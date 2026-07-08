@@ -32,7 +32,7 @@ class WebsiteInquiryController extends Controller
             'type' => 'other',
             'priority' => 'mittel',
             'status' => 'open',
-            'subject' => $data['subject'] ?: ('Website-Anfrage von ' . $data['name']),
+            'subject' => ($data['subject'] ?? null) ?: ('Website-Anfrage von ' . $data['name']),
             'description' => $data['message'],
             'guest_name' => $data['name'],
             'guest_email' => $data['email'],
