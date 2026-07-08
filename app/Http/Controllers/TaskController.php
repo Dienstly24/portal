@@ -24,7 +24,11 @@ class TaskController extends Controller
         if($due === 'today') $query->whereDate('due_date', today());
         elseif($due === '14') $query->whereDate('due_date', '<=', today()->addDays(14));
 
-        $tasks = $query->orderBy('due_date')->orderByRaw("FIELD(priority,'high','medium','low')")->get();
+        // CASE statt MySQL-spezifischem FIELD(), damit die Seite auch auf
+        // SQLite/Postgres funktioniert. (Audit M5)
+        $tasks = $query->orderBy('due_date')
+            ->orderByRaw("CASE priority WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END")
+            ->get();
 
         return view('admin.tasks', compact('tasks','tab'));
     }
