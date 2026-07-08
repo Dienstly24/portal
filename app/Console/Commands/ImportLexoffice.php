@@ -13,7 +13,7 @@ class ImportLexoffice extends Command
 
     public function handle()
     {
-        $apiKey = env('LEXOFFICE_API_KEY');
+        $apiKey = \App\Models\SystemSetting::get('lexoffice_api_key') ?: config('services.lexoffice.key');
         $baseUrl = 'https://api.lexware.io/v1';
         $imported = 0;
         $skipped = 0;

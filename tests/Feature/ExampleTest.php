@@ -2,18 +2,19 @@
 
 namespace Tests\Feature;
 
-// use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class ExampleTest extends TestCase
 {
-    /**
-     * A basic test example.
-     */
-    public function test_the_application_returns_a_successful_response(): void
-    {
-        $response = $this->get('/');
+    use RefreshDatabase;
 
-        $response->assertStatus(200);
+    /**
+     * '/' is a role-based redirect by design (guests -> portal -> login).
+     * The old Breeze test expected a 200 welcome page that no longer exists.
+     */
+    public function test_the_application_redirects_the_root_route(): void
+    {
+        $this->get('/')->assertRedirect(route('portal.dashboard'));
     }
 }

@@ -13,13 +13,7 @@ use App\Http\Controllers\TarifrechnerController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    $user = auth()->user();
-    if ($user && in_array($user->role, ['admin', 'manager', 'employee'])) {
-        return redirect()->route('admin.dashboard');
-    }
-    return redirect()->route('portal.dashboard');
-});
+Route::get('/', \App\Http\Controllers\HomeController::class);
 
 /*
 |--------------------------------------------------------------------------
@@ -75,10 +69,7 @@ Route::middleware(['auth', 'role:admin,manager,employee'])->prefix('admin')->nam
 
     // Verträge
     Route::get('/contracts', [AdminController::class, 'contracts'])->name('contracts');
-    Route::get('/contracts/new', function () {
-        $customers = \App\Models\Customer::with('user')->get();
-        return view('admin.contract_new', compact('customers'));
-    })->name('contract.new');
+    Route::get('/contracts/new', [AdminController::class, 'contractNew'])->name('contract.new');
     Route::get('/contracts/create/{customerId}', [AdminController::class, 'contractCreate'])->name('contract.create');
     Route::post('/contracts/{customerId}', [AdminController::class, 'contractStore'])->name('contract.store');
 
@@ -160,4 +151,5 @@ Route::middleware(['auth', 'role:admin,manager,employee'])->prefix('admin')->nam
 
 // استقبال استفسارات الموقع (WordPress) — محمي بـ Token
 Route::post('/api/website-inquiry', [\App\Http\Controllers\WebsiteInquiryController::class, 'store'])
+    ->middleware('throttle:30,1')
     ->name('api.inquiry.store');

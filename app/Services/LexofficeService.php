@@ -7,7 +7,10 @@ class LexofficeService {
     private string $baseUrl = 'https://api.lexware.io/v1';
 
     public function __construct() {
-        $this->apiKey = env('LEXOFFICE_API_KEY');
+        // env() liefert nach 'php artisan config:cache' null - stattdessen
+        // Einstellung aus der DB mit Fallback auf die Config. (Audit M6)
+        $this->apiKey = (string) (\App\Models\SystemSetting::get('lexoffice_api_key')
+            ?: config('services.lexoffice.key', ''));
     }
 
     private function http() {

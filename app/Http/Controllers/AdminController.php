@@ -24,6 +24,21 @@ class AdminController extends Controller
         return $query;
     }
 
+    /** 403, wenn der eingeloggte Mitarbeiter diesen Kunden nicht sehen darf. (Audit M1) */
+    private function authorizeCustomerAccess($customerId): void {
+        $ids = $this->visibleCustomerIds();
+        if ($ids !== null && !in_array((string) $customerId, array_map('strval', $ids), true)) {
+            abort(403, 'Kein Zugriff auf diesen Kunden.');
+        }
+    }
+
+    /** 403, wenn das Ticket zu einem nicht sichtbaren Kunden gehört. (Audit M1) */
+    private function authorizeTicketAccess(\App\Models\Ticket $ticket): void {
+        if ($ticket->customer_id !== null) {
+            $this->authorizeCustomerAccess($ticket->customer_id);
+        }
+    }
+
     public function dashboard() {
         $ids = $this->visibleCustomerIds();
         return view('admin.dashboard', [
@@ -47,8 +62,7 @@ class AdminController extends Controller
     }
 
     public function customerShow($id) {
-        $ids = $this->visibleCustomerIds();
-        if ($ids !== null && !in_array($id, $ids)) abort(403, 'Kein Zugriff auf diesen Kunden.');
+        $this->authorizeCustomerAccess($id);
         $customer = Customer::with(['user','contracts','tickets','documents','approvalRequests'])->findOrFail($id);
         return view('admin.customer_show', compact('customer'));
     }
@@ -59,12 +73,21 @@ class AdminController extends Controller
         return view('admin.contracts', compact('contracts'));
     }
 
+    public function contractNew() {
+        // Vorher eine Route-Closure in web.php (verhindert route:cache) und
+        // ohne Portfolio-Scoping. (Audit M8/M1)
+        $customers = $this->scopeCustomers(Customer::with('user'))->get();
+        return view('admin.contract_new', compact('customers'));
+    }
+
     public function contractCreate($customerId) {
+        $this->authorizeCustomerAccess($customerId);
         $customer = Customer::with('user')->findOrFail($customerId);
         return view('admin.contract_create', compact('customer'));
     }
 
     public function contractStore(Request $request, $customerId) {
+        $this->authorizeCustomerAccess($customerId);
         $request->validate([
             'type' => 'required',
             'insurer' => 'required',
@@ -97,12 +120,14 @@ class AdminController extends Controller
 
     public function ticketShow($id) {
         $ticket = Ticket::with(['customer.user','messages.sender'])->findOrFail($id);
+        $this->authorizeTicketAccess($ticket);
         return view('admin.ticket_show', compact('ticket'));
     }
 
     public function ticketReply(Request $request, $id) {
-        $request->validate(['body' => 'required', 'status' => 'required']);
+        $request->validate(['body' => 'required', 'status' => 'required|in:open,in_progress,waiting,closed']);
         $ticket = Ticket::findOrFail($id);
+        $this->authorizeTicketAccess($ticket);
         \App\Models\TicketMessage::create([
             'id' => Str::uuid(),
             'ticket_id' => $ticket->id,
@@ -142,6 +167,7 @@ class AdminController extends Controller
 
     public function approvalAction(Request $request, $id) {
         $approval = ApprovalRequest::findOrFail($id);
+        $this->authorizeCustomerAccess($approval->customer_id);
         if ($request->action === 'approve') {
             $customer = $approval->customer;
             $customer->update([$approval->field_name => $approval->new_value]);
@@ -190,23 +216,18 @@ class AdminController extends Controller
                 ));
             } catch (\Throwable $e) { \Log::warning('Welcome mail failed: ' . $e->getMessage()); }
         }
-        if ($request->email && !str_contains($request->email, '@dienstly24.internal')) {
-            try {
-                \Illuminate\Support\Facades\Mail::to($request->email)->send(new \App\Mail\CustomerWelcomeMail(
-                    $fullName, $request->email, $request->password, $request->preferred_lang ?? 'de'
-                ));
-            } catch (\Throwable $e) { \Log::warning('Welcome mail failed: ' . $e->getMessage()); }
-        }
         return redirect()->route("admin.customer", $customer->id)->with("success", "Kunde erfolgreich erstellt.");
     }
 
     public function customerEdit($id) {
+        $this->authorizeCustomerAccess($id);
         $customer = Customer::with('user')->findOrFail($id);
         $addr = $this->splitAddress($customer->address);
         return view('admin.customer_edit', compact('customer', 'addr'));
     }
 
     public function customerUpdate(Request $request, $id) {
+        $this->authorizeCustomerAccess($id);
         $customer = Customer::findOrFail($id);
         $user = $customer->user;
 
@@ -323,6 +344,7 @@ class AdminController extends Controller
     }
 
     public function storeNote(Request $request, $id) {
+        $this->authorizeCustomerAccess($id);
         $request->validate(['note' => 'required']);
         \App\Models\CustomerNote::create([
             'customer_id' => $id,
@@ -337,12 +359,14 @@ class AdminController extends Controller
 
     public function noteMarkDone($id) {
         $note = \App\Models\CustomerNote::findOrFail($id);
+        $this->authorizeCustomerAccess($note->customer_id);
         $note->update(['is_done' => !$note->is_done]);
         return back()->with('success', 'Status aktualisiert.');
     }
 
     public function storeDocument(Request $request, $id) {
-        $request->validate(['document' => 'required|file|max:10240']);
+        $this->authorizeCustomerAccess($id);
+        $request->validate(['document' => 'required|file|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:10240']);
         $file = $request->file('document');
         $path = $file->store("customers/$id/documents", 'public');
         \App\Models\Document::create([
@@ -357,6 +381,7 @@ class AdminController extends Controller
     }
 
     public function storeFamily(Request $request, $id) {
+        $this->authorizeCustomerAccess($id);
         $request->validate(['name' => 'required']);
         \App\Models\CustomerFamily::create([
             'customer_id' => $id,
@@ -368,6 +393,7 @@ class AdminController extends Controller
     }
 
     public function storeVehicle(Request $request, $id) {
+        $this->authorizeCustomerAccess($id);
         $request->validate(['brand' => 'required']);
         \App\Models\CustomerVehicle::create([
             'customer_id' => $id,
@@ -382,6 +408,7 @@ class AdminController extends Controller
 
     public function destroyFamily($id) {
         $f = \App\Models\CustomerFamily::findOrFail($id);
+        $this->authorizeCustomerAccess($f->customer_id);
         $customerId = $f->customer_id;
         $f->delete();
         return redirect()->route('admin.customer.edit', $customerId)->with('success', 'Familienmitglied entfernt.');
@@ -389,10 +416,13 @@ class AdminController extends Controller
 
     public function downloadAttachment($id) {
         $a = \App\Models\TicketAttachment::findOrFail($id);
+        $ticket = Ticket::findOrFail($a->ticket_id);
+        $this->authorizeTicketAccess($ticket);
         return response()->download(storage_path('app/public/' . $a->file_path), $a->file_name);
     }
 
     public function mergeForm($id) {
+        $this->authorizeCustomerAccess($id);
         $customer = \App\Models\Customer::with('user')->findOrFail($id);
         $others = \App\Models\Customer::with('user')->where('id', '!=', $id)->get()
             ->sortBy(fn($c) => $c->user?->name ?? '');
@@ -400,7 +430,9 @@ class AdminController extends Controller
     }
 
     public function mergeCustomers(Request $request, $id) {
+        $this->authorizeCustomerAccess($id);
         $request->validate(['duplicate_id' => 'required|different:id']);
+        $this->authorizeCustomerAccess($request->duplicate_id);
         $primary = \App\Models\Customer::findOrFail($id);
         $dup = \App\Models\Customer::findOrFail($request->duplicate_id);
         if ($primary->id === $dup->id) return back()->with('success', 'Gleicher Kunde gewählt.');
@@ -475,6 +507,7 @@ class AdminController extends Controller
     }
 
     public function destroyCustomer($id) {
+        $this->authorizeCustomerAccess($id);
         $customer = \App\Models\Customer::findOrFail($id);
         $user = $customer->user;
         $customer->delete();
@@ -485,6 +518,7 @@ class AdminController extends Controller
     }
 
     public function customerTimeline($id) {
+        $this->authorizeCustomerAccess($id);
         $customer = \App\Models\Customer::with(['user','timeline.user'])->findOrFail($id);
         return view('admin.customer_timeline', compact('customer'));
     }

@@ -6,7 +6,8 @@ use Illuminate\Support\Str;
 class Ticket extends Model {
     protected $keyType = 'string';
     public $incrementing = false;
-    protected $fillable = ['customer_id','assigned_to','type','status','subject','description'];
+    protected $fillable = ['customer_id','assigned_to','type','status','subject','description',
+        'priority','source','guest_name','guest_email','guest_phone'];
     protected static function boot() {
         parent::boot();
         static::creating(fn($m) => $m->id = Str::uuid());

@@ -10,7 +10,12 @@ class WebsiteInquiryController extends Controller
     // استقبال من نموذج الووردبريس (POST مع token)
     public function store(Request $request)
     {
-        if ($request->header('X-Inquiry-Token') !== config('services.inquiry.token')) {
+        // Fail closed: without a configured token, header (null) === config (null)
+        // previously passed the check and let anyone create tickets. (Audit C5)
+        $token = config('services.inquiry.token');
+        if (!is_string($token) || $token === ''
+            || !is_string($request->header('X-Inquiry-Token'))
+            || !hash_equals($token, $request->header('X-Inquiry-Token'))) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
         $data = $request->validate([
@@ -27,7 +32,7 @@ class WebsiteInquiryController extends Controller
             'type' => 'other',
             'priority' => 'mittel',
             'status' => 'open',
-            'subject' => $data['subject'] ?: ('Website-Anfrage von ' . $data['name']),
+            'subject' => ($data['subject'] ?? null) ?: ('Website-Anfrage von ' . $data['name']),
             'description' => $data['message'],
             'guest_name' => $data['name'],
             'guest_email' => $data['email'],

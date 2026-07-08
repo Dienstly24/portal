@@ -30,7 +30,6 @@ class AuthenticatedSessionController extends Controller
 
         $user = $request->user();
         $user->forceFill(['last_login_at' => now()])->save();
-        $user->forceFill(['last_login_at' => now()])->save();
         if (in_array($user->role, ['admin', 'manager', 'employee'])) {
             return redirect()->intended(route('admin.dashboard', absolute: false));
         }

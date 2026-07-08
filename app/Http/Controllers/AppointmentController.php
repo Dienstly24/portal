@@ -54,6 +54,7 @@ class AppointmentController extends Controller
     }
 
     public function update(Request $request, $id) {
+        $request->validate(['status' => 'required|in:scheduled,completed,cancelled']);
         Appointment::findOrFail($id)->update(['status' => $request->status]);
         return back()->with('success', 'Termin aktualisiert.');
     }

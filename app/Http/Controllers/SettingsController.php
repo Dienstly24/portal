@@ -15,7 +15,7 @@ class SettingsController extends Controller
             'admin_url' => SystemSetting::get('admin_url', 'https://admin.dienstly24.de'),
             'contract_reminder_days' => SystemSetting::get('contract_reminder_days', '30,14,7'),
             'welcome_email_enabled' => SystemSetting::get('welcome_email_enabled', '1'),
-            'lexoffice_api_key' => SystemSetting::get('lexoffice_api_key', env('LEXOFFICE_API_KEY', '')),
+            'lexoffice_api_key' => SystemSetting::get('lexoffice_api_key', config('services.lexoffice.key', '')),
         ];
         return view('admin.settings', compact('settings'));
     }
@@ -31,12 +31,11 @@ class SettingsController extends Controller
                 SystemSetting::set($field, $request->input($field));
             }
         }
-        if ($request->filled('lexoffice_api_key')) {
-            $envFile = base_path('.env');
-            $content = file_get_contents($envFile);
-            $content = preg_replace('/LEXOFFICE_API_KEY=.*/', 'LEXOFFICE_API_KEY=' . $request->lexoffice_api_key, $content);
-            file_put_contents($envFile, $content);
-        }
+        // Der API-Key wird nur noch in system_settings gespeichert.
+        // Das frühere Schreiben in die .env-Datei erlaubte Env-Injection
+        // (Zeilenumbrüche im Eingabefeld) und kollidiert mit config:cache.
+        // LexofficeService liest den Key aus system_settings mit
+        // Fallback auf config('services.lexoffice.key'). (Audit M6)
         return back()->with('success', 'Einstellungen gespeichert.');
     }
 }
