@@ -11,8 +11,12 @@ return new class extends Migration {
             if (!Schema::hasColumn('tickets', 'guest_email')) $table->string('guest_email')->nullable();
             if (!Schema::hasColumn('tickets', 'guest_phone')) $table->string('guest_phone')->nullable();
         });
-        // العمود customer_id لازم يقبل NULL للاستفسارات من غير عملاء
-        \Illuminate\Support\Facades\DB::statement('ALTER TABLE tickets MODIFY customer_id CHAR(36) NULL');
+        // customer_id muss NULL erlauben (Anfragen von Nicht-Kunden).
+        // Portabel via Schema-Builder statt MySQL-spezifischem "MODIFY",
+        // damit die Migration auch auf SQLite/Postgres läuft.
+        Schema::table('tickets', function (Blueprint $table) {
+            $table->uuid('customer_id')->nullable()->change();
+        });
     }
     public function down(): void {
         Schema::table('tickets', function (Blueprint $table) {
