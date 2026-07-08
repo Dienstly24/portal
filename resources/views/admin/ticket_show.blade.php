@@ -36,16 +36,35 @@
     @endforeach
 </div>
 @endif
+@php
+    $customerMessages = $ticket->messages->where('is_internal', false);
+    $internalMessages = $ticket->messages->where('is_internal', true);
+@endphp
+{{-- Kundenkommunikation: sichtbar im Kundenportal --}}
 <div class="card">
-    <div class="card-title">Nachrichten</div>
-    @forelse($ticket->messages as $m)
-    <div style="margin-bottom:16px;padding:12px 16px;border-radius:8px;background:{{ $m->is_internal ? '#FFF8E6' : 'var(--canvas)' }};border:1px solid var(--line);">
-        @if($m->is_internal)<span style="font-size:11px;background:#F7E7D6;color:#B5651D;padding:2px 8px;border-radius:4px;margin-bottom:6px;display:inline-block;">Interne Notiz</span><br>@endif
+    <div class="card-title">💬 Kundenkommunikation <span style="font-size:11.5px;font-weight:400;color:var(--ink-soft);">(für den Kunden sichtbar)</span></div>
+    @forelse($customerMessages as $m)
+    <div style="margin-bottom:16px;padding:12px 16px;border-radius:8px;background:var(--canvas);border:1px solid var(--line);">
         <div style="font-size:12px;color:var(--ink-soft);margin-bottom:6px;">{{ $m->sender?->name }} · {{ $m->created_at->format('d.m.Y H:i') }}</div>
         <div style="font-size:14px;line-height:1.6;">{{ $m->body }}</div>
     </div>
     @empty
-    <p style="color:var(--ink-soft);font-size:14px;">Noch keine Nachrichten.</p>
+    <p style="color:var(--ink-soft);font-size:14px;">Noch keine Nachrichten an den Kunden.</p>
+    @endforelse
+</div>
+{{-- Interner Bereich: NUR Mitarbeiter, wird niemals ans Kundenportal ausgeliefert --}}
+<div class="card" style="background:#FFFDF7;border-color:#F7E7D6;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div class="card-title" style="margin-bottom:0;">🔒 Interner Bereich</div>
+        <span style="font-size:11.5px;background:#F7E7D6;color:#B5651D;padding:3px 10px;border-radius:999px;">Nur für Mitarbeiter sichtbar</span>
+    </div>
+    @forelse($internalMessages as $m)
+    <div style="margin-bottom:14px;padding:12px 16px;border-radius:8px;background:#FFF8E6;border:1px solid #F7E7D6;">
+        <div style="font-size:12px;color:var(--ink-soft);margin-bottom:6px;">{{ $m->sender?->name }} · {{ $m->created_at->format('d.m.Y H:i') }}</div>
+        <div style="font-size:14px;line-height:1.6;">{{ $m->body }}</div>
+    </div>
+    @empty
+    <p style="color:var(--ink-soft);font-size:14px;">Noch keine internen Nachrichten zu diesem Ticket.</p>
     @endforelse
 </div>
 <div class="card">
