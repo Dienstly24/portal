@@ -160,4 +160,5 @@ Route::middleware(['auth', 'role:admin,manager,employee'])->prefix('admin')->nam
 
 // استقبال استفسارات الموقع (WordPress) — محمي بـ Token
 Route::post('/api/website-inquiry', [\App\Http\Controllers\WebsiteInquiryController::class, 'store'])
+    ->middleware('throttle:30,1')
     ->name('api.inquiry.store');
