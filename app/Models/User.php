@@ -1,0 +1,56 @@
+<?php
+namespace App\Models;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+
+class User extends Authenticatable {
+    use HasFactory, Notifiable;
+    protected $fillable = ['name','email','password','role','access_level','can_see_all_customers','can_manage_contracts','can_manage_tickets','can_approve_changes','can_send_emails','can_import_export'];
+    protected $hidden = ['password','remember_token'];
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+        'can_see_all_customers' => 'boolean',
+        'can_manage_contracts' => 'boolean',
+        'can_manage_tickets' => 'boolean',
+        'can_approve_changes' => 'boolean',
+        'can_send_emails' => 'boolean',
+        'can_import_export' => 'boolean',
+    ];
+    public function customer() { return $this->hasOne(Customer::class); }
+    public function assignedCustomers() { return $this->belongsToMany(Customer::class, 'employee_customers'); }
+
+    public function canSeeAllCustomers(): bool {
+        return in_array($this->role, ['admin', 'manager']) || (bool) $this->can_see_all_customers;
+    }
+
+    /** Eigene Kunden + Kunden von Kollegen, die man aktuell vertritt */
+    public function visibleCustomerIdsWithSubstitution(): array {
+        $ids = $this->assignedCustomers()->pluck('customers.id')->toArray();
+        $absentIds = \App\Models\Substitution::active()
+            ->where('substitute_user_id', $this->id)
+            ->pluck('absent_user_id');
+        foreach ($absentIds as $absentId) {
+            $absent = User::find($absentId);
+            if ($absent) {
+                $ids = array_merge($ids, $absent->assignedCustomers()->pluck('customers.id')->toArray());
+            }
+        }
+        return array_values(array_unique($ids));
+    }
+    public function isAdmin() { return $this->role === 'admin'; }
+    public function isEmployee() { return $this->role === 'employee'; }
+    public function isCustomer() { return $this->role === 'customer'; }
+    public function canSeeCustomer($customerId) {
+        if ($this->isAdmin()) return true;
+        if ($this->can_see_all_customers) return true;
+        return $this->assignedCustomers()->where('customers.id', $customerId)->exists();
+    }
+    public function getAccessibleCustomers() {
+        if ($this->isAdmin() || $this->can_see_all_customers) {
+            return Customer::with('user');
+        }
+        return $this->assignedCustomers()->with('user');
+    }
+}
