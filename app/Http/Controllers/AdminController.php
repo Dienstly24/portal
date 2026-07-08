@@ -209,13 +209,6 @@ class AdminController extends Controller
                 ));
             } catch (\Throwable $e) { \Log::warning('Welcome mail failed: ' . $e->getMessage()); }
         }
-        if ($request->email && !str_contains($request->email, '@dienstly24.internal')) {
-            try {
-                \Illuminate\Support\Facades\Mail::to($request->email)->send(new \App\Mail\CustomerWelcomeMail(
-                    $fullName, $request->email, $request->password, $request->preferred_lang ?? 'de'
-                ));
-            } catch (\Throwable $e) { \Log::warning('Welcome mail failed: ' . $e->getMessage()); }
-        }
         return redirect()->route("admin.customer", $customer->id)->with("success", "Kunde erfolgreich erstellt.");
     }
 
