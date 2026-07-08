@@ -73,6 +73,13 @@ class AdminController extends Controller
         return view('admin.contracts', compact('contracts'));
     }
 
+    public function contractNew() {
+        // Vorher eine Route-Closure in web.php (verhindert route:cache) und
+        // ohne Portfolio-Scoping. (Audit M8/M1)
+        $customers = $this->scopeCustomers(Customer::with('user'))->get();
+        return view('admin.contract_new', compact('customers'));
+    }
+
     public function contractCreate($customerId) {
         $this->authorizeCustomerAccess($customerId);
         $customer = Customer::with('user')->findOrFail($customerId);

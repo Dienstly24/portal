@@ -50,6 +50,7 @@ class TaskController extends Controller
     }
 
     public function update(Request $request, $id) {
+        $request->validate(['status' => 'required|in:open,in_progress,done']);
         $task = Task::findOrFail($id);
         $task->update(['status' => $request->status]);
         return back()->with('success', 'Status aktualisiert.');

@@ -91,6 +91,11 @@ class EmployeeController extends Controller
         if (auth()->user()->role === 'manager' && $employee->role === 'admin') {
             abort(403, 'Kein Zugriff auf Administrator-Konten.');
         }
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'role' => 'nullable|in:employee,manager',
+            'access_level' => 'nullable|in:full,limited',
+        ]);
         \Illuminate\Support\Facades\DB::transaction(function () use ($request, $employee) {
             $employee->update([
                 'name' => $request->name,
