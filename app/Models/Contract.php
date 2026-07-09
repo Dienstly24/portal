@@ -11,5 +11,8 @@ class Contract extends Model {
         parent::boot();
         static::creating(fn($m) => $m->id = Str::uuid());
     }
+    public function vehicleDetail() { return $this->hasOne(ContractVehicleDetail::class); }
+    public function energyDetail() { return $this->hasOne(ContractEnergyDetail::class); }
+    public function internetDetail() { return $this->hasOne(ContractInternetDetail::class); }
     public function customer() { return $this->belongsTo(Customer::class); }
 }

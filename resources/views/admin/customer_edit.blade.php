@@ -33,6 +33,14 @@
         <div class="field"><label>Beruf</label><input type="text" name="occupation" value="{{ $customer->occupation }}" placeholder="z.B. Ingenieur"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="field"><label>Anrede</label>
+            <select name="salutation" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                <option value="">— Nicht angegeben —</option>
+                @foreach(\App\Models\Customer::SALUTATIONS as $skey => $slabel)
+                <option value="{{ $skey }}" {{ $customer->salutation === $skey ? 'selected' : '' }}>{{ $slabel }}</option>
+                @endforeach
+            </select>
+        </div>
         <div class="field"><label>Geschlecht</label>
             <select name="gender" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
                 <option value="">— Nicht angegeben —</option>
