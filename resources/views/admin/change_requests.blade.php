@@ -60,8 +60,9 @@ $fmt = fn($v) => $valueLabels[$v] ?? $v;
                 <div style="background:#F0F7F3;border:1px solid #CDE7D8;border-radius:8px;padding:12px 14px;">
                     <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#3B7A57;margin-bottom:8px;">Neu</div>
                     @foreach($r->new_data as $k => $v)
+                        @php $changed = !$r->old_data || ($r->old_data[$k] ?? null) != $v; @endphp
                         @if(($fieldLabels[$k] ?? '') !== null && !is_null($v) && $v !== '')
-                        <div style="font-size:13px;padding:2px 0;"><span style="color:var(--ink-soft);">{{ $fieldLabels[$k] ?? $k }}:</span> <b>{{ $fmt($v) }}</b></div>
+                        <div style="font-size:13px;padding:2px 0;{{ $changed ? 'background:#FFF3D6;border-radius:4px;padding-left:6px;margin:1px -6px 1px 0;' : '' }}"><span style="color:var(--ink-soft);">{{ $fieldLabels[$k] ?? $k }}:</span> <b>{{ $fmt($v) }}</b>@if($changed)<span style="color:#B5651D;font-size:11px;"> · geändert</span>@endif</div>
                         @endif
                     @endforeach
                     @if(!empty($r->new_data['document_path']))

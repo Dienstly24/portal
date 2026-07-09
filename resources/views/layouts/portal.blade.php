@@ -51,10 +51,25 @@ form input:focus,form select:focus,form textarea:focus{outline:2px solid var(--g
 form textarea{min-height:90px;resize:vertical;}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 .toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+
+/* Responsive (Final Polish Punkt 8) */
+@media (max-width: 1024px) {
+    .grid-3{grid-template-columns:repeat(2,1fr);}
+}
+@media (max-width: 768px) {
+    .sidebar{transform:translateX(-100%);transition:transform .25s;box-shadow:0 0 30px rgba(0,0,0,.3);}
+    .sidebar.open{transform:translateX(0);}
+    .main{margin-left:0;padding:20px 16px;}
+    .grid-2,.grid-3{grid-template-columns:1fr;}
+    .mobile-menu-btn{display:inline-flex;}
+    .toolbar{flex-direction:column;align-items:stretch;gap:12px;}
+}
+.mobile-menu-btn{display:none;position:fixed;top:14px;left:14px;z-index:120;background:var(--petrol);color:#fff;border:none;border-radius:8px;width:42px;height:42px;font-size:20px;cursor:pointer;}
 </style>
 </head>
 <body>
-<div class="sidebar">
+<button class="mobile-menu-btn" type="button" id="m-btn" aria-label="Menü öffnen">☰</button>
+<div class="sidebar" id="portal-sidebar">
     <div class="brand"><img src="/images/logo.png" alt="Dienstly24" style="height:45px;width:auto;object-fit:contain;"></div>
     <a href="{{ route('portal.dashboard') }}" class="nav-item {{ request()->routeIs('portal.dashboard') ? 'active' : '' }}">Dashboard</a>
     <a href="{{ route('portal.contracts') }}" class="nav-item {{ request()->routeIs('portal.contracts*') ? 'active' : '' }}">Meine Verträge</a>
@@ -82,5 +97,8 @@ form textarea{min-height:90px;resize:vertical;}
     @if(session('error'))<div class="alert-error">{{ session('error') }}</div>@endif
     @yield('content')
 </div>
+<script>
+document.getElementById('m-btn')?.addEventListener('click', function(){ document.getElementById('portal-sidebar').classList.toggle('open'); });
+</script>
 </body>
 </html>
