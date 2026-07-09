@@ -138,12 +138,6 @@ table tr:hover td{background:#FAFAF8;}
         @php $openTasks = \App\Models\Task::where('assigned_to', auth()->id())->where('status','!=','done')->count(); @endphp
         @if($openTasks > 0)<span class="nav-badge">{{ $openTasks }}</span>@endif
     </a>
-    <a href="{{ route('admin.approvals') }}" class="nav-item {{ request()->routeIs('admin.approvals*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-        Genehmigungen
-        @php $pendingA = \App\Models\ApprovalRequest::where('status','pending')->when($navIds !== null, fn($q) => $q->whereIn('customer_id', $navIds))->count(); @endphp
-        @if($pendingA > 0)<span class="nav-badge">{{ $pendingA }}</span>@endif
-    </a>
     @if(in_array(auth()->user()->role, ['admin','manager']))
     <a href="{{ route('admin.import_export') }}" class="nav-item {{ request()->routeIs('admin.import*','admin.export*') ? 'active' : '' }}">
         <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
@@ -252,9 +246,13 @@ table tr:hover td{background:#FAFAF8;}
                 </div>
             </div>
         </div>
-        <a href="{{ route('admin.approvals') }}" class="icon-btn" title="Genehmigungen">
+        <a href="{{ route('admin.change_requests') }}" class="icon-btn" title="Kundenänderungen">
             🔔
-            @if(isset($pendingA) && $pendingA > 0)<span class="notif-dot"></span>@endif
+            @php
+                $bellQ = \App\Models\CustomerChangeRequest::where('status','pending');
+                if (!auth()->user()->canSeeAllCustomers()) { $bellQ->whereIn('customer_id', auth()->user()->visibleCustomerIdsWithSubstitution()); }
+            @endphp
+            @if($bellQ->count() > 0)<span class="notif-dot"></span>@endif
         </a>
         <div class="header-avatar">{{ strtoupper(substr(auth()->user()->name,0,2)) }}</div>
     </div>

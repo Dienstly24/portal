@@ -4,7 +4,6 @@ use App\Models\User;
 use App\Models\Customer;
 use App\Models\Contract;
 use App\Models\Ticket;
-use App\Models\ApprovalRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Schema;
@@ -45,9 +44,9 @@ class AdminController extends Controller
             'totalCustomers' => $ids === null ? Customer::count() : count($ids),
             'activeContracts' => Contract::where('status','active')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->count(),
             'openTickets' => Ticket::whereIn('status',['open','in_progress'])->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->count(),
-            'pendingApprovals' => ApprovalRequest::where('status','pending')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->count(),
+            'pendingApprovals' => \App\Models\CustomerChangeRequest::where('status','pending')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->count(),
             'recentTickets' => Ticket::with('customer.user')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->latest()->take(5)->get(),
-            'recentApprovals' => ApprovalRequest::with('customer.user')->where('status','pending')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->latest()->take(5)->get(),
+            'recentApprovals' => \App\Models\CustomerChangeRequest::with('customer.user')->where('status','pending')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->latest()->take(5)->get(),
         ]);
     }
 
@@ -63,7 +62,7 @@ class AdminController extends Controller
 
     public function customerShow($id) {
         $this->authorizeCustomerAccess($id);
-        $customer = Customer::with(['user','contracts','tickets','documents','approvalRequests'])->findOrFail($id);
+        $customer = Customer::with(['user','contracts','tickets','documents'])->findOrFail($id);
         // Interner Chat & Notizen (nur Staff - Zugriff bereits oben geprüft)
         $internalChat = \App\Models\InternalMessage::chat()->where('customer_id', $id)->with('sender')->orderBy('created_at')->get();
         $internalNotes = \App\Models\InternalMessage::note()->where('customer_id', $id)->with('sender')->latest()->get();
@@ -161,25 +160,6 @@ class AdminController extends Controller
             }
         }
         return back()->with('success', 'Antwort gesendet.');
-    }
-
-    public function approvals() {
-        $approvals = ApprovalRequest::with('customer.user')->where('status','pending')->latest()->get();
-        return view('admin.approvals', compact('approvals'));
-    }
-
-    public function approvalAction(Request $request, $id) {
-        $approval = ApprovalRequest::findOrFail($id);
-        $this->authorizeCustomerAccess($approval->customer_id);
-        if ($request->action === 'approve') {
-            $customer = $approval->customer;
-            $customer->update([$approval->field_name => $approval->new_value]);
-            $approval->update(['status' => 'approved', 'reviewed_by' => auth()->id(), 'reviewed_at' => now(), 'reviewer_note' => $request->note]);
-            return back()->with('success', 'Änderung genehmigt.');
-        } else {
-            $approval->update(['status' => 'rejected', 'reviewed_by' => auth()->id(), 'reviewed_at' => now(), 'reviewer_note' => $request->note]);
-            return back()->with('success', 'Änderung abgelehnt.');
-        }
     }
 
     public function createCustomer() {
@@ -454,7 +434,8 @@ class AdminController extends Controller
         foreach ([
             \App\Models\Contract::class, \App\Models\Ticket::class, \App\Models\Document::class,
             \App\Models\CustomerNote::class, \App\Models\CustomerFamily::class, \App\Models\CustomerVehicle::class,
-            \App\Models\CustomerTimeline::class, \App\Models\Appointment::class, \App\Models\ApprovalRequest::class,
+            \App\Models\CustomerTimeline::class, \App\Models\Appointment::class, \App\Models\CustomerChangeRequest::class,
+            \App\Models\CustomerAddress::class, \App\Models\CustomerContact::class, \App\Models\InternalMessage::class,
         ] as $model) {
             $model::where('customer_id', $dup->id)->update(['customer_id' => $primary->id]);
         }

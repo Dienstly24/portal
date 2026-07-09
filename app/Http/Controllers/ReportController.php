@@ -3,7 +3,6 @@ namespace App\Http\Controllers;
 use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\Ticket;
-use App\Models\ApprovalRequest;
 use Illuminate\Http\Request;
 
 class ReportController extends Controller

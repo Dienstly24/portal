@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\ApprovalRequest;
+use App\Models\CustomerChangeRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -33,11 +33,11 @@ class ProfileTest extends TestCase
             ->post(route('portal.profile.update'), ['phone' => '+49 40 123456'])
             ->assertSessionHas('success');
 
-        $approval = ApprovalRequest::first();
-        $this->assertNotNull($approval);
-        $this->assertSame('phone', $approval->field_name);
-        $this->assertSame('+49 40 123456', $approval->new_value);
-        $this->assertSame('pending', $approval->status);
+        $request = CustomerChangeRequest::first();
+        $this->assertNotNull($request);
+        $this->assertSame('profile', $request->type);
+        $this->assertSame('+49 40 123456', $request->new_data['phone']);
+        $this->assertSame('pending', $request->status);
     }
 
     public function test_staff_cannot_access_the_customer_portal_profile(): void
