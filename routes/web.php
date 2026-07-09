@@ -31,6 +31,21 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     Route::get('/attachments/{id}/download', [PortalController::class, 'downloadAttachment'])->name('attachment.download');
     Route::get('/documents', [PortalController::class, 'documents'])->name('documents');
     Route::get('/profile', [PortalController::class, 'profile'])->name('profile');
+
+    // Self-Service (jede Aktion erzeugt nur einen Change Request)
+    Route::get('/family', [\App\Http\Controllers\SelfServiceController::class, 'family'])->name('family');
+    Route::post('/family', [\App\Http\Controllers\SelfServiceController::class, 'familyStore'])->name('family.store');
+    Route::post('/family/{id}/change', [\App\Http\Controllers\SelfServiceController::class, 'familyChange'])->name('family.change');
+    Route::get('/addresses', [\App\Http\Controllers\SelfServiceController::class, 'addresses'])->name('addresses');
+    Route::post('/addresses', [\App\Http\Controllers\SelfServiceController::class, 'addressStore'])->name('addresses.store');
+    Route::post('/addresses/{id}/change', [\App\Http\Controllers\SelfServiceController::class, 'addressChange'])->name('addresses.change');
+    Route::get('/contacts', [\App\Http\Controllers\SelfServiceController::class, 'contacts'])->name('contacts');
+    Route::post('/contacts', [\App\Http\Controllers\SelfServiceController::class, 'contactStore'])->name('contacts.store');
+    Route::post('/contacts/{id}/change', [\App\Http\Controllers\SelfServiceController::class, 'contactChange'])->name('contacts.change');
+    Route::get('/bank', [\App\Http\Controllers\SelfServiceController::class, 'bank'])->name('bank');
+    Route::post('/bank', [\App\Http\Controllers\SelfServiceController::class, 'bankStore'])->name('bank.store');
+    Route::post('/contracts/report', [\App\Http\Controllers\SelfServiceController::class, 'contractReport'])->name('contracts.report');
+    Route::get('/change-requests', [\App\Http\Controllers\SelfServiceController::class, 'changeRequests'])->name('change_requests');
     Route::post('/profile', [PortalController::class, 'profileUpdate'])->name('profile.update');
 });
 
@@ -86,6 +101,10 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // Genehmigungen
     Route::get('/approvals', [AdminController::class, 'approvals'])->name('approvals');
     Route::post('/approvals/{id}', [AdminController::class, 'approvalAction'])->name('approval.action');
+
+    // Kundenänderungen (Self-Service Genehmigungsworkflow)
+    Route::get('/change-requests', [\App\Http\Controllers\ChangeRequestReviewController::class, 'index'])->name('change_requests');
+    Route::post('/change-requests/{id}/action', [\App\Http\Controllers\ChangeRequestReviewController::class, 'action'])->name('change_requests.action');
 
     // Interner Chat & Notizen (nur Mitarbeiter - keine Portal-Routen!)
     Route::post('/customers/{id}/internal-messages', [\App\Http\Controllers\InternalMessageController::class, 'store'])->name('internal.store');
