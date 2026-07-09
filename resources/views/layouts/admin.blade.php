@@ -98,10 +98,28 @@ table tr:hover td{background:#FAFAF8;}
 .customer-card:hover{border-color:var(--gold);background:#FAFAF8;}
 .customer-card .name{font-weight:600;font-size:13.5px;margin-bottom:4px;}
 .customer-card .meta{font-size:12px;color:var(--ink-soft);}
+
+/* Responsive (Final Polish Punkt 8) */
+@media (max-width: 1200px) {
+    .metrics-grid{grid-template-columns:repeat(2,1fr);}
+    .grid-3{grid-template-columns:repeat(2,1fr);}
+}
+@media (max-width: 900px) {
+    .sidebar{transform:translateX(-100%);transition:transform .25s;box-shadow:0 0 30px rgba(0,0,0,.35);}
+    .sidebar.open{transform:translateX(0);}
+    .header{left:0;padding:0 14px 0 60px;}
+    .main{margin-left:0;}
+    .grid-2,.grid-3,.metrics-grid{grid-template-columns:1fr;}
+    .admin-mobile-btn{display:inline-flex;}
+    .card{overflow-x:auto;}
+    .cust-tabs{overflow-x:auto;}
+}
+.admin-mobile-btn{display:none;position:fixed;top:11px;left:12px;z-index:130;background:var(--petrol-dark);color:#fff;border:none;border-radius:8px;width:42px;height:42px;font-size:20px;cursor:pointer;align-items:center;justify-content:center;}
 </style>
 </head>
 <body>
-<div class="sidebar">
+<button class="admin-mobile-btn" type="button" id="am-btn" aria-label="Menü öffnen">☰</button>
+<div class="sidebar" id="admin-sidebar">
     <div class="sidebar-logo"><img src="/images/logo.png" alt="Dienstly24"></div>
     <div class="nav-section">Beraterwelt</div>
     <a href="{{ route('admin.dashboard') }}" class="nav-item {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
@@ -344,6 +362,9 @@ function markAllNotifsRead() {
 }
 loadNotifications();
 setInterval(loadNotifications, 60000);
+</script>
+<script>
+document.getElementById('am-btn')?.addEventListener('click', function(){ document.getElementById('admin-sidebar').classList.toggle('open'); });
 </script>
 </body>
 </html>

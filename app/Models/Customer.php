@@ -87,7 +87,6 @@ class Customer extends Model {
     public function contracts() { return $this->hasMany(Contract::class); }
     public function tickets() { return $this->hasMany(Ticket::class); }
     public function documents() { return $this->hasMany(Document::class); }
-    public function familyMembers() { return $this->hasMany(FamilyMember::class); }
     public function family() { return $this->hasMany(CustomerFamily::class); }
     public function vehicles() { return $this->hasMany(CustomerVehicle::class); }
     public function notes() { return $this->hasMany(CustomerNote::class)->latest(); }
