@@ -1,0 +1,303 @@
+<?php
+namespace App\Http\Controllers;
+
+use App\Models\ActivityLog;
+use App\Models\Customer;
+use App\Models\CustomerAddress;
+use App\Models\CustomerChangeRequest;
+use App\Models\CustomerContact;
+use App\Models\CustomerFamily;
+use App\Models\InternalNotification;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+
+/**
+ * Self-Service im Kundenportal: Familie, Adressen, Kontakte, Bank,
+ * Vertragsmeldung, Änderungsanfragen.
+ *
+ * Sicherheitsprinzip: Der Kunde ändert NIE direkt Daten. Jede Aktion
+ * erzeugt ausschließlich einen CustomerChangeRequest (pending), der
+ * von Mitarbeitern geprüft wird. Alle Lese-/Schreibzugriffe sind hart
+ * auf den eigenen Customer-Datensatz gescoped.
+ */
+class SelfServiceController extends Controller
+{
+    private function getCustomer(): Customer
+    {
+        return Customer::firstOrCreate(
+            ['user_id' => auth()->id()],
+            ['customer_number' => 'C-' . strtoupper(Str::random(8))]
+        );
+    }
+
+    // ------------------------------------------------------------------
+    // Familie
+    // ------------------------------------------------------------------
+
+    public function family()
+    {
+        $customer = $this->getCustomer();
+        return view('portal.family', [
+            'customer' => $customer,
+            'members' => CustomerFamily::where('customer_id', $customer->id)->orderBy('created_at')->get(),
+            'requests' => $customer->changeRequests()->where('type', 'family')->latest()->get(),
+        ]);
+    }
+
+    public function familyStore(Request $request)
+    {
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'relation' => 'required|in:ehepartner,kind,andere',
+            'birth_date' => 'nullable|date|before_or_equal:today',
+        ]);
+
+        $this->createRequest('family', null, $data, 'Neues Familienmitglied beantragt: ' . $data['name']);
+
+        return back()->with('success', 'Ihr Familienmitglied wurde zur Prüfung eingereicht.');
+    }
+
+    public function familyChange(Request $request, $id)
+    {
+        $customer = $this->getCustomer();
+        $member = CustomerFamily::where('customer_id', $customer->id)->where('id', $id)->firstOrFail();
+
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'relation' => 'required|in:ehepartner,kind,andere',
+            'birth_date' => 'nullable|date|before_or_equal:today',
+        ]);
+
+        $this->createRequest(
+            'family',
+            ['id' => $member->id, 'name' => $member->name, 'relation' => $member->relation, 'birth_date' => $member->birth_date],
+            ['id' => $member->id] + $data,
+            'Änderung Familienmitglied beantragt: ' . $member->name
+        );
+
+        return back()->with('success', 'Ihre Änderung wurde zur Prüfung eingereicht.');
+    }
+
+    // ------------------------------------------------------------------
+    // Adressen
+    // ------------------------------------------------------------------
+
+    public function addresses()
+    {
+        $customer = $this->getCustomer();
+        return view('portal.addresses', [
+            'customer' => $customer,
+            'addresses' => $customer->addresses()->orderBy('created_at')->get(),
+            'requests' => $customer->changeRequests()->where('type', 'address')->latest()->get(),
+        ]);
+    }
+
+    public function addressStore(Request $request)
+    {
+        $data = $this->validateAddress($request);
+        $this->createRequest('address', null, $data, 'Neue Adresse beantragt (' . (CustomerAddress::TYPES[$data['type']] ?? $data['type']) . ')');
+        return back()->with('success', 'Ihre Adresse wurde zur Prüfung eingereicht.');
+    }
+
+    public function addressChange(Request $request, $id)
+    {
+        $customer = $this->getCustomer();
+        $address = CustomerAddress::where('customer_id', $customer->id)->where('id', $id)->firstOrFail();
+
+        $data = $this->validateAddress($request);
+        $this->createRequest(
+            'address',
+            ['id' => $address->id, 'type' => $address->type, 'street' => $address->street, 'zip' => $address->zip, 'city' => $address->city, 'country' => $address->country],
+            ['id' => $address->id] + $data,
+            'Adressänderung beantragt'
+        );
+        return back()->with('success', 'Ihre Adressänderung wurde zur Prüfung eingereicht.');
+    }
+
+    private function validateAddress(Request $request): array
+    {
+        return $request->validate([
+            'type' => 'required|in:main,billing,postal,other',
+            'street' => 'required|string|max:255',
+            'zip' => 'required|string|max:10',
+            'city' => 'required|string|max:100',
+            'country' => 'nullable|string|max:100',
+        ]);
+    }
+
+    // ------------------------------------------------------------------
+    // Kontaktinformationen (mehrere E-Mails / Telefonnummern)
+    // ------------------------------------------------------------------
+
+    public function contacts()
+    {
+        $customer = $this->getCustomer();
+        return view('portal.contacts', [
+            'customer' => $customer,
+            'contacts' => $customer->contacts()->orderBy('type')->orderBy('created_at')->get(),
+            'requests' => $customer->changeRequests()->whereIn('type', ['email', 'phone'])->latest()->get(),
+        ]);
+    }
+
+    public function contactStore(Request $request)
+    {
+        $data = $this->validateContact($request);
+        $label = $data['type'] === 'email' ? 'E-Mail-Adresse' : 'Telefonnummer';
+        $this->createRequest($data['type'], null, ['label' => $data['label'], 'value' => $data['value']], 'Neue ' . $label . ' beantragt');
+        return back()->with('success', 'Ihre Kontaktinformation wurde zur Prüfung eingereicht.');
+    }
+
+    public function contactChange(Request $request, $id)
+    {
+        $customer = $this->getCustomer();
+        $contact = CustomerContact::where('customer_id', $customer->id)->where('id', $id)->firstOrFail();
+
+        $data = $this->validateContact($request, $contact->type);
+        $this->createRequest(
+            $contact->type,
+            ['id' => $contact->id, 'label' => $contact->label, 'value' => $contact->value],
+            ['id' => $contact->id, 'label' => $data['label'], 'value' => $data['value']],
+            'Änderung Kontaktinformation beantragt'
+        );
+        return back()->with('success', 'Ihre Änderung wurde zur Prüfung eingereicht.');
+    }
+
+    private function validateContact(Request $request, ?string $forcedType = null): array
+    {
+        $type = $forcedType ?: $request->input('type');
+        $rules = [
+            'label' => 'required|in:privat,geschaeftlich,sonstige',
+            'value' => $type === 'email'
+                ? 'required|email|max:255'
+                : ['required', 'string', 'max:30', 'regex:/^[0-9+\/\s()-]{6,}$/'],
+        ];
+        if (!$forcedType) {
+            $rules['type'] = 'required|in:email,phone';
+        }
+        $data = $request->validate($rules);
+        $data['type'] = $type;
+        return $data;
+    }
+
+    // ------------------------------------------------------------------
+    // Bankverbindung
+    // ------------------------------------------------------------------
+
+    public function bank()
+    {
+        $customer = $this->getCustomer();
+        return view('portal.bank', [
+            'customer' => $customer,
+            'requests' => $customer->changeRequests()->where('type', 'bank')->latest()->get(),
+        ]);
+    }
+
+    public function bankStore(Request $request)
+    {
+        $data = $request->validate([
+            'iban' => ['required', 'string', 'max:34', 'regex:/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/'],
+            'account_holder' => 'required|string|max:255',
+        ]);
+
+        $customer = $this->getCustomer();
+        $this->createRequest(
+            'bank',
+            [
+                'iban' => $customer->iban ? '••••' . substr($customer->iban, -4) : null,
+                'account_holder' => $customer->account_holder,
+            ],
+            $data,
+            'Neue Bankverbindung beantragt'
+        );
+
+        return back()->with('success', 'Ihre neue Bankverbindung wurde zur Prüfung eingereicht. Die Änderung wird erst nach Freigabe wirksam.');
+    }
+
+    // ------------------------------------------------------------------
+    // Vertrag melden (inkl. Dokument-Upload)
+    // ------------------------------------------------------------------
+
+    public function contractReport(Request $request)
+    {
+        $data = $request->validate([
+            'type' => 'required|in:kfz,krankenversicherung,haftpflicht,rechtsschutz,hausrat,escooter,leben,unfall,internet,strom_gas,andere',
+            'insurer' => 'required|string|max:255',
+            'contract_number' => 'nullable|string|max:100',
+            'document' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+        ]);
+
+        $customer = $this->getCustomer();
+
+        $payload = [
+            'type' => $data['type'],
+            'insurer' => $data['insurer'],
+            'contract_number' => $data['contract_number'] ?? null,
+        ];
+
+        if ($request->hasFile('document')) {
+            $file = $request->file('document');
+            $payload['document_path'] = $file->store('contracts/reported/' . $customer->id, 'public');
+            $payload['document_name'] = $file->getClientOriginalName();
+        }
+
+        $this->createRequest('contract', null, $payload, 'Neuer Vertrag gemeldet: ' . $data['insurer']);
+
+        return back()->with('success', 'Ihr Vertrag wurde gemeldet und wird von uns geprüft.');
+    }
+
+    // ------------------------------------------------------------------
+    // Änderungsanfragen (eigene Übersicht)
+    // ------------------------------------------------------------------
+
+    public function changeRequests()
+    {
+        $customer = $this->getCustomer();
+        return view('portal.change_requests', [
+            'requests' => $customer->changeRequests()->with('reviewer')->latest()->get(),
+        ]);
+    }
+
+    // ------------------------------------------------------------------
+    // Gemeinsame Logik: Request anlegen + Staff benachrichtigen + Audit
+    // ------------------------------------------------------------------
+
+    private function createRequest(string $type, ?array $oldData, array $newData, string $auditText): CustomerChangeRequest
+    {
+        $customer = $this->getCustomer();
+
+        $changeRequest = CustomerChangeRequest::create([
+            'customer_id' => $customer->id,
+            'requested_by' => auth()->id(),
+            'type' => $type,
+            'old_data' => $oldData,
+            'new_data' => $newData,
+            'status' => 'pending',
+        ]);
+
+        // Punkt 10: interne Benachrichtigung an admin, manager, support
+        $recipients = User::whereIn('role', ['admin', 'manager', 'support'])
+            ->where('is_active', true)->get();
+        foreach ($recipients as $recipient) {
+            InternalNotification::create([
+                'user_id' => $recipient->id,
+                'change_request_id' => $changeRequest->id,
+            ]);
+        }
+
+        // Punkt 11: Audit-Log (wer, wann, was)
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'change_request_created',
+            'entity_type' => 'change_request',
+            'entity_id' => $changeRequest->id,
+            'meta' => json_encode([
+                'customer_id' => (string) $customer->id,
+                'type' => $type,
+                'text' => $auditText,
+            ], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        return $changeRequest;
+    }
+}
