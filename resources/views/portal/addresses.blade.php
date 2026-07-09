@@ -36,7 +36,8 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
             </div>
         </div>
         <p style="font-size:13.5px;line-height:1.6;color:var(--ink-soft);">{{ $a->street }}<br>{{ $a->zip }} {{ $a->city }}<br>{{ $a->country }}</p>
-        <button onclick='openAddressChange(@json($a->only(["id","type","street","zip","city","country"])))' class="btn btn-ghost" style="margin-top:12px;font-size:12.5px;padding:7px 14px;">✏️ Änderung beantragen</button>
+        @php $addressPayload = $a->only(['id','type','street','zip','city','country']); @endphp
+        <button onclick='openAddressChange(@json($addressPayload))' class="btn btn-ghost" style="margin-top:12px;font-size:12.5px;padding:7px 14px;">✏️ Änderung beantragen</button>
     </div>
     @endforeach
 

@@ -31,7 +31,7 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
             </div>
             <div style="display:flex;align-items:center;gap:8px;">
                 @if(in_array($c->id, $pendingChangeIds))<span class="badge badge-pending">In Prüfung</span>@else<span class="badge badge-active">Aktiv</span>@endif
-                <button onclick='openContactChange(@json($c->only(["id","type","label","value"])))' class="btn btn-ghost" style="font-size:12px;padding:6px 10px;">✏️</button>
+                @php $contactPayload = $c->only(['id','type','label','value']); @endphp<button onclick='openContactChange(@json($contactPayload))' class="btn btn-ghost" style="font-size:12px;padding:6px 10px;">✏️</button>
             </div>
         </div>
         @endforeach
@@ -65,7 +65,7 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
             </div>
             <div style="display:flex;align-items:center;gap:8px;">
                 @if(in_array($c->id, $pendingChangeIds))<span class="badge badge-pending">In Prüfung</span>@else<span class="badge badge-active">Aktiv</span>@endif
-                <button onclick='openContactChange(@json($c->only(["id","type","label","value"])))' class="btn btn-ghost" style="font-size:12px;padding:6px 10px;">✏️</button>
+                @php $contactPayload = $c->only(['id','type','label','value']); @endphp<button onclick='openContactChange(@json($contactPayload))' class="btn btn-ghost" style="font-size:12px;padding:6px 10px;">✏️</button>
             </div>
         </div>
         @endforeach
