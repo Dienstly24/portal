@@ -107,6 +107,31 @@
         </div>
         <div class="field"><label>Adresse 2 (Zweitwohnsitz / Postadresse)</label><input type="text" name="address2" value="{{ $customer->address2 }}" placeholder="Optional"></div>
     </div>
+    <div style="border-top:1px solid var(--line);padding-top:20px;margin-top:4px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <div class="card-title" style="margin-bottom:0;">🏥 Kranken-, Renten- & Steuerdaten</div>
+            <span style="font-size:11.5px;background:#EAF2FB;color:#185FA5;border:1px solid #CFE2F5;padding:3px 10px;border-radius:999px;">🔐 Verschlüsselt gespeichert</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="field"><label>Versicherungsart</label>
+                <select name="health_insurance_type" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                    <option value="">— Nicht angegeben —</option>
+                    <option value="gesetzlich" {{ $customer->health_insurance_type === 'gesetzlich' ? 'selected' : '' }}>Gesetzlich</option>
+                    <option value="privat" {{ $customer->health_insurance_type === 'privat' ? 'selected' : '' }}>Privat</option>
+                </select>
+            </div>
+            <div class="field"><label>Krankenkasse</label><input type="text" name="health_insurance_company" value="{{ $customer->health_insurance_company }}" placeholder="z.B. TK, AOK"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="field"><label>Krankenversicherungsnummer</label><input type="text" name="health_insurance_number" value="{{ $customer->health_insurance_number }}" placeholder="KV-Nummer"></div>
+            <div class="field"><label>Rentenversicherungsnummer</label><input type="text" name="pension_insurance_number" value="{{ $customer->pension_insurance_number }}" placeholder="z.B. 65 170439 K 001"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="field"><label>Steuer-ID (optional)</label><input type="text" name="tax_id" value="{{ $customer->tax_id }}" placeholder="11-stellige Steuer-ID"></div>
+            <div></div>
+        </div>
+    </div>
+
 </div>
 
 {{-- Tab: Familie & Fahrzeuge --}}
@@ -147,6 +172,17 @@
             <div class="field"><label>Krankenversicherungsnr.</label><input type="text" name="family_kv_nr[]" placeholder="z.B. A123456789"></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="field"><label>Krankenkasse</label><input type="text" name="family_kv_company[]" placeholder="z.B. TK, AOK"></div>
+            <div class="field"><label>KV-Status</label>
+                <select name="family_kv_status[]" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                    <option value="">—</option>
+                    <option value="mitglied">Mitglied</option>
+                    <option value="familienversichert">Familienversichert</option>
+                </select>
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="field"><label>Versicherungsbeginn</label><input type="date" name="family_kv_start[]"></div>
             <div class="field"><label>Steuernummer / Steuer-ID</label><input type="text" name="family_steuer[]" placeholder="z.B. 12 345 678 901"></div>
             <div class="field"><label>Geschlecht</label>
                 <select name="family_geschlecht[]" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">

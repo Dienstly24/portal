@@ -5,7 +5,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class InternalNotification extends Model
 {
-    protected $fillable = ['user_id', 'message_id', 'change_request_id', 'read_at'];
+    protected $fillable = ['user_id', 'message_id', 'change_request_id', 'title', 'body', 'link', 'read_at'];
     protected $casts = ['read_at' => 'datetime'];
 
     public function user() { return $this->belongsTo(User::class); }
