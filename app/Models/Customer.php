@@ -29,6 +29,34 @@ class Customer extends Model {
         ];
     }
 
+    /**
+     * Vollständigkeit der Kundenakte (Final Polish Punkt 5).
+     * Liefert Prozent + Liste offener Punkte mit direktem Portal-Link.
+     * Steuer-ID zählt als optional (nicht prozentmindernd).
+     */
+    public function completeness(): array
+    {
+        $checks = [
+            ['ok' => !empty($this->health_insurance_company), 'label' => 'Krankenkasse fehlt', 'route' => 'portal.profile'],
+            ['ok' => $this->family()->exists(), 'label' => 'Familienmitglieder fehlen', 'route' => 'portal.family'],
+            ['ok' => !empty($this->iban), 'label' => 'Bankverbindung fehlt', 'route' => 'portal.bank'],
+            ['ok' => $this->contracts()->whereHas('vehicleDetail')->exists(), 'label' => 'Fahrzeugdaten fehlen', 'route' => 'portal.contracts'],
+            ['ok' => $this->contracts()->where('type', 'strom_gas')->exists(), 'label' => 'Energievertrag fehlt', 'route' => 'portal.contracts'],
+            ['ok' => $this->contracts()->where('type', 'internet')->exists(), 'label' => 'Internetvertrag fehlt', 'route' => 'portal.contracts'],
+        ];
+
+        $done = count(array_filter($checks, fn($c) => $c['ok']));
+        $percent = (int) round($done / count($checks) * 100);
+
+        $missing = array_values(array_filter($checks, fn($c) => !$c['ok']));
+        // Steuer-ID als optionaler Hinweis (zählt nicht in die Prozent)
+        if (empty($this->tax_id)) {
+            $missing[] = ['ok' => false, 'label' => 'Steuer-ID optional', 'route' => 'portal.profile', 'optional' => true];
+        }
+
+        return ['percent' => $percent, 'missing' => $missing];
+    }
+
     /** Korrekte Briefanrede für E-Mails und Vorlagen. */
     public function salutationLine(?string $fallbackName = null): string {
         $name = $this->user?->name ?: ($fallbackName ?? '');
