@@ -36,6 +36,25 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
     </div>
 </div>
 
+
+{{-- Tab-Navigation (Kundenprofil) --}}
+<style>
+.cust-tabs{display:flex;gap:4px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px;margin-bottom:20px;overflow-x:auto;}
+.cust-tab{flex:1;text-align:center;padding:10px 16px;border-radius:8px;font-size:13.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;white-space:nowrap;text-decoration:none;transition:.15s;border:none;background:none;}
+.cust-tab:hover{background:var(--canvas);color:var(--ink);}
+.cust-tab.active{background:var(--petrol);color:#fff;}
+.chat-bubble{max-width:75%;padding:10px 14px;border-radius:12px;font-size:13.5px;line-height:1.55;}
+.chat-row{display:flex;gap:10px;margin-bottom:14px;align-items:flex-end;}
+.chat-avatar{width:32px;height:32px;border-radius:50%;background:var(--petrol);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:none;}
+</style>
+<div class="cust-tabs">
+    <button type="button" class="cust-tab active" data-tab="tab-uebersicht" onclick="showCustTab('tab-uebersicht',this)">📄 Übersicht</button>
+    <button type="button" class="cust-tab" data-tab="tab-vertraege" onclick="showCustTab('tab-vertraege',this)">📑 Verträge <span style="opacity:.7;">({{ $customer->contracts->count() }})</span></button>
+    <button type="button" class="cust-tab" data-tab="tab-tickets" onclick="showCustTab('tab-tickets',this)">🎫 Tickets <span style="opacity:.7;">({{ $customer->tickets->count() }})</span></button>
+    <button type="button" class="cust-tab" data-tab="tab-intern" onclick="showCustTab('tab-intern',this)">💬 Intern <span style="opacity:.7;">({{ $internalChat->count() }})</span></button>
+    <button type="button" class="cust-tab" data-tab="tab-notizen" onclick="showCustTab('tab-notizen',this)">📝 Notizen</button>
+</div>
+<div class="tab-section" id="tab-uebersicht">
 {{-- Vertragsstruktur Icons --}}
 <div class="card" style="margin-bottom:20px;">
     <div class="card-title" style="margin-bottom:16px;">Vertragsstruktur</div>
@@ -77,39 +96,31 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
     </table>
 </div>
 
-{{-- Notizen & Aufgaben --}}
+{{-- Dokumente --}}
 <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-        <div class="card-title">Notizen & Aufgaben</div>
-        <button onclick="document.getElementById('add-note-modal').style.display='flex'" style="width:28px;height:28px;border-radius:50%;border:none;background:var(--petrol);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
+        <div class="card-title">Dokumente</div>
+        <button onclick="document.getElementById('add-doc-modal').style.display='flex'" style="width:28px;height:28px;border-radius:50%;border:none;background:var(--petrol);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
     </div>
-    @php $notes = \App\Models\CustomerNote::where('customer_id',$customer->id)->with('createdBy')->latest()->get(); @endphp
-    @forelse($notes as $n)
-    <div style="padding:10px 0;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:10px;">
-        <span style="font-size:16px;">{{ $n->type === 'task' ? '✅' : '📝' }}</span>
+    @php $docs = $customer->documents; @endphp
+    @forelse($docs as $d)
+    @php $dotColor = ['red'=>'#E24B4A','yellow'=>'#F0A500','green'=>'#3B7A57'][$d->color ?? 'green']; @endphp
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);">
+        <div style="width:10px;height:10px;border-radius:50%;background:{{ $dotColor }};flex:none;"></div>
         <div style="flex:1;">
-            <div style="font-size:13px;line-height:1.5;">{{ $n->note }}</div>
-            <div style="font-size:11px;color:var(--ink-soft);margin-top:3px;">
-                {{ $n->createdBy?->name }} · {{ $n->created_at->format('d.m.Y H:i') }}
-                @if($n->due_date) · Fällig: {{ \Carbon\Carbon::parse($n->due_date)->format('d.m.Y') }} @endif
-            </div>
+            <div style="font-size:14px;font-weight:600;">{{ $d->file_name }}</div>
+            <div style="font-size:12px;color:var(--ink-soft);">{{ ucfirst($d->category) }} · {{ $d->created_at->format('d.m.Y') }}</div>
         </div>
-        @if($n->type === 'task')
-        <form method="POST" action="{{ route('admin.customer.note.done', $n->id) }}">
-            @csrf @method('PUT')
-            <button type="submit" style="border:none;background:none;cursor:pointer;font-size:14px;color:{{ $n->is_done ? '#3B7A57' : 'var(--ink-soft)' }};">
-                {{ $n->is_done ? '✓' : '○' }}
-            </button>
-        </form>
-        @endif
+        <a href="{{ Storage::url($d->file_path) }}" target="_blank" class="btn btn-ghost btn-sm">⬇</a>
     </div>
     @empty
-    <p style="color:var(--ink-soft);font-size:14px;">Noch keine Notizen.</p>
+    <p style="color:var(--ink-soft);font-size:14px;">Keine Dokumente.</p>
     @endforelse
 </div>
-
+</div>
 </div>
 
+<div class="tab-section" id="tab-vertraege" style="display:none;">
 {{-- Verträge --}}
 <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
@@ -156,29 +167,9 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
         </tbody>
     </table>
 </div>
-
-{{-- Dokumente --}}
-<div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-        <div class="card-title">Dokumente</div>
-        <button onclick="document.getElementById('add-doc-modal').style.display='flex'" style="width:28px;height:28px;border-radius:50%;border:none;background:var(--petrol);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
-    </div>
-    @php $docs = $customer->documents; @endphp
-    @forelse($docs as $d)
-    @php $dotColor = ['red'=>'#E24B4A','yellow'=>'#F0A500','green'=>'#3B7A57'][$d->color ?? 'green']; @endphp
-    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);">
-        <div style="width:10px;height:10px;border-radius:50%;background:{{ $dotColor }};flex:none;"></div>
-        <div style="flex:1;">
-            <div style="font-size:14px;font-weight:600;">{{ $d->file_name }}</div>
-            <div style="font-size:12px;color:var(--ink-soft);">{{ ucfirst($d->category) }} · {{ $d->created_at->format('d.m.Y') }}</div>
-        </div>
-        <a href="{{ Storage::url($d->file_path) }}" target="_blank" class="btn btn-ghost btn-sm">⬇</a>
-    </div>
-    @empty
-    <p style="color:var(--ink-soft);font-size:14px;">Keine Dokumente.</p>
-    @endforelse
 </div>
 
+<div class="tab-section" id="tab-tickets" style="display:none;">
 {{-- Anträge --}}
 <div class="card">
     <div class="card-title" style="margin-bottom:16px;">Anträge</div>
@@ -204,6 +195,114 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
         @endforelse
         </tbody>
     </table>
+</div>
+</div>
+
+<div class="tab-section" id="tab-intern" style="display:none;">
+
+{{-- Interner Chat: NUR für Mitarbeiter, wird niemals im Kundenportal angezeigt --}}
+<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div class="card-title">💬 Interner Chat</div>
+        <span style="font-size:11.5px;background:#FFF8E6;color:#B5651D;border:1px solid #F7E7D6;padding:3px 10px;border-radius:999px;">🔒 Nur für Mitarbeiter sichtbar</span>
+    </div>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;">Erwähnen Sie Kollegen mit <b>@Name</b>, <b>@Support</b>, <b>@Manager</b> oder <b>@Admin</b> – sie erhalten eine Benachrichtigung.</p>
+    <div id="internal-chat-scroll" style="max-height:420px;overflow-y:auto;padding:6px 2px;background:var(--canvas);border:1px solid var(--line);border-radius:10px;padding:14px;">
+        @forelse($internalChat as $msg)
+        @php $own = $msg->sender_id === auth()->id(); @endphp
+        <div class="chat-row" style="{{ $own ? 'flex-direction:row-reverse;' : '' }}">
+            <div class="chat-avatar" style="{{ $own ? 'background:var(--gold);' : '' }}">{{ strtoupper(mb_substr($msg->sender?->name ?? '??', 0, 2)) }}</div>
+            <div style="max-width:75%;">
+                <div style="font-size:11px;color:var(--ink-soft);margin-bottom:3px;{{ $own ? 'text-align:right;' : '' }}">
+                    {{ $msg->sender?->name ?? 'Gelöschter Nutzer' }} · {{ $msg->created_at->format('d.m.Y H:i') }}
+                </div>
+                <div class="chat-bubble" style="{{ $own ? 'background:var(--petrol);color:#fff;border-bottom-right-radius:4px;' : 'background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px;' }}">
+                    {!! $msg->renderedMessage() !!}
+                </div>
+                @can('delete', $msg)
+                <form method="POST" action="{{ route('admin.internal.destroy', $msg->id) }}" onsubmit="return confirm('Nachricht wirklich löschen?');" style="margin-top:2px;{{ $own ? 'text-align:right;' : '' }}">
+                    @csrf @method('DELETE')
+                    <button type="submit" style="border:none;background:none;color:var(--ink-soft);font-size:11px;cursor:pointer;">Löschen</button>
+                </form>
+                @endcan
+            </div>
+        </div>
+        @empty
+        <p style="color:var(--ink-soft);font-size:14px;text-align:center;padding:20px 0;">Noch keine internen Nachrichten zu diesem Kunden.</p>
+        @endforelse
+    </div>
+    <form method="POST" action="{{ route('admin.internal.store', $customer->id) }}" style="display:flex;gap:10px;margin-top:14px;align-items:flex-end;">
+        @csrf
+        <input type="hidden" name="type" value="chat">
+        <textarea name="message" required maxlength="5000" placeholder="Interne Nachricht… z.B. @Support Bitte prüfen, warum die Police noch nicht aktiviert wurde." style="flex:1;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;font-family:inherit;resize:vertical;min-height:52px;"></textarea>
+        <button type="submit" class="btn btn-primary" style="height:44px;">Senden</button>
+    </form>
+</div>
+</div>
+
+<div class="tab-section" id="tab-notizen" style="display:none;">
+<div class="grid-2">
+{{-- Notizen & Aufgaben --}}
+<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div class="card-title">Notizen & Aufgaben</div>
+        <button onclick="document.getElementById('add-note-modal').style.display='flex'" style="width:28px;height:28px;border-radius:50%;border:none;background:var(--petrol);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
+    </div>
+    @php $notes = \App\Models\CustomerNote::where('customer_id',$customer->id)->with('createdBy')->latest()->get(); @endphp
+    @forelse($notes as $n)
+    <div style="padding:10px 0;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:10px;">
+        <span style="font-size:16px;">{{ $n->type === 'task' ? '✅' : '📝' }}</span>
+        <div style="flex:1;">
+            <div style="font-size:13px;line-height:1.5;">{{ $n->note }}</div>
+            <div style="font-size:11px;color:var(--ink-soft);margin-top:3px;">
+                {{ $n->createdBy?->name }} · {{ $n->created_at->format('d.m.Y H:i') }}
+                @if($n->due_date) · Fällig: {{ \Carbon\Carbon::parse($n->due_date)->format('d.m.Y') }} @endif
+            </div>
+        </div>
+        @if($n->type === 'task')
+        <form method="POST" action="{{ route('admin.customer.note.done', $n->id) }}">
+            @csrf @method('PUT')
+            <button type="submit" style="border:none;background:none;cursor:pointer;font-size:14px;color:{{ $n->is_done ? '#3B7A57' : 'var(--ink-soft)' }};">
+                {{ $n->is_done ? '✓' : '○' }}
+            </button>
+        </form>
+        @endif
+    </div>
+    @empty
+    <p style="color:var(--ink-soft);font-size:14px;">Noch keine Notizen.</p>
+    @endforelse
+</div>
+
+{{-- Interne Notizen (dauerhaft, nur Mitarbeiter) --}}
+<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div class="card-title">📌 Interne Notizen</div>
+        <span style="font-size:11.5px;background:#FFF8E6;color:#B5651D;border:1px solid #F7E7D6;padding:3px 10px;border-radius:999px;">🔒 Nur intern</span>
+    </div>
+    @forelse($internalNotes as $note)
+    <div style="padding:10px 12px;border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:8px;margin-bottom:10px;background:#FDFDFB;">
+        <div style="font-size:13px;line-height:1.55;">{!! $note->renderedMessage() !!}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:5px;">
+            <span style="font-size:11px;color:var(--ink-soft);">{{ $note->sender?->name ?? 'Gelöschter Nutzer' }} · {{ $note->created_at->format('d.m.Y H:i') }}</span>
+            @can('delete', $note)
+            <form method="POST" action="{{ route('admin.internal.destroy', $note->id) }}" onsubmit="return confirm('Notiz wirklich löschen?');" style="margin:0;">
+                @csrf @method('DELETE')
+                <button type="submit" style="border:none;background:none;color:var(--ink-soft);font-size:11px;cursor:pointer;">Löschen</button>
+            </form>
+            @endcan
+        </div>
+    </div>
+    @empty
+    <p style="color:var(--ink-soft);font-size:14px;">Noch keine internen Notizen. Beispiele: „Kunde bevorzugt Kontakt per WhatsApp.", „Nicht telefonisch kontaktieren, nur E-Mail."</p>
+    @endforelse
+    <form method="POST" action="{{ route('admin.internal.store', $customer->id) }}" style="margin-top:14px;">
+        @csrf
+        <input type="hidden" name="type" value="note">
+        <div class="field"><textarea name="message" required maxlength="5000" placeholder="Wichtige dauerhafte Information zum Kunden…" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;font-family:inherit;resize:vertical;min-height:64px;"></textarea></div>
+        <button type="submit" class="btn btn-primary">Notiz speichern</button>
+    </form>
+</div>
+</div>
 </div>
 
 {{-- Add Contract Modal --}}
@@ -317,5 +416,27 @@ function filterContracts() {
         <button type="submit" class="btn btn-ghost" style="color:#A32D2D;border-color:#A32D2D;">🗑 Kunde löschen</button>
     </form>
 </div>
+
+
+<script>
+function showCustTab(id, btn) {
+    document.querySelectorAll('.tab-section').forEach(el => el.style.display = el.id === id ? '' : 'none');
+    document.querySelectorAll('.cust-tab').forEach(el => el.classList.toggle('active', el === btn));
+    history.replaceState(null, '', '#' + id);
+    if (id === 'tab-intern') scrollChatDown();
+}
+function scrollChatDown() {
+    const box = document.getElementById('internal-chat-scroll');
+    if (box) box.scrollTop = box.scrollHeight;
+}
+document.addEventListener('DOMContentLoaded', () => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash && document.getElementById(hash) && hash.startsWith('tab-')) {
+        const btn = document.querySelector('.cust-tab[data-tab="' + hash + '"]');
+        if (btn) showCustTab(hash, btn);
+    }
+    scrollChatDown();
+});
+</script>
 
 @endsection

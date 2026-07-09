@@ -39,6 +39,22 @@ class User extends Authenticatable {
         }
         return array_values(array_unique($ids));
     }
+    /** Interne Rollen - Kunden sind ausdrücklich KEIN Staff. */
+    public function isStaff(): bool {
+        return in_array($this->role, ['admin', 'manager', 'support', 'employee'], true);
+    }
+
+    /**
+     * Einheitliche Sichtbarkeitsprüfung für einen Kunden:
+     * admin/manager/can_see_all_customers sehen alles, sonst zählt die
+     * Zuweisung inkl. aktiver Vertretungen. (Basis für Policies)
+     */
+    public function canAccessCustomer($customerId): bool {
+        if (!$this->isStaff()) return false;
+        if ($this->canSeeAllCustomers()) return true;
+        return in_array((string) $customerId, array_map('strval', $this->visibleCustomerIdsWithSubstitution()), true);
+    }
+
     public function isAdmin() { return $this->role === 'admin'; }
     public function isEmployee() { return $this->role === 'employee'; }
     public function isCustomer() { return $this->role === 'customer'; }

@@ -27,7 +27,7 @@ class EnsureUserRole
 
         if (!in_array($user->role, $roles)) {
             // Falsche Rolle: zum richtigen Bereich umleiten
-            if (in_array($user->role, ['admin', 'manager', 'employee'])) {
+            if (in_array($user->role, ['admin', 'manager', 'support', 'employee'])) {
                 return redirect()->route('admin.dashboard');
             }
             return redirect()->route('portal.dashboard');

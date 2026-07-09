@@ -41,7 +41,7 @@ require __DIR__.'/auth.php';
 | Admin (admin.dienstly24.de/admin)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'role:admin,manager,employee'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admin')->name('admin.')->group(function () {
 
     // Dashboard & Suche
     Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
@@ -86,6 +86,13 @@ Route::middleware(['auth', 'role:admin,manager,employee'])->prefix('admin')->nam
     // Genehmigungen
     Route::get('/approvals', [AdminController::class, 'approvals'])->name('approvals');
     Route::post('/approvals/{id}', [AdminController::class, 'approvalAction'])->name('approval.action');
+
+    // Interner Chat & Notizen (nur Mitarbeiter - keine Portal-Routen!)
+    Route::post('/customers/{id}/internal-messages', [\App\Http\Controllers\InternalMessageController::class, 'store'])->name('internal.store');
+    Route::delete('/internal-messages/{id}', [\App\Http\Controllers\InternalMessageController::class, 'destroy'])->name('internal.destroy');
+    Route::get('/notifications', [\App\Http\Controllers\InternalNotificationController::class, 'index'])->name('notifications');
+    Route::post('/notifications/{id}/read', [\App\Http\Controllers\InternalNotificationController::class, 'markRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [\App\Http\Controllers\InternalNotificationController::class, 'markAllRead'])->name('notifications.read_all');
 
     // Aufgaben
     Route::get('/tasks', [TaskController::class, 'index'])->name('tasks');

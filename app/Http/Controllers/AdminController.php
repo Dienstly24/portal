@@ -64,7 +64,10 @@ class AdminController extends Controller
     public function customerShow($id) {
         $this->authorizeCustomerAccess($id);
         $customer = Customer::with(['user','contracts','tickets','documents','approvalRequests'])->findOrFail($id);
-        return view('admin.customer_show', compact('customer'));
+        // Interner Chat & Notizen (nur Staff - Zugriff bereits oben geprüft)
+        $internalChat = \App\Models\InternalMessage::chat()->where('customer_id', $id)->with('sender')->orderBy('created_at')->get();
+        $internalNotes = \App\Models\InternalMessage::note()->where('customer_id', $id)->with('sender')->latest()->get();
+        return view('admin.customer_show', compact('customer', 'internalChat', 'internalNotes'));
     }
 
     public function contracts() {
