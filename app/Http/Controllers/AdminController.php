@@ -418,6 +418,15 @@ class AdminController extends Controller
         return redirect()->route('admin.customer.edit', $customerId)->with('success', 'Familienmitglied entfernt.');
     }
 
+    /** Sicherer Dokument-Download (Admin) - nur mit Zugriff auf den Kunden. */
+    public function documentDownload($id) {
+        $doc = \App\Models\Document::findOrFail($id);
+        $this->authorizeCustomerAccess($doc->customer_id);
+        $disk = $doc->disk ?: 'public';
+        abort_unless(\Illuminate\Support\Facades\Storage::disk($disk)->exists($doc->file_path), 404);
+        return \Illuminate\Support\Facades\Storage::disk($disk)->download($doc->file_path, $doc->file_name);
+    }
+
     public function downloadAttachment($id) {
         $a = \App\Models\TicketAttachment::findOrFail($id);
         $ticket = Ticket::findOrFail($a->ticket_id);

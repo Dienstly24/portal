@@ -65,7 +65,7 @@ $fmt = fn($v) => $valueLabels[$v] ?? $v;
                         @endif
                     @endforeach
                     @if(!empty($r->new_data['document_path']))
-                    <div style="font-size:13px;padding:4px 0;">📎 <a href="{{ asset('storage/' . $r->new_data['document_path']) }}" target="_blank" style="color:var(--petrol);">{{ $r->new_data['document_name'] ?? 'Dokument öffnen' }}</a></div>
+                    <div style="font-size:13px;padding:4px 0;">📎 <a href="{{ route('admin.change_requests.document', $r->id) }}" style="color:var(--petrol);">{{ $r->new_data['document_name'] ?? 'Dokument öffnen' }}</a></div>
                     @endif
                 </div>
             </div>

@@ -115,6 +115,8 @@ class ChangeRequestService
                 'category' => 'contract',
                 'file_name' => $data['document_name'] ?? basename($data['document_path']),
                 'file_path' => $data['document_path'],
+                // Ältere, vor der Umstellung eingereichte Anträge liegen noch auf 'public'
+                'disk' => $data['document_disk'] ?? 'public',
             ]);
         }
     }

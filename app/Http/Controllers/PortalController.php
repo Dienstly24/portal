@@ -108,6 +108,19 @@ class PortalController extends Controller
         return back()->with('success', 'Nachricht gesendet.');
     }
 
+    /**
+     * Sicherer Dokument-Download: nur authentifizierte Kunden, nur
+     * Dokumente des eigenen Kundendatensatzes (sonst 404). Funktioniert
+     * für private ('local') und Bestandsdokumente ('public').
+     */
+    public function documentDownload($id) {
+        $customer = $this->getCustomer();
+        $doc = \App\Models\Document::where('customer_id', $customer->id)->where('id', $id)->firstOrFail();
+        $disk = $doc->disk ?: 'public';
+        abort_unless(\Illuminate\Support\Facades\Storage::disk($disk)->exists($doc->file_path), 404);
+        return \Illuminate\Support\Facades\Storage::disk($disk)->download($doc->file_path, $doc->file_name);
+    }
+
     public function documents() {
         $customer = $this->getCustomer();
         return view('portal.documents', [
