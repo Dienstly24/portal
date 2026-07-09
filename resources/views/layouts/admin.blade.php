@@ -164,6 +164,16 @@ table tr:hover td{background:#FAFAF8;}
         Tarifrechner
     </a>
         @endif
+    <a href="{{ route('admin.change_requests') }}" class="nav-item {{ request()->routeIs('admin.change_requests*') ? 'active' : '' }}">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        Kundenänderungen
+        @php
+            $crQ = \App\Models\CustomerChangeRequest::where('status','pending');
+            if (!auth()->user()->canSeeAllCustomers()) { $crQ->whereIn('customer_id', auth()->user()->visibleCustomerIdsWithSubstitution()); }
+            $pendingCR = $crQ->count();
+        @endphp
+        @if($pendingCR > 0)<span class="nav-badge">{{ $pendingCR }}</span>@endif
+    </a>
     <a href="{{ route('admin.announcements') }}" class="nav-item {{ request()->routeIs('admin.announcements*') ? 'active' : '' }}">
         <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
         Ankündigungen

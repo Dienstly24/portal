@@ -258,6 +258,7 @@ class AdminController extends Controller
             'iban2' => $request->iban2,
             'birth_date' => $request->birth_date ?: null,
             'marital_status' => $request->marital_status,
+            'gender' => in_array($request->gender, ['male','female','diverse'], true) ? $request->gender : null,
             'preferred_lang' => $request->preferred_lang,
             'nationality' => $request->nationality,
             'occupation' => $request->occupation,
@@ -451,7 +452,8 @@ class AdminController extends Controller
         \Illuminate\Support\Facades\DB::table('employee_customers')->where('customer_id', $dup->id)->update(['customer_id' => $primary->id]);
 
         // 2) Fehlende Felder vom Duplikat übernehmen
-        foreach (['phone','mobile','address','address2','iban','iban2','birth_date','marital_status','nationality','occupation','email2','company_name','company_type'] as $f) {
+        $request->validate(['gender' => 'nullable|in:male,female,diverse']);
+        foreach (['phone','mobile','address','address2','iban','iban2','birth_date','marital_status','nationality','occupation','email2','company_name','company_type','gender'] as $f) {
             if (empty($primary->$f) && !empty($dup->$f)) $primary->$f = $dup->$f;
         }
         $primary->save();
