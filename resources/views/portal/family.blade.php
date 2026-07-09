@@ -40,7 +40,8 @@ $rejected = $requests->where('status','rejected');
             <span class="badge badge-active">Aktiv</span>
             @endif
         </div>
-        <button onclick='openFamilyChange(@json($m->only(["id","name","relation","birth_date"])))' class="btn btn-ghost" style="margin-top:12px;font-size:12.5px;padding:7px 14px;">✏️ Änderung beantragen</button>
+        @php $familyPayload = $m->only(['id','name','relation','birth_date']); @endphp
+        <button onclick='openFamilyChange(@json($familyPayload))' class="btn btn-ghost" style="margin-top:12px;font-size:12.5px;padding:7px 14px;">✏️ Änderung beantragen</button>
     </div>
     @endforeach
 

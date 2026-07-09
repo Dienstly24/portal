@@ -103,7 +103,7 @@ class ChangeRequestService
             'customer_id' => $customer->id,
             'type' => $data['type'] ?? 'andere',
             'insurer' => $data['insurer'] ?? '',
-            'contract_number' => $data['contract_number'] ?? null,
+            'contract_number' => $data['contract_number'] ?? '', // Spalte ist NOT NULL
             // Gemeldete Verträge starten als 'pending' (In Bearbeitung),
             // damit das Team die Übernahme abschließen kann.
             'status' => 'pending',
