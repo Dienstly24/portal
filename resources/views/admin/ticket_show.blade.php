@@ -38,7 +38,6 @@
 @endif
 @php
     $customerMessages = $ticket->messages->where('is_internal', false);
-    $internalMessages = $ticket->messages->where('is_internal', true);
 @endphp
 {{-- Kundenkommunikation: sichtbar im Kundenportal --}}
 <div class="card">
@@ -52,20 +51,17 @@
     <p style="color:var(--ink-soft);font-size:14px;">Noch keine Nachrichten an den Kunden.</p>
     @endforelse
 </div>
-{{-- Interner Bereich: NUR Mitarbeiter, wird niemals ans Kundenportal ausgeliefert --}}
+{{-- Interne Kommunikation läuft NICHT mehr über Tickets, sondern über
+     den eigenständigen internen Chat - so kann nichts Internes
+     versehentlich an Kunden gesendet werden. (Spec Teil 8) --}}
 <div class="card" style="background:#FFFDF7;border-color:#F7E7D6;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-        <div class="card-title" style="margin-bottom:0;">🔒 Interner Bereich</div>
-        <span style="font-size:11.5px;background:#F7E7D6;color:#B5651D;padding:3px 10px;border-radius:999px;">Nur für Mitarbeiter sichtbar</span>
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+            <div class="card-title" style="margin-bottom:2px;">🔒 Interne Absprache nötig?</div>
+            <div style="font-size:13px;color:var(--ink-soft);">Interne Nachrichten laufen jetzt über den separaten internen Chat – niemals über Ticketantworten.</div>
+        </div>
+        <a href="{{ route('admin.chat.index') }}" class="btn btn-ghost">💬 Zum internen Chat</a>
     </div>
-    @forelse($internalMessages as $m)
-    <div style="margin-bottom:14px;padding:12px 16px;border-radius:8px;background:#FFF8E6;border:1px solid #F7E7D6;">
-        <div style="font-size:12px;color:var(--ink-soft);margin-bottom:6px;">{{ $m->sender?->name }} · {{ $m->created_at->format('d.m.Y H:i') }}</div>
-        <div style="font-size:14px;line-height:1.6;">{{ $m->body }}</div>
-    </div>
-    @empty
-    <p style="color:var(--ink-soft);font-size:14px;">Noch keine internen Nachrichten zu diesem Ticket.</p>
-    @endforelse
 </div>
 <div class="card">
     <div class="card-title">Antworten</div>
@@ -87,9 +83,7 @@
                 </select>
             </div>
             <div class="field" style="display:flex;align-items:flex-end;padding-bottom:18px;">
-                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-                    <input type="checkbox" name="is_internal" style="width:auto;"> Interne Notiz (nicht für Kunden sichtbar)
-                </label>
+                <span style="font-size:12px;color:var(--ink-soft);">📨 Diese Antwort geht an den Kunden.</span>
             </div>
         </div>
         <button type="submit" class="btn btn-primary">Senden</button>

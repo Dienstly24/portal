@@ -183,7 +183,11 @@ class AdminController extends Controller
             'ticket_id' => $ticket->id,
             'sender_id' => auth()->id(),
             'body' => $request->body,
-            'is_internal' => $request->has('is_internal'),
+            // Ticketantworten sind IMMER Kundenkommunikation. Interne
+            // Absprachen laufen über den eigenständigen internen Chat -
+            // dadurch ist es strukturell unmöglich, versehentlich
+            // Internes an Kunden zu senden. (Spec Teil 8)
+            'is_internal' => false,
         ]);
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
@@ -198,7 +202,7 @@ class AdminController extends Controller
             }
         }
         $ticket->update(['status' => $request->status]);
-        if (!$request->has('is_internal')) {
+        {
             $ticket->load('customer.user');
             $email = $ticket->customer?->user?->email;
             if ($email && !str_contains($email, '@dienstly24.internal')) {

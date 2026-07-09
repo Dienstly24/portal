@@ -107,6 +107,12 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/change-requests/{id}/document', [\App\Http\Controllers\ChangeRequestReviewController::class, 'document'])->name('change_requests.document');
     Route::get('/documents/{id}/download', [AdminController::class, 'documentDownload'])->name('documents.download');
 
+    // Eigenständiger interner Mitarbeiter-Chat (Spec Teil 8)
+    Route::get('/chat', [\App\Http\Controllers\InternalChatController::class, 'index'])->name('chat.index');
+    Route::post('/chat', [\App\Http\Controllers\InternalChatController::class, 'store'])->name('chat.store');
+    Route::get('/chat/{id}', [\App\Http\Controllers\InternalChatController::class, 'show'])->name('chat.show');
+    Route::post('/chat/{id}/reply', [\App\Http\Controllers\InternalChatController::class, 'reply'])->name('chat.reply');
+
     // Interner Chat & Notizen (nur Mitarbeiter - keine Portal-Routen!)
     Route::post('/customers/{id}/internal-messages', [\App\Http\Controllers\InternalMessageController::class, 'store'])->name('internal.store');
     Route::delete('/internal-messages/{id}', [\App\Http\Controllers\InternalMessageController::class, 'destroy'])->name('internal.destroy');
