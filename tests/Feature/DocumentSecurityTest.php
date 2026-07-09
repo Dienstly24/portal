@@ -183,4 +183,34 @@ class DocumentSecurityTest extends TestCase
         });
         $this->assertDatabaseHas('activity_logs', ['action' => 'document_uploaded', 'user_id' => $admin->id]);
     }
+
+    public function test_document_replace_sets_updated_by_and_audits(): void
+    {
+        Storage::fake('local');
+        $customer = $this->makeCustomer();
+        $doc = $this->makePrivateDocument($customer);
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->post(route('admin.documents.replace', $doc->id), [
+            'document' => UploadedFile::fake()->create('neu.pdf', 100, 'application/pdf'),
+        ])->assertSessionHas('success');
+
+        $doc->refresh();
+        $this->assertSame('neu.pdf', $doc->file_name);
+        $this->assertSame($admin->id, $doc->updated_by);
+        $this->assertSame('local', $doc->disk);
+        $this->assertDatabaseHas('activity_logs', ['action' => 'document_replaced', 'user_id' => $admin->id]);
+    }
+
+    public function test_unassigned_employee_cannot_replace_document(): void
+    {
+        Storage::fake('local');
+        $customer = $this->makeCustomer();
+        $doc = $this->makePrivateDocument($customer);
+        $unassigned = User::factory()->create(['role' => 'employee', 'can_see_all_customers' => false]);
+
+        $this->actingAs($unassigned)->post(route('admin.documents.replace', $doc->id), [
+            'document' => UploadedFile::fake()->create('x.pdf', 50, 'application/pdf'),
+        ])->assertForbidden();
+    }
 }

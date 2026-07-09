@@ -12,7 +12,7 @@
 <p style="font-size:15px;color:#333;">عزيزنا <strong>{{ $contract->customer?->user?->name }}</strong>،</p>
 <p style="font-size:15px;color:#333;">نودّ تذكيرك بأن العقد التالي سينتهي بعد <strong>{{ $days }}</strong> يوم:</p>
 @else
-<p style="font-size:15px;color:#333;">{{ $contract->customer?->salutationLine() ?? ('Hallo ' . $contract->customer?->user?->name) }},</p>
+@include('emails._greeting', ['greetingCustomer' => $contract->customer])
 <p style="font-size:15px;color:#333;">wir möchten Sie daran erinnern, dass folgender Vertrag in <strong>{{ $days }}</strong> Tagen abläuft:</p>
 @endif
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;margin:15px 0;">

@@ -8,7 +8,7 @@
 <h1 style="color:#ffffff;margin:0;font-size:22px;">{{ $subjectLine }}</h1>
 </td></tr>
 <tr><td style="padding:30px;">
-<p style="font-size:15px;color:#333;">Hallo <strong>{{ $recipientName }}</strong>,</p>
+@include('emails._greeting', ['greetingName' => $recipientName])
 {{-- Body is entered as plain text in the admin panel; escape it and keep line breaks. --}}
 <p style="font-size:15px;color:#333;white-space:pre-line;">{{ $bodyText }}</p>
 <p style="font-size:15px;color:#333;">Mit freundlichen Grüßen<br>Ihr Dienstly24 Team</p>

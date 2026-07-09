@@ -30,13 +30,13 @@ class Customer extends Model {
     }
 
     /** Korrekte Briefanrede für E-Mails und Vorlagen. */
-    public function salutationLine(): string {
-        $name = $this->user?->name ?? '';
+    public function salutationLine(?string $fallbackName = null): string {
+        $name = $this->user?->name ?: ($fallbackName ?? '');
         return match ($this->salutation) {
             'herr' => 'Sehr geehrter Herr ' . $this->lastNameOr($name),
             'frau' => 'Sehr geehrte Frau ' . $this->lastNameOr($name),
             'firma' => 'Sehr geehrte Damen und Herren',
-            default => 'Guten Tag ' . $name,
+            default => trim($name) !== '' ? 'Guten Tag ' . $name : 'Sehr geehrte Damen und Herren',
         };
     }
 
