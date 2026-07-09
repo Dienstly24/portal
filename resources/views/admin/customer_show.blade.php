@@ -124,7 +124,11 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
         <div style="width:10px;height:10px;border-radius:50%;background:{{ $dotColor }};flex:none;"></div>
         <div style="flex:1;">
             <div style="font-size:14px;font-weight:600;">{{ $d->file_name }}</div>
-            <div style="font-size:12px;color:var(--ink-soft);">{{ ucfirst($d->category) }} · {{ $d->created_at->format('d.m.Y') }}</div>
+            <div style="font-size:12px;color:var(--ink-soft);">
+                {{ \App\Models\Document::CATEGORIES[$d->category] ?? ucfirst($d->category) }} · {{ $d->created_at->format('d.m.Y') }}
+                @if(($d->visibility ?? 'customer') === 'internal')<span style="font-size:10.5px;background:#F7E7D6;color:#B5651D;padding:1px 6px;border-radius:4px;">🔒 intern</span>@else<span style="font-size:10.5px;background:#EAF2FB;color:#185FA5;padding:1px 6px;border-radius:4px;">👤 Kunde</span>@endif
+                @if($d->uploader) · {{ $d->uploader->name }}@endif
+            </div>
         </div>
         <a href="{{ route('admin.documents.download', $d->id) }}" class="btn btn-ghost btn-sm">⬇</a>
     </div>
@@ -438,28 +442,40 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
 
 {{-- Add Document Modal --}}
 <div id="add-doc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
-    <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:480px;position:relative;">
+    <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:520px;position:relative;">
         <button onclick="document.getElementById('add-doc-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
-        <div style="font-size:18px;font-weight:700;margin-bottom:20px;">Dokument hochladen</div>
-        <form method="POST" action="{{ route('admin.customer.document.store', $customer->id) }}" enctype="multipart/form-data">
+        <div style="font-size:18px;font-weight:700;margin-bottom:20px;">Dokumente hochladen</div>
+        <form method="POST" action="{{ route('admin.customer.document.store', $customer->id) }}" enctype="multipart/form-data" id="doc-upload-form">
             @csrf
-            <div class="field"><label>Datei *</label><input type="file" name="document" required></div>
+            {{-- Drag & Drop Zone (Multi-Upload) --}}
+            <div id="dropzone" style="border:2px dashed var(--line);border-radius:10px;padding:26px;text-align:center;cursor:pointer;margin-bottom:14px;transition:.15s;">
+                <div style="font-size:30px;margin-bottom:6px;">📎</div>
+                <div style="font-size:13.5px;color:var(--ink-soft);">Dateien hierher ziehen oder <span style="color:var(--petrol);font-weight:600;">durchsuchen</span></div>
+                <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">PDF, JPG, PNG, DOC, XLS · max. 10 MB pro Datei · bis zu 20 Dateien</div>
+                <input type="file" name="documents[]" id="doc-input" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" style="display:none;">
+            </div>
+            <div id="file-list" style="margin-bottom:14px;"></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
                 <div class="field"><label>Kategorie</label>
                     <select name="category" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
-                        <option value="contract">Vertrag</option>
-                        <option value="invoice">Rechnung</option>
-                        <option value="correspondence">Schreiben</option>
-                        <option value="other">Sonstiges</option>
+                        @foreach(\App\Models\Document::CATEGORIES as $ckey => $clabel)
+                        <option value="{{ $ckey }}">{{ $clabel }}</option>
+                        @endforeach
                     </select>
                 </div>
-                <div class="field"><label>Priorität</label>
-                    <select name="color" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
-                        <option value="green">🟢 Normal</option>
-                        <option value="yellow">🟡 Wichtig</option>
-                        <option value="red">🔴 Dringend</option>
+                <div class="field"><label>Sichtbarkeit</label>
+                    <select name="visibility" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                        <option value="customer">👤 Kundensichtbar</option>
+                        <option value="internal">🔒 Nur intern</option>
                     </select>
                 </div>
+            </div>
+            <div class="field"><label>Priorität</label>
+                <select name="color" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                    <option value="green">🟢 Normal</option>
+                    <option value="yellow">🟡 Wichtig</option>
+                    <option value="red">🔴 Dringend</option>
+                </select>
             </div>
             <div style="display:flex;gap:10px;justify-content:flex-end;">
                 <button type="button" onclick="document.getElementById('add-doc-modal').style.display='none'" class="btn btn-ghost">Abbrechen</button>
@@ -467,6 +483,31 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
             </div>
         </form>
     </div>
+</div>
+<script>
+(function() {
+    const dz = document.getElementById('dropzone');
+    const input = document.getElementById('doc-input');
+    const list = document.getElementById('file-list');
+    if (!dz) return;
+    const fmt = b => b < 1024*1024 ? (b/1024).toFixed(0)+' KB' : (b/1024/1024).toFixed(1)+' MB';
+    function render() {
+        list.innerHTML = '';
+        Array.from(input.files).forEach(f => {
+            const tooBig = f.size > 10*1024*1024;
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:6px 10px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px;'+(tooBig?'background:#F9E3E3;':'');
+            row.innerHTML = '<span>📄 '+f.name+'</span><span style="color:'+(tooBig?'#A32D2D':'var(--ink-soft)')+';">'+fmt(f.size)+(tooBig?' · zu groß':'')+'</span>';
+            list.appendChild(row);
+        });
+    }
+    dz.addEventListener('click', () => input.click());
+    input.addEventListener('change', render);
+    ['dragover','dragenter'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.style.borderColor = 'var(--petrol)'; dz.style.background = 'var(--canvas)'; }));
+    ['dragleave','drop'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.style.borderColor = 'var(--line)'; dz.style.background = 'transparent'; }));
+    dz.addEventListener('drop', ev => { input.files = ev.dataTransfer.files; render(); });
+})();
+</script>
 </div>
 
 <script>

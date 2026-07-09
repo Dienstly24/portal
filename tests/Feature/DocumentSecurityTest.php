@@ -129,4 +129,58 @@ class DocumentSecurityTest extends TestCase
             ->get(route('admin.change_requests.document', $request->id))
             ->assertOk();
     }
+
+    public function test_internal_document_is_hidden_from_customer(): void
+    {
+        $customer = $this->makeCustomer();
+        Storage::fake('local');
+        Storage::disk('local')->put('customers/' . $customer->id . '/internal.pdf', 'x');
+        $doc = Document::create([
+            'customer_id' => $customer->id,
+            'category' => 'other',
+            'file_name' => 'intern.pdf',
+            'file_path' => 'customers/' . $customer->id . '/internal.pdf',
+            'disk' => 'local',
+            'visibility' => 'internal',
+        ]);
+
+        // Nicht in der Portal-Liste ...
+        $this->actingAs($customer->user)->get(route('portal.documents'))
+            ->assertOk()->assertDontSee('intern.pdf');
+        // ... und Download blockiert (404), obwohl es dem eigenen Kunden gehört
+        $this->actingAs($customer->user)->get(route('portal.documents.download', $doc->id))
+            ->assertNotFound();
+    }
+
+    public function test_customer_can_download_own_customer_visible_document(): void
+    {
+        $customer = $this->makeCustomer();
+        $doc = $this->makePrivateDocument($customer); // visibility default 'customer'
+        $this->actingAs($customer->user)->get(route('portal.documents.download', $doc->id))->assertOk();
+    }
+
+    public function test_multi_upload_stores_all_files_privately_with_audit(): void
+    {
+        Storage::fake('local');
+        $customer = $this->makeCustomer();
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->post(route('admin.customer.document.store', $customer->id), [
+            'documents' => [
+                UploadedFile::fake()->create('a.pdf', 100, 'application/pdf'),
+                UploadedFile::fake()->create('b.pdf', 120, 'application/pdf'),
+            ],
+            'category' => 'police',
+            'visibility' => 'internal',
+        ])->assertSessionHas('success');
+
+        $this->assertSame(2, Document::count());
+        Document::all()->each(function ($d) {
+            $this->assertSame('local', $d->disk);
+            $this->assertSame('internal', $d->visibility);
+            Storage::disk('local')->assertExists($d->file_path);
+            Storage::disk('public')->assertMissing($d->file_path);
+        });
+        $this->assertDatabaseHas('activity_logs', ['action' => 'document_uploaded', 'user_id' => $admin->id]);
+    }
 }

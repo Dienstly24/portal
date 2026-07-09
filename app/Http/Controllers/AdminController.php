@@ -399,18 +399,45 @@ class AdminController extends Controller
 
     public function storeDocument(Request $request, $id) {
         $this->authorizeCustomerAccess($id);
-        $request->validate(['document' => 'required|file|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:10240']);
-        $file = $request->file('document');
-        $path = $file->store("customers/$id/documents", 'public');
-        \App\Models\Document::create([
-            'id' => \Illuminate\Support\Str::uuid(),
-            'customer_id' => $id,
-            'category' => $request->category ?? 'other',
-            'color' => $request->color ?? 'green',
-            'file_name' => $file->getClientOriginalName(),
-            'file_path' => $path,
+        $request->validate([
+            'documents' => 'required|array|min:1|max:20',
+            'documents.*' => 'file|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:10240',
+            'category' => 'nullable|in:contract,police,invoice,identity,claim,other',
+            'visibility' => 'nullable|in:customer,internal',
         ]);
-        return back()->with('success', 'Dokument hochgeladen.');
+
+        $created = [];
+        foreach ($request->file('documents') as $file) {
+            // Neue Uploads landen grundsätzlich im privaten Storage.
+            $path = $file->store("customers/$id/documents", 'local');
+            $doc = \App\Models\Document::create([
+                'id' => \Illuminate\Support\Str::uuid(),
+                'customer_id' => $id,
+                'category' => $request->category ?? 'other',
+                'color' => $request->color ?? 'green',
+                'file_name' => $file->getClientOriginalName(),
+                'file_path' => $path,
+                'disk' => 'local',
+                // Über die Sichtbarkeit entscheidet ausschließlich der Mitarbeiter.
+                'visibility' => $request->visibility ?? 'customer',
+                'uploaded_by' => auth()->id(),
+                'file_size' => $file->getSize(),
+            ]);
+            $created[] = $doc;
+
+            \App\Models\ActivityLog::create([
+                'user_id' => auth()->id(),
+                'action' => 'document_uploaded',
+                'entity_type' => 'document',
+                'entity_id' => $doc->id,
+                'meta' => json_encode(['customer_id' => (string) $id, 'file' => $doc->file_name, 'visibility' => $doc->visibility], JSON_UNESCAPED_UNICODE),
+            ]);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true, 'count' => count($created)]);
+        }
+        return back()->with('success', count($created) . ' Dokument(e) hochgeladen.');
     }
 
     public function storeFamily(Request $request, $id) {
@@ -459,6 +486,13 @@ class AdminController extends Controller
     public function documentDownload($id) {
         $doc = \App\Models\Document::findOrFail($id);
         $this->authorizeCustomerAccess($doc->customer_id);
+        \App\Models\ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'document_viewed',
+            'entity_type' => 'document',
+            'entity_id' => $doc->id,
+            'meta' => json_encode(['file' => $doc->file_name], JSON_UNESCAPED_UNICODE),
+        ]);
         $disk = $doc->disk ?: 'public';
         abort_unless(\Illuminate\Support\Facades\Storage::disk($disk)->exists($doc->file_path), 404);
         return \Illuminate\Support\Facades\Storage::disk($disk)->download($doc->file_path, $doc->file_name);
