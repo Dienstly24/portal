@@ -9,8 +9,14 @@ class Customer extends Model {
         'user_id','customer_number','birth_date','address','address2',
         'iban','iban2','marital_status','phone','mobile','preferred_lang',
         'company_name','company_type','customer_type','email2',
-        'nationality','occupation','last_contact'
+        'nationality','occupation','last_contact','gender','account_holder'
     ];
+
+    public const GENDERS = ['male' => 'Männlich', 'female' => 'Weiblich', 'diverse' => 'Divers'];
+
+    public function addresses() { return $this->hasMany(CustomerAddress::class, 'customer_id'); }
+    public function contacts() { return $this->hasMany(CustomerContact::class, 'customer_id'); }
+    public function changeRequests() { return $this->hasMany(CustomerChangeRequest::class, 'customer_id'); }
     protected static function boot() {
         parent::boot();
         static::creating(fn($m) => $m->id = Str::uuid());
