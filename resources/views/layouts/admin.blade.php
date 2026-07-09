@@ -243,31 +243,23 @@ table tr:hover td{background:#FAFAF8;}
     <div id="search-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:320px;overflow-y:auto;z-index:200;margin-top:4px;"></div>
     </div>
     <div class="header-actions">
-        {{-- Interne Erwähnungen (@Mentions) --}}
+        {{-- Einheitliches Notification Center: EINE Glocke, EIN Dropdown --}}
         <div style="position:relative;">
-            <button type="button" class="icon-btn" id="mention-bell" title="Interne Erwähnungen" onclick="toggleMentions()">
-                💬
-                <span class="notif-dot" id="mention-dot" style="display:none;"></span>
+            <button type="button" class="icon-btn" id="notif-bell" title="Benachrichtigungen" onclick="toggleNotifications()">
+                🔔
+                <span class="notif-dot" id="notif-dot" style="display:none;"></span>
             </button>
-            <div id="mention-dropdown" style="display:none;position:absolute;top:46px;right:0;width:360px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:300;overflow:hidden;">
+            <div id="notif-dropdown" style="display:none;position:absolute;top:46px;right:0;width:380px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:300;overflow:hidden;">
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);">
-                    <span style="font-size:13px;font-weight:700;">Interne Erwähnungen</span>
-                    <button type="button" onclick="markAllMentionsRead()" style="border:none;background:none;color:var(--ink-soft);font-size:12px;cursor:pointer;">Alle gelesen</button>
+                    <span style="font-size:13px;font-weight:700;">Benachrichtigungen</span>
+                    <button type="button" onclick="markAllNotifsRead()" style="border:none;background:none;color:var(--ink-soft);font-size:12px;cursor:pointer;">Alle gelesen</button>
                 </div>
-                <div id="mention-list" style="max-height:340px;overflow-y:auto;">
+                <div id="notif-list" style="max-height:400px;overflow-y:auto;">
                     <p style="padding:16px;font-size:13px;color:var(--ink-soft);">Laden…</p>
                 </div>
             </div>
         </div>
-        <a href="{{ route('admin.change_requests') }}" class="icon-btn" title="Kundenänderungen">
-            🔔
-            @php
-                $bellQ = \App\Models\CustomerChangeRequest::where('status','pending');
-                if (!auth()->user()->canSeeAllCustomers()) { $bellQ->whereIn('customer_id', auth()->user()->visibleCustomerIdsWithSubstitution()); }
-            @endphp
-            @if($bellQ->count() > 0)<span class="notif-dot"></span>@endif
-        </a>
-        <div class="header-avatar">{{ strtoupper(substr(auth()->user()->name,0,2)) }}</div>
+                <div class="header-avatar">{{ strtoupper(substr(auth()->user()->name,0,2)) }}</div>
     </div>
 </div>
 <div class="main">
@@ -308,47 +300,50 @@ document.addEventListener('click', function(e) {
     if (!e.target.closest('#global-search') && !e.target.closest('#search-results')) {
         document.getElementById('search-results').style.display = 'none';
     }
-    if (!e.target.closest('#mention-bell') && !e.target.closest('#mention-dropdown')) {
-        document.getElementById('mention-dropdown').style.display = 'none';
+    if (!e.target.closest('#notif-bell') && !e.target.closest('#notif-dropdown')) {
+        document.getElementById('notif-dropdown').style.display = 'none';
     }
 });
 
-// ===== Interne Erwähnungen (@Mentions) =====
+// ===== Einheitliches Notification Center =====
 const csrfToken = '{{ csrf_token() }}';
 function escapeHtml(t){const d=document.createElement('div');d.textContent=t??'';return d.innerHTML;}
-function loadMentions() {
+function loadNotifications() {
     fetch('{{ route('admin.notifications') }}', {headers: {'Accept': 'application/json'}})
         .then(r => r.json())
         .then(data => {
-            document.getElementById('mention-dot').style.display = data.unread > 0 ? 'block' : 'none';
-            const list = document.getElementById('mention-list');
+            document.getElementById('notif-dot').style.display = data.unread > 0 ? 'block' : 'none';
+            const list = document.getElementById('notif-list');
             if (!data.items.length) {
-                list.innerHTML = '<p style="padding:16px;font-size:13px;color:#6B7280;">Keine Erwähnungen.</p>';
+                list.innerHTML = '<p style="padding:16px;font-size:13px;color:#6B7280;">Keine Benachrichtigungen.</p>';
                 return;
             }
-            list.innerHTML = data.items.map(n => `
-                <a href="${n.url}" onclick="markMentionRead(${n.id})"
-                   style="display:block;padding:11px 16px;text-decoration:none;color:#152826;border-bottom:1px solid #E4E0D4;background:${n.read ? 'transparent' : '#F0F7F3'};">
-                    <div style="font-size:12.5px;"><b>${escapeHtml(n.sender)}</b> hat Sie erwähnt · <span style="color:#6B7280;">${escapeHtml(n.customer)}</span></div>
-                    <div style="font-size:12px;color:#6B7280;margin-top:2px;">${escapeHtml(n.preview)}</div>
-                    <div style="font-size:11px;color:#9CA3AF;margin-top:2px;">${escapeHtml(n.time)}</div>
-                </a>`).join('');
-        }).catch(() => {});
+            list.innerHTML = data.items.map(function(n) { return ''
+                + '<a href="' + n.url + '" onclick="markNotifRead(\'' + n.id + '\')" '
+                + 'style="display:flex;gap:10px;padding:11px 16px;text-decoration:none;color:#152826;border-bottom:1px solid #E4E0D4;background:' + (n.read ? 'transparent' : '#F0F7F3') + ';">'
+                + '<span style="font-size:18px;line-height:1.2;flex:none;">' + n.icon + '</span>'
+                + '<span style="min-width:0;">'
+                + '<span style="display:block;font-size:12.5px;font-weight:600;">' + escapeHtml(n.title) + '</span>'
+                + '<span style="display:block;font-size:12px;color:#6B7280;margin-top:2px;">' + escapeHtml(n.preview) + '</span>'
+                + '<span style="display:block;font-size:11px;color:#9CA3AF;margin-top:2px;">' + escapeHtml(n.time) + '</span>'
+                + '</span></a>';
+            }).join('');
+        }).catch(function(){});
 }
-function toggleMentions() {
-    const dd = document.getElementById('mention-dropdown');
+function toggleNotifications() {
+    const dd = document.getElementById('notif-dropdown');
     dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
-    if (dd.style.display === 'block') loadMentions();
+    if (dd.style.display === 'block') loadNotifications();
 }
-function markMentionRead(id) {
-    fetch('/admin/notifications/' + id + '/read', {method: 'POST', headers: {'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json'}}).catch(() => {});
+function markNotifRead(id) {
+    fetch('/admin/notifications/' + id + '/read', {method: 'POST', headers: {'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json'}}).catch(function(){});
 }
-function markAllMentionsRead() {
+function markAllNotifsRead() {
     fetch('{{ route('admin.notifications.read_all') }}', {method: 'POST', headers: {'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json'}})
-        .then(() => loadMentions()).catch(() => {});
+        .then(function(){ loadNotifications(); }).catch(function(){});
 }
-loadMentions();
-setInterval(loadMentions, 60000);
+loadNotifications();
+setInterval(loadNotifications, 60000);
 </script>
 </body>
 </html>

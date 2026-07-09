@@ -272,7 +272,28 @@ class AdminController extends Controller
             'email' => 'nullable|email|unique:users,email,' . $user->id,
             'portal_email' => 'nullable|email|unique:users,email,' . $user->id,
             'new_password' => 'nullable|min:8',
+            'health_insurance_type' => 'nullable|in:gesetzlich,privat',
+            'gender' => 'nullable|in:male,female,diverse',
+            'salutation' => 'nullable|in:herr,frau,divers,firma',
         ]);
+
+        // Sensible Kundenakte-Felder: Änderungen auditieren (nur Feldnamen ins Log)
+        $sensitive = ['health_insurance_number','health_insurance_company','health_insurance_type','pension_insurance_number','tax_id'];
+        $changedSensitive = [];
+        foreach ($sensitive as $sf) {
+            if ($request->has($sf) && (string) $request->input($sf) !== (string) $customer->$sf) {
+                $changedSensitive[] = $sf;
+            }
+        }
+        if ($changedSensitive) {
+            \App\Models\ActivityLog::create([
+                'user_id' => auth()->id(),
+                'action' => 'sensitive_data_updated',
+                'entity_type' => 'customer',
+                'entity_id' => $customer->id,
+                'meta' => json_encode(['fields' => $changedSensitive], JSON_UNESCAPED_UNICODE),
+            ]);
+        }
 
         if ($request->filled('street') || $request->filled('plz') || $request->filled('city')) {
             $address = $this->buildAddress($request);
@@ -298,6 +319,11 @@ class AdminController extends Controller
             'customer_type' => $request->customer_type,
             'company_name' => $request->company_name,
             'company_type' => $request->company_type,
+            'health_insurance_type' => in_array($request->health_insurance_type, ['gesetzlich','privat'], true) ? $request->health_insurance_type : null,
+            'health_insurance_company' => $request->health_insurance_company ?: null,
+            'health_insurance_number' => $request->health_insurance_number ?: null,
+            'pension_insurance_number' => $request->pension_insurance_number ?: null,
+            'tax_id' => $request->tax_id ?: null,
         ];
 
         // Nur Spalten speichern, die in der Tabelle wirklich existieren
@@ -317,24 +343,26 @@ class AdminController extends Controller
 
         // Neue Familienmitglieder aus dem Familie-Tab speichern
         if (is_array($request->family_name)) {
-            $famCols = Schema::getColumnListing((new \App\Models\CustomerFamily)->getTable());
-            $kvCol = null; $taxCol = null;
-            foreach ($famCols as $c) {
-                if (!$kvCol && str_contains($c, 'kv')) $kvCol = $c;
-                if (!$taxCol && (str_contains($c, 'steuer') || str_contains($c, 'tax'))) $taxCol = $c;
-            }
+            $request->validate([
+                'family_kv_status' => 'nullable|array',
+                'family_kv_status.*' => 'nullable|in:,mitglied,familienversichert',
+                'family_kv_start' => 'nullable|array',
+                'family_kv_start.*' => 'nullable|date',
+            ]);
             foreach ($request->family_name as $i => $fname) {
                 if (!trim((string) $fname)) continue;
-                $row = [
+                \App\Models\CustomerFamily::create([
                     'customer_id' => $customer->id,
                     'name' => trim($fname),
                     'relation' => $request->family_relation[$i] ?? 'Kind',
                     'birth_date' => ($request->family_birth[$i] ?? null) ?: null,
-                ];
-                if ($kvCol) $row[$kvCol] = $request->family_kv_nr[$i] ?? null;
-                if ($taxCol) $row[$taxCol] = $request->family_steuer[$i] ?? null;
-                $row['geschlecht'] = $request->family_geschlecht[$i] ?? null;
-                \App\Models\CustomerFamily::forceCreate(array_intersect_key($row, array_flip($famCols)));
+                    // KV-Daten je Person (Spec Teil 3 / Final Polish Punkt 1)
+                    'health_insurance_company' => ($request->family_kv_company[$i] ?? null) ?: null,
+                    'health_insurance_number' => ($request->family_kv_nr[$i] ?? null) ?: null,
+                    'health_insurance_status' => ($request->family_kv_status[$i] ?? null) ?: null,
+                    'health_insurance_start' => ($request->family_kv_start[$i] ?? null) ?: null,
+                    'steuer_nr' => ($request->family_steuer[$i] ?? null) ?: null,
+                ]);
             }
         }
 
@@ -538,25 +566,6 @@ class AdminController extends Controller
 
         // 2) Fehlende Felder vom Duplikat übernehmen
         $request->validate(['gender' => 'nullable|in:male,female,diverse', 'salutation' => 'nullable|in:herr,frau,divers,firma']);
-        // Sensible Kundenakte-Felder: Änderungen auditieren (Spec Teil 3)
-        $sensitive = ['health_insurance_number','health_insurance_company','health_insurance_type','pension_insurance_number','tax_id'];
-        $changedSensitive = [];
-        foreach ($sensitive as $sf) {
-            if ($request->has($sf) && (string) $request->input($sf) !== (string) $customer->$sf) {
-                $changedSensitive[] = $sf;
-                $customer->$sf = $request->input($sf) ?: null;
-            }
-        }
-        if ($changedSensitive) {
-            \App\Models\ActivityLog::create([
-                'user_id' => auth()->id(),
-                'action' => 'sensitive_data_updated',
-                'entity_type' => 'customer',
-                'entity_id' => $customer->id,
-                // bewusst NUR Feldnamen, niemals Werte, ins Log
-                'meta' => json_encode(['fields' => $changedSensitive], JSON_UNESCAPED_UNICODE),
-            ]);
-        }
 
         foreach (['phone','mobile','address','address2','iban','iban2','birth_date','marital_status','nationality','occupation','email2','company_name','company_type','gender','salutation'] as $f) {
             if (empty($primary->$f) && !empty($dup->$f)) $primary->$f = $dup->$f;
