@@ -52,6 +52,21 @@ class ChangeRequestReviewController extends Controller
         return $q->count();
     }
 
+    /** Eingereichtes Dokument eines Change Requests sicher ausliefern. */
+    public function document($id)
+    {
+        $changeRequest = CustomerChangeRequest::findOrFail($id);
+        $this->authorize('review', $changeRequest);
+
+        $path = $changeRequest->new_data['document_path'] ?? null;
+        abort_if(!$path, 404);
+        $disk = $changeRequest->new_data['document_disk'] ?? 'public';
+        abort_unless(\Illuminate\Support\Facades\Storage::disk($disk)->exists($path), 404);
+        return \Illuminate\Support\Facades\Storage::disk($disk)->download(
+            $path, $changeRequest->new_data['document_name'] ?? basename($path)
+        );
+    }
+
     public function action(Request $request, $id, ChangeRequestService $service)
     {
         $changeRequest = CustomerChangeRequest::findOrFail($id);

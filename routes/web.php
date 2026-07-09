@@ -46,6 +46,7 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     Route::post('/bank', [\App\Http\Controllers\SelfServiceController::class, 'bankStore'])->name('bank.store');
     Route::post('/contracts/report', [\App\Http\Controllers\SelfServiceController::class, 'contractReport'])->name('contracts.report');
     Route::get('/change-requests', [\App\Http\Controllers\SelfServiceController::class, 'changeRequests'])->name('change_requests');
+    Route::get('/documents/{id}/download', [PortalController::class, 'documentDownload'])->name('documents.download');
     Route::post('/profile', [PortalController::class, 'profileUpdate'])->name('profile.update');
 });
 
@@ -105,6 +106,8 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // Kundenänderungen (Self-Service Genehmigungsworkflow)
     Route::get('/change-requests', [\App\Http\Controllers\ChangeRequestReviewController::class, 'index'])->name('change_requests');
     Route::post('/change-requests/{id}/action', [\App\Http\Controllers\ChangeRequestReviewController::class, 'action'])->name('change_requests.action');
+    Route::get('/change-requests/{id}/document', [\App\Http\Controllers\ChangeRequestReviewController::class, 'document'])->name('change_requests.document');
+    Route::get('/documents/{id}/download', [AdminController::class, 'documentDownload'])->name('documents.download');
 
     // Interner Chat & Notizen (nur Mitarbeiter - keine Portal-Routen!)
     Route::post('/customers/{id}/internal-messages', [\App\Http\Controllers\InternalMessageController::class, 'store'])->name('internal.store');

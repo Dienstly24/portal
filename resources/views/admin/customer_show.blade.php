@@ -111,7 +111,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
             <div style="font-size:14px;font-weight:600;">{{ $d->file_name }}</div>
             <div style="font-size:12px;color:var(--ink-soft);">{{ ucfirst($d->category) }} · {{ $d->created_at->format('d.m.Y') }}</div>
         </div>
-        <a href="{{ Storage::url($d->file_path) }}" target="_blank" class="btn btn-ghost btn-sm">⬇</a>
+        <a href="{{ route('admin.documents.download', $d->id) }}" class="btn btn-ghost btn-sm">⬇</a>
     </div>
     @empty
     <p style="color:var(--ink-soft);font-size:14px;">Keine Dokumente.</p>

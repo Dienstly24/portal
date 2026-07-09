@@ -6,7 +6,7 @@ use Illuminate\Support\Str;
 class Document extends Model {
     protected $keyType = 'string';
     public $incrementing = false;
-    protected $fillable = ['customer_id','category','file_name','file_path'];
+    protected $fillable = ['customer_id','category','file_name','file_path','disk'];
     protected static function boot() {
         parent::boot();
         static::creating(fn($m) => $m->id = Str::uuid());

@@ -237,7 +237,10 @@ class SelfServiceController extends Controller
 
         if ($request->hasFile('document')) {
             $file = $request->file('document');
-            $payload['document_path'] = $file->store('contracts/reported/' . $customer->id, 'public');
+            // Private Disk (storage/app/private) - niemals per URL erreichbar,
+            // Zugriff nur über die autorisierten Download-Controller.
+            $payload['document_path'] = $file->store('contract_documents/' . $customer->id, 'local');
+            $payload['document_disk'] = 'local';
             $payload['document_name'] = $file->getClientOriginalName();
         }
 
