@@ -24,6 +24,7 @@ class PortalController extends Controller
             'pendingApprovals' => \App\Models\CustomerChangeRequest::where('customer_id', $customer->id)->where('status','pending')->count(),
             'contracts' => Contract::where('customer_id', $customer->id)->latest()->take(3)->get(),
             'tickets' => Ticket::where('customer_id', $customer->id)->latest()->take(3)->get(),
+            'completeness' => $customer->completeness(),
         ]);
     }
 
