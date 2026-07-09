@@ -41,7 +41,7 @@ require __DIR__.'/auth.php';
 | Admin (admin.dienstly24.de/admin)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'role:admin,manager,employee'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admin')->name('admin.')->group(function () {
 
     // Dashboard & Suche
     Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
