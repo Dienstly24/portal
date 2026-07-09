@@ -5,7 +5,6 @@ use App\Models\Customer;
 use App\Models\Contract;
 use App\Models\Ticket;
 use App\Models\TicketMessage;
-use App\Models\ApprovalRequest;
 use Illuminate\Support\Str;
 
 class PortalController extends Controller
@@ -22,7 +21,7 @@ class PortalController extends Controller
         return view('portal.dashboard', [
             'contractsCount' => Contract::where('customer_id', $customer->id)->where('status','active')->count(),
             'openTickets' => Ticket::where('customer_id', $customer->id)->whereIn('status',['open','in_progress'])->count(),
-            'pendingApprovals' => ApprovalRequest::where('customer_id', $customer->id)->where('status','pending')->count(),
+            'pendingApprovals' => \App\Models\CustomerChangeRequest::where('customer_id', $customer->id)->where('status','pending')->count(),
             'contracts' => Contract::where('customer_id', $customer->id)->latest()->take(3)->get(),
             'tickets' => Ticket::where('customer_id', $customer->id)->latest()->take(3)->get(),
         ]);
@@ -132,49 +131,51 @@ class PortalController extends Controller
         $customer = $this->getCustomer();
         return view('portal.profile', [
             'customer' => $customer,
-            'pending' => ApprovalRequest::where('customer_id', $customer->id)->where('status','pending')->count(),
+            'pending' => \App\Models\CustomerChangeRequest::where('customer_id', $customer->id)->where('status','pending')->count(),
         ]);
     }
 
     public function profileUpdate(Request $request) {
-        $request->validate(['gender' => 'nullable|in:male,female,diverse']);
         $customer = $this->getCustomer();
 
-        // Geschlecht läuft über das neue Change-Request-System (type=profile)
-        if ($request->filled('gender') && $request->gender !== $customer->gender) {
-            $cr = \App\Models\CustomerChangeRequest::create([
-                'customer_id' => $customer->id,
-                'requested_by' => auth()->id(),
-                'type' => 'profile',
-                'old_data' => ['gender' => $customer->gender],
-                'new_data' => ['gender' => $request->gender],
-                'status' => 'pending',
-            ]);
-            foreach (\App\Models\User::whereIn('role', ['admin','manager','support'])->where('is_active', true)->get() as $recipient) {
-                \App\Models\InternalNotification::create(['user_id' => $recipient->id, 'change_request_id' => $cr->id]);
+        $data = $request->validate([
+            'gender' => 'nullable|in:male,female,diverse',
+            'address' => 'nullable|string|max:255',
+            'phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+\/\s()-]{6,}$/'],
+            'iban' => ['nullable', 'string', 'max:34', 'regex:/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/'],
+            'marital_status' => 'nullable|in:ledig,verheiratet,geschieden,verwitwet',
+        ]);
+
+        $service = app(\App\Services\ChangeRequestService::class);
+        $created = false;
+
+        // Profildaten: ein gebündelter Antrag für alle geänderten Felder
+        $profileOld = $profileNew = [];
+        foreach (['gender', 'address', 'phone', 'marital_status'] as $field) {
+            if ($request->filled($field) && $data[$field] !== $customer->$field) {
+                $profileOld[$field] = $customer->$field;
+                $profileNew[$field] = $data[$field];
             }
-            \App\Models\ActivityLog::create([
-                'user_id' => auth()->id(),
-                'action' => 'change_request_created',
-                'entity_type' => 'change_request',
-                'entity_id' => $cr->id,
-                'meta' => json_encode(['customer_id' => (string) $customer->id, 'type' => 'profile', 'text' => 'Geschlecht geändert'], JSON_UNESCAPED_UNICODE),
-            ]);
+        }
+        if ($profileNew) {
+            $service->submit($customer, 'profile', $profileOld, $profileNew, 'Profiländerung beantragt: ' . implode(', ', array_keys($profileNew)));
+            $created = true;
         }
 
-        $fields = ['address','phone','iban','marital_status'];
-        foreach ($fields as $field) {
-            if ($request->filled($field) && $request->$field !== $customer->$field) {
-                ApprovalRequest::create([
-                    'id' => Str::uuid(),
-                    'customer_id' => $customer->id,
-                    'field_name' => $field,
-                    'old_value' => $customer->$field,
-                    'new_value' => $request->$field,
-                    'status' => 'pending',
-                ]);
-            }
+        // IBAN läuft einheitlich als Bankänderung (Typ 'bank')
+        if ($request->filled('iban') && $data['iban'] !== $customer->iban) {
+            $service->submit(
+                $customer,
+                'bank',
+                ['iban' => $customer->iban ? '••••' . substr($customer->iban, -4) : null, 'account_holder' => $customer->account_holder],
+                ['iban' => $data['iban'], 'account_holder' => $customer->account_holder ?? auth()->user()->name],
+                'Neue Bankverbindung beantragt (über Profil)'
+            );
+            $created = true;
         }
-        return back()->with('success', 'Ihre Änderungsanfrage wurde eingereicht und wird geprüft.');
+
+        return back()->with('success', $created
+            ? 'Ihre Änderungen wurden zur Prüfung eingereicht.'
+            : 'Keine Änderungen erkannt.');
     }
 }

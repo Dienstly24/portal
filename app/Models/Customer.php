@@ -25,7 +25,6 @@ class Customer extends Model {
     public function betreuer() { return $this->belongsToMany(User::class, 'employee_customers', 'customer_id', 'user_id'); }
     public function contracts() { return $this->hasMany(Contract::class); }
     public function tickets() { return $this->hasMany(Ticket::class); }
-    public function approvalRequests() { return $this->hasMany(ApprovalRequest::class); }
     public function documents() { return $this->hasMany(Document::class); }
     public function familyMembers() { return $this->hasMany(FamilyMember::class); }
     public function family() { return $this->hasMany(CustomerFamily::class); }

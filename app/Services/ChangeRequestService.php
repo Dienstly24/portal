@@ -17,6 +17,46 @@ use App\Models\Document;
  */
 class ChangeRequestService
 {
+    /**
+     * Zentraler Einreichungspfad für ALLE Kundenänderungen:
+     * legt den Change Request an, benachrichtigt admin/manager/support
+     * über die interne Glocke und schreibt den Audit-Log-Eintrag.
+     */
+    public function submit(Customer $customer, string $type, ?array $oldData, array $newData, string $auditText, ?int $requestedBy = null): CustomerChangeRequest
+    {
+        $changeRequest = CustomerChangeRequest::create([
+            'customer_id' => $customer->id,
+            'requested_by' => $requestedBy ?? auth()->id(),
+            'type' => $type,
+            'old_data' => $oldData,
+            'new_data' => $newData,
+            'status' => 'pending',
+        ]);
+
+        $recipients = \App\Models\User::whereIn('role', ['admin', 'manager', 'support'])
+            ->where('is_active', true)->get();
+        foreach ($recipients as $recipient) {
+            \App\Models\InternalNotification::create([
+                'user_id' => $recipient->id,
+                'change_request_id' => $changeRequest->id,
+            ]);
+        }
+
+        \App\Models\ActivityLog::create([
+            'user_id' => $requestedBy ?? auth()->id(),
+            'action' => 'change_request_created',
+            'entity_type' => 'change_request',
+            'entity_id' => $changeRequest->id,
+            'meta' => json_encode([
+                'customer_id' => (string) $customer->id,
+                'type' => $type,
+                'text' => $auditText,
+            ], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        return $changeRequest;
+    }
+
     public function apply(CustomerChangeRequest $request): void
     {
         $customer = Customer::findOrFail($request->customer_id);
@@ -124,7 +164,7 @@ class ChangeRequestService
     private function applyProfile(Customer $customer, array $data): void
     {
         // Strikte Whitelist unkritischer Profilfelder
-        $allowed = ['gender', 'marital_status', 'nationality', 'occupation'];
+        $allowed = ['gender', 'marital_status', 'nationality', 'occupation', 'address', 'phone', 'salutation', 'first_name', 'last_name', 'birth_date'];
         $update = array_intersect_key($data, array_flip($allowed));
         if (isset($update['gender']) && !array_key_exists($update['gender'], Customer::GENDERS)) {
             unset($update['gender']);

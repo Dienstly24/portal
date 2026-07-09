@@ -100,8 +100,6 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::post('/inquiries', [\App\Http\Controllers\WebsiteInquiryController::class, 'storeManual'])->name('inquiries.store');
 
     // Genehmigungen
-    Route::get('/approvals', [AdminController::class, 'approvals'])->name('approvals');
-    Route::post('/approvals/{id}', [AdminController::class, 'approvalAction'])->name('approval.action');
 
     // Kundenänderungen (Self-Service Genehmigungsworkflow)
     Route::get('/change-requests', [\App\Http\Controllers\ChangeRequestReviewController::class, 'index'])->name('change_requests');

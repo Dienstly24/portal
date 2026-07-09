@@ -267,40 +267,7 @@ class SelfServiceController extends Controller
 
     private function createRequest(string $type, ?array $oldData, array $newData, string $auditText): CustomerChangeRequest
     {
-        $customer = $this->getCustomer();
-
-        $changeRequest = CustomerChangeRequest::create([
-            'customer_id' => $customer->id,
-            'requested_by' => auth()->id(),
-            'type' => $type,
-            'old_data' => $oldData,
-            'new_data' => $newData,
-            'status' => 'pending',
-        ]);
-
-        // Punkt 10: interne Benachrichtigung an admin, manager, support
-        $recipients = User::whereIn('role', ['admin', 'manager', 'support'])
-            ->where('is_active', true)->get();
-        foreach ($recipients as $recipient) {
-            InternalNotification::create([
-                'user_id' => $recipient->id,
-                'change_request_id' => $changeRequest->id,
-            ]);
-        }
-
-        // Punkt 11: Audit-Log (wer, wann, was)
-        ActivityLog::create([
-            'user_id' => auth()->id(),
-            'action' => 'change_request_created',
-            'entity_type' => 'change_request',
-            'entity_id' => $changeRequest->id,
-            'meta' => json_encode([
-                'customer_id' => (string) $customer->id,
-                'type' => $type,
-                'text' => $auditText,
-            ], JSON_UNESCAPED_UNICODE),
-        ]);
-
-        return $changeRequest;
+        return app(\App\Services\ChangeRequestService::class)
+            ->submit($this->getCustomer(), $type, $oldData, $newData, $auditText);
     }
 }
