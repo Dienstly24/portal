@@ -56,16 +56,16 @@ form textarea{min-height:90px;resize:vertical;}
 <body>
 <div class="sidebar">
     <div class="brand"><img src="/images/logo.png" alt="Dienstly24" style="height:45px;width:auto;object-fit:contain;"></div>
-    <a href="{{ route('portal.dashboard') }}" class="nav-item {{ request()->routeIs('portal.dashboard') ? 'active' : '' }}">Übersicht</a>
+    <a href="{{ route('portal.dashboard') }}" class="nav-item {{ request()->routeIs('portal.dashboard') ? 'active' : '' }}">Dashboard</a>
     <a href="{{ route('portal.contracts') }}" class="nav-item {{ request()->routeIs('portal.contracts*') ? 'active' : '' }}">Meine Verträge</a>
-    <a href="{{ route('portal.tickets') }}" class="nav-item {{ request()->routeIs('portal.tickets*') ? 'active' : '' }}">Anfragen</a>
     <a href="{{ route('portal.documents') }}" class="nav-item {{ request()->routeIs('portal.documents*') ? 'active' : '' }}">Dokumente</a>
-    <a href="{{ route('portal.profile') }}" class="nav-item {{ request()->routeIs('portal.profile*') ? 'active' : '' }}">Mein Profil</a>
     <a href="{{ route('portal.family') }}" class="nav-item {{ request()->routeIs('portal.family*') ? 'active' : '' }}">Familie</a>
+    <a href="{{ route('portal.profile') }}" class="nav-item {{ request()->routeIs('portal.profile*') ? 'active' : '' }}">Meine Daten</a>
     <a href="{{ route('portal.addresses') }}" class="nav-item {{ request()->routeIs('portal.addresses*') ? 'active' : '' }}">Adressen</a>
     <a href="{{ route('portal.contacts') }}" class="nav-item {{ request()->routeIs('portal.contacts*') ? 'active' : '' }}">Kontaktinformationen</a>
     <a href="{{ route('portal.bank') }}" class="nav-item {{ request()->routeIs('portal.bank*') ? 'active' : '' }}">Bankverbindung</a>
     <a href="{{ route('portal.change_requests') }}" class="nav-item {{ request()->routeIs('portal.change_requests*') ? 'active' : '' }}">Änderungsanfragen</a>
+    <a href="{{ route('portal.tickets') }}" class="nav-item {{ request()->routeIs('portal.tickets*') ? 'active' : '' }}">Nachrichten</a>
     <div class="sidebar-foot">
         <div class="user-chip">
             <div class="avatar">{{ strtoupper(substr(auth()->user()->name,0,2)) }}</div>
