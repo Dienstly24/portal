@@ -15,7 +15,7 @@
 <p style="font-size:14px;color:#666;">بيانات الدخول موجودة في رسالة الترحيب التي وصلتك سابقاً. إذا واجهت أي مشكلة، لا تتردد بالتواصل معنا.</p>
 <p style="font-size:15px;color:#333;">مع أطيب التحيات،<br>فريق Dienstly24</p>
 @else
-<p style="font-size:15px;color:#333;">Hallo <strong>{{ $customerName }}</strong>,</p>
+@include('emails._greeting', ['greetingName' => $customerName])
 <p style="font-size:15px;color:#333;">wir haben bemerkt, dass Sie sich noch nicht in Ihrem Kundenportal angemeldet haben. Dort können Sie Ihre Verträge einsehen, Anfragen stellen und ganz einfach Ihre Daten und Familienmitglieder vervollständigen.</p>
 <p style="text-align:center;margin:25px 0;"><a href="https://portal.dienstly24.de" style="background:#1e3a8a;color:#ffffff;padding:12px 30px;border-radius:8px;text-decoration:none;font-size:15px;">Jetzt einloggen</a></p>
 <p style="font-size:14px;color:#666;">Ihre Zugangsdaten finden Sie in unserer Willkommens-E-Mail. Bei Fragen helfen wir gerne weiter.</p>

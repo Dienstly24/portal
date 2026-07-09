@@ -128,6 +128,10 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
                 {{ \App\Models\Document::CATEGORIES[$d->category] ?? ucfirst($d->category) }} · {{ $d->created_at->format('d.m.Y') }}
                 @if(($d->visibility ?? 'customer') === 'internal')<span style="font-size:10.5px;background:#F7E7D6;color:#B5651D;padding:1px 6px;border-radius:4px;">🔒 intern</span>@else<span style="font-size:10.5px;background:#EAF2FB;color:#185FA5;padding:1px 6px;border-radius:4px;">👤 Kunde</span>@endif
                 @if($d->uploader) · {{ $d->uploader->name }}@endif
+                <form method="POST" action="{{ route('admin.documents.replace', $d->id) }}" enctype="multipart/form-data" style="display:inline;">
+                    @csrf
+                    <label style="font-size:10.5px;color:var(--petrol);cursor:pointer;">↺ Ersetzen<input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" style="display:none;" onchange="this.form.submit()"></label>
+                </form>
             </div>
         </div>
         <a href="{{ route('admin.documents.download', $d->id) }}" class="btn btn-ghost btn-sm">⬇</a>
@@ -477,6 +481,12 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
                     <option value="red">🔴 Dringend</option>
                 </select>
             </div>
+            <div id="upload-progress" style="display:none;margin-bottom:14px;">
+                <div style="height:8px;background:var(--canvas);border:1px solid var(--line);border-radius:6px;overflow:hidden;">
+                    <div id="upload-progress-bar" style="height:100%;width:0;background:var(--petrol);transition:width .2s;"></div>
+                </div>
+                <div id="upload-progress-label" style="font-size:12px;color:var(--ink-soft);margin-top:5px;">0%</div>
+            </div>
             <div style="display:flex;gap:10px;justify-content:flex-end;">
                 <button type="button" onclick="document.getElementById('add-doc-modal').style.display='none'" class="btn btn-ghost">Abbrechen</button>
                 <button type="submit" class="btn btn-primary">Hochladen</button>
@@ -486,6 +496,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
 </div>
 <script>
 (function() {
+    const form = document.getElementById('doc-upload-form');
     const dz = document.getElementById('dropzone');
     const input = document.getElementById('doc-input');
     const list = document.getElementById('file-list');
@@ -505,7 +516,49 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
     input.addEventListener('change', render);
     ['dragover','dragenter'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.style.borderColor = 'var(--petrol)'; dz.style.background = 'var(--canvas)'; }));
     ['dragleave','drop'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.style.borderColor = 'var(--line)'; dz.style.background = 'transparent'; }));
-    dz.addEventListener('drop', ev => { input.files = ev.dataTransfer.files; render(); });
+    dz.addEventListener('drop', ev => { ev.preventDefault(); input.files = ev.dataTransfer.files; render(); });
+
+    // Echter Upload-Fortschritt via XHR (Punkt 3): Prozent + verbleibende Zeit
+    form.addEventListener('submit', function(ev) {
+        if (!input.files.length) return; // normales Verhalten, Server validiert
+        ev.preventDefault();
+        const xhr = new XMLHttpRequest();
+        const data = new FormData(form);
+        const bar = document.getElementById('upload-progress-bar');
+        const wrap = document.getElementById('upload-progress');
+        const label = document.getElementById('upload-progress-label');
+        wrap.style.display = 'block';
+        const started = Date.now();
+        xhr.upload.addEventListener('progress', function(e) {
+            if (!e.lengthComputable) return;
+            const pct = Math.round(e.loaded / e.total * 100);
+            bar.style.width = pct + '%';
+            const elapsed = (Date.now() - started) / 1000;
+            const rate = e.loaded / Math.max(elapsed, 0.1);
+            const remain = rate > 0 ? Math.max(0, Math.round((e.total - e.loaded) / rate)) : 0;
+            label.textContent = pct + '% · noch ~' + remain + ' s';
+        });
+        xhr.addEventListener('load', function() {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                label.textContent = '✓ Erfolgreich hochgeladen';
+                bar.style.background = '#3B7A57';
+                setTimeout(() => window.location.reload(), 600);
+            } else {
+                let msg = 'Fehler beim Upload.';
+                try { const j = JSON.parse(xhr.responseText); if (j.message) msg = j.message; } catch(e) {}
+                label.textContent = '⚠ ' + msg;
+                bar.style.background = '#A32D2D';
+            }
+        });
+        xhr.addEventListener('error', function() {
+            label.textContent = '⚠ Netzwerkfehler beim Upload.';
+            bar.style.background = '#A32D2D';
+        });
+        xhr.open('POST', form.action);
+        xhr.setRequestHeader('Accept', 'application/json');
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.send(data);
+    });
 })();
 </script>
 </div>

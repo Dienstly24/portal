@@ -515,6 +515,37 @@ class AdminController extends Controller
     }
 
     /** Sicherer Dokument-Download (Admin) - nur mit Zugriff auf den Kunden. */
+    /** Datei eines bestehenden Dokuments austauschen - setzt updated_by. (Punkt 3) */
+    public function documentReplace(Request $request, $id) {
+        $doc = \App\Models\Document::findOrFail($id);
+        $this->authorizeCustomerAccess($doc->customer_id);
+        $request->validate(['document' => 'required|file|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:10240']);
+
+        $file = $request->file('document');
+        $newPath = $file->store('customers/' . $doc->customer_id . '/documents', 'local');
+
+        // Alte Datei entfernen (best effort), dann DB aktualisieren
+        try { \Illuminate\Support\Facades\Storage::disk($doc->disk ?: 'public')->delete($doc->file_path); } catch (\Throwable $e) {}
+
+        $doc->update([
+            'file_name' => $file->getClientOriginalName(),
+            'file_path' => $newPath,
+            'disk' => 'local',
+            'file_size' => $file->getSize(),
+            'updated_by' => auth()->id(),
+        ]);
+
+        \App\Models\ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'document_replaced',
+            'entity_type' => 'document',
+            'entity_id' => $doc->id,
+            'meta' => json_encode(['customer_id' => (string) $doc->customer_id, 'file' => $doc->file_name], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        return back()->with('success', 'Dokument ersetzt.');
+    }
+
     public function documentDownload($id) {
         $doc = \App\Models\Document::findOrFail($id);
         $this->authorizeCustomerAccess($doc->customer_id);

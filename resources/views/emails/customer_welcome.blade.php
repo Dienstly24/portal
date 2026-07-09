@@ -12,7 +12,7 @@
 <p style="font-size:15px;color:#333;">مرحباً <strong>{{ $customerName }}</strong>،</p>
 <p style="font-size:15px;color:#333;">يسعدنا انضمامك إلينا! تم إنشاء حسابك في بوابة العملاء الخاصة بنا. هذه بيانات الدخول:</p>
 @else
-<p style="font-size:15px;color:#333;">Hallo <strong>{{ $customerName }}</strong>,</p>
+@include('emails._greeting', ['greetingName' => $customerName])
 <p style="font-size:15px;color:#333;">wir freuen uns, Sie bei uns begrüßen zu dürfen! Ihr Zugang zu unserem Kundenportal wurde erstellt:</p>
 @endif
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin:15px 0;">
