@@ -124,7 +124,31 @@ class PortalController extends Controller
     }
 
     public function profileUpdate(Request $request) {
+        $request->validate(['gender' => 'nullable|in:male,female,diverse']);
         $customer = $this->getCustomer();
+
+        // Geschlecht läuft über das neue Change-Request-System (type=profile)
+        if ($request->filled('gender') && $request->gender !== $customer->gender) {
+            $cr = \App\Models\CustomerChangeRequest::create([
+                'customer_id' => $customer->id,
+                'requested_by' => auth()->id(),
+                'type' => 'profile',
+                'old_data' => ['gender' => $customer->gender],
+                'new_data' => ['gender' => $request->gender],
+                'status' => 'pending',
+            ]);
+            foreach (\App\Models\User::whereIn('role', ['admin','manager','support'])->where('is_active', true)->get() as $recipient) {
+                \App\Models\InternalNotification::create(['user_id' => $recipient->id, 'change_request_id' => $cr->id]);
+            }
+            \App\Models\ActivityLog::create([
+                'user_id' => auth()->id(),
+                'action' => 'change_request_created',
+                'entity_type' => 'change_request',
+                'entity_id' => $cr->id,
+                'meta' => json_encode(['customer_id' => (string) $customer->id, 'type' => 'profile', 'text' => 'Geschlecht geändert'], JSON_UNESCAPED_UNICODE),
+            ]);
+        }
+
         $fields = ['address','phone','iban','marital_status'];
         foreach ($fields as $field) {
             if ($request->filled($field) && $request->$field !== $customer->$field) {
