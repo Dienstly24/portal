@@ -114,7 +114,16 @@ class PortalController extends Controller
      */
     public function documentDownload($id) {
         $customer = $this->getCustomer();
-        $doc = \App\Models\Document::where('customer_id', $customer->id)->where('id', $id)->firstOrFail();
+        $doc = \App\Models\Document::where('customer_id', $customer->id)
+            ->customerVisible() // interne Dokumente sind für Kunden unsichtbar (404)
+            ->where('id', $id)->firstOrFail();
+        \App\Models\ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'document_viewed',
+            'entity_type' => 'document',
+            'entity_id' => $doc->id,
+            'meta' => json_encode(['file' => $doc->file_name], JSON_UNESCAPED_UNICODE),
+        ]);
         $disk = $doc->disk ?: 'public';
         abort_unless(\Illuminate\Support\Facades\Storage::disk($disk)->exists($doc->file_path), 404);
         return \Illuminate\Support\Facades\Storage::disk($disk)->download($doc->file_path, $doc->file_name);
@@ -123,7 +132,7 @@ class PortalController extends Controller
     public function documents() {
         $customer = $this->getCustomer();
         return view('portal.documents', [
-            'documents' => \App\Models\Document::where('customer_id', $customer->id)->latest()->get()
+            'documents' => \App\Models\Document::where('customer_id', $customer->id)->customerVisible()->latest()->get()
         ]);
     }
 
