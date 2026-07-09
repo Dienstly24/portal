@@ -53,6 +53,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
     <button type="button" class="cust-tab" data-tab="tab-tickets" onclick="showCustTab('tab-tickets',this)">🎫 Tickets <span style="opacity:.7;">({{ $customer->tickets->count() }})</span></button>
     <button type="button" class="cust-tab" data-tab="tab-intern" onclick="showCustTab('tab-intern',this)">💬 Intern <span style="opacity:.7;">({{ $internalChat->count() }})</span></button>
     <button type="button" class="cust-tab" data-tab="tab-notizen" onclick="showCustTab('tab-notizen',this)">📝 Notizen</button>
+    <button type="button" class="cust-tab" data-tab="tab-verlauf" onclick="showCustTab('tab-verlauf',this)">🔄 Verlauf</button>
 </div>
 <div class="tab-section" id="tab-uebersicht">
 {{-- Vertragsstruktur Icons --}}
@@ -94,6 +95,20 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
         <tr><td style="color:var(--ink-soft);padding:8px 0;border-top:1px solid var(--line);">Firma</td><td style="border-top:1px solid var(--line);">{{ $customer->company_name }} @if($customer->company_type)<span style="font-size:12px;color:var(--ink-soft);">({{ $customer->company_type }})</span>@endif</td></tr>
         @endif
     </table>
+</div>
+
+{{-- Kundenakte: Kranken-/Renten-/Steuerdaten (sensibel, verschlüsselt gespeichert) --}}
+<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div class="card-title" style="margin-bottom:0;">🏥 Kranken-, Renten- & Steuerdaten</div>
+        <span style="font-size:11.5px;background:#EAF2FB;color:#185FA5;border:1px solid #CFE2F5;padding:3px 10px;border-radius:999px;">🔐 Verschlüsselt gespeichert</span>
+    </div>
+    <div class="item-row"><span style="font-size:13px;color:var(--ink-soft);">Versicherungsart</span><span style="font-size:13.5px;font-weight:600;">{{ ['gesetzlich'=>'Gesetzlich','privat'=>'Privat'][$customer->health_insurance_type] ?? '—' }}</span></div>
+    <div class="item-row"><span style="font-size:13px;color:var(--ink-soft);">Krankenkasse</span><span style="font-size:13.5px;font-weight:600;">{{ $customer->health_insurance_company ?? '—' }}</span></div>
+    <div class="item-row"><span style="font-size:13px;color:var(--ink-soft);">KV-Nummer</span><span style="font-size:13.5px;font-weight:600;font-family:monospace;">{{ $customer->health_insurance_number ?? '—' }}</span></div>
+    <div class="item-row"><span style="font-size:13px;color:var(--ink-soft);">Rentenversicherungsnr.</span><span style="font-size:13.5px;font-weight:600;font-family:monospace;">{{ $customer->pension_insurance_number ?? '—' }}</span></div>
+    <div class="item-row"><span style="font-size:13px;color:var(--ink-soft);">Steuer-ID</span><span style="font-size:13.5px;font-weight:600;font-family:monospace;">{{ $customer->tax_id ?? '—' }}</span></div>
+    <p style="font-size:11.5px;color:var(--ink-soft);margin-top:10px;">Bearbeitung über „Kunde bearbeiten" – jede Änderung wird auditiert.</p>
 </div>
 
 {{-- Dokumente --}}
@@ -161,6 +176,32 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
             </td>
             <td style="padding:12px;font-size:12px;color:var(--ink-soft);">{{ $c->added_by ?? 'System' }}</td>
         </tr>
+        @if($c->vehicleDetail || $c->energyDetail || $c->internetDetail)
+        <tr class="contract-row" data-type="{{ $c->type }}">
+            <td colspan="6" style="padding:4px 12px 12px;">
+                <div style="font-size:12.5px;color:var(--ink-soft);background:var(--canvas);border:1px solid var(--line);border-radius:8px;padding:8px 12px;">
+                    @if($v = $c->vehicleDetail)
+                        🚗 <b>{{ $v->license_plate ?? '—' }}</b> · {{ $v->manufacturer }} {{ $v->model }}@if($v->vehicle_type) ({{ $v->vehicle_type }})@endif
+                        @if($v->vin) · FIN {{ $v->vin }}@endif
+                        @if($v->first_registration) · EZ {{ $v->first_registration->format('m/Y') }}@endif
+                        @if($v->sf_liability_class) · SF Haftpflicht: {{ $v->sf_liability_class }}@if($v->sf_liability_year) ({{ $v->sf_liability_year }})@endif @endif
+                        @if($v->sf_comprehensive_class) · SF Vollkasko: {{ $v->sf_comprehensive_class }}@if($v->sf_comprehensive_year) ({{ $v->sf_comprehensive_year }})@endif @endif
+                        @if($v->has_claims)
+                            <br>⚠️ Schäden: @foreach($v->claims ?? [] as $claim){{ str_pad($claim['month'] ?? '?', 2, '0', STR_PAD_LEFT) }}/{{ $claim['year'] ?? '?' }} ({{ ucfirst($claim['type'] ?? '') }})@if(!$loop->last), @endif @endforeach
+                        @endif
+                    @elseif($e = $c->energyDetail)
+                        ⚡ {{ $e->tariff ?? 'Tarif —' }}@if($e->consumption_kwh) · {{ number_format($e->consumption_kwh, 0, ',', '.') }} kWh/Jahr @endif
+                        @if($e->meter_number) · Zähler: {{ $e->meter_number }}@endif
+                        @if($e->malo_id) · MaLo-ID: <b>{{ $e->malo_id }}</b>@endif
+                        @if($e->grid_operator) · Netz: {{ $e->grid_operator }}@endif
+                    @elseif($i = $c->internetDetail)
+                        📶 {{ $i->tariff ?? 'Tarif —' }}@if($i->speed) · {{ $i->speed }}@endif
+                    @endif
+                </div>
+            </td>
+        </tr>
+        @endif
+
         @empty
         <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--ink-soft);">Keine Verträge.</td></tr>
         @endforelse
@@ -302,6 +343,34 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
         <button type="submit" class="btn btn-primary">Notiz speichern</button>
     </form>
 </div>
+</div>
+</div>
+
+
+<div class="tab-section" id="tab-verlauf" style="display:none;">
+{{-- Änderungsverlauf: alle Self-Service-Anträge dieses Kunden --}}
+<div class="card">
+    <div class="card-title">🔄 Änderungsverlauf</div>
+    @forelse($customer->changeRequests->sortByDesc('created_at') as $cr)
+    <div class="item-row">
+        <div>
+            <div style="font-size:14px;font-weight:600;">{{ $cr->typeLabel() }}</div>
+            <div style="font-size:12px;color:var(--ink-soft);">
+                Eingereicht {{ $cr->created_at->format('d.m.Y H:i') }}
+                @if($cr->reviewer) · {{ $cr->status === 'approved' ? 'genehmigt' : 'abgelehnt' }} von {{ $cr->reviewer->name }} am {{ $cr->reviewed_at?->format('d.m.Y H:i') }}@endif
+                @if($cr->notes) · Notiz: {{ $cr->notes }}@endif
+            </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+            @if($cr->status === 'pending')<span class="badge badge-pending">Offen</span>
+            @elseif($cr->status === 'approved')<span class="badge badge-active">Genehmigt</span>
+            @else<span class="badge" style="background:#F9E3E3;color:#A32D2D;">Abgelehnt</span>@endif
+            @if($cr->status === 'pending')<a href="{{ route('admin.change_requests') }}" class="btn btn-ghost btn-sm">Prüfen</a>@endif
+        </div>
+    </div>
+    @empty
+    <p style="color:var(--ink-soft);font-size:14px;">Noch keine Änderungsanfragen dieses Kunden.</p>
+    @endforelse
 </div>
 </div>
 

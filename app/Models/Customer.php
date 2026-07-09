@@ -9,8 +9,41 @@ class Customer extends Model {
         'user_id','customer_number','birth_date','address','address2',
         'iban','iban2','marital_status','phone','mobile','preferred_lang',
         'company_name','company_type','customer_type','email2',
-        'nationality','occupation','last_contact','gender','account_holder'
+        'nationality','occupation','last_contact','gender','account_holder',
+        'salutation','health_insurance_number','health_insurance_company','health_insurance_type',
+        'pension_insurance_number','tax_id'
     ];
+
+    public const SALUTATIONS = ['herr' => 'Herr', 'frau' => 'Frau', 'divers' => 'Divers', 'firma' => 'Firma'];
+
+    /**
+     * Sensible Daten (KV-Nummer, RV-Nummer, Steuer-ID) werden
+     * verschlüsselt gespeichert (AES via APP_KEY). Zugriff nur über
+     * autorisierte Controller; Änderungen laufen durchs Audit-Log.
+     */
+    protected function casts(): array {
+        return [
+            'health_insurance_number' => 'encrypted',
+            'pension_insurance_number' => 'encrypted',
+            'tax_id' => 'encrypted',
+        ];
+    }
+
+    /** Korrekte Briefanrede für E-Mails und Vorlagen. */
+    public function salutationLine(): string {
+        $name = $this->user?->name ?? '';
+        return match ($this->salutation) {
+            'herr' => 'Sehr geehrter Herr ' . $this->lastNameOr($name),
+            'frau' => 'Sehr geehrte Frau ' . $this->lastNameOr($name),
+            'firma' => 'Sehr geehrte Damen und Herren',
+            default => 'Guten Tag ' . $name,
+        };
+    }
+
+    private function lastNameOr(string $fullName): string {
+        $parts = preg_split('/\s+/', trim($fullName));
+        return $parts ? end($parts) : $fullName;
+    }
 
     public const GENDERS = ['male' => 'Männlich', 'female' => 'Weiblich', 'diverse' => 'Divers'];
 

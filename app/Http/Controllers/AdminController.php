@@ -62,7 +62,7 @@ class AdminController extends Controller
 
     public function customerShow($id) {
         $this->authorizeCustomerAccess($id);
-        $customer = Customer::with(['user','contracts','tickets','documents'])->findOrFail($id);
+        $customer = Customer::with(['user','contracts.vehicleDetail','contracts.energyDetail','contracts.internetDetail','tickets','documents','changeRequests.reviewer'])->findOrFail($id);
         // Interner Chat & Notizen (nur Staff - Zugriff bereits oben geprüft)
         $internalChat = \App\Models\InternalMessage::chat()->where('customer_id', $id)->with('sender')->orderBy('created_at')->get();
         $internalNotes = \App\Models\InternalMessage::note()->where('customer_id', $id)->with('sender')->latest()->get();
@@ -94,11 +94,27 @@ class AdminController extends Controller
             'type' => 'required',
             'insurer' => 'required',
             'status' => 'required',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            // KFZ-Details
+            'vehicle.first_registration' => 'nullable|date',
+            'vehicle.sf_liability_year' => 'nullable|integer|min:1950|max:2100',
+            'vehicle.sf_comprehensive_year' => 'nullable|integer|min:1950|max:2100',
+            'vehicle.claims' => 'nullable|array',
+            'vehicle.claims.*.month' => 'required_with:vehicle.claims|integer|min:1|max:12',
+            'vehicle.claims.*.year' => 'required_with:vehicle.claims|integer|min:1990|max:2100',
+            'vehicle.claims.*.type' => 'required_with:vehicle.claims|in:haftpflicht,vollkasko,teilkasko',
+            // Energie: MaLo-ID hat 11 Ziffern und ist NICHT die Zählernummer
+            'energy.malo_id' => ['nullable', 'regex:/^[0-9]{11}$/'],
+            'energy.consumption_kwh' => 'nullable|integer|min:0',
+            // Internet
+            'internet.speed' => 'nullable|string|max:30',
         ]);
-        Contract::create([
+
+        $contract = Contract::create([
             'id' => Str::uuid(),
             'customer_id' => $customerId,
-            'contract_number' => 'V-' . strtoupper(Str::random(8)),
+            'contract_number' => $request->contract_number ?: ('V-' . strtoupper(Str::random(8))),
             'type' => $request->type,
             'insurer' => $request->insurer,
             'status' => $request->status,
@@ -106,6 +122,38 @@ class AdminController extends Controller
             'end_date' => $request->end_date,
             'notes' => $request->notes,
         ]);
+
+        // Spartenspezifische Detaildatensätze (Spec Teil 4/5)
+        if ($request->type === 'kfz' && $request->filled('vehicle')) {
+            $v = $request->input('vehicle');
+            $claims = collect($v['claims'] ?? [])->filter(fn($c) => !empty($c['year']))->values()->all();
+            \App\Models\ContractVehicleDetail::create([
+                'contract_id' => $contract->id,
+                'license_plate' => $v['license_plate'] ?? null,
+                'manufacturer' => $v['manufacturer'] ?? null,
+                'model' => $v['model'] ?? null,
+                'vehicle_type' => $v['vehicle_type'] ?? null,
+                'vin' => $v['vin'] ?? null,
+                'first_registration' => $v['first_registration'] ?? null,
+                'has_claims' => count($claims) > 0,
+                'claims' => $claims,
+                'sf_liability_class' => $v['sf_liability_class'] ?? null,
+                'sf_liability_year' => $v['sf_liability_year'] ?? null,
+                'sf_comprehensive_class' => $v['sf_comprehensive_class'] ?? null,
+                'sf_comprehensive_year' => $v['sf_comprehensive_year'] ?? null,
+            ]);
+        } elseif ($request->type === 'strom_gas' && $request->filled('energy')) {
+            \App\Models\ContractEnergyDetail::create(
+                ['contract_id' => $contract->id] + collect($request->input('energy'))
+                    ->only(['tariff','consumption_kwh','meter_number','malo_id','meter_reading','grid_operator','metering_operator'])
+                    ->all()
+            );
+        } elseif ($request->type === 'internet' && $request->filled('internet')) {
+            \App\Models\ContractInternetDetail::create(
+                ['contract_id' => $contract->id] + collect($request->input('internet'))->only(['tariff','speed'])->all()
+            );
+        }
+
         return redirect()->route('admin.customer', $customerId)->with('success', 'Vertrag erfolgreich hinzugefügt.');
     }
 
@@ -239,6 +287,7 @@ class AdminController extends Controller
             'birth_date' => $request->birth_date ?: null,
             'marital_status' => $request->marital_status,
             'gender' => in_array($request->gender, ['male','female','diverse'], true) ? $request->gender : null,
+            'salutation' => in_array($request->salutation, ['herr','frau','divers','firma'], true) ? $request->salutation : null,
             'preferred_lang' => $request->preferred_lang,
             'nationality' => $request->nationality,
             'occupation' => $request->occupation,
@@ -367,11 +416,19 @@ class AdminController extends Controller
     public function storeFamily(Request $request, $id) {
         $this->authorizeCustomerAccess($id);
         $request->validate(['name' => 'required']);
+        $request->validate([
+            'health_insurance_status' => 'nullable|in:mitglied,familienversichert',
+            'health_insurance_start' => 'nullable|date',
+        ]);
         \App\Models\CustomerFamily::create([
             'customer_id' => $id,
             'name' => $request->name,
             'relation' => $request->relation ?? 'Kind',
             'birth_date' => $request->birth_date ?: null,
+            'health_insurance_status' => $request->health_insurance_status,
+            'health_insurance_company' => $request->health_insurance_company,
+            'health_insurance_number' => $request->health_insurance_number ?: null,
+            'health_insurance_start' => $request->health_insurance_start ?: null,
         ]);
         return back()->with('success', 'Familienmitglied hinzugefuegt.');
     }
@@ -442,8 +499,28 @@ class AdminController extends Controller
         \Illuminate\Support\Facades\DB::table('employee_customers')->where('customer_id', $dup->id)->update(['customer_id' => $primary->id]);
 
         // 2) Fehlende Felder vom Duplikat übernehmen
-        $request->validate(['gender' => 'nullable|in:male,female,diverse']);
-        foreach (['phone','mobile','address','address2','iban','iban2','birth_date','marital_status','nationality','occupation','email2','company_name','company_type','gender'] as $f) {
+        $request->validate(['gender' => 'nullable|in:male,female,diverse', 'salutation' => 'nullable|in:herr,frau,divers,firma']);
+        // Sensible Kundenakte-Felder: Änderungen auditieren (Spec Teil 3)
+        $sensitive = ['health_insurance_number','health_insurance_company','health_insurance_type','pension_insurance_number','tax_id'];
+        $changedSensitive = [];
+        foreach ($sensitive as $sf) {
+            if ($request->has($sf) && (string) $request->input($sf) !== (string) $customer->$sf) {
+                $changedSensitive[] = $sf;
+                $customer->$sf = $request->input($sf) ?: null;
+            }
+        }
+        if ($changedSensitive) {
+            \App\Models\ActivityLog::create([
+                'user_id' => auth()->id(),
+                'action' => 'sensitive_data_updated',
+                'entity_type' => 'customer',
+                'entity_id' => $customer->id,
+                // bewusst NUR Feldnamen, niemals Werte, ins Log
+                'meta' => json_encode(['fields' => $changedSensitive], JSON_UNESCAPED_UNICODE),
+            ]);
+        }
+
+        foreach (['phone','mobile','address','address2','iban','iban2','birth_date','marital_status','nationality','occupation','email2','company_name','company_type','gender','salutation'] as $f) {
             if (empty($primary->$f) && !empty($dup->$f)) $primary->$f = $dup->$f;
         }
         $primary->save();

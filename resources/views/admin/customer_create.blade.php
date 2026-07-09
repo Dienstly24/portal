@@ -29,6 +29,14 @@
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div class="field"><label>Mobil</label><input type="tel" name="mobile" value="{{ old('mobile') }}" placeholder="+49 176 ..."></div>
+        <div class="field"><label>Anrede</label>
+            <select name="salutation" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                <option value="">— Nicht angegeben —</option>
+                @foreach(\App\Models\Customer::SALUTATIONS as $skey => $slabel)
+                <option value="{{ $skey }}" >{{ $slabel }}</option>
+                @endforeach
+            </select>
+        </div>
         <div class="field"><label>Geschlecht</label>
             <select name="gender" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
                 <option value="">— Nicht angegeben —</option>
