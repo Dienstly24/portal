@@ -178,6 +178,18 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // Einstellungen & Termine
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings')->middleware('role:admin');
     Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update')->middleware('role:admin');
+
+    // E-Mail-Postfächer (Priorität 1 der KI-Systemerweiterung) - nur admin, Zugangsdaten sind sensibel
+    Route::prefix('email-accounts')->name('email_accounts.')->middleware('role:admin')->group(function () {
+        Route::get('/', [\App\Http\Controllers\EmailAccountController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\EmailAccountController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\EmailAccountController::class, 'store'])->name('store');
+        Route::get('/{id}/edit', [\App\Http\Controllers\EmailAccountController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [\App\Http\Controllers\EmailAccountController::class, 'update'])->name('update');
+        Route::delete('/{id}', [\App\Http\Controllers\EmailAccountController::class, 'destroy'])->name('destroy');
+        Route::put('/{id}/toggle', [\App\Http\Controllers\EmailAccountController::class, 'toggleActive'])->name('toggle');
+        Route::post('/{id}/test', [\App\Http\Controllers\EmailAccountController::class, 'testConnection'])->name('test');
+    });
     Route::get('/appointments', [AppointmentController::class, 'index'])->name('appointments');
     Route::post('/appointments', [AppointmentController::class, 'store'])->name('appointments.store');
     Route::put('/appointments/{id}', [AppointmentController::class, 'update'])->name('appointments.update');
