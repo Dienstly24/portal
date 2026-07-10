@@ -25,9 +25,12 @@ class WebsiteInquiryController extends Controller
             'subject' => 'nullable|max:255',
             'message' => 'required|max:5000',
         ]);
-        Ticket::forceCreate([
+        // Punkt 7: Bestandskunden über die E-Mail-Adresse zuordnen
+        $customer = \App\Models\Customer::whereHas('user', fn($q) => $q->where('email', $data['email']))->first();
+
+        $ticket = Ticket::forceCreate([
             'id' => Str::uuid(),
-            'customer_id' => null,
+            'customer_id' => $customer?->id,
             'source' => 'website',
             'type' => 'other',
             'priority' => 'mittel',
@@ -38,6 +41,15 @@ class WebsiteInquiryController extends Controller
             'guest_email' => $data['email'],
             'guest_phone' => $data['phone'] ?? null,
         ]);
+        // Punkt 7: Support-Mail mit Kundenname, -nummer, E-Mail, Betreff, Zeit
+        $supportEmail = config('services.inquiry.support_email') ?: config('mail.from.address');
+        if ($supportEmail) {
+            try {
+                \Illuminate\Support\Facades\Mail::to($supportEmail)
+                    ->send(new \App\Mail\SupportInquiryMail($ticket, $customer?->customer_number));
+            } catch (\Throwable $e) { \Log::warning('Support inquiry mail failed: ' . $e->getMessage()); }
+        }
+
         return response()->json(['success' => true]);
     }
 

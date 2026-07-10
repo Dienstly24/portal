@@ -70,7 +70,7 @@
         <div class="field"><label>Nachricht</label><textarea name="body" required placeholder="Ihre Antwort..."></textarea></div>
         <div class="field">
             <label>Datei anhängen (optional)</label>
-            <input type="file" name="attachments[]" multiple accept=".pdf,.jpg,.jpeg,.png">
+            <input type="file" name="attachments[]" multiple accept=".pdf,.jpg,.jpeg,.png,.webp">
             <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">PDF, JPG oder PNG · für den Kunden im Portal sichtbar</div>
         </div>
         <div class="grid-2">

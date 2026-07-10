@@ -37,10 +37,14 @@
 @if($ticket->status !== 'closed')
 <div class="card">
     <div class="card-title">Antworten</div>
-    <form method="POST" action="{{ route('portal.tickets.reply', $ticket->id) }}">
+    <form method="POST" action="{{ route('portal.tickets.reply', $ticket->id) }}" enctype="multipart/form-data">
         @csrf
         <div class="field">
             <textarea name="body" required placeholder="Ihre Nachricht..."></textarea>
+        </div>
+        <div class="field">
+            <label>📎 Anhänge (optional, max. 5 · PDF/JPG/PNG/WEBP, je max. 10 MB)</label>
+            <input type="file" name="attachments[]" multiple accept=".pdf,.jpg,.jpeg,.png,.webp">
         </div>
         <button type="submit" class="btn btn-primary">Senden</button>
     </form>

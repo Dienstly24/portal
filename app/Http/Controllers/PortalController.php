@@ -103,11 +103,19 @@ class PortalController extends Controller
         $customer = $this->getCustomer();
         $a = \App\Models\TicketAttachment::findOrFail($id);
         $ticket = Ticket::where('id', $a->ticket_id)->where('customer_id', $customer->id)->firstOrFail();
+        if (($a->disk ?? 'public') === 'local') {
+            return \Illuminate\Support\Facades\Storage::disk('local')->download($a->file_path, $a->file_name);
+        }
         return response()->download(storage_path('app/public/' . $a->file_path), $a->file_name);
     }
 
     public function ticketsReply(Request $request, $id) {
-        $request->validate(['body' => 'required']);
+        // Punkt 5: Dateianhänge in der Unterhaltung (PDF/JPG/JPEG/PNG/WEBP)
+        $request->validate([
+            'body' => 'required',
+            'attachments' => 'nullable|array|max:5',
+            'attachments.*' => 'file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+        ]);
         $customer = $this->getCustomer();
         $ticket = Ticket::where('id', $id)->where('customer_id', $customer->id)->firstOrFail();
         TicketMessage::create([
@@ -117,6 +125,18 @@ class PortalController extends Controller
             'body' => $request->body,
             'is_internal' => false,
         ]);
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                \App\Models\TicketAttachment::create([
+                    'id' => (string) Str::uuid(),
+                    'ticket_id' => $ticket->id,
+                    'uploaded_by' => auth()->id(),
+                    'file_name' => $file->getClientOriginalName(),
+                    'file_path' => $file->store('tickets/' . $ticket->id, 'local'),
+                    'disk' => 'local',
+                ]);
+            }
+        }
         return back()->with('success', 'Nachricht gesendet.');
     }
 

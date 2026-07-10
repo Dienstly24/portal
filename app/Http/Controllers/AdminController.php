@@ -184,7 +184,12 @@ class AdminController extends Controller
     }
 
     public function ticketReply(Request $request, $id) {
-        $request->validate(['body' => 'required', 'status' => 'required|in:open,in_progress,waiting,closed']);
+        $request->validate([
+            'body' => 'required',
+            'status' => 'required|in:open,in_progress,waiting,closed',
+            'attachments' => 'nullable|array|max:5',
+            'attachments.*' => 'file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+        ]);
         $ticket = Ticket::findOrFail($id);
         $this->authorizeTicketAccess($ticket);
         \App\Models\TicketMessage::create([
@@ -200,13 +205,15 @@ class AdminController extends Controller
         ]);
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
-                $path = $file->store('tickets/' . $ticket->id, 'public');
+                // Punkt 5: sicher auf privater Disk speichern
+                $path = $file->store('tickets/' . $ticket->id, 'local');
                 \App\Models\TicketAttachment::create([
                     'id' => Str::uuid(),
                     'ticket_id' => $ticket->id,
                     'uploaded_by' => auth()->id(),
                     'file_name' => $file->getClientOriginalName(),
                     'file_path' => $path,
+                    'disk' => 'local',
                 ]);
             }
         }
@@ -584,6 +591,9 @@ class AdminController extends Controller
         $a = \App\Models\TicketAttachment::findOrFail($id);
         $ticket = Ticket::findOrFail($a->ticket_id);
         $this->authorizeTicketAccess($ticket);
+        if (($a->disk ?? 'public') === 'local') {
+            return \Illuminate\Support\Facades\Storage::disk('local')->download($a->file_path, $a->file_name);
+        }
         return response()->download(storage_path('app/public/' . $a->file_path), $a->file_name);
     }
 

@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html lang="de">
-<head>
-<meta charset="utf-8">
-</head>
+<head><meta charset="utf-8"><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
 <body style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:30px 0;">
 <tr><td align="center">
