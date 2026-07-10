@@ -1,5 +1,39 @@
 @extends('layouts.portal')
 @section('content')
+{{-- Werbebanner-Carousel (Punkt 3/4) --}}
+@if(isset($banners) && $banners->isNotEmpty())
+<div id="banner-carousel" style="position:relative;border-radius:14px;overflow:hidden;margin-bottom:24px;border:1px solid var(--line);">
+    @foreach($banners as $i => $b)
+    <a href="{{ route('portal.banner.interest', $b->id) }}" class="banner-slide" data-slide="{{ $i }}" style="display:{{ $i === 0 ? 'block' : 'none' }};position:relative;text-decoration:none;">
+        @if($b->media_type === 'video')
+        <video src="{{ asset('storage/' . $b->media_path) }}" style="width:100%;max-height:260px;object-fit:cover;display:block;" autoplay muted loop playsinline></video>
+        @else
+        <img src="{{ asset('storage/' . $b->media_path) }}" style="width:100%;max-height:260px;object-fit:cover;display:block;" alt="{{ $b->title }}">
+        @endif
+        <span style="position:absolute;left:0;right:0;bottom:0;padding:14px 18px;background:linear-gradient(transparent,rgba(0,0,0,.65));color:#fff;font-weight:700;font-size:15px;">{{ $b->title }} <span style="font-weight:400;font-size:12.5px;">– Jetzt anfragen →</span></span>
+    </a>
+    @endforeach
+    @if($banners->count() > 1)
+    <div style="position:absolute;bottom:10px;right:14px;display:flex;gap:6px;">
+        @foreach($banners as $i => $b)
+        <span class="banner-dot" data-dot="{{ $i }}" style="width:9px;height:9px;border-radius:50%;background:{{ $i === 0 ? '#fff' : 'rgba(255,255,255,.45)' }};cursor:pointer;"></span>
+        @endforeach
+    </div>
+    <script>
+    (function(){
+        const slides=document.querySelectorAll('#banner-carousel .banner-slide');
+        const dots=document.querySelectorAll('#banner-carousel .banner-dot');
+        let cur=0;
+        function show(n){slides[cur].style.display='none';dots[cur].style.background='rgba(255,255,255,.45)';cur=n%slides.length;slides[cur].style.display='block';dots[cur].style.background='#fff';}
+        dots.forEach(d=>d.addEventListener('click',e=>{e.preventDefault();show(parseInt(d.dataset.dot));}));
+        setInterval(()=>show(cur+1),6000);
+    })();
+    </script>
+    @endif
+</div>
+@endif
+
+
 <div class="page-title">Übersicht</div>
 <div class="page-sub">Willkommen zurück, {{ auth()->user()->name }}.</div>
 <div class="grid-3">

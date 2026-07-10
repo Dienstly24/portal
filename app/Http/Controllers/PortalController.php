@@ -25,6 +25,7 @@ class PortalController extends Controller
             'contracts' => Contract::where('customer_id', $customer->id)->latest()->take(3)->get(),
             'tickets' => Ticket::where('customer_id', $customer->id)->latest()->take(3)->get(),
             'completeness' => $customer->completeness(),
+            'banners' => \App\Models\Banner::current()->get(),
         ]);
     }
 
@@ -170,6 +171,36 @@ class PortalController extends Controller
         $n = \App\Models\InternalNotification::where('user_id', auth()->id())->whereNotNull('title')->findOrFail($id);
         $n->update(['read_at' => $n->read_at ?? now()]);
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Banner-Klick (Punkt 4): öffnet die Nachrichten-Seite und erstellt
+     * automatisch eine Supportanfrage, die den Banner eindeutig
+     * referenziert. Doppelklicks erzeugen kein Duplikat, solange die
+     * Anfrage offen ist.
+     */
+    public function bannerInterest($id) {
+        $customer = $this->getCustomer();
+        $banner = \App\Models\Banner::current()->findOrFail($id);
+
+        $subject = 'Interesse: ' . $banner->title;
+        $ticket = Ticket::where('customer_id', $customer->id)
+            ->where('subject', $subject)
+            ->whereIn('status', ['open', 'in_progress', 'waiting'])
+            ->first();
+
+        if (!$ticket) {
+            $ticket = Ticket::create([
+                'customer_id' => $customer->id,
+                'type' => 'other',
+                'status' => 'open',
+                'subject' => $subject,
+                'description' => 'Der Kunde interessiert sich für das Angebot „' . $banner->title . '" (Banner #' . $banner->id . ').',
+            ]);
+        }
+
+        return redirect()->route('portal.tickets.show', $ticket->id)
+            ->with('success', 'Ihre Anfrage zum Angebot „' . $banner->title . '" wurde erstellt. Unser Team meldet sich bei Ihnen.');
     }
 
     public function documents() {

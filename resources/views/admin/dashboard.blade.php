@@ -7,30 +7,30 @@
 </div>
 
 <div class="metrics-grid">
-    <div class="metric-card">
+    <a href="{{ route('admin.customers') }}" class="metric-card metric-card-link">
         <div class="metric-icon icon-green">👥</div>
         <div class="metric-label">Kunden gesamt</div>
         <div class="metric-value">{{ $totalCustomers }}</div>
         <div class="metric-sub">Registrierte Kunden</div>
-    </div>
-    <div class="metric-card">
+    </a>
+    <a href="{{ route('admin.contracts') }}" class="metric-card metric-card-link">
         <div class="metric-icon icon-blue">📄</div>
         <div class="metric-label">Aktive Verträge</div>
         <div class="metric-value">{{ $activeContracts }}</div>
         <div class="metric-sub">Im Bestand</div>
-    </div>
-    <div class="metric-card">
+    </a>
+    <a href="{{ route('admin.tickets') }}" class="metric-card metric-card-link">
         <div class="metric-icon icon-amber">💬</div>
         <div class="metric-label">Offene Anträge</div>
         <div class="metric-value">{{ $openTickets }}</div>
         <div class="metric-sub">Warten auf Bearbeitung</div>
-    </div>
-    <div class="metric-card">
+    </a>
+    <a href="{{ route('admin.change_requests') }}" class="metric-card metric-card-link">
         <div class="metric-icon icon-red">⏳</div>
         <div class="metric-label">Genehmigungen</div>
         <div class="metric-value">{{ $pendingApprovals }}</div>
         <div class="metric-sub">Ausstehend</div>
-    </div>
+    </a>
 </div>
 
 <div class="grid-2">
@@ -69,7 +69,6 @@
         <div class="card-title">Zuletzt geöffnete Kunden</div>
         <a href="{{ route('admin.customers') }}" class="card-link">Alle Kunden anzeigen →</a>
     </div>
-    @php $recentCustomers = \App\Models\Customer::with('user')->latest()->take(8)->get(); @endphp
     <div class="customer-cards">
         @forelse($recentCustomers as $c)
         <a href="{{ route('admin.customer', $c->id) }}" class="customer-card" style="text-decoration:none;color:inherit;">

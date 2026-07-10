@@ -33,6 +33,7 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     Route::post('/documents', [PortalController::class, 'documentUpload'])->name('documents.upload');
     Route::get('/notifications', [PortalController::class, 'notifications'])->name('notifications');
     Route::post('/notifications/{id}/read', [PortalController::class, 'notificationRead'])->name('notifications.read');
+    Route::get('/banner/{id}/interesse', [PortalController::class, 'bannerInterest'])->name('banner.interest');
     Route::get('/profile', [PortalController::class, 'profile'])->name('profile');
 
     // Self-Service (jede Aktion erzeugt nur einen Change Request)
@@ -111,6 +112,11 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/change-requests/{id}/document', [\App\Http\Controllers\ChangeRequestReviewController::class, 'document'])->name('change_requests.document');
     Route::get('/documents/{id}/download', [AdminController::class, 'documentDownload'])->name('documents.download');
     Route::post('/documents/{id}/replace', [AdminController::class, 'documentReplace'])->name('documents.replace');
+    Route::get('/banners', [\App\Http\Controllers\BannerController::class, 'index'])->name('banners');
+    Route::post('/banners', [\App\Http\Controllers\BannerController::class, 'store'])->name('banners.store');
+    Route::post('/banners/{banner}', [\App\Http\Controllers\BannerController::class, 'update'])->name('banners.update');
+    Route::post('/banners/{banner}/toggle', [\App\Http\Controllers\BannerController::class, 'toggle'])->name('banners.toggle');
+    Route::post('/banners/{banner}/delete', [\App\Http\Controllers\BannerController::class, 'destroy'])->name('banners.delete');
 
     // Eigenständiger interner Mitarbeiter-Chat (Spec Teil 8)
     Route::get('/chat', [\App\Http\Controllers\InternalChatController::class, 'index'])->name('chat.index');

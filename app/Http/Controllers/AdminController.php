@@ -47,6 +47,11 @@ class AdminController extends Controller
             'pendingApprovals' => \App\Models\CustomerChangeRequest::where('status','pending')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->count(),
             'recentTickets' => Ticket::with('customer.user')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->latest()->take(5)->get(),
             'recentApprovals' => \App\Models\CustomerChangeRequest::with('customer.user')->where('status','pending')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->latest()->take(5)->get(),
+            // Punkt 1: Zuletzt geöffnete Kunden strikt aufs Portfolio scopen.
+            // Admin (ids === null) sieht alle; Mitarbeiter nur zugewiesene.
+            'recentCustomers' => Customer::with('user')
+                ->when($ids !== null, fn($q) => $q->whereIn('id', $ids))
+                ->latest()->take(8)->get(),
         ]);
     }
 
