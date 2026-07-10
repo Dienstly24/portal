@@ -26,7 +26,7 @@ return new class extends Migration {
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->timestamp('last_read_at')->nullable();
             $table->timestamps();
-            $table->unique(['conversation_id', 'user_id']);
+            $table->unique(['conversation_id', 'user_id'], 'conv_participants_unique');
         });
 
         Schema::create('internal_conversation_messages', function (Blueprint $table) {
