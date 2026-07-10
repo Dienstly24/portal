@@ -106,6 +106,14 @@ form textarea{min-height:90px;resize:vertical;}
     </div>
     @if(session('success'))<div class="alert-success">{{ session('success') }}</div>@endif
     @if(session('error'))<div class="alert-error">{{ session('error') }}</div>@endif
+    @if($errors->any())
+    <div class="alert-error">
+        <strong>Bitte prüfen Sie Ihre Eingaben:</strong>
+        <ul style="margin:6px 0 0;padding-left:18px;">
+            @foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach
+        </ul>
+    </div>
+    @endif
     @yield('content')
 </div>
 <script>

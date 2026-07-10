@@ -18,7 +18,7 @@
     @foreach($attachments as $a)
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);">
         <span style="font-size:13.5px;">{{ $a->file_name }}@if($a->uploaded_by !== auth()->id()) <span style="font-size:11px;background:#E4F0E7;color:#3B7A57;padding:2px 8px;border-radius:4px;">von Dienstly24</span>@endif</span>
-        <span style="display:flex;gap:8px;"><a href="{{ asset('storage/' . $a->file_path) }}" target="_blank" class="btn btn-ghost btn-sm">Öffnen</a><a href="{{ route('portal.attachment.download', $a->id) }}" class="btn btn-ghost btn-sm">⬇</a></span>
+        <span style="display:flex;gap:8px;"><a href="{{ route('portal.attachment.download', $a->id) }}" class="btn btn-ghost btn-sm">⬇ Herunterladen</a></span>
     </div>
     @endforeach
 </div>
