@@ -5,9 +5,9 @@ use App\Models\Customer;
 use App\Models\EmailMessage;
 use App\Models\Task;
 use App\Models\Ticket;
-use App\Models\User;
 use App\Services\CustomerCreation\CustomerAutoCreationService;
 use App\Services\CustomerCreation\DuplicateCustomerException;
+use App\Services\FondsFinanz\FondsFinanzImportService;
 use App\Services\Matching\CustomerMatchingService;
 use Illuminate\Support\Str;
 
@@ -20,13 +20,21 @@ use Illuminate\Support\Str;
  */
 class EmailWorkflowService
 {
-    /** Kategorien, für die eine automatische Neuanlage plausibel ist, wenn wirklich kein Kandidat existiert. */
-    private const AUTO_CREATE_CATEGORIES = ['kundenanfrage', 'fonds_finanz', 'versicherung'];
+    /**
+     * Kategorien, für die eine automatische Neuanlage plausibel ist, wenn
+     * wirklich kein Kandidat existiert. fonds_finanz gehört bewusst NICHT
+     * dazu: Bei diesen Mails ist der Absender die Fonds Finanz selbst -
+     * die Kundendaten stehen im Text und werden vom
+     * FondsFinanzImportService verarbeitet.
+     */
+    private const AUTO_CREATE_CATEGORIES = ['kundenanfrage', 'versicherung'];
 
     public function __construct(
         private readonly EmailClassificationService $classifier,
         private readonly CustomerMatchingService $matcher,
         private readonly CustomerAutoCreationService $autoCreator,
+        private readonly FondsFinanzImportService $fondsFinanz,
+        private readonly SystemUserResolver $systemUser,
     ) {
     }
 
@@ -37,6 +45,13 @@ class EmailWorkflowService
         }
 
         $category = $this->classifier->classify($message);
+
+        if ($category === 'fonds_finanz') {
+            // Eigener Workflow (Architekturplan Abschnitt 8): Kundendaten
+            // stehen im Mail-TEXT, nicht im Absender-Header.
+            $this->fondsFinanz->process($message);
+            return;
+        }
         $criteria = $this->buildCriteria($message);
         $match = $this->matcher->match($criteria);
 
@@ -126,7 +141,6 @@ class EmailWorkflowService
             'kundenanfrage' => $this->createTicket($message, $confirmedCustomer),
             'versicherung' => $this->createTask($message, $confirmedCustomer, 'Dokument/Information für Versicherung prüfen', 7, 'high'),
             'energie' => $this->createTask($message, $confirmedCustomer, 'Energievertrag-Hinweis prüfen – Kunde kontaktieren', 14, 'medium'),
-            'fonds_finanz' => $this->createTask($message, $confirmedCustomer, 'Fonds-Finanz-Mail prüfen (automatischer Import folgt)', 3, 'medium'),
             'provisionen' => $this->createTask($message, $confirmedCustomer, 'Provisionsabrechnung prüfen (Lexoffice-Anbindung folgt)', 5, 'medium'),
             'dokumente' => $confirmedCustomer === null ? $this->createTask($message, null, 'Eingereichtes Dokument manuell zuordnen', 3, 'medium') : null,
             default => $this->createTask($message, $confirmedCustomer, 'E-Mail manuell prüfen', 5, 'low'),
@@ -167,16 +181,8 @@ class EmailWorkflowService
         ]);
     }
 
-    /**
-     * Systemweit für automatisiert erzeugte Aufgaben ohne konkreten
-     * Betreuer. Bewusst NICHT hart auf ID 1 verdrahtet (das bricht auf
-     * einer frischen/leeren Instanz mit Foreign-Key-Fehler) - stattdessen
-     * der erste Admin, sonst irgendein vorhandener Nutzer.
-     */
     private function systemUserId(): int
     {
-        return User::where('role', 'admin')->value('id')
-            ?? User::query()->value('id')
-            ?? throw new \RuntimeException('Keine Benutzer im System vorhanden - automatisierte Aufgabe kann niemandem zugewiesen werden.');
+        return $this->systemUser->resolveId();
     }
 }

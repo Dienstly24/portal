@@ -94,4 +94,5 @@ class Customer extends Model {
     public function notes() { return $this->hasMany(CustomerNote::class)->latest(); }
     public function timeline() { return $this->hasMany(CustomerTimeline::class)->latest(); }
     public function appointments() { return $this->hasMany(Appointment::class); }
+    public function externalReferences() { return $this->morphMany(ExternalReference::class, 'referenceable'); }
 }
