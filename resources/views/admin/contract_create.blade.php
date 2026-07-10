@@ -30,6 +30,7 @@
         </div>
         <div class="grid-2">
             <div class="field"><label>Enddatum</label><input type="date" name="end_date"></div>
+            <div class="field"><label>Kündigungsdatum</label><input type="date" name="cancellation_date"></div>
             <div class="field"><label>Notizen</label><input type="text" name="notes"></div>
         </div>
         <div class="field"><label>Vertragsnummer (leer = automatisch)</label><input type="text" name="contract_number" maxlength="100"></div>
@@ -82,6 +83,18 @@
                 <div class="field"><label>Netzbetreiber (optional)</label><input type="text" name="energy[grid_operator]"></div>
             </div>
             <div class="field"><label>Messstellenbetreiber (optional)</label><input type="text" name="energy[metering_operator]"></div>
+            <div class="grid-2">
+                <div class="field"><label>Abschlag (€)</label><input type="number" step="0.01" name="energy[payment_amount]" min="0"></div>
+                <div class="field"><label>Zahlungsintervall</label>
+                    <select name="energy[payment_interval]">
+                        <option value="">—</option>
+                        <option value="monatlich">Monatlich</option>
+                        <option value="vierteljaehrlich">Vierteljährlich</option>
+                        <option value="halbjaehrlich">Halbjährlich</option>
+                        <option value="jaehrlich">Jährlich</option>
+                    </select>
+                </div>
+            </div>
         </div>
 
         {{-- ===== Internet (Spec Teil 5) ===== --}}

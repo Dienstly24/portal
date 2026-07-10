@@ -172,4 +172,41 @@ class PortalReviewTest extends TestCase
                 && !str_contains($html, 'GEHEIME-ANTWORT-DETAILS');
         });
     }
+
+    // Punkt 11/12: Vertrag als Karte -> Detailseite mit erweiterten Feldern
+    public function test_contract_detail_page_shows_extended_fields(): void
+    {
+        $customer = $this->makeCustomer();
+        $contract = \App\Models\Contract::create([
+            'customer_id' => $customer->id, 'type' => 'strom_gas', 'insurer' => 'Stadtwerke',
+            'status' => 'active', 'contract_number' => 'S-1', 'end_date' => now()->addYear(),
+            'cancellation_date' => now()->addMonths(9),
+        ]);
+        \App\Models\ContractEnergyDetail::create([
+            'contract_id' => $contract->id, 'meter_number' => 'Z-999', 'malo_id' => '12345678901',
+            'payment_amount' => 89.50, 'payment_interval' => 'monatlich',
+        ]);
+
+        // Übersicht zeigt Karte mit Link
+        $this->actingAs($customer->user)->get(route('portal.contracts'))
+            ->assertOk()->assertSee(route('portal.contracts.show', $contract->id));
+
+        // Detailseite zeigt Kündigungsdatum + Abschlag + Intervall
+        $this->actingAs($customer->user)->get(route('portal.contracts.show', $contract->id))
+            ->assertOk()
+            ->assertSee('Stadtwerke')
+            ->assertSee('Z-999')
+            ->assertSee('89,50')
+            ->assertSee('Monatlich');
+    }
+
+    public function test_customer_cannot_view_foreign_contract_detail(): void
+    {
+        $owner = $this->makeCustomer();
+        $contract = \App\Models\Contract::create([
+            'customer_id' => $owner->id, 'type' => 'kfz', 'insurer' => 'HUK', 'status' => 'active', 'contract_number' => 'K-9',
+        ]);
+        $attacker = $this->makeCustomer();
+        $this->actingAs($attacker->user)->get(route('portal.contracts.show', $contract->id))->assertNotFound();
+    }
 }

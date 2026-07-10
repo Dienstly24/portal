@@ -96,6 +96,9 @@ class AdminController extends Controller
             'status' => 'required',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
+            'cancellation_date' => 'nullable|date',
+            'energy.payment_amount' => 'nullable|numeric|min:0',
+            'energy.payment_interval' => 'nullable|in:monatlich,vierteljaehrlich,halbjaehrlich,jaehrlich',
             // KFZ-Details
             'vehicle.first_registration' => 'nullable|date',
             'vehicle.sf_liability_year' => 'nullable|integer|min:1950|max:2100',
@@ -120,6 +123,7 @@ class AdminController extends Controller
             'status' => $request->status,
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
+            'cancellation_date' => $request->cancellation_date,
             'notes' => $request->notes,
         ]);
 
@@ -145,7 +149,7 @@ class AdminController extends Controller
         } elseif ($request->type === 'strom_gas' && $request->filled('energy')) {
             \App\Models\ContractEnergyDetail::create(
                 ['contract_id' => $contract->id] + collect($request->input('energy'))
-                    ->only(['tariff','consumption_kwh','meter_number','malo_id','meter_reading','grid_operator','metering_operator'])
+                    ->only(['tariff','consumption_kwh','meter_number','malo_id','meter_reading','grid_operator','metering_operator','payment_amount','payment_interval'])
                     ->all()
             );
         } elseif ($request->type === 'internet' && $request->filled('internet')) {

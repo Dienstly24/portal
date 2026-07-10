@@ -4,23 +4,37 @@
     <div><div class="page-title">Meine Verträge</div><div class="page-sub">Alle Ihre Verträge im Überblick.</div></div>
     <button onclick="document.getElementById('report-contract-modal').style.display='flex'" class="btn btn-gold">+ Neuen Vertrag melden</button>
 </div>
-<div class="card">
-    @forelse($contracts as $c)
-    <div class="item-row">
-        <div>
-            <div style="font-weight:600;font-size:14px;">{{ $c->insurer }}</div>
-            <div style="font-size:13px;color:var(--ink-soft);">{{ $c->contract_number }} · {{ ucfirst(str_replace('_',' ',$c->type)) }}</div>
-            @if($c->start_date)<div style="font-size:12px;color:var(--ink-soft);">Seit {{ \Carbon\Carbon::parse($c->start_date)->format('d.m.Y') }}</div>@endif
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;">
+@php
+$typeIcons = [
+    'kfz' => '🚗', 'strom_gas' => '⚡', 'internet' => '📶', 'haftpflicht' => '🛡️',
+    'hausrat' => '🏠', 'rechtsschutz' => '⚖️', 'krankenversicherung' => '🏥',
+    'leben' => '❤️', 'unfall' => '🚑', 'andere' => '📋',
+];
+$typeLabels = [
+    'kfz' => 'KFZ', 'strom_gas' => 'Strom/Gas', 'internet' => 'Internet', 'haftpflicht' => 'Haftpflicht',
+    'hausrat' => 'Hausrat', 'rechtsschutz' => 'Rechtsschutz', 'krankenversicherung' => 'Krankenversicherung',
+    'leben' => 'Leben', 'unfall' => 'Unfall', 'andere' => 'Andere',
+];
+@endphp
+
+@if($contracts->isEmpty())
+<div class="card"><p style="color:var(--ink-soft);font-size:14px;padding:12px 0;">Noch keine Verträge vorhanden. Melden Sie Ihren ersten Vertrag über den Button oben.</p></div>
+@else
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:24px;">
+    @foreach($contracts as $c)
+    <a href="{{ route('portal.contracts.show', $c->id) }}" class="card metric-link" style="margin-bottom:0;text-decoration:none;color:var(--ink);">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;">
+            <span style="font-size:34px;line-height:1;">{{ $typeIcons[$c->type] ?? '📋' }}</span>
             <span class="badge badge-{{ $c->status === 'active' ? 'active' : 'pending' }}">{{ $c->status === 'active' ? 'Aktiv' : ucfirst($c->status) }}</span>
-            @if($c->pdf_path)<a href="{{ Storage::url($c->pdf_path) }}" class="btn btn-ghost" style="padding:6px 12px;font-size:13px;" target="_blank">PDF</a>@endif
         </div>
-    </div>
-    @empty
-    <p style="color:var(--ink-soft);font-size:14px;padding:12px 0;">Noch keine Verträge vorhanden.</p>
-    @endforelse
+        <div style="font-weight:700;font-size:15px;margin-bottom:2px;">{{ $c->insurer }}</div>
+        <div style="font-size:12.5px;color:var(--ink-soft);">{{ $typeLabels[$c->type] ?? ucfirst($c->type) }}@if($c->contract_number) · {{ $c->contract_number }}@endif</div>
+        @if($c->start_date)<div style="font-size:12px;color:var(--ink-soft);margin-top:6px;">Seit {{ \Carbon\Carbon::parse($c->start_date)->format('d.m.Y') }}</div>@endif
+        <div class="metric-cta" style="margin-top:12px;">Details ansehen →</div>
+    </a>
+    @endforeach
 </div>
+@endif
 
 {{-- Modal: Neuen Vertrag melden (erzeugt nur einen Change Request) --}}
 <div id="report-contract-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">

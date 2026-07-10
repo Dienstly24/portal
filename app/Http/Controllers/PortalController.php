@@ -31,8 +31,19 @@ class PortalController extends Controller
     public function contracts() {
         $customer = $this->getCustomer();
         return view('portal.contracts', [
-            'contracts' => Contract::where('customer_id', $customer->id)->latest()->get()
+            'contracts' => Contract::where('customer_id', $customer->id)
+                ->with(['vehicleDetail', 'energyDetail', 'internetDetail'])
+                ->latest()->get()
         ]);
+    }
+
+    /** Detailseite eines eigenen Vertrags (Review Punkt 12). */
+    public function contractShow($id) {
+        $customer = $this->getCustomer();
+        $contract = Contract::where('customer_id', $customer->id)
+            ->with(['vehicleDetail', 'energyDetail', 'internetDetail'])
+            ->where('id', $id)->firstOrFail();
+        return view('portal.contract_show', ['contract' => $contract]);
     }
 
     public function tickets() {
