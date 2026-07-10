@@ -150,42 +150,60 @@ class PortalController extends Controller
 
         $data = $request->validate([
             'gender' => 'nullable|in:male,female,diverse',
-            'address' => 'nullable|string|max:255',
-            'phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+\/\s()-]{6,}$/'],
-            'iban' => ['nullable', 'string', 'max:34', 'regex:/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/'],
+            'birth_place' => 'nullable|string|max:255',
             'marital_status' => 'nullable|in:ledig,verheiratet,geschieden,verwitwet',
+            'phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+\/\s()-]{6,}$/'],
+            // Strukturierte Adresse nach deutschem Standard (Review Punkt 5)
+            'address_street' => 'nullable|string|max:255',
+            'address_house_number' => 'nullable|string|max:10',
+            'address_house_suffix' => 'nullable|string|max:10',
+            'address_zip' => 'nullable|string|max:10',
+            'address_city' => 'nullable|string|max:100',
+            // Sensible Kundendaten (Review Punkt 6)
+            'health_insurance_number' => 'nullable|string|max:50',
+            'pension_insurance_number' => 'nullable|string|max:50',
+            'tax_id' => 'nullable|string|max:20',
+            // Bankverbindung (Review Punkt 4 - alles auf einer Seite)
+            'iban' => ['nullable', 'string', 'max:34', 'regex:/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/'],
+            'account_holder' => 'nullable|string|max:255',
         ]);
 
         $service = app(\App\Services\ChangeRequestService::class);
-        $created = false;
+        $created = 0;
 
-        // Profildaten: ein gebündelter Antrag für alle geänderten Felder
+        // Persönliche Daten + strukturierte Adresse + Kundendaten:
+        // EIN gebündelter Profil-Antrag für alle geänderten Felder.
+        $profileFields = [
+            'gender', 'birth_place', 'marital_status', 'phone',
+            'address_street', 'address_house_number', 'address_house_suffix', 'address_zip', 'address_city',
+            'health_insurance_number', 'pension_insurance_number', 'tax_id',
+        ];
         $profileOld = $profileNew = [];
-        foreach (['gender', 'address', 'phone', 'marital_status'] as $field) {
-            if ($request->filled($field) && $data[$field] !== $customer->$field) {
+        foreach ($profileFields as $field) {
+            if ($request->filled($field) && (string) $data[$field] !== (string) $customer->$field) {
                 $profileOld[$field] = $customer->$field;
                 $profileNew[$field] = $data[$field];
             }
         }
         if ($profileNew) {
             $service->submit($customer, 'profile', $profileOld, $profileNew, 'Profiländerung beantragt: ' . implode(', ', array_keys($profileNew)));
-            $created = true;
+            $created++;
         }
 
-        // IBAN läuft einheitlich als Bankänderung (Typ 'bank')
+        // Bankverbindung als EIGENER, unabhängiger Change Request (Review Punkt 9)
         if ($request->filled('iban') && $data['iban'] !== $customer->iban) {
             $service->submit(
                 $customer,
                 'bank',
                 ['iban' => $customer->iban ? '••••' . substr($customer->iban, -4) : null, 'account_holder' => $customer->account_holder],
-                ['iban' => $data['iban'], 'account_holder' => $customer->account_holder ?? auth()->user()->name],
-                'Neue Bankverbindung beantragt (über Profil)'
+                ['iban' => $data['iban'], 'account_holder' => ($data['account_holder'] ?? null) ?: ($customer->account_holder ?? auth()->user()->name)],
+                'Neue Bankverbindung beantragt'
             );
-            $created = true;
+            $created++;
         }
 
-        return back()->with('success', $created
-            ? 'Ihre Änderungen wurden zur Prüfung eingereicht.'
+        return back()->with('success', $created > 0
+            ? 'Ihre Änderung' . ($created > 1 ? 'en wurden' : ' wurde') . ' zur Prüfung eingereicht. Jede Änderung wird einzeln bearbeitet.'
             : 'Keine Änderungen erkannt.');
     }
 }

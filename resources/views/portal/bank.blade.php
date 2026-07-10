@@ -17,7 +17,7 @@
             <span style="font-size:14px;font-weight:600;">{{ $customer->account_holder ?? '—' }}</span>
         </div>
         @if($pendingBank)
-        <div class="notice" style="margin-top:14px;margin-bottom:0;">⏳ Eine Bankänderung ist derzeit in Prüfung (eingereicht am {{ $pendingBank->created_at->format('d.m.Y') }}).</div>
+        <div class="notice" style="margin-top:14px;margin-bottom:0;">⏳ Es liegt bereits eine Bankänderung in Prüfung. Sie können dennoch eine weitere Änderung einreichen – jede wird einzeln bearbeitet.</div>
         @endif
     </div>
 
@@ -28,7 +28,7 @@
             <div class="field"><label>IBAN *</label><input type="text" name="iban" required maxlength="34" placeholder="DE00 0000 0000 0000 0000 00" oninput="this.value=this.value.toUpperCase().replace(/\s/g,'')"></div>
             <div class="field"><label>Kontoinhaber *</label><input type="text" name="account_holder" required maxlength="255" value="{{ auth()->user()->name }}"></div>
             @error('iban')<div class="alert-error">Bitte geben Sie eine gültige IBAN ein (ohne Leerzeichen).</div>@enderror
-            <button type="submit" class="btn btn-primary" {{ $pendingBank ? 'disabled style=opacity:.5;' : '' }}>Änderung einreichen</button>
+            <button type="submit" class="btn btn-primary">Änderung einreichen</button>
             <p style="font-size:12px;color:var(--ink-soft);margin-top:10px;">🔒 Die neue Bankverbindung wird erst nach Freigabe durch unser Team wirksam.</p>
         </form>
     </div>

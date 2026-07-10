@@ -11,7 +11,8 @@ class Customer extends Model {
         'company_name','company_type','customer_type','email2',
         'nationality','occupation','last_contact','gender','account_holder',
         'health_insurance_number','health_insurance_company','health_insurance_type',
-        'pension_insurance_number','tax_id'
+        'pension_insurance_number','tax_id','birth_place',
+        'address_street','address_house_number','address_house_suffix','address_zip','address_city'
     ];
 
     /**

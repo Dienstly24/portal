@@ -164,7 +164,9 @@ class ChangeRequestService
     private function applyProfile(Customer $customer, array $data): void
     {
         // Strikte Whitelist unkritischer Profilfelder
-        $allowed = ['gender', 'marital_status', 'nationality', 'occupation', 'address', 'phone', 'first_name', 'last_name', 'birth_date'];
+        $allowed = ['gender', 'marital_status', 'nationality', 'occupation', 'address', 'phone', 'first_name', 'last_name', 'birth_date',
+            'birth_place', 'address_street', 'address_house_number', 'address_house_suffix', 'address_zip', 'address_city',
+            'health_insurance_number', 'pension_insurance_number', 'tax_id'];
         $update = array_intersect_key($data, array_flip($allowed));
         if (isset($update['gender']) && !array_key_exists($update['gender'], Customer::GENDERS)) {
             unset($update['gender']);

@@ -9,7 +9,7 @@ class CustomerAddress extends Model
     protected $keyType = 'string';
     public $incrementing = false;
 
-    protected $fillable = ['customer_id', 'type', 'street', 'zip', 'city', 'country'];
+    protected $fillable = ['customer_id', 'type', 'street', 'house_number', 'house_number_suffix', 'zip', 'city', 'country'];
 
     public const TYPES = ['main' => 'Hauptadresse', 'billing' => 'Rechnungsadresse', 'postal' => 'Postadresse', 'other' => 'Andere Adresse'];
 

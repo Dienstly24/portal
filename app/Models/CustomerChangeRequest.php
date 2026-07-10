@@ -22,8 +22,8 @@ class CustomerChangeRequest extends Model
     ];
 
     protected $casts = [
-        'old_data' => 'array',
-        'new_data' => 'array',
+        'old_data' => 'encrypted:array',
+        'new_data' => 'encrypted:array',
         'requested_at' => 'datetime',
         'reviewed_at' => 'datetime',
     ];
