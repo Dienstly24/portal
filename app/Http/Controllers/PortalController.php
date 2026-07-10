@@ -150,7 +150,6 @@ class PortalController extends Controller
 
         $data = $request->validate([
             'gender' => 'nullable|in:male,female,diverse',
-            'salutation' => 'nullable|in:herr,frau,divers,firma',
             'address' => 'nullable|string|max:255',
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+\/\s()-]{6,}$/'],
             'iban' => ['nullable', 'string', 'max:34', 'regex:/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/'],
@@ -162,7 +161,7 @@ class PortalController extends Controller
 
         // Profildaten: ein gebündelter Antrag für alle geänderten Felder
         $profileOld = $profileNew = [];
-        foreach (['salutation', 'gender', 'address', 'phone', 'marital_status'] as $field) {
+        foreach (['gender', 'address', 'phone', 'marital_status'] as $field) {
             if ($request->filled($field) && $data[$field] !== $customer->$field) {
                 $profileOld[$field] = $customer->$field;
                 $profileNew[$field] = $data[$field];

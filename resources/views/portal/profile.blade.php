@@ -12,15 +12,7 @@
         </div>
         <div class="grid-2">
             <div class="field"><label>IBAN</label><input type="text" name="iban" value="{{ $customer?->iban }}"></div>
-            <div class="field"><label>Anrede</label>
-                <select name="salutation">
-                    <option value="">— Bitte wählen —</option>
-                    @foreach(\App\Models\Customer::SALUTATIONS as $skey => $slabel)
-                    <option value="{{ $skey }}" {{ $customer?->salutation === $skey ? 'selected' : '' }}>{{ $slabel }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="field"><label>Geschlecht</label>
+                        <div class="field"><label>Geschlecht</label>
                 <select name="gender">
                     <option value="">— Bitte wählen —</option>
                     @foreach(\App\Models\Customer::GENDERS as $key => $label)

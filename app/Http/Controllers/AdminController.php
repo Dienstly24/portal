@@ -274,7 +274,6 @@ class AdminController extends Controller
             'new_password' => 'nullable|min:8',
             'health_insurance_type' => 'nullable|in:gesetzlich,privat',
             'gender' => 'nullable|in:male,female,diverse',
-            'salutation' => 'nullable|in:herr,frau,divers,firma',
         ]);
 
         // Sensible Kundenakte-Felder: Änderungen auditieren (nur Feldnamen ins Log)
@@ -312,7 +311,6 @@ class AdminController extends Controller
             'birth_date' => $request->birth_date ?: null,
             'marital_status' => $request->marital_status,
             'gender' => in_array($request->gender, ['male','female','diverse'], true) ? $request->gender : null,
-            'salutation' => in_array($request->salutation, ['herr','frau','divers','firma'], true) ? $request->salutation : null,
             'preferred_lang' => $request->preferred_lang,
             'nationality' => $request->nationality,
             'occupation' => $request->occupation,
@@ -596,9 +594,9 @@ class AdminController extends Controller
         \Illuminate\Support\Facades\DB::table('employee_customers')->where('customer_id', $dup->id)->update(['customer_id' => $primary->id]);
 
         // 2) Fehlende Felder vom Duplikat übernehmen
-        $request->validate(['gender' => 'nullable|in:male,female,diverse', 'salutation' => 'nullable|in:herr,frau,divers,firma']);
+        $request->validate(['gender' => 'nullable|in:male,female,diverse']);
 
-        foreach (['phone','mobile','address','address2','iban','iban2','birth_date','marital_status','nationality','occupation','email2','company_name','company_type','gender','salutation'] as $f) {
+        foreach (['phone','mobile','address','address2','iban','iban2','birth_date','marital_status','nationality','occupation','email2','company_name','company_type','gender'] as $f) {
             if (empty($primary->$f) && !empty($dup->$f)) $primary->$f = $dup->$f;
         }
         $primary->save();

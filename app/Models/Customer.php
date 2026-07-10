@@ -10,11 +10,9 @@ class Customer extends Model {
         'iban','iban2','marital_status','phone','mobile','preferred_lang',
         'company_name','company_type','customer_type','email2',
         'nationality','occupation','last_contact','gender','account_holder',
-        'salutation','health_insurance_number','health_insurance_company','health_insurance_type',
+        'health_insurance_number','health_insurance_company','health_insurance_type',
         'pension_insurance_number','tax_id'
     ];
-
-    public const SALUTATIONS = ['herr' => 'Herr', 'frau' => 'Frau', 'divers' => 'Divers', 'firma' => 'Firma'];
 
     /**
      * Sensible Daten (KV-Nummer, RV-Nummer, Steuer-ID) werden
@@ -57,13 +55,19 @@ class Customer extends Model {
         return ['percent' => $percent, 'missing' => $missing];
     }
 
-    /** Korrekte Briefanrede für E-Mails und Vorlagen. */
+    /**
+     * Korrekte Briefanrede für E-Mails und Vorlagen - abgeleitet aus dem
+     * Geschlecht (einzige Datenquelle, Review Punkt 1). Firmenkunden
+     * (company_name gesetzt) erhalten die neutrale Form.
+     */
     public function salutationLine(?string $fallbackName = null): string {
         $name = $this->user?->name ?: ($fallbackName ?? '');
-        return match ($this->salutation) {
-            'herr' => 'Sehr geehrter Herr ' . $this->lastNameOr($name),
-            'frau' => 'Sehr geehrte Frau ' . $this->lastNameOr($name),
-            'firma' => 'Sehr geehrte Damen und Herren',
+        if (!empty($this->company_name)) {
+            return 'Sehr geehrte Damen und Herren';
+        }
+        return match ($this->gender) {
+            'male' => 'Sehr geehrter Herr ' . $this->lastNameOr($name),
+            'female' => 'Sehr geehrte Frau ' . $this->lastNameOr($name),
             default => trim($name) !== '' ? 'Guten Tag ' . $name : 'Sehr geehrte Damen und Herren',
         };
     }
