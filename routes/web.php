@@ -166,6 +166,17 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // Aktivitätslog
     Route::get('/activity-log', [EmployeeController::class, 'activityLog'])->name('activity_log')->middleware('role:admin,manager');
 
+    // Partner & Provisionen (Priorität 6)
+    Route::middleware('role:admin,manager')->group(function () {
+        Route::get('/partners', [\App\Http\Controllers\PartnerController::class, 'index'])->name('partners');
+        Route::post('/partners', [\App\Http\Controllers\PartnerController::class, 'store'])->name('partners.store');
+        Route::get('/partners/{id}', [\App\Http\Controllers\PartnerController::class, 'show'])->name('partners.show');
+        Route::put('/partners/{id}', [\App\Http\Controllers\PartnerController::class, 'update'])->name('partners.update');
+        Route::get('/commissions', [\App\Http\Controllers\CommissionController::class, 'index'])->name('commissions');
+        Route::post('/commissions/{id}/book', [\App\Http\Controllers\CommissionController::class, 'book'])->name('commissions.book');
+        Route::post('/commissions/{id}/reject', [\App\Http\Controllers\CommissionController::class, 'reject'])->name('commissions.reject');
+    });
+
     // lexoffice
     Route::prefix('lexoffice')->name('lexoffice.')->middleware('role:admin,manager')->group(function () {
         Route::get('/contacts', [LexofficeController::class, 'contacts'])->name('contacts');

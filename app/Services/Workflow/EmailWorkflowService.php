@@ -5,6 +5,7 @@ use App\Models\Customer;
 use App\Models\EmailMessage;
 use App\Models\Task;
 use App\Models\Ticket;
+use App\Services\Commission\CommissionWorkflowService;
 use App\Services\CustomerCreation\CustomerAutoCreationService;
 use App\Services\CustomerCreation\DuplicateCustomerException;
 use App\Services\FondsFinanz\FondsFinanzImportService;
@@ -34,6 +35,7 @@ class EmailWorkflowService
         private readonly CustomerMatchingService $matcher,
         private readonly CustomerAutoCreationService $autoCreator,
         private readonly FondsFinanzImportService $fondsFinanz,
+        private readonly CommissionWorkflowService $commissions,
         private readonly SystemUserResolver $systemUser,
     ) {
     }
@@ -50,6 +52,14 @@ class EmailWorkflowService
             // Eigener Workflow (Architekturplan Abschnitt 8): Kundendaten
             // stehen im Mail-TEXT, nicht im Absender-Header.
             $this->fondsFinanz->process($message);
+            return;
+        }
+
+        if ($category === 'provisionen') {
+            // Eigener Workflow (Architekturplan Abschnitt 10): Es geht um
+            // einen PARTNER, nicht um einen Kunden - Kunden-Matching auf
+            // den Absender wäre hier falsch.
+            $this->commissions->process($message);
             return;
         }
         $criteria = $this->buildCriteria($message);
@@ -141,7 +151,6 @@ class EmailWorkflowService
             'kundenanfrage' => $this->createTicket($message, $confirmedCustomer),
             'versicherung' => $this->createTask($message, $confirmedCustomer, 'Dokument/Information für Versicherung prüfen', 7, 'high'),
             'energie' => $this->createTask($message, $confirmedCustomer, 'Energievertrag-Hinweis prüfen – Kunde kontaktieren', 14, 'medium'),
-            'provisionen' => $this->createTask($message, $confirmedCustomer, 'Provisionsabrechnung prüfen (Lexoffice-Anbindung folgt)', 5, 'medium'),
             'dokumente' => $confirmedCustomer === null ? $this->createTask($message, null, 'Eingereichtes Dokument manuell zuordnen', 3, 'medium') : null,
             default => $this->createTask($message, $confirmedCustomer, 'E-Mail manuell prüfen', 5, 'low'),
         };

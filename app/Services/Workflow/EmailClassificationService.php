@@ -25,12 +25,19 @@ class EmailClassificationService
 
     public function classify(EmailMessage $message): string
     {
+        $haystack = mb_strtolower(($message->subject ?? '') . ' ' . ($message->body_text ?? ''));
+
         $domain = $this->domain($message->from_address);
         if (str_contains($domain, 'fondsfinanz')) {
+            // Auch die Fonds Finanz schickt Provisionsabrechnungen - die
+            // gehören in den Provisions-Workflow, nicht in den Vertragsimport.
+            foreach (self::KEYWORDS['provisionen'] as $keyword) {
+                if (str_contains($haystack, $keyword)) {
+                    return 'provisionen';
+                }
+            }
             return 'fonds_finanz';
         }
-
-        $haystack = mb_strtolower(($message->subject ?? '') . ' ' . ($message->body_text ?? ''));
 
         foreach (self::KEYWORDS as $category => $keywords) {
             foreach ($keywords as $keyword) {
