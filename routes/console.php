@@ -12,6 +12,9 @@ if (!function_exists('dienstly_mailable')) {
     }
 }
 
+// Alle 2 Minuten — E-Mail-Postfächer abrufen (Architekturplan Abschnitt 3.1)
+Schedule::command('mailboxes:sync')->everyTwoMinutes()->withoutOverlapping();
+
 // 07:30 — Aufgabe: Kind wird in 4 Monaten 15
 Schedule::call(function () {
     $target = now()->addMonths(4)->subYears(15)->toDateString();
