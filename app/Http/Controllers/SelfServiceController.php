@@ -51,6 +51,11 @@ class SelfServiceController extends Controller
             'name' => 'required|string|max:255',
             'relation' => 'required|in:ehepartner,kind,andere',
             'birth_date' => 'nullable|date|before_or_equal:today',
+            'gender' => 'nullable|in:male,female',
+            'birth_place' => 'nullable|string|max:255',
+            'health_insurance_number' => 'nullable|string|max:50',
+            'pension_insurance_number' => 'nullable|string|max:50',
+            'tax_id' => 'nullable|string|max:20',
         ]);
 
         $this->createRequest('family', null, $data, 'Neues Familienmitglied beantragt: ' . $data['name']);
@@ -67,6 +72,11 @@ class SelfServiceController extends Controller
             'name' => 'required|string|max:255',
             'relation' => 'required|in:ehepartner,kind,andere',
             'birth_date' => 'nullable|date|before_or_equal:today',
+            'gender' => 'nullable|in:male,female',
+            'birth_place' => 'nullable|string|max:255',
+            'health_insurance_number' => 'nullable|string|max:50',
+            'pension_insurance_number' => 'nullable|string|max:50',
+            'tax_id' => 'nullable|string|max:20',
         ]);
 
         $this->createRequest(

@@ -75,11 +75,16 @@ class ChangeRequestService
 
     private function applyFamily(Customer $customer, array $data): void
     {
-        $fields = [
+        $fields = array_filter([
             'name' => $data['name'] ?? null,
             'relation' => $data['relation'] ?? null,
             'birth_date' => $data['birth_date'] ?? null,
-        ];
+            'gender' => $data['gender'] ?? null,
+            'birth_place' => $data['birth_place'] ?? null,
+            'health_insurance_number' => $data['health_insurance_number'] ?? null,
+            'pension_insurance_number' => $data['pension_insurance_number'] ?? null,
+            'tax_id' => $data['tax_id'] ?? null,
+        ], fn($v) => $v !== null);
 
         if (!empty($data['id'])) {
             CustomerFamily::where('customer_id', $customer->id)

@@ -91,6 +91,21 @@ $rejected = $requests->where('status','rejected');
                 </div>
                 <div class="field"><label>Geburtsdatum</label><input type="date" name="birth_date" max="{{ now()->toDateString() }}"></div>
             </div>
+            <div class="grid-2">
+                <div class="field"><label>Geschlecht</label>
+                    <select name="gender">
+                        <option value="">— Bitte wählen —</option>
+                        <option value="male">Männlich</option>
+                        <option value="female">Weiblich</option>
+                    </select>
+                </div>
+                <div class="field"><label>Geburtsort</label><input type="text" name="birth_place" maxlength="255"></div>
+            </div>
+            <div class="grid-2">
+                <div class="field"><label>Krankenversicherungsnr.</label><input type="text" name="health_insurance_number" maxlength="50"></div>
+                <div class="field"><label>Rentenversicherungsnr.</label><input type="text" name="pension_insurance_number" maxlength="50"></div>
+            </div>
+            <div class="field"><label>Steuer-ID</label><input type="text" name="tax_id" maxlength="20"></div>
             <button type="submit" class="btn btn-primary" style="width:100%;">Zur Prüfung einreichen</button>
         </form>
     </div>

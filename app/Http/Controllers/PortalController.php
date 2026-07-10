@@ -137,6 +137,55 @@ class PortalController extends Controller
         ]);
     }
 
+    /**
+     * Kunde lädt selbst ein Dokument hoch (Review Punkt 7). Speicherung
+     * privat; das Dokument gehört dem Kunden und ist für ihn sichtbar.
+     * Admin/Manager/Support werden über das Notification Center informiert.
+     */
+    public function documentUpload(Request $request) {
+        $customer = $this->getCustomer();
+
+        $data = $request->validate([
+            'document' => 'required|file|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:10240',
+            'category' => 'required|in:contract,police,invoice,identity,claim,other',
+        ]);
+
+        $file = $request->file('document');
+        $path = $file->store('customers/' . $customer->id . '/documents', 'local');
+
+        $doc = \App\Models\Document::create([
+            'id' => \Illuminate\Support\Str::uuid(),
+            'customer_id' => $customer->id,
+            'category' => $data['category'],
+            'file_name' => $file->getClientOriginalName(),
+            'file_path' => $path,
+            'disk' => 'local',
+            'visibility' => 'customer',
+            'uploaded_by' => auth()->id(),
+            'file_size' => $file->getSize(),
+        ]);
+
+        // Benachrichtigung an Staff (Notification Center)
+        foreach (\App\Models\User::whereIn('role', ['admin','manager','support'])->where('is_active', true)->get() as $recipient) {
+            \App\Models\InternalNotification::create([
+                'user_id' => $recipient->id,
+                'title' => 'Neues Kundendokument',
+                'body' => ($customer->user?->name ?? 'Ein Kunde') . ' hat „' . $doc->file_name . '" hochgeladen.',
+                'link' => route('admin.customer', $customer->id) . '#tab-uebersicht',
+            ]);
+        }
+
+        \App\Models\ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'document_uploaded_by_customer',
+            'entity_type' => 'document',
+            'entity_id' => $doc->id,
+            'meta' => json_encode(['customer_id' => (string) $customer->id, 'file' => $doc->file_name], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        return back()->with('success', 'Ihr Dokument wurde hochgeladen.');
+    }
+
     public function profile() {
         $customer = $this->getCustomer();
         return view('portal.profile', [

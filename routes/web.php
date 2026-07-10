@@ -30,6 +30,7 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     Route::post('/tickets/{id}/reply', [PortalController::class, 'ticketsReply'])->name('tickets.reply');
     Route::get('/attachments/{id}/download', [PortalController::class, 'downloadAttachment'])->name('attachment.download');
     Route::get('/documents', [PortalController::class, 'documents'])->name('documents');
+    Route::post('/documents', [PortalController::class, 'documentUpload'])->name('documents.upload');
     Route::get('/profile', [PortalController::class, 'profile'])->name('profile');
 
     // Self-Service (jede Aktion erzeugt nur einen Change Request)
