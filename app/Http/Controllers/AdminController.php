@@ -235,7 +235,7 @@ class AdminController extends Controller
         ]);
         $customer = Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(Str::random(8)),
+            'customer_number' => app(\App\Services\CustomerNumberGenerator::class)->generate(),
             'phone' => $request->mobile ?? $request->phone,
             'address' => $address,
             'birth_date' => $request->birth_date,
