@@ -115,4 +115,61 @@ class PortalReviewTest extends TestCase
         $this->actingAs($customer->user)->get(route('portal.documents'))
             ->assertOk()->assertSee('meins.pdf');
     }
+
+    // Punkt 3: Dashboard-Kacheln sind echte Links
+    public function test_dashboard_tiles_link_to_sections(): void
+    {
+        $customer = $this->makeCustomer();
+        $this->actingAs($customer->user)->get(route('portal.dashboard'))
+            ->assertOk()
+            ->assertSee(route('portal.contracts'))
+            ->assertSee(route('portal.documents'))
+            ->assertSee(route('portal.profile'));
+    }
+
+    // Punkt 8: Kunde erhält Statusmeldung bei Entscheidung
+    public function test_customer_is_notified_when_request_is_decided(): void
+    {
+        $customer = $this->makeCustomer();
+        $this->actingAs($customer->user)->post(route('portal.profile.update'), ['iban' => 'DE89370400440532013000']);
+        $cr = CustomerChangeRequest::first();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->post(route('admin.change_requests.action', $cr->id), ['action' => 'approve']);
+
+        $this->assertDatabaseHas('internal_notifications', [
+            'user_id' => $customer->user_id,
+            'title' => 'Änderungsanfrage genehmigt',
+        ]);
+
+        // Kunde sieht die Meldung in seiner Portal-Glocke
+        $this->actingAs($customer->user)->get(route('portal.notifications'))
+            ->assertOk()->assertJsonFragment(['title' => 'Änderungsanfrage genehmigt']);
+    }
+
+    // Punkt 10: Admin-Antwort erzeugt Portal-Notification, Mail ohne Details
+    public function test_admin_ticket_reply_notifies_customer_without_details(): void
+    {
+        \Illuminate\Support\Facades\Mail::fake();
+        $customer = $this->makeCustomer();
+        $ticket = \App\Models\Ticket::create([
+            'customer_id' => $customer->id, 'type' => 'other', 'status' => 'open',
+            'subject' => 'Meine Frage', 'description' => 'Text',
+        ]);
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->post(route('admin.ticket.reply', $ticket->id), [
+            'body' => 'GEHEIME-ANTWORT-DETAILS', 'status' => 'open',
+        ]);
+
+        $this->assertDatabaseHas('internal_notifications', [
+            'user_id' => $customer->user_id, 'title' => 'Neue Nachricht',
+        ]);
+
+        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\TicketReplyMail::class, function ($mail) {
+            $html = $mail->render();
+            return str_contains($html, 'Sie haben eine neue Nachricht im Kundenportal')
+                && !str_contains($html, 'GEHEIME-ANTWORT-DETAILS');
+        });
+    }
 }

@@ -130,6 +130,37 @@ class PortalController extends Controller
         return \Illuminate\Support\Facades\Storage::disk($disk)->download($doc->file_path, $doc->file_name);
     }
 
+    /**
+     * Portal-Glocke (Review Punkt 8/10): Statusmeldungen und
+     * 'Neue Nachricht'-Hinweise für den Kunden. Hart gescoped auf den
+     * eigenen User und auf title-basierte Einträge - interne Mention-/
+     * Change-Request-Zeilen sind hier strukturell unerreichbar.
+     */
+    public function notifications() {
+        $items = \App\Models\InternalNotification::where('user_id', auth()->id())
+            ->whereNotNull('title')
+            ->latest()->take(15)->get()
+            ->map(fn($n) => [
+                'id' => $n->id,
+                'title' => $n->title,
+                'body' => $n->body,
+                'time' => $n->created_at->format('d.m.Y H:i'),
+                'read' => $n->read_at !== null,
+                'url' => $n->link ?: '#',
+            ]);
+
+        return response()->json([
+            'unread' => \App\Models\InternalNotification::where('user_id', auth()->id())->whereNotNull('title')->whereNull('read_at')->count(),
+            'items' => $items,
+        ]);
+    }
+
+    public function notificationRead($id) {
+        $n = \App\Models\InternalNotification::where('user_id', auth()->id())->whereNotNull('title')->findOrFail($id);
+        $n->update(['read_at' => $n->read_at ?? now()]);
+        return response()->json(['ok' => true]);
+    }
+
     public function documents() {
         $customer = $this->getCustomer();
         return view('portal.documents', [

@@ -204,9 +204,21 @@ class AdminController extends Controller
         $ticket->update(['status' => $request->status]);
         {
             $ticket->load('customer.user');
+
+            // Portal-Glocke: "Neue Nachricht" für den Kunden (Review Punkt 10)
+            if ($ticket->customer?->user_id) {
+                \App\Models\InternalNotification::create([
+                    'user_id' => $ticket->customer->user_id,
+                    'title' => 'Neue Nachricht',
+                    'body' => 'Unser Team hat auf Ihre Anfrage „' . \Illuminate\Support\Str::limit($ticket->subject, 60) . '" geantwortet.',
+                    'link' => route('portal.tickets.show', $ticket->id),
+                ]);
+            }
+
             $email = $ticket->customer?->user?->email;
             if ($email && !str_contains($email, '@dienstly24.internal')) {
                 try {
+                    // Mail enthält bewusst KEINE Nachrichtendetails (Punkt 10)
                     \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\TicketReplyMail($ticket, $request->body));
                 } catch (\Throwable $e) { \Log::warning('Ticket reply mail failed: ' . $e->getMessage()); }
             }

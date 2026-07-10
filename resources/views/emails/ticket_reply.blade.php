@@ -10,14 +10,12 @@
 <tr><td style="padding:30px;">
 @if($lang === 'ar')
 <p style="font-size:15px;color:#333;">عزيزنا <strong>{{ $ticket->customer?->user?->name }}</strong>،</p>
-<p style="font-size:15px;color:#333;">وصلك رد جديد من فريقنا على طلبك «<strong>{{ $ticket->subject }}</strong>»:</p>
+<p style="font-size:15px;color:#333;">لديك رسالة جديدة في بوابة العملاء. يرجى تسجيل الدخول للاطلاع عليها.</p>
 @else
 @include('emails._greeting', ['greetingCustomer' => $ticket->customer])
-<p style="font-size:15px;color:#333;">Sie haben eine neue Antwort auf Ihre Anfrage «<strong>{{ $ticket->subject }}</strong>» erhalten:</p>
+{{-- Bewusst KEINE Nachrichtendetails per E-Mail (Review Punkt 10) --}}
+<p style="font-size:15px;color:#333;">Sie haben eine neue Nachricht im Kundenportal. Bitte melden Sie sich an.</p>
 @endif
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin:15px 0;">
-<tr><td style="padding:15px 20px;font-size:14px;color:#333;">{{ \Illuminate\Support\Str::limit($replyBody, 300) }}</td></tr>
-</table>
 <p style="text-align:center;margin:25px 0;">
 <a href="{{ route('portal.tickets.show', $ticket->id) }}" style="background:#1e3a8a;color:#ffffff;padding:12px 30px;border-radius:8px;text-decoration:none;font-size:15px;">{{ $lang === 'ar' ? 'فتح الطلب والرد' : 'Anfrage öffnen & antworten' }}</a>
 </p>

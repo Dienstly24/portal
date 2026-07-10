@@ -110,8 +110,30 @@ class ChangeRequestReviewController extends Controller
             ]);
         });
 
+        $this->notifyCustomer($changeRequest, $data['action'], $data['notes'] ?? null);
+
         return back()->with('success', $data['action'] === 'approve'
             ? 'Anfrage genehmigt – die Kundendaten wurden aktualisiert.'
             : 'Anfrage abgelehnt.');
+    }
+
+    /**
+     * Statusmeldung an den Kunden (Review Punkt 8, Schritt 5):
+     * Portal-Glocke informiert über Genehmigung/Ablehnung.
+     */
+    private function notifyCustomer(CustomerChangeRequest $changeRequest, string $action, ?string $notes): void
+    {
+        $userId = $changeRequest->customer?->user_id;
+        if (!$userId) {
+            return;
+        }
+        $approved = $action === 'approve';
+        \App\Models\InternalNotification::create([
+            'user_id' => $userId,
+            'title' => 'Änderungsanfrage ' . ($approved ? 'genehmigt' : 'abgelehnt'),
+            'body' => 'Ihre Änderung (' . $changeRequest->typeLabel() . ') wurde '
+                . ($approved ? 'genehmigt und übernommen.' : 'abgelehnt.' . ($notes ? ' Grund: ' . \Illuminate\Support\Str::limit($notes, 120) : '')),
+            'link' => route('portal.change_requests'),
+        ]);
     }
 }

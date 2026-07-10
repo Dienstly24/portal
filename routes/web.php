@@ -31,6 +31,8 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     Route::get('/attachments/{id}/download', [PortalController::class, 'downloadAttachment'])->name('attachment.download');
     Route::get('/documents', [PortalController::class, 'documents'])->name('documents');
     Route::post('/documents', [PortalController::class, 'documentUpload'])->name('documents.upload');
+    Route::get('/notifications', [PortalController::class, 'notifications'])->name('notifications');
+    Route::post('/notifications/{id}/read', [PortalController::class, 'notificationRead'])->name('notifications.read');
     Route::get('/profile', [PortalController::class, 'profile'])->name('profile');
 
     // Self-Service (jede Aktion erzeugt nur einen Change Request)

@@ -3,9 +3,33 @@
 <div class="page-title">Übersicht</div>
 <div class="page-sub">Willkommen zurück, {{ auth()->user()->name }}.</div>
 <div class="grid-3">
-    <div class="metric"><div class="label">Aktive Verträge</div><div class="value">{{ $contractsCount }}</div></div>
-    <div class="metric"><div class="label">Offene Anfragen</div><div class="value">{{ $openTickets }}</div></div>
-    <div class="metric"><div class="label">Änderungen in Prüfung</div><div class="value">{{ $pendingApprovals }}</div></div>
+    <a href="{{ route('portal.contracts') }}" class="metric metric-link" title="Zur Vertragsübersicht">
+        <div class="label">📑 Aktive Verträge</div><div class="value">{{ $contractsCount }}</div>
+        <div class="metric-cta">Verträge ansehen →</div>
+    </a>
+    <a href="{{ route('portal.tickets') }}" class="metric metric-link" title="Zu Ihren Nachrichten">
+        <div class="label">💬 Offene Anfragen</div><div class="value">{{ $openTickets }}</div>
+        <div class="metric-cta">Nachrichten öffnen →</div>
+    </a>
+    <a href="{{ route('portal.change_requests') }}" class="metric metric-link" title="Status Ihrer Änderungsanfragen">
+        <div class="label">🔄 Änderungen in Prüfung</div><div class="value">{{ $pendingApprovals }}</div>
+        <div class="metric-cta">Status ansehen →</div>
+    </a>
+</div>
+
+{{-- Schnellzugriff (Review Punkt 3: jede Kachel hat eine klare Funktion) --}}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:24px;">
+    @foreach([
+        ['route' => 'portal.documents', 'icon' => '📄', 'label' => 'Dokumente'],
+        ['route' => 'portal.profile', 'icon' => '👤', 'label' => 'Meine Daten'],
+        ['route' => 'portal.family', 'icon' => '👨‍👩‍👦', 'label' => 'Familie'],
+        ['route' => 'portal.contacts', 'icon' => '📞', 'label' => 'Kontakte'],
+    ] as $tile)
+    <a href="{{ route($tile['route']) }}" class="card metric-link" style="margin-bottom:0;text-align:center;padding:18px 10px;text-decoration:none;color:var(--ink);">
+        <div style="font-size:26px;margin-bottom:6px;">{{ $tile['icon'] }}</div>
+        <div style="font-size:13px;font-weight:600;">{{ $tile['label'] }}</div>
+    </a>
+    @endforeach
 </div>
 
 {{-- Kundenakte-Vollständigkeit (Final Polish Punkt 5) --}}
