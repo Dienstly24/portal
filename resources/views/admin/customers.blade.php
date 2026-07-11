@@ -102,7 +102,7 @@ function confirmBulkDelete(form) {
     <table>
         <thead><tr>
             @if(in_array(auth()->user()->role, ['admin','manager']))<th style="width:36px;"><input type="checkbox" id="checkAll" style="width:17px;height:17px;cursor:pointer;accent-color:#1F3A33;"></th>@endif
-            <th>Kunde</th><th>Adresse</th><th>Portal</th><th>1. Login</th><th>Letzter Login</th><th>Betreuer</th><th>Aktive Verträge</th><th style="text-align:right;">Aktionen</th>
+            <th>Kunde</th><th>Adresse</th><th>Portal</th><th>Betreuer</th><th>Aktive Verträge</th><th style="text-align:right;">Aktionen</th>
         </tr></thead>
         <tbody>
         @forelse($customers as $c)
@@ -122,8 +122,6 @@ function confirmBulkDelete(form) {
             <td title="Einladung: {{ $c->user?->invitation_sent_at?->format('d.m.Y') ?? '—' }} · Passwort gesetzt: {{ $c->user?->portal_password_set_at ? 'Ja' : 'Nein' }}">
                 <span style="background:{{ $ps['bg'] }};color:{{ $ps['color'] }};border-radius:12px;padding:2px 10px;font-size:11.5px;white-space:nowrap;">{{ $ps['label'] }}</span>
             </td>
-            <td style="color:var(--ink-soft);font-size:12.5px;white-space:nowrap;">{{ $c->user?->first_login_at?->format('d.m.Y') ?? '—' }}</td>
-            <td style="color:var(--ink-soft);font-size:12.5px;white-space:nowrap;">{{ $c->user?->last_login_at?->format('d.m.Y') ?? '—' }}</td>
             <td style="font-size:12.5px;">
                 @forelse($c->betreuer as $b)
                 <span style="background:#E4F0E7;color:#3B7A57;border-radius:12px;padding:2px 10px;display:inline-block;margin:1px 0;">{{ $b->name }}</span>
@@ -162,7 +160,7 @@ function confirmBulkDelete(form) {
             </td>
         </tr>
         @empty
-        <tr><td colspan="9" style="text-align:center;padding:24px;color:var(--ink-soft);">Keine Kunden gefunden.</td></tr>
+        <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--ink-soft);">Keine Kunden gefunden.</td></tr>
         @endforelse
         </tbody>
     </table>

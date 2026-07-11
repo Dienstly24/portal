@@ -155,9 +155,12 @@ class CustomerBulkDeleteTest extends TestCase
         $response = $this->actingAs($this->admin)->get(route('admin.customers'));
         $response->assertOk()
             ->assertSee('Portal')
-            ->assertSee('1. Login')
-            ->assertSee('Letzter Login')
+            ->assertSee('Betreuer')
             ->assertSee('Ausgewählte löschen');
+
+        // Verschlankte Liste: Login-Spalten werden nicht mehr angezeigt
+        $response->assertDontSee('1. Login')
+            ->assertDontSee('Letzter Login');
 
         // Employee sieht den Lösch-Button NICHT
         $employee = User::factory()->create(['role' => 'employee', 'can_see_all_customers' => true]);
