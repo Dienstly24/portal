@@ -178,6 +178,20 @@ table tr:hover td{background:#FAFAF8;}
         Tarifrechner
     </a>
         @endif
+    @if(in_array(auth()->user()->role, ['admin','manager','support']))
+    <a href="{{ route('admin.email_inbox') }}" class="nav-item {{ request()->routeIs('admin.email_inbox*') ? 'active' : '' }}">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        E-Mail-Posteingang
+        @php $suggestedMails = \App\Models\EmailMessage::where('match_status', 'suggested')->count(); @endphp
+        @if($suggestedMails > 0)<span class="nav-badge">{{ $suggestedMails }}</span>@endif
+    </a>
+    @endif
+    <a href="{{ route('admin.document_requests') }}" class="nav-item {{ request()->routeIs('admin.document_requests*') ? 'active' : '' }}">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        Dokumentenanfragen
+        @php $docReqCount = \App\Models\DocumentRequest::awaitingReview()->count(); @endphp
+        @if($docReqCount > 0)<span class="nav-badge">{{ $docReqCount }}</span>@endif
+    </a>
     <a href="{{ route('admin.change_requests') }}" class="nav-item {{ request()->routeIs('admin.change_requests*') ? 'active' : '' }}">
         <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
         Kundenänderungen
@@ -222,11 +236,29 @@ table tr:hover td{background:#FAFAF8;}
     </a>
         
         @endif
+        @if(in_array(auth()->user()->role, ['admin','manager']))
+        <a href="{{ route('admin.partners') }}" class="nav-item {{ request()->routeIs('admin.partners*') ? 'active' : '' }}">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6-4a3 3 0 11-3-3"/></svg>
+        Partner
+    </a>
+        <a href="{{ route('admin.commissions') }}" class="nav-item {{ request()->routeIs('admin.commissions*') ? 'active' : '' }}">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Provisionen
+        @php $pendingCommissions = \App\Models\Commission::pendingReview()->count(); @endphp
+        @if($pendingCommissions > 0)<span class="nav-badge">{{ $pendingCommissions }}</span>@endif
+    </a>
+        @endif
         <div class="nav-section">Integrationen</div>
     @if(in_array(auth()->user()->role, ['admin','manager']))
     <a href="{{ route('admin.lexoffice.contacts') }}" class="nav-item {{ request()->is('admin/lexoffice*') ? 'active' : '' }}">
         <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
         lexoffice
+    </a>
+    @endif
+    @if(auth()->user()->role === 'admin')
+    <a href="{{ route('admin.email_accounts.index') }}" class="nav-item {{ request()->routeIs('admin.email_accounts*') ? 'active' : '' }}">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        E-Mail-Postfächer
     </a>
     @endif
         <a href="{{ route('admin.appointments') }}" class="nav-item {{ request()->routeIs('admin.appointments*') ? 'active' : '' }}">

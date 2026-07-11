@@ -89,6 +89,47 @@
     <div style="font-size:13.5px;color:#3B7A57;">✓ Ihre Kundenakte ist vollständig.</div>
     @endif
 </div>
+
+{{-- Offene Dokumentenanfragen prominent anzeigen (Priorität 8) --}}
+@php $openDocRequests = \App\Models\DocumentRequest::where('customer_id', $customer->id)->openForCustomer()->get(); @endphp
+@if($openDocRequests->isNotEmpty())
+<div class="card" style="border-left:4px solid #D9A441;">
+    <div class="card-title">📄 Wir benötigen Unterlagen von Ihnen</div>
+    @foreach($openDocRequests as $odr)
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;font-size:14px;">
+        <div>
+            {{ $odr->title }}
+            @if($odr->deadline)<span style="color:{{ $odr->deadline->isPast() ? '#A32D2D' : 'var(--ink-soft)' }};font-size:12.5px;"> · Frist {{ $odr->deadline->format('d.m.Y') }}</span>@endif
+        </div>
+        <a href="{{ route('portal.documents') }}" class="btn btn-gold" style="padding:6px 14px;font-size:13px;flex:none;">Hochladen</a>
+    </div>
+    @endforeach
+</div>
+@endif
+
+{{-- Kundenakte-Vollständigkeit (Final Polish Punkt 5) --}}
+<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div class="card-title" style="margin-bottom:0;">📋 Ihre Kundenakte</div>
+        <span style="font-size:20px;font-weight:800;color:{{ $completeness['percent'] >= 80 ? '#3B7A57' : ($completeness['percent'] >= 50 ? '#B5651D' : '#A32D2D') }};">{{ $completeness['percent'] }} %</span>
+    </div>
+    <div style="height:10px;background:var(--canvas);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:6px;">
+        <div style="height:100%;width:{{ $completeness['percent'] }}%;background:{{ $completeness['percent'] >= 80 ? '#3B7A57' : ($completeness['percent'] >= 50 ? '#D9A441' : '#E24B4A') }};transition:width .3s;"></div>
+    </div>
+    <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;">{{ $completeness['percent'] }} % vollständig</div>
+    @if(count($completeness['missing']))
+    <div style="display:flex;flex-direction:column;gap:8px;">
+        @foreach($completeness['missing'] as $m)
+        <a href="{{ route($m['route']) }}" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border:1px solid var(--line);border-radius:8px;text-decoration:none;color:var(--ink);font-size:13.5px;{{ !empty($m['optional']) ? 'opacity:.7;' : '' }}">
+            <span>⚠ {{ $m['label'] }}</span>
+            <span style="color:var(--petrol);font-size:12px;">ergänzen →</span>
+        </a>
+        @endforeach
+    </div>
+    @else
+    <div style="font-size:13.5px;color:#3B7A57;">✓ Ihre Kundenakte ist vollständig.</div>
+    @endif
+</div>
 <div class="card">
     <div class="card-title">Letzte Verträge</div>
     @forelse($contracts as $c)

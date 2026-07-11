@@ -63,7 +63,7 @@ class LexofficeController extends Controller
         Customer::create([
             'id' => Str::uuid(),
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(Str::random(8)),
+            'customer_number' => app(\App\Services\CustomerNumberGenerator::class)->generate(),
             'phone' => $phone,
             'address' => $address,
             'company_name' => $contact['company']['name'] ?? null,

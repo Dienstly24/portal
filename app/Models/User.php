@@ -10,6 +10,10 @@ class User extends Authenticatable {
     protected $hidden = ['password','remember_token'];
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'last_login_at' => 'datetime',
+        'invitation_sent_at' => 'datetime',
+        'first_login_at' => 'datetime',
+        'portal_password_set_at' => 'datetime',
         'password' => 'hashed',
         'can_see_all_customers' => 'boolean',
         'can_manage_contracts' => 'boolean',
@@ -19,6 +23,21 @@ class User extends Authenticatable {
         'can_import_export' => 'boolean',
     ];
     public function customer() { return $this->hasOne(Customer::class); }
+
+    /** Echte, erreichbare E-Mail (Import-Platzhalter zählen nicht). */
+    public function hasRealEmail(): bool {
+        return $this->email && !str_contains($this->email, '@dienstly24.internal');
+    }
+
+    /**
+     * Deutsche Passwort-Reset-Mail statt der englischen Framework-
+     * Notification. Der Versand läuft über den Password-Broker; Fehler
+     * werden im Controller abgefangen (kein 500 mehr beim Kunden).
+     */
+    public function sendPasswordResetNotification($token): void {
+        \Illuminate\Support\Facades\Mail::to($this->email)
+            ->send(new \App\Mail\PasswordResetMail($this, $token));
+    }
     public function assignedCustomers() { return $this->belongsToMany(Customer::class, 'employee_customers'); }
 
     public function canSeeAllCustomers(): bool {

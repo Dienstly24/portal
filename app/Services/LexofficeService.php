@@ -86,6 +86,16 @@ class LexofficeService {
         return $r->successful() ? $r->json() : ['content'=>[],'totalElements'=>0];
     }
 
+    /**
+     * Buchhaltungsbeleg (z. B. Provisionsgutschrift = Einnahme) anlegen.
+     * Wird ausschließlich aus der Mitarbeiter-Buchung im
+     * CommissionController aufgerufen - nie automatisch (HITL Abschnitt 13).
+     */
+    public function createVoucher(array $data): ?array {
+        $r = $this->http()->post("$this->baseUrl/vouchers", $data);
+        return $r->successful() ? $r->json() : null;
+    }
+
     public function uploadVoucher(string $filePath, string $fileName): ?string {
         $r = Http::withHeaders(['Authorization' => 'Bearer ' . $this->apiKey])
             ->attach('file', file_get_contents($filePath), $fileName)

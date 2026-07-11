@@ -5,8 +5,10 @@ use Illuminate\Support\Str;
 class Customer extends Model {
     protected $keyType = 'string';
     public $incrementing = false;
+    public const SOURCES = ['manual', 'website', 'email_import', 'fonds_finanz', 'import', 'lexoffice'];
+
     protected $fillable = [
-        'user_id','customer_number','birth_date','address','address2',
+        'user_id','customer_number','source','birth_date','address','address2',
         'iban','iban2','marital_status','phone','mobile','preferred_lang',
         'company_name','company_type','customer_type','email2',
         'nationality','occupation','last_contact','gender','account_holder',
@@ -57,6 +59,33 @@ class Customer extends Model {
     }
 
     /**
+     * Echter Portal-Status (Admin-Kundenakte + Kundenliste).
+     * Ableitung aus den Tracking-Feldern am User - keine eigene
+     * Statusspalte, die aus dem Takt laufen könnte.
+     */
+    public function portalStatus(): array
+    {
+        $user = $this->user;
+
+        if ($user === null || !$user->hasRealEmail()) {
+            return ['key' => 'kein_account', 'label' => 'Kein Portal-Account', 'color' => '#A32D2D', 'bg' => '#F9E3E3'];
+        }
+        if (isset($user->is_active) && !$user->is_active) {
+            return ['key' => 'deaktiviert', 'label' => 'Portal deaktiviert', 'color' => '#5F5E5A', 'bg' => '#EDEBE6'];
+        }
+        if ($user->first_login_at !== null) {
+            return ['key' => 'erster_login', 'label' => 'Aktiv – Login erfolgt', 'color' => '#3B7A57', 'bg' => '#E4F0E7'];
+        }
+        if ($user->portal_password_set_at !== null) {
+            return ['key' => 'aktiviert', 'label' => 'Aktiviert – noch kein Login', 'color' => '#185FA5', 'bg' => '#E6F1FB'];
+        }
+        if ($user->invitation_sent_at !== null) {
+            return ['key' => 'einladung_gesendet', 'label' => 'Einladung gesendet', 'color' => '#92400E', 'bg' => '#FEF3C7'];
+        }
+        return ['key' => 'passwort_nicht_gesetzt', 'label' => 'Passwort nicht gesetzt', 'color' => '#92400E', 'bg' => '#FEF3C7'];
+    }
+
+    /**
      * Korrekte Briefanrede für E-Mails und Vorlagen - abgeleitet aus dem
      * Geschlecht (einzige Datenquelle, Review Punkt 1). Firmenkunden
      * (company_name gesetzt) erhalten die neutrale Form.
@@ -97,4 +126,5 @@ class Customer extends Model {
     public function notes() { return $this->hasMany(CustomerNote::class)->latest(); }
     public function timeline() { return $this->hasMany(CustomerTimeline::class)->latest(); }
     public function appointments() { return $this->hasMany(Appointment::class); }
+    public function externalReferences() { return $this->morphMany(ExternalReference::class, 'referenceable'); }
 }

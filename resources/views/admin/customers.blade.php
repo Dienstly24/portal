@@ -37,14 +37,46 @@
         <input type="checkbox" name="replace_existing" value="1" style="width:auto;"> Bisherige Betreuer ersetzen
     </label>
     <button type="submit" class="btn btn-primary" style="padding:8px 18px;font-size:13px;">Zuweisen</button>
+    @if(auth()->user()->role === 'admin')
+    <button type="submit" form="bulkDeleteForm" id="bulkDeleteBtn"
+        style="padding:8px 18px;font-size:13px;background:#A32D2D;color:#fff;border:none;border-radius:8px;cursor:pointer;">
+        🗑 Ausgewählte löschen
+    </button>
+    @endif
 </div>
+@endif
+
+@if(auth()->user()->role === 'admin')
+{{-- Massen-Löschung (nur admin): eigenes Formular, die Checkboxen werden
+     beim Absenden per JS übernommen; Bestätigung mit Anzahl davor. --}}
+<form method="POST" action="{{ route('admin.customers.bulk-delete') }}" id="bulkDeleteForm"
+    onsubmit="return confirmBulkDelete(this);">
+    @csrf
+</form>
+<script>
+function confirmBulkDelete(form) {
+    var checked = document.querySelectorAll('.rowCheck:checked');
+    if (checked.length === 0) { alert('Bitte zuerst Kunden auswählen.'); return false; }
+    if (!confirm('⚠️ ' + checked.length + ' Kunde(n) ENDGÜLTIG löschen?\n\nAlle zugehörigen Daten (Verträge, Tickets, Dokumente, E-Mails, Portal-Zugang) werden unwiderruflich entfernt.')) {
+        return false;
+    }
+    // Ausgewählte IDs in das Delete-Formular übernehmen
+    form.querySelectorAll('input[name="customer_ids[]"]').forEach(function (i) { i.remove(); });
+    checked.forEach(function (cb) {
+        var input = document.createElement('input');
+        input.type = 'hidden'; input.name = 'customer_ids[]'; input.value = cb.value;
+        form.appendChild(input);
+    });
+    return true;
+}
+</script>
 @endif
 
 <div class="card">
     <table>
         <thead><tr>
             @if(in_array(auth()->user()->role, ['admin','manager']))<th style="width:36px;"><input type="checkbox" id="checkAll" style="width:17px;height:17px;cursor:pointer;accent-color:#1F3A33;"></th>@endif
-            <th>Kunde</th><th>Kundennr.</th><th>E-Mail</th><th>Adresse</th><th>Betreuer</th>
+            <th>Kunde</th><th>Kundennr.</th><th>E-Mail</th><th>Portal</th><th>1. Login</th><th>Letzter Login</th><th>Betreuer</th>
         </tr></thead>
         <tbody>
         @forelse($customers as $c)
@@ -55,7 +87,12 @@
             <td style="font-weight:600;">{{ $c->user?->name }}</td>
             <td style="color:var(--ink-soft);font-size:13px;">{{ $c->customer_number }}</td>
             <td style="color:var(--ink-soft);font-size:13px;">{{ str_contains($c->user?->email ?? '', '@dienstly24.internal') ? '—' : $c->user?->email }}</td>
-            <td style="color:var(--ink-soft);font-size:12.5px;max-width:200px;">{{ \Illuminate\Support\Str::limit($c->address ?? '—', 45) }}</td>
+            @php $ps = $c->portalStatus(); @endphp
+            <td title="Einladung: {{ $c->user?->invitation_sent_at?->format('d.m.Y') ?? '—' }} · Passwort gesetzt: {{ $c->user?->portal_password_set_at ? 'Ja' : 'Nein' }}">
+                <span style="background:{{ $ps['bg'] }};color:{{ $ps['color'] }};border-radius:12px;padding:2px 10px;font-size:11.5px;white-space:nowrap;">{{ $ps['label'] }}</span>
+            </td>
+            <td style="color:var(--ink-soft);font-size:12.5px;white-space:nowrap;">{{ $c->user?->first_login_at?->format('d.m.Y') ?? '—' }}</td>
+            <td style="color:var(--ink-soft);font-size:12.5px;white-space:nowrap;">{{ $c->user?->last_login_at?->format('d.m.Y') ?? '—' }}</td>
             <td style="font-size:12.5px;">
                 @forelse($c->betreuer as $b)
                 <span style="background:#E4F0E7;color:#3B7A57;border-radius:12px;padding:2px 10px;display:inline-block;margin:1px 0;">{{ $b->name }}</span>
@@ -65,7 +102,7 @@
             </td>
         </tr>
         @empty
-        <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--ink-soft);">Keine Kunden gefunden.</td></tr>
+        <tr><td colspan="9" style="text-align:center;padding:24px;color:var(--ink-soft);">Keine Kunden gefunden.</td></tr>
         @endforelse
         </tbody>
     </table>
