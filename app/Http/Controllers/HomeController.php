@@ -13,6 +13,9 @@ class HomeController extends Controller
         if ($user && in_array($user->role, ['admin', 'manager', 'employee'])) {
             return redirect()->route('admin.dashboard');
         }
+        if ($user && $user->role === 'partner') {
+            return redirect()->route('partner.dashboard');
+        }
         return redirect()->route('portal.dashboard');
     }
 }

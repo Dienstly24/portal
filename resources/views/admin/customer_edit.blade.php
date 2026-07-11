@@ -63,6 +63,14 @@
                 <option value="firma" {{ $customer->customer_type === 'firma' ? 'selected' : '' }}>🏢 Firmenkunde</option>
             </select>
         </div>
+        <div class="field"><label>Vertriebspartner (Partnerportal)</label>
+            <select name="partner_id" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                <option value="">— Kein Partner —</option>
+                @foreach($partners as $p)
+                <option value="{{ $p->id }}" {{ $customer->partner_id === $p->id ? 'selected' : '' }}>{{ $p->name }}</option>
+                @endforeach
+            </select>
+        </div>
     </div>
     <div style="border-top:1px solid var(--line);padding-top:20px;margin-top:4px;">
         <div class="card-title" style="margin-bottom:16px;">Bankverbindung</div>

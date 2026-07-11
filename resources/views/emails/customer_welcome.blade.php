@@ -43,6 +43,11 @@
 <p style="font-size:13.5px;color:#1e3a8a;margin:0;"><strong>📋 Unsere Bitte:</strong> Vervollständigen Sie nach dem ersten Login Ihre persönlichen Daten und Familienmitglieder – so können wir Sie optimal beraten.</p>
 </div>
 
+{{-- Transparenzhinweis (DSGVO Art. 13): Verarbeitung vertragsbezogener E-Mails --}}
+<div style="border-top:1px solid #e2e8f0;margin:20px 0 0;padding-top:16px;">
+<p style="font-size:12.5px;color:#666;margin:0;"><strong>Hinweis zum Datenschutz:</strong> Damit wir Ihre Verträge zuverlässig betreuen, empfangen und verarbeiten wir auch Korrespondenz, die Ihre Verträge betrifft – z. B. Nachrichten und Dokumente von Versicherungs- oder Energieunternehmen. Solche Vorgänge ordnen wir Ihrem Kundenkonto zu und stellen sie Ihnen, soweit relevant, in Ihrem Portal bereit. Die Verarbeitung erfolgt ausschließlich zur Vertragsbetreuung gemäß unseren Datenschutzhinweisen; Ihre Daten geben wir nicht unbefugt an Dritte weiter.</p>
+</div>
+
 <p style="font-size:15px;color:#333;margin-top:18px;">Mit freundlichen Grüßen<br>Ihr Dienstly24 Team</p>
 </td></tr>
 </table></td></tr></table>

@@ -36,6 +36,7 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     Route::post('/notifications/{id}/read', [PortalController::class, 'notificationRead'])->name('notifications.read');
     Route::get('/banner/{id}/interesse', [PortalController::class, 'bannerInterest'])->name('banner.interest');
     Route::get('/profile', [PortalController::class, 'profile'])->name('profile');
+    Route::get('/datenschutz', [PortalController::class, 'datenschutz'])->name('datenschutz');
 
     // Self-Service (jede Aktion erzeugt nur einen Change Request)
     Route::get('/family', [\App\Http\Controllers\SelfServiceController::class, 'family'])->name('family');
@@ -55,6 +56,20 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     Route::get('/documents/{id}/download', [PortalController::class, 'documentDownload'])->name('documents.download');
     Route::post('/profile', [PortalController::class, 'profileUpdate'])->name('profile.update');
     Route::post('/profile/password', [PortalController::class, 'passwordUpdate'])->name('profile.password');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Partnerportal (Grundgerüst) – nur role:partner, strikt gescoped
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'role:partner'])->prefix('partner')->name('partner.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\PartnerPortalController::class, 'dashboard'])->name('dashboard');
+    Route::get('/kunden', [\App\Http\Controllers\PartnerPortalController::class, 'customers'])->name('customers');
+    Route::get('/kunden/{id}', [\App\Http\Controllers\PartnerPortalController::class, 'customerShow'])->name('customer');
+    Route::get('/provisionen', [\App\Http\Controllers\PartnerPortalController::class, 'commissions'])->name('commissions');
+    Route::get('/profil', [\App\Http\Controllers\PartnerPortalController::class, 'profile'])->name('profile');
+    Route::post('/profil', [\App\Http\Controllers\PartnerPortalController::class, 'profileUpdate'])->name('profile.update');
 });
 
 require __DIR__.'/auth.php';

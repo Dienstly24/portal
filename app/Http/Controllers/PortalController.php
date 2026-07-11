@@ -353,6 +353,11 @@ class PortalController extends Controller
         ]);
     }
 
+    /** Transparente Datenschutzinfo für Kunden (DSGVO Art. 13/14). */
+    public function datenschutz() {
+        return view('portal.datenschutz');
+    }
+
     public function profileUpdate(Request $request) {
         $customer = $this->getCustomer();
 

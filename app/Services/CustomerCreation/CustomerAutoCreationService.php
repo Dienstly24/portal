@@ -56,19 +56,49 @@ class CustomerAutoCreationService
                 'role' => 'customer',
             ]);
 
+            // Zusammengesetzte Alt-Adresse (Kompatibilität) aus strukturierten Feldern.
             $address = $data['address'] ?? trim(
                 trim(($data['street'] ?? '') . ', ' . ($data['zip'] ?? '') . ' ' . ($data['city'] ?? '')),
                 ', '
             );
 
-            $customer = Customer::create([
-                'user_id' => $user->id,
+            // Nur gesetzte Felder übernehmen – so bleibt der Aufruf aus der
+            // E-Mail-/Fonds-Pipeline (nur Basisdaten) unverändert, während der
+            // Lexoffice-Import zusätzlich strukturierte Felder mitliefern kann.
+            $attributes = array_filter([
+                'birth_date'            => $data['birth_date'] ?? null,
+                'phone'                 => $data['phone'] ?? null,
+                'email2'                => $data['email2'] ?? null,
+                'address'               => $address !== '' ? $address : null,
+                'address_street'        => $data['street'] ?? null,
+                'address_house_number'  => $data['house_number'] ?? null,
+                'address_zip'           => $data['zip'] ?? null,
+                'address_city'          => $data['city'] ?? null,
+                'company_name'          => $data['company_name'] ?? null,
+                'company_type'          => $data['company_type'] ?? null,
+                'customer_type'         => $data['customer_type'] ?? null,
+                'iban'                  => $data['iban'] ?? null,
+                'birth_place'           => $data['birth_place'] ?? null,
+            ], fn ($v) => $v !== null && $v !== '');
+
+            $customer = Customer::create(array_merge([
+                'user_id'         => $user->id,
                 'customer_number' => $this->numberGenerator->generate(),
-                'source' => $source,
-                'birth_date' => $data['birth_date'] ?? null,
-                'phone' => $data['phone'] ?? null,
-                'address' => $address !== '' ? $address : null,
-            ]);
+                'source'          => $source,
+            ], $attributes));
+
+            // Externe Kennungen (z. B. Lexoffice-Kundennummer) an ihren
+            // dafür vorgesehenen Ort – nicht als interne Kundennummer.
+            foreach ($data['external_references'] ?? [] as $ref) {
+                if (empty($ref['type']) || empty($ref['value'])) {
+                    continue;
+                }
+                $customer->externalReferences()->create([
+                    'type'   => $ref['type'],
+                    'value'  => (string) $ref['value'],
+                    'source' => $ref['source'] ?? $source,
+                ]);
+            }
 
             ActivityLog::create([
                 'user_id' => $createdBy,
