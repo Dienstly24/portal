@@ -255,4 +255,35 @@ class PortalController extends Controller
             ? 'Ihre Änderungen wurden zur Prüfung eingereicht.'
             : 'Keine Änderungen erkannt.');
     }
+
+    /**
+     * Eigenes Passwort ändern (Portal, "Meine Daten"). Wirkt sofort -
+     * das Login-Passwort ist keine Stammdatenänderung und braucht
+     * keine Mitarbeiterfreigabe. Erfordert das aktuelle Passwort.
+     */
+    public function passwordUpdate(Request $request) {
+        $request->validate([
+            'current_password' => ['required', 'current_password'],
+            'password' => ['required', 'confirmed', 'min:8'],
+        ], [
+            'current_password.current_password' => 'Das aktuelle Passwort ist nicht korrekt.',
+            'password.confirmed' => 'Die Passwort-Bestätigung stimmt nicht überein.',
+            'password.min' => 'Das neue Passwort muss mindestens 8 Zeichen lang sein.',
+        ]);
+
+        auth()->user()->forceFill([
+            'password' => bcrypt($request->password),
+            'portal_password_set_at' => now(),
+        ])->save();
+
+        \App\Models\ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'portal_password_changed',
+            'entity_type' => 'user',
+            'entity_id' => (string) auth()->id(),
+            'meta' => json_encode([], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        return back()->with('success', 'Ihr Passwort wurde geändert.');
+    }
 }

@@ -213,14 +213,19 @@
 {{-- Tab: Portal --}}
 <div id="section-portal" class="card" style="max-width:760px;display:none;">
     <div class="card-title" style="margin-bottom:20px;">Portal-Zugang</div>
-    @php $hasPortalAccess = !str_contains($customer->user?->email ?? '', '@dienstly24.internal'); @endphp
-    <div style="padding:16px;border-radius:10px;background:{{ $hasPortalAccess ? '#E4F0E7' : '#F9E3E3' }};margin-bottom:20px;">
-        <div style="font-weight:600;font-size:14px;color:{{ $hasPortalAccess ? '#3B7A57' : '#A32D2D' }};">
-            {{ $hasPortalAccess ? '✅ Portal-Zugang aktiv' : '❌ Kein Portal-Zugang' }}
+    @php
+        $hasPortalAccess = !str_contains($customer->user?->email ?? '', '@dienstly24.internal');
+        $psEdit = $customer->portalStatus();
+    @endphp
+    <div style="padding:16px;border-radius:10px;background:{{ $psEdit['bg'] }};margin-bottom:20px;">
+        <div style="font-weight:600;font-size:14px;color:{{ $psEdit['color'] }};">{{ $psEdit['label'] }}</div>
+        <div style="font-size:12.5px;margin-top:6px;color:var(--ink-soft);">
+            Einladung: {{ $customer->user?->invitation_sent_at?->format('d.m.Y') ?? '—' }}
+            · Passwort gesetzt: {{ $customer->user?->portal_password_set_at ? 'Ja' : 'Nein' }}
+            · Erster Login: {{ $customer->user?->first_login_at?->format('d.m.Y') ?? '—' }}
+            · Letzter Login: {{ $customer->user?->last_login_at?->format('d.m.Y') ?? '—' }}
         </div>
-        <div style="font-size:13px;margin-top:4px;color:var(--ink-soft);">
-            {{ $hasPortalAccess ? 'Kunde kann sich unter portal.dienstly24.de einloggen.' : 'Kunde wurde ohne E-Mail importiert.' }}
-        </div>
+        <div style="font-size:12px;margin-top:6px;color:var(--ink-soft);">Aktionen (Einladung, Reset, Deaktivieren) finden Sie in der Kundenakte.</div>
     </div>
     @if(!$hasPortalAccess)
     <div class="field">

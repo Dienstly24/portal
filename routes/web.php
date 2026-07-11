@@ -49,6 +49,7 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     Route::get('/change-requests', [\App\Http\Controllers\SelfServiceController::class, 'changeRequests'])->name('change_requests');
     Route::get('/documents/{id}/download', [PortalController::class, 'documentDownload'])->name('documents.download');
     Route::post('/profile', [PortalController::class, 'profileUpdate'])->name('profile.update');
+    Route::post('/profile/password', [PortalController::class, 'passwordUpdate'])->name('profile.password');
 });
 
 require __DIR__.'/auth.php';
@@ -73,7 +74,17 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/customers/{id}', [AdminController::class, 'customerShow'])->name('customer');
     Route::get('/customers/{id}/edit', [AdminController::class, 'customerEdit'])->name('customer.edit');
     Route::put('/customers/{id}', [AdminController::class, 'customerUpdate'])->name('customer.update');
-    Route::delete('/customers/{id}', [AdminController::class, 'destroyCustomer'])->name('customers.delete');
+    // Kundenlöschung: NUR admin (employee/manager/support können nicht löschen)
+    Route::delete('/customers/{id}', [AdminController::class, 'destroyCustomer'])->name('customers.delete')->middleware('role:admin');
+    Route::post('/customers/bulk-delete', [AdminController::class, 'bulkDestroyCustomers'])->name('customers.bulk-delete')->middleware('role:admin');
+
+    // Portal-Zugang-Controls in der Kundenakte (nur admin)
+    Route::middleware('role:admin')->group(function () {
+        Route::post('/customers/{id}/portal/invite', [\App\Http\Controllers\PortalAccessController::class, 'invite'])->name('customer.portal.invite');
+        Route::post('/customers/{id}/portal/reset-link', [\App\Http\Controllers\PortalAccessController::class, 'sendResetLink'])->name('customer.portal.reset_link');
+        Route::post('/customers/{id}/portal/reset', [\App\Http\Controllers\PortalAccessController::class, 'reset'])->name('customer.portal.reset');
+        Route::post('/customers/{id}/portal/toggle', [\App\Http\Controllers\PortalAccessController::class, 'toggle'])->name('customer.portal.toggle');
+    });
     Route::get('/customers/{id}/merge', [AdminController::class, 'mergeForm'])->name('customer.merge');
     Route::post('/customers/{id}/merge', [AdminController::class, 'mergeCustomers'])->name('customer.merge.do');
     Route::get('/attachments/{id}/download', [AdminController::class, 'downloadAttachment'])->name('attachment.download');

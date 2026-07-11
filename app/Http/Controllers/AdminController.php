@@ -223,14 +223,18 @@ class AdminController extends Controller
             'first_name' => 'required',
             'last_name' => 'required',
             'email' => 'required|email|unique:users',
-            'password' => 'required|min:8',
+            // Passwort ist jetzt optional: ohne Eingabe greift der
+            // Startpasswort-Flow (Geburtsdatum TT.MM.JJJJ bzw. Set-Link).
+            'password' => 'nullable|min:8',
         ]);
         $fullName = $request->first_name . ' ' . $request->last_name;
         $address = $this->buildAddress($request);
         $user = User::create([
             'name' => $fullName,
             'email' => $request->email,
-            'password' => bcrypt($request->password),
+            // Platzhalter - das nutzbare Passwort setzt gleich der
+            // PortalAccessService (manuell/Geburtsdatum/Set-Link).
+            'password' => bcrypt(\Illuminate\Support\Str::random(40)),
             'role' => 'customer',
         ]);
         $customer = Customer::create([
@@ -244,11 +248,23 @@ class AdminController extends Controller
             'company_name' => $request->customer_type === 'firma' ? $request->company_name : null,
             'company_type' => $request->customer_type === 'firma' ? $request->company_type : null,
         ]);
-        if ($request->email && !str_contains($request->email, '@dienstly24.internal')) {
+        // Portal-Einladung: manuelles Passwort > Geburtsdatum-Startpasswort
+        // > Passwort-Setzen-Link. KEINE Login-Mail ohne echte Adresse.
+        $customer->setRelation('user', $user);
+        if ($user->hasRealEmail()) {
             try {
-                \Illuminate\Support\Facades\Mail::to($request->email)->send(new \App\Mail\CustomerWelcomeMail(
-                    $fullName, $request->email, $request->password, $request->preferred_lang ?? 'de'
-                ));
+                if ($request->filled('password')) {
+                    $user->forceFill([
+                        'password' => bcrypt($request->password),
+                        'portal_password_set_at' => now(),
+                        'invitation_sent_at' => now(),
+                    ])->save();
+                    \Illuminate\Support\Facades\Mail::to($user->email)->send(
+                        new \App\Mail\CustomerWelcomeMail($customer, 'manual', $request->password)
+                    );
+                } else {
+                    app(\App\Services\Portal\PortalAccessService::class)->sendInvitation($customer, auth()->id());
+                }
             } catch (\Throwable $e) { \Log::warning('Welcome mail failed: ' . $e->getMessage()); }
         }
         return redirect()->route("admin.customer", $customer->id)->with("success", "Kunde erfolgreich erstellt.");
@@ -338,6 +354,7 @@ class AdminController extends Controller
         }
         if ($request->filled('new_password')) {
             $userData['password'] = bcrypt($request->new_password);
+            $userData['portal_password_set_at'] = now();
         }
         $user->update($userData);
 
@@ -659,35 +676,29 @@ class AdminController extends Controller
     public function destroyCustomer($id) {
         $this->authorizeCustomerAccess($id);
         $customer = \App\Models\Customer::findOrFail($id);
-        $user = $customer->user;
-
-        // DSGVO Art. 17 (Audit-Fix H3): Physische Dateien mitlöschen -
-        // die FK-Kaskade entfernt nur DB-Zeilen, die Rohdaten blieben
-        // sonst dauerhaft im Storage liegen.
-        foreach ($customer->documents()->get() as $doc) {
-            try {
-                \Illuminate\Support\Facades\Storage::disk($doc->disk ?: 'public')->delete($doc->file_path);
-            } catch (\Throwable $e) {
-                \Log::warning('Dokumentdatei bei Kundenlöschung nicht entfernbar: ' . $doc->file_path);
-            }
-        }
-        \Illuminate\Support\Facades\Storage::disk('local')->deleteDirectory('customers/' . $customer->id);
-
-        // DSGVO (Art. 17): E-Mails des Kunden enthalten personenbezogene
-        // Daten im Volltext - beim Löschen des Kunden mitlöschen statt
-        // nur zu entkoppeln (der FK würde customer_id nur auf NULL setzen).
-        // Inkl. der zugehörigen Anhang-Dateien (Audit-Fix H3).
-        $attachmentService = app(\App\Services\Mailbox\EmailAttachmentService::class);
-        foreach (\App\Models\EmailMessage::where('customer_id', $customer->id)->get() as $mail) {
-            $attachmentService->deleteFiles($mail);
-            $mail->delete();
-        }
-
-        $customer->delete();
-        if ($user) {
-            $user->delete();
-        }
+        app(\App\Services\CustomerDeletionService::class)->delete($customer, auth()->id());
         return redirect()->route('admin.customers')->with('success', 'Kunde gelöscht.');
+    }
+
+    /**
+     * Mehrere Kunden auf einmal löschen (nur admin, Routen-Middleware).
+     * Nutzt exakt dieselbe DSGVO-Löschlogik wie die Einzellöschung.
+     */
+    public function bulkDestroyCustomers(\Illuminate\Http\Request $request) {
+        $data = $request->validate([
+            'customer_ids' => 'required|array|min:1|max:200',
+            'customer_ids.*' => 'uuid',
+        ]);
+
+        $service = app(\App\Services\CustomerDeletionService::class);
+        $deleted = 0;
+        foreach (\App\Models\Customer::whereIn('id', $data['customer_ids'])->get() as $customer) {
+            $service->delete($customer, auth()->id());
+            $deleted++;
+        }
+
+        return redirect()->route('admin.customers')
+            ->with('success', $deleted . ' Kunde(n) endgültig gelöscht.');
     }
 
     public function customerTimeline($id) {

@@ -82,8 +82,12 @@ Schedule::call(function () {
 
 // 09:00 — Portal-Erinnerung nach 3 Tagen ohne Login
 Schedule::call(function () {
+    // Nur Kunden erinnern, die sich auch WIRKLICH einloggen können:
+    // ohne nutzbares Passwort (portal_password_set_at) wäre die
+    // "Bitte einloggen"-Mail eine Sackgasse (Kundenproblem-Fix).
     $users = \App\Models\User::where('role', 'customer')
         ->whereNull('last_login_at')->whereNull('portal_reminder_sent_at')
+        ->whereNotNull('portal_password_set_at')
         ->where('created_at', '<=', now()->subDays(3))->get();
     foreach ($users as $u) {
         if (!dienstly_mailable($u->email)) continue;

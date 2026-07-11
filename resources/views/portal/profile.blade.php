@@ -40,4 +40,27 @@
         <button type="submit" class="btn btn-primary">Änderung einreichen</button>
     </form>
 </div>
+{{-- Passwort ändern (wirkt sofort, kein Freigabe-Workflow nötig) --}}
+<div class="card" style="margin-top:20px;">
+    <div class="card-title">🔑 Passwort ändern</div>
+    <div style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">
+        Sie können Ihr Passwort jederzeit ändern – z. B. nach dem ersten Login mit Ihrem Startpasswort.
+    </div>
+    <form method="POST" action="{{ route('portal.profile.password') }}" style="display:grid;gap:12px;max-width:420px;">
+        @csrf
+        <div class="field">
+            <label>Aktuelles Passwort</label>
+            <input type="password" name="current_password" required autocomplete="current-password">
+        </div>
+        <div class="field">
+            <label>Neues Passwort (mind. 8 Zeichen)</label>
+            <input type="password" name="password" required minlength="8" autocomplete="new-password">
+        </div>
+        <div class="field">
+            <label>Neues Passwort bestätigen</label>
+            <input type="password" name="password_confirmation" required minlength="8" autocomplete="new-password">
+        </div>
+        <button type="submit" class="btn btn-primary" style="justify-self:start;">Passwort speichern</button>
+    </form>
+</div>
 @endsection

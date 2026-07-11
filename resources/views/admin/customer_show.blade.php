@@ -37,6 +37,46 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
 </div>
 
 
+{{-- Portal-Status (echter Zustand statt "aktiv/inaktiv"-Raten) --}}
+@php $portalUser = $customer->user; $ps = $customer->portalStatus(); @endphp
+<div class="card" style="margin-bottom:20px;padding:18px 20px;">
+    <div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start;">
+        <div style="min-width:260px;">
+            <div style="font-weight:700;margin-bottom:8px;">Portal-Zugang</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+                <span style="background:{{ $ps['bg'] }};color:{{ $ps['color'] }};border-radius:12px;padding:3px 12px;font-size:12.5px;font-weight:600;">{{ $ps['label'] }}</span>
+                <span style="font-size:12.5px;color:var(--ink-soft);">Account vorhanden: <strong>{{ $portalUser && $portalUser->hasRealEmail() ? 'Ja' : 'Nein' }}</strong></span>
+                <span style="font-size:12.5px;color:var(--ink-soft);">Passwort gesetzt: <strong>{{ $portalUser?->portal_password_set_at ? 'Ja' : 'Nein' }}</strong></span>
+            </div>
+            <div style="display:grid;grid-template-columns:auto auto;gap:2px 18px;font-size:12.5px;color:var(--ink-soft);">
+                <span>Einladung gesendet:</span><strong>{{ $portalUser?->invitation_sent_at?->format('d.m.Y H:i') ?? '—' }}</strong>
+                <span>Account aktiviert:</span><strong>{{ $portalUser?->portal_password_set_at?->format('d.m.Y H:i') ?? '—' }}</strong>
+                <span>Erster Login:</span><strong>{{ $portalUser?->first_login_at?->format('d.m.Y H:i') ?? '—' }}</strong>
+                <span>Letzter Login:</span><strong>{{ $portalUser?->last_login_at?->format('d.m.Y H:i') ?? '—' }}</strong>
+            </div>
+        </div>
+        @if(auth()->user()->role === 'admin')
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
+            <form method="POST" action="{{ route('admin.customer.portal.invite', $customer->id) }}"
+                onsubmit="return confirm('Einladung mit Startpasswort (Geburtsdatum TT.MM.JJJJ) bzw. Passwort-Link an den Kunden senden?');">
+                @csrf<button type="submit" class="btn btn-gold btn-sm">📧 Einladung senden</button>
+            </form>
+            <form method="POST" action="{{ route('admin.customer.portal.reset_link', $customer->id) }}">
+                @csrf<button type="submit" class="btn btn-ghost btn-sm">🔑 Reset-Link senden</button>
+            </form>
+            <form method="POST" action="{{ route('admin.customer.portal.reset', $customer->id) }}"
+                onsubmit="return confirm('Portal wirklich zurücksetzen? Das Passwort wird neu gesetzt und die Einladung erneut versendet.');">
+                @csrf<button type="submit" class="btn btn-ghost btn-sm">↺ Portal zurücksetzen</button>
+            </form>
+            <form method="POST" action="{{ route('admin.customer.portal.toggle', $customer->id) }}"
+                onsubmit="return confirm('{{ ($portalUser?->is_active ?? true) ? 'Portal-Login für diesen Kunden deaktivieren?' : 'Portal-Login wieder aktivieren?' }}');">
+                @csrf<button type="submit" class="btn btn-ghost btn-sm">{{ ($portalUser?->is_active ?? true) ? '🚫 Deaktivieren' : '✅ Aktivieren' }}</button>
+            </form>
+        </div>
+        @endif
+    </div>
+</div>
+
 {{-- Tab-Navigation (Kundenprofil) --}}
 <style>
 .cust-tabs{display:flex;gap:4px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px;margin-bottom:20px;overflow-x:auto;}

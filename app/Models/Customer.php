@@ -59,6 +59,33 @@ class Customer extends Model {
         return ['percent' => $percent, 'missing' => $missing];
     }
 
+    /**
+     * Echter Portal-Status (Admin-Kundenakte + Kundenliste).
+     * Ableitung aus den Tracking-Feldern am User - keine eigene
+     * Statusspalte, die aus dem Takt laufen könnte.
+     */
+    public function portalStatus(): array
+    {
+        $user = $this->user;
+
+        if ($user === null || !$user->hasRealEmail()) {
+            return ['key' => 'kein_account', 'label' => 'Kein Portal-Account', 'color' => '#A32D2D', 'bg' => '#F9E3E3'];
+        }
+        if (isset($user->is_active) && !$user->is_active) {
+            return ['key' => 'deaktiviert', 'label' => 'Portal deaktiviert', 'color' => '#5F5E5A', 'bg' => '#EDEBE6'];
+        }
+        if ($user->first_login_at !== null) {
+            return ['key' => 'erster_login', 'label' => 'Aktiv – Login erfolgt', 'color' => '#3B7A57', 'bg' => '#E4F0E7'];
+        }
+        if ($user->portal_password_set_at !== null) {
+            return ['key' => 'aktiviert', 'label' => 'Aktiviert – noch kein Login', 'color' => '#185FA5', 'bg' => '#E6F1FB'];
+        }
+        if ($user->invitation_sent_at !== null) {
+            return ['key' => 'einladung_gesendet', 'label' => 'Einladung gesendet', 'color' => '#92400E', 'bg' => '#FEF3C7'];
+        }
+        return ['key' => 'passwort_nicht_gesetzt', 'label' => 'Passwort nicht gesetzt', 'color' => '#92400E', 'bg' => '#FEF3C7'];
+    }
+
     /** Korrekte Briefanrede für E-Mails und Vorlagen. */
     public function salutationLine(?string $fallbackName = null): string {
         $name = $this->user?->name ?: ($fallbackName ?? '');
