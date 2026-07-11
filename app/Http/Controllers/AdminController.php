@@ -660,6 +660,12 @@ class AdminController extends Controller
         $this->authorizeCustomerAccess($id);
         $customer = \App\Models\Customer::findOrFail($id);
         $user = $customer->user;
+
+        // DSGVO (Art. 17): E-Mails des Kunden enthalten personenbezogene
+        // Daten im Volltext - beim Löschen des Kunden mitlöschen statt
+        // nur zu entkoppeln (der FK würde customer_id nur auf NULL setzen).
+        \App\Models\EmailMessage::where('customer_id', $customer->id)->delete();
+
         $customer->delete();
         if ($user) {
             $user->delete();

@@ -117,13 +117,28 @@ class EmailInboxTest extends TestCase
         $this->assertSame((string) $customer->id, (string) $message->customer_id);
     }
 
-    public function test_restricted_employee_cannot_assign_unassigned_customer(): void
+    public function test_plain_employee_is_blocked_from_inbox_routes(): void
     {
         $employee = User::factory()->create(['role' => 'employee', 'can_see_all_customers' => false]);
         $customer = $this->customer();
         $message = $this->message(['match_status' => 'unmatched']);
 
+        // Posteingang ist auf admin/manager/support beschränkt (Priorität 9).
         $this->actingAs($employee)->post(route('admin.email_inbox.assign', $message->id), [
+            'customer_id' => (string) $customer->id,
+        ])->assertRedirect(route('admin.dashboard'));
+
+        $this->assertNull($message->fresh()->customer_id);
+    }
+
+    public function test_restricted_support_cannot_assign_unassigned_customer(): void
+    {
+        $support = User::factory()->create(['role' => 'support', 'can_see_all_customers' => false]);
+        $customer = $this->customer();
+        $message = $this->message(['match_status' => 'unmatched']);
+
+        // Portfolio-Scoping: auch im Posteingang nur eigene Kunden zuweisbar.
+        $this->actingAs($support)->post(route('admin.email_inbox.assign', $message->id), [
             'customer_id' => (string) $customer->id,
         ])->assertForbidden();
 
