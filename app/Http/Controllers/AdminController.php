@@ -720,8 +720,17 @@ class AdminController extends Controller
      * Nutzt exakt dieselbe DSGVO-Löschlogik wie die Einzellöschung.
      */
     public function bulkDestroyCustomers(\Illuminate\Http\Request $request) {
+        // Auswahl kommt aus dem Formular als EIN kommagetrenntes Feld (erlaubt
+        // sehr große Löschmengen ohne max_input_vars-Limit); direkte API-/Test-
+        // Aufrufe dürfen weiterhin ein Array senden.
+        $ids = $request->input('customer_ids', []);
+        if (is_string($ids)) {
+            $ids = array_filter(array_map('trim', explode(',', $ids)));
+        }
+        $request->merge(['customer_ids' => array_values($ids)]);
+
         $data = $request->validate([
-            'customer_ids' => 'required|array|min:1|max:200',
+            'customer_ids' => 'required|array|min:1|max:5000',
             'customer_ids.*' => 'uuid',
         ]);
 

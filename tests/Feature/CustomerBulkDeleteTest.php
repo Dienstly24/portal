@@ -242,6 +242,38 @@ class CustomerBulkDeleteTest extends TestCase
         $this->assertStringContainsString('🗑 Löschen', $adminHtml);
     }
 
+    public function test_list_hides_kundennr_and_email_and_shows_birthdate_under_name(): void
+    {
+        $c = $this->customerWithRelations('birth@k.de');
+        $c->update(['birth_date' => '1971-02-15']);
+
+        $html = $this->actingAs($this->admin)->get(route('admin.customers'))->getContent();
+
+        // Aufgeräumte Liste: Kunden-E-Mail und Kundennr. sind keine Spalten mehr
+        $this->assertStringNotContainsString('birth@k.de', $html);
+        $this->assertStringNotContainsString($c->customer_number, $html);
+
+        // Geburtsdatum steht unter dem Namen (TT.MM.JJJJ)
+        $this->assertStringContainsString('15.02.1971', $html);
+    }
+
+    public function test_bulk_delete_accepts_comma_separated_ids(): void
+    {
+        $c1 = $this->customerWithRelations('csv1@k.de');
+        $c2 = $this->customerWithRelations('csv2@k.de');
+        $keep = $this->customerWithRelations('csvkeep@k.de');
+
+        // So sendet das Formular jetzt: ein einziges kommagetrenntes Feld
+        $this->actingAs($this->admin)->post(route('admin.customers.bulk-delete'), [
+            'customer_ids' => $c1->id . ',' . $c2->id,
+        ])->assertRedirect(route('admin.customers'))
+          ->assertSessionHas('success', '2 Kunde(n) endgültig gelöscht.');
+
+        $this->assertDatabaseMissing('customers', ['id' => $c1->id]);
+        $this->assertDatabaseMissing('customers', ['id' => $c2->id]);
+        $this->assertDatabaseHas('customers', ['id' => $keep->id]);
+    }
+
     public function test_full_address_formats_and_falls_back_to_legacy(): void
     {
         $c = $this->customerWithRelations('addr@k.de');

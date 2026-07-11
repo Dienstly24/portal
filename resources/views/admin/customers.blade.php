@@ -83,13 +83,15 @@ function confirmBulkDelete(form) {
     if (!confirm('⚠️ ' + checked.length + ' Kunde(n) ENDGÜLTIG löschen?\n\nAlle zugehörigen Daten (Verträge, Tickets, Dokumente, E-Mails, Portal-Zugang) werden unwiderruflich entfernt.')) {
         return false;
     }
-    // Alte Übernahmen entfernen, dann die aktuelle Auswahl als hidden inputs anhängen.
-    form.querySelectorAll('input[name="customer_ids[]"]').forEach(function (i) { i.remove(); });
-    checked.forEach(function (cb) {
-        var input = document.createElement('input');
-        input.type = 'hidden'; input.name = 'customer_ids[]'; input.value = cb.value;
-        form.appendChild(input);
-    });
+    // Auswahl als EIN kommagetrenntes Feld übergeben (nicht ein hidden input pro
+    // Kunde). So funktioniert auch das Löschen sehr vieler Kunden auf einmal –
+    // ohne an PHPs max_input_vars-Limit zu stoßen.
+    form.querySelectorAll('input[name="customer_ids"]').forEach(function (i) { i.remove(); });
+    var input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'customer_ids';
+    input.value = Array.prototype.map.call(checked, function (cb) { return cb.value; }).join(',');
+    form.appendChild(input);
     return true;
 }
 </script>
@@ -100,7 +102,7 @@ function confirmBulkDelete(form) {
     <table>
         <thead><tr>
             @if(in_array(auth()->user()->role, ['admin','manager']))<th style="width:36px;"><input type="checkbox" id="checkAll" style="width:17px;height:17px;cursor:pointer;accent-color:#1F3A33;"></th>@endif
-            <th>Kunde</th><th>Adresse</th><th>Kundennr.</th><th>E-Mail</th><th>Portal</th><th>1. Login</th><th>Letzter Login</th><th>Betreuer</th><th>Aktive Verträge</th><th style="text-align:right;">Aktionen</th>
+            <th>Kunde</th><th>Adresse</th><th>Portal</th><th>1. Login</th><th>Letzter Login</th><th>Betreuer</th><th>Aktive Verträge</th><th style="text-align:right;">Aktionen</th>
         </tr></thead>
         <tbody>
         @forelse($customers as $c)
@@ -108,11 +110,14 @@ function confirmBulkDelete(form) {
             @if(in_array(auth()->user()->role, ['admin','manager']))
             <td class="noNav"><input type="checkbox" class="rowCheck" name="customer_ids[]" value="{{ $c->id }}" form="bulkForm" style="width:17px;height:17px;cursor:pointer;accent-color:#1F3A33;"></td>
             @endif
-            <td style="font-weight:600;">{{ $c->user?->name }}</td>
+            <td>
+                <div style="font-weight:600;">{{ $c->user?->name }}</div>
+                @if($c->birth_date)
+                <div style="color:var(--ink-soft);font-size:12px;margin-top:2px;">🎂 {{ \Illuminate\Support\Carbon::parse($c->birth_date)->format('d.m.Y') }}</div>
+                @endif
+            </td>
             @php $addr = $c->fullAddress(); @endphp
             <td style="color:var(--ink-soft);font-size:13px;white-space:nowrap;">{{ $addr !== '' ? $addr : '—' }}</td>
-            <td style="color:var(--ink-soft);font-size:13px;">{{ $c->customer_number }}</td>
-            <td style="color:var(--ink-soft);font-size:13px;">{{ str_contains($c->user?->email ?? '', '@dienstly24.internal') ? '—' : $c->user?->email }}</td>
             @php $ps = $c->portalStatus(); @endphp
             <td title="Einladung: {{ $c->user?->invitation_sent_at?->format('d.m.Y') ?? '—' }} · Passwort gesetzt: {{ $c->user?->portal_password_set_at ? 'Ja' : 'Nein' }}">
                 <span style="background:{{ $ps['bg'] }};color:{{ $ps['color'] }};border-radius:12px;padding:2px 10px;font-size:11.5px;white-space:nowrap;">{{ $ps['label'] }}</span>
@@ -157,7 +162,7 @@ function confirmBulkDelete(form) {
             </td>
         </tr>
         @empty
-        <tr><td colspan="11" style="text-align:center;padding:24px;color:var(--ink-soft);">Keine Kunden gefunden.</td></tr>
+        <tr><td colspan="9" style="text-align:center;padding:24px;color:var(--ink-soft);">Keine Kunden gefunden.</td></tr>
         @endforelse
         </tbody>
     </table>
