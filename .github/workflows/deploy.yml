@@ -1,0 +1,93 @@
+name: CI & Deploy
+
+# Ablauf:
+#  - Bei JEDEM Push/PR: vollständige Testsuite (Gate).
+#  - Nur bei Push auf main UND grünen Tests: automatischer Deploy per SSH.
+# Alle server-/geheimnisspezifischen Werte kommen aus GitHub Secrets,
+# nichts Sensibles liegt im Repository.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Nie zwei Deploys gleichzeitig auf denselben Server.
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+jobs:
+  # ---------------------------------------------------------------------
+  # 1) Test-Gate: baut die App wie in Produktion und lässt die volle Suite laufen
+  # ---------------------------------------------------------------------
+  test:
+    name: Tests & Build-Verifikation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PHP 8.3 einrichten
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_sqlite, sqlite3, bcmath, intl, gd, zip
+          coverage: none
+
+      - name: Composer-Cache
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Abhängigkeiten installieren
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: .env vorbereiten
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Node einrichten & Assets bauen (Build-Verifikation)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build
+
+      - name: Migrationen prüfen (frische DB, SQLite)
+        run: php artisan migrate:fresh --force
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+
+      - name: Volle Testsuite
+        run: php artisan test
+
+  # ---------------------------------------------------------------------
+  # 2) Deploy: läuft NUR nach grünem Test-Gate und NUR bei Push auf main
+  # ---------------------------------------------------------------------
+  deploy:
+    name: Deploy auf Produktionsserver
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Per SSH deployen
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script_stop: true
+          command_timeout: 15m
+          script: |
+            set -e
+            cd "${{ secrets.DEPLOY_PATH }}"
+            git fetch --all --prune
+            git reset --hard origin/main
+            bash scripts/deploy.sh
