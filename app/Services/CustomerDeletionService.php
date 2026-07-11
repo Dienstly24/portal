@@ -51,8 +51,11 @@ class CustomerDeletionService
         // Dokumente-Zeilen, Timeline, Aufgaben, Dokumentanfragen, ...)
         $customer->delete();
 
-        // Portal-Login-Account entfernen
-        if ($user) {
+        // Portal-Login-Account entfernen – aber NUR echte Kunden-Accounts.
+        // Sollte ein Kundendatensatz (etwa durch fehlerhaften Import) mit einem
+        // Mitarbeiter-/Admin-Konto verknüpft sein, darf dieses NIEMALS mitgelöscht
+        // werden (sonst sperrt man sich beim Massen-Löschen selbst aus).
+        if ($user && $user->role === 'customer') {
             $user->delete();
         }
 
