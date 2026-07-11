@@ -80,6 +80,10 @@ $typeConfig = [
 function confirmBulkDelete(form) {
     var checked = document.querySelectorAll('.rowCheck:checked');
     if (checked.length === 0) { alert('Bitte zuerst Kunden auswählen.'); return false; }
+    if (checked.length > 30) {
+        alert('Es können höchstens 30 Kunden auf einmal gelöscht werden.\nBitte weniger auswählen.');
+        return false;
+    }
     if (!confirm('⚠️ ' + checked.length + ' Kunde(n) ENDGÜLTIG löschen?\n\nAlle zugehörigen Daten (Verträge, Tickets, Dokumente, E-Mails, Portal-Zugang) werden unwiderruflich entfernt.')) {
         return false;
     }

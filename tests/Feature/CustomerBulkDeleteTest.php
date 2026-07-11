@@ -148,6 +148,28 @@ class CustomerBulkDeleteTest extends TestCase
         ])->assertSessionHasErrors('customer_ids.0');
     }
 
+    public function test_bulk_delete_rejects_more_than_30_at_once(): void
+    {
+        // 31 gültige UUIDs -> muss am Limit scheitern, nichts wird gelöscht.
+        $ids = collect(range(1, 31))->map(fn () => (string) \Illuminate\Support\Str::uuid())->all();
+
+        $this->actingAs($this->admin)->post(route('admin.customers.bulk-delete'), [
+            'customer_ids' => $ids,
+        ])->assertSessionHasErrors('customer_ids');
+    }
+
+    public function test_bulk_delete_allows_up_to_30(): void
+    {
+        $customers = collect(range(1, 30))->map(fn ($i) => $this->customerWithRelations("m{$i}@k.de"));
+
+        $this->actingAs($this->admin)->post(route('admin.customers.bulk-delete'), [
+            'customer_ids' => $customers->pluck('id')->map(fn ($id) => (string) $id)->all(),
+        ])->assertRedirect(route('admin.customers'))
+          ->assertSessionHas('success', '30 Kunde(n) endgültig gelöscht.');
+
+        $this->assertSame(0, Customer::count());
+    }
+
     public function test_customer_list_shows_portal_columns_and_admin_delete_button(): void
     {
         $this->customerWithRelations('list@k.de');

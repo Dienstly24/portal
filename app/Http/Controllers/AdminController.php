@@ -729,9 +729,14 @@ class AdminController extends Controller
         }
         $request->merge(['customer_ids' => array_values($ids)]);
 
+        // Bewusstes Sicherheitslimit: über die Weboberfläche dürfen höchstens
+        // 30 Kunden auf einmal gelöscht werden (Schutz vor versehentlichem
+        // Massenlöschen). Ein vollständiges Leeren läuft über `customers:purge`.
         $data = $request->validate([
-            'customer_ids' => 'required|array|min:1|max:5000',
+            'customer_ids' => 'required|array|min:1|max:30',
             'customer_ids.*' => 'uuid',
+        ], [
+            'customer_ids.max' => 'Es können höchstens 30 Kunden auf einmal gelöscht werden.',
         ]);
 
         $service = app(\App\Services\CustomerDeletionService::class);
