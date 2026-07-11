@@ -57,8 +57,11 @@ class MailSalutationTest extends TestCase
 
     public function test_welcome_mail_uses_central_greeting_partial(): void
     {
-        $html = (new CustomerWelcomeMail('Anna Beispiel', 'a@b.de', 'pw', 'de'))->render();
-        $this->assertStringContainsString('Guten Tag Anna Beispiel', $html);
+        // Neue Mailable-Signatur (Customer-Objekt + mode); Anrede aus
+        // dem Geschlecht (main-Refactor) über das zentrale _greeting-Partial.
+        $customer = $this->customerWithGender('female', 'Anna Beispiel');
+        $html = (new CustomerWelcomeMail($customer, 'manual', 'pw'))->render();
+        $this->assertStringContainsString('Sehr geehrte Frau Beispiel', $html);
         $this->assertStringNotContainsString('Hallo <strong>', $html);
     }
 }

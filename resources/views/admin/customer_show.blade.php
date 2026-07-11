@@ -37,6 +37,46 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
 </div>
 
 
+{{-- Portal-Status (echter Zustand statt "aktiv/inaktiv"-Raten) --}}
+@php $portalUser = $customer->user; $ps = $customer->portalStatus(); @endphp
+<div class="card" style="margin-bottom:20px;padding:18px 20px;">
+    <div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start;">
+        <div style="min-width:260px;">
+            <div style="font-weight:700;margin-bottom:8px;">Portal-Zugang</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+                <span style="background:{{ $ps['bg'] }};color:{{ $ps['color'] }};border-radius:12px;padding:3px 12px;font-size:12.5px;font-weight:600;">{{ $ps['label'] }}</span>
+                <span style="font-size:12.5px;color:var(--ink-soft);">Account vorhanden: <strong>{{ $portalUser && $portalUser->hasRealEmail() ? 'Ja' : 'Nein' }}</strong></span>
+                <span style="font-size:12.5px;color:var(--ink-soft);">Passwort gesetzt: <strong>{{ $portalUser?->portal_password_set_at ? 'Ja' : 'Nein' }}</strong></span>
+            </div>
+            <div style="display:grid;grid-template-columns:auto auto;gap:2px 18px;font-size:12.5px;color:var(--ink-soft);">
+                <span>Einladung gesendet:</span><strong>{{ $portalUser?->invitation_sent_at?->format('d.m.Y H:i') ?? '—' }}</strong>
+                <span>Account aktiviert:</span><strong>{{ $portalUser?->portal_password_set_at?->format('d.m.Y H:i') ?? '—' }}</strong>
+                <span>Erster Login:</span><strong>{{ $portalUser?->first_login_at?->format('d.m.Y H:i') ?? '—' }}</strong>
+                <span>Letzter Login:</span><strong>{{ $portalUser?->last_login_at?->format('d.m.Y H:i') ?? '—' }}</strong>
+            </div>
+        </div>
+        @if(auth()->user()->role === 'admin')
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
+            <form method="POST" action="{{ route('admin.customer.portal.invite', $customer->id) }}"
+                onsubmit="return confirm('Einladung mit Startpasswort (Geburtsdatum TT.MM.JJJJ) bzw. Passwort-Link an den Kunden senden?');">
+                @csrf<button type="submit" class="btn btn-gold btn-sm">📧 Einladung senden</button>
+            </form>
+            <form method="POST" action="{{ route('admin.customer.portal.reset_link', $customer->id) }}">
+                @csrf<button type="submit" class="btn btn-ghost btn-sm">🔑 Reset-Link senden</button>
+            </form>
+            <form method="POST" action="{{ route('admin.customer.portal.reset', $customer->id) }}"
+                onsubmit="return confirm('Portal wirklich zurücksetzen? Das Passwort wird neu gesetzt und die Einladung erneut versendet.');">
+                @csrf<button type="submit" class="btn btn-ghost btn-sm">↺ Portal zurücksetzen</button>
+            </form>
+            <form method="POST" action="{{ route('admin.customer.portal.toggle', $customer->id) }}"
+                onsubmit="return confirm('{{ ($portalUser?->is_active ?? true) ? 'Portal-Login für diesen Kunden deaktivieren?' : 'Portal-Login wieder aktivieren?' }}');">
+                @csrf<button type="submit" class="btn btn-ghost btn-sm">{{ ($portalUser?->is_active ?? true) ? '🚫 Deaktivieren' : '✅ Aktivieren' }}</button>
+            </form>
+        </div>
+        @endif
+    </div>
+</div>
+
 {{-- Tab-Navigation (Kundenprofil) --}}
 <style>
 .cust-tabs{display:flex;gap:4px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px;margin-bottom:20px;overflow-x:auto;}
@@ -139,6 +179,42 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
     @empty
     <p style="color:var(--ink-soft);font-size:14px;">Keine Dokumente.</p>
     @endforelse
+
+    {{-- Dokumentenanfragen (Priorität 7): Dokument beim Kunden anfordern --}}
+    @php $docRequests = \App\Models\DocumentRequest::with('contract')->where('customer_id', $customer->id)->latest()->limit(8)->get(); @endphp
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:18px 0 10px;">
+        <div class="card-title" style="font-size:14px;">Angeforderte Dokumente</div>
+        <button onclick="document.getElementById('request-doc-modal').style.display='flex'" class="btn btn-ghost btn-sm">📩 Dokument anfordern</button>
+    </div>
+    @forelse($docRequests as $dr)
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;">
+        <div>
+            <span style="font-weight:600;">{{ $dr->title }}</span>
+            @if($dr->deadline)<span style="color:var(--ink-soft);"> · Frist {{ $dr->deadline->format('d.m.Y') }}</span>@endif
+        </div>
+        <span class="badge {{ $dr->status === 'approved' ? 'badge-active' : ($dr->status === 'rejected' ? 'badge-danger' : 'badge-pending') }}">{{ $dr->statusLabel() }}</span>
+    </div>
+    @empty
+    <p style="color:var(--ink-soft);font-size:13px;">Keine Dokumentenanfragen.</p>
+    @endforelse
+
+    {{-- E-Mail-Verlauf (Priorität 8: alle Informationen am Kunden verbunden) --}}
+    @php $customerMails = \App\Models\EmailMessage::where('customer_id', $customer->id)->latest('received_at')->limit(6)->get(); @endphp
+    @if($customerMails->isNotEmpty())
+    <div class="card-title" style="font-size:14px;margin:18px 0 10px;">E-Mails ({{ $customerMails->count() }})</div>
+    @foreach($customerMails as $cm)
+    <div style="padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;">
+        <div style="display:flex;justify-content:space-between;gap:10px;">
+            <span style="font-weight:600;">{{ Str::limit($cm->subject ?: '(kein Betreff)', 60) }}</span>
+            <span class="badge badge-pending" style="flex:none;">{{ $cm->categoryLabel() }}</span>
+        </div>
+        <div style="color:var(--ink-soft);font-size:12px;margin-top:2px;">
+            von {{ $cm->from_name ?: $cm->from_address }} · {{ ($cm->received_at ?? $cm->created_at)->format('d.m.Y H:i') }}
+            @if($cm->match_status === 'suggested') · <span style="color:#92400E;">Zuordnung unbestätigt</span>@endif
+        </div>
+    </div>
+    @endforeach
+    @endif
 </div>
 </div>
 </div>
@@ -602,4 +678,44 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+{{-- Modal: Dokument anfordern (Priorität 7) --}}
+<div id="request-doc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:14px;padding:28px;width:440px;max-width:92vw;position:relative;">
+        <button onclick="document.getElementById('request-doc-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <div style="font-size:17px;font-weight:700;margin-bottom:6px;">Dokument anfordern</div>
+        <div style="font-size:13px;color:var(--ink-soft);margin-bottom:16px;">Der Kunde wird per E-Mail informiert und kann direkt im Portal hochladen.</div>
+        <form method="POST" action="{{ route('admin.document_requests.store', $customer->id) }}">
+            @csrf
+            <div style="display:grid;gap:12px;">
+                <div>
+                    <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Welches Dokument? *</label>
+                    <input type="text" name="title" required maxlength="255" placeholder="z. B. Kopie des Personalausweises" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;">
+                </div>
+                <div>
+                    <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Hinweis für den Kunden</label>
+                    <textarea name="description" rows="2" maxlength="2000" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;"></textarea>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div>
+                        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Frist</label>
+                        <input type="date" name="deadline" min="{{ now()->format('Y-m-d') }}" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;">
+                    </div>
+                    <div>
+                        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Betrifft Vertrag</label>
+                        <select name="contract_id" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;">
+                            <option value="">— keiner —</option>
+                            @foreach($customer->contracts as $ct)
+                            <option value="{{ $ct->id }}">{{ $ct->contract_number }} ({{ $ct->insurer }})</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+                <button type="button" class="btn btn-ghost" onclick="document.getElementById('request-doc-modal').style.display='none'">Abbrechen</button>
+                <button type="submit" class="btn btn-gold">Anfordern & Kunde informieren</button>
+            </div>
+        </form>
+    </div>
+</div>
 @endsection

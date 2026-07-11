@@ -65,7 +65,7 @@ class ImportExportController extends Controller
                 Customer::create([
                     'id' => Str::uuid(),
                     'user_id' => $user->id,
-                    'customer_number' => 'C-' . strtoupper(Str::random(8)),
+                    'customer_number' => app(\App\Services\CustomerNumberGenerator::class)->generate(),
                     'phone' => $row['phone'] ?? $row['Telefon'] ?? null,
                     'mobile' => $row['mobile'] ?? $row['Mobil'] ?? null,
                     'address' => $address ?: null,

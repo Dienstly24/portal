@@ -29,7 +29,12 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
 
         $user = $request->user();
-        $user->forceFill(['last_login_at' => now()])->save();
+        $user->forceFill([
+            'last_login_at' => now(),
+            // Erster erfolgreicher Login wird einmalig festgehalten
+            // (Portal-Status "Erster Login erfolgt").
+            'first_login_at' => $user->first_login_at ?? now(),
+        ])->save();
         if (in_array($user->role, ['admin', 'manager', 'employee'])) {
             return redirect()->intended(route('admin.dashboard', absolute: false));
         }

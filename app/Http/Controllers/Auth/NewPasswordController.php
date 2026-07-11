@@ -46,18 +46,23 @@ class NewPasswordController extends Controller
                 $user->forceFill([
                     'password' => Hash::make($request->password),
                     'remember_token' => Str::random(60),
+                    // Portal-Status: ab jetzt existiert ein selbst
+                    // gewähltes, nutzbares Passwort.
+                    'portal_password_set_at' => now(),
                 ])->save();
 
                 event(new PasswordReset($user));
             }
         );
 
-        // If the password was successfully reset, we will redirect the user back to
-        // the application's home authenticated view. If there is an error we can
-        // redirect them back to where they came from with their error message.
+        // Deutsche Meldungen statt englischer Framework-Texte.
         return $status == Password::PASSWORD_RESET
-                    ? redirect()->route('login')->with('status', __($status))
+                    ? redirect()->route('login')->with('status', 'Ihr Passwort wurde geändert. Sie können sich jetzt anmelden.')
                     : back()->withInput($request->only('email'))
-                        ->withErrors(['email' => __($status)]);
+                        ->withErrors(['email' => match ($status) {
+                            Password::INVALID_TOKEN => 'Dieser Link ist abgelaufen oder ungültig. Bitte fordern Sie einen neuen Link an.',
+                            Password::INVALID_USER => 'Zu dieser E-Mail-Adresse haben wir kein Konto gefunden.',
+                            default => 'Das Passwort konnte nicht geändert werden. Bitte fordern Sie einen neuen Link an.',
+                        }]);
     }
 }

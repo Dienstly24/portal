@@ -12,6 +12,15 @@ if (!function_exists('dienstly_mailable')) {
     }
 }
 
+// Alle 2 Minuten — E-Mail-Postfächer abrufen (Architekturplan Abschnitt 3.1)
+Schedule::command('mailboxes:sync')->everyTwoMinutes()->withoutOverlapping();
+
+// 03:30 — DSGVO: nicht zugeordnete E-Mails nach Aufbewahrungsfrist löschen (Abschnitt 3.3)
+Schedule::command('emails:prune-unmatched')->dailyAt('03:30');
+
+// 08:15 — Fristen-Watchdog Dokumentenanfragen (Phase 3): Kunden-Erinnerung + Überfälligkeits-Hinweis
+Schedule::command('document-requests:remind')->dailyAt('08:15');
+
 // 07:30 — Aufgabe: Kind wird in 4 Monaten 15
 Schedule::call(function () {
     $target = now()->addMonths(4)->subYears(15)->toDateString();
@@ -73,8 +82,12 @@ Schedule::call(function () {
 
 // 09:00 — Portal-Erinnerung nach 3 Tagen ohne Login
 Schedule::call(function () {
+    // Nur Kunden erinnern, die sich auch WIRKLICH einloggen können:
+    // ohne nutzbares Passwort (portal_password_set_at) wäre die
+    // "Bitte einloggen"-Mail eine Sackgasse (Kundenproblem-Fix).
     $users = \App\Models\User::where('role', 'customer')
         ->whereNull('last_login_at')->whereNull('portal_reminder_sent_at')
+        ->whereNotNull('portal_password_set_at')
         ->where('created_at', '<=', now()->subDays(3))->get();
     foreach ($users as $u) {
         if (!dienstly_mailable($u->email)) continue;
