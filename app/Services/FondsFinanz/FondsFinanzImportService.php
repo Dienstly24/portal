@@ -9,6 +9,8 @@ use App\Models\ExternalReference;
 use App\Models\Task;
 use App\Services\CustomerCreation\CustomerAutoCreationService;
 use App\Services\CustomerCreation\DuplicateCustomerException;
+use App\Services\Mailbox\AttachmentAnalysisService;
+use App\Services\Mailbox\EmailAttachmentService;
 use App\Services\Matching\CustomerMatchingService;
 use App\Services\Workflow\SystemUserResolver;
 use Illuminate\Support\Facades\DB;
@@ -32,12 +34,14 @@ class FondsFinanzImportService
         private readonly CustomerMatchingService $matcher,
         private readonly CustomerAutoCreationService $autoCreator,
         private readonly SystemUserResolver $systemUser,
+        private readonly AttachmentAnalysisService $attachmentAnalysis,
+        private readonly EmailAttachmentService $attachments,
     ) {
     }
 
     public function process(EmailMessage $message): void
     {
-        $data = $this->parser->parse((string) $message->body_text);
+        $data = $this->parseMessage($message);
 
         if (!$data->isImportable()) {
             // Defensives Scheitern: unbekanntes Layout -> manuelle Prüfung statt geratener Daten.
@@ -122,9 +126,25 @@ class FondsFinanzImportService
      * festgelegt - es wird nicht erneut gematcht. Ist die Mitteilung
      * nicht parsebar, wird nur die Zuordnung gespeichert.
      */
-    public function importForCustomer(EmailMessage $message, Customer $customer): void
+    /**
+     * Mail-Text zuerst, PDF-Anhänge als Fallback (Phase 2): liefert der
+     * Mail-Body keine importierbaren Daten, wird der Text der
+     * PDF-Anhänge durch denselben Parser geschickt.
+     */
+    private function parseMessage(EmailMessage $message): FondsFinanzData
     {
         $data = $this->parser->parse((string) $message->body_text);
+        if ($data->isImportable()) {
+            return $data;
+        }
+
+        $pdfText = $this->attachmentAnalysis->textFromPdfAttachments($message);
+        return $pdfText === '' ? $data : $this->parser->parse($pdfText);
+    }
+
+    public function importForCustomer(EmailMessage $message, Customer $customer): void
+    {
+        $data = $this->parseMessage($message);
 
         if (!$data->isImportable()) {
             $this->finish($message, 'confirmed', $customer, $message->match_score);
@@ -176,6 +196,11 @@ class FondsFinanzImportService
             $this->storeReferences($customer, $contract, $data);
 
             $this->finish($message, 'confirmed', $customer, $score);
+
+            // Phase 2 (automatische Zuordnung): Anhänge in die Akte
+            // übernehmen und direkt dem Vertrag zuordnen.
+            $this->attachments->createDocuments($message->fresh());
+            $this->attachments->linkDocumentsToContract($message->fresh(), $contract);
 
             ActivityLog::create([
                 'user_id' => null,

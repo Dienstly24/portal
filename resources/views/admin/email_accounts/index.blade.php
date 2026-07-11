@@ -43,6 +43,10 @@
             <td style="font-size:13px;color:var(--ink-soft);">{{ $a->last_synced_at?->format('d.m.Y H:i') ?? 'noch nie' }}</td>
             <td style="font-size:13px;color:var(--ink-soft);">{{ $a->messages_count }}</td>
             <td style="padding-right:20px;white-space:nowrap;">
+                @if($a->isOAuth())
+                    @php $connected = !empty(($a->credentials ?? [])['refresh_token']); @endphp
+                    <a href="{{ route('admin.email_accounts.oauth', $a->id) }}" class="btn {{ $connected ? 'btn-ghost' : 'btn-gold' }} btn-sm">{{ $connected ? '🔄 Neu verbinden' : '🔗 Verbinden' }}</a>
+                @endif
                 <form method="POST" action="{{ route('admin.email_accounts.test', $a->id) }}" style="display:inline;">@csrf<button type="submit" class="btn btn-ghost btn-sm">Testen</button></form>
                 <a href="{{ route('admin.email_accounts.edit', $a->id) }}" class="btn btn-ghost btn-sm">Bearbeiten</a>
                 <form method="POST" action="{{ route('admin.email_accounts.toggle', $a->id) }}" style="display:inline;">@csrf @method('PUT')<button type="submit" class="btn btn-ghost btn-sm">{{ $a->is_active ? 'Deaktivieren' : 'Aktivieren' }}</button></form>

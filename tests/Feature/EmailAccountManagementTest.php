@@ -102,7 +102,7 @@ class EmailAccountManagementTest extends TestCase
         $this->assertNotNull($account->fresh()->last_error);
     }
 
-    public function test_oauth_provider_test_connection_reports_not_yet_configured(): void
+    public function test_oauth_provider_test_connection_reports_not_yet_connected(): void
     {
         $admin = $this->admin();
         $account = EmailAccount::create([
@@ -114,6 +114,6 @@ class EmailAccountManagementTest extends TestCase
         ]);
 
         $this->actingAs($admin)->post(route('admin.email_accounts.test', $account->id))->assertRedirect();
-        $this->assertStringContainsString('noch nicht konfiguriert', $account->fresh()->last_error);
+        $this->assertStringContainsString('noch nicht verbunden', $account->fresh()->last_error);
     }
 }

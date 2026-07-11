@@ -5,6 +5,7 @@ use App\Models\ActivityLog;
 use App\Models\Commission;
 use App\Models\EmailMessage;
 use App\Models\Task;
+use App\Services\Mailbox\AttachmentAnalysisService;
 use App\Services\Workflow\SystemUserResolver;
 use Illuminate\Support\Str;
 
@@ -21,6 +22,7 @@ class CommissionWorkflowService
         private readonly PartnerRecognitionService $partnerRecognition,
         private readonly CommissionStatementParser $parser,
         private readonly SystemUserResolver $systemUser,
+        private readonly AttachmentAnalysisService $attachmentAnalysis,
     ) {
     }
 
@@ -39,6 +41,16 @@ class CommissionWorkflowService
         }
 
         $statement = $this->parser->parse((string) $message->body_text);
+
+        // Phase 2 (PDF-Anhang-Analyse): Liefert der Mail-Text keine
+        // Gutschrift-Daten, den Text der PDF-Anhänge parsen (typischer
+        // Fall: Abrechnung nur als PDF, Mail-Body ist Boilerplate).
+        if ($statement['credit_note_number'] === null && $statement['amount'] === null) {
+            $pdfText = $this->attachmentAnalysis->textFromPdfAttachments($message);
+            if ($pdfText !== '') {
+                $statement = $this->parser->parse($pdfText);
+            }
+        }
 
         // Duplikatsschutz: dieselbe Gutschrift desselben Partners nur einmal.
         if ($statement['credit_note_number'] !== null) {

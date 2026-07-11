@@ -38,4 +38,26 @@ return [
     'inquiry' => ['token' => env('INQUIRY_TOKEN')],
 
     'lexoffice' => ['key' => env('LEXOFFICE_API_KEY')],
+
+    /*
+    | OAuth-Apps für die Postfach-Anbindung (Phase 2). Die Client-IDs
+    | stammen aus der Google-Cloud-Console bzw. dem Microsoft-Entra-
+    | Admin-Center; ohne Konfiguration zeigen die Provider eine klare
+    | "nicht konfiguriert"-Meldung statt zu raten.
+    */
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+    ],
+
+    'microsoft' => [
+        'client_id' => env('MICROSOFT_CLIENT_ID'),
+        'client_secret' => env('MICROSOFT_CLIENT_SECRET'),
+        'tenant' => env('MICROSOFT_TENANT', 'common'),
+    ],
+
+    'anthropic' => [
+        'key' => env('ANTHROPIC_API_KEY'),
+        'model' => env('ANTHROPIC_MODEL', 'claude-sonnet-5'),
+    ],
 ];

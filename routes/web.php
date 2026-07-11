@@ -217,6 +217,9 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         Route::delete('/{id}', [\App\Http\Controllers\EmailAccountController::class, 'destroy'])->name('destroy');
         Route::put('/{id}/toggle', [\App\Http\Controllers\EmailAccountController::class, 'toggleActive'])->name('toggle');
         Route::post('/{id}/test', [\App\Http\Controllers\EmailAccountController::class, 'testConnection'])->name('test');
+        // OAuth-Anbindung Gmail/M365 (Phase 2)
+        Route::get('/{id}/oauth', [\App\Http\Controllers\EmailAccountController::class, 'oauthRedirect'])->name('oauth');
+        Route::get('/oauth/callback', [\App\Http\Controllers\EmailAccountController::class, 'oauthCallback'])->name('oauth_callback');
     });
     Route::get('/appointments', [AppointmentController::class, 'index'])->name('appointments');
     Route::post('/appointments', [AppointmentController::class, 'store'])->name('appointments.store');

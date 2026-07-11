@@ -90,6 +90,50 @@ class EmailAccountController extends Controller
     }
 
     /** Verbindungstest vor dem Speichern / aus der Übersicht heraus. */
+    /** OAuth-Consent starten (Phase 2): leitet zu Google/Microsoft weiter. */
+    public function oauthRedirect(string $id, \App\Services\Mailbox\OAuthTokenService $tokens)
+    {
+        $account = EmailAccount::findOrFail($id);
+        if (!$account->isOAuth()) {
+            return back()->with('error', 'Dieses Postfach nutzt kein OAuth.');
+        }
+
+        try {
+            return redirect()->away($tokens->authorizationUrl($account));
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    /** OAuth-Callback: Code gegen Tokens tauschen und Postfach verbinden. */
+    public function oauthCallback(Request $request, \App\Services\Mailbox\OAuthTokenService $tokens)
+    {
+        if ($request->filled('error')) {
+            return redirect()->route('admin.email_accounts.index')
+                ->with('error', 'Verbindung abgelehnt: ' . $request->get('error_description', $request->get('error')));
+        }
+
+        $request->validate(['code' => 'required|string', 'state' => 'required|string']);
+
+        try {
+            $account = $tokens->handleCallback($request->get('code'), $request->get('state'));
+        } catch (\Throwable $e) {
+            return redirect()->route('admin.email_accounts.index')
+                ->with('error', 'OAuth-Verbindung fehlgeschlagen: ' . $e->getMessage());
+        }
+
+        \App\Models\ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'email_account_oauth_connected',
+            'entity_type' => 'email_account',
+            'entity_id' => $account->id,
+            'meta' => json_encode(['email' => $account->email_address], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        return redirect()->route('admin.email_accounts.index')
+            ->with('success', $account->email_address . ' erfolgreich verbunden.');
+    }
+
     public function testConnection(string $id, MailboxProviderFactory $factory)
     {
         $account = EmailAccount::findOrFail($id);

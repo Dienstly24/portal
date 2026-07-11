@@ -8,7 +8,8 @@ class MailboxProviderFactory
     public function make(EmailAccount $account): MailboxProviderInterface
     {
         return match ($account->provider) {
-            'gmail_oauth', 'microsoft_oauth' => new OAuthMailboxProvider(),
+            'gmail_oauth' => new GmailApiMailboxProvider(app(OAuthTokenService::class)),
+            'microsoft_oauth' => new GraphApiMailboxProvider(app(OAuthTokenService::class)),
             default => new ImapMailboxProvider(), // imap | hostinger_imap
         };
     }
