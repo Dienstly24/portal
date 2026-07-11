@@ -60,7 +60,7 @@ class DocumentRequestTest extends TestCase
             'title' => 'Meldebescheinigung',
             'status' => 'open',
         ]);
-        Mail::assertSent(DocumentRequestMail::class, fn ($mail) => $mail->hasTo($this->customerUser->email));
+        Mail::assertQueued(DocumentRequestMail::class, fn ($mail) => $mail->hasTo($this->customerUser->email));
     }
 
     public function test_contract_of_other_customer_cannot_be_referenced(): void
@@ -149,7 +149,7 @@ class DocumentRequestTest extends TestCase
         $this->assertSame('rejected', $documentRequest->status);
         $this->assertSame('Bitte beide Seiten des Ausweises.', $documentRequest->rejection_note);
         $this->assertTrue($documentRequest->acceptsUpload()); // Kunde darf erneut hochladen
-        Mail::assertSent(DocumentRequestMail::class, fn ($mail) => $mail->hasTo($this->customerUser->email));
+        Mail::assertQueued(DocumentRequestMail::class, fn ($mail) => $mail->hasTo($this->customerUser->email));
     }
 
     public function test_restricted_employee_cannot_create_request_for_unassigned_customer(): void

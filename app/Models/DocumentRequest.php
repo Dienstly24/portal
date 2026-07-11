@@ -18,6 +18,7 @@ class DocumentRequest extends Model
         'customer_id', 'contract_id', 'title', 'description', 'deadline',
         'status', 'document_id', 'rejection_note', 'requested_by',
         'reviewed_by', 'uploaded_at', 'reviewed_at',
+        'reminder_sent_at', 'overdue_notified_at',
     ];
 
     public const STATUSES = [
@@ -33,6 +34,8 @@ class DocumentRequest extends Model
             'deadline' => 'date',
             'uploaded_at' => 'datetime',
             'reviewed_at' => 'datetime',
+            'reminder_sent_at' => 'datetime',
+            'overdue_notified_at' => 'datetime',
         ];
     }
 

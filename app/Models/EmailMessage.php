@@ -59,6 +59,11 @@ class EmailMessage extends Model
         return $this->belongsTo(Customer::class);
     }
 
+    public function aiDecisions()
+    {
+        return $this->hasMany(AiDecision::class);
+    }
+
     public function scopeUnprocessed($q)
     {
         return $q->whereNull('processed_at');

@@ -117,6 +117,9 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         Route::post('/email-inbox/{id}/confirm', [\App\Http\Controllers\EmailInboxController::class, 'confirm'])->name('email_inbox.confirm');
         Route::post('/email-inbox/{id}/reject', [\App\Http\Controllers\EmailInboxController::class, 'reject'])->name('email_inbox.reject');
         Route::post('/email-inbox/{id}/assign', [\App\Http\Controllers\EmailInboxController::class, 'assign'])->name('email_inbox.assign');
+        // KI-Vorschläge (Phase 3): Übernahme/Verwerfen ist die Freigabestufe
+        Route::post('/email-inbox/ai/{decisionId}/accept', [\App\Http\Controllers\EmailInboxController::class, 'aiAccept'])->name('email_inbox.ai_accept');
+        Route::post('/email-inbox/ai/{decisionId}/reject', [\App\Http\Controllers\EmailInboxController::class, 'aiReject'])->name('email_inbox.ai_reject');
     });
 
     // Dokumentenanfragen an Kunden (Priorität 7)

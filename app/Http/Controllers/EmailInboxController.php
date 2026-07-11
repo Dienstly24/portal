@@ -2,11 +2,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Models\AiDecision;
 use App\Models\Commission;
 use App\Models\Customer;
 use App\Models\CustomerChangeRequest;
 use App\Models\DocumentRequest;
 use App\Models\EmailMessage;
+use App\Models\Ticket;
 use App\Services\FondsFinanz\FondsFinanzImportService;
 use App\Services\Mailbox\EmailAttachmentService;
 use Illuminate\Http\Request;
@@ -33,7 +35,7 @@ class EmailInboxController extends Controller
             ->where('match_status', 'suggested')
             ->orderBy('received_at')->get();
 
-        $unmatched = EmailMessage::with('account')
+        $unmatched = EmailMessage::with(['account', 'aiDecisions' => fn ($q) => $q->suggested()])
             ->where('match_status', 'unmatched')
             ->whereNull('customer_id')
             ->whereNotNull('processed_at')
@@ -105,6 +107,49 @@ class EmailInboxController extends Controller
         return back()->with('success', 'E-Mail dem Kunden zugeordnet.');
     }
 
+    /** KI-Kategorievorschlag übernehmen (Phase 3, Freigabe-Gateway). */
+    public function aiAccept($decisionId, \App\Services\Workflow\EmailWorkflowService $workflow)
+    {
+        $decision = AiDecision::with('emailMessage')->findOrFail($decisionId);
+        if ($decision->status !== 'suggested' || $decision->emailMessage === null) {
+            return back()->with('error', 'Dieser Vorschlag wurde bereits bearbeitet.');
+        }
+
+        $workflow->applyCategory($decision->emailMessage, $decision->output['category']);
+        $decision->update(['status' => 'accepted', 'decided_by' => auth()->id(), 'decided_at' => now()]);
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'ai_suggestion_accepted',
+            'entity_type' => 'ai_decision',
+            'entity_id' => $decision->id,
+            'meta' => json_encode(['category' => $decision->output['category'], 'confidence' => $decision->confidence], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        return back()->with('success', 'KI-Vorschlag übernommen – Kategorie angewendet.');
+    }
+
+    /** KI-Kategorievorschlag verwerfen. */
+    public function aiReject($decisionId)
+    {
+        $decision = AiDecision::findOrFail($decisionId);
+        if ($decision->status !== 'suggested') {
+            return back()->with('error', 'Dieser Vorschlag wurde bereits bearbeitet.');
+        }
+
+        $decision->update(['status' => 'rejected', 'decided_by' => auth()->id(), 'decided_at' => now()]);
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'ai_suggestion_rejected',
+            'entity_type' => 'ai_decision',
+            'entity_id' => $decision->id,
+            'meta' => json_encode(['category' => $decision->output['category'] ?? null], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        return back()->with('success', 'KI-Vorschlag verworfen.');
+    }
+
     private function applyAssignment(EmailMessage $message, Customer $customer, string $logAction): void
     {
         if ($message->category === 'fonds_finanz') {
@@ -116,6 +161,15 @@ class EmailInboxController extends Controller
 
         // Audit-Fix H1: Anhänge erst JETZT (bestätigte Zuordnung) in die Akte übernehmen.
         $this->attachments->createDocuments($message->fresh());
+
+        // Prüfbericht M4 (Phase 3): Gast-Tickets desselben Absenders
+        // nachträglich mit dem bestätigten Kunden verknüpfen.
+        if ($message->from_address) {
+            Ticket::whereNull('customer_id')
+                ->where('source', 'email')
+                ->where('guest_email', $message->from_address)
+                ->update(['customer_id' => $customer->id]);
+        }
 
         ActivityLog::create([
             'user_id' => auth()->id(),

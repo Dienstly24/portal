@@ -5,6 +5,7 @@ use App\Models\Customer;
 use App\Models\EmailMessage;
 use App\Models\Task;
 use App\Models\Ticket;
+use App\Services\Ai\AiEmailClassifier;
 use App\Services\Commission\CommissionWorkflowService;
 use App\Services\CustomerCreation\CustomerAutoCreationService;
 use App\Services\CustomerCreation\DuplicateCustomerException;
@@ -37,6 +38,7 @@ class EmailWorkflowService
         private readonly FondsFinanzImportService $fondsFinanz,
         private readonly CommissionWorkflowService $commissions,
         private readonly SystemUserResolver $systemUser,
+        private readonly AiEmailClassifier $aiClassifier,
     ) {
     }
 
@@ -94,6 +96,34 @@ class EmailWorkflowService
         ])->save();
 
         $this->dispatchAction($message, $category, $matchStatus === 'confirmed' ? $customer : ($matchStatus === 'suggested' ? null : null));
+
+        // KI-Stufe (Phase 3, Plan Abschnitt 12): nur wenn die Regeln
+        // 'sonstige' liefern. Erzeugt ausschließlich einen VORSCHLAG in
+        // ai_decisions (Freigabe-Gateway) - wendet nie selbst etwas an.
+        if ($category === 'sonstige') {
+            $this->aiClassifier->suggestCategory($message->fresh());
+        }
+    }
+
+    /**
+     * Kategorie nach Mitarbeiter-Freigabe anwenden (Phase 3): löst die
+     * Standard-Aktion der neuen Kategorie aus. Fonds-Finanz/Provisionen
+     * laufen durch ihre eigenen Workflows.
+     */
+    public function applyCategory(EmailMessage $message, string $category): void
+    {
+        if ($category === 'fonds_finanz') {
+            $this->fondsFinanz->process($message);
+            return;
+        }
+        if ($category === 'provisionen') {
+            $this->commissions->process($message);
+            return;
+        }
+
+        $message->forceFill(['category' => $category])->save();
+        $customer = $message->match_status === 'confirmed' ? $message->customer : null;
+        $this->dispatchAction($message, $category, $customer);
     }
 
     /**

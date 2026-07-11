@@ -63,6 +63,17 @@
                     · <span class="badge badge-pending">{{ $m->categoryLabel() }}</span>
                 </div>
                 @if($m->body_text)<div style="font-size:12.5px;color:var(--ink-soft);margin-top:4px;">{{ Str::limit($m->body_text, 140) }}</div>@endif
+                @foreach($m->aiDecisions as $ai)
+                <div style="margin-top:8px;padding:8px 12px;background:#F5F0FA;border:1px solid #E2D5F0;border-radius:8px;font-size:12.5px;">
+                    🤖 <strong>KI-Vorschlag:</strong> {{ \App\Models\EmailMessage::CATEGORIES[$ai->output['category']] ?? $ai->output['category'] }}
+                    ({{ $ai->confidence }}% sicher)
+                    @if(!empty($ai->output['summary']))<span style="color:var(--ink-soft);"> – {{ $ai->output['summary'] }}</span>@endif
+                    <span style="white-space:nowrap;margin-left:8px;">
+                        <form method="POST" action="{{ route('admin.email_inbox.ai_accept', $ai->id) }}" style="display:inline;">@csrf<button type="submit" class="btn btn-gold btn-sm" style="padding:3px 10px;font-size:11.5px;">Übernehmen</button></form>
+                        <form method="POST" action="{{ route('admin.email_inbox.ai_reject', $ai->id) }}" style="display:inline;">@csrf<button type="submit" class="btn btn-ghost btn-sm" style="padding:3px 10px;font-size:11.5px;">Verwerfen</button></form>
+                    </span>
+                </div>
+                @endforeach
             </div>
             <form method="POST" action="{{ route('admin.email_inbox.assign', $m->id) }}" class="assign-form" style="display:flex;gap:8px;align-items:center;position:relative;">
                 @csrf
