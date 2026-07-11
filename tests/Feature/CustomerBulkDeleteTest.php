@@ -165,4 +165,36 @@ class CustomerBulkDeleteTest extends TestCase
             ->assertOk()
             ->assertDontSee('Ausgewählte löschen');
     }
+
+    /**
+     * Regressionsschutz: Das Lösch-Formular darf NICHT im Zuweisungs-Formular
+     * verschachtelt sein. Verschachtelte <form>-Tags verwirft der Browser, dann
+     * reagiert der "Ausgewählte löschen"-Button nicht (Bug aus Produktion).
+     * HTTP-Tests treffen die Route direkt und übersehen das – daher hier die
+     * Struktur des gerenderten HTML prüfen.
+     */
+    public function test_bulk_delete_form_is_not_nested_in_assign_form(): void
+    {
+        $this->customerWithRelations('nest@k.de');
+
+        $html = $this->actingAs($this->admin)->get(route('admin.customers'))->getContent();
+
+        $posAssignOpen = strpos($html, 'id="bulkForm"');
+        $posDeleteOpen = strpos($html, 'id="bulkDeleteForm"');
+        $this->assertNotFalse($posAssignOpen, 'bulkForm fehlt im HTML.');
+        $this->assertNotFalse($posDeleteOpen, 'bulkDeleteForm fehlt im HTML.');
+
+        // Das Zuweisungs-Formular muss geschlossen sein, BEVOR das Lösch-Formular
+        // beginnt – sonst liegt eine (ungültige) Verschachtelung vor.
+        $posAssignClose = strpos($html, '</form>', $posAssignOpen);
+        $this->assertNotFalse($posAssignClose);
+        $this->assertLessThan(
+            $posDeleteOpen,
+            $posAssignClose,
+            'bulkForm umschließt bulkDeleteForm – verschachtelte Formulare machen den Löschen-Button funktionslos.'
+        );
+
+        // Der Löschen-Button muss explizit auf das Lösch-Formular verweisen.
+        $this->assertStringContainsString('form="bulkDeleteForm"', $html);
+    }
 }

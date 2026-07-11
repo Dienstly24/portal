@@ -22,21 +22,29 @@
     </form>
 </div>
 
-<form method="POST" action="{{ route('admin.customers.bulk-assign') }}" id="bulkForm">
-@csrf
+{{-- Massen-Aktionen: zwei EIGENSTÄNDIGE Formulare (NICHT verschachtelt – sonst
+     verwirft der Browser das innere Formular und der Löschen-Button reagiert
+     nicht). Die Zeilen-Checkboxen weiter unten gehören per form="bulkForm" zum
+     Zuweisungs-Formular; der Löschen-Button überträgt die aktuelle Auswahl per
+     JS in bulkDeleteForm. --}}
+<form method="POST" action="{{ route('admin.customers.bulk-assign') }}" id="bulkForm">@csrf</form>
+@if(auth()->user()->role === 'admin')
+<form method="POST" action="{{ route('admin.customers.bulk-delete') }}" id="bulkDeleteForm" onsubmit="return confirmBulkDelete(this);">@csrf</form>
+@endif
+
 <div id="bulkBar" style="display:none;position:sticky;top:0;z-index:10;background:#1F3A33;color:#fff;border-radius:10px;padding:12px 20px;margin-bottom:12px;align-items:center;gap:14px;flex-wrap:wrap;">
     <span style="font-size:13.5px;font-weight:600;"><span id="bulkCount">0</span> Kunden ausgewaehlt</span>
-    <select name="employee_id" required style="padding:8px 12px;border-radius:8px;border:none;font-size:13px;">
+    <select name="employee_id" form="bulkForm" required style="padding:8px 12px;border-radius:8px;border:none;font-size:13px;">
         <option value="">— Mitarbeiter waehlen —</option>
         @foreach($employees as $e)
         <option value="{{ $e->id }}">{{ $e->name }}</option>
         @endforeach
     </select>
-    <input type="text" name="reason" required placeholder="Grund der Zuweisung (Pflicht)" style="padding:8px 12px;border-radius:8px;border:none;font-size:13px;flex:1;min-width:200px;">
+    <input type="text" name="reason" form="bulkForm" required placeholder="Grund der Zuweisung (Pflicht)" style="padding:8px 12px;border-radius:8px;border:none;font-size:13px;flex:1;min-width:200px;">
     <label style="font-size:12.5px;display:flex;align-items:center;gap:6px;cursor:pointer;">
-        <input type="checkbox" name="replace_existing" value="1" style="width:auto;"> Bisherige Betreuer ersetzen
+        <input type="checkbox" name="replace_existing" value="1" form="bulkForm" style="width:auto;"> Bisherige Betreuer ersetzen
     </label>
-    <button type="submit" class="btn btn-primary" style="padding:8px 18px;font-size:13px;">Zuweisen</button>
+    <button type="submit" form="bulkForm" class="btn btn-primary" style="padding:8px 18px;font-size:13px;">Zuweisen</button>
     @if(auth()->user()->role === 'admin')
     <button type="submit" form="bulkDeleteForm" id="bulkDeleteBtn"
         style="padding:8px 18px;font-size:13px;background:#A32D2D;color:#fff;border:none;border-radius:8px;cursor:pointer;">
@@ -44,23 +52,18 @@
     </button>
     @endif
 </div>
-@endif
 
 @if(auth()->user()->role === 'admin')
-{{-- Massen-Löschung (nur admin): eigenes Formular, die Checkboxen werden
-     beim Absenden per JS übernommen; Bestätigung mit Anzahl davor. --}}
-<form method="POST" action="{{ route('admin.customers.bulk-delete') }}" id="bulkDeleteForm"
-    onsubmit="return confirmBulkDelete(this);">
-    @csrf
-</form>
 <script>
+// Überträgt die aktuell angehakten Zeilen-Checkboxen in das Lösch-Formular und
+// verlangt eine bewusste Bestätigung mit Anzahl, bevor endgültig gelöscht wird.
 function confirmBulkDelete(form) {
     var checked = document.querySelectorAll('.rowCheck:checked');
     if (checked.length === 0) { alert('Bitte zuerst Kunden auswählen.'); return false; }
     if (!confirm('⚠️ ' + checked.length + ' Kunde(n) ENDGÜLTIG löschen?\n\nAlle zugehörigen Daten (Verträge, Tickets, Dokumente, E-Mails, Portal-Zugang) werden unwiderruflich entfernt.')) {
         return false;
     }
-    // Ausgewählte IDs in das Delete-Formular übernehmen
+    // Alte Übernahmen entfernen, dann die aktuelle Auswahl als hidden inputs anhängen.
     form.querySelectorAll('input[name="customer_ids[]"]').forEach(function (i) { i.remove(); });
     checked.forEach(function (cb) {
         var input = document.createElement('input');
@@ -70,6 +73,7 @@ function confirmBulkDelete(form) {
     return true;
 }
 </script>
+@endif
 @endif
 
 <div class="card">
@@ -107,8 +111,8 @@ function confirmBulkDelete(form) {
         </tbody>
     </table>
 </div>
+
 @if(in_array(auth()->user()->role, ['admin','manager']))
-</form>
 <script>
 (function () {
     var bar = document.getElementById('bulkBar');
