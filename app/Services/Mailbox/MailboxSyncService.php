@@ -1,25 +1,25 @@
 <?php
 namespace App\Services\Mailbox;
 
-use App\Models\Document;
 use App\Models\EmailAccount;
 use App\Models\EmailMessage;
 use App\Services\Workflow\EmailWorkflowService;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 /**
  * Orchestriert den kompletten Zyklus je Postfach (Architekturplan
- * Abschnitt 3/4): abrufen -> roh speichern -> Kategorisierung/Matching
- * (EmailWorkflowService) -> Anhänge erst verknüpfen, sobald ein Kunde
- * feststeht (documents.customer_id ist Pflichtfeld - kein Anhang wird
- * einem falschen/unbekannten Kunden zugeordnet).
+ * Abschnitt 3/4): abrufen -> roh speichern (inkl. Anhang-DATEIEN) ->
+ * Kategorisierung/Matching (EmailWorkflowService) -> Dokumente in der
+ * Kundenakte entstehen erst bei BESTÄTIGTER Zuordnung (Audit-Fix H1:
+ * ein bloßer 70-90%-Vorschlag legt nichts in eine Akte; bestätigt der
+ * Mitarbeiter später im Posteingang, übernimmt der EmailInboxController
+ * die Anhänge über denselben EmailAttachmentService).
  */
 class MailboxSyncService
 {
     public function __construct(
         private readonly MailboxProviderFactory $providerFactory,
         private readonly EmailWorkflowService $workflow,
+        private readonly EmailAttachmentService $attachments,
     ) {
     }
 
@@ -63,39 +63,20 @@ class MailboxSyncService
             }
 
             $stored++;
+
+            // Dateien VOR der Verarbeitung sichern, damit Analyse-Stufen
+            // (PDF-Auswertung) darauf zugreifen können - aber noch ohne
+            // Kundenakte-Bezug.
+            $this->attachments->storeFiles($message, $data->attachments);
+
             $this->workflow->process($message);
-            $this->storeAttachmentsIfMatched($message->fresh(), $data->attachments);
+
+            // In die Akte übernehmen NUR bei bestätigter Zuordnung (H1).
+            $this->attachments->createDocuments($message->fresh());
         }
 
         $account->update(['last_synced_at' => now(), 'last_error' => null]);
 
         return $stored;
-    }
-
-    private function storeAttachmentsIfMatched(EmailMessage $message, array $attachments): void
-    {
-        if (!$message->customer_id || empty($attachments)) {
-            return;
-        }
-
-        foreach ($attachments as $attachment) {
-            $path = 'email_attachments/' . $message->id . '/' . Str::random(8) . '_' . $this->sanitizeFilename($attachment['filename']);
-            Storage::disk('local')->put($path, $attachment['content']);
-
-            Document::create([
-                'customer_id' => $message->customer_id,
-                'category' => 'other',
-                'file_name' => $attachment['filename'],
-                'file_path' => $path,
-                'disk' => 'local',
-                'visibility' => 'internal',
-                'file_size' => strlen($attachment['content']),
-            ]);
-        }
-    }
-
-    private function sanitizeFilename(string $name): string
-    {
-        return preg_replace('/[^A-Za-z0-9._-]/', '_', $name) ?? 'anhang';
     }
 }

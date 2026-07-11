@@ -39,6 +39,7 @@ class EmailMessage extends Model
             'received_at' => 'datetime',
             'processed_at' => 'datetime',
             'raw_headers' => 'array',
+            'attachments_meta' => 'array',
         ];
     }
 

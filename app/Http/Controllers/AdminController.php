@@ -661,10 +661,27 @@ class AdminController extends Controller
         $customer = \App\Models\Customer::findOrFail($id);
         $user = $customer->user;
 
+        // DSGVO Art. 17 (Audit-Fix H3): Physische Dateien mitlöschen -
+        // die FK-Kaskade entfernt nur DB-Zeilen, die Rohdaten blieben
+        // sonst dauerhaft im Storage liegen.
+        foreach ($customer->documents()->get() as $doc) {
+            try {
+                \Illuminate\Support\Facades\Storage::disk($doc->disk ?: 'public')->delete($doc->file_path);
+            } catch (\Throwable $e) {
+                \Log::warning('Dokumentdatei bei Kundenlöschung nicht entfernbar: ' . $doc->file_path);
+            }
+        }
+        \Illuminate\Support\Facades\Storage::disk('local')->deleteDirectory('customers/' . $customer->id);
+
         // DSGVO (Art. 17): E-Mails des Kunden enthalten personenbezogene
         // Daten im Volltext - beim Löschen des Kunden mitlöschen statt
         // nur zu entkoppeln (der FK würde customer_id nur auf NULL setzen).
-        \App\Models\EmailMessage::where('customer_id', $customer->id)->delete();
+        // Inkl. der zugehörigen Anhang-Dateien (Audit-Fix H3).
+        $attachmentService = app(\App\Services\Mailbox\EmailAttachmentService::class);
+        foreach (\App\Models\EmailMessage::where('customer_id', $customer->id)->get() as $mail) {
+            $attachmentService->deleteFiles($mail);
+            $mail->delete();
+        }
 
         $customer->delete();
         if ($user) {

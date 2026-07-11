@@ -8,6 +8,7 @@ use App\Models\CustomerChangeRequest;
 use App\Models\DocumentRequest;
 use App\Models\EmailMessage;
 use App\Services\FondsFinanz\FondsFinanzImportService;
+use App\Services\Mailbox\EmailAttachmentService;
 use Illuminate\Http\Request;
 
 /**
@@ -20,8 +21,10 @@ use Illuminate\Http\Request;
  */
 class EmailInboxController extends Controller
 {
-    public function __construct(private readonly FondsFinanzImportService $fondsFinanz)
-    {
+    public function __construct(
+        private readonly FondsFinanzImportService $fondsFinanz,
+        private readonly EmailAttachmentService $attachments,
+    ) {
     }
 
     public function index()
@@ -52,6 +55,8 @@ class EmailInboxController extends Controller
         if ($message->match_status !== 'suggested' || $message->customer === null) {
             return back()->with('error', 'Diese E-Mail wartet nicht auf Bestätigung.');
         }
+        // Audit-Fix H2: Bestätigen nur mit Zugriff auf den vorgeschlagenen Kunden.
+        abort_unless(auth()->user()->canAccessCustomer($message->customer_id), 403);
 
         $this->applyAssignment($message, $message->customer, 'email_match_confirmed');
 
@@ -64,6 +69,10 @@ class EmailInboxController extends Controller
         $message = EmailMessage::findOrFail($id);
         if ($message->match_status !== 'suggested') {
             return back()->with('error', 'Diese E-Mail wartet nicht auf Bestätigung.');
+        }
+        // Audit-Fix H2: Auch Ablehnen ist eine Entscheidung über diesen Kunden.
+        if ($message->customer_id !== null) {
+            abort_unless(auth()->user()->canAccessCustomer($message->customer_id), 403);
         }
 
         $message->forceFill(['match_status' => 'unmatched', 'customer_id' => null, 'match_score' => null])->save();
@@ -104,6 +113,9 @@ class EmailInboxController extends Controller
         } else {
             $message->forceFill(['match_status' => 'confirmed', 'customer_id' => $customer->id])->save();
         }
+
+        // Audit-Fix H1: Anhänge erst JETZT (bestätigte Zuordnung) in die Akte übernehmen.
+        $this->attachments->createDocuments($message->fresh());
 
         ActivityLog::create([
             'user_id' => auth()->id(),

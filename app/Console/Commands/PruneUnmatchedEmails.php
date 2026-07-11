@@ -36,7 +36,15 @@ class PruneUnmatchedEmails extends Command
             return self::SUCCESS;
         }
 
-        $deleted = $query->delete();
+        // Audit-Fix H3/H1-Folge: auch die physischen Anhang-Dateien
+        // entfernen, nicht nur die DB-Zeilen.
+        $attachmentService = app(\App\Services\Mailbox\EmailAttachmentService::class);
+        $deleted = 0;
+        foreach ($query->cursor() as $message) {
+            $attachmentService->deleteFiles($message);
+            $message->delete();
+            $deleted++;
+        }
 
         if ($deleted > 0) {
             \App\Models\ActivityLog::create([

@@ -68,7 +68,7 @@ class MailboxSyncServiceTest extends TestCase
             }
         };
 
-        return new MailboxSyncService($factory, app(EmailWorkflowService::class));
+        return new MailboxSyncService($factory, app(EmailWorkflowService::class), app(\App\Services\Mailbox\EmailAttachmentService::class));
     }
 
     public function test_sync_stores_new_message_and_marks_account_synced(): void
@@ -169,7 +169,7 @@ class MailboxSyncServiceTest extends TestCase
             }
         };
 
-        $service = new MailboxSyncService($factory, app(EmailWorkflowService::class));
+        $service = new MailboxSyncService($factory, app(EmailWorkflowService::class), app(\App\Services\Mailbox\EmailAttachmentService::class));
         $stored = $service->syncAccount($account);
 
         $this->assertSame(0, $stored);

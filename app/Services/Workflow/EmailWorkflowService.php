@@ -110,6 +110,16 @@ class EmailWorkflowService
         $criteria = ['full_name' => $message->from_name, 'email' => $message->from_address];
 
         $text = (string) $message->body_text;
+
+        // Praxistest-Befund T1: Versicherer/Dritte nennen den Kunden im
+        // TEXT ("Kunde: ..."), der Absendername ist dann der Versicherer.
+        // Ein explizit genanntes Kundenlabel schlägt den Absendernamen -
+        // ohne E-Mail-Signal, denn die Absenderadresse gehört dem Dritten.
+        if ($bodyName = $this->extractCustomerName($text)) {
+            $criteria['full_name'] = $bodyName;
+            unset($criteria['email']);
+        }
+
         if ($birthDate = $this->extractBirthDate($text)) {
             $criteria['birth_date'] = $birthDate;
         }
@@ -118,6 +128,14 @@ class EmailWorkflowService
         }
 
         return $criteria;
+    }
+
+    private function extractCustomerName(string $text): ?string
+    {
+        if (preg_match('/^\s*(?:kunde|kundenname|versicherungsnehmer)\s*:\s*(.{2,80}?)\s*$/im', $text, $m)) {
+            return trim($m[1]);
+        }
+        return null;
     }
 
     private function extractBirthDate(string $text): ?string
