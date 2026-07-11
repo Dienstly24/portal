@@ -1,5 +1,25 @@
 @extends('layouts.admin')
 @section('content')
+@php
+// Vertragstyp -> Icon (identisch zur Kundenakte, damit die Liste dieselbe
+// Bildsprache spricht). Unbekannte Typen fallen auf 'andere' zurück.
+$typeConfig = [
+    'kfz'                 => ['icon'=>'🚗','label'=>'KFZ','bg'=>'#E6F1FB'],
+    'krankenversicherung' => ['icon'=>'🏥','label'=>'Kranken','bg'=>'#E4F0E7'],
+    'kranken'             => ['icon'=>'🏥','label'=>'Kranken','bg'=>'#E4F0E7'],
+    'haftpflicht'         => ['icon'=>'🛡️','label'=>'Haftpflicht','bg'=>'#F0E6FB'],
+    'rechtsschutz'        => ['icon'=>'⚖️','label'=>'Rechtsschutz','bg'=>'#FEF3C7'],
+    'hausrat'             => ['icon'=>'🏠','label'=>'Hausrat','bg'=>'#E4F0E7'],
+    'escooter'            => ['icon'=>'🛴','label'=>'E-Scooter','bg'=>'#E6F1FB'],
+    'leben'               => ['icon'=>'❤️','label'=>'Leben','bg'=>'#FBEAF0'],
+    'unfall'              => ['icon'=>'🚑','label'=>'Unfall','bg'=>'#F9E3E3'],
+    'sach'                => ['icon'=>'📦','label'=>'Sach','bg'=>'#F1EFE8'],
+    'internet'            => ['icon'=>'📶','label'=>'Internet','bg'=>'#EDE9FE'],
+    'energie'             => ['icon'=>'⚡','label'=>'Energie','bg'=>'#FEF3C7'],
+    'strom_gas'           => ['icon'=>'⚡','label'=>'Strom/Gas','bg'=>'#FEF3C7'],
+    'andere'              => ['icon'=>'📋','label'=>'Andere','bg'=>'#F1EFE8'],
+];
+@endphp
 <div class="toolbar">
     <div>
         <div class="page-title">Kunden</div>
@@ -80,7 +100,7 @@ function confirmBulkDelete(form) {
     <table>
         <thead><tr>
             @if(in_array(auth()->user()->role, ['admin','manager']))<th style="width:36px;"><input type="checkbox" id="checkAll" style="width:17px;height:17px;cursor:pointer;accent-color:#1F3A33;"></th>@endif
-            <th>Kunde</th><th>Kundennr.</th><th>E-Mail</th><th>Portal</th><th>1. Login</th><th>Letzter Login</th><th>Betreuer</th>
+            <th>Kunde</th><th>Adresse</th><th>Kundennr.</th><th>E-Mail</th><th>Portal</th><th>1. Login</th><th>Letzter Login</th><th>Betreuer</th><th>Aktive Verträge</th><th style="text-align:right;">Aktionen</th>
         </tr></thead>
         <tbody>
         @forelse($customers as $c)
@@ -89,6 +109,8 @@ function confirmBulkDelete(form) {
             <td class="noNav"><input type="checkbox" class="rowCheck" name="customer_ids[]" value="{{ $c->id }}" form="bulkForm" style="width:17px;height:17px;cursor:pointer;accent-color:#1F3A33;"></td>
             @endif
             <td style="font-weight:600;">{{ $c->user?->name }}</td>
+            @php $addr = $c->fullAddress(); @endphp
+            <td style="color:var(--ink-soft);font-size:13px;white-space:nowrap;">{{ $addr !== '' ? $addr : '—' }}</td>
             <td style="color:var(--ink-soft);font-size:13px;">{{ $c->customer_number }}</td>
             <td style="color:var(--ink-soft);font-size:13px;">{{ str_contains($c->user?->email ?? '', '@dienstly24.internal') ? '—' : $c->user?->email }}</td>
             @php $ps = $c->portalStatus(); @endphp
@@ -104,9 +126,38 @@ function confirmBulkDelete(form) {
                 <span style="color:#B5651D;">— offen —</span>
                 @endforelse
             </td>
+            {{-- Aktive Verträge als Icons (eager-geladen, nur status=active) --}}
+            <td style="white-space:nowrap;">
+                @php $activeTypes = $c->contracts->pluck('type')->unique(); @endphp
+                @forelse($activeTypes as $t)
+                    @php $cfg = $typeConfig[$t] ?? $typeConfig['andere']; @endphp
+                    <span title="{{ $cfg['label'] }}" aria-label="{{ $cfg['label'] }}"
+                        style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:7px;background:{{ $cfg['bg'] }};margin-right:3px;font-size:14px;">{{ $cfg['icon'] }}</span>
+                @empty
+                    <span style="color:var(--ink-soft);font-size:12.5px;">—</span>
+                @endforelse
+            </td>
+            {{-- Aktionen: 3-Punkte-Menü pro Kunde (Alpine). Zelle ist .noNav,
+                 damit ein Klick hier NICHT die Zeilennavigation auslöst. --}}
+            <td class="noNav" style="text-align:right;position:relative;" x-data="{open:false}">
+                <button type="button" @click="open=!open" aria-haspopup="true" :aria-expanded="open" title="Aktionen"
+                    style="background:none;border:none;cursor:pointer;font-size:18px;line-height:1;color:var(--ink-soft);padding:4px 10px;border-radius:6px;letter-spacing:1px;">•••</button>
+                <div x-show="open" x-cloak @click.outside="open=false" @keydown.escape.window="open=false"
+                    style="position:absolute;right:8px;top:100%;z-index:50;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);min-width:230px;padding:6px;">
+                    <a href="{{ route('admin.customer.merge', $c->id) }}" class="rowmenu-item">🔀 {{ $c->user?->name }}: Dublette bereinigen</a>
+                    @if(auth()->user()->role === 'admin')
+                    <form method="POST" action="{{ route('admin.customers.delete', $c->id) }}" style="margin:0;"
+                        onsubmit="return confirm('⚠️ Kunde {{ addslashes($c->user?->name) }} ENDGÜLTIG löschen?\n\nAlle Verträge, Tickets, Dokumente, E-Mails und der Portal-Zugang werden unwiderruflich entfernt.') && confirm('Wirklich sicher? Diese Aktion kann NICHT rückgängig gemacht werden.');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="rowmenu-item" style="background:none;border:none;cursor:pointer;color:#A32D2D;">🗑 Löschen</button>
+                    </form>
+                    @endif
+                </div>
+            </td>
         </tr>
         @empty
-        <tr><td colspan="9" style="text-align:center;padding:24px;color:var(--ink-soft);">Keine Kunden gefunden.</td></tr>
+        <tr><td colspan="11" style="text-align:center;padding:24px;color:var(--ink-soft);">Keine Kunden gefunden.</td></tr>
         @endforelse
         </tbody>
     </table>
@@ -133,6 +184,9 @@ function confirmBulkDelete(form) {
 @endif
 <style>
 .rowLink:hover td { background: #F4F7F5; }
+[x-cloak] { display: none !important; }
+.rowmenu-item { display:block; width:100%; text-align:left; padding:9px 12px; border-radius:7px; font-size:13.5px; color:var(--ink); text-decoration:none; box-sizing:border-box; }
+.rowmenu-item:hover { background:#F4F7F5; }
 </style>
 <script id="rowLinkScript">
 document.querySelectorAll('tr.rowLink').forEach(function (row) {

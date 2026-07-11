@@ -197,4 +197,71 @@ class CustomerBulkDeleteTest extends TestCase
         // Der Löschen-Button muss explizit auf das Lösch-Formular verweisen.
         $this->assertStringContainsString('form="bulkDeleteForm"', $html);
     }
+
+    public function test_customer_list_shows_address_active_contracts_and_actions_menu(): void
+    {
+        $c = $this->customerWithRelations('menu@k.de');
+        $c->update([
+            'address_street' => 'Rissener Dorfstr.',
+            'address_house_number' => '51',
+            'address_zip' => '22559',
+            'address_city' => 'Hamburg',
+        ]);
+
+        $html = $this->actingAs($this->admin)->get(route('admin.customers'))->getContent();
+
+        // Neue Spalten sind vorhanden
+        $this->assertStringContainsString('Adresse', $html);
+        $this->assertStringContainsString('Aktive Verträge', $html);
+        $this->assertStringContainsString('Aktionen', $html);
+
+        // Adresse wird formatiert angezeigt
+        $this->assertStringContainsString('Rissener Dorfstr. 51, 22559 Hamburg', $html);
+
+        // 3-Punkte-Menü: Merge-Link + Einzel-Löschung (nur admin)
+        $this->assertStringContainsString('Dublette bereinigen', $html);
+        $this->assertStringContainsString(route('admin.customer.merge', $c->id), $html);
+        $this->assertStringContainsString(route('admin.customers.delete', $c->id), $html);
+    }
+
+    public function test_employee_does_not_see_single_delete_in_actions_menu(): void
+    {
+        $c = $this->customerWithRelations('empmenu@k.de');
+        $employee = User::factory()->create(['role' => 'employee', 'can_see_all_customers' => true]);
+
+        $html = $this->actingAs($employee)->get(route('admin.customers'))->getContent();
+
+        // Merge (Dublette) darf der Mitarbeiter sehen, die Einzel-Löschung NICHT.
+        // (Der Lösch-Button ist eindeutig an "🗑 Löschen" erkennbar; die Route-URL
+        //  taugt nicht als Marker, da sie Präfix der Merge-URL ist.)
+        $this->assertStringContainsString('Dublette bereinigen', $html);
+        $this->assertStringNotContainsString('🗑 Löschen', $html);
+
+        // Gegenprobe: der Admin sieht die Einzel-Löschung im Menü
+        $adminHtml = $this->actingAs($this->admin)->get(route('admin.customers'))->getContent();
+        $this->assertStringContainsString('🗑 Löschen', $adminHtml);
+    }
+
+    public function test_full_address_formats_and_falls_back_to_legacy(): void
+    {
+        $c = $this->customerWithRelations('addr@k.de');
+        $c->update([
+            'address_street' => 'Hauptstr.', 'address_house_number' => '7',
+            'address_house_suffix' => 'a', 'address_zip' => '10115', 'address_city' => 'Berlin',
+        ]);
+        $this->assertSame('Hauptstr. 7 a, 10115 Berlin', $c->fresh()->fullAddress());
+
+        // Fallback auf Alt-Feld, wenn strukturierte Felder leer sind
+        $c2 = $this->customerWithRelations('legacy@k.de');
+        $c2->update(['address' => 'Altfeldweg 3, 50667 Köln']);
+        $this->assertSame('Altfeldweg 3, 50667 Köln', $c2->fresh()->fullAddress());
+
+        // Gleiche Anschrift -> gleicher Haushalts-Schlüssel
+        $c3 = $this->customerWithRelations('same@k.de');
+        $c3->update([
+            'address_street' => 'Hauptstr.', 'address_house_number' => '7',
+            'address_house_suffix' => 'a', 'address_zip' => '10115', 'address_city' => 'Berlin',
+        ]);
+        $this->assertSame($c->fresh()->householdKey(), $c3->fresh()->householdKey());
+    }
 }

@@ -57,7 +57,13 @@ class AdminController extends Controller
 
     public function customers() {
         $employees = \App\Models\User::whereIn('role', ['employee', 'manager', 'support'])->orderBy('name')->get();
-        $query = $this->scopeCustomers(Customer::with(['user', 'betreuer']));
+        // Aktive Verträge mitladen (nur benötigte Spalten) für die Vertrags-Icons
+        // in der Liste – ohne N+1-Abfragen pro Zeile.
+        $query = $this->scopeCustomers(Customer::with([
+            'user',
+            'betreuer',
+            'contracts' => fn($q) => $q->where('status', 'active')->select('id', 'customer_id', 'type', 'status'),
+        ]));
         if (request('betreuer')) {
             $query->whereHas('betreuer', fn($q) => $q->where('users.id', request('betreuer')));
         }

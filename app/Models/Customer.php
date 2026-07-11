@@ -31,6 +31,35 @@ class Customer extends Model {
     }
 
     /**
+     * Formatierte Anschrift für Listen/Übersichten. Nutzt die strukturierten
+     * Adressfelder (deutscher Standard) und fällt auf das Alt-Feld `address`
+     * zurück, solange ein Datensatz noch nicht migriert ist. Leerstring, wenn
+     * gar keine Adresse hinterlegt ist.
+     */
+    public function fullAddress(): string
+    {
+        $street = trim(
+            ($this->address_street ?? '') . ' ' . ($this->address_house_number ?? '')
+            . ($this->address_house_suffix ? ' ' . $this->address_house_suffix : '')
+        );
+        $city = trim(($this->address_zip ?? '') . ' ' . ($this->address_city ?? ''));
+        $parts = array_values(array_filter([$street, $city], fn($p) => $p !== ''));
+
+        return $parts !== [] ? implode(', ', $parts) : trim($this->address ?? '');
+    }
+
+    /**
+     * Normalisierter Adress-Schlüssel für die „Haushalt"-Zuordnung: Kunden mit
+     * identischem Schlüssel gelten als derselbe Haushalt (gleiche Anschrift).
+     * Leerstring, wenn keine Adresse vorhanden ist (dann kein Haushalt).
+     */
+    public function householdKey(): string
+    {
+        return \Illuminate\Support\Str::of($this->fullAddress())
+            ->lower()->replaceMatches('/[^a-z0-9]+/', '')->value();
+    }
+
+    /**
      * Vollständigkeit der Kundenakte (Final Polish Punkt 5).
      * Liefert Prozent + Liste offener Punkte mit direktem Portal-Link.
      * Steuer-ID zählt als optional (nicht prozentmindernd).
