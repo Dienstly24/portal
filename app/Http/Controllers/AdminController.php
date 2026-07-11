@@ -67,7 +67,9 @@ class AdminController extends Controller
         if (request('betreuer')) {
             $query->whereHas('betreuer', fn($q) => $q->where('users.id', request('betreuer')));
         }
-        $customers = $query->latest()->get();
+        // Seitenweise laden (25/Seite) – bleibt auch bei tausenden Kunden schnell.
+        // withQueryString() erhält den Betreuer-Filter über die Seiten hinweg.
+        $customers = $query->latest()->paginate(25)->withQueryString();
         return view('admin.customers', compact('customers', 'employees'));
     }
 

@@ -170,6 +170,28 @@ function confirmBulkDelete(form) {
     </table>
 </div>
 
+{{-- Seitennavigation (an das App-Design angepasst, ohne Framework-Theme) --}}
+@if($customers->hasPages())
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 2px;flex-wrap:wrap;">
+    <div style="font-size:13px;color:var(--ink-soft);">
+        {{ $customers->firstItem() }}–{{ $customers->lastItem() }} von {{ $customers->total() }} Kunden
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+        @if($customers->onFirstPage())
+            <span class="btn btn-ghost btn-sm" style="opacity:.45;pointer-events:none;">← Zurück</span>
+        @else
+            <a href="{{ $customers->previousPageUrl() }}" class="btn btn-ghost btn-sm">← Zurück</a>
+        @endif
+        <span style="font-size:13px;color:var(--ink-soft);">Seite {{ $customers->currentPage() }} / {{ $customers->lastPage() }}</span>
+        @if($customers->hasMorePages())
+            <a href="{{ $customers->nextPageUrl() }}" class="btn btn-ghost btn-sm">Weiter →</a>
+        @else
+            <span class="btn btn-ghost btn-sm" style="opacity:.45;pointer-events:none;">Weiter →</span>
+        @endif
+    </div>
+</div>
+@endif
+
 @if(in_array(auth()->user()->role, ['admin','manager']))
 <script>
 (function () {

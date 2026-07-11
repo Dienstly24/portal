@@ -27,6 +27,9 @@ class Customer extends Model {
             'health_insurance_number' => 'encrypted',
             'pension_insurance_number' => 'encrypted',
             'tax_id' => 'encrypted',
+            // Bankdaten verschlüsselt at rest (DSGVO). Anzeige bleibt maskiert.
+            'iban' => 'encrypted',
+            'iban2' => 'encrypted',
         ];
     }
 

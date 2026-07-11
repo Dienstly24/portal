@@ -14,7 +14,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias(['role' => \App\Http\Middleware\EnsureUserRole::class]);
         $middleware->validateCsrfTokens(except: ['api/website-inquiry']);
-        //
+        // Defensive Sicherheitsheader auf jede Antwort.
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
