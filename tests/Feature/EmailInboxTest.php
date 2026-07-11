@@ -1,0 +1,141 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Contract;
+use App\Models\Customer;
+use App\Models\EmailAccount;
+use App\Models\EmailMessage;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class EmailInboxTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private User $admin;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->admin = User::factory()->create(['role' => 'admin']);
+    }
+
+    private function customer(string $name = 'Max Mustermann'): Customer
+    {
+        $user = User::factory()->create(['name' => $name, 'role' => 'customer']);
+        return Customer::create(['user_id' => $user->id, 'customer_number' => 'K-' . uniqid()]);
+    }
+
+    private function message(array $overrides = []): EmailMessage
+    {
+        $account = EmailAccount::firstOrCreate(
+            ['email_address' => 'info@dienstly24.de'],
+            ['name' => 'Test', 'provider' => 'imap', 'folders' => ['INBOX'], 'is_active' => true]
+        );
+
+        return EmailMessage::create(array_merge([
+            'email_account_id' => $account->id,
+            'message_uid' => 'INBOX:' . uniqid(),
+            'from_address' => 'kunde@example.com',
+            'from_name' => 'Max Mustermann',
+            'subject' => 'Frage zu meinem Vertrag',
+            'body_text' => 'Hallo',
+            'category' => 'kundenanfrage',
+            'processed_at' => now(),
+        ], $overrides));
+    }
+
+    public function test_inbox_lists_suggested_and_unmatched_messages(): void
+    {
+        $customer = $this->customer();
+        $this->message(['match_status' => 'suggested', 'customer_id' => $customer->id, 'match_score' => 75, 'subject' => 'Vorschlags-Mail']);
+        $this->message(['match_status' => 'unmatched', 'subject' => 'Unklare Mail']);
+
+        $this->actingAs($this->admin)->get(route('admin.email_inbox'))
+            ->assertOk()
+            ->assertSee('Vorschlags-Mail')
+            ->assertSee('Unklare Mail')
+            ->assertSee('Max Mustermann');
+    }
+
+    public function test_confirm_links_customer(): void
+    {
+        $customer = $this->customer();
+        $message = $this->message(['match_status' => 'suggested', 'customer_id' => $customer->id, 'match_score' => 80]);
+
+        $this->actingAs($this->admin)->post(route('admin.email_inbox.confirm', $message->id));
+
+        $message->refresh();
+        $this->assertSame('confirmed', $message->match_status);
+        $this->assertSame((string) $customer->id, (string) $message->customer_id);
+    }
+
+    public function test_confirm_of_fonds_finanz_suggestion_runs_import(): void
+    {
+        $customer = $this->customer();
+        $message = $this->message([
+            'match_status' => 'suggested',
+            'customer_id' => $customer->id,
+            'match_score' => 70,
+            'category' => 'fonds_finanz',
+            'body_text' => "Kunde: Max Mustermann\nGesellschaft: Allianz\nSparte: Kfz\nVertragsnummer: AZ-999",
+        ]);
+
+        $this->actingAs($this->admin)->post(route('admin.email_inbox.confirm', $message->id));
+
+        $this->assertSame('confirmed', $message->fresh()->match_status);
+        $contract = Contract::where('customer_id', $customer->id)->where('contract_number', 'AZ-999')->first();
+        $this->assertNotNull($contract, 'Bestätigung muss den Fonds-Finanz-Import ausführen');
+        $this->assertSame('kfz', $contract->type);
+    }
+
+    public function test_reject_returns_message_to_manual_queue(): void
+    {
+        $customer = $this->customer();
+        $message = $this->message(['match_status' => 'suggested', 'customer_id' => $customer->id, 'match_score' => 75]);
+
+        $this->actingAs($this->admin)->post(route('admin.email_inbox.reject', $message->id));
+
+        $message->refresh();
+        $this->assertSame('unmatched', $message->match_status);
+        $this->assertNull($message->customer_id);
+    }
+
+    public function test_manual_assignment_links_customer(): void
+    {
+        $customer = $this->customer();
+        $message = $this->message(['match_status' => 'unmatched']);
+
+        $this->actingAs($this->admin)->post(route('admin.email_inbox.assign', $message->id), [
+            'customer_id' => (string) $customer->id,
+        ]);
+
+        $message->refresh();
+        $this->assertSame('confirmed', $message->match_status);
+        $this->assertSame((string) $customer->id, (string) $message->customer_id);
+    }
+
+    public function test_restricted_employee_cannot_assign_unassigned_customer(): void
+    {
+        $employee = User::factory()->create(['role' => 'employee', 'can_see_all_customers' => false]);
+        $customer = $this->customer();
+        $message = $this->message(['match_status' => 'unmatched']);
+
+        $this->actingAs($employee)->post(route('admin.email_inbox.assign', $message->id), [
+            'customer_id' => (string) $customer->id,
+        ])->assertForbidden();
+
+        $this->assertNull($message->fresh()->customer_id);
+    }
+
+    public function test_already_processed_message_cannot_be_confirmed_twice(): void
+    {
+        $customer = $this->customer();
+        $message = $this->message(['match_status' => 'confirmed', 'customer_id' => $customer->id]);
+
+        $this->actingAs($this->admin)->post(route('admin.email_inbox.confirm', $message->id))
+            ->assertSessionHas('error');
+    }
+}

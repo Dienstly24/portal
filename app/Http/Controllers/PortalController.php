@@ -19,6 +19,7 @@ class PortalController extends Controller
     public function dashboard() {
         $customer = $this->getCustomer();
         return view('portal.dashboard', [
+            'customer' => $customer,
             'contractsCount' => Contract::where('customer_id', $customer->id)->where('status','active')->count(),
             'openTickets' => Ticket::where('customer_id', $customer->id)->whereIn('status',['open','in_progress'])->count(),
             'pendingApprovals' => \App\Models\CustomerChangeRequest::where('customer_id', $customer->id)->where('status','pending')->count(),

@@ -157,6 +157,24 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
     @empty
     <p style="color:var(--ink-soft);font-size:13px;">Keine Dokumentenanfragen.</p>
     @endforelse
+
+    {{-- E-Mail-Verlauf (Priorität 8: alle Informationen am Kunden verbunden) --}}
+    @php $customerMails = \App\Models\EmailMessage::where('customer_id', $customer->id)->latest('received_at')->limit(6)->get(); @endphp
+    @if($customerMails->isNotEmpty())
+    <div class="card-title" style="font-size:14px;margin:18px 0 10px;">E-Mails ({{ $customerMails->count() }})</div>
+    @foreach($customerMails as $cm)
+    <div style="padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;">
+        <div style="display:flex;justify-content:space-between;gap:10px;">
+            <span style="font-weight:600;">{{ Str::limit($cm->subject ?: '(kein Betreff)', 60) }}</span>
+            <span class="badge badge-pending" style="flex:none;">{{ $cm->categoryLabel() }}</span>
+        </div>
+        <div style="color:var(--ink-soft);font-size:12px;margin-top:2px;">
+            von {{ $cm->from_name ?: $cm->from_address }} · {{ ($cm->received_at ?? $cm->created_at)->format('d.m.Y H:i') }}
+            @if($cm->match_status === 'suggested') · <span style="color:#92400E;">Zuordnung unbestätigt</span>@endif
+        </div>
+    </div>
+    @endforeach
+    @endif
 </div>
 </div>
 </div>

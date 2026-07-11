@@ -109,6 +109,12 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/documents/{id}/download', [AdminController::class, 'documentDownload'])->name('documents.download');
     Route::post('/documents/{id}/replace', [AdminController::class, 'documentReplace'])->name('documents.replace');
 
+    // E-Mail-Posteingang: Zuordnungen bestätigen/zuweisen (Priorität 8)
+    Route::get('/email-inbox', [\App\Http\Controllers\EmailInboxController::class, 'index'])->name('email_inbox');
+    Route::post('/email-inbox/{id}/confirm', [\App\Http\Controllers\EmailInboxController::class, 'confirm'])->name('email_inbox.confirm');
+    Route::post('/email-inbox/{id}/reject', [\App\Http\Controllers\EmailInboxController::class, 'reject'])->name('email_inbox.reject');
+    Route::post('/email-inbox/{id}/assign', [\App\Http\Controllers\EmailInboxController::class, 'assign'])->name('email_inbox.assign');
+
     // Dokumentenanfragen an Kunden (Priorität 7)
     Route::get('/document-requests', [\App\Http\Controllers\DocumentRequestController::class, 'index'])->name('document_requests');
     Route::post('/customers/{customerId}/document-requests', [\App\Http\Controllers\DocumentRequestController::class, 'store'])->name('document_requests.store');

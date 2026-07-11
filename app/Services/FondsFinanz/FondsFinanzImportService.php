@@ -117,6 +117,36 @@ class FondsFinanzImportService
     }
 
     /**
+     * Import nach expliziter Mitarbeiter-Bestätigung (HITL-Stufe 70-90%
+     * bzw. manuelle Zuordnung im Posteingang): Der Mensch hat den Kunden
+     * festgelegt - es wird nicht erneut gematcht. Ist die Mitteilung
+     * nicht parsebar, wird nur die Zuordnung gespeichert.
+     */
+    public function importForCustomer(EmailMessage $message, Customer $customer): void
+    {
+        $data = $this->parser->parse((string) $message->body_text);
+
+        if (!$data->isImportable()) {
+            $this->finish($message, 'confirmed', $customer, $message->match_score);
+            return;
+        }
+
+        // Vertragsnummer darf nicht bereits einem ANDEREN Kunden gehören.
+        $conflict = Contract::where('contract_number', $data->contractNumber)
+            ->where('customer_id', '!=', $customer->id)->exists();
+        if ($conflict) {
+            $this->finish($message, 'confirmed', $customer, $message->match_score);
+            $this->createTask($message, $customer, sprintf(
+                'Fonds-Finanz-Konflikt prüfen: Vertragsnummer %s gehört einem anderen Kunden',
+                $data->contractNumber
+            ), 3, 'high');
+            return;
+        }
+
+        $this->import($message, $data, $customer, $message->match_score);
+    }
+
+    /**
      * Eindeutig bekannte Vertragsnummer -> Kunde steht fest. Zusätzliche
      * Absicherung: Der im Text genannte Kundenname muss grob zum
      * Bestandskunden passen, sonst manuelles Matching statt Blindzuordnung.

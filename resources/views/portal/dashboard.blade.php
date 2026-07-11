@@ -8,6 +8,23 @@
     <div class="metric"><div class="label">Änderungen in Prüfung</div><div class="value">{{ $pendingApprovals }}</div></div>
 </div>
 
+{{-- Offene Dokumentenanfragen prominent anzeigen (Priorität 8) --}}
+@php $openDocRequests = \App\Models\DocumentRequest::where('customer_id', $customer->id)->openForCustomer()->get(); @endphp
+@if($openDocRequests->isNotEmpty())
+<div class="card" style="border-left:4px solid #D9A441;">
+    <div class="card-title">📄 Wir benötigen Unterlagen von Ihnen</div>
+    @foreach($openDocRequests as $odr)
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;font-size:14px;">
+        <div>
+            {{ $odr->title }}
+            @if($odr->deadline)<span style="color:{{ $odr->deadline->isPast() ? '#A32D2D' : 'var(--ink-soft)' }};font-size:12.5px;"> · Frist {{ $odr->deadline->format('d.m.Y') }}</span>@endif
+        </div>
+        <a href="{{ route('portal.documents') }}" class="btn btn-gold" style="padding:6px 14px;font-size:13px;flex:none;">Hochladen</a>
+    </div>
+    @endforeach
+</div>
+@endif
+
 {{-- Kundenakte-Vollständigkeit (Final Polish Punkt 5) --}}
 <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
