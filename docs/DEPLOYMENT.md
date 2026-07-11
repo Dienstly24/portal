@@ -65,3 +65,5 @@ ssh-keygen -t ed25519 -C "github-deploy" -f deploy_key -N ""
 - `concurrency` verhindert parallele Deploys.
 - Fehlgeschlagenes Deploy lässt die App dank Trap nicht offline zurück; die Migration ist additiv.
 - Rollback im Notfall: auf dem Server `git reset --hard <letzter-guter-commit>` + `bash scripts/deploy.sh`.
+
+<!-- Erster automatischer Deploy-Test: 2026-07-11 -->
