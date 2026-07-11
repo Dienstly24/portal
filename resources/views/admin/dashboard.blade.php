@@ -33,6 +33,24 @@
     </div>
 </div>
 
+{{-- Arbeitsvorrat der neuen Automatisierungs-Workflows (Priorität 8):
+     alles, was auf eine menschliche Entscheidung wartet, auf einen Blick. --}}
+@php
+    $inboxSuggested = \App\Models\EmailMessage::where('match_status', 'suggested')->count();
+    $inboxCommissions = \App\Models\Commission::pendingReview()->count();
+    $inboxDocRequests = \App\Models\DocumentRequest::awaitingReview()->count();
+@endphp
+@if($inboxSuggested + $inboxCommissions + $inboxDocRequests > 0)
+<div class="card" style="margin-bottom:24px;padding:16px 20px;">
+    <div style="font-weight:700;margin-bottom:10px;">Wartet auf Ihre Entscheidung</div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:14px;">
+        @if($inboxSuggested > 0)<a href="{{ route('admin.email_inbox') }}">📧 {{ $inboxSuggested }} E-Mail-Zuordnung(en) bestätigen</a>@endif
+        @if($inboxCommissions > 0)<a href="{{ route('admin.commissions') }}">💶 {{ $inboxCommissions }} Provisionsgutschrift(en) buchen</a>@endif
+        @if($inboxDocRequests > 0)<a href="{{ route('admin.document_requests') }}">📄 {{ $inboxDocRequests }} Dokument-Upload(s) prüfen</a>@endif
+    </div>
+</div>
+@endif
+
 <div class="grid-2">
 <div class="card">
     <div class="card-header">

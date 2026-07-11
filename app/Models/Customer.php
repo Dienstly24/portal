@@ -5,8 +5,10 @@ use Illuminate\Support\Str;
 class Customer extends Model {
     protected $keyType = 'string';
     public $incrementing = false;
+    public const SOURCES = ['manual', 'website', 'email_import', 'fonds_finanz', 'import', 'lexoffice'];
+
     protected $fillable = [
-        'user_id','customer_number','birth_date','address','address2',
+        'user_id','customer_number','source','birth_date','address','address2',
         'iban','iban2','marital_status','phone','mobile','preferred_lang',
         'company_name','company_type','customer_type','email2',
         'nationality','occupation','last_contact','gender','account_holder',
@@ -92,4 +94,5 @@ class Customer extends Model {
     public function notes() { return $this->hasMany(CustomerNote::class)->latest(); }
     public function timeline() { return $this->hasMany(CustomerTimeline::class)->latest(); }
     public function appointments() { return $this->hasMany(Appointment::class); }
+    public function externalReferences() { return $this->morphMany(ExternalReference::class, 'referenceable'); }
 }

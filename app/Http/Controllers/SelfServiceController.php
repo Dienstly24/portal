@@ -27,7 +27,7 @@ class SelfServiceController extends Controller
     {
         return Customer::firstOrCreate(
             ['user_id' => auth()->id()],
-            ['customer_number' => 'C-' . strtoupper(Str::random(8))]
+            ['customer_number' => app(\App\Services\CustomerNumberGenerator::class)->generate()]
         );
     }
 

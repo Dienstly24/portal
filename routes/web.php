@@ -30,6 +30,7 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     Route::post('/tickets/{id}/reply', [PortalController::class, 'ticketsReply'])->name('tickets.reply');
     Route::get('/attachments/{id}/download', [PortalController::class, 'downloadAttachment'])->name('attachment.download');
     Route::get('/documents', [PortalController::class, 'documents'])->name('documents');
+    Route::post('/document-requests/{id}/upload', [PortalController::class, 'documentRequestUpload'])->name('document_requests.upload');
     Route::get('/profile', [PortalController::class, 'profile'])->name('profile');
 
     // Self-Service (jede Aktion erzeugt nur einen Change Request)
@@ -108,6 +109,25 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/documents/{id}/download', [AdminController::class, 'documentDownload'])->name('documents.download');
     Route::post('/documents/{id}/replace', [AdminController::class, 'documentReplace'])->name('documents.replace');
 
+    // E-Mail-Posteingang: Zuordnungen bestätigen/zuweisen (Priorität 8).
+    // DSGVO/Zugriff (Plan 3.3): Mailinhalte unbekannter Absender sind
+    // sensibel - nur admin/manager/support, nicht jeder Mitarbeiter.
+    Route::middleware('role:admin,manager,support')->group(function () {
+        Route::get('/email-inbox', [\App\Http\Controllers\EmailInboxController::class, 'index'])->name('email_inbox');
+        Route::post('/email-inbox/{id}/confirm', [\App\Http\Controllers\EmailInboxController::class, 'confirm'])->name('email_inbox.confirm');
+        Route::post('/email-inbox/{id}/reject', [\App\Http\Controllers\EmailInboxController::class, 'reject'])->name('email_inbox.reject');
+        Route::post('/email-inbox/{id}/assign', [\App\Http\Controllers\EmailInboxController::class, 'assign'])->name('email_inbox.assign');
+        // KI-Vorschläge (Phase 3): Übernahme/Verwerfen ist die Freigabestufe
+        Route::post('/email-inbox/ai/{decisionId}/accept', [\App\Http\Controllers\EmailInboxController::class, 'aiAccept'])->name('email_inbox.ai_accept');
+        Route::post('/email-inbox/ai/{decisionId}/reject', [\App\Http\Controllers\EmailInboxController::class, 'aiReject'])->name('email_inbox.ai_reject');
+    });
+
+    // Dokumentenanfragen an Kunden (Priorität 7)
+    Route::get('/document-requests', [\App\Http\Controllers\DocumentRequestController::class, 'index'])->name('document_requests');
+    Route::post('/customers/{customerId}/document-requests', [\App\Http\Controllers\DocumentRequestController::class, 'store'])->name('document_requests.store');
+    Route::post('/document-requests/{id}/approve', [\App\Http\Controllers\DocumentRequestController::class, 'approve'])->name('document_requests.approve');
+    Route::post('/document-requests/{id}/reject', [\App\Http\Controllers\DocumentRequestController::class, 'reject'])->name('document_requests.reject');
+
     // Eigenständiger interner Mitarbeiter-Chat (Spec Teil 8)
     Route::get('/chat', [\App\Http\Controllers\InternalChatController::class, 'index'])->name('chat.index');
     Route::post('/chat', [\App\Http\Controllers\InternalChatController::class, 'store'])->name('chat.store');
@@ -166,6 +186,17 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // Aktivitätslog
     Route::get('/activity-log', [EmployeeController::class, 'activityLog'])->name('activity_log')->middleware('role:admin,manager');
 
+    // Partner & Provisionen (Priorität 6)
+    Route::middleware('role:admin,manager')->group(function () {
+        Route::get('/partners', [\App\Http\Controllers\PartnerController::class, 'index'])->name('partners');
+        Route::post('/partners', [\App\Http\Controllers\PartnerController::class, 'store'])->name('partners.store');
+        Route::get('/partners/{id}', [\App\Http\Controllers\PartnerController::class, 'show'])->name('partners.show');
+        Route::put('/partners/{id}', [\App\Http\Controllers\PartnerController::class, 'update'])->name('partners.update');
+        Route::get('/commissions', [\App\Http\Controllers\CommissionController::class, 'index'])->name('commissions');
+        Route::post('/commissions/{id}/book', [\App\Http\Controllers\CommissionController::class, 'book'])->name('commissions.book');
+        Route::post('/commissions/{id}/reject', [\App\Http\Controllers\CommissionController::class, 'reject'])->name('commissions.reject');
+    });
+
     // lexoffice
     Route::prefix('lexoffice')->name('lexoffice.')->middleware('role:admin,manager')->group(function () {
         Route::get('/contacts', [LexofficeController::class, 'contacts'])->name('contacts');
@@ -178,6 +209,21 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // Einstellungen & Termine
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings')->middleware('role:admin');
     Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update')->middleware('role:admin');
+
+    // E-Mail-Postfächer (Priorität 1 der KI-Systemerweiterung) - nur admin, Zugangsdaten sind sensibel
+    Route::prefix('email-accounts')->name('email_accounts.')->middleware('role:admin')->group(function () {
+        Route::get('/', [\App\Http\Controllers\EmailAccountController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\EmailAccountController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\EmailAccountController::class, 'store'])->name('store');
+        Route::get('/{id}/edit', [\App\Http\Controllers\EmailAccountController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [\App\Http\Controllers\EmailAccountController::class, 'update'])->name('update');
+        Route::delete('/{id}', [\App\Http\Controllers\EmailAccountController::class, 'destroy'])->name('destroy');
+        Route::put('/{id}/toggle', [\App\Http\Controllers\EmailAccountController::class, 'toggleActive'])->name('toggle');
+        Route::post('/{id}/test', [\App\Http\Controllers\EmailAccountController::class, 'testConnection'])->name('test');
+        // OAuth-Anbindung Gmail/M365 (Phase 2)
+        Route::get('/{id}/oauth', [\App\Http\Controllers\EmailAccountController::class, 'oauthRedirect'])->name('oauth');
+        Route::get('/oauth/callback', [\App\Http\Controllers\EmailAccountController::class, 'oauthCallback'])->name('oauth_callback');
+    });
     Route::get('/appointments', [AppointmentController::class, 'index'])->name('appointments');
     Route::post('/appointments', [AppointmentController::class, 'store'])->name('appointments.store');
     Route::put('/appointments/{id}', [AppointmentController::class, 'update'])->name('appointments.update');

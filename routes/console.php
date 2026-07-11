@@ -12,6 +12,15 @@ if (!function_exists('dienstly_mailable')) {
     }
 }
 
+// Alle 2 Minuten — E-Mail-Postfächer abrufen (Architekturplan Abschnitt 3.1)
+Schedule::command('mailboxes:sync')->everyTwoMinutes()->withoutOverlapping();
+
+// 03:30 — DSGVO: nicht zugeordnete E-Mails nach Aufbewahrungsfrist löschen (Abschnitt 3.3)
+Schedule::command('emails:prune-unmatched')->dailyAt('03:30');
+
+// 08:15 — Fristen-Watchdog Dokumentenanfragen (Phase 3): Kunden-Erinnerung + Überfälligkeits-Hinweis
+Schedule::command('document-requests:remind')->dailyAt('08:15');
+
 // 07:30 — Aufgabe: Kind wird in 4 Monaten 15
 Schedule::call(function () {
     $target = now()->addMonths(4)->subYears(15)->toDateString();
