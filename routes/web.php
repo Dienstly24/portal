@@ -30,6 +30,7 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     Route::post('/tickets/{id}/reply', [PortalController::class, 'ticketsReply'])->name('tickets.reply');
     Route::get('/attachments/{id}/download', [PortalController::class, 'downloadAttachment'])->name('attachment.download');
     Route::get('/documents', [PortalController::class, 'documents'])->name('documents');
+    Route::post('/document-requests/{id}/upload', [PortalController::class, 'documentRequestUpload'])->name('document_requests.upload');
     Route::get('/profile', [PortalController::class, 'profile'])->name('profile');
 
     // Self-Service (jede Aktion erzeugt nur einen Change Request)
@@ -107,6 +108,12 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/change-requests/{id}/document', [\App\Http\Controllers\ChangeRequestReviewController::class, 'document'])->name('change_requests.document');
     Route::get('/documents/{id}/download', [AdminController::class, 'documentDownload'])->name('documents.download');
     Route::post('/documents/{id}/replace', [AdminController::class, 'documentReplace'])->name('documents.replace');
+
+    // Dokumentenanfragen an Kunden (Priorität 7)
+    Route::get('/document-requests', [\App\Http\Controllers\DocumentRequestController::class, 'index'])->name('document_requests');
+    Route::post('/customers/{customerId}/document-requests', [\App\Http\Controllers\DocumentRequestController::class, 'store'])->name('document_requests.store');
+    Route::post('/document-requests/{id}/approve', [\App\Http\Controllers\DocumentRequestController::class, 'approve'])->name('document_requests.approve');
+    Route::post('/document-requests/{id}/reject', [\App\Http\Controllers\DocumentRequestController::class, 'reject'])->name('document_requests.reject');
 
     // Eigenständiger interner Mitarbeiter-Chat (Spec Teil 8)
     Route::get('/chat', [\App\Http\Controllers\InternalChatController::class, 'index'])->name('chat.index');

@@ -133,8 +133,73 @@ class PortalController extends Controller
     public function documents() {
         $customer = $this->getCustomer();
         return view('portal.documents', [
-            'documents' => \App\Models\Document::where('customer_id', $customer->id)->customerVisible()->latest()->get()
+            'documents' => \App\Models\Document::where('customer_id', $customer->id)->customerVisible()->latest()->get(),
+            // Offene/abgelehnte Anfragen zuerst, dann in Prüfung, dann erledigt.
+            'documentRequests' => \App\Models\DocumentRequest::with('contract')
+                ->where('customer_id', $customer->id)
+                ->orderByRaw("case status when 'rejected' then 0 when 'open' then 1 when 'uploaded' then 2 else 3 end")
+                ->latest()->get(),
         ]);
+    }
+
+    /**
+     * Upload zu einer konkreten Dokumentenanfrage (Architekturplan
+     * Abschnitt 14): Datei landet als normales Document (privater
+     * Storage), die Anfrage wechselt auf 'uploaded' und die zuständigen
+     * Mitarbeiter werden über die interne Glocke benachrichtigt.
+     */
+    public function documentRequestUpload(Request $request, $id) {
+        $customer = $this->getCustomer();
+        $documentRequest = \App\Models\DocumentRequest::where('customer_id', $customer->id)->findOrFail($id);
+        abort_unless($documentRequest->acceptsUpload(), 422);
+
+        $request->validate([
+            'document' => 'required|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:10240',
+        ]);
+
+        $file = $request->file('document');
+        $path = $file->store("customers/{$customer->id}/documents", 'local');
+
+        $doc = \App\Models\Document::create([
+            'customer_id' => $customer->id,
+            'category' => 'other',
+            'file_name' => $file->getClientOriginalName(),
+            'file_path' => $path,
+            'disk' => 'local',
+            'visibility' => 'customer',
+            'uploaded_by' => auth()->id(),
+            'file_size' => $file->getSize(),
+        ]);
+
+        $documentRequest->update([
+            'document_id' => $doc->id,
+            'status' => 'uploaded',
+            'uploaded_at' => now(),
+        ]);
+
+        \App\Models\ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'document_request_uploaded',
+            'entity_type' => 'document_request',
+            'entity_id' => $documentRequest->id,
+            'meta' => json_encode(['file' => $doc->file_name], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        // Zuständige Betreuer benachrichtigen; ohne Zuweisung admins/manager.
+        $recipients = $customer->betreuer()->get();
+        if ($recipients->isEmpty()) {
+            $recipients = \App\Models\User::whereIn('role', ['admin', 'manager'])->where('is_active', true)->get();
+        }
+        foreach ($recipients as $recipient) {
+            \App\Models\InternalNotification::create([
+                'user_id' => $recipient->id,
+                'title' => 'Dokument hochgeladen: ' . $documentRequest->title,
+                'body' => ($customer->user?->name ?? 'Kunde') . ' hat ein angefordertes Dokument hochgeladen.',
+                'link' => route('admin.document_requests'),
+            ]);
+        }
+
+        return back()->with('success', 'Vielen Dank! Ihr Dokument wurde übermittelt und wird nun geprüft.');
     }
 
     public function profile() {
