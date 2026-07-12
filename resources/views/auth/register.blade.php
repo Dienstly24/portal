@@ -51,6 +51,7 @@ label{display:block;font-size:13.5px;margin-bottom:7px;color:#dfe9e4;}
 .foot a:hover{color:#fff;text-decoration:underline;}
 @media(max-width:560px){.grid2{grid-template-columns:1fr;}.topbar{padding:18px 18px 0;}.topbar img{height:32px;}.card{padding:26px 22px;}}
 </style>
+    @include('partials.favicon')
 </head>
 <body>
 <div class="bg"><div class="orb orb-a"></div><div class="orb orb-b"></div></div>

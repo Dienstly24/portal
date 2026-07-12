@@ -27,6 +27,7 @@ a{color:#185FA5;}
 .foot-links a.active{color:#1a3c34;font-weight:700;}
 .foot-copy{text-align:center;color:#9aa39f;font-size:12px;margin-top:8px;}
 </style>
+    @include('partials.favicon')
 </head>
 <body>
 <div class="top">

@@ -35,6 +35,7 @@ label{display:block;font-size:13.5px;margin-bottom:7px;color:#dfe9e4;}
 .foot a:hover{color:#fff;text-decoration:underline;}
 .foot .sep{opacity:.35;}
 </style>
+    @include('partials.favicon')
 </head>
 <body>
 <div class="bg"></div>
