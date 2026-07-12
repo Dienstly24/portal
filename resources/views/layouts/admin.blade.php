@@ -76,6 +76,12 @@ table tr:hover td{background:#FAFAF8;}
 .badge-closed{background:#F1EFE8;color:#5F5E5A;}.badge-closed::before{background:#5F5E5A;}
 .badge-approved{background:#E4F0E7;color:#3B7A57;}.badge-approved::before{background:#3B7A57;}
 .badge-rejected{background:#F9E3E3;color:#A32D2D;}.badge-rejected::before{background:#A32D2D;}
+.badge-waiting{background:#EEE9F7;color:#6B4FA3;}.badge-waiting::before{background:#6B4FA3;}
+.tab-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
+.tab-row .tab{padding:7px 14px;border-radius:999px;border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--ink-soft);text-decoration:none;background:#fff;transition:.15s;}
+.tab-row .tab:hover{border-color:var(--ink-soft);color:var(--ink);}
+.tab-row .tab.active{background:var(--petrol);border-color:var(--petrol);color:#fff;}
+.tab-row .tab .tab-count{font-weight:700;margin-left:4px;}
 .btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13.5px;font-weight:600;text-decoration:none;transition:.15s;}
 .btn-primary{background:var(--petrol);color:#fff;}.btn-primary:hover{background:var(--petrol-dark);}
 .btn-gold{background:var(--gold);color:#ffffff;}.btn-gold:hover{opacity:.9;}

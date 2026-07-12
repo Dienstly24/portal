@@ -17,6 +17,9 @@ Schedule::command('mailboxes:sync')->everyTwoMinutes()->withoutOverlapping();
 // 03:30 — DSGVO: nicht zugeordnete E-Mails nach Aufbewahrungsfrist löschen (Abschnitt 3.3)
 Schedule::command('emails:prune-unmatched')->dailyAt('03:30');
 
+// 04:00 — Geloeste Tickets ohne Kundenreaktion nach 7 Tagen automatisch schliessen
+Schedule::command('tickets:auto-close')->dailyAt('04:00');
+
 // 08:15 — Fristen-Watchdog Dokumentenanfragen (Phase 3): Kunden-Erinnerung + Überfälligkeits-Hinweis
 Schedule::command('document-requests:remind')->dailyAt('08:15');
 
