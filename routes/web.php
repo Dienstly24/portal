@@ -35,6 +35,8 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     Route::get('/notifications', [PortalController::class, 'notifications'])->name('notifications');
     Route::post('/notifications/{id}/read', [PortalController::class, 'notificationRead'])->name('notifications.read');
     Route::get('/banner/{id}/interesse', [PortalController::class, 'bannerInterest'])->name('banner.interest');
+    Route::get('/banner/{id}/klick', [PortalController::class, 'bannerClick'])->name('banner.click');
+    Route::post('/banner/{id}/schliessen', [PortalController::class, 'bannerDismiss'])->name('banner.dismiss');
     Route::get('/profile', [PortalController::class, 'profile'])->name('profile');
     Route::get('/datenschutz', [PortalController::class, 'datenschutz'])->name('datenschutz');
 
@@ -140,11 +142,17 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/change-requests/{id}/document', [\App\Http\Controllers\ChangeRequestReviewController::class, 'document'])->name('change_requests.document');
     Route::get('/documents/{id}/download', [AdminController::class, 'documentDownload'])->name('documents.download');
     Route::post('/documents/{id}/replace', [AdminController::class, 'documentReplace'])->name('documents.replace');
-    Route::get('/banners', [\App\Http\Controllers\BannerController::class, 'index'])->name('banners');
-    Route::post('/banners', [\App\Http\Controllers\BannerController::class, 'store'])->name('banners.store');
-    Route::post('/banners/{banner}', [\App\Http\Controllers\BannerController::class, 'update'])->name('banners.update');
-    Route::post('/banners/{banner}/toggle', [\App\Http\Controllers\BannerController::class, 'toggle'])->name('banners.toggle');
-    Route::post('/banners/{banner}/delete', [\App\Http\Controllers\BannerController::class, 'destroy'])->name('banners.delete');
+    // Banner: Marketing-Verwaltung nur für Admin/Manager (Sicherheits-Fix:
+    // war zuvor ohne Rollen-Einschränkung für alle Staff-Rollen erreichbar).
+    Route::middleware('role:admin,manager')->group(function () {
+        Route::get('/banners', [\App\Http\Controllers\BannerController::class, 'index'])->name('banners');
+        Route::post('/banners', [\App\Http\Controllers\BannerController::class, 'store'])->name('banners.store');
+        Route::post('/banners/{banner}', [\App\Http\Controllers\BannerController::class, 'update'])->name('banners.update');
+        Route::post('/banners/{banner}/toggle', [\App\Http\Controllers\BannerController::class, 'toggle'])->name('banners.toggle');
+        Route::post('/banners/{banner}/move', [\App\Http\Controllers\BannerController::class, 'move'])->name('banners.move');
+        Route::post('/banners/{banner}/reset-stats', [\App\Http\Controllers\BannerController::class, 'resetStats'])->name('banners.reset_stats');
+        Route::post('/banners/{banner}/delete', [\App\Http\Controllers\BannerController::class, 'destroy'])->name('banners.delete');
+    });
 
     // E-Mail-Posteingang: Zuordnungen bestätigen/zuweisen (Priorität 8).
     // DSGVO/Zugriff (Plan 3.3): Mailinhalte unbekannter Absender sind

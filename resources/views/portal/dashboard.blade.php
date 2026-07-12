@@ -1,17 +1,26 @@
 @extends('layouts.portal')
 @section('content')
-{{-- Werbebanner-Carousel (Punkt 3/4) --}}
+{{-- Werbebanner-Carousel: volle Breite, responsive, KEIN Beschnitt
+     (Bild behält sein Seitenverhältnis – beliebige Formate 1080×1080,
+     1200×628 usw. werden vollständig angezeigt). --}}
 @if(isset($banners) && $banners->isNotEmpty())
-<div id="banner-carousel" style="position:relative;border-radius:14px;overflow:hidden;margin-bottom:24px;border:1px solid var(--line);">
+<div id="banner-carousel" style="position:relative;border-radius:14px;overflow:hidden;margin-bottom:24px;border:1px solid var(--line);background:#0e1f1b;">
     @foreach($banners as $i => $b)
-    <a href="{{ route('portal.banner.interest', $b->id) }}" class="banner-slide" data-slide="{{ $i }}" style="display:{{ $i === 0 ? 'block' : 'none' }};position:relative;text-decoration:none;">
-        @if($b->media_type === 'video')
-        <video src="{{ asset('storage/' . $b->media_path) }}" style="width:100%;max-height:260px;object-fit:cover;display:block;" autoplay muted loop playsinline></video>
-        @else
-        <img src="{{ asset('storage/' . $b->media_path) }}" style="width:100%;max-height:260px;object-fit:cover;display:block;" alt="{{ $b->title }}">
+    @php $clickUrl = $b->link_url ? route('portal.banner.click', $b->id) : route('portal.banner.interest', $b->id); @endphp
+    <div class="banner-slide" data-slide="{{ $i }}" style="display:{{ $i === 0 ? 'block' : 'none' }};position:relative;">
+        <a href="{{ $clickUrl }}" @if($b->link_url && $b->link_target === 'blank') target="_blank" rel="noopener" @endif style="display:block;text-decoration:none;">
+            @if($b->media_type === 'video')
+            <video src="{{ asset('storage/' . $b->media_path) }}" style="width:100%;height:auto;max-height:70vh;display:block;" autoplay muted loop playsinline></video>
+            @else
+            <img src="{{ asset('storage/' . $b->media_path) }}" style="width:100%;height:auto;max-height:70vh;object-fit:contain;display:block;" alt="{{ $b->title }}">
+            @endif
+            <span style="position:absolute;left:0;right:0;bottom:0;padding:14px 18px;background:linear-gradient(transparent,rgba(0,0,0,.65));color:#fff;font-weight:700;font-size:15px;">{{ $b->title }} <span style="font-weight:400;font-size:12.5px;">– Mehr erfahren →</span></span>
+        </a>
+        @if($b->dismiss_days)
+        <button type="button" class="banner-close" data-banner="{{ $b->id }}" title="Ausblenden"
+            style="position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:50%;border:none;background:rgba(0,0,0,.45);color:#fff;font-size:15px;cursor:pointer;line-height:1;">✕</button>
         @endif
-        <span style="position:absolute;left:0;right:0;bottom:0;padding:14px 18px;background:linear-gradient(transparent,rgba(0,0,0,.65));color:#fff;font-weight:700;font-size:15px;">{{ $b->title }} <span style="font-weight:400;font-size:12.5px;">– Jetzt anfragen →</span></span>
-    </a>
+    </div>
     @endforeach
     @if($banners->count() > 1)
     <div style="position:absolute;bottom:10px;right:14px;display:flex;gap:6px;">
@@ -19,17 +28,32 @@
         <span class="banner-dot" data-dot="{{ $i }}" style="width:9px;height:9px;border-radius:50%;background:{{ $i === 0 ? '#fff' : 'rgba(255,255,255,.45)' }};cursor:pointer;"></span>
         @endforeach
     </div>
+    @endif
     <script>
     (function(){
         const slides=document.querySelectorAll('#banner-carousel .banner-slide');
         const dots=document.querySelectorAll('#banner-carousel .banner-dot');
         let cur=0;
-        function show(n){slides[cur].style.display='none';dots[cur].style.background='rgba(255,255,255,.45)';cur=n%slides.length;slides[cur].style.display='block';dots[cur].style.background='#fff';}
+        function show(n){
+            if(slides.length<2)return;
+            slides[cur].style.display='none';if(dots[cur])dots[cur].style.background='rgba(255,255,255,.45)';
+            cur=((n%slides.length)+slides.length)%slides.length;
+            slides[cur].style.display='block';if(dots[cur])dots[cur].style.background='#fff';
+        }
         dots.forEach(d=>d.addEventListener('click',e=>{e.preventDefault();show(parseInt(d.dataset.dot));}));
-        setInterval(()=>show(cur+1),6000);
+        if(slides.length>1)setInterval(()=>show(cur+1),6000);
+        // Schließen: Banner sofort ausblenden und serverseitig für die
+        // konfigurierte Dauer merken.
+        document.querySelectorAll('#banner-carousel .banner-close').forEach(btn=>{
+            btn.addEventListener('click',function(e){
+                e.preventDefault();e.stopPropagation();
+                const slide=btn.closest('.banner-slide');
+                fetch('/portal/banner/'+btn.dataset.banner+'/schliessen',{method:'POST',headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}','Accept':'application/json'}}).catch(()=>{});
+                if(slide){slide.remove();const rest=document.querySelectorAll('#banner-carousel .banner-slide');if(rest.length===0){document.getElementById('banner-carousel').remove();}else{rest[0].style.display='block';}}
+            });
+        });
     })();
     </script>
-    @endif
 </div>
 @endif
 
