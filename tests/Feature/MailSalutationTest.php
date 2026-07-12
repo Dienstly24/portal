@@ -57,11 +57,12 @@ class MailSalutationTest extends TestCase
 
     public function test_welcome_mail_uses_central_greeting_partial(): void
     {
-        // Neue Mailable-Signatur (Customer-Objekt + mode); Anrede aus
-        // dem Geschlecht (main-Refactor) über das zentrale _greeting-Partial.
+        // Redesign der Willkommens-Mail: persönliche Anrede "Hallo Frau X"
+        // (Geschäftsvorgabe) statt der förmlichen Briefanrede; das zentrale
+        // _greeting-Partial bleibt für alle anderen Mails maßgeblich.
         $customer = $this->customerWithGender('female', 'Anna Beispiel');
         $html = (new CustomerWelcomeMail($customer, 'manual', 'pw'))->render();
-        $this->assertStringContainsString('Sehr geehrte Frau Beispiel', $html);
-        $this->assertStringNotContainsString('Hallo <strong>', $html);
+        $this->assertStringContainsString('Hallo Frau Beispiel', $html);
+        $this->assertStringNotContainsString('Sehr geehrte Damen und Herren', $html);
     }
 }

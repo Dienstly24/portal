@@ -27,6 +27,9 @@ class CustomerWelcomeMail extends Mailable
     public string $customerName;
     public string $lang;
 
+    /** Magischer Erst-Login: signierter Link, 90 Tage gültig (nur Kunden). */
+    public ?string $magicLoginUrl = null;
+
     public function __construct(
         public Customer $customer,
         public string $mode,
@@ -36,13 +39,19 @@ class CustomerWelcomeMail extends Mailable
         $this->loginEmail = (string) $customer->user?->email;
         $this->customerName = (string) ($customer->user?->name ?? '');
         $this->lang = $customer->preferred_lang ?? 'de';
+
+        if ($customer->user) {
+            $this->magicLoginUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+                'magic.login', now()->addDays(90), ['user' => $customer->user->id]
+            );
+        }
     }
 
     public function envelope(): Envelope
     {
         return new Envelope(subject: $this->lang === 'ar'
-            ? 'أهلاً بك في Dienstly24 – بيانات الدخول إلى بوابة العملاء'
-            : 'Willkommen bei Dienstly24 – Ihr Zugang zum Kundenportal');
+            ? '🎉 أهلاً بك في Dienstly24 – بوابتك جاهزة الآن'
+            : '🎉 Willkommen bei Dienstly24 – Ihr Kundenportal ist bereit');
     }
 
     public function content(): Content
