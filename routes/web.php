@@ -39,6 +39,14 @@ Route::get('/magic-login/{user}', \App\Http\Controllers\Auth\MagicLoginControlle
     ->middleware(['signed', 'throttle:10,1'])
     ->name('magic.login');
 
+// Hilfe-/Kontaktformular: oeffentlich; der Button in der Willkommens-Mail
+// bringt ein verschluesseltes Kunden-Token mit -> Formular ist vorbefuellt
+// und die Anfrage wird automatisch als Ticket der Kundenakte zugeordnet.
+Route::get('/hilfe', [\App\Http\Controllers\SupportFormController::class, 'show'])->name('support.form');
+Route::post('/hilfe', [\App\Http\Controllers\SupportFormController::class, 'submit'])
+    ->middleware('throttle:8,1')
+    ->name('support.submit');
+
 /*
 |--------------------------------------------------------------------------
 | Kundenportal (portal.dienstly24.de)
