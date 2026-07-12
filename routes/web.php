@@ -42,6 +42,7 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     Route::get('/family', [\App\Http\Controllers\SelfServiceController::class, 'family'])->name('family');
     Route::post('/family', [\App\Http\Controllers\SelfServiceController::class, 'familyStore'])->name('family.store');
     Route::post('/family/{id}/change', [\App\Http\Controllers\SelfServiceController::class, 'familyChange'])->name('family.change');
+    Route::post('/family/{id}/delete', [\App\Http\Controllers\SelfServiceController::class, 'familyDelete'])->name('family.delete');
     Route::get('/addresses', [\App\Http\Controllers\SelfServiceController::class, 'addresses'])->name('addresses');
     Route::post('/addresses', [\App\Http\Controllers\SelfServiceController::class, 'addressStore'])->name('addresses.store');
     Route::post('/addresses/{id}/change', [\App\Http\Controllers\SelfServiceController::class, 'addressChange'])->name('addresses.change');

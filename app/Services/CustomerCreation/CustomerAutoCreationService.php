@@ -81,9 +81,15 @@ class CustomerAutoCreationService
                 'birth_place'           => $data['birth_place'] ?? null,
             ], fn ($v) => $v !== null && $v !== '');
 
+            // Importierte Kunden behalten ihre Quellnummer mit Jahrespräfix
+            // ("25" + Originalnummer); Neuanlagen bekommen JJ+laufende Nummer.
+            $number = !empty($data['import_number'])
+                ? $this->numberGenerator->generateForImport((string) $data['import_number'])
+                : $this->numberGenerator->generate();
+
             $customer = Customer::create(array_merge([
                 'user_id'         => $user->id,
-                'customer_number' => $this->numberGenerator->generate(),
+                'customer_number' => $number,
                 'source'          => $source,
             ], $attributes));
 

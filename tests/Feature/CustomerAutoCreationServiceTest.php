@@ -28,7 +28,7 @@ class CustomerAutoCreationServiceTest extends TestCase
         ], 'email_import');
 
         $this->assertNotNull($customer->id);
-        $this->assertStringStartsWith('C-', $customer->customer_number);
+        $this->assertMatchesRegularExpression('/^\d{2}\d{5}$/', $customer->customer_number);
         $this->assertSame('email_import', $customer->source);
         $this->assertSame('neu@example.com', $customer->user->email);
         $this->assertSame('customer', $customer->user->role);
@@ -97,11 +97,20 @@ class CustomerAutoCreationServiceTest extends TestCase
     public function test_number_generator_produces_unique_numbers(): void
     {
         $generator = app(\App\Services\CustomerNumberGenerator::class);
-        $numbers = array_map(fn () => $generator->generate(), range(1, 20));
+
+        // Jahresbasierte Sequenz: jede vergebene (persistierte) Nummer
+        // erhöht den Zähler; Format JJ + 5-stellig (z. B. 2600001).
+        $numbers = [];
+        foreach (range(1, 20) as $i) {
+            $n = $generator->generate();
+            $numbers[] = $n;
+            $u = \App\Models\User::factory()->create(['role' => 'customer']);
+            \App\Models\Customer::create(['user_id' => $u->id, 'customer_number' => $n]);
+        }
 
         $this->assertCount(20, array_unique($numbers));
         foreach ($numbers as $n) {
-            $this->assertMatchesRegularExpression('/^C-[A-Z0-9]{8}$/', $n);
+            $this->assertMatchesRegularExpression('/^\d{2}\d{5}$/', $n);
         }
     }
 }

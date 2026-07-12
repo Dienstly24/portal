@@ -100,11 +100,14 @@ class SelfServiceTest extends TestCase
             ->assertRedirect(route('portal.dashboard'));
 
         $this->assertDatabaseHas('contracts', ['id' => $contract->id]);
+        // Ausnahme: portal.family.delete ist KEINE direkte Löschung, sondern
+        // erzeugt nur einen Change Request (Löschung erst nach Admin-Freigabe).
         $portalRoutes = collect(app('router')->getRoutes()->getRoutesByName())
-            ->keys()->filter(fn($n) => str_starts_with($n, 'portal.'));
+            ->keys()->filter(fn($n) => str_starts_with($n, 'portal.'))
+            ->reject(fn($n) => $n === 'portal.family.delete');
         $this->assertTrue(
             $portalRoutes->filter(fn($n) => str_contains($n, 'delete') || str_contains($n, 'destroy'))->isEmpty(),
-            'Das Portal darf keine Lösch-Routen anbieten.'
+            'Das Portal darf keine direkten Lösch-Routen anbieten.'
         );
     }
 

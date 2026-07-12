@@ -79,8 +79,8 @@ class LexofficeImportTest extends TestCase
         $this->assertSame(1, Customer::count());
         $customer = Customer::first();
 
-        // Interne Nummer (C-...), NICHT die Lexoffice-Nummer
-        $this->assertStringStartsWith('C-', $customer->customer_number);
+        // Import-Nummer: Jahrespräfix "25" + Original-Lexoffice-Nummer
+        $this->assertSame('2510001', $customer->customer_number);
         $this->assertSame('lexoffice', $customer->source);
         $this->assertSame('1985-02-15', $customer->birth_date);
         // IBAN verschlüsselt gespeichert, aber lesbar

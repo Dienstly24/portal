@@ -65,6 +65,8 @@ class LexofficeContactMapper
         $lexNumber = $c['roles']['customer']['number'] ?? null;
         if ($lexNumber) {
             $refs[] = ['type' => 'lexoffice_number', 'value' => $lexNumber, 'source' => 'lexoffice'];
+            // Quellnummer bleibt Teil der internen Nummer: "25" + Original.
+            $data['import_number'] = (string) $lexNumber;
         }
         if (!empty($c['id'])) {
             $refs[] = ['type' => 'lexoffice_id', 'value' => $c['id'], 'source' => 'lexoffice'];

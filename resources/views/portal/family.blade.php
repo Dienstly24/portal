@@ -42,6 +42,13 @@ $rejected = $requests->where('status','rejected');
         </div>
         @php $familyPayload = $m->only(['id','name','relation','birth_date']); @endphp
         <button onclick='openFamilyChange(@json($familyPayload))' class="btn btn-ghost" style="margin-top:12px;font-size:12.5px;padding:7px 14px;">✏️ Änderung beantragen</button>
+        @unless(in_array($m->id, $pendingChangeIds))
+        <form method="POST" action="{{ route('portal.family.delete', $m->id) }}" style="margin-top:8px;"
+            onsubmit="return confirm('Löschung von {{ addslashes($m->name) }} beantragen?\n\nDie Löschung wird erst nach Prüfung durch unser Team wirksam.');">
+            @csrf
+            <button type="submit" class="btn btn-ghost" style="font-size:12.5px;padding:7px 14px;color:#A32D2D;border-color:#F0A0A0;">🗑 Löschung beantragen</button>
+        </form>
+        @endunless
     </div>
     @endforeach
 
