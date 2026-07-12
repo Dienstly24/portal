@@ -30,6 +30,9 @@ class CustomerWelcomeMail extends Mailable
     /** Magischer Erst-Login: signierter Link, 90 Tage gültig (nur Kunden). */
     public ?string $magicLoginUrl = null;
 
+    /** Hilfe-Button: vorbefülltes Kontaktformular, legt automatisch ein Ticket an. */
+    public string $supportUrl;
+
     public function __construct(
         public Customer $customer,
         public string $mode,
@@ -45,6 +48,8 @@ class CustomerWelcomeMail extends Mailable
                 'magic.login', now()->addDays(90), ['user' => $customer->user->id]
             );
         }
+
+        $this->supportUrl = route('support.form', ['t' => \App\Http\Controllers\SupportFormController::tokenFor($customer)]);
     }
 
     public function envelope(): Envelope
