@@ -5,45 +5,49 @@
         <div class="page-title">Tickets</div>
         <div class="page-sub">Anfragen registrierter Kunden aus dem Kundenportal.</div>
     </div>
+    @if(in_array(auth()->user()->role, ['admin','manager']))
+    <a href="{{ route('admin.tickets.stats') }}" class="btn btn-ghost">📊 Statistik</a>
+    @endif
 </div>
 
 @php
     $s = $stats['statuses'];
     $activeCount = ($s['open'] ?? 0) + ($s['in_progress'] ?? 0) + ($s['waiting'] ?? 0);
 @endphp
+{{-- Kennzahlen-Karten sind klickbar und filtern die Liste direkt --}}
 <div class="metrics-grid">
-    <div class="metric-card">
+    <a href="{{ route('admin.tickets', ['status' => 'open']) }}" class="metric-card metric-card-link">
         <div class="metric-icon icon-blue">🎫</div>
         <div class="metric-label">Offene Tickets</div>
         <div class="metric-value">{{ $s['open'] ?? 0 }}</div>
-        <div class="metric-sub">Noch nicht in Bearbeitung</div>
-    </div>
-    <div class="metric-card">
+        <div class="metric-sub">Noch nicht in Bearbeitung · ansehen →</div>
+    </a>
+    <a href="{{ route('admin.tickets', ['status' => 'in_progress']) }}" class="metric-card metric-card-link">
         <div class="metric-icon icon-amber">⚙️</div>
         <div class="metric-label">In Bearbeitung</div>
         <div class="metric-value">{{ $s['in_progress'] ?? 0 }}</div>
-        <div class="metric-sub">Wartet auf Kunde: {{ $s['waiting'] ?? 0 }}</div>
-    </div>
-    <div class="metric-card">
+        <div class="metric-sub">Wartet auf Kunde: {{ $s['waiting'] ?? 0 }} · ansehen →</div>
+    </a>
+    <a href="{{ route('admin.tickets', ['overdue' => 1]) }}" class="metric-card metric-card-link">
         <div class="metric-icon icon-red">⏰</div>
         <div class="metric-label">Überfällig</div>
         <div class="metric-value">{{ $stats['overdue'] }}</div>
-        <div class="metric-sub">Reaktionszeit überschritten</div>
-    </div>
-    <div class="metric-card">
+        <div class="metric-sub">Reaktionszeit überschritten · ansehen →</div>
+    </a>
+    <a href="{{ route('admin.tickets', ['assigned' => 'none', 'status' => 'aktiv']) }}" class="metric-card metric-card-link">
         <div class="metric-icon icon-green">👤</div>
         <div class="metric-label">Nicht zugewiesen</div>
         <div class="metric-value">{{ $stats['unassigned'] }}</div>
-        <div class="metric-sub">Von {{ $activeCount }} aktiven Tickets</div>
-    </div>
+        <div class="metric-sub">Von {{ $activeCount }} aktiven Tickets · ansehen →</div>
+    </a>
 </div>
 
 {{-- Status-Tabs (behalten alle uebrigen Filter bei) --}}
 <div class="tab-row">
-    @php $current = request('status', 'alle'); @endphp
-    <a href="{{ request()->fullUrlWithQuery(['status' => null, 'page' => null]) }}" class="tab {{ $current === 'alle' ? 'active' : '' }}">Alle</a>
+    @php $current = request()->boolean('overdue') ? '' : request('status', 'alle'); @endphp
+    <a href="{{ request()->fullUrlWithQuery(['status' => null, 'overdue' => null, 'page' => null]) }}" class="tab {{ $current === 'alle' ? 'active' : '' }}">Alle</a>
     @foreach(\App\Models\Ticket::STATUSES as $key => $label)
-    <a href="{{ request()->fullUrlWithQuery(['status' => $key, 'page' => null]) }}" class="tab {{ $current === $key ? 'active' : '' }}">
+    <a href="{{ request()->fullUrlWithQuery(['status' => $key, 'overdue' => null, 'page' => null]) }}" class="tab {{ $current === $key ? 'active' : '' }}">
         {{ $label }}<span class="tab-count">{{ $s[$key] ?? 0 }}</span>
     </a>
     @endforeach
@@ -52,6 +56,7 @@
 <div class="card" style="margin-bottom:16px;">
     <form method="GET" action="{{ route('admin.tickets') }}" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
         @if(request('status'))<input type="hidden" name="status" value="{{ request('status') }}">@endif
+        @if(request()->boolean('overdue'))<input type="hidden" name="overdue" value="1">@endif
         <div class="field" style="flex:2;min-width:220px;margin-bottom:0;">
             <label>Suche</label>
             <input type="text" name="q" value="{{ request('q') }}" placeholder="Betreff, Ticket-Nr., Kunde, Kundennummer...">
@@ -77,7 +82,7 @@
             </select>
         </div>
         <button type="submit" class="btn btn-primary">Filtern</button>
-        @if(request()->hasAny(['q','priority','assigned','status']))
+        @if(request()->hasAny(['q','priority','assigned','status','overdue']))
         <a href="{{ route('admin.tickets') }}" class="btn btn-ghost">Zurücksetzen</a>
         @endif
     </form>

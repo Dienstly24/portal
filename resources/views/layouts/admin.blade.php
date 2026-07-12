@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dienstly24 — Admin</title>
 @vite(['resources/css/app.css', 'resources/js/app.js'])
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+{{-- Chart.js lokal gehostet (DSGVO: kein Abfluss von Besucher-IPs an CDN-Drittanbieter) --}}
+<script src="/js/chart.umd.min.js"></script>
 <style>
 :root{--petrol:#17191d;--petrol-dark:#101216;--gold:#17A65B;--canvas:#F4F5F7;--surface:#FFFFFF;--line:#E4E6EA;--ink:#152826;--ink-soft:#6B7280;--sidebar-w:260px;--header-h:64px;}
 *{box-sizing:border-box;margin:0;padding:0;}

@@ -166,6 +166,8 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
 
     // Tickets (Workflow: Status, Zuweisung, Eigenschaften, Notizen, Antwort)
     Route::get('/tickets', [\App\Http\Controllers\TicketController::class, 'index'])->name('tickets');
+    // Statistik VOR /tickets/{id} registrieren (sonst faengt {id} die URL ab)
+    Route::get('/tickets/statistik', [\App\Http\Controllers\TicketController::class, 'stats'])->name('tickets.stats')->middleware('role:admin,manager');
     Route::get('/tickets/{id}', [\App\Http\Controllers\TicketController::class, 'show'])->name('ticket');
     Route::post('/tickets/{id}/reply', [\App\Http\Controllers\TicketController::class, 'reply'])->name('ticket.reply');
     Route::post('/tickets/{id}/status', [\App\Http\Controllers\TicketController::class, 'status'])->name('ticket.status');
