@@ -146,6 +146,7 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // war zuvor ohne Rollen-Einschränkung für alle Staff-Rollen erreichbar).
     Route::middleware('role:admin,manager')->group(function () {
         Route::get('/banners', [\App\Http\Controllers\BannerController::class, 'index'])->name('banners');
+        Route::get('/banners/statistik', [\App\Http\Controllers\BannerController::class, 'stats'])->name('banners.stats');
         Route::post('/banners', [\App\Http\Controllers\BannerController::class, 'store'])->name('banners.store');
         Route::post('/banners/{banner}', [\App\Http\Controllers\BannerController::class, 'update'])->name('banners.update');
         Route::post('/banners/{banner}/toggle', [\App\Http\Controllers\BannerController::class, 'toggle'])->name('banners.toggle');

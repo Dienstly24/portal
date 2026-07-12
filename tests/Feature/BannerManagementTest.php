@@ -216,6 +216,48 @@ class BannerManagementTest extends TestCase
         $this->assertSame(['B', 'A'], $ordered);
     }
 
+    // ---------------- Statistik-Dashboard ----------------
+
+    public function test_stats_dashboard_shows_totals_charts_and_best_banner(): void
+    {
+        $top = $this->makeBanner(['title' => 'Top-Banner']);
+        $low = $this->makeBanner(['title' => 'Low-Banner']);
+
+        // Top: 4 Impressions, 2 Klicks (CTR 50 %) – Low: 4 Impressions, 0 Klicks
+        foreach (range(1, 4) as $i) { $top->recordImpression('u' . $i); $low->recordImpression('u' . $i); }
+        $top->recordClick();
+        $top->recordClick();
+
+        $response = $this->actingAs($this->admin)->get(route('admin.banners.stats'));
+        $response->assertOk()
+            ->assertSee('Banner-Statistik')
+            ->assertSee('impressionsChart', false)
+            ->assertSee('clicksChart', false)
+            ->assertSee('Top-Banner');
+
+        $this->assertSame(8, $response->viewData('totalImpressions'));
+        $this->assertSame(2, $response->viewData('totalClicks'));
+        $this->assertSame(25.0, $response->viewData('avgCtr'));
+        $this->assertSame('Top-Banner', $response->viewData('best')->title);
+
+        // 30-Tage-Reihen: 30 Punkte, heutiger Wert stimmt
+        $impressionSeries = $response->viewData('impressions');
+        $clickSeries = $response->viewData('clicks');
+        $this->assertCount(30, $impressionSeries);
+        $this->assertSame(8, end($impressionSeries));
+        $this->assertSame(2, end($clickSeries));
+    }
+
+    public function test_stats_dashboard_is_admin_manager_only(): void
+    {
+        $employee = User::factory()->create(['role' => 'employee']);
+        $this->actingAs($employee)->get(route('admin.banners.stats'))
+            ->assertRedirect(route('admin.dashboard'));
+
+        $manager = User::factory()->create(['role' => 'manager']);
+        $this->actingAs($manager)->get(route('admin.banners.stats'))->assertOk();
+    }
+
     public function test_employee_cannot_manage_banners(): void
     {
         $employee = User::factory()->create(['role' => 'employee']);

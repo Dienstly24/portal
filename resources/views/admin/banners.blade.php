@@ -2,8 +2,13 @@
 @section('content')
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Banner</span></div>
-    <div class="page-title">Bannerverwaltung</div>
-    <div class="page-sub">Werbebanner im Kundenportal – Bild, Video oder GIF, planbar, mit Klick-Ziel und Statistiken. Mehrere aktive Banner rotieren als Slider.</div>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div>
+            <div class="page-title">Bannerverwaltung</div>
+            <div class="page-sub">Werbebanner im Kundenportal – Bild, Video oder GIF, planbar, mit Klick-Ziel und Statistiken. Mehrere aktive Banner rotieren als Slider.</div>
+        </div>
+        <a href="{{ route('admin.banners.stats') }}" class="btn btn-ghost">📊 Statistik-Dashboard</a>
+    </div>
 </div>
 
 @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif

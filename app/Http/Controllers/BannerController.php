@@ -26,6 +26,45 @@ class BannerController extends Controller
         return view('admin.banners', compact('banners', 'creators'));
     }
 
+    /**
+     * Statistik-Dashboard: Gesamtwerte, 30-Tage-Verlauf (Impressions und
+     * Klicks als getrennte Diagramme – bewusst KEINE Doppelachse) und
+     * Banner-Vergleich mit CTR. Tage ohne Daten werden mit 0 aufgefüllt.
+     */
+    public function stats()
+    {
+        $banners = Banner::orderByDesc('total_impressions')->get();
+
+        $from = now()->subDays(29)->toDateString();
+        $daily = \App\Models\BannerDailyStat::where('date', '>=', $from)
+            ->selectRaw('date, SUM(impressions) as impressions, SUM(clicks) as clicks')
+            ->groupBy('date')->orderBy('date')->get()->keyBy('date');
+
+        $labels = [];
+        $impressions = [];
+        $clicks = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $day = now()->subDays($i)->toDateString();
+            $labels[] = now()->subDays($i)->format('d.m.');
+            $impressions[] = (int) ($daily[$day]->impressions ?? 0);
+            $clicks[] = (int) ($daily[$day]->clicks ?? 0);
+        }
+
+        $totalImpressions = (int) $banners->sum('total_impressions');
+        $totalClicks = (int) $banners->sum('total_clicks');
+
+        return view('admin.banner_stats', [
+            'banners' => $banners,
+            'labels' => $labels,
+            'impressions' => $impressions,
+            'clicks' => $clicks,
+            'totalImpressions' => $totalImpressions,
+            'totalClicks' => $totalClicks,
+            'avgCtr' => $totalImpressions > 0 ? round($totalClicks / $totalImpressions * 100, 1) : 0.0,
+            'best' => $banners->filter(fn ($b) => $b->total_impressions > 0)->sortByDesc(fn ($b) => $b->ctr())->first(),
+        ]);
+    }
+
     public function store(Request $request)
     {
         $data = $this->validated($request, true);
