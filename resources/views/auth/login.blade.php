@@ -107,9 +107,11 @@ label{display:block;font-size:14px;margin-bottom:8px;color:#dfe9e4;}
 
 <div class="trust">🛡️ {{ __('Sicher & verschlüsselt. Ihre Daten sind bei uns sicher.') }}</div>
 <div class="foot">
-    <a href="https://dienstly24.de/impressum" target="_blank" rel="noopener">{{ __('Impressum') }}</a>
-    <a href="https://dienstly24.de/datenschutz" target="_blank" rel="noopener">{{ __('Datenschutzerklärung') }}</a>
-    <a href="mailto:info@dienstly24.de">{{ __('Kontakt') }}</a>
+    <a href="{{ route('legal', 'impressum') }}">{{ __('Impressum') }}</a>
+    <a href="{{ route('legal', 'agb') }}">AGB</a>
+    <a href="{{ route('legal', 'datenschutz') }}">{{ __('Datenschutzerklärung') }}</a>
+    <a href="{{ route('legal', 'cookie-richtlinie') }}">Cookie-Richtlinie</a>
+    <a href="{{ route('legal', 'kontakt') }}">{{ __('Kontakt') }}</a>
 </div>
 <div class="foot-copy">Copyright © Dienstly24 {{ date('Y') }}</div>
 </body>

@@ -89,8 +89,8 @@ label{display:block;font-size:13.5px;margin-bottom:7px;color:#dfe9e4;}
         <label class="consent">
             <input type="checkbox" name="agb" value="1" required>
             <span>{!! __('Ich akzeptiere die :agb und habe die :privacy zur Kenntnis genommen.', [
-                'agb' => '<a href="https://dienstly24.de/impressum" target="_blank" rel="noopener">' . __('Nutzungsbedingungen') . '</a>',
-                'privacy' => '<a href="https://dienstly24.de/datenschutz" target="_blank" rel="noopener">' . __('Datenschutzerklärung') . '</a>',
+                'agb' => '<a href="' . route('legal', 'agb') . '" target="_blank">' . __('Nutzungsbedingungen') . '</a>',
+                'privacy' => '<a href="' . route('legal', 'datenschutz') . '" target="_blank">' . __('Datenschutzerklärung') . '</a>',
             ]) !!}</span>
         </label>
 
@@ -101,9 +101,11 @@ label{display:block;font-size:13.5px;margin-bottom:7px;color:#dfe9e4;}
 </div>
 
 <div class="foot">
-    <a href="https://dienstly24.de/impressum" target="_blank" rel="noopener">{{ __('Impressum') }}</a>
-    <a href="https://dienstly24.de/datenschutz" target="_blank" rel="noopener">{{ __('Datenschutzerklärung') }}</a>
-    <a href="mailto:info@dienstly24.de">{{ __('Kontakt') }}</a>
+    <a href="{{ route('legal', 'impressum') }}">{{ __('Impressum') }}</a>
+    <a href="{{ route('legal', 'agb') }}">AGB</a>
+    <a href="{{ route('legal', 'datenschutz') }}">{{ __('Datenschutzerklärung') }}</a>
+    <a href="{{ route('legal', 'cookie-richtlinie') }}">Cookie-Richtlinie</a>
+    <a href="{{ route('legal', 'kontakt') }}">{{ __('Kontakt') }}</a>
 </div>
 </body>
 </html>

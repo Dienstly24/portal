@@ -15,6 +15,12 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', \App\Http\Controllers\HomeController::class);
 
+// Öffentliche Rechts-/Infoseiten (Impressum, AGB, Datenschutzerklärung,
+// Cookie-Richtlinie, Kontakt) – IMMER erreichbar, im Portal gehostet.
+Route::get('/{page}', [\App\Http\Controllers\LegalPageController::class, 'show'])
+    ->whereIn('page', ['impressum', 'agb', 'datenschutz', 'cookie-richtlinie', 'kontakt'])
+    ->name('legal');
+
 // Sprachumschalter (de/ar): für Gäste per Session, für eingeloggte Kunden
 // zusätzlich dauerhaft in der Kundenakte (preferred_lang).
 Route::get('/sprache/{locale}', function (string $locale) {
