@@ -7,7 +7,7 @@
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
-:root{--petrol:#1a3c34;--petrol-dark:#142e27;--gold:#2d9c6e;--canvas:#F4F5F7;--surface:#FFFFFF;--line:#E4E0D4;--ink:#152826;--ink-soft:#6B7280;--sidebar-w:260px;--header-h:64px;}
+:root{--petrol:#17191d;--petrol-dark:#101216;--gold:#17A65B;--canvas:#F4F5F7;--surface:#FFFFFF;--line:#E4E6EA;--ink:#152826;--ink-soft:#6B7280;--sidebar-w:260px;--header-h:64px;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
 .sidebar{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:var(--petrol-dark);color:#fff;display:flex;flex-direction:column;z-index:100;overflow-y:auto;}
@@ -29,7 +29,7 @@ body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
 .logout-btn:hover{color:#fff;}
 .header{position:fixed;top:0;left:var(--sidebar-w);right:0;height:var(--header-h);background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 32px;gap:16px;z-index:90;}
 .header-search{flex:1;max-width:480px;position:relative;}
-.header-search input{width:100%;padding:9px 14px 9px 38px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#F9F9F8;color:var(--ink);}
+.header-search input{width:100%;padding:9px 14px 9px 38px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#F8F9FA;color:var(--ink);}
 .header-search input:focus{outline:2px solid var(--gold);outline-offset:1px;background:#fff;}
 .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink-soft);font-size:15px;}
 .header-actions{margin-left:auto;display:flex;align-items:center;gap:12px;}
@@ -67,13 +67,13 @@ table{width:100%;border-collapse:collapse;font-size:14px;}
 table th{text-align:left;padding:10px 12px;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--line);font-weight:600;text-transform:uppercase;letter-spacing:.05em;}
 table td{padding:13px 12px;border-bottom:1px solid var(--line);vertical-align:middle;}
 table tr:last-child td{border-bottom:none;}
-table tr:hover td{background:#FAFAF8;}
+table tr:hover td{background:#F8F9FA;}
 .badge{font-size:11.5px;padding:3px 10px;border-radius:999px;font-weight:600;display:inline-flex;align-items:center;gap:4px;}
 .badge::before{content:'';width:6px;height:6px;border-radius:50%;flex:none;}
 .badge-active{background:#E4F0E7;color:#3B7A57;}.badge-active::before{background:#3B7A57;}
 .badge-pending{background:#F7E7D6;color:#B5651D;}.badge-pending::before{background:#B5651D;}
 .badge-open{background:#E6F1FB;color:#185FA5;}.badge-open::before{background:#185FA5;}
-.badge-closed{background:#F1EFE8;color:#5F5E5A;}.badge-closed::before{background:#5F5E5A;}
+.badge-closed{background:#EEF0F3;color:#5F5E5A;}.badge-closed::before{background:#5F5E5A;}
 .badge-approved{background:#E4F0E7;color:#3B7A57;}.badge-approved::before{background:#3B7A57;}
 .badge-rejected{background:#F9E3E3;color:#A32D2D;}.badge-rejected::before{background:#A32D2D;}
 .badge-waiting{background:#EEE9F7;color:#6B4FA3;}.badge-waiting::before{background:#6B4FA3;}
@@ -101,7 +101,7 @@ table tr:hover td{background:#FAFAF8;}
 .item-row:last-child{border-bottom:none;}
 .customer-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px;}
 .customer-card{border:1px solid var(--line);border-radius:10px;padding:14px;cursor:pointer;transition:.15s;text-decoration:none;color:inherit;display:block;}
-.customer-card:hover{border-color:var(--gold);background:#FAFAF8;}
+.customer-card:hover{border-color:var(--gold);background:#F8F9FA;}
 .customer-card .name{font-weight:600;font-size:13.5px;margin-bottom:4px;}
 .customer-card .meta{font-size:12px;color:var(--ink-soft);}
 
@@ -129,7 +129,8 @@ table tr:hover td{background:#FAFAF8;}
 <body>
 <button class="admin-mobile-btn" type="button" id="am-btn" aria-label="Menü öffnen">☰</button>
 <div class="sidebar" id="admin-sidebar">
-    <div class="sidebar-logo"><img src="/images/logo-white.png" alt="Dienstly24"></div>
+    {{-- Kompakte Marke wie bei grossen Panels (nur das D-Symbol) --}}
+    <div class="sidebar-logo"><a href="{{ route('admin.dashboard') }}" title="Dienstly24"><img src="/images/logo-icon-white.png" alt="Dienstly24" style="height:42px;width:auto;"></a></div>
     <div class="nav-section">Beraterwelt</div>
     <a href="{{ route('admin.dashboard') }}" class="nav-item {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
         <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
@@ -343,7 +344,7 @@ function globalSearch(q) {
         .then(data => {
             if (!data.length) { results.style.display = 'none'; return; }
             results.innerHTML = data.map(item => `
-                <a href="${item.url}" style="display:flex;align-items:center;gap:10px;padding:10px 14px;text-decoration:none;color:#152826;border-bottom:1px solid #E4E0D4;"
+                <a href="${item.url}" style="display:flex;align-items:center;gap:10px;padding:10px 14px;text-decoration:none;color:#152826;border-bottom:1px solid #E4E6EA;"
                    onmouseover="this.style.background='#F4F5F7'" onmouseout="this.style.background='transparent'">
                     <span style="font-size:18px;">${item.icon}</span>
                     <div>
@@ -380,7 +381,7 @@ function loadNotifications() {
             }
             list.innerHTML = data.items.map(function(n) { return ''
                 + '<a href="' + n.url + '" onclick="markNotifRead(\'' + n.id + '\')" '
-                + 'style="display:flex;gap:10px;padding:11px 16px;text-decoration:none;color:#152826;border-bottom:1px solid #E4E0D4;background:' + (n.read ? 'transparent' : '#F0F7F3') + ';">'
+                + 'style="display:flex;gap:10px;padding:11px 16px;text-decoration:none;color:#152826;border-bottom:1px solid #E4E6EA;background:' + (n.read ? 'transparent' : '#F0F7F3') + ';">'
                 + '<span style="font-size:18px;line-height:1.2;flex:none;">' + n.icon + '</span>'
                 + '<span style="min-width:0;">'
                 + '<span style="display:block;font-size:12.5px;font-weight:600;">' + escapeHtml(n.title) + '</span>'

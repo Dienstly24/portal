@@ -13,7 +13,7 @@
 
 <div class="card" style="padding:0;overflow:hidden;">
     <table>
-        <thead><tr style="background:#FAFAF8;">
+        <thead><tr style="background:#F8F9FA;">
             <th style="padding:12px 20px;">Mitarbeiter</th>
             <th>Rolle</th>
             <th>Zugriff</th>
@@ -49,7 +49,7 @@
                     @if($e->can_manage_tickets)<span style="background:#E6F1FB;color:#185FA5;padding:2px 7px;border-radius:4px;">Tickets</span>@endif
                     @if($e->can_approve_changes)<span style="background:#FEF3C7;color:#92400E;padding:2px 7px;border-radius:4px;">Genehmigungen</span>@endif
                     @if($e->can_send_emails)<span style="background:#F0E6FB;color:#6D28D9;padding:2px 7px;border-radius:4px;">E-Mails</span>@endif
-                    @if($e->can_import_export)<span style="background:#F1EFE8;color:#5F5E5A;padding:2px 7px;border-radius:4px;">Import/Export</span>@endif
+                    @if($e->can_import_export)<span style="background:#EEF0F3;color:#5F5E5A;padding:2px 7px;border-radius:4px;">Import/Export</span>@endif
                 </div>
             </td>
             <td style="font-size:13px;color:var(--ink-soft);">

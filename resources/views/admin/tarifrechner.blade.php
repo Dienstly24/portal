@@ -27,7 +27,7 @@ $categories = [
     'leben'            => ['label'=>'Lebensversicherung',        'icon'=>'❤️','color'=>'#FBEAF0','text'=>'#993556'],
     'energie'          => ['label'=>'Energie',                   'icon'=>'⚡','color'=>'#FEF3C7','text'=>'#92400E'],
     'internet'         => ['label'=>'Internet',                  'icon'=>'📶','color'=>'#EDE9FE','text'=>'#6D28D9'],
-    'sonstige'         => ['label'=>'Sonstige Links',            'icon'=>'🔗','color'=>'#F1EFE8','text'=>'#5F5E5A'],
+    'sonstige'         => ['label'=>'Sonstige Links',            'icon'=>'🔗','color'=>'#EEF0F3','text'=>'#5F5E5A'],
 ];
 @endphp
 

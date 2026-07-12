@@ -45,7 +45,7 @@
     <div class="card" style="padding:0;overflow:hidden;">
         <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">Provisionshistorie</div>
         <table>
-            <thead><tr style="background:#FAFAF8;">
+            <thead><tr style="background:#F8F9FA;">
                 <th style="padding:10px 20px;">Gutschrift-Nr.</th>
                 <th>Datum</th>
                 <th>Betrag</th>

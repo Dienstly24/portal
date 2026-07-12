@@ -8,7 +8,7 @@
 <div class="card" style="max-width:800px;">
     <div style="display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:28px;">
         <div style="padding:14px;background:var(--petrol);color:#fff;text-align:center;font-weight:600;font-size:14px;">Manuell anlegen</div>
-        <div style="padding:14px;background:#fff;text-align:center;font-size:14px;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;gap:8px;">✦ Dokument per KI auslesen <span style="font-size:11px;background:#F1EFE8;padding:2px 8px;border-radius:4px;">Bald verfügbar</span></div>
+        <div style="padding:14px;background:#fff;text-align:center;font-size:14px;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;gap:8px;">✦ Dokument per KI auslesen <span style="font-size:11px;background:#EEF0F3;padding:2px 8px;border-radius:4px;">Bald verfügbar</span></div>
     </div>
 
     <form method="POST" id="contract-form" action="">
@@ -100,7 +100,7 @@ function searchCustomer(q) {
     } else {
         dd.innerHTML = results.map(c => `<div onclick="selectCustomer('${c.id}','${c.name}')"
             style="padding:12px 16px;cursor:pointer;font-size:14px;border-bottom:1px solid var(--line);"
-            onmouseover="this.style.background='#F9F9F8'" onmouseout="this.style.background='#fff'">
+            onmouseover="this.style.background='#F8F9FA'" onmouseout="this.style.background='#fff'">
             <div style="font-weight:600;">${c.name}</div>
             <div style="font-size:12px;color:var(--ink-soft);">${c.email||''}</div>
         </div>`).join('');

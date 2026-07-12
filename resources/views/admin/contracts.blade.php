@@ -38,7 +38,7 @@
 <div class="card" style="padding:0;overflow:hidden;">
     <table id="contracts-table">
         <thead>
-            <tr style="background:#FAFAF8;">
+            <tr style="background:#F8F9FA;">
                 <th style="padding:12px 20px;width:48px;"></th>
                 <th style="padding:12px 8px;">Versicherung</th>
                 <th>VN / Versichert</th>
@@ -50,10 +50,10 @@
         </thead>
         <tbody>
         @php
-$typeIcons = ['kfz'=>['🚗','#E6F1FB','#185FA5'],'krankenversicherung'=>['🏥','#E4F0E7','#3B7A57'],'internet'=>['📶','#EDE9FE','#6D28D9'],'strom_gas'=>['⚡','#FEF3C7','#92400E'],'andere'=>['📋','#F1EFE8','#5F5E5A']];
+$typeIcons = ['kfz'=>['🚗','#E6F1FB','#185FA5'],'krankenversicherung'=>['🏥','#E4F0E7','#3B7A57'],'internet'=>['📶','#EDE9FE','#6D28D9'],'strom_gas'=>['⚡','#FEF3C7','#92400E'],'andere'=>['📋','#EEF0F3','#5F5E5A']];
         @endphp
         @forelse($contracts as $c)
-        @php $icon = $typeIcons[$c->type] ?? ['📋','#F1EFE8','#5F5E5A']; @endphp
+        @php $icon = $typeIcons[$c->type] ?? ['📋','#EEF0F3','#5F5E5A']; @endphp
         <tr class="contract-row" data-status="{{ $c->status }}"
             data-search="{{ strtolower($c->insurer . ' ' . $c->contract_number . ' ' . ($c->customer?->user?->name ?? '')) }}">
             <td style="padding:14px 20px;">
