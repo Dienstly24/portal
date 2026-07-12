@@ -258,7 +258,19 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
                     {{ ['active'=>'Aktiv','pending'=>'In Bearb.','cancelled'=>'Gekündigt','expired'=>'Abgelaufen'][$c->status] ?? $c->status }}
                 </span>
             </td>
-            <td style="padding:12px;font-size:12px;color:var(--ink-soft);">{{ $c->added_by ?? 'System' }}</td>
+            <td style="padding:12px;font-size:12px;color:var(--ink-soft);">
+                {{ $c->added_by ?? 'System' }}
+                @php $openReminder = $c->switchReminders->whereNull('responded_at')->isNotEmpty(); @endphp
+                @if($openReminder)
+                {{-- Wechsel-Erinnerung offen: Klick stoppt das Follow-up (Paket C2) --}}
+                <form method="POST" action="{{ route('admin.contracts.switch_responded', $c->id) }}" style="margin-top:6px;">
+                    @csrf
+                    <button type="submit" class="btn btn-ghost" style="padding:4px 8px;font-size:11px;" title="Wechsel-Erinnerung wurde beantwortet – keine Folge-Erinnerung senden">✋ Kunde hat reagiert</button>
+                </form>
+                @elseif($c->switchReminders->isNotEmpty())
+                <div style="margin-top:6px;font-size:11px;color:#3B7A57;">✓ Erinnerung beantwortet</div>
+                @endif
+            </td>
         </tr>
         @if($c->vehicleDetail || $c->energyDetail || $c->internetDetail)
         <tr class="contract-row" data-type="{{ $c->type }}">

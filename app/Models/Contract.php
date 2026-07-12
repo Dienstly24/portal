@@ -6,7 +6,7 @@ use Illuminate\Support\Str;
 class Contract extends Model {
     protected $keyType = 'string';
     public $incrementing = false;
-    protected $fillable = ['customer_id','contract_number','type','insurer','status','start_date','end_date','pdf_path','notes', 'cancellation_date'];
+    protected $fillable = ['customer_id','contract_number','type','subtype','insurer','status','start_date','end_date','pdf_path','notes', 'cancellation_date'];
     protected static function boot() {
         parent::boot();
         static::creating(fn($m) => $m->id = Str::uuid());
@@ -17,4 +17,5 @@ class Contract extends Model {
     public function customer() { return $this->belongsTo(Customer::class); }
     public function externalReferences() { return $this->morphMany(ExternalReference::class, 'referenceable'); }
     public function documents() { return $this->hasMany(Document::class); }
+    public function switchReminders() { return $this->hasMany(ContractSwitchReminder::class); }
 }

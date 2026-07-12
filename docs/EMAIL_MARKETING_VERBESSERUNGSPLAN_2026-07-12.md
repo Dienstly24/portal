@@ -1,6 +1,16 @@
 # E-Mail-Marketing – Verbesserungsplan (2026-07-12)
 
-**Status: ENTWURF – wartet auf Freigabe. Noch nichts implementiert.**
+**Status: UMGESETZT (12.07.2026, nach Freigabe via PR #16).** Alle drei
+Pakete sind implementiert und durch `tests/Feature/EmailMarketingImprovementsTest.php`
+abgedeckt. Entscheidungen zu den offenen Punkten aus C4:
+
+1. GKV/PKV: neues Feld `contracts.subtype` (`gkv`|`pkv`), Pflege im
+   Vertragsformular (Sparte Krankenversicherung).
+2. GKV-Auslöser: `start_date + 12 Monate` (§175 SGB V) – umgesetzt.
+3. Kfz-Kalenderjahr: kein Extra-Kennzeichen nötig; bei `end_date` 31.12.
+   greifen die generischen Fenster automatisch im November.
+4. Alte 30/14/7-Logik: vollständig entfernt (Scheduler + Button + Mailable);
+   ersetzt durch die Wechsel-Engine.
 
 Dieser Plan basiert auf einer Analyse des bestehenden E-Mail-Marketing-Moduls
 (`EmailMarketingController`, `EmailCampaign`, `CampaignMail`, `ContractExpiryMail`,

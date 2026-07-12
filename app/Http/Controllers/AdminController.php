@@ -75,7 +75,7 @@ class AdminController extends Controller
 
     public function customerShow($id) {
         $this->authorizeCustomerAccess($id);
-        $customer = Customer::with(['user','contracts.vehicleDetail','contracts.energyDetail','contracts.internetDetail','tickets','documents','changeRequests.reviewer'])->findOrFail($id);
+        $customer = Customer::with(['user','contracts.vehicleDetail','contracts.energyDetail','contracts.internetDetail','contracts.switchReminders','tickets','documents','changeRequests.reviewer'])->findOrFail($id);
         // Interner Chat & Notizen (nur Staff - Zugriff bereits oben geprüft)
         $internalChat = \App\Models\InternalMessage::chat()->where('customer_id', $id)->with('sender')->orderBy('created_at')->get();
         $internalNotes = \App\Models\InternalMessage::note()->where('customer_id', $id)->with('sender')->latest()->get();
@@ -105,6 +105,8 @@ class AdminController extends Controller
         $this->authorizeCustomerAccess($customerId);
         $request->validate([
             'type' => 'required',
+            // GKV/PKV-Unterscheidung: nur GKV erhält Wechsel-Erinnerungen (§175 SGB V)
+            'subtype' => 'nullable|in:gkv,pkv',
             'insurer' => 'required',
             'status' => 'required',
             'start_date' => 'nullable|date',
@@ -132,6 +134,7 @@ class AdminController extends Controller
             'customer_id' => $customerId,
             'contract_number' => $request->contract_number ?: ('V-' . strtoupper(Str::random(8))),
             'type' => $request->type,
+            'subtype' => $request->type === 'krankenversicherung' ? $request->subtype : null,
             'insurer' => $request->insurer,
             'status' => $request->status,
             'start_date' => $request->start_date,

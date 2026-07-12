@@ -97,6 +97,19 @@
             </div>
         </div>
 
+        {{-- ===== Krankenversicherung: GKV/PKV steuert die Wechsel-Erinnerungen
+             (nur GKV wird erinnert, §175 SGB V - Verbesserungsplan Paket C) ===== --}}
+        <div id="section-krankenversicherung" class="branch-section" style="display:none;border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;">
+            <div class="card-title" style="font-size:14px;">🏥 Krankenversicherung</div>
+            <div class="field"><label>Art</label>
+                <select name="subtype">
+                    <option value="">— bitte wählen —</option>
+                    <option value="gkv">Gesetzlich (GKV) – erhält Wechsel-Erinnerung nach 12 Monaten</option>
+                    <option value="pkv">Privat (PKV) – keine Wechsel-Erinnerung</option>
+                </select>
+            </div>
+        </div>
+
         {{-- ===== Internet (Spec Teil 5) ===== --}}
         <div id="section-internet" class="branch-section" style="display:none;border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;">
             <div class="card-title" style="font-size:14px;">📶 Internetvertrag</div>

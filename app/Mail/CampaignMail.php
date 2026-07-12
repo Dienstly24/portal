@@ -19,7 +19,9 @@ class CampaignMail extends Mailable
     public function __construct(
         public string $subjectLine,
         public string $bodyText,
-        public string $recipientName
+        public string $recipientName,
+        public ?string $unsubscribeUrl = null,
+        public string $lang = 'de'
     ) {}
 
     public function envelope(): Envelope

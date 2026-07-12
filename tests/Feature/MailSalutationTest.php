@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Mail\ContractExpiryMail;
+use App\Mail\ContractSwitchMail;
 use App\Mail\CustomerWelcomeMail;
 use App\Mail\TicketReplyMail;
 use App\Models\Contract;
@@ -42,7 +42,7 @@ class MailSalutationTest extends TestCase
         $customer = $this->customerWithGender('female', 'Erika Müller');
         $contract = Contract::create(['customer_id' => $customer->id, 'type' => 'kfz', 'insurer' => 'HUK', 'status' => 'active', 'contract_number' => 'X', 'end_date' => now()->addDays(20)]);
 
-        $html = (new ContractExpiryMail($contract, 20))->render();
+        $html = (new ContractSwitchMail($contract, 'first'))->render();
         $this->assertStringContainsString('Sehr geehrte Frau Müller', $html);
     }
 

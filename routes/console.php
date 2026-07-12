@@ -1,7 +1,6 @@
 <?php
 
 use App\Mail\BirthdayMail;
-use App\Mail\ContractExpiryMail;
 use App\Mail\CustomerPortalReminderMail;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schedule;
@@ -65,20 +64,17 @@ Schedule::call(function () {
     }
 })->dailyAt('08:00');
 
-// 08:30 — Vertragsablauf-Erinnerungen
+// 08:30 — Spartenspezifische Wechsel-Erinnerungen (Verbesserungsplan Paket C,
+// ersetzt die pauschale 30/14/7-Logik). Regeln, Empfängerfilter und
+// Doppelversand-Schutz liegen zentral im Service - derselbe Code wie hinter
+// dem Button im E-Mail-Marketing.
 Schedule::call(function () {
-    foreach ([30, 14, 7] as $days) {
-        $contracts = \App\Models\Contract::with('customer.user')
-            ->whereNotNull('end_date')->whereDate('end_date', now()->addDays($days))
-            ->where('status', 'active')->get();
-        foreach ($contracts as $contract) {
-            if (!dienstly_mailable($contract->customer?->user?->email)) continue;
-            try {
-                Mail::to($contract->customer->user->email)->send(new ContractExpiryMail($contract, $days));
-            } catch (\Throwable $e) { \Log::warning('Contract reminder failed: ' . $e->getMessage()); }
-        }
-    }
+    $sent = app(\App\Services\ContractSwitchReminderService::class)->run();
+    if ($sent > 0) \Log::info("Wechsel-Erinnerungen: {$sent} Mails versendet.");
 })->dailyAt('08:30');
+
+// Alle 5 Minuten — geplante E-Mail-Kampagnen anstoßen (Paket B1)
+Schedule::call(fn() => \App\Jobs\SendCampaignJob::dispatchDueScheduled())->everyFiveMinutes();
 
 // 09:00 — Portal-Erinnerung nach 3 Tagen ohne Login
 Schedule::call(function () {
