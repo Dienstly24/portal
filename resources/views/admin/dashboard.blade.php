@@ -19,7 +19,7 @@
         <div class="metric-value">{{ $activeContracts }}</div>
         <div class="metric-sub">Im Bestand</div>
     </a>
-    <a href="{{ route('admin.tickets') }}" class="metric-card metric-card-link">
+    <a href="{{ route('admin.tickets', ['status' => 'aktiv']) }}" class="metric-card metric-card-link">
         <div class="metric-icon icon-amber">💬</div>
         <div class="metric-label">Offene Anträge</div>
         <div class="metric-value">{{ $openTickets }}</div>

@@ -61,7 +61,16 @@ class TicketController extends Controller
 
         $query = (clone $base)->with(['customer.user', 'assignedTo']);
         if ($request->filled('status') && $request->status !== 'alle') {
-            $query->where('status', $request->status);
+            // 'aktiv' = alles, was noch nicht geloest/geschlossen ist
+            // (Ziel der klickbaren Kennzahlen-Karten)
+            $request->status === 'aktiv'
+                ? $query->whereNotIn('status', ['resolved', 'closed'])
+                : $query->where('status', $request->status);
+        }
+        if ($request->boolean('overdue')) {
+            $query->whereNotIn('status', ['resolved', 'closed'])
+                ->whereNull('first_response_at')
+                ->whereNotNull('due_at')->where('due_at', '<', now());
         }
         if ($request->filled('priority')) {
             $query->where('priority', $request->priority);
@@ -85,6 +94,116 @@ class TicketController extends Controller
         $tickets = $query->orderByDesc('updated_at')->paginate(25)->withQueryString();
         $staff = User::whereIn('role', ['admin', 'manager', 'support', 'employee'])->orderBy('name')->get(['id', 'name']);
         return view('admin.tickets', compact('tickets', 'stats', 'staff'));
+    }
+
+    /**
+     * Ticket-Statistik (nur admin/manager): Wie viele Anfragen kamen im
+     * Zeitraum rein, wie viele davon sind erledigt/in Arbeit/offen, wer
+     * bearbeitet sie und wie zufrieden sind die Kunden.
+     */
+    public function stats(Request $request) {
+        $zeitraum = in_array($request->zeitraum, ['heute', '7', '30', '90', 'jahr'], true) ? $request->zeitraum : '30';
+        $from = match ($zeitraum) {
+            'heute' => now()->startOfDay(),
+            'jahr' => now()->startOfYear(),
+            default => now()->subDays((int) $zeitraum - 1)->startOfDay(),
+        };
+
+        // Kohorte: alle Tickets, die im Zeitraum ERSTELLT wurden (inkl. Gaeste)
+        $cohort = Ticket::with('customer.user')->where('created_at', '>=', $from)->get();
+        $finished = $cohort->filter(fn($t) => $t->isFinished());
+        $ratings = $cohort->whereNotNull('rating');
+
+        $kpis = [
+            'neu' => $cohort->count(),
+            'kunden' => $cohort->pluck('customer_id')->filter()->unique()->count(),
+            'erledigt' => $finished->count(),
+            'in_arbeit' => $cohort->whereIn('status', ['in_progress', 'waiting'])->count(),
+            'offen' => $cohort->where('status', 'open')->count(),
+            // Durchschnittliche Reaktions-/Loesungszeit in Stunden (nur Kohorte)
+            'avg_first_response_h' => ($withResponse = $cohort->whereNotNull('first_response_at'))->count()
+                ? round($withResponse->avg(fn($t) => $t->created_at->diffInMinutes($t->first_response_at)) / 60, 1) : null,
+            'avg_resolution_h' => $finished->whereNotNull('resolved_at')->count()
+                ? round($finished->whereNotNull('resolved_at')->avg(fn($t) => $t->created_at->diffInMinutes($t->resolved_at)) / 60, 1) : null,
+            'avg_rating' => $ratings->count() ? round($ratings->avg('rating'), 1) : null,
+            'rating_count' => $ratings->count(),
+            // Momentaufnahme unabhaengig vom Zeitraum: aktuell ueberfaellig
+            'overdue_now' => Ticket::whereNotIn('status', ['resolved', 'closed'])
+                ->whereNull('first_response_at')->whereNotNull('due_at')->where('due_at', '<', now())->count(),
+        ];
+
+        // Tagesverlauf: erstellt vs. erledigt (erledigt = geloest/geschlossen am Tag X)
+        $labels = [];
+        $createdPerDay = [];
+        $finishedPerDay = [];
+        $cursor = $from->copy();
+        while ($cursor->lte(now())) {
+            $key = $cursor->format('Y-m-d');
+            $labels[] = $cursor->format('d.m.');
+            $createdPerDay[$key] = 0;
+            $finishedPerDay[$key] = 0;
+            $cursor->addDay();
+        }
+        foreach ($cohort as $t) {
+            $key = $t->created_at->format('Y-m-d');
+            if (isset($createdPerDay[$key])) $createdPerDay[$key]++;
+        }
+        // Erledigt-Kurve zaehlt ALLE im Zeitraum abgeschlossenen Tickets
+        // (auch aeltere), damit die Team-Leistung sichtbar ist.
+        Ticket::whereIn('status', ['resolved', 'closed'])
+            ->where(fn($q) => $q->where('resolved_at', '>=', $from)->orWhere('closed_at', '>=', $from))
+            ->get()
+            ->each(function ($t) use (&$finishedPerDay, $from) {
+                $done = $t->closed_at ?? $t->resolved_at;
+                if ($done && $done->gte($from)) {
+                    $key = $done->format('Y-m-d');
+                    if (isset($finishedPerDay[$key])) $finishedPerDay[$key]++;
+                }
+            });
+
+        // Verteilungen innerhalb der Kohorte
+        $byStatus = collect(Ticket::STATUSES)
+            ->map(fn($label, $key) => ['label' => $label, 'n' => $cohort->where('status', $key)->count()])->values();
+        $byPriority = collect(Ticket::PRIORITIES)
+            ->map(fn($p, $key) => ['label' => $p['label'], 'n' => $cohort->where('priority', $key)->count()])->values();
+        $byType = collect(Ticket::TYPES)
+            ->map(fn($label, $key) => ['label' => $label, 'n' => $cohort->where('type', $key)->count()])
+            ->values()->sortByDesc('n')->values();
+
+        // Mitarbeiter-Auswertung (zugewiesene Tickets der Kohorte)
+        $byEmployee = $cohort->whereNotNull('assigned_to')->groupBy('assigned_to')
+            ->map(function ($tickets, $userId) {
+                $rated = $tickets->whereNotNull('rating');
+                return [
+                    'name' => User::find($userId)?->name ?? '—',
+                    'total' => $tickets->count(),
+                    'erledigt' => $tickets->filter(fn($t) => $t->isFinished())->count(),
+                    'rating' => $rated->count() ? round($rated->avg('rating'), 1) : null,
+                ];
+            })->sortByDesc('total')->values();
+
+        // Kunden mit den meisten Anfragen im Zeitraum
+        $topCustomers = $cohort->whereNotNull('customer_id')->groupBy('customer_id')
+            ->map(fn($tickets, $customerId) => [
+                'id' => $customerId,
+                'name' => $tickets->first()->customer?->user?->name ?? 'Kunde',
+                'number' => $tickets->first()->customer?->customer_number,
+                'n' => $tickets->count(),
+            ])->sortByDesc('n')->take(5)->values();
+
+        return view('admin.ticket_stats', [
+            'zeitraum' => $zeitraum,
+            'from' => $from,
+            'kpis' => $kpis,
+            'labels' => $labels,
+            'createdPerDay' => array_values($createdPerDay),
+            'finishedPerDay' => array_values($finishedPerDay),
+            'byStatus' => $byStatus,
+            'byPriority' => $byPriority,
+            'byType' => $byType,
+            'byEmployee' => $byEmployee,
+            'topCustomers' => $topCustomers,
+        ]);
     }
 
     public function show($id) {
