@@ -14,7 +14,7 @@
             @else
             <img src="{{ asset('storage/' . $b->media_path) }}" style="width:100%;height:auto;max-height:70vh;object-fit:contain;display:block;" alt="{{ $b->title }}">
             @endif
-            <span style="position:absolute;left:0;right:0;bottom:0;padding:14px 18px;background:linear-gradient(transparent,rgba(0,0,0,.65));color:#fff;font-weight:700;font-size:15px;">{{ $b->title }} <span style="font-weight:400;font-size:12.5px;">– Mehr erfahren →</span></span>
+            <span style="position:absolute;left:0;right:0;bottom:0;padding:14px 18px;background:linear-gradient(transparent,rgba(0,0,0,.65));color:#fff;font-weight:700;font-size:15px;">{{ $b->title }} <span style="font-weight:400;font-size:12.5px;">– {{ __('Mehr erfahren') }} →</span></span>
         </a>
         @if($b->dismiss_days)
         <button type="button" class="banner-close" data-banner="{{ $b->id }}" title="Ausblenden"
@@ -58,30 +58,30 @@
 @endif
 
 
-<div class="page-title">Übersicht</div>
-<div class="page-sub">Willkommen zurück, {{ auth()->user()->name }}.</div>
+<div class="page-title">{{ __('Übersicht') }}</div>
+<div class="page-sub">{{ __('Willkommen zurück') }}, {{ auth()->user()->name }}.</div>
 <div class="grid-3">
     <a href="{{ route('portal.contracts') }}" class="metric metric-link" title="Zur Vertragsübersicht">
-        <div class="label">📑 Aktive Verträge</div><div class="value">{{ $contractsCount }}</div>
-        <div class="metric-cta">Verträge ansehen →</div>
+        <div class="label">📑 {{ __('Aktive Verträge') }}</div><div class="value">{{ $contractsCount }}</div>
+        <div class="metric-cta">{{ __('Verträge ansehen') }} →</div>
     </a>
     <a href="{{ route('portal.tickets') }}" class="metric metric-link" title="Zu Ihren Nachrichten">
-        <div class="label">💬 Offene Anfragen</div><div class="value">{{ $openTickets }}</div>
-        <div class="metric-cta">Nachrichten öffnen →</div>
+        <div class="label">💬 {{ __('Offene Anfragen') }}</div><div class="value">{{ $openTickets }}</div>
+        <div class="metric-cta">{{ __('Nachrichten öffnen') }} →</div>
     </a>
     <a href="{{ route('portal.change_requests') }}" class="metric metric-link" title="Status Ihrer Änderungsanfragen">
-        <div class="label">🔄 Änderungen in Prüfung</div><div class="value">{{ $pendingApprovals }}</div>
-        <div class="metric-cta">Status ansehen →</div>
+        <div class="label">🔄 {{ __('Änderungen in Prüfung') }}</div><div class="value">{{ $pendingApprovals }}</div>
+        <div class="metric-cta">{{ __('Status ansehen') }} →</div>
     </a>
 </div>
 
 {{-- Schnellzugriff (Review Punkt 3: jede Kachel hat eine klare Funktion) --}}
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:24px;">
     @foreach([
-        ['route' => 'portal.documents', 'icon' => '📄', 'label' => 'Dokumente'],
-        ['route' => 'portal.profile', 'icon' => '👤', 'label' => 'Meine Daten'],
-        ['route' => 'portal.family', 'icon' => '👨‍👩‍👦', 'label' => 'Familie'],
-        ['route' => 'portal.contacts', 'icon' => '📞', 'label' => 'Kontakte'],
+        ['route' => 'portal.documents', 'icon' => '📄', 'label' => __('Dokumente')],
+        ['route' => 'portal.profile', 'icon' => '👤', 'label' => __('Meine Daten')],
+        ['route' => 'portal.family', 'icon' => '👨‍👩‍👦', 'label' => __('Familie')],
+        ['route' => 'portal.contacts', 'icon' => '📞', 'label' => __('Kontakte')],
     ] as $tile)
     <a href="{{ route($tile['route']) }}" class="card metric-link" style="margin-bottom:0;text-align:center;padding:18px 10px;text-decoration:none;color:var(--ink);">
         <div style="font-size:26px;margin-bottom:6px;">{{ $tile['icon'] }}</div>
@@ -93,24 +93,24 @@
 {{-- Kundenakte-Vollständigkeit (Final Polish Punkt 5) --}}
 <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-        <div class="card-title" style="margin-bottom:0;">📋 Ihre Kundenakte</div>
+        <div class="card-title" style="margin-bottom:0;">📋 {{ __('Ihre Kundenakte') }}</div>
         <span style="font-size:20px;font-weight:800;color:{{ $completeness['percent'] >= 80 ? '#3B7A57' : ($completeness['percent'] >= 50 ? '#B5651D' : '#A32D2D') }};">{{ $completeness['percent'] }} %</span>
     </div>
     <div style="height:10px;background:var(--canvas);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:6px;">
         <div style="height:100%;width:{{ $completeness['percent'] }}%;background:{{ $completeness['percent'] >= 80 ? '#3B7A57' : ($completeness['percent'] >= 50 ? '#D9A441' : '#E24B4A') }};transition:width .3s;"></div>
     </div>
-    <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;">{{ $completeness['percent'] }} % vollständig</div>
+    <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;">{{ $completeness['percent'] }} % {{ __('vollständig') }}</div>
     @if(count($completeness['missing']))
     <div style="display:flex;flex-direction:column;gap:8px;">
         @foreach($completeness['missing'] as $m)
         <a href="{{ route($m['route']) }}" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border:1px solid var(--line);border-radius:8px;text-decoration:none;color:var(--ink);font-size:13.5px;{{ !empty($m['optional']) ? 'opacity:.7;' : '' }}">
             <span>⚠ {{ $m['label'] }}</span>
-            <span style="color:var(--petrol);font-size:12px;">ergänzen →</span>
+            <span style="color:var(--petrol);font-size:12px;">{{ __('ergänzen') }} →</span>
         </a>
         @endforeach
     </div>
     @else
-    <div style="font-size:13.5px;color:#3B7A57;">✓ Ihre Kundenakte ist vollständig.</div>
+    <div style="font-size:13.5px;color:#3B7A57;">✓ {{ __('Ihre Kundenakte ist vollständig.') }}</div>
     @endif
 </div>
 
@@ -118,14 +118,14 @@
 @php $openDocRequests = \App\Models\DocumentRequest::where('customer_id', $customer->id)->openForCustomer()->get(); @endphp
 @if($openDocRequests->isNotEmpty())
 <div class="card" style="border-left:4px solid #D9A441;">
-    <div class="card-title">📄 Wir benötigen Unterlagen von Ihnen</div>
+    <div class="card-title">📄 {{ __('Wir benötigen Unterlagen von Ihnen') }}</div>
     @foreach($openDocRequests as $odr)
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;font-size:14px;">
         <div>
             {{ $odr->title }}
-            @if($odr->deadline)<span style="color:{{ $odr->deadline->isPast() ? '#A32D2D' : 'var(--ink-soft)' }};font-size:12.5px;"> · Frist {{ $odr->deadline->format('d.m.Y') }}</span>@endif
+            @if($odr->deadline)<span style="color:{{ $odr->deadline->isPast() ? '#A32D2D' : 'var(--ink-soft)' }};font-size:12.5px;"> · {{ __('Frist') }} {{ $odr->deadline->format('d.m.Y') }}</span>@endif
         </div>
-        <a href="{{ route('portal.documents') }}" class="btn btn-gold" style="padding:6px 14px;font-size:13px;flex:none;">Hochladen</a>
+        <a href="{{ route('portal.documents') }}" class="btn btn-gold" style="padding:6px 14px;font-size:13px;flex:none;">{{ __('Hochladen') }}</a>
     </div>
     @endforeach
 </div>
@@ -134,28 +134,28 @@
 {{-- Kundenakte-Vollständigkeit (Final Polish Punkt 5) --}}
 <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-        <div class="card-title" style="margin-bottom:0;">📋 Ihre Kundenakte</div>
+        <div class="card-title" style="margin-bottom:0;">📋 {{ __('Ihre Kundenakte') }}</div>
         <span style="font-size:20px;font-weight:800;color:{{ $completeness['percent'] >= 80 ? '#3B7A57' : ($completeness['percent'] >= 50 ? '#B5651D' : '#A32D2D') }};">{{ $completeness['percent'] }} %</span>
     </div>
     <div style="height:10px;background:var(--canvas);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:6px;">
         <div style="height:100%;width:{{ $completeness['percent'] }}%;background:{{ $completeness['percent'] >= 80 ? '#3B7A57' : ($completeness['percent'] >= 50 ? '#D9A441' : '#E24B4A') }};transition:width .3s;"></div>
     </div>
-    <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;">{{ $completeness['percent'] }} % vollständig</div>
+    <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;">{{ $completeness['percent'] }} % {{ __('vollständig') }}</div>
     @if(count($completeness['missing']))
     <div style="display:flex;flex-direction:column;gap:8px;">
         @foreach($completeness['missing'] as $m)
         <a href="{{ route($m['route']) }}" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border:1px solid var(--line);border-radius:8px;text-decoration:none;color:var(--ink);font-size:13.5px;{{ !empty($m['optional']) ? 'opacity:.7;' : '' }}">
             <span>⚠ {{ $m['label'] }}</span>
-            <span style="color:var(--petrol);font-size:12px;">ergänzen →</span>
+            <span style="color:var(--petrol);font-size:12px;">{{ __('ergänzen') }} →</span>
         </a>
         @endforeach
     </div>
     @else
-    <div style="font-size:13.5px;color:#3B7A57;">✓ Ihre Kundenakte ist vollständig.</div>
+    <div style="font-size:13.5px;color:#3B7A57;">✓ {{ __('Ihre Kundenakte ist vollständig.') }}</div>
     @endif
 </div>
 <div class="card">
-    <div class="card-title">Letzte Verträge</div>
+    <div class="card-title">{{ __('Letzte Verträge') }}</div>
     @forelse($contracts as $c)
     <div class="item-row">
         <div>
@@ -169,7 +169,7 @@
     @endforelse
 </div>
 <div class="card">
-    <div class="card-title">Letzte Anfragen</div>
+    <div class="card-title">{{ __('Letzte Anfragen') }}</div>
     @forelse($tickets as $t)
     <div class="item-row">
         <div>

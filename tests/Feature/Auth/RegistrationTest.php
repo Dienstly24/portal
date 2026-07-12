@@ -18,11 +18,15 @@ class RegistrationTest extends TestCase
 
     public function test_new_users_can_register(): void
     {
+        // Neues Registrierungsformular: Vor-/Nachname + AGB-Zustimmung;
+        // legt zusätzlich eine echte Kundenakte an.
         $response = $this->post('/register', [
-            'name' => 'Test User',
+            'first_name' => 'Test',
+            'last_name' => 'User',
             'email' => 'test@example.com',
             'password' => 'password',
             'password_confirmation' => 'password',
+            'agb' => '1',
         ]);
 
         $this->assertAuthenticated();

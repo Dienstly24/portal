@@ -1,7 +1,7 @@
 @extends('layouts.portal')
 @section('content')
 <div class="toolbar">
-    <div><div class="page-title">Meine Verträge</div><div class="page-sub">Alle Ihre Verträge im Überblick.</div></div>
+    <div><div class="page-title">{{ __('Meine Verträge') }}</div><div class="page-sub">{{ __('Alle Ihre Verträge im Überblick.') }}</div></div>
     <button onclick="document.getElementById('report-contract-modal').style.display='flex'" class="btn btn-gold">+ Neuen Vertrag melden</button>
 </div>
 @php
@@ -30,7 +30,7 @@ $typeLabels = [
         <div style="font-weight:700;font-size:15px;margin-bottom:2px;">{{ $c->insurer }}</div>
         <div style="font-size:12.5px;color:var(--ink-soft);">{{ $typeLabels[$c->type] ?? ucfirst($c->type) }}@if($c->contract_number) · {{ $c->contract_number }}@endif</div>
         @if($c->start_date)<div style="font-size:12px;color:var(--ink-soft);margin-top:6px;">Seit {{ \Carbon\Carbon::parse($c->start_date)->format('d.m.Y') }}</div>@endif
-        <div class="metric-cta" style="margin-top:12px;">Details ansehen →</div>
+        <div class="metric-cta" style="margin-top:12px;">{{ __('Details ansehen') }} →</div>
     </a>
     @endforeach
 </div>
