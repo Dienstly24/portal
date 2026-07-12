@@ -79,7 +79,7 @@ form textarea{min-height:90px;resize:vertical;}
 <body>
 <button class="mobile-menu-btn" type="button" id="m-btn" aria-label="Menü öffnen">☰</button>
 <div class="sidebar" id="portal-sidebar">
-    <div class="brand"><img src="/images/logo.png" alt="Dienstly24" style="height:45px;width:auto;object-fit:contain;"></div>
+    <div class="brand"><img src="/images/logo-white.png" alt="Dienstly24" style="height:45px;width:auto;object-fit:contain;"></div>
     <a href="{{ route('portal.dashboard') }}" class="nav-item {{ request()->routeIs('portal.dashboard') ? 'active' : '' }}">{{ __('Dashboard') }}</a>
     <a href="{{ route('portal.contracts') }}" class="nav-item {{ request()->routeIs('portal.contracts*') ? 'active' : '' }}">{{ __('Meine Verträge') }}</a>
     <a href="{{ route('portal.documents') }}" class="nav-item {{ request()->routeIs('portal.documents*') ? 'active' : '' }}">{{ __('Dokumente') }}</a>

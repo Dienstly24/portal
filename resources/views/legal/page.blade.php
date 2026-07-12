@@ -8,7 +8,7 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Inter',Arial,sans-serif;background:#F6F4EE;color:#152826;min-height:100vh;display:flex;flex-direction:column;}
 .top{background:#1a3c34;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
-.top .logo{background:#fff;border-radius:10px;padding:6px 12px;display:inline-block;}
+.top .logo{display:inline-block;}
 .top .logo img{height:38px;width:auto;display:block;}
 .top a.back{color:#c8ddd3;text-decoration:none;font-size:13.5px;}
 .top a.back:hover{color:#fff;}
@@ -30,7 +30,7 @@ a{color:#185FA5;}
 </head>
 <body>
 <div class="top">
-    <a class="logo" href="https://dienstly24.de"><img src="/images/logo.png" alt="Dienstly24"></a>
+    <a class="logo" href="https://dienstly24.de"><img src="/images/logo-white.png" alt="Dienstly24"></a>
     <a class="back" href="{{ route('login') }}">→ Zum Kundenportal-Login</a>
 </div>
 
