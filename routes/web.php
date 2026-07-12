@@ -33,6 +33,12 @@ Route::get('/sprache/{locale}', function (string $locale) {
     return back();
 })->name('locale.switch');
 
+// Abmeldung von Marketing-Mails (UWG §7 / DSGVO): öffentlich, ohne Login,
+// Token pro Kunde. Ratenbegrenzt gegen Token-Raten.
+Route::get('/abmelden/{token}', [\App\Http\Controllers\UnsubscribeController::class, 'handle'])
+    ->middleware('throttle:30,1')
+    ->name('unsubscribe');
+
 // Magischer Erst-Login aus der Willkommens-Mail: signiert (90 Tage),
 // nur Kunden-Accounts, ratenbegrenzt. Details im MagicLoginController.
 Route::get('/magic-login/{user}', \App\Http\Controllers\Auth\MagicLoginController::class)
@@ -234,7 +240,12 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // E-Mail Marketing
     Route::get('/email-marketing', [EmailMarketingController::class, 'index'])->name('email_marketing');
     Route::post('/email-marketing/send', [EmailMarketingController::class, 'send'])->name('email_marketing.send');
+    Route::post('/email-marketing/preview', [EmailMarketingController::class, 'preview'])->name('email_marketing.preview');
+    Route::post('/email-marketing/test', [EmailMarketingController::class, 'testSend'])->name('email_marketing.test');
+    Route::post('/email-marketing/{id}/dispatch', [EmailMarketingController::class, 'dispatchCampaign'])->name('email_marketing.dispatch');
+    Route::delete('/email-marketing/{id}', [EmailMarketingController::class, 'destroyCampaign'])->name('email_marketing.destroy');
     Route::post('/email-marketing/reminders', [EmailMarketingController::class, 'sendContractReminders'])->name('email_marketing.reminders');
+    Route::post('/contracts/{id}/switch-responded', [EmailMarketingController::class, 'markSwitchResponded'])->name('contracts.switch_responded');
 
     // Berichte
     Route::get('/reports', [ReportController::class, 'index'])->name('reports');

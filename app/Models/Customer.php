@@ -12,6 +12,7 @@ class Customer extends Model {
         'iban','iban2','marital_status','phone','mobile','preferred_lang',
         'company_name','company_type','customer_type','email2',
         'nationality','occupation','last_contact','gender','account_holder',
+        'marketing_consent','unsubscribed_at','unsubscribe_token',
         'health_insurance_number','health_insurance_company','health_insurance_type',
         'pension_insurance_number','tax_id','birth_place',
         'address_street','address_house_number','address_house_suffix','address_zip','address_city'
@@ -24,6 +25,8 @@ class Customer extends Model {
      */
     protected function casts(): array {
         return [
+            'marketing_consent' => 'boolean',
+            'unsubscribed_at' => 'datetime',
             'health_insurance_number' => 'encrypted',
             'pension_insurance_number' => 'encrypted',
             'tax_id' => 'encrypted',
@@ -140,6 +143,29 @@ class Customer extends Model {
     }
 
     public const GENDERS = ['male' => 'Männlich', 'female' => 'Weiblich', 'diverse' => 'Divers'];
+
+    /**
+     * Darf dieser Kunde Marketing-Mails (Kampagnen, Wechsel-Erinnerungen)
+     * erhalten? Transaktionale Mails sind davon NICHT betroffen.
+     */
+    public function isMarketingReachable(): bool {
+        return $this->user?->hasRealEmail()
+            && $this->marketing_consent
+            && $this->unsubscribed_at === null;
+    }
+
+    /** Query-Scope-Variante von isMarketingReachable() für Massenversand. */
+    public function scopeMarketingReachable($query) {
+        return $query->where('marketing_consent', true)->whereNull('unsubscribed_at');
+    }
+
+    /** Token für den öffentlichen Abmelde-Link (lazy erzeugt). */
+    public function unsubscribeToken(): string {
+        if (empty($this->unsubscribe_token)) {
+            $this->forceFill(['unsubscribe_token' => Str::random(48)])->save();
+        }
+        return $this->unsubscribe_token;
+    }
 
     public function addresses() { return $this->hasMany(CustomerAddress::class, 'customer_id'); }
     public function contacts() { return $this->hasMany(CustomerContact::class, 'customer_id'); }

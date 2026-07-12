@@ -1,10 +1,11 @@
 <?php
 namespace App\Http\Controllers;
-use App\Models\Customer;
-use App\Models\Contract;
-use App\Models\EmailCampaign;
+use App\Jobs\SendCampaignJob;
 use App\Mail\CampaignMail;
-use App\Mail\ContractExpiryMail;
+use App\Models\Contract;
+use App\Models\Customer;
+use App\Models\EmailCampaign;
+use App\Services\ContractSwitchReminderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 
@@ -17,71 +18,122 @@ class EmailMarketingController extends Controller
         return $user->assignedCustomers()->pluck('customers.id')->toArray();
     }
 
-    public function index() {
+    public function index(ContractSwitchReminderService $reminders) {
         $ids = $this->visibleCustomerIds();
-        $campaigns = EmailCampaign::with('createdBy')->when($ids !== null, fn($q) => $q->where('created_by', auth()->id()))->latest()->get();
+        $campaigns = EmailCampaign::with('createdBy')->withCount([
+                'logs as failed_count' => fn($q) => $q->where('status', 'failed'),
+            ])
+            ->when($ids !== null, fn($q) => $q->where('created_by', auth()->id()))
+            ->latest()->get();
         $totalCustomers = $ids === null ? Customer::count() : count($ids);
-        $expiringSoon = Contract::whereNotNull('end_date')
-            ->whereDate('end_date', '<=', now()->addDays(30))
-            ->whereDate('end_date', '>=', now())
-            ->where('status', 'active')
-            ->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))
-            ->count();
-        return view('admin.email_marketing', compact('campaigns', 'totalCustomers', 'expiringSoon'));
+        $reachableCustomers = Customer::marketingReachable()
+            ->when($ids !== null, fn($q) => $q->whereIn('customers.id', $ids))->count();
+        $dueReminders = count($reminders->due($ids));
+        // ?draft={id}: Entwurf/geplante Kampagne ins Formular laden
+        $draft = request('draft')
+            ? $campaigns->first(fn($c) => $c->id === request('draft') && in_array($c->status, ['draft', 'scheduled'], true))
+            : null;
+        return view('admin.email_marketing', compact('campaigns', 'totalCustomers', 'reachableCustomers', 'dueReminders', 'draft'));
     }
 
+    /**
+     * Kampagne anlegen: sofort senden (Queue), als Entwurf speichern oder
+     * für später planen - gesteuert über action. Mit draft_id wird ein
+     * bestehender Entwurf aktualisiert statt neu angelegt.
+     */
     public function send(Request $request) {
-        $request->validate(['subject' => 'required', 'body' => 'required', 'target' => 'required']);
-        $customers = $this->getTargetCustomers($request->target);
-        $sent = 0;
-        foreach ($customers as $customer) {
-            if (!$customer->user?->email || str_contains($customer->user->email, '@dienstly24.internal')) continue;
-            try {
-                Mail::to($customer->user->email)
-                    ->send(new CampaignMail($request->subject, $request->body, $customer->user->name));
-                $sent++;
-            } catch (\Exception $e) { continue; }
-        }
-        EmailCampaign::create([
-            'created_by' => auth()->id(),
-            'subject' => $request->subject,
-            'body' => $request->body,
-            'target' => $request->target,
-            'status' => 'sent',
-            'sent_count' => $sent,
-            'sent_at' => now(),
+        $data = $request->validate([
+            'subject' => 'required|string|max:255',
+            'body' => 'required|string',
+            'target' => 'required|in:' . implode(',', EmailCampaign::TARGETS),
+            'action' => 'nullable|in:send,draft,schedule',
+            'scheduled_for' => 'required_if:action,schedule|nullable|date|after:now',
+            'draft_id' => 'nullable|uuid',
         ]);
-        return back()->with('success', "$sent E-Mails erfolgreich gesendet.");
-    }
+        $action = $data['action'] ?? 'send';
 
-    public function sendContractReminders() {
-        $sent = 0;
-        foreach ([30, 14, 7] as $days) {
-            $ids = $this->visibleCustomerIds();
-            $contracts = Contract::with('customer.user')
-                ->whereNotNull('end_date')
-                ->whereDate('end_date', now()->addDays($days))
-                ->where('status', 'active')
-                ->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))
-                ->get();
-            foreach ($contracts as $contract) {
-                if (!$contract->customer?->user?->email) continue;
-                if (str_contains($contract->customer->user->email, '@dienstly24.internal')) continue;
-                try {
-                    Mail::to($contract->customer->user->email)
-                        ->send(new ContractExpiryMail($contract, $days));
-                    $sent++;
-                } catch (\Exception $e) { continue; }
-            }
+        $campaign = null;
+        if (!empty($data['draft_id'])) {
+            $campaign = EmailCampaign::where('id', $data['draft_id'])
+                ->whereIn('status', ['draft', 'scheduled'])
+                ->when($this->visibleCustomerIds() !== null, fn($q) => $q->where('created_by', auth()->id()))
+                ->first();
         }
-        return back()->with('success', "$sent Erinnerungs-E-Mails gesendet.");
+
+        $attributes = [
+            'created_by' => $campaign->created_by ?? auth()->id(),
+            'subject' => $data['subject'],
+            'body' => $data['body'],
+            'target' => $data['target'],
+            'status' => match ($action) { 'draft' => 'draft', 'schedule' => 'scheduled', default => 'sending' },
+            'scheduled_for' => $action === 'schedule' ? $data['scheduled_for'] : null,
+        ];
+        if ($campaign) {
+            $campaign->update($attributes);
+        } else {
+            $campaign = EmailCampaign::create($attributes);
+        }
+
+        if ($action === 'send') {
+            SendCampaignJob::dispatch($campaign->id);
+            return back()->with('success', 'Kampagne wird im Hintergrund versendet.');
+        }
+        return back()->with('success', $action === 'draft'
+            ? 'Entwurf gespeichert.'
+            : 'Kampagne geplant für ' . $campaign->scheduled_for->format('d.m.Y H:i') . '.');
     }
 
-    private function getTargetCustomers($target) {
+    /** Entwurf / geplante Kampagne sofort versenden. */
+    public function dispatchCampaign(string $id) {
+        $campaign = $this->ownCampaign($id, ['draft', 'scheduled']);
+        $campaign->update(['status' => 'sending', 'scheduled_for' => null]);
+        SendCampaignJob::dispatch($campaign->id);
+        return back()->with('success', 'Kampagne wird im Hintergrund versendet.');
+    }
+
+    /** Entwurf / geplante Kampagne löschen (Gesendetes bleibt als Historie). */
+    public function destroyCampaign(string $id) {
+        $this->ownCampaign($id, ['draft', 'scheduled'])->delete();
+        return back()->with('success', 'Kampagne gelöscht.');
+    }
+
+    /** Serverseitig gerenderte Vorschau der Kampagnen-Mail (Paket B3). */
+    public function preview(Request $request) {
+        $data = $request->validate(['subject' => 'required|string|max:255', 'body' => 'required|string']);
+        return response((new CampaignMail(
+            $data['subject'], $data['body'], auth()->user()->name, '#',
+        ))->render());
+    }
+
+    /** Testversand an die eigene Adresse - ohne Kampagne, ohne Protokoll. */
+    public function testSend(Request $request) {
+        $data = $request->validate(['subject' => 'required|string|max:255', 'body' => 'required|string']);
+        Mail::to(auth()->user()->email)->send(new CampaignMail(
+            '[TEST] ' . $data['subject'], $data['body'], auth()->user()->name, '#',
+        ));
+        return back()->with('success', 'Test-E-Mail an ' . auth()->user()->email . ' gesendet.');
+    }
+
+    /**
+     * Wechsel-Erinnerungen manuell anstoßen. Gleiche Engine wie der
+     * tägliche Cron; der Unique-Index verhindert Doppelversand.
+     */
+    public function sendContractReminders(ContractSwitchReminderService $reminders) {
+        $sent = $reminders->run($this->visibleCustomerIds());
+        return back()->with('success', "$sent Wechsel-Erinnerungen gesendet.");
+    }
+
+    /** Kunde hat auf eine Wechsel-Erinnerung reagiert -> Follow-up stoppen. */
+    public function markSwitchResponded(string $contractId, ContractSwitchReminderService $reminders) {
         $ids = $this->visibleCustomerIds();
-        $base = Customer::with('user')->when($ids !== null, fn($q) => $q->whereIn('customers.id', $ids));
-        if ($target === 'all') return $base->get();
-        if (in_array($target, ['de', 'ar'])) return $base->where('preferred_lang', $target)->get();
-        return $base->whereHas('contracts', fn($q) => $q->where('type', $target)->where('status', 'active'))->get();
+        $contract = Contract::when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->findOrFail($contractId);
+        $reminders->markResponded($contract);
+        return back()->with('success', 'Als „Kunde hat reagiert" markiert – keine weitere Erinnerung für diese Periode.');
+    }
+
+    private function ownCampaign(string $id, array $statuses): EmailCampaign {
+        return EmailCampaign::where('id', $id)->whereIn('status', $statuses)
+            ->when($this->visibleCustomerIds() !== null, fn($q) => $q->where('created_by', auth()->id()))
+            ->firstOrFail();
     }
 }
