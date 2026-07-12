@@ -166,8 +166,8 @@
     <p style="font-size:13px;color:#152826;margin:0 0 4px;"><strong>Dienstly24</strong> – Ihr Partner für Finanzdienstleistungen</p>
     <p style="font-size:12px;margin:0 0 8px;">
         <a href="https://dienstly24.de" style="color:#185FA5;text-decoration:none;">Website</a> &nbsp;·&nbsp;
-        <a href="https://dienstly24.de/impressum" style="color:#185FA5;text-decoration:none;">Impressum</a> &nbsp;·&nbsp;
-        <a href="https://dienstly24.de/datenschutz" style="color:#185FA5;text-decoration:none;">Datenschutz</a>
+        <a href="{{ url('/impressum') }}" style="color:#185FA5;text-decoration:none;">Impressum</a> &nbsp;·&nbsp;
+        <a href="{{ url('/datenschutz') }}" style="color:#185FA5;text-decoration:none;">Datenschutz</a>
     </p>
     <p style="font-size:11px;color:#9aa39f;margin:0;">Diese E-Mail wurde automatisch versendet. Bitte antworten Sie nicht direkt darauf.</p>
 </td></tr>

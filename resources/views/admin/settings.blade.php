@@ -59,6 +59,27 @@
     </div>
 </div>
 
+<div class="card">
+    <div class="card-title" style="margin-bottom:8px;">📜 Rechtliches</div>
+    <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;">
+        Inhalte der öffentlichen Portal-Seiten
+        <a href="{{ url('/impressum') }}" target="_blank" style="color:var(--petrol);">/impressum</a> ·
+        <a href="{{ url('/agb') }}" target="_blank" style="color:var(--petrol);">/agb</a> ·
+        <a href="{{ url('/datenschutz') }}" target="_blank" style="color:var(--petrol);">/datenschutz</a> ·
+        <a href="{{ url('/cookie-richtlinie') }}" target="_blank" style="color:var(--petrol);">/cookie-richtlinie</a> ·
+        <a href="{{ url('/kontakt') }}" target="_blank" style="color:var(--petrol);">/kontakt</a>.
+        Leer = sinnvoller Standardtext; Firmendaten kommen aus „Unternehmen" oben.
+    </div>
+    <div class="field"><label>Impressum – Zusatzangaben (Inhaber, USt-IdNr., Aufsichtsbehörde …)</label>
+        <textarea name="legal_impressum" rows="4">{{ $settings['legal_impressum'] }}</textarea></div>
+    <div class="field"><label>AGB – vollständiger Text (ersetzt den Standardtext)</label>
+        <textarea name="legal_agb" rows="6">{{ $settings['legal_agb'] }}</textarea></div>
+    <div class="field"><label>Datenschutzerklärung – Zusatzabschnitte</label>
+        <textarea name="legal_datenschutz" rows="4">{{ $settings['legal_datenschutz'] }}</textarea></div>
+    <div class="field"><label>Cookie-Richtlinie – eigener Text (ersetzt den Standardtext)</label>
+        <textarea name="legal_cookies" rows="4">{{ $settings['legal_cookies'] }}</textarea></div>
+</div>
+
 </div>
 
 <div style="margin-top:20px;max-width:900px;">
