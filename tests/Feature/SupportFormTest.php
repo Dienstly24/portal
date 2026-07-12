@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Http\Controllers\SupportFormController;
 use App\Mail\CustomerWelcomeMail;
 use App\Models\Customer;
+use App\Models\InternalNotification;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -114,6 +115,60 @@ class SupportFormTest extends TestCase
         ])->assertStatus(422);
 
         $this->assertSame(0, Ticket::count());
+    }
+
+    // ---------------- Benachrichtigung + Sichtbarkeit ----------------
+
+    public function test_new_ticket_notifies_admins_via_bell(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = $this->makeCustomer();
+
+        $this->post('/hilfe', [
+            't' => SupportFormController::tokenFor($customer),
+            'leistung' => 'login',
+            'message' => 'Frage zum Login.',
+        ])->assertOk();
+
+        $note = InternalNotification::where('user_id', $admin->id)->first();
+        $this->assertNotNull($note, 'Admin muss eine Glocken-Benachrichtigung erhalten.');
+        $this->assertStringContainsString('Support-Anfrage', $note->title);
+        // Body nennt WER (Kundennummer) und WORUM es geht
+        $this->assertStringContainsString('2600042', $note->body);
+        $this->assertStringContainsString('Login', $note->body);
+    }
+
+    public function test_customer_ticket_appears_in_admin_ticket_list(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = $this->makeCustomer();
+
+        $this->post('/hilfe', [
+            't' => SupportFormController::tokenFor($customer),
+            'leistung' => 'vertrag',
+            'message' => 'Frage zum Vertrag.',
+        ])->assertOk();
+
+        // Hilfe-Formular-Tickets (source != portal) muessen trotzdem gelistet sein
+        $this->actingAs($admin)->get(route('admin.tickets'))
+            ->assertOk()
+            ->assertSee('Hilfe-Anfrage: Frage zu einem Vertrag');
+    }
+
+    public function test_guest_ticket_appears_in_inquiries_list(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->post('/hilfe', [
+            'name' => 'Neuer Interessent',
+            'email' => 'neu@interessent.de',
+            'leistung' => 'angebot',
+            'message' => 'Bitte um ein Angebot.',
+        ])->assertOk();
+
+        $this->actingAs($admin)->get(route('admin.inquiries'))
+            ->assertOk()
+            ->assertSee('Neuer Interessent');
     }
 
     // ---------------- Willkommens-Mail ----------------

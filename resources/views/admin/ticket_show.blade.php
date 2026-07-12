@@ -5,7 +5,8 @@
     <div>
         <div class="page-title">{{ $ticket->subject }}</div>
         <div class="page-sub">
-            @if($ticket->customer){{ $ticket->customer?->user?->name }}@else 👤 {{ $ticket->guest_name ?? 'Gast' }} ({{ $ticket->source === 'website' ? 'Website' : 'E-Mail' }})@endif
+            @php $quelle = ['portal'=>'Portal','hilfe-formular'=>'Hilfe-Formular','website'=>'Website','email'=>'E-Mail'][$ticket->source] ?? $ticket->source; @endphp
+            @if($ticket->customer)👤 {{ $ticket->customer?->user?->name }} · Nr. {{ $ticket->customer->customer_number }} <span style="color:var(--ink-soft);">(via {{ $quelle }})</span>@else 👤 {{ $ticket->guest_name ?? 'Gast' }} <span style="color:var(--ink-soft);">(via {{ $quelle }})</span>@endif
             · {{ $ticket->created_at->format('d.m.Y') }}
             · {{ ['niedrig'=>'🟢 Niedrig','mittel'=>'🟡 Mittel','hoch'=>'🔴 Hoch'][$ticket->priority] ?? '🟡 Mittel' }}
         </div>

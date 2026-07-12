@@ -28,13 +28,23 @@ class LegalPageController extends Controller
 
     public const DEFAULT_EXTERNAL_BASE = 'https://dienstly24.de';
 
+    /**
+     * Die offizielle Website liefert die Rechtsseiten als statische Dateien
+     * mit .html-Endung aus (z. B. /impressum.html). Ohne Endung antwortet
+     * der Webserver mit 404. Deshalb haengen wir standardmaessig ".html" an.
+     * Sobald die Website "schoene" URLs (ohne Endung) unterstuetzt, kann das
+     * Suffix unter Einstellungen -> Rechtliches geleert werden.
+     */
+    public const DEFAULT_EXTERNAL_SUFFIX = '.html';
+
     public function show(string $page)
     {
         abort_unless(array_key_exists($page, self::PAGES), 404);
 
         $base = rtrim((string) SystemSetting::get('legal_external_base', self::DEFAULT_EXTERNAL_BASE), '/');
         if ($base !== '') {
-            return redirect()->away($base . '/' . $page);
+            $suffix = SystemSetting::get('legal_external_suffix', self::DEFAULT_EXTERNAL_SUFFIX);
+            return redirect()->away($base . '/' . $page . $suffix);
         }
 
         return view('legal.page', [

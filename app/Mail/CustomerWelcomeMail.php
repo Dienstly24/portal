@@ -2,11 +2,13 @@
 namespace App\Mail;
 
 use App\Models\Customer;
+use App\Models\SystemSetting;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\URL;
 
 /**
  * Willkommens-/Einladungsmail für das Kundenportal.
@@ -33,6 +35,9 @@ class CustomerWelcomeMail extends Mailable
     /** Hilfe-Button: vorbefülltes Kontaktformular, legt automatisch ein Ticket an. */
     public string $supportUrl;
 
+    /** Basis-URL des Kundenportals – alle Kundenlinks zeigen hierauf. */
+    public string $portalBase;
+
     public function __construct(
         public Customer $customer,
         public string $mode,
@@ -43,13 +48,26 @@ class CustomerWelcomeMail extends Mailable
         $this->customerName = (string) ($customer->user?->name ?? '');
         $this->lang = $customer->preferred_lang ?? 'de';
 
-        if ($customer->user) {
-            $this->magicLoginUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
-                'magic.login', now()->addDays(90), ['user' => $customer->user->id]
-            );
-        }
+        // Kundenmails werden meist aus der Beraterwelt (admin.dienstly24.de)
+        // ausgeloest. route()/url() wuerden dann den Admin-Host verwenden.
+        // Deshalb bauen wir ALLE Kundenlinks explizit auf der Portal-Domain,
+        // damit der Kunde nie auf admin.dienstly24.de landet.
+        $this->portalBase = rtrim(SystemSetting::get('portal_url', 'https://portal.dienstly24.de'), '/');
 
-        $this->supportUrl = route('support.form', ['t' => \App\Http\Controllers\SupportFormController::tokenFor($customer)]);
+        $previousRoot = URL::to('/');
+        URL::forceRootUrl($this->portalBase);
+        URL::forceScheme('https');
+        try {
+            if ($customer->user) {
+                $this->magicLoginUrl = URL::temporarySignedRoute(
+                    'magic.login', now()->addDays(90), ['user' => $customer->user->id]
+                );
+            }
+            $this->supportUrl = route('support.form', ['t' => \App\Http\Controllers\SupportFormController::tokenFor($customer)]);
+        } finally {
+            // Urspruenglichen Root wiederherstellen (fuer die laufende Admin-Anfrage).
+            URL::forceRootUrl($previousRoot);
+        }
     }
 
     public function envelope(): Envelope
