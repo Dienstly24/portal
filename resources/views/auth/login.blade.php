@@ -74,6 +74,7 @@ label{display:block;font-size:13px;margin-bottom:6px;color:#dfe9e4;}
   h1{font-size:24px;}
 }
 </style>
+    @include('partials.favicon')
 </head>
 <body>
 <div class="bg"><div class="orb orb-a"></div><div class="orb orb-b"></div></div>

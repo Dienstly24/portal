@@ -75,6 +75,7 @@ form textarea{min-height:90px;resize:vertical;}
 [dir=rtl] .mobile-menu-btn{left:auto;right:14px;}
 @media (max-width: 768px){[dir=rtl] .sidebar{transform:translateX(100%);}[dir=rtl] .sidebar.open{transform:translateX(0);}[dir=rtl] .main{margin-right:0;}}
 </style>
+    @include('partials.favicon')
 </head>
 <body>
 <button class="mobile-menu-btn" type="button" id="m-btn" aria-label="Menü öffnen">☰</button>

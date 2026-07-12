@@ -17,6 +17,7 @@ body{font-family:'Inter',Arial,sans-serif;min-height:100vh;color:#fff;display:fl
 .ref{display:inline-block;background:rgba(45,156,110,.15);border:1px solid rgba(45,156,110,.45);color:#9fe0c2;border-radius:9px;padding:8px 16px;font-size:14px;font-weight:700;margin:8px 0 14px;letter-spacing:.06em;}
 .btn{display:inline-block;background:linear-gradient(180deg,#2f8f70,#256a56);border:1px solid #3a9077;color:#fff;font-size:15px;font-weight:700;padding:12px 28px;border-radius:11px;text-decoration:none;}
 </style>
+    @include('partials.favicon')
 </head>
 <body>
 <div class="card">

@@ -75,9 +75,15 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   ergänzen.
 - **Banner-Verwaltung**: `BannerController`, Statistik-Dashboard unter
   `/admin/banners/statistik`. Routen auf `role:admin,manager` beschränkt.
-- **Logo-Assets**: `logo-white.png` (helle Variante, für dunkle Flächen),
-  `logo-transparent.png` (für helle Flächen), `logo.png` (Original mit
-  weißem Hintergrund, nur noch in der E-Mail auf weißem Kopf).
+- **Logo-Assets** (alle aus `logo.png` per GD generiert, `public/images/`):
+  `logo-white.png` (weisse Wortmarke, für dunkle Flächen: Login, Sidebars),
+  `logo-transparent.png` (farbige Wortmarke, für helle Flächen),
+  `logo-icon.png` (512px D-Symbol, transparent), `favicon.png` (32px),
+  `apple-touch-icon.png` (180px). Favicon zentral via
+  `resources/views/partials/favicon.blade.php` (vor jedem `</head>`).
+  `logo.png` = Original mit weissem Hintergrund (Quelle der Varianten).
+  Willkommens-Mail bewusst OHNE Logo-Bild (Outlook blockiert CID) –
+  Textmarke im Hero.
 
 ## Offene Themen / wartet auf den Betreiber
 

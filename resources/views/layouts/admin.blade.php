@@ -118,6 +118,7 @@ table tr:hover td{background:#FAFAF8;}
 }
 .admin-mobile-btn{display:none;position:fixed;top:11px;left:12px;z-index:130;background:var(--petrol-dark);color:#fff;border:none;border-radius:8px;width:42px;height:42px;font-size:20px;cursor:pointer;align-items:center;justify-content:center;}
 </style>
+    @include('partials.favicon')
 </head>
 <body>
 <button class="admin-mobile-btn" type="button" id="am-btn" aria-label="Menü öffnen">☰</button>

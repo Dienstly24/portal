@@ -48,6 +48,7 @@ tr:last-child td{border-bottom:none;}
 .badge-rejected{background:#F9E3E3;color:#A32D2D;}
 @media(max-width:900px){.sidebar{transform:translateX(-100%);}.main{margin-left:0;padding:20px;}.grid-3{grid-template-columns:1fr;}}
 </style>
+    @include('partials.favicon')
 </head>
 <body>
 <div class="sidebar">
