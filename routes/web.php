@@ -15,6 +15,12 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', \App\Http\Controllers\HomeController::class);
 
+// Magischer Erst-Login aus der Willkommens-Mail: signiert (90 Tage),
+// nur Kunden-Accounts, ratenbegrenzt. Details im MagicLoginController.
+Route::get('/magic-login/{user}', \App\Http\Controllers\Auth\MagicLoginController::class)
+    ->middleware(['signed', 'throttle:10,1'])
+    ->name('magic.login');
+
 /*
 |--------------------------------------------------------------------------
 | Kundenportal (portal.dienstly24.de)
