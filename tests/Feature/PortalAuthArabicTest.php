@@ -17,7 +17,7 @@ class PortalAuthArabicTest extends TestCase
     {
         $response = $this->get('/login');
         $response->assertOk()
-            ->assertSee('images/logo.png')
+            ->assertSee('images/logo-white.png') // Logo-Variante ohne weißen Hintergrund
             ->assertSee('Willkommen zurück')
             ->assertSee('Konto erstellen')
             ->assertSee('Impressum')
