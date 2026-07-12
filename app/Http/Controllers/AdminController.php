@@ -177,86 +177,12 @@ class AdminController extends Controller
         return redirect()->route('admin.customer', $customerId)->with('success', 'Vertrag erfolgreich hinzugefügt.');
     }
 
-    public function tickets() {
-        $ids = $this->visibleCustomerIds();
-        // Alle Anfragen MIT Kundenakte – unabhaengig von der Quelle (Portal,
-        // Hilfe-Formular, …), damit keine Anfrage unsichtbar bleibt.
-        $tickets = Ticket::with('customer.user')
-            ->whereNotNull('customer_id')
-            ->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))
-            ->latest()->get();
-        return view('admin.tickets', compact('tickets'));
-    }
+    // Tickets (Liste, Detail, Aktionen) liegen jetzt im TicketController.
 
     public function inquiries() {
         // Alle Anfragen OHNE Kundenakte (Gaeste: Website, E-Mail, Hilfe-Formular).
         $tickets = Ticket::whereNull('customer_id')->latest()->get();
         return view('admin.inquiries', compact('tickets'));
-    }
-
-    public function ticketShow($id) {
-        $ticket = Ticket::with(['customer.user','messages.sender'])->findOrFail($id);
-        $this->authorizeTicketAccess($ticket);
-        return view('admin.ticket_show', compact('ticket'));
-    }
-
-    public function ticketReply(Request $request, $id) {
-        $request->validate([
-            'body' => 'required',
-            'status' => 'required|in:open,in_progress,waiting,closed',
-            'attachments' => 'nullable|array|max:5',
-            'attachments.*' => 'file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
-        ]);
-        $ticket = Ticket::findOrFail($id);
-        $this->authorizeTicketAccess($ticket);
-        \App\Models\TicketMessage::create([
-            'id' => Str::uuid(),
-            'ticket_id' => $ticket->id,
-            'sender_id' => auth()->id(),
-            'body' => $request->body,
-            // Ticketantworten sind IMMER Kundenkommunikation. Interne
-            // Absprachen laufen über den eigenständigen internen Chat -
-            // dadurch ist es strukturell unmöglich, versehentlich
-            // Internes an Kunden zu senden. (Spec Teil 8)
-            'is_internal' => false,
-        ]);
-        if ($request->hasFile('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                // Punkt 5: sicher auf privater Disk speichern
-                $path = $file->store('tickets/' . $ticket->id, 'local');
-                \App\Models\TicketAttachment::create([
-                    'id' => Str::uuid(),
-                    'ticket_id' => $ticket->id,
-                    'uploaded_by' => auth()->id(),
-                    'file_name' => $file->getClientOriginalName(),
-                    'file_path' => $path,
-                    'disk' => 'local',
-                ]);
-            }
-        }
-        $ticket->update(['status' => $request->status]);
-        {
-            $ticket->load('customer.user');
-
-            // Portal-Glocke: "Neue Nachricht" für den Kunden (Review Punkt 10)
-            if ($ticket->customer?->user_id) {
-                \App\Models\InternalNotification::create([
-                    'user_id' => $ticket->customer->user_id,
-                    'title' => 'Neue Nachricht',
-                    'body' => 'Unser Team hat auf Ihre Anfrage „' . \Illuminate\Support\Str::limit($ticket->subject, 60) . '" geantwortet.',
-                    'link' => route('portal.tickets.show', $ticket->id),
-                ]);
-            }
-
-            $email = $ticket->customer?->user?->email;
-            if ($email && !str_contains($email, '@dienstly24.internal')) {
-                try {
-                    // Mail enthält bewusst KEINE Nachrichtendetails (Punkt 10)
-                    \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\TicketReplyMail($ticket, $request->body));
-                } catch (\Throwable $e) { \Log::warning('Ticket reply mail failed: ' . $e->getMessage()); }
-            }
-        }
-        return back()->with('success', 'Antwort gesendet.');
     }
 
     public function createCustomer() {
@@ -802,12 +728,15 @@ class AdminController extends Controller
             ]);
         $tickets = \App\Models\Ticket::with('customer.user')
             ->when($vids !== null, fn($qq) => $qq->whereIn('customer_id', $vids))
-            ->where('subject','like',"%$q%")
+            ->where(function($query) use ($q) {
+                $query->where('subject','like',"%$q%")
+                      ->orWhere('ticket_number','like',"%$q%");
+            })
             ->limit(3)->get()->map(fn($t) => [
                 'type' => 'ticket',
                 'icon' => '💬',
                 'title' => $t->subject,
-                'sub' => $t->customer?->user?->name,
+                'sub' => trim(($t->ticket_number ? $t->ticket_number . ' · ' : '') . ($t->customer?->user?->name ?? '')),
                 'url' => route('admin.ticket', $t->id),
             ]);
         return response()->json(array_merge(

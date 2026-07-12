@@ -142,7 +142,7 @@ class PortalController extends Controller
         }
         // Team ueber die neue Anfrage informieren (Glocke).
         \App\Services\TicketNotifier::notifyNewTicket($ticket);
-        return redirect()->route('portal.tickets')->with('success', 'Anfrage erfolgreich eingereicht.');
+        return redirect()->route('portal.tickets')->with('success', __('Anfrage erfolgreich eingereicht.') . ' (' . $ticket->ticket_number . ')');
     }
 
     public function ticketsShow($id) {
@@ -171,6 +171,10 @@ class PortalController extends Controller
         ]);
         $customer = $this->getCustomer();
         $ticket = Ticket::where('id', $id)->where('customer_id', $customer->id)->firstOrFail();
+        // Geschlossene Anfragen sind schreibgeschuetzt (bitte neue Anfrage stellen)
+        if ($ticket->status === 'closed') {
+            return back()->with('error', __('Diese Anfrage ist geschlossen. Bitte stellen Sie eine neue Anfrage.'));
+        }
         TicketMessage::create([
             'id' => Str::uuid(),
             'ticket_id' => $ticket->id,
@@ -190,8 +194,45 @@ class PortalController extends Controller
                 ]);
             }
         }
+        $ticket->logEvent('customer_reply');
+        // Kundenantwort auf "Wartet auf Kunde" oder "Geloest" -> Ticket ist
+        // wieder beim Team (auch Wiedereroeffnung nach Loesung).
+        if (in_array($ticket->status, ['waiting', 'resolved'], true)) {
+            $ticket->transitionTo('open', auth()->id());
+        }
+        $ticket->touch();
         \App\Services\TicketNotifier::notifyCustomerReply($ticket);
         return back()->with('success', 'Nachricht gesendet.');
+    }
+
+    /** Kunde bestaetigt: Anliegen erledigt -> Anfrage schliessen. */
+    public function ticketsClose($id) {
+        $customer = $this->getCustomer();
+        $ticket = Ticket::where('id', $id)->where('customer_id', $customer->id)->firstOrFail();
+        if ($ticket->status !== 'closed') {
+            $ticket->transitionTo('closed', auth()->id(), 'closed_by_customer');
+            \App\Services\TicketNotifier::notifyTeam($ticket, '✅ Anfrage vom Kunden geschlossen',
+                ($ticket->ticket_number ? $ticket->ticket_number . ' – ' : '') . \Illuminate\Support\Str::limit($ticket->subject, 70));
+        }
+        return back()->with('success', __('Vielen Dank! Die Anfrage wurde geschlossen.'));
+    }
+
+    /** Zufriedenheits-Bewertung (1-5) nach Loesung/Abschluss, einmalig. */
+    public function ticketsRate(Request $request, $id) {
+        $request->validate([
+            'rating' => 'required|integer|min:1|max:5',
+            'rating_comment' => 'nullable|string|max:1000',
+        ]);
+        $customer = $this->getCustomer();
+        $ticket = Ticket::where('id', $id)->where('customer_id', $customer->id)->firstOrFail();
+        if (!$ticket->isFinished() || $ticket->rating !== null) {
+            return back();
+        }
+        $ticket->update(['rating' => (int) $request->rating, 'rating_comment' => $request->rating_comment]);
+        $ticket->logEvent('rated', $request->rating . '/5' . ($request->rating_comment ? ' – ' . \Illuminate\Support\Str::limit($request->rating_comment, 120) : ''));
+        \App\Services\TicketNotifier::notifyTeam($ticket, '⭐ Neue Ticket-Bewertung',
+            ($ticket->ticket_number ? $ticket->ticket_number . ' – ' : '') . $request->rating . '/5 Sternen');
+        return back()->with('success', __('Vielen Dank für Ihre Bewertung!'));
     }
 
     /**

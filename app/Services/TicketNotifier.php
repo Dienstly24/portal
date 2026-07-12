@@ -57,6 +57,76 @@ class TicketNotifier
     }
 
     /**
+     * Glocke fuer den zugewiesenen Mitarbeiter bei (Um-)Zuweisung.
+     */
+    public static function notifyAssigned(Ticket $ticket, User $assignee): void
+    {
+        if ($assignee->id === auth()->id()) {
+            return; // Selbstzuweisung braucht keine Benachrichtigung
+        }
+        InternalNotification::create([
+            'user_id' => $assignee->id,
+            'title' => '🎫 Ticket zugewiesen',
+            'body' => ($ticket->ticket_number ? $ticket->ticket_number . ' – ' : '')
+                . \Illuminate\Support\Str::limit($ticket->subject, 70),
+            'link' => route('admin.ticket', $ticket->id),
+        ]);
+    }
+
+    /**
+     * Portal-Glocke fuer den Kunden bei relevanten Statuswechseln
+     * (geloest / geschlossen / wieder geoeffnet).
+     */
+    public static function notifyCustomerStatus(Ticket $ticket): void
+    {
+        $ticket->loadMissing('customer.user');
+        if (!$ticket->customer?->user_id) {
+            return;
+        }
+        $text = match ($ticket->status) {
+            'resolved' => 'Ihre Anfrage „:s" wurde als gelöst markiert. Bitte bestätigen Sie im Portal, ob Ihr Anliegen erledigt ist.',
+            'closed' => 'Ihre Anfrage „:s" wurde geschlossen.',
+            'open', 'in_progress' => 'Ihre Anfrage „:s" ist wieder in Bearbeitung.',
+            default => null,
+        };
+        if (!$text) {
+            return;
+        }
+        InternalNotification::create([
+            'user_id' => $ticket->customer->user_id,
+            'title' => 'Status Ihrer Anfrage',
+            'body' => str_replace(':s', \Illuminate\Support\Str::limit($ticket->subject, 60), $text),
+            'link' => route('portal.tickets.show', $ticket->id),
+        ]);
+    }
+
+    /**
+     * Glocke fuers Team, wenn der Kunde sein Ticket selbst schliesst
+     * oder eine Bewertung abgibt.
+     */
+    public static function notifyTeam(Ticket $ticket, string $title, string $text): void
+    {
+        $ticket->loadMissing('customer.user');
+        $recipients = collect();
+        if ($ticket->assigned_to) {
+            $recipients->push($ticket->assigned_to);
+        }
+        if ($ticket->customer) {
+            $recipients = $recipients->merge($ticket->customer->betreuer()->pluck('users.id'));
+        }
+        $recipients = $recipients->merge(User::whereIn('role', ['admin', 'manager'])->pluck('id'))
+            ->unique()->values();
+        foreach ($recipients as $userId) {
+            InternalNotification::create([
+                'user_id' => $userId,
+                'title' => $title,
+                'body' => $text,
+                'link' => route('admin.ticket', $ticket->id),
+            ]);
+        }
+    }
+
+    /**
      * Benachrichtigt das Team, wenn ein Kunde auf ein Ticket antwortet.
      */
     public static function notifyCustomerReply(Ticket $ticket): void

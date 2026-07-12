@@ -66,6 +66,8 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     Route::post('/tickets', [PortalController::class, 'ticketsStore'])->name('tickets.store');
     Route::get('/tickets/{id}', [PortalController::class, 'ticketsShow'])->name('tickets.show');
     Route::post('/tickets/{id}/reply', [PortalController::class, 'ticketsReply'])->name('tickets.reply');
+    Route::post('/tickets/{id}/close', [PortalController::class, 'ticketsClose'])->name('tickets.close');
+    Route::post('/tickets/{id}/rate', [PortalController::class, 'ticketsRate'])->name('tickets.rate');
     Route::get('/attachments/{id}/download', [PortalController::class, 'downloadAttachment'])->name('attachment.download');
     Route::get('/documents', [PortalController::class, 'documents'])->name('documents');
     Route::post('/documents', [PortalController::class, 'documentUpload'])->name('documents.upload');
@@ -162,10 +164,13 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/contracts/create/{customerId}', [AdminController::class, 'contractCreate'])->name('contract.create');
     Route::post('/contracts/{customerId}', [AdminController::class, 'contractStore'])->name('contract.store');
 
-    // Tickets
-    Route::get('/tickets', [AdminController::class, 'tickets'])->name('tickets');
-    Route::get('/tickets/{id}', [AdminController::class, 'ticketShow'])->name('ticket');
-    Route::post('/tickets/{id}/reply', [AdminController::class, 'ticketReply'])->name('ticket.reply');
+    // Tickets (Workflow: Status, Zuweisung, Eigenschaften, Notizen, Antwort)
+    Route::get('/tickets', [\App\Http\Controllers\TicketController::class, 'index'])->name('tickets');
+    Route::get('/tickets/{id}', [\App\Http\Controllers\TicketController::class, 'show'])->name('ticket');
+    Route::post('/tickets/{id}/reply', [\App\Http\Controllers\TicketController::class, 'reply'])->name('ticket.reply');
+    Route::post('/tickets/{id}/status', [\App\Http\Controllers\TicketController::class, 'status'])->name('ticket.status');
+    Route::post('/tickets/{id}/update', [\App\Http\Controllers\TicketController::class, 'updateMeta'])->name('ticket.update');
+    Route::post('/tickets/{id}/note', [\App\Http\Controllers\TicketController::class, 'note'])->name('ticket.note');
 
     // Anfragen (Website + E-Mail info@)
     Route::get('/inquiries', [AdminController::class, 'inquiries'])->name('inquiries');
