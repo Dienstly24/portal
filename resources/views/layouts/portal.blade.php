@@ -52,6 +52,9 @@ form textarea{min-height:90px;resize:vertical;}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 .toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
 
+.metric-link{display:block;text-decoration:none;color:var(--ink);cursor:pointer;transition:transform .12s, box-shadow .12s;}
+.metric-link:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.08);border-color:var(--petrol);}
+.metric-cta{font-size:11.5px;color:var(--petrol);margin-top:6px;font-weight:600;}
 /* Responsive (Final Polish Punkt 8) */
 @media (max-width: 1024px) {
     .grid-3{grid-template-columns:repeat(2,1fr);}
@@ -76,11 +79,10 @@ form textarea{min-height:90px;resize:vertical;}
     <a href="{{ route('portal.documents') }}" class="nav-item {{ request()->routeIs('portal.documents*') ? 'active' : '' }}">Dokumente</a>
     <a href="{{ route('portal.family') }}" class="nav-item {{ request()->routeIs('portal.family*') ? 'active' : '' }}">Familie</a>
     <a href="{{ route('portal.profile') }}" class="nav-item {{ request()->routeIs('portal.profile*') ? 'active' : '' }}">Meine Daten</a>
-    <a href="{{ route('portal.addresses') }}" class="nav-item {{ request()->routeIs('portal.addresses*') ? 'active' : '' }}">Adressen</a>
     <a href="{{ route('portal.contacts') }}" class="nav-item {{ request()->routeIs('portal.contacts*') ? 'active' : '' }}">Kontaktinformationen</a>
-    <a href="{{ route('portal.bank') }}" class="nav-item {{ request()->routeIs('portal.bank*') ? 'active' : '' }}">Bankverbindung</a>
     <a href="{{ route('portal.change_requests') }}" class="nav-item {{ request()->routeIs('portal.change_requests*') ? 'active' : '' }}">Änderungsanfragen</a>
     <a href="{{ route('portal.tickets') }}" class="nav-item {{ request()->routeIs('portal.tickets*') ? 'active' : '' }}">Nachrichten</a>
+    <a href="{{ route('portal.datenschutz') }}" class="nav-item {{ request()->routeIs('portal.datenschutz') ? 'active' : '' }}">Datenschutz</a>
     <div class="sidebar-foot">
         <div class="user-chip">
             <div class="avatar">{{ strtoupper(substr(auth()->user()->name,0,2)) }}</div>
@@ -93,12 +95,65 @@ form textarea{min-height:90px;resize:vertical;}
     </div>
 </div>
 <div class="main">
+    {{-- Portal-Glocke (Review Punkt 8/10) --}}
+    <div style="position:fixed;top:14px;right:18px;z-index:150;">
+        <button type="button" id="p-bell" title="Benachrichtigungen" style="position:relative;width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:18px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.08);">
+            🔔<span id="p-bell-dot" style="display:none;position:absolute;top:6px;right:7px;width:9px;height:9px;border-radius:50%;background:#E24B4A;border:2px solid #fff;"></span>
+        </button>
+        <div id="p-bell-dd" style="display:none;position:absolute;top:50px;right:0;width:330px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.14);overflow:hidden;">
+            <div style="padding:11px 14px;border-bottom:1px solid var(--line);font-size:13px;font-weight:700;">Benachrichtigungen</div>
+            <div id="p-bell-list" style="max-height:340px;overflow-y:auto;"><p style="padding:14px;font-size:13px;color:var(--ink-soft);">Laden…</p></div>
+        </div>
+    </div>
     @if(session('success'))<div class="alert-success">{{ session('success') }}</div>@endif
     @if(session('error'))<div class="alert-error">{{ session('error') }}</div>@endif
+    @if($errors->any())
+    <div class="alert-error">
+        <strong>Bitte prüfen Sie Ihre Eingaben:</strong>
+        <ul style="margin:6px 0 0;padding-left:18px;">
+            @foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach
+        </ul>
+    </div>
+    @endif
     @yield('content')
 </div>
 <script>
 document.getElementById('m-btn')?.addEventListener('click', function(){ document.getElementById('portal-sidebar').classList.toggle('open'); });
+
+// Portal-Benachrichtigungen
+(function() {
+    const bell = document.getElementById('p-bell');
+    if (!bell) return;
+    const esc = t => { const d = document.createElement('div'); d.textContent = t ?? ''; return d.innerHTML; };
+    function load() {
+        fetch('{{ route('portal.notifications') }}', {headers: {'Accept': 'application/json'}})
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('p-bell-dot').style.display = data.unread > 0 ? 'block' : 'none';
+                const list = document.getElementById('p-bell-list');
+                if (!data.items.length) { list.innerHTML = '<p style="padding:14px;font-size:13px;color:#6B7280;">Keine Benachrichtigungen.</p>'; return; }
+                list.innerHTML = data.items.map(function(n) { return ''
+                    + '<a href="' + n.url + '" onclick="pMarkRead(\'' + n.id + '\')" style="display:block;padding:10px 14px;text-decoration:none;color:#152826;border-bottom:1px solid #EEE;background:' + (n.read ? 'transparent' : '#F0F7F3') + ';">'
+                    + '<span style="display:block;font-size:12.5px;font-weight:600;">' + esc(n.title) + '</span>'
+                    + '<span style="display:block;font-size:12px;color:#6B7280;margin-top:2px;">' + esc(n.body) + '</span>'
+                    + '<span style="display:block;font-size:11px;color:#9CA3AF;margin-top:2px;">' + esc(n.time) + '</span></a>';
+                }).join('');
+            }).catch(function(){});
+    }
+    window.pMarkRead = function(id) {
+        fetch('/portal/notifications/' + id + '/read', {method: 'POST', headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'}}).catch(function(){});
+    };
+    bell.addEventListener('click', function() {
+        const dd = document.getElementById('p-bell-dd');
+        dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+        if (dd.style.display === 'block') load();
+    });
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#p-bell') && !e.target.closest('#p-bell-dd')) document.getElementById('p-bell-dd').style.display = 'none';
+    });
+    load();
+    setInterval(load, 60000);
+})();
 </script>
 </body>
 </html>

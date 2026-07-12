@@ -1,44 +1,55 @@
 <!DOCTYPE html>
-<html lang="{{ $lang }}" @if($lang === 'ar') dir="rtl" @endif>
+<html lang="de">
 <head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:30px 0;"><tr><td align="center">
 <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:10px;overflow:hidden;">
 <tr><td style="background:#1e3a8a;padding:25px 30px;">
-<h1 style="color:#ffffff;margin:0;font-size:22px;">{{ $lang === 'ar' ? 'أهلاً بك في Dienstly24 👋' : 'Willkommen bei Dienstly24 👋' }}</h1>
+<h1 style="color:#ffffff;margin:0;font-size:22px;">Willkommen bei Dienstly24 👋</h1>
 </td></tr>
 <tr><td style="padding:30px;">
-@if($lang === 'ar')
-<p style="font-size:15px;color:#333;">مرحباً <strong>{{ $customerName }}</strong>،</p>
-<p style="font-size:15px;color:#333;">يسعدنا انضمامك إلينا! تم إنشاء حسابك في بوابة العملاء الخاصة بنا. هذه بيانات الدخول:</p>
+@include('emails._greeting', ['greetingCustomer' => $customer])
+<p style="font-size:15px;color:#333;">Ihr persönliches Kundenportal ist eingerichtet. Dort sehen Sie Ihre Verträge und Dokumente, können Anfragen stellen und Ihre Daten bequem selbst pflegen.</p>
+
+{{-- Zugangsdaten-Box --}}
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fb;border:1px solid #e2e8f0;border-radius:8px;margin:18px 0;"><tr><td style="padding:18px 20px;">
+<p style="font-size:14px;color:#333;margin:0 0 10px;"><strong>Ihre Zugangsdaten:</strong></p>
+<p style="font-size:14px;color:#333;margin:0 0 6px;">🌐 Portal: <a href="https://portal.dienstly24.de" style="color:#1e3a8a;">portal.dienstly24.de</a></p>
+<p style="font-size:14px;color:#333;margin:0 0 10px;">👤 Benutzername: <strong>{{ $loginEmail }}</strong></p>
+@if($mode === 'birthdate')
+<p style="font-size:14px;color:#333;margin:0;">🔑 <strong>Ihr erstes Passwort ist Ihr Geburtsdatum im Format TT.MM.JJJJ</strong><br>
+<span style="color:#666;font-size:13px;">Beispiel für das Format: 01.01.1990 – bitte geben Sie Ihr eigenes Geburtsdatum mit Punkten ein.</span></p>
+@elseif($mode === 'setlink')
+<p style="font-size:14px;color:#333;margin:0;">🔑 Bitte legen Sie zunächst Ihr persönliches Passwort fest:</p>
+<p style="text-align:center;margin:14px 0 0;">
+    <a href="{{ $setPasswordUrl }}" style="background:#1e3a8a;color:#ffffff;padding:11px 26px;border-radius:8px;text-decoration:none;font-size:14px;">Passwort jetzt festlegen</a>
+</p>
 @else
-@include('emails._greeting', ['greetingName' => $customerName])
-<p style="font-size:15px;color:#333;">wir freuen uns, Sie bei uns begrüßen zu dürfen! Ihr Zugang zu unserem Kundenportal wurde erstellt:</p>
+<p style="font-size:14px;color:#333;margin:0;">🔑 Ihr Startpasswort: <strong>{{ $plainPassword }}</strong></p>
 @endif
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin:15px 0;">
-<tr><td style="padding:15px 20px;font-size:14px;color:#333;">
-<strong>{{ $lang === 'ar' ? 'رابط البوابة:' : 'Portal:' }}</strong> <a href="https://portal.dienstly24.de" style="color:#1e3a8a;">portal.dienstly24.de</a><br><br>
-<strong>{{ $lang === 'ar' ? 'البريد الإلكتروني:' : 'E-Mail:' }}</strong> {{ $customerEmail }}<br><br>
-<strong>{{ $lang === 'ar' ? 'كلمة المرور:' : 'Passwort:' }}</strong> {{ $plainPassword }}
 </td></tr></table>
-@if($lang === 'ar')
-<p style="font-size:13px;color:#b91c1c;"><strong>مهم:</strong> يرجى تغيير كلمة المرور بعد أول تسجيل دخول.</p>
-<div style="background:#EFF6FF;border-radius:8px;padding:15px 20px;margin:20px 0;">
-<p style="font-size:14px;color:#1e3a8a;margin:0;"><strong>📋 طلب صغير منك:</strong> بعد تسجيل الدخول، يرجى إكمال بياناتك الشخصية وإضافة أفراد عائلتك في البوابة. هذا يساعدنا على تقديم أفضل خدمة واستشارة تأمينية لك ولعائلتك.</p>
+
+{{-- Erste Schritte --}}
+<p style="font-size:14px;color:#333;margin:0 0 6px;"><strong>Ihr erster Login in 3 Schritten:</strong></p>
+<ol style="font-size:14px;color:#333;margin:0 0 16px;padding-left:20px;">
+    <li>Öffnen Sie <a href="https://portal.dienstly24.de" style="color:#1e3a8a;">portal.dienstly24.de</a></li>
+    <li>Melden Sie sich mit Ihrer E-Mail-Adresse und dem {{ $mode === 'setlink' ? 'selbst festgelegten' : 'oben beschriebenen' }} Passwort an</li>
+    <li>Ändern Sie Ihr Passwort anschließend jederzeit im Portal unter „Meine Daten“</li>
+</ol>
+
+<p style="font-size:13px;color:#666;margin:0 0 4px;"><strong>Passwort vergessen?</strong> Klicken Sie auf der Login-Seite auf „Passwort vergessen“ – Sie erhalten dann einen sicheren Link zum Zurücksetzen an diese E-Mail-Adresse.</p>
+
+<div style="background:#EFF6FF;border-radius:8px;padding:14px 18px;margin:18px 0 0;">
+<p style="font-size:13.5px;color:#1e3a8a;margin:0;"><strong>📋 Unsere Bitte:</strong> Vervollständigen Sie nach dem ersten Login Ihre persönlichen Daten und Familienmitglieder – so können wir Sie optimal beraten.</p>
 </div>
-<p style="font-size:15px;color:#333;">مع أطيب التحيات،<br>فريق Dienstly24</p>
-@else
-<p style="font-size:13px;color:#b91c1c;"><strong>Wichtig:</strong> Bitte ändern Sie Ihr Passwort nach dem ersten Login.</p>
-<div style="background:#EFF6FF;border-radius:8px;padding:15px 20px;margin:20px 0;">
-<p style="font-size:14px;color:#1e3a8a;margin:0;"><strong>📋 Eine kleine Bitte:</strong> Vervollständigen Sie nach dem Login bitte Ihre persönlichen Daten und fügen Sie Ihre Familienmitglieder im Portal hinzu. So können wir Sie und Ihre Familie optimal beraten.</p>
+
+{{-- Transparenzhinweis (DSGVO Art. 13): Verarbeitung vertragsbezogener E-Mails --}}
+<div style="border-top:1px solid #e2e8f0;margin:20px 0 0;padding-top:16px;">
+<p style="font-size:12.5px;color:#666;margin:0;"><strong>Hinweis zum Datenschutz:</strong> Damit wir Ihre Verträge zuverlässig betreuen, empfangen und verarbeiten wir auch Korrespondenz, die Ihre Verträge betrifft – z. B. Nachrichten und Dokumente von Versicherungs- oder Energieunternehmen. Solche Vorgänge ordnen wir Ihrem Kundenkonto zu und stellen sie Ihnen, soweit relevant, in Ihrem Portal bereit. Die Verarbeitung erfolgt ausschließlich zur Vertragsbetreuung gemäß unseren Datenschutzhinweisen; Ihre Daten geben wir nicht unbefugt an Dritte weiter.</p>
 </div>
-<p style="font-size:15px;color:#333;">Mit freundlichen Grüßen<br>Ihr Dienstly24 Team</p>
-@endif
+
+<p style="font-size:15px;color:#333;margin-top:18px;">Mit freundlichen Grüßen<br>Ihr Dienstly24 Team</p>
 </td></tr>
-<tr><td style="background:#f8fafc;padding:15px 30px;border-top:1px solid #e2e8f0;">
-<p style="font-size:12px;color:#94a3b8;margin:0;">Dienstly24 · Hamburg</p>
-</td></tr>
-</table>
-</td></tr></table>
+</table></td></tr></table>
 </body>
 </html>

@@ -47,16 +47,29 @@ class AdminController extends Controller
             'pendingApprovals' => \App\Models\CustomerChangeRequest::where('status','pending')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->count(),
             'recentTickets' => Ticket::with('customer.user')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->latest()->take(5)->get(),
             'recentApprovals' => \App\Models\CustomerChangeRequest::with('customer.user')->where('status','pending')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->latest()->take(5)->get(),
+            // Punkt 1: Zuletzt geöffnete Kunden strikt aufs Portfolio scopen.
+            // Admin (ids === null) sieht alle; Mitarbeiter nur zugewiesene.
+            'recentCustomers' => Customer::with('user')
+                ->when($ids !== null, fn($q) => $q->whereIn('id', $ids))
+                ->latest()->take(8)->get(),
         ]);
     }
 
     public function customers() {
         $employees = \App\Models\User::whereIn('role', ['employee', 'manager', 'support'])->orderBy('name')->get();
-        $query = $this->scopeCustomers(Customer::with(['user', 'betreuer']));
+        // Aktive Verträge mitladen (nur benötigte Spalten) für die Vertrags-Icons
+        // in der Liste – ohne N+1-Abfragen pro Zeile.
+        $query = $this->scopeCustomers(Customer::with([
+            'user',
+            'betreuer',
+            'contracts' => fn($q) => $q->where('status', 'active')->select('id', 'customer_id', 'type', 'status'),
+        ]));
         if (request('betreuer')) {
             $query->whereHas('betreuer', fn($q) => $q->where('users.id', request('betreuer')));
         }
-        $customers = $query->latest()->get();
+        // Seitenweise laden (25/Seite) – bleibt auch bei tausenden Kunden schnell.
+        // withQueryString() erhält den Betreuer-Filter über die Seiten hinweg.
+        $customers = $query->latest()->paginate(25)->withQueryString();
         return view('admin.customers', compact('customers', 'employees'));
     }
 
@@ -96,6 +109,9 @@ class AdminController extends Controller
             'status' => 'required',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
+            'cancellation_date' => 'nullable|date',
+            'energy.payment_amount' => 'nullable|numeric|min:0',
+            'energy.payment_interval' => 'nullable|in:monatlich,vierteljaehrlich,halbjaehrlich,jaehrlich',
             // KFZ-Details
             'vehicle.first_registration' => 'nullable|date',
             'vehicle.sf_liability_year' => 'nullable|integer|min:1950|max:2100',
@@ -120,6 +136,7 @@ class AdminController extends Controller
             'status' => $request->status,
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
+            'cancellation_date' => $request->cancellation_date,
             'notes' => $request->notes,
         ]);
 
@@ -145,7 +162,7 @@ class AdminController extends Controller
         } elseif ($request->type === 'strom_gas' && $request->filled('energy')) {
             \App\Models\ContractEnergyDetail::create(
                 ['contract_id' => $contract->id] + collect($request->input('energy'))
-                    ->only(['tariff','consumption_kwh','meter_number','malo_id','meter_reading','grid_operator','metering_operator'])
+                    ->only(['tariff','consumption_kwh','meter_number','malo_id','meter_reading','grid_operator','metering_operator','payment_amount','payment_interval'])
                     ->all()
             );
         } elseif ($request->type === 'internet' && $request->filled('internet')) {
@@ -175,7 +192,12 @@ class AdminController extends Controller
     }
 
     public function ticketReply(Request $request, $id) {
-        $request->validate(['body' => 'required', 'status' => 'required|in:open,in_progress,waiting,closed']);
+        $request->validate([
+            'body' => 'required',
+            'status' => 'required|in:open,in_progress,waiting,closed',
+            'attachments' => 'nullable|array|max:5',
+            'attachments.*' => 'file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+        ]);
         $ticket = Ticket::findOrFail($id);
         $this->authorizeTicketAccess($ticket);
         \App\Models\TicketMessage::create([
@@ -191,22 +213,36 @@ class AdminController extends Controller
         ]);
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
-                $path = $file->store('tickets/' . $ticket->id, 'public');
+                // Punkt 5: sicher auf privater Disk speichern
+                $path = $file->store('tickets/' . $ticket->id, 'local');
                 \App\Models\TicketAttachment::create([
                     'id' => Str::uuid(),
                     'ticket_id' => $ticket->id,
                     'uploaded_by' => auth()->id(),
                     'file_name' => $file->getClientOriginalName(),
                     'file_path' => $path,
+                    'disk' => 'local',
                 ]);
             }
         }
         $ticket->update(['status' => $request->status]);
         {
             $ticket->load('customer.user');
+
+            // Portal-Glocke: "Neue Nachricht" für den Kunden (Review Punkt 10)
+            if ($ticket->customer?->user_id) {
+                \App\Models\InternalNotification::create([
+                    'user_id' => $ticket->customer->user_id,
+                    'title' => 'Neue Nachricht',
+                    'body' => 'Unser Team hat auf Ihre Anfrage „' . \Illuminate\Support\Str::limit($ticket->subject, 60) . '" geantwortet.',
+                    'link' => route('portal.tickets.show', $ticket->id),
+                ]);
+            }
+
             $email = $ticket->customer?->user?->email;
             if ($email && !str_contains($email, '@dienstly24.internal')) {
                 try {
+                    // Mail enthält bewusst KEINE Nachrichtendetails (Punkt 10)
                     \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\TicketReplyMail($ticket, $request->body));
                 } catch (\Throwable $e) { \Log::warning('Ticket reply mail failed: ' . $e->getMessage()); }
             }
@@ -223,14 +259,18 @@ class AdminController extends Controller
             'first_name' => 'required',
             'last_name' => 'required',
             'email' => 'required|email|unique:users',
-            'password' => 'required|min:8',
+            // Passwort ist jetzt optional: ohne Eingabe greift der
+            // Startpasswort-Flow (Geburtsdatum TT.MM.JJJJ bzw. Set-Link).
+            'password' => 'nullable|min:8',
         ]);
         $fullName = $request->first_name . ' ' . $request->last_name;
         $address = $this->buildAddress($request);
         $user = User::create([
             'name' => $fullName,
             'email' => $request->email,
-            'password' => bcrypt($request->password),
+            // Platzhalter - das nutzbare Passwort setzt gleich der
+            // PortalAccessService (manuell/Geburtsdatum/Set-Link).
+            'password' => bcrypt(\Illuminate\Support\Str::random(40)),
             'role' => 'customer',
         ]);
         $customer = Customer::create([
@@ -244,11 +284,23 @@ class AdminController extends Controller
             'company_name' => $request->customer_type === 'firma' ? $request->company_name : null,
             'company_type' => $request->customer_type === 'firma' ? $request->company_type : null,
         ]);
-        if ($request->email && !str_contains($request->email, '@dienstly24.internal')) {
+        // Portal-Einladung: manuelles Passwort > Geburtsdatum-Startpasswort
+        // > Passwort-Setzen-Link. KEINE Login-Mail ohne echte Adresse.
+        $customer->setRelation('user', $user);
+        if ($user->hasRealEmail()) {
             try {
-                \Illuminate\Support\Facades\Mail::to($request->email)->send(new \App\Mail\CustomerWelcomeMail(
-                    $fullName, $request->email, $request->password, $request->preferred_lang ?? 'de'
-                ));
+                if ($request->filled('password')) {
+                    $user->forceFill([
+                        'password' => bcrypt($request->password),
+                        'portal_password_set_at' => now(),
+                        'invitation_sent_at' => now(),
+                    ])->save();
+                    \Illuminate\Support\Facades\Mail::to($user->email)->send(
+                        new \App\Mail\CustomerWelcomeMail($customer, 'manual', $request->password)
+                    );
+                } else {
+                    app(\App\Services\Portal\PortalAccessService::class)->sendInvitation($customer, auth()->id());
+                }
             } catch (\Throwable $e) { \Log::warning('Welcome mail failed: ' . $e->getMessage()); }
         }
         return redirect()->route("admin.customer", $customer->id)->with("success", "Kunde erfolgreich erstellt.");
@@ -258,7 +310,8 @@ class AdminController extends Controller
         $this->authorizeCustomerAccess($id);
         $customer = Customer::with('user')->findOrFail($id);
         $addr = $this->splitAddress($customer->address);
-        return view('admin.customer_edit', compact('customer', 'addr'));
+        $partners = \App\Models\Partner::active()->orderBy('name')->get(['id', 'name']);
+        return view('admin.customer_edit', compact('customer', 'addr', 'partners'));
     }
 
     public function customerUpdate(Request $request, $id) {
@@ -274,7 +327,6 @@ class AdminController extends Controller
             'new_password' => 'nullable|min:8',
             'health_insurance_type' => 'nullable|in:gesetzlich,privat',
             'gender' => 'nullable|in:male,female,diverse',
-            'salutation' => 'nullable|in:herr,frau,divers,firma',
         ]);
 
         // Sensible Kundenakte-Felder: Änderungen auditieren (nur Feldnamen ins Log)
@@ -312,7 +364,6 @@ class AdminController extends Controller
             'birth_date' => $request->birth_date ?: null,
             'marital_status' => $request->marital_status,
             'gender' => in_array($request->gender, ['male','female','diverse'], true) ? $request->gender : null,
-            'salutation' => in_array($request->salutation, ['herr','frau','divers','firma'], true) ? $request->salutation : null,
             'preferred_lang' => $request->preferred_lang,
             'nationality' => $request->nationality,
             'occupation' => $request->occupation,
@@ -324,6 +375,8 @@ class AdminController extends Controller
             'health_insurance_number' => $request->health_insurance_number ?: null,
             'pension_insurance_number' => $request->pension_insurance_number ?: null,
             'tax_id' => $request->tax_id ?: null,
+            // Zuordnung zu einem Vertriebspartner (dessen Portal ihn dann sieht).
+            'partner_id' => $request->partner_id ?: null,
         ];
 
         // Nur Spalten speichern, die in der Tabelle wirklich existieren
@@ -338,6 +391,7 @@ class AdminController extends Controller
         }
         if ($request->filled('new_password')) {
             $userData['password'] = bcrypt($request->new_password);
+            $userData['portal_password_set_at'] = now();
         }
         $user->update($userData);
 
@@ -565,6 +619,9 @@ class AdminController extends Controller
         $a = \App\Models\TicketAttachment::findOrFail($id);
         $ticket = Ticket::findOrFail($a->ticket_id);
         $this->authorizeTicketAccess($ticket);
+        if (($a->disk ?? 'public') === 'local') {
+            return \Illuminate\Support\Facades\Storage::disk('local')->download($a->file_path, $a->file_name);
+        }
         return response()->download(storage_path('app/public/' . $a->file_path), $a->file_name);
     }
 
@@ -596,9 +653,9 @@ class AdminController extends Controller
         \Illuminate\Support\Facades\DB::table('employee_customers')->where('customer_id', $dup->id)->update(['customer_id' => $primary->id]);
 
         // 2) Fehlende Felder vom Duplikat übernehmen
-        $request->validate(['gender' => 'nullable|in:male,female,diverse', 'salutation' => 'nullable|in:herr,frau,divers,firma']);
+        $request->validate(['gender' => 'nullable|in:male,female,diverse']);
 
-        foreach (['phone','mobile','address','address2','iban','iban2','birth_date','marital_status','nationality','occupation','email2','company_name','company_type','gender','salutation'] as $f) {
+        foreach (['phone','mobile','address','address2','iban','iban2','birth_date','marital_status','nationality','occupation','email2','company_name','company_type','gender'] as $f) {
             if (empty($primary->$f) && !empty($dup->$f)) $primary->$f = $dup->$f;
         }
         $primary->save();
@@ -659,35 +716,43 @@ class AdminController extends Controller
     public function destroyCustomer($id) {
         $this->authorizeCustomerAccess($id);
         $customer = \App\Models\Customer::findOrFail($id);
-        $user = $customer->user;
-
-        // DSGVO Art. 17 (Audit-Fix H3): Physische Dateien mitlöschen -
-        // die FK-Kaskade entfernt nur DB-Zeilen, die Rohdaten blieben
-        // sonst dauerhaft im Storage liegen.
-        foreach ($customer->documents()->get() as $doc) {
-            try {
-                \Illuminate\Support\Facades\Storage::disk($doc->disk ?: 'public')->delete($doc->file_path);
-            } catch (\Throwable $e) {
-                \Log::warning('Dokumentdatei bei Kundenlöschung nicht entfernbar: ' . $doc->file_path);
-            }
-        }
-        \Illuminate\Support\Facades\Storage::disk('local')->deleteDirectory('customers/' . $customer->id);
-
-        // DSGVO (Art. 17): E-Mails des Kunden enthalten personenbezogene
-        // Daten im Volltext - beim Löschen des Kunden mitlöschen statt
-        // nur zu entkoppeln (der FK würde customer_id nur auf NULL setzen).
-        // Inkl. der zugehörigen Anhang-Dateien (Audit-Fix H3).
-        $attachmentService = app(\App\Services\Mailbox\EmailAttachmentService::class);
-        foreach (\App\Models\EmailMessage::where('customer_id', $customer->id)->get() as $mail) {
-            $attachmentService->deleteFiles($mail);
-            $mail->delete();
-        }
-
-        $customer->delete();
-        if ($user) {
-            $user->delete();
-        }
+        app(\App\Services\CustomerDeletionService::class)->delete($customer, auth()->id());
         return redirect()->route('admin.customers')->with('success', 'Kunde gelöscht.');
+    }
+
+    /**
+     * Mehrere Kunden auf einmal löschen (nur admin, Routen-Middleware).
+     * Nutzt exakt dieselbe DSGVO-Löschlogik wie die Einzellöschung.
+     */
+    public function bulkDestroyCustomers(\Illuminate\Http\Request $request) {
+        // Auswahl kommt aus dem Formular als EIN kommagetrenntes Feld (erlaubt
+        // sehr große Löschmengen ohne max_input_vars-Limit); direkte API-/Test-
+        // Aufrufe dürfen weiterhin ein Array senden.
+        $ids = $request->input('customer_ids', []);
+        if (is_string($ids)) {
+            $ids = array_filter(array_map('trim', explode(',', $ids)));
+        }
+        $request->merge(['customer_ids' => array_values($ids)]);
+
+        // Bewusstes Sicherheitslimit: über die Weboberfläche dürfen höchstens
+        // 30 Kunden auf einmal gelöscht werden (Schutz vor versehentlichem
+        // Massenlöschen). Ein vollständiges Leeren läuft über `customers:purge`.
+        $data = $request->validate([
+            'customer_ids' => 'required|array|min:1|max:30',
+            'customer_ids.*' => 'uuid',
+        ], [
+            'customer_ids.max' => 'Es können höchstens 30 Kunden auf einmal gelöscht werden.',
+        ]);
+
+        $service = app(\App\Services\CustomerDeletionService::class);
+        $deleted = 0;
+        foreach (\App\Models\Customer::whereIn('id', $data['customer_ids'])->get() as $customer) {
+            $service->delete($customer, auth()->id());
+            $deleted++;
+        }
+
+        return redirect()->route('admin.customers')
+            ->with('success', $deleted . ' Kunde(n) endgültig gelöscht.');
     }
 
     public function customerTimeline($id) {

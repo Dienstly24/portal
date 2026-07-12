@@ -27,7 +27,7 @@ class SelfServiceController extends Controller
     {
         return Customer::firstOrCreate(
             ['user_id' => auth()->id()],
-            ['customer_number' => app(\App\Services\CustomerNumberGenerator::class)->generate()]
+            ['customer_number' => 'C-' . strtoupper(Str::random(8))]
         );
     }
 
@@ -51,6 +51,11 @@ class SelfServiceController extends Controller
             'name' => 'required|string|max:255',
             'relation' => 'required|in:ehepartner,kind,andere',
             'birth_date' => 'nullable|date|before_or_equal:today',
+            'gender' => 'nullable|in:male,female',
+            'birth_place' => 'nullable|string|max:255',
+            'health_insurance_number' => 'nullable|string|max:50',
+            'pension_insurance_number' => 'nullable|string|max:50',
+            'tax_id' => 'nullable|string|max:20',
         ]);
 
         $this->createRequest('family', null, $data, 'Neues Familienmitglied beantragt: ' . $data['name']);
@@ -67,6 +72,11 @@ class SelfServiceController extends Controller
             'name' => 'required|string|max:255',
             'relation' => 'required|in:ehepartner,kind,andere',
             'birth_date' => 'nullable|date|before_or_equal:today',
+            'gender' => 'nullable|in:male,female',
+            'birth_place' => 'nullable|string|max:255',
+            'health_insurance_number' => 'nullable|string|max:50',
+            'pension_insurance_number' => 'nullable|string|max:50',
+            'tax_id' => 'nullable|string|max:20',
         ]);
 
         $this->createRequest(
@@ -77,6 +87,26 @@ class SelfServiceController extends Controller
         );
 
         return back()->with('success', 'Ihre Änderung wurde zur Prüfung eingereicht.');
+    }
+
+    /**
+     * Löschung eines Familienmitglieds beantragen. Wird – wie jede andere
+     * Änderung – erst nach Prüfung und Freigabe durch einen Mitarbeiter
+     * wirksam (Vier-Augen-Prinzip).
+     */
+    public function familyDelete($id)
+    {
+        $customer = $this->getCustomer();
+        $member = CustomerFamily::where('customer_id', $customer->id)->where('id', $id)->firstOrFail();
+
+        $this->createRequest(
+            'family',
+            ['id' => $member->id, 'name' => $member->name, 'relation' => $member->relation, 'birth_date' => $member->birth_date],
+            ['id' => $member->id, 'delete' => true, 'name' => $member->name],
+            'Löschung Familienmitglied beantragt: ' . $member->name
+        );
+
+        return back()->with('success', 'Ihr Löschantrag wurde zur Prüfung eingereicht. Das Familienmitglied wird nach Freigabe entfernt.');
     }
 
     // ------------------------------------------------------------------

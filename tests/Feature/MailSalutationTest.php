@@ -16,19 +16,20 @@ class MailSalutationTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function customerWithSalutation(string $salutation, string $name): Customer
+    private function customerWithGender(?string $gender, string $name, ?string $company = null): Customer
     {
         $user = User::factory()->create(['name' => $name, 'role' => 'customer']);
         return Customer::create([
             'user_id' => $user->id,
             'customer_number' => 'C-' . strtoupper(substr(md5($name), 0, 6)),
-            'salutation' => $salutation,
+            'gender' => $gender,
+            'company_name' => $company,
         ]);
     }
 
-    public function test_herr_salutation_in_ticket_mail(): void
+    public function test_male_gender_gives_herr_salutation(): void
     {
-        $customer = $this->customerWithSalutation('herr', 'Max Mustermann');
+        $customer = $this->customerWithGender('male', 'Max Mustermann');
         $ticket = Ticket::create(['customer_id' => $customer->id, 'type' => 'other', 'status' => 'open', 'subject' => 's', 'description' => 'd']);
 
         $html = (new TicketReplyMail($ticket, 'Antwort'))->render();
@@ -36,18 +37,18 @@ class MailSalutationTest extends TestCase
         $this->assertStringNotContainsString('Hallo Max', $html);
     }
 
-    public function test_frau_salutation_in_contract_mail(): void
+    public function test_female_gender_gives_frau_salutation(): void
     {
-        $customer = $this->customerWithSalutation('frau', 'Erika Müller');
+        $customer = $this->customerWithGender('female', 'Erika Müller');
         $contract = Contract::create(['customer_id' => $customer->id, 'type' => 'kfz', 'insurer' => 'HUK', 'status' => 'active', 'contract_number' => 'X', 'end_date' => now()->addDays(20)]);
 
         $html = (new ContractExpiryMail($contract, 20))->render();
         $this->assertStringContainsString('Sehr geehrte Frau Müller', $html);
     }
 
-    public function test_firma_salutation_generic_greeting(): void
+    public function test_company_customer_gets_generic_greeting(): void
     {
-        $customer = $this->customerWithSalutation('firma', 'Muster GmbH');
+        $customer = $this->customerWithGender(null, 'Muster GmbH', 'Muster GmbH');
         $ticket = Ticket::create(['customer_id' => $customer->id, 'type' => 'other', 'status' => 'open', 'subject' => 's', 'description' => 'd']);
 
         $html = (new TicketReplyMail($ticket, 'Antwort'))->render();
@@ -56,8 +57,11 @@ class MailSalutationTest extends TestCase
 
     public function test_welcome_mail_uses_central_greeting_partial(): void
     {
-        $html = (new CustomerWelcomeMail('Anna Beispiel', 'a@b.de', 'pw', 'de'))->render();
-        $this->assertStringContainsString('Guten Tag Anna Beispiel', $html);
+        // Neue Mailable-Signatur (Customer-Objekt + mode); Anrede aus
+        // dem Geschlecht (main-Refactor) über das zentrale _greeting-Partial.
+        $customer = $this->customerWithGender('female', 'Anna Beispiel');
+        $html = (new CustomerWelcomeMail($customer, 'manual', 'pw'))->render();
+        $this->assertStringContainsString('Sehr geehrte Frau Beispiel', $html);
         $this->assertStringNotContainsString('Hallo <strong>', $html);
     }
 }

@@ -30,6 +30,9 @@ class EnsureUserRole
             if (in_array($user->role, ['admin', 'manager', 'support', 'employee'])) {
                 return redirect()->route('admin.dashboard');
             }
+            if ($user->role === 'partner') {
+                return redirect()->route('partner.dashboard');
+            }
             return redirect()->route('portal.dashboard');
         }
 

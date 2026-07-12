@@ -10,7 +10,7 @@ class ContractEnergyDetail extends Model
     public $incrementing = false;
     protected $fillable = [
         'contract_id','tariff','consumption_kwh','meter_number','malo_id',
-        'meter_reading','grid_operator','metering_operator',
+        'meter_reading','grid_operator','metering_operator','payment_amount','payment_interval',
     ];
     protected static function boot() {
         parent::boot();

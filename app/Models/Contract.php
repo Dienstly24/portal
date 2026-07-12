@@ -6,7 +6,7 @@ use Illuminate\Support\Str;
 class Contract extends Model {
     protected $keyType = 'string';
     public $incrementing = false;
-    protected $fillable = ['customer_id','contract_number','type','insurer','status','start_date','end_date','pdf_path','notes'];
+    protected $fillable = ['customer_id','contract_number','type','insurer','status','start_date','end_date','pdf_path','notes', 'cancellation_date'];
     protected static function boot() {
         parent::boot();
         static::creating(fn($m) => $m->id = Str::uuid());

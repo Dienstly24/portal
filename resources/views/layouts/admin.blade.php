@@ -99,6 +99,8 @@ table tr:hover td{background:#FAFAF8;}
 .customer-card .name{font-weight:600;font-size:13.5px;margin-bottom:4px;}
 .customer-card .meta{font-size:12px;color:var(--ink-soft);}
 
+.metric-card-link{display:block;text-decoration:none;color:inherit;cursor:pointer;transition:transform .12s,box-shadow .12s;}
+.metric-card-link:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.1);}
 /* Responsive (Final Polish Punkt 8) */
 @media (max-width: 1200px) {
     .metrics-grid{grid-template-columns:repeat(2,1fr);}
@@ -266,6 +268,7 @@ table tr:hover td{background:#FAFAF8;}
         @if($todayAppt > 0)<span class="nav-badge">{{ $todayAppt }}</span>@endif
     </a>
     @if(in_array(auth()->user()->role, ['admin','manager']))
+    <a href="{{ route('admin.banners') }}" class="nav-item {{ request()->routeIs('admin.banners*') ? 'active' : '' }}">📢 Banner</a>
     <a href="{{ route('admin.settings') }}" class="nav-item {{ request()->routeIs('admin.settings*') ? 'active' : '' }}">
         <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
         Einstellungen

@@ -29,15 +29,7 @@
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div class="field"><label>Mobil</label><input type="tel" name="mobile" value="{{ old('mobile') }}" placeholder="+49 176 ..."></div>
-        <div class="field"><label>Anrede</label>
-            <select name="salutation" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
-                <option value="">— Nicht angegeben —</option>
-                @foreach(\App\Models\Customer::SALUTATIONS as $skey => $slabel)
-                <option value="{{ $skey }}" >{{ $slabel }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div class="field"><label>Geschlecht</label>
+                <div class="field"><label>Geschlecht</label>
             <select name="gender" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
                 <option value="">— Nicht angegeben —</option>
                 @foreach(\App\Models\Customer::GENDERS as $gkey => $glabel)
@@ -95,7 +87,14 @@
 <div class="card" style="max-width:800px;">
     <div class="card-title" style="margin-bottom:20px;">Portal-Zugang</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Passwort *</label><input type="password" name="password" required placeholder="Mindestens 8 Zeichen"></div>
+        <div class="field">
+            <label>Passwort (optional)</label>
+            <input type="password" name="password" placeholder="Leer lassen = Startpasswort-Flow">
+            <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">
+                Leer lassen: Der Kunde erhält sein <strong>Geburtsdatum (TT.MM.JJJJ)</strong> als Startpasswort
+                bzw. ohne Geburtsdatum einen Link zum Selbst-Festlegen – inkl. Einladungs-Mail mit Anleitung.
+            </div>
+        </div>
         <div class="field"><label>Sprache</label>
             <select name="preferred_lang" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
                 <option value="de">Deutsch</option>

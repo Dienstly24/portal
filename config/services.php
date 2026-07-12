@@ -35,7 +35,8 @@ return [
         ],
     ],
 
-    'inquiry' => ['token' => env('INQUIRY_TOKEN')],
+    'inquiry' => [
+        'support_email' => env('INQUIRY_SUPPORT_EMAIL'),'token' => env('INQUIRY_TOKEN')],
 
     'lexoffice' => ['key' => env('LEXOFFICE_API_KEY')],
 

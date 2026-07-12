@@ -20,6 +20,16 @@ class ImportExportController extends Controller
         return view('admin.import_export');
     }
 
+    /**
+     * CSV-Import über denselben intelligenten Pfad wie der Lexoffice-Import:
+     * - Duplikaterkennung per CustomerMatchingService (Geburtsdatum + Name +
+     *   E-Mail), nicht mehr nur per E-Mail-Vergleich
+     * - Zeilen OHNE E-Mail werden importiert (Platzhalteradresse) statt
+     *   stillschweigend verworfen
+     * - strukturierte Adressfelder (Straße/Nr./PLZ/Ort) statt nur Sammelfeld
+     * - vorhandene Original-Kundennummer bleibt erhalten: "25" + Original;
+     *   zusätzlich als ExternalReference (type=import_number) nachvollziehbar
+     */
     public function import(Request $request) {
         $request->validate(['csv_file' => 'required|file|mimes:csv,txt|max:10240']);
 
@@ -27,69 +37,79 @@ class ImportExportController extends Controller
         $csv->setHeaderOffset(0);
         $records = $csv->getRecords();
 
+        $matcher = app(\App\Services\Matching\CustomerMatchingService::class);
+        $creator = app(\App\Services\CustomerCreation\CustomerAutoCreationService::class);
+
         $imported = 0;
+        $duplicates = 0;
         $skipped = 0;
         $errors = [];
 
         foreach ($records as $i => $row) {
             try {
-                $email = trim($row['email'] ?? $row['E-Mail'] ?? $row['e-mail'] ?? '');
-                if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                    $skipped++;
+                $col = fn (array $keys) => collect($keys)
+                    ->map(fn ($k) => trim((string) ($row[$k] ?? '')))
+                    ->first(fn ($v) => $v !== '') ?: null;
+
+                $firstName = $col(['first_name', 'Vorname']);
+                $lastName = $col(['last_name', 'Nachname']);
+                $name = trim(($firstName ?? '') . ' ' . ($lastName ?? '')) ?: $col(['name', 'Name']);
+                if (!$name) {
+                    $skipped++; // ohne Namen kein sinnvoller Datensatz
                     continue;
                 }
-                if (User::where('email', $email)->exists()) {
-                    $skipped++;
+
+                $email = $col(['email', 'E-Mail', 'e-mail']);
+                if ($email && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $email = null; // ungültige Adresse ignorieren, Kunde trotzdem anlegen
+                }
+
+                $company = $col(['company', 'Firma']);
+                $originalNumber = $col(['customer_number', 'Kundennummer', 'kundennummer', 'Kundennr', 'Nr']);
+
+                $data = array_filter([
+                    'full_name'     => $name,
+                    'first_name'    => $firstName,
+                    'last_name'     => $lastName,
+                    'email'         => $email,
+                    'phone'         => $col(['phone', 'Telefon']) ?? $col(['mobile', 'Mobil']),
+                    'birth_date'    => $this->parseDate($col(['birth_date', 'Geburtsdatum'])),
+                    'street'        => $col(['street', 'Straße', 'Strasse']),
+                    'house_number'  => $col(['street_nr', 'Nr', 'Hausnummer']),
+                    'zip'           => $col(['plz', 'PLZ']),
+                    'city'          => $col(['city', 'Ort', 'Stadt']),
+                    'iban'          => $col(['iban', 'IBAN']),
+                    'company_name'  => $company,
+                    'company_type'  => $col(['company_type', 'Rechtsform']),
+                    'customer_type' => $company ? 'firma' : 'privat',
+                    'import_number' => $originalNumber,
+                ], fn ($v) => $v !== null && $v !== '');
+
+                if ($originalNumber) {
+                    $data['external_references'] = [
+                        ['type' => 'import_number', 'value' => $originalNumber, 'source' => 'import'],
+                    ];
+                }
+
+                // Intelligente Duplikaterkennung statt reinem E-Mail-Vergleich.
+                $match = $matcher->match($data);
+                if ($match->tier() !== 'manual') {
+                    $duplicates++;
                     continue;
                 }
 
-                $firstName = trim($row['first_name'] ?? $row['Vorname'] ?? '');
-                $lastName = trim($row['last_name'] ?? $row['Nachname'] ?? '');
-                $name = trim("$firstName $lastName") ?: ($row['name'] ?? $row['Name'] ?? $email);
-
-                $user = User::create([
-                    'name' => $name,
-                    'email' => $email,
-                    'password' => bcrypt(Str::random(12)),
-                    'role' => 'customer',
-                ]);
-
-                $address = trim(
-                    ($row['street'] ?? $row['Straße'] ?? '') . ' ' .
-                    ($row['street_nr'] ?? $row['Nr'] ?? '') . ', ' .
-                    ($row['plz'] ?? $row['PLZ'] ?? '') . ' ' .
-                    ($row['city'] ?? $row['Ort'] ?? '') . ', ' .
-                    ($row['country'] ?? $row['Land'] ?? 'Deutschland')
-                , ', ');
-
-                Customer::create([
-                    'id' => Str::uuid(),
-                    'user_id' => $user->id,
-                    'customer_number' => app(\App\Services\CustomerNumberGenerator::class)->generate(),
-                    'phone' => $row['phone'] ?? $row['Telefon'] ?? null,
-                    'mobile' => $row['mobile'] ?? $row['Mobil'] ?? null,
-                    'address' => $address ?: null,
-                    'iban' => $row['iban'] ?? $row['IBAN'] ?? null,
-                    'birth_date' => $this->parseDate($row['birth_date'] ?? $row['Geburtsdatum'] ?? null),
-                    'marital_status' => $row['marital_status'] ?? $row['Familienstand'] ?? null,
-                    'preferred_lang' => $row['lang'] ?? $row['Sprache'] ?? 'de',
-                    'company_name' => $row['company'] ?? $row['Firma'] ?? null,
-                    'company_type' => $row['company_type'] ?? $row['Rechtsform'] ?? null,
-                    'customer_type' => ($row['company'] ?? $row['Firma'] ?? '') ? 'firma' : 'privat',
-                ]);
-
+                $creator->createFromUnmatched($data, 'import', auth()->id());
                 $imported++;
+            } catch (\App\Services\CustomerCreation\DuplicateCustomerException $e) {
+                $duplicates++;
             } catch (\Exception $e) {
-                $errors[] = "Zeile " . ($i+2) . ": " . $e->getMessage();
+                $errors[] = "Zeile " . ($i + 2) . ": " . $e->getMessage();
             }
         }
 
-        $msg = "$imported Kunden importiert, $skipped übersprungen.";
-        if(count($errors)) $msg .= " " . count($errors) . " Fehler.";
-
         return back()->with('import_result', [
             'imported' => $imported,
-            'skipped' => $skipped,
+            'skipped' => $skipped + $duplicates,
             'errors' => array_slice($errors, 0, 5),
         ]);
     }

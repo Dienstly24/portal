@@ -75,11 +75,26 @@ class ChangeRequestService
 
     private function applyFamily(Customer $customer, array $data): void
     {
-        $fields = [
+        // Genehmigte LÖSCHUNG eines Familienmitglieds (Vier-Augen-Prinzip:
+        // der Kunde beantragt, ein Mitarbeiter prüft und gibt frei).
+        if (!empty($data['delete']) && !empty($data['id'])) {
+            CustomerFamily::where('customer_id', $customer->id)
+                ->where('id', $data['id'])
+                ->firstOrFail()
+                ->delete();
+            return;
+        }
+
+        $fields = array_filter([
             'name' => $data['name'] ?? null,
             'relation' => $data['relation'] ?? null,
             'birth_date' => $data['birth_date'] ?? null,
-        ];
+            'gender' => $data['gender'] ?? null,
+            'birth_place' => $data['birth_place'] ?? null,
+            'health_insurance_number' => $data['health_insurance_number'] ?? null,
+            'pension_insurance_number' => $data['pension_insurance_number'] ?? null,
+            'tax_id' => $data['tax_id'] ?? null,
+        ], fn($v) => $v !== null);
 
         if (!empty($data['id'])) {
             CustomerFamily::where('customer_id', $customer->id)
@@ -164,7 +179,9 @@ class ChangeRequestService
     private function applyProfile(Customer $customer, array $data): void
     {
         // Strikte Whitelist unkritischer Profilfelder
-        $allowed = ['gender', 'marital_status', 'nationality', 'occupation', 'address', 'phone', 'salutation', 'first_name', 'last_name', 'birth_date'];
+        $allowed = ['gender', 'marital_status', 'nationality', 'occupation', 'address', 'phone', 'first_name', 'last_name', 'birth_date',
+            'birth_place', 'address_street', 'address_house_number', 'address_house_suffix', 'address_zip', 'address_city',
+            'health_insurance_number', 'pension_insurance_number', 'tax_id'];
         $update = array_intersect_key($data, array_flip($allowed));
         if (isset($update['gender']) && !array_key_exists($update['gender'], Customer::GENDERS)) {
             unset($update['gender']);

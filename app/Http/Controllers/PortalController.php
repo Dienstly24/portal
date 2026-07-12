@@ -12,7 +12,7 @@ class PortalController extends Controller
     private function getCustomer() {
         return Customer::firstOrCreate(
             ['user_id' => auth()->id()],
-            ['customer_number' => app(\App\Services\CustomerNumberGenerator::class)->generate()]
+            ['customer_number' => 'C-' . strtoupper(Str::random(8))]
         );
     }
 
@@ -26,14 +26,26 @@ class PortalController extends Controller
             'contracts' => Contract::where('customer_id', $customer->id)->latest()->take(3)->get(),
             'tickets' => Ticket::where('customer_id', $customer->id)->latest()->take(3)->get(),
             'completeness' => $customer->completeness(),
+            'banners' => \App\Models\Banner::current()->get(),
         ]);
     }
 
     public function contracts() {
         $customer = $this->getCustomer();
         return view('portal.contracts', [
-            'contracts' => Contract::where('customer_id', $customer->id)->latest()->get()
+            'contracts' => Contract::where('customer_id', $customer->id)
+                ->with(['vehicleDetail', 'energyDetail', 'internetDetail'])
+                ->latest()->get()
         ]);
+    }
+
+    /** Detailseite eines eigenen Vertrags (Review Punkt 12). */
+    public function contractShow($id) {
+        $customer = $this->getCustomer();
+        $contract = Contract::where('customer_id', $customer->id)
+            ->with(['vehicleDetail', 'energyDetail', 'internetDetail'])
+            ->where('id', $id)->firstOrFail();
+        return view('portal.contract_show', ['contract' => $contract]);
     }
 
     public function tickets() {
@@ -92,11 +104,19 @@ class PortalController extends Controller
         $customer = $this->getCustomer();
         $a = \App\Models\TicketAttachment::findOrFail($id);
         $ticket = Ticket::where('id', $a->ticket_id)->where('customer_id', $customer->id)->firstOrFail();
+        if (($a->disk ?? 'public') === 'local') {
+            return \Illuminate\Support\Facades\Storage::disk('local')->download($a->file_path, $a->file_name);
+        }
         return response()->download(storage_path('app/public/' . $a->file_path), $a->file_name);
     }
 
     public function ticketsReply(Request $request, $id) {
-        $request->validate(['body' => 'required']);
+        // Punkt 5: Dateianhänge in der Unterhaltung (PDF/JPG/JPEG/PNG/WEBP)
+        $request->validate([
+            'body' => 'required',
+            'attachments' => 'nullable|array|max:5',
+            'attachments.*' => 'file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+        ]);
         $customer = $this->getCustomer();
         $ticket = Ticket::where('id', $id)->where('customer_id', $customer->id)->firstOrFail();
         TicketMessage::create([
@@ -106,6 +126,18 @@ class PortalController extends Controller
             'body' => $request->body,
             'is_internal' => false,
         ]);
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                \App\Models\TicketAttachment::create([
+                    'id' => (string) Str::uuid(),
+                    'ticket_id' => $ticket->id,
+                    'uploaded_by' => auth()->id(),
+                    'file_name' => $file->getClientOriginalName(),
+                    'file_path' => $file->store('tickets/' . $ticket->id, 'local'),
+                    'disk' => 'local',
+                ]);
+            }
+        }
         return back()->with('success', 'Nachricht gesendet.');
     }
 
@@ -131,11 +163,72 @@ class PortalController extends Controller
         return \Illuminate\Support\Facades\Storage::disk($disk)->download($doc->file_path, $doc->file_name);
     }
 
+    /**
+     * Portal-Glocke (Review Punkt 8/10): Statusmeldungen und
+     * 'Neue Nachricht'-Hinweise für den Kunden. Hart gescoped auf den
+     * eigenen User und auf title-basierte Einträge - interne Mention-/
+     * Change-Request-Zeilen sind hier strukturell unerreichbar.
+     */
+    public function notifications() {
+        $items = \App\Models\InternalNotification::where('user_id', auth()->id())
+            ->whereNotNull('title')
+            ->latest()->take(15)->get()
+            ->map(fn($n) => [
+                'id' => $n->id,
+                'title' => $n->title,
+                'body' => $n->body,
+                'time' => $n->created_at->format('d.m.Y H:i'),
+                'read' => $n->read_at !== null,
+                'url' => $n->link ?: '#',
+            ]);
+
+        return response()->json([
+            'unread' => \App\Models\InternalNotification::where('user_id', auth()->id())->whereNotNull('title')->whereNull('read_at')->count(),
+            'items' => $items,
+        ]);
+    }
+
+    public function notificationRead($id) {
+        $n = \App\Models\InternalNotification::where('user_id', auth()->id())->whereNotNull('title')->findOrFail($id);
+        $n->update(['read_at' => $n->read_at ?? now()]);
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Banner-Klick (Punkt 4): öffnet die Nachrichten-Seite und erstellt
+     * automatisch eine Supportanfrage, die den Banner eindeutig
+     * referenziert. Doppelklicks erzeugen kein Duplikat, solange die
+     * Anfrage offen ist.
+     */
+    public function bannerInterest($id) {
+        $customer = $this->getCustomer();
+        $banner = \App\Models\Banner::current()->findOrFail($id);
+
+        $subject = 'Interesse: ' . $banner->title;
+        $ticket = Ticket::where('customer_id', $customer->id)
+            ->where('subject', $subject)
+            ->whereIn('status', ['open', 'in_progress', 'waiting'])
+            ->first();
+
+        if (!$ticket) {
+            $ticket = Ticket::create([
+                'customer_id' => $customer->id,
+                'type' => 'other',
+                'status' => 'open',
+                'subject' => $subject,
+                'description' => 'Der Kunde interessiert sich für das Angebot „' . $banner->title . '" (Banner #' . $banner->id . ').',
+            ]);
+        }
+
+        return redirect()->route('portal.tickets.show', $ticket->id)
+            ->with('success', 'Ihre Anfrage zum Angebot „' . $banner->title . '" wurde erstellt. Unser Team meldet sich bei Ihnen.');
+    }
+
     public function documents() {
         $customer = $this->getCustomer();
         return view('portal.documents', [
             'documents' => \App\Models\Document::where('customer_id', $customer->id)->customerVisible()->latest()->get(),
-            // Offene/abgelehnte Anfragen zuerst, dann in Prüfung, dann erledigt.
+            // Angeforderte Dokumente: offene/abgelehnte zuerst, dann in Prüfung, dann erledigt.
             'documentRequests' => \App\Models\DocumentRequest::with('contract')
                 ->where('customer_id', $customer->id)
                 ->orderByRaw("case status when 'rejected' then 0 when 'open' then 1 when 'uploaded' then 2 else 3 end")
@@ -203,6 +296,55 @@ class PortalController extends Controller
         return back()->with('success', 'Vielen Dank! Ihr Dokument wurde übermittelt und wird nun geprüft.');
     }
 
+    /**
+     * Kunde lädt selbst ein Dokument hoch (Review Punkt 7). Speicherung
+     * privat; das Dokument gehört dem Kunden und ist für ihn sichtbar.
+     * Admin/Manager/Support werden über das Notification Center informiert.
+     */
+    public function documentUpload(Request $request) {
+        $customer = $this->getCustomer();
+
+        $data = $request->validate([
+            'document' => 'required|file|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:10240',
+            'category' => 'required|in:contract,police,invoice,identity,claim,other',
+        ]);
+
+        $file = $request->file('document');
+        $path = $file->store('customers/' . $customer->id . '/documents', 'local');
+
+        $doc = \App\Models\Document::create([
+            'id' => \Illuminate\Support\Str::uuid(),
+            'customer_id' => $customer->id,
+            'category' => $data['category'],
+            'file_name' => $file->getClientOriginalName(),
+            'file_path' => $path,
+            'disk' => 'local',
+            'visibility' => 'customer',
+            'uploaded_by' => auth()->id(),
+            'file_size' => $file->getSize(),
+        ]);
+
+        // Benachrichtigung an Staff (Notification Center)
+        foreach (\App\Models\User::whereIn('role', ['admin','manager','support'])->where('is_active', true)->get() as $recipient) {
+            \App\Models\InternalNotification::create([
+                'user_id' => $recipient->id,
+                'title' => 'Neues Kundendokument',
+                'body' => ($customer->user?->name ?? 'Ein Kunde') . ' hat „' . $doc->file_name . '" hochgeladen.',
+                'link' => route('admin.customer', $customer->id) . '#tab-uebersicht',
+            ]);
+        }
+
+        \App\Models\ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'document_uploaded_by_customer',
+            'entity_type' => 'document',
+            'entity_id' => $doc->id,
+            'meta' => json_encode(['customer_id' => (string) $customer->id, 'file' => $doc->file_name], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        return back()->with('success', 'Ihr Dokument wurde hochgeladen.');
+    }
+
     public function profile() {
         $customer = $this->getCustomer();
         return view('portal.profile', [
@@ -211,48 +353,101 @@ class PortalController extends Controller
         ]);
     }
 
+    /** Transparente Datenschutzinfo für Kunden (DSGVO Art. 13/14). */
+    public function datenschutz() {
+        return view('portal.datenschutz');
+    }
+
     public function profileUpdate(Request $request) {
         $customer = $this->getCustomer();
 
         $data = $request->validate([
             'gender' => 'nullable|in:male,female,diverse',
-            'salutation' => 'nullable|in:herr,frau,divers,firma',
-            'address' => 'nullable|string|max:255',
-            'phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+\/\s()-]{6,}$/'],
-            'iban' => ['nullable', 'string', 'max:34', 'regex:/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/'],
+            'birth_place' => 'nullable|string|max:255',
             'marital_status' => 'nullable|in:ledig,verheiratet,geschieden,verwitwet',
+            'phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+\/\s()-]{6,}$/'],
+            // Strukturierte Adresse nach deutschem Standard (Review Punkt 5)
+            'address_street' => 'nullable|string|max:255',
+            'address_house_number' => 'nullable|string|max:10',
+            'address_house_suffix' => 'nullable|string|max:10',
+            'address_zip' => 'nullable|string|max:10',
+            'address_city' => 'nullable|string|max:100',
+            // Sensible Kundendaten (Review Punkt 6)
+            'health_insurance_number' => 'nullable|string|max:50',
+            'pension_insurance_number' => 'nullable|string|max:50',
+            'tax_id' => 'nullable|string|max:20',
+            // Bankverbindung (Review Punkt 4 - alles auf einer Seite)
+            'iban' => ['nullable', 'string', 'max:34', 'regex:/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/'],
+            'account_holder' => 'nullable|string|max:255',
         ]);
 
         $service = app(\App\Services\ChangeRequestService::class);
-        $created = false;
+        $created = 0;
 
-        // Profildaten: ein gebündelter Antrag für alle geänderten Felder
+        // Persönliche Daten + strukturierte Adresse + Kundendaten:
+        // EIN gebündelter Profil-Antrag für alle geänderten Felder.
+        $profileFields = [
+            'gender', 'birth_place', 'marital_status', 'phone',
+            'address_street', 'address_house_number', 'address_house_suffix', 'address_zip', 'address_city',
+            'health_insurance_number', 'pension_insurance_number', 'tax_id',
+        ];
         $profileOld = $profileNew = [];
-        foreach (['salutation', 'gender', 'address', 'phone', 'marital_status'] as $field) {
-            if ($request->filled($field) && $data[$field] !== $customer->$field) {
+        foreach ($profileFields as $field) {
+            if ($request->filled($field) && (string) $data[$field] !== (string) $customer->$field) {
                 $profileOld[$field] = $customer->$field;
                 $profileNew[$field] = $data[$field];
             }
         }
         if ($profileNew) {
             $service->submit($customer, 'profile', $profileOld, $profileNew, 'Profiländerung beantragt: ' . implode(', ', array_keys($profileNew)));
-            $created = true;
+            $created++;
         }
 
-        // IBAN läuft einheitlich als Bankänderung (Typ 'bank')
+        // Bankverbindung als EIGENER, unabhängiger Change Request (Review Punkt 9)
         if ($request->filled('iban') && $data['iban'] !== $customer->iban) {
             $service->submit(
                 $customer,
                 'bank',
                 ['iban' => $customer->iban ? '••••' . substr($customer->iban, -4) : null, 'account_holder' => $customer->account_holder],
-                ['iban' => $data['iban'], 'account_holder' => $customer->account_holder ?? auth()->user()->name],
-                'Neue Bankverbindung beantragt (über Profil)'
+                ['iban' => $data['iban'], 'account_holder' => ($data['account_holder'] ?? null) ?: ($customer->account_holder ?? auth()->user()->name)],
+                'Neue Bankverbindung beantragt'
             );
-            $created = true;
+            $created++;
         }
 
-        return back()->with('success', $created
-            ? 'Ihre Änderungen wurden zur Prüfung eingereicht.'
+        return back()->with('success', $created > 0
+            ? 'Ihre Änderung' . ($created > 1 ? 'en wurden' : ' wurde') . ' zur Prüfung eingereicht. Jede Änderung wird einzeln bearbeitet.'
             : 'Keine Änderungen erkannt.');
+    }
+
+    /**
+     * Eigenes Passwort ändern (Portal, "Meine Daten"). Wirkt sofort -
+     * das Login-Passwort ist keine Stammdatenänderung und braucht
+     * keine Mitarbeiterfreigabe. Erfordert das aktuelle Passwort.
+     */
+    public function passwordUpdate(Request $request) {
+        $request->validate([
+            'current_password' => ['required', 'current_password'],
+            'password' => ['required', 'confirmed', 'min:8'],
+        ], [
+            'current_password.current_password' => 'Das aktuelle Passwort ist nicht korrekt.',
+            'password.confirmed' => 'Die Passwort-Bestätigung stimmt nicht überein.',
+            'password.min' => 'Das neue Passwort muss mindestens 8 Zeichen lang sein.',
+        ]);
+
+        auth()->user()->forceFill([
+            'password' => bcrypt($request->password),
+            'portal_password_set_at' => now(),
+        ])->save();
+
+        \App\Models\ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'portal_password_changed',
+            'entity_type' => 'user',
+            'entity_id' => (string) auth()->id(),
+            'meta' => json_encode([], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        return back()->with('success', 'Ihr Passwort wurde geändert.');
     }
 }

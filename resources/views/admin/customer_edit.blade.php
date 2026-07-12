@@ -33,15 +33,7 @@
         <div class="field"><label>Beruf</label><input type="text" name="occupation" value="{{ $customer->occupation }}" placeholder="z.B. Ingenieur"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Anrede</label>
-            <select name="salutation" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
-                <option value="">— Nicht angegeben —</option>
-                @foreach(\App\Models\Customer::SALUTATIONS as $skey => $slabel)
-                <option value="{{ $skey }}" {{ $customer->salutation === $skey ? 'selected' : '' }}>{{ $slabel }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div class="field"><label>Geschlecht</label>
+                <div class="field"><label>Geschlecht</label>
             <select name="gender" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
                 <option value="">— Nicht angegeben —</option>
                 @foreach(\App\Models\Customer::GENDERS as $gkey => $glabel)
@@ -69,6 +61,14 @@
             <select name="customer_type" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
                 <option value="privat" {{ $customer->customer_type === 'privat' ? 'selected' : '' }}>👤 Privatkunde</option>
                 <option value="firma" {{ $customer->customer_type === 'firma' ? 'selected' : '' }}>🏢 Firmenkunde</option>
+            </select>
+        </div>
+        <div class="field"><label>Vertriebspartner (Partnerportal)</label>
+            <select name="partner_id" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                <option value="">— Kein Partner —</option>
+                @foreach($partners as $p)
+                <option value="{{ $p->id }}" {{ $customer->partner_id === $p->id ? 'selected' : '' }}>{{ $p->name }}</option>
+                @endforeach
             </select>
         </div>
     </div>
@@ -213,14 +213,19 @@
 {{-- Tab: Portal --}}
 <div id="section-portal" class="card" style="max-width:760px;display:none;">
     <div class="card-title" style="margin-bottom:20px;">Portal-Zugang</div>
-    @php $hasPortalAccess = !str_contains($customer->user?->email ?? '', '@dienstly24.internal'); @endphp
-    <div style="padding:16px;border-radius:10px;background:{{ $hasPortalAccess ? '#E4F0E7' : '#F9E3E3' }};margin-bottom:20px;">
-        <div style="font-weight:600;font-size:14px;color:{{ $hasPortalAccess ? '#3B7A57' : '#A32D2D' }};">
-            {{ $hasPortalAccess ? '✅ Portal-Zugang aktiv' : '❌ Kein Portal-Zugang' }}
+    @php
+        $hasPortalAccess = !str_contains($customer->user?->email ?? '', '@dienstly24.internal');
+        $psEdit = $customer->portalStatus();
+    @endphp
+    <div style="padding:16px;border-radius:10px;background:{{ $psEdit['bg'] }};margin-bottom:20px;">
+        <div style="font-weight:600;font-size:14px;color:{{ $psEdit['color'] }};">{{ $psEdit['label'] }}</div>
+        <div style="font-size:12.5px;margin-top:6px;color:var(--ink-soft);">
+            Einladung: {{ $customer->user?->invitation_sent_at?->format('d.m.Y') ?? '—' }}
+            · Passwort gesetzt: {{ $customer->user?->portal_password_set_at ? 'Ja' : 'Nein' }}
+            · Erster Login: {{ $customer->user?->first_login_at?->format('d.m.Y') ?? '—' }}
+            · Letzter Login: {{ $customer->user?->last_login_at?->format('d.m.Y') ?? '—' }}
         </div>
-        <div style="font-size:13px;margin-top:4px;color:var(--ink-soft);">
-            {{ $hasPortalAccess ? 'Kunde kann sich unter portal.dienstly24.de einloggen.' : 'Kunde wurde ohne E-Mail importiert.' }}
-        </div>
+        <div style="font-size:12px;margin-top:6px;color:var(--ink-soft);">Aktionen (Einladung, Reset, Deaktivieren) finden Sie in der Kundenakte.</div>
     </div>
     @if(!$hasPortalAccess)
     <div class="field">
