@@ -18,6 +18,7 @@ class SettingsController extends Controller
             'lexoffice_api_key' => SystemSetting::get('lexoffice_api_key', config('services.lexoffice.key', '')),
             // Rechtliches (öffentliche Portal-Seiten /impressum, /agb, …)
             'legal_external_base' => SystemSetting::get('legal_external_base', \App\Http\Controllers\LegalPageController::DEFAULT_EXTERNAL_BASE),
+            'legal_external_suffix' => SystemSetting::get('legal_external_suffix', \App\Http\Controllers\LegalPageController::DEFAULT_EXTERNAL_SUFFIX),
             'legal_impressum' => SystemSetting::get('legal_impressum', ''),
             'legal_agb' => SystemSetting::get('legal_agb', ''),
             'legal_datenschutz' => SystemSetting::get('legal_datenschutz', ''),
@@ -31,7 +32,7 @@ class SettingsController extends Controller
             'company_name','company_email','company_phone','company_address',
             'portal_url','admin_url','contract_reminder_days',
             'welcome_email_enabled','lexoffice_api_key',
-            'legal_external_base',
+            'legal_external_base','legal_external_suffix',
             'legal_impressum','legal_agb','legal_datenschutz','legal_cookies'
         ];
         foreach ($fields as $field) {

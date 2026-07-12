@@ -140,6 +140,8 @@ class PortalController extends Controller
                 ]);
             }
         }
+        // Team ueber die neue Anfrage informieren (Glocke).
+        \App\Services\TicketNotifier::notifyNewTicket($ticket);
         return redirect()->route('portal.tickets')->with('success', 'Anfrage erfolgreich eingereicht.');
     }
 
@@ -188,6 +190,7 @@ class PortalController extends Controller
                 ]);
             }
         }
+        \App\Services\TicketNotifier::notifyCustomerReply($ticket);
         return back()->with('success', 'Nachricht gesendet.');
     }
 

@@ -72,6 +72,8 @@
     </div>
     <div class="field"><label>Rechtsseiten-Quelle: Website-Basis-URL (leer lassen = Portal zeigt eigene Seiten aus den Texten unten)</label>
         <input type="url" name="legal_external_base" value="{{ $settings['legal_external_base'] }}" placeholder="https://dienstly24.de"></div>
+    <div class="field"><label>Datei-Endung der Website-Seiten (die Website liefert die Seiten als statische Dateien aus, z. B. /impressum<strong>.html</strong>. Leeren, sobald die Website URLs ohne Endung unterstuetzt)</label>
+        <input type="text" name="legal_external_suffix" value="{{ $settings['legal_external_suffix'] }}" placeholder=".html"></div>
     <div class="field"><label>Impressum – Zusatzangaben (Inhaber, USt-IdNr., Aufsichtsbehörde …) – nur im Portal-Modus sichtbar</label>
         <textarea name="legal_impressum" rows="4">{{ $settings['legal_impressum'] }}</textarea></div>
     <div class="field"><label>AGB – vollständiger Text (ersetzt den Standardtext)</label>

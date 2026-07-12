@@ -176,12 +176,18 @@ class AdminController extends Controller
 
     public function tickets() {
         $ids = $this->visibleCustomerIds();
-        $tickets = Ticket::with('customer.user')->where('source', 'portal')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->latest()->get();
+        // Alle Anfragen MIT Kundenakte – unabhaengig von der Quelle (Portal,
+        // Hilfe-Formular, …), damit keine Anfrage unsichtbar bleibt.
+        $tickets = Ticket::with('customer.user')
+            ->whereNotNull('customer_id')
+            ->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))
+            ->latest()->get();
         return view('admin.tickets', compact('tickets'));
     }
 
     public function inquiries() {
-        $tickets = Ticket::whereIn('source', ['website', 'email'])->latest()->get();
+        // Alle Anfragen OHNE Kundenakte (Gaeste: Website, E-Mail, Hilfe-Formular).
+        $tickets = Ticket::whereNull('customer_id')->latest()->get();
         return view('admin.inquiries', compact('tickets'));
     }
 

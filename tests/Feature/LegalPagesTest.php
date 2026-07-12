@@ -12,17 +12,19 @@ class LegalPagesTest extends TestCase
 
     // ---------------- Standard: eine Inhaltsquelle = offizielle Website ----------------
 
-    public function test_legal_routes_redirect_to_official_website_by_default(): void
+    public function test_legal_routes_redirect_to_official_website_html_files_by_default(): void
     {
+        // Website liefert statische Dateien mit .html-Endung aus.
         foreach (['impressum', 'agb', 'datenschutz', 'cookie-richtlinie', 'kontakt'] as $slug) {
             $this->get('/' . $slug)
-                ->assertRedirect('https://dienstly24.de/' . $slug);
+                ->assertRedirect('https://dienstly24.de/' . $slug . '.html');
         }
     }
 
-    public function test_custom_external_base_is_used_for_redirects(): void
+    public function test_custom_external_base_and_suffix_are_used_for_redirects(): void
     {
         SystemSetting::set('legal_external_base', 'https://dienstly24.com/');
+        SystemSetting::set('legal_external_suffix', ''); // schoene URLs ohne Endung
 
         $this->get('/impressum')->assertRedirect('https://dienstly24.com/impressum');
     }
@@ -94,7 +96,8 @@ class LegalPagesTest extends TestCase
 
         $html = (new \App\Mail\CustomerWelcomeMail($customer, 'birthdate'))->render();
 
-        $this->assertStringContainsString(url('/impressum'), $html);
-        $this->assertStringContainsString(url('/datenschutz'), $html);
+        // Kundenlinks zeigen auf die Portal-Domain (nie admin/localhost).
+        $this->assertStringContainsString('portal.dienstly24.de/impressum', $html);
+        $this->assertStringContainsString('portal.dienstly24.de/datenschutz', $html);
     }
 }

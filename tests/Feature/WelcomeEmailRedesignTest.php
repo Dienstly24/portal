@@ -30,10 +30,10 @@ class WelcomeEmailRedesignTest extends TestCase
         $mail = new CustomerWelcomeMail($this->customer(), 'birthdate');
         $html = $mail->render();
 
-        // Logo, Hero, persönliche Anrede
-        // Logo/QR sind als Inline-Bild eingebettet (CID bzw. data-URI im Test-Render)
-        $this->assertStringContainsString('alt="Dienstly24"', $html);
-        $this->assertStringContainsString('data:image', $html);
+        // Hero (Textmarke statt Bild), persönliche Anrede
+        // Bewusst OHNE eingebettete Bilder (Outlook blockiert CID-Anhaenge).
+        $this->assertStringNotContainsString('data:image', $html);
+        $this->assertStringNotContainsString('cid:', $html);
         $this->assertStringContainsString('Ihr Kundenportal ist jetzt bereit', $html);
         $this->assertStringContainsString('Hallo Ahmad Albhre', $html);
 
@@ -48,13 +48,16 @@ class WelcomeEmailRedesignTest extends TestCase
         $this->assertStringContainsString('Ihr erstes Passwort ist Ihr Geburtsdatum im Format TT.MM.JJJJ', $html);
         $this->assertStringNotContainsString('01.01.1990,', $html); // echtes Datum nie im Klartext-Kontext
 
-        // Steps, Portal-Funktionen, QR, Sicherheit, Support, Footer
+        // Portal-Funktionen, Sicherheit, Support, Footer
         $this->assertStringContainsString('WAS KÖNNEN SIE IM PORTAL TUN?', $html);
-        $this->assertStringContainsString('alt="QR-Code zum Kundenportal"', $html);
         $this->assertStringContainsString('niemals per E-Mail oder Telefon nach Ihrem Passwort', $html);
         $this->assertStringContainsString('info@dienstly24.de', $html);
         $this->assertStringContainsString('Impressum', $html);
         $this->assertStringContainsString('Hinweis zum Datenschutz', $html);
+
+        // Alle Kundenlinks zeigen auf die Portal-Domain (nie admin.*)
+        $this->assertStringContainsString('portal.dienstly24.de/hilfe', $html);
+        $this->assertStringNotContainsString('admin.dienstly24.de', $html);
     }
 
     public function test_subject_is_updated(): void

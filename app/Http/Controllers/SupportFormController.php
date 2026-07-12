@@ -135,6 +135,9 @@ class SupportFormController extends Controller
             ], JSON_UNESCAPED_UNICODE),
         ]);
 
+        // Team ueber die neue Anfrage informieren (Glocke).
+        \App\Services\TicketNotifier::notifyNewTicket($ticket);
+
         return view('support.thanks', [
             'ticketRef' => strtoupper(substr((string) $ticket->id, 0, 8)),
             'customer' => $customer,
