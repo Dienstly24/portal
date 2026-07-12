@@ -15,6 +15,18 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', \App\Http\Controllers\HomeController::class);
 
+// Sprachumschalter (de/ar): für Gäste per Session, für eingeloggte Kunden
+// zusätzlich dauerhaft in der Kundenakte (preferred_lang).
+Route::get('/sprache/{locale}', function (string $locale) {
+    abort_unless(in_array($locale, ['de', 'ar'], true), 404);
+    session(['locale' => $locale]);
+    $user = auth()->user();
+    if ($user && $user->role === 'customer' && $user->customer) {
+        $user->customer->update(['preferred_lang' => $locale]);
+    }
+    return back();
+})->name('locale.switch');
+
 // Magischer Erst-Login aus der Willkommens-Mail: signiert (90 Tage),
 // nur Kunden-Accounts, ratenbegrenzt. Details im MagicLoginController.
 Route::get('/magic-login/{user}', \App\Http\Controllers\Auth\MagicLoginController::class)

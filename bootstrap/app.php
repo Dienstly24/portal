@@ -16,6 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: ['api/website-inquiry']);
         // Defensive Sicherheitsheader auf jede Antwort.
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+        // Sprache (de/ar) je Kunde bzw. Session – nach StartSession.
+        $middleware->appendToGroup('web', \App\Http\Middleware\SetLocale::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

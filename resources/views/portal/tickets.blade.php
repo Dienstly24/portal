@@ -2,7 +2,7 @@
 @section('content')
 <div class="toolbar">
     <div><div class="page-title">Anfragen</div><div class="page-sub">Stellen Sie eine Anfrage oder verfolgen Sie den Status.</div></div>
-    <a href="{{ route('portal.tickets.create') }}" class="btn btn-gold">+ Neue Anfrage</a>
+    <a href="{{ route('portal.tickets.create') }}" class="btn btn-gold">+ {{ __('Neue Anfrage') }}</a>
 </div>
 <div class="card">
     @forelse($tickets as $t)

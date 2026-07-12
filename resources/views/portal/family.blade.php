@@ -5,7 +5,7 @@
         <div class="page-title">👨‍👩‍👦 Meine Familie</div>
         <div class="page-sub" style="margin-bottom:0;">Familienmitglieder hinzufügen oder Änderungen beantragen – jede Angabe wird von unserem Team geprüft.</div>
     </div>
-    <button onclick="document.getElementById('add-family-modal').style.display='flex'" class="btn btn-gold">+ Familienmitglied hinzufügen</button>
+    <button onclick="document.getElementById('add-family-modal').style.display='flex'" class="btn btn-gold">+ {{ __('Familienmitglied hinzufügen') }}</button>
 </div>
 
 @php
@@ -23,7 +23,7 @@ $rejected = $requests->where('status','rejected');
         <div style="font-weight:700;font-size:15px;">{{ auth()->user()->name }}</div>
         <div style="font-size:12.5px;color:var(--ink-soft);margin:4px 0 10px;">{{ $customer->birth_date ? \Carbon\Carbon::parse($customer->birth_date)->format('d.m.Y') : '—' }}</div>
         <span class="badge badge-open">Hauptversicherter</span>
-        <div style="margin-top:10px;"><span class="badge badge-active">Aktiv</span></div>
+        <div style="margin-top:10px;"><span class="badge badge-active">{{ __('Aktiv') }}</span></div>
     </div>
 
     {{-- Bestätigte Familienmitglieder --}}
@@ -35,18 +35,18 @@ $rejected = $requests->where('status','rejected');
         <span class="badge badge-open">{{ $relationLabels[$m->relation] ?? ucfirst($m->relation) }}</span>
         <div style="margin-top:10px;">
             @if(in_array($m->id, $pendingChangeIds))
-            <span class="badge badge-pending">Prüfung ausstehend</span>
+            <span class="badge badge-pending">{{ __('Prüfung ausstehend') }}</span>
             @else
-            <span class="badge badge-active">Aktiv</span>
+            <span class="badge badge-active">{{ __('Aktiv') }}</span>
             @endif
         </div>
         @php $familyPayload = $m->only(['id','name','relation','birth_date']); @endphp
-        <button onclick='openFamilyChange(@json($familyPayload))' class="btn btn-ghost" style="margin-top:12px;font-size:12.5px;padding:7px 14px;">✏️ Änderung beantragen</button>
+        <button onclick='openFamilyChange(@json($familyPayload))' class="btn btn-ghost" style="margin-top:12px;font-size:12.5px;padding:7px 14px;">✏️ {{ __('Änderung beantragen') }}</button>
         @unless(in_array($m->id, $pendingChangeIds))
         <form method="POST" action="{{ route('portal.family.delete', $m->id) }}" style="margin-top:8px;"
             onsubmit="return confirm('Löschung von {{ addslashes($m->name) }} beantragen?\n\nDie Löschung wird erst nach Prüfung durch unser Team wirksam.');">
             @csrf
-            <button type="submit" class="btn btn-ghost" style="font-size:12.5px;padding:7px 14px;color:#A32D2D;border-color:#F0A0A0;">🗑 Löschung beantragen</button>
+            <button type="submit" class="btn btn-ghost" style="font-size:12.5px;padding:7px 14px;color:#A32D2D;border-color:#F0A0A0;">🗑 {{ __('Löschung beantragen') }}</button>
         </form>
         @endunless
     </div>
@@ -59,7 +59,7 @@ $rejected = $requests->where('status','rejected');
         <div style="font-weight:700;font-size:15px;">{{ $r->new_data['name'] ?? '—' }}</div>
         <div style="font-size:12.5px;color:var(--ink-soft);margin:4px 0 10px;">{{ !empty($r->new_data['birth_date']) ? \Carbon\Carbon::parse($r->new_data['birth_date'])->format('d.m.Y') : '—' }}</div>
         <span class="badge badge-open">{{ $relationLabels[$r->new_data['relation'] ?? 'andere'] ?? 'Person' }}</span>
-        <div style="margin-top:10px;"><span class="badge badge-pending">Prüfung ausstehend</span></div>
+        <div style="margin-top:10px;"><span class="badge badge-pending">{{ __('Prüfung ausstehend') }}</span></div>
     </div>
     @endforeach
 </div>
@@ -113,7 +113,7 @@ $rejected = $requests->where('status','rejected');
                 <div class="field"><label>Rentenversicherungsnr.</label><input type="text" name="pension_insurance_number" maxlength="50"></div>
             </div>
             <div class="field"><label>Steuer-ID</label><input type="text" name="tax_id" maxlength="20"></div>
-            <button type="submit" class="btn btn-primary" style="width:100%;">Zur Prüfung einreichen</button>
+            <button type="submit" class="btn btn-primary" style="width:100%;">{{ __('Zur Prüfung einreichen') }}</button>
         </form>
     </div>
 </div>

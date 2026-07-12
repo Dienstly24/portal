@@ -31,7 +31,9 @@ class WelcomeEmailRedesignTest extends TestCase
         $html = $mail->render();
 
         // Logo, Hero, persönliche Anrede
-        $this->assertStringContainsString('images/logo.png', $html);
+        // Logo/QR sind als Inline-Bild eingebettet (CID bzw. data-URI im Test-Render)
+        $this->assertStringContainsString('alt="Dienstly24"', $html);
+        $this->assertStringContainsString('data:image', $html);
         $this->assertStringContainsString('Ihr Kundenportal ist jetzt bereit', $html);
         $this->assertStringContainsString('Hallo Ahmad Albhre', $html);
 
@@ -47,9 +49,8 @@ class WelcomeEmailRedesignTest extends TestCase
         $this->assertStringNotContainsString('01.01.1990,', $html); // echtes Datum nie im Klartext-Kontext
 
         // Steps, Portal-Funktionen, QR, Sicherheit, Support, Footer
-        $this->assertStringContainsString('SO STARTEN SIE', $html);
         $this->assertStringContainsString('WAS KÖNNEN SIE IM PORTAL TUN?', $html);
-        $this->assertStringContainsString('portal-qr.png', $html);
+        $this->assertStringContainsString('alt="QR-Code zum Kundenportal"', $html);
         $this->assertStringContainsString('niemals per E-Mail oder Telefon nach Ihrem Passwort', $html);
         $this->assertStringContainsString('info@dienstly24.de', $html);
         $this->assertStringContainsString('Impressum', $html);

@@ -12,9 +12,10 @@
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f2f1;padding:24px 8px;"><tr><td align="center">
 <table cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;">
 
-{{-- 1. Logo --}}
+{{-- 1. Logo – als CID-Inline-Anhang eingebettet: wird auch angezeigt,
+     wenn der Mail-Client externe Bilder blockiert (Outlook/Junk-Filter). --}}
 <tr><td align="center" style="padding:22px 30px 14px;background:#ffffff;">
-    <img src="{{ url('/images/logo.png') }}" alt="Dienstly24" width="170" style="display:block;max-width:170px;height:auto;">
+    <img src="{{ isset($message) ? $message->embed(public_path('images/logo.png')) : url('/images/logo.png') }}" alt="Dienstly24" width="170" style="display:block;max-width:170px;height:auto;">
 </td></tr>
 
 {{-- 2. Hero-Band --}}
@@ -83,33 +84,40 @@
 </table>
 </td></tr>
 
-{{-- 6. Progress-Steps --}}
-<tr><td style="padding:20px 30px 4px;">
-    <p style="font-size:13px;color:#1a3c34;margin:0 0 12px;letter-spacing:.06em;"><strong>SO STARTEN SIE</strong></p>
-    <table cellpadding="0" cellspacing="0">
-        <tr><td width="30" style="font-size:15px;color:#2d9c6e;font-weight:bold;padding:3px 0;">①</td><td style="font-size:14px;color:#333;padding:3px 0;">Anmelden – am schnellsten über den grünen Button oben</td></tr>
-        <tr><td style="color:#c2cdc8;padding:0 0 0 4px;font-size:12px;">│</td><td></td></tr>
-        <tr><td width="30" style="font-size:15px;color:#2d9c6e;font-weight:bold;padding:3px 0;">②</td><td style="font-size:14px;color:#333;padding:3px 0;">Eigenes Passwort festlegen (unter „Meine Daten")</td></tr>
-        <tr><td style="color:#c2cdc8;padding:0 0 0 4px;font-size:12px;">│</td><td></td></tr>
-        <tr><td width="30" style="font-size:15px;color:#2d9c6e;font-weight:bold;padding:3px 0;">③</td><td style="font-size:14px;color:#333;padding:3px 0;">Persönliche Daten und Familienmitglieder ergänzen – fertig! ✅</td></tr>
-    </table>
-</td></tr>
-
-{{-- 7. Was können Sie im Portal tun? --}}
-<tr><td style="padding:20px 30px 4px;">
-    <p style="font-size:13px;color:#1a3c34;margin:0 0 12px;letter-spacing:.06em;"><strong>WAS KÖNNEN SIE IM PORTAL TUN?</strong></p>
+{{-- Was können Sie im Portal tun? – prominent mit großen Icon-Chips
+     (ersetzt die frühere Schritt-Liste) --}}
+<tr><td style="padding:22px 30px 4px;">
+    <p style="font-size:14px;color:#1a3c34;margin:0 0 12px;letter-spacing:.06em;"><strong>✨ WAS KÖNNEN SIE IM PORTAL TUN?</strong></p>
     <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
-            <td width="50%" style="padding:5px 6px 5px 0;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fb;border-radius:8px;"><tr><td style="padding:11px 13px;font-size:13.5px;color:#333;">📄 Verträge ansehen</td></tr></table></td>
-            <td width="50%" style="padding:5px 0 5px 6px;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fb;border-radius:8px;"><tr><td style="padding:11px 13px;font-size:13.5px;color:#333;">📁 Dokumente herunterladen</td></tr></table></td>
+            <td width="50%" style="padding:5px 6px 5px 0;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fb;border:1px solid #eef1f4;border-radius:10px;"><tr>
+                <td width="44" align="center" style="font-size:22px;padding:12px 2px 12px 12px;">📄</td>
+                <td style="padding:12px 12px 12px 4px;font-size:13.5px;color:#152826;"><strong>Verträge ansehen</strong><br><span style="font-size:12px;color:#777;">alle auf einen Blick</span></td>
+            </tr></table></td>
+            <td width="50%" style="padding:5px 0 5px 6px;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fb;border:1px solid #eef1f4;border-radius:10px;"><tr>
+                <td width="44" align="center" style="font-size:22px;padding:12px 2px 12px 12px;">📁</td>
+                <td style="padding:12px 12px 12px 4px;font-size:13.5px;color:#152826;"><strong>Dokumente</strong><br><span style="font-size:12px;color:#777;">sicher herunterladen</span></td>
+            </tr></table></td>
         </tr>
         <tr>
-            <td style="padding:5px 6px 5px 0;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fb;border-radius:8px;"><tr><td style="padding:11px 13px;font-size:13.5px;color:#333;">💬 Support kontaktieren</td></tr></table></td>
-            <td style="padding:5px 0 5px 6px;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fb;border-radius:8px;"><tr><td style="padding:11px 13px;font-size:13.5px;color:#333;">✉️ Anfragen senden</td></tr></table></td>
+            <td style="padding:5px 6px 5px 0;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fb;border:1px solid #eef1f4;border-radius:10px;"><tr>
+                <td width="44" align="center" style="font-size:22px;padding:12px 2px 12px 12px;">💬</td>
+                <td style="padding:12px 12px 12px 4px;font-size:13.5px;color:#152826;"><strong>Support</strong><br><span style="font-size:12px;color:#777;">direkt Nachricht senden</span></td>
+            </tr></table></td>
+            <td style="padding:5px 0 5px 6px;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fb;border:1px solid #eef1f4;border-radius:10px;"><tr>
+                <td width="44" align="center" style="font-size:22px;padding:12px 2px 12px 12px;">✉️</td>
+                <td style="padding:12px 12px 12px 4px;font-size:13.5px;color:#152826;"><strong>Anfragen</strong><br><span style="font-size:12px;color:#777;">bequem online stellen</span></td>
+            </tr></table></td>
         </tr>
         <tr>
-            <td style="padding:5px 6px 5px 0;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fb;border-radius:8px;"><tr><td style="padding:11px 13px;font-size:13.5px;color:#333;">👨‍👩‍👧 Familie verwalten</td></tr></table></td>
-            <td style="padding:5px 0 5px 6px;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fb;border-radius:8px;"><tr><td style="padding:11px 13px;font-size:13.5px;color:#333;">👤 Daten selbst pflegen</td></tr></table></td>
+            <td style="padding:5px 6px 5px 0;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fb;border:1px solid #eef1f4;border-radius:10px;"><tr>
+                <td width="44" align="center" style="font-size:22px;padding:12px 2px 12px 12px;">👨‍👩‍👧</td>
+                <td style="padding:12px 12px 12px 4px;font-size:13.5px;color:#152826;"><strong>Familie</strong><br><span style="font-size:12px;color:#777;">Angehörige verwalten</span></td>
+            </tr></table></td>
+            <td style="padding:5px 0 5px 6px;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fb;border:1px solid #eef1f4;border-radius:10px;"><tr>
+                <td width="44" align="center" style="font-size:22px;padding:12px 2px 12px 12px;">👤</td>
+                <td style="padding:12px 12px 12px 4px;font-size:13.5px;color:#152826;"><strong>Meine Daten</strong><br><span style="font-size:12px;color:#777;">selbst aktuell halten</span></td>
+            </tr></table></td>
         </tr>
     </table>
 </td></tr>
@@ -119,7 +127,7 @@
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fb;border:1px solid #e2e8f0;border-radius:10px;">
 <tr>
     <td align="center" width="120" style="padding:16px 8px 16px 20px;">
-        <img src="{{ url('/images/portal-qr.png') }}" alt="QR-Code zum Kundenportal" width="96" style="display:block;border-radius:6px;">
+        <img src="{{ isset($message) ? $message->embed(public_path('images/portal-qr.png')) : url('/images/portal-qr.png') }}" alt="QR-Code zum Kundenportal" width="96" style="display:block;border-radius:6px;">
     </td>
     <td style="padding:16px 20px 16px 8px;">
         <p style="font-size:14px;color:#152826;margin:0 0 4px;"><strong>📱 Lieber am Smartphone?</strong></p>

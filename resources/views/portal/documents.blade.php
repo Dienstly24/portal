@@ -2,7 +2,7 @@
 @section('content')
 <div class="toolbar">
     <div>
-        <div class="page-title">Dokumente</div>
+        <div class="page-title">{{ __('Dokumente') }}</div>
         <div class="page-sub" style="margin-bottom:0;">Alle Ihre Dokumente und Unterlagen. Sie können hier auch eigene Dokumente hochladen.</div>
     </div>
     <button onclick="document.getElementById('upload-doc-modal').style.display='flex'" class="btn btn-gold">+ Dokument hochladen</button>
@@ -63,7 +63,7 @@
                 @if($d->uploaded_by === auth()->id())<span style="font-size:11px;background:#EAF2FB;color:#185FA5;padding:1px 6px;border-radius:4px;">von Ihnen</span>@endif
             </div>
         </div>
-        <a href="{{ route('portal.documents.download', $d->id) }}" class="btn btn-ghost" style="padding:6px 12px;font-size:13px;">Herunterladen</a>
+        <a href="{{ route('portal.documents.download', $d->id) }}" class="btn btn-ghost" style="padding:6px 12px;font-size:13px;">{{ __('Herunterladen') }}</a>
     </div>
     @empty
     <p style="color:var(--ink-soft);font-size:14px;padding:12px 0;">Noch keine Dokumente vorhanden. Laden Sie Ihr erstes Dokument hoch.</p>
@@ -86,7 +86,7 @@
             </div>
             <div class="field"><label>Datei *</label><input type="file" name="document" required accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"></div>
             @error('document')<div class="alert-error">{{ $message }}</div>@enderror
-            <button type="submit" class="btn btn-primary" style="width:100%;">Hochladen</button>
+            <button type="submit" class="btn btn-primary" style="width:100%;">{{ __('Hochladen') }}</button>
         </form>
     </div>
 </div>

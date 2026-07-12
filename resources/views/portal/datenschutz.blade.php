@@ -1,6 +1,6 @@
 @extends('layouts.portal')
 @section('content')
-<div class="page-title">Datenschutz &amp; Ihre E-Mails</div>
+<div class="page-title">{{ __('Datenschutz') }} &amp; {{ __('Ihre E-Mails') }}</div>
 <div class="page-sub">Transparente Information darüber, welche vertragsbezogene Korrespondenz wir für Sie verarbeiten.</div>
 
 <div class="card">

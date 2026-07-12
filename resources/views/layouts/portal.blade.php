@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="{{ auth()->user()->customer?->preferred_lang ?? 'de' }}">
+@php $rtl = app()->getLocale() === 'ar'; @endphp
+<html lang="{{ app()->getLocale() }}" dir="{{ $rtl ? 'rtl' : 'ltr' }}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -68,29 +69,35 @@ form textarea{min-height:90px;resize:vertical;}
     .toolbar{flex-direction:column;align-items:stretch;gap:12px;}
 }
 .mobile-menu-btn{display:none;position:fixed;top:14px;left:14px;z-index:120;background:var(--petrol);color:#fff;border:none;border-radius:8px;width:42px;height:42px;font-size:20px;cursor:pointer;}
+/* RTL (Arabisch): Sidebar rechts, Inhalt spiegeln */
+[dir=rtl] .sidebar{left:auto;right:0;}
+[dir=rtl] .main{margin-left:0;margin-right:240px;}
+[dir=rtl] .mobile-menu-btn{left:auto;right:14px;}
+@media (max-width: 768px){[dir=rtl] .sidebar{transform:translateX(100%);}[dir=rtl] .sidebar.open{transform:translateX(0);}[dir=rtl] .main{margin-right:0;}}
 </style>
 </head>
 <body>
 <button class="mobile-menu-btn" type="button" id="m-btn" aria-label="Menü öffnen">☰</button>
 <div class="sidebar" id="portal-sidebar">
     <div class="brand"><img src="/images/logo.png" alt="Dienstly24" style="height:45px;width:auto;object-fit:contain;"></div>
-    <a href="{{ route('portal.dashboard') }}" class="nav-item {{ request()->routeIs('portal.dashboard') ? 'active' : '' }}">Dashboard</a>
-    <a href="{{ route('portal.contracts') }}" class="nav-item {{ request()->routeIs('portal.contracts*') ? 'active' : '' }}">Meine Verträge</a>
-    <a href="{{ route('portal.documents') }}" class="nav-item {{ request()->routeIs('portal.documents*') ? 'active' : '' }}">Dokumente</a>
-    <a href="{{ route('portal.family') }}" class="nav-item {{ request()->routeIs('portal.family*') ? 'active' : '' }}">Familie</a>
-    <a href="{{ route('portal.profile') }}" class="nav-item {{ request()->routeIs('portal.profile*') ? 'active' : '' }}">Meine Daten</a>
-    <a href="{{ route('portal.contacts') }}" class="nav-item {{ request()->routeIs('portal.contacts*') ? 'active' : '' }}">Kontaktinformationen</a>
-    <a href="{{ route('portal.change_requests') }}" class="nav-item {{ request()->routeIs('portal.change_requests*') ? 'active' : '' }}">Änderungsanfragen</a>
-    <a href="{{ route('portal.tickets') }}" class="nav-item {{ request()->routeIs('portal.tickets*') ? 'active' : '' }}">Nachrichten</a>
-    <a href="{{ route('portal.datenschutz') }}" class="nav-item {{ request()->routeIs('portal.datenschutz') ? 'active' : '' }}">Datenschutz</a>
+    <a href="{{ route('portal.dashboard') }}" class="nav-item {{ request()->routeIs('portal.dashboard') ? 'active' : '' }}">{{ __('Dashboard') }}</a>
+    <a href="{{ route('portal.contracts') }}" class="nav-item {{ request()->routeIs('portal.contracts*') ? 'active' : '' }}">{{ __('Meine Verträge') }}</a>
+    <a href="{{ route('portal.documents') }}" class="nav-item {{ request()->routeIs('portal.documents*') ? 'active' : '' }}">{{ __('Dokumente') }}</a>
+    <a href="{{ route('portal.family') }}" class="nav-item {{ request()->routeIs('portal.family*') ? 'active' : '' }}">{{ __('Familie') }}</a>
+    <a href="{{ route('portal.profile') }}" class="nav-item {{ request()->routeIs('portal.profile*') ? 'active' : '' }}">{{ __('Meine Daten') }}</a>
+    <a href="{{ route('portal.contacts') }}" class="nav-item {{ request()->routeIs('portal.contacts*') ? 'active' : '' }}">{{ __('Kontaktinformationen') }}</a>
+    <a href="{{ route('portal.change_requests') }}" class="nav-item {{ request()->routeIs('portal.change_requests*') ? 'active' : '' }}">{{ __('Änderungsanfragen') }}</a>
+    <a href="{{ route('portal.tickets') }}" class="nav-item {{ request()->routeIs('portal.tickets*') ? 'active' : '' }}">{{ __('Nachrichten') }}</a>
+    <a href="{{ route('portal.datenschutz') }}" class="nav-item {{ request()->routeIs('portal.datenschutz') ? 'active' : '' }}">{{ __('Datenschutz') }}</a>
     <div class="sidebar-foot">
         <div class="user-chip">
             <div class="avatar">{{ strtoupper(substr(auth()->user()->name,0,2)) }}</div>
             <div style="font-weight:600;font-size:13px;">{{ auth()->user()->name }}</div>
         </div>
+        <a href="{{ route('locale.switch', app()->getLocale() === 'ar' ? 'de' : 'ar') }}" style="display:block;margin-top:10px;font-size:12.5px;color:rgba(255,255,255,.75);text-decoration:none;">🌐 {{ app()->getLocale() === 'ar' ? 'Deutsch' : 'العربية' }}</a>
         <form method="POST" action="{{ route('logout') }}">
             @csrf
-            <button type="submit" class="logout">Abmelden</button>
+            <button type="submit" class="logout">{{ __('Abmelden') }}</button>
         </form>
     </div>
 </div>
