@@ -115,7 +115,7 @@ document.querySelectorAll('.assign-form').forEach(form => {
                         const div = document.createElement('div');
                         div.style.cssText = 'padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--line);';
                         div.innerHTML = '<strong>' + (c.name ?? '—') + '</strong> <span style="color:var(--ink-soft);">(' + (c.number ?? '') + ')</span>';
-                        div.onmouseover = () => div.style.background = '#FAFAF8';
+                        div.onmouseover = () => div.style.background = '#F8F9FA';
                         div.onmouseout = () => div.style.background = '#fff';
                         div.onclick = () => {
                             hidden.value = c.id;

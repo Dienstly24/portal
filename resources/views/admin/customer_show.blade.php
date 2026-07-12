@@ -13,7 +13,7 @@ $typeConfig = [
     'unfall'           => ['icon'=>'🚑','label'=>'Unfall','color'=>'#A32D2D','bg'=>'#F9E3E3'],
     'internet'         => ['icon'=>'📶','label'=>'Internet','color'=>'#6D28D9','bg'=>'#EDE9FE'],
     'strom_gas'        => ['icon'=>'⚡','label'=>'Strom/Gas','color'=>'#92400E','bg'=>'#FEF3C7'],
-    'andere'           => ['icon'=>'📋','label'=>'Andere','color'=>'#5F5E5A','bg'=>'#F1EFE8'],
+    'andere'           => ['icon'=>'📋','label'=>'Andere','color'=>'#5F5E5A','bg'=>'#EEF0F3'],
 ];
 $activeTypes = $customer->contracts->where('status','active')->pluck('type')->unique()->toArray();
 @endphp
@@ -105,8 +105,8 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
         <div style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;"
             onclick="document.getElementById('filter-type').value='{{ $key }}';filterContracts()">
             <div style="width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;
-                background:{{ $isActive ? $cfg['bg'] : '#F1EFE8' }};
-                border:2px solid {{ $isActive ? $cfg['color'] : '#E4E0D4' }};
+                background:{{ $isActive ? $cfg['bg'] : '#EEF0F3' }};
+                border:2px solid {{ $isActive ? $cfg['color'] : '#E4E6EA' }};
                 opacity:{{ $isActive ? '1' : '0.4' }};
                 transition:.2s;">
                 {{ $cfg['icon'] }}
@@ -232,7 +232,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
         </select>
     </div>
     <table id="contracts-table" style="width:100%;border-collapse:collapse;font-size:14px;">
-        <thead><tr style="background:#FAFAF8;">
+        <thead><tr style="background:#F8F9FA;">
             <th style="text-align:left;padding:10px 12px;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--line);">Typ</th>
             <th style="text-align:left;padding:10px 12px;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--line);">Versicherer</th>
             <th style="text-align:left;padding:10px 12px;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--line);">Vertragsnr.</th>
@@ -311,7 +311,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
 <div class="card">
     <div class="card-title" style="margin-bottom:16px;">Anträge</div>
     <table style="width:100%;border-collapse:collapse;font-size:14px;">
-        <thead><tr style="background:#FAFAF8;">
+        <thead><tr style="background:#F8F9FA;">
             <th style="text-align:left;padding:10px 12px;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--line);">Betreff</th>
             <th style="text-align:left;padding:10px 12px;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--line);">Typ</th>
             <th style="text-align:left;padding:10px 12px;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--line);">Datum</th>

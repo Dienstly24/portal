@@ -107,7 +107,7 @@
     }
 
     lineChart('impressionsChart', @json($impressions), '#185FA5');
-    lineChart('clicksChart', @json($clicks), '#2d9c6e');
+    lineChart('clicksChart', @json($clicks), '#17A65B');
 })();
 </script>
 @endsection

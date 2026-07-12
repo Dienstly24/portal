@@ -19,7 +19,7 @@
 
 <div class="card" style="padding:0;overflow:hidden;">
     <table>
-        <thead><tr style="background:#FAFAF8;">
+        <thead><tr style="background:#F8F9FA;">
             <th style="padding:12px 20px;">Name</th>
             <th>Typ</th>
             <th>E-Mail</th>

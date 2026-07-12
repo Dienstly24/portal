@@ -75,10 +75,15 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   ergänzen.
 - **Banner-Verwaltung**: `BannerController`, Statistik-Dashboard unter
   `/admin/banners/statistik`. Routen auf `role:admin,manager` beschränkt.
+- **Farbschema „Graphit + Smaragd"** (Betreiber-Entscheidung, passend zum
+  Logo): dunkle Flaechen `#17191d`/`#101216`/`#0e0f12`, Akzent/Buttons
+  Smaragd `#17A65B` (Verlauf `#19b463`->`#128a4b`), helle Canvas `#F4F5F7`,
+  Linien `#E4E6EA`. KEIN Petrol-Gruen mehr verwenden.
 - **Logo-Assets** (alle aus `logo.png` per GD generiert, `public/images/`):
   `logo-white.png` (weisse Wortmarke, für dunkle Flächen: Login, Sidebars),
   `logo-transparent.png` (farbige Wortmarke, für helle Flächen),
-  `logo-icon.png` (512px D-Symbol, transparent), `favicon.png` (32px),
+  `logo-icon.png` (512px D-Symbol, transparent), `logo-icon-white.png`
+  (D-Symbol weiss fuer dunkle Sidebars), `favicon.png` (32px),
   `apple-touch-icon.png` (180px). Favicon zentral via
   `resources/views/partials/favicon.blade.php` (vor jedem `</head>`).
   `logo.png` = Original mit weissem Hintergrund (Quelle der Varianten).

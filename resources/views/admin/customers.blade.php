@@ -13,11 +13,11 @@ $typeConfig = [
     'escooter'            => ['icon'=>'🛴','label'=>'E-Scooter','bg'=>'#E6F1FB'],
     'leben'               => ['icon'=>'❤️','label'=>'Leben','bg'=>'#FBEAF0'],
     'unfall'              => ['icon'=>'🚑','label'=>'Unfall','bg'=>'#F9E3E3'],
-    'sach'                => ['icon'=>'📦','label'=>'Sach','bg'=>'#F1EFE8'],
+    'sach'                => ['icon'=>'📦','label'=>'Sach','bg'=>'#EEF0F3'],
     'internet'            => ['icon'=>'📶','label'=>'Internet','bg'=>'#EDE9FE'],
     'energie'             => ['icon'=>'⚡','label'=>'Energie','bg'=>'#FEF3C7'],
     'strom_gas'           => ['icon'=>'⚡','label'=>'Strom/Gas','bg'=>'#FEF3C7'],
-    'andere'              => ['icon'=>'📋','label'=>'Andere','bg'=>'#F1EFE8'],
+    'andere'              => ['icon'=>'📋','label'=>'Andere','bg'=>'#EEF0F3'],
 ];
 @endphp
 <div class="toolbar">

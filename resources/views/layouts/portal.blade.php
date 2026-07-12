@@ -7,7 +7,7 @@
 <title>Dienstly24 Portal</title>
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 <style>
-:root{--petrol:#1a3c34;--petrol-dark:#142e27;--gold:#2d9c6e;--gold-soft:#d8f3dc;--canvas:#F6F4EE;--surface:#FFFFFF;--line:#E4E0D4;--ink:#152826;--ink-soft:#4A5C59;}
+:root{--petrol:#17191d;--petrol-dark:#101216;--gold:#17A65B;--gold-soft:#d9f4e6;--canvas:#F4F5F7;--surface:#FFFFFF;--line:#E4E6EA;--ink:#152826;--ink-soft:#4A5C59;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
 .sidebar{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--petrol);color:#fff;display:flex;flex-direction:column;padding:24px 18px;z-index:100;}
@@ -31,7 +31,7 @@ body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
 .badge-active{background:#E4F0E7;color:#3B7A57;}
 .badge-pending{background:#F7E7D6;color:#B5651D;}
 .badge-open{background:#E6F1FB;color:#185FA5;}
-.badge-closed{background:#EDEBE3;color:#5F5E5A;}
+.badge-closed{background:#EAECEF;color:#5F5E5A;}
 .badge-waiting{background:#EEE9F7;color:#6B4FA3;}
 .badge-approved{background:#E4F0E7;color:#3B7A57;}
 .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-weight:600;text-decoration:none;transition:.2s;}

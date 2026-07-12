@@ -70,7 +70,7 @@ $typeIcon = ['call'=>'📞','email'=>'✉️','meeting'=>'📅','document'=>'�
 @endphp
 <div class="card" style="padding:16px 20px;margin:0;">
     <div style="display:flex;align-items:center;gap:14px;">
-        <div style="width:40px;height:40px;border-radius:10px;background:#F1EFE8;display:flex;align-items:center;justify-content:center;font-size:20px;flex:none;">
+        <div style="width:40px;height:40px;border-radius:10px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:20px;flex:none;">
             {{ $typeIcon[$t->type] ?? '📌' }}
         </div>
         <div style="flex:1;min-width:0;">
