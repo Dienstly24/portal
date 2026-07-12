@@ -310,7 +310,8 @@ class AdminController extends Controller
         $this->authorizeCustomerAccess($id);
         $customer = Customer::with('user')->findOrFail($id);
         $addr = $this->splitAddress($customer->address);
-        return view('admin.customer_edit', compact('customer', 'addr'));
+        $partners = \App\Models\Partner::active()->orderBy('name')->get(['id', 'name']);
+        return view('admin.customer_edit', compact('customer', 'addr', 'partners'));
     }
 
     public function customerUpdate(Request $request, $id) {
@@ -374,6 +375,8 @@ class AdminController extends Controller
             'health_insurance_number' => $request->health_insurance_number ?: null,
             'pension_insurance_number' => $request->pension_insurance_number ?: null,
             'tax_id' => $request->tax_id ?: null,
+            // Zuordnung zu einem Vertriebspartner (dessen Portal ihn dann sieht).
+            'partner_id' => $request->partner_id ?: null,
         ];
 
         // Nur Spalten speichern, die in der Tabelle wirklich existieren

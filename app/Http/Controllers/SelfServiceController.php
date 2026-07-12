@@ -89,6 +89,26 @@ class SelfServiceController extends Controller
         return back()->with('success', 'Ihre Änderung wurde zur Prüfung eingereicht.');
     }
 
+    /**
+     * Löschung eines Familienmitglieds beantragen. Wird – wie jede andere
+     * Änderung – erst nach Prüfung und Freigabe durch einen Mitarbeiter
+     * wirksam (Vier-Augen-Prinzip).
+     */
+    public function familyDelete($id)
+    {
+        $customer = $this->getCustomer();
+        $member = CustomerFamily::where('customer_id', $customer->id)->where('id', $id)->firstOrFail();
+
+        $this->createRequest(
+            'family',
+            ['id' => $member->id, 'name' => $member->name, 'relation' => $member->relation, 'birth_date' => $member->birth_date],
+            ['id' => $member->id, 'delete' => true, 'name' => $member->name],
+            'Löschung Familienmitglied beantragt: ' . $member->name
+        );
+
+        return back()->with('success', 'Ihr Löschantrag wurde zur Prüfung eingereicht. Das Familienmitglied wird nach Freigabe entfernt.');
+    }
+
     // ------------------------------------------------------------------
     // Adressen
     // ------------------------------------------------------------------

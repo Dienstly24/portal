@@ -82,6 +82,7 @@ form textarea{min-height:90px;resize:vertical;}
     <a href="{{ route('portal.contacts') }}" class="nav-item {{ request()->routeIs('portal.contacts*') ? 'active' : '' }}">Kontaktinformationen</a>
     <a href="{{ route('portal.change_requests') }}" class="nav-item {{ request()->routeIs('portal.change_requests*') ? 'active' : '' }}">Änderungsanfragen</a>
     <a href="{{ route('portal.tickets') }}" class="nav-item {{ request()->routeIs('portal.tickets*') ? 'active' : '' }}">Nachrichten</a>
+    <a href="{{ route('portal.datenschutz') }}" class="nav-item {{ request()->routeIs('portal.datenschutz') ? 'active' : '' }}">Datenschutz</a>
     <div class="sidebar-foot">
         <div class="user-chip">
             <div class="avatar">{{ strtoupper(substr(auth()->user()->name,0,2)) }}</div>

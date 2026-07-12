@@ -26,8 +26,58 @@ class PortalController extends Controller
             'contracts' => Contract::where('customer_id', $customer->id)->latest()->take(3)->get(),
             'tickets' => Ticket::where('customer_id', $customer->id)->latest()->take(3)->get(),
             'completeness' => $customer->completeness(),
-            'banners' => \App\Models\Banner::current()->get(),
+            'banners' => $this->bannersFor(auth()->id()),
         ]);
+    }
+
+    /**
+     * Ausspielbare Banner für diesen Kunden: weggeklickte Banner bleiben
+     * bis zum Ablauf der Schließen-Frist ausgeblendet; jede Ausspielung
+     * wird für die Statistik gezählt (Impressions + eindeutige Betrachter).
+     */
+    private function bannersFor(string $userId)
+    {
+        $dismissed = \App\Models\BannerUserView::where('user_id', $userId)
+            ->where('dismissed_until', '>', now())
+            ->pluck('banner_id');
+
+        $banners = \App\Models\Banner::current()
+            ->whereNotIn('id', $dismissed)
+            ->get();
+
+        foreach ($banners as $banner) {
+            $banner->recordImpression($userId);
+        }
+
+        return $banners;
+    }
+
+    /** Banner-Klick mit hinterlegtem Ziel: zählen, dann weiterleiten. */
+    public function bannerClick($id) {
+        $this->getCustomer();
+        $banner = \App\Models\Banner::current()->findOrFail($id);
+        $banner->recordClick(auth()->id());
+
+        $url = $banner->link_url;
+        // Interner Pfad oder externe URL – alles andere fällt aufs Dashboard zurück.
+        if (!$url) {
+            return redirect()->route('portal.dashboard');
+        }
+        return redirect()->away(str_starts_with($url, 'http') ? $url : url($url));
+    }
+
+    /** Banner schließen: für die konfigurierte Dauer nicht mehr anzeigen. */
+    public function bannerDismiss($id) {
+        $this->getCustomer();
+        $banner = \App\Models\Banner::findOrFail($id);
+        $days = max(1, (int) ($banner->dismiss_days ?? 7));
+
+        \App\Models\BannerUserView::updateOrCreate(
+            ['banner_id' => $banner->id, 'user_id' => auth()->id()],
+            ['dismissed_until' => now()->addDays($days)]
+        );
+
+        return response()->json(['ok' => true]);
     }
 
     public function contracts() {
@@ -203,6 +253,7 @@ class PortalController extends Controller
     public function bannerInterest($id) {
         $customer = $this->getCustomer();
         $banner = \App\Models\Banner::current()->findOrFail($id);
+        $banner->recordClick(auth()->id());
 
         $subject = 'Interesse: ' . $banner->title;
         $ticket = Ticket::where('customer_id', $customer->id)
@@ -351,6 +402,11 @@ class PortalController extends Controller
             'customer' => $customer,
             'pending' => \App\Models\CustomerChangeRequest::where('customer_id', $customer->id)->where('status','pending')->count(),
         ]);
+    }
+
+    /** Transparente Datenschutzinfo für Kunden (DSGVO Art. 13/14). */
+    public function datenschutz() {
+        return view('portal.datenschutz');
     }
 
     public function profileUpdate(Request $request) {

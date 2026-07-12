@@ -1,126 +1,129 @@
 <?php
+
 namespace App\Console\Commands;
+
+use App\Services\CustomerCreation\CustomerAutoCreationService;
+use App\Services\CustomerCreation\DuplicateCustomerException;
+use App\Services\Lexoffice\LexofficeContactMapper;
+use App\Services\Matching\CustomerMatchingService;
 use Illuminate\Console\Command;
-use App\Models\User;
-use App\Models\Customer;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
 
+/**
+ * Intelligenter Lexoffice-Import.
+ *
+ * Nutzt denselben Matching-/Anlage-Pfad wie der Rest des Systems:
+ *  - Duplikaterkennung über CustomerMatchingService (Geburtsdatum + Name +
+ *    E-Mail), nicht nur per E-Mail-Vergleich wie der alte Import.
+ *  - Interne Kundennummer über CustomerNumberGenerator; die Lexoffice-Nummer
+ *    landet als externe Referenz.
+ *  - Strukturierte Adresse, alle E-Mail-Kübel, IBAN/Geburtsdatum aus Notizen.
+ *
+ * Optionen:
+ *   --dry-run   nichts schreiben, nur zeigen was passieren würde
+ *   --limit=N   höchstens N Kontakte verarbeiten (zum Testen)
+ */
 class ImportLexoffice extends Command
 {
-    protected $signature = 'lexoffice:import';
-    protected $description = 'Import all contacts from lexoffice';
+    protected $signature = 'lexoffice:import {--dry-run : Nur simulieren, nichts speichern} {--limit=0 : Max. Anzahl Kontakte (0 = alle)}';
 
-    public function handle()
-    {
+    protected $description = 'Importiert Kontakte aus Lexoffice mit intelligenter Duplikaterkennung';
+
+    public function handle(
+        LexofficeContactMapper $mapper,
+        CustomerMatchingService $matcher,
+        CustomerAutoCreationService $creator,
+    ): int {
         $apiKey = \App\Models\SystemSetting::get('lexoffice_api_key') ?: config('services.lexoffice.key');
-        $baseUrl = 'https://api.lexware.io/v1';
-        $imported = 0;
-        $skipped = 0;
-        $page = 0;
-        $totalPages = 999;
+        if (!$apiKey) {
+            $this->error('Kein Lexoffice-API-Key hinterlegt (Einstellungen oder services.lexoffice.key).');
+            return self::FAILURE;
+        }
 
-        $this->info('=== Import gestartet ===');
+        $dryRun = (bool) $this->option('dry-run');
+        $limit = (int) $this->option('limit');
+        $baseUrl = 'https://api.lexware.io/v1';
+
+        $created = 0;
+        $duplicates = 0;
+        $skipped = 0;
+        $errors = 0;
+        $processed = 0;
+
+        $this->info($dryRun ? '=== Import-SIMULATION (dry-run) ===' : '=== Import gestartet ===');
+
+        $page = 0;
+        $totalPages = 1;
 
         while ($page < $totalPages) {
-            $r = Http::withHeaders([
+            $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $apiKey,
                 'Accept' => 'application/json',
             ])->get("$baseUrl/contacts", ['page' => $page, 'size' => 100]);
 
-            if (!$r->successful()) {
-                $this->error('API Fehler: ' . $r->status());
-                break;
+            if (!$response->successful()) {
+                $this->error('API-Fehler: HTTP ' . $response->status());
+                return self::FAILURE;
             }
 
-            $data = $r->json();
-            $totalPages = $data['totalPages'] ?? 1;
-            $contacts = $data['content'] ?? [];
+            $body = $response->json();
+            $totalPages = $body['totalPages'] ?? 1;
+            $contacts = $body['content'] ?? [];
 
-            $this->info("Seite " . ($page+1) . "/$totalPages (" . count($contacts) . " Kontakte)");
+            $this->line('Seite ' . ($page + 1) . "/$totalPages (" . count($contacts) . ' Kontakte)');
 
-            foreach ($contacts as $c) {
-                $isCompany = isset($c['company']['name']);
-                $name = $isCompany
-                    ? $c['company']['name']
-                    : trim(($c['person']['firstName'] ?? '') . ' ' . ($c['person']['lastName'] ?? ''));
+            foreach ($contacts as $contact) {
+                if ($limit > 0 && $processed >= $limit) {
+                    break 2;
+                }
+                $processed++;
 
-                if (empty(trim($name))) { $skipped++; continue; }
-
-                $email = $c['emailAddresses']['business'][0]
-                    ?? $c['emailAddresses']['private'][0]
-                    ?? $c['emailAddresses']['other'][0]
-                    ?? null;
-
-                if (!$email) {
-                    $slug = substr(preg_replace('/[^a-z0-9]/', '', strtolower($name)), 0, 20);
-                    $email = 'import_' . $slug . '_' . substr(md5($c['id']), 0, 6) . '@dienstly24.internal';
+                $data = $mapper->map($contact);
+                if ($data === null) {
+                    $skipped++;
+                    continue;
                 }
 
-                if (User::where('email', $email)->exists()) { $skipped++; continue; }
-
-                $phone = $c['phoneNumbers']['business'][0]
-                    ?? $c['phoneNumbers']['mobile'][0]
-                    ?? $c['phoneNumbers']['private'][0]
-                    ?? null;
-
-                $address = '';
-                $addr = $c['addresses']['billing'][0] ?? $c['addresses']['shipping'][0] ?? null;
-                if ($addr) {
-                    $address = trim(
-                        trim($addr['street'] ?? '') . ', ' .
-                        trim($addr['zip'] ?? '') . ' ' .
-                        trim($addr['city'] ?? ''),
-                    ', ');
+                // Duplikaterkennung über den zentralen Matching-Service.
+                $match = $matcher->match($data);
+                if ($match->tier() !== 'manual') {
+                    $duplicates++;
+                    $this->line("  ⊘ Duplikat ({$match->score}%): {$data['full_name']}");
+                    continue;
                 }
 
-                $birthDate = null;
-                if (!empty($c['note']) && preg_match('/(\d{2}\.\d{2}\.\d{4})/', $c['note'], $m)) {
-                    try {
-                        $birthDate = \Carbon\Carbon::createFromFormat('d.m.Y', $m[1])->format('Y-m-d');
-                    } catch(\Exception $e) {}
+                if ($dryRun) {
+                    $created++;
+                    $this->line("  + NEU (Simulation): {$data['full_name']}"
+                        . ($data['birth_date'] ? " · geb. {$data['birth_date']}" : '')
+                        . ($data['email'] ? " · {$data['email']}" : ' · (keine E-Mail)'));
+                    continue;
                 }
-
-                $tags = !empty($c['tags']) ? implode(', ', $c['tags']) : null;
 
                 try {
-                    $user = User::create([
-                        'name' => $name,
-                        'email' => $email,
-                        'password' => bcrypt(Str::random(12)),
-                        'role' => 'customer',
-                    ]);
-
-                    Customer::create([
-                        'id' => Str::uuid(),
-                        'user_id' => $user->id,
-                        'customer_number' => 'LEX-' . ($c['roles']['customer']['number'] ?? strtoupper(Str::random(6))),
-                        'phone' => $phone,
-                        'address' => $address ?: null,
-                        'birth_date' => $birthDate,
-                        'company_name' => $isCompany ? $name : null,
-                        'customer_type' => $isCompany ? 'firma' : 'privat',
-                        'preferred_lang' => 'de',
-                        'marital_status' => $tags,
-                    ]);
-
-                    $imported++;
-                    if ($imported % 50 === 0) {
-                        $this->info("  ✓ $imported importiert...");
+                    $customer = $creator->createFromUnmatched($data, 'lexoffice');
+                    $created++;
+                    if ($created % 25 === 0) {
+                        $this->info("  ✓ $created angelegt …");
                     }
-
-                } catch (\Exception $e) {
-                    $skipped++;
+                } catch (DuplicateCustomerException $e) {
+                    $duplicates++;
+                } catch (\Throwable $e) {
+                    $errors++;
+                    \Log::warning('Lexoffice-Import Fehler: ' . $e->getMessage());
                 }
 
-                usleep(100000);
+                usleep(50000); // API schonen
             }
+
             $page++;
         }
 
-        $this->info("\n=== Fertig ===");
-        $this->info("✓ Importiert: $imported");
-        $this->info("⊘ Übersprungen: $skipped");
-        return 0;
+        $this->newLine();
+        $this->info('=== Fertig ===');
+        $this->table(['Neu angelegt', 'Duplikate übersprungen', 'Ohne Namen übersprungen', 'Fehler'],
+            [[$created, $duplicates, $skipped, $errors]]);
+
+        return self::SUCCESS;
     }
 }

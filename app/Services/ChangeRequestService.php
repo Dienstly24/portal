@@ -75,6 +75,16 @@ class ChangeRequestService
 
     private function applyFamily(Customer $customer, array $data): void
     {
+        // Genehmigte LÖSCHUNG eines Familienmitglieds (Vier-Augen-Prinzip:
+        // der Kunde beantragt, ein Mitarbeiter prüft und gibt frei).
+        if (!empty($data['delete']) && !empty($data['id'])) {
+            CustomerFamily::where('customer_id', $customer->id)
+                ->where('id', $data['id'])
+                ->firstOrFail()
+                ->delete();
+            return;
+        }
+
         $fields = array_filter([
             'name' => $data['name'] ?? null,
             'relation' => $data['relation'] ?? null,

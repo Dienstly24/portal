@@ -14,7 +14,7 @@ class Partner extends Model
     protected $keyType = 'string';
     public $incrementing = false;
 
-    protected $fillable = ['name', 'partner_number', 'contact_email', 'email_domains', 'iban', 'notes', 'is_active'];
+    protected $fillable = ['name', 'user_id', 'partner_number', 'contact_email', 'email_domains', 'iban', 'notes', 'is_active', 'logo_path'];
 
     protected function casts(): array
     {
@@ -33,6 +33,18 @@ class Partner extends Model
     public function commissions()
     {
         return $this->hasMany(Commission::class)->latest('statement_date');
+    }
+
+    /** Login-Account des Partners (role=partner), optional. */
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /** Diesem Partner zugeordnete Kunden. */
+    public function customers()
+    {
+        return $this->hasMany(Customer::class);
     }
 
     public function externalReferences()
