@@ -10,11 +10,21 @@ class LegalPagesTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_all_five_legal_pages_are_publicly_reachable(): void
+    // ---------------- Standard: eine Inhaltsquelle = offizielle Website ----------------
+
+    public function test_legal_routes_redirect_to_official_website_by_default(): void
     {
         foreach (['impressum', 'agb', 'datenschutz', 'cookie-richtlinie', 'kontakt'] as $slug) {
-            $this->get('/' . $slug)->assertOk();
+            $this->get('/' . $slug)
+                ->assertRedirect('https://dienstly24.de/' . $slug);
         }
+    }
+
+    public function test_custom_external_base_is_used_for_redirects(): void
+    {
+        SystemSetting::set('legal_external_base', 'https://dienstly24.com/');
+
+        $this->get('/impressum')->assertRedirect('https://dienstly24.com/impressum');
     }
 
     public function test_unknown_legal_slug_is_404_and_does_not_shadow_other_routes(): void
@@ -24,8 +34,20 @@ class LegalPagesTest extends TestCase
         $this->get('/login')->assertOk();
     }
 
-    public function test_impressum_and_kontakt_use_company_settings(): void
+    // ---------------- Fallback: Portal-eigene Seiten (Quelle geleert) ----------------
+
+    public function test_portal_pages_render_when_external_base_is_empty(): void
     {
+        SystemSetting::set('legal_external_base', '');
+
+        foreach (['impressum', 'agb', 'datenschutz', 'cookie-richtlinie', 'kontakt'] as $slug) {
+            $this->get('/' . $slug)->assertOk();
+        }
+    }
+
+    public function test_portal_impressum_and_kontakt_use_company_settings(): void
+    {
+        SystemSetting::set('legal_external_base', '');
         SystemSetting::set('company_name', 'Dienstly24 GmbH');
         SystemSetting::set('company_address', "Musterstraße 1\n12345 Musterstadt");
         SystemSetting::set('company_phone', '+49 40 123456');
@@ -39,24 +61,19 @@ class LegalPagesTest extends TestCase
             ->assertSee('info@dienstly24.de');
     }
 
-    public function test_admin_custom_texts_appear_on_pages(): void
+    public function test_portal_datenschutz_explains_no_private_mailbox_access(): void
     {
-        SystemSetting::set('legal_agb', 'Individueller AGB-Text Absatz 1.');
-        SystemSetting::set('legal_impressum', 'USt-IdNr.: DE999999999');
+        SystemSetting::set('legal_external_base', '');
 
-        $this->get('/agb')->assertOk()->assertSee('Individueller AGB-Text Absatz 1.');
-        $this->get('/impressum')->assertOk()->assertSee('USt-IdNr.: DE999999999');
-    }
-
-    public function test_datenschutz_explains_correspondence_but_no_private_mailbox_access(): void
-    {
         $this->get('/datenschutz')->assertOk()
             ->assertSee('Vertragsbezogene Korrespondenz')
             ->assertSee('nicht')
             ->assertSee('Ihre Rechte');
     }
 
-    public function test_login_and_register_link_to_portal_legal_pages(): void
+    // ---------------- Verlinkung: alles zeigt auf die Portal-Routen ----------------
+
+    public function test_login_and_register_link_to_legal_routes(): void
     {
         $this->get('/login')->assertOk()
             ->assertSee(route('legal', 'impressum'))
@@ -70,7 +87,7 @@ class LegalPagesTest extends TestCase
             ->assertSee(route('legal', 'datenschutz'));
     }
 
-    public function test_welcome_mail_links_to_portal_legal_pages(): void
+    public function test_welcome_mail_links_to_legal_routes(): void
     {
         $user = \App\Models\User::factory()->create(['role' => 'customer', 'email' => 'legal@k.de']);
         $customer = \App\Models\Customer::create(['user_id' => $user->id, 'customer_number' => 'K-LEGAL', 'birth_date' => '1990-01-01']);

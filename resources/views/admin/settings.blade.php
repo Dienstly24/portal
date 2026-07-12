@@ -67,10 +67,12 @@
         <a href="{{ url('/agb') }}" target="_blank" style="color:var(--petrol);">/agb</a> ·
         <a href="{{ url('/datenschutz') }}" target="_blank" style="color:var(--petrol);">/datenschutz</a> ·
         <a href="{{ url('/cookie-richtlinie') }}" target="_blank" style="color:var(--petrol);">/cookie-richtlinie</a> ·
-        <a href="{{ url('/kontakt') }}" target="_blank" style="color:var(--petrol);">/kontakt</a>.
-        Leer = sinnvoller Standardtext; Firmendaten kommen aus „Unternehmen" oben.
+        <a href="{{ url('/kontakt') }}" target="_blank" style="color:var(--petrol);">/kontakt</a>
+        leiten auf die offizielle Website weiter – eine Inhaltsquelle, keine doppelten Texte.
     </div>
-    <div class="field"><label>Impressum – Zusatzangaben (Inhaber, USt-IdNr., Aufsichtsbehörde …)</label>
+    <div class="field"><label>Rechtsseiten-Quelle: Website-Basis-URL (leer lassen = Portal zeigt eigene Seiten aus den Texten unten)</label>
+        <input type="url" name="legal_external_base" value="{{ $settings['legal_external_base'] }}" placeholder="https://dienstly24.de"></div>
+    <div class="field"><label>Impressum – Zusatzangaben (Inhaber, USt-IdNr., Aufsichtsbehörde …) – nur im Portal-Modus sichtbar</label>
         <textarea name="legal_impressum" rows="4">{{ $settings['legal_impressum'] }}</textarea></div>
     <div class="field"><label>AGB – vollständiger Text (ersetzt den Standardtext)</label>
         <textarea name="legal_agb" rows="6">{{ $settings['legal_agb'] }}</textarea></div>

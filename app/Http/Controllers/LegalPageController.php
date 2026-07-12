@@ -5,14 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\SystemSetting;
 
 /**
- * Öffentliche Rechts-/Infoseiten des Portals: Impressum, AGB,
- * Datenschutzerklärung, Cookie-Richtlinie, Kontakt.
+ * Öffentliche Rechts-/Infoseiten: Impressum, AGB, Datenschutzerklärung,
+ * Cookie-Richtlinie, Kontakt.
  *
- * Warum im Portal statt auf der Website: Die Footer-Links (Login,
- * Registrierung, E-Mails) müssen IMMER funktionieren – unabhängig davon,
- * ob die WordPress-Seite die Unterseiten pflegt. Inhalte kommen aus den
- * Systemeinstellungen (Admin -> Einstellungen -> Rechtliches) und fallen
- * auf sinnvolle, faktenbasierte Standardtexte zurück.
+ * Eine Inhaltsquelle, keine zwei Versionen: Standardmäßig leiten die
+ * Portal-Routen auf die entsprechenden Seiten der offiziellen Website
+ * weiter (Einstellungen -> Rechtliches -> "Rechtsseiten-Quelle"). Wird
+ * die Quelle dort geleert, rendert das Portal eigene Seiten aus den
+ * Systemeinstellungen – als Fallback, falls die Website-Seiten einmal
+ * nicht gepflegt sind. Interne Links (Login, E-Mails) zeigen immer auf
+ * die Portal-Routen und funktionieren daher in beiden Modi.
  */
 class LegalPageController extends Controller
 {
@@ -24,9 +26,16 @@ class LegalPageController extends Controller
         'kontakt' => 'Kontakt',
     ];
 
+    public const DEFAULT_EXTERNAL_BASE = 'https://dienstly24.de';
+
     public function show(string $page)
     {
         abort_unless(array_key_exists($page, self::PAGES), 404);
+
+        $base = rtrim((string) SystemSetting::get('legal_external_base', self::DEFAULT_EXTERNAL_BASE), '/');
+        if ($base !== '') {
+            return redirect()->away($base . '/' . $page);
+        }
 
         return view('legal.page', [
             'page' => $page,
