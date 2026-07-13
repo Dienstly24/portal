@@ -11,7 +11,7 @@ class Customer extends Model {
         'user_id','partner_id','customer_number','source','birth_date','address','address2',
         'iban','iban2','marital_status','phone','mobile','preferred_lang',
         'company_name','company_type','customer_type','email2',
-        'nationality','occupation','last_contact','gender','account_holder',
+        'nationality','occupation','last_contact','gender','account_holder','bank_name','bic',
         'marketing_consent','unsubscribed_at','unsubscribe_token',
         'health_insurance_number','health_insurance_company','health_insurance_type',
         'pension_insurance_number','tax_id','birth_place',
@@ -36,6 +36,45 @@ class Customer extends Model {
             'iban' => \App\Casts\SafeEncrypted::class,
             'iban2' => \App\Casts\SafeEncrypted::class,
         ];
+    }
+
+    /**
+     * Portal-Verbesserung Punkt 1: Zerlegt eine Hausnummer-Eingabe in reine
+     * Hausnummer + Zusatz. Kunden tippen den Zusatz (z. B. "A", "1a", "2. OG",
+     * "Hinterhaus") oft ins Hausnummer-Feld - er soll automatisch ins
+     * Zusatz-Feld wandern, damit die Hausnummer sauber bleibt.
+     *
+     * Regel: fuehrende Ziffern = Hausnummer, der Rest = Zusatz. Ein bereits
+     * ausgefuelltes Zusatz-Feld wird NICHT ueberschrieben. Ohne fuehrende
+     * Ziffer (reiner Text) wandert die Eingabe komplett in den Zusatz.
+     *
+     * @return array{number: string, suffix: string}
+     */
+    public static function splitHouseNumber(?string $number, ?string $suffix = null): array
+    {
+        $number = trim((string) $number);
+        $suffix = trim((string) $suffix);
+
+        if ($number === '') {
+            return ['number' => '', 'suffix' => $suffix];
+        }
+
+        // Fuehrende Ziffern abtrennen, optionalen Trenner (Leerzeichen/Punkt/
+        // Bindestrich/Schraegstrich) verwerfen, Rest ist der Zusatz.
+        if (preg_match('/^(\d+)\s*[.\-\/]?\s*(.*)$/u', $number, $m)) {
+            $extracted = trim($m[2]);
+            if ($extracted !== '' && $suffix === '') {
+                $suffix = $extracted;
+            }
+            return ['number' => $m[1], 'suffix' => $suffix];
+        }
+
+        // Keine fuehrende Ziffer (z. B. "Hinterhaus") -> komplett in den Zusatz.
+        if ($suffix === '') {
+            return ['number' => '', 'suffix' => $number];
+        }
+
+        return ['number' => $number, 'suffix' => $suffix];
     }
 
     /**

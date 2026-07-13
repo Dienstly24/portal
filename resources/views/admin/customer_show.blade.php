@@ -118,6 +118,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
         <tr><td style="color:var(--ink-soft);padding:8px 0;width:130px;">Telefon</td><td>{{ $customer->phone ?? '—' }}</td></tr>
         <tr><td style="color:var(--ink-soft);padding:8px 0;border-top:1px solid var(--line);">Adresse</td><td style="border-top:1px solid var(--line);">{{ $customer->address ?? '—' }}</td></tr>
         <tr><td style="color:var(--ink-soft);padding:8px 0;border-top:1px solid var(--line);">IBAN</td><td style="border-top:1px solid var(--line);">{{ $customer->iban ? '••••' . substr($customer->iban,-4) : '—' }}</td></tr>
+        <tr><td style="color:var(--ink-soft);padding:8px 0;border-top:1px solid var(--line);">Bank / BIC</td><td style="border-top:1px solid var(--line);">{{ $customer->bank_name ?: '—' }}{{ $customer->bic ? ' · ' . $customer->bic : '' }}</td></tr>
         <tr><td style="color:var(--ink-soft);padding:8px 0;border-top:1px solid var(--line);">Geburtsdatum</td><td style="border-top:1px solid var(--line);">{{ $customer->birth_date ? \Carbon\Carbon::parse($customer->birth_date)->format('d.m.Y') : '—' }}</td></tr>
         <tr><td style="color:var(--ink-soft);padding:8px 0;border-top:1px solid var(--line);">Familienstand</td><td style="border-top:1px solid var(--line);">{{ $customer->marital_status ?? '—' }}</td></tr>
         <tr><td style="color:var(--ink-soft);padding:8px 0;border-top:1px solid var(--line);">Sprache</td><td style="border-top:1px solid var(--line);">{{ strtoupper($customer->preferred_lang) }}</td></tr>

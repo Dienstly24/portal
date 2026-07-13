@@ -17,8 +17,10 @@
 $fieldLabels = [
     'name'=>'Name','relation'=>'Beziehung','birth_date'=>'Geburtsdatum','type'=>'Typ','street'=>'Straße',
     'zip'=>'PLZ','city'=>'Stadt','country'=>'Land','label'=>'Bezeichnung','value'=>'Wert','iban'=>'IBAN',
-    'account_holder'=>'Kontoinhaber','insurer'=>'Gesellschaft','contract_number'=>'Vertragsnummer',
-    'gender'=>'Geschlecht','marital_status'=>'Familienstand','document_name'=>'Dokument','id'=>null,'document_path'=>null,
+    'account_holder'=>'Kontoinhaber','bank_name'=>'Bankname','bic'=>'BIC','insurer'=>'Gesellschaft','contract_number'=>'Vertragsnummer',
+    'house_number'=>'Hausnummer','house_number_suffix'=>'Zusatz','address_street'=>'Straße','address_house_number'=>'Hausnummer',
+    'address_house_suffix'=>'Zusatz','address_zip'=>'PLZ','address_city'=>'Stadt','phone'=>'Telefon','birth_place'=>'Geburtsort',
+    'gender'=>'Geschlecht','marital_status'=>'Familienstand','document_name'=>'Dokument','id'=>null,'document_path'=>null,'document_disk'=>null,
 ];
 $valueLabels = [
     'ehepartner'=>'Ehepartner','kind'=>'Kind','andere'=>'Andere','main'=>'Hauptadresse','billing'=>'Rechnungsadresse',

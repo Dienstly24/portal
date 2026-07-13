@@ -482,7 +482,18 @@ class PortalController extends Controller
             // Bankverbindung (Review Punkt 4 - alles auf einer Seite)
             'iban' => ['nullable', 'string', 'max:34', 'regex:/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/'],
             'account_holder' => 'nullable|string|max:255',
+            // Portal-Verbesserung Punkt 2: Bankname + BIC (fuer viele Versicherungen noetig)
+            'bank_name' => 'nullable|string|max:255',
+            'bic' => ['nullable', 'string', 'max:11', 'regex:/^[A-Z0-9]{8}([A-Z0-9]{3})?$/'],
         ]);
+
+        // Portal-Verbesserung Punkt 1: Zusatz automatisch aus der Hausnummer
+        // loesen (z. B. "51a" -> Hausnummer "51" + Zusatz "a").
+        if ($request->filled('address_house_number') || $request->filled('address_house_suffix')) {
+            $split = Customer::splitHouseNumber($data['address_house_number'] ?? null, $data['address_house_suffix'] ?? null);
+            $data['address_house_number'] = $split['number'];
+            $data['address_house_suffix'] = $split['suffix'];
+        }
 
         $service = app(\App\Services\ChangeRequestService::class);
         $created = 0;
@@ -491,7 +502,7 @@ class PortalController extends Controller
         // EIN gebündelter Profil-Antrag für alle geänderten Felder.
         $profileFields = [
             'gender', 'birth_place', 'marital_status', 'phone',
-            'address_street', 'address_house_number', 'address_house_suffix', 'address_zip', 'address_city',
+            'address_street', 'address_zip', 'address_city',
             'health_insurance_number', 'pension_insurance_number', 'tax_id',
         ];
         $profileOld = $profileNew = [];
@@ -501,19 +512,45 @@ class PortalController extends Controller
                 $profileNew[$field] = $data[$field];
             }
         }
+        // Hausnummer + Zusatz separat: der Zusatz kann durch die Auto-Zerlegung
+        // gesetzt werden, obwohl das Zusatz-Feld im Formular leer war.
+        if ($request->filled('address_house_number') || $request->filled('address_house_suffix')) {
+            foreach (['address_house_number', 'address_house_suffix'] as $field) {
+                if ((string) $data[$field] !== (string) $customer->$field) {
+                    $profileOld[$field] = $customer->$field;
+                    $profileNew[$field] = $data[$field];
+                }
+            }
+        }
         if ($profileNew) {
             $service->submit($customer, 'profile', $profileOld, $profileNew, 'Profiländerung beantragt: ' . implode(', ', array_keys($profileNew)));
             $created++;
         }
 
-        // Bankverbindung als EIGENER, unabhängiger Change Request (Review Punkt 9)
-        if ($request->filled('iban') && $data['iban'] !== $customer->iban) {
+        // Bankverbindung als EIGENER, unabhängiger Change Request (Review Punkt 9).
+        // Ausloeser: IBAN, Kontoinhaber, Bankname oder BIC geaendert (Punkt 2).
+        $bankChanged = ($request->filled('iban') && $data['iban'] !== $customer->iban)
+            || ($request->filled('account_holder') && (string) $data['account_holder'] !== (string) $customer->account_holder)
+            || ($request->filled('bank_name') && (string) $data['bank_name'] !== (string) $customer->bank_name)
+            || ($request->filled('bic') && (string) $data['bic'] !== (string) $customer->bic);
+        if ($bankChanged) {
             $service->submit(
                 $customer,
                 'bank',
-                ['iban' => $customer->iban ? '••••' . substr($customer->iban, -4) : null, 'account_holder' => $customer->account_holder],
-                ['iban' => $data['iban'], 'account_holder' => ($data['account_holder'] ?? null) ?: ($customer->account_holder ?? auth()->user()->name)],
-                'Neue Bankverbindung beantragt'
+                [
+                    'iban' => $customer->iban ? '••••' . substr($customer->iban, -4) : null,
+                    'account_holder' => $customer->account_holder,
+                    'bank_name' => $customer->bank_name,
+                    'bic' => $customer->bic,
+                ],
+                [
+                    // IBAN nur uebernehmen, wenn neu eingegeben - sonst bestehende behalten.
+                    'iban' => $request->filled('iban') ? $data['iban'] : $customer->iban,
+                    'account_holder' => ($data['account_holder'] ?? null) ?: ($customer->account_holder ?? auth()->user()->name),
+                    'bank_name' => $data['bank_name'] ?? $customer->bank_name,
+                    'bic' => $data['bic'] ?? $customer->bic,
+                ],
+                'Bankverbindung geändert'
             );
             $created++;
         }

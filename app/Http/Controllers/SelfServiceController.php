@@ -228,6 +228,9 @@ class SelfServiceController extends Controller
         $data = $request->validate([
             'iban' => ['required', 'string', 'max:34', 'regex:/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/'],
             'account_holder' => 'required|string|max:255',
+            // Portal-Verbesserung Punkt 2: Bankname + BIC (fuer viele Versicherungen noetig)
+            'bank_name' => 'nullable|string|max:255',
+            'bic' => ['nullable', 'string', 'max:11', 'regex:/^[A-Z0-9]{8}([A-Z0-9]{3})?$/'],
         ]);
 
         $customer = $this->getCustomer();
@@ -236,6 +239,8 @@ class SelfServiceController extends Controller
             [
                 'iban' => $customer->iban ? '••••' . substr($customer->iban, -4) : null,
                 'account_holder' => $customer->account_holder,
+                'bank_name' => $customer->bank_name,
+                'bic' => $customer->bic,
             ],
             $data,
             'Neue Bankverbindung beantragt'

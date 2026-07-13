@@ -321,6 +321,8 @@ class AdminController extends Controller
             // Bankverbindung (verschluesselt at rest) direkt bei der Anlage.
             'iban' => $request->iban ?: null,
             'account_holder' => $request->account_holder ?: null,
+            'bank_name' => $request->bank_name ?: null,
+            'bic' => $request->bic ?: null,
             'preferred_lang' => $request->preferred_lang ?? 'de',
             'customer_type' => $request->customer_type ?? 'privat',
             'company_name' => $request->customer_type === 'firma' ? $request->company_name : null,
@@ -405,6 +407,8 @@ class AdminController extends Controller
             'iban' => $request->iban,
             'iban2' => $request->iban2,
             'account_holder' => $request->account_holder,
+            'bank_name' => $request->bank_name,
+            'bic' => $request->bic,
             'birth_date' => $request->birth_date ?: null,
             'marital_status' => $request->marital_status,
             'gender' => in_array($request->gender, ['male','female','diverse'], true) ? $request->gender : null,

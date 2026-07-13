@@ -82,6 +82,10 @@
             <div class="field"><label>Kontoinhaber (falls abweichend)</label><input type="text" name="account_holder" value="{{ $customer->account_holder }}" placeholder="Optional"></div>
             <div></div>
         </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="field"><label>Bankname</label><input type="text" name="bank_name" value="{{ $customer->bank_name }}" placeholder="z. B. Sparkasse Köln"></div>
+            <div class="field"><label>BIC</label><input type="text" name="bic" value="{{ $customer->bic }}" placeholder="z. B. COLSDE33XXX"></div>
+        </div>
     </div>
 <div style="border-top:1px solid var(--line);margin-top:20px;"></div>
     <div class="card-title" style="margin-bottom:20px;">E-Mail & Telefon</div>

@@ -209,4 +209,82 @@ class PortalReviewTest extends TestCase
         $attacker = $this->makeCustomer();
         $this->actingAs($attacker->user)->get(route('portal.contracts.show', $contract->id))->assertNotFound();
     }
+
+    // Portal-Verbesserung Punkt 1: Zusatz automatisch aus der Hausnummer loesen
+    public function test_house_number_suffix_is_split_automatically(): void
+    {
+        $customer = $this->makeCustomer();
+        // Kunde tippt Zusatz ins Hausnummer-Feld, Zusatz-Feld bleibt leer.
+        $this->actingAs($customer->user)->post(route('portal.profile.update'), [
+            'address_street' => 'Hauptstraße', 'address_house_number' => '51a',
+            'address_zip' => '50667', 'address_city' => 'Köln',
+        ])->assertSessionHas('success');
+
+        $cr = CustomerChangeRequest::where('type', 'profile')->first();
+        $this->assertSame('51', $cr->new_data['address_house_number']);
+        $this->assertSame('a', $cr->new_data['address_house_suffix']);
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->post(route('admin.change_requests.action', $cr->id), ['action' => 'approve']);
+        $customer->refresh();
+        $this->assertSame('51', $customer->address_house_number);
+        $this->assertSame('a', $customer->address_house_suffix);
+    }
+
+    public function test_house_number_split_variants(): void
+    {
+        $this->assertSame(['number' => '51', 'suffix' => 'a'], Customer::splitHouseNumber('51a'));
+        $this->assertSame(['number' => '12', 'suffix' => 'A'], Customer::splitHouseNumber('12 A'));
+        $this->assertSame(['number' => '2', 'suffix' => 'OG'], Customer::splitHouseNumber('2. OG'));
+        $this->assertSame(['number' => '7', 'suffix' => 'Hinterhaus'], Customer::splitHouseNumber('7 Hinterhaus'));
+        $this->assertSame(['number' => '51', 'suffix' => ''], Customer::splitHouseNumber('51'));
+        // Ein bereits ausgefuelltes Zusatz-Feld wird nicht ueberschrieben.
+        $this->assertSame(['number' => '51', 'suffix' => 'b'], Customer::splitHouseNumber('51a', 'b'));
+        // Reiner Text ohne fuehrende Ziffer wandert komplett in den Zusatz.
+        $this->assertSame(['number' => '', 'suffix' => 'Hinterhaus'], Customer::splitHouseNumber('Hinterhaus'));
+    }
+
+    // Portal-Verbesserung Punkt 2: Bankverbindung um Bankname + BIC erweitert
+    public function test_bank_request_carries_bank_name_and_bic(): void
+    {
+        $customer = $this->makeCustomer();
+        $this->actingAs($customer->user)->post(route('portal.bank.store'), [
+            'iban' => 'DE89370400440532013000', 'account_holder' => 'Erika Muster',
+            'bank_name' => 'Sparkasse Köln', 'bic' => 'COLSDE33XXX',
+        ])->assertSessionHas('success');
+
+        $cr = CustomerChangeRequest::where('type', 'bank')->first();
+        $this->assertSame('Sparkasse Köln', $cr->new_data['bank_name']);
+        $this->assertSame('COLSDE33XXX', $cr->new_data['bic']);
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->post(route('admin.change_requests.action', $cr->id), ['action' => 'approve']);
+        $customer->refresh();
+        $this->assertSame('Sparkasse Köln', $customer->bank_name);
+        $this->assertSame('COLSDE33XXX', $customer->bic);
+        $this->assertSame('DE89370400440532013000', $customer->iban);
+    }
+
+    public function test_bank_change_via_profile_triggers_request_for_bank_name_only(): void
+    {
+        $customer = $this->makeCustomer();
+        // Nur Bankname/BIC geaendert (keine neue IBAN) -> trotzdem Bank-Request
+        $this->actingAs($customer->user)->post(route('portal.profile.update'), [
+            'bank_name' => 'Volksbank', 'bic' => 'GENODE61XXX',
+        ])->assertSessionHas('success');
+
+        $cr = CustomerChangeRequest::where('type', 'bank')->first();
+        $this->assertNotNull($cr);
+        $this->assertSame('Volksbank', $cr->new_data['bank_name']);
+        $this->assertSame('GENODE61XXX', $cr->new_data['bic']);
+    }
+
+    public function test_invalid_bic_is_rejected(): void
+    {
+        $customer = $this->makeCustomer();
+        $this->actingAs($customer->user)->post(route('portal.bank.store'), [
+            'iban' => 'DE89370400440532013000', 'account_holder' => 'Erika Muster',
+            'bic' => 'zu-kurz',
+        ])->assertSessionHasErrors('bic');
+    }
 }

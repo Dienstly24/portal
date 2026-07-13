@@ -78,6 +78,10 @@
         <div class="field"><label>IBAN</label><input type="text" name="iban" value="{{ old('iban') }}" placeholder="DE89 3704 0044 0532 0130 00"></div>
         <div class="field"><label>Kontoinhaber</label><input type="text" name="account_holder" value="{{ old('account_holder') }}" placeholder="Abweichend vom Kunden?"></div>
     </div>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;">
+        <div class="field"><label>Bankname</label><input type="text" name="bank_name" value="{{ old('bank_name') }}" placeholder="z. B. Sparkasse Köln"></div>
+        <div class="field"><label>BIC</label><input type="text" name="bic" value="{{ old('bic') }}" placeholder="z. B. COLSDE33XXX"></div>
+    </div>
 </div>
 
 <div class="card" style="max-width:800px;">

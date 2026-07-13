@@ -149,6 +149,9 @@ class ChangeRequestService
         $customer->update([
             'iban' => $data['iban'] ?? $customer->iban,
             'account_holder' => $data['account_holder'] ?? $customer->account_holder,
+            // Portal-Verbesserung Punkt 2: Bankname + BIC
+            'bank_name' => $data['bank_name'] ?? $customer->bank_name,
+            'bic' => $data['bic'] ?? $customer->bic,
         ]);
     }
 

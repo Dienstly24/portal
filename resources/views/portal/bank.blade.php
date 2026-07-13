@@ -16,6 +16,14 @@
             <span style="font-size:13px;color:var(--ink-soft);">Kontoinhaber</span>
             <span style="font-size:14px;font-weight:600;">{{ $customer->account_holder ?? '—' }}</span>
         </div>
+        <div class="item-row">
+            <span style="font-size:13px;color:var(--ink-soft);">Bankname</span>
+            <span style="font-size:14px;font-weight:600;">{{ $customer->bank_name ?? '—' }}</span>
+        </div>
+        <div class="item-row">
+            <span style="font-size:13px;color:var(--ink-soft);">BIC</span>
+            <span style="font-size:14px;font-weight:600;font-family:monospace;">{{ $customer->bic ?? '—' }}</span>
+        </div>
         @if($pendingBank)
         <div class="notice" style="margin-top:14px;margin-bottom:0;">⏳ Es liegt bereits eine Bankänderung in Prüfung. Sie können dennoch eine weitere Änderung einreichen – jede wird einzeln bearbeitet.</div>
         @endif
@@ -27,7 +35,10 @@
             @csrf
             <div class="field"><label>IBAN *</label><input type="text" name="iban" required maxlength="34" placeholder="DE00 0000 0000 0000 0000 00" oninput="this.value=this.value.toUpperCase().replace(/\s/g,'')"></div>
             <div class="field"><label>Kontoinhaber *</label><input type="text" name="account_holder" required maxlength="255" value="{{ auth()->user()->name }}"></div>
+            <div class="field"><label>Bankname</label><input type="text" name="bank_name" maxlength="255" value="{{ old('bank_name', $customer->bank_name) }}" placeholder="z. B. Sparkasse Köln"></div>
+            <div class="field"><label>BIC</label><input type="text" name="bic" maxlength="11" value="{{ old('bic', $customer->bic) }}" placeholder="z. B. COLSDE33XXX" oninput="this.value=this.value.toUpperCase().replace(/\s/g,'')"></div>
             @error('iban')<div class="alert-error">Bitte geben Sie eine gültige IBAN ein (ohne Leerzeichen).</div>@enderror
+            @error('bic')<div class="alert-error">Bitte geben Sie einen gültigen BIC ein (8 oder 11 Zeichen).</div>@enderror
             <button type="submit" class="btn btn-primary">Änderung einreichen</button>
             <p style="font-size:12px;color:var(--ink-soft);margin-top:10px;">🔒 Die neue Bankverbindung wird erst nach Freigabe durch unser Team wirksam.</p>
         </form>

@@ -45,9 +45,10 @@
         <div class="card-title">🏠 {{ __('Adresse') }}</div>
         <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;">
             <div class="field"><label>{{ __('Straße') }}</label><input type="text" name="address_street" value="{{ $customer?->address_street }}"></div>
-            <div class="field"><label>{{ __('Hausnummer') }}</label><input type="text" name="address_house_number" value="{{ $customer?->address_house_number }}"></div>
-            <div class="field"><label>Zusatz</label><input type="text" name="address_house_suffix" value="{{ $customer?->address_house_suffix }}" placeholder="A, 1a"></div>
+            <div class="field"><label>{{ __('Hausnummer') }}</label><input type="text" name="address_house_number" value="{{ $customer?->address_house_number }}" placeholder="z. B. 51"></div>
+            <div class="field"><label>Zusatz</label><input type="text" name="address_house_suffix" value="{{ $customer?->address_house_suffix }}" placeholder="A, 1a, 2. OG"></div>
         </div>
+        <p style="font-size:12px;color:var(--ink-soft);">Tipp: Buchstaben oder Ergänzungen (A, 1a, Hinterhaus …) werden automatisch in das Feld „Zusatz" übernommen – die Hausnummer bleibt sauber.</p>
         <div class="grid-2">
             <div class="field"><label>{{ __('Postleitzahl') }}</label><input type="text" name="address_zip" value="{{ $customer?->address_zip }}" maxlength="10"></div>
             <div class="field"><label>{{ __('Ort') }}</label><input type="text" name="address_city" value="{{ $customer?->address_city }}"></div>
@@ -63,6 +64,10 @@
         <div class="grid-2">
             <div class="field"><label>{{ __('IBAN') }}</label><input type="text" name="iban" value="" placeholder="{{ $customer?->iban ? '••••' . substr($customer->iban, -4) : 'DE…' }}" oninput="this.value=this.value.toUpperCase().replace(/\s/g,'')"></div>
             <div class="field"><label>{{ __('Kontoinhaber') }}</label><input type="text" name="account_holder" value="{{ $customer?->account_holder }}"></div>
+        </div>
+        <div class="grid-2">
+            <div class="field"><label>{{ __('Bankname') }}</label><input type="text" name="bank_name" value="{{ $customer?->bank_name }}" placeholder="z. B. Sparkasse Köln"></div>
+            <div class="field"><label>{{ __('BIC') }}</label><input type="text" name="bic" value="{{ $customer?->bic }}" placeholder="z. B. COLSDE33XXX" oninput="this.value=this.value.toUpperCase().replace(/\s/g,'')"></div>
         </div>
         <p style="font-size:12px;color:var(--ink-soft);">🔒 Bank- und Steuerdaten werden verschlüsselt gespeichert und erst nach Freigabe übernommen.</p>
     </div>
