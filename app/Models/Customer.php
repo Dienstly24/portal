@@ -27,12 +27,14 @@ class Customer extends Model {
         return [
             'marketing_consent' => 'boolean',
             'unsubscribed_at' => 'datetime',
-            'health_insurance_number' => 'encrypted',
-            'pension_insurance_number' => 'encrypted',
-            'tax_id' => 'encrypted',
+            // SafeEncrypted: verschluesselt at rest (DSGVO), aber robust gegen
+            // Alt-Klartext-Bestaende (sonst HTTP 500 beim Oeffnen/Speichern).
+            'health_insurance_number' => \App\Casts\SafeEncrypted::class,
+            'pension_insurance_number' => \App\Casts\SafeEncrypted::class,
+            'tax_id' => \App\Casts\SafeEncrypted::class,
             // Bankdaten verschlüsselt at rest (DSGVO). Anzeige bleibt maskiert.
-            'iban' => 'encrypted',
-            'iban2' => 'encrypted',
+            'iban' => \App\Casts\SafeEncrypted::class,
+            'iban2' => \App\Casts\SafeEncrypted::class,
         ];
     }
 

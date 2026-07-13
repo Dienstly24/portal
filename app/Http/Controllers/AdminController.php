@@ -111,15 +111,99 @@ class AdminController extends Controller
 
     public function contractStore(Request $request, $customerId) {
         $this->authorizeCustomerAccess($customerId);
-        $request->validate([
-            'type' => 'required',
+        $this->validateContract($request);
+
+        $contract = Contract::create([
+            'id' => Str::uuid(),
+            'customer_id' => $customerId,
+            // Echte Versicherungsnummer wird spaeter nachgetragen -> KEINE
+            // automatische Fantasienummer mehr (Betreiber-Feedback).
+            'contract_number' => $request->filled('contract_number') ? trim($request->contract_number) : null,
+            'type' => $request->type,
+            'type_other' => $request->type === 'andere' ? ($request->type_other ?: null) : null,
+            'subtype' => $request->type === 'krankenversicherung' ? $request->subtype : null,
+            'insurer' => $request->insurer,
+            'status' => $request->status,
+            'start_date' => $request->start_date,
+            'end_date' => $request->end_date,
+            'cancellation_date' => $request->cancellation_date,
+            'notes' => $request->notes,
+            'added_by' => auth()->user()?->name,
+        ]);
+
+        $this->syncContractDetails($contract, $request);
+
+        return redirect()->route('admin.customer', $customerId)->with('success', 'Vertrag erfolgreich hinzugefügt.');
+    }
+
+    public function contractEdit($id) {
+        $contract = Contract::with(['vehicleDetail','energyDetail','internetDetail','customer.user'])->findOrFail($id);
+        $this->authorizeCustomerAccess($contract->customer_id);
+        return view('admin.contract_edit', compact('contract'));
+    }
+
+    public function contractUpdate(Request $request, $id) {
+        $contract = Contract::findOrFail($id);
+        $this->authorizeCustomerAccess($contract->customer_id);
+        $this->validateContract($request, $contract->id);
+
+        $contract->update([
+            'contract_number' => $request->filled('contract_number') ? trim($request->contract_number) : null,
+            'type' => $request->type,
+            'type_other' => $request->type === 'andere' ? ($request->type_other ?: null) : null,
+            'subtype' => $request->type === 'krankenversicherung' ? $request->subtype : null,
+            'insurer' => $request->insurer,
+            'status' => $request->status,
+            'start_date' => $request->start_date,
+            'end_date' => $request->end_date,
+            'cancellation_date' => $request->cancellation_date,
+            'notes' => $request->notes,
+        ]);
+
+        $this->syncContractDetails($contract, $request);
+
+        return redirect()->route('admin.customer', $contract->customer_id)->with('success', 'Vertrag aktualisiert.');
+    }
+
+    public function contractDestroy($id) {
+        $contract = Contract::findOrFail($id);
+        $this->authorizeCustomerAccess($contract->customer_id);
+        $customerId = $contract->customer_id;
+
+        // Dokumente bleiben in der Kundenakte erhalten - nur die
+        // Vertragszuordnung wird geloest (keine FK-Cascade auf documents).
+        \App\Models\Document::where('contract_id', $contract->id)->update(['contract_id' => null]);
+
+        \App\Models\ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'contract_deleted',
+            'entity_type' => 'contract',
+            'entity_id' => $contract->id,
+            'meta' => json_encode(['customer_id' => (string) $customerId, 'insurer' => $contract->insurer, 'type' => $contract->type], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        // Detail-Datensaetze und Wechsel-Erinnerungen haengen per FK-Cascade.
+        $contract->delete();
+
+        return redirect()->route('admin.customer', $customerId)->with('success', 'Vertrag gelöscht.');
+    }
+
+    /** Gemeinsame Validierung fuer Anlegen und Bearbeiten von Vertraegen. */
+    private function validateContract(Request $request, ?string $ignoreId = null): array {
+        return $request->validate([
+            'type' => 'required|in:' . implode(',', Contract::typeKeys()),
+            // Freitext-Sparte nur bei "Sonstige" - dann aber verpflichtend.
+            'type_other' => 'nullable|string|max:120|required_if:type,andere',
             // GKV/PKV-Unterscheidung: nur GKV erhält Wechsel-Erinnerungen (§175 SGB V)
             'subtype' => 'nullable|in:gkv,pkv',
-            'insurer' => 'required',
-            'status' => 'required',
+            'insurer' => 'required|string|max:255',
+            // Echte Versicherungsnummer, optional, aber eindeutig.
+            'contract_number' => ['nullable', 'string', 'max:255', \Illuminate\Validation\Rule::unique('contracts', 'contract_number')->ignore($ignoreId)],
+            'status' => 'required|in:active,pending,cancelled,expired',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'cancellation_date' => 'nullable|date',
+            'notes' => 'nullable|string',
             'energy.payment_amount' => 'nullable|numeric|min:0',
             'energy.payment_interval' => 'nullable|in:monatlich,vierteljaehrlich,halbjaehrlich,jaehrlich',
             // KFZ-Details
@@ -136,53 +220,51 @@ class AdminController extends Controller
             // Internet
             'internet.speed' => 'nullable|string|max:30',
         ]);
+    }
 
-        $contract = Contract::create([
-            'id' => Str::uuid(),
-            'customer_id' => $customerId,
-            'contract_number' => $request->contract_number ?: ('V-' . strtoupper(Str::random(8))),
-            'type' => $request->type,
-            'subtype' => $request->type === 'krankenversicherung' ? $request->subtype : null,
-            'insurer' => $request->insurer,
-            'status' => $request->status,
-            'start_date' => $request->start_date,
-            'end_date' => $request->end_date,
-            'cancellation_date' => $request->cancellation_date,
-            'notes' => $request->notes,
-        ]);
+    /**
+     * Spartenspezifische Detaildatensätze anlegen/aktualisieren (Spec Teil 4/5).
+     * Beim Bearbeiten mit Typwechsel werden verwaiste Detaildaten entfernt.
+     */
+    private function syncContractDetails(Contract $contract, Request $request): void {
+        if ($contract->type !== 'kfz')       { $contract->vehicleDetail()->delete(); }
+        if ($contract->type !== 'strom_gas') { $contract->energyDetail()->delete(); }
+        if ($contract->type !== 'internet')  { $contract->internetDetail()->delete(); }
 
-        // Spartenspezifische Detaildatensätze (Spec Teil 4/5)
-        if ($request->type === 'kfz' && $request->filled('vehicle')) {
-            $v = $request->input('vehicle');
+        if ($contract->type === 'kfz') {
+            $v = $request->input('vehicle', []);
             $claims = collect($v['claims'] ?? [])->filter(fn($c) => !empty($c['year']))->values()->all();
-            \App\Models\ContractVehicleDetail::create([
-                'contract_id' => $contract->id,
-                'license_plate' => $v['license_plate'] ?? null,
-                'manufacturer' => $v['manufacturer'] ?? null,
-                'model' => $v['model'] ?? null,
-                'vehicle_type' => $v['vehicle_type'] ?? null,
-                'vin' => $v['vin'] ?? null,
-                'first_registration' => $v['first_registration'] ?? null,
-                'has_claims' => count($claims) > 0,
-                'claims' => $claims,
-                'sf_liability_class' => $v['sf_liability_class'] ?? null,
-                'sf_liability_year' => $v['sf_liability_year'] ?? null,
-                'sf_comprehensive_class' => $v['sf_comprehensive_class'] ?? null,
-                'sf_comprehensive_year' => $v['sf_comprehensive_year'] ?? null,
-            ]);
-        } elseif ($request->type === 'strom_gas' && $request->filled('energy')) {
-            \App\Models\ContractEnergyDetail::create(
-                ['contract_id' => $contract->id] + collect($request->input('energy'))
+            \App\Models\ContractVehicleDetail::updateOrCreate(
+                ['contract_id' => $contract->id],
+                [
+                    'license_plate' => $v['license_plate'] ?? null,
+                    'manufacturer' => $v['manufacturer'] ?? null,
+                    'model' => $v['model'] ?? null,
+                    'vehicle_type' => $v['vehicle_type'] ?? null,
+                    'vin' => $v['vin'] ?? null,
+                    'first_registration' => $v['first_registration'] ?? null,
+                    'has_claims' => count($claims) > 0,
+                    'claims' => $claims,
+                    'sf_liability_class' => $v['sf_liability_class'] ?? null,
+                    'sf_liability_year' => $v['sf_liability_year'] ?? null,
+                    'sf_comprehensive_class' => $v['sf_comprehensive_class'] ?? null,
+                    'sf_comprehensive_year' => $v['sf_comprehensive_year'] ?? null,
+                ]
+            );
+        } elseif ($contract->type === 'strom_gas') {
+            \App\Models\ContractEnergyDetail::updateOrCreate(
+                ['contract_id' => $contract->id],
+                collect($request->input('energy', []))
                     ->only(['tariff','consumption_kwh','meter_number','malo_id','meter_reading','grid_operator','metering_operator','payment_amount','payment_interval'])
+                    ->map(fn($val) => $val === '' ? null : $val)
                     ->all()
             );
-        } elseif ($request->type === 'internet' && $request->filled('internet')) {
-            \App\Models\ContractInternetDetail::create(
-                ['contract_id' => $contract->id] + collect($request->input('internet'))->only(['tariff','speed'])->all()
+        } elseif ($contract->type === 'internet') {
+            \App\Models\ContractInternetDetail::updateOrCreate(
+                ['contract_id' => $contract->id],
+                collect($request->input('internet', []))->only(['tariff','speed'])->map(fn($val) => $val === '' ? null : $val)->all()
             );
         }
-
-        return redirect()->route('admin.customer', $customerId)->with('success', 'Vertrag erfolgreich hinzugefügt.');
     }
 
     // Tickets (Liste, Detail, Aktionen) liegen jetzt im TicketController.
@@ -206,6 +288,9 @@ class AdminController extends Controller
             // Passwort ist jetzt optional: ohne Eingabe greift der
             // Startpasswort-Flow (Geburtsdatum TT.MM.JJJJ bzw. Set-Link).
             'password' => 'nullable|min:8',
+            // Bankverbindung darf schon bei der Neuanlage erfasst werden.
+            'iban' => 'nullable|string|max:40',
+            'account_holder' => 'nullable|string|max:120',
         ]);
         $fullName = $request->first_name . ' ' . $request->last_name;
         $address = $this->buildAddress($request);
@@ -221,8 +306,14 @@ class AdminController extends Controller
             'user_id' => $user->id,
             'customer_number' => app(\App\Services\CustomerNumberGenerator::class)->generate(),
             'phone' => $request->mobile ?? $request->phone,
+            'mobile' => $request->mobile,
             'address' => $address,
             'birth_date' => $request->birth_date,
+            'gender' => in_array($request->gender, ['male','female','diverse'], true) ? $request->gender : null,
+            'marital_status' => $request->marital_status ?: null,
+            // Bankverbindung (verschluesselt at rest) direkt bei der Anlage.
+            'iban' => $request->iban ?: null,
+            'account_holder' => $request->account_holder ?: null,
             'preferred_lang' => $request->preferred_lang ?? 'de',
             'customer_type' => $request->customer_type ?? 'privat',
             'company_name' => $request->customer_type === 'firma' ? $request->company_name : null,
@@ -305,6 +396,7 @@ class AdminController extends Controller
             'email2' => $request->email2,
             'iban' => $request->iban,
             'iban2' => $request->iban2,
+            'account_holder' => $request->account_holder,
             'birth_date' => $request->birth_date ?: null,
             'marital_status' => $request->marital_status,
             'gender' => in_array($request->gender, ['male','female','diverse'], true) ? $request->gender : null,
@@ -434,7 +526,14 @@ class AdminController extends Controller
             'documents.*' => 'file|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:10240',
             'category' => 'nullable|in:contract,police,invoice,identity,claim,other',
             'visibility' => 'nullable|in:customer,internal',
+            'color' => 'nullable|in:green,yellow,red',
+            'contract_id' => 'nullable|string',
         ]);
+
+        // Vertragszuordnung nur zulassen, wenn der Vertrag zu DIESEM Kunden gehört.
+        $contractId = $request->filled('contract_id')
+            ? \App\Models\Contract::where('id', $request->contract_id)->where('customer_id', $id)->value('id')
+            : null;
 
         $created = [];
         foreach ($request->file('documents') as $file) {
@@ -443,6 +542,7 @@ class AdminController extends Controller
             $doc = \App\Models\Document::create([
                 'id' => \Illuminate\Support\Str::uuid(),
                 'customer_id' => $id,
+                'contract_id' => $contractId,
                 'category' => $request->category ?? 'other',
                 'color' => $request->color ?? 'green',
                 'file_name' => $file->getClientOriginalName(),
@@ -542,6 +642,68 @@ class AdminController extends Controller
         ]);
 
         return back()->with('success', 'Dokument ersetzt.');
+    }
+
+    /**
+     * Dokument-Metadaten bearbeiten: Vertragszuordnung, Kategorie, Sichtbarkeit
+     * (intern/Kunde), Priorität und Anzeigename. Datei-Inhalt bleibt unberührt.
+     */
+    public function documentUpdate(Request $request, $id) {
+        $doc = \App\Models\Document::findOrFail($id);
+        $this->authorizeCustomerAccess($doc->customer_id);
+        $request->validate([
+            'category' => 'nullable|in:contract,police,invoice,identity,claim,other',
+            'visibility' => 'nullable|in:customer,internal',
+            'color' => 'nullable|in:green,yellow,red',
+            'contract_id' => 'nullable|string',
+            'file_name' => 'nullable|string|max:255',
+        ]);
+
+        // Vertrag muss zum selben Kunden gehören (Fremdzuordnung verhindern).
+        $contractId = $request->filled('contract_id')
+            ? \App\Models\Contract::where('id', $request->contract_id)->where('customer_id', $doc->customer_id)->value('id')
+            : null;
+
+        $doc->update([
+            'contract_id' => $contractId,
+            'category' => $request->category ?: $doc->category,
+            'visibility' => $request->visibility ?: $doc->visibility,
+            'color' => $request->color ?: ($doc->color ?? 'green'),
+            'file_name' => $request->filled('file_name') ? $request->file_name : $doc->file_name,
+            'updated_by' => auth()->id(),
+        ]);
+
+        \App\Models\ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'document_updated',
+            'entity_type' => 'document',
+            'entity_id' => $doc->id,
+            'meta' => json_encode(['customer_id' => (string) $doc->customer_id, 'visibility' => $doc->visibility, 'contract_id' => $contractId], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        return back()->with('success', 'Dokument aktualisiert.');
+    }
+
+    /** Dokument löschen (Datei + Datensatz). Nur mit Zugriff auf den Kunden. */
+    public function documentDestroy($id) {
+        $doc = \App\Models\Document::findOrFail($id);
+        $this->authorizeCustomerAccess($doc->customer_id);
+
+        try {
+            \Illuminate\Support\Facades\Storage::disk($doc->disk ?: 'public')->delete($doc->file_path);
+        } catch (\Throwable $e) { /* Datei evtl. schon weg - Datensatz trotzdem entfernen */ }
+
+        \App\Models\ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'document_deleted',
+            'entity_type' => 'document',
+            'entity_id' => $doc->id,
+            'meta' => json_encode(['customer_id' => (string) $doc->customer_id, 'file' => $doc->file_name], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        $doc->delete();
+
+        return back()->with('success', 'Dokument gelöscht.');
     }
 
     public function documentDownload($id) {

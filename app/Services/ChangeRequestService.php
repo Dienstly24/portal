@@ -156,9 +156,11 @@ class ChangeRequestService
     {
         $contract = Contract::create([
             'customer_id' => $customer->id,
-            'type' => $data['type'] ?? 'andere',
+            'type' => in_array($data['type'] ?? null, Contract::typeKeys(), true) ? $data['type'] : 'andere',
             'insurer' => $data['insurer'] ?? '',
-            'contract_number' => $data['contract_number'] ?? '', // Spalte ist NOT NULL
+            // NULL statt Leerstring: mehrere gemeldete Verträge ohne Nummer
+            // würden sich am Unique-Index sonst gegenseitig blockieren.
+            'contract_number' => !empty($data['contract_number']) ? $data['contract_number'] : null,
             // Gemeldete Verträge starten als 'pending' (In Bearbeitung),
             // damit das Team die Übernahme abschließen kann.
             'status' => 'pending',

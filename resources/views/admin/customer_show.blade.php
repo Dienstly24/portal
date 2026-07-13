@@ -2,19 +2,8 @@
 @section('content')
 
 @php
-$typeConfig = [
-    'kfz'              => ['icon'=>'🚗','label'=>'KFZ','color'=>'#185FA5','bg'=>'#E6F1FB'],
-    'krankenversicherung' => ['icon'=>'🏥','label'=>'Kranken','color'=>'#3B7A57','bg'=>'#E4F0E7'],
-    'haftpflicht'      => ['icon'=>'🛡️','label'=>'Haftpflicht','color'=>'#6D28D9','bg'=>'#F0E6FB'],
-    'rechtsschutz'     => ['icon'=>'⚖️','label'=>'Rechtsschutz','color'=>'#92400E','bg'=>'#FEF3C7'],
-    'hausrat'          => ['icon'=>'🏠','label'=>'Hausrat','color'=>'#3B7A57','bg'=>'#E4F0E7'],
-    'escooter'         => ['icon'=>'🛴','label'=>'E-Scooter','color'=>'#185FA5','bg'=>'#E6F1FB'],
-    'leben'            => ['icon'=>'❤️','label'=>'Leben','color'=>'#993556','bg'=>'#FBEAF0'],
-    'unfall'           => ['icon'=>'🚑','label'=>'Unfall','color'=>'#A32D2D','bg'=>'#F9E3E3'],
-    'internet'         => ['icon'=>'📶','label'=>'Internet','color'=>'#6D28D9','bg'=>'#EDE9FE'],
-    'strom_gas'        => ['icon'=>'⚡','label'=>'Strom/Gas','color'=>'#92400E','bg'=>'#FEF3C7'],
-    'andere'           => ['icon'=>'📋','label'=>'Andere','color'=>'#5F5E5A','bg'=>'#EEF0F3'],
-];
+// Zentrale Sparten-Definition (Contract::TYPES) - eine Quelle für alle Views.
+$typeConfig = \App\Models\Contract::TYPES;
 $activeTypes = $customer->contracts->where('status','active')->pluck('type')->unique()->toArray();
 @endphp
 
@@ -31,7 +20,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
         </div>
         <div style="display:flex;gap:10px;">
             <a href="{{ route('admin.customer.edit', $customer->id) }}" class="btn btn-ghost">✏️ Bearbeiten</a>
-            <button onclick="document.getElementById('add-contract-modal').style.display='flex'" class="btn btn-gold">+ Vertrag hinzufügen</button>
+            <a href="{{ route('admin.contract.create', $customer->id) }}" class="btn btn-gold">+ Vertrag hinzufügen</a>
         </div>
     </div>
 </div>
@@ -90,6 +79,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
 <div class="cust-tabs">
     <button type="button" class="cust-tab active" data-tab="tab-uebersicht" onclick="showCustTab('tab-uebersicht',this)">📄 Übersicht</button>
     <button type="button" class="cust-tab" data-tab="tab-vertraege" onclick="showCustTab('tab-vertraege',this)">📑 Verträge <span style="opacity:.7;">({{ $customer->contracts->count() }})</span></button>
+    <button type="button" class="cust-tab" data-tab="tab-dokumente" onclick="showCustTab('tab-dokumente',this)">📎 Dokumente <span style="opacity:.7;">({{ $customer->documents->count() }})</span></button>
     <button type="button" class="cust-tab" data-tab="tab-tickets" onclick="showCustTab('tab-tickets',this)">🎫 Tickets <span style="opacity:.7;">({{ $customer->tickets->count() }})</span></button>
     <button type="button" class="cust-tab" data-tab="tab-intern" onclick="showCustTab('tab-intern',this)">💬 Intern <span style="opacity:.7;">({{ $internalChat->count() }})</span></button>
     <button type="button" class="cust-tab" data-tab="tab-notizen" onclick="showCustTab('tab-notizen',this)">📝 Notizen</button>
@@ -151,57 +141,11 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
     <p style="font-size:11.5px;color:var(--ink-soft);margin-top:10px;">Bearbeitung über „Kunde bearbeiten" – jede Änderung wird auditiert.</p>
 </div>
 
-{{-- Dokumente --}}
+{{-- E-Mail-Verlauf (Priorität 8: alle Informationen am Kunden verbunden) --}}
+@php $customerMails = \App\Models\EmailMessage::where('customer_id', $customer->id)->latest('received_at')->limit(6)->get(); @endphp
+@if($customerMails->isNotEmpty())
 <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-        <div class="card-title">Dokumente</div>
-        <button onclick="document.getElementById('add-doc-modal').style.display='flex'" style="width:28px;height:28px;border-radius:50%;border:none;background:var(--petrol);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
-    </div>
-    @php $docs = $customer->documents; @endphp
-    @forelse($docs as $d)
-    @php $dotColor = ['red'=>'#E24B4A','yellow'=>'#F0A500','green'=>'#3B7A57'][$d->color ?? 'green']; @endphp
-    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);">
-        <div style="width:10px;height:10px;border-radius:50%;background:{{ $dotColor }};flex:none;"></div>
-        <div style="flex:1;">
-            <div style="font-size:14px;font-weight:600;">{{ $d->file_name }}</div>
-            <div style="font-size:12px;color:var(--ink-soft);">
-                {{ \App\Models\Document::CATEGORIES[$d->category] ?? ucfirst($d->category) }} · {{ $d->created_at->format('d.m.Y') }}
-                @if(($d->visibility ?? 'customer') === 'internal')<span style="font-size:10.5px;background:#F7E7D6;color:#B5651D;padding:1px 6px;border-radius:4px;">🔒 intern</span>@else<span style="font-size:10.5px;background:#EAF2FB;color:#185FA5;padding:1px 6px;border-radius:4px;">👤 Kunde</span>@endif
-                @if($d->uploader) · {{ $d->uploader->name }}@endif
-                <form method="POST" action="{{ route('admin.documents.replace', $d->id) }}" enctype="multipart/form-data" style="display:inline;">
-                    @csrf
-                    <label style="font-size:10.5px;color:var(--petrol);cursor:pointer;">↺ Ersetzen<input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" style="display:none;" onchange="this.form.submit()"></label>
-                </form>
-            </div>
-        </div>
-        <a href="{{ route('admin.documents.download', $d->id) }}" class="btn btn-ghost btn-sm">⬇</a>
-    </div>
-    @empty
-    <p style="color:var(--ink-soft);font-size:14px;">Keine Dokumente.</p>
-    @endforelse
-
-    {{-- Dokumentenanfragen (Priorität 7): Dokument beim Kunden anfordern --}}
-    @php $docRequests = \App\Models\DocumentRequest::with('contract')->where('customer_id', $customer->id)->latest()->limit(8)->get(); @endphp
-    <div style="display:flex;align-items:center;justify-content:space-between;margin:18px 0 10px;">
-        <div class="card-title" style="font-size:14px;">Angeforderte Dokumente</div>
-        <button onclick="document.getElementById('request-doc-modal').style.display='flex'" class="btn btn-ghost btn-sm">📩 Dokument anfordern</button>
-    </div>
-    @forelse($docRequests as $dr)
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;">
-        <div>
-            <span style="font-weight:600;">{{ $dr->title }}</span>
-            @if($dr->deadline)<span style="color:var(--ink-soft);"> · Frist {{ $dr->deadline->format('d.m.Y') }}</span>@endif
-        </div>
-        <span class="badge {{ $dr->status === 'approved' ? 'badge-active' : ($dr->status === 'rejected' ? 'badge-danger' : 'badge-pending') }}">{{ $dr->statusLabel() }}</span>
-    </div>
-    @empty
-    <p style="color:var(--ink-soft);font-size:13px;">Keine Dokumentenanfragen.</p>
-    @endforelse
-
-    {{-- E-Mail-Verlauf (Priorität 8: alle Informationen am Kunden verbunden) --}}
-    @php $customerMails = \App\Models\EmailMessage::where('customer_id', $customer->id)->latest('received_at')->limit(6)->get(); @endphp
-    @if($customerMails->isNotEmpty())
-    <div class="card-title" style="font-size:14px;margin:18px 0 10px;">E-Mails ({{ $customerMails->count() }})</div>
+    <div class="card-title" style="font-size:14px;margin-bottom:10px;">E-Mails ({{ $customerMails->count() }})</div>
     @foreach($customerMails as $cm)
     <div style="padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;">
         <div style="display:flex;justify-content:space-between;gap:10px;">
@@ -214,8 +158,73 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
         </div>
     </div>
     @endforeach
-    @endif
 </div>
+@endif
+</div>{{-- .grid-2 --}}
+</div>{{-- #tab-uebersicht --}}
+
+{{-- ================= Dokumente-Tab ================= --}}
+<div class="tab-section" id="tab-dokumente" style="display:none;">
+<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div class="card-title" style="margin-bottom:0;">📎 Dokumente</div>
+        <div style="display:flex;gap:8px;">
+            <button onclick="document.getElementById('request-doc-modal').style.display='flex'" class="btn btn-ghost btn-sm">📩 Dokument anfordern</button>
+            <button onclick="document.getElementById('add-doc-modal').style.display='flex'" class="btn btn-gold btn-sm">+ Hochladen</button>
+        </div>
+    </div>
+    @php $docs = $customer->documents; @endphp
+    @forelse($docs as $d)
+    @php
+        $dotColor = ['red'=>'#E24B4A','yellow'=>'#F0A500','green'=>'#3B7A57'][$d->color ?? 'green'];
+        $docContract = $d->contract_id ? $customer->contracts->firstWhere('id', $d->contract_id) : null;
+    @endphp
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);">
+        <div style="width:10px;height:10px;border-radius:50%;background:{{ $dotColor }};flex:none;" title="Priorität"></div>
+        <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:600;">{{ $d->file_name }}</div>
+            <div style="font-size:12px;color:var(--ink-soft);display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:2px;">
+                <span>{{ \App\Models\Document::CATEGORIES[$d->category] ?? ucfirst($d->category) }}</span>
+                <span>· {{ $d->created_at->format('d.m.Y') }}</span>
+                @if(($d->visibility ?? 'customer') === 'internal')<span style="background:#F7E7D6;color:#B5651D;padding:1px 6px;border-radius:4px;">🔒 intern</span>@else<span style="background:#EAF2FB;color:#185FA5;padding:1px 6px;border-radius:4px;">👤 Kunde</span>@endif
+                @if($docContract)<span style="background:#E4F0E7;color:#3B7A57;padding:1px 6px;border-radius:4px;">{{ $docContract->typeIcon() }} {{ $docContract->insurer }}</span>@endif
+                @if($d->uploader)<span>· {{ $d->uploader->name }}</span>@endif
+            </div>
+        </div>
+        <div style="display:flex;gap:4px;flex:none;align-items:center;">
+            <a href="{{ route('admin.documents.download', $d->id) }}" class="btn btn-ghost btn-sm" title="Herunterladen">⬇</a>
+            <button type="button" class="btn btn-ghost btn-sm" title="Bearbeiten"
+                data-doc-id="{{ $d->id }}" data-doc-name="{{ $d->file_name }}" data-doc-category="{{ $d->category }}"
+                data-doc-visibility="{{ $d->visibility ?? 'customer' }}" data-doc-color="{{ $d->color ?? 'green' }}" data-doc-contract="{{ $d->contract_id }}"
+                onclick="openDocEditFromBtn(this)">✏️</button>
+            <form method="POST" action="{{ route('admin.documents.replace', $d->id) }}" enctype="multipart/form-data" style="display:inline;margin:0;">
+                @csrf
+                <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin:0;" title="Datei ersetzen">↺<input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" style="display:none;" onchange="this.form.submit()"></label>
+            </form>
+            <form method="POST" action="{{ route('admin.documents.destroy', $d->id) }}" onsubmit="return confirm('Dokument „{{ $d->file_name }}“ wirklich löschen?');" style="display:inline;margin:0;">
+                @csrf @method('DELETE')
+                <button type="submit" class="btn btn-ghost btn-sm" style="color:#A32D2D;" title="Löschen">🗑</button>
+            </form>
+        </div>
+    </div>
+    @empty
+    <p style="color:var(--ink-soft);font-size:14px;">Keine Dokumente. Über „+ Hochladen" können Sie Dateien hinzufügen und einem Vertrag zuordnen.</p>
+    @endforelse
+
+    {{-- Dokumentenanfragen (Priorität 7): Dokument beim Kunden anfordern --}}
+    @php $docRequests = \App\Models\DocumentRequest::with('contract')->where('customer_id', $customer->id)->latest()->limit(8)->get(); @endphp
+    <div class="card-title" style="font-size:14px;margin:22px 0 10px;">Angeforderte Dokumente</div>
+    @forelse($docRequests as $dr)
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;">
+        <div>
+            <span style="font-weight:600;">{{ $dr->title }}</span>
+            @if($dr->deadline)<span style="color:var(--ink-soft);"> · Frist {{ $dr->deadline->format('d.m.Y') }}</span>@endif
+        </div>
+        <span class="badge {{ $dr->status === 'approved' ? 'badge-active' : ($dr->status === 'rejected' ? 'badge-danger' : 'badge-pending') }}">{{ $dr->statusLabel() }}</span>
+    </div>
+    @empty
+    <p style="color:var(--ink-soft);font-size:13px;">Keine Dokumentenanfragen.</p>
+    @endforelse
 </div>
 </div>
 
@@ -239,6 +248,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
             <th style="text-align:left;padding:10px 12px;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--line);">Beginn</th>
             <th style="text-align:left;padding:10px 12px;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--line);">Status</th>
             <th style="text-align:left;padding:10px 12px;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--line);">Hinzugefügt von</th>
+            <th style="text-align:right;padding:10px 12px;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--line);">Aktionen</th>
         </tr></thead>
         <tbody>
         @forelse($customer->contracts as $c)
@@ -246,8 +256,8 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
         <tr class="contract-row" data-type="{{ $c->type }}" style="border-bottom:1px solid var(--line);">
             <td style="padding:12px;">
                 <div style="display:flex;align-items:center;gap:8px;">
-                    <span style="width:32px;height:32px;border-radius:8px;background:{{ $cfg['bg'] }};display:flex;align-items:center;justify-content:center;font-size:16px;">{{ $cfg['icon'] }}</span>
-                    <span style="font-weight:600;">{{ $cfg['label'] }}</span>
+                    <span style="width:32px;height:32px;border-radius:8px;background:{{ $cfg['bg'] }};display:flex;align-items:center;justify-content:center;font-size:16px;">{{ $c->typeIcon() }}</span>
+                    <span style="font-weight:600;">{{ $c->typeLabel() }}</span>
                 </div>
             </td>
             <td style="padding:12px;">{{ $c->insurer }}</td>
@@ -271,10 +281,17 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
                 <div style="margin-top:6px;font-size:11px;color:#3B7A57;">✓ Erinnerung beantwortet</div>
                 @endif
             </td>
+            <td style="padding:12px;text-align:right;white-space:nowrap;">
+                <a href="{{ route('admin.contract.edit', $c->id) }}" class="btn btn-ghost btn-sm" title="Vertrag bearbeiten">✏️ Bearbeiten</a>
+                <form method="POST" action="{{ route('admin.contract.destroy', $c->id) }}" onsubmit="return confirm('Vertrag {{ $c->insurer }} wirklich löschen?');" style="display:inline;margin:0;">
+                    @csrf @method('DELETE')
+                    <button type="submit" class="btn btn-ghost btn-sm" style="color:#A32D2D;" title="Vertrag löschen">🗑</button>
+                </form>
+            </td>
         </tr>
         @if($c->vehicleDetail || $c->energyDetail || $c->internetDetail)
         <tr class="contract-row" data-type="{{ $c->type }}">
-            <td colspan="6" style="padding:4px 12px 12px;">
+            <td colspan="7" style="padding:4px 12px 12px;">
                 <div style="font-size:12.5px;color:var(--ink-soft);background:var(--canvas);border:1px solid var(--line);border-radius:8px;padding:8px 12px;">
                     @if($v = $c->vehicleDetail)
                         🚗 <b>{{ $v->license_plate ?? '—' }}</b> · {{ $v->manufacturer }} {{ $v->model }}@if($v->vehicle_type) ({{ $v->vehicle_type }})@endif
@@ -299,7 +316,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
         @endif
 
         @empty
-        <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--ink-soft);">Keine Verträge.</td></tr>
+        <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--ink-soft);">Keine Verträge.</td></tr>
         @endforelse
         </tbody>
     </table>
@@ -470,44 +487,9 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
 </div>
 </div>
 
-{{-- Add Contract Modal --}}
-<div id="add-contract-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
-    <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:560px;position:relative;max-height:90vh;overflow-y:auto;">
-        <button onclick="document.getElementById('add-contract-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
-        <div style="font-size:18px;font-weight:700;margin-bottom:20px;">Vertrag hinzufügen</div>
-        <form method="POST" action="{{ route('admin.contract.store', $customer->id) }}">
-            @csrf
-            <div class="field"><label>Vertragsart *</label>
-                <select name="type" required style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
-                    @foreach($typeConfig as $key => $cfg)
-                    <option value="{{ $key }}">{{ $cfg['icon'] }} {{ $cfg['label'] }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="field"><label>Versicherer / Anbieter *</label><input type="text" name="insurer" required placeholder="z.B. Allianz, HUK..."></div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                <div class="field"><label>Status</label>
-                    <select name="status" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
-                        <option value="active">Aktiv</option>
-                        <option value="pending">In Bearbeitung</option>
-                        <option value="cancelled">Gekündigt</option>
-                        <option value="expired">Abgelaufen</option>
-                    </select>
-                </div>
-                <div class="field"><label>Vertragsnummer</label><input type="text" name="vsnr" placeholder="Optional"></div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                <div class="field"><label>Beginn</label><input type="date" name="start_date"></div>
-                <div class="field"><label>Ablauf</label><input type="date" name="end_date"></div>
-            </div>
-            <div class="field"><label>Notizen</label><textarea name="notes" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;min-height:70px;font-family:inherit;resize:vertical;"></textarea></div>
-            <div style="display:flex;gap:10px;justify-content:flex-end;">
-                <button type="button" onclick="document.getElementById('add-contract-modal').style.display='none'" class="btn btn-ghost">Abbrechen</button>
-                <button type="submit" class="btn btn-primary">Speichern</button>
-            </div>
-        </form>
-    </div>
-</div>
+{{-- Vertrag anlegen läuft jetzt über die vollständige Seite
+     (route admin.contract.create) mit allen Spartenfeldern statt eines
+     abgespeckten Modals - siehe Button im Seitenkopf. --}}
 
 {{-- Add Note Modal --}}
 <div id="add-note-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
@@ -562,12 +544,22 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
                     </select>
                 </div>
             </div>
-            <div class="field"><label>Priorität</label>
-                <select name="color" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
-                    <option value="green">🟢 Normal</option>
-                    <option value="yellow">🟡 Wichtig</option>
-                    <option value="red">🔴 Dringend</option>
-                </select>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div class="field"><label>Priorität</label>
+                    <select name="color" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                        <option value="green">🟢 Normal</option>
+                        <option value="yellow">🟡 Wichtig</option>
+                        <option value="red">🔴 Dringend</option>
+                    </select>
+                </div>
+                <div class="field"><label>Zu Vertrag zuordnen (optional)</label>
+                    <select name="contract_id" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                        <option value="">— kein Vertrag —</option>
+                        @foreach($customer->contracts as $ct)
+                        <option value="{{ $ct->id }}">{{ $ct->typeIcon() }} {{ $ct->insurer }}@if($ct->contract_number) · {{ $ct->contract_number }}@endif</option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
             <div id="upload-progress" style="display:none;margin-bottom:14px;">
                 <div style="height:8px;background:var(--canvas);border:1px solid var(--line);border-radius:6px;overflow:hidden;">
@@ -730,4 +722,66 @@ document.addEventListener('DOMContentLoaded', () => {
         </form>
     </div>
 </div>
+
+{{-- Modal: Dokument bearbeiten (Vertragszuordnung, Kategorie, Sichtbarkeit, Priorität, Name) --}}
+<div id="doc-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:480px;position:relative;">
+        <button onclick="document.getElementById('doc-edit-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <div style="font-size:18px;font-weight:700;margin-bottom:20px;">Dokument bearbeiten</div>
+        <form method="POST" id="doc-edit-form" action="">
+            @csrf @method('PUT')
+            <div class="field"><label>Dateiname</label><input type="text" name="file_name" id="doc-edit-name" maxlength="255" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div class="field"><label>Kategorie</label>
+                    <select name="category" id="doc-edit-category" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                        @foreach(\App\Models\Document::CATEGORIES as $ckey => $clabel)
+                        <option value="{{ $ckey }}">{{ $clabel }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="field"><label>Sichtbarkeit</label>
+                    <select name="visibility" id="doc-edit-visibility" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                        <option value="customer">👤 Kundensichtbar</option>
+                        <option value="internal">🔒 Nur intern</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div class="field"><label>Priorität</label>
+                    <select name="color" id="doc-edit-color" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                        <option value="green">🟢 Normal</option>
+                        <option value="yellow">🟡 Wichtig</option>
+                        <option value="red">🔴 Dringend</option>
+                    </select>
+                </div>
+                <div class="field"><label>Zu Vertrag zuordnen</label>
+                    <select name="contract_id" id="doc-edit-contract" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                        <option value="">— kein Vertrag —</option>
+                        @foreach($customer->contracts as $ct)
+                        <option value="{{ $ct->id }}">{{ $ct->typeIcon() }} {{ $ct->insurer }}@if($ct->contract_number) · {{ $ct->contract_number }}@endif</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+                <button type="button" class="btn btn-ghost" onclick="document.getElementById('doc-edit-modal').style.display='none'">Abbrechen</button>
+                <button type="submit" class="btn btn-primary">Speichern</button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+function openDocEditFromBtn(btn) {
+    openDocEdit(btn.dataset.docId, btn.dataset.docName, btn.dataset.docCategory, btn.dataset.docVisibility, btn.dataset.docColor, btn.dataset.docContract);
+}
+function openDocEdit(id, name, category, visibility, color, contractId) {
+    document.getElementById('doc-edit-form').action = '/admin/documents/' + id;
+    document.getElementById('doc-edit-name').value = name || '';
+    document.getElementById('doc-edit-category').value = category || 'other';
+    document.getElementById('doc-edit-visibility').value = visibility || 'customer';
+    document.getElementById('doc-edit-color').value = color || 'green';
+    document.getElementById('doc-edit-contract').value = contractId || '';
+    document.getElementById('doc-edit-modal').style.display = 'flex';
+}
+</script>
 @endsection

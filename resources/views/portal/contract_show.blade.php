@@ -11,10 +11,10 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
 
 <div class="card">
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:6px;">
-        <span style="font-size:40px;line-height:1;">{{ $typeIcons[$contract->type] ?? '📋' }}</span>
+        <span style="font-size:40px;line-height:1;">{{ $contract->typeIcon() }}</span>
         <div>
             <div class="page-title" style="margin-bottom:2px;">{{ $contract->insurer }}</div>
-            <div class="page-sub" style="margin-bottom:0;">{{ $typeLabels[$contract->type] ?? ucfirst($contract->type) }}</div>
+            <div class="page-sub" style="margin-bottom:0;">{{ $contract->typeLabel() }}</div>
         </div>
         <span class="badge badge-{{ $contract->status === 'active' ? 'active' : 'pending' }}" style="margin-left:auto;">{{ $contract->status === 'active' ? 'Aktiv' : ucfirst($contract->status) }}</span>
     </div>
@@ -24,7 +24,7 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
 <div class="card">
     <div class="card-title">Vertragsdaten</div>
     <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Vertragsnummer</span><span style="font-weight:600;font-size:13.5px;">{{ $contract->contract_number ?? '—' }}</span></div>
-    <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Vertragstyp</span><span style="font-weight:600;font-size:13.5px;">{{ $typeLabels[$contract->type] ?? ucfirst($contract->type) }}</span></div>
+    <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Vertragstyp</span><span style="font-weight:600;font-size:13.5px;">{{ $contract->typeLabel() }}</span></div>
     <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Startdatum</span><span style="font-weight:600;font-size:13.5px;">{{ $d($contract->start_date) }}</span></div>
     <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Enddatum</span><span style="font-weight:600;font-size:13.5px;">{{ $d($contract->end_date) }}</span></div>
     <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Kündigungsdatum</span><span style="font-weight:600;font-size:13.5px;">{{ $d($contract->cancellation_date) }}</span></div>
