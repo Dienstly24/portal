@@ -54,6 +54,22 @@ class ServicePageController extends Controller
                 ->withErrors(['email' => __('Bitte geben Sie E-Mail oder Telefon an.')]);
         }
 
+        // Zusaetzliche, pro Leistung konfigurierte Formularfelder einsammeln.
+        // Pflichtfelder pruefen, Antworten fuer die Ticketbeschreibung sammeln.
+        $answers = (array) $request->input('custom', []);
+        $extraLines = [];
+        foreach ($page->fieldList() as $i => $field) {
+            $value = trim((string) ($answers[$i] ?? ''));
+            if ($field['required'] && $value === '') {
+                return back()->withInput()->withErrors([
+                    "custom.$i" => __('Bitte fuellen Sie das Feld ":feld" aus.', ['feld' => $field['label']]),
+                ]);
+            }
+            if ($value !== '') {
+                $extraLines[] = $field['label'] . ': ' . $value;
+            }
+        }
+
         // Bestandskunden ueber die E-Mail zuordnen (nur wenn E-Mail vorhanden).
         $customer = null;
         if (!empty($data['email'])) {
@@ -62,6 +78,13 @@ class ServicePageController extends Controller
         }
 
         $leistung = $page->title_de;
+        $description = ($data['message'] ?? '') !== ''
+            ? $data['message']
+            : ('Anfrage zur Leistung "' . $leistung . '" ueber die Website.');
+        if ($extraLines) {
+            $description .= "\n\n--- Angaben ---\n" . implode("\n", $extraLines);
+        }
+
         $ticket = Ticket::forceCreate([
             'id' => Str::uuid(),
             'customer_id' => $customer?->id,
@@ -70,9 +93,7 @@ class ServicePageController extends Controller
             'priority' => 'mittel',
             'status' => 'open',
             'subject' => 'Anfrage ' . $leistung . ' von ' . $data['name'],
-            'description' => ($data['message'] ?? '') !== ''
-                ? $data['message']
-                : ('Anfrage zur Leistung "' . $leistung . '" ueber die Website.'),
+            'description' => $description,
             'guest_name' => $data['name'],
             'guest_email' => $customer ? null : ($data['email'] ?? null),
             'guest_phone' => $data['phone'] ?? null,

@@ -107,9 +107,39 @@ class ServicePageAdminController extends Controller
         $data['is_active'] = $request->boolean('is_active');
         $data['sort_order'] = (int) ($data['sort_order'] ?? 0);
         $data['faq'] = $this->buildFaq($request);
+        $data['fields'] = $this->buildFields($request);
         unset($data['image']);
 
         return $data;
+    }
+
+    /** Zusaetzliche Formularfelder aus den parallelen Formularfeldern aufbauen. */
+    private function buildFields(Request $request): array
+    {
+        $labelDe = (array) $request->input('field_label_de', []);
+        $labelAr = (array) $request->input('field_label_ar', []);
+        $type = (array) $request->input('field_type', []);
+        $optDe = (array) $request->input('field_options_de', []);
+        $optAr = (array) $request->input('field_options_ar', []);
+        $req = (array) $request->input('field_required', []);
+
+        $fields = [];
+        foreach ($labelDe as $i => $l) {
+            $l = trim((string) $l);
+            if ($l === '') {
+                continue;
+            }
+            $t = (string) ($type[$i] ?? 'text');
+            $fields[] = [
+                'label_de' => $l,
+                'label_ar' => trim((string) ($labelAr[$i] ?? '')),
+                'type' => in_array($t, \App\Models\ServicePage::FIELD_TYPES, true) ? $t : 'text',
+                'options_de' => trim((string) ($optDe[$i] ?? '')),
+                'options_ar' => trim((string) ($optAr[$i] ?? '')),
+                'required' => (string) ($req[$i] ?? '0') === '1',
+            ];
+        }
+        return $fields;
     }
 
     private function buildFaq(Request $request): array

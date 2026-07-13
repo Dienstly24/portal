@@ -93,6 +93,30 @@
     </div>
 
     <div class="card">
+        <div class="card-title">Zusaetzliche Formularfelder (optional)</div>
+        <div class="page-sub" style="margin-bottom:14px;">Zusaetzliche Eingabefelder im Anfrageformular dieser Leistung – z. B. bei der Kfz-Versicherung „Fahrzeug“ oder „gewuenschte Deckung“. Die Antworten werden an das Ticket angehaengt.</div>
+        <div id="fieldRows">
+            @php $fields = old('field_label_de') ? null : ($page->fields ?? []); @endphp
+            @if(old('field_label_de'))
+                @foreach(old('field_label_de') as $i => $l)
+                    @include('admin.partials.service_field_row', [
+                        'label_de' => old('field_label_de.'.$i), 'label_ar' => old('field_label_ar.'.$i),
+                        'type' => old('field_type.'.$i), 'options_de' => old('field_options_de.'.$i),
+                        'options_ar' => old('field_options_ar.'.$i), 'required' => old('field_required.'.$i) === '1'])
+                @endforeach
+            @else
+                @foreach($fields as $f)
+                    @include('admin.partials.service_field_row', [
+                        'label_de' => $f['label_de'] ?? '', 'label_ar' => $f['label_ar'] ?? '',
+                        'type' => $f['type'] ?? 'text', 'options_de' => $f['options_de'] ?? '',
+                        'options_ar' => $f['options_ar'] ?? '', 'required' => $f['required'] ?? false])
+                @endforeach
+            @endif
+        </div>
+        <button type="button" class="btn btn-ghost" onclick="addFieldRow()">➕ Formularfeld</button>
+    </div>
+
+    <div class="card">
         <div class="card-title">Bild &amp; SEO (optional)</div>
         <div class="field"><label>Bild (JPG/PNG/WEBP, max. 4 MB)</label>
             <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp">
@@ -117,11 +141,19 @@
 <template id="faqRowTpl">
     @include('admin.partials.service_faq_row', ['q_de' => '', 'q_ar' => '', 'a_de' => '', 'a_ar' => ''])
 </template>
+<template id="fieldRowTpl">
+    @include('admin.partials.service_field_row', ['label_de' => '', 'label_ar' => '', 'type' => 'text', 'options_de' => '', 'options_ar' => '', 'required' => false])
+</template>
 <script>
 function addFaqRow() {
     var tpl = document.getElementById('faqRowTpl');
     document.getElementById('faqRows').appendChild(tpl.content.cloneNode(true));
 }
 function removeFaqRow(btn) { btn.closest('.faq-row').remove(); }
+function addFieldRow() {
+    var tpl = document.getElementById('fieldRowTpl');
+    document.getElementById('fieldRows').appendChild(tpl.content.cloneNode(true));
+}
+function removeFieldRow(btn) { btn.closest('.field-row').remove(); }
 </script>
 @endsection

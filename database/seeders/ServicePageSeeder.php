@@ -55,6 +55,11 @@ class ServicePageSeeder extends Seeder
                         'a_ar' => 'الاستشارة مجانية وبدون أي التزام.',
                     ],
                 ],
+                'fields' => [
+                    ['label_de' => 'Fahrzeug (Marke / Modell)', 'label_ar' => 'السيارة (الماركة / الموديل)', 'type' => 'text', 'options_de' => '', 'options_ar' => '', 'required' => false],
+                    ['label_de' => 'Gewuenschte Deckung', 'label_ar' => 'التغطية المطلوبة', 'type' => 'select', 'options_de' => 'Haftpflicht, Teilkasko, Vollkasko', 'options_ar' => 'مسؤولية, تأمين جزئي, تأمين شامل', 'required' => true],
+                    ['label_de' => 'Erstzulassung (Jahr)', 'label_ar' => 'سنة أول ترخيص', 'type' => 'number', 'options_de' => '', 'options_ar' => '', 'required' => false],
+                ],
             ],
             [
                 'slug' => 'krankenversicherung',
@@ -122,6 +127,10 @@ class ServicePageSeeder extends Seeder
                         'a_ar' => 'بيعتمد على نوع المعاملة. بعد طلبك منخبّرك بالأوراق المطلوبة بالضبط.',
                     ],
                 ],
+                'fields' => [
+                    ['label_de' => 'Art der Zulassung', 'label_ar' => 'نوع المعاملة', 'type' => 'select', 'options_de' => 'Anmeldung, Ummeldung, Abmeldung', 'options_ar' => 'تسجيل جديد, تحويل, إلغاء', 'required' => true],
+                    ['label_de' => 'Wunschkennzeichen (optional)', 'label_ar' => 'رقم لوحة مرغوب (اختياري)', 'type' => 'text', 'options_de' => '', 'options_ar' => '', 'required' => false],
+                ],
             ],
             [
                 'slug' => 'kennzeichen-per-post',
@@ -164,6 +173,11 @@ class ServicePageSeeder extends Seeder
                         'a_de' => 'Nur Ihre letzte Jahresabrechnung oder Ihren ungefaehren Jahresverbrauch in kWh.',
                         'a_ar' => 'بس فاتورتك السنوية الأخيرة أو استهلاكك التقريبي بالكيلوواط ساعة.',
                     ],
+                ],
+                'fields' => [
+                    ['label_de' => 'Sparte', 'label_ar' => 'النوع', 'type' => 'select', 'options_de' => 'Strom, Gas, Strom und Gas', 'options_ar' => 'كهرباء, غاز, كهرباء وغاز', 'required' => true],
+                    ['label_de' => 'Jahresverbrauch (kWh)', 'label_ar' => 'الاستهلاك السنوي (كيلوواط ساعة)', 'type' => 'number', 'options_de' => '', 'options_ar' => '', 'required' => false],
+                    ['label_de' => 'PLZ', 'label_ar' => 'الرمز البريدي', 'type' => 'text', 'options_de' => '', 'options_ar' => '', 'required' => false],
                 ],
             ],
         ];
