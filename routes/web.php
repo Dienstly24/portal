@@ -162,6 +162,9 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/contracts', [AdminController::class, 'contracts'])->name('contracts');
     Route::get('/contracts/new', [AdminController::class, 'contractNew'])->name('contract.new');
     Route::get('/contracts/create/{customerId}', [AdminController::class, 'contractCreate'])->name('contract.create');
+    Route::get('/contracts/{id}/edit', [AdminController::class, 'contractEdit'])->name('contract.edit');
+    Route::put('/contracts/{id}', [AdminController::class, 'contractUpdate'])->name('contract.update');
+    Route::delete('/contracts/{id}', [AdminController::class, 'contractDestroy'])->name('contract.destroy');
     Route::post('/contracts/{customerId}', [AdminController::class, 'contractStore'])->name('contract.store');
 
     // Tickets (Workflow: Status, Zuweisung, Eigenschaften, Notizen, Antwort)
@@ -191,6 +194,8 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/change-requests/{id}/document', [\App\Http\Controllers\ChangeRequestReviewController::class, 'document'])->name('change_requests.document');
     Route::get('/documents/{id}/download', [AdminController::class, 'documentDownload'])->name('documents.download');
     Route::post('/documents/{id}/replace', [AdminController::class, 'documentReplace'])->name('documents.replace');
+    Route::put('/documents/{id}', [AdminController::class, 'documentUpdate'])->name('documents.update');
+    Route::delete('/documents/{id}', [AdminController::class, 'documentDestroy'])->name('documents.destroy');
     // Banner: Marketing-Verwaltung nur für Admin/Manager (Sicherheits-Fix:
     // war zuvor ohne Rollen-Einschränkung für alle Staff-Rollen erreichbar).
     Route::middleware('role:admin,manager')->group(function () {

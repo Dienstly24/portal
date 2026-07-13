@@ -78,6 +78,10 @@
             <div class="field"><label>IBAN (Haupt)</label><input type="text" name="iban" value="{{ $customer->iban }}" placeholder="DE89 3704 0044 ..."></div>
             <div class="field"><label>IBAN 2 (Alternativ)</label><input type="text" name="iban2" value="{{ $customer->iban2 }}" placeholder="Optional"></div>
         </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="field"><label>Kontoinhaber (falls abweichend)</label><input type="text" name="account_holder" value="{{ $customer->account_holder }}" placeholder="Optional"></div>
+            <div></div>
+        </div>
     </div>
 <div style="border-top:1px solid var(--line);margin-top:20px;"></div>
     <div class="card-title" style="margin-bottom:20px;">E-Mail & Telefon</div>

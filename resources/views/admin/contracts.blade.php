@@ -49,18 +49,15 @@
             </tr>
         </thead>
         <tbody>
-        @php
-$typeIcons = ['kfz'=>['🚗','#E6F1FB','#185FA5'],'krankenversicherung'=>['🏥','#E4F0E7','#3B7A57'],'internet'=>['📶','#EDE9FE','#6D28D9'],'strom_gas'=>['⚡','#FEF3C7','#92400E'],'andere'=>['📋','#EEF0F3','#5F5E5A']];
-        @endphp
         @forelse($contracts as $c)
-        @php $icon = $typeIcons[$c->type] ?? ['📋','#EEF0F3','#5F5E5A']; @endphp
+        @php $cfg = $c->typeConfig(); @endphp
         <tr class="contract-row" data-status="{{ $c->status }}"
             data-search="{{ strtolower($c->insurer . ' ' . $c->contract_number . ' ' . ($c->customer?->user?->name ?? '')) }}">
             <td style="padding:14px 20px;">
-                <div style="width:40px;height:40px;border-radius:10px;background:{{ $icon[1] }};display:flex;align-items:center;justify-content:center;font-size:20px;">{{ $icon[0] }}</div>
+                <div style="width:40px;height:40px;border-radius:10px;background:{{ $cfg['bg'] }};display:flex;align-items:center;justify-content:center;font-size:20px;">{{ $c->typeIcon() }}</div>
             </td>
             <td style="padding:14px 8px;">
-                <div style="font-weight:700;font-size:14px;">{{ ucfirst(str_replace('_',' ',$c->type)) }}</div>
+                <div style="font-weight:700;font-size:14px;">{{ $c->typeLabel() }}</div>
                 <div style="font-size:12px;color:var(--ink-soft);">{{ $c->insurer }}</div>
             </td>
             <td style="font-size:13px;">{{ $c->customer?->user?->name ?? '—' }}</td>
@@ -70,9 +67,10 @@ $typeIcons = ['kfz'=>['🚗','#E6F1FB','#185FA5'],'krankenversicherung'=>['🏥'
             </td>
             <td><span class="badge badge-{{ $c->status === 'active' ? 'active' : ($c->status === 'cancelled' ? 'rejected' : 'pending') }}">{{ ['active'=>'Aktiv','pending'=>'In Bearbeitung','cancelled'=>'Gekündigt','expired'=>'Abgelaufen'][$c->status] ?? $c->status }}</span></td>
             <td>
-                <div style="font-size:13px;font-weight:600;">{{ $c->contract_number }}</div>
+                <div style="font-size:13px;font-weight:600;">{{ $c->contract_number ?: '—' }}</div>
             </td>
-            <td style="padding-right:20px;">
+            <td style="padding-right:20px;white-space:nowrap;">
+                <a href="{{ route('admin.contract.edit', $c->id) }}" class="btn btn-ghost btn-sm">Bearbeiten</a>
                 <a href="{{ route('admin.customer', $c->customer_id) }}" class="btn btn-ghost btn-sm">Kunde</a>
             </td>
         </tr>

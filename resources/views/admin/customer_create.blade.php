@@ -70,17 +70,13 @@
 </div>
 
 <div class="card" style="max-width:800px;">
-    <div class="card-title" style="margin-bottom:20px;">Firma (optional)</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Firmenname</label><input type="text" name="company_name" value="{{ old('company_name') }}" placeholder="Optional"></div>
-        <div class="field"><label>Rechtsform</label>
-            <select name="company_type" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
-                <option value="">—</option>
-                @foreach(['Einzelunternehmen','GmbH','UG (haftungsbeschränkt)','AG','GbR','OHG','KG','e.K.','e.V.'] as $t)
-                <option value="{{ $t }}">{{ $t }}</option>
-                @endforeach
-            </select>
-        </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <div class="card-title" style="margin-bottom:0;">Bankverbindung (optional)</div>
+        <span style="font-size:11.5px;background:#EAF2FB;color:#185FA5;border:1px solid #CFE2F5;padding:3px 10px;border-radius:999px;">🔐 Verschlüsselt gespeichert</span>
+    </div>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;">
+        <div class="field"><label>IBAN</label><input type="text" name="iban" value="{{ old('iban') }}" placeholder="DE89 3704 0044 0532 0130 00"></div>
+        <div class="field"><label>Kontoinhaber</label><input type="text" name="account_holder" value="{{ old('account_holder') }}" placeholder="Abweichend vom Kunden?"></div>
     </div>
 </div>
 
