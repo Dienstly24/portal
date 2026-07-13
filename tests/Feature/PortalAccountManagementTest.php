@@ -63,6 +63,49 @@ class PortalAccountManagementTest extends TestCase
         $this->assertAuthenticatedAs($user->fresh());
     }
 
+    /**
+     * Kunden tippen ihr Geburtsdatum-Passwort oft in einer abweichenden,
+     * aber gleichwertigen Schreibweise. Der Login akzeptiert diese, ohne dass
+     * das gespeicherte Passwort (kanonisch TT.MM.JJJJ) angepasst werden muss.
+     */
+    public function test_customer_can_login_with_equivalent_birthdate_formats(): void
+    {
+        $customer = $this->customer();
+        app(PortalAccessService::class)->sendInvitation($customer, $this->admin->id);
+        $user = $customer->user->fresh();
+
+        // Geburtsdatum 15.03.1985 in gleichwertigen Schreibweisen
+        foreach (['15.3.1985', '15031985', '1985-03-15', '15-03-1985', '15/03/1985', '15.03.1985 '] as $variant) {
+            $this->post('/login', ['email' => 'erika@kunde.de', 'password' => $variant])
+                ->assertRedirect(route('portal.dashboard'));
+            $this->assertAuthenticatedAs($user);
+            $this->post('/logout');
+        }
+    }
+
+    /** Der Geburtsdatum-Fallback darf keinen Fremdzugriff ermoeglichen. */
+    public function test_birthdate_fallback_does_not_bypass_a_self_chosen_password(): void
+    {
+        // Kunde hat ein eigenes Passwort gesetzt (nicht mehr das Geburtsdatum)
+        $customer = $this->customer(['password' => Hash::make('mein-eigenes-pw1')]);
+
+        // Das Geburtsdatum in irgendeiner Schreibweise darf NICHT einloggen
+        $this->post('/login', ['email' => 'erika@kunde.de', 'password' => '15.3.1985'])
+            ->assertSessionHasErrors('email');
+        $this->assertGuest();
+    }
+
+    /** Fuehrende/nachfolgende Leerzeichen in der E-Mail brechen den Login nicht. */
+    public function test_login_trims_whitespace_around_email(): void
+    {
+        $customer = $this->customer();
+        app(PortalAccessService::class)->sendInvitation($customer, $this->admin->id);
+
+        $this->post('/login', ['email' => '  erika@kunde.de  ', 'password' => '15.03.1985'])
+            ->assertRedirect(route('portal.dashboard'));
+        $this->assertAuthenticated();
+    }
+
     public function test_welcome_mail_contains_birthdate_rule_but_not_the_date_itself(): void
     {
         $customer = $this->customer();
