@@ -36,6 +36,10 @@ php artisan migrate --force
 #     (idempotent - verschiebt nur, was noch auf der public Disk liegt).
 php artisan tickets:attachments-private || true
 
+# 4c) Startinhalt der Leistungsseiten anlegen/aktualisieren (idempotent,
+#     ueberschreibt nur die sechs Standard-Slugs; weitere Seiten bleiben).
+php artisan db:seed --class=ServicePageSeeder --force || true
+
 # 5) Produktions-Caches neu aufbauen.
 php artisan config:cache
 php artisan route:cache

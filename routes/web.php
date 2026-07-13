@@ -15,6 +15,14 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', \App\Http\Controllers\HomeController::class);
 
+// Öffentliche Leistungsseiten (Definition + Kurzinfos + FAQ je Leistung).
+// Das Anfrageformular erzeugt ein Ticket im System (source=website).
+Route::get('/leistungen', [\App\Http\Controllers\ServicePageController::class, 'index'])->name('services.index');
+Route::get('/leistungen/{slug}', [\App\Http\Controllers\ServicePageController::class, 'show'])->name('services.show');
+Route::post('/leistungen/{slug}/anfrage', [\App\Http\Controllers\ServicePageController::class, 'submit'])
+    ->middleware('throttle:8,1')
+    ->name('services.submit');
+
 // Öffentliche Rechts-/Infoseiten (Impressum, AGB, Datenschutzerklärung,
 // Cookie-Richtlinie, Kontakt) – IMMER erreichbar, im Portal gehostet.
 Route::get('/{page}', [\App\Http\Controllers\LegalPageController::class, 'show'])
@@ -207,6 +215,16 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         Route::post('/banners/{banner}/move', [\App\Http\Controllers\BannerController::class, 'move'])->name('banners.move');
         Route::post('/banners/{banner}/reset-stats', [\App\Http\Controllers\BannerController::class, 'resetStats'])->name('banners.reset_stats');
         Route::post('/banners/{banner}/delete', [\App\Http\Controllers\BannerController::class, 'destroy'])->name('banners.delete');
+
+        // Leistungsseiten (oeffentliche /leistungen/*): Inhalte pflegbar durch
+        // admin/manager - Texte DE/AR, Kurzinfos, FAQ, Bild, Reihenfolge.
+        Route::get('/service-pages', [\App\Http\Controllers\ServicePageAdminController::class, 'index'])->name('service_pages');
+        Route::get('/service-pages/create', [\App\Http\Controllers\ServicePageAdminController::class, 'create'])->name('service_pages.create');
+        Route::post('/service-pages', [\App\Http\Controllers\ServicePageAdminController::class, 'store'])->name('service_pages.store');
+        Route::get('/service-pages/{servicePage}/edit', [\App\Http\Controllers\ServicePageAdminController::class, 'edit'])->name('service_pages.edit');
+        Route::put('/service-pages/{servicePage}', [\App\Http\Controllers\ServicePageAdminController::class, 'update'])->name('service_pages.update');
+        Route::post('/service-pages/{servicePage}/toggle', [\App\Http\Controllers\ServicePageAdminController::class, 'toggle'])->name('service_pages.toggle');
+        Route::delete('/service-pages/{servicePage}', [\App\Http\Controllers\ServicePageAdminController::class, 'destroy'])->name('service_pages.delete');
     });
 
     // E-Mail-Posteingang: Zuordnungen bestätigen/zuweisen (Priorität 8).
