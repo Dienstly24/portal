@@ -6,10 +6,10 @@ use App\Models\ServicePage;
 use Illuminate\Database\Seeder;
 
 /**
- * Legt die sechs Hauptleistungen als Startinhalt an. Idempotent (updateOrCreate
- * nach Slug), damit ein erneuter Lauf keine Duplikate erzeugt. Weitere
- * Leistungsseiten koennen danach vollstaendig ueber die Adminoberflaeche
- * gepflegt werden - dieser Seeder ueberschreibt nur die sechs Startseiten.
+ * Legt die sechs Hauptleistungen als Startinhalt an. Idempotent und
+ * NICHT-destruktiv: vorhandene Seiten werden nicht ueberschrieben (nur
+ * fehlende Beispiel-Formularfelder werden einmalig nachgetragen), damit im
+ * Admin gepflegte Inhalte bei jedem Deploy erhalten bleiben.
  */
 class ServicePageSeeder extends Seeder
 {
@@ -17,7 +17,19 @@ class ServicePageSeeder extends Seeder
     {
         foreach ($this->pages() as $i => $page) {
             $page['sort_order'] = $i * 10;
-            ServicePage::updateOrCreate(['slug' => $page['slug']], $page);
+            $existing = ServicePage::where('slug', $page['slug'])->first();
+
+            if (!$existing) {
+                // Neue Standardseite anlegen.
+                ServicePage::create($page);
+            } elseif (empty($existing->fields) && !empty($page['fields'])) {
+                // Nur die Beispiel-Formularfelder einmalig nachtragen, wenn noch
+                // keine gesetzt sind - vorhandene Admin-Aenderungen (Texte, FAQ,
+                // eigene Felder) werden dabei NICHT ueberschrieben.
+                $existing->update(['fields' => $page['fields']]);
+            }
+            // Bereits vorhandene Seiten werden ansonsten bewusst nicht angefasst,
+            // damit im Admin gepflegte Inhalte bei jedem Deploy erhalten bleiben.
         }
     }
 
