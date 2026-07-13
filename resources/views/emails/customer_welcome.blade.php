@@ -59,7 +59,7 @@
             <td width="28" style="font-size:15px;padding:3px 0;vertical-align:top;">🔑</td>
             <td style="padding:3px 0;font-size:13px;color:#152826;">
                 @if($mode === 'birthdate')
-                    <strong>Ihr erstes Passwort ist Ihr Geburtsdatum im Format TT.MM.JJJJ.</strong><br>
+                    <strong>Ihr erstes Passwort ist Ihr Geburtsdatum im Format TT.MM.JJJJ</strong><br>
                     <span style="color:#666;font-size:12px;">Formatbeispiel: 01.01.1990 – bitte Ihr eigenes Geburtsdatum mit Punkten eingeben.</span>
                 @elseif($mode === 'setlink')
                     <a href="{{ $setPasswordUrl }}" style="display:inline-block;background:#17191d;color:#ffffff;font-size:13px;font-weight:bold;text-decoration:none;padding:9px 20px;border-radius:8px;">Passwort jetzt festlegen</a>
