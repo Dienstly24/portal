@@ -8,7 +8,7 @@
 {{-- Chart.js lokal gehostet (DSGVO: kein Abfluss von Besucher-IPs an CDN-Drittanbieter) --}}
 <script src="/js/chart.umd.min.js"></script>
 <style>
-:root{--petrol:#17191d;--petrol-dark:#101216;--gold:#17A65B;--canvas:#F4F5F7;--surface:#FFFFFF;--line:#E4E6EA;--ink:#152826;--ink-soft:#6B7280;--sidebar-w:260px;--header-h:64px;}
+:root{--petrol:#17191d;--petrol-dark:#101216;--gold:#17A65B;--canvas:#DCDEE3;--surface:#ECEEF1;--line:#CDD1D8;--ink:#152826;--ink-soft:#6B7280;--sidebar-w:260px;--header-h:64px;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
 .sidebar{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:var(--petrol-dark);color:#fff;display:flex;flex-direction:column;z-index:100;overflow-y:auto;}
@@ -28,13 +28,13 @@ body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
 .user-role{font-size:11px;color:rgba(255,255,255,.45);}
 .logout-btn{background:none;border:none;color:rgba(255,255,255,.45);font-size:12px;cursor:pointer;margin-top:10px;padding:0;}
 .logout-btn:hover{color:#fff;}
-.header{position:fixed;top:0;left:var(--sidebar-w);right:0;height:var(--header-h);background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 32px;gap:16px;z-index:90;}
+.header{position:fixed;top:0;left:var(--sidebar-w);right:0;height:var(--header-h);background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 32px;gap:16px;z-index:90;}
 .header-search{flex:1;max-width:480px;position:relative;}
-.header-search input{width:100%;padding:9px 14px 9px 38px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#F8F9FA;color:var(--ink);}
-.header-search input:focus{outline:2px solid var(--gold);outline-offset:1px;background:#fff;}
+.header-search input{width:100%;padding:9px 14px 9px 38px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#E3E6EA;color:var(--ink);}
+.header-search input:focus{outline:2px solid var(--gold);outline-offset:1px;background:#fff;color:var(--ink);}
 .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink-soft);font-size:15px;}
 .header-actions{margin-left:auto;display:flex;align-items:center;gap:12px;}
-.icon-btn{width:38px;height:38px;border-radius:8px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-soft);font-size:16px;position:relative;text-decoration:none;}
+.icon-btn{width:38px;height:38px;border-radius:8px;border:1px solid var(--line);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-soft);font-size:16px;position:relative;text-decoration:none;}
 .icon-btn:hover{background:var(--canvas);color:var(--ink);}
 .notif-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#E24B4A;border:2px solid #fff;}
 .header-avatar{width:36px;height:36px;border-radius:50%;background:var(--petrol);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;cursor:pointer;}
@@ -47,13 +47,13 @@ body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
 .page-header{margin-bottom:24px;}
 .page-title{font-size:24px;font-weight:700;margin-bottom:4px;}
 .page-sub{color:var(--ink-soft);font-size:14px;}
-.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px 24px;margin-bottom:20px;}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 24px;margin-bottom:20px;}
 .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
 .card-title{font-size:15px;font-weight:600;}
 .card-link{font-size:13px;color:var(--gold);text-decoration:none;}
 .card-link:hover{text-decoration:underline;}
 .metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
-.metric-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px;}
+.metric-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;}
 .metric-label{font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;font-weight:500;}
 .metric-value{font-size:30px;font-weight:700;line-height:1;}
 .metric-sub{font-size:12px;color:var(--ink-soft);margin-top:6px;}
@@ -68,7 +68,7 @@ table{width:100%;border-collapse:collapse;font-size:14px;}
 table th{text-align:left;padding:10px 12px;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--line);font-weight:600;text-transform:uppercase;letter-spacing:.05em;}
 table td{padding:13px 12px;border-bottom:1px solid var(--line);vertical-align:middle;}
 table tr:last-child td{border-bottom:none;}
-table tr:hover td{background:#F8F9FA;}
+table tr:hover td{background:#E3E6EA;}
 .badge{font-size:11.5px;padding:3px 10px;border-radius:999px;font-weight:600;display:inline-flex;align-items:center;gap:4px;}
 .badge::before{content:'';width:6px;height:6px;border-radius:50%;flex:none;}
 .badge-active{background:#E4F0E7;color:#3B7A57;}.badge-active::before{background:#3B7A57;}
@@ -79,7 +79,7 @@ table tr:hover td{background:#F8F9FA;}
 .badge-rejected{background:#F9E3E3;color:#A32D2D;}.badge-rejected::before{background:#A32D2D;}
 .badge-waiting{background:#EEE9F7;color:#6B4FA3;}.badge-waiting::before{background:#6B4FA3;}
 .tab-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
-.tab-row .tab{padding:7px 14px;border-radius:999px;border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--ink-soft);text-decoration:none;background:#fff;transition:.15s;}
+.tab-row .tab{padding:7px 14px;border-radius:999px;border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--ink-soft);text-decoration:none;background:var(--surface);transition:.15s;}
 .tab-row .tab:hover{border-color:var(--ink-soft);color:var(--ink);}
 .tab-row .tab.active{background:var(--petrol);border-color:var(--petrol);color:#fff;}
 .tab-row .tab .tab-count{font-weight:700;margin-left:4px;}
@@ -92,7 +92,7 @@ table tr:hover td{background:#F8F9FA;}
 .toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
 .field{margin-bottom:18px;}
 .field label{display:block;font-size:13px;color:var(--ink-soft);margin-bottom:6px;font-weight:500;}
-.field input,.field select,.field textarea{width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#fff;color:var(--ink);font-family:inherit;transition:.15s;}
+.field input,.field select,.field textarea{width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#F4F5F7;color:var(--ink);font-family:inherit;transition:.15s;}
 .field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--gold);outline-offset:1px;}
 .field textarea{min-height:90px;resize:vertical;}
 .alert{border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:14px;display:flex;align-items:center;gap:10px;}
@@ -298,11 +298,12 @@ table tr:hover td{background:#F8F9FA;}
     </div>
 </div>
 <div class="header">
+    <a href="{{ route('admin.dashboard') }}" title="Dienstly24" style="flex:none;margin-right:6px;"><img src="/images/logo-transparent.png" alt="Dienstly24" style="height:30px;width:auto;display:block;"></a>
     <div class="header-search">
         <span class="search-icon">🔍</span>
         <input type="text" id="global-search" placeholder="Suche nach Kunden, Verträge, Tickets..."
         oninput="globalSearch(this.value)" autocomplete="off">
-    <div id="search-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:320px;overflow-y:auto;z-index:200;margin-top:4px;"></div>
+    <div id="search-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);max-height:320px;overflow-y:auto;z-index:200;margin-top:4px;"></div>
     </div>
     <div class="header-actions">
         {{-- Einheitliches Notification Center: EINE Glocke, EIN Dropdown --}}
