@@ -23,6 +23,13 @@
             Aktiv (wird beim Sync berücksichtigt)
         </label>
     </div>
+    <div class="field">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" name="is_customer_import" value="1" style="width:auto;" {{ old('is_customer_import', $a->is_customer_import ?? false) ? 'checked' : '' }}>
+            Kunden-Import-Postfach (Weiterleitungen an import+&lt;Token&gt;@)
+        </label>
+        <div style="font-size:11px;color:var(--ink-soft);margin-top:4px;">Nur einwilligungs- und whitelist-gepruefte Vertragspost wird verarbeitet; alles andere wird verworfen.</div>
+    </div>
 </div>
 
 <div class="card" id="imap-fields">

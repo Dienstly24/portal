@@ -17,6 +17,14 @@
 </div>
 
 <div class="card">
+    <div class="card-title">🔗 {{ __('E-Mail-Verbindung') }}</div>
+    <p style="font-size:14px;color:var(--ink);line-height:1.6;">
+        {{ __('Optional koennen Sie vertragsbezogene Post automatisch Ihrem Konto zuordnen lassen - freiwillig und jederzeit widerrufbar.') }}
+    </p>
+    <a href="{{ route('portal.email_connection') }}" class="btn" style="margin-top:8px;display:inline-block;">{{ __('E-Mail-Verbindung verwalten') }}</a>
+</div>
+
+<div class="card">
     <div class="card-title">🔒 Wie wir mit Ihren Daten umgehen</div>
     <ul style="font-size:14px;color:var(--ink);line-height:1.8;padding-left:20px;margin:0;">
         <li>Die Verarbeitung erfolgt <strong>ausschließlich zur Betreuung Ihrer Verträge</strong>.</li>
