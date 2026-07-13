@@ -74,10 +74,11 @@ class TicketNotifier
     }
 
     /**
-     * Portal-Glocke fuer den Kunden bei relevanten Statuswechseln
-     * (geloest / geschlossen / wieder geoeffnet).
+     * Portal-Glocke fuer den Kunden bei relevanten Statuswechseln.
+     * NUR nach einem echten Wechsel aufrufen (transitionTo() === true),
+     * sonst entstehen bei Doppel-Submits doppelte Glocken.
      */
-    public static function notifyCustomerStatus(Ticket $ticket): void
+    public static function notifyCustomerStatus(Ticket $ticket, bool $reopened = false): void
     {
         $ticket->loadMissing('customer.user');
         if (!$ticket->customer?->user_id) {
@@ -86,7 +87,12 @@ class TicketNotifier
         $text = match ($ticket->status) {
             'resolved' => 'Ihre Anfrage „:s" wurde als gelöst markiert. Bitte bestätigen Sie im Portal, ob Ihr Anliegen erledigt ist.',
             'closed' => 'Ihre Anfrage „:s" wurde geschlossen.',
-            'open', 'in_progress' => 'Ihre Anfrage „:s" ist wieder in Bearbeitung.',
+            'waiting' => 'Zu Ihrer Anfrage „:s" wird Ihre Rückmeldung benötigt. Bitte antworten Sie im Kundenportal.',
+            // "wieder" nur bei echter Wiedereroeffnung - beim ersten
+            // Uebernehmen eines neuen Tickets waere das irrefuehrend.
+            'open', 'in_progress' => $reopened
+                ? 'Ihre Anfrage „:s" wurde wieder geöffnet und ist in Bearbeitung.'
+                : 'Ihre Anfrage „:s" ist jetzt in Bearbeitung.',
             default => null,
         };
         if (!$text) {
@@ -140,7 +146,10 @@ class TicketNotifier
         $body = $name . ' hat auf „' . \Illuminate\Support\Str::limit($ticket->subject, 60) . '" geantwortet.';
         $link = route('admin.ticket', $ticket->id);
 
-        $recipients = $ticket->customer->betreuer()->pluck('users.id')
+        // Auch der zugewiesene Bearbeiter muss es erfahren - er ist nicht
+        // zwingend Betreuer des Kunden (z. B. Support-Mitarbeiter).
+        $recipients = collect($ticket->assigned_to ? [$ticket->assigned_to] : [])
+            ->merge($ticket->customer->betreuer()->pluck('users.id'))
             ->merge(User::whereIn('role', ['admin', 'manager'])->pluck('id'))
             ->unique()->values();
 

@@ -1,7 +1,7 @@
 @extends('layouts.portal')
 @section('content')
 <div class="toolbar">
-    <div><div class="page-title">Anfragen</div><div class="page-sub">Stellen Sie eine Anfrage oder verfolgen Sie den Status.</div></div>
+    <div><div class="page-title">{{ __('Anfragen') }}</div><div class="page-sub">{{ __('Stellen Sie eine Anfrage oder verfolgen Sie den Status.') }}</div></div>
     <a href="{{ route('portal.tickets.create') }}" class="btn btn-gold">+ {{ __('Neue Anfrage') }}</a>
 </div>
 <div class="card">
@@ -13,11 +13,11 @@
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
             <span class="badge badge-{{ $t->statusBadge() }}">{{ __($t->portalStatusLabel()) }}</span>
-            <a href="{{ route('portal.tickets.show', $t->id) }}" class="btn btn-ghost" style="padding:6px 12px;font-size:13px;">Details</a>
+            <a href="{{ route('portal.tickets.show', $t->id) }}" class="btn btn-ghost" style="padding:6px 12px;font-size:13px;">{{ __('Details') }}</a>
         </div>
     </div>
     @empty
-    <p style="color:var(--ink-soft);font-size:14px;padding:12px 0;">Noch keine Anfragen vorhanden.</p>
+    <p style="color:var(--ink-soft);font-size:14px;padding:12px 0;">{{ __('Noch keine Anfragen vorhanden.') }}</p>
     @endforelse
 </div>
 @endsection

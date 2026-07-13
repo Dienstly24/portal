@@ -32,6 +32,10 @@ fi
 # 4) Datenbank migrieren (additiv; --force = ohne Rückfrage in Produktion).
 php artisan migrate --force
 
+# 4b) DSGVO: oeffentliche Ticketanhaenge in den privaten Storage verschieben
+#     (idempotent - verschiebt nur, was noch auf der public Disk liegt).
+php artisan tickets:attachments-private || true
+
 # 5) Produktions-Caches neu aufbauen.
 php artisan config:cache
 php artisan route:cache

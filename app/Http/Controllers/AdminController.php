@@ -35,6 +35,12 @@ class AdminController extends Controller
     private function authorizeTicketAccess(\App\Models\Ticket $ticket): void {
         if ($ticket->customer_id !== null) {
             $this->authorizeCustomerAccess($ticket->customer_id);
+            return;
+        }
+        // Gast-Anfragen (Leads): nur admin/manager/support - gleiche Regel
+        // wie die Anfragen-Liste (betrifft z. B. Anhang-Downloads).
+        if (!in_array(auth()->user()?->role, ['admin', 'manager', 'support'], true)) {
+            abort(403, 'Kein Zugriff auf Gast-Anfragen.');
         }
     }
 
@@ -43,7 +49,9 @@ class AdminController extends Controller
         return view('admin.dashboard', [
             'totalCustomers' => $ids === null ? Customer::count() : count($ids),
             'activeContracts' => Contract::where('status','active')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->count(),
-            'openTickets' => Ticket::whereIn('status',['open','in_progress'])->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->count(),
+            // Gleiche Definition wie der Karten-Link (status=aktiv, nur Kundentickets),
+            // damit die Zahl der Liste nach dem Klick entspricht.
+            'openTickets' => Ticket::customerOnly()->active()->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->count(),
             'pendingApprovals' => \App\Models\CustomerChangeRequest::where('status','pending')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->count(),
             'recentTickets' => Ticket::with('customer.user')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->latest()->take(5)->get(),
             'recentApprovals' => \App\Models\CustomerChangeRequest::with('customer.user')->where('status','pending')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->latest()->take(5)->get(),
@@ -181,7 +189,8 @@ class AdminController extends Controller
 
     public function inquiries() {
         // Alle Anfragen OHNE Kundenakte (Gaeste: Website, E-Mail, Hilfe-Formular).
-        $tickets = Ticket::whereNull('customer_id')->latest()->get();
+        // Seitenweise - die Liste waechst mit jedem Website-Lead.
+        $tickets = Ticket::whereNull('customer_id')->latest()->paginate(25);
         return view('admin.inquiries', compact('tickets'));
     }
 
@@ -557,6 +566,8 @@ class AdminController extends Controller
         if (($a->disk ?? 'public') === 'local') {
             return \Illuminate\Support\Facades\Storage::disk('local')->download($a->file_path, $a->file_name);
         }
+        // 404 statt 500, wenn die Datei fehlt (z. B. manuell geloescht)
+        abort_unless(is_file(storage_path('app/public/' . $a->file_path)), 404);
         return response()->download(storage_path('app/public/' . $a->file_path), $a->file_name);
     }
 
