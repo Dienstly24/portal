@@ -111,12 +111,14 @@ class PortalController extends Controller
 
     public function ticketsStore(Request $request) {
         $request->validate([
-            'type' => 'required',
+            // in:-Regel gegen das MySQL-Enum - ohne sie wirft ein
+            // manipulierter POST einen 500er statt Validierungsfehler
+            'type' => 'required|in:' . implode(',', array_keys(Ticket::TYPES)),
             'subject' => 'required|max:255',
             'description' => 'required',
             'priority' => 'required|in:niedrig,mittel,hoch',
             'attachments' => 'nullable|array|max:10',
-            'attachments.*' => 'file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'attachments.*' => 'file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
         ]);
         $customer = $this->getCustomer();
         $ticket = Ticket::create([
@@ -130,13 +132,17 @@ class PortalController extends Controller
         ]);
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
-                $path = $file->store('tickets/' . $ticket->id, 'public');
+                // Punkt 5: sicher auf privater Disk speichern - Kunden-Uploads
+                // (Versichertenkarten, Unfallfotos) duerfen NIE oeffentlich
+                // unter /storage/... erreichbar sein.
+                $path = $file->store('tickets/' . $ticket->id, 'local');
                 \App\Models\TicketAttachment::create([
                     'id' => Str::uuid(),
                     'ticket_id' => $ticket->id,
                     'uploaded_by' => auth()->id(),
                     'file_name' => $file->getClientOriginalName(),
                     'file_path' => $path,
+                    'disk' => 'local',
                 ]);
             }
         }
@@ -159,6 +165,8 @@ class PortalController extends Controller
         if (($a->disk ?? 'public') === 'local') {
             return \Illuminate\Support\Facades\Storage::disk('local')->download($a->file_path, $a->file_name);
         }
+        // 404 statt 500, wenn die Datei fehlt (z. B. manuell geloescht)
+        abort_unless(is_file(storage_path('app/public/' . $a->file_path)), 404);
         return response()->download(storage_path('app/public/' . $a->file_path), $a->file_name);
     }
 

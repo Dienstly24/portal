@@ -76,7 +76,7 @@
     <div class="card-title">{{ __('Nachrichten') }}</div>
     @forelse($messages as $m)
     <div style="margin-bottom:16px;padding:12px 16px;border-radius:8px;background:{{ $m->sender_id === auth()->id() ? 'var(--gold-soft)' : 'var(--canvas)' }};border:1px solid var(--line);">
-        <div style="font-size:12px;color:var(--ink-soft);margin-bottom:6px;">{{ $m->sender->name }} · {{ $m->created_at->format('d.m.Y H:i') }}</div>
+        <div style="font-size:12px;color:var(--ink-soft);margin-bottom:6px;">{{ $m->sender?->name ?? 'Dienstly24 Team' }} · {{ $m->created_at->format('d.m.Y H:i') }}</div>
         <div style="font-size:14px;line-height:1.6;white-space:pre-line;">{{ $m->body }}</div>
     </div>
     @empty

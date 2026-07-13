@@ -29,4 +29,20 @@
         </tbody>
     </table>
 </div>
+@if($tickets->hasPages())
+<div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;">
+    <div style="font-size:13px;color:var(--ink-soft);">
+        {{ $tickets->firstItem() }}–{{ $tickets->lastItem() }} von {{ $tickets->total() }} Anfragen
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+        @if(!$tickets->onFirstPage())
+            <a href="{{ $tickets->previousPageUrl() }}" class="btn btn-ghost btn-sm">← Zurück</a>
+        @endif
+        <span style="font-size:13px;color:var(--ink-soft);">Seite {{ $tickets->currentPage() }} / {{ $tickets->lastPage() }}</span>
+        @if($tickets->hasMorePages())
+            <a href="{{ $tickets->nextPageUrl() }}" class="btn btn-ghost btn-sm">Weiter →</a>
+        @endif
+    </div>
+</div>
+@endif
 @endsection

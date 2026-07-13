@@ -87,10 +87,13 @@ class SupportFormController extends Controller
             abort(422);
         }
 
-        $customer = $this->customerFromToken($request->input('t'));
-        if (!$customer && $request->user() && $request->user()->role === 'customer') {
-            $customer = $request->user()->customer;
+        // "Vertrauenswürdig" identifiziert = per Token aus der Willkommens-Mail
+        // oder eingeloggt. Nur dann darf die Antwortseite Kundenbezug zeigen.
+        $trusted = $this->customerFromToken($request->input('t'));
+        if (!$trusted && $request->user() && $request->user()->role === 'customer') {
+            $trusted = $request->user()->customer;
         }
+        $customer = $trusted;
 
         $rules = [
             'leistung' => 'required|in:' . implode(',', array_keys(self::LEISTUNGEN)),
@@ -102,7 +105,9 @@ class SupportFormController extends Controller
         }
         $data = $request->validate($rules);
 
-        // Gast-Anfrage: per E-Mail trotzdem der Kundenakte zuordnen, wenn möglich
+        // Gast-Anfrage: per E-Mail trotzdem der Kundenakte zuordnen, wenn
+        // möglich - aber NUR intern. Die Antwortseite verrät die Zuordnung
+        // nicht (sonst könnten Fremde per E-Mail-Raten Kundenkonten erkennen).
         if (!$customer) {
             $customer = Customer::whereHas('user', fn ($q) => $q->where('email', $data['email']))
                 ->orWhere('email', $data['email'])->first();
@@ -139,8 +144,10 @@ class SupportFormController extends Controller
         \App\Services\TicketNotifier::notifyNewTicket($ticket);
 
         return view('support.thanks', [
-            'ticketRef' => strtoupper(substr((string) $ticket->id, 0, 8)),
-            'customer' => $customer,
+            // Einheitliche Vorgangsnummer (T-...) statt UUID-Fragment -
+            // dieselbe Nummer, die auch in Mails und Beraterwelt steht.
+            'ticketRef' => $ticket->ticket_number,
+            'customer' => $trusted,
         ]);
     }
 }

@@ -151,7 +151,10 @@ table tr:hover td{background:#F8F9FA;}
         @php
             $navUser = auth()->user();
             $navIds = ($navUser && !$navUser->canSeeAllCustomers()) ? $navUser->visibleCustomerIdsWithSubstitution() : null;
-            $openT = \App\Models\Ticket::whereIn('status',['open','in_progress'])->when($navIds !== null, fn($q) => $q->whereIn('customer_id', $navIds))->count();
+            // Badge = NEUE, noch nicht uebernommene Kundentickets (Status "Offen").
+            // Nach "In Bearbeitung uebernehmen" verschwindet die Zahl.
+            // Gast-Anfragen zaehlen hier nicht mit - die stehen unter "Anfragen".
+            $openT = \App\Models\Ticket::customerOnly()->where('status', 'open')->when($navIds !== null, fn($q) => $q->whereIn('customer_id', $navIds))->count();
         @endphp
         @if($openT > 0)<span class="nav-badge">{{ $openT }}</span>@endif
     </a>

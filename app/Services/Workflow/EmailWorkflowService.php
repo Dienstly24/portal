@@ -206,7 +206,7 @@ class EmailWorkflowService
 
     private function createTicket(EmailMessage $message, ?Customer $customer): void
     {
-        Ticket::forceCreate([
+        $ticket = Ticket::forceCreate([
             'id' => (string) Str::uuid(),
             'customer_id' => $customer?->id,
             'type' => 'other',
@@ -218,6 +218,10 @@ class EmailWorkflowService
             'guest_name' => $customer ? null : $message->from_name,
             'guest_email' => $customer ? null : $message->from_address,
         ]);
+
+        // Team-Glocke wie bei allen anderen Ticket-Quellen - E-Mail-Tickets
+        // entstanden bisher lautlos.
+        \App\Services\TicketNotifier::notifyNewTicket($ticket);
     }
 
     private function createTask(EmailMessage $message, ?Customer $customer, string $title, int $dueInDays, string $priority): void

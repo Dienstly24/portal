@@ -25,8 +25,17 @@ class TicketController extends Controller
 
     /** 403, wenn das Ticket zu einem nicht sichtbaren Kunden gehoert. (Audit M1) */
     private function authorizeTicketAccess(Ticket $ticket): void {
+        // Gast-Anfragen (Leads mit Kontaktdaten) sind sensibel: wie die
+        // Anfragen-Liste nur fuer admin/manager/support - der bisherige
+        // Guard existierte nur im Nav-UI, nicht serverseitig.
+        if ($ticket->customer_id === null) {
+            if (!in_array(auth()->user()?->role, ['admin', 'manager', 'support'], true)) {
+                abort(403, 'Kein Zugriff auf Gast-Anfragen.');
+            }
+            return;
+        }
         $ids = $this->visibleCustomerIds();
-        if ($ticket->customer_id !== null && $ids !== null
+        if ($ids !== null
             && !in_array((string) $ticket->customer_id, array_map('strval', $ids), true)) {
             abort(403, 'Kein Zugriff auf diesen Kunden.');
         }
@@ -92,7 +101,7 @@ class TicketController extends Controller
         }
 
         $tickets = $query->orderByDesc('updated_at')->paginate(25)->withQueryString();
-        $staff = User::whereIn('role', ['admin', 'manager', 'support', 'employee'])->orderBy('name')->get(['id', 'name']);
+        $staff = $this->assignableStaff();
         return view('admin.tickets', compact('tickets', 'stats', 'staff'));
     }
 
@@ -170,12 +179,14 @@ class TicketController extends Controller
             ->map(fn($label, $key) => ['label' => $label, 'n' => $cohort->where('type', $key)->count()])
             ->values()->sortByDesc('n')->values();
 
-        // Mitarbeiter-Auswertung (zugewiesene Tickets der Kohorte)
+        // Mitarbeiter-Auswertung (zugewiesene Tickets der Kohorte);
+        // Namen in EINER Query vorab laden statt User::find je Zeile
+        $staffNames = User::whereIn('id', $cohort->pluck('assigned_to')->filter()->unique())->pluck('name', 'id');
         $byEmployee = $cohort->whereNotNull('assigned_to')->groupBy('assigned_to')
-            ->map(function ($tickets, $userId) {
+            ->map(function ($tickets, $userId) use ($staffNames) {
                 $rated = $tickets->whereNotNull('rating');
                 return [
-                    'name' => User::find($userId)?->name ?? '—',
+                    'name' => $staffNames[$userId] ?? '—',
                     'total' => $tickets->count(),
                     'erledigt' => $tickets->filter(fn($t) => $t->isFinished())->count(),
                     'rating' => $rated->count() ? round($rated->avg('rating'), 1) : null,
@@ -209,8 +220,14 @@ class TicketController extends Controller
     public function show($id) {
         $ticket = Ticket::with(['customer.user', 'assignedTo', 'closedBy', 'messages.sender', 'events.user', 'attachments'])->findOrFail($id);
         $this->authorizeTicketAccess($ticket);
-        $staff = User::whereIn('role', ['admin', 'manager', 'support', 'employee'])->orderBy('name')->get(['id', 'name']);
+        $staff = $this->assignableStaff();
         return view('admin.ticket_show', compact('ticket', 'staff'));
+    }
+
+    /** Zuweisbare Mitarbeiter: nur aktive Konten (deaktivierte bearbeiten nichts mehr). */
+    private function assignableStaff() {
+        return User::whereIn('role', ['admin', 'manager', 'support', 'employee'])
+            ->where('is_active', true)->orderBy('name')->get(['id', 'name']);
     }
 
     /** Statuswechsel ueber die Schnellaktionen der Detailseite. */
@@ -225,8 +242,12 @@ class TicketController extends Controller
             $ticket->update(['assigned_to' => auth()->id()]);
             $ticket->logEvent('assigned', 'an ' . auth()->user()->name);
         }
-        $ticket->transitionTo($request->status, auth()->id());
-        TicketNotifier::notifyCustomerStatus($ticket);
+        $reopened = $ticket->isFinished() && !in_array($request->status, ['resolved', 'closed'], true);
+        // Nur bei einem ECHTEN Wechsel benachrichtigen - ein Doppel-Submit
+        // darf keine zweite Kunden-Glocke erzeugen.
+        if ($ticket->transitionTo($request->status, auth()->id())) {
+            TicketNotifier::notifyCustomerStatus($ticket, $reopened);
+        }
         return back()->with('success', 'Status aktualisiert: ' . $ticket->statusLabel());
     }
 
@@ -243,8 +264,8 @@ class TicketController extends Controller
 
         if ($request->has('assigned_to')) {
             $newId = $request->assigned_to ?: null;
-            if ($newId && !User::find($newId)->isStaff()) {
-                return back()->with('error', 'Tickets koennen nur Mitarbeitern zugewiesen werden.');
+            if ($newId && (!($assigneeCheck = User::find($newId))->isStaff() || !$assigneeCheck->is_active)) {
+                return back()->with('error', 'Tickets koennen nur aktiven Mitarbeitern zugewiesen werden.');
             }
             if ((string) $newId !== (string) $ticket->assigned_to) {
                 $ticket->update(['assigned_to' => $newId]);
@@ -302,6 +323,11 @@ class TicketController extends Controller
         $ticket = Ticket::findOrFail($id);
         $this->authorizeTicketAccess($ticket);
         $this->authorizeTicketManage();
+        // Geschlossene Tickets sind schreibgeschuetzt (das UI blendet das
+        // Formular aus, aber auch der Server muss es ablehnen).
+        if ($ticket->status === 'closed') {
+            return back()->with('error', 'Dieses Ticket ist geschlossen. Bitte zuerst wieder oeffnen.');
+        }
         TicketMessage::create([
             'id' => Str::uuid(),
             'ticket_id' => $ticket->id,

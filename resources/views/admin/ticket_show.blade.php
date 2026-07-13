@@ -160,7 +160,7 @@
     @forelse($customerMessages as $m)
     @php $fromCustomer = $m->sender_id === $ticket->customer?->user_id; @endphp
     <div style="margin-bottom:16px;padding:12px 16px;border-radius:8px;background:{{ $fromCustomer ? '#EFF6FF' : 'var(--canvas)' }};border:1px solid var(--line);">
-        <div style="font-size:12px;color:var(--ink-soft);margin-bottom:6px;">{{ $fromCustomer ? '👤' : '🏢' }} {{ $m->sender?->name }} · {{ $m->created_at->format('d.m.Y H:i') }}</div>
+        <div style="font-size:12px;color:var(--ink-soft);margin-bottom:6px;">{{ $fromCustomer ? '👤' : '🏢' }} {{ $m->sender?->name ?? 'Dienstly24 Team (Konto entfernt)' }} · {{ $m->created_at->format('d.m.Y H:i') }}</div>
         <div style="font-size:14px;line-height:1.6;white-space:pre-line;">{{ $m->body }}</div>
     </div>
     @empty
@@ -177,7 +177,7 @@
         <div class="field">
             <label>Datei anhängen (optional)</label>
             <input type="file" name="attachments[]" multiple accept=".pdf,.jpg,.jpeg,.png,.webp">
-            <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">PDF, JPG oder PNG · für den Kunden im Portal sichtbar</div>
+            <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">PDF, JPG, PNG oder WEBP · für den Kunden im Portal sichtbar</div>
         </div>
         <div class="grid-2">
             <div class="field"><label>Status nach dem Senden</label>
@@ -205,7 +205,7 @@
     <div class="card-title">🔒 Interne Notizen <span style="font-size:11.5px;font-weight:400;color:var(--ink-soft);">(nur für das Team – der Kunde sieht das nicht)</span></div>
     @foreach($internalNotes as $n)
     <div style="margin-bottom:12px;padding:10px 14px;border-radius:8px;background:#FDF6E9;border:1px solid #F7E7D6;">
-        <div style="font-size:12px;color:var(--ink-soft);margin-bottom:4px;">{{ $n->sender?->name }} · {{ $n->created_at->format('d.m.Y H:i') }}</div>
+        <div style="font-size:12px;color:var(--ink-soft);margin-bottom:4px;">{{ $n->sender?->name ?? 'Dienstly24 Team (Konto entfernt)' }} · {{ $n->created_at->format('d.m.Y H:i') }}</div>
         <div style="font-size:13.5px;line-height:1.6;white-space:pre-line;">{{ $n->body }}</div>
     </div>
     @endforeach

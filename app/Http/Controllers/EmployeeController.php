@@ -133,6 +133,10 @@ class EmployeeController extends Controller
         if ($employee->id === auth()->id()) abort(403, 'Eigenes Konto kann nicht geloescht werden.');
         if ($employee->role === 'admin' && auth()->user()->role !== 'admin') abort(403);
         $name = $employee->name;
+        // Ticket-Antworten des Mitarbeiters bleiben in den Kundengespraechen
+        // erhalten (sender wird geleert, Views zeigen "Dienstly24 Team") -
+        // vorher loeschte der DB-Cascade die komplette Historie mit.
+        \App\Models\TicketMessage::where('sender_id', $employee->id)->update(['sender_id' => null]);
         $employee->delete();
 
         ActivityLog::create([

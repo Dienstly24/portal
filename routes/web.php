@@ -174,10 +174,14 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::post('/tickets/{id}/update', [\App\Http\Controllers\TicketController::class, 'updateMeta'])->name('ticket.update');
     Route::post('/tickets/{id}/note', [\App\Http\Controllers\TicketController::class, 'note'])->name('ticket.note');
 
-    // Anfragen (Website + E-Mail info@)
-    Route::get('/inquiries', [AdminController::class, 'inquiries'])->name('inquiries');
-    Route::get('/inquiries/create', [\App\Http\Controllers\WebsiteInquiryController::class, 'createManual'])->name('inquiries.create');
-    Route::post('/inquiries', [\App\Http\Controllers\WebsiteInquiryController::class, 'storeManual'])->name('inquiries.store');
+    // Anfragen (Website + E-Mail info@): Leads mit Kontaktdaten sind sensibel -
+    // wie der E-Mail-Posteingang nur admin/manager/support (das Nav-Item war
+    // bereits so eingeschraenkt, die Routen bisher aber nicht).
+    Route::middleware('role:admin,manager,support')->group(function () {
+        Route::get('/inquiries', [AdminController::class, 'inquiries'])->name('inquiries');
+        Route::get('/inquiries/create', [\App\Http\Controllers\WebsiteInquiryController::class, 'createManual'])->name('inquiries.create');
+        Route::post('/inquiries', [\App\Http\Controllers\WebsiteInquiryController::class, 'storeManual'])->name('inquiries.store');
+    });
 
     // Genehmigungen
 

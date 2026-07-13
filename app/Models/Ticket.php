@@ -75,6 +75,12 @@ class Ticket extends Model {
         return self::PRIORITIES[$priority]['sla_hours'] ?? 72;
     }
 
+    /** Nur Tickets mit Kundenakte (ohne Gast-Anfragen/Leads). */
+    public function scopeCustomerOnly($query) { return $query->whereNotNull('customer_id'); }
+
+    /** Noch nicht erledigt (weder geloest noch geschlossen). */
+    public function scopeActive($query) { return $query->whereNotIn('status', ['resolved', 'closed']); }
+
     public function customer() { return $this->belongsTo(Customer::class); }
     public function assignedTo() { return $this->belongsTo(User::class, 'assigned_to'); }
     public function closedBy() { return $this->belongsTo(User::class, 'closed_by'); }
@@ -132,15 +138,25 @@ class Ticket extends Model {
      * Zentraler Statuswechsel: pflegt resolved_at/closed_at/closed_by und
      * den Wiedereroeffnungs-Zaehler und schreibt den Verlauf. EIN Codepfad
      * fuer Beraterwelt, Kundenportal und Auto-Close.
+     *
+     * @return bool true nur bei einem echten Wechsel (fuer Benachrichtigungen:
+     *              Doppel-Submits duerfen keine zweite Kunden-Glocke erzeugen).
      */
-    public function transitionTo(string $status, ?int $userId = null, ?string $eventOverride = null): void {
+    public function transitionTo(string $status, ?int $userId = null, ?string $eventOverride = null): bool {
         $old = $this->status;
-        if ($old === $status || !isset(self::STATUSES[$status])) return;
+        if ($old === $status || !isset(self::STATUSES[$status])) return false;
 
         $reopening = $this->isFinished() && !in_array($status, ['resolved', 'closed'], true);
         $data = ['status' => $status];
         if ($status === 'resolved') { $data['resolved_at'] = now(); }
         if ($status === 'closed') { $data['closed_at'] = now(); $data['closed_by'] = $userId ?? auth()->id(); }
+        // Beim Verlassen von "geschlossen" (auch closed -> resolved) duerfen
+        // keine Abschlussdaten stehen bleiben - sonst zeigt die Akte
+        // "Geloest" UND "Geschlossen am ..." gleichzeitig.
+        if ($old === 'closed' && $status !== 'closed') {
+            $data['closed_at'] = null;
+            $data['closed_by'] = null;
+        }
         if ($reopening) {
             $data['reopened_count'] = $this->reopened_count + 1;
             $data['resolved_at'] = null;
@@ -153,5 +169,22 @@ class Ticket extends Model {
             (self::STATUSES[$old] ?? $old) . ' → ' . self::STATUSES[$status],
             $userId
         );
+        return true;
+    }
+
+    /**
+     * Faengt die seltene Kollision zweier zeitgleich vergebener
+     * Ticketnummern ab (Unique-Index): einmal neu ziehen statt 500er.
+     */
+    public function save(array $options = []) {
+        try {
+            return parent::save($options);
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            if (!$this->exists && $this->ticket_number) {
+                $this->ticket_number = static::nextTicketNumber();
+                return parent::save($options);
+            }
+            throw $e;
+        }
     }
 }
