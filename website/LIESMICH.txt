@@ -1,0 +1,41 @@
+Dienstly24 - Website (statisch)
+================================
+
+Inhalt
+------
+- index.html ............ Startseite
+- impressum.html, datenschutz.html, agb.html, widerruf.html,
+  erstinformation.html, cookie-richtlinie.html, bildnachweise.html
+- assets/images/ ........ alle Bilder (frei austauschbar)
+    logo-white.png ...... Wortmarke (Kopfzeile aller Seiten)
+    favicon.png ......... Browser-Symbol
+    hero-office.jpg ..... PLATZHALTER - durch eigenes Foto ersetzen
+    kat-gesundheit.jpg .. PLATZHALTER - durch eigenes Foto ersetzen
+
+Bilder tauschen
+---------------
+Einfach die Datei in assets/images/ durch eine gleichnamige Datei
+ersetzen (gleicher Dateiname, gleiches Format). Kein Code noetig.
+Fuer ein anderes Bild im HTML den Pfad "assets/images/..." anpassen.
+
+Texte aendern
+-------------
+Alle Texte stehen direkt im HTML. Zweisprachig ueber Attribute:
+  data-de="..."  = Deutsch
+  data-ar="..."  = Arabisch
+Beide anpassen, damit DE- und AR-Ansicht stimmen.
+
+Hochladen (Hostinger)
+---------------------
+1. hPanel -> Dateien -> Dateimanager (oder FTP).
+2. Diesen kompletten Ordner in das Web-Root laden
+   (z. B. public_html/), Ordnerstruktur beibehalten
+   (assets/images/ muss neben den HTML-Dateien liegen).
+3. Fertig - Seiten sind unter dienstly24.de/ erreichbar.
+
+Wichtig (rechtlich)
+-------------------
+- Firmennamen (Allianz, AXA ...) nur als Text, KEINE Logos ohne
+  schriftliche Freigabe.
+- Vermittler-Angaben (NESA, Registernr., Aufsicht) stehen bewusst
+  nur in impressum.html und erstinformation.html - dort belassen.
