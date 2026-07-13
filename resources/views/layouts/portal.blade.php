@@ -7,7 +7,7 @@
 <title>Dienstly24 Portal</title>
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 <style>
-:root{--petrol:#17191d;--petrol-dark:#101216;--gold:#17A65B;--gold-soft:#d9f4e6;--canvas:#F4F5F7;--surface:#FFFFFF;--line:#E4E6EA;--ink:#152826;--ink-soft:#4A5C59;}
+:root{--petrol:#17191d;--petrol-dark:#101216;--gold:#17A65B;--gold-soft:#d9f4e6;--canvas:#DCDEE3;--surface:#ECEEF1;--line:#CDD1D8;--ink:#152826;--ink-soft:#4A5C59;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
 .sidebar{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--petrol);color:#fff;display:flex;flex-direction:column;padding:24px 18px;z-index:100;}
@@ -20,10 +20,10 @@ body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
 .page-title{font-size:22px;font-weight:700;margin-bottom:6px;}
 .page-sub{color:var(--ink-soft);font-size:14px;margin-bottom:28px;}
 .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px;}
-.metric{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 20px;}
+.metric{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px;}
 .metric .label{font-size:13px;color:var(--ink-soft);margin-bottom:8px;}
 .metric .value{font-size:26px;font-weight:700;color:var(--ink);}
-.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px 24px;margin-bottom:16px;}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 24px;margin-bottom:16px;}
 .card-title{font-size:15px;font-weight:600;margin-bottom:16px;}
 .item-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);}
 .item-row:last-child{border-bottom:none;}
@@ -49,7 +49,7 @@ body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
 .notice{background:#F7E7D6;color:#B5651D;border-radius:10px;padding:12px 16px;font-size:13px;margin-bottom:20px;}
 form .field{margin-bottom:18px;}
 form label{display:block;font-size:13px;color:var(--ink-soft);margin-bottom:6px;}
-form input,form select,form textarea{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:var(--canvas);color:var(--ink);font-family:inherit;}
+form input,form select,form textarea{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#F4F5F7;color:var(--ink);font-family:inherit;}
 form input:focus,form select:focus,form textarea:focus{outline:2px solid var(--gold);outline-offset:1px;background:#fff;}
 form textarea{min-height:90px;resize:vertical;}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
