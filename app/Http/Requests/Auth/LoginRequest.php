@@ -42,7 +42,13 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        $user = \App\Models\User::where('email', $this->email)->first();
+        // E-Mail robust behandeln: fuehrende/nachfolgende Leerzeichen (z. B.
+        // aus Autofill/Copy-Paste) fuehrten bisher zu "Zugangsdaten falsch".
+        $email = trim((string) $this->input('email'));
+        $password = (string) $this->input('password');
+        $remember = $this->boolean('remember');
+
+        $user = \App\Models\User::where('email', $email)->first();
         if ($user && !$user->is_active) {
             RateLimiter::hit($this->throttleKey());
             throw ValidationException::withMessages([
@@ -50,15 +56,73 @@ class LoginRequest extends FormRequest
             ]);
         }
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey());
-
-            throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
-            ]);
+        if (Auth::attempt(['email' => $email, 'password' => $password], $remember)) {
+            RateLimiter::clear($this->throttleKey());
+            return;
         }
 
-        RateLimiter::clear($this->throttleKey());
+        // Startpasswort = Geburtsdatum (TT.MM.JJJJ). Kunden tippen es haeufig
+        // in einer abweichenden, aber gleichwertigen Schreibweise (z. B.
+        // 5.3.1985, 05031985, 1985-03-05, oder mit Leerzeichen) und wurden
+        // dann faelschlich abgewiesen. Erkennen wir das eingegebene Passwort
+        // als das Geburtsdatum dieses Kunden, versuchen wir den Login erneut
+        // mit der kanonischen Form. Das gewaehrt KEINEN zusaetzlichen Zugriff:
+        // der Zweitversuch gelingt nur, wenn das gespeicherte Passwort
+        // tatsaechlich das Geburtsdatum ist (nicht bei selbst gesetztem PW).
+        if ($user && $user->role === 'customer') {
+            $canonical = $this->canonicalBirthdatePassword($user, $password);
+            if ($canonical !== null && Auth::attempt(['email' => $email, 'password' => $canonical], $remember)) {
+                RateLimiter::clear($this->throttleKey());
+                return;
+            }
+        }
+
+        RateLimiter::hit($this->throttleKey());
+
+        throw ValidationException::withMessages([
+            'email' => trans('auth.failed'),
+        ]);
+    }
+
+    /**
+     * Liefert das kanonische Startpasswort (TT.MM.JJJJ), wenn das
+     * eingegebene Passwort - unabhaengig von der Schreibweise - dem
+     * Geburtsdatum des Kunden entspricht; sonst null.
+     */
+    private function canonicalBirthdatePassword(\App\Models\User $user, string $entered): ?string
+    {
+        $birthDate = $user->customer?->birth_date;
+        if (!$birthDate) {
+            return null;
+        }
+        try {
+            $birth = \Carbon\Carbon::parse($birthDate);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        $canonical = $birth->format('d.m.Y');
+        $entered = trim($entered);
+
+        // Exakt (nur an einem Leerzeichen gescheitert) - direkt uebernehmen.
+        if ($entered === $canonical) {
+            return $canonical;
+        }
+
+        // Gleichwertige Schreibweisen auf dasselbe Datum abbilden.
+        $target = $birth->format('Y-m-d');
+        foreach (['d.m.Y', 'j.n.Y', 'd-m-Y', 'j-n-Y', 'd/m/Y', 'j/n/Y', 'd.m.y', 'dmY', 'Y-m-d'] as $format) {
+            try {
+                $parsed = \Carbon\Carbon::createFromFormat('!' . $format, $entered);
+            } catch (\Throwable) {
+                continue;
+            }
+            if ($parsed && $parsed->format('Y-m-d') === $target) {
+                return $canonical;
+            }
+        }
+
+        return null;
     }
 
     /**
