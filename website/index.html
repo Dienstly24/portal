@@ -1,0 +1,1988 @@
+<!DOCTYPE html>
+<html lang="de" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="assets/images/favicon.png">
+<title>Dienstly24 – Ihr Experte für Versicherung, Kfz-Zulassung &amp; Energie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    color-scheme:dark;
+    /* Graphit-Dark-Theme: Metall-Schwarz wie das Logo, Smaragd nur als Akzent */
+    --emerald-deep:#0A3D22;
+    --emerald:#17A65B;              /* offizielles Markengrün */
+    --emerald-bright:#1EC975;
+    --emerald-mist:#12291D;          /* dunkle Grün-Tönung für Flächen */
+    --charcoal:#EDF1EE;              /* = Haupt-TEXTFARBE im Dark-Theme */
+    --silver:#A7A7A7;               /* offizielles Silbergrau */
+    --paper:#111111;                 /* offizielles Markenschwarz */                 /* Seiten-Hintergrund (Graphit) */
+    --paper-2:#1A1B1A;               /* erhöhte Flächen / Karten */
+    --line:#2A2C2B;                  /* Trennlinien */
+    --radius:16px;
+
+    --ink-dark:#0B0B0B;              /* dunkelster Ton (Footer, Hover) */
+    --text-muted:#9BA6A0;
+    --text-soft:#B9C2BC;
+
+    --color-primary:var(--emerald);
+    --color-primary-light:#14231B;   /* dunkle Grünfläche (Badges, Hover) */
+    --color-primary-dark:var(--emerald-deep);
+    --color-accent:#C98A3B;
+    --color-accent-light:#3A2C17;
+
+    --section-py:104px;
+    --section-py-mobile:64px;
+    --ease:cubic-bezier(.22,1,.36,1);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background-color:var(--paper);
+    background-image:radial-gradient(rgba(255,255,255,.035) 1px, transparent 1px);
+    background-size:26px 26px;
+    color:var(--charcoal);
+    font-family:'Plus Jakarta Sans', sans-serif;
+    line-height:1.65;
+    overflow-x:hidden;
+  }
+  html[dir="rtl"] body{font-family:'IBM Plex Sans Arabic', sans-serif;}
+  .display{font-family:'Manrope', sans-serif; font-weight:800;}
+  html[dir="rtl"] .display{font-family:'IBM Plex Sans Arabic', sans-serif; font-weight:700;}
+
+  img,svg{display:block; max-width:100%;}
+  a{color:inherit; text-decoration:none;}
+  ul{list-style:none;}
+  button{font-family:inherit; cursor:pointer; border:none; background:none;}
+  .container{max-width:1180px; margin:0 auto; padding:0 28px;}
+  section{padding:var(--section-py) 0;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important;}
+  }
+
+  /* facet hexagon badge — echoes the faceted logo mark */
+  .facet{
+    clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0% 50%);
+  }
+
+  /* ---------- Top Info Bar ---------- */
+  .top-bar{
+    background:linear-gradient(90deg, var(--color-primary-dark), var(--color-primary));
+    color:#fff; overflow:hidden; position:relative; z-index:101;
+  }
+  .top-bar-track{
+    display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:8px 28px;
+    padding:9px 20px; font-size:.8rem; font-weight:600; letter-spacing:.1px; text-align:center;
+  }
+  .top-bar-track span{display:inline-flex; align-items:center; gap:6px; white-space:nowrap;}
+  .top-bar-track .sep{opacity:.45; font-weight:400;}
+  @media (max-width:560px){
+    .top-bar-track{gap:4px 14px; font-size:.72rem; padding:8px 14px;}
+    .top-bar-track .sep{display:none;}
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    position:sticky; top:0; z-index:100;
+    background:rgba(17,17,17,.72);
+    backdrop-filter:blur(16px) saturate(160%);
+    -webkit-backdrop-filter:blur(16px) saturate(160%);
+    border-bottom:1px solid rgba(39,45,42,.8);
+    transition:box-shadow .35s var(--ease), background .35s var(--ease), border-color .35s var(--ease);
+  }
+  header.is-scrolled{
+    background:rgba(17,17,17,.9);
+    box-shadow:0 12px 34px rgba(0,0,0,.55);
+    border-bottom-color:var(--line);
+  }
+  .nav{display:flex; align-items:center; justify-content:space-between; gap:20px; padding:14px 28px; max-width:1180px; margin:0 auto; transition:padding .3s var(--ease);}
+  header.is-scrolled .nav{padding-top:11px; padding-bottom:11px;}
+  .logo-img{height:44px; width:auto; transition:height .3s var(--ease);}
+  header.is-scrolled .logo-img{height:38px;}
+
+  .nav-links{display:flex; gap:30px; align-items:center;}
+  .nav-links a{position:relative; font-size:.95rem; font-weight:600; color:var(--charcoal); opacity:.75; transition:opacity .2s;}
+  .nav-links a::after{
+    content:''; position:absolute; left:0; right:0; bottom:-6px; height:2px; background:var(--color-primary);
+    transform:scaleX(0); transform-origin:left; transition:transform .25s var(--ease);
+  }
+  .nav-links a:hover{opacity:1;}
+  .nav-links a:hover::after{transform:scaleX(1);}
+
+  .nav-actions{display:flex; align-items:center; gap:14px;}
+  .lang-toggle{
+    display:flex; align-items:center; gap:2px;
+    border:1.5px solid var(--emerald); border-radius:999px; padding:4px; font-weight:700; font-size:.78rem;
+  }
+  .lang-toggle span{padding:5px 12px; border-radius:999px; transition:all .3s ease; color:var(--emerald);}
+  .lang-toggle span.active{background:var(--emerald); color:#fff;}
+
+  .btn{display:inline-flex; align-items:center; gap:8px; padding:12px 24px; border-radius:999px; font-weight:700; font-size:.92rem; transition:transform .25s var(--ease), box-shadow .25s var(--ease), background .25s var(--ease), color .25s var(--ease);}
+  .btn-primary{background:linear-gradient(135deg, var(--color-primary), var(--emerald-bright)); color:#fff; box-shadow:0 8px 20px rgba(20,107,63,.28);}
+  .btn-primary:hover{transform:translateY(-2px) scale(1.03); background:linear-gradient(135deg, var(--emerald-bright), var(--color-primary)); box-shadow:0 14px 30px rgba(20,107,63,.4);}
+  .btn-primary:active{transform:translateY(0) scale(.99);}
+  .btn-ghost{border:1.5px solid var(--charcoal); color:var(--charcoal);}
+  .btn-ghost:hover{background:var(--charcoal); color:var(--ink-dark); transform:translateY(-2px) scale(1.03);}
+
+  .menu-toggle{display:none; flex-direction:column; gap:5px; width:26px; padding:6px;}
+  .menu-toggle span{height:2px; background:var(--charcoal); border-radius:2px; transition:transform .3s var(--ease), opacity .3s var(--ease);}
+  .menu-toggle.is-open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+  .menu-toggle.is-open span:nth-child(2){opacity:0;}
+  .menu-toggle.is-open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+
+
+
+  /* ---------- Hero ---------- */
+  .hero{position:relative; padding:80px 0 0; overflow:hidden;}
+  .hero-bg-facet{
+    position:absolute; top:-160px; inset-inline-end:-180px; width:640px; height:640px;
+    background:linear-gradient(155deg, var(--emerald) 0%, var(--emerald-deep) 100%);
+    clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
+    opacity:.9;
+  }
+  .hero-bg-facet::after{
+    content:''; position:absolute; inset:14%;
+    background:linear-gradient(155deg, rgba(255,255,255,.14), transparent 60%);
+    clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
+  }
+  .hero-inner{position:relative; z-index:2; padding-bottom:70px;}
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    background:var(--paper-2); border:1px solid var(--line);
+    padding:8px 16px; border-radius:999px; font-size:.85rem; font-weight:700; color:var(--emerald);
+    margin-bottom:26px;
+  }
+  .eyebrow .dot{width:7px; height:7px; border-radius:50%; background:var(--emerald-bright); animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1} 50%{opacity:.25}}
+
+  h1{font-size:clamp(2.2rem, 4.2vw, 3.6rem); line-height:1.15; letter-spacing:-.015em; color:var(--charcoal); max-width:760px; margin-bottom:24px;}
+  .hero p.lead{font-size:1.15rem; line-height:1.7; color:var(--text-soft); max-width:560px; margin-bottom:36px;}
+  .hero-actions{display:flex; gap:16px; flex-wrap:wrap; margin-bottom:56px;}
+
+  .trust-row{display:flex; gap:14px; flex-wrap:wrap;}
+  .trust-pill{
+    display:flex; align-items:center; gap:10px;
+    background:var(--paper-2); border:1px solid var(--line); border-radius:999px;
+    padding:10px 18px; font-size:.86rem; font-weight:600; color:var(--charcoal);
+  }
+  .trust-pill svg{width:16px; height:16px; stroke:var(--emerald); flex-shrink:0;}
+
+  /* jagged divider echoing a cut gem edge */
+  .facet-divider{display:block; width:100%; height:64px; margin-top:-2px;}
+  .facet-divider path{fill:var(--paper-2);}
+
+  /* ---------- Services ---------- */
+  .services{background:var(--paper-2); border-top:1px solid var(--line); border-bottom:1px solid var(--line);}
+  .section-head{max-width:640px; margin-bottom:56px;}
+  .section-head.center{margin-inline:auto; text-align:center;}
+  .kicker{color:var(--emerald); font-weight:700; font-size:.85rem; letter-spacing:.4px; text-transform:uppercase; margin-bottom:10px; display:block;}
+  h2{font-size:clamp(1.7rem, 3vw, 2.25rem); color:var(--charcoal); margin-bottom:14px; line-height:1.28; letter-spacing:-.01em;}
+  .section-head p{color:var(--text-muted); font-size:1.02rem; line-height:1.7;}
+
+  .services-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:24px;}
+  .service-card{
+    display:flex; flex-direction:column; background:var(--paper); border:1px solid var(--line); border-radius:var(--radius);
+    padding:32px 26px; cursor:pointer; position:relative; overflow:hidden;
+    transition:transform .3s var(--ease), box-shadow .3s var(--ease), border-color .3s var(--ease);
+  }
+  .service-card:hover{
+    transform:translateY(-8px) scale(1.015);
+    box-shadow:0 24px 42px rgba(0,0,0,.55);
+    border-color:transparent;
+  }
+  .service-card:focus-visible{outline:2px solid var(--color-primary); outline-offset:3px;}
+  .service-icon{
+    width:56px; height:56px; background:linear-gradient(155deg, var(--emerald) 0%, var(--emerald-deep) 100%);
+    display:flex; align-items:center; justify-content:center; margin-bottom:20px;
+    transition:transform .3s var(--ease), box-shadow .3s var(--ease);
+  }
+  .service-card:hover .service-icon{transform:scale(1.14) rotate(-4deg); box-shadow:0 10px 22px rgba(0,0,0,.5);}
+  .service-icon svg{width:26px; height:26px; stroke:#fff;}
+  .service-card h3{font-size:1.12rem; font-weight:700; margin-bottom:8px;}
+  .service-card p{font-size:.92rem; color:var(--text-muted); margin-bottom:16px;}
+  .service-features{margin:0 0 16px; display:flex; flex-direction:column; gap:6px;}
+  .service-features li{font-size:.86rem; color:var(--text-soft); display:flex; align-items:center; gap:8px;}
+  .service-features li::before{content:''; width:5px; height:5px; border-radius:50%; background:var(--emerald-bright); flex-shrink:0;}
+  .service-arrow{
+    margin-top:auto; display:inline-flex; align-items:center; gap:6px; font-size:.85rem; font-weight:700; color:var(--color-primary);
+  }
+  .service-arrow svg{width:16px; height:16px; stroke:var(--color-primary); transition:transform .3s var(--ease);}
+  .service-card:hover .service-arrow svg{transform:translateX(5px);}
+
+  /* ---------- Process ---------- */
+  .process-track{display:grid; grid-template-columns:repeat(3,1fr); gap:30px;}
+  .step{background:var(--paper-2); border:1px solid var(--line); border-radius:var(--radius); padding:34px 28px; position:relative;}
+  .step-num{width:48px; height:48px; background:var(--emerald-mist); color:#7FD6A4; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.15rem; margin-bottom:22px;}
+  .step h3{font-size:1.08rem; font-weight:700; margin-bottom:8px;}
+  .step p{font-size:.92rem; color:var(--text-muted);}
+
+  /* ---------- About ---------- */
+  .about{background:var(--paper-2); border-top:1px solid var(--line); border-bottom:1px solid var(--line);}
+  .about-grid{display:grid; grid-template-columns:1.1fr .9fr; gap:60px; align-items:center;}
+  .about-visual{position:relative; height:320px; display:flex; align-items:center; justify-content:center;}
+  .about-facet-1{position:absolute; width:220px; height:220px; background:linear-gradient(155deg, var(--emerald-bright), var(--emerald-deep)); opacity:.95;}
+  .about-facet-2{position:absolute; width:140px; height:140px; background:var(--emerald-mist); transform:translate(70px,-70px);}
+  .about h2{margin-bottom:18px;}
+  .about p{color:var(--text-soft); margin-bottom:18px; font-size:1.02rem;}
+  .about-list li{display:flex; gap:12px; align-items:flex-start; margin-bottom:16px; font-size:.96rem; color:var(--charcoal);}
+  .about-list svg{width:20px; height:20px; stroke:var(--emerald); flex-shrink:0; margin-top:2px;}
+
+  /* ---------- Why us ---------- */
+  .why-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:24px;}
+  .why-card{text-align:center;}
+  .seal{
+    width:78px; height:78px; margin:0 auto 20px; position:relative;
+    background:linear-gradient(155deg, var(--emerald) 0%, var(--emerald-deep) 100%);
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .seal::before{
+    content:''; position:absolute; inset:-6px; border-radius:50%;
+    border:1.5px dashed var(--emerald-bright); opacity:.5;
+  }
+  .seal svg{width:30px; height:30px; stroke:#fff;}
+  .why-card h3{font-size:1rem; font-weight:700; margin-bottom:8px;}
+  .why-card p{font-size:.88rem; color:var(--text-muted);}
+
+  /* ---------- Testimonials ---------- */
+  .testi-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:24px;}
+  .testi-card{background:var(--paper-2); border:1px solid var(--line); border-radius:var(--radius); padding:30px;}
+  .testi-mark{font-size:2rem; color:var(--emerald-bright); font-weight:800; line-height:1;}
+  .testi-card p.text{font-size:.95rem; margin:14px 0 22px; color:var(--charcoal);}
+  .testi-person{display:flex; align-items:center; gap:12px;}
+  .testi-avatar{width:38px; height:38px; border-radius:50%; background:linear-gradient(155deg, var(--emerald-bright), var(--emerald-deep)); flex-shrink:0;}
+  .testi-person strong{display:block; font-size:.9rem;}
+  .testi-person span{font-size:.78rem; color:var(--text-muted);}
+  .testi-note{text-align:center; font-size:.8rem; color:#7E8983; margin-top:30px;}
+
+  /* ---------- CTA ---------- */
+  .cta-wrap{padding:0 28px;}
+  .cta{
+    max-width:1180px; margin:0 auto;
+    background:linear-gradient(135deg, var(--emerald-deep) 0%, var(--emerald) 100%);
+    border-radius:28px; padding:58px; position:relative; overflow:hidden;
+    display:flex; align-items:center; justify-content:space-between; gap:30px; flex-wrap:wrap; color:#fff;
+  }
+  .cta::before{
+    content:''; position:absolute; width:280px; height:280px; inset-inline-end:-90px; top:-90px;
+    background:rgba(255,255,255,.08);
+    clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
+  }
+  .cta h2{color:#fff; margin-bottom:8px; font-size:1.7rem;}
+  .cta p{color:#dcefe3;}
+  .cta-actions{display:flex; gap:14px; flex-wrap:wrap; position:relative; z-index:2;}
+  .btn-white{background:#fff; color:var(--emerald-deep);}
+  .btn-white:hover{transform:translateY(-2px);}
+  .btn-outline-white{border:1.5px solid rgba(255,255,255,.6); color:#fff;}
+  .btn-outline-white:hover{background:rgba(255,255,255,.14);}
+
+  /* ---------- Footer ---------- */
+  footer{background:var(--ink-dark); color:#c7ccc9; border-top:1px solid var(--line); padding:70px 0 26px; margin-top:100px;}
+  .footer-wordmark{display:flex; align-items:baseline; gap:6px; font-family:'Manrope',sans-serif; font-weight:800; font-size:1.3rem; color:#fff; margin-bottom:16px;}
+  .footer-wordmark span{color:var(--emerald-bright);}
+  .footer-grid{display:grid; grid-template-columns:1.5fr 1fr 1fr .9fr 1.2fr; gap:36px; margin-bottom:50px;}
+  footer .about-text{font-size:.9rem; color:#9aa39e; max-width:280px;}
+  footer h4{color:#fff; font-size:.94rem; margin-bottom:18px; font-weight:700;}
+  footer ul li{margin-bottom:11px; font-size:.88rem;}
+  footer ul li a{color:#b7bdb9; transition:color .2s;}
+  footer ul li a:hover{color:var(--emerald-bright);}
+  .social-row{display:flex; gap:10px; margin-top:18px;}
+  .social-row a{width:38px; height:38px; border-radius:10px; background:rgba(255,255,255,.07); display:flex; align-items:center; justify-content:center; transition:background .2s;}
+  .social-row a:hover{background:var(--emerald-bright);}
+  .social-row svg{width:18px; height:18px; stroke:#fff;}
+  .placeholder-note{color:var(--emerald-bright); font-weight:700;}
+  .footer-bottom{border-top:1px solid rgba(255,255,255,.1); padding-top:24px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px; font-size:.82rem; color:#8a928d;}
+  .footer-bottom a{color:#8a928d;}
+  .footer-bottom a:hover{color:var(--emerald-bright);}
+
+  /* ---------- Contact form ---------- */
+  .contact-grid{display:grid; grid-template-columns:1fr 1.1fr; gap:60px; align-items:start;}
+  .contact-form{background:var(--paper-2); border:1px solid var(--line); border-radius:var(--radius); padding:34px; display:flex; flex-direction:column; gap:18px;}
+  .form-row{display:flex; flex-direction:column; gap:8px;}
+  .form-row label{font-size:.85rem; font-weight:700; color:var(--charcoal);}
+  .form-row input, .form-row select, .form-row textarea{
+    border:1.5px solid var(--line); border-radius:10px; padding:12px 14px;
+    font-family:inherit; font-size:.95rem; color:var(--charcoal); background:var(--paper);
+    transition:border-color .2s;
+  }
+  .form-row input:focus, .form-row select:focus, .form-row textarea:focus{outline:none; border-color:var(--emerald);}
+  .form-row textarea{resize:vertical;}
+  .form-note{font-size:.8rem; color:#7E8983; text-align:center;}
+
+  @media (max-width:900px){
+    .contact-grid{grid-template-columns:1fr;}
+  }
+
+  .reveal{opacity:0; transform:translateY(24px) scale(.98); transition:opacity .7s var(--ease), transform .7s var(--ease);}
+  .reveal.in{opacity:1; transform:translateY(0) scale(1);}
+
+  .services-grid .reveal:nth-child(2){transition-delay:.06s;}
+  .services-grid .reveal:nth-child(3){transition-delay:.12s;}
+  .services-grid .reveal:nth-child(4){transition-delay:.18s;}
+  .services-grid .reveal:nth-child(5){transition-delay:.24s;}
+  .services-grid .reveal:nth-child(6){transition-delay:.3s;}
+  .why-grid .reveal:nth-child(2){transition-delay:.06s;}
+  .why-grid .reveal:nth-child(3){transition-delay:.12s;}
+  .why-grid .reveal:nth-child(4){transition-delay:.18s;}
+  .process-track .reveal:nth-child(2){transition-delay:.08s;}
+  .process-track .reveal:nth-child(3){transition-delay:.16s;}
+
+  @media (max-width:980px){
+    :root{--section-py:var(--section-py-mobile);}
+    .about-grid{grid-template-columns:1fr;}
+    .about-visual{order:-1; height:220px;}
+    .services-grid{grid-template-columns:repeat(2,1fr);}
+    .why-grid{grid-template-columns:repeat(2,1fr);}
+    .testi-grid{grid-template-columns:1fr;}
+    .footer-grid{grid-template-columns:1fr 1fr;}
+    .process-track{grid-template-columns:1fr;}
+    .hero-bg-facet{width:420px; height:420px; top:-100px;}
+  }
+  @media (max-width:680px){
+    .nav-links{
+      display:flex; position:absolute; top:100%; inset-inline:0; flex-direction:column; align-items:stretch;
+      background:rgba(17,17,17,.98); backdrop-filter:blur(16px); padding:0 28px; border-bottom:1px solid var(--line);
+      box-shadow:0 16px 30px rgba(0,0,0,.55);
+      max-height:0; overflow:hidden; opacity:0; transform:translateY(-8px);
+      transition:max-height .35s var(--ease), opacity .3s var(--ease), transform .3s var(--ease), padding .35s var(--ease);
+    }
+    .nav-links.is-open{max-height:360px; opacity:1; transform:translateY(0); padding:10px 28px 20px;}
+    .nav-links a{padding:12px 0; border-bottom:1px solid var(--line);}
+    .nav-links a:last-child{border-bottom:none;}
+    .menu-toggle{display:flex;}
+    .hero-actions{flex-direction:column; align-items:stretch;}
+    .hero-actions .btn{justify-content:center; width:100%;}
+    .services-grid{grid-template-columns:1fr;}
+    .why-grid{grid-template-columns:1fr;}
+    .footer-grid{grid-template-columns:1fr;}
+    .cta{padding:38px 26px; text-align:center; justify-content:center;}
+    .trust-row{justify-content:center;}
+  }
+
+  /* ---------- Stats / Erfahrung (Zahlen animieren per JS) ---------- */
+  .stats-section{background:linear-gradient(160deg, #0D2A1B 0%, var(--emerald-deep) 100%); color:#fff; border-top:1px solid var(--line); border-bottom:1px solid var(--line);}
+  .stats-section .kicker{color:rgba(255,255,255,.75);}
+  .stats-section h2{color:#fff;}
+  .stats-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:24px; margin-top:48px;}
+  .stat-card{text-align:center; padding:28px 16px; border:1px solid rgba(255,255,255,.18); border-radius:var(--radius); background:rgba(255,255,255,.06); backdrop-filter:blur(6px);}
+  .stat-number{font-family:'Manrope',sans-serif; font-size:2.6rem; font-weight:800; line-height:1; display:block; margin-bottom:10px;}
+  .stat-number .plus{color:#7FD6A4;}
+  .stat-label{font-size:.9rem; opacity:.85;}
+  @media (max-width:980px){ .stats-grid{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:480px){ .stats-grid{grid-template-columns:1fr 1fr; gap:14px;} .stat-number{font-size:2rem;} }
+
+  /* ---------- Partner-Leiste ---------- */
+  .partners-strip{display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:20px 56px; margin-top:44px;}
+  .partner-logo{font-family:'Manrope',sans-serif; font-weight:800; font-size:1.35rem; color:#9AA39E; letter-spacing:.5px; filter:grayscale(1); opacity:.8; transition:opacity .3s var(--ease), color .3s var(--ease); cursor:default; text-align:center;}
+  .partner-logo small{display:block; font-size:.62rem; font-weight:600; letter-spacing:2px; text-transform:uppercase; margin-top:2px;}
+  .partner-logo:hover{opacity:1; color:#C6CFC9; filter:grayscale(0);}
+
+  /* ---------- FAQ Accordion ---------- */
+  .faq-list{max-width:760px; margin:0 auto; display:flex; flex-direction:column; gap:14px;}
+  .faq-item{background:var(--paper-2); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; transition:box-shadow .3s var(--ease), border-color .3s var(--ease);}
+  .faq-item.open{box-shadow:0 14px 30px rgba(0,0,0,.5); border-color:transparent;}
+  .faq-q{width:100%; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:20px 24px; background:none; border:none; cursor:pointer; text-align:start; font-family:inherit; font-size:1rem; font-weight:700; color:var(--charcoal);}
+  .faq-q .chev{flex-shrink:0; width:22px; height:22px; display:flex; align-items:center; justify-content:center; transition:transform .3s var(--ease);}
+  .faq-q .chev svg{width:16px; height:16px; stroke:var(--color-primary); stroke-width:2.5;}
+  .faq-item.open .faq-q .chev{transform:rotate(180deg);}
+  .faq-a{max-height:0; overflow:hidden; transition:max-height .4s var(--ease);}
+  .faq-a p{padding:0 24px 20px; font-size:.95rem; color:var(--text-muted); line-height:1.7;}
+
+  /* ---------- Testimonials: Avatare + Sterne ---------- */
+  .testi-avatar{display:flex; align-items:center; justify-content:center; font-family:'Manrope',sans-serif; font-weight:800; font-size:1.05rem; color:#fff;}
+  .testi-card:nth-child(1) .testi-avatar{background:linear-gradient(135deg,#146B3F,#1E9257);}
+  .testi-card:nth-child(2) .testi-avatar{background:linear-gradient(135deg,#0A3D22,#146B3F);}
+  .testi-card:nth-child(3) .testi-avatar{background:linear-gradient(135deg,#C98A3B,#e0a95c);}
+  .testi-stars{display:flex; gap:3px; margin-bottom:12px;}
+  .testi-stars svg{width:16px; height:16px; fill:#F2B01E; stroke:none;}
+
+  /* ---------- Trust-Badge (§ 34d GewO) ---------- */
+  .trust-badge{display:flex; gap:14px; align-items:flex-start; margin-top:26px; padding:16px 18px; background:var(--color-primary-light); border:1px solid #234433; border-radius:12px;}
+  .trust-badge .shield{flex-shrink:0; width:38px; height:38px; border-radius:10px; background:var(--color-primary); display:flex; align-items:center; justify-content:center;}
+  .trust-badge .shield svg{width:20px; height:20px; stroke:#fff; stroke-width:2;}
+  .trust-badge p{font-size:.82rem; line-height:1.55; color:#A8C7B4; margin:0;}
+  .trust-badge a{color:var(--color-primary-dark); font-weight:700; text-decoration:underline;}
+
+  /* ---------- WhatsApp Float ---------- */
+  .wa-float{position:fixed; bottom:24px; inset-inline-end:24px; z-index:99; display:flex; align-items:center; gap:12px; text-decoration:none;}
+  .wa-label{background:var(--paper-2); border:1px solid var(--line); border-radius:999px; padding:9px 16px; font-size:.8rem; font-weight:600; color:var(--charcoal); box-shadow:0 8px 24px rgba(0,0,0,.55); white-space:nowrap; opacity:0; transform:translateX(8px); transition:opacity .35s var(--ease), transform .35s var(--ease); pointer-events:none;}
+  .wa-float:hover .wa-label, .wa-float.show-label .wa-label{opacity:1; transform:translateX(0);}
+  .wa-btn{width:58px; height:58px; border-radius:50%; background:#25D366; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 26px rgba(37,211,102,.45); transition:transform .3s var(--ease);}
+  .wa-btn svg{width:30px; height:30px; fill:#fff;}
+  .wa-float:hover .wa-btn{transform:scale(1.08);}
+  .wa-btn::after{content:''; position:absolute; inset:0; border-radius:50%; border:2px solid #25D366; animation:waPulse 2.2s ease-out infinite;}
+  @keyframes waPulse{0%{transform:scale(1); opacity:.7;} 100%{transform:scale(1.55); opacity:0;}}
+  @media (max-width:560px){ .wa-label{display:none;} .wa-btn{width:52px; height:52px;} }
+
+  /* ---------- Versicherungsarten-Linkliste ---------- */
+  .vers-grid{display:grid; grid-template-columns:1fr 1fr; gap:32px; margin-top:44px;}
+  .vers-col h3{font-size:1.05rem; font-weight:800; margin-bottom:16px; color:var(--charcoal);}
+  .vers-links{display:flex; flex-wrap:wrap; gap:10px;}
+  .vers-links a{padding:8px 16px; border:1px solid var(--line); border-radius:999px; font-size:.85rem; font-weight:600; color:var(--text-soft); background:var(--paper-2); transition:all .25s var(--ease);}
+  .vers-links a:hover{border-color:var(--color-primary); color:var(--color-primary); background:var(--color-primary-light); transform:translateY(-2px);}
+  @media (max-width:760px){ .vers-grid{grid-template-columns:1fr;} }
+
+  /* ---------- Hero: Premium-Gradient ---------- */
+  .hero{background:linear-gradient(180deg, #0D1912 0%, var(--paper) 60%);}
+
+
+  /* ---------- Login-Button (Kundenportal) ---------- */
+  .btn-sm{padding:9px 18px; font-size:.85rem;}
+  .btn-login{border:1.5px solid var(--emerald); color:var(--emerald-bright); display:inline-flex; align-items:center; gap:7px;}
+  .btn-login svg{width:15px; height:15px; stroke:currentColor; stroke-width:2;}
+  .btn-login:hover{background:var(--emerald); color:#fff; transform:translateY(-2px);}
+  .mobile-only{display:none;}
+  @media (max-width:680px){
+    .nav-actions .btn-login{display:none;}
+    .nav-links .mobile-only{display:block;}
+  }
+
+  /* ---------- Benefits-Bar (unter dem Hero) ---------- */
+  .benefits-bar{border-top:1px solid var(--line); border-bottom:1px solid var(--line); background:var(--paper-2); padding:34px 0;}
+  .benefits-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:28px;}
+  .benefit-item{display:flex; gap:14px; align-items:flex-start;}
+  .benefit-item .b-icon{flex-shrink:0; width:42px; height:42px; border-radius:12px; background:var(--color-primary-light); display:flex; align-items:center; justify-content:center;}
+  .benefit-item .b-icon svg{width:21px; height:21px; stroke:var(--emerald-bright); stroke-width:2;}
+  .benefit-item h4{font-size:.95rem; font-weight:800; margin-bottom:4px; color:var(--charcoal);}
+  .benefit-item p{font-size:.82rem; color:var(--text-muted); line-height:1.5; margin:0;}
+  @media (max-width:980px){ .benefits-grid{grid-template-columns:1fr 1fr; gap:22px;} }
+  @media (max-width:560px){ .benefits-grid{grid-template-columns:1fr;} }
+
+  /* ---------- Kategorien-Karten (Versicherungen) ---------- */
+  .kat-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:24px; margin-top:44px;}
+  .kat-card{background:var(--paper); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; transition:transform .3s var(--ease), box-shadow .3s var(--ease);}
+  .kat-card:hover{transform:translateY(-4px); box-shadow:0 18px 36px rgba(0,0,0,.45);}
+  .kat-head{display:flex; align-items:center; gap:12px; padding:18px 20px; background:linear-gradient(135deg, var(--emerald-mist), transparent); border-bottom:1px solid var(--line);}
+  .kat-head .k-icon{width:40px; height:40px; border-radius:11px; background:linear-gradient(155deg, var(--emerald), var(--emerald-deep)); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .kat-head .k-icon svg{width:20px; height:20px; stroke:#fff; stroke-width:2;}
+  .kat-head h3{font-size:1.02rem; font-weight:800; margin:0;}
+  .kat-links{list-style:none; margin:0; padding:6px 0;}
+  .kat-links li{border-bottom:1px solid var(--line);}
+  .kat-links li:last-child{border-bottom:none;}
+  .kat-links a{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:13px 20px; font-size:.9rem; font-weight:600; color:var(--text-soft); transition:color .2s, background .2s, padding-inline-start .25s var(--ease);}
+  .kat-links a svg{width:15px; height:15px; stroke:var(--emerald-bright); stroke-width:2.5; flex-shrink:0; transition:transform .25s var(--ease);}
+  .kat-links a:hover{color:var(--emerald-bright); background:var(--color-primary-light); padding-inline-start:26px;}
+  .kat-links a:hover svg{transform:translateX(3px);}
+  [dir="rtl"] .kat-links a:hover svg{transform:translateX(-3px) scaleX(-1);}
+  [dir="rtl"] .kat-links a svg{transform:scaleX(-1);}
+  @media (max-width:980px){ .kat-grid{grid-template-columns:1fr 1fr;} }
+  @media (max-width:640px){ .kat-grid{grid-template-columns:1fr;} }
+
+  /* ---------- Service-Modal ---------- */
+  .modal-overlay{position:fixed; inset:0; z-index:200; background:rgba(0,0,0,.72); backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center; padding:20px;}
+  .modal-overlay.open{display:flex; animation:fadeIn .25s var(--ease);}
+  @keyframes fadeIn{from{opacity:0;} to{opacity:1;}}
+  .modal-box{background:var(--paper-2); border:1px solid var(--line); border-radius:20px; max-width:580px; width:100%; max-height:88vh; overflow-y:auto; padding:32px 30px; position:relative; animation:popIn .3s var(--ease);}
+  @keyframes popIn{from{transform:translateY(16px) scale(.97); opacity:0;} to{transform:none; opacity:1;}}
+  .modal-close{position:absolute; top:16px; inset-inline-end:16px; width:34px; height:34px; border-radius:50%; border:1px solid var(--line); background:var(--paper); color:var(--text-soft); font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .2s;}
+  .modal-close:hover{background:var(--emerald); border-color:var(--emerald); color:#fff;}
+  .modal-box h3{font-size:1.4rem; font-weight:800; margin-bottom:10px; padding-inline-end:36px;}
+  .modal-box .m-desc{color:var(--text-muted); font-size:.95rem; line-height:1.7; margin-bottom:20px;}
+  .modal-box h4{font-size:.92rem; font-weight:800; color:var(--emerald-bright); margin:18px 0 10px; text-transform:uppercase; letter-spacing:.5px;}
+  .m-benefits{list-style:none; margin:0 0 6px; padding:0; display:flex; flex-direction:column; gap:8px;}
+  .m-benefits li{display:flex; gap:10px; align-items:flex-start; font-size:.9rem; color:var(--text-soft);}
+  .m-benefits li::before{content:'✓'; color:var(--emerald-bright); font-weight:800; flex-shrink:0;}
+  .m-faq{border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:10px; background:var(--paper);}
+  .m-faq strong{display:block; font-size:.88rem; margin-bottom:5px; color:var(--charcoal);}
+  .m-faq p{font-size:.85rem; color:var(--text-muted); margin:0; line-height:1.6;}
+  .m-actions{display:flex; gap:12px; margin-top:24px; flex-wrap:wrap;}
+  .m-actions .btn{flex:1; justify-content:center; min-width:180px;}
+  .btn-wa{background:#25D366; color:#fff;}
+  .btn-wa:hover{background:#1fbd5a; transform:translateY(-2px);}
+
+  /* ---------- Smartes Formular ---------- */
+  #extraFields{display:flex; flex-direction:column; gap:18px;}
+  #extraFields .form-row{animation:fadeIn .35s var(--ease);}
+  .form-file input[type="file"]{padding:11px; border:1px dashed var(--line); border-radius:10px; background:var(--paper); width:100%; color:var(--text-muted); font-size:.85rem; cursor:pointer;}
+  .form-file input[type="file"]::file-selector-button{background:var(--emerald); color:#fff; border:none; border-radius:8px; padding:7px 14px; margin-inline-end:12px; cursor:pointer; font-weight:700; font-family:inherit;}
+  .file-hint{font-size:.75rem; color:var(--text-muted); margin-top:6px;}
+
+  /* ---------- Hero: Split-Layout mit Bildfläche ---------- */
+  .hero-inner{display:grid; grid-template-columns:1.05fr .95fr; gap:56px; align-items:center;}
+  .hero-visual{position:relative; border-radius:24px; overflow:hidden; border:1px solid var(--line);
+    background:
+      radial-gradient(120% 90% at 80% 10%, rgba(23,166,91,.35), transparent 55%),
+      radial-gradient(90% 80% at 15% 90%, rgba(10,61,34,.8), transparent 60%),
+      linear-gradient(160deg, #182420 0%, #0F1512 100%);
+    min-height:420px; box-shadow:0 30px 60px rgba(0,0,0,.5);}
+  /* TODO AI-BILD: Sobald das Bild vorliegt, einfach dieses <img> im Hero aktivieren:
+     <img class="hero-img" src="assets/images/hero-office.jpg" alt="Das Dienstly24-Team im Büro">
+     Das CSS unten ist dafür schon fertig. */
+  .hero-img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover;}
+  .hero-visual::after{content:''; position:absolute; inset:0; background:linear-gradient(180deg, transparent 55%, rgba(11,13,12,.55)); pointer-events:none;}
+  .hero-visual .hv-logo{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:56%; opacity:.16; filter:drop-shadow(0 8px 30px rgba(0,0,0,.4));}
+  .hv-chip{position:absolute; z-index:2; display:flex; align-items:center; gap:10px; background:rgba(23,27,25,.92); backdrop-filter:blur(8px); border:1px solid var(--line); border-radius:14px; padding:12px 16px; box-shadow:0 14px 30px rgba(0,0,0,.45); animation:chipFloat 5s ease-in-out infinite;}
+  .hv-chip strong{font-family:'Manrope',sans-serif; font-size:1.05rem; color:var(--emerald-bright);}
+  .hv-chip span{font-size:.75rem; color:var(--text-muted);}
+  .hv-chip.c1{top:26px; inset-inline-start:22px;}
+  .hv-chip.c2{bottom:26px; inset-inline-end:22px; animation-delay:2.5s;}
+  @keyframes chipFloat{0%,100%{transform:translateY(0);} 50%{transform:translateY(-8px);}}
+  @media (max-width:980px){
+    .hero-inner{grid-template-columns:1fr; gap:36px;}
+    .hero-visual{min-height:280px;}
+  }
+
+  /* ---------- Storytelling (Kundenreise) ---------- */
+  .story-flow{max-width:640px; margin:52px auto 0; display:flex; flex-direction:column; align-items:center;}
+  .story-step{width:100%; background:var(--paper-2); border:1px solid var(--line); border-radius:18px; padding:26px 28px; display:flex; gap:18px; align-items:center; transition:border-color .3s var(--ease), transform .3s var(--ease);}
+  .story-step:hover{border-color:var(--emerald); transform:scale(1.02);}
+  .story-num{flex-shrink:0; width:46px; height:46px; border-radius:50%; background:linear-gradient(155deg, var(--emerald), var(--emerald-deep)); color:#fff; font-family:'Manrope',sans-serif; font-weight:800; font-size:1.1rem; display:flex; align-items:center; justify-content:center;}
+  .story-step h3{font-size:1.08rem; font-weight:800; margin:0 0 4px;}
+  .story-step p{font-size:.88rem; color:var(--text-muted); margin:0; line-height:1.6;}
+  .story-arrow{padding:10px 0;}
+  .story-arrow svg{width:26px; height:26px; stroke:var(--emerald-bright); stroke-width:2.5; animation:arrowPulse 1.8s ease-in-out infinite;}
+  @keyframes arrowPulse{0%,100%{transform:translateY(0); opacity:.7;} 50%{transform:translateY(5px); opacity:1;}}
+  .story-final .story-num{background:linear-gradient(155deg, var(--color-accent), #8a5a1f);}
+
+  /* ---------- Section-CTA (am Ende jedes Abschnitts) ---------- */
+  .section-cta{display:flex; justify-content:center; margin-top:46px;}
+  .section-cta .btn{min-width:280px; justify-content:center; padding:15px 30px; font-size:1rem;}
+
+  /* ---------- Anfrage-Funnel (mehrstufig) ---------- */
+  .funnel-progress{height:5px; background:var(--line); border-radius:99px; overflow:hidden; margin-bottom:26px;}
+  .funnel-progress span{display:block; height:100%; background:linear-gradient(90deg, var(--emerald), var(--emerald-bright)); border-radius:99px; transition:width .4s var(--ease);}
+  .funnel-q{font-size:1.25rem; font-weight:800; margin-bottom:20px;}
+  .funnel-options{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .funnel-opt{padding:16px 18px; border:1.5px solid var(--line); border-radius:14px; background:var(--paper); color:var(--charcoal); font-family:inherit; font-size:.95rem; font-weight:700; cursor:pointer; text-align:center; transition:all .2s var(--ease);}
+  .funnel-opt:hover{border-color:var(--emerald); background:var(--color-primary-light); transform:translateY(-2px);}
+  .funnel-input{width:100%; padding:14px 16px; border:1.5px solid var(--line); border-radius:12px; background:var(--paper); color:var(--charcoal); font-family:inherit; font-size:.95rem; margin-bottom:14px;}
+  .funnel-input:focus{outline:none; border-color:var(--emerald);}
+  .funnel-nav{display:flex; justify-content:space-between; align-items:center; margin-top:22px; gap:12px;}
+  .funnel-back{background:none; border:none; color:var(--text-muted); font-family:inherit; font-size:.88rem; font-weight:600; cursor:pointer; padding:8px;}
+  .funnel-back:hover{color:var(--emerald-bright);}
+  .funnel-summary{border:1px solid var(--line); border-radius:14px; background:var(--paper); padding:18px 20px; margin-bottom:8px;}
+  .funnel-summary div{display:flex; justify-content:space-between; gap:14px; padding:7px 0; border-bottom:1px dashed var(--line); font-size:.88rem;}
+  .funnel-summary div:last-child{border-bottom:none;}
+  .funnel-summary b{color:var(--text-muted); font-weight:600;}
+  .funnel-summary span{color:var(--charcoal); font-weight:700; text-align:end;}
+  @media (max-width:520px){ .funnel-options{grid-template-columns:1fr;} }
+
+  /* ---------- Cookie-Consent-Banner ---------- */
+  .cookie-banner{position:fixed; bottom:0; inset-inline:0; z-index:300; background:var(--paper-2); border-top:1px solid var(--line); box-shadow:0 -14px 40px rgba(0,0,0,.5); padding:22px 0; display:none; animation:slideUp .4s var(--ease);}
+  .cookie-banner.show{display:block;}
+  @keyframes slideUp{from{transform:translateY(30px); opacity:0;} to{transform:none; opacity:1;}}
+  .cookie-inner{display:flex; gap:24px; align-items:center; flex-wrap:wrap;}
+  .cookie-text{flex:1; min-width:280px;}
+  .cookie-text h4{font-size:1rem; font-weight:800; margin-bottom:6px;}
+  .cookie-text p{font-size:.82rem; color:var(--text-muted); margin:0; line-height:1.55;}
+  .cookie-text a{color:var(--emerald-bright); text-decoration:underline;}
+  .cookie-actions{display:flex; gap:10px; flex-wrap:wrap;}
+  .cookie-actions .btn{padding:11px 20px; font-size:.85rem;}
+  .btn-cookie-ghost{border:1.5px solid var(--line); color:var(--text-soft);}
+  .btn-cookie-ghost:hover{border-color:var(--emerald); color:var(--emerald-bright);}
+  .cookie-settings{display:none; width:100%; margin-top:18px; border-top:1px solid var(--line); padding-top:18px;}
+  .cookie-settings.open{display:block;}
+  .cookie-cat{display:flex; justify-content:space-between; align-items:center; gap:16px; padding:12px 0; border-bottom:1px dashed var(--line);}
+  .cookie-cat:last-of-type{border-bottom:none;}
+  .cookie-cat strong{font-size:.9rem; display:block; margin-bottom:2px;}
+  .cookie-cat p{font-size:.78rem; color:var(--text-muted); margin:0;}
+  .switch{position:relative; width:46px; height:26px; flex-shrink:0;}
+  .switch input{opacity:0; width:0; height:0;}
+  .switch .slider{position:absolute; inset:0; background:var(--line); border-radius:99px; cursor:pointer; transition:background .25s;}
+  .switch .slider::before{content:''; position:absolute; width:20px; height:20px; border-radius:50%; background:#fff; top:3px; inset-inline-start:3px; transition:transform .25s var(--ease);}
+  .switch input:checked + .slider{background:var(--emerald);}
+  .switch input:checked + .slider::before{transform:translateX(20px);}
+  [dir="rtl"] .switch input:checked + .slider::before{transform:translateX(-20px);}
+  .switch input:disabled + .slider{opacity:.55; cursor:not-allowed;}
+
+  /* ---------- Formular: Validierung / Consent / Success ---------- */
+  .form-row.invalid input, .form-row.invalid textarea{border-color:#e05c5c;}
+  .field-error{display:none; font-size:.76rem; color:#e07070; margin-top:5px;}
+  .form-row.invalid .field-error{display:block;}
+  .consent-row{display:flex; gap:10px; align-items:flex-start; font-size:.8rem; color:var(--text-muted); line-height:1.55; margin:4px 0 2px;}
+  .consent-row input{margin-top:3px; width:16px; height:16px; accent-color:var(--emerald); flex-shrink:0; cursor:pointer;}
+  .consent-row a{color:var(--emerald-bright); text-decoration:underline;}
+  .consent-row.invalid{color:#e07070;}
+  .btn.loading{pointer-events:none; opacity:.75;}
+  .btn.loading::after{content:''; width:15px; height:15px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; margin-inline-start:4px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .form-success{display:none; text-align:center; padding:44px 24px; border:1px solid var(--emerald); border-radius:var(--radius); background:var(--color-primary-light);}
+  .form-success.show{display:block; animation:fadeIn .4s var(--ease);}
+  .form-success .fs-icon{width:60px; height:60px; border-radius:50%; background:var(--emerald); color:#fff; font-size:1.7rem; display:flex; align-items:center; justify-content:center; margin:0 auto 18px;}
+  .form-success h3{font-size:1.25rem; margin-bottom:10px;}
+  .form-success p{font-size:.9rem; color:var(--text-soft); margin:0; line-height:1.65;}
+
+  /* ---------- Sicherheits-Hinweise am Formular / Footer ---------- */
+  .security-row{display:flex; gap:16px; flex-wrap:wrap; margin-top:18px;}
+  .security-row span{display:inline-flex; align-items:center; gap:7px; font-size:.76rem; color:var(--text-muted);}
+  .security-row svg{width:14px; height:14px; stroke:var(--emerald-bright); stroke-width:2;}
+</style>
+</head>
+<body>
+
+<div class="top-bar" role="note">
+  <div class="top-bar-track">
+    <span><a href="tel:+491799673909" style="color:#fff;">📞 +49 179 9673909</a></span>
+    <span class="sep">|</span>
+    <span class="i18n" data-de="✅ Kostenlose Beratung" data-ar="✅ استشارة مجانية">✅ Kostenlose Beratung</span>
+    <span class="sep">|</span>
+    <span class="i18n" data-de="🚗 Kfz-Zulassungsservice" data-ar="🚗 خدمة تسجيل السيارات">🚗 Kfz-Zulassungsservice</span>
+    <span class="sep">|</span>
+    <span class="i18n" data-de="⚡ Energievergleich deutschlandweit" data-ar="⚡ مقارنة الطاقة بكل ألمانيا">⚡ Energievergleich deutschlandweit</span>
+  </div>
+</div>
+
+<header>
+  <div class="nav">
+    <a href="#top"><img class="logo-img" src="assets/images/logo-white.png" alt="Dienstly24 Logo"></a>
+
+    <nav class="nav-links">
+      <a href="#services" class="i18n" data-de="Leistungen" data-ar="خدماتنا">Leistungen</a>
+      <a href="#process" class="i18n" data-de="Ablauf" data-ar="كيف نعمل">Ablauf</a>
+      <a href="#about" class="i18n" data-de="Über uns" data-ar="من نحن">Über uns</a>
+      <a href="#why" class="i18n" data-de="Warum wir" data-ar="ليش نحنا">Warum wir</a>
+      <a href="#faq" class="i18n" data-de="FAQ" data-ar="أسئلة شائعة">FAQ</a>
+      <a href="#contact" class="i18n" data-de="Kontakt" data-ar="تواصل معنا">Kontakt</a>
+      <a href="login.html" class="mobile-only i18n" data-de="🔐 Kundenportal-Login" data-ar="🔐 دخول بوابة العملاء">🔐 Kundenportal-Login</a>
+    </nav>
+
+    <div class="nav-actions">
+      <div class="lang-toggle" id="langToggle" role="button" aria-label="Sprache wechseln">
+        <span class="lang-de active">DE</span>
+        <span class="lang-ar">AR</span>
+      </div>
+      <!-- TODO: href an die echte Login-URL des Kundenportals anpassen (z.B. https://portal.dienstly24.de oder /login) -->
+      <a href="login.html" class="btn btn-sm btn-login">
+        <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+        <span class="i18n" data-de="Login" data-ar="تسجيل الدخول">Login</span>
+      </a>
+      <a href="#contact" class="btn btn-primary i18n" data-de="Beratung anfragen" data-ar="اطلب استشارة">Beratung anfragen</a>
+      <button class="menu-toggle" aria-label="menu" aria-expanded="false"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</header>
+
+<!-- ================= HERO ================= -->
+<section class="hero" id="top">
+  <div class="hero-bg-facet"></div>
+  <div class="container hero-inner">
+    <div class="reveal in">
+      <div class="eyebrow">
+        <span class="dot"></span>
+        <span class="i18n" data-de="Beratung auf Deutsch &amp; Arabisch" data-ar="استشارة بالألماني والعربي">Beratung auf Deutsch &amp; Arabisch</span>
+      </div>
+      <h1 class="display i18n"
+          data-de="Alle Versicherungen.<br>Ein Ansprechpartner."
+          data-ar="كل أنواع التأمين.<br>مرجع واحد.">
+        Alle Versicherungen.<br>Ein Ansprechpartner.
+      </h1>
+      <p class="lead i18n"
+         data-de="Wir vergleichen hunderte Tarife und finden die beste Lösung für Sie – auf Deutsch und Arabisch, deutschlandweit."
+         data-ar="منقارنلك مئات العروض ومنلاقيلك أفضل حل — بالألماني والعربي، وبكل ألمانيا.">
+        Wir vergleichen hunderte Tarife und finden die beste Lösung für Sie – auf Deutsch und Arabisch, deutschlandweit.
+      </p>
+      <div class="hero-actions">
+        <button type="button" class="btn btn-primary open-funnel i18n" data-de="Angebot anfordern" data-ar="اطلب عرض سعر">Angebot anfordern</button>
+        <a href="#contact" class="btn btn-ghost i18n" data-de="Beratung buchen" data-ar="احجز استشارة">Beratung buchen</a>
+      </div>
+      <div class="trust-row">
+        <div class="trust-pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg>
+          <span class="i18n" data-de="Anbieterunabhängige Beratung" data-ar="استشارة مستقلة عن الشركات">Anbieterunabhängige Beratung</span>
+        </div>
+        <div class="trust-pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M8 12.5a11 11 0 0114 0M8 15.5a6.5 6.5 0 018 0" transform="translate(-4,-3)"/><circle cx="12" cy="19" r="1"/></svg>
+          <span class="i18n" data-de="Persönlicher Ansprechpartner" data-ar="مرجع شخصي دايم">Persönlicher Ansprechpartner</span>
+        </div>
+        <div class="trust-pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M8 4h13M8 12h13M8 20h13M3 4h.01M3 12h.01M3 20h.01"/></svg>
+          <span class="i18n" data-de="Transparente Kommunikation" data-ar="تواصل واضح وصريح">Transparente Kommunikation</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <svg class="facet-divider" viewBox="0 0 1200 64" preserveAspectRatio="none">
+    <path d="M0 64 L120 20 L260 50 L420 10 L600 44 L780 12 L960 48 L1080 18 L1200 40 L1200 64 Z"/>
+  </svg>
+</section>
+
+<!-- ================= SERVICES ================= -->
+
+<!-- ================= BENEFITS-BAR ================= -->
+<div class="benefits-bar">
+  <div class="container">
+    <div class="benefits-grid reveal">
+      <div class="benefit-item">
+        <div class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v8H4v-8M2 7h20v5H2zM12 22V7M12 7s-2-5-5-5-2 5 0 5h5zM12 7s2-5 5-5 2 5 0 5h-5z"/></svg></div>
+        <div><h4 class="i18n" data-de="Kostenlos &amp; unverbindlich" data-ar="مجاني وبدون التزام">Kostenlos &amp; unverbindlich</h4>
+        <p class="i18n" data-de="Unsere Beratung kostet Sie nichts – Sie entscheiden frei." data-ar="استشارتنا ما بتكلفك شي — والقرار النهائي بإيدك.">Unsere Beratung kostet Sie nichts – Sie entscheiden frei.</p></div>
+      </div>
+      <div class="benefit-item">
+        <div class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-9 8.35 8.5 8.5 0 01-3.4-.7L3 21l1.85-5.55A8.38 8.38 0 013.5 11.5a8.5 8.5 0 018.5-8.5 8.5 8.5 0 019 8.5z"/></svg></div>
+        <div><h4 class="i18n" data-de="Deutsch &amp; Arabisch" data-ar="ألماني وعربي">Deutsch &amp; Arabisch</h4>
+        <p class="i18n" data-de="Beratung in Ihrer Sprache – verständlich und persönlich." data-ar="استشارة بلغتك — واضحة وشخصية.">Beratung in Ihrer Sprache – verständlich und persönlich.</p></div>
+      </div>
+      <div class="benefit-item">
+        <div class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.5 13l1.5 9-5-3-5 3 1.5-9"/></svg></div>
+        <div><h4 class="i18n" data-de="Erfahren" data-ar="خبرة موثوقة">Erfahren</h4>
+        <p class="i18n" data-de="6+ Jahre Erfahrung, über 3.000 zufriedene Kunden." data-ar="خبرة 6+ سنوات وأكثر من 3.000 عميل راضٍ.">6+ Jahre Erfahrung, über 3.000 zufriedene Kunden.</p></div>
+      </div>
+      <div class="benefit-item">
+        <div class="b-icon"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 12-9 12S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+        <div><h4 class="i18n" data-de="Deutschlandweit" data-ar="بكل ألمانيا">Deutschlandweit</h4>
+        <p class="i18n" data-de="Digital, telefonisch und per Post – wo immer Sie sind." data-ar="أونلاين وتلفون وبريد — وين ما كنت.">Digital, telefonisch und per Post – wo immer Sie sind.</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="services" id="services">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="kicker i18n" data-de="Leistungen" data-ar="خدماتنا">Leistungen</span>
+      <h2 class="i18n" data-de="Beratung in sechs zentralen Lebensbereichen" data-ar="استشارة بست مجالات أساسية بحياتك اليومية">Beratung in sechs zentralen Lebensbereichen</h2>
+      <p class="i18n" data-de="Wir begleiten Sie persönlich – von der ersten Frage bis zum unterschriebenen Vertrag." data-de-note="" data-ar="منرافقك خطوة خطوة، من أول سؤال لحتى توقيع العقد.">Wir begleiten Sie persönlich – von der ersten Frage bis zum unterschriebenen Vertrag.</p>
+    </div>
+
+    <div class="services-grid">
+      <a href="#contact" class="service-card reveal">
+        <div class="service-icon facet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12l2-6h14l2 6M5 12v6a1 1 0 001 1h1a1 1 0 001-1v-1h8v1a1 1 0 001 1h1a1 1 0 001-1v-6"/></svg></div>
+        <h3 class="i18n" data-de="Kfz-Versicherung" data-ar="تأمين السيارات">Kfz-Versicherung</h3>
+        <p class="i18n" data-de="Wir erklären Ihnen die Unterschiede zwischen Haftpflicht, Teil- und Vollkasko und finden gemeinsam den passenden Schutz." data-ar="منشرحلك الفرق بين التأمين الإلزامي والشامل ومنساعدك تختار التغطية المناسبة إلك.">Wir erklären Ihnen die Unterschiede zwischen Haftpflicht, Teil- und Vollkasko und finden gemeinsam den passenden Schutz.</p>
+        <span class="service-arrow"><span class="i18n" data-de="Beratung anfragen" data-ar="اطلب استشارة">Beratung anfragen</span> <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+
+      <a href="#contact" class="service-card reveal">
+        <div class="service-icon facet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4.5 12.5s2-7 7.5-7 7.5 7 7.5 7-2 7-7.5 7-7.5-7-7.5-7z"/><circle cx="12" cy="12.5" r="2.2"/></svg></div>
+        <h3 class="i18n" data-de="Krankenversicherung" data-ar="التأمين الصحي">Krankenversicherung</h3>
+        <p class="i18n" data-de="Ob gesetzlich oder privat – wir beraten Sie zu den Optionen, die zu Ihrer beruflichen Situation passen." data-ar="سواء تأمين حكومي أو خاص، منشرحلك الخيارات المناسبة لوضعك المهني.">Ob gesetzlich oder privat – wir beraten Sie zu den Optionen, die zu Ihrer beruflichen Situation passen.</p>
+        <span class="service-arrow"><span class="i18n" data-de="Beratung anfragen" data-ar="اطلب استشارة">Beratung anfragen</span> <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+
+      <a href="#contact" class="service-card reveal">
+        <div class="service-icon facet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4l2 4h-4l2-4zM8 8h8l2 12H6L8 8z"/></svg></div>
+        <h3 class="i18n" data-de="Zahnzusatzversicherung" data-ar="تأمين الأسنان الإضافي">Zahnzusatzversicherung</h3>
+        <p class="i18n" data-de="Wir zeigen Ihnen, welche Zusatzleistungen sich für Zahnbehandlungen wirklich lohnen." data-ar="منوضحلك شو الخدمات الإضافية يلي فعلاً بتستاهل لعلاج الأسنان.">Wir zeigen Ihnen, welche Zusatzleistungen sich für Zahnbehandlungen wirklich lohnen.</p>
+        <span class="service-arrow"><span class="i18n" data-de="Beratung anfragen" data-ar="اطلب استشارة">Beratung anfragen</span> <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+
+      <a href="#contact" class="service-card reveal">
+        <div class="service-icon facet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/><path d="M9 3v2M15 3v2"/></svg></div>
+        <h3 class="i18n" data-de="Kfz-Zulassungsservice" data-ar="خدمة تسجيل السيارات">Kfz-Zulassungsservice</h3>
+        <p class="i18n" data-de="Wir übernehmen die komplette Zulassung Ihres Fahrzeugs bei der Zulassungsstelle – schnell und ohne Warteschlange." data-ar="منتكفل بكل إجراءات تسجيل سيارتك بمكتب الترخيص، بسرعة ومن دون دور انتظار.">Wir übernehmen die komplette Zulassung Ihres Fahrzeugs bei der Zulassungsstelle – schnell und ohne Warteschlange.</p>
+        <ul class="service-features">
+          <li class="i18n" data-de="Anmeldung" data-ar="تسجيل جديد">Anmeldung</li>
+          <li class="i18n" data-de="Ummeldung" data-ar="تحويل ملكية">Ummeldung</li>
+          <li class="i18n" data-de="Abmeldung" data-ar="إلغاء تسجيل">Abmeldung</li>
+        </ul>
+        <span class="service-arrow"><span class="i18n" data-de="Jetzt anfragen" data-ar="اطلب الآن">Jetzt anfragen</span> <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+
+      <a href="#contact" class="service-card reveal">
+        <div class="service-icon facet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 7V5a2 2 0 012-2h6a2 2 0 012 2v2M3 12h18"/></svg></div>
+        <h3 class="i18n" data-de="Kennzeichen per Post" data-ar="لوحات السيارة بالبريد">Kennzeichen per Post</h3>
+        <p class="i18n" data-de="Neue Kennzeichen bequem bestellen – wir liefern sie versiegelt direkt zu Ihnen nach Hause." data-ar="اطلب لوحاتك الجديدة بكل سهولة، ومنبعتلك ياها مختومة لحد باب البيت.">Neue Kennzeichen bequem bestellen – wir liefern sie versiegelt direkt zu Ihnen nach Hause.</p>
+        <ul class="service-features">
+          <li class="i18n" data-de="Kennzeichen bestellen" data-ar="طلب اللوحات">Kennzeichen bestellen</li>
+          <li class="i18n" data-de="Versand nach Hause" data-ar="التوصيل للمنزل">Versand nach Hause</li>
+          <li class="i18n" data-de="Schnell &amp; sicher" data-ar="سريع وآمن">Schnell &amp; sicher</li>
+        </ul>
+        <span class="service-arrow"><span class="i18n" data-de="Jetzt anfragen" data-ar="اطلب الآن">Jetzt anfragen</span> <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+
+      <a href="#contact" class="service-card reveal">
+        <div class="service-icon facet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg></div>
+        <h3 class="i18n" data-de="Strom &amp; Gas" data-ar="الكهرباء والغاز">Strom &amp; Gas</h3>
+        <p class="i18n" data-de="Wir prüfen Ihre aktuelle Situation und erklären, wie ein Anbieterwechsel abläuft." data-ar="منراجع وضعك الحالي ومنشرحلك كيف بتصير عملية تبديل المزود.">Wir prüfen Ihre aktuelle Situation und erklären, wie ein Anbieterwechsel abläuft.</p>
+        <span class="service-arrow"><span class="i18n" data-de="Beratung anfragen" data-ar="اطلب استشارة">Beratung anfragen</span> <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+    </div>
+  <div class="section-cta reveal">
+      <button type="button" class="btn btn-primary open-funnel i18n" data-de="Jetzt kostenlos beraten lassen" data-ar="احصل على استشارة مجانية الآن">Jetzt kostenlos beraten lassen</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PROCESS ================= -->
+<section id="process">
+  <div class="container">
+    <div class="section-head center reveal">
+      <span class="kicker i18n" data-de="So einfach geht's" data-ar="هيك بتمشي الأمور">So einfach geht's</span>
+      <h2 class="i18n" data-de="Ihre Reise zu uns – in vier Schritten" data-ar="رحلتك معنا — بأربع خطوات">Ihre Reise zu uns – in vier Schritten</h2>
+    </div>
+    <div class="story-flow reveal">
+      <div class="story-step">
+        <div class="story-num">1</div>
+        <div>
+          <h3 class="i18n" data-de="Du suchst eine Versicherung." data-ar="عم تدور على تأمين.">Du suchst eine Versicherung.</h3>
+          <p class="i18n" data-de="Sag uns kurz, was du brauchst – online, per WhatsApp oder telefonisch." data-ar="خبرنا باختصار شو بتحتاج — أونلاين أو واتساب أو تلفون.">Sag uns kurz, was du brauchst – online, per WhatsApp oder telefonisch.</p>
+        </div>
+      </div>
+      <div class="story-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M6 14l6 6 6-6"/></svg></div>
+      <div class="story-step">
+        <div class="story-num">2</div>
+        <div>
+          <h3 class="i18n" data-de="Wir vergleichen hunderte Tarife." data-ar="منقارنلك مئات العروض.">Wir vergleichen hunderte Tarife.</h3>
+          <p class="i18n" data-de="Anbieterunabhängig, transparent und kostenlos – über unsere Pools mit Zugang zu Tarifen von Allianz, AXA u.&nbsp;v.&nbsp;m." data-ar="بشكل مستقل عن الشركات وشفاف ومجاني — عبر منصّاتنا مع وصول لعروض Allianz وAXA وغيرهم.">Anbieterunabhängig, transparent und kostenlos – über unsere Pools mit Zugang zu Tarifen von Allianz, AXA u.&nbsp;v.&nbsp;m.</p>
+        </div>
+      </div>
+      <div class="story-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M6 14l6 6 6-6"/></svg></div>
+      <div class="story-step">
+        <div class="story-num">3</div>
+        <div>
+          <h3 class="i18n" data-de="Du erhältst dein persönliches Angebot." data-ar="بيوصلك عرضك الشخصي.">Du erhältst dein persönliches Angebot.</h3>
+          <p class="i18n" data-de="Verständlich erklärt, auf Deutsch oder Arabisch – du entscheidest in Ruhe." data-ar="مشروح بوضوح، بالألماني أو العربي — وانت بتقرر على راحتك.">Verständlich erklärt, auf Deutsch oder Arabisch – du entscheidest in Ruhe.</p>
+        </div>
+      </div>
+      <div class="story-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M6 14l6 6 6-6"/></svg></div>
+      <div class="story-step story-final">
+        <div class="story-num">✓</div>
+        <div>
+          <h3 class="i18n" data-de="Fertig – wir bleiben an deiner Seite." data-ar="خلصنا — ومنضل حدك.">Fertig – wir bleiben an deiner Seite.</h3>
+          <p class="i18n" data-de="Auch nach dem Abschluss: ein Ansprechpartner für alle Fragen und Schadensfälle." data-ar="حتى بعد توقيع العقد: مرجع واحد لكل أسئلتك وأي حادث.">Auch nach dem Abschluss: ein Ansprechpartner für alle Fragen und Schadensfälle.</p>
+        </div>
+      </div>
+    </div>
+    <div class="section-cta reveal">
+      <button type="button" class="btn btn-primary open-funnel i18n" data-de="Jetzt Angebot anfordern" data-ar="اطلب عرض سعر الآن">Jetzt Angebot anfordern</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ABOUT ================= -->
+<section class="about" id="about">
+  <div class="container about-grid">
+    <div class="reveal">
+      <span class="kicker i18n" data-de="Über uns" data-ar="من نحن">Über uns</span>
+      <h2 class="i18n" data-de="Ihr Experte für den deutschen Alltag" data-ar="خبيركم بأمور الحياة اليومية بألمانيا">Ihr Experte für den deutschen Alltag</h2>
+      <p class="i18n"
+         data-de="Dienstly24 wurde gegründet, um Menschen in Deutschland – ganz gleich ob auf Deutsch oder Arabisch – eine verständliche und ehrliche Beratung rund um Versicherungen, Kfz-Zulassung und Energie zu bieten. Statt komplizierter Fachbegriffe bekommen Sie klare Antworten und einen persönlichen Ansprechpartner."
+         data-ar="تأسست Dienstly24 لتقدم لسكان ألمانيا، سواء بالألماني أو بالعربي، استشارة واضحة وصادقة بمواضيع التأمين وتسجيل السيارات والطاقة. بدل المصطلحات المعقدة، بتحصل على إجابات واضحة ومرجع شخصي يرافقك.">
+        Dienstly24 wurde gegründet, um Menschen in Deutschland – ganz gleich ob auf Deutsch oder Arabisch – eine verständliche und ehrliche Beratung rund um Versicherungen, Kfz-Zulassung und Energie zu bieten. Statt komplizierter Fachbegriffe bekommen Sie klare Antworten und einen persönlichen Ansprechpartner.
+      </p>
+      <ul class="about-list">
+        <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg><span class="i18n" data-de="Anbieterunabhängig – wir binden Sie an keine Gesellschaft" data-ar="مستقلون عن الشركات — ما بنلزمك بأي شركة">Anbieterunabhängig – wir binden Sie an keine Gesellschaft</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg><span class="i18n" data-de="Beratung auf Deutsch und Arabisch" data-ar="استشارة بالألماني والعربي">Beratung auf Deutsch und Arabisch</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg><span class="i18n" data-de="Persönliche Betreuung von Anfang bis Ende" data-ar="مرافقة شخصية من البداية للنهاية">Persönliche Betreuung von Anfang bis Ende</span></li>
+      </ul>
+    </div>
+    <div class="about-visual reveal">
+      <div class="about-facet-1 facet"></div>
+      <div class="about-facet-2 facet"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= WHY US ================= -->
+
+<!-- ================= ERFAHRUNG / ZAHLEN ================= -->
+<!-- Zahlen bestätigt: 6 Jahre Erfahrung, 3000+ zufriedene Kunden (Stand 07/2026) -->
+<section class="stats-section" id="experience">
+  <div class="container">
+    <div class="section-head center reveal">
+      <span class="kicker i18n" data-de="Unsere Erfahrung" data-ar="خبرتنا">Unsere Erfahrung</span>
+      <h2 class="i18n" data-de="Erfahrung, auf die Sie sich verlassen können" data-ar="خبرة تقدر تعتمد عليها">Erfahrung, auf die Sie sich verlassen können</h2>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card reveal">
+        <span class="stat-number"><span class="count" data-target="6">0</span><span class="plus">+</span></span>
+        <span class="stat-label i18n" data-de="Jahre Erfahrung" data-ar="سنوات خبرة">Jahre Erfahrung</span>
+      </div>
+      <div class="stat-card reveal">
+        <span class="stat-number"><span class="count" data-target="3000">0</span><span class="plus">+</span></span>
+        <span class="stat-label i18n" data-de="Zufriedene Kunden" data-ar="عميل راضٍ">Zufriedene Kunden</span>
+      </div>
+      <div class="stat-card reveal">
+        <span class="stat-number">24<span class="plus">h</span></span>
+        <span class="stat-label i18n" data-de="Antwort innerhalb eines Tages" data-ar="رد خلال يوم واحد">Antwort innerhalb eines Tages</span>
+      </div>
+      <div class="stat-card reveal">
+        <span class="stat-number">100<span class="plus">%</span></span>
+        <span class="stat-label i18n" data-de="Deutschlandweit verfügbar" data-ar="متوفرون بكل ألمانيا">Deutschlandweit verfügbar</span>
+      </div>
+    </div>
+  <div class="section-cta reveal">
+      <a href="#contact" class="btn" style="background:#fff; color:var(--emerald-deep); font-weight:800;"><span class="i18n" data-de="Jetzt Beratung sichern" data-ar="احجز استشارتك الآن">Jetzt Beratung sichern</span></a>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="container">
+    <div class="section-head center reveal">
+      <span class="kicker i18n" data-de="Warum Dienstly24" data-ar="ليش تختار Dienstly24">Warum Dienstly24</span>
+      <h2 class="i18n" data-de="Vertrauen, das man spürt" data-ar="ثقة محسوسة بكل خطوة">Vertrauen, das man spürt</h2>
+    </div>
+    <div class="why-grid">
+      <div class="why-card reveal">
+        <div class="seal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12l5 5L20 6"/></svg></div>
+        <h3 class="i18n" data-de="Anbieterunabhängige Beratung" data-ar="استشارة مستقلة عن الشركات">Anbieterunabhängige Beratung</h3>
+        <p class="i18n" data-de="Wir empfehlen, was zu Ihnen passt – nicht was uns am meisten nützt." data-ar="بننصحك بيلي يناسبك، مش بيلي بينفعنا أكتر.">Wir empfehlen, was zu Ihnen passt – nicht was uns am meisten nützt.</p>
+      </div>
+      <div class="why-card reveal">
+        <div class="seal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></svg></div>
+        <h3 class="i18n" data-de="Zweisprachiger Service" data-ar="خدمة بلغتين">Zweisprachiger Service</h3>
+        <p class="i18n" data-de="Unser Team spricht Deutsch und Arabisch – Sie wählen, was für Sie bequemer ist." data-ar="فريقنا بيحكي عربي وألماني، اختار اللغة يلي مرتاح فيها.">Unser Team spricht Deutsch und Arabisch – Sie wählen, was für Sie bequemer ist.</p>
+      </div>
+      <div class="why-card reveal">
+        <div class="seal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.5a11 11 0 0114 0M8 15.5a6.5 6.5 0 018 0" transform="translate(-4,-3)"/><circle cx="12" cy="19" r="1"/></svg></div>
+        <h3 class="i18n" data-de="Persönlicher Ansprechpartner" data-ar="مرجع شخصي دايم">Persönlicher Ansprechpartner</h3>
+        <p class="i18n" data-de="Sie haben einen festen Kontakt statt eines anonymen Callcenters." data-ar="عندك شخص ثابت تتواصل معه، مش مركز اتصال بدون وجه.">Sie haben einen festen Kontakt statt eines anonymen Callcenters.</p>
+      </div>
+      <div class="why-card reveal">
+        <div class="seal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 4h13M8 12h13M8 20h13M3 4h.01M3 12h.01M3 20h.01"/></svg></div>
+        <h3 class="i18n" data-de="Transparente Kommunikation" data-ar="تواصل واضح">Transparente Kommunikation</h3>
+        <p class="i18n" data-de="Keine versteckten Klauseln – wir erklären alles in klaren Worten." data-ar="بدون بنود مخفية، منشرحلك كل شي بوضوح.">Keine versteckten Klauseln – wir erklären alles in klaren Worten.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================= PARTNER ================= -->
+<section id="partners" style="padding-top:0;">
+  <div class="container">
+    <div class="section-head center reveal">
+      <span class="kicker i18n" data-de="Kooperationen" data-ar="شراكاتنا">Kooperationen</span>
+      <h2 class="i18n" data-de="Starke Pools – Zugang zu vielen Tarifen" data-ar="منصّات قوية — وصول لعروض كتير">Starke Pools – Zugang zu vielen Tarifen</h2>
+      <p class="i18n" data-de="Über unsere Kooperationen mit Maklerpools und Plattformen vergleichen wir für Sie die Tarife zahlreicher Anbieter – anbieterunabhängig und ohne Bindung an eine einzelne Gesellschaft." data-ar="عبر تعاوننا مع مجمّعات الوسطاء والمنصّات، منقارنلك عروض شركات كتيرة — بشكل مستقل عن الشركات وبدون ما نلزمك بشركة وحدة.">Über unsere Kooperationen mit Maklerpools und Plattformen vergleichen wir für Sie die Tarife zahlreicher Anbieter – anbieterunabhängig und ohne Bindung an eine einzelne Gesellschaft.</p>
+    </div>
+    <p style="text-align:center; margin:0 0 16px; font-size:.8rem; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--emerald);" class="i18n"
+       data-de="Unsere Pools &amp; Plattformen" data-ar="مجمّعاتنا ومنصّاتنا">Unsere Pools &amp; Plattformen</p>
+    <div class="partners-strip reveal">
+      <span class="partner-logo">Fonds Finanz<small>Maklerpool</small></span>
+      <span class="partner-logo">tarifcheck<small>Vergleichsplattform</small></span>
+      <span class="partner-logo">TeamGermany<small>Maklerpool</small></span>
+      <span class="partner-logo">Stromkreis<small>Energie-Plattform</small></span>
+      <span class="partner-logo">CHECK24<small>Vergleichsportal</small></span>
+    </div>
+    <p style="text-align:center; margin:34px 0 16px; font-size:.8rem; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--emerald);" class="i18n"
+       data-de="Zugang zu Tarifen u.&nbsp;a. von" data-ar="وصول لعروض شركات مثل">Zugang zu Tarifen u.&nbsp;a. von</p>
+    <div class="partners-strip reveal">
+      <span class="partner-logo">Allianz<small>Versicherung</small></span>
+      <span class="partner-logo">AXA<small>Versicherung</small></span>
+      <span class="partner-logo">Telekom<small>Internet &amp; Mobilfunk</small></span>
+      <span class="partner-logo">Vattenfall<small>Energie</small></span>
+      <span class="partner-logo">LichtBlick<small>Energie</small></span>
+    </div>
+    <p style="text-align:center; margin-top:26px; font-size:.85rem; color:var(--text-muted);" class="i18n"
+       data-de="… und viele weitere Versicherer, Energie- und Telekommunikationsanbieter."
+       data-ar="… وغيرهم الكثير من شركات التأمين والطاقة والاتصالات.">… und viele weitere Versicherer, Energie- und Telekommunikationsanbieter.</p>
+  </div>
+</section>
+
+<!-- ================= TESTIMONIALS ================= -->
+<section id="testimonials">
+  <div class="container">
+    <div class="section-head center reveal">
+      <span class="kicker i18n" data-de="Kundenstimmen" data-ar="آراء عملائنا">Kundenstimmen</span>
+      <h2 class="i18n" data-de="Was Kunden über uns sagen" data-ar="شو حكى عنا اللي جربونا">Was Kunden über uns sagen</h2>
+    </div>
+    <div class="testi-grid">
+      <div class="testi-card reveal">
+        <div class="testi-mark">"</div>
+        <div class="testi-stars">
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>
+        </div>
+        <p class="text i18n" data-de="Endlich jemand, der mir die Unterschiede zwischen den Kfz-Tarifen wirklich erklärt hat – ohne Fachchinesisch." data-ar="أخيراً حدا شرحلي الفرق بين تأمينات السيارات بشكل مفهوم، بدون تعقيد.">Endlich jemand, der mir die Unterschiede zwischen den Kfz-Tarifen wirklich erklärt hat – ohne Fachchinesisch.</p>
+        <div class="testi-person"><div class="testi-avatar">Y</div><div><strong class="i18n" data-de="Yasmin H." data-ar="ياسمين ح.">Yasmin H.</strong><span class="i18n" data-de="Frankfurt" data-ar="فرانكفورت">Frankfurt</span></div></div>
+      </div>
+      <div class="testi-card reveal">
+        <div class="testi-mark">"</div>
+        <div class="testi-stars">
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>
+        </div>
+        <p class="text i18n" data-de="Die Beratung auf Arabisch hat mir sehr geholfen, weil ich noch nicht alles auf Deutsch verstehe." data-ar="الاستشارة بالعربي ساعدتني كثير كوني ما زلت بتعلم الألماني.">Die Beratung auf Arabisch hat mir sehr geholfen, weil ich noch nicht alles auf Deutsch verstehe.</p>
+        <div class="testi-person"><div class="testi-avatar">O</div><div><strong class="i18n" data-de="Omar S." data-ar="عمر س.">Omar S.</strong><span class="i18n" data-de="Köln" data-ar="كولن">Köln</span></div></div>
+      </div>
+      <div class="testi-card reveal">
+        <div class="testi-mark">"</div>
+        <div class="testi-stars">
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>
+        </div>
+        <p class="text i18n" data-de="Ich hatte einen festen Ansprechpartner während des ganzen Prozesses. Das hat mir Sicherheit gegeben." data-ar="كان عندي شخص ثابت طول العملية، وهاد أعطاني إحساس بالأمان.">Ich hatte einen festen Ansprechpartner während des ganzen Prozesses. Das hat mir Sicherheit gegeben.</p>
+        <div class="testi-person"><div class="testi-avatar">L</div><div><strong class="i18n" data-de="Laila M." data-ar="ليلى م.">Laila M.</strong><span class="i18n" data-de="München" data-ar="ميونخ">München</span></div></div>
+      </div>
+    </div>
+    <div style="text-align:center; margin-top:36px;" class="reveal">
+      <a href="https://www.facebook.com/Dienstly24" target="_blank" rel="noopener" class="btn btn-ghost i18n"
+         data-de="Alle Bewertungen auf Facebook ansehen"
+         data-ar="شوف كل التقييمات على فيسبوك">Alle Bewertungen auf Facebook ansehen</a>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================= FAQ ================= -->
+<section id="faq" style="background:var(--paper-2);">
+  <div class="container">
+    <div class="section-head center reveal">
+      <span class="kicker i18n" data-de="Häufige Fragen" data-ar="أسئلة شائعة">Häufige Fragen</span>
+      <h2 class="i18n" data-de="Gut zu wissen" data-ar="أشياء بتهمك تعرفها">Gut zu wissen</h2>
+    </div>
+    <div class="faq-list reveal">
+      <div class="faq-item">
+        <button class="faq-q" type="button"><span class="i18n" data-de="Wie funktioniert die Beratung bei Dienstly24?" data-ar="كيف بتصير الاستشارة عند Dienstly24؟">Wie funktioniert die Beratung bei Dienstly24?</span><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
+        <div class="faq-a"><p class="i18n" data-de="Sie schildern uns Ihre Situation, wir sammeln passende Angebote unserer Partner und erklären Ihnen die Unterschiede – verständlich und ohne Fachchinesisch." data-ar="بتحكيلنا وضعك، منجمعلك عروض مناسبة من شركائنا ومنشرحلك الفروقات بشكل واضح وبدون تعقيد.">Sie schildern uns Ihre Situation, wir sammeln passende Angebote unserer Partner und erklären Ihnen die Unterschiede – verständlich und ohne Fachchinesisch.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button"><span class="i18n" data-de="Wie lange dauert die Bearbeitung meiner Anfrage?" data-ar="قديش بتاخد معالجة طلبي؟">Wie lange dauert die Bearbeitung meiner Anfrage?</span><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
+        <div class="faq-a"><p class="i18n" data-de="In der Regel melden wir uns innerhalb von 24 Stunden bei Ihnen. Der weitere Ablauf hängt von der gewünschten Leistung ab." data-ar="عادةً منرجعلك خلال 24 ساعة، وباقي الخطوات بتعتمد على نوع الخدمة المطلوبة.">In der Regel melden wir uns innerhalb von 24 Stunden bei Ihnen. Der weitere Ablauf hängt von der gewünschten Leistung ab.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button"><span class="i18n" data-de="Ist die Beratung wirklich kostenlos?" data-ar="هل الاستشارة فعلاً مجانية؟">Ist die Beratung wirklich kostenlos?</span><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
+        <div class="faq-a"><p class="i18n" data-de="Ja, die Erstberatung ist für Sie komplett kostenlos und unverbindlich." data-ar="أي نعم، الاستشارة الأولى مجانية بالكامل وبدون أي التزام.">Ja, die Erstberatung ist für Sie komplett kostenlos und unverbindlich.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button"><span class="i18n" data-de="Sprechen Sie auch Arabisch?" data-ar="بتحكوا عربي؟">Sprechen Sie auch Arabisch?</span><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
+        <div class="faq-a"><p class="i18n" data-de="Ja, unser Team berät Sie auf Deutsch und auf Arabisch – ganz wie es für Sie bequemer ist." data-ar="أكيد، فريقنا بيقدم الاستشارة بالألماني والعربي، متل ما بيريحك.">Ja, unser Team berät Sie auf Deutsch und auf Arabisch – ganz wie es für Sie bequemer ist.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button"><span class="i18n" data-de="Wie kann ich eine Anfrage stellen?" data-ar="كيف بقدر قدم طلب؟">Wie kann ich eine Anfrage stellen?</span><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
+        <div class="faq-a"><p class="i18n" data-de="Am einfachsten über das Kontaktformular weiter unten, per WhatsApp oder telefonisch." data-ar="أسهل طريقة عن طريق نموذج التواصل تحت، أو واتساب، أو بالتلفون.">Am einfachsten über das Kontaktformular weiter unten, per WhatsApp oder telefonisch.</p></div>
+      </div>
+    </div>
+  <div class="section-cta reveal">
+      <a href="#contact" class="btn btn-ghost i18n" data-de="Noch Fragen? Jetzt Kontakt aufnehmen" data-ar="عندك أسئلة؟ تواصل معنا الآن">Noch Fragen? Jetzt Kontakt aufnehmen</a>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ALLE VERSICHERUNGEN (Kategorien) ================= -->
+<section id="versicherungen" style="padding-top:0; background:var(--paper-2);">
+  <div class="container">
+    <div class="section-head center reveal">
+      <span class="kicker i18n" data-de="Alle Versicherungen" data-ar="كل أنواع التأمين">Alle Versicherungen</span>
+      <h2 class="i18n" data-de="Beratung zu jeder Versicherungsart" data-ar="استشارة بكل أنواع التأمين">Beratung zu jeder Versicherungsart</h2>
+      <p class="i18n" data-de="Wählen Sie Ihre Kategorie – wir beraten Sie persönlich, vergleichen für Sie und begleiten Sie bis zum Abschluss." data-ar="اختار الفئة يلي بتهمك — منستشيرك شخصيًا ومنقارنلك العروض ومنرافقك لحد إتمام العقد.">Wählen Sie Ihre Kategorie – wir beraten Sie persönlich, vergleichen für Sie und begleiten Sie bis zum Abschluss.</p>
+    </div>
+
+    <!-- HINWEIS: Später kann pro Kategorie ein AI-Bild ergänzt werden:
+         <div class="kat-img"><img src="assets/images/kat-gesundheit.jpg" alt=""></div> direkt über .kat-head einfügen -->
+    <div class="kat-grid reveal">
+
+      <div class="kat-card">
+        <div class="kat-head">
+          <div class="k-icon"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg></div>
+          <h3 class="i18n" data-de="Gesundheit" data-ar="الصحة">Gesundheit</h3>
+        </div>
+        <ul class="kat-links">
+          <li><a href="krankenversicherung/"><span class="i18n" data-de="Krankenversicherung" data-ar="التأمين الصحي">Krankenversicherung</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a></li>
+          <li><a href="private-krankenversicherung/"><span class="i18n" data-de="Private Krankenversicherung" data-ar="التأمين الصحي الخاص">Private Krankenversicherung</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a></li>
+          <li><a href="zahnzusatzversicherung/"><span class="i18n" data-de="Zahnzusatzversicherung" data-ar="تأمين الأسنان الإضافي">Zahnzusatzversicherung</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a></li>
+        </ul>
+      </div>
+
+      <div class="kat-card">
+        <div class="kat-head">
+          <div class="k-icon"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6l8-4z"/></svg></div>
+          <h3 class="i18n" data-de="Vorsorge &amp; Leben" data-ar="المستقبل والحياة">Vorsorge &amp; Leben</h3>
+        </div>
+        <ul class="kat-links">
+          <li><a href="berufsunfaehigkeitsversicherung/"><span class="i18n" data-de="Berufsunfähigkeit" data-ar="العجز المهني">Berufsunfähigkeit</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a></li>
+          <li><a href="lebensversicherung/"><span class="i18n" data-de="Lebensversicherung" data-ar="التأمين على الحياة">Lebensversicherung</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a></li>
+          <li><a href="unfallversicherung/"><span class="i18n" data-de="Unfallversicherung" data-ar="تأمين الحوادث">Unfallversicherung</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a></li>
+        </ul>
+      </div>
+
+      <div class="kat-card">
+        <div class="kat-head">
+          <div class="k-icon"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-6h14l2 6M5 12v6a1 1 0 001 1h1a1 1 0 001-1v-1h8v1a1 1 0 001 1h1a1 1 0 001-1v-6"/></svg></div>
+          <h3 class="i18n" data-de="Auto &amp; Mobilität" data-ar="السيارات والتنقل">Auto &amp; Mobilität</h3>
+        </div>
+        <ul class="kat-links">
+          <li><a href="kfz-versicherung/"><span class="i18n" data-de="Kfz-Versicherung" data-ar="تأمين السيارات">Kfz-Versicherung</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a></li>
+          <li><a href="e-bike-versicherung/"><span class="i18n" data-de="E-Bike-Versicherung" data-ar="تأمين الدراجات الكهربائية">E-Bike-Versicherung</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a></li>
+          <li><a href="#services"><span class="i18n" data-de="Kfz-Zulassungsservice" data-ar="خدمة تسجيل السيارات">Kfz-Zulassungsservice</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a></li>
+          <li><a href="#services"><span class="i18n" data-de="Kennzeichen per Post" data-ar="لوحات السيارة بالبريد">Kennzeichen per Post</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a></li>
+        </ul>
+      </div>
+
+      <div class="kat-card">
+        <div class="kat-head">
+          <div class="k-icon"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 9.5V21h14V9.5"/></svg></div>
+          <h3 class="i18n" data-de="Haus &amp; Wohnung" data-ar="البيت والسكن">Haus &amp; Wohnung</h3>
+        </div>
+        <ul class="kat-links">
+          <li><a href="hausratversicherung/"><span class="i18n" data-de="Hausratversicherung" data-ar="تأمين محتويات المنزل">Hausratversicherung</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a></li>
+          <li><a href="wohngebaeudeversicherung/"><span class="i18n" data-de="Wohngebäudeversicherung" data-ar="تأمين المباني السكنية">Wohngebäudeversicherung</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a></li>
+          <li><a href="gebaeudeversicherung/"><span class="i18n" data-de="Gebäudeversicherung" data-ar="تأمين المباني">Gebäudeversicherung</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a></li>
+          <li><a href="glasversicherung/"><span class="i18n" data-de="Glasversicherung" data-ar="تأمين الزجاج">Glasversicherung</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a></li>
+        </ul>
+      </div>
+
+      <div class="kat-card">
+        <div class="kat-head">
+          <div class="k-icon"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 6h9a3 3 0 010 6H8M19 18h-9"/></svg></div>
+          <h3 class="i18n" data-de="Recht &amp; Gewerbe" data-ar="القانون والأعمال">Recht &amp; Gewerbe</h3>
+        </div>
+        <ul class="kat-links">
+          <li><a href="haftpflichtversicherung/"><span class="i18n" data-de="Haftpflichtversicherung" data-ar="تأمين المسؤولية">Haftpflichtversicherung</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a></li>
+          <li><a href="rechtsschutzversicherung/"><span class="i18n" data-de="Rechtsschutzversicherung" data-ar="تأمين الحماية القانونية">Rechtsschutzversicherung</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a></li>
+          <li><a href="gewerbeversicherung/"><span class="i18n" data-de="Gewerbeversicherung" data-ar="تأمين الأعمال التجارية">Gewerbeversicherung</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a></li>
+        </ul>
+      </div>
+
+      <div class="kat-card">
+        <div class="kat-head">
+          <div class="k-icon"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 015 5v3.5a3.5 3.5 0 01-6.8 1.2c-.5-1.4-1.9-2.4-3.4-2.4A2.8 2.8 0 011 14.5C1 12 3 10 5.5 10H9z"/></svg></div>
+          <h3 class="i18n" data-de="Tiere &amp; Reise" data-ar="الحيوانات والسفر">Tiere &amp; Reise</h3>
+        </div>
+        <ul class="kat-links">
+          <li><a href="tierkrankenversicherung/"><span class="i18n" data-de="Tierkrankenversicherung" data-ar="التأمين الصحي للحيوانات">Tierkrankenversicherung</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a></li>
+          <li><a href="reiseversicherung/"><span class="i18n" data-de="Reiseversicherung" data-ar="تأمين السفر">Reiseversicherung</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></a></li>
+        </ul>
+      </div>
+
+    </div>
+  <div class="section-cta reveal">
+      <button type="button" class="btn btn-primary open-funnel i18n" data-de="Angebot anfordern" data-ar="اطلب عرض سعر">Angebot anfordern</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CTA ================= -->
+<div class="cta-wrap">
+  <div class="cta reveal">
+    <div>
+      <h2 class="i18n" data-de="Bereit für eine persönliche Beratung?" data-ar="جاهز لاستشارة شخصية؟">Bereit für eine persönliche Beratung?</h2>
+      <p class="i18n" data-de="Schreiben Sie uns – wir melden uns innerhalb von 24 Stunden." data-ar="ابعتلنا رسالة، ومنرجعلك خلال 24 ساعة.">Schreiben Sie uns – wir melden uns innerhalb von 24 Stunden.</p>
+    </div>
+    <div class="cta-actions">
+      <a href="#contact" class="btn btn-white i18n" data-de="Jetzt Kontakt aufnehmen" data-ar="تواصل معنا الآن">Jetzt Kontakt aufnehmen</a>
+      <a href="tel:+491799673909" class="btn btn-outline-white i18n" data-de="Direkt anrufen" data-ar="اتصل فينا مباشرة">Direkt anrufen</a>
+    </div>
+  </div>
+</div>
+
+<!-- ================= CONTACT FORM ================= -->
+<section id="contact">
+  <div class="container">
+    <div class="contact-grid">
+      <div class="reveal">
+        <span class="kicker i18n" data-de="Kontakt" data-ar="تواصل معنا">Kontakt</span>
+        <h2 class="i18n" data-de="Schreiben Sie uns Ihr Anliegen" data-ar="ابعتلنا طلبك">Schreiben Sie uns Ihr Anliegen</h2>
+        <p class="i18n" data-de="Füllen Sie das Formular aus – wir melden uns innerhalb von 24 Stunden bei Ihnen, auf Deutsch oder Arabisch." data-ar="عبّي النموذج ومنرجعلك خلال 24 ساعة، بالألماني أو العربي.">Füllen Sie das Formular aus – wir melden uns innerhalb von 24 Stunden bei Ihnen, auf Deutsch oder Arabisch.</p>
+        <ul class="about-list" style="margin-top:30px;">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.8 19.8 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.8 19.8 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.13.96.36 1.9.68 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.9.32 1.85.55 2.81.68A2 2 0 0122 16.92z"/></svg><a href="tel:+491799673909">+49 179 9673909</a></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M4 4h16v16H4z"/><path d="M4 6l8 7 8-7"/></svg><a href="mailto:info@dienstly24.de">info@dienstly24.de</a></li>
+        </ul>
+
+        <div class="trust-badge reveal">
+          <div class="shield"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg></div>
+          <p class="i18n"
+             data-de="Die Versicherungsvermittlung erfolgt über einen zugelassenen Versicherungsmakler gem. § 34d Abs. 1 GewO. <a href='erstinformation.html'>Mehr erfahren</a>"
+             data-ar="وساطة التأمين تتم عبر وسيط تأمين مرخّص وفق § 34d فقرة 1 GewO. <a href='erstinformation.html'>اعرف أكثر</a>">
+             Die Versicherungsvermittlung erfolgt über einen zugelassenen Versicherungsmakler gem. § 34d Abs. 1 GewO. <a href="erstinformation.html">Mehr erfahren</a>
+          </p>
+        </div>
+      </div>
+
+      <form class="contact-form reveal" id="contactForm">
+        <div class="form-row">
+          <label class="i18n" data-de="Name" data-ar="الاسم">Name</label>
+          <input type="text" name="name" required>
+        </div>
+        <div class="form-row">
+          <label class="i18n" data-de="E-Mail oder Telefon" data-ar="الإيميل أو رقم الهاتف">E-Mail oder Telefon</label>
+          <input type="text" name="contact" required>
+        </div>
+        <div class="form-row">
+          <label class="i18n" data-de="Gewünschte Leistung" data-ar="الخدمة المطلوبة">Gewünschte Leistung</label>
+          <select name="service">
+            <option class="i18n" data-de="Kfz-Versicherung" data-ar="تأمين السيارات">Kfz-Versicherung</option>
+            <option class="i18n" data-de="Krankenversicherung" data-ar="التأمين الصحي">Krankenversicherung</option>
+            <option class="i18n" data-de="Zahnzusatzversicherung" data-ar="تأمين الأسنان الإضافي">Zahnzusatzversicherung</option>
+            <option class="i18n" data-de="Kfz-Zulassungsservice" data-ar="خدمة تسجيل السيارات">Kfz-Zulassungsservice</option>
+            <option class="i18n" data-de="Kennzeichen per Post" data-ar="لوحات السيارة بالبريد">Kennzeichen per Post</option>
+            <option class="i18n" data-de="Strom &amp; Gas" data-ar="الكهرباء والغاز">Strom &amp; Gas</option>
+            <option class="i18n" data-de="Sonstiges" data-ar="أخرى">Sonstiges</option>
+          </select>
+        </div>
+
+        <!-- Dynamische Zusatzfelder je nach gewählter Leistung (per JS befüllt) -->
+        <div id="extraFields"></div>
+
+        <div class="form-row">
+          <label class="i18n" data-de="Ihre Nachricht" data-ar="رسالتك">Ihre Nachricht</label>
+          <textarea name="message" rows="4"></textarea>
+        </div>
+        <div class="form-row form-file">
+          <label class="i18n" data-de="Dokumente anhängen (optional)" data-ar="إرفاق مستندات (اختياري)">Dokumente anhängen (optional)</label>
+          <input type="file" name="files" multiple accept=".pdf,.jpg,.jpeg,.png">
+          <p class="file-hint i18n"
+             data-de="Hinweis: Anhänge werden aktuell am besten per WhatsApp oder als Antwort auf unsere E-Mail gesendet."
+             data-ar="ملاحظة: حاليًا الأفضل ترسل المرفقات عبر واتساب أو كرد على إيميلنا.">Hinweis: Anhänge werden aktuell am besten per WhatsApp oder als Antwort auf unsere E-Mail gesendet.</p>
+        </div>
+        <!-- ============================================================
+             TODO CRM-ANBINDUNG:
+             Sobald der CRM-Endpoint bereitsteht, den mailto-Versand im JS
+             (Suche nach "CRM_ENDPOINT") durch einen fetch()-POST ersetzen.
+             Beispiel:
+               const fd = new FormData(document.getElementById('contactForm'));
+               fetch('https://crm.dienstly24.de/api/anfragen', {method:'POST', body: fd});
+             Dann funktioniert auch der Datei-Upload automatisch mit.
+             ============================================================ -->
+        <div class="form-row consent-row" id="consentRow">
+          <input type="checkbox" id="privacyConsent" name="privacyConsent" required>
+          <label for="privacyConsent" class="i18n"
+            data-de="Ich stimme zu, dass meine Angaben zur Bearbeitung meiner Anfrage gespeichert und verarbeitet werden. Weitere Informationen in der <a href='datenschutz.html' target='_blank'>Datenschutzerklärung</a>. *"
+            data-ar="أوافق على حفظ ومعالجة بياناتي لغرض الرد على طلبي. مزيد من المعلومات في <a href='datenschutz.html' target='_blank'>سياسة الخصوصية</a>. *">
+            Ich stimme zu, dass meine Angaben zur Bearbeitung meiner Anfrage gespeichert und verarbeitet werden. Weitere Informationen in der <a href="datenschutz.html" target="_blank">Datenschutzerklärung</a>. *</label>
+        </div>
+        <button type="submit" class="btn btn-primary i18n" id="formSubmitBtn" data-de="Anfrage senden" data-ar="إرسال الطلب" style="width:100%; justify-content:center;">Anfrage senden</button>
+        <div class="security-row">
+          <span><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg><span class="i18n" data-de="SSL-verschlüsselt" data-ar="اتصال مشفّر SSL">SSL-verschlüsselt</span></span>
+          <span><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><path d="M12 2l8 4v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6l8-4z"/></svg><span class="i18n" data-de="DSGVO-konform" data-ar="متوافق مع DSGVO">DSGVO-konform</span></span>
+          <span><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg><span class="i18n" data-de="Ihre Daten werden vertraulich behandelt" data-ar="بياناتك بتتعامل بسرية تامة">Ihre Daten werden vertraulich behandelt</span></span>
+        </div>
+        <p class="form-note i18n" data-de="Beim Absenden öffnet sich Ihr E-Mail-Programm mit den ausgefüllten Angaben." data-ar="عند الإرسال، بينفتحلك برنامج الإيميل تبعك وفيه البيانات جاهزة.">Beim Absenden öffnet sich Ihr E-Mail-Programm mit den ausgefüllten Angaben.</p>
+      </form>
+      <div class="form-success" id="formSuccess">
+        <div class="fs-icon">✓</div>
+        <h3 class="i18n" data-de="Vielen Dank!" data-ar="شكرًا جزيلاً!">Vielen Dank!</h3>
+        <p class="i18n"
+           data-de="Ihre Anfrage wurde erfolgreich an unser Team übermittelt.<br>Wir melden uns schnellstmöglich bei Ihnen – in der Regel innerhalb von 24 Stunden."
+           data-ar="وصل طلبك لفريقنا بنجاح.<br>رح نتواصل معك بأسرع وقت — عادةً خلال 24 ساعة.">
+           Ihre Anfrage wurde erfolgreich an unser Team übermittelt.<br>Wir melden uns schnellstmöglich bei Ihnen – in der Regel innerhalb von 24 Stunden.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer id="kontakt-info">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-wordmark">Dienstly<span>24</span></div>
+        <p class="about-text i18n"
+           data-de="Ihr persönlicher Ansprechpartner für Versicherungen, Kfz-Zulassung sowie Strom und Gas in Deutschland – auf Deutsch und Arabisch."
+           data-ar="مرجعك الشخصي لمواضيع التأمين وتسجيل السيارات والكهرباء والغاز بألمانيا، بالألماني والعربي.">
+           Ihr persönlicher Ansprechpartner für Versicherungen, Kfz-Zulassung sowie Strom und Gas in Deutschland – auf Deutsch und Arabisch.
+        </p>
+        <div class="social-row">
+          <a href="https://www.facebook.com/Dienstly24" target="_blank" rel="noopener" aria-label="Facebook">
+            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M13 22v-9h3l1-4h-4V6.5C13 5.4 13.4 5 14.6 5H17V1.2C16.6 1.1 15.3 1 13.9 1 11 1 9 2.8 9 6.1V9H6v4h3v9h4z"/></svg>
+          </a>
+          <a href="https://www.tiktok.com/@dienstly24" target="_blank" rel="noopener" aria-label="TikTok">
+            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M16.5 2c.4 2.3 1.9 3.8 4.2 4v3c-1.5 0-2.9-.4-4.2-1.2v6.7c0 3.6-2.9 6.5-6.5 6.5S3.5 17.1 3.5 13.5 6.4 7 10 7c.3 0 .6 0 .9.1v3.2c-.3-.1-.6-.1-.9-.1-1.8 0-3.3 1.5-3.3 3.3S8.2 16.8 10 16.8s3.3-1.5 3.3-3.3V2h3.2z"/></svg>
+          </a>
+          <a href="https://www.instagram.com/dienstly24" target="_blank" rel="noopener" aria-label="Instagram">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>
+          </a>
+          <a href="https://www.youtube.com/@Dienstly24" target="_blank" rel="noopener" aria-label="YouTube">
+            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M23 7.5s-.2-1.6-.9-2.3c-.9-.9-1.9-.9-2.3-1C16.6 4 12 4 12 4s-4.6 0-7.8.2c-.4.1-1.4.1-2.3 1-.7.7-.9 2.3-.9 2.3S.8 9.4.8 11.3v1.4c0 1.9.2 3.8.2 3.8s.2 1.6.9 2.3c.9.9 2 .9 2.5 1 1.8.2 7.6.2 7.6.2s4.6 0 7.8-.2c.4-.1 1.4-.1 2.3-1 .7-.7.9-2.3.9-2.3s.2-1.9.2-3.8v-1.4c0-1.9-.2-3.8-.2-3.8zM9.8 14.9V8.6l6.1 3.2-6.1 3.1z"/></svg>
+          </a>
+          <a href="https://wa.me/491799673909" target="_blank" rel="noopener" aria-label="WhatsApp">
+            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2a10 10 0 00-8.6 15L2 22l5.2-1.4A10 10 0 1012 2zm5.5 14.1c-.2.7-1.3 1.3-1.8 1.3-.5.1-1 .2-3.4-.7-2.9-1.2-4.7-4.1-4.9-4.3-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.4l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.9 1.7.3.2.5.1.7-.1l.9-1c.2-.3.4-.2.7-.1l2 .9c.3.2.5.3.6.4.1.2.1.7-.2 1.1z"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <div>
+        <h4 class="i18n" data-de="Leistungen" data-ar="خدماتنا">Leistungen</h4>
+        <ul>
+          <li><a href="#services" class="i18n" data-de="Kfz-Versicherung" data-ar="تأمين السيارات">Kfz-Versicherung</a></li>
+          <li><a href="#services" class="i18n" data-de="Krankenversicherung" data-ar="التأمين الصحي">Krankenversicherung</a></li>
+          <li><a href="#services" class="i18n" data-de="Kfz-Zulassungsservice" data-ar="خدمة تسجيل السيارات">Kfz-Zulassungsservice</a></li>
+          <li><a href="#services" class="i18n" data-de="Kennzeichen per Post" data-ar="لوحات السيارة بالبريد">Kennzeichen per Post</a></li>
+          <li><a href="#services" class="i18n" data-de="Strom &amp; Gas" data-ar="الكهرباء والغاز">Strom &amp; Gas</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="i18n" data-de="Unternehmen" data-ar="الشركة">Unternehmen</h4>
+        <ul>
+          <li><a href="#about" class="i18n" data-de="Über uns" data-ar="من نحن">Über uns</a></li>
+          <li><a href="#process" class="i18n" data-de="Ablauf" data-ar="طريقة العمل">Ablauf</a></li>
+          <li><a href="#testimonials" class="i18n" data-de="Kundenstimmen" data-ar="آراء العملاء">Kundenstimmen</a></li>
+          <li><a href="#" class="i18n" data-de="Karriere" data-ar="الوظائف">Karriere</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="i18n" data-de="Portale" data-ar="البوابات">Portale</h4>
+        <ul>
+          <!-- TODO: URLs an das echte Portal-System anpassen -->
+          <li><a href="login.html" class="i18n" data-de="Kundenportal" data-ar="بوابة العملاء">Kundenportal</a></li>
+          <li><a href="partnerportal.html" class="i18n" data-de="Partnerportal" data-ar="بوابة الشركاء">Partnerportal</a></li>
+          <li><a href="partner-werden.html" class="i18n" data-de="Partner werden" data-ar="كن شريكنا">Partner werden</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="i18n" data-de="Kontakt" data-ar="تواصل معنا">Kontakt</h4>
+        <ul>
+          <li>📞 <a href="tel:+491799673909">+49 179 9673909</a></li>
+          <li>✉️ <a href="mailto:info@dienstly24.de">info@dienstly24.de</a></li>
+          <li>🕘 <span class="i18n" data-de="Mo–Fr, 9:00–18:00 Uhr" data-ar="الإثنين–الجمعة، 9:00–18:00">Mo–Fr, 9:00–18:00 Uhr</span></li>
+          <li>📍 Furtweg 51a, 22523 Hamburg</li>
+        </ul>
+      </div>
+    </div>
+
+    <p style="font-size:.74rem; color:#8a938e; line-height:1.6; margin-bottom:16px; text-align:center;" class="i18n"
+      data-de="Die Versicherungsvermittlung erfolgt über einen zugelassenen Versicherungsmakler gem. § 34d Abs. 1 GewO. Angaben zum Vermittler, Registernummer und Aufsichtsbehörde finden Sie im Impressum und in der Erstinformation."
+      data-ar="وساطة التأمين تتم عبر وسيط تأمين مرخّص وفق § 34d فقرة 1 GewO. تفاصيل الوسيط ورقم السجل وجهة الإشراف موجودة في الـImpressum وفي الـErstinformation.">
+      Die Versicherungsvermittlung erfolgt über einen zugelassenen Versicherungsmakler gem. § 34d Abs. 1 GewO. Angaben zum Vermittler, Registernummer und Aufsichtsbehörde finden Sie im Impressum und in der Erstinformation.</p>
+    <div class="footer-bottom">
+      <span>© 2026 Dienstly24 — <span class="i18n" data-de="Alle Rechte vorbehalten" data-ar="كل الحقوق محفوظة">Alle Rechte vorbehalten</span></span>
+      <div style="display:flex; gap:20px;">
+        <a href="impressum.html" class="i18n" data-de="Impressum" data-ar="Impressum">Impressum</a>
+        <a href="datenschutz.html" class="i18n" data-de="Datenschutz" data-ar="سياسة الخصوصية">Datenschutz</a>
+        <a href="agb.html" class="i18n" data-de="AGB" data-ar="الشروط والأحكام">AGB</a>
+        <a href="widerruf.html" class="i18n" data-de="Widerruf" data-ar="حق الإلغاء">Widerruf</a>
+        <a href="erstinformation.html" class="i18n" data-de="Erstinformation" data-ar="المعلومات الأولية">Erstinformation</a>
+        <a href="cookie-richtlinie.html" class="i18n" data-de="Cookie-Richtlinie" data-ar="سياسة الكوكيز">Cookie-Richtlinie</a>
+        <a href="bildnachweise.html" class="i18n" data-de="Bildnachweise" data-ar="مصادر الصور">Bildnachweise</a>
+        <a href="#" class="open-cookie-settings i18n" data-de="Cookie-Einstellungen" data-ar="إعدادات الكوكيز">Cookie-Einstellungen</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  const html = document.documentElement;
+  const langToggle = document.getElementById('langToggle');
+  const deBtn = document.querySelector('.lang-de');
+  const arBtn = document.querySelector('.lang-ar');
+  const i18nEls = document.querySelectorAll('.i18n');
+
+  function setLang(lang){
+    i18nEls.forEach(el=>{
+      const val = el.getAttribute('data-'+lang);
+      if(val !== null) el.innerHTML = val;
+    });
+    if(lang === 'de'){
+      html.setAttribute('dir','ltr'); html.setAttribute('lang','de');
+      deBtn.classList.add('active'); arBtn.classList.remove('active');
+    } else {
+      html.setAttribute('dir','rtl'); html.setAttribute('lang','ar');
+      arBtn.classList.add('active'); deBtn.classList.remove('active');
+    }
+  }
+
+  langToggle.addEventListener('click', ()=>{
+    const current = html.getAttribute('lang') === 'de' ? 'ar' : 'de';
+    setLang(current);
+  });
+
+  const menuToggle = document.querySelector('.menu-toggle');
+  const navLinks = document.querySelector('.nav-links');
+  menuToggle.addEventListener('click', ()=>{
+    const willOpen = !navLinks.classList.contains('is-open');
+    navLinks.classList.toggle('is-open', willOpen);
+    menuToggle.classList.toggle('is-open', willOpen);
+    menuToggle.setAttribute('aria-expanded', String(willOpen));
+  });
+  navLinks.querySelectorAll('a').forEach(a=>{
+    a.addEventListener('click', ()=>{
+      navLinks.classList.remove('is-open');
+      menuToggle.classList.remove('is-open');
+      menuToggle.setAttribute('aria-expanded','false');
+    });
+  });
+
+  const siteHeader = document.querySelector('header');
+  const onScroll = ()=> siteHeader.classList.toggle('is-scrolled', window.scrollY > 8);
+  onScroll();
+  window.addEventListener('scroll', onScroll, {passive:true});
+
+  const contactForm = document.getElementById('contactForm');
+
+  // ---- Live-Validierung: Fehlermeldung unter dem Feld, direkt beim Verlassen ----
+  const VAL_MSG = {
+    de:{required:'Bitte füllen Sie dieses Feld aus.', contact:'Bitte geben Sie eine gültige E-Mail-Adresse oder Telefonnummer ein.', consent:'Bitte stimmen Sie der Datenverarbeitung zu.'},
+    ar:{required:'يرجى تعبئة هذا الحقل.', contact:'يرجى إدخال إيميل صحيح أو رقم هاتف صحيح.', consent:'يرجى الموافقة على معالجة البيانات.'}
+  };
+  function ensureErrorEl(row){
+    let el = row.querySelector('.field-error');
+    if(!el){ el = document.createElement('p'); el.className = 'field-error'; row.appendChild(el); }
+    return el;
+  }
+  function validateField(input){
+    const row = input.closest('.form-row'); if(!row) return true;
+    const L = getLang();
+    let msg = '';
+    const v = input.value.trim();
+    if(input.hasAttribute('required') && !v) msg = VAL_MSG[L].required;
+    else if(input.name === 'contact' && v){
+      const okMail = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
+      const okTel = /^[+0-9][0-9 \/()-]{5,}$/.test(v);
+      if(!okMail && !okTel) msg = VAL_MSG[L].contact;
+    }
+    row.classList.toggle('invalid', !!msg);
+    if(msg) ensureErrorEl(row).textContent = msg;
+    return !msg;
+  }
+  contactForm.querySelectorAll('input[required], input[name="contact"], textarea').forEach(inp=>{
+    inp.addEventListener('blur', ()=>validateField(inp));
+    inp.addEventListener('input', ()=>{ if(inp.closest('.form-row')?.classList.contains('invalid')) validateField(inp); });
+  });
+
+  contactForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    let ok = true;
+    contactForm.querySelectorAll('input[required]:not([type="checkbox"]), input[name="contact"]').forEach(inp=>{ if(!validateField(inp)) ok = false; });
+    const consent = document.getElementById('privacyConsent');
+    const consentRow = document.getElementById('consentRow');
+    if(!consent.checked){ consentRow.classList.add('invalid'); ok = false; } else consentRow.classList.remove('invalid');
+    if(!ok) return;
+
+    // Ladeanimation
+    const btn = document.getElementById('formSubmitBtn');
+    btn.classList.add('loading');
+
+    // ===== CRM_ENDPOINT: Hier später per fetch() ans CRM senden statt mailto.
+    // Beispiel: fetch('https://crm.dienstly24.de/api/anfragen', {method:'POST', body:new FormData(contactForm)})
+    //   .then(()=>{ Erfolg anzeigen }) — dann funktionieren auch Datei-Anhänge. =====
+    const service = contactForm.service.value;
+    const lines = [];
+    new FormData(contactForm).forEach((v, k)=>{
+      if(k === 'files' || k === 'privacyConsent' || v === '') return;
+      lines.push(k + ': ' + v);
+    });
+    lines.push('', 'Datenschutz-Einwilligung: erteilt am ' + new Date().toLocaleString('de-DE'));
+    const subject = encodeURIComponent('Anfrage über Dienstly24: ' + service);
+    window.location.href = 'mailto:info@dienstly24.de?subject=' + subject + '&body=' + encodeURIComponent(lines.join('\n'));
+
+    // Erfolgsbestätigung anzeigen
+    setTimeout(()=>{
+      btn.classList.remove('loading');
+      contactForm.style.display = 'none';
+      document.getElementById('formSuccess').classList.add('show');
+    }, 900);
+  });
+
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, {threshold:0.15});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  // ---- Animierte Zähler (Stats-Sektion) ----
+  const counters = document.querySelectorAll('.count');
+  const counterIO = new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      if(!entry.isIntersecting) return;
+      const el = entry.target;
+      counterIO.unobserve(el);
+      const target = parseInt(el.dataset.target, 10);
+      const duration = 1800;
+      const start = performance.now();
+      function tick(now){
+        const p = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+        el.textContent = Math.round(target * eased).toLocaleString('de-DE');
+        if(p < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    });
+  }, {threshold:0.5});
+  counters.forEach(c=>counterIO.observe(c));
+
+  // ---- FAQ Accordion ----
+  document.querySelectorAll('.faq-item').forEach(item=>{
+    const q = item.querySelector('.faq-q');
+    const a = item.querySelector('.faq-a');
+    q.addEventListener('click', ()=>{
+      const isOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item.open').forEach(o=>{
+        o.classList.remove('open');
+        o.querySelector('.faq-a').style.maxHeight = null;
+      });
+      if(!isOpen){
+        item.classList.add('open');
+        a.style.maxHeight = a.scrollHeight + 'px';
+      }
+    });
+  });
+
+  // ---- WhatsApp-Label nach 6s dezent ausblenden ----
+  setTimeout(()=>{ const w = document.querySelector('.wa-float'); if(w) w.classList.remove('show-label'); }, 6000);
+
+  // ============================================================
+  // SERVICE-MODAL: Daten je Leistung (DE/AR)
+  // Neuen Service hinzufügen = neuen Schlüssel in SERVICE_DATA anlegen
+  // (Schlüssel muss exakt dem <h3>-Text der Service-Karte entsprechen)
+  // ============================================================
+  const SERVICE_DATA = {
+    'Kfz-Versicherung': {
+      desc: {de:'Haftpflicht, Teilkasko oder Vollkasko? Wir vergleichen die Tarife führender Versicherer und finden den Schutz, der wirklich zu Ihnen und Ihrem Fahrzeug passt.', ar:'إلزامي، جزئي أو شامل؟ منقارنلك عروض أكبر شركات التأمين ومنلاقيلك التغطية يلي فعلاً بتناسبك وبتناسب سيارتك.'},
+      benefits: [
+        {de:'Vergleich vieler Anbieter – ein Ansprechpartner', ar:'مقارنة بين عدة شركات — ومرجع واحد إلك'},
+        {de:'Hilfe beim Wechsel und bei der Kündigung', ar:'مساعدة بتبديل الشركة وإلغاء العقد القديم'},
+        {de:'Unterstützung im Schadensfall', ar:'وقوف معك بحال صار حادث'}
+      ],
+      faq: [
+        {q:{de:'Wann kann ich wechseln?', ar:'إيمتى فيني بدّل شركة التأمين؟'}, a:{de:'Regulär zum 30. November – bei Beitragserhöhung oder Fahrzeugwechsel auch außerordentlich.', ar:'عادةً قبل 30 نوفمبر — وبحال رفعوا القسط أو غيّرت سيارتك فيك تبدّل بأي وقت.'}},
+        {q:{de:'Was kostet die Beratung?', ar:'قديش بتكلف الاستشارة؟'}, a:{de:'Nichts. Unsere Beratung ist für Sie komplett kostenlos.', ar:'ولا شي. الاستشارة مجانية بالكامل.'}}
+      ]
+    },
+    'Krankenversicherung': {
+      desc: {de:'Gesetzlich oder privat? Wir erklären die Unterschiede und finden die Lösung, die zu Ihrer beruflichen und familiären Situation passt.', ar:'حكومي أو خاص؟ منشرحلك الفروقات ومنلاقيلك الحل المناسب لوضعك المهني والعائلي.'},
+      benefits: [
+        {de:'Analyse Ihrer aktuellen Situation', ar:'تحليل وضعك الحالي'},
+        {de:'GKV- und PKV-Vergleich', ar:'مقارنة بين التأمين الحكومي والخاص'},
+        {de:'Begleitung beim kompletten Wechselprozess', ar:'مرافقتك بكل خطوات التبديل'}
+      ],
+      faq: [
+        {q:{de:'Für wen lohnt sich die PKV?', ar:'لمين بيناسب التأمين الخاص؟'}, a:{de:'Häufig für Selbstständige, Beamte und Gutverdiener – wir prüfen das individuell für Sie.', ar:'غالبًا لأصحاب الأعمال الحرة والموظفين الحكوميين وأصحاب الدخل العالي — منفحصلك وضعك بشكل فردي.'}},
+        {q:{de:'Kann meine Familie mitversichert werden?', ar:'فيني ضم عيلتي عالتأمين؟'}, a:{de:'In der GKV ist eine kostenlose Familienversicherung oft möglich – wir beraten Sie dazu.', ar:'بالتأمين الحكومي غالبًا في تأمين عائلي مجاني — منشرحلك التفاصيل.'}}
+      ]
+    },
+    'Zahnzusatzversicherung': {
+      desc: {de:'Hochwertiger Zahnersatz kann schnell mehrere tausend Euro kosten. Eine Zahnzusatzversicherung schließt die Lücke der gesetzlichen Kasse.', ar:'تعويضات الأسنان الجيدة ممكن تكلف آلاف اليوروهات. تأمين الأسنان الإضافي بيغطي الفرق يلي ما بتدفعه الكاسة الحكومية.'},
+      benefits: [
+        {de:'Bis zu 100 % Kostenübernahme möglich', ar:'تغطية ممكن توصل لـ 100% من التكاليف'},
+        {de:'Auch für Kieferorthopädie bei Kindern', ar:'بيشمل تقويم الأسنان للأطفال'},
+        {de:'Tarife bereits ab wenigen Euro im Monat', ar:'أقساط بتبلش من كم يورو بالشهر'}
+      ],
+      faq: [
+        {q:{de:'Lohnt sich das auch mit gesunden Zähnen?', ar:'بيستاهل حتى لو أسناني سليمة؟'}, a:{de:'Gerade dann – die Beiträge sind niedriger, solange keine Behandlungen anstehen.', ar:'بالعكس هي أفضل فترة — الأقساط بتكون أرخص طالما ما في علاجات قيد التنفيذ.'}},
+        {q:{de:'Gibt es Wartezeiten?', ar:'في فترة انتظار؟'}, a:{de:'Je nach Tarif – es gibt auch Tarife ohne Wartezeit. Wir finden den passenden.', ar:'حسب العقد — في عقود بدون فترة انتظار، ومنلاقيلك المناسب.'}}
+      ]
+    },
+    'Kfz-Zulassungsservice': {
+      desc: {de:'Keine Lust auf Warteschlangen bei der Zulassungsstelle? Wir übernehmen die komplette An-, Um- oder Abmeldung Ihres Fahrzeugs für Sie.', ar:'ما عندك وقت لدور الانتظار بدائرة الترخيص؟ منتكفل بكل إجراءات تسجيل أو تحويل أو إلغاء تسجيل سيارتك.'},
+      benefits: [
+        {de:'Komplette Abwicklung ohne Behördengang', ar:'إنجاز كامل بدون ما تروح على أي دائرة'},
+        {de:'Anmeldung, Ummeldung und Abmeldung', ar:'تسجيل جديد، تحويل ملكية، وإلغاء تسجيل'},
+        {de:'Schnelle Bearbeitung deutschlandweit', ar:'معالجة سريعة بكل ألمانيا'}
+      ],
+      faq: [
+        {q:{de:'Welche Unterlagen brauche ich?', ar:'شو الأوراق المطلوبة؟'}, a:{de:'In der Regel Fahrzeugschein, Fahrzeugbrief, eVB-Nummer und Personalausweis – wir schicken Ihnen eine Checkliste.', ar:'عادةً رخصة السيارة الصغيرة والكبيرة ورقم eVB والهوية — منبعتلك قائمة كاملة.'}},
+        {q:{de:'Wie lange dauert die Zulassung?', ar:'قديش بياخد التسجيل؟'}, a:{de:'Meist nur wenige Werktage – je nach Zulassungsstelle.', ar:'غالبًا كم يوم عمل بس — حسب دائرة الترخيص.'}}
+      ]
+    },
+    'Kennzeichen per Post': {
+      desc: {de:'Bestellen Sie Ihre neuen Kennzeichen bequem online – wir prägen und versenden sie sicher direkt zu Ihnen nach Hause.', ar:'اطلب لوحاتك الجديدة أونلاين بكل راحة — مننقشها ومنبعتها بشكل آمن لحد باب بيتك.'},
+      benefits: [
+        {de:'Versand direkt nach Hause', ar:'توصيل مباشر للمنزل'},
+        {de:'Auch Wunschkennzeichen möglich', ar:'فيك تختار أرقام وحروف على ذوقك'},
+        {de:'Schnell, sicher und günstig', ar:'سريع وآمن وبسعر منافس'}
+      ],
+      faq: [
+        {q:{de:'Wie schnell kommen die Kennzeichen an?', ar:'قديش بتوصل اللوحات؟'}, a:{de:'In der Regel innerhalb von 1–3 Werktagen.', ar:'عادةً خلال 1–3 أيام عمل.'}},
+        {q:{de:'Kann ich ein Wunschkennzeichen reservieren?', ar:'فيني احجز لوحة برقم خاص؟'}, a:{de:'Ja – teilen Sie uns einfach Ihren Wunsch mit, wir prüfen die Verfügbarkeit.', ar:'أكيد — ابعتلنا رغبتك ومنشيك إذا الرقم متوفر.'}}
+      ]
+    },
+    'Strom & Gas': {
+      desc: {de:'Die Energiepreise ändern sich ständig. Wir prüfen Ihren aktuellen Tarif und zeigen Ihnen, wie viel Sie durch einen Wechsel sparen können.', ar:'أسعار الطاقة عم تتغير باستمرار. منراجع تعرفتك الحالية ومنوريك قديش فيك توفر إذا بدّلت المزود.'},
+      benefits: [
+        {de:'Kostenloser Tarif-Check', ar:'فحص مجاني لتعرفتك الحالية'},
+        {de:'Wechselservice komplett aus einer Hand', ar:'خدمة التبديل كاملة من عنا'},
+        {de:'Zugang zu Tarifen von Vattenfall, LichtBlick u.v.m.', ar:'وصول لعروض Vattenfall وLichtBlick وغيرهم'}
+      ],
+      faq: [
+        {q:{de:'Ist der Wechsel kompliziert?', ar:'هل التبديل معقد؟'}, a:{de:'Nein – wir übernehmen die Kündigung und Anmeldung. Ihre Versorgung läuft ohne Unterbrechung weiter.', ar:'أبدًا — منتكفل بإلغاء العقد القديم وتسجيل الجديد، والكهرباء ما بتنقطع ولا لحظة.'}},
+        {q:{de:'Was brauche ich für den Vergleich?', ar:'شو بتحتاجوا مني للمقارنة؟'}, a:{de:'Nur Ihre letzte Jahresabrechnung oder Ihren ungefähren Jahresverbrauch in kWh.', ar:'بس فاتورتك السنوية الأخيرة أو استهلاكك التقريبي بالكيلوواط ساعة.'}}
+      ]
+    }
+  };
+
+  // ============================================================
+  // Dynamische Zusatzfelder je Leistung (Schlüssel = data-de der Option)
+  // ============================================================
+  const EXTRA_FIELDS = {
+    'Kfz-Versicherung': [
+      {name:'fahrzeug', type:'text', label:{de:'Fahrzeug (z.B. VW Golf, 2020)', ar:'السيارة (مثلاً VW Golf موديل 2020)'}},
+      {name:'aktuell_versichert', type:'select', label:{de:'Aktuell versichert?', ar:'عندك تأمين حاليًا؟'}, options:[{de:'Ja', ar:'نعم'},{de:'Nein', ar:'لا'}]}
+    ],
+    'Krankenversicherung': [
+      {name:'status', type:'select', label:{de:'Beruflicher Status', ar:'الوضع المهني'}, options:[{de:'Angestellt', ar:'موظف'},{de:'Selbstständig', ar:'عمل حر'},{de:'Student', ar:'طالب'},{de:'Sonstiges', ar:'غير ذلك'}]},
+      {name:'art', type:'select', label:{de:'Gesetzlich oder privat?', ar:'حكومي أو خاص؟'}, options:[{de:'Gesetzlich', ar:'حكومي'},{de:'Privat', ar:'خاص'},{de:'Unsicher – bitte beraten', ar:'مش متأكد — بدي استشارة'}]}
+    ],
+    'Zahnzusatzversicherung': [
+      {name:'krankenkasse', type:'text', label:{de:'Ihre aktuelle Krankenkasse', ar:'شركة التأمين الصحي الحالية'}}
+    ],
+    'Kfz-Zulassungsservice': [
+      {name:'anliegen', type:'select', label:{de:'Ihr Anliegen', ar:'نوع المعاملة'}, options:[{de:'Anmeldung', ar:'تسجيل جديد'},{de:'Ummeldung', ar:'تحويل ملكية'},{de:'Abmeldung', ar:'إلغاء تسجيل'}]},
+      {name:'plz', type:'text', label:{de:'PLZ des Zulassungsbezirks', ar:'الرمز البريدي لمنطقة الترخيص'}}
+    ],
+    'Kennzeichen per Post': [
+      {name:'wunschkennzeichen', type:'text', label:{de:'Wunschkennzeichen (optional)', ar:'رقم اللوحة المرغوب (اختياري)'}},
+      {name:'plz', type:'text', label:{de:'Ihre PLZ', ar:'رمزك البريدي'}}
+    ],
+    'Strom & Gas': [
+      {name:'energieart', type:'select', label:{de:'Strom oder Gas?', ar:'كهرباء أو غاز؟'}, options:[{de:'Strom', ar:'كهرباء'},{de:'Gas', ar:'غاز'},{de:'Beides', ar:'الاثنين'}]},
+      {name:'verbrauch', type:'text', label:{de:'Jahresverbrauch in kWh (ca.)', ar:'الاستهلاك السنوي بالكيلوواط ساعة (تقريبًا)'}}
+    ]
+  };
+
+  const getLang = () => html.getAttribute('lang') === 'ar' ? 'ar' : 'de';
+
+  // ---- Modal öffnen/schließen ----
+  const modal = document.getElementById('serviceModal');
+  const modalContent = document.getElementById('modalContent');
+  let currentModalKey = null;
+
+  function renderModal(key){
+    const d = SERVICE_DATA[key]; if(!d) return;
+    const L = getLang();
+    const t = {
+      benefits: L==='de' ? 'Ihre Vorteile' : 'مميزاتك',
+      faq: L==='de' ? 'Häufige Fragen' : 'أسئلة شائعة',
+      offer: L==='de' ? 'Angebot anfordern' : 'اطلب عرض سعر',
+      wa: L==='de' ? 'Per WhatsApp fragen' : 'اسأل عبر واتساب'
+    };
+    modalContent.innerHTML = `
+      <h3 id="modalTitle">${key}</h3>
+      <p class="m-desc">${d.desc[L]}</p>
+      <h4>${t.benefits}</h4>
+      <ul class="m-benefits">${d.benefits.map(b=>`<li>${b[L]}</li>`).join('')}</ul>
+      <h4>${t.faq}</h4>
+      ${d.faq.map(f=>`<div class="m-faq"><strong>${f.q[L]}</strong><p>${f.a[L]}</p></div>`).join('')}
+      <div class="m-actions">
+        <button type="button" class="btn btn-primary" id="modalOffer">${t.offer}</button>
+        <a class="btn btn-wa" href="https://wa.me/491799673909?text=${encodeURIComponent(key)}" target="_blank" rel="noopener">${t.wa}</a>
+      </div>`;
+    document.getElementById('modalOffer').addEventListener('click', ()=>{
+      openFunnel(key); // startet den mehrstufigen Anfrage-Funnel
+    });
+  }
+
+  function openModal(key){
+    currentModalKey = key;
+    renderModal(key);
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal(){
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+    currentModalKey = null;
+    funnel = null;
+  }
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  modal.addEventListener('click', e=>{ if(e.target === modal) closeModal(); });
+  document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && modal.classList.contains('open')) closeModal(); });
+
+  // Service-Karten: Klick öffnet Modal statt direkt zum Formular zu springen
+  document.querySelectorAll('.service-card').forEach(card=>{
+    card.addEventListener('click', e=>{
+      const key = card.querySelector('h3').textContent.trim();
+      if(SERVICE_DATA[key]){ e.preventDefault(); openModal(key); }
+    });
+  });
+
+  // ---- Smartes Formular: Zusatzfelder je Leistung ----
+  const serviceSelect = document.querySelector('#contactForm select[name="service"]');
+  const extraWrap = document.getElementById('extraFields');
+
+  function renderExtraFields(){
+    const opt = serviceSelect.selectedOptions[0];
+    const key = opt ? opt.getAttribute('data-de') : null;
+    const fields = EXTRA_FIELDS[key] || [];
+    const L = getLang();
+    extraWrap.innerHTML = fields.map(f=>{
+      if(f.type === 'select'){
+        return `<div class="form-row"><label>${f.label[L]}</label>
+          <select name="${f.name}">${f.options.map(o=>`<option value="${o.de}">${o[L]}</option>`).join('')}</select></div>`;
+      }
+      return `<div class="form-row"><label>${f.label[L]}</label><input type="text" name="${f.name}"></div>`;
+    }).join('');
+  }
+  serviceSelect.addEventListener('change', renderExtraFields);
+  renderExtraFields();
+
+  function preselectService(deName){
+    [...serviceSelect.options].forEach((o,i)=>{ if(o.getAttribute('data-de') === deName) serviceSelect.selectedIndex = i; });
+    renderExtraFields();
+  }
+
+  // Bei Sprachwechsel: offene dynamische Inhalte neu rendern
+  langToggle.addEventListener('click', ()=>{
+    renderExtraFields();
+    if(currentModalKey) renderModal(currentModalKey);
+    if(funnel) renderFunnel();
+  });
+
+  // ============================================================
+  // ANFRAGE-FUNNEL: mehrstufiger Frage-Dialog
+  // Ablauf: Leistung wählen -> servicespezifische Fragen -> Kontakt -> Zusammenfassung -> Senden
+  // Senden = mailto (siehe CRM_ENDPOINT-Hinweis: später durch fetch-POST ans CRM ersetzen)
+  // ============================================================
+  const FUNNEL_T = {
+    choose:{de:'Was möchten Sie versichern oder anfragen?', ar:'شو حابب تؤمّن أو تطلب؟'},
+    contactQ:{de:'Fast geschafft! Wie erreichen wir Sie?', ar:'وصلنا عالآخر! كيف منقدر نتواصل معك؟'},
+    name:{de:'Ihr Name', ar:'اسمك'},
+    contact:{de:'E-Mail oder Telefonnummer', ar:'الإيميل أو رقم الهاتف'},
+    next:{de:'Weiter', ar:'التالي'},
+    back:{de:'← Zurück', ar:'→ رجوع'},
+    summaryQ:{de:'Ihre Anfrage im Überblick', ar:'ملخص طلبك'},
+    send:{de:'Anfrage senden', ar:'إرسال الطلب'},
+    service:{de:'Leistung', ar:'الخدمة'},
+    skip:{de:'Überspringen', ar:'تخطي'}
+  };
+
+  let funnel = null; // {key, steps, idx, answers}
+
+  function buildFunnelSteps(key){
+    const steps = [];
+    if(!key) steps.push({type:'choose'});
+    else steps.push(...(EXTRA_FIELDS[key]||[]).map(f=>({type:'field', field:f})));
+    steps.push({type:'contact'});
+    steps.push({type:'summary'});
+    return steps;
+  }
+
+  function openFunnel(key){
+    funnel = {key: key||null, idx:0, answers:{}, steps: buildFunnelSteps(key)};
+    renderFunnel();
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    currentModalKey = null;
+  }
+
+  function funnelNext(){ 
+    if(funnel.idx < funnel.steps.length-1){ funnel.idx++; renderFunnel(); }
+  }
+  function funnelBack(){
+    if(funnel.idx > 0){ funnel.idx--; renderFunnel(); }
+    else if(funnel.key){ const k = funnel.key; funnel = null; openModal(k); } // zurück zur Info-Ansicht
+  }
+
+  function renderFunnel(){
+    if(!funnel) return;
+    const L = getLang();
+    const step = funnel.steps[funnel.idx];
+    const pct = Math.round(((funnel.idx+1) / funnel.steps.length) * 100);
+    let body = '';
+
+    if(step.type === 'choose'){
+      const keys = Object.keys(SERVICE_DATA);
+      body = `<div class="funnel-q">${FUNNEL_T.choose[L]}</div>
+        <div class="funnel-options">` +
+        keys.map(k=>`<button type="button" class="funnel-opt" data-choose="${k}">${k}</button>`).join('') +
+        `</div>`;
+    }
+    else if(step.type === 'field'){
+      const f = step.field;
+      if(f.type === 'select'){
+        body = `<div class="funnel-q">${f.label[L]}</div>
+          <div class="funnel-options">` +
+          f.options.map(o=>`<button type="button" class="funnel-opt" data-answer="${f.name}" data-value="${o.de}">${o[L]}</button>`).join('') +
+          `</div>
+          <div class="funnel-nav"><button type="button" class="funnel-back" id="fBack">${FUNNEL_T.back[L]}</button>
+          <button type="button" class="funnel-back" id="fSkip">${FUNNEL_T.skip[L]}</button></div>`;
+      } else {
+        const val = funnel.answers[f.name] || '';
+        body = `<div class="funnel-q">${f.label[L]}</div>
+          <input type="text" class="funnel-input" id="fInput" value="${val.replace(/"/g,'&quot;')}">
+          <div class="funnel-nav">
+            <button type="button" class="funnel-back" id="fBack">${FUNNEL_T.back[L]}</button>
+            <button type="button" class="btn btn-primary" id="fNext">${FUNNEL_T.next[L]}</button>
+          </div>`;
+      }
+    }
+    else if(step.type === 'contact'){
+      const consentTxt = L==='de'
+        ? `Ich stimme zu, dass meine Angaben zur Bearbeitung meiner Anfrage gespeichert und verarbeitet werden. <a href="datenschutz.html" target="_blank">Datenschutzerklärung</a> *`
+        : `أوافق على حفظ ومعالجة بياناتي لغرض الرد على طلبي. <a href="datenschutz.html" target="_blank">سياسة الخصوصية</a> *`;
+      body = `<div class="funnel-q">${FUNNEL_T.contactQ[L]}</div>
+        <input type="text" class="funnel-input" id="fName" placeholder="${FUNNEL_T.name[L]}" value="${(funnel.answers._name||'').replace(/"/g,'&quot;')}">
+        <input type="text" class="funnel-input" id="fContact" placeholder="${FUNNEL_T.contact[L]}" value="${(funnel.answers._contact||'').replace(/"/g,'&quot;')}">
+        <div class="consent-row" id="fConsentRow">
+          <input type="checkbox" id="fConsent" ${funnel.answers._consent ? 'checked' : ''}>
+          <label for="fConsent">${consentTxt}</label>
+        </div>
+        <div class="funnel-nav">
+          <button type="button" class="funnel-back" id="fBack">${FUNNEL_T.back[L]}</button>
+          <button type="button" class="btn btn-primary" id="fNext">${FUNNEL_T.next[L]}</button>
+        </div>`;
+    }
+    else if(step.type === 'done'){
+      const doneTxt = L==='de'
+        ? {h:'Vielen Dank!', p:'Ihre Anfrage wurde erfolgreich an unser Team übermittelt.<br>Wir melden uns schnellstmöglich bei Ihnen – in der Regel innerhalb von 24 Stunden.', b:'Fenster schließen'}
+        : {h:'شكرًا جزيلاً!', p:'وصل طلبك لفريقنا بنجاح.<br>رح نتواصل معك بأسرع وقت — عادةً خلال 24 ساعة.', b:'إغلاق النافذة'};
+      body = `<div class="form-success show" style="border:none; background:none; padding:24px 4px;">
+        <div class="fs-icon">✓</div>
+        <h3>${doneTxt.h}</h3>
+        <p>${doneTxt.p}</p>
+        <div class="m-actions" style="margin-top:26px;"><button type="button" class="btn btn-primary" id="fDone">${doneTxt.b}</button></div>
+      </div>`;
+    }
+    else if(step.type === 'summary'){
+      const rows = [`<div><b>${FUNNEL_T.service[L]}</b><span>${funnel.key}</span></div>`];
+      (EXTRA_FIELDS[funnel.key]||[]).forEach(f=>{
+        if(funnel.answers[f.name]) rows.push(`<div><b>${f.label[L]}</b><span>${funnel.answers[f.name]}</span></div>`);
+      });
+      rows.push(`<div><b>${FUNNEL_T.name[L]}</b><span>${funnel.answers._name||'–'}</span></div>`);
+      rows.push(`<div><b>${FUNNEL_T.contact[L]}</b><span>${funnel.answers._contact||'–'}</span></div>`);
+      body = `<div class="funnel-q">${FUNNEL_T.summaryQ[L]}</div>
+        <div class="funnel-summary">${rows.join('')}</div>
+        <div class="funnel-nav">
+          <button type="button" class="funnel-back" id="fBack">${FUNNEL_T.back[L]}</button>
+          <button type="button" class="btn btn-primary" id="fSend">${FUNNEL_T.send[L]}</button>
+        </div>`;
+    }
+
+    modalContent.innerHTML = `
+      <div class="funnel-progress"><span style="width:${pct}%"></span></div>
+      ${funnel.key && step.type !== 'choose' ? `<p style="font-size:.8rem; color:var(--text-muted); margin-bottom:8px;">${funnel.key}</p>` : ''}
+      ${body}`;
+
+    // --- Events der aktuellen Ansicht ---
+    modalContent.querySelectorAll('[data-choose]').forEach(b=>b.addEventListener('click', ()=>{
+      funnel.key = b.dataset.choose;
+      funnel.steps = buildFunnelSteps(funnel.key).slice(); // Fragen des gewählten Service
+      funnel.steps.unshift({type:'choose'}); // choose bleibt Schritt 0
+      funnelNext();
+    }));
+    modalContent.querySelectorAll('[data-answer]').forEach(b=>b.addEventListener('click', ()=>{
+      funnel.answers[b.dataset.answer] = b.dataset.value;
+      funnelNext();
+    }));
+    const fNext = document.getElementById('fNext');
+    if(fNext) fNext.addEventListener('click', ()=>{
+      if(step.type === 'field'){ funnel.answers[step.field.name] = document.getElementById('fInput').value.trim(); }
+      if(step.type === 'contact'){
+        const n = document.getElementById('fName').value.trim();
+        const c = document.getElementById('fContact').value.trim();
+        const consent = document.getElementById('fConsent');
+        if(!n || !c){ (n?document.getElementById('fContact'):document.getElementById('fName')).focus(); return; }
+        if(!consent.checked){ document.getElementById('fConsentRow').classList.add('invalid'); return; }
+        funnel.answers._name = n; funnel.answers._contact = c; funnel.answers._consent = true;
+      }
+      funnelNext();
+    });
+    const fInput = document.getElementById('fInput');
+    if(fInput){ fInput.focus(); fInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ document.getElementById('fNext').click(); } }); }
+    const fBack = document.getElementById('fBack');
+    if(fBack) fBack.addEventListener('click', funnelBack);
+    const fSkip = document.getElementById('fSkip');
+    if(fSkip) fSkip.addEventListener('click', funnelNext);
+    const fSend = document.getElementById('fSend');
+    if(fSend) fSend.addEventListener('click', ()=>{
+      // ===== CRM_ENDPOINT: Hier später per fetch() ans CRM senden statt mailto =====
+      fSend.classList.add('loading');
+      const a = funnel.answers;
+      let lines = ['Leistung: ' + funnel.key];
+      (EXTRA_FIELDS[funnel.key]||[]).forEach(f=>{ if(a[f.name]) lines.push(f.label.de + ': ' + a[f.name]); });
+      lines.push('Name: ' + a._name, 'Kontakt: ' + a._contact,
+        'Datenschutz-Einwilligung: erteilt am ' + new Date().toLocaleString('de-DE'),
+        '', '(Anfrage über den Online-Funnel auf dienstly24.de)');
+      const subject = encodeURIComponent('Online-Anfrage: ' + funnel.key);
+      window.location.href = 'mailto:info@dienstly24.de?subject=' + subject + '&body=' + encodeURIComponent(lines.join('\n'));
+      setTimeout(()=>{
+        funnel.steps.push({type:'done'});
+        funnel.idx = funnel.steps.length - 1;
+        renderFunnel();
+      }, 900);
+    });
+    const fDone = document.getElementById('fDone');
+    if(fDone) fDone.addEventListener('click', ()=>{ closeModal(); });
+  }
+
+  // Alle "open-funnel"-Buttons aktivieren (Hero + Sektions-CTAs)
+  document.querySelectorAll('.open-funnel').forEach(b=>b.addEventListener('click', ()=>openFunnel(null)));
+
+  // ============================================================
+  // COOKIE-CONSENT (DSGVO/TTDSG): Auswahl in localStorage
+  // TODO SERVER-PROTOKOLL: Laut Datenschutzerklärung soll jede Entscheidung
+  // zusätzlich serverseitig protokolliert werden (Zeitpunkt, Auswahl, anonymisierte IP).
+  // Sobald ein Endpoint existiert: fetch('/api/consent-log', {method:'POST', body: JSON.stringify(consent)})
+  // ============================================================
+  const CONSENT_KEY = 'd24-consent';
+  const cookieBanner = document.getElementById('cookieBanner');
+
+  function saveConsent(obj){
+    obj.ts = new Date().toISOString();
+    localStorage.setItem(CONSENT_KEY, JSON.stringify(obj));
+    cookieBanner.classList.remove('show');
+    // Hier künftig: Skripte der zugestimmten Kategorien nachladen
+  }
+  function openCookieBanner(showSettings){
+    cookieBanner.classList.add('show');
+    document.getElementById('cookieSettings').classList.toggle('open', !!showSettings);
+    const saved = JSON.parse(localStorage.getItem(CONSENT_KEY) || 'null');
+    if(saved){
+      document.querySelectorAll('#cookieSettings input[data-cat]').forEach(i=>{
+        if(i.dataset.cat !== 'necessary') i.checked = !!saved[i.dataset.cat];
+      });
+    }
+  }
+  if(!localStorage.getItem(CONSENT_KEY)) openCookieBanner(false);
+
+  document.getElementById('cookieAcceptAll').addEventListener('click', ()=>saveConsent({necessary:true, analytics:true, marketing:true, media:true, choice:'all'}));
+  document.getElementById('cookieNecessary').addEventListener('click', ()=>saveConsent({necessary:true, analytics:false, marketing:false, media:false, choice:'necessary'}));
+  document.getElementById('cookieSettingsBtn').addEventListener('click', ()=>document.getElementById('cookieSettings').classList.toggle('open'));
+  document.getElementById('cookieSaveSel').addEventListener('click', ()=>{
+    const c = {necessary:true, choice:'custom'};
+    document.querySelectorAll('#cookieSettings input[data-cat]').forEach(i=>{ if(i.dataset.cat!=='necessary') c[i.dataset.cat] = i.checked; });
+    saveConsent(c);
+  });
+  // Footer-Button "Cookie-Einstellungen" (auch auf Unterseiten verlinkbar via #cookie-einstellungen)
+  document.querySelectorAll('.open-cookie-settings').forEach(b=>b.addEventListener('click', e=>{e.preventDefault(); openCookieBanner(true);}));
+  if(location.hash === '#cookie-einstellungen') openCookieBanner(true);
+</script>
+
+
+
+<!-- ================= SERVICE-MODAL ================= -->
+<div class="modal-overlay" id="serviceModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal-box">
+    <button class="modal-close" id="modalClose" aria-label="Schließen">✕</button>
+    <div id="modalContent"><!-- wird per JS befüllt --></div>
+  </div>
+</div>
+
+<!-- ================= WHATSAPP FLOAT ================= -->
+<a class="wa-float show-label" href="https://wa.me/491799673909" target="_blank" rel="noopener" aria-label="WhatsApp Chat">
+  <span class="wa-label i18n" data-de="Meist Antwort innerhalb 1 Stunde" data-ar="عادةً منرد خلال ساعة">Meist Antwort innerhalb 1 Stunde</span>
+  <span class="wa-btn"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 00-8.6 15L2 22l5.2-1.4A10 10 0 1012 2zm5.5 14.1c-.2.7-1.3 1.3-1.8 1.3-.5.1-1 .2-3.4-.7-2.9-1.2-4.7-4.1-4.9-4.3-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.4l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.9 1.7.3.2.5.1.7-.1l.9-1c.2-.3.4-.2.7-.1l2 .9c.3.2.5.3.6.4.1.2.1.7-.2 1.1z"/></svg></span>
+</a>
+
+
+<!-- ================= COOKIE-CONSENT (DSGVO / TTDSG) ================= -->
+<div class="cookie-banner" id="cookieBanner" role="dialog" aria-label="Cookie-Einstellungen">
+  <div class="container cookie-inner">
+    <div class="cookie-text">
+      <h4 class="i18n" data-de="🍪 Ihre Privatsphäre" data-ar="🍪 خصوصيتك">🍪 Ihre Privatsphäre</h4>
+      <p class="i18n"
+         data-de="Wir verwenden nur technisch notwendige Cookies. Analyse-, Marketing- und externe Medien-Dienste werden erst nach Ihrer Zustimmung geladen. Details in der <a href='datenschutz.html'>Datenschutzerklärung</a> und <a href='cookie-richtlinie.html'>Cookie-Richtlinie</a>."
+         data-ar="منستخدم فقط الكوكيز الضرورية تقنيًا. خدمات التحليل والتسويق والوسائط الخارجية ما بتنحمل إلا بعد موافقتك. التفاصيل في <a href='datenschutz.html'>سياسة الخصوصية</a> و<a href='cookie-richtlinie.html'>سياسة الكوكيز</a>.">
+         Wir verwenden nur technisch notwendige Cookies. Analyse-, Marketing- und externe Medien-Dienste werden erst nach Ihrer Zustimmung geladen. Details in der <a href="datenschutz.html">Datenschutzerklärung</a> und <a href="cookie-richtlinie.html">Cookie-Richtlinie</a>.</p>
+    </div>
+    <div class="cookie-actions">
+      <button type="button" class="btn btn-cookie-ghost" id="cookieSettingsBtn"><span class="i18n" data-de="Einstellungen verwalten" data-ar="إدارة الإعدادات">Einstellungen verwalten</span></button>
+      <button type="button" class="btn btn-cookie-ghost" id="cookieNecessary"><span class="i18n" data-de="Nur notwendige" data-ar="الضرورية فقط">Nur notwendige</span></button>
+      <button type="button" class="btn btn-primary" id="cookieAcceptAll"><span class="i18n" data-de="Alle akzeptieren" data-ar="قبول الكل">Alle akzeptieren</span></button>
+    </div>
+    <div class="cookie-settings" id="cookieSettings">
+      <div class="cookie-cat">
+        <div><strong class="i18n" data-de="Notwendig" data-ar="ضرورية">Notwendig</strong>
+          <p class="i18n" data-de="Grundfunktionen wie Spracheinstellung und Sicherheit. Immer aktiv." data-ar="وظائف أساسية متل اللغة والأمان. مفعّلة دائمًا.">Grundfunktionen wie Spracheinstellung und Sicherheit. Immer aktiv.</p></div>
+        <label class="switch"><input type="checkbox" checked disabled data-cat="necessary"><span class="slider"></span></label>
+      </div>
+      <div class="cookie-cat">
+        <div><strong class="i18n" data-de="Analyse" data-ar="التحليل">Analyse</strong>
+          <p class="i18n" data-de="Aktuell nicht aktiv – wird erst bei Einbindung eines Analyse-Tools relevant." data-ar="غير مفعّلة حاليًا — بتصير مهمة عند إضافة أداة تحليل.">Aktuell nicht aktiv – wird erst bei Einbindung eines Analyse-Tools relevant.</p></div>
+        <label class="switch"><input type="checkbox" data-cat="analytics"><span class="slider"></span></label>
+      </div>
+      <div class="cookie-cat">
+        <div><strong class="i18n" data-de="Marketing" data-ar="التسويق">Marketing</strong>
+          <p class="i18n" data-de="Aktuell nicht aktiv – z.B. für künftige Werbe-Pixel." data-ar="غير مفعّلة حاليًا — مثلاً لبكسلات إعلانية مستقبلية.">Aktuell nicht aktiv – z.B. für künftige Werbe-Pixel.</p></div>
+        <label class="switch"><input type="checkbox" data-cat="marketing"><span class="slider"></span></label>
+      </div>
+      <div class="cookie-cat">
+        <div><strong class="i18n" data-de="Externe Medien" data-ar="وسائط خارجية">Externe Medien</strong>
+          <p class="i18n" data-de="Inhalte von Drittanbietern (z.B. YouTube, Google Maps)." data-ar="محتوى من جهات خارجية (مثلاً YouTube أو خرائط Google).">Inhalte von Drittanbietern (z.B. YouTube, Google Maps).</p></div>
+        <label class="switch"><input type="checkbox" data-cat="media"><span class="slider"></span></label>
+      </div>
+      <div style="display:flex; justify-content:flex-end; margin-top:16px;">
+        <button type="button" class="btn btn-primary" id="cookieSaveSel"><span class="i18n" data-de="Auswahl speichern" data-ar="حفظ الاختيار">Auswahl speichern</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
