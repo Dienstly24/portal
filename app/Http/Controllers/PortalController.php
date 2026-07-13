@@ -461,6 +461,81 @@ class PortalController extends Controller
         return view('portal.datenschutz');
     }
 
+    /**
+     * E-Mail-Verbindung (einwilligungsbasiert, Variante A). Zeigt Status,
+     * getrennte Einwilligung und - bei aktiver Zustimmung - die persoenliche
+     * Import-Adresse samt Weiterleitungs-Anleitung.
+     */
+    public function emailConnection(\App\Services\Mailbox\CustomerMailboxImportService $import) {
+        $customer = $this->getCustomer();
+        $consent = $customer->activeEmailConsent();
+
+        return view('portal.email_connection', [
+            'customer' => $customer,
+            'consent' => $consent,
+            'importAddress' => $consent ? $import->importAddressFor($consent) : null,
+        ]);
+    }
+
+    /** Einwilligung erteilen (getrennte, nicht vorausgewaehlte Checkbox). */
+    public function emailConnectionGrant(Request $request) {
+        $request->validate([
+            'consent' => 'accepted', // Checkbox muss aktiv gesetzt sein (Art. 7: keine Vorauswahl)
+        ], [
+            'consent.accepted' => __('Bitte bestaetigen Sie die Einwilligung, um Ihre E-Mail-Verbindung zu aktivieren.'),
+        ]);
+
+        $customer = $this->getCustomer();
+
+        if ($customer->hasActiveEmailConsent()) {
+            return redirect()->route('portal.email_connection')
+                ->with('success', __('Ihre E-Mail-Verbindung ist bereits aktiv.'));
+        }
+
+        \App\Models\CustomerConsent::create([
+            'customer_id' => $customer->id,
+            'type' => \App\Models\CustomerConsent::TYPE_EMAIL_PROCESSING,
+            'granted_at' => now(),
+            'consent_text_version' => \App\Models\CustomerConsent::EMAIL_TEXT_VERSION,
+            'ip_address' => $request->ip(),
+            'user_agent' => substr((string) $request->userAgent(), 0, 512),
+            'source' => 'portal_settings',
+            'import_token' => \App\Models\CustomerConsent::newImportToken(),
+        ]);
+
+        \App\Models\ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'email_consent_granted',
+            'entity_type' => 'customer',
+            'entity_id' => $customer->id,
+            'meta' => json_encode(['version' => \App\Models\CustomerConsent::EMAIL_TEXT_VERSION], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        return redirect()->route('portal.email_connection')
+            ->with('success', __('E-Mail-Verbindung aktiviert. Bitte richten Sie die Weiterleitung wie unten beschrieben ein.'));
+    }
+
+    /** Einwilligung widerrufen (Art. 7 Abs. 3 - so einfach wie die Erteilung). */
+    public function emailConnectionRevoke(Request $request) {
+        $customer = $this->getCustomer();
+
+        $consent = $customer->activeEmailConsent();
+        if ($consent) {
+            $consent->forceFill(['revoked_at' => now()])->save();
+
+            \App\Models\ActivityLog::create([
+                'user_id' => auth()->id(),
+                'action' => 'email_consent_revoked',
+                'entity_type' => 'customer',
+                'entity_id' => $customer->id,
+                'meta' => json_encode(['consent_id' => $consent->id], JSON_UNESCAPED_UNICODE),
+            ]);
+        }
+
+        return redirect()->route('portal.email_connection')
+            ->with('success', __('E-Mail-Verbindung getrennt. Es werden keine weiteren E-Mails verarbeitet.'));
+    }
+
     public function profileUpdate(Request $request) {
         $customer = $this->getCustomer();
 

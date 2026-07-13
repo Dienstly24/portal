@@ -164,6 +164,7 @@ class EmailAccountController extends Controller
             'password' => ($requirePassword ? 'nullable' : 'nullable') . '|string|max:1024',
             'folders' => 'nullable|string|max:1000',
             'is_active' => 'nullable|boolean',
+            'is_customer_import' => 'nullable|boolean',
         ]);
     }
 
@@ -191,6 +192,7 @@ class EmailAccountController extends Controller
             'credentials' => $credentials,
             'folders' => $folders ?: ['INBOX'],
             'is_active' => $request->boolean('is_active', true),
+            'is_customer_import' => $request->boolean('is_customer_import'),
         ];
     }
 }

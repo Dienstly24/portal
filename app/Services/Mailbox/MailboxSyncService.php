@@ -44,6 +44,18 @@ class MailboxSyncService
 
         $stored = 0;
         foreach ($messages as $data) {
+            // Kundenseitiges Import-Postfach (Variante A): nur Mails mit
+            // gueltigem Einwilligungs-Token UND erlaubter Absenderdomain
+            // werden ueberhaupt gespeichert. Alles andere (fremde/private
+            // Weiterleitung) wird sofort verworfen - Data Minimization.
+            $importCustomer = null;
+            if ($account->is_customer_import) {
+                $importCustomer = $this->importService()->resolveConsentingCustomer($data);
+                if ($importCustomer === null || !$this->importService()->isAllowedSender($data->fromAddress)) {
+                    continue;
+                }
+            }
+
             $message = EmailMessage::firstOrCreate(
                 ['email_account_id' => $account->id, 'message_uid' => $data->uid],
                 [
@@ -69,7 +81,13 @@ class MailboxSyncService
             // Kundenakte-Bezug.
             $this->attachments->storeFiles($message, $data->attachments);
 
-            $this->workflow->process($message);
+            if ($importCustomer !== null) {
+                // Kunde steht durch das Token DETERMINISTISCH fest - kein
+                // Score-Matching, direkt bestaetigte Zuordnung.
+                $this->workflow->processForCustomer($message, $importCustomer);
+            } else {
+                $this->workflow->process($message);
+            }
 
             // In die Akte übernehmen NUR bei bestätigter Zuordnung (H1).
             $this->attachments->createDocuments($message->fresh());
@@ -78,5 +96,14 @@ class MailboxSyncService
         $account->update(['last_synced_at' => now(), 'last_error' => null]);
 
         return $stored;
+    }
+
+    /**
+     * Lazy aufgeloest, damit der bestehende 3-Argumente-Konstruktor (und
+     * die darauf aufbauenden Tests) unveraendert bleibt.
+     */
+    private function importService(): CustomerMailboxImportService
+    {
+        return app(CustomerMailboxImportService::class);
     }
 }

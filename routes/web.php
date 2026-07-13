@@ -79,6 +79,9 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     Route::post('/banner/{id}/schliessen', [PortalController::class, 'bannerDismiss'])->name('banner.dismiss');
     Route::get('/profile', [PortalController::class, 'profile'])->name('profile');
     Route::get('/datenschutz', [PortalController::class, 'datenschutz'])->name('datenschutz');
+    Route::get('/email-connection', [PortalController::class, 'emailConnection'])->name('email_connection');
+    Route::post('/email-connection/grant', [PortalController::class, 'emailConnectionGrant'])->name('email_connection.grant');
+    Route::post('/email-connection/revoke', [PortalController::class, 'emailConnectionRevoke'])->name('email_connection.revoke');
 
     // Self-Service (jede Aktion erzeugt nur einen Change Request)
     Route::get('/family', [\App\Http\Controllers\SelfServiceController::class, 'family'])->name('family');

@@ -106,6 +106,37 @@ class EmailWorkflowService
     }
 
     /**
+     * Verarbeitung fuer einen bereits DETERMINISTISCH feststehenden Kunden
+     * (kundenseitiges Import-Postfach, Variante A): Der Kunde ist ueber das
+     * Einwilligungs-Token eindeutig, es wird NICHT erneut gematcht. Nur die
+     * Kategorie wird bestimmt und die passende Standard-Aktion ausgeloest.
+     */
+    public function processForCustomer(EmailMessage $message, Customer $customer): void
+    {
+        if ($message->processed_at !== null) {
+            return; // idempotent
+        }
+
+        $category = $this->classifier->classify($message);
+
+        $message->forceFill([
+            'category' => $category,
+            'match_status' => 'confirmed',
+            'customer_id' => $customer->id,
+            'processed_at' => now(),
+        ])->save();
+
+        if ($category === 'fonds_finanz') {
+            // Vertragsdaten stehen im Text/PDF - fuer den feststehenden
+            // Kunden importieren (legt/ergaenzt Vertrag, verknuepft Anhaenge).
+            $this->fondsFinanz->importForCustomer($message->fresh(), $customer);
+            return;
+        }
+
+        $this->dispatchAction($message, $category, $customer);
+    }
+
+    /**
      * Kategorie nach Mitarbeiter-Freigabe anwenden (Phase 3): löst die
      * Standard-Aktion der neuen Kategorie aus. Fonds-Finanz/Provisionen
      * laufen durch ihre eigenen Workflows.

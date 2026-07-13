@@ -181,6 +181,7 @@ class Customer extends Model {
     public function contracts() { return $this->hasMany(Contract::class); }
     public function tickets() { return $this->hasMany(Ticket::class); }
     public function documents() { return $this->hasMany(Document::class); }
+    public function consents() { return $this->hasMany(CustomerConsent::class); }
     public function family() { return $this->hasMany(CustomerFamily::class); }
     public function vehicles() { return $this->hasMany(CustomerVehicle::class); }
     public function notes() { return $this->hasMany(CustomerNote::class)->latest(); }
@@ -188,4 +189,17 @@ class Customer extends Model {
     public function appointments() { return $this->hasMany(Appointment::class); }
     public function externalReferences() { return $this->morphMany(ExternalReference::class, 'referenceable'); }
     public function partner() { return $this->belongsTo(Partner::class); }
+
+    /** Aktive E-Mail-Verarbeitungs-Einwilligung (oder null). */
+    public function activeEmailConsent(): ?CustomerConsent
+    {
+        return $this->consents()
+            ->emailProcessing()->active()
+            ->latest('granted_at')->first();
+    }
+
+    public function hasActiveEmailConsent(): bool
+    {
+        return $this->activeEmailConsent() !== null;
+    }
 }

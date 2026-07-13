@@ -19,7 +19,7 @@ class EmailAccount extends Model
         'name', 'email_address', 'provider',
         'imap_host', 'imap_port', 'imap_encryption',
         'smtp_host', 'smtp_port', 'smtp_encryption',
-        'username', 'credentials', 'folders', 'is_active', 'created_by',
+        'username', 'credentials', 'folders', 'is_active', 'is_customer_import', 'created_by',
         'last_synced_at', 'last_error',
     ];
 
@@ -38,6 +38,7 @@ class EmailAccount extends Model
             'credentials' => 'encrypted:array',
             'folders' => 'array',
             'is_active' => 'boolean',
+            'is_customer_import' => 'boolean',
             'last_synced_at' => 'datetime',
         ];
     }
