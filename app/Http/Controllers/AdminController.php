@@ -294,6 +294,7 @@ class AdminController extends Controller
         ]);
         $fullName = $request->first_name . ' ' . $request->last_name;
         $address = $this->buildAddress($request);
+        $addressColumns = $this->addressColumns($request);
         $user = User::create([
             'name' => $fullName,
             'email' => $request->email,
@@ -308,6 +309,12 @@ class AdminController extends Controller
             'phone' => $request->mobile ?? $request->phone,
             'mobile' => $request->mobile,
             'address' => $address,
+            // Strukturierte Adressfelder (wie sie das Kundenportal liest),
+            // damit im Portal keine leeren Felder erscheinen.
+            'address_street' => $addressColumns['address_street'],
+            'address_house_number' => $addressColumns['address_house_number'],
+            'address_zip' => $addressColumns['address_zip'],
+            'address_city' => $addressColumns['address_city'],
             'birth_date' => $request->birth_date,
             'gender' => in_array($request->gender, ['male','female','diverse'], true) ? $request->gender : null,
             'marital_status' => $request->marital_status ?: null,
@@ -382,7 +389,8 @@ class AdminController extends Controller
             ]);
         }
 
-        if ($request->filled('street') || $request->filled('plz') || $request->filled('city')) {
+        $addressChanged = $request->filled('street') || $request->filled('plz') || $request->filled('city');
+        if ($addressChanged) {
             $address = $this->buildAddress($request);
         } else {
             $address = $request->address ?? $customer->address;
@@ -414,6 +422,13 @@ class AdminController extends Controller
             // Zuordnung zu einem Vertriebspartner (dessen Portal ihn dann sieht).
             'partner_id' => $request->partner_id ?: null,
         ];
+
+        // Strukturierte Adressfelder (wie sie das Kundenportal liest) mit
+        // schreiben, wenn im Formular eine Adresse eingegeben wurde - sonst
+        // erscheinen die Felder im Portal leer.
+        if ($addressChanged) {
+            $data = array_merge($data, $this->addressColumns($request));
+        }
 
         // Nur Spalten speichern, die in der Tabelle wirklich existieren
         $columns = Schema::getColumnListing('customers');
@@ -465,6 +480,20 @@ class AdminController extends Controller
         $line3 = trim($request->country ?? '');
         $parts = array_filter([$line1, $line2, $line3], fn($p) => $p !== '');
         return $parts ? implode(', ', $parts) : null;
+    }
+
+    /**
+     * Strukturierte Adressspalten aus den Formularfeldern, exakt so, wie sie
+     * das Kundenportal (Profilseite) liest. So sind admin-seitig erfasste
+     * Adressen im Portal sofort sichtbar und nicht leer.
+     */
+    private function addressColumns(Request $request): array {
+        return [
+            'address_street'       => $request->street ?: null,
+            'address_house_number' => $request->street_nr ?: null,
+            'address_zip'          => $request->plz ?: null,
+            'address_city'         => $request->city ?: null,
+        ];
     }
 
     private function splitAddress(?string $address): array {
