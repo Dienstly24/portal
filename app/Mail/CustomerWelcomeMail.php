@@ -79,6 +79,12 @@ class CustomerWelcomeMail extends Mailable
 
     public function content(): Content
     {
-        return new Content(view: 'emails.customer_welcome');
+        // Zusaetzlich eine Text-Variante (multipart/alternative): reine
+        // HTML-Mails erhoehen den Spam-Score bei Outlook/Gmail. Die
+        // Text-Version verbessert die Zustellbarkeit und dient als Fallback.
+        return new Content(
+            view: 'emails.customer_welcome',
+            text: 'emails.customer_welcome_text',
+        );
     }
 }
