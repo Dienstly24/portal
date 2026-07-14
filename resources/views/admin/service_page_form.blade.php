@@ -104,6 +104,13 @@
     </div>
 
     <div class="card">
+        <div class="card-title">Anbieter-Laufband (optional)</div>
+        <div class="page-sub" style="margin-bottom:14px;">Ein Anbietername pro Zeile – wird als ruhiges Laufband angezeigt. Nur Namen (kein fremdes Logo). Bitte nur Anbieter aufführen, zu denen Sie tatsächlich beraten oder vermitteln.</div>
+        <div class="field"><label>Anbieter (eine pro Zeile)</label>
+            <textarea name="providers" rows="6" maxlength="4000" placeholder="Allianz&#10;AXA&#10;...">{{ old('providers', $page->providers) }}</textarea></div>
+    </div>
+
+    <div class="card">
         <div class="card-title">Zusaetzliche Formularfelder (optional)</div>
         <div class="page-sub" style="margin-bottom:14px;">Zusaetzliche Eingabefelder im Anfrageformular dieser Leistung – z. B. bei der Kfz-Versicherung „Fahrzeug“ oder „gewuenschte Deckung“. Die Antworten werden an das Ticket angehaengt.</div>
         <div id="fieldRows">

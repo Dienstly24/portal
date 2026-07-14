@@ -16,7 +16,7 @@ class ServicePage extends Model
     protected $fillable = [
         'slug', 'category', 'icon',
         'title_de', 'title_ar', 'subtitle_de', 'subtitle_ar',
-        'intro_de', 'intro_ar', 'highlights_de', 'highlights_ar', 'body_de', 'body_ar', 'faq', 'fields',
+        'intro_de', 'intro_ar', 'highlights_de', 'highlights_ar', 'body_de', 'body_ar', 'providers', 'faq', 'fields',
         'image_path', 'meta_description_de', 'meta_description_ar',
         'is_active', 'sort_order', 'created_by', 'updated_by',
     ];
@@ -89,6 +89,12 @@ class ServicePage extends Model
         }
         if ($inList) { $html .= '</ul>'; }
         return $html;
+    }
+
+    /** Anbieternamen als Array (ein Name pro Zeile) fuer das Laufband. */
+    public function providerList(): array
+    {
+        return array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string) $this->providers))));
     }
 
     /** Kurzinfos als Array (eine pro Zeile), lokalisiert. */

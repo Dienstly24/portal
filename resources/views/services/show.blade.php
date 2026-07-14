@@ -92,6 +92,15 @@ body{font-family:'Inter',system-ui,Arial,sans-serif;min-height:100vh;color:var(-
 .prose p{color:#c7cec9;font-size:14.5px;line-height:1.75;margin-bottom:12px;}
 .prose ul{margin:0 0 14px;padding-inline-start:20px;}
 .prose li{color:#c7cec9;font-size:14.5px;line-height:1.7;margin-bottom:6px;}
+.providers{margin-top:36px;}
+.providers-label{text-align:center;font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);margin-bottom:16px;}
+.marquee{overflow:hidden;position:relative;-webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);}
+.marquee-track{display:flex;width:max-content;gap:12px;animation:pvscroll 34s linear infinite;}
+.marquee:hover .marquee-track{animation-play-state:paused;}
+.pv{flex:none;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:11px 18px;font-size:14px;font-weight:600;color:#dfe4df;white-space:nowrap;}
+@keyframes pvscroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+[dir=rtl] .marquee-track{animation-direction:reverse;}
+@media(prefers-reduced-motion:reduce){.marquee-track{animation:none;flex-wrap:wrap;justify-content:center;}}
 /* Form */
 .form-card{position:sticky;top:22px;}
 .form-card h2{font-size:19px;}
@@ -226,6 +235,19 @@ label{display:block;font-size:13px;margin-bottom:7px;color:#cfd5cf;font-weight:5
             @endif
         </div>
     </div>
+
+    @php $providers = $page->providerList(); @endphp
+    @if(count($providers))
+    <div class="providers" aria-label="{{ __('Anbieter im Überblick') }}">
+        <p class="providers-label">{{ __('Anbieter im Überblick') }}</p>
+        <div class="marquee">
+            <div class="marquee-track">
+                @foreach($providers as $pv)<span class="pv">{{ $pv }}</span>@endforeach
+                @foreach($providers as $pv)<span class="pv" aria-hidden="true">{{ $pv }}</span>@endforeach
+            </div>
+        </div>
+    </div>
+    @endif
 </div>
 
 <div class="foot">
