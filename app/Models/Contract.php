@@ -17,6 +17,7 @@ class Contract extends Model {
     public const TYPES = [
         'kfz'                 => ['label' => 'KFZ',                  'icon' => '🚗', 'color' => '#185FA5', 'bg' => '#E6F1FB'],
         'krankenversicherung' => ['label' => 'Krankenversicherung', 'icon' => '🏥', 'color' => '#3B7A57', 'bg' => '#E4F0E7'],
+        'krankenzusatz'       => ['label' => 'Krankenzusatz',       'icon' => '🩺', 'color' => '#2F8F6B', 'bg' => '#DEF1E8'],
         'leben'               => ['label' => 'Leben',               'icon' => '❤️', 'color' => '#993556', 'bg' => '#FBEAF0'],
         'haftpflicht'         => ['label' => 'Haftpflicht',         'icon' => '🛡️', 'color' => '#6D28D9', 'bg' => '#F0E6FB'],
         'hausrat'             => ['label' => 'Hausrat',             'icon' => '🏠', 'color' => '#3B7A57', 'bg' => '#E4F0E7'],
@@ -53,6 +54,46 @@ class Contract extends Model {
     /** Ist dies ein Energievertrag (Strom oder Gas)? */
     public function isEnergy(): bool {
         return in_array($this->type, self::ENERGY_TYPES, true);
+    }
+
+    /**
+     * Untergruppen (subtype-Spalte) je Sparte. Bei der Krankenversicherung
+     * steuert GKV/PKV die Wechsel-Erinnerungen (§175 SGB V); die Krankenzusatz-
+     * Arten sind rein beschreibend. Neue Untergruppe = hier eine Zeile ergaenzen.
+     */
+    public const SUBTYPES = [
+        'krankenversicherung' => [
+            'gkv' => 'Gesetzlich (GKV)',
+            'pkv' => 'Privat (PKV)',
+        ],
+        'krankenzusatz' => [
+            'ambulant'        => 'Ambulante Zusatzversicherung',
+            'zahnzusatz'      => 'Zahnzusatzversicherung',
+            'auslandskranken' => 'Auslandskrankenversicherung',
+        ],
+    ];
+
+    /** Sparten, die eine Untergruppe (subtype) fuehren. */
+    public static function typesWithSubtype(): array {
+        return array_keys(self::SUBTYPES);
+    }
+
+    /** Alle gueltigen subtype-Schluessel ueber alle Sparten (Validierung). */
+    public static function subtypeKeys(): array {
+        return array_merge(...array_map('array_keys', array_values(self::SUBTYPES)));
+    }
+
+    /**
+     * Liefert den subtype-Wert nur zurueck, wenn er zur Sparte passt - sonst
+     * null. So kann kein "gkv" an einem Krankenzusatz-Vertrag haengen bleiben.
+     */
+    public static function normalizeSubtype(?string $type, ?string $subtype): ?string {
+        return isset(self::SUBTYPES[$type][$subtype]) ? $subtype : null;
+    }
+
+    /** Anzeige-Label der Untergruppe (z.B. "Zahnzusatzversicherung"), sonst null. */
+    public function subtypeLabel(): ?string {
+        return self::SUBTYPES[$this->type][$this->subtype] ?? null;
     }
 
     /** Anzeige-Konfiguration (Icon/Farbe/Label) einer Sparte inkl. Fallback. */

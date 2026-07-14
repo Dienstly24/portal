@@ -7,6 +7,7 @@ $typeConfig = [
     'kfz'                 => ['icon'=>'🚗','label'=>'KFZ','bg'=>'#E6F1FB'],
     'krankenversicherung' => ['icon'=>'🏥','label'=>'Kranken','bg'=>'#E4F0E7'],
     'kranken'             => ['icon'=>'🏥','label'=>'Kranken','bg'=>'#E4F0E7'],
+    'krankenzusatz'       => ['icon'=>'🩺','label'=>'Krankenzusatz','bg'=>'#DEF1E8'],
     'haftpflicht'         => ['icon'=>'🛡️','label'=>'Haftpflicht','bg'=>'#F0E6FB'],
     'rechtsschutz'        => ['icon'=>'⚖️','label'=>'Rechtsschutz','bg'=>'#FEF3C7'],
     'hausrat'             => ['icon'=>'🏠','label'=>'Hausrat','bg'=>'#E4F0E7'],

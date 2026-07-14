@@ -257,7 +257,10 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
             <td style="padding:12px;">
                 <div style="display:flex;align-items:center;gap:8px;">
                     <span style="width:32px;height:32px;border-radius:8px;background:{{ $cfg['bg'] }};display:flex;align-items:center;justify-content:center;font-size:16px;">{{ $c->typeIcon() }}</span>
-                    <span style="font-weight:600;">{{ $c->typeLabel() }}</span>
+                    <div>
+                        <span style="font-weight:600;">{{ $c->typeLabel() }}</span>
+                        @if($c->subtypeLabel())<div style="font-size:11.5px;color:var(--ink-soft);">{{ $c->subtypeLabel() }}</div>@endif
+                    </div>
                 </div>
             </td>
             <td style="padding:12px;">{{ $c->insurer }}</td>

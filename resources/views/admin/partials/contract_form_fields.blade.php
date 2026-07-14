@@ -34,12 +34,24 @@
 </div>
 
 {{-- Krankenversicherung: GKV/PKV steuert die Wechsel-Erinnerungen --}}
-<div id="subtype-wrap" class="field" style="display:none;">
+<div id="subtype-wrap-krankenversicherung" class="field subtype-wrap" style="display:none;">
     <label>Art der Krankenversicherung</label>
-    <select name="subtype" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+    <select name="subtype" data-subtype-for="krankenversicherung" disabled style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
         <option value="">— bitte wählen —</option>
         <option value="gkv" {{ $curSub === 'gkv' ? 'selected' : '' }}>Gesetzlich (GKV) – erhält Wechsel-Erinnerung nach 12 Monaten</option>
         <option value="pkv" {{ $curSub === 'pkv' ? 'selected' : '' }}>Privat (PKV) – keine Wechsel-Erinnerung</option>
+    </select>
+</div>
+
+{{-- Krankenzusatz: Art der Zusatzversicherung (rein beschreibend, keine Erinnerung).
+     Gleiche subtype-Spalte wie oben; nur das aktive Feld wird abgeschickt (disabled). --}}
+<div id="subtype-wrap-krankenzusatz" class="field subtype-wrap" style="display:none;">
+    <label>Art der Krankenzusatz</label>
+    <select name="subtype" data-subtype-for="krankenzusatz" disabled style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+        <option value="">— bitte wählen —</option>
+        @foreach(\App\Models\Contract::SUBTYPES['krankenzusatz'] as $ok => $ol)
+        <option value="{{ $ok }}" {{ $curSub === $ok ? 'selected' : '' }}>{{ $ol }}</option>
+        @endforeach
     </select>
 </div>
 
@@ -158,7 +170,16 @@ function contractToggleSections() {
         : document.getElementById('section-' + type);
     if (active) active.style.display = 'block';
     document.getElementById('type-other-wrap').style.display = (type === 'andere') ? 'block' : 'none';
-    document.getElementById('subtype-wrap').style.display = (type === 'krankenversicherung') ? 'block' : 'none';
+    // Untergruppe (subtype) je Sparte: nur das passende Feld anzeigen UND aktivieren.
+    // disabled steuert, welcher Wert abgeschickt wird - sonst kaemen zwei subtype-Werte an.
+    document.querySelectorAll('.subtype-wrap').forEach(w => w.style.display = 'none');
+    document.querySelectorAll('select[data-subtype-for]').forEach(s => s.disabled = true);
+    const subWrap = document.getElementById('subtype-wrap-' + type);
+    if (subWrap) {
+        subWrap.style.display = 'block';
+        const sel = subWrap.querySelector('select[data-subtype-for]');
+        if (sel) sel.disabled = false;
+    }
     // Energievertraege haben eine Vertragsnummer statt einer Versicherungsnummer.
     const lbl = document.getElementById('contract-number-label');
     if (lbl) lbl.textContent = energyTypes.includes(type) ? 'Vertragsnummer' : 'Versicherungsnummer (VSNR)';
