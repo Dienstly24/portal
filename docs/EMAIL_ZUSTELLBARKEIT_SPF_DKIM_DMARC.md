@@ -7,14 +7,20 @@ Anleitung beschreibt die konkreten Schritte, damit Mails von
 ## Kurzdiagnose
 
 Outlook markiert die Mail als Junk, weil die Domain `dienstly24.de` sich nicht
-sauber authentifiziert. Die drei entscheidenden DNS-Eintraege fehlen oder sind
-unvollstaendig:
+vollstaendig authentifiziert. Stand 14.07.2026:
 
+- **DKIM** – kryptografische Signatur der Mail. **In hPanel aktiv und
+  „Verifiziert"** (Selector `hostingermail1._domainkey`). Damit ist die
+  frueher vermutete Hauptursache („leerer `p=`-Schluessel") **erledigt**.
 - **SPF** – legt fest, welche Server fuer `dienstly24.de` senden duerfen.
-- **DKIM** – kryptografische Signatur der Mail. **Aktuell leer (`p=`)** –
-  das ist die wichtigste Ursache. Ohne gueltigen Schluessel kann kein
-  Empfaenger die Echtheit pruefen → Spam.
+  Muss den Hostinger-Include enthalten (siehe A2). **Zu pruefen.**
 - **DMARC** – Richtlinie, die SPF+DKIM zusammenfasst und Reputation aufbaut.
+  Fuer eine neue Domain praktisch Pflicht; Outlook misstraut ohne DMARC.
+  **Zu pruefen/anzulegen (siehe unten).**
+
+Verbleibende wahrscheinliche Ursachen: **fehlender/falscher SPF-Eintrag**,
+**fehlender DMARC-Eintrag**, sowie die normale **Reputations-Aufwaermung**
+einer neuen Absender-Domain.
 
 Der Code (Laravel Mailable, HTML-Template) ist in Ordnung. Zusaetzlich wurde
 eine Text-Variante der Willkommens-Mail ergaenzt (`multipart/alternative`),
@@ -39,15 +45,12 @@ nur als Referenz, falls der Versandweg spaeter wechselt.
 
 ## Variante A — Versand ueber Hostinger-E-Mail
 
-### A1. DKIM aktivieren (wichtigster Schritt)
+### A1. DKIM — bereits erledigt (14.07.2026)
 
-1. hPanel → **E-Mails → E-Mail-Konten → DKIM** (bzw. „E-Mail-Authentifizierung").
-2. DKIM fuer `dienstly24.de` **aktivieren**. Hostinger erzeugt den Schluessel
-   und traegt die noetigen DNS-Eintraege automatisch ein (meist CNAMEs
-   `hostingermail1/2/3._domainkey` oder ein TXT `default._domainkey`).
-3. Falls die Domain-DNS **nicht** bei Hostinger liegt: den von Hostinger
-   angezeigten DKIM-Wert manuell beim DNS-Anbieter eintragen.
-4. Pruefen, dass der `p=`-Teil **nicht leer** ist (siehe „Verifizieren").
+hPanel → **E-Mails → Benutzerdefiniertes DKIM** zeigt fuer `dienstly24.de`
+den Eintrag `hostingermail1._domainkey` mit Status **„Verifiziert"**. DKIM ist
+damit aktiv; hier ist nichts mehr zu tun. (Die vollstaendige Aktivierung kann
+laut Hostinger bis zu 8 Stunden dauern – ist hier bereits abgeschlossen.)
 
 ### A2. SPF setzen/ergaenzen
 
