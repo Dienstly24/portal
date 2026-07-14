@@ -20,20 +20,20 @@ Der Code (Laravel Mailable, HTML-Template) ist in Ordnung. Zusaetzlich wurde
 eine Text-Variante der Willkommens-Mail ergaenzt (`multipart/alternative`),
 was den Spam-Score weiter senkt – der eigentliche Hebel bleibt aber DNS.
 
-## Zuerst klaeren: Wie werden die Mails versendet?
+## Versandweg (bestaetigt am 14.07.2026): Variante A – Hostinger-E-Mail
 
-Die konkreten Eintraege haengen davon ab, **welcher Server** die Mails
-verschickt. Auf dem Server pruefen:
+Auf dem Produktivserver geprueft:
 
 ```
-grep -E "MAIL_MAILER|MAIL_HOST|MAIL_FROM" /var/www/dienstly24/portal/.env
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.hostinger.com
+MAIL_FROM_ADDRESS=noreply@dienstly24.de
+MAIL_FROM_NAME="Dienstly24"
 ```
 
-- **Variante A – Hostinger-E-Mail** (`MAIL_HOST=smtp.hostinger.com`):
-  DKIM/SPF werden in hPanel verwaltet. → Abschnitt A.
-- **Variante B – eigener Mailserver auf dem VPS** (`MAIL_HOST=127.0.0.1`,
-  lokales Postfix/Sendmail): SPF/DKIM muessen am VPS eingerichtet werden.
-  → Abschnitt B.
+→ Es gilt **Variante A** (Abschnitt A). DKIM/SPF werden in hPanel verwaltet.
+Abschnitt B (eigener VPS-Mailserver) ist hier **nicht** relevant und dient
+nur als Referenz, falls der Versandweg spaeter wechselt.
 
 ---
 
