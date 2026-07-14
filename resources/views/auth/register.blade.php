@@ -114,6 +114,14 @@ label{display:block;font-size:13.5px;margin-bottom:7px;color:#dde0e5;}
             ]) !!}</span>
         </label>
 
+        {{-- Getrennte, NICHT vorausgewaehlte, freiwillige Einwilligung (Art. 7
+             DSGVO, kein Kopplungsverbot-Verstoss): E-Mail-Archivierung zur
+             besseren Betreuung. Jederzeit im Portal widerrufbar. --}}
+        <label class="consent">
+            <input type="checkbox" name="email_consent" value="1">
+            <span>{{ __('Optional: Ich willige ein, dass vertragsbezogene E-Mails automatisch in meiner Kundenakte archiviert werden, damit Dienstly24 mich besser betreuen kann. Freiwillig und jederzeit widerrufbar.') }}</span>
+        </label>
+
         <button type="submit" class="btn">{{ __('Konto erstellen') }}</button>
     </form>
 
@@ -133,5 +141,6 @@ label{display:block;font-size:13.5px;margin-bottom:7px;color:#dde0e5;}
     <span class="sep">|</span>
     <span>© {{ date('Y') }} Dienstly24</span>
 </div>
+@include('partials.cookie_consent')
 </body>
 </html>

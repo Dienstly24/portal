@@ -55,7 +55,9 @@ label{display:block;font-size:13px;margin-bottom:6px;color:#dde0e5;}
 .btn:hover{filter:brightness(1.08);transform:translateY(-1px);box-shadow:0 10px 26px rgba(23,166,91,.35);}
 .remember{display:flex;align-items:center;gap:8px;font-size:13px;color:#b7bcc4;margin-bottom:clamp(10px,1.8vh,16px);}
 .remember input{width:15px;height:15px;accent-color:var(--green);}
-.register-line{text-align:center;font-size:13px;color:#b7bcc4;margin-top:clamp(8px,1.6vh,16px);}
+.policy-note{font-size:11.5px;line-height:1.5;color:#9aa1ab;text-align:center;margin-top:clamp(8px,1.6vh,14px);}
+.policy-note a{color:var(--mint);text-decoration:none;}
+.register-line{text-align:center;font-size:13px;color:#b7bcc4;margin-top:clamp(6px,1.2vh,12px);}
 .register-line a{color:var(--mint);font-weight:700;text-decoration:none;}
 .error{background:rgba(226,75,74,.15);border:1px solid rgba(226,75,74,.4);color:#ffb9b8;border-radius:9px;padding:9px 12px;font-size:13px;margin-bottom:12px;}
 .status{background:rgba(23,166,91,.15);border:1px solid rgba(23,166,91,.45);color:#5fe3a1;border-radius:9px;padding:9px 12px;font-size:13px;margin-bottom:12px;}
@@ -123,6 +125,12 @@ label{display:block;font-size:13px;margin-bottom:6px;color:#dde0e5;}
             <button type="submit" class="btn">{{ __('Anmelden') }} <span>{{ $rtl ? '←' : '→' }}</span></button>
         </form>
 
+        <p class="policy-note">{!! __('Mit der Anmeldung stimmen Sie den :agb zu und bestätigen die :privacy sowie die :cookie.', [
+            'agb' => '<a href="' . route('legal', 'agb') . '" target="_blank">' . __('Nutzungsbedingungen') . '</a>',
+            'privacy' => '<a href="' . route('legal', 'datenschutz') . '" target="_blank">' . __('Datenschutzerklärung') . '</a>',
+            'cookie' => '<a href="' . route('legal', 'cookie-richtlinie') . '" target="_blank">' . __('Cookie-Richtlinie') . '</a>',
+        ]) !!}</p>
+
         <p class="register-line">{{ __('Noch kein Konto?') }} <a href="{{ route('register') }}">{{ __('Konto erstellen') }}</a></p>
     </div>
 </div>
@@ -139,5 +147,6 @@ label{display:block;font-size:13px;margin-bottom:6px;color:#dde0e5;}
     <span class="sep">|</span>
     <span>© {{ date('Y') }} Dienstly24</span>
 </div>
+@include('partials.cookie_consent')
 </body>
 </html>

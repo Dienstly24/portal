@@ -60,6 +60,38 @@
 
 <div class="page-title">{{ __('Übersicht') }}</div>
 <div class="page-sub">{{ __('Willkommen zurück') }}, {{ auth()->user()->name }}.</div>
+
+{{-- Onboarding: freiwillige E-Mail-Archivierung anbieten, solange keine
+     aktive Einwilligung vorliegt. Rein optional (Art. 7 DSGVO); der Kunde
+     kann jederzeit "Später" waehlen (lokal ausgeblendet) oder im Portal
+     widerrufen. --}}
+@unless($customer->hasActiveEmailConsent())
+<div id="email-onboarding" class="card" style="border-inline-start:4px solid var(--green,#17A65B);display:none;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+        <div>
+            <div class="card-title" style="margin-bottom:4px;">📨 {{ __('E-Mail-Verbindung aktivieren') }}</div>
+            <div style="font-size:13.5px;color:var(--ink-soft);line-height:1.55;max-width:640px;">
+                {{ __('Lassen Sie vertragsbezogene E-Mails automatisch in Ihrer Kundenakte archivieren, damit wir Sie schneller und besser unterstützen können. Freiwillig und jederzeit widerrufbar.') }}
+            </div>
+        </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
+        <a href="{{ route('portal.email_connection') }}" class="btn" style="padding:8px 18px;font-size:13.5px;">{{ __('Jetzt aktivieren') }} →</a>
+        <button type="button" onclick="d24DismissEmailOnboarding()" style="background:none;border:1px solid var(--line);color:var(--ink-soft);font-size:13.5px;padding:8px 16px;border-radius:10px;cursor:pointer;">{{ __('Später') }}</button>
+    </div>
+</div>
+<script>
+(function(){
+    if(localStorage.getItem('email_onboarding_dismissed')!=='1'){
+        var el=document.getElementById('email-onboarding');if(el)el.style.display='block';
+    }
+    window.d24DismissEmailOnboarding=function(){
+        localStorage.setItem('email_onboarding_dismissed','1');
+        var el=document.getElementById('email-onboarding');if(el)el.style.display='none';
+    };
+})();
+</script>
+@endunless
 <div class="grid-3">
     <a href="{{ route('portal.contracts') }}" class="metric metric-link" title="Zur Vertragsübersicht">
         <div class="label">📑 {{ __('Aktive Verträge') }}</div><div class="value">{{ $contractsCount }}</div>

@@ -166,5 +166,6 @@ document.getElementById('m-btn')?.addEventListener('click', function(){ document
     setInterval(load, 60000);
 })();
 </script>
+@include('partials.cookie_consent')
 </body>
 </html>
