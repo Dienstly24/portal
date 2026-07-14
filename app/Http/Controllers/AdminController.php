@@ -121,7 +121,7 @@ class AdminController extends Controller
             'contract_number' => $request->filled('contract_number') ? trim($request->contract_number) : null,
             'type' => $request->type,
             'type_other' => $request->type === 'andere' ? ($request->type_other ?: null) : null,
-            'subtype' => $request->type === 'krankenversicherung' ? $request->subtype : null,
+            'subtype' => Contract::normalizeSubtype($request->type, $request->subtype),
             'insurer' => $request->insurer,
             'status' => $request->status,
             'start_date' => $request->start_date,
@@ -151,7 +151,7 @@ class AdminController extends Controller
             'contract_number' => $request->filled('contract_number') ? trim($request->contract_number) : null,
             'type' => $request->type,
             'type_other' => $request->type === 'andere' ? ($request->type_other ?: null) : null,
-            'subtype' => $request->type === 'krankenversicherung' ? $request->subtype : null,
+            'subtype' => Contract::normalizeSubtype($request->type, $request->subtype),
             'insurer' => $request->insurer,
             'status' => $request->status,
             'start_date' => $request->start_date,
@@ -194,8 +194,9 @@ class AdminController extends Controller
             'type' => 'required|in:' . implode(',', Contract::typeKeys()),
             // Freitext-Sparte nur bei "Sonstige" - dann aber verpflichtend.
             'type_other' => 'nullable|string|max:120|required_if:type,andere',
-            // GKV/PKV-Unterscheidung: nur GKV erhält Wechsel-Erinnerungen (§175 SGB V)
-            'subtype' => 'nullable|in:gkv,pkv',
+            // Untergruppe je Sparte: GKV/PKV (Wechsel-Erinnerung, §175 SGB V)
+            // bzw. Art der Krankenzusatz (ambulant/Zahn/Ausland).
+            'subtype' => 'nullable|in:' . implode(',', Contract::subtypeKeys()),
             'insurer' => 'required|string|max:255',
             // Echte Versicherungsnummer, optional, aber eindeutig.
             'contract_number' => ['nullable', 'string', 'max:255', \Illuminate\Validation\Rule::unique('contracts', 'contract_number')->ignore($ignoreId)],
