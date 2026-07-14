@@ -163,29 +163,6 @@
 </div>
 @endif
 
-{{-- Kundenakte-Vollständigkeit (Final Polish Punkt 5) --}}
-<div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-        <div class="card-title" style="margin-bottom:0;">📋 {{ __('Ihre Kundenakte') }}</div>
-        <span style="font-size:20px;font-weight:800;color:{{ $completeness['percent'] >= 80 ? '#3B7A57' : ($completeness['percent'] >= 50 ? '#B5651D' : '#A32D2D') }};">{{ $completeness['percent'] }} %</span>
-    </div>
-    <div style="height:10px;background:var(--canvas);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:6px;">
-        <div style="height:100%;width:{{ $completeness['percent'] }}%;background:{{ $completeness['percent'] >= 80 ? '#3B7A57' : ($completeness['percent'] >= 50 ? '#D9A441' : '#E24B4A') }};transition:width .3s;"></div>
-    </div>
-    <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;">{{ $completeness['percent'] }} % {{ __('vollständig') }}</div>
-    @if(count($completeness['missing']))
-    <div style="display:flex;flex-direction:column;gap:8px;">
-        @foreach($completeness['missing'] as $m)
-        <a href="{{ route($m['route']) }}" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border:1px solid var(--line);border-radius:8px;text-decoration:none;color:var(--ink);font-size:13.5px;{{ !empty($m['optional']) ? 'opacity:.7;' : '' }}">
-            <span>⚠ {{ $m['label'] }}</span>
-            <span style="color:var(--petrol);font-size:12px;">{{ __('ergänzen') }} →</span>
-        </a>
-        @endforeach
-    </div>
-    @else
-    <div style="font-size:13.5px;color:#3B7A57;">✓ {{ __('Ihre Kundenakte ist vollständig.') }}</div>
-    @endif
-</div>
 <div class="card">
     <div class="card-title">{{ __('Letzte Verträge') }}</div>
     @forelse($contracts as $c)
