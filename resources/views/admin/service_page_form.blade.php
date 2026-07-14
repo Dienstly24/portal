@@ -72,6 +72,17 @@
     </div>
 
     <div class="card">
+        <div class="card-title">Ausführlicher Inhalt (optional, gut für SEO)</div>
+        <div class="page-sub" style="margin-bottom:14px;">Formatierung: Zeile mit <code>## </code> = Zwischenüberschrift, Zeile mit <code>- </code> = Aufzählungspunkt, Leerzeile = neuer Absatz.</div>
+        <div class="grid-2">
+            <div class="field"><label>Inhalt (DE)</label>
+                <textarea name="body_de" rows="12" maxlength="20000" placeholder="## Darauf kommt es an&#10;Die Kfz-Haftpflicht ist ...&#10;&#10;- Punkt eins&#10;- Punkt zwei">{{ old('body_de', $page->body_de) }}</textarea></div>
+            <div class="field"><label>Inhalt (AR)</label>
+                <textarea name="body_ar" rows="12" maxlength="20000" dir="rtl">{{ old('body_ar', $page->body_ar) }}</textarea></div>
+        </div>
+    </div>
+
+    <div class="card">
         <div class="card-title">FAQ (optional)</div>
         <div id="faqRows">
             @php $faq = old('faq_q_de') ? null : ($page->faq ?? []); @endphp
@@ -90,6 +101,13 @@
             @endif
         </div>
         <button type="button" class="btn btn-ghost" onclick="addFaqRow()">➕ FAQ-Eintrag</button>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Anbieter-Laufband (optional)</div>
+        <div class="page-sub" style="margin-bottom:14px;">Ein Anbietername pro Zeile – wird als ruhiges Laufband angezeigt. Nur Namen (kein fremdes Logo). Bitte nur Anbieter aufführen, zu denen Sie tatsächlich beraten oder vermitteln.</div>
+        <div class="field"><label>Anbieter (eine pro Zeile)</label>
+            <textarea name="providers" rows="6" maxlength="4000" placeholder="Allianz&#10;AXA&#10;...">{{ old('providers', $page->providers) }}</textarea></div>
     </div>
 
     <div class="card">

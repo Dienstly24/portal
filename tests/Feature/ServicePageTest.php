@@ -46,6 +46,31 @@ class ServicePageTest extends TestCase
             ->assertSee('Frage?');
     }
 
+    public function test_body_markup_renders_as_html(): void
+    {
+        $this->makePage([
+            'body_de' => "## Darauf kommt es an\nEin Absatz.\n\n- Punkt eins\n- Punkt zwei",
+            'meta_description_de' => 'Testbeschreibung fuer SEO.',
+        ]);
+
+        $this->get('/leistungen/kfz-versicherung')
+            ->assertOk()
+            ->assertSee('<h3>Darauf kommt es an</h3>', false)
+            ->assertSee('<li>Punkt eins</li>', false)
+            ->assertSee('<p>Ein Absatz.</p>', false)
+            ->assertSee('Testbeschreibung fuer SEO.', false)   // meta description
+            ->assertSee('application/ld+json', false);          // structured data
+    }
+
+    public function test_body_escapes_html(): void
+    {
+        $this->makePage(['body_de' => 'Text mit <script>alert(1)</script> drin']);
+        $this->get('/leistungen/kfz-versicherung')
+            ->assertOk()
+            ->assertDontSee('<script>alert(1)</script>', false)
+            ->assertSee('&lt;script&gt;', false);
+    }
+
     public function test_inactive_or_unknown_is_404(): void
     {
         $this->makePage(['is_active' => false]);
