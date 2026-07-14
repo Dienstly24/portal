@@ -229,6 +229,34 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
 </div>
 
 <div class="tab-section" id="tab-vertraege" style="display:none;">
+{{-- Beitrags-Statistik: was zahlt der Kunde ueber alle AKTIVEN Vertraege
+     (auf den Monat normiert, damit unterschiedliche Zahlweisen vergleichbar sind). --}}
+@php
+    $activeContracts = $customer->contracts->where('status', 'active');
+    $monthlyTotal = $activeContracts->sum(fn($c) => $c->monthlyPremium());
+    $yearlyTotal  = $activeContracts->sum(fn($c) => $c->yearlyPremium());
+    $withPremium  = $activeContracts->filter(fn($c) => $c->hasPremium())->count();
+    $eur = fn($v) => number_format((float) $v, 2, ',', '.') . ' €';
+@endphp
+@if($withPremium > 0)
+<div class="card" style="margin-bottom:20px;">
+    <div class="card-title" style="margin-bottom:14px;">💶 Beitragsübersicht (aktive Verträge)</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;">
+        <div style="background:var(--canvas);border:1px solid var(--line);border-radius:10px;padding:14px 16px;">
+            <div style="font-size:12px;color:var(--ink-soft);margin-bottom:4px;">Monatlich gesamt</div>
+            <div style="font-size:22px;font-weight:700;">{{ $eur($monthlyTotal) }}</div>
+        </div>
+        <div style="background:var(--canvas);border:1px solid var(--line);border-radius:10px;padding:14px 16px;">
+            <div style="font-size:12px;color:var(--ink-soft);margin-bottom:4px;">Jährlich gesamt</div>
+            <div style="font-size:22px;font-weight:700;">{{ $eur($yearlyTotal) }}</div>
+        </div>
+        <div style="background:var(--canvas);border:1px solid var(--line);border-radius:10px;padding:14px 16px;">
+            <div style="font-size:12px;color:var(--ink-soft);margin-bottom:4px;">Verträge mit Beitrag</div>
+            <div style="font-size:22px;font-weight:700;">{{ $withPremium }} <span style="font-size:13px;color:var(--ink-soft);font-weight:500;">von {{ $activeContracts->count() }}</span></div>
+        </div>
+    </div>
+</div>
+@endif
 {{-- Verträge --}}
 <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
@@ -246,6 +274,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
             <th style="text-align:left;padding:10px 12px;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--line);">Versicherer</th>
             <th style="text-align:left;padding:10px 12px;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--line);">Vertragsnr.</th>
             <th style="text-align:left;padding:10px 12px;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--line);">Beginn</th>
+            <th style="text-align:left;padding:10px 12px;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--line);">Beitrag</th>
             <th style="text-align:left;padding:10px 12px;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--line);">Status</th>
             <th style="text-align:left;padding:10px 12px;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--line);">Hinzugefügt von</th>
             <th style="text-align:right;padding:10px 12px;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--line);">Aktionen</th>
@@ -266,6 +295,14 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
             <td style="padding:12px;">{{ $c->insurer }}</td>
             <td style="padding:12px;font-family:monospace;font-size:13px;">{{ $c->contract_number }}</td>
             <td style="padding:12px;color:var(--ink-soft);font-size:13px;">{{ $c->start_date ? \Carbon\Carbon::parse($c->start_date)->format('d.m.Y') : '—' }}</td>
+            <td style="padding:12px;font-size:13px;white-space:nowrap;">
+                @if($c->hasPremium())
+                    <div style="font-weight:600;">{{ $eur($c->premium_amount) }}</div>
+                    <div style="font-size:11.5px;color:var(--ink-soft);">{{ $c->premiumIntervalLabel() }}@if($c->premium_interval !== 'monthly') · {{ $eur($c->monthlyPremium()) }}/Mon.@endif</div>
+                @else
+                    <span style="color:var(--ink-soft);">—</span>
+                @endif
+            </td>
             <td style="padding:12px;">
                 <span class="badge badge-{{ $c->status === 'active' ? 'active' : ($c->status === 'cancelled' ? 'rejected' : 'pending') }}">
                     {{ ['active'=>'Aktiv','pending'=>'In Bearb.','cancelled'=>'Gekündigt','expired'=>'Abgelaufen'][$c->status] ?? $c->status }}
@@ -294,7 +331,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
         </tr>
         @if($c->vehicleDetail || $c->energyDetail || $c->internetDetail)
         <tr class="contract-row" data-type="{{ $c->type }}">
-            <td colspan="7" style="padding:4px 12px 12px;">
+            <td colspan="8" style="padding:4px 12px 12px;">
                 <div style="font-size:12.5px;color:var(--ink-soft);background:var(--canvas);border:1px solid var(--line);border-radius:8px;padding:8px 12px;">
                     @if($v = $c->vehicleDetail)
                         🚗 <b>{{ $v->license_plate ?? '—' }}</b> · {{ $v->manufacturer }} {{ $v->model }}@if($v->vehicle_type) ({{ $v->vehicle_type }})@endif
@@ -320,7 +357,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
         @endif
 
         @empty
-        <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--ink-soft);">Keine Verträge.</td></tr>
+        <tr><td colspan="8" style="text-align:center;padding:24px;color:var(--ink-soft);">Keine Verträge.</td></tr>
         @endforelse
         </tbody>
     </table>
