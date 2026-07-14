@@ -100,7 +100,8 @@ class EnergyContractImportTest extends TestCase
 
         $this->assertSame(1, Contract::count());
         $contract = Contract::first();
-        $this->assertSame('strom_gas', $contract->type);
+        // ÖkoStrom-Produkt -> Sparte "strom" (Strom und Gas sind getrennt).
+        $this->assertSame('strom', $contract->type);
         $this->assertSame('LichtBlick', $contract->insurer);
         $this->assertSame('active', $contract->status);
         $this->assertSame('1636476', $contract->contract_number);
@@ -135,6 +136,10 @@ class EnergyContractImportTest extends TestCase
         $this->assertSame(1, Customer::count());
         $this->assertSame(2, Contract::count());
         $this->assertSame(2, Customer::first()->contracts()->count());
+
+        // Strom und Gas landen in getrennten Sparten.
+        $this->assertSame(1, Contract::where('type', 'strom')->count());
+        $this->assertSame(1, Contract::where('type', 'gas')->count());
     }
 
     public function test_status_mapping_pending_and_cancelled(): void

@@ -25,18 +25,39 @@ class Contract extends Model {
         'sach'                => ['label' => 'Sach',                'icon' => '📦', 'color' => '#5F5E5A', 'bg' => '#EEF0F3'],
         'escooter'            => ['label' => 'E-Scooter',           'icon' => '🛴', 'color' => '#185FA5', 'bg' => '#E6F1FB'],
         'internet'            => ['label' => 'Internet & Mobilfunk','icon' => '📶', 'color' => '#6D28D9', 'bg' => '#EDE9FE'],
-        'strom_gas'           => ['label' => 'Strom & Gas',         'icon' => '⚡', 'color' => '#92400E', 'bg' => '#FEF3C7'],
+        // Strom und Gas sind getrennte Sparten (Betreiber-Vorgabe 14.07.2026):
+        // je eigene Zeile, beide nutzen die Energie-Detailtabelle.
+        'strom'               => ['label' => 'Strom',               'icon' => '⚡', 'color' => '#92400E', 'bg' => '#FEF3C7'],
+        'gas'                 => ['label' => 'Gas',                 'icon' => '🔥', 'color' => '#B45309', 'bg' => '#FEF0E7'],
         'andere'              => ['label' => 'Sonstige',            'icon' => '📋', 'color' => '#5F5E5A', 'bg' => '#EEF0F3'],
     ];
+
+    /**
+     * Alt-Sparten, die nicht mehr auswaehlbar sind, aber in Bestandsdaten
+     * vorkommen koennen (Migration teilt "strom_gas" in strom/gas auf; ein
+     * Rest-Datensatz soll trotzdem sauber rendern statt auf "Sonstige" zu
+     * fallen).
+     */
+    public const LEGACY_TYPES = [
+        'strom_gas' => ['label' => 'Strom & Gas', 'icon' => '⚡', 'color' => '#92400E', 'bg' => '#FEF3C7'],
+    ];
+
+    /** Energie-Sparten (Strom, Gas + Alt-Sammelsparte) - nutzen energyDetail. */
+    public const ENERGY_TYPES = ['strom', 'gas', 'strom_gas'];
 
     /** Gueltige Sparten-Schluessel (Validierungs-Whitelist). */
     public static function typeKeys(): array {
         return array_keys(self::TYPES);
     }
 
+    /** Ist dies ein Energievertrag (Strom oder Gas)? */
+    public function isEnergy(): bool {
+        return in_array($this->type, self::ENERGY_TYPES, true);
+    }
+
     /** Anzeige-Konfiguration (Icon/Farbe/Label) einer Sparte inkl. Fallback. */
     public function typeConfig(): array {
-        return self::TYPES[$this->type] ?? self::TYPES['andere'];
+        return self::TYPES[$this->type] ?? self::LEGACY_TYPES[$this->type] ?? self::TYPES['andere'];
     }
 
     /**
@@ -47,11 +68,13 @@ class Contract extends Model {
         if ($this->type === 'andere' && !empty($this->type_other)) {
             return $this->type_other;
         }
-        return self::TYPES[$this->type]['label'] ?? ucfirst(str_replace('_', ' ', (string) $this->type));
+        return self::TYPES[$this->type]['label']
+            ?? self::LEGACY_TYPES[$this->type]['label']
+            ?? ucfirst(str_replace('_', ' ', (string) $this->type));
     }
 
     public function typeIcon(): string {
-        return self::TYPES[$this->type]['icon'] ?? '📋';
+        return self::TYPES[$this->type]['icon'] ?? self::LEGACY_TYPES[$this->type]['icon'] ?? '📋';
     }
 
     protected static function boot() {

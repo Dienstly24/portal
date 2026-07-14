@@ -79,7 +79,7 @@ class Customer extends Model {
             ['ok' => $this->family()->exists(), 'label' => 'Familienmitglieder fehlen', 'route' => 'portal.family'],
             ['ok' => !empty($this->iban), 'label' => 'Bankverbindung fehlt', 'route' => 'portal.bank'],
             ['ok' => $this->contracts()->whereHas('vehicleDetail')->exists(), 'label' => 'Fahrzeugdaten fehlen', 'route' => 'portal.contracts'],
-            ['ok' => $this->contracts()->where('type', 'strom_gas')->exists(), 'label' => 'Energievertrag fehlt', 'route' => 'portal.contracts'],
+            ['ok' => $this->contracts()->whereIn('type', \App\Models\Contract::ENERGY_TYPES)->exists(), 'label' => 'Energievertrag fehlt', 'route' => 'portal.contracts'],
             ['ok' => $this->contracts()->where('type', 'internet')->exists(), 'label' => 'Internetvertrag fehlt', 'route' => 'portal.contracts'],
         ];
 

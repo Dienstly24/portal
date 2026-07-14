@@ -35,7 +35,10 @@ class ContractSwitchReminderService
     /** Fenster-Offsets vor end_date je Sparte. */
     private const END_DATE_RULES = [
         'internet'  => ['first' => '6 months', 'followup' => '3 months'],
-        'strom_gas' => ['first' => '6 months', 'followup' => '3 months'],
+        // Strom und Gas sind getrennte Sparten, gleiche Wechsel-Fenster.
+        'strom'     => ['first' => '6 months', 'followup' => '3 months'],
+        'gas'       => ['first' => '6 months', 'followup' => '3 months'],
+        'strom_gas' => ['first' => '6 months', 'followup' => '3 months'], // Alt-Daten
         'kfz'       => ['first' => '2 months', 'followup' => '6 weeks'],
     ];
 

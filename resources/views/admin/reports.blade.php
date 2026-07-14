@@ -86,7 +86,7 @@
     </div>
     <canvas id="contractTypeChart" height="220"></canvas>
     @php
-    $typeLabels = ['kfz'=>'KFZ','krankenversicherung'=>'Kranken','internet'=>'Internet','strom_gas'=>'Strom & Gas','andere'=>'Andere','leben'=>'Leben','sach'=>'Sach'];
+    $typeLabels = ['kfz'=>'KFZ','krankenversicherung'=>'Kranken','internet'=>'Internet','strom'=>'Strom','gas'=>'Gas','strom_gas'=>'Strom & Gas','andere'=>'Andere','leben'=>'Leben','sach'=>'Sach'];
     @endphp
 </div>
 
@@ -139,7 +139,7 @@
         <tr>
             <td style="padding:13px 20px;font-weight:600;">{{ $c->customer?->user?->name ?? '—' }}</td>
             <td>{{ $c->insurer }}</td>
-            <td>{{ ['kfz'=>'KFZ','krankenversicherung'=>'Kranken','internet'=>'Internet','strom_gas'=>'Strom & Gas','andere'=>'Andere'][$c->type] ?? $c->type }}</td>
+            <td>{{ ['kfz'=>'KFZ','krankenversicherung'=>'Kranken','internet'=>'Internet','strom'=>'Strom','gas'=>'Gas','strom_gas'=>'Strom & Gas','andere'=>'Andere'][$c->type] ?? $c->type }}</td>
             <td>{{ \Carbon\Carbon::parse($c->end_date)->format('d.m.Y') }}</td>
             <td>
                 <span style="background:{{ $days <= 7 ? '#F9E3E3' : ($days <= 14 ? '#F7E7D6' : '#FEF3C7') }};color:{{ $days <= 7 ? '#A32D2D' : ($days <= 14 ? '#B5651D' : '#92400E') }};padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;">

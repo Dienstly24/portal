@@ -274,4 +274,54 @@ class ContractManagementTest extends TestCase
             ->assertSee('tab-dokumente')
             ->assertSee('Bearbeiten');
     }
+
+    // 15) Strom und Gas sind getrennte Sparten; Energievertraege speichern
+    //     Vertragsnummer (am Vertrag) UND Kundennummer (am Energie-Detail).
+    public function test_strom_and_gas_are_separate_sparten_with_energy_numbers(): void
+    {
+        $customer = $this->makeCustomer();
+
+        // Strom-Vertrag mit Vertrags- und Kundennummer + Zaehler.
+        $this->actingAs($this->admin())->post(route('admin.contract.store', $customer->id), $this->base([
+            'type' => 'strom', 'insurer' => 'LichtBlick', 'contract_number' => 'V-STROM-1',
+            'energy' => ['tariff' => 'ÖkoStrom 24', 'customer_number' => 'KD-777', 'meter_number' => 'Z-123', 'consumption_kwh' => 3200],
+        ]))->assertSessionHas('success');
+
+        $strom = Contract::where('customer_id', $customer->id)->where('type', 'strom')->firstOrFail();
+        $this->assertSame('V-STROM-1', $strom->contract_number);
+        $this->assertSame('KD-777', $strom->energyDetail->customer_number);
+        $this->assertSame('Z-123', $strom->energyDetail->meter_number);
+        $this->assertSame(3200, $strom->energyDetail->consumption_kwh);
+
+        // Gas-Vertrag als eigene Sparte.
+        $this->actingAs($this->admin())->post(route('admin.contract.store', $customer->id), $this->base([
+            'type' => 'gas', 'insurer' => 'EWE',
+            'energy' => ['tariff' => 'EWE Gas basis', 'customer_number' => 'KD-888'],
+        ]))->assertSessionHas('success');
+
+        $gas = Contract::where('customer_id', $customer->id)->where('type', 'gas')->firstOrFail();
+        $this->assertSame('gas', $gas->type);
+        $this->assertSame('KD-888', $gas->energyDetail->customer_number);
+        $this->assertTrue($gas->isEnergy());
+
+        // Beide getrennt, kein "strom_gas" mehr.
+        $this->assertSame(0, Contract::where('type', 'strom_gas')->count());
+    }
+
+    // 16) Typwechsel weg von Energie entfernt die Energie-Detaildaten.
+    public function test_switching_away_from_energy_clears_energy_details(): void
+    {
+        $customer = $this->makeCustomer();
+        $this->actingAs($this->admin())->post(route('admin.contract.store', $customer->id), $this->base([
+            'type' => 'gas', 'insurer' => 'EWE', 'energy' => ['tariff' => 'EWE Gas basis'],
+        ]));
+        $contract = Contract::where('customer_id', $customer->id)->firstOrFail();
+        $this->assertNotNull($contract->energyDetail);
+
+        $this->actingAs($this->admin())->put(route('admin.contract.update', $contract->id), $this->base([
+            'type' => 'kfz', 'insurer' => 'HUK',
+        ]))->assertRedirect(route('admin.customer', $customer->id));
+
+        $this->assertNull($contract->fresh()->energyDetail);
+    }
 }

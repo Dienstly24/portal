@@ -387,9 +387,11 @@ class FondsFinanzImportService
     }
 
     /**
-     * Sparte auf die BESTEHENDEN contracts.type-Enum-Werte abbilden
-     * (kfz|krankenversicherung|internet|strom_gas|andere) - bewusst keine
+     * Sparte auf die bestehenden contracts.type-Werte abbilden
+     * (kfz|krankenversicherung|internet|strom|gas|andere) - bewusst keine
      * neuen Parallel-Kategorien; Unbekanntes landet in 'andere'.
+     * Strom und Gas sind getrennte Sparten: "Gas" hat Vorrang, damit z. B.
+     * "Erdgas" nicht faelschlich als Strom landet.
      */
     private function normalizeLine(?string $line): ?string
     {
@@ -402,7 +404,8 @@ class FondsFinanzImportService
         return match (true) {
             str_contains($normalized, 'kfz'), str_contains($normalized, 'kraftfahrt'), str_contains($normalized, 'auto') => 'kfz',
             str_contains($normalized, 'kranken'), $normalized === 'kv', $normalized === 'pkv', $normalized === 'gkv' => 'krankenversicherung',
-            str_contains($normalized, 'strom'), str_contains($normalized, 'gas'), str_contains($normalized, 'energie') => 'strom_gas',
+            str_contains($normalized, 'gas') => 'gas',
+            str_contains($normalized, 'strom'), str_contains($normalized, 'energie') => 'strom',
             str_contains($normalized, 'internet'), str_contains($normalized, 'dsl'), str_contains($normalized, 'telekommunikation') => 'internet',
             default => 'andere',
         };
