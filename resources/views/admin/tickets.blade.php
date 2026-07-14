@@ -1,5 +1,26 @@
 @extends('layouts.admin')
 @section('content')
+@php
+// Ticket-Typ -> Icon + Farbflaeche (gleiche Bildsprache wie Kunden-/Vertragsliste,
+// damit die Beraterwelt konsistent wirkt). Unbekannte Typen -> 'other'.
+$typeConfig = [
+    'damage'       => ['icon' => '💥', 'bg' => '#F9E3E3'],
+    'change'       => ['icon' => '🔄', 'bg' => '#E6F1FB'],
+    'offer'        => ['icon' => '🏷️', 'bg' => '#E4F0E7'],
+    'data_update'  => ['icon' => '📝', 'bg' => '#EDE9FE'],
+    'cancellation' => ['icon' => '🚪', 'bg' => '#F7E7D6'],
+    'complaint'    => ['icon' => '⚠️', 'bg' => '#FEF3C7'],
+    'other'        => ['icon' => '💬', 'bg' => '#EEF0F3'],
+];
+// Prioritaet -> farbiger Chip (Punkt + Label), damit die Dringlichkeit auf einen
+// Blick lesbar ist statt nur als Emoji.
+$prioConfig = [
+    'dringend' => ['label' => 'Dringend', 'bg' => '#F9E3E3', 'fg' => '#A32D2D'],
+    'hoch'     => ['label' => 'Hoch',     'bg' => '#F7E7D6', 'fg' => '#B5651D'],
+    'mittel'   => ['label' => 'Mittel',   'bg' => '#FAF0DA', 'fg' => '#8A6D1B'],
+    'niedrig'  => ['label' => 'Niedrig',  'bg' => '#E4F0E7', 'fg' => '#3B7A57'],
+];
+@endphp
 <div class="toolbar">
     <div>
         <div class="page-title">Tickets</div>
@@ -88,29 +109,87 @@
     </form>
 </div>
 
-<div class="card">
-    <table>
-        <thead><tr><th>Nr.</th><th>Betreff</th><th>Kunde</th><th>Priorität</th><th>Zugewiesen</th><th>Aktualisiert</th><th>Status</th><th></th></tr></thead>
+<div class="card" style="padding:0;overflow:hidden;">
+    <table class="tickets-table">
+        <thead><tr>
+            <th style="width:52px;"></th>
+            <th>Betreff</th>
+            <th>Kunde</th>
+            <th>Priorität</th>
+            <th>Zugewiesen</th>
+            <th>Aktualisiert</th>
+            <th>Status</th>
+            <th style="width:44px;"></th>
+        </tr></thead>
         <tbody>
         @forelse($tickets as $t)
-        <tr>
-            <td style="color:var(--ink-soft);font-size:13px;white-space:nowrap;">{{ $t->ticket_number }}</td>
-            <td>
-                <div style="font-weight:600;">{{ $t->subject }}</div>
-                <div style="font-size:12px;color:var(--ink-soft);">{{ $t->typeLabel() }} · erstellt {{ $t->created_at->format('d.m.Y') }}</div>
+        @php
+            $cfg = $typeConfig[$t->type] ?? $typeConfig['other'];
+            $prio = $prioConfig[$t->priority] ?? $prioConfig['mittel'];
+            $custName = $t->customer?->user?->name ?? $t->guest_name ?? $t->guest_email;
+            // Initialen aus dem Namen (Sonderzeichen/Klammern aus Import-Namen
+            // vorher entfernen, damit die Avatare sauber bleiben).
+            $clean = trim(preg_replace('/[^\p{L}\p{N} ]+/u', ' ', (string) $custName));
+            $initials = \Illuminate\Support\Str::of($clean !== '' ? $clean : '?')->explode(' ')
+                ->filter()->take(2)->map(fn($w) => mb_strtoupper(mb_substr($w, 0, 1)))->implode('');
+        @endphp
+        <tr class="ticket-row" data-href="{{ route('admin.ticket', $t->id) }}" style="cursor:pointer;">
+            {{-- Typ-Icon als farbige Kachel (wie Kunden-/Vertragsliste) --}}
+            <td style="padding-left:20px;">
+                <div title="{{ $t->typeLabel() }}" aria-label="{{ $t->typeLabel() }}"
+                    style="width:38px;height:38px;border-radius:10px;background:{{ $cfg['bg'] }};display:flex;align-items:center;justify-content:center;font-size:18px;">{{ $cfg['icon'] }}</div>
             </td>
-            <td style="color:var(--ink-soft);">{{ $t->customer?->user?->name }}</td>
-            <td style="white-space:nowrap;">{{ $t->priorityLabel() }}</td>
-            <td style="color:var(--ink-soft);">{{ $t->assignedTo?->name ?? '—' }}</td>
-            <td style="color:var(--ink-soft);white-space:nowrap;">{{ $t->updated_at->format('d.m.Y H:i') }}</td>
+            <td>
+                <div style="font-weight:600;line-height:1.35;">{{ $t->subject }}</div>
+                <div style="font-size:12px;color:var(--ink-soft);margin-top:2px;">
+                    <span style="font-variant-numeric:tabular-nums;">{{ $t->ticket_number }}</span>
+                    · {{ $t->typeLabel() }} · erstellt {{ $t->created_at->format('d.m.Y') }}
+                </div>
+            </td>
+            <td>
+                @if($custName)
+                <div style="display:flex;align-items:center;gap:9px;">
+                    <span class="ticket-avatar">{{ $initials }}</span>
+                    <div style="min-width:0;">
+                        <div style="font-weight:500;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;">{{ $custName }}</div>
+                        @if($t->customer?->customer_number)
+                        <div style="font-size:11.5px;color:var(--ink-soft);">Nr. {{ $t->customer->customer_number }}</div>
+                        @elseif(!$t->customer)
+                        <div style="font-size:11.5px;color:var(--ink-soft);">Gast-Anfrage</div>
+                        @endif
+                    </div>
+                </div>
+                @else
+                <span style="color:var(--ink-soft);">—</span>
+                @endif
+            </td>
+            <td>
+                <span class="prio-chip" style="background:{{ $prio['bg'] }};color:{{ $prio['fg'] }};">
+                    <span class="prio-dot" style="background:{{ $prio['fg'] }};"></span>{{ $prio['label'] }}
+                </span>
+            </td>
+            <td style="font-size:13px;color:var(--ink-soft);white-space:nowrap;">{{ $t->assignedTo?->name ?? '—' }}</td>
+            <td style="color:var(--ink-soft);white-space:nowrap;font-size:13px;">{{ $t->updated_at->format('d.m.Y') }}<div style="font-size:11.5px;">{{ $t->updated_at->format('H:i') }} Uhr</div></td>
             <td>
                 <span class="badge badge-{{ $t->statusBadge() }}">{{ $t->statusLabel() }}</span>
-                @if($t->isOverdue())<div style="font-size:11px;color:#A32D2D;font-weight:600;margin-top:4px;">⏰ überfällig</div>@endif
+                @if($t->isOverdue())<div style="font-size:11px;color:#A32D2D;font-weight:600;margin-top:5px;white-space:nowrap;">⏰ überfällig</div>@endif
             </td>
-            <td><a href="{{ route('admin.ticket', $t->id) }}" class="btn btn-ghost btn-sm">Details</a></td>
+            {{-- Aktionen: 3-Punkte-Menue. Zelle .noNav, damit der Klick hier NICHT
+                 die Zeilennavigation ausloest. --}}
+            <td class="noNav" style="text-align:right;padding-right:16px;position:relative;" x-data="{open:false}">
+                <button type="button" @click="open=!open" aria-haspopup="true" :aria-expanded="open" title="Aktionen"
+                    style="background:none;border:none;cursor:pointer;font-size:18px;line-height:1;color:var(--ink-soft);padding:4px 10px;border-radius:6px;letter-spacing:1px;">•••</button>
+                <div x-show="open" x-cloak @click.outside="open=false" @keydown.escape.window="open=false"
+                    style="position:absolute;right:12px;top:100%;z-index:50;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);min-width:200px;padding:6px;">
+                    <a href="{{ route('admin.ticket', $t->id) }}" class="rowmenu-item">🎫 Ticket öffnen</a>
+                    @if($t->customer)
+                    <a href="{{ route('admin.customer', $t->customer_id) }}" class="rowmenu-item">👤 Kundenakte öffnen</a>
+                    @endif
+                </div>
+            </td>
         </tr>
         @empty
-        <tr><td colspan="8" style="color:var(--ink-soft);text-align:center;padding:24px;">Keine Tickets gefunden.</td></tr>
+        <tr><td colspan="8" style="color:var(--ink-soft);text-align:center;padding:40px;">Keine Tickets gefunden.</td></tr>
         @endforelse
         </tbody>
     </table>
@@ -132,4 +211,24 @@
     </div>
 </div>
 @endif
+
+<style>
+[x-cloak]{display:none !important;}
+.tickets-table td{padding-top:12px;padding-bottom:12px;vertical-align:middle;}
+.ticket-row{transition:background .12s;}
+.ticket-row:hover td{background:#E6E9ED;}
+.ticket-avatar{width:32px;height:32px;flex:none;border-radius:50%;background:var(--petrol);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;letter-spacing:.3px;}
+.prio-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;}
+.prio-dot{width:7px;height:7px;border-radius:50%;flex:none;}
+.rowmenu-item{display:block;width:100%;text-align:left;padding:9px 12px;border-radius:7px;font-size:13.5px;color:var(--ink);text-decoration:none;box-sizing:border-box;}
+.rowmenu-item:hover{background:#F4F5F7;}
+</style>
+<script>
+document.querySelectorAll('tr.ticket-row').forEach(function (row) {
+    row.addEventListener('click', function (e) {
+        if (e.target.closest('.noNav') || e.target.closest('a') || e.target.closest('button')) return;
+        window.location = row.dataset.href;
+    });
+});
+</script>
 @endsection
