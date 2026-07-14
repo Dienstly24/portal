@@ -303,7 +303,8 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
                             <br>⚠️ Schäden: @foreach($v->claims ?? [] as $claim){{ str_pad($claim['month'] ?? '?', 2, '0', STR_PAD_LEFT) }}/{{ $claim['year'] ?? '?' }} ({{ ucfirst($claim['type'] ?? '') }})@if(!$loop->last), @endif @endforeach
                         @endif
                     @elseif($e = $c->energyDetail)
-                        ⚡ {{ $e->tariff ?? 'Tarif —' }}@if($e->consumption_kwh) · {{ number_format($e->consumption_kwh, 0, ',', '.') }} kWh/Jahr @endif
+                        {{ $c->typeIcon() }} {{ $e->tariff ?? 'Tarif —' }}@if($e->consumption_kwh) · {{ number_format($e->consumption_kwh, 0, ',', '.') }} kWh/Jahr @endif
+                        @if($e->customer_number) · Kd-Nr.: {{ $e->customer_number }}@endif
                         @if($e->meter_number) · Zähler: {{ $e->meter_number }}@endif
                         @if($e->malo_id) · MaLo-ID: <b>{{ $e->malo_id }}</b>@endif
                         @if($e->grid_operator) · Netz: {{ $e->grid_operator }}@endif

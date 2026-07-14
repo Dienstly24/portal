@@ -1,6 +1,8 @@
 @php
     $typeLabels = [
         'kfz' => ['de' => 'Kfz-Versicherung', 'ar' => 'تأمين السيارة'],
+        'strom' => ['de' => 'Stromvertrag', 'ar' => 'عقد الكهرباء'],
+        'gas' => ['de' => 'Gasvertrag', 'ar' => 'عقد الغاز'],
         'strom_gas' => ['de' => 'Strom-/Gasvertrag', 'ar' => 'عقد الكهرباء/الغاز'],
         'internet' => ['de' => 'Internetvertrag', 'ar' => 'عقد الإنترنت'],
         'krankenversicherung' => ['de' => 'Gesetzliche Krankenversicherung', 'ar' => 'التأمين الصحي الحكومي'],

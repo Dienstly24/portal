@@ -227,9 +227,9 @@ class AdminController extends Controller
      * Beim Bearbeiten mit Typwechsel werden verwaiste Detaildaten entfernt.
      */
     private function syncContractDetails(Contract $contract, Request $request): void {
-        if ($contract->type !== 'kfz')       { $contract->vehicleDetail()->delete(); }
-        if ($contract->type !== 'strom_gas') { $contract->energyDetail()->delete(); }
-        if ($contract->type !== 'internet')  { $contract->internetDetail()->delete(); }
+        if ($contract->type !== 'kfz')      { $contract->vehicleDetail()->delete(); }
+        if (!$contract->isEnergy())         { $contract->energyDetail()->delete(); }
+        if ($contract->type !== 'internet') { $contract->internetDetail()->delete(); }
 
         if ($contract->type === 'kfz') {
             $v = $request->input('vehicle', []);
@@ -251,11 +251,11 @@ class AdminController extends Controller
                     'sf_comprehensive_year' => $v['sf_comprehensive_year'] ?? null,
                 ]
             );
-        } elseif ($contract->type === 'strom_gas') {
+        } elseif ($contract->isEnergy()) {
             \App\Models\ContractEnergyDetail::updateOrCreate(
                 ['contract_id' => $contract->id],
                 collect($request->input('energy', []))
-                    ->only(['tariff','consumption_kwh','meter_number','malo_id','meter_reading','grid_operator','metering_operator','payment_amount','payment_interval'])
+                    ->only(['tariff','consumption_kwh','meter_number','customer_number','malo_id','meter_reading','grid_operator','metering_operator','payment_amount','payment_interval'])
                     ->map(fn($val) => $val === '' ? null : $val)
                     ->all()
             );

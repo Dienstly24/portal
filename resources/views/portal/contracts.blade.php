@@ -6,12 +6,12 @@
 </div>
 @php
 $typeIcons = [
-    'kfz' => '🚗', 'strom_gas' => '⚡', 'internet' => '📶', 'haftpflicht' => '🛡️',
+    'kfz' => '🚗', 'strom' => '⚡', 'gas' => '🔥', 'strom_gas' => '⚡', 'internet' => '📶', 'haftpflicht' => '🛡️',
     'hausrat' => '🏠', 'rechtsschutz' => '⚖️', 'krankenversicherung' => '🏥',
     'leben' => '❤️', 'unfall' => '🚑', 'andere' => '📋',
 ];
 $typeLabels = [
-    'kfz' => 'KFZ', 'strom_gas' => 'Strom/Gas', 'internet' => 'Internet', 'haftpflicht' => 'Haftpflicht',
+    'kfz' => 'KFZ', 'strom' => 'Strom', 'gas' => 'Gas', 'strom_gas' => 'Strom/Gas', 'internet' => 'Internet', 'haftpflicht' => 'Haftpflicht',
     'hausrat' => 'Hausrat', 'rechtsschutz' => 'Rechtsschutz', 'krankenversicherung' => 'Krankenversicherung',
     'leben' => 'Leben', 'unfall' => 'Unfall', 'andere' => 'Andere',
 ];
@@ -55,7 +55,8 @@ $typeLabels = [
                         <option value="leben">❤️ Leben</option>
                         <option value="unfall">🚑 Unfall</option>
                         <option value="internet">📶 Internet</option>
-                        <option value="strom_gas">⚡ Strom/Gas</option>
+                        <option value="strom">⚡ Strom</option>
+                        <option value="gas">🔥 Gas</option>
                         <option value="andere">📋 Andere</option>
                     </select>
                 </div>

@@ -31,17 +31,22 @@ class ContractSwitchMail extends Mailable
     {
         $de = [
             'kfz' => 'Ihre Kfz-Versicherung: Jetzt Wechsel prüfen und sparen',
+            'strom' => 'Ihr Stromvertrag: Jetzt Tarife vergleichen und sparen',
+            'gas' => 'Ihr Gasvertrag: Jetzt Tarife vergleichen und sparen',
             'strom_gas' => 'Ihr Energievertrag: Jetzt Tarife vergleichen und sparen',
             'internet' => 'Ihr Internetvertrag: Jetzt Wechsel prüfen und sparen',
             'krankenversicherung' => 'Ihre Krankenkasse: Wechsel jetzt möglich',
         ];
         $ar = [
             'kfz' => 'تأمين سيارتك: افحص إمكانية التبديل ووفّر الآن',
+            'strom' => 'عقد الكهرباء: قارن الأسعار ووفّر الآن',
+            'gas' => 'عقد الغاز: قارن الأسعار ووفّر الآن',
             'strom_gas' => 'عقد الطاقة: قارن الأسعار ووفّر الآن',
             'internet' => 'عقد الإنترنت: افحص إمكانية التبديل ووفّر',
             'krankenversicherung' => 'تأمينك الصحي: التبديل ممكن الآن',
         ];
-        $subject = ($this->lang === 'ar' ? $ar : $de)[$this->contract->type];
+        $map = $this->lang === 'ar' ? $ar : $de;
+        $subject = $map[$this->contract->type] ?? ($this->lang === 'ar' ? 'عرض توفير على عقدك' : 'Sparpotenzial bei Ihrem Vertrag');
         if ($this->stage === 'followup') {
             $subject = ($this->lang === 'ar' ? 'تذكير: ' : 'Erinnerung: ') . $subject;
         }

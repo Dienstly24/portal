@@ -110,7 +110,7 @@ new Chart(ctx, {
                 {{ \App\Models\Contract::where('type','kfz')->count() }},
                 {{ \App\Models\Contract::where('type','krankenversicherung')->count() }},
                 {{ \App\Models\Contract::where('type','internet')->count() }},
-                {{ \App\Models\Contract::where('type','strom_gas')->count() }},
+                {{ \App\Models\Contract::whereIn('type',['strom','gas','strom_gas'])->count() }},
                 {{ \App\Models\Contract::where('type','andere')->count() }}
             ],
             backgroundColor: ['#0F3D3D','#C9963E','#3B7A57','#185FA5','#B4B2A9'],

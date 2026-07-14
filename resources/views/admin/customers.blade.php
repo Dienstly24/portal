@@ -16,6 +16,8 @@ $typeConfig = [
     'sach'                => ['icon'=>'📦','label'=>'Sach','bg'=>'#EEF0F3'],
     'internet'            => ['icon'=>'📶','label'=>'Internet','bg'=>'#EDE9FE'],
     'energie'             => ['icon'=>'⚡','label'=>'Energie','bg'=>'#FEF3C7'],
+    'strom'               => ['icon'=>'⚡','label'=>'Strom','bg'=>'#FEF3C7'],
+    'gas'                 => ['icon'=>'🔥','label'=>'Gas','bg'=>'#FEF0E7'],
     'strom_gas'           => ['icon'=>'⚡','label'=>'Strom/Gas','bg'=>'#FEF3C7'],
     'andere'              => ['icon'=>'📋','label'=>'Andere','bg'=>'#EEF0F3'],
 ];

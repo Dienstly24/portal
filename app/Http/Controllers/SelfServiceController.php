@@ -251,7 +251,7 @@ class SelfServiceController extends Controller
     public function contractReport(Request $request)
     {
         $data = $request->validate([
-            'type' => 'required|in:kfz,krankenversicherung,haftpflicht,rechtsschutz,hausrat,escooter,leben,unfall,internet,strom_gas,andere',
+            'type' => 'required|in:kfz,krankenversicherung,haftpflicht,rechtsschutz,hausrat,escooter,leben,unfall,internet,strom,gas,andere',
             'insurer' => 'required|string|max:255',
             'contract_number' => 'nullable|string|max:100',
             'document' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',

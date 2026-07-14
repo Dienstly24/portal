@@ -22,8 +22,9 @@ use Illuminate\Support\Str;
  *    strukturierter Anschrift - Duplikate werden ueber den zentralen
  *    CustomerMatchingService und einen Batch-Schluessel zusammengefuehrt,
  *    sodass mehrere Auftraege desselben Kunden an EINER Kundenakte haengen;
- *  - ein Energievertrag (type "strom_gas") mit Anbieter, Tarif/Produkt,
- *    Status, Zaehlernummer, Verbrauch, Start- und Stornodatum;
+ *  - ein Energievertrag (Sparte "strom" oder "gas", je nach Produktname)
+ *    mit Anbieter, Tarif/Produkt, Status, Zaehlernummer, Verbrauch,
+ *    Start- und Stornodatum;
  *  - die Auftragsnummer als externe Referenz (Idempotenz + Rueckverfolgung).
  *
  * Bewusst ignorierte Spalten (Betreiber-Vorgabe): VP-Name, Auftr.-Statustext,
@@ -100,8 +101,9 @@ class ImportEnergyContracts extends Command
 
                 if ($dryRun) {
                     $this->line(sprintf(
-                        '  + %s | %s | %s | Auftrag %s (%s)',
+                        '  + %s | %s | %s | %s | Auftrag %s (%s)',
                         $customerData['full_name'],
+                        strtoupper($contractData['type']),
                         $contractData['insurer'],
                         $contractData['tariff'] ?: '-',
                         $contractData['order_number'],
@@ -222,11 +224,16 @@ class ImportEnergyContracts extends Command
         $insurer = $parts[0] !== '' ? $parts[0] : 'Unbekannter Anbieter';
         $tariff = $parts[1] ?? $product;
 
+        // Strom und Gas sind getrennte Sparten: am Produktnamen erkennen
+        // ("Gas", "Erdgas", "Ökogas" -> gas, sonst strom).
+        $type = preg_match('/gas/i', $product) === 1 ? 'gas' : 'strom';
+
         $consumption = preg_replace('/[^0-9]/', '', $r[11]);
         $consumptionNt = preg_replace('/[^0-9]/', '', $r[12] ?? '');
 
         return [
             'order_number'  => trim($r[1]),
+            'type'          => $type,
             'status'        => $this->mapStatus($r[4]),
             'status_code'   => trim($r[4]),
             'insurer'       => $insurer,
@@ -308,7 +315,7 @@ class ImportEnergyContracts extends Command
             'id'                => (string) Str::uuid(),
             'customer_id'       => $customer->id,
             'contract_number'   => $this->uniqueContractNumber($c['order_number']),
-            'type'              => 'strom_gas',
+            'type'              => $c['type'],
             'insurer'           => $c['insurer'],
             'status'            => $c['status'],
             'start_date'        => $c['start_date'],

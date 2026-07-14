@@ -48,7 +48,9 @@
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
     <div class="field"><label>Versicherer / Anbieter *</label><input type="text" name="insurer" required value="{{ $val('insurer', $c->insurer ?? '') }}" placeholder="z.B. Allianz, HUK-Coburg..."></div>
     <div class="field">
-        <label>Versicherungsnummer (VSNR)</label>
+        {{-- Bei Energievertraegen (Strom/Gas) heisst dieses Feld "Vertragsnummer"
+             statt "Versicherungsnummer (VSNR)" - per JS umgeschaltet. --}}
+        <label id="contract-number-label">Versicherungsnummer (VSNR)</label>
         <input type="text" name="contract_number" maxlength="255" value="{{ $val('contract_number', $c->contract_number ?? '') }}" placeholder="Optional – später nachtragbar">
         <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">Leer lassen, falls die echte Nummer noch nicht vorliegt. Es wird keine automatische Nummer erzeugt.</div>
     </div>
@@ -101,22 +103,27 @@
     </div>
 </div>
 
-{{-- ===== Energie ===== --}}
-<div id="section-strom_gas" class="branch-section" style="display:none;border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;">
-    <div class="card-title" style="font-size:14px;">⚡ Energievertrag</div>
+{{-- ===== Energie (Strom & Gas) ===== --}}
+<div id="section-energy" class="branch-section" style="display:none;border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;">
+    <div class="card-title" style="font-size:14px;">⚡ Energievertrag (Strom / Gas)</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div class="field"><label>Tarif</label><input type="text" name="energy[tariff]" value="{{ $val('energy.tariff', $en->tariff ?? '') }}"></div>
+        {{-- Energievertraege haben zusaetzlich eine Kundennummer beim Anbieter
+             (getrennt von der Vertragsnummer oben). --}}
+        <div class="field"><label>Kundennummer (beim Anbieter)</label><input type="text" name="energy[customer_number]" maxlength="60" value="{{ $val('energy.customer_number', $en->customer_number ?? '') }}" placeholder="Kundennummer des Energieanbieters"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div class="field"><label>Verbrauch (kWh/Jahr)</label><input type="number" name="energy[consumption_kwh]" min="0" value="{{ $val('energy.consumption_kwh', $en->consumption_kwh ?? '') }}"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div class="field"><label>Zählernummer</label><input type="text" name="energy[meter_number]" maxlength="60" value="{{ $val('energy.meter_number', $en->meter_number ?? '') }}"></div>
-        <div class="field"><label>Marktlokations-ID (MaLo-ID, 11 Ziffern)</label><input type="text" name="energy[malo_id]" maxlength="11" pattern="[0-9]{11}" value="{{ $val('energy.malo_id', $en->malo_id ?? '') }}" placeholder="Nicht die Zählernummer!"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="field"><label>Marktlokations-ID (MaLo-ID, 11 Ziffern)</label><input type="text" name="energy[malo_id]" maxlength="11" pattern="[0-9]{11}" value="{{ $val('energy.malo_id', $en->malo_id ?? '') }}" placeholder="Nicht die Zählernummer!"></div>
         <div class="field"><label>Zählerstand (optional)</label><input type="text" name="energy[meter_reading]" maxlength="30" value="{{ $val('energy.meter_reading', $en->meter_reading ?? '') }}"></div>
-        <div class="field"><label>Netzbetreiber (optional)</label><input type="text" name="energy[grid_operator]" value="{{ $val('energy.grid_operator', $en->grid_operator ?? '') }}"></div>
     </div>
-    <div class="field"><label>Messstellenbetreiber (optional)</label><input type="text" name="energy[metering_operator]" value="{{ $val('energy.metering_operator', $en->metering_operator ?? '') }}"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="field"><label>Netzbetreiber (optional)</label><input type="text" name="energy[grid_operator]" value="{{ $val('energy.grid_operator', $en->grid_operator ?? '') }}"></div>
+        <div class="field"><label>Messstellenbetreiber (optional)</label><input type="text" name="energy[metering_operator]" value="{{ $val('energy.metering_operator', $en->metering_operator ?? '') }}"></div>
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div class="field"><label>Abschlag (€)</label><input type="number" step="0.01" name="energy[payment_amount]" min="0" value="{{ $val('energy.payment_amount', $en->payment_amount ?? '') }}"></div>
         <div class="field"><label>Zahlungsintervall</label>
@@ -143,11 +150,18 @@
 <script>
 function contractToggleSections() {
     const type = document.getElementById('sparte').value;
+    // Strom und Gas sind getrennte Sparten, teilen sich aber das Energie-Formular.
+    const energyTypes = ['strom', 'gas'];
     document.querySelectorAll('.branch-section').forEach(el => el.style.display = 'none');
-    const active = document.getElementById('section-' + type);
+    const active = energyTypes.includes(type)
+        ? document.getElementById('section-energy')
+        : document.getElementById('section-' + type);
     if (active) active.style.display = 'block';
     document.getElementById('type-other-wrap').style.display = (type === 'andere') ? 'block' : 'none';
     document.getElementById('subtype-wrap').style.display = (type === 'krankenversicherung') ? 'block' : 'none';
+    // Energievertraege haben eine Vertragsnummer statt einer Versicherungsnummer.
+    const lbl = document.getElementById('contract-number-label');
+    if (lbl) lbl.textContent = energyTypes.includes(type) ? 'Vertragsnummer' : 'Versicherungsnummer (VSNR)';
 }
 
 let claimIndex = 0;

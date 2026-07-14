@@ -10,7 +10,7 @@ class EmailCampaign extends Model {
     protected $casts = ['sent_at' => 'datetime', 'scheduled_for' => 'datetime'];
 
     /** Zulässige Zielgruppen (Empfänger-Dropdown + Validierung). */
-    public const TARGETS = ['all', 'de', 'ar', 'kfz', 'krankenversicherung', 'internet', 'strom_gas'];
+    public const TARGETS = ['all', 'de', 'ar', 'kfz', 'krankenversicherung', 'internet', 'strom', 'gas', 'strom_gas'];
 
     protected static function boot() {
         parent::boot();

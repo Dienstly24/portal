@@ -1,8 +1,8 @@
 @extends('layouts.portal')
 @section('content')
 @php
-$typeIcons = ['kfz'=>'🚗','strom_gas'=>'⚡','internet'=>'📶','haftpflicht'=>'🛡️','hausrat'=>'🏠','rechtsschutz'=>'⚖️','krankenversicherung'=>'🏥','leben'=>'❤️','unfall'=>'🚑','andere'=>'📋'];
-$typeLabels = ['kfz'=>'KFZ','strom_gas'=>'Strom/Gas','internet'=>'Internet','haftpflicht'=>'Haftpflicht','hausrat'=>'Hausrat','rechtsschutz'=>'Rechtsschutz','krankenversicherung'=>'Krankenversicherung','leben'=>'Leben','unfall'=>'Unfall','andere'=>'Andere'];
+$typeIcons = ['kfz'=>'🚗','strom'=>'⚡','gas'=>'🔥','strom_gas'=>'⚡','internet'=>'📶','haftpflicht'=>'🛡️','hausrat'=>'🏠','rechtsschutz'=>'⚖️','krankenversicherung'=>'🏥','leben'=>'❤️','unfall'=>'🚑','andere'=>'📋'];
+$typeLabels = ['kfz'=>'KFZ','strom'=>'Strom','gas'=>'Gas','strom_gas'=>'Strom/Gas','internet'=>'Internet','haftpflicht'=>'Haftpflicht','hausrat'=>'Hausrat','rechtsschutz'=>'Rechtsschutz','krankenversicherung'=>'Krankenversicherung','leben'=>'Leben','unfall'=>'Unfall','andere'=>'Andere'];
 $intervalLabels = ['monatlich'=>'Monatlich','vierteljaehrlich'=>'Vierteljährlich','halbjaehrlich'=>'Halbjährlich','jaehrlich'=>'Jährlich'];
 $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
 @endphp
@@ -41,11 +41,12 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
 </div>
 @endif
 
-{{-- Sparte Strom/Gas --}}
+{{-- Sparte Strom / Gas --}}
 @if($e = $contract->energyDetail)
 <div class="card">
-    <div class="card-title">⚡ Energievertrag</div>
+    <div class="card-title">{{ $contract->typeIcon() }} {{ $contract->typeLabel() }}vertrag</div>
     @if($e->tariff)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Tarif</span><span style="font-weight:600;font-size:13.5px;">{{ $e->tariff }}</span></div>@endif
+    @if($e->customer_number)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Kundennummer</span><span style="font-weight:600;font-size:13.5px;">{{ $e->customer_number }}</span></div>@endif
     <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Zählernummer</span><span style="font-weight:600;font-size:13.5px;">{{ $e->meter_number ?? '—' }}</span></div>
     @if($e->malo_id)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">MaLo-ID</span><span style="font-weight:600;font-size:13.5px;">{{ $e->malo_id }}</span></div>@endif
     <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Abschlag</span><span style="font-weight:600;font-size:13.5px;">{{ $e->payment_amount ? number_format($e->payment_amount, 2, ',', '.') . ' €' : '—' }}</span></div>

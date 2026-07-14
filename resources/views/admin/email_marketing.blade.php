@@ -57,7 +57,8 @@
                 <option value="kfz" @selected($t==='kfz')>Kfz-Versicherung Kunden</option>
                 <option value="krankenversicherung" @selected($t==='krankenversicherung')>Krankenversicherung Kunden</option>
                 <option value="internet" @selected($t==='internet')>Internet & Mobilfunk Kunden</option>
-                <option value="strom_gas" @selected($t==='strom_gas')>Strom & Gas Kunden</option>
+                <option value="strom" @selected($t==='strom')>Strom Kunden</option>
+                <option value="gas" @selected($t==='gas')>Gas Kunden</option>
                 <option value="de" @selected($t==='de')>Deutschsprachige Kunden</option>
                 <option value="ar" @selected($t==='ar')>Arabischsprachige Kunden</option>
             </select>
