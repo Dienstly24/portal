@@ -85,6 +85,55 @@ class ServicePageTest extends TestCase
         $this->assertStringContainsString('Kfz-Versicherung', $ticket->subject);
     }
 
+    public function test_custom_required_field_is_enforced(): void
+    {
+        $this->makePage(['fields' => [
+            ['label_de' => 'Deckung', 'label_ar' => '', 'type' => 'select', 'options_de' => 'Haftpflicht, Vollkasko', 'options_ar' => '', 'required' => true],
+        ]]);
+
+        $this->from('/leistungen/kfz-versicherung')
+            ->post('/leistungen/kfz-versicherung/anfrage', ['name' => 'A', 'email' => 'a@b.de', 'consent' => '1'])
+            ->assertSessionHasErrors('custom.0');
+
+        $this->assertSame(0, Ticket::count());
+    }
+
+    public function test_custom_field_answers_appended_to_ticket(): void
+    {
+        Mail::fake();
+        $this->makePage(['fields' => [
+            ['label_de' => 'Fahrzeug', 'label_ar' => '', 'type' => 'text', 'options_de' => '', 'options_ar' => '', 'required' => false],
+            ['label_de' => 'Deckung', 'label_ar' => '', 'type' => 'select', 'options_de' => 'Haftpflicht, Vollkasko', 'options_ar' => '', 'required' => true],
+        ]]);
+
+        $this->post('/leistungen/kfz-versicherung/anfrage', [
+            'name' => 'Max', 'email' => 'max@x.de', 'consent' => '1',
+            'custom' => [0 => 'BMW 3er', 1 => 'Vollkasko'],
+        ])->assertRedirect(route('services.show', 'kfz-versicherung'));
+
+        $ticket = Ticket::first();
+        $this->assertStringContainsString('Fahrzeug: BMW 3er', $ticket->description);
+        $this->assertStringContainsString('Deckung: Vollkasko', $ticket->description);
+    }
+
+    public function test_admin_can_save_custom_fields(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->post(route('admin.service_pages.store'), [
+            'slug' => 'kfz', 'title_de' => 'Kfz', 'is_active' => '1',
+            'field_label_de' => ['Fahrzeug', ''], 'field_label_ar' => ['', ''],
+            'field_type' => ['text', 'text'], 'field_options_de' => ['', ''],
+            'field_options_ar' => ['', ''], 'field_required' => ['1', '0'],
+        ])->assertRedirect(route('admin.service_pages'));
+
+        $page = ServicePage::where('slug', 'kfz')->firstOrFail();
+        // Leere Zeile (ohne Label) wird verworfen -> genau ein Feld.
+        $this->assertCount(1, $page->fields);
+        $this->assertSame('Fahrzeug', $page->fields[0]['label_de']);
+        $this->assertTrue($page->fields[0]['required']);
+    }
+
     public function test_submit_requires_consent_and_contact(): void
     {
         $this->makePage();

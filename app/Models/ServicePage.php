@@ -16,16 +16,20 @@ class ServicePage extends Model
     protected $fillable = [
         'slug', 'category', 'icon',
         'title_de', 'title_ar', 'subtitle_de', 'subtitle_ar',
-        'intro_de', 'intro_ar', 'highlights_de', 'highlights_ar', 'faq',
+        'intro_de', 'intro_ar', 'highlights_de', 'highlights_ar', 'faq', 'fields',
         'image_path', 'meta_description_de', 'meta_description_ar',
         'is_active', 'sort_order', 'created_by', 'updated_by',
     ];
 
     protected $casts = [
         'faq' => 'array',
+        'fields' => 'array',
         'is_active' => 'boolean',
         'sort_order' => 'integer',
     ];
+
+    /** Erlaubte Feldtypen fuer die zusaetzlichen Formularfelder. */
+    public const FIELD_TYPES = ['text', 'tel', 'email', 'number', 'select', 'textarea'];
 
     /** Routen-Binding ueber den Slug statt der ID. */
     public function getRouteKeyName(): string
@@ -71,6 +75,33 @@ class ServicePage extends Model
             if ($q !== '' || $a !== '') {
                 $out[] = ['q' => $q, 'a' => $a];
             }
+        }
+        return $out;
+    }
+
+    /**
+     * Zusaetzliche Formularfelder lokalisiert:
+     * [['label'=>, 'type'=>, 'options'=>[], 'required'=>bool], ...].
+     */
+    public function fieldList(): array
+    {
+        $locale = app()->getLocale();
+        $out = [];
+        foreach ((array) $this->fields as $f) {
+            $label = $locale === 'ar' ? ($f['label_ar'] ?? $f['label_de'] ?? '') : ($f['label_de'] ?? '');
+            $label = $label !== '' ? $label : ($f['label_de'] ?? '');
+            if ($label === '') {
+                continue;
+            }
+            $type = in_array($f['type'] ?? 'text', self::FIELD_TYPES, true) ? $f['type'] : 'text';
+            $optRaw = $locale === 'ar' ? ($f['options_ar'] ?? $f['options_de'] ?? '') : ($f['options_de'] ?? '');
+            $options = array_values(array_filter(array_map('trim', explode(',', (string) $optRaw))));
+            $out[] = [
+                'label' => $label,
+                'type' => $type,
+                'options' => $options,
+                'required' => (bool) ($f['required'] ?? false),
+            ];
         }
         return $out;
     }
