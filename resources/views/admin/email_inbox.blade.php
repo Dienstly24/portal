@@ -30,7 +30,7 @@
     @forelse($suggested as $m)
     <div style="padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:center;">
         <div style="min-width:260px;flex:1;">
-            <div style="font-weight:600;font-size:14px;">{{ $m->subject ?: '(kein Betreff)' }}</div>
+            <div style="font-weight:600;font-size:14px;"><a href="{{ route('admin.email_inbox.show', $m->id) }}">{{ $m->subject ?: '(kein Betreff)' }}</a></div>
             <div style="font-size:12.5px;color:var(--ink-soft);margin-top:2px;">
                 von {{ $m->from_name ?: $m->from_address }} · {{ $m->received_at?->format('d.m.Y H:i') ?? $m->created_at->format('d.m.Y H:i') }}
                 · <span class="badge badge-pending">{{ $m->categoryLabel() }}</span>
@@ -57,7 +57,7 @@
     <div style="padding:16px 20px;border-bottom:1px solid var(--line);">
         <div style="display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:center;">
             <div style="min-width:260px;flex:1;">
-                <div style="font-weight:600;font-size:14px;">{{ $m->subject ?: '(kein Betreff)' }}</div>
+                <div style="font-weight:600;font-size:14px;"><a href="{{ route('admin.email_inbox.show', $m->id) }}">{{ $m->subject ?: '(kein Betreff)' }}</a></div>
                 <div style="font-size:12.5px;color:var(--ink-soft);margin-top:2px;">
                     von {{ $m->from_name ?: $m->from_address }} · {{ $m->received_at?->format('d.m.Y H:i') ?? $m->created_at->format('d.m.Y H:i') }}
                     · <span class="badge badge-pending">{{ $m->categoryLabel() }}</span>

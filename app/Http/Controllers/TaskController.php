@@ -13,7 +13,7 @@ class TaskController extends Controller
         $type = $request->get('type', '');
         $due = $request->get('due', '');
 
-        $query = Task::with(['assignedTo','customer.user','createdBy']);
+        $query = Task::with(['assignedTo','customer.user','createdBy','emailMessage']);
 
         if($tab === 'mine') $query->where('assigned_to', auth()->id());
         elseif($tab === 'customer') $query->whereNotNull('customer_id');

@@ -153,4 +153,52 @@ class EmailInboxTest extends TestCase
         $this->actingAs($this->admin)->post(route('admin.email_inbox.confirm', $message->id))
             ->assertSessionHas('error');
     }
+
+    public function test_email_detail_page_shows_full_mail_and_attachments(): void
+    {
+        $message = $this->message([
+            'subject' => 'Neues Dokument zum Kunden Alibrahim, Omar',
+            'body_text' => 'Sehr geehrte Damen und Herren, anbei ein Dokument.',
+            'match_status' => 'unmatched',
+        ]);
+        $message->forceFill(['attachments_meta' => [
+            ['filename' => 'police.pdf', 'mime' => 'application/pdf', 'path' => 'email_attachments/x/police.pdf', 'size' => 2048, 'document_id' => null],
+        ]])->save();
+
+        $this->actingAs($this->admin)->get(route('admin.email_inbox.show', $message->id))
+            ->assertOk()
+            ->assertSee('Neues Dokument zum Kunden Alibrahim, Omar')
+            ->assertSee('Sehr geehrte Damen und Herren')
+            ->assertSee('police.pdf')
+            ->assertSee(route('admin.email_inbox.attachment', [$message->id, 0]), false);
+    }
+
+    public function test_email_detail_respects_customer_access(): void
+    {
+        $support = User::factory()->create(['role' => 'support', 'can_see_all_customers' => false]);
+        $customer = $this->customer();
+        $message = $this->message(['match_status' => 'confirmed', 'customer_id' => $customer->id]);
+
+        $this->actingAs($support)->get(route('admin.email_inbox.show', $message->id))->assertForbidden();
+    }
+
+    public function test_task_links_back_to_its_email(): void
+    {
+        $message = $this->message([
+            'subject' => 'Neues Dokument zum Kunden Tiger GmbH',
+            'category' => 'fonds_finanz',
+            'from_address' => 'noreply@fondsfinanz.de',
+            'processed_at' => null,
+            'match_status' => 'unmatched',
+        ]);
+
+        app(\App\Services\Workflow\EmailWorkflowService::class)->process($message);
+
+        $task = \App\Models\Task::where('email_message_id', $message->id)->first();
+        $this->assertNotNull($task);
+
+        $this->actingAs($this->admin)->get(route('admin.tasks', ['tab' => 'customer']))
+            ->assertOk()
+            ->assertSee(route('admin.email_inbox.show', $message->id), false);
+    }
 }

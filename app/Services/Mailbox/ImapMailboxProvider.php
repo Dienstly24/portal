@@ -2,6 +2,7 @@
 namespace App\Services\Mailbox;
 
 use App\Models\EmailAccount;
+use App\Support\MimeHeaderDecoder;
 use Illuminate\Support\Carbon;
 use Webklex\PHPIMAP\Address;
 use Webklex\PHPIMAP\Client;
@@ -95,9 +96,9 @@ class ImapMailboxProvider implements MailboxProviderInterface
         return new MailboxMessageData(
             uid: $folderPath . ':' . $message->getUid(),
             fromAddress: $from?->mail ?? 'unbekannt@unbekannt.invalid',
-            fromName: $from?->personal ?: null,
+            fromName: MimeHeaderDecoder::decode($from?->personal ?: null),
             toAddress: $message->getTo()->first()?->mail,
-            subject: $message->getSubject()?->toString(),
+            subject: MimeHeaderDecoder::decode($message->getSubject()?->toString()),
             bodyText: $message->getTextBody() ?: null,
             bodyHtml: $message->getHTMLBody() ?: null,
             receivedAt: $date ? Carbon::instance($date) : null,
