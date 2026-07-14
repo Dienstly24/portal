@@ -92,7 +92,11 @@ class FondsFinanzImportTest extends TestCase
         $this->assertSame('FF-778899', $refs[ExternalReference::TYPE_FONDS_FINANZ_NUMBER] ?? null);
         $this->assertSame('DOC-2026-0815', $refs[ExternalReference::TYPE_FONDS_FINANZ_DOCUMENT] ?? null);
 
-        $this->assertTrue(Task::where('customer_id', $customer->id)->where('title', 'like', 'Fonds-Finanz-Import prüfen%')->exists());
+        // Neu angelegter Kunde -> Pruefaufgabe (Duplikat ausschliessen,
+        // Stammdaten vervollstaendigen), verknuepft mit der Ausloeser-Mail.
+        $task = Task::where('customer_id', $customer->id)->where('title', 'like', 'Neu angelegten Fonds-Finanz-Kunden prüfen%')->first();
+        $this->assertNotNull($task);
+        $this->assertSame((string) $message->id, (string) $task->email_message_id);
     }
 
     public function test_sender_is_never_created_as_customer(): void
@@ -208,7 +212,11 @@ class FondsFinanzImportTest extends TestCase
         $this->assertNotNull($message->processed_at);
         $this->assertSame(0, Customer::count());
         $this->assertSame(0, Contract::count());
-        $this->assertTrue(Task::where('title', 'like', '%manuell prüfen%')->exists());
+        // Kein Kunde im Betreff/Text erkennbar -> eine kontextreiche
+        // Bearbeitungsaufgabe (statt kontextlosem "manuell pruefen").
+        $task = Task::where('title', 'like', 'Fonds-Finanz-Mail bearbeiten%')->first();
+        $this->assertNotNull($task);
+        $this->assertSame((string) $message->id, (string) $task->email_message_id);
     }
 
     public function test_processing_is_idempotent(): void
@@ -220,5 +228,71 @@ class FondsFinanzImportTest extends TestCase
 
         $this->assertSame(1, Contract::count());
         $this->assertSame(1, Customer::count());
+    }
+
+    public function test_real_mail_with_customer_in_subject_only_creates_customer_and_routing_task(): void
+    {
+        // Realer Fall: Kundendaten NUR im Betreff, Body/PDF liefern nichts
+        // Strukturiertes. Frueher -> "konnte nicht gelesen werden". Jetzt:
+        // Kunde angelegt, Dokument-Routing-Aufgabe mit Kontext + Mail-Link.
+        $message = $this->fondsFinanzMessage([
+            'subject' => 'Neues Dokument zum Kunden Alibrahim, Omar, Sach',
+            'body_text' => 'Sehr geehrte Damen und Herren, im Anhang finden Sie ein neues Dokument.',
+        ]);
+
+        app(EmailWorkflowService::class)->process($message);
+
+        $message->refresh();
+        $this->assertSame('fonds_finanz', $message->category);
+        $this->assertSame('confirmed', $message->match_status);
+        $this->assertNotNull($message->customer_id);
+
+        // "Nachname, Vorname" -> "Vorname Nachname"; Sparte "Sach" wird nicht Teil des Namens.
+        $customer = Customer::find($message->customer_id);
+        $this->assertSame('Omar Alibrahim', $customer->user->name);
+        $this->assertSame('fonds_finanz', $customer->source);
+
+        // Kein Vertrag ohne Vertragsnummer - aber eine kontextreiche Routing-Aufgabe.
+        $this->assertSame(0, Contract::count());
+        $task = Task::where('title', 'like', 'Fonds-Finanz-Dokument dem Vertrag zuordnen%')->first();
+        $this->assertNotNull($task);
+        $this->assertSame((string) $message->id, (string) $task->email_message_id);
+    }
+
+    public function test_subject_only_customer_matches_existing_customer(): void
+    {
+        $existing = $this->customer('Tiger Snacks', '1990-01-01');
+        $message = $this->fondsFinanzMessage([
+            'subject' => 'Neues Dokument zum Kunden Tiger Snacks, Sach',
+            'body_text' => 'Neues Dokument im Anhang.',
+        ]);
+
+        app(EmailWorkflowService::class)->process($message);
+
+        $message->refresh();
+        // Name-only match (Score 30) -> schwacher Kandidat -> manuelle Zuordnung, kein Duplikat.
+        $this->assertSame(1, Customer::count());
+        $this->assertTrue(Task::where('title', 'like', 'Fonds-Finanz-Dokument manuell zuordnen%')->exists());
+    }
+
+    public function test_subject_reference_number_is_stored_when_contract_present(): void
+    {
+        // Betreff nennt eine Info-No., Body liefert die Vertragsnummer:
+        // beide Quellen werden zusammengefuehrt.
+        $message = $this->fondsFinanzMessage([
+            'subject' => 'Fonds Finanz Info No. 2959197012 zum Kunden Max Mustermann',
+            'body_text' => "Vertragsnummer: POL-55501\nSparte: Kfz",
+        ]);
+
+        app(EmailWorkflowService::class)->process($message);
+
+        $message->refresh();
+        $this->assertSame('confirmed', $message->match_status);
+        $contract = Contract::where('contract_number', 'POL-55501')->first();
+        $this->assertNotNull($contract);
+        $this->assertTrue(
+            ExternalReference::where('referenceable_id', $contract->id)
+                ->where('value', '2959197012')->exists()
+        );
     }
 }

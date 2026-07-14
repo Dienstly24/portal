@@ -22,15 +22,21 @@ use Illuminate\Support\Str;
  * über die BESTEHENDE Auto-Anlage erstellen (Abschnitt 6), Vertrag
  * anlegen/ergänzen, externe Referenzen speichern.
  *
- * Wichtig: Das Kunden-Matching läuft hier über die im TEXT genannten
- * Kundendaten ("Kunde: ...", "Geburtsdatum: ..."), NICHT über den
- * Mail-Absender - der Absender ist die Fonds Finanz selbst und darf
- * niemals als Kunde angelegt werden.
+ * Datenquellen (in dieser Prioritaet zusammengefuehrt): Mail-Body
+ * ("Label: Wert"), PDF-Anhaenge, und - entscheidend fuer reale Mails -
+ * der BETREFF ("... zum Kunden <Name>, <Sparte>"). Ohne die
+ * Betreff-Auswertung scheiterte frueher jede reale Benachrichtigung und
+ * erzeugte nur "konnte nicht gelesen werden"-Aufgaben.
+ *
+ * Wichtig: Das Kunden-Matching läuft über die im TEXT/Betreff genannten
+ * Kundendaten, NICHT über den Mail-Absender - der Absender ist die Fonds
+ * Finanz selbst und darf niemals als Kunde angelegt werden.
  */
 class FondsFinanzImportService
 {
     public function __construct(
         private readonly FondsFinanzParser $parser,
+        private readonly FondsFinanzSubjectParser $subjectParser,
         private readonly CustomerMatchingService $matcher,
         private readonly CustomerAutoCreationService $autoCreator,
         private readonly SystemUserResolver $systemUser,
@@ -43,29 +49,53 @@ class FondsFinanzImportService
     {
         $data = $this->parseMessage($message);
 
-        if (!$data->isImportable()) {
-            // Defensives Scheitern: unbekanntes Layout -> manuelle Prüfung statt geratener Daten.
+        if (!$data->hasCustomer()) {
+            // Weder Vertragsnummer noch Kunde erkennbar (z. B. reine
+            // Verwaltungs-/Serviceanfrage "Bitte bestätigen Sie Ihre
+            // Angaben"): eine EINZELNE, mit Kontext versehene Aufgabe -
+            // statt geratener Fachdaten.
             $this->finish($message, 'unmatched', null, 0);
-            $this->createTask($message, null, 'Fonds-Finanz-Mail konnte nicht automatisch gelesen werden – manuell prüfen', 3, 'high');
+            $this->createTask(
+                $message, null,
+                'Fonds-Finanz-Mail bearbeiten: ' . ($message->subject ?: '(kein Betreff)'),
+                3, 'medium', $data
+            );
             return;
         }
 
-        // 1) Deterministische Referenz zuerst (Abschnitt 8: "ergänzt um
-        //    Fonds-Finanz-Nummer/Vertragsnummer, falls bereits bekannt"):
-        //    Ist die Vertragsnummer bereits eindeutig im Bestand, steht der
-        //    Kunde fest - kein Score-Raten für Folge-Mitteilungen.
-        //    contract_number ist global UNIQUE: Existiert die Nummer, aber
-        //    der genannte Kunde passt nicht dazu, ist das ein Datenkonflikt
-        //    -> zwingend manuelle Prüfung, nie Blindzuordnung/Neuanlage.
+        if ($data->hasContract()) {
+            $this->processWithContract($message, $data);
+            return;
+        }
+
+        // Kunde bekannt, aber keine Vertragsnummer (haeufigster reale Fall,
+        // z. B. "Neues Dokument zum Kunden ..."): Kunde zuordnen/anlegen und
+        // das Dokument seiner Akte zufuehren, statt es liegen zu lassen.
+        $this->processCustomerOnly($message, $data);
+    }
+
+    /**
+     * Vertragsnummer vorhanden -> vollstaendiger Vertragsimport
+     * (deterministisch ueber bekannte Nummer, sonst Score-Matching /
+     * Neuanlage mit Duplikatsschutz).
+     */
+    private function processWithContract(EmailMessage $message, FondsFinanzData $data): void
+    {
+        // 1) Deterministische Referenz zuerst: Ist die Vertragsnummer bereits
+        //    eindeutig im Bestand, steht der Kunde fest - kein Score-Raten.
+        //    contract_number ist global UNIQUE: passt der genannte Kunde
+        //    nicht zum Inhaber, ist das ein Datenkonflikt -> manuelle Pruefung.
         if (Contract::where('contract_number', $data->contractNumber)->exists()) {
             if ($customer = $this->customerByKnownContract($data)) {
-                $this->import($message, $data, $customer, null);
+                // Folge-Mitteilung zu bekanntem Vertrag/Kunde: automatisch,
+                // ohne Routine-Aufgabe (Kunde ist bereits geprueft).
+                $this->import($message, $data, $customer, null, null);
             } else {
                 $this->finish($message, 'unmatched', null, null);
                 $this->createTask($message, null, sprintf(
                     'Fonds-Finanz-Konflikt prüfen: Vertragsnummer %s existiert, genannter Kunde "%s" passt nicht zum Vertragsinhaber',
                     $data->contractNumber, $data->customerName
-                ), 3, 'high');
+                ), 3, 'high', $data);
             }
             return;
         }
@@ -77,77 +107,154 @@ class FondsFinanzImportService
         $match = $this->matcher->match($criteria);
 
         if ($match->tier() === 'confirm') {
-            // 70-90%: kein automatischer Import an einen möglicherweise
-            // falschen Kunden - Vorschlag speichern, Mitarbeiter bestätigt (Abschnitt 13).
+            // 70-90%: kein automatischer Import an einen moeglicherweise
+            // falschen Kunden - Vorschlag speichern, Mitarbeiter bestaetigt.
             $this->finish($message, 'suggested', $match->customer, $match->score);
             $this->createTask($message, $match->customer, sprintf(
                 'Fonds-Finanz-Zuordnung bestätigen: "%s" (Vertrag %s, Übereinstimmung %d%%)',
                 $data->customerName, $data->contractNumber, $match->score
-            ), 3, 'high');
+            ), 3, 'high', $data);
             return;
         }
 
         if ($match->tier() === 'manual' && $match->hasMatch()) {
-            // Es gibt einen (schwachen) Kandidaten: KEINE automatische
-            // Neuanlage neben einem ähnlichen Bestandskunden (Duplikatsschutz,
-            // Abschnitt 6) - manuelle Prüfung.
+            // Schwacher Kandidat: KEINE automatische Neuanlage neben einem
+            // aehnlichen Bestandskunden (Duplikatsschutz) - manuelle Pruefung.
             $this->finish($message, 'unmatched', null, $match->score);
             $this->createTask($message, null, sprintf(
                 'Fonds-Finanz-Kunde "%s" manuell zuordnen (Vertrag %s)',
                 $data->customerName, $data->contractNumber
-            ), 3, 'high');
+            ), 3, 'high', $data);
             return;
         }
 
-        $score = null;
+        if ($match->tier() === 'auto') {
+            // >90%: hohe Konfidenz auf Bestandskunde - automatisch, ohne
+            // Routine-Aufgabe (Dokument wird der Akte/dem Vertrag zugefuehrt).
+            $this->import($message, $data, $match->customer, $match->score, null);
+            return;
+        }
+
+        // Kein Kandidat -> Neuanlage (mit Duplikatsschutz im AutoCreator).
+        try {
+            $customer = $this->autoCreator->createFromUnmatched($criteria, 'fonds_finanz');
+        } catch (DuplicateCustomerException) {
+            $this->finish($message, 'unmatched', null, $match->score);
+            $this->createTask($message, null, sprintf(
+                'Fonds-Finanz-Kunde "%s" manuell zuordnen (Vertrag %s)',
+                $data->customerName, $data->contractNumber
+            ), 3, 'high', $data);
+            return;
+        }
+
+        // Neu angelegter Kunde -> hier IST eine Pruefaufgabe sinnvoll
+        // (Duplikat ausschliessen, Stammdaten vervollstaendigen).
+        $this->import($message, $data, $customer, null, sprintf(
+            'Neu angelegten Fonds-Finanz-Kunden prüfen: %s (Vertrag %s)',
+            $data->customerName, $data->contractNumber
+        ));
+    }
+
+    /**
+     * Kunde bekannt, aber keine Vertragsnummer: reine Dokument-/
+     * Kundenzuordnung. Ergebnis ist immer EINE Routing-Aufgabe
+     * ("Dokument dem richtigen Vertrag zuordnen") mit vollem Kontext und
+     * Link zur Mail - nie mehr ein kontextloses "konnte nicht gelesen
+     * werden".
+     */
+    private function processCustomerOnly(EmailMessage $message, FondsFinanzData $data): void
+    {
+        $criteria = array_filter([
+            'full_name' => $data->customerName,
+            'birth_date' => $data->birthDate,
+        ]);
+        $match = $this->matcher->match($criteria);
+
+        if ($match->tier() === 'confirm') {
+            $this->finish($message, 'suggested', $match->customer, $match->score);
+            $this->createTask($message, $match->customer, sprintf(
+                'Fonds-Finanz-Dokument zuordnen bestätigen: "%s" (Übereinstimmung %d%%)',
+                $data->customerName, $match->score
+            ), 3, 'high', $data);
+            return;
+        }
+
+        if ($match->tier() === 'manual' && $match->hasMatch()) {
+            $this->finish($message, 'unmatched', null, $match->score);
+            $this->createTask($message, null, sprintf(
+                'Fonds-Finanz-Dokument manuell zuordnen: Kunde "%s"',
+                $data->customerName
+            ), 3, 'high', $data);
+            return;
+        }
+
         if ($match->tier() === 'auto') {
             $customer = $match->customer;
-            $score = $match->score;
         } else {
             try {
                 $customer = $this->autoCreator->createFromUnmatched($criteria, 'fonds_finanz');
             } catch (DuplicateCustomerException) {
-                // Sicherheitsnetz hat doch einen Kandidaten gefunden -> manuelle Prüfung.
                 $this->finish($message, 'unmatched', null, $match->score);
                 $this->createTask($message, null, sprintf(
-                    'Fonds-Finanz-Kunde "%s" manuell zuordnen (Vertrag %s)',
-                    $data->customerName, $data->contractNumber
-                ), 3, 'high');
+                    'Fonds-Finanz-Dokument manuell zuordnen: Kunde "%s"',
+                    $data->customerName
+                ), 3, 'high', $data);
                 return;
             }
         }
 
-        $this->import($message, $data, $customer, $score);
+        $this->finish($message, 'confirmed', $customer, $match->tier() === 'auto' ? $match->score : null);
+
+        // Anhaenge JETZT (bestaetigte Zuordnung) in die Akte uebernehmen.
+        $this->attachments->createDocuments($message->fresh());
+
+        ActivityLog::create([
+            'user_id' => null,
+            'action' => 'fonds_finanz_document',
+            'entity_type' => 'customer',
+            'entity_id' => $customer->id,
+            'meta' => json_encode([
+                'email_message_id' => (string) $message->id,
+                'customer_name' => $data->customerName,
+                'line' => $data->line,
+            ], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        // EINE Routing-Aufgabe: Dokument dem passenden Vertrag zuordnen.
+        $this->createTask($message, $customer, sprintf(
+            'Fonds-Finanz-Dokument dem Vertrag zuordnen: %s', $data->customerName
+        ), 5, 'medium', $data);
     }
 
     /**
-     * Import nach expliziter Mitarbeiter-Bestätigung (HITL-Stufe 70-90%
-     * bzw. manuelle Zuordnung im Posteingang): Der Mensch hat den Kunden
-     * festgelegt - es wird nicht erneut gematcht. Ist die Mitteilung
-     * nicht parsebar, wird nur die Zuordnung gespeichert.
-     */
-    /**
-     * Mail-Text zuerst, PDF-Anhänge als Fallback (Phase 2): liefert der
-     * Mail-Body keine importierbaren Daten, wird der Text der
-     * PDF-Anhänge durch denselben Parser geschickt.
+     * Mail-Body + PDF-Anhaenge + Betreff zu EINEM Datensatz zusammenfuehren.
+     * Prioritaet: strukturierter Body -> PDF -> Betreff (Body/PDF sind
+     * praeziser, der Betreff fuellt die haeufig einzige Kundenangabe auf).
      */
     private function parseMessage(EmailMessage $message): FondsFinanzData
     {
         $data = $this->parser->parse((string) $message->body_text);
-        if ($data->isImportable()) {
-            return $data;
+
+        if (!$data->isImportable()) {
+            $pdfText = $this->attachmentAnalysis->textFromPdfAttachments($message);
+            if ($pdfText !== '') {
+                $data = $data->mergeMissing($this->parser->parse($pdfText));
+            }
         }
 
-        $pdfText = $this->attachmentAnalysis->textFromPdfAttachments($message);
-        return $pdfText === '' ? $data : $this->parser->parse($pdfText);
+        // Betreff immer als Fallback fuer fehlende Felder heranziehen.
+        return $data->mergeMissing($this->subjectParser->parse($message->subject));
     }
 
     public function importForCustomer(EmailMessage $message, Customer $customer): void
     {
         $data = $this->parseMessage($message);
 
-        if (!$data->isImportable()) {
+        if (!$data->hasContract()) {
+            // Kein Vertrag im Text - trotzdem Zuordnung + Dokumentuebernahme
+            // fuer den (durch den Mitarbeiter bestaetigten) Kunden.
             $this->finish($message, 'confirmed', $customer, $message->match_score);
+            $this->attachments->createDocuments($message->fresh());
             return;
         }
 
@@ -159,11 +266,11 @@ class FondsFinanzImportService
             $this->createTask($message, $customer, sprintf(
                 'Fonds-Finanz-Konflikt prüfen: Vertragsnummer %s gehört einem anderen Kunden',
                 $data->contractNumber
-            ), 3, 'high');
+            ), 3, 'high', $data);
             return;
         }
 
-        $this->import($message, $data, $customer, $message->match_score);
+        $this->import($message, $data, $customer, $message->match_score, null);
     }
 
     /**
@@ -189,16 +296,22 @@ class FondsFinanzImportService
         return $percent >= 50 ? $customer : null;
     }
 
-    private function import(EmailMessage $message, FondsFinanzData $data, Customer $customer, ?int $score): void
+    /**
+     * @param ?string $reviewTaskTitle Wenn gesetzt, wird eine Pruefaufgabe
+     *        angelegt (nur bei Faellen, die Menschen brauchen - z. B.
+     *        Neuanlage). Bei vollautomatischen Importen zu bereits
+     *        bekannten Kunden bleibt es aus (kein Aufgaben-Spam), die
+     *        Uebernahme steht im ActivityLog und im Posteingang.
+     */
+    private function import(EmailMessage $message, FondsFinanzData $data, Customer $customer, ?int $score, ?string $reviewTaskTitle): void
     {
-        DB::transaction(function () use ($message, $data, $customer, $score) {
+        DB::transaction(function () use ($message, $data, $customer, $score, $reviewTaskTitle) {
             $contract = $this->upsertContract($customer, $data);
             $this->storeReferences($customer, $contract, $data);
 
             $this->finish($message, 'confirmed', $customer, $score);
 
-            // Phase 2 (automatische Zuordnung): Anhänge in die Akte
-            // übernehmen und direkt dem Vertrag zuordnen.
+            // Anhaenge in die Akte uebernehmen und dem Vertrag zuordnen.
             $this->attachments->createDocuments($message->fresh());
             $this->attachments->linkDocumentsToContract($message->fresh(), $contract);
 
@@ -215,11 +328,9 @@ class FondsFinanzImportService
                 ], JSON_UNESCAPED_UNICODE),
             ]);
 
-            $this->createTask($message, $customer, sprintf(
-                'Fonds-Finanz-Import prüfen: Vertrag %s%s',
-                $data->contractNumber,
-                $data->company ? ' (' . $data->company . ')' : ''
-            ), 3, 'medium');
+            if ($reviewTaskTitle !== null) {
+                $this->createTask($message, $customer, $reviewTaskTitle, 3, 'medium', $data, $contract);
+            }
         });
     }
 
@@ -308,19 +419,47 @@ class FondsFinanzImportService
         ])->save();
     }
 
-    private function createTask(EmailMessage $message, ?Customer $customer, string $title, int $dueInDays, string $priority): void
+    private function createTask(EmailMessage $message, ?Customer $customer, string $title, int $dueInDays, string $priority, ?FondsFinanzData $data = null, ?Contract $contract = null): void
     {
         Task::forceCreate([
             'id' => (string) Str::uuid(),
             'assigned_to' => $customer?->betreuer()->first()?->id ?? $this->systemUser->resolveId(),
             'created_by' => $this->systemUser->resolveId(),
             'customer_id' => $customer?->id,
+            'email_message_id' => $message->id,
+            'contract_id' => $contract?->id,
             'title' => $title,
-            'description' => 'Ausgelöst durch Fonds-Finanz-Mail "' . ($message->subject ?: '(kein Betreff)') . '" von ' . $message->from_address,
+            'description' => $this->taskDescription($message, $data),
             'type' => 'email',
             'status' => 'open',
             'priority' => $priority,
             'due_date' => now()->addDays($dueInDays)->toDateString(),
         ]);
+    }
+
+    /** Aussagekraeftige Beschreibung: was steht drin, was ist zu tun. */
+    private function taskDescription(EmailMessage $message, ?FondsFinanzData $data): string
+    {
+        $parts = ['Ausgelöst durch Fonds-Finanz-Mail "' . ($message->subject ?: '(kein Betreff)') . '" von ' . $message->from_address . '.'];
+
+        if ($data !== null) {
+            $facts = array_filter([
+                $data->customerName ? 'Kunde: ' . $data->customerName : null,
+                $data->line ? 'Sparte: ' . $data->line : null,
+                $data->company ? 'Gesellschaft: ' . $data->company : null,
+                $data->contractNumber ? 'Vertragsnummer: ' . $data->contractNumber : null,
+                $data->fondsFinanzNumber ? 'Vorgang/Nr.: ' . $data->fondsFinanzNumber : null,
+            ]);
+            if (!empty($facts)) {
+                $parts[] = 'Erkannt: ' . implode(' · ', $facts) . '.';
+            }
+        }
+
+        $attCount = count($message->attachments_meta ?? []);
+        if ($attCount > 0) {
+            $parts[] = $attCount . ' Anhang/Anhänge.';
+        }
+
+        return implode(' ', $parts);
     }
 }

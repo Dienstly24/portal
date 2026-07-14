@@ -50,6 +50,43 @@ class EmailInboxController extends Controller
         return view('admin.email_inbox', compact('suggested', 'unmatched', 'queues'));
     }
 
+    /**
+     * Einzelne E-Mail vollstaendig anzeigen (Betreff, Absender, Body,
+     * Anhaenge, Verarbeitungsstatus). Behebt die Luecke "man kommt nicht
+     * an die Original-Mail heran" - von hier aus laesst sich zuordnen,
+     * bestaetigen oder der Anhang oeffnen.
+     */
+    public function show($id)
+    {
+        $message = EmailMessage::with(['customer.user', 'account'])->findOrFail($id);
+
+        // DSGVO/Zugriff: ist die Mail bereits einem Kunden zugeordnet, darf
+        // sie nur sehen, wer auch auf diesen Kunden zugreifen darf.
+        if ($message->customer_id !== null) {
+            abort_unless(auth()->user()->canAccessCustomer($message->customer_id), 403);
+        }
+
+        $tasks = \App\Models\Task::where('email_message_id', $message->id)
+            ->with('assignedTo')->latest()->get();
+
+        return view('admin.email_message', compact('message', 'tasks'));
+    }
+
+    /** Anhang einer E-Mail herunterladen (aus dem Roh-Speicher). */
+    public function downloadAttachment($id, int $index)
+    {
+        $message = EmailMessage::findOrFail($id);
+        if ($message->customer_id !== null) {
+            abort_unless(auth()->user()->canAccessCustomer($message->customer_id), 403);
+        }
+
+        $entry = ($message->attachments_meta ?? [])[$index] ?? null;
+        abort_if($entry === null, 404);
+        abort_unless(\Illuminate\Support\Facades\Storage::disk('local')->exists($entry['path']), 404);
+
+        return \Illuminate\Support\Facades\Storage::disk('local')->download($entry['path'], $entry['filename']);
+    }
+
     /** Vorgeschlagene Zuordnung bestätigen (Ein-Klick, Abschnitt 13). */
     public function confirm($id)
     {

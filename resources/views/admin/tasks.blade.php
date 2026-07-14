@@ -85,9 +85,12 @@ $typeIcon = ['call'=>'📞','email'=>'✉️','meeting'=>'📅','document'=>'�
                 @endif
             </div>
             @if($t->description)<div style="font-size:13px;color:var(--ink-soft);margin-top:3px;">{{ $t->description }}</div>@endif
-            <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;display:flex;gap:10px;flex-wrap:wrap;">
-                @if($t->customer)<span>👤 {{ $t->customer->user?->name }}</span>@endif
+            <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                @if($t->customer)<a href="{{ route('admin.customer', $t->customer_id) }}" style="color:var(--ink-soft);">👤 {{ $t->customer->user?->name }}</a>@endif
                 <span>Zugewiesen: {{ $t->assignedTo?->name }}</span>
+                @if($t->email_message_id && in_array(auth()->user()->role, ['admin','manager','support']))
+                <a href="{{ route('admin.email_inbox.show', $t->email_message_id) }}" style="color:var(--petrol);font-weight:600;">✉️ E-Mail öffnen</a>
+                @endif
             </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex:none;">

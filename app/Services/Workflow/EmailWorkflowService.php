@@ -259,13 +259,20 @@ class EmailWorkflowService
     {
         $assignedTo = $customer?->betreuer()->first()?->id ?? $this->systemUserId();
 
+        $facts = array_filter([
+            'Kategorie: ' . $message->categoryLabel(),
+            $customer ? 'Kunde: ' . ($customer->user?->name ?? $customer->customer_number) : null,
+            ($n = count($message->attachments_meta ?? [])) > 0 ? $n . ' Anhang/Anhänge' : null,
+        ]);
+
         Task::forceCreate([
             'id' => (string) Str::uuid(),
             'assigned_to' => $assignedTo,
             'created_by' => $this->systemUserId(),
             'customer_id' => $customer?->id,
+            'email_message_id' => $message->id,
             'title' => $title,
-            'description' => 'Ausgelöst durch E-Mail "' . ($message->subject ?: '(kein Betreff)') . '" von ' . $message->from_address,
+            'description' => 'Ausgelöst durch E-Mail "' . ($message->subject ?: '(kein Betreff)') . '" von ' . $message->from_address . '. ' . implode(' · ', $facts) . '.',
             'type' => 'email',
             'status' => 'open',
             'priority' => $priority,
