@@ -154,6 +154,41 @@ class ChangeRequestService
 
     private function applyContract(Customer $customer, array $data): void
     {
+        // Aenderung an einem BESTEHENDEN Vertrag: der Kunde beantragt die
+        // Anpassung ueber das Portal, ein Mitarbeiter prueft und gibt frei
+        // (Vier-Augen-Prinzip). Nur eine strikte Feld-Whitelist wird
+        // uebernommen - status und customer_id bleiben unberuehrt.
+        if (!empty($data['id'])) {
+            $contract = Contract::where('customer_id', $customer->id)
+                ->where('id', $data['id'])->firstOrFail();
+
+            $update = [];
+            if (!empty($data['insurer'])) {
+                $update['insurer'] = $data['insurer'];
+            }
+            if (isset($data['type']) && in_array($data['type'], Contract::typeKeys(), true)) {
+                $update['type'] = $data['type'];
+            }
+            // Datumsfelder: leerer String -> NULL (Feld bewusst geleert)
+            foreach (['start_date', 'end_date', 'cancellation_date'] as $dateField) {
+                if (array_key_exists($dateField, $data)) {
+                    $update[$dateField] = $data[$dateField] !== '' ? $data[$dateField] : null;
+                }
+            }
+            if (array_key_exists('contract_number', $data)) {
+                // NULL statt Leerstring wegen Unique-Index auf contract_number
+                $update['contract_number'] = $data['contract_number'] !== '' ? $data['contract_number'] : null;
+            }
+            if (array_key_exists('notes', $data)) {
+                $update['notes'] = $data['notes'] !== '' ? $data['notes'] : null;
+            }
+
+            if ($update) {
+                $contract->update($update);
+            }
+            return;
+        }
+
         $contract = Contract::create([
             'customer_id' => $customer->id,
             'type' => in_array($data['type'] ?? null, Contract::typeKeys(), true) ? $data['type'] : 'andere',

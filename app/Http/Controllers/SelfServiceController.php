@@ -2,6 +2,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\CustomerAddress;
 use App\Models\CustomerChangeRequest;
@@ -277,6 +278,46 @@ class SelfServiceController extends Controller
         $this->createRequest('contract', null, $payload, 'Neuer Vertrag gemeldet: ' . $data['insurer']);
 
         return back()->with('success', 'Ihr Vertrag wurde gemeldet und wird von uns geprüft.');
+    }
+
+    /**
+     * Aenderung an einem BESTEHENDEN Vertrag beantragen. Wie jede andere
+     * Self-Service-Aktion wird die Aenderung erst nach Pruefung und Freigabe
+     * durch einen Mitarbeiter wirksam (Vier-Augen-Prinzip). Der Zugriff ist
+     * hart auf den eigenen Customer-Datensatz gescoped.
+     */
+    public function contractChange(Request $request, $id)
+    {
+        $customer = $this->getCustomer();
+        $contract = Contract::where('customer_id', $customer->id)->where('id', $id)->firstOrFail();
+
+        $data = $request->validate([
+            'type' => 'required|in:' . implode(',', Contract::typeKeys()),
+            'insurer' => 'required|string|max:255',
+            'contract_number' => 'nullable|string|max:100',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'cancellation_date' => 'nullable|date',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        $this->createRequest(
+            'contract',
+            [
+                'id' => $contract->id,
+                'type' => $contract->type,
+                'insurer' => $contract->insurer,
+                'contract_number' => $contract->contract_number,
+                'start_date' => $contract->start_date,
+                'end_date' => $contract->end_date,
+                'cancellation_date' => $contract->cancellation_date,
+                'notes' => $contract->notes,
+            ],
+            ['id' => $contract->id] + $data,
+            'Vertragsänderung beantragt: ' . $contract->insurer
+        );
+
+        return back()->with('success', 'Ihre Vertragsänderung wurde zur Prüfung eingereicht. Sie wird erst nach Freigabe durch unser Team wirksam.');
     }
 
     // ------------------------------------------------------------------

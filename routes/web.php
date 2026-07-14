@@ -105,6 +105,7 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     Route::get('/bank', [\App\Http\Controllers\SelfServiceController::class, 'bank'])->name('bank');
     Route::post('/bank', [\App\Http\Controllers\SelfServiceController::class, 'bankStore'])->name('bank.store');
     Route::post('/contracts/report', [\App\Http\Controllers\SelfServiceController::class, 'contractReport'])->name('contracts.report');
+    Route::post('/contracts/{id}/change', [\App\Http\Controllers\SelfServiceController::class, 'contractChange'])->name('contracts.change');
     Route::get('/contracts/{id}', [PortalController::class, 'contractShow'])->name('contracts.show');
     Route::get('/change-requests', [\App\Http\Controllers\SelfServiceController::class, 'changeRequests'])->name('change_requests');
     Route::get('/documents/{id}/download', [PortalController::class, 'documentDownload'])->name('documents.download');
