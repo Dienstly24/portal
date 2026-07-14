@@ -180,6 +180,27 @@ class EnergyContractImportTest extends TestCase
         $this->assertSame(1, Contract::count());
     }
 
+    public function test_invalid_zero_birthdate_becomes_null_and_row_imports(): void
+    {
+        // Der Export enthaelt Platzhalter "00.00.0000" - der darf nicht als
+        // "0000-00-00" in die DB (MySQL Strict-Mode lehnt das ab), sondern
+        // muss zu NULL werden, damit die Zeile trotzdem importiert wird.
+        $this->writeCsv([
+            $this->row([
+                'nr' => '833928', 'kunde' => 'Herr Rami Alhabash',
+                'anschrift' => 'Teststr. 9, 45886 Gelsenkirchen', 'geburt' => '00.00.0000',
+                'produkt' => 'stadtenergie - Gönn dir WATT', 'status' => '9100', 'storno' => '10.06.2026',
+            ]),
+        ]);
+
+        $this->artisan('energie:import', ['file' => $this->csvPath])->assertSuccessful();
+
+        $this->assertSame(1, Customer::count());
+        $this->assertNull(Customer::first()->birth_date);
+        $this->assertSame(1, Contract::count());
+        $this->assertSame('cancelled', Contract::first()->status);
+    }
+
     public function test_dry_run_writes_nothing(): void
     {
         $this->writeCsv([
