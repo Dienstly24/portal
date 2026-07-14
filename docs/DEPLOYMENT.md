@@ -60,6 +60,32 @@ ssh-keygen -t ed25519 -C "github-deploy" -f deploy_key -N ""
 6. `php artisan queue:restart` (Worker laden neuen Code)
 7. Wartungsmodus aus.
 
+## Upload-Limits (nginx + PHP) — WICHTIG
+
+Die App erlaubt Uploads bis **10 MB** (Tickets, Dokumente, Self-Service) bzw.
+**20 MB** (Banner). Damit diese nicht mit **HTTP 413 (Request Entity Too Large)**
+abgewiesen werden, müssen die Server-Limits entsprechend gesetzt sein.
+
+**nginx** (Server-Block der Portal-Domain, dann `nginx -t && systemctl reload nginx`):
+```
+client_max_body_size 25M;
+```
+
+**PHP-FPM** (`php.ini` bzw. Pool-Konfiguration, dann `systemctl restart php8.3-fpm`):
+```
+upload_max_filesize = 25M
+post_max_size       = 30M
+```
+
+Kurzbefehl zum Prüfen der aktuellen Werte auf dem Server:
+```
+php -i | grep -E "upload_max_filesize|post_max_size"
+grep -R client_max_body_size /etc/nginx/
+```
+
+Hinweis: `post_max_size` muss größer sein als `upload_max_filesize`, und
+`client_max_body_size` (nginx) muss mindestens so groß sein wie `post_max_size`.
+
 ## Sicherheit
 - Deploy läuft **nur** nach grüner Testsuite (`needs: test`) und **nur** bei Push auf `main` (nicht bei PRs).
 - `concurrency` verhindert parallele Deploys.
