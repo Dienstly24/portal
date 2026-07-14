@@ -122,5 +122,6 @@ a{color:#185FA5;}
     </div>
     <div class="foot-copy">Copyright © {{ $company['name'] }} {{ date('Y') }}</div>
 </div>
+@include('partials.cookie_consent')
 </body>
 </html>

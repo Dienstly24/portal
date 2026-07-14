@@ -27,5 +27,6 @@
                 {{ $slot }}
             </div>
         </div>
+        @include('partials.cookie_consent')
     </body>
 </html>
