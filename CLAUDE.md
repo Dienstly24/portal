@@ -97,8 +97,9 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   DKIM `hostingermail1._domainkey` = verifiziert, DMARC `p=none`). Die frühere
   Annahme „DKIM leer (`p=`)" ist damit überholt. Verbleibendes Thema ist die
   **Reputation der neuen Absender-Domain** (v. a. Microsoft/Outlook):
-  aufwärmen, „Kein Spam"/Kontakt-Signal, Microsoft SNDS/JMRP. Nächster
-  Schritt: Testversand an mail-tester.com. Details + Checkliste in
+  aufwärmen, „Kein Spam"/Kontakt-Signal, Microsoft SNDS/JMRP. **mail-tester.com
+  = 10/10** bestätigt (14.07.2026: authentifiziert, SpamAssassin ok, nicht
+  blockgelistet) → rein technisch nichts mehr offen. Details + Checkliste in
   `docs/EMAIL_ZUSTELLBARKEIT_SPF_DKIM_DMARC.md`.
 - **WordPress-Rechtsseiten** (`dienstly24.de/impressum` etc.) sind leer und
   müssen mit Inhalt gefüllt werden.

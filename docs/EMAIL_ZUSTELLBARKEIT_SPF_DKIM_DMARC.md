@@ -1,8 +1,13 @@
 # E-Mail-Zustellbarkeit: Warum Willkommens-Mails im Spam landen
 
-**Status:** Hauptursache ist DNS-Konfiguration (kein Code-Fehler). Diese
-Anleitung beschreibt die konkreten Schritte, damit Mails von
-`noreply@dienstly24.de` bei Outlook/Gmail im Posteingang statt im Spam landen.
+**Status (14.07.2026): Technische Einrichtung abgeschlossen und bestaetigt.**
+mail-tester.com bewertet einen Testversand ueber die App mit **10/10**:
+„properly authenticated", „SpamAssassin likes you", „not blocklisted". SPF,
+DKIM und DMARC sind korrekt; die Domain steht auf keiner Blockliste. Die
+Spam-Einstufung bei Outlook ist damit **kein Code- oder DNS-Fehler**, sondern
+ausschliesslich eine Frage der **Reputation der neuen Absender-Domain**
+(v. a. Microsoft/Outlook). Diese Anleitung dokumentiert die (erreichte)
+Zielkonfiguration und die verbleibenden Reputations-Massnahmen.
 
 ## Kurzdiagnose
 
@@ -217,8 +222,8 @@ Erst umstellen, wenn der mail-tester-Test SPF+DKIM sicher als `pass` zeigt.
 - [x] SPF-TXT gesetzt – `v=spf1 include:_spf.mail.hostinger.com ~all`
 - [x] DKIM aktiv und verifiziert – `hostingermail1._domainkey`
 - [x] DMARC-TXT gesetzt – `v=DMARC1; p=none`
-- [ ] **Testversand ueber die App an mail-tester.com** – Score + versteckte
-  Fehler/Blocklisten pruefen
+- [x] **Testversand ueber die App an mail-tester.com** – **10/10** am
+  14.07.2026 (authentifiziert, SpamAssassin ok, nicht blockgelistet)
 - [ ] **Reputation aufwaermen** – kleine Mengen, „Kein Spam"/Kontakt-Signal
 - [ ] **Microsoft SNDS/JMRP** registrieren (Outlook ist der strengste Empfaenger)
 - [ ] Optional: DMARC auf `p=quarantine` schaerfen, sobald mail-tester `pass`
