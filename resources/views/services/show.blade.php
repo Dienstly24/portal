@@ -4,7 +4,8 @@
     $highlights = $page->highlightList();
     $faq = $page->faqList();
     $customFields = $page->fieldList();
-    $hasLeft = count($highlights) || count($faq);
+    $body = $page->bodyHtml();
+    $hasLeft = $body !== '' || count($highlights) || count($faq);
 @endphp
 <html lang="{{ app()->getLocale() }}" dir="{{ $rtl ? 'rtl' : 'ltr' }}">
 <head>
@@ -12,6 +13,42 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dienstly24 — {{ $page->t('title') }}</title>
 @if($page->t('meta_description'))<meta name="description" content="{{ $page->t('meta_description') }}">@endif
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="{{ url('/leistungen/' . $page->slug) }}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{ $page->t('title') }} – Dienstly24">
+@if($page->t('meta_description'))<meta property="og:description" content="{{ $page->t('meta_description') }}">@endif
+<meta property="og:url" content="{{ url('/leistungen/' . $page->slug) }}">
+<script type="application/ld+json">
+{!! json_encode([
+    '@context' => 'https://schema.org',
+    '@type' => 'Service',
+    'name' => $page->t('title'),
+    'serviceType' => $page->t('title'),
+    'description' => $page->t('meta_description') ?: $page->t('subtitle'),
+    'areaServed' => ['@type' => 'Country', 'name' => 'Deutschland'],
+    'provider' => [
+        '@type' => 'InsuranceAgency',
+        'name' => 'Dienstly24',
+        'url' => url('/'),
+        'telephone' => '+49-179-9673909',
+        'address' => ['@type' => 'PostalAddress', 'streetAddress' => 'Furtweg 51a', 'postalCode' => '22523', 'addressLocality' => 'Hamburg', 'addressCountry' => 'DE'],
+    ],
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+</script>
+@if(count($faq))
+<script type="application/ld+json">
+{!! json_encode([
+    '@context' => 'https://schema.org',
+    '@type' => 'FAQPage',
+    'mainEntity' => collect($faq)->map(fn ($f) => [
+        '@type' => 'Question',
+        'name' => $f['q'],
+        'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f['a']],
+    ])->all(),
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+</script>
+@endif
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 <style>
 :root{--green:#17A65B;--green2:#19b463;--green3:#128a4b;--mint:#3ddc8e;--paper:#0e0f12;--card:#15171b;--card2:#1b1e23;--line:rgba(255,255,255,.10);--line2:rgba(255,255,255,.16);--muted:#9aa1ab;--text:#eef1ee;}
@@ -50,6 +87,11 @@ body{font-family:'Inter',system-ui,Arial,sans-serif;min-height:100vh;color:var(-
 .faq summary::after{content:'+';color:var(--mint);font-weight:700;}
 .faq details[open] summary::after{content:'–';}
 .faq details p{color:#bcc3bd;font-size:14px;margin-top:9px;line-height:1.65;}
+.prose h3{font-size:16px;color:#fff;margin:22px 0 8px;}
+.prose h3:first-child{margin-top:0;}
+.prose p{color:#c7cec9;font-size:14.5px;line-height:1.75;margin-bottom:12px;}
+.prose ul{margin:0 0 14px;padding-inline-start:20px;}
+.prose li{color:#c7cec9;font-size:14.5px;line-height:1.7;margin-bottom:6px;}
 /* Form */
 .form-card{position:sticky;top:22px;}
 .form-card h2{font-size:19px;}
@@ -108,6 +150,12 @@ label{display:block;font-size:13px;margin-bottom:7px;color:#cfd5cf;font-weight:5
                         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg><span>{{ $h }}</span></li>
                     @endforeach
                 </ul>
+            </div>
+            @endif
+
+            @if($body !== '')
+            <div class="card prose">
+                {!! $body !!}
             </div>
             @endif
 

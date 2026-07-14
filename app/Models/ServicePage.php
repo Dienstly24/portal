@@ -16,7 +16,7 @@ class ServicePage extends Model
     protected $fillable = [
         'slug', 'category', 'icon',
         'title_de', 'title_ar', 'subtitle_de', 'subtitle_ar',
-        'intro_de', 'intro_ar', 'highlights_de', 'highlights_ar', 'faq', 'fields',
+        'intro_de', 'intro_ar', 'highlights_de', 'highlights_ar', 'body_de', 'body_ar', 'faq', 'fields',
         'image_path', 'meta_description_de', 'meta_description_ar',
         'is_active', 'sort_order', 'created_by', 'updated_by',
     ];
@@ -55,6 +55,40 @@ class ServicePage extends Model
             return $this->{$field . '_ar'} ?: $this->{$field . '_de'};
         }
         return $this->{$field . '_de'};
+    }
+
+    /**
+     * Ausführlichen Inhalt (body) als sicheres HTML rendern. Leichtes Markup:
+     * "## " -> Zwischenüberschrift, "- " -> Listenpunkt, Leerzeile -> Absatz.
+     * Alle Inhalte werden escaped (kein HTML aus der Adminoberflaeche).
+     */
+    public function bodyHtml(): string
+    {
+        $raw = (string) $this->t('body');
+        if (trim($raw) === '') {
+            return '';
+        }
+        $html = '';
+        $inList = false;
+        foreach (preg_split('/\r\n|\r|\n/', $raw) as $line) {
+            $t = trim($line);
+            if ($t === '') {
+                if ($inList) { $html .= '</ul>'; $inList = false; }
+                continue;
+            }
+            if (str_starts_with($t, '## ')) {
+                if ($inList) { $html .= '</ul>'; $inList = false; }
+                $html .= '<h3>' . e(substr($t, 3)) . '</h3>';
+            } elseif (str_starts_with($t, '- ')) {
+                if (!$inList) { $html .= '<ul>'; $inList = true; }
+                $html .= '<li>' . e(substr($t, 2)) . '</li>';
+            } else {
+                if ($inList) { $html .= '</ul>'; $inList = false; }
+                $html .= '<p>' . e($t) . '</p>';
+            }
+        }
+        if ($inList) { $html .= '</ul>'; }
+        return $html;
     }
 
     /** Kurzinfos als Array (eine pro Zeile), lokalisiert. */
