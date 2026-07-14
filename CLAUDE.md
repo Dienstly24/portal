@@ -92,9 +92,14 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
 
 ## Offene Themen / wartet auf den Betreiber
 
-- **SPF/DKIM/DMARC** für `dienstly24.de` in Hostinger-DNS: DKIM-Schlüssel ist
-  aktuell leer (`p=`) → Willkommens-Mails landen im Spam. DNS-Aufgabe, kein
-  Code. (Details siehe frühere Diagnose.)
+- **E-Mail-Zustellbarkeit (Spam bei Outlook):** SPF, DKIM und DMARC sind
+  inzwischen **korrekt gesetzt** (geprüft 14.07.2026: SPF `include:_spf.mail.hostinger.com`,
+  DKIM `hostingermail1._domainkey` = verifiziert, DMARC `p=none`). Die frühere
+  Annahme „DKIM leer (`p=`)" ist damit überholt. Verbleibendes Thema ist die
+  **Reputation der neuen Absender-Domain** (v. a. Microsoft/Outlook):
+  aufwärmen, „Kein Spam"/Kontakt-Signal, Microsoft SNDS/JMRP. Nächster
+  Schritt: Testversand an mail-tester.com. Details + Checkliste in
+  `docs/EMAIL_ZUSTELLBARKEIT_SPF_DKIM_DMARC.md`.
 - **WordPress-Rechtsseiten** (`dienstly24.de/impressum` etc.) sind leer und
   müssen mit Inhalt gefüllt werden.
 - **Finale Logo-Dateien** kommen vom Betreiber (bevorzugt SVG, sonst PNG

@@ -6,21 +6,35 @@ Anleitung beschreibt die konkreten Schritte, damit Mails von
 
 ## Kurzdiagnose
 
-Outlook markiert die Mail als Junk, weil die Domain `dienstly24.de` sich nicht
-vollstaendig authentifiziert. Stand 14.07.2026:
+**Wichtige Aktualisierung (14.07.2026): Die E-Mail-Authentifizierung ist
+vollstaendig und korrekt eingerichtet.** Auf dem Produktivserver geprueft:
 
-- **DKIM** – kryptografische Signatur der Mail. **In hPanel aktiv und
-  „Verifiziert"** (Selector `hostingermail1._domainkey`). Damit ist die
-  frueher vermutete Hauptursache („leerer `p=`-Schluessel") **erledigt**.
-- **SPF** – legt fest, welche Server fuer `dienstly24.de` senden duerfen.
-  Muss den Hostinger-Include enthalten (siehe A2). **Zu pruefen.**
-- **DMARC** – Richtlinie, die SPF+DKIM zusammenfasst und Reputation aufbaut.
-  Fuer eine neue Domain praktisch Pflicht; Outlook misstraut ohne DMARC.
-  **Zu pruefen/anzulegen (siehe unten).**
+```
+dig +short TXT dienstly24.de
+  "v=spf1 include:_spf.mail.hostinger.com ~all"      # SPF korrekt
+dig +short TXT _dmarc.dienstly24.de
+  "v=DMARC1; p=none"                                   # DMARC vorhanden
+# DKIM: hostingermail1._domainkey -> hPanel-Status "Verifiziert"
+```
 
-Verbleibende wahrscheinliche Ursachen: **fehlender/falscher SPF-Eintrag**,
-**fehlender DMARC-Eintrag**, sowie die normale **Reputations-Aufwaermung**
-einer neuen Absender-Domain.
+- **SPF** ✅ korrekt (Hostinger-Include vorhanden).
+- **DKIM** ✅ aktiv und verifiziert.
+- **DMARC** ✅ vorhanden (`p=none`, Monitoring-Modus).
+
+Damit ist die frueher vermutete Hauptursache („leerer DKIM-Schluessel")
+**widerlegt** – SPF, DKIM und DMARC sind gesetzt. Die Spam-Einstufung bei
+Outlook liegt daher **nicht** an fehlender Authentifizierung, sondern an der
+**Reputation einer neuen Absender-Domain** – besonders Microsoft/Outlook stuft
+neue Absender ohne Sende-Historie anfangs streng als Junk ein.
+
+**Naechster Schritt = messen, nicht raten:** Einen echten Testversand ueber die
+App an https://www.mail-tester.com schicken und den Score lesen (siehe
+Abschnitt „Verifizieren"). Der Report zeigt, ob doch ein versteckter Fehler
+vorliegt (z. B. DKIM-Signatur bricht beim Versand, IP/Domain auf einer
+Blockliste) oder ob wirklich nur die Reputation fehlt.
+
+Die folgenden Abschnitte A/B dokumentieren die korrekte Zielkonfiguration
+(bereits erreicht) und die Reputations-Massnahmen.
 
 Der Code (Laravel Mailable, HTML-Template) ist in Ordnung. Zusaetzlich wurde
 eine Text-Variante der Willkommens-Mail ergaenzt (`multipart/alternative`),
@@ -142,29 +156,69 @@ dig +short TXT default._domainkey.dienstly24.de
 dig +short TXT _dmarc.dienstly24.de
 ```
 
-Zusaetzlich zuverlaessig:
+**Empfohlen: Testversand ueber die App** (testet den echten Sendeweg inkl.
+DKIM-Signatur durch Hostinger). Auf https://www.mail-tester.com die dort
+angezeigte Zieladresse holen und einsetzen:
 
-- **Testmail an** `check-auth@verifier.port25.com` senden – man erhaelt
-  einen Report mit `SPF: pass`, `DKIM: pass`, `DMARC: pass`.
-- Oder Testmail ueber **https://www.mail-tester.com** (Ziel: 9–10/10).
-- In Gmail: Mail oeffnen → „Original anzeigen" → SPF/DKIM/DMARC muessen
-  jeweils `PASS` zeigen.
+```
+cd /var/www/dienstly24/portal
+php artisan tinker --execute='\Mail::raw("Test Zustellbarkeit Dienstly24", function($m){ $m->to("test-XXXX@srv1.mail-tester.com")->subject("Test Zustellbarkeit"); });'
+```
 
-## Reputations-Aufwaermung (neue Domain)
+Danach auf mail-tester.com den Score ansehen (Ziel: 9–10/10). Der Report zeigt
+`SPF`, `DKIM`, `DMARC` einzeln sowie eventuelle Blocklisten-Treffer.
 
-Selbst mit korrektem SPF/DKIM/DMARC braucht eine neue Absender-Domain etwas
-Zeit, bis Outlook/Gmail ihr vertrauen:
+Weitere Pruefungen:
 
-- Anfangs **kleine Mengen** versenden, langsam steigern.
-- Empfaenger bitten, die erste Mail als „Kein Spam" zu markieren und den
-  Absender zu den Kontakten hinzuzufuegen.
+- **Testmail an** `check-auth@verifier.port25.com` – Report mit
+  `SPF/DKIM/DMARC: pass`.
+- In Gmail: Mail oeffnen → „Original anzeigen" → SPF/DKIM/DMARC = `PASS`,
+  und `Authentication-Results` pruefen.
+
+## Reputations-Aufwaermung (neue Domain) – hier der eigentliche Hebel
+
+SPF/DKIM/DMARC sind gesetzt. Was fehlt, ist Sende-Historie. Eine neue
+Absender-Domain wird von Outlook/Gmail anfangs streng behandelt:
+
+- Anfangs **kleine Mengen** versenden, langsam steigern (nicht sofort an alle).
+- Empfaenger bitten, die erste Mail als **„Kein Spam"** zu markieren und den
+  Absender `noreply@dienstly24.de` zu den **Kontakten** hinzuzufuegen. Dieses
+  Signal wirkt bei Outlook am schnellsten.
 - Bounces/Beschwerden gering halten (nur an echte, gewollte Adressen senden).
+
+### Microsoft/Outlook-spezifisch (wichtigster Empfaenger hier)
+
+Outlook/Hotmail (SmartScreen) ist bei neuen Absendern am strengsten. Direkt bei
+Microsoft anmelden:
+
+- **SNDS** (Smart Network Data Services): https://sendersupport.olc.protection.outlook.com/snds/
+  – Einblick in Reputation der sendenden IP.
+- **JMRP** (Junk Mail Reporting Program): ueber das Microsoft-Postmaster-Portal
+  registrieren, um Beschwerden zu erhalten.
+- Ggf. **Absender-Freischaltung** anfragen:
+  https://sendersupport.olc.protection.outlook.com/pm/
+
+### Optional: DMARC schaerfen
+
+Aktuell `p=none` (Monitoring). Fuer ein etwas staerkeres Vertrauenssignal und
+Report-Rueckmeldungen kann ergaenzt werden:
+
+```
+Typ:  TXT
+Name: _dmarc
+Wert: v=DMARC1; p=quarantine; rua=mailto:dmarc@dienstly24.de; adkim=s; aspf=s; pct=100
+```
+
+Erst umstellen, wenn der mail-tester-Test SPF+DKIM sicher als `pass` zeigt.
 
 ## Checkliste
 
-- [ ] Versandweg geklaert (Hostinger vs. eigener VPS-Mailserver)
-- [ ] SPF-TXT gesetzt (nur ein Record, korrekter `include`/`ip4`)
-- [ ] DKIM aktiv, `p=` **nicht leer**, Selector korrekt
-- [ ] DMARC-TXT gesetzt (Start `p=none`, spaeter `p=quarantine`)
-- [ ] PTR/rDNS passt (nur Variante B / eigener Server)
-- [ ] Verifikation via mail-tester / port25 = alles `pass`
+- [x] Versandweg geklaert – Hostinger-Mail (`smtp.hostinger.com`)
+- [x] SPF-TXT gesetzt – `v=spf1 include:_spf.mail.hostinger.com ~all`
+- [x] DKIM aktiv und verifiziert – `hostingermail1._domainkey`
+- [x] DMARC-TXT gesetzt – `v=DMARC1; p=none`
+- [ ] **Testversand ueber die App an mail-tester.com** – Score + versteckte
+  Fehler/Blocklisten pruefen
+- [ ] **Reputation aufwaermen** – kleine Mengen, „Kein Spam"/Kontakt-Signal
+- [ ] **Microsoft SNDS/JMRP** registrieren (Outlook ist der strengste Empfaenger)
+- [ ] Optional: DMARC auf `p=quarantine` schaerfen, sobald mail-tester `pass`
