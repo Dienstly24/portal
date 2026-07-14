@@ -421,7 +421,11 @@ class ImportEnergyContracts extends Command
         return $out;
     }
 
-    /** Datum "dd.mm.yyyy" -> "Y-m-d"; "-"/leer -> null. */
+    /**
+     * Datum "dd.mm.yyyy" -> "Y-m-d"; "-"/leer/ungueltig -> null.
+     * Platzhalter wie "00.00.0000" gibt es im Export; die werden zu null,
+     * damit MySQL im Strict-Mode sie nicht als "0000-00-00" ablehnt.
+     */
     private function parseDate(?string $value): ?string
     {
         $value = trim((string) $value);
@@ -429,7 +433,14 @@ class ImportEnergyContracts extends Command
             return null;
         }
         if (preg_match('/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/', $value, $m)) {
-            return sprintf('%04d-%02d-%02d', $m[3], $m[2], $m[1]);
+            $day = (int) $m[1];
+            $month = (int) $m[2];
+            $year = (int) $m[3];
+            // Nur echte, kalendarisch gueltige Datumswerte uebernehmen.
+            if (!checkdate($month, $day, $year)) {
+                return null;
+            }
+            return sprintf('%04d-%02d-%02d', $year, $month, $day);
         }
         return null;
     }
