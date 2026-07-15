@@ -83,6 +83,27 @@
     <div class="field"><label>Notizen</label><input type="text" name="notes" value="{{ $val('notes', $c->notes ?? '') }}" placeholder="Interne Notizen..."></div>
 </div>
 
+{{-- Beitrag + Zahlweise: was der Kunde zahlt und in welchem Rhythmus. Gilt fuer
+     alle Sparten und ist Grundlage der Kosten-Statistik in der Kundenakte/Portal. --}}
+@php $curInterval = old('premium_interval', $c->premium_interval ?? 'monthly'); @endphp
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div class="field">
+        <label>Beitrag (€)</label>
+        <input type="number" step="0.01" min="0" name="premium_amount"
+            value="{{ $val('premium_amount', $c && $c->premium_amount !== null ? rtrim(rtrim(number_format((float) $c->premium_amount, 2, '.', ''), '0'), '.') : '') }}"
+            placeholder="z. B. 49,90">
+        <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">Leer lassen, wenn kein Beitrag hinterlegt werden soll.</div>
+    </div>
+    <div class="field">
+        <label>Zahlweise</label>
+        <select name="premium_interval" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+            @foreach(\App\Models\Contract::PREMIUM_INTERVALS as $ik => $cfg)
+            <option value="{{ $ik }}" {{ $curInterval === $ik ? 'selected' : '' }}>{{ $cfg['label'] }}</option>
+            @endforeach
+        </select>
+    </div>
+</div>
+
 {{-- ===== KFZ ===== --}}
 <div id="section-kfz" class="branch-section" style="display:none;border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;">
     <div class="card-title" style="font-size:14px;">🚗 Fahrzeug & Einstufung</div>

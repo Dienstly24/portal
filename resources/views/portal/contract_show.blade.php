@@ -28,6 +28,13 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
     <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Startdatum</span><span style="font-weight:600;font-size:13.5px;">{{ $d($contract->start_date) }}</span></div>
     <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Enddatum</span><span style="font-weight:600;font-size:13.5px;">{{ $d($contract->end_date) }}</span></div>
     <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Kündigungsdatum</span><span style="font-weight:600;font-size:13.5px;">{{ $d($contract->cancellation_date) }}</span></div>
+    @if($contract->hasPremium())
+    @php $eur = fn($v) => number_format((float) $v, 2, ',', '.') . ' €'; @endphp
+    <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Beitrag') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $eur($contract->premium_amount) }} / {{ __(\App\Models\Contract::PREMIUM_INTERVALS[$contract->premium_interval]['label'] ?? 'Monatlich') }}</span></div>
+    @if($contract->premium_interval !== 'monthly')
+    <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Beitrag pro Monat') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $eur($contract->monthlyPremium()) }}</span></div>
+    @endif
+    @endif
 </div>
 
 {{-- Sparte KFZ --}}

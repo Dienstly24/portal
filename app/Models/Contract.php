@@ -6,7 +6,53 @@ use Illuminate\Support\Str;
 class Contract extends Model {
     protected $keyType = 'string';
     public $incrementing = false;
-    protected $fillable = ['customer_id','contract_number','type','type_other','subtype','insurer','status','start_date','end_date','pdf_path','notes','cancellation_date'];
+    protected $fillable = ['customer_id','contract_number','type','type_other','subtype','insurer','status','start_date','end_date','pdf_path','notes','cancellation_date','premium_amount','premium_interval'];
+
+    protected $casts = [
+        'premium_amount' => 'decimal:2',
+    ];
+
+    /**
+     * Zahlweisen des Beitrags mit deutschem Label und der Anzahl Zahlungen pro
+     * Jahr (Basis fuer die auf den Monat normierte Statistik). Neue Stufe = hier
+     * eine Zeile ergaenzen (premium_interval ist ein String, keine Migration).
+     */
+    public const PREMIUM_INTERVALS = [
+        'monthly'    => ['label' => 'Monatlich',       'per_year' => 12],
+        'quarterly'  => ['label' => 'Vierteljährlich', 'per_year' => 4],
+        'semiannual' => ['label' => 'Halbjährlich',    'per_year' => 2],
+        'yearly'     => ['label' => 'Jährlich',        'per_year' => 1],
+    ];
+
+    /** Gueltige Zahlweise-Schluessel (Validierungs-Whitelist). */
+    public static function premiumIntervalKeys(): array {
+        return array_keys(self::PREMIUM_INTERVALS);
+    }
+
+    /** Deutsches Label der Zahlweise (z.B. "Vierteljährlich"). */
+    public function premiumIntervalLabel(): string {
+        return self::PREMIUM_INTERVALS[$this->premium_interval]['label']
+            ?? self::PREMIUM_INTERVALS['monthly']['label'];
+    }
+
+    /** Ist ein Beitrag hinterlegt? (Betrag > 0) */
+    public function hasPremium(): bool {
+        return (float) $this->premium_amount > 0;
+    }
+
+    /** Auf den Monat normierter Beitrag - Basis fuer Summen/Statistik. */
+    public function monthlyPremium(): float {
+        if (!$this->hasPremium()) return 0.0;
+        $perYear = self::PREMIUM_INTERVALS[$this->premium_interval]['per_year'] ?? 12;
+        return round((float) $this->premium_amount * $perYear / 12, 2);
+    }
+
+    /** Auf das Jahr hochgerechneter Beitrag. */
+    public function yearlyPremium(): float {
+        if (!$this->hasPremium()) return 0.0;
+        $perYear = self::PREMIUM_INTERVALS[$this->premium_interval]['per_year'] ?? 12;
+        return round((float) $this->premium_amount * $perYear, 2);
+    }
 
     /**
      * Zentrale Sparten-Definition (eine Quelle fuer alle Formulare, Listen und

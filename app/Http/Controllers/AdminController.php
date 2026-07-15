@@ -128,6 +128,8 @@ class AdminController extends Controller
             'end_date' => $request->end_date,
             'cancellation_date' => $request->cancellation_date,
             'notes' => $request->notes,
+            'premium_amount' => $request->filled('premium_amount') ? $request->premium_amount : null,
+            'premium_interval' => in_array($request->premium_interval, Contract::premiumIntervalKeys(), true) ? $request->premium_interval : 'monthly',
             'added_by' => auth()->user()?->name,
         ]);
 
@@ -158,6 +160,8 @@ class AdminController extends Controller
             'end_date' => $request->end_date,
             'cancellation_date' => $request->cancellation_date,
             'notes' => $request->notes,
+            'premium_amount' => $request->filled('premium_amount') ? $request->premium_amount : null,
+            'premium_interval' => in_array($request->premium_interval, Contract::premiumIntervalKeys(), true) ? $request->premium_interval : 'monthly',
         ]);
 
         $this->syncContractDetails($contract, $request);
@@ -205,6 +209,9 @@ class AdminController extends Controller
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'cancellation_date' => 'nullable|date',
             'notes' => 'nullable|string',
+            // Beitrag + Zahlweise (was zahlt der Kunde, in welchem Rhythmus).
+            'premium_amount' => 'nullable|numeric|min:0|max:9999999.99',
+            'premium_interval' => 'nullable|in:' . implode(',', Contract::premiumIntervalKeys()),
             'energy.payment_amount' => 'nullable|numeric|min:0',
             'energy.payment_interval' => 'nullable|in:monatlich,vierteljaehrlich,halbjaehrlich,jaehrlich',
             // KFZ-Details
