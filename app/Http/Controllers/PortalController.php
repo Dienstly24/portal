@@ -273,6 +273,30 @@ class PortalController extends Controller
     }
 
     /**
+     * Dokument INLINE im Browser anzeigen (Ansehen statt Download): PDF und
+     * Bilder oeffnen direkt im Tab. Gleiche Scoping-/Sichtbarkeitsregeln wie
+     * beim Download (fremde oder interne Dokumente -> 404).
+     */
+    public function documentView($id) {
+        $customer = $this->getCustomer();
+        $doc = \App\Models\Document::where('customer_id', $customer->id)
+            ->customerVisible()
+            ->where('id', $id)->firstOrFail();
+        \App\Models\ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'document_viewed',
+            'entity_type' => 'document',
+            'entity_id' => $doc->id,
+            'meta' => json_encode(['file' => $doc->file_name], JSON_UNESCAPED_UNICODE),
+        ]);
+        $disk = $doc->disk ?: 'public';
+        abort_unless(\Illuminate\Support\Facades\Storage::disk($disk)->exists($doc->file_path), 404);
+        // Content-Disposition: inline -> Browser zeigt die Datei an, statt sie
+        // herunterzuladen. Nur fuer den Kunden selbst zugaenglich.
+        return \Illuminate\Support\Facades\Storage::disk($disk)->response($doc->file_path, $doc->file_name);
+    }
+
+    /**
      * Portal-Glocke (Review Punkt 8/10): Statusmeldungen und
      * 'Neue Nachricht'-Hinweise für den Kunden. Hart gescoped auf den
      * eigenen User und auf title-basierte Einträge - interne Mention-/

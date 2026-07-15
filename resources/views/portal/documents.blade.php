@@ -53,23 +53,80 @@
 </div>
 @endif
 
-<div class="card">
-    @forelse($documents as $d)
-    <div class="item-row">
-        <div>
-            <div style="font-weight:600;font-size:14px;">📄 {{ $d->file_name }}</div>
-            <div style="font-size:13px;color:var(--ink-soft);">
-                {{ \App\Models\Document::CATEGORIES[$d->category] ?? ucfirst($d->category) }} · {{ $d->created_at->format('d.m.Y') }}
-                @if($d->contract)<span style="font-size:11px;background:#E4F0E7;color:#3B7A57;padding:1px 6px;border-radius:4px;">{{ $d->contract->typeIcon() }} {{ $d->contract->typeLabel() }}</span>@endif
-                @if($d->uploaded_by === auth()->id())<span style="font-size:11px;background:#EAF2FB;color:#185FA5;padding:1px 6px;border-radius:4px;">von Ihnen</span>@endif
-            </div>
+<style>
+.doc-folder{background:#fff;border:1px solid var(--line);border-radius:14px;margin-bottom:16px;overflow:hidden;}
+.doc-folder>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:16px 18px;font-weight:700;font-size:15px;}
+.doc-folder>summary::-webkit-details-marker{display:none;}
+.doc-folder>summary .fold-ico{font-size:26px;line-height:1;}
+.doc-folder>summary .fold-sub{font-weight:500;font-size:12.5px;color:var(--ink-soft);}
+.doc-folder>summary .fold-count{margin-left:auto;background:#EEF0F3;color:var(--ink-soft);font-size:12px;font-weight:600;padding:2px 10px;border-radius:20px;}
+.doc-folder>summary .fold-chev{transition:transform .15s;color:var(--ink-soft);}
+.doc-folder[open]>summary .fold-chev{transform:rotate(90deg);}
+.doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;padding:0 18px 18px;}
+.doc-tile{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .15s,transform .15s;}
+.doc-tile:hover{box-shadow:0 6px 20px rgba(0,0,0,.08);transform:translateY(-2px);}
+.doc-thumb{display:flex;align-items:center;justify-content:center;height:126px;background:#F4F5F7;position:relative;overflow:hidden;text-decoration:none;}
+.doc-thumb img{width:100%;height:100%;object-fit:cover;}
+.doc-thumb .doc-emoji{font-size:50px;line-height:1;}
+.doc-thumb .doc-ext{position:absolute;bottom:8px;right:8px;font-size:10px;font-weight:700;letter-spacing:.03em;background:#17191d;color:#fff;padding:2px 7px;border-radius:6px;text-transform:uppercase;}
+.doc-body{padding:11px 13px;display:flex;flex-direction:column;gap:7px;flex:1;}
+.doc-name{font-weight:600;font-size:13px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;}
+.doc-tags{display:flex;flex-wrap:wrap;gap:5px;font-size:11px;}
+.doc-tag{padding:1px 7px;border-radius:5px;background:#EEF0F3;color:var(--ink-soft);}
+.doc-tag-you{background:#EAF2FB;color:#185FA5;}
+.doc-date{font-size:12px;color:var(--ink-soft);margin-top:auto;}
+.doc-actions{display:flex;border-top:1px solid var(--line);}
+.doc-actions a{flex:1;text-align:center;padding:10px 4px;font-size:12.5px;font-weight:600;text-decoration:none;color:var(--ink);}
+.doc-actions a:hover{background:#F4F5F7;}
+.doc-actions a.view{color:#128a4b;border-right:1px solid var(--line);}
+</style>
+
+@php
+    // Nach Vertrag gruppieren: jeder Vertrag ist ein eigener "Ordner",
+    // nicht zugeordnete Dokumente kommen zuletzt.
+    $groups = $documents->groupBy(fn($d) => $d->contract_id ?: '');
+    $withContract = $groups->filter(fn($v, $k) => $k !== '');
+    $withoutContract = $groups->get('', collect());
+@endphp
+
+@if($documents->isEmpty())
+<div class="card"><p style="color:var(--ink-soft);font-size:14px;padding:12px 0;text-align:center;">📂 Noch keine Dokumente vorhanden. Laden Sie oben Ihr erstes Dokument hoch.</p></div>
+@else
+
+    {{-- Ein Ordner je Vertrag --}}
+    @foreach($withContract as $docs)
+    @php $contract = $docs->first()->contract; @endphp
+    <details class="doc-folder" open>
+        <summary>
+            <span class="fold-ico">{{ $contract?->typeIcon() ?? '📁' }}</span>
+            <span>
+                {{ $contract?->typeLabel() ?? 'Vertrag' }}
+                <span class="fold-sub">{{ $contract?->insurer }}@if($contract?->contract_number) · {{ $contract->contract_number }}@endif</span>
+            </span>
+            <span class="fold-count">{{ $docs->count() }}</span>
+            <span class="fold-chev">▸</span>
+        </summary>
+        <div class="doc-grid">
+            @foreach($docs as $d)@include('portal.partials.document_tile')@endforeach
         </div>
-        <a href="{{ route('portal.documents.download', $d->id) }}" class="btn btn-ghost" style="padding:6px 12px;font-size:13px;">{{ __('Herunterladen') }}</a>
-    </div>
-    @empty
-    <p style="color:var(--ink-soft);font-size:14px;padding:12px 0;">Noch keine Dokumente vorhanden. Laden Sie Ihr erstes Dokument hoch.</p>
-    @endforelse
-</div>
+    </details>
+    @endforeach
+
+    {{-- Ordner fuer Dokumente ohne Vertragszuordnung --}}
+    @if($withoutContract->isNotEmpty())
+    <details class="doc-folder" open>
+        <summary>
+            <span class="fold-ico">📁</span>
+            <span>Weitere Dokumente <span class="fold-sub">ohne Vertragszuordnung</span></span>
+            <span class="fold-count">{{ $withoutContract->count() }}</span>
+            <span class="fold-chev">▸</span>
+        </summary>
+        <div class="doc-grid">
+            @foreach($withoutContract as $d)@include('portal.partials.document_tile')@endforeach
+        </div>
+    </details>
+    @endif
+@endif
 
 <div id="upload-doc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:460px;position:relative;">
