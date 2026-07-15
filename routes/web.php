@@ -206,6 +206,7 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::post('/change-requests/{id}/action', [\App\Http\Controllers\ChangeRequestReviewController::class, 'action'])->name('change_requests.action');
     Route::get('/change-requests/{id}/document', [\App\Http\Controllers\ChangeRequestReviewController::class, 'document'])->name('change_requests.document');
     Route::get('/documents/{id}/download', [AdminController::class, 'documentDownload'])->name('documents.download');
+    Route::get('/documents/{id}/view', [AdminController::class, 'documentView'])->name('documents.view');
     Route::post('/documents/{id}/replace', [AdminController::class, 'documentReplace'])->name('documents.replace');
     Route::put('/documents/{id}', [AdminController::class, 'documentUpdate'])->name('documents.update');
     Route::delete('/documents/{id}', [AdminController::class, 'documentDestroy'])->name('documents.destroy');

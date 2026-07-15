@@ -178,9 +178,15 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
     @php
         $dotColor = ['red'=>'#E24B4A','yellow'=>'#F0A500','green'=>'#3B7A57'][$d->color ?? 'green'];
         $docContract = $d->contract_id ? $customer->contracts->firstWhere('id', $d->contract_id) : null;
+        $dExt = strtolower(pathinfo($d->file_name, PATHINFO_EXTENSION));
+        $dIsImage = in_array($dExt, ['jpg','jpeg','png','webp','gif']);
+        $dEmoji = $dExt === 'pdf' ? '📕' : (in_array($dExt, ['doc','docx']) ? '📘' : (in_array($dExt, ['xls','xlsx','csv']) ? '📗' : '📄'));
     @endphp
     <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);">
         <div style="width:10px;height:10px;border-radius:50%;background:{{ $dotColor }};flex:none;" title="Priorität"></div>
+        <a href="{{ route('admin.documents.view', $d->id) }}" target="_blank" rel="noopener" title="Ansehen" style="width:40px;height:40px;border-radius:8px;background:#F4F5F7;border:1px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center;overflow:hidden;text-decoration:none;">
+            @if($dIsImage)<img src="{{ route('admin.documents.view', $d->id) }}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;">@else<span style="font-size:20px;">{{ $dEmoji }}</span>@endif
+        </a>
         <div style="flex:1;min-width:0;">
             <div style="font-size:14px;font-weight:600;">{{ $d->file_name }}</div>
             <div style="font-size:12px;color:var(--ink-soft);display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:2px;">
@@ -192,6 +198,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
             </div>
         </div>
         <div style="display:flex;gap:4px;flex:none;align-items:center;">
+            <a href="{{ route('admin.documents.view', $d->id) }}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" title="Ansehen">👁</a>
             <a href="{{ route('admin.documents.download', $d->id) }}" class="btn btn-ghost btn-sm" title="Herunterladen">⬇</a>
             <button type="button" class="btn btn-ghost btn-sm" title="Bearbeiten"
                 data-doc-id="{{ $d->id }}" data-doc-name="{{ $d->file_name }}" data-doc-category="{{ $d->category }}"
@@ -199,7 +206,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
                 onclick="openDocEditFromBtn(this)">✏️</button>
             <form method="POST" action="{{ route('admin.documents.replace', $d->id) }}" enctype="multipart/form-data" style="display:inline;margin:0;">
                 @csrf
-                <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin:0;" title="Datei ersetzen">↺<input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" style="display:none;" onchange="this.form.submit()"></label>
+                <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin:0;" title="Datei ersetzen">↺<input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,.gif,.doc,.docx,.xls,.xlsx" style="display:none;" onchange="this.form.submit()"></label>
             </form>
             <form method="POST" action="{{ route('admin.documents.destroy', $d->id) }}" onsubmit="return confirm('Dokument „{{ $d->file_name }}“ wirklich löschen?');" style="display:inline;margin:0;">
                 @csrf @method('DELETE')
@@ -567,7 +574,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
                 <div style="font-size:30px;margin-bottom:6px;">📎</div>
                 <div style="font-size:13.5px;color:var(--ink-soft);">Dateien hierher ziehen oder <span style="color:var(--petrol);font-weight:600;">durchsuchen</span></div>
                 <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">PDF, JPG, PNG, DOC, XLS · max. 10 MB pro Datei · bis zu 20 Dateien</div>
-                <input type="file" name="documents[]" id="doc-input" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" style="display:none;">
+                <input type="file" name="documents[]" id="doc-input" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,.gif,.doc,.docx,.xls,.xlsx" style="display:none;">
             </div>
             <div id="file-list" style="margin-bottom:14px;"></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">

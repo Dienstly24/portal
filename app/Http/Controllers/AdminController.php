@@ -560,7 +560,7 @@ class AdminController extends Controller
         $this->authorizeCustomerAccess($id);
         $request->validate([
             'documents' => 'required|array|min:1|max:20',
-            'documents.*' => 'file|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:10240',
+            'documents.*' => 'file|mimes:pdf,jpg,jpeg,png,webp,heic,heif,gif,doc,docx,xls,xlsx|max:10240',
             'category' => 'nullable|in:contract,police,invoice,identity,claim,other',
             'visibility' => 'nullable|in:customer,internal',
             'color' => 'nullable|in:green,yellow,red',
@@ -654,7 +654,7 @@ class AdminController extends Controller
     public function documentReplace(Request $request, $id) {
         $doc = \App\Models\Document::findOrFail($id);
         $this->authorizeCustomerAccess($doc->customer_id);
-        $request->validate(['document' => 'required|file|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:10240']);
+        $request->validate(['document' => 'required|file|mimes:pdf,jpg,jpeg,png,webp,heic,heif,gif,doc,docx,xls,xlsx|max:10240']);
 
         $file = $request->file('document');
         $newPath = $file->store('customers/' . $doc->customer_id . '/documents', 'local');
@@ -756,6 +756,26 @@ class AdminController extends Controller
         $disk = $doc->disk ?: 'public';
         abort_unless(\Illuminate\Support\Facades\Storage::disk($disk)->exists($doc->file_path), 404);
         return \Illuminate\Support\Facades\Storage::disk($disk)->download($doc->file_path, $doc->file_name);
+    }
+
+    /**
+     * Dokument INLINE im Browser anzeigen (Ansehen ohne Download): PDF und
+     * Bilder oeffnen direkt im Tab, damit das Team schneller pruefen kann.
+     * Gleiche Zugriffskontrolle wie beim Download (Portfolio-Scoping).
+     */
+    public function documentView($id) {
+        $doc = \App\Models\Document::findOrFail($id);
+        $this->authorizeCustomerAccess($doc->customer_id);
+        \App\Models\ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'document_viewed',
+            'entity_type' => 'document',
+            'entity_id' => $doc->id,
+            'meta' => json_encode(['file' => $doc->file_name], JSON_UNESCAPED_UNICODE),
+        ]);
+        $disk = $doc->disk ?: 'public';
+        abort_unless(\Illuminate\Support\Facades\Storage::disk($disk)->exists($doc->file_path), 404);
+        return \Illuminate\Support\Facades\Storage::disk($disk)->response($doc->file_path, $doc->file_name);
     }
 
     public function downloadAttachment($id) {
