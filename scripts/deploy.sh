@@ -50,6 +50,25 @@ php artisan event:cache || true
 # 6) Laufende Queue-Worker sauber neu starten, damit sie den neuen Code laden.
 php artisan queue:restart
 
+# 6b) OPcache/PHP-FPM neu laden. Ohne diesen Schritt serviert PHP-FPM bei
+#     opcache.validate_timestamps=0 weiterhin den ALTEN Bytecode und die alt
+#     kompilierten Blade-Views -> Deploy meldet Erfolg, aber im Portal ist
+#     keine Aenderung sichtbar. Der erste gefundene FPM-Dienst wird neu
+#     geladen; fehlt er, wird der Deploy NICHT abgebrochen (nur ein Hinweis).
+if command -v systemctl >/dev/null 2>&1; then
+  reloaded=""
+  for svc in php8.3-fpm php8.2-fpm php8.1-fpm php-fpm; do
+    if systemctl reload "$svc" 2>/dev/null; then
+      echo "  OPcache/PHP-FPM neu geladen: $svc"
+      reloaded="$svc"
+      break
+    fi
+  done
+  if [ -z "$reloaded" ]; then
+    echo "  Hinweis: kein PHP-FPM-Dienst neu geladen (OPcache ggf. manuell leeren)."
+  fi
+fi
+
 # 7) App wieder online (zusätzlich zum trap, damit es sofort passiert).
 php artisan up
 trap - EXIT
