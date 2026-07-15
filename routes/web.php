@@ -109,6 +109,7 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     Route::get('/contracts/{id}', [PortalController::class, 'contractShow'])->name('contracts.show');
     Route::get('/change-requests', [\App\Http\Controllers\SelfServiceController::class, 'changeRequests'])->name('change_requests');
     Route::get('/documents/{id}/download', [PortalController::class, 'documentDownload'])->name('documents.download');
+    Route::get('/documents/{id}/view', [PortalController::class, 'documentView'])->name('documents.view');
     Route::post('/profile', [PortalController::class, 'profileUpdate'])->name('profile.update');
     Route::post('/profile/password', [PortalController::class, 'passwordUpdate'])->name('profile.password');
 });
