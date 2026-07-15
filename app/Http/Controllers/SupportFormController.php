@@ -105,6 +105,13 @@ class SupportFormController extends Controller
         }
         $data = $request->validate($rules);
 
+        // Inhaltsbasierte Spam-Erkennung: erkannte Bot-Werbung still verwerfen
+        // (kein Ticket) und - wie beim Honeypot - die Dankeseite anzeigen.
+        if ($spam = \App\Services\SpamFilter::reason([$data['name'] ?? null, $data['message']])) {
+            \Log::info('Hilfe-Anfrage als Spam verworfen: ' . $spam);
+            return view('support.thanks', ['ticketRef' => null, 'customer' => $trusted]);
+        }
+
         // Gast-Anfrage: per E-Mail trotzdem der Kundenakte zuordnen, wenn
         // möglich - aber NUR intern. Die Antwortseite verrät die Zuordnung
         // nicht (sonst könnten Fremde per E-Mail-Raten Kundenkonten erkennen).

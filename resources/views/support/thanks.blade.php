@@ -24,7 +24,7 @@ body{font-family:'Inter',Arial,sans-serif;min-height:100vh;color:#fff;display:fl
     <div class="big">✅</div>
     <h2>{{ __('Vielen Dank – Ihre Anfrage ist bei uns!') }}</h2>
     <p>{{ __('Unser Team kümmert sich schnellstmöglich um Ihr Anliegen.') }}</p>
-    <div class="ref">{{ __('Vorgangsnummer') }}: {{ $ticketRef }}</div>
+    @if(!empty($ticketRef))<div class="ref">{{ __('Vorgangsnummer') }}: {{ $ticketRef }}</div>@endif
     <p>@if($customer){{ __('Sie können den Status jederzeit im Kundenportal unter „Anfragen" verfolgen.') }}@else{{ __('Wir melden uns per E-Mail bei Ihnen.') }}@endif</p>
     <a class="btn" href="{{ route('login') }}">{{ __('Zum Kundenportal') }}</a>
 </div>
