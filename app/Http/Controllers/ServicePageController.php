@@ -54,6 +54,13 @@ class ServicePageController extends Controller
                 ->withErrors(['email' => __('Bitte geben Sie E-Mail oder Telefon an.')]);
         }
 
+        // Inhaltsbasierte Spam-Erkennung: erkannte Bot-Werbung still verwerfen
+        // (kein Ticket, keine Mail) und - wie beim Honeypot - Erfolg vortaeuschen.
+        if ($spam = \App\Services\SpamFilter::reason([$data['name'], $data['message'] ?? null])) {
+            \Log::info('Leistungs-Anfrage als Spam verworfen: ' . $spam);
+            return redirect()->route('services.show', $page->slug)->with('sent', true);
+        }
+
         // Zusaetzliche, pro Leistung konfigurierte Formularfelder einsammeln.
         // Pflichtfelder pruefen, Antworten fuer die Ticketbeschreibung sammeln.
         $answers = (array) $request->input('custom', []);

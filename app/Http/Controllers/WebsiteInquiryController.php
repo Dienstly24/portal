@@ -25,6 +25,15 @@ class WebsiteInquiryController extends Controller
             'subject' => 'nullable|max:255',
             'message' => 'required|max:5000',
         ]);
+
+        // Inhaltsbasierte Spam-Erkennung: Bot-Werbung (Gluecksspiel etc.)
+        // still verwerfen und "success" melden, damit Bots keine Rueckmeldung
+        // zum Umgehen erhalten - Token/Throttle allein reichen nicht.
+        if ($spam = \App\Services\SpamFilter::reason([$data['name'], $data['subject'] ?? null, $data['message']])) {
+            \Log::info('Website-Anfrage als Spam verworfen: ' . $spam);
+            return response()->json(['success' => true]);
+        }
+
         // Punkt 7: Bestandskunden über die E-Mail-Adresse zuordnen
         $customer = \App\Models\Customer::whereHas('user', fn($q) => $q->where('email', $data['email']))->first();
 
