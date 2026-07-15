@@ -95,7 +95,14 @@ class PortalController extends Controller
         $contract = Contract::where('customer_id', $customer->id)
             ->with(['vehicleDetail', 'energyDetail', 'internetDetail'])
             ->where('id', $id)->firstOrFail();
-        return view('portal.contract_show', ['contract' => $contract]);
+
+        // Offene Vertragsaenderung fuer genau diesen Vertrag (new_data ist
+        // verschluesselt, daher kein DB-Filter - Auswahl in PHP).
+        $pendingChange = $customer->changeRequests()
+            ->where('type', 'contract')->where('status', 'pending')->latest()->get()
+            ->first(fn($r) => ($r->new_data['id'] ?? null) === $contract->id);
+
+        return view('portal.contract_show', ['contract' => $contract, 'pendingChange' => $pendingChange]);
     }
 
     public function tickets() {
@@ -330,7 +337,9 @@ class PortalController extends Controller
     public function documents() {
         $customer = $this->getCustomer();
         return view('portal.documents', [
-            'documents' => \App\Models\Document::where('customer_id', $customer->id)->customerVisible()->latest()->get(),
+            'documents' => \App\Models\Document::where('customer_id', $customer->id)->customerVisible()->with('contract')->latest()->get(),
+            // Eigene Vertraege zur Zuordnung eines Uploads (Kfz, Rechtsschutz, ...).
+            'contracts' => Contract::where('customer_id', $customer->id)->latest()->get(),
             // Angeforderte Dokumente: offene/abgelehnte zuerst, dann in Prüfung, dann erledigt.
             'documentRequests' => \App\Models\DocumentRequest::with('contract')
                 ->where('customer_id', $customer->id)
@@ -351,7 +360,7 @@ class PortalController extends Controller
         abort_unless($documentRequest->acceptsUpload(), 422);
 
         $request->validate([
-            'document' => 'required|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:10240',
+            'document' => 'required|file|mimes:pdf,jpg,jpeg,png,webp,heic,heif,gif,doc,docx|max:10240',
         ]);
 
         $file = $request->file('document');
@@ -408,9 +417,18 @@ class PortalController extends Controller
         $customer = $this->getCustomer();
 
         $data = $request->validate([
-            'document' => 'required|file|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:10240',
+            'document' => 'required|file|mimes:pdf,jpg,jpeg,png,webp,heic,heif,gif,doc,docx,xls,xlsx|max:10240',
             'category' => 'required|in:contract,police,invoice,identity,claim,other',
+            // Optionale Zuordnung zu einem eigenen Vertrag (Kfz, Rechtsschutz, ...).
+            'contract_id' => 'nullable|uuid',
         ]);
+
+        // Zuordnung nur zulassen, wenn der Vertrag wirklich dem Kunden gehoert.
+        $contractId = null;
+        if (!empty($data['contract_id'])) {
+            $contractId = Contract::where('customer_id', $customer->id)
+                ->where('id', $data['contract_id'])->value('id');
+        }
 
         $file = $request->file('document');
         $path = $file->store('customers/' . $customer->id . '/documents', 'local');
@@ -418,6 +436,7 @@ class PortalController extends Controller
         $doc = \App\Models\Document::create([
             'id' => \Illuminate\Support\Str::uuid(),
             'customer_id' => $customer->id,
+            'contract_id' => $contractId,
             'category' => $data['category'],
             'file_name' => $file->getClientOriginalName(),
             'file_path' => $path,

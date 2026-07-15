@@ -293,6 +293,103 @@ class SelfServiceTest extends TestCase
         $this->assertSame('DE00ALTALTALTALTALT00', $customer->fresh()->iban);
     }
 
+    public function test_customer_can_request_contract_change_and_admin_approval_applies_it(): void
+    {
+        $customer = $this->makeCustomer();
+        $contract = Contract::create([
+            'customer_id' => $customer->id,
+            'type' => 'kfz', 'insurer' => 'Allianz', 'status' => 'active',
+            'contract_number' => 'KFZ-100',
+        ]);
+
+        // Kunde beantragt eine Aenderung an seinem eigenen Vertrag
+        $this->actingAs($customer->user)->post(route('portal.contracts.change', $contract->id), [
+            'type' => 'kfz',
+            'insurer' => 'HUK-Coburg',
+            'contract_number' => 'KFZ-200',
+            'notes' => 'Bitte Tarif pruefen.',
+        ])->assertSessionHas('success');
+
+        // Vor der Freigabe bleibt der Vertrag unveraendert
+        $this->assertSame('Allianz', $contract->fresh()->insurer);
+
+        $request = CustomerChangeRequest::where('type', 'contract')->firstOrFail();
+        $this->assertSame('pending', $request->status);
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->post(route('admin.change_requests.action', $request->id), [
+            'action' => 'approve',
+        ])->assertSessionHas('success');
+
+        // Jetzt ist die Aenderung uebernommen - KEIN neuer Vertrag entstanden
+        $contract->refresh();
+        $this->assertSame('HUK-Coburg', $contract->insurer);
+        $this->assertSame('KFZ-200', $contract->contract_number);
+        $this->assertSame('Bitte Tarif pruefen.', $contract->notes);
+        $this->assertSame(1, Contract::count());
+    }
+
+    public function test_customer_cannot_request_change_on_foreign_contract(): void
+    {
+        $owner = $this->makeCustomer();
+        $contract = Contract::create([
+            'customer_id' => $owner->id,
+            'type' => 'kfz', 'insurer' => 'Allianz', 'status' => 'active',
+        ]);
+
+        $attacker = $this->makeCustomer();
+        $this->actingAs($attacker->user)->post(route('portal.contracts.change', $contract->id), [
+            'type' => 'kfz', 'insurer' => 'Fremd',
+        ])->assertNotFound();
+
+        $this->assertSame(0, CustomerChangeRequest::count());
+    }
+
+    public function test_customer_can_assign_uploaded_document_to_own_contract(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+        $customer = $this->makeCustomer();
+        $contract = Contract::create([
+            'customer_id' => $customer->id,
+            'type' => 'rechtsschutz', 'insurer' => 'ARAG', 'status' => 'active',
+        ]);
+
+        $this->actingAs($customer->user)->post(route('portal.documents.upload'), [
+            'category' => 'contract',
+            'contract_id' => $contract->id,
+            'document' => \Illuminate\Http\UploadedFile::fake()->create('vertrag.pdf', 200, 'application/pdf'),
+        ])->assertSessionHas('success');
+
+        $this->assertDatabaseHas('documents', [
+            'customer_id' => (string) $customer->id,
+            'contract_id' => (string) $contract->id,
+            'category' => 'contract',
+        ]);
+    }
+
+    public function test_document_cannot_be_assigned_to_foreign_contract(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+        $owner = $this->makeCustomer();
+        $foreign = Contract::create([
+            'customer_id' => $owner->id,
+            'type' => 'kfz', 'insurer' => 'Allianz', 'status' => 'active',
+        ]);
+
+        $customer = $this->makeCustomer();
+        $this->actingAs($customer->user)->post(route('portal.documents.upload'), [
+            'category' => 'other',
+            'contract_id' => $foreign->id,
+            'document' => \Illuminate\Http\UploadedFile::fake()->create('foto.jpg', 100, 'image/jpeg'),
+        ])->assertSessionHas('success');
+
+        // Datei wurde hochgeladen, aber NICHT dem fremden Vertrag zugeordnet
+        $this->assertDatabaseHas('documents', [
+            'customer_id' => (string) $customer->id,
+            'contract_id' => null,
+        ]);
+    }
+
     public function test_contract_report_creates_pending_contract_on_approval(): void
     {
         $customer = $this->makeCustomer();

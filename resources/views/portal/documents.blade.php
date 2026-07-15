@@ -42,7 +42,7 @@
         @if($req->acceptsUpload())
         <form method="POST" action="{{ route('portal.document_requests.upload', $req->id) }}" enctype="multipart/form-data" style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap;">
             @csrf
-            <input type="file" name="document" required accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="font-size:13px;">
+            <input type="file" name="document" required accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,.gif,.doc,.docx" style="font-size:13px;">
             <button type="submit" class="btn btn-gold" style="padding:7px 16px;font-size:13px;">{{ $req->status === 'rejected' ? 'Erneut hochladen' : 'Hochladen' }}</button>
         </form>
         @elseif($req->status === 'uploaded')
@@ -60,6 +60,7 @@
             <div style="font-weight:600;font-size:14px;">📄 {{ $d->file_name }}</div>
             <div style="font-size:13px;color:var(--ink-soft);">
                 {{ \App\Models\Document::CATEGORIES[$d->category] ?? ucfirst($d->category) }} · {{ $d->created_at->format('d.m.Y') }}
+                @if($d->contract)<span style="font-size:11px;background:#E4F0E7;color:#3B7A57;padding:1px 6px;border-radius:4px;">{{ $d->contract->typeIcon() }} {{ $d->contract->typeLabel() }}</span>@endif
                 @if($d->uploaded_by === auth()->id())<span style="font-size:11px;background:#EAF2FB;color:#185FA5;padding:1px 6px;border-radius:4px;">von Ihnen</span>@endif
             </div>
         </div>
@@ -74,7 +75,7 @@
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:460px;position:relative;">
         <button onclick="document.getElementById('upload-doc-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:6px;">Dokument hochladen</div>
-        <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">PDF, JPG, PNG, DOC oder XLS – max. 10 MB. Unser Team wird über Ihren Upload informiert.</p>
+        <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">PDF, Bild (JPG, PNG, HEIC, WEBP), DOC oder XLS – max. 10 MB. Unser Team wird über Ihren Upload informiert.</p>
         <form method="POST" action="{{ route('portal.documents.upload') }}" enctype="multipart/form-data">
             @csrf
             <div class="field"><label>Kategorie *</label>
@@ -84,7 +85,17 @@
                     @endforeach
                 </select>
             </div>
-            <div class="field"><label>Datei *</label><input type="file" name="document" required accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"></div>
+            @if($contracts->isNotEmpty())
+            <div class="field"><label>Zu welchem Vertrag gehört das Dokument? (optional)</label>
+                <select name="contract_id">
+                    <option value="">— Keinem Vertrag zuordnen —</option>
+                    @foreach($contracts as $c)
+                    <option value="{{ $c->id }}">{{ $c->typeIcon() }} {{ $c->typeLabel() }} · {{ $c->insurer }}@if($c->contract_number) ({{ $c->contract_number }})@endif</option>
+                    @endforeach
+                </select>
+            </div>
+            @endif
+            <div class="field"><label>Datei *</label><input type="file" name="document" required accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,.gif,.doc,.docx,.xls,.xlsx"></div>
             @error('document')<div class="alert-error">{{ $message }}</div>@enderror
             <button type="submit" class="btn btn-primary" style="width:100%;">{{ __('Hochladen') }}</button>
         </form>

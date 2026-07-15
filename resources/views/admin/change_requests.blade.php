@@ -18,13 +18,18 @@ $fieldLabels = [
     'name'=>'Name','relation'=>'Beziehung','birth_date'=>'Geburtsdatum','type'=>'Typ','street'=>'Straße',
     'zip'=>'PLZ','city'=>'Stadt','country'=>'Land','label'=>'Bezeichnung','value'=>'Wert','iban'=>'IBAN',
     'account_holder'=>'Kontoinhaber','insurer'=>'Gesellschaft','contract_number'=>'Vertragsnummer',
+    'start_date'=>'Startdatum','end_date'=>'Enddatum','cancellation_date'=>'Kündigungsdatum','notes'=>'Anmerkung',
     'gender'=>'Geschlecht','marital_status'=>'Familienstand','document_name'=>'Dokument','id'=>null,'document_path'=>null,
+    'document_disk'=>null,
 ];
 $valueLabels = [
     'ehepartner'=>'Ehepartner','kind'=>'Kind','andere'=>'Andere','main'=>'Hauptadresse','billing'=>'Rechnungsadresse',
     'postal'=>'Postadresse','other'=>'Andere Adresse','privat'=>'Privat','geschaeftlich'=>'Geschäftlich',
     'sonstige'=>'Sonstige','male'=>'Männlich','female'=>'Weiblich','diverse'=>'Divers','email'=>'E-Mail','phone'=>'Telefon',
 ];
+// Vertrags-Sparten (kfz, krankenversicherung, ...) lesbar machen, ohne die
+// bestehenden Zuordnungen zu ueberschreiben.
+foreach (\App\Models\Contract::TYPES as $ck => $cfg) { $valueLabels[$ck] ??= $cfg['label']; }
 $fmt = fn($v) => $valueLabels[$v] ?? $v;
 @endphp
 

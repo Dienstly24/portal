@@ -75,4 +75,57 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
 @if($contract->pdf_path)
 <a href="{{ route('portal.documents') }}" class="btn btn-ghost">📎 Zugehörige Dokumente</a>
 @endif
+
+{{-- Aenderung beantragen (Self-Service, Vier-Augen-Prinzip) --}}
+@if(!empty($pendingChange))
+<div class="notice" style="margin-top:16px;">⏳ Für diesen Vertrag liegt bereits eine Änderungsanfrage in Prüfung (eingereicht am {{ $pendingChange->created_at->format('d.m.Y H:i') }}). Sie können nach der Bearbeitung eine weitere Änderung einreichen.</div>
+@endif
+
+<details class="card" style="margin-top:16px;" {{ ($errors->any() || !empty($pendingChange)) ? 'open' : '' }}>
+    <summary style="cursor:pointer;font-weight:600;font-size:14px;list-style:none;display:flex;align-items:center;gap:8px;">
+        ✏️ Änderung an diesem Vertrag beantragen
+    </summary>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin:10px 0 14px;">
+        Passen Sie die Vertragsdaten an oder beschreiben Sie im Feld „Anmerkung" gewünschte Änderungen bzw. Ergänzungen.
+        Ihre Anfrage wird erst nach Freigabe durch unser Team wirksam.
+    </p>
+    <form method="POST" action="{{ route('portal.contracts.change', $contract->id) }}">
+        @csrf
+        <div class="field">
+            <label>Vertragstyp *</label>
+            <select name="type" required style="width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                @foreach(\App\Models\Contract::TYPES as $key => $cfg)
+                <option value="{{ $key }}" {{ old('type', $contract->type) === $key ? 'selected' : '' }}>{{ $cfg['icon'] }} {{ $cfg['label'] }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="field">
+            <label>Gesellschaft / Anbieter *</label>
+            <input type="text" name="insurer" required maxlength="255" value="{{ old('insurer', $contract->insurer) }}">
+        </div>
+        <div class="field">
+            <label>Vertragsnummer</label>
+            <input type="text" name="contract_number" maxlength="100" value="{{ old('contract_number', $contract->contract_number) }}">
+        </div>
+        <div class="field">
+            <label>Startdatum</label>
+            <input type="date" name="start_date" value="{{ old('start_date', optional($contract->start_date ? \Carbon\Carbon::parse($contract->start_date) : null)->format('Y-m-d')) }}">
+        </div>
+        <div class="field">
+            <label>Enddatum</label>
+            <input type="date" name="end_date" value="{{ old('end_date', optional($contract->end_date ? \Carbon\Carbon::parse($contract->end_date) : null)->format('Y-m-d')) }}">
+        </div>
+        <div class="field">
+            <label>Kündigungsdatum</label>
+            <input type="date" name="cancellation_date" value="{{ old('cancellation_date', optional($contract->cancellation_date ? \Carbon\Carbon::parse($contract->cancellation_date) : null)->format('Y-m-d')) }}">
+        </div>
+        <div class="field">
+            <label>Anmerkung / gewünschte Änderung</label>
+            <textarea name="notes" maxlength="1000" placeholder="z. B. Tarifwechsel gewünscht, neue Vertragsunterlagen, Fragen zum Vertrag …" style="width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;min-height:70px;font-family:inherit;resize:vertical;">{{ old('notes') }}</textarea>
+        </div>
+        @if($errors->any())<div class="alert-error">Bitte prüfen Sie Ihre Eingaben.</div>@endif
+        <button type="submit" class="btn btn-primary">Änderung einreichen</button>
+        <p style="font-size:12px;color:var(--ink-soft);margin-top:10px;">🔒 Die Änderung wird erst nach Freigabe durch unser Team übernommen.</p>
+    </form>
+</details>
 @endsection
