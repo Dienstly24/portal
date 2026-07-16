@@ -60,6 +60,15 @@
 </div>
 
 <div class="card">
+    <div class="card-title" style="margin-bottom:8px;">⏱ Aktivitätserfassung</div>
+    <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;">
+        Arbeitszeit-Schwellwerte und Punkte-Gewichte der Mitarbeiter-Produktivität
+        werden auf einer eigenen Seite verwaltet.
+    </div>
+    <a href="{{ route('admin.activity.settings') }}" class="btn btn-ghost btn-sm">Aktivitätserfassung konfigurieren →</a>
+</div>
+
+<div class="card">
     <div class="card-title" style="margin-bottom:8px;">📜 Rechtliches</div>
     <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;">
         Inhalte der öffentlichen Portal-Seiten

@@ -34,8 +34,9 @@ $actionLabels = [
         <tbody>
         @forelse($logs as $log)
         @php
-            $label = $actionLabels[$log->action] ?? [$log->action, 'badge-closed'];
-            $meta = $log->meta ? json_decode($log->meta, true) : [];
+            $label = $actionLabels[$log->action] ?? [app(\App\Services\Activity\ActivityCatalog::class)->labelFor($log->action), 'badge-closed'];
+            // metaArray(): Alt-Eintraege sind doppelt kodierte Strings, neue echte Arrays
+            $meta = $log->metaArray();
         @endphp
         <tr>
             <td style="padding:13px 20px;font-size:13px;color:var(--ink-soft);white-space:nowrap;">

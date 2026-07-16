@@ -18,6 +18,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
         // Sprache (de/ar) je Kunde bzw. Session – nach StartSession.
         $middleware->appendToGroup('web', \App\Http\Middleware\SetLocale::class);
+        // Aktivitaetserfassung fuer Mitarbeiter: global in der Web-Gruppe,
+        // damit sie serverseitig laeuft und nicht umgangen werden kann.
+        $middleware->appendToGroup('web', \App\Http\Middleware\TrackStaffActivity::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

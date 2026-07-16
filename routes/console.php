@@ -20,6 +20,12 @@ Schedule::command('emails:prune-unmatched')->dailyAt('03:30');
 // 04:00 — Geloeste Tickets ohne Kundenreaktion nach 7 Tagen automatisch schliessen
 Schedule::command('tickets:auto-close')->dailyAt('04:00');
 
+// Alle 15 Minuten — verwaiste Arbeitssitzungen beenden (Browser zu ohne Logout)
+Schedule::command('activity:close-stale')->everyFifteenMinutes();
+
+// 03:45 — DSGVO: alte Seitenaufruf-Eintraege (IP/Geraet je Request) loeschen
+Schedule::command('activity:prune')->dailyAt('03:45');
+
 // 08:15 — Fristen-Watchdog Dokumentenanfragen (Phase 3): Kunden-Erinnerung + Überfälligkeits-Hinweis
 Schedule::command('document-requests:remind')->dailyAt('08:15');
 
