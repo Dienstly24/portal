@@ -65,8 +65,8 @@ $typeLabels = [
 @endif
 
 {{-- Modal: Neuen Vertrag melden (erzeugt nur einen Change Request) --}}
-<div id="report-contract-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
-    <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:480px;position:relative;">
+<div id="report-contract-modal" class="d24-modal">
+    <div class="d24-modal-box">
         <button onclick="document.getElementById('report-contract-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:6px;">Neuen Vertrag melden</div>
         <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">Unser Team prüft Ihre Meldung und nimmt den Vertrag anschließend auf.</p>

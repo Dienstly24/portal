@@ -128,8 +128,8 @@
     @endif
 @endif
 
-<div id="upload-doc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
-    <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:460px;position:relative;">
+<div id="upload-doc-modal" class="d24-modal">
+    <div class="d24-modal-box">
         <button onclick="document.getElementById('upload-doc-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:6px;">Dokument hochladen</div>
         <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">PDF, Bild (JPG, PNG, HEIC, WEBP), DOC oder XLS – max. 10 MB. Unser Team wird über Ihren Upload informiert.</p>
