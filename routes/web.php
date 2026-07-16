@@ -316,6 +316,18 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // Aktivitätslog
     Route::get('/activity-log', [EmployeeController::class, 'activityLog'])->name('activity_log')->middleware('role:admin,manager');
 
+    // Aktivitaet & Arbeitszeiten: Berichte NUR fuer die Verwaltung
+    // (admin/manager); Einstellungen (Punkte/Schwellwerte) nur admin.
+    // Mitarbeiter haben keinerlei Einblick in Erfassung oder Berechnung.
+    Route::prefix('aktivitaet')->name('activity.')->middleware('role:admin,manager')->group(function () {
+        Route::get('/', [\App\Http\Controllers\ActivityReportController::class, 'index'])->name('index');
+        Route::get('/export', [\App\Http\Controllers\ActivityReportController::class, 'export'])->name('export');
+        Route::get('/einstellungen', [\App\Http\Controllers\ActivityReportController::class, 'settings'])->name('settings')->middleware('role:admin');
+        Route::put('/einstellungen', [\App\Http\Controllers\ActivityReportController::class, 'settingsUpdate'])->name('settings.update')->middleware('role:admin');
+        Route::get('/{id}/export', [\App\Http\Controllers\ActivityReportController::class, 'exportEmployee'])->whereNumber('id')->name('user_export');
+        Route::get('/{id}', [\App\Http\Controllers\ActivityReportController::class, 'show'])->whereNumber('id')->name('show');
+    });
+
     // Partner & Provisionen (Priorität 6)
     Route::middleware('role:admin,manager')->group(function () {
         Route::get('/partners', [\App\Http\Controllers\PartnerController::class, 'index'])->name('partners');

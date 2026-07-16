@@ -271,7 +271,13 @@ class EmployeeController extends Controller
     }
 
     public function activityLog() {
-        $logs = ActivityLog::with('user')->latest()->paginate(50);
+        // Seitenaufrufe (seite_geoeffnet) wuerden das Audit-Protokoll
+        // fluten - der vollstaendige Verlauf inkl. Seitenaufrufen ist je
+        // Mitarbeiter unter "Aktivitaet & Zeiten" einsehbar.
+        $logs = ActivityLog::with('user')
+            ->where('action', '!=', 'seite_geoeffnet')
+            ->latest()
+            ->paginate(50);
         return view('admin.activity_log', compact('logs'));
     }
 }
