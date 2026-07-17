@@ -353,6 +353,75 @@ class KfzContractRedesignTest extends TestCase
         $this->assertSame(0, VehicleMileageReading::count());
     }
 
+    // 9b) Eigene Fahrleistung: Freifeld deckt Sonderwerte (18.500 km) ab,
+    //     Pflicht bei gewaehltem "custom"-Chip, Buttons funktionieren weiter.
+    public function test_custom_annual_mileage_is_supported(): void
+    {
+        $customer = $this->makeCustomer();
+        $admin = $this->admin();
+
+        // custom + Freifeld -> krummer Wert wird gespeichert.
+        $this->actingAs($admin)->post(route('admin.contract.store', $customer->id), $this->base([
+            'vehicle' => $this->fullVehicle(['annual_mileage' => 'custom', 'annual_mileage_custom' => 18500]),
+        ]))->assertSessionHasNoErrors();
+
+        $contract = Contract::where('customer_id', $customer->id)->firstOrFail();
+        $this->assertSame(18500, (int) $contract->vehicleDetail->annual_mileage);
+
+        // Bearbeiten-Seite waehlt den Chip vor und fuellt das Freifeld.
+        $this->actingAs($admin)->get(route('admin.contract.edit', $contract->id))
+            ->assertOk()->assertSee('Eigene Fahrleistung')->assertSee('value="18500"', false);
+
+        // custom ohne Wert -> deutscher Validierungsfehler.
+        $this->actingAs($admin)->post(route('admin.contract.store', $customer->id), $this->base([
+            'vehicle' => ['annual_mileage' => 'custom'],
+        ]))->assertSessionHasErrors(['vehicle.annual_mileage_custom']);
+
+        // Freier Wert ausserhalb der Grenzen wird abgelehnt.
+        $this->actingAs($admin)->post(route('admin.contract.store', $customer->id), $this->base([
+            'vehicle' => ['annual_mileage' => 'custom', 'annual_mileage_custom' => 500],
+        ]))->assertSessionHasErrors(['vehicle.annual_mileage_custom']);
+    }
+
+    // 9c) Ablauf-Automatik + Heute-Button sind im Formular verdrahtet
+    //     (Berechnung selbst laeuft im Browser, hier: Elemente + Modus-Ableitung).
+    public function test_contract_form_has_end_date_automation_and_today_button(): void
+    {
+        $customer = $this->makeCustomer();
+        $admin = $this->admin();
+
+        $html = $this->actingAs($admin)->get(route('admin.contract.create', $customer->id))->assertOk()->getContent();
+        foreach (['Heute', 'Laufzeit 12 Monate', 'Ende des Kalenderjahres (31.12.)', 'contractEndSync', 'contractSetToday'] as $needle) {
+            $this->assertStringContainsString($needle, $html);
+        }
+        // Neuanlage: "12 Monate" ist vorgewaehlt (haeufigster Fall).
+        $this->assertMatchesRegularExpression('/name="end_mode" value="plus12" checked/', $html);
+
+        // Bestand 17.07.2026 - 31.12.2026 -> Modus "Ende des Kalenderjahres" wird erkannt.
+        $yearEnd = Contract::create([
+            'customer_id' => $customer->id, 'type' => 'haftpflicht', 'insurer' => 'AXA',
+            'status' => 'active', 'start_date' => '2026-07-17', 'end_date' => '2026-12-31',
+        ]);
+        $this->assertMatchesRegularExpression('/name="end_mode" value="year_end" checked/',
+            $this->actingAs($admin)->get(route('admin.contract.edit', $yearEnd->id))->assertOk()->getContent());
+
+        // Bestand 17.07.2026 - 17.07.2027 -> Modus "12 Monate" wird erkannt.
+        $plus12 = Contract::create([
+            'customer_id' => $customer->id, 'type' => 'haftpflicht', 'insurer' => 'AXA',
+            'status' => 'active', 'start_date' => '2026-07-17', 'end_date' => '2027-07-17',
+        ]);
+        $this->assertMatchesRegularExpression('/name="end_mode" value="plus12" checked/',
+            $this->actingAs($admin)->get(route('admin.contract.edit', $plus12->id))->assertOk()->getContent());
+
+        // Abweichender Ablauf -> "Manuell".
+        $manual = Contract::create([
+            'customer_id' => $customer->id, 'type' => 'haftpflicht', 'insurer' => 'AXA',
+            'status' => 'active', 'start_date' => '2026-07-17', 'end_date' => '2026-10-01',
+        ]);
+        $this->assertMatchesRegularExpression('/name="end_mode" value="manual" checked/',
+            $this->actingAs($admin)->get(route('admin.contract.edit', $manual->id))->assertOk()->getContent());
+    }
+
     // 10) Seiten rendern mit vollem KFZ-Datensatz (Formular, Cockpit, Kundenakte, Portal).
     public function test_kfz_pages_render_with_full_dataset(): void
     {

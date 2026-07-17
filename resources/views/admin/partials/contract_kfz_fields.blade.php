@@ -20,6 +20,11 @@
     $curHolder      = $vd('holder_type', $veh->holder_type ?? '');
     $curOwnership   = $vd('ownership_type', $veh->ownership_type ?? '');
     $curAnnual      = (string) $vd('annual_mileage', $veh->annual_mileage ?? '');
+    // Bestand mit "krummer" Fahrleistung (z.B. 18.500 km) -> Chip "Eigene
+    // Fahrleistung" vorwaehlen und den Wert ins Freifeld uebernehmen.
+    $isCustomAnnual = $curAnnual === 'custom'
+        || ($curAnnual !== '' && !in_array((int) $curAnnual, VD::ANNUAL_MILEAGE_OPTIONS, true));
+    $customAnnual   = (string) $vd('annual_mileage_custom', $isCustomAnnual && $curAnnual !== 'custom' ? $curAnnual : '');
 
     // Booleans kommen als '0'/'1' aus hidden+checkbox zurueck.
     $hasTk = (string) $vd('has_teilkasko', ($veh->has_teilkasko ?? false) ? '1' : '0') === '1';
@@ -271,10 +276,16 @@
     @endif
     <div class="kfz-subline">Jährliche Fahrleistung (vereinbart)</div>
     <div class="kfz-chip-row">
-        <label class="kfz-chip"><input type="radio" name="vehicle[annual_mileage]" value="" {{ $curAnnual === '' ? 'checked' : '' }}><span>keine Angabe</span></label>
+        <label class="kfz-chip"><input type="radio" name="vehicle[annual_mileage]" value="" {{ $curAnnual === '' ? 'checked' : '' }} onchange="kfzSync()"><span>keine Angabe</span></label>
         @foreach(VD::ANNUAL_MILEAGE_OPTIONS as $km)
-        <label class="kfz-chip"><input type="radio" name="vehicle[annual_mileage]" value="{{ $km }}" {{ $curAnnual !== '' && (int) $curAnnual === $km ? 'checked' : '' }}><span>{{ number_format($km, 0, ',', '.') }} km</span></label>
+        <label class="kfz-chip"><input type="radio" name="vehicle[annual_mileage]" value="{{ $km }}" {{ !$isCustomAnnual && $curAnnual !== '' && (int) $curAnnual === $km ? 'checked' : '' }} onchange="kfzSync()"><span>{{ number_format($km, 0, ',', '.') }} km</span></label>
         @endforeach
+        {{-- Sonderfaelle (8.000, 18.500, 22.500 km ...) per Freifeld --}}
+        <label class="kfz-chip"><input type="radio" id="kfz-annual-custom-radio" name="vehicle[annual_mileage]" value="custom" {{ $isCustomAnnual ? 'checked' : '' }} onchange="kfzSync()"><span>✏️ Eigene Fahrleistung</span></label>
+    </div>
+    <div id="kfz-annual-custom" class="field" style="display:none;margin-top:10px;max-width:280px;">
+        <label>Eigene Fahrleistung (km/Jahr)</label>
+        <input type="number" name="vehicle[annual_mileage_custom]" min="1000" max="150000" step="100" value="{{ $customAnnual }}" placeholder="z. B. 18500" style="{{ $kfzInputStyle }}">
     </div>
     @if($mileageStatus && $mileageStatus['exceeded'])
     <div class="kfz-warn">⚠️ <b>Fahrleistung überschritten:</b> hochgerechnet {{ number_format($mileageStatus['projected'], 0, ',', '.') }} km/Jahr bei vereinbarten {{ number_format($mileageStatus['allowed'], 0, ',', '.') }} km/Jahr. Bitte Kunden auf eine Anpassung ansprechen (sonst droht Nachzahlung im Schadenfall).</div>
@@ -450,6 +461,10 @@ function kfzSync() {
     const holder = document.querySelector('input[name="vehicle[holder_type]"]:checked');
     document.getElementById('kfz-holder-name').style.display = (holder && holder.value === 'abweichender_halter') ? 'block' : 'none';
 
+    // Eigene Fahrleistung: Freifeld nur bei gewaehltem Chip anzeigen.
+    const customAnnual = document.getElementById('kfz-annual-custom-radio');
+    document.getElementById('kfz-annual-custom').style.display = customAnnual.checked ? 'block' : 'none';
+
     ['liability', 'comprehensive'].forEach(branch => {
         const prefix = branch === 'liability' ? 'sf_liability' : 'sf_comprehensive';
         const type = document.querySelector(`input[name="vehicle[${prefix}_type]"]:checked`);
@@ -486,7 +501,9 @@ function kfzSummary() {
     q('#kfz-sum-drivers').textContent = groups ? groups + ' Gruppe(n)' + (addl ? ' + ' + addl + ' namentlich' : '') : '—';
 
     const annual = q('input[name="vehicle[annual_mileage]"]:checked');
-    q('#kfz-sum-mileage').textContent = annual && annual.value ? Number(annual.value).toLocaleString('de-DE') + ' km/Jahr' : '—';
+    let annualVal = annual ? annual.value : '';
+    if (annualVal === 'custom') annualVal = q('input[name="vehicle[annual_mileage_custom]"]').value;
+    q('#kfz-sum-mileage').textContent = annualVal ? Number(annualVal).toLocaleString('de-DE') + ' km/Jahr' : '—';
 
     const sfl = q('select[name="vehicle[sf_liability_class]"]').value;
     const sfv = q('select[name="vehicle[sf_comprehensive_class]"]').value;
