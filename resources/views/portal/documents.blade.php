@@ -293,6 +293,7 @@ window.smartScan = (function() {
         renderPages();
     }
 
+    // Rendert nur die Seitenuebersicht - Schrittwechsel machen die Aufrufer.
     function renderPages() {
         var grid = document.getElementById('scan-pages-grid');
         grid.innerHTML = '';
@@ -317,13 +318,13 @@ window.smartScan = (function() {
         });
         document.getElementById('scan-pages-title').textContent =
             pages.length + ' ' + (pages.length === 1 ? L.pageTaken : L.pagesTaken);
-        showStep(pages.length ? 'pages' : 'choose');
     }
 
     function removePage(i) {
         URL.revokeObjectURL(pages[i].url);
         pages.splice(i, 1);
         renderPages();
+        if (!pages.length) showStep('choose');
     }
 
     function movePage(i, dir) {
@@ -333,17 +334,26 @@ window.smartScan = (function() {
         renderPages();
     }
 
+    function updateCameraTitle() {
+        var next = (retakeIndex !== null && retakeIndex !== undefined)
+            ? L.page + ' ' + (retakeIndex + 1)
+            : L.page + ' ' + (pages.length + 1);
+        document.getElementById('scan-camera-title').textContent = next;
+    }
+
     function startCamera() {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             document.getElementById('scan-camera-input').click();
             return;
         }
+        stopStream(); // kein zweiter paralleler Kamera-Stream
         navigator.mediaDevices.getUserMedia({
             video: { facingMode: 'environment', width: { ideal: 2560 }, height: { ideal: 1920 } },
             audio: false
         }).then(function(s) {
             stream = s;
             document.getElementById('scan-video').srcObject = s;
+            updateCameraTitle();
             showStep('camera');
         }).catch(function() {
             // Kein Kamera-Zugriff: nativer Kamera-Dialog des Geraets als Fallback
@@ -359,7 +369,7 @@ window.smartScan = (function() {
         stopStream();
         retakeIndex = null;
         renderPages();
-        if (cancel && !pages.length) showStep('choose');
+        showStep(pages.length ? 'pages' : 'choose');
     }
 
     function capture() {
@@ -375,9 +385,14 @@ window.smartScan = (function() {
             if (!blob) return;
             var idx = retakeIndex; retakeIndex = null;
             addPage(blob, idx);
-            if (idx !== null && idx !== undefined) { stopStream(); }
-            // Bei Neuaufnahme einer Seite Kamera schliessen, sonst weiterfotografieren
-            if (idx !== null && idx !== undefined) showStep('pages');
+            if (idx !== null && idx !== undefined) {
+                // Neuaufnahme einer einzelnen Seite: zurueck zur Uebersicht
+                stopStream();
+                showStep('pages');
+            } else {
+                // Mehrseiten-Modus: Kamera bleibt offen fuer die naechste Seite
+                updateCameraTitle();
+            }
         }, 'image/jpeg', 0.85);
     }
 
@@ -392,7 +407,7 @@ window.smartScan = (function() {
                     .catch(function() { alert(L.imageError + ' (' + file.name + ')'); });
             });
         });
-        chain.then(function() { if (retakeIndex === null) showStep(pages.length ? 'pages' : 'choose'); });
+        chain.then(function() { showStep(pages.length ? 'pages' : 'choose'); });
     }
 
     function upload() {
@@ -508,7 +523,7 @@ window.smartScan = (function() {
             this.value = '';
             if (!files.length) return;
             var idx = retakeIndex; retakeIndex = null;
-            toJpeg(files[0]).then(function(blob) { addPage(blob, idx); })
+            toJpeg(files[0]).then(function(blob) { addPage(blob, idx); showStep('pages'); })
                 .catch(function() { alert(L.imageError); });
         });
         document.getElementById('scan-pdf-input').addEventListener('change', function() {
