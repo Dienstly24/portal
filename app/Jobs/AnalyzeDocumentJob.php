@@ -129,8 +129,7 @@ class AnalyzeDocumentJob implements ShouldQueue
             }
         } elseif ($match && $match['tier'] === 'auto') {
             $customer = Customer::find($match['customer_id']);
-            if ($customer) {
-                $intake->assignToCustomer($document, $customer, $document->uploaded_by, auto: true);
+            if ($customer && $intake->assignToCustomer($document, $customer, $document->uploaded_by, auto: true)) {
                 $intake->linkMatchingContract($document, $customer);
             }
         }

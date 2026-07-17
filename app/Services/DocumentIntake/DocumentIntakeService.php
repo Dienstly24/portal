@@ -76,9 +76,27 @@ class DocumentIntakeService
      * Eingangs-Dokument einem Kunden zuordnen: Datei in den Kundenordner
      * verschieben, Zuordnung speichern, protokollieren. $auto = durch die
      * Analyse (eindeutiger Match), sonst durch einen Mitarbeiter.
+     *
+     * Die Uebernahme ist atomisch (UPDATE ... WHERE customer_id IS NULL):
+     * pruefen zwei Mitarbeiter dasselbe Eingangs-Dokument gleichzeitig,
+     * gewinnt genau einer - sonst koennte ein Dokument von Kunde B im
+     * Dateiordner von Kunde A landen (und dessen DSGVO-Purge zum Opfer
+     * fallen).
+     *
+     * @return bool false, wenn das Dokument inzwischen einem ANDEREN Kunden gehoert
      */
-    public function assignToCustomer(Document $document, Customer $customer, ?int $byUserId, bool $auto = false): void
+    public function assignToCustomer(Document $document, Customer $customer, ?int $byUserId, bool $auto = false): bool
     {
+        $claimed = Document::whereKey($document->id)
+            ->whereNull('customer_id')
+            ->update(['customer_id' => $customer->id]);
+        if (!$claimed) {
+            $document->refresh();
+            // Idempotent: derselbe Kunde ist ok, ein anderer nicht.
+            return (string) $document->customer_id === (string) $customer->id;
+        }
+        $document->customer_id = $customer->id;
+
         $disk = $document->disk ?: 'local';
         $target = 'customers/' . $customer->id . '/documents/' . basename($document->file_path);
         if ($document->file_path !== $target && Storage::disk($disk)->exists($document->file_path)) {
@@ -89,7 +107,6 @@ class DocumentIntakeService
             $document->file_path = $target;
         }
 
-        $document->customer_id = $customer->id;
         $document->save();
 
         ActivityLog::create([
@@ -119,6 +136,8 @@ class DocumentIntakeService
                 ]);
             }
         }
+
+        return true;
     }
 
     /**

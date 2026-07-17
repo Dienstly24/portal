@@ -34,7 +34,9 @@ class Document extends Model {
 
     protected function casts(): array {
         return [
-            'ai_extracted' => 'array',
+            // Verschluesselt at rest: kann IBAN/Versichertennummern enthalten
+            // (gleiche Schutzstufe wie die SafeEncrypted-Kundenfelder).
+            'ai_extracted' => 'encrypted:array',
             'ai_processed_at' => 'datetime',
         ];
     }

@@ -235,6 +235,7 @@ window.smartScan = (function() {
     var stream = null;
     var retakeIndex = null;  // Seite neu aufnehmen
     var pollTimer = null;
+    var pollGen = 0;         // entwertet alte Poll-Antworten nach close()/open()
     var modal = function() { return document.getElementById('smart-upload-modal'); };
 
     var L = {
@@ -247,7 +248,8 @@ window.smartScan = (function() {
         failed: @json(__('Analyse nicht möglich – das Dokument wurde trotzdem gespeichert.')),
         uploadError: @json(__('Upload fehlgeschlagen. Bitte erneut versuchen.')),
         imageError: @json(__('Dieses Bild konnte nicht verarbeitet werden.')),
-        cameraError: @json(__('Kamera nicht verfügbar – bitte Fotos über die Galerie auswählen.')),
+        maxPages: @json(__('Maximal 20 Seiten pro Dokument.')),
+        done: @json(__('Fertig')), close: @json(__('Schließen')),
         retake: @json(__('Neu')), page: @json(__('Seite'))
     };
 
@@ -283,11 +285,17 @@ window.smartScan = (function() {
     }
 
     function addPage(blob, index) {
+        pdfFile = null; // Seiten-Modus ersetzt eine evtl. vorher gewaehlte PDF
         var entry = { blob: blob, url: URL.createObjectURL(blob) };
         if (index !== null && index !== undefined && pages[index]) {
             URL.revokeObjectURL(pages[index].url);
             pages[index] = entry;
         } else {
+            if (pages.length >= 20) {
+                URL.revokeObjectURL(entry.url);
+                alert(L.maxPages);
+                return;
+            }
             pages.push(entry);
         }
         renderPages();
@@ -311,9 +319,11 @@ window.smartScan = (function() {
                 '</div>';
             div.querySelector('img').src = p.url;
             div.querySelector('.sp-del').onclick = function() { removePage(i); };
-            div.querySelector('[data-act="left"]').onclick = function() { movePage(i, -1); };
-            div.querySelector('[data-act="right"]').onclick = function() { movePage(i, 1); };
-            div.querySelector('[data-act="retake"]').onclick = function() { retakeIndex = i; startCamera(); };
+            // RTL: der Pfeil nach links zeigt optisch zur NAECHSTEN Seite
+            var back = document.documentElement.dir === 'rtl' ? 1 : -1;
+            div.querySelector('[data-act="left"]').onclick = function() { movePage(i, back); };
+            div.querySelector('[data-act="right"]').onclick = function() { movePage(i, -back); };
+            div.querySelector('[data-act="retake"]').onclick = function() { retakeIndex = i; openCamera(); };
             grid.appendChild(div);
         });
         document.getElementById('scan-pages-title').textContent =
@@ -341,7 +351,14 @@ window.smartScan = (function() {
         document.getElementById('scan-camera-title').textContent = next;
     }
 
+    // Oeffentlicher Einstieg (Buttons "Foto/Seite fotografieren"): neue Seite,
+    // kein Rest-Zustand einer frueheren Neuaufnahme.
     function startCamera() {
+        retakeIndex = null;
+        openCamera();
+    }
+
+    function openCamera() {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             document.getElementById('scan-camera-input').click();
             return;
@@ -400,6 +417,7 @@ window.smartScan = (function() {
         var files = Array.from(input.files || []);
         input.value = '';
         if (!files.length) return;
+        retakeIndex = null; // Galerie-Auswahl fuegt immer NEUE Seiten hinzu
         var chain = Promise.resolve();
         files.forEach(function(file) {
             chain = chain.then(function() {
@@ -416,8 +434,12 @@ window.smartScan = (function() {
         document.getElementById('scan-status-title').textContent = L.uploading;
         document.getElementById('scan-status-sub').textContent = '';
         document.getElementById('scan-progress').style.display = '';
+        document.getElementById('scan-progress-bar').style.width = '0';
         document.getElementById('scan-result').style.display = 'none';
-        document.getElementById('scan-done-btn').style.display = 'none';
+        var doneBtn = document.getElementById('scan-done-btn');
+        doneBtn.style.display = 'none';
+        doneBtn.textContent = L.done;
+        doneBtn.onclick = function() { window.location.reload(); };
         document.getElementById('scan-spinner').style.display = '';
 
         var data = new FormData();
@@ -466,16 +488,24 @@ window.smartScan = (function() {
         document.getElementById('scan-status-title').textContent = '⚠ ' + msg;
         var btn = document.getElementById('scan-done-btn');
         btn.style.display = '';
-        btn.textContent = @json(__('Schließen'));
-        btn.onclick = function() { showStep(pages.length ? 'pages' : 'choose'); btn.onclick = function() { window.location.reload(); }; };
+        btn.textContent = L.close;
+        btn.onclick = function() {
+            btn.textContent = L.done;
+            btn.onclick = function() { window.location.reload(); };
+            showStep(pages.length ? 'pages' : 'choose');
+        };
     }
 
     function poll(id, attempt) {
+        // Generation-Zaehler: nach close()/open() darf eine alte, noch
+        // laufende Antwort das neue Fenster nicht mehr beschreiben.
+        var gen = pollGen;
         if (attempt > 40) { finish(L.saved, L.stillRunning, null); return; }
         pollTimer = setTimeout(function() {
             fetch(@json(route('portal.documents.analyse_status', ['id' => '__ID__'])).replace('__ID__', id), {
                 headers: { 'Accept': 'application/json' }, credentials: 'same-origin'
             }).then(function(r) { return r.json(); }).then(function(s) {
+                if (gen !== pollGen) return;
                 if (s.status === 'done') {
                     finish('✓ ' + (s.type_label || s.file_name) + ' ' + L.recognized, s.summary || '', s);
                 } else if (s.status === 'failed') {
@@ -485,7 +515,7 @@ window.smartScan = (function() {
                 } else {
                     poll(id, attempt + 1);
                 }
-            }).catch(function() { poll(id, attempt + 2); });
+            }).catch(function() { if (gen === pollGen) poll(id, attempt + 2); });
         }, 2500);
     }
 
@@ -512,11 +542,21 @@ window.smartScan = (function() {
     function reset() {
         stopStream();
         if (pollTimer) clearTimeout(pollTimer);
+        pollGen++;
         pages.forEach(function(p) { URL.revokeObjectURL(p.url); });
         pages = []; pdfFile = null; retakeIndex = null;
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+        // Der globale Layout-Handler blendet .d24-modal bei Backdrop/ESC nur
+        // aus - hier zusaetzlich sauber schliessen (Kamera stoppen, Poll
+        // entwerten), sonst laeuft die Kamera unsichtbar weiter.
+        modal().addEventListener('click', function(e) {
+            if (e.target === modal()) smartScan.close();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal().style.display === 'flex') smartScan.close();
+        });
         document.getElementById('scan-images-input').addEventListener('change', function() { handleImagesPicked(this); });
         document.getElementById('scan-camera-input').addEventListener('change', function() {
             var files = Array.from(this.files || []);

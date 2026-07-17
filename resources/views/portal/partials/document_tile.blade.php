@@ -19,7 +19,7 @@
         <div class="doc-name">{{ $d->file_name }}</div>
         <div class="doc-tags">
             <span class="doc-tag">{{ \App\Models\Document::CATEGORIES[$d->category] ?? ucfirst($d->category) }}</span>
-            @if($d->aiTypeLabel())<span class="doc-tag" style="background:#d9f4e6;color:#128a4b;">{{ $d->aiTypeLabel() }}</span>@endif
+            @if($d->aiTypeLabel())<span class="doc-tag" style="background:#d9f4e6;color:#128a4b;">{{ __($d->aiTypeLabel()) }}</span>@endif
             @if($d->aiInProgress())<span class="doc-tag" style="background:#FEF3C7;color:#92400E;">{{ __('Wird analysiert…') }}</span>@endif
             @if($d->uploaded_by === auth()->id())<span class="doc-tag doc-tag-you">von Ihnen</span>@endif
         </div>

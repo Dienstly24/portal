@@ -42,12 +42,22 @@ class SmartDocumentUploadController extends Controller
     {
         $customer = $this->portalCustomer();
 
-        $request->validate([
+        $this->validateJson($request, [
             'pages' => 'required_without:pdf|array|min:1|max:20',
             'pages.*' => 'file|mimes:jpg,jpeg,png,webp|max:10240',
             'pdf' => 'required_without:pages|file|mimes:pdf|max:10240',
             'contract_id' => 'nullable|uuid',
         ]);
+
+        // Entweder Seiten ODER eine fertige PDF - beides zusammen waere
+        // mehrdeutig (welche Datei ist das Dokument?).
+        if ($request->hasFile('pages') && $request->hasFile('pdf')) {
+            $this->failJson('Bitte entweder Seiten oder eine PDF-Datei senden, nicht beides.');
+        }
+
+        if ($request->hasFile('pages')) {
+            $this->guardTotalImageSize($request->file('pages'));
+        }
 
         $contractId = $request->filled('contract_id')
             ? Contract::where('customer_id', $customer->id)->where('id', $request->contract_id)->value('id')
@@ -117,8 +127,15 @@ class SmartDocumentUploadController extends Controller
             ->with(['customer.user', 'contract'])
             ->latest()->limit(30)->get();
 
+        // Datenminimierung: Mitarbeiter mit eingeschraenktem Portfolio sehen
+        // im Eingang nur ihre eigenen Uploads (extrahierte Daten koennen
+        // sensibel sein); Admin/Manager sehen alles.
+        $inbox = Document::inbox()->with('uploader')
+            ->when(!$user->canSeeAllCustomers(), fn ($q) => $q->where('uploaded_by', $user->id))
+            ->latest()->get();
+
         return view('admin.documents_inbox', [
-            'inboxDocuments' => Document::inbox()->with('uploader')->latest()->get(),
+            'inboxDocuments' => $inbox,
             'recentDocuments' => $recent,
             'aiEnabled' => $this->analyzer->isEnabled(),
         ]);
@@ -131,11 +148,14 @@ class SmartDocumentUploadController extends Controller
      */
     public function adminStore(Request $request)
     {
-        $request->validate([
+        $this->validateJson($request, [
             'files' => 'required|array|min:1|max:20',
             'files.*' => 'file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
             'customer_id' => 'nullable|uuid',
             'visibility' => 'nullable|in:customer,internal',
+            // 1 = Bilder zu EINEM mehrseitigen Dokument buendeln (Standard),
+            // 0 = jedes Bild wird ein eigenes Dokument.
+            'bundle_images' => 'nullable|boolean',
         ]);
 
         $customer = null;
@@ -151,10 +171,18 @@ class SmartDocumentUploadController extends Controller
         // Mitarbeiter ihn freigibt (DSGVO-schonender Standard).
         $visibility = $request->input('visibility', 'internal');
 
+        // Aufteilung nach ECHTEM Inhalt (finfo), nicht nach dem vom Client
+        // gelieferten Dateinamen - "foto.pdf" mit JPEG-Inhalt ist ein Bild.
+        // Nur wenn der Inhalt keinen eindeutigen Typ liefert, entscheidet
+        // die Dateiendung.
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
         $images = [];
         $pdfs = [];
         foreach ($request->file('files') as $file) {
-            if (strtolower($file->getClientOriginalExtension()) === 'pdf') {
+            $mime = (string) $finfo->file($file->getRealPath());
+            $isPdf = $mime === 'application/pdf'
+                || (!str_starts_with($mime, 'image/') && strtolower($file->getClientOriginalExtension()) === 'pdf');
+            if ($isPdf) {
                 $pdfs[] = $file;
             } else {
                 $images[] = $file;
@@ -164,12 +192,18 @@ class SmartDocumentUploadController extends Controller
         $created = [];
         try {
             if ($images !== []) {
-                $created[] = $this->createScanDocument(
-                    array_map(fn ($f) => (string) file_get_contents($f->getRealPath()), $images),
-                    directory: $directory,
-                    customerId: $customer?->id,
-                    visibility: $visibility,
-                );
+                $this->guardTotalImageSize($images);
+                $imageGroups = $request->boolean('bundle_images', true)
+                    ? [$images]
+                    : array_map(fn ($f) => [$f], $images);
+                foreach ($imageGroups as $group) {
+                    $created[] = $this->createScanDocument(
+                        array_map(fn ($f) => (string) file_get_contents($f->getRealPath()), $group),
+                        directory: $directory,
+                        customerId: $customer?->id,
+                        visibility: $visibility,
+                    );
+                }
             }
             foreach ($pdfs as $pdf) {
                 $created[] = $this->createPdfDocument($pdf, $directory, $customer?->id, $visibility);
@@ -204,7 +238,7 @@ class SmartDocumentUploadController extends Controller
         $document = Document::findOrFail($id);
         $this->authorizeDocument($document);
 
-        return response()->json($this->statusPayload($document));
+        return response()->json($this->statusPayload($document, internal: true));
     }
 
     /**
@@ -217,7 +251,7 @@ class SmartDocumentUploadController extends Controller
         $document = Document::findOrFail($id);
         $this->authorizeDocument($document);
 
-        $request->validate([
+        $this->validateJson($request, [
             'customer_id' => 'required|uuid',
             'apply_fields' => 'nullable|array',
             'apply_fields.*' => 'string|in:birth_date,birth_place,address,phone,nationality,email2,health_insurance,iban',
@@ -232,8 +266,9 @@ class SmartDocumentUploadController extends Controller
             return response()->json(['message' => 'Dokument ist bereits einem anderen Kunden zugeordnet.'], 422);
         }
 
-        if (!$document->customer_id) {
-            $this->intake->assignToCustomer($document, $customer, auth()->id());
+        if (!$document->customer_id && !$this->intake->assignToCustomer($document, $customer, auth()->id())) {
+            // Zwei Mitarbeiter gleichzeitig: der andere hat gewonnen.
+            return response()->json(['message' => 'Dokument wurde soeben einem anderen Kunden zugeordnet.'], 422);
         }
         if ($request->filled('visibility')) {
             $document->update(['visibility' => $request->visibility, 'updated_by' => auth()->id()]);
@@ -272,10 +307,11 @@ class SmartDocumentUploadController extends Controller
             return response()->json(['message' => 'Dokument ist bereits einem Kunden zugeordnet.'], 422);
         }
 
-        $request->validate([
+        $this->validateJson($request, [
             'apply_fields' => 'nullable|array',
             'apply_fields.*' => 'string|in:birth_date,birth_place,address,phone,nationality,email2,health_insurance,iban',
             'create_contract' => 'nullable|boolean',
+            'visibility' => 'nullable|in:customer,internal',
         ]);
 
         $person = ($document->ai_extracted ?? [])['person'] ?? [];
@@ -284,9 +320,17 @@ class SmartDocumentUploadController extends Controller
             return response()->json(['message' => 'Im Dokument wurde kein Name erkannt - bitte Kunden manuell anlegen.'], 422);
         }
 
+        $criteria = $this->intake->matchCriteria($document->ai_extracted ?? []);
+        // Bereits vergebene E-Mail nicht als Login-Adresse verwenden (unique
+        // auf users.email); der neue Kunde bekommt dann eine Platzhalter-
+        // Adresse, die extrahierte E-Mail kann als email2 uebernommen werden.
+        if (!empty($criteria['email']) && User::where('email', $criteria['email'])->exists()) {
+            unset($criteria['email']);
+        }
+
         try {
             $customer = app(CustomerAutoCreationService::class)->createFromUnmatched(
-                $this->intake->matchCriteria($document->ai_extracted ?? []),
+                $criteria,
                 'manual',
                 auth()->id(),
             );
@@ -298,6 +342,9 @@ class SmartDocumentUploadController extends Controller
         }
 
         $this->intake->assignToCustomer($document, $customer, auth()->id());
+        if ($request->filled('visibility')) {
+            $document->update(['visibility' => $request->visibility, 'updated_by' => auth()->id()]);
+        }
         $applied = $this->intake->applyExtractedToCustomer($document, $customer, $request->input('apply_fields', []), auth()->id());
 
         $contract = null;
@@ -328,12 +375,13 @@ class SmartDocumentUploadController extends Controller
         }
 
         $user = auth()->user();
+        $like = '%' . addcslashes($q, '%_\\') . '%';
         $customers = Customer::with('user')
             ->when(!$user->canSeeAllCustomers(), fn ($query) => $query->whereIn('customers.id', $user->visibleCustomerIdsWithSubstitution()))
-            ->where(function ($query) use ($q) {
-                $query->whereHas('user', fn ($u) => $u->where('name', 'like', "%$q%")->orWhere('email', 'like', "%$q%"))
-                    ->orWhere('customer_number', 'like', "%$q%")
-                    ->orWhere('phone', 'like', "%$q%");
+            ->where(function ($query) use ($like) {
+                $query->whereHas('user', fn ($u) => $u->where('name', 'like', $like)->orWhere('email', 'like', $like))
+                    ->orWhere('customer_number', 'like', $like)
+                    ->orWhere('phone', 'like', $like);
             })
             ->limit(15)->get()
             ->map(fn ($c) => [
@@ -421,14 +469,58 @@ class SmartDocumentUploadController extends Controller
     {
         $path = $file->store($directory, 'local');
 
+        // Anzeigename immer mit .pdf-Endung, damit Viewer und Analyse den
+        // Inhalt korrekt behandeln (Client-Namen sind nicht verlaesslich).
+        $fileName = $file->getClientOriginalName();
+        if (strtolower(pathinfo($fileName, PATHINFO_EXTENSION)) !== 'pdf') {
+            $fileName = (pathinfo($fileName, PATHINFO_FILENAME) ?: 'Dokument') . '.pdf';
+        }
+
         return $this->createDocument(
             customerId: $customerId,
             contractId: $contractId,
-            fileName: $file->getClientOriginalName(),
+            fileName: $fileName,
             path: $path,
             size: (int) $file->getSize(),
             pageCount: null,
             visibility: $visibility,
+        );
+    }
+
+    /**
+     * Obergrenze fuer die Summe der Bilddaten eines Buendels: schuetzt
+     * Speicher (alle Seiten werden fuer den PDF-Bau im RAM gehalten) und
+     * haelt das Ergebnis unter dem Analyse-Limit von 20 MB.
+     *
+     * @param list<\Illuminate\Http\UploadedFile> $files
+     */
+    private function guardTotalImageSize(array $files): void
+    {
+        $total = array_sum(array_map(fn ($f) => (int) $f->getSize(), $files));
+        if ($total > 25 * 1024 * 1024) {
+            $this->failJson('Die Bilder sind zusammen zu gross (max. 25 MB pro Dokument).');
+        }
+    }
+
+    /**
+     * Validierung mit garantierter JSON-Fehlerantwort: die App rendert
+     * Exceptions nur unter api/* als JSON (bootstrap/app.php), diese
+     * XHR-Endpunkte brauchen aber immer strukturierte 422-Antworten.
+     */
+    private function validateJson(Request $request, array $rules): array
+    {
+        try {
+            return $request->validate($rules);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->failJson((string) $e->validator->errors()->first());
+        }
+    }
+
+    /** Bricht mit einer JSON-422-Antwort ab (fuer die XHR-Frontends). */
+    private function failJson(string $message): never
+    {
+        throw new \Illuminate\Http\Exceptions\HttpResponseException(
+            response()->json(['message' => $message], 422)
         );
     }
 
@@ -458,24 +550,30 @@ class SmartDocumentUploadController extends Controller
         return $document;
     }
 
-    /** Status-JSON fuer die Poll-Anzeigen in Portal und CRM. */
-    private function statusPayload(Document $document): array
+    /**
+     * Status-JSON fuer die Poll-Anzeigen. $internal steuert, ob interne
+     * Details (Fehlertext, Match) mitgegeben werden - Kunden im Portal
+     * bekommen sie nicht.
+     */
+    private function statusPayload(Document $document, bool $internal = false): array
     {
         $extracted = $document->ai_extracted ?? [];
+        $label = $document->aiTypeLabel();
 
         return [
             'id' => $document->id,
             'status' => $document->ai_status,
             'type' => $document->ai_type,
-            'type_label' => $document->aiTypeLabel(),
+            // Typ-Label lokalisiert (Portal kann Arabisch sein; ar.json)
+            'type_label' => $label !== null ? __($label) : null,
             'confidence' => $document->ai_confidence,
             'summary' => $document->ai_summary,
-            'error' => $document->ai_error,
+            'error' => $internal ? $document->ai_error : null,
             'file_name' => $document->file_name,
-            'category_label' => Document::CATEGORIES[$document->category] ?? $document->category,
+            'category_label' => __(Document::CATEGORIES[$document->category] ?? $document->category),
             'customer_id' => $document->customer_id,
             'contract_id' => $document->contract_id,
-            'match' => $extracted['match'] ?? null,
+            'match' => $internal ? ($extracted['match'] ?? null) : null,
         ];
     }
 

@@ -22,6 +22,10 @@
         <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">PDF, JPG, PNG, WEBP · max. 10 MB pro Datei · mehrere Bilder werden zu EINEM Dokument gebündelt</div>
         <input type="file" id="inbox-files" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none;">
     </div>
+    <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--ink-soft);margin-top:10px;cursor:pointer;">
+        <input type="checkbox" id="inbox-bundle" checked>
+        Mehrere Bilder zu EINEM mehrseitigen Dokument bündeln (abwählen = jedes Bild wird ein eigenes Dokument)
+    </label>
     <div id="inbox-upload-progress" style="display:none;margin-top:12px;">
         <div style="height:8px;background:var(--canvas);border:1px solid var(--line);border-radius:6px;overflow:hidden;">
             <div id="inbox-upload-bar" style="height:100%;width:0;background:var(--gold);transition:width .2s;"></div>
@@ -64,10 +68,14 @@
                 <div style="margin-top:10px;border:1px solid {{ $match['tier'] === 'auto' ? '#17A65B' : 'var(--line)' }};background:{{ $match['tier'] === 'auto' ? '#d9f4e6' : '#F4F5F7' }};border-radius:10px;padding:10px 12px;font-size:13px;">
                     👤 Kunde gefunden: <strong>{{ $match['name'] ?? '—' }}</strong>
                     ({{ $match['customer_number'] ?? '—' }}) · Übereinstimmung {{ $match['score'] }}%
+                    @if(auth()->user()->canAccessCustomer($match['customer_id']))
                     <button type="button" class="btn btn-gold btn-sm" style="margin-inline-start:10px;"
                         onclick="docReview.open(@js($doc->id), 'assign', @js($match['customer_id']), @js(($match['name'] ?? '') . ' (' . ($match['customer_number'] ?? '') . ')'))">
                         Diesem Kunden zuordnen
                     </button>
+                    @else
+                    <span style="color:var(--ink-soft);">· außerhalb Ihres Portfolios – bitte an Admin/Manager übergeben</span>
+                    @endif
                 </div>
                 @elseif($doc->ai_status === 'done')
                 <div style="margin-top:10px;font-size:13px;color:var(--ink-soft);">Kein Kunde gefunden.</div>
@@ -82,6 +90,11 @@
                 @if($aiEnabled)
                 <button type="button" class="btn btn-ghost btn-sm" onclick="docReview.reanalyze(@js($doc->id), this)">🔄 Neu analysieren</button>
                 @endif
+                <form method="POST" action="{{ route('admin.documents.destroy', $doc->id) }}" style="margin:0;"
+                    onsubmit="return confirm('Dokument „{{ $doc->file_name }}“ wirklich löschen?');">
+                    @csrf @method('DELETE')
+                    <button type="submit" class="btn btn-ghost btn-sm" style="color:#A32D2D;" title="Löschen">🗑</button>
+                </form>
                 @endif
             </div>
         </div>
@@ -307,10 +320,13 @@ window.docReview = (function() {
         }
     }
 
+    var searchSeq = 0;
     function search(q) {
+        var seq = ++searchSeq; // verspaetete Antworten aelterer Suchen verwerfen
         fetch(@json(route('admin.documents.customer_search')) + '?q=' + encodeURIComponent(q), {
             headers: { 'Accept': 'application/json' }, credentials: 'same-origin'
         }).then(function(r) { return r.json(); }).then(function(list) {
+            if (seq !== searchSeq) return;
             var wrap = el('review-customer-results');
             wrap.innerHTML = '';
             list.forEach(function(c) {
@@ -392,7 +408,12 @@ window.docReview = (function() {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': @json(csrf_token()) },
-        }).then(function(r) { return r.json(); }).then(function() { window.location.reload(); })
+        }).then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })
+        .then(function(res) {
+            if (res.ok) { window.location.reload(); return; }
+            btn.disabled = false;
+            alert(res.json.message || 'Analyse konnte nicht gestartet werden.');
+        })
         .catch(function() { btn.disabled = false; });
     }
 
@@ -420,11 +441,15 @@ window.docReview = (function() {
 (function() {
     var dz = document.getElementById('inbox-dropzone');
     var input = document.getElementById('inbox-files');
+    var uploadActive = false; // Auto-Reload pausieren, solange ein Upload laeuft
 
     function uploadFiles(files) {
         if (!files.length) return;
+        uploadActive = true;
         var data = new FormData();
         data.append('_token', @json(csrf_token()));
+        var bundle = document.getElementById('inbox-bundle');
+        data.append('bundle_images', bundle && bundle.checked ? 1 : 0);
         Array.from(files).forEach(function(f) { data.append('files[]', f, f.name); });
 
         var wrap = document.getElementById('inbox-upload-progress');
@@ -441,6 +466,7 @@ window.docReview = (function() {
             label.textContent = pct + '%';
         });
         xhr.addEventListener('load', function() {
+            uploadActive = false;
             if (xhr.status >= 200 && xhr.status < 300) {
                 label.textContent = '✓ Hochgeladen – Analyse gestartet';
                 setTimeout(function() { window.location.reload(); }, 700);
@@ -452,6 +478,7 @@ window.docReview = (function() {
             }
         });
         xhr.addEventListener('error', function() {
+            uploadActive = false;
             label.textContent = '⚠ Netzwerkfehler beim Upload.';
             bar.style.background = '#A32D2D';
         });
@@ -486,7 +513,7 @@ window.docReview = (function() {
         })).then(function(results) {
             var finished = results.some(function(s) { return s && ['done', 'failed', 'none'].indexOf(s.status) !== -1; });
             var modalOpen = document.getElementById('doc-review-modal').style.display === 'flex';
-            if (finished && !modalOpen) { window.location.reload(); return; }
+            if (finished && !modalOpen && !uploadActive) { window.location.reload(); return; }
             setTimeout(check, 5000);
         });
     }

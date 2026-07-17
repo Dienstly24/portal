@@ -82,7 +82,8 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     // Smart Document Upload: Mehrseiten-Scanner (Fotos/Bilder/PDF) + KI-Analyse
     Route::post('/documents/scan', [\App\Http\Controllers\SmartDocumentUploadController::class, 'portalStore'])
         ->middleware('throttle:20,10')->name('documents.scan');
-    Route::get('/documents/{id}/analyse-status', [\App\Http\Controllers\SmartDocumentUploadController::class, 'portalStatus'])->name('documents.analyse_status');
+    Route::get('/documents/{id}/analyse-status', [\App\Http\Controllers\SmartDocumentUploadController::class, 'portalStatus'])
+        ->middleware('throttle:120,1')->name('documents.analyse_status');
     Route::post('/document-requests/{id}/upload', [PortalController::class, 'documentRequestUpload'])->name('document_requests.upload');
     Route::get('/notifications', [PortalController::class, 'notifications'])->name('notifications');
     Route::post('/notifications/{id}/read', [PortalController::class, 'notificationRead'])->name('notifications.read');
@@ -214,12 +215,15 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/change-requests/{id}/document', [\App\Http\Controllers\ChangeRequestReviewController::class, 'document'])->name('change_requests.document');
     // Smart Document Upload (CRM): Dokumenten-Eingang, Drag&Drop-Analyse, Zuordnung
     Route::get('/dokumenten-eingang', [\App\Http\Controllers\SmartDocumentUploadController::class, 'inbox'])->name('documents.inbox');
-    Route::post('/documents/smart-upload', [\App\Http\Controllers\SmartDocumentUploadController::class, 'adminStore'])->name('documents.smart_upload');
+    Route::post('/documents/smart-upload', [\App\Http\Controllers\SmartDocumentUploadController::class, 'adminStore'])
+        ->middleware('throttle:30,10')->name('documents.smart_upload');
     Route::get('/documents/customer-search', [\App\Http\Controllers\SmartDocumentUploadController::class, 'customerSearch'])->name('documents.customer_search');
-    Route::get('/documents/{id}/analyse-status', [\App\Http\Controllers\SmartDocumentUploadController::class, 'adminStatus'])->name('documents.analyse_status');
+    Route::get('/documents/{id}/analyse-status', [\App\Http\Controllers\SmartDocumentUploadController::class, 'adminStatus'])
+        ->middleware('throttle:240,1')->name('documents.analyse_status');
     Route::post('/documents/{id}/assign', [\App\Http\Controllers\SmartDocumentUploadController::class, 'assign'])->name('documents.assign');
     Route::post('/documents/{id}/create-customer', [\App\Http\Controllers\SmartDocumentUploadController::class, 'createCustomer'])->name('documents.create_customer');
-    Route::post('/documents/{id}/reanalyze', [\App\Http\Controllers\SmartDocumentUploadController::class, 'reanalyze'])->name('documents.reanalyze');
+    Route::post('/documents/{id}/reanalyze', [\App\Http\Controllers\SmartDocumentUploadController::class, 'reanalyze'])
+        ->middleware('throttle:30,10')->name('documents.reanalyze');
     Route::get('/documents/{id}/download', [AdminController::class, 'documentDownload'])->name('documents.download');
     Route::post('/documents/{id}/replace', [AdminController::class, 'documentReplace'])->name('documents.replace');
     Route::put('/documents/{id}', [AdminController::class, 'documentUpdate'])->name('documents.update');

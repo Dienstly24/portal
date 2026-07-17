@@ -527,6 +527,165 @@ class SmartDocumentUploadTest extends TestCase
             ->assertSee('Dokumenten-Eingang');
     }
 
+    public function test_admin_smart_upload_classifies_by_real_content_not_client_extension(): void
+    {
+        Storage::fake('local');
+        config(['services.anthropic.key' => '']);
+
+        // Echtes JPEG, aber vom Client als "foto.pdf" benannt.
+        $img = imagecreatetruecolor(300, 400);
+        ob_start();
+        imagejpeg($img);
+        $jpegBytes = (string) ob_get_clean();
+        imagedestroy($img);
+
+        $admin = $this->makeAdmin();
+        $response = $this->actingAs($admin)->postJson(route('admin.documents.smart_upload'), [
+            'files' => [UploadedFile::fake()->createWithContent('foto.pdf', $jpegBytes)],
+        ]);
+
+        $response->assertOk();
+        $doc = Document::findOrFail($response->json('ids.0'));
+        // Als Bild erkannt -> zu einem Scan-PDF gebuendelt, nicht als kaputte "PDF" gespeichert.
+        $this->assertSame(1, $doc->page_count);
+        $this->assertStringStartsWith('%PDF-1.4', Storage::disk('local')->get($doc->file_path));
+    }
+
+    public function test_admin_smart_upload_without_bundling_creates_one_document_per_image(): void
+    {
+        Storage::fake('local');
+        config(['services.anthropic.key' => '']);
+
+        $admin = $this->makeAdmin();
+        $response = $this->actingAs($admin)->postJson(route('admin.documents.smart_upload'), [
+            'files' => [
+                UploadedFile::fake()->image('a.jpg', 400, 500),
+                UploadedFile::fake()->image('b.jpg', 400, 500),
+            ],
+            'bundle_images' => 0,
+        ]);
+
+        $response->assertOk();
+        $this->assertCount(2, $response->json('ids'));
+        foreach ($response->json('ids') as $id) {
+            $this->assertSame(1, Document::findOrFail($id)->page_count);
+        }
+    }
+
+    public function test_portal_scan_rejects_pages_and_pdf_together(): void
+    {
+        Storage::fake('local');
+        $customer = $this->makeCustomer();
+
+        $this->actingAs($customer->user)->postJson(route('portal.documents.scan'), [
+            'pages' => [UploadedFile::fake()->image('s.jpg', 400, 400)],
+            'pdf' => UploadedFile::fake()->create('x.pdf', 10, 'application/pdf'),
+        ])->assertStatus(422);
+    }
+
+    public function test_restricted_employee_can_open_inbox_documents_but_sees_only_own_uploads(): void
+    {
+        Storage::fake('local');
+        config(['services.anthropic.key' => '']);
+
+        $employee = User::factory()->create(['role' => 'employee', 'can_see_all_customers' => false]);
+        $admin = $this->makeAdmin();
+
+        // Der Mitarbeiter laedt selbst ein Dokument in den Eingang hoch ...
+        $response = $this->actingAs($employee)->postJson(route('admin.documents.smart_upload'), [
+            'files' => [UploadedFile::fake()->image('eigenes.jpg', 400, 400)],
+        ]);
+        $ownDoc = Document::findOrFail($response->json('ids.0'));
+
+        // ... und ein Admin ein weiteres.
+        Storage::disk('local')->put('documents/eingang/fremd.pdf', '%PDF-1.4');
+        Document::create([
+            'customer_id' => null,
+            'category' => 'other',
+            'file_name' => 'Fremdes-Dokument.pdf',
+            'file_path' => 'documents/eingang/fremd.pdf',
+            'disk' => 'local',
+            'uploaded_by' => $admin->id,
+        ]);
+
+        // Eingang zeigt dem Mitarbeiter nur die eigenen Uploads.
+        $this->actingAs($employee)->get(route('admin.documents.inbox'))
+            ->assertOk()
+            ->assertDontSee('Fremdes-Dokument.pdf');
+
+        // Und der Download des eigenen Eingangs-Dokuments liefert kein 403 mehr.
+        $this->actingAs($employee)->get(route('admin.documents.download', $ownDoc->id))
+            ->assertOk();
+    }
+
+    public function test_create_customer_falls_back_to_placeholder_email_when_address_is_taken(): void
+    {
+        Storage::fake('local');
+        Storage::disk('local')->put('documents/eingang/scan.pdf', '%PDF-1.4');
+
+        User::factory()->create(['email' => 'belegt@example.com']);
+
+        $doc = Document::create([
+            'customer_id' => null,
+            'category' => 'identity',
+            'file_name' => 'Ausweis.pdf',
+            'file_path' => 'documents/eingang/scan.pdf',
+            'disk' => 'local',
+            'ai_status' => 'done',
+            'ai_type' => 'personalausweis',
+            'ai_extracted' => ['person' => [
+                'first_name' => 'Paul', 'last_name' => 'Einmalig', 'email' => 'belegt@example.com',
+            ]],
+        ]);
+
+        $response = $this->actingAs($this->makeAdmin())
+            ->postJson(route('admin.documents.create_customer', $doc->id), []);
+
+        $response->assertOk();
+        $customer = Customer::findOrFail($doc->fresh()->customer_id);
+        // Kein 500 durch unique users.email - Platzhalter-Adresse statt Duplikat.
+        $this->assertNotSame('belegt@example.com', $customer->user->email);
+    }
+
+    public function test_ai_extracted_is_encrypted_at_rest(): void
+    {
+        Storage::fake('local');
+        Storage::disk('local')->put('documents/eingang/scan.pdf', '%PDF-1.4');
+        $doc = Document::create([
+            'customer_id' => null,
+            'category' => 'other',
+            'file_name' => 'scan.pdf',
+            'file_path' => 'documents/eingang/scan.pdf',
+            'disk' => 'local',
+            'ai_extracted' => ['bank' => ['iban' => 'DE89370400440532013000']],
+        ]);
+
+        $raw = (string) \Illuminate\Support\Facades\DB::table('documents')->where('id', $doc->id)->value('ai_extracted');
+        $this->assertStringNotContainsString('DE89370400440532013000', $raw);
+        $this->assertSame('DE89370400440532013000', $doc->fresh()->ai_extracted['bank']['iban']);
+    }
+
+    public function test_portal_status_hides_internal_error_details(): void
+    {
+        Storage::fake('local');
+        $customer = $this->makeCustomer();
+        Storage::disk('local')->put('customers/' . $customer->id . '/documents/scan.pdf', '%PDF-1.4');
+        $doc = Document::create([
+            'customer_id' => $customer->id,
+            'category' => 'other',
+            'file_name' => 'scan.pdf',
+            'file_path' => 'customers/' . $customer->id . '/documents/scan.pdf',
+            'disk' => 'local',
+            'ai_status' => 'failed',
+            'ai_error' => 'KI-Dienst antwortete mit HTTP 500',
+        ]);
+
+        $this->actingAs($customer->user)
+            ->getJson(route('portal.documents.analyse_status', $doc->id))
+            ->assertOk()
+            ->assertJson(['status' => 'failed', 'error' => null]);
+    }
+
     public function test_reanalyze_endpoint_restarts_analysis(): void
     {
         Storage::fake('local');

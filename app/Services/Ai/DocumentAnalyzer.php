@@ -65,19 +65,27 @@ class DocumentAnalyzer
             throw new \RuntimeException('Datei zu gross fuer die Analyse (max. 20 MB).');
         }
 
-        $ext = strtolower(pathinfo($document->file_name, PATHINFO_EXTENSION));
-        if ($ext === 'pdf') {
+        // Medientyp aus dem ECHTEN Inhalt bestimmen (Client-Dateinamen sind
+        // nicht verlaesslich); liefert der Inhalt keinen bekannten Typ,
+        // faellt die Erkennung auf die Endung des Anzeigenamens zurueck.
+        $mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($binary) ?: '';
+        if ($mime !== 'application/pdf' && !in_array($mime, self::IMAGE_MEDIA_TYPES, true)) {
+            $ext = strtolower(pathinfo($document->file_name, PATHINFO_EXTENSION));
+            $mime = $ext === 'pdf' ? 'application/pdf' : (self::IMAGE_MEDIA_TYPES[$ext] ?? '');
+        }
+
+        if ($mime === 'application/pdf') {
             $sourceBlock = [
                 'type' => 'document',
                 'source' => ['type' => 'base64', 'media_type' => 'application/pdf', 'data' => base64_encode($binary)],
             ];
-        } elseif (isset(self::IMAGE_MEDIA_TYPES[$ext])) {
+        } elseif (in_array($mime, self::IMAGE_MEDIA_TYPES, true)) {
             $sourceBlock = [
                 'type' => 'image',
-                'source' => ['type' => 'base64', 'media_type' => self::IMAGE_MEDIA_TYPES[$ext], 'data' => base64_encode($binary)],
+                'source' => ['type' => 'base64', 'media_type' => $mime, 'data' => base64_encode($binary)],
             ];
         } else {
-            throw new \RuntimeException('Dateityp wird von der Analyse nicht unterstuetzt (' . $ext . ').');
+            throw new \RuntimeException('Dateityp wird von der Analyse nicht unterstuetzt (' . ($mime ?: 'unbekannt') . ').');
         }
 
         $response = Http::withHeaders([
@@ -125,6 +133,7 @@ class DocumentAnalyzer
             . '"bank": {"iban": "", "bic": "", "account_holder": ""}}} '
             . 'Regeln: Nur Werte aufnehmen, die im Dokument sicher lesbar sind. Unbekannte oder unleserliche Felder weglassen oder null setzen. '
             . 'Keine Werte raten oder erfinden. Datumsangaben immer als JJJJ-MM-TT. '
+            . 'In "summary" und "title" KEINE sensiblen Nummern nennen (keine IBAN, Versicherten-, Ausweis- oder Steuernummern). '
             . 'Bei einem KFZ-Vertrag gehoeren Vertragsdaten in "versicherung" (sparte: kfz) UND Fahrzeugdaten in "kfz".';
     }
 
@@ -187,7 +196,7 @@ class DocumentAnalyzer
             'phone' => $this->cleanString($in['phone'] ?? null, 40),
             'nationality' => $this->cleanString($in['nationality'] ?? null, 60),
             'id_number' => $this->cleanString($in['id_number'] ?? null, 40),
-        ]);
+        ], fn ($v) => $v !== null && $v !== '');
     }
 
     private function validatedInsurance(mixed $in): array
@@ -204,7 +213,7 @@ class DocumentAnalyzer
             'end_date' => $this->cleanDate($in['end_date'] ?? null),
             'premium_amount' => (is_numeric($premium) && $premium > 0 && $premium < 1000000) ? round((float) $premium, 2) : null,
             'premium_interval' => in_array($interval, Contract::premiumIntervalKeys(), true) ? $interval : null,
-        ]);
+        ], fn ($v) => $v !== null && $v !== '');
     }
 
     private function validatedVehicle(mixed $in): array
@@ -223,7 +232,7 @@ class DocumentAnalyzer
             'manufacturer' => $this->cleanString($in['manufacturer'] ?? null, 60),
             'model' => $this->cleanString($in['model'] ?? null, 80),
             'first_registration' => $this->cleanDate($in['first_registration'] ?? null),
-        ]);
+        ], fn ($v) => $v !== null && $v !== '');
     }
 
     private function validatedHealth(mixed $in): array
@@ -232,7 +241,7 @@ class DocumentAnalyzer
         return array_filter([
             'health_insurance_company' => $this->cleanString($in['health_insurance_company'] ?? null, 120),
             'health_insurance_number' => $this->cleanString($in['health_insurance_number'] ?? null, 30),
-        ]);
+        ], fn ($v) => $v !== null && $v !== '');
     }
 
     private function validatedBank(mixed $in): array
@@ -251,7 +260,7 @@ class DocumentAnalyzer
             'iban' => $iban,
             'bic' => $this->cleanString($in['bic'] ?? null, 11),
             'account_holder' => $this->cleanString($in['account_holder'] ?? null, 120),
-        ]);
+        ], fn ($v) => $v !== null && $v !== '');
     }
 
     private function cleanString(mixed $value, int $max): ?string
