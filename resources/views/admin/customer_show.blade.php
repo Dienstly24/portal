@@ -206,6 +206,8 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
                 @if(($d->visibility ?? 'customer') === 'internal')<span style="background:#F7E7D6;color:#B5651D;padding:1px 6px;border-radius:4px;">🔒 intern</span>@else<span style="background:#EAF2FB;color:#185FA5;padding:1px 6px;border-radius:4px;">👤 Kunde</span>@endif
                 @if($docContract)<span style="background:#E4F0E7;color:#3B7A57;padding:1px 6px;border-radius:4px;">{{ $docContract->typeIcon() }} {{ $docContract->insurer }}</span>@endif
                 @if($d->aiInProgress())<span style="background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:4px;">⏳ KI-Analyse läuft</span>
+                @elseif($d->ai_status === 'failed')<span style="background:#FBE9E9;color:#B3261E;padding:1px 6px;border-radius:4px;" title="{{ $d->ai_error }}">⚠ KI-Analyse fehlgeschlagen</span>
+                    <button type="button" onclick="smartReanalyze(@js($d->id), this)" style="border:none;background:none;color:#185FA5;cursor:pointer;font-size:12px;padding:0;">erneut analysieren</button>
                 @elseif($d->aiTypeLabel())<span style="background:#d9f4e6;color:#128a4b;padding:1px 6px;border-radius:4px;" title="{{ $d->ai_summary }}">⚡ {{ $d->aiTypeLabel() }}</span>@endif
                 @if($d->uploader)<span>· {{ $d->uploader->name }}</span>@endif
             </div>
@@ -604,6 +606,10 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
             <input type="file" id="smart-doc-input" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none;">
         </div>
         <div id="smart-file-list" style="margin-bottom:14px;"></div>
+        <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;cursor:pointer;">
+            <input type="checkbox" id="smart-bundle" checked>
+            Mehrere Bilder zu EINEM mehrseitigen Dokument bündeln
+        </label>
         <div class="field"><label>Sichtbarkeit</label>
             <select id="smart-visibility" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
                 <option value="internal">🔒 Nur intern (nach Prüfung freigeben)</option>
@@ -623,6 +629,21 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
     </div>
 </div>
 <script>
+// Fehlgeschlagene KI-Analyse direkt aus der Kundenakte neu anstossen
+function smartReanalyze(docId, btn) {
+    btn.disabled = true;
+    fetch(@json(route('admin.documents.reanalyze', ['id' => '__ID__'])).replace('__ID__', docId), {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': @json(csrf_token()) },
+    }).then(r => r.json().then(j => ({ ok: r.ok, json: j })))
+    .then(res => {
+        if (res.ok) { window.location.reload(); return; }
+        btn.disabled = false;
+        alert(res.json.message || 'Analyse konnte nicht gestartet werden.');
+    })
+    .catch(() => { btn.disabled = false; });
+}
 (function() {
     const dz = document.getElementById('smart-dropzone');
     const input = document.getElementById('smart-doc-input');
@@ -647,17 +668,22 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
         });
     }
     dz.addEventListener('click', () => input.click());
-    input.addEventListener('change', () => { files = Array.from(input.files); render(); });
+    input.addEventListener('change', () => { files = Array.from(input.files); input.value = ''; render(); });
     ['dragover','dragenter'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.style.borderColor = 'var(--gold)'; dz.style.background = 'var(--canvas)'; }));
     ['dragleave','drop'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.style.borderColor = 'var(--line)'; dz.style.background = 'transparent'; }));
     dz.addEventListener('drop', ev => { ev.preventDefault(); files = Array.from(ev.dataTransfer.files); render(); });
 
     btn.addEventListener('click', function() {
         if (!files.length) { input.click(); return; }
+        if (files.some(f => f.size > 10*1024*1024)) {
+            alert('Mindestens eine Datei ist größer als 10 MB – bitte entfernen.');
+            return;
+        }
         const data = new FormData();
         data.append('_token', @json(csrf_token()));
         data.append('customer_id', @json($customer->id));
         data.append('visibility', document.getElementById('smart-visibility').value);
+        data.append('bundle_images', document.getElementById('smart-bundle').checked ? 1 : 0);
         files.forEach(f => data.append('files[]', f, f.name));
         const xhr = new XMLHttpRequest();
         const wrap = document.getElementById('smart-progress');

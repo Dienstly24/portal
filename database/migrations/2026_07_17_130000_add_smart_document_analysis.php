@@ -26,7 +26,10 @@ return new class extends Migration
             $table->string('ai_type', 40)->nullable()->after('ai_status');
             $table->unsignedTinyInteger('ai_confidence')->nullable()->after('ai_type');
             $table->string('ai_summary', 500)->nullable()->after('ai_confidence');
-            $table->json('ai_extracted')->nullable()->after('ai_summary');
+            // text statt json: der Inhalt wird verschluesselt gespeichert
+            // (encrypted:array-Cast), da er IBAN/Versichertennummern
+            // enthalten kann - gleiche Schutzstufe wie die Kundenfelder.
+            $table->text('ai_extracted')->nullable()->after('ai_summary');
             $table->string('ai_error', 300)->nullable()->after('ai_extracted');
             $table->timestamp('ai_processed_at')->nullable()->after('ai_error');
             $table->unsignedSmallInteger('page_count')->nullable()->after('ai_processed_at');
@@ -41,7 +44,9 @@ return new class extends Migration
 
         Schema::table('ai_decisions', function (Blueprint $table) {
             $table->uuid('document_id')->nullable()->after('email_message_id');
-            $table->foreign('document_id')->references('id')->on('documents')->cascadeOnDelete();
+            // nullOnDelete statt cascade: das Freigabe-Protokoll bleibt als
+            // Audit-Trail erhalten, auch wenn das Dokument geloescht wird.
+            $table->foreign('document_id')->references('id')->on('documents')->nullOnDelete();
             $table->index('document_id');
         });
     }

@@ -35,12 +35,18 @@ class ImagesToPdfService
         return $this->assemble($pages);
     }
 
-    /** @return array{jpeg: string, width: int, height: int, cmyk: bool} */
+    /** Dekompressionsbomben-Schutz: mehr Pixel dekodiert GD nicht. */
+    private const MAX_MEGAPIXELS = 50_000_000;
+
+    /** @return array{jpeg: string, width: int, height: int, channels: int} */
     private function preparePage(string $binary, int $pageNo): array
     {
         $info = @getimagesizefromstring($binary);
         if ($info === false) {
             throw new \RuntimeException("Seite $pageNo ist kein lesbares Bild.");
+        }
+        if ((int) $info[0] * (int) $info[1] > self::MAX_MEGAPIXELS) {
+            throw new \RuntimeException("Seite $pageNo hat zu viele Pixel (max. 50 Megapixel).");
         }
 
         $mime = $info['mime'] ?? '';
@@ -56,8 +62,8 @@ class ImagesToPdfService
             'jpeg' => $binary,
             'width' => (int) $info[0],
             'height' => (int) $info[1],
-            // Adobe-CMYK-JPEGs brauchen einen eigenen Farbraum + Decode-Array.
-            'cmyk' => ($info['channels'] ?? 3) === 4,
+            // 1 = Graustufen, 3 = RGB, 4 = Adobe-CMYK (invertiert)
+            'channels' => (int) ($info['channels'] ?? 3),
         ];
     }
 
@@ -89,7 +95,7 @@ class ImagesToPdfService
         return $jpeg;
     }
 
-    /** @param list<array{jpeg: string, width: int, height: int, cmyk: bool}> $pages */
+    /** @param list<array{jpeg: string, width: int, height: int, channels: int}> $pages */
     private function assemble(array $pages): string
     {
         $pdf = "%PDF-1.4\n%\xE2\xE3\xCF\xD3\n";
@@ -119,6 +125,12 @@ class ImagesToPdfService
             $pageH = $page['width'] > 0
                 ? round($page['height'] * $pageW / $page['width'], 2)
                 : $pageW;
+            // PDF erlaubt maximal 14400 pt Kantenlaenge - extreme
+            // Seitenverhaeltnisse werden proportional eingedampft.
+            if ($pageH > 14400) {
+                $pageW = round($pageW * 14400 / $pageH, 2);
+                $pageH = 14400.0;
+            }
 
             $writeObject($pageObj, sprintf(
                 '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %.2F %.2F] '
@@ -126,9 +138,11 @@ class ImagesToPdfService
                 $pageW, $pageH, $i, $imageObj, $contentObj
             ));
 
-            $colorSpace = $page['cmyk']
-                ? '/ColorSpace /DeviceCMYK /Decode [1 0 1 0 1 0 1 0]'
-                : '/ColorSpace /DeviceRGB';
+            $colorSpace = match ($page['channels']) {
+                4 => '/ColorSpace /DeviceCMYK /Decode [1 0 1 0 1 0 1 0]',
+                1 => '/ColorSpace /DeviceGray',
+                default => '/ColorSpace /DeviceRGB',
+            };
             $writeObject($imageObj, sprintf(
                 "<< /Type /XObject /Subtype /Image /Width %d /Height %d %s "
                 . "/BitsPerComponent 8 /Filter /DCTDecode /Length %d >>\nstream\n%s\nendstream",

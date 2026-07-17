@@ -31,6 +31,17 @@ class AdminController extends Controller
         }
     }
 
+    /**
+     * Dokumente im Dokumenten-Eingang (Smart Upload, noch ohne Kunde)
+     * duerfen von Mitarbeitern bearbeitet werden; sobald ein Kunde
+     * zugeordnet ist, gilt der normale Portfolio-Check.
+     */
+    private function authorizeDocumentAccess(\App\Models\Document $doc): void {
+        if ($doc->customer_id !== null) {
+            $this->authorizeCustomerAccess($doc->customer_id);
+        }
+    }
+
     /** 403, wenn das Ticket zu einem nicht sichtbaren Kunden gehört. (Audit M1) */
     private function authorizeTicketAccess(\App\Models\Ticket $ticket): void {
         if ($ticket->customer_id !== null) {
@@ -831,7 +842,7 @@ class AdminController extends Controller
     /** Datei eines bestehenden Dokuments austauschen - setzt updated_by. (Punkt 3) */
     public function documentReplace(Request $request, $id) {
         $doc = \App\Models\Document::findOrFail($id);
-        $this->authorizeCustomerAccess($doc->customer_id);
+        $this->authorizeDocumentAccess($doc);
         $request->validate(['document' => 'required|file|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:10240']);
 
         $file = $request->file('document');
@@ -865,7 +876,7 @@ class AdminController extends Controller
      */
     public function documentUpdate(Request $request, $id) {
         $doc = \App\Models\Document::findOrFail($id);
-        $this->authorizeCustomerAccess($doc->customer_id);
+        $this->authorizeDocumentAccess($doc);
         $request->validate([
             'category' => 'nullable|in:contract,police,invoice,identity,claim,other',
             'visibility' => 'nullable|in:customer,internal',
@@ -902,7 +913,7 @@ class AdminController extends Controller
     /** Dokument löschen (Datei + Datensatz). Nur mit Zugriff auf den Kunden. */
     public function documentDestroy($id) {
         $doc = \App\Models\Document::findOrFail($id);
-        $this->authorizeCustomerAccess($doc->customer_id);
+        $this->authorizeDocumentAccess($doc);
 
         try {
             \Illuminate\Support\Facades\Storage::disk($doc->disk ?: 'public')->delete($doc->file_path);
@@ -923,7 +934,7 @@ class AdminController extends Controller
 
     public function documentDownload($id) {
         $doc = \App\Models\Document::findOrFail($id);
-        $this->authorizeCustomerAccess($doc->customer_id);
+        $this->authorizeDocumentAccess($doc);
         \App\Models\ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => 'document_viewed',
