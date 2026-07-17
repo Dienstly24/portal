@@ -170,6 +170,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
         <div class="card-title" style="margin-bottom:0;">📎 Dokumente</div>
         <div style="display:flex;gap:8px;">
             <button onclick="document.getElementById('request-doc-modal').style.display='flex'" class="btn btn-ghost btn-sm">📩 Dokument anfordern</button>
+            <button onclick="document.getElementById('smart-doc-modal').style.display='flex'" class="btn btn-primary btn-sm">⚡ Smart-Upload (KI)</button>
             <button onclick="document.getElementById('add-doc-modal').style.display='flex'" class="btn btn-gold btn-sm">+ Hochladen</button>
         </div>
     </div>
@@ -188,6 +189,8 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
                 <span>· {{ $d->created_at->format('d.m.Y') }}</span>
                 @if(($d->visibility ?? 'customer') === 'internal')<span style="background:#F7E7D6;color:#B5651D;padding:1px 6px;border-radius:4px;">🔒 intern</span>@else<span style="background:#EAF2FB;color:#185FA5;padding:1px 6px;border-radius:4px;">👤 Kunde</span>@endif
                 @if($docContract)<span style="background:#E4F0E7;color:#3B7A57;padding:1px 6px;border-radius:4px;">{{ $docContract->typeIcon() }} {{ $docContract->insurer }}</span>@endif
+                @if($d->aiInProgress())<span style="background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:4px;">⏳ KI-Analyse läuft</span>
+                @elseif($d->aiTypeLabel())<span style="background:#d9f4e6;color:#128a4b;padding:1px 6px;border-radius:4px;" title="{{ $d->ai_summary }}">⚡ {{ $d->aiTypeLabel() }}</span>@endif
                 @if($d->uploader)<span>· {{ $d->uploader->name }}</span>@endif
             </div>
         </div>
@@ -565,6 +568,115 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
         </form>
     </div>
 </div>
+
+{{-- Smart-Upload Modal (KI): Typ wird automatisch erkannt, Daten extrahiert --}}
+<div id="smart-doc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:520px;position:relative;">
+        <button onclick="document.getElementById('smart-doc-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <div style="font-size:18px;font-weight:700;margin-bottom:6px;">⚡ Smart-Upload (KI)</div>
+        <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;">
+            Dateien hochladen – die KI erkennt den Dokumenttyp, liest die Daten und ordnet passende Verträge automatisch zu.
+            Mehrere Bilder werden zu EINEM mehrseitigen Dokument gebündelt.
+        </p>
+        <div id="smart-dropzone" style="border:2px dashed var(--line);border-radius:10px;padding:26px;text-align:center;cursor:pointer;margin-bottom:14px;transition:.15s;">
+            <div style="font-size:30px;margin-bottom:6px;">⚡</div>
+            <div style="font-size:13.5px;color:var(--ink-soft);">Dateien hierher ziehen oder <span style="color:var(--gold);font-weight:600;">durchsuchen</span></div>
+            <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">PDF, JPG, PNG, WEBP · max. 10 MB pro Datei</div>
+            <input type="file" id="smart-doc-input" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none;">
+        </div>
+        <div id="smart-file-list" style="margin-bottom:14px;"></div>
+        <div class="field"><label>Sichtbarkeit</label>
+            <select id="smart-visibility" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                <option value="internal">🔒 Nur intern (nach Prüfung freigeben)</option>
+                <option value="customer">👤 Kundensichtbar</option>
+            </select>
+        </div>
+        <div id="smart-progress" style="display:none;margin-bottom:14px;">
+            <div style="height:8px;background:var(--canvas);border:1px solid var(--line);border-radius:6px;overflow:hidden;">
+                <div id="smart-progress-bar" style="height:100%;width:0;background:var(--gold);transition:width .2s;"></div>
+            </div>
+            <div id="smart-progress-label" style="font-size:12px;color:var(--ink-soft);margin-top:5px;">0%</div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button type="button" onclick="document.getElementById('smart-doc-modal').style.display='none'" class="btn btn-ghost">Abbrechen</button>
+            <button type="button" class="btn btn-primary" id="smart-upload-btn">⚡ Hochladen &amp; analysieren</button>
+        </div>
+    </div>
+</div>
+<script>
+(function() {
+    const dz = document.getElementById('smart-dropzone');
+    const input = document.getElementById('smart-doc-input');
+    const list = document.getElementById('smart-file-list');
+    const btn = document.getElementById('smart-upload-btn');
+    if (!dz) return;
+    const fmt = b => b < 1024*1024 ? (b/1024).toFixed(0)+' KB' : (b/1024/1024).toFixed(1)+' MB';
+    let files = [];
+    function render() {
+        list.innerHTML = '';
+        files.forEach(f => {
+            const tooBig = f.size > 10*1024*1024;
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:6px 10px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px;'+(tooBig?'background:#F9E3E3;':'');
+            const left = document.createElement('span');
+            left.textContent = '📄 ' + f.name;
+            const right = document.createElement('span');
+            right.style.color = tooBig ? '#A32D2D' : 'var(--ink-soft)';
+            right.textContent = fmt(f.size) + (tooBig ? ' · zu groß' : '');
+            row.appendChild(left); row.appendChild(right);
+            list.appendChild(row);
+        });
+    }
+    dz.addEventListener('click', () => input.click());
+    input.addEventListener('change', () => { files = Array.from(input.files); render(); });
+    ['dragover','dragenter'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.style.borderColor = 'var(--gold)'; dz.style.background = 'var(--canvas)'; }));
+    ['dragleave','drop'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.style.borderColor = 'var(--line)'; dz.style.background = 'transparent'; }));
+    dz.addEventListener('drop', ev => { ev.preventDefault(); files = Array.from(ev.dataTransfer.files); render(); });
+
+    btn.addEventListener('click', function() {
+        if (!files.length) { input.click(); return; }
+        const data = new FormData();
+        data.append('_token', @json(csrf_token()));
+        data.append('customer_id', @json($customer->id));
+        data.append('visibility', document.getElementById('smart-visibility').value);
+        files.forEach(f => data.append('files[]', f, f.name));
+        const xhr = new XMLHttpRequest();
+        const wrap = document.getElementById('smart-progress');
+        const bar = document.getElementById('smart-progress-bar');
+        const label = document.getElementById('smart-progress-label');
+        wrap.style.display = 'block';
+        btn.disabled = true;
+        xhr.upload.addEventListener('progress', function(e) {
+            if (!e.lengthComputable) return;
+            const pct = Math.round(e.loaded / e.total * 100);
+            bar.style.width = pct + '%';
+            label.textContent = pct + '%';
+        });
+        xhr.addEventListener('load', function() {
+            btn.disabled = false;
+            if (xhr.status >= 200 && xhr.status < 300) {
+                label.textContent = '✓ Hochgeladen – KI-Analyse läuft im Hintergrund';
+                bar.style.background = '#3B7A57';
+                setTimeout(() => { window.location.href = window.location.pathname + '#tab-dokumente'; window.location.reload(); }, 800);
+            } else {
+                let msg = 'Fehler beim Upload.';
+                try { const j = JSON.parse(xhr.responseText); if (j.message) msg = j.message; } catch(e) {}
+                label.textContent = '⚠ ' + msg;
+                bar.style.background = '#A32D2D';
+            }
+        });
+        xhr.addEventListener('error', function() {
+            btn.disabled = false;
+            label.textContent = '⚠ Netzwerkfehler beim Upload.';
+            bar.style.background = '#A32D2D';
+        });
+        xhr.open('POST', @json(route('admin.documents.smart_upload')));
+        xhr.setRequestHeader('Accept', 'application/json');
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.send(data);
+    });
+})();
+</script>
 
 {{-- Add Document Modal --}}
 <div id="add-doc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">

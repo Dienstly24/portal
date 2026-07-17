@@ -29,6 +29,9 @@ Schedule::command('activity:prune')->dailyAt('03:45');
 // 08:15 — Fristen-Watchdog Dokumentenanfragen (Phase 3): Kunden-Erinnerung + Überfälligkeits-Hinweis
 Schedule::command('document-requests:remind')->dailyAt('08:15');
 
+// Alle 10 Minuten — Sicherheitsnetz Smart Document Upload: haengende KI-Analysen neu anstossen
+Schedule::command('documents:analyze-pending')->everyTenMinutes()->withoutOverlapping();
+
 // 07:30 — Aufgabe: Kind wird in 4 Monaten 15
 Schedule::call(function () {
     $target = now()->addMonths(4)->subYears(15)->toDateString();

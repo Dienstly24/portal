@@ -1,0 +1,496 @@
+@extends('layouts.admin')
+@section('content')
+<div class="page-header">
+    <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Dokumenten-Eingang</span></div>
+    <div>
+        <div class="page-title">⚡ Dokumenten-Eingang (KI)</div>
+        <div class="page-sub">Dokumente hochladen oder hierher ziehen – die KI erkennt den Typ, liest die Daten und schlägt den passenden Kunden vor.</div>
+    </div>
+</div>
+
+@if(!$aiEnabled)
+<div style="background:#FEF3C7;color:#92400E;padding:12px 16px;border-radius:8px;margin-bottom:16px;">
+    ⚠ KI-Analyse ist nicht konfiguriert (<code>ANTHROPIC_API_KEY</code> fehlt). Uploads werden gespeichert, aber nicht automatisch analysiert.
+</div>
+@endif
+
+{{-- Drag&Drop Smart-Upload (ohne Kundenzuordnung -> Eingang) --}}
+<div class="card" style="margin-bottom:20px;">
+    <div id="inbox-dropzone" style="border:2px dashed var(--line);border-radius:12px;padding:30px;text-align:center;cursor:pointer;transition:.15s;">
+        <div style="font-size:34px;margin-bottom:6px;">📥</div>
+        <div style="font-size:14px;color:var(--ink-soft);">Dateien hierher ziehen oder <span style="color:var(--gold);font-weight:600;">durchsuchen</span></div>
+        <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">PDF, JPG, PNG, WEBP · max. 10 MB pro Datei · mehrere Bilder werden zu EINEM Dokument gebündelt</div>
+        <input type="file" id="inbox-files" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none;">
+    </div>
+    <div id="inbox-upload-progress" style="display:none;margin-top:12px;">
+        <div style="height:8px;background:var(--canvas);border:1px solid var(--line);border-radius:6px;overflow:hidden;">
+            <div id="inbox-upload-bar" style="height:100%;width:0;background:var(--gold);transition:width .2s;"></div>
+        </div>
+        <div id="inbox-upload-label" style="font-size:12px;color:var(--ink-soft);margin-top:5px;">0%</div>
+    </div>
+</div>
+
+{{-- Eingang: nicht zugeordnete Dokumente --}}
+<div class="card" style="padding:0;overflow:hidden;margin-bottom:24px;">
+    <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">Nicht zugeordnet ({{ $inboxDocuments->count() }})</div>
+    @forelse($inboxDocuments as $doc)
+    @php $extracted = $doc->ai_extracted ?? []; $match = $extracted['match'] ?? null; @endphp
+    <div style="padding:16px 20px;border-bottom:1px solid var(--line);" data-doc-row="{{ $doc->id }}" data-doc-status="{{ $doc->ai_status }}">
+        <div style="display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:flex-start;">
+            <div style="min-width:260px;flex:1;">
+                <div style="font-weight:600;font-size:14px;">
+                    📄 <a href="{{ route('admin.documents.download', $doc->id) }}">{{ $doc->file_name }}</a>
+                    @if($doc->page_count)<span style="font-weight:400;color:var(--ink-soft);font-size:12.5px;"> · {{ $doc->page_count }} Seiten</span>@endif
+                </div>
+                <div style="font-size:12.5px;color:var(--ink-soft);margin-top:2px;">
+                    Hochgeladen {{ $doc->created_at->format('d.m.Y H:i') }}@if($doc->uploader) von {{ $doc->uploader->name }}@endif
+                </div>
+                <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                    @if($doc->aiInProgress())
+                        <span class="badge" style="background:#FEF3C7;color:#92400E;">⏳ Wird analysiert…</span>
+                    @elseif($doc->ai_status === 'done')
+                        <span class="badge" style="background:#d9f4e6;color:#128a4b;">✓ {{ $doc->aiTypeLabel() ?? 'Erkannt' }}</span>
+                        @if($doc->ai_confidence !== null)<span class="badge" style="background:#EEF0F3;color:var(--ink-soft);">{{ $doc->ai_confidence }}% sicher</span>@endif
+                    @elseif($doc->ai_status === 'failed')
+                        <span class="badge" style="background:#FBE9E9;color:#B3261E;">Analyse fehlgeschlagen</span>
+                    @else
+                        <span class="badge" style="background:#EEF0F3;color:var(--ink-soft);">Ohne Analyse</span>
+                    @endif
+                </div>
+                @if($doc->ai_summary)<div style="font-size:13px;margin-top:8px;">{{ $doc->ai_summary }}</div>@endif
+                @if($doc->ai_error)<div style="font-size:12.5px;color:#B3261E;margin-top:6px;">{{ $doc->ai_error }}</div>@endif
+
+                @if($match)
+                <div style="margin-top:10px;border:1px solid {{ $match['tier'] === 'auto' ? '#17A65B' : 'var(--line)' }};background:{{ $match['tier'] === 'auto' ? '#d9f4e6' : '#F4F5F7' }};border-radius:10px;padding:10px 12px;font-size:13px;">
+                    👤 Kunde gefunden: <strong>{{ $match['name'] ?? '—' }}</strong>
+                    ({{ $match['customer_number'] ?? '—' }}) · Übereinstimmung {{ $match['score'] }}%
+                    <button type="button" class="btn btn-gold btn-sm" style="margin-inline-start:10px;"
+                        onclick="docReview.open(@js($doc->id), 'assign', @js($match['customer_id']), @js(($match['name'] ?? '') . ' (' . ($match['customer_number'] ?? '') . ')'))">
+                        Diesem Kunden zuordnen
+                    </button>
+                </div>
+                @elseif($doc->ai_status === 'done')
+                <div style="margin-top:10px;font-size:13px;color:var(--ink-soft);">Kein Kunde gefunden.</div>
+                @endif
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
+                @if(!$doc->aiInProgress())
+                <button type="button" class="btn btn-primary btn-sm" onclick="docReview.open(@js($doc->id), 'assign', null, null)">Kunden zuordnen…</button>
+                @if(($extracted['person']['first_name'] ?? null) || ($extracted['person']['last_name'] ?? null))
+                <button type="button" class="btn btn-gold btn-sm" onclick="docReview.open(@js($doc->id), 'create', null, null)">Neuen Kunden erstellen</button>
+                @endif
+                @if($aiEnabled)
+                <button type="button" class="btn btn-ghost btn-sm" onclick="docReview.reanalyze(@js($doc->id), this)">🔄 Neu analysieren</button>
+                @endif
+                @endif
+            </div>
+        </div>
+    </div>
+    @empty
+    <div style="padding:22px 20px;color:var(--ink-soft);font-size:13.5px;">📭 Keine unzugeordneten Dokumente – alles erledigt.</div>
+    @endforelse
+</div>
+
+{{-- Zuletzt analysierte, bereits zugeordnete Dokumente --}}
+<div class="card" style="padding:0;overflow:hidden;">
+    <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">Zuletzt analysiert &amp; zugeordnet</div>
+    <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:13.5px;">
+        <thead>
+            <tr style="text-align:start;color:var(--ink-soft);font-size:12px;">
+                <th style="text-align:start;padding:10px 20px;">Dokument</th>
+                <th style="text-align:start;padding:10px 12px;">Kunde</th>
+                <th style="text-align:start;padding:10px 12px;">Erkannt als</th>
+                <th style="text-align:start;padding:10px 12px;">Status</th>
+                <th style="text-align:start;padding:10px 20px;">Datum</th>
+            </tr>
+        </thead>
+        <tbody>
+        @forelse($recentDocuments as $doc)
+            <tr style="border-top:1px solid var(--line);" @if($doc->aiInProgress()) data-doc-row="{{ $doc->id }}" data-doc-status="{{ $doc->ai_status }}" @endif>
+                <td style="padding:10px 20px;"><a href="{{ route('admin.documents.download', $doc->id) }}">{{ $doc->file_name }}</a></td>
+                <td style="padding:10px 12px;">
+                    @if($doc->customer)<a href="{{ route('admin.customer', $doc->customer_id) }}#tab-dokumente">{{ $doc->customer->user?->name ?? $doc->customer->customer_number }}</a>@else — @endif
+                </td>
+                <td style="padding:10px 12px;">{{ $doc->aiTypeLabel() ?? '—' }}</td>
+                <td style="padding:10px 12px;">
+                    @if($doc->aiInProgress())<span class="badge" style="background:#FEF3C7;color:#92400E;">⏳ läuft</span>
+                    @elseif($doc->ai_status === 'done')<span class="badge" style="background:#d9f4e6;color:#128a4b;">✓ analysiert</span>
+                    @elseif($doc->ai_status === 'failed')<span class="badge" style="background:#FBE9E9;color:#B3261E;">Fehler</span>
+                    @endif
+                </td>
+                <td style="padding:10px 20px;color:var(--ink-soft);">{{ $doc->created_at->format('d.m.Y H:i') }}</td>
+            </tr>
+        @empty
+            <tr><td colspan="5" style="padding:18px 20px;color:var(--ink-soft);">Noch keine analysierten Dokumente.</td></tr>
+        @endforelse
+        </tbody>
+    </table>
+    </div>
+</div>
+
+{{-- Review-/Zuordnungs-Modal --}}
+<div id="doc-review-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:#fff;border-radius:14px;padding:26px;width:100%;max-width:620px;position:relative;max-height:92vh;overflow-y:auto;">
+        <button type="button" onclick="docReview.close()" style="position:absolute;top:14px;right:14px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <div style="font-size:17px;font-weight:700;margin-bottom:4px;" id="review-title">Dokument zuordnen</div>
+        <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;" id="review-doc-name"></div>
+
+        {{-- Kundensuche (Modus: zuordnen) --}}
+        <div id="review-assign-block">
+            <div class="field" style="margin-bottom:6px;">
+                <label>Kunde suchen (Name, Kundennummer, E-Mail, Telefon)</label>
+                <input type="text" id="review-customer-q" autocomplete="off" placeholder="Mind. 2 Zeichen…"
+                    style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+            </div>
+            <div id="review-customer-results" style="margin-bottom:10px;"></div>
+            <div id="review-customer-chosen" style="display:none;background:#d9f4e6;border:1px solid #17A65B;border-radius:8px;padding:9px 12px;font-size:13.5px;margin-bottom:12px;"></div>
+        </div>
+
+        {{-- Neuanlage-Hinweis (Modus: neuer Kunde) --}}
+        <div id="review-create-block" style="display:none;background:#E6F1FB;border:1px solid #185FA5;border-radius:8px;padding:10px 12px;font-size:13.5px;margin-bottom:12px;"></div>
+
+        {{-- Extrahierte Daten --}}
+        <div id="review-extract-section" style="display:none;">
+            <div style="font-weight:700;font-size:13.5px;margin:6px 0 8px;">Erkannte Daten übernehmen <span style="font-weight:400;color:var(--ink-soft);">(nur leere Felder werden befüllt)</span></div>
+            <div id="review-apply-fields" style="display:grid;grid-template-columns:1fr;gap:6px;margin-bottom:12px;"></div>
+        </div>
+
+        {{-- Vertrag --}}
+        <div id="review-contract-section" style="display:none;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;">
+            <label style="display:flex;gap:9px;align-items:flex-start;font-size:13.5px;cursor:pointer;">
+                <input type="checkbox" id="review-create-contract" style="margin-top:2px;">
+                <span><strong>Vertrag anlegen/verknüpfen</strong><br><span id="review-contract-info" style="color:var(--ink-soft);font-size:12.5px;"></span></span>
+            </label>
+        </div>
+
+        <div class="field">
+            <label>Sichtbarkeit des Dokuments</label>
+            <select id="review-visibility" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                <option value="internal">🔒 Nur intern</option>
+                <option value="customer">👤 Kundensichtbar</option>
+            </select>
+        </div>
+
+        <div id="review-error" style="display:none;background:#FBE9E9;color:#B3261E;padding:9px 12px;border-radius:8px;font-size:13px;margin-bottom:12px;"></div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button type="button" class="btn btn-ghost" onclick="docReview.close()">Abbrechen</button>
+            <button type="button" class="btn btn-gold" id="review-submit" onclick="docReview.submit()">Zuordnen &amp; übernehmen</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Daten der Eingangs-Dokumente fuer das Review-Modal (nur Anzeige;
+// alle Werte werden per textContent gesetzt - kein HTML aus KI-Ausgaben).
+@php
+    $inboxDocsJson = $inboxDocuments->mapWithKeys(fn($d) => [$d->id => [
+        'id' => $d->id,
+        'file_name' => $d->file_name,
+        'type_label' => $d->aiTypeLabel(),
+        'summary' => $d->ai_summary,
+        'extracted' => $d->ai_extracted ?: new stdClass(),
+    ]]);
+@endphp
+window.INBOX_DOCS = @json($inboxDocsJson);
+
+window.docReview = (function() {
+    var current = null;   // {docId, mode, customerId, customerLabel}
+    var searchTimer = null;
+
+    var APPLY_GROUPS = [
+        { key: 'birth_date', label: 'Geburtsdatum', from: function(x) { return get(x, 'person', 'birth_date'); } },
+        { key: 'birth_place', label: 'Geburtsort', from: function(x) { return get(x, 'person', 'birth_place'); } },
+        { key: 'address', label: 'Adresse', from: function(x) {
+            var p = x.person || {};
+            var s = [(p.street || '') + ' ' + (p.house_number || ''), [(p.zip || ''), (p.city || '')].join(' ').trim()]
+                .map(function(v) { return v.trim(); }).filter(Boolean).join(', ');
+            return s || null;
+        } },
+        { key: 'phone', label: 'Telefon', from: function(x) { return get(x, 'person', 'phone'); } },
+        { key: 'nationality', label: 'Staatsangehörigkeit', from: function(x) { return get(x, 'person', 'nationality'); } },
+        { key: 'email2', label: 'E-Mail (Zweitadresse)', from: function(x) { return get(x, 'person', 'email'); } },
+        { key: 'health_insurance', label: 'Krankenkasse / Versichertennummer', from: function(x) {
+            var g = x.gesundheit || {};
+            return [g.health_insurance_company, g.health_insurance_number].filter(Boolean).join(' · ') || null;
+        } },
+        { key: 'iban', label: 'IBAN / Kontoinhaber', from: function(x) {
+            var b = x.bank || {};
+            return [b.iban, b.account_holder].filter(Boolean).join(' · ') || null;
+        } },
+    ];
+
+    function get(x, a, b) { return (x[a] || {})[b] || null; }
+    function el(id) { return document.getElementById(id); }
+
+    function open(docId, mode, customerId, customerLabel) {
+        var doc = window.INBOX_DOCS[docId];
+        if (!doc) return;
+        current = { docId: docId, mode: mode, customerId: customerId || null };
+
+        el('review-title').textContent = mode === 'create' ? 'Neuen Kunden erstellen' : 'Dokument zuordnen';
+        el('review-doc-name').textContent = '📄 ' + doc.file_name + (doc.type_label ? ' · ' + doc.type_label : '');
+        el('review-error').style.display = 'none';
+        el('review-customer-q').value = '';
+        el('review-customer-results').innerHTML = '';
+        el('review-visibility').value = 'internal';
+
+        el('review-assign-block').style.display = mode === 'assign' ? '' : 'none';
+        el('review-create-block').style.display = mode === 'create' ? '' : 'none';
+
+        if (mode === 'create') {
+            var p = (doc.extracted || {}).person || {};
+            var name = [(p.first_name || ''), (p.last_name || '')].join(' ').trim() || 'Unbekannt';
+            el('review-create-block').textContent = '🆕 Es wird ein neuer Kunde angelegt: ' + name
+                + ' – mit neuer Kundennummer. Die unten ausgewählten Daten werden in die Kundenakte übernommen.';
+        }
+
+        chooseCustomer(customerId || null, customerLabel || null);
+        renderApplyFields(doc);
+        renderContract(doc);
+
+        el('review-submit').textContent = mode === 'create' ? 'Kunden anlegen & Dokument zuordnen' : 'Zuordnen & übernehmen';
+        el('doc-review-modal').style.display = 'flex';
+    }
+
+    function renderApplyFields(doc) {
+        var wrap = el('review-apply-fields');
+        wrap.innerHTML = '';
+        var any = false;
+        APPLY_GROUPS.forEach(function(group) {
+            var value = group.from(doc.extracted || {});
+            if (!value) return;
+            any = true;
+            var label = document.createElement('label');
+            label.style.cssText = 'display:flex;gap:9px;align-items:flex-start;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;';
+            var cb = document.createElement('input');
+            cb.type = 'checkbox'; cb.checked = true; cb.value = group.key; cb.className = 'review-apply-cb';
+            cb.style.marginTop = '2px';
+            var span = document.createElement('span');
+            var strong = document.createElement('strong');
+            strong.textContent = group.label + ': ';
+            span.appendChild(strong);
+            span.appendChild(document.createTextNode(value));
+            label.appendChild(cb); label.appendChild(span);
+            wrap.appendChild(label);
+        });
+        el('review-extract-section').style.display = any ? '' : 'none';
+    }
+
+    function renderContract(doc) {
+        var ins = (doc.extracted || {}).versicherung || {};
+        var kfz = (doc.extracted || {}).kfz || {};
+        var has = ins.insurer || ins.contract_number;
+        el('review-contract-section').style.display = has ? '' : 'none';
+        el('review-create-contract').checked = false;
+        if (has) {
+            var parts = [];
+            if (ins.insurer) parts.push(ins.insurer);
+            if (ins.contract_number) parts.push('Nr. ' + ins.contract_number);
+            if (ins.sparte) parts.push('Sparte: ' + ins.sparte);
+            if (ins.premium_amount) parts.push(ins.premium_amount + ' €');
+            if (kfz.license_plate) parts.push('Kennzeichen: ' + kfz.license_plate);
+            el('review-contract-info').textContent = parts.join(' · ');
+        }
+    }
+
+    function chooseCustomer(id, label) {
+        current.customerId = id;
+        var chosen = el('review-customer-chosen');
+        if (id && label) {
+            chosen.style.display = '';
+            chosen.textContent = '✓ Ausgewählt: ' + label;
+        } else {
+            chosen.style.display = 'none';
+            chosen.textContent = '';
+        }
+    }
+
+    function search(q) {
+        fetch(@json(route('admin.documents.customer_search')) + '?q=' + encodeURIComponent(q), {
+            headers: { 'Accept': 'application/json' }, credentials: 'same-origin'
+        }).then(function(r) { return r.json(); }).then(function(list) {
+            var wrap = el('review-customer-results');
+            wrap.innerHTML = '';
+            list.forEach(function(c) {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.style.cssText = 'display:block;width:100%;text-align:start;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 11px;font-size:13px;margin-bottom:5px;cursor:pointer;';
+                btn.textContent = (c.name || '—') + ' · ' + (c.number || '') + (c.email ? ' · ' + c.email : '');
+                btn.onclick = function() {
+                    chooseCustomer(c.id, (c.name || '—') + ' (' + (c.number || '') + ')');
+                    wrap.innerHTML = '';
+                    el('review-customer-q').value = '';
+                };
+                wrap.appendChild(btn);
+            });
+            if (!list.length) {
+                var none = document.createElement('div');
+                none.style.cssText = 'font-size:12.5px;color:var(--ink-soft);padding:4px 2px;';
+                none.textContent = 'Keine Treffer.';
+                wrap.appendChild(none);
+            }
+        });
+    }
+
+    function submit() {
+        if (!current) return;
+        var isCreate = current.mode === 'create';
+        if (!isCreate && !current.customerId) {
+            showError('Bitte zuerst einen Kunden auswählen.');
+            return;
+        }
+        var fields = Array.from(document.querySelectorAll('.review-apply-cb'))
+            .filter(function(cb) { return cb.checked; }).map(function(cb) { return cb.value; });
+
+        var payload = {
+            apply_fields: fields,
+            create_contract: el('review-create-contract').checked ? 1 : 0,
+            visibility: el('review-visibility').value,
+        };
+        if (!isCreate) payload.customer_id = current.customerId;
+
+        var url = isCreate
+            ? @json(route('admin.documents.create_customer', ['id' => '__ID__']))
+            : @json(route('admin.documents.assign', ['id' => '__ID__']));
+        url = url.replace('__ID__', current.docId);
+
+        el('review-submit').disabled = true;
+        fetch(url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': @json(csrf_token()),
+            },
+            body: JSON.stringify(payload),
+        }).then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })
+        .then(function(res) {
+            el('review-submit').disabled = false;
+            if (res.ok && res.json.ok) {
+                window.location.href = res.json.customer_url || window.location.href;
+            } else {
+                showError(res.json.message || 'Aktion fehlgeschlagen.');
+            }
+        }).catch(function() {
+            el('review-submit').disabled = false;
+            showError('Netzwerkfehler.');
+        });
+    }
+
+    function showError(msg) {
+        var box = el('review-error');
+        box.textContent = '⚠ ' + msg;
+        box.style.display = '';
+    }
+
+    function reanalyze(docId, btn) {
+        btn.disabled = true;
+        fetch(@json(route('admin.documents.reanalyze', ['id' => '__ID__'])).replace('__ID__', docId), {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': @json(csrf_token()) },
+        }).then(function(r) { return r.json(); }).then(function() { window.location.reload(); })
+        .catch(function() { btn.disabled = false; });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        el('review-customer-q').addEventListener('input', function() {
+            var q = this.value.trim();
+            if (searchTimer) clearTimeout(searchTimer);
+            if (q.length < 2) { el('review-customer-results').innerHTML = ''; return; }
+            searchTimer = setTimeout(function() { search(q); }, 300);
+        });
+        el('doc-review-modal').addEventListener('click', function(e) {
+            if (e.target === this) docReview.close();
+        });
+    });
+
+    return {
+        open: open,
+        close: function() { el('doc-review-modal').style.display = 'none'; current = null; },
+        submit: submit,
+        reanalyze: reanalyze,
+    };
+})();
+
+// Drag&Drop-Upload in den Eingang + Status-Polling laufender Analysen
+(function() {
+    var dz = document.getElementById('inbox-dropzone');
+    var input = document.getElementById('inbox-files');
+
+    function uploadFiles(files) {
+        if (!files.length) return;
+        var data = new FormData();
+        data.append('_token', @json(csrf_token()));
+        Array.from(files).forEach(function(f) { data.append('files[]', f, f.name); });
+
+        var wrap = document.getElementById('inbox-upload-progress');
+        var bar = document.getElementById('inbox-upload-bar');
+        var label = document.getElementById('inbox-upload-label');
+        wrap.style.display = '';
+        bar.style.background = 'var(--gold)';
+
+        var xhr = new XMLHttpRequest();
+        xhr.upload.addEventListener('progress', function(e) {
+            if (!e.lengthComputable) return;
+            var pct = Math.round(e.loaded / e.total * 100);
+            bar.style.width = pct + '%';
+            label.textContent = pct + '%';
+        });
+        xhr.addEventListener('load', function() {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                label.textContent = '✓ Hochgeladen – Analyse gestartet';
+                setTimeout(function() { window.location.reload(); }, 700);
+            } else {
+                var msg = 'Fehler beim Upload.';
+                try { var j = JSON.parse(xhr.responseText); if (j.message) msg = j.message; } catch (e) {}
+                label.textContent = '⚠ ' + msg;
+                bar.style.background = '#A32D2D';
+            }
+        });
+        xhr.addEventListener('error', function() {
+            label.textContent = '⚠ Netzwerkfehler beim Upload.';
+            bar.style.background = '#A32D2D';
+        });
+        xhr.open('POST', @json(route('admin.documents.smart_upload')));
+        xhr.setRequestHeader('Accept', 'application/json');
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.send(data);
+    }
+
+    dz.addEventListener('click', function() { input.click(); });
+    input.addEventListener('change', function() { uploadFiles(this.files); this.value = ''; });
+    ['dragover', 'dragenter'].forEach(function(ev) {
+        dz.addEventListener(ev, function(e) { e.preventDefault(); dz.style.borderColor = 'var(--gold)'; dz.style.background = 'var(--surface)'; });
+    });
+    ['dragleave', 'drop'].forEach(function(ev) {
+        dz.addEventListener(ev, function(e) { e.preventDefault(); dz.style.borderColor = 'var(--line)'; dz.style.background = 'transparent'; });
+    });
+    dz.addEventListener('drop', function(e) { e.preventDefault(); uploadFiles(e.dataTransfer.files); });
+
+    // Laufende Analysen beobachten; bei Abschluss Seite aktualisieren
+    // (nur wenn gerade kein Modal offen ist).
+    var pendingIds = Array.from(document.querySelectorAll('[data-doc-row]'))
+        .filter(function(row) { return ['pending', 'processing'].indexOf(row.getAttribute('data-doc-status')) !== -1; })
+        .map(function(row) { return row.getAttribute('data-doc-row'); });
+    if (!pendingIds.length) return;
+
+    var statusUrl = @json(route('admin.documents.analyse_status', ['id' => '__ID__']));
+    function check() {
+        Promise.all(pendingIds.map(function(id) {
+            return fetch(statusUrl.replace('__ID__', id), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+                .then(function(r) { return r.json(); }).catch(function() { return null; });
+        })).then(function(results) {
+            var finished = results.some(function(s) { return s && ['done', 'failed', 'none'].indexOf(s.status) !== -1; });
+            var modalOpen = document.getElementById('doc-review-modal').style.display === 'flex';
+            if (finished && !modalOpen) { window.location.reload(); return; }
+            setTimeout(check, 5000);
+        });
+    }
+    setTimeout(check, 5000);
+})();
+</script>
+@endsection
