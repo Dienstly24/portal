@@ -93,7 +93,7 @@ class PortalController extends Controller
     public function contractShow($id) {
         $customer = $this->getCustomer();
         $contract = Contract::where('customer_id', $customer->id)
-            ->with(['vehicleDetail', 'energyDetail', 'internetDetail'])
+            ->with(['vehicleDetail.mileageReadings', 'energyDetail', 'internetDetail'])
             ->where('id', $id)->firstOrFail();
 
         // Offene Vertragsaenderung fuer genau diesen Vertrag (new_data ist
@@ -103,6 +103,39 @@ class PortalController extends Controller
             ->first(fn($r) => ($r->new_data['id'] ?? null) === $contract->id);
 
         return view('portal.contract_show', ['contract' => $contract, 'pendingChange' => $pendingChange]);
+    }
+
+    /**
+     * Kunde meldet den aktuellen Kilometerstand seines KFZ-Vertrags
+     * (KFZ-Redesign 17.07.2026). Jede Meldung wird als eigene Ablesung
+     * gespeichert - alle frueheren Werte bleiben erhalten.
+     */
+    public function contractMileageStore(Request $request, $id) {
+        $customer = $this->getCustomer();
+        $contract = Contract::where('customer_id', $customer->id)
+            ->where('type', 'kfz')->with('vehicleDetail')
+            ->where('id', $id)->firstOrFail();
+        $detail = $contract->vehicleDetail;
+        abort_unless($detail, 404);
+
+        $request->validate(['mileage' => 'required|integer|min:0|max:5000000']);
+
+        // Ein Tacho zaehlt nicht rueckwaerts - Tippfehler frueh abfangen.
+        $latest = $detail->mileageReadings()->first();
+        if ($latest && (int) $request->mileage < (int) $latest->mileage) {
+            return back()->withErrors([
+                'mileage' => __('Der Kilometerstand kann nicht kleiner sein als die letzte Meldung (:km km).', ['km' => number_format($latest->mileage, 0, ',', '.')]),
+            ])->withInput();
+        }
+
+        $detail->mileageReadings()->create([
+            'mileage' => (int) $request->mileage,
+            'reading_date' => now()->toDateString(),
+            'source' => 'customer',
+            'created_by' => $customer->user?->name,
+        ]);
+
+        return back()->with('success', __('Vielen Dank! Ihr Kilometerstand wurde gespeichert.'));
     }
 
     public function tickets() {

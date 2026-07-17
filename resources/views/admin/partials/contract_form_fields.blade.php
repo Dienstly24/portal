@@ -104,36 +104,9 @@
     </div>
 </div>
 
-{{-- ===== KFZ ===== --}}
-<div id="section-kfz" class="branch-section" style="display:none;border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;">
-    <div class="card-title" style="font-size:14px;">🚗 Fahrzeug & Einstufung</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Kennzeichen</label><input type="text" name="vehicle[license_plate]" maxlength="20" value="{{ $val('vehicle.license_plate', $veh->license_plate ?? '') }}" placeholder="HH-AB 1234"></div>
-        <div class="field"><label>Fahrzeugtyp</label><input type="text" name="vehicle[vehicle_type]" maxlength="50" value="{{ $val('vehicle.vehicle_type', $veh->vehicle_type ?? '') }}" placeholder="PKW"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Hersteller</label><input type="text" name="vehicle[manufacturer]" value="{{ $val('vehicle.manufacturer', $veh->manufacturer ?? '') }}" placeholder="VW"></div>
-        <div class="field"><label>Modell</label><input type="text" name="vehicle[model]" value="{{ $val('vehicle.model', $veh->model ?? '') }}" placeholder="Golf VIII"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>FIN / Fahrgestellnummer</label><input type="text" name="vehicle[vin]" maxlength="30" value="{{ $val('vehicle.vin', $veh->vin ?? '') }}"></div>
-        <div class="field"><label>Erstzulassung</label><input type="date" name="vehicle[first_registration]" value="{{ $val('vehicle.first_registration', $veh && $veh->first_registration ? \Carbon\Carbon::parse($veh->first_registration)->format('Y-m-d') : '') }}"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>SF-Klasse Haftpflicht</label><input type="text" name="vehicle[sf_liability_class]" maxlength="10" value="{{ $val('vehicle.sf_liability_class', $veh->sf_liability_class ?? '') }}" placeholder="SF 12"></div>
-        <div class="field"><label>SF-Jahr Haftpflicht</label><input type="number" name="vehicle[sf_liability_year]" min="1950" max="2100" value="{{ $val('vehicle.sf_liability_year', $veh->sf_liability_year ?? '') }}"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>SF-Klasse Vollkasko</label><input type="text" name="vehicle[sf_comprehensive_class]" maxlength="10" value="{{ $val('vehicle.sf_comprehensive_class', $veh->sf_comprehensive_class ?? '') }}" placeholder="SF 10"></div>
-        <div class="field"><label>SF-Jahr Vollkasko</label><input type="number" name="vehicle[sf_comprehensive_year]" min="1950" max="2100" value="{{ $val('vehicle.sf_comprehensive_year', $veh->sf_comprehensive_year ?? '') }}"></div>
-    </div>
-    <div class="field">
-        <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="has-claims" {{ ($veh && $veh->has_claims) ? 'checked' : '' }} onchange="document.getElementById('claims-area').style.display=this.checked?'block':'none'"> Schäden vorhanden</label>
-    </div>
-    <div id="claims-area" style="display:{{ ($veh && $veh->has_claims) ? 'block' : 'none' }};">
-        <div id="claims-list"></div>
-        <button type="button" class="btn btn-ghost" style="font-size:12.5px;" onclick="addClaimRow()">+ Schaden hinzufügen</button>
-    </div>
+{{-- ===== KFZ (Redesign 17.07.2026: Button-Oberflaeche, eigenes Partial) ===== --}}
+<div id="section-kfz" class="branch-section" style="display:none;">
+    @include('admin.partials.contract_kfz_fields')
 </div>
 
 {{-- ===== Energie (Strom & Gas) ===== --}}
@@ -206,28 +179,5 @@ function contractToggleSections() {
     if (lbl) lbl.textContent = energyTypes.includes(type) ? 'Vertragsnummer' : 'Versicherungsnummer (VSNR)';
 }
 
-let claimIndex = 0;
-function addClaimRow(month, year, ctype) {
-    const wrap = document.createElement('div');
-    wrap.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;align-items:center;';
-    const sel = t => `<option value="${t}" ${ctype===t?'selected':''}>${t.charAt(0).toUpperCase()+t.slice(1)}</option>`;
-    wrap.innerHTML = `
-        <input type="number" name="vehicle[claims][${claimIndex}][month]" min="1" max="12" placeholder="Monat" value="${month??''}" style="width:90px;padding:8px;border:1px solid var(--line);border-radius:8px;">
-        <input type="number" name="vehicle[claims][${claimIndex}][year]" min="1990" max="2100" placeholder="Jahr" value="${year??''}" style="width:100px;padding:8px;border:1px solid var(--line);border-radius:8px;">
-        <select name="vehicle[claims][${claimIndex}][type]" style="padding:8px;border:1px solid var(--line);border-radius:8px;">
-            ${sel('haftpflicht')}${sel('vollkasko')}${sel('teilkasko')}
-        </select>
-        <button type="button" onclick="this.parentElement.remove()" style="border:none;background:none;cursor:pointer;">✕</button>`;
-    document.getElementById('claims-list').appendChild(wrap);
-    claimIndex++;
-}
-
-document.addEventListener('DOMContentLoaded', function () {
-    contractToggleSections();
-    @if($veh && $veh->has_claims && is_array($veh->claims))
-        @foreach($veh->claims as $claim)
-        addClaimRow({{ (int)($claim['month'] ?? 0) ?: 'null' }}, {{ (int)($claim['year'] ?? 0) ?: 'null' }}, @json($claim['type'] ?? 'haftpflicht'));
-        @endforeach
-    @endif
-});
+document.addEventListener('DOMContentLoaded', contractToggleSections);
 </script>

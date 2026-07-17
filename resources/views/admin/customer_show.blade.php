@@ -334,13 +334,24 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
             <td colspan="8" style="padding:4px 12px 12px;">
                 <div style="font-size:12.5px;color:var(--ink-soft);background:var(--canvas);border:1px solid var(--line);border-radius:8px;padding:8px 12px;">
                     @if($v = $c->vehicleDetail)
-                        🚗 <b>{{ $v->license_plate ?? '—' }}</b> · {{ $v->manufacturer }} {{ $v->model }}@if($v->vehicle_type) ({{ $v->vehicle_type }})@endif
-                        @if($v->vin) · FIN {{ $v->vin }}@endif
+                        @php $vMileage = $v->mileageStatus(); $vLatest = $v->latestMileageReading(); @endphp
+                        {{ $v->vehicleTypeIcon() }} <b>{{ $v->license_plate ?? '—' }}</b> · {{ $v->manufacturer }} {{ $v->model }}@if($v->vehicleTypeLabel()) ({{ $v->vehicleTypeLabel() }})@endif
                         @if($v->first_registration) · EZ {{ $v->first_registration->format('m/Y') }}@endif
-                        @if($v->sf_liability_class) · SF Haftpflicht: {{ $v->sf_liability_class }}@if($v->sf_liability_year) ({{ $v->sf_liability_year }})@endif @endif
-                        @if($v->sf_comprehensive_class) · SF Vollkasko: {{ $v->sf_comprehensive_class }}@if($v->sf_comprehensive_year) ({{ $v->sf_comprehensive_year }})@endif @endif
-                        @if($v->has_claims)
-                            <br>⚠️ Schäden: @foreach($v->claims ?? [] as $claim){{ str_pad($claim['month'] ?? '?', 2, '0', STR_PAD_LEFT) }}/{{ $claim['year'] ?? '?' }} ({{ ucfirst($claim['type'] ?? '') }})@if(!$loop->last), @endif @endforeach
+                        · <b>{{ $v->coverageLabel() }}</b>
+                        @if($v->sf_liability_class)
+                            <br>📊 SF Haftpflicht: <b>{{ \App\Models\ContractVehicleDetail::sfLabel($v->sf_liability_class) }}</b>@if($v->sf_liability_valid_from) (ab {{ $v->sf_liability_valid_from->format('d.m.Y') }})@endif {{ $v->sfTransferable('haftpflicht') ? '🟢' : '🔴 Sondereinstufung' }}
+                            @if($v->has_vollkasko && $v->sf_comprehensive_class) · SF Vollkasko: <b>{{ \App\Models\ContractVehicleDetail::sfLabel($v->sf_comprehensive_class) }}</b> {{ $v->sfTransferable('vollkasko') ? '🟢' : '🔴 Sondereinstufung' }}@endif
+                        @endif
+                        @if($v->extrasLabels())
+                            <br>🧩 {{ implode(' · ', $v->extrasLabels()) }}
+                        @endif
+                        @if($vLatest || $v->annual_mileage)
+                            <br>🧭 @if($vLatest){{ number_format($vLatest->mileage, 0, ',', '.') }} km ({{ $vLatest->reading_date->format('d.m.Y') }})@endif
+                            @if($v->annual_mileage) · vereinbart {{ number_format($v->annual_mileage, 0, ',', '.') }} km/Jahr @endif
+                            @if($vMileage && $vMileage['exceeded']) <b style="color:#A32D2D;">⚠️ hochgerechnet {{ number_format($vMileage['projected'], 0, ',', '.') }} km/Jahr – Limit überschritten</b>@endif
+                        @endif
+                        @if($v->claims->isNotEmpty())
+                            <br>⚠️ {{ $v->claims->count() }} Schaden{{ $v->claims->count() > 1 ? 'fälle' : 'fall' }}: @foreach($v->claims->take(4) as $claim){{ $claim->claim_date?->format('m/Y') ?? '—' }} ({{ $claim->typeLabel() }}@if($claim->status), {{ $claim->statusLabel() }}@endif)@if(!$loop->last), @endif @endforeach
                         @endif
                     @elseif($e = $c->energyDetail)
                         {{ $c->typeIcon() }} {{ $e->tariff ?? 'Tarif —' }}@if($e->consumption_kwh) · {{ number_format($e->consumption_kwh, 0, ',', '.') }} kWh/Jahr @endif
