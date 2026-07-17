@@ -64,18 +64,19 @@
                 @if($doc->ai_summary)<div style="font-size:13px;margin-top:8px;">{{ $doc->ai_summary }}</div>@endif
                 @if($doc->ai_error)<div style="font-size:12.5px;color:#B3261E;margin-top:6px;">{{ $doc->ai_error }}</div>@endif
 
-                @if($match)
+                @if($match && ($match['out_of_portfolio'] ?? false))
+                {{-- Name/Kundennummer bewusst nicht angezeigt (ausserhalb des Portfolios). --}}
+                <div style="margin-top:10px;border:1px solid var(--line);background:#F4F5F7;border-radius:10px;padding:10px 12px;font-size:13px;color:var(--ink-soft);">
+                    👤 Möglicher Kunde erkannt (Übereinstimmung {{ $match['score'] }}%) – liegt außerhalb Ihres Portfolios. Bitte an Admin/Manager übergeben.
+                </div>
+                @elseif($match)
                 <div style="margin-top:10px;border:1px solid {{ $match['tier'] === 'auto' ? '#17A65B' : 'var(--line)' }};background:{{ $match['tier'] === 'auto' ? '#d9f4e6' : '#F4F5F7' }};border-radius:10px;padding:10px 12px;font-size:13px;">
                     👤 Kunde gefunden: <strong>{{ $match['name'] ?? '—' }}</strong>
                     ({{ $match['customer_number'] ?? '—' }}) · Übereinstimmung {{ $match['score'] }}%
-                    @if(auth()->user()->canAccessCustomer($match['customer_id']))
                     <button type="button" class="btn btn-gold btn-sm" style="margin-inline-start:10px;"
                         onclick="docReview.open(@js($doc->id), 'assign', @js($match['customer_id']), @js(($match['name'] ?? '') . ' (' . ($match['customer_number'] ?? '') . ')'))">
                         Diesem Kunden zuordnen
                     </button>
-                    @else
-                    <span style="color:var(--ink-soft);">· außerhalb Ihres Portfolios – bitte an Admin/Manager übergeben</span>
-                    @endif
                 </div>
                 @elseif($doc->ai_status === 'done')
                 <div style="margin-top:10px;font-size:13px;color:var(--ink-soft);">Kein Kunde gefunden.</div>
@@ -444,8 +445,10 @@ window.docReview = (function() {
     var uploadActive = false; // Auto-Reload pausieren, solange ein Upload laeuft
 
     function uploadFiles(files) {
-        if (!files.length) return;
+        if (!files.length || uploadActive) return; // kein Doppel-Upload waehrend ein anderer laeuft
         uploadActive = true;
+        dz.style.opacity = '.6';
+        dz.style.pointerEvents = 'none';
         var data = new FormData();
         data.append('_token', @json(csrf_token()));
         var bundle = document.getElementById('inbox-bundle');
@@ -465,12 +468,17 @@ window.docReview = (function() {
             bar.style.width = pct + '%';
             label.textContent = pct + '%';
         });
-        xhr.addEventListener('load', function() {
+        function unlockDropzone() {
             uploadActive = false;
+            dz.style.opacity = '';
+            dz.style.pointerEvents = '';
+        }
+        xhr.addEventListener('load', function() {
             if (xhr.status >= 200 && xhr.status < 300) {
                 label.textContent = '✓ Hochgeladen – Analyse gestartet';
                 setTimeout(function() { window.location.reload(); }, 700);
             } else {
+                unlockDropzone();
                 var msg = 'Fehler beim Upload.';
                 try { var j = JSON.parse(xhr.responseText); if (j.message) msg = j.message; } catch (e) {}
                 label.textContent = '⚠ ' + msg;
@@ -478,7 +486,7 @@ window.docReview = (function() {
             }
         });
         xhr.addEventListener('error', function() {
-            uploadActive = false;
+            unlockDropzone();
             label.textContent = '⚠ Netzwerkfehler beim Upload.';
             bar.style.background = '#A32D2D';
         });

@@ -30,6 +30,21 @@ class CustomerDeletionService
     {
         $user = $customer->user;
         $customerNumber = $customer->customer_number;
+        $documentIds = $customer->documents()->pluck('id');
+
+        // KI-Entscheidungsprotokoll (Smart Document Upload) bereinigen:
+        // der Eintrag selbst (Skill/Status/Zeitpunkt) bleibt als Nachweis
+        // erhalten, aber sein Inhalt (Name/Kundennummer des Matches, KI-
+        // Zusammenfassung) wird entfernt - sonst ueberlebt personenbezogene
+        // Information die Loeschung, weil ai_decisions.document_id absichtlich
+        // NICHT kaskadierend geloescht wird (Art. 17 DSGVO).
+        if ($documentIds->isNotEmpty()) {
+            // Ueber die Modelle iterieren (nicht per Mass-Update), damit der
+            // encrypted:array-Cast beim Schreiben tatsaechlich greift.
+            \App\Models\AiDecision::whereIn('document_id', $documentIds)->get()->each(
+                fn ($decision) => $decision->update(['output' => ['redacted_on_customer_deletion' => true]])
+            );
+        }
 
         // Physische Dokumentdateien (beide Disks) + Kundenverzeichnis
         foreach ($customer->documents()->get() as $doc) {

@@ -134,6 +134,17 @@ class SmartDocumentUploadController extends Controller
             ->when(!$user->canSeeAllCustomers(), fn ($q) => $q->where('uploaded_by', $user->id))
             ->latest()->get();
 
+        // Match-Vorschlaege ausserhalb des eigenen Portfolios bereinigen,
+        // BEVOR die View (inkl. des JSON-Blobs fuers Review-Modal) sie
+        // sieht - sonst laesst sich Name/Kundennummer per View-Source lesen.
+        foreach ($inbox as $doc) {
+            $extracted = $doc->ai_extracted;
+            if (is_array($extracted) && array_key_exists('match', $extracted)) {
+                $extracted['match'] = $this->scrubMatch($extracted['match']);
+                $doc->ai_extracted = $extracted;
+            }
+        }
+
         return view('admin.documents_inbox', [
             'inboxDocuments' => $inbox,
             'recentDocuments' => $recent,
@@ -160,7 +171,10 @@ class SmartDocumentUploadController extends Controller
 
         $customer = null;
         if ($request->filled('customer_id')) {
-            $customer = Customer::findOrFail($request->customer_id);
+            $customer = Customer::find($request->customer_id);
+            if (!$customer) {
+                return response()->json(['message' => 'Dieser Kunde existiert nicht (mehr).'], 404);
+            }
             abort_unless(auth()->user()->canAccessCustomer($customer->id), 403);
         }
 
@@ -170,6 +184,14 @@ class SmartDocumentUploadController extends Controller
         // Ohne bewusste Wahl bleibt ein Smart-Upload intern, bis ein
         // Mitarbeiter ihn freigibt (DSGVO-schonender Standard).
         $visibility = $request->input('visibility', 'internal');
+
+        // Gesamtgroesse ALLER Dateien begrenzen (Bilder + PDFs), nicht nur
+        // der Bilder - sonst waeren pro Request bis zu ~200 MB moeglich
+        // (20 Dateien x 10 MB Einzel-Limit).
+        $totalBytes = array_sum(array_map(fn ($f) => (int) $f->getSize(), $request->file('files')));
+        if ($totalBytes > 60 * 1024 * 1024) {
+            $this->failJson('Die Dateien sind zusammen zu gross (max. 60 MB pro Upload).');
+        }
 
         // Aufteilung nach ECHTEM Inhalt (finfo), nicht nach dem vom Client
         // gelieferten Dateinamen - "foto.pdf" mit JPEG-Inhalt ist ein Bild.
@@ -259,7 +281,10 @@ class SmartDocumentUploadController extends Controller
             'visibility' => 'nullable|in:customer,internal',
         ]);
 
-        $customer = Customer::findOrFail($request->customer_id);
+        $customer = Customer::find($request->customer_id);
+        if (!$customer) {
+            return response()->json(['message' => 'Dieser Kunde existiert nicht (mehr).'], 404);
+        }
         abort_unless(auth()->user()->canAccessCustomer($customer->id), 403);
 
         if ($document->customer_id && (string) $document->customer_id !== (string) $customer->id) {
@@ -425,12 +450,42 @@ class SmartDocumentUploadController extends Controller
         );
     }
 
-    /** Eingangs-Dokumente darf jeder Mitarbeiter sehen, Kunden-Dokumente nur mit Portfolio-Zugriff. */
+    /**
+     * Kunden-Dokumente nur mit Portfolio-Zugriff. Eingangs-Dokumente (noch
+     * kein Kunde) duerfen Admin/Manager immer oeffnen; Mitarbeiter mit
+     * eingeschraenktem Portfolio nur ihre EIGENEN Uploads - konsistent mit
+     * der Sichtbarkeits-Einschraenkung in inbox() (Datenminimierung: die
+     * Listen-Ansicht war schon gescopet, die Aktions-Endpunkte sonst nicht).
+     */
     private function authorizeDocument(Document $document): void
     {
-        if ($document->customer_id && !auth()->user()->canAccessCustomer($document->customer_id)) {
-            abort(403, 'Kein Zugriff auf diesen Kunden.');
+        $user = auth()->user();
+        if ($document->customer_id) {
+            if (!$user->canAccessCustomer($document->customer_id)) {
+                abort(403, 'Kein Zugriff auf diesen Kunden.');
+            }
+            return;
         }
+        if (!$user->canSeeAllCustomers() && (int) $document->uploaded_by !== (int) $user->id) {
+            abort(403, 'Kein Zugriff auf dieses Dokument.');
+        }
+    }
+
+    /**
+     * Match-Vorschlag fuer die Anzeige bereinigen: Name/Kundennummer eines
+     * Kunden ausserhalb des Portfolios des aktuellen Betrachters duerfen
+     * nicht offengelegt werden, auch wenn der Zuordnen-Button ohnehin
+     * ausgeblendet ist (sonst per View-Source/JSON-Blob sichtbar).
+     */
+    private function scrubMatch(?array $match): ?array
+    {
+        if ($match === null) {
+            return null;
+        }
+        if (auth()->user()?->canAccessCustomer($match['customer_id']) === true) {
+            return $match;
+        }
+        return ['out_of_portfolio' => true, 'score' => $match['score'], 'tier' => $match['tier']];
     }
 
     /** Portal-/CRM-Upload in ein Document verwandeln (Seiten -> PDF oder Original-PDF). */
@@ -573,7 +628,7 @@ class SmartDocumentUploadController extends Controller
             'category_label' => __(Document::CATEGORIES[$document->category] ?? $document->category),
             'customer_id' => $document->customer_id,
             'contract_id' => $document->contract_id,
-            'match' => $internal ? ($extracted['match'] ?? null) : null,
+            'match' => $internal ? $this->scrubMatch($extracted['match'] ?? null) : null,
         ];
     }
 

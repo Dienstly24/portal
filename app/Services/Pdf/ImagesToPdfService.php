@@ -50,7 +50,14 @@ class ImagesToPdfService
         }
 
         $mime = $info['mime'] ?? '';
-        if ($mime !== 'image/jpeg') {
+        if ($mime === 'image/jpeg') {
+            // Handyfotos tragen oft ein EXIF-Orientation-Tag statt gedrehter
+            // Pixel; ohne Korrektur landet das Bild seitlich im PDF (der
+            // Portal-Scanner umgeht das schon durchs Canvas-Redraw, Drag&Drop-
+            // Uploads im CRM nicht).
+            $binary = $this->correctOrientation($binary);
+            $info = @getimagesizefromstring($binary) ?: $info;
+        } else {
             $binary = $this->convertToJpeg($binary, $pageNo);
             $info = @getimagesizefromstring($binary);
             if ($info === false) {
@@ -65,6 +72,52 @@ class ImagesToPdfService
             // 1 = Graustufen, 3 = RGB, 4 = Adobe-CMYK (invertiert)
             'channels' => (int) ($info['channels'] ?? 3),
         ];
+    }
+
+    /**
+     * Dreht/spiegelt ein JPEG anhand seines EXIF-Orientation-Tags gerade.
+     * Ohne Tag oder ohne exif-Erweiterung bleibt das Bild unveraendert -
+     * kein harter Fehler, nur keine Korrektur.
+     */
+    private function correctOrientation(string $binary): string
+    {
+        if (!function_exists('exif_read_data')) {
+            return $binary;
+        }
+
+        $tmp = @tempnam(sys_get_temp_dir(), 'doc');
+        if ($tmp === false) {
+            return $binary;
+        }
+        file_put_contents($tmp, $binary);
+        $exif = @exif_read_data($tmp, null, false);
+        @unlink($tmp);
+
+        $orientation = (int) ($exif['Orientation'] ?? 1);
+        if ($orientation <= 1 || $orientation > 8) {
+            return $binary;
+        }
+
+        $img = @imagecreatefromstring($binary);
+        if ($img === false) {
+            return $binary;
+        }
+
+        switch ($orientation) {
+            case 2: imageflip($img, IMG_FLIP_HORIZONTAL); break;
+            case 3: $img = imagerotate($img, 180, 0); break;
+            case 4: imageflip($img, IMG_FLIP_VERTICAL); break;
+            case 5: imageflip($img, IMG_FLIP_VERTICAL); $img = imagerotate($img, -90, 0); break;
+            case 6: $img = imagerotate($img, -90, 0); break;
+            case 7: imageflip($img, IMG_FLIP_HORIZONTAL); $img = imagerotate($img, -90, 0); break;
+            case 8: $img = imagerotate($img, 90, 0); break;
+        }
+
+        ob_start();
+        imagejpeg($img, null, self::JPEG_QUALITY);
+        $out = (string) ob_get_clean();
+        imagedestroy($img);
+        return $out !== '' ? $out : $binary;
     }
 
     private function convertToJpeg(string $binary, int $pageNo): string

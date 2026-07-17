@@ -298,7 +298,11 @@ class DocumentIntakeService
                 ->where('contract_number', $number)->first();
         }
         if (!$contract && !blank($plate)) {
-            $normalized = strtoupper((string) preg_replace('/[^A-Z0-9]/i', '', $plate));
+            // Nur Trennzeichen entfernen (wie die SQL-Normalisierung unten),
+            // NICHT alle Nicht-ASCII-Zeichen - deutsche Kennzeichen mit
+            // Umlaut-Ortskennung (WÜ, GÖ, KÖN, SÜW, ...) wuerden sonst nie
+            // matchen, weil das alte \A-Z0-9\ das Ü/Ö einfach entfernte.
+            $normalized = mb_strtoupper((string) preg_replace('/[\s\-]+/u', '', $plate));
             $contract = Contract::where('customer_id', $customer->id)
                 ->whereHas('vehicleDetail', function ($q) use ($normalized) {
                     $q->whereRaw("replace(replace(upper(license_plate), '-', ''), ' ', '') = ?", [$normalized]);

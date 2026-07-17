@@ -37,6 +37,11 @@ class Document extends Model {
             // Verschluesselt at rest: kann IBAN/Versichertennummern enthalten
             // (gleiche Schutzstufe wie die SafeEncrypted-Kundenfelder).
             'ai_extracted' => 'encrypted:array',
+            // Die KI-Zusammenfassung ist reiner Fliesstext, kann aber trotz
+            // Prompt-Regel Namen/Fragmente enthalten - defensiv ebenfalls
+            // verschluesselt statt sich allein auf die Modell-Anweisung zu
+            // verlassen.
+            'ai_summary' => 'encrypted',
             'ai_processed_at' => 'datetime',
         ];
     }

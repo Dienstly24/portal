@@ -23,7 +23,9 @@ class AiDecision extends Model
     protected function casts(): array
     {
         return [
-            'output' => 'array',
+            // Verschluesselt at rest: enthaelt bei Dokument-Analysen Name/
+            // Kundennummer eines Matches sowie die KI-Zusammenfassung.
+            'output' => 'encrypted:array',
             'decided_at' => 'datetime',
         ];
     }

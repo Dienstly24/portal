@@ -57,4 +57,49 @@ class ImagesToPdfServiceTest extends TestCase
         $this->expectException(\RuntimeException::class);
         (new ImagesToPdfService())->build(['kein-bild']);
     }
+
+    /** Minimalen EXIF-APP1-Block mit einem Orientation-Tag in ein JPEG einfuegen. */
+    private function makeJpegWithOrientation(int $w, int $h, int $orientation): string
+    {
+        $img = imagecreatetruecolor($w, $h);
+        imagefill($img, 0, 0, imagecolorallocate($img, 200, 200, 200));
+        ob_start();
+        imagejpeg($img, null, 85);
+        $jpeg = (string) ob_get_clean();
+        imagedestroy($img);
+
+        // Minimaler TIFF-Header (Intel/Little-Endian) mit einem IFD-Eintrag: Orientation (Tag 0x0112, SHORT).
+        $tiff = "II" . pack('v', 42) . pack('V', 8);
+        $tiff .= pack('v', 1);
+        $tiff .= pack('v', 0x0112) . pack('v', 3) . pack('V', 1) . pack('v', $orientation) . pack('v', 0);
+        $tiff .= pack('V', 0);
+
+        $exif = "Exif\0\0" . $tiff;
+        $app1 = "\xFF\xE1" . pack('n', strlen($exif) + 2) . $exif;
+
+        return substr($jpeg, 0, 2) . $app1 . substr($jpeg, 2);
+    }
+
+    public function test_corrects_jpeg_exif_orientation(): void
+    {
+        if (!function_exists('exif_read_data')) {
+            $this->markTestSkipped('exif-Erweiterung nicht installiert.');
+        }
+
+        // 100x200 (Hochformat), Orientation=6 = "90 Grad im Uhrzeigersinn drehen"
+        // -> nach der Korrektur ist das eingebettete Bild 200x100 (Querformat).
+        $jpeg = $this->makeJpegWithOrientation(100, 200, 6);
+        $pdf = (new ImagesToPdfService())->build([$jpeg]);
+
+        $this->assertStringStartsWith('%PDF-1.4', $pdf);
+        $this->assertMatchesRegularExpression('/\/Width 200 \/Height 100/', $pdf);
+    }
+
+    public function test_leaves_jpeg_without_orientation_tag_unchanged_dimensions(): void
+    {
+        $jpeg = $this->makeJpeg(100, 200);
+        $pdf = (new ImagesToPdfService())->build([$jpeg]);
+
+        $this->assertMatchesRegularExpression('/\/Width 100 \/Height 200/', $pdf);
+    }
 }
