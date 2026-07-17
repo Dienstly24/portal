@@ -136,9 +136,9 @@
         <tbody>
         @forelse($expiring as $c)
         @php $days = now()->diffInDays(\Carbon\Carbon::parse($c->end_date)); @endphp
-        <tr>
+        <tr class="row-link" onclick="rowNav(event, '{{ route('admin.contract.edit', $c->id) }}')" title="Vertrag öffnen">
             <td style="padding:13px 20px;font-weight:600;">{{ $c->customer?->user?->name ?? '—' }}</td>
-            <td>{{ $c->insurer }}</td>
+            <td><a href="{{ route('admin.contract.edit', $c->id) }}" style="color:inherit;">{{ $c->insurer }}</a></td>
             <td>{{ ['kfz'=>'KFZ','krankenversicherung'=>'Kranken','internet'=>'Internet','strom'=>'Strom','gas'=>'Gas','strom_gas'=>'Strom & Gas','andere'=>'Andere'][$c->type] ?? $c->type }}</td>
             <td>{{ \Carbon\Carbon::parse($c->end_date)->format('d.m.Y') }}</td>
             <td>

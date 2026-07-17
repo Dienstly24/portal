@@ -68,7 +68,7 @@ $priorityText = ['high'=>'#A32D2D','medium'=>'#92400E','low'=>'#3B7A57'];
 $priorityLabel = ['high'=>'Hoch','medium'=>'Mittel','low'=>'Niedrig'];
 $typeIcon = ['call'=>'📞','email'=>'✉️','meeting'=>'📅','document'=>'📄','follow_up'=>'🔄','other'=>'📌'];
 @endphp
-<div class="card" style="padding:16px 20px;margin:0;">
+<div class="card" id="task-{{ $t->id }}" style="padding:16px 20px;margin:0;">
     <div style="display:flex;align-items:center;gap:14px;">
         <div style="width:40px;height:40px;border-radius:10px;background:#EEF0F3;display:flex;align-items:center;justify-content:center;font-size:20px;flex:none;">
             {{ $typeIcon[$t->type] ?? '📌' }}

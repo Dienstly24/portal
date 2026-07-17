@@ -28,6 +28,9 @@ body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
 .card-title{font-size:15px;font-weight:600;margin-bottom:16px;}
 .item-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);}
 .item-row:last-child{border-bottom:none;}
+/* Klickbare Listenzeilen: ganze Zeile fuehrt zum verknuepften Datensatz */
+.row-link{cursor:pointer;transition:background .12s;}
+.row-link:hover{background:var(--canvas);}
 .badge{font-size:12px;padding:4px 10px;border-radius:999px;font-weight:600;}
 .badge-active{background:#E4F0E7;color:#3B7A57;}
 .badge-pending{background:#F7E7D6;color:#B5651D;}

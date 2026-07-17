@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 @section('content')
 <div class="page-header">
-    <div class="breadcrumb"><a href="#">🏠</a><span class="breadcrumb-sep">›</span><span>Dashboard</span></div>
+    <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Dashboard</span></div>
     <div class="page-title">Hallo, {{ auth()->user()->name }}</div>
     <div class="page-sub">{{ now()->format('d.m.Y') }} — Willkommen in Ihrer Beraterwelt</div>
 </div>
@@ -66,7 +66,7 @@
         <a href="{{ route('admin.tickets') }}" class="card-link">Alle anzeigen →</a>
     </div>
     @forelse($recentTickets as $t)
-    <div class="item-row">
+    <div class="item-row row-link" onclick="rowNav(event, '{{ route('admin.ticket', $t->id) }}')" title="Antrag öffnen">
         <div>
             <div style="font-weight:600;font-size:14px;">{{ $t->subject }}</div>
             <div style="font-size:12px;color:var(--ink-soft);">{{ $t->customer?->user?->name }} · {{ $t->created_at->format('d.m.Y') }}</div>

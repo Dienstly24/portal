@@ -345,7 +345,8 @@ class PortalController extends Controller
                 'body' => $n->body,
                 'time' => $n->created_at->format('d.m.Y H:i'),
                 'read' => $n->read_at !== null,
-                'url' => $n->link ?: '#',
+                // Fallback Dashboard statt totem '#': jede Meldung bleibt klickbar
+                'url' => $n->link ?: route('portal.dashboard'),
             ]);
 
         return response()->json([

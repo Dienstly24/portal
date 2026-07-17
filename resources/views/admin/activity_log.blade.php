@@ -37,8 +37,27 @@ $actionLabels = [
             $label = $actionLabels[$log->action] ?? [app(\App\Services\Activity\ActivityCatalog::class)->labelFor($log->action), 'badge-closed'];
             // metaArray(): Alt-Eintraege sind doppelt kodierte Strings, neue echte Arrays
             $meta = $log->metaArray();
+            // Verknuepften Datensatz oeffnen: je Entitaetstyp die passende
+            // Detail- bzw. Uebersichtsseite (geloeschte Datensaetze -> 404).
+            $entityUrl = null;
+            if ($log->entity_id) {
+                $entityUrl = match ($log->entity_type) {
+                    'customer' => route('admin.customer', $log->entity_id),
+                    'contract' => route('admin.contract.edit', $log->entity_id),
+                    'document' => route('admin.documents.download', $log->entity_id),
+                    'email_message' => route('admin.email_inbox.show', $log->entity_id),
+                    'internal_conversation' => route('admin.chat.show', $log->entity_id),
+                    'email_account' => route('admin.email_accounts.edit', $log->entity_id),
+                    'change_request' => route('admin.change_requests'),
+                    'document_request' => route('admin.document_requests'),
+                    'commission' => route('admin.commissions'),
+                    'banner' => route('admin.banners'),
+                    'user' => str_starts_with($log->action, 'employee_') ? route('admin.employees.edit', $log->entity_id) : null,
+                    default => null,
+                };
+            }
         @endphp
-        <tr>
+        <tr @if($entityUrl) class="row-link" onclick="rowNav(event, '{{ $entityUrl }}')" title="Verknüpften Datensatz öffnen" @endif>
             <td style="padding:13px 20px;font-size:13px;color:var(--ink-soft);white-space:nowrap;">
                 {{ $log->created_at->format('d.m.Y H:i') }}
             </td>
@@ -54,6 +73,7 @@ $actionLabels = [
             <td style="font-size:13px;color:var(--ink-soft);">
                 @if(isset($meta['name'])) {{ $meta['name'] }} @endif
                 @if(isset($meta['email'])) · {{ $meta['email'] }} @endif
+                @if($entityUrl) <a href="{{ $entityUrl }}" style="color:var(--gold);text-decoration:none;white-space:nowrap;">Öffnen →</a> @endif
             </td>
         </tr>
         @empty

@@ -52,6 +52,12 @@ body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
 .card-title{font-size:15px;font-weight:600;}
 .card-link{font-size:13px;color:var(--gold);text-decoration:none;}
 .card-link:hover{text-decoration:underline;}
+/* Klickbare Listenzeilen: ganze Zeile fuehrt zum verknuepften Datensatz */
+.row-link{cursor:pointer;transition:background .12s;}
+.row-link:hover{background:var(--canvas);}
+tr.row-link:hover td{background:var(--canvas);}
+/* Sprungziel (z.B. #task-42) beim Oeffnen aus einer Verknuepfung markieren */
+.card:target{outline:2px solid var(--gold);outline-offset:2px;}
 .metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
 .metric-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;}
 .metric-label{font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;font-weight:500;}
@@ -385,6 +391,12 @@ document.addEventListener('click', function(e) {
 // ===== Einheitliches Notification Center =====
 const csrfToken = '{{ csrf_token() }}';
 function escapeHtml(t){const d=document.createElement('div');d.textContent=t??'';return d.innerHTML;}
+// Ganze Tabellenzeile klickbar machen, ohne Buttons/Links/Formulare in der
+// Zeile zu stoeren (die behalten ihre eigene Aktion).
+function rowNav(e, url) {
+    if (e.target.closest('a,button,form,input,select,textarea,label')) return;
+    window.location = url;
+}
 function loadNotifications() {
     fetch('{{ route('admin.notifications') }}', {headers: {'Accept': 'application/json'}})
         .then(r => r.json())

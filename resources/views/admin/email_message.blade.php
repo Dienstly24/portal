@@ -101,13 +101,14 @@ $sb = $statusBadge[$message->match_status] ?? ['#EEF0F3', '#555', $message->matc
         <div class="card" style="padding:0;overflow:hidden;">
             <div style="padding:14px 20px;font-weight:700;border-bottom:1px solid var(--line);">Verknüpfte Aufgaben ({{ $tasks->count() }})</div>
             @forelse($tasks as $t)
-            <div style="padding:12px 20px;border-bottom:1px solid var(--line);font-size:13px;">
-                <div style="font-weight:600;">{{ $t->title }}</div>
+            @php $taskTab = $t->status === 'done' ? 'done' : ($t->customer_id ? 'customer' : 'mine'); @endphp
+            <a href="{{ route('admin.tasks', ['tab' => $taskTab]) }}#task-{{ $t->id }}" class="row-link" title="Aufgabe öffnen" style="display:block;padding:12px 20px;border-bottom:1px solid var(--line);font-size:13px;color:inherit;text-decoration:none;">
+                <div style="font-weight:600;">{{ $t->title }} <span style="color:var(--ink-soft);font-weight:400;">→</span></div>
                 <div style="color:var(--ink-soft);font-size:12px;margin-top:2px;">
                     {{ ['open'=>'Offen','in_progress'=>'In Bearbeitung','done'=>'Erledigt'][$t->status] ?? $t->status }}
                     @if($t->assignedTo) · {{ $t->assignedTo->name }}@endif
                 </div>
-            </div>
+            </a>
             @empty
             <div style="padding:16px 20px;color:var(--ink-soft);font-size:13px;">Keine verknüpften Aufgaben.</div>
             @endforelse
