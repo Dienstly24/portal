@@ -254,7 +254,10 @@ class AdminController extends Controller
             'vehicle.initial_mileage' => 'nullable|integer|min:0|max:5000000',
             'vehicle.current_mileage' => 'nullable|integer|min:0|max:5000000',
             'vehicle.current_mileage_date' => 'nullable|date',
-            'vehicle.annual_mileage' => 'nullable|integer|in:' . implode(',', \App\Models\ContractVehicleDetail::ANNUAL_MILEAGE_OPTIONS),
+            // Buttons decken die Standardwerte ab; "custom" schaltet das
+            // Freifeld fuer Sonderfaelle (8.000, 18.500, 22.500 km ...) frei.
+            'vehicle.annual_mileage' => 'nullable|in:custom,' . implode(',', \App\Models\ContractVehicleDetail::ANNUAL_MILEAGE_OPTIONS),
+            'vehicle.annual_mileage_custom' => 'nullable|integer|min:1000|max:150000|required_if:vehicle.annual_mileage,custom',
             // SF-Einstufung (Haftpflicht / Vollkasko getrennt)
             'vehicle.sf_liability_class' => 'nullable|in:' . implode(',', \App\Models\ContractVehicleDetail::sfClassKeys()),
             'vehicle.sf_liability_valid_from' => 'nullable|date',
@@ -274,6 +277,8 @@ class AdminController extends Controller
             'vehicle.claim_rows.*.status' => 'nullable|in:' . implode(',', array_keys(\App\Models\VehicleClaim::STATUSES)),
             'vehicle.claim_rows.*.insurer' => 'nullable|string|max:255',
             'vehicle.claim_rows.*.notes' => 'nullable|string|max:2000',
+        ], [
+            'vehicle.annual_mileage_custom.required_if' => 'Bitte die eigene Jahresfahrleistung in km angeben.',
         ]);
     }
 
@@ -379,7 +384,8 @@ class AdminController extends Controller
                 'holder_name' => ($blank('holder_type') === 'abweichender_halter') ? $blank('holder_name') : null,
                 'ownership_type' => $blank('ownership_type'),
                 'initial_mileage' => $blank('initial_mileage'),
-                'annual_mileage' => $blank('annual_mileage'),
+                // "custom" = Freifeld-Wert (Sonderfaelle wie 18.500 km/Jahr).
+                'annual_mileage' => $blank('annual_mileage') === 'custom' ? $blank('annual_mileage_custom') : $blank('annual_mileage'),
             ], $sfLiability, $sfComprehensive)
         );
 

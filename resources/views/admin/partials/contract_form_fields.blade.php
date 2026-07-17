@@ -67,6 +67,26 @@
         <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">Leer lassen, falls die echte Nummer noch nicht vorliegt. Es wird keine automatische Nummer erzeugt.</div>
     </div>
 </div>
+@php
+    // Ablauf-Automatik: Modus aus den Bestandsdaten ableiten, damit eine
+    // spaetere Aenderung des Beginns den Ablauf korrekt nachzieht.
+    // Neuanlage startet mit "12 Monate" (haeufigster Fall, spart Klicks).
+    $startVal = $val('start_date', $c && $c->start_date ? \Carbon\Carbon::parse($c->start_date)->format('Y-m-d') : '');
+    $endVal   = $val('end_date', $c && $c->end_date ? \Carbon\Carbon::parse($c->end_date)->format('Y-m-d') : '');
+    $endMode  = old('end_mode');
+    if ($endMode === null) {
+        if ($c && $startVal && $endVal) {
+            $s = \Carbon\Carbon::parse($startVal);
+            $endMode = match ($endVal) {
+                $s->copy()->addYear()->format('Y-m-d') => 'plus12',
+                $s->format('Y') . '-12-31'             => 'year_end',
+                default                                 => 'manual',
+            };
+        } else {
+            $endMode = $c ? 'manual' : 'plus12';
+        }
+    }
+@endphp
 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
     <div class="field"><label>Status *</label>
         <select name="status" required style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
@@ -75,9 +95,36 @@
             @endforeach
         </select>
     </div>
-    <div class="field"><label>Beginn</label><input type="date" name="start_date" value="{{ $val('start_date', $c && $c->start_date ? \Carbon\Carbon::parse($c->start_date)->format('Y-m-d') : '') }}"></div>
-    <div class="field"><label>Ablauf</label><input type="date" name="end_date" value="{{ $val('end_date', $c && $c->end_date ? \Carbon\Carbon::parse($c->end_date)->format('Y-m-d') : '') }}"></div>
+    <div class="field"><label>Beginn</label>
+        <div style="display:flex;gap:8px;">
+            <input type="date" id="contract-start" name="start_date" value="{{ $startVal }}" style="flex:1;min-width:0;">
+            {{-- Ein Klick statt Kalender: setzt das heutige Datum --}}
+            <button type="button" class="btn btn-ghost" style="padding:8px 12px;font-size:12.5px;flex:none;" onclick="contractSetToday()">📅 Heute</button>
+        </div>
+    </div>
+    <div class="field"><label>Ablauf</label>
+        <input type="date" id="contract-end" name="end_date" value="{{ $endVal }}">
+    </div>
 </div>
+{{-- Ablauf-Automatik: 12 Monate Laufzeit oder Ende des Kalenderjahres -
+     der Ablauf wird aus dem Beginn errechnet und folgt jeder Aenderung.
+     Manuelles Tippen im Ablauf-Feld schaltet automatisch auf "Manuell". --}}
+<div class="field" style="margin-top:-6px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <span style="font-size:12px;color:var(--ink-soft);">Ablauf berechnen:</span>
+        @foreach(['plus12' => 'Laufzeit 12 Monate', 'year_end' => 'Ende des Kalenderjahres (31.12.)', 'manual' => 'Manuell'] as $mk => $ml)
+        <label class="end-mode-chip" style="position:relative;display:inline-flex;">
+            <input type="radio" name="end_mode" value="{{ $mk }}" {{ $endMode === $mk ? 'checked' : '' }} onchange="contractEndSync()" style="position:absolute;inset:0;opacity:0;cursor:pointer;margin:0;">
+            <span style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:1.5px solid var(--line);border-radius:999px;font-size:12px;font-weight:600;background:var(--surface);cursor:pointer;user-select:none;">{{ $ml }}</span>
+        </label>
+        @endforeach
+        <span id="end-mode-hint" style="font-size:11.5px;color:var(--ink-soft);"></span>
+    </div>
+</div>
+<style>
+.end-mode-chip input:checked + span{border-color:#17A65B;background:#E7F6EE;color:#0E7A41;box-shadow:inset 0 0 0 1px #17A65B;}
+.end-mode-chip input:focus-visible + span{outline:2px solid #17A65B;outline-offset:2px;}
+</style>
 <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;">
     <div class="field"><label>Kündigungsdatum</label><input type="date" name="cancellation_date" value="{{ $val('cancellation_date', $c && $c->cancellation_date ? \Carbon\Carbon::parse($c->cancellation_date)->format('Y-m-d') : '') }}"></div>
     <div class="field"><label>Notizen</label><input type="text" name="notes" value="{{ $val('notes', $c->notes ?? '') }}" placeholder="Interne Notizen..."></div>
@@ -179,5 +226,59 @@ function contractToggleSections() {
     if (lbl) lbl.textContent = energyTypes.includes(type) ? 'Vertragsnummer' : 'Versicherungsnummer (VSNR)';
 }
 
-document.addEventListener('DOMContentLoaded', contractToggleSections);
+// ---- Ablauf-Automatik (Beginn + Modus -> Ablauf) ----
+function contractEndMode() {
+    return document.querySelector('input[name="end_mode"]:checked')?.value || 'manual';
+}
+
+// Ablauf aus Beginn errechnen: +12 Monate (17.07.2026 -> 17.07.2027)
+// oder Ende des Kalenderjahres (17.07.2026 -> 31.12.2026).
+function contractEndSync() {
+    const start = document.getElementById('contract-start').value;
+    const end = document.getElementById('contract-end');
+    const mode = contractEndMode();
+    const hint = document.getElementById('end-mode-hint');
+    hint.textContent = '';
+    if (mode === 'manual') return;
+    if (!start) { hint.textContent = 'Beginn eintragen – der Ablauf wird automatisch berechnet.'; return; }
+    const [y, m, d] = start.split('-').map(Number);
+    let target;
+    if (mode === 'plus12') {
+        const plus = new Date(Date.UTC(y + 1, m - 1, d));
+        // 29.02. + 1 Jahr rutscht auf den 28.02. statt in den Maerz.
+        if (plus.getUTCMonth() !== m - 1) plus.setUTCDate(0);
+        target = plus.toISOString().slice(0, 10);
+    } else {
+        target = y + '-12-31';
+    }
+    if (end.value !== target) {
+        end.value = target;
+        hint.textContent = 'Ablauf automatisch gesetzt: ' + target.split('-').reverse().join('.');
+    }
+}
+
+// Heute-Button: setzt den Beginn auf das heutige Datum (lokale Zeit).
+function contractSetToday() {
+    const el = document.getElementById('contract-start');
+    const now = new Date();
+    el.value = [now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, '0'),
+        String(now.getDate()).padStart(2, '0')].join('-');
+    contractEndSync();
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    contractToggleSections();
+    const start = document.getElementById('contract-start');
+    const end = document.getElementById('contract-end');
+    // Beginn geaendert -> Ablauf sofort neu berechnen (gewaehlter Modus).
+    start.addEventListener('change', contractEndSync);
+    start.addEventListener('input', contractEndSync);
+    // Manuelles Tippen im Ablauf-Feld schaltet die Automatik ab.
+    end.addEventListener('input', function () {
+        const manual = document.querySelector('input[name="end_mode"][value="manual"]');
+        if (manual && !manual.checked) { manual.checked = true; document.getElementById('end-mode-hint').textContent = 'Automatik aus – Ablauf manuell gesetzt.'; }
+    });
+    contractEndSync();
+});
 </script>
