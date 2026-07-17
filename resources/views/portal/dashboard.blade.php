@@ -165,13 +165,16 @@
 <div class="card">
     <div class="card-title">{{ __('Letzte Verträge') }}</div>
     @forelse($contracts as $c)
-    <div class="item-row">
+    <a href="{{ route('portal.contracts.show', $c->id) }}" class="item-row row-link" title="{{ __('Vertrag öffnen') }}" style="color:inherit;text-decoration:none;">
         <div>
             <div style="font-weight:600;font-size:14px;">{{ $c->insurer }}</div>
             <div style="font-size:13px;color:var(--ink-soft);">{{ $c->contract_number }} · {{ ucfirst($c->type) }}</div>
         </div>
-        <span class="badge badge-{{ $c->status === 'active' ? 'active' : 'pending' }}">{{ $c->status === 'active' ? 'Aktiv' : ucfirst($c->status) }}</span>
-    </div>
+        <span style="display:flex;gap:6px;align-items:center;">
+            <span class="badge badge-{{ $c->status === 'active' ? 'active' : 'pending' }}">{{ $c->status === 'active' ? 'Aktiv' : ucfirst($c->status) }}</span>
+            <span style="color:var(--ink-soft);font-size:12px;">→</span>
+        </span>
+    </a>
     @empty
     <p style="color:var(--ink-soft);font-size:14px;">Noch keine Verträge vorhanden.</p>
     @endforelse
@@ -179,13 +182,16 @@
 <div class="card">
     <div class="card-title">{{ __('Letzte Anfragen') }}</div>
     @forelse($tickets as $t)
-    <div class="item-row">
+    <a href="{{ route('portal.tickets.show', $t->id) }}" class="item-row row-link" title="{{ __('Anfrage öffnen') }}" style="color:inherit;text-decoration:none;">
         <div>
             <div style="font-weight:600;font-size:14px;">{{ $t->subject }}</div>
             <div style="font-size:13px;color:var(--ink-soft);">{{ $t->created_at->format('d.m.Y') }}</div>
         </div>
-        <span class="badge badge-{{ $t->status === 'open' ? 'open' : 'closed' }}">{{ $t->status === 'open' ? 'Offen' : 'In Bearbeitung' }}</span>
-    </div>
+        <span style="display:flex;gap:6px;align-items:center;">
+            <span class="badge badge-{{ $t->status === 'open' ? 'open' : 'closed' }}">{{ $t->status === 'open' ? 'Offen' : 'In Bearbeitung' }}</span>
+            <span style="color:var(--ink-soft);font-size:12px;">→</span>
+        </span>
+    </a>
     @empty
     <p style="color:var(--ink-soft);font-size:14px;">Noch keine Anfragen vorhanden.</p>
     @endforelse

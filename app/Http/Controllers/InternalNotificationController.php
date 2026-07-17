@@ -44,7 +44,8 @@ class InternalNotificationController extends Controller
                         'preview' => Str::limit($n->body ?? '', 90),
                         'time' => $n->created_at->format('d.m.Y H:i'),
                         'read' => $n->read_at !== null,
-                        'url' => $n->link ?: '#',
+                        // Fallback Dashboard statt totem '#': jede Meldung bleibt klickbar
+                        'url' => $n->link ?: route('admin.dashboard'),
                         'sort' => $n->created_at,
                     ];
                 }

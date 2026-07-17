@@ -142,21 +142,37 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
 </div>
 
 {{-- E-Mail-Verlauf (Priorität 8: alle Informationen am Kunden verbunden) --}}
-@php $customerMails = \App\Models\EmailMessage::where('customer_id', $customer->id)->latest('received_at')->limit(6)->get(); @endphp
+@php
+    $customerMails = \App\Models\EmailMessage::where('customer_id', $customer->id)->latest('received_at')->limit(6)->get();
+    // E-Mail-Detailansicht ist auf admin/manager/support beschraenkt (DSGVO);
+    // nur dann werden die Zeilen als Links gerendert.
+    $canOpenMail = in_array(auth()->user()->role, ['admin', 'manager', 'support'], true);
+@endphp
 @if($customerMails->isNotEmpty())
 <div class="card">
     <div class="card-title" style="font-size:14px;margin-bottom:10px;">E-Mails ({{ $customerMails->count() }})</div>
     @foreach($customerMails as $cm)
+    @if($canOpenMail)
+    <a href="{{ route('admin.email_inbox.show', $cm->id) }}" class="row-link" title="E-Mail öffnen" style="display:block;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;color:inherit;text-decoration:none;">
+    @else
     <div style="padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;">
+    @endif
         <div style="display:flex;justify-content:space-between;gap:10px;">
             <span style="font-weight:600;">{{ Str::limit($cm->subject ?: '(kein Betreff)', 60) }}</span>
-            <span class="badge badge-pending" style="flex:none;">{{ $cm->categoryLabel() }}</span>
+            <span style="display:flex;gap:6px;align-items:center;flex:none;">
+                <span class="badge badge-pending">{{ $cm->categoryLabel() }}</span>
+                @if($canOpenMail)<span style="color:var(--ink-soft);font-size:12px;">→</span>@endif
+            </span>
         </div>
         <div style="color:var(--ink-soft);font-size:12px;margin-top:2px;">
             von {{ $cm->from_name ?: $cm->from_address }} · {{ ($cm->received_at ?? $cm->created_at)->format('d.m.Y H:i') }}
             @if($cm->match_status === 'suggested') · <span style="color:#92400E;">Zuordnung unbestätigt</span>@endif
         </div>
+    @if($canOpenMail)
+    </a>
+    @else
     </div>
+    @endif
     @endforeach
 </div>
 @endif
@@ -218,13 +234,16 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
     @php $docRequests = \App\Models\DocumentRequest::with('contract')->where('customer_id', $customer->id)->latest()->limit(8)->get(); @endphp
     <div class="card-title" style="font-size:14px;margin:22px 0 10px;">Angeforderte Dokumente</div>
     @forelse($docRequests as $dr)
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;">
+    <a href="{{ $dr->document_id ? route('admin.documents.download', $dr->document_id) : route('admin.document_requests') }}" class="row-link" title="{{ $dr->document_id ? 'Hochgeladenes Dokument herunterladen' : 'Zur Anfragen-Übersicht' }}" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;color:inherit;text-decoration:none;">
         <div>
             <span style="font-weight:600;">{{ $dr->title }}</span>
             @if($dr->deadline)<span style="color:var(--ink-soft);"> · Frist {{ $dr->deadline->format('d.m.Y') }}</span>@endif
         </div>
-        <span class="badge {{ $dr->status === 'approved' ? 'badge-active' : ($dr->status === 'rejected' ? 'badge-danger' : 'badge-pending') }}">{{ $dr->statusLabel() }}</span>
-    </div>
+        <span style="display:flex;gap:6px;align-items:center;">
+            <span class="badge {{ $dr->status === 'approved' ? 'badge-active' : ($dr->status === 'rejected' ? 'badge-danger' : 'badge-pending') }}">{{ $dr->statusLabel() }}</span>
+            <span style="color:var(--ink-soft);font-size:12px;">→</span>
+        </span>
+    </a>
     @empty
     <p style="color:var(--ink-soft);font-size:13px;">Keine Dokumentenanfragen.</p>
     @endforelse
@@ -285,7 +304,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
         <tbody>
         @forelse($customer->contracts as $c)
         @php $cfg = $typeConfig[$c->type] ?? $typeConfig['andere']; @endphp
-        <tr class="contract-row" data-type="{{ $c->type }}" style="border-bottom:1px solid var(--line);">
+        <tr class="contract-row row-link" data-type="{{ $c->type }}" style="border-bottom:1px solid var(--line);" onclick="rowNav(event, '{{ route('admin.contract.edit', $c->id) }}')" title="Vertrag öffnen">
             <td style="padding:12px;">
                 <div style="display:flex;align-items:center;gap:8px;">
                     <span style="width:32px;height:32px;border-radius:8px;background:{{ $cfg['bg'] }};display:flex;align-items:center;justify-content:center;font-size:16px;">{{ $c->typeIcon() }}</span>
@@ -392,7 +411,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
         </tr></thead>
         <tbody>
         @forelse($customer->tickets as $t)
-        <tr>
+        <tr class="row-link" onclick="rowNav(event, '{{ route('admin.ticket', $t->id) }}')" title="Antrag öffnen">
             <td style="padding:12px;font-weight:600;">{{ $t->subject }}</td>
             <td style="padding:12px;color:var(--ink-soft);">{{ ucfirst(str_replace('_',' ',$t->type)) }}</td>
             <td style="padding:12px;color:var(--ink-soft);font-size:13px;">{{ $t->created_at->format('d.m.Y') }}</td>
@@ -533,7 +552,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
             @if($cr->status === 'pending')<span class="badge badge-pending">Offen</span>
             @elseif($cr->status === 'approved')<span class="badge badge-active">Genehmigt</span>
             @else<span class="badge" style="background:#F9E3E3;color:#A32D2D;">Abgelehnt</span>@endif
-            @if($cr->status === 'pending')<a href="{{ route('admin.change_requests') }}" class="btn btn-ghost btn-sm">Prüfen</a>@endif
+            <a href="{{ route('admin.change_requests', ['status' => $cr->status]) }}" class="btn btn-ghost btn-sm">{{ $cr->status === 'pending' ? 'Prüfen' : 'Ansehen' }}</a>
         </div>
     </div>
     @empty

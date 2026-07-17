@@ -14,7 +14,7 @@
 <div class="card">
     <div class="card-title" style="margin-bottom:16px;">📅 Kommende Termine</div>
     @forelse($appointments as $a)
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);">
+    <div class="{{ $a->customer_id ? 'row-link' : '' }}" @if($a->customer_id) onclick="rowNav(event, '{{ route('admin.customer', $a->customer_id) }}')" title="Kundenakte öffnen" @endif style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);">
         <div style="display:flex;align-items:center;gap:12px;">
             <div style="width:48px;height:48px;border-radius:10px;background:#E6F1FB;display:flex;flex-direction:column;align-items:center;justify-content:center;">
                 <div style="font-size:16px;font-weight:700;color:#185FA5;line-height:1;">{{ $a->starts_at->format('d') }}</div>
@@ -23,7 +23,8 @@
             <div>
                 <div style="font-weight:600;font-size:14px;">{{ $a->title }}</div>
                 <div style="font-size:12px;color:var(--ink-soft);">
-                    {{ $a->customer?->user?->name }} · {{ $a->starts_at->format('H:i') }} – {{ $a->ends_at->format('H:i') }} · {{ $a->assignedTo?->name }}
+                    @if($a->customer_id)<a href="{{ route('admin.customer', $a->customer_id) }}" style="color:inherit;">{{ $a->customer?->user?->name }}</a>@else{{ $a->customer?->user?->name }}@endif
+                    · {{ $a->starts_at->format('H:i') }} – {{ $a->ends_at->format('H:i') }} · {{ $a->assignedTo?->name }}
                 </div>
             </div>
         </div>
@@ -50,10 +51,13 @@
 <div class="card" style="margin-top:16px;">
     <div class="card-title" style="margin-bottom:16px;">Vergangene Termine</div>
     @foreach($past as $a)
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);opacity:.7;">
+    <div class="{{ $a->customer_id ? 'row-link' : '' }}" @if($a->customer_id) onclick="rowNav(event, '{{ route('admin.customer', $a->customer_id) }}')" title="Kundenakte öffnen" @endif style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);opacity:.7;">
         <div>
             <div style="font-size:13px;font-weight:600;">{{ $a->title }}</div>
-            <div style="font-size:11px;color:var(--ink-soft);">{{ $a->customer?->user?->name }} · {{ $a->starts_at->format('d.m.Y H:i') }}</div>
+            <div style="font-size:11px;color:var(--ink-soft);">
+                @if($a->customer_id)<a href="{{ route('admin.customer', $a->customer_id) }}" style="color:inherit;">{{ $a->customer?->user?->name }}</a>@else{{ $a->customer?->user?->name }}@endif
+                · {{ $a->starts_at->format('d.m.Y H:i') }}
+            </div>
         </div>
         <span class="badge badge-{{ $a->status === 'completed' ? 'active' : 'closed' }}">
             {{ ['scheduled'=>'Geplant','completed'=>'Erledigt','cancelled'=>'Abgesagt'][$a->status] }}
