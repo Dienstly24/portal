@@ -96,6 +96,7 @@ class AnalyzeDocumentJob implements ShouldQueue
             'ai_status' => 'done',
             'ai_type' => $result['type'],
             'ai_confidence' => $result['confidence'],
+            'ai_source' => $result['source'] ?? 'ai',
             'ai_summary' => $result['summary'],
             'ai_extracted' => $extracted,
             'ai_error' => null,

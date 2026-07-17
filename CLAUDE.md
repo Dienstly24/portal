@@ -89,8 +89,30 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   `logo.png` = Original mit weissem Hintergrund (Quelle der Varianten).
   Willkommens-Mail bewusst OHNE Logo-Bild (Outlook blockiert CID) –
   Textmarke im Hero.
+- **Smart Document Upload** (`SmartDocumentUploadController`,
+  `DocumentAnalyzer`): Analyse-Pipeline ist dreistufig und der KI-Anbieter
+  austauschbar (`DocumentAiProviderInterface`, Registrierung in
+  `AppServiceProvider`, Auswahl per `AI_DOCUMENT_PROVIDER`). 1) Ist Claude
+  konfiguriert (`ANTHROPIC_API_KEY`), liest er Bilder/PDF direkt (Vision) -
+  beste Qualität. 2) Ohne KI-Anbieter greift `HeuristicDocumentClassifier`
+  auf dem OCR-Text (Stichwort-Erkennung + konservative Regex-Extraktion:
+  IBAN/FIN/Kennzeichen nur aus eindeutig abgegrenzten Zeilen, keine
+  Namen/Adressen aus Freitext - bewusst niedrige Konfidenz, Kennzeichnung
+  `ai_source = 'ocr'` in der Review-UI). 3) Die OCR-Basisebene selbst
+  (`TesseractTextExtractor`) ist standardmäßig **AUS**
+  (`OCR_ENABLED=false`) und muss erst nach Installation der Systempakete
+  freigeschaltet werden: `apt install tesseract-ocr tesseract-ocr-deu
+  poppler-utils` auf dem VPS, danach `OCR_ENABLED=true` in der `.env`.
+  Rohtext wird bewusst NICHT gespeichert (Datenminimierung) - nur das
+  bereits geprüfte, validierte Extraktionsergebnis.
 
 ## Offene Themen / wartet auf den Betreiber
+
+- **OCR-Systempakete auf dem VPS installieren:** `tesseract-ocr`,
+  `tesseract-ocr-deu`, `poppler-utils` sind noch nicht auf dem
+  Produktionsserver installiert (nur lokal geprüft) - ohne sie bleibt die
+  kostenlose OCR-Basisebene inaktiv und der Smart Document Upload läuft
+  wie bisher rein über Claude. Nach Installation `OCR_ENABLED=true` setzen.
 
 - **E-Mail-Zustellbarkeit (Spam bei Outlook):** SPF, DKIM und DMARC sind
   inzwischen **korrekt gesetzt** (geprüft 14.07.2026: SPF `include:_spf.mail.hostinger.com`,

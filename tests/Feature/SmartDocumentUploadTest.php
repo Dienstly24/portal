@@ -7,6 +7,7 @@ use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\User;
+use App\Services\Ocr\TextExtractorInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
@@ -48,6 +49,21 @@ class SmartDocumentUploadTest extends TestCase
                 'content' => [['type' => 'text', 'text' => json_encode($payload)]],
             ]),
         ]);
+    }
+
+    /**
+     * OCR-Basisebene fuer die Analyse-Orchestrierung faken (statt eines
+     * echten Tesseract-Aufrufs) - deterministisch und unabhaengig davon,
+     * ob der Test-Runner das Systempaket installiert hat.
+     */
+    private function fakeOcr(string $text, bool $available = true): void
+    {
+        config(['services.ocr.enabled' => $available]);
+        $this->app->bind(TextExtractorInterface::class, fn () => new class($text, $available) implements TextExtractorInterface {
+            public function __construct(private string $text, private bool $available) {}
+            public function isAvailable(): bool { return $this->available; }
+            public function extract(string $binary, string $mime): string { return $this->available ? $this->text : ''; }
+        });
     }
 
     private function gesundheitskartePayload(array $person = [], array $extra = []): array
@@ -1050,5 +1066,92 @@ class SmartDocumentUploadTest extends TestCase
         $this->actingAs($this->makeAdmin())
             ->postJson(route('admin.documents.smart_upload'), ['files' => $files])
             ->assertStatus(422);
+    }
+
+    /* ---------------------------------------------------------------
+     | OCR-Basisebene (Tesseract) ohne KI-Anbieter
+     * -------------------------------------------------------------- */
+
+    public function test_ocr_only_analysis_produces_low_confidence_ocr_sourced_result(): void
+    {
+        Storage::fake('local');
+        config(['services.anthropic.key' => '']);
+        $this->fakeOcr("PERSONALAUSWEIS\nMax Mustermann\nIBAN: DE89 3704 0044 0532 0130 00");
+
+        $customer = $this->makeCustomer();
+        $response = $this->actingAs($customer->user)->postJson(route('portal.documents.scan'), [
+            'pages' => [UploadedFile::fake()->image('ausweis.jpg', 600, 800)],
+        ]);
+
+        $response->assertOk()->assertJson(['ai_enabled' => true]);
+        $doc = Document::findOrFail($response->json('id'));
+        $this->assertSame('done', $doc->ai_status);
+        $this->assertSame('personalausweis', $doc->ai_type);
+        $this->assertSame('ocr', $doc->ai_source);
+        $this->assertSame(40, $doc->ai_confidence);
+        $this->assertSame('DE89370400440532013000', $doc->ai_extracted['bank']['iban']);
+        Http::assertNothingSent(); // kein KI-Aufruf, rein OCR-basiert
+    }
+
+    public function test_ai_provider_is_preferred_over_ocr_when_both_available(): void
+    {
+        Storage::fake('local');
+        $this->enableAi();
+        // OCR-Text wuerde als "sonstiges" klassifizieren - der konfigurierte
+        // KI-Anbieter muss trotzdem gewinnen (bessere Qualitaet, Vision).
+        $this->fakeOcr('Belangloser OCR-Text ohne jedes Stichwort.');
+        $this->fakeAnalysis($this->gesundheitskartePayload());
+
+        $admin = $this->makeAdmin();
+        $response = $this->actingAs($admin)->postJson(route('admin.documents.smart_upload'), [
+            'files' => [UploadedFile::fake()->image('karte.jpg', 800, 500)],
+        ]);
+
+        $response->assertOk();
+        $doc = Document::findOrFail($response->json('ids.0'));
+        $this->assertSame('gesundheitskarte', $doc->ai_type);
+        $this->assertSame('ai', $doc->ai_source);
+        Http::assertSent(fn ($request) => str_contains($request->url(), 'api.anthropic.com'));
+    }
+
+    public function test_ocr_disabled_leaves_document_without_analysis_like_before(): void
+    {
+        Storage::fake('local');
+        config(['services.anthropic.key' => '', 'services.ocr.enabled' => false]);
+
+        $customer = $this->makeCustomer();
+        $response = $this->actingAs($customer->user)->postJson(route('portal.documents.scan'), [
+            'pages' => [UploadedFile::fake()->image('seite-1.jpg', 600, 800)],
+        ]);
+
+        $response->assertOk()->assertJson(['ai_enabled' => false]);
+        $doc = Document::findOrFail($response->json('id'));
+        $this->assertSame('none', $doc->ai_status);
+        $this->assertNull($doc->ai_source);
+    }
+
+    public function test_ocr_extracted_iban_can_be_applied_when_assigning_to_customer(): void
+    {
+        Storage::fake('local');
+        config(['services.anthropic.key' => '']);
+        $this->fakeOcr("SEPA-Lastschriftmandat\nIBAN: DE89 3704 0044 0532 0130 00");
+
+        $admin = $this->makeAdmin();
+        $upload = $this->actingAs($admin)->postJson(route('admin.documents.smart_upload'), [
+            'files' => [UploadedFile::fake()->image('mandat.jpg', 600, 400)],
+        ]);
+        $doc = Document::findOrFail($upload->json('ids.0'));
+        $this->assertSame('ocr', $doc->ai_source);
+        $this->assertSame('DE89370400440532013000', $doc->ai_extracted['bank']['iban']);
+
+        $customer = $this->makeCustomer();
+        $this->assertNull($customer->iban);
+
+        $this->actingAs($admin)->postJson(route('admin.documents.assign', $doc->id), [
+            'customer_id' => (string) $customer->id,
+            'apply_fields' => ['iban'],
+        ])->assertOk();
+
+        $this->assertSame('DE89370400440532013000', $customer->fresh()->iban);
     }
 }

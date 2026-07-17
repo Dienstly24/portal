@@ -64,4 +64,24 @@ return [
         // ohne Angabe gilt das Standard-Modell.
         'document_model' => env('ANTHROPIC_DOCUMENT_MODEL', env('ANTHROPIC_MODEL', 'claude-sonnet-5')),
     ],
+
+    /*
+    | Smart Document Upload: austauschbarer KI-Anbieter (aktuell nur
+    | 'claude') - siehe App\Services\Ai\Contracts\DocumentAiProviderInterface
+    | und die Registrierung in AppServiceProvider.
+    */
+    'ai_document_provider' => env('AI_DOCUMENT_PROVIDER', 'claude'),
+
+    /*
+    | Kostenlose OCR-Basisebene (Tesseract) fuer den Smart Document Upload.
+    | Standardmaessig AUS: erst nach Installation von `tesseract-ocr`,
+    | `tesseract-ocr-deu` und (fuer PDFs) `poppler-utils` auf dem Server
+    | per OCR_ENABLED=true einschalten (siehe CLAUDE.md).
+    */
+    'ocr' => [
+        'enabled' => env('OCR_ENABLED', false),
+        'languages' => env('OCR_LANGUAGES', 'deu+eng'),
+        'tesseract_binary' => env('OCR_TESSERACT_BINARY', 'tesseract'),
+        'pdftoppm_binary' => env('OCR_PDFTOPPM_BINARY', 'pdftoppm'),
+    ],
 ];
