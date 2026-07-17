@@ -16,7 +16,7 @@ class AiDecision extends Model
     public $incrementing = false;
 
     protected $fillable = [
-        'email_message_id', 'skill', 'model', 'input_hash', 'output',
+        'email_message_id', 'document_id', 'skill', 'model', 'input_hash', 'output',
         'confidence', 'status', 'decided_by', 'decided_at',
     ];
 
@@ -35,6 +35,7 @@ class AiDecision extends Model
     }
 
     public function emailMessage() { return $this->belongsTo(EmailMessage::class); }
+    public function document() { return $this->belongsTo(Document::class); }
     public function decider() { return $this->belongsTo(User::class, 'decided_by'); }
 
     public function scopeSuggested($q) { return $q->where('status', 'suggested'); }

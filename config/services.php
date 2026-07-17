@@ -60,5 +60,8 @@ return [
     'anthropic' => [
         'key' => env('ANTHROPIC_API_KEY'),
         'model' => env('ANTHROPIC_MODEL', 'claude-sonnet-5'),
+        // Dokument-Analyse (Vision/PDF) kann ein eigenes Modell nutzen;
+        // ohne Angabe gilt das Standard-Modell.
+        'document_model' => env('ANTHROPIC_DOCUMENT_MODEL', env('ANTHROPIC_MODEL', 'claude-sonnet-5')),
     ],
 ];

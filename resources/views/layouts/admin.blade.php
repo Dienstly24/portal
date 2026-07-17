@@ -204,6 +204,12 @@ table tr:hover td{background:#E3E6EA;}
         @php $docReqCount = \App\Models\DocumentRequest::awaitingReview()->count(); @endphp
         @if($docReqCount > 0)<span class="nav-badge">{{ $docReqCount }}</span>@endif
     </a>
+    <a href="{{ route('admin.documents.inbox') }}" class="nav-item {{ request()->routeIs('admin.documents.inbox') ? 'active' : '' }}">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M4 8h16M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2zm4-6l2 2 4-4"/></svg>
+        Dokumenten-Eingang
+        @php $docInboxCount = \App\Models\Document::inbox()->count(); @endphp
+        @if($docInboxCount > 0)<span class="nav-badge">{{ $docInboxCount }}</span>@endif
+    </a>
     <a href="{{ route('admin.change_requests') }}" class="nav-item {{ request()->routeIs('admin.change_requests*') ? 'active' : '' }}">
         <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
         Kundenänderungen
