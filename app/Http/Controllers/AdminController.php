@@ -83,7 +83,7 @@ class AdminController extends Controller
 
     public function customerShow($id) {
         $this->authorizeCustomerAccess($id);
-        $customer = Customer::with(['user','contracts.vehicleDetail','contracts.energyDetail','contracts.internetDetail','contracts.switchReminders','tickets','documents','changeRequests.reviewer'])->findOrFail($id);
+        $customer = Customer::with(['user','contracts.vehicleDetail.claims','contracts.vehicleDetail.mileageReadings','contracts.energyDetail','contracts.internetDetail','contracts.switchReminders','tickets','documents','changeRequests.reviewer'])->findOrFail($id);
         // Interner Chat & Notizen (nur Staff - Zugriff bereits oben geprüft)
         $internalChat = \App\Models\InternalMessage::chat()->where('customer_id', $id)->with('sender')->orderBy('created_at')->get();
         $internalNotes = \App\Models\InternalMessage::note()->where('customer_id', $id)->with('sender')->latest()->get();
@@ -139,7 +139,7 @@ class AdminController extends Controller
     }
 
     public function contractEdit($id) {
-        $contract = Contract::with(['vehicleDetail','energyDetail','internetDetail','customer.user'])->findOrFail($id);
+        $contract = Contract::with(['vehicleDetail.claims','vehicleDetail.mileageReadings','vehicleDetail.sfHistory','energyDetail','internetDetail','customer.user'])->findOrFail($id);
         $this->authorizeCustomerAccess($contract->customer_id);
         return view('admin.contract_edit', compact('contract'));
     }
@@ -214,19 +214,66 @@ class AdminController extends Controller
             'premium_interval' => 'nullable|in:' . implode(',', Contract::premiumIntervalKeys()),
             'energy.payment_amount' => 'nullable|numeric|min:0',
             'energy.payment_interval' => 'nullable|in:monatlich,vierteljaehrlich,halbjaehrlich,jaehrlich',
-            // KFZ-Details
-            'vehicle.first_registration' => 'nullable|date',
-            'vehicle.sf_liability_year' => 'nullable|integer|min:1950|max:2100',
-            'vehicle.sf_comprehensive_year' => 'nullable|integer|min:1950|max:2100',
-            'vehicle.claims' => 'nullable|array',
-            'vehicle.claims.*.month' => 'required_with:vehicle.claims|integer|min:1|max:12',
-            'vehicle.claims.*.year' => 'required_with:vehicle.claims|integer|min:1990|max:2100',
-            'vehicle.claims.*.type' => 'required_with:vehicle.claims|in:haftpflicht,vollkasko,teilkasko',
             // Energie: MaLo-ID hat 11 Ziffern und ist NICHT die Zählernummer
             'energy.malo_id' => ['nullable', 'regex:/^[0-9]{11}$/'],
             'energy.consumption_kwh' => 'nullable|integer|min:0',
             // Internet
             'internet.speed' => 'nullable|string|max:30',
+            // ---- KFZ (Redesign 17.07.2026): alle Kataloge kommen aus dem Model ----
+            'vehicle.vehicle_type' => 'nullable|in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::VEHICLE_TYPES)),
+            'vehicle.license_plate' => 'nullable|string|max:20',
+            'vehicle.manufacturer' => 'nullable|string|max:255',
+            'vehicle.model' => 'nullable|string|max:255',
+            'vehicle.vin' => 'nullable|string|max:30',
+            'vehicle.hsn' => ['nullable', 'regex:/^[0-9]{4}$/'],
+            'vehicle.tsn' => ['nullable', 'regex:/^[A-Za-z0-9]{1,10}$/'],
+            'vehicle.first_registration' => 'nullable|date',
+            'vehicle.acquisition_date' => 'nullable|date',
+            'vehicle.vehicle_condition' => 'nullable|in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::CONDITIONS)),
+            'vehicle.power_kw' => 'nullable|integer|min:1|max:2000',
+            'vehicle.fuel_type' => 'nullable|in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::FUEL_TYPES)),
+            'vehicle.transmission' => 'nullable|in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::TRANSMISSIONS)),
+            'vehicle.color' => 'nullable|string|max:40',
+            // Deckung: Haftpflicht ist immer enthalten; Vollkasko setzt Teilkasko voraus (wird im Sync erzwungen).
+            'vehicle.has_teilkasko' => 'nullable|boolean',
+            'vehicle.teilkasko_deductible' => 'nullable|integer|in:' . implode(',', \App\Models\ContractVehicleDetail::TK_DEDUCTIBLES),
+            'vehicle.has_vollkasko' => 'nullable|boolean',
+            'vehicle.vollkasko_deductible' => 'nullable|integer|in:' . implode(',', \App\Models\ContractVehicleDetail::VK_DEDUCTIBLES),
+            'vehicle.extras' => 'nullable|array',
+            'vehicle.extras.*' => 'in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::EXTRAS)),
+            'vehicle.driver_groups' => 'nullable|array',
+            'vehicle.driver_groups.*' => 'in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::DRIVER_GROUPS)),
+            'vehicle.additional_drivers' => 'nullable|array',
+            'vehicle.additional_drivers.*.name' => 'nullable|string|max:120',
+            'vehicle.additional_drivers.*.birth_date' => 'nullable|date',
+            'vehicle.additional_drivers.*.license_date' => 'nullable|date',
+            'vehicle.holder_type' => 'nullable|in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::HOLDER_TYPES)),
+            'vehicle.holder_name' => 'nullable|string|max:255',
+            'vehicle.ownership_type' => 'nullable|in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::OWNERSHIP_TYPES)),
+            // Nutzung / Kilometer
+            'vehicle.initial_mileage' => 'nullable|integer|min:0|max:5000000',
+            'vehicle.current_mileage' => 'nullable|integer|min:0|max:5000000',
+            'vehicle.current_mileage_date' => 'nullable|date',
+            'vehicle.annual_mileage' => 'nullable|integer|in:' . implode(',', \App\Models\ContractVehicleDetail::ANNUAL_MILEAGE_OPTIONS),
+            // SF-Einstufung (Haftpflicht / Vollkasko getrennt)
+            'vehicle.sf_liability_class' => 'nullable|in:' . implode(',', \App\Models\ContractVehicleDetail::sfClassKeys()),
+            'vehicle.sf_liability_valid_from' => 'nullable|date',
+            'vehicle.sf_liability_type' => 'nullable|in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::SF_TYPES)),
+            'vehicle.sf_liability_special_reason' => 'nullable|in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::SF_SPECIAL_REASONS)),
+            'vehicle.sf_liability_real_class' => 'nullable|in:' . implode(',', \App\Models\ContractVehicleDetail::sfClassKeys()),
+            'vehicle.sf_comprehensive_class' => 'nullable|in:' . implode(',', \App\Models\ContractVehicleDetail::sfClassKeys()),
+            'vehicle.sf_comprehensive_valid_from' => 'nullable|date',
+            'vehicle.sf_comprehensive_type' => 'nullable|in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::SF_TYPES)),
+            'vehicle.sf_comprehensive_special_reason' => 'nullable|in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::SF_SPECIAL_REASONS)),
+            'vehicle.sf_comprehensive_real_class' => 'nullable|in:' . implode(',', \App\Models\ContractVehicleDetail::sfClassKeys()),
+            // Schaeden (strukturierte Zeilen, eigene Tabelle)
+            'vehicle.claim_rows' => 'nullable|array',
+            'vehicle.claim_rows.*.claim_date' => 'nullable|date',
+            'vehicle.claim_rows.*.claim_type' => 'nullable|in:' . implode(',', array_keys(\App\Models\VehicleClaim::TYPES)),
+            'vehicle.claim_rows.*.damage_amount' => 'nullable|numeric|min:0|max:99999999',
+            'vehicle.claim_rows.*.status' => 'nullable|in:' . implode(',', array_keys(\App\Models\VehicleClaim::STATUSES)),
+            'vehicle.claim_rows.*.insurer' => 'nullable|string|max:255',
+            'vehicle.claim_rows.*.notes' => 'nullable|string|max:2000',
         ]);
     }
 
@@ -240,25 +287,7 @@ class AdminController extends Controller
         if ($contract->type !== 'internet') { $contract->internetDetail()->delete(); }
 
         if ($contract->type === 'kfz') {
-            $v = $request->input('vehicle', []);
-            $claims = collect($v['claims'] ?? [])->filter(fn($c) => !empty($c['year']))->values()->all();
-            \App\Models\ContractVehicleDetail::updateOrCreate(
-                ['contract_id' => $contract->id],
-                [
-                    'license_plate' => $v['license_plate'] ?? null,
-                    'manufacturer' => $v['manufacturer'] ?? null,
-                    'model' => $v['model'] ?? null,
-                    'vehicle_type' => $v['vehicle_type'] ?? null,
-                    'vin' => $v['vin'] ?? null,
-                    'first_registration' => $v['first_registration'] ?? null,
-                    'has_claims' => count($claims) > 0,
-                    'claims' => $claims,
-                    'sf_liability_class' => $v['sf_liability_class'] ?? null,
-                    'sf_liability_year' => $v['sf_liability_year'] ?? null,
-                    'sf_comprehensive_class' => $v['sf_comprehensive_class'] ?? null,
-                    'sf_comprehensive_year' => $v['sf_comprehensive_year'] ?? null,
-                ]
-            );
+            $this->syncVehicleDetail($contract, $request->input('vehicle', []));
         } elseif ($contract->isEnergy()) {
             \App\Models\ContractEnergyDetail::updateOrCreate(
                 ['contract_id' => $contract->id],
@@ -273,6 +302,149 @@ class AdminController extends Controller
                 collect($request->input('internet', []))->only(['tariff','speed'])->map(fn($val) => $val === '' ? null : $val)->all()
             );
         }
+    }
+
+    /**
+     * KFZ-Detail speichern (Redesign 17.07.2026). Erzwingt die Deckungs-
+     * Hierarchie (Vollkasko nur mit Teilkasko), filtert Kataloge, pflegt
+     * Schaeden als eigene Tabelle, legt km-Ablesungen an und schreibt den
+     * SF-Verlauf fort statt ihn zu ueberschreiben.
+     */
+    private function syncVehicleDetail(Contract $contract, array $v): void {
+        $blank = fn($key) => isset($v[$key]) && $v[$key] !== '' ? $v[$key] : null;
+
+        // Deckung: Haftpflicht ist Pflicht (immer enthalten). Vollkasko ohne
+        // Teilkasko ist fachlich unmoeglich -> wird hier hart abgeraeumt.
+        $hasTk = !empty($v['has_teilkasko']);
+        $hasVk = $hasTk && !empty($v['has_vollkasko']);
+
+        // Kataloge serverseitig filtern (Whitelist, Reihenfolge des Katalogs).
+        $extras = array_values(array_intersect(array_keys(\App\Models\ContractVehicleDetail::EXTRAS), (array) ($v['extras'] ?? [])));
+        $driverGroups = array_values(array_intersect(array_keys(\App\Models\ContractVehicleDetail::DRIVER_GROUPS), (array) ($v['driver_groups'] ?? [])));
+        $additionalDrivers = in_array('weitere_fahrer', $driverGroups, true)
+            ? collect($v['additional_drivers'] ?? [])
+                ->filter(fn($drv) => !empty($drv['name']))
+                ->map(fn($drv) => [
+                    'name' => trim((string) $drv['name']),
+                    'birth_date' => $drv['birth_date'] ?? null,
+                    'license_date' => $drv['license_date'] ?? null,
+                ])->values()->all()
+            : [];
+
+        // SF: Art faellt auf "tatsaechlich" zurueck; Sondereinstufungs-Felder
+        // (Grund + tatsaechliche Klasse) nur bei Sondereinstufung speichern.
+        $sf = function (string $prefix) use ($v, $blank) {
+            $class = $blank($prefix . '_class');
+            $type = $class ? ($blank($prefix . '_type') ?: 'tatsaechlich') : null;
+            return [
+                $prefix . '_class' => $class,
+                $prefix . '_valid_from' => $class ? $blank($prefix . '_valid_from') : null,
+                $prefix . '_type' => $type,
+                $prefix . '_special_reason' => $type === 'sondereinstufung' ? $blank($prefix . '_special_reason') : null,
+                $prefix . '_real_class' => $type === 'sondereinstufung' ? $blank($prefix . '_real_class') : null,
+            ];
+        };
+        $sfLiability = $sf('sf_liability');
+        $sfComprehensive = $hasVk ? $sf('sf_comprehensive') : [
+            'sf_comprehensive_class' => null, 'sf_comprehensive_valid_from' => null,
+            'sf_comprehensive_type' => null, 'sf_comprehensive_special_reason' => null,
+            'sf_comprehensive_real_class' => null,
+        ];
+
+        $detail = \App\Models\ContractVehicleDetail::updateOrCreate(
+            ['contract_id' => $contract->id],
+            array_merge([
+                'vehicle_type' => $blank('vehicle_type'),
+                'license_plate' => $blank('license_plate'),
+                'manufacturer' => $blank('manufacturer'),
+                'model' => $blank('model'),
+                'vin' => $blank('vin'),
+                'hsn' => $blank('hsn'),
+                'tsn' => $blank('tsn') ? strtoupper($v['tsn']) : null,
+                'first_registration' => $blank('first_registration'),
+                'acquisition_date' => $blank('acquisition_date'),
+                'vehicle_condition' => $blank('vehicle_condition'),
+                'power_kw' => $blank('power_kw'),
+                'fuel_type' => $blank('fuel_type'),
+                'transmission' => $blank('transmission'),
+                'color' => $blank('color'),
+                'has_teilkasko' => $hasTk,
+                'teilkasko_deductible' => $hasTk ? $blank('teilkasko_deductible') : null,
+                'has_vollkasko' => $hasVk,
+                'vollkasko_deductible' => $hasVk ? $blank('vollkasko_deductible') : null,
+                'extras' => $extras,
+                'driver_groups' => $driverGroups,
+                'additional_drivers' => $additionalDrivers,
+                'holder_type' => $blank('holder_type'),
+                'holder_name' => ($blank('holder_type') === 'abweichender_halter') ? $blank('holder_name') : null,
+                'ownership_type' => $blank('ownership_type'),
+                'initial_mileage' => $blank('initial_mileage'),
+                'annual_mileage' => $blank('annual_mileage'),
+            ], $sfLiability, $sfComprehensive)
+        );
+
+        // Schaeden: eingereichte Zeilen ersetzen den Bestand vollstaendig
+        // (das Formular zeigt immer alle Schaeden inkl. Loeschen-Knopf).
+        $detail->claims()->delete();
+        foreach ((array) ($v['claim_rows'] ?? []) as $row) {
+            if (!is_array($row)) continue;
+            $hasContent = collect(['claim_date', 'claim_type', 'damage_amount', 'insurer', 'notes'])
+                ->contains(fn($key) => isset($row[$key]) && $row[$key] !== '');
+            if (!$hasContent) continue;
+            $detail->claims()->create([
+                'claim_date' => $row['claim_date'] ?? null,
+                'claim_type' => ($row['claim_type'] ?? '') !== '' ? $row['claim_type'] : null,
+                'damage_amount' => ($row['damage_amount'] ?? '') !== '' ? $row['damage_amount'] : null,
+                'status' => ($row['status'] ?? '') !== '' ? $row['status'] : null,
+                'insurer' => ($row['insurer'] ?? '') !== '' ? $row['insurer'] : null,
+                'notes' => ($row['notes'] ?? '') !== '' ? $row['notes'] : null,
+            ]);
+        }
+
+        // Aktueller Kilometerstand: nur bei neuem Wert eine Ablesung anlegen -
+        // die Historie bleibt vollstaendig erhalten.
+        if ($blank('current_mileage') !== null) {
+            $mileage = (int) $v['current_mileage'];
+            $date = $blank('current_mileage_date') ?: now()->toDateString();
+            $latest = $detail->mileageReadings()->first();
+            if (!$latest || (int) $latest->mileage !== $mileage || $latest->reading_date->toDateString() !== $date) {
+                $detail->mileageReadings()->create([
+                    'mileage' => $mileage,
+                    'reading_date' => $date,
+                    'source' => 'staff',
+                    'created_by' => auth()->user()?->name,
+                ]);
+            }
+        }
+
+        // SF-Verlauf fortschreiben (Teilkasko hat keine SF-Klasse).
+        $this->syncSfHistory($detail, 'haftpflicht', $sfLiability['sf_liability_class'], $sfLiability['sf_liability_valid_from']);
+        $this->syncSfHistory($detail, 'vollkasko', $sfComprehensive['sf_comprehensive_class'], $sfComprehensive['sf_comprehensive_valid_from']);
+    }
+
+    /**
+     * SF-Verlauf je Sparte: Klassenwechsel schliesst den offenen Eintrag
+     * (gueltig bis = Vortag der neuen Einstufung) und legt einen neuen an.
+     * Gleiche Klasse mit korrigiertem Datum aktualisiert nur das gueltig-ab.
+     */
+    private function syncSfHistory(\App\Models\ContractVehicleDetail $detail, string $branch, ?string $class, ?string $validFrom): void {
+        $open = $detail->sfHistory()->where('branch', $branch)->whereNull('valid_until')->orderByDesc('created_at')->first();
+
+        if (!$class) {
+            if ($open) $open->update(['valid_until' => now()->toDateString()]);
+            return;
+        }
+        if ($open && $open->sf_class === $class) {
+            $openFrom = $open->valid_from?->toDateString();
+            if ($openFrom !== $validFrom) $open->update(['valid_from' => $validFrom]);
+            return;
+        }
+        if ($open) {
+            $open->update(['valid_until' => $validFrom
+                ? \Carbon\Carbon::parse($validFrom)->subDay()->toDateString()
+                : now()->toDateString()]);
+        }
+        $detail->sfHistory()->create(['branch' => $branch, 'sf_class' => $class, 'valid_from' => $validFrom, 'valid_until' => null]);
     }
 
     // Tickets (Liste, Detail, Aktionen) liegen jetzt im TicketController.

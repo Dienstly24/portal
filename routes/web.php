@@ -107,6 +107,9 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     Route::post('/contracts/report', [\App\Http\Controllers\SelfServiceController::class, 'contractReport'])->name('contracts.report');
     Route::post('/contracts/{id}/change', [\App\Http\Controllers\SelfServiceController::class, 'contractChange'])->name('contracts.change');
     Route::get('/contracts/{id}', [PortalController::class, 'contractShow'])->name('contracts.show');
+    // KFZ: Kunde meldet den aktuellen Kilometerstand (Historie bleibt erhalten)
+    Route::post('/contracts/{id}/kilometerstand', [PortalController::class, 'contractMileageStore'])
+        ->middleware('throttle:10,1')->name('contracts.mileage');
     Route::get('/change-requests', [\App\Http\Controllers\SelfServiceController::class, 'changeRequests'])->name('change_requests');
     Route::get('/documents/{id}/download', [PortalController::class, 'documentDownload'])->name('documents.download');
     Route::get('/documents/{id}/view', [PortalController::class, 'documentView'])->name('documents.view');

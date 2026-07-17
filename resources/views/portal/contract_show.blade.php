@@ -37,15 +37,84 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
     @endif
 </div>
 
-{{-- Sparte KFZ --}}
+{{-- Sparte KFZ (Redesign 17.07.2026: Deckung, Zusatzleistungen, Kilometerstand) --}}
 @if($v = $contract->vehicleDetail)
+@php $rowL = 'color:var(--ink-soft);font-size:13px;'; $rowV = 'font-weight:600;font-size:13.5px;'; @endphp
 <div class="card">
-    <div class="card-title">🚗 Fahrzeugdaten</div>
-    <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Kennzeichen</span><span style="font-weight:600;font-size:13.5px;">{{ $v->license_plate ?? '—' }}</span></div>
-    <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Fahrzeug</span><span style="font-weight:600;font-size:13.5px;">{{ trim(($v->manufacturer ?? '') . ' ' . ($v->model ?? '')) ?: '—' }}</span></div>
-    @if($v->vin)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">FIN</span><span style="font-weight:600;font-size:13.5px;">{{ $v->vin }}</span></div>@endif
-    @if($v->first_registration)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Erstzulassung</span><span style="font-weight:600;font-size:13.5px;">{{ $d($v->first_registration) }}</span></div>@endif
+    <div class="card-title">{{ $v->vehicleTypeIcon() }} {{ __('Fahrzeugdaten') }}</div>
+    <div class="item-row"><span style="{{ $rowL }}">{{ __('Kennzeichen') }}</span><span style="{{ $rowV }}">{{ $v->license_plate ?? '—' }}</span></div>
+    <div class="item-row"><span style="{{ $rowL }}">{{ __('Fahrzeug') }}</span><span style="{{ $rowV }}">{{ trim(($v->manufacturer ?? '') . ' ' . ($v->model ?? '')) ?: '—' }}</span></div>
+    @if($v->vehicleTypeLabel())<div class="item-row"><span style="{{ $rowL }}">{{ __('Fahrzeugtyp') }}</span><span style="{{ $rowV }}">{{ $v->vehicleTypeLabel() }}</span></div>@endif
+    @if($v->vin)<div class="item-row"><span style="{{ $rowL }}">FIN</span><span style="{{ $rowV }}">{{ $v->vin }}</span></div>@endif
+    @if($v->hsn || $v->tsn)<div class="item-row"><span style="{{ $rowL }}">HSN / TSN</span><span style="{{ $rowV }}">{{ $v->hsn ?? '—' }} / {{ $v->tsn ?? '—' }}</span></div>@endif
+    @if($v->first_registration)<div class="item-row"><span style="{{ $rowL }}">{{ __('Erstzulassung') }}</span><span style="{{ $rowV }}">{{ $d($v->first_registration) }}</span></div>@endif
+    @if($v->power_kw)<div class="item-row"><span style="{{ $rowL }}">{{ __('Leistung') }}</span><span style="{{ $rowV }}">{{ $v->power_kw }} kW</span></div>@endif
+    @if($v->fuelLabel())<div class="item-row"><span style="{{ $rowL }}">{{ __('Kraftstoff') }}</span><span style="{{ $rowV }}">{{ $v->fuelLabel() }}</span></div>@endif
+    @if($v->color)<div class="item-row"><span style="{{ $rowL }}">{{ __('Farbe') }}</span><span style="{{ $rowV }}">{{ $v->color }}</span></div>@endif
 </div>
+
+{{-- Versicherungsschutz + Zusatzleistungen --}}
+<div class="card">
+    <div class="card-title">🛡️ {{ __('Versicherungsschutz') }}</div>
+    <div class="item-row"><span style="{{ $rowL }}">{{ __('Haftpflicht') }}</span><span style="{{ $rowV }}color:#0E7A41;">✓ {{ __('enthalten') }}</span></div>
+    <div class="item-row"><span style="{{ $rowL }}">{{ __('Teilkasko') }}</span><span style="{{ $rowV }}{{ $v->has_teilkasko ? 'color:#0E7A41;' : 'color:var(--ink-soft);' }}">{{ $v->has_teilkasko ? '✓ ' . \App\Models\ContractVehicleDetail::deductibleLabel((int) $v->teilkasko_deductible) : '—' }}</span></div>
+    <div class="item-row"><span style="{{ $rowL }}">{{ __('Vollkasko') }}</span><span style="{{ $rowV }}{{ $v->has_vollkasko ? 'color:#0E7A41;' : 'color:var(--ink-soft);' }}">{{ $v->has_vollkasko ? '✓ ' . \App\Models\ContractVehicleDetail::deductibleLabel((int) $v->vollkasko_deductible) : '—' }}</span></div>
+    @if($v->extrasLabels())
+    <div style="margin-top:12px;">
+        <div style="{{ $rowL }}margin-bottom:8px;">{{ __('Zusatzleistungen') }}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            @foreach($v->extrasLabels() as $label)
+            <span style="display:inline-flex;padding:5px 11px;border-radius:999px;font-size:12px;font-weight:600;background:#E7F6EE;color:#0E7A41;">✓ {{ $label }}</span>
+            @endforeach
+        </div>
+    </div>
+    @endif
+</div>
+
+{{-- Kilometerstand melden (jede Meldung bleibt gespeichert) --}}
+<div class="card">
+    <div class="card-title">🧭 {{ __('Kilometerstand') }}</div>
+    @php $latestReading = $v->latestMileageReading(); @endphp
+    @if($latestReading)
+    <div class="item-row"><span style="{{ $rowL }}">{{ __('Letzte Meldung') }}</span><span style="{{ $rowV }}">{{ number_format($latestReading->mileage, 0, ',', '.') }} km ({{ $latestReading->reading_date->format('d.m.Y') }})</span></div>
+    @endif
+    @if($v->annual_mileage)
+    <div class="item-row"><span style="{{ $rowL }}">{{ __('Vereinbarte Fahrleistung') }}</span><span style="{{ $rowV }}">{{ number_format($v->annual_mileage, 0, ',', '.') }} km / {{ __('Jahr') }}</span></div>
+    @endif
+    <form method="POST" action="{{ route('portal.contracts.mileage', $contract->id) }}" style="margin-top:12px;">
+        @csrf
+        <div class="field">
+            <label>{{ __('Aktuellen Kilometerstand melden') }}</label>
+            <div style="display:flex;gap:8px;">
+                <input type="number" name="mileage" required min="0" max="5000000" inputmode="numeric"
+                    value="{{ old('mileage') }}" placeholder="{{ __('z. B.') }} 52300"
+                    style="flex:1;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                <button type="submit" class="btn btn-primary" style="white-space:nowrap;">{{ __('Melden') }}</button>
+            </div>
+            @error('mileage')<div style="color:#A32D2D;font-size:12.5px;margin-top:6px;">{{ $message }}</div>@enderror
+            <p style="font-size:12px;color:var(--ink-soft);margin-top:8px;">{{ __('Ihre Meldung wird direkt in Ihrer Vertragsakte gespeichert. Alle früheren Stände bleiben erhalten.') }}</p>
+        </div>
+    </form>
+    @if($v->mileageReadings->count() > 1)
+    <details>
+        <summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--ink-soft);">{{ __('Frühere Meldungen anzeigen') }}</summary>
+        @foreach($v->mileageReadings as $reading)
+        <div class="item-row"><span style="{{ $rowL }}">{{ $reading->reading_date->format('d.m.Y') }}</span><span style="{{ $rowV }}">{{ number_format($reading->mileage, 0, ',', '.') }} km</span></div>
+        @endforeach
+    </details>
+    @endif
+</div>
+
+{{-- SF-Klassen (Information fuer den Kunden) --}}
+@if($v->sf_liability_class)
+<div class="card">
+    <div class="card-title">📊 {{ __('Schadenfreiheitsklasse') }}</div>
+    <div class="item-row"><span style="{{ $rowL }}">{{ __('Haftpflicht') }}</span><span style="{{ $rowV }}">{{ \App\Models\ContractVehicleDetail::sfLabel($v->sf_liability_class) }}@if($v->sf_liability_valid_from) ({{ __('ab') }} {{ $v->sf_liability_valid_from->format('d.m.Y') }})@endif</span></div>
+    @if($v->has_vollkasko && $v->sf_comprehensive_class)
+    <div class="item-row"><span style="{{ $rowL }}">{{ __('Vollkasko') }}</span><span style="{{ $rowV }}">{{ \App\Models\ContractVehicleDetail::sfLabel($v->sf_comprehensive_class) }}@if($v->sf_comprehensive_valid_from) ({{ __('ab') }} {{ $v->sf_comprehensive_valid_from->format('d.m.Y') }})@endif</span></div>
+    @endif
+</div>
+@endif
 @endif
 
 {{-- Sparte Strom / Gas --}}

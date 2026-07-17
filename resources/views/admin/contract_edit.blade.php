@@ -18,7 +18,10 @@
 </div>
 @endif
 
-<div class="card" style="max-width:800px;">
+{{-- KFZ-Cockpit: alle Vertragsdetails auf einen Blick (Redesign 17.07.2026) --}}
+@include('admin.partials.contract_kfz_cockpit', ['contract' => $contract])
+
+<div class="card" style="max-width:980px;">
     <form method="POST" action="{{ route('admin.contract.update', $contract->id) }}">
         @csrf @method('PUT')
         @include('admin.partials.contract_form_fields', ['contract' => $contract])

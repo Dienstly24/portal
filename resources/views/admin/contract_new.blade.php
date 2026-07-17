@@ -12,7 +12,7 @@
 </div>
 @endif
 
-<div class="card" style="max-width:800px;">
+<div class="card" style="max-width:980px;">
     <form method="POST" id="contract-form" action="">
     @csrf
 

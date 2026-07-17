@@ -18,7 +18,7 @@
 </div>
 @endif
 
-<div class="card" style="max-width:800px;">
+<div class="card" style="max-width:980px;">
     <form method="POST" action="{{ route('admin.contract.store', $customer->id) }}">
         @csrf
         @include('admin.partials.contract_form_fields')
