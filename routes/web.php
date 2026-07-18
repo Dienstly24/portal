@@ -308,6 +308,14 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     });
     Route::get('/email/verfassen', [\App\Http\Controllers\ComposeEmailController::class, 'create'])->name('email.compose');
     Route::post('/email/verfassen', [\App\Http\Controllers\ComposeEmailController::class, 'send'])->name('email.compose.send');
+    // Smart-Composer: Kundensuche, Kundenkarte/Verlauf, Favoriten, KI-Entwurf
+    Route::get('/email/kunden-suche', [\App\Http\Controllers\ComposeEmailController::class, 'customerSearch'])
+        ->middleware('throttle:120,1')->name('email.customer_search');
+    Route::get('/email/kunden-kontext/{id}', [\App\Http\Controllers\ComposeEmailController::class, 'customerContext'])
+        ->middleware('throttle:120,1')->name('email.customer_context');
+    Route::post('/email/favorit/{id}', [\App\Http\Controllers\ComposeEmailController::class, 'toggleFavorite'])->name('email.favorite');
+    Route::post('/email/ki-entwurf', [\App\Http\Controllers\ComposeEmailController::class, 'aiDraft'])
+        ->middleware('throttle:15,10')->name('email.ai_draft');
 
     // Interner Chat & Notizen (nur Mitarbeiter - keine Portal-Routen!)
     Route::post('/customers/{id}/internal-messages', [\App\Http\Controllers\InternalMessageController::class, 'store'])->name('internal.store');

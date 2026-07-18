@@ -40,6 +40,9 @@ class User extends Authenticatable {
     }
     public function assignedCustomers() { return $this->belongsToMany(Customer::class, 'employee_customers'); }
 
+    /** Favoriten-Kunden dieses Mitarbeiters (Stern im E-Mail-Composer). */
+    public function favoriteCustomers() { return $this->belongsToMany(Customer::class, 'favorite_customers')->withTimestamps(); }
+
     public function canSeeAllCustomers(): bool {
         return in_array($this->role, ['admin', 'manager']) || (bool) $this->can_see_all_customers;
     }
