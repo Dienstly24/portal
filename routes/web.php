@@ -162,6 +162,10 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // Dubletten-Pruefung: MUSS vor /customers/{id} stehen, sonst wuerde
     // "duplicates" als Kunden-ID interpretiert.
     Route::get('/customers/duplicates', [AdminController::class, 'duplicates'])->name('customers.duplicates');
+    // Sammel-Zusammenfuehrung: nur admin/manager (Massenaktion, entfernt
+    // leere Duplikat-Akten - analog zur Loesch-Beschraenkung).
+    Route::post('/customers/duplicates/merge', [AdminController::class, 'duplicatesMerge'])
+        ->name('customers.duplicates.merge')->middleware('role:admin,manager');
     Route::put('/customers/notes/{id}/done', [AdminController::class, 'noteMarkDone'])->name('customer.note.done');
     Route::get('/customers/{id}', [AdminController::class, 'customerShow'])->name('customer');
     Route::get('/customers/{id}/edit', [AdminController::class, 'customerEdit'])->name('customer.edit');

@@ -19,7 +19,28 @@
     <div style="font-size:13px;margin-top:6px;">Der Kundenbestand ({{ $scanned }} geprüft) enthält aktuell keine offensichtlichen Doppelanlagen.</div>
 </div>
 @else
-<div style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">{{ count($pairs) }} Verdachtsfall(e) · {{ $scanned }} Kunden geprüft</div>
+@php $canBulk = in_array(auth()->user()->role, ['admin','manager']); @endphp
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+    <div style="font-size:13px;color:var(--ink-soft);">{{ count($pairs) }} Verdachtsfall(e) · {{ $scanned }} Kunden geprüft</div>
+    @if($canBulk)
+    <label style="font-size:13px;color:var(--ink);display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="checkAllPairs" style="width:16px;height:16px;cursor:pointer;accent-color:#17A65B;"> Alle auswählen
+    </label>
+    @endif
+</div>
+
+@if($canBulk)
+{{-- Eigenstaendiges Formular fuer die Sammel-Zusammenfuehrung. Die Checkboxen
+     unten gehoeren per form="bulkMergeForm" dazu; der Button uebertraegt die
+     Auswahl per JS und verlangt eine bewusste Bestaetigung. --}}
+<form method="POST" action="{{ route('admin.customers.duplicates.merge') }}" id="bulkMergeForm" onsubmit="return confirmBulkMerge(this);">@csrf</form>
+
+<div id="mergeBar" style="display:none;position:sticky;top:0;z-index:10;background:#1F3A33;color:#fff;border-radius:10px;padding:12px 20px;margin-bottom:14px;align-items:center;gap:14px;flex-wrap:wrap;">
+    <span style="font-size:13.5px;font-weight:600;"><span id="mergeCount">0</span> Paar(e) ausgewählt</span>
+    <span style="font-size:12px;opacity:.8;">Zusammengehörige Datensätze werden automatisch zu einem Kunden vereint – nichts wird gelöscht außer den leeren Duplikat-Akten.</span>
+    <button type="submit" form="bulkMergeForm" class="btn btn-primary" style="padding:8px 18px;font-size:13px;margin-left:auto;">Ausgewählte zusammenführen</button>
+</div>
+@endif
 
 @foreach($pairs as $pair)
 @php
@@ -31,6 +52,9 @@
 <div class="card" style="margin-bottom:16px;padding:0;overflow:hidden;">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap;gap:10px;">
         <div style="display:flex;align-items:center;gap:12px;">
+            @if($canBulk)
+            <input type="checkbox" class="pairCheck" name="pairs[]" value="{{ $primary->id }}|{{ $duplicate->id }}" form="bulkMergeForm" style="width:17px;height:17px;cursor:pointer;accent-color:#17A65B;" title="Für Sammel-Zusammenführung auswählen">
+            @endif
             <span style="background:{{ $badgeColor }};color:#fff;border-radius:999px;padding:4px 12px;font-size:12.5px;font-weight:700;">{{ $score }}% · {{ $tierLabel }}</span>
         </div>
         <a href="{{ route('admin.customer.merge', $primary->id) }}?duplicate={{ $duplicate->id }}" class="btn btn-primary" style="padding:8px 16px;">Prüfen &amp; zusammenführen →</a>
@@ -63,5 +87,34 @@
     @endif
 </div>
 @endforeach
+
+@if($canBulk)
+<script>
+// Zaehlt die aktuelle Auswahl und blendet die Aktionsleiste ein/aus.
+function refreshMergeBar() {
+    var checked = document.querySelectorAll('.pairCheck:checked');
+    document.getElementById('mergeCount').textContent = checked.length;
+    document.getElementById('mergeBar').style.display = checked.length > 0 ? 'flex' : 'none';
+    var all = document.querySelectorAll('.pairCheck');
+    var master = document.getElementById('checkAllPairs');
+    if (master) master.checked = checked.length > 0 && checked.length === all.length;
+}
+document.querySelectorAll('.pairCheck').forEach(function (cb) { cb.addEventListener('change', refreshMergeBar); });
+var master = document.getElementById('checkAllPairs');
+if (master) master.addEventListener('change', function () {
+    document.querySelectorAll('.pairCheck').forEach(function (cb) { cb.checked = master.checked; });
+    refreshMergeBar();
+});
+
+// Bestaetigung vor der Sammel-Zusammenfuehrung. Die ausgewaehlten Checkboxen
+// gehoeren per form="bulkMergeForm" bereits zum Formular und werden vom Browser
+// automatisch als pairs[] uebertragen - kein manuelles Kopieren noetig.
+function confirmBulkMerge(form) {
+    var checked = document.querySelectorAll('.pairCheck:checked');
+    if (checked.length === 0) { alert('Bitte zuerst mindestens ein Paar auswählen.'); return false; }
+    return confirm(checked.length + ' ausgewählte Dubletten-Paar(e) jetzt zusammenführen?\n\nZusammengehörige Datensätze werden zu einem Kunden vereint. Alle Verträge, Dokumente und Daten bleiben erhalten – nur die leeren Duplikat-Akten werden entfernt. Diese Aktion kann nicht rückgängig gemacht werden.');
+}
+</script>
+@endif
 @endif
 @endsection

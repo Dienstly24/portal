@@ -980,6 +980,108 @@ class AdminController extends Controller
         ]);
     }
 
+    /**
+     * Sammel-Zusammenfuehrung mehrerer Dubletten-Paare in einem Schritt.
+     * Ueberlappende Paare (z. B. fuenf Datensaetze derselben Person) werden
+     * ueber eine Union-Find-Gruppierung zu EINEM Cluster zusammengefasst und
+     * in den jeweils aeltesten Datensatz vereint. Sicherheitsdeckel: max. 30
+     * entfernte Duplikate pro Aktion (analog zur Loesch-Begrenzung).
+     */
+    public function duplicatesMerge(Request $request, \App\Services\Matching\CustomerMergeService $merge) {
+        $data = $request->validate([
+            'pairs'   => 'required|array|min:1|max:300',
+            'pairs.*' => 'string',
+        ]);
+
+        // 1) Paare in Kanten (Kunde <-> Kunde) zerlegen.
+        $edges = [];
+        $ids = [];
+        foreach ($data['pairs'] as $pair) {
+            $parts = explode('|', $pair, 2);
+            if (count($parts) !== 2 || $parts[0] === '' || $parts[1] === '' || $parts[0] === $parts[1]) {
+                continue;
+            }
+            $edges[] = $parts;
+            $ids[$parts[0]] = true;
+            $ids[$parts[1]] = true;
+        }
+        $ids = array_keys($ids);
+        if ($ids === []) {
+            return back()->with('error', 'Keine gültige Auswahl.');
+        }
+
+        // Zugriffsschutz: jeder betroffene Kunde muss im Portfolio liegen.
+        foreach ($ids as $id) {
+            $this->authorizeCustomerAccess($id);
+        }
+
+        // 2) Union-Find: verbundene Paare zu Clustern gruppieren.
+        $parent = [];
+        foreach ($ids as $id) {
+            $parent[$id] = $id;
+        }
+        $find = function ($x) use (&$parent) {
+            $root = $x;
+            while ($parent[$root] !== $root) {
+                $root = $parent[$root];
+            }
+            while ($parent[$x] !== $root) {
+                [$parent[$x], $x] = [$root, $parent[$x]];
+            }
+            return $root;
+        };
+        foreach ($edges as [$a, $b]) {
+            $ra = $find($a);
+            $rb = $find($b);
+            if ($ra !== $rb) {
+                $parent[$ra] = $rb;
+            }
+        }
+        $clusters = [];
+        foreach ($ids as $id) {
+            $clusters[$find($id)][] = $id;
+        }
+
+        // 3) Deckel gegen Massen-Merge (Anzahl zu entfernender Duplikate).
+        $toRemove = array_sum(array_map(fn ($c) => max(0, count($c) - 1), $clusters));
+        if ($toRemove > 30) {
+            return back()->with('error', 'Zu viele auf einmal: höchstens 30 Zusammenführungen pro Aktion. Bitte Auswahl verkleinern.');
+        }
+
+        // 4) Je Cluster in den aeltesten Datensatz vereinen.
+        $customers = \App\Models\Customer::with('user')->whereIn('id', $ids)->get()->keyBy('id');
+        $merged = 0;
+        $skipped = 0;
+        foreach ($clusters as $members) {
+            $present = array_values(array_filter($members, fn ($id) => $customers->has($id)));
+            if (count($present) < 2) {
+                continue;
+            }
+            usort($present, fn ($x, $y) => $customers[$x]->created_at <=> $customers[$y]->created_at);
+            $primaryId = array_shift($present);
+            foreach ($present as $dupId) {
+                $primary = \App\Models\Customer::with('user')->find($primaryId);
+                $dup = \App\Models\Customer::with('user')->find($dupId);
+                if (!$primary || !$dup || (string) $primary->id === (string) $dup->id) {
+                    $skipped++;
+                    continue;
+                }
+                try {
+                    $merge->merge($primary, $dup, auth()->id());
+                    $merged++;
+                } catch (\Throwable $e) {
+                    $skipped++;
+                }
+            }
+        }
+
+        $message = "{$merged} Zusammenführung(en) durchgeführt.";
+        if ($skipped > 0) {
+            $message .= " {$skipped} übersprungen (bereits zusammengeführt oder nicht zulässig).";
+        }
+        return redirect()->route('admin.customers.duplicates')->with('success', $message);
+    }
+
     public function mergeForm($id, \App\Services\Matching\CustomerMergeService $merge, \App\Services\Matching\CustomerMatchingService $matcher) {
         $this->authorizeCustomerAccess($id);
         $customer = \App\Models\Customer::with(['user', 'addresses'])->findOrFail($id);
