@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\Document;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -108,5 +109,38 @@ class DocumentMergeTest extends TestCase
 
         $response->assertOk()->assertJson(['ok' => true]);
         $this->assertSame(1, Customer::count());
+    }
+
+    public function test_files_uploaded_together_share_intake_batch(): void
+    {
+        Storage::fake('local');
+        config(['services.anthropic.key' => '']); // keine Analyse noetig fuer diesen Test
+
+        $response = $this->actingAs($this->admin())->postJson(route('admin.documents.smart_upload'), [
+            'files' => [
+                UploadedFile::fake()->create('ausweis.pdf', 40, 'application/pdf'),
+                UploadedFile::fake()->create('protokoll.pdf', 40, 'application/pdf'),
+            ],
+        ]);
+
+        $response->assertOk();
+        $ids = $response->json('ids');
+        $this->assertCount(2, $ids);
+        $batches = Document::whereIn('id', $ids)->pluck('intake_batch')->unique();
+        $this->assertCount(1, $batches);
+        $this->assertNotNull($batches->first());
+    }
+
+    public function test_single_upload_gets_no_batch(): void
+    {
+        Storage::fake('local');
+        config(['services.anthropic.key' => '']);
+
+        $response = $this->actingAs($this->admin())->postJson(route('admin.documents.smart_upload'), [
+            'files' => [UploadedFile::fake()->create('einzel.pdf', 40, 'application/pdf')],
+        ]);
+
+        $response->assertOk();
+        $this->assertNull(Document::findOrFail($response->json('ids.0'))->intake_batch);
     }
 }

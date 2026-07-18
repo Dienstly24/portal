@@ -235,6 +235,17 @@ class SmartDocumentUploadController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
+        // Mehrere Dateien in EINEM Eingangs-Upload gehoeren i.d.R. zu EINEM
+        // (neuen) Kunden -> gemeinsame Hochlade-Kennung, damit der Eingang sie
+        // als einen Vorgang gruppiert ("Neuen Kunden aus allen anlegen").
+        if ($customer === null && count($created) > 1) {
+            $batch = (string) \Illuminate\Support\Str::uuid();
+            Document::whereIn('id', array_map(fn ($d) => $d->id, $created))->update(['intake_batch' => $batch]);
+            foreach ($created as $document) {
+                $document->intake_batch = $batch;
+            }
+        }
+
         foreach ($created as $document) {
             ActivityLog::create([
                 'user_id' => auth()->id(),
