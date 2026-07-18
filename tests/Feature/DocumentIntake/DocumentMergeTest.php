@@ -131,6 +131,38 @@ class DocumentMergeTest extends TestCase
         $this->assertNotNull($batches->first());
     }
 
+    public function test_inbox_groups_batch_documents_as_one_vorgang(): void
+    {
+        Storage::fake('local');
+        $batch = (string) \Illuminate\Support\Str::uuid();
+        foreach ([['personalausweis', 'ausweis.pdf'], ['kfz_vertrag', 'protokoll.pdf']] as [$type, $name]) {
+            $this->inboxDoc($type, ['person' => ['first_name' => 'Ahmed', 'last_name' => 'Nassar']], $name)
+                ->update(['intake_batch' => $batch]);
+        }
+
+        $response = $this->actingAs($this->admin())->get(route('admin.documents.inbox'));
+
+        $response->assertOk()
+            ->assertSee('Ein Vorgang · 2 Dokumente', false)
+            ->assertSee('Neuen Kunden aus allen 2 anlegen', false);
+    }
+
+    public function test_inbox_batch_with_name_conflict_shows_warning_instead_of_button(): void
+    {
+        Storage::fake('local');
+        $batch = (string) \Illuminate\Support\Str::uuid();
+        $this->inboxDoc('personalausweis', ['person' => ['first_name' => 'Ahmed', 'last_name' => 'Nassar']])
+            ->update(['intake_batch' => $batch]);
+        $this->inboxDoc('fuehrerschein', ['person' => ['first_name' => 'Ahmad', 'last_name' => 'Nasser']])
+            ->update(['intake_batch' => $batch]);
+
+        $response = $this->actingAs($this->admin())->get(route('admin.documents.inbox'));
+
+        $response->assertOk()
+            ->assertSee('stimmen nicht ueberein', false)
+            ->assertDontSee('Neuen Kunden aus allen', false);
+    }
+
     public function test_single_upload_gets_no_batch(): void
     {
         Storage::fake('local');

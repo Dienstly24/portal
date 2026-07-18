@@ -35,77 +35,45 @@
 </div>
 
 {{-- Eingang: nicht zugeordnete Dokumente --}}
+@php
+    $batchIds = collect($batchGroups ?? [])->flatMap(fn ($g) => $g->pluck('id'))->all();
+    $singleDocuments = $inboxDocuments->reject(fn ($d) => in_array($d->id, $batchIds, true));
+@endphp
 <div class="card" style="padding:0;overflow:hidden;margin-bottom:24px;">
     <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">Nicht zugeordnet ({{ $inboxDocuments->count() }})</div>
-    @forelse($inboxDocuments as $doc)
-    @php $extracted = $doc->ai_extracted ?? []; $match = $extracted['match'] ?? null; @endphp
-    <div style="padding:16px 20px;border-bottom:1px solid var(--line);" data-doc-row="{{ $doc->id }}" data-doc-status="{{ $doc->ai_status }}">
-        <div style="display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:flex-start;">
-            <div style="min-width:260px;flex:1;">
-                <div style="font-weight:600;font-size:14px;">
-                    📄 <a href="{{ route('admin.documents.download', $doc->id) }}">{{ $doc->file_name }}</a>
-                    @if($doc->page_count)<span style="font-weight:400;color:var(--ink-soft);font-size:12.5px;"> · {{ $doc->page_count }} Seiten</span>@endif
-                </div>
-                <div style="font-size:12.5px;color:var(--ink-soft);margin-top:2px;">
-                    Hochgeladen {{ $doc->created_at->format('d.m.Y H:i') }}@if($doc->uploader) von {{ $doc->uploader->name }}@endif
-                </div>
-                <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-                    @if($doc->aiInProgress())
-                        <span class="badge" style="background:#FEF3C7;color:#92400E;">⏳ Wird analysiert…</span>
-                    @elseif($doc->ai_status === 'done')
-                        <span class="badge" style="background:#d9f4e6;color:#128a4b;">✓ {{ $doc->aiTypeLabel() ?? 'Erkannt' }}</span>
-                        @if($doc->ai_confidence !== null)<span class="badge" style="background:#EEF0F3;color:var(--ink-soft);">{{ $doc->ai_confidence }}% sicher</span>@endif
-                        @if($doc->ai_source === 'ocr')<span class="badge" style="background:#FEF3C7;color:#92400E;" title="Ohne KI-Anbieter erkannt (Tesseract-OCR) - Ergebnis bitte besonders sorgfaeltig pruefen.">OCR, ohne KI</span>@endif
-                    @elseif($doc->ai_status === 'failed')
-                        <span class="badge" style="background:#FBE9E9;color:#B3261E;">Analyse fehlgeschlagen</span>
-                    @else
-                        <span class="badge" style="background:#EEF0F3;color:var(--ink-soft);">Ohne Analyse</span>
-                    @endif
-                </div>
-                @if($doc->ai_summary)<div style="font-size:13px;margin-top:8px;">{{ $doc->ai_summary }}</div>@endif
-                @if($doc->ai_error)<div style="font-size:12.5px;color:#B3261E;margin-top:6px;">{{ $doc->ai_error }}</div>@endif
 
-                @if($match && ($match['out_of_portfolio'] ?? false))
-                {{-- Name/Kundennummer bewusst nicht angezeigt (ausserhalb des Portfolios). --}}
-                <div style="margin-top:10px;border:1px solid var(--line);background:#F4F5F7;border-radius:10px;padding:10px 12px;font-size:13px;color:var(--ink-soft);">
-                    👤 Möglicher Kunde erkannt (Übereinstimmung {{ $match['score'] }}%) – liegt außerhalb Ihres Portfolios. Bitte an Admin/Manager übergeben.
-                </div>
-                @elseif($match)
-                <div style="margin-top:10px;border:1px solid {{ $match['tier'] === 'auto' ? '#17A65B' : 'var(--line)' }};background:{{ $match['tier'] === 'auto' ? '#d9f4e6' : '#F4F5F7' }};border-radius:10px;padding:10px 12px;font-size:13px;">
-                    👤 Kunde gefunden: <strong>{{ $match['name'] ?? '—' }}</strong>
-                    ({{ $match['customer_number'] ?? '—' }}) · Übereinstimmung {{ $match['score'] }}%
-                    <button type="button" class="btn btn-gold btn-sm" style="margin-inline-start:10px;"
-                        onclick="docReview.open(@js($doc->id), 'assign', @js($match['customer_id']), @js(($match['name'] ?? '') . ' (' . ($match['customer_number'] ?? '') . ')'))">
-                        Diesem Kunden zuordnen
-                    </button>
-                </div>
-                @elseif($doc->ai_status === 'done')
-                <div style="margin-top:10px;font-size:13px;color:var(--ink-soft);">Kein Kunde gefunden.</div>
-                @endif
+    {{-- Vorgaenge: gemeinsam hochgeladene Dateien gehoeren zu EINEM Kunden --}}
+    @foreach(($batchGroups ?? []) as $batchId => $groupDocs)
+    @php $meta = $batchData[$batchId] ?? null; @endphp
+    <div style="margin:14px 16px;border:1.5px solid #185FA5;border-radius:12px;overflow:hidden;" data-batch="{{ $batchId }}">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 16px;background:#E6F1FB;">
+            <div style="font-weight:700;font-size:13.5px;color:#185FA5;">
+                🗂 Ein Vorgang · {{ $groupDocs->count() }} Dokumente (gemeinsam hochgeladen)
             </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
-                @if(!$doc->aiInProgress())
-                <button type="button" class="btn btn-primary btn-sm" onclick="docReview.open(@js($doc->id), 'assign', null, null)">Kunden zuordnen…</button>
-                @if(($extracted['person']['first_name'] ?? null) || ($extracted['person']['last_name'] ?? null))
-                <button type="button" class="btn btn-gold btn-sm" onclick="docReview.open(@js($doc->id), 'create', null, null)">Neuen Kunden erstellen</button>
-                @endif
-                @if($providerEnabled ?? false)
-                {{-- Erzwingt bewusst die kostenpflichtige KI-Stufe (ueberspringt die kostenlose OCR-Vorstufe). --}}
-                <button type="button" class="btn btn-ghost btn-sm" onclick="docReview.reanalyze(@js($doc->id), this)" title="Kostenpflichtige KI-Analyse (Claude) erzwingen">🤖 Mit KI analysieren</button>
-                @elseif($aiEnabled)
-                <button type="button" class="btn btn-ghost btn-sm" onclick="docReview.reanalyze(@js($doc->id), this)">🔄 Neu analysieren</button>
-                @endif
-                <form method="POST" action="{{ route('admin.documents.destroy', $doc->id) }}" style="margin:0;"
-                    onsubmit="return confirm('Dokument „{{ $doc->file_name }}“ wirklich löschen?');">
-                    @csrf @method('DELETE')
-                    <button type="submit" class="btn btn-ghost btn-sm" style="color:#A32D2D;" title="Löschen">🗑</button>
-                </form>
+            <div>
+                @if($meta && !empty($meta['conflicts']))
+                    <span class="badge" style="background:#FBE9E9;color:#B3261E;">⚠ {{ implode(' ', $meta['conflicts']) }}</span>
+                @elseif($meta && $meta['ready'] && $meta['has_name'])
+                    <button type="button" class="btn btn-gold btn-sm" onclick="docReview.openBatch(@js($batchId))">
+                        Neuen Kunden aus allen {{ $groupDocs->count() }} anlegen
+                    </button>
+                @elseif($meta && !$meta['ready'])
+                    <span class="badge" style="background:#FEF3C7;color:#92400E;">⏳ Analyse läuft noch…</span>
                 @endif
             </div>
         </div>
+        @foreach($groupDocs as $doc)
+            @include('admin.partials.inbox_doc_row', ['doc' => $doc])
+        @endforeach
     </div>
+    @endforeach
+
+    @forelse($singleDocuments as $doc)
+        @include('admin.partials.inbox_doc_row', ['doc' => $doc])
     @empty
-    <div style="padding:22px 20px;color:var(--ink-soft);font-size:13.5px;">📭 Keine unzugeordneten Dokumente – alles erledigt.</div>
+        @if(($batchGroups ?? collect())->isEmpty())
+        <div style="padding:22px 20px;color:var(--ink-soft);font-size:13.5px;">📭 Keine unzugeordneten Dokumente – alles erledigt.</div>
+        @endif
     @endforelse
 </div>
 
@@ -212,6 +180,9 @@
     ]]);
 @endphp
 window.INBOX_DOCS = @json($inboxDocsJson);
+// Vorgaenge (gemeinsam hochgeladene Dateien): serverseitig zusammengefuehrte
+// Extraktion (gleiche Logik wie beim Anlegen) fuer die Batch-Vorschau.
+window.INBOX_BATCHES = @json((object) ($batchData ?? []));
 
 window.docReview = (function() {
     var current = null;   // {docId, mode, customerId, customerLabel}
@@ -241,6 +212,34 @@ window.docReview = (function() {
 
     function get(x, a, b) { return (x[a] || {})[b] || null; }
     function el(id) { return document.getElementById(id); }
+
+    // Vorgang-Modus: EIN neuer Kunde aus allen Dokumenten des Batches.
+    function openBatch(batchId) {
+        var batch = window.INBOX_BATCHES[batchId];
+        if (!batch) return;
+        current = { batchId: batchId, mode: 'batch', customerId: null };
+
+        el('review-title').textContent = 'Neuen Kunden aus ' + batch.ids.length + ' Dokumenten erstellen';
+        el('review-doc-name').textContent = '🗂 ' + batch.file_names.join(' · ');
+        el('review-error').style.display = 'none';
+        el('review-customer-q').value = '';
+        el('review-customer-results').innerHTML = '';
+        el('review-visibility').value = 'internal';
+        el('review-assign-block').style.display = 'none';
+        el('review-create-block').style.display = '';
+
+        var p = (batch.merged || {}).person || {};
+        var name = [(p.first_name || ''), (p.last_name || '')].join(' ').trim() || 'Unbekannt';
+        el('review-create-block').textContent = '🆕 Es wird EIN neuer Kunde angelegt: ' + name
+            + ' – alle ' + batch.ids.length + ' Dokumente werden ihm zugeordnet. Die Daten stammen zusammengefuehrt aus allen Dokumenten (Ausweis hat Vorrang bei Personendaten).';
+
+        chooseCustomer(null, null);
+        renderApplyFields({ extracted: batch.merged || {} });
+        renderContract({ extracted: batch.merged || {} });
+
+        el('review-submit').textContent = 'Kunden anlegen & alle zuordnen';
+        el('doc-review-modal').style.display = 'flex';
+    }
 
     function open(docId, mode, customerId, customerLabel) {
         var doc = window.INBOX_DOCS[docId];
@@ -357,7 +356,8 @@ window.docReview = (function() {
 
     function submit() {
         if (!current) return;
-        var isCreate = current.mode === 'create';
+        var isBatch = current.mode === 'batch';
+        var isCreate = current.mode === 'create' || isBatch;
         if (!isCreate && !current.customerId) {
             showError('Bitte zuerst einen Kunden auswählen.');
             return;
@@ -372,10 +372,16 @@ window.docReview = (function() {
         };
         if (!isCreate) payload.customer_id = current.customerId;
 
-        var url = isCreate
-            ? @json(route('admin.documents.create_customer', ['id' => '__ID__']))
-            : @json(route('admin.documents.assign', ['id' => '__ID__']));
-        url = url.replace('__ID__', current.docId);
+        var url;
+        if (isBatch) {
+            payload.document_ids = (window.INBOX_BATCHES[current.batchId] || {}).ids || [];
+            url = @json(route('admin.documents.create_customer_batch'));
+        } else {
+            url = isCreate
+                ? @json(route('admin.documents.create_customer', ['id' => '__ID__']))
+                : @json(route('admin.documents.assign', ['id' => '__ID__']));
+            url = url.replace('__ID__', current.docId);
+        }
 
         el('review-submit').disabled = true;
         fetch(url, {
@@ -436,6 +442,7 @@ window.docReview = (function() {
 
     return {
         open: open,
+        openBatch: openBatch,
         close: function() { el('doc-review-modal').style.display = 'none'; current = null; },
         submit: submit,
         reanalyze: reanalyze,

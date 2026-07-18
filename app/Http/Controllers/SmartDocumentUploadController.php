@@ -145,8 +145,33 @@ class SmartDocumentUploadController extends Controller
             }
         }
 
+        // Gemeinsam hochgeladene Dateien (intake_batch) als EINEN Vorgang
+        // gruppieren. Die zusammengefuehrte Extraktion (Feld-Hoheit nach
+        // Dokumenttyp) wird hier serverseitig berechnet - dieselbe Logik wie
+        // beim Anlegen (create-customer-batch), keine Duplikation im JS.
+        $batchGroups = $inbox->filter(fn ($d) => $d->intake_batch !== null)
+            ->groupBy('intake_batch')
+            ->filter(fn ($group) => $group->count() > 1);
+        $batchData = [];
+        foreach ($batchGroups as $batchId => $group) {
+            $merged = $this->intake->mergeExtractions($group);
+            $conflicts = $merged['_conflicts'] ?? [];
+            unset($merged['_conflicts']);
+            $person = $merged['person'] ?? [];
+            $batchData[$batchId] = [
+                'ids' => $group->pluck('id')->values()->all(),
+                'file_names' => $group->pluck('file_name')->values()->all(),
+                'merged' => $merged,
+                'conflicts' => array_values($conflicts),
+                'ready' => $group->every(fn ($d) => !$d->aiInProgress()),
+                'has_name' => trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? '')) !== '',
+            ];
+        }
+
         return view('admin.documents_inbox', [
             'inboxDocuments' => $inbox,
+            'batchGroups' => $batchGroups,
+            'batchData' => $batchData,
             'recentDocuments' => $recent,
             'aiEnabled' => $this->analyzer->isEnabled(),
             'providerEnabled' => $this->analyzer->providerEnabled(),
