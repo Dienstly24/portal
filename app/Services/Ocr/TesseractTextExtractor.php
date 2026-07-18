@@ -51,8 +51,19 @@ class TesseractTextExtractor implements TextExtractorInterface
                 ? $this->rasterizePdf($binary, $dir)
                 : $this->writeSingleImage($binary, $mime, $dir);
 
+            // Hartes Gesamt-Zeitbudget: OCR darf niemals das Job-Timeout
+            // sprengen (sonst wird der Worker mitten im Lauf gekillt und das
+            // Dokument bleibt in 'processing' haengen). Ist das Budget
+            // erschoepft, wird mit dem bisher Gelesenen weitergemacht -
+            // reicht das nicht, eskaliert DocumentAnalyzer ohnehin zur KI.
+            $deadline = microtime(true) + max(5, (int) config('services.ocr.max_seconds', 60));
+
             $text = '';
             foreach ($images as $image) {
+                if (microtime(true) >= $deadline) {
+                    Log::warning('OCR-Zeitbudget erschoepft - Teilergebnis nach ' . mb_strlen($text) . ' Zeichen.');
+                    break;
+                }
                 $text .= $this->ocrImage($image) . "\n";
             }
             return trim($text);
@@ -74,9 +85,15 @@ class TesseractTextExtractor implements TextExtractorInterface
         $pdfPath = $dir . '/source.pdf';
         file_put_contents($pdfPath, $binary);
 
+        // Niedrigere DPI (Default 150 statt 200) reicht fuer OCR voellig aus,
+        // halbiert aber Pixelzahl und Rechenzeit; die Seitenzahl fuer OCR ist
+        // bewusst begrenzt (Default 10), da fuer Typ-Erkennung + Basisfelder
+        // die ersten Seiten genuegen - so bleibt der Lauf im Zeitbudget.
+        $dpi = (string) max(72, (int) config('services.ocr.dpi', 150));
+        $maxPages = (string) max(1, (int) config('services.ocr.max_pages', 10));
         $prefix = $dir . '/page';
         $process = new Process([
-            $this->pdftoppmBinary(), '-png', '-r', '200', '-f', '1', '-l', (string) self::MAX_PDF_PAGES, $pdfPath, $prefix,
+            $this->pdftoppmBinary(), '-png', '-r', $dpi, '-f', '1', '-l', $maxPages, $pdfPath, $prefix,
         ]);
         $process->setTimeout(60);
         $process->run();
@@ -106,7 +123,7 @@ class TesseractTextExtractor implements TextExtractorInterface
         $process = new Process([
             $this->tesseractBinary(), $path, 'stdout', '-l', (string) config('services.ocr.languages', 'deu+eng'),
         ]);
-        $process->setTimeout(30);
+        $process->setTimeout(max(5, (int) config('services.ocr.page_timeout', 20)));
         $process->run();
         return $process->isSuccessful() ? $process->getOutput() : '';
     }

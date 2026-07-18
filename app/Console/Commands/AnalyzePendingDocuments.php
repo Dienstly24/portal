@@ -26,10 +26,13 @@ class AnalyzePendingDocuments extends Command
             AnalyzeDocumentJob::dispatch($document->id);
         }
 
-        // processing aelter als 45 Minuten: festgefahren -> als Fehler markieren,
-        // Mitarbeiter koennen ueber die Review-UI neu analysieren.
+        // processing aelter als 20 Minuten: festgefahren -> als Fehler markieren,
+        // Mitarbeiter koennen ueber die Review-UI neu analysieren. Ein regulaerer
+        // Lauf kann inkl. Retries hoechstens ~11 Min dauern (2x timeout 300s +
+        // backoff), 20 Min ist also ein sicherer Abstand und surft Fehler
+        // schneller auf als die frueheren 45 Min.
         $stuck = Document::where('ai_status', 'processing')
-            ->where('updated_at', '<', now()->subMinutes(45))->get();
+            ->where('updated_at', '<', now()->subMinutes(20))->get();
         foreach ($stuck as $document) {
             $document->update([
                 'ai_status' => 'failed',
