@@ -970,7 +970,7 @@ class SmartDocumentUploadTest extends TestCase
         $this->actingAs($this->makeAdmin())
             ->postJson(route('admin.documents.reanalyze', $doc->id))
             ->assertStatus(422)
-            ->assertJsonFragment(['message' => 'KI-Analyse ist nicht konfiguriert (ANTHROPIC_API_KEY fehlt).']);
+            ->assertJsonFragment(['message' => 'Analyse ist nicht konfiguriert (kein KI-Anbieter und keine OCR-Stufe aktiv).']);
 
         $this->enableAi();
         $doc->update(['ai_status' => 'processing']);
@@ -1093,12 +1093,33 @@ class SmartDocumentUploadTest extends TestCase
         Http::assertNothingSent(); // kein KI-Aufruf, rein OCR-basiert
     }
 
-    public function test_ai_provider_is_preferred_over_ocr_when_both_available(): void
+    public function test_sufficient_ocr_result_skips_ai_even_when_configured(): void
     {
         Storage::fake('local');
         $this->enableAi();
-        // OCR-Text wuerde als "sonstiges" klassifizieren - der konfigurierte
-        // KI-Anbieter muss trotzdem gewinnen (bessere Qualitaet, Vision).
+        // "Kostenlos zuerst": erkennt OCR den Typ UND ein Feld (hier
+        // sepa_mandat + IBAN), darf Claude gar nicht erst aufgerufen werden.
+        $this->fakeOcr("SEPA-Lastschriftmandat\nIBAN: DE89 3704 0044 0532 0130 00");
+        $this->fakeAnalysis($this->gesundheitskartePayload());
+
+        $admin = $this->makeAdmin();
+        $response = $this->actingAs($admin)->postJson(route('admin.documents.smart_upload'), [
+            'files' => [UploadedFile::fake()->image('mandat.jpg', 800, 500)],
+        ]);
+
+        $response->assertOk();
+        $doc = Document::findOrFail($response->json('ids.0'));
+        $this->assertSame('sepa_mandat', $doc->ai_type);
+        $this->assertSame('ocr', $doc->ai_source);
+        Http::assertNothingSent(); // kostenlose Stufe reichte -> keine KI-Kosten
+    }
+
+    public function test_insufficient_ocr_result_escalates_to_ai(): void
+    {
+        Storage::fake('local');
+        $this->enableAi();
+        // OCR erkennt weder Typ (-> 'sonstiges') noch ein Feld: die kostenlose
+        // Stufe reicht NICHT, also uebernimmt der KI-Anbieter (Claude).
         $this->fakeOcr('Belangloser OCR-Text ohne jedes Stichwort.');
         $this->fakeAnalysis($this->gesundheitskartePayload());
 
@@ -1114,31 +1135,37 @@ class SmartDocumentUploadTest extends TestCase
         Http::assertSent(fn ($request) => str_contains($request->url(), 'api.anthropic.com'));
     }
 
-    public function test_ocr_is_not_invoked_when_ai_provider_does_not_need_it(): void
+    public function test_reanalyze_forces_ai_and_skips_ocr(): void
     {
         Storage::fake('local');
         $this->enableAi();
         config(['services.ocr.enabled' => true]);
-        // OCR-Extraktor, der bei Aufruf FEHLSCHLAEGT: er darf bei aktivem
-        // Vision-Anbieter (Claude) gar nicht erst laufen - sonst waere das
-        // eine teure, nutzlose Extraktion bei jedem Upload.
+        // OCR-Extraktor, der bei Aufruf FEHLSCHLAEGT: die erzwungene
+        // KI-Eskalation (Button "Mit KI analysieren") muss die kostenlose
+        // Vorstufe komplett ueberspringen, sonst wuerde dieser Extractor
+        // aufgerufen und werfen.
         $this->app->bind(TextExtractorInterface::class, fn () => new class implements TextExtractorInterface {
             public function isAvailable(): bool { return true; }
             public function extract(string $binary, string $mime): string
             {
-                throw new \RuntimeException('OCR darf bei aktivem KI-Anbieter nicht laufen.');
+                throw new \RuntimeException('OCR darf bei erzwungener KI-Analyse nicht laufen.');
             }
         });
+        Storage::disk('local')->put('documents/eingang/scan.pdf', '%PDF-1.4');
+        $doc = Document::create([
+            'customer_id' => null, 'category' => 'other', 'file_name' => 'scan.pdf',
+            'file_path' => 'documents/eingang/scan.pdf', 'disk' => 'local',
+            'ai_status' => 'done', 'ai_type' => 'sonstiges', 'ai_source' => 'ocr',
+        ]);
         $this->fakeAnalysis($this->gesundheitskartePayload());
 
-        $admin = $this->makeAdmin();
-        $response = $this->actingAs($admin)->postJson(route('admin.documents.smart_upload'), [
-            'files' => [UploadedFile::fake()->image('karte.jpg', 800, 500)],
-        ]);
+        $this->actingAs($this->makeAdmin())
+            ->postJson(route('admin.documents.reanalyze', $doc->id))
+            ->assertOk();
 
-        $response->assertOk();
-        $doc = Document::findOrFail($response->json('ids.0'));
+        $doc->refresh();
         $this->assertSame('done', $doc->ai_status);
+        $this->assertSame('gesundheitskarte', $doc->ai_type);
         $this->assertSame('ai', $doc->ai_source);
     }
 

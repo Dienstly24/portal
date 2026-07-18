@@ -89,7 +89,10 @@
                 @if(($extracted['person']['first_name'] ?? null) || ($extracted['person']['last_name'] ?? null))
                 <button type="button" class="btn btn-gold btn-sm" onclick="docReview.open(@js($doc->id), 'create', null, null)">Neuen Kunden erstellen</button>
                 @endif
-                @if($aiEnabled)
+                @if($providerEnabled ?? false)
+                {{-- Erzwingt bewusst die kostenpflichtige KI-Stufe (ueberspringt die kostenlose OCR-Vorstufe). --}}
+                <button type="button" class="btn btn-ghost btn-sm" onclick="docReview.reanalyze(@js($doc->id), this)" title="Kostenpflichtige KI-Analyse (Claude) erzwingen">🤖 Mit KI analysieren</button>
+                @elseif($aiEnabled)
                 <button type="button" class="btn btn-ghost btn-sm" onclick="docReview.reanalyze(@js($doc->id), this)">🔄 Neu analysieren</button>
                 @endif
                 <form method="POST" action="{{ route('admin.documents.destroy', $doc->id) }}" style="margin:0;"

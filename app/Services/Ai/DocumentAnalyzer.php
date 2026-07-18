@@ -7,17 +7,23 @@ use App\Services\Ocr\TextExtractorInterface;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Orchestriert die Dokumentanalyse (Smart Document Upload):
+ * Orchestriert die Dokumentanalyse (Smart Document Upload) - "kostenlos
+ * zuerst" (Betreiber-Entscheidung):
  *
- * 1) Die kostenlose OCR-Basisebene (Tesseract, nur wenn per Konfiguration
- *    aktiviert) liest den Text der Datei.
- * 2) Ist ein KI-Anbieter konfiguriert (Standard: Claude/Anthropic), liefert
- *    er Typ-Erkennung und strukturierte Datenextraktion - er liest Bilder/
- *    PDFs direkt (Vision) und braucht den OCR-Text i.d.R. nicht.
- * 3) Ohne KI-Anbieter liefert eine einfache Stichwort-/Regex-Heuristik auf
- *    dem OCR-Text ein Ergebnis niedriger Konfidenz.
- * 4) Ist weder ein Anbieter konfiguriert noch OCR aktiv/erfolgreich,
- *    bleibt der Upload ohne Analyse (ai_status = 'none', wie zuvor).
+ * 1) Die kostenlose OCR-Basisebene (Tesseract) liest den Text und eine
+ *    einfache Stichwort-/Regex-Heuristik bestimmt Typ + Basisfelder.
+ * 2) Reicht dieses Ergebnis (Typ erkannt UND mindestens ein nutzbares
+ *    Feld), wird es OHNE KI-Aufruf uebernommen (ai_source = 'ocr').
+ * 3) Sonst wird - falls konfiguriert - der KI-Anbieter (Standard: Claude,
+ *    Vision) hinzugezogen (ai_source = 'ai'). So kostet die KI nur dann
+ *    etwas, wenn die kostenlose Stufe nicht ausreicht.
+ * 4) Ist kein KI-Anbieter konfiguriert, bleibt es beim (ggf. schwachen)
+ *    OCR-Ergebnis; ist auch OCR nicht verfuegbar, laeuft der Upload wie
+ *    frueher ohne Analyse.
+ *
+ * Mitarbeiter koennen die KI ueber die Review-UI bewusst erzwingen
+ * (forceAi) - z.B. wenn das OCR-Ergebnis zwar formal "reicht", die
+ * Kundenzuordnung aber die bessere Vision-Extraktion braucht.
  *
  * Der KI-Anbieter ist ueber DocumentAiProviderInterface austauschbar
  * (siehe AppServiceProvider): ein weiterer Anbieter braucht keinen Umbau
@@ -41,9 +47,16 @@ class DocumentAnalyzer
     ) {
     }
 
+    /** Analyse moeglich? (KI-Anbieter ODER kostenlose OCR-Basisebene) */
     public function isEnabled(): bool
     {
         return $this->provider->isEnabled() || $this->ocr->isAvailable();
+    }
+
+    /** Steht die kostenpflichtige KI-Stufe zur Verfuegung? (fuer den "Mit KI"-Button) */
+    public function providerEnabled(): bool
+    {
+        return $this->provider->isEnabled();
     }
 
     public function model(): string
@@ -56,35 +69,62 @@ class DocumentAnalyzer
      * validierte Ergebnis (inkl. "source": 'ai'|'ocr') - oder null, wenn
      * keine brauchbare/sichere Antwort vorliegt.
      *
+     * @param bool $forceAi KI-Anbieter direkt nutzen (Mitarbeiter-Eskalation),
+     *                      die kostenlose Vorstufe ueberspringen.
      * @return array{type: string, confidence: int, summary: string, title: ?string, data: array, source: string}|null
      * @throws \RuntimeException bei nicht analysierbarer Datei oder KI-Dienstfehler
      */
-    public function analyze(Document $document): ?array
+    public function analyze(Document $document, bool $forceAi = false): ?array
     {
         [$binary, $mime] = $this->readFile($document);
 
-        $providerEnabled = $this->provider->isEnabled();
-
-        // OCR nur ausfuehren, wenn das Ergebnis auch genutzt wird: entweder
-        // gibt es keinen KI-Anbieter (dann IST OCR die Analyse) oder der
-        // Anbieter verarbeitet den Text ausdruecklich. Claude liest
-        // Bilder/PDF direkt (Vision) und braucht ihn nicht - ihn trotzdem
-        // bei jedem Upload zu erzeugen (pdftoppm + tesseract je Seite) waere
-        // spuerbare, nutzlose Last auf dem Server.
-        $needOcr = !$providerEnabled || $this->provider->wantsOcrText();
-        $ocrText = ($needOcr && $this->ocr->isAvailable()) ? $this->ocr->extract($binary, $mime) : '';
-
-        if ($providerEnabled) {
-            $result = $this->provider->analyze($binary, $mime, $ocrText);
-            return $result !== null ? [...$result, 'source' => 'ai'] : null;
+        // Erzwungene KI-Eskalation: kostenlose Stufe ueberspringen.
+        if ($forceAi && $this->provider->isEnabled()) {
+            return $this->runProvider($binary, $mime, '');
         }
 
-        if ($ocrText !== '') {
-            $result = (new HeuristicDocumentClassifier())->classify($ocrText);
-            return $result !== null ? [...$result, 'source' => 'ocr'] : null;
+        // Kostenlose Stufe zuerst: OCR-Text + Heuristik.
+        $ocrText = $this->ocr->isAvailable() ? $this->ocr->extract($binary, $mime) : '';
+        $ocrResult = $ocrText !== '' ? (new HeuristicDocumentClassifier())->classify($ocrText) : null;
+
+        // Reicht das OCR-Ergebnis, KI gar nicht erst bemuehen.
+        if ($ocrResult !== null && $this->ocrResultSufficient($ocrResult)) {
+            return [...$ocrResult, 'source' => 'ocr'];
         }
 
-        return null;
+        // Sonst zur KI eskalieren (falls konfiguriert).
+        if ($this->provider->isEnabled()) {
+            return $this->runProvider($binary, $mime, $ocrText);
+        }
+
+        // Kein KI-Anbieter: bestmoegliches OCR-Ergebnis (auch schwach) oder nichts.
+        return $ocrResult !== null ? [...$ocrResult, 'source' => 'ocr'] : null;
+    }
+
+    /** @return array{...}|null */
+    private function runProvider(string $binary, string $mime, string $ocrText): ?array
+    {
+        $result = $this->provider->analyze($binary, $mime, $ocrText);
+        return $result !== null ? [...$result, 'source' => 'ai'] : null;
+    }
+
+    /**
+     * Ist das kostenlose OCR-Ergebnis gut genug, um die KI zu sparen?
+     * Kriterium: Der Dokumenttyp wurde erkannt (nicht 'sonstiges') UND es
+     * wurde mindestens ein strukturiertes Feld extrahiert (IBAN, FIN,
+     * Kennzeichen, E-Mail ...). Andernfalls uebernimmt die KI.
+     */
+    private function ocrResultSufficient(array $result): bool
+    {
+        if (($result['type'] ?? 'sonstiges') === 'sonstiges') {
+            return false;
+        }
+        foreach ($result['data'] ?? [] as $group) {
+            if (is_array($group) && $group !== []) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** @return array{0: string, 1: string} [$binary, $mime] */

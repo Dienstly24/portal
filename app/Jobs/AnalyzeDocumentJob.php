@@ -35,7 +35,7 @@ class AnalyzeDocumentJob implements ShouldQueue
     public int $tries = 2;
     public int $backoff = 45;
 
-    public function __construct(public string $documentId) {}
+    public function __construct(public string $documentId, public bool $forceAi = false) {}
 
     public function handle(DocumentAnalyzer $analyzer, DocumentIntakeService $intake): void
     {
@@ -63,7 +63,7 @@ class AnalyzeDocumentJob implements ShouldQueue
         }
 
         try {
-            $result = $analyzer->analyze($document);
+            $result = $analyzer->analyze($document, $this->forceAi);
         } catch (\Throwable $e) {
             // Auf echten Queues (database) einmal erneut versuchen; im
             // Sync-Betrieb (Tests, QUEUE_CONNECTION=sync) sofort als

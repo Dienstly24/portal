@@ -149,6 +149,7 @@ class SmartDocumentUploadController extends Controller
             'inboxDocuments' => $inbox,
             'recentDocuments' => $recent,
             'aiEnabled' => $this->analyzer->isEnabled(),
+            'providerEnabled' => $this->analyzer->providerEnabled(),
         ]);
     }
 
@@ -419,21 +420,27 @@ class SmartDocumentUploadController extends Controller
         return response()->json($customers);
     }
 
-    /** Analyse erneut anstossen (z.B. nach Fehler oder Modellwechsel). */
+    /**
+     * Analyse erneut anstossen. Ist ein KI-Anbieter konfiguriert, erzwingt
+     * die manuelle Wiederholung die kostenpflichtige KI-Stufe (Mitarbeiter-
+     * Eskalation ueber den "Mit KI analysieren"-Button) - die kostenlose
+     * OCR-Vorstufe wird uebersprungen. Ohne KI-Anbieter laeuft nur die
+     * OCR-Analyse erneut (z.B. Retry nach Fehler).
+     */
     public function reanalyze($id)
     {
         $document = Document::findOrFail($id);
         $this->authorizeDocument($document);
 
         if (!$this->analyzer->isEnabled()) {
-            return response()->json(['message' => 'KI-Analyse ist nicht konfiguriert (ANTHROPIC_API_KEY fehlt).'], 422);
+            return response()->json(['message' => 'Analyse ist nicht konfiguriert (kein KI-Anbieter und keine OCR-Stufe aktiv).'], 422);
         }
         if ($document->aiInProgress()) {
             return response()->json(['message' => 'Analyse laeuft bereits.'], 422);
         }
 
         $document->update(['ai_status' => 'pending', 'ai_error' => null]);
-        AnalyzeDocumentJob::dispatch($document->id);
+        AnalyzeDocumentJob::dispatch($document->id, forceAi: $this->analyzer->providerEnabled());
 
         return response()->json(['ok' => true]);
     }

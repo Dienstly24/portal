@@ -36,12 +36,6 @@ class ClaudeDocumentAiProvider implements DocumentAiProviderInterface
         return (string) config('services.anthropic.document_model', config('services.anthropic.model'));
     }
 
-    /** Claude liest Bilder/PDF direkt (Vision) - der OCR-Text wird nicht benoetigt. */
-    public function wantsOcrText(): bool
-    {
-        return false;
-    }
-
     public function analyze(string $binary, string $mime, string $ocrText): ?array
     {
         if ($mime === 'application/pdf') {
