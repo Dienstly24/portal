@@ -54,13 +54,15 @@
         <input type="file" name="csv_file" id="csv-input" accept=".csv,.txt" style="display:none;" onchange="updateFileName(this.files[0]?.name)">
 
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-            <div style="display:flex;align-items:center;gap:8px;">
-                <input type="checkbox" name="skip_duplicates" id="skip_dup" checked style="width:auto;">
-                <label for="skip_dup" style="font-size:13px;color:var(--ink-soft);">Duplikate überspringen</label>
+            <div style="font-size:13px;color:var(--ink-soft);">
+                Duplikate werden automatisch erkannt und übersprungen.
             </div>
             <button type="submit" class="btn btn-primary">
-                📥 Importieren
+                👁 Vorschau anzeigen
             </button>
+        </div>
+        <div style="font-size:12px;color:var(--ink-soft);margin-top:8px;">
+            Nach dem Hochladen siehst du zuerst eine Vorschau. Erst nach deiner Bestätigung werden Kunden angelegt.
         </div>
     </form>
 </div>
