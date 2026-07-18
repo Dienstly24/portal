@@ -55,13 +55,26 @@ class ImportCustomersJob implements ShouldQueue
         if ($this->actorId) {
             $body = "{$result['imported']} Kunden importiert, {$result['skipped']} uebersprungen.";
             if (!empty($result['errors'])) {
-                $body .= ' Hinweise: ' . implode(' | ', $result['errors']);
+                // Nur wenige, gekuerzte Hinweise einbetten und Platz fuer den
+                // "weitere"-Zaehler reservieren: die Notification-Spalte ist
+                // string(500), ein Import mit vielen Warnungen (z.B. hunderte
+                // Duplikate) wuerde sie sonst sprengen und den Job trotz
+                // erfolgreichem Import als fehlgeschlagen markieren.
+                $shown = array_map(
+                    fn ($e) => mb_substr((string) $e, 0, 80),
+                    array_slice($result['errors'], 0, 3)
+                );
+                $body .= ' Hinweise: ' . implode(' | ', $shown);
+                $more = count($result['errors']) - count($shown);
+                if ($more > 0) {
+                    $body .= ' | ... und ' . $more . ' weitere.';
+                }
             }
 
             InternalNotification::create([
                 'user_id' => $this->actorId,
                 'title'   => 'Kunden-Import abgeschlossen',
-                'body'    => $body,
+                'body'    => mb_substr($body, 0, 480),
                 'link'    => route('admin.import_export'),
             ]);
         }
