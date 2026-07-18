@@ -82,6 +82,18 @@ class CustomerMatchingService
         return $this->match($this->criteriaFor($customer), (string) $customer->id);
     }
 
+    /**
+     * Score zweier konkreter (bereits geladener) Kunden - fuer den
+     * Dubletten-Abgleich, wenn das Kandidatenpaar bereits feststeht
+     * (Blocking). Rechnet rein im Speicher, ohne DB-Abfrage.
+     */
+    public function scorePair(Customer $a, Customer $b): MatchResult
+    {
+        [$score, $breakdown] = $this->score($a, $this->criteriaFor($b));
+
+        return new MatchResult($a, min(100, $score), $breakdown);
+    }
+
     /** Begrenzter Kandidatenpool statt Volltabellen-Scan bei jedem Matching-Lauf. */
     private function candidatePool(array $criteria, ?string $excludeId = null)
     {
