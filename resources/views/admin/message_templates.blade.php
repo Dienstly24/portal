@@ -48,9 +48,12 @@
         </div>
         @if($canManage)
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button type="button" class="btn btn-ghost btn-sm"
-                onclick='openTplModal(@json($tpl->only(["id","name","category","subject","body","sort"]), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP))'>✏️ Bearbeiten</button>
-            <form method="POST" action="{{ route('admin.templates.destroy', $tpl->id) }}" onsubmit="return confirm('Vorlage „{{ $tpl->name }}" wirklich löschen?');" style="margin:0;">
+            {{-- Daten als data-Attribut (Blade-escaped) statt @json im onclick:
+                 @json mit Options-Parameter zerlegt Argumente an Kommas und
+                 erzeugt kaputtes PHP -> 500 erst zur Laufzeit. --}}
+            <button type="button" class="btn btn-ghost btn-sm tpl-edit"
+                data-tpl="{{ json_encode($tpl->only(['id', 'name', 'category', 'subject', 'body', 'sort'])) }}">✏️ Bearbeiten</button>
+            <form method="POST" action="{{ route('admin.templates.destroy', $tpl->id) }}" onsubmit="return confirm('Diese Vorlage wirklich löschen?');" style="margin:0;">
                 @csrf @method('DELETE')
                 <button type="submit" class="btn btn-ghost btn-sm" style="color:#A32D2D;">Löschen</button>
             </form>
@@ -121,6 +124,9 @@ function openTplModal(tpl) {
 }
 document.getElementById('tpl-modal').addEventListener('click', function(e) {
     if (e.target === this) this.style.display = 'none';
+});
+document.querySelectorAll('.tpl-edit').forEach(function(btn) {
+    btn.addEventListener('click', function() { openTplModal(JSON.parse(btn.dataset.tpl)); });
 });
 </script>
 @endif
