@@ -73,6 +73,13 @@ return [
     'ai_document_provider' => env('AI_DOCUMENT_PROVIDER', 'claude'),
 
     /*
+    | Provider-unabhaengige LLM-Schicht der AI-Workflow-Engine (Saeule 8):
+    | austauschbarer Text-/Vision-Anbieter (aktuell nur 'claude') - siehe
+    | App\Services\Ai\Contracts\AiProviderInterface.
+    */
+    'ai_text_provider' => env('AI_TEXT_PROVIDER', 'claude'),
+
+    /*
     | Kostenlose OCR-Basisebene (Tesseract) fuer den Smart Document Upload.
     | Standardmaessig AUS: erst nach Installation von `tesseract-ocr`,
     | `tesseract-ocr-deu` und (fuer PDFs) `poppler-utils` auf dem Server
