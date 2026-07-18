@@ -3,18 +3,23 @@ namespace App\Http\Controllers;
 
 use App\Mail\DirectEmailMail;
 use App\Models\Customer;
+use App\Models\CustomerMessage;
 use App\Models\CustomerTimeline;
 use App\Models\MessageTemplate;
+use App\Models\Ticket;
+use App\Services\EmailDraftService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 
 /**
- * E-Mail-Composer der Beraterwelt: eine E-Mail per Klick an einen Kunden
- * oder an eine Gesellschaft (freier Empfaenger) - mit Vorlagen und
- * Platzhaltern. Versand an Kunden wird in der Kunden-Historie protokolliert.
+ * Smart-E-Mail-Composer der Beraterwelt: Kundensuche mit Sofort-Vorschlaegen
+ * und Favoriten, Kundenkarte mit Interaktionsverlauf, Vorlagen mit Suche,
+ * optionaler KI-Entwurf - Versand an Kunden oder Gesellschaften.
+ * Versand mit Kundenbezug wird in der Kunden-Historie protokolliert.
  *
  * Berechtigung: admin/manager/support immer; employee nur mit dem
- * bestehenden Rechte-Flag can_send_emails.
+ * bestehenden Rechte-Flag can_send_emails. Kundendaten immer zusaetzlich
+ * durch den Portfolio-Check (canAccessCustomer) geschuetzt.
  */
 class ComposeEmailController extends Controller
 {
@@ -28,7 +33,14 @@ class ComposeEmailController extends Controller
         );
     }
 
-    public function create(Request $request)
+    /** null = alle Kunden sichtbar; sonst erlaubte IDs (Portfolio-Scope). */
+    private function visibleCustomerIds(): ?array
+    {
+        $user = auth()->user();
+        return $user->canSeeAllCustomers() ? null : $user->visibleCustomerIdsWithSubstitution();
+    }
+
+    public function create(Request $request, EmailDraftService $draftService)
     {
         $this->authorizeCompose();
 
@@ -41,9 +53,169 @@ class ComposeEmailController extends Controller
         return view('admin.compose_email', [
             'customer' => $customer,
             'templates' => MessageTemplate::orderBy('category')->orderBy('sort')->orderBy('name')
-                ->get(['id', 'name', 'category']),
+                ->get(['id', 'name', 'category', 'subject']),
             'placeholders' => MessageTemplate::PLACEHOLDERS,
+            'aiAvailable' => $draftService->isAvailable(),
         ]);
+    }
+
+    /**
+     * Sofort-Suche fuer die Kundenauswahl: Name, E-Mail, Kundennummer oder
+     * Firma - immer im eigenen Portfolio-Scope. Ohne Suchbegriff kommen
+     * Favoriten zuerst, danach die zuletzt angelegten Kunden.
+     */
+    public function customerSearch(Request $request)
+    {
+        $this->authorizeCompose();
+        $q = trim((string) $request->query('q', ''));
+        $ids = $this->visibleCustomerIds();
+        $favoriteIds = auth()->user()->favoriteCustomers()->pluck('customers.id')->map(fn($id) => (string) $id);
+
+        $base = Customer::with(['user', 'betreuer'])
+            ->when($ids !== null, fn($query) => $query->whereIn('customers.id', $ids));
+
+        if ($q === '') {
+            $favorites = (clone $base)->whereIn('customers.id', $favoriteIds)->get();
+            $recent = (clone $base)->whereNotIn('customers.id', $favoriteIds)->latest()->take(5)->get();
+            $customers = $favorites->concat($recent);
+        } else {
+            $customers = $base->where(function ($query) use ($q) {
+                $like = '%' . $q . '%';
+                $query->where('customer_number', 'like', $like)
+                    ->orWhere('company_name', 'like', $like)
+                    ->orWhereHas('user', fn($u) => $u->where('name', 'like', $like)->orWhere('email', 'like', $like));
+            })->take(8)->get();
+        }
+
+        return response()->json([
+            'customers' => $customers->map(fn(Customer $c) => [
+                'id' => (string) $c->id,
+                'name' => $c->user?->name ?? '—',
+                'email' => $c->user?->hasRealEmail() ? $c->user->email : null,
+                'company' => $c->company_name,
+                'number' => $c->customer_number,
+                'lang' => strtoupper((string) $c->preferred_lang ?: 'DE'),
+                'last_contact' => $c->last_contact
+                    ? \Carbon\Carbon::parse($c->last_contact)->format('d.m.Y') : null,
+                'betreuer' => $c->betreuer->pluck('name')->implode(', '),
+                'favorite' => $favoriteIds->contains((string) $c->id),
+            ])->values(),
+        ]);
+    }
+
+    /** Stern setzen/entfernen - Favoriten stehen in der Suche ganz oben. */
+    public function toggleFavorite($customerId)
+    {
+        $this->authorizeCompose();
+        abort_unless(auth()->user()->canAccessCustomer($customerId), 403);
+        Customer::findOrFail($customerId);
+
+        $favorites = auth()->user()->favoriteCustomers();
+        if ($favorites->where('customers.id', $customerId)->exists()) {
+            $favorites->detach($customerId);
+            return response()->json(['favorite' => false]);
+        }
+        $favorites->attach($customerId);
+        return response()->json(['favorite' => true]);
+    }
+
+    /**
+     * Kundenkarte + Kontext nach der Auswahl: Anreden (formell/locker),
+     * Stammdaten und die letzten Interaktionen (Nachrichten, Anfragen,
+     * Historie) - damit der Mitarbeiter den Zusammenhang sofort sieht.
+     */
+    public function customerContext($customerId)
+    {
+        $this->authorizeCompose();
+        abort_unless(auth()->user()->canAccessCustomer($customerId), 403);
+        $customer = Customer::with(['user', 'betreuer'])->findOrFail($customerId);
+
+        $name = trim((string) ($customer->user?->name ?? ''));
+        $vorname = $name !== '' ? preg_split('/\s+/', $name)[0] : '';
+
+        $history = collect();
+        foreach (CustomerMessage::where('customer_id', $customerId)->latest()->take(5)->get() as $m) {
+            $history->push([
+                'icon' => $m->from_staff ? '📨' : '💬',
+                'text' => ($m->from_staff ? 'Nachricht gesendet: ' : 'Kunde schrieb: ')
+                    . \Illuminate\Support\Str::limit(trim($m->body), 55),
+                'at' => $m->created_at,
+            ]);
+        }
+        foreach (Ticket::where('customer_id', $customerId)->latest()->take(4)->get() as $t) {
+            $history->push([
+                'icon' => '🎫',
+                'text' => $t->subject . ' (' . ($t->status === 'closed' ? 'geschlossen' : 'offen') . ')',
+                'at' => $t->created_at,
+            ]);
+        }
+        foreach (CustomerTimeline::where('customer_id', $customerId)->latest()->take(5)->get() as $e) {
+            $history->push(['icon' => '✓', 'text' => $e->title, 'at' => $e->created_at]);
+        }
+
+        return response()->json([
+            'id' => (string) $customer->id,
+            'name' => $name !== '' ? $name : '—',
+            'email' => $customer->user?->hasRealEmail() ? $customer->user->email : null,
+            'company' => $customer->company_name,
+            'number' => $customer->customer_number,
+            'lang' => strtoupper((string) $customer->preferred_lang ?: 'DE'),
+            'phone' => $customer->phone ?: $customer->mobile,
+            'betreuer' => $customer->betreuer->pluck('name')->implode(', '),
+            'last_contact' => $customer->last_contact
+                ? \Carbon\Carbon::parse($customer->last_contact)->format('d.m.Y') : null,
+            'favorite' => auth()->user()->favoriteCustomers()->where('customers.id', $customerId)->exists(),
+            'salutations' => [
+                'formell' => $customer->salutationLine() . ',',
+                'locker' => $vorname !== '' ? 'Hallo ' . $vorname . ',' : 'Hallo,',
+            ],
+            'history' => $history->sortByDesc('at')->take(6)->values()
+                ->map(fn($h) => ['icon' => $h['icon'], 'text' => $h['text'], 'date' => $h['at']->format('d.m.Y')]),
+        ]);
+    }
+
+    /**
+     * "✨ KI-Entwurf": erzeugt auf expliziten Klick einen kompletten
+     * E-Mail-Vorschlag aus Kundenkontext + Anliegen. Der Mitarbeiter
+     * prueft und sendet selbst - nie automatisch.
+     */
+    public function aiDraft(Request $request, EmailDraftService $draftService)
+    {
+        $this->authorizeCompose();
+        $request->validate([
+            'goal' => 'required|string|max:1000',
+            'customer_id' => 'nullable|string',
+            'category' => 'nullable|in:' . implode(',', array_keys(MessageTemplate::CATEGORIES)),
+        ]);
+        if (!$draftService->isAvailable()) {
+            return response()->json(['message' => 'Kein KI-Anbieter konfiguriert (ANTHROPIC_API_KEY fehlt).'], 422);
+        }
+
+        $customer = null;
+        $history = [];
+        if ($request->filled('customer_id')) {
+            abort_unless(auth()->user()->canAccessCustomer($request->customer_id), 403);
+            $customer = Customer::with('user')->findOrFail($request->customer_id);
+            $history = CustomerMessage::where('customer_id', $customer->id)->latest()->take(4)->get()
+                ->map(fn($m) => $m->created_at->format('d.m.Y') . ' '
+                    . ($m->from_staff ? 'Wir' : 'Kunde') . ': ' . \Illuminate\Support\Str::limit(trim($m->body), 90))
+                ->all();
+        }
+
+        try {
+            $draft = $draftService->draft(
+                $customer,
+                auth()->user(),
+                $request->goal,
+                $request->input('category', 'kunde'),
+                $history,
+            );
+        } catch (\Throwable $e) {
+            \Log::warning('KI-Entwurf fehlgeschlagen: ' . $e->getMessage());
+            return response()->json(['message' => 'KI-Entwurf derzeit nicht verfügbar. Bitte später erneut versuchen.'], 502);
+        }
+
+        return response()->json($draft);
     }
 
     public function send(Request $request)
@@ -96,6 +268,7 @@ class ComposeEmailController extends Controller
                 'description' => 'An ' . $request->to
                     . ($files !== [] ? ' · ' . count($files) . ' Anhang/Anhänge' : ''),
             ]);
+            $customer->update(['last_contact' => now()->toDateString()]);
         }
 
         return redirect(route('admin.email.compose') . ($customer ? '?customer_id=' . $customer->id : ''))
