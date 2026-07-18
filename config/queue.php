@@ -40,7 +40,11 @@ return [
             'connection' => env('DB_QUEUE_CONNECTION'),
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => env('DB_QUEUE', 'default'),
-            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 90),
+            // WICHTIG: retry_after MUSS groesser sein als das laengste Job-
+            // Timeout, sonst nimmt ein zweiter Worker den Job an, waehrend der
+            // erste noch laeuft. AnalyzeDocumentJob hat $timeout=300 (Claude-
+            // Vision-HTTP bis 180s) -> Default 360s haelt sicheren Abstand.
+            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 360),
             'after_commit' => false,
         ],
 

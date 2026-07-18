@@ -83,68 +83,88 @@ class AnalyzeDocumentJob implements ShouldQueue
             return;
         }
 
-        $extracted = $result['data'];
-
-        // Eingangs-Dokument: Kunden-Matching (Vorschlag oder Auto-Zuordnung).
+        // Die (u.U. kostenpflichtige) Analyse war erfolgreich. Ihr Ergebnis
+        // MUSS zuerst persistiert werden - schlaegt danach das Matching oder
+        // das Speichern fehl, darf das Dokument nicht in 'processing' haengen
+        // bleiben (der atomare pending->processing-Claim laesst einen Retry
+        // sonst folgenlos aussteigen) und das bezahlte Ergebnis nicht verloren
+        // gehen. Deshalb: Kern-Ergebnis in einem geschuetzten Block speichern,
+        // die Zuordnung/Protokollierung danach nur "best effort".
         $match = null;
-        if (!$document->customer_id) {
-            $match = $intake->findMatch($extracted);
-            $extracted['match'] = $match;
+        try {
+            $extracted = $result['data'];
+            if (!$document->customer_id) {
+                $match = $intake->findMatch($extracted);
+                $extracted['match'] = $match;
+            }
+
+            $updates = [
+                'ai_status' => 'done',
+                'ai_type' => $result['type'],
+                'ai_confidence' => $result['confidence'],
+                'ai_source' => $result['source'] ?? 'ai',
+                'ai_summary' => $result['summary'],
+                'ai_extracted' => $extracted,
+                'ai_error' => null,
+                'ai_processed_at' => now(),
+            ];
+
+            // Kategorie nur setzen, wenn keine bewusst gewaehlte vorliegt
+            // (Smart-Uploads starten mit 'other').
+            if ($document->category === 'other') {
+                $updates['category'] = Document::AI_TYPES[$result['type']]['category'];
+            }
+
+            // Scans bekommen den erkannten Titel als sprechenden Dateinamen.
+            if ($result['title'] && str_starts_with($document->file_name, 'Scan ')) {
+                $updates['file_name'] = $this->safeFileName($result['title']) . '.pdf';
+            }
+
+            $document->update($updates);
+        } catch (\Throwable $e) {
+            // Nachverarbeitung des erfolgreichen Analyse-Ergebnisses
+            // fehlgeschlagen -> sauber als 'failed' markieren statt in
+            // 'processing' zu verharren.
+            $this->markFailed($document, 'Nachverarbeitung fehlgeschlagen: ' . $e->getMessage());
+            return;
         }
 
-        $updates = [
-            'ai_status' => 'done',
-            'ai_type' => $result['type'],
-            'ai_confidence' => $result['confidence'],
-            'ai_source' => $result['source'] ?? 'ai',
-            'ai_summary' => $result['summary'],
-            'ai_extracted' => $extracted,
-            'ai_error' => null,
-            'ai_processed_at' => now(),
-        ];
-
-        // Kategorie nur setzen, wenn keine bewusst gewaehlte vorliegt
-        // (Smart-Uploads starten mit 'other').
-        if ($document->category === 'other') {
-            $updates['category'] = Document::AI_TYPES[$result['type']]['category'];
-        }
-
-        // Scans bekommen den erkannten Titel als sprechenden Dateinamen.
-        if ($result['title'] && str_starts_with($document->file_name, 'Scan ')) {
-            $updates['file_name'] = $this->safeFileName($result['title']) . '.pdf';
-        }
-
-        $document->update($updates);
-
-        // Freigabe-Protokoll wie bei der E-Mail-Klassifikation.
-        $disk = $document->disk ?: 'local';
-        AiDecision::create([
-            'document_id' => $document->id,
-            'skill' => DocumentAnalyzer::SKILL,
-            'model' => $analyzer->model(),
-            'input_hash' => Storage::disk($disk)->exists($document->file_path)
-                ? hash('sha256', Storage::disk($disk)->get($document->file_path))
-                : hash('sha256', $document->id),
-            'output' => [
-                'type' => $result['type'],
+        // Freigabe-Protokoll + Zuordnung: das Analyse-Ergebnis ist bereits
+        // gespeichert (Dokument steht auf 'done'); ein Fehler hier degradiert
+        // nur die Automatik (Mitarbeiter kann weiterhin manuell zuordnen),
+        // strandet das Dokument aber nicht.
+        try {
+            $disk = $document->disk ?: 'local';
+            AiDecision::create([
+                'document_id' => $document->id,
+                'skill' => DocumentAnalyzer::SKILL,
+                'model' => $analyzer->model(),
+                'input_hash' => Storage::disk($disk)->exists($document->file_path)
+                    ? hash('sha256', Storage::disk($disk)->get($document->file_path))
+                    : hash('sha256', $document->id),
+                'output' => [
+                    'type' => $result['type'],
+                    'confidence' => $result['confidence'],
+                    'summary' => $result['summary'],
+                    'match' => $match,
+                ],
                 'confidence' => $result['confidence'],
-                'summary' => $result['summary'],
-                'match' => $match,
-            ],
-            'confidence' => $result['confidence'],
-            'status' => 'suggested',
-        ]);
+                'status' => 'suggested',
+            ]);
 
-        if ($document->customer_id) {
-            $customer = Customer::find($document->customer_id);
-            if ($customer) {
-                $intake->linkMatchingContract($document, $customer);
+            if ($document->customer_id) {
+                $customer = Customer::find($document->customer_id);
+                if ($customer) {
+                    $intake->linkMatchingContract($document, $customer);
+                }
+            } elseif ($match && $match['tier'] === 'auto') {
+                $customer = Customer::find($match['customer_id']);
+                if ($customer && $intake->assignToCustomer($document, $customer, $document->uploaded_by, auto: true)) {
+                    $intake->linkMatchingContract($document, $customer);
+                }
             }
-        } elseif ($match && $match['tier'] === 'auto') {
-            $customer = Customer::find($match['customer_id']);
-            if ($customer && $intake->assignToCustomer($document, $customer, $document->uploaded_by, auto: true)) {
-                $intake->linkMatchingContract($document, $customer);
-            }
+        } catch (\Throwable $e) {
+            Log::warning('Dokument-Nachverarbeitung (Protokoll/Zuordnung) fehlgeschlagen (' . $document->id . '): ' . $e->getMessage());
         }
     }
 
