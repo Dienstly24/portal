@@ -90,5 +90,11 @@ return [
         'languages' => env('OCR_LANGUAGES', 'deu+eng'),
         'tesseract_binary' => env('OCR_TESSERACT_BINARY', 'tesseract'),
         'pdftoppm_binary' => env('OCR_PDFTOPPM_BINARY', 'pdftoppm'),
+        // Leistungs-/Zeitgrenzen, damit OCR auf schwacher VPS-Hardware nie das
+        // Job-Timeout sprengt (sonst haengt das Dokument in 'processing').
+        'dpi' => env('OCR_DPI', 150),
+        'max_pages' => env('OCR_MAX_PAGES', 10),
+        'max_seconds' => env('OCR_MAX_SECONDS', 60),
+        'page_timeout' => env('OCR_PAGE_TIMEOUT', 20),
     ],
 ];

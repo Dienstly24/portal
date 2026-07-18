@@ -84,6 +84,33 @@ class TesseractTextExtractorTest extends TestCase
         $this->assertStringContainsStringIgnoringCase('RECHNUNG', $text);
     }
 
+    public function test_respects_max_pages_limit_to_stay_within_time_budget(): void
+    {
+        config([
+            'services.ocr.enabled' => true,
+            'services.ocr.languages' => 'eng',
+            'services.ocr.max_pages' => 1,
+        ]);
+        if (!$this->tesseractInstalledForRealCheck() || !$this->pdftoppmInstalledForRealCheck()) {
+            $this->markTestSkipped('tesseract/pdftoppm-Binary auf diesem System nicht installiert.');
+        }
+
+        // 3-seitiges PDF, jede Seite mit eindeutigem Marker.
+        $pages = [];
+        foreach (['ALPHAONE', 'BRAVOTWO', 'CHARLIETHREE'] as $marker) {
+            $pages[] = $this->makeTextImage($marker);
+        }
+        $pdf = (new \App\Services\Pdf\ImagesToPdfService())->build($pages);
+
+        $text = (new TesseractTextExtractor())->extract($pdf, 'application/pdf');
+
+        // Nur die erste Seite wird OCR-verarbeitet (max_pages=1) -> Marker der
+        // dritten Seite darf NICHT auftauchen. Schuetzt vor Zeit-/Timeout-
+        // Explosion bei vielseitigen PDFs auf schwacher Hardware.
+        $this->assertStringContainsStringIgnoringCase('ALPHAONE', $text);
+        $this->assertStringNotContainsStringIgnoringCase('CHARLIETHREE', $text);
+    }
+
     private function tesseractInstalledForRealCheck(): bool
     {
         return $this->binaryUsable('tesseract', ['--version']);
