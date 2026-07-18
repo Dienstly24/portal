@@ -973,31 +973,120 @@ class AdminController extends Controller
      */
     public function duplicates(\App\Services\Matching\DuplicateDetectionService $detection) {
         $result = $detection->scan($this->visibleCustomerIds());
+        $autoMin = \App\Services\Matching\DuplicateDetectionService::AUTO_MERGE_MIN_SCORE;
+        $strongCount = count(array_filter($result['pairs'], fn ($p) => $p['score'] >= $autoMin));
         return view('admin.customer_duplicates', [
-            'pairs'   => $result['pairs'],
-            'scanned' => $result['scanned'],
-            'capped'  => $result['capped'],
+            'pairs'       => $result['pairs'],
+            'scanned'     => $result['scanned'],
+            'capped'      => $result['capped'],
+            'autoMin'     => $autoMin,
+            'strongCount' => $strongCount,
         ]);
     }
 
+    /** Deckel gegen versehentliche Massen-Merges pro manueller Aktion. */
+    private const MANUAL_MERGE_CAP = 100;
+
+    /** Deckel je Ein-Klick-Auto-Merge-Lauf (Rest per erneutem Klick). */
+    private const AUTO_MERGE_CAP = 200;
+
     /**
-     * Sammel-Zusammenfuehrung mehrerer Dubletten-Paare in einem Schritt.
+     * Sammel-Zusammenfuehrung der VOM NUTZER AUSGEWAEHLTEN Dubletten-Paare.
      * Ueberlappende Paare (z. B. fuenf Datensaetze derselben Person) werden
      * ueber eine Union-Find-Gruppierung zu EINEM Cluster zusammengefasst und
-     * in den jeweils aeltesten Datensatz vereint. Sicherheitsdeckel: max. 30
-     * entfernte Duplikate pro Aktion (analog zur Loesch-Begrenzung).
+     * in den jeweils aeltesten Datensatz vereint.
      */
     public function duplicatesMerge(Request $request, \App\Services\Matching\CustomerMergeService $merge) {
         $data = $request->validate([
-            'pairs'   => 'required|array|min:1|max:300',
+            'pairs'   => 'required|array|min:1|max:500',
             'pairs.*' => 'string',
         ]);
 
-        // 1) Paare in Kanten (Kunde <-> Kunde) zerlegen.
+        [$edges, $ids] = $this->pairsToEdges($data['pairs']);
+        if ($ids === []) {
+            return back()->with('error', 'Keine gültige Auswahl.');
+        }
+        foreach ($ids as $id) {
+            $this->authorizeCustomerAccess($id);
+        }
+
+        $clusters = $this->clusterPairs($edges, $ids);
+        $toRemove = array_sum(array_map(fn ($c) => max(0, count($c) - 1), $clusters));
+        if ($toRemove > self::MANUAL_MERGE_CAP) {
+            return back()->with('error', 'Zu viele auf einmal: höchstens ' . self::MANUAL_MERGE_CAP . ' Zusammenführungen pro Aktion. Bitte Auswahl verkleinern oder „Alle sicheren zusammenführen" nutzen.');
+        }
+
+        $res = $this->mergeClusters($clusters, $merge);
+        return redirect()->route('admin.customers.duplicates')->with('success', $this->mergeSummary($res, false));
+    }
+
+    /**
+     * Ein-Klick-Zusammenfuehrung ALLER "sicheren" Treffer (Score >=
+     * AUTO_MERGE_MIN_SCORE, Betreiber-Vorgabe 40 %). Schwaechere Treffer
+     * (z. B. nur gleicher Name) bleiben bewusst der manuellen Pruefung
+     * vorbehalten. Aus Zeitgruenden pro Lauf gedeckelt - der Hinweis fordert
+     * bei Bedarf zum erneuten Klick auf, bis alles bereinigt ist.
+     */
+    public function duplicatesMergeAll(\App\Services\Matching\DuplicateDetectionService $detection, \App\Services\Matching\CustomerMergeService $merge) {
+        $min = \App\Services\Matching\DuplicateDetectionService::AUTO_MERGE_MIN_SCORE;
+
+        // Frischer Scan (nie auf veraltete Seiten-Daten verlassen).
+        $result = $detection->scan($this->visibleCustomerIds());
+        $strong = array_values(array_filter($result['pairs'], fn ($p) => $p['score'] >= $min));
+
+        if ($strong === []) {
+            return redirect()->route('admin.customers.duplicates')
+                ->with('success', "Keine sicheren Treffer (>= {$min} %) zum automatischen Zusammenführen gefunden.");
+        }
+
         $edges = [];
         $ids = [];
-        foreach ($data['pairs'] as $pair) {
-            $parts = explode('|', $pair, 2);
+        foreach ($strong as $p) {
+            $a = (string) $p['primary']->id;
+            $b = (string) $p['duplicate']->id;
+            $edges[] = [$a, $b];
+            $ids[$a] = true;
+            $ids[$b] = true;
+        }
+        $ids = array_keys($ids);
+        foreach ($ids as $id) {
+            $this->authorizeCustomerAccess($id);
+        }
+
+        // Cluster bilden, dann pro Lauf deckeln (Rest beim naechsten Klick).
+        $clusters = $this->clusterPairs($edges, $ids);
+        $limited = [];
+        $removals = 0;
+        foreach ($clusters as $cluster) {
+            $need = count($cluster) - 1;
+            if ($removals + $need > self::AUTO_MERGE_CAP) {
+                continue;
+            }
+            $limited[] = $cluster;
+            $removals += $need;
+        }
+
+        $res = $this->mergeClusters($limited, $merge);
+        $more = count($limited) < count($clusters);
+        $message = "{$res['merged']} sichere Zusammenführung(en) (>= {$min} %) durchgeführt.";
+        if ($more) {
+            $message .= ' Es waren mehr vorhanden – bitte erneut klicken, um die restlichen zu bereinigen.';
+        }
+        if ($res['skipped'] > 0) {
+            $message .= " {$res['skipped']} übersprungen.";
+        }
+        return redirect()->route('admin.customers.duplicates')->with('success', $message);
+    }
+
+    /**
+     * Paar-Strings ("primaryId|dupId") in Kantenliste + eindeutige ID-Liste.
+     * @return array{0: array<int, array{0:string,1:string}>, 1: array<int, string>}
+     */
+    private function pairsToEdges(array $pairs): array {
+        $edges = [];
+        $ids = [];
+        foreach ($pairs as $pair) {
+            $parts = explode('|', (string) $pair, 2);
             if (count($parts) !== 2 || $parts[0] === '' || $parts[1] === '' || $parts[0] === $parts[1]) {
                 continue;
             }
@@ -1005,17 +1094,15 @@ class AdminController extends Controller
             $ids[$parts[0]] = true;
             $ids[$parts[1]] = true;
         }
-        $ids = array_keys($ids);
-        if ($ids === []) {
-            return back()->with('error', 'Keine gültige Auswahl.');
-        }
+        return [$edges, array_keys($ids)];
+    }
 
-        // Zugriffsschutz: jeder betroffene Kunde muss im Portfolio liegen.
-        foreach ($ids as $id) {
-            $this->authorizeCustomerAccess($id);
-        }
-
-        // 2) Union-Find: verbundene Paare zu Clustern gruppieren.
+    /**
+     * Union-Find: verbundene Paare zu Clustern gruppieren (ueberlappende
+     * Paare derselben Person werden zu einem Cluster).
+     * @return array<int, array<int, string>>
+     */
+    private function clusterPairs(array $edges, array $ids): array {
         $parent = [];
         foreach ($ids as $id) {
             $parent[$id] = $id;
@@ -1041,15 +1128,19 @@ class AdminController extends Controller
         foreach ($ids as $id) {
             $clusters[$find($id)][] = $id;
         }
+        return array_values($clusters);
+    }
 
-        // 3) Deckel gegen Massen-Merge (Anzahl zu entfernender Duplikate).
-        $toRemove = array_sum(array_map(fn ($c) => max(0, count($c) - 1), $clusters));
-        if ($toRemove > 30) {
-            return back()->with('error', 'Zu viele auf einmal: höchstens 30 Zusammenführungen pro Aktion. Bitte Auswahl verkleinern.');
-        }
+    /**
+     * Jeden Cluster in den aeltesten Datensatz vereinen (verlustfrei ueber
+     * CustomerMergeService). Bereits geloeschte/fehlende IDs werden
+     * uebersprungen statt abzubrechen.
+     * @return array{merged: int, skipped: int}
+     */
+    private function mergeClusters(array $clusters, \App\Services\Matching\CustomerMergeService $merge): array {
+        $allIds = array_merge([], ...array_map('array_values', $clusters));
+        $customers = \App\Models\Customer::with('user')->whereIn('id', $allIds)->get()->keyBy('id');
 
-        // 4) Je Cluster in den aeltesten Datensatz vereinen.
-        $customers = \App\Models\Customer::with('user')->whereIn('id', $ids)->get()->keyBy('id');
         $merged = 0;
         $skipped = 0;
         foreach ($clusters as $members) {
@@ -1074,12 +1165,15 @@ class AdminController extends Controller
                 }
             }
         }
+        return ['merged' => $merged, 'skipped' => $skipped];
+    }
 
-        $message = "{$merged} Zusammenführung(en) durchgeführt.";
-        if ($skipped > 0) {
-            $message .= " {$skipped} übersprungen (bereits zusammengeführt oder nicht zulässig).";
+    private function mergeSummary(array $res, bool $auto): string {
+        $message = "{$res['merged']} Zusammenführung(en) durchgeführt.";
+        if ($res['skipped'] > 0) {
+            $message .= " {$res['skipped']} übersprungen (bereits zusammengeführt oder nicht zulässig).";
         }
-        return redirect()->route('admin.customers.duplicates')->with('success', $message);
+        return $message;
     }
 
     public function mergeForm($id, \App\Services\Matching\CustomerMergeService $merge, \App\Services\Matching\CustomerMatchingService $matcher) {

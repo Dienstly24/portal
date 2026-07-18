@@ -23,6 +23,14 @@ class DuplicateDetectionService
     /** Nur noch fuer die Merge-Vorauswahl (starker Treffer) genutzt. */
     public const DEFAULT_THRESHOLD = 70;
 
+    /**
+     * Ab diesem Score gilt ein Paar als "sicher" und darf per Ein-Klick-Aktion
+     * ohne Einzelpruefung zusammengefuehrt werden (Betreiber-Entscheidung).
+     * Darunter (nur schwaches Signal wie gleicher Name allein) bleibt die
+     * manuelle Pruefung Pflicht.
+     */
+    public const AUTO_MERGE_MIN_SCORE = 40;
+
     /** Sicherheitsdeckel gegen Extrembestaende (Blocking ist ~O(n)). */
     private const MAX_SCAN = 20000;
 

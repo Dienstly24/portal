@@ -74,10 +74,10 @@ class DuplicateBulkMergeTest extends TestCase
         $this->assertEquals(1, Contract::where('customer_id', $c[1]->id)->count());
     }
 
-    public function test_bulk_merge_is_capped_at_30(): void
+    public function test_manual_bulk_merge_is_capped(): void
     {
         $pairs = [];
-        for ($i = 0; $i < 31; $i++) {
+        for ($i = 0; $i < 101; $i++) {
             $x = $this->customer("Person {$i}", "p{$i}a@example.com");
             $y = $this->customer("Person {$i}", "p{$i}b@example.com");
             $pairs[] = "{$x->id}|{$y->id}";
@@ -88,7 +88,29 @@ class DuplicateBulkMergeTest extends TestCase
         $response->assertRedirect();
         $response->assertSessionHas('error');
         // Nichts wurde zusammengefuehrt (alle Paare noch vollstaendig vorhanden).
-        $this->assertEquals(62, Customer::count());
+        $this->assertEquals(202, Customer::count());
+    }
+
+    public function test_merge_all_merges_only_strong_pairs_and_leaves_name_only_for_manual(): void
+    {
+        // Starker Treffer: gleicher Name + gleiche Telefon -> ... eigentlich
+        // gleiche IBAN, damit Score sicher >= 40 liegt.
+        $s1 = $this->customer('Stark Eins', 'stark1@example.com');
+        $s2 = $this->customer('Stark Eins', 'stark2@example.com');
+        $s1->update(['iban' => 'DE89370400440532013000']);
+        $s2->update(['iban' => 'DE89 3704 0044 0532 0130 00']);
+
+        // Schwacher Treffer: NUR gleicher Name (Score 30 < 40).
+        $w1 = $this->customer('Schwach Zwei', 'schwach1@example.com');
+        $w2 = $this->customer('Schwach Zwei', 'schwach2@example.com');
+
+        $this->actingAs($this->admin())->post(route('admin.customers.duplicates.merge_all'))
+            ->assertRedirect(route('admin.customers.duplicates'));
+
+        // Starker Treffer wurde vereint (nur einer bleibt) ...
+        $this->assertEquals(1, Customer::whereIn('id', [$s1->id, $s2->id])->count());
+        // ... schwacher Treffer bleibt UNANGETASTET (manuelle Pruefung).
+        $this->assertEquals(2, Customer::whereIn('id', [$w1->id, $w2->id])->count());
     }
 
     public function test_employee_cannot_bulk_merge(): void
