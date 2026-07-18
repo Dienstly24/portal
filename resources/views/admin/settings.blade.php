@@ -6,6 +6,29 @@
     <div class="page-sub">Systemkonfiguration und Integrationen</div>
 </div>
 
+{{-- Verwaltungs-Hub: Bereiche, die frueher einzeln in der Sidebar standen,
+     sind hier gebuendelt, damit die linke Navigation schlank bleibt. --}}
+<div class="card" style="max-width:900px;margin-bottom:20px;">
+    <div class="card-title" style="margin-bottom:6px;">🗂 Verwaltung &amp; Werkzeuge</div>
+    <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;">
+        Selten genutzte Konfigurations- und Werkzeug-Bereiche – aus der Seitenleiste
+        hierher verschoben.
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;">
+        <a href="{{ route('admin.service_pages') }}" class="hub-tile">🧩 <span>Leistungsseiten</span></a>
+        <a href="{{ route('admin.banners') }}" class="hub-tile">📢 <span>Banner</span></a>
+        <a href="{{ route('admin.templates') }}" class="hub-tile">📋 <span>Vorlagen</span></a>
+        <a href="{{ route('admin.import_export') }}" class="hub-tile">⬆️ <span>Import / Export</span></a>
+        <a href="{{ route('admin.lexoffice.contacts') }}" class="hub-tile">🧮 <span>lexoffice-Kontakte</span></a>
+        <a href="{{ route('admin.email_accounts.index') }}" class="hub-tile">📬 <span>E-Mail-Postfächer</span></a>
+    </div>
+</div>
+<style>
+.hub-tile{display:flex;align-items:center;gap:10px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);text-decoration:none;font-size:13.5px;font-weight:600;transition:.15s;}
+.hub-tile:hover{border-color:var(--gold);box-shadow:0 4px 14px rgba(0,0,0,.08);transform:translateY(-1px);}
+.hub-tile span{flex:1;}
+</style>
+
 <form method="POST" action="{{ route('admin.settings.update') }}">
 @csrf @method('PUT')
 
