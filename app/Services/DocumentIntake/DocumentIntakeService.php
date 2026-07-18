@@ -371,6 +371,18 @@ class DocumentIntakeService
         $document->contract_id = $contract->id;
         $document->save();
 
+        // Vertragsverlauf starten (Betreiber-Vorgabe: fuer alle Sparten).
+        app(\App\Services\ContractHistoryService::class)->record([
+            'customer_id' => (string) $customer->id,
+            'contract_id' => (string) $contract->id,
+            'branch' => $type,
+            'provider' => $ins['insurer'] ?? null,
+            'effective_from' => $ins['start_date'] ?? null,
+            'reason' => 'initial',
+            'source_document_id' => (string) $document->id,
+            'created_by' => $byUserId,
+        ]);
+
         ActivityLog::create([
             'user_id' => $byUserId,
             'action' => 'contract_created_from_document',
