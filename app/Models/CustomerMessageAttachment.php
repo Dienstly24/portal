@@ -20,6 +20,30 @@ class CustomerMessageAttachment extends Model
 
     /** Bild-Anhaenge koennen im Chat als Vorschau gerendert werden. */
     public function isImage(): bool {
-        return in_array(strtolower(pathinfo($this->file_name, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'webp'], true);
+        return in_array($this->extension(), ['jpg', 'jpeg', 'png', 'webp'], true);
+    }
+
+    public function isPdf(): bool {
+        return $this->extension() === 'pdf';
+    }
+
+    /** Bilder und PDFs kann der Browser direkt anzeigen (Content-Disposition: inline). */
+    public function isViewable(): bool {
+        return $this->isImage() || $this->isPdf();
+    }
+
+    /** Passender MIME-Typ aus der Dateiendung (kein mime_type in der DB gespeichert). */
+    public function mimeType(): string {
+        return match ($this->extension()) {
+            'jpg', 'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            'pdf' => 'application/pdf',
+            default => 'application/octet-stream',
+        };
+    }
+
+    private function extension(): string {
+        return strtolower(pathinfo($this->file_name, PATHINFO_EXTENSION));
     }
 }

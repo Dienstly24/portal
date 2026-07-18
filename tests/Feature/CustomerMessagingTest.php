@@ -230,6 +230,52 @@ class CustomerMessagingTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_kunde_kann_anhang_inline_ansehen(): void
+    {
+        Storage::fake('local');
+        $admin = $this->makeAdmin();
+        $customer = $this->makeCustomer();
+        $message = CustomerMessage::create([
+            'customer_id' => $customer->id, 'sender_id' => $admin->id,
+            'body' => 'Bild fuer Sie', 'from_staff' => true,
+        ]);
+        $path = 'customers/' . $customer->id . '/messages/beleg.pdf';
+        Storage::disk('local')->put($path, '%PDF-1.4 fake');
+        $attachment = \App\Models\CustomerMessageAttachment::create([
+            'message_id' => $message->id, 'uploaded_by' => $admin->id,
+            'file_name' => 'beleg.pdf', 'file_path' => $path, 'disk' => 'local',
+        ]);
+
+        $response = $this->actingAs($customer->user)
+            ->get(route('portal.messages.attachment.view', $attachment->id));
+
+        $response->assertOk();
+        $this->assertStringContainsString('inline', $response->headers->get('content-disposition'));
+        $this->assertSame('application/pdf', $response->headers->get('content-type'));
+        $this->assertSame('nosniff', $response->headers->get('x-content-type-options'));
+    }
+
+    public function test_kunde_kann_fremde_anhaenge_nicht_ansehen(): void
+    {
+        Storage::fake('local');
+        $admin = $this->makeAdmin();
+        $customerA = $this->makeCustomer('a@example.de');
+        $customerB = $this->makeCustomer('b@example.de');
+        $message = CustomerMessage::create([
+            'customer_id' => $customerA->id, 'sender_id' => $admin->id,
+            'body' => 'Anhang fuer A', 'from_staff' => true,
+        ]);
+        $attachment = \App\Models\CustomerMessageAttachment::create([
+            'message_id' => $message->id, 'uploaded_by' => $admin->id,
+            'file_name' => 'geheim.pdf', 'file_path' => 'customers/' . $customerA->id . '/messages/geheim.pdf',
+            'disk' => 'local',
+        ]);
+
+        $this->actingAs($customerB->user)
+            ->get(route('portal.messages.attachment.view', $attachment->id))
+            ->assertNotFound();
+    }
+
     public function test_kundenakte_markiert_kundenantworten_als_gelesen(): void
     {
         $admin = $this->makeAdmin();

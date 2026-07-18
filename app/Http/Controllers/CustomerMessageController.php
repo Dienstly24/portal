@@ -41,10 +41,30 @@ class CustomerMessageController extends Controller
 
     public function downloadAttachment($id)
     {
+        $attachment = $this->findAccessibleAttachment($id);
+        $disk = \Illuminate\Support\Facades\Storage::disk($attachment->disk ?: 'local');
+        abort_unless($disk->exists($attachment->file_path), 404);
+        return $disk->download($attachment->file_path, $attachment->file_name);
+    }
+
+    /** Zeigt Bild-/PDF-Anhaenge direkt im Browser an (Content-Disposition: inline). */
+    public function viewAttachment($id)
+    {
+        $attachment = $this->findAccessibleAttachment($id);
+        abort_unless($attachment->isViewable(), 404);
+        $disk = \Illuminate\Support\Facades\Storage::disk($attachment->disk ?: 'local');
+        abort_unless($disk->exists($attachment->file_path), 404);
+        return $disk->response($attachment->file_path, $attachment->file_name, [
+            'Content-Type' => $attachment->mimeType(),
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    private function findAccessibleAttachment($id): CustomerMessageAttachment
+    {
         $attachment = CustomerMessageAttachment::with('message')->findOrFail($id);
         abort_unless(auth()->user()->canAccessCustomer($attachment->message->customer_id), 403);
-        return \Illuminate\Support\Facades\Storage::disk($attachment->disk ?: 'local')
-            ->download($attachment->file_path, $attachment->file_name);
+        return $attachment;
     }
 
     /**
