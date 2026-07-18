@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\CustomerNumberGenerator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Bus;
 use Tests\TestCase;
 
 class SmartNumberingAndImportTest extends TestCase
@@ -225,6 +226,40 @@ class SmartNumberingAndImportTest extends TestCase
 
         $this->assertSame(1, $preview['new_count']);
         $this->assertSame(1, $preview['dup_count']);
+    }
+
+    public function test_confirm_dispatches_background_job(): void
+    {
+        \Illuminate\Support\Facades\Bus::fake();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $file = UploadedFile::fake()->createWithContent('kunden.csv', implode("\n", [
+            'Vorname;Nachname;E-Mail 1',
+            'Anna;Beispiel;anna@k.de',
+        ]));
+
+        $preview = $this->actingAs($admin)->post(route('admin.import'), ['csv_file' => $file]);
+        $token = $preview->viewData('token');
+
+        $this->actingAs($admin)->post(route('admin.import.confirm'), ['token' => $token])
+            ->assertRedirect(route('admin.import_export'));
+
+        // Import laeuft im Hintergrund, nicht synchron im Web-Request.
+        Bus::assertDispatched(\App\Jobs\ImportCustomersJob::class);
+    }
+
+    public function test_import_notifies_user_when_finished(): void
+    {
+        // Sync-Queue in Tests -> Job laeuft inline; Benachrichtigung entsteht.
+        $this->importCsv(implode("\n", [
+            'Vorname;Nachname;E-Mail 1',
+            'Anna;Beispiel;anna@k.de',
+        ]))->assertRedirect();
+
+        $this->assertSame(1, Customer::count());
+        $this->assertDatabaseHas('internal_notifications', [
+            'title' => 'Kunden-Import abgeschlossen',
+        ]);
     }
 
     public function test_confirm_import_with_expired_token_shows_error(): void
