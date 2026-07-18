@@ -56,6 +56,22 @@ trait ValidatesExtractedFields
         if ($vin !== null && !preg_match('/^[A-HJ-NPR-Z0-9]{11,17}$/i', $vin)) {
             $vin = null; // FIN-Format unplausibel -> lieber weglassen als falsch speichern
         }
+        // Wahrheitswerte (Deckung) nur uebernehmen, wenn eindeutig bool-artig.
+        $bool = function ($v): ?bool {
+            if (is_bool($v)) return $v;
+            if (in_array($v, ['true', '1', 1, 'ja'], true)) return true;
+            if (in_array($v, ['false', '0', 0, 'nein'], true)) return false;
+            return null;
+        };
+        // Selbstbeteiligung/Fahrleistung nur in plausiblen Grenzen.
+        $intInRange = function ($v, int $min, int $max): ?int {
+            if (!is_numeric($v)) return null;
+            $n = (int) round((float) $v);
+            return ($n >= $min && $n <= $max) ? $n : null;
+        };
+        $holder = $in['holder_type'] ?? null;
+        $holder = in_array($holder, ['versicherungsnehmer', 'abweichender_halter'], true) ? $holder : null;
+
         return array_filter([
             'license_plate' => $plate !== null ? mb_strtoupper($plate) : null,
             'vin' => $vin !== null ? strtoupper($vin) : null,
@@ -64,6 +80,15 @@ trait ValidatesExtractedFields
             'manufacturer' => $this->cleanString($in['manufacturer'] ?? null, 60),
             'model' => $this->cleanString($in['model'] ?? null, 80),
             'first_registration' => $this->cleanDate($in['first_registration'] ?? null),
+            // Zusaetzliche, klar abgrenzbare Tarif-/Fahrzeugfakten (z.B. aus
+            // dem CHECK24-Beratungsprotokoll). Ungenaue/geschaetzte Angaben
+            // fallen durch die harte Validierung heraus.
+            'has_teilkasko' => $bool($in['has_teilkasko'] ?? null),
+            'teilkasko_deductible' => $intInRange($in['teilkasko_deductible'] ?? null, 0, 5000),
+            'has_vollkasko' => $bool($in['has_vollkasko'] ?? null),
+            'vollkasko_deductible' => $intInRange($in['vollkasko_deductible'] ?? null, 0, 5000),
+            'holder_type' => $holder,
+            'annual_mileage' => $intInRange($in['annual_mileage'] ?? null, 0, 200000),
         ], fn ($v) => $v !== null && $v !== '');
     }
 

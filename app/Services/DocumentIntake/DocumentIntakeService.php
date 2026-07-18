@@ -257,6 +257,14 @@ class DocumentIntakeService
                 'manufacturer' => $kfz['manufacturer'] ?? null,
                 'model' => $kfz['model'] ?? null,
                 'first_registration' => $kfz['first_registration'] ?? null,
+                // Zusaetzliche Tarif-/Fahrzeugfakten (validiert in
+                // ValidatesExtractedFields::validatedVehicle).
+                'has_teilkasko' => $kfz['has_teilkasko'] ?? null,
+                'teilkasko_deductible' => $kfz['teilkasko_deductible'] ?? null,
+                'has_vollkasko' => $kfz['has_vollkasko'] ?? null,
+                'vollkasko_deductible' => $kfz['vollkasko_deductible'] ?? null,
+                'holder_type' => $kfz['holder_type'] ?? null,
+                'annual_mileage' => $kfz['annual_mileage'] ?? null,
             ], fn ($v) => $v !== null));
         }
 
