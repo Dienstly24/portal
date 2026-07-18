@@ -111,12 +111,15 @@ und wird spaeter auf diese generische Schicht aufgesetzt.
 
 ## Phasenplan (jede Phase = 1 PR, testbar)
 
-- **P1 (diese PR):** Blueprint (dieses Dokument) + `AiProviderInterface` +
+- **P1 (erledigt):** Blueprint (dieses Dokument) + `AiProviderInterface` +
   `ClaudeTextProvider` + Value Objects + Registrierung/Config + Tests.
   (Fundament "Provider Independent".)
-- **P2:** Engine-Schema (`workflow_definitions`, `workflow_runs`,
+- **P2 (erledigt):** Engine-Schema (`workflow_definitions`, `workflow_runs`,
   `workflow_step_runs`, `ai_action_logs`, `workflow_prompts`) + Modelle +
-  `WorkflowEngine`-Kern + Step-Handler-Interface + Tests.
+  `WorkflowEngine`-Kern (start/advance/Confidence-Gate/Human Override/cancel)
+  + `StepHandlerInterface` + `StepHandlerRegistry` + `StepResult` + generischer
+  `review`-Handler + Tests. Verschluesselte Spalten (`memory`, `output`,
+  `detail`) bewusst als `text` (Lehre aus dem `ai_extracted`-Fehler).
 - **P3:** Erste Definition end-to-end: `bankverbindung_aendern`
   (request_document -> extract -> apply_change ueber ChangeRequestService ->
   draft_reply). Minimal-UI im Ticket. Confidence-Gate + Human Override.

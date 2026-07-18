@@ -10,6 +10,8 @@ use App\Services\Ai\Contracts\AiProviderInterface;
 use App\Services\Ai\Contracts\DocumentAiProviderInterface;
 use App\Services\Ocr\TesseractTextExtractor;
 use App\Services\Ocr\TextExtractorInterface;
+use App\Services\Workflow\Handlers\ReviewStepHandler;
+use App\Services\Workflow\StepHandlerRegistry;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Support\Facades\Event;
@@ -46,6 +48,16 @@ class AppServiceProvider extends ServiceProvider
             return match (config('services.ai_text_provider', 'claude')) {
                 default => $app->make(ClaudeTextProvider::class),
             };
+        });
+
+        // Registry der Workflow-Step-Handler (Blueprint Saeule 1): Typ ->
+        // Handler. Neue Schritt-Typen werden hier additiv registriert, der
+        // Engine-Kern bleibt unveraendert. Start-Set: `review` (generischer
+        // Freigabe-Halt); weitere Handler folgen mit den ersten Definitionen.
+        $this->app->singleton(StepHandlerRegistry::class, function ($app) {
+            $registry = new StepHandlerRegistry();
+            $registry->register($app->make(ReviewStepHandler::class));
+            return $registry;
         });
     }
 
