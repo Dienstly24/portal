@@ -124,9 +124,12 @@ class ClaudeDocumentAiProvider implements DocumentAiProviderInterface
             . '"has_teilkasko": true, "teilkasko_deductible": <Zahl Euro>, "has_vollkasko": false, "vollkasko_deductible": <Zahl Euro>, '
             . '"holder_type": <einer aus: versicherungsnehmer, abweichender_halter>, "annual_mileage": <Zahl km pro Jahr>}, '
             . '"gesundheit": {"health_insurance_company": "", "health_insurance_number": ""}, '
+            . '"personen": [{"first_name": "", "last_name": "", "birth_date": "JJJJ-MM-TT", "gender": <male|female>, "health_insurance_number": ""}], '
             . '"bank": {"iban": "", "bic": "", "account_holder": ""}}} '
             . 'Regeln: Nur Werte aufnehmen, die im Dokument sicher lesbar sind. Unbekannte oder unleserliche Felder weglassen oder null setzen. '
             . 'Keine Werte raten oder erfinden. Datumsangaben immer als JJJJ-MM-TT. '
+            . 'Enthaelt das Dokument MEHRERE Personen (z.B. mehrere Gesundheitskarten einer Familie, Familienbescheinigung, Geburtsurkunden), '
+            . 'liste JEDE Person in "personen" auf (auch die Hauptperson). Bei nur einer Person lass "personen" leer. '
             . 'In "summary" und "title" KEINE sensiblen Nummern nennen (keine IBAN, Versicherten-, Ausweis- oder Steuernummern). '
             . 'Bei einem KFZ-Vertrag gehoeren Vertragsdaten in "versicherung" (sparte: kfz) UND Fahrzeugdaten in "kfz".';
     }
@@ -170,6 +173,7 @@ class ClaudeDocumentAiProvider implements DocumentAiProviderInterface
                 'kfz' => $this->validatedVehicle($data['kfz'] ?? null),
                 'gesundheit' => $this->validatedHealth($data['gesundheit'] ?? null),
                 'bank' => $this->validatedBank($data['bank'] ?? null),
+                'personen' => $this->validatedPersons($data['personen'] ?? null),
             ],
         ];
     }

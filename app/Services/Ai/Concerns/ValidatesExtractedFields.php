@@ -31,6 +31,34 @@ trait ValidatesExtractedFields
         ], fn ($v) => $v !== null && $v !== '');
     }
 
+    /**
+     * Liste weiterer Personen im Dokument (z.B. Buendel mehrerer
+     * Gesundheitskarten einer Familie, Familienbescheinigung). Jede Person
+     * durchlaeuft dieselbe harte Validierung; zusaetzlich sind Geschlecht und
+     * Versichertennummer erlaubt. Hart auf 10 begrenzt.
+     */
+    private function validatedPersons(mixed $in): array
+    {
+        if (!is_array($in)) return [];
+        $out = [];
+        foreach (array_slice(array_values($in), 0, 10) as $entry) {
+            if (!is_array($entry)) continue;
+            $person = $this->validatedPerson($entry);
+            $gender = $entry['gender'] ?? null;
+            if (in_array($gender, ['male', 'female'], true)) {
+                $person['gender'] = $gender;
+            }
+            $kvnr = $this->cleanString($entry['health_insurance_number'] ?? null, 30);
+            if ($kvnr !== null) {
+                $person['health_insurance_number'] = $kvnr;
+            }
+            if (($person['first_name'] ?? '') !== '' || ($person['last_name'] ?? '') !== '') {
+                $out[] = $person;
+            }
+        }
+        return $out;
+    }
+
     private function validatedInsurance(mixed $in): array
     {
         if (!is_array($in)) return [];

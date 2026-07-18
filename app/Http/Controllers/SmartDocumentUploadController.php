@@ -153,11 +153,15 @@ class SmartDocumentUploadController extends Controller
             ->groupBy('intake_batch')
             ->filter(fn ($group) => $group->count() > 1);
         $batchData = [];
+        $familyService = app(\App\Services\Health\FamilyBundleService::class);
         foreach ($batchGroups as $batchId => $group) {
             $merged = $this->intake->mergeExtractions($group);
             $conflicts = $merged['_conflicts'] ?? [];
             unset($merged['_conflicts']);
             $person = $merged['person'] ?? [];
+            // Familien-Erkennung: >= 2 Personen im Vorgang -> die UI bietet
+            // den Krankenkassen-Fall an (Haupt-Frage, Wechsel, Stichtag).
+            $persons = $familyService->detectPersons($group);
             $batchData[$batchId] = [
                 'ids' => $group->pluck('id')->values()->all(),
                 'file_names' => $group->pluck('file_name')->values()->all(),
@@ -165,6 +169,9 @@ class SmartDocumentUploadController extends Controller
                 'conflicts' => array_values($conflicts),
                 'ready' => $group->every(fn ($d) => !$d->aiInProgress()),
                 'has_name' => trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? '')) !== '',
+                'persons' => $persons,
+                'haupt_suggest' => count($persons) >= 2 ? $familyService->suggestHauptIndex($persons) : 0,
+                'has_health_cards' => $group->contains(fn ($d) => $d->ai_type === 'gesundheitskarte'),
             ];
         }
 
@@ -441,6 +448,19 @@ class SmartDocumentUploadController extends Controller
             'apply_fields.*' => 'string|in:birth_date,birth_place,address,phone,nationality,email2,health_insurance,iban',
             'create_contract' => 'nullable|boolean',
             'visibility' => 'nullable|in:customer,internal',
+            // Optional: Krankenkassen-Fall (Familie + Wechsel). Die UI fragt
+            // den Mitarbeiter, wer hauptversichert ist und welcher der drei
+            // Wechsel-Faelle vorliegt; der Server rechnet den Stichtag.
+            'family' => 'nullable|array',
+            'family.haupt_index' => 'required_with:family|integer|min:0',
+            'family.members' => 'nullable|array|max:10',
+            'family.members.*.index' => 'required|integer|min:0',
+            'family.members.*.status' => 'nullable|in:mitglied,familienversichert',
+            'family.members.*.relation' => 'nullable|string|max:40',
+            'family.switch_reason' => 'required_with:family|in:wechsel,sonder,new_job',
+            'family.job_start' => 'nullable|date',
+            'family.old_insurer' => 'nullable|string|max:120',
+            'family.new_insurer' => 'required_with:family|string|max:120',
         ]);
 
         $ids = array_values(array_unique($request->input('document_ids')));
@@ -461,6 +481,24 @@ class SmartDocumentUploadController extends Controller
                 'message' => implode(' ', $merged['_conflicts']),
                 'conflicts' => $merged['_conflicts'],
             ], 422);
+        }
+
+        // Krankenkassen-Fall: der vom Mitarbeiter gewaehlte HAUPTVERSICHERTE
+        // wird der Kunde - seine Identitaet hat Vorrang vor der Hauptperson
+        // der zusammengefuehrten Extraktion.
+        $familyInput = $request->input('family');
+        $familyPersons = [];
+        if ($familyInput !== null) {
+            $familyPersons = app(\App\Services\Health\FamilyBundleService::class)->detectPersons($documents);
+            $haupt = $familyPersons[(int) $familyInput['haupt_index']] ?? null;
+            if ($haupt === null) {
+                return response()->json(['message' => 'Hauptversicherte Person nicht gefunden - bitte neu auswaehlen.'], 422);
+            }
+            foreach (['first_name', 'last_name', 'birth_date'] as $field) {
+                if (filled($haupt[$field] ?? null)) {
+                    $merged['person'][$field] = $haupt[$field];
+                }
+            }
         }
 
         $person = $merged['person'] ?? [];
@@ -497,6 +535,21 @@ class SmartDocumentUploadController extends Controller
             ? $this->intake->createContractFromExtraction($primary, $customer, auth()->id(), $merged)
             : null;
 
+        // Krankenkassen-Fall einrichten (Familie, Wechseldatum, Verlauf).
+        $health = null;
+        if ($familyInput !== null) {
+            $health = app(\App\Services\Health\HealthFamilySetupService::class)->setup($customer, $familyPersons, [
+                'haupt_index' => (int) $familyInput['haupt_index'],
+                'members' => $familyInput['members'] ?? [],
+                'switch_reason' => $familyInput['switch_reason'],
+                'job_start' => $familyInput['job_start'] ?? null,
+                'old_insurer' => $familyInput['old_insurer'] ?? null,
+                'new_insurer' => $familyInput['new_insurer'],
+                'source_document_id' => (string) $primary->id,
+                'created_by' => auth()->id(),
+            ]);
+        }
+
         foreach ($documents as $document) {
             $this->markDecision($document, 'accepted');
         }
@@ -508,6 +561,7 @@ class SmartDocumentUploadController extends Controller
             'applied_fields' => $applied,
             'contract_id' => $contract?->id,
             'documents' => $documents->count(),
+            'health' => $health,
         ]);
     }
 

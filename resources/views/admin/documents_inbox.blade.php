@@ -136,6 +136,40 @@
         {{-- Neuanlage-Hinweis (Modus: neuer Kunde) --}}
         <div id="review-create-block" style="display:none;background:#E6F1FB;border:1px solid #185FA5;border-radius:8px;padding:10px 12px;font-size:13.5px;margin-bottom:12px;"></div>
 
+        {{-- Krankenkassen-Fall (Familie + Wechsel), nur im Vorgang-Modus bei >= 2 Personen --}}
+        <div id="review-family-section" style="display:none;border:1.5px solid #3B7A57;border-radius:10px;padding:12px;margin-bottom:12px;background:#F6FBF8;">
+            <label style="display:flex;gap:9px;align-items:flex-start;font-size:13.5px;cursor:pointer;font-weight:700;">
+                <input type="checkbox" id="family-enabled" style="margin-top:2px;">
+                <span>🏥 Krankenkassen-Fall einrichten (Familie + Wechsel)</span>
+            </label>
+            <div id="family-body" style="display:none;margin-top:10px;">
+                <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:6px;">Wer ist <strong>hauptversichert</strong>? (meist der Vater – bitte pruefen)</div>
+                <div id="family-persons" style="display:grid;gap:6px;margin-bottom:10px;"></div>
+
+                <div style="font-weight:700;font-size:13px;margin-bottom:6px;">Wechsel-Fall</div>
+                <div id="family-reasons" style="display:grid;gap:5px;margin-bottom:8px;font-size:13px;">
+                    <label style="display:flex;gap:8px;cursor:pointer;"><input type="radio" name="family-reason" value="wechsel" checked> Regulaerer Wechsel (Statusaenderung) – wirksam am 1. des Monats +3</label>
+                    <label style="display:flex;gap:8px;cursor:pointer;"><input type="radio" name="family-reason" value="sonder"> Sonderkuendigungsrecht – gleicher Stichtag, als Sonderfall markiert</label>
+                    <label style="display:flex;gap:8px;cursor:pointer;"><input type="radio" name="family-reason" value="new_job"> Neue Beschaeftigung – sofort ab Arbeitsbeginn</label>
+                </div>
+                <div id="family-jobstart-wrap" style="display:none;margin-bottom:8px;">
+                    <label style="font-size:12.5px;">Arbeitsbeginn</label>
+                    <input type="date" id="family-jobstart" style="width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                    <div>
+                        <label style="font-size:12.5px;">Bisherige Kasse</label>
+                        <input type="text" id="family-old-insurer" placeholder="z.B. AOK" style="width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+                    </div>
+                    <div>
+                        <label style="font-size:12.5px;">Neue Kasse *</label>
+                        <input type="text" id="family-new-insurer" placeholder="z.B. TK" style="width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+                    </div>
+                </div>
+                <div id="family-effective-preview" style="font-size:12.5px;color:#3B7A57;font-weight:600;"></div>
+            </div>
+        </div>
+
         {{-- Extrahierte Daten --}}
         <div id="review-extract-section" style="display:none;">
             <div style="font-weight:700;font-size:13.5px;margin:6px 0 8px;">Erkannte Daten übernehmen <span style="font-weight:400;color:var(--ink-soft);">(nur leere Felder werden befüllt)</span></div>
@@ -236,9 +270,94 @@ window.docReview = (function() {
         chooseCustomer(null, null);
         renderApplyFields({ extracted: batch.merged || {} });
         renderContract({ extracted: batch.merged || {} });
+        renderFamily(batch);
 
         el('review-submit').textContent = 'Kunden anlegen & alle zuordnen';
         el('doc-review-modal').style.display = 'flex';
+    }
+
+    // Krankenkassen-Fall: Personenliste (Haupt-Frage + Status je Person),
+    // Wechsel-Grund und Stichtag-Vorschau. Nur bei >= 2 erkannten Personen.
+    function renderFamily(batch) {
+        var section = el('review-family-section');
+        var persons = batch.persons || [];
+        if (persons.length < 2) { section.style.display = 'none'; return; }
+        section.style.display = '';
+
+        // Bei Gesundheitskarten im Vorgang direkt aktivieren, sonst opt-in.
+        el('family-enabled').checked = !!batch.has_health_cards;
+        el('family-body').style.display = el('family-enabled').checked ? '' : 'none';
+
+        var wrap = el('family-persons');
+        wrap.innerHTML = '';
+        persons.forEach(function(p, i) {
+            var row = document.createElement('div');
+            row.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff;font-size:13px;';
+            var radio = document.createElement('input');
+            radio.type = 'radio'; radio.name = 'family-haupt'; radio.value = i;
+            radio.checked = (i === (batch.haupt_suggest || 0));
+            radio.addEventListener('change', function() { updateMemberSelects(); });
+            var name = document.createElement('strong');
+            name.textContent = [(p.first_name || ''), (p.last_name || '')].join(' ').trim() || ('Person ' + (i + 1));
+            var meta = document.createElement('span');
+            meta.style.cssText = 'color:var(--ink-soft);font-size:12px;';
+            meta.textContent = [p.birth_date, p.gender === 'male' ? '♂' : (p.gender === 'female' ? '♀' : null)].filter(Boolean).join(' · ');
+            var status = document.createElement('select');
+            status.className = 'family-status'; status.dataset.index = i;
+            status.style.cssText = 'margin-inline-start:auto;padding:6px 9px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;';
+            [['familienversichert', 'Familienversichert'], ['mitglied', 'Eigenes Mitglied'], ['skip', 'Nicht anlegen']].forEach(function(opt) {
+                var o = document.createElement('option'); o.value = opt[0]; o.textContent = opt[1]; status.appendChild(o);
+            });
+            var rel = document.createElement('select');
+            rel.className = 'family-relation'; rel.dataset.index = i;
+            rel.style.cssText = 'padding:6px 9px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;';
+            ['Ehepartner', 'Kind', 'Sonstig'].forEach(function(r) {
+                var o = document.createElement('option'); o.value = r; o.textContent = r; rel.appendChild(o);
+            });
+            // Heuristik nur fuer die VORAUSWAHL der Beziehung (Mitarbeiter prueft).
+            if (p.birth_date && (new Date().getFullYear() - parseInt(p.birth_date.substring(0, 4), 10)) < 18) rel.value = 'Kind';
+            row.appendChild(radio); row.appendChild(name); row.appendChild(meta); row.appendChild(status); row.appendChild(rel);
+            wrap.appendChild(row);
+        });
+
+        // Bisherige Kasse aus den Karten vorbelegen.
+        var known = persons.map(function(p) { return p.company; }).filter(Boolean);
+        el('family-old-insurer').value = known.length ? known[0] : '';
+        el('family-new-insurer').value = '';
+        el('family-jobstart').value = '';
+        document.querySelector('input[name="family-reason"][value="wechsel"]').checked = true;
+        updateMemberSelects();
+        updateEffectivePreview();
+    }
+
+    // Haupt-Person braucht weder Status- noch Beziehungs-Auswahl.
+    function updateMemberSelects() {
+        var haupt = getHauptIndex();
+        document.querySelectorAll('.family-status, .family-relation').forEach(function(sel) {
+            sel.style.visibility = parseInt(sel.dataset.index, 10) === haupt ? 'hidden' : 'visible';
+        });
+    }
+
+    function getHauptIndex() {
+        var checked = document.querySelector('input[name="family-haupt"]:checked');
+        return checked ? parseInt(checked.value, 10) : 0;
+    }
+
+    // Stichtag-VORSCHAU (der Server rechnet verbindlich mit derselben Regel).
+    function updateEffectivePreview() {
+        var reason = (document.querySelector('input[name="family-reason"]:checked') || {}).value || 'wechsel';
+        el('family-jobstart-wrap').style.display = reason === 'new_job' ? '' : 'none';
+        var text;
+        if (reason === 'new_job') {
+            text = 'Wirksam sofort ab Arbeitsbeginn' + (el('family-jobstart').value ? ' (' + el('family-jobstart').value + ')' : '') + '.';
+        } else {
+            var d = new Date();
+            d.setMonth(d.getMonth() + 3, 1);
+            text = 'Voraussichtlich wirksam ab ' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + d.getFullYear()
+                + ' (1. des Monats; Einreichungsmonat zaehlt nicht + 2 volle Monate)'
+                + (reason === 'sonder' ? ' – als Sonderkuendigungsrecht markiert.' : '.');
+        }
+        el('family-effective-preview').textContent = '📅 ' + text;
     }
 
     function open(docId, mode, customerId, customerLabel) {
@@ -255,6 +374,7 @@ window.docReview = (function() {
 
         el('review-assign-block').style.display = mode === 'assign' ? '' : 'none';
         el('review-create-block').style.display = mode === 'create' ? '' : 'none';
+        el('review-family-section').style.display = 'none';
 
         if (mode === 'create') {
             var p = (doc.extracted || {}).person || {};
@@ -376,6 +496,28 @@ window.docReview = (function() {
         if (isBatch) {
             payload.document_ids = (window.INBOX_BATCHES[current.batchId] || {}).ids || [];
             url = @json(route('admin.documents.create_customer_batch'));
+            // Krankenkassen-Fall mitschicken, wenn aktiviert.
+            var famSection = el('review-family-section');
+            if (famSection.style.display !== 'none' && el('family-enabled').checked) {
+                var newInsurer = el('family-new-insurer').value.trim();
+                if (!newInsurer) { showError('Bitte die neue Krankenkasse angeben.'); return; }
+                var haupt = getHauptIndex();
+                var members = [];
+                document.querySelectorAll('.family-status').forEach(function(sel) {
+                    var idx = parseInt(sel.dataset.index, 10);
+                    if (idx === haupt || sel.value === 'skip') return;
+                    var rel = document.querySelector('.family-relation[data-index="' + idx + '"]');
+                    members.push({ index: idx, status: sel.value, relation: rel ? rel.value : 'Sonstig' });
+                });
+                payload.family = {
+                    haupt_index: haupt,
+                    members: members,
+                    switch_reason: (document.querySelector('input[name="family-reason"]:checked') || {}).value || 'wechsel',
+                    job_start: el('family-jobstart').value || null,
+                    old_insurer: el('family-old-insurer').value.trim() || null,
+                    new_insurer: newInsurer,
+                };
+            }
         } else {
             url = isCreate
                 ? @json(route('admin.documents.create_customer', ['id' => '__ID__']))
@@ -429,6 +571,13 @@ window.docReview = (function() {
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+        el('family-enabled').addEventListener('change', function() {
+            el('family-body').style.display = this.checked ? '' : 'none';
+        });
+        document.querySelectorAll('input[name="family-reason"]').forEach(function(r) {
+            r.addEventListener('change', updateEffectivePreview);
+        });
+        el('family-jobstart').addEventListener('input', updateEffectivePreview);
         el('review-customer-q').addEventListener('input', function() {
             var q = this.value.trim();
             if (searchTimer) clearTimeout(searchTimer);
