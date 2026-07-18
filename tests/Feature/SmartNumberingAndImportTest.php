@@ -78,12 +78,33 @@ class SmartNumberingAndImportTest extends TestCase
     // CSV-Import (andere Plattformen)
     // ------------------------------------------------------------------
 
-    private function importCsv(string $content)
+    /**
+     * Zweistufiger Import: erst Vorschau hochladen (legt NICHTS an), dann mit
+     * dem Vorschau-Token bestaetigen (legt die Kunden an). Gibt die Antwort
+     * des Bestaetigungsschritts zurueck.
+     */
+    private function importCsv(string $content, string $filename = 'kunden.csv')
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $file = UploadedFile::fake()->createWithContent($filename, $content);
+
+        $preview = $this->actingAs($admin)->post(route('admin.import'), ['csv_file' => $file]);
+        $preview->assertOk();
+        $token = $preview->viewData('token');
+
+        return $this->actingAs($admin)->post(route('admin.import.confirm'), ['token' => $token]);
+    }
+
+    /** Nur die Vorschau (Schritt 1) ausfuehren und die View-Daten zurueckgeben. */
+    private function previewCsv(string $content): array
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $file = UploadedFile::fake()->createWithContent('kunden.csv', $content);
 
-        return $this->actingAs($admin)->post(route('admin.import'), ['csv_file' => $file]);
+        $preview = $this->actingAs($admin)->post(route('admin.import'), ['csv_file' => $file]);
+        $preview->assertOk();
+
+        return $preview->viewData('preview');
     }
 
     public function test_csv_import_keeps_original_number_and_structured_address(): void
@@ -146,10 +167,7 @@ class SmartNumberingAndImportTest extends TestCase
         ]);
         $latin1 = mb_convert_encoding($utf8, 'Windows-1252', 'UTF-8');
 
-        $admin = User::factory()->create(['role' => 'admin']);
-        $file = UploadedFile::fake()->createWithContent('kontakte.csv', $latin1);
-        $this->actingAs($admin)->post(route('admin.import'), ['csv_file' => $file])
-            ->assertRedirect();
+        $this->importCsv($latin1, 'kontakte.csv')->assertRedirect();
 
         $customer = Customer::first();
         $this->assertNotNull($customer);
@@ -172,16 +190,79 @@ class SmartNumberingAndImportTest extends TestCase
             '20001;Beispiel GmbH;;;kontakt@beispiel-gmbh.de',
         ]);
 
-        $admin = User::factory()->create(['role' => 'admin']);
-        $file = UploadedFile::fake()->createWithContent('firma.csv', $content);
-        $this->actingAs($admin)->post(route('admin.import'), ['csv_file' => $file])
-            ->assertRedirect();
+        $this->importCsv($content, 'firma.csv')->assertRedirect();
 
         $customer = Customer::first();
         $this->assertNotNull($customer);
         $this->assertSame('Beispiel GmbH', $customer->user->name);
         $this->assertSame('firma', $customer->customer_type);
         $this->assertSame('kontakt@beispiel-gmbh.de', $customer->user->email);
+    }
+
+    public function test_import_preview_does_not_create_customers(): void
+    {
+        // Schritt 1 (Vorschau) darf noch NICHTS anlegen.
+        $preview = $this->previewCsv(implode("\n", [
+            'Vorname;Nachname;E-Mail 1;Kundennummer',
+            'Anna;Beispiel;anna@k.de;4711',
+            'Ben;Muster;ben@k.de;4712',
+            ';;;', // ohne Namen -> uebersprungen
+        ]));
+
+        $this->assertSame(0, Customer::count()); // nichts angelegt
+        $this->assertSame(2, $preview['new_count']);
+        $this->assertSame(1, $preview['skipped']);
+        $this->assertSame('anna@k.de', $preview['new'][0]['email']);
+    }
+
+    public function test_import_preview_flags_in_file_duplicate_email(): void
+    {
+        $preview = $this->previewCsv(implode("\n", [
+            'Vorname;Nachname;E-Mail 1',
+            'Anna;Beispiel;dup@k.de',
+            'Anna;Beispiel;dup@k.de', // gleiche E-Mail zweimal in der Datei
+        ]));
+
+        $this->assertSame(1, $preview['new_count']);
+        $this->assertSame(1, $preview['dup_count']);
+    }
+
+    public function test_confirm_import_with_expired_token_shows_error(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.import.confirm'), ['token' => '00000000-0000-0000-0000-000000000000'])
+            ->assertRedirect(route('admin.import_export'));
+
+        $this->assertSame(0, Customer::count());
+    }
+
+    public function test_cleanup_command_removes_only_placeholder_import_customers(): void
+    {
+        // Kaputter Import: Quelle 'import' + Platzhalter-E-Mail -> muss weg.
+        $broken = $this->makeCustomer('import-abc@dienstly24.internal', ['source' => 'import']);
+        // Guter Import: echte E-Mail -> bleibt.
+        $good = $this->makeCustomer('echt@k.de', ['source' => 'import']);
+        // Platzhalter, aber andere Quelle -> bleibt (kein CSV-Import-Fehler).
+        $fonds = $this->makeCustomer('import-xyz@dienstly24.internal', ['source' => 'fonds_finanz']);
+
+        $this->artisan('customers:cleanup-import --force')
+            ->expectsConfirmation('Wirklich diese 1 Import-Datensaetze endgueltig loeschen?', 'yes')
+            ->assertSuccessful();
+
+        $this->assertDatabaseMissing('customers', ['id' => $broken->id]);
+        $this->assertDatabaseHas('customers', ['id' => $good->id]);
+        $this->assertDatabaseHas('customers', ['id' => $fonds->id]);
+    }
+
+    public function test_cleanup_command_dry_run_deletes_nothing(): void
+    {
+        $broken = $this->makeCustomer('import-abc@dienstly24.internal', ['source' => 'import']);
+
+        $this->artisan('customers:cleanup-import')->assertSuccessful();
+
+        $this->assertDatabaseHas('customers', ['id' => $broken->id]);
     }
 
     // ------------------------------------------------------------------

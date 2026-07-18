@@ -297,6 +297,7 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // Import / Export
     Route::get('/import-export', [ImportExportController::class, 'index'])->name('import_export')->middleware('role:admin,manager');
     Route::post('/import', [ImportExportController::class, 'import'])->name('import')->middleware('role:admin,manager');
+    Route::post('/import/confirm', [ImportExportController::class, 'confirmImport'])->name('import.confirm')->middleware('role:admin,manager');
     Route::get('/export', [ImportExportController::class, 'export'])->name('export')->middleware('role:admin,manager');
     Route::get('/import/template', [ImportExportController::class, 'template'])->name('import.template')->middleware('role:admin,manager');
 
