@@ -1114,6 +1114,34 @@ class SmartDocumentUploadTest extends TestCase
         Http::assertSent(fn ($request) => str_contains($request->url(), 'api.anthropic.com'));
     }
 
+    public function test_ocr_is_not_invoked_when_ai_provider_does_not_need_it(): void
+    {
+        Storage::fake('local');
+        $this->enableAi();
+        config(['services.ocr.enabled' => true]);
+        // OCR-Extraktor, der bei Aufruf FEHLSCHLAEGT: er darf bei aktivem
+        // Vision-Anbieter (Claude) gar nicht erst laufen - sonst waere das
+        // eine teure, nutzlose Extraktion bei jedem Upload.
+        $this->app->bind(TextExtractorInterface::class, fn () => new class implements TextExtractorInterface {
+            public function isAvailable(): bool { return true; }
+            public function extract(string $binary, string $mime): string
+            {
+                throw new \RuntimeException('OCR darf bei aktivem KI-Anbieter nicht laufen.');
+            }
+        });
+        $this->fakeAnalysis($this->gesundheitskartePayload());
+
+        $admin = $this->makeAdmin();
+        $response = $this->actingAs($admin)->postJson(route('admin.documents.smart_upload'), [
+            'files' => [UploadedFile::fake()->image('karte.jpg', 800, 500)],
+        ]);
+
+        $response->assertOk();
+        $doc = Document::findOrFail($response->json('ids.0'));
+        $this->assertSame('done', $doc->ai_status);
+        $this->assertSame('ai', $doc->ai_source);
+    }
+
     public function test_ocr_disabled_leaves_document_without_analysis_like_before(): void
     {
         Storage::fake('local');

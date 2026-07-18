@@ -63,9 +63,18 @@ class DocumentAnalyzer
     {
         [$binary, $mime] = $this->readFile($document);
 
-        $ocrText = $this->ocr->isAvailable() ? $this->ocr->extract($binary, $mime) : '';
+        $providerEnabled = $this->provider->isEnabled();
 
-        if ($this->provider->isEnabled()) {
+        // OCR nur ausfuehren, wenn das Ergebnis auch genutzt wird: entweder
+        // gibt es keinen KI-Anbieter (dann IST OCR die Analyse) oder der
+        // Anbieter verarbeitet den Text ausdruecklich. Claude liest
+        // Bilder/PDF direkt (Vision) und braucht ihn nicht - ihn trotzdem
+        // bei jedem Upload zu erzeugen (pdftoppm + tesseract je Seite) waere
+        // spuerbare, nutzlose Last auf dem Server.
+        $needOcr = !$providerEnabled || $this->provider->wantsOcrText();
+        $ocrText = ($needOcr && $this->ocr->isAvailable()) ? $this->ocr->extract($binary, $mime) : '';
+
+        if ($providerEnabled) {
             $result = $this->provider->analyze($binary, $mime, $ocrText);
             return $result !== null ? [...$result, 'source' => 'ai'] : null;
         }
