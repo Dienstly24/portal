@@ -20,6 +20,7 @@ class Document extends Model {
         'kfz_vertrag'          => ['label' => 'KFZ-Vertrag',          'category' => 'contract'],
         'versicherungsvertrag' => ['label' => 'Versicherungsvertrag', 'category' => 'contract'],
         'versicherungspolice'  => ['label' => 'Versicherungspolice',  'category' => 'police'],
+        'beratungsprotokoll'   => ['label' => 'Beratungsprotokoll',   'category' => 'contract'],
         'fahrzeugschein'       => ['label' => 'Fahrzeugschein',       'category' => 'other'],
         'fahrzeugbrief'        => ['label' => 'Fahrzeugbrief',        'category' => 'other'],
         'gesundheitskarte'     => ['label' => 'Gesundheitskarte',     'category' => 'identity'],

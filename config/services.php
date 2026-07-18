@@ -90,6 +90,25 @@ return [
         'languages' => env('OCR_LANGUAGES', 'deu+eng'),
         'tesseract_binary' => env('OCR_TESSERACT_BINARY', 'tesseract'),
         'pdftoppm_binary' => env('OCR_PDFTOPPM_BINARY', 'pdftoppm'),
+        'pdftotext_binary' => env('OCR_PDFTOTEXT_BINARY', 'pdftotext'),
+        // Digitale PDFs (CHECK24-Protokolle, Versicherer-Portale, alles aus
+        // einer Software) tragen eine perfekte Textebene. Sie VOR OCR/Vision
+        // kostenlos per pdftotext zu lesen, spart die teure KI-Eskalation.
+        // Teil der kostenlosen Basisebene und daher an dieselbe bewusste
+        // Freischaltung wie OCR gekoppelt (Default = OCR_ENABLED); separat
+        // per OCR_TEXT_LAYER abschaltbar. In Produktion ist OCR_ENABLED=true,
+        // damit ist die Textebene aktiv (nur poppler-utils noetig).
+        'text_layer' => env('OCR_TEXT_LAYER', env('OCR_ENABLED', false)),
+        'text_layer_max_pages' => env('OCR_TEXT_LAYER_MAX_PAGES', 15),
+        // Oberhalb dieser Zeichenzahl ist ein Dokument fuer die einfache
+        // Stichwort-/Regex-Heuristik zu komplex (mehrseitige Protokolle mit
+        // vielen Abschnitten -> Falschtreffer). Solche Dokumente werden zur
+        // genauen KI-Analyse eskaliert - aber auf dem billigen Textweg.
+        'heuristic_max_chars' => env('OCR_HEURISTIC_MAX_CHARS', 2500),
+        // Bei vorhandener Textebene bekommt die KI den TEXT (auf so viele
+        // Zeichen gekuerzt) statt der teuren Bild-/PDF-Seiten - massiv
+        // guenstiger bei gleicher Genauigkeit fuer digitale PDFs.
+        'ai_text_max_chars' => env('OCR_AI_TEXT_MAX_CHARS', 12000),
         // Leistungs-/Zeitgrenzen, damit OCR auf schwacher VPS-Hardware nie das
         // Job-Timeout sprengt (sonst haengt das Dokument in 'processing').
         'dpi' => env('OCR_DPI', 150),
