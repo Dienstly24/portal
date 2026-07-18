@@ -119,6 +119,13 @@ new Chart(ctx, {
     },
     options: {
         cutout: '65%',
+        onClick: (evt, elements) => {
+            if (!elements.length) return;
+            // Segment -> gefilterte Vertragsliste (gleiche Reihenfolge wie labels)
+            const types = ['kfz','krankenversicherung','internet','energie','andere'];
+            window.location = '{{ route('admin.contracts') }}?type=' + types[elements[0].index];
+        },
+        onHover: (evt, elements) => { evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
         plugins: {
             legend: { position: 'right', labels: { font: { size: 12 }, padding: 16 } }
         }

@@ -72,6 +72,8 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
 .cust-tab{flex:1;text-align:center;padding:10px 16px;border-radius:8px;font-size:13.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;white-space:nowrap;text-decoration:none;transition:.15s;border:none;background:none;}
 .cust-tab:hover{background:var(--canvas);color:var(--ink);}
 .cust-tab.active{background:var(--petrol);color:#fff;}
+.vs-cat{transition:background .12s;}
+.vs-cat:hover{background:var(--canvas);}
 .chat-bubble{max-width:75%;padding:10px 14px;border-radius:12px;font-size:13.5px;line-height:1.55;}
 .chat-row{display:flex;gap:10px;margin-bottom:14px;align-items:flex-end;}
 .chat-avatar{width:32px;height:32px;border-radius:50%;background:var(--petrol);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:none;}
@@ -89,11 +91,12 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
 {{-- Vertragsstruktur Icons --}}
 <div class="card" style="margin-bottom:20px;">
     <div class="card-title" style="margin-bottom:16px;">Vertragsstruktur</div>
+    <p style="font-size:12px;color:var(--ink-soft);margin:-6px 0 14px;">Fläche anklicken, um direkt zu den Verträgen dieser Kategorie zu springen.</p>
     <div style="display:flex;gap:12px;flex-wrap:wrap;">
         @foreach($typeConfig as $key => $cfg)
         @php $isActive = in_array($key, $activeTypes); @endphp
-        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;"
-            onclick="document.getElementById('filter-type').value='{{ $key }}';filterContracts()">
+        <div class="{{ $isActive ? 'vs-cat' : '' }}" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:4px;border-radius:12px;{{ $isActive ? 'cursor:pointer;' : 'cursor:default;' }}"
+            @if($isActive) onclick="showContractsOfType('{{ $key }}')" title="Verträge {{ $cfg['label'] }} anzeigen" @else title="Keine Verträge in dieser Kategorie" @endif>
             <div style="width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;
                 background:{{ $isActive ? $cfg['bg'] : '#EEF0F3' }};
                 border:2px solid {{ $isActive ? $cfg['color'] : '#E4E6EA' }};
@@ -846,10 +849,21 @@ function filterContracts() {
 
 <script>
 function showCustTab(id, btn) {
+    // btn ist optional: aus der Vertragsstruktur wird ohne Button gewechselt
+    btn = btn || document.querySelector('.cust-tab[data-tab="' + id + '"]');
     document.querySelectorAll('.tab-section').forEach(el => el.style.display = el.id === id ? '' : 'none');
     document.querySelectorAll('.cust-tab').forEach(el => el.classList.toggle('active', el === btn));
     history.replaceState(null, '', '#' + id);
     if (id === 'tab-intern') scrollChatDown();
+}
+// Klick auf ein Vertragsstruktur-Symbol: zum Vertraege-Tab wechseln, nach
+// Kategorie filtern und dorthin scrollen.
+function showContractsOfType(type) {
+    showCustTab('tab-vertraege');
+    const sel = document.getElementById('filter-type');
+    if (sel) { sel.value = type; filterContracts(); }
+    const tab = document.getElementById('tab-vertraege');
+    if (tab) tab.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function scrollChatDown() {
     const box = document.getElementById('internal-chat-scroll');

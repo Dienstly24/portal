@@ -33,7 +33,14 @@
     </button>
 </div>
 
-<div style="font-size:14px;font-weight:700;margin-bottom:14px;" id="contract-count">{{ $contracts->count() }} Verträge</div>
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+    <div style="font-size:14px;font-weight:700;" id="contract-count">{{ $contracts->count() }} Verträge</div>
+    {{-- Aktiver Kategorie-Filter (z.B. per Klick aus dem Dashboard-Diagramm) --}}
+    <span id="type-filter-chip" style="display:none;align-items:center;gap:8px;font-size:12.5px;background:var(--canvas);border:1px solid var(--line);border-radius:999px;padding:4px 8px 4px 12px;">
+        <span id="type-filter-label"></span>
+        <a href="{{ route('admin.contracts') }}" style="text-decoration:none;color:var(--ink-soft);font-weight:700;" title="Filter entfernen">✕</a>
+    </span>
+</div>
 
 <div class="card" style="padding:0;overflow:hidden;">
     <table id="contracts-table">
@@ -51,7 +58,7 @@
         <tbody>
         @forelse($contracts as $c)
         @php $cfg = $c->typeConfig(); @endphp
-        <tr class="contract-row" data-status="{{ $c->status }}"
+        <tr class="contract-row" data-status="{{ $c->status }}" data-type="{{ $c->type }}"
             data-search="{{ strtolower($c->insurer . ' ' . $c->contract_number . ' ' . ($c->customer?->user?->name ?? '')) }}">
             <td style="padding:14px 20px;">
                 <div style="width:40px;height:40px;border-radius:10px;background:{{ $cfg['bg'] }};display:flex;align-items:center;justify-content:center;font-size:20px;">{{ $c->typeIcon() }}</div>
@@ -83,6 +90,12 @@
 
 <script>
 let currentTab = 'active';
+// Kategorie-Filter aus der URL (?type=...), z.B. Klick im Dashboard-Diagramm.
+// 'energie' fasst Strom/Gas zusammen (wie im Diagramm gruppiert).
+const TYPE_LABELS = {kfz:'KFZ',krankenversicherung:'Krankenversicherung',internet:'Internet & Mobilfunk',energie:'Strom & Gas',strom:'Strom',gas:'Gas',strom_gas:'Strom & Gas',andere:'Andere'};
+const typeFilter = new URLSearchParams(window.location.search).get('type') || '';
+const typeMatches = t => !typeFilter
+    || (typeFilter === 'energie' ? ['strom','gas','strom_gas'].includes(t) : t === typeFilter);
 
 function showTab(tab) {
     currentTab = tab;
@@ -101,13 +114,20 @@ function filterContracts() {
     document.querySelectorAll('.contract-row').forEach(row => {
         const statusMatch = currentTab === 'active' ? row.dataset.status === 'active' : row.dataset.status !== 'active';
         const searchMatch = !q || row.dataset.search.includes(q);
-        const show = statusMatch && searchMatch;
+        const show = statusMatch && searchMatch && typeMatches(row.dataset.type);
         row.style.display = show ? '' : 'none';
         if(show) count++;
     });
     document.getElementById('contract-count').textContent = count + ' Verträge';
 }
 
-document.addEventListener('DOMContentLoaded', () => filterContracts());
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeFilter) {
+        const chip = document.getElementById('type-filter-chip');
+        document.getElementById('type-filter-label').textContent = 'Kategorie: ' + (TYPE_LABELS[typeFilter] || typeFilter);
+        chip.style.display = 'inline-flex';
+    }
+    filterContracts();
+});
 </script>
 @endsection
