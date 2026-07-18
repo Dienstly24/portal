@@ -91,6 +91,7 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     Route::get('/nachrichten', [\App\Http\Controllers\PortalMessageController::class, 'index'])->name('messages');
     Route::post('/nachrichten', [\App\Http\Controllers\PortalMessageController::class, 'store'])->name('messages.store');
     Route::get('/nachrichten/anhang/{id}', [\App\Http\Controllers\PortalMessageController::class, 'downloadAttachment'])->name('messages.attachment');
+    Route::get('/nachrichten/anhang/{id}/ansehen', [\App\Http\Controllers\PortalMessageController::class, 'viewAttachment'])->name('messages.attachment.view');
     Route::get('/banner/{id}/interesse', [PortalController::class, 'bannerInterest'])->name('banner.interest');
     Route::get('/banner/{id}/klick', [PortalController::class, 'bannerClick'])->name('banner.click');
     Route::post('/banner/{id}/schliessen', [PortalController::class, 'bannerDismiss'])->name('banner.dismiss');
@@ -296,6 +297,7 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // Direktnachrichten an Kunden (Portal-Chat), Vorlagen & E-Mail-Composer
     Route::post('/customers/{id}/messages', [\App\Http\Controllers\CustomerMessageController::class, 'store'])->name('customer.messages.store');
     Route::get('/messages/attachments/{id}/download', [\App\Http\Controllers\CustomerMessageController::class, 'downloadAttachment'])->name('messages.attachment');
+    Route::get('/messages/attachments/{id}/view', [\App\Http\Controllers\CustomerMessageController::class, 'viewAttachment'])->name('messages.attachment.view');
     Route::get('/vorlagen', [\App\Http\Controllers\MessageTemplateController::class, 'index'])->name('templates');
     Route::get('/vorlagen/liste', [\App\Http\Controllers\MessageTemplateController::class, 'list'])->name('templates.list');
     Route::get('/vorlagen/{id}/render', [\App\Http\Controllers\MessageTemplateController::class, 'render'])->name('templates.render');

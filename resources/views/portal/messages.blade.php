@@ -16,11 +16,17 @@
         </div>
         <div style="font-size:14px;line-height:1.6;white-space:pre-line;">{{ $m->body }}</div>
         @if($m->attachments->isNotEmpty())
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
             @foreach($m->attachments as $att)
-            <a href="{{ route('portal.messages.attachment', $att->id) }}" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 12px;text-decoration:none;color:var(--ink);">
-                {{ $att->isImage() ? '🖼️' : '📎' }} {{ \Illuminate\Support\Str::limit($att->file_name, 32) }} ⬇
-            </a>
+            <div style="display:inline-flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:12.5px;">
+                <span style="display:inline-flex;align-items:center;gap:6px;color:var(--ink-soft);">
+                    {{ $att->isImage() ? '🖼️' : ($att->isPdf() ? '📄' : '📎') }} {{ \Illuminate\Support\Str::limit($att->file_name, 32) }}
+                </span>
+                @if($att->isViewable())
+                <a href="{{ route('portal.messages.attachment.view', $att->id) }}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 11px;text-decoration:none;color:var(--ink);">👁 {{ __('Anzeigen') }}</a>
+                @endif
+                <a href="{{ route('portal.messages.attachment', $att->id) }}" style="display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 11px;text-decoration:none;color:var(--ink);">⬇ {{ __('Herunterladen') }}</a>
+            </div>
             @endforeach
         </div>
         @endif

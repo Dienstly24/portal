@@ -458,11 +458,15 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
                     {!! nl2br(e($msg->body)) !!}
                 </div>
                 @if($msg->attachments->isNotEmpty())
-                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:5px;{{ $staffSide ? 'justify-content:flex-end;' : '' }}">
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:5px;font-size:12px;align-items:center;{{ $staffSide ? 'justify-content:flex-end;' : '' }}">
                     @foreach($msg->attachments as $att)
-                    <a href="{{ route('admin.messages.attachment', $att->id) }}" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 11px;text-decoration:none;color:var(--ink);">
-                        {{ $att->isImage() ? '🖼️' : '📎' }} {{ \Illuminate\Support\Str::limit($att->file_name, 30) }}
-                    </a>
+                    <span style="display:inline-flex;align-items:center;gap:5px;color:var(--ink-soft);">
+                        {{ $att->isImage() ? '🖼️' : ($att->isPdf() ? '📄' : '📎') }} {{ \Illuminate\Support\Str::limit($att->file_name, 30) }}
+                    </span>
+                    @if($att->isViewable())
+                    <a href="{{ route('admin.messages.attachment.view', $att->id) }}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 11px;text-decoration:none;color:var(--ink);">👁 Anzeigen</a>
+                    @endif
+                    <a href="{{ route('admin.messages.attachment', $att->id) }}" style="display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 11px;text-decoration:none;color:var(--ink);">⬇ Herunterladen</a>
                     @endforeach
                 </div>
                 @endif
