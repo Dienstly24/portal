@@ -6,6 +6,7 @@ use App\Models\Document;
 use App\Services\Ai\ClaudeDocumentAiProvider;
 use App\Services\Ai\Contracts\DocumentAiProviderInterface;
 use App\Services\Ai\DocumentAnalyzer;
+use App\Services\Ai\RelevantPageSelector;
 use App\Services\Ocr\PdfTextLayerExtractor;
 use App\Services\Ocr\TextExtractorInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -93,7 +94,7 @@ class DocumentCostOptimizationTest extends TestCase
         $this->assertGreaterThan(2500, mb_strlen($text));
 
         $provider = $this->recordingProvider($this->aiPayload());
-        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text));
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector());
 
         $result = $analyzer->analyze($this->pdfDocument());
 
@@ -108,7 +109,7 @@ class DocumentCostOptimizationTest extends TestCase
         $text = "SEPA-LASTSCHRIFTMANDAT\nIBAN DE89370400440532013000\nKontoinhaber Max Mustermann";
 
         $provider = $this->recordingProvider($this->aiPayload());
-        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text));
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector());
 
         $result = $analyzer->analyze($this->pdfDocument());
 
@@ -122,7 +123,7 @@ class DocumentCostOptimizationTest extends TestCase
     {
         // Keine Textebene (Scan) und kein OCR -> KI mit Bild/PDF (preferText false).
         $provider = $this->recordingProvider($this->aiPayload('gesundheitskarte'));
-        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(available: false), $this->fakePdfText(''));
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(available: false), $this->fakePdfText(''), new RelevantPageSelector());
 
         $result = $analyzer->analyze($this->pdfDocument());
 

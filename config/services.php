@@ -18,6 +18,16 @@ return [
         'key' => env('POSTMARK_API_KEY'),
     ],
 
+    // Bekannte, mehrseitige Formulare auf ihre fachlich relevanten Seiten
+    // reduzieren (RelevantPageSelector), bevor Heuristik/KI sie sehen. So
+    // fliegen Rechtstext/Anhang raus - weniger Rauschen, weniger KI-Tokens.
+    // 'markers' = Stichwoerter zur Erkennung, 'pages' = 1-basierte Seiten.
+    'document_profiles' => [
+        // CHECK24-Beratungsprotokoll (Kfz): nur diese Seiten tragen Kunden-,
+        // Fahrzeug- und Tarifdaten (Betreiber-Vorgabe).
+        ['markers' => ['BERATUNGSPROTOKOLL'], 'pages' => [1, 2, 4, 5, 6, 7]],
+    ],
+
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],
@@ -107,8 +117,10 @@ return [
         'heuristic_max_chars' => env('OCR_HEURISTIC_MAX_CHARS', 2500),
         // Bei vorhandener Textebene bekommt die KI den TEXT (auf so viele
         // Zeichen gekuerzt) statt der teuren Bild-/PDF-Seiten - massiv
-        // guenstiger bei gleicher Genauigkeit fuer digitale PDFs.
-        'ai_text_max_chars' => env('OCR_AI_TEXT_MAX_CHARS', 12000),
+        // guenstiger bei gleicher Genauigkeit fuer digitale PDFs. Grosszuegig
+        // genug, dass die auf relevante Seiten reduzierten Formulare (siehe
+        // document_profiles) komplett hineinpassen.
+        'ai_text_max_chars' => env('OCR_AI_TEXT_MAX_CHARS', 16000),
         // Leistungs-/Zeitgrenzen, damit OCR auf schwacher VPS-Hardware nie das
         // Job-Timeout sprengt (sonst haengt das Dokument in 'processing').
         'dpi' => env('OCR_DPI', 150),
