@@ -39,16 +39,28 @@ class AnalyzeDocumentJob implements ShouldQueue
 
     public function handle(DocumentAnalyzer $analyzer, DocumentIntakeService $intake): void
     {
+        // Atomarer Uebernahme-Claim (pending -> processing): verhindert eine
+        // doppelte, kostenpflichtige Analyse, wenn ein freigegebener Retry-
+        // Job und ein vom Scheduler (AnalyzePendingDocuments) erneut
+        // angestossener Job gleichzeitig in der Queue liegen - z.B. nach
+        // laengerem Worker-Ausfall. Nur der zuerst laufende Job gewinnt
+        // diesen Uebergang; jeder weitere findet den Status bereits auf
+        // 'processing' vor und beendet sich folgenlos.
+        $claimed = Document::whereKey($this->documentId)
+            ->where('ai_status', 'pending')
+            ->update(['ai_status' => 'processing']);
+        if (!$claimed) {
+            return;
+        }
+
         $document = Document::find($this->documentId);
-        if (!$document || !in_array($document->ai_status, ['pending', 'processing'], true)) {
+        if (!$document) {
             return;
         }
         if (!$analyzer->isEnabled()) {
             $document->update(['ai_status' => 'none']);
             return;
         }
-
-        $document->update(['ai_status' => 'processing']);
 
         try {
             $result = $analyzer->analyze($document);
@@ -84,6 +96,7 @@ class AnalyzeDocumentJob implements ShouldQueue
             'ai_status' => 'done',
             'ai_type' => $result['type'],
             'ai_confidence' => $result['confidence'],
+            'ai_source' => $result['source'] ?? 'ai',
             'ai_summary' => $result['summary'],
             'ai_extracted' => $extracted,
             'ai_error' => null,

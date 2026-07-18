@@ -213,7 +213,13 @@ table tr:hover td{background:#E3E6EA;}
     <a href="{{ route('admin.documents.inbox') }}" class="nav-item {{ request()->routeIs('admin.documents.inbox') ? 'active' : '' }}">
         <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M4 8h16M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2zm4-6l2 2 4-4"/></svg>
         Dokumenten-Eingang
-        @php $docInboxCount = \App\Models\Document::inbox()->count(); @endphp
+        @php
+            // Konsistent mit der Listen-Ansicht: eingeschraenkte Mitarbeiter
+            // sehen dort nur eigene Uploads, die Badge-Zahl muss dazu passen.
+            $docInboxCount = \App\Models\Document::inbox()
+                ->when(!auth()->user()->canSeeAllCustomers(), fn($q) => $q->where('uploaded_by', auth()->id()))
+                ->count();
+        @endphp
         @if($docInboxCount > 0)<span class="nav-badge">{{ $docInboxCount }}</span>@endif
     </a>
     <a href="{{ route('admin.change_requests') }}" class="nav-item {{ request()->routeIs('admin.change_requests*') ? 'active' : '' }}">

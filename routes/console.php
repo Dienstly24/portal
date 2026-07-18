@@ -32,6 +32,9 @@ Schedule::command('document-requests:remind')->dailyAt('08:15');
 // Alle 10 Minuten — Sicherheitsnetz Smart Document Upload: haengende KI-Analysen neu anstossen
 Schedule::command('documents:analyze-pending')->everyTenMinutes()->withoutOverlapping();
 
+// 03:50 — DSGVO: nie zugeordnete Eingangs-Dokumente nach Aufbewahrungsfrist loeschen
+Schedule::command('documents:prune-unassigned')->dailyAt('03:50');
+
 // 07:30 — Aufgabe: Kind wird in 4 Monaten 15
 Schedule::call(function () {
     $target = now()->addMonths(4)->subYears(15)->toDateString();

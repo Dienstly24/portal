@@ -7,7 +7,7 @@ class Document extends Model {
     protected $keyType = 'string';
     public $incrementing = false;
     protected $fillable = ['customer_id','contract_id','category','file_name','file_path','disk','visibility','color','uploaded_by','updated_by','file_size',
-        'ai_status','ai_type','ai_confidence','ai_summary','ai_extracted','ai_error','ai_processed_at','page_count'];
+        'ai_status','ai_type','ai_confidence','ai_source','ai_summary','ai_extracted','ai_error','ai_processed_at','page_count'];
 
     public const CATEGORIES = ['contract' => 'Verträge', 'police' => 'Policen', 'invoice' => 'Rechnungen', 'identity' => 'Identität', 'claim' => 'Schaden', 'other' => 'Sonstige'];
 
@@ -37,6 +37,11 @@ class Document extends Model {
             // Verschluesselt at rest: kann IBAN/Versichertennummern enthalten
             // (gleiche Schutzstufe wie die SafeEncrypted-Kundenfelder).
             'ai_extracted' => 'encrypted:array',
+            // Die KI-Zusammenfassung ist reiner Fliesstext, kann aber trotz
+            // Prompt-Regel Namen/Fragmente enthalten - defensiv ebenfalls
+            // verschluesselt statt sich allein auf die Modell-Anweisung zu
+            // verlassen.
+            'ai_summary' => 'encrypted',
             'ai_processed_at' => 'datetime',
         ];
     }

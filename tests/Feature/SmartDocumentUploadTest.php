@@ -7,6 +7,7 @@ use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\User;
+use App\Services\Ocr\TextExtractorInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
@@ -48,6 +49,21 @@ class SmartDocumentUploadTest extends TestCase
                 'content' => [['type' => 'text', 'text' => json_encode($payload)]],
             ]),
         ]);
+    }
+
+    /**
+     * OCR-Basisebene fuer die Analyse-Orchestrierung faken (statt eines
+     * echten Tesseract-Aufrufs) - deterministisch und unabhaengig davon,
+     * ob der Test-Runner das Systempaket installiert hat.
+     */
+    private function fakeOcr(string $text, bool $available = true): void
+    {
+        config(['services.ocr.enabled' => $available]);
+        $this->app->bind(TextExtractorInterface::class, fn () => new class($text, $available) implements TextExtractorInterface {
+            public function __construct(private string $text, private bool $available) {}
+            public function isAvailable(): bool { return $this->available; }
+            public function extract(string $binary, string $mime): string { return $this->available ? $this->text : ''; }
+        });
     }
 
     private function gesundheitskartePayload(array $person = [], array $extra = []): array
@@ -711,5 +727,431 @@ class SmartDocumentUploadTest extends TestCase
         $this->assertSame('done', $doc->ai_status);
         $this->assertNull($doc->ai_error);
         $this->assertSame('gesundheitskarte', $doc->ai_type);
+    }
+
+    /* ---------------------------------------------------------------
+     | Review-Fixes Runde 2 (Sicherheit/DSGVO/Korrektheit)
+     * -------------------------------------------------------------- */
+
+    public function test_ai_decision_output_is_encrypted_at_rest(): void
+    {
+        Storage::fake('local');
+        Storage::disk('local')->put('documents/eingang/scan.pdf', '%PDF-1.4');
+        $doc = Document::create([
+            'customer_id' => null,
+            'category' => 'other',
+            'file_name' => 'scan.pdf',
+            'file_path' => 'documents/eingang/scan.pdf',
+            'disk' => 'local',
+        ]);
+        AiDecision::create([
+            'document_id' => $doc->id,
+            'skill' => 'analyze_document',
+            'input_hash' => str_repeat('a', 64),
+            'output' => ['type' => 'gesundheitskarte', 'match' => ['name' => 'Max Mustermann', 'customer_number' => '2600001']],
+            'status' => 'suggested',
+        ]);
+
+        $raw = (string) \Illuminate\Support\Facades\DB::table('ai_decisions')->where('document_id', $doc->id)->value('output');
+        $this->assertStringNotContainsString('Max Mustermann', $raw);
+        $this->assertStringNotContainsString('2600001', $raw);
+    }
+
+    public function test_customer_deletion_redacts_document_ai_decisions_but_keeps_audit_row(): void
+    {
+        Storage::fake('local');
+        $customer = $this->makeCustomer();
+        Storage::disk('local')->put('customers/' . $customer->id . '/documents/scan.pdf', '%PDF-1.4');
+        $doc = Document::create([
+            'customer_id' => $customer->id,
+            'category' => 'other',
+            'file_name' => 'scan.pdf',
+            'file_path' => 'customers/' . $customer->id . '/documents/scan.pdf',
+            'disk' => 'local',
+        ]);
+        $decision = AiDecision::create([
+            'document_id' => $doc->id,
+            'skill' => 'analyze_document',
+            'input_hash' => str_repeat('a', 64),
+            'output' => ['type' => 'gesundheitskarte', 'match' => ['name' => $customer->user->name, 'customer_number' => $customer->customer_number]],
+            'status' => 'suggested',
+        ]);
+
+        app(\App\Services\CustomerDeletionService::class)->delete($customer);
+
+        $decision->refresh();
+        $this->assertNull($decision->document_id); // nullOnDelete greift nach der Kaskade
+        $this->assertTrue($decision->output['redacted_on_customer_deletion'] ?? false);
+        $this->assertArrayNotHasKey('match', $decision->output);
+    }
+
+    public function test_documents_prune_unassigned_deletes_old_inbox_documents_only(): void
+    {
+        Storage::fake('local');
+
+        Storage::disk('local')->put('documents/eingang/old.pdf', '%PDF-1.4');
+        $old = Document::create([
+            'customer_id' => null, 'category' => 'other', 'file_name' => 'old.pdf',
+            'file_path' => 'documents/eingang/old.pdf', 'disk' => 'local',
+        ]);
+        $old->forceFill(['created_at' => now()->subDays(120)])->save();
+        AiDecision::create([
+            'document_id' => $old->id, 'skill' => 'analyze_document',
+            'input_hash' => str_repeat('a', 64), 'output' => ['type' => 'sonstiges'], 'status' => 'suggested',
+        ]);
+
+        Storage::disk('local')->put('documents/eingang/recent.pdf', '%PDF-1.4');
+        $recent = Document::create([
+            'customer_id' => null, 'category' => 'other', 'file_name' => 'recent.pdf',
+            'file_path' => 'documents/eingang/recent.pdf', 'disk' => 'local',
+        ]);
+
+        $customer = $this->makeCustomer();
+        Storage::disk('local')->put('customers/' . $customer->id . '/documents/mine.pdf', '%PDF-1.4');
+        $assigned = Document::create([
+            'customer_id' => $customer->id, 'category' => 'other', 'file_name' => 'mine.pdf',
+            'file_path' => 'customers/' . $customer->id . '/documents/mine.pdf', 'disk' => 'local',
+        ]);
+        $assigned->forceFill(['created_at' => now()->subDays(120)])->save();
+
+        $this->artisan('documents:prune-unassigned')->assertExitCode(0);
+
+        $this->assertDatabaseMissing('documents', ['id' => $old->id]);
+        $this->assertDatabaseMissing('ai_decisions', ['document_id' => $old->id]);
+        Storage::disk('local')->assertMissing('documents/eingang/old.pdf');
+
+        $this->assertDatabaseHas('documents', ['id' => $recent->id]);   // zu jung
+        $this->assertDatabaseHas('documents', ['id' => $assigned->id]); // zugeordnet, nicht betroffen
+    }
+
+    public function test_admin_status_and_actions_are_scoped_to_uploader_for_restricted_employee(): void
+    {
+        Storage::fake('local');
+        $uploader = User::factory()->create(['role' => 'employee', 'can_see_all_customers' => false]);
+        $other = User::factory()->create(['role' => 'employee', 'can_see_all_customers' => false]);
+
+        Storage::disk('local')->put('documents/eingang/scan.pdf', '%PDF-1.4');
+        $doc = Document::create([
+            'customer_id' => null, 'category' => 'other', 'file_name' => 'scan.pdf',
+            'file_path' => 'documents/eingang/scan.pdf', 'disk' => 'local', 'uploaded_by' => $uploader->id,
+        ]);
+
+        // Der Uploader selbst darf den Status abfragen ...
+        $this->actingAs($uploader)
+            ->getJson(route('admin.documents.analyse_status', $doc->id))
+            ->assertOk();
+
+        // ... ein anderer eingeschraenkter Mitarbeiter nicht (vorher 403-Luecke).
+        $this->actingAs($other)
+            ->getJson(route('admin.documents.analyse_status', $doc->id))
+            ->assertForbidden();
+        $this->actingAs($other)
+            ->postJson(route('admin.documents.reanalyze', $doc->id))
+            ->assertForbidden();
+
+        // Admin darf immer.
+        $this->actingAs($this->makeAdmin())
+            ->getJson(route('admin.documents.analyse_status', $doc->id))
+            ->assertOk();
+    }
+
+    public function test_match_outside_portfolio_hides_name_and_number(): void
+    {
+        Storage::fake('local');
+        $foreignCustomer = $this->makeCustomer([], ['name' => 'Geheim Kunde']);
+        $employee = User::factory()->create(['role' => 'employee', 'can_see_all_customers' => false]);
+        // employee sieht KEINEN Kunden (leeres Portfolio) -> foreignCustomer ist ausserhalb.
+
+        Storage::disk('local')->put('documents/eingang/scan.pdf', '%PDF-1.4');
+        $doc = Document::create([
+            'customer_id' => null, 'category' => 'other', 'file_name' => 'scan.pdf',
+            'file_path' => 'documents/eingang/scan.pdf', 'disk' => 'local', 'uploaded_by' => $employee->id,
+            'ai_status' => 'done', 'ai_extracted' => [
+                'match' => ['customer_id' => (string) $foreignCustomer->id, 'name' => 'Geheim Kunde', 'customer_number' => $foreignCustomer->customer_number, 'score' => 85, 'tier' => 'confirm'],
+            ],
+        ]);
+
+        $inboxResponse = $this->actingAs($employee)->get(route('admin.documents.inbox'));
+        $inboxResponse->assertOk()
+            ->assertDontSee('Geheim Kunde')
+            ->assertDontSee($foreignCustomer->customer_number)
+            ->assertSee('außerhalb Ihres Portfolios');
+
+        $statusResponse = $this->actingAs($employee)->getJson(route('admin.documents.analyse_status', $doc->id));
+        $statusResponse->assertOk();
+        $this->assertTrue($statusResponse->json('match.out_of_portfolio'));
+        $this->assertArrayNotHasKey('name', $statusResponse->json('match'));
+    }
+
+    public function test_customer_search_is_throttled_and_scoped(): void
+    {
+        Storage::fake('local');
+        $visible = $this->makeCustomer([], ['name' => 'Sichtbar Kunde']);
+        $hidden = $this->makeCustomer([], ['name' => 'Versteckt Kunde']);
+
+        $employee = User::factory()->create(['role' => 'employee', 'can_see_all_customers' => false]);
+        $employee->assignedCustomers()->attach((string) $visible->id);
+
+        $this->actingAs($employee)
+            ->getJson(route('admin.documents.customer_search') . '?q=Kunde')
+            ->assertOk()
+            ->assertJsonFragment(['name' => 'Sichtbar Kunde'])
+            ->assertJsonMissing(['name' => 'Versteckt Kunde']);
+
+        // LIKE-Wildcards werden escaped, kein Server-Fehler bei Sonderzeichen.
+        $this->actingAs($employee)
+            ->getJson(route('admin.documents.customer_search') . '?q=' . urlencode('%_\\'))
+            ->assertOk();
+    }
+
+    public function test_assign_returns_clean_404_for_deleted_customer(): void
+    {
+        Storage::fake('local');
+        Storage::disk('local')->put('documents/eingang/scan.pdf', '%PDF-1.4');
+        $doc = Document::create([
+            'customer_id' => null, 'category' => 'other', 'file_name' => 'scan.pdf',
+            'file_path' => 'documents/eingang/scan.pdf', 'disk' => 'local',
+        ]);
+
+        $this->actingAs($this->makeAdmin())
+            ->postJson(route('admin.documents.assign', $doc->id), ['customer_id' => (string) \Illuminate\Support\Str::uuid()])
+            ->assertStatus(404)
+            ->assertJsonStructure(['message']);
+    }
+
+    public function test_assign_is_idempotent_for_same_customer_and_conflicts_for_different_one(): void
+    {
+        Storage::fake('local');
+        $customerA = $this->makeCustomer();
+        $customerB = $this->makeCustomer();
+        Storage::disk('local')->put('customers/' . $customerA->id . '/documents/scan.pdf', '%PDF-1.4');
+        $doc = Document::create([
+            'customer_id' => $customerA->id, 'category' => 'other', 'file_name' => 'scan.pdf',
+            'file_path' => 'customers/' . $customerA->id . '/documents/scan.pdf', 'disk' => 'local',
+        ]);
+        $admin = $this->makeAdmin();
+
+        // Gleicher Kunde erneut zuordnen: idempotent, kein Fehler.
+        $this->actingAs($admin)
+            ->postJson(route('admin.documents.assign', $doc->id), ['customer_id' => (string) $customerA->id])
+            ->assertOk()->assertJson(['ok' => true]);
+
+        // Anderer Kunde: klarer Konflikt statt stillem Ueberschreiben.
+        $this->actingAs($admin)
+            ->postJson(route('admin.documents.assign', $doc->id), ['customer_id' => (string) $customerB->id])
+            ->assertStatus(422);
+    }
+
+    public function test_create_customer_rejects_already_assigned_document(): void
+    {
+        Storage::fake('local');
+        $customer = $this->makeCustomer();
+        Storage::disk('local')->put('customers/' . $customer->id . '/documents/scan.pdf', '%PDF-1.4');
+        $doc = Document::create([
+            'customer_id' => $customer->id, 'category' => 'other', 'file_name' => 'scan.pdf',
+            'file_path' => 'customers/' . $customer->id . '/documents/scan.pdf', 'disk' => 'local',
+        ]);
+
+        $this->actingAs($this->makeAdmin())
+            ->postJson(route('admin.documents.create_customer', $doc->id), [])
+            ->assertStatus(422);
+    }
+
+    public function test_reanalyze_rejects_when_ai_disabled_or_already_running(): void
+    {
+        Storage::fake('local');
+        Storage::disk('local')->put('documents/eingang/scan.pdf', '%PDF-1.4');
+
+        config(['services.anthropic.key' => '']);
+        $doc = Document::create([
+            'customer_id' => null, 'category' => 'other', 'file_name' => 'scan.pdf',
+            'file_path' => 'documents/eingang/scan.pdf', 'disk' => 'local', 'ai_status' => 'failed',
+        ]);
+        $this->actingAs($this->makeAdmin())
+            ->postJson(route('admin.documents.reanalyze', $doc->id))
+            ->assertStatus(422)
+            ->assertJsonFragment(['message' => 'KI-Analyse ist nicht konfiguriert (ANTHROPIC_API_KEY fehlt).']);
+
+        $this->enableAi();
+        $doc->update(['ai_status' => 'processing']);
+        $this->actingAs($this->makeAdmin())
+            ->postJson(route('admin.documents.reanalyze', $doc->id))
+            ->assertStatus(422)
+            ->assertJsonFragment(['message' => 'Analyse laeuft bereits.']);
+    }
+
+    public function test_portal_customer_cannot_attach_document_to_foreign_contract(): void
+    {
+        Storage::fake('local');
+        $owner = $this->makeCustomer();
+        $foreignContract = Contract::create([
+            'customer_id' => $owner->id, 'contract_number' => 'X-1', 'type' => 'kfz', 'insurer' => 'HUK24', 'status' => 'active',
+        ]);
+        $attacker = $this->makeCustomer();
+
+        $response = $this->actingAs($attacker->user)->postJson(route('portal.documents.scan'), [
+            'pages' => [UploadedFile::fake()->image('s.jpg', 400, 400)],
+            'contract_id' => (string) $foreignContract->id,
+        ]);
+
+        $response->assertOk();
+        $doc = Document::findOrFail($response->json('id'));
+        $this->assertNull($doc->contract_id); // fremder Vertrag wurde NICHT uebernommen
+    }
+
+    public function test_analyze_job_does_not_run_twice_for_same_document(): void
+    {
+        Storage::fake('local');
+        $this->enableAi();
+        // Simuliert: ein anderer Job-Lauf hat den Claim bereits gewonnen.
+        Storage::disk('local')->put('documents/eingang/scan.pdf', '%PDF-1.4');
+        $doc = Document::create([
+            'customer_id' => null, 'category' => 'other', 'file_name' => 'scan.pdf',
+            'file_path' => 'documents/eingang/scan.pdf', 'disk' => 'local', 'ai_status' => 'processing',
+        ]);
+
+        (new \App\Jobs\AnalyzeDocumentJob($doc->id))->handle(
+            app(\App\Services\Ai\DocumentAnalyzer::class),
+            app(\App\Services\DocumentIntake\DocumentIntakeService::class),
+        );
+
+        Http::assertNothingSent();
+        $this->assertSame('processing', $doc->fresh()->ai_status); // unveraendert, kein zweiter Lauf
+    }
+
+    public function test_portal_scan_rejects_more_than_twenty_pages(): void
+    {
+        Storage::fake('local');
+        $customer = $this->makeCustomer();
+
+        $pages = [];
+        for ($i = 0; $i < 21; $i++) {
+            $pages[] = UploadedFile::fake()->image("s$i.jpg", 100, 100);
+        }
+
+        $this->actingAs($customer->user)->postJson(route('portal.documents.scan'), ['pages' => $pages])
+            ->assertStatus(422);
+    }
+
+    public function test_link_matching_contract_matches_umlaut_license_plates(): void
+    {
+        $customer = $this->makeCustomer();
+        $contract = Contract::create([
+            'customer_id' => $customer->id, 'contract_number' => null, 'type' => 'kfz', 'insurer' => 'HUK24', 'status' => 'active',
+        ]);
+        \App\Models\ContractVehicleDetail::create(['contract_id' => $contract->id, 'license_plate' => 'WÜ-AB 123']);
+
+        $doc = Document::create([
+            'customer_id' => $customer->id, 'category' => 'contract', 'file_name' => 'v.pdf',
+            'file_path' => 'x.pdf', 'disk' => 'local',
+            'ai_extracted' => ['kfz' => ['license_plate' => 'WÜ AB123']], // andere Schreibweise, gleiches Kennzeichen
+        ]);
+
+        $linked = app(\App\Services\DocumentIntake\DocumentIntakeService::class)->linkMatchingContract($doc, $customer);
+
+        $this->assertNotNull($linked);
+        $this->assertSame((string) $contract->id, (string) $linked->id);
+    }
+
+    public function test_admin_smart_upload_rejects_oversized_combined_batch(): void
+    {
+        Storage::fake('local');
+        config(['services.anthropic.key' => '']);
+
+        $files = [];
+        for ($i = 0; $i < 7; $i++) {
+            $files[] = UploadedFile::fake()->create("doc$i.pdf", 9 * 1024, 'application/pdf'); // 9 MB je Datei
+        }
+
+        $this->actingAs($this->makeAdmin())
+            ->postJson(route('admin.documents.smart_upload'), ['files' => $files])
+            ->assertStatus(422);
+    }
+
+    /* ---------------------------------------------------------------
+     | OCR-Basisebene (Tesseract) ohne KI-Anbieter
+     * -------------------------------------------------------------- */
+
+    public function test_ocr_only_analysis_produces_low_confidence_ocr_sourced_result(): void
+    {
+        Storage::fake('local');
+        config(['services.anthropic.key' => '']);
+        $this->fakeOcr("PERSONALAUSWEIS\nMax Mustermann\nIBAN: DE89 3704 0044 0532 0130 00");
+
+        $customer = $this->makeCustomer();
+        $response = $this->actingAs($customer->user)->postJson(route('portal.documents.scan'), [
+            'pages' => [UploadedFile::fake()->image('ausweis.jpg', 600, 800)],
+        ]);
+
+        $response->assertOk()->assertJson(['ai_enabled' => true]);
+        $doc = Document::findOrFail($response->json('id'));
+        $this->assertSame('done', $doc->ai_status);
+        $this->assertSame('personalausweis', $doc->ai_type);
+        $this->assertSame('ocr', $doc->ai_source);
+        $this->assertSame(40, $doc->ai_confidence);
+        $this->assertSame('DE89370400440532013000', $doc->ai_extracted['bank']['iban']);
+        Http::assertNothingSent(); // kein KI-Aufruf, rein OCR-basiert
+    }
+
+    public function test_ai_provider_is_preferred_over_ocr_when_both_available(): void
+    {
+        Storage::fake('local');
+        $this->enableAi();
+        // OCR-Text wuerde als "sonstiges" klassifizieren - der konfigurierte
+        // KI-Anbieter muss trotzdem gewinnen (bessere Qualitaet, Vision).
+        $this->fakeOcr('Belangloser OCR-Text ohne jedes Stichwort.');
+        $this->fakeAnalysis($this->gesundheitskartePayload());
+
+        $admin = $this->makeAdmin();
+        $response = $this->actingAs($admin)->postJson(route('admin.documents.smart_upload'), [
+            'files' => [UploadedFile::fake()->image('karte.jpg', 800, 500)],
+        ]);
+
+        $response->assertOk();
+        $doc = Document::findOrFail($response->json('ids.0'));
+        $this->assertSame('gesundheitskarte', $doc->ai_type);
+        $this->assertSame('ai', $doc->ai_source);
+        Http::assertSent(fn ($request) => str_contains($request->url(), 'api.anthropic.com'));
+    }
+
+    public function test_ocr_disabled_leaves_document_without_analysis_like_before(): void
+    {
+        Storage::fake('local');
+        config(['services.anthropic.key' => '', 'services.ocr.enabled' => false]);
+
+        $customer = $this->makeCustomer();
+        $response = $this->actingAs($customer->user)->postJson(route('portal.documents.scan'), [
+            'pages' => [UploadedFile::fake()->image('seite-1.jpg', 600, 800)],
+        ]);
+
+        $response->assertOk()->assertJson(['ai_enabled' => false]);
+        $doc = Document::findOrFail($response->json('id'));
+        $this->assertSame('none', $doc->ai_status);
+        $this->assertNull($doc->ai_source);
+    }
+
+    public function test_ocr_extracted_iban_can_be_applied_when_assigning_to_customer(): void
+    {
+        Storage::fake('local');
+        config(['services.anthropic.key' => '']);
+        $this->fakeOcr("SEPA-Lastschriftmandat\nIBAN: DE89 3704 0044 0532 0130 00");
+
+        $admin = $this->makeAdmin();
+        $upload = $this->actingAs($admin)->postJson(route('admin.documents.smart_upload'), [
+            'files' => [UploadedFile::fake()->image('mandat.jpg', 600, 400)],
+        ]);
+        $doc = Document::findOrFail($upload->json('ids.0'));
+        $this->assertSame('ocr', $doc->ai_source);
+        $this->assertSame('DE89370400440532013000', $doc->ai_extracted['bank']['iban']);
+
+        $customer = $this->makeCustomer();
+        $this->assertNull($customer->iban);
+
+        $this->actingAs($admin)->postJson(route('admin.documents.assign', $doc->id), [
+            'customer_id' => (string) $customer->id,
+            'apply_fields' => ['iban'],
+        ])->assertOk();
+
+        $this->assertSame('DE89370400440532013000', $customer->fresh()->iban);
     }
 }

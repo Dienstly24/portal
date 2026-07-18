@@ -217,11 +217,14 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/dokumenten-eingang', [\App\Http\Controllers\SmartDocumentUploadController::class, 'inbox'])->name('documents.inbox');
     Route::post('/documents/smart-upload', [\App\Http\Controllers\SmartDocumentUploadController::class, 'adminStore'])
         ->middleware('throttle:30,10')->name('documents.smart_upload');
-    Route::get('/documents/customer-search', [\App\Http\Controllers\SmartDocumentUploadController::class, 'customerSearch'])->name('documents.customer_search');
+    Route::get('/documents/customer-search', [\App\Http\Controllers\SmartDocumentUploadController::class, 'customerSearch'])
+        ->middleware('throttle:60,1')->name('documents.customer_search');
     Route::get('/documents/{id}/analyse-status', [\App\Http\Controllers\SmartDocumentUploadController::class, 'adminStatus'])
         ->middleware('throttle:240,1')->name('documents.analyse_status');
-    Route::post('/documents/{id}/assign', [\App\Http\Controllers\SmartDocumentUploadController::class, 'assign'])->name('documents.assign');
-    Route::post('/documents/{id}/create-customer', [\App\Http\Controllers\SmartDocumentUploadController::class, 'createCustomer'])->name('documents.create_customer');
+    Route::post('/documents/{id}/assign', [\App\Http\Controllers\SmartDocumentUploadController::class, 'assign'])
+        ->middleware('throttle:30,10')->name('documents.assign');
+    Route::post('/documents/{id}/create-customer', [\App\Http\Controllers\SmartDocumentUploadController::class, 'createCustomer'])
+        ->middleware('throttle:30,10')->name('documents.create_customer');
     Route::post('/documents/{id}/reanalyze', [\App\Http\Controllers\SmartDocumentUploadController::class, 'reanalyze'])
         ->middleware('throttle:30,10')->name('documents.reanalyze');
     Route::get('/documents/{id}/download', [AdminController::class, 'documentDownload'])->name('documents.download');
