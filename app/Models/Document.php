@@ -6,7 +6,7 @@ use Illuminate\Support\Str;
 class Document extends Model {
     protected $keyType = 'string';
     public $incrementing = false;
-    protected $fillable = ['customer_id','contract_id','category','file_name','file_path','disk','visibility','color','uploaded_by','updated_by','file_size',
+    protected $fillable = ['customer_id','contract_id','intake_batch','category','file_name','file_path','disk','visibility','color','uploaded_by','updated_by','file_size',
         'ai_status','ai_type','ai_confidence','ai_source','ai_summary','ai_extracted','ai_error','ai_processed_at','page_count'];
 
     public const CATEGORIES = ['contract' => 'Verträge', 'police' => 'Policen', 'invoice' => 'Rechnungen', 'identity' => 'Identität', 'claim' => 'Schaden', 'other' => 'Sonstige'];
@@ -24,10 +24,15 @@ class Document extends Model {
         'fahrzeugschein'       => ['label' => 'Fahrzeugschein',       'category' => 'other'],
         'fahrzeugbrief'        => ['label' => 'Fahrzeugbrief',        'category' => 'other'],
         'gesundheitskarte'     => ['label' => 'Gesundheitskarte',     'category' => 'identity'],
+        'geburtsurkunde'       => ['label' => 'Geburtsurkunde',       'category' => 'identity'],
+        'familienbescheinigung'=> ['label' => 'Familienbescheinigung','category' => 'identity'],
+        'gehaltsabrechnung'    => ['label' => 'Gehaltsabrechnung',    'category' => 'other'],
         'personalausweis'      => ['label' => 'Personalausweis',      'category' => 'identity'],
         'reisepass'            => ['label' => 'Reisepass',            'category' => 'identity'],
         'fuehrerschein'        => ['label' => 'Führerschein',         'category' => 'identity'],
         'rechnung'             => ['label' => 'Rechnung',             'category' => 'invoice'],
+        'energieauftrag'       => ['label' => 'Energie-Auftrag',      'category' => 'contract'],
+        'zaehlerfoto'          => ['label' => 'Zaehlerfoto',          'category' => 'other'],
         'sepa_mandat'          => ['label' => 'SEPA-Mandat',          'category' => 'other'],
         'schadenmeldung'       => ['label' => 'Schadenmeldung',       'category' => 'claim'],
         'sonstiges'            => ['label' => 'Sonstiges Dokument',   'category' => 'other'],

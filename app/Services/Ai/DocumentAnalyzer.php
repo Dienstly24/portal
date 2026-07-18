@@ -46,6 +46,7 @@ class DocumentAnalyzer
         private readonly DocumentAiProviderInterface $provider,
         private readonly TextExtractorInterface $ocr,
         private readonly PdfTextLayerExtractor $pdfText,
+        private readonly RelevantPageSelector $pageSelector,
     ) {
     }
 
@@ -95,6 +96,12 @@ class DocumentAnalyzer
         if ($mime === 'application/pdf' && $this->pdfText->isAvailable()) {
             $freeText = $this->pdfText->extract($binary);
             $fromTextLayer = $freeText !== '';
+            if ($fromTextLayer) {
+                // Bekannte Formulare (z.B. CHECK24-Beratungsprotokoll) auf die
+                // fachlich relevanten Seiten reduzieren - weniger Rauschen fuer
+                // die Extraktion, weniger Tokens fuer die KI.
+                $freeText = $this->pageSelector->reduce($freeText);
+            }
         }
         if ($freeText === '' && $this->ocr->isAvailable()) {
             $freeText = $this->ocr->extract($binary, $mime);

@@ -46,6 +46,103 @@ class DocumentIntakeService
         ]);
     }
 
+    /** Ausweis-Dokumente liefern die verlaesslichsten Personendaten. */
+    private const IDENTITY_TYPES = ['personalausweis', 'reisepass'];
+    private const LICENSE_TYPES = ['fuehrerschein'];
+
+    /**
+     * Analyse-Ergebnisse MEHRERER Dokumente eines Kunden zu einem Ergebnis
+     * verschmelzen (Betreiber-Vorgabe: Hoheit je Feld nach Dokumenttyp):
+     * - Person (Name/Geburtsdatum/Adresse): Ausweis-Dokumente zuerst.
+     * - Bank/IBAN, Fahrzeug/Tarif, Gesundheit: jeweils erster nicht-leerer Wert.
+     * Bewusst NICHT aus einem Beratungsprotokoll uebernommen: Fuehrerschein-
+     * datum, weitere Fahrer (dort oft ungenau).
+     *
+     * Stimmen Name auf Ausweis und Fuehrerschein nicht ueberein, wird ein
+     * Konflikt gemeldet (_conflicts) -> keine automatische Anlage.
+     *
+     * @param iterable<Document> $documents
+     * @return array<string,mixed>
+     */
+    public function mergeExtractions(iterable $documents): array
+    {
+        $docs = collect($documents);
+        $merged = ['person' => [], 'versicherung' => [], 'kfz' => [], 'gesundheit' => [], 'bank' => [], 'energie' => []];
+
+        // Fuer Personendaten Ausweis-Dokumente zuerst; sonst Reihenfolge egal.
+        $personFirst = $docs->sortByDesc(fn ($d) => $this->personPriority($d->ai_type));
+
+        foreach (array_keys($merged) as $group) {
+            $source = $group === 'person' ? $personFirst : $docs;
+            foreach ($source as $doc) {
+                $values = ($doc->ai_extracted[$group] ?? []);
+                if (!is_array($values)) {
+                    continue;
+                }
+                foreach ($values as $field => $value) {
+                    if ($value === null || $value === '' || $value === []) {
+                        continue;
+                    }
+                    $current = $merged[$group][$field] ?? null;
+                    if ($current === null || $current === '') {
+                        $merged[$group][$field] = $value;
+                    }
+                }
+            }
+        }
+
+        $merged['_conflicts'] = $this->nameConflicts($docs);
+
+        return $merged;
+    }
+
+    private function personPriority(?string $aiType): int
+    {
+        if (in_array($aiType, self::IDENTITY_TYPES, true)) {
+            return 3;
+        }
+        if (in_array($aiType, self::LICENSE_TYPES, true)) {
+            return 2;
+        }
+        return 1;
+    }
+
+    /**
+     * Namens-Abgleich Ausweis vs. Fuehrerschein. Weichen die Namen ab, ist
+     * die Zuordnung unsicher -> Mitarbeiter muss manuell pruefen.
+     *
+     * @return array<string,string>
+     */
+    private function nameConflicts(\Illuminate\Support\Collection $docs): array
+    {
+        $idName = null;
+        $licenseName = null;
+        foreach ($docs as $doc) {
+            $person = $doc->ai_extracted['person'] ?? [];
+            $name = $this->normalizeName(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+            if (in_array($doc->ai_type, self::IDENTITY_TYPES, true)) {
+                $idName ??= $name;
+            } elseif (in_array($doc->ai_type, self::LICENSE_TYPES, true)) {
+                $licenseName ??= $name;
+            }
+        }
+
+        if ($idName !== null && $licenseName !== null && $idName !== $licenseName) {
+            return ['name' => 'Name auf Ausweis und Fuehrerschein stimmen nicht ueberein - bitte manuell pruefen.'];
+        }
+        return [];
+    }
+
+    private function normalizeName(string $name): string
+    {
+        $name = mb_strtolower(trim($name));
+        $name = preg_replace('/[^a-zäöüß ]/u', '', $name) ?? $name;
+        return trim((string) preg_replace('/\s+/', ' ', $name));
+    }
+
     /**
      * Kunden zum Analyse-Ergebnis suchen.
      *
@@ -148,9 +245,12 @@ class DocumentIntakeService
      * @param list<string> $keys z.B. ['birth_date','address','phone','health_insurance','iban','email2','nationality','birth_place']
      * @return list<string> tatsaechlich befuellte Kundenfelder
      */
-    public function applyExtractedToCustomer(Document $document, Customer $customer, array $keys, ?int $byUserId): array
+    public function applyExtractedToCustomer(Document $document, Customer $customer, array $keys, ?int $byUserId, ?array $extracted = null): array
     {
-        $data = $document->ai_extracted ?? [];
+        // $extracted erlaubt das Anwenden EINES aus mehreren Dokumenten
+        // zusammengefuehrten Ergebnisses (mergeExtractions); ohne Angabe wird
+        // das Analyse-Ergebnis des Dokuments selbst genutzt.
+        $data = $extracted ?? ($document->ai_extracted ?? []);
         $person = $data['person'] ?? [];
         $health = $data['gesundheit'] ?? [];
         $bank = $data['bank'] ?? [];
@@ -212,11 +312,12 @@ class DocumentIntakeService
      * Existiert beim Kunden bereits ein Vertrag mit derselben
      * Vertragsnummer, wird dieser verknuepft statt ein Duplikat anzulegen.
      */
-    public function createContractFromExtraction(Document $document, Customer $customer, ?int $byUserId): ?Contract
+    public function createContractFromExtraction(Document $document, Customer $customer, ?int $byUserId, ?array $extracted = null): ?Contract
     {
-        $data = $document->ai_extracted ?? [];
+        $data = $extracted ?? ($document->ai_extracted ?? []);
         $ins = $data['versicherung'] ?? [];
         $kfz = $data['kfz'] ?? [];
+        $energie = $data['energie'] ?? [];
 
         if (blank($ins['insurer'] ?? null) && blank($ins['contract_number'] ?? null)) {
             return null;
@@ -257,11 +358,47 @@ class DocumentIntakeService
                 'manufacturer' => $kfz['manufacturer'] ?? null,
                 'model' => $kfz['model'] ?? null,
                 'first_registration' => $kfz['first_registration'] ?? null,
+                // Zusaetzliche Tarif-/Fahrzeugfakten (validiert in
+                // ValidatesExtractedFields::validatedVehicle).
+                'has_teilkasko' => $kfz['has_teilkasko'] ?? null,
+                'teilkasko_deductible' => $kfz['teilkasko_deductible'] ?? null,
+                'has_vollkasko' => $kfz['has_vollkasko'] ?? null,
+                'vollkasko_deductible' => $kfz['vollkasko_deductible'] ?? null,
+                'holder_type' => $kfz['holder_type'] ?? null,
+                'annual_mileage' => $kfz['annual_mileage'] ?? null,
+            ], fn ($v) => $v !== null));
+        }
+
+        // Energie-Vertrag (Strom/Gas): Zaehler-/Tarifdaten aus dem Auftrag
+        // bzw. Zaehlerfoto in die Energie-Detailtabelle uebernehmen.
+        if (in_array($type, Contract::ENERGY_TYPES, true) && $energie !== []) {
+            \App\Models\ContractEnergyDetail::create(array_filter([
+                'contract_id' => $contract->id,
+                'meter_number' => $energie['meter_number'] ?? null,
+                'malo_id' => $energie['malo_id'] ?? null,
+                'meter_reading' => $energie['meter_reading'] ?? null,
+                'consumption_kwh' => $energie['consumption_kwh'] ?? null,
+                'tariff' => $energie['tariff'] ?? null,
+                'customer_number' => $energie['customer_number'] ?? null,
+                'payment_amount' => $ins['premium_amount'] ?? null,
+                'payment_interval' => $ins['premium_interval'] ?? null,
             ], fn ($v) => $v !== null));
         }
 
         $document->contract_id = $contract->id;
         $document->save();
+
+        // Vertragsverlauf starten (Betreiber-Vorgabe: fuer alle Sparten).
+        app(\App\Services\ContractHistoryService::class)->record([
+            'customer_id' => (string) $customer->id,
+            'contract_id' => (string) $contract->id,
+            'branch' => $type,
+            'provider' => $ins['insurer'] ?? null,
+            'effective_from' => $ins['start_date'] ?? null,
+            'reason' => 'initial',
+            'source_document_id' => (string) $document->id,
+            'created_by' => $byUserId,
+        ]);
 
         ActivityLog::create([
             'user_id' => $byUserId,

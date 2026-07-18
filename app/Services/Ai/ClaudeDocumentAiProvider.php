@@ -120,11 +120,21 @@ class ClaudeDocumentAiProvider implements DocumentAiProviderInterface
             . '"data": {'
             . '"person": {"first_name": "", "last_name": "", "birth_date": "JJJJ-MM-TT", "birth_place": "", "street": "", "house_number": "", "zip": "", "city": "", "email": "", "phone": "", "nationality": "", "id_number": ""}, '
             . '"versicherung": {"insurer": "", "contract_number": "", "sparte": <einer aus: ' . $sparten . '>, "start_date": "JJJJ-MM-TT", "end_date": "JJJJ-MM-TT", "premium_amount": <Zahl>, "premium_interval": <einer aus: ' . $intervals . '>}, '
-            . '"kfz": {"license_plate": "", "vin": "", "hsn": "", "tsn": "", "manufacturer": "", "model": "", "first_registration": "JJJJ-MM-TT"}, '
+            . '"kfz": {"license_plate": "", "vin": "", "hsn": "", "tsn": "", "manufacturer": "", "model": "", "first_registration": "JJJJ-MM-TT", '
+            . '"has_teilkasko": true, "teilkasko_deductible": <Zahl Euro>, "has_vollkasko": false, "vollkasko_deductible": <Zahl Euro>, '
+            . '"holder_type": <einer aus: versicherungsnehmer, abweichender_halter>, "annual_mileage": <Zahl km pro Jahr>}, '
             . '"gesundheit": {"health_insurance_company": "", "health_insurance_number": ""}, '
+            . '"personen": [{"first_name": "", "last_name": "", "birth_date": "JJJJ-MM-TT", "gender": <male|female>, "health_insurance_number": ""}], '
+            . '"energie": {"meter_number": "", "malo_id": "<11 Ziffern>", "meter_reading": <Zahl kWh-Stand>, "consumption_kwh": <Zahl Jahresverbrauch>, "tariff": "", "customer_number": "<Kundennummer beim bisherigen Versorger>"}, '
             . '"bank": {"iban": "", "bic": "", "account_holder": ""}}} '
             . 'Regeln: Nur Werte aufnehmen, die im Dokument sicher lesbar sind. Unbekannte oder unleserliche Felder weglassen oder null setzen. '
             . 'Keine Werte raten oder erfinden. Datumsangaben immer als JJJJ-MM-TT. '
+            . 'Enthaelt das Dokument MEHRERE Personen (z.B. mehrere Gesundheitskarten einer Familie, Familienbescheinigung, Geburtsurkunden), '
+            . 'liste JEDE Person in "personen" auf (auch die Hauptperson). Bei nur einer Person lass "personen" leer. '
+            . 'Bei einem Strom-/Gas-Auftrag (type energieauftrag): Versorger in versicherung.insurer, sparte strom oder gas, '
+            . 'Lieferbeginn in versicherung.start_date, monatlicher Abschlag in versicherung.premium_amount (premium_interval monthly), '
+            . 'Zaehlernummer/MaLo-ID/Jahresverbrauch/Tarif in "energie". '
+            . 'Bei einem FOTO eines Strom- oder Gaszaehlers (type zaehlerfoto): lies Zaehlernummer und aktuellen Zaehlerstand in "energie". '
             . 'In "summary" und "title" KEINE sensiblen Nummern nennen (keine IBAN, Versicherten-, Ausweis- oder Steuernummern). '
             . 'Bei einem KFZ-Vertrag gehoeren Vertragsdaten in "versicherung" (sparte: kfz) UND Fahrzeugdaten in "kfz".';
     }
@@ -168,6 +178,8 @@ class ClaudeDocumentAiProvider implements DocumentAiProviderInterface
                 'kfz' => $this->validatedVehicle($data['kfz'] ?? null),
                 'gesundheit' => $this->validatedHealth($data['gesundheit'] ?? null),
                 'bank' => $this->validatedBank($data['bank'] ?? null),
+                'personen' => $this->validatedPersons($data['personen'] ?? null),
+                'energie' => $this->validatedEnergy($data['energie'] ?? null),
             ],
         ];
     }

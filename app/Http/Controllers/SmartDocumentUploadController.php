@@ -145,8 +145,40 @@ class SmartDocumentUploadController extends Controller
             }
         }
 
+        // Gemeinsam hochgeladene Dateien (intake_batch) als EINEN Vorgang
+        // gruppieren. Die zusammengefuehrte Extraktion (Feld-Hoheit nach
+        // Dokumenttyp) wird hier serverseitig berechnet - dieselbe Logik wie
+        // beim Anlegen (create-customer-batch), keine Duplikation im JS.
+        $batchGroups = $inbox->filter(fn ($d) => $d->intake_batch !== null)
+            ->groupBy('intake_batch')
+            ->filter(fn ($group) => $group->count() > 1);
+        $batchData = [];
+        $familyService = app(\App\Services\Health\FamilyBundleService::class);
+        foreach ($batchGroups as $batchId => $group) {
+            $merged = $this->intake->mergeExtractions($group);
+            $conflicts = $merged['_conflicts'] ?? [];
+            unset($merged['_conflicts']);
+            $person = $merged['person'] ?? [];
+            // Familien-Erkennung: >= 2 Personen im Vorgang -> die UI bietet
+            // den Krankenkassen-Fall an (Haupt-Frage, Wechsel, Stichtag).
+            $persons = $familyService->detectPersons($group);
+            $batchData[$batchId] = [
+                'ids' => $group->pluck('id')->values()->all(),
+                'file_names' => $group->pluck('file_name')->values()->all(),
+                'merged' => $merged,
+                'conflicts' => array_values($conflicts),
+                'ready' => $group->every(fn ($d) => !$d->aiInProgress()),
+                'has_name' => trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? '')) !== '',
+                'persons' => $persons,
+                'haupt_suggest' => count($persons) >= 2 ? $familyService->suggestHauptIndex($persons) : 0,
+                'has_health_cards' => $group->contains(fn ($d) => $d->ai_type === 'gesundheitskarte'),
+            ];
+        }
+
         return view('admin.documents_inbox', [
             'inboxDocuments' => $inbox,
+            'batchGroups' => $batchGroups,
+            'batchData' => $batchData,
             'recentDocuments' => $recent,
             'aiEnabled' => $this->analyzer->isEnabled(),
             'providerEnabled' => $this->analyzer->providerEnabled(),
@@ -233,6 +265,17 @@ class SmartDocumentUploadController extends Controller
             }
         } catch (\RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        // Mehrere Dateien in EINEM Eingangs-Upload gehoeren i.d.R. zu EINEM
+        // (neuen) Kunden -> gemeinsame Hochlade-Kennung, damit der Eingang sie
+        // als einen Vorgang gruppiert ("Neuen Kunden aus allen anlegen").
+        if ($customer === null && count($created) > 1) {
+            $batch = (string) \Illuminate\Support\Str::uuid();
+            Document::whereIn('id', array_map(fn ($d) => $d->id, $created))->update(['intake_batch' => $batch]);
+            foreach ($created as $document) {
+                $document->intake_batch = $batch;
+            }
         }
 
         foreach ($created as $document) {
@@ -386,6 +429,139 @@ class SmartDocumentUploadController extends Controller
             'customer_url' => route('admin.customer', $customer->id),
             'applied_fields' => $applied,
             'contract_id' => $contract?->id,
+        ]);
+    }
+
+    /**
+     * Neuen Kunden aus MEHREREN Eingangs-Dokumenten anlegen (Ausweis + Bank-
+     * karte + Fuehrerschein + Beratungsprotokoll gehoeren zu EINEM Kunden).
+     * Die Extraktionen werden zusammengefuehrt (Feld-Hoheit nach Dokumenttyp),
+     * ALLE Dokumente werden dem neuen Kunden zugeordnet. Widersprechen sich
+     * Ausweis- und Fuehrerschein-Name, wird abgebrochen (manuelle Pruefung).
+     */
+    public function createCustomerFromDocuments(Request $request)
+    {
+        $this->validateJson($request, [
+            'document_ids' => 'required|array|min:1|max:10',
+            'document_ids.*' => 'uuid',
+            'apply_fields' => 'nullable|array',
+            'apply_fields.*' => 'string|in:birth_date,birth_place,address,phone,nationality,email2,health_insurance,iban',
+            'create_contract' => 'nullable|boolean',
+            'visibility' => 'nullable|in:customer,internal',
+            // Optional: Krankenkassen-Fall (Familie + Wechsel). Die UI fragt
+            // den Mitarbeiter, wer hauptversichert ist und welcher der drei
+            // Wechsel-Faelle vorliegt; der Server rechnet den Stichtag.
+            'family' => 'nullable|array',
+            'family.haupt_index' => 'required_with:family|integer|min:0',
+            'family.members' => 'nullable|array|max:10',
+            'family.members.*.index' => 'required|integer|min:0',
+            'family.members.*.status' => 'nullable|in:mitglied,familienversichert',
+            'family.members.*.relation' => 'nullable|string|max:40',
+            'family.switch_reason' => 'required_with:family|in:wechsel,sonder,new_job',
+            'family.job_start' => 'nullable|date',
+            'family.old_insurer' => 'nullable|string|max:120',
+            'family.new_insurer' => 'required_with:family|string|max:120',
+        ]);
+
+        $ids = array_values(array_unique($request->input('document_ids')));
+        $documents = Document::whereIn('id', $ids)->get();
+        if ($documents->count() !== count($ids)) {
+            return response()->json(['message' => 'Mindestens ein Dokument wurde nicht gefunden.'], 404);
+        }
+        foreach ($documents as $document) {
+            $this->authorizeDocument($document);
+            if ($document->customer_id) {
+                return response()->json(['message' => 'Bereits zugeordnet: ' . $document->file_name], 422);
+            }
+        }
+
+        $merged = $this->intake->mergeExtractions($documents);
+        if (!empty($merged['_conflicts'])) {
+            return response()->json([
+                'message' => implode(' ', $merged['_conflicts']),
+                'conflicts' => $merged['_conflicts'],
+            ], 422);
+        }
+
+        // Krankenkassen-Fall: der vom Mitarbeiter gewaehlte HAUPTVERSICHERTE
+        // wird der Kunde - seine Identitaet hat Vorrang vor der Hauptperson
+        // der zusammengefuehrten Extraktion.
+        $familyInput = $request->input('family');
+        $familyPersons = [];
+        if ($familyInput !== null) {
+            $familyPersons = app(\App\Services\Health\FamilyBundleService::class)->detectPersons($documents);
+            $haupt = $familyPersons[(int) $familyInput['haupt_index']] ?? null;
+            if ($haupt === null) {
+                return response()->json(['message' => 'Hauptversicherte Person nicht gefunden - bitte neu auswaehlen.'], 422);
+            }
+            foreach (['first_name', 'last_name', 'birth_date'] as $field) {
+                if (filled($haupt[$field] ?? null)) {
+                    $merged['person'][$field] = $haupt[$field];
+                }
+            }
+        }
+
+        $person = $merged['person'] ?? [];
+        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        if ($name === '') {
+            return response()->json(['message' => 'In den Dokumenten wurde kein Name erkannt - bitte Kunden manuell anlegen.'], 422);
+        }
+
+        $criteria = $this->intake->matchCriteria($merged);
+        if (!empty($criteria['email']) && User::where('email', $criteria['email'])->exists()) {
+            unset($criteria['email']);
+        }
+
+        try {
+            $customer = app(CustomerAutoCreationService::class)->createFromUnmatched($criteria, 'manual', auth()->id());
+        } catch (DuplicateCustomerException $e) {
+            return response()->json([
+                'message' => 'Es existiert bereits ein aehnlicher Kunde (' . ($e->matchResult->customer?->user?->name ?? '?') . ', '
+                    . $e->matchResult->score . ' Punkte). Bitte stattdessen zuordnen.',
+            ], 422);
+        }
+
+        foreach ($documents as $document) {
+            $this->intake->assignToCustomer($document, $customer, auth()->id());
+        }
+        if ($request->filled('visibility')) {
+            Document::whereIn('id', $documents->pluck('id'))->update(['visibility' => $request->visibility, 'updated_by' => auth()->id()]);
+        }
+
+        // Zusammengefuehrtes Ergebnis auf das erste Dokument beziehen.
+        $primary = $documents->first();
+        $applied = $this->intake->applyExtractedToCustomer($primary, $customer, $request->input('apply_fields', []), auth()->id(), $merged);
+        $contract = $request->boolean('create_contract')
+            ? $this->intake->createContractFromExtraction($primary, $customer, auth()->id(), $merged)
+            : null;
+
+        // Krankenkassen-Fall einrichten (Familie, Wechseldatum, Verlauf).
+        $health = null;
+        if ($familyInput !== null) {
+            $health = app(\App\Services\Health\HealthFamilySetupService::class)->setup($customer, $familyPersons, [
+                'haupt_index' => (int) $familyInput['haupt_index'],
+                'members' => $familyInput['members'] ?? [],
+                'switch_reason' => $familyInput['switch_reason'],
+                'job_start' => $familyInput['job_start'] ?? null,
+                'old_insurer' => $familyInput['old_insurer'] ?? null,
+                'new_insurer' => $familyInput['new_insurer'],
+                'source_document_id' => (string) $primary->id,
+                'created_by' => auth()->id(),
+            ]);
+        }
+
+        foreach ($documents as $document) {
+            $this->markDecision($document, 'accepted');
+        }
+
+        return response()->json([
+            'ok' => true,
+            'customer_id' => $customer->id,
+            'customer_url' => route('admin.customer', $customer->id),
+            'applied_fields' => $applied,
+            'contract_id' => $contract?->id,
+            'documents' => $documents->count(),
+            'health' => $health,
         ]);
     }
 

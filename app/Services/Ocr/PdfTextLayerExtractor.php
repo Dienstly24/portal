@@ -68,7 +68,16 @@ class PdfTextLayerExtractor
             }
 
             $text = trim($process->getOutput());
-            return mb_strlen($text) >= self::MIN_USEFUL_CHARS ? $text : '';
+            if (mb_strlen($text) < self::MIN_USEFUL_CHARS) {
+                return '';
+            }
+
+            // Manche digitalen PDFs (z.B. enviaM-Auftraege) haben eine kaputt
+            // kodierte Textebene (Font-Encoding ohne gueltiges ToUnicode) -
+            // pdftotext liefert dann Kauderwelsch ("$XIWUDJ" statt "Auftrag").
+            // Solchen Text NICHT weiterreichen, sondern '' zurueckgeben, damit
+            // die Analyse sauber auf OCR/Vision zurueckfaellt.
+            return $this->isLikelyGarbled($text) ? '' : $text;
         } catch (\Throwable $e) {
             Log::warning('PDF-Textebene-Extraktion fehlgeschlagen: ' . $e->getMessage());
             return '';
@@ -76,6 +85,33 @@ class PdfTextLayerExtractor
             @unlink($pdfPath);
             @rmdir($dir);
         }
+    }
+
+    /** Haeufige deutsche Allerweltswoerter - eine echte Textebene trifft mehrere. */
+    private const GERMAN_MARKERS = [
+        'und', 'der', 'die', 'für', 'fuer', 'straße', 'strasse', 'gmbh', 'euro',
+        'datum', 'vertrag', 'kunde', 'nummer', 'betrag', 'monat', 'jahr', 'name', 'preis',
+    ];
+
+    /**
+     * Grobe Erkennung einer kaputt kodierten Textebene: ein laengerer
+     * deutscher Text enthaelt zwangslaeufig mehrere Allerweltswoerter; fehlen
+     * sie fast alle, ist die Kodierung verschoben und der Text unbrauchbar.
+     * Kurze Texte werden bewusst nicht bewertet (zu wenig Signal).
+     */
+    public function isLikelyGarbled(string $text): bool
+    {
+        if (mb_strlen($text) < 400) {
+            return false;
+        }
+        $lower = mb_strtolower($text);
+        $hits = 0;
+        foreach (self::GERMAN_MARKERS as $marker) {
+            if (str_contains($lower, $marker)) {
+                $hits++;
+            }
+        }
+        return $hits < 3;
     }
 
     private function binary(): string

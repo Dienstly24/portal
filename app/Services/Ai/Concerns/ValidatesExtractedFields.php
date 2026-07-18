@@ -31,6 +31,58 @@ trait ValidatesExtractedFields
         ], fn ($v) => $v !== null && $v !== '');
     }
 
+    /**
+     * Liste weiterer Personen im Dokument (z.B. Buendel mehrerer
+     * Gesundheitskarten einer Familie, Familienbescheinigung). Jede Person
+     * durchlaeuft dieselbe harte Validierung; zusaetzlich sind Geschlecht und
+     * Versichertennummer erlaubt. Hart auf 10 begrenzt.
+     */
+    private function validatedPersons(mixed $in): array
+    {
+        if (!is_array($in)) return [];
+        $out = [];
+        foreach (array_slice(array_values($in), 0, 10) as $entry) {
+            if (!is_array($entry)) continue;
+            $person = $this->validatedPerson($entry);
+            $gender = $entry['gender'] ?? null;
+            if (in_array($gender, ['male', 'female'], true)) {
+                $person['gender'] = $gender;
+            }
+            $kvnr = $this->cleanString($entry['health_insurance_number'] ?? null, 30);
+            if ($kvnr !== null) {
+                $person['health_insurance_number'] = $kvnr;
+            }
+            if (($person['first_name'] ?? '') !== '' || ($person['last_name'] ?? '') !== '') {
+                $out[] = $person;
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * Energie-Felder (Strom-/Gas-Auftrag, Zaehlerfoto). Zaehlerstand und
+     * Verbrauch nur in plausiblen Grenzen; MaLo-ID muss dem Format (11
+     * Ziffern) entsprechen, sonst wird sie verworfen.
+     */
+    private function validatedEnergy(mixed $in): array
+    {
+        if (!is_array($in)) return [];
+        $malo = $this->cleanString($in['malo_id'] ?? null, 20);
+        if ($malo !== null && !preg_match('/^\d{11}$/', $malo)) {
+            $malo = null;
+        }
+        $reading = $in['meter_reading'] ?? null;
+        $consumption = $in['consumption_kwh'] ?? null;
+        return array_filter([
+            'meter_number' => $this->cleanString($in['meter_number'] ?? null, 30),
+            'malo_id' => $malo,
+            'meter_reading' => (is_numeric($reading) && $reading >= 0 && $reading < 100000000) ? round((float) $reading, 1) : null,
+            'consumption_kwh' => (is_numeric($consumption) && $consumption > 0 && $consumption < 1000000) ? (int) $consumption : null,
+            'tariff' => $this->cleanString($in['tariff'] ?? null, 80),
+            'customer_number' => $this->cleanString($in['customer_number'] ?? null, 40),
+        ], fn ($v) => $v !== null && $v !== '');
+    }
+
     private function validatedInsurance(mixed $in): array
     {
         if (!is_array($in)) return [];
@@ -56,6 +108,22 @@ trait ValidatesExtractedFields
         if ($vin !== null && !preg_match('/^[A-HJ-NPR-Z0-9]{11,17}$/i', $vin)) {
             $vin = null; // FIN-Format unplausibel -> lieber weglassen als falsch speichern
         }
+        // Wahrheitswerte (Deckung) nur uebernehmen, wenn eindeutig bool-artig.
+        $bool = function ($v): ?bool {
+            if (is_bool($v)) return $v;
+            if (in_array($v, ['true', '1', 1, 'ja'], true)) return true;
+            if (in_array($v, ['false', '0', 0, 'nein'], true)) return false;
+            return null;
+        };
+        // Selbstbeteiligung/Fahrleistung nur in plausiblen Grenzen.
+        $intInRange = function ($v, int $min, int $max): ?int {
+            if (!is_numeric($v)) return null;
+            $n = (int) round((float) $v);
+            return ($n >= $min && $n <= $max) ? $n : null;
+        };
+        $holder = $in['holder_type'] ?? null;
+        $holder = in_array($holder, ['versicherungsnehmer', 'abweichender_halter'], true) ? $holder : null;
+
         return array_filter([
             'license_plate' => $plate !== null ? mb_strtoupper($plate) : null,
             'vin' => $vin !== null ? strtoupper($vin) : null,
@@ -64,6 +132,15 @@ trait ValidatesExtractedFields
             'manufacturer' => $this->cleanString($in['manufacturer'] ?? null, 60),
             'model' => $this->cleanString($in['model'] ?? null, 80),
             'first_registration' => $this->cleanDate($in['first_registration'] ?? null),
+            // Zusaetzliche, klar abgrenzbare Tarif-/Fahrzeugfakten (z.B. aus
+            // dem CHECK24-Beratungsprotokoll). Ungenaue/geschaetzte Angaben
+            // fallen durch die harte Validierung heraus.
+            'has_teilkasko' => $bool($in['has_teilkasko'] ?? null),
+            'teilkasko_deductible' => $intInRange($in['teilkasko_deductible'] ?? null, 0, 5000),
+            'has_vollkasko' => $bool($in['has_vollkasko'] ?? null),
+            'vollkasko_deductible' => $intInRange($in['vollkasko_deductible'] ?? null, 0, 5000),
+            'holder_type' => $holder,
+            'annual_mileage' => $intInRange($in['annual_mileage'] ?? null, 0, 200000),
         ], fn ($v) => $v !== null && $v !== '');
     }
 

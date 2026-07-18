@@ -179,6 +179,7 @@ class Customer extends Model {
     public function user() { return $this->belongsTo(User::class); }
     public function betreuer() { return $this->belongsToMany(User::class, 'employee_customers', 'customer_id', 'user_id'); }
     public function contracts() { return $this->hasMany(Contract::class); }
+    public function contractHistories() { return $this->hasMany(ContractHistory::class); }
     public function tickets() { return $this->hasMany(Ticket::class); }
     public function documents() { return $this->hasMany(Document::class); }
     public function consents() { return $this->hasMany(CustomerConsent::class); }

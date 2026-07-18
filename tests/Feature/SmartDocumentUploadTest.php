@@ -456,6 +456,34 @@ class SmartDocumentUploadTest extends TestCase
         $this->assertSame('10115', $customer->address_zip);
     }
 
+    public function test_excluded_fields_are_never_applied_to_customer(): void
+    {
+        // Betreiber-Vorgabe: Familienstand, Beruf, Fuehrerscheindatum und
+        // weitere Fahrer werden NIE automatisch uebernommen (oft ungenau) -
+        // sie stehen nicht auf der apply_fields-Whitelist und werden abgewiesen.
+        Storage::fake('local');
+        Storage::disk('local')->put('documents/eingang/scan2.pdf', '%PDF-1.4');
+        $doc = Document::create([
+            'customer_id' => null,
+            'category' => 'other',
+            'file_name' => 'Protokoll.pdf',
+            'file_path' => 'documents/eingang/scan2.pdf',
+            'disk' => 'local',
+            'ai_status' => 'done',
+            'ai_extracted' => ['person' => ['first_name' => 'Ahmed', 'last_name' => 'Nassar']],
+        ]);
+        $admin = $this->makeAdmin();
+
+        foreach (['marital_status', 'occupation', 'fuehrerscheindatum', 'weitere_fahrer'] as $field) {
+            $this->actingAs($admin)->postJson(route('admin.documents.create_customer', $doc->id), [
+                'apply_fields' => [$field],
+            ])->assertStatus(422);
+        }
+
+        // Dokument blieb unzugeordnet (nichts wurde uebernommen).
+        $this->assertNull($doc->fresh()->customer_id);
+    }
+
     public function test_create_customer_is_blocked_when_similar_customer_exists(): void
     {
         Storage::fake('local');

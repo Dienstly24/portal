@@ -6,6 +6,7 @@ use App\Models\Document;
 use App\Services\Ai\ClaudeDocumentAiProvider;
 use App\Services\Ai\Contracts\DocumentAiProviderInterface;
 use App\Services\Ai\DocumentAnalyzer;
+use App\Services\Ai\RelevantPageSelector;
 use App\Services\Ocr\PdfTextLayerExtractor;
 use App\Services\Ocr\TextExtractorInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -93,7 +94,7 @@ class DocumentCostOptimizationTest extends TestCase
         $this->assertGreaterThan(2500, mb_strlen($text));
 
         $provider = $this->recordingProvider($this->aiPayload());
-        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text));
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector());
 
         $result = $analyzer->analyze($this->pdfDocument());
 
@@ -108,7 +109,7 @@ class DocumentCostOptimizationTest extends TestCase
         $text = "SEPA-LASTSCHRIFTMANDAT\nIBAN DE89370400440532013000\nKontoinhaber Max Mustermann";
 
         $provider = $this->recordingProvider($this->aiPayload());
-        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text));
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector());
 
         $result = $analyzer->analyze($this->pdfDocument());
 
@@ -122,7 +123,7 @@ class DocumentCostOptimizationTest extends TestCase
     {
         // Keine Textebene (Scan) und kein OCR -> KI mit Bild/PDF (preferText false).
         $provider = $this->recordingProvider($this->aiPayload('gesundheitskarte'));
-        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(available: false), $this->fakePdfText(''));
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(available: false), $this->fakePdfText(''), new RelevantPageSelector());
 
         $result = $analyzer->analyze($this->pdfDocument());
 
@@ -193,5 +194,21 @@ class DocumentCostOptimizationTest extends TestCase
         // hinweg nicht stabil und taugt nicht als Fixture.
         $this->assertSame('', $extractor->extract('kein pdf'));
         $this->assertSame('', $extractor->extract(''));
+    }
+
+    public function test_detects_garbled_text_layer(): void
+    {
+        $extractor = new PdfTextLayerExtractor();
+
+        // Echte deutsche Textebene (Auszug aus einem Energie-Auftrag).
+        $ok = str_repeat('Auftrag fuer Gas der EWE VERTRIEB GmbH, Name und Datum, Betrag in Euro pro Monat, Vertragsnummer und Kundennummer. ', 6);
+        $this->assertFalse($extractor->isLikelyGarbled($ok));
+
+        // Kaputt kodierte Textebene (Font-Encoding verschoben, wie enviaM).
+        $garbled = str_repeat('$XIWUDJ 0(,1 67520 EHVW 6FKRHQ GDVV 6LH VLFK IXHU 6WURP YRQ HQYLD0 ', 10);
+        $this->assertTrue($extractor->isLikelyGarbled($garbled));
+
+        // Kurzer Text wird nicht bewertet (zu wenig Signal).
+        $this->assertFalse($extractor->isLikelyGarbled('xyz qrst'));
     }
 }

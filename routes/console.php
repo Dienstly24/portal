@@ -35,6 +35,10 @@ Schedule::command('documents:analyze-pending')->everyTenMinutes()->withoutOverla
 // 03:50 — DSGVO: nie zugeordnete Eingangs-Dokumente nach Aufbewahrungsfrist loeschen
 Schedule::command('documents:prune-unassigned')->dailyAt('03:50');
 
+// 06:30 — Faellige Krankenkassenwechsel aktivieren (pending Kranken-Vertraege
+// am Stichtag -> aktiv + Kasse des Kunden umstellen)
+Schedule::command('health:apply-due-switches')->dailyAt('06:30');
+
 // Stuendlich tagsueber — automatische Portal-Einladungen: neue Kunden ohne
 // Klick einladen, Bestand alphabetisch im Tagesbudget (~100/Tag) abarbeiten,
 // nicht Registrierte alle 7 Tage erinnern. Laeuft nur, wenn der Betreiber den
