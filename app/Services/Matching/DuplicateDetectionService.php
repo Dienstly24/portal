@@ -2,6 +2,7 @@
 namespace App\Services\Matching;
 
 use App\Models\Customer;
+use App\Models\CustomerRelationship;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
@@ -79,6 +80,9 @@ class DuplicateDetectionService
             return $px <=> $py;
         });
 
+        // Als "Kein Duplikat" markierte Paare (Verwandte Kunden) ausschliessen.
+        $dismissed = CustomerRelationship::dismissedKeySet();
+
         // 2) Kandidatenpaare aus allen Bloecken einsammeln (dedupliziert).
         $pairIndex = [];  // "i|j" => true
         $pairs = [];
@@ -97,7 +101,7 @@ class DuplicateDetectionService
             if ($count <= self::BUCKET_ALLPAIRS_LIMIT) {
                 for ($x = 0; $x < $count; $x++) {
                     for ($y = $x + 1; $y < $count; $y++) {
-                        $this->addPair($customers, $members[$x], $members[$y], $pairIndex, $pairs, $bucketCapped);
+                        $this->addPair($customers, $members[$x], $members[$y], $pairIndex, $pairs, $bucketCapped, $dismissed);
                     }
                 }
             } else {
@@ -106,7 +110,7 @@ class DuplicateDetectionService
                     if ($m === $anchor) {
                         continue;
                     }
-                    $this->addPair($customers, $anchor, $m, $pairIndex, $pairs, $bucketCapped);
+                    $this->addPair($customers, $anchor, $m, $pairIndex, $pairs, $bucketCapped, $dismissed);
                 }
             }
         }
@@ -134,6 +138,87 @@ class DuplicateDetectionService
     public function forgetCount(): void
     {
         Cache::flush();
+    }
+
+    /** Oeffentlicher Zugriff auf die uebereinstimmenden Merkmale eines Paares. */
+    public function pairSignals(Customer $a, Customer $b): array
+    {
+        return $this->signalsFor($a, $b);
+    }
+
+    /**
+     * "Verwandte Kunden" fuer EINEN Kunden: andere Kunden, die mindestens ein
+     * Merkmal teilen (Name, Telefon, E-Mail, Anschrift, IBAN, Vertragsnummer).
+     * Grundlage fuer die Beziehungs-Ansicht (Kundenakte + Uebersichtsseite) -
+     * rein informativ, KEINE Zusammenfuehrung.
+     *
+     * @param ?array<int, string> $visibleIds Portfolio-Sicht; null = alle.
+     * @return array<int, array{customer: Customer, signals: array<int, string>, score: int, dismissed: bool}>
+     */
+    public function relationsFor(Customer $customer, ?array $visibleIds = null, int $limit = 40): array
+    {
+        $customer->loadMissing(['user', 'addresses', 'contracts:id,customer_id,contract_number']);
+
+        $name = (string) ($customer->user?->name ?? '');
+        $lastName = $name !== '' ? Str::afterLast($name, ' ') : '';
+
+        $query = Customer::query()
+            ->with(['user', 'addresses', 'contracts:id,customer_id,contract_number'])
+            ->where('id', '!=', $customer->id);
+        if ($visibleIds !== null) {
+            $query->whereIn('id', $visibleIds);
+        }
+
+        // Grobe Vorfilterung per SQL; die exakte (normalisierte) Signalpruefung
+        // laeuft danach in PHP. Adresse ueber PLZ als bezahlbaren Vorfilter.
+        $query->where(function ($q) use ($customer, $lastName) {
+            $matched = false;
+            if ($lastName !== '') {
+                $q->orWhereHas('user', fn ($u) => $u->where('name', 'like', '%' . $lastName . '%'));
+                $matched = true;
+            }
+            if ($customer->user?->email) {
+                $q->orWhereHas('user', fn ($u) => $u->where('email', $customer->user->email));
+                $q->orWhere('email2', $customer->user->email);
+                $matched = true;
+            }
+            if ($customer->email2) {
+                $q->orWhere('email2', $customer->email2);
+                $matched = true;
+            }
+            foreach (array_filter([$customer->phone, $customer->mobile]) as $p) {
+                $q->orWhere('phone', $p)->orWhere('mobile', $p);
+                $matched = true;
+            }
+            if ($customer->address_zip) {
+                $q->orWhere('address_zip', $customer->address_zip);
+                $matched = true;
+            }
+            if (!$matched) {
+                $q->whereRaw('1 = 0');
+            }
+        });
+
+        $candidates = $query->limit(200)->get();
+        $dismissed = CustomerRelationship::dismissedKeySet();
+
+        $out = [];
+        foreach ($candidates as $cand) {
+            $signals = $this->signalsFor($customer, $cand);
+            if ($signals === []) {
+                continue;
+            }
+            [$ka, $kb] = CustomerRelationship::pairKey((string) $customer->id, (string) $cand->id);
+            $out[] = [
+                'customer'  => $cand,
+                'signals'   => $signals,
+                'score'     => $this->confidence($customer, $cand, $signals),
+                'dismissed' => isset($dismissed[$ka . '|' . $kb]),
+            ];
+        }
+
+        usort($out, fn ($a, $b) => $b['score'] <=> $a['score']);
+        return array_slice($out, 0, $limit);
     }
 
     /**
@@ -210,8 +295,9 @@ class DuplicateDetectionService
      * @param \Illuminate\Support\Collection<int, Customer> $customers
      * @param array<string, bool> $pairIndex
      * @param array<int, array<string, mixed>> $pairs
+     * @param array<string, bool> $dismissed  Als "kein Duplikat" markierte Paare (a|b).
      */
-    private function addPair($customers, int $i, int $j, array &$pairIndex, array &$pairs, bool &$capped): void
+    private function addPair($customers, int $i, int $j, array &$pairIndex, array &$pairs, bool &$capped, array $dismissed = []): void
     {
         if ($i === $j) {
             return;
@@ -220,13 +306,21 @@ class DuplicateDetectionService
         if (isset($pairIndex[$key])) {
             return;
         }
+
+        $a = $customers[$i];
+        $b = $customers[$j];
+
+        // Bereits als "Verwandte Kunden" (kein Duplikat) markiert -> ueberspringen.
+        [$ka, $kb] = CustomerRelationship::pairKey((string) $a->id, (string) $b->id);
+        if (isset($dismissed[$ka . '|' . $kb])) {
+            $pairIndex[$key] = true;
+            return;
+        }
+
         if (count($pairs) >= self::MAX_PAIRS) {
             $capped = true;
             return;
         }
-
-        $a = $customers[$i];
-        $b = $customers[$j];
 
         $signals = $this->signalsFor($a, $b);
         if ($signals === []) {

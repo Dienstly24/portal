@@ -169,6 +169,12 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // Ein-Klick: alle "sicheren" Treffer (Score >= 40 %) automatisch vereinen.
     Route::post('/customers/duplicates/merge-all', [AdminController::class, 'duplicatesMergeAll'])
         ->name('customers.duplicates.merge_all')->middleware('role:admin,manager');
+    // "Kein Duplikat" -> Paar als Beziehung markieren (Verwandte Kunden).
+    Route::post('/customers/duplicates/dismiss', [AdminController::class, 'dismissDuplicate'])
+        ->name('customers.duplicates.dismiss');
+    // Verwandte Kunden (Beziehungen). GET vor /customers/{id} registrieren.
+    Route::get('/customers/relationships', [AdminController::class, 'relationships'])->name('customers.relationships');
+    Route::delete('/customers/relationships/{id}', [AdminController::class, 'relationshipDelete'])->name('customers.relationships.delete');
     Route::put('/customers/notes/{id}/done', [AdminController::class, 'noteMarkDone'])->name('customer.note.done');
     Route::get('/customers/{id}', [AdminController::class, 'customerShow'])->name('customer');
     Route::get('/customers/{id}/edit', [AdminController::class, 'customerEdit'])->name('customer.edit');
