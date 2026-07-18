@@ -48,6 +48,16 @@ class WorkflowDefinition extends Model
         return $this->hasMany(WorkflowPrompt::class);
     }
 
+    /**
+     * Prompt-Vorlage eines Typs (system|intent|extraction|reply|validation)
+     * oder ein Standard-Fallback. So laeuft ein Workflow auch, bevor der
+     * Betreiber die Vorlagen im Admin gepflegt hat (Blueprint Saeule 7).
+     */
+    public function promptTemplate(string $type, ?string $default = null): ?string
+    {
+        return $this->prompts()->where('type', $type)->value('template') ?: $default;
+    }
+
     public function runs()
     {
         return $this->hasMany(WorkflowRun::class);

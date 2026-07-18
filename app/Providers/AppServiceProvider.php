@@ -10,6 +10,10 @@ use App\Services\Ai\Contracts\AiProviderInterface;
 use App\Services\Ai\Contracts\DocumentAiProviderInterface;
 use App\Services\Ocr\TesseractTextExtractor;
 use App\Services\Ocr\TextExtractorInterface;
+use App\Services\Workflow\Handlers\ApplyChangeStepHandler;
+use App\Services\Workflow\Handlers\DraftReplyStepHandler;
+use App\Services\Workflow\Handlers\ExtractDataStepHandler;
+use App\Services\Workflow\Handlers\RequestDocumentStepHandler;
 use App\Services\Workflow\Handlers\ReviewStepHandler;
 use App\Services\Workflow\StepHandlerRegistry;
 use Illuminate\Auth\Events\Login;
@@ -52,12 +56,14 @@ class AppServiceProvider extends ServiceProvider
 
         // Registry der Workflow-Step-Handler (Blueprint Saeule 1): Typ ->
         // Handler. Neue Schritt-Typen werden hier additiv registriert, der
-        // Engine-Kern bleibt unveraendert. Start-Set: `review` (generischer
-        // Freigabe-Halt); weitere Handler folgen mit den ersten Definitionen.
+        // Engine-Kern bleibt unveraendert.
         $this->app->singleton(StepHandlerRegistry::class, function ($app) {
-            $registry = new StepHandlerRegistry();
-            $registry->register($app->make(ReviewStepHandler::class));
-            return $registry;
+            return (new StepHandlerRegistry())
+                ->register($app->make(ReviewStepHandler::class))
+                ->register($app->make(RequestDocumentStepHandler::class))
+                ->register($app->make(ExtractDataStepHandler::class))
+                ->register($app->make(ApplyChangeStepHandler::class))
+                ->register($app->make(DraftReplyStepHandler::class));
         });
     }
 

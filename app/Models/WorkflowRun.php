@@ -84,4 +84,23 @@ class WorkflowRun extends Model
     {
         return in_array($this->status, self::TERMINAL, true);
     }
+
+    /**
+     * Ergebnis (`output`) des zuletzt erledigten Schrittes eines bestimmten
+     * Typs - so liest ein spaeterer Schritt (z.B. apply_change) die von einem
+     * frueheren Schritt (extract_data) gewonnenen Felder, ohne dessen
+     * Schluessel kennen zu muessen.
+     *
+     * @return array<string,mixed>
+     */
+    public function latestOutputOfType(string $type): array
+    {
+        $step = $this->stepRuns()
+            ->where('type', $type)
+            ->where('status', WorkflowStepRun::STATUS_COMPLETED)
+            ->orderByDesc('sort_order')
+            ->first();
+
+        return is_array($step?->output) ? $step->output : [];
+    }
 }
