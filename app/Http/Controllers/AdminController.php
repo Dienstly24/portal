@@ -975,16 +975,48 @@ class AdminController extends Controller
      * Geburtsdatum, E-Mail, Adresse, Telefon) zur manuellen Pruefung.
      * Respektiert die Portfolio-Sicht der Mitarbeiter (nur eigene Kunden).
      */
+    /** Signal-Text -> Filterkategorie (Schnellfilter auf der Dubletten-Seite). */
+    private const SIGNAL_CATEGORIES = [
+        'Gleicher Name' => 'name',
+        'Sehr aehnlicher Name' => 'name',
+        'Gleiche Anschrift' => 'address',
+        'Gleiche E-Mail-Adresse' => 'email',
+        'Gleiche Telefonnummer' => 'phone',
+        'Gleiche Bankverbindung (IBAN)' => 'iban',
+        'Gleiche Vertragsnummer' => 'contract',
+        'Gleiches Geburtsdatum' => 'birthdate',
+    ];
+
     public function duplicates(\App\Services\Matching\DuplicateDetectionService $detection) {
         $result = $detection->scan($this->visibleCustomerIds());
         $autoMin = \App\Services\Matching\DuplicateDetectionService::AUTO_MERGE_MIN_SCORE;
-        $strongCount = count(array_filter($result['pairs'], fn ($p) => $p['score'] >= $autoMin));
+
+        // Jedes Paar mit Filterkategorien versehen + Kategorie-Zaehler fuer die
+        // Schnellfilter-Buttons (Namen / Adressen / E-Mails / Telefon / IBAN ...).
+        $counts = ['name' => 0, 'address' => 0, 'email' => 0, 'phone' => 0, 'iban' => 0, 'contract' => 0, 'birthdate' => 0];
+        $pairs = array_map(function ($p) use (&$counts) {
+            $cats = [];
+            foreach ($p['signals'] as $s) {
+                if (isset(self::SIGNAL_CATEGORIES[$s])) {
+                    $cats[self::SIGNAL_CATEGORIES[$s]] = true;
+                }
+            }
+            $p['categories'] = array_keys($cats);
+            foreach ($p['categories'] as $c) {
+                $counts[$c]++;
+            }
+            return $p;
+        }, $result['pairs']);
+
+        $strongCount = count(array_filter($pairs, fn ($p) => $p['score'] >= $autoMin));
+
         return view('admin.customer_duplicates', [
-            'pairs'       => $result['pairs'],
+            'pairs'       => $pairs,
             'scanned'     => $result['scanned'],
             'capped'      => $result['capped'],
             'autoMin'     => $autoMin,
             'strongCount' => $strongCount,
+            'catCounts'   => $counts,
             'relationCount' => \App\Models\CustomerRelationship::count(),
         ]);
     }
@@ -1013,6 +1045,42 @@ class AdminController extends Controller
         app(\App\Services\Matching\DuplicateDetectionService::class)->forgetCount();
 
         return back()->with('success', 'Als „kein Duplikat" markiert – das Paar erscheint jetzt unter „Verwandte Kunden".');
+    }
+
+    /**
+     * Sammel-Aktion: mehrere ausgewaehlte Paare auf einmal als "kein Duplikat"
+     * markieren (schnelles Aufraeumen, z. B. alle Adress-Treffer eines
+     * Haushalts). Reihenfolge-unabhaengig, dedupliziert.
+     */
+    public function dismissBulk(Request $request) {
+        $data = $request->validate(['pairs' => 'required|array|min:1|max:500', 'pairs.*' => 'string']);
+        [$edges, $ids] = $this->pairsToEdges($data['pairs']);
+        if ($ids === []) {
+            return back()->with('error', 'Keine gültige Auswahl.');
+        }
+        foreach ($ids as $id) {
+            $this->authorizeCustomerAccess($id);
+        }
+        $existing = \App\Models\Customer::whereIn('id', $ids)->pluck('id')->map(fn ($i) => (string) $i)->all();
+
+        $marked = 0;
+        foreach ($edges as [$a, $b]) {
+            if (!in_array($a, $existing, true) || !in_array($b, $existing, true)) {
+                continue;
+            }
+            [$x, $y] = \App\Models\CustomerRelationship::pairKey($a, $b);
+            $rel = \App\Models\CustomerRelationship::firstOrCreate(
+                ['customer_a_id' => $x, 'customer_b_id' => $y],
+                ['type' => 'not_duplicate', 'created_by' => auth()->id()]
+            );
+            if ($rel->wasRecentlyCreated) {
+                $marked++;
+            }
+        }
+        app(\App\Services\Matching\DuplicateDetectionService::class)->forgetCount();
+
+        return redirect()->route('admin.customers.duplicates')
+            ->with('success', $marked . ' Paar(e) als „kein Duplikat" markiert – jetzt unter „Verwandte Kunden".');
     }
 
     /**

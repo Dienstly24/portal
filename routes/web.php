@@ -172,6 +172,8 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // "Kein Duplikat" -> Paar als Beziehung markieren (Verwandte Kunden).
     Route::post('/customers/duplicates/dismiss', [AdminController::class, 'dismissDuplicate'])
         ->name('customers.duplicates.dismiss');
+    Route::post('/customers/duplicates/dismiss-bulk', [AdminController::class, 'dismissBulk'])
+        ->name('customers.duplicates.dismiss_bulk');
     // Verwandte Kunden (Beziehungen). GET vor /customers/{id} registrieren.
     Route::get('/customers/relationships', [AdminController::class, 'relationships'])->name('customers.relationships');
     Route::delete('/customers/relationships/{id}', [AdminController::class, 'relationshipDelete'])->name('customers.relationships.delete');

@@ -41,6 +41,34 @@
     @endif
 </div>
 
+@php
+$chipDefs = [
+    'all'       => ['Alle', count($pairs)],
+    'name'      => ['👤 Namen', $catCounts['name'] ?? 0],
+    'address'   => ['📍 Adressen', $catCounts['address'] ?? 0],
+    'email'     => ['✉ E-Mails', $catCounts['email'] ?? 0],
+    'phone'     => ['📞 Telefon', $catCounts['phone'] ?? 0],
+    'iban'      => ['🏦 Bankkonto', $catCounts['iban'] ?? 0],
+    'contract'  => ['📄 Vertragsnr.', $catCounts['contract'] ?? 0],
+    'birthdate' => ['🎂 Geburtsdatum', $catCounts['birthdate'] ?? 0],
+];
+@endphp
+<style>
+.catChip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 15px;font-size:12.5px;cursor:pointer;color:var(--ink);transition:.12s;white-space:nowrap;}
+.catChip:hover{border-color:#17191d;}
+.catChip.active{background:#17191d;color:#fff;border-color:#17191d;}
+.catChip.active .chipCount{color:rgba(255,255,255,.7);}
+.chipCount{color:var(--ink-soft);}
+</style>
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+    <span style="font-size:12.5px;color:var(--ink-soft);align-self:center;margin-right:2px;">Schnellfilter:</span>
+    @foreach($chipDefs as $key => [$label, $cnt])
+        @if($key === 'all' || $cnt > 0)
+        <button type="button" class="catChip {{ $key === 'all' ? 'active' : '' }}" data-cat="{{ $key }}" onclick="filterCat('{{ $key }}', this)">{{ $label }} <span class="chipCount">({{ $cnt }})</span></button>
+        @endif
+    @endforeach
+</div>
+
 @if($canBulk)
 <div class="card" style="background:#EEF6F1;padding:11px 16px;margin-bottom:14px;font-size:12.5px;color:#1F3A33;line-height:1.5;">
     💡 <strong>Sichere Treffer (≥ {{ $autoMin }} %)</strong> – gleiche E-Mail, Telefon, IBAN, Vertragsnummer oder Name + Geburtsdatum – können mit einem Klick automatisch zusammengeführt werden. <strong>Schwächere Treffer (nur gleicher Name)</strong> bitte einzeln prüfen und per Auswahl zusammenführen.
@@ -52,11 +80,14 @@
      unten gehoeren per form="bulkMergeForm" dazu; der Button uebertraegt die
      Auswahl per JS und verlangt eine bewusste Bestaetigung. --}}
 <form method="POST" action="{{ route('admin.customers.duplicates.merge') }}" id="bulkMergeForm" onsubmit="return confirmBulkMerge(this);">@csrf</form>
+<form method="POST" action="{{ route('admin.customers.duplicates.dismiss_bulk') }}" id="bulkDismissForm">@csrf</form>
 
 <div id="mergeBar" style="display:none;position:sticky;top:0;z-index:10;background:#1F3A33;color:#fff;border-radius:10px;padding:12px 20px;margin-bottom:14px;align-items:center;gap:14px;flex-wrap:wrap;">
     <span style="font-size:13.5px;font-weight:600;"><span id="mergeCount">0</span> Paar(e) ausgewählt</span>
-    <span style="font-size:12px;opacity:.8;">Zusammengehörige Datensätze werden automatisch zu einem Kunden vereint – nichts wird gelöscht außer den leeren Duplikat-Akten.</span>
-    <button type="submit" form="bulkMergeForm" class="btn btn-primary" style="padding:8px 18px;font-size:13px;margin-left:auto;">Ausgewählte zusammenführen</button>
+    <div style="margin-left:auto;display:flex;gap:10px;flex-wrap:wrap;">
+        <button type="button" onclick="submitBulkDismiss()" class="btn btn-ghost" style="padding:8px 16px;font-size:13px;background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.25);" title="Ausgewählte als „kein Duplikat" markieren – wandern zu Verwandte Kunden">✕ Kein Duplikat</button>
+        <button type="submit" form="bulkMergeForm" class="btn btn-primary" style="padding:8px 18px;font-size:13px;">Zusammenführen</button>
+    </div>
 </div>
 @endif
 
@@ -67,7 +98,7 @@
     $badgeColor = $score >= 90 ? '#A32D2D' : ($score >= 80 ? '#B45309' : '#185FA5');
     $tierLabel = $pair['tier'] === 'auto' ? 'Sehr wahrscheinlich' : 'Wahrscheinlich';
 @endphp
-<div class="card" style="margin-bottom:16px;padding:0;overflow:hidden;">
+<div class="card dupCard" data-cats="{{ implode(' ', $pair['categories'] ?? []) }}" style="margin-bottom:16px;padding:0;overflow:hidden;">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap;gap:10px;">
         <div style="display:flex;align-items:center;gap:12px;">
             @if($canBulk)
@@ -120,33 +151,75 @@
 </div>
 @endforeach
 
-@if($canBulk)
 <script>
+// Schnellfilter: zeigt nur Paare der gewaehlten Kategorie (Name/Adresse/...).
+// Versteckte Paare werden abgewaehlt, damit Sammel-Aktionen nur das Sichtbare
+// betreffen.
+function filterCat(cat, btn) {
+    document.querySelectorAll('.dupCard').forEach(function (card) {
+        var cats = (card.dataset.cats || '').split(' ');
+        var show = (cat === 'all' || cats.indexOf(cat) !== -1);
+        card.style.display = show ? '' : 'none';
+        if (!show) {
+            var cb = card.querySelector('.pairCheck');
+            if (cb) cb.checked = false;
+        }
+    });
+    document.querySelectorAll('.catChip').forEach(function (c) { c.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+    if (window.refreshMergeBar) refreshMergeBar();
+}
+
+@if($canBulk)
+// Sichtbare (nicht ausgefilterte) Paar-Checkboxen.
+function visiblePairChecks() {
+    return Array.prototype.filter.call(document.querySelectorAll('.pairCheck'), function (cb) {
+        var card = cb.closest('.dupCard');
+        return card && card.style.display !== 'none';
+    });
+}
+
 // Zaehlt die aktuelle Auswahl und blendet die Aktionsleiste ein/aus.
 function refreshMergeBar() {
     var checked = document.querySelectorAll('.pairCheck:checked');
     document.getElementById('mergeCount').textContent = checked.length;
     document.getElementById('mergeBar').style.display = checked.length > 0 ? 'flex' : 'none';
-    var all = document.querySelectorAll('.pairCheck');
+    var vis = visiblePairChecks();
+    var checkedVis = vis.filter(function (cb) { return cb.checked; });
     var master = document.getElementById('checkAllPairs');
-    if (master) master.checked = checked.length > 0 && checked.length === all.length;
+    if (master) master.checked = vis.length > 0 && checkedVis.length === vis.length;
 }
 document.querySelectorAll('.pairCheck').forEach(function (cb) { cb.addEventListener('change', refreshMergeBar); });
 var master = document.getElementById('checkAllPairs');
 if (master) master.addEventListener('change', function () {
-    document.querySelectorAll('.pairCheck').forEach(function (cb) { cb.checked = master.checked; });
+    // Nur die aktuell sichtbaren Paare auswaehlen (respektiert den Filter).
+    visiblePairChecks().forEach(function (cb) { cb.checked = master.checked; });
     refreshMergeBar();
 });
 
-// Bestaetigung vor der Sammel-Zusammenfuehrung. Die ausgewaehlten Checkboxen
-// gehoeren per form="bulkMergeForm" bereits zum Formular und werden vom Browser
-// automatisch als pairs[] uebertragen - kein manuelles Kopieren noetig.
+// Sammel-Zusammenfuehrung: Checkboxen gehoeren per form="bulkMergeForm" bereits
+// zum Formular und werden automatisch als pairs[] uebertragen.
 function confirmBulkMerge(form) {
     var checked = document.querySelectorAll('.pairCheck:checked');
     if (checked.length === 0) { alert('Bitte zuerst mindestens ein Paar auswählen.'); return false; }
     return confirm(checked.length + ' ausgewählte Dubletten-Paar(e) jetzt zusammenführen?\n\nZusammengehörige Datensätze werden zu einem Kunden vereint. Alle Verträge, Dokumente und Daten bleiben erhalten – nur die leeren Duplikat-Akten werden entfernt. Diese Aktion kann nicht rückgängig gemacht werden.');
 }
-</script>
+
+// Sammel-"Kein Duplikat": ausgewaehlte Paare ins Dismiss-Formular kopieren.
+function submitBulkDismiss() {
+    var checked = document.querySelectorAll('.pairCheck:checked');
+    if (checked.length === 0) { alert('Bitte zuerst mindestens ein Paar auswählen.'); return; }
+    if (!confirm(checked.length + ' ausgewählte Paar(e) als „kein Duplikat" markieren?\n\nSie verschwinden aus dieser Liste und erscheinen unter „Verwandte Kunden". Reversibel.')) return;
+    var form = document.getElementById('bulkDismissForm');
+    form.querySelectorAll('input[name="pairs[]"]').forEach(function (i) { i.remove(); });
+    checked.forEach(function (cb) {
+        var input = document.createElement('input');
+        input.type = 'hidden'; input.name = 'pairs[]'; input.value = cb.value;
+        form.appendChild(input);
+    });
+    form.submit();
+}
 @endif
+</script>
 @endif
 @endsection

@@ -95,6 +95,21 @@ class CustomerRelationshipTest extends TestCase
         $this->assertCount(1, app(DuplicateDetectionService::class)->scan()['pairs']);
     }
 
+    public function test_bulk_dismiss_marks_multiple_pairs_at_once(): void
+    {
+        $a1 = $this->customer('Fam A', 'fa1@example.com', ['address' => 'Weg 1, 10115 Berlin']);
+        $a2 = $this->customer('Fam B', 'fa2@example.com', ['address' => 'Weg 1, 10115 Berlin']);
+        $b1 = $this->customer('Haus C', 'hc1@example.com', ['phone' => '030555']);
+        $b2 = $this->customer('Haus D', 'hc2@example.com', ['phone' => '030555']);
+
+        $this->actingAs($this->admin())->post(route('admin.customers.duplicates.dismiss_bulk'), [
+            'pairs' => ["{$a1->id}|{$a2->id}", "{$b1->id}|{$b2->id}"],
+        ])->assertRedirect(route('admin.customers.duplicates'));
+
+        $this->assertDatabaseCount('customer_relationships', 2);
+        $this->assertCount(0, app(DuplicateDetectionService::class)->scan()['pairs']);
+    }
+
     public function test_relations_for_finds_customers_sharing_a_signal(): void
     {
         $main = $this->customer('Nina Roth', 'nina@example.com', ['phone' => '0301234']);
