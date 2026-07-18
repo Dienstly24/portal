@@ -87,6 +87,10 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     Route::post('/document-requests/{id}/upload', [PortalController::class, 'documentRequestUpload'])->name('document_requests.upload');
     Route::get('/notifications', [PortalController::class, 'notifications'])->name('notifications');
     Route::post('/notifications/{id}/read', [PortalController::class, 'notificationRead'])->name('notifications.read');
+    // Direktnachrichten Berater <-> Kunde (Portal-Chat mit Anhaengen)
+    Route::get('/nachrichten', [\App\Http\Controllers\PortalMessageController::class, 'index'])->name('messages');
+    Route::post('/nachrichten', [\App\Http\Controllers\PortalMessageController::class, 'store'])->name('messages.store');
+    Route::get('/nachrichten/anhang/{id}', [\App\Http\Controllers\PortalMessageController::class, 'downloadAttachment'])->name('messages.attachment');
     Route::get('/banner/{id}/interesse', [PortalController::class, 'bannerInterest'])->name('banner.interest');
     Route::get('/banner/{id}/klick', [PortalController::class, 'bannerClick'])->name('banner.click');
     Route::post('/banner/{id}/schliessen', [PortalController::class, 'bannerDismiss'])->name('banner.dismiss');
@@ -280,6 +284,22 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::post('/chat', [\App\Http\Controllers\InternalChatController::class, 'store'])->name('chat.store');
     Route::get('/chat/{id}', [\App\Http\Controllers\InternalChatController::class, 'show'])->name('chat.show');
     Route::post('/chat/{id}/reply', [\App\Http\Controllers\InternalChatController::class, 'reply'])->name('chat.reply');
+
+    // Direktnachrichten an Kunden (Portal-Chat), Vorlagen & E-Mail-Composer
+    Route::post('/customers/{id}/messages', [\App\Http\Controllers\CustomerMessageController::class, 'store'])->name('customer.messages.store');
+    Route::get('/messages/attachments/{id}/download', [\App\Http\Controllers\CustomerMessageController::class, 'downloadAttachment'])->name('messages.attachment');
+    Route::get('/vorlagen', [\App\Http\Controllers\MessageTemplateController::class, 'index'])->name('templates');
+    Route::get('/vorlagen/liste', [\App\Http\Controllers\MessageTemplateController::class, 'list'])->name('templates.list');
+    Route::get('/vorlagen/{id}/render', [\App\Http\Controllers\MessageTemplateController::class, 'render'])->name('templates.render');
+    // Vorlagen-Pflege nur Verwaltung; Nutzung (Liste/Rendern) alle Staff-Rollen
+    Route::middleware('role:admin,manager')->group(function () {
+        Route::post('/vorlagen', [\App\Http\Controllers\MessageTemplateController::class, 'store'])->name('templates.store');
+        Route::post('/vorlagen/standard', [\App\Http\Controllers\MessageTemplateController::class, 'seedDefaults'])->name('templates.seed');
+        Route::put('/vorlagen/{id}', [\App\Http\Controllers\MessageTemplateController::class, 'update'])->name('templates.update');
+        Route::delete('/vorlagen/{id}', [\App\Http\Controllers\MessageTemplateController::class, 'destroy'])->name('templates.destroy');
+    });
+    Route::get('/email/verfassen', [\App\Http\Controllers\ComposeEmailController::class, 'create'])->name('email.compose');
+    Route::post('/email/verfassen', [\App\Http\Controllers\ComposeEmailController::class, 'send'])->name('email.compose.send');
 
     // Interner Chat & Notizen (nur Mitarbeiter - keine Portal-Routen!)
     Route::post('/customers/{id}/internal-messages', [\App\Http\Controllers\InternalMessageController::class, 'store'])->name('internal.store');

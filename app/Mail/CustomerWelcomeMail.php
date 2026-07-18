@@ -65,8 +65,11 @@ class CustomerWelcomeMail extends Mailable
             }
             $this->supportUrl = route('support.form', ['t' => \App\Http\Controllers\SupportFormController::tokenFor($customer)]);
         } finally {
-            // Urspruenglichen Root wiederherstellen (fuer die laufende Admin-Anfrage).
+            // Urspruenglichen Root UND Schema wiederherstellen (fuer die
+            // laufende Admin-Anfrage) - forceScheme('https') wuerde sonst
+            // nach dem Mailbau bestehen bleiben.
             URL::forceRootUrl($previousRoot);
+            URL::forceScheme(str_starts_with($previousRoot, 'https://') ? 'https' : 'http');
         }
     }
 
