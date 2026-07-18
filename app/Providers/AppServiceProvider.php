@@ -5,6 +5,8 @@ namespace App\Providers;
 use App\Services\Activity\ActivityCatalog;
 use App\Services\Activity\ActivityTracker;
 use App\Services\Ai\ClaudeDocumentAiProvider;
+use App\Services\Ai\ClaudeTextProvider;
+use App\Services\Ai\Contracts\AiProviderInterface;
 use App\Services\Ai\Contracts\DocumentAiProviderInterface;
 use App\Services\Ocr\TesseractTextExtractor;
 use App\Services\Ocr\TextExtractorInterface;
@@ -34,6 +36,15 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(DocumentAiProviderInterface::class, function ($app) {
             return match (config('services.ai_document_provider', 'claude')) {
                 default => $app->make(ClaudeDocumentAiProvider::class),
+            };
+        });
+
+        // Provider-unabhaengige LLM-Schicht der Workflow-Engine (Saeule 8):
+        // ein weiterer Anbieter (OpenAI, Gemini, Azure) braucht nur eine
+        // neue Implementierung + einen Zweig hier, keine Engine-Aenderung.
+        $this->app->bind(AiProviderInterface::class, function ($app) {
+            return match (config('services.ai_text_provider', 'claude')) {
+                default => $app->make(ClaudeTextProvider::class),
             };
         });
     }
