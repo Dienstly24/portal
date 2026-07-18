@@ -46,6 +46,103 @@ class DocumentIntakeService
         ]);
     }
 
+    /** Ausweis-Dokumente liefern die verlaesslichsten Personendaten. */
+    private const IDENTITY_TYPES = ['personalausweis', 'reisepass'];
+    private const LICENSE_TYPES = ['fuehrerschein'];
+
+    /**
+     * Analyse-Ergebnisse MEHRERER Dokumente eines Kunden zu einem Ergebnis
+     * verschmelzen (Betreiber-Vorgabe: Hoheit je Feld nach Dokumenttyp):
+     * - Person (Name/Geburtsdatum/Adresse): Ausweis-Dokumente zuerst.
+     * - Bank/IBAN, Fahrzeug/Tarif, Gesundheit: jeweils erster nicht-leerer Wert.
+     * Bewusst NICHT aus einem Beratungsprotokoll uebernommen: Fuehrerschein-
+     * datum, weitere Fahrer (dort oft ungenau).
+     *
+     * Stimmen Name auf Ausweis und Fuehrerschein nicht ueberein, wird ein
+     * Konflikt gemeldet (_conflicts) -> keine automatische Anlage.
+     *
+     * @param iterable<Document> $documents
+     * @return array<string,mixed>
+     */
+    public function mergeExtractions(iterable $documents): array
+    {
+        $docs = collect($documents);
+        $merged = ['person' => [], 'versicherung' => [], 'kfz' => [], 'gesundheit' => [], 'bank' => []];
+
+        // Fuer Personendaten Ausweis-Dokumente zuerst; sonst Reihenfolge egal.
+        $personFirst = $docs->sortByDesc(fn ($d) => $this->personPriority($d->ai_type));
+
+        foreach (array_keys($merged) as $group) {
+            $source = $group === 'person' ? $personFirst : $docs;
+            foreach ($source as $doc) {
+                $values = ($doc->ai_extracted[$group] ?? []);
+                if (!is_array($values)) {
+                    continue;
+                }
+                foreach ($values as $field => $value) {
+                    if ($value === null || $value === '' || $value === []) {
+                        continue;
+                    }
+                    $current = $merged[$group][$field] ?? null;
+                    if ($current === null || $current === '') {
+                        $merged[$group][$field] = $value;
+                    }
+                }
+            }
+        }
+
+        $merged['_conflicts'] = $this->nameConflicts($docs);
+
+        return $merged;
+    }
+
+    private function personPriority(?string $aiType): int
+    {
+        if (in_array($aiType, self::IDENTITY_TYPES, true)) {
+            return 3;
+        }
+        if (in_array($aiType, self::LICENSE_TYPES, true)) {
+            return 2;
+        }
+        return 1;
+    }
+
+    /**
+     * Namens-Abgleich Ausweis vs. Fuehrerschein. Weichen die Namen ab, ist
+     * die Zuordnung unsicher -> Mitarbeiter muss manuell pruefen.
+     *
+     * @return array<string,string>
+     */
+    private function nameConflicts(\Illuminate\Support\Collection $docs): array
+    {
+        $idName = null;
+        $licenseName = null;
+        foreach ($docs as $doc) {
+            $person = $doc->ai_extracted['person'] ?? [];
+            $name = $this->normalizeName(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+            if (in_array($doc->ai_type, self::IDENTITY_TYPES, true)) {
+                $idName ??= $name;
+            } elseif (in_array($doc->ai_type, self::LICENSE_TYPES, true)) {
+                $licenseName ??= $name;
+            }
+        }
+
+        if ($idName !== null && $licenseName !== null && $idName !== $licenseName) {
+            return ['name' => 'Name auf Ausweis und Fuehrerschein stimmen nicht ueberein - bitte manuell pruefen.'];
+        }
+        return [];
+    }
+
+    private function normalizeName(string $name): string
+    {
+        $name = mb_strtolower(trim($name));
+        $name = preg_replace('/[^a-zäöüß ]/u', '', $name) ?? $name;
+        return trim((string) preg_replace('/\s+/', ' ', $name));
+    }
+
     /**
      * Kunden zum Analyse-Ergebnis suchen.
      *
@@ -148,9 +245,12 @@ class DocumentIntakeService
      * @param list<string> $keys z.B. ['birth_date','address','phone','health_insurance','iban','email2','nationality','birth_place']
      * @return list<string> tatsaechlich befuellte Kundenfelder
      */
-    public function applyExtractedToCustomer(Document $document, Customer $customer, array $keys, ?int $byUserId): array
+    public function applyExtractedToCustomer(Document $document, Customer $customer, array $keys, ?int $byUserId, ?array $extracted = null): array
     {
-        $data = $document->ai_extracted ?? [];
+        // $extracted erlaubt das Anwenden EINES aus mehreren Dokumenten
+        // zusammengefuehrten Ergebnisses (mergeExtractions); ohne Angabe wird
+        // das Analyse-Ergebnis des Dokuments selbst genutzt.
+        $data = $extracted ?? ($document->ai_extracted ?? []);
         $person = $data['person'] ?? [];
         $health = $data['gesundheit'] ?? [];
         $bank = $data['bank'] ?? [];
@@ -212,9 +312,9 @@ class DocumentIntakeService
      * Existiert beim Kunden bereits ein Vertrag mit derselben
      * Vertragsnummer, wird dieser verknuepft statt ein Duplikat anzulegen.
      */
-    public function createContractFromExtraction(Document $document, Customer $customer, ?int $byUserId): ?Contract
+    public function createContractFromExtraction(Document $document, Customer $customer, ?int $byUserId, ?array $extracted = null): ?Contract
     {
-        $data = $document->ai_extracted ?? [];
+        $data = $extracted ?? ($document->ai_extracted ?? []);
         $ins = $data['versicherung'] ?? [];
         $kfz = $data['kfz'] ?? [];
 

@@ -390,6 +390,92 @@ class SmartDocumentUploadController extends Controller
     }
 
     /**
+     * Neuen Kunden aus MEHREREN Eingangs-Dokumenten anlegen (Ausweis + Bank-
+     * karte + Fuehrerschein + Beratungsprotokoll gehoeren zu EINEM Kunden).
+     * Die Extraktionen werden zusammengefuehrt (Feld-Hoheit nach Dokumenttyp),
+     * ALLE Dokumente werden dem neuen Kunden zugeordnet. Widersprechen sich
+     * Ausweis- und Fuehrerschein-Name, wird abgebrochen (manuelle Pruefung).
+     */
+    public function createCustomerFromDocuments(Request $request)
+    {
+        $this->validateJson($request, [
+            'document_ids' => 'required|array|min:1|max:10',
+            'document_ids.*' => 'uuid',
+            'apply_fields' => 'nullable|array',
+            'apply_fields.*' => 'string|in:birth_date,birth_place,address,phone,nationality,email2,health_insurance,iban',
+            'create_contract' => 'nullable|boolean',
+            'visibility' => 'nullable|in:customer,internal',
+        ]);
+
+        $ids = array_values(array_unique($request->input('document_ids')));
+        $documents = Document::whereIn('id', $ids)->get();
+        if ($documents->count() !== count($ids)) {
+            return response()->json(['message' => 'Mindestens ein Dokument wurde nicht gefunden.'], 404);
+        }
+        foreach ($documents as $document) {
+            $this->authorizeDocument($document);
+            if ($document->customer_id) {
+                return response()->json(['message' => 'Bereits zugeordnet: ' . $document->file_name], 422);
+            }
+        }
+
+        $merged = $this->intake->mergeExtractions($documents);
+        if (!empty($merged['_conflicts'])) {
+            return response()->json([
+                'message' => implode(' ', $merged['_conflicts']),
+                'conflicts' => $merged['_conflicts'],
+            ], 422);
+        }
+
+        $person = $merged['person'] ?? [];
+        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        if ($name === '') {
+            return response()->json(['message' => 'In den Dokumenten wurde kein Name erkannt - bitte Kunden manuell anlegen.'], 422);
+        }
+
+        $criteria = $this->intake->matchCriteria($merged);
+        if (!empty($criteria['email']) && User::where('email', $criteria['email'])->exists()) {
+            unset($criteria['email']);
+        }
+
+        try {
+            $customer = app(CustomerAutoCreationService::class)->createFromUnmatched($criteria, 'manual', auth()->id());
+        } catch (DuplicateCustomerException $e) {
+            return response()->json([
+                'message' => 'Es existiert bereits ein aehnlicher Kunde (' . ($e->matchResult->customer?->user?->name ?? '?') . ', '
+                    . $e->matchResult->score . ' Punkte). Bitte stattdessen zuordnen.',
+            ], 422);
+        }
+
+        foreach ($documents as $document) {
+            $this->intake->assignToCustomer($document, $customer, auth()->id());
+        }
+        if ($request->filled('visibility')) {
+            Document::whereIn('id', $documents->pluck('id'))->update(['visibility' => $request->visibility, 'updated_by' => auth()->id()]);
+        }
+
+        // Zusammengefuehrtes Ergebnis auf das erste Dokument beziehen.
+        $primary = $documents->first();
+        $applied = $this->intake->applyExtractedToCustomer($primary, $customer, $request->input('apply_fields', []), auth()->id(), $merged);
+        $contract = $request->boolean('create_contract')
+            ? $this->intake->createContractFromExtraction($primary, $customer, auth()->id(), $merged)
+            : null;
+
+        foreach ($documents as $document) {
+            $this->markDecision($document, 'accepted');
+        }
+
+        return response()->json([
+            'ok' => true,
+            'customer_id' => $customer->id,
+            'customer_url' => route('admin.customer', $customer->id),
+            'applied_fields' => $applied,
+            'contract_id' => $contract?->id,
+            'documents' => $documents->count(),
+        ]);
+    }
+
+    /**
      * Kundensuche fuer die Zuordnungs-UI - beschraenkt auf Kunden, die
      * der Mitarbeiter sehen darf (Portfolio + Vertretungen).
      */
