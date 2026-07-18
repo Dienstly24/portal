@@ -195,4 +195,20 @@ class DocumentCostOptimizationTest extends TestCase
         $this->assertSame('', $extractor->extract('kein pdf'));
         $this->assertSame('', $extractor->extract(''));
     }
+
+    public function test_detects_garbled_text_layer(): void
+    {
+        $extractor = new PdfTextLayerExtractor();
+
+        // Echte deutsche Textebene (Auszug aus einem Energie-Auftrag).
+        $ok = str_repeat('Auftrag fuer Gas der EWE VERTRIEB GmbH, Name und Datum, Betrag in Euro pro Monat, Vertragsnummer und Kundennummer. ', 6);
+        $this->assertFalse($extractor->isLikelyGarbled($ok));
+
+        // Kaputt kodierte Textebene (Font-Encoding verschoben, wie enviaM).
+        $garbled = str_repeat('$XIWUDJ 0(,1 67520 EHVW 6FKRHQ GDVV 6LH VLFK IXHU 6WURP YRQ HQYLD0 ', 10);
+        $this->assertTrue($extractor->isLikelyGarbled($garbled));
+
+        // Kurzer Text wird nicht bewertet (zu wenig Signal).
+        $this->assertFalse($extractor->isLikelyGarbled('xyz qrst'));
+    }
 }
