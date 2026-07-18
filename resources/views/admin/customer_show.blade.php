@@ -132,6 +132,36 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
     </table>
 </div>
 
+{{-- Verwandte Kunden: andere Akten mit gemeinsamen Merkmalen (Telefon,
+     Anschrift, E-Mail, IBAN ...). Rein informativ - hilft zu erkennen, ob
+     dieser Kunde mit einem anderen verbunden oder ein Duplikat ist. --}}
+@if(!empty($relations) && count($relations) > 0)
+<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="card-title" style="margin-bottom:0;">🔗 Verwandte Kunden ({{ count($relations) }})</div>
+        <span style="font-size:11.5px;color:var(--ink-soft);">gemeinsame Merkmale</span>
+    </div>
+    @foreach($relations as $rel)
+    @php $rc = $rel['customer']; @endphp
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;{{ !$loop->first ? 'border-top:1px solid var(--line);' : '' }}flex-wrap:wrap;">
+        <div style="min-width:0;">
+            <a href="{{ route('admin.customer', $rc->id) }}" style="font-size:13.5px;font-weight:600;color:var(--ink);text-decoration:none;">{{ $rc->user?->name ?? 'Unbekannt' }}</a>
+            <span style="font-size:12px;color:var(--ink-soft);"> · {{ $rc->customer_number }}</span>
+            @if($rel['dismissed'])<span style="font-size:11px;background:#EDE9FE;color:#5B21B6;border-radius:999px;padding:2px 8px;margin-left:6px;">verwandt</span>@endif
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">
+                @foreach($rel['signals'] as $signal)
+                <span style="background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:2px 7px;font-size:11px;color:var(--ink-soft);">{{ $signal }}</span>
+                @endforeach
+            </div>
+        </div>
+        @if(!$rel['dismissed'])
+        <a href="{{ route('admin.customer.merge', $customer->id) }}?duplicate={{ $rc->id }}" class="btn btn-ghost" style="padding:6px 12px;font-size:12.5px;flex:none;">Prüfen</a>
+        @endif
+    </div>
+    @endforeach
+</div>
+@endif
+
 {{-- Kundenakte: Kranken-/Renten-/Steuerdaten (sensibel, verschlüsselt gespeichert) --}}
 <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">

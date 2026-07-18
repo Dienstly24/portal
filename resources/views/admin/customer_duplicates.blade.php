@@ -2,8 +2,11 @@
 @section('content')
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.customers') }}">Kunden</a><span class="breadcrumb-sep">›</span><span>Dubletten</span></div>
-    <div class="page-title">Mögliche Dubletten</div>
-    <div class="page-sub">Automatischer Abgleich nach Name, Telefon, E-Mail, Anschrift, Geburtsdatum, IBAN und Vertragsnummer. Jede einzelne Übereinstimmung wird angezeigt – bitte jedes Paar prüfen, bevor Sie es zusammenführen.</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div class="page-title">Mögliche Dubletten</div>
+        <a href="{{ route('admin.customers.relationships') }}" class="btn btn-ghost">🔗 Verwandte Kunden @if(($relationCount ?? 0) > 0)({{ $relationCount }})@endif</a>
+    </div>
+    <div class="page-sub">Automatischer Abgleich nach Name, Telefon, E-Mail, Anschrift, Geburtsdatum, IBAN und Vertragsnummer. Jede einzelne Übereinstimmung wird angezeigt – bitte jedes Paar prüfen, bevor Sie es zusammenführen. Kein Duplikat? Mit „✕ Kein Duplikat" wandert das Paar zu „Verwandte Kunden".</div>
 </div>
 
 @if($capped)
@@ -77,7 +80,16 @@
             <span style="background:#FEF3C7;color:#92400E;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:600;">manuell prüfen</span>
             @endif
         </div>
-        <a href="{{ route('admin.customer.merge', $primary->id) }}?duplicate={{ $duplicate->id }}" class="btn btn-primary" style="padding:8px 16px;">Prüfen &amp; zusammenführen →</a>
+        <div style="display:flex;align-items:center;gap:8px;">
+            <form method="POST" action="{{ route('admin.customers.duplicates.dismiss') }}" style="margin:0;"
+                  onsubmit="return confirm('Als „kein Duplikat" markieren? Das Paar verschwindet aus dieser Liste und erscheint unter „Verwandte Kunden".');">
+                @csrf
+                <input type="hidden" name="customer_a" value="{{ $primary->id }}">
+                <input type="hidden" name="customer_b" value="{{ $duplicate->id }}">
+                <button type="submit" class="btn btn-ghost" style="padding:8px 14px;" title="Kein Duplikat, sondern verwandt (z. B. Familie)">✕ Kein Duplikat</button>
+            </form>
+            <a href="{{ route('admin.customer.merge', $primary->id) }}?duplicate={{ $duplicate->id }}" class="btn btn-primary" style="padding:8px 16px;">Prüfen &amp; zusammenführen →</a>
+        </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
         @foreach([['c'=>$primary,'label'=>'Hauptkunde (bleibt bestehen)','bg'=>'#E4F0E7'],['c'=>$duplicate,'label'=>'Duplikat (wird übernommen)','bg'=>'#FEF3C7']] as $col)

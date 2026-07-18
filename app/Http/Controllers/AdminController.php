@@ -105,7 +105,11 @@ class AdminController extends Controller
         $customerMessages = \App\Models\CustomerMessage::where('customer_id', $id)
             ->with(['sender', 'attachments'])->orderBy('created_at')->get();
         \App\Models\CustomerMessage::where('customer_id', $id)->fromCustomer()->unread()->update(['read_at' => now()]);
-        return view('admin.customer_show', compact('customer', 'internalChat', 'internalNotes', 'customerMessages'));
+        // "Verwandte Kunden": andere Akten mit gemeinsamen Merkmalen (Telefon,
+        // Anschrift, E-Mail, IBAN ...) - Beziehungshinweis in der Kundenakte.
+        $relations = app(\App\Services\Matching\DuplicateDetectionService::class)
+            ->relationsFor($customer, $this->visibleCustomerIds(), 12);
+        return view('admin.customer_show', compact('customer', 'internalChat', 'internalNotes', 'customerMessages', 'relations'));
     }
 
     public function contracts() {
@@ -981,7 +985,66 @@ class AdminController extends Controller
             'capped'      => $result['capped'],
             'autoMin'     => $autoMin,
             'strongCount' => $strongCount,
+            'relationCount' => \App\Models\CustomerRelationship::count(),
         ]);
+    }
+
+    /**
+     * Markiert ein Paar als "kein Duplikat" -> es verschwindet aus der
+     * Dubletten-Liste und erscheint stattdessen als Beziehung unter
+     * "Verwandte Kunden". Reversibel (Beziehung entfernen).
+     */
+    public function dismissDuplicate(Request $request) {
+        $data = $request->validate([
+            'customer_a' => 'required|string',
+            'customer_b' => 'required|string|different:customer_a',
+            'note'       => 'nullable|string|max:255',
+        ]);
+        $this->authorizeCustomerAccess($data['customer_a']);
+        $this->authorizeCustomerAccess($data['customer_b']);
+        \App\Models\Customer::findOrFail($data['customer_a']);
+        \App\Models\Customer::findOrFail($data['customer_b']);
+
+        [$a, $b] = \App\Models\CustomerRelationship::pairKey($data['customer_a'], $data['customer_b']);
+        \App\Models\CustomerRelationship::firstOrCreate(
+            ['customer_a_id' => $a, 'customer_b_id' => $b],
+            ['type' => 'not_duplicate', 'note' => $data['note'] ?? null, 'created_by' => auth()->id()]
+        );
+        app(\App\Services\Matching\DuplicateDetectionService::class)->forgetCount();
+
+        return back()->with('success', 'Als „kein Duplikat" markiert – das Paar erscheint jetzt unter „Verwandte Kunden".');
+    }
+
+    /**
+     * "Verwandte Kunden": alle als Beziehung markierten Paare (kein Duplikat).
+     * Nur Paare, deren BEIDE Kunden im Portfolio des Mitarbeiters liegen.
+     */
+    public function relationships(\App\Services\Matching\DuplicateDetectionService $detection) {
+        $ids = $this->visibleCustomerIds();
+        $query = \App\Models\CustomerRelationship::with(['customerA.user', 'customerB.user', 'customerA.contracts:id,customer_id,contract_number', 'customerB.contracts:id,customer_id,contract_number'])
+            ->latest();
+        if ($ids !== null) {
+            $query->whereIn('customer_a_id', $ids)->whereIn('customer_b_id', $ids);
+        }
+        $relations = $query->limit(500)->get()
+            ->filter(fn ($r) => $r->customerA && $r->customerB)
+            ->map(function ($r) use ($detection) {
+                $r->signals = $detection->pairSignals($r->customerA, $r->customerB);
+                return $r;
+            })->values();
+
+        return view('admin.customer_relationships', ['relations' => $relations]);
+    }
+
+    /** Beziehung entfernen -> Paar kann wieder als moegliche Dublette erscheinen. */
+    public function relationshipDelete($id) {
+        $rel = \App\Models\CustomerRelationship::findOrFail($id);
+        $this->authorizeCustomerAccess($rel->customer_a_id);
+        $this->authorizeCustomerAccess($rel->customer_b_id);
+        $rel->delete();
+        app(\App\Services\Matching\DuplicateDetectionService::class)->forgetCount();
+
+        return back()->with('success', 'Beziehung entfernt – das Paar kann wieder als mögliche Dublette erscheinen.');
     }
 
     /** Deckel gegen versehentliche Massen-Merges pro manueller Aktion. */
