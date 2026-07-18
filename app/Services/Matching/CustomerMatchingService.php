@@ -29,10 +29,12 @@ class CustomerMatchingService
      *     birth_date?: ?string, email?: ?string, phone?: ?string,
      *     street?: ?string, zip?: ?string, city?: ?string,
      * } $criteria
+     * @param ?string $excludeId Kunden-ID, die im Kandidatenpool ausgeschlossen
+     *        wird (z. B. der Kunde selbst beim Dubletten-Abgleich).
      */
-    public function match(array $criteria): MatchResult
+    public function match(array $criteria, ?string $excludeId = null): MatchResult
     {
-        $candidates = $this->candidatePool($criteria);
+        $candidates = $this->candidatePool($criteria, $excludeId);
 
         $best = null;
         $bestScore = 0;
@@ -50,10 +52,44 @@ class CustomerMatchingService
         return new MatchResult($best, min(100, $bestScore), $bestBreakdown);
     }
 
+    /**
+     * Baut aus einem bestehenden Kunden die Abgleichskriterien - Grundlage fuer
+     * den systemweiten Dubletten-Abgleich (gleiche Gewichte wie beim Import).
+     */
+    public function criteriaFor(Customer $customer): array
+    {
+        $firstAddress = $customer->relationLoaded('addresses')
+            ? $customer->addresses->first()
+            : $customer->addresses()->first();
+
+        return [
+            'full_name'  => $customer->user?->name,
+            'email'      => $customer->user?->email,
+            'birth_date' => $customer->birth_date ? (string) $customer->birth_date : null,
+            'phone'      => $customer->phone ?: $customer->mobile,
+            'street'     => $customer->address_street ?: ($firstAddress->street ?? null),
+            'zip'        => $customer->address_zip ?: ($firstAddress->zip ?? null),
+            'city'       => $customer->address_city ?: ($firstAddress->city ?? null),
+        ];
+    }
+
+    /**
+     * Bester Dubletten-Kandidat fuer einen bereits gespeicherten Kunden -
+     * der Kunde selbst wird dabei nie als eigener Treffer gewertet.
+     */
+    public function matchExisting(Customer $customer): MatchResult
+    {
+        return $this->match($this->criteriaFor($customer), (string) $customer->id);
+    }
+
     /** Begrenzter Kandidatenpool statt Volltabellen-Scan bei jedem Matching-Lauf. */
-    private function candidatePool(array $criteria)
+    private function candidatePool(array $criteria, ?string $excludeId = null)
     {
         $query = Customer::with(['user', 'addresses']);
+
+        if ($excludeId !== null) {
+            $query->where('id', '!=', $excludeId);
+        }
 
         $query->where(function ($q) use ($criteria) {
             $any = false;

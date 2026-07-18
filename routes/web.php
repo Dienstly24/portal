@@ -158,6 +158,9 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/customers/create', [AdminController::class, 'createCustomer'])->name('customers.create');
     Route::post('/customers', [AdminController::class, 'storeCustomer'])->name('customers.store');
     Route::post('/customers/bulk-assign', [AdminController::class, 'bulkAssign'])->name('customers.bulk-assign')->middleware('role:admin,manager');
+    // Dubletten-Pruefung: MUSS vor /customers/{id} stehen, sonst wuerde
+    // "duplicates" als Kunden-ID interpretiert.
+    Route::get('/customers/duplicates', [AdminController::class, 'duplicates'])->name('customers.duplicates');
     Route::put('/customers/notes/{id}/done', [AdminController::class, 'noteMarkDone'])->name('customer.note.done');
     Route::get('/customers/{id}', [AdminController::class, 'customerShow'])->name('customer');
     Route::get('/customers/{id}/edit', [AdminController::class, 'customerEdit'])->name('customer.edit');
