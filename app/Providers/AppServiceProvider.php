@@ -36,6 +36,15 @@ class AppServiceProvider extends ServiceProvider
         // spaeter ein anderer OCR-Dienst als Tesseract eingesetzt wird.
         $this->app->bind(TextExtractorInterface::class, TesseractTextExtractor::class);
 
+        // Gratis-Parser fuer bekannte, immer gleich aufgebaute Formulare
+        // (CHECK24-Kfz-Beratungsprotokoll). Weitere Templates: hier zu einem
+        // Composite buendeln. Trifft kein Template zu -> null, dann laeuft die
+        // normale Analyse (Heuristik/KI).
+        $this->app->bind(
+            \App\Services\Ai\Contracts\DocumentTemplateParser::class,
+            \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser::class,
+        );
+
         // KI-Anbieter der Dokumentanalyse: per Konfiguration waehlbar, damit
         // ein weiterer Anbieter spaeter ohne Umbau des restlichen Systems
         // ergaenzt werden kann (siehe DocumentAiProviderInterface).

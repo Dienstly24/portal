@@ -85,6 +85,21 @@ class DocumentCostOptimizationTest extends TestCase
         return ['type' => $type, 'confidence' => 92, 'summary' => 'ok', 'title' => null, 'data' => []];
     }
 
+    public function test_check24_protocol_is_parsed_for_free_without_ai(): void
+    {
+        // Bekanntes Formular -> Gratis-Parser greift, KEIN KI-Aufruf.
+        $text = "Vorlaeufiges Beratungsprotokoll zur Kfz-Versicherung - CHECK24\n"
+            . "HSN/TSN: 1234/ABC\nHalter: Versicherungsnehmer\nVersicherungsbeginn: 01.08.2026\n";
+        $provider = $this->recordingProvider($this->aiPayload());
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector(), new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser());
+
+        $result = $analyzer->analyze($this->pdfDocument());
+
+        $this->assertFalse($provider->called, 'bekanntes Formular darf keine KI kosten');
+        $this->assertSame('template', $result['source']);
+        $this->assertSame('beratungsprotokoll', $result['type']);
+    }
+
     public function test_long_text_layer_escalates_to_ai_on_cheap_text_path(): void
     {
         // Text WAERE heuristisch verwertbar (SEPA + IBAN), ist aber zu lang
@@ -94,7 +109,7 @@ class DocumentCostOptimizationTest extends TestCase
         $this->assertGreaterThan(2500, mb_strlen($text));
 
         $provider = $this->recordingProvider($this->aiPayload());
-        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector());
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector(), new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser());
 
         $result = $analyzer->analyze($this->pdfDocument());
 
@@ -109,7 +124,7 @@ class DocumentCostOptimizationTest extends TestCase
         $text = "SEPA-LASTSCHRIFTMANDAT\nIBAN DE89370400440532013000\nKontoinhaber Max Mustermann";
 
         $provider = $this->recordingProvider($this->aiPayload());
-        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector());
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector(), new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser());
 
         $result = $analyzer->analyze($this->pdfDocument());
 
@@ -123,7 +138,7 @@ class DocumentCostOptimizationTest extends TestCase
     {
         // Keine Textebene (Scan) und kein OCR -> KI mit Bild/PDF (preferText false).
         $provider = $this->recordingProvider($this->aiPayload('gesundheitskarte'));
-        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(available: false), $this->fakePdfText(''), new RelevantPageSelector());
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(available: false), $this->fakePdfText(''), new RelevantPageSelector(), new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser());
 
         $result = $analyzer->analyze($this->pdfDocument());
 

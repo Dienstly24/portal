@@ -47,6 +47,7 @@ class DocumentAnalyzer
         private readonly TextExtractorInterface $ocr,
         private readonly PdfTextLayerExtractor $pdfText,
         private readonly RelevantPageSelector $pageSelector,
+        private readonly \App\Services\Ai\Contracts\DocumentTemplateParser $templateParser,
     ) {
     }
 
@@ -97,9 +98,15 @@ class DocumentAnalyzer
             $freeText = $this->pdfText->extract($binary);
             $fromTextLayer = $freeText !== '';
             if ($fromTextLayer) {
-                // Bekannte Formulare (z.B. CHECK24-Beratungsprotokoll) auf die
-                // fachlich relevanten Seiten reduzieren - weniger Rauschen fuer
-                // die Extraktion, weniger Tokens fuer die KI.
+                // Bekanntes, immer gleich aufgebautes Formular? Dann GRATIS per
+                // fester Regel aus der Textebene lesen (kein KI-Aufruf) - z.B.
+                // das CHECK24-Kfz-Beratungsprotokoll.
+                $parsed = $this->templateParser->parse($freeText);
+                if ($parsed !== null) {
+                    return [...$parsed, 'source' => 'template'];
+                }
+                // Sonst: bekannte Formulare auf die relevanten Seiten
+                // reduzieren - weniger Rauschen/Tokens fuer Heuristik/KI.
                 $freeText = $this->pageSelector->reduce($freeText);
             }
         }
