@@ -3,7 +3,7 @@
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.customers') }}">Kunden</a><span class="breadcrumb-sep">›</span><span>Dubletten</span></div>
     <div class="page-title">Mögliche Dubletten</div>
-    <div class="page-sub">Automatischer Abgleich nach Name, Geburtsdatum, E-Mail, Adresse und Telefon. Bitte jedes Paar prüfen, bevor Sie es zusammenführen.</div>
+    <div class="page-sub">Automatischer Abgleich nach Name, Telefon, E-Mail, Anschrift, Geburtsdatum, IBAN und Vertragsnummer. Jede einzelne Übereinstimmung wird angezeigt – bitte jedes Paar prüfen, bevor Sie es zusammenführen.</div>
 </div>
 
 @if($capped)
