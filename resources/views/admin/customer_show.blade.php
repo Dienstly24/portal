@@ -18,7 +18,11 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
             <div class="page-title">{{ $customer->user?->name }}</div>
             <div style="font-size:14px;color:var(--ink-soft);">{{ $customer->customer_number }} · {{ $customer->user?->email }}</div>
         </div>
-        <div style="display:flex;gap:10px;">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button type="button" class="btn btn-ghost" onclick="openMessagesTab()">📨 Nachricht senden</button>
+            @if(in_array(auth()->user()->role, ['admin','manager','support']) || auth()->user()->can_send_emails)
+            <a href="{{ route('admin.email.compose', ['customer_id' => $customer->id]) }}" class="btn btn-ghost">✉️ E-Mail verfassen</a>
+            @endif
             <a href="{{ route('admin.customer.edit', $customer->id) }}" class="btn btn-ghost">✏️ Bearbeiten</a>
             <a href="{{ route('admin.contract.create', $customer->id) }}" class="btn btn-gold">+ Vertrag hinzufügen</a>
         </div>
@@ -81,6 +85,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
     <button type="button" class="cust-tab" data-tab="tab-vertraege" onclick="showCustTab('tab-vertraege',this)">📑 Verträge <span style="opacity:.7;">({{ $customer->contracts->count() }})</span></button>
     <button type="button" class="cust-tab" data-tab="tab-dokumente" onclick="showCustTab('tab-dokumente',this)">📎 Dokumente <span style="opacity:.7;">({{ $customer->documents->count() }})</span></button>
     <button type="button" class="cust-tab" data-tab="tab-tickets" onclick="showCustTab('tab-tickets',this)">🎫 Tickets <span style="opacity:.7;">({{ $customer->tickets->count() }})</span></button>
+    <button type="button" class="cust-tab" data-tab="tab-nachrichten" onclick="showCustTab('tab-nachrichten',this)">📨 Nachrichten <span style="opacity:.7;">({{ $customerMessages->count() }})</span></button>
     <button type="button" class="cust-tab" data-tab="tab-intern" onclick="showCustTab('tab-intern',this)">💬 Intern <span style="opacity:.7;">({{ $internalChat->count() }})</span></button>
     <button type="button" class="cust-tab" data-tab="tab-notizen" onclick="showCustTab('tab-notizen',this)">📝 Notizen</button>
     <button type="button" class="cust-tab" data-tab="tab-verlauf" onclick="showCustTab('tab-verlauf',this)">🔄 Verlauf</button>
@@ -426,6 +431,96 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
         </tbody>
     </table>
 </div>
+</div>
+
+<div class="tab-section" id="tab-nachrichten" style="display:none;">
+
+{{-- Direktnachrichten: sichtbar fuer den Kunden im Portal (Gegenstueck zu "Intern") --}}
+<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div class="card-title">📨 Nachrichten an den Kunden</div>
+        <span style="font-size:11.5px;background:#E4F0E7;color:#3B7A57;border:1px solid #CBE3D2;padding:3px 10px;border-radius:999px;">👁 Für den Kunden im Portal sichtbar</span>
+    </div>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;">Der Kunde sieht diese Unterhaltung im Kundenportal unter „Nachrichten" und kann dort antworten – auch mit Anhängen (PDF/Bilder).</p>
+    @if(!$customer->user?->hasRealEmail())
+    <div style="background:#FFF8E6;color:#B5651D;border:1px solid #F7E7D6;border-radius:8px;padding:10px 14px;font-size:12.5px;margin-bottom:12px;">⚠ Dieser Kunde hat keine echte E-Mail-Adresse hinterlegt – die Nachricht erscheint nur im Portal, ein E-Mail-Versand ist nicht möglich.</div>
+    @endif
+    <div id="customer-msg-scroll" style="max-height:420px;overflow-y:auto;background:var(--canvas);border:1px solid var(--line);border-radius:10px;padding:14px;">
+        @forelse($customerMessages as $msg)
+        @php $staffSide = $msg->from_staff; @endphp
+        <div class="chat-row" style="{{ $staffSide ? 'flex-direction:row-reverse;' : '' }}">
+            <div class="chat-avatar" style="{{ $staffSide ? 'background:var(--gold);' : '' }}">{{ strtoupper(mb_substr($msg->sender?->name ?? '??', 0, 2)) }}</div>
+            <div style="max-width:75%;">
+                <div style="font-size:11px;color:var(--ink-soft);margin-bottom:3px;{{ $staffSide ? 'text-align:right;' : '' }}">
+                    {{ $msg->sender?->name ?? 'Gelöschter Nutzer' }} · {{ $msg->created_at->format('d.m.Y H:i') }}
+                </div>
+                <div class="chat-bubble" style="{{ $staffSide ? 'background:var(--petrol);color:#fff;border-bottom-right-radius:4px;' : 'background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px;' }}">
+                    {!! nl2br(e($msg->body)) !!}
+                </div>
+                @if($msg->attachments->isNotEmpty())
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:5px;{{ $staffSide ? 'justify-content:flex-end;' : '' }}">
+                    @foreach($msg->attachments as $att)
+                    <a href="{{ route('admin.messages.attachment', $att->id) }}" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 11px;text-decoration:none;color:var(--ink);">
+                        {{ $att->isImage() ? '🖼️' : '📎' }} {{ \Illuminate\Support\Str::limit($att->file_name, 30) }}
+                    </a>
+                    @endforeach
+                </div>
+                @endif
+                <div style="font-size:10.5px;color:var(--ink-soft);margin-top:3px;{{ $staffSide ? 'text-align:right;' : '' }}">
+                    @if($staffSide)
+                        {{ $msg->read_at ? '✓✓ Vom Kunden gelesen ' . $msg->read_at->format('d.m.Y H:i') : '✓ Zugestellt' }}
+                        @if($msg->email_mode === 'full') · ✉️ Text per E-Mail @elseif($msg->email_mode === 'hint') · ✉️ E-Mail-Hinweis @endif
+                    @endif
+                </div>
+            </div>
+        </div>
+        @empty
+        <p style="color:var(--ink-soft);font-size:14px;text-align:center;padding:20px 0;">Noch keine Nachrichten. Starten Sie die Unterhaltung – der Kunde sieht sie sofort im Portal.</p>
+        @endforelse
+    </div>
+    <form method="POST" action="{{ route('admin.customer.messages.store', $customer->id) }}" enctype="multipart/form-data" style="margin-top:14px;">
+        @csrf
+        @php $msgTemplates = \App\Models\MessageTemplate::where('category', 'kunde')->orderBy('sort')->orderBy('name')->get(['id', 'name']); @endphp
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+            <select id="msg-template" onchange="applyMsgTemplate(this.value)" style="padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;max-width:280px;">
+                <option value="">📋 Vorlage einfügen…</option>
+                @foreach($msgTemplates as $tpl)
+                <option value="{{ $tpl->id }}">{{ $tpl->name }}</option>
+                @endforeach
+            </select>
+            @if(in_array(auth()->user()->role, ['admin','manager']))
+            <a href="{{ route('admin.templates') }}" style="font-size:12px;color:var(--ink-soft);">Vorlagen verwalten →</a>
+            @endif
+        </div>
+        <textarea id="msg-body" name="body" required maxlength="5000" placeholder="Nachricht an den Kunden… (Vorlage wählen oder frei schreiben)" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;font-family:inherit;resize:vertical;min-height:84px;"></textarea>
+        <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:10px;">
+            <label style="font-size:12.5px;color:var(--ink-soft);display:inline-flex;align-items:center;gap:6px;margin:0;">
+                📎 <input type="file" name="attachments[]" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" style="width:auto;font-size:12px;padding:4px;background:none;border:none;">
+            </label>
+            <span style="font-size:11.5px;color:var(--ink-soft);">max. 5 Dateien · PDF/JPG/PNG/WEBP · je 10 MB</span>
+        </div>
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:12px;">
+            <span style="font-size:12.5px;font-weight:600;">E-Mail an den Kunden:</span>
+            <label style="font-size:12.5px;display:inline-flex;align-items:center;gap:5px;margin:0;color:var(--ink);"><input type="radio" name="email_mode" value="hint" checked style="width:auto;"> Nur Hinweis (ohne Inhalt)</label>
+            <label style="font-size:12.5px;display:inline-flex;align-items:center;gap:5px;margin:0;color:var(--ink);"><input type="radio" name="email_mode" value="full" style="width:auto;"> Kompletter Text per E-Mail</label>
+            <label style="font-size:12.5px;display:inline-flex;align-items:center;gap:5px;margin:0;color:var(--ink);"><input type="radio" name="email_mode" value="none" style="width:auto;"> Keine E-Mail</label>
+        </div>
+        <button type="submit" class="btn btn-gold" style="margin-top:12px;">📨 Nachricht senden</button>
+    </form>
+</div>
+<script>
+function applyMsgTemplate(id) {
+    if (!id) return;
+    fetch('{{ url('admin/vorlagen') }}/' + id + '/render?customer_id={{ $customer->id }}', {headers: {'Accept': 'application/json'}})
+        .then(r => r.json())
+        .then(d => { document.getElementById('msg-body').value = d.body || ''; })
+        .catch(() => {});
+}
+function openMessagesTab() {
+    const btn = document.querySelector('.cust-tab[data-tab="tab-nachrichten"]');
+    if (btn) { showCustTab('tab-nachrichten', btn); window.scrollTo({top: 0, behavior: 'smooth'}); }
+}
+</script>
 </div>
 
 <div class="tab-section" id="tab-intern" style="display:none;">
@@ -875,11 +970,13 @@ function showCustTab(id, btn) {
     document.querySelectorAll('.tab-section').forEach(el => el.style.display = el.id === id ? '' : 'none');
     document.querySelectorAll('.cust-tab').forEach(el => el.classList.toggle('active', el === btn));
     history.replaceState(null, '', '#' + id);
-    if (id === 'tab-intern') scrollChatDown();
+    if (id === 'tab-intern' || id === 'tab-nachrichten') scrollChatDown();
 }
 function scrollChatDown() {
     const box = document.getElementById('internal-chat-scroll');
     if (box) box.scrollTop = box.scrollHeight;
+    const msgBox = document.getElementById('customer-msg-scroll');
+    if (msgBox) msgBox.scrollTop = msgBox.scrollHeight;
 }
 document.addEventListener('DOMContentLoaded', () => {
     const hash = window.location.hash.replace('#', '');

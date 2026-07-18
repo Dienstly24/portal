@@ -165,7 +165,17 @@ form textarea{min-height:90px;resize:vertical;}
     <a href="{{ route('portal.profile') }}" class="nav-item {{ request()->routeIs('portal.profile*') ? 'active' : '' }}">{{ __('Meine Daten') }}</a>
     <a href="{{ route('portal.contacts') }}" class="nav-item {{ request()->routeIs('portal.contacts*') ? 'active' : '' }}">{{ __('Kontaktinformationen') }}</a>
     <a href="{{ route('portal.change_requests') }}" class="nav-item {{ request()->routeIs('portal.change_requests*') ? 'active' : '' }}">{{ __('Änderungsanfragen') }}</a>
-    <a href="{{ route('portal.tickets') }}" class="nav-item {{ request()->routeIs('portal.tickets*') ? 'active' : '' }}">{{ __('Nachrichten') }}</a>
+    @php
+        // Ungelesene Beraternachrichten fuer die Badge (eine kleine Abfrage pro Seitenaufruf)
+        $navCustomerId = auth()->user()->customer?->id;
+        $unreadMsgs = $navCustomerId
+            ? \App\Models\CustomerMessage::where('customer_id', $navCustomerId)->fromStaff()->unread()->count()
+            : 0;
+    @endphp
+    <a href="{{ route('portal.messages') }}" class="nav-item {{ request()->routeIs('portal.messages*') ? 'active' : '' }}">{{ __('Nachrichten') }}
+        @if($unreadMsgs > 0)<span style="margin-inline-start:auto;background:#E24B4A;color:#fff;font-size:11px;font-weight:700;border-radius:999px;padding:1px 8px;">{{ $unreadMsgs }}</span>@endif
+    </a>
+    <a href="{{ route('portal.tickets') }}" class="nav-item {{ request()->routeIs('portal.tickets*') ? 'active' : '' }}">{{ __('Anfragen') }}</a>
     <a href="{{ route('portal.datenschutz') }}" class="nav-item {{ request()->routeIs('portal.datenschutz') ? 'active' : '' }}">{{ __('Datenschutz') }}</a>
     <div class="sidebar-foot">
         <div class="user-chip">
@@ -208,7 +218,7 @@ form textarea{min-height:90px;resize:vertical;}
         <a href="{{ route('portal.dashboard') }}" class="tab-item {{ request()->routeIs('portal.dashboard') ? 'active' : '' }}"><span class="tab-ico">🏠</span><span class="tab-label">{{ __('Übersicht') }}</span></a>
         <a href="{{ route('portal.contracts') }}" class="tab-item {{ request()->routeIs('portal.contracts*') ? 'active' : '' }}"><span class="tab-ico">📑</span><span class="tab-label">{{ __('Verträge') }}</span></a>
         <a href="{{ route('portal.documents') }}" class="tab-item {{ request()->routeIs('portal.documents*') ? 'active' : '' }}"><span class="tab-ico">📄</span><span class="tab-label">{{ __('Dokumente') }}</span></a>
-        <a href="{{ route('portal.tickets') }}" class="tab-item {{ request()->routeIs('portal.tickets*') ? 'active' : '' }}"><span class="tab-ico">💬</span><span class="tab-label">{{ __('Nachrichten') }}</span></a>
+        <a href="{{ route('portal.messages') }}" class="tab-item {{ request()->routeIs('portal.messages*') ? 'active' : '' }}" style="position:relative;"><span class="tab-ico">💬</span><span class="tab-label">{{ __('Nachrichten') }}</span>@if($unreadMsgs > 0)<span style="position:absolute;top:6px;inset-inline-end:22%;width:9px;height:9px;border-radius:50%;background:#E24B4A;border:2px solid var(--petrol);"></span>@endif</a>
         <button type="button" class="tab-item" id="tab-more" aria-label="Menü öffnen"><span class="tab-ico">☰</span><span class="tab-label">{{ __('Mehr') }}</span></button>
     </div>
 </nav>

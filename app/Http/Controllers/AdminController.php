@@ -98,7 +98,12 @@ class AdminController extends Controller
         // Interner Chat & Notizen (nur Staff - Zugriff bereits oben geprüft)
         $internalChat = \App\Models\InternalMessage::chat()->where('customer_id', $id)->with('sender')->orderBy('created_at')->get();
         $internalNotes = \App\Models\InternalMessage::note()->where('customer_id', $id)->with('sender')->latest()->get();
-        return view('admin.customer_show', compact('customer', 'internalChat', 'internalNotes'));
+        // Direktnachrichten (Portal-Chat): Kundenantworten gelten mit dem
+        // Oeffnen der Akte als vom Team gelesen.
+        $customerMessages = \App\Models\CustomerMessage::where('customer_id', $id)
+            ->with(['sender', 'attachments'])->orderBy('created_at')->get();
+        \App\Models\CustomerMessage::where('customer_id', $id)->fromCustomer()->unread()->update(['read_at' => now()]);
+        return view('admin.customer_show', compact('customer', 'internalChat', 'internalNotes', 'customerMessages'));
     }
 
     public function contracts() {
