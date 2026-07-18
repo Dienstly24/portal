@@ -21,6 +21,16 @@ body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
 .nav-item.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gold);border-radius:0 3px 3px 0;}
 .nav-icon{width:18px;height:18px;opacity:.8;flex:none;}
 .nav-badge{margin-left:auto;background:var(--gold);color:#ffffff;border-radius:999px;padding:2px 7px;font-size:11px;font-weight:700;}
+/* Einklappbare Nav-Gruppen (Akkordeon) */
+.nav-group-header{display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;cursor:pointer;padding:16px 20px 6px;color:rgba(255,255,255,.35);font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;font-weight:600;font-family:inherit;text-align:left;}
+.nav-group-header:hover{color:rgba(255,255,255,.6);}
+.nav-group-title{flex:1;}
+.nav-group-caret{width:14px;height:14px;flex:none;opacity:.7;transition:transform .18s;}
+.nav-group.collapsed .nav-group-caret{transform:rotate(-90deg);}
+.nav-group.collapsed .nav-group-body{display:none;}
+/* Summen-Badge nur im eingeklappten Zustand zeigen, damit offene Vorgaenge sichtbar bleiben */
+.nav-group-badge{margin-left:0;display:none;padding:1px 6px;font-size:10px;}
+.nav-group.collapsed .nav-group-badge{display:inline-block;}
 .sidebar-foot{margin-top:auto;padding:16px 20px;border-top:1px solid rgba(255,255,255,.1);}
 .user-row{display:flex;align-items:center;gap:10px;}
 .avatar-sm{width:34px;height:34px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#ffffff;flex:none;}
@@ -138,188 +148,223 @@ table tr:hover td{background:#E3E6EA;}
 <div class="sidebar" id="admin-sidebar">
     {{-- Kompakte Marke wie bei grossen Panels (nur das D-Symbol) --}}
     <div class="sidebar-logo"><a href="{{ route('admin.dashboard') }}" title="Dienstly24"><img src="/images/logo-icon-white.png" alt="Dienstly24" style="height:42px;width:auto;"></a></div>
+    {{-- Badge-Zaehler einmalig berechnen, damit auch eingeklappte Gruppen-Header
+         die offenen Vorgaenge als Summe anzeigen koennen (keine Doppelabfragen). --}}
+    @php
+        $navUser = auth()->user();
+        $navRole = $navUser->role;
+        $navCanAll = $navUser->canSeeAllCustomers();
+        $navIds = $navCanAll ? null : $navUser->visibleCustomerIdsWithSubstitution();
+
+        // Badge = NEUE, noch nicht uebernommene Kundentickets (Status "Offen").
+        $openT = \App\Models\Ticket::customerOnly()->where('status', 'open')
+            ->when($navIds !== null, fn($q) => $q->whereIn('customer_id', $navIds))->count();
+        $openTasks = \App\Models\Task::where('assigned_to', $navUser->id)->where('status','!=','done')->count();
+        $suggestedMails = in_array($navRole, ['admin','manager','support'])
+            ? \App\Models\EmailMessage::where('match_status', 'suggested')->count() : 0;
+        $docReqCount = \App\Models\DocumentRequest::awaitingReview()->count();
+        // Eingeschraenkte Mitarbeiter sehen im Eingang nur eigene Uploads - Badge muss dazu passen.
+        $docInboxCount = \App\Models\Document::inbox()
+            ->when(!$navCanAll, fn($q) => $q->where('uploaded_by', $navUser->id))->count();
+        $crQ = \App\Models\CustomerChangeRequest::where('status','pending');
+        if (!$navCanAll) { $crQ->whereIn('customer_id', $navUser->visibleCustomerIdsWithSubstitution()); }
+        $pendingCR = $crQ->count();
+        $unreadChat = \App\Models\InternalConversationParticipant::where('user_id', $navUser->id)
+            ->whereHas('conversation', function ($q) {
+                $q->whereColumn('internal_conversations.last_message_at', '>', 'internal_conversation_participants.last_read_at')
+                  ->orWhereNull('internal_conversation_participants.last_read_at');
+            })->count();
+        $activeAnn = \App\Models\Announcement::where(function($q){ $q->whereNull('expires_at')->orWhere('expires_at','>=',now()); })->count();
+        $pendingCommissions = in_array($navRole, ['admin','manager'])
+            ? \App\Models\Commission::pendingReview()->count() : 0;
+        $todayAppt = \App\Models\Appointment::whereDate('starts_at', today())->where('status','scheduled')->count();
+
+        // Gruppen-Summen fuer den eingeklappten Zustand.
+        $grpKunden   = $docReqCount + $docInboxCount + $pendingCR;
+        $grpKomm     = $suggestedMails + $unreadChat + $activeAnn + $openT;
+        $grpArbeit   = $openTasks + $todayAppt;
+        $grpVertrieb = $pendingCommissions;
+    @endphp
+
     <div class="nav-section">Beraterwelt</div>
+    {{-- Dashboard bleibt als Startpunkt immer sichtbar (nicht einklappbar). --}}
     <a href="{{ route('admin.dashboard') }}" class="nav-item {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
         <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
         Dashboard
     </a>
-    <a href="{{ route('admin.customers') }}" class="nav-item {{ request()->routeIs('admin.customers*','admin.customer*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-        Kunden
-    </a>
-    <a href="{{ route('admin.contracts') }}" class="nav-item {{ request()->routeIs('admin.contracts*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-        Verträge
-    </a>
-    <a href="{{ route('admin.tickets') }}" class="nav-item {{ request()->routeIs('admin.tickets*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
-        Tickets
-        @php
-            $navUser = auth()->user();
-            $navIds = ($navUser && !$navUser->canSeeAllCustomers()) ? $navUser->visibleCustomerIdsWithSubstitution() : null;
-            // Badge = NEUE, noch nicht uebernommene Kundentickets (Status "Offen").
-            // Nach "In Bearbeitung uebernehmen" verschwindet die Zahl.
-            // Gast-Anfragen zaehlen hier nicht mit - die stehen unter "Anfragen".
-            $openT = \App\Models\Ticket::customerOnly()->where('status', 'open')->when($navIds !== null, fn($q) => $q->whereIn('customer_id', $navIds))->count();
-        @endphp
-        @if($openT > 0)<span class="nav-badge">{{ $openT }}</span>@endif
-    </a>
-    @if(in_array(auth()->user()->role, ['admin','manager','support']))
-    <a href="{{ route('admin.inquiries') }}" class="nav-item {{ request()->routeIs('admin.inquiries*') ? 'active' : '' }}">
-        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-        Anfragen
-    </a>
-    @endif
-    <a href="{{ route('admin.tasks') }}" class="nav-item {{ request()->routeIs('admin.tasks*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
-        Aufgaben
-        @php $openTasks = \App\Models\Task::where('assigned_to', auth()->id())->where('status','!=','done')->count(); @endphp
-        @if($openTasks > 0)<span class="nav-badge">{{ $openTasks }}</span>@endif
-    </a>
-    @if(in_array(auth()->user()->role, ['admin','manager']))
-    <a href="{{ route('admin.import_export') }}" class="nav-item {{ request()->routeIs('admin.import*','admin.export*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-        Import / Export
-    </a>
-    @endif
-        <a href="{{ route('admin.email_marketing') }}" class="nav-item {{ request()->routeIs('admin.email_marketing*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-        E-Mail Marketing
-    </a>
-    @if(in_array(auth()->user()->role, ['admin','manager','support']) || auth()->user()->can_send_emails)
-    <a href="{{ route('admin.email.compose') }}" class="nav-item {{ request()->routeIs('admin.email.compose*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-        E-Mail verfassen
-    </a>
-    @endif
-    @if(in_array(auth()->user()->role, ['admin','manager']))
-    <a href="{{ route('admin.templates') }}" class="nav-item {{ request()->routeIs('admin.templates*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 6h6m-6 4h4"/></svg>
-        Vorlagen
-    </a>
-    @endif
-        <a href="{{ route('admin.reports') }}" class="nav-item {{ request()->routeIs('admin.reports*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-        Berichte
-    </a>
-        @if(in_array(auth()->user()->role, ['admin','manager']))
-        <a href="{{ route('admin.tarifrechner') }}" class="nav-item {{ request()->routeIs('admin.tarifrechner*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-        Tarifrechner
-    </a>
-        @endif
-    @if(in_array(auth()->user()->role, ['admin','manager','support']))
-    <a href="{{ route('admin.email_inbox') }}" class="nav-item {{ request()->routeIs('admin.email_inbox*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-        E-Mail-Posteingang
-        @php $suggestedMails = \App\Models\EmailMessage::where('match_status', 'suggested')->count(); @endphp
-        @if($suggestedMails > 0)<span class="nav-badge">{{ $suggestedMails }}</span>@endif
-    </a>
-    @endif
-    <a href="{{ route('admin.document_requests') }}" class="nav-item {{ request()->routeIs('admin.document_requests*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-        Dokumentenanfragen
-        @php $docReqCount = \App\Models\DocumentRequest::awaitingReview()->count(); @endphp
-        @if($docReqCount > 0)<span class="nav-badge">{{ $docReqCount }}</span>@endif
-    </a>
-    <a href="{{ route('admin.documents.inbox') }}" class="nav-item {{ request()->routeIs('admin.documents.inbox') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M4 8h16M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2zm4-6l2 2 4-4"/></svg>
-        Dokumenten-Eingang
-        @php
-            // Konsistent mit der Listen-Ansicht: eingeschraenkte Mitarbeiter
-            // sehen dort nur eigene Uploads, die Badge-Zahl muss dazu passen.
-            $docInboxCount = \App\Models\Document::inbox()
-                ->when(!auth()->user()->canSeeAllCustomers(), fn($q) => $q->where('uploaded_by', auth()->id()))
-                ->count();
-        @endphp
-        @if($docInboxCount > 0)<span class="nav-badge">{{ $docInboxCount }}</span>@endif
-    </a>
-    <a href="{{ route('admin.change_requests') }}" class="nav-item {{ request()->routeIs('admin.change_requests*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-        Kundenänderungen
-        @php
-            $crQ = \App\Models\CustomerChangeRequest::where('status','pending');
-            if (!auth()->user()->canSeeAllCustomers()) { $crQ->whereIn('customer_id', auth()->user()->visibleCustomerIdsWithSubstitution()); }
-            $pendingCR = $crQ->count();
-        @endphp
-        @if($pendingCR > 0)<span class="nav-badge">{{ $pendingCR }}</span>@endif
-    </a>
 
-    <a href="{{ route('admin.chat.index') }}" class="nav-item {{ request()->routeIs('admin.chat*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4-.8L3 21l1.5-4A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-        Interner Chat
-        @php
-            $unreadChat = \App\Models\InternalConversationParticipant::where('user_id', auth()->id())
-                ->whereHas('conversation', function ($q) {
-                    $q->whereColumn('internal_conversations.last_message_at', '>', 'internal_conversation_participants.last_read_at')
-                      ->orWhereNull('internal_conversation_participants.last_read_at');
-                })->count();
-        @endphp
-        @if($unreadChat > 0)<span class="nav-badge">{{ $unreadChat }}</span>@endif
-    </a>
-    <a href="{{ route('admin.announcements') }}" class="nav-item {{ request()->routeIs('admin.announcements*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
-        Ankündigungen
-        @php $activeAnn = \App\Models\Announcement::where(function($q){ $q->whereNull('expires_at')->orWhere('expires_at','>=',now()); })->count(); @endphp
-        @if($activeAnn > 0)<span class="nav-badge">{{ $activeAnn }}</span>@endif
-    </a>
-        @if(in_array(auth()->user()->role, ['admin','manager']))
-        <a href="{{ route('admin.employees') }}" class="nav-item {{ request()->routeIs('admin.employees*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-        Mitarbeiter
-    </a>
-        @endif
-        
-        @if(in_array(auth()->user()->role, ['admin','manager']))
+    {{-- Gruppe: Kunden & Vertraege --}}
+    <div class="nav-group" data-group="kunden">
+        <button type="button" class="nav-group-header" onclick="toggleNavGroup(this)" aria-expanded="true">
+            <span class="nav-group-title">Kunden &amp; Verträge</span>
+            @if($grpKunden > 0)<span class="nav-badge nav-group-badge">{{ $grpKunden }}</span>@endif
+            <svg class="nav-group-caret" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div class="nav-group-body">
+            <a href="{{ route('admin.customers') }}" class="nav-item {{ request()->routeIs('admin.customers*','admin.customer*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                Kunden
+            </a>
+            <a href="{{ route('admin.contracts') }}" class="nav-item {{ request()->routeIs('admin.contracts*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Verträge
+            </a>
+            <a href="{{ route('admin.change_requests') }}" class="nav-item {{ request()->routeIs('admin.change_requests*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                Kundenänderungen
+                @if($pendingCR > 0)<span class="nav-badge">{{ $pendingCR }}</span>@endif
+            </a>
+            <a href="{{ route('admin.document_requests') }}" class="nav-item {{ request()->routeIs('admin.document_requests*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Dokumentenanfragen
+                @if($docReqCount > 0)<span class="nav-badge">{{ $docReqCount }}</span>@endif
+            </a>
+            <a href="{{ route('admin.documents.inbox') }}" class="nav-item {{ request()->routeIs('admin.documents.inbox') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M4 8h16M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2zm4-6l2 2 4-4"/></svg>
+                Dokumenten-Eingang
+                @if($docInboxCount > 0)<span class="nav-badge">{{ $docInboxCount }}</span>@endif
+            </a>
+        </div>
+    </div>
 
-        <a href="{{ route('admin.activity_log') }}" class="nav-item {{ request()->routeIs('admin.activity_log*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-        Aktivitätslog
-    </a>
-        <a href="{{ route('admin.activity.index') }}" class="nav-item {{ request()->routeIs('admin.activity.*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        Aktivität &amp; Zeiten
-    </a>
+    {{-- Gruppe: Kommunikation --}}
+    <div class="nav-group" data-group="kommunikation">
+        <button type="button" class="nav-group-header" onclick="toggleNavGroup(this)" aria-expanded="true">
+            <span class="nav-group-title">Kommunikation</span>
+            @if($grpKomm > 0)<span class="nav-badge nav-group-badge">{{ $grpKomm }}</span>@endif
+            <svg class="nav-group-caret" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div class="nav-group-body">
+            @if(in_array($navRole, ['admin','manager','support']))
+            <a href="{{ route('admin.email_inbox') }}" class="nav-item {{ request()->routeIs('admin.email_inbox*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                E-Mail-Posteingang
+                @if($suggestedMails > 0)<span class="nav-badge">{{ $suggestedMails }}</span>@endif
+            </a>
+            @endif
+            @if(in_array($navRole, ['admin','manager','support']) || $navUser->can_send_emails)
+            <a href="{{ route('admin.email.compose') }}" class="nav-item {{ request()->routeIs('admin.email.compose*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                E-Mail verfassen
+            </a>
+            @endif
+            <a href="{{ route('admin.email_marketing') }}" class="nav-item {{ request()->routeIs('admin.email_marketing*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                E-Mail Marketing
+            </a>
+            <a href="{{ route('admin.tickets') }}" class="nav-item {{ request()->routeIs('admin.tickets*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
+                Tickets
+                @if($openT > 0)<span class="nav-badge">{{ $openT }}</span>@endif
+            </a>
+            @if(in_array($navRole, ['admin','manager','support']))
+            <a href="{{ route('admin.inquiries') }}" class="nav-item {{ request()->routeIs('admin.inquiries*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                Anfragen
+            </a>
+            @endif
+            <a href="{{ route('admin.chat.index') }}" class="nav-item {{ request()->routeIs('admin.chat*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4-.8L3 21l1.5-4A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                Interner Chat
+                @if($unreadChat > 0)<span class="nav-badge">{{ $unreadChat }}</span>@endif
+            </a>
+            <a href="{{ route('admin.announcements') }}" class="nav-item {{ request()->routeIs('admin.announcements*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                Ankündigungen
+                @if($activeAnn > 0)<span class="nav-badge">{{ $activeAnn }}</span>@endif
+            </a>
+        </div>
+    </div>
 
-        @endif
-        @if(in_array(auth()->user()->role, ['admin','manager']))
-        <a href="{{ route('admin.partners') }}" class="nav-item {{ request()->routeIs('admin.partners*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6-4a3 3 0 11-3-3"/></svg>
-        Partner
-    </a>
-        <a href="{{ route('admin.commissions') }}" class="nav-item {{ request()->routeIs('admin.commissions*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        Provisionen
-        @php $pendingCommissions = \App\Models\Commission::pendingReview()->count(); @endphp
-        @if($pendingCommissions > 0)<span class="nav-badge">{{ $pendingCommissions }}</span>@endif
-    </a>
-        @endif
-        <div class="nav-section">Integrationen</div>
-    @if(in_array(auth()->user()->role, ['admin','manager']))
-    <a href="{{ route('admin.lexoffice.contacts') }}" class="nav-item {{ request()->is('admin/lexoffice*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-        lexoffice
-    </a>
+    {{-- Gruppe: Aufgaben & Termine --}}
+    <div class="nav-group" data-group="arbeit">
+        <button type="button" class="nav-group-header" onclick="toggleNavGroup(this)" aria-expanded="true">
+            <span class="nav-group-title">Aufgaben &amp; Termine</span>
+            @if($grpArbeit > 0)<span class="nav-badge nav-group-badge">{{ $grpArbeit }}</span>@endif
+            <svg class="nav-group-caret" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div class="nav-group-body">
+            <a href="{{ route('admin.tasks') }}" class="nav-item {{ request()->routeIs('admin.tasks*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+                Aufgaben
+                @if($openTasks > 0)<span class="nav-badge">{{ $openTasks }}</span>@endif
+            </a>
+            <a href="{{ route('admin.appointments') }}" class="nav-item {{ request()->routeIs('admin.appointments*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                Termine
+                @if($todayAppt > 0)<span class="nav-badge">{{ $todayAppt }}</span>@endif
+            </a>
+        </div>
+    </div>
+
+    {{-- Gruppe: Auswertung --}}
+    <div class="nav-group" data-group="auswertung">
+        <button type="button" class="nav-group-header" onclick="toggleNavGroup(this)" aria-expanded="true">
+            <span class="nav-group-title">Auswertung</span>
+            <svg class="nav-group-caret" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div class="nav-group-body">
+            <a href="{{ route('admin.reports') }}" class="nav-item {{ request()->routeIs('admin.reports*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                Berichte
+            </a>
+            @if(in_array($navRole, ['admin','manager']))
+            <a href="{{ route('admin.tarifrechner') }}" class="nav-item {{ request()->routeIs('admin.tarifrechner*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                Tarifrechner
+            </a>
+            @endif
+        </div>
+    </div>
+
+    @if(in_array($navRole, ['admin','manager']))
+    {{-- Gruppe: Vertrieb --}}
+    <div class="nav-group" data-group="vertrieb">
+        <button type="button" class="nav-group-header" onclick="toggleNavGroup(this)" aria-expanded="true">
+            <span class="nav-group-title">Vertrieb</span>
+            @if($grpVertrieb > 0)<span class="nav-badge nav-group-badge">{{ $grpVertrieb }}</span>@endif
+            <svg class="nav-group-caret" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div class="nav-group-body">
+            <a href="{{ route('admin.partners') }}" class="nav-item {{ request()->routeIs('admin.partners*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6-4a3 3 0 11-3-3"/></svg>
+                Partner
+            </a>
+            <a href="{{ route('admin.commissions') }}" class="nav-item {{ request()->routeIs('admin.commissions*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Provisionen
+                @if($pendingCommissions > 0)<span class="nav-badge">{{ $pendingCommissions }}</span>@endif
+            </a>
+        </div>
+    </div>
     @endif
-    @if(auth()->user()->role === 'admin')
-    <a href="{{ route('admin.email_accounts.index') }}" class="nav-item {{ request()->routeIs('admin.email_accounts*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-        E-Mail-Postfächer
-    </a>
-    @endif
-        <a href="{{ route('admin.appointments') }}" class="nav-item {{ request()->routeIs('admin.appointments*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-        Termine
-        @php $todayAppt = \App\Models\Appointment::whereDate('starts_at', today())->where('status','scheduled')->count(); @endphp
-        @if($todayAppt > 0)<span class="nav-badge">{{ $todayAppt }}</span>@endif
-    </a>
-    @if(in_array(auth()->user()->role, ['admin','manager']))
-    <a href="{{ route('admin.service_pages') }}" class="nav-item {{ request()->routeIs('admin.service_pages*') ? 'active' : '' }}">🧩 Leistungsseiten</a>
-    <a href="{{ route('admin.banners') }}" class="nav-item {{ request()->routeIs('admin.banners*') ? 'active' : '' }}">📢 Banner</a>
-    <a href="{{ route('admin.settings') }}" class="nav-item {{ request()->routeIs('admin.settings*') ? 'active' : '' }}">
-        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-        Einstellungen
-    </a>
+
+    @if(in_array($navRole, ['admin','manager']))
+    {{-- Gruppe: Verwaltung (Konfig-lastige Bereiche + Werkzeuge unter Einstellungen) --}}
+    <div class="nav-group" data-group="verwaltung">
+        <button type="button" class="nav-group-header" onclick="toggleNavGroup(this)" aria-expanded="true">
+            <span class="nav-group-title">Verwaltung</span>
+            <svg class="nav-group-caret" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div class="nav-group-body">
+            <a href="{{ route('admin.employees') }}" class="nav-item {{ request()->routeIs('admin.employees*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                Mitarbeiter
+            </a>
+            <a href="{{ route('admin.activity_log') }}" class="nav-item {{ request()->routeIs('admin.activity_log*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                Aktivitätslog
+            </a>
+            <a href="{{ route('admin.activity.index') }}" class="nav-item {{ request()->routeIs('admin.activity.*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Aktivität &amp; Zeiten
+            </a>
+            <a href="{{ route('admin.settings') }}" class="nav-item {{ request()->routeIs('admin.settings*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                Einstellungen
+            </a>
+        </div>
+    </div>
     @endif
     <div class="sidebar-foot">
         <div class="user-row">
@@ -454,6 +499,31 @@ setInterval(loadNotifications, 60000);
 </script>
 <script>
 document.getElementById('am-btn')?.addEventListener('click', function(){ document.getElementById('admin-sidebar').classList.toggle('open'); });
+
+// Nav-Gruppen ein-/ausklappen; Zustand pro Gruppe im localStorage merken.
+function toggleNavGroup(btn){
+    var g = btn.closest('.nav-group');
+    if (!g) return;
+    var collapsed = g.classList.toggle('collapsed');
+    btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    try {
+        var key = 'nav-collapsed:' + g.dataset.group;
+        if (collapsed) { localStorage.setItem(key, '1'); } else { localStorage.removeItem(key); }
+    } catch(e){}
+}
+// Gespeicherten Zustand anwenden; die Gruppe der aktiven Seite bleibt immer offen.
+(function(){
+    document.querySelectorAll('.nav-group').forEach(function(g){
+        if (g.querySelector('.nav-item.active')) return;
+        var collapsed = false;
+        try { collapsed = localStorage.getItem('nav-collapsed:' + g.dataset.group) === '1'; } catch(e){}
+        if (collapsed) {
+            g.classList.add('collapsed');
+            var h = g.querySelector('.nav-group-header');
+            if (h) h.setAttribute('aria-expanded', 'false');
+        }
+    });
+})();
 </script>
 </body>
 </html>
