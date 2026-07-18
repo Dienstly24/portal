@@ -8,14 +8,23 @@
 
 @if(session('import_result'))
 @php $r = session('import_result'); @endphp
-<div class="alert {{ $r['imported'] > 0 ? 'alert-success' : 'alert-error' }}" style="flex-direction:column;align-items:flex-start;gap:6px;">
+@if(!empty($r['queued']))
+<div class="alert alert-success" style="flex-direction:column;align-items:flex-start;gap:6px;">
     <div style="font-weight:700;">
-        ✓ {{ $r['imported'] }} Kunden importiert — {{ $r['skipped'] }} übersprungen
+        ✓ Import gestartet — die Kunden werden im Hintergrund angelegt.
     </div>
-    @foreach($r['errors'] as $err)
+    <div style="font-size:13px;opacity:.8;">Bei großen Dateien dauert das ein paar Minuten. Du bekommst eine Benachrichtigung, sobald der Import fertig ist.</div>
+</div>
+@else
+<div class="alert {{ ($r['imported'] ?? 0) > 0 ? 'alert-success' : 'alert-error' }}" style="flex-direction:column;align-items:flex-start;gap:6px;">
+    <div style="font-weight:700;">
+        ✓ {{ $r['imported'] ?? 0 }} Kunden importiert — {{ $r['skipped'] ?? 0 }} übersprungen
+    </div>
+    @foreach(($r['errors'] ?? []) as $err)
     <div style="font-size:13px;opacity:.8;">⚠ {{ $err }}</div>
     @endforeach
 </div>
+@endif
 @endif
 
 <div class="grid-2" style="max-width:900px;">
