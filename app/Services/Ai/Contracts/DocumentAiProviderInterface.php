@@ -21,15 +21,6 @@ interface DocumentAiProviderInterface
     public function model(): string;
 
     /**
-     * Ob der Anbieter den OCR-Text der kostenlosen Vorstufe verarbeitet.
-     * Ein Vision-Anbieter wie Claude liest Bilder/PDF direkt und braucht
-     * ihn nicht (false) - dann wird die teure OCR-Extraktion bei aktivem
-     * Anbieter gar nicht erst ausgefuehrt. Ein textbasierter Anbieter ohne
-     * Vision gibt true zurueck und bekommt den OCR-Text mitgeliefert.
-     */
-    public function wantsOcrText(): bool;
-
-    /**
      * @return array{type: string, confidence: int, summary: string, title: ?string, data: array}|null
      *         null = keine sichere Antwort (Ergebnis wird verworfen).
      * @throws \RuntimeException bei einem Dienstfehler (fuer Retry/Fehlerstatus im Job)

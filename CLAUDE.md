@@ -90,29 +90,37 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   Willkommens-Mail bewusst OHNE Logo-Bild (Outlook blockiert CID) –
   Textmarke im Hero.
 - **Smart Document Upload** (`SmartDocumentUploadController`,
-  `DocumentAnalyzer`): Analyse-Pipeline ist dreistufig und der KI-Anbieter
-  austauschbar (`DocumentAiProviderInterface`, Registrierung in
-  `AppServiceProvider`, Auswahl per `AI_DOCUMENT_PROVIDER`). 1) Ist Claude
-  konfiguriert (`ANTHROPIC_API_KEY`), liest er Bilder/PDF direkt (Vision) -
-  beste Qualität. 2) Ohne KI-Anbieter greift `HeuristicDocumentClassifier`
-  auf dem OCR-Text (Stichwort-Erkennung + konservative Regex-Extraktion:
-  IBAN/FIN/Kennzeichen nur aus eindeutig abgegrenzten Zeilen, keine
-  Namen/Adressen aus Freitext - bewusst niedrige Konfidenz, Kennzeichnung
-  `ai_source = 'ocr'` in der Review-UI). 3) Die OCR-Basisebene selbst
-  (`TesseractTextExtractor`) ist standardmäßig **AUS**
-  (`OCR_ENABLED=false`) und muss erst nach Installation der Systempakete
-  freigeschaltet werden: `apt install tesseract-ocr tesseract-ocr-deu
-  poppler-utils` auf dem VPS, danach `OCR_ENABLED=true` in der `.env`.
-  Rohtext wird bewusst NICHT gespeichert (Datenminimierung) - nur das
-  bereits geprüfte, validierte Extraktionsergebnis.
+  `DocumentAnalyzer`): Analyse laeuft **„kostenlos zuerst"** (Betreiber-
+  Entscheidung) und der KI-Anbieter ist austauschbar
+  (`DocumentAiProviderInterface`, Registrierung in `AppServiceProvider`,
+  Auswahl per `AI_DOCUMENT_PROVIDER`). Ablauf in `DocumentAnalyzer::analyze`:
+  1) **OCR zuerst** - `TesseractTextExtractor` liest den Text,
+  `HeuristicDocumentClassifier` bestimmt Typ + Basisfelder (Stichwort-
+  Erkennung + konservative Regex-Extraktion: IBAN/FIN/Kennzeichen/E-Mail
+  nur aus eindeutig abgegrenzten Zeilen, keine Namen/Adressen aus Freitext;
+  Kennzeichnung `ai_source = 'ocr'`, niedrige Konfidenz 20/40). 2) **Reicht
+  das OCR-Ergebnis** (Typ erkannt UND mind. ein extrahiertes Feld,
+  `ocrResultSufficient()`), wird es OHNE KI-Aufruf uebernommen - spart
+  Claude-Kosten. 3) **Sonst Eskalation an den KI-Anbieter** (Claude liest
+  Bilder/PDF direkt per Vision, beste Qualitaet, `ai_source = 'ai'`).
+  4) Ohne KI-Anbieter bleibt es beim OCR-Ergebnis. Mitarbeiter koennen die
+  KI ueber den Button **„🤖 Mit KI analysieren"** bewusst erzwingen
+  (`reanalyze` -> `AnalyzeDocumentJob(forceAi: true)`), z.B. wenn die
+  Kundenzuordnung die bessere Vision-Extraktion braucht. Die OCR-Basisebene
+  ist standardmäßig **AUS** (`OCR_ENABLED=false`) und muss erst nach
+  Installation der Systempakete freigeschaltet werden: `apt install
+  tesseract-ocr tesseract-ocr-deu poppler-utils` auf dem VPS, danach
+  `OCR_ENABLED=true` in der `.env`. Rohtext wird bewusst NICHT gespeichert
+  (Datenminimierung) - nur das validierte Extraktionsergebnis.
 
 ## Offene Themen / wartet auf den Betreiber
 
-- **OCR-Systempakete auf dem VPS installieren:** `tesseract-ocr`,
-  `tesseract-ocr-deu`, `poppler-utils` sind noch nicht auf dem
-  Produktionsserver installiert (nur lokal geprüft) - ohne sie bleibt die
-  kostenlose OCR-Basisebene inaktiv und der Smart Document Upload läuft
-  wie bisher rein über Claude. Nach Installation `OCR_ENABLED=true` setzen.
+- **OCR auf dem VPS ist aktiv** (Stand 18.07.2026): `tesseract-ocr`,
+  `tesseract-ocr-deu`, `tesseract-ocr-ara`, `poppler-utils` sind installiert,
+  `OCR_ENABLED=true` und `OCR_LANGUAGES=deu+eng+ara` in der Produktions-`.env`
+  gesetzt. Der Smart Document Upload laeuft damit „kostenlos zuerst" (OCR,
+  Eskalation zu Claude nur bei Bedarf). Kein offener Punkt mehr - hier nur als
+  Betriebszustand dokumentiert.
 
 - **E-Mail-Zustellbarkeit (Spam bei Outlook):** SPF, DKIM und DMARC sind
   inzwischen **korrekt gesetzt** (geprüft 14.07.2026: SPF `include:_spf.mail.hostinger.com`,
