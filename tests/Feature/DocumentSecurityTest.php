@@ -83,6 +83,24 @@ class DocumentSecurityTest extends TestCase
         $this->get(route('portal.documents.download', $doc->id))->assertRedirect(route('login'));
     }
 
+    public function test_admin_can_view_document_inline_with_view_param(): void
+    {
+        $customer = $this->makeCustomer();
+        $doc = $this->makePrivateDocument($customer);
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        // Standard: als Download (attachment).
+        $this->actingAs($admin)->get(route('admin.documents.download', $doc->id))
+            ->assertOk()->assertDownload('police.pdf');
+
+        // ?view=1: inline im Browser-Tab anzeigen (kein attachment) - damit
+        // der Mitarbeiter jedes Dokument (auch ein fehlgeschlagenes) ansehen
+        // kann, ohne es herunterzuladen.
+        $response = $this->actingAs($admin)->get(route('admin.documents.download', $doc->id) . '?view=1');
+        $response->assertOk();
+        $this->assertStringContainsString('inline', (string) $response->headers->get('Content-Disposition'));
+    }
+
     public function test_new_contract_uploads_are_stored_privately_not_publicly(): void
     {
         Storage::fake('local');

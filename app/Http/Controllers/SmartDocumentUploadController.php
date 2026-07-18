@@ -153,26 +153,8 @@ class SmartDocumentUploadController extends Controller
             ->groupBy('intake_batch')
             ->filter(fn ($group) => $group->count() > 1);
         $batchData = [];
-        $familyService = app(\App\Services\Health\FamilyBundleService::class);
         foreach ($batchGroups as $batchId => $group) {
-            $merged = $this->intake->mergeExtractions($group);
-            $conflicts = $merged['_conflicts'] ?? [];
-            unset($merged['_conflicts']);
-            $person = $merged['person'] ?? [];
-            // Familien-Erkennung: >= 2 Personen im Vorgang -> die UI bietet
-            // den Krankenkassen-Fall an (Haupt-Frage, Wechsel, Stichtag).
-            $persons = $familyService->detectPersons($group);
-            $batchData[$batchId] = [
-                'ids' => $group->pluck('id')->values()->all(),
-                'file_names' => $group->pluck('file_name')->values()->all(),
-                'merged' => $merged,
-                'conflicts' => array_values($conflicts),
-                'ready' => $group->every(fn ($d) => !$d->aiInProgress()),
-                'has_name' => trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? '')) !== '',
-                'persons' => $persons,
-                'haupt_suggest' => count($persons) >= 2 ? $familyService->suggestHauptIndex($persons) : 0,
-                'has_health_cards' => $group->contains(fn ($d) => $d->ai_type === 'gesundheitskarte'),
-            ];
+            $batchData[$batchId] = $this->buildBatchMeta($group);
         }
 
         return view('admin.documents_inbox', [
@@ -358,6 +340,8 @@ class SmartDocumentUploadController extends Controller
             'ok' => true,
             'customer_id' => $customer->id,
             'customer_url' => route('admin.customer', $customer->id) . '#tab-dokumente',
+            'customer_name' => $customer->user?->name ?? $customer->customer_number,
+            'customer_number' => $customer->customer_number,
             'applied_fields' => $applied,
             'contract_id' => $contract?->id,
         ]);
@@ -427,6 +411,8 @@ class SmartDocumentUploadController extends Controller
             'ok' => true,
             'customer_id' => $customer->id,
             'customer_url' => route('admin.customer', $customer->id),
+            'customer_name' => $name,
+            'customer_number' => $customer->customer_number,
             'applied_fields' => $applied,
             'contract_id' => $contract?->id,
         ]);
@@ -558,11 +544,76 @@ class SmartDocumentUploadController extends Controller
             'ok' => true,
             'customer_id' => $customer->id,
             'customer_url' => route('admin.customer', $customer->id),
+            'customer_name' => $name,
+            'customer_number' => $customer->customer_number,
             'applied_fields' => $applied,
             'contract_id' => $contract?->id,
             'documents' => $documents->count(),
             'health' => $health,
         ]);
+    }
+
+    /**
+     * Vorschau fuer eine MANUELLE Mehrfachauswahl im Eingang: liefert dieselbe
+     * zusammengefuehrte Extraktion + Familien-Erkennung wie ein automatisch
+     * gruppierter Vorgang, damit der Mitarbeiter beliebige Dokumente (z.B.
+     * Ausweis-Vorderseite + Rueckseite, die getrennt hochgeladen wurden) selbst
+     * zu EINEM Kunden buendeln kann. Reine Anzeige - angelegt wird erst ueber
+     * create-customer-batch (das serverseitig erneut zusammenfuehrt und prueft).
+     */
+    public function batchPreview(Request $request)
+    {
+        $this->validateJson($request, [
+            'document_ids' => 'required|array|min:1|max:10',
+            'document_ids.*' => 'uuid',
+        ]);
+
+        $ids = array_values(array_unique($request->input('document_ids')));
+        $documents = Document::whereIn('id', $ids)->get();
+        if ($documents->count() !== count($ids)) {
+            return response()->json(['message' => 'Mindestens ein Dokument wurde nicht gefunden.'], 404);
+        }
+        foreach ($documents as $document) {
+            $this->authorizeDocument($document);
+            if ($document->customer_id) {
+                return response()->json(['message' => 'Bereits zugeordnet: ' . $document->file_name], 422);
+            }
+        }
+
+        return response()->json($this->buildBatchMeta($documents));
+    }
+
+    /**
+     * Baut die Vorschau-/Vorgang-Metadaten fuer eine Gruppe Eingangs-Dokumente
+     * (zusammengefuehrte Extraktion, Konflikte, Familien-Erkennung). Wird sowohl
+     * fuer automatisch gruppierte Vorgaenge (inbox) als auch fuer manuelle
+     * Mehrfachauswahl (batchPreview) genutzt - eine einzige Wahrheit.
+     *
+     * @param  \Illuminate\Support\Collection<int,Document>  $group
+     * @return array<string,mixed>
+     */
+    private function buildBatchMeta($group): array
+    {
+        $familyService = app(\App\Services\Health\FamilyBundleService::class);
+        $merged = $this->intake->mergeExtractions($group);
+        $conflicts = $merged['_conflicts'] ?? [];
+        unset($merged['_conflicts']);
+        $person = $merged['person'] ?? [];
+        // Familien-Erkennung: >= 2 Personen im Vorgang -> die UI bietet den
+        // Krankenkassen-Fall an (Haupt-Frage, Wechsel, Stichtag).
+        $persons = $familyService->detectPersons($group);
+
+        return [
+            'ids' => $group->pluck('id')->values()->all(),
+            'file_names' => $group->pluck('file_name')->values()->all(),
+            'merged' => $merged,
+            'conflicts' => array_values($conflicts),
+            'ready' => $group->every(fn ($d) => !$d->aiInProgress()),
+            'has_name' => trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? '')) !== '',
+            'persons' => $persons,
+            'haupt_suggest' => count($persons) >= 2 ? $familyService->suggestHauptIndex($persons) : 0,
+            'has_health_cards' => $group->contains(fn ($d) => $d->ai_type === 'gesundheitskarte'),
+        ];
     }
 
     /**
