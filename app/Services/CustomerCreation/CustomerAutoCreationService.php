@@ -69,6 +69,7 @@ class CustomerAutoCreationService
                 'birth_date'            => $data['birth_date'] ?? null,
                 'phone'                 => $data['phone'] ?? null,
                 'email2'                => $data['email2'] ?? null,
+                'gender'                => $data['gender'] ?? null,
                 'address'               => $address !== '' ? $address : null,
                 'address_street'        => $data['street'] ?? null,
                 'address_house_number'  => $data['house_number'] ?? null,

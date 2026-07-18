@@ -135,6 +135,55 @@ class SmartNumberingAndImportTest extends TestCase
         $this->assertSame(1, Customer::count()); // kein Duplikat
     }
 
+    public function test_csv_import_reads_semicolon_latin1_and_numbered_columns(): void
+    {
+        // Reproduziert den frueher kaputten Fremdexport: Windows-1252,
+        // Semikolon-Trennung, nummerierte Spalten (E-Mail 1, Telefon 1 ...).
+        // Frueher wurde die E-Mail nicht erkannt -> Platzhalter-Adresse.
+        $utf8 = implode("\n", [
+            'Kundennummer;Firmenname;Anrede;Vorname;Nachname;Straße 1;PLZ 1;Ort 1;Telefon 1;E-Mail 1',
+            '14017;;Herr;Mohamad;Abbas;Warthestr. 4 A;47169;Duisburg;017634963362;mhd.modar@example.com',
+        ]);
+        $latin1 = mb_convert_encoding($utf8, 'Windows-1252', 'UTF-8');
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $file = UploadedFile::fake()->createWithContent('kontakte.csv', $latin1);
+        $this->actingAs($admin)->post(route('admin.import'), ['csv_file' => $file])
+            ->assertRedirect();
+
+        $customer = Customer::first();
+        $this->assertNotNull($customer);
+        // Kern der Sache: echte E-Mail landet am User, KEINE Platzhalteradresse.
+        $this->assertSame('mhd.modar@example.com', $customer->user->email);
+        $this->assertStringNotContainsString('@dienstly24.internal', $customer->user->email);
+        $this->assertSame('Mohamad Abbas', $customer->user->name);
+        $this->assertSame('2514017', $customer->customer_number);
+        $this->assertSame('Warthestr. 4 A', $customer->address_street);
+        $this->assertSame('47169', $customer->address_zip);
+        $this->assertSame('Duisburg', $customer->address_city);
+        $this->assertSame('017634963362', $customer->phone);
+        $this->assertSame('male', $customer->gender);
+    }
+
+    public function test_csv_import_uses_company_name_when_person_name_missing(): void
+    {
+        $content = implode("\n", [
+            'Kundennummer;Firmenname;Vorname;Nachname;E-Mail 1',
+            '20001;Beispiel GmbH;;;kontakt@beispiel-gmbh.de',
+        ]);
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $file = UploadedFile::fake()->createWithContent('firma.csv', $content);
+        $this->actingAs($admin)->post(route('admin.import'), ['csv_file' => $file])
+            ->assertRedirect();
+
+        $customer = Customer::first();
+        $this->assertNotNull($customer);
+        $this->assertSame('Beispiel GmbH', $customer->user->name);
+        $this->assertSame('firma', $customer->customer_type);
+        $this->assertSame('kontakt@beispiel-gmbh.de', $customer->user->email);
+    }
+
     // ------------------------------------------------------------------
     // Familienmitglied löschen (Kunde beantragt, Admin genehmigt)
     // ------------------------------------------------------------------
