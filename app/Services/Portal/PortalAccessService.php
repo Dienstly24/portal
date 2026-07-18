@@ -61,7 +61,10 @@ class PortalAccessService
 
         Mail::to($user->email)->send(new CustomerWelcomeMail($customer, $mode, null, $setPasswordUrl));
 
-        $user->forceFill(['invitation_sent_at' => now()])->save();
+        $user->forceFill([
+            'invitation_sent_at' => now(),
+            'invitation_count' => (int) ($user->invitation_count ?? 0) + 1,
+        ])->save();
 
         ActivityLog::create([
             'user_id' => $actorId,

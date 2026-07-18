@@ -35,6 +35,12 @@ Schedule::command('documents:analyze-pending')->everyTenMinutes()->withoutOverla
 // 03:50 — DSGVO: nie zugeordnete Eingangs-Dokumente nach Aufbewahrungsfrist loeschen
 Schedule::command('documents:prune-unassigned')->dailyAt('03:50');
 
+// Stuendlich tagsueber — automatische Portal-Einladungen: neue Kunden ohne
+// Klick einladen, Bestand alphabetisch im Tagesbudget (~100/Tag) abarbeiten,
+// nicht Registrierte alle 7 Tage erinnern. Laeuft nur, wenn der Betreiber den
+// Batch per SystemSetting freigeschaltet hat (Schutz vor Massenversand).
+Schedule::command('portal:send-invitations')->hourly()->between('8:00', '19:00')->withoutOverlapping();
+
 // 07:30 — Aufgabe: Kind wird in 4 Monaten 15
 Schedule::call(function () {
     $target = now()->addMonths(4)->subYears(15)->toDateString();
