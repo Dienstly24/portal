@@ -179,7 +179,12 @@ class AnalyzeDocumentJob implements ShouldQueue
     private function markFailed(Document $document, string $message): void
     {
         Log::warning('Dokument-Analyse fehlgeschlagen (' . $document->id . '): ' . $message);
-        $document->update([
+        // Direktes Query-Update statt $document->update(): schlug zuvor das
+        // Speichern des Analyse-Ergebnisses fehl, traegt das Modell noch
+        // "dirty" verschluesselte Felder (ai_extracted/ai_summary), die ueber
+        // save() erneut geschrieben wuerden und denselben Fehler ausloesen
+        // wuerden. Der direkte Update schreibt nur die beiden Status-Spalten.
+        Document::whereKey($document->id)->update([
             'ai_status' => 'failed',
             'ai_error' => mb_substr($message, 0, 300),
         ]);
