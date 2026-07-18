@@ -218,11 +218,19 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/tickets', [\App\Http\Controllers\TicketController::class, 'index'])->name('tickets');
     // Statistik VOR /tickets/{id} registrieren (sonst faengt {id} die URL ab)
     Route::get('/tickets/statistik', [\App\Http\Controllers\TicketController::class, 'stats'])->name('tickets.stats')->middleware('role:admin,manager');
+    // Bulk-Aktionen der Liste (Status/Zuweisung/Prioritaet/Papierkorb, max. 30)
+    Route::post('/tickets/bulk', [\App\Http\Controllers\TicketController::class, 'bulk'])->name('tickets.bulk');
     Route::get('/tickets/{id}', [\App\Http\Controllers\TicketController::class, 'show'])->name('ticket');
     Route::post('/tickets/{id}/reply', [\App\Http\Controllers\TicketController::class, 'reply'])->name('ticket.reply');
     Route::post('/tickets/{id}/status', [\App\Http\Controllers\TicketController::class, 'status'])->name('ticket.status');
     Route::post('/tickets/{id}/update', [\App\Http\Controllers\TicketController::class, 'updateMeta'])->name('ticket.update');
     Route::post('/tickets/{id}/note', [\App\Http\Controllers\TicketController::class, 'note'])->name('ticket.note');
+    // Loeschen = Papierkorb (Soft Delete, admin/manager); endgueltig NUR admin
+    // und nur aus dem Papierkorb (zweistufiger Schutz). Mitarbeiter/Support
+    // loeschen NIE - analog zur Kundenloeschung.
+    Route::delete('/tickets/{id}', [\App\Http\Controllers\TicketController::class, 'destroy'])->name('ticket.delete')->middleware('role:admin,manager');
+    Route::post('/tickets/{id}/restore', [\App\Http\Controllers\TicketController::class, 'restore'])->name('ticket.restore')->middleware('role:admin,manager');
+    Route::delete('/tickets/{id}/force', [\App\Http\Controllers\TicketController::class, 'forceDelete'])->name('ticket.forcedelete')->middleware('role:admin');
 
     // Anfragen (Website + E-Mail info@): Leads mit Kontaktdaten sind sensibel -
     // wie der E-Mail-Posteingang nur admin/manager/support (das Nav-Item war

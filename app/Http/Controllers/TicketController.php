@@ -23,21 +23,37 @@ class TicketController extends Controller
         return $user->visibleCustomerIdsWithSubstitution();
     }
 
-    /** 403, wenn das Ticket zu einem nicht sichtbaren Kunden gehoert. (Audit M1) */
-    private function authorizeTicketAccess(Ticket $ticket): void {
+    /** Sichtbarkeits-Check als Bool (fuer Bulk-Aktionen ohne Abbruch). */
+    private function canAccessTicket(Ticket $ticket): bool {
         // Gast-Anfragen (Leads mit Kontaktdaten) sind sensibel: wie die
         // Anfragen-Liste nur fuer admin/manager/support - der bisherige
         // Guard existierte nur im Nav-UI, nicht serverseitig.
         if ($ticket->customer_id === null) {
-            if (!in_array(auth()->user()?->role, ['admin', 'manager', 'support'], true)) {
-                abort(403, 'Kein Zugriff auf Gast-Anfragen.');
-            }
-            return;
+            return in_array(auth()->user()?->role, ['admin', 'manager', 'support'], true);
         }
         $ids = $this->visibleCustomerIds();
-        if ($ids !== null
-            && !in_array((string) $ticket->customer_id, array_map('strval', $ids), true)) {
-            abort(403, 'Kein Zugriff auf diesen Kunden.');
+        return $ids === null
+            || in_array((string) $ticket->customer_id, array_map('strval', $ids), true);
+    }
+
+    /** 403, wenn das Ticket zu einem nicht sichtbaren Kunden gehoert. (Audit M1) */
+    private function authorizeTicketAccess(Ticket $ticket): void {
+        if (!$this->canAccessTicket($ticket)) {
+            abort(403, $ticket->customer_id === null
+                ? 'Kein Zugriff auf Gast-Anfragen.'
+                : 'Kein Zugriff auf diesen Kunden.');
+        }
+    }
+
+    /**
+     * Loeschen ist wie bei Kunden strikt begrenzt: Papierkorb/Wiederherstellen
+     * nur admin/manager, endgueltig loeschen NUR admin. Mitarbeiter und
+     * Support loeschen NIE - auch nicht mit "Tickets bearbeiten"-Recht.
+     */
+    private function authorizeTicketDelete(bool $force = false): void {
+        $role = auth()->user()?->role;
+        if ($force ? $role !== 'admin' : !in_array($role, ['admin', 'manager'], true)) {
+            abort(403, 'Keine Berechtigung, Tickets zu loeschen.');
         }
     }
 
@@ -55,6 +71,13 @@ class TicketController extends Controller
 
     public function index(Request $request) {
         $ids = $this->visibleCustomerIds();
+        $isDeleteRole = in_array(auth()->user()->role, ['admin', 'manager'], true);
+        // Papierkorb-Ansicht: nur fuer Rollen, die auch loeschen duerfen
+        $trashView = $request->status === 'papierkorb';
+        if ($trashView && !$isDeleteRole) {
+            abort(403, 'Kein Zugriff auf den Papierkorb.');
+        }
+
         // Alle Anfragen MIT Kundenakte - unabhaengig von der Quelle (Portal,
         // Hilfe-Formular, ...), damit keine Anfrage unsichtbar bleibt.
         $base = Ticket::whereNotNull('customer_id')
@@ -66,10 +89,13 @@ class TicketController extends Controller
             'overdue' => (clone $base)->whereNotIn('status', ['resolved', 'closed'])
                 ->whereNull('first_response_at')->whereNotNull('due_at')->where('due_at', '<', now())->count(),
             'unassigned' => (clone $base)->whereNotIn('status', ['resolved', 'closed'])->whereNull('assigned_to')->count(),
+            'trashed' => $isDeleteRole ? (clone $base)->onlyTrashed()->count() : 0,
         ];
 
         $query = (clone $base)->with(['customer.user', 'assignedTo']);
-        if ($request->filled('status') && $request->status !== 'alle') {
+        if ($trashView) {
+            $query->onlyTrashed();
+        } elseif ($request->filled('status') && $request->status !== 'alle') {
             // 'aktiv' = alles, was noch nicht geloest/geschlossen ist
             // (Ziel der klickbaren Kennzahlen-Karten)
             $request->status === 'aktiv'
@@ -83,6 +109,9 @@ class TicketController extends Controller
         }
         if ($request->filled('priority')) {
             $query->where('priority', $request->priority);
+        }
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
         }
         if ($request->filled('assigned')) {
             match ($request->assigned) {
@@ -100,9 +129,20 @@ class TicketController extends Controller
             });
         }
 
-        $tickets = $query->orderByDesc('updated_at')->paginate(25)->withQueryString();
+        // Sortierung (portable CASE-Reihung statt MySQL FIELD(), laeuft auch auf SQLite)
+        $sort = $request->input('sort', 'aktualisiert');
+        match ($sort) {
+            'neueste' => $query->orderByDesc('created_at'),
+            'aelteste' => $query->orderBy('created_at'),
+            'prioritaet' => $query->orderByRaw("case priority when 'dringend' then 0 when 'hoch' then 1 when 'mittel' then 2 else 3 end")
+                ->orderByRaw('due_at is null')->orderBy('due_at'),
+            'faellig' => $query->orderByRaw('due_at is null')->orderBy('due_at'),
+            default => $query->orderByDesc('updated_at'),
+        };
+
+        $tickets = $query->paginate(25)->withQueryString();
         $staff = $this->assignableStaff();
-        return view('admin.tickets', compact('tickets', 'stats', 'staff'));
+        return view('admin.tickets', compact('tickets', 'stats', 'staff', 'trashView', 'sort'));
     }
 
     /**
@@ -218,7 +258,14 @@ class TicketController extends Controller
     }
 
     public function show($id) {
-        $ticket = Ticket::with(['customer.user', 'assignedTo', 'closedBy', 'messages.sender', 'events.user', 'attachments'])->findOrFail($id);
+        // Tickets im Papierkorb bleiben fuer admin/manager einsehbar
+        // (Wiederherstellen/endgueltig loeschen), fuer alle anderen: 404.
+        $ticket = Ticket::withTrashed()
+            ->with(['customer.user', 'assignedTo', 'closedBy', 'messages.sender', 'events.user', 'attachments'])
+            ->findOrFail($id);
+        if ($ticket->trashed() && !in_array(auth()->user()->role, ['admin', 'manager'], true)) {
+            abort(404);
+        }
         $this->authorizeTicketAccess($ticket);
         $staff = $this->assignableStaff();
         return view('admin.ticket_show', compact('ticket', 'staff'));
@@ -249,6 +296,140 @@ class TicketController extends Controller
             TicketNotifier::notifyCustomerStatus($ticket, $reopened);
         }
         return back()->with('success', 'Status aktualisiert: ' . $ticket->statusLabel());
+    }
+
+    /**
+     * Ticket in den Papierkorb verschieben (Soft Delete, admin/manager).
+     * Wiederherstellbar; endgueltiges Loeschen ist ein separater Admin-Schritt.
+     */
+    public function destroy($id) {
+        $this->authorizeTicketDelete();
+        $ticket = Ticket::findOrFail($id);
+        $this->authorizeTicketAccess($ticket);
+        $ticket->logEvent('deleted');
+        $ticket->delete();
+        return redirect()->route('admin.tickets')
+            ->with('success', 'Ticket ' . $ticket->ticket_number . ' in den Papierkorb verschoben.');
+    }
+
+    /** Ticket aus dem Papierkorb wiederherstellen (admin/manager). */
+    public function restore($id) {
+        $this->authorizeTicketDelete();
+        $ticket = Ticket::onlyTrashed()->findOrFail($id);
+        $this->authorizeTicketAccess($ticket);
+        $ticket->restore();
+        $ticket->logEvent('restored');
+        return back()->with('success', 'Ticket ' . $ticket->ticket_number . ' wiederhergestellt.');
+    }
+
+    /**
+     * Endgueltig loeschen (NUR admin, nur aus dem Papierkorb heraus -
+     * zweistufiger Schutz gegen versehentlichen Datenverlust). Entfernt
+     * auch Nachrichten, Verlauf und Anhaenge inkl. Dateien.
+     */
+    public function forceDelete($id) {
+        $this->authorizeTicketDelete(force: true);
+        $ticket = Ticket::onlyTrashed()->with('attachments')->findOrFail($id);
+        $this->authorizeTicketAccess($ticket);
+        foreach ($ticket->attachments as $a) {
+            try {
+                \Illuminate\Support\Facades\Storage::disk($a->disk ?? 'public')->delete($a->file_path);
+            } catch (\Throwable $e) { \Log::warning('Ticket attachment cleanup failed: ' . $e->getMessage()); }
+        }
+        // ticket_events/ticket_attachments haben keinen FK-Cascade -> explizit aufraeumen
+        $ticket->attachments()->delete();
+        $ticket->events()->delete();
+        $ticket->messages()->delete();
+        $ticket->forceDelete();
+        return redirect()->route('admin.tickets', ['status' => 'papierkorb'])
+            ->with('success', 'Ticket ' . $ticket->ticket_number . ' endgueltig geloescht.');
+    }
+
+    /**
+     * Bulk-Aktionen der Ticketliste: Status, Zuweisung, Prioritaet oder
+     * Papierkorb fuer mehrere Tickets auf einmal. Max. 30 pro Aktion
+     * (analog Kundenloeschung); nicht sichtbare Tickets werden uebersprungen.
+     */
+    public function bulk(Request $request) {
+        // Berechtigung VOR der Validierung: ohne Recht immer 403,
+        // unabhaengig vom Inhalt der Anfrage.
+        $request->input('action') === 'delete'
+            ? $this->authorizeTicketDelete()
+            : $this->authorizeTicketManage();
+        // nullable: die Bulk-Leiste sendet die jeweils unbenutzten Selects
+        // als Leerstring mit - ohne nullable wuerde "in:" daran scheitern.
+        $request->validate([
+            'ids' => 'required|array|min:1|max:30',
+            'ids.*' => 'string',
+            'action' => 'required|in:status,assign,priority,delete',
+            'status' => 'nullable|required_if:action,status|in:' . implode(',', array_keys(Ticket::STATUSES)),
+            'priority' => 'nullable|required_if:action,priority|in:' . implode(',', array_keys(Ticket::PRIORITIES)),
+            'assigned_to' => 'nullable|required_if:action,assign|string',
+        ]);
+
+        // Zuweisungsziel einmal vorab pruefen (nicht je Ticket)
+        $assignee = null;
+        if ($request->action === 'assign' && !in_array($request->assigned_to, ['none'], true)) {
+            $assigneeId = $request->assigned_to === 'me' ? auth()->id() : $request->assigned_to;
+            $assignee = User::find($assigneeId);
+            if (!$assignee || !$assignee->isStaff() || !$assignee->is_active) {
+                return back()->with('error', 'Tickets koennen nur aktiven Mitarbeitern zugewiesen werden.');
+            }
+        }
+
+        $tickets = Ticket::whereIn('id', $request->ids)->get();
+        $done = 0;
+        $skipped = count($request->ids) - $tickets->count();
+        foreach ($tickets as $ticket) {
+            if (!$this->canAccessTicket($ticket)) { $skipped++; continue; }
+            switch ($request->action) {
+                case 'status':
+                    $reopened = $ticket->isFinished() && !in_array($request->status, ['resolved', 'closed'], true);
+                    if ($ticket->transitionTo($request->status, auth()->id())) {
+                        TicketNotifier::notifyCustomerStatus($ticket, $reopened);
+                    }
+                    break;
+                case 'assign':
+                    $newId = $assignee?->id;
+                    if ((string) $newId !== (string) $ticket->assigned_to) {
+                        $ticket->update(['assigned_to' => $newId]);
+                        if ($assignee) {
+                            $ticket->logEvent('assigned', 'an ' . $assignee->name);
+                            TicketNotifier::notifyAssigned($ticket, $assignee);
+                        } else {
+                            $ticket->logEvent('unassigned');
+                        }
+                    }
+                    break;
+                case 'priority':
+                    if ($request->priority !== $ticket->priority) {
+                        $old = $ticket->priorityLabel();
+                        $ticket->update([
+                            'priority' => $request->priority,
+                            // SLA-Faelligkeit haengt an der Prioritaet -> neu berechnen
+                            'due_at' => $ticket->created_at->copy()->addHours(Ticket::slaHours($request->priority)),
+                        ]);
+                        $ticket->logEvent('priority_changed', $old . ' → ' . $ticket->priorityLabel());
+                    }
+                    break;
+                case 'delete':
+                    $ticket->logEvent('deleted');
+                    $ticket->delete();
+                    break;
+            }
+            $done++;
+        }
+
+        $msg = match ($request->action) {
+            'status' => $done . ' Ticket(s) auf „' . Ticket::STATUSES[$request->status] . '" gesetzt.',
+            'assign' => $assignee
+                ? $done . ' Ticket(s) an ' . $assignee->name . ' zugewiesen.'
+                : 'Zuweisung bei ' . $done . ' Ticket(s) entfernt.',
+            'priority' => 'Prioritaet bei ' . $done . ' Ticket(s) auf „' . Ticket::PRIORITIES[$request->priority]['label'] . '" gesetzt.',
+            'delete' => $done . ' Ticket(s) in den Papierkorb verschoben.',
+        };
+        if ($skipped > 0) { $msg .= ' ' . $skipped . ' ohne Berechtigung uebersprungen.'; }
+        return back()->with('success', $msg);
     }
 
     /** Zuweisung, Prioritaet und Typ aendern (Karte "Eigenschaften"). */
