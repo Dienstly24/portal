@@ -93,21 +93,31 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   `DocumentAnalyzer`): Analyse laeuft **„kostenlos zuerst"** (Betreiber-
   Entscheidung) und der KI-Anbieter ist austauschbar
   (`DocumentAiProviderInterface`, Registrierung in `AppServiceProvider`,
-  Auswahl per `AI_DOCUMENT_PROVIDER`). Ablauf in `DocumentAnalyzer::analyze`:
-  1) **OCR zuerst** - `TesseractTextExtractor` liest den Text,
-  `HeuristicDocumentClassifier` bestimmt Typ + Basisfelder (Stichwort-
-  Erkennung + konservative Regex-Extraktion: IBAN/FIN/Kennzeichen/E-Mail
-  nur aus eindeutig abgegrenzten Zeilen, keine Namen/Adressen aus Freitext;
-  Kennzeichnung `ai_source = 'ocr'`, niedrige Konfidenz 20/40). 2) **Reicht
-  das OCR-Ergebnis** (Typ erkannt UND mind. ein extrahiertes Feld,
-  `ocrResultSufficient()`), wird es OHNE KI-Aufruf uebernommen - spart
-  Claude-Kosten. 3) **Sonst Eskalation an den KI-Anbieter** (Claude liest
-  Bilder/PDF direkt per Vision, beste Qualitaet, `ai_source = 'ai'`).
-  4) Ohne KI-Anbieter bleibt es beim OCR-Ergebnis. Mitarbeiter koennen die
-  KI ueber den Button **„🤖 Mit KI analysieren"** bewusst erzwingen
-  (`reanalyze` -> `AnalyzeDocumentJob(forceAi: true)`), z.B. wenn die
-  Kundenzuordnung die bessere Vision-Extraktion braucht. Die OCR-Basisebene
-  ist standardmäßig **AUS** (`OCR_ENABLED=false`) und muss erst nach
+  Auswahl per `AI_DOCUMENT_PROVIDER`). Ablauf in `DocumentAnalyzer::analyze`
+  (kostenaufsteigend):
+  0) **PDF-Textebene zuerst** (`PdfTextLayerExtractor`, `pdftotext`) - viele
+  hochgeladene Dokumente (CHECK24-Beratungsprotokolle, Antraege/Policen aus
+  Versicherer-Portalen, alles aus einer Software) sind DIGITALE PDFs mit
+  perfekter Textebene: gratis, fehlerfrei, sofort. Nur wenn keine Textebene
+  da ist (echter Scan), 1) **OCR** - `TesseractTextExtractor` liest den Text.
+  Auf dem gewonnenen Text bestimmt `HeuristicDocumentClassifier` Typ +
+  Basisfelder (Stichwort-Erkennung + konservative Regex-Extraktion:
+  IBAN/FIN/Kennzeichen/E-Mail nur aus eindeutig abgegrenzten Zeilen, keine
+  Namen/Adressen aus Freitext; `ai_source = 'ocr'`, Konfidenz 20/40).
+  2) **Reicht das kostenlose Ergebnis** (`ocrResultSufficient()`: Text KURZ
+  genug fuer die einfache Heuristik - lange, mehrseitige Dokumente haben zu
+  viele Abschnitte und erzeugen Falschtreffer, daher Eskalation - UND Typ
+  erkannt UND mind. ein Feld), wird es OHNE KI-Aufruf uebernommen.
+  3) **Sonst Eskalation an den KI-Anbieter**: bei vorhandener Textebene
+  bekommt Claude den (auf `OCR_AI_TEXT_MAX_CHARS`, Default 12000, gekuerzten)
+  **TEXT** statt der teuren Bild-/PDF-Seiten (ein 19-seitiges Protokoll als
+  Vision kostet schnell 20+ Cent, als Text nur Bruchteile), sonst Vision;
+  `ai_source = 'ai'`. 4) Ohne KI-Anbieter bleibt es beim kostenlosen
+  Ergebnis. Mitarbeiter koennen die KI ueber den Button
+  **„🤖 Mit KI analysieren"** bewusst erzwingen (`reanalyze` ->
+  `AnalyzeDocumentJob(forceAi: true)`, Vision). Die kostenlose Basisebene
+  (Textebene + OCR) ist standardmäßig **AUS** (`OCR_ENABLED=false`, die
+  Textebene folgt per Default `OCR_TEXT_LAYER=OCR_ENABLED`) und muss erst nach
   Installation der Systempakete freigeschaltet werden: `apt install
   tesseract-ocr tesseract-ocr-deu poppler-utils` auf dem VPS, danach
   `OCR_ENABLED=true` in der `.env`. Rohtext wird bewusst NICHT gespeichert

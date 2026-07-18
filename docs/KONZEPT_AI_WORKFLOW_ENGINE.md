@@ -120,9 +120,15 @@ und wird spaeter auf diese generische Schicht aufgesetzt.
   + `StepHandlerInterface` + `StepHandlerRegistry` + `StepResult` + generischer
   `review`-Handler + Tests. Verschluesselte Spalten (`memory`, `output`,
   `detail`) bewusst als `text` (Lehre aus dem `ai_extracted`-Fehler).
-- **P3:** Erste Definition end-to-end: `bankverbindung_aendern`
-  (request_document -> extract -> apply_change ueber ChangeRequestService ->
-  draft_reply). Minimal-UI im Ticket. Confidence-Gate + Human Override.
+- **P3 (Backend erledigt, UI folgt):** Erste Definition end-to-end
+  `bankverbindung_aendern` (request_document -> extract_data -> apply_change
+  ueber `ChangeRequestService::submit` als pending Change Request ->
+  draft_reply zur Freigabe). Vier Step-Handler an die realen Dienste
+  (`AiProviderInterface`, `ChangeRequestService`) gebunden; Definition +
+  Prompts idempotent installierbar (`WorkflowDefinitionInstaller`,
+  `php artisan workflow:install`); Confidence-Gate + Human Override greifen;
+  Tests mit Fake-KI-Anbieter. **Offen:** Minimal-UI im Ticket (Run-Status,
+  Schritte, Override-Buttons) - naechster Schritt.
 - **P4:** `IntentDetector` (Saeule 2) + `ask_customer` (Saeule 3) am
   Beispiel `neues_kind`.
 - **P5:** Prompt-Pflege im Admin (Saeule 7) + Versionierung-UI (Saeule 9).

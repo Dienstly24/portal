@@ -30,6 +30,7 @@ class HeuristicDocumentClassifier
         'gesundheitskarte' => ['GESUNDHEITSKARTE', 'VERSICHERTENKARTE', 'KRANKENVERSICHERUNGSKARTE'],
         'versicherungspolice' => ['VERSICHERUNGSPOLICE', 'VERSICHERUNGSSCHEIN'],
         'versicherungsvertrag' => ['VERSICHERUNGSVERTRAG', 'VERSICHERUNGSANTRAG'],
+        'beratungsprotokoll' => ['BERATUNGSPROTOKOLL', 'BERATUNGSVERZICHT'],
         'rechnung' => ['RECHNUNG', 'INVOICE'],
         'sepa_mandat' => ['SEPA-LASTSCHRIFTMANDAT', 'SEPA MANDAT', 'MANDATSREFERENZ'],
         'schadenmeldung' => ['SCHADENMELDUNG', 'SCHADENANZEIGE'],

@@ -3,6 +3,7 @@ namespace App\Services\Ai;
 
 use App\Models\Document;
 use App\Services\Ai\Contracts\DocumentAiProviderInterface;
+use App\Services\Ocr\PdfTextLayerExtractor;
 use App\Services\Ocr\TextExtractorInterface;
 use Illuminate\Support\Facades\Storage;
 
@@ -44,13 +45,14 @@ class DocumentAnalyzer
     public function __construct(
         private readonly DocumentAiProviderInterface $provider,
         private readonly TextExtractorInterface $ocr,
+        private readonly PdfTextLayerExtractor $pdfText,
     ) {
     }
 
-    /** Analyse moeglich? (KI-Anbieter ODER kostenlose OCR-Basisebene) */
+    /** Analyse moeglich? (KI-Anbieter ODER kostenlose Text-/OCR-Basisebene) */
     public function isEnabled(): bool
     {
-        return $this->provider->isEnabled() || $this->ocr->isAvailable();
+        return $this->provider->isEnabled() || $this->ocr->isAvailable() || $this->pdfText->isAvailable();
     }
 
     /** Steht die kostenpflichtige KI-Stufe zur Verfuegung? (fuer den "Mit KI"-Button) */
@@ -83,18 +85,32 @@ class DocumentAnalyzer
             return $this->runProvider($binary, $mime, '');
         }
 
-        // Kostenlose Stufe zuerst: OCR-Text + Heuristik.
-        $ocrText = $this->ocr->isAvailable() ? $this->ocr->extract($binary, $mime) : '';
-        $ocrResult = $ocrText !== '' ? (new HeuristicDocumentClassifier())->classify($ocrText) : null;
+        // Kostenlose Stufe zuerst - in aufsteigender Kosten-Reihenfolge:
+        // 1) PDF-Textebene (pdftotext, gratis, perfekter Text bei digitalen
+        //    PDFs), 2) sonst Tesseract-OCR (gratis, aber CPU + Fehler bei
+        //    Scans). Der so gewonnene Text speist die Stichwort-/Regex-
+        //    Heuristik.
+        $freeText = '';
+        $fromTextLayer = false;
+        if ($mime === 'application/pdf' && $this->pdfText->isAvailable()) {
+            $freeText = $this->pdfText->extract($binary);
+            $fromTextLayer = $freeText !== '';
+        }
+        if ($freeText === '' && $this->ocr->isAvailable()) {
+            $freeText = $this->ocr->extract($binary, $mime);
+        }
+        $ocrResult = $freeText !== '' ? (new HeuristicDocumentClassifier())->classify($freeText) : null;
 
-        // Reicht das OCR-Ergebnis, KI gar nicht erst bemuehen.
-        if ($ocrResult !== null && $this->ocrResultSufficient($ocrResult)) {
+        // Reicht das kostenlose Ergebnis, KI gar nicht erst bemuehen.
+        if ($ocrResult !== null && $this->ocrResultSufficient($ocrResult, $freeText)) {
             return [...$ocrResult, 'source' => 'ocr'];
         }
 
-        // Sonst zur KI eskalieren (falls konfiguriert).
+        // Sonst zur KI eskalieren (falls konfiguriert). Bei sauberer
+        // Textebene bekommt die KI den TEXT (billig) statt der Bild-/PDF-
+        // Seiten - gleiche Genauigkeit, ein Bruchteil der Kosten.
         if ($this->provider->isEnabled()) {
-            return $this->runProvider($binary, $mime, $ocrText);
+            return $this->runProvider($binary, $mime, $freeText, $fromTextLayer);
         }
 
         // Kein KI-Anbieter: bestmoegliches OCR-Ergebnis (auch schwach) oder nichts.
@@ -102,20 +118,28 @@ class DocumentAnalyzer
     }
 
     /** @return array{...}|null */
-    private function runProvider(string $binary, string $mime, string $ocrText): ?array
+    private function runProvider(string $binary, string $mime, string $ocrText, bool $preferText = false): ?array
     {
-        $result = $this->provider->analyze($binary, $mime, $ocrText);
+        $result = $this->provider->analyze($binary, $mime, $ocrText, $preferText);
         return $result !== null ? [...$result, 'source' => 'ai'] : null;
     }
 
     /**
-     * Ist das kostenlose OCR-Ergebnis gut genug, um die KI zu sparen?
-     * Kriterium: Der Dokumenttyp wurde erkannt (nicht 'sonstiges') UND es
-     * wurde mindestens ein strukturiertes Feld extrahiert (IBAN, FIN,
-     * Kennzeichen, E-Mail ...). Andernfalls uebernimmt die KI.
+     * Ist das kostenlose Ergebnis gut genug, um die KI zu sparen?
+     * Kriterien:
+     * - Der Text ist kurz genug fuer die einfache Heuristik. Lange,
+     *   mehrseitige Dokumente (Protokolle, Vertraege) haben zu viele
+     *   Abschnitte -> die Regex-Heuristik produziert Falschtreffer
+     *   (fremde E-Mail, maskierte IBAN, 17-Buchstaben-Wort als FIN). Solche
+     *   werden zur genauen KI-Analyse eskaliert (auf dem billigen Textweg).
+     * - Der Dokumenttyp wurde erkannt (nicht 'sonstiges') UND mindestens ein
+     *   strukturiertes Feld (IBAN, FIN, Kennzeichen, E-Mail ...) extrahiert.
      */
-    private function ocrResultSufficient(array $result): bool
+    private function ocrResultSufficient(array $result, string $text): bool
     {
+        if (mb_strlen($text) > max(200, (int) config('services.ocr.heuristic_max_chars', 2500))) {
+            return false;
+        }
         if (($result['type'] ?? 'sonstiges') === 'sonstiges') {
             return false;
         }
