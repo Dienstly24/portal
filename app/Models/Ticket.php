@@ -1,9 +1,12 @@
 <?php
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 class Ticket extends Model {
+    use SoftDeletes;
+
     protected $keyType = 'string';
     public $incrementing = false;
     protected $fillable = ['ticket_number','customer_id','assigned_to','type','status','subject','description',
@@ -56,10 +59,14 @@ class Ticket extends Model {
         });
     }
 
-    /** Fortlaufende Ticketnummer: T-JJ + 5-stellig (analog Kundennummern). */
+    /**
+     * Fortlaufende Ticketnummer: T-JJ + 5-stellig (analog Kundennummern).
+     * withTrashed: Nummern von Tickets im Papierkorb duerfen NICHT neu
+     * vergeben werden (Unique-Index gilt auch fuer soft-deleted Zeilen).
+     */
     public static function nextTicketNumber(): string {
         $prefix = 'T-' . now()->format('y');
-        $max = static::where('ticket_number', 'like', $prefix . '%')
+        $max = static::withTrashed()->where('ticket_number', 'like', $prefix . '%')
             ->pluck('ticket_number')
             ->filter(fn ($n) => preg_match('/^' . preg_quote($prefix, '/') . '\d{5}$/', (string) $n))
             ->map(fn ($n) => (int) substr($n, strlen($prefix)))
@@ -67,7 +74,7 @@ class Ticket extends Model {
         do {
             $max++;
             $number = $prefix . str_pad((string) $max, 5, '0', STR_PAD_LEFT);
-        } while (static::where('ticket_number', $number)->exists());
+        } while (static::withTrashed()->where('ticket_number', $number)->exists());
         return $number;
     }
 

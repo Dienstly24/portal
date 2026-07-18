@@ -3,7 +3,9 @@
 @php
     $attachments = $ticket->attachments;
     $me = auth()->user();
-    $canManage = $me->role !== 'employee' || $me->can_manage_tickets;
+    // Im Papierkorb ist das Ticket schreibgeschuetzt (erst wiederherstellen)
+    $canManage = ($me->role !== 'employee' || $me->can_manage_tickets) && !$ticket->trashed();
+    $canDelete = in_array($me->role, ['admin', 'manager'], true);
     $quelle = ['portal'=>'Portal','hilfe-formular'=>'Hilfe-Formular','website'=>'Website','email'=>'E-Mail'][$ticket->source] ?? $ticket->source;
 @endphp
 <div class="toolbar">
@@ -24,6 +26,31 @@
         @if($ticket->isOverdue())<div style="font-size:12px;color:#A32D2D;font-weight:600;margin-top:6px;">⏰ Reaktionszeit überschritten (fällig {{ $ticket->due_at->format('d.m.Y H:i') }})</div>@endif
     </div>
 </div>
+
+@if($ticket->trashed())
+{{-- Papierkorb-Banner: Wiederherstellen oder endgueltig loeschen --}}
+<div class="card" style="background:#F9E3E3;border-color:#EFC7C7;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+        <div style="font-size:13.5px;color:#7A1F1F;line-height:1.6;">
+            🗑️ <strong>Dieses Ticket liegt im Papierkorb</strong> (gelöscht am {{ $ticket->deleted_at->format('d.m.Y H:i') }}).
+            Es ist für Kunden und in der Ticketliste nicht mehr sichtbar. Zum Bearbeiten zuerst wiederherstellen.
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <form method="POST" action="{{ route('admin.ticket.restore', $ticket->id) }}">
+                @csrf
+                <button type="submit" class="btn btn-primary">♻️ Wiederherstellen</button>
+            </form>
+            @if($me->role === 'admin')
+            <form method="POST" action="{{ route('admin.ticket.forcedelete', $ticket->id) }}"
+                onsubmit="return confirm('Ticket {{ $ticket->ticket_number }} ENDGÜLTIG löschen? Nachrichten, Verlauf und Anhänge werden unwiderruflich entfernt.')">
+                @csrf @method('DELETE')
+                <button type="submit" class="btn btn-ghost" style="color:#A32D2D;">🗑️ Endgültig löschen</button>
+            </form>
+            @endif
+        </div>
+    </div>
+</div>
+@endif
 
 @if($canManage)
 {{-- Schnellaktionen: Statuswechsel mit einem Klick --}}
@@ -52,7 +79,7 @@
     <div style="font-size:12.5px;color:var(--ink-soft);margin-top:10px;">💡 „In Bearbeitung übernehmen" weist das Ticket automatisch Ihnen zu.</div>
     @endif
 </div>
-@else
+@elseif(!$ticket->trashed())
 <div class="card" style="background:#FFFDF7;border-color:#F7E7D6;">
     <div style="font-size:13.5px;color:var(--ink-soft);">🔒 Sie haben keine Berechtigung, Tickets zu bearbeiten (nur Lesezugriff). Wenden Sie sich an einen Administrator.</div>
 </div>
@@ -194,7 +221,7 @@
         <button type="submit" class="btn btn-primary">Senden</button>
     </form>
 </div>
-@elseif($ticket->status === 'closed')
+@elseif($ticket->status === 'closed' && !$ticket->trashed())
 <div class="card" style="background:var(--canvas);">
     <div style="font-size:13.5px;color:var(--ink-soft);">Dieses Ticket ist geschlossen. Zum Antworten zuerst über „Wieder öffnen" reaktivieren.</div>
 </div>
@@ -238,5 +265,23 @@
     @endforelse
 </div>
 
-<a href="{{ $ticket->customer ? route('admin.tickets') : route('admin.inquiries') }}" class="btn btn-ghost" style="margin-top:8px;">← Zurück</a>
+@if($canDelete && !$ticket->trashed())
+{{-- Loeschen (Soft Delete): nur admin/manager - analog zur Kundenloeschung.
+     Endgueltiges Loeschen geht ausschliesslich aus dem Papierkorb (nur admin). --}}
+<div class="card" style="border-color:#EFC7C7;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+        <div style="font-size:13px;color:var(--ink-soft);line-height:1.6;">
+            <strong style="color:#A32D2D;">Ticket löschen:</strong> verschiebt das Ticket in den Papierkorb.
+            Es verschwindet aus der Ticketliste und dem Kundenportal, kann aber jederzeit wiederhergestellt werden.
+        </div>
+        <form method="POST" action="{{ route('admin.ticket.delete', $ticket->id) }}"
+            onsubmit="return confirm('Ticket {{ $ticket->ticket_number }} in den Papierkorb verschieben?')">
+            @csrf @method('DELETE')
+            <button type="submit" class="btn btn-ghost" style="color:#A32D2D;border-color:#EFC7C7;">🗑️ In den Papierkorb</button>
+        </form>
+    </div>
+</div>
+@endif
+
+<a href="{{ $ticket->trashed() ? route('admin.tickets', ['status' => 'papierkorb']) : ($ticket->customer ? route('admin.tickets') : route('admin.inquiries')) }}" class="btn btn-ghost" style="margin-top:8px;">← Zurück</a>
 @endsection

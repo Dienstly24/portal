@@ -23,6 +23,8 @@ class TicketEvent extends Model {
         'closed_by_customer' => ['✅', 'Vom Kunden geschlossen'],
         'auto_closed' => ['🕓', 'Automatisch geschlossen'],
         'rated' => ['⭐', 'Vom Kunden bewertet'],
+        'deleted' => ['🗑️', 'In den Papierkorb verschoben'],
+        'restored' => ['♻️', 'Aus dem Papierkorb wiederhergestellt'],
     ];
 
     protected static function boot() {
