@@ -196,6 +196,60 @@ class DocumentCostOptimizationTest extends TestCase
         $this->assertSame('', $extractor->extract(''));
     }
 
+    public function test_request_uses_generous_max_tokens_for_full_schema(): void
+    {
+        // Zu knappe max_tokens schneiden das (mit personen/energie erweiterte)
+        // JSON ab -> ungueltig -> "Keine verwertbare Analyse-Antwort".
+        config(['services.anthropic.key' => 'test-key']);
+        Http::fake([
+            'api.anthropic.com/*' => Http::response([
+                'content' => [['type' => 'text', 'text' => json_encode($this->aiPayload('kfz_vertrag'))]],
+            ]),
+        ]);
+
+        (new ClaudeDocumentAiProvider())->analyze('BYTES', 'application/pdf', 'Ein langer Dokumenttext', true);
+
+        Http::assertSent(fn ($request) => (int) ($request->data()['max_tokens'] ?? 0) >= 4096);
+    }
+
+    public function test_truncated_response_returns_null_without_crash(): void
+    {
+        // Abgeschnittene Antwort (kein gueltiges JSON) -> null, keine Exception.
+        config(['services.anthropic.key' => 'test-key']);
+        Http::fake([
+            'api.anthropic.com/*' => Http::response([
+                'content' => [['type' => 'text', 'text' => '{"type":"kfz_vertrag","confidence":90,"data":{"person":{"first_name":"Ahmed"']],
+                'stop_reason' => 'max_tokens',
+            ]),
+        ]);
+
+        $this->assertNull((new ClaudeDocumentAiProvider())->analyze('BYTES', 'application/pdf', 'text', true));
+    }
+
+    public function test_unknown_type_falls_back_to_sonstiges_without_losing_data(): void
+    {
+        // Eine kleine Format-Abweichung (Typ nicht in Whitelist) darf nicht
+        // das ganze Ergebnis verwerfen - Felder bleiben, Typ wird 'sonstiges'.
+        config(['services.anthropic.key' => 'test-key']);
+        Http::fake([
+            'api.anthropic.com/*' => Http::response([
+                'content' => [['type' => 'text', 'text' => json_encode([
+                    'type' => 'kfz-versicherung-antrag',   // nicht in AI_TYPES
+                    // confidence fehlt -> Default 50
+                    'summary' => 'Kfz-Antrag',
+                    'data' => ['person' => ['first_name' => 'Ahmed', 'last_name' => 'Nassar']],
+                ])]],
+            ]),
+        ]);
+
+        $result = (new ClaudeDocumentAiProvider())->analyze('BYTES', 'application/pdf', 'text', true);
+
+        $this->assertNotNull($result);
+        $this->assertSame('sonstiges', $result['type']);
+        $this->assertSame(50, $result['confidence']);
+        $this->assertSame('Ahmed', $result['data']['person']['first_name']);
+    }
+
     public function test_detects_garbled_text_layer(): void
     {
         $extractor = new PdfTextLayerExtractor();

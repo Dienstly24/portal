@@ -73,6 +73,10 @@ return [
         // Dokument-Analyse (Vision/PDF) kann ein eigenes Modell nutzen;
         // ohne Angabe gilt das Standard-Modell.
         'document_model' => env('ANTHROPIC_DOCUMENT_MODEL', env('ANTHROPIC_MODEL', 'claude-sonnet-5')),
+        // Obergrenze der Antwort-Tokens der Dokument-Analyse. Das JSON umfasst
+        // Person, Vertrag, Fahrzeug/Tarif, Personenliste und Energie - zu
+        // knappe Werte schneiden die Antwort mittendrin ab (ungueltiges JSON).
+        'document_max_tokens' => env('ANTHROPIC_DOCUMENT_MAX_TOKENS', 4096),
     ],
 
     /*

@@ -47,7 +47,11 @@ class ClaudeDocumentAiProvider implements DocumentAiProviderInterface
             'anthropic-version' => '2023-06-01',
         ])->timeout(180)->post('https://api.anthropic.com/v1/messages', [
             'model' => $this->model(),
-            'max_tokens' => 2000,
+            // Grosszuegig genug fuer das vollstaendige JSON (Person, Vertrag,
+            // Fahrzeug/Tarif, Personenliste, Energie). Zu knappe max_tokens
+            // schneiden die Antwort mittendrin ab -> ungueltiges JSON ->
+            // "Keine verwertbare Analyse-Antwort".
+            'max_tokens' => max(2000, (int) config('services.anthropic.document_max_tokens', 4096)),
             'system' => $this->systemPrompt(),
             'messages' => [[
                 'role' => 'user',
@@ -59,7 +63,19 @@ class ClaudeDocumentAiProvider implements DocumentAiProviderInterface
             throw new \RuntimeException('KI-Dienst antwortete mit HTTP ' . $response->status());
         }
 
-        return $this->validatedOutput((string) ($response->json('content.0.text') ?? ''));
+        $result = $this->validatedOutput((string) ($response->json('content.0.text') ?? ''));
+
+        // Diagnose (ohne PII): scheiterte die Validierung, festhalten warum -
+        // v.a. abgeschnittene Antworten (stop_reason 'max_tokens').
+        if ($result === null) {
+            \Illuminate\Support\Facades\Log::warning('Dokument-KI: Antwort nicht verwertbar', [
+                'stop_reason' => $response->json('stop_reason'),
+                'text_length' => mb_strlen((string) ($response->json('content.0.text') ?? '')),
+                'output_tokens' => $response->json('usage.output_tokens'),
+            ]);
+        }
+
+        return $result;
     }
 
     /**
@@ -140,10 +156,12 @@ class ClaudeDocumentAiProvider implements DocumentAiProviderInterface
     }
 
     /**
-     * Harte Validierung der Modellantwort (wie AiEmailClassifier):
-     * unbekannte Typen, kaputte Datumswerte oder unplausible Zahlen
-     * werden verworfen bzw. bereinigt - eine Halluzination darf keine
-     * falschen Stammdaten erzeugen.
+     * Validierung der Modellantwort: die einzelnen Felder werden hart
+     * bereinigt (kaputte Datumswerte/unplausible Zahlen fliegen raus), ABER
+     * eine kleine Format-Abweichung des Modells verwirft nicht das GESAMTE
+     * Ergebnis: unbekannter/fehlender Typ -> 'sonstiges', fehlende Konfidenz
+     * -> konservativ 50. null nur, wenn gar kein gueltiges JSON vorliegt
+     * (z.B. abgeschnittene Antwort).
      */
     private function validatedOutput(string $raw): ?array
     {
@@ -155,15 +173,15 @@ class ClaudeDocumentAiProvider implements DocumentAiProviderInterface
             return null;
         }
 
+        // Unbekannter/fehlender Typ verwirft nicht die extrahierten Daten -
+        // der Mitarbeiter korrigiert den Typ, die Felder bleiben erhalten.
         $type = $json['type'] ?? null;
         if (!is_string($type) || !isset(Document::AI_TYPES[$type])) {
-            return null;
+            $type = 'sonstiges';
         }
 
         $confidence = $json['confidence'] ?? null;
-        if (!is_numeric($confidence) || $confidence < 0 || $confidence > 100) {
-            return null;
-        }
+        $confidence = (is_numeric($confidence) && $confidence >= 0 && $confidence <= 100) ? (int) $confidence : 50;
 
         $data = is_array($json['data'] ?? null) ? $json['data'] : [];
 
