@@ -71,20 +71,20 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     Route::get('/contracts', [PortalController::class, 'contracts'])->name('contracts');
     Route::get('/tickets', [PortalController::class, 'tickets'])->name('tickets');
     Route::get('/tickets/create', [PortalController::class, 'ticketsCreate'])->name('tickets.create');
-    Route::post('/tickets', [PortalController::class, 'ticketsStore'])->name('tickets.store');
+    Route::post('/tickets', [PortalController::class, 'ticketsStore'])->middleware('throttle:20,10')->name('tickets.store');
     Route::get('/tickets/{id}', [PortalController::class, 'ticketsShow'])->name('tickets.show');
-    Route::post('/tickets/{id}/reply', [PortalController::class, 'ticketsReply'])->name('tickets.reply');
+    Route::post('/tickets/{id}/reply', [PortalController::class, 'ticketsReply'])->middleware('throttle:30,10')->name('tickets.reply');
     Route::post('/tickets/{id}/close', [PortalController::class, 'ticketsClose'])->name('tickets.close');
     Route::post('/tickets/{id}/rate', [PortalController::class, 'ticketsRate'])->name('tickets.rate');
     Route::get('/attachments/{id}/download', [PortalController::class, 'downloadAttachment'])->name('attachment.download');
     Route::get('/documents', [PortalController::class, 'documents'])->name('documents');
-    Route::post('/documents', [PortalController::class, 'documentUpload'])->name('documents.upload');
+    Route::post('/documents', [PortalController::class, 'documentUpload'])->middleware('throttle:20,10')->name('documents.upload');
     // Smart Document Upload: Mehrseiten-Scanner (Fotos/Bilder/PDF) + KI-Analyse
     Route::post('/documents/scan', [\App\Http\Controllers\SmartDocumentUploadController::class, 'portalStore'])
         ->middleware('throttle:20,10')->name('documents.scan');
     Route::get('/documents/{id}/analyse-status', [\App\Http\Controllers\SmartDocumentUploadController::class, 'portalStatus'])
         ->middleware('throttle:120,1')->name('documents.analyse_status');
-    Route::post('/document-requests/{id}/upload', [PortalController::class, 'documentRequestUpload'])->name('document_requests.upload');
+    Route::post('/document-requests/{id}/upload', [PortalController::class, 'documentRequestUpload'])->middleware('throttle:20,10')->name('document_requests.upload');
     Route::get('/notifications', [PortalController::class, 'notifications'])->name('notifications');
     Route::post('/notifications/{id}/read', [PortalController::class, 'notificationRead'])->name('notifications.read');
     // Direktnachrichten Berater <-> Kunde (Portal-Chat mit Anhaengen)
@@ -173,14 +173,19 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         Route::post('/customers/{id}/portal/reset', [\App\Http\Controllers\PortalAccessController::class, 'reset'])->name('customer.portal.reset');
         Route::post('/customers/{id}/portal/toggle', [\App\Http\Controllers\PortalAccessController::class, 'toggle'])->name('customer.portal.toggle');
     });
-    Route::get('/customers/{id}/merge', [AdminController::class, 'mergeForm'])->name('customer.merge');
-    Route::post('/customers/{id}/merge', [AdminController::class, 'mergeCustomers'])->name('customer.merge.do');
+    // Kundenzusammenfuehrung loescht den Duplikat-Datensatz + Login endgueltig
+    // -> wie die anderen Loeschpfade NUR admin (DSGVO/Sicherheitsregel:
+    // Mitarbeiter/Manager/Support duerfen nicht loeschen).
+    Route::get('/customers/{id}/merge', [AdminController::class, 'mergeForm'])->name('customer.merge')->middleware('role:admin');
+    Route::post('/customers/{id}/merge', [AdminController::class, 'mergeCustomers'])->name('customer.merge.do')->middleware('role:admin');
     Route::get('/attachments/{id}/download', [AdminController::class, 'downloadAttachment'])->name('attachment.download');
     Route::get('/customers/{id}/timeline', [AdminController::class, 'customerTimeline'])->name('customer.timeline');
     Route::post('/customers/{id}/notes', [AdminController::class, 'storeNote'])->name('customer.note.store');
     Route::post('/customers/{id}/documents', [AdminController::class, 'storeDocument'])->name('customer.document.store');
     Route::post('/customers/{id}/family', [AdminController::class, 'storeFamily'])->name('customer.family.store');
-    Route::get('/customers/family/{id}/delete', [AdminController::class, 'destroyFamily'])->name('customer.family.delete');
+    // Loeschen als DELETE (nicht GET): zustandsaendernde Aktion gehoert hinter
+    // CSRF-Schutz; ein GET waere per Link-Prefetch/Scanner ungewollt ausloesbar.
+    Route::delete('/customers/family/{id}', [AdminController::class, 'destroyFamily'])->name('customer.family.delete');
     Route::post('/customers/{id}/vehicles', [AdminController::class, 'storeVehicle'])->name('customer.vehicle.store');
 
     // Verträge

@@ -151,7 +151,10 @@
         $icon = $isKind ? ($g === 'w' ? '👧' : ($g === 'm' ? '👦' : '🧒')) : ($g === 'w' ? '👩' : ($g === 'm' ? '👨' : '👤'));
     @endphp
     <div style="border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center;position:relative;background:#FAFBFC;">
-        <a href="{{ route('admin.customer.family.delete', $f->id) }}" onclick="return confirm('Familienmitglied wirklich entfernen?')" style="position:absolute;top:6px;right:10px;color:#A32D2D;text-decoration:none;font-size:13px;">✕</a>
+        <form method="POST" action="{{ route('admin.customer.family.delete', $f->id) }}" onsubmit="return confirm('Familienmitglied wirklich entfernen?')" style="position:absolute;top:6px;right:10px;margin:0;">
+            @csrf @method('DELETE')
+            <button type="submit" style="background:none;border:0;cursor:pointer;color:#A32D2D;font-size:13px;padding:0;">✕</button>
+        </form>
         <div style="font-size:34px;">{{ $icon }}</div>
         <div style="font-size:13px;font-weight:700;margin-top:6px;">{{ $f->name }}</div>
         <div style="font-size:11.5px;color:var(--ink-soft);margin-top:2px;">{{ $f->relation }}{{ $age !== null ? ' · '.$age.' J.' : '' }}{{ $g ? ' · '.$g : '' }}</div>

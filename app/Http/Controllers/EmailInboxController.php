@@ -31,8 +31,15 @@ class EmailInboxController extends Controller
 
     public function index()
     {
+        // Datenschutz/Portfolio-Scoping wie bei scrubMatch() im Smart Document
+        // Upload: Mitarbeiter mit eingeschraenktem Portfolio (z.B. Support)
+        // duerfen Namen vorgeschlagener Zuordnungen fremder Kunden nicht in
+        // der Liste sehen. Die Aktions-Endpunkte pruefen canAccessCustomer -
+        // die Listenansicht war bisher ungescoped.
+        $user = auth()->user();
         $suggested = EmailMessage::with(['customer.user', 'account'])
             ->where('match_status', 'suggested')
+            ->when(!$user->canSeeAllCustomers(), fn ($q) => $q->whereIn('customer_id', $user->visibleCustomerIdsWithSubstitution()))
             ->orderBy('received_at')->get();
 
         $unmatched = EmailMessage::with(['account', 'aiDecisions' => fn ($q) => $q->suggested()])
