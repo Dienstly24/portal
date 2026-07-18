@@ -4,7 +4,11 @@
 @php
 // Zentrale Sparten-Definition (Contract::TYPES) - eine Quelle für alle Views.
 $typeConfig = \App\Models\Contract::TYPES;
+// Aktive Sparten = farbige Hervorhebung. Klickbar ist eine Kachel jedoch,
+// sobald der Kunde IRGENDEINEN Vertrag dieser Sparte hat (auch pending/
+// gekuendigt/abgelaufen) - der Vertraege-Tab zeigt ohnehin alle Status.
 $activeTypes = $customer->contracts->where('status','active')->pluck('type')->unique()->toArray();
+$typesWithContracts = $customer->contracts->pluck('type')->unique()->toArray();
 @endphp
 
 <div class="page-header">
@@ -94,17 +98,20 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
     <p style="font-size:12px;color:var(--ink-soft);margin:-6px 0 14px;">Fläche anklicken, um direkt zu den Verträgen dieser Kategorie zu springen.</p>
     <div style="display:flex;gap:12px;flex-wrap:wrap;">
         @foreach($typeConfig as $key => $cfg)
-        @php $isActive = in_array($key, $activeTypes); @endphp
-        <div class="{{ $isActive ? 'vs-cat' : '' }}" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:4px;border-radius:12px;{{ $isActive ? 'cursor:pointer;' : 'cursor:default;' }}"
-            @if($isActive) onclick="showContractsOfType('{{ $key }}')" title="Verträge {{ $cfg['label'] }} anzeigen" @else title="Keine Verträge in dieser Kategorie" @endif>
+        @php
+            $isActive = in_array($key, $activeTypes);      // aktive Deckung -> volle Hervorhebung
+            $hasAny   = in_array($key, $typesWithContracts); // irgendein Vertrag -> klickbar
+        @endphp
+        <div class="{{ $hasAny ? 'vs-cat' : '' }}" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:4px;border-radius:12px;{{ $hasAny ? 'cursor:pointer;' : 'cursor:default;' }}"
+            @if($hasAny) onclick="showContractsOfType('{{ $key }}')" title="Verträge {{ $cfg['label'] }} anzeigen{{ $isActive ? '' : ' (keine aktiven)' }}" @else title="Keine Verträge in dieser Kategorie" @endif>
             <div style="width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;
-                background:{{ $isActive ? $cfg['bg'] : '#EEF0F3' }};
-                border:2px solid {{ $isActive ? $cfg['color'] : '#E4E6EA' }};
-                opacity:{{ $isActive ? '1' : '0.4' }};
+                background:{{ $hasAny ? $cfg['bg'] : '#EEF0F3' }};
+                border:2px solid {{ $hasAny ? $cfg['color'] : '#E4E6EA' }};
+                opacity:{{ $isActive ? '1' : ($hasAny ? '0.72' : '0.4') }};
                 transition:.2s;">
                 {{ $cfg['icon'] }}
             </div>
-            <span style="font-size:11px;color:{{ $isActive ? $cfg['color'] : 'var(--ink-soft)' }};font-weight:{{ $isActive ? '600' : '400' }};">
+            <span style="font-size:11px;color:{{ $hasAny ? $cfg['color'] : 'var(--ink-soft)' }};font-weight:{{ $hasAny ? '600' : '400' }};">
                 {{ $cfg['label'] }}
             </span>
         </div>
