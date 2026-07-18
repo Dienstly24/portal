@@ -67,7 +67,7 @@ class DocumentIntakeService
     public function mergeExtractions(iterable $documents): array
     {
         $docs = collect($documents);
-        $merged = ['person' => [], 'versicherung' => [], 'kfz' => [], 'gesundheit' => [], 'bank' => []];
+        $merged = ['person' => [], 'versicherung' => [], 'kfz' => [], 'gesundheit' => [], 'bank' => [], 'energie' => []];
 
         // Fuer Personendaten Ausweis-Dokumente zuerst; sonst Reihenfolge egal.
         $personFirst = $docs->sortByDesc(fn ($d) => $this->personPriority($d->ai_type));
@@ -317,6 +317,7 @@ class DocumentIntakeService
         $data = $extracted ?? ($document->ai_extracted ?? []);
         $ins = $data['versicherung'] ?? [];
         $kfz = $data['kfz'] ?? [];
+        $energie = $data['energie'] ?? [];
 
         if (blank($ins['insurer'] ?? null) && blank($ins['contract_number'] ?? null)) {
             return null;
@@ -365,6 +366,22 @@ class DocumentIntakeService
                 'vollkasko_deductible' => $kfz['vollkasko_deductible'] ?? null,
                 'holder_type' => $kfz['holder_type'] ?? null,
                 'annual_mileage' => $kfz['annual_mileage'] ?? null,
+            ], fn ($v) => $v !== null));
+        }
+
+        // Energie-Vertrag (Strom/Gas): Zaehler-/Tarifdaten aus dem Auftrag
+        // bzw. Zaehlerfoto in die Energie-Detailtabelle uebernehmen.
+        if (in_array($type, Contract::ENERGY_TYPES, true) && $energie !== []) {
+            \App\Models\ContractEnergyDetail::create(array_filter([
+                'contract_id' => $contract->id,
+                'meter_number' => $energie['meter_number'] ?? null,
+                'malo_id' => $energie['malo_id'] ?? null,
+                'meter_reading' => $energie['meter_reading'] ?? null,
+                'consumption_kwh' => $energie['consumption_kwh'] ?? null,
+                'tariff' => $energie['tariff'] ?? null,
+                'customer_number' => $energie['customer_number'] ?? null,
+                'payment_amount' => $ins['premium_amount'] ?? null,
+                'payment_interval' => $ins['premium_interval'] ?? null,
             ], fn ($v) => $v !== null));
         }
 

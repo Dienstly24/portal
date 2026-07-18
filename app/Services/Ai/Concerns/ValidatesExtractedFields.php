@@ -59,6 +59,30 @@ trait ValidatesExtractedFields
         return $out;
     }
 
+    /**
+     * Energie-Felder (Strom-/Gas-Auftrag, Zaehlerfoto). Zaehlerstand und
+     * Verbrauch nur in plausiblen Grenzen; MaLo-ID muss dem Format (11
+     * Ziffern) entsprechen, sonst wird sie verworfen.
+     */
+    private function validatedEnergy(mixed $in): array
+    {
+        if (!is_array($in)) return [];
+        $malo = $this->cleanString($in['malo_id'] ?? null, 20);
+        if ($malo !== null && !preg_match('/^\d{11}$/', $malo)) {
+            $malo = null;
+        }
+        $reading = $in['meter_reading'] ?? null;
+        $consumption = $in['consumption_kwh'] ?? null;
+        return array_filter([
+            'meter_number' => $this->cleanString($in['meter_number'] ?? null, 30),
+            'malo_id' => $malo,
+            'meter_reading' => (is_numeric($reading) && $reading >= 0 && $reading < 100000000) ? round((float) $reading, 1) : null,
+            'consumption_kwh' => (is_numeric($consumption) && $consumption > 0 && $consumption < 1000000) ? (int) $consumption : null,
+            'tariff' => $this->cleanString($in['tariff'] ?? null, 80),
+            'customer_number' => $this->cleanString($in['customer_number'] ?? null, 40),
+        ], fn ($v) => $v !== null && $v !== '');
+    }
+
     private function validatedInsurance(mixed $in): array
     {
         if (!is_array($in)) return [];

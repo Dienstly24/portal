@@ -35,6 +35,7 @@ class HeuristicDocumentClassifier
         'versicherungsvertrag' => ['VERSICHERUNGSVERTRAG', 'VERSICHERUNGSANTRAG'],
         'beratungsprotokoll' => ['BERATUNGSPROTOKOLL', 'BERATUNGSVERZICHT'],
         'rechnung' => ['RECHNUNG', 'INVOICE'],
+        'energieauftrag' => ['STROMLIEFER', 'GASLIEFER', 'ÖKOSTROM', 'OEKOSTROM', 'MARKTLOKATION', 'MALO-ID'],
         'sepa_mandat' => ['SEPA-LASTSCHRIFTMANDAT', 'SEPA MANDAT', 'MANDATSREFERENZ'],
         'schadenmeldung' => ['SCHADENMELDUNG', 'SCHADENANZEIGE'],
     ];

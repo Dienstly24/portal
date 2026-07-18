@@ -31,6 +31,8 @@ class Document extends Model {
         'reisepass'            => ['label' => 'Reisepass',            'category' => 'identity'],
         'fuehrerschein'        => ['label' => 'Führerschein',         'category' => 'identity'],
         'rechnung'             => ['label' => 'Rechnung',             'category' => 'invoice'],
+        'energieauftrag'       => ['label' => 'Energie-Auftrag',      'category' => 'contract'],
+        'zaehlerfoto'          => ['label' => 'Zaehlerfoto',          'category' => 'other'],
         'sepa_mandat'          => ['label' => 'SEPA-Mandat',          'category' => 'other'],
         'schadenmeldung'       => ['label' => 'Schadenmeldung',       'category' => 'claim'],
         'sonstiges'            => ['label' => 'Sonstiges Dokument',   'category' => 'other'],

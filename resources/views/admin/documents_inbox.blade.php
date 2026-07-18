@@ -418,6 +418,7 @@ window.docReview = (function() {
     function renderContract(doc) {
         var ins = (doc.extracted || {}).versicherung || {};
         var kfz = (doc.extracted || {}).kfz || {};
+        var energie = (doc.extracted || {}).energie || {};
         var has = ins.insurer || ins.contract_number;
         el('review-contract-section').style.display = has ? '' : 'none';
         el('review-create-contract').checked = false;
@@ -428,6 +429,10 @@ window.docReview = (function() {
             if (ins.sparte) parts.push('Sparte: ' + ins.sparte);
             if (ins.premium_amount) parts.push(ins.premium_amount + ' €');
             if (kfz.license_plate) parts.push('Kennzeichen: ' + kfz.license_plate);
+            if (energie.meter_number) parts.push('Zähler: ' + energie.meter_number);
+            if (energie.malo_id) parts.push('MaLo: ' + energie.malo_id);
+            if (energie.consumption_kwh) parts.push(energie.consumption_kwh + ' kWh/Jahr');
+            if (energie.meter_reading) parts.push('Stand: ' + energie.meter_reading);
             el('review-contract-info').textContent = parts.join(' · ');
         }
     }
