@@ -28,7 +28,10 @@ $typeConfig = [
         <div class="page-title">Kunden</div>
         <div class="page-sub">Alle Kundenakten verwalten.</div>
     </div>
-    <a href="{{ route('admin.customers.create') }}" class="btn btn-primary">+ Neuer Kunde</a>
+    <div style="display:flex;gap:10px;align-items:center;">
+        <a href="{{ route('admin.customers.duplicates') }}" class="btn btn-ghost">🔀 Dubletten prüfen @if(($dupCount ?? 0) > 0)<span class="nav-badge" style="background:#A32D2D;">{{ $dupCount }}</span>@endif</a>
+        <a href="{{ route('admin.customers.create') }}" class="btn btn-primary">+ Neuer Kunde</a>
+    </div>
 </div>
 
 @if(in_array(auth()->user()->role, ['admin','manager']))

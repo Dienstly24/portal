@@ -74,8 +74,10 @@ class AdminController extends Controller
         ]);
     }
 
-    public function customers() {
+    public function customers(\App\Services\Matching\DuplicateDetectionService $detection) {
         $employees = \App\Models\User::whereIn('role', ['employee', 'manager', 'support'])->orderBy('name')->get();
+        // Hinweis-Badge: Anzahl offener Dubletten-Verdachtsfaelle (kurz gecacht).
+        $dupCount = $detection->countCached($this->visibleCustomerIds());
         // Aktive Verträge mitladen (nur benötigte Spalten) für die Vertrags-Icons
         // in der Liste – ohne N+1-Abfragen pro Zeile.
         $query = $this->scopeCustomers(Customer::with([
@@ -89,7 +91,7 @@ class AdminController extends Controller
         // Seitenweise laden (25/Seite) – bleibt auch bei tausenden Kunden schnell.
         // withQueryString() erhält den Betreuer-Filter über die Seiten hinweg.
         $customers = $query->latest()->paginate(25)->withQueryString();
-        return view('admin.customers', compact('customers', 'employees'));
+        return view('admin.customers', compact('customers', 'employees', 'dupCount'));
     }
 
     public function customerShow($id) {
@@ -964,55 +966,60 @@ class AdminController extends Controller
         return response()->download(storage_path('app/public/' . $a->file_path), $a->file_name);
     }
 
-    public function mergeForm($id) {
-        $this->authorizeCustomerAccess($id);
-        $customer = \App\Models\Customer::with('user')->findOrFail($id);
-        $others = \App\Models\Customer::with('user')->where('id', '!=', $id)->get()
-            ->sortBy(fn($c) => $c->user?->name ?? '');
-        return view('admin.customer_merge', compact('customer', 'others'));
+    /**
+     * Systemweiter Dubletten-Abgleich: listet Verdachtspaare (Name,
+     * Geburtsdatum, E-Mail, Adresse, Telefon) zur manuellen Pruefung.
+     * Respektiert die Portfolio-Sicht der Mitarbeiter (nur eigene Kunden).
+     */
+    public function duplicates(\App\Services\Matching\DuplicateDetectionService $detection) {
+        $result = $detection->scan($this->visibleCustomerIds());
+        return view('admin.customer_duplicates', [
+            'pairs'   => $result['pairs'],
+            'scanned' => $result['scanned'],
+            'capped'  => $result['capped'],
+        ]);
     }
 
-    public function mergeCustomers(Request $request, $id) {
+    public function mergeForm($id, \App\Services\Matching\CustomerMergeService $merge, \App\Services\Matching\CustomerMatchingService $matcher) {
+        $this->authorizeCustomerAccess($id);
+        $customer = \App\Models\Customer::with(['user', 'addresses'])->findOrFail($id);
+        $others = $this->scopeCustomers(\App\Models\Customer::with('user')->where('id', '!=', $id))->get()
+            ->sortBy(fn($c) => $c->user?->name ?? '');
+
+        // Vorauswahl bestimmen: entweder explizit aus der Dubletten-Pruefung
+        // (?duplicate=) oder - falls nicht - automatisch der wahrscheinlichste
+        // Treffer fuer genau diesen Kunden. So schlaegt das System das Duplikat
+        // aktiv vor, statt nur eine leere Auswahlliste zu zeigen.
+        $suggested = null;
+        $preview = [];
+        if ($dupId = request('duplicate')) {
+            $suggested = $others->firstWhere('id', $dupId);
+        } else {
+            $match = $matcher->matchExisting($customer);
+            if ($match->hasMatch() && $match->score >= \App\Services\Matching\DuplicateDetectionService::DEFAULT_THRESHOLD) {
+                $suggested = $others->firstWhere('id', (string) $match->customer->id);
+            }
+        }
+        if ($suggested) {
+            $preview = $merge->preview($suggested);
+        }
+
+        return view('admin.customer_merge', compact('customer', 'others', 'suggested', 'preview'));
+    }
+
+    public function mergeCustomers(Request $request, $id, \App\Services\Matching\CustomerMergeService $merge) {
         $this->authorizeCustomerAccess($id);
         $request->validate(['duplicate_id' => 'required|different:id']);
         $this->authorizeCustomerAccess($request->duplicate_id);
-        $primary = \App\Models\Customer::findOrFail($id);
-        $dup = \App\Models\Customer::findOrFail($request->duplicate_id);
-        if ($primary->id === $dup->id) return back()->with('success', 'Gleicher Kunde gewählt.');
+        $primary = \App\Models\Customer::with('user')->findOrFail($id);
+        $dup = \App\Models\Customer::with('user')->findOrFail($request->duplicate_id);
+        if ((string) $primary->id === (string) $dup->id) return back()->with('success', 'Gleicher Kunde gewählt.');
 
-        // 1) Alle abhängigen Datensätze umhängen
-        foreach ([
-            \App\Models\Contract::class, \App\Models\Ticket::class, \App\Models\Document::class,
-            \App\Models\CustomerNote::class, \App\Models\CustomerFamily::class, \App\Models\CustomerVehicle::class,
-            \App\Models\CustomerTimeline::class, \App\Models\Appointment::class, \App\Models\CustomerChangeRequest::class,
-            \App\Models\CustomerAddress::class, \App\Models\CustomerContact::class, \App\Models\InternalMessage::class,
-        ] as $model) {
-            $model::where('customer_id', $dup->id)->update(['customer_id' => $primary->id]);
-        }
-        \Illuminate\Support\Facades\DB::table('employee_customers')->where('customer_id', $dup->id)->update(['customer_id' => $primary->id]);
+        $moved = $merge->merge($primary, $dup, auth()->id());
 
-        // 2) Fehlende Felder vom Duplikat übernehmen
-        $request->validate(['gender' => 'nullable|in:male,female,diverse']);
-
-        foreach (['phone','mobile','address','address2','iban','iban2','birth_date','marital_status','nationality','occupation','email2','company_name','company_type','gender'] as $f) {
-            if (empty($primary->$f) && !empty($dup->$f)) $primary->$f = $dup->$f;
-        }
-        $primary->save();
-
-        // 3) Duplikat + dessen User löschen
-        $dupName = $dup->user?->name;
-        $dupUser = $dup->user;
-        $dup->delete();
-        if ($dupUser && $dupUser->id !== $primary->user_id) $dupUser->delete();
-
-        \App\Models\ActivityLog::create([
-            'user_id' => auth()->id(),
-            'action' => 'customers_merged',
-            'entity_type' => 'customer',
-            'entity_id' => $primary->id,
-            'meta' => json_encode(['merged_from' => $dupName, 'into' => $primary->user?->name]),
-        ]);
-        return redirect()->route('admin.customer', $primary->id)->with('success', 'Kunden erfolgreich zusammengeführt.');
+        $summary = collect($moved)->sum();
+        return redirect()->route('admin.customer', $primary->id)
+            ->with('success', "Kunden erfolgreich zusammengeführt. {$summary} verknüpfte Datensätze wurden übertragen, nichts wurde gelöscht.");
     }
 
     public function bulkAssign(Request $request) {
