@@ -215,15 +215,26 @@ class CustomerMergeService
         }
     }
 
+    /** @var array<int, string>|null Schema-Abgleich einmal pro Request cachen. */
+    private static ?array $customerIdTablesCache = null;
+
     /**
      * Alle Tabellen mit einer customer_id-Spalte (Schema-Abgleich). So sind
      * auch kuenftige Tabellen automatisch abgedeckt - kein hartkodiertes
      * Modell-Register, das beim naechsten Feature vergessen wird.
      *
+     * Das Ergebnis wird pro Request gecacht: bei der Sammel-Zusammenfuehrung
+     * vieler Paare wuerde sonst fuer JEDEN Merge das komplette Schema
+     * abgefragt (getTables + hasColumn je Tabelle) - der teuerste Teil.
+     *
      * @return array<int, string>
      */
     private function customerIdTables(): array
     {
+        if (self::$customerIdTablesCache !== null) {
+            return self::$customerIdTablesCache;
+        }
+
         $tables = [];
         foreach (Schema::getTables() as $table) {
             $name = is_array($table) ? ($table['name'] ?? null) : ($table->name ?? null);
@@ -231,6 +242,6 @@ class CustomerMergeService
                 $tables[] = $name;
             }
         }
-        return $tables;
+        return self::$customerIdTablesCache = $tables;
     }
 }

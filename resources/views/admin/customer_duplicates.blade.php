@@ -23,11 +23,26 @@
 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
     <div style="font-size:13px;color:var(--ink-soft);">{{ count($pairs) }} Verdachtsfall(e) · {{ $scanned }} Kunden geprüft</div>
     @if($canBulk)
-    <label style="font-size:13px;color:var(--ink);display:flex;align-items:center;gap:8px;cursor:pointer;">
-        <input type="checkbox" id="checkAllPairs" style="width:16px;height:16px;cursor:pointer;accent-color:#17A65B;"> Alle auswählen
-    </label>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        @if($strongCount > 0)
+        <form method="POST" action="{{ route('admin.customers.duplicates.merge_all') }}" style="margin:0;"
+              onsubmit="return confirm('Alle sicheren Treffer (>= {{ $autoMin }} % Übereinstimmung) automatisch zusammenführen?\n\nNur eindeutige Dubletten (gleiche E-Mail, Telefon, IBAN, Vertragsnummer oder Name + Geburtsdatum). Schwächere Treffer (nur gleicher Name) bleiben zur manuellen Prüfung. Alle Daten bleiben erhalten.');">
+            @csrf
+            <button type="submit" class="btn btn-primary" style="background:#128a4b;">✓ Alle sicheren zusammenführen ({{ $strongCount }})</button>
+        </form>
+        @endif
+        <label style="font-size:13px;color:var(--ink);display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="checkAllPairs" style="width:16px;height:16px;cursor:pointer;accent-color:#17A65B;"> Alle auswählen
+        </label>
+    </div>
     @endif
 </div>
+
+@if($canBulk)
+<div class="card" style="background:#EEF6F1;padding:11px 16px;margin-bottom:14px;font-size:12.5px;color:#1F3A33;line-height:1.5;">
+    💡 <strong>Sichere Treffer (≥ {{ $autoMin }} %)</strong> – gleiche E-Mail, Telefon, IBAN, Vertragsnummer oder Name + Geburtsdatum – können mit einem Klick automatisch zusammengeführt werden. <strong>Schwächere Treffer (nur gleicher Name)</strong> bitte einzeln prüfen und per Auswahl zusammenführen.
+</div>
+@endif
 
 @if($canBulk)
 {{-- Eigenstaendiges Formular fuer die Sammel-Zusammenfuehrung. Die Checkboxen
@@ -56,6 +71,11 @@
             <input type="checkbox" class="pairCheck" name="pairs[]" value="{{ $primary->id }}|{{ $duplicate->id }}" form="bulkMergeForm" style="width:17px;height:17px;cursor:pointer;accent-color:#17A65B;" title="Für Sammel-Zusammenführung auswählen">
             @endif
             <span style="background:{{ $badgeColor }};color:#fff;border-radius:999px;padding:4px 12px;font-size:12.5px;font-weight:700;">{{ $score }}% · {{ $tierLabel }}</span>
+            @if($score >= $autoMin)
+            <span style="background:#E4F0E7;color:#128a4b;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:600;">✓ sicher</span>
+            @else
+            <span style="background:#FEF3C7;color:#92400E;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:600;">manuell prüfen</span>
+            @endif
         </div>
         <a href="{{ route('admin.customer.merge', $primary->id) }}?duplicate={{ $duplicate->id }}" class="btn btn-primary" style="padding:8px 16px;">Prüfen &amp; zusammenführen →</a>
     </div>

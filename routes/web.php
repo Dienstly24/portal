@@ -166,6 +166,9 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // leere Duplikat-Akten - analog zur Loesch-Beschraenkung).
     Route::post('/customers/duplicates/merge', [AdminController::class, 'duplicatesMerge'])
         ->name('customers.duplicates.merge')->middleware('role:admin,manager');
+    // Ein-Klick: alle "sicheren" Treffer (Score >= 40 %) automatisch vereinen.
+    Route::post('/customers/duplicates/merge-all', [AdminController::class, 'duplicatesMergeAll'])
+        ->name('customers.duplicates.merge_all')->middleware('role:admin,manager');
     Route::put('/customers/notes/{id}/done', [AdminController::class, 'noteMarkDone'])->name('customer.note.done');
     Route::get('/customers/{id}', [AdminController::class, 'customerShow'])->name('customer');
     Route::get('/customers/{id}/edit', [AdminController::class, 'customerEdit'])->name('customer.edit');
