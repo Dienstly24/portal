@@ -98,6 +98,28 @@ class MessageTemplateTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_vorlagen_seite_rendert_mit_vorhandenen_vorlagen(): void
+    {
+        // Regression: die Detail-Zeile (Bearbeiten-Button mit JSON-Daten)
+        // wird nur mit vorhandener Vorlage ausgefuehrt - genau dort sass
+        // der Kompilierfehler, der in Produktion einen 500 ausloeste.
+        $admin = User::factory()->create(['role' => 'admin']);
+        MessageTemplate::create([
+            'name' => 'Render-Check', 'category' => 'kunde',
+            'subject' => 'Betreff mit "Anfuehrungszeichen"', 'body' => "Zeile 1\n{{anrede}}, 'Apostroph'",
+        ]);
+
+        $this->actingAs($admin)->get(route('admin.templates'))
+            ->assertOk()
+            ->assertSee('Render-Check');
+
+        // Mitarbeiter sehen die Seite lesend, ohne Pflege-Buttons
+        $employee = User::factory()->create(['role' => 'employee']);
+        $this->actingAs($employee)->get(route('admin.templates'))
+            ->assertOk()
+            ->assertDontSee('tpl-edit');
+    }
+
     public function test_standard_vorlagen_sind_idempotent(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
