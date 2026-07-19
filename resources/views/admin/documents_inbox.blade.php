@@ -338,14 +338,14 @@ window.docReview = (function() {
                 'X-CSRF-TOKEN': @json(csrf_token()),
             },
             body: JSON.stringify({ document_ids: ids }),
-        }).then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })
+        }).then(readJsonOrStatus)
         .then(function(res) {
             if (btn) { btn.disabled = false; btn.textContent = '🗂 Zu EINEM Kunden zusammenfuehren'; }
-            if (res.ok) { openBatchMeta(res.json); }
-            else { alert('⚠ ' + (res.json.message || 'Vorschau fehlgeschlagen.')); }
+            if (res.ok && res.json) { openBatchMeta(res.json); }
+            else { alert('⚠ ' + friendlyError(res)); }
         }).catch(function() {
             if (btn) { btn.disabled = false; btn.textContent = '🗂 Zu EINEM Kunden zusammenfuehren'; }
-            alert('Netzwerkfehler.');
+            alert('⚠ Keine Verbindung zum Server. Bitte erneut versuchen.');
         });
     }
 
@@ -614,18 +614,50 @@ window.docReview = (function() {
                 'X-CSRF-TOKEN': @json(csrf_token()),
             },
             body: JSON.stringify(payload),
-        }).then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })
+        }).then(readJsonOrStatus)
         .then(function(res) {
             el('review-submit').disabled = false;
-            if (res.ok && res.json.ok) {
+            if (res.ok && res.json && res.json.ok) {
                 showSuccess(res.json, isBatch ? 'batch' : current.mode);
             } else {
-                showError(res.json.message || 'Aktion fehlgeschlagen.');
+                showError(friendlyError(res)); // echte Ursache statt "Netzwerkfehler"
             }
         }).catch(function() {
             el('review-submit').disabled = false;
-            showError('Netzwerkfehler.');
+            showError('Keine Verbindung zum Server. Bitte die Internetverbindung pruefen und erneut versuchen.');
         });
+    }
+
+    // Antwort robust lesen: JSON, wenn moeglich; sonst Status + ob umgeleitet
+    // wurde. So wird ein Server-Fehler (500/504), eine abgelaufene Sitzung
+    // (Umleitung zum Login) oder ein CSRF-Fehler (419) NICHT faelschlich als
+    // "Netzwerkfehler" angezeigt, sondern mit klarer, umsetzbarer Ursache.
+    function readJsonOrStatus(r) {
+        return r.text().then(function(text) {
+            var json = null;
+            try { json = JSON.parse(text); } catch (e) {}
+            return { ok: r.ok, status: r.status, json: json, redirected: r.redirected, url: r.url || '' };
+        });
+    }
+
+    // Klartext-Meldung fuer einen fehlgeschlagenen Request.
+    function friendlyError(res) {
+        if (res.json && res.json.message) return res.json.message; // echte Server-Meldung
+        // Sitzung abgelaufen -> der POST wurde zur Login-Seite umgeleitet (HTML).
+        if (res.redirected || res.url.indexOf('/login') !== -1) {
+            return 'Ihre Sitzung ist abgelaufen. Bitte die Seite neu laden und erneut anmelden.';
+        }
+        return httpErrorHint(res.status);
+    }
+
+    function httpErrorHint(status) {
+        if (status === 419) return 'Ihre Sitzung ist abgelaufen. Bitte die Seite neu laden (F5) und erneut versuchen.';
+        if (status === 401 || status === 403) return 'Nicht mehr angemeldet oder keine Berechtigung. Bitte neu anmelden.';
+        if (status === 413) return 'Die Anfrage ist zu gross.';
+        if (status === 429) return 'Zu viele Anfragen in kurzer Zeit. Bitte kurz warten und erneut versuchen.';
+        if (status === 502 || status === 504) return 'Der Server hat zu lange gebraucht (Zeitueberschreitung). Bitte erneut versuchen.';
+        if (status >= 500) return 'Server-Fehler (' + status + '). Bitte erneut versuchen; bleibt es bestehen, bitte an die Technik melden.';
+        return 'Aktion fehlgeschlagen (Status ' + (status || '?') + ').';
     }
 
     // Nach erfolgreicher Aktion NICHT hart weiterleiten (der Mitarbeiter
