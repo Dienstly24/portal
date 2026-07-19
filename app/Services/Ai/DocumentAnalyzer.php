@@ -80,6 +80,19 @@ class DocumentAnalyzer
      */
     public function analyze(Document $document, bool $forceAi = false): ?array
     {
+        // Tier 0 (noch vor der kostenlosen Textstufe): Ist dieselbe Datei schon
+        // einmal analysiert worden (identischer Inhalts-Hash -> duplicate_of),
+        // wird ihr fertiges Ergebnis uebernommen - kein erneutes Lesen der
+        // Datei, vor allem kein zweiter (kostenpflichtiger) KI-Aufruf fuer ein
+        // Dokument, das der Betrieb nachweislich schon hat. Nur ohne bewusste
+        // KI-Erzwingung (forceAi) durch den Mitarbeiter.
+        if (!$forceAi) {
+            $reused = $this->reuseFromDuplicate($document);
+            if ($reused !== null) {
+                return $reused;
+            }
+        }
+
         [$binary, $mime] = $this->readFile($document);
 
         // Erzwungene KI-Eskalation: kostenlose Stufe ueberspringen.
@@ -136,6 +149,40 @@ class DocumentAnalyzer
     {
         $result = $this->provider->analyze($binary, $mime, $ocrText, $preferText);
         return $result !== null ? [...$result, 'source' => 'ai'] : null;
+    }
+
+    /**
+     * Uebernimmt das fertige Analyse-Ergebnis eines inhaltsgleichen, bereits
+     * abgeschlossenen Dokuments (Duplikat). Der personenbezogene Match-
+     * Vorschlag wird bewusst NICHT uebernommen - die Kundenzuordnung fuer das
+     * neue Dokument rechnet der Job frisch (kostenlos, ohne KI).
+     *
+     * @return array{type: string, confidence: int, summary: ?string, title: ?string, data: array, source: string}|null
+     */
+    private function reuseFromDuplicate(Document $document): ?array
+    {
+        if (!$document->duplicate_of) {
+            return null;
+        }
+        $twin = Document::whereKey($document->duplicate_of)
+            ->where('ai_status', 'done')
+            ->whereNotNull('ai_type')
+            ->first();
+        if ($twin === null) {
+            return null;
+        }
+
+        $data = is_array($twin->ai_extracted) ? $twin->ai_extracted : [];
+        unset($data['match']);
+
+        return [
+            'type' => $twin->ai_type,
+            'confidence' => $twin->ai_confidence ?? 50,
+            'summary' => $twin->ai_summary,
+            'title' => null, // Dateiname des Duplikats bleibt unveraendert.
+            'data' => $data,
+            'source' => $twin->ai_source ?? 'ocr',
+        ];
     }
 
     /**

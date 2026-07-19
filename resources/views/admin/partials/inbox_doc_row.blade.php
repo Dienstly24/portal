@@ -1,6 +1,15 @@
 {{-- Eine Zeile im Dokumenten-Eingang (einzeln oder innerhalb eines Vorgangs).
      Erwartet: $doc, $aiEnabled, $providerEnabled --}}
-@php $extracted = $doc->ai_extracted ?? []; $match = $extracted['match'] ?? null; @endphp
+@php
+    $extracted = $doc->ai_extracted ?? []; $match = $extracted['match'] ?? null;
+    // Duplikat: dieselbe Datei wurde schon einmal hochgeladen. Kundenname nur,
+    // wenn der Betrachter den betreffenden Kunden ohnehin sehen darf.
+    $dupOrig = $doc->duplicate_of ? $doc->duplicateOriginal : null;
+    $dupCustomerName = null;
+    if ($dupOrig && $dupOrig->customer_id && auth()->user()->canAccessCustomer($dupOrig->customer_id)) {
+        $dupCustomerName = $dupOrig->customer?->user?->name ?? $dupOrig->customer?->customer_number;
+    }
+@endphp
 <div style="padding:16px 20px;border-bottom:1px solid var(--line);" data-doc-row="{{ $doc->id }}" data-doc-status="{{ $doc->ai_status }}">
     <div style="display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:flex-start;">
         <div style="min-width:260px;flex:1;display:flex;gap:10px;align-items:flex-start;">
@@ -27,6 +36,28 @@
                         <span class="badge" style="background:#EEF0F3;color:var(--ink-soft);">Ohne Analyse</span>
                     @endif
                 </div>
+                @if($dupOrig)
+                {{-- Warnung: identische Datei bereits im System vorhanden. --}}
+                <div style="margin-top:10px;border:1px solid #E4A11B;background:#FEF6E7;border-radius:10px;padding:10px 12px;font-size:13px;color:#8A5A00;">
+                    ⚠ <strong>Bereits vorhanden.</strong>
+                    Diese Datei wurde am {{ $dupOrig->created_at->format('d.m.Y') }} schon hochgeladen
+                    @if($dupCustomerName)
+                        und Kunde <strong>{{ $dupCustomerName }}</strong> zugeordnet.
+                    @elseif($dupOrig->customer_id)
+                        und ist bereits einem Kunden zugeordnet.
+                    @else
+                        und liegt noch im Eingang.
+                    @endif
+                    <div style="margin-top:7px;display:flex;gap:8px;flex-wrap:wrap;">
+                        <a href="{{ route('admin.documents.download', $dupOrig->id) }}?view=1" target="_blank" class="btn btn-ghost btn-sm">👁 Original anzeigen</a>
+                        <form method="POST" action="{{ route('admin.documents.destroy', $doc->id) }}" style="margin:0;"
+                            onsubmit="return confirm('Dieses doppelte Dokument „{{ $doc->file_name }}“ wirklich löschen?');">
+                            @csrf @method('DELETE')
+                            <button type="submit" class="btn btn-ghost btn-sm" style="color:#A32D2D;">🗑 Duplikat löschen</button>
+                        </form>
+                    </div>
+                </div>
+                @endif
                 @if($doc->ai_summary)<div style="font-size:13px;margin-top:8px;">{{ $doc->ai_summary }}</div>@endif
                 @if($doc->ai_error)<div style="font-size:12.5px;color:#B3261E;margin-top:6px;">{{ $doc->ai_error }}</div>@endif
 

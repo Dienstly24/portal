@@ -774,8 +774,15 @@ window.docReview = (function() {
         }
         xhr.addEventListener('load', function() {
             if (xhr.status >= 200 && xhr.status < 300) {
-                label.textContent = '✓ Hochgeladen – Analyse gestartet';
-                setTimeout(function() { window.location.reload(); }, 700);
+                var dupN = 0;
+                try { var r = JSON.parse(xhr.responseText); dupN = (r.duplicates || []).length; } catch (e) {}
+                // Sofortiger Hinweis, wenn eine Datei bereits im System liegt;
+                // Details (wann/welcher Kunde) zeigt die Warnung an der Zeile.
+                label.textContent = dupN > 0
+                    ? '⚠ ' + dupN + ' Datei(en) bereits vorhanden – siehe Hinweis unten'
+                    : '✓ Hochgeladen – Analyse gestartet';
+                if (dupN > 0) bar.style.background = '#E4A11B';
+                setTimeout(function() { window.location.reload(); }, dupN > 0 ? 1400 : 700);
             } else {
                 unlockDropzone();
                 var msg = 'Fehler beim Upload.';
