@@ -100,6 +100,37 @@ class DocumentCostOptimizationTest extends TestCase
         $this->assertSame('beratungsprotokoll', $result['type']);
     }
 
+    public function test_kkh_form_is_parsed_free_from_ocr_without_ai(): void
+    {
+        // Bild-PDF ohne Textebene (KKH-Beitrittserklaerung): pdfText liefert
+        // nichts, OCR liefert den Formulartext -> der Vorlagen-Parser greift
+        // auf dem OCR-Text und die (teure, wackelige) Bild-KI wird gespart.
+        $kkh = "Beitrittserklärung\nMustermann Max\nNachname Vorname\n"
+            . "01.02.1990 Aleppo Männlich\nGeburtsdatum Geburtsort Geschlecht\n"
+            . "B123456789\nRentenbezieher\nKrankenversicherungsnummer\n"
+            . "01.09.2026 x\nMitgliedschaftsbeginn Zum Zeitpunkt\n"
+            . "KKH Kaufmännische Krankenkasse - 30125 Hannover";
+
+        $provider = $this->recordingProvider($this->aiPayload());
+        $analyzer = new DocumentAnalyzer(
+            $provider,
+            $this->fakeOcr(true, $kkh),   // OCR verfuegbar + liefert den Text
+            $this->fakePdfText('', true), // keine Textebene (Bild-PDF)
+            new RelevantPageSelector(),
+            new \App\Services\Ai\TemplateParsers\CompositeDocumentTemplateParser([
+                new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser(),
+                new \App\Services\Ai\TemplateParsers\KkhBeitrittserklaerungParser(),
+            ]),
+        );
+
+        $result = $analyzer->analyze($this->pdfDocument());
+
+        $this->assertFalse($provider->called, 'KKH-Formular darf keine KI kosten');
+        $this->assertSame('template', $result['source']);
+        $this->assertSame('beitrittserklaerung', $result['type']);
+        $this->assertSame('B123456789', $result['data']['gesundheit']['health_insurance_number']);
+    }
+
     public function test_long_text_layer_escalates_to_ai_on_cheap_text_path(): void
     {
         // Text WAERE heuristisch verwertbar (SEPA + IBAN), ist aber zu lang
