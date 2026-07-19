@@ -75,18 +75,23 @@ class DocumentAnalyzer
      *
      * @param bool $forceAi KI-Anbieter direkt nutzen (Mitarbeiter-Eskalation),
      *                      die kostenlose Vorstufe ueberspringen.
+     * @param bool $fresh   Bewusste NEU-Analyse (Mitarbeiter-Klick): das
+     *                      Duplikat-Ergebnis nicht wiederverwenden, sondern
+     *                      die Datei wirklich neu lesen - sonst kaeme nach
+     *                      einer Parser-Verbesserung immer wieder das alte
+     *                      Ergebnis zurueck.
      * @return array{type: string, confidence: int, summary: string, title: ?string, data: array, source: string}|null
      * @throws \RuntimeException bei nicht analysierbarer Datei oder KI-Dienstfehler
      */
-    public function analyze(Document $document, bool $forceAi = false): ?array
+    public function analyze(Document $document, bool $forceAi = false, bool $fresh = false): ?array
     {
         // Tier 0 (noch vor der kostenlosen Textstufe): Ist dieselbe Datei schon
         // einmal analysiert worden (identischer Inhalts-Hash -> duplicate_of),
         // wird ihr fertiges Ergebnis uebernommen - kein erneutes Lesen der
         // Datei, vor allem kein zweiter (kostenpflichtiger) KI-Aufruf fuer ein
         // Dokument, das der Betrieb nachweislich schon hat. Nur ohne bewusste
-        // KI-Erzwingung (forceAi) durch den Mitarbeiter.
-        if (!$forceAi) {
+        // KI-Erzwingung (forceAi) und ohne bewusste Neu-Analyse (fresh).
+        if (!$forceAi && !$fresh) {
             $reused = $this->reuseFromDuplicate($document);
             if ($reused !== null) {
                 return $reused;

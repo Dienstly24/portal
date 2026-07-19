@@ -748,7 +748,7 @@ class SmartDocumentUploadController extends Controller
      * OCR-Vorstufe wird uebersprungen. Ohne KI-Anbieter laeuft nur die
      * OCR-Analyse erneut (z.B. Retry nach Fehler).
      */
-    public function reanalyze($id)
+    public function reanalyze(Request $request, $id)
     {
         $document = Document::findOrFail($id);
         $this->authorizeDocument($document);
@@ -760,8 +760,16 @@ class SmartDocumentUploadController extends Controller
             return response()->json(['message' => 'Analyse laeuft bereits.'], 422);
         }
 
+        // "Neu analysieren" laeuft standardmaessig die normale kostenlose
+        // Kette (Vorlagen-Parser -> OCR -> ggf. KI) - so wirken Parser-
+        // Verbesserungen auch auf bereits hochgeladene Dokumente. Die teure
+        // KI wird nur auf ausdruecklichen Wunsch erzwungen (force_ai, eigener
+        // Button). fresh=true: das Duplikat-Ergebnis wird bewusst NICHT
+        // wiederverwendet, die Datei wird wirklich neu gelesen.
+        $forceAi = $request->boolean('force_ai') && $this->analyzer->providerEnabled();
+
         $document->update(['ai_status' => 'pending', 'ai_error' => null]);
-        AnalyzeDocumentJob::dispatch($document->id, forceAi: $this->analyzer->providerEnabled());
+        AnalyzeDocumentJob::dispatch($document->id, forceAi: $forceAi, fresh: true);
 
         return response()->json(['ok' => true]);
     }

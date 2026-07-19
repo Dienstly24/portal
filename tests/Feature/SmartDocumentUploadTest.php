@@ -1320,8 +1320,9 @@ class SmartDocumentUploadTest extends TestCase
         ]);
         $this->fakeAnalysis($this->gesundheitskartePayload());
 
+        // Erzwungene KI jetzt per explizitem Flag (eigener Button "Mit KI").
         $this->actingAs($this->makeAdmin())
-            ->postJson(route('admin.documents.reanalyze', $doc->id))
+            ->postJson(route('admin.documents.reanalyze', $doc->id), ['force_ai' => 1])
             ->assertOk();
 
         $doc->refresh();

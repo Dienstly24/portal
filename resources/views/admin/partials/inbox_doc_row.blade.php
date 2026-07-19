@@ -92,11 +92,15 @@
             {{-- Immer moeglich: den Namen kann der Mitarbeiter im Modal auch
                  selbst eintragen, falls er nicht (sicher) gelesen wurde. --}}
             <button type="button" class="btn btn-gold btn-sm" onclick="docReview.open(@js($doc->id), 'create', null, null)">Neuen Kunden erstellen</button>
+            @if($aiEnabled)
+            {{-- Laesst die normale kostenlose Kette (Vorlagen/OCR, ggf. KI) neu
+                 laufen - auch bei Duplikaten wird die Datei wirklich neu gelesen,
+                 damit Parser-Verbesserungen auf Bestandsdokumente wirken. --}}
+            <button type="button" class="btn btn-ghost btn-sm" onclick="docReview.reanalyze(@js($doc->id), this, false)" title="Analyse (gratis zuerst) neu ausfuehren">🔄 Neu analysieren</button>
+            @endif
             @if($providerEnabled ?? false)
             {{-- Erzwingt bewusst die kostenpflichtige KI-Stufe (ueberspringt die kostenlose OCR-Vorstufe). --}}
-            <button type="button" class="btn btn-ghost btn-sm" onclick="docReview.reanalyze(@js($doc->id), this)" title="Kostenpflichtige KI-Analyse (Claude) erzwingen">🤖 Mit KI analysieren</button>
-            @elseif($aiEnabled)
-            <button type="button" class="btn btn-ghost btn-sm" onclick="docReview.reanalyze(@js($doc->id), this)">🔄 Neu analysieren</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="docReview.reanalyze(@js($doc->id), this, true)" title="Kostenpflichtige KI-Analyse (Claude) erzwingen">🤖 Mit KI analysieren</button>
             @endif
             <form method="POST" action="{{ route('admin.documents.destroy', $doc->id) }}" style="margin:0;"
                 onsubmit="return confirm('Dokument „{{ $doc->file_name }}“ wirklich löschen?');">
