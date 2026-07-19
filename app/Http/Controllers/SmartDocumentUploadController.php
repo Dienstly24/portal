@@ -400,15 +400,25 @@ class SmartDocumentUploadController extends Controller
             'apply_fields.*' => 'string|in:birth_date,birth_place,address,phone,nationality,marital_status,gender,email2,health_insurance,iban',
             'create_contract' => 'nullable|boolean',
             'visibility' => 'nullable|in:customer,internal',
+            // Konnte der Name nicht sicher gelesen werden, traegt der
+            // Mitarbeiter ihn im Modal selbst ein (er sieht das Dokument).
+            'first_name' => 'nullable|string|max:80',
+            'last_name' => 'nullable|string|max:80',
         ]);
 
-        $person = ($document->ai_extracted ?? [])['person'] ?? [];
+        $extracted = $document->ai_extracted ?? [];
+        // Manuell eingetragener Name hat Vorrang vor der (evtl. fehlenden)
+        // Extraktion - so laesst sich der Kunde auch anlegen, wenn die
+        // automatische Namenserkennung nichts geliefert hat.
+        $extracted = $this->applyManualName($request, $extracted);
+
+        $person = $extracted['person'] ?? [];
         $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
         if ($name === '') {
-            return response()->json(['message' => 'Im Dokument wurde kein Name erkannt - bitte Kunden manuell anlegen.'], 422);
+            return response()->json(['message' => 'Bitte den Namen des Kunden eintragen (Vorname und/oder Nachname).'], 422);
         }
 
-        $criteria = $this->intake->matchCriteria($document->ai_extracted ?? []);
+        $criteria = $this->intake->matchCriteria($extracted);
         // Bereits vergebene E-Mail nicht als Login-Adresse verwenden (unique
         // auf users.email); der neue Kunde bekommt dann eine Platzhalter-
         // Adresse, die extrahierte E-Mail kann als email2 uebernommen werden.
@@ -482,6 +492,9 @@ class SmartDocumentUploadController extends Controller
             'family.job_start' => 'nullable|date',
             'family.old_insurer' => 'nullable|string|max:120',
             'family.new_insurer' => 'required_with:family|string|max:120',
+            // Manuell eingetragener Name, falls die Extraktion keinen lieferte.
+            'first_name' => 'nullable|string|max:80',
+            'last_name' => 'nullable|string|max:80',
         ]);
 
         $ids = array_values(array_unique($request->input('document_ids')));
@@ -522,10 +535,15 @@ class SmartDocumentUploadController extends Controller
             }
         }
 
+        // Manuell eingetragener Name hat Vorrang (Familien-Hauptperson wurde
+        // oben ggf. schon gesetzt; hier ueberschreibt nur eine explizite
+        // Eingabe des Mitarbeiters).
+        $merged = $this->applyManualName($request, $merged);
+
         $person = $merged['person'] ?? [];
         $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
         if ($name === '') {
-            return response()->json(['message' => 'In den Dokumenten wurde kein Name erkannt - bitte Kunden manuell anlegen.'], 422);
+            return response()->json(['message' => 'Bitte den Namen des Kunden eintragen (Vorname und/oder Nachname).'], 422);
         }
 
         $criteria = $this->intake->matchCriteria($merged);
@@ -758,6 +776,29 @@ class SmartDocumentUploadController extends Controller
             ['user_id' => auth()->id()],
             ['customer_number' => 'C-' . strtoupper(Str::random(8))]
         );
+    }
+
+    /**
+     * Vom Mitarbeiter im Modal eingetragenen Namen in die Extraktion
+     * uebernehmen. So laesst sich ein Kunde auch dann anlegen, wenn die
+     * automatische Namenserkennung nichts (Sicheres) geliefert hat - der
+     * Mitarbeiter sieht das Dokument und traegt Vor-/Nachname selbst ein.
+     * Eine explizite Eingabe hat Vorrang vor dem extrahierten Wert.
+     *
+     * @param array<string,mixed> $extracted
+     * @return array<string,mixed>
+     */
+    private function applyManualName(Request $request, array $extracted): array
+    {
+        $first = trim((string) $request->input('first_name', ''));
+        $last = trim((string) $request->input('last_name', ''));
+        if ($first !== '') {
+            $extracted['person']['first_name'] = $first;
+        }
+        if ($last !== '') {
+            $extracted['person']['last_name'] = $last;
+        }
+        return $extracted;
     }
 
     /**

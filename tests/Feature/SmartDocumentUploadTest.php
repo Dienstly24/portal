@@ -456,6 +456,86 @@ class SmartDocumentUploadTest extends TestCase
         $this->assertSame('10115', $customer->address_zip);
     }
 
+    public function test_create_customer_requires_a_name_when_none_extracted(): void
+    {
+        // Wurde der Name nicht (sicher) gelesen, darf die Neuanlage nicht
+        // stillschweigend scheitern - der Server verlangt einen Namen.
+        Storage::fake('local');
+        Storage::disk('local')->put('documents/eingang/be.pdf', '%PDF-1.4');
+        $doc = Document::create([
+            'customer_id' => null,
+            'category' => 'other',
+            'file_name' => 'Beitrittserklaerung.pdf',
+            'file_path' => 'documents/eingang/be.pdf',
+            'disk' => 'local',
+            'ai_status' => 'done',
+            'ai_type' => 'beitrittserklaerung',
+            'ai_extracted' => ['person' => ['birth_date' => '1990-05-02']],
+        ]);
+        $admin = $this->makeAdmin();
+
+        $this->actingAs($admin)->postJson(route('admin.documents.create_customer', $doc->id), [])
+            ->assertStatus(422);
+        $this->assertNull($doc->fresh()->customer_id);
+    }
+
+    public function test_create_customer_uses_manually_entered_name(): void
+    {
+        // Der Mitarbeiter sieht das Dokument und traegt den Namen selbst ein,
+        // wenn die Extraktion keinen (sicheren) Namen geliefert hat.
+        Storage::fake('local');
+        Storage::disk('local')->put('documents/eingang/be2.pdf', '%PDF-1.4');
+        $doc = Document::create([
+            'customer_id' => null,
+            'category' => 'other',
+            'file_name' => 'Beitrittserklaerung.pdf',
+            'file_path' => 'documents/eingang/be2.pdf',
+            'disk' => 'local',
+            'ai_status' => 'done',
+            'ai_type' => 'beitrittserklaerung',
+            'ai_extracted' => ['person' => ['birth_date' => '1990-05-02']],
+        ]);
+        $admin = $this->makeAdmin();
+
+        $response = $this->actingAs($admin)->postJson(route('admin.documents.create_customer', $doc->id), [
+            'first_name' => 'Osama',
+            'last_name' => 'Salem',
+            'apply_fields' => ['birth_date'],
+        ]);
+
+        $response->assertOk()->assertJson(['ok' => true]);
+        $doc->refresh();
+        $customer = Customer::findOrFail($doc->customer_id);
+        $this->assertSame('Osama Salem', $customer->user->name);
+        $this->assertSame('1990-05-02', (string) $customer->birth_date);
+    }
+
+    public function test_create_customer_manual_name_overrides_extracted(): void
+    {
+        // Explizit eingegebener Name hat Vorrang vor einem (falsch) gelesenen.
+        Storage::fake('local');
+        Storage::disk('local')->put('documents/eingang/be3.pdf', '%PDF-1.4');
+        $doc = Document::create([
+            'customer_id' => null,
+            'category' => 'other',
+            'file_name' => 'Beitrittserklaerung.pdf',
+            'file_path' => 'documents/eingang/be3.pdf',
+            'disk' => 'local',
+            'ai_status' => 'done',
+            'ai_type' => 'beitrittserklaerung',
+            'ai_extracted' => ['person' => ['first_name' => 'Falsch', 'last_name' => 'Gelesen']],
+        ]);
+        $admin = $this->makeAdmin();
+
+        $this->actingAs($admin)->postJson(route('admin.documents.create_customer', $doc->id), [
+            'first_name' => 'Jaber',
+            'last_name' => 'Salem',
+        ])->assertOk();
+
+        $customer = Customer::findOrFail($doc->fresh()->customer_id);
+        $this->assertSame('Jaber Salem', $customer->user->name);
+    }
+
     public function test_excluded_fields_are_never_applied_to_customer(): void
     {
         // Betreiber-Vorgabe: Beruf, Fuehrerscheindatum und weitere Fahrer werden
