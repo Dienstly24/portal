@@ -943,7 +943,7 @@ class AdminController extends Controller
         return back()->with('success', 'Dokument gelöscht.');
     }
 
-    public function documentDownload($id) {
+    public function documentDownload(\Illuminate\Http\Request $request, $id) {
         $doc = \App\Models\Document::findOrFail($id);
         $this->authorizeDocumentAccess($doc);
         \App\Models\ActivityLog::create([
@@ -955,7 +955,11 @@ class AdminController extends Controller
         ]);
         $disk = $doc->disk ?: 'public';
         abort_unless(\Illuminate\Support\Facades\Storage::disk($disk)->exists($doc->file_path), 404);
-        return \Illuminate\Support\Facades\Storage::disk($disk)->download($doc->file_path, $doc->file_name);
+        // ?view=1 -> im Browser anzeigen (Vorschau, z.B. "Anzeigen"-Button im
+        // Dokumenten-Eingang); sonst herunterladen.
+        return $request->boolean('view')
+            ? \Illuminate\Support\Facades\Storage::disk($disk)->response($doc->file_path, $doc->file_name)
+            : \Illuminate\Support\Facades\Storage::disk($disk)->download($doc->file_path, $doc->file_name);
     }
 
     public function downloadAttachment($id) {

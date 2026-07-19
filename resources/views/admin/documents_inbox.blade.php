@@ -77,6 +77,16 @@
     @endforelse
 </div>
 
+{{-- Aktionsleiste fuer manuelle Mehrfachauswahl: beliebige Eingangs-Dokumente
+     zu EINEM Kunden buendeln (z.B. getrennt hochgeladene Ausweis-Vorder- und
+     -Rueckseite oder Ausweis + Antrag). Erscheint, sobald >= 1 Dokument per
+     Checkbox markiert ist. --}}
+<div id="inbox-selection-bar" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:150;background:#101216;color:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.30);padding:11px 16px;align-items:center;gap:14px;flex-wrap:wrap;max-width:calc(100% - 32px);">
+    <span style="font-size:13.5px;"><strong id="inbox-selection-count">0</strong>&nbsp;Dokumente ausgewaehlt</span>
+    <button type="button" class="btn btn-gold btn-sm" id="inbox-selection-merge" onclick="docReview.openSelection()">🗂 Zu EINEM Kunden zusammenfuehren</button>
+    <button type="button" class="btn btn-ghost btn-sm" style="color:#fff;border-color:rgba(255,255,255,.35);" onclick="docReview.clearSelection()">Aufheben</button>
+</div>
+
 {{-- Zuletzt analysierte, bereits zugeordnete Dokumente --}}
 <div class="card" style="padding:0;overflow:hidden;">
     <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">Zuletzt analysiert &amp; zugeordnet</div>
@@ -122,6 +132,7 @@
         <div style="font-size:17px;font-weight:700;margin-bottom:4px;" id="review-title">Dokument zuordnen</div>
         <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;" id="review-doc-name"></div>
 
+        <div id="review-body">
         {{-- Kundensuche (Modus: zuordnen) --}}
         <div id="review-assign-block">
             <div class="field" style="margin-bottom:6px;">
@@ -198,6 +209,19 @@
             <button type="button" class="btn btn-ghost" onclick="docReview.close()">Abbrechen</button>
             <button type="button" class="btn btn-gold" id="review-submit" onclick="docReview.submit()">Zuordnen &amp; übernehmen</button>
         </div>
+        </div>{{-- /review-body --}}
+
+        {{-- Erfolg: NICHT zwangsweise weiterleiten. Der Mitarbeiter entscheidet,
+             ob er zur Kundenakte springt oder im Eingang weiterarbeitet. --}}
+        <div id="review-success" style="display:none;text-align:center;padding:10px 4px;">
+            <div style="font-size:42px;margin-bottom:8px;">✅</div>
+            <div id="review-success-msg" style="font-size:15.5px;font-weight:700;margin-bottom:6px;"></div>
+            <div id="review-success-sub" style="font-size:13px;color:var(--ink-soft);margin-bottom:20px;"></div>
+            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+                <button type="button" class="btn btn-ghost" onclick="docReview.stay()">Im Eingang bleiben</button>
+                <a id="review-success-link" href="#" class="btn btn-gold">Zur Kundenakte →</a>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -249,12 +273,23 @@ window.docReview = (function() {
 
     // Vorgang-Modus: EIN neuer Kunde aus allen Dokumenten des Batches.
     function openBatch(batchId) {
-        var batch = window.INBOX_BATCHES[batchId];
+        openBatchMeta(window.INBOX_BATCHES[batchId]);
+    }
+
+    // Kern des Vorgang-/Auswahl-Modus: nimmt die (server-berechneten)
+    // Batch-Metadaten direkt entgegen - so nutzen automatisch gruppierte
+    // Vorgaenge UND die manuelle Mehrfachauswahl exakt dieselbe Ansicht.
+    function openBatchMeta(batch) {
         if (!batch) return;
-        current = { batchId: batchId, mode: 'batch', customerId: null };
+        if (batch.conflicts && batch.conflicts.length) {
+            alert('⚠ ' + batch.conflicts.join(' ') + '\n\nBitte die Dokumente einzeln pruefen.');
+            return;
+        }
+        current = { mode: 'batch', customerId: null, ids: batch.ids || [] };
 
         el('review-title').textContent = 'Neuen Kunden aus ' + batch.ids.length + ' Dokumenten erstellen';
         el('review-doc-name').textContent = '🗂 ' + batch.file_names.join(' · ');
+        showBody();
         el('review-error').style.display = 'none';
         el('review-customer-q').value = '';
         el('review-customer-results').innerHTML = '';
@@ -274,6 +309,33 @@ window.docReview = (function() {
 
         el('review-submit').textContent = 'Kunden anlegen & alle zuordnen';
         el('doc-review-modal').style.display = 'flex';
+    }
+
+    // Manuelle Mehrfachauswahl -> Batch-Vorschau vom Server holen (gleiche
+    // Zusammenfuehrung + Familien-Erkennung wie ein Vorgang) und oeffnen.
+    function openSelection() {
+        var ids = selectedIds();
+        if (ids.length < 2) { alert('Bitte mindestens zwei Dokumente auswaehlen.'); return; }
+        var btn = el('inbox-selection-merge');
+        if (btn) { btn.disabled = true; btn.textContent = 'Wird zusammengefuehrt…'; }
+        fetch(@json(route('admin.documents.batch_preview')), {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': @json(csrf_token()),
+            },
+            body: JSON.stringify({ document_ids: ids }),
+        }).then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })
+        .then(function(res) {
+            if (btn) { btn.disabled = false; btn.textContent = '🗂 Zu EINEM Kunden zusammenfuehren'; }
+            if (res.ok) { openBatchMeta(res.json); }
+            else { alert('⚠ ' + (res.json.message || 'Vorschau fehlgeschlagen.')); }
+        }).catch(function() {
+            if (btn) { btn.disabled = false; btn.textContent = '🗂 Zu EINEM Kunden zusammenfuehren'; }
+            alert('Netzwerkfehler.');
+        });
     }
 
     // Krankenkassen-Fall: Personenliste (Haupt-Frage + Status je Person),
@@ -367,6 +429,7 @@ window.docReview = (function() {
 
         el('review-title').textContent = mode === 'create' ? 'Neuen Kunden erstellen' : 'Dokument zuordnen';
         el('review-doc-name').textContent = '📄 ' + doc.file_name + (doc.type_label ? ' · ' + doc.type_label : '');
+        showBody();
         el('review-error').style.display = 'none';
         el('review-customer-q').value = '';
         el('review-customer-results').innerHTML = '';
@@ -499,7 +562,7 @@ window.docReview = (function() {
 
         var url;
         if (isBatch) {
-            payload.document_ids = (window.INBOX_BATCHES[current.batchId] || {}).ids || [];
+            payload.document_ids = current.ids || [];
             url = @json(route('admin.documents.create_customer_batch'));
             // Krankenkassen-Fall mitschicken, wenn aktiviert.
             var famSection = el('review-family-section');
@@ -544,7 +607,7 @@ window.docReview = (function() {
         .then(function(res) {
             el('review-submit').disabled = false;
             if (res.ok && res.json.ok) {
-                window.location.href = res.json.customer_url || window.location.href;
+                showSuccess(res.json, isBatch ? 'batch' : current.mode);
             } else {
                 showError(res.json.message || 'Aktion fehlgeschlagen.');
             }
@@ -552,6 +615,45 @@ window.docReview = (function() {
             el('review-submit').disabled = false;
             showError('Netzwerkfehler.');
         });
+    }
+
+    // Nach erfolgreicher Aktion NICHT hart weiterleiten (der Mitarbeiter
+    // verliert sonst den Eingang), sondern einen Erfolg mit Wahl anzeigen:
+    // zur Kundenakte springen ODER im Eingang weiterarbeiten.
+    function showSuccess(data, mode) {
+        // Manuelle Auswahl abschliessen (die Dokumente sind jetzt zugeordnet).
+        clearSelection();
+        var name = data.customer_name || 'Kunde';
+        var number = data.customer_number ? ' (' + data.customer_number + ')' : '';
+        var msg, sub;
+        if (mode === 'assign') {
+            msg = 'Dokument zugeordnet';
+            sub = 'Zugeordnet zu ' + name + number + '.';
+        } else if (mode === 'batch') {
+            msg = 'Kunde angelegt · ' + (data.documents || 0) + ' Dokumente zugeordnet';
+            sub = name + number + ' wurde angelegt.'
+                + (data.health ? ' Krankenkassen-Fall eingerichtet.' : '');
+        } else {
+            msg = 'Neuer Kunde angelegt';
+            sub = name + number + ' wurde angelegt und das Dokument zugeordnet.';
+        }
+        el('review-success-msg').textContent = '✅ ' + msg;
+        el('review-success-sub').textContent = sub;
+        el('review-success-link').href = data.customer_url || '#';
+        el('review-body').style.display = 'none';
+        el('review-success').style.display = '';
+    }
+
+    // Modal-Arbeitsbereich zeigen, Erfolgsansicht ausblenden.
+    function showBody() {
+        el('review-body').style.display = '';
+        el('review-success').style.display = 'none';
+    }
+
+    // "Im Eingang bleiben": Seite neu laden, damit die jetzt zugeordneten
+    // Dokumente aus der Liste verschwinden - der Mitarbeiter arbeitet weiter.
+    function stay() {
+        window.location.reload();
     }
 
     function showError(msg) {
@@ -575,6 +677,27 @@ window.docReview = (function() {
         .catch(function() { btn.disabled = false; });
     }
 
+    // --- Manuelle Mehrfachauswahl (Checkboxen im Eingang) ---
+    function selectedBoxes() {
+        return Array.from(document.querySelectorAll('.inbox-select:checked'));
+    }
+    function selectedIds() {
+        return selectedBoxes().map(function(cb) { return cb.value; });
+    }
+    function updateSelectionBar() {
+        var n = selectedBoxes().length;
+        var bar = el('inbox-selection-bar');
+        if (!bar) return;
+        el('inbox-selection-count').textContent = n;
+        bar.style.display = n > 0 ? 'flex' : 'none';
+        var btn = el('inbox-selection-merge');
+        if (btn) btn.disabled = n < 2; // erst ab 2 Dokumenten sinnvoll
+    }
+    function clearSelection() {
+        selectedBoxes().forEach(function(cb) { cb.checked = false; });
+        updateSelectionBar();
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         el('family-enabled').addEventListener('change', function() {
             el('family-body').style.display = this.checked ? '' : 'none';
@@ -592,11 +715,22 @@ window.docReview = (function() {
         el('doc-review-modal').addEventListener('click', function(e) {
             if (e.target === this) docReview.close();
         });
+        // Auswahl-Leiste live aktualisieren (Delegation, damit auch neu
+        // gerenderte Zeilen erfasst werden).
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.classList && e.target.classList.contains('inbox-select')) {
+                updateSelectionBar();
+            }
+        });
+        updateSelectionBar();
     });
 
     return {
         open: open,
         openBatch: openBatch,
+        openSelection: openSelection,
+        clearSelection: clearSelection,
+        stay: stay,
         close: function() { el('doc-review-modal').style.display = 'none'; current = null; },
         submit: submit,
         reanalyze: reanalyze,

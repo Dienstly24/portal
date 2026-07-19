@@ -175,4 +175,84 @@ class DocumentMergeTest extends TestCase
         $response->assertOk();
         $this->assertNull(Document::findOrFail($response->json('ids.0'))->intake_batch);
     }
+
+    /**
+     * Manuelle Mehrfachauswahl: der Mitarbeiter markiert getrennt hochgeladene
+     * Dokumente (z.B. Ausweis-Vorder- und -Rueckseite) selbst und bekommt die
+     * gleiche zusammengefuehrte Vorschau wie ein automatischer Vorgang.
+     */
+    public function test_batch_preview_merges_selected_documents(): void
+    {
+        $ausweis = $this->inboxDoc('personalausweis', ['person' => [
+            'first_name' => 'Ahmed', 'last_name' => 'Nassar', 'birth_date' => '1999-08-15',
+        ]], 'ausweis.pdf');
+        $protokoll = $this->inboxDoc('kfz_vertrag', [
+            'person' => ['first_name' => 'Ahmed', 'last_name' => 'Nassar'],
+            'versicherung' => ['insurer' => 'HUK24', 'sparte' => 'kfz'],
+        ], 'protokoll.pdf');
+
+        $response = $this->actingAs($this->admin())->postJson(route('admin.documents.batch_preview'), [
+            'document_ids' => [$ausweis->id, $protokoll->id],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('has_name', true)
+            ->assertJsonPath('merged.person.first_name', 'Ahmed')
+            ->assertJsonCount(2, 'ids')
+            ->assertJsonCount(2, 'file_names');
+    }
+
+    public function test_batch_preview_reports_name_conflict(): void
+    {
+        $ausweis = $this->inboxDoc('personalausweis', ['person' => ['first_name' => 'Ahmed', 'last_name' => 'Nassar']]);
+        $fuehrerschein = $this->inboxDoc('fuehrerschein', ['person' => ['first_name' => 'Ahmad', 'last_name' => 'Nasser']]);
+
+        $response = $this->actingAs($this->admin())->postJson(route('admin.documents.batch_preview'), [
+            'document_ids' => [$ausweis->id, $fuehrerschein->id],
+        ]);
+
+        // Die Vorschau selbst liefert 200 mit den Konflikten (die UI warnt),
+        // das eigentliche Anlegen (create_customer_batch) blockt dann mit 422.
+        $response->assertOk();
+        $this->assertNotEmpty($response->json('conflicts'));
+    }
+
+    public function test_batch_preview_rejects_already_assigned_document(): void
+    {
+        $doc = $this->inboxDoc('personalausweis', ['person' => ['first_name' => 'Ahmed', 'last_name' => 'Nassar']]);
+        $user = User::factory()->create(['role' => 'customer']);
+        $customer = Customer::create(['user_id' => $user->id, 'customer_number' => 'C-ASSIGNED']);
+        $doc->update(['customer_id' => $customer->id]);
+        $other = $this->inboxDoc('kfz_vertrag', ['person' => ['first_name' => 'Ahmed', 'last_name' => 'Nassar']]);
+
+        $this->actingAs($this->admin())->postJson(route('admin.documents.batch_preview'), [
+            'document_ids' => [$doc->id, $other->id],
+        ])->assertStatus(422);
+    }
+
+    public function test_inbox_shows_selection_checkbox_and_view_button(): void
+    {
+        $this->inboxDoc('personalausweis', ['person' => ['first_name' => 'Ahmed', 'last_name' => 'Nassar']], 'ausweis.pdf');
+
+        $response = $this->actingAs($this->admin())->get(route('admin.documents.inbox'));
+
+        $response->assertOk()
+            ->assertSee('inbox-select', false)                 // Mehrfachauswahl-Checkbox
+            ->assertSee('inbox-selection-bar', false)          // Aktionsleiste
+            ->assertSee('Anzeigen', false);                    // Anzeigen-Button
+    }
+
+    public function test_inbox_shows_view_button_for_failed_document(): void
+    {
+        $doc = $this->inboxDoc('sonstiges', [], 'scan.pdf');
+        $doc->update(['ai_status' => 'failed', 'ai_error' => 'Analyse kaputt']);
+
+        $response = $this->actingAs($this->admin())->get(route('admin.documents.inbox'));
+
+        // Auch ein fehlgeschlagenes Dokument laesst sich ansehen (der
+        // Mitarbeiter kann sonst nicht erkennen, um welche Datei es geht).
+        $response->assertOk()
+            ->assertSee('Analyse fehlgeschlagen', false)
+            ->assertSee('Anzeigen', false);
+    }
 }
