@@ -147,6 +147,23 @@
         {{-- Neuanlage-Hinweis (Modus: neuer Kunde) --}}
         <div id="review-create-block" style="display:none;background:#E6F1FB;border:1px solid #185FA5;border-radius:8px;padding:10px 12px;font-size:13.5px;margin-bottom:12px;"></div>
 
+        {{-- Name des neuen Kunden: vorbefuellt aus dem Dokument, aber IMMER
+             editierbar - so laesst sich ein Kunde auch anlegen, wenn der Name
+             nicht (sicher) gelesen wurde (Mitarbeiter tippt ihn aus dem
+             Dokument ab). --}}
+        <div id="review-name-block" style="display:none;margin-bottom:12px;">
+            <div style="font-weight:700;font-size:13.5px;margin-bottom:6px;">Name des Kunden *</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <input type="text" id="review-first-name" placeholder="Vorname"
+                    style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                <input type="text" id="review-last-name" placeholder="Nachname"
+                    style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+            </div>
+            <div id="review-name-hint" style="display:none;font-size:12px;color:#8A5A00;margin-top:5px;">
+                ℹ Der Name wurde nicht automatisch gelesen – bitte aus dem Dokument eintragen (👁 Anzeigen).
+            </div>
+        </div>
+
         {{-- Krankenkassen-Fall (Familie + Wechsel), nur im Vorgang-Modus bei >= 2 Personen --}}
         <div id="review-family-section" style="display:none;border:1.5px solid #3B7A57;border-radius:10px;padding:12px;margin-bottom:12px;background:#F6FBF8;">
             <label style="display:flex;gap:9px;align-items:flex-start;font-size:13.5px;cursor:pointer;font-weight:700;">
@@ -282,6 +299,15 @@ window.docReview = (function() {
     function get(x, a, b) { return (x[a] || {})[b] || null; }
     function el(id) { return document.getElementById(id); }
 
+    // Namensfelder fuer die Neuanlage vorbelegen (aus dem Dokument) und immer
+    // editierbar zeigen. Fehlt der Name, wird ein Hinweis eingeblendet.
+    function fillNameBlock(first, last) {
+        el('review-name-block').style.display = '';
+        el('review-first-name').value = first || '';
+        el('review-last-name').value = last || '';
+        el('review-name-hint').style.display = (!first && !last) ? '' : 'none';
+    }
+
     // Vorgang-Modus: EIN neuer Kunde aus allen Dokumenten des Batches.
     function openBatch(batchId) {
         openBatchMeta(window.INBOX_BATCHES[batchId]);
@@ -309,9 +335,9 @@ window.docReview = (function() {
         el('review-create-block').style.display = '';
 
         var p = (batch.merged || {}).person || {};
-        var name = [(p.first_name || ''), (p.last_name || '')].join(' ').trim() || 'Unbekannt';
-        el('review-create-block').textContent = '🆕 Es wird EIN neuer Kunde angelegt: ' + name
-            + ' – alle ' + batch.ids.length + ' Dokumente werden ihm zugeordnet. Die Daten stammen zusammengefuehrt aus allen Dokumenten (Ausweis hat Vorrang bei Personendaten).';
+        el('review-create-block').textContent = '🆕 Es wird EIN neuer Kunde angelegt und alle ' + batch.ids.length
+            + ' Dokumente werden ihm zugeordnet. Die Daten stammen zusammengefuehrt aus allen Dokumenten (Ausweis hat Vorrang bei Personendaten).';
+        fillNameBlock(p.first_name, p.last_name);
 
         chooseCustomer(null, null);
         renderApplyFields({ extracted: batch.merged || {} });
@@ -452,9 +478,11 @@ window.docReview = (function() {
 
         if (mode === 'create') {
             var p = (doc.extracted || {}).person || {};
-            var name = [(p.first_name || ''), (p.last_name || '')].join(' ').trim() || 'Unbekannt';
-            el('review-create-block').textContent = '🆕 Es wird ein neuer Kunde angelegt: ' + name
-                + ' – mit neuer Kundennummer. Die unten ausgewählten Daten werden in die Kundenakte übernommen.';
+            el('review-create-block').textContent = '🆕 Es wird ein neuer Kunde mit neuer Kundennummer angelegt. '
+                + 'Die unten ausgewählten Daten werden in die Kundenakte übernommen.';
+            fillNameBlock(p.first_name, p.last_name);
+        } else {
+            el('review-name-block').style.display = 'none';
         }
 
         chooseCustomer(customerId || null, customerLabel || null);
@@ -570,6 +598,20 @@ window.docReview = (function() {
             visibility: el('review-visibility').value,
         };
         if (!isCreate) payload.customer_id = current.customerId;
+
+        // Neuanlage: der (ggf. manuell eingetippte) Name ist Pflicht - so laesst
+        // sich ein Kunde auch anlegen, wenn der Name nicht gelesen wurde.
+        if (isCreate) {
+            var first = el('review-first-name').value.trim();
+            var last = el('review-last-name').value.trim();
+            if (!first && !last) {
+                showError('Bitte den Namen des Kunden eintragen (Vorname und/oder Nachname).');
+                el('review-first-name').focus();
+                return;
+            }
+            payload.first_name = first;
+            payload.last_name = last;
+        }
 
         var url;
         if (isBatch) {
