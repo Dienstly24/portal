@@ -1,5 +1,6 @@
 <?php
 namespace App\Http\Controllers;
+use App\Http\Controllers\Concerns\ScopesCustomerAccess;
 
 use App\Mail\DirectEmailMail;
 use App\Models\Customer;
@@ -23,6 +24,8 @@ use Illuminate\Support\Facades\Mail;
  */
 class ComposeEmailController extends Controller
 {
+    use ScopesCustomerAccess;
+
     private function authorizeCompose(): void
     {
         $user = auth()->user();
@@ -31,13 +34,6 @@ class ComposeEmailController extends Controller
             403,
             'Keine Berechtigung zum E-Mail-Versand.'
         );
-    }
-
-    /** null = alle Kunden sichtbar; sonst erlaubte IDs (Portfolio-Scope). */
-    private function visibleCustomerIds(): ?array
-    {
-        $user = auth()->user();
-        return $user->canSeeAllCustomers() ? null : $user->visibleCustomerIdsWithSubstitution();
     }
 
     public function create(Request $request, EmailDraftService $draftService)

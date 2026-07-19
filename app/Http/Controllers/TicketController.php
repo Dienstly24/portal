@@ -1,5 +1,6 @@
 <?php
 namespace App\Http\Controllers;
+use App\Http\Controllers\Concerns\ScopesCustomerAccess;
 
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
@@ -16,12 +17,7 @@ use Illuminate\Support\Str;
  */
 class TicketController extends Controller
 {
-    /** null = alle sichtbar; sonst Array der erlaubten Kunden-IDs */
-    private function visibleCustomerIds(): ?array {
-        $user = auth()->user();
-        if (!$user || $user->canSeeAllCustomers()) return null;
-        return $user->visibleCustomerIdsWithSubstitution();
-    }
+    use ScopesCustomerAccess;
 
     /** Sichtbarkeits-Check als Bool (fuer Bulk-Aktionen ohne Abbruch). */
     private function canAccessTicket(Ticket $ticket): bool {

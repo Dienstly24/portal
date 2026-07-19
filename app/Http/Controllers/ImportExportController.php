@@ -1,5 +1,6 @@
 <?php
 namespace App\Http\Controllers;
+use App\Http\Controllers\Concerns\ScopesCustomerAccess;
 use App\Models\User;
 use App\Models\Customer;
 use Illuminate\Http\Request;
@@ -9,12 +10,7 @@ use League\Csv\EscapeFormula;
 
 class ImportExportController extends Controller
 {
-    /** null = alle sichtbar; sonst Array der erlaubten Kunden-IDs */
-    private function visibleCustomerIds(): ?array {
-        $user = auth()->user();
-        if (!$user || $user->canSeeAllCustomers()) return null;
-        return $user->assignedCustomers()->pluck('customers.id')->toArray();
-    }
+    use ScopesCustomerAccess;
 
     public function index() {
         return view('admin.import_export');

@@ -1,5 +1,6 @@
 <?php
 namespace App\Http\Controllers;
+use App\Http\Controllers\Concerns\ScopesCustomerAccess;
 use App\Models\Appointment;
 use App\Models\Customer;
 use App\Models\CustomerTimeline;
@@ -8,11 +9,7 @@ use Illuminate\Support\Str;
 
 class AppointmentController extends Controller
 {
-    private function visibleCustomerIds(): ?array {
-        $user = auth()->user();
-        if (!$user || $user->canSeeAllCustomers()) return null;
-        return $user->assignedCustomers()->pluck('customers.id')->toArray();
-    }
+    use ScopesCustomerAccess;
 
     public function index() {
         $appointments = Appointment::with(['customer.user','assignedTo'])
