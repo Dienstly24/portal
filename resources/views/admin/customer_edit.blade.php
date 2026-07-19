@@ -255,7 +255,7 @@
     <div class="field">
         <label>Echte E-Mail-Adresse eingeben (aktiviert Portal-Zugang)</label>
         <input type="email" name="portal_email" placeholder="kunde@beispiel.de">
-        <div style="font-size:11px;color:var(--ink-soft);margin-top:4px;">Nach dem Speichern kann der Kunde eine Einladungs-E-Mail erhalten.</div>
+        <div style="font-size:11px;color:var(--ink-soft);margin-top:4px;">Nach dem Speichern wird automatisch eine Einladungs-E-Mail an den Kunden gesendet.</div>
     </div>
     @endif
     <div class="field">

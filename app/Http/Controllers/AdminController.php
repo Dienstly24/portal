@@ -78,7 +78,7 @@ class AdminController extends Controller
         ]);
     }
 
-    public function customers(\App\Services\Matching\DuplicateDetectionService $detection) {
+    public function customers(Request $request, \App\Services\Matching\DuplicateDetectionService $detection) {
         $employees = \App\Models\User::whereIn('role', ['employee', 'manager', 'support'])->orderBy('name')->get();
         // Hinweis-Badge: Anzahl offener Dubletten-Verdachtsfaelle (kurz gecacht).
         $dupCount = $detection->countCached($this->visibleCustomerIds());
@@ -89,13 +89,153 @@ class AdminController extends Controller
             'betreuer',
             'contracts' => fn($q) => $q->where('status', 'active')->select('id', 'customer_id', 'type', 'status'),
         ]));
-        if (request('betreuer')) {
-            $query->whereHas('betreuer', fn($q) => $q->where('users.id', request('betreuer')));
-        }
+        // Filter (E-Mail, Sparte, Portal-Status, Vertrags-Ablauf, letzter Kontakt,
+        // Betreuer) + Sortierung aus den GET-Parametern anwenden.
+        $this->applyCustomerFilters($query, $request);
+        $this->applyCustomerSort($query, $request);
         // Seitenweise laden (25/Seite) – bleibt auch bei tausenden Kunden schnell.
-        // withQueryString() erhält den Betreuer-Filter über die Seiten hinweg.
-        $customers = $query->latest()->paginate(25)->withQueryString();
-        return view('admin.customers', compact('customers', 'employees', 'dupCount'));
+        // withQueryString() erhält alle Filter/Sortierung über die Seiten hinweg.
+        $customers = $query->paginate(25)->withQueryString();
+
+        // Schnell-Kennzahlen (aufs Portfolio gescoped, OHNE die aktiven Filter):
+        // beantworten "wie viele Strom-/Gas-Kunden, wie viele ohne E-Mail, wessen
+        // Vertrag laeuft bald ab, wer wurde lange nicht kontaktiert" auf einen Blick
+        // und dienen zugleich als klickbare Schnellfilter.
+        $counts = [
+            'total'      => $this->scopeCustomers(Customer::query())->count(),
+            'strom'      => $this->countBySparte('strom'),
+            'gas'        => $this->countBySparte('gas'),
+            'kfz'        => $this->countBySparte('kfz'),
+            'ohne_email' => $this->scopeCustomers(Customer::query())
+                                ->whereDoesntHave('user', fn($u) => $this->scopeRealEmail($u))->count(),
+            'ablauf'     => $this->scopeCustomers(Customer::query())
+                                ->whereHas('contracts', fn($q) => $q->where('status', 'active')
+                                    ->whereNotNull('end_date')
+                                    ->whereBetween('end_date', [today(), today()->addDays(60)]))->count(),
+            'kontakt'    => $this->scopeCustomers(Customer::query())
+                                ->where(fn($q) => $q->whereNull('last_contact')
+                                    ->orWhere('last_contact', '<', today()->subDays(180)))->count(),
+        ];
+
+        $sparten = \App\Models\Contract::TYPES;
+
+        return view('admin.customers', compact('customers', 'employees', 'dupCount', 'counts', 'sparten'));
+    }
+
+    /** Zaehlt Kunden mit mind. einem AKTIVEN Vertrag der Sparte (portfolio-gescoped). */
+    private function countBySparte(string $type): int {
+        return $this->scopeCustomers(Customer::query())
+            ->whereHas('contracts', fn($q) => $q->where('status', 'active')->where('type', $type))
+            ->count();
+    }
+
+    /** Query-Bedingung "echte E-Mail" (kein Import-Platzhalter), analog User::hasRealEmail(). */
+    private function scopeRealEmail($query) {
+        return $query->whereNotNull('email')->where('email', 'not like', '%@dienstly24.internal%');
+    }
+
+    /**
+     * Filter der Kundenliste aus den GET-Parametern. Alle Bedingungen sind
+     * additiv (UND) und portfolio-vertraeglich (die Basis ist bereits gescoped).
+     */
+    private function applyCustomerFilters($query, Request $request): void {
+        // Betreuer (nur admin/manager sehen den Filter, serverseitig aber
+        // unschaedlich fuer Mitarbeiter, da deren Portfolio ohnehin gescoped ist).
+        if ($request->filled('betreuer')) {
+            $query->whereHas('betreuer', fn($q) => $q->where('users.id', $request->betreuer));
+        }
+        // E-Mail vorhanden / fehlt (echte Adresse, kein Import-Platzhalter).
+        if ($request->email === 'mit') {
+            $query->whereHas('user', fn($u) => $this->scopeRealEmail($u));
+        } elseif ($request->email === 'ohne') {
+            $query->whereDoesntHave('user', fn($u) => $this->scopeRealEmail($u));
+        }
+        // Sparte: mind. ein aktiver Vertrag dieses Typs.
+        if ($request->filled('sparte')) {
+            $query->whereHas('contracts', fn($q) => $q->where('status', 'active')->where('type', $request->sparte));
+        }
+        // Portal-Status (spiegelt Customer::portalStatus()).
+        if ($request->filled('portal')) {
+            $this->applyPortalStatusFilter($query, (string) $request->portal);
+        }
+        // Vertrag laeuft demnaechst ab: aktiver Vertrag mit end_date im Fenster.
+        if ($request->filled('ablauf')) {
+            $days = max(1, (int) $request->ablauf);
+            $query->whereHas('contracts', fn($q) => $q->where('status', 'active')
+                ->whereNotNull('end_date')
+                ->whereBetween('end_date', [today(), today()->addDays($days)]));
+        }
+        // Lange nicht kontaktiert (nie oder laenger als X Tage her).
+        if ($request->filled('kontakt')) {
+            if ($request->kontakt === 'nie') {
+                $query->whereNull('last_contact');
+            } else {
+                $days = max(1, (int) $request->kontakt);
+                $query->where(fn($q) => $q->whereNull('last_contact')
+                    ->orWhere('last_contact', '<', today()->subDays($days)));
+            }
+        }
+    }
+
+    /**
+     * Portal-Status als Query-Bedingung – gleiche Reihenfolge/Regeln wie
+     * Customer::portalStatus(), damit Filter und Badge deckungsgleich sind.
+     */
+    private function applyPortalStatusFilter($query, string $key): void {
+        if ($key === 'kein_account') {
+            $query->whereDoesntHave('user', fn($u) => $this->scopeRealEmail($u));
+            return;
+        }
+        // "Nicht deaktiviert" = is_active true oder (Alt-Datensatz) NULL.
+        $notDeactivated = fn($u) => $u->where(fn($w) => $w->whereNull('is_active')->orWhere('is_active', true));
+        $query->whereHas('user', function ($u) use ($key, $notDeactivated) {
+            $this->scopeRealEmail($u);
+            switch ($key) {
+                case 'deaktiviert':
+                    $u->where('is_active', false);
+                    break;
+                case 'erster_login':
+                    $notDeactivated($u);
+                    $u->whereNotNull('first_login_at');
+                    break;
+                case 'aktiviert':
+                    $notDeactivated($u);
+                    $u->whereNull('first_login_at')->whereNotNull('portal_password_set_at');
+                    break;
+                case 'einladung_gesendet':
+                    $notDeactivated($u);
+                    $u->whereNull('first_login_at')->whereNull('portal_password_set_at')->whereNotNull('invitation_sent_at');
+                    break;
+                case 'passwort_nicht_gesetzt':
+                    $notDeactivated($u);
+                    $u->whereNull('first_login_at')->whereNull('portal_password_set_at')->whereNull('invitation_sent_at');
+                    break;
+            }
+        });
+    }
+
+    /** Sortierung der Kundenliste (Standard: neueste zuerst). */
+    private function applyCustomerSort($query, Request $request): void {
+        switch ($request->sort) {
+            case 'name':
+                // Kundenname liegt am User – Join nur zum Sortieren, customers.* behalten.
+                $query->join('users', 'users.id', '=', 'customers.user_id')
+                      ->orderBy('users.name')->select('customers.*');
+                break;
+            case 'name_desc':
+                $query->join('users', 'users.id', '=', 'customers.user_id')
+                      ->orderByDesc('users.name')->select('customers.*');
+                break;
+            case 'aelteste':
+                $query->oldest();
+                break;
+            case 'kontakt':
+                // Laengster ausstehender Kontakt zuerst (nie kontaktierte ganz oben).
+                $query->orderByRaw('last_contact IS NULL DESC')->orderBy('last_contact', 'asc');
+                break;
+            default:
+                $query->latest();
+        }
     }
 
     public function customerShow($id) {
@@ -683,7 +823,38 @@ class AdminController extends Controller
             $userData['password'] = bcrypt($request->new_password);
             $userData['portal_password_set_at'] = now();
         }
+        // Zustand VOR dem Speichern merken: hatte der Kunde bisher eine echte
+        // (nutzbare) E-Mail? Nur so laesst sich "E-Mail neu nachgetragen" erkennen.
+        $hadRealEmail = $user->hasRealEmail();
         $user->update($userData);
+
+        // Automatische Portal-Einladung, sobald eine echte E-Mail NEU nachgetragen
+        // wird (analog zur Neuanlage in storeCustomer). So muss der Mitarbeiter die
+        // Einladung nicht mehr separat ausloesen – sie geht direkt an den Kunden.
+        $invited = false;
+        if (!$hadRealEmail && $user->hasRealEmail()) {
+            try {
+                $customer->setRelation('user', $user);
+                if ($request->filled('new_password')) {
+                    // Passwort wurde in diesem Schritt gesetzt -> manuelle Willkommens-
+                    // Mail mit dem Zugangspasswort (kein Ueberschreiben durch Set-Link).
+                    $user->forceFill(['invitation_sent_at' => now()])->save();
+                    \Illuminate\Support\Facades\Mail::to($user->email)->send(
+                        new \App\Mail\CustomerWelcomeMail($customer, 'manual', $request->new_password)
+                    );
+                    $invited = true;
+                } elseif ($user->invitation_sent_at === null
+                    && $user->portal_password_set_at === null
+                    && $user->first_login_at === null) {
+                    // Noch kein Portal-Zugang angestossen -> Standard-Einladung
+                    // (Startpasswort = Geburtsdatum bzw. Passwort-Setzen-Link).
+                    app(\App\Services\Portal\PortalAccessService::class)->sendInvitation($customer, auth()->id());
+                    $invited = true;
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Auto-Einladung nach E-Mail-Nachtrag fehlgeschlagen: ' . $e->getMessage());
+            }
+        }
 
         // Neue Familienmitglieder aus dem Familie-Tab speichern
         if (is_array($request->family_name)) {
@@ -712,7 +883,10 @@ class AdminController extends Controller
             }
         }
 
-        return redirect()->route('admin.customer', $id)->with('success', 'Kundendaten aktualisiert.');
+        $msg = $invited
+            ? 'Kundendaten aktualisiert. Einladung zum Portal wurde an ' . $user->email . ' gesendet.'
+            : 'Kundendaten aktualisiert.';
+        return redirect()->route('admin.customer', $id)->with('success', $msg);
     }
 
     private function buildAddress(Request $request): ?string {

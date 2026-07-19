@@ -34,19 +34,101 @@ $typeConfig = [
     </div>
 </div>
 
-@if(in_array(auth()->user()->role, ['admin','manager']))
-<div class="card" style="padding:14px 20px;margin-bottom:16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
-    <form method="GET" action="{{ route('admin.customers') }}" style="display:flex;gap:10px;align-items:center;margin:0;">
-        <label style="font-size:13px;color:var(--ink-soft);">Nach Betreuer filtern:</label>
-        <select name="betreuer" onchange="this.form.submit()" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
-            <option value="">Alle Kunden</option>
-            @foreach($employees as $e)
-            <option value="{{ $e->id }}" {{ request('betreuer') == $e->id ? 'selected' : '' }}>{{ $e->name }}</option>
-            @endforeach
-        </select>
-        @if(request('betreuer'))<a href="{{ route('admin.customers') }}" style="font-size:12.5px;color:#A32D2D;">✕ Filter entfernen</a>@endif
+{{-- Filter- und Sortierleiste (fuer alle Rollen sichtbar; der Betreuer-Filter
+     nur fuer admin/manager – Mitarbeiter sehen ohnehin nur ihr Portfolio). --}}
+@php
+    $filterKeys = ['betreuer','email','sparte','portal','ablauf','kontakt'];
+    $hasActiveFilter = collect($filterKeys)->contains(fn($k) => request()->filled($k))
+        || (request()->filled('sort') && request('sort') !== 'neueste');
+@endphp
+<div class="card" style="padding:16px 20px;margin-bottom:16px;">
+    {{-- Schnellfilter mit Kennzahlen (klickbar) --}}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+        <a href="{{ route('admin.customers') }}" class="kf-chip {{ !$hasActiveFilter ? 'kf-active' : '' }}">Alle <b>{{ $counts['total'] }}</b></a>
+        <a href="{{ route('admin.customers', ['sparte'=>'strom']) }}" class="kf-chip {{ request('sparte')==='strom' ? 'kf-active' : '' }}">⚡ Strom <b>{{ $counts['strom'] }}</b></a>
+        <a href="{{ route('admin.customers', ['sparte'=>'gas']) }}" class="kf-chip {{ request('sparte')==='gas' ? 'kf-active' : '' }}">🔥 Gas <b>{{ $counts['gas'] }}</b></a>
+        <a href="{{ route('admin.customers', ['sparte'=>'kfz']) }}" class="kf-chip {{ request('sparte')==='kfz' ? 'kf-active' : '' }}">🚗 KFZ <b>{{ $counts['kfz'] }}</b></a>
+        <a href="{{ route('admin.customers', ['email'=>'ohne']) }}" class="kf-chip {{ request('email')==='ohne' ? 'kf-active' : '' }}">✉️ Ohne E-Mail <b>{{ $counts['ohne_email'] }}</b></a>
+        <a href="{{ route('admin.customers', ['ablauf'=>'60']) }}" class="kf-chip {{ request('ablauf') ? 'kf-active' : '' }}">⏳ Laeuft bald ab <b>{{ $counts['ablauf'] }}</b></a>
+        <a href="{{ route('admin.customers', ['kontakt'=>'180']) }}" class="kf-chip {{ request('kontakt') ? 'kf-active' : '' }}">💤 Lange kein Kontakt <b>{{ $counts['kontakt'] }}</b></a>
+    </div>
+    {{-- Ausfuehrliche Filter + Sortierung (auto-submit bei Auswahl) --}}
+    <form method="GET" action="{{ route('admin.customers') }}" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin:0;">
+        @if(in_array(auth()->user()->role, ['admin','manager']))
+        <div class="flt-group">
+            <label class="flt-lbl">Betreuer</label>
+            <select name="betreuer" class="flt-sel" onchange="this.form.submit()">
+                <option value="">Alle</option>
+                @foreach($employees as $e)
+                <option value="{{ $e->id }}" {{ request('betreuer') == $e->id ? 'selected' : '' }}>{{ $e->name }}</option>
+                @endforeach
+            </select>
+        </div>
+        @endif
+        <div class="flt-group">
+            <label class="flt-lbl">Sparte (aktiv)</label>
+            <select name="sparte" class="flt-sel" onchange="this.form.submit()">
+                <option value="">Alle Sparten</option>
+                @foreach($sparten as $key => $cfg)
+                <option value="{{ $key }}" {{ request('sparte') === $key ? 'selected' : '' }}>{{ $cfg['icon'] }} {{ $cfg['label'] }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="flt-group">
+            <label class="flt-lbl">E-Mail</label>
+            <select name="email" class="flt-sel" onchange="this.form.submit()">
+                <option value="">Alle</option>
+                <option value="mit" {{ request('email')==='mit' ? 'selected' : '' }}>Mit E-Mail</option>
+                <option value="ohne" {{ request('email')==='ohne' ? 'selected' : '' }}>Ohne E-Mail</option>
+            </select>
+        </div>
+        <div class="flt-group">
+            <label class="flt-lbl">Portal-Status</label>
+            <select name="portal" class="flt-sel" onchange="this.form.submit()">
+                <option value="">Alle</option>
+                @foreach(['kein_account'=>'Kein Portal-Account','passwort_nicht_gesetzt'=>'Passwort nicht gesetzt','einladung_gesendet'=>'Einladung gesendet','aktiviert'=>'Aktiviert - kein Login','erster_login'=>'Aktiv - Login erfolgt','deaktiviert'=>'Deaktiviert'] as $k => $lbl)
+                <option value="{{ $k }}" {{ request('portal')===$k ? 'selected' : '' }}>{{ $lbl }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="flt-group">
+            <label class="flt-lbl">Vertrag laeuft ab in</label>
+            <select name="ablauf" class="flt-sel" onchange="this.form.submit()">
+                <option value="">Egal</option>
+                @foreach(['30'=>'30 Tagen','60'=>'60 Tagen','90'=>'90 Tagen','180'=>'180 Tagen'] as $k => $lbl)
+                <option value="{{ $k }}" {{ request('ablauf')===$k ? 'selected' : '' }}>{{ $lbl }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="flt-group">
+            <label class="flt-lbl">Letzter Kontakt</label>
+            <select name="kontakt" class="flt-sel" onchange="this.form.submit()">
+                <option value="">Egal</option>
+                <option value="nie" {{ request('kontakt')==='nie' ? 'selected' : '' }}>Nie kontaktiert</option>
+                @foreach(['30'=>'vor >30 Tagen','90'=>'vor >90 Tagen','180'=>'vor >180 Tagen','365'=>'vor >1 Jahr'] as $k => $lbl)
+                <option value="{{ $k }}" {{ request('kontakt')===$k ? 'selected' : '' }}>{{ $lbl }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="flt-group">
+            <label class="flt-lbl">Sortierung</label>
+            <select name="sort" class="flt-sel" onchange="this.form.submit()">
+                @foreach(['neueste'=>'Neueste zuerst','aelteste'=>'Aelteste zuerst','name'=>'Name A-Z','name_desc'=>'Name Z-A','kontakt'=>'Laengster Kontakt'] as $k => $lbl)
+                <option value="{{ $k }}" {{ request('sort','neueste')===$k ? 'selected' : '' }}>{{ $lbl }}</option>
+                @endforeach
+            </select>
+        </div>
+        <noscript><button type="submit" class="btn btn-primary btn-sm">Anwenden</button></noscript>
+        @if($hasActiveFilter)
+        <a href="{{ route('admin.customers') }}" class="btn btn-ghost btn-sm">✕ Filter zuruecksetzen</a>
+        @endif
     </form>
+    @if($customers->total() !== $counts['total'])
+    <div style="font-size:12.5px;color:var(--ink-soft);margin-top:10px;">Treffer: <b>{{ $customers->total() }}</b> von {{ $counts['total'] }} Kunden</div>
+    @endif
 </div>
+
+@if(in_array(auth()->user()->role, ['admin','manager']))
 
 {{-- Massen-Aktionen: zwei EIGENSTÄNDIGE Formulare (NICHT verschachtelt – sonst
      verwirft der Browser das innere Formular und der Löschen-Button reagiert
@@ -219,6 +301,14 @@ function confirmBulkDelete(form) {
 @endif
 <style>
 .rowLink:hover td { background: #F4F7F5; }
+.flt-group { display:flex; flex-direction:column; gap:4px; }
+.flt-lbl { font-size:11.5px; color:var(--ink-soft); font-weight:600; }
+.flt-sel { padding:8px 12px; border:1px solid var(--line); border-radius:8px; font-size:13.5px; background:#fff; min-width:150px; }
+.kf-chip { display:inline-flex; align-items:center; gap:6px; padding:7px 13px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:13px; color:var(--ink); text-decoration:none; white-space:nowrap; }
+.kf-chip:hover { background:#F4F7F5; }
+.kf-chip b { background:#EEF0F3; border-radius:999px; padding:1px 8px; font-size:12px; }
+.kf-chip.kf-active { background:#17191d; color:#fff; border-color:#17191d; }
+.kf-chip.kf-active b { background:rgba(255,255,255,.22); color:#fff; }
 [x-cloak] { display: none !important; }
 .rowmenu-item { display:block; width:100%; text-align:left; padding:9px 12px; border-radius:7px; font-size:13.5px; color:var(--ink); text-decoration:none; box-sizing:border-box; }
 .rowmenu-item:hover { background:#F4F7F5; }
