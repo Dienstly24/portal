@@ -269,6 +269,9 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // Kunden buendeln) - dieselbe Zusammenfuehrung wie ein Vorgang.
     Route::post('/documents/batch-preview', [\App\Http\Controllers\SmartDocumentUploadController::class, 'batchPreview'])
         ->middleware('throttle:120,1')->name('documents.batch_preview');
+    // Mehrere Eingangs-Dokumente auf einmal loeschen (Select-All / Bulk-Delete).
+    Route::post('/documents/bulk-delete', [\App\Http\Controllers\SmartDocumentUploadController::class, 'bulkDelete'])
+        ->middleware('throttle:30,10')->name('documents.bulk_delete');
     Route::post('/documents/{id}/reanalyze', [\App\Http\Controllers\SmartDocumentUploadController::class, 'reanalyze'])
         ->middleware('throttle:30,10')->name('documents.reanalyze');
     Route::get('/documents/{id}/download', [AdminController::class, 'documentDownload'])->name('documents.download');

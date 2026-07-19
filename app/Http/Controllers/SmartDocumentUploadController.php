@@ -589,6 +589,47 @@ class SmartDocumentUploadController extends Controller
     }
 
     /**
+     * Mehrere Dokumente auf einmal loeschen (Select-All / Bulk-Delete im
+     * Eingang). Jedes Dokument wird einzeln berechtigt geprueft; Datei +
+     * Datensatz werden entfernt und protokolliert. Hart auf 100 begrenzt.
+     */
+    public function bulkDelete(Request $request)
+    {
+        $this->validateJson($request, [
+            'document_ids' => 'required|array|min:1|max:100',
+            'document_ids.*' => 'uuid',
+        ]);
+
+        $ids = array_values(array_unique($request->input('document_ids')));
+        $documents = Document::whereIn('id', $ids)->get();
+
+        $deleted = 0;
+        foreach ($documents as $document) {
+            $this->authorizeDocument($document);
+            try {
+                Storage::disk($document->disk ?: 'public')->delete($document->file_path);
+            } catch (\Throwable $e) {
+                // Datei evtl. schon weg - Datensatz trotzdem entfernen.
+            }
+            ActivityLog::create([
+                'user_id' => auth()->id(),
+                'action' => 'document_deleted',
+                'entity_type' => 'document',
+                'entity_id' => $document->id,
+                'meta' => json_encode([
+                    'customer_id' => $document->customer_id ? (string) $document->customer_id : null,
+                    'file' => $document->file_name,
+                    'bulk' => true,
+                ], JSON_UNESCAPED_UNICODE),
+            ]);
+            $document->delete();
+            $deleted++;
+        }
+
+        return response()->json(['ok' => true, 'deleted' => $deleted]);
+    }
+
+    /**
      * Vorschau fuer eine MANUELLE Mehrfachauswahl im Eingang: liefert dieselbe
      * zusammengefuehrte Extraktion + Familien-Erkennung wie ein automatisch
      * gruppierter Vorgang, damit der Mitarbeiter beliebige Dokumente (z.B.

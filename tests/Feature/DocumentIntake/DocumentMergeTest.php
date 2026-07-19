@@ -181,6 +181,21 @@ class DocumentMergeTest extends TestCase
      * Dokumente (z.B. Ausweis-Vorder- und -Rueckseite) selbst und bekommt die
      * gleiche zusammengefuehrte Vorschau wie ein automatischer Vorgang.
      */
+    public function test_bulk_delete_removes_selected_inbox_documents(): void
+    {
+        $a = $this->inboxDoc('sonstiges', [], 'a.pdf');
+        $b = $this->inboxDoc('sonstiges', [], 'b.pdf');
+        $c = $this->inboxDoc('sonstiges', [], 'c.pdf');
+
+        $this->actingAs($this->admin())->postJson(route('admin.documents.bulk_delete'), [
+            'document_ids' => [$a->id, $b->id],
+        ])->assertOk()->assertJson(['ok' => true, 'deleted' => 2]);
+
+        $this->assertNull(Document::find($a->id));
+        $this->assertNull(Document::find($b->id));
+        $this->assertNotNull(Document::find($c->id)); // nicht ausgewaehlt -> bleibt
+    }
+
     public function test_batch_preview_merges_selected_documents(): void
     {
         $ausweis = $this->inboxDoc('personalausweis', ['person' => [

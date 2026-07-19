@@ -40,7 +40,14 @@
     $singleDocuments = $inboxDocuments->reject(fn ($d) => in_array($d->id, $batchIds, true));
 @endphp
 <div class="card" style="padding:0;overflow:hidden;margin-bottom:24px;">
-    <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">Nicht zugeordnet ({{ $inboxDocuments->count() }})</div>
+    <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span>Nicht zugeordnet ({{ $inboxDocuments->count() }})</span>
+        @if($inboxDocuments->count() > 0)
+        <label style="margin-inline-start:auto;font-weight:500;font-size:12.5px;color:var(--ink-soft);display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
+            <input type="checkbox" id="inbox-select-all" onchange="docReview.selectAll(this.checked)"> Alle auswaehlen
+        </label>
+        @endif
+    </div>
 
     {{-- Vorgaenge: gemeinsam hochgeladene Dateien gehoeren zu EINEM Kunden --}}
     @foreach(($batchGroups ?? []) as $batchId => $groupDocs)
@@ -84,7 +91,18 @@
 <div id="inbox-selection-bar" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:150;background:#101216;color:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.30);padding:11px 16px;align-items:center;gap:14px;flex-wrap:wrap;max-width:calc(100% - 32px);">
     <span style="font-size:13.5px;"><strong id="inbox-selection-count">0</strong>&nbsp;Dokumente ausgewaehlt</span>
     <button type="button" class="btn btn-gold btn-sm" id="inbox-selection-merge" onclick="docReview.openSelection()">🗂 Zu EINEM Kunden zusammenfuehren</button>
+    <button type="button" class="btn btn-ghost btn-sm" style="color:#fff;border-color:rgba(255,120,120,.55);" onclick="docReview.bulkDelete()">🗑 Loeschen</button>
     <button type="button" class="btn btn-ghost btn-sm" style="color:#fff;border-color:rgba(255,255,255,.35);" onclick="docReview.clearSelection()">Aufheben</button>
+</div>
+
+{{-- Schnellvorschau (Quick-Look): erscheint beim Ueberfahren eines Dokuments,
+     ohne eine neue Seite zu oeffnen. Klick auf das Dokument oeffnet es voll. --}}
+<div id="doc-quicklook" style="display:none;position:fixed;z-index:300;width:min(560px,46vw);height:70vh;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.28);overflow:hidden;">
+    <div style="padding:7px 11px;font-size:12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--canvas);">
+        <span id="doc-quicklook-name" style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+        <span style="color:var(--ink-soft);white-space:nowrap;">Klick öffnet vollständig</span>
+    </div>
+    <iframe id="doc-quicklook-frame" src="about:blank" title="Vorschau" style="width:100%;height:calc(100% - 32px);border:0;background:#f4f5f7;"></iframe>
 </div>
 
 {{-- Zuletzt analysierte, bereits zugeordnete Dokumente --}}
@@ -706,7 +724,29 @@ window.docReview = (function() {
     }
     function clearSelection() {
         selectedBoxes().forEach(function(cb) { cb.checked = false; });
+        var all = el('inbox-select-all'); if (all) all.checked = false;
         updateSelectionBar();
+    }
+    // Alle Eingangs-Dokumente auf einmal aus-/abwaehlen.
+    function selectAll(checked) {
+        document.querySelectorAll('.inbox-select').forEach(function(cb) { cb.checked = checked; });
+        updateSelectionBar();
+    }
+    // Ausgewaehlte Dokumente gemeinsam loeschen (Bulk-Delete).
+    function bulkDelete() {
+        var ids = selectedIds();
+        if (!ids.length) return;
+        if (!confirm(ids.length + ' Dokument(e) wirklich loeschen? Das kann nicht rueckgaengig gemacht werden.')) return;
+        fetch(@json(route('admin.documents.bulk_delete')), {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': @json(csrf_token()) },
+            body: JSON.stringify({ document_ids: ids }),
+        }).then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })
+        .then(function(res) {
+            if (res.ok && res.json.ok) { window.location.reload(); }
+            else { alert(res.json.message || 'Loeschen fehlgeschlagen.'); }
+        }).catch(function() { alert('Netzwerkfehler.'); });
     }
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -741,11 +781,59 @@ window.docReview = (function() {
         openBatch: openBatch,
         openSelection: openSelection,
         clearSelection: clearSelection,
+        selectAll: selectAll,
+        bulkDelete: bulkDelete,
         stay: stay,
         close: function() { el('doc-review-modal').style.display = 'none'; current = null; },
         submit: submit,
         reanalyze: reanalyze,
     };
+})();
+
+// Schnellvorschau (Quick-Look): beim Ueberfahren eines Dokuments erscheint nach
+// kurzer Verzoegerung eine Vorschau (PDF/Bild im iframe) neben der Zeile - ohne
+// eine neue Seite zu oeffnen. Ein Klick oeffnet das Dokument weiterhin voll.
+(function() {
+    var ql = document.getElementById('doc-quicklook');
+    var frame = document.getElementById('doc-quicklook-frame');
+    var nameEl = document.getElementById('doc-quicklook-name');
+    if (!ql || !frame) return;
+    var showTimer = null, hideTimer = null;
+
+    function place(rect) {
+        var w = ql.offsetWidth, h = ql.offsetHeight;
+        var top = Math.min(Math.max(10, rect.top), window.innerHeight - h - 10);
+        var left = rect.right + 14;
+        if (left + w > window.innerWidth - 10) { left = Math.max(10, rect.left - w - 14); }
+        ql.style.top = top + 'px';
+        ql.style.left = left + 'px';
+    }
+    function show(target) {
+        var url = target.getAttribute('data-preview-url');
+        var name = target.getAttribute('data-preview-name') || '';
+        nameEl.textContent = name;
+        if (frame.getAttribute('data-url') !== url) { frame.src = url; frame.setAttribute('data-url', url); }
+        ql.style.display = 'block';
+        place(target.getBoundingClientRect());
+    }
+    function hide() { ql.style.display = 'none'; }
+
+    document.addEventListener('mouseover', function(e) {
+        var t = e.target.closest ? e.target.closest('[data-preview-url]') : null;
+        if (!t) return;
+        clearTimeout(hideTimer);
+        clearTimeout(showTimer);
+        showTimer = setTimeout(function() { show(t); }, 650);
+    });
+    document.addEventListener('mouseout', function(e) {
+        var t = e.target.closest ? e.target.closest('[data-preview-url]') : null;
+        if (!t) return;
+        clearTimeout(showTimer);
+        hideTimer = setTimeout(hide, 250);
+    });
+    ql.addEventListener('mouseenter', function() { clearTimeout(hideTimer); });
+    ql.addEventListener('mouseleave', hide);
+    window.addEventListener('scroll', hide, true);
 })();
 
 // Drag&Drop-Upload in den Eingang + Status-Polling laufender Analysen
