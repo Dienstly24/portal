@@ -18,7 +18,7 @@ class ImprovementRoundTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function makeCustomer(string $email = null): Customer
+    private function makeCustomer(?string $email = null): Customer
     {
         $user = User::factory()->create(['role' => 'customer'] + ($email ? ['email' => $email] : []));
         return Customer::create(['user_id' => $user->id, 'customer_number' => 'C-' . strtoupper(substr(md5((string)$user->id),0,6))]);
