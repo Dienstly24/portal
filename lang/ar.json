@@ -332,5 +332,13 @@
     "Rechnungen": "فواتير",
     "Identität": "إثبات هوية",
     "Schaden": "أضرار",
-    "Sonstige": "أخرى"
+    "Sonstige": "أخرى",
+    "Neues Passwort setzen": "تعيين كلمة مرور جديدة",
+    "Zurueck zur Anmeldung": "العودة إلى تسجيل الدخول",
+    "Kein Problem. Geben Sie Ihre E-Mail-Adresse ein und wir senden Ihnen einen Link zum Zuruecksetzen Ihres Passworts.": "لا مشكلة. أدخل بريدك الإلكتروني وسنرسل لك رابطاً لإعادة تعيين كلمة المرور.",
+    "Link zum Zuruecksetzen senden": "إرسال رابط إعادة التعيين",
+    "Neues Passwort": "كلمة المرور الجديدة",
+    "Passwort bestaetigen": "تأكيد كلمة المرور",
+    "Passwort zuruecksetzen": "إعادة تعيين كلمة المرور",
+    "Mindestens 8 Zeichen": "8 أحرف على الأقل"
 }
