@@ -39,6 +39,14 @@ class AdminController extends Controller
     private function authorizeDocumentAccess(\App\Models\Document $doc): void {
         if ($doc->customer_id !== null) {
             $this->authorizeCustomerAccess($doc->customer_id);
+            return;
+        }
+        // Nicht zugeordnete Inbox-Dokumente: portfolio-begrenzte Mitarbeiter
+        // duerfen nur die selbst hochgeladenen sehen - spiegelt
+        // SmartDocumentUploadController::authorizeDocument. (Audit SEC-2/IDOR)
+        $user = auth()->user();
+        if (!$user?->canSeeAllCustomers() && (int) $doc->uploaded_by !== (int) $user?->id) {
+            abort(403, 'Kein Zugriff auf dieses Dokument.');
         }
     }
 

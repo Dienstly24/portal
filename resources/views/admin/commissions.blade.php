@@ -33,8 +33,8 @@
             <input type="date" name="statement_date" value="{{ $c->statement_date?->format('Y-m-d') ?? now()->format('Y-m-d') }}" required style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;">
         </div>
         <div style="display:flex;gap:8px;margin-left:auto;">
-            <button type="submit" class="btn btn-gold btn-sm">Buchen (Lexoffice)</button>
-            <button type="submit" form="reject-{{ $c->id }}" class="btn btn-ghost btn-sm">Ablehnen</button>
+            <button type="submit" class="btn btn-gold btn-sm" onclick="return confirm('Diese Provision jetzt in Lexoffice verbuchen? Die Buchung wird an ein externes System uebertragen.')">Buchen (Lexoffice)</button>
+            <button type="submit" form="reject-{{ $c->id }}" class="btn btn-ghost btn-sm" onclick="return confirm('Diese Provision wirklich ablehnen?')">Ablehnen</button>
         </div>
     </form>
     <form id="reject-{{ $c->id }}" method="POST" action="{{ route('admin.commissions.reject', $c->id) }}">@csrf</form>

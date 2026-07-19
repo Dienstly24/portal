@@ -17,6 +17,17 @@
 <div class="card" style="max-width:700px;">
     <div class="card-title" style="margin-bottom:20px;">Zugriffsrechte</div>
 
+    {{-- Rolle - IMMER sichtbar (Audit UX-1): frueher lag der Select im
+         display:none-Block "Begrenzte Kunden", sodass fuer Voll-Zugriff-
+         Mitarbeiter kein Rollenwechsel moeglich war. --}}
+    <div class="field" style="max-width:320px;margin-bottom:20px;">
+        <label for="role">Rolle</label>
+        <select name="role" id="role" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+            <option value="employee" {{ $employee->role === 'employee' ? 'selected' : '' }}>👤 Mitarbeiter</option>
+            <option value="manager" {{ $employee->role === 'manager' ? 'selected' : '' }}>⭐ Manager (sieht alle Kunden)</option>
+        </select>
+    </div>
+
     <div style="margin-bottom:20px;">
         <label style="font-size:13px;color:var(--ink-soft);font-weight:600;display:block;margin-bottom:10px;">Kundenzugriff</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
@@ -41,13 +52,6 @@
 
     <div id="assign-customers" style="{{ $employee->can_see_all_customers ? 'display:none' : '' }};border-top:1px solid var(--line);padding-top:20px;margin-bottom:20px;">
         <label style="font-size:13px;color:var(--ink-soft);font-weight:600;display:block;margin-bottom:12px;">Zugewiesene Kunden</label>
-        <div class="field" style="max-width:320px;">
-    <label>Rolle</label>
-    <select name="role" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
-        <option value="employee" {{ $employee->role === 'employee' ? 'selected' : '' }}>👤 Mitarbeiter</option>
-        <option value="manager" {{ $employee->role === 'manager' ? 'selected' : '' }}>⭐ Manager (sieht alle Kunden)</option>
-    </select>
-</div>
 @php
     $preselectedCustomers = \App\Models\Customer::with('user')->whereIn('id', $assignedIds)->get()->map(function ($c) {
         return ['id' => $c->id, 'name' => $c->user?->name, 'number' => $c->customer_number];
@@ -142,6 +146,7 @@
                 ['can_manage_tickets','Tickets bearbeiten','Kundenanfragen beantworten','💬'],
                 ['can_approve_changes','Änderungen genehmigen','Kundendaten-Änderungen genehmigen','✅'],
                 ['can_send_emails','E-Mails senden','E-Mail Marketing nutzen','📧'],
+                ['can_import_export','Import / Export','Kunden importieren und exportieren','📊'],
             ] as $perm)
             <div class="perm-card" id="card-{{ $perm[0] }}"
                 onclick="togglePerm('{{ $perm[0] }}')"
@@ -201,7 +206,7 @@ function togglePerm(name) {
     check.textContent = cb.checked ? '\u2713' : '';
 }
 function selectAllPerms(state) {
-    ['can_manage_contracts','can_manage_tickets','can_approve_changes','can_send_emails'].forEach(function (name) {
+    ['can_manage_contracts','can_manage_tickets','can_approve_changes','can_send_emails','can_import_export'].forEach(function (name) {
         var cb = document.getElementById(name);
         if (cb && cb.checked !== state) togglePerm(name);
     });

@@ -10,6 +10,15 @@
     <div class="page-title">{{ $customer->user?->name }} bearbeiten</div>
 </div>
 
+@if($errors->any())
+<div style="background:#F9E3E3;border:1px solid #F0A0A0;border-radius:10px;padding:16px;margin-bottom:20px;max-width:800px;">
+    <div style="font-weight:700;color:#A32D2D;margin-bottom:8px;">Bitte korrigieren Sie folgende Fehler:</div>
+    @foreach($errors->all() as $error)
+    <div style="font-size:13px;color:#A32D2D;">• {{ $error }}</div>
+    @endforeach
+</div>
+@endif
+
 <form method="POST" action="{{ route('admin.customer.update', $customer->id) }}">
 @csrf @method('PUT')
 {{-- Tabs --}}
@@ -26,11 +35,11 @@
         @php $__np = explode(' ', trim($customer->user?->name ?? ''), 2); @endphp
         <div class="field"><label>Vorname *</label><input type="text" name="first_name" required value="{{ $__np[0] ?? '' }}"></div>
         <div class="field"><label>Nachname *</label><input type="text" name="last_name" required value="{{ $__np[1] ?? '' }}"></div>
-        <div class="field"><label>Geburtsdatum</label><input type="date" name="birth_date" value="{{ $customer->birth_date }}"></div>
+        <div class="field"><label>Geburtsdatum</label><input type="date" name="birth_date" value="{{ old('birth_date', $customer->birth_date) }}"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Nationalität</label><input type="text" name="nationality" value="{{ $customer->nationality }}" placeholder="z.B. Deutsch, Syrisch"></div>
-        <div class="field"><label>Beruf</label><input type="text" name="occupation" value="{{ $customer->occupation }}" placeholder="z.B. Ingenieur"></div>
+        <div class="field"><label>Nationalität</label><input type="text" name="nationality" value="{{ old('nationality', $customer->nationality) }}" placeholder="z.B. Deutsch, Syrisch"></div>
+        <div class="field"><label>Beruf</label><input type="text" name="occupation" value="{{ old('occupation', $customer->occupation) }}" placeholder="z.B. Ingenieur"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
                 <div class="field"><label>Geschlecht</label>
@@ -75,11 +84,11 @@
     <div style="border-top:1px solid var(--line);padding-top:20px;margin-top:4px;">
         <div class="card-title" style="margin-bottom:16px;">Bankverbindung</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="field"><label>IBAN (Haupt)</label><input type="text" name="iban" value="{{ $customer->iban }}" placeholder="DE89 3704 0044 ..."></div>
+            <div class="field"><label>IBAN (Haupt)</label><input type="text" name="iban" value="{{ old('iban', $customer->iban) }}" placeholder="DE89 3704 0044 ..."></div>
             <div class="field"><label>IBAN 2 (Alternativ)</label><input type="text" name="iban2" value="{{ $customer->iban2 }}" placeholder="Optional"></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="field"><label>Kontoinhaber (falls abweichend)</label><input type="text" name="account_holder" value="{{ $customer->account_holder }}" placeholder="Optional"></div>
+            <div class="field"><label>Kontoinhaber (falls abweichend)</label><input type="text" name="account_holder" value="{{ old('account_holder', $customer->account_holder) }}" placeholder="Optional"></div>
             <div></div>
         </div>
     </div>
@@ -103,8 +112,8 @@
         <div class="field"><label>E-Mail 2 (Alternativ)</label><input type="email" name="email2" value="{{ $customer->email2 }}" placeholder="alternativ@beispiel.de"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Telefon</label><input type="tel" name="phone" value="{{ $customer->phone }}" placeholder="+49 40 ..."></div>
-        <div class="field"><label>Mobil</label><input type="tel" name="mobile" value="{{ $customer->mobile }}" placeholder="+49 176 ..."></div>
+        <div class="field"><label>Telefon</label><input type="tel" name="phone" value="{{ old('phone', $customer->phone) }}" placeholder="+49 40 ..."></div>
+        <div class="field"><label>Mobil</label><input type="tel" name="mobile" value="{{ old('mobile', $customer->mobile) }}" placeholder="+49 176 ..."></div>
     </div>
     <div style="border-top:1px solid var(--line);padding-top:20px;margin-top:4px;">
         <div class="card-title" style="margin-bottom:16px;">Adressen</div>
@@ -132,14 +141,14 @@
                     <option value="privat" {{ $customer->health_insurance_type === 'privat' ? 'selected' : '' }}>Privat</option>
                 </select>
             </div>
-            <div class="field"><label>Krankenkasse</label><input type="text" name="health_insurance_company" value="{{ $customer->health_insurance_company }}" placeholder="z.B. TK, AOK"></div>
+            <div class="field"><label>Krankenkasse</label><input type="text" name="health_insurance_company" value="{{ old('health_insurance_company', $customer->health_insurance_company) }}" placeholder="z.B. TK, AOK"></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="field"><label>Krankenversicherungsnummer</label><input type="text" name="health_insurance_number" value="{{ $customer->health_insurance_number }}" placeholder="KV-Nummer"></div>
-            <div class="field"><label>Rentenversicherungsnummer</label><input type="text" name="pension_insurance_number" value="{{ $customer->pension_insurance_number }}" placeholder="z.B. 65 170439 K 001"></div>
+            <div class="field"><label>Krankenversicherungsnummer</label><input type="text" name="health_insurance_number" value="{{ old('health_insurance_number', $customer->health_insurance_number) }}" placeholder="KV-Nummer"></div>
+            <div class="field"><label>Rentenversicherungsnummer</label><input type="text" name="pension_insurance_number" value="{{ old('pension_insurance_number', $customer->pension_insurance_number) }}" placeholder="z.B. 65 170439 K 001"></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="field"><label>Steuer-ID (optional)</label><input type="text" name="tax_id" value="{{ $customer->tax_id }}" placeholder="11-stellige Steuer-ID"></div>
+            <div class="field"><label>Steuer-ID (optional)</label><input type="text" name="tax_id" value="{{ old('tax_id', $customer->tax_id) }}" placeholder="11-stellige Steuer-ID"></div>
             <div></div>
         </div>
     </div>
@@ -213,7 +222,7 @@
 <div id="section-firma" class="card" style="max-width:760px;display:none;">
     <div class="card-title" style="margin-bottom:20px;">Firmendaten</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Firmenname</label><input type="text" name="company_name" value="{{ $customer->company_name }}" placeholder="Firmenname GmbH"></div>
+        <div class="field"><label>Firmenname</label><input type="text" name="company_name" value="{{ old('company_name', $customer->company_name) }}" placeholder="Firmenname GmbH"></div>
         <div class="field"><label>Rechtsform</label>
             <select name="company_type" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
                 <option value="">—</option>

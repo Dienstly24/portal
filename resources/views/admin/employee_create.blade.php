@@ -22,18 +22,20 @@
         <label style="font-size:13px;color:var(--ink-soft);font-weight:600;display:block;margin-bottom:10px;">Kundenzugriff</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
             <div onclick="selectAccess('full')" id="lbl-full"
-                style="border:2px solid var(--petrol);border-radius:10px;padding:16px;cursor:pointer;background:#E4F0E7;transition:.15s;">
+                style="border:2px solid var(--line);border-radius:10px;padding:16px;cursor:pointer;background:#fff;transition:.15s;">
                 <div style="font-weight:700;margin-bottom:4px;">👥 Alle Kunden</div>
                 <div style="font-size:12px;color:var(--ink-soft);">Mitarbeiter sieht alle Kunden</div>
             </div>
             <div onclick="selectAccess('limited')" id="lbl-limited"
-                style="border:2px solid var(--line);border-radius:10px;padding:16px;cursor:pointer;background:#fff;transition:.15s;">
+                style="border:2px solid var(--gold);border-radius:10px;padding:16px;cursor:pointer;background:#D9F4E6;transition:.15s;">
                 <div style="font-weight:700;margin-bottom:4px;">🔒 Begrenzte Kunden</div>
                 <div style="font-size:12px;color:var(--ink-soft);">Nur zugewiesene Kunden</div>
             </div>
         </div>
-        <input type="hidden" name="access_level" id="access_level" value="full">
-        <input type="hidden" name="can_see_all_customers" id="can_see_all" value="1">
+        {{-- Least-privilege-Default (Audit UX-14): "Begrenzte Kunden" ist
+             vorausgewaehlt; Voll-Zugriff muss der Admin bewusst waehlen. --}}
+        <input type="hidden" name="access_level" id="access_level" value="limited">
+        <input type="hidden" id="can_see_all" value="0">
     </div>
 
     <div style="border-top:1px solid var(--line);padding-top:20px;">
@@ -50,17 +52,21 @@
                 ['can_manage_tickets','Tickets bearbeiten','Kundenanfragen beantworten','💬'],
                 ['can_approve_changes','Änderungen genehmigen','Kundendaten-Änderungen genehmigen','✅'],
                 ['can_send_emails','E-Mails senden','E-Mail Marketing nutzen','📧'],
+                ['can_import_export','Import / Export','Kunden importieren und exportieren','📊'],
             ] as $perm)
+            {{-- Least-privilege-Default (Audit UX-14): neue Mitarbeiter starten
+                 OHNE Rechte, der Admin vergibt bewusst. Frueher waren alle
+                 Rechte + Voll-Zugriff vorausgewaehlt. --}}
             <div class="perm-card" id="card-{{ $perm[0] }}"
                 onclick="togglePerm('{{ $perm[0] }}')"
-                style="border:2px solid var(--petrol);border-radius:10px;padding:14px;cursor:pointer;background:#E4F0E7;transition:.15s;user-select:none;">
+                style="border:2px solid var(--line);border-radius:10px;padding:14px;cursor:pointer;background:#fff;transition:.15s;user-select:none;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
                     <span style="font-size:24px;">{{ $perm[3] }}</span>
-                    <span id="check-{{ $perm[0] }}" style="width:24px;height:24px;border-radius:50%;background:var(--petrol);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">✓</span>
+                    <span id="check-{{ $perm[0] }}" style="width:24px;height:24px;border-radius:50%;background:#ccc;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;"></span>
                 </div>
                 <div style="font-weight:700;font-size:13px;">{{ $perm[1] }}</div>
                 <div style="font-size:11px;color:var(--ink-soft);margin-top:2px;">{{ $perm[2] }}</div>
-                <input type="checkbox" name="{{ $perm[0] }}" id="{{ $perm[0] }}" checked style="display:none;">
+                <input type="checkbox" name="{{ $perm[0] }}" id="{{ $perm[0] }}" style="display:none;">
             </div>
             @endforeach
         </div>

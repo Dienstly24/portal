@@ -74,7 +74,7 @@ tr.row-link:hover td{background:var(--canvas);}
 .metric-value{font-size:30px;font-weight:700;line-height:1;}
 .metric-sub{font-size:12px;color:var(--ink-soft);margin-top:6px;}
 .metric-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:18px;}
-.icon-green{background:#E4F0E7;color:#3B7A57;}
+.icon-green{background:#D9F4E6;color:#128a4b;}
 .icon-blue{background:#E6F1FB;color:#185FA5;}
 .icon-amber{background:#FEF3C7;color:#92400E;}
 .icon-red{background:#F9E3E3;color:#A32D2D;}
@@ -87,12 +87,13 @@ table tr:last-child td{border-bottom:none;}
 table tr:hover td{background:#E3E6EA;}
 .badge{font-size:11.5px;padding:3px 10px;border-radius:999px;font-weight:600;display:inline-flex;align-items:center;gap:4px;}
 .badge::before{content:'';width:6px;height:6px;border-radius:50%;flex:none;}
-.badge-active{background:#E4F0E7;color:#3B7A57;}.badge-active::before{background:#3B7A57;}
+.badge-active{background:#D9F4E6;color:#128a4b;}.badge-active::before{background:#17A65B;}
 .badge-pending{background:#F7E7D6;color:#B5651D;}.badge-pending::before{background:#B5651D;}
 .badge-open{background:#E6F1FB;color:#185FA5;}.badge-open::before{background:#185FA5;}
 .badge-closed{background:#EEF0F3;color:#5F5E5A;}.badge-closed::before{background:#5F5E5A;}
-.badge-approved{background:#E4F0E7;color:#3B7A57;}.badge-approved::before{background:#3B7A57;}
+.badge-approved{background:#D9F4E6;color:#128a4b;}.badge-approved::before{background:#17A65B;}
 .badge-rejected{background:#F9E3E3;color:#A32D2D;}.badge-rejected::before{background:#A32D2D;}
+.badge-danger{background:#F9E3E3;color:#A32D2D;}.badge-danger::before{background:#A32D2D;}
 .badge-waiting{background:#EEE9F7;color:#6B4FA3;}.badge-waiting::before{background:#6B4FA3;}
 .tab-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
 .tab-row .tab{padding:7px 14px;border-radius:999px;border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--ink-soft);text-decoration:none;background:var(--surface);transition:.15s;}
@@ -112,8 +113,9 @@ table tr:hover td{background:#E3E6EA;}
 .field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--gold);outline-offset:1px;}
 .field textarea{min-height:90px;resize:vertical;}
 .alert{border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:14px;display:flex;align-items:center;gap:10px;}
-.alert-success{background:#E4F0E7;color:#3B7A57;}
+.alert-success{background:#D9F4E6;color:#128a4b;}
 .alert-error{background:#F9E3E3;color:#A32D2D;}
+.alert-warning{background:#FEF3C7;color:#92400E;}
 .item-row{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line);}
 .item-row:last-child{border-bottom:none;}
 .customer-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px;}

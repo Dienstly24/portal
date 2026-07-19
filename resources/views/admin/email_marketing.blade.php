@@ -79,8 +79,8 @@
             ℹ Der Versand läuft im Hintergrund über die Warteschlange. Jede Mail enthält automatisch einen Abmelde-Link; abgemeldete Kunden werden übersprungen.
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;">
-            <button type="submit" name="action" value="send" class="btn btn-primary" style="flex:1 1 100%;justify-content:center;">📤 Jetzt senden</button>
-            <button type="submit" name="action" value="schedule" class="btn btn-gold" style="flex:1;justify-content:center;">🕐 Später senden</button>
+            <button type="submit" name="action" value="send" class="btn btn-primary" style="flex:1 1 100%;justify-content:center;" onclick="return confirmMassSend(this.form)">📤 Jetzt senden</button>
+            <button type="submit" name="action" value="schedule" class="btn btn-ghost" style="flex:1;justify-content:center;">🕐 Später senden</button>
             <button type="submit" name="action" value="draft" class="btn btn-ghost" style="flex:1;justify-content:center;">💾 Entwurf</button>
             <button type="submit" formaction="{{ route('admin.email_marketing.preview') }}" formtarget="_blank" class="btn btn-ghost" style="flex:1;justify-content:center;">👁 Vorschau</button>
             <button type="submit" formaction="{{ route('admin.email_marketing.test') }}" class="btn btn-ghost" style="flex:1;justify-content:center;">🧪 Test an mich</button>
@@ -176,4 +176,13 @@
 
 </div>
 </div>
+<script>
+// Bestaetigung vor Massenversand (Audit UX-7): nennt Zielgruppe + (fuer "Alle")
+// die Empfaengerzahl, damit niemand versehentlich an alle Kunden sendet.
+function confirmMassSend(form) {
+    var sel = form.querySelector('[name=target]');
+    var label = sel.options[sel.selectedIndex].text;
+    return confirm('Kampagne wirklich JETZT an "' + label.trim() + '" senden?\n\nDer Versand laeuft sofort im Hintergrund und kann nicht rueckgaengig gemacht werden.');
+}
+</script>
 @endsection

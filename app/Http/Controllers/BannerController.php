@@ -147,7 +147,10 @@ class BannerController extends Controller
             'title' => 'required|string|max:150',
             // Beliebige Bildmaße; GIF und Videos zusätzlich erlaubt.
             'media' => ($isCreate ? 'required' : 'nullable') . '|file|mimes:jpg,jpeg,png,webp,gif,mp4,webm|max:20480',
-            'link_url' => 'nullable|string|max:500',
+            // Nur http(s)-URLs oder interne Pfade (fuehrendes /) zulassen -
+            // blockt javascript:/data:-Schemata und haertet den Open-Redirect
+            // beim Banner-Klick (PortalController). (Audit SEC-7)
+            'link_url' => ['nullable', 'string', 'max:500', 'regex:#^(https?://|/)#i'],
             'link_target' => 'nullable|in:self,blank',
             'dismiss_days' => 'nullable|integer|min:1|max:365',
             'sort_order' => 'nullable|integer|min:0|max:9999',

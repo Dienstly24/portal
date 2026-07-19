@@ -5,6 +5,7 @@ use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use League\Csv\Writer;
+use League\Csv\EscapeFormula;
 
 class ImportExportController extends Controller
 {
@@ -91,6 +92,10 @@ class ImportExportController extends Controller
         $customers = Customer::with('user')->when($this->visibleCustomerIds() !== null, fn($q) => $q->whereIn('customers.id', $this->visibleCustomerIds()))->get();
 
         $csv = Writer::createFromString('');
+        // Schutz vor CSV-/Formel-Injection (Audit INT-1): kunden-kontrollierte
+        // Felder mit fuehrendem = + - @ werden neutralisiert, sonst fuehren sie
+        // beim Oeffnen in Excel/LibreOffice (DDE) Formeln aus.
+        $csv->addFormatter(new EscapeFormula());
         $csv->insertOne([
             'Kundennummer','Vorname','Nachname','E-Mail','Telefon','Mobil',
             'Adresse','IBAN','Geburtsdatum','Familienstand','Sprache',
@@ -125,6 +130,7 @@ class ImportExportController extends Controller
 
     public function template() {
         $csv = Writer::createFromString('');
+        $csv->addFormatter(new EscapeFormula());
         $csv->insertOne([
             'Vorname','Nachname','E-Mail','Telefon','Mobil',
             'Straße','Nr','PLZ','Ort','Land',
