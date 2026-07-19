@@ -104,6 +104,22 @@ class Check24KfzProtocolParserTest extends TestCase
         $this->assertSame('2', $k['sf_liability_class']);
     }
 
+    public function test_reads_vorversicherung_and_ablauf_der_versicherung(): void
+    {
+        // Wechsel-Kontext: Vorversicherer (wo der Kunde herkommt) + Vertrags-
+        // ablauf - beides musste der Betrieb bisher von Hand nachtragen.
+        $text = $this->protocolText() . "\n"
+            . "Hauptnutzer: Versicherungsnehmer,         Vorversicherung: HUK-Coburg\n"
+            . "Ablauf der Versicherung                     29.06.2027 (automatische Verlängerung um 12 Monate)";
+        $r = (new Check24KfzProtocolParser())->parse($text);
+        $v = $r['data']['versicherung'];
+
+        $this->assertSame('HUK-Coburg', $v['previous_insurer']);
+        $this->assertSame('2027-06-29', $v['end_date']);
+        $this->assertStringContainsString('Vorversicherung: HUK-Coburg', $r['summary']);
+        $this->assertStringContainsString('Ablauf der Versicherung: 29.06.2027', $r['summary']);
+    }
+
     public function test_haftpflicht_only_has_no_kasko(): void
     {
         $r = (new Check24KfzProtocolParser())->parse($this->protocolText('nur Haftpflicht', '0 €'));
