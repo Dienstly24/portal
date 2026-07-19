@@ -120,6 +120,16 @@ class ImagesToPdfService
         return $out !== '' ? $out : $binary;
     }
 
+    /**
+     * Ist die Bild->PDF-Konvertierung moeglich? Braucht die GD-Erweiterung.
+     * Fehlt sie, koennen einzelne Bilder trotzdem direkt (ohne Buendelung)
+     * gespeichert und analysiert werden - der Aufrufer weicht dann aus.
+     */
+    public function canBuild(): bool
+    {
+        return function_exists('imagecreatefromstring') && function_exists('imagejpeg');
+    }
+
     private function convertToJpeg(string $binary, int $pageNo): string
     {
         if (!function_exists('imagecreatefromstring')) {

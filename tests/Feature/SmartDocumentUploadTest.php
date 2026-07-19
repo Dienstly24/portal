@@ -260,6 +260,28 @@ class SmartDocumentUploadTest extends TestCase
         $this->assertStringStartsWith('documents/eingang/', $doc->file_path);
     }
 
+    public function test_single_image_upload_works_without_gd_extension(): void
+    {
+        // Fehlt die GD-Erweiterung auf dem Server, muss ein einzelnes Bild
+        // trotzdem hochladbar sein (direkt gespeichert, nicht als PDF gebuendelt).
+        Storage::fake('local');
+        $this->app->instance(\App\Services\Pdf\ImagesToPdfService::class, new class extends \App\Services\Pdf\ImagesToPdfService {
+            public function canBuild(): bool { return false; }
+            public function build(array $imageBinaries): string { throw new \RuntimeException('GD fehlt - darf hier nicht aufgerufen werden.'); }
+        });
+
+        $admin = $this->makeAdmin();
+        $response = $this->actingAs($admin)->postJson(route('admin.documents.smart_upload'), [
+            'files' => [UploadedFile::fake()->image('screenshot.png', 800, 500)],
+        ]);
+
+        $response->assertOk();
+        $doc = Document::findOrFail($response->json('ids.0'));
+        $this->assertSame(1, $doc->page_count);
+        $this->assertStringEndsWith('.png', $doc->file_path); // direkt als Bild, kein .pdf
+        Storage::disk('local')->assertExists($doc->file_path);
+    }
+
     public function test_admin_smart_upload_auto_assigns_on_unambiguous_match(): void
     {
         Storage::fake('local');
