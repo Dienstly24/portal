@@ -34,6 +34,7 @@ class Document extends Model {
         'fuehrerschein'        => ['label' => 'Führerschein',         'category' => 'identity'],
         'rechnung'             => ['label' => 'Rechnung',             'category' => 'invoice'],
         'energieauftrag'       => ['label' => 'Energie-Auftrag',      'category' => 'contract'],
+        'internetvertrag'      => ['label' => 'Internet-/DSL-Auftrag', 'category' => 'contract'],
         'zaehlerfoto'          => ['label' => 'Zaehlerfoto',          'category' => 'other'],
         'sepa_mandat'          => ['label' => 'SEPA-Mandat',          'category' => 'other'],
         'kontaktdaten'         => ['label' => 'Kontaktdaten',         'category' => 'identity'],
