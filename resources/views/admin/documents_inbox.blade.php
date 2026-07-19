@@ -16,8 +16,11 @@
 
 {{-- Drag&Drop Smart-Upload (ohne Kundenzuordnung -> Eingang) --}}
 <div class="card" style="margin-bottom:20px;">
-    <div id="inbox-dropzone" style="border:2px dashed var(--line);border-radius:12px;padding:30px;text-align:center;cursor:pointer;transition:.15s;">
-        <div style="font-size:34px;margin-bottom:6px;">📥</div>
+    {{-- Tastaturbedienbar (Audit A11Y-2): role=button + tabindex + Enter/Space --}}
+    <div id="inbox-dropzone" role="button" tabindex="0" aria-label="Dateien zum Hochladen auswaehlen oder hierher ziehen"
+        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('inbox-files').click();}"
+        style="border:2px dashed var(--line);border-radius:12px;padding:30px;text-align:center;cursor:pointer;transition:.15s;">
+        <div style="font-size:34px;margin-bottom:6px;" aria-hidden="true">📥</div>
         <div style="font-size:14px;color:var(--ink-soft);">Dateien hierher ziehen oder <span style="color:var(--gold);font-weight:600;">durchsuchen</span></div>
         <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">PDF, JPG, PNG, WEBP · max. 10 MB pro Datei · mehrere Bilder werden zu EINEM Dokument gebündelt</div>
         <input type="file" id="inbox-files" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none;">
@@ -30,7 +33,8 @@
         <div style="height:8px;background:var(--canvas);border:1px solid var(--line);border-radius:6px;overflow:hidden;">
             <div id="inbox-upload-bar" style="height:100%;width:0;background:var(--gold);transition:width .2s;"></div>
         </div>
-        <div id="inbox-upload-label" style="font-size:12px;color:var(--ink-soft);margin-top:5px;">0%</div>
+        {{-- Fortschritt/Status wird Screenreadern angesagt (Audit A11Y-5) --}}
+        <div id="inbox-upload-label" role="status" aria-live="polite" style="font-size:12px;color:var(--ink-soft);margin-top:5px;">0%</div>
     </div>
 </div>
 
