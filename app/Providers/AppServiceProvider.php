@@ -46,6 +46,7 @@ class AppServiceProvider extends ServiceProvider
             fn ($app) => new \App\Services\Ai\TemplateParsers\CompositeDocumentTemplateParser([
                 $app->make(\App\Services\Ai\TemplateParsers\Check24KfzProtocolParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\KkhBeitrittserklaerungParser::class),
+                $app->make(\App\Services\Ai\TemplateParsers\NovitasBeitrittserklaerungParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\FamilienversicherungParser::class),
             ]),
         );
