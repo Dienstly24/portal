@@ -268,6 +268,8 @@ class DocumentIntakeService
                 'birth_place' => $set('birth_place', $person['birth_place'] ?? null),
                 'phone' => $set('phone', $person['phone'] ?? null),
                 'nationality' => $set('nationality', $person['nationality'] ?? null),
+                'marital_status' => $set('marital_status', $person['marital_status'] ?? null),
+                'gender' => $set('gender', $person['gender'] ?? null),
                 'email2' => $set('email2', $person['email'] ?? null),
                 'address' => (function () use ($set, $person): void {
                     $set('address_street', $person['street'] ?? null);
@@ -278,6 +280,9 @@ class DocumentIntakeService
                 'health_insurance' => (function () use ($set, $health): void {
                     $set('health_insurance_company', $health['health_insurance_company'] ?? null);
                     $set('health_insurance_number', $health['health_insurance_number'] ?? null);
+                    $set('health_insurance_type', $health['health_insurance_type'] ?? null);
+                    // Renten-/Sozialversicherungsnummer (aus der Beitrittserklaerung).
+                    $set('pension_insurance_number', $health['pension_number'] ?? null);
                 })(),
                 'iban' => (function () use ($set, $bank): void {
                     $set('iban', $bank['iban'] ?? null);

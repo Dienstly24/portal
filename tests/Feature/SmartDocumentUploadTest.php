@@ -458,9 +458,11 @@ class SmartDocumentUploadTest extends TestCase
 
     public function test_excluded_fields_are_never_applied_to_customer(): void
     {
-        // Betreiber-Vorgabe: Familienstand, Beruf, Fuehrerscheindatum und
-        // weitere Fahrer werden NIE automatisch uebernommen (oft ungenau) -
-        // sie stehen nicht auf der apply_fields-Whitelist und werden abgewiesen.
+        // Betreiber-Vorgabe: Beruf, Fuehrerscheindatum und weitere Fahrer werden
+        // NIE automatisch uebernommen (oft ungenau) - sie stehen nicht auf der
+        // apply_fields-Whitelist und werden abgewiesen. (Familienstand/Geschlecht
+        // sind seit dem KKH-Beitrittsformular erlaubt: dort strukturiert +
+        // zuverlaessig; das Kfz-Protokoll liefert sie ohnehin nicht.)
         Storage::fake('local');
         Storage::disk('local')->put('documents/eingang/scan2.pdf', '%PDF-1.4');
         $doc = Document::create([
@@ -474,7 +476,7 @@ class SmartDocumentUploadTest extends TestCase
         ]);
         $admin = $this->makeAdmin();
 
-        foreach (['marital_status', 'occupation', 'fuehrerscheindatum', 'weitere_fahrer'] as $field) {
+        foreach (['occupation', 'fuehrerscheindatum', 'weitere_fahrer'] as $field) {
             $this->actingAs($admin)->postJson(route('admin.documents.create_customer', $doc->id), [
                 'apply_fields' => [$field],
             ])->assertStatus(422);

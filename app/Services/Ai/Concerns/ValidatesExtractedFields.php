@@ -15,6 +15,8 @@ trait ValidatesExtractedFields
     private function validatedPerson(mixed $in): array
     {
         if (!is_array($in)) return [];
+        $gender = $in['gender'] ?? null;
+        $marital = $in['marital_status'] ?? null;
         return array_filter([
             'first_name' => $this->cleanString($in['first_name'] ?? null, 80),
             'last_name' => $this->cleanString($in['last_name'] ?? null, 80),
@@ -28,6 +30,11 @@ trait ValidatesExtractedFields
             'phone' => $this->cleanString($in['phone'] ?? null, 40),
             'nationality' => $this->cleanString($in['nationality'] ?? null, 60),
             'id_number' => $this->cleanString($in['id_number'] ?? null, 40),
+            // Geschlecht/Familienstand nur aus eindeutigen Quellen (z.B. das
+            // strukturierte Kranken-Beitrittsformular) - Wertelisten wie in der
+            // Kundenakte, Unbekanntes faellt heraus.
+            'gender' => in_array($gender, ['male', 'female'], true) ? $gender : null,
+            'marital_status' => in_array($marital, ['ledig', 'verheiratet', 'geschieden', 'verwitwet'], true) ? $marital : null,
         ], fn ($v) => $v !== null && $v !== '');
     }
 
@@ -147,9 +154,17 @@ trait ValidatesExtractedFields
     private function validatedHealth(mixed $in): array
     {
         if (!is_array($in)) return [];
+        $type = $in['health_insurance_type'] ?? null;
         return array_filter([
             'health_insurance_company' => $this->cleanString($in['health_insurance_company'] ?? null, 120),
             'health_insurance_number' => $this->cleanString($in['health_insurance_number'] ?? null, 30),
+            'health_insurance_type' => in_array($type, ['gesetzlich', 'privat'], true) ? $type : null,
+            // Rentenversicherungs-/Sozialversicherungsnummer (aus dem
+            // Beitrittsformular). Speicherung in customer.pension_insurance_number.
+            'pension_number' => $this->cleanString($in['pension_number'] ?? null, 30),
+            // Bisherige/letzte Krankenkasse (Vorversicherung) - reine Anzeige
+            // fuer den Mitarbeiter, keine Kundenspalte.
+            'previous_insurer' => $this->cleanString($in['previous_insurer'] ?? null, 120),
         ], fn ($v) => $v !== null && $v !== '');
     }
 

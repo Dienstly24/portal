@@ -242,6 +242,42 @@ class DocumentMergeTest extends TestCase
             ->assertSee('Anzeigen', false);                    // Anzeigen-Button
     }
 
+    public function test_kkh_health_and_personal_fields_apply_to_customer(): void
+    {
+        // Felder aus der KKH-Beitrittserklaerung (Familienstand, Geschlecht,
+        // Renten-/Krankenversicherungsnummer, gesetzlich) landen in der
+        // Kundenakte.
+        $doc = $this->inboxDoc('beitrittserklaerung', [
+            'person' => [
+                'first_name' => 'Max', 'last_name' => 'Mustermann',
+                'birth_place' => 'Aleppo', 'nationality' => 'Syrisch',
+                'marital_status' => 'verheiratet', 'gender' => 'male',
+            ],
+            'gesundheit' => [
+                'health_insurance_company' => 'KKH Kaufmaennische Krankenkasse',
+                'health_insurance_number' => 'B123456789',
+                'health_insurance_type' => 'gesetzlich',
+                'pension_number' => '30011990B042',
+            ],
+            'versicherung' => ['sparte' => 'krankenversicherung', 'insurer' => 'KKH Kaufmaennische Krankenkasse'],
+        ]);
+
+        $response = $this->actingAs($this->admin())->postJson(route('admin.documents.create_customer', $doc->id), [
+            'apply_fields' => ['birth_place', 'nationality', 'marital_status', 'gender', 'health_insurance'],
+        ]);
+
+        $response->assertOk()->assertJson(['ok' => true]);
+
+        $customer = Customer::findOrFail($response->json('customer_id'));
+        $this->assertSame('verheiratet', $customer->marital_status);
+        $this->assertSame('male', $customer->gender);
+        $this->assertSame('Syrisch', $customer->nationality);
+        $this->assertSame('Aleppo', $customer->birth_place);
+        $this->assertSame('gesetzlich', $customer->health_insurance_type);
+        $this->assertSame('B123456789', $customer->health_insurance_number);
+        $this->assertSame('30011990B042', $customer->pension_insurance_number);
+    }
+
     public function test_inbox_shows_view_button_for_failed_document(): void
     {
         $doc = $this->inboxDoc('sonstiges', [], 'scan.pdf');

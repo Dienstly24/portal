@@ -257,10 +257,21 @@ window.docReview = (function() {
         } },
         { key: 'phone', label: 'Telefon', from: function(x) { return get(x, 'person', 'phone'); } },
         { key: 'nationality', label: 'Staatsangehörigkeit', from: function(x) { return get(x, 'person', 'nationality'); } },
+        { key: 'marital_status', label: 'Familienstand', from: function(x) {
+            var m = get(x, 'person', 'marital_status');
+            return m ? (m.charAt(0).toUpperCase() + m.slice(1)) : null;
+        } },
+        { key: 'gender', label: 'Geschlecht', from: function(x) {
+            var g = get(x, 'person', 'gender');
+            return g === 'male' ? 'Männlich' : (g === 'female' ? 'Weiblich' : null);
+        } },
         { key: 'email2', label: 'E-Mail (Zweitadresse)', from: function(x) { return get(x, 'person', 'email'); } },
         { key: 'health_insurance', label: 'Krankenkasse / Versichertennummer', from: function(x) {
             var g = x.gesundheit || {};
-            return [g.health_insurance_company, g.health_insurance_number].filter(Boolean).join(' · ') || null;
+            var parts = [g.health_insurance_company, g.health_insurance_number];
+            if (g.pension_number) parts.push('Renten-Nr. ' + g.pension_number);
+            if (g.previous_insurer) parts.push('zuvor: ' + g.previous_insurer);
+            return parts.filter(Boolean).join(' · ') || null;
         } },
         { key: 'iban', label: 'IBAN / Kontoinhaber', from: function(x) {
             var b = x.bank || {};

@@ -110,22 +110,29 @@ class DocumentAnalyzer
         if ($mime === 'application/pdf' && $this->pdfText->isAvailable()) {
             $freeText = $this->pdfText->extract($binary);
             $fromTextLayer = $freeText !== '';
-            if ($fromTextLayer) {
-                // Bekanntes, immer gleich aufgebautes Formular? Dann GRATIS per
-                // fester Regel aus der Textebene lesen (kein KI-Aufruf) - z.B.
-                // das CHECK24-Kfz-Beratungsprotokoll.
-                $parsed = $this->templateParser->parse($freeText);
-                if ($parsed !== null) {
-                    return [...$parsed, 'source' => 'template'];
-                }
-                // Sonst: bekannte Formulare auf die relevanten Seiten
-                // reduzieren - weniger Rauschen/Tokens fuer Heuristik/KI.
-                $freeText = $this->pageSelector->reduce($freeText);
-            }
         }
         if ($freeText === '' && $this->ocr->isAvailable()) {
             $freeText = $this->ocr->extract($binary, $mime);
         }
+
+        // Bekanntes, immer gleich aufgebautes Formular? Dann GRATIS per fester
+        // Regel lesen (kein KI-Aufruf) - egal ob der Text aus der PDF-Textebene
+        // (z.B. CHECK24-Kfz-Protokoll) oder aus OCR stammt (z.B. die als
+        // Bild-PDF hochgeladene KKH-Beitrittserklaerung). Deterministisch und
+        // zuverlaessig, wo die Bild-KI teuer und wackelig waere.
+        if ($freeText !== '') {
+            $parsed = $this->templateParser->parse($freeText);
+            if ($parsed !== null) {
+                return [...$parsed, 'source' => 'template'];
+            }
+        }
+
+        // Saubere Textebene: bekannte Formulare auf die relevanten Seiten
+        // reduzieren - weniger Rauschen/Tokens fuer Heuristik/KI.
+        if ($fromTextLayer) {
+            $freeText = $this->pageSelector->reduce($freeText);
+        }
+
         $ocrResult = $freeText !== '' ? (new HeuristicDocumentClassifier())->classify($freeText) : null;
 
         // Reicht das kostenlose Ergebnis, KI gar nicht erst bemuehen.
