@@ -543,11 +543,12 @@ class TicketController extends Controller
         if ($ticket->customer) {
             // Portal-Glocke: "Neue Nachricht" fuer den Kunden (Review Punkt 10)
             if ($ticket->customer->user_id) {
-                \App\Models\InternalNotification::create([
-                    'user_id' => $ticket->customer->user_id,
+                \App\Support\Facades\Notify::push($ticket->customer->user_id, [
+                    'type' => \App\Services\Notifications\NotificationService::TYPE_TICKET,
                     'title' => 'Neue Nachricht',
                     'body' => 'Unser Team hat auf Ihre Anfrage „' . Str::limit($ticket->subject, 60) . '" geantwortet.',
                     'link' => route('portal.tickets.show', $ticket->id),
+                    'dedup_key' => 'ticket-staff-reply-' . $ticket->id,
                 ]);
             }
             $email = $ticket->customer->user?->email;

@@ -6,7 +6,6 @@ use App\Models\ActivityLog;
 use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\Document;
-use App\Models\InternalNotification;
 use App\Models\User;
 use App\Services\Ai\DocumentAnalyzer;
 use App\Services\CustomerCreation\CustomerAutoCreationService;
@@ -75,14 +74,16 @@ class SmartDocumentUploadController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        foreach (User::whereIn('role', ['admin', 'manager', 'support'])->where('is_active', true)->get() as $recipient) {
-            InternalNotification::create([
-                'user_id' => $recipient->id,
+        \App\Support\Facades\Notify::pushMany(
+            User::whereIn('role', ['admin', 'manager', 'support'])->where('is_active', true)->pluck('id'),
+            [
+                'type' => \App\Services\Notifications\NotificationService::TYPE_DOCUMENT,
                 'title' => 'Neues Kundendokument (Scan)',
                 'body' => ($customer->user?->name ?? 'Ein Kunde') . ' hat „' . $document->file_name . '" hochgeladen.',
                 'link' => route('admin.customer', $customer->id) . '#tab-dokumente',
-            ]);
-        }
+                'dedup_key' => 'doc-scan-' . $document->id,
+            ]
+        );
 
         ActivityLog::create([
             'user_id' => auth()->id(),

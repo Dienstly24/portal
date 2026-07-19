@@ -287,7 +287,12 @@ form textarea{min-height:90px;resize:vertical;}
         if (!e.target.closest('#p-bell') && !e.target.closest('#p-bell-dd')) document.getElementById('p-bell-dd').style.display = 'none';
     });
     load();
-    setInterval(load, 60000);
+    // Naeher an Echtzeit: haeufiger pollen und zusaetzlich sofort
+    // aktualisieren, sobald der Tab wieder in den Vordergrund kommt.
+    setInterval(load, 30000);
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible') load();
+    });
 })();
 </script>
 @include('partials.cookie_consent')

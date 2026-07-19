@@ -32,6 +32,10 @@ class AppServiceProvider extends ServiceProvider
         // aus den Einstellungen gelesen werden.
         $this->app->singleton(ActivityCatalog::class);
 
+        // Zentraler Notification-Dienst (Glocke): eine Stelle fuer Kuerzen,
+        // Duplikat-Vermeidung und Kategorisierung. Facade: App\Support\Facades\Notify.
+        $this->app->singleton(\App\Services\Notifications\NotificationService::class);
+
         // OCR-Basisebene des Smart Document Upload - austauschbar, falls
         // spaeter ein anderer OCR-Dienst als Tesseract eingesetzt wird.
         $this->app->bind(TextExtractorInterface::class, TesseractTextExtractor::class);

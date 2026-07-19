@@ -2,9 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\InternalNotification;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Support\Facades\Notify;
+use App\Services\Notifications\NotificationService;
 
 /**
  * Benachrichtigt das zuständige Team über eine neue Kundenanfrage (Ticket).
@@ -46,14 +47,13 @@ class TicketNotifier
             User::whereIn('role', ['admin', 'manager'])->pluck('id')
         )->unique()->values();
 
-        foreach ($recipients as $userId) {
-            InternalNotification::create([
-                'user_id' => $userId,
-                'title' => '🎫 Neue Support-Anfrage',
-                'body' => $body,
-                'link' => $link,
-            ]);
-        }
+        Notify::pushMany($recipients, [
+            'type' => NotificationService::TYPE_TICKET,
+            'title' => '🎫 Neue Support-Anfrage',
+            'body' => $body,
+            'link' => $link,
+            'dedup_key' => 'ticket-new-' . $ticket->id,
+        ]);
     }
 
     /**
@@ -64,12 +64,13 @@ class TicketNotifier
         if ($assignee->id === auth()->id()) {
             return; // Selbstzuweisung braucht keine Benachrichtigung
         }
-        InternalNotification::create([
-            'user_id' => $assignee->id,
+        Notify::push($assignee->id, [
+            'type' => NotificationService::TYPE_TICKET,
             'title' => '🎫 Ticket zugewiesen',
             'body' => ($ticket->ticket_number ? $ticket->ticket_number . ' – ' : '')
                 . \Illuminate\Support\Str::limit($ticket->subject, 70),
             'link' => route('admin.ticket', $ticket->id),
+            'dedup_key' => 'ticket-assigned-' . $ticket->id,
         ]);
     }
 
@@ -98,11 +99,12 @@ class TicketNotifier
         if (!$text) {
             return;
         }
-        InternalNotification::create([
-            'user_id' => $ticket->customer->user_id,
+        Notify::push($ticket->customer->user_id, [
+            'type' => NotificationService::TYPE_TICKET,
             'title' => 'Status Ihrer Anfrage',
             'body' => str_replace(':s', \Illuminate\Support\Str::limit($ticket->subject, 60), $text),
             'link' => route('portal.tickets.show', $ticket->id),
+            'dedup_key' => 'ticket-status-' . $ticket->id . '-' . $ticket->status,
         ]);
     }
 
@@ -122,14 +124,13 @@ class TicketNotifier
         }
         $recipients = $recipients->merge(User::whereIn('role', ['admin', 'manager'])->pluck('id'))
             ->unique()->values();
-        foreach ($recipients as $userId) {
-            InternalNotification::create([
-                'user_id' => $userId,
-                'title' => $title,
-                'body' => $text,
-                'link' => route('admin.ticket', $ticket->id),
-            ]);
-        }
+        Notify::pushMany($recipients, [
+            'type' => NotificationService::TYPE_TICKET,
+            'title' => $title,
+            'body' => $text,
+            'link' => route('admin.ticket', $ticket->id),
+            'dedup_key' => 'ticket-team-' . $ticket->id . '-' . md5($title),
+        ]);
     }
 
     /**
@@ -153,13 +154,15 @@ class TicketNotifier
             ->merge(User::whereIn('role', ['admin', 'manager'])->pluck('id'))
             ->unique()->values();
 
-        foreach ($recipients as $userId) {
-            InternalNotification::create([
-                'user_id' => $userId,
-                'title' => '💬 Neue Ticket-Antwort',
-                'body' => $body,
-                'link' => $link,
-            ]);
-        }
+        // dedup_key ohne Zeitbezug: mehrere Kundenantworten auf DASSELBE
+        // Ticket fallen zu einem ungelesenen Eintrag zusammen, bis das Team
+        // ihn liest - danach erzeugt die naechste Antwort wieder eine Glocke.
+        Notify::pushMany($recipients, [
+            'type' => NotificationService::TYPE_TICKET,
+            'title' => '💬 Neue Ticket-Antwort',
+            'body' => $body,
+            'link' => $link,
+            'dedup_key' => 'ticket-reply-' . $ticket->id,
+        ]);
     }
 }
