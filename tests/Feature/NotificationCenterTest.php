@@ -76,8 +76,13 @@ class NotificationCenterTest extends TestCase
             'user_id' => $user->id,
             'last_read_at' => null,
         ]);
-        InternalConversationMessage::create(['conversation_id' => $conversation->id, 'sender_id' => $user->id, 'body' => 'Erste Nachricht', 'created_at' => now()->subMinutes(5)]);
-        InternalConversationMessage::create(['conversation_id' => $conversation->id, 'sender_id' => $user->id, 'body' => 'Neueste Nachricht', 'created_at' => now()]);
+        // created_at ist bewusst NICHT fillable -> nach dem Anlegen explizit
+        // setzen, damit die beiden Nachrichten wirklich unterschiedliche
+        // Zeitpunkte haben (sonst entscheidet der UUID-Tiebreaker zufaellig).
+        $old = InternalConversationMessage::create(['conversation_id' => $conversation->id, 'sender_id' => $user->id, 'body' => 'Erste Nachricht']);
+        $old->forceFill(['created_at' => now()->subMinutes(5)])->save();
+        $new = InternalConversationMessage::create(['conversation_id' => $conversation->id, 'sender_id' => $user->id, 'body' => 'Neueste Nachricht']);
+        $new->forceFill(['created_at' => now()])->save();
 
         $data = $this->actingAs($user)->getJson(route('admin.notifications'))->json();
 

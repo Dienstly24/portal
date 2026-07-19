@@ -30,7 +30,7 @@ class InternalConversation extends Model
      * nicht der komplette Nachrichtenverlauf jeder Unterhaltung geladen
      * werden muss (Behebung eines N+1-/Speicher-Problems).
      */
-    public function latestMessage() { return $this->hasOne(InternalConversationMessage::class, 'conversation_id')->latestOfMany(); }
+    public function latestMessage() { return $this->hasOne(InternalConversationMessage::class, 'conversation_id')->latestOfMany('created_at'); }
 
     public function hasParticipant(int $userId): bool {
         return $this->participants()->where('user_id', $userId)->exists();
