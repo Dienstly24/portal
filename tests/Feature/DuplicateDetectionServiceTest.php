@@ -131,4 +131,51 @@ class DuplicateDetectionServiceTest extends TestCase
 
         $this->assertCount(0, $result['pairs']);
     }
+
+    /**
+     * Kern des gemeldeten Fehlers: Der Hinweis-Badge (countCached) wird 5
+     * Minuten gecacht. Loest ein Mitarbeiter die Dublette durch LOESCHEN eines
+     * der beiden Datensaetze (statt Zusammenfuehren), muss die Zahl SOFORT
+     * sinken - vorher blieb sie bis zum TTL-Ablauf stehen ("erledigt, Badge
+     * aber noch da").
+     */
+    public function test_cached_badge_count_drops_after_one_duplicate_is_deleted(): void
+    {
+        $this->makeCustomer('Ahmad Albhre', 'ahmad@example.com');
+        $dup = $this->makeCustomer('Ahmad Albhre', 'ahmad.zweit@web.de');
+
+        $detection = app(DuplicateDetectionService::class);
+        $this->assertSame(1, $detection->countCached(), 'Verdachtsfall muss zunaechst gezaehlt werden');
+
+        app(\App\Services\CustomerDeletionService::class)->delete($dup, null);
+
+        $this->assertSame(0, $detection->countCached(), 'Nach dem Loeschen muss der Badge sofort auf 0 stehen');
+    }
+
+    /** Neuanlage eines Duplikats muss den Badge sofort hochzaehlen. */
+    public function test_cached_badge_count_rises_when_a_new_duplicate_is_created(): void
+    {
+        $this->makeCustomer('Sara Klein', 'sara@example.com');
+        $detection = app(DuplicateDetectionService::class);
+        $this->assertSame(0, $detection->countCached());
+
+        $this->makeCustomer('Sara Klein', 'sara.zweit@example.com');
+
+        $this->assertSame(1, $detection->countCached());
+    }
+
+    /** Namenskorrektur (starkes Signal am User-Modell) muss den Badge nachziehen. */
+    public function test_cached_badge_count_drops_when_duplicate_name_is_corrected(): void
+    {
+        $this->makeCustomer('Mona Gross', 'mona1@example.com');
+        $dup = $this->makeCustomer('Mona Gross', 'mona2@example.com');
+
+        $detection = app(DuplicateDetectionService::class);
+        $this->assertSame(1, $detection->countCached());
+
+        // Verwechselter Name korrigiert -> kein Verdacht mehr.
+        $dup->user->update(['name' => 'Lena Ferner']);
+
+        $this->assertSame(0, $detection->countCached());
+    }
 }

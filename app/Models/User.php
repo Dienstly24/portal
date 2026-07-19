@@ -22,6 +22,23 @@ class User extends Authenticatable {
         'can_send_emails' => 'boolean',
         'can_import_export' => 'boolean',
     ];
+    protected static function booted(): void
+    {
+        // Name und E-Mail sind starke Dubletten-Signale, liegen aber am User.
+        // Aendert sich eines fuer einen KUNDEN-Account, muss der Dubletten-
+        // Hinweis-Badge neu berechnet werden (Anlage/Loeschung laufen bereits
+        // ueber das Customer-Modell). Nur Kundenkonten, nur bei echten
+        // Aenderungen an Name/E-Mail - Login-/Rechte-Updates loesen nichts aus.
+        static::updated(function (self $user) {
+            if ($user->role !== 'customer') {
+                return;
+            }
+            if (array_intersect(array_keys($user->getChanges()), ['name', 'email']) !== []) {
+                app(\App\Services\Matching\DuplicateDetectionService::class)->forgetCount();
+            }
+        });
+    }
+
     public function customer() { return $this->hasOne(Customer::class); }
 
     /** Echte, erreichbare E-Mail (Import-Platzhalter zählen nicht). */
