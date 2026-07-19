@@ -139,6 +139,40 @@ class DocumentSecurityTest extends TestCase
             ->assertSee(route('admin.documents.download', $doc->id), false);
     }
 
+    public function test_portal_document_list_shows_inline_preview_for_viewable_document(): void
+    {
+        $customer = $this->makeCustomer();
+        $doc = $this->makePrivateDocument($customer); // police.pdf, visibility 'customer'
+
+        $viewUrl = route('portal.documents.view', $doc->id);
+        $this->actingAs($customer->user)->get(route('portal.documents'))
+            ->assertOk()
+            ->assertSee('data-preview-open', false)
+            ->assertSee('data-preview-url="' . e($viewUrl) . '"', false)
+            ->assertSee('data-preview-kind="pdf"', false);
+    }
+
+    public function test_portal_document_list_has_no_inline_preview_for_office_document(): void
+    {
+        $customer = $this->makeCustomer();
+        Storage::fake('local');
+        Storage::disk('local')->put('customers/' . $customer->id . '/antrag.docx', 'x');
+        $doc = Document::create([
+            'customer_id' => $customer->id,
+            'category' => 'other',
+            'file_name' => 'antrag.docx',
+            'file_path' => 'customers/' . $customer->id . '/antrag.docx',
+            'disk' => 'local',
+            'visibility' => 'customer',
+        ]);
+
+        // Word-Datei ist nicht inline ansehbar -> kein Vorschau-Fenster fuer diese Kachel.
+        $viewUrl = route('portal.documents.view', $doc->id);
+        $this->actingAs($customer->user)->get(route('portal.documents'))
+            ->assertOk()
+            ->assertDontSee('data-preview-url="' . e($viewUrl) . '"', false);
+    }
+
     public function test_new_contract_uploads_are_stored_privately_not_publicly(): void
     {
         Storage::fake('local');

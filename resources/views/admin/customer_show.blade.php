@@ -1195,5 +1195,5 @@ function openDocEdit(id, name, category, visibility, color, contractId) {
 </script>
 
 {{-- Dokument-Vorschau (Schnellvorschau beim Ueberfahren, grosses Fenster bei Klick) --}}
-@include('admin.partials.doc_preview')
+@include('partials.doc_preview')
 @endsection

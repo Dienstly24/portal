@@ -617,4 +617,7 @@ window.smartScan = (function() {
         </form>
     </div>
 </div>
+
+{{-- Dokument-Vorschau: Schnellvorschau beim Ueberfahren, grosses Fenster bei Klick (ohne Download) --}}
+@include('partials.doc_preview')
 @endsection

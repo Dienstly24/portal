@@ -5,11 +5,21 @@
         : (in_array($ext, ['doc','docx']) ? '📘'
         : (in_array($ext, ['xls','xlsx','csv']) ? '📗'
         : (in_array($ext, ['heic','heif']) ? '🖼️' : '📄')));
+    // Vorschau ohne Download nur fuer inline anzeigbare Dateien (PDF/Bild).
+    $viewable = $d->isViewable();
+    $pvKind = $d->isImage() ? 'image' : ($d->isPdf() ? 'pdf' : 'other');
+    $viewUrl = route('portal.documents.view', $d->id);
+    $downloadUrl = route('portal.documents.download', $d->id);
+    // Gemeinsame Vorschau-Attribute (Schnellvorschau beim Ueberfahren, grosses
+    // Fenster bei Klick) - nur wenn die Datei ohne Download ansehbar ist.
+    $previewAttrs = $viewable
+        ? 'data-preview-open data-preview-url="' . e($viewUrl) . '" data-preview-name="' . e($d->file_name) . '" data-preview-kind="' . $pvKind . '" data-preview-download="' . e($downloadUrl) . '"'
+        : '';
 @endphp
 <div class="doc-tile">
-    <a href="{{ route('portal.documents.view', $d->id) }}" target="_blank" rel="noopener" class="doc-thumb" title="{{ $d->file_name }}">
+    <a href="{{ $viewUrl }}" target="_blank" rel="noopener" class="doc-thumb" title="{{ $d->file_name }}" {!! $previewAttrs !!}>
         @if($isImage)
-            <img src="{{ route('portal.documents.view', $d->id) }}" alt="{{ $d->file_name }}" loading="lazy">
+            <img src="{{ $viewUrl }}" alt="{{ $d->file_name }}" loading="lazy">
         @else
             <span class="doc-emoji">{{ $emoji }}</span>
         @endif
@@ -26,7 +36,7 @@
         <div class="doc-date">{{ $d->created_at->format('d.m.Y') }}</div>
     </div>
     <div class="doc-actions">
-        <a href="{{ route('portal.documents.view', $d->id) }}" target="_blank" rel="noopener" class="view">👁 Ansehen</a>
-        <a href="{{ route('portal.documents.download', $d->id) }}">⬇ Herunterladen</a>
+        <a href="{{ $viewUrl }}" target="_blank" rel="noopener" class="view" {!! $previewAttrs !!}>👁 {{ __('Ansehen') }}</a>
+        <a href="{{ $downloadUrl }}">⬇ {{ __('Herunterladen') }}</a>
     </div>
 </div>
