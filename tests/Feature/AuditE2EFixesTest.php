@@ -106,4 +106,30 @@ class AuditE2EFixesTest extends TestCase
         $this->actingAs($other)->get(route('admin.documents.download', $doc->id))->assertForbidden();
         $this->actingAs($uploader)->get(route('admin.documents.download', $doc->id))->assertOk();
     }
+
+    // SEC-1: HTML-Antworten tragen einen Content-Security-Policy-Header.
+    public function test_csp_header_present_on_html_response(): void
+    {
+        $res = $this->actingAs($this->admin())->get(route('admin.dashboard'))->assertOk();
+        $csp = $res->headers->get('Content-Security-Policy');
+        $this->assertNotNull($csp);
+        $this->assertStringContainsString("frame-ancestors 'self'", $csp);
+        $this->assertStringContainsString("object-src 'none'", $csp);
+    }
+
+    // INT-8: Fehlgeschlagener Login landet im Audit-Trail (ohne Passwort).
+    public function test_failed_login_is_audited(): void
+    {
+        $user = User::factory()->create(['role' => 'admin']);
+        $this->post('/login', ['email' => $user->email, 'password' => 'falsch-falsch']);
+        $this->assertDatabaseHas('activity_logs', ['action' => 'login_failed']);
+    }
+
+    // INT-8: Voll-Export der Kundendaten wird protokolliert.
+    public function test_customer_export_is_audited(): void
+    {
+        $this->customerWithName('Max Muster');
+        $this->actingAs($this->admin())->get(route('admin.export'))->assertOk();
+        $this->assertDatabaseHas('activity_logs', ['action' => 'customers_exported']);
+    }
 }

@@ -117,12 +117,13 @@ class EmployeeController extends Controller
             }
         });
 
-        ActivityLog::create([
-            'user_id' => auth()->id(),
-            'action' => 'employee_updated',
-            'entity_type' => 'user',
-            'entity_id' => $employee->id,
-            'meta' => json_encode(['name' => $employee->name]),
+        // Rollen-/Rechteaenderung mit protokollieren (Audit INT-8).
+        ActivityLog::record('employee_updated', 'user', $employee->id, [
+            'name' => $employee->name,
+            'role' => $employee->role,
+            'access_level' => $employee->access_level,
+            'can_see_all_customers' => $employee->can_see_all_customers,
+            'can_import_export' => $employee->can_import_export,
         ]);
 
         return redirect()->route('admin.employees')->with('success', 'Mitarbeiter aktualisiert.');

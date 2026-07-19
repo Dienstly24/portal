@@ -54,7 +54,9 @@ return [
 
         'stack' => [
             'driver' => 'stack',
-            'channels' => explode(',', (string) env('LOG_STACK', 'single')),
+            // Default 'daily' statt 'single' (Audit INT-7): rotierende, nach
+            // LOG_DAILY_DAYS begrenzte Logs statt einer unbegrenzt wachsenden Datei.
+            'channels' => explode(',', (string) env('LOG_STACK', 'daily')),
             'ignore_exceptions' => false,
         ],
 

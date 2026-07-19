@@ -35,6 +35,10 @@ class AuthenticatedSessionController extends Controller
             // (Portal-Status "Erster Login erfolgt").
             'first_login_at' => $user->first_login_at ?? now(),
         ])->save();
+        // Hinweis: erfolgreiche Staff-Logins werden bereits vom ActivityTracker
+        // protokolliert; Kunden-Logins bewusst nicht (Datenminimierung). Hier
+        // daher kein zusaetzlicher 'login'-Eintrag - siehe stattdessen die
+        // fehlgeschlagenen Logins in LoginRequest und Logout unten. (Audit INT-8)
         if (in_array($user->role, ['admin', 'manager', 'employee'])) {
             return redirect()->intended(route('admin.dashboard', absolute: false));
         }
@@ -49,6 +53,8 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        // Staff-Logout wird bereits vom ActivityTracker protokolliert - hier
+        // kein zusaetzlicher Eintrag noetig. (Audit INT-8)
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();

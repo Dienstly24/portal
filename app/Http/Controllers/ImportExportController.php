@@ -123,6 +123,12 @@ class ImportExportController extends Controller
             ]);
         }
 
+        // Voll-Export personenbezogener Daten (inkl. IBAN) protokollieren
+        // (Audit INT-8) - hochsensibler Vorgang, gehoert in den Audit-Trail.
+        \App\Models\ActivityLog::record('customers_exported', 'customer', null, [
+            'count' => $customers->count(),
+        ]);
+
         return response((string) $csv)
             ->header('Content-Type', 'text/csv; charset=UTF-8')
             ->header('Content-Disposition', 'attachment; filename="kunden_' . date('Y-m-d') . '.csv"');

@@ -5,6 +5,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Mail\Mailables\Headers;
 use Illuminate\Queue\SerializesModels;
 
 /**
@@ -27,6 +28,20 @@ class CampaignMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(subject: $this->subjectLine);
+    }
+
+    /**
+     * RFC-8058 List-Unsubscribe(-Post) fuer Ein-Klick-Abmeldung (Audit INT-5).
+     * Gmail/Outlook erwarten das bei Massenmail; verbessert Zustellung/Reputation.
+     */
+    public function headers(): Headers
+    {
+        $custom = [];
+        if ($this->unsubscribeUrl) {
+            $custom['List-Unsubscribe'] = '<' . $this->unsubscribeUrl . '>';
+            $custom['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click';
+        }
+        return new Headers(text: $custom);
     }
 
     public function content(): Content
