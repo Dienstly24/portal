@@ -95,4 +95,65 @@ class VehicleContractExtractionTest extends TestCase
         $this->assertArrayNotHasKey('annual_mileage', $kfz);
         $this->assertArrayNotHasKey('holder_type', $kfz);
     }
+
+    public function test_beratungsprotokoll_never_gets_a_contract_number(): void
+    {
+        // Ein VORLAEUFIGES Beratungsprotokoll hat noch keine VSNR des neuen
+        // Vertrags - eine von der KI gelieferte Nummer ist die des
+        // VORversicherers und darf nicht als neue Vertragsnummer landen.
+        config(['services.anthropic.key' => 'test-key']);
+        Http::fake([
+            'api.anthropic.com/*' => Http::response([
+                'content' => [['type' => 'text', 'text' => json_encode([
+                    'type' => 'beratungsprotokoll',
+                    'confidence' => 90,
+                    'summary' => 'Kfz-Protokoll',
+                    'title' => 'Protokoll',
+                    'data' => ['versicherung' => [
+                        'sparte' => 'kfz',
+                        'insurer' => 'AdmiralDirekt',
+                        'contract_number' => 'AID222887673', // VSNR des Vorversicherers!
+                    ]],
+                ])]],
+            ]),
+        ]);
+
+        $result = (new ClaudeDocumentAiProvider())->analyze('BYTES', 'application/pdf', '', false);
+        $v = $result['data']['versicherung'];
+
+        $this->assertArrayNotHasKey('contract_number', $v);
+        $this->assertSame('AID222887673', $v['previous_contract_number']);
+        $this->assertSame('AdmiralDirekt', $v['insurer']);
+    }
+
+    public function test_contract_creation_persists_sondereinstufung_fields(): void
+    {
+        // Sondereinstufung: gewaehrte Klasse SF 5 (nicht uebertragbar) +
+        // echte (uebertragbare) Klasse SF 4 landen getrennt im Fahrzeug.
+        $customer = $this->customer();
+        $doc = Document::create([
+            'customer_id' => null,
+            'category' => 'contract',
+            'file_name' => 'protokoll.pdf',
+            'file_path' => 'documents/eingang/protokoll2.pdf',
+            'disk' => 'local',
+            'ai_status' => 'done',
+            'ai_type' => 'beratungsprotokoll',
+            'ai_extracted' => [
+                'versicherung' => ['insurer' => 'AdmiralDirekt', 'sparte' => 'kfz', 'start_date' => '2026-07-19'],
+                'kfz' => [
+                    'sf_liability_class' => '5',
+                    'sf_liability_type' => 'sondereinstufung',
+                    'sf_liability_real_class' => '4',
+                ],
+            ],
+        ]);
+
+        $contract = app(DocumentIntakeService::class)->createContractFromExtraction($doc, $customer, null);
+        $veh = $contract->vehicleDetail;
+
+        $this->assertSame('5', $veh->sf_liability_class);
+        $this->assertSame('sondereinstufung', $veh->sf_liability_type);
+        $this->assertSame('4', $veh->sf_liability_real_class);
+    }
 }

@@ -185,6 +185,17 @@ class ClaudeDocumentAiProvider implements DocumentAiProviderInterface
 
         $data = is_array($json['data'] ?? null) ? $json['data'] : [];
 
+        $versicherung = $this->validatedInsurance($data['versicherung'] ?? null);
+        // Ein VORLAEUFIGES Beratungsprotokoll traegt noch KEINE Vertrags-/
+        // Versicherungsscheinnummer des neuen Vertrags - die einzige VSNR im
+        // Umfeld ist die des VORversicherers (z.B. aus einer mitgelieferten
+        // Notiz). Die darf nie als Nummer des neuen Vertrags landen; sie wird
+        // stattdessen als Vorversicherungs-Info gefuehrt.
+        if ($type === 'beratungsprotokoll' && isset($versicherung['contract_number'])) {
+            $versicherung['previous_contract_number'] = $versicherung['contract_number'];
+            unset($versicherung['contract_number']);
+        }
+
         return [
             'type' => $type,
             'confidence' => (int) $confidence,
@@ -192,7 +203,7 @@ class ClaudeDocumentAiProvider implements DocumentAiProviderInterface
             'title' => $this->cleanString($json['title'] ?? null, 60),
             'data' => [
                 'person' => $this->validatedPerson($data['person'] ?? null),
-                'versicherung' => $this->validatedInsurance($data['versicherung'] ?? null),
+                'versicherung' => $versicherung,
                 'kfz' => $this->validatedVehicle($data['kfz'] ?? null),
                 'gesundheit' => $this->validatedHealth($data['gesundheit'] ?? null),
                 'bank' => $this->validatedBank($data['bank'] ?? null),

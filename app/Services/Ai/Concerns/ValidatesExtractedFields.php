@@ -149,6 +149,14 @@ trait ValidatesExtractedFields
             // gueltigen SF-Klasse entspricht (M, S, 0, 1/2, SF 1-50).
             'sf_liability_class' => $this->cleanSfClass($in['sf_liability_class'] ?? null),
             'sf_comprehensive_class' => $this->cleanSfClass($in['sf_comprehensive_class'] ?? null),
+            // Art der Einstufung: tatsaechlich vs. Sondereinstufung (nicht
+            // uebertragbar) + echte (uebertragbare) Klasse + Grund - nur aus
+            // den bekannten Wertelisten.
+            'sf_liability_type' => in_array($in['sf_liability_type'] ?? null, array_keys(\App\Models\ContractVehicleDetail::SF_TYPES), true)
+                ? $in['sf_liability_type'] : null,
+            'sf_liability_special_reason' => in_array($in['sf_liability_special_reason'] ?? null, array_keys(\App\Models\ContractVehicleDetail::SF_SPECIAL_REASONS), true)
+                ? $in['sf_liability_special_reason'] : null,
+            'sf_liability_real_class' => $this->cleanSfClass($in['sf_liability_real_class'] ?? null),
             // Zusaetzliche, klar abgrenzbare Tarif-/Fahrzeugfakten (z.B. aus
             // dem CHECK24-Beratungsprotokoll). Ungenaue/geschaetzte Angaben
             // fallen durch die harte Validierung heraus.
