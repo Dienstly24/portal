@@ -22,11 +22,21 @@ class DocumentRequestMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
-    public function __construct(public DocumentRequest $documentRequest) {}
+    /** Sprache der Kundenansprache (DE/AR, Audit I18N-3). */
+    public string $lang;
+
+    public function __construct(public DocumentRequest $documentRequest)
+    {
+        $this->lang = $documentRequest->customer->preferred_lang ?? 'de';
+    }
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Dokument benötigt: ' . $this->documentRequest->title);
+        $subject = $this->lang === 'ar'
+            ? 'مستند مطلوب: ' . $this->documentRequest->title
+            : 'Dokument benötigt: ' . $this->documentRequest->title;
+
+        return new Envelope(subject: $subject);
     }
 
     public function content(): Content
