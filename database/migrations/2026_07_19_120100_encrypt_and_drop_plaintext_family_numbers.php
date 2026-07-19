@@ -17,17 +17,27 @@ return new class extends Migration {
             || Schema::hasColumn('customer_family', 'steuer_nr')) {
             // Ueber die Modelle iterieren, damit der encrypted-Cast beim
             // Schreiben tatsaechlich greift (kein Mass-Update).
+            // Ziel-Leerpruefung entschluesselt die verschluesselte Spalte. Sollte
+            // dort (untypisch) ein nicht entschluesselbarer Alt-Wert liegen,
+            // werten wir ihn als "belegt" statt die Migration abzubrechen.
+            $targetEmpty = function ($member, string $col): bool {
+                try {
+                    return empty($member->{$col});
+                } catch (\Illuminate\Contracts\Encryption\DecryptException) {
+                    return false;
+                }
+            };
             foreach (CustomerFamily::all() as $member) {
                 $dirty = false;
                 if (Schema::hasColumn('customer_family', 'krankenversicherung_nr')
                     && !empty($member->getRawOriginal('krankenversicherung_nr'))
-                    && empty($member->health_insurance_number)) {
+                    && $targetEmpty($member, 'health_insurance_number')) {
                     $member->health_insurance_number = $member->getRawOriginal('krankenversicherung_nr');
                     $dirty = true;
                 }
                 if (Schema::hasColumn('customer_family', 'steuer_nr')
                     && !empty($member->getRawOriginal('steuer_nr'))
-                    && empty($member->tax_id)) {
+                    && $targetEmpty($member, 'tax_id')) {
                     $member->tax_id = $member->getRawOriginal('steuer_nr');
                     $dirty = true;
                 }

@@ -16,8 +16,11 @@ use App\Services\Workflow\EmailWorkflowService;
  */
 class MailboxSyncService
 {
-    /** Max. Mails pro Sync-Lauf und Postfach (muss zum Provider-Default passen). */
+    /** Max. Mails pro Fetch-Runde und Postfach (muss zum Provider-Default passen). */
     private const FETCH_LIMIT = 50;
+
+    /** Sicherheitskappe fuer die Pagination je Lauf (max. 20*50 = 1000 Mails). */
+    private const MAX_SYNC_ROUNDS = 20;
 
     public function __construct(
         private readonly MailboxProviderFactory $providerFactory,
@@ -38,15 +41,27 @@ class MailboxSyncService
 
     public function syncAccount(EmailAccount $account): int
     {
-        try {
-            $messages = $this->providerFactory->make($account)->fetchNewMessages($account, self::FETCH_LIMIT);
-        } catch (\Throwable $e) {
-            $account->update(['last_error' => $e->getMessage()]);
-            return 0;
-        }
-
         $stored = 0;
-        $maxReceived = null; // hoechstes tatsaechlich verarbeitetes Empfangsdatum
+        $overallMax = null; // hoechstes ueber alle Runden verarbeitetes Empfangsdatum
+        $drained = false;   // true, sobald ein Batch < Limit kam (Postfach leer)
+        $rounds = 0;
+
+        // Pagination innerhalb EINES Laufs (Audit INT-4 / Re-Audit): bei vollem
+        // Batch wird der Cursor (last_synced_at) im Speicher auf das juengste
+        // verarbeitete Datum vorgerueckt und weitergeholt, bis das Postfach
+        // geleert ist oder das Rundenlimit greift. Ohne diese Schleife konnte
+        // die Marke unter Dauerlast (>=Limit Mails je -1h-Fenster) stehenbleiben
+        // und neuere Mails jenseits des Limits nie geholt werden.
+        do {
+            $rounds++;
+            try {
+                $messages = $this->providerFactory->make($account)->fetchNewMessages($account, self::FETCH_LIMIT);
+            } catch (\Throwable $e) {
+                $account->update(['last_error' => $e->getMessage()]);
+                return $stored;
+            }
+
+        $maxReceived = null; // hoechstes tatsaechlich verarbeitetes Empfangsdatum dieser Runde
         foreach ($messages as $data) {
             // Kundenseitiges Import-Postfach (Variante A): nur Mails mit
             // gueltigem Einwilligungs-Token UND erlaubter Absenderdomain
@@ -104,16 +119,26 @@ class MailboxSyncService
             $this->attachments->createDocuments($message->fresh());
         }
 
-        // Wasserstandsmarke nur bis zum hoechsten TATSAECHLICH verarbeiteten
-        // Empfangsdatum vorruecken statt bedingungslos auf now() (Audit INT-4):
-        // Wurde die Fetch-Grenze erreicht und blieben aeltere Mails ungeholt,
-        // fischt der naechste Lauf sie ueber die -1h-Marge wieder ein, statt sie
-        // dauerhaft zu verlieren. Nur wenn ein voller Batch kam (== Limit) und
-        // damit weitere Mails moeglich sind, halten wir bei $maxReceived; sonst
-        // ist das Postfach geleert und wir duerfen bis now() gehen.
-        $watermark = ($maxReceived && count($messages) >= self::FETCH_LIMIT)
-            ? $maxReceived
-            : now();
+            if ($maxReceived && (!$overallMax || $maxReceived->gt($overallMax))) {
+                $overallMax = $maxReceived;
+            }
+
+            $full = count($messages) >= self::FETCH_LIMIT;
+            // Nur weiterpaginieren, wenn ein voller Batch kam UND der Cursor
+            // echt vorwaerts wandert (sonst Endlosschleife). Andernfalls Abbruch:
+            // $drained = true, falls der Batch < Limit war (Postfach leer).
+            if ($full && $maxReceived && (!$account->last_synced_at || $maxReceived->gt($account->last_synced_at))) {
+                $account->last_synced_at = $maxReceived; // In-Memory-Cursor vorruecken
+            } else {
+                $drained = !$full;
+                break;
+            }
+        } while ($rounds < self::MAX_SYNC_ROUNDS);
+
+        // Geleert -> bis now(); sonst (Rundenlimit/kein Fortschritt) beim
+        // hoechsten verarbeiteten Empfangsdatum halten, damit der Rest beim
+        // naechsten Lauf ueber die -1h-Marge folgt (kein Verlust).
+        $watermark = $drained ? now() : ($overallMax ?? now());
         $account->update(['last_synced_at' => $watermark, 'last_error' => null]);
 
         return $stored;

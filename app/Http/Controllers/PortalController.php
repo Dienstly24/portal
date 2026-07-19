@@ -63,7 +63,13 @@ class PortalController extends Controller
         if (!$url) {
             return redirect()->route('portal.dashboard');
         }
-        return redirect()->away(str_starts_with($url, 'http') ? $url : url($url));
+        // Defense-in-depth gegen protokoll-relative //fremdhost-Redirects
+        // (auch fuer evtl. vor der Validierung gespeicherte Alt-Banner):
+        // nur echte http(s)-URLs extern, alles andere strikt als interner Pfad.
+        if (preg_match('#^https?://#i', $url)) {
+            return redirect()->away($url);
+        }
+        return redirect()->to('/' . ltrim($url, '/'));
     }
 
     /** Banner schließen: für die konfigurierte Dauer nicht mehr anzeigen. */
