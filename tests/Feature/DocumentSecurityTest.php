@@ -101,6 +101,44 @@ class DocumentSecurityTest extends TestCase
         $this->assertStringContainsString('inline', (string) $response->headers->get('Content-Disposition'));
     }
 
+    public function test_admin_customer_page_shows_inline_preview_button_for_viewable_document(): void
+    {
+        $customer = $this->makeCustomer();
+        $doc = $this->makePrivateDocument($customer); // police.pdf -> ansehbar
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $viewUrl = route('admin.documents.download', $doc->id) . '?view=1';
+        $this->actingAs($admin)->get(route('admin.customer', $customer->id))
+            ->assertOk()
+            // Anzeigen-Button mit Schnellvorschau/Modal-Attributen (ohne Download)
+            ->assertSee('data-preview-open', false)
+            ->assertSee('data-preview-url="' . e($viewUrl) . '"', false)
+            ->assertSee('data-preview-kind="pdf"', false);
+    }
+
+    public function test_admin_customer_page_has_no_preview_button_for_office_document(): void
+    {
+        $customer = $this->makeCustomer();
+        Storage::fake('local');
+        Storage::disk('local')->put('customers/' . $customer->id . '/antrag.docx', 'x');
+        $doc = Document::create([
+            'customer_id' => $customer->id,
+            'category' => 'other',
+            'file_name' => 'antrag.docx',
+            'file_path' => 'customers/' . $customer->id . '/antrag.docx',
+            'disk' => 'local',
+        ]);
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        // Word-Datei ist nicht inline ansehbar -> kein Anzeigen-Button (kein
+        // data-preview-url) fuer diese Zeile; der Download-Button bleibt.
+        $viewUrl = route('admin.documents.download', $doc->id) . '?view=1';
+        $this->actingAs($admin)->get(route('admin.customer', $customer->id))
+            ->assertOk()
+            ->assertDontSee('data-preview-url="' . e($viewUrl) . '"', false)
+            ->assertSee(route('admin.documents.download', $doc->id), false);
+    }
+
     public function test_new_contract_uploads_are_stored_privately_not_publicly(): void
     {
         Storage::fake('local');

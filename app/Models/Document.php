@@ -113,4 +113,28 @@ class Document extends Model {
     public function aiInProgress(): bool {
         return in_array($this->ai_status, ['pending', 'processing'], true);
     }
+
+    /** Kleingeschriebene Dateiendung (z.B. "pdf") oder leerer String. */
+    public function extension(): string {
+        return strtolower(pathinfo((string) $this->file_name, PATHINFO_EXTENSION));
+    }
+
+    /** Bild-Dokumente koennen als Vorschau gerendert werden. */
+    public function isImage(): bool {
+        return in_array($this->extension(), ['jpg', 'jpeg', 'png', 'webp', 'gif'], true);
+    }
+
+    public function isPdf(): bool {
+        return $this->extension() === 'pdf';
+    }
+
+    /**
+     * Bilder und PDFs kann der Browser direkt inline anzeigen
+     * (Content-Disposition: inline via ?view=1) - also ohne Download in der
+     * Schnellvorschau/im Vorschau-Fenster darstellbar. Office-Dateien
+     * (doc/xls) muessen weiterhin heruntergeladen werden.
+     */
+    public function isViewable(): bool {
+        return $this->isImage() || $this->isPdf();
+    }
 }

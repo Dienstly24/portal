@@ -264,6 +264,17 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
             </div>
         </div>
         <div style="display:flex;gap:4px;flex:none;align-items:center;">
+            @php $pvKind = $d->isImage() ? 'image' : ($d->isPdf() ? 'pdf' : 'other'); @endphp
+            @if($d->isViewable())
+            {{-- Ansehen ohne Download: Ueberfahren zeigt eine Schnellvorschau,
+                 Klick oeffnet das Dokument gross im Vorschau-Fenster. --}}
+            <a href="{{ route('admin.documents.download', $d->id) }}?view=1" class="btn btn-ghost btn-sm" title="Anzeigen (ohne Download)"
+                data-preview-open
+                data-preview-url="{{ route('admin.documents.download', $d->id) }}?view=1"
+                data-preview-name="{{ $d->file_name }}"
+                data-preview-kind="{{ $pvKind }}"
+                data-preview-download="{{ route('admin.documents.download', $d->id) }}">👁</a>
+            @endif
             <a href="{{ route('admin.documents.download', $d->id) }}" class="btn btn-ghost btn-sm" title="Herunterladen">⬇</a>
             <button type="button" class="btn btn-ghost btn-sm" title="Bearbeiten"
                 data-doc-id="{{ $d->id }}" data-doc-name="{{ $d->file_name }}" data-doc-category="{{ $d->category }}"
@@ -1182,4 +1193,7 @@ function openDocEdit(id, name, category, visibility, color, contractId) {
     document.getElementById('doc-edit-modal').style.display = 'flex';
 }
 </script>
+
+{{-- Dokument-Vorschau (Schnellvorschau beim Ueberfahren, grosses Fenster bei Klick) --}}
+@include('admin.partials.doc_preview')
 @endsection
