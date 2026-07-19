@@ -35,9 +35,30 @@ class PdfTextLayerExtractor
 
     /**
      * Liest die Textebene eines PDF (erste N Seiten). Liefert '' bei fehlender
-     * Textebene, Fehler oder zu wenig verwertbarem Text.
+     * Textebene, Fehler, zu wenig verwertbarem Text ODER kaputt kodierter
+     * Textebene (Mojibake). Fuer Heuristik/KI verwenden.
      */
     public function extract(string $binary): string
+    {
+        $text = $this->extractRaw($binary);
+
+        // Manche digitalen PDFs (z.B. enviaM-Auftraege, Novitas-Formulare)
+        // haben eine kaputt kodierte Textebene (Font-Encoding ohne gueltiges
+        // ToUnicode) - pdftotext liefert dann Kauderwelsch ("$XIWUDJ" statt
+        // "Auftrag"). Solchen Text NICHT an Heuristik/KI weiterreichen, damit
+        // die Analyse sauber auf OCR/Vision zurueckfaellt.
+        return ($text === '' || $this->isLikelyGarbled($text)) ? '' : $text;
+    }
+
+    /**
+     * Rohe Textebene OHNE Mojibake-Filter. Fuer Vorlagen-Parser: bei
+     * Formularen mit defektem Font-Encoding sind zwar die BESCHRIFTUNGEN
+     * kaputt, die AUSGEFUELLTEN Werte (Name, Datum, Ort ...) aber sauber und
+     * exakt positioniert. Ein Formular-Parser, der das Layout kennt (z.B.
+     * Novitas-Beitrittserklaerung), liest diese Werte gratis und praezise -
+     * besser als OCR, das mehrteilige Namen verschmilzt.
+     */
+    public function extractRaw(string $binary): string
     {
         if (!$this->isAvailable()) {
             return '';
@@ -72,12 +93,7 @@ class PdfTextLayerExtractor
                 return '';
             }
 
-            // Manche digitalen PDFs (z.B. enviaM-Auftraege) haben eine kaputt
-            // kodierte Textebene (Font-Encoding ohne gueltiges ToUnicode) -
-            // pdftotext liefert dann Kauderwelsch ("$XIWUDJ" statt "Auftrag").
-            // Solchen Text NICHT weiterreichen, sondern '' zurueckgeben, damit
-            // die Analyse sauber auf OCR/Vision zurueckfaellt.
-            return $this->isLikelyGarbled($text) ? '' : $text;
+            return $text;
         } catch (\Throwable $e) {
             Log::warning('PDF-Textebene-Extraktion fehlgeschlagen: ' . $e->getMessage());
             return '';
@@ -94,9 +110,16 @@ class PdfTextLayerExtractor
     ];
 
     /**
-     * Grobe Erkennung einer kaputt kodierten Textebene: ein laengerer
-     * deutscher Text enthaelt zwangslaeufig mehrere Allerweltswoerter; fehlen
-     * sie fast alle, ist die Kodierung verschoben und der Text unbrauchbar.
+     * Grobe Erkennung einer kaputt kodierten Textebene. Zwei Signale:
+     *
+     * 1) Steuer-/C1-Zeichen (0x00-0x1F ohne Whitespace, U+0080-U+009F) kommen
+     *    in echtem Text nie vor. Ein Font ohne gueltiges ToUnicode bildet
+     *    Glyphen auf solche Codepoints ab (z.B. Novitas-Formulare) - schon ein
+     *    paar davon sind ein sicheres Zeichen fuer Mojibake.
+     * 2) Ein laengerer deutscher Text enthaelt zwangslaeufig mehrere
+     *    Allerweltswoerter (der/die/und ...); fehlen sie fast alle, ist die
+     *    Kodierung verschoben (z.B. Caesar-artige enviaM-Auftraege).
+     *
      * Kurze Texte werden bewusst nicht bewertet (zu wenig Signal).
      */
     public function isLikelyGarbled(string $text): bool
@@ -104,6 +127,11 @@ class PdfTextLayerExtractor
         if (mb_strlen($text) < 400) {
             return false;
         }
+        // 1) Steuer-/C1-Zeichen -> sicheres Mojibake-Signal.
+        if (preg_match_all('/[\x00-\x08\x0B\x0C\x0E-\x1F\x{0080}-\x{009F}]/u', $text) >= 5) {
+            return true;
+        }
+        // 2) Zu wenige deutsche Allerweltswoerter.
         $lower = mb_strtolower($text);
         $hits = 0;
         foreach (self::GERMAN_MARKERS as $marker) {

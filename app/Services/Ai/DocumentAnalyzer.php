@@ -100,11 +100,27 @@ class DocumentAnalyzer
             return $this->runProvider($binary, $mime, '');
         }
 
+        // Bekanntes Formular mit kaputt kodierter Textebene (defekter Font,
+        // z.B. Novitas-Beitrittserklaerung)? Dann bekommen die Vorlagen-Parser
+        // die ROHE Textebene ZUERST: die Beschriftungen sind zwar Mojibake, die
+        // ausgefuellten WERTE aber sauber und exakt positioniert (Spalten aus
+        // -layout). Ein layout-kundiger Parser liest sie gratis und praeziser
+        // als OCR (das mehrteilige Namen verschmelzen wuerde).
+        if ($mime === 'application/pdf' && $this->pdfText->isAvailable()) {
+            $rawTextLayer = $this->pdfText->extractRaw($binary);
+            if ($rawTextLayer !== '') {
+                $parsed = $this->templateParser->parse($rawTextLayer);
+                if ($parsed !== null) {
+                    return [...$parsed, 'source' => 'template'];
+                }
+            }
+        }
+
         // Kostenlose Stufe zuerst - in aufsteigender Kosten-Reihenfolge:
         // 1) PDF-Textebene (pdftotext, gratis, perfekter Text bei digitalen
-        //    PDFs), 2) sonst Tesseract-OCR (gratis, aber CPU + Fehler bei
-        //    Scans). Der so gewonnene Text speist die Stichwort-/Regex-
-        //    Heuristik.
+        //    PDFs; kaputt kodierte Textebene wird hier verworfen), 2) sonst
+        //    Tesseract-OCR (gratis, aber CPU + Fehler bei Scans). Der so
+        //    gewonnene Text speist die Stichwort-/Regex-Heuristik.
         $freeText = '';
         $fromTextLayer = false;
         if ($mime === 'application/pdf' && $this->pdfText->isAvailable()) {
@@ -115,11 +131,10 @@ class DocumentAnalyzer
             $freeText = $this->ocr->extract($binary, $mime);
         }
 
-        // Bekanntes, immer gleich aufgebautes Formular? Dann GRATIS per fester
-        // Regel lesen (kein KI-Aufruf) - egal ob der Text aus der PDF-Textebene
-        // (z.B. CHECK24-Kfz-Protokoll) oder aus OCR stammt (z.B. die als
-        // Bild-PDF hochgeladene KKH-Beitrittserklaerung). Deterministisch und
-        // zuverlaessig, wo die Bild-KI teuer und wackelig waere.
+        // Bekanntes, immer gleich aufgebautes Formular auf dem Gratis-Text
+        // (OCR bei Bild-PDF, oder saubere Textebene)? Dann GRATIS per fester
+        // Regel lesen (kein KI-Aufruf) - z.B. die als Bild-PDF hochgeladene
+        // KKH-Beitrittserklaerung oder das CHECK24-Kfz-Protokoll.
         if ($freeText !== '') {
             $parsed = $this->templateParser->parse($freeText);
             if ($parsed !== null) {
