@@ -134,28 +134,33 @@ class EmployeeController extends Controller
         if ($employee->id === auth()->id()) abort(403, 'Eigenes Konto kann nicht geloescht werden.');
         if ($employee->role === 'admin' && auth()->user()->role !== 'admin') abort(403);
         $name = $employee->name;
-        // Ticket-Antworten des Mitarbeiters bleiben in den Kundengespraechen
-        // erhalten (sender wird geleert, Views zeigen "Dienstly24 Team") -
-        // vorher loeschte der DB-Cascade die komplette Historie mit.
-        \App\Models\TicketMessage::where('sender_id', $employee->id)->update(['sender_id' => null]);
+        // Referenz-Nullung + Loeschung atomar (Audit-Re-Audit): sonst koennte
+        // ein Abbruch dazwischen genullte Referenzen bei noch existierendem
+        // User hinterlassen.
+        \Illuminate\Support\Facades\DB::transaction(function () use ($employee) {
+            // Ticket-Antworten des Mitarbeiters bleiben in den Kundengespraechen
+            // erhalten (sender wird geleert, Views zeigen "Dienstly24 Team") -
+            // vorher loeschte der DB-Cascade die komplette Historie mit.
+            \App\Models\TicketMessage::where('sender_id', $employee->id)->update(['sender_id' => null]);
 
-        // Betriebs-/Audit-Historie erhalten (Audit DB-4): Autor-/Zustaendig-
-        // Referenzen leeren, bevor der User geloescht wird. Wirkt auf jedem
-        // Treiber (auch SQLite, wo die FK weiterhin CASCADE ist).
-        foreach ([
-            [\App\Models\Task::class, ['assigned_to', 'created_by']],
-            [\App\Models\Appointment::class, ['assigned_to']],
-            [\App\Models\Announcement::class, ['created_by']],
-            [\App\Models\CustomerNote::class, ['created_by']],
-            [\App\Models\EmailCampaign::class, ['created_by']],
-            [\App\Models\EmailLog::class, ['user_id']],
-        ] as [$model, $cols]) {
-            foreach ($cols as $col) {
-                $model::where($col, $employee->id)->update([$col => null]);
+            // Betriebs-/Audit-Historie erhalten (Audit DB-4): Autor-/Zustaendig-
+            // Referenzen leeren, bevor der User geloescht wird. Wirkt auf jedem
+            // Treiber (auch SQLite, wo die FK weiterhin CASCADE ist).
+            foreach ([
+                [\App\Models\Task::class, ['assigned_to', 'created_by']],
+                [\App\Models\Appointment::class, ['assigned_to']],
+                [\App\Models\Announcement::class, ['created_by']],
+                [\App\Models\CustomerNote::class, ['created_by']],
+                [\App\Models\EmailCampaign::class, ['created_by']],
+                [\App\Models\EmailLog::class, ['user_id']],
+            ] as [$model, $cols]) {
+                foreach ($cols as $col) {
+                    $model::where($col, $employee->id)->update([$col => null]);
+                }
             }
-        }
 
-        $employee->delete();
+            $employee->delete();
+        });
 
         ActivityLog::create([
             'user_id' => auth()->id(),
