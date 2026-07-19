@@ -1,6 +1,8 @@
 <?php
 namespace App\Services;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class LexofficeService {
     private string $apiKey;
@@ -19,6 +21,18 @@ class LexofficeService {
             'Accept' => 'application/json',
             'Content-Type' => 'application/json',
         ])->retry(2, 500);
+    }
+
+    /**
+     * Zentrales Fehler-Logging fuer fehlgeschlagene Lexoffice-Aufrufe (Audit ARCH-3).
+     * Bisher wurde jeder Fehler still zu []/null - Ops hatte keine Sichtbarkeit,
+     * gerade auf dem Geld-Pfad (Provisions-/Rechnungsbuchung).
+     */
+    private function logFailure(string $operation, $response): void {
+        Log::warning('Lexoffice-Aufruf fehlgeschlagen: ' . $operation, [
+            'status' => method_exists($response, 'status') ? $response->status() : null,
+            'body' => method_exists($response, 'json') ? $response->json('message', $response->body()) : null,
+        ]);
     }
 
     // ===== Profile =====
@@ -55,24 +69,58 @@ class LexofficeService {
 
     public function getInvoice(string $id): ?array {
         $r = $this->http()->get("$this->baseUrl/invoices/$id");
-        return $r->successful() ? $r->json() : null;
+        if(!$r->successful()) { $this->logFailure("getInvoice($id)", $r); return null; }
+        return $r->json();
     }
 
     public function createInvoice(array $data, bool $finalize = false): ?array {
         $url = "$this->baseUrl/invoices" . ($finalize ? '?finalize=true' : '');
         $r = $this->http()->post($url, $data);
-        return $r->successful() ? $r->json() : null;
+        if(!$r->successful()) { $this->logFailure('createInvoice', $r); return null; }
+        return $r->json();
     }
 
     public function renderInvoicePdf(string $id): ?string {
         $r = Http::withHeaders(['Authorization' => 'Bearer ' . $this->apiKey])
             ->post("$this->baseUrl/invoices/$id/document");
-        if(!$r->successful()) return null;
+        if(!$r->successful()) { $this->logFailure("renderInvoicePdf.document($id)", $r); return null; }
         $fileId = $r->json()['documentFileId'] ?? null;
         if(!$fileId) return null;
         $pdf = Http::withHeaders(['Authorization' => 'Bearer ' . $this->apiKey])
             ->get("$this->baseUrl/files/$fileId");
-        return $pdf->successful() ? $pdf->body() : null;
+        if(!$pdf->successful()) { $this->logFailure("renderInvoicePdf.file($fileId)", $pdf); return null; }
+        return $pdf->body();
+    }
+
+    /**
+     * Rechnungs-PDF holen. Frueher rief der Controller diese Methode auf,
+     * obwohl sie nicht existierte -> HTTP 500 (Audit INT-2). Alias auf
+     * renderInvoicePdf, das Dokument-Rendering + File-Download kapselt.
+     */
+    public function getInvoicePdf(string $id): ?string {
+        return $this->renderInvoicePdf($id);
+    }
+
+    /**
+     * Rechnung als PDF an eine E-Mail-Adresse senden. Die Lexoffice-v1-API
+     * bietet keinen direkten "per E-Mail versenden"-Endpunkt; wir rendern das
+     * PDF und versenden es ueber den eigenen Mailer. Frueher fehlte die Methode
+     * komplett -> HTTP 500 (Audit INT-2).
+     */
+    public function sendInvoice(string $id, string $email): bool {
+        $pdf = $this->renderInvoicePdf($id);
+        if(!$pdf) return false;
+        try {
+            Mail::raw('Im Anhang finden Sie Ihre Rechnung.', function ($m) use ($email, $id, $pdf) {
+                $m->to($email)
+                  ->subject('Ihre Rechnung')
+                  ->attachData($pdf, "rechnung-$id.pdf", ['mime' => 'application/pdf']);
+            });
+            return true;
+        } catch (\Throwable $e) {
+            Log::warning('Lexoffice-Rechnungsversand fehlgeschlagen: ' . $e->getMessage(), ['invoice' => $id]);
+            return false;
+        }
     }
 
     // ===== Vouchers (Belege/Expenses) =====
@@ -93,14 +141,22 @@ class LexofficeService {
      */
     public function createVoucher(array $data): ?array {
         $r = $this->http()->post("$this->baseUrl/vouchers", $data);
-        return $r->successful() ? $r->json() : null;
+        if(!$r->successful()) { $this->logFailure('createVoucher', $r); return null; }
+        return $r->json();
     }
 
     public function uploadVoucher(string $filePath, string $fileName): ?string {
+        // Guard gegen fehlende/unlesbare Datei (Audit ARCH-3) - frueher warf
+        // file_get_contents() eine Warning und lieferte false in den Upload.
+        if(!is_file($filePath) || !is_readable($filePath)) {
+            Log::warning('Lexoffice uploadVoucher: Datei nicht lesbar', ['path' => $filePath]);
+            return null;
+        }
         $r = Http::withHeaders(['Authorization' => 'Bearer ' . $this->apiKey])
             ->attach('file', file_get_contents($filePath), $fileName)
             ->post("$this->baseUrl/files", ['type' => 'voucher']);
-        return $r->successful() ? ($r->json()['id'] ?? null) : null;
+        if(!$r->successful()) { $this->logFailure('uploadVoucher', $r); return null; }
+        return $r->json()['id'] ?? null;
     }
 
     // ===== Financial Overview =====

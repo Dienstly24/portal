@@ -57,7 +57,7 @@ class CustomerMessagingTest extends TestCase
             'user_id' => $customer->user_id,
             'title' => '💬 Neue Nachricht',
         ]);
-        Mail::assertSent(CustomerMessageMail::class, function ($mail) use ($customer) {
+        Mail::assertQueued(CustomerMessageMail::class, function ($mail) use ($customer) {
             return $mail->hasTo($customer->user->email) && $mail->mode === 'hint';
         });
     }

@@ -6,7 +6,7 @@ class CustomerFamily extends Model {
     protected $table = 'customer_family';
     protected $keyType = 'string';
     public $incrementing = false;
-    protected $fillable = ['customer_id','name','relation','birth_date','krankenversicherung_nr','steuer_nr',
+    protected $fillable = ['customer_id','name','relation','birth_date',
         'health_insurance_status','health_insurance_company','health_insurance_number','health_insurance_start',
         'gender','pension_insurance_number','tax_id','birth_place'];
 

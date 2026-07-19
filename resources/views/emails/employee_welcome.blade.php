@@ -6,7 +6,7 @@
 <tr><td align="center">
 <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:10px;overflow:hidden;">
 <tr>
-<td style="background:#1e3a8a;padding:25px 30px;">
+<td style="background:#17191d;padding:25px 30px;">
 <h1 style="color:#ffffff;margin:0;font-size:22px;">Willkommen bei Dienstly24 👋</h1>
 </td>
 </tr>
@@ -16,7 +16,7 @@
 <p style="font-size:15px;color:#333;">Ihr Mitarbeiter-Konto wurde erstellt. Hier sind Ihre Zugangsdaten:</p>
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin:15px 0;">
 <tr><td style="padding:15px 20px;font-size:14px;color:#333;">
-<strong>Login-URL:</strong> <a href="https://admin.dienstly24.de/admin" style="color:#1e3a8a;">admin.dienstly24.de/admin</a><br><br>
+<strong>Login-URL:</strong> <a href="https://admin.dienstly24.de/admin" style="color:#17A65B;">admin.dienstly24.de/admin</a><br><br>
 <strong>E-Mail:</strong> {{ $employeeEmail }}<br><br>
 <strong>Passwort:</strong> {{ $plainPassword }}
 </td></tr>

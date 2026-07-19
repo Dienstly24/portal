@@ -25,6 +25,30 @@ class SecurityHeaders
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->headers->set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
 
+        // Content-Security-Policy (Audit SEC-1): moderate Defense-in-Depth-Schicht
+        // gegen XSS/Clickjacking. Inline-Styles/-Handler sind derzeit noch noetig
+        // (grosse Blade-Flaeche), daher 'unsafe-inline'; object/base/frame sind
+        // hart eingeschraenkt. Nur auf HTML-Antworten setzen (nicht auf
+        // PDF-/CSV-Downloads). Fonts von bunny.net sind explizit erlaubt.
+        if (! $response->headers->has('Content-Security-Policy')) {
+            $contentType = (string) $response->headers->get('Content-Type');
+            $isHtml = $contentType === '' || str_contains($contentType, 'text/html');
+            if ($isHtml) {
+                $response->headers->set('Content-Security-Policy', implode('; ', [
+                    "default-src 'self'",
+                    "base-uri 'self'",
+                    "object-src 'none'",
+                    "frame-ancestors 'self'",
+                    "form-action 'self'",
+                    "img-src 'self' data: https:",
+                    "font-src 'self' data: https://fonts.bunny.net",
+                    "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
+                    "script-src 'self' 'unsafe-inline'",
+                    "connect-src 'self'",
+                ]));
+            }
+        }
+
         if ($request->secure()) {
             $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
         }

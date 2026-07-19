@@ -38,12 +38,12 @@ tr:last-child td{border-bottom:none;}
 .btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13.5px;font-weight:600;text-decoration:none;background:var(--petrol);color:#fff;}
 .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink);}
 .btn-sm{padding:6px 12px;font-size:12.5px;}
-.alert-success{background:#E4F0E7;color:#3B7A57;border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:14px;}
+.alert-success{background:#D9F4E6;color:#128a4b;border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:14px;}
 .field{margin-bottom:16px;}
 .field label{display:block;font-size:13px;color:var(--ink-soft);margin-bottom:6px;}
 .field input{width:100%;max-width:420px;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;}
 .badge{font-size:11.5px;padding:3px 10px;border-radius:999px;font-weight:600;}
-.badge-booked{background:#E4F0E7;color:#3B7A57;}
+.badge-booked{background:#D9F4E6;color:#128a4b;}
 .badge-pending{background:#F7E7D6;color:#B5651D;}
 .badge-rejected{background:#F9E3E3;color:#A32D2D;}
 @media(max-width:900px){.sidebar{transform:translateX(-100%);}.main{margin-left:0;padding:20px;}.grid-3{grid-template-columns:1fr;}}

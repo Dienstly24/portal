@@ -117,12 +117,13 @@ class EmployeeController extends Controller
             }
         });
 
-        ActivityLog::create([
-            'user_id' => auth()->id(),
-            'action' => 'employee_updated',
-            'entity_type' => 'user',
-            'entity_id' => $employee->id,
-            'meta' => json_encode(['name' => $employee->name]),
+        // Rollen-/Rechteaenderung mit protokollieren (Audit INT-8).
+        ActivityLog::record('employee_updated', 'user', $employee->id, [
+            'name' => $employee->name,
+            'role' => $employee->role,
+            'access_level' => $employee->access_level,
+            'can_see_all_customers' => $employee->can_see_all_customers,
+            'can_import_export' => $employee->can_import_export,
         ]);
 
         return redirect()->route('admin.employees')->with('success', 'Mitarbeiter aktualisiert.');
@@ -137,6 +138,23 @@ class EmployeeController extends Controller
         // erhalten (sender wird geleert, Views zeigen "Dienstly24 Team") -
         // vorher loeschte der DB-Cascade die komplette Historie mit.
         \App\Models\TicketMessage::where('sender_id', $employee->id)->update(['sender_id' => null]);
+
+        // Betriebs-/Audit-Historie erhalten (Audit DB-4): Autor-/Zustaendig-
+        // Referenzen leeren, bevor der User geloescht wird. Wirkt auf jedem
+        // Treiber (auch SQLite, wo die FK weiterhin CASCADE ist).
+        foreach ([
+            [\App\Models\Task::class, ['assigned_to', 'created_by']],
+            [\App\Models\Appointment::class, ['assigned_to']],
+            [\App\Models\Announcement::class, ['created_by']],
+            [\App\Models\CustomerNote::class, ['created_by']],
+            [\App\Models\EmailCampaign::class, ['created_by']],
+            [\App\Models\EmailLog::class, ['user_id']],
+        ] as [$model, $cols]) {
+            foreach ($cols as $col) {
+                $model::where($col, $employee->id)->update([$col => null]);
+            }
+        }
+
         $employee->delete();
 
         ActivityLog::create([

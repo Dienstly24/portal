@@ -1,5 +1,6 @@
 <?php
 namespace App\Http\Controllers;
+use App\Http\Controllers\Concerns\ScopesCustomerAccess;
 use App\Models\User;
 use App\Models\Customer;
 use App\Models\Contract;
@@ -10,12 +11,7 @@ use Illuminate\Support\Facades\Schema;
 
 class AdminController extends Controller
 {
-    /** null = alle sichtbar; sonst Array der erlaubten Kunden-IDs */
-    private function visibleCustomerIds(): ?array {
-        $user = auth()->user();
-        if (!$user || $user->canSeeAllCustomers()) return null;
-        return $user->visibleCustomerIdsWithSubstitution();
-    }
+    use ScopesCustomerAccess;
 
     private function scopeCustomers($query) {
         $ids = $this->visibleCustomerIds();
@@ -39,6 +35,14 @@ class AdminController extends Controller
     private function authorizeDocumentAccess(\App\Models\Document $doc): void {
         if ($doc->customer_id !== null) {
             $this->authorizeCustomerAccess($doc->customer_id);
+            return;
+        }
+        // Nicht zugeordnete Inbox-Dokumente: portfolio-begrenzte Mitarbeiter
+        // duerfen nur die selbst hochgeladenen sehen - spiegelt
+        // SmartDocumentUploadController::authorizeDocument. (Audit SEC-2/IDOR)
+        $user = auth()->user();
+        if (!$user?->canSeeAllCustomers() && (int) $doc->uploaded_by !== (int) $user?->id) {
+            abort(403, 'Kein Zugriff auf dieses Dokument.');
         }
     }
 
@@ -701,7 +705,9 @@ class AdminController extends Controller
                     'health_insurance_number' => ($request->family_kv_nr[$i] ?? null) ?: null,
                     'health_insurance_status' => ($request->family_kv_status[$i] ?? null) ?: null,
                     'health_insurance_start' => ($request->family_kv_start[$i] ?? null) ?: null,
-                    'steuer_nr' => ($request->family_steuer[$i] ?? null) ?: null,
+                    // In das VERSCHLUESSELTE Feld schreiben, nicht mehr in die
+                    // Klartext-Spalte steuer_nr (Audit DB-2 / DSGVO).
+                    'tax_id' => ($request->family_steuer[$i] ?? null) ?: null,
                 ]);
             }
         }

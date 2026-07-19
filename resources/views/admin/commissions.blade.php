@@ -8,7 +8,7 @@
     </div>
 </div>
 
-@if(session('success'))<div style="background:#E4F0E7;color:#3B7A57;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
+@if(session('success'))<div style="background:#D9F4E6;color:#17A65B;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
 @if(session('error'))<div style="background:#FBE9E9;color:#B3261E;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('error') }}</div>@endif
 
 <div class="card" style="padding:0;overflow:hidden;margin-bottom:24px;">
@@ -33,8 +33,8 @@
             <input type="date" name="statement_date" value="{{ $c->statement_date?->format('Y-m-d') ?? now()->format('Y-m-d') }}" required style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;">
         </div>
         <div style="display:flex;gap:8px;margin-left:auto;">
-            <button type="submit" class="btn btn-gold btn-sm">Buchen (Lexoffice)</button>
-            <button type="submit" form="reject-{{ $c->id }}" class="btn btn-ghost btn-sm">Ablehnen</button>
+            <button type="submit" class="btn btn-gold btn-sm" onclick="return confirm('Diese Provision jetzt in Lexoffice verbuchen? Die Buchung wird an ein externes System uebertragen.')">Buchen (Lexoffice)</button>
+            <button type="submit" form="reject-{{ $c->id }}" class="btn btn-ghost btn-sm" onclick="return confirm('Diese Provision wirklich ablehnen?')">Ablehnen</button>
         </div>
     </form>
     <form id="reject-{{ $c->id }}" method="POST" action="{{ route('admin.commissions.reject', $c->id) }}">@csrf</form>

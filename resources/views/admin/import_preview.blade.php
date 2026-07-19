@@ -10,9 +10,9 @@
 
     {{-- Zusammenfassung --}}
     <div class="grid-2" style="margin-bottom:16px;">
-        <div class="card" style="text-align:center;background:#E4F0E7;">
+        <div class="card" style="text-align:center;background:#D9F4E6;">
             <div style="font-size:34px;font-weight:700;color:#17A65B;">{{ $preview['new_count'] }}</div>
-            <div style="font-size:14px;color:#3B7A57;">werden neu angelegt</div>
+            <div style="font-size:14px;color:#17A65B;">werden neu angelegt</div>
         </div>
         <div class="card" style="text-align:center;">
             <div style="display:flex;justify-content:space-around;">

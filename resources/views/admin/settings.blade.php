@@ -77,9 +77,18 @@
             <a href="https://app.lexoffice.de/addons/public-api" target="_blank" style="color:var(--petrol);">API Key generieren →</a>
         </div>
     </div>
-    <div style="background:#E4F0E7;border-radius:8px;padding:12px;font-size:13px;color:#3B7A57;">
-        ✅ lexoffice verbunden — 1031 Kontakte importiert
+    {{-- Status aus dem echten Zustand ableiten (Audit UX-13) - frueher stand
+         hier hartkodiert "1031 Kontakte importiert" (erfundene Statistik,
+         verstoesst gegen CLAUDE.md). --}}
+    @if(!empty($settings['lexoffice_api_key']))
+    <div style="background:#D9F4E6;border-radius:8px;padding:12px;font-size:13px;color:#128a4b;">
+        ✅ lexoffice API-Key hinterlegt
     </div>
+    @else
+    <div style="background:#EEF0F3;border-radius:8px;padding:12px;font-size:13px;color:#5F5E5A;">
+        ○ Noch kein lexoffice API-Key hinterlegt
+    </div>
+    @endif
 </div>
 
 <div class="card">

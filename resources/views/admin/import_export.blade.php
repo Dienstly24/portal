@@ -51,12 +51,15 @@
 
     <form method="POST" action="{{ route('admin.import') }}" enctype="multipart/form-data">
         @csrf
-        <div style="border:2px dashed var(--line);border-radius:10px;padding:32px;text-align:center;margin-bottom:16px;cursor:pointer;"
+        {{-- Tastaturbedienbar (Audit A11Y-2) --}}
+        <div role="button" tabindex="0" aria-label="CSV-Datei auswaehlen oder hierher ziehen"
+            style="border:2px dashed var(--line);border-radius:10px;padding:32px;text-align:center;margin-bottom:16px;cursor:pointer;"
             onclick="document.getElementById('csv-input').click()"
+            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('csv-input').click();}"
             ondragover="event.preventDefault();this.style.borderColor='var(--gold)'"
             ondragleave="this.style.borderColor='var(--line)'"
             ondrop="event.preventDefault();this.style.borderColor='var(--line)';document.getElementById('csv-input').files=event.dataTransfer.files;updateFileName(event.dataTransfer.files[0].name)">
-            <div style="font-size:32px;margin-bottom:8px;">📂</div>
+            <div style="font-size:32px;margin-bottom:8px;" aria-hidden="true">📂</div>
             <div style="font-weight:600;font-size:14px;" id="file-name-display">CSV-Datei auswählen oder hierher ziehen</div>
             <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">Maximal 10 MB</div>
         </div>
@@ -85,9 +88,9 @@
     </div>
 
     @php $total = \App\Models\Customer::count(); @endphp
-    <div style="background:#E4F0E7;border-radius:10px;padding:20px;text-align:center;margin-bottom:20px;">
-        <div style="font-size:36px;font-weight:700;color:#3B7A57;">{{ $total }}</div>
-        <div style="font-size:14px;color:#3B7A57;margin-top:4px;">Kunden im System</div>
+    <div style="background:#D9F4E6;border-radius:10px;padding:20px;text-align:center;margin-bottom:20px;">
+        <div style="font-size:36px;font-weight:700;color:#17A65B;">{{ $total }}</div>
+        <div style="font-size:14px;color:#17A65B;margin-top:4px;">Kunden im System</div>
     </div>
 
     <div style="font-size:13px;color:var(--ink-soft);margin-bottom:16px;">

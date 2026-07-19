@@ -17,16 +17,27 @@
 <div class="card" style="max-width:700px;">
     <div class="card-title" style="margin-bottom:20px;">Zugriffsrechte</div>
 
+    {{-- Rolle - IMMER sichtbar (Audit UX-1): frueher lag der Select im
+         display:none-Block "Begrenzte Kunden", sodass fuer Voll-Zugriff-
+         Mitarbeiter kein Rollenwechsel moeglich war. --}}
+    <div class="field" style="max-width:320px;margin-bottom:20px;">
+        <label for="role">Rolle</label>
+        <select name="role" id="role" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+            <option value="employee" {{ $employee->role === 'employee' ? 'selected' : '' }}>👤 Mitarbeiter</option>
+            <option value="manager" {{ $employee->role === 'manager' ? 'selected' : '' }}>⭐ Manager (sieht alle Kunden)</option>
+        </select>
+    </div>
+
     <div style="margin-bottom:20px;">
         <label style="font-size:13px;color:var(--ink-soft);font-weight:600;display:block;margin-bottom:10px;">Kundenzugriff</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
             <label onclick="toggleLimited(false)" id="lbl-full"
-                style="border:2px solid {{ $employee->can_see_all_customers ? 'var(--petrol)' : 'var(--line)' }};border-radius:10px;padding:16px;cursor:pointer;background:{{ $employee->can_see_all_customers ? '#E4F0E7' : '#fff' }};">
+                style="border:2px solid {{ $employee->can_see_all_customers ? 'var(--petrol)' : 'var(--line)' }};border-radius:10px;padding:16px;cursor:pointer;background:{{ $employee->can_see_all_customers ? '#D9F4E6' : '#fff' }};">
                 <div style="font-weight:700;margin-bottom:4px;">Alle Kunden</div>
                 <div style="font-size:12px;color:var(--ink-soft);">Mitarbeiter sieht alle Kunden</div>
             </label>
             <label onclick="toggleLimited(true)" id="lbl-limited"
-                style="border:2px solid {{ !$employee->can_see_all_customers ? 'var(--petrol)' : 'var(--line)' }};border-radius:10px;padding:16px;cursor:pointer;background:{{ !$employee->can_see_all_customers ? '#E4F0E7' : '#fff' }};">
+                style="border:2px solid {{ !$employee->can_see_all_customers ? 'var(--petrol)' : 'var(--line)' }};border-radius:10px;padding:16px;cursor:pointer;background:{{ !$employee->can_see_all_customers ? '#D9F4E6' : '#fff' }};">
                 <div style="font-weight:700;margin-bottom:4px;">Begrenzte Kunden</div>
                 <div style="font-size:12px;color:var(--ink-soft);">Nur zugewiesene Kunden</div>
             </label>
@@ -41,13 +52,6 @@
 
     <div id="assign-customers" style="{{ $employee->can_see_all_customers ? 'display:none' : '' }};border-top:1px solid var(--line);padding-top:20px;margin-bottom:20px;">
         <label style="font-size:13px;color:var(--ink-soft);font-weight:600;display:block;margin-bottom:12px;">Zugewiesene Kunden</label>
-        <div class="field" style="max-width:320px;">
-    <label>Rolle</label>
-    <select name="role" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
-        <option value="employee" {{ $employee->role === 'employee' ? 'selected' : '' }}>👤 Mitarbeiter</option>
-        <option value="manager" {{ $employee->role === 'manager' ? 'selected' : '' }}>⭐ Manager (sieht alle Kunden)</option>
-    </select>
-</div>
 @php
     $preselectedCustomers = \App\Models\Customer::with('user')->whereIn('id', $assignedIds)->get()->map(function ($c) {
         return ['id' => $c->id, 'name' => $c->user?->name, 'number' => $c->customer_number];
@@ -79,7 +83,7 @@
         ids.forEach(function (id) {
             var c = selected[id];
             var chip = document.createElement('span');
-            chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:#E4F0E7;border:1px solid #3B7A57;border-radius:20px;padding:5px 12px;font-size:12.5px;';
+            chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:#D9F4E6;border:1px solid #17A65B;border-radius:20px;padding:5px 12px;font-size:12.5px;';
             chip.innerHTML = '👤 ' + c.name + ' <span style="color:var(--ink-soft);">' + (c.number || '') + '</span>';
             var x = document.createElement('a');
             x.textContent = '✕';
@@ -142,10 +146,11 @@
                 ['can_manage_tickets','Tickets bearbeiten','Kundenanfragen beantworten','💬'],
                 ['can_approve_changes','Änderungen genehmigen','Kundendaten-Änderungen genehmigen','✅'],
                 ['can_send_emails','E-Mails senden','E-Mail Marketing nutzen','📧'],
+                ['can_import_export','Import / Export','Kunden importieren und exportieren','📊'],
             ] as $perm)
             <div class="perm-card" id="card-{{ $perm[0] }}"
                 onclick="togglePerm('{{ $perm[0] }}')"
-                style="border:2px solid {{ $employee->{$perm[0]} ? 'var(--petrol)' : 'var(--line)' }};border-radius:10px;padding:14px;cursor:pointer;background:{{ $employee->{$perm[0]} ? '#E4F0E7' : '#fff' }};transition:.15s;user-select:none;">
+                style="border:2px solid {{ $employee->{$perm[0]} ? 'var(--petrol)' : 'var(--line)' }};border-radius:10px;padding:14px;cursor:pointer;background:{{ $employee->{$perm[0]} ? '#D9F4E6' : '#fff' }};transition:.15s;user-select:none;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
                     <span style="font-size:24px;">{{ $perm[3] }}</span>
                     <span id="check-{{ $perm[0] }}" style="width:24px;height:24px;border-radius:50%;background:{{ $employee->{$perm[0]} ? 'var(--petrol)' : '#ccc' }};color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">{{ $employee->{$perm[0]} ? '✓' : '' }}</span>
@@ -175,7 +180,7 @@
         <div style="font-size:13px;color:var(--ink-soft);line-height:1.5;"><strong>{{ $employee->is_active ? 'Konto deaktivieren' : 'Konto aktivieren' }}</strong><br>{{ $employee->is_active ? 'Login wird gesperrt, alle Daten und Zuweisungen bleiben erhalten. Empfohlen statt Loeschen.' : 'Konto ist derzeit deaktiviert. Login wieder freigeben.' }}</div>
         <form method="POST" action="{{ route('admin.employees.toggle', $employee->id) }}" style="margin:0;">
             @csrf @method('PUT')
-            <button type="submit" class="btn btn-ghost" style="white-space:nowrap;{{ $employee->is_active ? 'color:#B5651D;border-color:#B5651D;' : 'color:#3B7A57;border-color:#3B7A57;' }}">{{ $employee->is_active ? '&#9208; Deaktivieren' : '&#9654; Aktivieren' }}</button>
+            <button type="submit" class="btn btn-ghost" style="white-space:nowrap;{{ $employee->is_active ? 'color:#B5651D;border-color:#B5651D;' : 'color:#17A65B;border-color:#17A65B;' }}">{{ $employee->is_active ? '&#9208; Deaktivieren' : '&#9654; Aktivieren' }}</button>
         </form>
     </div>
     @if(auth()->user()->role === 'admin')
@@ -196,12 +201,12 @@ function togglePerm(name) {
     var check = document.getElementById('check-' + name);
     cb.checked = !cb.checked;
     card.style.borderColor = cb.checked ? 'var(--petrol)' : 'var(--line)';
-    card.style.background = cb.checked ? '#E4F0E7' : '#fff';
+    card.style.background = cb.checked ? '#D9F4E6' : '#fff';
     check.style.background = cb.checked ? 'var(--petrol)' : '#ccc';
     check.textContent = cb.checked ? '\u2713' : '';
 }
 function selectAllPerms(state) {
-    ['can_manage_contracts','can_manage_tickets','can_approve_changes','can_send_emails'].forEach(function (name) {
+    ['can_manage_contracts','can_manage_tickets','can_approve_changes','can_send_emails','can_import_export'].forEach(function (name) {
         var cb = document.getElementById(name);
         if (cb && cb.checked !== state) togglePerm(name);
     });
@@ -209,9 +214,9 @@ function selectAllPerms(state) {
 function toggleLimited(limited) {
     document.getElementById('access_level').value = limited ? 'limited' : 'full';
     document.getElementById('lbl-full').style.borderColor = limited ? 'var(--line)' : 'var(--petrol)';
-    document.getElementById('lbl-full').style.background = limited ? '#fff' : '#E4F0E7';
+    document.getElementById('lbl-full').style.background = limited ? '#fff' : '#D9F4E6';
     document.getElementById('lbl-limited').style.borderColor = limited ? 'var(--petrol)' : 'var(--line)';
-    document.getElementById('lbl-limited').style.background = limited ? '#E4F0E7' : '#fff';
+    document.getElementById('lbl-limited').style.background = limited ? '#D9F4E6' : '#fff';
     document.getElementById('assign-customers').style.display = limited ? 'block' : 'none';
     const el = document.getElementById('can_see_all');
     if (limited) { el.removeAttribute('name'); }

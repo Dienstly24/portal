@@ -25,6 +25,21 @@ class ActivityLog extends Model {
     public function workSession() { return $this->belongsTo(WorkSession::class); }
 
     /**
+     * Einheitliches Schreiben eines Audit-Eintrags (Audit ARCH-9). Ersetzt das
+     * ueberall duplizierte create([... json_encode(meta) ...]); meta ist als
+     * Array-Cast gespeichert.
+     */
+    public static function record(string $action, ?string $entityType = null, $entityId = null, array $meta = [], ?int $userId = null): self {
+        return static::create([
+            'user_id' => $userId ?? auth()->id(),
+            'action' => $action,
+            'entity_type' => $entityType,
+            'entity_id' => $entityId,
+            'meta' => $meta,
+        ]);
+    }
+
+    /**
      * Meta robust als Array liefern: Alt-Eintraege wurden teils als
      * vor-serialisierter JSON-String gespeichert (doppelt kodiert),
      * neue Eintraege als echtes Array ueber den Cast.

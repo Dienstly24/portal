@@ -113,7 +113,7 @@ new Chart(ctx, {
                 {{ \App\Models\Contract::whereIn('type',['strom','gas','strom_gas'])->count() }},
                 {{ \App\Models\Contract::where('type','andere')->count() }}
             ],
-            backgroundColor: ['#0F3D3D','#C9963E','#3B7A57','#185FA5','#B4B2A9'],
+            backgroundColor: ['#0F3D3D','#C9963E','#17A65B','#185FA5','#B4B2A9'],
             borderWidth: 0,
         }]
     },

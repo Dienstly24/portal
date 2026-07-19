@@ -146,7 +146,7 @@ class MessageTemplateTest extends TestCase
             'attachments' => [UploadedFile::fake()->create('vollmacht.pdf', 50, 'application/pdf')],
         ])->assertRedirect();
 
-        Mail::assertSent(DirectEmailMail::class, function ($mail) {
+        Mail::assertQueued(DirectEmailMail::class, function ($mail) {
             return $mail->hasTo('service@gesellschaft.de')
                 && $mail->mailSubject === 'Kuendigung Vertrag 123'
                 && count($mail->fileAttachments) === 1;

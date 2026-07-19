@@ -86,6 +86,20 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Fail-fast, falls Produktion versehentlich auf SQLite laeuft (Audit DB-6):
+        // der committete Default ist SQLite; ohne korrekte .env faellt die App
+        // sonst still auf eine lokale database.sqlite zurueck (Daten-Divergenz,
+        // verborgene MySQL-only-Fehler). Konsolenlauf (Migrationen/Tests) bleibt
+        // ausgenommen, damit CI/Artisan nicht blockiert wird.
+        if ($this->app->environment('production')
+            && ! $this->app->runningInConsole()
+            && config('database.default') !== 'mysql') {
+            throw new \RuntimeException(
+                'Ungueltige DB-Konfiguration: In Produktion muss DB_CONNECTION=mysql gesetzt sein '
+                . '(aktuell: ' . config('database.default') . ').'
+            );
+        }
+
         // Aktivitaetserfassung: Arbeitssitzungen an Login/Logout koppeln.
         // Fehler in der Erfassung duerfen Login/Logout nie blockieren.
         Event::listen(Login::class, function (Login $event): void {

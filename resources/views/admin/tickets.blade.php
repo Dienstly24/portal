@@ -6,7 +6,7 @@
 $typeConfig = [
     'damage'       => ['icon' => '💥', 'bg' => '#F9E3E3'],
     'change'       => ['icon' => '🔄', 'bg' => '#E6F1FB'],
-    'offer'        => ['icon' => '🏷️', 'bg' => '#E4F0E7'],
+    'offer'        => ['icon' => '🏷️', 'bg' => '#D9F4E6'],
     'data_update'  => ['icon' => '📝', 'bg' => '#EDE9FE'],
     'cancellation' => ['icon' => '🚪', 'bg' => '#F7E7D6'],
     'complaint'    => ['icon' => '⚠️', 'bg' => '#FEF3C7'],
@@ -18,7 +18,7 @@ $prioConfig = [
     'dringend' => ['label' => 'Dringend', 'bg' => '#F9E3E3', 'fg' => '#A32D2D'],
     'hoch'     => ['label' => 'Hoch',     'bg' => '#F7E7D6', 'fg' => '#B5651D'],
     'mittel'   => ['label' => 'Mittel',   'bg' => '#FAF0DA', 'fg' => '#8A6D1B'],
-    'niedrig'  => ['label' => 'Niedrig',  'bg' => '#E4F0E7', 'fg' => '#3B7A57'],
+    'niedrig'  => ['label' => 'Niedrig',  'bg' => '#D9F4E6', 'fg' => '#17A65B'],
 ];
 $me = auth()->user();
 // Bearbeiten: admin/manager/support immer, Mitarbeiter nur mit Recht.

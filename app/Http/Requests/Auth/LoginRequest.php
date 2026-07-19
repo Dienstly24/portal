@@ -79,6 +79,13 @@ class LoginRequest extends FormRequest
 
         RateLimiter::hit($this->throttleKey());
 
+        // Fehlgeschlagenen Login-Versuch protokollieren (Audit INT-8) - ohne
+        // Passwort, mit IP fuer Forensik/Brute-Force-Erkennung.
+        \App\Models\ActivityLog::record('login_failed', 'user', $user?->id, [
+            'email' => $email,
+            'ip' => $this->ip(),
+        ], $user?->id);
+
         throw ValidationException::withMessages([
             'email' => trans('auth.failed'),
         ]);

@@ -70,7 +70,7 @@ $chipDefs = [
 </div>
 
 @if($canBulk)
-<div class="card" style="background:#EEF6F1;padding:11px 16px;margin-bottom:14px;font-size:12.5px;color:#1F3A33;line-height:1.5;">
+<div class="card" style="background:#EEF6F1;padding:11px 16px;margin-bottom:14px;font-size:12.5px;color:#17191d;line-height:1.5;">
     💡 <strong>Sichere Treffer (≥ {{ $autoMin }} %)</strong> – gleiche E-Mail, Telefon, IBAN, Vertragsnummer oder Name + Geburtsdatum – können mit einem Klick automatisch zusammengeführt werden. <strong>Schwächere Treffer (nur gleicher Name)</strong> bitte einzeln prüfen und per Auswahl zusammenführen.
 </div>
 @endif
@@ -82,7 +82,7 @@ $chipDefs = [
 <form method="POST" action="{{ route('admin.customers.duplicates.merge') }}" id="bulkMergeForm" onsubmit="return confirmBulkMerge(this);">@csrf</form>
 <form method="POST" action="{{ route('admin.customers.duplicates.dismiss_bulk') }}" id="bulkDismissForm">@csrf</form>
 
-<div id="mergeBar" style="display:none;position:sticky;top:0;z-index:10;background:#1F3A33;color:#fff;border-radius:10px;padding:12px 20px;margin-bottom:14px;align-items:center;gap:14px;flex-wrap:wrap;">
+<div id="mergeBar" style="display:none;position:sticky;top:0;z-index:10;background:#17191d;color:#fff;border-radius:10px;padding:12px 20px;margin-bottom:14px;align-items:center;gap:14px;flex-wrap:wrap;">
     <span style="font-size:13.5px;font-weight:600;"><span id="mergeCount">0</span> Paar(e) ausgewählt</span>
     <div style="margin-left:auto;display:flex;gap:10px;flex-wrap:wrap;">
         <button type="button" onclick="submitBulkDismiss()" class="btn btn-ghost" style="padding:8px 16px;font-size:13px;background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.25);" title="Ausgewählte als „kein Duplikat" markieren – wandern zu Verwandte Kunden">✕ Kein Duplikat</button>
@@ -106,7 +106,7 @@ $chipDefs = [
             @endif
             <span style="background:{{ $badgeColor }};color:#fff;border-radius:999px;padding:4px 12px;font-size:12.5px;font-weight:700;">{{ $score }}% · {{ $tierLabel }}</span>
             @if($score >= $autoMin)
-            <span style="background:#E4F0E7;color:#128a4b;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:600;">✓ sicher</span>
+            <span style="background:#D9F4E6;color:#128a4b;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:600;">✓ sicher</span>
             @else
             <span style="background:#FEF3C7;color:#92400E;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:600;">manuell prüfen</span>
             @endif
@@ -123,7 +123,7 @@ $chipDefs = [
         </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
-        @foreach([['c'=>$primary,'label'=>'Hauptkunde (bleibt bestehen)','bg'=>'#E4F0E7'],['c'=>$duplicate,'label'=>'Duplikat (wird übernommen)','bg'=>'#FEF3C7']] as $col)
+        @foreach([['c'=>$primary,'label'=>'Hauptkunde (bleibt bestehen)','bg'=>'#D9F4E6'],['c'=>$duplicate,'label'=>'Duplikat (wird übernommen)','bg'=>'#FEF3C7']] as $col)
         @php $c = $col['c']; @endphp
         <div style="padding:16px 20px;{{ $loop->first ? 'border-right:1px solid var(--line);' : '' }}">
             <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);margin-bottom:8px;">{{ $col['label'] }}</div>

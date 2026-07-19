@@ -4,7 +4,7 @@
 <body style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:30px 0;"><tr><td align="center">
 <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:10px;overflow:hidden;">
-<tr><td style="background:#0F4C4C;padding:18px 30px;color:#fff;font-size:16px;font-weight:bold;">📩 Neue Kundenanfrage über die Webseite</td></tr>
+<tr><td style="background:#17191d;padding:18px 30px;color:#fff;font-size:16px;font-weight:bold;">📩 Neue Kundenanfrage über die Webseite</td></tr>
 <tr><td style="padding:25px 30px;">
 <table width="100%" cellpadding="6" cellspacing="0" style="font-size:14px;color:#333;">
 <tr><td style="color:#6B7280;width:150px;">Kundenname</td><td style="font-weight:bold;">{{ $ticket->guest_name }}</td></tr>

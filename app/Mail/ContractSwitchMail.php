@@ -4,6 +4,7 @@ namespace App\Mail;
 use App\Models\Contract;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -13,7 +14,7 @@ use Illuminate\Queue\SerializesModels;
  * Spartenspezifische Wechsel-Erinnerung (Paket C). Ersetzt die frühere
  * pauschale ContractExpiryMail (30/14/7 Tage). stage: first | followup.
  */
-class ContractSwitchMail extends Mailable
+class ContractSwitchMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 

@@ -1,5 +1,6 @@
 <?php
 namespace App\Http\Controllers;
+use App\Http\Controllers\Concerns\ScopesCustomerAccess;
 use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\Ticket;
@@ -7,12 +8,7 @@ use Illuminate\Http\Request;
 
 class ReportController extends Controller
 {
-    /** null = alle sichtbar; sonst Array der erlaubten Kunden-IDs */
-    private function visibleCustomerIds(): ?array {
-        $user = auth()->user();
-        if (!$user || $user->canSeeAllCustomers()) return null;
-        return $user->assignedCustomers()->pluck('customers.id')->toArray();
-    }
+    use ScopesCustomerAccess;
 
     public function index(Request $request) {
         $from = $request->get('from') ? \Carbon\Carbon::parse($request->get('from')) : now()->subDays(30);

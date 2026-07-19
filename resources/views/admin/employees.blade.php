@@ -45,7 +45,7 @@
             </td>
             <td style="font-size:12px;">
                 <div style="display:flex;flex-wrap:wrap;gap:4px;">
-                    @if($e->can_manage_contracts)<span style="background:#E4F0E7;color:#3B7A57;padding:2px 7px;border-radius:4px;">Verträge</span>@endif
+                    @if($e->can_manage_contracts)<span style="background:#D9F4E6;color:#17A65B;padding:2px 7px;border-radius:4px;">Verträge</span>@endif
                     @if($e->can_manage_tickets)<span style="background:#E6F1FB;color:#185FA5;padding:2px 7px;border-radius:4px;">Tickets</span>@endif
                     @if($e->can_approve_changes)<span style="background:#FEF3C7;color:#92400E;padding:2px 7px;border-radius:4px;">Genehmigungen</span>@endif
                     @if($e->can_send_emails)<span style="background:#F0E6FB;color:#6D28D9;padding:2px 7px;border-radius:4px;">E-Mails</span>@endif

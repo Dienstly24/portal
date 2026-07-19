@@ -1,5 +1,6 @@
 <?php
 namespace App\Http\Controllers;
+use App\Http\Controllers\Concerns\ScopesCustomerAccess;
 use App\Jobs\SendCampaignJob;
 use App\Mail\CampaignMail;
 use App\Models\Contract;
@@ -11,12 +12,7 @@ use Illuminate\Support\Facades\Mail;
 
 class EmailMarketingController extends Controller
 {
-    /** null = alle sichtbar; sonst Array der erlaubten Kunden-IDs */
-    private function visibleCustomerIds(): ?array {
-        $user = auth()->user();
-        if (!$user || $user->canSeeAllCustomers()) return null;
-        return $user->assignedCustomers()->pluck('customers.id')->toArray();
-    }
+    use ScopesCustomerAccess;
 
     public function index(ContractSwitchReminderService $reminders) {
         $ids = $this->visibleCustomerIds();

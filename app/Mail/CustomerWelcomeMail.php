@@ -4,6 +4,7 @@ namespace App\Mail;
 use App\Models\Customer;
 use App\Models\SystemSetting;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -21,7 +22,7 @@ use Illuminate\Support\Facades\URL;
  *
  * Ziel: Der Kunde kann sich ohne Rückfrage beim Support einloggen.
  */
-class CustomerWelcomeMail extends Mailable
+class CustomerWelcomeMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
