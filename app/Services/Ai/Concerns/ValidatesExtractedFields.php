@@ -104,6 +104,9 @@ trait ValidatesExtractedFields
             'end_date' => $this->cleanDate($in['end_date'] ?? null),
             'premium_amount' => (is_numeric($premium) && $premium > 0 && $premium < 1000000) ? round((float) $premium, 2) : null,
             'premium_interval' => in_array($interval, Contract::premiumIntervalKeys(), true) ? $interval : null,
+            // Vorversicherung (bisheriger Versicherer bei einem Wechsel) - reine
+            // Anzeige-Info fuer den Mitarbeiter, keine eigene Vertragsspalte.
+            'previous_insurer' => $this->cleanString($in['previous_insurer'] ?? null, 120),
         ], fn ($v) => $v !== null && $v !== '');
     }
 

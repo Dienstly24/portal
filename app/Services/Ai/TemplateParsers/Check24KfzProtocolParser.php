@@ -42,7 +42,10 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
             // als die generische OCR-Heuristik, aber weiter mit Mitarbeiter-
             // Pruefung (der Kunde wird i.d.R. neu angelegt).
             'confidence' => 75,
-            'summary' => 'CHECK24-Beratungsprotokoll Kfz - Felder gratis aus der Textebene gelesen (ohne KI).',
+            'summary' => 'CHECK24-Beratungsprotokoll Kfz - Felder gratis aus der Textebene gelesen (ohne KI).'
+                . (isset($versicherung['previous_insurer']) ? ' Vorversicherung: ' . $versicherung['previous_insurer'] . '.' : '')
+                . (isset($kfz['sf_liability_class']) ? ' SF-Klasse Haftpflicht: SF ' . $kfz['sf_liability_class'] . '.' : '')
+                . (isset($versicherung['end_date']) ? ' Ablauf der Versicherung: ' . $this->displayDate($versicherung['end_date']) . '.' : ''),
             'title' => 'Beratungsprotokoll Kfz'
                 . (isset($versicherung['insurer']) ? ' ' . $versicherung['insurer'] : ''),
             'data' => [
@@ -152,10 +155,29 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
 
         $raw['start_date'] = $this->germanDate($this->label($text, 'Versicherungsbeginn'));
 
+        // "Ablauf der Versicherung  29.06.2027 (automatische Verlaengerung ...)"
+        // -> Vertragsablauf (Spaltenlayout ohne Doppelpunkt). Bisher musste der
+        // Betrieb dieses Datum bei einem Wechsel von Hand nachtragen.
+        if (preg_match('/Ablauf der Versicherung\s+(\d{2})\.(\d{2})\.(\d{4})/u', $text, $m)) {
+            $raw['end_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+        }
+
         // Gesamtbeitrag (inkl. Versicherungssteuer)  222,65 € vierteljährlich
         if (preg_match('/Gesamtbeitrag[^\d]*([\d.]+,\d{2})\s*€\s*([a-zäöü]+)/ui', $text, $m)) {
             $raw['premium_amount'] = (float) str_replace(['.', ','], ['', '.'], $m[1]);
             $raw['premium_interval'] = $this->interval($m[2]);
+        }
+
+        // Vorversicherung (bisheriger Versicherer, von dem der Kunde wechselt).
+        // Wichtiger Wechsel-Kontext ("wo war der Kunde vorher"). Es gibt keine
+        // eigene Vertragsspalte dafuer - der Wert bleibt in der Extraktion und
+        // wird im Zusammenfassungstext sichtbar gemacht.
+        if (preg_match('/Vorversicherung:\s*([^\r\n]+)/u', $text, $m)) {
+            // Bis zur naechsten Spalte (2+ Leerzeichen) bzw. Zeilenende nehmen.
+            $prev = trim((string) (preg_split('/\s{2,}/', trim($m[1]))[0] ?? ''));
+            if (preg_match('/\p{L}{2,}/u', $prev) && stripos($prev, 'keine') === false && mb_strlen($prev) <= 60) {
+                $raw['previous_insurer'] = $prev;
+            }
         }
 
         return $this->validatedInsurance(array_filter($raw, fn ($v) => $v !== null && $v !== ''));
@@ -226,6 +248,12 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
             return $m[3] . '-' . $m[2] . '-' . $m[1];
         }
         return null;
+    }
+
+    /** ISO-Datum ("2027-06-29") fuer die Anzeige nach "29.06.2027". */
+    private function displayDate(string $iso): string
+    {
+        return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $iso, $m) ? $m[3] . '.' . $m[2] . '.' . $m[1] : $iso;
     }
 
     private function interval(string $german): ?string
