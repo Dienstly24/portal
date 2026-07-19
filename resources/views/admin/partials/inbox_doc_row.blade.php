@@ -16,7 +16,8 @@
             <input type="checkbox" class="inbox-select" value="{{ $doc->id }}" data-doc-name="{{ $doc->file_name }}" title="Auswaehlen, um mehrere Dokumente zu EINEM Kunden zusammenzufuehren (z.B. Ausweis-Vorderseite + Rueckseite + Antrag)." style="margin-top:3px;cursor:pointer;">
             <div style="flex:1;">
                 <div style="font-weight:600;font-size:14px;">
-                    📄 <a href="{{ route('admin.documents.download', $doc->id) }}?view=1" target="_blank" title="In neuem Tab anzeigen">{{ $doc->file_name }}</a>
+                    📄 <a href="{{ route('admin.documents.download', $doc->id) }}?view=1" target="_blank" title="Ueberfahren zeigt eine Schnellvorschau, Klick oeffnet"
+                        data-preview-url="{{ route('admin.documents.download', $doc->id) }}?view=1" data-preview-name="{{ $doc->file_name }}">{{ $doc->file_name }}</a>
                     @if($doc->page_count)<span style="font-weight:400;color:var(--ink-soft);font-size:12.5px;"> · {{ $doc->page_count }} Seiten</span>@endif
                 </div>
                 <div style="font-size:12.5px;color:var(--ink-soft);margin-top:2px;">
@@ -84,7 +85,8 @@
             {{-- „Anzeigen" ist immer verfuegbar - auch bei fehlgeschlagener oder
                  laufender Analyse, damit der Mitarbeiter sofort sieht, um welches
                  Dokument es sich handelt. --}}
-            <a href="{{ route('admin.documents.download', $doc->id) }}?view=1" target="_blank" class="btn btn-ghost btn-sm" title="Dokument in neuem Tab anzeigen">👁 Anzeigen</a>
+            <a href="{{ route('admin.documents.download', $doc->id) }}?view=1" target="_blank" class="btn btn-ghost btn-sm" title="Ueberfahren zeigt eine Schnellvorschau, Klick oeffnet"
+                data-preview-url="{{ route('admin.documents.download', $doc->id) }}?view=1" data-preview-name="{{ $doc->file_name }}">👁 Anzeigen</a>
             @if(!$doc->aiInProgress())
             <button type="button" class="btn btn-primary btn-sm" onclick="docReview.open(@js($doc->id), 'assign', null, null)">Kunden zuordnen…</button>
             @if(($extracted['person']['first_name'] ?? null) || ($extracted['person']['last_name'] ?? null))
