@@ -172,9 +172,47 @@ class Customer extends Model {
     public function addresses() { return $this->hasMany(CustomerAddress::class, 'customer_id'); }
     public function contacts() { return $this->hasMany(CustomerContact::class, 'customer_id'); }
     public function changeRequests() { return $this->hasMany(CustomerChangeRequest::class, 'customer_id'); }
+    /**
+     * Kundenfelder, die in den Dubletten-Abgleich einfliessen. Aendert sich
+     * eines davon, kann sich die Zahl der Verdachtsfaelle veraendern - der
+     * Hinweis-Badge muss dann neu berechnet werden. (Name/E-Mail liegen am
+     * User-Modell und werden dort invalidiert.)
+     */
+    private const DUPLICATE_SIGNAL_FIELDS = [
+        'phone', 'mobile', 'email2', 'iban', 'iban2', 'birth_date',
+        'address', 'address2', 'address_street', 'address_house_number',
+        'address_house_suffix', 'address_zip', 'address_city',
+    ];
+
     protected static function boot() {
         parent::boot();
         static::creating(fn($m) => $m->id = Str::uuid());
+
+        // Dubletten-Hinweis-Badge (DuplicateDetectionService::countCached, 5-Min-
+        // TTL) zentral invalidieren, sobald sich der Kundenbestand aendert.
+        // Bisher wurde der Cache NUR beim Zusammenfuehren/Verwerfen aktualisiert;
+        // loeschte ein Mitarbeiter dagegen einen der beiden Duplikat-Datensaetze
+        // direkt (oder legte einen neuen Kunden an), blieb die angezeigte Zahl
+        // bis zu 5 Minuten stehen - der Verdachtsfall war "erledigt", der Badge
+        // aber noch da. Jetzt greift die Invalidierung an EINER Stelle fuer ALLE
+        // Pfade (UI, Import-Job, CLI-Purge, Merge).
+        static::created(fn() => static::forgetDuplicateBadge());
+        static::deleted(fn() => static::forgetDuplicateBadge());
+        static::updated(function ($customer) {
+            if (array_intersect(array_keys($customer->getChanges()), self::DUPLICATE_SIGNAL_FIELDS) !== []) {
+                static::forgetDuplicateBadge();
+            }
+        });
+    }
+
+    /**
+     * Zaehler-Cache der Dubletten-Verdachtsfaelle verwerfen. Ueber den Service,
+     * damit der Cache-Schluessel (Versionsnummer) nur an EINER Stelle definiert
+     * ist.
+     */
+    private static function forgetDuplicateBadge(): void
+    {
+        app(\App\Services\Matching\DuplicateDetectionService::class)->forgetCount();
     }
     public function user() { return $this->belongsTo(User::class); }
     public function betreuer() { return $this->belongsToMany(User::class, 'employee_customers', 'customer_id', 'user_id'); }
