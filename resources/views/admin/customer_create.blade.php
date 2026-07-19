@@ -125,4 +125,5 @@
     <a href="{{ route('admin.customers') }}" class="btn btn-ghost">Abbrechen</a>
 </div>
 </form>
+@include('admin.partials.phone_hints')
 @endsection

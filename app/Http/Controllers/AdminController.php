@@ -488,6 +488,30 @@ class AdminController extends Controller
         return view('admin.customer_create');
     }
 
+    /**
+     * Validierung fuer die beiden Telefonfelder: eine eindeutige deutsche
+     * Mobilnummer gehoert ins Feld "Mobil", eine Festnetznummer ins Feld
+     * "Telefon". Nur klare Verwechslungen werden abgewiesen (internationale
+     * Nummern bleiben erlaubt); die Meldung sagt genau, wohin die Nummer gehoert.
+     *
+     * @return array<string,mixed>
+     */
+    private function phoneFieldRules(): array
+    {
+        return [
+            'mobile' => ['nullable', 'string', 'max:40', function ($attr, $value, $fail) {
+                if ($value && \App\Support\GermanPhone::isLandline($value)) {
+                    $fail('Das sieht nach einer Festnetznummer aus – bitte ins Feld „Telefon" eintragen.');
+                }
+            }],
+            'phone' => ['nullable', 'string', 'max:40', function ($attr, $value, $fail) {
+                if ($value && \App\Support\GermanPhone::isMobile($value)) {
+                    $fail('Das sieht nach einer Mobilnummer aus – bitte ins Feld „Mobil" eintragen.');
+                }
+            }],
+        ];
+    }
+
     public function storeCustomer(Request $request) {
         $request->validate([
             'first_name' => 'required',
@@ -501,7 +525,7 @@ class AdminController extends Controller
             // Bankverbindung darf schon bei der Neuanlage erfasst werden.
             'iban' => 'nullable|string|max:40',
             'account_holder' => 'nullable|string|max:120',
-        ]);
+        ] + $this->phoneFieldRules());
         $fullName = $request->first_name . ' ' . $request->last_name;
         $address = $this->buildAddress($request);
         $addressColumns = $this->addressColumns($request);
@@ -579,7 +603,7 @@ class AdminController extends Controller
             'new_password' => 'nullable|min:8',
             'health_insurance_type' => 'nullable|in:gesetzlich,privat',
             'gender' => 'nullable|in:male,female,diverse',
-        ]);
+        ] + $this->phoneFieldRules());
 
         // Sensible Kundenakte-Felder: Änderungen auditieren (nur Feldnamen ins Log)
         $sensitive = ['health_insurance_number','health_insurance_company','health_insurance_type','pension_insurance_number','tax_id'];
