@@ -94,6 +94,19 @@ class BannerManagementTest extends TestCase
         $this->assertSame(50.0, $this->clickCtr($banner)); // 0 imp? -> siehe Helper
     }
 
+    // Re-Audit SEC-7: protokoll-relative //fremdhost darf NICHT extern
+    // umgeleitet werden (Open-Redirect), sondern als interner Pfad landen.
+    public function test_click_route_blocks_protocol_relative_open_redirect(): void
+    {
+        $banner = $this->makeBanner(['link_url' => '//evil.example.com/phish']);
+        $customer = $this->makePortalCustomer();
+
+        $res = $this->actingAs($customer->user)->get(route('portal.banner.click', $banner->id));
+        $location = $res->headers->get('Location');
+        // Nicht auf den fremden Host, sondern intern (eigener Host / Pfad).
+        $this->assertStringNotContainsString('//evil.example.com', (string) $location);
+    }
+
     /** CTR-Helfer: erzeugt eine Impression falls nötig, prüft Berechnung. */
     private function clickCtr(Banner $banner): float
     {
