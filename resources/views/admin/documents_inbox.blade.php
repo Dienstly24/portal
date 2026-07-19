@@ -132,6 +132,14 @@
         <div style="font-size:17px;font-weight:700;margin-bottom:4px;" id="review-title">Dokument zuordnen</div>
         <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;" id="review-doc-name"></div>
 
+        {{-- Unsicherheits-Hinweis: warnt bei niedriger Konfidenz/OCR und listet
+             wichtige Angaben, die NICHT sicher gelesen wurden - nichts wird
+             geraten, der Mitarbeiter ergaenzt sie bewusst. --}}
+        <div id="review-uncertainty" style="display:none;background:#FEF6E7;border:1px solid #E4A11B;border-radius:10px;padding:10px 12px;font-size:13px;color:#8A5A00;margin-bottom:14px;">
+            <div id="review-uncertainty-head" style="font-weight:600;margin-bottom:4px;"></div>
+            <div id="review-uncertainty-missing"></div>
+        </div>
+
         <div id="review-body">
         {{-- Kundensuche (Modus: zuordnen) --}}
         <div id="review-assign-block">
@@ -234,6 +242,8 @@
         'file_name' => $d->file_name,
         'type_label' => $d->aiTypeLabel(),
         'summary' => $d->ai_summary,
+        'confidence' => $d->ai_confidence,
+        'source' => $d->ai_source,
         'extracted' => $d->ai_extracted ?: new stdClass(),
     ]]);
 @endphp
@@ -316,6 +326,7 @@ window.docReview = (function() {
         chooseCustomer(null, null);
         renderApplyFields({ extracted: batch.merged || {} });
         renderContract({ extracted: batch.merged || {} });
+        renderUncertainty(batch.merged || {}, null, null);
         renderFamily(batch);
 
         el('review-submit').textContent = 'Kunden anlegen & alle zuordnen';
@@ -460,6 +471,7 @@ window.docReview = (function() {
         chooseCustomer(customerId || null, customerLabel || null);
         renderApplyFields(doc);
         renderContract(doc);
+        renderUncertainty(doc.extracted || {}, doc.confidence, doc.source);
 
         el('review-submit').textContent = mode === 'create' ? 'Kunden anlegen & Dokument zuordnen' : 'Zuordnen & übernehmen';
         el('doc-review-modal').style.display = 'flex';
@@ -487,6 +499,30 @@ window.docReview = (function() {
             wrap.appendChild(label);
         });
         el('review-extract-section').style.display = any ? '' : 'none';
+    }
+
+    // Unsicherheits-Hinweis: warnt bei niedriger Konfidenz/OCR und listet
+    // wichtige Standardfelder, die NICHT gelesen wurden. Es wird nichts
+    // geraten - der Mitarbeiter ergaenzt bewusst.
+    function renderUncertainty(extracted, confidence, source) {
+        var box = el('review-uncertainty');
+        var p = (extracted || {}).person || {};
+        var checks = [
+            { label: 'Geburtsdatum', ok: !!p.birth_date },
+            { label: 'Adresse', ok: !!(p.street || p.zip || p.city) },
+            { label: 'Telefon', ok: !!p.phone },
+            { label: 'E-Mail', ok: !!p.email },
+        ];
+        var missing = checks.filter(function(c) { return !c.ok; }).map(function(c) { return c.label; });
+        var lowConf = (source === 'ocr') || (confidence != null && confidence < 60);
+        if (!lowConf && !missing.length) { box.style.display = 'none'; return; }
+        box.style.display = '';
+        el('review-uncertainty-head').textContent = lowConf
+            ? '⚠ Unsichere Erkennung – bitte alle Felder sorgfältig prüfen.'
+            : '⚠ Einige Angaben konnten nicht sicher gelesen werden.';
+        el('review-uncertainty-missing').textContent = missing.length
+            ? 'Nicht automatisch gelesen (bitte manuell ergänzen): ' + missing.join(', ') + '.'
+            : '';
     }
 
     function renderContract(doc) {
@@ -652,6 +688,7 @@ window.docReview = (function() {
         el('review-success-sub').textContent = sub;
         el('review-success-link').href = data.customer_url || '#';
         el('review-body').style.display = 'none';
+        el('review-uncertainty').style.display = 'none';
         el('review-success').style.display = '';
     }
 
