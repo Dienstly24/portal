@@ -63,8 +63,8 @@
 <div style="display:flex;flex-direction:column;gap:10px;">
 @foreach($tasks as $t)
 @php
-$priorityColor = ['high'=>'#F9E3E3','medium'=>'#FEF3C7','low'=>'#E4F0E7'];
-$priorityText = ['high'=>'#A32D2D','medium'=>'#92400E','low'=>'#3B7A57'];
+$priorityColor = ['high'=>'#F9E3E3','medium'=>'#FEF3C7','low'=>'#D9F4E6'];
+$priorityText = ['high'=>'#A32D2D','medium'=>'#92400E','low'=>'#17A65B'];
 $priorityLabel = ['high'=>'Hoch','medium'=>'Mittel','low'=>'Niedrig'];
 $typeIcon = ['call'=>'📞','email'=>'✉️','meeting'=>'📅','document'=>'📄','follow_up'=>'🔄','other'=>'📌'];
 @endphp

@@ -17,7 +17,7 @@
 <body style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:30px 0;"><tr><td align="center">
 <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:10px;overflow:hidden;">
-<tr><td style="background:#185FA5;padding:25px 30px;">
+<tr><td style="background:#17191d;padding:25px 30px;">
 <h1 style="color:#ffffff;margin:0;font-size:22px;">{{ $lang === 'ar' ? '💡 فرصة للتوفير' : '💡 Ihre Sparchance' }}</h1>
 </td></tr>
 <tr><td style="padding:30px;">
@@ -71,7 +71,7 @@
 <p style="font-size:12px;color:#8a8a8a;margin:0;">Dienstly24 · Diese E-Mail wurde über das Kundenportal versendet.</p>
 @if(!empty($unsubscribeUrl))
 <p style="font-size:12px;color:#8a8a8a;margin:6px 0 0;">
-<a href="{{ $unsubscribeUrl }}" style="color:#185FA5;">Abmelden / إلغاء الاشتراك</a>
+<a href="{{ $unsubscribeUrl }}" style="color:#17A65B;">Abmelden / إلغاء الاشتراك</a>
 </p>
 @endif
 </td></tr>

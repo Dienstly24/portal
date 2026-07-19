@@ -32,12 +32,12 @@
         <label style="font-size:13px;color:var(--ink-soft);font-weight:600;display:block;margin-bottom:10px;">Kundenzugriff</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
             <label onclick="toggleLimited(false)" id="lbl-full"
-                style="border:2px solid {{ $employee->can_see_all_customers ? 'var(--petrol)' : 'var(--line)' }};border-radius:10px;padding:16px;cursor:pointer;background:{{ $employee->can_see_all_customers ? '#E4F0E7' : '#fff' }};">
+                style="border:2px solid {{ $employee->can_see_all_customers ? 'var(--petrol)' : 'var(--line)' }};border-radius:10px;padding:16px;cursor:pointer;background:{{ $employee->can_see_all_customers ? '#D9F4E6' : '#fff' }};">
                 <div style="font-weight:700;margin-bottom:4px;">Alle Kunden</div>
                 <div style="font-size:12px;color:var(--ink-soft);">Mitarbeiter sieht alle Kunden</div>
             </label>
             <label onclick="toggleLimited(true)" id="lbl-limited"
-                style="border:2px solid {{ !$employee->can_see_all_customers ? 'var(--petrol)' : 'var(--line)' }};border-radius:10px;padding:16px;cursor:pointer;background:{{ !$employee->can_see_all_customers ? '#E4F0E7' : '#fff' }};">
+                style="border:2px solid {{ !$employee->can_see_all_customers ? 'var(--petrol)' : 'var(--line)' }};border-radius:10px;padding:16px;cursor:pointer;background:{{ !$employee->can_see_all_customers ? '#D9F4E6' : '#fff' }};">
                 <div style="font-weight:700;margin-bottom:4px;">Begrenzte Kunden</div>
                 <div style="font-size:12px;color:var(--ink-soft);">Nur zugewiesene Kunden</div>
             </label>
@@ -83,7 +83,7 @@
         ids.forEach(function (id) {
             var c = selected[id];
             var chip = document.createElement('span');
-            chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:#E4F0E7;border:1px solid #3B7A57;border-radius:20px;padding:5px 12px;font-size:12.5px;';
+            chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:#D9F4E6;border:1px solid #17A65B;border-radius:20px;padding:5px 12px;font-size:12.5px;';
             chip.innerHTML = '👤 ' + c.name + ' <span style="color:var(--ink-soft);">' + (c.number || '') + '</span>';
             var x = document.createElement('a');
             x.textContent = '✕';
@@ -150,7 +150,7 @@
             ] as $perm)
             <div class="perm-card" id="card-{{ $perm[0] }}"
                 onclick="togglePerm('{{ $perm[0] }}')"
-                style="border:2px solid {{ $employee->{$perm[0]} ? 'var(--petrol)' : 'var(--line)' }};border-radius:10px;padding:14px;cursor:pointer;background:{{ $employee->{$perm[0]} ? '#E4F0E7' : '#fff' }};transition:.15s;user-select:none;">
+                style="border:2px solid {{ $employee->{$perm[0]} ? 'var(--petrol)' : 'var(--line)' }};border-radius:10px;padding:14px;cursor:pointer;background:{{ $employee->{$perm[0]} ? '#D9F4E6' : '#fff' }};transition:.15s;user-select:none;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
                     <span style="font-size:24px;">{{ $perm[3] }}</span>
                     <span id="check-{{ $perm[0] }}" style="width:24px;height:24px;border-radius:50%;background:{{ $employee->{$perm[0]} ? 'var(--petrol)' : '#ccc' }};color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">{{ $employee->{$perm[0]} ? '✓' : '' }}</span>
@@ -180,7 +180,7 @@
         <div style="font-size:13px;color:var(--ink-soft);line-height:1.5;"><strong>{{ $employee->is_active ? 'Konto deaktivieren' : 'Konto aktivieren' }}</strong><br>{{ $employee->is_active ? 'Login wird gesperrt, alle Daten und Zuweisungen bleiben erhalten. Empfohlen statt Loeschen.' : 'Konto ist derzeit deaktiviert. Login wieder freigeben.' }}</div>
         <form method="POST" action="{{ route('admin.employees.toggle', $employee->id) }}" style="margin:0;">
             @csrf @method('PUT')
-            <button type="submit" class="btn btn-ghost" style="white-space:nowrap;{{ $employee->is_active ? 'color:#B5651D;border-color:#B5651D;' : 'color:#3B7A57;border-color:#3B7A57;' }}">{{ $employee->is_active ? '&#9208; Deaktivieren' : '&#9654; Aktivieren' }}</button>
+            <button type="submit" class="btn btn-ghost" style="white-space:nowrap;{{ $employee->is_active ? 'color:#B5651D;border-color:#B5651D;' : 'color:#17A65B;border-color:#17A65B;' }}">{{ $employee->is_active ? '&#9208; Deaktivieren' : '&#9654; Aktivieren' }}</button>
         </form>
     </div>
     @if(auth()->user()->role === 'admin')
@@ -201,7 +201,7 @@ function togglePerm(name) {
     var check = document.getElementById('check-' + name);
     cb.checked = !cb.checked;
     card.style.borderColor = cb.checked ? 'var(--petrol)' : 'var(--line)';
-    card.style.background = cb.checked ? '#E4F0E7' : '#fff';
+    card.style.background = cb.checked ? '#D9F4E6' : '#fff';
     check.style.background = cb.checked ? 'var(--petrol)' : '#ccc';
     check.textContent = cb.checked ? '\u2713' : '';
 }
@@ -214,9 +214,9 @@ function selectAllPerms(state) {
 function toggleLimited(limited) {
     document.getElementById('access_level').value = limited ? 'limited' : 'full';
     document.getElementById('lbl-full').style.borderColor = limited ? 'var(--line)' : 'var(--petrol)';
-    document.getElementById('lbl-full').style.background = limited ? '#fff' : '#E4F0E7';
+    document.getElementById('lbl-full').style.background = limited ? '#fff' : '#D9F4E6';
     document.getElementById('lbl-limited').style.borderColor = limited ? 'var(--petrol)' : 'var(--line)';
-    document.getElementById('lbl-limited').style.background = limited ? '#E4F0E7' : '#fff';
+    document.getElementById('lbl-limited').style.background = limited ? '#D9F4E6' : '#fff';
     document.getElementById('assign-customers').style.display = limited ? 'block' : 'none';
     const el = document.getElementById('can_see_all');
     if (limited) { el.removeAttribute('name'); }

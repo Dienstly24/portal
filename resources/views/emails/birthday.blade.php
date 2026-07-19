@@ -4,7 +4,7 @@
 <body style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:30px 0;"><tr><td align="center">
 <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:10px;overflow:hidden;">
-<tr><td style="background:linear-gradient(135deg,#1e3a8a,#3b5bd9);padding:35px 30px;text-align:center;">
+<tr><td style="background:linear-gradient(135deg,#17191d,#17A65B);padding:35px 30px;text-align:center;">
 <div style="font-size:44px;">🎂🎉</div>
 <h1 style="color:#ffffff;margin:10px 0 0;font-size:24px;">{{ $lang === 'ar' ? 'عيد ميلاد سعيد!' : 'Herzlichen Glückwunsch!' }}</h1>
 </td></tr>

@@ -8,7 +8,7 @@
     <button onclick="smartScan.open()" class="btn btn-gold">+ {{ __('Dokument hinzufügen') }}</button>
 </div>
 
-@if(session('success'))<div style="background:#E4F0E7;color:#3B7A57;padding:10px 16px;border-radius:8px;margin:16px 0;">{{ session('success') }}</div>@endif
+@if(session('success'))<div style="background:#D9F4E6;color:#17A65B;padding:10px 16px;border-radius:8px;margin:16px 0;">{{ session('success') }}</div>@endif
 @if($errors->any())<div style="background:#FBE9E9;color:#B3261E;padding:10px 16px;border-radius:8px;margin:16px 0;">{{ $errors->first() }}</div>@endif
 
 {{-- Angeforderte Dokumente (Architekturplan Abschnitt 14: klare Statusanzeige) --}}
@@ -35,7 +35,7 @@
             <div style="text-align:right;">
                 @if($req->status === 'open')<span class="badge" style="background:#FEF3C7;color:#92400E;">{{ $req->statusLabel() }}</span>
                 @elseif($req->status === 'uploaded')<span class="badge" style="background:#E6F1FB;color:#185FA5;">{{ $req->statusLabel() }}</span>
-                @elseif($req->status === 'approved')<span class="badge" style="background:#E4F0E7;color:#3B7A57;">{{ $req->statusLabel() }}</span>
+                @elseif($req->status === 'approved')<span class="badge" style="background:#D9F4E6;color:#17A65B;">{{ $req->statusLabel() }}</span>
                 @else<span class="badge" style="background:#FBE9E9;color:#B3261E;">{{ $req->statusLabel() }}</span>@endif
             </div>
         </div>

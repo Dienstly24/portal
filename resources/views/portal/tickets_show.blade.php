@@ -11,7 +11,7 @@
 
 @if($ticket->status === 'resolved')
 {{-- Geloest: Kunde bestaetigt oder oeffnet mit einer Antwort wieder --}}
-<div class="card" style="background:#E4F0E7;border-color:#B7D9C2;">
+<div class="card" style="background:#D9F4E6;border-color:#B7D9C2;">
     <div class="card-title" style="margin-bottom:8px;">✅ {{ __('Unser Team hat Ihre Anfrage als gelöst markiert.') }}</div>
     <p style="font-size:13.5px;color:var(--ink-soft);margin-bottom:14px;">{{ __('Ist Ihr Anliegen erledigt? Dann können Sie die Anfrage schließen. Falls nicht, antworten Sie einfach unten – die Anfrage wird dann automatisch wieder geöffnet.') }}</p>
     <form method="POST" action="{{ route('portal.tickets.close', $ticket->id) }}">
@@ -66,7 +66,7 @@
     <div class="card-title">📎 {{ __('Anhänge') }} ({{ $attachments->count() }})</div>
     @foreach($attachments as $a)
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);">
-        <span style="font-size:13.5px;">{{ $a->file_name }}@if($a->uploaded_by !== auth()->id()) <span style="font-size:11px;background:#E4F0E7;color:#3B7A57;padding:2px 8px;border-radius:4px;">von Dienstly24</span>@endif</span>
+        <span style="font-size:13.5px;">{{ $a->file_name }}@if($a->uploaded_by !== auth()->id()) <span style="font-size:11px;background:#D9F4E6;color:#17A65B;padding:2px 8px;border-radius:4px;">von Dienstly24</span>@endif</span>
         <span style="display:flex;gap:8px;"><a href="{{ route('portal.attachment.download', $a->id) }}" class="btn btn-ghost btn-sm">⬇ {{ __('Herunterladen') }}</a></span>
     </div>
     @endforeach

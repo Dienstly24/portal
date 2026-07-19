@@ -86,9 +86,9 @@ function selectAccess(type) {
     const isLimited = type === 'limited';
     document.getElementById('access_level').value = type;
     document.getElementById('lbl-full').style.borderColor = isLimited ? 'var(--line)' : 'var(--petrol)';
-    document.getElementById('lbl-full').style.background = isLimited ? '#fff' : '#E4F0E7';
+    document.getElementById('lbl-full').style.background = isLimited ? '#fff' : '#D9F4E6';
     document.getElementById('lbl-limited').style.borderColor = isLimited ? 'var(--petrol)' : 'var(--line)';
-    document.getElementById('lbl-limited').style.background = isLimited ? '#E4F0E7' : '#fff';
+    document.getElementById('lbl-limited').style.background = isLimited ? '#D9F4E6' : '#fff';
     const el = document.getElementById('can_see_all');
     if (isLimited) { el.removeAttribute('name'); }
     else { el.name = 'can_see_all_customers'; el.value = '1'; }
@@ -104,7 +104,7 @@ function updateCard(id, checked) {
     const card = document.getElementById('card-' + id);
     const check = document.getElementById('check-' + id);
     card.style.borderColor = checked ? 'var(--petrol)' : 'var(--line)';
-    card.style.background = checked ? '#E4F0E7' : '#fff';
+    card.style.background = checked ? '#D9F4E6' : '#fff';
     check.style.background = checked ? 'var(--petrol)' : '#ccc';
     check.textContent = checked ? '✓' : '';
 }

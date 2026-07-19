@@ -85,9 +85,9 @@
     </div>
 
     @php $total = \App\Models\Customer::count(); @endphp
-    <div style="background:#E4F0E7;border-radius:10px;padding:20px;text-align:center;margin-bottom:20px;">
-        <div style="font-size:36px;font-weight:700;color:#3B7A57;">{{ $total }}</div>
-        <div style="font-size:14px;color:#3B7A57;margin-top:4px;">Kunden im System</div>
+    <div style="background:#D9F4E6;border-radius:10px;padding:20px;text-align:center;margin-bottom:20px;">
+        <div style="font-size:36px;font-weight:700;color:#17A65B;">{{ $total }}</div>
+        <div style="font-size:14px;color:#17A65B;margin-top:4px;">Kunden im System</div>
     </div>
 
     <div style="font-size:13px;color:var(--ink-soft);margin-bottom:16px;">

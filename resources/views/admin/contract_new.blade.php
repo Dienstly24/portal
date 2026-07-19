@@ -24,7 +24,7 @@
             <div id="customer-dropdown" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:8px;margin-top:4px;max-height:200px;overflow-y:auto;z-index:50;display:none;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
         </div>
         <input type="hidden" name="customer_id_selected" id="customer_id_selected">
-        <div id="selected-display" style="display:none;margin-top:8px;padding:10px 14px;background:#E4F0E7;border-radius:8px;font-size:13px;font-weight:600;color:#3B7A57;">
+        <div id="selected-display" style="display:none;margin-top:8px;padding:10px 14px;background:#D9F4E6;border-radius:8px;font-size:13px;font-weight:600;color:#17A65B;">
             ✓ <span id="selected-name"></span> ausgewählt
         </div>
         <div id="customer-error" style="display:none;color:#A32D2D;font-size:13px;margin-top:6px;">Bitte Versicherungsnehmer auswählen</div>

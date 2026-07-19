@@ -2,7 +2,7 @@
 @section('content')
 @php
 $statusBadge = [
-    'confirmed' => ['#E4F0E7', '#3B7A57', 'Zugeordnet'],
+    'confirmed' => ['#D9F4E6', '#17A65B', 'Zugeordnet'],
     'suggested' => ['#FEF3C7', '#92400E', 'Vorschlag – Bestätigung offen'],
     'unmatched' => ['#F9E3E3', '#A32D2D', 'Nicht zugeordnet'],
 ];
@@ -17,7 +17,7 @@ $sb = $statusBadge[$message->match_status] ?? ['#EEF0F3', '#555', $message->matc
     <div class="page-title">{{ $message->subject ?: '(kein Betreff)' }}</div>
 </div>
 
-@if(session('success'))<div style="background:#E4F0E7;color:#3B7A57;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
+@if(session('success'))<div style="background:#D9F4E6;color:#17A65B;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
 @if(session('error'))<div style="background:#FBE9E9;color:#B3261E;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('error') }}</div>@endif
 
 <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:start;">

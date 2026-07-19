@@ -17,7 +17,7 @@
 
 {{-- Hero-Band mit Textmarke (kein Bild) --}}
 <tr><td align="center" style="background:#17191d;padding:20px 30px;">
-    <p style="color:#34d17f;margin:0 0 4px;font-size:15px;font-weight:bold;letter-spacing:.04em;">DIENSTLY24</p>
+    <p style="color:#17A65B;margin:0 0 4px;font-size:15px;font-weight:bold;letter-spacing:.04em;">DIENSTLY24</p>
     <h1 style="color:#ffffff;margin:0 0 3px;font-size:20px;">Willkommen bei Dienstly24 👋</h1>
     <p style="color:#c6cbd3;margin:0;font-size:13.5px;">Ihr Kundenportal ist jetzt bereit.</p>
 </td></tr>
@@ -49,7 +49,7 @@
     <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
             <td width="28" style="font-size:15px;padding:3px 0;">🌍</td>
-            <td style="padding:3px 0;font-size:13.5px;"><a href="{{ $portalBase }}" style="color:#185FA5;font-weight:bold;text-decoration:none;">portal.dienstly24.de</a></td>
+            <td style="padding:3px 0;font-size:13.5px;"><a href="{{ $portalBase }}" style="color:#17A65B;font-weight:bold;text-decoration:none;">portal.dienstly24.de</a></td>
         </tr>
         <tr>
             <td width="28" style="font-size:15px;padding:3px 0;">👤</td>
@@ -114,7 +114,7 @@
 <tr>
     <td style="padding:14px 20px;">
         <p style="font-size:14px;color:#ffffff;margin:0 0 2px;"><strong>Brauchen Sie Hilfe?</strong></p>
-        <p style="font-size:12px;color:#c6cbd3;margin:0;">Unser Team hilft Ihnen gerne: <a href="mailto:info@dienstly24.de" style="color:#34d17f;text-decoration:none;font-weight:bold;">info@dienstly24.de</a></p>
+        <p style="font-size:12px;color:#c6cbd3;margin:0;">Unser Team hilft Ihnen gerne: <a href="mailto:info@dienstly24.de" style="color:#17A65B;text-decoration:none;font-weight:bold;">info@dienstly24.de</a></p>
     </td>
     <td align="right" style="padding:14px 20px 14px 0;white-space:nowrap;">
         <a href="{{ $supportUrl }}" style="display:inline-block;background:#17A65B;color:#ffffff;font-size:13px;font-weight:bold;text-decoration:none;padding:11px 20px;border-radius:8px;">💬 Anfrage senden</a>
@@ -128,16 +128,16 @@
     <p style="font-size:11.5px;color:#7a5c12;background:#fff8e6;border:1px solid #f0e0b0;border-radius:8px;padding:9px 12px;margin:0;"><strong>🔒 Sicherheit:</strong> Wir fragen niemals per E-Mail oder Telefon nach Ihrem Passwort. Passwort vergessen? Einfach „Passwort vergessen" auf der Login-Seite nutzen.</p>
 </td></tr>
 <tr><td style="padding:8px 30px 12px;">
-    <p style="font-size:10.5px;color:#8a938f;line-height:1.5;margin:0;"><strong>Hinweis zum Datenschutz:</strong> Zur Betreuung Ihrer Verträge verarbeiten wir auch vertragsbezogene Korrespondenz (z.&nbsp;B. von Versicherungs- oder Energieunternehmen) und stellen sie Ihnen im Portal bereit – ausschließlich zur Vertragsbetreuung, ohne unbefugte Weitergabe. Details: <a href="{{ $portalBase }}/datenschutz" style="color:#185FA5;text-decoration:none;">Datenschutzerklärung</a>.</p>
+    <p style="font-size:10.5px;color:#8a938f;line-height:1.5;margin:0;"><strong>Hinweis zum Datenschutz:</strong> Zur Betreuung Ihrer Verträge verarbeiten wir auch vertragsbezogene Korrespondenz (z.&nbsp;B. von Versicherungs- oder Energieunternehmen) und stellen sie Ihnen im Portal bereit – ausschließlich zur Vertragsbetreuung, ohne unbefugte Weitergabe. Details: <a href="{{ $portalBase }}/datenschutz" style="color:#17A65B;text-decoration:none;">Datenschutzerklärung</a>.</p>
 </td></tr>
 
 {{-- Footer --}}
 <tr><td align="center" style="background:#f8f9fb;border-top:1px solid #e2e8f0;padding:14px 30px;">
     <p style="font-size:12px;color:#152826;margin:0 0 4px;"><strong>Dienstly24</strong> – Ihr Partner für Finanzdienstleistungen</p>
     <p style="font-size:11.5px;margin:0 0 6px;">
-        <a href="https://dienstly24.de" style="color:#185FA5;text-decoration:none;">Website</a> &nbsp;·&nbsp;
-        <a href="{{ $portalBase }}/impressum" style="color:#185FA5;text-decoration:none;">Impressum</a> &nbsp;·&nbsp;
-        <a href="{{ $portalBase }}/datenschutz" style="color:#185FA5;text-decoration:none;">Datenschutz</a>
+        <a href="https://dienstly24.de" style="color:#17A65B;text-decoration:none;">Website</a> &nbsp;·&nbsp;
+        <a href="{{ $portalBase }}/impressum" style="color:#17A65B;text-decoration:none;">Impressum</a> &nbsp;·&nbsp;
+        <a href="{{ $portalBase }}/datenschutz" style="color:#17A65B;text-decoration:none;">Datenschutz</a>
     </p>
     <p style="font-size:10.5px;color:#9aa39f;margin:0;">Diese E-Mail wurde automatisch versendet. Bitte antworten Sie nicht direkt darauf.</p>
 </td></tr>

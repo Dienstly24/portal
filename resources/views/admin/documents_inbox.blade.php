@@ -174,7 +174,7 @@
         <div id="review-create-block" style="display:none;background:#E6F1FB;border:1px solid #185FA5;border-radius:8px;padding:10px 12px;font-size:13.5px;margin-bottom:12px;"></div>
 
         {{-- Krankenkassen-Fall (Familie + Wechsel), nur im Vorgang-Modus bei >= 2 Personen --}}
-        <div id="review-family-section" style="display:none;border:1.5px solid #3B7A57;border-radius:10px;padding:12px;margin-bottom:12px;background:#F6FBF8;">
+        <div id="review-family-section" style="display:none;border:1.5px solid #17A65B;border-radius:10px;padding:12px;margin-bottom:12px;background:#F6FBF8;">
             <label style="display:flex;gap:9px;align-items:flex-start;font-size:13.5px;cursor:pointer;font-weight:700;">
                 <input type="checkbox" id="family-enabled" style="margin-top:2px;">
                 <span>🏥 Krankenkassen-Fall einrichten (Familie + Wechsel)</span>
@@ -203,7 +203,7 @@
                         <input type="text" id="family-new-insurer" placeholder="z.B. TK" style="width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
                     </div>
                 </div>
-                <div id="family-effective-preview" style="font-size:12.5px;color:#3B7A57;font-weight:600;"></div>
+                <div id="family-effective-preview" style="font-size:12.5px;color:#17A65B;font-weight:600;"></div>
             </div>
         </div>
 

@@ -37,7 +37,7 @@
                 <td style="padding:10px 8px;"><a href="{{ url('/leistungen/' . $page->slug) }}" target="_blank" rel="noopener"><code>{{ $page->slug }}</code> ↗</a></td>
                 <td style="padding:10px 8px;">
                     @if($page->is_active)
-                        <span style="background:#E4F0E7;color:#3B7A57;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;">Sichtbar</span>
+                        <span style="background:#D9F4E6;color:#17A65B;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;">Sichtbar</span>
                     @else
                         <span style="background:#F1EFE8;color:#5F5E5A;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;">Verborgen</span>
                     @endif

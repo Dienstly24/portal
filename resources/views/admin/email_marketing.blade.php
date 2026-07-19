@@ -104,7 +104,7 @@
         Der tägliche Automatik-Lauf (08:30) und dieser Button senden nie doppelt.
     </p>
     @if($dueReminders > 0)
-    <div style="background:#E4F0E7;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#3B7A57;">
+    <div style="background:#D9F4E6;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#17A65B;">
         ✓ {{ $dueReminders }} Erinnerungen fällig — bereit zum Senden.
     </div>
     @else

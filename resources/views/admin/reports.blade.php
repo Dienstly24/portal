@@ -99,9 +99,9 @@
             <div style="font-size:28px;font-weight:700;">{{ $tickets['total'] }}</div>
             <div style="font-size:13px;color:var(--ink-soft);">Tickets gesamt</div>
         </div>
-        <div style="background:#E4F0E7;border-radius:10px;padding:16px;text-align:center;">
-            <div style="font-size:28px;font-weight:700;color:#3B7A57;">{{ $tickets['closed'] }}</div>
-            <div style="font-size:13px;color:#3B7A57;">Gelöst</div>
+        <div style="background:#D9F4E6;border-radius:10px;padding:16px;text-align:center;">
+            <div style="font-size:28px;font-weight:700;color:#17A65B;">{{ $tickets['closed'] }}</div>
+            <div style="font-size:13px;color:#17A65B;">Gelöst</div>
         </div>
         <div style="background:#E6F1FB;border-radius:10px;padding:16px;text-align:center;">
             <div style="font-size:28px;font-weight:700;color:#185FA5;">{{ $tickets['open'] }}</div>
@@ -169,7 +169,7 @@ new Chart(document.getElementById('contractTypeChart'), {
         labels: labels,
         datasets: [{
             data: data,
-            backgroundColor: ['#0F3D3D','#C9963E','#3B7A57','#185FA5','#B4B2A9','#7F77DD','#D85A30'],
+            backgroundColor: ['#0F3D3D','#C9963E','#17A65B','#185FA5','#B4B2A9','#7F77DD','#D85A30'],
             borderWidth: 0,
         }]
     },

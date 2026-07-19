@@ -228,7 +228,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
     @php $docs = $customer->documents; @endphp
     @forelse($docs as $d)
     @php
-        $dotColor = ['red'=>'#E24B4A','yellow'=>'#F0A500','green'=>'#3B7A57'][$d->color ?? 'green'];
+        $dotColor = ['red'=>'#E24B4A','yellow'=>'#F0A500','green'=>'#17A65B'][$d->color ?? 'green'];
         $docContract = $d->contract_id ? $customer->contracts->firstWhere('id', $d->contract_id) : null;
     @endphp
     <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);">
@@ -239,7 +239,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
                 <span>{{ \App\Models\Document::CATEGORIES[$d->category] ?? ucfirst($d->category) }}</span>
                 <span>· {{ $d->created_at->format('d.m.Y') }}</span>
                 @if(($d->visibility ?? 'customer') === 'internal')<span style="background:#F7E7D6;color:#B5651D;padding:1px 6px;border-radius:4px;">🔒 intern</span>@else<span style="background:#EAF2FB;color:#185FA5;padding:1px 6px;border-radius:4px;">👤 Kunde</span>@endif
-                @if($docContract)<span style="background:#E4F0E7;color:#3B7A57;padding:1px 6px;border-radius:4px;">{{ $docContract->typeIcon() }} {{ $docContract->insurer }}</span>@endif
+                @if($docContract)<span style="background:#D9F4E6;color:#17A65B;padding:1px 6px;border-radius:4px;">{{ $docContract->typeIcon() }} {{ $docContract->insurer }}</span>@endif
                 @if($d->aiInProgress())<span style="background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:4px;">⏳ KI-Analyse läuft</span>
                 @elseif($d->ai_status === 'failed')<span style="background:#FBE9E9;color:#B3261E;padding:1px 6px;border-radius:4px;" title="{{ $d->ai_error }}">⚠ KI-Analyse fehlgeschlagen</span>
                     <button type="button" onclick="smartReanalyze(@js($d->id), this)" style="border:none;background:none;color:#185FA5;cursor:pointer;font-size:12px;padding:0;">erneut analysieren</button>
@@ -377,7 +377,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
                     <button type="submit" class="btn btn-ghost" style="padding:4px 8px;font-size:11px;" title="Wechsel-Erinnerung wurde beantwortet – keine Folge-Erinnerung senden">✋ Kunde hat reagiert</button>
                 </form>
                 @elseif($c->switchReminders->isNotEmpty())
-                <div style="margin-top:6px;font-size:11px;color:#3B7A57;">✓ Erinnerung beantwortet</div>
+                <div style="margin-top:6px;font-size:11px;color:#17A65B;">✓ Erinnerung beantwortet</div>
                 @endif
             </td>
             <td style="padding:12px;text-align:right;white-space:nowrap;">
@@ -469,7 +469,7 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
 <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
         <div class="card-title">📨 Nachrichten an den Kunden</div>
-        <span style="font-size:11.5px;background:#E4F0E7;color:#3B7A57;border:1px solid #CBE3D2;padding:3px 10px;border-radius:999px;">👁 Für den Kunden im Portal sichtbar</span>
+        <span style="font-size:11.5px;background:#D9F4E6;color:#17A65B;border:1px solid #CBE3D2;padding:3px 10px;border-radius:999px;">👁 Für den Kunden im Portal sichtbar</span>
     </div>
     <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;">Der Kunde sieht diese Unterhaltung im Kundenportal unter „Nachrichten" und kann dort antworten – auch mit Anhängen (PDF/Bilder).</p>
     @if(!$customer->user?->hasRealEmail())
@@ -621,7 +621,7 @@ function openMessagesTab() {
         @if($n->type === 'task')
         <form method="POST" action="{{ route('admin.customer.note.done', $n->id) }}">
             @csrf @method('PUT')
-            <button type="submit" style="border:none;background:none;cursor:pointer;font-size:14px;color:{{ $n->is_done ? '#3B7A57' : 'var(--ink-soft)' }};">
+            <button type="submit" style="border:none;background:none;cursor:pointer;font-size:14px;color:{{ $n->is_done ? '#17A65B' : 'var(--ink-soft)' }};">
                 {{ $n->is_done ? '✓' : '○' }}
             </button>
         </form>
@@ -830,7 +830,7 @@ function smartReanalyze(docId, btn) {
             btn.disabled = false;
             if (xhr.status >= 200 && xhr.status < 300) {
                 label.textContent = '✓ Hochgeladen – KI-Analyse läuft im Hintergrund';
-                bar.style.background = '#3B7A57';
+                bar.style.background = '#17A65B';
                 setTimeout(() => { window.location.href = window.location.pathname + '#tab-dokumente'; window.location.reload(); }, 800);
             } else {
                 let msg = 'Fehler beim Upload.';
@@ -959,7 +959,7 @@ function smartReanalyze(docId, btn) {
         xhr.addEventListener('load', function() {
             if (xhr.status >= 200 && xhr.status < 300) {
                 label.textContent = '✓ Erfolgreich hochgeladen';
-                bar.style.background = '#3B7A57';
+                bar.style.background = '#17A65B';
                 setTimeout(() => window.location.reload(), 600);
             } else {
                 let msg = 'Fehler beim Upload.';

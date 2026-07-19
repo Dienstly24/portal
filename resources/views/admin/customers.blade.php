@@ -5,12 +5,12 @@
 // Bildsprache spricht). Unbekannte Typen fallen auf 'andere' zurück.
 $typeConfig = [
     'kfz'                 => ['icon'=>'🚗','label'=>'KFZ','bg'=>'#E6F1FB'],
-    'krankenversicherung' => ['icon'=>'🏥','label'=>'Kranken','bg'=>'#E4F0E7'],
-    'kranken'             => ['icon'=>'🏥','label'=>'Kranken','bg'=>'#E4F0E7'],
+    'krankenversicherung' => ['icon'=>'🏥','label'=>'Kranken','bg'=>'#D9F4E6'],
+    'kranken'             => ['icon'=>'🏥','label'=>'Kranken','bg'=>'#D9F4E6'],
     'krankenzusatz'       => ['icon'=>'🩺','label'=>'Krankenzusatz','bg'=>'#DEF1E8'],
     'haftpflicht'         => ['icon'=>'🛡️','label'=>'Haftpflicht','bg'=>'#F0E6FB'],
     'rechtsschutz'        => ['icon'=>'⚖️','label'=>'Rechtsschutz','bg'=>'#FEF3C7'],
-    'hausrat'             => ['icon'=>'🏠','label'=>'Hausrat','bg'=>'#E4F0E7'],
+    'hausrat'             => ['icon'=>'🏠','label'=>'Hausrat','bg'=>'#D9F4E6'],
     'escooter'            => ['icon'=>'🛴','label'=>'E-Scooter','bg'=>'#E6F1FB'],
     'leben'               => ['icon'=>'❤️','label'=>'Leben','bg'=>'#FBEAF0'],
     'unfall'              => ['icon'=>'🚑','label'=>'Unfall','bg'=>'#F9E3E3'],
@@ -58,7 +58,7 @@ $typeConfig = [
 <form method="POST" action="{{ route('admin.customers.bulk-delete') }}" id="bulkDeleteForm" onsubmit="return confirmBulkDelete(this);">@csrf</form>
 @endif
 
-<div id="bulkBar" style="display:none;position:sticky;top:0;z-index:10;background:#1F3A33;color:#fff;border-radius:10px;padding:12px 20px;margin-bottom:12px;align-items:center;gap:14px;flex-wrap:wrap;">
+<div id="bulkBar" style="display:none;position:sticky;top:0;z-index:10;background:#17191d;color:#fff;border-radius:10px;padding:12px 20px;margin-bottom:12px;align-items:center;gap:14px;flex-wrap:wrap;">
     <span style="font-size:13.5px;font-weight:600;"><span id="bulkCount">0</span> Kunden ausgewaehlt</span>
     <select name="employee_id" form="bulkForm" required style="padding:8px 12px;border-radius:8px;border:none;font-size:13px;">
         <option value="">— Mitarbeiter waehlen —</option>
@@ -111,14 +111,14 @@ function confirmBulkDelete(form) {
 <div class="card">
     <table>
         <thead><tr>
-            @if(in_array(auth()->user()->role, ['admin','manager']))<th style="width:36px;"><input type="checkbox" id="checkAll" style="width:17px;height:17px;cursor:pointer;accent-color:#1F3A33;"></th>@endif
+            @if(in_array(auth()->user()->role, ['admin','manager']))<th style="width:36px;"><input type="checkbox" id="checkAll" style="width:17px;height:17px;cursor:pointer;accent-color:#17191d;"></th>@endif
             <th>Kunde</th><th>Adresse</th><th>Portal</th><th>Betreuer</th><th>Aktive Verträge</th><th style="text-align:right;">Aktionen</th>
         </tr></thead>
         <tbody>
         @forelse($customers as $c)
         <tr class="rowLink" data-href="{{ route('admin.customer', $c->id) }}" style="cursor:pointer;">
             @if(in_array(auth()->user()->role, ['admin','manager']))
-            <td class="noNav"><input type="checkbox" class="rowCheck" name="customer_ids[]" value="{{ $c->id }}" form="bulkForm" style="width:17px;height:17px;cursor:pointer;accent-color:#1F3A33;"></td>
+            <td class="noNav"><input type="checkbox" class="rowCheck" name="customer_ids[]" value="{{ $c->id }}" form="bulkForm" style="width:17px;height:17px;cursor:pointer;accent-color:#17191d;"></td>
             @endif
             <td>
                 <div style="font-weight:600;">{{ $c->user?->name }}</div>
@@ -134,7 +134,7 @@ function confirmBulkDelete(form) {
             </td>
             <td style="font-size:12.5px;">
                 @forelse($c->betreuer as $b)
-                <span style="background:#E4F0E7;color:#3B7A57;border-radius:12px;padding:2px 10px;display:inline-block;margin:1px 0;">{{ $b->name }}</span>
+                <span style="background:#D9F4E6;color:#17A65B;border-radius:12px;padding:2px 10px;display:inline-block;margin:1px 0;">{{ $b->name }}</span>
                 @empty
                 <span style="color:#B5651D;">— offen —</span>
                 @endforelse

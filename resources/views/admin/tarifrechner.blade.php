@@ -16,10 +16,10 @@
 @php
 $categories = [
     'kfz'              => ['label'=>'KFZ-Versicherung',         'icon'=>'🚗','color'=>'#E6F1FB','text'=>'#185FA5'],
-    'kranken'          => ['label'=>'Krankenversicherung',       'icon'=>'🏥','color'=>'#E4F0E7','text'=>'#3B7A57'],
+    'kranken'          => ['label'=>'Krankenversicherung',       'icon'=>'🏥','color'=>'#D9F4E6','text'=>'#17A65B'],
     'haftpflicht'      => ['label'=>'Haftpflichtversicherung',   'icon'=>'🛡️','color'=>'#F0E6FB','text'=>'#6D28D9'],
     'rechtsschutz'     => ['label'=>'Rechtsschutzversicherung',  'icon'=>'⚖️','color'=>'#FEF3C7','text'=>'#92400E'],
-    'hausrat'          => ['label'=>'Hausrat & Gebäude',         'icon'=>'🏠','color'=>'#E4F0E7','text'=>'#3B7A57'],
+    'hausrat'          => ['label'=>'Hausrat & Gebäude',         'icon'=>'🏠','color'=>'#D9F4E6','text'=>'#17A65B'],
     'escooter'         => ['label'=>'E-Scooter Versicherung',    'icon'=>'🛴','color'=>'#E6F1FB','text'=>'#185FA5'],
     'tierkranken'      => ['label'=>'Tierkrankenversicherung',   'icon'=>'🐾','color'=>'#FEF3C7','text'=>'#92400E'],
     'berufsunfaehigkeit' => ['label'=>'Berufsunfähigkeit',      'icon'=>'💼','color'=>'#F9E3E3','text'=>'#A32D2D'],
