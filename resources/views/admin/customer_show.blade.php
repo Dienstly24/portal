@@ -5,6 +5,8 @@
 // Zentrale Sparten-Definition (Contract::TYPES) - eine Quelle für alle Views.
 $typeConfig = \App\Models\Contract::TYPES;
 $activeTypes = $customer->contracts->where('status','active')->pluck('type')->unique()->toArray();
+// Anzahl aller Vertraege je Sparte - fuer die Zaehler-Badges an den Struktur-Symbolen.
+$typeCounts = $customer->contracts->countBy('type')->toArray();
 @endphp
 
 <div class="page-header">
@@ -91,20 +93,34 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
     <button type="button" class="cust-tab" data-tab="tab-verlauf" onclick="showCustTab('tab-verlauf',this)">🔄 Verlauf</button>
 </div>
 <div class="tab-section" id="tab-uebersicht">
-{{-- Vertragsstruktur Icons --}}
+{{-- Vertragsstruktur Icons: Klick oeffnet die Vertraege-Registerkarte,
+     gefiltert auf die gewaehlte Sparte (siehe openContractType()). --}}
+<style>
+    .vstruct-tile{transition:transform .15s ease;}
+    .vstruct-tile:hover{transform:translateY(-3px);}
+    .vstruct-tile:hover .vstruct-icon{box-shadow:0 5px 16px rgba(0,0,0,.14);}
+    .vstruct-tile:focus-visible{outline:2px solid var(--accent,#17A65B);outline-offset:3px;border-radius:12px;}
+</style>
 <div class="card" style="margin-bottom:20px;">
-    <div class="card-title" style="margin-bottom:16px;">Vertragsstruktur</div>
+    <div class="card-title" style="margin-bottom:6px;">Vertragsstruktur</div>
+    <p style="font-size:12px;color:var(--ink-soft);margin:0 0 16px;">Symbol anklicken, um die Verträge dieser Sparte zu öffnen.</p>
     <div style="display:flex;gap:12px;flex-wrap:wrap;">
         @foreach($typeConfig as $key => $cfg)
-        @php $isActive = in_array($key, $activeTypes); @endphp
-        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;"
-            onclick="document.getElementById('filter-type').value='{{ $key }}';filterContracts()">
-            <div style="width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;
+        @php $isActive = in_array($key, $activeTypes); $count = $typeCounts[$key] ?? 0; @endphp
+        <div class="vstruct-tile" role="button" tabindex="0"
+            title="{{ $count > 0 ? $count . ' Vertrag/Verträge – ' . $cfg['label'] . ' öffnen' : 'Keine Verträge – ' . $cfg['label'] . ' anlegen' }}"
+            style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;"
+            onclick="openContractType('{{ $key }}')"
+            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openContractType('{{ $key }}');}">
+            <div class="vstruct-icon" style="position:relative;width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;
                 background:{{ $isActive ? $cfg['bg'] : '#EEF0F3' }};
                 border:2px solid {{ $isActive ? $cfg['color'] : '#E4E6EA' }};
                 opacity:{{ $isActive ? '1' : '0.4' }};
                 transition:.2s;">
                 {{ $cfg['icon'] }}
+                @if($count > 0)
+                <span style="position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:{{ $cfg['color'] }};color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.2);">{{ $count }}</span>
+                @endif
             </div>
             <span style="font-size:11px;color:{{ $isActive ? $cfg['color'] : 'var(--ink-soft)' }};font-weight:{{ $isActive ? '600' : '400' }};">
                 {{ $cfg['label'] }}
@@ -429,6 +445,14 @@ $activeTypes = $customer->contracts->where('status','active')->pluck('type')->un
         @empty
         <tr><td colspan="8" style="text-align:center;padding:24px;color:var(--ink-soft);">Keine Verträge.</td></tr>
         @endforelse
+        {{-- Hinweis, wenn nach einer Sparte gefiltert wird, zu der kein Vertrag existiert
+             (per JS in filterContracts() ein-/ausgeblendet). --}}
+        <tr id="contract-type-empty" style="display:none;">
+            <td colspan="8" style="text-align:center;padding:24px;color:var(--ink-soft);">
+                <div id="contract-type-empty-text" style="margin-bottom:10px;">Keine Verträge dieser Sparte.</div>
+                <a id="contract-type-empty-add" href="{{ route('admin.contract.create', $customer->id) }}" class="btn btn-gold btn-sm">+ Vertrag anlegen</a>
+            </td>
+        </tr>
         </tbody>
     </table>
 </div>
@@ -982,11 +1006,45 @@ function smartReanalyze(docId, btn) {
 </div>
 
 <script>
+// Sparten-Labels und Anlage-URL fuer den Filter-Hinweis (aus PHP gespiegelt).
+const CONTRACT_TYPE_LABELS = @json(collect($typeConfig)->map(fn($c) => $c['label']));
+const CONTRACT_CREATE_URL  = @json(route('admin.contract.create', $customer->id));
+
 function filterContracts() {
     const type = document.getElementById('filter-type').value;
-    document.querySelectorAll('.contract-row').forEach(row => {
-        row.style.display = !type || row.dataset.type === type ? '' : 'none';
+    const rows = document.querySelectorAll('.contract-row');
+    let visible = 0;
+    rows.forEach(row => {
+        const show = !type || row.dataset.type === type;
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
     });
+    // Hinweis + Anlage-Button zeigen, wenn nach einer Sparte gefiltert wird,
+    // es Vertraege gibt, aber keinen dieser Sparte.
+    const hint = document.getElementById('contract-type-empty');
+    if (hint) {
+        if (type && rows.length > 0 && visible === 0) {
+            document.getElementById('contract-type-empty-text').textContent =
+                'Keine Verträge der Sparte „' + (CONTRACT_TYPE_LABELS[type] || type) + '".';
+            document.getElementById('contract-type-empty-add').href =
+                CONTRACT_CREATE_URL + '?type=' + encodeURIComponent(type);
+            hint.style.display = '';
+        } else {
+            hint.style.display = 'none';
+        }
+    }
+}
+
+// Klick auf ein Struktur-Symbol: zur Vertraege-Registerkarte wechseln,
+// auf die Sparte filtern und zur Liste scrollen.
+function openContractType(key) {
+    const tabBtn = document.querySelector('.cust-tab[data-tab="tab-vertraege"]');
+    if (tabBtn) showCustTab('tab-vertraege', tabBtn);
+    const sel = document.getElementById('filter-type');
+    if (sel) sel.value = key;
+    filterContracts();
+    const table = document.getElementById('contracts-table');
+    if (table) table.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 </script>
 

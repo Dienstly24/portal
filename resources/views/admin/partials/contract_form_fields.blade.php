@@ -10,7 +10,7 @@
     $en  = $c?->energyDetail;
     $net = $c?->internetDetail;
     $val = fn($field, $default = '') => old($field, $default);
-    $curType   = old('type', $c->type ?? '');
+    $curType   = old('type', $c->type ?? request('type', ''));
     $curStatus = old('status', $c->status ?? 'active');
     $curSub    = old('subtype', $c->subtype ?? '');
 @endphp
