@@ -138,6 +138,23 @@ class EmployeeController extends Controller
         // erhalten (sender wird geleert, Views zeigen "Dienstly24 Team") -
         // vorher loeschte der DB-Cascade die komplette Historie mit.
         \App\Models\TicketMessage::where('sender_id', $employee->id)->update(['sender_id' => null]);
+
+        // Betriebs-/Audit-Historie erhalten (Audit DB-4): Autor-/Zustaendig-
+        // Referenzen leeren, bevor der User geloescht wird. Wirkt auf jedem
+        // Treiber (auch SQLite, wo die FK weiterhin CASCADE ist).
+        foreach ([
+            [\App\Models\Task::class, ['assigned_to', 'created_by']],
+            [\App\Models\Appointment::class, ['assigned_to']],
+            [\App\Models\Announcement::class, ['created_by']],
+            [\App\Models\CustomerNote::class, ['created_by']],
+            [\App\Models\EmailCampaign::class, ['created_by']],
+            [\App\Models\EmailLog::class, ['user_id']],
+        ] as [$model, $cols]) {
+            foreach ($cols as $col) {
+                $model::where($col, $employee->id)->update([$col => null]);
+            }
+        }
+
         $employee->delete();
 
         ActivityLog::create([

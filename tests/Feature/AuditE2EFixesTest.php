@@ -132,4 +132,34 @@ class AuditE2EFixesTest extends TestCase
         $this->actingAs($this->admin())->get(route('admin.export'))->assertOk();
         $this->assertDatabaseHas('activity_logs', ['action' => 'customers_exported']);
     }
+
+    // DB-2: Die Klartext-PII-Spalten auf customer_family sind entfernt.
+    public function test_plaintext_family_number_columns_removed(): void
+    {
+        $this->assertFalse(\Illuminate\Support\Facades\Schema::hasColumn('customer_family', 'krankenversicherung_nr'));
+        $this->assertFalse(\Illuminate\Support\Facades\Schema::hasColumn('customer_family', 'steuer_nr'));
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumn('customer_family', 'tax_id'));
+    }
+
+    // DB-4: Loeschen eines Mitarbeiters vernichtet keine Aufgaben-Historie.
+    public function test_deleting_employee_preserves_task_history(): void
+    {
+        $admin = $this->admin();
+        $employee = User::factory()->create(['role' => 'employee']);
+
+        $task = \App\Models\Task::create([
+            'assigned_to' => $employee->id,
+            'created_by' => $employee->id,
+            'title' => 'Rueckruf Kunde',
+            'type' => 'call',
+            'status' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $this->actingAs($admin)->delete(route('admin.employees.destroy', $employee->id))->assertRedirect();
+
+        // Aufgabe bleibt erhalten, nur die User-Referenzen sind geleert.
+        $this->assertDatabaseHas('tasks', ['id' => $task->id, 'assigned_to' => null, 'created_by' => null]);
+        $this->assertDatabaseMissing('users', ['id' => $employee->id]);
+    }
 }

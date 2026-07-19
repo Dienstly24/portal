@@ -709,7 +709,9 @@ class AdminController extends Controller
                     'health_insurance_number' => ($request->family_kv_nr[$i] ?? null) ?: null,
                     'health_insurance_status' => ($request->family_kv_status[$i] ?? null) ?: null,
                     'health_insurance_start' => ($request->family_kv_start[$i] ?? null) ?: null,
-                    'steuer_nr' => ($request->family_steuer[$i] ?? null) ?: null,
+                    // In das VERSCHLUESSELTE Feld schreiben, nicht mehr in die
+                    // Klartext-Spalte steuer_nr (Audit DB-2 / DSGVO).
+                    'tax_id' => ($request->family_steuer[$i] ?? null) ?: null,
                 ]);
             }
         }

@@ -16,6 +16,9 @@ use App\Services\Workflow\EmailWorkflowService;
  */
 class MailboxSyncService
 {
+    /** Max. Mails pro Sync-Lauf und Postfach (muss zum Provider-Default passen). */
+    private const FETCH_LIMIT = 50;
+
     public function __construct(
         private readonly MailboxProviderFactory $providerFactory,
         private readonly EmailWorkflowService $workflow,
@@ -36,13 +39,14 @@ class MailboxSyncService
     public function syncAccount(EmailAccount $account): int
     {
         try {
-            $messages = $this->providerFactory->make($account)->fetchNewMessages($account);
+            $messages = $this->providerFactory->make($account)->fetchNewMessages($account, self::FETCH_LIMIT);
         } catch (\Throwable $e) {
             $account->update(['last_error' => $e->getMessage()]);
             return 0;
         }
 
         $stored = 0;
+        $maxReceived = null; // hoechstes tatsaechlich verarbeitetes Empfangsdatum
         foreach ($messages as $data) {
             // Kundenseitiges Import-Postfach (Variante A): nur Mails mit
             // gueltigem Einwilligungs-Token UND erlaubter Absenderdomain
@@ -70,6 +74,13 @@ class MailboxSyncService
                 ]
             );
 
+            // Empfangsdatum aller GESEHENEN (auch bereits bekannten) Mails
+            // beruecksichtigen, damit die Wasserstandsmarke nicht ueber noch
+            // ungeholte Mails hinausspringt (Audit INT-4).
+            if ($data->receivedAt && (!$maxReceived || $data->receivedAt->gt($maxReceived))) {
+                $maxReceived = $data->receivedAt->copy();
+            }
+
             if (!$message->wasRecentlyCreated) {
                 continue; // bereits bekannt (Unique-Constraint email_account_id+message_uid) - kein Duplikat verarbeiten
             }
@@ -93,7 +104,17 @@ class MailboxSyncService
             $this->attachments->createDocuments($message->fresh());
         }
 
-        $account->update(['last_synced_at' => now(), 'last_error' => null]);
+        // Wasserstandsmarke nur bis zum hoechsten TATSAECHLICH verarbeiteten
+        // Empfangsdatum vorruecken statt bedingungslos auf now() (Audit INT-4):
+        // Wurde die Fetch-Grenze erreicht und blieben aeltere Mails ungeholt,
+        // fischt der naechste Lauf sie ueber die -1h-Marge wieder ein, statt sie
+        // dauerhaft zu verlieren. Nur wenn ein voller Batch kam (== Limit) und
+        // damit weitere Mails moeglich sind, halten wir bei $maxReceived; sonst
+        // ist das Postfach geleert und wir duerfen bis now() gehen.
+        $watermark = ($maxReceived && count($messages) >= self::FETCH_LIMIT)
+            ? $maxReceived
+            : now();
+        $account->update(['last_synced_at' => $watermark, 'last_error' => null]);
 
         return $stored;
     }
