@@ -154,11 +154,18 @@ trait ValidatesExtractedFields
     private function validatedHealth(mixed $in): array
     {
         if (!is_array($in)) return [];
+        $company = $this->cleanString($in['health_insurance_company'] ?? null, 120);
         $type = $in['health_insurance_type'] ?? null;
+        $type = in_array($type, ['gesetzlich', 'privat'], true) ? $type : null;
+        // Fehlt der Typ, aber der Kassenname ist eindeutig -> automatisch
+        // ableiten (GKV -> gesetzlich, PKV -> privat). Sonst leer lassen.
+        if ($type === null && $company !== null) {
+            $type = \App\Services\Ai\KrankenkasseType::resolve($company);
+        }
         return array_filter([
-            'health_insurance_company' => $this->cleanString($in['health_insurance_company'] ?? null, 120),
+            'health_insurance_company' => $company,
             'health_insurance_number' => $this->cleanString($in['health_insurance_number'] ?? null, 30),
-            'health_insurance_type' => in_array($type, ['gesetzlich', 'privat'], true) ? $type : null,
+            'health_insurance_type' => $type,
             // Rentenversicherungs-/Sozialversicherungsnummer (aus dem
             // Beitrittsformular). Speicherung in customer.pension_insurance_number.
             'pension_number' => $this->cleanString($in['pension_number'] ?? null, 30),
