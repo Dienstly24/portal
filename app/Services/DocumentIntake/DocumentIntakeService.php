@@ -351,10 +351,23 @@ class DocumentIntakeService
         $type = $ins['sparte']
             ?? ($document->ai_type === 'kfz_vertrag' ? 'kfz' : 'andere');
 
+        // Bei der gesetzlichen Krankenversicherung den Subtyp 'gkv' setzen -
+        // erst damit greift die 12-Monats-Wechsel-Erinnerung (§175 SGB V) im
+        // ContractSwitchReminderService (Bindungsfrist ab Mitgliedsbeginn).
+        $healthType = ($data['gesundheit'] ?? [])['health_insurance_type'] ?? null;
+        $subtype = $type === 'krankenversicherung'
+            ? match ($healthType) {
+                'gesetzlich' => 'gkv',
+                'privat' => 'pkv',
+                default => null,
+            }
+            : null;
+
         $contract = Contract::create([
             'customer_id' => $customer->id,
             'contract_number' => $ins['contract_number'] ?? null,
             'type' => $type,
+            'subtype' => $subtype,
             'insurer' => $ins['insurer'] ?? null,
             'status' => 'active',
             'start_date' => $ins['start_date'] ?? null,
