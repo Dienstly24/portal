@@ -36,6 +36,7 @@ class Document extends Model {
         'energieauftrag'       => ['label' => 'Energie-Auftrag',      'category' => 'contract'],
         'zaehlerfoto'          => ['label' => 'Zaehlerfoto',          'category' => 'other'],
         'sepa_mandat'          => ['label' => 'SEPA-Mandat',          'category' => 'other'],
+        'kontaktdaten'         => ['label' => 'Kontaktdaten',         'category' => 'identity'],
         'schadenmeldung'       => ['label' => 'Schadenmeldung',       'category' => 'claim'],
         'sonstiges'            => ['label' => 'Sonstiges Dokument',   'category' => 'other'],
     ];
