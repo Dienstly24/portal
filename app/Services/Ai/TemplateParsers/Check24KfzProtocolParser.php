@@ -83,9 +83,11 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
             $raw['first_name'] = implode(' ', $parts);
         }
         if ($street !== null) {
-            if (preg_match('/^(.*?)\s+(\d+[a-zA-Z]?)$/', $street, $m)) {
+            // Hausnummer am Ende abspalten - auch mit Leerzeichen vor dem
+            // Zusatzbuchstaben ("Mittelstr. 21 b") oder ohne ("Alleestr. 43").
+            if (preg_match('/^(.*?)\s+(\d+\s*[a-zA-Z]?)$/u', $street, $m)) {
                 $raw['street'] = trim($m[1]);
-                $raw['house_number'] = $m[2];
+                $raw['house_number'] = trim((string) preg_replace('/\s+/', ' ', $m[2]));
             } else {
                 $raw['street'] = $street;
             }
@@ -179,7 +181,17 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
 
     private function phone(string $text): ?string
     {
-        return preg_match('/\b(0\d{9,14})\b/', $text, $m) ? $m[1] : null;
+        // Erste 0-Nummer, die WIE eine deutsche Telefon-/Mobilnummer aussieht -
+        // so wird nicht versehentlich eine lange 0-Vertrags-/Referenznummer als
+        // Telefon uebernommen.
+        if (preg_match_all('/\b(0\d{9,14})\b/', $text, $mm)) {
+            foreach ($mm[1] as $candidate) {
+                if (\App\Support\GermanPhone::isMobile($candidate) || \App\Support\GermanPhone::isLandline($candidate)) {
+                    return $candidate;
+                }
+            }
+        }
+        return null;
     }
 
     /** @return array{0:?string,1:?string} [Name, Strasse] aus dem Kopf-Block. */

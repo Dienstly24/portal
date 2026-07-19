@@ -67,12 +67,19 @@ class CustomerAutoCreationService
                 ', '
             );
 
+            // Eindeutige Mobilnummer gehoert ins Feld "Handy" (mobile), nicht
+            // ins Festnetz-Feld "Telefon" (z.B. die Handynummer aus dem
+            // CHECK24-Beratungsprotokoll).
+            $phone = $data['phone'] ?? null;
+            $isMobile = $phone !== null && \App\Support\GermanPhone::isMobile($phone);
+
             // Nur gesetzte Felder übernehmen – so bleibt der Aufruf aus der
             // E-Mail-/Fonds-Pipeline (nur Basisdaten) unverändert, während der
             // Lexoffice-Import zusätzlich strukturierte Felder mitliefern kann.
             $attributes = array_filter([
                 'birth_date'            => $data['birth_date'] ?? null,
-                'phone'                 => $data['phone'] ?? null,
+                'phone'                 => $isMobile ? null : $phone,
+                'mobile'                => $isMobile ? $phone : null,
                 'email2'                => $data['email2'] ?? null,
                 'gender'                => $data['gender'] ?? null,
                 'address'               => $address !== '' ? $address : null,

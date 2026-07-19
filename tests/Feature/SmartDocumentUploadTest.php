@@ -456,6 +456,35 @@ class SmartDocumentUploadTest extends TestCase
         $this->assertSame('10115', $customer->address_zip);
     }
 
+    public function test_mobile_number_is_applied_to_mobile_field_not_phone(): void
+    {
+        // Eine eindeutige Handynummer (aus dem CHECK24-Protokoll) gehoert ins
+        // Feld "Handy" (mobile), nicht ins Festnetz-Feld "Telefon".
+        Storage::fake('local');
+        Storage::disk('local')->put('documents/eingang/kfz.pdf', '%PDF-1.4');
+        $doc = Document::create([
+            'customer_id' => null,
+            'category' => 'other',
+            'file_name' => 'Protokoll.pdf',
+            'file_path' => 'documents/eingang/kfz.pdf',
+            'disk' => 'local',
+            'ai_status' => 'done',
+            'ai_type' => 'beratungsprotokoll',
+            'ai_extracted' => ['person' => [
+                'first_name' => 'Max', 'last_name' => 'Mobil', 'phone' => '015112345678',
+            ]],
+        ]);
+        $admin = $this->makeAdmin();
+
+        $this->actingAs($admin)->postJson(route('admin.documents.create_customer', $doc->id), [
+            'apply_fields' => ['phone'],
+        ])->assertOk();
+
+        $customer = Customer::findOrFail($doc->fresh()->customer_id);
+        $this->assertSame('015112345678', $customer->mobile);
+        $this->assertNull($customer->phone);
+    }
+
     public function test_create_customer_requires_a_name_when_none_extracted(): void
     {
         // Wurde der Name nicht (sicher) gelesen, darf die Neuanlage nicht
