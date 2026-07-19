@@ -51,7 +51,7 @@
 
 <div class="card" style="max-width:800px;">
     <div class="card-title" style="margin-bottom:20px;">Kontakt & Adresse</div>
-    <div class="field"><label>E-Mail *</label><input type="email" name="email" required value="{{ old('email') }}" placeholder="max@beispiel.de"></div>
+    <div class="field"><label>E-Mail</label><input type="email" name="email" value="{{ old('email') }}" placeholder="max@beispiel.de (optional – leer lassen, wenn nicht bekannt)"></div>
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;">
         <div class="field"><label>Straße</label><input type="text" name="street" value="{{ old('street') }}" placeholder="Musterstraße"></div>
         <div class="field"><label>Hausnummer</label><input type="text" name="street_nr" value="{{ old('street_nr') }}" placeholder="12"></div>

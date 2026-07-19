@@ -140,7 +140,8 @@ class SmartNumberingAndImportTest extends TestCase
         ]))->assertRedirect();
 
         $this->assertSame(1, Customer::count());
-        $this->assertStringContainsString('@dienstly24.internal', Customer::first()->user->email);
+        // Keine Dummy-Adresse mehr: E-Mail bleibt leer (NULL).
+        $this->assertNull(Customer::first()->user->email);
     }
 
     public function test_csv_import_deduplicates_by_matching_not_only_email(): void

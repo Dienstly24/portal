@@ -492,7 +492,9 @@ class AdminController extends Controller
         $request->validate([
             'first_name' => 'required',
             'last_name' => 'required',
-            'email' => 'required|email|unique:users',
+            // E-Mail optional: liegt keine echte Adresse vor, bleibt das Feld
+            // leer (kein Dummy) - der Mitarbeiter traegt sie spaeter nach.
+            'email' => 'nullable|email|unique:users',
             // Passwort ist jetzt optional: ohne Eingabe greift der
             // Startpasswort-Flow (Geburtsdatum TT.MM.JJJJ bzw. Set-Link).
             'password' => 'nullable|min:8',
@@ -505,7 +507,7 @@ class AdminController extends Controller
         $addressColumns = $this->addressColumns($request);
         $user = User::create([
             'name' => $fullName,
-            'email' => $request->email,
+            'email' => $request->email ?: null,
             // Platzhalter - das nutzbare Passwort setzt gleich der
             // PortalAccessService (manuell/Geburtsdatum/Set-Link).
             'password' => bcrypt(\Illuminate\Support\Str::random(40)),
@@ -644,10 +646,11 @@ class AdminController extends Controller
 
         // User-Daten: Name, E-Mail, optional neues Passwort
         $userData = ['name' => trim(($request->first_name ?? '') . ' ' . ($request->last_name ?? '')) ?: ($request->name ?? $user->name)];
+        // E-Mail: eingetragene echte Adresse uebernehmen; ist das Feld leer,
+        // bleibt/wird die E-Mail LEER (NULL) - kein Dummy. So laesst sich auch
+        // eine alte Platzhalter-Adresse durch Leeren sauber entfernen.
         $newEmail = $request->filled('portal_email') ? $request->portal_email : $request->email;
-        if ($newEmail) {
-            $userData['email'] = $newEmail;
-        }
+        $userData['email'] = ($newEmail !== null && $newEmail !== '') ? $newEmail : null;
         if ($request->filled('new_password')) {
             $userData['password'] = bcrypt($request->new_password);
             $userData['portal_password_set_at'] = now();

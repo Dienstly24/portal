@@ -49,9 +49,14 @@ class CustomerAutoCreationService
             $name = trim($data['full_name'] ?? trim(($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? '')));
             $name = $name !== '' ? $name : 'Unbekannter Kunde';
 
+            // Keine Platzhalter-/Dummy-E-Mail mehr: fehlt die echte Adresse,
+            // bleibt das Feld LEER (NULL). Der Mitarbeiter erkennt so, bei
+            // welchem Kunden die E-Mail noch nachzutragen ist; eine erfundene
+            // .internal-Adresse hilft weder ihm noch dem Kunden.
+            $email = $data['email'] ?? null;
             $user = User::create([
                 'name' => $name,
-                'email' => $data['email'] ?? $this->placeholderEmail(),
+                'email' => ($email !== null && $email !== '') ? $email : null,
                 'password' => bcrypt(Str::random(32)),
                 'role' => 'customer',
             ]);
@@ -137,14 +142,4 @@ class CustomerAutoCreationService
         }
     }
 
-    /**
-     * Platzhalter-Adresse für automatisch angelegte Kunden ohne bekannte
-     * E-Mail (z. B. reine Fonds-Finanz-Papierpost). Die .internal-Domain
-     * ist bereits Konvention im System (siehe dienstly_mailable() in
-     * routes/console.php) - keine echten Mails gehen an diese Adresse.
-     */
-    private function placeholderEmail(): string
-    {
-        return 'import-' . Str::uuid() . '@dienstly24.internal';
-    }
 }
