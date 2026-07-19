@@ -381,6 +381,10 @@ class DocumentIntakeService
                 'vollkasko_deductible' => $kfz['vollkasko_deductible'] ?? null,
                 'holder_type' => $kfz['holder_type'] ?? null,
                 'annual_mileage' => $kfz['annual_mileage'] ?? null,
+                // Schadenfreiheitsklassen (z.B. aus der ADAC-Beitragsinformation
+                // oder dem CHECK24-Protokoll).
+                'sf_liability_class' => $kfz['sf_liability_class'] ?? null,
+                'sf_comprehensive_class' => $kfz['sf_comprehensive_class'] ?? null,
             ], fn ($v) => $v !== null));
         }
 
