@@ -107,6 +107,9 @@ trait ValidatesExtractedFields
             // Vorversicherung (bisheriger Versicherer bei einem Wechsel) - reine
             // Anzeige-Info fuer den Mitarbeiter, keine eigene Vertragsspalte.
             'previous_insurer' => $this->cleanString($in['previous_insurer'] ?? null, 120),
+            // Tarif-/Produktbezeichnung (z.B. "Magenta Zuhause L" beim
+            // Internet-Auftrag) - Anzeige-Info.
+            'tariff' => $this->cleanString($in['tariff'] ?? null, 80),
         ], fn ($v) => $v !== null && $v !== '');
     }
 
