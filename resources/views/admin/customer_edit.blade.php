@@ -271,4 +271,5 @@ function showTab(tab) {
 }
 showTab('basis');
 </script>
+@include('admin.partials.phone_hints')
 @endsection
