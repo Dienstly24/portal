@@ -130,7 +130,7 @@ class SmartDocumentUploadController extends Controller
         // Datenminimierung: Mitarbeiter mit eingeschraenktem Portfolio sehen
         // im Eingang nur ihre eigenen Uploads (extrahierte Daten koennen
         // sensibel sein); Admin/Manager sehen alles.
-        $inbox = Document::inbox()->with('uploader')
+        $inbox = Document::inbox()->with(['uploader', 'duplicateOriginal.customer.user'])
             ->when(!$user->canSeeAllCustomers(), fn ($q) => $q->where('uploaded_by', $user->id))
             ->latest()->get();
 
@@ -277,7 +277,42 @@ class SmartDocumentUploadController extends Controller
         return response()->json([
             'ids' => array_map(fn ($d) => $d->id, $created),
             'ai_enabled' => $this->analyzer->isEnabled(),
+            // Sofortige Rueckmeldung: welche der hochgeladenen Dateien sind
+            // bereits im System vorhanden (identischer Inhalt)?
+            'duplicates' => array_values(array_filter(array_map(
+                fn ($d) => $this->duplicateInfo($d),
+                $created
+            ))),
         ]);
+    }
+
+    /**
+     * Info fuer ein als Duplikat erkanntes Dokument (identischer Inhalts-Hash
+     * zu einem frueher hochgeladenen). Der Kundenname wird nur gezeigt, wenn
+     * der Mitarbeiter den betreffenden Kunden ohnehin sehen darf.
+     *
+     * @return array<string,mixed>|null
+     */
+    private function duplicateInfo(Document $document): ?array
+    {
+        if (!$document->duplicate_of) {
+            return null;
+        }
+        $original = Document::with('customer.user')->find($document->duplicate_of);
+        if ($original === null) {
+            return null;
+        }
+        $customerName = null;
+        if ($original->customer_id && auth()->user()->canAccessCustomer($original->customer_id)) {
+            $customerName = $original->customer?->user?->name ?? $original->customer?->customer_number;
+        }
+
+        return [
+            'file_name' => $document->file_name,
+            'uploaded_at' => $original->created_at->format('d.m.Y'),
+            'customer_name' => $customerName,
+            'in_inbox' => $original->customer_id === null,
+        ];
     }
 
     /** Analyse-Status fuer CRM-Ansichten (Eingang, Kundenakte). */
