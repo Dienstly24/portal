@@ -22,6 +22,7 @@ class Document extends Model {
         'versicherungspolice'  => ['label' => 'Versicherungspolice',  'category' => 'police'],
         'beratungsprotokoll'   => ['label' => 'Beratungsprotokoll',   'category' => 'contract'],
         'beitrittserklaerung'  => ['label' => 'Beitrittserklaerung (Kranken)', 'category' => 'contract'],
+        'familienversicherung' => ['label' => 'Familienversicherung (Kranken)', 'category' => 'contract'],
         'fahrzeugschein'       => ['label' => 'Fahrzeugschein',       'category' => 'other'],
         'fahrzeugbrief'        => ['label' => 'Fahrzeugbrief',        'category' => 'other'],
         'gesundheitskarte'     => ['label' => 'Gesundheitskarte',     'category' => 'identity'],
