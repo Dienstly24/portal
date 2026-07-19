@@ -44,7 +44,15 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
             'confidence' => 75,
             'summary' => 'CHECK24-Beratungsprotokoll Kfz - Felder gratis aus der Textebene gelesen (ohne KI).'
                 . (isset($versicherung['previous_insurer']) ? ' Vorversicherung: ' . $versicherung['previous_insurer'] . '.' : '')
-                . (isset($kfz['sf_liability_class']) ? ' SF-Klasse Haftpflicht: SF ' . $kfz['sf_liability_class'] . '.' : '')
+                . (isset($kfz['sf_liability_class'])
+                    ? ' SF-Klasse Haftpflicht: SF ' . $kfz['sf_liability_class']
+                        . (($kfz['sf_liability_type'] ?? null) === 'sondereinstufung'
+                            ? ' (Sondereinstufung, nicht uebertragbar'
+                                . (isset($kfz['sf_liability_real_class']) ? '; echte Klasse SF ' . $kfz['sf_liability_real_class'] : '')
+                                . ')'
+                            : '')
+                        . '.'
+                    : '')
                 . (isset($versicherung['end_date']) ? ' Ablauf der Versicherung: ' . $this->displayDate($versicherung['end_date']) . '.' : ''),
             'title' => 'Beratungsprotokoll Kfz'
                 . (isset($versicherung['insurer']) ? ' ' . $versicherung['insurer'] : ''),
@@ -130,12 +138,27 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
                 $raw['teilkasko_deductible'] = $deductible;
             }
         }
-        // Tatsaechliche SF-Klasse Haftpflicht (die reale Einstufung; die
-        // "Angegebene" ist oft "keine"). Steht im Spaltenlayout OHNE Doppel-
-        // punkt, daher direkt per Regex. Der Betrieb musste sie bisher
-        // manuell nachtragen.
-        if (preg_match('/Tats[äa]chliche SF-Klasse Haftpflicht\s+SF\s*(\d{1,2}(?:\/\d)?|[MS])/ui', $text, $m)) {
+        // SF-Einstufung Haftpflicht (Spaltenlayout ohne Doppelpunkt):
+        //   Angegebene SF-Klasse Haftpflicht     SF 4        (oder "keine")
+        //   Tatsächliche SF-Klasse Haftpflicht   SF 5 (Sondereinstufung)
+        // Die "Tatsaechliche" ist die Einstufung beim NEUEN Versicherer. Steht
+        // dahinter "(...Sondereinstufung)", ist sie NICHT uebertragbar - dann
+        // ist die "Angegebene" die echte, uebertragbare Klasse des Kunden
+        // (sf_liability_real_class). Der Betrieb musste das bisher von Hand
+        // auseinanderhalten.
+        if (preg_match('/Tats[äa]chliche SF-Klasse Haftpflicht\s+SF\s*(\d{1,2}(?:\/\d)?|[MS])\s*(\(([^)\r\n]*)\))?/ui', $text, $m)) {
             $raw['sf_liability_class'] = strtoupper($m[1]);
+            $zusatz = $m[3] ?? '';
+            if (stripos($zusatz, 'Sondereinstufung') !== false) {
+                $raw['sf_liability_type'] = 'sondereinstufung';
+                $raw['sf_liability_special_reason'] = $this->sfSpecialReason($zusatz);
+                // Die vom Kunden ANGEGEBENE Klasse = seine echte (uebertragbare).
+                if (preg_match('/Angegebene SF-Klasse Haftpflicht\s+SF\s*(\d{1,2}(?:\/\d)?|[MS])/ui', $text, $a)) {
+                    $raw['sf_liability_real_class'] = strtoupper($a[1]);
+                }
+            } else {
+                $raw['sf_liability_type'] = 'tatsaechlich';
+            }
         }
 
         return $this->validatedVehicle($raw);
@@ -175,6 +198,10 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
         if (preg_match('/Vorversicherung:\s*([^\r\n]+)/u', $text, $m)) {
             // Bis zur naechsten Spalte (2+ Leerzeichen) bzw. Zeilenende nehmen.
             $prev = trim((string) (preg_split('/\s{2,}/', trim($m[1]))[0] ?? ''));
+            // Manche Layouts trennen die naechste Spalte nur mit EINEM
+            // Leerzeichen ("Verti Versicherung AG Zahlweise: jährlich") -
+            // am naechsten "Label:" abschneiden.
+            $prev = trim((string) preg_replace('/\s+\p{Lu}[\p{L}]*:.*$/u', '', $prev));
             if (preg_match('/\p{L}{2,}/u', $prev) && stripos($prev, 'keine') === false && mb_strlen($prev) <= 60) {
                 $raw['previous_insurer'] = $prev;
             }
@@ -254,6 +281,27 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
     private function displayDate(string $iso): string
     {
         return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $iso, $m) ? $m[3] . '.' . $m[2] . '.' . $m[1] : $iso;
+    }
+
+    /**
+     * Grund der Sondereinstufung aus dem Klammerzusatz ("Zweitwagen-
+     * Sondereinstufung" -> zweitwagen). Traegt der Zusatz keinen erkennbaren
+     * Grund (nur "Sondereinstufung"), bleibt er leer - der Mitarbeiter waehlt
+     * ihn dann im Vertrag (lieber leer als geraten).
+     */
+    private function sfSpecialReason(string $zusatz): ?string
+    {
+        $z = mb_strtolower($zusatz);
+        return match (true) {
+            str_contains($z, 'zweitwagen') => 'zweitwagen',
+            str_contains($z, 'drittwagen') => 'drittwagen',
+            str_contains($z, 'führerschein') || str_contains($z, 'fuehrerschein') =>
+                str_contains($z, '5') ? 'fuehrerschein_5' : 'fuehrerschein_3',
+            str_contains($z, 'familie') => 'familie',
+            str_contains($z, 'firmen') => 'firmenfahrzeug',
+            str_contains($z, 'sonderaktion') => 'sonderaktion',
+            default => null,
+        };
     }
 
     private function interval(string $german): ?string

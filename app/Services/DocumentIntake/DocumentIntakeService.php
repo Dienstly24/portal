@@ -395,8 +395,13 @@ class DocumentIntakeService
                 'holder_type' => $kfz['holder_type'] ?? null,
                 'annual_mileage' => $kfz['annual_mileage'] ?? null,
                 // Schadenfreiheitsklassen (z.B. aus der ADAC-Beitragsinformation
-                // oder dem CHECK24-Protokoll).
+                // oder dem CHECK24-Protokoll) - inkl. Sondereinstufung: die
+                // gewaehrte Klasse ist dann NICHT uebertragbar, die echte
+                // (uebertragbare) Klasse steht in sf_liability_real_class.
                 'sf_liability_class' => $kfz['sf_liability_class'] ?? null,
+                'sf_liability_type' => $kfz['sf_liability_type'] ?? null,
+                'sf_liability_special_reason' => $kfz['sf_liability_special_reason'] ?? null,
+                'sf_liability_real_class' => $kfz['sf_liability_real_class'] ?? null,
                 'sf_comprehensive_class' => $kfz['sf_comprehensive_class'] ?? null,
             ], fn ($v) => $v !== null));
         }

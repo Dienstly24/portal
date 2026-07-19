@@ -95,13 +95,54 @@ class Check24KfzProtocolParserTest extends TestCase
 
     public function test_reads_tatsaechliche_sf_klasse_haftpflicht(): void
     {
-        // Die tatsaechliche SF-Klasse (Spaltenlayout ohne Doppelpunkt) soll ins
-        // Fahrzeug uebernommen werden - bisher manuell nachgetragen.
+        // Zweitwagen-Sondereinstufung: Klasse + Typ + Grund; "Angegebene:
+        // keine" -> keine echte (uebertragbare) Klasse.
         $text = $this->protocolText() . "\n"
             . "Angegebene SF-Klasse Haftpflicht            keine\n"
             . "Tatsächliche SF-Klasse Haftpflicht          SF 2 (Zweitwagen-Sondereinstufung)";
         $k = (new Check24KfzProtocolParser())->parse($text)['data']['kfz'];
         $this->assertSame('2', $k['sf_liability_class']);
+        $this->assertSame('sondereinstufung', $k['sf_liability_type']);
+        $this->assertSame('zweitwagen', $k['sf_liability_special_reason']);
+        $this->assertArrayNotHasKey('sf_liability_real_class', $k);
+    }
+
+    public function test_sondereinstufung_keeps_real_class_from_angegebene(): void
+    {
+        // Betreiber-Fall: der Kunde hat ECHT SF 4 (angegeben), der neue
+        // Versicherer gewaehrt SF 5 als Sondereinstufung (nicht uebertragbar).
+        // Beides muss getrennt landen - bisher manuell auseinanderzuhalten.
+        $text = $this->protocolText() . "\n"
+            . "Angegebene SF-Klasse Haftpflicht            SF 4\n"
+            . "Tatsächliche SF-Klasse Haftpflicht          SF 5 (Sondereinstufung)";
+        $r = (new Check24KfzProtocolParser())->parse($text);
+        $k = $r['data']['kfz'];
+
+        $this->assertSame('5', $k['sf_liability_class']);
+        $this->assertSame('sondereinstufung', $k['sf_liability_type']);
+        $this->assertSame('4', $k['sf_liability_real_class']);
+        $this->assertArrayNotHasKey('sf_liability_special_reason', $k); // Grund unbekannt -> leer
+        $this->assertStringContainsString('SF 5 (Sondereinstufung, nicht uebertragbar; echte Klasse SF 4)', $r['summary']);
+    }
+
+    public function test_sf_without_sondereinstufung_is_tatsaechlich(): void
+    {
+        $text = $this->protocolText() . "\n"
+            . "Angegebene SF-Klasse Haftpflicht            SF 6\n"
+            . "Tatsächliche SF-Klasse Haftpflicht          SF 6";
+        $k = (new Check24KfzProtocolParser())->parse($text)['data']['kfz'];
+        $this->assertSame('6', $k['sf_liability_class']);
+        $this->assertSame('tatsaechlich', $k['sf_liability_type']);
+        $this->assertArrayNotHasKey('sf_liability_real_class', $k);
+    }
+
+    public function test_vorversicherung_is_cut_at_next_single_space_label(): void
+    {
+        // Manche Layouts trennen die naechste Spalte nur mit EINEM Leerzeichen.
+        $text = $this->protocolText() . "\n"
+            . "nehmer und 1 weitere Fahrer)            Vorversicherung: Verti Versicherung AG Zahlweise: jährlich";
+        $v = (new Check24KfzProtocolParser())->parse($text)['data']['versicherung'];
+        $this->assertSame('Verti Versicherung AG', $v['previous_insurer']);
     }
 
     public function test_reads_vorversicherung_and_ablauf_der_versicherung(): void
