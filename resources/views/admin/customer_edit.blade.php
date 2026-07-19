@@ -87,10 +87,18 @@
     <div class="card-title" style="margin-bottom:20px;">E-Mail & Telefon</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div class="field">
-            <label>E-Mail (Haupt) *</label>
-            <input type="email" name="email" required value="{{ $customer->user?->email }}"
+            <label>E-Mail (Haupt)</label>
+            {{-- Platzhalter-/leere Adressen werden als LEER angezeigt, damit der
+                 Mitarbeiter sieht, dass die echte E-Mail noch fehlt. --}}
+            <input type="email" name="email" value="{{ $customer->user?->hasRealEmail() ? $customer->user->email : '' }}"
                 placeholder="hauptemail@beispiel.de">
-            <div style="font-size:11px;color:var(--ink-soft);margin-top:4px;">⚠ Login-E-Mail — Änderung betrifft den Portal-Zugang</div>
+            @if(!$customer->user?->hasRealEmail())
+                <div style="font-size:12px;color:#8A5A00;background:#FEF6E7;border:1px solid #E4A11B;border-radius:7px;padding:6px 9px;margin-top:5px;">
+                    ⚠ E-Mail fehlt – bitte die echte Adresse eintragen (aktiviert den Portal-Zugang).
+                </div>
+            @else
+                <div style="font-size:11px;color:var(--ink-soft);margin-top:4px;">⚠ Login-E-Mail — Änderung betrifft den Portal-Zugang</div>
+            @endif
         </div>
         <div class="field"><label>E-Mail 2 (Alternativ)</label><input type="email" name="email2" value="{{ $customer->email2 }}" placeholder="alternativ@beispiel.de"></div>
     </div>

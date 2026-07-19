@@ -41,14 +41,17 @@ class CustomerAutoCreationServiceTest extends TestCase
         $this->service()->createFromUnmatched(['full_name' => 'X'], 'made_up_source');
     }
 
-    public function test_generates_placeholder_email_when_none_known(): void
+    public function test_leaves_email_empty_when_none_known(): void
     {
+        // Keine Dummy-/Platzhalter-Adresse mehr: fehlt die echte E-Mail, bleibt
+        // das Feld leer (NULL), damit der Mitarbeiter sie nachtragen kann.
         $customer = $this->service()->createFromUnmatched([
             'full_name' => 'Ohne Email',
             'birth_date' => '1960-01-01',
         ], 'fonds_finanz');
 
-        $this->assertStringEndsWith('@dienstly24.internal', $customer->user->email);
+        $this->assertNull($customer->user->email);
+        $this->assertFalse($customer->user->hasRealEmail());
     }
 
     public function test_refuses_to_create_duplicate_when_strong_match_exists(): void
