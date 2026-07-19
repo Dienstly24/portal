@@ -115,6 +115,10 @@ class AuditE2EFixesTest extends TestCase
         $this->assertNotNull($csp);
         $this->assertStringContainsString("frame-ancestors 'self'", $csp);
         $this->assertStringContainsString("object-src 'none'", $csp);
+        // Alpine.js (x-data/x-show/@click) wertet Direktiven per Function() aus
+        // und braucht daher 'unsafe-eval' - sonst brechen alle Dropdowns/Menues
+        // (Regression-Guard).
+        $this->assertStringContainsString("'unsafe-eval'", $csp);
     }
 
     // INT-8: Fehlgeschlagener Login landet im Audit-Trail (ohne Passwort).

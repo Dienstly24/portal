@@ -43,7 +43,11 @@ class SecurityHeaders
                     "img-src 'self' data: https:",
                     "font-src 'self' data: https://fonts.bunny.net",
                     "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
-                    "script-src 'self' 'unsafe-inline'",
+                    // 'unsafe-eval' ist noetig, weil Alpine.js v3 (Standard-Build)
+                    // seine Direktiven (x-data/x-show/@click) per Function()
+                    // auswertet. Ohne dies bricht Alpine still und Dropdowns/Menues
+                    // (z. B. das ...-Aktionsmenue der Kundenliste) bleiben offen.
+                    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
                     "connect-src 'self'",
                 ]));
             }
