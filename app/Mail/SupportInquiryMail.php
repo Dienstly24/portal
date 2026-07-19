@@ -3,6 +3,7 @@ namespace App\Mail;
 
 use App\Models\Ticket;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
@@ -15,7 +16,7 @@ use Illuminate\Queue\SerializesModels;
  * damit der Support direkt antworten kann. Inhalt: Kundenname,
  * Kundennummer (falls zuordenbar), E-Mail, Betreff, Datum/Uhrzeit.
  */
-class SupportInquiryMail extends Mailable
+class SupportInquiryMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 

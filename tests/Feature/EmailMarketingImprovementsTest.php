@@ -182,7 +182,7 @@ class EmailMarketingImprovementsTest extends TestCase
         $sent = app(ContractSwitchReminderService::class)->run();
 
         $this->assertEquals(1, $sent);
-        Mail::assertSent(ContractSwitchMail::class, fn($m) => $m->stage === 'first');
+        Mail::assertQueued(ContractSwitchMail::class, fn($m) => $m->stage === 'first');
         $this->assertDatabaseHas('contract_switch_reminders', ['contract_id' => $contract->id, 'stage' => 'first']);
         $this->assertDatabaseHas('email_logs', ['type' => 'contract_switch', 'status' => 'sent']);
 
@@ -210,7 +210,7 @@ class EmailMarketingImprovementsTest extends TestCase
 
         ContractSwitchReminder::query()->update(['sent_at' => now()->subDays(15)]);
         $this->assertEquals(1, app(ContractSwitchReminderService::class)->run());
-        Mail::assertSent(ContractSwitchMail::class, fn($m) => $m->stage === 'followup');
+        Mail::assertQueued(ContractSwitchMail::class, fn($m) => $m->stage === 'followup');
         $this->assertEquals(2, $contract->switchReminders()->count());
     }
 
@@ -283,7 +283,7 @@ class EmailMarketingImprovementsTest extends TestCase
 
         $this->actingAs($this->admin)->post(route('admin.email_marketing.reminders'))
             ->assertSessionHas('success', '1 Wechsel-Erinnerungen gesendet.');
-        Mail::assertSent(ContractSwitchMail::class, 1);
+        Mail::assertQueued(ContractSwitchMail::class, 1);
 
         // Button direkt nochmal: kein Doppelversand
         $this->actingAs($this->admin)->post(route('admin.email_marketing.reminders'))

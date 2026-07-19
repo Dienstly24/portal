@@ -128,16 +128,23 @@ class DuplicateDetectionService
     public function countCached(?array $visibleIds = null, int $ttlSeconds = 300): int
     {
         $scope = $visibleIds === null ? 'all' : md5(implode(',', $visibleIds));
+        $version = (int) Cache::get('duplicate_candidates_count_version', 0);
 
-        return (int) Cache::remember("duplicate_candidates_count_{$scope}", $ttlSeconds, function () use ($visibleIds) {
+        return (int) Cache::remember("duplicate_candidates_count_v{$version}_{$scope}", $ttlSeconds, function () use ($visibleIds) {
             return count($this->scan($visibleIds)['pairs']);
         });
     }
 
-    /** Cache der Trefferzahl invalidieren (nach einer Zusammenfuehrung). */
+    /**
+     * Cache der Trefferzahl invalidieren (nach einer Zusammenfuehrung).
+     * Statt Cache::flush() (loeschte den GESAMTEN App-Cache - Audit PERF-7)
+     * wird eine Versionsnummer erhoeht: alle scoped Count-Keys werden dadurch
+     * ungueltig, ohne fremde Cache-Eintraege zu beruehren.
+     */
     public function forgetCount(): void
     {
-        Cache::flush();
+        $current = (int) Cache::get('duplicate_candidates_count_version', 0);
+        Cache::forever('duplicate_candidates_count_version', $current + 1);
     }
 
     /** Oeffentlicher Zugriff auf die uebereinstimmenden Merkmale eines Paares. */

@@ -212,7 +212,7 @@ class TicketSystemTest extends TestCase
         $this->assertNotNull($ticket->first_response_at);
         $this->assertSame('resolved', $ticket->status);
         $this->assertNotNull($ticket->resolved_at);
-        Mail::assertSent(TicketReplyMail::class);
+        Mail::assertQueued(TicketReplyMail::class);
         $this->assertSame(1, TicketEvent::where('ticket_id', $ticket->id)->where('event', 'staff_reply')->count());
     }
 
@@ -236,7 +236,7 @@ class TicketSystemTest extends TestCase
             'status' => 'waiting',
         ]);
 
-        Mail::assertSent(GuestTicketReplyMail::class, function ($mail) {
+        Mail::assertQueued(GuestTicketReplyMail::class, function ($mail) {
             return $mail->hasTo('gast@example.de')
                 && str_contains($mail->render(), 'Gerne, anbei unser Angebot.');
         });

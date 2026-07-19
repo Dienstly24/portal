@@ -166,7 +166,7 @@ class PortalReviewTest extends TestCase
             'user_id' => $customer->user_id, 'title' => 'Neue Nachricht',
         ]);
 
-        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\TicketReplyMail::class, function ($mail) {
+        \Illuminate\Support\Facades\Mail::assertQueued(\App\Mail\TicketReplyMail::class, function ($mail) {
             $html = $mail->render();
             return str_contains($html, 'Sie haben eine neue Nachricht im Kundenportal')
                 && !str_contains($html, 'GEHEIME-ANTWORT-DETAILS');

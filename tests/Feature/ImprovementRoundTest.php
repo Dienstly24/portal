@@ -158,7 +158,7 @@ class ImprovementRoundTest extends TestCase
             'subject' => 'Stromtarif Frage', 'message' => 'Bitte um Rückruf.',
         ], ['X-Inquiry-Token' => 'secret-token'])->assertOk();
 
-        Mail::assertSent(SupportInquiryMail::class, function ($mail) use ($customer) {
+        Mail::assertQueued(SupportInquiryMail::class, function ($mail) use ($customer) {
             $env = $mail->envelope();
             $html = $mail->render();
             return str_contains($env->subject, 'Erika Müller')

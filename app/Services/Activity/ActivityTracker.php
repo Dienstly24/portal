@@ -143,10 +143,17 @@ class ActivityTracker
 
         WorkSession::where('id', $session->id)->update(['last_seen_at' => $now]);
 
-        $this->writeLog($user, $session, $action, $request, $productive, $points, $credit, [
-            'status' => $status,
-            'failed' => $failed,
-        ]);
+        // Den Navigations-Log-INSERT aus dem kritischen Request-Pfad nehmen
+        // (Audit PERF-1): er wird nach dem Senden der Antwort geschrieben
+        // (terminating). Login/Logout-Logs bleiben synchron. In Tests laeuft
+        // terminate() innerhalb des Request-Zyklus, die Assertions greifen also
+        // weiterhin.
+        app()->terminating(function () use ($user, $session, $action, $request, $productive, $points, $credit, $status, $failed) {
+            $this->writeLog($user, $session, $action, $request, $productive, $points, $credit, [
+                'status' => $status,
+                'failed' => $failed,
+            ]);
+        });
     }
 
     /**

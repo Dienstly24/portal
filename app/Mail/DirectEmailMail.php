@@ -3,6 +3,7 @@ namespace App\Mail;
 
 use App\Models\Customer;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -14,7 +15,7 @@ use Illuminate\Queue\SerializesModels;
  * Controller (Vorlagen + Platzhalter). Anhaenge werden direkt aus dem
  * Upload uebernommen (kein Zwischenspeichern).
  */
-class DirectEmailMail extends Mailable
+class DirectEmailMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 

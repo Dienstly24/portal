@@ -4,6 +4,7 @@ namespace App\Mail;
 use App\Models\CustomerMessage;
 use App\Models\SystemSetting;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -17,7 +18,7 @@ use Illuminate\Support\Facades\URL;
  * - 'full': kompletter Nachrichtentext in der Mail; Anhaenge bleiben
  *   bewusst NUR im Portal (kein unverschluesselter Dokumentversand).
  */
-class CustomerMessageMail extends Mailable
+class CustomerMessageMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
