@@ -144,6 +144,45 @@ class DuplicateDetectionTest extends TestCase
         $this->assertArrayNotHasKey('match', $result['data']);
     }
 
+    public function test_fresh_analysis_rereads_duplicate_instead_of_reusing(): void
+    {
+        // Nach einer Parser-Verbesserung muss "Neu analysieren" die Datei
+        // WIRKLICH neu lesen - nicht das alte Duplikat-Ergebnis kopieren.
+        $content = "%PDF-1.4\nAlt analysiert\n%%EOF";
+        $original = $this->docWithContent($content, [
+            'ai_status' => 'done',
+            'ai_type' => 'sonstiges',
+            'ai_extracted' => [],
+        ]);
+        $duplicate = $this->docWithContent($content, ['ai_status' => 'pending']);
+        $this->assertSame((string) $original->id, (string) $duplicate->duplicate_of);
+
+        $provider = new class implements DocumentAiProviderInterface {
+            public function isEnabled(): bool { return false; }
+            public function model(): string { return 'fake'; }
+            public function analyze(string $binary, string $mime, string $ocrText, bool $preferText = false): ?array { return null; }
+        };
+        // Textebene liefert jetzt ein bekanntes Formular (verbesserter Parser).
+        $text = "Vorlaeufiges Beratungsprotokoll zur Kfz-Versicherung - CHECK24\n"
+            . "HSN/TSN: 1234/ABC\nHalter: Versicherungsnehmer\nVersicherungsbeginn: 01.08.2026\n";
+        $analyzer = new DocumentAnalyzer(
+            $provider,
+            $this->fakeOcr(),
+            $this->fakePdfText($text),
+            new RelevantPageSelector(),
+            new Check24KfzProtocolParser(),
+        );
+
+        // Ohne fresh: altes Ergebnis wird wiederverwendet.
+        $reused = $analyzer->analyze($duplicate->fresh());
+        $this->assertSame('sonstiges', $reused['type']);
+
+        // Mit fresh: die Datei wird neu gelesen -> neues Template-Ergebnis.
+        $freshResult = $analyzer->analyze($duplicate->fresh(), forceAi: false, fresh: true);
+        $this->assertSame('beratungsprotokoll', $freshResult['type']);
+        $this->assertSame('template', $freshResult['source']);
+    }
+
     public function test_inbox_shows_duplicate_warning(): void
     {
         $content = "%PDF-1.4\nDoppelt im Eingang\n%%EOF";

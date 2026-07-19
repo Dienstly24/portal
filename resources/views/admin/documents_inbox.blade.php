@@ -806,12 +806,17 @@ window.docReview = (function() {
         box.style.display = '';
     }
 
-    function reanalyze(docId, btn) {
+    function reanalyze(docId, btn, forceAi) {
         btn.disabled = true;
         fetch(@json(route('admin.documents.reanalyze', ['id' => '__ID__'])).replace('__ID__', docId), {
             method: 'POST',
             credentials: 'same-origin',
-            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': @json(csrf_token()) },
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': @json(csrf_token()),
+            },
+            body: JSON.stringify({ force_ai: forceAi ? 1 : 0 }),
         }).then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })
         .then(function(res) {
             if (res.ok) { window.location.reload(); return; }
