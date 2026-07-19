@@ -266,7 +266,17 @@ class DocumentIntakeService
             match ($key) {
                 'birth_date' => $set('birth_date', $person['birth_date'] ?? null),
                 'birth_place' => $set('birth_place', $person['birth_place'] ?? null),
-                'phone' => $set('phone', $person['phone'] ?? null),
+                // Eindeutige Mobilnummer gehoert ins Feld "Handy", nicht ins
+                // Festnetz-Feld "Telefon" (z.B. die Handynummer aus dem
+                // CHECK24-Beratungsprotokoll).
+                'phone' => (function () use ($set, $person): void {
+                    $phone = $person['phone'] ?? null;
+                    if ($phone !== null && \App\Support\GermanPhone::isMobile($phone)) {
+                        $set('mobile', $phone);
+                    } else {
+                        $set('phone', $phone);
+                    }
+                })(),
                 'nationality' => $set('nationality', $person['nationality'] ?? null),
                 'marital_status' => $set('marital_status', $person['marital_status'] ?? null),
                 'gender' => $set('gender', $person['gender'] ?? null),

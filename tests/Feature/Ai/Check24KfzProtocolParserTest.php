@@ -69,6 +69,30 @@ class Check24KfzProtocolParserTest extends TestCase
         $this->assertSame('monthly', $v['premium_interval']);
     }
 
+    public function test_house_number_with_letter_and_space_is_split(): void
+    {
+        // "Mittelstr. 21 b" (Leerzeichen vor dem Zusatzbuchstaben) wurde bisher
+        // NICHT getrennt - die Nummer blieb in der Strasse, die Hausnummer leer.
+        $text = str_replace('Teststr. 12', 'Mittelstr. 21 b', $this->protocolText());
+        $p = (new Check24KfzProtocolParser())->parse($text)['data']['person'];
+
+        $this->assertSame('Mittelstr.', $p['street']);
+        $this->assertSame('21 b', $p['house_number']);
+    }
+
+    public function test_phone_ignores_non_phone_numbers(): void
+    {
+        // Eine lange 0-Referenznummer VOR der echten Handynummer darf nicht als
+        // Telefon uebernommen werden.
+        $text = str_replace(
+            '  Geboren am 01.02.1990                    12345 Berlin                   015112345678',
+            "  Referenz 0123456789012 (Vorgang)\n  Geboren am 01.02.1990    12345 Berlin    015112345678",
+            $this->protocolText()
+        );
+        $p = (new Check24KfzProtocolParser())->parse($text)['data']['person'];
+        $this->assertSame('015112345678', $p['phone']);
+    }
+
     public function test_haftpflicht_only_has_no_kasko(): void
     {
         $r = (new Check24KfzProtocolParser())->parse($this->protocolText('nur Haftpflicht', '0 €'));

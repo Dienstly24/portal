@@ -304,7 +304,7 @@ window.docReview = (function() {
                 .map(function(v) { return v.trim(); }).filter(Boolean).join(', ');
             return s || null;
         } },
-        { key: 'phone', label: 'Telefon', from: function(x) { return get(x, 'person', 'phone'); } },
+        { key: 'phone', label: 'Telefon / Handy', from: function(x) { return get(x, 'person', 'phone'); } },
         { key: 'nationality', label: 'Staatsangehörigkeit', from: function(x) { return get(x, 'person', 'nationality'); } },
         { key: 'marital_status', label: 'Familienstand', from: function(x) {
             var m = get(x, 'person', 'marital_status');

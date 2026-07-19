@@ -181,7 +181,10 @@ class SmartNumberingAndImportTest extends TestCase
         $this->assertSame('Warthestr. 4 A', $customer->address_street);
         $this->assertSame('47169', $customer->address_zip);
         $this->assertSame('Duisburg', $customer->address_city);
-        $this->assertSame('017634963362', $customer->phone);
+        // Eindeutige Handynummer landet im Feld "Handy" (mobile), nicht im
+        // Festnetz-Feld "Telefon".
+        $this->assertSame('017634963362', $customer->mobile);
+        $this->assertNull($customer->phone);
         $this->assertSame('male', $customer->gender);
     }
 
