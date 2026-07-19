@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Models\InternalNotification;
 use App\Models\Ticket;
 use Illuminate\Console\Command;
 
@@ -33,11 +32,12 @@ class AutoCloseResolvedTickets extends Command
             $ticket->transitionTo('closed', null, 'auto_closed');
             // Portal-Glocke: Kunde weiss, dass der Vorgang abgeschlossen ist
             if ($ticket->customer?->user_id) {
-                InternalNotification::create([
-                    'user_id' => $ticket->customer->user_id,
+                \App\Support\Facades\Notify::push($ticket->customer->user_id, [
+                    'type' => \App\Services\Notifications\NotificationService::TYPE_TICKET,
                     'title' => 'Anfrage geschlossen',
                     'body' => 'Ihre gelöste Anfrage „' . \Illuminate\Support\Str::limit($ticket->subject, 60) . '" wurde nach ' . $days . ' Tagen ohne Rückmeldung automatisch geschlossen.',
                     'link' => route('portal.tickets.show', $ticket->id),
+                    'dedup_key' => 'ticket-autoclosed-' . $ticket->id,
                 ]);
             }
         }

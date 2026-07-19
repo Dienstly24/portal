@@ -497,7 +497,12 @@ function markAllNotifsRead() {
         .then(function(){ loadNotifications(); }).catch(function(){});
 }
 loadNotifications();
-setInterval(loadNotifications, 60000);
+// Naeher an Echtzeit: haeufiger pollen und sofort aktualisieren, sobald
+// der Tab wieder aktiv wird (statt bis zu 60s zu warten).
+setInterval(loadNotifications, 30000);
+document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible') loadNotifications();
+});
 </script>
 <script>
 document.getElementById('am-btn')?.addEventListener('click', function(){ document.getElementById('admin-sidebar').classList.toggle('open'); });

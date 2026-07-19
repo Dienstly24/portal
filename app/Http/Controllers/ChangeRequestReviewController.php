@@ -128,12 +128,13 @@ class ChangeRequestReviewController extends Controller
             return;
         }
         $approved = $action === 'approve';
-        \App\Models\InternalNotification::create([
-            'user_id' => $userId,
+        \App\Support\Facades\Notify::push($userId, [
+            'type' => \App\Services\Notifications\NotificationService::TYPE_CHANGE_REQUEST,
             'title' => 'Änderungsanfrage ' . ($approved ? 'genehmigt' : 'abgelehnt'),
             'body' => 'Ihre Änderung (' . $changeRequest->typeLabel() . ') wurde '
                 . ($approved ? 'genehmigt und übernommen.' : 'abgelehnt.' . ($notes ? ' Grund: ' . \Illuminate\Support\Str::limit($notes, 120) : '')),
             'link' => route('portal.change_requests'),
+            'dedup_key' => 'change-request-decision-' . $changeRequest->id,
         ]);
     }
 }

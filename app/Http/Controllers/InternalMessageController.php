@@ -5,7 +5,6 @@ use App\Events\InternalMessageCreated;
 use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\InternalMessage;
-use App\Models\InternalNotification;
 use App\Models\SystemSetting;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -133,9 +132,10 @@ class InternalMessageController extends Controller
     private function notifyMentioned(InternalMessage $message, $users): void
     {
         foreach ($users as $user) {
-            InternalNotification::create([
-                'user_id' => $user->id,
+            \App\Support\Facades\Notify::push($user->id, [
+                'type' => \App\Services\Notifications\NotificationService::TYPE_MENTION,
                 'message_id' => $message->id,
+                'dedup_key' => 'mention-' . $message->id,
             ]);
 
             // Optionale E-Mail-Benachrichtigung (Einstellung, Standard: aus).

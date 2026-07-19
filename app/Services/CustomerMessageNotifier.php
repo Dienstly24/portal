@@ -3,8 +3,9 @@
 namespace App\Services;
 
 use App\Models\CustomerMessage;
-use App\Models\InternalNotification;
 use App\Models\User;
+use App\Support\Facades\Notify;
+use App\Services\Notifications\NotificationService;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
@@ -27,12 +28,13 @@ class CustomerMessageNotifier
         }
 
         if ($customer->user_id) {
-            InternalNotification::create([
-                'user_id' => $customer->user_id,
+            Notify::push($customer->user_id, [
+                'type' => NotificationService::TYPE_MESSAGE,
                 'title' => '💬 Neue Nachricht',
                 'body' => 'Ihr Berater hat Ihnen eine Nachricht geschickt: „'
                     . Str::limit(trim($message->body), 60) . '"',
                 'link' => route('portal.messages'),
+                'dedup_key' => 'cust-msg-' . $customer->id,
             ]);
         }
 
@@ -60,14 +62,13 @@ class CustomerMessageNotifier
             ->unique()->values();
 
         $link = route('admin.customer', $customer->id) . '#tab-nachrichten';
-        foreach ($recipients as $userId) {
-            InternalNotification::create([
-                'user_id' => $userId,
-                'title' => '💬 Neue Kundennachricht',
-                'body' => $name . ' (Nr. ' . $customer->customer_number . '): „'
-                    . Str::limit(trim($message->body), 60) . '"',
-                'link' => $link,
-            ]);
-        }
+        Notify::pushMany($recipients, [
+            'type' => NotificationService::TYPE_MESSAGE,
+            'title' => '💬 Neue Kundennachricht',
+            'body' => $name . ' (Nr. ' . $customer->customer_number . '): „'
+                . Str::limit(trim($message->body), 60) . '"',
+            'link' => $link,
+            'dedup_key' => 'cust-reply-' . $customer->id,
+        ]);
     }
 }

@@ -6,7 +6,6 @@ use App\Models\Contract;
 use App\Models\ContractVehicleDetail;
 use App\Models\Customer;
 use App\Models\Document;
-use App\Models\InternalNotification;
 use App\Services\Matching\CustomerMatchingService;
 use Illuminate\Support\Facades\Storage;
 
@@ -224,14 +223,13 @@ class DocumentIntakeService
             if ($recipients->isEmpty()) {
                 $recipients = \App\Models\User::whereIn('role', ['admin', 'manager'])->where('is_active', true)->get();
             }
-            foreach ($recipients as $recipient) {
-                InternalNotification::create([
-                    'user_id' => $recipient->id,
-                    'title' => 'Dokument automatisch zugeordnet: ' . ($document->aiTypeLabel() ?? $document->file_name),
-                    'body' => 'Die KI-Analyse hat ein Dokument dem Kunden ' . ($customer->user?->name ?? $customer->customer_number) . ' zugeordnet.',
-                    'link' => route('admin.customer', $customer->id) . '#tab-dokumente',
-                ]);
-            }
+            \App\Support\Facades\Notify::pushMany($recipients->pluck('id'), [
+                'type' => \App\Services\Notifications\NotificationService::TYPE_DOCUMENT,
+                'title' => 'Dokument automatisch zugeordnet: ' . ($document->aiTypeLabel() ?? $document->file_name),
+                'body' => 'Die KI-Analyse hat ein Dokument dem Kunden ' . ($customer->user?->name ?? $customer->customer_number) . ' zugeordnet.',
+                'link' => route('admin.customer', $customer->id) . '#tab-dokumente',
+                'dedup_key' => 'doc-auto-' . $document->id,
+            ]);
         }
 
         return true;

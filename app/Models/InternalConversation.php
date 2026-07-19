@@ -25,6 +25,12 @@ class InternalConversation extends Model
     public function participants() { return $this->hasMany(InternalConversationParticipant::class, 'conversation_id'); }
     public function users() { return $this->belongsToMany(User::class, 'internal_conversation_participants', 'conversation_id', 'user_id')->withPivot('last_read_at'); }
     public function messages() { return $this->hasMany(InternalConversationMessage::class, 'conversation_id'); }
+    /**
+     * Nur die juengste Nachricht - fuer das Notification Center, damit dort
+     * nicht der komplette Nachrichtenverlauf jeder Unterhaltung geladen
+     * werden muss (Behebung eines N+1-/Speicher-Problems).
+     */
+    public function latestMessage() { return $this->hasOne(InternalConversationMessage::class, 'conversation_id')->latestOfMany(); }
 
     public function hasParticipant(int $userId): bool {
         return $this->participants()->where('user_id', $userId)->exists();

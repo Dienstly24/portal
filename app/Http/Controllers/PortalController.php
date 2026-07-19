@@ -460,14 +460,13 @@ class PortalController extends Controller
         if ($recipients->isEmpty()) {
             $recipients = \App\Models\User::whereIn('role', ['admin', 'manager'])->where('is_active', true)->get();
         }
-        foreach ($recipients as $recipient) {
-            \App\Models\InternalNotification::create([
-                'user_id' => $recipient->id,
-                'title' => 'Dokument hochgeladen: ' . $documentRequest->title,
-                'body' => ($customer->user?->name ?? 'Kunde') . ' hat ein angefordertes Dokument hochgeladen.',
-                'link' => route('admin.document_requests'),
-            ]);
-        }
+        \App\Support\Facades\Notify::pushMany($recipients->pluck('id'), [
+            'type' => \App\Services\Notifications\NotificationService::TYPE_DOCUMENT,
+            'title' => 'Dokument hochgeladen: ' . $documentRequest->title,
+            'body' => ($customer->user?->name ?? 'Kunde') . ' hat ein angefordertes Dokument hochgeladen.',
+            'link' => route('admin.document_requests'),
+            'dedup_key' => 'doc-request-' . $documentRequest->id,
+        ]);
 
         return back()->with('success', 'Vielen Dank! Ihr Dokument wurde übermittelt und wird nun geprüft.');
     }
@@ -511,14 +510,16 @@ class PortalController extends Controller
         ]);
 
         // Benachrichtigung an Staff (Notification Center)
-        foreach (\App\Models\User::whereIn('role', ['admin','manager','support'])->where('is_active', true)->get() as $recipient) {
-            \App\Models\InternalNotification::create([
-                'user_id' => $recipient->id,
+        \App\Support\Facades\Notify::pushMany(
+            \App\Models\User::whereIn('role', ['admin','manager','support'])->where('is_active', true)->pluck('id'),
+            [
+                'type' => \App\Services\Notifications\NotificationService::TYPE_DOCUMENT,
                 'title' => 'Neues Kundendokument',
                 'body' => ($customer->user?->name ?? 'Ein Kunde') . ' hat „' . $doc->file_name . '" hochgeladen.',
                 'link' => route('admin.customer', $customer->id) . '#tab-uebersicht',
-            ]);
-        }
+                'dedup_key' => 'doc-upload-' . $doc->id,
+            ]
+        );
 
         \App\Models\ActivityLog::create([
             'user_id' => auth()->id(),

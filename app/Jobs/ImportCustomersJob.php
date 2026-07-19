@@ -2,7 +2,6 @@
 
 namespace App\Jobs;
 
-use App\Models\InternalNotification;
 use App\Services\Import\CustomerCsvImporter;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -71,11 +70,11 @@ class ImportCustomersJob implements ShouldQueue
                 }
             }
 
-            InternalNotification::create([
-                'user_id' => $this->actorId,
-                'title'   => 'Kunden-Import abgeschlossen',
-                'body'    => mb_substr($body, 0, 480),
-                'link'    => route('admin.import_export'),
+            \App\Support\Facades\Notify::push($this->actorId, [
+                'type'  => \App\Services\Notifications\NotificationService::TYPE_IMPORT,
+                'title' => 'Kunden-Import abgeschlossen',
+                'body'  => $body,
+                'link'  => route('admin.import_export'),
             ]);
         }
     }

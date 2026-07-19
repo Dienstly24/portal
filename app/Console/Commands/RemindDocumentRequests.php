@@ -3,7 +3,6 @@ namespace App\Console\Commands;
 
 use App\Mail\DocumentRequestMail;
 use App\Models\DocumentRequest;
-use App\Models\InternalNotification;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
@@ -67,14 +66,13 @@ class RemindDocumentRequests extends Command
             if ($recipients->isEmpty()) {
                 $recipients = User::whereIn('role', ['admin', 'manager'])->where('is_active', true)->get();
             }
-            foreach ($recipients as $recipient) {
-                InternalNotification::create([
-                    'user_id' => $recipient->id,
-                    'title' => 'Dokumentenanfrage überfällig: ' . $request->title,
-                    'body' => ($request->customer?->user?->name ?? 'Kunde') . ' hat die Frist ' . $request->deadline->format('d.m.Y') . ' überschritten.',
-                    'link' => route('admin.document_requests'),
-                ]);
-            }
+            \App\Support\Facades\Notify::pushMany($recipients->pluck('id'), [
+                'type' => \App\Services\Notifications\NotificationService::TYPE_DOCUMENT,
+                'title' => 'Dokumentenanfrage überfällig: ' . $request->title,
+                'body' => ($request->customer?->user?->name ?? 'Kunde') . ' hat die Frist ' . $request->deadline->format('d.m.Y') . ' überschritten.',
+                'link' => route('admin.document_requests'),
+                'dedup_key' => 'doc-overdue-' . $request->id,
+            ]);
             $request->forceFill(['overdue_notified_at' => now()])->save();
             $count++;
         }

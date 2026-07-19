@@ -75,7 +75,10 @@ class InternalNotificationController extends Controller
             });
 
         // Ungelesene interne Chat-Unterhaltungen (Punkt 7: erscheinen im Center)
-        $unreadConversations = InternalConversationParticipant::with('conversation.messages')
+        // Es wird bewusst nur die JUENGSTE Nachricht je Unterhaltung geladen
+        // (latestMessage), nicht der gesamte Verlauf - sonst waechst der
+        // Speicherbedarf linear mit der Chat-Historie (frueheres N+1-Problem).
+        $unreadConversations = InternalConversationParticipant::with('conversation.latestMessage')
             ->where('user_id', $user->id)
             ->whereHas('conversation', function ($q) {
                 $q->whereColumn('internal_conversations.last_message_at', '>', 'internal_conversation_participants.last_read_at')
@@ -84,7 +87,7 @@ class InternalNotificationController extends Controller
             ->get()
             ->filter(fn($p) => $p->conversation && $p->conversation->last_message_at)
             ->map(function ($p) {
-                $last = $p->conversation->messages->sortByDesc('created_at')->first();
+                $last = $p->conversation->latestMessage;
                 return [
                     'id' => 'conv-' . $p->conversation->id,
                     'icon' => '🗨️',

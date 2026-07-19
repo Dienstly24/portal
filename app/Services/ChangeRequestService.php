@@ -34,13 +34,12 @@ class ChangeRequestService
         ]);
 
         $recipients = \App\Models\User::whereIn('role', ['admin', 'manager', 'support'])
-            ->where('is_active', true)->get();
-        foreach ($recipients as $recipient) {
-            \App\Models\InternalNotification::create([
-                'user_id' => $recipient->id,
-                'change_request_id' => $changeRequest->id,
-            ]);
-        }
+            ->where('is_active', true)->pluck('id');
+        \App\Support\Facades\Notify::pushMany($recipients, [
+            'type' => \App\Services\Notifications\NotificationService::TYPE_CHANGE_REQUEST,
+            'change_request_id' => $changeRequest->id,
+            'dedup_key' => 'change-request-' . $changeRequest->id,
+        ]);
 
         \App\Models\ActivityLog::create([
             'user_id' => $requestedBy ?? auth()->id(),
