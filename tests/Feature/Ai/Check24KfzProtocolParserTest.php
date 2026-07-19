@@ -93,6 +93,17 @@ class Check24KfzProtocolParserTest extends TestCase
         $this->assertSame('015112345678', $p['phone']);
     }
 
+    public function test_reads_tatsaechliche_sf_klasse_haftpflicht(): void
+    {
+        // Die tatsaechliche SF-Klasse (Spaltenlayout ohne Doppelpunkt) soll ins
+        // Fahrzeug uebernommen werden - bisher manuell nachgetragen.
+        $text = $this->protocolText() . "\n"
+            . "Angegebene SF-Klasse Haftpflicht            keine\n"
+            . "Tatsächliche SF-Klasse Haftpflicht          SF 2 (Zweitwagen-Sondereinstufung)";
+        $k = (new Check24KfzProtocolParser())->parse($text)['data']['kfz'];
+        $this->assertSame('2', $k['sf_liability_class']);
+    }
+
     public function test_haftpflicht_only_has_no_kasko(): void
     {
         $r = (new Check24KfzProtocolParser())->parse($this->protocolText('nur Haftpflicht', '0 €'));

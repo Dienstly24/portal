@@ -139,6 +139,10 @@ trait ValidatesExtractedFields
             'manufacturer' => $this->cleanString($in['manufacturer'] ?? null, 60),
             'model' => $this->cleanString($in['model'] ?? null, 80),
             'first_registration' => $this->cleanDate($in['first_registration'] ?? null),
+            // Schadenfreiheitsklasse (Haftpflicht/Vollkasko) - nur wenn sie einer
+            // gueltigen SF-Klasse entspricht (M, S, 0, 1/2, SF 1-50).
+            'sf_liability_class' => $this->cleanSfClass($in['sf_liability_class'] ?? null),
+            'sf_comprehensive_class' => $this->cleanSfClass($in['sf_comprehensive_class'] ?? null),
             // Zusaetzliche, klar abgrenzbare Tarif-/Fahrzeugfakten (z.B. aus
             // dem CHECK24-Beratungsprotokoll). Ungenaue/geschaetzte Angaben
             // fallen durch die harte Validierung heraus.
@@ -221,5 +225,22 @@ trait ValidatesExtractedFields
         if (!is_string($value)) return null;
         $value = trim($value);
         return filter_var($value, FILTER_VALIDATE_EMAIL) ? mb_substr($value, 0, 190) : null;
+    }
+
+    /**
+     * SF-Klasse auf den Schluessel bringen ("SF 2" -> "2", "Klasse M" -> "M")
+     * und gegen die gueltigen Klassen pruefen (M, S, 0, 1/2, 1-50). Alles
+     * andere wird verworfen - lieber leer als eine falsche Einstufung.
+     */
+    private function cleanSfClass(mixed $value): ?string
+    {
+        if (!is_string($value)) return null;
+        $s = trim($value);
+        if ($s === '') return null;
+        if (preg_match('/(?:SF|Klasse)?\s*(\d{1,2}\/\d|\d{1,2}|[MS])\b/i', $s, $m)) {
+            $key = strtoupper($m[1]);
+            return in_array($key, \App\Models\ContractVehicleDetail::sfClassKeys(), true) ? $key : null;
+        }
+        return null;
     }
 }

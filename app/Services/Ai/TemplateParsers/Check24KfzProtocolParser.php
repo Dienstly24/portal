@@ -127,6 +127,13 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
                 $raw['teilkasko_deductible'] = $deductible;
             }
         }
+        // Tatsaechliche SF-Klasse Haftpflicht (die reale Einstufung; die
+        // "Angegebene" ist oft "keine"). Steht im Spaltenlayout OHNE Doppel-
+        // punkt, daher direkt per Regex. Der Betrieb musste sie bisher
+        // manuell nachtragen.
+        if (preg_match('/Tats[äa]chliche SF-Klasse Haftpflicht\s+SF\s*(\d{1,2}(?:\/\d)?|[MS])/ui', $text, $m)) {
+            $raw['sf_liability_class'] = strtoupper($m[1]);
+        }
 
         return $this->validatedVehicle($raw);
     }
