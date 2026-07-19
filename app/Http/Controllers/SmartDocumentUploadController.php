@@ -856,6 +856,15 @@ class SmartDocumentUploadController extends Controller
     /** @param list<string> $imageBinaries */
     private function createScanDocument(array $imageBinaries, string $directory, ?string $customerId, string $visibility, ?string $contractId = null): Document
     {
+        // Fehlt die GD-Erweiterung auf dem Server, laesst sich zwar kein PDF aus
+        // mehreren Bildern bauen - ein EINZELNES Bild kann aber direkt
+        // gespeichert und analysiert werden (OCR/Vision lesen Bilder ohnehin).
+        // So funktioniert der Upload einzelner Foto-/Screenshot-Dateien auch
+        // ohne GD; nur das Buendeln mehrerer Seiten braucht sie weiterhin.
+        if (count($imageBinaries) === 1 && !$this->pdfBuilder->canBuild()) {
+            return $this->createRawImageDocument($imageBinaries[0], $directory, $customerId, $visibility, $contractId);
+        }
+
         $pdfBytes = $this->pdfBuilder->build($imageBinaries);
         $path = $directory . '/' . Str::uuid() . '.pdf';
         Storage::disk('local')->put($path, $pdfBytes);
@@ -867,6 +876,34 @@ class SmartDocumentUploadController extends Controller
             path: $path,
             size: strlen($pdfBytes),
             pageCount: count($imageBinaries),
+            visibility: $visibility,
+        );
+    }
+
+    /**
+     * Speichert ein einzelnes Bild UNVERAENDERT als Dokument (Fallback, wenn
+     * die GD-Erweiterung fehlt und keine Bild->PDF-Konvertierung moeglich ist).
+     * Die Analyse (OCR/Vision) verarbeitet Bilddateien direkt.
+     */
+    private function createRawImageDocument(string $binary, string $directory, ?string $customerId, string $visibility, ?string $contractId): Document
+    {
+        $mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($binary) ?: 'image/jpeg';
+        $ext = match ($mime) {
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            'image/gif' => 'gif',
+            default => 'jpg',
+        };
+        $path = $directory . '/' . Str::uuid() . '.' . $ext;
+        Storage::disk('local')->put($path, $binary);
+
+        return $this->createDocument(
+            customerId: $customerId,
+            contractId: $contractId,
+            fileName: 'Bild ' . now()->format('d.m.Y H.i') . '.' . $ext,
+            path: $path,
+            size: strlen($binary),
+            pageCount: 1,
             visibility: $visibility,
         );
     }
