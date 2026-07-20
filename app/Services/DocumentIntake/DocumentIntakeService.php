@@ -445,6 +445,14 @@ class DocumentIntakeService
                 'vollkasko_deductible' => $kfz['vollkasko_deductible'] ?? null,
                 'holder_type' => $kfz['holder_type'] ?? null,
                 'annual_mileage' => $kfz['annual_mileage'] ?? null,
+                // Zusatzleistungen (z.B. Werkstattbindung/Schutzbrief) aus dem
+                // Beratungsprotokoll - Schluessel bereits gegen den Katalog
+                // validiert (ValidatesExtractedFields::validatedVehicle).
+                'extras' => !empty($kfz['extras']) ? $kfz['extras'] : null,
+                // Vorversicherung (bisheriger Kfz-Versicherer beim Wechsel).
+                'previous_insurer' => $ins['previous_insurer'] ?? null,
+                'previous_insurance_since' => $ins['previous_insurance_since'] ?? null,
+                'previous_insurance_terminated_by_insurer' => $ins['previous_insurance_terminated'] ?? null,
                 // Schadenfreiheitsklassen (z.B. aus der ADAC-Beitragsinformation
                 // oder dem CHECK24-Protokoll) - inkl. Sondereinstufung: die
                 // gewaehrte Klasse ist dann NICHT uebertragbar, die echte

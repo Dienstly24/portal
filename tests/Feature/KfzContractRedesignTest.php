@@ -140,6 +140,37 @@ class KfzContractRedesignTest extends TestCase
         $this->assertSame('Haftpflicht · Teilkasko (150 € SB) · Vollkasko (300 € SB)', $veh->coverageLabel());
     }
 
+    // 1b) Vorversicherung (bisheriger Versicherer) wird gespeichert; ein leerer
+    //     Kuendigungs-Radio bedeutet "unbekannt" (null).
+    public function test_vorversicherung_fields_are_stored(): void
+    {
+        $customer = $this->makeCustomer();
+
+        $this->actingAs($this->admin())->post(route('admin.contract.store', $customer->id), $this->base([
+            'vehicle' => $this->fullVehicle([
+                'previous_insurer' => 'Generali',
+                'previous_insurance_since' => 'länger als 3 Jahre',
+                'previous_insurance_terminated_by_insurer' => '0',
+            ]),
+        ]))->assertSessionHasNoErrors();
+
+        $veh = Contract::where('customer_id', $customer->id)->firstOrFail()->vehicleDetail;
+        $this->assertSame('Generali', $veh->previous_insurer);
+        $this->assertSame('länger als 3 Jahre', $veh->previous_insurance_since);
+        $this->assertFalse($veh->previous_insurance_terminated_by_insurer);
+        $this->assertNotNull($veh->previous_insurance_terminated_by_insurer);
+
+        // Leerer Radio ("unbekannt") -> null, kein false.
+        $contract = Contract::where('customer_id', $customer->id)->firstOrFail();
+        $this->actingAs($this->admin())->put(route('admin.contract.update', $contract->id), $this->base([
+            'vehicle' => $this->fullVehicle([
+                'previous_insurer' => 'Generali',
+                'previous_insurance_terminated_by_insurer' => '',
+            ]),
+        ]))->assertSessionHasNoErrors();
+        $this->assertNull($contract->fresh()->vehicleDetail->previous_insurance_terminated_by_insurer);
+    }
+
     // 2) Vollkasko ohne Teilkasko ist fachlich unmoeglich und wird abgeraeumt.
     public function test_vollkasko_requires_teilkasko(): void
     {

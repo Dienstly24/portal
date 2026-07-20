@@ -156,4 +156,48 @@ class VehicleContractExtractionTest extends TestCase
         $this->assertSame('sondereinstufung', $veh->sf_liability_type);
         $this->assertSame('4', $veh->sf_liability_real_class);
     }
+
+    public function test_contract_creation_persists_extras_and_vorversicherung(): void
+    {
+        // Zusatzleistungen (Werkstattbindung) und die Vorversicherung
+        // (Generali, seit >3 Jahre, keine Kuendigung) landen im Fahrzeug.
+        $customer = $this->customer();
+        $doc = Document::create([
+            'customer_id' => null,
+            'category' => 'contract',
+            'file_name' => 'protokoll.pdf',
+            'file_path' => 'documents/eingang/protokoll3.pdf',
+            'disk' => 'local',
+            'ai_status' => 'done',
+            'ai_type' => 'beratungsprotokoll',
+            'ai_extracted' => [
+                'versicherung' => [
+                    'insurer' => 'DA Direkt', 'sparte' => 'kfz', 'start_date' => '2026-02-04',
+                    'tariff' => 'Komfort Smart mit Werkstattbindung',
+                    'previous_insurer' => 'Generali',
+                    'previous_insurance_since' => 'länger als 3 Jahre',
+                    'previous_insurance_terminated' => false,
+                ],
+                'kfz' => [
+                    'has_teilkasko' => true, 'teilkasko_deductible' => 150,
+                    'has_vollkasko' => true, 'vollkasko_deductible' => 500,
+                    'extras' => ['werkstattbindung'],
+                ],
+            ],
+        ]);
+
+        $contract = app(DocumentIntakeService::class)->createContractFromExtraction($doc, $customer, null);
+        $veh = $contract->vehicleDetail;
+
+        $this->assertSame('DA Direkt', $contract->insurer);
+        $this->assertTrue((bool) $veh->has_teilkasko);
+        $this->assertSame(150, (int) $veh->teilkasko_deductible);
+        $this->assertTrue((bool) $veh->has_vollkasko);
+        $this->assertSame(500, (int) $veh->vollkasko_deductible);
+        $this->assertContains('werkstattbindung', $veh->extras);
+        $this->assertSame('Generali', $veh->previous_insurer);
+        $this->assertSame('länger als 3 Jahre', $veh->previous_insurance_since);
+        $this->assertFalse((bool) $veh->previous_insurance_terminated_by_insurer);
+        $this->assertNotNull($veh->previous_insurance_terminated_by_insurer);
+    }
 }
