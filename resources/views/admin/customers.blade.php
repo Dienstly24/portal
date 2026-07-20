@@ -37,7 +37,7 @@ $typeConfig = [
 {{-- Filter- und Sortierleiste (fuer alle Rollen sichtbar; der Betreuer-Filter
      nur fuer admin/manager – Mitarbeiter sehen ohnehin nur ihr Portfolio). --}}
 @php
-    $filterKeys = ['betreuer','email','sparte','portal','ablauf','kontakt'];
+    $filterKeys = ['betreuer','email','sparte','portal','ablauf','kontakt','buchstabe'];
     $hasActiveFilter = collect($filterKeys)->contains(fn($k) => request()->filled($k))
         || (request()->filled('sort') && request('sort') !== 'neueste');
 @endphp
@@ -126,6 +126,23 @@ $typeConfig = [
     @if($customers->total() !== $counts['total'])
     <div style="font-size:12.5px;color:var(--ink-soft);margin-top:10px;">Treffer: <b>{{ $customers->total() }}</b> von {{ $counts['total'] }} Kunden</div>
     @endif
+</div>
+
+{{-- Alphabet-Index: schneller Sprung zu Kunden nach Anfangsbuchstabe des
+     Namens. Erhaelt die aktiven Filter/Sortierung (nur die Seite wird
+     zurueckgesetzt). "XYZ" fasst die seltenen Buchstaben X/Y/Z zusammen. --}}
+@php
+    $letterKeys = array_merge(range('A', 'W'), ['XYZ']);
+    $activeLetter = strtoupper((string) request('buchstabe'));
+    $azBaseParams = request()->except(['buchstabe', 'page']);
+@endphp
+<div class="card az-bar">
+    <a href="{{ route('admin.customers', $azBaseParams) }}"
+       class="az-chip {{ $activeLetter === '' ? 'az-active' : '' }}">Alle</a>
+    @foreach($letterKeys as $letter)
+    <a href="{{ route('admin.customers', array_merge($azBaseParams, ['buchstabe' => $letter])) }}"
+       class="az-chip {{ $activeLetter === $letter ? 'az-active' : '' }}">{{ $letter }}</a>
+    @endforeach
 </div>
 
 @if(in_array(auth()->user()->role, ['admin','manager']))
@@ -309,6 +326,11 @@ function confirmBulkDelete(form) {
 .kf-chip b { background:#EEF0F3; border-radius:999px; padding:1px 8px; font-size:12px; }
 .kf-chip.kf-active { background:#17191d; color:#fff; border-color:#17191d; }
 .kf-chip.kf-active b { background:rgba(255,255,255,.22); color:#fff; }
+.az-bar { display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:12px 14px; margin-bottom:16px; }
+.az-chip { display:inline-flex; align-items:center; justify-content:center; min-width:34px; height:34px; padding:0 9px; border-radius:8px; background:#EEF0F3; color:var(--ink); font-size:13.5px; font-weight:600; text-decoration:none; transition:background .12s; }
+.az-chip:hover { background:#E4E6EA; }
+.az-chip.az-active { background:#17A65B; color:#fff; }
+.az-chip.az-active:hover { background:#128a4b; }
 [x-cloak] { display: none !important; }
 .rowmenu-item { display:block; width:100%; text-align:left; padding:9px 12px; border-radius:7px; font-size:13.5px; color:var(--ink); text-decoration:none; box-sizing:border-box; }
 .rowmenu-item:hover { background:#F4F7F5; }
