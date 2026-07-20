@@ -49,6 +49,71 @@ class KontaktdatenBlockParserTest extends TestCase
         $this->assertNull((new KontaktdatenBlockParser())->parse($long));
     }
 
+    public function test_reads_hyphenated_name_and_two_dates(): void
+    {
+        // Bindestrich-Nachname ("Al-Wattar"), zwei Daten (das ERSTE ist das
+        // Geburtsdatum), und mehrere Felder in einer Zeile (Datum+Strasse,
+        // PLZ+Ort+Telefon).
+        $text = implode("\n", [
+            'Salam Al-Wattar',
+            '27.10.1970&28.08.2023 Seestr. 14',
+            '23879 Mölln 01778664110',
+            'Salamalwattar20@gmail.com',
+            'DE82 2305 2750 0081 4355 63',
+        ]);
+        $p = (new KontaktdatenBlockParser())->parse($text)['data']['person'];
+
+        $this->assertSame('Salam', $p['first_name']);
+        $this->assertSame('Al-Wattar', $p['last_name']);
+        $this->assertSame('1970-10-27', $p['birth_date']); // erstes Datum
+        $this->assertSame('Seestr.', $p['street']);
+        $this->assertSame('14', $p['house_number']);
+        $this->assertSame('23879', $p['zip']);
+        $this->assertSame('Mölln', $p['city']);
+        $this->assertSame('01778664110', $p['phone']);
+    }
+
+    public function test_salutation_becomes_gender_and_three_part_name(): void
+    {
+        // "Herr" ist die Anrede (-> Geschlecht), NICHT der Vorname. Der Name
+        // besteht aus drei Teilen (Vorname + zweiteiliger Nachname). PLZ steht
+        // am Zeilenende, der Ort in der naechsten Zeile. Geburtsdatum 2-stellig.
+        $text = implode("\n", [
+            'Herr Ibrahim Al-Ali Al-Sharaa',
+            '01.01.88 Falkenweg 40 71634',
+            'Ludwigsburg 015560360109',
+            'alalialsharaa.ibrahim@gmail.com',
+            'DE44 1001 0010 0461 1063 8',
+        ]);
+        $p = (new KontaktdatenBlockParser())->parse($text)['data']['person'];
+
+        $this->assertSame('Ibrahim', $p['first_name']);
+        $this->assertSame('Al-Ali Al-Sharaa', $p['last_name']);
+        $this->assertSame('male', $p['gender']);
+        $this->assertSame('1988-01-01', $p['birth_date']);
+        $this->assertSame('Falkenweg', $p['street']);
+        $this->assertSame('40', $p['house_number']);
+        $this->assertSame('71634', $p['zip']);
+        $this->assertSame('Ludwigsburg', $p['city']);
+        $this->assertSame('015560360109', $p['phone']);
+    }
+
+    public function test_frau_salutation_sets_female_gender(): void
+    {
+        $text = implode("\n", [
+            'Frau Layla Al-Hassan 15.03.1992',
+            'Hauptstr. 7',
+            '10115 Berlin',
+            '01701234567',
+            'layla@example.com',
+            'DE89 3704 0044 0532 0130 00',
+        ]);
+        $p = (new KontaktdatenBlockParser())->parse($text)['data']['person'];
+        $this->assertSame('Layla', $p['first_name']);
+        $this->assertSame('Al-Hassan', $p['last_name']);
+        $this->assertSame('female', $p['gender']);
+    }
+
     public function test_requires_email_iban_and_plz(): void
     {
         // Ohne IBAN kein Kontaktblock (zu schwaches Signal).
