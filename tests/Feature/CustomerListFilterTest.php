@@ -120,6 +120,46 @@ class CustomerListFilterTest extends TestCase
         $res2->assertSee('Hat Login')->assertDontSee('Kein Account');
     }
 
+    public function test_buchstabe_filter_matches_first_letter_of_name(): void
+    {
+        $this->customer(['name' => 'Berta Bauer']);
+        $this->customer(['name' => 'Anton Anfang']);
+
+        $res = $this->actingAs($this->admin)->get(route('admin.customers', ['buchstabe' => 'B']));
+        $res->assertOk()->assertSee('Berta Bauer')->assertDontSee('Anton Anfang');
+    }
+
+    public function test_buchstabe_filter_xyz_groups_x_y_and_z(): void
+    {
+        $this->customer(['name' => 'Xaver Xander']);
+        $this->customer(['name' => 'Yvonne Yager']);
+        $this->customer(['name' => 'Zacharias Zed']);
+        $this->customer(['name' => 'Anton Anfang']);
+
+        $res = $this->actingAs($this->admin)->get(route('admin.customers', ['buchstabe' => 'XYZ']));
+        $res->assertOk()
+            ->assertSee('Xaver Xander')
+            ->assertSee('Yvonne Yager')
+            ->assertSee('Zacharias Zed')
+            ->assertDontSee('Anton Anfang');
+    }
+
+    public function test_buchstabe_filter_combines_with_other_filters(): void
+    {
+        $bStrom = $this->customer(['name' => 'Bernd Blitz']);
+        $this->contract($bStrom, ['type' => 'strom']);
+        $bKfz = $this->customer(['name' => 'Bea Auto']);
+        $this->contract($bKfz, ['type' => 'kfz']);
+        $aStrom = $this->customer(['name' => 'Anna Strom']);
+        $this->contract($aStrom, ['type' => 'strom']);
+
+        $res = $this->actingAs($this->admin)->get(route('admin.customers', ['buchstabe' => 'B', 'sparte' => 'strom']));
+        $res->assertOk()
+            ->assertSee('Bernd Blitz')
+            ->assertDontSee('Bea Auto')
+            ->assertDontSee('Anna Strom');
+    }
+
     // ---------- Sortierung ----------
 
     public function test_sort_by_name_orders_alphabetically(): void

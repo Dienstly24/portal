@@ -161,6 +161,22 @@ class AdminController extends Controller
         if ($request->filled('sparte')) {
             $query->whereHas('contracts', fn($q) => $q->where('status', 'active')->where('type', $request->sparte));
         }
+        // Alphabet-Index: Kundenname (users.name) beginnt mit dem gewaehlten
+        // Buchstaben. "XYZ" fasst die seltenen Anfangsbuchstaben X/Y/Z zusammen.
+        // LIKE ist case-insensitiv (Standard-Collation), Umlaute (Ä/Ö/Ü) fallen
+        // ueber die akzent-insensitive Collation auf A/O/U.
+        if ($request->filled('buchstabe')) {
+            $letters = $this->buchstabeToLetters((string) $request->buchstabe);
+            if ($letters !== []) {
+                $query->whereHas('user', function ($u) use ($letters) {
+                    $u->where(function ($w) use ($letters) {
+                        foreach ($letters as $l) {
+                            $w->orWhere('name', 'like', $l . '%');
+                        }
+                    });
+                });
+            }
+        }
         // Portal-Status (spiegelt Customer::portalStatus()).
         if ($request->filled('portal')) {
             $this->applyPortalStatusFilter($query, (string) $request->portal);
@@ -182,6 +198,25 @@ class AdminController extends Controller
                     ->orWhere('last_contact', '<', today()->subDays($days)));
             }
         }
+    }
+
+    /**
+     * Uebersetzt einen Alphabet-Index-Schluessel in die zu treffenden
+     * Anfangsbuchstaben. Einzelbuchstaben A-W bleiben unveraendert, "XYZ"
+     * fasst X/Y/Z zusammen. Unbekannte Werte liefern ein leeres Array
+     * (kein Filter).
+     *
+     * @return array<int,string>
+     */
+    private function buchstabeToLetters(string $key): array {
+        $key = strtoupper(trim($key));
+        if ($key === 'XYZ') {
+            return ['X', 'Y', 'Z'];
+        }
+        if (strlen($key) === 1 && $key >= 'A' && $key <= 'W') {
+            return [$key];
+        }
+        return [];
     }
 
     /**
