@@ -385,6 +385,12 @@ class AdminController extends Controller
             'energy.consumption_kwh' => 'nullable|integer|min:0',
             // Internet
             'internet.speed' => 'nullable|string|max:30',
+            // ---- E-Scooter (schlankes Fahrzeug-Detail, eigener Namensraum) ----
+            'escooter.license_plate' => 'nullable|string|max:20',
+            'escooter.manufacturer' => 'nullable|string|max:255',
+            'escooter.model' => 'nullable|string|max:255',
+            'escooter.vin' => 'nullable|string|max:30',
+            'escooter.has_teilkasko' => 'nullable|boolean',
             // ---- KFZ (Redesign 17.07.2026): alle Kataloge kommen aus dem Model ----
             'vehicle.vehicle_type' => 'nullable|in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::VEHICLE_TYPES)),
             'vehicle.license_plate' => 'nullable|string|max:20',
@@ -453,12 +459,17 @@ class AdminController extends Controller
      * Beim Bearbeiten mit Typwechsel werden verwaiste Detaildaten entfernt.
      */
     private function syncContractDetails(Contract $contract, Request $request): void {
-        if ($contract->type !== 'kfz')      { $contract->vehicleDetail()->delete(); }
+        // KFZ und E-Scooter teilen sich die Fahrzeugtabelle - beide behalten
+        // ihr vehicleDetail (sonst wuerde ein Speichern das automatisch aus dem
+        // Dokument angelegte E-Scooter-Detail loeschen).
+        if (!in_array($contract->type, ['kfz', 'escooter'], true)) { $contract->vehicleDetail()->delete(); }
         if (!$contract->isEnergy())         { $contract->energyDetail()->delete(); }
         if ($contract->type !== 'internet') { $contract->internetDetail()->delete(); }
 
         if ($contract->type === 'kfz') {
             $this->syncVehicleDetail($contract, $request->input('vehicle', []));
+        } elseif ($contract->type === 'escooter') {
+            $this->syncEscooterDetail($contract, $request->input('escooter', []));
         } elseif ($contract->isEnergy()) {
             \App\Models\ContractEnergyDetail::updateOrCreate(
                 ['contract_id' => $contract->id],
@@ -592,6 +603,32 @@ class AdminController extends Controller
         // SF-Verlauf fortschreiben (Teilkasko hat keine SF-Klasse).
         $this->syncSfHistory($detail, 'haftpflicht', $sfLiability['sf_liability_class'], $sfLiability['sf_liability_valid_from']);
         $this->syncSfHistory($detail, 'vollkasko', $sfComprehensive['sf_comprehensive_class'], $sfComprehensive['sf_comprehensive_valid_from']);
+    }
+
+    /**
+     * E-Scooter-Detail speichern: schlanker als KFZ - nur Kennzeichen,
+     * Hersteller/Modell und Fahrgestellnummer sowie die Deckung. E-Scooter
+     * haben nur Haftpflicht oder Teilkasko (nie Vollkasko), keine SF-Klasse,
+     * keine Kilometer und keine Selbstbeteiligungsstufen. Nutzt dieselbe
+     * Fahrzeugtabelle wie KFZ (Fahrzeugtyp = escooter).
+     */
+    private function syncEscooterDetail(Contract $contract, array $v): void {
+        $blank = fn($key) => isset($v[$key]) && $v[$key] !== '' ? $v[$key] : null;
+
+        \App\Models\ContractVehicleDetail::updateOrCreate(
+            ['contract_id' => $contract->id],
+            [
+                'vehicle_type' => 'escooter',
+                'license_plate' => $blank('license_plate') ? mb_strtoupper($v['license_plate']) : null,
+                'manufacturer' => $blank('manufacturer'),
+                'model' => $blank('model'),
+                'vin' => $blank('vin') ? strtoupper($v['vin']) : null,
+                'has_teilkasko' => !empty($v['has_teilkasko']),
+                'teilkasko_deductible' => null,
+                'has_vollkasko' => false,
+                'vollkasko_deductible' => null,
+            ]
+        );
     }
 
     /**

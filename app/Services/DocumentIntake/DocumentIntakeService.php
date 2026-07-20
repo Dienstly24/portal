@@ -361,6 +361,10 @@ class DocumentIntakeService
             }
             : null;
 
+        // E-Scooter: Einmalbeitrag als Standard-Zahlweise (kein laufender
+        // Beitrag). Contract::saving erzwingt zudem den Saison-Ablauf.
+        $defaultInterval = $type === 'escooter' ? 'einmalig' : 'monthly';
+
         $contract = Contract::create([
             'customer_id' => $customer->id,
             'contract_number' => $ins['contract_number'] ?? null,
@@ -371,12 +375,16 @@ class DocumentIntakeService
             'start_date' => $ins['start_date'] ?? null,
             'end_date' => $ins['end_date'] ?? null,
             'premium_amount' => $ins['premium_amount'] ?? null,
-            'premium_interval' => $ins['premium_interval'] ?? 'monthly',
+            'premium_interval' => $ins['premium_interval'] ?? $defaultInterval,
         ]);
 
-        if ($type === 'kfz' && $kfz !== []) {
+        // Fahrzeug-Detaildaten fuer KFZ und E-Scooter (beide nutzen die
+        // Fahrzeugtabelle). Beim E-Scooter wird der Fahrzeugtyp gesetzt, damit
+        // Anzeige und Bearbeitung ihn als E-Scooter erkennen.
+        if (in_array($type, ['kfz', 'escooter'], true) && $kfz !== []) {
             ContractVehicleDetail::create(array_filter([
                 'contract_id' => $contract->id,
+                'vehicle_type' => $type === 'escooter' ? 'escooter' : ($kfz['vehicle_type'] ?? null),
                 'license_plate' => $kfz['license_plate'] ?? null,
                 'vin' => $kfz['vin'] ?? null,
                 'hsn' => $kfz['hsn'] ?? null,

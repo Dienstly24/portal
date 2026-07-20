@@ -30,16 +30,27 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
     <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Kündigungsdatum</span><span style="font-weight:600;font-size:13.5px;">{{ $d($contract->cancellation_date) }}</span></div>
     @if($contract->hasPremium())
     @php $eur = fn($v) => number_format((float) $v, 2, ',', '.') . ' €'; @endphp
-    <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Beitrag') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $eur($contract->premium_amount) }} / {{ __(\App\Models\Contract::PREMIUM_INTERVALS[$contract->premium_interval]['label'] ?? 'Monatlich') }}</span></div>
-    @if($contract->premium_interval !== 'monthly')
+    <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ $contract->isOneTime() ? __('Einmaliger Beitrag') : __('Beitrag') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $eur($contract->premium_amount) }}{{ $contract->isOneTime() ? '' : ' / ' . __(\App\Models\Contract::PREMIUM_INTERVALS[$contract->premium_interval]['label'] ?? 'Monatlich') }}</span></div>
+    @if(!$contract->isOneTime() && $contract->premium_interval !== 'monthly')
     <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Beitrag pro Monat') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $eur($contract->monthlyPremium()) }}</span></div>
     @endif
     @endif
 </div>
 
+@php $v = $contract->vehicleDetail; $rowL = 'color:var(--ink-soft);font-size:13px;'; $rowV = 'font-weight:600;font-size:13.5px;'; @endphp
+
+{{-- Sparte E-Scooter: schlanke Ansicht (Kennzeichen, Fahrzeug, FIN, Deckung) --}}
+@if($v && $contract->type === 'escooter')
+<div class="card">
+    <div class="card-title">🛴 {{ __('Ihr E-Scooter') }}</div>
+    <div class="item-row"><span style="{{ $rowL }}">{{ __('Kennzeichen') }}</span><span style="{{ $rowV }}">{{ $v->license_plate ?? '—' }}</span></div>
+    <div class="item-row"><span style="{{ $rowL }}">{{ __('Hersteller/Modellbezeichnung') }}</span><span style="{{ $rowV }}">{{ trim(($v->manufacturer ?? '') . ' ' . ($v->model ?? '')) ?: '—' }}</span></div>
+    @if($v->vin)<div class="item-row"><span style="{{ $rowL }}">{{ __('Fahrgestellnummer') }}</span><span style="{{ $rowV }}">{{ $v->vin }}</span></div>@endif
+    <div class="item-row"><span style="{{ $rowL }}">{{ __('Tarifname') }}</span><span style="{{ $rowV }}">{{ $v->has_teilkasko ? __('Teilkasko') : __('Haftpflicht') }}</span></div>
+</div>
+
 {{-- Sparte KFZ (Redesign 17.07.2026: Deckung, Zusatzleistungen, Kilometerstand) --}}
-@if($v = $contract->vehicleDetail)
-@php $rowL = 'color:var(--ink-soft);font-size:13px;'; $rowV = 'font-weight:600;font-size:13.5px;'; @endphp
+@elseif($v)
 <div class="card">
     <div class="card-title">{{ $v->vehicleTypeIcon() }} {{ __('Fahrzeugdaten') }}</div>
     <div class="item-row"><span style="{{ $rowL }}">{{ __('Kennzeichen') }}</span><span style="{{ $rowV }}">{{ $v->license_plate ?? '—' }}</span></div>
