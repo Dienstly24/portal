@@ -251,29 +251,36 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/change-requests/{id}/document', [\App\Http\Controllers\ChangeRequestReviewController::class, 'document'])->name('change_requests.document');
     // Smart Document Upload (CRM): Dokumenten-Eingang, Drag&Drop-Analyse, Zuordnung
     Route::get('/dokumenten-eingang', [\App\Http\Controllers\SmartDocumentUploadController::class, 'inbox'])->name('documents.inbox');
+    // Rate-Limits bewusst grosszuegig (10-fach ggue. Ausgangswert): der
+    // Mitarbeiter arbeitet den Dokumenten-Eingang zuegig im Stapel ab (Kunde
+    // anlegen/zuordnen im Sekundentakt). Enge Limits loesten faelschlich
+    // HTTP 429 ("Zu viele Anfragen") aus. Das Throttle bleibt als Missbrauchs-
+    // Bremse erhalten, behindert aber den normalen Stapelbetrieb nicht mehr.
     Route::post('/documents/smart-upload', [\App\Http\Controllers\SmartDocumentUploadController::class, 'adminStore'])
-        ->middleware('throttle:30,10')->name('documents.smart_upload');
+        ->middleware('throttle:300,10')->name('documents.smart_upload');
     Route::get('/documents/customer-search', [\App\Http\Controllers\SmartDocumentUploadController::class, 'customerSearch'])
-        ->middleware('throttle:60,1')->name('documents.customer_search');
+        ->middleware('throttle:600,1')->name('documents.customer_search');
     Route::get('/documents/{id}/analyse-status', [\App\Http\Controllers\SmartDocumentUploadController::class, 'adminStatus'])
-        ->middleware('throttle:240,1')->name('documents.analyse_status');
+        ->middleware('throttle:2400,1')->name('documents.analyse_status');
     Route::post('/documents/{id}/assign', [\App\Http\Controllers\SmartDocumentUploadController::class, 'assign'])
-        ->middleware('throttle:30,10')->name('documents.assign');
+        ->middleware('throttle:300,10')->name('documents.assign');
     Route::post('/documents/{id}/create-customer', [\App\Http\Controllers\SmartDocumentUploadController::class, 'createCustomer'])
-        ->middleware('throttle:30,10')->name('documents.create_customer');
+        ->middleware('throttle:300,10')->name('documents.create_customer');
     // Mehrere Eingangs-Dokumente (Ausweis + Bankkarte + Fuehrerschein +
     // Protokoll) zu EINEM neuen Kunden zusammenfuehren.
     Route::post('/documents/create-customer-batch', [\App\Http\Controllers\SmartDocumentUploadController::class, 'createCustomerFromDocuments'])
-        ->middleware('throttle:30,10')->name('documents.create_customer_batch');
+        ->middleware('throttle:300,10')->name('documents.create_customer_batch');
     // Vorschau fuer eine manuelle Mehrfachauswahl (beliebige Dokumente zu EINEM
     // Kunden buendeln) - dieselbe Zusammenfuehrung wie ein Vorgang.
     Route::post('/documents/batch-preview', [\App\Http\Controllers\SmartDocumentUploadController::class, 'batchPreview'])
-        ->middleware('throttle:120,1')->name('documents.batch_preview');
+        ->middleware('throttle:1200,1')->name('documents.batch_preview');
     // Mehrere Eingangs-Dokumente auf einmal loeschen (Select-All / Bulk-Delete).
+    // Hinweis: Das Throttle begrenzt nur die Request-Frequenz; die feste
+    // DSGVO-Obergrenze von max. 30 Kunden pro Bulk-Aktion bleibt im Controller.
     Route::post('/documents/bulk-delete', [\App\Http\Controllers\SmartDocumentUploadController::class, 'bulkDelete'])
-        ->middleware('throttle:30,10')->name('documents.bulk_delete');
+        ->middleware('throttle:300,10')->name('documents.bulk_delete');
     Route::post('/documents/{id}/reanalyze', [\App\Http\Controllers\SmartDocumentUploadController::class, 'reanalyze'])
-        ->middleware('throttle:30,10')->name('documents.reanalyze');
+        ->middleware('throttle:300,10')->name('documents.reanalyze');
     Route::get('/documents/{id}/download', [AdminController::class, 'documentDownload'])->name('documents.download');
     Route::post('/documents/{id}/replace', [AdminController::class, 'documentReplace'])->name('documents.replace');
     Route::put('/documents/{id}', [AdminController::class, 'documentUpdate'])->name('documents.update');
