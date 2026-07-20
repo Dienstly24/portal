@@ -12,6 +12,7 @@ use App\Services\CustomerCreation\CustomerAutoCreationService;
 use App\Services\CustomerCreation\DuplicateCustomerException;
 use App\Services\DocumentIntake\DocumentIntakeService;
 use App\Services\Pdf\ImagesToPdfService;
+use App\Services\Portal\PortalAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -29,6 +30,7 @@ class SmartDocumentUploadController extends Controller
         private readonly ImagesToPdfService $pdfBuilder,
         private readonly DocumentAnalyzer $analyzer,
         private readonly DocumentIntakeService $intake,
+        private readonly PortalAccessService $portal,
     ) {
     }
 
@@ -370,6 +372,11 @@ class SmartDocumentUploadController extends Controller
             $contract = $this->intake->linkMatchingContract($document, $customer);
         }
 
+        // Sobald durch das Dokument ein Vertrag entstanden/verknuepft ist, den
+        // Kunden automatisch zum Portal einladen (Betreiber-Vorgabe: kein
+        // separater Klick mehr). Schutz gegen Doppelversand steckt in autoInvite.
+        $invited = $contract !== null && $this->portal->autoInvite($customer, auth()->id());
+
         $this->markDecision($document, 'accepted');
 
         return response()->json([
@@ -380,6 +387,7 @@ class SmartDocumentUploadController extends Controller
             'customer_number' => $customer->customer_number,
             'applied_fields' => $applied,
             'contract_id' => $contract?->id,
+            'invited' => $invited,
         ]);
     }
 
@@ -451,6 +459,10 @@ class SmartDocumentUploadController extends Controller
             $contract = $this->intake->createContractFromExtraction($document, $customer, auth()->id());
         }
 
+        // Vertrag aus dem Dokument angelegt -> neuen Kunden automatisch einladen
+        // (nur wenn eine echte E-Mail extrahiert/gesetzt wurde; sonst still).
+        $invited = $contract !== null && $this->portal->autoInvite($customer, auth()->id());
+
         $this->markDecision($document, 'accepted');
 
         return response()->json([
@@ -461,6 +473,7 @@ class SmartDocumentUploadController extends Controller
             'customer_number' => $customer->customer_number,
             'applied_fields' => $applied,
             'contract_id' => $contract?->id,
+            'invited' => $invited,
         ]);
     }
 
@@ -575,6 +588,10 @@ class SmartDocumentUploadController extends Controller
             ? $this->intake->createContractFromExtraction($primary, $customer, auth()->id(), $merged)
             : null;
 
+        // Vertrag aus dem Dokumenten-Buendel angelegt -> Kunden automatisch
+        // einladen (still uebersprungen, wenn keine echte E-Mail vorliegt).
+        $invited = $contract !== null && $this->portal->autoInvite($customer, auth()->id());
+
         // Krankenkassen-Fall einrichten (Familie, Wechseldatum, Verlauf).
         $health = null;
         if ($familyInput !== null) {
@@ -602,6 +619,7 @@ class SmartDocumentUploadController extends Controller
             'customer_number' => $customer->customer_number,
             'applied_fields' => $applied,
             'contract_id' => $contract?->id,
+            'invited' => $invited,
             'documents' => $documents->count(),
             'health' => $health,
         ]);

@@ -75,6 +75,47 @@ class PortalAccessService
         ]);
     }
 
+    /**
+     * Automatische Portal-Einladung nach einem Ereignis (z.B. Vertrag aus
+     * einem hochgeladenen Dokument angelegt/verknuepft). Anders als
+     * sendInvitation() wirft diese Methode NICHT, sondern ueberspringt still,
+     * wenn eine Einladung nicht sinnvoll ist - der ausloesende Vorgang
+     * (Dokument zuordnen, Kunde anlegen) darf daran nie scheitern.
+     *
+     * Es wird NUR eingeladen, wenn:
+     * - eine echte, erreichbare E-Mail vorliegt,
+     * - das Portal nicht deaktiviert ist,
+     * - der Zugang noch NICHT laeuft (kein Login, kein gesetztes Passwort) und
+     * - noch KEINE Einladung raus ist (Reputationsschutz: nie doppelt).
+     *
+     * @return bool true, wenn eine Einladung versendet wurde
+     */
+    public function autoInvite(Customer $customer, ?int $actorId = null): bool
+    {
+        $user = $customer->user;
+        if ($user === null || !$user->hasRealEmail()) {
+            return false; // keine erreichbare Adresse -> stiller Ueberspring
+        }
+        if (isset($user->is_active) && !$user->is_active) {
+            return false; // Portal bewusst deaktiviert
+        }
+        // Zugang laeuft bereits (Login/Passwort) oder Einladung schon versandt
+        // -> nicht wiederholen (kein Spam bei jedem weiteren Vertrag/Dokument).
+        if ($user->first_login_at !== null
+            || $user->portal_password_set_at !== null
+            || $user->invitation_sent_at !== null) {
+            return false;
+        }
+
+        try {
+            $this->sendInvitation($customer, $actorId);
+            return true;
+        } catch (\Throwable $e) {
+            \Log::warning('Automatische Portal-Einladung fehlgeschlagen (' . $user->email . '): ' . $e->getMessage());
+            return false;
+        }
+    }
+
     /** Passwort-Reset-Link senden (Admin-Aktion, gleiche Mail wie Self-Service). */
     public function sendResetLink(Customer $customer, ?int $actorId = null): void
     {
