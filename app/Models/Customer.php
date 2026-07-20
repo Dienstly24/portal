@@ -139,6 +139,26 @@ class Customer extends Model {
         };
     }
 
+    /**
+     * Sprachbewusste Anrede fuer Kundenmails: liefert bei 'ar' die arabische
+     * Anrede, sonst die deutsche (salutationLine). Staff-Werkzeuge (Composer,
+     * Vorlagen) nutzen weiter salutationLine() und bleiben damit deutsch.
+     */
+    public function salutationLineFor(string $lang, ?string $fallbackName = null): string {
+        if ($lang !== 'ar') {
+            return $this->salutationLine($fallbackName);
+        }
+        $name = $this->user?->name ?: ($fallbackName ?? '');
+        if (!empty($this->company_name)) {
+            return 'حضرة السادة المحترمين';
+        }
+        return match ($this->gender) {
+            'male' => 'حضرة السيد ' . $this->lastNameOr($name) . ' المحترم',
+            'female' => 'حضرة السيدة ' . $this->lastNameOr($name) . ' المحترمة',
+            default => trim($name) !== '' ? 'مرحباً ' . $name : 'حضرة السادة المحترمين',
+        };
+    }
+
     private function lastNameOr(string $fullName): string {
         $parts = preg_split('/\s+/', trim($fullName));
         return $parts ? end($parts) : $fullName;

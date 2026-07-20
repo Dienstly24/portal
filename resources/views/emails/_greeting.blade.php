@@ -3,15 +3,16 @@
      bereits berechnete Zeile ($greetingLine); sonst Fallback über den
      Namen. So nutzt jede Mail dieselbe Logik. --}}
 @php
+    $lng = ($lang ?? (app()->getLocale() === 'ar' ? 'ar' : 'de')) === 'ar' ? 'ar' : 'de';
     $line = null;
     if (!empty($greetingCustomer)) {
-        $line = $greetingCustomer->salutationLine();
+        $line = $greetingCustomer->salutationLineFor($lng);
     } elseif (!empty($greetingLine)) {
         $line = $greetingLine;
     } elseif (!empty($greetingName)) {
-        $line = 'Guten Tag ' . $greetingName;
+        $line = ($lng === 'ar' ? 'مرحباً ' : 'Guten Tag ') . $greetingName;
     } else {
-        $line = 'Sehr geehrte Damen und Herren';
+        $line = $lng === 'ar' ? 'حضرة السادة المحترمين' : 'Sehr geehrte Damen und Herren';
     }
 @endphp
-<p style="font-size:15px;color:#333;">{{ $line }},</p>
+<p style="font-size:15px;color:#333;" dir="{{ $lng === 'ar' ? 'rtl' : 'ltr' }}">{{ $line }},</p>
