@@ -161,6 +161,75 @@ class Customer extends Model {
         return $query->where('marketing_consent', true)->whereNull('unsubscribed_at');
     }
 
+    /**
+     * Volltext-Suche ueber ALLE relevanten Kundenfelder und verknuepften
+     * Datensaetze (Vertraege, Fahrzeuge, Energie). EIN Sucheingabefeld findet
+     * damit den Kunden unabhaengig davon, welche Information dem Mitarbeiter
+     * vorliegt: Name, E-Mail, Telefon, Kundennummer, Vertragsnummer, Anschrift,
+     * PLZ/Ort, Kennzeichen, FIN, Zaehlernummer usw.
+     *
+     * Der Suchbegriff wird in einzelne Woerter zerlegt: jedes Wort MUSS
+     * irgendwo passen (UND zwischen den Woertern, ODER ueber die Felder). So
+     * grenzt "Ahmad Berlin" auf Ahmad in Berlin ein, waehrend eine einzelne
+     * Nummer (PLZ, Kennzeichen, Zaehler, Vertragsnummer ...) jedes Feld trifft,
+     * in dem sie vorkommt.
+     *
+     * Verschluesselte Felder (IBAN, KV-/RV-Nummer, Steuer-ID) sind BEWUSST
+     * nicht durchsuchbar - sie liegen als Chiffrat in der Datenbank und lassen
+     * sich per LIKE nicht vergleichen (Datenschutz + technisch nicht moeglich).
+     */
+    public function scopeSearch($query, ?string $term) {
+        $term = trim((string) ($term ?? ''));
+        if ($term === '') {
+            return $query;
+        }
+        // In einzelne Suchwoerter zerlegen (mehrere Leerzeichen zusammenfassen).
+        $tokens = preg_split('/\s+/', $term, -1, PREG_SPLIT_NO_EMPTY) ?: [$term];
+        foreach ($tokens as $token) {
+            // %/_ maskieren, damit Nutzereingaben keine LIKE-Platzhalter werden.
+            $like = '%' . addcslashes($token, '%_\\') . '%';
+            $query->where(function ($w) use ($like) {
+                // Direkte Kundenfelder (inkl. strukturierte Anschrift + PLZ/Ort).
+                $w->where('customer_number', 'like', $like)
+                  ->orWhere('phone', 'like', $like)
+                  ->orWhere('mobile', 'like', $like)
+                  ->orWhere('email2', 'like', $like)
+                  ->orWhere('company_name', 'like', $like)
+                  ->orWhere('address', 'like', $like)
+                  ->orWhere('address2', 'like', $like)
+                  ->orWhere('address_street', 'like', $like)
+                  ->orWhere('address_house_number', 'like', $like)
+                  ->orWhere('address_zip', 'like', $like)
+                  ->orWhere('address_city', 'like', $like)
+                  // Name + Login-E-Mail liegen am User.
+                  ->orWhereHas('user', fn($u) => $u->where('name', 'like', $like)
+                      ->orWhere('email', 'like', $like))
+                  // Vertragsnummer, Versicherer/Anbieter, freie Sparte.
+                  ->orWhereHas('contracts', fn($c) => $c->where('contract_number', 'like', $like)
+                      ->orWhere('insurer', 'like', $like)
+                      ->orWhere('type_other', 'like', $like))
+                  // Fahrzeug am Vertrag: Kennzeichen, FIN, HSN/TSN, Marke/Modell.
+                  ->orWhereHas('contracts.vehicleDetail', fn($v) => $v->where('license_plate', 'like', $like)
+                      ->orWhere('vin', 'like', $like)
+                      ->orWhere('hsn', 'like', $like)
+                      ->orWhere('tsn', 'like', $like)
+                      ->orWhere('manufacturer', 'like', $like)
+                      ->orWhere('model', 'like', $like))
+                  // Energie am Vertrag: Zaehlernummer (Strom/Gas), MaLo-ID,
+                  // Kundennummer beim Energieanbieter.
+                  ->orWhereHas('contracts.energyDetail', fn($e) => $e->where('meter_number', 'like', $like)
+                      ->orWhere('malo_id', 'like', $like)
+                      ->orWhere('customer_number', 'like', $like))
+                  // Separat gepflegte Kunden-Stammfahrzeuge.
+                  ->orWhereHas('vehicles', fn($cv) => $cv->where('license_plate', 'like', $like)
+                      ->orWhere('vin', 'like', $like)
+                      ->orWhere('brand', 'like', $like)
+                      ->orWhere('model', 'like', $like));
+            });
+        }
+        return $query;
+    }
+
     /** Token für den öffentlichen Abmelde-Link (lazy erzeugt). */
     public function unsubscribeToken(): string {
         if (empty($this->unsubscribe_token)) {

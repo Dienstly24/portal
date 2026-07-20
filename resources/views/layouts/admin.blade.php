@@ -387,7 +387,7 @@ table tr:hover td{background:#E3E6EA;}
     <div class="header-search">
         <span class="search-icon">🔍</span>
         <input type="text" id="global-search" placeholder="Suche nach Kunden, Verträge, Tickets..."
-        oninput="globalSearch(this.value)" autocomplete="off">
+        oninput="globalSearch(this.value)" onkeydown="globalSearchKey(event)" autocomplete="off">
     <div id="search-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);max-height:320px;overflow-y:auto;z-index:200;margin-top:4px;"></div>
     </div>
     <div class="header-actions">
@@ -419,6 +419,16 @@ table tr:hover td{background:#E3E6EA;}
 </div>
 <script>
 let searchTimeout;
+// Enter in der Kopfzeilen-Suche: zur vollstaendigen Kundenliste springen, die
+// serverseitig ueber ALLE Kundenfelder sucht (Name, Nummer, Telefon, Anschrift,
+// Kennzeichen, Zaehlernummer ...) und alle Treffer seitenweise anzeigt.
+function globalSearchKey(e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const q = e.target.value.trim();
+    if (q.length < 1) return;
+    window.location = '{{ route('admin.customers') }}?q=' + encodeURIComponent(q);
+}
 function globalSearch(q) {
     clearTimeout(searchTimeout);
     const results = document.getElementById('search-results');

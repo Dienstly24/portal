@@ -176,13 +176,12 @@ class EmployeeController extends Controller
     public function customerSearch(Request $request) {
         $q = trim($request->get('q', ''));
         if (strlen($q) < 2) return response()->json([]);
+        // Suche ueber ALLE Kundenfelder (Name, E-Mail, Telefon, Kundennummer,
+        // Vertragsnummer, Anschrift, PLZ/Ort, Kennzeichen, FIN, Zaehlernummer
+        // ...), damit der Kunde mit jeder vorliegenden Information gefunden und
+        // dem Mitarbeiter zugewiesen werden kann.
         $customers = Customer::with('user')
-            ->where(function ($query) use ($q) {
-                $query->whereHas('user', fn($u) => $u->where('name', 'like', "%$q%")->orWhere('email', 'like', "%$q%"))
-                      ->orWhere('customer_number', 'like', "%$q%")
-                      ->orWhere('phone', 'like', "%$q%")
-                      ->orWhere('mobile', 'like', "%$q%");
-            })
+            ->search($q)
             ->limit(15)->get()
             ->map(fn($c) => [
                 'id' => $c->id,

@@ -37,7 +37,7 @@ $typeConfig = [
 {{-- Filter- und Sortierleiste (fuer alle Rollen sichtbar; der Betreuer-Filter
      nur fuer admin/manager – Mitarbeiter sehen ohnehin nur ihr Portfolio). --}}
 @php
-    $filterKeys = ['betreuer','email','sparte','portal','ablauf','kontakt','buchstabe'];
+    $filterKeys = ['q','betreuer','email','sparte','portal','ablauf','kontakt','buchstabe'];
     $hasActiveFilter = collect($filterKeys)->contains(fn($k) => request()->filled($k))
         || (request()->filled('sort') && request('sort') !== 'neueste');
 @endphp
@@ -54,6 +54,21 @@ $typeConfig = [
     </div>
     {{-- Ausfuehrliche Filter + Sortierung (auto-submit bei Auswahl) --}}
     <form method="GET" action="{{ route('admin.customers') }}" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin:0;">
+        {{-- Freitext-Suche ueber ALLE Kundenfelder (Name, E-Mail, Telefon,
+             Kundennummer, Vertragsnummer, Anschrift, PLZ/Ort, Kennzeichen, FIN,
+             Zaehlernummer ...). Wert eingeben + Enter zeigt alle Treffer. --}}
+        <div class="flt-group" style="flex:1;min-width:230px;">
+            <label class="flt-lbl" for="kunden-suche">Suche</label>
+            <div style="display:flex;gap:8px;">
+                <input type="text" name="q" id="kunden-suche" value="{{ request('q') }}" autocomplete="off"
+                    placeholder="Name, Nummer, Telefon, Kennzeichen, Zaehler ..."
+                    style="flex:1;min-width:0;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;background:#fff;">
+                <button type="submit" class="btn btn-primary btn-sm" title="Suchen">🔍</button>
+                @if(request()->filled('q'))
+                <a href="{{ route('admin.customers', request()->except(['q','page'])) }}" class="btn btn-ghost btn-sm" title="Suche loeschen">✕</a>
+                @endif
+            </div>
+        </div>
         @if(in_array(auth()->user()->role, ['admin','manager']))
         <div class="flt-group">
             <label class="flt-lbl">Betreuer</label>
