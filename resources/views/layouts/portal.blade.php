@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#17191d">
-<title>Dienstly24 Portal</title>
+<title>Dienstly24 {{ __('Portal') }}</title>
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 <style>
 :root{--petrol:#17191d;--petrol-dark:#101216;--gold:#17A65B;--gold-soft:#d9f4e6;--canvas:#DCDEE3;--surface:#ECEEF1;--line:#CDD1D8;--ink:#152826;--ink-soft:#4A5C59;}
@@ -148,14 +148,14 @@ form textarea{min-height:90px;resize:vertical;}
 <body>
 {{-- Mobile Topbar: Hamburger + Logo, Glocke sitzt fix rechts daneben --}}
 <header class="topbar">
-    <button class="topbar-btn" type="button" id="m-btn" aria-label="Menü öffnen" aria-controls="portal-sidebar" aria-expanded="false">☰</button>
+    <button class="topbar-btn" type="button" id="m-btn" aria-label="{{ __('Menü öffnen') }}" aria-controls="portal-sidebar" aria-expanded="false">☰</button>
     <a class="topbar-logo" href="{{ route('portal.dashboard') }}" title="Dienstly24"><img src="/images/logo-white.png" alt="Dienstly24"></a>
     {{-- Platzhalter haelt das Logo mittig (rechts steht die fixe Glocke) --}}
     <span style="width:44px;flex:none;"></span>
 </header>
 <div class="sidebar-overlay" id="sidebar-overlay"></div>
 <div class="sidebar" id="portal-sidebar">
-    <button class="sidebar-close" type="button" id="sidebar-close" aria-label="Menü schließen">✕</button>
+    <button class="sidebar-close" type="button" id="sidebar-close" aria-label="{{ __('Menü schließen') }}">✕</button>
     {{-- Kompakte Marke wie bei grossen Panels (nur das D-Symbol) --}}
     <div class="brand"><a href="{{ route('portal.dashboard') }}" title="Dienstly24"><img src="/images/logo-icon-white.png" alt="Dienstly24" style="height:46px;width:auto;"></a></div>
     <a href="{{ route('portal.dashboard') }}" class="nav-item {{ request()->routeIs('portal.dashboard') ? 'active' : '' }}">{{ __('Dashboard') }}</a>
@@ -192,7 +192,7 @@ form textarea{min-height:90px;resize:vertical;}
 <div class="main">
     {{-- Portal-Glocke (Review Punkt 8/10) --}}
     <div class="bell-wrap">
-        <button type="button" id="p-bell" class="bell-btn" title="Benachrichtigungen">
+        <button type="button" id="p-bell" class="bell-btn" title="{{ __('Benachrichtigungen') }}">
             🔔<span id="p-bell-dot" class="bell-dot"></span>
         </button>
         <div id="p-bell-dd" class="bell-dd">
@@ -204,7 +204,7 @@ form textarea{min-height:90px;resize:vertical;}
     @if(session('error'))<div class="alert-error">{{ session('error') }}</div>@endif
     @if($errors->any())
     <div class="alert-error">
-        <strong>Bitte prüfen Sie Ihre Eingaben:</strong>
+        <strong>{{ __('Bitte prüfen Sie Ihre Eingaben:') }}</strong>
         <ul style="margin:6px 0 0;padding-left:18px;">
             @foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach
         </ul>
@@ -213,13 +213,13 @@ form textarea{min-height:90px;resize:vertical;}
     @yield('content')
 </div>
 {{-- Bottom-Tab-Bar: schneller Wechsel zwischen den Kernbereichen (nur Mobile) --}}
-<nav class="tabbar" aria-label="Schnellnavigation">
+<nav class="tabbar" aria-label="{{ __('Schnellnavigation') }}">
     <div class="tabbar-inner">
         <a href="{{ route('portal.dashboard') }}" class="tab-item {{ request()->routeIs('portal.dashboard') ? 'active' : '' }}"><span class="tab-ico">🏠</span><span class="tab-label">{{ __('Übersicht') }}</span></a>
         <a href="{{ route('portal.contracts') }}" class="tab-item {{ request()->routeIs('portal.contracts*') ? 'active' : '' }}"><span class="tab-ico">📑</span><span class="tab-label">{{ __('Verträge') }}</span></a>
         <a href="{{ route('portal.documents') }}" class="tab-item {{ request()->routeIs('portal.documents*') ? 'active' : '' }}"><span class="tab-ico">📄</span><span class="tab-label">{{ __('Dokumente') }}</span></a>
         <a href="{{ route('portal.messages') }}" class="tab-item {{ request()->routeIs('portal.messages*') ? 'active' : '' }}" style="position:relative;"><span class="tab-ico">💬</span><span class="tab-label">{{ __('Nachrichten') }}</span>@if($unreadMsgs > 0)<span style="position:absolute;top:6px;inset-inline-end:22%;width:9px;height:9px;border-radius:50%;background:#E24B4A;border:2px solid var(--petrol);"></span>@endif</a>
-        <button type="button" class="tab-item" id="tab-more" aria-label="Menü öffnen"><span class="tab-ico">☰</span><span class="tab-label">{{ __('Mehr') }}</span></button>
+        <button type="button" class="tab-item" id="tab-more" aria-label="{{ __('Menü öffnen') }}"><span class="tab-ico">☰</span><span class="tab-label">{{ __('Mehr') }}</span></button>
     </div>
 </nav>
 <script>
@@ -266,7 +266,7 @@ form textarea{min-height:90px;resize:vertical;}
             .then(data => {
                 document.getElementById('p-bell-dot').style.display = data.unread > 0 ? 'block' : 'none';
                 const list = document.getElementById('p-bell-list');
-                if (!data.items.length) { list.innerHTML = '<p style="padding:14px;font-size:13px;color:#6B7280;">Keine Benachrichtigungen.</p>'; return; }
+                if (!data.items.length) { list.innerHTML = '<p style="padding:14px;font-size:13px;color:#6B7280;">{{ __('Keine Benachrichtigungen.') }}</p>'; return; }
                 list.innerHTML = data.items.map(function(n) { return ''
                     + '<a href="' + n.url + '" onclick="pMarkRead(\'' + n.id + '\')" style="display:block;padding:10px 14px;text-decoration:none;color:#152826;border-bottom:1px solid #EEE;background:' + (n.read ? 'transparent' : '#F0F7F3') + ';">'
                     + '<span style="display:block;font-size:12.5px;font-weight:600;">' + esc(n.title) + '</span>'

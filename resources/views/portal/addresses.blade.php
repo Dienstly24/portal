@@ -2,10 +2,10 @@
 @section('content')
 <div class="toolbar">
     <div>
-        <div class="page-title">🏠 Meine Adressen</div>
-        <div class="page-sub" style="margin-bottom:0;">Adressen hinzufügen oder Änderungen beantragen – Änderungen werden geprüft.</div>
+        <div class="page-title">🏠 {{ __('Meine Adressen') }}</div>
+        <div class="page-sub" style="margin-bottom:0;">{{ __('Adressen hinzufügen oder Änderungen beantragen – Änderungen werden geprüft.') }}</div>
     </div>
-    <button onclick="document.getElementById('add-address-modal').style.display='flex'" class="btn btn-gold">+ Adresse hinzufügen</button>
+    <button onclick="document.getElementById('add-address-modal').style.display='flex'" class="btn btn-gold">+ {{ __('Adresse hinzufügen') }}</button>
 </div>
 
 @php
@@ -16,8 +16,8 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
 
 @if($customer->address)
 <div class="card">
-    <div class="card-title">Aktuelle Stammadresse</div>
-    <p style="font-size:14px;">🏠 {{ $customer->address }} <span style="font-size:12px;color:var(--ink-soft);">(im Profil hinterlegt – Änderung über „Meine Daten")</span></p>
+    <div class="card-title">{{ __('Aktuelle Stammadresse') }}</div>
+    <p style="font-size:14px;">🏠 {{ $customer->address }} <span style="font-size:12px;color:var(--ink-soft);">{{ __('(im Profil hinterlegt – Änderung über „Meine Daten")') }}</span></p>
 </div>
 @endif
 
@@ -27,17 +27,17 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
             <span style="font-size:26px;">{{ $typeIcons[$a->type] ?? '📍' }}</span>
             <div>
-                <div style="font-weight:700;font-size:14px;">{{ $a->typeLabel() }}</div>
+                <div style="font-weight:700;font-size:14px;">{{ __($a->typeLabel()) }}</div>
                 @if(in_array($a->id, $pendingChangeIds))
-                <span class="badge badge-pending" style="font-size:11px;">Änderung in Prüfung</span>
+                <span class="badge badge-pending" style="font-size:11px;">{{ __('Änderung in Prüfung') }}</span>
                 @else
-                <span class="badge badge-active" style="font-size:11px;">Aktiv</span>
+                <span class="badge badge-active" style="font-size:11px;">{{ __('Aktiv') }}</span>
                 @endif
             </div>
         </div>
         <p style="font-size:13.5px;line-height:1.6;color:var(--ink-soft);">{{ $a->street }}<br>{{ $a->zip }} {{ $a->city }}<br>{{ $a->country }}</p>
         @php $addressPayload = $a->only(['id','type','street','zip','city','country']); @endphp
-        <button onclick='openAddressChange(@json($addressPayload))' class="btn btn-ghost" style="margin-top:12px;font-size:12.5px;padding:7px 14px;">✏️ Änderung beantragen</button>
+        <button onclick='openAddressChange(@json($addressPayload))' class="btn btn-ghost" style="margin-top:12px;font-size:12.5px;padding:7px 14px;">✏️ {{ __('Änderung beantragen') }}</button>
     </div>
     @endforeach
 
@@ -46,8 +46,8 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
             <span style="font-size:26px;">{{ $typeIcons[$r->new_data['type'] ?? 'other'] ?? '📍' }}</span>
             <div>
-                <div style="font-weight:700;font-size:14px;">{{ \App\Models\CustomerAddress::TYPES[$r->new_data['type'] ?? 'other'] ?? 'Adresse' }}</div>
-                <span class="badge badge-pending" style="font-size:11px;">Prüfung ausstehend</span>
+                <div style="font-weight:700;font-size:14px;">{{ \App\Models\CustomerAddress::TYPES[$r->new_data['type'] ?? 'other'] ?? __('Adresse') }}</div>
+                <span class="badge badge-pending" style="font-size:11px;">{{ __('Prüfung ausstehend') }}</span>
             </div>
         </div>
         <p style="font-size:13.5px;line-height:1.6;color:var(--ink-soft);">{{ $r->new_data['street'] ?? '' }}<br>{{ $r->new_data['zip'] ?? '' }} {{ $r->new_data['city'] ?? '' }}</p>
@@ -56,18 +56,18 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
 </div>
 
 @if($addresses->isEmpty() && $pendingCreates->isEmpty())
-<div class="card"><p style="color:var(--ink-soft);font-size:14px;">Noch keine zusätzlichen Adressen hinterlegt.</p></div>
+<div class="card"><p style="color:var(--ink-soft);font-size:14px;">{{ __('Noch keine zusätzlichen Adressen hinterlegt.') }}</p></div>
 @endif
 
 <div id="add-address-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:460px;position:relative;">
         <button onclick="document.getElementById('add-address-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
-        <div style="font-size:18px;font-weight:700;margin-bottom:6px;">Adresse hinzufügen</div>
-        <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">Wird nach Prüfung durch unser Team übernommen.</p>
+        <div style="font-size:18px;font-weight:700;margin-bottom:6px;">{{ __('Adresse hinzufügen') }}</div>
+        <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">{{ __('Wird nach Prüfung durch unser Team übernommen.') }}</p>
         <form method="POST" action="{{ route('portal.addresses.store') }}">
             @csrf
             @include('portal._address_fields')
-            <button type="submit" class="btn btn-primary" style="width:100%;">Zur Prüfung einreichen</button>
+            <button type="submit" class="btn btn-primary" style="width:100%;">{{ __('Zur Prüfung einreichen') }}</button>
         </form>
     </div>
 </div>
@@ -75,12 +75,12 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
 <div id="change-address-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:460px;position:relative;">
         <button onclick="document.getElementById('change-address-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
-        <div style="font-size:18px;font-weight:700;margin-bottom:6px;">Adressänderung beantragen</div>
-        <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">Die Änderung wird erst nach Prüfung wirksam.</p>
+        <div style="font-size:18px;font-weight:700;margin-bottom:6px;">{{ __('Adressänderung beantragen') }}</div>
+        <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">{{ __('Die Änderung wird erst nach Prüfung wirksam.') }}</p>
         <form method="POST" id="change-address-form" action="">
             @csrf
             @include('portal._address_fields', ['prefix' => 'ca-'])
-            <button type="submit" class="btn btn-primary" style="width:100%;">Änderung einreichen</button>
+            <button type="submit" class="btn btn-primary" style="width:100%;">{{ __('Änderung einreichen') }}</button>
         </form>
     </div>
 </div>

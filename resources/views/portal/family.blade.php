@@ -2,15 +2,15 @@
 @section('content')
 <div class="toolbar">
     <div>
-        <div class="page-title">👨‍👩‍👦 Meine Familie</div>
-        <div class="page-sub" style="margin-bottom:0;">Familienmitglieder hinzufügen oder Änderungen beantragen – jede Angabe wird von unserem Team geprüft.</div>
+        <div class="page-title">👨‍👩‍👦 {{ __('Meine Familie') }}</div>
+        <div class="page-sub" style="margin-bottom:0;">{{ __('Familienmitglieder hinzufügen oder Änderungen beantragen – jede Angabe wird von unserem Team geprüft.') }}</div>
     </div>
     <button onclick="document.getElementById('add-family-modal').style.display='flex'" class="btn btn-gold">+ {{ __('Familienmitglied hinzufügen') }}</button>
 </div>
 
 @php
 $relationIcons = ['hauptversicherter'=>'👨','ehepartner'=>'👩','kind'=>'👦','andere'=>'👤'];
-$relationLabels = ['hauptversicherter'=>'Hauptversicherter','ehepartner'=>'Ehepartner','kind'=>'Kind','andere'=>'Weitere Person'];
+$relationLabels = ['hauptversicherter'=>__('Hauptversicherter'),'ehepartner'=>__('Ehepartner'),'kind'=>__('Kind'),'andere'=>__('Weitere Person')];
 $pendingCreates = $requests->where('status','pending')->filter(fn($r)=>empty($r->new_data['id']));
 $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->filter()->all();
 $rejected = $requests->where('status','rejected');
@@ -22,7 +22,7 @@ $rejected = $requests->where('status','rejected');
         <div style="font-size:40px;margin-bottom:8px;">👨</div>
         <div style="font-weight:700;font-size:15px;">{{ auth()->user()->name }}</div>
         <div style="font-size:12.5px;color:var(--ink-soft);margin:4px 0 10px;">{{ $customer->birth_date ? \Carbon\Carbon::parse($customer->birth_date)->format('d.m.Y') : '—' }}</div>
-        <span class="badge badge-open">Hauptversicherter</span>
+        <span class="badge badge-open">{{ __('Hauptversicherter') }}</span>
         <div style="margin-top:10px;"><span class="badge badge-active">{{ __('Aktiv') }}</span></div>
     </div>
 
@@ -44,7 +44,7 @@ $rejected = $requests->where('status','rejected');
         <button onclick='openFamilyChange(@json($familyPayload))' class="btn btn-ghost" style="margin-top:12px;font-size:12.5px;padding:7px 14px;">✏️ {{ __('Änderung beantragen') }}</button>
         @unless(in_array($m->id, $pendingChangeIds))
         <form method="POST" action="{{ route('portal.family.delete', $m->id) }}" style="margin-top:8px;"
-            onsubmit="return confirm('Löschung von {{ addslashes($m->name) }} beantragen?\n\nDie Löschung wird erst nach Prüfung durch unser Team wirksam.');">
+            onsubmit="return confirm('{{ __('Löschung von :name beantragen?\n\nDie Löschung wird erst nach Prüfung durch unser Team wirksam.', ['name' => addslashes($m->name)]) }}');">
             @csrf
             <button type="submit" class="btn btn-ghost" style="font-size:12.5px;padding:7px 14px;color:#A32D2D;border-color:#F0A0A0;">🗑 {{ __('Löschung beantragen') }}</button>
         </form>
@@ -58,7 +58,7 @@ $rejected = $requests->where('status','rejected');
         <div style="font-size:40px;margin-bottom:8px;">{{ $relationIcons[$r->new_data['relation'] ?? 'andere'] ?? '👤' }}</div>
         <div style="font-weight:700;font-size:15px;">{{ $r->new_data['name'] ?? '—' }}</div>
         <div style="font-size:12.5px;color:var(--ink-soft);margin:4px 0 10px;">{{ !empty($r->new_data['birth_date']) ? \Carbon\Carbon::parse($r->new_data['birth_date'])->format('d.m.Y') : '—' }}</div>
-        <span class="badge badge-open">{{ $relationLabels[$r->new_data['relation'] ?? 'andere'] ?? 'Person' }}</span>
+        <span class="badge badge-open">{{ $relationLabels[$r->new_data['relation'] ?? 'andere'] ?? __('Person') }}</span>
         <div style="margin-top:10px;"><span class="badge badge-pending">{{ __('Prüfung ausstehend') }}</span></div>
     </div>
     @endforeach
@@ -66,14 +66,14 @@ $rejected = $requests->where('status','rejected');
 
 @if($rejected->count())
 <div class="card">
-    <div class="card-title">Abgelehnte Anfragen</div>
+    <div class="card-title">{{ __('Abgelehnte Anfragen') }}</div>
     @foreach($rejected as $r)
     <div class="item-row">
         <div>
-            <div style="font-size:14px;font-weight:600;">{{ $r->new_data['name'] ?? 'Familienmitglied' }}</div>
-            <div style="font-size:12px;color:var(--ink-soft);">{{ $r->created_at->format('d.m.Y') }} @if($r->notes) · Grund: {{ $r->notes }} @endif</div>
+            <div style="font-size:14px;font-weight:600;">{{ $r->new_data['name'] ?? __('Familienmitglied') }}</div>
+            <div style="font-size:12px;color:var(--ink-soft);">{{ $r->created_at->format('d.m.Y') }} @if($r->notes) · {{ __('Grund:') }} {{ $r->notes }} @endif</div>
         </div>
-        <span class="badge" style="background:#F9E3E3;color:#A32D2D;">Abgelehnt</span>
+        <span class="badge" style="background:#F9E3E3;color:#A32D2D;">{{ __('Abgelehnt') }}</span>
     </div>
     @endforeach
 </div>
@@ -83,36 +83,36 @@ $rejected = $requests->where('status','rejected');
 <div id="add-family-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:440px;position:relative;">
         <button onclick="document.getElementById('add-family-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
-        <div style="font-size:18px;font-weight:700;margin-bottom:6px;">Familienmitglied hinzufügen</div>
-        <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">Die Angaben werden erst nach Prüfung durch unser Team übernommen.</p>
+        <div style="font-size:18px;font-weight:700;margin-bottom:6px;">{{ __('Familienmitglied hinzufügen') }}</div>
+        <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">{{ __('Die Angaben werden erst nach Prüfung durch unser Team übernommen.') }}</p>
         <form method="POST" action="{{ route('portal.family.store') }}">
             @csrf
-            <div class="field"><label>Name *</label><input type="text" name="name" required maxlength="255"></div>
+            <div class="field"><label>{{ __('Name') }} *</label><input type="text" name="name" required maxlength="255"></div>
             <div class="grid-2">
-                <div class="field"><label>Beziehung *</label>
+                <div class="field"><label>{{ __('Beziehung') }} *</label>
                     <select name="relation" required>
-                        <option value="ehepartner">Ehepartner</option>
-                        <option value="kind">Kind</option>
-                        <option value="andere">Weitere Person</option>
+                        <option value="ehepartner">{{ __('Ehepartner') }}</option>
+                        <option value="kind">{{ __('Kind') }}</option>
+                        <option value="andere">{{ __('Weitere Person') }}</option>
                     </select>
                 </div>
-                <div class="field"><label>Geburtsdatum</label><input type="date" name="birth_date" max="{{ now()->toDateString() }}"></div>
+                <div class="field"><label>{{ __('Geburtsdatum') }}</label><input type="date" name="birth_date" max="{{ now()->toDateString() }}"></div>
             </div>
             <div class="grid-2">
-                <div class="field"><label>Geschlecht</label>
+                <div class="field"><label>{{ __('Geschlecht') }}</label>
                     <select name="gender">
-                        <option value="">— Bitte wählen —</option>
-                        <option value="male">Männlich</option>
-                        <option value="female">Weiblich</option>
+                        <option value="">{{ __('— Bitte wählen —') }}</option>
+                        <option value="male">{{ __('Männlich') }}</option>
+                        <option value="female">{{ __('Weiblich') }}</option>
                     </select>
                 </div>
-                <div class="field"><label>Geburtsort</label><input type="text" name="birth_place" maxlength="255"></div>
+                <div class="field"><label>{{ __('Geburtsort') }}</label><input type="text" name="birth_place" maxlength="255"></div>
             </div>
             <div class="grid-2">
-                <div class="field"><label>Krankenversicherungsnr.</label><input type="text" name="health_insurance_number" maxlength="50"></div>
-                <div class="field"><label>Rentenversicherungsnr.</label><input type="text" name="pension_insurance_number" maxlength="50"></div>
+                <div class="field"><label>{{ __('Krankenversicherungsnr.') }}</label><input type="text" name="health_insurance_number" maxlength="50"></div>
+                <div class="field"><label>{{ __('Rentenversicherungsnr.') }}</label><input type="text" name="pension_insurance_number" maxlength="50"></div>
             </div>
-            <div class="field"><label>Steuer-ID</label><input type="text" name="tax_id" maxlength="20"></div>
+            <div class="field"><label>{{ __('Steuer-ID') }}</label><input type="text" name="tax_id" maxlength="20"></div>
             <button type="submit" class="btn btn-primary" style="width:100%;">{{ __('Zur Prüfung einreichen') }}</button>
         </form>
     </div>
@@ -122,22 +122,22 @@ $rejected = $requests->where('status','rejected');
 <div id="change-family-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:440px;position:relative;">
         <button onclick="document.getElementById('change-family-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
-        <div style="font-size:18px;font-weight:700;margin-bottom:6px;">Änderung beantragen</div>
-        <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">Die Änderung wird erst nach Prüfung wirksam.</p>
+        <div style="font-size:18px;font-weight:700;margin-bottom:6px;">{{ __('Änderung beantragen') }}</div>
+        <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">{{ __('Die Änderung wird erst nach Prüfung wirksam.') }}</p>
         <form method="POST" id="change-family-form" action="">
             @csrf
-            <div class="field"><label>Name *</label><input type="text" name="name" id="cf-name" required maxlength="255"></div>
+            <div class="field"><label>{{ __('Name') }} *</label><input type="text" name="name" id="cf-name" required maxlength="255"></div>
             <div class="grid-2">
-                <div class="field"><label>Beziehung *</label>
+                <div class="field"><label>{{ __('Beziehung') }} *</label>
                     <select name="relation" id="cf-relation" required>
-                        <option value="ehepartner">Ehepartner</option>
-                        <option value="kind">Kind</option>
-                        <option value="andere">Weitere Person</option>
+                        <option value="ehepartner">{{ __('Ehepartner') }}</option>
+                        <option value="kind">{{ __('Kind') }}</option>
+                        <option value="andere">{{ __('Weitere Person') }}</option>
                     </select>
                 </div>
-                <div class="field"><label>Geburtsdatum</label><input type="date" name="birth_date" id="cf-birth" max="{{ now()->toDateString() }}"></div>
+                <div class="field"><label>{{ __('Geburtsdatum') }}</label><input type="date" name="birth_date" id="cf-birth" max="{{ now()->toDateString() }}"></div>
             </div>
-            <button type="submit" class="btn btn-primary" style="width:100%;">Änderung einreichen</button>
+            <button type="submit" class="btn btn-primary" style="width:100%;">{{ __('Änderung einreichen') }}</button>
         </form>
     </div>
 </div>

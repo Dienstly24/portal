@@ -131,9 +131,9 @@ label{display:block;font-size:13.5px;margin-bottom:7px;color:#dde0e5;}
 
 <div class="foot">
     <a href="{{ route('legal', 'impressum') }}">{{ __('Impressum') }}</a>
-    <a href="{{ route('legal', 'agb') }}">AGB</a>
+    <a href="{{ route('legal', 'agb') }}">{{ __('AGB') }}</a>
     <a href="{{ route('legal', 'datenschutz') }}">{{ __('Datenschutzerklärung') }}</a>
-    <a href="{{ route('legal', 'cookie-richtlinie') }}">Cookie-Richtlinie</a>
+    <a href="{{ route('legal', 'cookie-richtlinie') }}">{{ __('Cookie-Richtlinie') }}</a>
     <a href="{{ route('legal', 'kontakt') }}">{{ __('Kontakt') }}</a>
     <span class="sep">|</span>
     <span>🔒 {{ __('SSL-verschlüsselt') }}</span>

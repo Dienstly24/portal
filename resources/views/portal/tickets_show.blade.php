@@ -4,7 +4,7 @@
 <div class="toolbar">
     <div>
         <div class="page-title">{{ $ticket->subject }}</div>
-        <div class="page-sub">{{ $ticket->ticket_number }} · {{ $ticket->created_at->format('d.m.Y') }} · {{ __($ticket->typeLabel()) }} · {{ $ticket->priorityLabel() }}</div>
+        <div class="page-sub">{{ $ticket->ticket_number }} · {{ $ticket->created_at->format('d.m.Y') }} · {{ __($ticket->typeLabel()) }} · {{ __($ticket->priorityLabel()) }}</div>
     </div>
     <span class="badge badge-{{ $ticket->statusBadge() }}">{{ __($ticket->portalStatusLabel()) }}</span>
 </div>
@@ -66,7 +66,7 @@
     <div class="card-title">📎 {{ __('Anhänge') }} ({{ $attachments->count() }})</div>
     @foreach($attachments as $a)
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);">
-        <span style="font-size:13.5px;">{{ $a->file_name }}@if($a->uploaded_by !== auth()->id()) <span style="font-size:11px;background:#D9F4E6;color:#17A65B;padding:2px 8px;border-radius:4px;">von Dienstly24</span>@endif</span>
+        <span style="font-size:13.5px;">{{ $a->file_name }}@if($a->uploaded_by !== auth()->id()) <span style="font-size:11px;background:#D9F4E6;color:#17A65B;padding:2px 8px;border-radius:4px;">{{ __('von') }} Dienstly24</span>@endif</span>
         <span style="display:flex;gap:8px;"><a href="{{ route('portal.attachment.download', $a->id) }}" class="btn btn-ghost btn-sm">⬇ {{ __('Herunterladen') }}</a></span>
     </div>
     @endforeach

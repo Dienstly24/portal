@@ -17,7 +17,7 @@
             <span style="position:absolute;left:0;right:0;bottom:0;padding:14px 18px;background:linear-gradient(transparent,rgba(0,0,0,.65));color:#fff;font-weight:700;font-size:15px;">{{ $b->title }} <span style="font-weight:400;font-size:12.5px;">– {{ __('Mehr erfahren') }} →</span></span>
         </a>
         @if($b->dismiss_days)
-        <button type="button" class="banner-close" data-banner="{{ $b->id }}" title="Ausblenden"
+        <button type="button" class="banner-close" data-banner="{{ $b->id }}" title="{{ __('Ausblenden') }}"
             style="position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:50%;border:none;background:rgba(0,0,0,.45);color:#fff;font-size:15px;cursor:pointer;line-height:1;">✕</button>
         @endif
     </div>
@@ -93,15 +93,15 @@
 </script>
 @endunless
 <div class="grid-3">
-    <a href="{{ route('portal.contracts') }}" class="metric metric-link" title="Zur Vertragsübersicht">
+    <a href="{{ route('portal.contracts') }}" class="metric metric-link" title="{{ __('Zur Vertragsübersicht') }}">
         <div class="label">📑 {{ __('Aktive Verträge') }}</div><div class="value">{{ $contractsCount }}</div>
         <div class="metric-cta">{{ __('Verträge ansehen') }} →</div>
     </a>
-    <a href="{{ route('portal.tickets') }}" class="metric metric-link" title="Zu Ihren Nachrichten">
+    <a href="{{ route('portal.tickets') }}" class="metric metric-link" title="{{ __('Zu Ihren Nachrichten') }}">
         <div class="label">💬 {{ __('Offene Anfragen') }}</div><div class="value">{{ $openTickets }}</div>
         <div class="metric-cta">{{ __('Nachrichten öffnen') }} →</div>
     </a>
-    <a href="{{ route('portal.change_requests') }}" class="metric metric-link" title="Status Ihrer Änderungsanfragen">
+    <a href="{{ route('portal.change_requests') }}" class="metric metric-link" title="{{ __('Status Ihrer Änderungsanfragen') }}">
         <div class="label">🔄 {{ __('Änderungen in Prüfung') }}</div><div class="value">{{ $pendingApprovals }}</div>
         <div class="metric-cta">{{ __('Status ansehen') }} →</div>
     </a>
@@ -171,12 +171,12 @@
             <div style="font-size:13px;color:var(--ink-soft);">{{ $c->contract_number }} · {{ ucfirst($c->type) }}</div>
         </div>
         <span style="display:flex;gap:6px;align-items:center;">
-            <span class="badge badge-{{ $c->status === 'active' ? 'active' : 'pending' }}">{{ $c->status === 'active' ? 'Aktiv' : ucfirst($c->status) }}</span>
+            <span class="badge badge-{{ $c->status === 'active' ? 'active' : 'pending' }}">{{ $c->status === 'active' ? __('Aktiv') : ucfirst($c->status) }}</span>
             <span style="color:var(--ink-soft);font-size:12px;">→</span>
         </span>
     </a>
     @empty
-    <p style="color:var(--ink-soft);font-size:14px;">Noch keine Verträge vorhanden.</p>
+    <p style="color:var(--ink-soft);font-size:14px;">{{ __('Noch keine Verträge vorhanden.') }}</p>
     @endforelse
 </div>
 <div class="card">
@@ -188,12 +188,12 @@
             <div style="font-size:13px;color:var(--ink-soft);">{{ $t->created_at->format('d.m.Y') }}</div>
         </div>
         <span style="display:flex;gap:6px;align-items:center;">
-            <span class="badge badge-{{ $t->status === 'open' ? 'open' : 'closed' }}">{{ $t->status === 'open' ? 'Offen' : 'In Bearbeitung' }}</span>
+            <span class="badge badge-{{ $t->status === 'open' ? 'open' : 'closed' }}">{{ $t->status === 'open' ? __('Offen') : __('In Bearbeitung') }}</span>
             <span style="color:var(--ink-soft);font-size:12px;">→</span>
         </span>
     </a>
     @empty
-    <p style="color:var(--ink-soft);font-size:14px;">Noch keine Anfragen vorhanden.</p>
+    <p style="color:var(--ink-soft);font-size:14px;">{{ __('Noch keine Anfragen vorhanden.') }}</p>
     @endforelse
 </div>
 @endsection
