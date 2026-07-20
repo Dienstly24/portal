@@ -157,7 +157,14 @@ class AnalyzeDocumentJob implements ShouldQueue
                 if ($customer) {
                     $intake->linkMatchingContract($document, $customer);
                 }
-            } elseif ($match && $match['tier'] === 'auto') {
+            } elseif ($match && $match['tier'] === 'auto'
+                && !in_array($result['type'] ?? null, \App\Models\Document::NEW_BUSINESS_TYPES, true)) {
+                // Reine Ablage-Dokumente (Ausweis, SEPA, Gesundheitskarte ...)
+                // duerfen bei eindeutigem Treffer automatisch zugeordnet werden.
+                // NEUES Geschaeft (Beratungsprotokoll, Vertrag, Auftrag) NICHT:
+                // es bleibt im Eingang mit dem Kunden-Vorschlag, damit der
+                // Mitarbeiter den (ggf. zweiten) Vertrag anlegt - sonst
+                // verschwindet das Dokument still in die Kundenakte.
                 $customer = Customer::find($match['customer_id']);
                 if ($customer && $intake->assignToCustomer($document, $customer, $document->uploaded_by, auto: true)) {
                     $intake->linkMatchingContract($document, $customer);

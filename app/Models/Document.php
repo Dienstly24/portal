@@ -43,6 +43,25 @@ class Document extends Model {
         'sonstiges'            => ['label' => 'Sonstiges Dokument',   'category' => 'other'],
     ];
 
+    /**
+     * Dokumenttypen, die NEUES Geschaeft bedeuten (ein - ggf. zweiter - Vertrag
+     * ist anzulegen). Solche Dokumente werden auch bei einem eindeutigen
+     * Kunden-Treffer NICHT automatisch zugeordnet: sie bleiben im
+     * Dokumenten-Eingang mit dem Kunden-VORSCHLAG stehen, damit der Mitarbeiter
+     * sie sieht und den Vertrag anlegt. Sonst "verschwindet" z.B. das Kfz-
+     * Beratungsprotokoll fuer den ZWEITEN Wagen still in die Kundenakte, ohne
+     * dass der zweite Vertrag entsteht.
+     */
+    public const NEW_BUSINESS_TYPES = [
+        'kfz_vertrag', 'escooter_vertrag', 'versicherungsvertrag', 'beratungsprotokoll',
+        'beitrittserklaerung', 'familienversicherung', 'energieauftrag', 'internetvertrag',
+    ];
+
+    /** Bedeutet dieser Dokumenttyp neues Geschaeft (Vertrag anzulegen)? */
+    public function impliesNewContract(): bool {
+        return in_array($this->ai_type, self::NEW_BUSINESS_TYPES, true);
+    }
+
     protected function casts(): array {
         return [
             // Verschluesselt at rest: kann IBAN/Versichertennummern enthalten
