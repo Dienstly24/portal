@@ -146,6 +146,12 @@ class AdminController extends Controller
      * additiv (UND) und portfolio-vertraeglich (die Basis ist bereits gescoped).
      */
     private function applyCustomerFilters($query, Request $request): void {
+        // Freitext-Suche ueber ALLE Kundenfelder (Name, E-Mail, Telefon,
+        // Kundennummer, Vertragsnummer, Anschrift, PLZ/Ort, Kennzeichen, FIN,
+        // Zaehlernummer ...). Ein Begriff + Enter zeigt alle passenden Kunden.
+        if ($request->filled('q')) {
+            $query->search((string) $request->q);
+        }
         // Betreuer (nur admin/manager sehen den Filter, serverseitig aber
         // unschaedlich fuer Mitarbeiter, da deren Portfolio ohnehin gescoped ist).
         if ($request->filled('betreuer')) {
@@ -1739,10 +1745,7 @@ class AdminController extends Controller
         $vids = $this->visibleCustomerIds();
         $customers = \App\Models\Customer::with('user')
             ->when($vids !== null, fn($qq) => $qq->whereIn('customers.id', $vids))
-            ->where(function($query) use ($q) {
-                $query->whereHas('user', fn($u) => $u->where('name','like',"%$q%")->orWhere('email','like',"%$q%"))
-                      ->orWhere('customer_number','like',"%$q%");
-            })
+            ->search($q)
             ->limit(5)->get()->map(fn($c) => [
                 'type' => 'customer',
                 'icon' => '👤',

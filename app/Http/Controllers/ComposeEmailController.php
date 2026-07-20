@@ -75,12 +75,9 @@ class ComposeEmailController extends Controller
             $recent = (clone $base)->whereNotIn('customers.id', $favoriteIds)->latest()->take(5)->get();
             $customers = $favorites->concat($recent);
         } else {
-            $customers = $base->where(function ($query) use ($q) {
-                $like = '%' . $q . '%';
-                $query->where('customer_number', 'like', $like)
-                    ->orWhere('company_name', 'like', $like)
-                    ->orWhereHas('user', fn($u) => $u->where('name', 'like', $like)->orWhere('email', 'like', $like));
-            })->take(8)->get();
+            // Suche ueber ALLE Kundenfelder (Name, E-Mail, Nummer, Anschrift,
+            // Kennzeichen, Zaehlernummer ...) statt nur Name/E-Mail/Nummer.
+            $customers = $base->search($q)->take(8)->get();
         }
 
         return response()->json([

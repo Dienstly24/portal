@@ -723,14 +723,12 @@ class SmartDocumentUploadController extends Controller
         }
 
         $user = auth()->user();
-        $like = '%' . addcslashes($q, '%_\\') . '%';
+        // Suche ueber ALLE Kundenfelder (Name, Nummer, Anschrift, Kennzeichen,
+        // Zaehlernummer ...), damit ein Dokument dem richtigen Kunden mit jeder
+        // vorliegenden Information zugeordnet werden kann.
         $customers = Customer::with('user')
             ->when(!$user->canSeeAllCustomers(), fn ($query) => $query->whereIn('customers.id', $user->visibleCustomerIdsWithSubstitution()))
-            ->where(function ($query) use ($like) {
-                $query->whereHas('user', fn ($u) => $u->where('name', 'like', $like)->orWhere('email', 'like', $like))
-                    ->orWhere('customer_number', 'like', $like)
-                    ->orWhere('phone', 'like', $like);
-            })
+            ->search($q)
             ->limit(15)->get()
             ->map(fn ($c) => [
                 'id' => $c->id,

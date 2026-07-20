@@ -61,7 +61,7 @@
 <input type="hidden" name="assigned_customers_present" value="1">
 <div id="assignBox">
     <div style="font-size:13px;color:var(--ink-soft);margin-bottom:10px;">Aktuell zugewiesen: <strong id="assignCount">{{ count($assignedIds) }}</strong> Kunden</div>
-    <input type="text" id="assignSearch" placeholder="Suche: Name, Kundennummer, E-Mail oder Telefon..." autocomplete="off"
+    <input type="text" id="assignSearch" placeholder="Suche: Name, Nummer, E-Mail, Telefon, Anschrift, Kennzeichen, Zaehler ..." autocomplete="off"
         style="width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:10px;font-size:14px;margin-bottom:8px;">
     <div id="assignResults" style="display:none;border:1px solid var(--line);border-radius:10px;background:#fff;max-height:220px;overflow-y:auto;margin-bottom:12px;"></div>
     <div id="assignSelected" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
