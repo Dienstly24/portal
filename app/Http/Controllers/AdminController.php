@@ -430,6 +430,11 @@ class AdminController extends Controller
             // Freifeld fuer Sonderfaelle (8.000, 18.500, 22.500 km ...) frei.
             'vehicle.annual_mileage' => 'nullable|in:custom,' . implode(',', \App\Models\ContractVehicleDetail::ANNUAL_MILEAGE_OPTIONS),
             'vehicle.annual_mileage_custom' => 'nullable|integer|min:1000|max:150000|required_if:vehicle.annual_mileage,custom',
+
+            // Vorversicherung (bisheriger Kfz-Versicherer beim Wechsel).
+            'vehicle.previous_insurer' => 'nullable|string|max:120',
+            'vehicle.previous_insurance_since' => 'nullable|string|max:60',
+            'vehicle.previous_insurance_terminated_by_insurer' => 'nullable|in:0,1',
             // SF-Einstufung (Haftpflicht / Vollkasko getrennt)
             'vehicle.sf_liability_class' => 'nullable|in:' . implode(',', \App\Models\ContractVehicleDetail::sfClassKeys()),
             'vehicle.sf_liability_valid_from' => 'nullable|date',
@@ -563,6 +568,11 @@ class AdminController extends Controller
                 'initial_mileage' => $blank('initial_mileage'),
                 // "custom" = Freifeld-Wert (Sonderfaelle wie 18.500 km/Jahr).
                 'annual_mileage' => $blank('annual_mileage') === 'custom' ? $blank('annual_mileage_custom') : $blank('annual_mileage'),
+                // Vorversicherung: leerer Radio ("") = unbekannt (null).
+                'previous_insurer' => $blank('previous_insurer'),
+                'previous_insurance_since' => $blank('previous_insurance_since'),
+                'previous_insurance_terminated_by_insurer' => $blank('previous_insurance_terminated_by_insurer') === null
+                    ? null : ($v['previous_insurance_terminated_by_insurer'] === '1'),
             ], $sfLiability, $sfComprehensive)
         );
 

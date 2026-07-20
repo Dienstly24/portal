@@ -307,6 +307,27 @@
     @endif
 </div>
 
+{{-- ===== Vorversicherung ===== --}}
+@php
+    // null (unbekannt) -> '', true -> '1', false -> '0'
+    $prevTerm = $veh->previous_insurance_terminated_by_insurer ?? null;
+    $curPrevTerm = (string) old('vehicle.previous_insurance_terminated_by_insurer', $prevTerm === null ? '' : ($prevTerm ? '1' : '0'));
+@endphp
+<div class="kfz-card">
+    <div class="kfz-card-title">↩️ Vorversicherung</div>
+    <div class="kfz-card-sub">Wo war der Kunde vor diesem Vertrag versichert? Wird beim Wechsel aus dem Beratungsprotokoll übernommen.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="field"><label>Vorheriger Versicherer</label><input type="text" name="vehicle[previous_insurer]" maxlength="120" value="{{ $vd('previous_insurer', $veh->previous_insurer ?? '') }}" placeholder="z. B. Generali" style="{{ $kfzInputStyle }}"></div>
+        <div class="field"><label>Dort versichert seit</label><input type="text" name="vehicle[previous_insurance_since]" maxlength="60" value="{{ $vd('previous_insurance_since', $veh->previous_insurance_since ?? '') }}" placeholder="z. B. länger als 3 Jahre" style="{{ $kfzInputStyle }}"></div>
+    </div>
+    <div class="kfz-subline">Kündigung durch Vorversicherer</div>
+    <div class="kfz-chip-row">
+        <label class="kfz-chip"><input type="radio" name="vehicle[previous_insurance_terminated_by_insurer]" value="" {{ $curPrevTerm === '' ? 'checked' : '' }}><span>unbekannt</span></label>
+        <label class="kfz-chip"><input type="radio" name="vehicle[previous_insurance_terminated_by_insurer]" value="0" {{ $curPrevTerm === '0' ? 'checked' : '' }}><span>Nein</span></label>
+        <label class="kfz-chip"><input type="radio" name="vehicle[previous_insurance_terminated_by_insurer]" value="1" {{ $curPrevTerm === '1' ? 'checked' : '' }}><span>Ja</span></label>
+    </div>
+</div>
+
 {{-- ===== SF-Einstufung ===== --}}
 <div class="kfz-card">
     <div class="kfz-card-title">📊 Schadenfreiheitsklasse (SF)</div>

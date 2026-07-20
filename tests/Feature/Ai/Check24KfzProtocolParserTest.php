@@ -170,6 +170,96 @@ class Check24KfzProtocolParserTest extends TestCase
         $this->assertArrayNotHasKey('teilkasko_deductible', $r['data']['kfz']);
     }
 
+    /**
+     * Protokoll im DA-Direkt-Layout: mehrwortiger Versicherer, Vollkasko mit
+     * getrennten SB (VK/TK), Werkstattbindung, Vorversicherung mit Kuendigungs-
+     * angabe. Enthaelt die Vergleichstabelle mit dem Monatsbeitrag.
+     */
+    private function daDirektProtocol(): string
+    {
+        return implode("\n", [
+            'Vorlaeufiges Beratungsprotokoll zur Kfz-Versicherung',
+            '  CHECK24 Vergleichsportal                 E-Mail: kfz-beratung@check24.de',
+            '  Versicherungsnehmer',
+            '  Herr                                     Anschrift:                     E-Mail:',
+            '  Ahmad Alhaj Sulaiman                     Hohenloher Str. 7              alhajsulaiman85@gmail.com',
+            '  Geboren am 01.06.1985                    71543 Wuestenrot               01746150627',
+            '  Fahrzeug                                 Versicherungsnehmer            Rabatte',
+            '  HSN/TSN: 0710/362                        Geschlecht: maennlich          Nur freie Werkstattwahl: nein',
+            '  Halter: Versicherungsnehmer              Wohnort: 71543 Wuestenrot',
+            '  Versicherungsbeginn: 04.02.2026          Deckung: mit Vollkasko',
+            '  Jährliche Fahrleistung: 9.000 km         Selbstbeteiligung: 500 € VK, 150 € TK   Zahlweise: monatlich',
+            '  Hauptnutzer: Versicherungsnehmer,        Vorversicherung: Generali',
+            '  geb. 01.06.1985                          Seit wann: länger als 3 Jahre',
+            '                                           Kündigung durch',
+            '                                           Vorversicherer: nein',
+            '                                           Schutzbrief gewünscht: nein',
+            '                                           Fahrerschutz gewünscht: nein',
+            'Position Versicherer / Tarif                                          Beitrag monatlich',
+            '     1    DA Direkt Basis mit Werkstattbindung                                62,04 €',
+            '     3    DA Direkt Komfort Smart mit Werkstattbindung                        64,56 €',
+            'waehlte der Versicherungsnehmer selbstständig folgenden Tarif:',
+            '',
+            'DA Direkt Komfort Smart mit Werkstattbindung',
+            'Angaben ohne Gewähr',
+        ]);
+    }
+
+    public function test_multiword_insurer_and_tariff_are_split(): void
+    {
+        // Der Versicherer ist NICHT nur das erste Wort ("DA"), sondern
+        // "DA Direkt"; der Rest ist der Tarifname.
+        $v = (new Check24KfzProtocolParser())->parse($this->daDirektProtocol())['data']['versicherung'];
+        $this->assertSame('DA Direkt', $v['insurer']);
+        $this->assertSame('Komfort Smart mit Werkstattbindung', $v['tariff']);
+        // Monatsbeitrag zum gewaehlten Tarif aus der Vergleichstabelle.
+        $this->assertSame(64.56, $v['premium_amount']);
+        $this->assertSame('monthly', $v['premium_interval']);
+    }
+
+    public function test_both_kasko_deductibles_are_read(): void
+    {
+        // "mit Vollkasko" + "500 € VK, 150 € TK": Teilkasko (150) UND Vollkasko
+        // (500) gehoeren in den Vertrag - nicht nur eine der beiden.
+        $k = (new Check24KfzProtocolParser())->parse($this->daDirektProtocol())['data']['kfz'];
+        $this->assertTrue($k['has_vollkasko']);
+        $this->assertTrue($k['has_teilkasko']);
+        $this->assertSame(500, $k['vollkasko_deductible']);
+        $this->assertSame(150, $k['teilkasko_deductible']);
+    }
+
+    public function test_werkstattbindung_is_read_as_extra(): void
+    {
+        $k = (new Check24KfzProtocolParser())->parse($this->daDirektProtocol())['data']['kfz'];
+        $this->assertContains('werkstattbindung', $k['extras']);
+        // "gewünscht: nein" -> Schutzbrief/Fahrerschutz NICHT aufnehmen.
+        $this->assertNotContains('schutzbrief', $k['extras']);
+        $this->assertNotContains('fahrerschutz', $k['extras']);
+    }
+
+    public function test_vorversicherung_details_are_read(): void
+    {
+        $v = (new Check24KfzProtocolParser())->parse($this->daDirektProtocol())['data']['versicherung'];
+        $this->assertSame('Generali', $v['previous_insurer']);
+        $this->assertSame('länger als 3 Jahre', $v['previous_insurance_since']);
+        // "Kündigung durch Vorversicherer: nein" -> false (muss erhalten bleiben).
+        $this->assertArrayHasKey('previous_insurance_terminated', $v);
+        $this->assertFalse($v['previous_insurance_terminated']);
+    }
+
+    public function test_schutzbrief_and_fahrerschutz_extras_when_wished(): void
+    {
+        $text = str_replace(
+            ['Schutzbrief gewünscht: nein', 'Fahrerschutz gewünscht: nein'],
+            ['Schutzbrief gewünscht: ja', 'Fahrerschutz gewünscht: ja'],
+            $this->daDirektProtocol()
+        );
+        $k = (new Check24KfzProtocolParser())->parse($text)['data']['kfz'];
+        $this->assertContains('schutzbrief', $k['extras']);
+        $this->assertContains('fahrerschutz', $k['extras']);
+        $this->assertContains('werkstattbindung', $k['extras']);
+    }
+
     public function test_non_check24_document_is_not_matched(): void
     {
         $this->assertNull((new Check24KfzProtocolParser())->parse('Irgendein anderes Dokument ohne die Marker.'));

@@ -104,9 +104,15 @@ trait ValidatesExtractedFields
             'end_date' => $this->cleanDate($in['end_date'] ?? null),
             'premium_amount' => (is_numeric($premium) && $premium > 0 && $premium < 1000000) ? round((float) $premium, 2) : null,
             'premium_interval' => in_array($interval, Contract::premiumIntervalKeys(), true) ? $interval : null,
-            // Vorversicherung (bisheriger Versicherer bei einem Wechsel) - reine
-            // Anzeige-Info fuer den Mitarbeiter, keine eigene Vertragsspalte.
+            // Vorversicherung (bisheriger Versicherer bei einem Wechsel). Bei
+            // Kfz wird sie in contract_vehicle_details festgehalten; sonst reine
+            // Anzeige-Info fuer den Mitarbeiter.
             'previous_insurer' => $this->cleanString($in['previous_insurer'] ?? null, 120),
+            // Seit wann beim Vorversicherer (Freitext, z.B. "länger als 3 Jahre").
+            'previous_insurance_since' => $this->cleanString($in['previous_insurance_since'] ?? null, 60),
+            // Hat der Vorversicherer gekuendigt? (false MUSS erhalten bleiben.)
+            'previous_insurance_terminated' => is_bool($in['previous_insurance_terminated'] ?? null)
+                ? $in['previous_insurance_terminated'] : null,
             // Tarif-/Produktbezeichnung (z.B. "Magenta Zuhause L" beim
             // Internet-Auftrag) - Anzeige-Info.
             'tariff' => $this->cleanString($in['tariff'] ?? null, 80),
@@ -137,6 +143,17 @@ trait ValidatesExtractedFields
         $holder = $in['holder_type'] ?? null;
         $holder = in_array($holder, ['versicherungsnehmer', 'abweichender_halter'], true) ? $holder : null;
 
+        // Zusatzleistungen: nur bekannte Katalog-Schluessel (Whitelist), in der
+        // Katalog-Reihenfolge. Geratenes/Unbekanntes faellt heraus.
+        $extras = null;
+        if (is_array($in['extras'] ?? null)) {
+            $extras = array_values(array_intersect(
+                array_keys(\App\Models\ContractVehicleDetail::EXTRAS),
+                $in['extras']
+            ));
+            $extras = $extras !== [] ? $extras : null;
+        }
+
         return array_filter([
             'license_plate' => $plate !== null ? mb_strtoupper($plate) : null,
             'vin' => $vin !== null ? strtoupper($vin) : null,
@@ -164,6 +181,7 @@ trait ValidatesExtractedFields
             'teilkasko_deductible' => $intInRange($in['teilkasko_deductible'] ?? null, 0, 5000),
             'has_vollkasko' => $bool($in['has_vollkasko'] ?? null),
             'vollkasko_deductible' => $intInRange($in['vollkasko_deductible'] ?? null, 0, 5000),
+            'extras' => $extras,
             'holder_type' => $holder,
             'annual_mileage' => $intInRange($in['annual_mileage'] ?? null, 0, 200000),
         ], fn ($v) => $v !== null && $v !== '');

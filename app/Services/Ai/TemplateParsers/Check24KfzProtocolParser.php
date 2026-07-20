@@ -17,6 +17,26 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
 {
     use ValidatesExtractedFields;
 
+    /**
+     * Bekannte deutsche Kfz-Versicherer, wie sie in der CHECK24-Tarifzeile
+     * vorne stehen. Dient dazu, den Versicherer sauber vom Tarifnamen zu
+     * trennen ("DA Direkt Komfort Smart ..." -> Versicherer "DA Direkt",
+     * Tarif "Komfort Smart ..."). Mehrwortige Namen zuerst gedanklich - der
+     * Abgleich nimmt ohnehin den LAENGSTEN passenden Praefix. Neuer Anbieter
+     * = hier eine Zeile ergaenzen (kanonische Schreibweise).
+     */
+    private const KNOWN_INSURERS = [
+        'Sparkassen DirektVersicherung', 'SV SparkassenVersicherung',
+        'DA Direkt', 'Allianz Direct', 'HUK-COBURG', 'HUK24', 'CosmosDirekt',
+        'Signal Iduna', 'Direct Line', 'BavariaDirekt', 'Rhion Digital', 'Rhion',
+        'Allianz', 'AXA', 'HDI', 'DEVK', 'ADAC', 'Verti', 'Generali', 'WGV',
+        'R+V24', 'R+V', 'VHV', 'LVM', 'Gothaer', 'Württembergische',
+        'Wuerttembergische', 'Zurich', 'ERGO', 'Barmenia', 'Continentale',
+        'KRAVAG', 'Baloise', 'Basler', 'uniVersa', 'Ammerländer', 'Ammerlaender',
+        'VGH', 'Provinzial', 'Nürnberger', 'Nuernberger', 'FRIDAY', 'Getsafe',
+        'Neodigital', 'andsafe', 'mailo', 'Feuersozietät', 'Konzept',
+    ];
+
     public function parse(string $text): ?array
     {
         // Nur zustaendig fuer das CHECK24-Kfz-Beratungsprotokoll.
@@ -43,7 +63,18 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
             // Pruefung (der Kunde wird i.d.R. neu angelegt).
             'confidence' => 75,
             'summary' => 'CHECK24-Beratungsprotokoll Kfz - Felder gratis aus der Textebene gelesen (ohne KI).'
-                . (isset($versicherung['previous_insurer']) ? ' Vorversicherung: ' . $versicherung['previous_insurer'] . '.' : '')
+                . (isset($versicherung['insurer'])
+                    ? ' Gewaehlt: ' . $versicherung['insurer']
+                        . (isset($versicherung['tariff']) ? ' ' . $versicherung['tariff'] : '') . '.'
+                    : '')
+                . (in_array('werkstattbindung', $kfz['extras'] ?? [], true) ? ' Mit Werkstattbindung.' : '')
+                . (isset($kfz['has_teilkasko']) || isset($kfz['has_vollkasko'])
+                    ? ' Deckung: ' . $this->coverageSummary($kfz) . '.'
+                    : '')
+                . (isset($versicherung['previous_insurer'])
+                    ? ' Vorversicherung: ' . $versicherung['previous_insurer']
+                        . (isset($versicherung['previous_insurance_since']) ? ' (' . $versicherung['previous_insurance_since'] . ')' : '') . '.'
+                    : '')
                 . (isset($kfz['sf_liability_class'])
                     ? ' SF-Klasse Haftpflicht: SF ' . $kfz['sf_liability_class']
                         . (($kfz['sf_liability_type'] ?? null) === 'sondereinstufung'
@@ -124,19 +155,47 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
         if ($mileage !== null && preg_match('/([\d.]+)/', $mileage, $m)) {
             $raw['annual_mileage'] = (int) str_replace('.', '', $m[1]);
         }
+        // Deckung + Selbstbeteiligung. Wichtig: "mit Vollkasko" schliesst die
+        // Teilkasko-Risiken ein - weist das Protokoll BEIDE Selbstbeteiligungen
+        // aus ("500 € VK, 150 € TK"), gehoeren auch beide in den Vertrag (der
+        // Betrieb will Teilkasko 150 UND Vollkasko 500 sehen, nicht nur eine).
         $deckung = $this->label($text, 'Deckung');
-        if ($deckung !== null) {
-            $raw['has_vollkasko'] = stripos($deckung, 'Vollkasko') !== false;
-            $raw['has_teilkasko'] = !$raw['has_vollkasko'] && stripos($deckung, 'Teilkasko') !== false;
+        $sb = $this->label($text, 'Selbstbeteiligung') ?? '';
+        $hasVoll = $deckung !== null && stripos($deckung, 'Vollkasko') !== false;
+        // Vollkasko enthaelt Teilkasko - bei ausgewiesener TK-SB oder Vollkasko
+        // gilt Teilkasko als vorhanden.
+        $hasTeil = ($deckung !== null && stripos($deckung, 'Teilkasko') !== false)
+            || (bool) preg_match('/€\s*TK\b/iu', $sb)
+            || $hasVoll;
+        // Ist die Deckung ueberhaupt angegeben, beide Flags setzen (auch false).
+        if ($deckung !== null || $hasTeil) {
+            $raw['has_vollkasko'] = $hasVoll;
+            $raw['has_teilkasko'] = $hasTeil;
         }
-        $sb = $this->label($text, 'Selbstbeteiligung');
-        if ($sb !== null && preg_match('/([\d.]+)\s*€/', $sb, $m)) {
+        // Getrennte Selbstbeteiligungen fuer VK und TK ("500 € VK, 150 € TK").
+        if (preg_match('/([\d.]+)\s*€\s*VK\b/iu', $sb, $m)) {
+            $raw['vollkasko_deductible'] = (int) str_replace('.', '', $m[1]);
+        }
+        if (preg_match('/([\d.]+)\s*€\s*TK\b/iu', $sb, $m)) {
+            $raw['teilkasko_deductible'] = (int) str_replace('.', '', $m[1]);
+        }
+        // Fallback: nur EIN Betrag ohne VK/TK-Kennung.
+        if (!isset($raw['vollkasko_deductible']) && !isset($raw['teilkasko_deductible'])
+            && $sb !== '' && preg_match('/([\d.]+)\s*€/u', $sb, $m)) {
             $deductible = (int) str_replace('.', '', $m[1]);
-            if (!empty($raw['has_vollkasko'])) {
+            if ($hasVoll) {
                 $raw['vollkasko_deductible'] = $deductible;
-            } elseif (!empty($raw['has_teilkasko'])) {
+            } elseif ($hasTeil) {
                 $raw['teilkasko_deductible'] = $deductible;
             }
+        }
+
+        // Zusatzleistungen aus dem Protokoll (nur eindeutige Ja-Angaben bzw. der
+        // Tarifname): Werkstattbindung, Schutzbrief, Fahrerschutz. Schluessel
+        // stammen aus ContractVehicleDetail::EXTRAS.
+        $extras = $this->parseExtras($text);
+        if ($extras !== []) {
+            $raw['extras'] = $extras;
         }
         // SF-Einstufung Haftpflicht (Spaltenlayout ohne Doppelpunkt):
         //   Angegebene SF-Klasse Haftpflicht     SF 4        (oder "keine")
@@ -169,11 +228,25 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
     {
         $raw = ['sparte' => 'kfz'];
 
-        // Ausgewaehlter Tarif: die Zeile direkt nach "folgenden Tarif:".
-        if (preg_match('/folgenden Tarif:\s*\R+\s*([^\r\n]+)/u', $text, $m)) {
-            $tarif = trim($m[1]);
-            // Versicherer = erstes Wort der Tarifzeile (z.B. "ADAC Basis ...").
-            $raw['insurer'] = preg_split('/\s+/', $tarif)[0] ?? null;
+        // Ausgewaehlter Tarif: die Zeile nach "folgenden Tarif:" (z.B.
+        // "DA Direkt Komfort Smart mit Werkstattbindung"). Versicherer und
+        // Tarifname sauber trennen - der Versicherer ist NICHT immer nur das
+        // erste Wort ("DA Direkt", "Sparkassen DirektVersicherung", ...).
+        $tariffLine = $this->selectedTariffLine($text);
+        if ($tariffLine !== null) {
+            [$insurer, $tariff] = $this->splitInsurerTariff($tariffLine);
+            if ($insurer !== null) {
+                $raw['insurer'] = $insurer;
+            }
+            if ($tariff !== null) {
+                $raw['tariff'] = $tariff;
+            }
+            // Beitrag zum gewaehlten Tarif aus der Vergleichstabelle lesen
+            // (dieselbe Tarifzeile traegt dort den Monatsbeitrag).
+            if (preg_match('/' . preg_quote($tariffLine, '/') . '\s+([\d.]+,\d{2})\s*€/u', $text, $m)) {
+                $raw['premium_amount'] = (float) str_replace(['.', ','], ['', '.'], $m[1]);
+                $raw['premium_interval'] = $this->interval((string) $this->label($text, 'Zahlweise')) ?? 'monthly';
+            }
         }
 
         $raw['start_date'] = $this->germanDate($this->label($text, 'Versicherungsbeginn'));
@@ -207,13 +280,115 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
             }
         }
 
-        return $this->validatedInsurance(array_filter($raw, fn ($v) => $v !== null && $v !== ''));
+        // Seit wann beim Vorversicherer ("länger als 3 Jahre") + ob der
+        // Vorversicherer gekuendigt hat (relevant fuer Annahme/Beitrag beim
+        // neuen Versicherer). Nur setzen, wenn eine Vorversicherung erkannt ist.
+        if (isset($raw['previous_insurer'])) {
+            $since = $this->label($text, 'Seit wann');
+            if ($since !== null && mb_strlen($since) <= 60) {
+                $raw['previous_insurance_since'] = $since;
+            }
+            // "Kündigung durch\nVorversicherer: nein" (das Label steht ueber
+            // zwei Zeilen; \s matcht auch den Zeilenumbruch).
+            if (preg_match('/K[üu]ndigung durch\s+Vorversicherer\s*:?\s*(ja|nein)/ui', $text, $k)) {
+                $raw['previous_insurance_terminated'] = mb_strtolower($k[1]) === 'ja';
+            }
+        }
+
+        return $this->validatedInsurance(array_filter(
+            $raw,
+            // false (z.B. previous_insurance_terminated) MUSS erhalten bleiben.
+            fn ($v) => $v !== null && $v !== ''
+        ));
     }
 
-    /** Wert nach "Label:" bis zum Spaltenumbruch (2+ Leerzeichen) oder Zeilenende. */
+    /** Kurztext der Deckung fuer die Zusammenfassung (Haftpflicht immer dabei). */
+    private function coverageSummary(array $kfz): string
+    {
+        $parts = ['Haftpflicht'];
+        if (!empty($kfz['has_teilkasko'])) {
+            $parts[] = 'Teilkasko' . (isset($kfz['teilkasko_deductible']) ? ' (' . $kfz['teilkasko_deductible'] . ' EUR SB)' : '');
+        }
+        if (!empty($kfz['has_vollkasko'])) {
+            $parts[] = 'Vollkasko' . (isset($kfz['vollkasko_deductible']) ? ' (' . $kfz['vollkasko_deductible'] . ' EUR SB)' : '');
+        }
+        return implode(', ', $parts);
+    }
+
+    /** Die ausgewaehlte Tarifzeile (nach "folgenden Tarif:") oder null. */
+    private function selectedTariffLine(string $text): ?string
+    {
+        if (preg_match('/folgenden Tarif:\s*\R+\s*([^\r\n]+)/u', $text, $m)) {
+            $line = trim($m[1]);
+            return $line !== '' ? $line : null;
+        }
+        return null;
+    }
+
+    /**
+     * Versicherer + Tarifname aus der Tarifzeile trennen. Der Versicherer wird
+     * am laengsten passenden bekannten Namen erkannt (kanonische Schreibweise);
+     * faellt keiner, wird konservativ das erste Wort genommen.
+     *
+     * @return array{0:?string,1:?string} [Versicherer, Tarifname]
+     */
+    private function splitInsurerTariff(string $line): array
+    {
+        $line = trim($line);
+        $best = null;
+        foreach (self::KNOWN_INSURERS as $name) {
+            if (preg_match('/^' . preg_quote($name, '/') . '(?=\s|$)/iu', $line)
+                && ($best === null || mb_strlen($name) > mb_strlen($best))) {
+                $best = $name;
+            }
+        }
+        if ($best !== null) {
+            $tariff = trim(mb_substr($line, mb_strlen($best)));
+            return [$best, $tariff !== '' ? $tariff : null];
+        }
+        $parts = preg_split('/\s+/', $line, 2);
+        return [$parts[0] ?? null, $parts[1] ?? null];
+    }
+
+    /**
+     * Zusatzleistungen aus dem Protokoll (Schluessel aus
+     * ContractVehicleDetail::EXTRAS). Bewusst konservativ: nur der Tarifname
+     * (Werkstattbindung) und eindeutige "gewuenscht: ja"-Angaben - nichts aus
+     * dem langen Leistungskatalog erraten.
+     *
+     * @return list<string>
+     */
+    private function parseExtras(string $text): array
+    {
+        $extras = [];
+        // Werkstattbindung: aus dem Tarifnamen ("... mit Werkstattbindung/
+        // -service/-bonus") oder ueber "Nur freie Werkstattwahl: nein".
+        $tariff = $this->selectedTariffLine($text) ?? '';
+        $freeChoice = $this->label($text, 'Nur freie Werkstattwahl');
+        if (preg_match('/mit Werkstatt(bindung|service|bonus)/iu', $tariff)
+            || ($freeChoice !== null && mb_strtolower(trim($freeChoice)) === 'nein')) {
+            $extras[] = 'werkstattbindung';
+        }
+        // Schutzbrief / Fahrerschutz nur bei ausdruecklichem "gewuenscht: ja".
+        foreach (['Schutzbrief' => 'schutzbrief', 'Fahrerschutz' => 'fahrerschutz'] as $labelText => $key) {
+            $val = $this->label($text, $labelText . ' gewünscht');
+            if ($val !== null && mb_strtolower(trim($val)) === 'ja') {
+                $extras[] = $key;
+            }
+        }
+        return array_values(array_unique($extras));
+    }
+
+    /**
+     * Wert nach "Label:" bis zum Spaltenumbruch (2+ Leerzeichen) oder
+     * Zeilenende. Der /m-Modifier ist wichtig: ohne ihn matcht "$" nur am
+     * Dokumentende, sodass ein Wert am ZEILENENDE (ohne folgende Spalte, aber
+     * nicht in der letzten Zeile) nicht erkannt wuerde (z.B. "Fahrerschutz
+     * gewünscht: ja" mitten im Dokument).
+     */
     private function label(string $text, string $label): ?string
     {
-        $pattern = '/' . preg_quote($label, '/') . '\s*:\s*([^\n]+?)(?:\s{2,}|$)/u';
+        $pattern = '/' . preg_quote($label, '/') . '\s*:\s*([^\n]+?)(?:\s{2,}|$)/um';
         return preg_match($pattern, $text, $m) ? trim($m[1]) : null;
     }
 

@@ -23,6 +23,7 @@ class ContractVehicleDetail extends Model
         'has_teilkasko', 'teilkasko_deductible', 'has_vollkasko', 'vollkasko_deductible',
         'extras', 'driver_groups', 'additional_drivers', 'holder_type', 'holder_name', 'ownership_type',
         'initial_mileage', 'annual_mileage',
+        'previous_insurer', 'previous_insurance_since', 'previous_insurance_terminated_by_insurer',
         'sf_liability_class', 'sf_liability_valid_from', 'sf_liability_type', 'sf_liability_special_reason', 'sf_liability_real_class',
         'sf_comprehensive_class', 'sf_comprehensive_valid_from', 'sf_comprehensive_type', 'sf_comprehensive_special_reason', 'sf_comprehensive_real_class',
     ];
@@ -33,6 +34,7 @@ class ContractVehicleDetail extends Model
         'sf_comprehensive_valid_from' => 'date',
         'has_teilkasko' => 'boolean',
         'has_vollkasko' => 'boolean',
+        'previous_insurance_terminated_by_insurer' => 'boolean',
         'extras' => 'array',
         'driver_groups' => 'array',
         'additional_drivers' => 'array',
