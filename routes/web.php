@@ -407,6 +407,11 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/employees/create', [EmployeeController::class, 'create'])->name('employees.create')->middleware('role:admin,manager');
     Route::post('/employees', [EmployeeController::class, 'store'])->name('employees.store')->middleware('role:admin,manager');
     Route::get('/employees/{id}/edit', [EmployeeController::class, 'edit'])->name('employees.edit')->middleware('role:admin,manager');
+    // Mitarbeiter-Detailseite: Profil + durchsuchbare/paginierte Kundenliste
+    // (wie der Kundenbereich) mit smarter Mehrfach-Zuweisung und Entfernen.
+    Route::get('/employees/{id}', [EmployeeController::class, 'show'])->name('employees.show')->middleware('role:admin,manager');
+    Route::post('/employees/{id}/assign-customers', [EmployeeController::class, 'assignCustomers'])->name('employees.assign_customers')->middleware('role:admin,manager');
+    Route::delete('/employees/{id}/customers/{customerId}', [EmployeeController::class, 'unassignCustomer'])->name('employees.unassign_customer')->middleware('role:admin,manager');
     Route::put('/employees/{id}', [EmployeeController::class, 'update'])->name('employees.update')->middleware('role:admin,manager');
     Route::delete('/employees/{id}', [EmployeeController::class, 'destroy'])->name('employees.destroy')->middleware('role:admin');
     Route::put('/employees/{id}/toggle-active', [EmployeeController::class, 'toggleActive'])->name('employees.toggle')->middleware('role:admin,manager');
