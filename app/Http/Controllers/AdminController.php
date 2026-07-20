@@ -70,11 +70,18 @@ class AdminController extends Controller
             'pendingApprovals' => \App\Models\CustomerChangeRequest::where('status','pending')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->count(),
             'recentTickets' => Ticket::with('customer.user')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->latest()->take(5)->get(),
             'recentApprovals' => \App\Models\CustomerChangeRequest::with('customer.user')->where('status','pending')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->latest()->take(5)->get(),
-            // Punkt 1: Zuletzt geöffnete Kunden strikt aufs Portfolio scopen.
-            // Admin (ids === null) sieht alle; Mitarbeiter nur zugewiesene.
-            'recentCustomers' => Customer::with('user')
-                ->when($ids !== null, fn($q) => $q->whereIn('id', $ids))
-                ->latest()->take(8)->get(),
+            // Zuletzt GEOEFFNETE Kunden: pro Mitarbeiter aus customer_views,
+            // nach eigenem Aufruf-Zeitstempel sortiert (nicht mehr nach Anlage-
+            // datum). Zusaetzlich aufs Portfolio gescopt, damit ein alter View
+            // auf einen inzwischen entzogenen Kunden nicht mehr auftaucht.
+            'recentCustomers' => Customer::query()
+                ->select('customers.*')
+                ->join('customer_views', 'customer_views.customer_id', '=', 'customers.id')
+                ->where('customer_views.user_id', auth()->id())
+                ->when($ids !== null, fn($q) => $q->whereIn('customers.id', $ids))
+                ->with('user')->withCount('contracts')
+                ->orderByDesc('customer_views.viewed_at')
+                ->take(8)->get(),
         ]);
     }
 
@@ -240,6 +247,15 @@ class AdminController extends Controller
 
     public function customerShow($id) {
         $this->authorizeCustomerAccess($id);
+        // "Zuletzt geoeffnet" pro Mitarbeiter festhalten: jeder Aufruf der Akte
+        // aktualisiert den Zeitstempel, damit das Dashboard die reale Reihenfolge
+        // zeigt (nur Staff - Kunden erreichen diese Route nicht).
+        if (auth()->user()?->isStaff()) {
+            \App\Models\CustomerView::updateOrCreate(
+                ['user_id' => auth()->id(), 'customer_id' => $id],
+                ['viewed_at' => now()]
+            );
+        }
         $customer = Customer::with(['user','contracts.vehicleDetail.claims','contracts.vehicleDetail.mileageReadings','contracts.energyDetail','contracts.internetDetail','contracts.switchReminders','tickets','documents','changeRequests.reviewer'])->findOrFail($id);
         // Interner Chat & Notizen (nur Staff - Zugriff bereits oben geprüft)
         $internalChat = \App\Models\InternalMessage::chat()->where('customer_id', $id)->with('sender')->orderBy('created_at')->get();

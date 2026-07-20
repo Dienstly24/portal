@@ -24,25 +24,60 @@ class ImprovementRoundTest extends TestCase
         return Customer::create(['user_id' => $user->id, 'customer_number' => 'C-' . strtoupper(substr(md5((string)$user->id),0,6))]);
     }
 
-    // Punkt 1: Mitarbeiter sieht in "Zuletzt geöffnete Kunden" nur eigene
-    public function test_employee_dashboard_shows_only_assigned_recent_customers(): void
+    // Punkt 1: "Zuletzt geöffnete Kunden" zeigt nur, was der Mitarbeiter selbst
+    // geoeffnet hat - und nur aus dem eigenen Portfolio.
+    public function test_employee_dashboard_shows_only_own_opened_customers(): void
     {
         $mine = $this->makeCustomer();
         $foreign = $this->makeCustomer();
         $employee = User::factory()->create(['role' => 'employee', 'can_see_all_customers' => false]);
         $mine->betreuer()->attach($employee->id);
 
+        // Vor dem Oeffnen ist die Liste leer.
+        $this->actingAs($employee)->get(route('admin.dashboard'))->assertOk()
+            ->assertDontSee($mine->user->name);
+
+        // Nach dem Oeffnen der eigenen Akte erscheint sie.
+        $this->actingAs($employee)->get(route('admin.customer', $mine->id))->assertOk();
+
         $res = $this->actingAs($employee)->get(route('admin.dashboard'))->assertOk();
         $res->assertSee($mine->user->name);
         $res->assertDontSee($foreign->user->name);
     }
 
-    public function test_admin_dashboard_shows_all_recent_customers(): void
+    // Auch ein Admin sieht in "zuletzt geoeffnet" nur die von IHM geoeffneten
+    // Akten - die Liste ist bewusst pro Nutzer, nicht global.
+    public function test_admin_dashboard_shows_only_own_opened_customers(): void
     {
         $a = $this->makeCustomer(); $b = $this->makeCustomer();
         $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->get(route('admin.customer', $a->id))->assertOk();
+
         $this->actingAs($admin)->get(route('admin.dashboard'))
-            ->assertOk()->assertSee($a->user->name)->assertSee($b->user->name);
+            ->assertOk()->assertSee($a->user->name)->assertDontSee($b->user->name);
+    }
+
+    // Kernfix: Oeffnen aktualisiert die Reihenfolge sofort (zuletzt geoeffnet
+    // steht oben, erneutes Oeffnen holt einen Kunden wieder nach vorne).
+    public function test_opening_customer_updates_recent_order(): void
+    {
+        $a = $this->makeCustomer(); $b = $this->makeCustomer();
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->get(route('admin.customer', $a->id))->assertOk();
+        $this->travel(1)->minutes();
+        $this->actingAs($admin)->get(route('admin.customer', $b->id))->assertOk();
+
+        // Zuletzt geoeffnet: b vor a.
+        $this->actingAs($admin)->get(route('admin.dashboard'))->assertOk()
+            ->assertSeeInOrder([$b->user->name, $a->user->name]);
+
+        // a erneut oeffnen -> a wieder oben.
+        $this->travel(2)->minutes();
+        $this->actingAs($admin)->get(route('admin.customer', $a->id))->assertOk();
+        $this->actingAs($admin)->get(route('admin.dashboard'))->assertOk()
+            ->assertSeeInOrder([$a->user->name, $b->user->name]);
     }
 
     // Punkt 2: Dashboard-Karten verlinken auf die Übersichten
