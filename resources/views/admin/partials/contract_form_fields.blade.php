@@ -200,6 +200,30 @@
     </div>
 </div>
 
+{{-- ===== E-Scooter (eigener Namensraum, nutzt aber die Fahrzeugtabelle) ===== --}}
+<div id="section-escooter" class="branch-section" style="display:none;border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;">
+    <div class="card-title" style="font-size:14px;">🛴 E-Scooter</div>
+    <p style="font-size:12px;color:var(--ink-soft);margin:0 0 14px;">
+        E-Scooter laufen ueber ein festes Versicherungsjahr: Der Vertrag endet automatisch am Ende des Februars
+        (bedarf keiner Kuendigung), der Beitrag wird einmalig faellig. Deckung: Haftpflicht oder Teilkasko (kein Vollkasko).
+        Der Ablauf wird aus dem Beginn berechnet und muss nicht von Hand gesetzt werden.
+    </p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="field"><label>Versicherungskennzeichen</label><input type="text" name="escooter[license_plate]" maxlength="20" value="{{ $val('escooter.license_plate', $veh->license_plate ?? '') }}" placeholder="z. B. 611 MDS"></div>
+        <div class="field"><label>Fahrgestellnummer (FIN)</label><input type="text" name="escooter[vin]" maxlength="30" value="{{ $val('escooter.vin', $veh->vin ?? '') }}" placeholder="z. B. ZSF10Z23075358"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="field"><label>Hersteller/Modellbezeichnung</label><input type="text" name="escooter[manufacturer]" maxlength="255" value="{{ $val('escooter.manufacturer', $veh->manufacturer ?? '') }}" placeholder="z. B. ZHEJIANG KUANTU (RC)"></div>
+        <div class="field"><label>Modell (optional)</label><input type="text" name="escooter[model]" maxlength="255" value="{{ $val('escooter.model', $veh->model ?? '') }}"></div>
+    </div>
+    <div class="field">
+        <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">
+            <input type="checkbox" name="escooter[has_teilkasko]" value="1" {{ old('escooter.has_teilkasko', $veh->has_teilkasko ?? false) ? 'checked' : '' }}>
+            Teilkasko eingeschlossen (sonst nur Haftpflicht)
+        </label>
+    </div>
+</div>
+
 <script>
 function contractToggleSections() {
     const type = document.getElementById('sparte').value;

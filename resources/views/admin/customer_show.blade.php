@@ -384,7 +384,7 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
             <td style="padding:12px;font-size:13px;white-space:nowrap;">
                 @if($c->hasPremium())
                     <div style="font-weight:600;">{{ $eur($c->premium_amount) }}</div>
-                    <div style="font-size:11.5px;color:var(--ink-soft);">{{ $c->premiumIntervalLabel() }}@if($c->premium_interval !== 'monthly') · {{ $eur($c->monthlyPremium()) }}/Mon.@endif</div>
+                    <div style="font-size:11.5px;color:var(--ink-soft);">{{ $c->premiumIntervalLabel() }}@if(!$c->isOneTime() && $c->premium_interval !== 'monthly') · {{ $eur($c->monthlyPremium()) }}/Mon.@endif</div>
                 @else
                     <span style="color:var(--ink-soft);">—</span>
                 @endif

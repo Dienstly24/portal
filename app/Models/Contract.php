@@ -22,6 +22,10 @@ class Contract extends Model {
         'quarterly'  => ['label' => 'Vierteljährlich', 'per_year' => 4],
         'semiannual' => ['label' => 'Halbjährlich',    'per_year' => 2],
         'yearly'     => ['label' => 'Jährlich',        'per_year' => 1],
+        // Einmalzahlung (z.B. E-Scooter-Saisonbeitrag): faellt nur EINMAL an,
+        // daher per_year = 0 -> geht nicht in die auf den Monat/das Jahr
+        // normierte Beitrags-Statistik ein (kein laufender Beitrag).
+        'einmalig'   => ['label' => 'Einmalig',        'per_year' => 0],
     ];
 
     /** Gueltige Zahlweise-Schluessel (Validierungs-Whitelist). */
@@ -38,6 +42,16 @@ class Contract extends Model {
     /** Ist ein Beitrag hinterlegt? (Betrag > 0) */
     public function hasPremium(): bool {
         return (float) $this->premium_amount > 0;
+    }
+
+    /** Einmalzahlung (z.B. E-Scooter-Saisonbeitrag) - kein laufender Beitrag. */
+    public function isOneTime(): bool {
+        return $this->premium_interval === 'einmalig';
+    }
+
+    /** Ist dies ein E-Scooter-Vertrag (feste Saison, Einmalbeitrag)? */
+    public function isEscooter(): bool {
+        return $this->type === 'escooter';
     }
 
     /** Auf den Monat normierter Beitrag - Basis fuer Summen/Statistik. */
@@ -167,6 +181,22 @@ class Contract extends Model {
     protected static function boot() {
         parent::boot();
         static::creating(fn($m) => $m->id = $m->id ?: (string) Str::uuid());
+
+        // E-Scooter: feste Fachregeln zentral erzwingen - egal woher der Vertrag
+        // kommt (Formular, Dokumenten-Eingang, Import). Der Vertrag endet immer
+        // am Ende der Saison (Ende Februar, "bedarf keiner Kuendigung") und der
+        // Beitrag ist eine Einmalzahlung. So bleibt der Ablauf bei jedem Wechsel
+        // des Beginns korrekt und muss nirgends von Hand nachgezogen werden.
+        static::saving(function ($m) {
+            if ($m->type === 'escooter') {
+                if (!empty($m->start_date)) {
+                    $m->end_date = \App\Support\EscooterInsurance::seasonEndDate($m->start_date);
+                }
+                if (empty($m->premium_interval)) {
+                    $m->premium_interval = 'einmalig';
+                }
+            }
+        });
     }
     public function vehicleDetail() { return $this->hasOne(ContractVehicleDetail::class); }
     public function energyDetail() { return $this->hasOne(ContractEnergyDetail::class); }

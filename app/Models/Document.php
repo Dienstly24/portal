@@ -18,6 +18,7 @@ class Document extends Model {
      */
     public const AI_TYPES = [
         'kfz_vertrag'          => ['label' => 'KFZ-Vertrag',          'category' => 'contract'],
+        'escooter_vertrag'     => ['label' => 'E-Scooter-Versicherung', 'category' => 'contract'],
         'versicherungsvertrag' => ['label' => 'Versicherungsvertrag', 'category' => 'contract'],
         'versicherungspolice'  => ['label' => 'Versicherungspolice',  'category' => 'police'],
         'beratungsprotokoll'   => ['label' => 'Beratungsprotokoll',   'category' => 'contract'],

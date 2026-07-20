@@ -48,6 +48,7 @@ class ContractVehicleDetail extends Model
         'wohnwagen'   => ['label' => 'Wohnwagen',   'icon' => '🏕️'],
         'taxi'        => ['label' => 'Taxi',        'icon' => '🚕'],
         'mietwagen'   => ['label' => 'Mietwagen',   'icon' => '🔑'],
+        'escooter'    => ['label' => 'E-Scooter',   'icon' => '🛴'],
         'sonstige'    => ['label' => 'Sonstige',    'icon' => '📋'],
     ];
 
