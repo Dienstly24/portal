@@ -445,6 +445,7 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
                         @if($e->meter_number) · Zähler: {{ $e->meter_number }}@endif
                         @if($e->malo_id) · MaLo-ID: <b>{{ $e->malo_id }}</b>@endif
                         @if($e->grid_operator) · Netz: {{ $e->grid_operator }}@endif
+                        @if($e->previous_provider) · Vorher: {{ $e->previous_provider }}@if($e->previous_customer_number) (Kd-Nr. {{ $e->previous_customer_number }})@endif @endif
                     @elseif($i = $c->internetDetail)
                         📶 {{ $i->tariff ?? 'Tarif —' }}@if($i->speed) · {{ $i->speed }}@endif
                     @endif
