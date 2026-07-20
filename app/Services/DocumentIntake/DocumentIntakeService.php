@@ -260,6 +260,40 @@ class DocumentIntakeService
             }
         };
 
+        // Die aus dem Dokument gelesene E-Mail ist die Kontaktadresse des
+        // Kunden und soll - wenn moeglich - die HAUPT-Login-Adresse
+        // (users.email) werden: erst damit laesst sich der Portal-Zugang
+        // aktivieren und die Willkommens-/Portal-Mail versenden. Nur wenn der
+        // Kunde bereits eine echte Haupt-Adresse hat ODER die Adresse schon
+        // einem ANDEREN Nutzer gehoert (users.email ist unique), wandert sie
+        // in die Zweitadresse (email2).
+        $userEmail = null;
+        $applyEmail = function (?string $email) use ($customer, &$updates, &$userEmail): void {
+            $email = $email !== null ? trim($email) : null;
+            if ($email === null || $email === '') {
+                return;
+            }
+            $user = $customer->user;
+            // Gehoert die Adresse bereits diesem Kunden (Haupt- oder Zweit-
+            // adresse), ist nichts zu tun - keine Dopplung.
+            if ($user !== null && strcasecmp((string) $user->email, $email) === 0) {
+                return;
+            }
+            if (strcasecmp((string) $customer->email2, $email) === 0) {
+                return;
+            }
+            $takenByOther = \App\Models\User::where('email', $email)
+                ->when($customer->user_id, fn ($q) => $q->where('id', '!=', $customer->user_id))
+                ->exists();
+            if ($user !== null && !$user->hasRealEmail() && !$takenByOther) {
+                // Haupt-Login-Adresse setzen -> aktiviert den Portal-Zugang.
+                $userEmail = $email;
+            } elseif (blank($customer->email2)) {
+                // Fallback: als Zweitadresse hinterlegen (nur wenn noch leer).
+                $updates['email2'] = $email;
+            }
+        };
+
         foreach (array_unique($keys) as $key) {
             match ($key) {
                 'birth_date' => $set('birth_date', $person['birth_date'] ?? null),
@@ -278,7 +312,9 @@ class DocumentIntakeService
                 'nationality' => $set('nationality', $person['nationality'] ?? null),
                 'marital_status' => $set('marital_status', $person['marital_status'] ?? null),
                 'gender' => $set('gender', $person['gender'] ?? null),
-                'email2' => $set('email2', $person['email'] ?? null),
+                // Bewusst KEIN reines email2: die gelesene Adresse soll primaer
+                // die Haupt-Login-Adresse werden (Portal-Zugang), sonst email2.
+                'email2' => $applyEmail($person['email'] ?? null),
                 'address' => (function () use ($set, $person): void {
                     $set('address_street', $person['street'] ?? null);
                     $set('address_house_number', $person['house_number'] ?? null);
@@ -300,11 +336,20 @@ class DocumentIntakeService
             };
         }
 
-        if ($updates === []) {
+        if ($updates === [] && $userEmail === null) {
             return [];
         }
 
-        $customer->fill($updates)->save();
+        $applied = [];
+        if ($userEmail !== null && $customer->user !== null) {
+            // Haupt-Login-Adresse am User setzen (aktiviert den Portal-Zugang).
+            $customer->user->forceFill(['email' => $userEmail])->save();
+            $applied[] = 'email';
+        }
+        if ($updates !== []) {
+            $customer->fill($updates)->save();
+            $applied = array_merge($applied, array_keys($updates));
+        }
 
         ActivityLog::create([
             'user_id' => $byUserId,
@@ -313,11 +358,11 @@ class DocumentIntakeService
             'entity_id' => $customer->id,
             'meta' => json_encode([
                 'document_id' => (string) $document->id,
-                'fields' => array_keys($updates),
+                'fields' => $applied,
             ], JSON_UNESCAPED_UNICODE),
         ]);
 
-        return array_keys($updates);
+        return $applied;
     }
 
     /**
