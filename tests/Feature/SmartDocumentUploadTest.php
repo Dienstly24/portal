@@ -507,6 +507,130 @@ class SmartDocumentUploadTest extends TestCase
         $this->assertNull($customer->phone);
     }
 
+    public function test_extracted_email_becomes_main_login_email_on_assign(): void
+    {
+        // Kernproblem: die aus dem Dokument gelesene E-Mail muss die HAUPT-
+        // Login-Adresse (users.email) werden - erst damit laesst sich der
+        // Portal-Zugang aktivieren und die Willkommens-Mail versenden. Bisher
+        // landete sie faelschlich nur in der Zweitadresse (email2).
+        Storage::fake('local');
+        Storage::disk('local')->put('documents/eingang/kfz.pdf', '%PDF-1.4');
+        $doc = Document::create([
+            'customer_id' => null,
+            'category' => 'other',
+            'file_name' => 'Antrag.pdf',
+            'file_path' => 'documents/eingang/kfz.pdf',
+            'disk' => 'local',
+            'ai_status' => 'done',
+            'ai_type' => 'kfz_vertrag',
+            'ai_extracted' => ['person' => ['email' => 'Mustafa.jabir1990@gmail.com']],
+        ]);
+        // Bestandskunde OHNE echte E-Mail (Import-Platzhalter).
+        $customer = $this->makeCustomer([], ['email' => 'alt-2600001@dienstly24.internal']);
+        $admin = $this->makeAdmin();
+
+        $this->actingAs($admin)->postJson(route('admin.documents.assign', $doc->id), [
+            'customer_id' => (string) $customer->id,
+            'apply_fields' => ['email2'],
+        ])->assertOk();
+
+        $customer->refresh();
+        $this->assertSame('Mustafa.jabir1990@gmail.com', $customer->user->email);
+        $this->assertTrue($customer->user->hasRealEmail());
+        // Keine Dopplung in die Zweitadresse.
+        $this->assertNull($customer->email2);
+    }
+
+    public function test_extracted_email_falls_back_to_email2_when_main_exists(): void
+    {
+        // Hat der Kunde bereits eine echte Haupt-Adresse, wird sie NICHT
+        // ueberschrieben - die gelesene Adresse wandert in die Zweitadresse.
+        Storage::fake('local');
+        Storage::disk('local')->put('documents/eingang/kfz2.pdf', '%PDF-1.4');
+        $doc = Document::create([
+            'customer_id' => null,
+            'category' => 'other',
+            'file_name' => 'Antrag2.pdf',
+            'file_path' => 'documents/eingang/kfz2.pdf',
+            'disk' => 'local',
+            'ai_status' => 'done',
+            'ai_type' => 'kfz_vertrag',
+            'ai_extracted' => ['person' => ['email' => 'neu@example.com']],
+        ]);
+        $customer = $this->makeCustomer([], ['email' => 'bestand@example.com']);
+        $admin = $this->makeAdmin();
+
+        $this->actingAs($admin)->postJson(route('admin.documents.assign', $doc->id), [
+            'customer_id' => (string) $customer->id,
+            'apply_fields' => ['email2'],
+        ])->assertOk();
+
+        $customer->refresh();
+        $this->assertSame('bestand@example.com', $customer->user->email);
+        $this->assertSame('neu@example.com', $customer->email2);
+    }
+
+    public function test_extracted_email_falls_back_to_email2_when_taken_by_another_user(): void
+    {
+        // Gehoert die Adresse schon einem ANDEREN Nutzer (users.email ist
+        // unique), darf sie nicht als Login-Adresse gesetzt werden -> email2.
+        Storage::fake('local');
+        Storage::disk('local')->put('documents/eingang/kfz3.pdf', '%PDF-1.4');
+        User::factory()->create(['email' => 'geteilt@example.com']);
+        $doc = Document::create([
+            'customer_id' => null,
+            'category' => 'other',
+            'file_name' => 'Antrag3.pdf',
+            'file_path' => 'documents/eingang/kfz3.pdf',
+            'disk' => 'local',
+            'ai_status' => 'done',
+            'ai_type' => 'kfz_vertrag',
+            'ai_extracted' => ['person' => ['email' => 'geteilt@example.com']],
+        ]);
+        $customer = $this->makeCustomer([], ['email' => 'ohne-mail@dienstly24.internal']);
+        $admin = $this->makeAdmin();
+
+        $this->actingAs($admin)->postJson(route('admin.documents.assign', $doc->id), [
+            'customer_id' => (string) $customer->id,
+            'apply_fields' => ['email2'],
+        ])->assertOk();
+
+        $customer->refresh();
+        $this->assertSame('ohne-mail@dienstly24.internal', $customer->user->email);
+        $this->assertFalse($customer->user->hasRealEmail());
+        $this->assertSame('geteilt@example.com', $customer->email2);
+    }
+
+    public function test_create_customer_puts_extracted_email_in_main_not_email2(): void
+    {
+        // Neuanlage: die freie Adresse wird die Haupt-Login-Adresse - und wird
+        // NICHT zusaetzlich (doppelt) in die Zweitadresse geschrieben.
+        Storage::fake('local');
+        Storage::disk('local')->put('documents/eingang/neu.pdf', '%PDF-1.4');
+        $doc = Document::create([
+            'customer_id' => null,
+            'category' => 'other',
+            'file_name' => 'Antrag_neu.pdf',
+            'file_path' => 'documents/eingang/neu.pdf',
+            'disk' => 'local',
+            'ai_status' => 'done',
+            'ai_type' => 'kfz_vertrag',
+            'ai_extracted' => ['person' => [
+                'first_name' => 'Mustafa', 'last_name' => 'Jabir',
+                'email' => 'mustafa@example.com',
+            ]],
+        ]);
+        $admin = $this->makeAdmin();
+
+        $this->actingAs($admin)->postJson(route('admin.documents.create_customer', $doc->id), [
+            'apply_fields' => ['email2'],
+        ])->assertOk();
+
+        $customer = Customer::findOrFail($doc->fresh()->customer_id);
+        $this->assertSame('mustafa@example.com', $customer->user->email);
+        $this->assertNull($customer->email2);
+    }
+
     public function test_create_customer_requires_a_name_when_none_extracted(): void
     {
         // Wurde der Name nicht (sicher) gelesen, darf die Neuanlage nicht

@@ -314,7 +314,7 @@ window.docReview = (function() {
             var g = get(x, 'person', 'gender');
             return g === 'male' ? 'Männlich' : (g === 'female' ? 'Weiblich' : null);
         } },
-        { key: 'email2', label: 'E-Mail (Zweitadresse)', from: function(x) { return get(x, 'person', 'email'); } },
+        { key: 'email2', label: 'E-Mail (Login / Portal-Zugang)', from: function(x) { return get(x, 'person', 'email'); } },
         { key: 'health_insurance', label: 'Krankenkasse / Versichertennummer', from: function(x) {
             var g = x.gesundheit || {};
             var parts = [g.health_insurance_company, g.health_insurance_number];
