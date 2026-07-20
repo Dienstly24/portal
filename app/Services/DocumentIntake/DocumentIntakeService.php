@@ -35,6 +35,8 @@ class DocumentIntakeService
             'first_name' => $person['first_name'] ?? null,
             'last_name' => $person['last_name'] ?? null,
             'full_name' => trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? '')) ?: null,
+            // Firmenname (Gewerbekunde) - wird bei der Neuanlage uebernommen.
+            'company_name' => $person['company_name'] ?? null,
             'birth_date' => $person['birth_date'] ?? null,
             'email' => $person['email'] ?? null,
             'phone' => $person['phone'] ?? null,
@@ -478,6 +480,10 @@ class DocumentIntakeService
                 'customer_number' => $energie['customer_number'] ?? null,
                 'payment_amount' => $ins['premium_amount'] ?? null,
                 'payment_interval' => $ins['premium_interval'] ?? null,
+                // Vorversorger (bisheriger Lieferant beim Wechsel) + dessen
+                // Kundennummer - aus dem Strom-/Gas-Auftrag.
+                'previous_provider' => $energie['previous_provider'] ?? null,
+                'previous_customer_number' => $energie['previous_customer_number'] ?? null,
             ], fn ($v) => $v !== null));
         }
 

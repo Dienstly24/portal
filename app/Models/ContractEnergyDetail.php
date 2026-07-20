@@ -14,6 +14,8 @@ class ContractEnergyDetail extends Model
         // Kundennummer beim Energieanbieter (separat von der Vertragsnummer,
         // die am Vertrag selbst haengt) - Betreiber-Vorgabe fuer Energievertraege.
         'customer_number',
+        // Vorversorger (bisheriger Lieferant beim Wechsel) + dessen Kundennummer.
+        'previous_provider','previous_customer_number',
     ];
     protected static function boot() {
         parent::boot();

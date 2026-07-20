@@ -440,6 +440,9 @@ class AdminController extends Controller
             // Energie: MaLo-ID hat 11 Ziffern und ist NICHT die Zählernummer
             'energy.malo_id' => ['nullable', 'regex:/^[0-9]{11}$/'],
             'energy.consumption_kwh' => 'nullable|integer|min:0',
+            // Vorversorger (bisheriger Lieferant beim Wechsel).
+            'energy.previous_provider' => 'nullable|string|max:150',
+            'energy.previous_customer_number' => 'nullable|string|max:60',
             // Internet
             'internet.speed' => 'nullable|string|max:30',
             // ---- E-Scooter (schlankes Fahrzeug-Detail, eigener Namensraum) ----
@@ -536,7 +539,7 @@ class AdminController extends Controller
             \App\Models\ContractEnergyDetail::updateOrCreate(
                 ['contract_id' => $contract->id],
                 collect($request->input('energy', []))
-                    ->only(['tariff','consumption_kwh','meter_number','customer_number','malo_id','meter_reading','grid_operator','metering_operator','payment_amount','payment_interval'])
+                    ->only(['tariff','consumption_kwh','meter_number','customer_number','malo_id','meter_reading','grid_operator','metering_operator','payment_amount','payment_interval','previous_provider','previous_customer_number'])
                     ->map(fn($val) => $val === '' ? null : $val)
                     ->all()
             );

@@ -392,6 +392,25 @@ class ContractManagementTest extends TestCase
         $this->assertSame(0, Contract::where('type', 'strom_gas')->count());
     }
 
+    // 15b) Vorversorger (bisheriger Lieferant) wird am Energie-Detail gespeichert.
+    public function test_energy_contract_stores_previous_provider(): void
+    {
+        $customer = $this->makeCustomer();
+
+        $this->actingAs($this->admin())->post(route('admin.contract.store', $customer->id), $this->base([
+            'type' => 'strom', 'insurer' => 'EWE VERTRIEB GmbH',
+            'energy' => [
+                'tariff' => 'EWE business Gruenstrom', 'meter_number' => '364-8646796',
+                'previous_provider' => 'Stadtwerke Neuss Energie und Wasser GmbH',
+                'previous_customer_number' => '20478172',
+            ],
+        ]))->assertSessionHasNoErrors();
+
+        $strom = Contract::where('customer_id', $customer->id)->where('type', 'strom')->firstOrFail();
+        $this->assertSame('Stadtwerke Neuss Energie und Wasser GmbH', $strom->energyDetail->previous_provider);
+        $this->assertSame('20478172', $strom->energyDetail->previous_customer_number);
+    }
+
     // 16) Typwechsel weg von Energie entfernt die Energie-Detaildaten.
     public function test_switching_away_from_energy_clears_energy_details(): void
     {

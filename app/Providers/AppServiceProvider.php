@@ -57,6 +57,7 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(\App\Services\Ai\TemplateParsers\ErsatzbescheinigungParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\GesundheitskarteParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\DslAuftragParser::class),
+                $app->make(\App\Services\Ai\TemplateParsers\EnergieAuftragParser::class),
                 // Zuletzt: kompakter Kontaktdaten-Block (nur wenn kein echtes
                 // Dokument passt - er triggert auf E-Mail+IBAN+PLZ in kurzem Text).
                 $app->make(\App\Services\Ai\TemplateParsers\KontaktdatenBlockParser::class),

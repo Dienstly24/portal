@@ -30,6 +30,9 @@ trait ValidatesExtractedFields
             'phone' => $this->cleanString($in['phone'] ?? null, 40),
             'nationality' => $this->cleanString($in['nationality'] ?? null, 60),
             'id_number' => $this->cleanString($in['id_number'] ?? null, 40),
+            // Firmenname (z.B. bei einem Gewerbe-Energievertrag: "Bisso
+            // Shawarma Einzeluntern.") - fliesst in die Kundenanlage.
+            'company_name' => $this->cleanString($in['company_name'] ?? null, 150),
             // Geschlecht/Familienstand nur aus eindeutigen Quellen (z.B. das
             // strukturierte Kranken-Beitrittsformular) - Wertelisten wie in der
             // Kundenakte, Unbekanntes faellt heraus.
@@ -87,6 +90,10 @@ trait ValidatesExtractedFields
             'consumption_kwh' => (is_numeric($consumption) && $consumption > 0 && $consumption < 1000000) ? (int) $consumption : null,
             'tariff' => $this->cleanString($in['tariff'] ?? null, 80),
             'customer_number' => $this->cleanString($in['customer_number'] ?? null, 40),
+            // Vorversorger (bisheriger Lieferant beim Wechsel) + dessen
+            // Kundennummer - aus dem Strom-/Gas-Auftrag.
+            'previous_provider' => $this->cleanString($in['previous_provider'] ?? null, 150),
+            'previous_customer_number' => $this->cleanString($in['previous_customer_number'] ?? null, 60),
         ], fn ($v) => $v !== null && $v !== '');
     }
 

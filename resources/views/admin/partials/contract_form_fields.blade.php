@@ -177,6 +177,11 @@
         <div class="field"><label>Netzbetreiber (optional)</label><input type="text" name="energy[grid_operator]" value="{{ $val('energy.grid_operator', $en->grid_operator ?? '') }}"></div>
         <div class="field"><label>Messstellenbetreiber (optional)</label><input type="text" name="energy[metering_operator]" value="{{ $val('energy.metering_operator', $en->metering_operator ?? '') }}"></div>
     </div>
+    {{-- Vorversorger (bisheriger Lieferant beim Wechsel) - aus dem Auftrag. --}}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="field"><label>Bisheriger Lieferant (Vorversorger)</label><input type="text" name="energy[previous_provider]" maxlength="150" value="{{ $val('energy.previous_provider', $en->previous_provider ?? '') }}" placeholder="z. B. Stadtwerke Neuss"></div>
+        <div class="field"><label>Kundennummer beim bisherigen Lieferanten</label><input type="text" name="energy[previous_customer_number]" maxlength="60" value="{{ $val('energy.previous_customer_number', $en->previous_customer_number ?? '') }}"></div>
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div class="field"><label>Abschlag (€)</label><input type="number" step="0.01" name="energy[payment_amount]" min="0" value="{{ $val('energy.payment_amount', $en->payment_amount ?? '') }}"></div>
         <div class="field"><label>Zahlungsintervall</label>

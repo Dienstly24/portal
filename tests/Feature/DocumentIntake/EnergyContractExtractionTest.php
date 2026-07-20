@@ -67,6 +67,35 @@ class EnergyContractExtractionTest extends TestCase
         $this->assertSame('2026-08-01', $history->effective_from?->toDateString());
     }
 
+    public function test_vorversorger_flows_into_energy_detail(): void
+    {
+        // Der bisherige Lieferant (Vorversorger) + dessen Kundennummer aus dem
+        // Strom-/Gas-Auftrag landen im Energie-Detail (Wechsel-Kontext).
+        $customer = $this->customer();
+        $doc = Document::create([
+            'customer_id' => null, 'category' => 'contract', 'file_name' => 'auftrag.pdf',
+            'file_path' => 'documents/eingang/v.pdf', 'disk' => 'local', 'ai_status' => 'done',
+            'ai_type' => 'energieauftrag',
+            'ai_extracted' => [
+                'versicherung' => ['insurer' => 'EWE VERTRIEB GmbH', 'sparte' => 'strom',
+                    'premium_amount' => 18.31, 'premium_interval' => 'monthly'],
+                'energie' => ['meter_number' => '364-8646796', 'consumption_kwh' => 20000,
+                    'tariff' => 'EWE business Gruenstrom',
+                    'previous_provider' => 'Stadtwerke Neuss Energie und Wasser GmbH',
+                    'previous_customer_number' => '20478172'],
+            ],
+        ]);
+
+        $contract = app(DocumentIntakeService::class)->createContractFromExtraction($doc, $customer, null);
+        $detail = ContractEnergyDetail::where('contract_id', $contract->id)->first();
+
+        $this->assertNotNull($detail);
+        $this->assertSame('EWE VERTRIEB GmbH', $contract->insurer);
+        $this->assertSame('Stadtwerke Neuss Energie und Wasser GmbH', $detail->previous_provider);
+        $this->assertSame('20478172', $detail->previous_customer_number);
+        $this->assertSame(18.31, (float) $detail->payment_amount);
+    }
+
     public function test_zaehlerfoto_data_flows_into_energy_detail(): void
     {
         $customer = $this->customer();
