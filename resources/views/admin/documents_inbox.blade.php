@@ -780,6 +780,11 @@ window.docReview = (function() {
             msg = 'Neuer Kunde angelegt';
             sub = name + number + ' wurde angelegt und das Dokument zugeordnet.';
         }
+        // Wurde durch den Vertrag automatisch eine Portal-Einladung versendet,
+        // dem Mitarbeiter Rueckmeldung geben (er muss sie nicht mehr manuell ausloesen).
+        if (data.invited) {
+            sub += ' 📧 Einladung zum Portal wurde automatisch an den Kunden versendet.';
+        }
         el('review-success-msg').textContent = '✅ ' + msg;
         el('review-success-sub').textContent = sub;
         el('review-success-link').href = data.customer_url || '#';

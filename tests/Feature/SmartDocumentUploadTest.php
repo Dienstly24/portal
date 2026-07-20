@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mail\CustomerWelcomeMail;
 use App\Models\AiDecision;
 use App\Models\Contract;
 use App\Models\Customer;
@@ -11,6 +12,7 @@ use App\Services\Ocr\TextExtractorInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -410,6 +412,151 @@ class SmartDocumentUploadTest extends TestCase
             'status' => 'accepted',
             'decided_by' => $admin->id,
         ]);
+    }
+
+    /* ---------------------------------------------------------------
+     | Automatische Portal-Einladung bei Vertrag aus Dokument
+     * -------------------------------------------------------------- */
+
+    /** Eingangs-Dokument mit KFZ-Vertragsdaten (fuer die Vertrag-Anlage). */
+    private function contractInboxDocument(array $versicherung = []): Document
+    {
+        Storage::disk('local')->put('documents/eingang/vertrag.pdf', '%PDF-1.4');
+        return Document::create([
+            'customer_id' => null,
+            'category' => 'contract',
+            'file_name' => 'KFZ-Vertrag.pdf',
+            'file_path' => 'documents/eingang/vertrag.pdf',
+            'disk' => 'local',
+            'visibility' => 'internal',
+            'ai_status' => 'done',
+            'ai_type' => 'kfz_vertrag',
+            'ai_extracted' => ['versicherung' => array_merge([
+                'insurer' => 'Allianz', 'contract_number' => 'AZ-777', 'sparte' => 'kfz',
+            ], $versicherung)],
+        ]);
+    }
+
+    public function test_assign_with_contract_auto_invites_customer_with_real_email(): void
+    {
+        // Betreiber-Vorgabe: sobald aus dem hochgeladenen Dokument ein Vertrag
+        // entsteht, wird der Kunde OHNE separaten Klick zum Portal eingeladen.
+        Storage::fake('local');
+        Mail::fake();
+
+        $doc = $this->contractInboxDocument();
+        $customer = $this->makeCustomer(['birth_date' => '1985-01-15'], ['email' => 'kunde@example.com']);
+        $admin = $this->makeAdmin();
+
+        $response = $this->actingAs($admin)->postJson(route('admin.documents.assign', $doc->id), [
+            'customer_id' => (string) $customer->id,
+            'create_contract' => 1,
+        ]);
+
+        $response->assertOk()->assertJson(['invited' => true]);
+        Mail::assertQueued(CustomerWelcomeMail::class, 1);
+        $this->assertNotNull($customer->user->fresh()->invitation_sent_at);
+        $this->assertSame(1, (int) $customer->user->fresh()->invitation_count);
+    }
+
+    public function test_assign_without_contract_does_not_invite(): void
+    {
+        // Wird nur ein Dokument zugeordnet (kein Vertrag), geht KEINE Einladung
+        // raus - der Ausloeser ist bewusst der Vertrag, nicht jedes Dokument.
+        Storage::fake('local');
+        Mail::fake();
+
+        // Dokument ohne Vertragsnummer -> linkMatchingContract findet nichts.
+        $doc = $this->contractInboxDocument(['contract_number' => null]);
+        $customer = $this->makeCustomer(['birth_date' => '1985-01-15'], ['email' => 'kunde2@example.com']);
+        $admin = $this->makeAdmin();
+
+        $response = $this->actingAs($admin)->postJson(route('admin.documents.assign', $doc->id), [
+            'customer_id' => (string) $customer->id,
+        ]);
+
+        $response->assertOk()->assertJson(['invited' => false]);
+        Mail::assertNothingQueued();
+        $this->assertNull($customer->user->fresh()->invitation_sent_at);
+    }
+
+    public function test_assign_with_contract_skips_invite_without_real_email(): void
+    {
+        // Kein Versand ohne echte Adresse - und der Vorgang scheitert daran
+        // NICHT (Vertrag wird trotzdem angelegt, invited=false).
+        Storage::fake('local');
+        Mail::fake();
+
+        $doc = $this->contractInboxDocument();
+        $customer = $this->makeCustomer([], ['email' => 'platzhalter-2600001@dienstly24.internal']);
+        $admin = $this->makeAdmin();
+
+        $response = $this->actingAs($admin)->postJson(route('admin.documents.assign', $doc->id), [
+            'customer_id' => (string) $customer->id,
+            'create_contract' => 1,
+        ]);
+
+        $response->assertOk()->assertJson(['invited' => false]);
+        Mail::assertNothingQueued();
+        $this->assertSame(1, Contract::where('customer_id', $customer->id)->count());
+    }
+
+    public function test_assign_with_contract_does_not_reinvite_already_registered_customer(): void
+    {
+        // Wer sich bereits eingeloggt hat, bekommt keine erneute Einladung
+        // (Reputationsschutz, kein Spam bei jedem weiteren Vertrag).
+        Storage::fake('local');
+        Mail::fake();
+
+        $doc = $this->contractInboxDocument();
+        $customer = $this->makeCustomer(
+            ['birth_date' => '1985-01-15'],
+            ['email' => 'aktiv@example.com', 'first_login_at' => now(), 'invitation_sent_at' => now()->subMonth()],
+        );
+        $admin = $this->makeAdmin();
+
+        $response = $this->actingAs($admin)->postJson(route('admin.documents.assign', $doc->id), [
+            'customer_id' => (string) $customer->id,
+            'create_contract' => 1,
+        ]);
+
+        $response->assertOk()->assertJson(['invited' => false]);
+        Mail::assertNothingQueued();
+    }
+
+    public function test_create_customer_with_contract_and_extracted_email_auto_invites(): void
+    {
+        // Neuanlage aus einem Vertragsdokument: die gelesene E-Mail wird die
+        // Login-Adresse und der neue Kunde direkt eingeladen.
+        Storage::fake('local');
+        Mail::fake();
+        Storage::disk('local')->put('documents/eingang/neu-vertrag.pdf', '%PDF-1.4');
+
+        $doc = Document::create([
+            'customer_id' => null,
+            'category' => 'contract',
+            'file_name' => 'Antrag.pdf',
+            'file_path' => 'documents/eingang/neu-vertrag.pdf',
+            'disk' => 'local',
+            'ai_status' => 'done',
+            'ai_type' => 'kfz_vertrag',
+            'ai_extracted' => [
+                'person' => ['first_name' => 'Neu', 'last_name' => 'Kunde', 'email' => 'neu.kunde@example.com'],
+                'versicherung' => ['insurer' => 'HUK24', 'contract_number' => 'HK-555', 'sparte' => 'kfz'],
+            ],
+        ]);
+        $admin = $this->makeAdmin();
+
+        $response = $this->actingAs($admin)->postJson(route('admin.documents.create_customer', $doc->id), [
+            'apply_fields' => ['email2'],
+            'create_contract' => 1,
+        ]);
+
+        $response->assertOk()->assertJson(['invited' => true]);
+        Mail::assertQueued(CustomerWelcomeMail::class, 1);
+        $customer = Customer::findOrFail($doc->fresh()->customer_id);
+        $this->assertSame('neu.kunde@example.com', $customer->user->email);
+        $this->assertNotNull($customer->user->invitation_sent_at);
     }
 
     public function test_apply_fields_never_overwrites_existing_customer_data(): void
