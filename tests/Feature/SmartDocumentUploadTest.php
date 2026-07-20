@@ -317,6 +317,48 @@ class SmartDocumentUploadTest extends TestCase
         ]);
     }
 
+    public function test_beratungsprotokoll_stays_in_inbox_even_on_strong_match(): void
+    {
+        // Zweitwagen: der Bestandskunde wird eindeutig getroffen (Score > 90),
+        // aber ein Beratungsprotokoll ist NEUES Geschaeft - es darf NICHT still
+        // in die Kundenakte zugeordnet werden, sonst "verschwindet" es aus dem
+        // Eingang und der zweite Vertrag entsteht nie. Es bleibt im Eingang mit
+        // dem Kunden-Vorschlag.
+        Storage::fake('local');
+        $this->enableAi();
+
+        $customer = $this->makeCustomer(
+            ['birth_date' => '1964-01-08', 'phone' => '0157 39334775'],
+            ['name' => 'Mohamad Alkhatib', 'email' => 'hassanalkhatib570@gmail.com'],
+        );
+
+        $this->fakeAnalysis([
+            'type' => 'beratungsprotokoll',
+            'confidence' => 88,
+            'summary' => 'Kfz-Beratungsprotokoll',
+            'title' => 'Protokoll',
+            'data' => ['person' => [
+                'first_name' => 'Mohamad', 'last_name' => 'Alkhatib',
+                'birth_date' => '1964-01-08', 'email' => 'hassanalkhatib570@gmail.com',
+                'phone' => '015739334775',
+            ]],
+        ]);
+
+        $admin = $this->makeAdmin();
+        $response = $this->actingAs($admin)->postJson(route('admin.documents.smart_upload'), [
+            'files' => [UploadedFile::fake()->create('protokoll.pdf', 120, 'application/pdf')],
+        ]);
+        $response->assertOk();
+
+        $doc = Document::findOrFail($response->json('ids.0'));
+        $this->assertNull($doc->customer_id, 'Zweitwagen-Protokoll bleibt im Eingang');
+        $this->assertSame('beratungsprotokoll', $doc->ai_type);
+        // Der Kunde wird trotzdem als VORSCHLAG erkannt (fuer die Freigabe).
+        $match = $doc->ai_extracted['match'] ?? null;
+        $this->assertNotNull($match);
+        $this->assertSame((string) $customer->id, (string) $match['customer_id']);
+    }
+
     public function test_admin_smart_upload_bundles_images_and_keeps_pdfs_separate(): void
     {
         Storage::fake('local');
