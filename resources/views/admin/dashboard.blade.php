@@ -91,10 +91,10 @@
         @forelse($recentCustomers as $c)
         <a href="{{ route('admin.customer', $c->id) }}" class="customer-card" style="text-decoration:none;color:inherit;">
             <div class="name">{{ $c->user?->name }}</div>
-            <div class="meta">Verträge: {{ $c->contracts()->count() }}</div>
+            <div class="meta">Verträge: {{ $c->contracts_count }}</div>
         </a>
         @empty
-        <p style="color:var(--ink-soft);font-size:14px;">Noch keine Kunden.</p>
+        <p style="color:var(--ink-soft);font-size:14px;">Noch keine Kunden geöffnet.</p>
         @endforelse
     </div>
 </div>
