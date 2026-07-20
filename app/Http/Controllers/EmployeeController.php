@@ -81,9 +81,94 @@ class EmployeeController extends Controller
         if (auth()->user()->role === 'manager' && $employee->role === 'admin') {
             abort(403, 'Kein Zugriff auf Administrator-Konten.');
         }
-        $customers = Customer::with('user')->get();
         $assignedIds = $employee->assignedCustomers()->pluck('customers.id')->toArray();
-        return view('admin.employee_edit', compact('employee','customers','assignedIds'));
+        return view('admin.employee_edit', compact('employee','assignedIds'));
+    }
+
+    /**
+     * Mitarbeiter-Detailseite: Profil + die zugewiesenen Kunden als
+     * durchsuchbare, paginierte Liste (gleiche UX wie der Kundenbereich).
+     * Ueber die Detailseite laeuft die smarte Mehrfach-Zuweisung und das
+     * Entfernen einzelner Kunden.
+     */
+    public function show(Request $request, $id) {
+        $employee = User::findOrFail($id);
+        if (auth()->user()->role === 'manager' && $employee->role === 'admin') {
+            abort(403, 'Kein Zugriff auf Administrator-Konten.');
+        }
+        // Zugewiesene Kunden dieses Mitarbeiters (aktive Vertraege fuer die
+        // Icons mitladen). Die Freitext-Suche nutzt denselben Scope wie der
+        // Kundenbereich (alle Felder) - hier nur auf das Portfolio begrenzt.
+        $query = $employee->assignedCustomers()
+            ->with(['user', 'contracts' => fn($q) => $q->where('status', 'active')->select('id', 'customer_id', 'type', 'status')]);
+        if ($request->filled('q')) {
+            $query->search((string) $request->q);
+        }
+        $assignedCount = $employee->assignedCustomers()->count();
+        $customers = $query->orderByDesc('employee_customers.created_at')->paginate(25)->withQueryString();
+        // IDs aller zugewiesenen Kunden - damit die smarte Suche bereits
+        // zugewiesene Treffer markiert (kein doppeltes Zuweisen).
+        $assignedIds = $employee->assignedCustomers()->pluck('customers.id')->map(fn($v) => (string) $v)->values();
+
+        return view('admin.employee_show', compact('employee', 'customers', 'assignedCount', 'assignedIds'));
+    }
+
+    /**
+     * Smarte Mehrfach-Zuweisung: mehrere gesuchte Kunden auf einmal diesem
+     * Mitarbeiter zuweisen (ohne bestehende Zuweisungen zu loesen).
+     */
+    public function assignCustomers(Request $request, $id) {
+        $employee = User::findOrFail($id);
+        if (auth()->user()->role === 'manager' && $employee->role === 'admin') {
+            abort(403, 'Kein Zugriff auf Administrator-Konten.');
+        }
+        $data = $request->validate([
+            'customer_ids' => 'required|array|min:1',
+            'customer_ids.*' => 'string',
+        ]);
+        // Nur echte, existierende Kunden zuweisen (keine ungueltigen IDs).
+        $ids = Customer::whereIn('id', $data['customer_ids'])->pluck('id')->map(fn($v) => (string) $v)->all();
+        if ($ids === []) {
+            return back()->with('error', 'Keine gueltigen Kunden ausgewaehlt.');
+        }
+        $employee->assignedCustomers()->syncWithoutDetaching($ids);
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'customer_reassigned',
+            'entity_type' => 'user',
+            'entity_id' => $employee->id,
+            'meta' => json_encode([
+                'to' => $employee->name,
+                'count' => count($ids),
+                'mode' => 'hinzugefuegt',
+            ], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        return back()->with('success', count($ids) . ' Kunde(n) ' . $employee->name . ' zugewiesen.');
+    }
+
+    /** Einen einzelnen Kunden aus dem Portfolio des Mitarbeiters entfernen. */
+    public function unassignCustomer($id, $customerId) {
+        $employee = User::findOrFail($id);
+        if (auth()->user()->role === 'manager' && $employee->role === 'admin') {
+            abort(403, 'Kein Zugriff auf Administrator-Konten.');
+        }
+        $customer = Customer::find($customerId);
+        $employee->assignedCustomers()->detach($customerId);
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'customer_unassigned',
+            'entity_type' => 'user',
+            'entity_id' => $employee->id,
+            'meta' => json_encode([
+                'from' => $employee->name,
+                'customer' => $customer?->user?->name,
+            ], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        return back()->with('success', 'Kunde aus dem Portfolio entfernt.');
     }
 
     public function update(Request $request, $id) {
@@ -188,6 +273,7 @@ class EmployeeController extends Controller
                 'name' => $c->user?->name,
                 'number' => $c->customer_number,
                 'email' => $c->user?->email,
+                'address' => $c->fullAddress(),
             ]);
         return response()->json($customers);
     }

@@ -28,7 +28,7 @@
                 <div style="display:flex;align-items:center;gap:10px;">
                     <div style="width:36px;height:36px;border-radius:50%;background:var(--petrol);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">{{ strtoupper(substr($e->name,0,2)) }}</div>
                     <div>
-                        <div style="font-weight:600;font-size:14px;">{{ $e->name }} @if(!$e->is_active)<span style="background:#EEE;color:#888;border-radius:10px;padding:1px 8px;font-size:11px;margin-left:6px;">Deaktiviert</span>@endif</div>
+                        <div style="font-weight:600;font-size:14px;"><a href="{{ route('admin.employees.show', $e->id) }}" style="color:var(--ink);text-decoration:none;">{{ $e->name }}</a> @if(!$e->is_active)<span style="background:#EEE;color:#888;border-radius:10px;padding:1px 8px;font-size:11px;margin-left:6px;">Deaktiviert</span>@endif</div>
                         <div style="font-size:12px;color:var(--ink-soft);">{{ $e->email }}</div>
                     </div>
                 </div>
@@ -52,11 +52,16 @@
                     @if($e->can_import_export)<span style="background:#EEF0F3;color:#5F5E5A;padding:2px 7px;border-radius:4px;">Import/Export</span>@endif
                 </div>
             </td>
-            <td style="font-size:13px;color:var(--ink-soft);">
-                {{ $e->can_see_all_customers ? 'Alle' : $e->assignedCustomers()->count() . ' Kunden' }}
+            <td style="font-size:13px;">
+                @if($e->can_see_all_customers)
+                    <span style="color:var(--ink-soft);">Alle</span>
+                @else
+                    <a href="{{ route('admin.employees.show', $e->id) }}" style="color:#17A65B;font-weight:600;text-decoration:none;">{{ $e->assignedCustomers()->count() }} Kunden ansehen →</a>
+                @endif
             </td>
-            <td style="padding-right:20px;">
+            <td style="padding-right:20px;white-space:nowrap;">
                 @if(!$e->isAdmin() || auth()->user()->isAdmin())
+                <a href="{{ route('admin.employees.show', $e->id) }}" class="btn btn-ghost btn-sm">Öffnen</a>
                 <a href="{{ route('admin.employees.edit', $e->id) }}" class="btn btn-ghost btn-sm">Bearbeiten</a>
                 @endif
             </td>
