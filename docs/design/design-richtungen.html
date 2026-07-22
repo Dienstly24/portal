@@ -1,0 +1,762 @@
+<title>Dienstly24 — اقتراحات الاتجاه البصري</title>
+<style>
+  :root{
+    --bg:#FAF8F3; --ink:#26241E; --muted:#6B675C; --line:#E3DFD4;
+    --card:#FFFFFF; --chip:#F1EEE5; --chrome:#EFECE3; --chrome-dot:#D8D4C8;
+    --note-bg:#FBF3E2; --note-line:#E4CE9A; --note-ink:#5C4A1E;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#14161A; --ink:#ECE9E2; --muted:#9A968B; --line:#2A2D33;
+      --card:#1B1E23; --chip:#22252B; --chrome:#20232A; --chrome-dot:#3A3E46;
+      --note-bg:#26221636; --note-line:#5C4E2A; --note-ink:#D9C48A;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#14161A; --ink:#ECE9E2; --muted:#9A968B; --line:#2A2D33;
+    --card:#1B1E23; --chip:#22252B; --chrome:#20232A; --chrome-dot:#3A3E46;
+    --note-bg:#26221636; --note-line:#5C4E2A; --note-ink:#D9C48A;
+  }
+  :root[data-theme="light"]{
+    --bg:#FAF8F3; --ink:#26241E; --muted:#6B675C; --line:#E3DFD4;
+    --card:#FFFFFF; --chip:#F1EEE5; --chrome:#EFECE3; --chrome-dot:#D8D4C8;
+    --note-bg:#FBF3E2; --note-line:#E4CE9A; --note-ink:#5C4A1E;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);margin:0}
+  .wrap{
+    font-family:-apple-system,"Segoe UI","SF Arabic","Noto Naskh Arabic","Noto Sans Arabic",Tahoma,sans-serif;
+    max-width:1080px;margin:0 auto;padding:48px 20px 80px;line-height:1.75;
+  }
+  .wrap h1,.wrap h2,.wrap h3{text-wrap:balance;line-height:1.35;margin:0}
+  .eyebrow{font-size:12px;letter-spacing:.14em;color:var(--muted);font-weight:700}
+  header.top{margin-bottom:14px}
+  header.top h1{font-size:clamp(26px,4.5vw,38px);font-weight:800;margin-top:6px}
+  header.top p.lead{color:var(--muted);max-width:62ch;margin:10px 0 0;font-size:15.5px}
+
+  /* paint-chip TOC */
+  .chips-toc{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:26px 0 8px}
+  .chips-toc a{
+    text-decoration:none;color:inherit;border:1px solid var(--line);border-radius:12px;
+    background:var(--card);overflow:hidden;display:block;transition:transform .15s ease;
+  }
+  .chips-toc a:hover{transform:translateY(-2px)}
+  .chips-toc a:focus-visible{outline:2px solid #B8A16B;outline-offset:2px}
+  .chips-toc .bar{height:52px;display:flex}
+  .chips-toc .bar i{flex:1}
+  .chips-toc .meta{padding:10px 14px 12px}
+  .chips-toc .meta b{font-size:14.5px;display:block}
+  .chips-toc .meta span{font-size:12.5px;color:var(--muted)}
+
+  .note{
+    border:1px solid var(--note-line);background:var(--note-bg);color:var(--note-ink);
+    border-radius:12px;padding:14px 18px;margin:26px 0 0;font-size:14px;
+  }
+  .note b{font-weight:800}
+
+  section.dir{margin-top:64px;padding-top:34px;border-top:1px solid var(--line)}
+  .dir-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .dir-tag{
+    font-size:12px;font-weight:800;letter-spacing:.1em;padding:3px 12px;border-radius:999px;
+    color:#fff;
+  }
+  .dir h2{font-size:clamp(21px,3vw,27px);font-weight:800}
+  .dir .sub{color:var(--muted);font-size:14px}
+  .dir-grid{display:grid;grid-template-columns:300px 1fr;gap:28px;margin-top:22px}
+  @media (max-width:820px){ .dir-grid{grid-template-columns:1fr} }
+  .concept p{font-size:14.5px;margin:0 0 12px;color:var(--ink)}
+  .concept .spec{font-size:13px;color:var(--muted);border-top:1px dashed var(--line);padding-top:10px;margin-top:4px}
+  .swatches{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+  .sw{display:flex;align-items:center;gap:7px;background:var(--chip);border:1px solid var(--line);
+      border-radius:8px;padding:4px 9px;font-size:11.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .sw i{width:15px;height:15px;border-radius:4px;display:inline-block;border:1px solid rgba(0,0,0,.12)}
+  .pm{display:grid;gap:6px;margin-top:14px;font-size:13.5px}
+  .pm div{display:flex;gap:9px;align-items:baseline}
+  .pm .p{color:#2E7D4F;font-weight:800}
+  .pm .m{color:#A8542A;font-weight:800}
+
+  /* browser frame */
+  .frames{display:grid;gap:18px;min-width:0}
+  .frame{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card);min-width:0}
+  .frame .chr{display:flex;align-items:center;gap:6px;background:var(--chrome);
+      border-bottom:1px solid var(--line);padding:8px 12px}
+  .frame .chr i{width:9px;height:9px;border-radius:50%;background:var(--chrome-dot)}
+  .frame .chr span{font-size:11px;color:var(--muted);margin-inline-start:8px;font-family:ui-monospace,Menlo,monospace}
+  .frame .body{overflow-x:auto}
+
+  /* ============ shared mock components (token-driven) ============ */
+  .mock{
+    direction:ltr;text-align:left;min-width:520px;
+    background:var(--m-bg);color:var(--m-ink);
+    font-family:var(--m-font,ui-sans-serif,-apple-system,"Segoe UI",Arial,sans-serif);
+    font-size:12px;line-height:1.5;
+  }
+  .mock.rtl{direction:rtl;text-align:right}
+  .m-nav{display:flex;justify-content:space-between;align-items:center;padding:11px 18px;
+      background:var(--m-nav-bg);color:var(--m-nav-ink);border-bottom:1px solid var(--m-nav-line,transparent)}
+  .m-logo{font-weight:800;font-size:14px;letter-spacing:.01em}
+  .m-logo em{font-style:normal;color:var(--m-gold)}
+  .m-links{display:flex;gap:14px;font-size:11px;opacity:.88}
+  .m-lang{border:1px solid var(--m-nav-ink);border-radius:999px;padding:2px 9px;font-size:10px;opacity:.85}
+  .m-hero{padding:26px 22px 24px;background:var(--m-hero-bg);color:var(--m-hero-ink)}
+  .m-kicker{display:inline-flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.08em;
+      border:1px solid var(--m-kicker-line);color:var(--m-kicker-ink);border-radius:999px;padding:3px 10px;margin-bottom:12px}
+  .m-kicker i{width:6px;height:6px;border-radius:50%;background:var(--m-gold)}
+  .m-h1{font-family:var(--m-display,inherit);font-size:24px;line-height:1.25;font-weight:800;margin:0 0 8px;max-width:22ch}
+  .m-h1 em{font-style:var(--m-em-style,normal);color:var(--m-gold)}
+  .m-sub{font-size:12px;opacity:.82;max-width:46ch;margin:0 0 16px}
+  .m-cta{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .m-btn{display:inline-flex;align-items:center;gap:6px;border-radius:var(--m-radius,8px);
+      padding:8px 16px;font-size:11.5px;font-weight:700;border:1px solid transparent}
+  .m-btn.pri{background:var(--m-btn-bg);color:var(--m-btn-ink)}
+  .m-btn.sec{background:transparent;color:var(--m-hero-ink);border-color:var(--m-sec-line)}
+  .m-trust{display:flex;gap:16px;margin-top:16px;font-size:10px;opacity:.72}
+  .m-cards{display:flex;gap:12px;padding:18px 22px;background:var(--m-body-bg);color:var(--m-body-ink)}
+  .m-card{flex:1;background:var(--m-card-bg);border:1px solid var(--m-card-line);
+      border-radius:var(--m-radius,8px);padding:14px;min-width:0}
+  .m-ic{width:26px;height:26px;border-radius:7px;background:var(--m-ic-bg);color:var(--m-ic-ink);
+      display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;margin-bottom:8px}
+  .m-card b{display:block;font-size:12px;margin-bottom:3px;font-family:var(--m-display,inherit)}
+  .m-card p{margin:0;font-size:10.5px;opacity:.75}
+  .m-more{font-size:10.5px;font-weight:700;color:var(--m-link);margin-top:7px;display:inline-block}
+
+  /* portal + admin strip */
+  .m-portal{display:flex;gap:14px;padding:16px 18px;background:var(--m-body-bg);color:var(--m-body-ink)}
+  .m-pcard{flex:1.4;background:var(--m-card-bg);border:1px solid var(--m-card-line);border-radius:var(--m-radius,8px);padding:14px}
+  .m-pcard h4{margin:0 0 10px;font-size:12.5px;font-family:var(--m-display,inherit)}
+  .m-req{border:1px solid var(--m-card-line);border-radius:calc(var(--m-radius,8px) - 2px);padding:10px 12px}
+  .m-req .row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+  .m-req b{font-size:11.5px}
+  .m-req small{font-size:10px;opacity:.7;display:block;margin-top:2px}
+  .m-prog{height:5px;border-radius:99px;background:var(--m-prog-track);margin-top:10px;overflow:hidden}
+  .m-prog i{display:block;height:100%;width:62%;background:var(--m-prog-fill)}
+  .m-action{display:inline-flex;align-items:center;gap:5px;margin-top:9px;font-size:10px;font-weight:700;
+      color:var(--m-gold-ink);background:var(--m-gold-bg);border:1px solid var(--m-gold-line);border-radius:999px;padding:2px 9px}
+  .pill{font-size:9.5px;font-weight:800;border-radius:999px;padding:2px 9px;letter-spacing:.02em;white-space:nowrap}
+  .pill.work{background:#FDF3DC;color:#8A6410;border:1px solid #EBD9A8}
+  .pill.done{background:#E4F2E8;color:#256B41;border:1px solid #BCDDC7}
+  .pill.new{background:#E6EEF5;color:#2C5F86;border:1px solid #C4D8E8}
+  .m-admin{display:flex;background:var(--m-adm-bg);color:var(--m-adm-ink);min-height:132px;flex:2}
+  .m-side{width:118px;background:var(--m-side-bg);color:var(--m-side-ink);padding:10px 0;font-size:10.5px;flex-shrink:0}
+  .m-side .lg{padding:2px 14px 10px;font-weight:800;font-size:11px}
+  .m-side a{display:block;padding:6px 14px;opacity:.72}
+  .m-side a.on{opacity:1;background:var(--m-side-on);color:var(--m-side-on-ink);font-weight:700}
+  .m-main{flex:1;padding:12px 14px;background:var(--m-adm-main);color:var(--m-adm-main-ink);min-width:0}
+  .m-main .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .m-main .hd b{font-size:12px}
+  .m-main .hd .m-btn{padding:4px 11px;font-size:10px}
+  .m-tbl{width:100%;border-collapse:collapse;font-size:10px;font-variant-numeric:tabular-nums}
+  .m-tbl th{text-align:left;font-size:9px;letter-spacing:.06em;opacity:.6;padding:4px 6px;border-bottom:1px solid var(--m-card-line)}
+  .m-tbl td{padding:5px 6px;border-bottom:1px solid var(--m-card-line)}
+
+  /* ============ Direction A: Klares Licht ============ */
+  .dA{
+    --m-font:ui-sans-serif,-apple-system,"Segoe UI",Arial,sans-serif;
+    --m-radius:8px;
+    --m-bg:#F8F6F0; --m-ink:#173B39;
+    --m-nav-bg:#FFFFFF; --m-nav-ink:#173B39; --m-nav-line:#D8D4C8;
+    --m-gold:#B8A16B;
+    --m-hero-bg:#F8F6F0; --m-hero-ink:#173B39;
+    --m-kicker-line:#D8D4C8; --m-kicker-ink:#6E6A5E;
+    --m-btn-bg:#004F4B; --m-btn-ink:#F8F6F0; --m-sec-line:#B7B2A4;
+    --m-body-bg:#FFFFFF; --m-body-ink:#173B39;
+    --m-card-bg:#FDFCF8; --m-card-line:#D8D4C8;
+    --m-ic-bg:#EFE9DA; --m-ic-ink:#7A6B43; --m-link:#004F4B;
+    --m-prog-track:#E9E5DA; --m-prog-fill:#004F4B;
+    --m-gold-bg:#F5EEDC; --m-gold-ink:#77602A; --m-gold-line:#DECFA4;
+    --m-adm-bg:#F1EEE5; --m-adm-ink:#173B39;
+    --m-side-bg:#003D3A; --m-side-ink:#DDE8E4;
+    --m-side-on:#004F4B; --m-side-on-ink:#F1E7CD;
+    --m-adm-main:#FBFAF6; --m-adm-main-ink:#173B39;
+  }
+  .tag-a{background:#004F4B}
+  /* ============ Direction B: Dunkle Eleganz ============ */
+  .dB{
+    --m-font:ui-sans-serif,-apple-system,"Segoe UI",Arial,sans-serif;
+    --m-display:Georgia,"Times New Roman",serif;
+    --m-em-style:italic;
+    --m-radius:13px;
+    --m-bg:#003D3A; --m-ink:#F8F6F0;
+    --m-nav-bg:#00332F; --m-nav-ink:#F1EEE5; --m-nav-line:#B8A16B33;
+    --m-gold:#D1C18F;
+    --m-hero-bg:linear-gradient(135deg,#00332F 0%,#004F4B 70%,#065C54 100%);
+    --m-hero-ink:#F8F6F0;
+    --m-kicker-line:#B8A16B66; --m-kicker-ink:#D1C18F;
+    --m-btn-bg:#B8A16B; --m-btn-ink:#00332F; --m-sec-line:#F8F6F066;
+    --m-body-bg:#F8F6F0; --m-body-ink:#173B39;
+    --m-card-bg:#FFFFFF; --m-card-line:#D8D4C8;
+    --m-ic-bg:#004F4B; --m-ic-ink:#D1C18F; --m-link:#004F4B;
+    --m-prog-track:#E9E5DA; --m-prog-fill:#B8A16B;
+    --m-gold-bg:#F5EEDC; --m-gold-ink:#77602A; --m-gold-line:#DECFA4;
+    --m-adm-bg:#F1EEE5; --m-adm-ink:#173B39;
+    --m-side-bg:#00332F; --m-side-ink:#D9E3DE;
+    --m-side-on:#B8A16B22; --m-side-on-ink:#D1C18F;
+    --m-adm-main:#FBFAF6; --m-adm-main-ink:#173B39;
+  }
+  .dB .m-hero{background:var(--m-hero-bg)}
+  .tag-b{background:linear-gradient(120deg,#00332F,#004F4B);border:1px solid #B8A16B}
+  /* ============ Direction C: Smaragd (Bestand) ============ */
+  .dC{
+    --m-font:ui-sans-serif,-apple-system,"Segoe UI",Arial,sans-serif;
+    --m-radius:10px;
+    --m-bg:#F4F5F7; --m-ink:#1D222B;
+    --m-nav-bg:#17191D; --m-nav-ink:#EDEEF0; --m-nav-line:#26292F;
+    --m-gold:#17A65B;
+    --m-hero-bg:#101216; --m-hero-ink:#F2F3F5;
+    --m-kicker-line:#3A3E46; --m-kicker-ink:#9BA1AB;
+    --m-btn-bg:linear-gradient(120deg,#19B463,#128A4B); --m-btn-ink:#FFFFFF; --m-sec-line:#4A4E56;
+    --m-body-bg:#F4F5F7; --m-body-ink:#1D222B;
+    --m-card-bg:#FFFFFF; --m-card-line:#E4E6EA;
+    --m-ic-bg:#E2F4E9; --m-ic-ink:#128A4B; --m-link:#128A4B;
+    --m-prog-track:#E4E6EA; --m-prog-fill:#17A65B;
+    --m-gold-bg:#E2F4E9; --m-gold-ink:#1D7A46; --m-gold-line:#BFE4CD;
+    --m-adm-bg:#F4F5F7; --m-adm-ink:#1D222B;
+    --m-side-bg:#17191D; --m-side-ink:#C9CCD2;
+    --m-side-on:#20242B; --m-side-on-ink:#3ED184;
+    --m-adm-main:#FFFFFF; --m-adm-main-ink:#1D222B;
+  }
+  .dC .m-btn.pri{background:var(--m-btn-bg)}
+  .tag-c{background:#17191D;border:1px solid #17A65B}
+  /* ============ Direction D: Smaragd & Gold (Fusion) ============ */
+  .dD{
+    --m-font:ui-sans-serif,-apple-system,"Segoe UI",Arial,sans-serif;
+    --m-radius:10px;
+    --m-bg:#F8F6F0; --m-ink:#16211C;
+    --m-nav-bg:#131A17; --m-nav-ink:#EFEDE6; --m-nav-line:#B8A16B2E;
+    --m-gold:#D1C18F;
+    --m-hero-bg:linear-gradient(135deg,#0F1512 0%,#16241E 55%,#1C3126 100%);
+    --m-hero-ink:#F5F3EC;
+    --m-kicker-line:#B8A16B55; --m-kicker-ink:#D1C18F;
+    --m-btn-bg:linear-gradient(120deg,#1DB56A,#128A4B); --m-btn-ink:#FFFFFF; --m-sec-line:#F5F3EC55;
+    --m-body-bg:#F8F6F0; --m-body-ink:#16211C;
+    --m-card-bg:#FFFFFF; --m-card-line:#E0DCD0;
+    --m-ic-bg:#E3F1E8; --m-ic-ink:#128A4B; --m-link:#128A4B;
+    --m-prog-track:#E9E5DA; --m-prog-fill:#17A65B;
+    --m-gold-bg:#F5EEDC; --m-gold-ink:#77602A; --m-gold-line:#DECFA4;
+    --m-adm-bg:#F1EEE5; --m-adm-ink:#16211C;
+    --m-side-bg:#121915; --m-side-ink:#CFD6CE;
+    --m-side-on:#1C2A22; --m-side-on-ink:#3ED184;
+    --m-adm-main:#FBFAF6; --m-adm-main-ink:#16211C;
+  }
+  .dD .m-hero{background:var(--m-hero-bg)}
+  .dD .m-btn.pri{background:var(--m-btn-bg)}
+  .tag-d{background:linear-gradient(120deg,#131A17,#1B5E3C);border:1px solid #B8A16B}
+
+  /* comparison table */
+  .cmp-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin-top:22px}
+  table.cmp{width:100%;border-collapse:collapse;font-size:13.5px;min-width:860px;background:var(--card)}
+  .cmp th,.cmp td{padding:11px 16px;border-bottom:1px solid var(--line);text-align:right;vertical-align:top}
+  .cmp thead th{font-size:12px;letter-spacing:.06em;color:var(--muted);background:var(--chip)}
+  .cmp tbody tr:last-child td{border-bottom:none}
+  .cmp td:first-child{font-weight:700;white-space:nowrap;color:var(--muted);font-size:12.5px}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-inline-end:6px;vertical-align:baseline}
+
+  .steps{margin-top:18px;display:grid;gap:10px;max-width:70ch}
+  .steps div{display:flex;gap:12px;align-items:baseline;font-size:14.5px}
+  .steps b{color:var(--muted);font-size:12px;font-family:ui-monospace,Menlo,monospace;flex-shrink:0}
+  footer.fin{margin-top:56px;border-top:1px solid var(--line);padding-top:18px;color:var(--muted);font-size:13px;max-width:70ch}
+  @media (prefers-reduced-motion: reduce){ .chips-toc a{transition:none} }
+</style>
+
+<div class="wrap" dir="rtl" lang="ar">
+
+  <header class="top">
+    <div class="eyebrow">DIENSTLY24 · DESIGN ECOSYSTEM · اقتراح رقم ١</div>
+    <h1>أربعة اتجاهات بصرية — نعتمد واحدًا ثم نبني كل شيء عليه</h1>
+    <p class="lead">
+      كل اتجاه معروض بمعاينات حيّة: الموقع العام، بورتال العميل، النظام الداخلي، وعينة RTL —
+      حتى ترى كيف تتصرف الهوية في المنظومة كاملة وليس في شاشة واحدة.
+      المعاينات مصغّرة وبخطوط النظام؛ الخطوط النهائية محددة في مواصفات كل اتجاه.
+      الاتجاه <b>D</b> أُضيف بناءً على طلبك: مزج ألوان هوية الشركة (زمرد اللوغو + المعدن الأسود)
+      مع باليتة البريف الجديدة.
+    </p>
+  </header>
+
+  <nav class="chips-toc" aria-label="الاتجاهات">
+    <a href="#dir-d" style="border-color:#B8A16B">
+      <span class="bar"><i style="background:#131A17"></i><i style="background:#17A65B"></i><i style="background:#B8A16B"></i><i style="background:#F8F6F0"></i></span>
+      <span class="meta"><b>D — „Smaragd &amp; Gold"</b><span>المكس: زمرد الهوية + ذهبي البريف</span></span>
+    </a>
+    <a href="#dir-a">
+      <span class="bar"><i style="background:#F8F6F0"></i><i style="background:#004F4B"></i><i style="background:#003D3A"></i><i style="background:#B8A16B"></i></span>
+      <span class="meta"><b>A — „Klares Licht"</b><span>فاتح أولًا · دقة ألمانية · الذهبي لمسة</span></span>
+    </a>
+    <a href="#dir-b">
+      <span class="bar"><i style="background:#00332F"></i><i style="background:#004F4B"></i><i style="background:#B8A16B"></i><i style="background:#F8F6F0"></i></span>
+      <span class="meta"><b>B — „Dunkle Eleganz"</b><span>فخامة داكنة · الأقرب للموكاب المرفق</span></span>
+    </a>
+    <a href="#dir-c">
+      <span class="bar"><i style="background:#17191D"></i><i style="background:#101216"></i><i style="background:#17A65B"></i><i style="background:#F4F5F7"></i></span>
+      <span class="meta"><b>C — „Smaragd"</b><span>تطوير الهوية الحالية · بدون Rebrand</span></span>
+    </a>
+  </nav>
+
+  <div class="note">
+    <b>نقطة قرار مهمة:</b> الهوية المطبّقة حاليًا في الكود هي «Graphit + Smaragd» وقاعدة المشروع تنصّ صراحةً على
+    عدم استخدام البترولي. البريف الجديد يعيد البترولي + الذهبي. اعتماد A أو B يعني تحديث هذه القاعدة رسميًا
+    (سيتم ضمن نفس الـ PR وتُعاد صياغة أصول اللوغو تبعًا لذلك)؛ اعتماد C يعني إبقاءها كما هي.
+    <b>الاتجاه D</b> يحل الوسط: يُبقي زمرد اللوغو لونًا للعلامة (فلا تنافر مع أحجار اللوغو الحالية)،
+    ويتبنى من البريف المحايدات الدافئة والذهبي — تحديث جزئي فقط للقاعدة، واللوغو يبقى كما هو.
+  </div>
+
+  <!-- ================= DIRECTION D (Fusion) ================= -->
+  <section class="dir" id="dir-d" style="border-top:none;margin-top:44px;padding-top:0">
+    <div class="dir-head">
+      <span class="dir-tag tag-d">الاتجاه D — المكس المطلوب</span>
+      <h2>„Smaragd &amp; Gold" — زمرد الهوية على حجر دافئ</h2>
+      <span class="sub">هوية الشركة (اللوغو) + دفء وذهبي البريف الجديد</span>
+    </div>
+    <div class="dir-grid">
+      <div class="concept">
+        <p>
+          اللوغو نفسه يحدد الوصفة: أحجار زمرد على معدن أسود. نُبقي الزمرد لون العلامة والأفعال
+          (أزرار، روابط، حالات نشطة)، ونستبدل الرمادي البارد الحالي بمحايدات البريف الدافئة
+          (Off-White وبيج)، والأسطح الداكنة تصبح «غرافيت بنَفَس أخضر» يحاكي معدن اللوغو.
+          الذهبي الرملي يدخل كطبقة الترف: شارات، تفاصيل، حالات مميزة.
+        </p>
+        <p>
+          منطق المجوهرات: زمرد + ذهب لا يتنافسان — لكل منهما دور. الزمرد = «افعل»،
+          الذهبي = «انتبه، هذا ثمين». والأرضية الدافئة تجمعهما.
+        </p>
+        <div class="swatches">
+          <span class="sw"><i style="background:#131A17"></i>131A17</span>
+          <span class="sw"><i style="background:#17A65B"></i>17A65B</span>
+          <span class="sw"><i style="background:#128A4B"></i>128A4B</span>
+          <span class="sw"><i style="background:#B8A16B"></i>B8A16B</span>
+          <span class="sw"><i style="background:#D1C18F"></i>D1C18F</span>
+          <span class="sw"><i style="background:#F8F6F0"></i>F8F6F0</span>
+          <span class="sw"><i style="background:#F1EEE5"></i>F1EEE5</span>
+          <span class="sw"><i style="background:#16211C"></i>16211C</span>
+        </div>
+        <div class="spec">
+          <b>الخطوط المقترحة:</b> لاتيني: Instrument Sans للنص + عناوين بوزن ثقيل ·
+          عربي: IBM Plex Sans Arabic. زوايا 10px، حدود دافئة رفيعة، خط ذهبي زخرفي تحت العناوين الكبرى.
+        </div>
+        <div class="pm">
+          <div><span class="p">+</span><span>اللوغو الحالي يبقى متناسقًا تمامًا — لا حاجة لإعادة صياغته</span></div>
+          <div><span class="p">+</span><span>يحافظ على تعرّف العملاء الحاليين على العلامة، ويضيف دفء وفخامة البريف</span></div>
+          <div><span class="p">+</span><span>توزيع البريف 60/25/10/5 قابل للتطبيق حرفيًا (الزمرد مكان البترولي)</span></div>
+          <div><span class="m">−</span><span>لونان «ثمينان» (زمرد + ذهب) يتطلبان انضباطًا: الذهبي زينة وتمييز فقط، لا أزرار ذهبية أساسية</span></div>
+        </div>
+      </div>
+      <div class="frames">
+        <div class="frame">
+          <div class="chr"><i></i><i></i><i></i><span>dienstly24.de — Public Website</span></div>
+          <div class="body"><div class="mock dD">
+            <div class="m-nav">
+              <span class="m-logo">Dienstly<em>24</em></span>
+              <span class="m-links"><span>Leistungen</span><span>Über uns</span><span>Partner werden</span><span>Kontakt</span></span>
+              <span class="m-lang">DE · AR</span>
+            </div>
+            <div class="m-hero">
+              <span class="m-kicker"><i></i>IHR MAKLER-SERVICE IN HAMBURG</span>
+              <p class="m-h1">Alle Versicherungen.<br><em style="color:var(--m-gold)">Ein Ansprechpartner.</em></p>
+              <p class="m-sub">Unabhängige Beratung zu Versicherungen, Kfz-Zulassung und Energie – kostenlos, auf Deutsch &amp; Arabisch.</p>
+              <div class="m-cta">
+                <span class="m-btn pri">Leistung wählen &amp; anfragen →</span>
+                <span class="m-btn sec">Direkt kontaktieren</span>
+              </div>
+              <div class="m-trust"><span>✓ Kostenlos &amp; unverbindlich</span><span>✓ Vertraulich</span><span>✓ Schnell &amp; zuverlässig</span></div>
+            </div>
+            <div class="m-cards">
+              <div class="m-card"><span class="m-ic">V</span><b>Versicherungen</b><p>Privat &amp; gewerblich, individuell abgestimmt.</p><span class="m-more">Mehr erfahren →</span></div>
+              <div class="m-card"><span class="m-ic">K</span><b>Kfz-Zulassung</b><p>Zulassung, Ummeldung, Abmeldung.</p><span class="m-more">Mehr erfahren →</span></div>
+              <div class="m-card"><span class="m-ic">E</span><b>Energie</b><p>Strom &amp; Gas vergleichen und sparen.</p><span class="m-more">Mehr erfahren →</span></div>
+            </div>
+          </div></div>
+        </div>
+        <div class="frame">
+          <div class="chr"><i></i><i></i><i></i><span>portal.dienstly24.de + admin.dienstly24.de</span></div>
+          <div class="body"><div class="mock dD">
+            <div class="m-portal">
+              <div class="m-pcard">
+                <h4>Meine Anfragen</h4>
+                <div class="m-req">
+                  <div class="row"><b>Kfz-Zulassung · HH-XX 123</b><span class="pill work">In Bearbeitung</span></div>
+                  <small>Eingereicht am 18.07.2026 · Schritt 3 von 5</small>
+                  <div class="m-prog"><i></i></div>
+                  <span class="m-action">● Aktion erforderlich: Fahrzeugschein hochladen</span>
+                </div>
+              </div>
+              <div class="m-admin" style="border:1px solid var(--m-card-line);border-radius:var(--m-radius);overflow:hidden">
+                <div class="m-side">
+                  <div class="lg">D<span style="color:var(--m-gold)">24</span></div>
+                  <a>Dashboard</a><a class="on">Kunden</a><a>Anfragen</a><a>Dokumente</a>
+                </div>
+                <div class="m-main">
+                  <div class="hd"><b>Kunden</b><span class="m-btn pri">+ Neuer Kunde</span></div>
+                  <table class="m-tbl">
+                    <tr><th>NR.</th><th>NAME</th><th>STATUS</th></tr>
+                    <tr><td>2600014</td><td>A. Hamdan</td><td><span class="pill done">Aktiv</span></td></tr>
+                    <tr><td>2600013</td><td>M. Weber</td><td><span class="pill new">Neu</span></td></tr>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div class="m-nav rtl" dir="rtl" style="border-top:1px solid var(--m-card-line);border-bottom:none">
+              <span class="m-logo">دينستلي<em>24</em></span>
+              <span class="m-links"><span>خدماتنا</span><span>من نحن</span><span>اتصل بنا</span></span>
+              <span class="m-btn pri" style="padding:5px 13px;font-size:10.5px">اختر الخدمة واطلبها ←</span>
+            </div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= DIRECTION A ================= -->
+  <section class="dir" id="dir-a">
+    <div class="dir-head">
+      <span class="dir-tag tag-a">الاتجاه A</span>
+      <h2>„Klares Licht" — الضوء والدقة</h2>
+      <span class="sub">التطبيق الحرفي لتوزيع البريف 60 / 25 / 10 / 5</span>
+    </div>
+    <div class="dir-grid">
+      <div class="concept">
+        <p>
+          أرضية Off-White دافئة تهيمن على كل شيء، البترولي يظهر في القرارات فقط: الأزرار الرئيسية،
+          الـ Sidebar، الروابط. الذهبي نادر ومقصود — شارة، أيقونة، حالة نشطة. النتيجة: منصة SaaS ألمانية
+          هادئة تُقرأ بسرعة، والقليل من الذهبي يلمع لأنه نادر.
+        </p>
+        <p>
+          الانتقال بين الموقع ← البورتال ← الأدمن يكون سلسًا لأن الأرضية واحدة؛
+          يتغير فقط تركيز البترولي (يزداد في الأدمن عبر الـ Sidebar الداكن).
+        </p>
+        <div class="swatches">
+          <span class="sw"><i style="background:#F8F6F0"></i>F8F6F0</span>
+          <span class="sw"><i style="background:#004F4B"></i>004F4B</span>
+          <span class="sw"><i style="background:#003D3A"></i>003D3A</span>
+          <span class="sw"><i style="background:#B8A16B"></i>B8A16B</span>
+          <span class="sw"><i style="background:#173B39"></i>173B39</span>
+          <span class="sw"><i style="background:#D8D4C8"></i>D8D4C8</span>
+        </div>
+        <div class="spec">
+          <b>الخطوط المقترحة:</b> لاتيني: Instrument Sans أو Inter Tight ·
+          عربي: IBM Plex Sans Arabic. زوايا 8px حادّة نسبيًا، حدود شعرية، ظلال شبه معدومة.
+        </div>
+        <div class="pm">
+          <div><span class="p">+</span><span>أوضح قراءةً وأسرع في العمل اليومي؛ يلائم النماذج والجداول</span></div>
+          <div><span class="p">+</span><span>أسهل صيانةً على المدى الطويل (تباين مضمون، طباعة أقل حساسية)</span></div>
+          <div><span class="m">−</span><span>أقل «وَقارًا فخمًا» من الموكاب المرفق — الفخامة هنا بالهدوء لا بالدُّكنة</span></div>
+          <div><span class="m">−</span><span>البترولي قد ينافر زمرد اللوغو الحالي (أخضران متجاوران) — يتطلب إعادة صياغة اللوغو</span></div>
+        </div>
+      </div>
+      <div class="frames">
+        <div class="frame">
+          <div class="chr"><i></i><i></i><i></i><span>dienstly24.de — Public Website</span></div>
+          <div class="body"><div class="mock dA">
+            <div class="m-nav">
+              <span class="m-logo">Dienstly<em>24</em></span>
+              <span class="m-links"><span>Leistungen</span><span>Über uns</span><span>Partner werden</span><span>Kontakt</span></span>
+              <span class="m-lang">DE · AR</span>
+            </div>
+            <div class="m-hero">
+              <span class="m-kicker"><i></i>IHR MAKLER-SERVICE IN HAMBURG</span>
+              <p class="m-h1">Alle Versicherungen.<br>Ein Ansprechpartner.</p>
+              <p class="m-sub">Unabhängige Beratung zu Versicherungen, Kfz-Zulassung und Energie – kostenlos, auf Deutsch &amp; Arabisch.</p>
+              <div class="m-cta">
+                <span class="m-btn pri">Leistung wählen &amp; anfragen →</span>
+                <span class="m-btn sec">Direkt kontaktieren</span>
+              </div>
+              <div class="m-trust"><span>✓ Kostenlos &amp; unverbindlich</span><span>✓ Vertraulich</span><span>✓ Schnell &amp; zuverlässig</span></div>
+            </div>
+            <div class="m-cards">
+              <div class="m-card"><span class="m-ic">V</span><b>Versicherungen</b><p>Privat &amp; gewerblich, individuell abgestimmt.</p><span class="m-more">Mehr erfahren →</span></div>
+              <div class="m-card"><span class="m-ic">K</span><b>Kfz-Zulassung</b><p>Zulassung, Ummeldung, Abmeldung.</p><span class="m-more">Mehr erfahren →</span></div>
+              <div class="m-card"><span class="m-ic">E</span><b>Energie</b><p>Strom &amp; Gas vergleichen und sparen.</p><span class="m-more">Mehr erfahren →</span></div>
+            </div>
+          </div></div>
+        </div>
+        <div class="frame">
+          <div class="chr"><i></i><i></i><i></i><span>portal.dienstly24.de + admin.dienstly24.de</span></div>
+          <div class="body"><div class="mock dA">
+            <div class="m-portal">
+              <div class="m-pcard">
+                <h4>Meine Anfragen</h4>
+                <div class="m-req">
+                  <div class="row"><b>Kfz-Zulassung · HH-XX 123</b><span class="pill work">In Bearbeitung</span></div>
+                  <small>Eingereicht am 18.07.2026 · Schritt 3 von 5</small>
+                  <div class="m-prog"><i></i></div>
+                  <span class="m-action">● Aktion erforderlich: Fahrzeugschein hochladen</span>
+                </div>
+              </div>
+              <div class="m-admin" style="border:1px solid var(--m-card-line);border-radius:var(--m-radius);overflow:hidden">
+                <div class="m-side">
+                  <div class="lg">D<span style="color:var(--m-side-on-ink)">24</span></div>
+                  <a>Dashboard</a><a class="on">Kunden</a><a>Anfragen</a><a>Dokumente</a>
+                </div>
+                <div class="m-main">
+                  <div class="hd"><b>Kunden</b><span class="m-btn pri">+ Neuer Kunde</span></div>
+                  <table class="m-tbl">
+                    <tr><th>NR.</th><th>NAME</th><th>STATUS</th></tr>
+                    <tr><td>2600014</td><td>A. Hamdan</td><td><span class="pill done">Aktiv</span></td></tr>
+                    <tr><td>2600013</td><td>M. Weber</td><td><span class="pill new">Neu</span></td></tr>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div class="m-nav rtl" dir="rtl" style="border-top:1px solid var(--m-nav-line);border-bottom:none">
+              <span class="m-logo">دينستلي<em>24</em></span>
+              <span class="m-links"><span>خدماتنا</span><span>من نحن</span><span>اتصل بنا</span></span>
+              <span class="m-btn pri" style="padding:5px 13px;font-size:10.5px">اختر الخدمة واطلبها ←</span>
+            </div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= DIRECTION B ================= -->
+  <section class="dir" id="dir-b">
+    <div class="dir-head">
+      <span class="dir-tag tag-b">الاتجاه B</span>
+      <h2>„Dunkle Eleganz" — الفخامة الداكنة</h2>
+      <span class="sub">روح الموكاب المرفق، مع انضباط في المحتوى</span>
+    </div>
+    <div class="dir-grid">
+      <div class="concept">
+        <p>
+          الموقع العام يفتتح بمساحات بترولية داكنة عميقة مع Serif ذهبي للعناوين — حضور «علامة خدمة راقية»
+          واضح من أول ثانية. لكن المحتوى بعد الـ Hero يعود إلى أرضية فاتحة كي تبقى القراءة مريحة،
+          والذهبي يبقى في العناوين والتفاصيل الثمينة فقط.
+        </p>
+        <p>
+          البورتال والأدمن يحملان نفس الروح: Sidebar داكن بحالة نشطة ذهبية، محتوى فاتح.
+          هذا أجرأ الاتجاهات الثلاثة وأكثرها تميزًا عن المنافسين.
+        </p>
+        <div class="swatches">
+          <span class="sw"><i style="background:#00332F"></i>00332F</span>
+          <span class="sw"><i style="background:#004F4B"></i>004F4B</span>
+          <span class="sw"><i style="background:#B8A16B"></i>B8A16B</span>
+          <span class="sw"><i style="background:#D1C18F"></i>D1C18F</span>
+          <span class="sw"><i style="background:#F8F6F0"></i>F8F6F0</span>
+          <span class="sw"><i style="background:#173B39"></i>173B39</span>
+        </div>
+        <div class="spec">
+          <b>الخطوط المقترحة:</b> عناوين لاتينية: Fraunces أو Cormorant (Serif) · نص: Inter ·
+          عربي: عناوين بوزن ثقيل من Noto Naskh Arabic أو Amiri والنص IBM Plex Sans Arabic.
+          زوايا 13px، خطوط زخرفية ذهبية رفيعة، تدرجات داكنة هادئة.
+        </div>
+        <div class="pm">
+          <div><span class="p">+</span><span>أقوى انطباع أول و«Premium» صريح — الأقرب لما في الصورة المرفقة</span></div>
+          <div><span class="p">+</span><span>تميّز واضح عن مواقع التأمين الاعتيادية</span></div>
+          <div><span class="m">−</span><span>يتطلب انضباطًا دائمًا: الإفراط في الداكن/الذهبي يتعب العين في الشاشات اليومية</span></div>
+          <div><span class="m">−</span><span>الـ Serif اللاتيني يحتاج مقابلًا عربيًا مدروسًا كي لا تختل الهوية بين اللغتين</span></div>
+          <div><span class="m">−</span><span>البترولي قد ينافر زمرد اللوغو الحالي — يتطلب إعادة صياغة اللوغو</span></div>
+        </div>
+      </div>
+      <div class="frames">
+        <div class="frame">
+          <div class="chr"><i></i><i></i><i></i><span>dienstly24.de — Public Website</span></div>
+          <div class="body"><div class="mock dB">
+            <div class="m-nav">
+              <span class="m-logo">Dienstly<em>24</em></span>
+              <span class="m-links"><span>Leistungen</span><span>Über uns</span><span>Partner werden</span><span>Kontakt</span></span>
+              <span class="m-lang">DE · AR</span>
+            </div>
+            <div class="m-hero">
+              <span class="m-kicker"><i></i>IHR MAKLER-SERVICE IN HAMBURG</span>
+              <p class="m-h1">Alle Versicherungen.<br><em>Ein Ansprechpartner.</em></p>
+              <p class="m-sub">Unabhängige Beratung zu Versicherungen, Kfz-Zulassung und Energie – kostenlos, auf Deutsch &amp; Arabisch.</p>
+              <div class="m-cta">
+                <span class="m-btn pri">Leistung wählen &amp; anfragen →</span>
+                <span class="m-btn sec">Direkt kontaktieren</span>
+              </div>
+              <div class="m-trust"><span>✓ Kostenlos &amp; unverbindlich</span><span>✓ Vertraulich</span><span>✓ Schnell &amp; zuverlässig</span></div>
+            </div>
+            <div class="m-cards">
+              <div class="m-card"><span class="m-ic">V</span><b>Versicherungen</b><p>Privat &amp; gewerblich, individuell abgestimmt.</p><span class="m-more">Mehr erfahren →</span></div>
+              <div class="m-card"><span class="m-ic">K</span><b>Kfz-Zulassung</b><p>Zulassung, Ummeldung, Abmeldung.</p><span class="m-more">Mehr erfahren →</span></div>
+              <div class="m-card"><span class="m-ic">E</span><b>Energie</b><p>Strom &amp; Gas vergleichen und sparen.</p><span class="m-more">Mehr erfahren →</span></div>
+            </div>
+          </div></div>
+        </div>
+        <div class="frame">
+          <div class="chr"><i></i><i></i><i></i><span>portal.dienstly24.de + admin.dienstly24.de</span></div>
+          <div class="body"><div class="mock dB" style="background:var(--m-body-bg)">
+            <div class="m-portal">
+              <div class="m-pcard">
+                <h4>Meine Anfragen</h4>
+                <div class="m-req">
+                  <div class="row"><b>Kfz-Zulassung · HH-XX 123</b><span class="pill work">In Bearbeitung</span></div>
+                  <small>Eingereicht am 18.07.2026 · Schritt 3 von 5</small>
+                  <div class="m-prog"><i></i></div>
+                  <span class="m-action">● Aktion erforderlich: Fahrzeugschein hochladen</span>
+                </div>
+              </div>
+              <div class="m-admin" style="border:1px solid var(--m-card-line);border-radius:var(--m-radius);overflow:hidden">
+                <div class="m-side">
+                  <div class="lg">D<span style="color:var(--m-gold)">24</span></div>
+                  <a>Dashboard</a><a class="on">Kunden</a><a>Anfragen</a><a>Dokumente</a>
+                </div>
+                <div class="m-main">
+                  <div class="hd"><b>Kunden</b><span class="m-btn pri">+ Neuer Kunde</span></div>
+                  <table class="m-tbl">
+                    <tr><th>NR.</th><th>NAME</th><th>STATUS</th></tr>
+                    <tr><td>2600014</td><td>A. Hamdan</td><td><span class="pill done">Aktiv</span></td></tr>
+                    <tr><td>2600013</td><td>M. Weber</td><td><span class="pill new">Neu</span></td></tr>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div class="m-nav rtl" dir="rtl" style="border-top:1px solid #D8D4C8;border-bottom:none;background:#00332F">
+              <span class="m-logo" style="font-family:var(--m-display)">دينستلي<em>24</em></span>
+              <span class="m-links"><span>خدماتنا</span><span>من نحن</span><span>اتصل بنا</span></span>
+              <span class="m-btn pri" style="padding:5px 13px;font-size:10.5px">اختر الخدمة واطلبها ←</span>
+            </div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= DIRECTION C ================= -->
+  <section class="dir" id="dir-c">
+    <div class="dir-head">
+      <span class="dir-tag tag-c">الاتجاه C</span>
+      <h2>„Smaragd" — تطوير الهوية الحالية</h2>
+      <span class="sub">لا Rebrand — توحيد وتنظيم ما هو مبني فعلًا</span>
+    </div>
+    <div class="dir-grid">
+      <div class="concept">
+        <p>
+          نبقي «Graphit + Smaragd» المعتمدة حاليًا في البورتال والأدمن، ونصرف كامل الجهد على
+          هدف البريف الحقيقي: منظومة موحّدة — Design Tokens، مكوّنات موحّدة، حالات فارغة/خطأ/تحميل،
+          استجابة كاملة، RTL حقيقي — بنفس الألوان الموجودة.
+        </p>
+        <p>
+          الأسرع تنفيذًا والأقل مخاطرة، ولا يمسّ أصول اللوغو الحالية. لكنه لا يحقق
+          الهوية البترولية/الذهبية المطلوبة في البريف الجديد.
+        </p>
+        <div class="swatches">
+          <span class="sw"><i style="background:#17191D"></i>17191D</span>
+          <span class="sw"><i style="background:#101216"></i>101216</span>
+          <span class="sw"><i style="background:#17A65B"></i>17A65B</span>
+          <span class="sw"><i style="background:#F4F5F7"></i>F4F5F7</span>
+          <span class="sw"><i style="background:#E4E6EA"></i>E4E6EA</span>
+        </div>
+        <div class="spec">
+          <b>الخطوط المقترحة:</b> إبقاء الحالي مع ضبط مقياس موحّد ·
+          عربي: IBM Plex Sans Arabic. زوايا 10px، لغة SaaS حديثة.
+        </div>
+        <div class="pm">
+          <div><span class="p">+</span><span>صفر إعادة عمل على الشاشات المبنية؛ يركّز الجهد على التوحيد والجودة</span></div>
+          <div><span class="p">+</span><span>لا حاجة لتحديث قاعدة الألوان ولا أصول اللوغو</span></div>
+          <div><span class="m">−</span><span>يتجاهل باليتة البريف الجديد (البترولي + الذهبي) والموكاب المرفق</span></div>
+        </div>
+      </div>
+      <div class="frames">
+        <div class="frame">
+          <div class="chr"><i></i><i></i><i></i><span>dienstly24.de — Public Website</span></div>
+          <div class="body"><div class="mock dC">
+            <div class="m-nav">
+              <span class="m-logo">Dienstly<em>24</em></span>
+              <span class="m-links"><span>Leistungen</span><span>Über uns</span><span>Partner werden</span><span>Kontakt</span></span>
+              <span class="m-lang">DE · AR</span>
+            </div>
+            <div class="m-hero">
+              <span class="m-kicker"><i></i>IHR MAKLER-SERVICE IN HAMBURG</span>
+              <p class="m-h1">Alle Versicherungen.<br>Ein Ansprechpartner.</p>
+              <p class="m-sub">Unabhängige Beratung zu Versicherungen, Kfz-Zulassung und Energie – kostenlos, auf Deutsch &amp; Arabisch.</p>
+              <div class="m-cta">
+                <span class="m-btn pri">Leistung wählen &amp; anfragen →</span>
+                <span class="m-btn sec">Direkt kontaktieren</span>
+              </div>
+              <div class="m-trust"><span>✓ Kostenlos &amp; unverbindlich</span><span>✓ Vertraulich</span><span>✓ Schnell &amp; zuverlässig</span></div>
+            </div>
+            <div class="m-cards">
+              <div class="m-card"><span class="m-ic">V</span><b>Versicherungen</b><p>Privat &amp; gewerblich, individuell abgestimmt.</p><span class="m-more">Mehr erfahren →</span></div>
+              <div class="m-card"><span class="m-ic">K</span><b>Kfz-Zulassung</b><p>Zulassung, Ummeldung, Abmeldung.</p><span class="m-more">Mehr erfahren →</span></div>
+              <div class="m-card"><span class="m-ic">E</span><b>Energie</b><p>Strom &amp; Gas vergleichen und sparen.</p><span class="m-more">Mehr erfahren →</span></div>
+            </div>
+          </div></div>
+        </div>
+        <div class="frame">
+          <div class="chr"><i></i><i></i><i></i><span>portal.dienstly24.de + admin.dienstly24.de</span></div>
+          <div class="body"><div class="mock dC">
+            <div class="m-portal">
+              <div class="m-pcard">
+                <h4>Meine Anfragen</h4>
+                <div class="m-req">
+                  <div class="row"><b>Kfz-Zulassung · HH-XX 123</b><span class="pill work">In Bearbeitung</span></div>
+                  <small>Eingereicht am 18.07.2026 · Schritt 3 von 5</small>
+                  <div class="m-prog"><i></i></div>
+                  <span class="m-action">● Aktion erforderlich: Fahrzeugschein hochladen</span>
+                </div>
+              </div>
+              <div class="m-admin" style="border:1px solid var(--m-card-line);border-radius:var(--m-radius);overflow:hidden">
+                <div class="m-side">
+                  <div class="lg">D<span style="color:var(--m-side-on-ink)">24</span></div>
+                  <a>Dashboard</a><a class="on">Kunden</a><a>Anfragen</a><a>Dokumente</a>
+                </div>
+                <div class="m-main">
+                  <div class="hd"><b>Kunden</b><span class="m-btn pri">+ Neuer Kunde</span></div>
+                  <table class="m-tbl">
+                    <tr><th>NR.</th><th>NAME</th><th>STATUS</th></tr>
+                    <tr><td>2600014</td><td>A. Hamdan</td><td><span class="pill done">Aktiv</span></td></tr>
+                    <tr><td>2600013</td><td>M. Weber</td><td><span class="pill new">Neu</span></td></tr>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div class="m-nav rtl" dir="rtl" style="border-top:1px solid var(--m-nav-line);border-bottom:none">
+              <span class="m-logo">دينستلي<em>24</em></span>
+              <span class="m-links"><span>خدماتنا</span><span>من نحن</span><span>اتصل بنا</span></span>
+              <span class="m-btn pri" style="padding:5px 13px;font-size:10.5px">اختر الخدمة واطلبها ←</span>
+            </div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= COMPARISON ================= -->
+  <section class="dir" id="cmp">
+    <div class="dir-head"><h2>المقارنة بنظرة واحدة</h2></div>
+    <div class="cmp-wrap">
+      <table class="cmp">
+        <thead>
+          <tr>
+            <th></th>
+            <th><span class="dot" style="background:#17A65B"></span><span class="dot" style="background:#B8A16B;margin-inline-start:-3px"></span>D — المكس</th>
+            <th><span class="dot" style="background:#004F4B"></span>A — Klares Licht</th>
+            <th><span class="dot" style="background:#B8A16B"></span>B — Dunkle Eleganz</th>
+            <th><span class="dot" style="background:#17A65B"></span>C — Smaragd</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>الانطباع العام</td><td>فخامة دافئة تحفظ الهوية</td><td>ثقة هادئة، دقة ألمانية</td><td>فخامة وحضور قوي</td><td>SaaS حديث مألوف</td></tr>
+          <tr><td>القرب من الموكاب المرفق</td><td>قريب جدًا في الافتتاح الداكن</td><td>متوسط (الروح دون الدُّكنة)</td><td>الأقرب</td><td>بعيد</td></tr>
+          <tr><td>التزام باليتة البريف</td><td>المحايدات والذهبي حرفيًا؛ الزمرد مكان البترولي</td><td>حرفي (60/25/10/5)</td><td>يميل للداكن أكثر من التوزيع</td><td>لا يعتمدها</td></tr>
+          <tr><td>الانسجام مع اللوغو الحالي</td><td>كامل — اللوغو يبقى</td><td>متوتر (أخضران)</td><td>متوتر (أخضران)</td><td>كامل</td></tr>
+          <tr><td>ملاءمة العمل اليومي (Admin)</td><td>ممتازة</td><td>ممتازة</td><td>جيدة بشرط الانضباط</td><td>ممتازة</td></tr>
+          <tr><td>حجم التغيير على الكود</td><td>متوسط (تدفئة الأرضيات + إدخال الذهبي)</td><td>كبير (Rebrand كامل)</td><td>كبير (Rebrand + خطوط Serif)</td><td>صغير (توحيد فقط)</td></tr>
+          <tr><td>تحديث قاعدة الألوان واللوغو</td><td>تحديث جزئي للقاعدة؛ اللوغو يبقى</td><td>مطلوب بالكامل</td><td>مطلوب بالكامل</td><td>غير مطلوب</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:14px;color:var(--muted);max-width:70ch;margin-top:14px">
+      <b style="color:var(--ink)">ملاحظة:</b> الاتجاه D يطبّق أصلًا منطق «افتتاح داكن فخم ← محتوى فاتح مريح»
+      الذي يعتمده الموكاب المرفق، لكن بألوان هوية الشركة. ويمكن تطبيق الفكرة نفسها على A
+      (Hero داكن بترولي) إذا فضّلت البترولي رغم ملاحظة اللوغو.
+    </p>
+  </section>
+
+  <!-- ================= NEXT STEPS ================= -->
+  <section class="dir">
+    <div class="dir-head"><h2>بعد اعتماد الاتجاه</h2></div>
+    <div class="steps">
+      <div><b>01</b><span>Design Tokens كاملة (ألوان، طباعة، مسافات، زوايا، Breakpoints) + إعداد Tailwind</span></div>
+      <div><b>02</b><span>Component Library: أزرار، نماذج، بطاقات، جداول، Modals — بكل الحالات (Hover/Focus/Loading/Disabled/Error)</span></div>
+      <div><b>03</b><span>معاينات HTML كاملة للموقع العام + البورتال + الأدمن على Desktop / Tablet / Mobile، بالألمانية والعربية (RTL حقيقي)</span></div>
+      <div><b>04</b><span>بعد موافقتك على المعاينات: التطبيق التدريجي في Laravel/Blade عبر Pull Requests صغيرة قابلة للمراجعة، base=main دائمًا</span></div>
+      <div><b>05</b><span>Empty / Loading / Error / Success States لكل شاشة + فحص فعلي بالأجهزة عبر Headless Chromium</span></div>
+    </div>
+  </section>
+
+  <footer class="fin">
+    المعاينات أعلاه Art Direction مصغّرة للمقارنة، وليست التصميم النهائي — التفاصيل (الأيقونات، الصور، الخطوط النهائية،
+    الرسوم) تُبنى بعد اعتماد الاتجاه. يمكن أيضًا اعتماد اتجاه مع تعديلات تذكرها بملاحظة.
+  </footer>
+
+</div>
