@@ -64,6 +64,12 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
 - **Hilfe-Formular**: `SupportFormController` → `/hilfe`. Aus der Mail mit
   verschlüsseltem Kunden-Token vorbefüllt; Absenden legt automatisch ein
   Ticket an, verknüpft mit der Kundenakte.
+- **Website-Kontaktformular** (`website/index.html`): sendet per JS an
+  `POST /api/website-contact` (`WebsiteContactController`) statt per Mail.
+  Mehrstufiger Spam-Schutz: JS-Einmal-Token mit Mindest-Ausfuellzeit,
+  Honeypot, Throttle, `SpamFilter` (Spam wird still verworfen). Echte
+  Anfragen werden Tickets (Quelle `website`) + Glocke + Support-Mail.
+  Details/Inbetriebnahme: `docs/SPAM_SCHUTZ_WEBSITE_ANFRAGE.md`.
 - **Rechtsseiten** (`/impressum`, `/agb`, `/datenschutz`,
   `/cookie-richtlinie`, `/kontakt`): leiten standardmäßig auf die offizielle
   Website weiter (`LegalPageController`, Basis-URL unter Einstellungen →

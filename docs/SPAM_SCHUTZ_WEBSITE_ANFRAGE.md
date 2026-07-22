@@ -1,6 +1,47 @@
 # Spam-Schutz fuer die Website-Anfragen ("Neue Anfrage ueber Dienstly24")
 
-## Problem
+## Radikale Loesung (umgesetzt, Juli 2026)
+
+Das Kontaktformular der statischen Website (`website/index.html`) sendet
+**nicht mehr per E-Mail**, sondern direkt an einen neuen, mehrstufig
+geschuetzten Portal-Endpunkt. Jede echte Anfrage wird ein **Ticket**
+(Quelle `website`) mit Team-Benachrichtigung und Support-Mail; Spam wird
+vorher verworfen und erreicht das Postfach gar nicht mehr.
+
+Architektur (`WebsiteContactController`):
+
+1. **Formular-Token**: Das Website-JS holt beim Laden ein verschluesseltes
+   Einmal-Token (`GET /api/website-contact/token`). Bots, die kein
+   JavaScript ausfuehren - die grosse Mehrheit -, koennen gar nicht erst
+   gueltig absenden.
+2. **Mindest-Ausfuellzeit** (5 s): Absenden in Bot-Tempo nach Token-Ausgabe
+   wird abgelehnt. Das Website-JS behandelt den Fehler selbst (frisches
+   Token holen, warten, erneut senden), Menschen verlieren also nie eine
+   Anfrage.
+3. **Einmal-Token** (max. 2 h gueltig): Replay/Massenversand geblockt.
+4. **Honeypot-Feld** `website`: ausgefuellt -> still verworfen.
+5. **Inhaltsfilter** `App\Services\SpamFilter` (Gluecksspiel/Pillen/SEO,
+   Link-Haeufung, Mojibake): erkannter Spam wird **still** verworfen -
+   die Antwort sieht wie Erfolg aus, Bots lernen nichts.
+6. **Throttle pro IP**: Token 30/min, Absenden 10/min.
+
+Endpunkte: `POST /api/website-contact` (CSRF-exempt, CORS ueber die
+Framework-Defaults fuer `api/*`). Tests:
+`tests/Feature/WebsiteContactFormTest.php`.
+
+### Inbetriebnahme (Schritte fuer den Betreiber)
+
+1. Portal normal deployen (Merge auf `main` reicht).
+2. Den Ordner `website/` komplett neu auf Hostinger hochladen
+   (siehe `website/LIESMICH.txt`) - er enthaelt das neue Formular.
+3. **Den alten Formular-Versand stilllegen**: Falls auf `dienstly24.de`
+   noch ein WordPress-/Builder-Formular liegt, das "Neue Anfrage ueber
+   Dienstly24"-Mails erzeugt, dieses Formular/Plugin deaktivieren oder
+   loeschen. Solange es existiert, koennen Bots es weiter direkt anfunken.
+4. Testen: Formular auf der Website absenden -> Anfrage erscheint in der
+   Beraterwelt unter Anfragen/Tickets (Quelle "website") + Support-Mail.
+
+## Problem (Historie)
 
 Ueber das Kontaktformular der oeffentlichen Website (`dienstly24.de`)
 trafen Bot-Nachrichten mit Werbe-/Gluecksspiel-Spam ein
