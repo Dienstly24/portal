@@ -6,7 +6,7 @@
 <title>Dienstly24 — Partnerportal</title>
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 <style>
-:root{--petrol:#17191d;--petrol-dark:#101216;--gold:#17A65B;--canvas:#F4F5F7;--line:#E4E6EA;--ink:#152826;--ink-soft:#6B7280;}
+:root{--petrol:#131A17;--petrol-dark:#0F1512;--gold:#17A65B;--akzent:#B8A16B;--akzent-hell:#D1C18F;--canvas:#F1EEE5;--line:#E0DCD0;--ink:#16211C;--ink-soft:#5F6B62;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Inter',Arial,sans-serif;background:var(--canvas);color:var(--ink);}
 .sidebar{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--petrol);color:#fff;display:flex;flex-direction:column;padding:24px 18px;z-index:100;}

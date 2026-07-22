@@ -55,8 +55,8 @@ $chipDefs = [
 @endphp
 <style>
 .catChip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 15px;font-size:12.5px;cursor:pointer;color:var(--ink);transition:.12s;white-space:nowrap;}
-.catChip:hover{border-color:#17191d;}
-.catChip.active{background:#17191d;color:#fff;border-color:#17191d;}
+.catChip:hover{border-color:#131A17;}
+.catChip.active{background:#131A17;color:#fff;border-color:#131A17;}
 .catChip.active .chipCount{color:rgba(255,255,255,.7);}
 .chipCount{color:var(--ink-soft);}
 </style>
@@ -70,7 +70,7 @@ $chipDefs = [
 </div>
 
 @if($canBulk)
-<div class="card" style="background:#EEF6F1;padding:11px 16px;margin-bottom:14px;font-size:12.5px;color:#17191d;line-height:1.5;">
+<div class="card" style="background:#EEF6F1;padding:11px 16px;margin-bottom:14px;font-size:12.5px;color:#131A17;line-height:1.5;">
     💡 <strong>Sichere Treffer (≥ {{ $autoMin }} %)</strong> – gleiche E-Mail, Telefon, IBAN, Vertragsnummer oder Name + Geburtsdatum – können mit einem Klick automatisch zusammengeführt werden. <strong>Schwächere Treffer (nur gleicher Name)</strong> bitte einzeln prüfen und per Auswahl zusammenführen.
 </div>
 @endif
@@ -82,7 +82,7 @@ $chipDefs = [
 <form method="POST" action="{{ route('admin.customers.duplicates.merge') }}" id="bulkMergeForm" onsubmit="return confirmBulkMerge(this);">@csrf</form>
 <form method="POST" action="{{ route('admin.customers.duplicates.dismiss_bulk') }}" id="bulkDismissForm">@csrf</form>
 
-<div id="mergeBar" style="display:none;position:sticky;top:0;z-index:10;background:#17191d;color:#fff;border-radius:10px;padding:12px 20px;margin-bottom:14px;align-items:center;gap:14px;flex-wrap:wrap;">
+<div id="mergeBar" style="display:none;position:sticky;top:0;z-index:10;background:#131A17;color:#fff;border-radius:10px;padding:12px 20px;margin-bottom:14px;align-items:center;gap:14px;flex-wrap:wrap;">
     <span style="font-size:13.5px;font-weight:600;"><span id="mergeCount">0</span> Paar(e) ausgewählt</span>
     <div style="margin-left:auto;display:flex;gap:10px;flex-wrap:wrap;">
         <button type="button" onclick="submitBulkDismiss()" class="btn btn-ghost" style="padding:8px 16px;font-size:13px;background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.25);" title="Ausgewählte als „kein Duplikat" markieren – wandern zu Verwandte Kunden">✕ Kein Duplikat</button>

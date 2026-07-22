@@ -10,7 +10,7 @@
 @php $rtl = app()->getLocale() === 'ar'; @endphp
 <div id="d24-cookie" role="dialog" aria-live="polite" aria-label="{{ __('Cookie-Hinweis') }}"
      dir="{{ $rtl ? 'rtl' : 'ltr' }}"
-     style="display:none;position:fixed;z-index:9999;inset-inline:0;bottom:0;padding:16px;background:#17191d;border-top:1px solid rgba(255,255,255,.14);box-shadow:0 -12px 40px rgba(0,0,0,.45);font-family:'Inter',Arial,sans-serif;">
+     style="display:none;position:fixed;z-index:9999;inset-inline:0;bottom:0;padding:16px;background:#131A17;border-top:1px solid rgba(255,255,255,.14);box-shadow:0 -12px 40px rgba(0,0,0,.45);font-family:'Inter',Arial,sans-serif;">
   <div style="max-width:1080px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:14px 22px;justify-content:space-between;">
     <div style="flex:1 1 320px;min-width:260px;color:#c6cbd3;font-size:13px;line-height:1.55;">
       <strong style="color:#fff;display:block;margin-bottom:3px;font-size:14px;">🍪 {{ __('Cookies und Datenschutz') }}</strong>

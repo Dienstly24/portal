@@ -145,13 +145,13 @@
 
 {{-- Vorschau-Modal --}}
 <div id="preview-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:120;align-items:center;justify-content:center;padding:16px;">
-    <div style="background:#f4f5f7;border-radius:14px;width:640px;max-width:95vw;max-height:92vh;overflow-y:auto;position:relative;padding:22px;">
+    <div style="background:#F7F5EF;border-radius:14px;width:640px;max-width:95vw;max-height:92vh;overflow-y:auto;position:relative;padding:22px;">
         <button onclick="document.getElementById('preview-modal').style.display='none'" style="position:absolute;top:12px;right:14px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;">An: <span id="pv-to"></span> · Betreff: <strong id="pv-subject"></strong> <span id="pv-att"></span></div>
         <div style="background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08);">
-            <div style="background:#17191d;padding:18px 24px;"><span style="color:#fff;font-size:18px;font-weight:bold;">Dienstly<span style="color:#17A65B;">24</span></span></div>
+            <div style="background:#131A17;padding:18px 24px;"><span style="color:#fff;font-size:18px;font-weight:bold;">Dienstly<span style="color:#17A65B;">24</span></span></div>
             <div style="padding:24px;font-size:14px;color:#333;line-height:1.7;" id="pv-body"></div>
-            <div style="background:#f4f5f7;padding:12px 24px;font-size:11.5px;color:#888;">Dienstly24 – Ihr Experte für Versicherungen &amp; Energie<br>Ihr Ansprechpartner: {{ auth()->user()->name }}</div>
+            <div style="background:#F7F5EF;padding:12px 24px;font-size:11.5px;color:#888;">Dienstly24 – Ihr Experte für Versicherungen &amp; Energie<br>Ihr Ansprechpartner: {{ auth()->user()->name }}</div>
         </div>
     </div>
 </div>

@@ -8,7 +8,7 @@
 {{-- Chart.js lokal gehostet (DSGVO: kein Abfluss von Besucher-IPs an CDN-Drittanbieter) --}}
 <script src="/js/chart.umd.min.js"></script>
 <style>
-:root{--petrol:#17191d;--petrol-dark:#101216;--gold:#17A65B;--canvas:#DCDEE3;--surface:#ECEEF1;--line:#CDD1D8;--ink:#152826;--ink-soft:#6B7280;--sidebar-w:260px;--header-h:64px;}
+:root{--petrol:#131A17;--petrol-dark:#0F1512;--gold:#17A65B;--akzent:#B8A16B;--akzent-hell:#D1C18F;--canvas:#F1EEE5;--surface:#FBFAF6;--line:#E0DCD0;--ink:#16211C;--ink-soft:#5F6B62;--sidebar-w:260px;--header-h:64px;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
 .sidebar{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:var(--petrol-dark);color:#fff;display:flex;flex-direction:column;z-index:100;overflow-y:auto;}
@@ -18,9 +18,9 @@ body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
 .nav-item{display:flex;align-items:center;gap:12px;padding:10px 20px;color:rgba(255,255,255,.7);font-size:13.5px;text-decoration:none;transition:.15s;position:relative;}
 .nav-item:hover{background:rgba(255,255,255,.06);color:#fff;}
 .nav-item.active{background:rgba(255,255,255,.1);color:#fff;font-weight:600;}
-.nav-item.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gold);border-radius:0 3px 3px 0;}
+.nav-item.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--akzent-hell);border-radius:0 3px 3px 0;}
 .nav-icon{width:18px;height:18px;opacity:.8;flex:none;}
-.nav-badge{margin-left:auto;background:var(--gold);color:#ffffff;border-radius:999px;padding:2px 7px;font-size:11px;font-weight:700;}
+.nav-badge{margin-left:auto;background:var(--akzent);color:#0F1512;border-radius:999px;padding:2px 7px;font-size:11px;font-weight:700;}
 /* Einklappbare Nav-Gruppen (Akkordeon) */
 .nav-group-header{display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;cursor:pointer;padding:16px 20px 6px;color:rgba(255,255,255,.35);font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;font-weight:600;font-family:inherit;text-align:left;}
 .nav-group-header:hover{color:rgba(255,255,255,.6);}
@@ -40,7 +40,7 @@ body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
 .logout-btn:hover{color:#fff;}
 .header{position:fixed;top:0;left:var(--sidebar-w);right:0;height:var(--header-h);background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 32px;gap:16px;z-index:90;}
 .header-search{flex:1;max-width:480px;position:relative;}
-.header-search input{width:100%;padding:9px 14px 9px 38px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#E3E6EA;color:var(--ink);}
+.header-search input{width:100%;padding:9px 14px 9px 38px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#EDEAE0;color:var(--ink);}
 .header-search input:focus{outline:2px solid var(--gold);outline-offset:1px;background:#fff;color:var(--ink);}
 .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink-soft);font-size:15px;}
 .header-actions{margin-left:auto;display:flex;align-items:center;gap:12px;}
@@ -84,7 +84,7 @@ table{width:100%;border-collapse:collapse;font-size:14px;}
 table th{text-align:left;padding:10px 12px;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--line);font-weight:600;text-transform:uppercase;letter-spacing:.05em;}
 table td{padding:13px 12px;border-bottom:1px solid var(--line);vertical-align:middle;}
 table tr:last-child td{border-bottom:none;}
-table tr:hover td{background:#E3E6EA;}
+table tr:hover td{background:#EDEAE0;}
 .badge{font-size:11.5px;padding:3px 10px;border-radius:999px;font-weight:600;display:inline-flex;align-items:center;gap:4px;}
 .badge::before{content:'';width:6px;height:6px;border-radius:50%;flex:none;}
 .badge-active{background:#D9F4E6;color:#128a4b;}.badge-active::before{background:#17A65B;}
@@ -109,7 +109,7 @@ table tr:hover td{background:#E3E6EA;}
 .toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
 .field{margin-bottom:18px;}
 .field label{display:block;font-size:13px;color:var(--ink-soft);margin-bottom:6px;font-weight:500;}
-.field input,.field select,.field textarea{width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#F4F5F7;color:var(--ink);font-family:inherit;transition:.15s;}
+.field input,.field select,.field textarea{width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#F7F5EF;color:var(--ink);font-family:inherit;transition:.15s;}
 .field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--gold);outline-offset:1px;}
 .field textarea{min-height:90px;resize:vertical;}
 .alert{border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:14px;display:flex;align-items:center;gap:10px;}
@@ -441,8 +441,8 @@ function globalSearch(q) {
         .then(data => {
             if (!data.length) { results.style.display = 'none'; return; }
             results.innerHTML = data.map(item => `
-                <a href="${item.url}" style="display:flex;align-items:center;gap:10px;padding:10px 14px;text-decoration:none;color:#152826;border-bottom:1px solid #E4E6EA;"
-                   onmouseover="this.style.background='#F4F5F7'" onmouseout="this.style.background='transparent'">
+                <a href="${item.url}" style="display:flex;align-items:center;gap:10px;padding:10px 14px;text-decoration:none;color:#152826;border-bottom:1px solid #E5E1D6;"
+                   onmouseover="this.style.background='#F7F5EF'" onmouseout="this.style.background='transparent'">
                     <span style="font-size:18px;">${item.icon}</span>
                     <div>
                         <div style="font-weight:600;font-size:13px;">${item.title}</div>
@@ -484,7 +484,7 @@ function loadNotifications() {
             }
             list.innerHTML = data.items.map(function(n) { return ''
                 + '<a href="' + n.url + '" onclick="markNotifRead(\'' + n.id + '\')" '
-                + 'style="display:flex;gap:10px;padding:11px 16px;text-decoration:none;color:#152826;border-bottom:1px solid #E4E6EA;background:' + (n.read ? 'transparent' : '#F0F7F3') + ';">'
+                + 'style="display:flex;gap:10px;padding:11px 16px;text-decoration:none;color:#152826;border-bottom:1px solid #E5E1D6;background:' + (n.read ? 'transparent' : '#F0F7F3') + ';">'
                 + '<span style="font-size:18px;line-height:1.2;flex:none;">' + n.icon + '</span>'
                 + '<span style="min-width:0;">'
                 + '<span style="display:block;font-size:12.5px;font-weight:600;">' + escapeHtml(n.title) + '</span>'

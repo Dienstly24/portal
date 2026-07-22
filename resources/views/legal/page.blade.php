@@ -6,25 +6,25 @@
 <title>{{ $title }} — Dienstly24</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Inter',Arial,sans-serif;background:#F4F5F7;color:#152826;min-height:100vh;display:flex;flex-direction:column;}
-.top{background:#17191d;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+body{font-family:'Inter',Arial,sans-serif;background:#F7F5EF;color:#152826;min-height:100vh;display:flex;flex-direction:column;}
+.top{background:#131A17;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
 .top .logo{display:inline-block;}
 .top .logo img{height:38px;width:auto;display:block;}
 .top a.back{color:#c6cbd3;text-decoration:none;font-size:13.5px;}
 .top a.back:hover{color:#fff;}
 .wrap{flex:1;max-width:820px;width:100%;margin:0 auto;padding:36px 22px;}
 h1{font-size:26px;margin-bottom:20px;}
-h2{font-size:17px;margin:22px 0 8px;color:#17191d;}
+h2{font-size:17px;margin:22px 0 8px;color:#131A17;}
 p,li{font-size:14.5px;line-height:1.7;color:#333;}
 ul{padding-left:22px;margin:6px 0;}
-.card{background:#fff;border:1px solid #E4E6EA;border-radius:12px;padding:26px 28px;}
+.card{background:#fff;border:1px solid #E5E1D6;border-radius:12px;padding:26px 28px;}
 .muted{color:#6B7280;font-size:13px;margin-top:14px;}
 .custom{white-space:pre-line;}
 a{color:#185FA5;}
-.foot{background:#fff;border-top:1px solid #E4E6EA;padding:16px 22px;}
+.foot{background:#fff;border-top:1px solid #E5E1D6;padding:16px 22px;}
 .foot-links{display:flex;flex-wrap:wrap;gap:8px 20px;justify-content:center;font-size:13px;}
 .foot-links a{color:#4A5C59;text-decoration:none;}
-.foot-links a.active{color:#17191d;font-weight:700;}
+.foot-links a.active{color:#131A17;font-weight:700;}
 .foot-copy{text-align:center;color:#9aa39f;font-size:12px;margin-top:8px;}
 </style>
     @include('partials.favicon')

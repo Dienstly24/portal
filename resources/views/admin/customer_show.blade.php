@@ -20,7 +20,7 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
             <div class="page-title" style="display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;">
                 <span>{{ $customer->user?->name }}</span>
                 @if($customer->birth_date)
-                <span style="font-size:13px;font-weight:600;color:var(--ink-soft);background:var(--surface-soft,#F4F5F7);border:1px solid var(--line);border-radius:12px;padding:2px 10px;white-space:nowrap;">🎂 {{ \Carbon\Carbon::parse($customer->birth_date)->format('d.m.Y') }}</span>
+                <span style="font-size:13px;font-weight:600;color:var(--ink-soft);background:var(--surface-soft,#F7F5EF);border:1px solid var(--line);border-radius:12px;padding:2px 10px;white-space:nowrap;">🎂 {{ \Carbon\Carbon::parse($customer->birth_date)->format('d.m.Y') }}</span>
                 @endif
             </div>
             <div style="font-size:14px;color:var(--ink-soft);">
@@ -121,7 +121,7 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openContractType('{{ $key }}');}">
             <div class="vstruct-icon" style="position:relative;width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;
                 background:{{ $isActive ? $cfg['bg'] : '#EEF0F3' }};
-                border:2px solid {{ $isActive ? $cfg['color'] : '#E4E6EA' }};
+                border:2px solid {{ $isActive ? $cfg['color'] : '#E5E1D6' }};
                 opacity:{{ $isActive ? '1' : '0.4' }};
                 transition:.2s;">
                 {{ $cfg['icon'] }}

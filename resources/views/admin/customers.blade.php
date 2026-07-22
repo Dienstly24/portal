@@ -172,7 +172,7 @@ $typeConfig = [
 <form method="POST" action="{{ route('admin.customers.bulk-delete') }}" id="bulkDeleteForm" onsubmit="return confirmBulkDelete(this);">@csrf</form>
 @endif
 
-<div id="bulkBar" style="display:none;position:sticky;top:0;z-index:10;background:#17191d;color:#fff;border-radius:10px;padding:12px 20px;margin-bottom:12px;align-items:center;gap:14px;flex-wrap:wrap;">
+<div id="bulkBar" style="display:none;position:sticky;top:0;z-index:10;background:#131A17;color:#fff;border-radius:10px;padding:12px 20px;margin-bottom:12px;align-items:center;gap:14px;flex-wrap:wrap;">
     <span style="font-size:13.5px;font-weight:600;"><span id="bulkCount">0</span> Kunden ausgewaehlt</span>
     <select name="employee_id" form="bulkForm" required style="padding:8px 12px;border-radius:8px;border:none;font-size:13px;">
         <option value="">— Mitarbeiter waehlen —</option>
@@ -225,14 +225,14 @@ function confirmBulkDelete(form) {
 <div class="card">
     <table>
         <thead><tr>
-            @if(in_array(auth()->user()->role, ['admin','manager']))<th style="width:36px;"><input type="checkbox" id="checkAll" style="width:17px;height:17px;cursor:pointer;accent-color:#17191d;"></th>@endif
+            @if(in_array(auth()->user()->role, ['admin','manager']))<th style="width:36px;"><input type="checkbox" id="checkAll" style="width:17px;height:17px;cursor:pointer;accent-color:#131A17;"></th>@endif
             <th>Kunde</th><th>Adresse</th><th>Portal</th><th>Betreuer</th><th>Aktive Verträge</th><th style="text-align:right;">Aktionen</th>
         </tr></thead>
         <tbody>
         @forelse($customers as $c)
         <tr class="rowLink" data-href="{{ route('admin.customer', $c->id) }}" style="cursor:pointer;">
             @if(in_array(auth()->user()->role, ['admin','manager']))
-            <td class="noNav"><input type="checkbox" class="rowCheck" name="customer_ids[]" value="{{ $c->id }}" form="bulkForm" style="width:17px;height:17px;cursor:pointer;accent-color:#17191d;"></td>
+            <td class="noNav"><input type="checkbox" class="rowCheck" name="customer_ids[]" value="{{ $c->id }}" form="bulkForm" style="width:17px;height:17px;cursor:pointer;accent-color:#131A17;"></td>
             @endif
             <td>
                 <div style="font-weight:600;">{{ $c->user?->name }}</div>
@@ -339,11 +339,11 @@ function confirmBulkDelete(form) {
 .kf-chip { display:inline-flex; align-items:center; gap:6px; padding:7px 13px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:13px; color:var(--ink); text-decoration:none; white-space:nowrap; }
 .kf-chip:hover { background:#F4F7F5; }
 .kf-chip b { background:#EEF0F3; border-radius:999px; padding:1px 8px; font-size:12px; }
-.kf-chip.kf-active { background:#17191d; color:#fff; border-color:#17191d; }
+.kf-chip.kf-active { background:#131A17; color:#fff; border-color:#131A17; }
 .kf-chip.kf-active b { background:rgba(255,255,255,.22); color:#fff; }
 .az-bar { display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:12px 14px; margin-bottom:16px; }
 .az-chip { display:inline-flex; align-items:center; justify-content:center; min-width:34px; height:34px; padding:0 9px; border-radius:8px; background:#EEF0F3; color:var(--ink); font-size:13.5px; font-weight:600; text-decoration:none; transition:background .12s; }
-.az-chip:hover { background:#E4E6EA; }
+.az-chip:hover { background:#E5E1D6; }
 .az-chip.az-active { background:#17A65B; color:#fff; }
 .az-chip.az-active:hover { background:#128a4b; }
 [x-cloak] { display: none !important; }

@@ -108,7 +108,7 @@
         ✓ {{ $dueReminders }} Erinnerungen fällig — bereit zum Senden.
     </div>
     @else
-    <div style="background:#F4F5F7;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--ink-soft);">
+    <div style="background:#F7F5EF;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--ink-soft);">
         Aktuell keine fälligen Wechsel-Erinnerungen.
     </div>
     @endif

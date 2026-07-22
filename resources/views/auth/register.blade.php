@@ -9,9 +9,9 @@
 <style>
 :root{--green:#17A65B;--mint:#3ddc8e;--line:rgba(255,255,255,.14);}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Inter',Arial,sans-serif;min-height:100vh;color:#fff;display:flex;flex-direction:column;background:#0e0f12;overflow-x:hidden;}
+body{font-family:'Inter',Arial,sans-serif;min-height:100vh;color:#fff;display:flex;flex-direction:column;background:#0B1310;overflow-x:hidden;}
 html,body{height:100%;}
-.bg{position:fixed;inset:0;z-index:-1;background:radial-gradient(1200px 800px at 70% 15%, #23262b 0%, #101216 48%, #0e0f12 100%);}
+.bg{position:fixed;inset:0;z-index:-1;background:radial-gradient(1200px 800px at 70% 15%, #1A2C24 0%, #0F1512 48%, #0B1310 100%);}
 .orb{position:absolute;border-radius:50%;filter:blur(90px);opacity:.5;will-change:transform;}
 .orb-a{width:520px;height:520px;background:radial-gradient(circle,#17A65B44,transparent 70%);top:-140px;{{ $rtl ? 'right' : 'left' }}:-120px;animation:drift-a 26s ease-in-out infinite alternate;}
 .orb-b{width:640px;height:640px;background:radial-gradient(circle,#3a3f4644,transparent 70%);bottom:-220px;{{ $rtl ? 'left' : 'right' }}:-160px;animation:drift-b 32s ease-in-out infinite alternate;}

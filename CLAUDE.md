@@ -81,10 +81,20 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   ergänzen.
 - **Banner-Verwaltung**: `BannerController`, Statistik-Dashboard unter
   `/admin/banners/statistik`. Routen auf `role:admin,manager` beschränkt.
-- **Farbschema „Graphit + Smaragd"** (Betreiber-Entscheidung, passend zum
-  Logo): dunkle Flaechen `#17191d`/`#101216`/`#0e0f12`, Akzent/Buttons
-  Smaragd `#17A65B` (Verlauf `#19b463`->`#128a4b`), helle Canvas `#F4F5F7`,
-  Linien `#E4E6EA`. KEIN Petrol-Gruen mehr verwenden.
+- **Farbschema „Smaragd & Gold"** (Betreiber-Entscheidung 22.07.2026,
+  ersetzt „Graphit + Smaragd"; Richtungswahl dokumentiert in
+  `docs/design/design-richtungen.html`): Smaragd bleibt Marken- und
+  Aktionsfarbe `#17A65B` (Verlauf `#19b463`->`#128a4b`); dunkle Flaechen
+  sind Gruen-Graphit `#131A17`/`#0F1512`/`#0B1310` (passend zum
+  Logo-Metall); GOLD `#B8A16B` (hell `#D1C18F`) ist reiner Premium-AKZENT
+  fuer Badges, aktive Zustaende, Kicker, Zierlinien - NIE fuer
+  Primaer-Buttons; helle Flaechen sind WARM: Canvas `#F1EEE5`
+  (Website-Canvas `#F8F6F0`), Surface `#FBFAF6`, Linien `#E0DCD0`,
+  Text `#16211C`/`#5F6B62`. Website-Ueberschriften in Serif
+  (Playfair Display, AR: Amiri). KEIN Petrol-Gruen, keine kuehlen
+  Grautoene (`#DCDEE3`/`#ECEEF1`/`#CDD1D8`) mehr verwenden.
+  E-Mail-Templates sind bewusst noch auf altem Stand (separates Thema,
+  Outlook-Risiko).
 - **Logo-Assets** (alle aus `logo.png` per GD generiert, `public/images/`):
   `logo-white.png` (weisse Wortmarke, für dunkle Flächen: Login, Sidebars),
   `logo-transparent.png` (farbige Wortmarke, für helle Flächen),

@@ -25,7 +25,7 @@ $labels = [
     </div>
 
     @if($suggested)
-    <div style="background:#D9F4E6;border-radius:8px;padding:14px 18px;margin-bottom:20px;font-size:13px;color:#17191d;line-height:1.6;">
+    <div style="background:#D9F4E6;border-radius:8px;padding:14px 18px;margin-bottom:20px;font-size:13px;color:#131A17;line-height:1.6;">
         <strong>🔎 Möglicher Treffer erkannt:</strong> „{{ $suggested->user?->name }}" ({{ $suggested->customer_number }}) ähnelt diesem Kunden und ist unten vorausgewählt. Bitte prüfen.
         @if(!empty($preview))
         <div style="margin-top:10px;">Diese Daten würden übernommen:</div>

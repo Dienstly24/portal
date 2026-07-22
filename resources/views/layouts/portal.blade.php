@@ -4,19 +4,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#17191d">
+<meta name="theme-color" content="#131A17">
 <title>Dienstly24 Portal</title>
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 <style>
-:root{--petrol:#17191d;--petrol-dark:#101216;--gold:#17A65B;--gold-soft:#d9f4e6;--canvas:#DCDEE3;--surface:#ECEEF1;--line:#CDD1D8;--ink:#152826;--ink-soft:#4A5C59;}
+:root{--petrol:#131A17;--petrol-dark:#0F1512;--gold:#17A65B;--gold-soft:#d9f4e6;--akzent:#B8A16B;--akzent-hell:#D1C18F;--canvas:#F1EEE5;--surface:#FBFAF6;--line:#E0DCD0;--ink:#16211C;--ink-soft:#5F6B62;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
 .sidebar{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--petrol);color:#fff;display:flex;flex-direction:column;padding:24px 18px;z-index:100;overflow-y:auto;}
 .brand{font-size:22px;font-weight:700;padding:0 6px 24px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:18px;}
-.brand span{color:var(--gold);}
+.brand span{color:var(--akzent-hell);}
 .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:rgba(255,255,255,.75);font-size:14px;text-decoration:none;margin-bottom:2px;transition:.2s;}
 .nav-item:hover{background:rgba(255,255,255,.06);color:#fff;}
-.nav-item.active{background:rgba(255,255,255,.12);color:#fff;font-weight:600;}
+.nav-item.active{background:rgba(255,255,255,.12);color:#fff;font-weight:600;position:relative;}
+.nav-item.active::before{content:'';position:absolute;inset-inline-start:0;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--akzent-hell);}
 .main{margin-left:240px;padding:32px 40px;min-height:100vh;}
 .page-title{font-size:22px;font-weight:700;margin-bottom:6px;}
 .page-sub{color:var(--ink-soft);font-size:14px;margin-bottom:28px;}
@@ -53,7 +54,7 @@ body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
 .notice{background:#F7E7D6;color:#B5651D;border-radius:10px;padding:12px 16px;font-size:13px;margin-bottom:20px;}
 form .field{margin-bottom:18px;}
 form label{display:block;font-size:13px;color:var(--ink-soft);margin-bottom:6px;}
-form input,form select,form textarea{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#F4F5F7;color:var(--ink);font-family:inherit;}
+form input,form select,form textarea{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#F7F5EF;color:var(--ink);font-family:inherit;}
 form input:focus,form select:focus,form textarea:focus{outline:2px solid var(--gold);outline-offset:1px;background:#fff;}
 form textarea{min-height:90px;resize:vertical;}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}

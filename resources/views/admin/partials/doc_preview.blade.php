@@ -20,7 +20,7 @@
         <span id="docpv-quicklook-name" style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
         <span style="color:var(--ink-soft);white-space:nowrap;">Klick öffnet groß</span>
     </div>
-    <div id="docpv-quicklook-body" style="width:100%;height:calc(100% - 32px);background:#f4f5f7;"></div>
+    <div id="docpv-quicklook-body" style="width:100%;height:calc(100% - 32px);background:#F7F5EF;"></div>
 </div>
 
 {{-- Vorschau-Fenster (Modal): grosse Ansicht auf derselben Seite, kein Download noetig. --}}
@@ -32,7 +32,7 @@
             <a id="docpv-modal-download" href="#" class="btn btn-ghost btn-sm" title="Herunterladen">⬇ Herunterladen</a>
             <button type="button" onclick="docPreview.close()" class="btn btn-ghost btn-sm" title="Schließen (Esc)" style="font-size:16px;line-height:1;">✕</button>
         </div>
-        <div id="docpv-modal-body" style="flex:1;min-height:0;background:#f4f5f7;display:flex;align-items:center;justify-content:center;overflow:auto;"></div>
+        <div id="docpv-modal-body" style="flex:1;min-height:0;background:#F7F5EF;display:flex;align-items:center;justify-content:center;overflow:auto;"></div>
     </div>
 </div>
 
@@ -69,7 +69,7 @@ window.docPreview = (function () {
         var frame = document.createElement('iframe');
         frame.src = url;
         frame.title = 'Vorschau';
-        frame.style.cssText = 'width:100%;height:100%;border:0;background:#f4f5f7;';
+        frame.style.cssText = 'width:100%;height:100%;border:0;background:#F7F5EF;';
         return frame;
     }
 

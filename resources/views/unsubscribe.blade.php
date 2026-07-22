@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $lang === 'ar' ? 'تم إلغاء الاشتراك' : 'Abmeldung erfolgreich' }}</title>
 </head>
-<body style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;">
+<body style="margin:0;padding:0;background:#F7F5EF;font-family:Arial,Helvetica,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="padding:60px 20px;"><tr><td align="center">
 <table width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:10px;overflow:hidden;max-width:100%;">
 <tr><td style="background:#185FA5;padding:22px 30px;">

@@ -21,7 +21,7 @@
 <div style="display:flex;flex-direction:column;gap:12px;">
 @foreach($announcements as $a)
 @php
-$colors = ['normal'=>['#F4F5F7','var(--ink)','📋'],'important'=>['#E6F1FB','#185FA5','⚠️'],'urgent'=>['#F9E3E3','#A32D2D','🚨']];
+$colors = ['normal'=>['#F7F5EF','var(--ink)','📋'],'important'=>['#E6F1FB','#185FA5','⚠️'],'urgent'=>['#F9E3E3','#A32D2D','🚨']];
 $c = $colors[$a->priority];
 @endphp
 <div style="background:#fff;border:1px solid var(--line);border-left:4px solid {{ $a->priority === 'urgent' ? '#A32D2D' : ($a->priority === 'important' ? '#185FA5' : 'var(--line)') }};border-radius:12px;padding:20px 24px;">

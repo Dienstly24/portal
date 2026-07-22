@@ -64,11 +64,11 @@
 
                 @if($match && ($match['out_of_portfolio'] ?? false))
                 {{-- Name/Kundennummer bewusst nicht angezeigt (ausserhalb des Portfolios). --}}
-                <div style="margin-top:10px;border:1px solid var(--line);background:#F4F5F7;border-radius:10px;padding:10px 12px;font-size:13px;color:var(--ink-soft);">
+                <div style="margin-top:10px;border:1px solid var(--line);background:#F7F5EF;border-radius:10px;padding:10px 12px;font-size:13px;color:var(--ink-soft);">
                     👤 Möglicher Kunde erkannt (Übereinstimmung {{ $match['score'] }}%) – liegt außerhalb Ihres Portfolios. Bitte an Admin/Manager übergeben.
                 </div>
                 @elseif($match)
-                <div style="margin-top:10px;border:1px solid {{ $match['tier'] === 'auto' ? '#17A65B' : 'var(--line)' }};background:{{ $match['tier'] === 'auto' ? '#d9f4e6' : '#F4F5F7' }};border-radius:10px;padding:10px 12px;font-size:13px;">
+                <div style="margin-top:10px;border:1px solid {{ $match['tier'] === 'auto' ? '#17A65B' : 'var(--line)' }};background:{{ $match['tier'] === 'auto' ? '#d9f4e6' : '#F7F5EF' }};border-radius:10px;padding:10px 12px;font-size:13px;">
                     👤 Kunde gefunden: <strong>{{ $match['name'] ?? '—' }}</strong>
                     ({{ $match['customer_number'] ?? '—' }}) · Übereinstimmung {{ $match['score'] }}%
                     <button type="button" class="btn btn-gold btn-sm" style="margin-inline-start:10px;"

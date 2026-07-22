@@ -12,7 +12,7 @@
     $eur = fn($v) => number_format((float) $v, 2, ',', '.') . ' €';
     $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
 @endphp
-<div class="card" style="max-width:980px;background:linear-gradient(135deg,#17191d,#101216);border-color:#101216;color:#fff;">
+<div class="card" style="max-width:980px;background:linear-gradient(135deg,#131A17,#0F1512);border-color:#0F1512;color:#fff;">
     <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
         <span style="font-size:34px;line-height:1;">🛴</span>
         <div style="min-width:200px;">

@@ -92,7 +92,7 @@
      zu EINEM Kunden buendeln (z.B. getrennt hochgeladene Ausweis-Vorder- und
      -Rueckseite oder Ausweis + Antrag). Erscheint, sobald >= 1 Dokument per
      Checkbox markiert ist. --}}
-<div id="inbox-selection-bar" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:150;background:#101216;color:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.30);padding:11px 16px;align-items:center;gap:14px;flex-wrap:wrap;max-width:calc(100% - 32px);">
+<div id="inbox-selection-bar" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:150;background:#0F1512;color:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.30);padding:11px 16px;align-items:center;gap:14px;flex-wrap:wrap;max-width:calc(100% - 32px);">
     <span style="font-size:13.5px;"><strong id="inbox-selection-count">0</strong>&nbsp;Dokumente ausgewaehlt</span>
     <button type="button" class="btn btn-gold btn-sm" id="inbox-selection-merge" onclick="docReview.openSelection()">🗂 Zu EINEM Kunden zusammenfuehren</button>
     <button type="button" class="btn btn-ghost btn-sm" style="color:#fff;border-color:rgba(255,120,120,.55);" onclick="docReview.bulkDelete()">🗑 Loeschen</button>
@@ -106,7 +106,7 @@
         <span id="doc-quicklook-name" style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
         <span style="color:var(--ink-soft);white-space:nowrap;">Klick öffnet vollständig</span>
     </div>
-    <iframe id="doc-quicklook-frame" src="about:blank" title="Vorschau" style="width:100%;height:calc(100% - 32px);border:0;background:#f4f5f7;"></iframe>
+    <iframe id="doc-quicklook-frame" src="about:blank" title="Vorschau" style="width:100%;height:calc(100% - 32px);border:0;background:#F7F5EF;"></iframe>
 </div>
 
 {{-- Zuletzt analysierte, bereits zugeordnete Dokumente --}}
