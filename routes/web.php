@@ -482,3 +482,13 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
 Route::post('/api/website-inquiry', [\App\Http\Controllers\WebsiteInquiryController::class, 'store'])
     ->middleware('throttle:30,1')
     ->name('api.inquiry.store');
+
+// Kontaktformular der statischen Website (dienstly24.de). Schutzschichten
+// (JS-Token, Mindest-Ausfuellzeit, Einmal-Token, Honeypot, SpamFilter)
+// siehe WebsiteContactController.
+Route::get('/api/website-contact/token', [\App\Http\Controllers\WebsiteContactController::class, 'token'])
+    ->middleware('throttle:30,1')
+    ->name('api.contact.token');
+Route::post('/api/website-contact', [\App\Http\Controllers\WebsiteContactController::class, 'submit'])
+    ->middleware('throttle:10,1')
+    ->name('api.contact.store');

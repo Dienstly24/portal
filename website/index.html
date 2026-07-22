@@ -211,6 +211,7 @@ header.scrolled{background:rgba(17,17,17,.94);box-shadow:0 10px 30px rgba(0,0,0,
 .cinfo li{display:flex;align-items:center;gap:12px;margin-bottom:16px;font-size:.98rem;}
 .cinfo .ic{width:42px;height:42px;border-radius:12px;background:var(--paper-2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;}
 .form{background:var(--paper-2);border:1px solid var(--line);border-radius:var(--radius);padding:26px;}
+.hp-feld{position:absolute!important;left:-9999px!important;top:auto!important;width:1px;height:1px;overflow:hidden;}
 .form .row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 @media(max-width:480px){.form .row{grid-template-columns:1fr;}}
 .field{margin-bottom:14px;}
@@ -419,21 +420,25 @@ html.js .reveal.in{opacity:1;transform:none;}
       <li><span class="ic">📍</span><span>Furtweg 51a, 22523 Hamburg</span></li>
     </ul>
   </div>
-  <form class="form reveal" action="mailto:info@dienstly24.de" method="post" enctype="text/plain">
+  <form class="form reveal" id="kontaktform">
     <div class="row">
-      <div class="field"><label class="i18n" data-de="Name" data-ar="الاسم">Name</label><input type="text" name="Name" required></div>
-      <div class="field"><label class="i18n" data-de="E-Mail oder Telefon" data-ar="بريد أو هاتف">E-Mail oder Telefon</label><input type="text" name="Kontakt" required></div>
+      <div class="field"><label class="i18n" data-de="Name" data-ar="الاسم">Name</label><input type="text" name="name" required maxlength="150"></div>
+      <div class="field"><label class="i18n" data-de="E-Mail oder Telefon" data-ar="بريد أو هاتف">E-Mail oder Telefon</label><input type="text" name="kontakt" required maxlength="190"></div>
     </div>
     <div class="field"><label class="i18n" data-de="Gewünschte Leistung" data-ar="الخدمة المطلوبة">Gewünschte Leistung</label>
-      <select name="Leistung">
+      <select name="leistung">
         <option>Kfz-Versicherung</option><option>Krankenversicherung</option><option>Zahnzusatzversicherung</option>
         <option>Kfz-Zulassungsservice</option><option>Kennzeichen per Post</option><option>Strom & Gas</option><option>Sonstiges</option>
       </select>
     </div>
-    <div class="field"><label class="i18n" data-de="Ihre Nachricht" data-ar="رسالتك">Ihre Nachricht</label><textarea name="Nachricht" rows="4"></textarea></div>
+    <div class="field"><label class="i18n" data-de="Ihre Nachricht" data-ar="رسالتك">Ihre Nachricht</label><textarea name="nachricht" rows="4" maxlength="5000"></textarea></div>
+    <!-- Honeypot: unsichtbar fuer Menschen, Bots fuellen es aus -->
+    <div class="hp-feld" aria-hidden="true"><label for="hp-web">Website</label><input type="text" id="hp-web" name="website" tabindex="-1" autocomplete="off"></div>
     <div class="consent"><input type="checkbox" required id="c1"><label for="c1" style="margin:0;"><span class="i18n" data-de="Ich stimme der Verarbeitung meiner Angaben zur Bearbeitung meiner Anfrage zu." data-ar="أوافق على معالجة بياناتي لغرض الرد على طلبي.">Ich stimme der Verarbeitung meiner Angaben zur Bearbeitung meiner Anfrage zu.</span> <a href="datenschutz.html" class="i18n" data-de="Datenschutz" data-ar="سياسة الخصوصية">Datenschutz</a></label></div>
-    <button type="submit" class="btn btn-primary" style="width:100%;"><span class="i18n" data-de="Anfrage senden" data-ar="إرسال الطلب">Anfrage senden</span></button>
-    <p style="font-size:.72rem;color:var(--muted);text-align:center;margin-top:12px;" class="i18n" data-de="Beim Absenden öffnet sich Ihr E-Mail-Programm. Alternativ per WhatsApp oder Telefon." data-ar="عند الإرسال بيفتح برنامج الإيميل. أو عبر واتساب أو تلفون.">Beim Absenden öffnet sich Ihr E-Mail-Programm. Alternativ per WhatsApp oder Telefon.</p>
+    <button type="submit" class="btn btn-primary" id="kf-send" style="width:100%;"><span class="i18n" data-de="Anfrage senden" data-ar="إرسال الطلب">Anfrage senden</span></button>
+    <p id="kf-ok" hidden style="color:var(--emerald-bright);font-weight:600;text-align:center;margin-top:14px;" class="i18n" data-de="Vielen Dank! Ihre Anfrage ist bei uns eingegangen – wir melden uns in der Regel innerhalb von 24 Stunden." data-ar="شكراً! وصلنا طلبك – عادةً منرد خلال 24 ساعة.">Vielen Dank! Ihre Anfrage ist bei uns eingegangen – wir melden uns in der Regel innerhalb von 24 Stunden.</p>
+    <p id="kf-err" hidden style="color:#e05f5f;font-weight:600;text-align:center;margin-top:14px;" class="i18n" data-de="Senden fehlgeschlagen. Bitte erneut versuchen oder per WhatsApp bzw. Telefon kontaktieren." data-ar="فشل الإرسال. جرّب مرة تانية أو تواصل معنا واتساب أو تلفون.">Senden fehlgeschlagen. Bitte erneut versuchen oder per WhatsApp bzw. Telefon kontaktieren.</p>
+    <p style="font-size:.72rem;color:var(--muted);text-align:center;margin-top:12px;" class="i18n" data-de="Ihre Anfrage geht direkt und sicher an unser Kundenportal – ganz ohne E-Mail-Programm." data-ar="طلبك بيوصل مباشرة وبأمان لبوابة عملائنا – بدون برنامج إيميل.">Ihre Anfrage geht direkt und sicher an unser Kundenportal – ganz ohne E-Mail-Programm.</p>
   </form>
 </div></div></section>
 
@@ -514,6 +519,64 @@ html.js .reveal.in{opacity:1;transform:none;}
   }
   var co=new IntersectionObserver(function(es){es.forEach(function(e){ if(e.isIntersecting){ count(e.target); co.unobserve(e.target);} });},{threshold:.5});
   document.querySelectorAll('.num[data-count]').forEach(function(el){ co.observe(el); });
+})();
+</script>
+<script>
+/* Kontaktformular -> Dienstly24-Kundenportal (Spam-geschuetzt).
+   Das Formular sendet an das Portal statt per E-Mail. Das Portal verlangt
+   ein per JavaScript geholtes Einmal-Token mit Mindest-Ausfuellzeit -
+   reine HTML-Bots scheitern daran, Werbe-Spam filtert das Portal zusaetzlich
+   inhaltlich. Bei abgelaufenem Token holt dieses Script automatisch ein
+   frisches, wartet kurz und sendet erneut. */
+(function(){
+  var PORTAL='https://portal.dienstly24.de';
+  var form=document.getElementById('kontaktform');
+  if(!form||!window.fetch)return;
+  var token=null,sending=false;
+  function holToken(){
+    return fetch(PORTAL+'/api/website-contact/token')
+      .then(function(r){return r.json();})
+      .then(function(d){token=d.token;});
+  }
+  holToken().catch(function(){/* wird beim Absenden erneut versucht */});
+  function senden(erneut){
+    var fd=new FormData(form);
+    fd.append('token',token||'');
+    return fetch(PORTAL+'/api/website-contact',{
+      method:'POST',
+      headers:{'Accept':'application/json'},
+      body:new URLSearchParams(fd)
+    }).then(function(r){
+      return r.json().catch(function(){return {};}).then(function(d){
+        if(r.status===422&&d.error==='token'&&!erneut){
+          // Frisches Token holen, Server-Mindestzeit abwarten, einmal erneut.
+          return holToken().then(function(){
+            return new Promise(function(res){setTimeout(res,6500);});
+          }).then(function(){return senden(true);});
+        }
+        if(!r.ok)throw new Error('HTTP '+r.status);
+        return d;
+      });
+    });
+  }
+  form.addEventListener('submit',function(ev){
+    ev.preventDefault();
+    if(sending)return;
+    sending=true;
+    var btn=document.getElementById('kf-send'),ok=document.getElementById('kf-ok'),err=document.getElementById('kf-err');
+    btn.disabled=true;err.hidden=true;
+    (token?Promise.resolve():holToken())
+      .then(function(){return senden(false);})
+      .then(function(){
+        form.reset();
+        btn.hidden=true;ok.hidden=false;
+        token=null;sending=false;
+      })
+      .catch(function(){
+        err.hidden=false;btn.disabled=false;
+        token=null;sending=false;
+      });
+  });
 })();
 </script>
 </body>
