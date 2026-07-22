@@ -24,6 +24,14 @@ Optionale Bild-Slots der Startseite (hochladen genuegt)
     PNG mit TRANSPARENTEM Hintergrund (Alphakanal), ca. 1024x1024,
     ohne Schlagschatten. Fehlt die Datei, zeigt die Seite automatisch
     die eingebaute Schild-Grafik.
+- assets/images/leistung-<name>.png -> Bild oben in der jeweiligen
+    Leistungskarte (ersetzt die Icon-Kachel automatisch). Namen:
+      leistung-kfz-versicherung.png   leistung-krankenversicherung.png
+      leistung-zahnzusatz.png         leistung-kfz-zulassung.png
+      leistung-kennzeichen.png        leistung-strom-gas.png
+    PNG ca. 800x600, weisser oder transparenter Hintergrund passt
+    (Karten sind weiss). WICHTIG: keine Marken-Logos/Embleme im Bild
+    (z. B. BMW) - siehe rechtlicher Hinweis unten.
 - assets/images/hamburg.jpg -> Foto in der Karte "Warum Dienstly24?".
     JPG im Querformat, ca. 1200x900, moeglichst unter 500 KB
     (z. B. von Pexels, Quelle in bildnachweise.html ergaenzen).
