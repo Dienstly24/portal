@@ -70,18 +70,27 @@
     <button type="submit" class="btn btn-primary">{{ __('Änderungen einreichen') }}</button>
 </form>
 
-{{-- Passwort ändern (wirkt sofort, kein Freigabe-Workflow nötig) --}}
+{{-- Passwort ändern (wirkt sofort, kein Freigabe-Workflow nötig).
+     Ohne nutzbares Passwort (Magic-Login, Set-Link nie benutzt) wird
+     KEIN aktuelles Passwort abgefragt - der Kunde kennt keines. --}}
+@php $hatPasswort = auth()->user()->portal_password_set_at !== null; @endphp
 <div class="card" style="margin-top:20px;">
-    <div class="card-title">🔑 {{ __('Passwort ändern') }}</div>
+    <div class="card-title">🔑 {{ $hatPasswort ? __('Passwort ändern') : __('Passwort festlegen') }}</div>
     <div style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">
-        Sie können Ihr Passwort jederzeit ändern – z. B. nach dem ersten Login mit Ihrem Startpasswort.
+        @if($hatPasswort)
+            {{ __('Sie können Ihr Passwort jederzeit ändern – z. B. nach dem ersten Login mit Ihrem Startpasswort.') }}
+        @else
+            {{ __('Sie haben noch kein eigenes Passwort. Legen Sie es jetzt fest, um sich künftig direkt anmelden zu können.') }}
+        @endif
     </div>
     <form method="POST" action="{{ route('portal.profile.password') }}" style="display:grid;gap:12px;max-width:420px;">
         @csrf
+        @if($hatPasswort)
         <div class="field">
             <label>{{ __('Aktuelles Passwort') }}</label>
             <input type="password" name="current_password" required autocomplete="current-password">
         </div>
+        @endif
         <div class="field">
             <label>{{ __('Neues Passwort (mind. 8 Zeichen)') }}</label>
             <input type="password" name="password" required minlength="8" autocomplete="new-password">

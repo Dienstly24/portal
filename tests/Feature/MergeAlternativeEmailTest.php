@@ -49,7 +49,7 @@ class MergeAlternativeEmailTest extends TestCase
         $this->assertSame('echt@beispiel.de', $c->user->email);
         $this->assertNull($c->email2);
         $this->assertNotNull($c->user->invitation_sent_at);
-        Mail::assertQueued(CustomerWelcomeMail::class, 1);
+        Mail::assertSent(CustomerWelcomeMail::class, 1);
     }
 
     public function test_moves_when_login_email_is_null(): void
@@ -125,7 +125,7 @@ class MergeAlternativeEmailTest extends TestCase
         $this->artisan('customers:merge-alternative-email')->assertSuccessful();
 
         // Beide verschoben, aber nur eine Einladung (Budget = 1).
-        Mail::assertQueued(CustomerWelcomeMail::class, 1);
+        Mail::assertSent(CustomerWelcomeMail::class, 1);
         $this->assertNull(Customer::where('customer_number', 'C-0001')->first()->email2);
         $this->assertNull(Customer::where('customer_number', 'C-0002')->first()->email2);
     }

@@ -2,8 +2,6 @@
 namespace App\Mail;
 
 use App\Models\User;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -12,11 +10,14 @@ use Illuminate\Queue\SerializesModels;
 /**
  * Deutsche Passwort-Reset-Mail (ersetzt die englische Framework-
  * Notification). Bewusst NICHT queued: Der Kunde wartet aktiv auf
- * diese Mail, und der Controller fängt Versandfehler ab.
+ * diese Mail, und der Controller fängt Versandfehler ab. Ein
+ * ShouldQueue würde den Versand vom Queue-Worker abhängig machen –
+ * steht der Worker, kommt die Mail nie an und der Fehler bleibt
+ * unsichtbar (failed_jobs statt Fehlermeldung beim Kunden).
  */
-class PasswordResetMail extends Mailable implements ShouldQueue
+class PasswordResetMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use SerializesModels;
 
     public string $resetUrl;
 

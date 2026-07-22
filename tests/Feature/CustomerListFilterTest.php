@@ -197,7 +197,7 @@ class CustomerListFilterTest extends TestCase
 
         $this->assertEquals('neu@kunde.de', $customer->user->fresh()->email);
         $this->assertNotNull($customer->user->fresh()->invitation_sent_at);
-        Mail::assertQueued(CustomerWelcomeMail::class, fn ($m) => $m->hasTo('neu@kunde.de'));
+        Mail::assertSent(CustomerWelcomeMail::class, fn ($m) => $m->hasTo('neu@kunde.de'));
     }
 
     public function test_update_without_email_change_does_not_send_invitation(): void

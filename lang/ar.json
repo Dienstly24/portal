@@ -346,5 +346,8 @@
     "Neues Passwort": "كلمة المرور الجديدة",
     "Passwort bestaetigen": "تأكيد كلمة المرور",
     "Passwort zuruecksetzen": "إعادة تعيين كلمة المرور",
-    "Mindestens 8 Zeichen": "8 أحرف على الأقل"
+    "Mindestens 8 Zeichen": "8 أحرف على الأقل",
+    "Passwort festlegen": "تعيين كلمة المرور",
+    "Sie können Ihr Passwort jederzeit ändern – z. B. nach dem ersten Login mit Ihrem Startpasswort.": "يمكنك تغيير كلمة المرور في أي وقت – مثلاً بعد أول تسجيل دخول بكلمة المرور الأولية.",
+    "Sie haben noch kein eigenes Passwort. Legen Sie es jetzt fest, um sich künftig direkt anmelden zu können.": "ليس لديك كلمة مرور خاصة بك بعد. عيّنها الآن لتتمكن من تسجيل الدخول مباشرة في المستقبل."
 }

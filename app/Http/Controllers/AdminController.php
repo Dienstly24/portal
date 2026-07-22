@@ -828,7 +828,13 @@ class AdminController extends Controller
                 } else {
                     app(\App\Services\Portal\PortalAccessService::class)->sendInvitation($customer, auth()->id());
                 }
-            } catch (\Throwable $e) { \Log::warning('Welcome mail failed: ' . $e->getMessage()); }
+            } catch (\Throwable $e) {
+                \Log::warning('Welcome mail failed: ' . $e->getMessage());
+                // Seit dem synchronen Versand landen Fehler HIER statt
+                // still in failed_jobs - dem Mitarbeiter anzeigen, sonst
+                // wartet der Kunde vergeblich auf seine Zugangsdaten.
+                session()->flash('error', 'Die Willkommens-Mail konnte NICHT versendet werden. Bitte in der Kundenakte "Einladung erneut senden" nutzen.');
+            }
         }
         return redirect()->route("admin.customer", $customer->id)->with("success", "Kunde erfolgreich erstellt.");
     }
@@ -960,6 +966,7 @@ class AdminController extends Controller
                 }
             } catch (\Throwable $e) {
                 \Log::warning('Auto-Einladung nach E-Mail-Nachtrag fehlgeschlagen: ' . $e->getMessage());
+                session()->flash('error', 'Die Portal-Einladung konnte NICHT versendet werden. Bitte in der Kundenakte "Einladung erneut senden" nutzen.');
             }
         }
 

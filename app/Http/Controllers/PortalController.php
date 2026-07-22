@@ -688,10 +688,18 @@ class PortalController extends Controller
      * keine Mitarbeiterfreigabe. Erfordert das aktuelle Passwort.
      */
     public function passwordUpdate(Request $request) {
-        $request->validate([
-            'current_password' => ['required', 'current_password'],
-            'password' => ['required', 'confirmed', 'min:8'],
-        ], [
+        // Kunden ohne nutzbares Passwort (Magic-Login aus der Willkommens-
+        // Mail, Set-Link nie benutzt) KENNEN kein aktuelles Passwort - es
+        // ist ein zufaelliger 40-Zeichen-Platzhalter. Von ihnen eines zu
+        // verlangen war eine Sackgasse: Passwort festlegen unmoeglich.
+        $hasUsablePassword = auth()->user()->portal_password_set_at !== null;
+
+        $rules = ['password' => ['required', 'confirmed', 'min:8']];
+        if ($hasUsablePassword) {
+            $rules['current_password'] = ['required', 'current_password'];
+        }
+
+        $request->validate($rules, [
             'current_password.current_password' => 'Das aktuelle Passwort ist nicht korrekt.',
             'password.confirmed' => 'Die Passwort-Bestätigung stimmt nicht überein.',
             'password.min' => 'Das neue Passwort muss mindestens 8 Zeichen lang sein.',

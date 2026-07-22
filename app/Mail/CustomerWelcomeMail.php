@@ -3,8 +3,6 @@ namespace App\Mail;
 
 use App\Models\Customer;
 use App\Models\SystemSetting;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -21,10 +19,16 @@ use Illuminate\Support\Facades\URL;
  * - 'manual':   Berater hat ein Passwort vergeben und teilt es mit.
  *
  * Ziel: Der Kunde kann sich ohne Rückfrage beim Support einloggen.
+ *
+ * Bewusst NICHT queued: Diese Mail ist der einzige Zugangsweg des
+ * Kunden. Als Queue-Job haengt der Versand am Queue-Worker – steht
+ * der Worker, kommt die Mail nie an und niemand merkt es. Synchron
+ * schlaegt der Versand sofort fehl und der Aufrufer (Admin-UI,
+ * Batch, autoInvite) sieht/loggt den Fehler.
  */
-class CustomerWelcomeMail extends Mailable implements ShouldQueue
+class CustomerWelcomeMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use SerializesModels;
 
     public string $loginEmail;
     public string $customerName;
@@ -65,6 +69,15 @@ class CustomerWelcomeMail extends Mailable implements ShouldQueue
                 );
             }
             $this->supportUrl = route('support.form', ['t' => \App\Http\Controllers\SupportFormController::tokenFor($customer)]);
+            // Der Set-Link wird im PortalAccessService per route() gebaut
+            // und traegt dort den Host der AUSLOESENDEN Anfrage (meist
+            // admin.dienstly24.de). Hier auf die Portal-Domain umschreiben.
+            if ($this->setPasswordUrl !== null) {
+                $teile = parse_url($this->setPasswordUrl);
+                $this->setPasswordUrl = $this->portalBase
+                    . ($teile['path'] ?? '/')
+                    . (isset($teile['query']) ? '?' . $teile['query'] : '');
+            }
         } finally {
             // Urspruenglichen Root UND Schema wiederherstellen (fuer die
             // laufende Admin-Anfrage) - forceScheme('https') wuerde sonst

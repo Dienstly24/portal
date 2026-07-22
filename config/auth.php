@@ -96,7 +96,12 @@ return [
         'users' => [
             'provider' => 'users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
-            'expire' => 60,
+            // 72 Stunden statt Laravel-Default 60 Minuten: Der Passwort-
+            // Setzen-Link der Willkommens-Mail nutzt denselben Broker.
+            // Kunden lesen die Mail oft erst Stunden/Tage spaeter - ein
+            // 60-Minuten-Link war fuer sie praktisch immer abgelaufen.
+            // Token bleiben einmal-nutzbar und gehasht gespeichert.
+            'expire' => (int) env('AUTH_PASSWORD_RESET_EXPIRE', 4320),
             'throttle' => 60,
         ],
     ],
