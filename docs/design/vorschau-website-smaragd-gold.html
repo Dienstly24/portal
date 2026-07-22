@@ -94,10 +94,20 @@ header.scrolled{background:rgba(15,21,18,.96);box-shadow:0 10px 30px rgba(10,16,
 }
 /* Hero: dunkles Gruen-Graphit, Smaragd-Facette + Gold-Kontur */
 .hero{position:relative;padding:74px 0 0;overflow:hidden;background:linear-gradient(150deg,var(--dark-1) 0%,var(--dark-2) 55%,#1C3126 100%);color:var(--dark-text);}
-.hero-facet{position:absolute;top:-140px;inset-inline-end:-160px;width:560px;height:560px;background:linear-gradient(155deg,var(--emerald),#0A3D22);clip-path:polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%);opacity:.5;}
-.hero-facet-gold{position:absolute;top:120px;inset-inline-end:60px;width:230px;height:230px;border:1.5px solid rgba(209,193,143,.4);clip-path:none;transform:rotate(18deg);border-radius:26px;opacity:.7;}
-@media(max-width:760px){.hero-facet{width:380px;height:380px;top:-120px;inset-inline-end:-150px;}.hero-facet-gold{display:none;}}
-.hero h1{font-size:clamp(2.1rem,4.4vw,3.5rem);line-height:1.12;letter-spacing:-.015em;max-width:780px;margin-bottom:22px;position:relative;}
+.hero-facet{position:absolute;top:-140px;inset-inline-end:-160px;width:560px;height:560px;background:linear-gradient(155deg,var(--emerald),#0A3D22);clip-path:polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%);opacity:.28;}
+@media(max-width:760px){.hero-facet{width:380px;height:380px;top:-120px;inset-inline-end:-150px;}}
+.hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:44px;align-items:center;position:relative;}
+.hero-visual{position:relative;display:flex;justify-content:center;}
+.hero-visual svg{width:100%;max-width:430px;height:auto;filter:drop-shadow(0 24px 48px rgba(6,20,12,.55));}
+.chipf{animation:floaty 5s ease-in-out infinite;}
+.chipf.f2{animation-delay:1.2s;}.chipf.f3{animation-delay:2.4s;}.chipf.f4{animation-delay:3.6s;}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+@media(max-width:900px){
+  .hero-grid{grid-template-columns:1fr;gap:12px;}
+  .hero-visual{order:2;margin-top:8px;}
+  .hero-visual svg{max-width:280px;}
+}
+.hero h1{font-size:clamp(2rem,3.6vw,3.1rem);line-height:1.12;letter-spacing:-.015em;max-width:780px;margin-bottom:22px;position:relative;}
 .hero h1 .gold{color:var(--gold-soft);}
 .hero .lead{font-size:1.14rem;color:var(--dark-soft);max-width:560px;margin-bottom:32px;position:relative;}
 .hero-actions{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:44px;position:relative;}
@@ -221,13 +231,59 @@ html.js .reveal.in{opacity:1;transform:none;}
 </div></header>
 
 <!-- Hero -->
-<section class="hero"><div class="hero-facet" aria-hidden="true"></div><div class="hero-facet-gold" aria-hidden="true"></div><div class="container">
-  <span class="eyebrow"><span class="dot"></span><span class="i18n" data-de="Ihr Makler-Service in Hamburg – deutschlandweit" data-ar="خدمتك في هامبورغ – بكل ألمانيا">Ihr Makler-Service in Hamburg – deutschlandweit</span></span>
-  <h1 class="display"><span class="i18n" data-de="Alle Versicherungen." data-ar="كل أنواع التأمين.">Alle Versicherungen.</span><br><span class="gold i18n" data-de="Ein Ansprechpartner." data-ar="مرجع واحد.">Ein Ansprechpartner.</span></h1>
-  <p class="lead i18n" data-de="Anbieterunabhängige Beratung zu Versicherungen, Kfz-Zulassung und Energie – kostenlos, verständlich und auf Deutsch & Arabisch." data-ar="استشارة مستقلة عن الشركات للتأمين وتسجيل السيارات والطاقة – مجاناً وبوضوح وبالعربي والألماني.">Anbieterunabhängige Beratung zu Versicherungen, Kfz-Zulassung und Energie – kostenlos, verständlich und auf Deutsch & Arabisch.</p>
-  <div class="hero-actions">
-    <a href="#leistungen" class="btn btn-primary i18n" data-de="Leistung wählen & anfragen" data-ar="اختر خدمة واطلب">Leistung wählen & anfragen</a>
-    <a href="tel:+491799673909" class="btn btn-ghost i18n" data-de="📞 Direkt anrufen" data-ar="📞 اتصل مباشرة">📞 Direkt anrufen</a>
+<section class="hero"><div class="hero-facet" aria-hidden="true"></div><div class="container">
+  <div class="hero-grid">
+    <div>
+      <span class="eyebrow"><span class="dot"></span><span class="i18n" data-de="Ihr Makler-Service in Hamburg – deutschlandweit" data-ar="خدمتك في هامبورغ – بكل ألمانيا">Ihr Makler-Service in Hamburg – deutschlandweit</span></span>
+      <h1 class="display"><span class="i18n" data-de="Alle Versicherungen." data-ar="كل أنواع التأمين.">Alle Versicherungen.</span><br><span class="gold i18n" data-de="Ein Ansprechpartner." data-ar="مرجع واحد.">Ein Ansprechpartner.</span></h1>
+      <p class="lead i18n" data-de="Anbieterunabhängige Beratung zu Versicherungen, Kfz-Zulassung und Energie – kostenlos, verständlich und auf Deutsch & Arabisch." data-ar="استشارة مستقلة عن الشركات للتأمين وتسجيل السيارات والطاقة – مجاناً وبوضوح وبالعربي والألماني.">Anbieterunabhängige Beratung zu Versicherungen, Kfz-Zulassung und Energie – kostenlos, verständlich und auf Deutsch & Arabisch.</p>
+      <div class="hero-actions">
+        <a href="#leistungen" class="btn btn-primary i18n" data-de="Leistung wählen & anfragen" data-ar="اختر خدمة واطلب">Leistung wählen & anfragen</a>
+        <a href="tel:+491799673909" class="btn btn-ghost i18n" data-de="📞 Direkt anrufen" data-ar="📞 اتصل مباشرة">📞 Direkt anrufen</a>
+      </div>
+    </div>
+    <div class="hero-visual" aria-hidden="true">
+      <svg viewBox="0 0 440 440" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="shieldG" x1="120" y1="60" x2="330" y2="400" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#1EC975"/><stop offset=".55" stop-color="#128A4B"/><stop offset="1" stop-color="#0A3D22"/>
+          </linearGradient>
+          <linearGradient id="goldG" x1="140" y1="120" x2="300" y2="320" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#D1C18F"/><stop offset="1" stop-color="#B8A16B"/>
+          </linearGradient>
+          <radialGradient id="glowG" cx=".5" cy=".45" r=".55">
+            <stop offset="0" stop-color="#1EC975" stop-opacity=".28"/><stop offset="1" stop-color="#1EC975" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <circle cx="220" cy="215" r="205" fill="url(#glowG)"/>
+        <circle cx="220" cy="215" r="168" stroke="#B8A16B" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="3 9"/>
+        <!-- Schild -->
+        <path d="M220 62 L330 100 V212 C330 296 282 348 220 382 C158 348 110 296 110 212 V100 Z" fill="url(#shieldG)" stroke="url(#goldG)" stroke-width="3.5"/>
+        <!-- Facetten -->
+        <path d="M220 62 V382 M110 100 L330 100 M110 212 H330 M220 62 L110 212 M220 62 L330 212 M110 100 L220 382 M330 100 L220 382" stroke="#F5F3EC" stroke-opacity=".1" stroke-width="1.5"/>
+        <!-- Haken -->
+        <path d="M172 218 L206 254 L272 176" stroke="#0A3D22" stroke-opacity=".5" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M172 214 L206 250 L272 172" stroke="url(#goldG)" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Service-Chips -->
+        <g class="chipf" transform="translate(66 96)">
+          <rect x="-30" y="-30" width="60" height="60" rx="15" fill="#1A241E" stroke="#27342C"/>
+          <path d="M-15 6 h30 M-13 6 v-7 l5 -8 h16 l5 8 v7" stroke="#D1C18F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="-8" cy="10" r="3.6" stroke="#D1C18F" stroke-width="2.4"/><circle cx="8" cy="10" r="3.6" stroke="#D1C18F" stroke-width="2.4"/>
+        </g>
+        <g class="chipf f2" transform="translate(374 120)">
+          <rect x="-30" y="-30" width="60" height="60" rx="15" fill="#1A241E" stroke="#27342C"/>
+          <path d="M0 12 C-15 0 -10 -13 -2 -9 L0 -7 L2 -9 C10 -13 15 0 0 12 Z" stroke="#D1C18F" stroke-width="2.4" stroke-linejoin="round"/>
+        </g>
+        <g class="chipf f3" transform="translate(58 300)">
+          <rect x="-30" y="-30" width="60" height="60" rx="15" fill="#1A241E" stroke="#27342C"/>
+          <path d="M3 -14 L-9 3 H-1 L-3 14 L9 -3 H1 Z" stroke="#D1C18F" stroke-width="2.4" stroke-linejoin="round"/>
+        </g>
+        <g class="chipf f4" transform="translate(382 306)">
+          <rect x="-30" y="-30" width="60" height="60" rx="15" fill="#1A241E" stroke="#27342C"/>
+          <path d="M-14 -1 L0 -12 L14 -1 M-10 -3 V12 H10 V-3 M-3 12 V3 H3 V12" stroke="#D1C18F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+      </svg>
+    </div>
   </div>
   <div class="trust-row">
     <span class="trust-pill"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg><span class="i18n" data-de="Kostenlos & unverbindlich" data-ar="مجاني وبدون التزام">Kostenlos & unverbindlich</span></span>
