@@ -90,7 +90,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Amiri:wght@700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ==========================================================
    DIENSTLY24 DESIGN TOKENS — Richtung D „Smaragd & Gold"
@@ -114,8 +114,8 @@
 html{scroll-behavior:smooth;}
 body{background:var(--canvas);color:var(--ink);font-family:'Plus Jakarta Sans',system-ui,sans-serif;line-height:1.65;overflow-x:hidden;}
 html[dir="rtl"] body{font-family:'IBM Plex Sans Arabic',system-ui,sans-serif;}
-.display{font-family:'Manrope',system-ui,sans-serif;font-weight:800;}
-html[dir="rtl"] .display{font-family:'IBM Plex Sans Arabic',system-ui,sans-serif;font-weight:700;}
+.display{font-family:'Playfair Display',Georgia,serif;font-weight:700;letter-spacing:.005em;}
+html[dir="rtl"] .display{font-family:'Amiri','IBM Plex Sans Arabic',serif;font-weight:700;}
 img{display:block;max-width:100%;}a{color:inherit;text-decoration:none;}ul{list-style:none;}
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
 .container{max-width:1140px;margin:0 auto;padding:0 24px;}
@@ -175,7 +175,7 @@ header.scrolled{background:rgba(15,21,18,.96);box-shadow:0 10px 30px rgba(10,16,
   .nav-actions .btn-login-text{display:none;}
 }
 /* Hero: dunkles Gruen-Graphit, Smaragd-Facette + Gold-Kontur */
-.hero{position:relative;padding:74px 0 0;overflow:hidden;background:linear-gradient(150deg,var(--dark-1) 0%,var(--dark-2) 55%,#1C3126 100%);color:var(--dark-text);}
+.hero{position:relative;padding:74px 0 0;overflow:hidden;background:radial-gradient(900px 620px at 76% 24%,#175040 0%,rgba(23,80,64,0) 62%),linear-gradient(150deg,#0A1F1B 0%,#0E2A23 55%,#123B30 100%);color:var(--dark-text);}
 .hero-facet{position:absolute;top:-140px;inset-inline-end:-160px;width:560px;height:560px;background:linear-gradient(155deg,var(--emerald),#0A3D22);clip-path:polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%);opacity:.28;}
 @media(max-width:760px){.hero-facet{width:380px;height:380px;top:-120px;inset-inline-end:-150px;}}
 .hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:44px;align-items:center;position:relative;}
@@ -184,6 +184,12 @@ header.scrolled{background:rgba(15,21,18,.96);box-shadow:0 10px 30px rgba(10,16,
 .chipf{animation:floaty 5s ease-in-out infinite;}
 .chipf.f2{animation-delay:1.2s;}.chipf.f3{animation-delay:2.4s;}.chipf.f4{animation-delay:3.6s;}
 @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+/* Optionaler Bild-Slot: assets/images/hero-shield.png (transparentes PNG).
+   Fehlt die Datei, bleibt automatisch die eingebaute SVG-Grafik sichtbar. */
+.hero-shield-img{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);width:56%;max-width:250px;filter:drop-shadow(0 26px 46px rgba(6,20,12,.6));}
+.hero-visual.hat-bild .hero-shield-img{display:block;animation:floatys 6s ease-in-out infinite;}
+.hero-visual.hat-bild .schild-kern{display:none;}
+@keyframes floatys{0%,100%{transform:translate(-50%,-52%)}50%{transform:translate(-50%,-55%)}}
 @media(max-width:900px){
   .hero-grid{grid-template-columns:1fr;gap:12px;}
   .hero-visual{order:2;margin-top:8px;}
@@ -194,8 +200,39 @@ header.scrolled{background:rgba(15,21,18,.96);box-shadow:0 10px 30px rgba(10,16,
 .hero .lead{font-size:1.14rem;color:var(--dark-soft);max-width:560px;margin-bottom:32px;position:relative;}
 .hero-actions{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:44px;position:relative;}
 .trust-row{display:flex;gap:12px;flex-wrap:wrap;padding-bottom:70px;position:relative;}
-.trust-pill{display:flex;align-items:center;gap:9px;background:rgba(26,36,30,.75);border:1px solid var(--dark-line);border-radius:99px;padding:9px 16px;font-size:.85rem;font-weight:600;}
-.trust-pill svg{width:16px;height:16px;stroke:var(--emerald-bright);}
+.trust-pill{display:flex;align-items:center;gap:9px;background:transparent;border:0;padding:0;font-size:.88rem;font-weight:600;color:var(--dark-soft);}
+.trust-pill:not(:last-child){padding-inline-end:22px;border-inline-end:1px solid rgba(209,193,143,.25);}
+.trust-pill svg{width:16px;height:16px;stroke:var(--gold-soft);}
+/* Skyline-Silhouette am Hero-Fuss */
+.hero-skyline{position:absolute;bottom:-2px;left:0;right:0;width:100%;height:auto;opacity:.55;pointer-events:none;}
+/* Zahlenband unter dem Hero */
+.band{background:var(--dark-1);border-top:1px solid rgba(184,161,107,.16);border-bottom:1px solid rgba(184,161,107,.16);padding:26px 0;}
+.band-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;}
+@media(max-width:860px){.band-grid{grid-template-columns:1fr 1fr;gap:22px;}}
+@media(max-width:430px){.band-grid{grid-template-columns:1fr;}}
+.band-item{display:flex;align-items:center;gap:14px;color:var(--dark-text);}
+.band-item svg{width:30px;height:30px;stroke:var(--gold-soft);flex:none;}
+.band-item b{display:block;font-size:1.22rem;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums;}
+.band-item span{font-size:.82rem;color:var(--dark-muted);}
+/* Versprechen-Karte (dunkel, wie Mockup) */
+.promise{background:linear-gradient(150deg,#0A1F1B,#123B30);border:1px solid rgba(184,161,107,.28);border-radius:22px;padding:46px;display:grid;grid-template-columns:.85fr 1.15fr;gap:44px;align-items:center;color:var(--dark-text);}
+@media(max-width:840px){.promise{grid-template-columns:1fr;padding:30px 24px;gap:28px;}}
+.promise .kicker{color:var(--gold-soft);}
+.promise-lead{color:var(--dark-soft);font-size:.98rem;margin-bottom:20px;max-width:56ch;}
+.promise-visual{position:relative;min-height:230px;height:100%;border-radius:16px;background:radial-gradient(420px 300px at 30% 20%,#175040 0%,#0B1E19 78%);border:1px solid rgba(209,193,143,.28);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.promise-visual img{width:68%;max-width:250px;position:relative;z-index:1;}
+.promise-visual svg{position:absolute;bottom:-2px;left:0;right:0;width:100%;opacity:.6;}
+/* Optionaler Foto-Slot: assets/images/hamburg.jpg.
+   Fehlt die Datei, bleibt automatisch das Logo-Panel sichtbar. */
+.promise-foto{display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.promise-visual.hat-foto .promise-foto{display:block;}
+.promise-visual.hat-foto svg,.promise-visual.hat-foto .promise-logo{display:none;}
+.plist{display:grid;gap:18px;}
+.plist li{display:flex;gap:14px;align-items:flex-start;}
+.pic{width:34px;height:34px;border-radius:50%;background:linear-gradient(155deg,var(--emerald),#0A3D22);box-shadow:0 0 0 1.5px rgba(209,193,143,.45);display:flex;align-items:center;justify-content:center;flex:none;}
+.pic svg{width:15px;height:15px;stroke:#fff;}
+.plist b{display:block;font-size:1.02rem;margin-bottom:3px;}
+.plist p{font-size:.9rem;color:var(--dark-muted);margin:0;}
 /* Services: helle Canvas, weisse Karten, Gold-Hover */
 .services{background:var(--canvas);}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;}
@@ -203,7 +240,13 @@ header.scrolled{background:rgba(15,21,18,.96);box-shadow:0 10px 30px rgba(10,16,
 @media(max-width:560px){.grid3{grid-template-columns:1fr;}}
 .svc{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:28px 24px;transition:transform .3s var(--ease),box-shadow .3s,border-color .3s;}
 .svc:hover{transform:translateY(-6px);box-shadow:0 22px 44px rgba(22,33,28,.12);border-color:var(--gold-line);}
-.svc .ic{width:52px;height:52px;border-radius:14px;background:linear-gradient(155deg,var(--emerald),#0A3D22);display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:16px;box-shadow:inset 0 0 0 1.5px rgba(209,193,143,.35);}
+/* Optionaler Bild-Slot je Leistungskarte: assets/images/leistung-<name>.png.
+   Vorhandene Datei ersetzt automatisch die Icon-Kachel. */
+.svc-bild{display:none;width:100%;height:150px;object-fit:contain;margin-bottom:14px;}
+.svc.hat-bild .svc-bild{display:block;}
+.svc.hat-bild .ic{display:none;}
+.svc .ic{width:52px;height:52px;border-radius:14px;background:linear-gradient(155deg,var(--emerald),#0A3D22);display:flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:inset 0 0 0 1.5px rgba(209,193,143,.45);}
+.svc .ic svg{width:27px;height:27px;stroke:#F5F3EC;}
 .svc h3{font-size:1.1rem;margin-bottom:7px;}
 .svc p{font-size:.9rem;color:var(--muted);margin-bottom:16px;flex:1;}
 .svc .go{display:inline-flex;align-items:center;gap:6px;color:var(--emerald-deep);font-weight:700;font-size:.86rem;}
@@ -325,6 +368,9 @@ html.js .reveal.in{opacity:1;transform:none;}
       </div>
     </div>
     <div class="hero-visual" aria-hidden="true">
+      <img class="hero-shield-img" src="assets/images/hero-shield.png" alt=""
+           onload="this.closest('.hero-visual').classList.add('hat-bild')"
+           onerror="this.remove()">
       <svg viewBox="0 0 440 440" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="shieldG" x1="120" y1="60" x2="330" y2="400" gradientUnits="userSpaceOnUse">
@@ -339,6 +385,7 @@ html.js .reveal.in{opacity:1;transform:none;}
         </defs>
         <circle cx="220" cy="215" r="205" fill="url(#glowG)"/>
         <circle cx="220" cy="215" r="168" stroke="#B8A16B" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="3 9"/>
+        <g class="schild-kern">
         <!-- Schild -->
         <path d="M220 62 L330 100 V212 C330 296 282 348 220 382 C158 348 110 296 110 212 V100 Z" fill="url(#shieldG)" stroke="url(#goldG)" stroke-width="3.5"/>
         <!-- Facetten -->
@@ -346,6 +393,7 @@ html.js .reveal.in{opacity:1;transform:none;}
         <!-- Haken -->
         <path d="M172 218 L206 254 L272 176" stroke="#0A3D22" stroke-opacity=".5" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M172 214 L206 250 L272 172" stroke="url(#goldG)" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
         <!-- Service-Chips -->
         <g class="chipf" transform="translate(66 96)">
           <rect x="-30" y="-30" width="60" height="60" rx="15" fill="#1A241E" stroke="#27342C"/>
@@ -372,38 +420,52 @@ html.js .reveal.in{opacity:1;transform:none;}
     <span class="trust-pill"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg><span class="i18n" data-de="Deutsch & Arabisch" data-ar="ألماني وعربي">Deutsch & Arabisch</span></span>
     <span class="trust-pill"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg><span class="i18n" data-de="Persönlicher Ansprechpartner" data-ar="مرجع شخصي ثابت">Persönlicher Ansprechpartner</span></span>
   </div>
+</div><svg class="hero-skyline" viewBox="0 0 1440 110" preserveAspectRatio="none" aria-hidden="true"><path d="M0 110 V84 H55 V66 H88 V90 H138 V58 H168 L173 38 L178 58 H208 V90 H258 V72 H298 V48 H328 V90 H378 V76 H428 V52 H458 L464 26 L470 52 H498 V90 H558 V68 H608 V90 H658 V44 H688 L695 16 L702 44 H728 V90 H788 V62 H838 V90 H888 V52 H918 V90 H978 V72 H1028 V38 H1058 L1064 18 L1070 38 H1098 V90 H1158 V68 H1208 V90 H1268 V58 H1308 V90 H1368 V78 H1440 V110 Z" fill="#17513F"/></svg></section>
+
+<!-- Zahlenband -->
+<section class="band"><div class="container band-grid">
+  <div class="band-item"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M4 26c0-5 4-7.5 8-7.5s8 2.5 8 7.5"/><circle cx="22.5" cy="13" r="3.2"/><path d="M21 18.6c3.5.2 7 2.4 7 6.9"/></svg><div><b>100 %</b><span class="i18n" data-de="Unabhängige Beratung" data-ar="استشارة مستقلة">Unabhängige Beratung</span></div></div>
+  <div class="band-item"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linejoin="round"><path d="M16 4 L19.6 11.6 L28 12.7 L21.8 18.4 L23.4 26.6 L16 22.6 L8.6 26.6 L10.2 18.4 L4 12.7 L12.4 11.6 Z"/></svg><div><b>3.000+</b><span class="i18n" data-de="Zufriedene Kunden" data-ar="عميل راضٍ">Zufriedene Kunden</span></div></div>
+  <div class="band-item"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3 C10.5 3 6.5 7.2 6.5 12 C6.5 19 16 28 16 28 S25.5 19 25.5 12 C25.5 7.2 21.5 3 16 3 Z"/><circle cx="16" cy="12" r="3.6"/></svg><div><b>Hamburg</b><span class="i18n" data-de="&amp; deutschlandweit" data-ar="وبكل ألمانيا">&amp; deutschlandweit</span></div></div>
+  <div class="band-item"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="24" height="16" rx="4"/><path d="M12 22 L15 27 L18 22"/><path d="M10 12 h12 M10 16 h8"/></svg><div><b class="i18n" data-de="Deutsch &amp; Arabisch" data-ar="ألماني وعربي">Deutsch &amp; Arabisch</b><span class="i18n" data-de="Für Sie da" data-ar="بخدمتك دائماً">Für Sie da</span></div></div>
 </div></section>
 
 <!-- Leistungen -->
 <section class="services" id="leistungen"><div class="container">
-  <div class="section-head reveal">
-    <span class="kicker i18n" data-de="Leistungen" data-ar="الخدمات">Leistungen</span>
-    <h2 class="title display i18n" data-de="Beratung in Ihren wichtigsten Lebensbereichen" data-ar="استشارة في أهم مجالات حياتك">Beratung in Ihren wichtigsten Lebensbereichen</h2>
+  <div class="section-head center reveal">
+    <span class="kicker i18n" data-de="Unsere Leistungen" data-ar="خدماتنا">Unsere Leistungen</span>
+    <h2 class="title display i18n" data-de="Unsere Leistungen für Sie" data-ar="خدماتنا لك">Unsere Leistungen für Sie</h2>
     <p class="i18n" data-de="Wählen Sie eine Leistung – Sie erhalten alle Infos und stellen in wenigen Sekunden Ihre Anfrage." data-ar="اختر خدمة – بتشوف كل التفاصيل وبتبعت طلبك بثواني.">Wählen Sie eine Leistung – Sie erhalten alle Infos und stellen in wenigen Sekunden Ihre Anfrage.</p>
   </div>
   <div class="grid3">
     <a class="svc reveal" href="https://portal.dienstly24.de/leistungen/kfz-versicherung">
-      <div class="ic">🚗</div><h3 class="i18n" data-de="Kfz-Versicherung" data-ar="تأمين السيارة">Kfz-Versicherung</h3>
+      <img class="svc-bild" src="assets/images/leistung-kfz-versicherung.png" alt="" onload="this.closest('.svc').classList.add('hat-bild')" onerror="this.remove()">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15h18M5 15v-3l2-4h10l2 4v3M6 15v2.5M18 15v2.5"/><circle cx="8.2" cy="15" r="0.4"/><circle cx="15.8" cy="15" r="0.4"/></svg></div><h3 class="i18n" data-de="Kfz-Versicherung" data-ar="تأمين السيارة">Kfz-Versicherung</h3>
       <p class="i18n" data-de="Haftpflicht, Teil- und Vollkasko verständlich erklärt – wir finden den passenden Schutz." data-ar="شرح واضح للمسؤولية والتأمين الجزئي والشامل – ومنلاقيلك الأنسب.">Haftpflicht, Teil- und Vollkasko verständlich erklärt – wir finden den passenden Schutz.</p>
       <span class="go i18n" data-de="Mehr & anfragen →" data-ar="التفاصيل والطلب →">Mehr & anfragen →</span></a>
     <a class="svc reveal" href="https://portal.dienstly24.de/leistungen/krankenversicherung">
-      <div class="ic">🩺</div><h3 class="i18n" data-de="Krankenversicherung" data-ar="التأمين الصحي">Krankenversicherung</h3>
+      <img class="svc-bild" src="assets/images/leistung-krankenversicherung.png" alt="" onload="this.closest('.svc').classList.add('hat-bild')" onerror="this.remove()">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linejoin="round"><path d="M9.5 3.5h5v6h6v5h-6v6h-5v-6h-6v-5h6Z"/></svg></div><h3 class="i18n" data-de="Krankenversicherung" data-ar="التأمين الصحي">Krankenversicherung</h3>
       <p class="i18n" data-de="Gesetzlich oder privat – wir beraten zu den Optionen, die zu Ihrer Situation passen." data-ar="حكومي أو خاص – منساعدك تختار الأنسب لوضعك.">Gesetzlich oder privat – wir beraten zu den Optionen, die zu Ihrer Situation passen.</p>
       <span class="go i18n" data-de="Mehr & anfragen →" data-ar="التفاصيل والطلب →">Mehr & anfragen →</span></a>
     <a class="svc reveal" href="https://portal.dienstly24.de/leistungen/zahnzusatzversicherung">
-      <div class="ic">🦷</div><h3 class="i18n" data-de="Zahnzusatzversicherung" data-ar="تأمين الأسنان الإضافي">Zahnzusatzversicherung</h3>
+      <img class="svc-bild" src="assets/images/leistung-zahnzusatz.png" alt="" onload="this.closest('.svc').classList.add('hat-bild')" onerror="this.remove()">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.2C9.6 3.4 5.6 4 5.6 7.8c0 2.6 1.7 3.6 2.1 6 .3 1.9.7 4.4 1.5 5.6h1.1l.9-5.6c.5-.7 1.1-.7 1.6 0l.9 5.6h1.1c.8-1.2 1.2-3.7 1.5-5.6.4-2.4 2.1-3.4 2.1-6 0-3.8-4-4.4-6.4-2.6Z"/></svg></div><h3 class="i18n" data-de="Zahnzusatzversicherung" data-ar="تأمين الأسنان الإضافي">Zahnzusatzversicherung</h3>
       <p class="i18n" data-de="Höhere Erstattung bei Zahnersatz und Behandlungen – wir zeigen, was sich lohnt." data-ar="تغطية أعلى لتركيبات وعلاجات الأسنان – منوريك شو بيستاهل.">Höhere Erstattung bei Zahnersatz und Behandlungen – wir zeigen, was sich lohnt.</p>
       <span class="go i18n" data-de="Mehr & anfragen →" data-ar="التفاصيل والطلب →">Mehr & anfragen →</span></a>
     <a class="svc reveal" href="https://portal.dienstly24.de/leistungen/kfz-zulassung">
-      <div class="ic">📋</div><h3 class="i18n" data-de="Kfz-Zulassungsservice" data-ar="خدمة تسجيل السيارات">Kfz-Zulassungsservice</h3>
+      <img class="svc-bild" src="assets/images/leistung-kfz-zulassung.png" alt="" onload="this.closest('.svc').classList.add('hat-bild')" onerror="this.remove()">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="4.5" width="13" height="16" rx="2"/><path d="M9.5 4.5V3h5v1.5M9 10h6M9 13.5h6M9 17h3.5"/></svg></div><h3 class="i18n" data-de="Kfz-Zulassungsservice" data-ar="خدمة تسجيل السيارات">Kfz-Zulassungsservice</h3>
       <p class="i18n" data-de="An-, Um- und Abmeldung ohne Behördengang und ohne Warteschlange." data-ar="تسجيل وتحويل وإلغاء بدون زيارة الدائرة وبدون طوابير.">An-, Um- und Abmeldung ohne Behördengang und ohne Warteschlange.</p>
       <span class="go i18n" data-de="Mehr & anfragen →" data-ar="التفاصيل والطلب →">Mehr & anfragen →</span></a>
     <a class="svc reveal" href="https://portal.dienstly24.de/leistungen/kennzeichen-per-post">
-      <div class="ic">🔖</div><h3 class="i18n" data-de="Kennzeichen per Post" data-ar="لوحات بالبريد">Kennzeichen per Post</h3>
+      <img class="svc-bild" src="assets/images/leistung-kennzeichen.png" alt="" onload="this.closest('.svc').classList.add('hat-bild')" onerror="this.remove()">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="8" width="19" height="8" rx="2"/><path d="M6 8v8M8.5 12h3M14 12h4.5"/></svg></div><h3 class="i18n" data-de="Kennzeichen per Post" data-ar="لوحات بالبريد">Kennzeichen per Post</h3>
       <p class="i18n" data-de="Neue Kennzeichen versiegelt und bequem nach Hause geliefert – auch mit Wunschkennzeichen." data-ar="لوحات جديدة مختومة بتوصل لبيتك – وحتى برقم خاص.">Neue Kennzeichen versiegelt und bequem nach Hause geliefert – auch mit Wunschkennzeichen.</p>
       <span class="go i18n" data-de="Mehr & anfragen →" data-ar="التفاصيل والطلب →">Mehr & anfragen →</span></a>
     <a class="svc reveal" href="https://portal.dienstly24.de/leistungen/strom-gas">
-      <div class="ic">⚡</div><h3 class="i18n" data-de="Strom & Gas" data-ar="الكهرباء والغاز">Strom & Gas</h3>
+      <img class="svc-bild" src="assets/images/leistung-strom-gas.png" alt="" onload="this.closest('.svc').classList.add('hat-bild')" onerror="this.remove()">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linejoin="round"><path d="M13 3 6 13.5h5L10 21l8-11h-5l0-7Z"/></svg></div><h3 class="i18n" data-de="Strom & Gas" data-ar="الكهرباء والغاز">Strom & Gas</h3>
       <p class="i18n" data-de="Tarif prüfen und beim Anbieterwechsel sparen – Kündigung und Anmeldung übernehmen wir." data-ar="فحص التعرفة وتوفير عند تبديل المزوّد – مننتكفّل بكل الإجراءات.">Tarif prüfen und beim Anbieterwechsel sparen – Kündigung und Anmeldung übernehmen wir.</p>
       <span class="go i18n" data-de="Mehr & anfragen →" data-ar="التفاصيل والطلب →">Mehr & anfragen →</span></a>
   </div>
@@ -423,25 +485,28 @@ html.js .reveal.in{opacity:1;transform:none;}
   </div>
 </div></section>
 
-<!-- Über uns + Stats -->
-<section id="ueber"><div class="container"><div class="about-grid">
-  <div class="reveal">
-    <span class="kicker i18n" data-de="Über Dienstly24" data-ar="عن Dienstly24">Über Dienstly24</span>
-    <h2 class="title display i18n" data-de="Ihr Partner für den deutschen Alltag" data-ar="شريكك بالحياة اليومية بألمانيا">Ihr Partner für den deutschen Alltag</h2>
-    <p style="color:var(--soft);margin-bottom:22px;" class="i18n" data-de="Wir bieten verständliche, ehrliche Beratung rund um Versicherungen, Kfz-Zulassung und Energie – auf Deutsch und Arabisch. Statt Fachbegriffen bekommen Sie klare Antworten und einen persönlichen Ansprechpartner." data-ar="منقدّم استشارة واضحة وصادقة للتأمين وتسجيل السيارات والطاقة – بالعربي والألماني. بدل المصطلحات المعقّدة، بتاخد أجوبة واضحة ومرجع شخصي.">Wir bieten verständliche, ehrliche Beratung rund um Versicherungen, Kfz-Zulassung und Energie – auf Deutsch und Arabisch. Statt Fachbegriffen bekommen Sie klare Antworten und einen persönlichen Ansprechpartner.</p>
-    <ul class="vlist">
-      <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg><span class="i18n" data-de="Anbieterunabhängig – wir binden Sie an keine Gesellschaft" data-ar="مستقلون عن الشركات – ما بنلزمك بأي شركة">Anbieterunabhängig – wir binden Sie an keine Gesellschaft</span></li>
-      <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg><span class="i18n" data-de="Beratung auf Deutsch und Arabisch" data-ar="استشارة بالعربي والألماني">Beratung auf Deutsch und Arabisch</span></li>
-      <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg><span class="i18n" data-de="Persönliche Betreuung von Anfang bis Ende" data-ar="متابعة شخصية من البداية للنهاية">Persönliche Betreuung von Anfang bis Ende</span></li>
-    </ul>
+<!-- Warum Dienstly24 -->
+<section id="ueber"><div class="container">
+  <div class="promise reveal">
+    <div class="promise-visual" aria-hidden="true">
+      <img class="promise-foto" src="assets/images/hamburg.jpg" alt=""
+           onload="this.closest('.promise-visual').classList.add('hat-foto')"
+           onerror="this.remove()">
+      <svg viewBox="0 0 600 90" preserveAspectRatio="none" aria-hidden="true"><path d="M0 90 V70 H40 V56 H70 V74 H110 V48 H135 L140 30 L145 48 H170 V74 H215 V60 H255 V40 H285 V74 H330 V64 H375 V44 H400 L406 20 L412 44 H438 V74 H490 V56 H535 V74 H600 V90 Z" fill="#1A5A45"/></svg>
+      <img class="promise-logo" src="assets/images/logo-white.png" alt="">
+    </div>
+    <div>
+      <span class="kicker i18n" data-de="Warum Dienstly24?" data-ar="ليش Dienstly24؟">Warum Dienstly24?</span>
+      <h2 class="title display i18n" data-de="Ihr Vorteil – Unser Versprechen" data-ar="ميزتك – وعدنا">Ihr Vorteil – Unser Versprechen</h2>
+      <p class="promise-lead i18n" data-de="Wir bieten verständliche, ehrliche Beratung rund um Versicherungen, Kfz-Zulassung und Energie – statt Fachbegriffen bekommen Sie klare Antworten." data-ar="منقدّم استشارة واضحة وصادقة للتأمين وتسجيل السيارات والطاقة – بدل المصطلحات المعقّدة بتاخد أجوبة واضحة.">Wir bieten verständliche, ehrliche Beratung rund um Versicherungen, Kfz-Zulassung und Energie – statt Fachbegriffen bekommen Sie klare Antworten.</p>
+      <ul class="plist">
+        <li><span class="pic"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span><div><b class="i18n" data-de="Unabhängig &amp; objektiv" data-ar="مستقلون وموضوعيون">Unabhängig &amp; objektiv</b><p class="i18n" data-de="Anbieterunabhängig – wir binden Sie an keine Gesellschaft." data-ar="مستقلون عن الشركات – ما بنلزمك بأي شركة.">Anbieterunabhängig – wir binden Sie an keine Gesellschaft.</p></div></li>
+        <li><span class="pic"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span><div><b class="i18n" data-de="Zeit &amp; Geld sparen" data-ar="وفّر وقتك ومصاريك">Zeit &amp; Geld sparen</b><p class="i18n" data-de="Ein Ansprechpartner für alles – wir machen es Ihnen einfach." data-ar="مرجع واحد لكل شي – منسهّللك كل الإجراءات.">Ein Ansprechpartner für alles – wir machen es Ihnen einfach.</p></div></li>
+        <li><span class="pic"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span><div><b class="i18n" data-de="Verständlich &amp; nah" data-ar="بوضوح وقريبين منك">Verständlich &amp; nah</b><p class="i18n" data-de="Beratung auf Deutsch und Arabisch – persönlich betreut von Anfang bis Ende." data-ar="استشارة بالعربي والألماني – ومتابعة شخصية من البداية للنهاية.">Beratung auf Deutsch und Arabisch – persönlich betreut von Anfang bis Ende.</p></div></li>
+      </ul>
+    </div>
   </div>
-  <div class="stats reveal">
-    <div class="stat"><div class="num" data-count="6" data-suffix="+">6+</div><div class="lbl i18n" data-de="Jahre Erfahrung" data-ar="سنوات خبرة">Jahre Erfahrung</div></div>
-    <div class="stat"><div class="num" data-count="3000" data-suffix="+">3.000+</div><div class="lbl i18n" data-de="Zufriedene Kunden" data-ar="عميل راضٍ">Zufriedene Kunden</div></div>
-    <div class="stat"><div class="num">24 h</div><div class="lbl i18n" data-de="Antwort in der Regel" data-ar="رد عادةً خلال">Antwort in der Regel</div></div>
-    <div class="stat"><div class="num">100 %</div><div class="lbl i18n" data-de="Deutschlandweit" data-ar="بكل ألمانيا">Deutschlandweit</div></div>
-  </div>
-</div></div></section>
+</div></section>
 
 <!-- Kooperationen -->
 <section id="partner" class="partner"><div class="container">

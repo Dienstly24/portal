@@ -63,7 +63,7 @@
                 </div>
                 <input type="number" name="points[{{ $action->key }}]" min="0" max="100"
                        value="{{ old('points.' . $action->key, $action->current) }}"
-                       style="width:80px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;text-align:right;background:#F4F5F7;">
+                       style="width:80px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;text-align:right;background:#F7F5EF;">
             </div>
             @endforeach
         </div>

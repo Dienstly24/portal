@@ -37,7 +37,7 @@
         </div>
     </div>
 
-    <div style="background:#F4F5F7;border-radius:10px;padding:16px;margin-bottom:20px;font-size:13px;">
+    <div style="background:#F7F5EF;border-radius:10px;padding:16px;margin-bottom:20px;font-size:13px;">
         <div style="font-weight:600;margin-bottom:8px;">Unterstützte Spalten:</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;">
             @foreach(['Vorname','Nachname','E-Mail','Telefon','Mobil','Straße','Nr','PLZ','Ort','IBAN','Geburtsdatum','Familienstand','Sprache','Firma','Rechtsform'] as $col)
@@ -110,7 +110,7 @@
         <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Export-Felder:</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;">
             @foreach(['Kundennummer','Vorname','Nachname','E-Mail','Telefon','Mobil','Adresse','IBAN','Geburtsdatum','Familienstand','Sprache','Firmenname','Rechtsform','Erstellt am'] as $f)
-            <span style="background:#F4F5F7;border-radius:6px;padding:3px 10px;font-size:12px;">{{ $f }}</span>
+            <span style="background:#F7F5EF;border-radius:6px;padding:3px 10px;font-size:12px;">{{ $f }}</span>
             @endforeach
         </div>
     </div>

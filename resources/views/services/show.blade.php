@@ -51,7 +51,7 @@
 @endif
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 <style>
-:root{--green:#17A65B;--green2:#19b463;--green3:#128a4b;--mint:#3ddc8e;--paper:#0e0f12;--card:#15171b;--card2:#1b1e23;--line:rgba(255,255,255,.10);--line2:rgba(255,255,255,.16);--muted:#9aa1ab;--text:#eef1ee;}
+:root{--green:#17A65B;--green2:#19b463;--green3:#128a4b;--mint:#3ddc8e;--paper:#0B1310;--card:#15171b;--card2:#1b1e23;--line:rgba(255,255,255,.10);--line2:rgba(255,255,255,.16);--muted:#9aa1ab;--text:#eef1ee;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Inter',system-ui,Arial,sans-serif;min-height:100vh;color:var(--text);display:flex;flex-direction:column;background:var(--paper);line-height:1.6;}
 .bg{position:fixed;inset:0;z-index:-1;background:radial-gradient(1100px 720px at 78% -8%, #23272e 0%, #14161a 46%, var(--paper) 100%);}

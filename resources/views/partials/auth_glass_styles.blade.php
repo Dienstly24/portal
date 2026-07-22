@@ -5,8 +5,8 @@
 :root{--green:#17A65B;--mint:#3ddc8e;--line:rgba(255,255,255,.14);}
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;}
-body{font-family:'Inter',Arial,sans-serif;min-height:100vh;color:#fff;display:flex;flex-direction:column;background:#0e0f12;}
-.bg{position:fixed;inset:0;z-index:-1;background:radial-gradient(1200px 800px at 70% 15%, #23262b 0%, #101216 48%, #0e0f12 100%);}
+body{font-family:'Inter',Arial,sans-serif;min-height:100vh;color:#fff;display:flex;flex-direction:column;background:#0B1310;}
+.bg{position:fixed;inset:0;z-index:-1;background:radial-gradient(1200px 800px at 70% 15%, #1A2C24 0%, #0F1512 48%, #0B1310 100%);}
 .bg::after{content:'';position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.05) 1px,transparent 1px);background-size:26px 26px;}
 .topbar{flex:none;display:flex;align-items:center;justify-content:space-between;max-width:1200px;width:100%;margin:0 auto;padding:18px 28px 0;}
 .topbar img{height:36px;width:auto;display:block;}

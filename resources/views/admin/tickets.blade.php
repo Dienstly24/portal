@@ -370,15 +370,15 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
 .prio-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;}
 .prio-dot{width:7px;height:7px;border-radius:50%;flex:none;}
 .rowmenu-item{display:block;width:100%;text-align:left;padding:9px 12px;border-radius:7px;font-size:13.5px;color:var(--ink);text-decoration:none;box-sizing:border-box;background:none;border:none;cursor:pointer;font-family:inherit;}
-.rowmenu-item:hover{background:#F4F5F7;}
+.rowmenu-item:hover{background:#F7F5EF;}
 .rowmenu-danger{color:#A32D2D;}
 .rowmenu-danger:hover{background:#F9E3E3;}
 .rowmenu-sep{height:1px;background:var(--line);margin:5px 4px;}
 .tab-trash{margin-left:auto;}
 /* Bulk-Leiste: schwebt unten in der Mitte, Graphit-Optik wie die Sidebar */
-.bulk-bar{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:120;display:flex;align-items:center;gap:10px;background:#17191d;color:#fff;padding:10px 14px;border-radius:14px;box-shadow:0 12px 34px rgba(0,0,0,.35);flex-wrap:wrap;max-width:min(94vw,900px);}
+.bulk-bar{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:120;display:flex;align-items:center;gap:10px;background:#131A17;color:#fff;padding:10px 14px;border-radius:14px;box-shadow:0 12px 34px rgba(0,0,0,.35);flex-wrap:wrap;max-width:min(94vw,900px);}
 .bulk-bar .bulk-count{font-size:13.5px;white-space:nowrap;padding:0 4px;}
-.bulk-bar select{background:#101216;color:#fff;border:1px solid #2a2d33;border-radius:8px;padding:7px 10px;font-size:13px;max-width:190px;}
+.bulk-bar select{background:#0F1512;color:#fff;border:1px solid #2a2d33;border-radius:8px;padding:7px 10px;font-size:13px;max-width:190px;}
 .bulk-bar .bulk-delete{background:#3a1518;color:#ff9b9b;border:1px solid #5a2226;border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;white-space:nowrap;}
 .bulk-bar .bulk-delete:hover{background:#4a1a1e;}
 .bulk-bar .bulk-clear{background:none;border:none;color:#9aa0a8;font-size:15px;cursor:pointer;padding:4px 6px;}

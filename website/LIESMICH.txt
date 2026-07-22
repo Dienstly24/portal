@@ -18,6 +18,35 @@ Einfach die Datei in assets/images/ durch eine gleichnamige Datei
 ersetzen (gleicher Dateiname, gleiches Format). Kein Code noetig.
 Fuer ein anderes Bild im HTML den Pfad "assets/images/..." anpassen.
 
+Optionale Bild-Slots der Startseite (hochladen genuegt)
+-------------------------------------------------------
+- assets/images/hero-shield.png -> 3D-Schild im Hero.
+    PNG mit TRANSPARENTEM Hintergrund (Alphakanal), ca. 1024x1024,
+    ohne Schlagschatten. Fehlt die Datei, zeigt die Seite automatisch
+    die eingebaute Schild-Grafik.
+- assets/images/leistung-<name>.png -> Bild oben in der jeweiligen
+    Leistungskarte (ersetzt die Icon-Kachel automatisch). Namen:
+      leistung-kfz-versicherung.png   leistung-krankenversicherung.png
+      leistung-zahnzusatz.png         leistung-kfz-zulassung.png
+      leistung-kennzeichen.png        leistung-strom-gas.png
+    PNG ca. 800x600, weisser oder transparenter Hintergrund passt
+    (Karten sind weiss). WICHTIG: keine Marken-Logos/Embleme im Bild
+    (z. B. BMW) - siehe rechtlicher Hinweis unten.
+- assets/images/hamburg.jpg -> Foto in der Karte "Warum Dienstly24?".
+    JPG im Querformat, ca. 1200x900, moeglichst unter 500 KB
+    (z. B. von Pexels, Quelle in bildnachweise.html ergaenzen).
+    Fehlt die Datei, zeigt die Karte automatisch das Logo-Panel.
+
+Logo tauschen
+-------------
+- logo-white.png = weisse Wortmarke auf transparentem Grund
+  (Kopf- und Fusszeile, Hoehe mind. 160px empfohlen).
+- favicon.png = 32px Browser-Symbol.
+Gleicher Dateiname genuegt - kein Code noetig. Fuer das Kundenportal/
+Admin (eigene Logo-Dateien unter public/images/ im Portal-Projekt)
+bitte die Logo-Quelldatei zusaetzlich an Claude geben, damit alle
+Varianten neu generiert werden.
+
 Texte aendern
 -------------
 Alle Texte stehen direkt im HTML. Zweisprachig ueber Attribute:

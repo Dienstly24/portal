@@ -95,7 +95,7 @@
         <div class="card-title">Tickets nach Status</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-        <div style="background:#F4F5F7;border-radius:10px;padding:16px;text-align:center;">
+        <div style="background:#F7F5EF;border-radius:10px;padding:16px;text-align:center;">
             <div style="font-size:28px;font-weight:700;">{{ $tickets['total'] }}</div>
             <div style="font-size:13px;color:var(--ink-soft);">Tickets gesamt</div>
         </div>

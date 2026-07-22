@@ -27,7 +27,7 @@ $typeConfig = [
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.employees') }}">Mitarbeiter</a><span class="breadcrumb-sep">›</span><span>{{ $employee->name }}</span></div>
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
         <div style="display:flex;align-items:center;gap:12px;">
-            <div style="width:44px;height:44px;border-radius:50%;background:#17191d;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;">{{ strtoupper(substr($employee->name,0,2)) }}</div>
+            <div style="width:44px;height:44px;border-radius:50%;background:#131A17;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;">{{ strtoupper(substr($employee->name,0,2)) }}</div>
             <div>
                 <div class="page-title" style="margin:0;">{{ $employee->name }} @if(!$employee->is_active)<span class="badge badge-closed">Deaktiviert</span>@endif</div>
                 <div class="page-sub" style="margin:0;">{{ $employee->email }}</div>
@@ -227,7 +227,7 @@ $typeConfig = [
             } else {
                 var cb = document.createElement('input');
                 cb.type = 'checkbox';
-                cb.style.cssText = 'width:17px;height:17px;cursor:pointer;accent-color:#17191d;flex:none;';
+                cb.style.cssText = 'width:17px;height:17px;cursor:pointer;accent-color:#131A17;flex:none;';
                 cb.checked = !!selected[id];
                 cb.onchange = function () {
                     if (cb.checked) { selected[id] = { id: id, name: c.name, number: c.number }; }

@@ -7,10 +7,10 @@
 <title>Dienstly24 — {{ __('Unsere Leistungen') }}</title>
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 <style>
-:root{--green:#17A65B;--mint:#3ddc8e;--paper:#0e0f12;--paper2:#15171b;--line:rgba(255,255,255,.14);--muted:#9aa1ab;}
+:root{--green:#17A65B;--mint:#3ddc8e;--paper:#0B1310;--paper2:#15171b;--line:rgba(255,255,255,.14);--muted:#9aa1ab;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Inter',Arial,sans-serif;min-height:100vh;color:#eef1ee;display:flex;flex-direction:column;background:var(--paper);}
-.bg{position:fixed;inset:0;z-index:-1;background:radial-gradient(1200px 800px at 70% 12%, #23262b 0%, #101216 48%, var(--paper) 100%);}
+.bg{position:fixed;inset:0;z-index:-1;background:radial-gradient(1200px 800px at 70% 12%, #1A2C24 0%, #0F1512 48%, var(--paper) 100%);}
 .bg::after{content:'';position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.05) 1px,transparent 1px);background-size:26px 26px;}
 .topbar{display:flex;align-items:center;justify-content:space-between;max-width:1000px;width:100%;margin:0 auto;padding:16px 24px 0;}
 .topbar img{height:36px;width:auto;display:block;}

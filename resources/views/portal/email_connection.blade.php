@@ -12,7 +12,7 @@
             <strong>{{ $consent->granted_at?->format('d.m.Y') }}</strong>
             {{ __('aktiv. Leiten Sie vertragsbezogene E-Mails an folgende persoenliche Adresse weiter:') }}
         </p>
-        <div style="background:var(--surface,#101216);color:#fff;border-radius:10px;padding:14px 16px;font-family:monospace;font-size:15px;word-break:break-all;margin:12px 0;">
+        <div style="background:var(--surface,#0F1512);color:#fff;border-radius:10px;padding:14px 16px;font-family:monospace;font-size:15px;word-break:break-all;margin:12px 0;">
             {{ $importAddress }}
         </div>
         <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.6;">

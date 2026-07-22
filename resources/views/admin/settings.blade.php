@@ -61,7 +61,7 @@
             Willkommens-E-Mail bei neuem Kunden senden
         </label>
     </div>
-    <div style="background:#F4F5F7;border-radius:8px;padding:14px;font-size:13px;">
+    <div style="background:#F7F5EF;border-radius:8px;padding:14px;font-size:13px;">
         <div style="font-weight:600;margin-bottom:8px;">SMTP Konfiguration</div>
         <div style="color:var(--ink-soft);">Host: smtp.hostinger.com · Port: 587</div>
         <div style="color:var(--ink-soft);margin-top:4px;">Von: noreply@dienstly24.de</div>
