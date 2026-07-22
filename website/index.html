@@ -184,6 +184,12 @@ header.scrolled{background:rgba(15,21,18,.96);box-shadow:0 10px 30px rgba(10,16,
 .chipf{animation:floaty 5s ease-in-out infinite;}
 .chipf.f2{animation-delay:1.2s;}.chipf.f3{animation-delay:2.4s;}.chipf.f4{animation-delay:3.6s;}
 @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+/* Optionaler Bild-Slot: assets/images/hero-shield.png (transparentes PNG).
+   Fehlt die Datei, bleibt automatisch die eingebaute SVG-Grafik sichtbar. */
+.hero-shield-img{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);width:56%;max-width:250px;filter:drop-shadow(0 26px 46px rgba(6,20,12,.6));}
+.hero-visual.hat-bild .hero-shield-img{display:block;animation:floatys 6s ease-in-out infinite;}
+.hero-visual.hat-bild .schild-kern{display:none;}
+@keyframes floatys{0%,100%{transform:translate(-50%,-52%)}50%{transform:translate(-50%,-55%)}}
 @media(max-width:900px){
   .hero-grid{grid-template-columns:1fr;gap:12px;}
   .hero-visual{order:2;margin-top:8px;}
@@ -216,6 +222,11 @@ header.scrolled{background:rgba(15,21,18,.96);box-shadow:0 10px 30px rgba(10,16,
 .promise-visual{position:relative;min-height:230px;height:100%;border-radius:16px;background:radial-gradient(420px 300px at 30% 20%,#175040 0%,#0B1E19 78%);border:1px solid rgba(209,193,143,.28);display:flex;align-items:center;justify-content:center;overflow:hidden;}
 .promise-visual img{width:68%;max-width:250px;position:relative;z-index:1;}
 .promise-visual svg{position:absolute;bottom:-2px;left:0;right:0;width:100%;opacity:.6;}
+/* Optionaler Foto-Slot: assets/images/hamburg.jpg.
+   Fehlt die Datei, bleibt automatisch das Logo-Panel sichtbar. */
+.promise-foto{display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.promise-visual.hat-foto .promise-foto{display:block;}
+.promise-visual.hat-foto svg,.promise-visual.hat-foto .promise-logo{display:none;}
 .plist{display:grid;gap:18px;}
 .plist li{display:flex;gap:14px;align-items:flex-start;}
 .pic{width:34px;height:34px;border-radius:50%;background:linear-gradient(155deg,var(--emerald),#0A3D22);box-shadow:0 0 0 1.5px rgba(209,193,143,.45);display:flex;align-items:center;justify-content:center;flex:none;}
@@ -352,6 +363,9 @@ html.js .reveal.in{opacity:1;transform:none;}
       </div>
     </div>
     <div class="hero-visual" aria-hidden="true">
+      <img class="hero-shield-img" src="assets/images/hero-shield.png" alt=""
+           onload="this.closest('.hero-visual').classList.add('hat-bild')"
+           onerror="this.remove()">
       <svg viewBox="0 0 440 440" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="shieldG" x1="120" y1="60" x2="330" y2="400" gradientUnits="userSpaceOnUse">
@@ -366,6 +380,7 @@ html.js .reveal.in{opacity:1;transform:none;}
         </defs>
         <circle cx="220" cy="215" r="205" fill="url(#glowG)"/>
         <circle cx="220" cy="215" r="168" stroke="#B8A16B" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="3 9"/>
+        <g class="schild-kern">
         <!-- Schild -->
         <path d="M220 62 L330 100 V212 C330 296 282 348 220 382 C158 348 110 296 110 212 V100 Z" fill="url(#shieldG)" stroke="url(#goldG)" stroke-width="3.5"/>
         <!-- Facetten -->
@@ -373,6 +388,7 @@ html.js .reveal.in{opacity:1;transform:none;}
         <!-- Haken -->
         <path d="M172 218 L206 254 L272 176" stroke="#0A3D22" stroke-opacity=".5" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M172 214 L206 250 L272 172" stroke="url(#goldG)" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
         <!-- Service-Chips -->
         <g class="chipf" transform="translate(66 96)">
           <rect x="-30" y="-30" width="60" height="60" rx="15" fill="#1A241E" stroke="#27342C"/>
@@ -462,8 +478,11 @@ html.js .reveal.in{opacity:1;transform:none;}
 <section id="ueber"><div class="container">
   <div class="promise reveal">
     <div class="promise-visual" aria-hidden="true">
+      <img class="promise-foto" src="assets/images/hamburg.jpg" alt=""
+           onload="this.closest('.promise-visual').classList.add('hat-foto')"
+           onerror="this.remove()">
       <svg viewBox="0 0 600 90" preserveAspectRatio="none" aria-hidden="true"><path d="M0 90 V70 H40 V56 H70 V74 H110 V48 H135 L140 30 L145 48 H170 V74 H215 V60 H255 V40 H285 V74 H330 V64 H375 V44 H400 L406 20 L412 44 H438 V74 H490 V56 H535 V74 H600 V90 Z" fill="#1A5A45"/></svg>
-      <img src="assets/images/logo-white.png" alt="">
+      <img class="promise-logo" src="assets/images/logo-white.png" alt="">
     </div>
     <div>
       <span class="kicker i18n" data-de="Warum Dienstly24?" data-ar="ليش Dienstly24؟">Warum Dienstly24?</span>
