@@ -32,14 +32,18 @@ Route::middleware('guest')->group(function () {
     Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
         ->middleware('throttle:6,1')
         ->name('password.email');
-
-    Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])
-        ->name('password.reset');
-
-    Route::post('reset-password', [NewPasswordController::class, 'store'])
-        ->middleware('throttle:6,1')
-        ->name('password.store');
 });
+
+// BEWUSST ohne 'guest': Kunden aus der Willkommens-Mail sind oft schon
+// per Magic-Login eingeloggt, wenn sie den Passwort-Setzen-Link klicken.
+// Mit 'guest' wurden sie still zum Dashboard umgeleitet und konnten nie
+// ein Passwort festlegen. Der Token selbst schuetzt den Vorgang.
+Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])
+    ->name('password.reset');
+
+Route::post('reset-password', [NewPasswordController::class, 'store'])
+    ->middleware('throttle:6,1')
+    ->name('password.store');
 
 Route::middleware('auth')->group(function () {
     Route::get('verify-email', EmailVerificationPromptController::class)

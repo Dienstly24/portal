@@ -55,7 +55,7 @@ class PortalAccountManagementTest extends TestCase
         $this->assertTrue(Hash::check('15.03.1985', $user->password));
         $this->assertNotNull($user->invitation_sent_at);
         $this->assertNotNull($user->portal_password_set_at);
-        Mail::assertQueued(CustomerWelcomeMail::class, fn ($m) => $m->hasTo('erika@kunde.de') && $m->mode === 'birthdate');
+        Mail::assertSent(CustomerWelcomeMail::class, fn ($m) => $m->hasTo('erika@kunde.de') && $m->mode === 'birthdate');
 
         // Echter Login über HTTP mit dem Geburtsdatum-Passwort
         $this->post('/login', ['email' => 'erika@kunde.de', 'password' => '15.03.1985'])
@@ -111,7 +111,7 @@ class PortalAccountManagementTest extends TestCase
         $customer = $this->customer();
         app(PortalAccessService::class)->sendInvitation($customer, $this->admin->id);
 
-        Mail::assertQueued(CustomerWelcomeMail::class, function (CustomerWelcomeMail $m) {
+        Mail::assertSent(CustomerWelcomeMail::class, function (CustomerWelcomeMail $m) {
             $html = $m->render();
             return str_contains($html, 'Ihr erstes Passwort ist Ihr Geburtsdatum im Format TT.MM.JJJJ')
                 && str_contains($html, 'portal.dienstly24.de')
@@ -130,7 +130,7 @@ class PortalAccountManagementTest extends TestCase
         $user = $customer->user->fresh();
         $this->assertNull($user->portal_password_set_at); // noch kein nutzbares Passwort
         $this->assertNotNull($user->invitation_sent_at);
-        Mail::assertQueued(CustomerWelcomeMail::class, function (CustomerWelcomeMail $m) {
+        Mail::assertSent(CustomerWelcomeMail::class, function (CustomerWelcomeMail $m) {
             return $m->mode === 'setlink'
                 && $m->setPasswordUrl !== null
                 && str_contains($m->render(), 'Passwort jetzt festlegen');
@@ -163,7 +163,7 @@ class PortalAccountManagementTest extends TestCase
         $user = User::where('email', 'max@neu.de')->first();
         $this->assertTrue(Hash::check('01.01.1990', $user->password));
         $this->assertNotNull($user->invitation_sent_at);
-        Mail::assertQueued(CustomerWelcomeMail::class, fn ($m) => $m->mode === 'birthdate');
+        Mail::assertSent(CustomerWelcomeMail::class, fn ($m) => $m->mode === 'birthdate');
     }
 
     public function test_store_customer_with_manual_password_still_works(): void
@@ -176,7 +176,7 @@ class PortalAccountManagementTest extends TestCase
         $user = User::where('email', 'manu@ell.de')->first();
         $this->assertTrue(Hash::check('super-sicher-123', $user->password));
         $this->assertNotNull($user->portal_password_set_at);
-        Mail::assertQueued(CustomerWelcomeMail::class, fn ($m) => $m->mode === 'manual');
+        Mail::assertSent(CustomerWelcomeMail::class, fn ($m) => $m->mode === 'manual');
     }
 
     // ---------- Passwort-Reset (kein 500 mehr) ----------
@@ -189,7 +189,7 @@ class PortalAccountManagementTest extends TestCase
             ->assertSessionHas('status')
             ->assertSessionHasNoErrors();
 
-        Mail::assertQueued(PasswordResetMail::class, function (PasswordResetMail $m) {
+        Mail::assertSent(PasswordResetMail::class, function (PasswordResetMail $m) {
             $html = $m->render();
             return $m->hasTo('erika@kunde.de')
                 && str_contains($html, 'Passwort zurücksetzen')
@@ -317,11 +317,11 @@ class PortalAccountManagementTest extends TestCase
 
         $this->actingAs($this->admin)->post(route('admin.customer.portal.invite', $customer->id))
             ->assertSessionHas('success');
-        Mail::assertQueued(CustomerWelcomeMail::class);
+        Mail::assertSent(CustomerWelcomeMail::class);
 
         $this->actingAs($this->admin)->post(route('admin.customer.portal.reset_link', $customer->id))
             ->assertSessionHas('success');
-        Mail::assertQueued(PasswordResetMail::class);
+        Mail::assertSent(PasswordResetMail::class);
 
         $this->actingAs($this->admin)->post(route('admin.customer.portal.reset', $customer->id))
             ->assertSessionHas('success');

@@ -496,7 +496,7 @@ class SmartDocumentUploadTest extends TestCase
         ]);
 
         $response->assertOk()->assertJson(['invited' => true]);
-        Mail::assertQueued(CustomerWelcomeMail::class, 1);
+        Mail::assertSent(CustomerWelcomeMail::class, 1);
         $this->assertNotNull($customer->user->fresh()->invitation_sent_at);
         $this->assertSame(1, (int) $customer->user->fresh()->invitation_count);
     }
@@ -595,7 +595,7 @@ class SmartDocumentUploadTest extends TestCase
         ]);
 
         $response->assertOk()->assertJson(['invited' => true]);
-        Mail::assertQueued(CustomerWelcomeMail::class, 1);
+        Mail::assertSent(CustomerWelcomeMail::class, 1);
         $customer = Customer::findOrFail($doc->fresh()->customer_id);
         $this->assertSame('neu.kunde@example.com', $customer->user->email);
         $this->assertNotNull($customer->user->invitation_sent_at);

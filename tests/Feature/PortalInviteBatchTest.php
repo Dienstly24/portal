@@ -53,7 +53,7 @@ class PortalInviteBatchTest extends TestCase
 
         $this->artisan('portal:send-invitations')->assertSuccessful();
 
-        Mail::assertQueued(CustomerWelcomeMail::class, 2);
+        Mail::assertSent(CustomerWelcomeMail::class, 2);
         $this->assertNotNull($c->user->fresh()->invitation_sent_at);
         $this->assertSame(1, (int) $c->user->fresh()->invitation_count);
     }
@@ -80,7 +80,7 @@ class PortalInviteBatchTest extends TestCase
 
         $this->artisan('portal:send-invitations')->assertSuccessful();
 
-        Mail::assertQueued(CustomerWelcomeMail::class, 1);
+        Mail::assertSent(CustomerWelcomeMail::class, 1);
     }
 
     public function test_respects_daily_cap(): void
@@ -94,6 +94,6 @@ class PortalInviteBatchTest extends TestCase
 
         $this->artisan('portal:send-invitations')->assertSuccessful();
 
-        Mail::assertQueued(CustomerWelcomeMail::class, 2);
+        Mail::assertSent(CustomerWelcomeMail::class, 2);
     }
 }

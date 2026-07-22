@@ -32,6 +32,14 @@ class PortalAccessService
      * das Startpasswort; ohne Geburtsdatum enthält die Mail einen
      * Passwort-Setzen-Link (Reset-Broker-Token).
      *
+     * WICHTIG: Ein bereits nutzbares Passwort (portal_password_set_at
+     * gesetzt) wird NIE ueberschrieben. Der 7-Tage-Erinnerungs-Batch
+     * und "Einladung erneut senden" haben sonst Kunden, die ihr
+     * Passwort schon gesetzt (aber sich noch nicht eingeloggt) hatten,
+     * still das Passwort zurueckgesetzt -> "mein Passwort geht nicht".
+     * Bewusstes Zuruecksetzen laeuft ueber resetPortal(), das den
+     * Timestamp vorher leert.
+     *
      * @throws \RuntimeException wenn keine echte E-Mail vorliegt
      */
     public function sendInvitation(Customer $customer, ?int $actorId = null): void
@@ -43,17 +51,24 @@ class PortalAccessService
 
         $initialPassword = $this->initialPasswordFor($customer);
         $setPasswordUrl = null;
+        $hasUsablePassword = $user->portal_password_set_at !== null;
 
         if ($initialPassword !== null) {
-            $user->forceFill([
-                'password' => bcrypt($initialPassword),
-                'portal_password_set_at' => now(),
-            ])->save();
+            if (!$hasUsablePassword) {
+                $user->forceFill([
+                    'password' => bcrypt($initialPassword),
+                    'portal_password_set_at' => now(),
+                ])->save();
+            }
             $mode = 'birthdate';
         } else {
             // Kein Geburtsdatum: zufälliges (unbekanntes) Passwort + Link
             // zum Selbst-Setzen über den regulären Reset-Broker.
-            $user->forceFill(['password' => bcrypt(Str::random(40))])->save();
+            if (!$hasUsablePassword) {
+                $user->forceFill(['password' => bcrypt(Str::random(40))])->save();
+            }
+            // createToken() laesst das Passwort unangetastet - der Link
+            // funktioniert auch, wenn der Kunde schon eines gesetzt hat.
             $token = Password::broker()->createToken($user);
             $setPasswordUrl = route('password.reset', ['token' => $token, 'email' => $user->email]);
             $mode = 'setlink';
