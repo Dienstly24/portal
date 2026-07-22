@@ -17,8 +17,15 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;">
         <div>
-            <div class="page-title">{{ $customer->user?->name }}</div>
-            <div style="font-size:14px;color:var(--ink-soft);">{{ $customer->customer_number }} · {{ $customer->user?->email }}</div>
+            <div class="page-title" style="display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <span>{{ $customer->user?->name }}</span>
+                @if($customer->birth_date)
+                <span style="font-size:13px;font-weight:600;color:var(--ink-soft);background:var(--surface-soft,#F4F5F7);border:1px solid var(--line);border-radius:12px;padding:2px 10px;white-space:nowrap;">🎂 {{ \Carbon\Carbon::parse($customer->birth_date)->format('d.m.Y') }}</span>
+                @endif
+            </div>
+            <div style="font-size:14px;color:var(--ink-soft);">
+                {{ $customer->customer_number }}@if($customer->user?->email) · {{ $customer->user?->email }}@endif
+            </div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
             <button type="button" class="btn btn-ghost" onclick="openMessagesTab()">📨 Nachricht senden</button>
