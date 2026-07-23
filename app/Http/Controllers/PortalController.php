@@ -27,6 +27,9 @@ class PortalController extends Controller
             'tickets' => Ticket::where('customer_id', $customer->id)->latest()->take(3)->get(),
             'completeness' => $customer->completeness(),
             'banners' => $this->bannersFor(auth()->id()),
+            // Badge auf der Kontakt-Hero-Karte (Chat starten)
+            'unreadMessages' => \App\Models\CustomerMessage::where('customer_id', $customer->id)
+                ->fromStaff()->unread()->count(),
         ]);
     }
 

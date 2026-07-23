@@ -61,6 +61,57 @@
 <div class="page-title">{{ __('Übersicht') }}</div>
 <div class="page-sub">{{ __('Willkommen zurück') }}, {{ auth()->user()->name }}.</div>
 
+{{-- Kontakt-Hero: Chat, Anfrage und Dokument-Upload immer einen Klick
+     entfernt. "Chat starten" oeffnet auf Desktop/Tablet direkt das
+     schwebende Chat-Widget, auf Mobile die Nachrichten-Seite. --}}
+<style>
+.hero-contact{background:linear-gradient(135deg,var(--petrol),var(--petrol-dark));border-radius:14px;padding:22px;color:#fff;margin-bottom:24px;position:relative;overflow:hidden;}
+.hero-contact::after{content:'';position:absolute;top:-50px;inset-inline-end:-50px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(23,166,91,.22),transparent 70%);pointer-events:none;}
+.hero-kicker{color:var(--akzent-hell);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;}
+.hero-title{font-size:19px;font-weight:700;margin:6px 0 4px;}
+.hero-text{color:rgba(255,255,255,.72);font-size:13px;margin-bottom:16px;}
+.hero-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;position:relative;}
+.hero-act{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:11px;padding:13px 12px;text-decoration:none;color:#fff;display:block;transition:.15s;}
+.hero-act:hover{background:rgba(23,166,91,.18);border-color:rgba(23,166,91,.55);transform:translateY(-2px);}
+.hero-act.hero-act-primary{background:linear-gradient(135deg,#19b463,#128a4b);border-color:transparent;}
+.hero-act .hero-ico{font-size:22px;line-height:1;display:block;}
+.hero-act .hero-lbl{font-weight:700;font-size:13.5px;margin-top:6px;display:flex;align-items:center;gap:7px;}
+.hero-act .hero-sub{font-size:11.5px;color:rgba(255,255,255,.62);margin-top:2px;display:block;line-height:1.45;}
+.hero-act.hero-act-primary .hero-sub{color:rgba(255,255,255,.85);}
+.hero-badge{background:#E24B4A;color:#fff;font-size:10.5px;font-weight:800;border-radius:999px;padding:1px 7px;}
+@media (max-width:820px){.hero-actions{grid-template-columns:1fr;}.hero-contact{padding:18px;}}
+</style>
+<div class="hero-contact">
+    <div class="hero-kicker">{{ __('Schneller Draht zu uns') }}</div>
+    <div class="hero-title">{{ __('Wie können wir Ihnen helfen?') }}</div>
+    <div class="hero-text">{{ __('Schreiben Sie uns einfach – wie in Ihrem Messenger. Wir melden uns schnellstmöglich.') }}</div>
+    <div class="hero-actions">
+        <a href="{{ route('portal.messages') }}" class="hero-act hero-act-primary" id="hero-chat">
+            <span class="hero-ico">💬</span>
+            <span class="hero-lbl">{{ __('Chat starten') }}@if(($unreadMessages ?? 0) > 0)<span class="hero-badge">{{ $unreadMessages }}</span>@endif</span>
+            <span class="hero-sub">{{ __('Direkt an Ihr Team') }}</span>
+        </a>
+        <a href="{{ route('portal.tickets.create') }}" class="hero-act">
+            <span class="hero-ico">📝</span>
+            <span class="hero-lbl">{{ __('Anfrage stellen') }}</span>
+            <span class="hero-sub">{{ __('Schaden, Änderung, Angebot') }}</span>
+        </a>
+        <a href="{{ route('portal.documents') }}" class="hero-act">
+            <span class="hero-ico">📤</span>
+            <span class="hero-lbl">{{ __('Dokument senden') }}</span>
+            <span class="hero-sub">{{ __('Foto oder PDF – wir kümmern uns') }}</span>
+        </a>
+    </div>
+</div>
+<script>
+document.getElementById('hero-chat').addEventListener('click', function (e) {
+    if (window.d24ChatOpen && window.matchMedia('(min-width:821px)').matches) {
+        e.preventDefault();
+        window.d24ChatOpen();
+    }
+});
+</script>
+
 {{-- Onboarding: freiwillige E-Mail-Archivierung anbieten, solange keine
      aktive Einwilligung vorliegt. Rein optional (Art. 7 DSGVO); der Kunde
      kann jederzeit "Später" waehlen (lokal ausgeblendet) oder im Portal
