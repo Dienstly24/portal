@@ -159,23 +159,9 @@
 <div id="section-familie" class="card" style="max-width:760px;display:none;">
     <div class="card-title" style="margin-bottom:20px;">Familie & Kinder</div>
     @php $family = $customer->family ?? collect(); @endphp
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;">
     @forelse($family as $f)
-    @php
-        $age = $f->birth_date ? \Carbon\Carbon::parse($f->birth_date)->age : null;
-        $g = strtolower($f->geschlecht ?? '');
-        $isKind = $f->relation === 'Kind';
-        $icon = $isKind ? ($g === 'w' ? '👧' : ($g === 'm' ? '👦' : '🧒')) : ($g === 'w' ? '👩' : ($g === 'm' ? '👨' : '👤'));
-    @endphp
-    <div style="border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center;position:relative;background:#FAFBFC;">
-        <form method="POST" action="{{ route('admin.customer.family.delete', $f->id) }}" onsubmit="return confirm('Familienmitglied wirklich entfernen?')" style="position:absolute;top:6px;right:10px;margin:0;">
-            @csrf @method('DELETE')
-            <button type="submit" style="background:none;border:0;cursor:pointer;color:#A32D2D;font-size:13px;padding:0;">✕</button>
-        </form>
-        <div style="font-size:34px;">{{ $icon }}</div>
-        <div style="font-size:13px;font-weight:700;margin-top:6px;">{{ $f->name }}</div>
-        <div style="font-size:11.5px;color:var(--ink-soft);margin-top:2px;">{{ $f->relation }}{{ $age !== null ? ' · '.$age.' J.' : '' }}{{ $g ? ' · '.$g : '' }}</div>
-    </div>
+        @include('admin.partials.family_member_card', ['f' => $f, 'showDelete' => true])
     @empty
     <div style="grid-column:1/-1;text-align:center;padding:12px;color:var(--ink-soft);font-size:13px;">Keine Familienmitglieder vorhanden</div>
     @endforelse
@@ -210,7 +196,10 @@
             <div class="field"><label>Steuernummer / Steuer-ID</label><input type="text" name="family_steuer[]" placeholder="z.B. 12 345 678 901"></div>
             <div class="field"><label>Geschlecht</label>
                 <select name="family_geschlecht[]" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
-                    <option value="">—</option><option value="m">Männlich (m)</option><option value="w">Weiblich (w)</option>
+                    <option value="">—</option>
+                    @foreach(\App\Models\CustomerFamily::GENDERS as $gkey => $glabel)
+                    <option value="{{ $gkey }}">{{ $glabel }}</option>
+                    @endforeach
                 </select>
             </div>
         </div>
@@ -286,7 +275,11 @@ function showTab(tab) {
     var f = document.getElementById('section-firma');
     if (f) { f.style.display = (tab === 'basis' && window.IS_FIRMA) ? 'block' : 'none'; }
 }
-showTab('basis');
+// Direktsprung per URL-Anker (z. B. aus der Kundenakte: ...bearbeiten#familie)
+(function () {
+    var h = (window.location.hash || '').replace('#', '');
+    showTab(['familie', 'portal'].includes(h) ? h : 'basis');
+})();
 </script>
 @include('admin.partials.phone_hints')
 @endsection

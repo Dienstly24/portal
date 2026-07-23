@@ -297,7 +297,7 @@ class AdminController extends Controller
                 ['viewed_at' => now()]
             );
         }
-        $customer = Customer::with(['user','contracts.vehicleDetail.claims','contracts.vehicleDetail.mileageReadings','contracts.energyDetail','contracts.internetDetail','contracts.switchReminders','tickets','documents','changeRequests.reviewer'])->findOrFail($id);
+        $customer = Customer::with(['user','contracts.vehicleDetail.claims','contracts.vehicleDetail.mileageReadings','contracts.energyDetail','contracts.internetDetail','contracts.switchReminders','tickets','documents','family','changeRequests.reviewer'])->findOrFail($id);
         // Interner Chat & Notizen (nur Staff - Zugriff bereits oben geprüft)
         $internalChat = \App\Models\InternalMessage::chat()->where('customer_id', $id)->with('sender')->orderBy('created_at')->get();
         $internalNotes = \App\Models\InternalMessage::note()->where('customer_id', $id)->with('sender')->latest()->get();
@@ -980,11 +980,15 @@ class AdminController extends Controller
             ]);
             foreach ($request->family_name as $i => $fname) {
                 if (!trim((string) $fname)) continue;
+                $fgender = $request->family_geschlecht[$i] ?? null;
                 \App\Models\CustomerFamily::create([
                     'customer_id' => $customer->id,
                     'name' => trim($fname),
                     'relation' => $request->family_relation[$i] ?? 'Kind',
                     'birth_date' => ($request->family_birth[$i] ?? null) ?: null,
+                    // Geschlecht (male|female) - wurde bislang aus dem Formular
+                    // nicht uebernommen und ging verloren.
+                    'gender' => in_array($fgender, array_keys(\App\Models\CustomerFamily::GENDERS), true) ? $fgender : null,
                     // KV-Daten je Person (Spec Teil 3 / Final Polish Punkt 1)
                     'health_insurance_company' => ($request->family_kv_company[$i] ?? null) ?: null,
                     'health_insurance_number' => ($request->family_kv_nr[$i] ?? null) ?: null,
