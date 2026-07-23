@@ -24,9 +24,22 @@ php artisan down --retry=15 || true
 composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
 # 3) Frontend-Assets bauen (public/build ist nicht im Repo).
+#    Sicherheitsnetz: vite leert public/build VOR dem Bauen. Schlaegt der
+#    Build fehl, fehlt sonst das manifest.json und JEDE Seite antwortet
+#    mit einem 500er. Deshalb vorher sichern, im Fehlerfall zuruecklegen
+#    und den Deploy LAUT abbrechen (Migration/Caches laufen dann nicht).
 if [ -f package-lock.json ]; then
-  npm ci --no-audit --no-fund
-  npm run build
+  rm -rf public/build.bak
+  if [ -d public/build ]; then cp -a public/build public/build.bak; fi
+  if npm ci --no-audit --no-fund && npm run build; then
+    rm -rf public/build.bak
+  else
+    echo "!! FEHLER: Asset-Build fehlgeschlagen - vorherige Assets werden"
+    echo "!! wiederhergestellt, Deploy wird abgebrochen (App geht per trap"
+    echo "!! wieder online, laeuft aber mit dem ALTEN Build weiter)."
+    if [ -d public/build.bak ]; then rm -rf public/build && mv public/build.bak public/build; fi
+    exit 1
+  fi
 fi
 
 # 4) Datenbank migrieren (additiv; --force = ohne Rückfrage in Produktion).
