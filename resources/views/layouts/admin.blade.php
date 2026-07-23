@@ -186,7 +186,8 @@ table tr:hover td{background:#EDEAE0;}
 
         // Gruppen-Summen fuer den eingeklappten Zustand.
         $grpKunden   = $docReqCount + $docInboxCount + $pendingCR;
-        $grpKomm     = $suggestedMails + $unreadChat + $activeAnn + $openT + $unreadCustMsg;
+        $grpKomm     = $unreadChat + $activeAnn + $openT + $unreadCustMsg;
+        $grpMail     = $suggestedMails;
         $grpArbeit   = $openTasks + $todayAppt;
         $grpVertrieb = $pendingCommissions;
     @endphp
@@ -240,22 +241,11 @@ table tr:hover td{background:#EDEAE0;}
             <svg class="nav-group-caret" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
         </button>
         <div class="nav-group-body">
-            @if(in_array($navRole, ['admin','manager','support']))
-            <a href="{{ route('admin.email_inbox') }}" class="nav-item {{ request()->routeIs('admin.email_inbox*') ? 'active' : '' }}">
-                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                E-Mail-Posteingang
-                @if($suggestedMails > 0)<span class="nav-badge">{{ $suggestedMails }}</span>@endif
-            </a>
-            @endif
-            @if(in_array($navRole, ['admin','manager','support']) || $navUser->can_send_emails)
-            <a href="{{ route('admin.email.compose') }}" class="nav-item {{ request()->routeIs('admin.email.compose*') ? 'active' : '' }}">
-                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                E-Mail verfassen
-            </a>
-            @endif
-            <a href="{{ route('admin.email_marketing') }}" class="nav-item {{ request()->routeIs('admin.email_marketing*') ? 'active' : '' }}">
-                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                E-Mail Marketing
+            {{-- Zentrale zuerst: EINE Unterhaltung pro Kunde (Omnichannel) --}}
+            <a href="{{ route('admin.customer_chat') }}" class="nav-item {{ request()->routeIs('admin.customer_chat*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                Kundenkommunikation
+                @if($unreadCustMsg > 0)<span class="nav-badge" style="background:#E24B4A;color:#fff;">{{ $unreadCustMsg }}</span>@endif
             </a>
             <a href="{{ route('admin.tickets') }}" class="nav-item {{ request()->routeIs('admin.tickets*') ? 'active' : '' }}">
                 <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
@@ -268,11 +258,6 @@ table tr:hover td{background:#EDEAE0;}
                 Anfragen
             </a>
             @endif
-            <a href="{{ route('admin.customer_chat') }}" class="nav-item {{ request()->routeIs('admin.customer_chat*') ? 'active' : '' }}">
-                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
-                Kunden-Chat
-                @if($unreadCustMsg > 0)<span class="nav-badge" style="background:#E24B4A;color:#fff;">{{ $unreadCustMsg }}</span>@endif
-            </a>
             <a href="{{ route('admin.chat.index') }}" class="nav-item {{ request()->routeIs('admin.chat*') ? 'active' : '' }}">
                 <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4-.8L3 21l1.5-4A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                 Interner Chat
@@ -282,6 +267,34 @@ table tr:hover td{background:#EDEAE0;}
                 <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
                 Ankündigungen
                 @if($activeAnn > 0)<span class="nav-badge">{{ $activeAnn }}</span>@endif
+            </a>
+        </div>
+    </div>
+
+    {{-- Gruppe: E-Mail (Marketing bewusst getrennt vom Kundenservice) --}}
+    <div class="nav-group" data-group="email">
+        <button type="button" class="nav-group-header" onclick="toggleNavGroup(this)" aria-expanded="true">
+            <span class="nav-group-title">E-Mail</span>
+            @if($grpMail > 0)<span class="nav-badge nav-group-badge">{{ $grpMail }}</span>@endif
+            <svg class="nav-group-caret" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div class="nav-group-body">
+            @if(in_array($navRole, ['admin','manager','support']))
+            <a href="{{ route('admin.email_inbox') }}" class="nav-item {{ request()->routeIs('admin.email_inbox*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                Posteingang
+                @if($suggestedMails > 0)<span class="nav-badge">{{ $suggestedMails }}</span>@endif
+            </a>
+            @endif
+            @if(in_array($navRole, ['admin','manager','support']) || $navUser->can_send_emails)
+            <a href="{{ route('admin.email.compose') }}" class="nav-item {{ request()->routeIs('admin.email.compose*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                Verfassen
+            </a>
+            @endif
+            <a href="{{ route('admin.email_marketing') }}" class="nav-item {{ request()->routeIs('admin.email_marketing*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                Marketing
             </a>
         </div>
     </div>

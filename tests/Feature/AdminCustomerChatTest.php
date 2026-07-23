@@ -44,7 +44,7 @@ class AdminCustomerChatTest extends TestCase
 
         $this->actingAs($admin)->get(route('admin.customer_chat'))
             ->assertOk()
-            ->assertSee('Kunden-Chat')
+            ->assertSee('Kundenkommunikation')
             ->assertSee('Max Meyer')
             ->assertSee('Frage zur KFZ-Police')
             ->assertSee('kchat-unread', false);
@@ -205,7 +205,7 @@ class AdminCustomerChatTest extends TestCase
 
         $this->actingAs($admin)->get(route('admin.dashboard'))
             ->assertOk()
-            ->assertSee('Kunden-Chat')
+            ->assertSee('Kundenkommunikation')
             ->assertSee(route('admin.customer_chat'), false);
     }
 }
