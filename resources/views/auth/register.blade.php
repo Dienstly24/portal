@@ -7,14 +7,14 @@
 <title>Dienstly24 — {{ __('Konto erstellen') }}</title>
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 <style>
-:root{--green:#17A65B;--mint:#3ddc8e;--line:rgba(255,255,255,.14);}
+:root{--green:#17A65B;--mint:#3ddc8e;--line:rgba(255,255,255,.14);--gold:#B8A16B;--gold-hell:#D1C18F;--gold-line:rgba(184,161,107,.4);}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Inter',Arial,sans-serif;min-height:100vh;color:#fff;display:flex;flex-direction:column;background:#0B1310;overflow-x:hidden;}
 html,body{height:100%;}
 .bg{position:fixed;inset:0;z-index:-1;background:radial-gradient(1200px 800px at 70% 15%, #1A2C24 0%, #0F1512 48%, #0B1310 100%);}
 .orb{position:absolute;border-radius:50%;filter:blur(90px);opacity:.5;will-change:transform;}
 .orb-a{width:520px;height:520px;background:radial-gradient(circle,#17A65B44,transparent 70%);top:-140px;{{ $rtl ? 'right' : 'left' }}:-120px;animation:drift-a 26s ease-in-out infinite alternate;}
-.orb-b{width:640px;height:640px;background:radial-gradient(circle,#3a3f4644,transparent 70%);bottom:-220px;{{ $rtl ? 'left' : 'right' }}:-160px;animation:drift-b 32s ease-in-out infinite alternate;}
+.orb-b{width:640px;height:640px;background:radial-gradient(circle,#B8A16B33,transparent 70%);bottom:-220px;{{ $rtl ? 'left' : 'right' }}:-160px;animation:drift-b 32s ease-in-out infinite alternate;}
 @keyframes drift-a{from{transform:translate(0,0);}to{transform:translate(70px,50px);}}
 @keyframes drift-b{from{transform:translate(0,0);}to{transform:translate(-80px,-60px);}}
 .bg::after{content:'';position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.05) 1px,transparent 1px);background-size:26px 26px;}
@@ -24,10 +24,10 @@ html,body{height:100%;}
 @media (prefers-reduced-motion: reduce){.orb,.rise{animation:none;}.rise{opacity:1;transform:none;}}
 .topbar{display:flex;align-items:center;justify-content:space-between;max-width:1200px;width:100%;margin:0 auto;padding:clamp(10px,1.8vh,20px) 28px 0;}
 .topbar img{height:clamp(28px,4.5vh,40px);width:auto;display:block;}
-.lang-switch a{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.08);border:1px solid var(--line);color:#dde0e5;text-decoration:none;font-size:13.5px;padding:8px 15px;border-radius:9px;transition:background .2s;}
+.lang-switch a{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.08);border:1px solid var(--gold-line);color:#dde0e5;text-decoration:none;font-size:13.5px;padding:8px 15px;border-radius:9px;transition:background .2s;}
 .lang-switch a:hover{background:rgba(255,255,255,.16);}
 .main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:clamp(10px,2vh,24px) 16px;}
-.card{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:18px;padding:clamp(18px,2.6vh,30px);max-width:520px;width:100%;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 24px 60px rgba(0,0,0,.35);}
+.card{background:rgba(255,255,255,.06);border:1px solid var(--gold-line);border-radius:18px;padding:clamp(18px,2.6vh,30px);max-width:520px;width:100%;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 24px 60px rgba(0,0,0,.35);}
 .card h2{font-size:24px;color:var(--mint);margin-bottom:6px;}
 .card .lead{color:#b7bcc4;font-size:13.5px;line-height:1.5;margin-bottom:clamp(10px,2vh,18px);}
 label{display:block;font-size:13.5px;margin-bottom:7px;color:#dde0e5;}

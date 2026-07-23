@@ -2,7 +2,7 @@
      Passwort-Reset-Strecke on-brand ist statt Breeze-Grau. (Audit UX-8)
      Erwartet eine Variable $rtl im umgebenden Scope. --}}
 <style>
-:root{--green:#17A65B;--mint:#3ddc8e;--line:rgba(255,255,255,.14);}
+:root{--green:#17A65B;--mint:#3ddc8e;--line:rgba(255,255,255,.14);--gold:#B8A16B;--gold-hell:#D1C18F;--gold-line:rgba(184,161,107,.4);}
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;}
 body{font-family:'Inter',Arial,sans-serif;min-height:100vh;color:#fff;display:flex;flex-direction:column;background:#0B1310;}
@@ -10,12 +10,12 @@ body{font-family:'Inter',Arial,sans-serif;min-height:100vh;color:#fff;display:fl
 .bg::after{content:'';position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.05) 1px,transparent 1px);background-size:26px 26px;}
 .topbar{flex:none;display:flex;align-items:center;justify-content:space-between;max-width:1200px;width:100%;margin:0 auto;padding:18px 28px 0;}
 .topbar img{height:36px;width:auto;display:block;}
-.lang-switch a{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.08);border:1px solid var(--line);color:#dde0e5;text-decoration:none;font-size:13px;padding:7px 13px;border-radius:9px;}
+.lang-switch a{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.08);border:1px solid var(--gold-line);color:#dde0e5;text-decoration:none;font-size:13px;padding:7px 13px;border-radius:9px;}
 .main{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;text-align:center;gap:14px;}
-h1{font-size:clamp(20px,3vh,28px);letter-spacing:-.4px;line-height:1.2;}
+h1{font-family:Georgia,'Times New Roman',serif;font-size:clamp(20px,3vh,28px);letter-spacing:-.2px;line-height:1.2;}
 .sub{color:#b7bcc4;font-size:14px;line-height:1.5;max-width:520px;}
-.card{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:18px;padding:28px 30px;max-width:430px;width:100%;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 24px 60px rgba(0,0,0,.35);text-align:{{ $rtl ? 'right' : 'left' }};}
-.card h2{font-size:20px;color:var(--mint);margin-bottom:16px;}
+.card{background:rgba(255,255,255,.06);border:1px solid var(--gold-line);border-radius:18px;padding:28px 30px;max-width:430px;width:100%;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 24px 60px rgba(0,0,0,.35);text-align:{{ $rtl ? 'right' : 'left' }};}
+.card h2{font-size:20px;color:var(--gold-hell);margin-bottom:16px;}
 label{display:block;font-size:13px;margin-bottom:6px;color:#dde0e5;}
 .field{position:relative;margin-bottom:16px;}
 .field input{width:100%;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:10px;color:#fff;font-size:14.5px;padding:12px 13px;outline:none;transition:border-color .2s;}
