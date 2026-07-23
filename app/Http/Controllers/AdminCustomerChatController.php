@@ -41,27 +41,34 @@ class AdminCustomerChatController extends Controller
                 ->get();
         }
 
-        // Aktive Unterhaltung (?kunde=...): Verlauf laden und Kunden-
-        // antworten als gelesen markieren (Chat ist sichtbar).
+        // Aktive Unterhaltung (?kunde=...): EINE chronologische Timeline
+        // ueber alle Kanaele (Omnichannel Phase A); Kundenantworten im Chat
+        // gelten als gelesen, sobald die Unterhaltung sichtbar ist.
         $active = null;
-        $messages = collect();
+        $timeline = collect();
+        $activeTicket = null;
         if ($request->query('kunde')) {
             abort_unless($user->canAccessCustomer($request->query('kunde')), 403);
             $active = Customer::with('user')->findOrFail($request->query('kunde'));
             CustomerMessage::where('customer_id', $active->id)
                 ->fromCustomer()->unread()
                 ->update(['read_at' => now()]);
-            $messages = CustomerMessage::where('customer_id', $active->id)
-                ->with(['sender', 'attachments', 'customer.user'])
-                ->orderBy('created_at')
-                ->get();
+            $timeline = (new \App\Services\CustomerConversationService())->timeline(
+                $active,
+                includeEmails: in_array($user->role, ['admin', 'manager', 'support'], true),
+            );
+            // Schnellaktion Ticket-Status: das juengste noch offene Ticket.
+            $activeTicket = \App\Models\Ticket::where('customer_id', $active->id)
+                ->whereNotIn('status', ['resolved', 'closed'])
+                ->latest()->first();
         }
 
         return view('admin.customer_chat', [
             'conversations' => $conversations,
             'searchResults' => $searchResults,
             'active' => $active,
-            'messages' => $messages,
+            'timeline' => $timeline,
+            'activeTicket' => $activeTicket,
             'templates' => \App\Models\MessageTemplate::where('category', 'kunde')
                 ->orderBy('sort')->orderBy('name')->get(['id', 'name']),
         ]);
