@@ -35,6 +35,14 @@ class CustomerMessageController extends Controller
 
         CustomerMessageNotifier::notifyCustomer($message, $request->email_mode);
 
+        // Kunden-Chat (Beraterwelt) sendet per fetch() und rendert selbst.
+        if ($request->wantsJson()) {
+            return response()->json([
+                'ok' => true,
+                'message' => $message->load(['sender', 'attachments', 'customer.user'])->toChatPayload(staffView: true),
+            ]);
+        }
+
         return redirect(route('admin.customer', $customer->id) . '#tab-nachrichten')
             ->with('success', 'Nachricht an den Kunden gesendet.');
     }

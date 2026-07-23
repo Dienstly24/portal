@@ -574,9 +574,12 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
 
 {{-- Direktnachrichten: sichtbar fuer den Kunden im Portal (Gegenstueck zu "Intern") --}}
 <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:10px;flex-wrap:wrap;">
         <div class="card-title">📨 Nachrichten an den Kunden</div>
-        <span style="font-size:11.5px;background:#D9F4E6;color:#17A65B;border:1px solid #CBE3D2;padding:3px 10px;border-radius:999px;">👁 Für den Kunden im Portal sichtbar</span>
+        <span style="display:inline-flex;align-items:center;gap:10px;">
+            <a href="{{ route('admin.customer_chat', ['kunde' => $customer->id]) }}" style="font-size:12px;color:var(--ink);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:4px 12px;">💬 Im Kunden-Chat öffnen →</a>
+            <span style="font-size:11.5px;background:#D9F4E6;color:#17A65B;border:1px solid #CBE3D2;padding:3px 10px;border-radius:999px;">👁 Für den Kunden im Portal sichtbar</span>
+        </span>
     </div>
     <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;">Der Kunde sieht diese Unterhaltung im Kundenportal unter „Nachrichten" und kann dort antworten – auch mit Anhängen (PDF/Bilder).</p>
     @if(!$customer->user?->hasRealEmail())

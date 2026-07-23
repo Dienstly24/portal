@@ -171,6 +171,9 @@ table tr:hover td{background:#EDEAE0;}
         $crQ = \App\Models\CustomerChangeRequest::where('status','pending');
         if (!$navCanAll) { $crQ->whereIn('customer_id', $navUser->visibleCustomerIdsWithSubstitution()); }
         $pendingCR = $crQ->count();
+        // Ungelesene Kundenantworten aus dem Portal-Chat (Kunden-Chat).
+        $unreadCustMsg = \App\Models\CustomerMessage::fromCustomer()->unread()
+            ->when($navIds !== null, fn($q) => $q->whereIn('customer_id', $navIds))->count();
         $unreadChat = \App\Models\InternalConversationParticipant::where('user_id', $navUser->id)
             ->whereHas('conversation', function ($q) {
                 $q->whereColumn('internal_conversations.last_message_at', '>', 'internal_conversation_participants.last_read_at')
@@ -183,7 +186,7 @@ table tr:hover td{background:#EDEAE0;}
 
         // Gruppen-Summen fuer den eingeklappten Zustand.
         $grpKunden   = $docReqCount + $docInboxCount + $pendingCR;
-        $grpKomm     = $suggestedMails + $unreadChat + $activeAnn + $openT;
+        $grpKomm     = $suggestedMails + $unreadChat + $activeAnn + $openT + $unreadCustMsg;
         $grpArbeit   = $openTasks + $todayAppt;
         $grpVertrieb = $pendingCommissions;
     @endphp
@@ -265,6 +268,11 @@ table tr:hover td{background:#EDEAE0;}
                 Anfragen
             </a>
             @endif
+            <a href="{{ route('admin.customer_chat') }}" class="nav-item {{ request()->routeIs('admin.customer_chat*') ? 'active' : '' }}">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                Kunden-Chat
+                @if($unreadCustMsg > 0)<span class="nav-badge" style="background:#E24B4A;color:#fff;">{{ $unreadCustMsg }}</span>@endif
+            </a>
             <a href="{{ route('admin.chat.index') }}" class="nav-item {{ request()->routeIs('admin.chat*') ? 'active' : '' }}">
                 <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4-.8L3 21l1.5-4A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                 Interner Chat

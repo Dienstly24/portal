@@ -292,6 +292,7 @@ class Customer extends Model {
     public function consents() { return $this->hasMany(CustomerConsent::class); }
     public function family() { return $this->hasMany(CustomerFamily::class); }
     public function vehicles() { return $this->hasMany(CustomerVehicle::class); }
+    public function messages() { return $this->hasMany(CustomerMessage::class); }
     public function notes() { return $this->hasMany(CustomerNote::class)->latest(); }
     public function timeline() { return $this->hasMany(CustomerTimeline::class)->latest(); }
     public function appointments() { return $this->hasMany(Appointment::class); }

@@ -60,7 +60,7 @@ class PortalMessageController extends Controller
 
         return response()->json([
             'unread' => $messages->where('from_staff', true)->whereNull('read_at')->count(),
-            'messages' => $messages->map(fn ($m) => $this->messagePayload($m))->values(),
+            'messages' => $messages->map(fn ($m) => $m->toChatPayload())->values(),
         ]);
     }
 
@@ -87,34 +87,11 @@ class PortalMessageController extends Controller
         if ($request->wantsJson()) {
             return response()->json([
                 'ok' => true,
-                'message' => $this->messagePayload($message->load(['sender', 'attachments'])),
+                'message' => $message->load(['sender', 'attachments'])->toChatPayload(),
             ]);
         }
 
         return redirect()->route('portal.messages')->with('success', __('Nachricht gesendet.'));
-    }
-
-    /** Einheitliche Nachricht-Struktur fuer Feed und Sende-Antwort. */
-    private function messagePayload(CustomerMessage $m): array
-    {
-        return [
-            'id' => $m->id,
-            'from_staff' => $m->from_staff,
-            'sender' => $m->from_staff ? ($m->sender?->name ?? 'Dienstly24 Team') : __('Sie'),
-            'body' => $m->body,
-            'day' => $m->created_at->isToday()
-                ? __('Heute')
-                : ($m->created_at->isYesterday() ? __('Gestern') : $m->created_at->format('d.m.Y')),
-            'time' => $m->created_at->format('H:i'),
-            'read' => $m->read_at !== null,
-            'attachments' => $m->attachments->map(fn ($a) => [
-                'id' => $a->id,
-                'name' => $a->file_name,
-                'kind' => $a->isImage() ? 'image' : ($a->isPdf() ? 'pdf' : 'file'),
-                'view_url' => $a->isViewable() ? route('portal.messages.attachment.view', $a->id) : null,
-                'download_url' => route('portal.messages.attachment', $a->id),
-            ])->values()->all(),
-        ];
     }
 
     public function downloadAttachment($id)
