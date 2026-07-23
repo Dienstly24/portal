@@ -44,6 +44,17 @@
 .kx-status{display:inline-flex;gap:6px;align-items:center;font-size:12px;color:var(--ink-soft);margin:0;}
 .kx-status select{padding:5px 9px;border:1px solid var(--line);border-radius:999px;font-size:12px;background:#fff;}
 .kx-note-btn{border:1px solid #E7D9A8;background:#FBF6E4;border-radius:999px;padding:4px 11px;font-size:12px;font-weight:600;color:#8a7846;cursor:pointer;}
+.kx-ticket-btn{border:1px solid var(--petrol);background:var(--petrol);color:#fff;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer;}
+.kx-ticket-btn:hover{background:var(--petrol-dark);}
+/* Problem-Cockpit: aktiver Vorgang als Balken unter dem Kopf */
+.kx-cockpit{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:8px 14px;background:#F3F1E8;border-bottom:1px solid var(--line);text-decoration:none;color:var(--ink);font-size:12.5px;}
+.kx-cockpit:hover{background:#ECE9DC;}
+.kx-cockpit.overdue{background:#FBECEC;border-bottom-color:#E4B4B4;}
+.kx-cp-ticket{font-weight:800;color:var(--petrol);}
+.kx-cp-prio{font-weight:600;}
+.kx-cp-subject{color:var(--ink-soft);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.kx-cp-sla{margin-inline-start:auto;font-weight:700;color:var(--ink-soft);flex:none;}
+.kx-cp-sla.overdue{color:#B3261E;}
 .kx-note{display:flex;gap:8px;padding:8px 12px;background:#FBF6E4;border-bottom:1px solid #E7D9A8;align-items:flex-end;}
 .kx-note[hidden]{display:none;}
 .kx-note textarea{flex:1;border:1px solid #E7D9A8;border-radius:9px;padding:8px 11px;font-size:13px;font-family:inherit;resize:vertical;background:#fff;}
@@ -116,6 +127,22 @@
             </div>
             <a class="kchat-head-link" href="{{ route('admin.customer', $active->id) }}">Kundenakte →</a>
         </div>
+        {{-- Problem-Cockpit: der aktive Vorgang auf einen Blick. Macht die
+             Unterhaltung zur Problemloese-Zentrale (Status, Prioritaet,
+             SLA/Ueberfaellig) statt nur zum Chatfenster. --}}
+        @if($activeTicket)
+        <a class="kx-cockpit {{ $activeTicket->isOverdue() ? 'overdue' : '' }}" href="{{ route('admin.ticket', $activeTicket->id) }}" title="Ticket öffnen">
+            <span class="kx-cp-ticket">🎫 #{{ $activeTicket->ticket_number }}</span>
+            <span class="badge badge-{{ $activeTicket->statusBadge() }}">{{ $activeTicket->statusLabel() }}</span>
+            <span class="kx-cp-prio">{{ $activeTicket->priorityLabel() }}</span>
+            <span class="kx-cp-subject">{{ \Illuminate\Support\Str::limit($activeTicket->subject, 48) }}</span>
+            @if($activeTicket->isOverdue())
+            <span class="kx-cp-sla overdue">⏰ SLA überfällig – Frist war {{ $activeTicket->due_at->format('d.m. H:i') }}</span>
+            @elseif($activeTicket->due_at && !$activeTicket->first_response_at && !$activeTicket->isFinished())
+            <span class="kx-cp-sla">⏱ Erstantwort bis {{ $activeTicket->due_at->format('d.m. H:i') }}</span>
+            @endif
+        </a>
+        @endif
         {{-- Omnichannel: Kanal-Filter + Schnellaktionen (Ticket-Status,
              interne Notiz) - ohne die Seite zu verlassen. --}}
         <div class="kx-bar">
@@ -133,7 +160,7 @@
                 @if($activeTicket && (auth()->user()->role !== 'employee' || auth()->user()->can_manage_tickets))
                 <form method="POST" action="{{ route('admin.ticket.status', $activeTicket->id) }}" class="kx-status">
                     @csrf
-                    <span title="{{ $activeTicket->subject }}">🎫 #{{ $activeTicket->ticket_number }}</span>
+                    <span>Status ändern:</span>
                     <select name="status" onchange="this.form.submit()" aria-label="Ticket-Status">
                         @foreach(\App\Models\Ticket::STATUSES as $val => $label)
                         <option value="{{ $val }}" @selected($activeTicket->status === $val)>{{ $label }}</option>
@@ -155,6 +182,9 @@
                 @if(in_array(auth()->user()->role, ['admin','manager','support']) || auth()->user()->can_send_emails)
                 <a class="kx-note-btn" style="background:#fff;border-color:var(--line);color:var(--ink-soft);text-decoration:none;" href="{{ route('admin.email.compose', ['customer_id' => $active->id]) }}">✉️ E-Mail verfassen</a>
                 @endif
+                @if(auth()->user()->role !== 'employee' || auth()->user()->can_manage_tickets)
+                <button type="button" class="kx-ticket-btn" onclick="document.getElementById('kx-ticket-modal').style.display='flex'">🎫 Vorgang erstellen</button>
+                @endif
                 <button type="button" class="kx-note-btn" onclick="const n=document.getElementById('kx-note');n.hidden=!n.hidden;if(!n.hidden)n.querySelector('textarea').focus();">🔒 Notiz</button>
             </div>
         </div>
@@ -173,6 +203,53 @@
             <button type="submit" class="btn btn-gold" style="padding:7px 16px;font-size:13px;">Speichern</button>
         </form>
         <button type="button" id="kx-refresh" class="kx-refresh" hidden onclick="location.reload()">⟳ Neue Ereignisse – Ansicht aktualisieren</button>
+
+        {{-- "Anfrage -> Conversation -> Ticket": Vorgang aus der laufenden
+             Unterhaltung eroeffnen, Beschreibung aus der letzten
+             Kundennachricht vorbefuellt. Der Chatverlauf bleibt erhalten. --}}
+        @if(auth()->user()->role !== 'employee' || auth()->user()->can_manage_tickets)
+        <div id="kx-ticket-modal" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.5);align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)this.style.display='none'">
+            <form method="POST" action="{{ route('admin.customer_chat.ticket', $active->id) }}" style="background:#fff;border-radius:14px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;padding:24px;">
+                @csrf
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                    <div style="font-size:16px;font-weight:700;">🎫 Vorgang erstellen</div>
+                    <button type="button" onclick="document.getElementById('kx-ticket-modal').style.display='none'" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--ink-soft);">✕</button>
+                </div>
+                <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;">Für {{ $active->user?->name ?? 'diesen Kunden' }} (Nr. {{ $active->customer_number }}). Der Chatverlauf bleibt erhalten – das Ticket ist nur der Bearbeitungs-Status.</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                    <label style="font-size:12.5px;color:var(--ink-soft);">Art
+                        <select name="type" required style="width:100%;margin-top:4px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+                            @foreach(\App\Models\Ticket::TYPES as $val => $label)
+                            <option value="{{ $val }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                    <label style="font-size:12.5px;color:var(--ink-soft);">Priorität
+                        <select name="priority" required style="width:100%;margin-top:4px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+                            <option value="niedrig">🟢 Niedrig</option>
+                            <option value="mittel" selected>🟡 Mittel</option>
+                            <option value="hoch">🔴 Hoch</option>
+                            <option value="dringend">🚨 Dringend</option>
+                        </select>
+                    </label>
+                </div>
+                <label style="font-size:12.5px;color:var(--ink-soft);display:block;margin-bottom:12px;">Betreff
+                    <input type="text" name="subject" required maxlength="255" placeholder="Kurzbeschreibung des Anliegens" style="width:100%;margin-top:4px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+                </label>
+                <label style="font-size:12.5px;color:var(--ink-soft);display:block;margin-bottom:14px;">Beschreibung
+                    <textarea name="description" required rows="4" maxlength="5000" style="width:100%;margin-top:4px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;font-family:inherit;resize:vertical;">{{ $ticketPrefill }}</textarea>
+                </label>
+                <label style="font-size:13px;display:flex;align-items:center;gap:8px;margin-bottom:16px;cursor:pointer;">
+                    <input type="checkbox" name="assign_me" value="1" style="width:auto;"> Mir zuweisen und direkt in Bearbeitung nehmen
+                </label>
+                <div style="display:flex;gap:10px;justify-content:flex-end;">
+                    <button type="button" onclick="document.getElementById('kx-ticket-modal').style.display='none'" class="btn btn-ghost" style="padding:8px 16px;font-size:13px;">Abbrechen</button>
+                    <button type="submit" class="btn btn-gold" style="padding:8px 18px;font-size:13px;">Vorgang eröffnen</button>
+                </div>
+            </form>
+        </div>
+        @endif
+
         <div class="d24c-scroll" id="kc-scroll">
             <div class="d24c-list" id="kc-list" data-last-day="">
                 {{-- EINE Timeline ueber alle Kanaele (gemeinsames Partial

@@ -66,11 +66,31 @@ Kommunikationsweg. Bestehende Funktionen weiterverwenden - kein Neuaufbau.
   Aggregat-Block im Service (eigener `kind`), Meta-Konto/Anbieter
   und DSGVO (AVV, Einwilligung) vorher klaeren.
 
+## Phase C - Vorgang & Problem-Cockpit (umgesetzt)
+
+Das Ticket ist ein STATUS der Unterhaltung, kein zweiter Kanal. Deshalb
+laesst sich der Vorgang jetzt vollstaendig aus der Unterhaltung heraus
+fuehren:
+
+- **"Vorgang erstellen"** in der Kundenkommunikation: oeffnet ein Ticket
+  fuer den Kunden direkt aus dem Chat (Art/Prioritaet/Betreff/
+  Beschreibung; Beschreibung mit der letzten Kundennachricht
+  vorbefuellt). Optional "Mir zuweisen und in Bearbeitung nehmen".
+  Der Chatverlauf bleibt erhalten, man bleibt am selben Ort.
+  Endpoint: POST /admin/kundenchat/{id}/ticket (scoped auf das
+  Portfolio, erfordert can_manage_tickets). Quelle = kundenkommunikation.
+- **Problem-Cockpit** im Kopf der Unterhaltung: der juengste offene
+  Vorgang auf einen Blick - Ticket-Nr., Status-Badge, Prioritaet,
+  Betreff und SLA/Ueberfaellig-Hinweis. So ist die Unterhaltung die
+  Problemloese-Zentrale, nicht nur ein Chatfenster. Status weiter per
+  Schnellaktion aenderbar; Antwort per Kanalwahl direkt ins Ticket.
+
 ## Offen (spaetere Phasen)
 
 - Ausgehende Einzel-E-Mails (Composer) in der Timeline: dafuer muss
   der Versand pro Kunde protokolliert werden (heute nur Marketing-Log).
 - Voll-Live-Rendering der Nicht-Chat-Karten ohne Neuladen.
+- WhatsApp weiterhin nur als wa.me-Bruecke (keine API) - siehe oben.
 
 ## Leitplanken
 

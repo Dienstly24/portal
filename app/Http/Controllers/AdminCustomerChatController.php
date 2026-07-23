@@ -61,6 +61,11 @@ class AdminCustomerChatController extends Controller
             $activeTicket = \App\Models\Ticket::where('customer_id', $active->id)
                 ->whereNotIn('status', ['resolved', 'closed'])
                 ->latest()->first();
+            // Vorbefuellung fuer "Vorgang aus Unterhaltung": letzte
+            // Kundennachricht als Beschreibung, damit der Mitarbeiter nicht
+            // abtippen muss.
+            $ticketPrefill = CustomerMessage::where('customer_id', $active->id)
+                ->fromCustomer()->latest()->value('body');
         }
 
         return view('admin.customer_chat', [
@@ -70,6 +75,7 @@ class AdminCustomerChatController extends Controller
             'timeline' => $timeline,
             'timelineVersion' => $timelineVersion ?? '',
             'activeTicket' => $activeTicket,
+            'ticketPrefill' => $ticketPrefill ?? '',
             'templates' => \App\Models\MessageTemplate::where('category', 'kunde')
                 ->orderBy('sort')->orderBy('name')->get(['id', 'name']),
         ]);
@@ -106,5 +112,50 @@ class AdminCustomerChatController extends Controller
                 includeEmails: in_array(auth()->user()->role, ['admin', 'manager', 'support'], true),
             ),
         ]);
+    }
+
+    /**
+     * Vorgang aus der laufenden Unterhaltung eroeffnen ("Anfrage ->
+     * Conversation -> Ticket"): ein Ticket ist nur der STATUS/Workflow
+     * ueber der bestehenden Kommunikation - der Chatverlauf bleibt
+     * erhalten, der Mitarbeiter arbeitet weiter am selben Ort. Der
+     * Betreff/Beschreibung wird vorbefuellt aus der letzten
+     * Kundennachricht uebergeben. Ticket-Bearbeitung erfordert
+     * (wie ueberall) can_manage_tickets.
+     */
+    public function createTicket(Request $request, $customerId)
+    {
+        abort_unless(auth()->user()->canAccessCustomer($customerId), 403);
+        $user = auth()->user();
+        abort_if($user->role === 'employee' && !$user->can_manage_tickets, 403,
+            'Keine Berechtigung, Tickets zu bearbeiten.');
+
+        $data = $request->validate([
+            'type' => 'required|in:' . implode(',', array_keys(\App\Models\Ticket::TYPES)),
+            'priority' => 'required|in:niedrig,mittel,hoch,dringend',
+            'subject' => 'required|string|max:255',
+            'description' => 'required|string|max:5000',
+            'assign_me' => 'nullable|boolean',
+        ]);
+        $customer = Customer::findOrFail($customerId);
+
+        $ticket = \App\Models\Ticket::create([
+            'customer_id' => $customer->id,
+            'type' => $data['type'],
+            'priority' => $data['priority'],
+            'subject' => $data['subject'],
+            'description' => $data['description'],
+            'status' => $request->boolean('assign_me') ? 'in_progress' : 'open',
+            'assigned_to' => $request->boolean('assign_me') ? $user->id : null,
+            'source' => 'kundenkommunikation',
+        ]);
+        if ($request->boolean('assign_me')) {
+            $ticket->logEvent('assigned', 'an ' . $user->name);
+        }
+        \App\Services\TicketNotifier::notifyNewTicket($ticket);
+
+        return redirect()
+            ->route('admin.customer_chat', ['kunde' => $customer->id])
+            ->with('success', 'Vorgang ' . $ticket->ticket_number . ' aus der Unterhaltung eröffnet.');
     }
 }
