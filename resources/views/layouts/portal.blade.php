@@ -77,6 +77,64 @@ form textarea{min-height:90px;resize:vertical;}
 .d24-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;}
 .d24-modal-box{background:#fff;border-radius:14px;padding:28px;width:100%;max-width:480px;position:relative;max-height:min(92vh,92dvh);overflow-y:auto;-webkit-overflow-scrolling:touch;}
 
+/* ===== Chat (Nachrichten-Seite + schwebendes Widget) ================ */
+/* Gemeinsame Bausteine, damit Seite und Widget identisch aussehen.     */
+.d24c-av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#19b463,#128a4b);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12.5px;flex:none;letter-spacing:.02em;}
+.d24c-scroll{flex:1;overflow-y:auto;background:#EFEBDF;-webkit-overflow-scrolling:touch;}
+.d24c-list{display:flex;flex-direction:column;gap:8px;padding:16px 14px;min-height:100%;}
+.d24c-day{align-self:center;background:rgba(19,26,23,.08);color:var(--ink-soft);font-size:11px;font-weight:600;border-radius:999px;padding:2px 11px;}
+.d24c-empty{align-self:center;margin:auto;text-align:center;color:var(--ink-soft);font-size:13.5px;padding:26px 18px;line-height:1.7;max-width:340px;}
+.d24c-bub{max-width:76%;padding:9px 12px;border-radius:13px;font-size:14px;line-height:1.55;box-shadow:0 1px 1px rgba(0,0,0,.06);display:flex;flex-direction:column;gap:2px;}
+.d24c-bub.them{background:#fff;align-self:flex-start;border-start-start-radius:4px;}
+.d24c-bub.me{background:var(--gold-soft);align-self:flex-end;border-start-end-radius:4px;}
+.d24c-sender{font-size:11.5px;font-weight:700;color:#128a4b;}
+.d24c-body{white-space:pre-line;word-break:break-word;}
+.d24c-att{display:flex;align-items:center;flex-wrap:wrap;gap:6px;background:rgba(19,26,23,.06);border-radius:9px;padding:6px 9px;margin-top:4px;font-size:12.5px;}
+.d24c-att-n{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
+.d24c-attbtns{display:flex;gap:6px;}
+.d24c-attbtns a{display:inline-flex;align-items:center;gap:4px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:3px 10px;text-decoration:none;color:var(--ink);font-size:11.5px;}
+.d24c-tm{font-size:10.5px;color:var(--ink-soft);align-self:flex-end;display:inline-flex;gap:3px;align-items:center;}
+.d24c-ticks{color:#9AA79E;font-size:10.5px;letter-spacing:-1px;}
+.d24c-ticks.read{color:#128a4b;}
+.d24c-chips{display:flex;gap:8px;padding:9px 12px;background:var(--surface);border-top:1px solid var(--line);overflow-x:auto;scrollbar-width:none;}
+.d24c-chip{flex:none;font-size:12.5px;font-weight:600;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;padding:6px 13px;text-decoration:none;white-space:nowrap;transition:.15s;}
+.d24c-chip:hover{border-color:var(--gold);color:#128a4b;}
+.d24c-files{display:flex;align-items:center;gap:8px;padding:7px 14px;background:var(--surface);border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-soft);}
+.d24c-files .d24c-clear{margin-inline-start:auto;border:none;background:none;cursor:pointer;font-size:13px;color:var(--ink-soft);}
+.d24c-comp{display:flex;align-items:flex-end;gap:8px;padding:10px 12px;background:var(--surface);border-top:1px solid var(--line);}
+.d24c-clip{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;font-size:19px;cursor:pointer;flex:none;color:var(--ink-soft);}
+.d24c-clip:hover{background:var(--canvas);}
+.d24c-inp{flex:1;background:var(--canvas);border:1px solid var(--line);border-radius:20px;padding:9px 15px;font-size:14px;resize:none;max-height:110px;min-height:40px;font-family:inherit;color:var(--ink);}
+.d24c-inp:focus{outline:2px solid var(--gold);outline-offset:1px;background:#fff;}
+.d24c-send{width:42px;height:42px;border-radius:50%;border:none;background:linear-gradient(135deg,#19b463,#128a4b);color:#fff;font-size:16px;cursor:pointer;flex:none;box-shadow:0 4px 12px rgba(18,138,75,.35);display:flex;align-items:center;justify-content:center;}
+.d24c-send:disabled{opacity:.6;cursor:default;}
+[dir=rtl] .d24c-send .snd-ico{display:inline-block;transform:scaleX(-1);}
+
+/* Chat-Seite: fuellt die Hoehe zwischen Kopf und Fussleisten */
+.chatpage{display:flex;flex-direction:column;height:calc(100dvh - 64px);min-height:420px;max-width:920px;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;}
+.chatpage-head{display:flex;align-items:center;gap:11px;padding:13px 16px;background:linear-gradient(135deg,var(--petrol),var(--petrol-dark));color:#fff;}
+.chatpage-name{font-weight:700;font-size:15px;}
+.chatpage-status{font-size:11.5px;color:var(--akzent-hell);display:flex;align-items:center;gap:5px;}
+.chatpage-status::before{content:'';width:7px;height:7px;border-radius:50%;background:#2ecc71;}
+
+/* Schwebendes Chat-Widget (Desktop/Tablet) */
+.cw-wrap{position:fixed;bottom:22px;inset-inline-end:22px;z-index:160;display:flex;flex-direction:column;align-items:flex-end;gap:12px;}
+[dir=rtl] .cw-wrap{align-items:flex-start;}
+.cw-fab{position:relative;width:58px;height:58px;border-radius:50%;border:none;background:linear-gradient(135deg,#19b463,#128a4b);color:#fff;font-size:25px;cursor:pointer;box-shadow:0 8px 24px rgba(18,138,75,.45);display:flex;align-items:center;justify-content:center;transition:transform .15s;}
+.cw-fab:hover{transform:scale(1.06);}
+.cw-badge{position:absolute;top:-2px;inset-inline-end:-2px;min-width:20px;height:20px;border-radius:999px;background:#E24B4A;color:#fff;border:2px solid var(--canvas);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 5px;}
+.cw-badge[hidden]{display:none;}
+.cw-panel{width:min(360px,calc(100vw - 44px));height:min(540px,calc(100dvh - 130px));background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.24);overflow:hidden;display:flex;flex-direction:column;}
+.cw-panel[hidden]{display:none;}
+.cw-head{display:flex;align-items:center;gap:10px;padding:11px 13px;background:linear-gradient(135deg,var(--petrol),var(--petrol-dark));color:#fff;}
+.cw-head .d24c-av{width:34px;height:34px;font-size:11.5px;}
+.cw-name{font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cw-status{font-size:10.5px;color:var(--akzent-hell);display:flex;align-items:center;gap:4px;}
+.cw-status::before{content:'';width:6px;height:6px;border-radius:50%;background:#2ecc71;}
+.cw-expand,.cw-close{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:none;border-radius:8px;background:transparent;color:rgba(255,255,255,.7);font-size:15px;cursor:pointer;text-decoration:none;flex:none;}
+.cw-expand:hover,.cw-close:hover{background:rgba(255,255,255,.1);color:#fff;}
+.cw-expand{margin-inline-start:auto;}
+
 /* ===== Responsive Navigation (Mobile-UX-Ausbau) ===================== */
 /* Topbar: nur auf Mobile sichtbar, ersetzt schwebende Buttons */
 .topbar{display:none;position:fixed;top:0;left:0;right:0;height:calc(56px + env(safe-area-inset-top));z-index:140;background:var(--petrol);color:#fff;align-items:center;gap:8px;padding:0 8px;padding-top:env(safe-area-inset-top);box-shadow:0 2px 12px rgba(0,0,0,.25);}
@@ -134,6 +192,11 @@ form textarea{min-height:90px;resize:vertical;}
     .bell-dd{position:fixed;top:calc(58px + env(safe-area-inset-top));right:8px;left:8px;width:auto;}
     [dir=rtl] .bell-wrap{right:auto;left:8px;}
     [dir=rtl] .bell-dd{left:8px;right:8px;}
+    /* Chat: Vollbild zwischen Topbar und Tab-Bar; Widget uebernimmt die
+       Nachrichten-Seite selbst (Tab "Nachrichten"), daher ausgeblendet */
+    .chatpage{height:calc(100dvh - 168px - env(safe-area-inset-top) - env(safe-area-inset-bottom));min-height:340px;border-radius:14px;}
+    .d24c-bub{max-width:85%;}
+    .cw-wrap{display:none;}
 }
 /* RTL (Arabisch): Sidebar rechts, Inhalt spiegeln */
 [dir=rtl] .sidebar{left:auto;right:0;}
@@ -296,6 +359,12 @@ form textarea{min-height:90px;resize:vertical;}
     });
 })();
 </script>
+{{-- Chat: gemeinsamer JS-Kern (Seite + Widget); das schwebende Widget
+     entfaellt auf der Nachrichten-Seite (dort laeuft der Chat im Vollbild) --}}
+@include('portal.partials.chat_core')
+@unless(request()->routeIs('portal.messages'))
+    @include('portal.partials.chat_widget')
+@endunless
 @include('partials.cookie_consent')
 </body>
 </html>

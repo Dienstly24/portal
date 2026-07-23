@@ -89,6 +89,8 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     Route::post('/notifications/{id}/read', [PortalController::class, 'notificationRead'])->name('notifications.read');
     // Direktnachrichten Berater <-> Kunde (Portal-Chat mit Anhaengen)
     Route::get('/nachrichten', [\App\Http\Controllers\PortalMessageController::class, 'index'])->name('messages');
+    Route::get('/nachrichten/feed', [\App\Http\Controllers\PortalMessageController::class, 'feed'])
+        ->middleware('throttle:120,1')->name('messages.feed');
     Route::post('/nachrichten', [\App\Http\Controllers\PortalMessageController::class, 'store'])->name('messages.store');
     Route::get('/nachrichten/anhang/{id}', [\App\Http\Controllers\PortalMessageController::class, 'downloadAttachment'])->name('messages.attachment');
     Route::get('/nachrichten/anhang/{id}/ansehen', [\App\Http\Controllers\PortalMessageController::class, 'viewAttachment'])->name('messages.attachment.view');
