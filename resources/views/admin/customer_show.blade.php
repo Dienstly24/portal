@@ -604,7 +604,7 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
                         {{ $att->isImage() ? '🖼️' : ($att->isPdf() ? '📄' : '📎') }} {{ \Illuminate\Support\Str::limit($att->file_name, 30) }}
                     </span>
                     @if($att->isViewable())
-                    <a href="{{ route('admin.messages.attachment.view', $att->id) }}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 11px;text-decoration:none;color:var(--ink);">👁 Anzeigen</a>
+                    <a href="{{ route('admin.messages.attachment.view', $att->id) }}" target="_blank" rel="noopener" data-preview-open data-preview-url="{{ route('admin.messages.attachment.view', $att->id) }}" data-preview-name="{{ $att->file_name }}" data-preview-kind="{{ $att->isImage() ? 'image' : 'pdf' }}" data-preview-download="{{ route('admin.messages.attachment', $att->id) }}" style="display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 11px;text-decoration:none;color:var(--ink);">👁 Anzeigen</a>
                     @endif
                     <a href="{{ route('admin.messages.attachment', $att->id) }}" style="display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 11px;text-decoration:none;color:var(--ink);">⬇ Herunterladen</a>
                     @endforeach
@@ -1270,5 +1270,5 @@ function openDocEdit(id, name, category, visibility, color, contractId) {
 </script>
 
 {{-- Dokument-Vorschau (Schnellvorschau beim Ueberfahren, grosses Fenster bei Klick) --}}
-@include('admin.partials.doc_preview')
+@include('partials.doc_preview')
 @endsection

@@ -20,7 +20,14 @@ window.D24Chat = (function () {
     function attHtml(a) {
         const ico = a.kind === 'image' ? '🖼️' : (a.kind === 'pdf' ? '📄' : '📎');
         let btns = '';
-        if (a.view_url) btns += '<a href="' + esc(a.view_url) + '" target="_blank" rel="noopener">👁 ' + esc(L.view) + '</a>';
+        if (a.view_url) {
+            // Vorschau-Attribute: Hover = Schnellvorschau, Klick = grosses
+            // Fenster (partials/doc_preview). Ohne eingebundenes Partial
+            // bleibt der Link ein normaler Neuer-Tab-Link.
+            const pv = ' data-preview-open data-preview-url="' + esc(a.view_url) + '" data-preview-name="' + esc(a.name)
+                + '" data-preview-kind="' + (a.kind === 'image' ? 'image' : 'pdf') + '" data-preview-download="' + esc(a.download_url) + '"';
+            btns += '<a href="' + esc(a.view_url) + '" target="_blank" rel="noopener"' + pv + '>👁 ' + esc(L.view) + '</a>';
+        }
         btns += '<a href="' + esc(a.download_url) + '">⬇ ' + esc(L.download) + '</a>';
         return '<span class="d24c-att"><span class="d24c-att-n">' + ico + ' ' + esc(a.name) + '</span><span class="d24c-attbtns">' + btns + '</span></span>';
     }

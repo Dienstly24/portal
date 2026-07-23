@@ -333,6 +333,8 @@ form textarea{min-height:90px;resize:vertical;}
 {{-- Chat: gemeinsamer JS-Kern (Seite + Widget); das schwebende Widget
      entfaellt auf der Nachrichten-Seite (dort laeuft der Chat im Vollbild) --}}
 @include('partials.chat_core')
+{{-- Anhang-Vorschau: Hover = Schnellvorschau, Klick = grosses Fenster --}}
+@include('partials.doc_preview')
 @unless(request()->routeIs('portal.messages'))
     @include('portal.partials.chat_widget')
 @endunless
