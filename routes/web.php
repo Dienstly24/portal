@@ -341,6 +341,10 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::post('/customers/{id}/messages', [\App\Http\Controllers\CustomerMessageController::class, 'store'])->name('customer.messages.store');
     Route::get('/messages/attachments/{id}/download', [\App\Http\Controllers\CustomerMessageController::class, 'downloadAttachment'])->name('messages.attachment');
     Route::get('/messages/attachments/{id}/view', [\App\Http\Controllers\CustomerMessageController::class, 'viewAttachment'])->name('messages.attachment.view');
+    // Zentraler Kunden-Chat: alle Portal-Unterhaltungen an einem Ort
+    Route::get('/kundenchat', [\App\Http\Controllers\AdminCustomerChatController::class, 'index'])->name('customer_chat');
+    Route::get('/kundenchat/{id}/feed', [\App\Http\Controllers\AdminCustomerChatController::class, 'feed'])
+        ->middleware('throttle:120,1')->name('customer_chat.feed');
     Route::get('/vorlagen', [\App\Http\Controllers\MessageTemplateController::class, 'index'])->name('templates');
     Route::get('/vorlagen/liste', [\App\Http\Controllers\MessageTemplateController::class, 'list'])->name('templates.list');
     Route::get('/vorlagen/{id}/render', [\App\Http\Controllers\MessageTemplateController::class, 'render'])->name('templates.render');

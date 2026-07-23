@@ -1,6 +1,8 @@
 {{-- Gemeinsamer Chat-Kern: Renderer + Composer- und Polling-Logik.
-     Wird von der Nachrichten-Seite und vom schwebenden Widget genutzt,
-     damit Blasen, Lesehaken und Anhaenge ueberall identisch aussehen. --}}
+     Genutzt von Nachrichten-Seite und Widget im Kundenportal sowie vom
+     Kunden-Chat der Beraterwelt. Die Perspektive steckt im Payload
+     (m.own aus CustomerMessage::toChatPayload), damit Blasen, Lesehaken
+     und Anhaenge ueberall identisch funktionieren. --}}
 <script>
 window.D24ChatL10n = {
     view: @json(__('Anzeigen')),
@@ -24,11 +26,12 @@ window.D24Chat = (function () {
     }
 
     function bubbleHtml(m) {
-        const cls = m.from_staff ? 'them' : 'me';
-        const ticks = m.from_staff ? '' : ('<span class="d24c-ticks' + (m.read ? ' read' : '') + '" title="' + esc(m.read ? L.read : L.sent) + '">' + (m.read ? '✓✓' : '✓') + '</span>');
-        const sender = m.from_staff ? '<span class="d24c-sender">' + esc(m.sender) + '</span>' : '';
+        const own = (m.own !== undefined) ? m.own : !m.from_staff;
+        const showSender = (m.show_sender !== undefined) ? m.show_sender : m.from_staff;
+        const ticks = own ? ('<span class="d24c-ticks' + (m.read ? ' read' : '') + '" title="' + esc(m.read ? L.read : L.sent) + '">' + (m.read ? '✓✓' : '✓') + '</span>') : '';
+        const sender = showSender ? '<span class="d24c-sender">' + esc(m.sender) + '</span>' : '';
         const atts = (m.attachments || []).map(attHtml).join('');
-        return '<div class="d24c-bub ' + cls + '" data-mid="' + esc(m.id) + '">' + sender
+        return '<div class="d24c-bub ' + (own ? 'me' : 'them') + '" data-mid="' + esc(m.id) + '">' + sender
             + '<span class="d24c-body">' + esc(m.body) + '</span>' + atts
             + '<span class="d24c-tm">' + esc(m.time) + ticks + '</span></div>';
     }
@@ -53,7 +56,8 @@ window.D24Chat = (function () {
         (messages || []).forEach(function (m) {
             const el = list.querySelector('[data-mid="' + cssId(m.id) + '"]');
             if (!el) { added = append(list, m) || added; return; }
-            if (!m.from_staff && m.read) {
+            const own = (m.own !== undefined) ? m.own : !m.from_staff;
+            if (own && m.read) {
                 const t = el.querySelector('.d24c-ticks');
                 if (t && !t.classList.contains('read')) { t.classList.add('read'); t.textContent = '✓✓'; t.title = L.read; }
             }
@@ -103,7 +107,7 @@ window.D24Chat = (function () {
     }
 
     // Polling: alle N Sekunden Feed holen; markRead() sagt, ob der Chat
-    // gerade sichtbar ist (dann Beraternachrichten als gelesen markieren).
+    // gerade sichtbar ist (dann Gegenseite-Nachrichten als gelesen markieren).
     function poll(o) {
         function tick() {
             if (document.hidden) return;
