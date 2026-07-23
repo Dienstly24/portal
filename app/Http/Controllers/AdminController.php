@@ -362,7 +362,7 @@ class AdminController extends Controller
     }
 
     public function contractEdit($id) {
-        $contract = Contract::with(['vehicleDetail.claims','vehicleDetail.mileageReadings','vehicleDetail.sfHistory','energyDetail','internetDetail','customer.user'])->findOrFail($id);
+        $contract = Contract::with(['vehicleDetail.claims','vehicleDetail.mileageReadings','vehicleDetail.sfHistory','energyDetail','internetDetail','customer.user','revisions.changedBy'])->findOrFail($id);
         $this->authorizeCustomerAccess($contract->customer_id);
         return view('admin.contract_edit', compact('contract'));
     }

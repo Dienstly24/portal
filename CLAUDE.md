@@ -138,6 +138,22 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   tesseract-ocr tesseract-ocr-deu poppler-utils` auf dem VPS, danach
   `OCR_ENABLED=true` in der `.env`. Rohtext wird bewusst NICHT gespeichert
   (Datenminimierung) - nur das validierte Extraktionsergebnis.
+- **Vertrags-Duplikat-Schutz + Version History** (`DocumentIntakeService`,
+  Betreiber-Vorgabe 23.07.2026): Ein neu importiertes Dokument fuer ein
+  bereits erfasstes Fahrzeug/eine Police erzeugt KEIN Duplikat mehr.
+  `findExistingContractByIdentity()` sucht den Bestandsvertrag streng ueber
+  die Identitaet (Vertragsnummer -> FIN/VIN -> Kennzeichen -> Energie
+  MaLo-ID/Zaehlernummer). Trifft einer zu, aktualisiert
+  `updateContractFromExtraction()` nur ihn und schreibt jede geaenderte
+  Angabe feldgenau in die Version History (`contract_revisions`,
+  `ContractRevision`, `ContractRevisionRecorder`): Feld, alter/neuer Wert,
+  Zeitpunkt, Quelle, Bearbeiter (null = System). Regeln: leere neue Werte
+  ueberschreiben nie einen Bestand (kein Datenverlust); Zusatzleistungen
+  werden ergaenzt, nie entfernt; feste Identitaetsfelder (Kennzeichen, FIN,
+  MaLo-ID ...) werden nur ergaenzt, wenn leer. Anzeige des Verlaufs auf der
+  Vertrags-Bearbeiten-Seite (`partials/contract_revisions.blade.php`). Nur
+  wenn kein passender Vertrag existiert, wird ein neuer angelegt -> genau EIN
+  Vertrag je Fahrzeug (Single Source of Truth).
 
 ## Offene Themen / wartet auf den Betreiber
 

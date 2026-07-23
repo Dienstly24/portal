@@ -368,9 +368,18 @@ class DocumentIntakeService
     }
 
     /**
-     * Vertrag aus dem Analyse-Ergebnis anlegen (Mitarbeiter-Freigabe).
-     * Existiert beim Kunden bereits ein Vertrag mit derselben
-     * Vertragsnummer, wird dieser verknuepft statt ein Duplikat anzulegen.
+     * Vertrag aus dem Analyse-Ergebnis anlegen ODER - wenn bereits ein
+     * passender Vertrag existiert - diesen aktualisieren (Mitarbeiter-Freigabe).
+     *
+     * Betreiber-Vorgabe (23.07.2026): Ein neu importiertes Dokument fuer ein
+     * bereits erfasstes Fahrzeug/eine bereits erfasste Police erzeugt KEIN
+     * Duplikat mehr. Zuerst wird anhand der Vertrags-Identitaet
+     * (Vertragsnummer, FIN/VIN, Kennzeichen, Energie-Zaehler/MaLo) ein
+     * bestehender Vertrag gesucht. Trifft einer zu, wird nur er aktualisiert
+     * und jede geaenderte Angabe in der Version History (ContractRevision)
+     * festgehalten. Nur wenn kein passender Vertrag existiert, wird ein neuer
+     * angelegt. So sieht der Kunde genau EINEN Vertrag je Fahrzeug (Single
+     * Source of Truth) mit vollstaendigem Aenderungsverlauf.
      */
     public function createContractFromExtraction(Document $document, Customer $customer, ?int $byUserId, ?array $extracted = null): ?Contract
     {
@@ -383,14 +392,11 @@ class DocumentIntakeService
             return null;
         }
 
-        if (!blank($ins['contract_number'] ?? null)) {
-            $existing = Contract::where('customer_id', $customer->id)
-                ->where('contract_number', $ins['contract_number'])->first();
-            if ($existing) {
-                $document->contract_id = $existing->id;
-                $document->save();
-                return $existing;
-            }
+        // Duplikat-Schutz: passenden Bestandsvertrag anhand der Identitaet
+        // suchen und stattdessen aktualisieren (mit Audit-Log).
+        $existing = $this->findExistingContractByIdentity($customer, $data);
+        if ($existing) {
+            return $this->updateContractFromExtraction($existing, $document, $customer, $byUserId, $data);
         }
 
         $type = $ins['sparte']
@@ -518,41 +524,311 @@ class DocumentIntakeService
     }
 
     /**
-     * Bestehenden Vertrag des Kunden anhand Vertragsnummer oder
-     * KFZ-Kennzeichen verknuepfen (rein additive Automatik: nur
-     * contract_id des Dokuments wird gesetzt).
+     * Bestehenden Vertrag des Kunden anhand der Vertrags-Identitaet
+     * verknuepfen (rein additive Automatik: nur contract_id des Dokuments
+     * wird gesetzt, KEINE Feldaenderung - das bleibt der Freigabe-Stufe
+     * vorbehalten). Nutzt dieselbe Identitaets-Suche wie der Duplikat-Schutz
+     * beim Anlegen.
      */
     public function linkMatchingContract(Document $document, Customer $customer): ?Contract
     {
         if ($document->contract_id) {
             return null;
         }
-        $data = $document->ai_extracted ?? [];
-        $number = $data['versicherung']['contract_number'] ?? null;
-        $plate = $data['kfz']['license_plate'] ?? null;
 
-        $contract = null;
-        if (!blank($number)) {
-            $contract = Contract::where('customer_id', $customer->id)
-                ->where('contract_number', $number)->first();
-        }
-        if (!$contract && !blank($plate)) {
-            // Nur Trennzeichen entfernen (wie die SQL-Normalisierung unten),
-            // NICHT alle Nicht-ASCII-Zeichen - deutsche Kennzeichen mit
-            // Umlaut-Ortskennung (WÜ, GÖ, KÖN, SÜW, ...) wuerden sonst nie
-            // matchen, weil das alte \A-Z0-9\ das Ü/Ö einfach entfernte.
-            $normalized = mb_strtoupper((string) preg_replace('/[\s\-]+/u', '', $plate));
-            $contract = Contract::where('customer_id', $customer->id)
-                ->whereHas('vehicleDetail', function ($q) use ($normalized) {
-                    $q->whereRaw("replace(replace(upper(license_plate), '-', ''), ' ', '') = ?", [$normalized]);
-                })->first();
-        }
-
+        $contract = $this->findExistingContractByIdentity($customer, $document->ai_extracted ?? []);
         if ($contract) {
             $document->contract_id = $contract->id;
             $document->save();
         }
 
         return $contract;
+    }
+
+    /**
+     * Bestehenden Vertrag des Kunden anhand der Vertrags-Identitaet suchen -
+     * Grundlage des Duplikat-Schutzes. Geprueft wird (in dieser Reihenfolge,
+     * jeweils streng):
+     *   1. Vertragsnummer (Vertragsnummer)
+     *   2. Fahrzeug-Identnummer (FIN/VIN)
+     *   3. Kennzeichen (normalisiert)
+     *   4. Energie: MaLo-ID bzw. Zaehlernummer
+     * Der erste Treffer gewinnt. Bewusst nur harte Identitaetsmerkmale, damit
+     * nicht faelschlich zwei verschiedene Vertraege verschmolzen werden.
+     */
+    public function findExistingContractByIdentity(Customer $customer, array $data): ?Contract
+    {
+        $ins = $data['versicherung'] ?? [];
+        $kfz = $data['kfz'] ?? [];
+        $energie = $data['energie'] ?? [];
+
+        // 1. Vertragsnummer
+        if (!blank($ins['contract_number'] ?? null)) {
+            $byNumber = Contract::where('customer_id', $customer->id)
+                ->where('contract_number', $ins['contract_number'])->first();
+            if ($byNumber) {
+                return $byNumber;
+            }
+        }
+
+        // 2. FIN/VIN (nur Leerzeichen entfernen, Grossschreibung normalisieren)
+        if (!blank($kfz['vin'] ?? null)) {
+            $vin = mb_strtoupper((string) preg_replace('/\s+/u', '', $kfz['vin']));
+            $byVin = Contract::where('customer_id', $customer->id)
+                ->whereHas('vehicleDetail', function ($q) use ($vin) {
+                    $q->whereRaw("replace(upper(vin), ' ', '') = ?", [$vin]);
+                })->first();
+            if ($byVin) {
+                return $byVin;
+            }
+        }
+
+        // 3. Kennzeichen (Trennzeichen entfernen, Umlaut-Ortskennung erhalten)
+        if (!blank($kfz['license_plate'] ?? null)) {
+            $plate = mb_strtoupper((string) preg_replace('/[\s\-]+/u', '', $kfz['license_plate']));
+            $byPlate = Contract::where('customer_id', $customer->id)
+                ->whereHas('vehicleDetail', function ($q) use ($plate) {
+                    $q->whereRaw("replace(replace(upper(license_plate), '-', ''), ' ', '') = ?", [$plate]);
+                })->first();
+            if ($byPlate) {
+                return $byPlate;
+            }
+        }
+
+        // 4. Energie: MaLo-ID (11-stellig, eindeutig) bzw. Zaehlernummer
+        foreach (['malo_id', 'meter_number'] as $field) {
+            if (!blank($energie[$field] ?? null)) {
+                $byMeter = Contract::where('customer_id', $customer->id)
+                    ->whereHas('energyDetail', function ($q) use ($field, $energie) {
+                        $q->where($field, $energie[$field]);
+                    })->first();
+                if ($byMeter) {
+                    return $byMeter;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Bestehenden Vertrag aus einem neu importierten Dokument aktualisieren:
+     * geaenderte Sachfelder (Beitrag, Beginn/Ende, Deckung, Zusatzleistungen
+     * ...) werden uebernommen und jede Aenderung in der Version History
+     * (ContractRevision) mit altem und neuem Wert protokolliert. Leere neue
+     * Werte ueberschreiben nie einen bestehenden (kein Datenverlust);
+     * Zusatzleistungen werden ergaenzt, nie entfernt.
+     */
+    private function updateContractFromExtraction(Contract $contract, Document $document, Customer $customer, ?int $byUserId, array $data): Contract
+    {
+        $ins = $data['versicherung'] ?? [];
+        $kfz = $data['kfz'] ?? [];
+        $energie = $data['energie'] ?? [];
+
+        $recorder = app(ContractRevisionRecorder::class);
+        $ctx = [
+            'source' => 'document',
+            'source_document_id' => (string) $document->id,
+            'changed_by' => $byUserId,
+            'batch_id' => $recorder->newBatchId(),
+        ];
+
+        // ---- Vertragsstammdaten -------------------------------------------
+        $contractProposed = [
+            'insurer' => $ins['insurer'] ?? null,
+            'start_date' => $ins['start_date'] ?? null,
+            'end_date' => $ins['end_date'] ?? null,
+            'premium_amount' => $ins['premium_amount'] ?? null,
+            'premium_interval' => $ins['premium_interval'] ?? null,
+        ];
+        // Vertragsnummer nur ERGAENZEN, wenn bislang leer und noch nicht
+        // anderweitig vergeben (unique) - nie eine bestehende ueberschreiben.
+        $newNumber = $ins['contract_number'] ?? null;
+        if (blank($contract->contract_number) && !blank($newNumber)
+            && !Contract::where('contract_number', $newNumber)->where('id', '!=', $contract->id)->exists()) {
+            $contractProposed['contract_number'] = $newNumber;
+        }
+        $changed = $recorder->apply($contract, $contract, $contractProposed, $this->contractRevisionSpec(), $ctx);
+
+        // ---- Fahrzeug-Detaildaten (KFZ / E-Scooter) -----------------------
+        if (in_array($contract->type, ['kfz', 'escooter'], true) && $kfz !== []) {
+            $veh = $contract->vehicleDetail
+                ?: ContractVehicleDetail::create(['contract_id' => $contract->id]);
+
+            $vehProposed = [
+                'license_plate' => $kfz['license_plate'] ?? null,
+                'vin' => $kfz['vin'] ?? null,
+                'hsn' => $kfz['hsn'] ?? null,
+                'tsn' => $kfz['tsn'] ?? null,
+                'manufacturer' => $kfz['manufacturer'] ?? null,
+                'model' => $kfz['model'] ?? null,
+                'first_registration' => $kfz['first_registration'] ?? null,
+                'has_teilkasko' => $kfz['has_teilkasko'] ?? null,
+                'teilkasko_deductible' => $kfz['teilkasko_deductible'] ?? null,
+                'has_vollkasko' => $kfz['has_vollkasko'] ?? null,
+                'vollkasko_deductible' => $kfz['vollkasko_deductible'] ?? null,
+                'holder_type' => $kfz['holder_type'] ?? null,
+                'annual_mileage' => $kfz['annual_mileage'] ?? null,
+                'sf_liability_class' => $kfz['sf_liability_class'] ?? null,
+                'sf_comprehensive_class' => $kfz['sf_comprehensive_class'] ?? null,
+                'previous_insurer' => $ins['previous_insurer'] ?? null,
+            ];
+            // Zusatzleistungen ERGAENZEN (nie entfernen): so geht z.B. ein
+            // bereits erfasster Schutzbrief nicht verloren, wenn ihn ein
+            // spaeteres Dokument nicht erneut auffuehrt.
+            if (!empty($kfz['extras'])) {
+                $vehProposed['extras'] = array_values(array_unique(
+                    array_merge($veh->extras ?? [], $kfz['extras'])
+                ));
+            }
+            // Feste Fahrzeug-Identitaets-/Stammfelder nur ERGAENZEN, wenn leer -
+            // eine abweichende Schreibweise (z.B. "S-AB 1234" vs "S-AB1234")
+            // ist keine echte Aenderung und darf den Bestand nicht ueberschreiben.
+            foreach (['license_plate', 'vin', 'hsn', 'tsn', 'manufacturer', 'model', 'first_registration'] as $static) {
+                if (filled($veh->{$static})) {
+                    unset($vehProposed[$static]);
+                }
+            }
+            $changed = array_merge($changed, $recorder->apply($contract, $veh, $vehProposed, $this->vehicleRevisionSpec(), $ctx));
+        }
+
+        // ---- Energie-Detaildaten (Strom / Gas) ----------------------------
+        if (in_array($contract->type, Contract::ENERGY_TYPES, true) && $energie !== []) {
+            $en = $contract->energyDetail
+                ?: \App\Models\ContractEnergyDetail::create(['contract_id' => $contract->id]);
+
+            $enProposed = [
+                'tariff' => $energie['tariff'] ?? null,
+                'consumption_kwh' => $energie['consumption_kwh'] ?? null,
+                'meter_number' => $energie['meter_number'] ?? null,
+                'malo_id' => $energie['malo_id'] ?? null,
+                'meter_reading' => $energie['meter_reading'] ?? null,
+                'customer_number' => $energie['customer_number'] ?? null,
+                'payment_amount' => $ins['premium_amount'] ?? null,
+                'previous_provider' => $energie['previous_provider'] ?? null,
+            ];
+            // Physische Zaehler-Identitaet nur ergaenzen, wenn leer (nie eine
+            // bestehende MaLo-ID/Zaehlernummer durch eine Schreibvariante ersetzen).
+            foreach (['malo_id', 'meter_number'] as $static) {
+                if (filled($en->{$static})) {
+                    unset($enProposed[$static]);
+                }
+            }
+            $changed = array_merge($changed, $recorder->apply($contract, $en, $enProposed, $this->energyRevisionSpec(), $ctx));
+        }
+
+        // Dokument mit dem (aktualisierten) Vertrag verknuepfen.
+        if (!$document->contract_id) {
+            $document->contract_id = $contract->id;
+            $document->save();
+        }
+
+        ActivityLog::create([
+            'user_id' => $byUserId,
+            'action' => 'contract_updated_from_document',
+            'entity_type' => 'contract',
+            'entity_id' => $contract->id,
+            'meta' => json_encode([
+                'document_id' => (string) $document->id,
+                'customer_id' => (string) $customer->id,
+                'changed_fields' => $changed,
+                'batch_id' => $ctx['batch_id'],
+            ], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        return $contract;
+    }
+
+    /** Anzeige-Spezifikation (Label + Formatter) der Vertragsstammfelder. */
+    private function contractRevisionSpec(): array
+    {
+        return [
+            'insurer' => ['label' => 'Versicherer'],
+            'contract_number' => ['label' => 'Vertragsnummer'],
+            'start_date' => ['label' => 'Vertragsbeginn', 'format' => [$this, 'fmtDate']],
+            'end_date' => ['label' => 'Vertragsende', 'format' => [$this, 'fmtDate']],
+            'premium_amount' => ['label' => 'Beitrag', 'format' => [$this, 'fmtEuro']],
+            'premium_interval' => ['label' => 'Zahlweise', 'format' => [$this, 'fmtInterval']],
+        ];
+    }
+
+    /** Anzeige-Spezifikation der Fahrzeug-Detailfelder. */
+    private function vehicleRevisionSpec(): array
+    {
+        return [
+            'license_plate' => ['label' => 'Kennzeichen'],
+            'vin' => ['label' => 'FIN'],
+            'hsn' => ['label' => 'HSN'],
+            'tsn' => ['label' => 'TSN'],
+            'manufacturer' => ['label' => 'Hersteller'],
+            'model' => ['label' => 'Modell'],
+            'first_registration' => ['label' => 'Erstzulassung', 'format' => [$this, 'fmtDate']],
+            'has_teilkasko' => ['label' => 'Teilkasko'],
+            'teilkasko_deductible' => ['label' => 'SB Teilkasko', 'format' => [$this, 'fmtDeductible']],
+            'has_vollkasko' => ['label' => 'Vollkasko'],
+            'vollkasko_deductible' => ['label' => 'SB Vollkasko', 'format' => [$this, 'fmtDeductible']],
+            'holder_type' => ['label' => 'Halter'],
+            'annual_mileage' => ['label' => 'Jahresfahrleistung', 'format' => [$this, 'fmtKm']],
+            'sf_liability_class' => ['label' => 'SF-Klasse Haftpflicht'],
+            'sf_comprehensive_class' => ['label' => 'SF-Klasse Vollkasko'],
+            'previous_insurer' => ['label' => 'Vorversicherer'],
+            'extras' => ['label' => 'Zusatzleistungen', 'format' => [$this, 'fmtExtras']],
+        ];
+    }
+
+    /** Anzeige-Spezifikation der Energie-Detailfelder. */
+    private function energyRevisionSpec(): array
+    {
+        return [
+            'tariff' => ['label' => 'Tarif'],
+            'consumption_kwh' => ['label' => 'Verbrauch', 'format' => [$this, 'fmtKwh']],
+            'meter_number' => ['label' => 'Zaehlernummer'],
+            'malo_id' => ['label' => 'MaLo-ID'],
+            'meter_reading' => ['label' => 'Zaehlerstand'],
+            'customer_number' => ['label' => 'Kundennummer (Anbieter)'],
+            'payment_amount' => ['label' => 'Abschlag', 'format' => [$this, 'fmtEuro']],
+            'previous_provider' => ['label' => 'Vorversorger'],
+        ];
+    }
+
+    public function fmtEuro($v): string
+    {
+        return number_format((float) $v, 2, ',', '.') . ' €';
+    }
+
+    public function fmtDate($v): string
+    {
+        try {
+            return \Carbon\Carbon::parse($v)->format('d.m.Y');
+        } catch (\Throwable) {
+            return (string) $v;
+        }
+    }
+
+    public function fmtInterval($v): string
+    {
+        return Contract::PREMIUM_INTERVALS[$v]['label'] ?? (string) $v;
+    }
+
+    public function fmtDeductible($v): string
+    {
+        return ContractVehicleDetail::deductibleLabel((int) $v);
+    }
+
+    public function fmtKm($v): string
+    {
+        return number_format((int) $v, 0, ',', '.') . ' km';
+    }
+
+    public function fmtKwh($v): string
+    {
+        return number_format((int) $v, 0, ',', '.') . ' kWh';
+    }
+
+    public function fmtExtras($v): string
+    {
+        $keys = (array) $v;
+        $labels = array_values(array_intersect_key(ContractVehicleDetail::EXTRAS, array_flip($keys)));
+        return implode(', ', $labels ?: $keys);
     }
 }
