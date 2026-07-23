@@ -310,7 +310,13 @@ class AdminController extends Controller
         // Anschrift, E-Mail, IBAN ...) - Beziehungshinweis in der Kundenakte.
         $relations = app(\App\Services\Matching\DuplicateDetectionService::class)
             ->relationsFor($customer, $this->visibleCustomerIds(), 12);
-        return view('admin.customer_show', compact('customer', 'internalChat', 'internalNotes', 'customerMessages', 'relations'));
+        // Omnichannel: komplette Kommunikation (alle Kanaele) als Timeline
+        // im Tab "Kommunikation" (gleiches Partial wie die Kundenkommunikation).
+        $conversationTimeline = (new \App\Services\CustomerConversationService())->timeline(
+            $customer,
+            includeEmails: in_array(auth()->user()->role, ['admin', 'manager', 'support'], true),
+        );
+        return view('admin.customer_show', compact('customer', 'internalChat', 'internalNotes', 'customerMessages', 'relations', 'conversationTimeline'));
     }
 
     public function contracts() {

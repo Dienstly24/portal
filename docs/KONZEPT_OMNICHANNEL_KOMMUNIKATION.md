@@ -30,28 +30,47 @@ Kommunikationsweg. Bestehende Funktionen weiterverwenden - kein Neuaufbau.
   E-Mail = Posteingang, Verfassen, Marketing (Marketing bewusst vom
   operativen Service getrennt).
 
-## Phase B (naechste Schritte, kein Betreiber-Blocker)
+## Phase B (umgesetzt)
 
-- Antworten auf Ticket und E-Mail DIREKT aus der Unterhaltung
-  (Kanalwahl im Composer statt nur Portal-Chat).
-- Live-Aktualisierung der Nicht-Chat-Elemente (Feed liefert heute nur
-  Chat; Timeline-Karten erscheinen nach Neuladen).
-- "Anfrage -> Conversation -> optional Ticket": Gast-Anfragen
-  (Tickets ohne Kundenakte) beim Verknuepfen mit einem Kunden
-  automatisch in dessen Unterhaltung einreihen.
-- Kundenakte: Tab "Kommunikation" mit derselben Timeline-Komponente.
-- Erwaehnungen (@Name) aus der Unterhaltung heraus in den internen
-  Chat teilen (ohne Copy/Paste).
+- **Kanalwahl im Composer**: Portal-Chat (AJAX, wie gehabt) ODER
+  Antwort ins juengste offene Ticket (klassischer POST an den
+  bestehenden Reply-Endpoint inkl. Anhaenge; Berechtigung
+  `can_manage_tickets` beruecksichtigt). E-Mail ueber den Shortcut
+  "E-Mail verfassen" (Smart-Composer, Kunde vorausgewaehlt).
+- **Live-Hinweis fuer Nicht-Chat-Kanaele**: der Feed liefert eine
+  `timeline_version` (Fingerabdruck aus Tickets/E-Mails/Dokumenten/
+  Notizen); aendert sie sich, erscheint "Neue Ereignisse -
+  aktualisieren". Der Chat selbst bleibt voll live.
+- **Kundenakte: Tab "Kommunikation"** mit derselben Timeline
+  (gemeinsames Partial `admin/partials/conversation_timeline`).
+- **Intern teilen mit @Erwaehnungen**: das Notiz-Formular der
+  Unterhaltung kann wahlweise eine Kundenakten-Notiz anlegen ODER
+  eine Nachricht in den internen Bereich der Akte schreiben
+  (bestehender Endpoint mit @Mention-Aufloesung + Benachrichtigung).
+- Gast-Anfragen erscheinen automatisch in der Unterhaltung, sobald
+  das Ticket einer Kundenakte zugeordnet wird (Timeline liest ueber
+  customer_id - kein Zusatzschritt noetig).
 
-## Phase C (wartet auf Betreiber-Entscheidung)
+## Phase C - WhatsApp (Betreiber-Entscheidung 23.07.2026)
 
-- **WhatsApp Business**: braucht Meta-Business-Konto + API-Anbieter
-  (z. B. Cloud API) und DSGVO-Klaerung (AVV, Einwilligung). Die
-  Timeline ist darauf vorbereitet (neuer `kind` = ein weiterer
-  Aggregat-Block im Service). NICHT bauen, bevor Konto/Anbieter
-  entschieden sind - keine Attrappen.
+- Es gibt ein WhatsApp-BUSINESS-KONTO, aber AUSDRUECKLICH KEINE
+  API-Anbindung an das System (weder Cloud API noch Drittanbieter).
+- Umgesetzt ist deshalb nur eine API-freie Bruecke: der Button
+  "WhatsApp" in der Unterhaltung oeffnet wa.me/<Kundennummer>
+  (Mobil, sonst Festnetz; 0 -> 49 normalisiert) im Business-Konto
+  des Teams. Das System speichert, sendet und liest dabei NICHTS.
+- WhatsApp-Gespraeche bei Bedarf manuell festhalten: Schnellaktion
+  "Notiz" in der Unterhaltung (erscheint als interne Karte in der
+  Timeline).
+- Sollte spaeter doch eine API-Anbindung gewuenscht sein: neuer
+  Aggregat-Block im Service (eigener `kind`), Meta-Konto/Anbieter
+  und DSGVO (AVV, Einwilligung) vorher klaeren.
+
+## Offen (spaetere Phasen)
+
 - Ausgehende Einzel-E-Mails (Composer) in der Timeline: dafuer muss
   der Versand pro Kunde protokolliert werden (heute nur Marketing-Log).
+- Voll-Live-Rendering der Nicht-Chat-Karten ohne Neuladen.
 
 ## Leitplanken
 

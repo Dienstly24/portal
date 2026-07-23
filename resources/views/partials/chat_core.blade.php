@@ -91,6 +91,9 @@ window.D24Chat = (function () {
             }
         });
         o.form.addEventListener('submit', function (e) {
+            // Kanalwahl (z.B. Ticket-Antwort): klassischer POST mit Redirect,
+            // damit die Timeline serverseitig neu aufgebaut wird.
+            if (o.form.dataset.plain === '1') return;
             e.preventDefault();
             if (!o.input.value.trim()) return;
             const btn = o.form.querySelector('.d24c-send');

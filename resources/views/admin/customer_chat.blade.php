@@ -23,7 +23,7 @@
 .kchat-snippet{font-size:12.5px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
 .kchat-unread{background:#E24B4A;color:#fff;border-radius:999px;font-size:11px;font-weight:800;min-width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;padding:0 6px;flex:none;}
 .kchat-none{padding:26px 18px;text-align:center;color:var(--ink-soft);font-size:13.5px;line-height:1.7;}
-.kchat-thread{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--surface);}
+.kchat-thread{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--surface);position:relative;}
 .kchat-head{display:flex;align-items:center;gap:11px;padding:11px 14px;background:linear-gradient(135deg,var(--petrol),var(--petrol-dark));color:#fff;}
 .kchat-head-name{font-weight:700;font-size:14.5px;}
 .kchat-head-sub{font-size:11.5px;color:var(--akzent-hell);}
@@ -47,13 +47,12 @@
 .kx-note{display:flex;gap:8px;padding:8px 12px;background:#FBF6E4;border-bottom:1px solid #E7D9A8;align-items:flex-end;}
 .kx-note[hidden]{display:none;}
 .kx-note textarea{flex:1;border:1px solid #E7D9A8;border-radius:9px;padding:8px 11px;font-size:13px;font-family:inherit;resize:vertical;background:#fff;}
-/* Timeline-Karten: Ereignisse/E-Mails/Dokumente mittig, Notizen intern */
-.kx-card{align-self:center;max-width:86%;background:#fff;border:1px solid var(--line);border-radius:11px;padding:8px 13px;font-size:12.5px;display:flex;flex-direction:column;gap:3px;box-shadow:0 1px 1px rgba(0,0,0,.05);}
-.kx-card-head{font-weight:600;color:var(--ink);}
-.kx-card-body{color:var(--ink-soft);white-space:pre-line;word-break:break-word;}
-.kx-card-link{font-size:11.5px;color:#128a4b;text-decoration:none;font-weight:600;}
-.kx-internal{background:#FBF6E4;border-color:#E7D9A8;align-self:flex-end;max-width:76%;}
-.kx-tag{font-size:10.5px;font-weight:700;color:#128a4b;text-decoration:none;background:rgba(18,138,75,.08);border-radius:6px;padding:1px 7px;align-self:flex-start;}
+/* Timeline-Karten (kx-card/kx-tag/kx-internal) kommen aus chat_styles. */
+.kx-refresh{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:5;border:none;border-radius:999px;background:var(--petrol);color:#fff;font-size:12px;font-weight:600;padding:7px 14px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.25);}
+.kx-refresh[hidden]{display:none;}
+.kx-chanwahl{display:inline-flex;gap:0;border:1px solid var(--line);border-radius:999px;overflow:hidden;}
+.kx-chanwahl button{border:none;background:#fff;padding:5px 12px;font-size:12px;font-weight:600;color:var(--ink-soft);cursor:pointer;}
+.kx-chanwahl button.active{background:var(--petrol);color:#fff;}
 @media (max-width: 900px) {
     .kchat{grid-template-columns:1fr;height:calc(100dvh - var(--header-h) - 40px);}
     .kchat.mode-thread .kchat-side{display:none;}
@@ -142,57 +141,54 @@
                     </select>
                 </form>
                 @endif
+                @php
+                    // WhatsApp OHNE Systemanbindung (Betreiber-Entscheidung
+                    // 23.07.2026): reiner Klick-Link zum Business-Konto des
+                    // Teams - das System speichert und sendet nichts.
+                    $waNummer = preg_replace('/\D+/', '', (string) ($active->mobile ?: $active->phone));
+                    if (str_starts_with($waNummer, '00')) { $waNummer = substr($waNummer, 2); }
+                    elseif (str_starts_with($waNummer, '0')) { $waNummer = '49' . substr($waNummer, 1); }
+                @endphp
+                @if($waNummer !== '')
+                <a class="kx-note-btn" style="background:#E9F8EF;border-color:#BFE8CE;color:#128a4b;text-decoration:none;" href="https://wa.me/{{ $waNummer }}" target="_blank" rel="noopener" title="Öffnet WhatsApp Business – nicht mit dem System verbunden">📱 WhatsApp</a>
+                @endif
+                @if(in_array(auth()->user()->role, ['admin','manager','support']) || auth()->user()->can_send_emails)
+                <a class="kx-note-btn" style="background:#fff;border-color:var(--line);color:var(--ink-soft);text-decoration:none;" href="{{ route('admin.email.compose', ['customer_id' => $active->id]) }}">✉️ E-Mail verfassen</a>
+                @endif
                 <button type="button" class="kx-note-btn" onclick="const n=document.getElementById('kx-note');n.hidden=!n.hidden;if(!n.hidden)n.querySelector('textarea').focus();">🔒 Notiz</button>
             </div>
         </div>
-        <form id="kx-note" method="POST" action="{{ route('admin.customer.note.store', $active->id) }}" class="kx-note" hidden>
+        <form id="kx-note" method="POST" action="{{ route('admin.customer.note.store', $active->id) }}" class="kx-note" hidden
+              data-note-action="{{ route('admin.customer.note.store', $active->id) }}"
+              data-chat-action="{{ route('admin.internal.store', $active->id) }}">
             @csrf
-            <textarea name="note" required rows="2" placeholder="Interne Notiz – nur für das Team sichtbar …"></textarea>
+            <div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:0;">
+                <div class="kx-chanwahl" id="kx-note-ziel" style="align-self:flex-start;">
+                    <button type="button" class="active" data-ziel="note">🔒 Notiz</button>
+                    <button type="button" data-ziel="chat">💬 Intern teilen (@Name erwähnt Kollegen)</button>
+                </div>
+                <textarea name="note" required rows="2" maxlength="5000" placeholder="Interne Notiz – nur für das Team sichtbar …"></textarea>
+            </div>
+            <input type="hidden" name="type" value="chat" disabled id="kx-note-type">
             <button type="submit" class="btn btn-gold" style="padding:7px 16px;font-size:13px;">Speichern</button>
         </form>
+        <button type="button" id="kx-refresh" class="kx-refresh" hidden onclick="location.reload()">⟳ Neue Ereignisse – Ansicht aktualisieren</button>
         <div class="d24c-scroll" id="kc-scroll">
-            @php $lastDay = null; @endphp
             <div class="d24c-list" id="kc-list" data-last-day="">
-                {{-- EINE Timeline ueber alle Kanaele: Chat- und Ticket-
-                     Nachrichten als Blasen, Ereignisse/E-Mails/Dokumente als
-                     Karten, interne Notizen gelb (nur Team). --}}
-                @forelse($timeline as $item)
-                    @if($item['day'] !== $lastDay)
-                        <div class="d24c-day">{{ $item['day'] }}</div>
-                        @php $lastDay = $item['day']; @endphp
-                    @endif
-                    @if($item['style'] === 'bubble')
-                    @php $m = $item['message']; @endphp
-                    <div class="d24c-bub {{ $item['own'] ? 'me' : 'them' }}" data-kind="{{ $item['kind'] }}" @if($m) data-mid="{{ $m->id }}" @endif>
-                        @if($item['tag'])<a class="kx-tag" href="{{ $item['url'] }}">{{ $item['tag'] }}</a>@endif
-                        @if($item['own'] && $item['sender'])<span class="d24c-sender">{{ $item['sender'] }}</span>@endif
-                        <span class="d24c-body">{{ $item['body'] }}</span>
-                        @if($m)
-                        @foreach($m->attachments as $att)
-                        <span class="d24c-att">
-                            <span class="d24c-att-n">{{ $att->isImage() ? '🖼️' : ($att->isPdf() ? '📄' : '📎') }} {{ $att->file_name }}</span>
-                            <span class="d24c-attbtns">
-                                @if($att->isViewable())<a href="{{ route('admin.messages.attachment.view', $att->id) }}" target="_blank" rel="noopener" data-preview-open data-preview-url="{{ route('admin.messages.attachment.view', $att->id) }}" data-preview-name="{{ $att->file_name }}" data-preview-kind="{{ $att->isImage() ? 'image' : 'pdf' }}" data-preview-download="{{ route('admin.messages.attachment', $att->id) }}">👁 {{ __('Anzeigen') }}</a>@endif
-                                <a href="{{ route('admin.messages.attachment', $att->id) }}">⬇ {{ __('Herunterladen') }}</a>
-                            </span>
-                        </span>
-                        @endforeach
-                        @endif
-                        <span class="d24c-tm">{{ $item['time'] }}@if($item['kind'] === 'chat' && $item['own'])<span class="d24c-ticks{{ $item['read'] ? ' read' : '' }}" title="{{ $item['read'] ? __('Gelesen') : __('Gesendet') }}">{{ $item['read'] ? '✓✓' : '✓' }}</span>@endif</span>
-                    </div>
-                    @else
-                    <div class="kx-card {{ $item['style'] === 'internal' ? 'kx-internal' : '' }}" data-kind="{{ $item['kind'] }}">
-                        <span class="kx-card-head">{{ $item['icon'] }} @if($item['tag'] && $item['style'] !== 'internal')<b>{{ $item['tag'] }}</b> · @endif{{ $item['title'] }} · {{ $item['time'] }}</span>
-                        @if($item['body'])<span class="kx-card-body">{{ $item['body'] }}</span>@endif
-                        @if($item['url'])<a class="kx-card-link" href="{{ $item['url'] }}">Öffnen →</a>@endif
-                    </div>
-                    @endif
-                @empty
-                    <div class="d24c-empty">👋 Noch keine Kommunikation. Starten Sie die Unterhaltung – der Kunde sieht Ihre Nachricht sofort im Portal.</div>
-                @endforelse
+                {{-- EINE Timeline ueber alle Kanaele (gemeinsames Partial
+                     mit dem Kundenakte-Tab "Kommunikation") --}}
+                @include('admin.partials.conversation_timeline')
             </div>
         </div>
         <div class="kchat-opts">
+            {{-- Kanalwahl: Portal-Chat (AJAX) oder Antwort ins offene
+                 Ticket (klassischer POST, gleiche Anhaenge-Regeln) --}}
+            <div class="kx-chanwahl" id="kx-chan">
+                <button type="button" class="active" data-chan="chat">💬 Portal-Chat</button>
+                @if($activeTicket && (auth()->user()->role !== 'employee' || auth()->user()->can_manage_tickets))
+                <button type="button" data-chan="ticket">🎫 Ticket #{{ $activeTicket->ticket_number }}</button>
+                @endif
+            </div>
             <select id="kc-template" aria-label="Vorlage einfügen">
                 <option value="">📋 Vorlage einfügen…</option>
                 @foreach($templates as $tpl)
@@ -207,8 +203,10 @@
             </select>
         </div>
         <div class="d24c-files" id="kc-files" hidden></div>
-        <form class="d24c-comp" id="kc-form" method="POST" action="{{ route('admin.customer.messages.store', $active->id) }}" enctype="multipart/form-data">
+        <form class="d24c-comp" id="kc-form" method="POST" action="{{ route('admin.customer.messages.store', $active->id) }}" enctype="multipart/form-data"
+              @if($activeTicket) data-ticket-action="{{ route('admin.ticket.reply', $activeTicket->id) }}" data-ticket-nr="{{ $activeTicket->ticket_number }}" @endif>
             @csrf
+            @if($activeTicket)<input type="hidden" name="status" value="{{ $activeTicket->status }}" disabled id="kc-ticket-status">@endif
             <label class="d24c-clip" title="{{ __('Anhang hinzufügen') }}">📎<input id="kc-file" type="file" name="attachments[]" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" hidden></label>
             <textarea id="kc-input" name="body" class="d24c-inp" rows="1" maxlength="5000" placeholder="Nachricht an {{ $active->user?->name ?? 'den Kunden' }} …" required></textarea>
             <button type="submit" class="d24c-send" aria-label="{{ __('Senden') }}"><span class="snd-ico">➤</span></button>
@@ -230,7 +228,7 @@
 document.addEventListener('DOMContentLoaded', function () {
     const list = document.getElementById('kc-list');
     const scroller = document.getElementById('kc-scroll');
-    list.dataset.lastDay = @json($lastDay ?? '');
+    list.dataset.lastDay = @json($timeline->count() ? $timeline->last()['day'] : '');
     D24Chat.wireComposer({
         form: document.getElementById('kc-form'),
         input: document.getElementById('kc-input'),
@@ -239,12 +237,62 @@ document.addEventListener('DOMContentLoaded', function () {
         list: list, scroller: scroller
     });
     // Chat offen = Kundenantworten gelten als gelesen; neue Nachrichten
-    // erscheinen live.
+    // erscheinen live. Aendern sich NICHT-Chat-Kanaele (Ticket, E-Mail,
+    // Dokument, Notiz), erscheint ein Aktualisieren-Hinweis.
+    let timelineVersion = @json($timelineVersion ?? '');
     D24Chat.poll({
         list: list, scroller: scroller,
         url: '{{ route('admin.customer_chat.feed', $active->id) }}',
         every: 10000,
-        markRead: function () { return true; }
+        markRead: function () { return true; },
+        onData: function (d) {
+            if (timelineVersion && d.timeline_version && d.timeline_version !== timelineVersion) {
+                document.getElementById('kx-refresh').hidden = false;
+            }
+        }
+    });
+
+    // Kanalwahl im Composer: Portal-Chat (AJAX) oder Ticket-Antwort
+    // (klassischer POST; Feld status ist beim Ticket Pflicht).
+    const kcForm = document.getElementById('kc-form');
+    const chatAction = kcForm.action;
+    const inputEl = document.getElementById('kc-input');
+    const chatPlaceholder = inputEl.placeholder;
+    document.querySelectorAll('#kx-chan button').forEach(function (b) {
+        b.addEventListener('click', function () {
+            document.querySelectorAll('#kx-chan button').forEach(function (x) { x.classList.remove('active'); });
+            b.classList.add('active');
+            const ticket = b.dataset.chan === 'ticket';
+            kcForm.action = ticket ? kcForm.dataset.ticketAction : chatAction;
+            kcForm.dataset.plain = ticket ? '1' : '';
+            const st = document.getElementById('kc-ticket-status');
+            if (st) st.disabled = !ticket;
+            const em = document.querySelector('select[name=email_mode]');
+            if (em) em.disabled = ticket;
+            inputEl.placeholder = ticket
+                ? 'Antwort ins Ticket #' + kcForm.dataset.ticketNr + ' – der Kunde sieht sie im Portal …'
+                : chatPlaceholder;
+            inputEl.focus();
+        });
+    });
+
+    // Notiz-Formular: Ziel umschalten (Kundenakte-Notiz vs. interner
+    // Chat mit @Erwaehnungen - anderes Feld, anderer Endpoint).
+    const noteForm = document.getElementById('kx-note');
+    const noteArea = noteForm.querySelector('textarea');
+    document.querySelectorAll('#kx-note-ziel button').forEach(function (b) {
+        b.addEventListener('click', function () {
+            document.querySelectorAll('#kx-note-ziel button').forEach(function (x) { x.classList.remove('active'); });
+            b.classList.add('active');
+            const chat = b.dataset.ziel === 'chat';
+            noteForm.action = chat ? noteForm.dataset.chatAction : noteForm.dataset.noteAction;
+            noteArea.name = chat ? 'message' : 'note';
+            document.getElementById('kx-note-type').disabled = !chat;
+            noteArea.placeholder = chat
+                ? 'Nachricht in den internen Bereich dieser Kundenakte – mit @Name Kollegen erwähnen …'
+                : 'Interne Notiz – nur für das Team sichtbar …';
+            noteArea.focus();
+        });
     });
     // Kanal-Filter: blendet Timeline-Elemente nach Kanal ein/aus
     // (rein clientseitig - die Daten sind bereits geladen).

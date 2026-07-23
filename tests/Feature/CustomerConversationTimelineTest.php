@@ -118,6 +118,87 @@ class CustomerConversationTimelineTest extends TestCase
             ->assertSee(route('admin.customer.note.store', $customer->id), false);
     }
 
+    public function test_composer_bietet_ticket_kanal_und_versionshinweis(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = $this->makeCustomer();
+        $ticket = Ticket::create([
+            'customer_id' => $customer->id, 'type' => 'damage', 'status' => 'open',
+            'subject' => 'Wasserschaden', 'description' => 'x', 'priority' => 'mittel',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.customer_chat', ['kunde' => (string) $customer->id]))
+            ->assertOk()
+            // Kanalwahl Chat/Ticket + versteckter Status fuer den Reply-Endpoint
+            ->assertSee('kx-chan', false)
+            ->assertSee(route('admin.ticket.reply', $ticket->id), false)
+            ->assertSee('kc-ticket-status', false)
+            // Intern-Teilen (interner Chat mit Mentions) + E-Mail-Shortcut
+            ->assertSee(route('admin.internal.store', $customer->id), false)
+            ->assertSee(route('admin.email.compose', ['customer_id' => $customer->id]), false)
+            // Aktualisieren-Hinweis vorhanden
+            ->assertSee('kx-refresh', false);
+    }
+
+    public function test_feed_liefert_timeline_version_und_aendert_sich(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = $this->makeCustomer();
+
+        $first = $this->actingAs($admin)
+            ->getJson(route('admin.customer_chat.feed', $customer->id))
+            ->assertOk()->json('timeline_version');
+
+        Ticket::create([
+            'customer_id' => $customer->id, 'type' => 'damage', 'status' => 'open',
+            'subject' => 'Neues Ticket', 'description' => 'x', 'priority' => 'mittel',
+        ]);
+
+        $second = $this->actingAs($admin)
+            ->getJson(route('admin.customer_chat.feed', $customer->id))
+            ->assertOk()->json('timeline_version');
+
+        $this->assertNotSame($first, $second);
+    }
+
+    public function test_whatsapp_button_nur_mit_rufnummer_und_normalisiert(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $mit = $this->makeCustomer();
+        $mit->update(['mobile' => '0176 1234567']);
+        $ohne = Customer::create([
+            'user_id' => User::factory()->create(['role' => 'customer', 'name' => 'Ohne Nummer'])->id,
+            'customer_number' => '2699999', 'preferred_lang' => 'de',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.customer_chat', ['kunde' => (string) $mit->id]))
+            ->assertOk()
+            ->assertSee('https://wa.me/491761234567', false);
+
+        $this->actingAs($admin)
+            ->get(route('admin.customer_chat', ['kunde' => (string) $ohne->id]))
+            ->assertOk()
+            ->assertDontSee('wa.me', false);
+    }
+
+    public function test_kundenakte_hat_kommunikations_tab_mit_timeline(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = $this->makeCustomer();
+        Ticket::create([
+            'customer_id' => $customer->id, 'type' => 'damage', 'status' => 'open',
+            'subject' => 'Akten-Test-Ticket', 'description' => 'x', 'priority' => 'mittel',
+        ]);
+
+        $this->actingAs($admin)->get(route('admin.customer', $customer->id))
+            ->assertOk()
+            ->assertSee('tab-kommunikation', false)
+            ->assertSee('Komplette Kommunikation')
+            ->assertSee('Ticket erstellt: Akten-Test-Ticket');
+    }
+
     public function test_sidebar_hat_email_gruppe_und_umbenannte_zentrale(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
