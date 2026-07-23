@@ -37,6 +37,13 @@ Optionale Bild-Slots der Startseite (hochladen genuegt)
     (z. B. von Pexels, Quelle in bildnachweise.html ergaenzen).
     Fehlt die Datei, zeigt die Karte automatisch das Logo-Panel.
 
+- assets/images/banner-<seite>.jpg -> optionales Bild oben auf den
+    Unterseiten (JPG quer, ca. 1600x500, unter 400 KB). Namen:
+      banner-impressum.jpg  banner-datenschutz.jpg  banner-agb.jpg
+      banner-widerruf.jpg   banner-erstinformation.jpg
+      banner-cookie-richtlinie.jpg  banner-bildnachweise.jpg
+    Fehlt die Datei, bleibt die Seite unveraendert.
+
 Logo tauschen
 -------------
 - logo-white.png = weisse Wortmarke auf transparentem Grund
