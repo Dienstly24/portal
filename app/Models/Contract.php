@@ -205,4 +205,6 @@ class Contract extends Model {
     public function externalReferences() { return $this->morphMany(ExternalReference::class, 'referenceable'); }
     public function documents() { return $this->hasMany(Document::class); }
     public function switchReminders() { return $this->hasMany(ContractSwitchReminder::class); }
+    /** Feld-genaue Aenderungshistorie (Audit Log), neueste zuerst. */
+    public function revisions() { return $this->hasMany(ContractRevision::class)->orderByDesc('created_at'); }
 }

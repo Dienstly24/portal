@@ -38,6 +38,9 @@
     </form>
 </div>
 
+{{-- Aenderungsverlauf (Version History): alte/neue Werte je Feld --}}
+@include('admin.partials.contract_revisions', ['contract' => $contract])
+
 {{-- Löschen bewusst außerhalb des Bearbeiten-Formulars (eigener POST). --}}
 <div class="card" style="max-width:800px;border-color:#F0C0C0;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
