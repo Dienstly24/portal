@@ -91,6 +91,7 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
 </style>
 <div class="cust-tabs">
     <button type="button" class="cust-tab active" data-tab="tab-uebersicht" onclick="showCustTab('tab-uebersicht',this)">📄 Übersicht</button>
+    <button type="button" id="cust-tab-familie" class="cust-tab" data-tab="tab-familie" onclick="showCustTab('tab-familie',this)">👨‍👩‍👦 Familie <span style="opacity:.7;">({{ $customer->family->count() }})</span></button>
     <button type="button" class="cust-tab" data-tab="tab-vertraege" onclick="showCustTab('tab-vertraege',this)">📑 Verträge <span style="opacity:.7;">({{ $customer->contracts->count() }})</span></button>
     <button type="button" class="cust-tab" data-tab="tab-dokumente" onclick="showCustTab('tab-dokumente',this)">📎 Dokumente <span style="opacity:.7;">({{ $customer->documents->count() }})</span></button>
     <button type="button" class="cust-tab" data-tab="tab-tickets" onclick="showCustTab('tab-tickets',this)">🎫 Tickets <span style="opacity:.7;">({{ $customer->tickets->count() }})</span></button>
@@ -153,6 +154,45 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
         <tr><td style="color:var(--ink-soft);padding:8px 0;border-top:1px solid var(--line);">Firma</td><td style="border-top:1px solid var(--line);">{{ $customer->company_name }} @if($customer->company_type)<span style="font-size:12px;color:var(--ink-soft);">({{ $customer->company_type }})</span>@endif</td></tr>
         @endif
     </table>
+</div>
+
+{{-- Familie (Ehepartner/Kinder): auf einen Blick sichtbar, ob der Kunde
+     eine Familie hinterlegt hat und wer dazugehoert. Voller Datensatz je
+     Person in der eigenen Registerkarte „Familie". --}}
+<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="card-title" style="margin-bottom:0;">👨‍👩‍👦 Familie ({{ $customer->family->count() }})</div>
+        @if($customer->family->count())
+        <button type="button" onclick="document.getElementById('cust-tab-familie').click()" class="btn btn-ghost" style="padding:6px 12px;font-size:12.5px;">Alle Details →</button>
+        @endif
+    </div>
+    @forelse($customer->family as $f)
+    @php
+        $frel = strtolower(trim($f->relation ?? ''));
+        $fg = strtolower(trim($f->gender ?? $f->geschlecht ?? ''));
+        $ffemale = in_array($fg, ['female','w','weiblich'], true);
+        $fmale = in_array($fg, ['male','m','maennlich','männlich'], true);
+        $fkind = str_contains($frel, 'kind');
+        $ficon = $fkind ? ($ffemale ? '👧' : ($fmale ? '👦' : '🧒')) : ($ffemale ? '👩' : ($fmale ? '👨' : '👤'));
+        $frelLabels = ['kind'=>'Kind','ehepartner'=>'Ehepartner','hauptversicherter'=>'Hauptversicherter','andere'=>'Weitere Person','familienmitglied'=>'Familienmitglied','elternteil'=>'Elternteil','geschwister'=>'Geschwister','sonstige'=>'Sonstige'];
+        $frelLabel = $frelLabels[$frel] ?? ($f->relation ?: 'Familienmitglied');
+        $fage = $f->birth_date ? \Carbon\Carbon::parse($f->birth_date)->age : null;
+        $fmeta = $frelLabel;
+        if ($fage !== null) { $fmeta .= ' · ' . $fage . ' J.'; }
+        if ($f->birth_date) { $fmeta .= ' · ' . \Carbon\Carbon::parse($f->birth_date)->format('d.m.Y'); }
+    @endphp
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;{{ !$loop->first ? 'border-top:1px solid var(--line);' : '' }}">
+        <div style="font-size:22px;flex:none;">{{ $ficon }}</div>
+        <div style="flex:1;min-width:0;">
+            <div style="font-size:13.5px;font-weight:600;">{{ $f->name }}</div>
+            <div style="font-size:12px;color:var(--ink-soft);">{{ $fmeta }}</div>
+        </div>
+        @if($f->health_insurance_company)<span style="font-size:11.5px;background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:2px 7px;color:var(--ink-soft);flex:none;">{{ $f->health_insurance_company }}</span>@endif
+    </div>
+    @empty
+    <p style="color:var(--ink-soft);font-size:13px;margin:4px 0 0;">Keine Familienmitglieder hinterlegt.</p>
+    @endforelse
+    <a href="{{ route('admin.customer.edit', $customer->id) }}#familie" class="btn btn-ghost" style="width:100%;margin-top:14px;font-size:12.5px;text-align:center;">✏️ Familie bearbeiten</a>
 </div>
 
 {{-- Verwandte Kunden: andere Akten mit gemeinsamen Merkmalen (Telefon,
@@ -236,6 +276,30 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
 @endif
 </div>{{-- .grid-2 --}}
 </div>{{-- #tab-uebersicht --}}
+
+{{-- ================= Familie-Tab ================= --}}
+<div class="tab-section" id="tab-familie" style="display:none;">
+<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:10px;">
+        <div class="card-title" style="margin-bottom:0;">👨‍👩‍👦 Familie & Kinder ({{ $customer->family->count() }})</div>
+        <a href="{{ route('admin.customer.edit', $customer->id) }}#familie" class="btn btn-gold btn-sm">✏️ Familie bearbeiten</a>
+    </div>
+    <p style="font-size:12px;color:var(--ink-soft);margin:0 0 18px;">Ehepartner und Kinder des Kunden mit vollstaendigen Angaben (Geburtsdatum, Geschlecht, Krankenkasse, KV-Nummer, KV-Status).</p>
+    @if($customer->family->count())
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;">
+        @foreach($customer->family as $f)
+            @include('admin.partials.family_member_card', ['f' => $f, 'showDelete' => false])
+        @endforeach
+    </div>
+    @else
+    <div style="text-align:center;padding:32px 12px;color:var(--ink-soft);">
+        <div style="font-size:40px;margin-bottom:8px;">👨‍👩‍👦</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:4px;">Keine Familienmitglieder hinterlegt</div>
+        <div style="font-size:12.5px;">Ueber „Familie bearbeiten" koennen Sie Ehepartner und Kinder mit ihren Versicherungsdaten anlegen.</div>
+    </div>
+    @endif
+</div>
+</div>
 
 {{-- ================= Dokumente-Tab ================= --}}
 <div class="tab-section" id="tab-dokumente" style="display:none;">
