@@ -108,6 +108,27 @@ class AdminCustomerChatTest extends TestCase
         $this->assertNotNull($reply->fresh()->read_at);
     }
 
+    public function test_anhaenge_im_thread_haben_vorschau_attribute(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = $this->makeCustomer();
+        $reply = $this->customerReply($customer, 'Mit Foto');
+        $attachment = \App\Models\CustomerMessageAttachment::create([
+            'message_id' => $reply->id,
+            'uploaded_by' => $customer->user_id,
+            'file_name' => 'schaden.jpg',
+            'file_path' => 'customers/' . $customer->id . '/messages/schaden.jpg',
+            'disk' => 'local',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.customer_chat', ['kunde' => (string) $customer->id]))
+            ->assertOk()
+            ->assertSee('docpv-quicklook', false)
+            ->assertSee('data-preview-url="' . route('admin.messages.attachment.view', $attachment->id) . '"', false)
+            ->assertSee('data-preview-kind="image"', false);
+    }
+
     public function test_feed_liefert_staff_perspektive(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);

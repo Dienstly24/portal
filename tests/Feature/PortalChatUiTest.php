@@ -129,6 +129,25 @@ class PortalChatUiTest extends TestCase
             ->assertSee(__('Anfrage stellen'));
     }
 
+    public function test_anhaenge_haben_vorschau_attribute_und_partial_ist_eingebunden(): void
+    {
+        $customer = $this->makeCustomer();
+        $message = $this->staffMessage($customer, 'Mit Anhang');
+        $attachment = \App\Models\CustomerMessageAttachment::create([
+            'message_id' => $message->id,
+            'uploaded_by' => $message->sender_id,
+            'file_name' => 'police.pdf',
+            'file_path' => 'customers/' . $customer->id . '/messages/police.pdf',
+            'disk' => 'local',
+        ]);
+
+        $this->actingAs($customer->user)->get(route('portal.messages'))
+            ->assertOk()
+            ->assertSee('docpv-quicklook', false)
+            ->assertSee('data-preview-url="' . route('portal.messages.attachment.view', $attachment->id) . '"', false)
+            ->assertSee('data-preview-kind="pdf"', false);
+    }
+
     public function test_chat_widget_erscheint_im_portal_aber_nicht_im_chat(): void
     {
         $customer = $this->makeCustomer();

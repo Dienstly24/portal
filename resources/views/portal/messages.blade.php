@@ -32,7 +32,7 @@
                     <span class="d24c-att">
                         <span class="d24c-att-n">{{ $att->isImage() ? '🖼️' : ($att->isPdf() ? '📄' : '📎') }} {{ $att->file_name }}</span>
                         <span class="d24c-attbtns">
-                            @if($att->isViewable())<a href="{{ route('portal.messages.attachment.view', $att->id) }}" target="_blank" rel="noopener">👁 {{ __('Anzeigen') }}</a>@endif
+                            @if($att->isViewable())<a href="{{ route('portal.messages.attachment.view', $att->id) }}" target="_blank" rel="noopener" data-preview-open data-preview-url="{{ route('portal.messages.attachment.view', $att->id) }}" data-preview-name="{{ $att->file_name }}" data-preview-kind="{{ $att->isImage() ? 'image' : 'pdf' }}" data-preview-download="{{ route('portal.messages.attachment', $att->id) }}">👁 {{ __('Anzeigen') }}</a>@endif
                             <a href="{{ route('portal.messages.attachment', $att->id) }}">⬇ {{ __('Herunterladen') }}</a>
                         </span>
                     </span>
