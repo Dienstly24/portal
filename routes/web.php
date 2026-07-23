@@ -345,6 +345,9 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/kundenchat', [\App\Http\Controllers\AdminCustomerChatController::class, 'index'])->name('customer_chat');
     Route::get('/kundenchat/{id}/feed', [\App\Http\Controllers\AdminCustomerChatController::class, 'feed'])
         ->middleware('throttle:120,1')->name('customer_chat.feed');
+    // Vorgang direkt aus der Unterhaltung eroeffnen (Anfrage -> Ticket)
+    Route::post('/kundenchat/{id}/ticket', [\App\Http\Controllers\AdminCustomerChatController::class, 'createTicket'])
+        ->name('customer_chat.ticket');
     Route::get('/vorlagen', [\App\Http\Controllers\MessageTemplateController::class, 'index'])->name('templates');
     Route::get('/vorlagen/liste', [\App\Http\Controllers\MessageTemplateController::class, 'list'])->name('templates.list');
     Route::get('/vorlagen/{id}/render', [\App\Http\Controllers\MessageTemplateController::class, 'render'])->name('templates.render');
