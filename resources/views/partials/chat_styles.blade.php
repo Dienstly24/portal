@@ -33,4 +33,12 @@
 .d24c-send{width:42px;height:42px;border-radius:50%;border:none;background:linear-gradient(135deg,#19b463,#128a4b);color:#fff;font-size:16px;cursor:pointer;flex:none;box-shadow:0 4px 12px rgba(18,138,75,.35);display:flex;align-items:center;justify-content:center;}
 .d24c-send:disabled{opacity:.6;cursor:default;}
 [dir=rtl] .d24c-send .snd-ico{display:inline-block;transform:scaleX(-1);}
+/* Omnichannel-Timeline: Ereignis-/E-Mail-/Dokument-Karten mittig,
+   interne Notizen gelb rechts, Kanal-Tag an Blasen (Beraterwelt) */
+.kx-card{align-self:center;max-width:86%;background:#fff;border:1px solid var(--line);border-radius:11px;padding:8px 13px;font-size:12.5px;display:flex;flex-direction:column;gap:3px;box-shadow:0 1px 1px rgba(0,0,0,.05);}
+.kx-card-head{font-weight:600;color:var(--ink);}
+.kx-card-body{color:var(--ink-soft);white-space:pre-line;word-break:break-word;}
+.kx-card-link{font-size:11.5px;color:#128a4b;text-decoration:none;font-weight:600;}
+.kx-internal{background:#FBF6E4;border-color:#E7D9A8;align-self:flex-end;max-width:76%;}
+.kx-tag{font-size:10.5px;font-weight:700;color:#128a4b;text-decoration:none;background:rgba(18,138,75,.08);border-radius:6px;padding:1px 7px;align-self:flex-start;}
 </style>

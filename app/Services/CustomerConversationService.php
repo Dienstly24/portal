@@ -164,6 +164,27 @@ class CustomerConversationService
         return $items->sortBy('at')->values();
     }
 
+    /**
+     * Leichter Fingerabdruck der NICHT-Chat-Elemente (Tickets, E-Mails,
+     * Dokumente, Notizen). Der Chat aktualisiert sich live; aendert sich
+     * diese Version, zeigt die Unterhaltung einen Aktualisieren-Hinweis.
+     */
+    public function version(Customer $customer, bool $includeEmails = true): string
+    {
+        $ticketIds = Ticket::where('customer_id', $customer->id)->pluck('id');
+        $parts = [
+            Ticket::where('customer_id', $customer->id)->count(),
+            Ticket::where('customer_id', $customer->id)->max('updated_at'),
+            TicketMessage::whereIn('ticket_id', $ticketIds)->count(),
+            TicketEvent::whereIn('ticket_id', $ticketIds)->count(),
+            $includeEmails ? EmailMessage::where('customer_id', $customer->id)->count() : 0,
+            Document::where('customer_id', $customer->id)->count(),
+            CustomerNote::where('customer_id', $customer->id)->count(),
+            InternalMessage::where('customer_id', $customer->id)->note()->count(),
+        ];
+        return md5(implode('|', array_map(strval(...), $parts)));
+    }
+
     /** @return array<string,mixed> */
     private function base(string $kind, string $style, $at): array
     {

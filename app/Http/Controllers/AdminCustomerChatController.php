@@ -53,10 +53,10 @@ class AdminCustomerChatController extends Controller
             CustomerMessage::where('customer_id', $active->id)
                 ->fromCustomer()->unread()
                 ->update(['read_at' => now()]);
-            $timeline = (new \App\Services\CustomerConversationService())->timeline(
-                $active,
-                includeEmails: in_array($user->role, ['admin', 'manager', 'support'], true),
-            );
+            $service = new \App\Services\CustomerConversationService();
+            $includeEmails = in_array($user->role, ['admin', 'manager', 'support'], true);
+            $timeline = $service->timeline($active, includeEmails: $includeEmails);
+            $timelineVersion = $service->version($active, includeEmails: $includeEmails);
             // Schnellaktion Ticket-Status: das juengste noch offene Ticket.
             $activeTicket = \App\Models\Ticket::where('customer_id', $active->id)
                 ->whereNotIn('status', ['resolved', 'closed'])
@@ -68,6 +68,7 @@ class AdminCustomerChatController extends Controller
             'searchResults' => $searchResults,
             'active' => $active,
             'timeline' => $timeline,
+            'timelineVersion' => $timelineVersion ?? '',
             'activeTicket' => $activeTicket,
             'templates' => \App\Models\MessageTemplate::where('category', 'kunde')
                 ->orderBy('sort')->orderBy('name')->get(['id', 'name']),
@@ -97,6 +98,13 @@ class AdminCustomerChatController extends Controller
         return response()->json([
             'unread' => $messages->where('from_staff', false)->whereNull('read_at')->count(),
             'messages' => $messages->map(fn ($m) => $m->toChatPayload(staffView: true))->values(),
+            // Nicht-Chat-Kanaele (Tickets, E-Mails, Dokumente, Notizen):
+            // aendert sich die Version, blendet die Seite einen
+            // Aktualisieren-Hinweis ein (Chat selbst ist bereits live).
+            'timeline_version' => (new \App\Services\CustomerConversationService())->version(
+                $customer,
+                includeEmails: in_array(auth()->user()->role, ['admin', 'manager', 'support'], true),
+            ),
         ]);
     }
 }

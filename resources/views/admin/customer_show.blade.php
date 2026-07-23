@@ -95,6 +95,7 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
     <button type="button" class="cust-tab" data-tab="tab-vertraege" onclick="showCustTab('tab-vertraege',this)">📑 Verträge <span style="opacity:.7;">({{ $customer->contracts->count() }})</span></button>
     <button type="button" class="cust-tab" data-tab="tab-dokumente" onclick="showCustTab('tab-dokumente',this)">📎 Dokumente <span style="opacity:.7;">({{ $customer->documents->count() }})</span></button>
     <button type="button" class="cust-tab" data-tab="tab-tickets" onclick="showCustTab('tab-tickets',this)">🎫 Tickets <span style="opacity:.7;">({{ $customer->tickets->count() }})</span></button>
+    <button type="button" class="cust-tab" data-tab="tab-kommunikation" onclick="showCustTab('tab-kommunikation',this)">🧭 Kommunikation <span style="opacity:.7;">({{ $conversationTimeline->count() }})</span></button>
     <button type="button" class="cust-tab" data-tab="tab-nachrichten" onclick="showCustTab('tab-nachrichten',this)">📨 Nachrichten <span style="opacity:.7;">({{ $customerMessages->count() }})</span></button>
     <button type="button" class="cust-tab" data-tab="tab-intern" onclick="showCustTab('tab-intern',this)">💬 Intern <span style="opacity:.7;">({{ $internalChat->count() }})</span></button>
     <button type="button" class="cust-tab" data-tab="tab-notizen" onclick="showCustTab('tab-notizen',this)">📝 Notizen</button>
@@ -567,6 +568,24 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
         @endforelse
         </tbody>
     </table>
+</div>
+</div>
+
+<div class="tab-section" id="tab-kommunikation" style="display:none;">
+{{-- Omnichannel: komplette Kommunikation aller Kanaele an einem Ort
+     (gleiches Partial wie die Kundenkommunikation; Antworten dort). --}}
+@include('partials.chat_styles')
+<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+        <div class="card-title" style="margin-bottom:0;">🧭 Komplette Kommunikation – alle Kanäle</div>
+        <a href="{{ route('admin.customer_chat', ['kunde' => $customer->id]) }}" class="btn btn-gold" style="padding:7px 16px;font-size:13px;">💬 Antworten in der Kundenkommunikation →</a>
+    </div>
+    <div style="max-height:560px;overflow-y:auto;background:#EFEBDF;border:1px solid var(--line);border-radius:12px;" id="komm-scroll">
+        <div class="d24c-list">
+            @php $timeline = $conversationTimeline; @endphp
+            @include('admin.partials.conversation_timeline')
+        </div>
+    </div>
 </div>
 </div>
 
