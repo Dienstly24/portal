@@ -631,7 +631,12 @@ class PortalController extends Controller
 
         $data = $request->validate([
             'gender' => 'nullable|in:male,female,diverse',
-            'birth_place' => 'nullable|string|max:255',
+            // Pflichtfelder im Portal-Formular (HTML "required" erzwingt die
+            // Eingabe im Browser). Serverseitig "sometimes|required": ist das
+            // Feld Teil des Submits, darf es nicht leer sein - ein reiner
+            // Bank-/Teil-Submit ohne diese Schluessel bleibt aber moeglich.
+            'birth_place' => 'sometimes|required|string|max:255',
+            'nationality' => 'sometimes|required|string|max:100',
             'marital_status' => 'nullable|in:ledig,verheiratet,geschieden,verwitwet',
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+\/\s()-]{6,}$/'],
             // Strukturierte Adresse nach deutschem Standard (Review Punkt 5)
@@ -655,7 +660,7 @@ class PortalController extends Controller
         // Persönliche Daten + strukturierte Adresse + Kundendaten:
         // EIN gebündelter Profil-Antrag für alle geänderten Felder.
         $profileFields = [
-            'gender', 'birth_place', 'marital_status', 'phone',
+            'gender', 'birth_place', 'nationality', 'marital_status', 'phone',
             'address_street', 'address_house_number', 'address_house_suffix', 'address_zip', 'address_city',
             'health_insurance_number', 'pension_insurance_number', 'tax_id',
         ];

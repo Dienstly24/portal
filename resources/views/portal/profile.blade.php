@@ -30,7 +30,10 @@
             </div>
         </div>
         <div class="grid-2">
-            <div class="field"><label>{{ __('Geburtsort') }}</label><input type="text" name="birth_place" value="{{ $customer?->birth_place }}"></div>
+            <div class="field"><label>{{ __('Geburtsort') }} *</label><input type="text" name="birth_place" required value="{{ $customer?->birth_place }}"></div>
+            <div class="field"><label>{{ __('Nationalität') }} *</label><input type="text" name="nationality" required value="{{ $customer?->nationality }}" placeholder="{{ __('z.B. Deutsch, Syrisch') }}"></div>
+        </div>
+        <div class="grid-2">
             <div class="field"><label>{{ __('Telefon') }}</label><input type="text" name="phone" value="{{ $customer?->phone }}" placeholder="+49 …"></div>
         </div>
         <div class="grid-2">
