@@ -125,6 +125,18 @@ label{display:block;font-size:13px;margin-bottom:7px;color:#cfd5cf;font-weight:5
 .foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 18px;padding:20px 16px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);}
 .foot a{color:#c2c7cf;text-decoration:none;}.foot a:hover{color:#fff;}
 .foot .sep{opacity:.35;}
+/* Partner-Vergleichsrechner (Zwei-Klick) */
+.vgl-card{margin-bottom:18px;border-color:rgba(184,161,107,.4);}
+.vgl-card h2{margin-bottom:8px;}
+.vgl-text{color:var(--muted);font-size:13.5px;margin-bottom:14px;max-width:70ch;}
+.vgl-text a{color:var(--mint);}
+.vgl-load{background:linear-gradient(180deg,#19b463,#128a4b);border:1px solid #1fc06e;color:#fff;font-size:14.5px;font-weight:700;padding:12px 22px;border-radius:11px;cursor:pointer;}
+.vgl-load:hover{filter:brightness(1.08);}
+.vgl-alt{margin-top:10px;font-size:13px;}
+.vgl-alt a{color:#D1C18F;text-decoration:none;}
+.vgl-alt a:hover{text-decoration:underline;}
+.vgl-hinweis{margin-top:12px;font-size:11.5px;color:var(--muted);}
+#vgl-widget{background:#fff;border-radius:12px;padding:6px;min-height:120px;}
 </style>
 @include('partials.favicon')
 </head>
@@ -147,6 +159,26 @@ label{display:block;font-size:13px;margin-bottom:7px;color:#cfd5cf;font-weight:5
         </div>
     </div>
     @if($page->t('intro'))<p class="lead">{{ $page->t('intro') }}</p>@endif
+
+    @if(!empty($vergleich))
+    {{-- Partner-Vergleichsrechner mit Zwei-Klick-Einwilligung (DSGVO):
+         Drittanbieter-Script wird erst nach Klick per JS injiziert. --}}
+    <div class="card vgl-card" id="vergleich">
+        <div id="vgl-consent">
+            <h2>🔍 {{ __('Tarife direkt vergleichen') }}</h2>
+            <p class="vgl-text">{{ __('Mit einem Klick laden Sie den Vergleichsrechner unseres Partners :anbieter. Dabei werden Daten (z. B. Ihre IP-Adresse) an :anbieter übertragen; es gelten dessen', ['anbieter' => $vergleich['anbieter']]) }}
+                <a href="{{ $vergleich['datenschutz'] }}" target="_blank" rel="noopener">{{ __('Datenschutzhinweise') }}</a>.</p>
+            <button type="button" class="btn vgl-load"
+                    data-container="{{ $vergleich['container'] }}"
+                    data-script="{{ $vergleich['script'] }}">
+                {{ __('Vergleichsrechner laden') }} →
+            </button>
+            <p class="vgl-alt"><a href="{{ $vergleich['direktlink'] }}" target="_blank" rel="noopener sponsored">{{ __('Oder direkt bei :anbieter vergleichen', ['anbieter' => $vergleich['anbieter']]) }} ↗</a></p>
+        </div>
+        <div id="vgl-widget" hidden></div>
+        <p class="vgl-hinweis">{{ __('Ein Service von :anbieter – Vergleich und Abschluss laufen beim Partner.', ['anbieter' => $vergleich['anbieter']]) }}</p>
+    </div>
+    @endif
 
     <div class="cols {{ $hasLeft ? 'two' : 'one' }}">
         @if($hasLeft)
@@ -255,5 +287,28 @@ label{display:block;font-size:13px;margin-bottom:7px;color:#cfd5cf;font-weight:5
     <a href="{{ url('/datenschutz') }}">{{ __('Datenschutz') }}</a><span class="sep">·</span>
     <a href="{{ route('login') }}">{{ __('Kundenportal') }}</a>
 </div>
+<script>
+// Zwei-Klick-Einwilligung: Partner-Script erst nach Klick laden (DSGVO).
+(function(){
+    var btn = document.querySelector('.vgl-load');
+    if (!btn) return;
+    function laden(){
+        var ziel = document.getElementById('vgl-widget');
+        var box = document.createElement('div');
+        box.style.width = '100%';
+        box.id = btn.getAttribute('data-container');
+        ziel.appendChild(box);
+        var s = document.createElement('script');
+        s.src = btn.getAttribute('data-script');
+        ziel.appendChild(s);
+        ziel.hidden = false;
+        document.getElementById('vgl-consent').hidden = true;
+        try { localStorage.setItem('d24_vgl_ok', '1'); } catch(e) {}
+    }
+    btn.addEventListener('click', laden);
+    // Bereits frueher eingewilligt -> direkt laden.
+    try { if (localStorage.getItem('d24_vgl_ok') === '1') laden(); } catch(e) {}
+})();
+</script>
 </body>
 </html>
