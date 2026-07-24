@@ -42,17 +42,13 @@ class SecurityHeaders
                     "form-action 'self'",
                     "img-src 'self' data: https:",
                     "font-src 'self' data: https://fonts.bunny.net",
-                    // form.partner-versicherung.de: eingebetteter Tarifcheck-
-                    // Vergleichsrechner (Zwei-Klick-Einwilligung auf den
-                    // Leistungsseiten, config/vergleichsrechner.php).
-                    "style-src 'self' 'unsafe-inline' https://fonts.bunny.net https://form.partner-versicherung.de",
+                    "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
                     // 'unsafe-eval' ist noetig, weil Alpine.js v3 (Standard-Build)
                     // seine Direktiven (x-data/x-show/@click) per Function()
                     // auswertet. Ohne dies bricht Alpine still und Dropdowns/Menues
                     // (z. B. das ...-Aktionsmenue der Kundenliste) bleiben offen.
-                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://form.partner-versicherung.de",
-                    "connect-src 'self' https://form.partner-versicherung.de",
-                    "frame-src 'self' https://form.partner-versicherung.de https://www.tarifcheck.de",
+                    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+                    "connect-src 'self'",
                 ]));
             }
         }
