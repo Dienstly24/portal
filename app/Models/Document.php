@@ -31,6 +31,7 @@ class Document extends Model {
         'familienbescheinigung'=> ['label' => 'Familienbescheinigung','category' => 'identity'],
         'gehaltsabrechnung'    => ['label' => 'Gehaltsabrechnung',    'category' => 'other'],
         'personalausweis'      => ['label' => 'Personalausweis',      'category' => 'identity'],
+        'aufenthaltstitel'     => ['label' => 'Aufenthaltstitel',     'category' => 'identity'],
         'reisepass'            => ['label' => 'Reisepass',            'category' => 'identity'],
         'fuehrerschein'        => ['label' => 'Führerschein',         'category' => 'identity'],
         'rechnung'             => ['label' => 'Rechnung',             'category' => 'invoice'],
