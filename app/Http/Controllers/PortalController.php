@@ -484,7 +484,10 @@ class PortalController extends Controller
 
         $data = $request->validate([
             'document' => 'required|file|mimes:pdf,jpg,jpeg,png,webp,heic,heif,gif,doc,docx,xls,xlsx|max:10240',
-            'category' => 'required|in:contract,police,invoice,identity,claim,other',
+            // Kunde waehlt bewusst KEINE Kategorie mehr (kein Aufwand fuer ihn) -
+            // das Einordnen uebernimmt das Team im CRM. Optional bleibt sie
+            // zulaessig, falls ein anderer Aufrufer sie doch mitsendet.
+            'category' => 'nullable|in:contract,police,invoice,identity,claim,other',
             // Optionale Zuordnung zu einem eigenen Vertrag (Kfz, Rechtsschutz, ...).
             'contract_id' => 'nullable|uuid',
         ]);
@@ -503,7 +506,7 @@ class PortalController extends Controller
             'id' => \Illuminate\Support\Str::uuid(),
             'customer_id' => $customer->id,
             'contract_id' => $contractId,
-            'category' => $data['category'],
+            'category' => $data['category'] ?? 'other',
             'file_name' => $file->getClientOriginalName(),
             'file_path' => $path,
             'disk' => 'local',
