@@ -26,9 +26,7 @@ class ServicePageController extends Controller
     public function show(string $slug)
     {
         $page = ServicePage::active()->where('slug', $slug)->firstOrFail();
-        // Optionaler Partner-Vergleichsrechner (Zwei-Klick-Einwilligung im View).
-        $vergleich = config('vergleichsrechner.slugs.' . $slug);
-        return view('services.show', compact('page', 'vergleich'));
+        return view('services.show', compact('page'));
     }
 
     public function submit(Request $request, string $slug)
