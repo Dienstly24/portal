@@ -171,20 +171,11 @@
                 <span class="so-ico">📄</span>
                 <span>{{ __('PDF hochladen') }}<span class="so-sub">{{ __('Fertige PDF-Datei (max. 10 MB)') }}</span></span>
             </button>
-            @if($contracts->isNotEmpty())
-            <div class="field" style="margin-top:14px;margin-bottom:8px;">
-                <label>{{ __('Zu welchem Vertrag gehört das Dokument? (optional)') }}</label>
-                <select id="scan-contract">
-                    <option value="">{{ __('— Automatisch erkennen / kein Vertrag —') }}</option>
-                    @foreach($contracts as $c)
-                    <option value="{{ $c->id }}">{{ $c->typeIcon() }} {{ $c->typeLabel() }} · {{ $c->insurer }}@if($c->contract_number) ({{ $c->contract_number }})@endif</option>
-                    @endforeach
-                </select>
-            </div>
-            @endif
-            <div style="text-align:center;margin-top:12px;">
-                <a href="#" onclick="smartScan.close();document.getElementById('upload-doc-modal').style.display='flex';return false;" style="font-size:12.5px;color:var(--ink-soft);">{{ __('Klassischer Upload (Kategorie selbst wählen)') }}</a>
-            </div>
+            <button type="button" class="scan-option" onclick="document.getElementById('classic-file-input').click()">
+                <span class="so-ico">📎</span>
+                <span>{{ __('Andere Datei') }}<span class="so-sub">{{ __('Word, Excel oder andere Datei (max. 10 MB)') }}</span></span>
+            </button>
+            <p style="font-size:12px;color:var(--ink-soft);text-align:center;margin-top:14px;line-height:1.5;">{{ __('Einfach hochladen – mehr müssen Sie nicht tun. Wir kümmern uns um den Rest.') }}</p>
         </div>
 
         {{-- Schritt 2: Kamera --}}
@@ -444,8 +435,6 @@ window.smartScan = (function() {
 
         var data = new FormData();
         data.append('_token', @json(csrf_token()));
-        var contractSel = document.getElementById('scan-contract');
-        if (contractSel && contractSel.value) data.append('contract_id', contractSel.value);
         if (pdfFile) {
             data.append('pdf', pdfFile, pdfFile.name);
         } else {
@@ -506,10 +495,12 @@ window.smartScan = (function() {
                 headers: { 'Accept': 'application/json' }, credentials: 'same-origin'
             }).then(function(r) { return r.json(); }).then(function(s) {
                 if (gen !== pollGen) return;
+                // Dem Kunden bewusst KEINE Analyse-/Kategorie-Details zeigen -
+                // er soll nur hochladen; das Einordnen uebernimmt das Team.
                 if (s.status === 'done') {
-                    finish('✓ ' + (s.type_label || s.file_name) + ' ' + L.recognized, s.summary || '', s);
+                    finish('✓ ' + L.saved, L.savedSub, null);
                 } else if (s.status === 'failed') {
-                    finish(L.saved, L.failed, null);
+                    finish(L.saved, L.savedSub, null);
                 } else if (s.status === 'none') {
                     finish(L.saved, L.savedSub, null);
                 } else {
@@ -587,34 +578,17 @@ window.smartScan = (function() {
 })();
 </script>
 
-<div id="upload-doc-modal" class="d24-modal">
-    <div class="d24-modal-box">
-        <button onclick="document.getElementById('upload-doc-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
-        <div style="font-size:18px;font-weight:700;margin-bottom:6px;">Dokument hochladen</div>
-        <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">PDF, Bild (JPG, PNG, HEIC, WEBP), DOC oder XLS – max. 10 MB. Unser Team wird über Ihren Upload informiert.</p>
-        <form method="POST" action="{{ route('portal.documents.upload') }}" enctype="multipart/form-data">
-            @csrf
-            <div class="field"><label>Kategorie *</label>
-                <select name="category" required>
-                    @foreach(\App\Models\Document::CATEGORIES as $key => $label)
-                    <option value="{{ $key }}">{{ $label }}</option>
-                    @endforeach
-                </select>
-            </div>
-            @if($contracts->isNotEmpty())
-            <div class="field"><label>Zu welchem Vertrag gehört das Dokument? (optional)</label>
-                <select name="contract_id">
-                    <option value="">— Keinem Vertrag zuordnen —</option>
-                    @foreach($contracts as $c)
-                    <option value="{{ $c->id }}">{{ $c->typeIcon() }} {{ $c->typeLabel() }} · {{ $c->insurer }}@if($c->contract_number) ({{ $c->contract_number }})@endif</option>
-                    @endforeach
-                </select>
-            </div>
-            @endif
-            <div class="field"><label>Datei *</label><input type="file" name="document" required accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,.gif,.doc,.docx,.xls,.xlsx"></div>
-            @error('document')<div class="alert-error">{{ $message }}</div>@enderror
-            <button type="submit" class="btn btn-primary" style="width:100%;">{{ __('Hochladen') }}</button>
-        </form>
-    </div>
-</div>
+{{-- "Andere Datei" (Word/Excel/...): kein Kategorie- oder Vertragsfeld -
+     der Kunde waehlt nur die Datei, das Formular sendet automatisch ab.
+     Einordnen und Zuordnen uebernimmt das Team im CRM. --}}
+<form id="classic-upload-form" method="POST" action="{{ route('portal.documents.upload') }}" enctype="multipart/form-data" style="display:none;">
+    @csrf
+    <input type="file" id="classic-file-input" name="document" accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,.gif,.doc,.docx,.xls,.xlsx">
+</form>
+<script>
+    // Auto-Submit, sobald der Kunde eine Datei gewaehlt hat.
+    document.getElementById('classic-file-input').addEventListener('change', function() {
+        if (this.files && this.files.length) document.getElementById('classic-upload-form').submit();
+    });
+</script>
 @endsection
