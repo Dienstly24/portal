@@ -80,12 +80,13 @@ $chipDefs = [
      unten gehoeren per form="bulkMergeForm" dazu; der Button uebertraegt die
      Auswahl per JS und verlangt eine bewusste Bestaetigung. --}}
 <form method="POST" action="{{ route('admin.customers.duplicates.merge') }}" id="bulkMergeForm" onsubmit="return confirmBulkMerge(this);">@csrf</form>
-<form method="POST" action="{{ route('admin.customers.duplicates.dismiss_bulk') }}" id="bulkDismissForm">@csrf</form>
+<form method="POST" action="{{ route('admin.customers.duplicates.dismiss_bulk') }}" id="bulkDismissForm">@csrf<input type="hidden" name="type" id="bulkDismissType" value="not_duplicate"></form>
 
 <div id="mergeBar" style="display:none;position:sticky;top:0;z-index:10;background:#131A17;color:#fff;border-radius:10px;padding:12px 20px;margin-bottom:14px;align-items:center;gap:14px;flex-wrap:wrap;">
     <span style="font-size:13.5px;font-weight:600;"><span id="mergeCount">0</span> Paar(e) ausgewählt</span>
     <div style="margin-left:auto;display:flex;gap:10px;flex-wrap:wrap;">
-        <button type="button" onclick="submitBulkDismiss()" class="btn btn-ghost" style="padding:8px 16px;font-size:13px;background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.25);" title="Ausgewählte als „kein Duplikat" markieren – wandern zu Verwandte Kunden">✕ Kein Duplikat</button>
+        <button type="button" onclick="submitBulkDismiss('spouse')" class="btn btn-ghost" style="padding:8px 16px;font-size:13px;background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.25);" title="Ausgewählte als Ehepaar verknüpfen – beide Akten bleiben erhalten, nichts wird zusammengeführt">💍 Ehepaar</button>
+        <button type="button" onclick="submitBulkDismiss('not_duplicate')" class="btn btn-ghost" style="padding:8px 16px;font-size:13px;background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.25);" title="Ausgewählte als „kein Duplikat" markieren – wandern zu Verwandte Kunden">✕ Kein Duplikat</button>
         <button type="submit" form="bulkMergeForm" class="btn btn-primary" style="padding:8px 18px;font-size:13px;">Zusammenführen</button>
     </div>
 </div>
@@ -112,6 +113,17 @@ $chipDefs = [
             @endif
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
+            {{-- Ehepaar/Partner: KEINE Zusammenfuehrung. Beide Akten bleiben mit
+                 allen Vertraegen erhalten, das Paar wird nur als Ehepaar
+                 gekennzeichnet und wandert zu „Verwandte Kunden". --}}
+            <form method="POST" action="{{ route('admin.customers.duplicates.dismiss') }}" style="margin:0;"
+                  onsubmit="return confirm('Als Ehepaar verknüpfen? BEIDE Kunden bleiben mit allen Verträgen und Dokumenten erhalten – es wird nichts gelöscht und nichts zusammengeführt. Das Paar erscheint unter „Verwandte Kunden".');">
+                @csrf
+                <input type="hidden" name="customer_a" value="{{ $primary->id }}">
+                <input type="hidden" name="customer_b" value="{{ $duplicate->id }}">
+                <input type="hidden" name="type" value="spouse">
+                <button type="submit" class="btn btn-ghost" style="padding:8px 14px;" title="Kein Duplikat – die beiden sind ein Ehepaar. Beide Akten und Verträge bleiben erhalten.">💍 Ehepaar</button>
+            </form>
             <form method="POST" action="{{ route('admin.customers.duplicates.dismiss') }}" style="margin:0;"
                   onsubmit="return confirm('Als „kein Duplikat" markieren? Das Paar verschwindet aus dieser Liste und erscheint unter „Verwandte Kunden".');">
                 @csrf
@@ -205,12 +217,19 @@ function confirmBulkMerge(form) {
     return confirm(checked.length + ' ausgewählte Dubletten-Paar(e) jetzt zusammenführen?\n\nZusammengehörige Datensätze werden zu einem Kunden vereint. Alle Verträge, Dokumente und Daten bleiben erhalten – nur die leeren Duplikat-Akten werden entfernt. Diese Aktion kann nicht rückgängig gemacht werden.');
 }
 
-// Sammel-"Kein Duplikat": ausgewaehlte Paare ins Dismiss-Formular kopieren.
-function submitBulkDismiss() {
+// Sammel-"Kein Duplikat"/"Ehepaar": ausgewaehlte Paare ins Dismiss-Formular
+// kopieren. Der Typ ('spouse' = Ehepaar, sonst 'not_duplicate') steuert nur
+// die Kennzeichnung - in beiden Faellen wird NICHTS zusammengefuehrt.
+function submitBulkDismiss(type) {
+    type = type || 'not_duplicate';
     var checked = document.querySelectorAll('.pairCheck:checked');
     if (checked.length === 0) { alert('Bitte zuerst mindestens ein Paar auswählen.'); return; }
-    if (!confirm(checked.length + ' ausgewählte Paar(e) als „kein Duplikat" markieren?\n\nSie verschwinden aus dieser Liste und erscheinen unter „Verwandte Kunden". Reversibel.')) return;
+    var frage = type === 'spouse'
+        ? checked.length + ' ausgewählte Paar(e) als Ehepaar verknüpfen?\n\nBeide Kunden bleiben mit allen Verträgen erhalten – nichts wird gelöscht oder zusammengeführt. Sie erscheinen unter „Verwandte Kunden". Reversibel.'
+        : checked.length + ' ausgewählte Paar(e) als „kein Duplikat" markieren?\n\nSie verschwinden aus dieser Liste und erscheinen unter „Verwandte Kunden". Reversibel.';
+    if (!confirm(frage)) return;
     var form = document.getElementById('bulkDismissForm');
+    document.getElementById('bulkDismissType').value = type;
     form.querySelectorAll('input[name="pairs[]"]').forEach(function (i) { i.remove(); });
     checked.forEach(function (cb) {
         var input = document.createElement('input');

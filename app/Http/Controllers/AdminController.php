@@ -1366,20 +1366,29 @@ class AdminController extends Controller
             'customer_a' => 'required|string',
             'customer_b' => 'required|string|different:customer_a',
             'note'       => 'nullable|string|max:255',
+            'type'       => 'nullable|in:' . implode(',', \App\Models\CustomerRelationship::TYPES),
         ]);
         $this->authorizeCustomerAccess($data['customer_a']);
         $this->authorizeCustomerAccess($data['customer_b']);
         \App\Models\Customer::findOrFail($data['customer_a']);
         \App\Models\Customer::findOrFail($data['customer_b']);
 
+        $type = $data['type'] ?? 'not_duplicate';
         [$a, $b] = \App\Models\CustomerRelationship::pairKey($data['customer_a'], $data['customer_b']);
-        \App\Models\CustomerRelationship::firstOrCreate(
+        // updateOrCreate: ein bereits als "verwandt" markiertes Paar kann so
+        // nachtraeglich praeziser als Ehepaar/Familie gekennzeichnet werden.
+        \App\Models\CustomerRelationship::updateOrCreate(
             ['customer_a_id' => $a, 'customer_b_id' => $b],
-            ['type' => 'not_duplicate', 'note' => $data['note'] ?? null, 'created_by' => auth()->id()]
+            ['type' => $type, 'note' => $data['note'] ?? null, 'created_by' => auth()->id()]
         );
         app(\App\Services\Matching\DuplicateDetectionService::class)->forgetCount();
 
-        return back()->with('success', 'Als „kein Duplikat" markiert – das Paar erscheint jetzt unter „Verwandte Kunden".');
+        $label = \App\Models\CustomerRelationship::typeLabel($type);
+        $msg = $type === 'not_duplicate'
+            ? 'Als „kein Duplikat" markiert – das Paar erscheint jetzt unter „Verwandte Kunden".'
+            : 'Als „' . $label . '" verknüpft – beide Kunden bleiben mit allen Verträgen erhalten und erscheinen unter „Verwandte Kunden".';
+
+        return back()->with('success', $msg);
     }
 
     /**
@@ -1388,7 +1397,12 @@ class AdminController extends Controller
      * Haushalts). Reihenfolge-unabhaengig, dedupliziert.
      */
     public function dismissBulk(Request $request) {
-        $data = $request->validate(['pairs' => 'required|array|min:1|max:500', 'pairs.*' => 'string']);
+        $data = $request->validate([
+            'pairs'   => 'required|array|min:1|max:500',
+            'pairs.*' => 'string',
+            'type'    => 'nullable|in:' . implode(',', \App\Models\CustomerRelationship::TYPES),
+        ]);
+        $type = $data['type'] ?? 'not_duplicate';
         [$edges, $ids] = $this->pairsToEdges($data['pairs']);
         if ($ids === []) {
             return back()->with('error', 'Keine gültige Auswahl.');
@@ -1404,9 +1418,9 @@ class AdminController extends Controller
                 continue;
             }
             [$x, $y] = \App\Models\CustomerRelationship::pairKey($a, $b);
-            $rel = \App\Models\CustomerRelationship::firstOrCreate(
+            $rel = \App\Models\CustomerRelationship::updateOrCreate(
                 ['customer_a_id' => $x, 'customer_b_id' => $y],
-                ['type' => 'not_duplicate', 'created_by' => auth()->id()]
+                ['type' => $type, 'created_by' => auth()->id()]
             );
             if ($rel->wasRecentlyCreated) {
                 $marked++;
@@ -1414,8 +1428,12 @@ class AdminController extends Controller
         }
         app(\App\Services\Matching\DuplicateDetectionService::class)->forgetCount();
 
-        return redirect()->route('admin.customers.duplicates')
-            ->with('success', $marked . ' Paar(e) als „kein Duplikat" markiert – jetzt unter „Verwandte Kunden".');
+        $label = \App\Models\CustomerRelationship::typeLabel($type);
+        $msg = $type === 'not_duplicate'
+            ? $marked . ' Paar(e) als „kein Duplikat" markiert – jetzt unter „Verwandte Kunden".'
+            : $marked . ' Paar(e) als „' . $label . '" verknüpft – beide Kunden bleiben erhalten, jetzt unter „Verwandte Kunden".';
+
+        return redirect()->route('admin.customers.duplicates')->with('success', $msg);
     }
 
     /**
@@ -1448,6 +1466,22 @@ class AdminController extends Controller
         app(\App\Services\Matching\DuplicateDetectionService::class)->forgetCount();
 
         return back()->with('success', 'Beziehung entfernt – das Paar kann wieder als mögliche Dublette erscheinen.');
+    }
+
+    /**
+     * Art einer bestehenden Beziehung aendern (z. B. von "verwandt" zu
+     * "Ehepaar"). Aendert NICHTS an den Kundenakten - nur die Kennzeichnung.
+     */
+    public function relationshipSetType(Request $request, $id) {
+        $data = $request->validate([
+            'type' => 'required|in:' . implode(',', \App\Models\CustomerRelationship::TYPES),
+        ]);
+        $rel = \App\Models\CustomerRelationship::findOrFail($id);
+        $this->authorizeCustomerAccess($rel->customer_a_id);
+        $this->authorizeCustomerAccess($rel->customer_b_id);
+        $rel->update(['type' => $data['type']]);
+
+        return back()->with('success', 'Beziehung als „' . \App\Models\CustomerRelationship::typeLabel($data['type']) . '" gekennzeichnet.');
     }
 
     /** Deckel gegen versehentliche Massen-Merges pro manueller Aktion. */
