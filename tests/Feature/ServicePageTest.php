@@ -36,6 +36,26 @@ class ServicePageTest extends TestCase
         ], $o));
     }
 
+    public function test_seite_zeigt_hochgeladenes_bild_statt_emoji_kachel(): void
+    {
+        $page = $this->makePage(['image_path' => 'service-pages/testbild.png']);
+
+        $res = $this->get('/leistungen/' . $page->slug);
+        $res->assertOk();
+        $res->assertSee('<img class="hero-bild"', false);
+        $res->assertSee('service-pages/testbild.png');
+    }
+
+    public function test_seite_ohne_bild_zeigt_emoji_kachel(): void
+    {
+        $page = $this->makePage();
+
+        $res = $this->get('/leistungen/' . $page->slug);
+        $res->assertOk();
+        $res->assertDontSee('<img class="hero-bild"', false);
+        $res->assertSee('class="badge"', false);
+    }
+
     public function test_public_page_renders(): void
     {
         $this->makePage();

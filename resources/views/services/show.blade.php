@@ -64,7 +64,9 @@ body{font-family:'Inter',system-ui,Arial,sans-serif;min-height:100vh;color:var(-
 .back{display:inline-flex;align-items:center;gap:6px;margin-bottom:22px;color:var(--muted);text-decoration:none;font-size:13.5px;}
 .back:hover{color:#fff;}
 /* Hero */
-.hero{display:flex;gap:20px;align-items:flex-start;margin-bottom:14px;}
+.hero{display:flex;gap:20px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+/* Im Admin hochgeladenes Seitenbild (weisse Kachel vertraegt auch Bilder mit weissem Hintergrund) */
+.hero-bild{width:clamp(110px,22vw,210px);border-radius:18px;border:1px solid rgba(184,161,107,.45);background:#fff;padding:8px;margin-inline-start:auto;box-shadow:0 18px 40px rgba(0,0,0,.35);}
 .hero .badge{flex-shrink:0;width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:32px;background:linear-gradient(155deg,rgba(23,166,91,.22),rgba(23,166,91,.06));border:1px solid rgba(23,166,91,.35);}
 .hero h1{font-size:clamp(25px,3.6vw,36px);color:#fff;line-height:1.14;letter-spacing:-.01em;margin-bottom:8px;}
 .hero .sub{color:var(--mint);font-size:15.5px;font-weight:600;}
@@ -152,11 +154,16 @@ label{display:block;font-size:13px;margin-bottom:7px;color:#cfd5cf;font-weight:5
     <a href="{{ route('services.index') }}" class="back">← {{ __('Alle Leistungen') }}</a>
 
     <div class="hero">
-        @if($page->icon)<div class="badge">{{ $page->icon }}</div>@endif
+        @if($page->image_path)
+            {{-- Im Admin hochgeladenes Seitenbild ersetzt die Emoji-Kachel --}}
+        @elseif($page->icon)<div class="badge">{{ $page->icon }}</div>@endif
         <div>
             <h1>{{ $page->t('title') }}</h1>
             @if($page->t('subtitle'))<div class="sub">{{ $page->t('subtitle') }}</div>@endif
         </div>
+        @if($page->image_path)
+            <img class="hero-bild" src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($page->image_path) }}" alt="">
+        @endif
     </div>
     @if($page->t('intro'))<p class="lead">{{ $page->t('intro') }}</p>@endif
 
