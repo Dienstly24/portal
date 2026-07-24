@@ -407,6 +407,7 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/tarifrechner', [TarifrechnerController::class, 'index'])->name('tarifrechner')->middleware('role:admin,manager');
     Route::post('/tarifrechner', [TarifrechnerController::class, 'store'])->name('tarifrechner.store')->middleware('role:admin,manager');
     Route::delete('/tarifrechner/{id}', [TarifrechnerController::class, 'destroy'])->name('tarifrechner.destroy')->middleware('role:admin,manager');
+    Route::post('/tarifrechner/reorder', [TarifrechnerController::class, 'reorder'])->name('tarifrechner.reorder')->middleware('role:admin,manager');
     Route::get('/announcements', [TarifrechnerController::class, 'announcements'])->name('announcements');
     Route::post('/announcements', [TarifrechnerController::class, 'storeAnnouncement'])->name('announcements.store');
     Route::delete('/announcements/{id}', [TarifrechnerController::class, 'destroyAnnouncement'])->name('announcements.destroy');
