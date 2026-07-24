@@ -24,6 +24,7 @@ class HeuristicDocumentClassifier
     private const KEYWORDS = [
         'fuehrerschein' => ['FÜHRERSCHEIN', 'FAHRERLAUBNIS', 'DRIVING LICENCE'],
         'personalausweis' => ['PERSONALAUSWEIS', 'IDENTITY CARD'],
+        'aufenthaltstitel' => ['AUFENTHALTSTITEL', 'AUFENTHALTSERLAUBNIS', 'AUFENTHALTSKARTE', 'NIEDERLASSUNGSERLAUBNIS', 'RESIDENCE PERMIT'],
         'reisepass' => ['REISEPASS', 'PASSPORT'],
         'fahrzeugschein' => ['ZULASSUNGSBESCHEINIGUNG TEIL I', 'FAHRZEUGSCHEIN'],
         'fahrzeugbrief' => ['ZULASSUNGSBESCHEINIGUNG TEIL II', 'FAHRZEUGBRIEF'],
