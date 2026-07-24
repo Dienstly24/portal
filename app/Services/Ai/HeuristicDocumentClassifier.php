@@ -26,6 +26,9 @@ class HeuristicDocumentClassifier
         'personalausweis' => ['PERSONALAUSWEIS', 'IDENTITY CARD'],
         'aufenthaltstitel' => ['AUFENTHALTSTITEL', 'AUFENTHALTSERLAUBNIS', 'AUFENTHALTSKARTE', 'NIEDERLASSUNGSERLAUBNIS', 'RESIDENCE PERMIT'],
         'reisepass' => ['REISEPASS', 'PASSPORT'],
+        // Praefixe, damit sowohl "Meldebestätigung" als auch die ASCII-/OCR-
+        // Schreibweise "Meldebestaetigung" (bzw. -bescheinigung) treffen.
+        'meldebescheinigung' => ['MELDEBEST', 'MELDEBESCH', 'MELDEBEH', 'ANMELDUNG DER WOHNUNG'],
         'fahrzeugschein' => ['ZULASSUNGSBESCHEINIGUNG TEIL I', 'FAHRZEUGSCHEIN'],
         'fahrzeugbrief' => ['ZULASSUNGSBESCHEINIGUNG TEIL II', 'FAHRZEUGBRIEF'],
         'gesundheitskarte' => ['GESUNDHEITSKARTE', 'VERSICHERTENKARTE', 'KRANKENVERSICHERUNGSKARTE'],
