@@ -629,22 +629,31 @@ class PortalController extends Controller
     public function profileUpdate(Request $request) {
         $customer = $this->getCustomer();
 
+        $user = auth()->user();
+
         $data = $request->validate([
             'gender' => 'nullable|in:male,female,diverse',
             // Pflichtfelder im Portal-Formular (HTML "required" erzwingt die
             // Eingabe im Browser). Serverseitig "sometimes|required": ist das
             // Feld Teil des Submits, darf es nicht leer sein - ein reiner
             // Bank-/Teil-Submit ohne diese Schluessel bleibt aber moeglich.
+            // Name und Login-E-Mail liegen auf dem User, werden aber ebenfalls
+            // ueber den Aenderungsantrag (Vier-Augen-Prinzip) gepflegt.
+            'first_name' => 'sometimes|required|string|max:100',
+            'last_name' => 'sometimes|required|string|max:100',
+            'email' => ['sometimes', 'required', 'email', 'max:255', 'unique:users,email,' . $user->id],
+            'birth_date' => 'sometimes|required|date',
             'birth_place' => 'sometimes|required|string|max:255',
             'nationality' => 'sometimes|required|string|max:100',
             'marital_status' => 'nullable|in:ledig,verheiratet,geschieden,verwitwet',
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+\/\s()-]{6,}$/'],
-            // Strukturierte Adresse nach deutschem Standard (Review Punkt 5)
-            'address_street' => 'nullable|string|max:255',
-            'address_house_number' => 'nullable|string|max:10',
+            // Strukturierte Adresse nach deutschem Standard (Review Punkt 5) -
+            // Strasse/Hausnummer/PLZ/Ort sind Pflicht (sofern uebermittelt).
+            'address_street' => 'sometimes|required|string|max:255',
+            'address_house_number' => 'sometimes|required|string|max:10',
             'address_house_suffix' => 'nullable|string|max:10',
-            'address_zip' => 'nullable|string|max:10',
-            'address_city' => 'nullable|string|max:100',
+            'address_zip' => 'sometimes|required|string|max:10',
+            'address_city' => 'sometimes|required|string|max:100',
             // Sensible Kundendaten (Review Punkt 6)
             'health_insurance_number' => 'nullable|string|max:50',
             'pension_insurance_number' => 'nullable|string|max:50',
@@ -660,7 +669,7 @@ class PortalController extends Controller
         // Persönliche Daten + strukturierte Adresse + Kundendaten:
         // EIN gebündelter Profil-Antrag für alle geänderten Felder.
         $profileFields = [
-            'gender', 'birth_place', 'nationality', 'marital_status', 'phone',
+            'gender', 'birth_place', 'nationality', 'marital_status', 'phone', 'birth_date',
             'address_street', 'address_house_number', 'address_house_suffix', 'address_zip', 'address_city',
             'health_insurance_number', 'pension_insurance_number', 'tax_id',
         ];
@@ -671,6 +680,29 @@ class PortalController extends Controller
                 $profileNew[$field] = $data[$field];
             }
         }
+
+        // Name (Vor-/Nachname) liegt auf dem User (als voller Name). Aktuellen
+        // Namen zerlegen und nur bei echter Aenderung in den Antrag aufnehmen.
+        $nameParts = explode(' ', trim($user->name ?? ''), 2);
+        $currentFirst = $nameParts[0] ?? '';
+        $currentLast = $nameParts[1] ?? '';
+        if ($request->filled('first_name') || $request->filled('last_name')) {
+            $newFirst = trim((string) ($data['first_name'] ?? $currentFirst));
+            $newLast = trim((string) ($data['last_name'] ?? $currentLast));
+            if ($newFirst !== $currentFirst || $newLast !== $currentLast) {
+                $profileOld['first_name'] = $currentFirst;
+                $profileOld['last_name'] = $currentLast;
+                $profileNew['first_name'] = $newFirst;
+                $profileNew['last_name'] = $newLast;
+            }
+        }
+
+        // Login-E-Mail liegt ebenfalls auf dem User.
+        if ($request->filled('email') && (string) $data['email'] !== (string) $user->email) {
+            $profileOld['email'] = $user->email;
+            $profileNew['email'] = $data['email'];
+        }
+
         if ($profileNew) {
             $service->submit($customer, 'profile', $profileOld, $profileNew, 'Profiländerung beantragt: ' . implode(', ', array_keys($profileNew)));
             $created++;

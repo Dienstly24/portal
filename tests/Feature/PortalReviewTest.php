@@ -63,6 +63,47 @@ class PortalReviewTest extends TestCase
         $this->assertSame('Bremen', $customer->birth_place);
     }
 
+    // Pflicht-Stammdaten: Name, E-Mail und Geburtsdatum aus dem Portal
+    // laufen ueber den Aenderungsantrag und landen nach Freigabe am User bzw.
+    // am Kunden.
+    public function test_name_email_and_birthdate_from_portal_update_user_after_approval(): void
+    {
+        $user = User::factory()->create(['role' => 'customer', 'name' => 'Alt Name', 'email' => 'alt@example.com']);
+        $customer = Customer::create(['user_id' => $user->id, 'customer_number' => 'C-NAME01']);
+
+        $this->actingAs($user)->post(route('portal.profile.update'), [
+            'first_name' => 'Neu', 'last_name' => 'Name', 'email' => 'neu@example.com',
+            'birth_date' => '1990-05-17', 'birth_place' => 'Aleppo', 'nationality' => 'Syrisch',
+        ])->assertSessionHas('success');
+
+        $cr = CustomerChangeRequest::where('type', 'profile')->firstOrFail();
+        $this->assertSame('Neu', $cr->new_data['first_name']);
+        $this->assertSame('neu@example.com', $cr->new_data['email']);
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->post(route('admin.change_requests.action', $cr->id), ['action' => 'approve']);
+
+        $user->refresh();
+        $customer->refresh();
+        $this->assertSame('Neu Name', $user->name);
+        $this->assertSame('neu@example.com', $user->email);
+        $this->assertSame('1990-05-17', (string) $customer->birth_date);
+        $this->assertSame('Aleppo', $customer->birth_place);
+        $this->assertSame('Syrisch', $customer->nationality);
+    }
+
+    // Pflichtfeld darf nicht LEER eingereicht werden (serverseitige Absicherung
+    // zusaetzlich zum HTML-required), Teil-Updates ohne das Feld bleiben moeglich.
+    public function test_empty_required_profile_field_is_rejected(): void
+    {
+        $customer = $this->makeCustomer();
+        $this->actingAs($customer->user)->post(route('portal.profile.update'), [
+            'birth_place' => '', 'nationality' => 'Deutsch',
+        ])->assertSessionHasErrors('birth_place');
+
+        $this->assertSame(0, CustomerChangeRequest::where('type', 'profile')->count());
+    }
+
     // Punkt 9: mehrere unabhängige Change Requests gleichzeitig
     public function test_customer_can_create_multiple_independent_requests(): void
     {

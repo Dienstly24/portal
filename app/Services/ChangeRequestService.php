@@ -225,5 +225,27 @@ class ChangeRequestService
         if ($update) {
             $customer->update($update);
         }
+
+        // Name (Vor-/Nachname) und Login-E-Mail liegen auf dem User-Model und
+        // werden getrennt uebernommen. Erst nach der Freigabe wirksam.
+        $user = $customer->user;
+        if ($user) {
+            $userUpdate = [];
+            if (array_key_exists('first_name', $data) || array_key_exists('last_name', $data)) {
+                $full = trim(trim((string) ($data['first_name'] ?? '')) . ' ' . trim((string) ($data['last_name'] ?? '')));
+                if ($full !== '') {
+                    $userUpdate['name'] = $full;
+                }
+            }
+            // E-Mail nur uebernehmen, wenn gueltig und noch frei (Login bleibt
+            // eindeutig; zwischen Antrag und Freigabe koennte sie belegt sein).
+            if (!empty($data['email']) && filter_var($data['email'], FILTER_VALIDATE_EMAIL)
+                && !\App\Models\User::where('email', $data['email'])->where('id', '!=', $user->id)->exists()) {
+                $userUpdate['email'] = $data['email'];
+            }
+            if ($userUpdate) {
+                $user->update($userUpdate);
+            }
+        }
     }
 }
