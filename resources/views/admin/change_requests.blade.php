@@ -21,6 +21,9 @@ $fieldLabels = [
     'start_date'=>'Startdatum','end_date'=>'Enddatum','cancellation_date'=>'Kündigungsdatum','notes'=>'Anmerkung',
     'gender'=>'Geschlecht','marital_status'=>'Familienstand','document_name'=>'Dokument','id'=>null,'document_path'=>null,
     'document_disk'=>null,
+    'first_name'=>'Vorname','last_name'=>'Nachname','email'=>'E-Mail','birth_place'=>'Geburtsort','nationality'=>'Nationalität',
+    'phone'=>'Telefon','address_street'=>'Straße','address_house_number'=>'Hausnummer','address_house_suffix'=>'Zusatz',
+    'address_zip'=>'PLZ','address_city'=>'Ort',
 ];
 $valueLabels = [
     'ehepartner'=>'Ehepartner','kind'=>'Kind','andere'=>'Andere','main'=>'Hauptadresse','billing'=>'Rechnungsadresse',

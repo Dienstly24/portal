@@ -866,6 +866,12 @@ class AdminController extends Controller
             'new_password' => 'nullable|min:8',
             'health_insurance_type' => 'nullable|in:gesetzlich,privat',
             'gender' => 'nullable|in:male,female,diverse',
+            // Pflichtfelder im Bearbeiten-Formular (HTML "required" erzwingt die
+            // Eingabe im Browser). Serverseitig "sometimes|required": ist das
+            // Feld Teil des Submits, darf es nicht leer sein - Teil-Updates ohne
+            // diese Schluessel (z. B. reine Partner-/E-Mail-Zuordnung) bleiben moeglich.
+            'birth_place' => 'sometimes|required|string|max:255',
+            'nationality' => 'sometimes|required|string|max:100',
         ] + $this->phoneFieldRules());
 
         // Sensible Kundenakte-Felder: Änderungen auditieren (nur Feldnamen ins Log)
@@ -907,6 +913,7 @@ class AdminController extends Controller
             'gender' => in_array($request->gender, ['male','female','diverse'], true) ? $request->gender : null,
             'preferred_lang' => $request->preferred_lang,
             'nationality' => $request->nationality,
+            'birth_place' => $request->birth_place,
             'occupation' => $request->occupation,
             'customer_type' => $request->customer_type,
             'company_name' => $request->company_name,

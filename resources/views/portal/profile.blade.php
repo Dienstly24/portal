@@ -11,6 +11,15 @@
     {{-- Persönliche Daten --}}
     <div class="card">
         <div class="card-title">👤 {{ __('Persönliche Daten') }}</div>
+        @php $__np = explode(' ', trim(auth()->user()->name ?? ''), 2); @endphp
+        <div class="grid-2">
+            <div class="field"><label>{{ __('Vorname') }} *</label><input type="text" name="first_name" required value="{{ old('first_name', $__np[0] ?? '') }}"></div>
+            <div class="field"><label>{{ __('Nachname') }} *</label><input type="text" name="last_name" required value="{{ old('last_name', $__np[1] ?? '') }}"></div>
+        </div>
+        <div class="grid-2">
+            <div class="field"><label>{{ __('E-Mail') }} *</label><input type="email" name="email" required value="{{ old('email', auth()->user()->hasRealEmail() ? auth()->user()->email : '') }}" placeholder="name@example.com"></div>
+            <div class="field"><label>{{ __('Geburtsdatum') }} *</label><input type="date" name="birth_date" required value="{{ old('birth_date', $customer?->birth_date) }}"></div>
+        </div>
         <div class="grid-2">
             <div class="field"><label>{{ __('Geschlecht') }}</label>
                 <select name="gender">
@@ -30,7 +39,10 @@
             </div>
         </div>
         <div class="grid-2">
-            <div class="field"><label>{{ __('Geburtsort') }}</label><input type="text" name="birth_place" value="{{ $customer?->birth_place }}"></div>
+            <div class="field"><label>{{ __('Geburtsort') }} *</label><input type="text" name="birth_place" required value="{{ $customer?->birth_place }}"></div>
+            <div class="field"><label>{{ __('Nationalität') }} *</label><input type="text" name="nationality" required value="{{ $customer?->nationality }}" placeholder="{{ __('z.B. Deutsch, Syrisch') }}"></div>
+        </div>
+        <div class="grid-2">
             <div class="field"><label>{{ __('Telefon') }}</label><input type="text" name="phone" value="{{ $customer?->phone }}" placeholder="+49 …"></div>
         </div>
         <div class="grid-2">
@@ -44,13 +56,13 @@
     <div class="card">
         <div class="card-title">🏠 {{ __('Adresse') }}</div>
         <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;">
-            <div class="field"><label>{{ __('Straße') }}</label><input type="text" name="address_street" value="{{ $customer?->address_street }}"></div>
-            <div class="field"><label>{{ __('Hausnummer') }}</label><input type="text" name="address_house_number" value="{{ $customer?->address_house_number }}"></div>
+            <div class="field"><label>{{ __('Straße') }} *</label><input type="text" name="address_street" required value="{{ $customer?->address_street }}"></div>
+            <div class="field"><label>{{ __('Hausnummer') }} *</label><input type="text" name="address_house_number" required value="{{ $customer?->address_house_number }}"></div>
             <div class="field"><label>Zusatz</label><input type="text" name="address_house_suffix" value="{{ $customer?->address_house_suffix }}" placeholder="A, 1a"></div>
         </div>
         <div class="grid-2">
-            <div class="field"><label>{{ __('Postleitzahl') }}</label><input type="text" name="address_zip" value="{{ $customer?->address_zip }}" maxlength="10"></div>
-            <div class="field"><label>{{ __('Ort') }}</label><input type="text" name="address_city" value="{{ $customer?->address_city }}"></div>
+            <div class="field"><label>{{ __('Postleitzahl') }} *</label><input type="text" name="address_zip" required value="{{ $customer?->address_zip }}" maxlength="10"></div>
+            <div class="field"><label>{{ __('Ort') }} *</label><input type="text" name="address_city" required value="{{ $customer?->address_city }}"></div>
         </div>
         @if($customer?->address && !$customer?->address_street)
         <p style="font-size:12px;color:var(--ink-soft);">Bisher hinterlegt: {{ $customer->address }}</p>

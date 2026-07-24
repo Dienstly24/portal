@@ -36,9 +36,10 @@
         <div class="field"><label>Vorname *</label><input type="text" name="first_name" required value="{{ $__np[0] ?? '' }}"></div>
         <div class="field"><label>Nachname *</label><input type="text" name="last_name" required value="{{ $__np[1] ?? '' }}"></div>
         <div class="field"><label>Geburtsdatum</label><input type="date" name="birth_date" value="{{ old('birth_date', $customer->birth_date) }}"></div>
+        <div class="field"><label>Geburtsort *</label><input type="text" name="birth_place" required value="{{ old('birth_place', $customer->birth_place) }}" placeholder="z.B. Damaskus"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Nationalität</label><input type="text" name="nationality" value="{{ old('nationality', $customer->nationality) }}" placeholder="z.B. Deutsch, Syrisch"></div>
+        <div class="field"><label>Nationalität *</label><input type="text" name="nationality" required value="{{ old('nationality', $customer->nationality) }}" placeholder="z.B. Deutsch, Syrisch"></div>
         <div class="field"><label>Beruf</label><input type="text" name="occupation" value="{{ old('occupation', $customer->occupation) }}" placeholder="z.B. Ingenieur"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
