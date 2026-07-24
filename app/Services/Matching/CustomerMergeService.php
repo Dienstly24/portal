@@ -60,9 +60,7 @@ class CustomerMergeService
                 if ($table === self::PIVOT_TABLE) {
                     continue; // eigene Dedup-Logik unten
                 }
-                $count = DB::table($table)
-                    ->where('customer_id', $duplicate->id)
-                    ->update(['customer_id' => $primary->id]);
+                $count = $this->moveCustomerIdRows($table, $primary, $duplicate);
                 if ($count > 0) {
                     $moved[$table] = $count;
                 }
@@ -142,6 +140,96 @@ class CustomerMergeService
         return $counts;
     }
 
+    /**
+     * Haengt alle Zeilen einer customer_id-Tabelle vom Duplikat auf den
+     * Hauptkunden um. Hat die Tabelle einen UNIQUE-Index, der customer_id
+     * einschliesst (z. B. customer_views / favorite_customers mit
+     * unique(user_id, customer_id)), wuerde ein blindes UPDATE genau dann eine
+     * Integritaetsverletzung (-> HTTP 500) ausloesen, wenn derselbe
+     * Schluessel am Hauptkunden bereits existiert. Genau das passiert im
+     * Normalfall: der Bearbeiter oeffnet erst beide Akten (customer_views),
+     * bevor er sie zusammenfuehrt. Deshalb werden kollidierende Duplikat-
+     * Zeilen vor dem Umhaengen verworfen.
+     *
+     * @return int Anzahl tatsaechlich umgehaengter Zeilen.
+     */
+    private function moveCustomerIdRows(string $table, Customer $primary, Customer $duplicate): int
+    {
+        foreach ($this->uniquePeerColumns($table) as $peers) {
+            $this->deleteCollidingDuplicateRows($table, $primary, $duplicate, $peers);
+        }
+
+        return DB::table($table)
+            ->where('customer_id', $duplicate->id)
+            ->update(['customer_id' => $primary->id]);
+    }
+
+    /**
+     * Entfernt Duplikat-Zeilen, die beim Umhaengen mit einer bereits am
+     * Hauptkunden vorhandenen Zeile auf demselben UNIQUE-Schluessel kollidieren
+     * wuerden. `$peers` sind die uebrigen Spalten des UNIQUE-Index (ohne
+     * customer_id). NULL-Werte gelten in SQL als verschieden und kollidieren
+     * daher nie - solche Zeilen bleiben erhalten und werden normal umgehaengt.
+     *
+     * @param array<int, string> $peers
+     */
+    private function deleteCollidingDuplicateRows(string $table, Customer $primary, Customer $duplicate, array $peers): void
+    {
+        $primaryRows = DB::table($table)->where('customer_id', $primary->id)->get();
+        if ($primaryRows->isEmpty()) {
+            return;
+        }
+
+        // Reine unique(customer_id)-Tabelle (keine weiteren Schluesselspalten):
+        // existiert am Hauptkunden schon eine Zeile, ist jede Duplikat-Zeile
+        // ein Konflikt und wird verworfen.
+        if ($peers === []) {
+            DB::table($table)->where('customer_id', $duplicate->id)->delete();
+            return;
+        }
+
+        DB::table($table)
+            ->where('customer_id', $duplicate->id)
+            ->where(function ($q) use ($primaryRows, $peers) {
+                foreach ($primaryRows as $row) {
+                    // NULL-Peers koennen laut UNIQUE-Semantik nicht kollidieren.
+                    if (array_filter($peers, fn ($c) => $row->$c === null) !== []) {
+                        continue;
+                    }
+                    $q->orWhere(function ($qq) use ($row, $peers) {
+                        foreach ($peers as $col) {
+                            $qq->where($col, $row->$col);
+                        }
+                    });
+                }
+            })
+            ->delete();
+    }
+
+    /**
+     * Spalten (ohne customer_id) aller UNIQUE-Indizes einer Tabelle, die
+     * customer_id einschliessen. Ergebnis wird pro Request und Tabelle
+     * gecacht (Bulk-Merge ruft dies je Paar auf).
+     *
+     * @return array<int, array<int, string>>
+     */
+    private function uniquePeerColumns(string $table): array
+    {
+        if (isset(self::$uniquePeerCache[$table])) {
+            return self::$uniquePeerCache[$table];
+        }
+
+        $result = [];
+        foreach (Schema::getIndexes($table) as $index) {
+            $columns = $index['columns'] ?? [];
+            if (($index['unique'] ?? false) && in_array('customer_id', $columns, true)) {
+                $result[] = array_values(array_filter($columns, fn ($c) => $c !== 'customer_id'));
+            }
+        }
+
+        return self::$uniquePeerCache[$table] = $result;
+    }
+
     /** Betreuer-Zuordnungen umhaengen, danach doppelte (user_id) entfernen. */
     private function mergePivot(Customer $primary, Customer $duplicate): int
     {
@@ -217,6 +305,9 @@ class CustomerMergeService
 
     /** @var array<int, string>|null Schema-Abgleich einmal pro Request cachen. */
     private static ?array $customerIdTablesCache = null;
+
+    /** @var array<string, array<int, array<int, string>>> UNIQUE-Peers je Tabelle (Request-Cache). */
+    private static array $uniquePeerCache = [];
 
     /**
      * Alle Tabellen mit einer customer_id-Spalte (Schema-Abgleich). So sind
