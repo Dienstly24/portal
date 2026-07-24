@@ -6,7 +6,7 @@
         <div class="page-title">Verwandte Kunden</div>
         <a href="{{ route('admin.customers.duplicates') }}" class="btn btn-ghost">← Mögliche Dubletten</a>
     </div>
-    <div class="page-sub">Paare, die als „kein Duplikat" markiert wurden – z. B. Familienmitglieder oder ein Haushalt mit gleicher Anschrift/Telefon. Sie sind bewusst KEINE Dubletten, sondern verbundene Kunden. Ist ein Paar doch dieselbe Person, kann es hier wieder als Dublette freigegeben oder direkt zusammengeführt werden.</div>
+    <div class="page-sub">Paare, die als „kein Duplikat" markiert wurden – z. B. ein Ehepaar, Familienmitglieder oder ein Haushalt mit gleicher Anschrift/Telefon. Sie sind bewusst KEINE Dubletten, sondern verbundene Kunden: beide Akten bleiben mit allen Verträgen erhalten. Die Beziehungsart lässt sich hier jederzeit als Ehepaar/Familie präzisieren. Ist ein Paar doch dieselbe Person, kann es hier wieder als Dublette freigegeben oder direkt zusammengeführt werden.</div>
 </div>
 
 @if(count($relations) === 0)
@@ -20,9 +20,25 @@
 
 @foreach($relations as $rel)
 <div class="card" style="margin-bottom:16px;padding:0;overflow:hidden;">
+    @php
+        $relType = $rel->type ?? 'not_duplicate';
+        $relEmoji = \App\Models\CustomerRelationship::typeEmoji($relType);
+        $relLabel = \App\Models\CustomerRelationship::typeLabel($relType);
+        $typeChoices = ['spouse' => '💍 Ehepaar', 'family' => '👪 Familie', 'not_duplicate' => '🔗 Allgemein'];
+    @endphp
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap;gap:10px;">
-        <span style="background:#EDE9FE;color:#5B21B6;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:700;">🔗 Verwandt · kein Duplikat</span>
-        <div style="display:flex;align-items:center;gap:8px;">
+        <span style="background:#EDE9FE;color:#5B21B6;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:700;">{{ $relEmoji }} {{ $relLabel }} · kein Duplikat</span>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            {{-- Beziehungsart nachtraeglich praezisieren (aendert nur die Kennzeichnung). --}}
+            @foreach($typeChoices as $tKey => $tLabel)
+                @if($tKey !== $relType)
+                <form method="POST" action="{{ route('admin.customers.relationships.type', $rel->id) }}" style="margin:0;">
+                    @csrf
+                    <input type="hidden" name="type" value="{{ $tKey }}">
+                    <button type="submit" class="btn btn-ghost" style="padding:7px 12px;font-size:12.5px;" title="Als {{ $tLabel }} kennzeichnen">{{ $tLabel }}</button>
+                </form>
+                @endif
+            @endforeach
             <a href="{{ route('admin.customer.merge', $rel->customerA->id) }}?duplicate={{ $rel->customerB->id }}" class="btn btn-ghost" style="padding:7px 14px;">Doch zusammenführen</a>
             <form method="POST" action="{{ route('admin.customers.relationships.delete', $rel->id) }}" style="margin:0;"
                   onsubmit="return confirm('Beziehung entfernen? Das Paar kann danach wieder als mögliche Dublette erscheinen.');">

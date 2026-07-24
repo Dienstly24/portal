@@ -211,7 +211,10 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
         <div style="min-width:0;">
             <a href="{{ route('admin.customer', $rc->id) }}" style="font-size:13.5px;font-weight:600;color:var(--ink);text-decoration:none;">{{ $rc->user?->name ?? 'Unbekannt' }}</a>
             <span style="font-size:12px;color:var(--ink-soft);"> · {{ $rc->customer_number }}</span>
-            @if($rel['dismissed'])<span style="font-size:11px;background:#EDE9FE;color:#5B21B6;border-radius:999px;padding:2px 8px;margin-left:6px;">verwandt</span>@endif
+            @if($rel['dismissed'])
+                @php $rt = $rel['relationship_type'] ?? 'not_duplicate'; @endphp
+                <span style="font-size:11px;background:#EDE9FE;color:#5B21B6;border-radius:999px;padding:2px 8px;margin-left:6px;">{{ \App\Models\CustomerRelationship::typeEmoji($rt) }} {{ $rt === 'not_duplicate' ? 'verwandt' : \App\Models\CustomerRelationship::typeLabel($rt) }}</span>
+            @endif
             <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">
                 @foreach($rel['signals'] as $signal)
                 <span style="background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:2px 7px;font-size:11px;color:var(--ink-soft);">{{ $signal }}</span>

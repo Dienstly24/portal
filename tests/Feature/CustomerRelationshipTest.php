@@ -110,6 +110,58 @@ class CustomerRelationshipTest extends TestCase
         $this->assertCount(0, app(DuplicateDetectionService::class)->scan()['pairs']);
     }
 
+    public function test_marking_pair_as_spouse_keeps_both_records_and_stores_type(): void
+    {
+        // Ehepaar: gleiche Anschrift/Telefon, aber zwei verschiedene Personen.
+        // Sie duerfen NICHT zusammengefuehrt (kein Datensatz geloescht) werden.
+        $a = $this->customer('Hussein Buzu', 'hussein@example.com', ['phone' => '01734303065', 'address' => 'Denickestr. 52, 21075 Hamburg']);
+        $b = $this->customer('Dilan Almuhamad', 'dilan@example.com', ['phone' => '01734303065', 'address' => 'Denickestr. 52, 21075 Hamburg']);
+
+        $this->actingAs($this->admin())->post(route('admin.customers.duplicates.dismiss'), [
+            'customer_a' => (string) $a->id,
+            'customer_b' => (string) $b->id,
+            'type'       => 'spouse',
+        ])->assertRedirect();
+
+        // Beziehung als Ehepaar gespeichert ...
+        [$x, $y] = CustomerRelationship::pairKey($a->id, $b->id);
+        $this->assertDatabaseHas('customer_relationships', [
+            'customer_a_id' => $x, 'customer_b_id' => $y, 'type' => 'spouse',
+        ]);
+        // ... und BEIDE Kundenakten existieren weiterhin (nichts geloescht).
+        $this->assertDatabaseHas('customers', ['id' => $a->id]);
+        $this->assertDatabaseHas('customers', ['id' => $b->id]);
+
+        // Paar erscheint nicht mehr als Dublette.
+        $this->assertCount(0, app(DuplicateDetectionService::class)->scan()['pairs']);
+    }
+
+    public function test_relationship_type_can_be_changed_afterwards(): void
+    {
+        $a = $this->customer('Lea Nomi', 'lea@example.com', ['phone' => '030777']);
+        $b = $this->customer('Ben Nomi', 'ben@example.com', ['phone' => '030777']);
+        [$x, $y] = CustomerRelationship::pairKey($a->id, $b->id);
+        $rel = CustomerRelationship::create(['customer_a_id' => $x, 'customer_b_id' => $y, 'type' => 'not_duplicate']);
+
+        $this->actingAs($this->admin())
+            ->post(route('admin.customers.relationships.type', $rel->id), ['type' => 'spouse'])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('customer_relationships', ['id' => $rel->id, 'type' => 'spouse']);
+    }
+
+    public function test_relationships_page_shows_spouse_badge(): void
+    {
+        $a = $this->customer('Mara Sung', 'mara@example.com', ['phone' => '040888']);
+        $b = $this->customer('Nils Sung', 'nils@example.com', ['phone' => '040888']);
+        [$x, $y] = CustomerRelationship::pairKey($a->id, $b->id);
+        CustomerRelationship::create(['customer_a_id' => $x, 'customer_b_id' => $y, 'type' => 'spouse']);
+
+        $this->actingAs($this->admin())->get(route('admin.customers.relationships'))
+            ->assertOk()
+            ->assertSee('Ehepaar');
+    }
+
     public function test_relations_for_finds_customers_sharing_a_signal(): void
     {
         $main = $this->customer('Nina Roth', 'nina@example.com', ['phone' => '0301234']);

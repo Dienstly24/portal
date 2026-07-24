@@ -160,7 +160,7 @@ class DuplicateDetectionService
      * rein informativ, KEINE Zusammenfuehrung.
      *
      * @param ?array<int, string> $visibleIds Portfolio-Sicht; null = alle.
-     * @return array<int, array{customer: Customer, signals: array<int, string>, score: int, dismissed: bool}>
+     * @return array<int, array{customer: Customer, signals: array<int, string>, score: int, dismissed: bool, relationship_type: ?string}>
      */
     public function relationsFor(Customer $customer, ?array $visibleIds = null, int $limit = 40): array
     {
@@ -207,7 +207,12 @@ class DuplicateDetectionService
         });
 
         $candidates = $query->limit(200)->get();
-        $dismissed = CustomerRelationship::dismissedKeySet();
+        // Bereits markierte Beziehungen inkl. Art (Ehepaar/Familie/...), damit
+        // die Kundenakte eine verwandte Person aussagekraeftig kennzeichnen kann.
+        $relTypes = CustomerRelationship::query()
+            ->get(['customer_a_id', 'customer_b_id', 'type'])
+            ->mapWithKeys(fn ($r) => [$r->customer_a_id . '|' . $r->customer_b_id => $r->type])
+            ->all();
 
         $out = [];
         foreach ($candidates as $cand) {
@@ -216,11 +221,13 @@ class DuplicateDetectionService
                 continue;
             }
             [$ka, $kb] = CustomerRelationship::pairKey((string) $customer->id, (string) $cand->id);
+            $relKey = $ka . '|' . $kb;
             $out[] = [
-                'customer'  => $cand,
-                'signals'   => $signals,
-                'score'     => $this->confidence($customer, $cand, $signals),
-                'dismissed' => isset($dismissed[$ka . '|' . $kb]),
+                'customer'          => $cand,
+                'signals'           => $signals,
+                'score'             => $this->confidence($customer, $cand, $signals),
+                'dismissed'         => array_key_exists($relKey, $relTypes),
+                'relationship_type' => $relTypes[$relKey] ?? null,
             ];
         }
 
