@@ -33,6 +33,7 @@ class Document extends Model {
         'personalausweis'      => ['label' => 'Personalausweis',      'category' => 'identity'],
         'aufenthaltstitel'     => ['label' => 'Aufenthaltstitel',     'category' => 'identity'],
         'reisepass'            => ['label' => 'Reisepass',            'category' => 'identity'],
+        'meldebescheinigung'   => ['label' => 'Meldebescheinigung',   'category' => 'identity'],
         'fuehrerschein'        => ['label' => 'Führerschein',         'category' => 'identity'],
         'rechnung'             => ['label' => 'Rechnung',             'category' => 'invoice'],
         'energieauftrag'       => ['label' => 'Energie-Auftrag',      'category' => 'contract'],

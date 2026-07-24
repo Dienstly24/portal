@@ -61,6 +61,8 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(\App\Services\Ai\TemplateParsers\FamilienversicherungParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\ErsatzbescheinigungParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\GesundheitskarteParser::class),
+                $app->make(\App\Services\Ai\TemplateParsers\ReisepassMrzParser::class),
+                $app->make(\App\Services\Ai\TemplateParsers\MeldebestaetigungParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\AufenthaltstitelParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\DslAuftragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\EnergieAuftragParser::class),
