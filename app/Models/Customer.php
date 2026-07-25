@@ -334,6 +334,25 @@ class Customer extends Model {
         return null;
     }
 
+    /**
+     * Werber-Schluessel aus Formularen ('u:{id}' Mitarbeiter, 'p:{uuid}'
+     * Partner) validiert aufloesen. Liefert immer beide Spalten (exklusiv,
+     * unbekannte Schluessel -> beide null). Rollen-Gate (nur Verwaltung darf
+     * Werber setzen) bleibt Sache des Aufrufers.
+     */
+    public static function resolveWerberKey(?string $key): array
+    {
+        $values = ['acquired_by' => null, 'acquired_by_partner_id' => null];
+        $key = (string) $key;
+        if (str_starts_with($key, 'u:')) {
+            $values['acquired_by'] = User::whereIn('role', ['admin', 'manager', 'support', 'employee'])
+                ->whereKey((int) substr($key, 2))->value('id');
+        } elseif (str_starts_with($key, 'p:')) {
+            $values['acquired_by_partner_id'] = Partner::whereKey(substr($key, 2))->value('id');
+        }
+        return $values;
+    }
+
     /** Aktive E-Mail-Verarbeitungs-Einwilligung (oder null). */
     public function activeEmailConsent(): ?CustomerConsent
     {

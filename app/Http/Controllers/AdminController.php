@@ -808,17 +808,9 @@ class AdminController extends Controller
 
         // Werber (Neukunden-Bericht/Provision): 'u:{id}' = Mitarbeiter,
         // 'p:{uuid}' = Partner. Nur Verwaltung darf ihn bei der Anlage setzen.
-        $acquiredBy = null;
-        $acquiredByPartner = null;
-        if (in_array(auth()->user()->role, ['admin', 'manager']) && $request->filled('werber')) {
-            $w = (string) $request->werber;
-            if (str_starts_with($w, 'u:')) {
-                $acquiredBy = User::whereIn('role', ['admin', 'manager', 'support', 'employee'])
-                    ->whereKey((int) substr($w, 2))->value('id');
-            } elseif (str_starts_with($w, 'p:')) {
-                $acquiredByPartner = \App\Models\Partner::whereKey(substr($w, 2))->value('id');
-            }
-        }
+        $werber = in_array(auth()->user()->role, ['admin', 'manager'])
+            ? Customer::resolveWerberKey($request->werber)
+            : ['acquired_by' => null, 'acquired_by_partner_id' => null];
 
         $user = User::create([
             'name' => $fullName,
@@ -834,8 +826,8 @@ class AdminController extends Controller
             // Herkunft + Werber fuer den Neukunden-Bericht (created_by setzt
             // das Customer-Modell automatisch auf den angemeldeten Mitarbeiter).
             'source' => 'manual',
-            'acquired_by' => $acquiredBy,
-            'acquired_by_partner_id' => $acquiredByPartner,
+            'acquired_by' => $werber['acquired_by'],
+            'acquired_by_partner_id' => $werber['acquired_by_partner_id'],
             'phone' => $request->mobile ?? $request->phone,
             'mobile' => $request->mobile,
             'address' => $address,
