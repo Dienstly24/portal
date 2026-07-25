@@ -654,10 +654,24 @@ class DocumentIntakeService
             return null;
         }
 
-        $contract = $this->findExistingContractByIdentity($customer, $document->ai_extracted ?? []);
+        $data = $document->ai_extracted ?? [];
+        $contract = $this->findExistingContractByIdentity($customer, $data);
         if ($contract) {
             $document->contract_id = $contract->id;
             $document->save();
+
+            // Fahrzeugschein/-brief (Zulassungsbescheinigung Teil I/II): die
+            // AMTLICHEN Fahrzeugdaten (FIN, HSN/TSN, Marke, Modell, Erst-
+            // zulassung, Kennzeichen) mit dem passenden Vertrag abgleichen und
+            // dessen LEERE Fahrzeugfelder ergaenzen - Bestand wird nie
+            // ueberschrieben, jede Ergaenzung steht in der Version History.
+            // So fuellt die amtliche Zulassung fehlende Fahrzeugdaten des
+            // Kundenvertrags automatisch nach.
+            if (in_array($document->ai_type, ['fahrzeugschein', 'fahrzeugbrief'], true)
+                && in_array($contract->type, ['kfz', 'escooter'], true)
+                && !empty($data['kfz'])) {
+                $this->updateContractFromExtraction($contract, $document, $customer, null, $data);
+            }
         }
 
         return $contract;

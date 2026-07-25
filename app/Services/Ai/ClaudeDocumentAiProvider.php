@@ -166,7 +166,13 @@ class ClaudeDocumentAiProvider implements DocumentAiProviderInterface
             . 'Preisvariabel: die erste Grundgebuehr-Stufe (z.B. Monat 1-3) als price_initial + price_initial_months, die spaetere Stufe als price_regular. '
             . 'Bonus/Cashback/Gutschriften stehen als Abzug (z.B. -155,00 EUR) - trage den positiven Betrag ein. '
             . 'In "summary" und "title" KEINE sensiblen Nummern nennen (keine IBAN, Versicherten-, Ausweis- oder Steuernummern). '
-            . 'Bei einem KFZ-Vertrag gehoeren Vertragsdaten in "versicherung" (sparte: kfz) UND Fahrzeugdaten in "kfz".';
+            . 'Bei einem KFZ-Vertrag gehoeren Vertragsdaten in "versicherung" (sparte: kfz) UND Fahrzeugdaten in "kfz". '
+            . 'Bei einer Zulassungsbescheinigung Teil I (Fahrzeugschein, type fahrzeugschein) bzw. Teil II (Fahrzeugbrief, '
+            . 'type fahrzeugbrief) die genormten Feld-Codes lesen: A=kfz.license_plate (amtliches Kennzeichen), '
+            . 'D.1=kfz.manufacturer (Marke), D.3=kfz.model (Handelsbezeichnung), E=kfz.vin (Fahrzeug-Identifizierungsnummer/FIN), '
+            . '(2.1)=kfz.hsn (zu 2.1, Herstellerschluessel), (2.2)=kfz.tsn (zu 2.2, Typschluessel), B=kfz.first_registration '
+            . '(Datum der Erstzulassung), C.1.1=person.last_name, C.1.2=person.first_name, C.1.3=person.street/zip/city (Halter). '
+            . 'Keine Versicherungsdaten erfinden - der Fahrzeugschein enthaelt keine.';
     }
 
     /**
