@@ -97,6 +97,39 @@ trait ValidatesExtractedFields
         ], fn ($v) => $v !== null && $v !== '');
     }
 
+    /**
+     * Internet-/DSL-Felder (Auftragsbestaetigung). Preise nur in plausiblen
+     * Grenzen; Aktionsdauer als kleine Monatszahl. has_router als Wahrheitswert
+     * (auch false bleibt erhalten). Betrag immer positiv (ein Bonus/Cashback
+     * steht im Dokument als Abzug "-155,00 EUR" -> Betrag = Magnitude).
+     */
+    private function validatedInternet(mixed $in): array
+    {
+        if (!is_array($in)) return [];
+        $euro = fn ($v) => (is_numeric($v) && $v >= 0 && $v < 100000) ? round((float) $v, 2) : null;
+        $months = $in['price_initial_months'] ?? null;
+        $out = array_filter([
+            'tariff' => $this->cleanString($in['tariff'] ?? null, 120),
+            'speed' => $this->cleanString($in['speed'] ?? null, 30),
+            'upload_speed' => $this->cleanString($in['upload_speed'] ?? null, 30),
+            'price_initial' => $euro($in['price_initial'] ?? null),
+            'price_initial_months' => (is_numeric($months) && $months > 0 && $months <= 60) ? (int) $months : null,
+            'price_regular' => $euro($in['price_regular'] ?? null),
+            'router_name' => $this->cleanString($in['router_name'] ?? null, 120),
+            'router_price' => $euro($in['router_price'] ?? null),
+            'bonus_amount' => $euro($in['bonus_amount'] ?? null),
+            'voucher_amount' => $euro($in['voucher_amount'] ?? null),
+        ], fn ($v) => $v !== null && $v !== '');
+        // Router als eingeschlossen werten, wenn ausdruecklich gesetzt oder ein
+        // Router-Modell/Preis erkannt wurde.
+        if (array_key_exists('has_router', $in)) {
+            $out['has_router'] = (bool) $in['has_router'];
+        } elseif (isset($out['router_name']) || isset($out['router_price'])) {
+            $out['has_router'] = true;
+        }
+        return $out;
+    }
+
     private function validatedInsurance(mixed $in): array
     {
         if (!is_array($in)) return [];
