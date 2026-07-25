@@ -62,6 +62,9 @@ class User extends Authenticatable {
     /** Kunden, die dieser Mitarbeiter geworben hat (Neukunden-Bericht/Provision). */
     public function acquiredCustomers() { return $this->hasMany(Customer::class, 'acquired_by'); }
 
+    /** Sparten-Provisionssaetze dieses Mitarbeiters (Provisions-Management). */
+    public function provisionRates() { return $this->hasMany(ProvisionRate::class); }
+
     /** Favoriten-Kunden dieses Mitarbeiters (Stern im E-Mail-Composer). */
     public function favoriteCustomers() { return $this->belongsToMany(Customer::class, 'favorite_customers')->withTimestamps(); }
 

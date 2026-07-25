@@ -460,10 +460,19 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         Route::get('/commissions', [\App\Http\Controllers\CommissionController::class, 'index'])->name('commissions');
         Route::post('/commissions/{id}/book', [\App\Http\Controllers\CommissionController::class, 'book'])->name('commissions.book');
         Route::post('/commissions/{id}/reject', [\App\Http\Controllers\CommissionController::class, 'reject'])->name('commissions.reject');
-        // Vermittler-Provisionen (Ausgang an Mitarbeiter/Partner)
+        // Vermittler-Provisionen (Ausgang an Mitarbeiter/Partner) -
+        // Provisions-Management: NUR admin/manager, Mitarbeiter/Partner haben
+        // keinerlei Zugriff auf Betraege, Saetze, Berichte oder Statistiken.
         Route::get('/provisionen', [\App\Http\Controllers\ProvisionController::class, 'index'])->name('provisions');
         Route::post('/provisionen', [\App\Http\Controllers\ProvisionController::class, 'store'])->name('provisions.store');
+        Route::get('/provisionen/saetze', [\App\Http\Controllers\ProvisionController::class, 'rates'])->name('provisions.rates');
+        Route::post('/provisionen/saetze', [\App\Http\Controllers\ProvisionController::class, 'ratesSave'])->name('provisions.rates.save');
+        Route::get('/provisionen/bericht', [\App\Http\Controllers\ProvisionController::class, 'report'])->name('provisions.report');
+        Route::get('/provisionen/bericht/export', [\App\Http\Controllers\ProvisionController::class, 'reportExport'])->name('provisions.report.export');
+        Route::get('/provisionen/dashboard', [\App\Http\Controllers\ProvisionController::class, 'dashboard'])->name('provisions.dashboard');
+        Route::get('/provisionen/{id}', [\App\Http\Controllers\ProvisionController::class, 'show'])->whereUuid('id')->name('provisions.show');
         Route::post('/provisionen/{id}/status', [\App\Http\Controllers\ProvisionController::class, 'updateStatus'])->name('provisions.status');
+        Route::post('/provisionen/{id}/betrag', [\App\Http\Controllers\ProvisionController::class, 'adjustAmount'])->name('provisions.amount');
     });
 
     // lexoffice

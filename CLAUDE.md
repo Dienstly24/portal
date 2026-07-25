@@ -174,8 +174,32 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   Vorschlag wird per Klick als `Provision` erfasst (Tabelle `provisions`,
   AUSGANG an eigene Vermittler - NICHT verwechseln mit `commissions` =
   EINGANG Gutschriften). Verwaltung unter `/admin/provisionen`
-  (`ProvisionController`, Tabs mit der Gutschriften-Seite): offen ->
-  ausgezahlt/storniert (HITL). Tests: `NewCustomerReportTest`.
+  (`ProvisionController`, Tabs mit der Gutschriften-Seite). Tests:
+  `NewCustomerReportTest`.
+- **Provisions-Management (Vollausbau, Betreiber-Vorgabe 25.07.2026)**:
+  Provisionen entstehen AUTOMATISCH bei jeder Vertragsanlage (Formular,
+  Dokumenten-Eingang, Imports, CLI - zentraler Hook im Contract-Modell ->
+  `ContractProvisionService`). Empfaenger ist der WERBER des Kunden
+  (`acquired_by` XOR `acquired_by_partner_id`); der Betrag kommt aus dem
+  SPARTEN-Satz (`provision_rates`: je Mitarbeiter/Partner je Sparte fix +
+  Prozent vom Jahresbeitrag, Pflege unter `/admin/provisionen/saetze`),
+  Fallback globaler Satz am Empfaenger. Ohne Werber oder Satz KEINE Buchung
+  (nie Betraege erfinden); Werber nachtraeglich setzen bucht offene
+  Vertraege nach (Idempotenz: je Vertrag genau EINE Neuvertrag-Provision).
+  Workflow offen -> freigegeben -> ausgezahlt (oder storniert), Statuswege
+  begrenzt (`updateStatus`). Kuendigung (`status=cancelled`) oder Loeschung
+  eines Vertrags erzeugt automatisch eine NEGATIVE Gegenbuchung
+  (type=storno, `related_provision_id`) - Originale werden NIE geloescht
+  (Finanzhistorie; Kunden-Purge per FK-Kaskade bucht bewusst NICHT).
+  Betrags-Anpassung/Bonus/Abzug nur mit Grund; JEDE Aenderung steht im
+  unveraenderlichen `provision_audit_logs` (wer/wann/alt/neu/Grund).
+  Monatsbericht `/admin/provisionen/bericht` (je Empfaenger: Neukunden,
+  Vertraege je Sparte, Provision/Abzuege/Netto) mit Export Excel
+  (`XlsxWriter`, ohne Fremdpaket, CSV-Fallback) + PDF (Druckansicht);
+  Leistungs-Dashboard `/admin/provisionen/dashboard`. ALLES nur
+  role:admin,manager - Mitarbeiter/Partner sehen keinerlei Betraege,
+  Saetze, Berichte oder Statistiken; KEINE Benachrichtigungen an
+  Empfaenger (interner Prozess). Tests: `ProvisionManagementTest`.
 
 ## Offene Themen / wartet auf den Betreiber
 
