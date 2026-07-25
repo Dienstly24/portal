@@ -65,7 +65,8 @@
                 @if($c->start_date)<div>{{ \Carbon\Carbon::parse($c->start_date)->format('d.m.Y') }}</div>@endif
                 @if($c->end_date)<div>{{ \Carbon\Carbon::parse($c->end_date)->format('d.m.Y') }}</div>@endif
             </td>
-            <td><span class="badge badge-{{ $c->status === 'active' ? 'active' : ($c->status === 'cancelled' ? 'rejected' : 'pending') }}">{{ ['active'=>'Aktiv','pending'=>'In Bearbeitung','cancelled'=>'Gekündigt','expired'=>'Abgelaufen'][$c->status] ?? $c->status }}</span></td>
+            @php $st = $c->displayStatus(); @endphp
+            <td><span class="badge badge-{{ $st['badge'] }}" style="white-space:nowrap;">{{ $st['label'] }}</span></td>
             <td>
                 <div style="font-size:13px;font-weight:600;">{{ $c->contract_number ?: '—' }}</div>
             </td>

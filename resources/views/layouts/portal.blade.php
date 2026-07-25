@@ -37,6 +37,7 @@ body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
 .badge-pending{background:#F7E7D6;color:#B5651D;}
 .badge-open{background:#E6F1FB;color:#185FA5;}
 .badge-closed{background:#EAECEF;color:#5F5E5A;}
+.badge-rejected{background:#F9E3E3;color:#A32D2D;}
 .badge-waiting{background:#EEE9F7;color:#6B4FA3;}
 .badge-approved{background:#D9F4E6;color:#128a4b;}
 .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-weight:600;text-decoration:none;transition:.2s;}

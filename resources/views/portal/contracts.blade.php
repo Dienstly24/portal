@@ -50,7 +50,8 @@ $typeLabels = [
     <a href="{{ route('portal.contracts.show', $c->id) }}" class="card metric-link" style="margin-bottom:0;text-decoration:none;color:var(--ink);">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;">
             <span style="font-size:34px;line-height:1;">{{ $c->typeIcon() }}</span>
-            <span class="badge badge-{{ $c->status === 'active' ? 'active' : 'pending' }}">{{ $c->status === 'active' ? 'Aktiv' : ucfirst($c->status) }}</span>
+            @php $st = $c->displayStatus(); @endphp
+            <span class="badge badge-{{ $st['badge'] }}" style="white-space:nowrap;">{{ __($st['label_key'], $st['params']) }}</span>
         </div>
         <div style="font-weight:700;font-size:15px;margin-bottom:2px;">{{ $c->insurer }}</div>
         <div style="font-size:12.5px;color:var(--ink-soft);">{{ $c->typeLabel() }}@if($c->contract_number) · {{ $c->contract_number }}@endif</div>

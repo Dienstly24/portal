@@ -222,7 +222,8 @@ document.getElementById('hero-chat').addEventListener('click', function (e) {
             <div style="font-size:13px;color:var(--ink-soft);">{{ $c->contract_number }} · {{ ucfirst($c->type) }}</div>
         </div>
         <span style="display:flex;gap:6px;align-items:center;">
-            <span class="badge badge-{{ $c->status === 'active' ? 'active' : 'pending' }}">{{ $c->status === 'active' ? 'Aktiv' : ucfirst($c->status) }}</span>
+            @php $st = $c->displayStatus(); @endphp
+            <span class="badge badge-{{ $st['badge'] }}" style="white-space:nowrap;">{{ __($st['label_key'], $st['params']) }}</span>
             <span style="color:var(--ink-soft);font-size:12px;">→</span>
         </span>
     </a>

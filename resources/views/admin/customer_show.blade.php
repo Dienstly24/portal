@@ -465,9 +465,8 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
                 @endif
             </td>
             <td style="padding:12px;">
-                <span class="badge badge-{{ $c->status === 'active' ? 'active' : ($c->status === 'cancelled' ? 'rejected' : 'pending') }}">
-                    {{ ['active'=>'Aktiv','pending'=>'In Bearb.','cancelled'=>'Gekündigt','expired'=>'Abgelaufen'][$c->status] ?? $c->status }}
-                </span>
+                @php $st = $c->displayStatus(); @endphp
+                <span class="badge badge-{{ $st['badge'] }}" style="white-space:nowrap;">{{ $st['label'] }}</span>
             </td>
             <td style="padding:12px;font-size:12px;color:var(--ink-soft);">
                 {{ $c->added_by ?? 'System' }}
