@@ -55,6 +55,12 @@ class Partner extends Model
         return $this->hasMany(Customer::class, 'acquired_by_partner_id');
     }
 
+    /** Sparten-Provisionssaetze dieses Partners (Provisions-Management). */
+    public function provisionRates()
+    {
+        return $this->hasMany(ProvisionRate::class);
+    }
+
     public function externalReferences()
     {
         return $this->morphMany(ExternalReference::class, 'referenceable');

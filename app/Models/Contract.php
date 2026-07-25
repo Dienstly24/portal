@@ -197,6 +197,23 @@ class Contract extends Model {
                 }
             }
         });
+
+        // Provisions-Management (25.07.2026): Vermittler-Provision automatisch
+        // buchen - zentral am Modell, damit ALLE Anlagewege greifen (Formular,
+        // Dokumenten-Eingang, Imports, CLI). Kuendigung/Loeschung erzeugt eine
+        // negative Gegenbuchung statt einer Loeschung (Finanzhistorie).
+        static::created(fn ($m) => app(\App\Services\Provision\ContractProvisionService::class)
+            ->createForContract($m));
+        static::updated(function ($m) {
+            if ($m->wasChanged('status') && $m->status === 'cancelled') {
+                app(\App\Services\Provision\ContractProvisionService::class)
+                    ->createStornoForContract($m, 'Vertrag gekuendigt/storniert');
+            }
+        });
+        // deleting (nicht deleted): die Provisionen referenzieren den Vertrag
+        // hier noch - nach dem Loeschen setzt die DB contract_id auf null.
+        static::deleting(fn ($m) => app(\App\Services\Provision\ContractProvisionService::class)
+            ->createStornoForContract($m, 'Vertrag geloescht'));
     }
     public function vehicleDetail() { return $this->hasOne(ContractVehicleDetail::class); }
     public function energyDetail() { return $this->hasOne(ContractEnergyDetail::class); }
@@ -207,4 +224,6 @@ class Contract extends Model {
     public function switchReminders() { return $this->hasMany(ContractSwitchReminder::class); }
     /** Feld-genaue Aenderungshistorie (Audit Log), neueste zuerst. */
     public function revisions() { return $this->hasMany(ContractRevision::class)->orderByDesc('created_at'); }
+    /** Vermittler-Provisionen dieses Vertrags (inkl. Storno-Gegenbuchungen). */
+    public function provisions() { return $this->hasMany(Provision::class); }
 }

@@ -230,8 +230,17 @@ class ReportController extends Controller
             'werber' => $label, 'key' => $w === 'keiner' ? null : $w,
         ]);
 
+        // Provisions-Management: Werber nachtraeglich gesetzt (z.B. nach einem
+        // Import) -> offene Vertraege des Kunden automatisch verguenten.
+        // Bereits gebuchte Vertraege bleiben unveraendert (Idempotenz im Service).
+        $booked = 0;
+        if ($w !== 'keiner') {
+            $booked = app(\App\Services\Provision\ContractProvisionService::class)
+                ->createForCustomerContracts($customer->fresh());
+        }
+
         return back()->with('success', $label
-            ? "Werber gesetzt: {$label}."
+            ? "Werber gesetzt: {$label}." . ($booked > 0 ? " {$booked} Provision(en) automatisch gebucht." : '')
             : 'Werber entfernt.');
     }
 
