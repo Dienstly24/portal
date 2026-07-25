@@ -1527,6 +1527,48 @@ class SmartDocumentUploadTest extends TestCase
         $this->assertSame((string) $contract->id, (string) $linked->id);
     }
 
+    public function test_fahrzeugschein_fills_missing_vehicle_data_of_matching_contract(): void
+    {
+        // Bestandsvertrag: Kennzeichen vorhanden, aber FIN/Marke/Modell fehlen.
+        $customer = $this->makeCustomer();
+        $contract = Contract::create([
+            'customer_id' => $customer->id, 'contract_number' => null, 'type' => 'kfz', 'insurer' => 'HUK24', 'status' => 'active',
+        ]);
+        \App\Models\ContractVehicleDetail::create([
+            'contract_id' => $contract->id, 'license_plate' => 'UN-AB 123',
+        ]);
+
+        // Fahrzeugschein (Zulassungsbescheinigung Teil I) mit den amtlichen
+        // Fahrzeugdaten - gleiches Kennzeichen (andere Schreibweise).
+        $doc = Document::create([
+            'customer_id' => $customer->id, 'category' => 'identity', 'file_name' => 'zb1.pdf',
+            'file_path' => 'zb1.pdf', 'disk' => 'local', 'ai_type' => 'fahrzeugschein',
+            'ai_extracted' => ['kfz' => [
+                'license_plate' => 'UN AB 123',
+                'vin' => 'VXKUPHNSSM4100609',
+                'hsn' => '1844', 'tsn' => 'ABC',
+                'manufacturer' => 'OPEL', 'model' => 'CORSA',
+                'first_registration' => '2021-03-23',
+            ]],
+        ]);
+
+        $linked = app(\App\Services\DocumentIntake\DocumentIntakeService::class)->linkMatchingContract($doc, $customer);
+        $this->assertNotNull($linked);
+        $this->assertSame((string) $contract->id, (string) $linked->id);
+
+        $veh = $contract->fresh()->vehicleDetail;
+        // Leere Fahrzeugfelder wurden aus der amtlichen Zulassung ergaenzt.
+        $this->assertSame('VXKUPHNSSM4100609', $veh->vin);
+        $this->assertSame('OPEL', $veh->manufacturer);
+        $this->assertSame('CORSA', $veh->model);
+        $this->assertSame('1844', $veh->hsn);
+        $this->assertSame('ABC', $veh->tsn);
+        // Bestehendes Kennzeichen bleibt unveraendert (nicht ueberschrieben).
+        $this->assertSame('UN-AB 123', $veh->license_plate);
+        // Jede Ergaenzung steht in der Version History.
+        $this->assertDatabaseHas('contract_revisions', ['contract_id' => $contract->id, 'field' => 'vin']);
+    }
+
     public function test_admin_smart_upload_rejects_oversized_combined_batch(): void
     {
         Storage::fake('local');
