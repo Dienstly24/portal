@@ -402,6 +402,11 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
 
     // Berichte
     Route::get('/reports', [ReportController::class, 'index'])->name('reports');
+    // Neukunden-Bericht: Liste fuer alle Rollen (Daten per Portfolio-Scoping),
+    // Werber/Sichtbarkeit setzen nur Verwaltung.
+    Route::get('/reports/neukunden', [ReportController::class, 'newCustomers'])->name('reports.neukunden');
+    Route::post('/reports/neukunden/{id}/werber', [ReportController::class, 'setAcquirer'])->name('reports.neukunden.werber')->middleware('role:admin,manager');
+    Route::post('/reports/neukunden/{id}/sichtbarkeit', [ReportController::class, 'setVisibility'])->name('reports.neukunden.sichtbarkeit')->middleware('role:admin,manager');
 
     // Tarifrechner & Ankündigungen
     Route::get('/tarifrechner', [TarifrechnerController::class, 'index'])->name('tarifrechner')->middleware('role:admin,manager');
@@ -455,6 +460,10 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         Route::get('/commissions', [\App\Http\Controllers\CommissionController::class, 'index'])->name('commissions');
         Route::post('/commissions/{id}/book', [\App\Http\Controllers\CommissionController::class, 'book'])->name('commissions.book');
         Route::post('/commissions/{id}/reject', [\App\Http\Controllers\CommissionController::class, 'reject'])->name('commissions.reject');
+        // Vermittler-Provisionen (Ausgang an Mitarbeiter/Partner)
+        Route::get('/provisionen', [\App\Http\Controllers\ProvisionController::class, 'index'])->name('provisions');
+        Route::post('/provisionen', [\App\Http\Controllers\ProvisionController::class, 'store'])->name('provisions.store');
+        Route::post('/provisionen/{id}/status', [\App\Http\Controllers\ProvisionController::class, 'updateStatus'])->name('provisions.status');
     });
 
     // lexoffice

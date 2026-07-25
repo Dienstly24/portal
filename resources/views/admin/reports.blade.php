@@ -6,6 +6,20 @@
     <div class="page-sub">Ihre Leistungskennzahlen und Übersicht</div>
 </div>
 
+{{-- Bericht-Tabs --}}
+<div style="display:flex;gap:8px;margin-bottom:20px;">
+    <a href="{{ route('admin.reports') }}" class="rep-tab rep-tab-active">Übersicht</a>
+    <a href="{{ route('admin.reports.neukunden') }}" class="rep-tab">Neukunden</a>
+    @if(in_array(auth()->user()->role, ['admin','manager']))
+    <a href="{{ route('admin.provisions') }}" class="rep-tab">Vermittler-Provisionen</a>
+    @endif
+</div>
+<style>
+.rep-tab { padding:9px 18px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:13.5px; font-weight:600; color:var(--ink); text-decoration:none; }
+.rep-tab:hover { background:#F4F7F5; }
+.rep-tab-active { background:#131A17; color:#fff; border-color:#131A17; }
+</style>
+
 <div class="card" style="margin-bottom:24px;">
     <form method="GET" action="{{ route('admin.reports') }}" style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;">
         <div>
@@ -30,12 +44,12 @@
         <div class="metric-value">{{ $customers_stats['total'] }}</div>
         <div class="metric-sub">Alle Kunden</div>
     </div>
-    <div class="metric-card">
+    <a class="metric-card" href="{{ route('admin.reports.neukunden', ['from' => $from->format('Y-m-d'), 'to' => $to->format('Y-m-d')]) }}" style="text-decoration:none;color:inherit;display:block;" title="Zum Neukunden-Bericht">
         <div class="metric-icon icon-green">🆕</div>
         <div class="metric-label">Neu im Zeitraum</div>
         <div class="metric-value">{{ $customers_stats['new'] }}</div>
-        <div class="metric-sub">Im gewählten Zeitraum</div>
-    </div>
+        <div class="metric-sub">Zum Neukunden-Bericht →</div>
+    </a>
     <div class="metric-card">
         <div class="metric-icon icon-amber">👤</div>
         <div class="metric-label">Privatkunden</div>

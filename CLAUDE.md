@@ -154,6 +154,28 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   Vertrags-Bearbeiten-Seite (`partials/contract_revisions.blade.php`). Nur
   wenn kein passender Vertrag existiert, wird ein neuer angelegt -> genau EIN
   Vertrag je Fahrzeug (Single Source of Truth).
+- **Neukunden-Bericht + Vermittler-Provisionen** (Betreiber-Vorgabe
+  25.07.2026): `/admin/reports/neukunden` (`ReportController::newCustomers`,
+  Tab auf der Berichte-Seite) zeigt die Neukunden des Monats (blaetterbar,
+  freier Zeitraum moeglich) mit ANLEGER (`customers.created_by`, wird beim
+  Erstellen automatisch auf den angemeldeten Mitarbeiter gesetzt -
+  Creating-Hook im Customer-Modell) und WERBER: Mitarbeiter
+  (`acquired_by`) ODER Partner (`acquired_by_partner_id`), exklusiv.
+  Bewusst NICHT `partner_id` wiederverwendet - das steuert den
+  Partner-Portal-Zugriff, Werber-Attribution darf keine Datensicht
+  eroeffnen (DSGVO). Jede Zeile fuehrt in die Kundenakte; Vertraege zeigen
+  Gesellschaft (insurer), Beginn/Ende, Status mit Link. admin/manager
+  setzen Werber + Mitarbeiter-Sichtbarkeit (= Betreuer-Sync
+  `employee_customers`) direkt aus der Liste (Popover); Mitarbeiter sehen
+  nur ihr Portfolio, ohne Verwaltungs-Controls. Leaderboard „Wer hat wie
+  viele gebracht" + Provisions-Vorschau: Saetze je Mitarbeiter/Partner
+  (`provision_fixed` EUR je Neuvertrag, `provision_percent` % vom
+  Jahresbeitrag; gepflegt in Mitarbeiter-Bearbeiten bzw. Partnerakte).
+  Vorschlag wird per Klick als `Provision` erfasst (Tabelle `provisions`,
+  AUSGANG an eigene Vermittler - NICHT verwechseln mit `commissions` =
+  EINGANG Gutschriften). Verwaltung unter `/admin/provisionen`
+  (`ProvisionController`, Tabs mit der Gutschriften-Seite): offen ->
+  ausgezahlt/storniert (HITL). Tests: `NewCustomerReportTest`.
 
 ## Offene Themen / wartet auf den Betreiber
 

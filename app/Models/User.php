@@ -6,7 +6,7 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable {
     use HasFactory, Notifiable;
-    protected $fillable = ['name','email','password','role','access_level','can_see_all_customers','can_manage_contracts','can_manage_tickets','can_approve_changes','can_send_emails','can_import_export'];
+    protected $fillable = ['name','email','password','role','access_level','can_see_all_customers','can_manage_contracts','can_manage_tickets','can_approve_changes','can_send_emails','can_import_export','provision_fixed','provision_percent'];
     protected $hidden = ['password','remember_token'];
     protected $casts = [
         'email_verified_at' => 'datetime',
@@ -21,6 +21,8 @@ class User extends Authenticatable {
         'can_approve_changes' => 'boolean',
         'can_send_emails' => 'boolean',
         'can_import_export' => 'boolean',
+        'provision_fixed' => 'decimal:2',
+        'provision_percent' => 'decimal:2',
     ];
     protected static function booted(): void
     {
@@ -56,6 +58,9 @@ class User extends Authenticatable {
             ->send(new \App\Mail\PasswordResetMail($this, $token));
     }
     public function assignedCustomers() { return $this->belongsToMany(Customer::class, 'employee_customers'); }
+
+    /** Kunden, die dieser Mitarbeiter geworben hat (Neukunden-Bericht/Provision). */
+    public function acquiredCustomers() { return $this->hasMany(Customer::class, 'acquired_by'); }
 
     /** Favoriten-Kunden dieses Mitarbeiters (Stern im E-Mail-Composer). */
     public function favoriteCustomers() { return $this->belongsToMany(Customer::class, 'favorite_customers')->withTimestamps(); }

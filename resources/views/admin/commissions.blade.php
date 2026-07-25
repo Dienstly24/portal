@@ -8,6 +8,17 @@
     </div>
 </div>
 
+{{-- Tabs: Eingang (Gutschriften) / Ausgang (Vermittler) --}}
+<div style="display:flex;gap:8px;margin-bottom:20px;">
+    <a href="{{ route('admin.commissions') }}" class="rep-tab rep-tab-active">Gutschriften (Eingang)</a>
+    <a href="{{ route('admin.provisions') }}" class="rep-tab">Vermittler-Provisionen (Ausgang)</a>
+</div>
+<style>
+.rep-tab { padding:9px 18px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:13.5px; font-weight:600; color:var(--ink); text-decoration:none; }
+.rep-tab:hover { background:#F4F7F5; }
+.rep-tab-active { background:#131A17; color:#fff; border-color:#131A17; }
+</style>
+
 @if(session('success'))<div style="background:#D9F4E6;color:#17A65B;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
 @if(session('error'))<div style="background:#FBE9E9;color:#B3261E;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('error') }}</div>@endif
 

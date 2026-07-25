@@ -14,13 +14,15 @@ class Partner extends Model
     protected $keyType = 'string';
     public $incrementing = false;
 
-    protected $fillable = ['name', 'user_id', 'partner_number', 'contact_email', 'email_domains', 'iban', 'notes', 'is_active', 'logo_path'];
+    protected $fillable = ['name', 'user_id', 'partner_number', 'contact_email', 'email_domains', 'iban', 'notes', 'is_active', 'logo_path', 'provision_fixed', 'provision_percent'];
 
     protected function casts(): array
     {
         return [
             'email_domains' => 'array',
             'is_active' => 'boolean',
+            'provision_fixed' => 'decimal:2',
+            'provision_percent' => 'decimal:2',
         ];
     }
 
@@ -45,6 +47,12 @@ class Partner extends Model
     public function customers()
     {
         return $this->hasMany(Customer::class);
+    }
+
+    /** Vom Partner geworbene Kunden (Neukunden-Bericht/Provision). */
+    public function acquiredCustomers()
+    {
+        return $this->hasMany(Customer::class, 'acquired_by_partner_id');
     }
 
     public function externalReferences()
