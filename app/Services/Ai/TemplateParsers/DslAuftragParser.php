@@ -40,6 +40,7 @@ class DslAuftragParser implements DocumentTemplateParser
 
         $person = $this->parsePerson($text, $lines);
         $contract = $this->parseContract($text);
+        $internet = $this->parseInternet($text);
 
         // Ohne belastbaren Kern (Anbieter/Tarif oder Name) der KI ueberlassen.
         if ($contract === [] && $person === []) {
@@ -64,8 +65,86 @@ class DslAuftragParser implements DocumentTemplateParser
                 'bank' => [],
                 'personen' => [],
                 'energie' => [],
+                'internet' => $internet,
             ],
         ];
+    }
+
+    /**
+     * Internet-Detaildaten aus der CHECK24-Preisuebersicht: Tarifname,
+     * Download/Upload, preisvariabler Tarif (Grundgebuehr-Stufen), Router
+     * (inklusive/Aufpreis) sowie Bonus/Gutschein (stehen als Abzug -155,00 EUR).
+     *
+     * @return array<string,mixed>
+     */
+    private function parseInternet(string $text): array
+    {
+        $raw = [];
+
+        // Tarifname (auch fuer die Detailtabelle).
+        if (preg_match('/\bTarif\b\s*:?\s+([^\r\n]+?)(?:\s{2,}|$)/mu', $text, $m)) {
+            $raw['tariff'] = trim($m[1]);
+        }
+
+        // Download-/Upload-Geschwindigkeit (z.B. "100 MBit/s", "40,0 MBit/s").
+        if (preg_match('/Max\.?\s*Download[^\d\r\n]{0,20}(\d{1,4}(?:[.,]\d+)?\s*MBit\/?s)/iu', $text, $m)) {
+            $raw['speed'] = trim((string) preg_replace('/\s+/', ' ', $m[1]));
+        }
+        if (preg_match('/Max\.?\s*Upload[^\d\r\n]{0,20}(\d{1,4}(?:[.,]\d+)?\s*MBit\/?s)/iu', $text, $m)) {
+            $raw['upload_speed'] = trim((string) preg_replace('/\s+/', ' ', $m[1]));
+        }
+
+        // Preisvariabel: alle "Grundgebuehr Monat X - Y ... Betrag"-Zeilen.
+        // Erste Stufe (Monat 1) = Aktionspreis + Aktionsdauer (Ende der Stufe),
+        // letzte Stufe = regulaerer Preis.
+        if (preg_match_all('/Grundgeb(?:ü|ue|u)hr\s*Monat\s*(\d{1,2})\s*[-–—]\s*(\d{1,3})[^\d\r\n]{0,40}?(\d{1,3}(?:\.\d{3})*,\d{2})/iu', $text, $mm, PREG_SET_ORDER)) {
+            $first = $mm[0];
+            $last = $mm[count($mm) - 1];
+            $raw['price_initial'] = $this->amount($first[3]);
+            $raw['price_initial_months'] = (int) $first[2];
+            $raw['price_regular'] = $this->amount($last[3]);
+        }
+
+        // Router (z.B. "Telekom Speedport Smart 4", "AVM FRITZ!Box 7590"):
+        // Name aus der ersten Fundstelle, Aufpreis = hoechster Betrag auf den
+        // Router-Zeilen (die Aktionsstufe ist oft 0,00, danach der Aufpreis).
+        if (preg_match('/((?:Telekom|AVM|Vodafone|1&1|o2)?\s*(?:Speedport|FRITZ!?\s?Box|FritzBox)[A-Za-z0-9 .\-!]*?)(?=\s{2,}|\s*Monat|\s*\d+\s*[-–—])/iu', $text, $m)) {
+            $raw['has_router'] = true;
+            $name = trim((string) preg_replace('/\s+/', ' ', $m[1]));
+            if ($name !== '') {
+                $raw['router_name'] = $name;
+            }
+            // Alle Betraege auf Zeilen mit Router-Bezug einsammeln -> Maximum.
+            $prices = [];
+            foreach (preg_split('/\R/', $text) ?: [] as $line) {
+                if (preg_match('/Speedport|FRITZ!?\s?Box|FritzBox/iu', $line)
+                    && preg_match_all('/(\d{1,3}(?:\.\d{3})*,\d{2})/u', $line, $pm)) {
+                    foreach ($pm[1] as $p) {
+                        $prices[] = $this->amount($p);
+                    }
+                }
+            }
+            if ($prices !== []) {
+                $raw['router_price'] = max($prices);
+            }
+        }
+
+        // Bonus/Cashback und Gutschrift/Gutschein (stehen als Abzug, Betrag
+        // wird als positive Magnitude uebernommen).
+        if (preg_match('/Cashback[^\d\r\n]{0,45}?[-–—]?\s*(\d{1,3}(?:\.\d{3})*,\d{2})/iu', $text, $m)) {
+            $raw['bonus_amount'] = $this->amount($m[1]);
+        }
+        if (preg_match('/(?:Routergutschrift|Gutschrift|Gutschein)[^\d\r\n]{0,45}?[-–—]?\s*(\d{1,3}(?:\.\d{3})*,\d{2})/iu', $text, $m)) {
+            $raw['voucher_amount'] = $this->amount($m[1]);
+        }
+
+        return $this->validatedInternet(array_filter($raw, fn ($v) => $v !== null && $v !== ''));
+    }
+
+    /** Deutschen Geldbetrag ("1.234,56") als float. */
+    private function amount(string $s): float
+    {
+        return (float) str_replace(['.', ','], ['', '.'], $s);
     }
 
     /**
@@ -140,7 +219,7 @@ class DslAuftragParser implements DocumentTemplateParser
             $raw['insurer'] = trim($m[1]);
         }
         // Tarif (z.B. "Magenta Zuhause L").
-        if (preg_match('/\bTarif\s*:?\s*([^\r\n]+?)(?:\s{2,}|$)/mu', $text, $m)) {
+        if (preg_match('/\bTarif\b\s*:?\s+([^\r\n]+?)(?:\s{2,}|$)/mu', $text, $m)) {
             $raw['tariff'] = trim($m[1]);
         }
         // Auftragsnummer als Vertrags-/Auftragsnummer (bis der finale

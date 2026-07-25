@@ -68,7 +68,7 @@ class DocumentIntakeService
     public function mergeExtractions(iterable $documents): array
     {
         $docs = collect($documents);
-        $merged = ['person' => [], 'versicherung' => [], 'kfz' => [], 'gesundheit' => [], 'bank' => [], 'energie' => []];
+        $merged = ['person' => [], 'versicherung' => [], 'kfz' => [], 'gesundheit' => [], 'bank' => [], 'energie' => [], 'internet' => []];
 
         // Fuer Personendaten Ausweis-Dokumente zuerst; sonst Reihenfolge egal.
         $personFirst = $docs->sortByDesc(fn ($d) => $this->personPriority($d->ai_type));
@@ -493,6 +493,26 @@ class DocumentIntakeService
             ], fn ($v) => $v !== null));
         }
 
+        // Internet-/DSL-Vertrag: Tarif, Geschwindigkeit, preisvariabler Tarif,
+        // Router und Bonus/Gutschein aus dem Auftrag in die Internet-Detailtabelle.
+        $internet = $data['internet'] ?? [];
+        if ($type === 'internet' && $internet !== []) {
+            \App\Models\ContractInternetDetail::create(array_filter([
+                'contract_id' => $contract->id,
+                'tariff' => $internet['tariff'] ?? null,
+                'speed' => $internet['speed'] ?? null,
+                'upload_speed' => $internet['upload_speed'] ?? null,
+                'price_initial' => $internet['price_initial'] ?? null,
+                'price_initial_months' => $internet['price_initial_months'] ?? null,
+                'price_regular' => $internet['price_regular'] ?? null,
+                'has_router' => $internet['has_router'] ?? null,
+                'router_name' => $internet['router_name'] ?? null,
+                'router_price' => $internet['router_price'] ?? null,
+                'bonus_amount' => $internet['bonus_amount'] ?? null,
+                'voucher_amount' => $internet['voucher_amount'] ?? null,
+            ], fn ($v) => $v !== null));
+        }
+
         $document->contract_id = $contract->id;
         $document->save();
 
@@ -717,6 +737,33 @@ class DocumentIntakeService
             $changed = array_merge($changed, $recorder->apply($contract, $en, $enProposed, $this->energyRevisionSpec(), $ctx));
         }
 
+        // ---- Internet-Detaildaten (DSL / Internet) ------------------------
+        $internet = $data['internet'] ?? [];
+        if ($contract->type === 'internet' && $internet !== []) {
+            $net = $contract->internetDetail
+                ?: \App\Models\ContractInternetDetail::create(['contract_id' => $contract->id]);
+
+            $netProposed = [
+                'tariff' => $internet['tariff'] ?? null,
+                'speed' => $internet['speed'] ?? null,
+                'upload_speed' => $internet['upload_speed'] ?? null,
+                'price_initial' => $internet['price_initial'] ?? null,
+                'price_initial_months' => $internet['price_initial_months'] ?? null,
+                'price_regular' => $internet['price_regular'] ?? null,
+                'router_name' => $internet['router_name'] ?? null,
+                'router_price' => $internet['router_price'] ?? null,
+                'bonus_amount' => $internet['bonus_amount'] ?? null,
+                'voucher_amount' => $internet['voucher_amount'] ?? null,
+            ];
+            // has_router nur ergaenzen, wenn im Dokument gesetzt (true) - ein
+            // fehlender Router-Block soll ein bereits erfasstes "mit Router"
+            // nicht auf false zuruecksetzen.
+            if (!empty($internet['has_router'])) {
+                $netProposed['has_router'] = true;
+            }
+            $changed = array_merge($changed, $recorder->apply($contract, $net, $netProposed, $this->internetRevisionSpec(), $ctx));
+        }
+
         // Dokument mit dem (aktualisierten) Vertrag verknuepfen.
         if (!$document->contract_id) {
             $document->contract_id = $contract->id;
@@ -788,6 +835,24 @@ class DocumentIntakeService
             'customer_number' => ['label' => 'Kundennummer (Anbieter)'],
             'payment_amount' => ['label' => 'Abschlag', 'format' => [$this, 'fmtEuro']],
             'previous_provider' => ['label' => 'Vorversorger'],
+        ];
+    }
+
+    /** Anzeige-Spezifikation der Internet-/DSL-Detailfelder. */
+    private function internetRevisionSpec(): array
+    {
+        return [
+            'tariff' => ['label' => 'Tarif'],
+            'speed' => ['label' => 'Geschwindigkeit'],
+            'upload_speed' => ['label' => 'Upload'],
+            'price_initial' => ['label' => 'Aktionspreis', 'format' => [$this, 'fmtEuro']],
+            'price_initial_months' => ['label' => 'Aktion (Monate)'],
+            'price_regular' => ['label' => 'Preis danach', 'format' => [$this, 'fmtEuro']],
+            'has_router' => ['label' => 'Router'],
+            'router_name' => ['label' => 'Router-Modell'],
+            'router_price' => ['label' => 'Router-Aufpreis', 'format' => [$this, 'fmtEuro']],
+            'bonus_amount' => ['label' => 'Bonus/Cashback', 'format' => [$this, 'fmtEuro']],
+            'voucher_amount' => ['label' => 'Gutschein', 'format' => [$this, 'fmtEuro']],
         ];
     }
 

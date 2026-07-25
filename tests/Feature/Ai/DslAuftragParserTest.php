@@ -27,8 +27,17 @@ class DslAuftragParserTest extends TestCase
             'Anbieter          Telekom',
             'Tarif             Magenta Zuhause L',
             'Max. Download     100 MBit/s',
+            'Max. Upload       40,0 MBit/s',
             'Mindestlaufzeit   24 Monate',
             'Kündigungsfrist   1 Monat',
+            'Grundgebühr Monat 1 - 3                    9,95 €',
+            'Grundgebühr Monat 4 - 24                  48,95 €',
+            'Telekom Speedport Smart 4 Monat 1 - 6      0,00 €',
+            'Telekom Speedport Smart 4 Monat 7 - 24     6,95 €',
+            'Versandkosten                              6,95 €',
+            'CHECK24.net Cashback                    - 155,00 €',
+            'Online-Vorteil                          - 100,00 €',
+            'Routergutschrift                        - 100,00 €',
             'Durchschnitt pro Monat   34,79 €',
             'Auftragsnummer: 17485672',
         ]);
@@ -58,6 +67,20 @@ class DslAuftragParserTest extends TestCase
         $this->assertSame('17485672', $v['contract_number']);
         $this->assertSame(34.79, $v['premium_amount']);
         $this->assertSame('monthly', $v['premium_interval']);
+
+        // Internet-Detaildaten (preisvariabler Tarif, Router, Bonus/Gutschein).
+        $i = $r['data']['internet'];
+        $this->assertSame('Magenta Zuhause L', $i['tariff']);
+        $this->assertSame('100 MBit/s', $i['speed']);
+        $this->assertSame('40,0 MBit/s', $i['upload_speed']);
+        $this->assertSame(9.95, $i['price_initial']);
+        $this->assertSame(3, $i['price_initial_months']);
+        $this->assertSame(48.95, $i['price_regular']);
+        $this->assertTrue($i['has_router']);
+        $this->assertSame('Telekom Speedport Smart 4', $i['router_name']);
+        $this->assertSame(6.95, $i['router_price']);
+        $this->assertSame(155.00, $i['bonus_amount']);
+        $this->assertSame(100.00, $i['voucher_amount']);
 
         // Maskierte IBAN wird NICHT als Bankverbindung uebernommen.
         $this->assertArrayNotHasKey('iban', $r['data']['bank']);

@@ -142,6 +142,7 @@ class ClaudeDocumentAiProvider implements DocumentAiProviderInterface
             . '"gesundheit": {"health_insurance_company": "", "health_insurance_number": ""}, '
             . '"personen": [{"first_name": "", "last_name": "", "birth_date": "JJJJ-MM-TT", "gender": <male|female>, "health_insurance_number": ""}], '
             . '"energie": {"meter_number": "", "malo_id": "<11 Ziffern>", "meter_reading": <Zahl kWh-Stand>, "consumption_kwh": <Zahl Jahresverbrauch>, "tariff": "", "customer_number": "<Kundennummer beim bisherigen Versorger>"}, '
+            . '"internet": {"tariff": "", "speed": "<Download z.B. 100 MBit/s>", "upload_speed": "<z.B. 40 MBit/s>", "price_initial": <Zahl EUR/Monat Aktionspreis>, "price_initial_months": <Zahl Monate der Aktion>, "price_regular": <Zahl EUR/Monat danach>, "has_router": <true|false>, "router_name": "<z.B. Telekom Speedport Smart 4>", "router_price": <Zahl EUR/Monat>, "bonus_amount": <Zahl EUR Cashback/Bonus positiv>, "voucher_amount": <Zahl EUR Gutschrift/Gutschein positiv>}, '
             . '"bank": {"iban": "", "bic": "", "account_holder": ""}}} '
             . 'Regeln: Nur Werte aufnehmen, die im Dokument sicher lesbar sind. Unbekannte oder unleserliche Felder weglassen oder null setzen. '
             . 'Keine Werte raten oder erfinden. Datumsangaben immer als JJJJ-MM-TT. '
@@ -157,6 +158,10 @@ class ClaudeDocumentAiProvider implements DocumentAiProviderInterface
             . 'Lieferbeginn in versicherung.start_date, monatlicher Abschlag in versicherung.premium_amount (premium_interval monthly), '
             . 'Zaehlernummer/MaLo-ID/Jahresverbrauch/Tarif in "energie". '
             . 'Bei einem FOTO eines Strom- oder Gaszaehlers (type zaehlerfoto): lies Zaehlernummer und aktuellen Zaehlerstand in "energie". '
+            . 'Bei einem Internet-/DSL-Auftrag (type internetvertrag): Anbieter in versicherung.insurer, sparte internet, Auftrags-/Vertragsnummer in versicherung.contract_number, '
+            . 'Durchschnittspreis pro Monat in versicherung.premium_amount (premium_interval monthly), und Tarif/Geschwindigkeit/Preisstufen/Router/Bonus in "internet". '
+            . 'Preisvariabel: die erste Grundgebuehr-Stufe (z.B. Monat 1-3) als price_initial + price_initial_months, die spaetere Stufe als price_regular. '
+            . 'Bonus/Cashback/Gutschriften stehen als Abzug (z.B. -155,00 EUR) - trage den positiven Betrag ein. '
             . 'In "summary" und "title" KEINE sensiblen Nummern nennen (keine IBAN, Versicherten-, Ausweis- oder Steuernummern). '
             . 'Bei einem KFZ-Vertrag gehoeren Vertragsdaten in "versicherung" (sparte: kfz) UND Fahrzeugdaten in "kfz".';
     }
@@ -215,6 +220,7 @@ class ClaudeDocumentAiProvider implements DocumentAiProviderInterface
                 'bank' => $this->validatedBank($data['bank'] ?? null),
                 'personen' => $this->validatedPersons($data['personen'] ?? null),
                 'energie' => $this->validatedEnergy($data['energie'] ?? null),
+                'internet' => $this->validatedInternet($data['internet'] ?? null),
             ],
         ];
     }
