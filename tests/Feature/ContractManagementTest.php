@@ -411,6 +411,63 @@ class ContractManagementTest extends TestCase
         $this->assertSame('20478172', $strom->energyDetail->previous_customer_number);
     }
 
+    // 15c) Energievertrag speichert Arbeitspreis (ct/kWh) und Grundpreis (EUR/Monat).
+    public function test_energy_contract_stores_working_and_base_price(): void
+    {
+        $customer = $this->makeCustomer();
+
+        $this->actingAs($this->admin())->post(route('admin.contract.store', $customer->id), $this->base([
+            'type' => 'strom', 'insurer' => 'LichtBlick',
+            'energy' => ['tariff' => 'OekoStrom 24', 'working_price' => '28.9', 'base_price' => '11.90'],
+        ]))->assertSessionHasNoErrors();
+
+        $strom = Contract::where('customer_id', $customer->id)->where('type', 'strom')->firstOrFail();
+        $this->assertSame('28.900', $strom->energyDetail->working_price);
+        $this->assertSame('11.90', $strom->energyDetail->base_price);
+    }
+
+    // 17) Internetvertrag speichert preisvariablen Tarif, Router und Bonus/Gutschein.
+    public function test_internet_contract_stores_variable_price_router_and_bonus(): void
+    {
+        $customer = $this->makeCustomer();
+
+        $this->actingAs($this->admin())->post(route('admin.contract.store', $customer->id), $this->base([
+            'type' => 'internet', 'insurer' => 'Telekom',
+            'internet' => [
+                'tariff' => 'Magenta Zuhause L', 'speed' => '100 Mbit/s', 'upload_speed' => '40 Mbit/s',
+                'price_initial' => '9.95', 'price_initial_months' => '6', 'price_regular' => '48.95',
+                'has_router' => '1', 'router_name' => 'Telekom Speedport Smart 4', 'router_price' => '6.95',
+                'bonus_amount' => '155', 'voucher_amount' => '100',
+            ],
+        ]))->assertSessionHasNoErrors();
+
+        $net = Contract::where('customer_id', $customer->id)->where('type', 'internet')->firstOrFail()->internetDetail;
+        $this->assertSame('Magenta Zuhause L', $net->tariff);
+        $this->assertSame('40 Mbit/s', $net->upload_speed);
+        $this->assertSame('9.95', $net->price_initial);
+        $this->assertSame(6, $net->price_initial_months);
+        $this->assertSame('48.95', $net->price_regular);
+        $this->assertTrue($net->has_router);
+        $this->assertSame('Telekom Speedport Smart 4', $net->router_name);
+        $this->assertSame('6.95', $net->router_price);
+        $this->assertSame('155.00', $net->bonus_amount);
+        $this->assertSame('100.00', $net->voucher_amount);
+    }
+
+    // 17b) Ohne Router-Haken bleibt has_router false.
+    public function test_internet_contract_without_router_defaults_false(): void
+    {
+        $customer = $this->makeCustomer();
+
+        $this->actingAs($this->admin())->post(route('admin.contract.store', $customer->id), $this->base([
+            'type' => 'internet', 'insurer' => 'Vodafone',
+            'internet' => ['tariff' => 'GigaZuhause', 'speed' => '250 Mbit/s'],
+        ]))->assertSessionHasNoErrors();
+
+        $net = Contract::where('customer_id', $customer->id)->where('type', 'internet')->firstOrFail()->internetDetail;
+        $this->assertFalse($net->has_router);
+    }
+
     // 16) Typwechsel weg von Energie entfernt die Energie-Detaildaten.
     public function test_switching_away_from_energy_clears_energy_details(): void
     {

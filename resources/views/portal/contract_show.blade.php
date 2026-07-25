@@ -136,6 +136,8 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
     @if($e->customer_number)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Kundennummer</span><span style="font-weight:600;font-size:13.5px;">{{ $e->customer_number }}</span></div>@endif
     <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Zählernummer</span><span style="font-weight:600;font-size:13.5px;">{{ $e->meter_number ?? '—' }}</span></div>
     @if($e->malo_id)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">MaLo-ID</span><span style="font-weight:600;font-size:13.5px;">{{ $e->malo_id }}</span></div>@endif
+    @if($e->working_price !== null)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Arbeitspreis</span><span style="font-weight:600;font-size:13.5px;">{{ rtrim(rtrim(number_format((float) $e->working_price, 3, ',', '.'), '0'), ',') }} ct/kWh</span></div>@endif
+    @if($e->base_price !== null)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Grundpreis</span><span style="font-weight:600;font-size:13.5px;">{{ number_format((float) $e->base_price, 2, ',', '.') }} €/Monat</span></div>@endif
     <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Abschlag</span><span style="font-weight:600;font-size:13.5px;">{{ $e->payment_amount ? number_format($e->payment_amount, 2, ',', '.') . ' €' : '—' }}</span></div>
     <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Zahlungsintervall</span><span style="font-weight:600;font-size:13.5px;">{{ $intervalLabels[$e->payment_interval] ?? '—' }}</span></div>
     @if($e->consumption_kwh)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Verbrauch</span><span style="font-weight:600;font-size:13.5px;">{{ number_format($e->consumption_kwh, 0, ',', '.') }} kWh/Jahr</span></div>@endif
@@ -148,7 +150,12 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
     <div class="card-title">📶 Internetvertrag</div>
     <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Anbieter</span><span style="font-weight:600;font-size:13.5px;">{{ $contract->insurer }}</span></div>
     @if($i->tariff)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Tarif</span><span style="font-weight:600;font-size:13.5px;">{{ $i->tariff }}</span></div>@endif
-    @if($i->speed)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Geschwindigkeit</span><span style="font-weight:600;font-size:13.5px;">{{ $i->speed }}</span></div>@endif
+    @if($i->speed)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Geschwindigkeit</span><span style="font-weight:600;font-size:13.5px;">{{ $i->speed }}{{ $i->upload_speed ? ' / ' . $i->upload_speed . ' Upload' : '' }}</span></div>@endif
+    @if($i->price_initial !== null)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Aktionspreis</span><span style="font-weight:600;font-size:13.5px;">{{ number_format((float) $i->price_initial, 2, ',', '.') }} €/Monat{{ $i->price_initial_months ? ' (erste ' . $i->price_initial_months . ' Monate)' : '' }}</span></div>@endif
+    @if($i->price_regular !== null)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Preis danach</span><span style="font-weight:600;font-size:13.5px;">{{ number_format((float) $i->price_regular, 2, ',', '.') }} €/Monat</span></div>@endif
+    @if($i->has_router)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Router</span><span style="font-weight:600;font-size:13.5px;">{{ $i->router_name ?: 'inklusive' }}{{ $i->router_price !== null ? ((float) $i->router_price > 0 ? ' · ' . number_format((float) $i->router_price, 2, ',', '.') . ' €/Monat' : ' · inklusive') : '' }}</span></div>@endif
+    @if($i->bonus_amount !== null)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Bonus / Cashback</span><span style="font-weight:600;font-size:13.5px;">{{ number_format((float) $i->bonus_amount, 2, ',', '.') }} €</span></div>@endif
+    @if($i->voucher_amount !== null)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Gutschein</span><span style="font-weight:600;font-size:13.5px;">{{ number_format((float) $i->voucher_amount, 2, ',', '.') }} €</span></div>@endif
 </div>
 @endif
 

@@ -516,6 +516,8 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
                         @endif
                     @elseif($e = $c->energyDetail)
                         {{ $c->typeIcon() }} {{ $e->tariff ?? 'Tarif —' }}@if($e->consumption_kwh) · {{ number_format($e->consumption_kwh, 0, ',', '.') }} kWh/Jahr @endif
+                        @if($e->working_price !== null) · {{ rtrim(rtrim(number_format((float) $e->working_price, 3, ',', '.'), '0'), ',') }} ct/kWh @endif
+                        @if($e->base_price !== null) · Grundpreis {{ number_format((float) $e->base_price, 2, ',', '.') }} € @endif
                         @if($e->customer_number) · Kd-Nr.: {{ $e->customer_number }}@endif
                         @if($e->meter_number) · Zähler: {{ $e->meter_number }}@endif
                         @if($e->malo_id) · MaLo-ID: <b>{{ $e->malo_id }}</b>@endif
@@ -523,6 +525,9 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
                         @if($e->previous_provider) · Vorher: {{ $e->previous_provider }}@if($e->previous_customer_number) (Kd-Nr. {{ $e->previous_customer_number }})@endif @endif
                     @elseif($i = $c->internetDetail)
                         📶 {{ $i->tariff ?? 'Tarif —' }}@if($i->speed) · {{ $i->speed }}@endif
+                        @if($i->price_regular !== null) · {{ number_format((float) $i->price_regular, 2, ',', '.') }} €/Monat @endif
+                        @if($i->has_router) · Router{{ $i->router_name ? ': ' . $i->router_name : '' }}@endif
+                        @if($i->bonus_amount !== null) · Bonus {{ number_format((float) $i->bonus_amount, 2, ',', '.') }} € @endif
                     @endif
                 </div>
             </td>

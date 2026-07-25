@@ -78,9 +78,10 @@
         if ($c && $startVal && $endVal) {
             $s = \Carbon\Carbon::parse($startVal);
             $endMode = match ($endVal) {
-                $s->copy()->addYear()->format('Y-m-d') => 'plus12',
-                $s->format('Y') . '-12-31'             => 'year_end',
-                default                                 => 'manual',
+                $s->copy()->addYear()->format('Y-m-d')   => 'plus12',
+                $s->copy()->addYears(2)->format('Y-m-d')  => 'plus24',
+                $s->format('Y') . '-12-31'                => 'year_end',
+                default                                    => 'manual',
             };
         } else {
             $endMode = $c ? 'manual' : 'plus12';
@@ -112,7 +113,7 @@
 <div class="field" style="margin-top:-6px;">
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         <span style="font-size:12px;color:var(--ink-soft);">Ablauf berechnen:</span>
-        @foreach(['plus12' => 'Laufzeit 12 Monate', 'year_end' => 'Ende des Kalenderjahres (31.12.)', 'manual' => 'Manuell'] as $mk => $ml)
+        @foreach(['plus12' => 'Laufzeit 12 Monate', 'plus24' => 'Laufzeit 24 Monate', 'year_end' => 'Ende des Kalenderjahres (31.12.)', 'manual' => 'Manuell'] as $mk => $ml)
         <label class="end-mode-chip" style="position:relative;display:inline-flex;">
             <input type="radio" name="end_mode" value="{{ $mk }}" {{ $endMode === $mk ? 'checked' : '' }} onchange="contractEndSync()" style="position:absolute;inset:0;opacity:0;cursor:pointer;margin:0;">
             <span style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:1.5px solid var(--line);border-radius:999px;font-size:12px;font-weight:600;background:var(--surface);cursor:pointer;user-select:none;">{{ $ml }}</span>
@@ -182,6 +183,12 @@
         <div class="field"><label>Bisheriger Lieferant (Vorversorger)</label><input type="text" name="energy[previous_provider]" maxlength="150" value="{{ $val('energy.previous_provider', $en->previous_provider ?? '') }}" placeholder="z. B. Stadtwerke Neuss"></div>
         <div class="field"><label>Kundennummer beim bisherigen Lieferanten</label><input type="text" name="energy[previous_customer_number]" maxlength="60" value="{{ $val('energy.previous_customer_number', $en->previous_customer_number ?? '') }}"></div>
     </div>
+    {{-- Tarifpreise: Arbeitspreis (ct/kWh) und Grundpreis (EUR/Monat) - die
+         beiden Kernpreise eines Energietarifs, getrennt vom Abschlag. --}}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="field"><label>Arbeitspreis (ct/kWh)</label><input type="number" step="0.001" name="energy[working_price]" min="0" value="{{ $val('energy.working_price', $en && $en->working_price !== null ? rtrim(rtrim(number_format((float) $en->working_price, 3, '.', ''), '0'), '.') : '') }}" placeholder="z. B. 28,9"></div>
+        <div class="field"><label>Grundpreis (€/Monat)</label><input type="number" step="0.01" name="energy[base_price]" min="0" value="{{ $val('energy.base_price', $en && $en->base_price !== null ? rtrim(rtrim(number_format((float) $en->base_price, 2, '.', ''), '0'), '.') : '') }}" placeholder="z. B. 11,90"></div>
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div class="field"><label>Abschlag (€)</label><input type="number" step="0.01" name="energy[payment_amount]" min="0" value="{{ $val('energy.payment_amount', $en->payment_amount ?? '') }}"></div>
         <div class="field"><label>Zahlungsintervall</label>
@@ -196,12 +203,51 @@
     </div>
 </div>
 
-{{-- ===== Internet ===== --}}
+{{-- ===== Internet =====
+     DSL-Tarife laufen fast immer 24 Monate und sind PREISVARIABEL: die ersten
+     Monate guenstiger, danach der regulaere Preis. Dazu Router (inklusive oder
+     Aufpreis), Upload getrennt vom Download sowie Bonus/Gutschein (Cashback,
+     Router-Gutschrift ...), die der Kunde beim Abschluss erhaelt. --}}
 <div id="section-internet" class="branch-section" style="display:none;border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;">
     <div class="card-title" style="font-size:14px;">📶 Internet & Mobilfunk</div>
+    <p style="font-size:12px;color:var(--ink-soft);margin:0 0 14px;">
+        Internetvertraege sind meist auf 24 Monate ausgelegt (Button „Laufzeit 24 Monate" oben) und haben oft
+        einen Aktionspreis fuer die ersten Monate, danach den regulaeren Preis.
+    </p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Tarif</label><input type="text" name="internet[tariff]" value="{{ $val('internet.tariff', $net->tariff ?? '') }}"></div>
-        <div class="field"><label>Geschwindigkeit</label><input type="text" name="internet[speed]" maxlength="30" value="{{ $val('internet.speed', $net->speed ?? '') }}" placeholder="250 Mbit/s"></div>
+        <div class="field"><label>Tarif</label><input type="text" name="internet[tariff]" maxlength="255" value="{{ $val('internet.tariff', $net->tariff ?? '') }}" placeholder="z. B. Magenta Zuhause L"></div>
+        <div class="field"><label>Geschwindigkeit (Download)</label><input type="text" name="internet[speed]" maxlength="30" value="{{ $val('internet.speed', $net->speed ?? '') }}" placeholder="z. B. 100 Mbit/s"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr;gap:16px;">
+        <div class="field"><label>Upload-Geschwindigkeit (optional)</label><input type="text" name="internet[upload_speed]" maxlength="30" value="{{ $val('internet.upload_speed', $net->upload_speed ?? '') }}" placeholder="z. B. 40 Mbit/s"></div>
+    </div>
+
+    {{-- Preisvariabler Tarif: Aktionsphase + regulaerer Preis. --}}
+    <div style="font-weight:600;font-size:13px;margin:6px 0 8px;color:var(--ink);">Preis (variabel)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+        <div class="field"><label>Aktionspreis (€/Monat)</label><input type="number" step="0.01" min="0" name="internet[price_initial]" value="{{ $val('internet.price_initial', $net && $net->price_initial !== null ? rtrim(rtrim(number_format((float) $net->price_initial, 2, '.', ''), '0'), '.') : '') }}" placeholder="z. B. 9,95"></div>
+        <div class="field"><label>Aktion gilt für (Monate)</label><input type="number" step="1" min="0" max="60" name="internet[price_initial_months]" value="{{ $val('internet.price_initial_months', $net->price_initial_months ?? '') }}" placeholder="z. B. 6"></div>
+        <div class="field"><label>Danach (€/Monat)</label><input type="number" step="0.01" min="0" name="internet[price_regular]" value="{{ $val('internet.price_regular', $net && $net->price_regular !== null ? rtrim(rtrim(number_format((float) $net->price_regular, 2, '.', ''), '0'), '.') : '') }}" placeholder="z. B. 48,95"></div>
+    </div>
+
+    {{-- Router: inklusive oder mit monatlichem Aufpreis. --}}
+    <div style="font-weight:600;font-size:13px;margin:10px 0 8px;color:var(--ink);">Router</div>
+    <div class="field">
+        <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">
+            <input type="checkbox" name="internet[has_router]" value="1" {{ old('internet.has_router', $net->has_router ?? false) ? 'checked' : '' }}>
+            Mit Router
+        </label>
+    </div>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;">
+        <div class="field"><label>Router-Modell</label><input type="text" name="internet[router_name]" maxlength="120" value="{{ $val('internet.router_name', $net->router_name ?? '') }}" placeholder="z. B. Telekom Speedport Smart 4"></div>
+        <div class="field"><label>Router-Aufpreis (€/Monat)</label><input type="number" step="0.01" min="0" name="internet[router_price]" value="{{ $val('internet.router_price', $net && $net->router_price !== null ? rtrim(rtrim(number_format((float) $net->router_price, 2, '.', ''), '0'), '.') : '') }}" placeholder="0,00 = inklusive"></div>
+    </div>
+
+    {{-- Einmalige Vorteile beim Abschluss (Cashback/Bonus, Gutschein/Gutschrift). --}}
+    <div style="font-weight:600;font-size:13px;margin:10px 0 8px;color:var(--ink);">Vorteile beim Abschluss</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="field"><label>Bonus / Cashback (€)</label><input type="number" step="0.01" min="0" name="internet[bonus_amount]" value="{{ $val('internet.bonus_amount', $net && $net->bonus_amount !== null ? rtrim(rtrim(number_format((float) $net->bonus_amount, 2, '.', ''), '0'), '.') : '') }}" placeholder="z. B. 155,00"></div>
+        <div class="field"><label>Gutschein / Gutschrift (€)</label><input type="number" step="0.01" min="0" name="internet[voucher_amount]" value="{{ $val('internet.voucher_amount', $net && $net->voucher_amount !== null ? rtrim(rtrim(number_format((float) $net->voucher_amount, 2, '.', ''), '0'), '.') : '') }}" placeholder="z. B. 100,00"></div>
     </div>
 </div>
 
@@ -272,9 +318,10 @@ function contractEndSync() {
     if (!start) { hint.textContent = 'Beginn eintragen – der Ablauf wird automatisch berechnet.'; return; }
     const [y, m, d] = start.split('-').map(Number);
     let target;
-    if (mode === 'plus12') {
-        const plus = new Date(Date.UTC(y + 1, m - 1, d));
-        // 29.02. + 1 Jahr rutscht auf den 28.02. statt in den Maerz.
+    if (mode === 'plus12' || mode === 'plus24') {
+        const years = mode === 'plus24' ? 2 : 1;
+        const plus = new Date(Date.UTC(y + years, m - 1, d));
+        // 29.02. + Jahre rutscht auf den 28.02. statt in den Maerz.
         if (plus.getUTCMonth() !== m - 1) plus.setUTCDate(0);
         target = plus.toISOString().slice(0, 10);
     } else {

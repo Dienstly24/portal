@@ -446,11 +446,24 @@ class AdminController extends Controller
             // Energie: MaLo-ID hat 11 Ziffern und ist NICHT die Zählernummer
             'energy.malo_id' => ['nullable', 'regex:/^[0-9]{11}$/'],
             'energy.consumption_kwh' => 'nullable|integer|min:0',
+            // Tarifpreise: Arbeitspreis (ct/kWh) und Grundpreis (EUR/Monat).
+            'energy.working_price' => 'nullable|numeric|min:0|max:9999.999',
+            'energy.base_price' => 'nullable|numeric|min:0|max:99999.99',
             // Vorversorger (bisheriger Lieferant beim Wechsel).
             'energy.previous_provider' => 'nullable|string|max:150',
             'energy.previous_customer_number' => 'nullable|string|max:60',
-            // Internet
+            // Internet: preisvariabler Tarif + Router + Bonus/Gutschein.
+            'internet.tariff' => 'nullable|string|max:255',
             'internet.speed' => 'nullable|string|max:30',
+            'internet.upload_speed' => 'nullable|string|max:30',
+            'internet.price_initial' => 'nullable|numeric|min:0|max:99999.99',
+            'internet.price_initial_months' => 'nullable|integer|min:0|max:60',
+            'internet.price_regular' => 'nullable|numeric|min:0|max:99999.99',
+            'internet.has_router' => 'nullable|boolean',
+            'internet.router_name' => 'nullable|string|max:120',
+            'internet.router_price' => 'nullable|numeric|min:0|max:99999.99',
+            'internet.bonus_amount' => 'nullable|numeric|min:0|max:99999999.99',
+            'internet.voucher_amount' => 'nullable|numeric|min:0|max:99999999.99',
             // ---- E-Scooter (schlankes Fahrzeug-Detail, eigener Namensraum) ----
             'escooter.license_plate' => 'nullable|string|max:20',
             'escooter.manufacturer' => 'nullable|string|max:255',
@@ -545,14 +558,20 @@ class AdminController extends Controller
             \App\Models\ContractEnergyDetail::updateOrCreate(
                 ['contract_id' => $contract->id],
                 collect($request->input('energy', []))
-                    ->only(['tariff','consumption_kwh','meter_number','customer_number','malo_id','meter_reading','grid_operator','metering_operator','payment_amount','payment_interval','previous_provider','previous_customer_number'])
+                    ->only(['tariff','consumption_kwh','meter_number','customer_number','malo_id','meter_reading','grid_operator','metering_operator','payment_amount','payment_interval','working_price','base_price','previous_provider','previous_customer_number'])
                     ->map(fn($val) => $val === '' ? null : $val)
                     ->all()
             );
         } elseif ($contract->type === 'internet') {
+            // has_router ist eine Checkbox - fehlt im Request, wenn nicht gesetzt.
+            $internet = collect($request->input('internet', []))
+                ->only(['tariff','speed','upload_speed','price_initial','price_initial_months','price_regular','router_name','router_price','bonus_amount','voucher_amount'])
+                ->map(fn($val) => $val === '' ? null : $val)
+                ->all();
+            $internet['has_router'] = $request->boolean('internet.has_router');
             \App\Models\ContractInternetDetail::updateOrCreate(
                 ['contract_id' => $contract->id],
-                collect($request->input('internet', []))->only(['tariff','speed'])->map(fn($val) => $val === '' ? null : $val)->all()
+                $internet
             );
         }
     }
