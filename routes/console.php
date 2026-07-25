@@ -98,6 +98,12 @@ Schedule::call(function () {
     if ($sent > 0) \Log::info("Wechsel-Erinnerungen: {$sent} Mails versendet.");
 })->dailyAt('08:30');
 
+// 08:40 — E-Scooter-Erneuerung: aktive E-Scooter-Vertraege Anfang Februar an
+// das ablaufende Kennzeichen erinnern (neues gilt ab 01.03.). Idempotent, das
+// Fenster liegt naturgemaess nur im Februar. Derselbe Service wie hinter dem
+// Button im Backend.
+Schedule::command('escooter:renewal-reminders')->dailyAt('08:40');
+
 // Alle 5 Minuten — geplante E-Mail-Kampagnen anstoßen (Paket B1)
 Schedule::call(fn() => \App\Jobs\SendCampaignJob::dispatchDueScheduled())->everyFiveMinutes();
 
