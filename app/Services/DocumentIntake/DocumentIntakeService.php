@@ -655,21 +655,35 @@ class DocumentIntakeService
         }
 
         $data = $document->ai_extracted ?? [];
+        $isVehicleDoc = in_array($document->ai_type, ['fahrzeugschein', 'fahrzeugbrief'], true)
+            && !empty($data['kfz']);
+
         $contract = $this->findExistingContractByIdentity($customer, $data);
+
+        // Fahrzeugschein/-brief ohne Identitaets-Treffer: hat der Vertrag noch
+        // KEIN Kennzeichen/keine FIN (frisch angelegt), findet ihn der
+        // Identitaetsabgleich nicht. Hat der Kunde dann GENAU EINEN Kfz-/
+        // E-Scooter-Vertrag, ist das eindeutig der passende - seine leeren
+        // Fahrzeugdaten werden aus der amtlichen Zulassung ergaenzt. Bei
+        // mehreren Vertraegen bleibt die Wahl dem Mitarbeiter (kein Raten).
+        if ($contract === null && $isVehicleDoc) {
+            $kfzContracts = Contract::where('customer_id', $customer->id)
+                ->whereIn('type', ['kfz', 'escooter'])->get();
+            if ($kfzContracts->count() === 1) {
+                $contract = $kfzContracts->first();
+            }
+        }
+
         if ($contract) {
             $document->contract_id = $contract->id;
             $document->save();
 
-            // Fahrzeugschein/-brief (Zulassungsbescheinigung Teil I/II): die
-            // AMTLICHEN Fahrzeugdaten (FIN, HSN/TSN, Marke, Modell, Erst-
-            // zulassung, Kennzeichen) mit dem passenden Vertrag abgleichen und
-            // dessen LEERE Fahrzeugfelder ergaenzen - Bestand wird nie
-            // ueberschrieben, jede Ergaenzung steht in der Version History.
-            // So fuellt die amtliche Zulassung fehlende Fahrzeugdaten des
-            // Kundenvertrags automatisch nach.
-            if (in_array($document->ai_type, ['fahrzeugschein', 'fahrzeugbrief'], true)
-                && in_array($contract->type, ['kfz', 'escooter'], true)
-                && !empty($data['kfz'])) {
+            // Die AMTLICHEN Fahrzeugdaten (FIN, HSN/TSN, Marke, Modell, Erst-
+            // zulassung, Kennzeichen) in den passenden Vertrag uebernehmen -
+            // nur LEERE Felder fuellen (Bestand nie ueberschreiben), jede
+            // Ergaenzung steht in der Version History. So fuellt die amtliche
+            // Zulassung fehlende Fahrzeugdaten des Kundenvertrags automatisch nach.
+            if ($isVehicleDoc && in_array($contract->type, ['kfz', 'escooter'], true)) {
                 $this->updateContractFromExtraction($contract, $document, $customer, null, $data);
             }
         }

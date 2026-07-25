@@ -1569,6 +1569,59 @@ class SmartDocumentUploadTest extends TestCase
         $this->assertDatabaseHas('contract_revisions', ['contract_id' => $contract->id, 'field' => 'vin']);
     }
 
+    public function test_fahrzeugschein_fills_the_single_kfz_contract_without_plate_match(): void
+    {
+        // Frisch angelegter Kfz-Vertrag OHNE Kennzeichen/FIN - der Identitaets-
+        // abgleich kann nicht greifen. Da der Kunde nur EINEN Kfz-Vertrag hat,
+        // ist er eindeutig gemeint: die Fahrzeugdaten werden dennoch ergaenzt.
+        $customer = $this->makeCustomer();
+        $contract = Contract::create([
+            'customer_id' => $customer->id, 'contract_number' => null, 'type' => 'kfz', 'insurer' => 'HUK24', 'status' => 'active',
+        ]);
+
+        $doc = Document::create([
+            'customer_id' => $customer->id, 'category' => 'identity', 'file_name' => 'zb1.pdf',
+            'file_path' => 'zb1.pdf', 'disk' => 'local', 'ai_type' => 'fahrzeugschein',
+            'ai_extracted' => ['kfz' => [
+                'license_plate' => 'LÜN-G 1110', 'vin' => 'VXKUPHNSSM4100609',
+                'hsn' => '1889', 'tsn' => 'ABV', 'manufacturer' => 'VW', 'model' => 'Golf VIII',
+                'first_registration' => '2021-03-23',
+            ]],
+        ]);
+
+        $linked = app(\App\Services\DocumentIntake\DocumentIntakeService::class)->linkMatchingContract($doc, $customer);
+        $this->assertNotNull($linked);
+        $this->assertSame((string) $contract->id, (string) $linked->id);
+
+        $veh = $contract->fresh()->vehicleDetail;
+        $this->assertNotNull($veh); // Detailsatz wurde bei Bedarf angelegt.
+        $this->assertSame('VXKUPHNSSM4100609', $veh->vin);
+        $this->assertSame('VW', $veh->manufacturer);
+        $this->assertSame('Golf VIII', $veh->model);
+        $this->assertSame('1889', $veh->hsn);
+        $this->assertSame('ABV', $veh->tsn);
+        $this->assertSame('LÜN-G 1110', $veh->license_plate);
+    }
+
+    public function test_fahrzeugschein_does_not_guess_when_multiple_kfz_contracts(): void
+    {
+        // Zwei Kfz-Vertraege ohne Kennzeichen-Match -> nicht raten (Mitarbeiter
+        // entscheidet, welches Fahrzeug gemeint ist).
+        $customer = $this->makeCustomer();
+        Contract::create(['customer_id' => $customer->id, 'type' => 'kfz', 'insurer' => 'HUK24', 'status' => 'active']);
+        Contract::create(['customer_id' => $customer->id, 'type' => 'kfz', 'insurer' => 'AXA', 'status' => 'active']);
+
+        $doc = Document::create([
+            'customer_id' => $customer->id, 'category' => 'identity', 'file_name' => 'zb1.pdf',
+            'file_path' => 'zb1.pdf', 'disk' => 'local', 'ai_type' => 'fahrzeugschein',
+            'ai_extracted' => ['kfz' => ['vin' => 'VXKUPHNSSM4100609', 'manufacturer' => 'VW']],
+        ]);
+
+        $linked = app(\App\Services\DocumentIntake\DocumentIntakeService::class)->linkMatchingContract($doc, $customer);
+        $this->assertNull($linked);
+        $this->assertDatabaseMissing('contract_vehicle_details', ['vin' => 'VXKUPHNSSM4100609']);
+    }
+
     public function test_admin_smart_upload_rejects_oversized_combined_batch(): void
     {
         Storage::fake('local');
