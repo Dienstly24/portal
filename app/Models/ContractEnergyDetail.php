@@ -16,6 +16,13 @@ class ContractEnergyDetail extends Model
         'customer_number',
         // Vorversorger (bisheriger Lieferant beim Wechsel) + dessen Kundennummer.
         'previous_provider','previous_customer_number',
+        // Tarifpreise: Arbeitspreis (ct/kWh) und Grundpreis (EUR/Monat).
+        'working_price','base_price',
+    ];
+    protected $casts = [
+        'working_price' => 'decimal:3',
+        'base_price'    => 'decimal:2',
+        'payment_amount'=> 'decimal:2',
     ];
     protected static function boot() {
         parent::boot();
