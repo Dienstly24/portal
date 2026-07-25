@@ -413,6 +413,8 @@ class SmartDocumentUploadController extends Controller
             // Mitarbeiter ihn im Modal selbst ein (er sieht das Dokument).
             'first_name' => 'nullable|string|max:80',
             'last_name' => 'nullable|string|max:80',
+            // Werber (Neukunden-Bericht/Provision): 'u:{id}' oder 'p:{uuid}'.
+            'werber' => 'nullable|string|max:60',
         ]);
 
         $extracted = $document->ai_extracted ?? [];
@@ -447,6 +449,8 @@ class SmartDocumentUploadController extends Controller
                     . $e->matchResult->score . ' Punkte). Bitte stattdessen zuordnen.',
             ], 422);
         }
+
+        $this->applyWerber($request, $customer);
 
         $this->intake->assignToCustomer($document, $customer, auth()->id());
         if ($request->filled('visibility')) {
@@ -509,6 +513,8 @@ class SmartDocumentUploadController extends Controller
             // Manuell eingetragener Name, falls die Extraktion keinen lieferte.
             'first_name' => 'nullable|string|max:80',
             'last_name' => 'nullable|string|max:80',
+            // Werber (Neukunden-Bericht/Provision): 'u:{id}' oder 'p:{uuid}'.
+            'werber' => 'nullable|string|max:60',
         ]);
 
         $ids = array_values(array_unique($request->input('document_ids')));
@@ -573,6 +579,8 @@ class SmartDocumentUploadController extends Controller
                     . $e->matchResult->score . ' Punkte). Bitte stattdessen zuordnen.',
             ], 422);
         }
+
+        $this->applyWerber($request, $customer);
 
         foreach ($documents as $document) {
             $this->intake->assignToCustomer($document, $customer, auth()->id());
@@ -824,6 +832,23 @@ class SmartDocumentUploadController extends Controller
             $extracted['person']['last_name'] = $last;
         }
         return $extracted;
+    }
+
+    /**
+     * Werber aus dem Review-Modal (Neukunden-Bericht/Provision) auf den neu
+     * angelegten Kunden anwenden: 'u:{id}' = Mitarbeiter, 'p:{uuid}' =
+     * Partner. Nur Verwaltung darf den Werber setzen; ungueltige Schluessel
+     * werden still ignoriert - die Kundenanlage selbst scheitert daran nie.
+     */
+    private function applyWerber(Request $request, Customer $customer): void
+    {
+        if (!$request->filled('werber') || !in_array(auth()->user()->role, ['admin', 'manager'])) {
+            return;
+        }
+        $values = Customer::resolveWerberKey($request->input('werber'));
+        if ($values['acquired_by'] !== null || $values['acquired_by_partner_id'] !== null) {
+            $customer->update($values);
+        }
     }
 
     /**

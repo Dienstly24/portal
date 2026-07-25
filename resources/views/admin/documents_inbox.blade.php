@@ -192,6 +192,27 @@
             <div id="review-name-hint" style="display:none;font-size:12px;color:#8A5A00;margin-top:5px;">
                 ℹ Der Name wurde nicht automatisch gelesen – bitte aus dem Dokument eintragen (👁 Anzeigen).
             </div>
+            @if(in_array(auth()->user()->role, ['admin','manager']))
+            {{-- Werber direkt bei der Anlage aus dem Dokumenten-Eingang setzen
+                 (Neukunden-Bericht/Provision). Nur Verwaltung; nachtraeglich
+                 aenderbar im Neukunden-Bericht. --}}
+            <div style="margin-top:10px;">
+                <div style="font-weight:700;font-size:13.5px;margin-bottom:6px;">Geworben von <span style="font-weight:400;color:var(--ink-soft);">(optional – für Neukunden-Bericht &amp; Provision)</span></div>
+                <select id="review-werber" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                    <option value="">— Kein Werber —</option>
+                    <optgroup label="Mitarbeiter">
+                        @foreach(\App\Models\User::whereIn('role', ['admin','manager','support','employee'])->orderBy('name')->get() as $e)
+                        <option value="u:{{ $e->id }}">{{ $e->name }}</option>
+                        @endforeach
+                    </optgroup>
+                    <optgroup label="Partner">
+                        @foreach(\App\Models\Partner::orderBy('name')->get() as $p)
+                        <option value="p:{{ $p->id }}">{{ $p->name }}</option>
+                        @endforeach
+                    </optgroup>
+                </select>
+            </div>
+            @endif
         </div>
 
         {{-- Krankenkassen-Fall (Familie + Wechsel), nur im Vorgang-Modus bei >= 2 Personen --}}
@@ -363,6 +384,7 @@ window.docReview = (function() {
         el('review-customer-q').value = '';
         el('review-customer-results').innerHTML = '';
         el('review-visibility').value = 'internal';
+        if (el('review-werber')) el('review-werber').value = '';
         el('review-assign-block').style.display = 'none';
         el('review-create-block').style.display = '';
 
@@ -504,6 +526,7 @@ window.docReview = (function() {
         el('review-customer-q').value = '';
         el('review-customer-results').innerHTML = '';
         el('review-visibility').value = 'internal';
+        if (el('review-werber')) el('review-werber').value = '';
 
         el('review-assign-block').style.display = mode === 'assign' ? '' : 'none';
         el('review-create-block').style.display = mode === 'create' ? '' : 'none';
@@ -669,6 +692,11 @@ window.docReview = (function() {
             }
             payload.first_name = first;
             payload.last_name = last;
+            // Werber (Neukunden-Bericht/Provision) - Select existiert nur
+            // fuer admin/manager.
+            if (el('review-werber') && el('review-werber').value) {
+                payload.werber = el('review-werber').value;
+            }
         }
 
         var url;
