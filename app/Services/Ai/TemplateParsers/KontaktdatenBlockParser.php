@@ -61,11 +61,19 @@ class KontaktdatenBlockParser implements DocumentTemplateParser
             return null; // ohne Namen der normalen Analyse ueberlassen
         }
 
+        // Zweites Datum NEBEN dem Geburtsdatum ("04.08.75/05.09.17"): der
+        // Betrieb notiert dort oft das Datum der Bescheinigung/des Aufenthalts-
+        // titels. Das Geburtsdatum bleibt das ERSTE Datum; das zweite geht nicht
+        // verloren, sondern wird sichtbar in der Zusammenfassung genannt.
+        $secondDate = $this->secondDateBesideBirth($joined);
+
         $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
         return [
             'type' => 'kontaktdaten',
             'confidence' => 70,
             'summary' => 'Kontaktdaten' . ($name !== '' ? ' - ' . $name : '')
+                . (isset($person['birth_date']) ? ' - geb. ' . $this->displayDate($person['birth_date']) : '')
+                . ($secondDate !== null ? ' - weiteres Datum ' . $secondDate . ' (z.B. Aufenthaltstitel/Bescheinigung)' : '')
                 . ' (Name, Anschrift, Telefon, E-Mail, IBAN gratis gelesen).',
             'title' => 'Kontaktdaten' . ($name !== '' ? ' ' . $name : ''),
             'data' => [
@@ -184,6 +192,31 @@ class KontaktdatenBlockParser implements DocumentTemplateParser
             return $year . '-' . $m[2] . '-' . $m[1];
         }
         return null;
+    }
+
+    /**
+     * Ein ZWEITES Datum, das direkt neben dem Geburtsdatum steht (durch "/",
+     * "-" oder Leerzeichen getrennt, z.B. "04.08.75/05.09.17"). Der Betrieb
+     * schreibt dort oft das Datum der Bescheinigung / des Aufenthaltstitels.
+     * Rueckgabe im Anzeigeformat (TT.MM.JJJJ) oder null. Das Geburtsdatum
+     * (erstes Datum) bleibt davon unberuehrt.
+     */
+    private function secondDateBesideBirth(string $text): ?string
+    {
+        if (!preg_match('#\b\d{2}\.\d{2}\.(?:\d{4}|\d{2})\s*[/\-]\s*(\d{2})\.(\d{2})\.(\d{4}|\d{2})\b#u', $text, $m)) {
+            return null;
+        }
+        $yy = $m[3];
+        $year = mb_strlen($yy) === 2
+            ? ((int) $yy <= 30 ? 2000 + (int) $yy : 1900 + (int) $yy)
+            : (int) $yy;
+        return sprintf('%02d.%02d.%04d', (int) $m[1], (int) $m[2], $year);
+    }
+
+    /** ISO-Datum ("1975-08-04") -> Anzeige "04.08.1975". */
+    private function displayDate(string $iso): string
+    {
+        return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $iso, $m) ? $m[3] . '.' . $m[2] . '.' . $m[1] : $iso;
     }
 
     private function firstEmail(string $text): ?string

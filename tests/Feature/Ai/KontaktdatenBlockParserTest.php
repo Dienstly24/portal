@@ -114,6 +114,34 @@ class KontaktdatenBlockParserTest extends TestCase
         $this->assertSame('female', $p['gender']);
     }
 
+    public function test_second_date_beside_birthdate_is_recognized(): void
+    {
+        // "04.08.75/05.09.17": erstes Datum = Geburtsdatum, zweites Datum =
+        // z.B. Datum der Bescheinigung/des Aufenthaltstitels (darf das
+        // Geburtsdatum nicht verfaelschen und geht nicht verloren).
+        $text = implode("\n", [
+            'Refat Alhussein Aleliwi',
+            '04.08.75/05.09.17',
+            'Königsheide 53',
+            '44536 Lünen',
+            '01708211387',
+            'refat.re75@hotmail.com',
+            'DE55 2856 2297 0035 5267 00',
+        ]);
+        $r = (new KontaktdatenBlockParser())->parse($text);
+        $p = $r['data']['person'];
+
+        $this->assertSame('Refat', $p['first_name']);
+        $this->assertSame('Alhussein Aleliwi', $p['last_name']);
+        // Geburtsdatum = ERSTES Datum, nicht das zweite.
+        $this->assertSame('1975-08-04', $p['birth_date']);
+        // Zweites Datum sichtbar in der Zusammenfassung.
+        $this->assertStringContainsString('05.09.2017', $r['summary']);
+        $this->assertStringContainsString('44536', $p['zip']);
+        $this->assertSame('01708211387', $p['phone']);
+        $this->assertSame('DE55285622970035526700', $r['data']['bank']['iban']);
+    }
+
     public function test_requires_email_iban_and_plz(): void
     {
         // Ohne IBAN kein Kontaktblock (zu schwaches Signal).
