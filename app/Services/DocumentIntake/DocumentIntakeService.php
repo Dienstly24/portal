@@ -234,7 +234,105 @@ class DocumentIntakeService
             ]);
         }
 
+        // Geburtsurkunde: das Kind automatisch mit den bereits erfassten
+        // Eltern-Kunden verknuepfen. Fehler duerfen die Zuordnung nie blockieren.
+        if ($document->ai_type === 'geburtsurkunde') {
+            try {
+                $this->linkBirthCertificateParents($document, $customer, $byUserId);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
         return true;
+    }
+
+    /**
+     * Kind <-> Eltern verknuepfen (Geburtsurkunde): fuer jeden im Dokument
+     * erkannten Elternteil (relation mutter/vater) den bestehenden Eltern-Kunden
+     * suchen und - nur bei belastbarem Namens-Treffer (Score >= 70) - eine
+     * Familien-Beziehung (CustomerRelationship, type 'family') zwischen Kind und
+     * Elternteil anlegen. Idempotent (Paar in fester Reihenfolge). So ist das
+     * neugeborene Kind sofort mit seinen Eltern verknuepft, ohne dass der
+     * Mitarbeiter die Beziehung von Hand pflegen muss.
+     *
+     * @return list<string> Namen der tatsaechlich verknuepften Eltern
+     */
+    public function linkBirthCertificateParents(Document $document, Customer $child, ?int $byUserId): array
+    {
+        $personen = $document->ai_extracted['personen'] ?? [];
+        if (!is_array($personen) || $personen === []) {
+            return [];
+        }
+
+        $linked = [];
+        foreach ($personen as $parent) {
+            if (!is_array($parent)) {
+                continue;
+            }
+            $relation = $parent['relation'] ?? null;
+            if (!in_array($relation, ['mutter', 'vater'], true)) {
+                continue;
+            }
+            $first = $parent['first_name'] ?? null;
+            $last = $parent['last_name'] ?? null;
+            $full = trim(($first ?? '') . ' ' . ($last ?? ''));
+            if ($full === '') {
+                continue;
+            }
+
+            // Bestehenden Eltern-Kunden ueber einen EXAKTEN und EINDEUTIGEN
+            // Namens-Treffer suchen (die Geburtsurkunde liefert nur Namen, kein
+            // Geburtsdatum/Adresse - ein Fuzzy-Score waere zu unsicher). Ueber
+            // den Nachnamen grob vorfiltern, dann in PHP exakt normalisiert
+            // vergleichen. Nur bei GENAU EINEM Treffer wird verknuepft; bei
+            // Namensgleichheit mehrerer Kunden bleibt es dem Mitarbeiter
+            // ueberlassen (kein Raten).
+            $lastToken = $last !== null && $last !== ''
+                ? (string) preg_replace('/.*\s/u', '', trim($last))
+                : (string) preg_replace('/.*\s/u', '', $full);
+            $target = $this->normalizeName($full);
+            $candidates = Customer::with('user')
+                ->where('id', '!=', $child->id)
+                ->whereHas('user', fn ($u) => $u->where('name', 'like', '%' . $lastToken . '%'))
+                ->limit(50)
+                ->get()
+                ->filter(fn ($c) => $this->normalizeName((string) ($c->user?->name ?? '')) === $target)
+                ->values();
+            if ($candidates->count() !== 1) {
+                continue;
+            }
+            $parentCustomer = $candidates->first();
+            if ($parentCustomer === null || (string) $parentCustomer->id === (string) $child->id) {
+                continue;
+            }
+
+            [$a, $b] = \App\Models\CustomerRelationship::pairKey((string) $child->id, (string) $parentCustomer->id);
+            \App\Models\CustomerRelationship::updateOrCreate(
+                ['customer_a_id' => $a, 'customer_b_id' => $b],
+                [
+                    'type' => 'family',
+                    'note' => 'Aus Geburtsurkunde: ' . ($relation === 'mutter' ? 'Mutter' : 'Vater') . ' des Kindes',
+                    'created_by' => $byUserId,
+                ]
+            );
+            $linked[] = $full;
+
+            ActivityLog::create([
+                'user_id' => $byUserId,
+                'action' => 'customer_relationship_linked',
+                'entity_type' => 'customer',
+                'entity_id' => (string) $child->id,
+                'meta' => json_encode([
+                    'parent_customer_id' => (string) $parentCustomer->id,
+                    'relation' => $relation,
+                    'source' => 'geburtsurkunde',
+                    'document_id' => (string) $document->id,
+                ], JSON_UNESCAPED_UNICODE),
+            ]);
+        }
+
+        return $linked;
     }
 
     /**

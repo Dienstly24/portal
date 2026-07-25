@@ -62,6 +62,13 @@ trait ValidatesExtractedFields
             if ($kvnr !== null) {
                 $person['health_insurance_number'] = $kvnr;
             }
+            // Verwandtschaftsrolle (z.B. aus der Geburtsurkunde: mutter/vater/
+            // kind) - Basis fuer die automatische Familienverknuepfung. Nur
+            // aus der Werteliste, Unbekanntes faellt heraus.
+            $relation = $entry['relation'] ?? null;
+            if (in_array($relation, ['mutter', 'vater', 'kind', 'ehepartner', 'angehoerig'], true)) {
+                $person['relation'] = $relation;
+            }
             if (($person['first_name'] ?? '') !== '' || ($person['last_name'] ?? '') !== '') {
                 $out[] = $person;
             }
