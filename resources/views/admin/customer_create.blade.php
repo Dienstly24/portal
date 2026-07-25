@@ -117,6 +117,32 @@
     </div>
 </div>
 
+@if(in_array(auth()->user()->role, ['admin','manager']))
+{{-- Werber direkt bei der Anlage festhalten (Neukunden-Bericht/Provision).
+     Nachtraeglich aenderbar im Neukunden-Bericht. --}}
+<div class="card" style="max-width:800px;">
+    <div class="card-title" style="margin-bottom:6px;">Vermittlung (optional)</div>
+    <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;">
+        Wer hat diesen Kunden geworben? Grundlage für den Neukunden-Bericht und die Provisions-Abrechnung.
+    </div>
+    <div class="field" style="max-width:360px;margin:0;"><label>Geworben von</label>
+        <select name="werber" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+            <option value="">— Kein Werber —</option>
+            <optgroup label="Mitarbeiter">
+                @foreach(\App\Models\User::whereIn('role', ['admin','manager','support','employee'])->orderBy('name')->get() as $e)
+                <option value="u:{{ $e->id }}" {{ old('werber') === 'u:' . $e->id ? 'selected' : '' }}>{{ $e->name }}</option>
+                @endforeach
+            </optgroup>
+            <optgroup label="Partner">
+                @foreach(\App\Models\Partner::orderBy('name')->get() as $p)
+                <option value="p:{{ $p->id }}" {{ old('werber') === 'p:' . $p->id ? 'selected' : '' }}>{{ $p->name }}</option>
+                @endforeach
+            </optgroup>
+        </select>
+    </div>
+</div>
+@endif
+
 <div style="display:flex;gap:12px;max-width:800px;">
     <button type="submit" class="btn btn-primary">
         <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>

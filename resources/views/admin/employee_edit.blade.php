@@ -164,6 +164,25 @@
     </div>
 </div>
 
+{{-- Provisions-Saetze fuer den Neukunden-Bericht: Vorschlag = fix je
+     Neuvertrag + Prozent vom Jahresbeitrag. Beide optional. --}}
+<div class="card" style="max-width:700px;">
+    <div class="card-title" style="margin-bottom:6px;">Provision (Werber-Vergütung)</div>
+    <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;">
+        Grundlage für den Provisions-Vorschlag im Neukunden-Bericht, wenn dieser Mitarbeiter als Werber eingetragen ist. Leer = keine Provision.
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="field" style="margin:0;">
+            <label>Fester Betrag je Neuvertrag (EUR)</label>
+            <input type="number" name="provision_fixed" step="0.01" min="0" max="99999" value="{{ old('provision_fixed', $employee->provision_fixed) }}" placeholder="z. B. 25,00">
+        </div>
+        <div class="field" style="margin:0;">
+            <label>Prozent vom Jahresbeitrag (%)</label>
+            <input type="number" name="provision_percent" step="0.01" min="0" max="100" value="{{ old('provision_percent', $employee->provision_percent) }}" placeholder="z. B. 10">
+        </div>
+    </div>
+</div>
+
 <div style="display:flex;gap:12px;max-width:700px;justify-content:space-between;">
     <div style="display:flex;gap:12px;">
         <button type="submit" class="btn btn-primary">Speichern</button>

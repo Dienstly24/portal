@@ -490,7 +490,7 @@ function escapeHtml(t){const d=document.createElement('div');d.textContent=t??''
 // Ganze Tabellenzeile klickbar machen, ohne Buttons/Links/Formulare in der
 // Zeile zu stoeren (die behalten ihre eigene Aktion).
 function rowNav(e, url) {
-    if (e.target.closest('a,button,form,input,select,textarea,label')) return;
+    if (e.target.closest('a,button,form,input,select,textarea,label,details,summary')) return;
     window.location = url;
 }
 function loadNotifications() {

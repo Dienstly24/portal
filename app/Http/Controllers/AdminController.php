@@ -805,6 +805,21 @@ class AdminController extends Controller
         $fullName = $request->first_name . ' ' . $request->last_name;
         $address = $this->buildAddress($request);
         $addressColumns = $this->addressColumns($request);
+
+        // Werber (Neukunden-Bericht/Provision): 'u:{id}' = Mitarbeiter,
+        // 'p:{uuid}' = Partner. Nur Verwaltung darf ihn bei der Anlage setzen.
+        $acquiredBy = null;
+        $acquiredByPartner = null;
+        if (in_array(auth()->user()->role, ['admin', 'manager']) && $request->filled('werber')) {
+            $w = (string) $request->werber;
+            if (str_starts_with($w, 'u:')) {
+                $acquiredBy = User::whereIn('role', ['admin', 'manager', 'support', 'employee'])
+                    ->whereKey((int) substr($w, 2))->value('id');
+            } elseif (str_starts_with($w, 'p:')) {
+                $acquiredByPartner = \App\Models\Partner::whereKey(substr($w, 2))->value('id');
+            }
+        }
+
         $user = User::create([
             'name' => $fullName,
             'email' => $request->email ?: null,
@@ -816,6 +831,11 @@ class AdminController extends Controller
         $customer = Customer::create([
             'user_id' => $user->id,
             'customer_number' => app(\App\Services\CustomerNumberGenerator::class)->generate(),
+            // Herkunft + Werber fuer den Neukunden-Bericht (created_by setzt
+            // das Customer-Modell automatisch auf den angemeldeten Mitarbeiter).
+            'source' => 'manual',
+            'acquired_by' => $acquiredBy,
+            'acquired_by_partner_id' => $acquiredByPartner,
             'phone' => $request->mobile ?? $request->phone,
             'mobile' => $request->mobile,
             'address' => $address,

@@ -180,6 +180,9 @@ class EmployeeController extends Controller
             'name' => 'required|string|max:255',
             'role' => 'nullable|in:employee,manager',
             'access_level' => 'nullable|in:full,limited',
+            // Provisions-Saetze (Neukunden-Bericht): beide optional.
+            'provision_fixed' => 'nullable|numeric|min:0|max:99999.99',
+            'provision_percent' => 'nullable|numeric|min:0|max:100',
         ]);
         \Illuminate\Support\Facades\DB::transaction(function () use ($request, $employee) {
             $employee->update([
@@ -192,6 +195,8 @@ class EmployeeController extends Controller
                 'can_approve_changes' => $request->has('can_approve_changes'),
                 'can_send_emails' => $request->has('can_send_emails'),
                 'can_import_export' => $request->has('can_import_export'),
+                'provision_fixed' => $request->filled('provision_fixed') ? round((float) $request->provision_fixed, 2) : null,
+                'provision_percent' => $request->filled('provision_percent') ? round((float) $request->provision_percent, 2) : null,
             ]);
 
             // Zuweisungen NUR ändern, wenn das Formular sie explizit mitschickt.

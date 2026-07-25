@@ -27,6 +27,18 @@
         <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Notizen</label>
         <textarea name="notes" rows="2" maxlength="5000" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;">{{ old('notes', $partner->notes ?? '') }}</textarea>
     </div>
+    {{-- Provisions-Saetze (Neukunden-Bericht): Vorschlag, wenn dieser Partner
+         als Werber eines Neukunden eingetragen ist. Beide optional. --}}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Provision je Neuvertrag (EUR)</label>
+            <input type="number" name="provision_fixed" step="0.01" min="0" max="99999" value="{{ old('provision_fixed', $partner->provision_fixed ?? '') }}" placeholder="z. B. 25,00" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;">
+        </div>
+        <div>
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Provision % vom Jahresbeitrag</label>
+            <input type="number" name="provision_percent" step="0.01" min="0" max="100" value="{{ old('provision_percent', $partner->provision_percent ?? '') }}" placeholder="z. B. 10" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;">
+        </div>
+    </div>
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;">
         <input type="hidden" name="is_active" value="0">
         <input type="checkbox" name="is_active" value="1" {{ old('is_active', $partner->is_active ?? true) ? 'checked' : '' }}> Aktiv

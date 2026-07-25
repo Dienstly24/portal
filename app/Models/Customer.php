@@ -8,7 +8,8 @@ class Customer extends Model {
     public const SOURCES = ['manual', 'website', 'email_import', 'fonds_finanz', 'import', 'lexoffice'];
 
     protected $fillable = [
-        'user_id','partner_id','customer_number','source','birth_date','address','address2',
+        'user_id','partner_id','customer_number','source','created_by','acquired_by','acquired_by_partner_id',
+        'birth_date','address','address2',
         'iban','iban2','marital_status','phone','mobile','preferred_lang',
         'company_name','company_type','customer_type','email2',
         'nationality','occupation','last_contact','gender','account_holder',
@@ -255,7 +256,15 @@ class Customer extends Model {
 
     protected static function boot() {
         parent::boot();
-        static::creating(fn($m) => $m->id = Str::uuid());
+        static::creating(function ($m) {
+            $m->id = Str::uuid();
+            // Neukunden-Bericht: den Anleger automatisch festhalten, egal ueber
+            // welchen Weg der Kunde entsteht (Formular, Import, Dokument-Upload).
+            // Nur Mitarbeiter-Konten - Selbstregistrierung/CLI bleibt null (=System).
+            if ($m->created_by === null && auth()->check() && auth()->user()->isStaff()) {
+                $m->created_by = auth()->id();
+            }
+        });
 
         // Dubletten-Hinweis-Badge (DuplicateDetectionService::countCached, 5-Min-
         // TTL) zentral invalidieren, sobald sich der Kundenbestand aendert.
@@ -298,6 +307,32 @@ class Customer extends Model {
     public function appointments() { return $this->hasMany(Appointment::class); }
     public function externalReferences() { return $this->morphMany(ExternalReference::class, 'referenceable'); }
     public function partner() { return $this->belongsTo(Partner::class); }
+    /** Mitarbeiter, der den Datensatz angelegt hat (null = System/Import/Alt-Bestand). */
+    public function creator() { return $this->belongsTo(User::class, 'created_by'); }
+    /** Werber (Mitarbeiter), der den Kunden geworben hat. */
+    public function acquirer() { return $this->belongsTo(User::class, 'acquired_by'); }
+    /** Werber (Vertriebspartner), der den Kunden geworben hat. */
+    public function acquirerPartner() { return $this->belongsTo(Partner::class, 'acquired_by_partner_id'); }
+
+    /**
+     * Werber-Schluessel fuer Filter/Formulare: 'u:{id}' (Mitarbeiter),
+     * 'p:{uuid}' (Partner) oder null. Mitarbeiter hat Vorrang - die
+     * Setter-Logik haelt beide Felder ohnehin exklusiv.
+     */
+    public function acquirerKey(): ?string
+    {
+        if ($this->acquired_by) return 'u:' . $this->acquired_by;
+        if ($this->acquired_by_partner_id) return 'p:' . $this->acquired_by_partner_id;
+        return null;
+    }
+
+    /** Anzeigename des Werbers oder null, wenn keiner hinterlegt ist. */
+    public function acquirerLabel(): ?string
+    {
+        if ($this->acquired_by) return $this->acquirer?->name;
+        if ($this->acquired_by_partner_id) return $this->acquirerPartner?->name;
+        return null;
+    }
 
     /** Aktive E-Mail-Verarbeitungs-Einwilligung (oder null). */
     public function activeEmailConsent(): ?CustomerConsent

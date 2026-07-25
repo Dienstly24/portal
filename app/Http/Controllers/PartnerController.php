@@ -47,6 +47,9 @@ class PartnerController extends Controller
             'iban' => 'nullable|string|max:50',
             'notes' => 'nullable|string|max:5000',
             'is_active' => 'nullable|boolean',
+            // Provisions-Saetze (Neukunden-Bericht): beide optional.
+            'provision_fixed' => 'nullable|numeric|min:0|max:99999.99',
+            'provision_percent' => 'nullable|numeric|min:0|max:100',
         ]);
 
         // Komma-/zeilengetrennte Eingabe -> normalisierte Domain-Liste
