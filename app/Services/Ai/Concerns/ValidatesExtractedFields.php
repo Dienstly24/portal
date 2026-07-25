@@ -231,7 +231,41 @@ trait ValidatesExtractedFields
             'extras' => $extras,
             'holder_type' => $holder,
             'annual_mileage' => $intInRange($in['annual_mileage'] ?? null, 0, 200000),
+            // Technische Fahrzeugdaten aus der Zulassungsbescheinigung: Leistung
+            // (kW, Feld P.2), Kraftstoff (P.3, auf die Werteliste normalisiert)
+            // und Farbe (R).
+            'power_kw' => $intInRange($in['power_kw'] ?? null, 1, 2000),
+            'fuel_type' => $this->cleanFuelType($in['fuel_type'] ?? null),
+            'color' => $this->cleanString($in['color'] ?? null, 40),
         ], fn ($v) => $v !== null && $v !== '');
+    }
+
+    /**
+     * Kraftstoffart auf den Katalog-Schluessel bringen ("Benzin" -> benzin,
+     * "Plug-in-Hybrid" -> plugin_hybrid, "LPG" -> autogas). Unbekanntes faellt
+     * heraus (lieber leer als eine falsche Auswahl).
+     */
+    private function cleanFuelType(mixed $value): ?string
+    {
+        if (!is_string($value)) {
+            return null;
+        }
+        $v = mb_strtolower(trim($value));
+        if ($v === '') {
+            return null;
+        }
+        return match (true) {
+            str_contains($v, 'plug') => 'plugin_hybrid',
+            str_contains($v, 'hybrid') => 'hybrid',
+            str_contains($v, 'diesel') => 'diesel',
+            str_contains($v, 'benzin') || str_contains($v, 'super') || str_contains($v, 'otto') => 'benzin',
+            str_contains($v, 'elektro') || str_contains($v, 'electric') || $v === 'strom' => 'elektro',
+            str_contains($v, 'wasserstoff') || str_contains($v, 'hydrogen') => 'wasserstoff',
+            str_contains($v, 'lpg') || str_contains($v, 'autogas') || str_contains($v, 'fluessiggas') => 'autogas',
+            str_contains($v, 'cng') || str_contains($v, 'erdgas') => 'erdgas',
+            array_key_exists($v, \App\Models\ContractVehicleDetail::FUEL_TYPES) => $v,
+            default => null,
+        };
     }
 
     private function validatedHealth(mixed $in): array

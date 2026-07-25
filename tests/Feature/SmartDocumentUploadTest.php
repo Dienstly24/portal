@@ -1585,7 +1585,7 @@ class SmartDocumentUploadTest extends TestCase
             'ai_extracted' => ['kfz' => [
                 'license_plate' => 'LÜN-G 1110', 'vin' => 'VXKUPHNSSM4100609',
                 'hsn' => '1889', 'tsn' => 'ABV', 'manufacturer' => 'VW', 'model' => 'Golf VIII',
-                'first_registration' => '2021-03-23',
+                'first_registration' => '2021-03-23', 'power_kw' => 110, 'fuel_type' => 'benzin', 'color' => 'schwarz',
             ]],
         ]);
 
@@ -1601,6 +1601,10 @@ class SmartDocumentUploadTest extends TestCase
         $this->assertSame('1889', $veh->hsn);
         $this->assertSame('ABV', $veh->tsn);
         $this->assertSame('LÜN-G 1110', $veh->license_plate);
+        // Technische Angaben aus der Zulassung (P.2/P.3/R) ebenfalls ergaenzt.
+        $this->assertSame(110, $veh->power_kw);
+        $this->assertSame('benzin', $veh->fuel_type);
+        $this->assertSame('schwarz', $veh->color);
     }
 
     public function test_fahrzeugschein_does_not_guess_when_multiple_kfz_contracts(): void

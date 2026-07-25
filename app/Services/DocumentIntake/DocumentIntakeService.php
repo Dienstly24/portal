@@ -809,6 +809,9 @@ class DocumentIntakeService
                 'manufacturer' => $kfz['manufacturer'] ?? null,
                 'model' => $kfz['model'] ?? null,
                 'first_registration' => $kfz['first_registration'] ?? null,
+                'power_kw' => $kfz['power_kw'] ?? null,
+                'fuel_type' => $kfz['fuel_type'] ?? null,
+                'color' => $kfz['color'] ?? null,
                 'has_teilkasko' => $kfz['has_teilkasko'] ?? null,
                 'teilkasko_deductible' => $kfz['teilkasko_deductible'] ?? null,
                 'has_vollkasko' => $kfz['has_vollkasko'] ?? null,
@@ -827,10 +830,13 @@ class DocumentIntakeService
                     array_merge($veh->extras ?? [], $kfz['extras'])
                 ));
             }
-            // Feste Fahrzeug-Identitaets-/Stammfelder nur ERGAENZEN, wenn leer -
-            // eine abweichende Schreibweise (z.B. "S-AB 1234" vs "S-AB1234")
-            // ist keine echte Aenderung und darf den Bestand nicht ueberschreiben.
-            foreach (['license_plate', 'vin', 'hsn', 'tsn', 'manufacturer', 'model', 'first_registration'] as $static) {
+            // Feste Fahrzeug-Identitaets-/Stammfelder (inkl. der technischen
+            // Angaben aus der Zulassung) nur ERGAENZEN, wenn leer - eine
+            // abweichende Schreibweise (z.B. "S-AB 1234" vs "S-AB1234") ist
+            // keine echte Aenderung und darf den Bestand (bzw. eine vom
+            // Mitarbeiter erfasste Angabe) nicht ueberschreiben.
+            foreach (['license_plate', 'vin', 'hsn', 'tsn', 'manufacturer', 'model', 'first_registration',
+                'power_kw', 'fuel_type', 'color'] as $static) {
                 if (filled($veh->{$static})) {
                     unset($vehProposed[$static]);
                 }
@@ -942,6 +948,9 @@ class DocumentIntakeService
             'vollkasko_deductible' => ['label' => 'SB Vollkasko', 'format' => [$this, 'fmtDeductible']],
             'holder_type' => ['label' => 'Halter'],
             'annual_mileage' => ['label' => 'Jahresfahrleistung', 'format' => [$this, 'fmtKm']],
+            'power_kw' => ['label' => 'Leistung (kW)'],
+            'fuel_type' => ['label' => 'Kraftstoff'],
+            'color' => ['label' => 'Farbe'],
             'sf_liability_class' => ['label' => 'SF-Klasse Haftpflicht'],
             'sf_comprehensive_class' => ['label' => 'SF-Klasse Vollkasko'],
             'previous_insurer' => ['label' => 'Vorversicherer'],

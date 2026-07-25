@@ -138,7 +138,8 @@ class ClaudeDocumentAiProvider implements DocumentAiProviderInterface
             . '"versicherung": {"insurer": "", "contract_number": "", "sparte": <einer aus: ' . $sparten . '>, "start_date": "JJJJ-MM-TT", "end_date": "JJJJ-MM-TT", "premium_amount": <Zahl>, "premium_interval": <einer aus: ' . $intervals . '>}, '
             . '"kfz": {"license_plate": "", "vin": "", "hsn": "", "tsn": "", "manufacturer": "", "model": "", "first_registration": "JJJJ-MM-TT", '
             . '"has_teilkasko": true, "teilkasko_deductible": <Zahl Euro>, "has_vollkasko": false, "vollkasko_deductible": <Zahl Euro>, '
-            . '"holder_type": <einer aus: versicherungsnehmer, abweichender_halter>, "annual_mileage": <Zahl km pro Jahr>}, '
+            . '"holder_type": <einer aus: versicherungsnehmer, abweichender_halter>, "annual_mileage": <Zahl km pro Jahr>, '
+            . '"power_kw": <Zahl Leistung in kW>, "fuel_type": <einer aus: benzin, diesel, elektro, hybrid, plugin_hybrid, autogas, erdgas, wasserstoff, sonstige>, "color": "<Fahrzeugfarbe>"}, '
             . '"gesundheit": {"health_insurance_company": "", "health_insurance_number": ""}, '
             . '"personen": [{"first_name": "", "last_name": "", "birth_date": "JJJJ-MM-TT", "gender": <male|female>, "health_insurance_number": "", "relation": <mutter|vater|kind>}], '
             . '"energie": {"meter_number": "", "malo_id": "<11 Ziffern>", "meter_reading": <Zahl kWh-Stand>, "consumption_kwh": <Zahl Jahresverbrauch>, "tariff": "", "customer_number": "<Kundennummer beim bisherigen Versorger>"}, '
@@ -171,7 +172,8 @@ class ClaudeDocumentAiProvider implements DocumentAiProviderInterface
             . 'type fahrzeugbrief) die genormten Feld-Codes lesen: A=kfz.license_plate (amtliches Kennzeichen), '
             . 'D.1=kfz.manufacturer (Marke), D.3=kfz.model (Handelsbezeichnung), E=kfz.vin (Fahrzeug-Identifizierungsnummer/FIN), '
             . '(2.1)=kfz.hsn (zu 2.1, Herstellerschluessel), (2.2)=kfz.tsn (zu 2.2, Typschluessel), B=kfz.first_registration '
-            . '(Datum der Erstzulassung), C.1.1=person.last_name, C.1.2=person.first_name, C.1.3=person.street/zip/city (Halter). '
+            . '(Datum der Erstzulassung), P.2=kfz.power_kw (Nennleistung in kW), P.3=kfz.fuel_type (Kraftstoff), R=kfz.color (Farbe), '
+            . 'C.1.1=person.last_name, C.1.2=person.first_name, C.1.3=person.street/zip/city (Halter). '
             . 'Keine Versicherungsdaten erfinden - der Fahrzeugschein enthaelt keine.';
     }
 
