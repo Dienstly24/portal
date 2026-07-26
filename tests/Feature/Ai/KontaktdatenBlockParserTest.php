@@ -56,16 +56,19 @@ class KontaktdatenBlockParserTest extends TestCase
         // PLZ+Ort+Telefon).
         $text = implode("\n", [
             'Salam Al-Wattar',
-            '27.10.1970&28.08.2023 Seestr. 14',
+            '27.10.1970 & 28.08.2023 Seestr. 14',
             '23879 Mölln 01778664110',
             'Salamalwattar20@gmail.com',
             'DE82 2305 2750 0081 4355 63',
         ]);
-        $p = (new KontaktdatenBlockParser())->parse($text)['data']['person'];
+        $r = (new KontaktdatenBlockParser())->parse($text);
+        $p = $r['data']['person'];
 
         $this->assertSame('Salam', $p['first_name']);
         $this->assertSame('Al-Wattar', $p['last_name']);
         $this->assertSame('1970-10-27', $p['birth_date']); // erstes Datum
+        // Zweites Datum (mit "&" getrennt) sichtbar in der Zusammenfassung.
+        $this->assertStringContainsString('28.08.2023', $r['summary']);
         $this->assertSame('Seestr.', $p['street']);
         $this->assertSame('14', $p['house_number']);
         $this->assertSame('23879', $p['zip']);
