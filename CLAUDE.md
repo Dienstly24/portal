@@ -192,6 +192,28 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   ab X" ist erlaubt (halb-offene Intervalle), Zweitwagen sowieso. Tests:
   `ContractDisplayStatusTest`, `VehicleOverlapGuardTest`,
   `ContractEndingsCommandTest`, `ContractDeduplicationTest`.
+- **Aufgaben & Wiedervorlagen** (Vollausbau, Betreiber-Vorgabe 26.07.2026):
+  `/admin/tasks` (`TaskController`, alle Staff-Rollen). Kundenauswahl im
+  Formular per **Sofort-Suche** (`/admin/tasks/kunden-suche`, Portfolio-
+  Scope wie ueberall, KEINE Liste aller Kunden mehr). Wiedervorlage
+  ueber Faelligkeits-Praesets (Heute ... +10/+20 Tage/+1 Monat), aus der
+  Liste verschiebbar (+1 Tag ... +1 Monat) und voll bearbeitbar (Modal).
+  Taeglich 07:45 buendelt `tasks:remind` je Mitarbeiter EINEN
+  Glocken-Hinweis (heute faellig / ueberfaellig, dedup je Nutzer).
+  **Geplante Auto-E-Mail je Aufgabe**: beim Anlegen optional Betreff/Text
+  (Vorlagen + {{platzhalter}}) und Stichtag erfassen - Versand stuendlich
+  8-18 Uhr durch `tasks:send-auto-emails` via `DirectEmailMail`;
+  Platzhalter werden erst BEIM Versand gerendert, Versand steht in
+  Kundenakte (Timeline) + Glocke, `last_contact` wird gesetzt. Erledigte
+  Aufgaben versenden NIE (Model-Hook -> Status `skipped`); bereits
+  gesendete Mails sind unveraenderlich (Historie). Planen erfordert die
+  Composer-Berechtigung (`can_send_emails` bzw. admin/manager/support)
+  und einen Kunden mit ECHTER E-Mail-Adresse. Statusverlauf:
+  `auto_email_status` pending/sent/skipped/failed (failed erst nach 3
+  Tagen Retry). `tasks.type` ist jetzt String statt ENUM (Typ 'reminder'
+  des Geburtstags-Jobs war im ENUM ungueltig); gueltige Typen zentral in
+  `Task::TYPES`. Kundenakte-Header hat Button "Aufgabe / Wiedervorlage"
+  (oeffnet das Modal vorbefuellt). Tests: `TaskSystemTest`.
 - **Neukunden-Bericht + Vermittler-Provisionen** (Betreiber-Vorgabe
   25.07.2026): `/admin/reports/neukunden` (`ReportController::newCustomers`,
   Tab auf der Berichte-Seite) zeigt die Neukunden des Monats (blaetterbar,
