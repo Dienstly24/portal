@@ -341,7 +341,9 @@ function contractEndSync() {
 // ---- Kuendigungs-Hinweis: wann wirkt die Kuendigung wirklich? ----
 // Das Kuendigungsdatum ist das EINREICHUNGS-Datum; der Vertrag endet zum
 // Ablauf. KFZ (deutsches Recht): Frist ein Monat zum Ablauf - verpasst
-// verlaengert sich der Vertrag um ein weiteres Versicherungsjahr.
+// verlaengert sich der Vertrag regulaer ums Versicherungsjahr. Der Hinweis
+// ist BERATUNG beim Erfassen; gespeichert wird, was der Betreiber eintraegt
+// (Sonderkuendigung/Wechsel folgen anderen Regeln - Ablauf dann anpassen).
 function contractCancelHint() {
     const hint = document.getElementById('cancel-effect-hint');
     const cancel = document.getElementById('contract-cancel');
@@ -368,7 +370,7 @@ function contractCancelHint() {
         let ende = new Date(ablauf); let verpasst = false; let i = 0;
         while (minusMonat(ende) < submitted && i++ < 10) { ende.setFullYear(ende.getFullYear() + 1); verpasst = true; }
         if (verpasst) {
-            hint.textContent = '⚠ Kündigungsfrist (1 Monat vor Ablauf) verpasst – wirksam erst zum ' + fmt(ende) + '.';
+            hint.textContent = '⚠ Kündigungsfrist (1 Monat vor Ablauf) verpasst – regulär wirksam erst zum ' + fmt(ende) + '. Ablauf entsprechend anpassen (außer Sonderkündigung/Wechsel).';
             hint.style.color = '#A32D2D';
         } else {
             hint.textContent = '✓ Frist gewahrt – Vertrag endet zum Ablauf ' + fmt(ende) + '.';

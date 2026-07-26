@@ -179,6 +179,41 @@ class ContractDeduplicationTest extends TestCase
 
         $this->assertNotSame($alt->id, $neu->id);
         $this->assertSame(2, Contract::where('customer_id', $customer->id)->count());
+
+        // Wechsel-Automatik: der Altvertrag bekommt die Kuendigung erfasst -
+        // Ablauf = Beginn des neuen Vertrags, Einreichung dokumentiert,
+        // alles nachvollziehbar in der Version History (Quelle: Dokument).
+        $alt->refresh();
+        $this->assertSame('2026-09-03', (string) $alt->end_date);
+        $this->assertNotNull($alt->cancellation_date);
+        $this->assertSame('Gekündigt zum 03.09.2026', $alt->displayStatus()['label']);
+        $this->assertTrue(
+            ContractRevision::where('contract_id', $alt->id)
+                ->where('field', 'end_date')->where('source', 'document')->exists()
+        );
+    }
+
+    // Wechsel-Dokument OHNE Beginn: keine Verkettung moeglich -> der
+    // Altvertrag bleibt unangetastet (keine erfundenen Daten).
+    public function test_switch_document_without_start_leaves_old_contract_untouched(): void
+    {
+        $customer = $this->customer();
+        $intake = app(DocumentIntakeService::class);
+
+        $first = $this->doc([
+            'versicherung' => ['insurer' => 'ADAC Autoversicherung AG', 'sparte' => 'kfz', 'start_date' => '2025-09-03'],
+            'kfz' => ['license_plate' => 'K-WW 12'],
+        ]);
+        $alt = $intake->createContractFromExtraction($first, $customer, null);
+
+        $second = $this->doc([
+            'versicherung' => ['insurer' => 'Neodigital', 'sparte' => 'kfz'],
+            'kfz' => ['license_plate' => 'K-WW 12'],
+        ]);
+        $intake->createContractFromExtraction($second, $customer, null);
+
+        $this->assertSame(2, Contract::where('customer_id', $customer->id)->count());
+        $this->assertNull($alt->fresh()->cancellation_date);
     }
 
     // Gleicher Versicherer (Kurzform "ADAC"), Kennzeichen einmal mit und

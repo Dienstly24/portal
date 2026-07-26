@@ -65,9 +65,10 @@ class ContractDisplayStatusTest extends TestCase
         $this->assertSame($ablauf->format('d.m.Y'), $st['params']['date']);
     }
 
-    // KFZ-Frist (1 Monat zum Ablauf) verpasst -> Vertrag verlaengert sich um
-    // ein Versicherungsjahr, das wirksame Ende rueckt aufs naechste Jahr.
-    public function test_kfz_missed_deadline_rolls_to_next_insurance_year(): void
+    // Frist knapp/verpasst? Der SERVER vertraut den ERFASSTEN Daten (der
+    // rote Live-Hinweis im Formular beraet beim Eintragen; Sonderkuendigung
+    // und Wechsel-Kette waeren sonst falsch): wirksam zum Ablauf.
+    public function test_missed_deadline_still_trusts_recorded_ablauf(): void
     {
         $ablauf = now()->addDays(14);
         $st = $this->contract([
@@ -75,13 +76,12 @@ class ContractDisplayStatusTest extends TestCase
             'cancellation_date' => now()->toDateString(),
         ])->displayStatus();
 
-        $expected = $ablauf->copy()->addYear();
         $this->assertSame('cancelled_upcoming', $st['key']);
-        $this->assertSame('Gekündigt zum ' . $expected->format('d.m.Y'), $st['label']);
+        $this->assertSame('Gekündigt zum ' . $ablauf->format('d.m.Y'), $st['label']);
     }
 
-    // Andere Sparten kennen die KFZ-Jahresregel nicht: wirksam zum Ablauf.
-    public function test_non_kfz_uses_ablauf_without_year_roll(): void
+    // Andere Sparten identisch: wirksam zum Ablauf.
+    public function test_non_kfz_uses_ablauf(): void
     {
         $ablauf = now()->addDays(14);
         $st = $this->contract([

@@ -10,11 +10,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Doppelversicherungs-Schutz fuer Fahrzeuge (Betreiber-Vorgabe 26.07.2026):
- * dasselbe Fahrzeug darf nie zwei Vertraege mit ueberschneidendem
- * Versicherungszeitraum haben. Ein Versicherer-Wechsel als Kette (alter
- * Vertrag gekuendigt zum X, neuer aktiv ab X) ist ausdruecklich erlaubt;
- * mehrere Fahrzeuge je Kunde sowieso.
+ * Doppelversicherungs-Schutz + Wechsel-Automatik (Betreiber-Vorgabe
+ * 26.07.2026): dasselbe Fahrzeug darf nie zwei Vertraege mit
+ * ueberschneidendem Zeitraum haben. Gleicher Versicherer = Duplikat ->
+ * blockiert. ANDERER Versicherer = Wechsel -> der Altvertrag bekommt
+ * automatisch die Kuendigung erfasst (eingereicht heute, Ablauf =
+ * Beginn des neuen) und die Akte zeigt die Kette "Gekuendigt zum X" ->
+ * "Aktiv ab X". Mehrere Fahrzeuge je Kunde bleiben uneingeschraenkt.
  */
 class VehicleOverlapGuardTest extends TestCase
 {
@@ -58,19 +60,85 @@ class VehicleOverlapGuardTest extends TestCase
         ], $contract, ['vehicle' => $vehicle]);
     }
 
-    // Gleiches Fahrzeug (Kennzeichen mit/ohne Umlaut!), Altvertrag ohne
-    // erfasstes Ende -> Ueberschneidung -> Anlegen wird abgelehnt.
-    public function test_overlapping_contract_for_same_plate_is_blocked(): void
+    // Gleiches Fahrzeug (Kennzeichen mit/ohne Umlaut!) beim SELBEN
+    // Versicherer -> Duplikat, kein Wechsel -> Anlegen wird abgelehnt.
+    public function test_same_insurer_overlap_is_blocked_as_duplicate(): void
     {
         $customer = $this->makeCustomer();
         $this->existingContract($customer, [], ['license_plate' => 'LUN-G 1110']);
 
         $this->actingAs($this->admin())->post(
             route('admin.contract.store', $customer->id),
-            $this->payload(['start_date' => now()->addMonths(2)->toDateString()], ['license_plate' => 'LÜN-G1110'])
+            $this->payload([
+                'insurer' => 'ADAC Autoversicherung AG',
+                'start_date' => now()->addMonths(2)->toDateString(),
+            ], ['license_plate' => 'LÜN-G1110'])
         )->assertSessionHasErrors('vehicle_overlap');
 
         $this->assertSame(1, Contract::where('customer_id', $customer->id)->count());
+    }
+
+    // ANDERER Versicherer = Wechsel: der Altvertrag bekommt automatisch die
+    // Kuendigung erfasst (eingereicht heute, Ablauf = Beginn des neuen) -
+    // die Akte zeigt die Kette "Gekündigt zum X" -> "Aktiv ab X".
+    public function test_insurer_switch_records_cancellation_on_old_contract(): void
+    {
+        $customer = $this->makeCustomer();
+        $alt = $this->existingContract($customer, [], ['license_plate' => 'LUN-G 1110']);
+        $wechseltag = now()->addMonths(2)->startOfDay();
+
+        $this->actingAs($this->admin())->post(
+            route('admin.contract.store', $customer->id),
+            $this->payload(['start_date' => $wechseltag->toDateString()], ['license_plate' => 'LÜN-G1110'])
+        )->assertRedirect(route('admin.customer', $customer->id))->assertSessionHas('success');
+
+        $this->assertSame(2, Contract::where('customer_id', $customer->id)->count());
+        $alt->refresh();
+        $this->assertSame(now()->toDateString(), (string) $alt->cancellation_date);
+        $this->assertSame($wechseltag->toDateString(), (string) $alt->end_date);
+        $this->assertSame('Gekündigt zum ' . $wechseltag->format('d.m.Y'), $alt->displayStatus()['label']);
+        $this->assertTrue(
+            \App\Models\ContractRevision::where('contract_id', $alt->id)
+                ->where('field', 'end_date')->where('source', 'system')->exists()
+        );
+    }
+
+    // Wechsel ohne Beginn laesst sich nicht verketten -> klare Aufforderung.
+    public function test_switch_without_start_date_asks_for_beginn(): void
+    {
+        $customer = $this->makeCustomer();
+        $alt = $this->existingContract($customer, [], ['license_plate' => 'D-XY 88']);
+
+        $this->actingAs($this->admin())->post(
+            route('admin.contract.store', $customer->id),
+            $this->payload([], ['license_plate' => 'D-XY 88'])
+        )->assertSessionHasErrors('vehicle_overlap');
+
+        $this->assertSame(1, Contract::where('customer_id', $customer->id)->count());
+        $this->assertNull($alt->fresh()->cancellation_date);
+    }
+
+    // Beginnt der neue Vertrag VOR dem bereits erfassten Ablauf des alten,
+    // zieht die Wechsel-Automatik den Ablauf auf den Wechseltag vor
+    // (Doppelversicherung ist verboten - das faktische Ende zaehlt).
+    public function test_switch_tightens_later_recorded_ablauf(): void
+    {
+        $customer = $this->makeCustomer();
+        $alt = $this->existingContract($customer, [
+            'end_date' => now()->addMonths(3)->toDateString(),
+            'cancellation_date' => now()->subDays(5)->toDateString(),
+        ], ['license_plate' => 'HH-AB 1234']);
+        $wechseltag = now()->addMonths(2)->startOfDay();
+
+        $this->actingAs($this->admin())->post(
+            route('admin.contract.store', $customer->id),
+            $this->payload(['start_date' => $wechseltag->toDateString()], ['license_plate' => 'HH-AB1234'])
+        )->assertSessionHas('success');
+
+        $alt->refresh();
+        $this->assertSame($wechseltag->toDateString(), (string) $alt->end_date);
+        $this->assertSame(now()->subDays(5)->toDateString(), (string) $alt->cancellation_date);
+        $this->assertSame(2, Contract::where('customer_id', $customer->id)->count());
     }
 
     // Wechsel-Kette: Altvertrag gekuendigt zum Ablauf X, neuer beginnt genau
@@ -92,8 +160,9 @@ class VehicleOverlapGuardTest extends TestCase
         $this->assertSame(2, Contract::where('customer_id', $customer->id)->count());
     }
 
-    // Ein Tag zu frueh (neuer Beginn VOR dem wirksamen Ende) -> abgelehnt.
-    public function test_one_day_overlap_is_blocked(): void
+    // Gleicher Versicherer, neuer Beginn einen Tag VOR dem wirksamen Ende
+    // -> Duplikat-Ueberschneidung, abgelehnt.
+    public function test_same_insurer_one_day_overlap_is_blocked(): void
     {
         $customer = $this->makeCustomer();
         $ablauf = now()->addMonths(3);
@@ -104,15 +173,19 @@ class VehicleOverlapGuardTest extends TestCase
 
         $this->actingAs($this->admin())->post(
             route('admin.contract.store', $customer->id),
-            $this->payload(['start_date' => $ablauf->copy()->subDay()->toDateString()], ['license_plate' => 'HH-AB1234'])
+            $this->payload([
+                'insurer' => 'ADAC Autoversicherung AG',
+                'start_date' => $ablauf->copy()->subDay()->toDateString(),
+            ], ['license_plate' => 'HH-AB1234'])
         )->assertSessionHasErrors('vehicle_overlap');
     }
 
-    // Zweites Fahrzeug desselben Kunden -> parallel voellig okay.
+    // Zweites Fahrzeug desselben Kunden -> parallel voellig okay, und die
+    // Wechsel-Automatik fasst fremde Fahrzeuge natuerlich nicht an.
     public function test_second_car_is_allowed(): void
     {
         $customer = $this->makeCustomer();
-        $this->existingContract($customer, [], ['license_plate' => 'B-AA 1']);
+        $alt = $this->existingContract($customer, [], ['license_plate' => 'B-AA 1']);
 
         $this->actingAs($this->admin())->post(
             route('admin.contract.store', $customer->id),
@@ -120,14 +193,16 @@ class VehicleOverlapGuardTest extends TestCase
         )->assertSessionHas('success');
 
         $this->assertSame(2, Contract::where('customer_id', $customer->id)->count());
+        $this->assertNull($alt->fresh()->cancellation_date);
     }
 
     // Verschiedene FIN = sicher verschiedene Fahrzeuge, auch wenn das
-    // Kennzeichen (uebernommen/vertippt) gleich aussieht.
+    // Kennzeichen (uebernommen/vertippt) gleich aussieht - kein Konflikt,
+    // kein automatischer Eingriff in den Altvertrag.
     public function test_different_vin_beats_equal_plate(): void
     {
         $customer = $this->makeCustomer();
-        $this->existingContract($customer, [], ['license_plate' => 'K-XY 77', 'vin' => 'WVWZZZAAA111']);
+        $alt = $this->existingContract($customer, [], ['license_plate' => 'K-XY 77', 'vin' => 'WVWZZZAAA111']);
 
         $this->actingAs($this->admin())->post(
             route('admin.contract.store', $customer->id),
@@ -135,9 +210,11 @@ class VehicleOverlapGuardTest extends TestCase
         )->assertSessionHas('success');
 
         $this->assertSame(2, Contract::where('customer_id', $customer->id)->count());
+        $this->assertNull($alt->fresh()->cancellation_date);
     }
 
-    // HSN/TSN greift als letzte Stufe, wenn keine Seite FIN/Kennzeichen hat.
+    // HSN/TSN greift als letzte Stufe, wenn keine Seite FIN/Kennzeichen hat
+    // (gleicher Versicherer -> Duplikat, abgelehnt).
     public function test_hsn_tsn_fallback_blocks_overlap(): void
     {
         $customer = $this->makeCustomer();
@@ -145,7 +222,10 @@ class VehicleOverlapGuardTest extends TestCase
 
         $this->actingAs($this->admin())->post(
             route('admin.contract.store', $customer->id),
-            $this->payload(['start_date' => now()->toDateString()], ['hsn' => '0603', 'tsn' => 'bjm'])
+            $this->payload([
+                'insurer' => 'ADAC Autoversicherung AG',
+                'start_date' => now()->toDateString(),
+            ], ['hsn' => '0603', 'tsn' => 'bjm'])
         )->assertSessionHasErrors('vehicle_overlap');
     }
 

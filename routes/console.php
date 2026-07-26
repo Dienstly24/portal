@@ -39,6 +39,12 @@ Schedule::command('documents:prune-unassigned')->dailyAt('03:50');
 // am Stichtag -> aktiv + Kasse des Kunden umstellen)
 Schedule::command('health:apply-due-switches')->dailyAt('06:30');
 
+// 05:15 — Erreichte Vertragsenden anwenden: "gekuendigt zum X" wird am Tag X
+// wirklich cancelled (Model-Hook bucht die Storno-Gegenbuchung der
+// Vermittler-Provision), E-Scooter werden nach dem Saisonende expired.
+// Status, Zahlen und Tab-Filter folgen so von selbst der Realitaet.
+Schedule::command('contracts:apply-endings')->dailyAt('05:15');
+
 // Stuendlich tagsueber — automatische Portal-Einladungen: neue Kunden ohne
 // Klick einladen, Bestand alphabetisch im Tagesbudget (~100/Tag) abarbeiten,
 // nicht Registrierte alle 7 Tage erinnern. Laeuft nur, wenn der Betreiber den

@@ -7,6 +7,16 @@ use Illuminate\Support\Str;
 class Contract extends Model {
     protected $keyType = 'string';
     public $incrementing = false;
+
+    /**
+     * Transientes Flag (nicht persistiert): true, wenn der Statuswechsel auf
+     * cancelled ein NATUERLICHES Vertragsende ist (Wechsel-Kette bzw.
+     * Tages-Job contracts:apply-endings). Dann KEIN Provisions-Storno - die
+     * Vermittler-Provision gibt es einmalig je Verkauf und sie bleibt bei
+     * regulaerem Vertragsende verdient (Betreiber-Klarstellung 26.07.2026).
+     * Storno weiterhin bei Loeschung und manueller Stornierung im Formular.
+     */
+    public bool $endsWithoutStorno = false;
     protected $fillable = ['customer_id','contract_number','type','type_other','subtype','insurer','status','start_date','end_date','pdf_path','notes','cancellation_date','premium_amount','premium_interval'];
 
     protected $casts = [
@@ -190,18 +200,13 @@ class Contract extends Model {
     /**
      * Wirksames Vertragsende bei erfasster Kuendigung (Betreiber-Feedback
      * 26.07.2026): cancellation_date ist das EINREICHUNGS-Datum der
-     * Kuendigung (meist "heute"), der Vertrag endet aber erst zum Ablauf
-     * (end_date). Regeln:
-     *  - Ablauf hinterlegt: die Kuendigung wirkt zum Ablauf. KFZ-Sonderfall
-     *    nach deutschem Recht (Frist EIN MONAT zum Ablauf): geht die
-     *    Kuendigung spaeter als einen Monat vor Ablauf ein, verlaengert
-     *    sich der Vertrag um ein weiteres Versicherungsjahr - der Ablauf
-     *    wird jahresweise vorgerueckt, bis die Frist gewahrt ist.
-     *    (Sonderkuendigung nach Schaden/Beitragserhoehung: dann den Ablauf
-     *    manuell auf das tatsaechliche Ende setzen.)
-     *  - Kein Ablauf hinterlegt: das erfasste Datum selbst gilt als Ende
-     *    (Altdaten bzw. bereits als Enddatum gepflegte Kuendigungen).
-     *  - Nie frueher als das Einreichungsdatum.
+     * Kuendigung (meist "heute"), der Vertrag endet zum Ablauf (end_date).
+     * Ohne Ablauf gilt das erfasste Datum selbst als Ende (Altdaten/
+     * Sonderkuendigung); nie frueher als die Einreichung. Die deutsche
+     * Kuendigungsfrist (KFZ: EIN MONAT zum Ablauf) prueft das Formular als
+     * LIVE-HINWEIS beim Erfassen - gespeicherte Daten werden bewusst nicht
+     * still "korrigiert": der Betreiber erfasst Fakten (inkl.
+     * Sonderkuendigung und Wechsel-Kette), keine erfundenen Daten.
      */
     public function effectiveCancellationDate(): ?Carbon {
         if (empty($this->cancellation_date)) {
@@ -212,14 +217,40 @@ class Contract extends Model {
         if (!$end) {
             return $submitted;
         }
-        if ($this->type === 'kfz') {
-            $guard = 0;
-            while ($end->copy()->subMonthNoOverflow()->lessThan($submitted) && $guard++ < 10) {
-                $end = $end->addYear();
-            }
-            return $end;
-        }
         return $end->greaterThanOrEqualTo($submitted) ? $end : $submitted;
+    }
+
+    /**
+     * Zwei Versicherer-Angaben grob vergleichen ("ADAC Autoversicherung AG"
+     * = "ADAC"): Kleinschreibung, Umlaute gefaltet, Rechtsform- und
+     * Branchenwoerter entfernt, dann Gleichheit oder Enthaltensein. Fehlt
+     * eine Angabe (oder bleibt nichts uebrig), gilt sie als passend.
+     * Genutzt vom Dokumenten-Eingang (Duplikat vs. Wechsel) und der
+     * Wechsel-Automatik im Admin-Formular.
+     */
+    public static function insurersLookAlike(?string $a, ?string $b): bool {
+        $na = self::normalizeInsurerName($a);
+        $nb = self::normalizeInsurerName($b);
+        if ($na === '' || $nb === '') {
+            return true;
+        }
+        return $na === $nb || str_contains($na, $nb) || str_contains($nb, $na);
+    }
+
+    /** Versicherer-Namen auf seinen unterscheidenden Kern reduzieren. */
+    private static function normalizeInsurerName(?string $name): string {
+        $n = mb_strtolower(trim((string) $name));
+        if ($n === '') {
+            return '';
+        }
+        $n = strtr($n, ['ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue', 'ß' => 'ss']);
+        $n = (string) preg_replace('/[^a-z0-9 ]+/', ' ', $n);
+        $stop = ['ag', 'se', 'gmbh', 'kg', 'vvag', 'a', 'g', 'e', 'v', 'co',
+            'versicherung', 'versicherungs', 'versicherungen', 'versicherungsverein',
+            'autoversicherung', 'krankenversicherung', 'lebensversicherung',
+            'sachversicherung', 'direktversicherung', 'allgemeine', 'deutschland'];
+        $words = array_filter(explode(' ', $n), fn ($w) => $w !== '' && !in_array($w, $stop, true));
+        return implode(' ', $words);
     }
 
     /**
@@ -331,7 +362,9 @@ class Contract extends Model {
         static::created(fn ($m) => app(\App\Services\Provision\ContractProvisionService::class)
             ->createForContract($m));
         static::updated(function ($m) {
-            if ($m->wasChanged('status') && $m->status === 'cancelled') {
+            // endsWithoutStorno: natuerliches Vertragsende (Wechsel/Tages-Job)
+            // laesst die einmalige Verkaufs-Provision unangetastet.
+            if ($m->wasChanged('status') && $m->status === 'cancelled' && !$m->endsWithoutStorno) {
                 app(\App\Services\Provision\ContractProvisionService::class)
                     ->createStornoForContract($m, 'Vertrag gekuendigt/storniert');
             }

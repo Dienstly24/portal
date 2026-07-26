@@ -569,6 +569,14 @@ class DocumentIntakeService
                 'sf_liability_real_class' => $kfz['sf_liability_real_class'] ?? null,
                 'sf_comprehensive_class' => $kfz['sf_comprehensive_class'] ?? null,
             ], fn ($v) => $v !== null));
+
+            // Wechsel-Automatik (Betreiber-Vorgabe 26.07.2026): laeuft fuer
+            // dasselbe Fahrzeug noch ein Vertrag eines ANDEREN Versicherers,
+            // wird dort automatisch die Kuendigung erfasst - der Altvertrag
+            // endet zum Beginn des neuen (nahtlose Kette in der Akte).
+            if ($type === 'kfz') {
+                $this->recordSwitchIfAny($contract, $kfz, $byUserId);
+            }
         }
 
         // Energie-Vertrag (Strom/Gas): Zaehler-/Tarifdaten aus dem Auftrag
@@ -749,38 +757,43 @@ class DocumentIntakeService
     }
 
     /**
-     * Zwei Versicherer-Angaben grob vergleichen ("ADAC Autoversicherung AG"
-     * = "ADAC"): Kleinschreibung, Umlaute gefaltet, Rechtsform- und
-     * Branchenwoerter entfernt, dann Gleichheit oder Enthaltensein. Fehlt
-     * eine Angabe (oder bleibt nach der Normalisierung nichts uebrig), gilt
-     * sie als passend - Dokumente ohne klare Versicherer-Nennung sollen wie
-     * bisher dem Bestandsvertrag zugeordnet werden.
+     * Zwei Versicherer-Angaben grob vergleichen - zentral im Contract-Modell
+     * (auch die Wechsel-Automatik im Admin-Formular nutzt dieselbe Logik).
      */
     private function insurersLookAlike(?string $a, ?string $b): bool
     {
-        $na = $this->normalizeInsurerName($a);
-        $nb = $this->normalizeInsurerName($b);
-        if ($na === '' || $nb === '') {
-            return true;
-        }
-        return $na === $nb || str_contains($na, $nb) || str_contains($nb, $na);
+        return Contract::insurersLookAlike($a, $b);
     }
 
-    /** Versicherer-Namen auf seinen unterscheidenden Kern reduzieren. */
-    private function normalizeInsurerName(?string $name): string
+    /**
+     * Wechsel-Automatik nach dem Anlegen eines neuen KFZ-Vertrags aus einem
+     * Dokument: laeuft fuer dasselbe Fahrzeug (FIN/Kennzeichen) noch ein
+     * Vertrag eines ANDEREN Versicherers in den Zeitraum hinein, wird dort
+     * die Kuendigung erfasst (eingereicht heute, Ablauf = Beginn des neuen).
+     * Ohne Beginn im Dokument passiert bewusst nichts (keine erfundenen
+     * Daten); gleicher Versicherer ist kein Wechsel (Duplikat-Schutz hat
+     * vorher schon zugeordnet).
+     */
+    private function recordSwitchIfAny(Contract $neu, array $kfz, ?int $byUserId): void
     {
-        $n = mb_strtolower(trim((string) $name));
-        if ($n === '') {
-            return '';
+        if (empty($neu->start_date)) {
+            return;
         }
-        $n = strtr($n, ['ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue', 'ß' => 'ss']);
-        $n = (string) preg_replace('/[^a-z0-9 ]+/', ' ', $n);
-        $stop = ['ag', 'se', 'gmbh', 'kg', 'vvag', 'a', 'g', 'e', 'v', 'co',
-            'versicherung', 'versicherungs', 'versicherungen', 'versicherungsverein',
-            'autoversicherung', 'krankenversicherung', 'lebensversicherung',
-            'sachversicherung', 'direktversicherung', 'allgemeine', 'deutschland'];
-        $words = array_filter(explode(' ', $n), fn ($w) => $w !== '' && !in_array($w, $stop, true));
-        return implode(' ', $words);
+        $conflict = app(\App\Services\VehicleOverlapGuard::class)->findConflict($neu, [
+            'vin' => $kfz['vin'] ?? null,
+            'license_plate' => $kfz['license_plate'] ?? null,
+            'hsn' => $kfz['hsn'] ?? null,
+            'tsn' => $kfz['tsn'] ?? null,
+        ], (string) $neu->id);
+        if (!$conflict || Contract::insurersLookAlike($conflict->insurer, $neu->insurer)) {
+            return;
+        }
+        app(\App\Services\ContractSwitchService::class)->recordCancellationForSwitch(
+            $conflict,
+            \Illuminate\Support\Carbon::parse($neu->start_date),
+            'document',
+            $byUserId,
+        );
     }
 
     /**

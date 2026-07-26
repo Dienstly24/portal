@@ -341,8 +341,29 @@ class AdminController extends Controller
     public function contractStore(Request $request, $customerId) {
         $this->authorizeCustomerAccess($customerId);
         $this->validateContract($request);
-        if ($conflictError = $this->vehicleOverlapError($request, (string) $customerId)) {
-            return back()->withErrors(['vehicle_overlap' => $conflictError])->withInput();
+
+        // Doppelversicherungs-Schutz + Wechsel-Automatik (26.07.2026):
+        // Gleiches Fahrzeug, ANDERER Versicherer = Wechsel -> am Altvertrag
+        // wird automatisch die Kuendigung erfasst (eingereicht heute, Ablauf
+        // = Beginn des neuen Vertrags). Gleicher Versicherer = Duplikat ->
+        // Fehler. Ueberschneidung ohne Beginn laesst sich nicht verketten.
+        $switchNote = '';
+        if ($conflict = $this->findVehicleConflict($request, (string) $customerId)) {
+            $guard = app(\App\Services\VehicleOverlapGuard::class);
+            $istWechsel = !Contract::insurersLookAlike($conflict->insurer, $request->insurer);
+            if (!$istWechsel) {
+                return back()->withErrors(['vehicle_overlap' => $guard->conflictMessage($conflict)])->withInput();
+            }
+            if (!$request->filled('start_date')) {
+                return back()->withErrors(['vehicle_overlap' => 'Versicherer-Wechsel erkannt: Bitte den Beginn des neuen Vertrags angeben – der Altvertrag (' . $conflict->insurer . ') wird dann automatisch zu diesem Tag gekündigt.'])->withInput();
+            }
+            app(\App\Services\ContractSwitchService::class)->recordCancellationForSwitch(
+                $conflict, \Illuminate\Support\Carbon::parse($request->start_date), 'system', auth()->id());
+            if ($rest = $this->findVehicleConflict($request, (string) $customerId)) {
+                return back()->withErrors(['vehicle_overlap' => $guard->conflictMessage($rest)])->withInput();
+            }
+            $ende = $conflict->fresh()->effectiveCancellationDate();
+            $switchNote = ' Wechsel erkannt: ' . $conflict->insurer . ' wurde automatisch gekündigt zum ' . ($ende ? $ende->format('d.m.Y') : '—') . '.';
         }
 
         $contract = Contract::create([
@@ -367,7 +388,8 @@ class AdminController extends Controller
 
         $this->syncContractDetails($contract, $request);
 
-        return redirect()->route('admin.customer', $customerId)->with('success', 'Vertrag erfolgreich hinzugefügt.');
+        return redirect()->route('admin.customer', $customerId)
+            ->with('success', 'Vertrag erfolgreich hinzugefügt.' . $switchNote);
     }
 
     public function contractEdit($id) {
@@ -428,12 +450,14 @@ class AdminController extends Controller
     }
 
     /**
-     * Doppelversicherungs-Schutz beim Anlegen/Bearbeiten von KFZ-Vertraegen
-     * (Betreiber-Vorgabe 26.07.2026): dasselbe Fahrzeug darf keine zwei
-     * Vertraege mit ueberschneidendem Zeitraum haben. Liefert die deutsche
-     * Fehlermeldung oder null, wenn kein Konflikt besteht.
+     * Kollidierenden KFZ-Bestandsvertrag zu den Formulardaten suchen
+     * (Doppelversicherungs-Schutz, Betreiber-Vorgabe 26.07.2026): dasselbe
+     * Fahrzeug darf keine zwei Vertraege mit ueberschneidendem Zeitraum
+     * haben. Beim ANLEGEN loest ein anderer Versicherer die
+     * Wechsel-Automatik aus (contractStore), beim BEARBEITEN wird nur
+     * blockiert - Bearbeiten veraendert nie stillschweigend Altvertraege.
      */
-    private function vehicleOverlapError(Request $request, string $customerId, ?string $ignoreId = null): ?string {
+    private function findVehicleConflict(Request $request, string $customerId, ?string $ignoreId = null): ?Contract {
         if ($request->type !== 'kfz') {
             return null;
         }
@@ -446,9 +470,14 @@ class AdminController extends Controller
             'end_date' => $request->end_date,
             'cancellation_date' => $request->cancellation_date,
         ]);
-        $guard = app(\App\Services\VehicleOverlapGuard::class);
-        $conflict = $guard->findConflict($candidate, (array) $request->input('vehicle', []), $ignoreId);
-        return $conflict ? $guard->conflictMessage($conflict) : null;
+        return app(\App\Services\VehicleOverlapGuard::class)
+            ->findConflict($candidate, (array) $request->input('vehicle', []), $ignoreId);
+    }
+
+    /** Fehlermeldung fuer contractUpdate (nur blockieren, nie automatisieren). */
+    private function vehicleOverlapError(Request $request, string $customerId, ?string $ignoreId = null): ?string {
+        $conflict = $this->findVehicleConflict($request, $customerId, $ignoreId);
+        return $conflict ? app(\App\Services\VehicleOverlapGuard::class)->conflictMessage($conflict) : null;
     }
 
     /** Gemeinsame Validierung fuer Anlegen und Bearbeiten von Vertraegen. */
