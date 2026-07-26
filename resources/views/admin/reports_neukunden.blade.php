@@ -346,7 +346,8 @@
                         →
                         {{ $v->end_date ? \Carbon\Carbon::parse($v->end_date)->format('d.m.Y') : 'offen' }}
                     </span>
-                    <span class="vt-status vt-{{ $v->status }}">{{ ['active' => 'Aktiv', 'pending' => 'In Bearbeitung', 'cancelled' => 'Gekündigt', 'expired' => 'Abgelaufen'][$v->status] ?? $v->status }}</span>
+                    @php $st = $v->displayStatus(); @endphp
+                    <span class="vt-status vt-{{ $st['key'] }}">{{ $st['label'] }}</span>
                 </a>
                 @empty
                 <span style="font-size:12.5px;color:var(--ink-soft);">Kein Vertrag</span>
@@ -385,7 +386,8 @@
 .vt-row:hover span:nth-child(2) { text-decoration:underline; }
 .vt-status { font-size:11px; font-weight:600; padding:2px 8px; border-radius:999px; }
 .vt-active { background:#D9F4E6; color:#0E7A41; }
-.vt-pending { background:#F7E7D6; color:#B5651D; }
+.vt-active_upcoming { background:#E6F1FB; color:#185FA5; }
+.vt-pending, .vt-cancelled_upcoming { background:#F7E7D6; color:#B5651D; }
 .vt-cancelled, .vt-expired { background:#F9E3E3; color:#A32D2D; }
 </style>
 <script>

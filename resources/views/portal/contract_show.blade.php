@@ -16,7 +16,8 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
             <div class="page-title" style="margin-bottom:2px;">{{ $contract->insurer }}</div>
             <div class="page-sub" style="margin-bottom:0;">{{ $contract->typeLabel() }}</div>
         </div>
-        <span class="badge badge-{{ $contract->status === 'active' ? 'active' : 'pending' }}" style="margin-left:auto;">{{ $contract->status === 'active' ? 'Aktiv' : ucfirst($contract->status) }}</span>
+        @php $st = $contract->displayStatus(); @endphp
+        <span class="badge badge-{{ $st['badge'] }}" style="margin-left:auto;white-space:nowrap;">{{ __($st['label_key'], $st['params']) }}</span>
     </div>
 </div>
 

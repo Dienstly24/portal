@@ -15,7 +15,7 @@
             <td>{{ $v->type }}</td>
             <td>{{ $v->insurer ?? '—' }}</td>
             <td style="color:var(--ink-soft);">{{ $v->contract_number ?? '—' }}</td>
-            <td>{{ $v->status }}</td>
+            <td>{{ $v->displayStatus()['label'] }}</td>
         </tr>
         @empty
         <tr><td colspan="4" style="text-align:center;color:var(--ink-soft);padding:20px;">Keine Verträge hinterlegt.</td></tr>

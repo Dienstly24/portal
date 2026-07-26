@@ -1,6 +1,7 @@
 <?php
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 class Contract extends Model {
@@ -176,6 +177,68 @@ class Contract extends Model {
 
     public function typeIcon(): string {
         return self::TYPES[$this->type]['icon'] ?? self::LEGACY_TYPES[$this->type]['icon'] ?? '📋';
+    }
+
+    /** Roh-Status -> deutsches Label (eine Quelle fuer alle Listen). */
+    public const STATUS_LABELS = [
+        'active'    => 'Aktiv',
+        'pending'   => 'In Bearbeitung',
+        'cancelled' => 'Gekündigt',
+        'expired'   => 'Abgelaufen',
+    ];
+
+    /**
+     * Schlauer Anzeige-Status (Betreiber-Feedback 25.07.2026): das rohe
+     * status-Feld allein greift zu kurz. Eine erfasste Kuendigung
+     * (cancellation_date) erscheint als "Gekuendigt zum <Datum>", ein
+     * abgeschlossener Vertrag mit Beginn in der Zukunft als
+     * "Aktiv ab <Datum>". Der GESPEICHERTE Status bleibt unveraendert -
+     * Statistiken, Filter und der Provisions-Storno haengen daran; hier
+     * geht es nur um die Anzeige in Listen und Detailseiten.
+     *
+     * Rueckgabe fuer die Views:
+     *   key       maschinenlesbarer Zustand (active, active_upcoming,
+     *             cancelled_upcoming, cancelled, pending, expired)
+     *   badge     Badge-Ton der Layouts (active|open|pending|rejected|closed)
+     *   label     fertiges deutsches Label ("Gekündigt zum 03.09.2026")
+     *   label_key Uebersetzungs-Key fuer __() im Kundenportal (:date-Platzhalter)
+     *   params    Parameter fuer __() ([] oder ['date' => '03.09.2026'])
+     */
+    public function displayStatus(): array {
+        $today = Carbon::today();
+        $cancellation = $this->cancellation_date ? Carbon::parse($this->cancellation_date)->startOfDay() : null;
+        $start = $this->start_date ? Carbon::parse($this->start_date)->startOfDay() : null;
+
+        // Kuendigung erfasst: zaehlt fuer laufende UND bereits auf
+        // cancelled gestellte Vertraege. Zukuenftiges Datum = Vertrag
+        // laeuft noch bis dahin (orange), erreichtes Datum = beendet (rot).
+        if ($cancellation && in_array($this->status, ['active', 'cancelled'], true)) {
+            $date = $cancellation->format('d.m.Y');
+            $upcoming = $cancellation->greaterThan($today);
+            return [
+                'key'       => $upcoming ? 'cancelled_upcoming' : 'cancelled',
+                'badge'     => $upcoming ? 'pending' : 'rejected',
+                'label'     => 'Gekündigt zum ' . $date,
+                'label_key' => 'Gekündigt zum :date',
+                'params'    => ['date' => $date],
+            ];
+        }
+
+        // Abgeschlossen, aber der Beginn liegt in der Zukunft: "Aktiv ab".
+        if ($this->status === 'active' && $start && $start->greaterThan($today)) {
+            $date = $start->format('d.m.Y');
+            return [
+                'key'       => 'active_upcoming',
+                'badge'     => 'open',
+                'label'     => 'Aktiv ab ' . $date,
+                'label_key' => 'Aktiv ab :date',
+                'params'    => ['date' => $date],
+            ];
+        }
+
+        $label = self::STATUS_LABELS[$this->status] ?? ucfirst((string) $this->status);
+        $badge = ['active' => 'active', 'pending' => 'pending', 'cancelled' => 'rejected', 'expired' => 'closed'][$this->status] ?? 'pending';
+        return ['key' => (string) $this->status, 'badge' => $badge, 'label' => $label, 'label_key' => $label, 'params' => []];
     }
 
     protected static function boot() {
