@@ -377,8 +377,10 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::post('/notifications/{id}/read', [\App\Http\Controllers\InternalNotificationController::class, 'markRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [\App\Http\Controllers\InternalNotificationController::class, 'markAllRead'])->name('notifications.read_all');
 
-    // Aufgaben
+    // Aufgaben (inkl. Sofort-Kundensuche fuer das Aufgaben-Formular)
     Route::get('/tasks', [TaskController::class, 'index'])->name('tasks');
+    Route::get('/tasks/kunden-suche', [TaskController::class, 'customerSearch'])
+        ->middleware('throttle:120,1')->name('tasks.customer_search');
     Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
     Route::put('/tasks/{id}', [TaskController::class, 'update'])->name('tasks.update');
     Route::delete('/tasks/{id}', [TaskController::class, 'destroy'])->name('tasks.destroy');

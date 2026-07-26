@@ -29,6 +29,14 @@ Schedule::command('activity:prune')->dailyAt('03:45');
 // 08:15 — Fristen-Watchdog Dokumentenanfragen (Phase 3): Kunden-Erinnerung + Überfälligkeits-Hinweis
 Schedule::command('document-requests:remind')->dailyAt('08:15');
 
+// 07:45 — Wiedervorlage: EIN gebuendelter Glocken-Hinweis je Mitarbeiter
+// ueber heute faellige + ueberfaellige Aufgaben (Aufgaben-Ausbau 26.07.2026)
+Schedule::command('tasks:remind')->dailyAt('07:45');
+
+// Stuendlich tagsueber — geplante Aufgaben-E-Mails ("in 14 Tagen nachfassen")
+// am Stichtag an den Kunden versenden; erledigte Aufgaben versenden nie.
+Schedule::command('tasks:send-auto-emails')->hourly()->between('8:00', '18:00')->withoutOverlapping();
+
 // Alle 10 Minuten — Sicherheitsnetz Smart Document Upload: haengende KI-Analysen neu anstossen
 Schedule::command('documents:analyze-pending')->everyTenMinutes()->withoutOverlapping();
 

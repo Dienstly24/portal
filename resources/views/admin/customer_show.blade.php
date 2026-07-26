@@ -32,6 +32,7 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
             @if(in_array(auth()->user()->role, ['admin','manager','support']) || auth()->user()->can_send_emails)
             <a href="{{ route('admin.email.compose', ['customer_id' => $customer->id]) }}" class="btn btn-ghost">✉️ E-Mail verfassen</a>
             @endif
+            <a href="{{ route('admin.tasks', ['customer_id' => $customer->id, 'neu' => 1]) }}" class="btn btn-ghost">✅ Aufgabe / Wiedervorlage</a>
             <a href="{{ route('admin.customer.edit', $customer->id) }}" class="btn btn-ghost">✏️ Bearbeiten</a>
             <a href="{{ route('admin.contract.create', $customer->id) }}" class="btn btn-gold">+ Vertrag hinzufügen</a>
         </div>
