@@ -195,15 +195,15 @@ class KontaktdatenBlockParser implements DocumentTemplateParser
     }
 
     /**
-     * Ein ZWEITES Datum, das direkt neben dem Geburtsdatum steht (durch "/",
-     * "-" oder Leerzeichen getrennt, z.B. "04.08.75/05.09.17"). Der Betrieb
-     * schreibt dort oft das Datum der Bescheinigung / des Aufenthaltstitels.
-     * Rueckgabe im Anzeigeformat (TT.MM.JJJJ) oder null. Das Geburtsdatum
-     * (erstes Datum) bleibt davon unberuehrt.
+     * Ein ZWEITES Datum, das direkt neben dem Geburtsdatum steht - getrennt
+     * durch "/", "-", "&" oder nur Leerzeichen (z.B. "04.08.75/05.09.17" oder
+     * "00.00.00 & 00.00.00"). Der Betrieb schreibt dort oft das Datum der
+     * Bescheinigung / des Aufenthaltstitels. Rueckgabe im Anzeigeformat
+     * (TT.MM.JJJJ) oder null. Das Geburtsdatum (erstes Datum) bleibt unberuehrt.
      */
     private function secondDateBesideBirth(string $text): ?string
     {
-        if (!preg_match('#\b\d{2}\.\d{2}\.(?:\d{4}|\d{2})\s*[/\-]\s*(\d{2})\.(\d{2})\.(\d{4}|\d{2})\b#u', $text, $m)) {
+        if (!preg_match('#\b\d{2}\.\d{2}\.(?:\d{4}|\d{2})\s*[/\-&]\s*(\d{2})\.(\d{2})\.(\d{4}|\d{2})\b#u', $text, $m)) {
             return null;
         }
         $yy = $m[3];
