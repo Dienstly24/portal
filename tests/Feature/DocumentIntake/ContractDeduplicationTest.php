@@ -157,6 +157,53 @@ class ContractDeduplicationTest extends TestCase
         $this->assertSame(2, Contract::where('customer_id', $customer->id)->count());
     }
 
+    // Betreiber-Vorgabe 26.07.2026: ein Dokument des NEUEN Versicherers fuer
+    // dasselbe Fahrzeug ist ein WECHSEL -> eigener Vertrag (alter gekuendigt
+    // zum X, neuer aktiv ab X), KEIN Update des Altvertrags.
+    public function test_insurer_switch_creates_separate_contract_for_same_plate(): void
+    {
+        $customer = $this->customer();
+        $intake = app(DocumentIntakeService::class);
+
+        $first = $this->doc([
+            'versicherung' => ['insurer' => 'ADAC Autoversicherung AG', 'sparte' => 'kfz', 'start_date' => '2025-09-03'],
+            'kfz' => ['license_plate' => 'LÜN-G 1110'],
+        ]);
+        $alt = $intake->createContractFromExtraction($first, $customer, null);
+
+        $second = $this->doc([
+            'versicherung' => ['insurer' => 'Neodigital', 'sparte' => 'kfz', 'start_date' => '2026-09-03'],
+            'kfz' => ['license_plate' => 'LUN-G 1110'],
+        ]);
+        $neu = $intake->createContractFromExtraction($second, $customer, null);
+
+        $this->assertNotSame($alt->id, $neu->id);
+        $this->assertSame(2, Contract::where('customer_id', $customer->id)->count());
+    }
+
+    // Gleicher Versicherer (Kurzform "ADAC"), Kennzeichen einmal mit und
+    // einmal ohne Umlaut geschrieben -> dasselbe Fahrzeug, KEIN Duplikat.
+    public function test_umlaut_plate_variant_with_same_insurer_updates_existing(): void
+    {
+        $customer = $this->customer();
+        $intake = app(DocumentIntakeService::class);
+
+        $first = $this->doc([
+            'versicherung' => ['insurer' => 'ADAC Autoversicherung AG', 'sparte' => 'kfz', 'premium_amount' => 116.68],
+            'kfz' => ['license_plate' => 'LÜN-G 1110'],
+        ]);
+        $contract = $intake->createContractFromExtraction($first, $customer, null);
+
+        $second = $this->doc([
+            'versicherung' => ['insurer' => 'ADAC', 'sparte' => 'kfz', 'premium_amount' => 121.50],
+            'kfz' => ['license_plate' => 'LUN-G1110'],
+        ]);
+        $result = $intake->createContractFromExtraction($second, $customer, null);
+
+        $this->assertSame($contract->id, $result->id);
+        $this->assertSame(1, Contract::where('customer_id', $customer->id)->count());
+    }
+
     public function test_empty_new_value_never_overwrites_existing(): void
     {
         $customer = $this->customer();

@@ -681,12 +681,14 @@ class DocumentIntakeService
      * Bestehenden Vertrag des Kunden anhand der Vertrags-Identitaet suchen -
      * Grundlage des Duplikat-Schutzes. Geprueft wird (in dieser Reihenfolge,
      * jeweils streng):
-     *   1. Vertragsnummer (Vertragsnummer)
-     *   2. Fahrzeug-Identnummer (FIN/VIN)
-     *   3. Kennzeichen (normalisiert)
+     *   1. Vertragsnummer (versichererunabhaengig - gleiche Nummer = gleiche Police)
+     *   2. Fahrzeug-Identnummer (FIN/VIN) - nur beim selben Versicherer
+     *   3. Kennzeichen (normalisiert, umlaut-tolerant) - nur beim selben Versicherer
      *   4. Energie: MaLo-ID bzw. Zaehlernummer
      * Der erste Treffer gewinnt. Bewusst nur harte Identitaetsmerkmale, damit
      * nicht faelschlich zwei verschiedene Vertraege verschmolzen werden.
+     * Fahrzeug-Treffer bei ANDEREM Versicherer sind ein Wechsel und werden
+     * absichtlich NICHT zugeordnet -> eigener Vertrag (26.07.2026).
      */
     public function findExistingContractByIdentity(Customer $customer, array $data): ?Contract
     {
@@ -703,27 +705,30 @@ class DocumentIntakeService
             }
         }
 
-        // 2. FIN/VIN (nur Leerzeichen entfernen, Grossschreibung normalisieren)
-        if (!blank($kfz['vin'] ?? null)) {
-            $vin = mb_strtoupper((string) preg_replace('/\s+/u', '', $kfz['vin']));
-            $byVin = Contract::where('customer_id', $customer->id)
-                ->whereHas('vehicleDetail', function ($q) use ($vin) {
-                    $q->whereRaw("replace(upper(vin), ' ', '') = ?", [$vin]);
-                })->first();
-            if ($byVin) {
-                return $byVin;
-            }
-        }
-
-        // 3. Kennzeichen (Trennzeichen entfernen, Umlaut-Ortskennung erhalten)
-        if (!blank($kfz['license_plate'] ?? null)) {
-            $plate = mb_strtoupper((string) preg_replace('/[\s\-]+/u', '', $kfz['license_plate']));
-            $byPlate = Contract::where('customer_id', $customer->id)
-                ->whereHas('vehicleDetail', function ($q) use ($plate) {
-                    $q->whereRaw("replace(replace(upper(license_plate), '-', ''), ' ', '') = ?", [$plate]);
-                })->first();
-            if ($byPlate) {
-                return $byPlate;
+        // 2./3. Fahrzeug-Identitaet: erst FIN/VIN, dann Kennzeichen - in PHP
+        // verglichen, damit Umlaut-Schreibweisen dasselbe Fahrzeug treffen
+        // ("LÜN-G 1110" = "LUN-G1110"; SQL-upper() kann keine Umlaute falten).
+        // WICHTIG (Betreiber-Vorgabe 26.07.2026): die Fahrzeug-Identitaet
+        // greift nur beim SELBEN Versicherer. Ein Dokument eines ANDEREN
+        // Versicherers fuer dasselbe Fahrzeug ist ein WECHSEL und muss ein
+        // eigener Vertrag werden (alter gekuendigt zum X, neuer aktiv ab X) -
+        // kein Update des Altvertrags. Ohne Versicherer-Angabe im Dokument
+        // bleibt es beim bisherigen Verhalten (Zuordnung zum Bestand).
+        $vin = ContractVehicleDetail::normalizeVin($kfz['vin'] ?? null);
+        $plate = ContractVehicleDetail::normalizePlate($kfz['license_plate'] ?? null);
+        if ($vin || $plate) {
+            $vehicleContracts = Contract::where('customer_id', $customer->id)
+                ->whereHas('vehicleDetail')->with('vehicleDetail')->get();
+            foreach (['vin', 'plate'] as $merkmal) {
+                foreach ($vehicleContracts as $vehicleContract) {
+                    $veh = $vehicleContract->vehicleDetail;
+                    $hit = $merkmal === 'vin'
+                        ? ($vin && $vin === ContractVehicleDetail::normalizeVin($veh->vin))
+                        : ($plate && $plate === ContractVehicleDetail::normalizePlate($veh->license_plate));
+                    if ($hit && $this->insurersLookAlike($vehicleContract->insurer, $ins['insurer'] ?? null)) {
+                        return $vehicleContract;
+                    }
+                }
             }
         }
 
@@ -741,6 +746,41 @@ class DocumentIntakeService
         }
 
         return null;
+    }
+
+    /**
+     * Zwei Versicherer-Angaben grob vergleichen ("ADAC Autoversicherung AG"
+     * = "ADAC"): Kleinschreibung, Umlaute gefaltet, Rechtsform- und
+     * Branchenwoerter entfernt, dann Gleichheit oder Enthaltensein. Fehlt
+     * eine Angabe (oder bleibt nach der Normalisierung nichts uebrig), gilt
+     * sie als passend - Dokumente ohne klare Versicherer-Nennung sollen wie
+     * bisher dem Bestandsvertrag zugeordnet werden.
+     */
+    private function insurersLookAlike(?string $a, ?string $b): bool
+    {
+        $na = $this->normalizeInsurerName($a);
+        $nb = $this->normalizeInsurerName($b);
+        if ($na === '' || $nb === '') {
+            return true;
+        }
+        return $na === $nb || str_contains($na, $nb) || str_contains($nb, $na);
+    }
+
+    /** Versicherer-Namen auf seinen unterscheidenden Kern reduzieren. */
+    private function normalizeInsurerName(?string $name): string
+    {
+        $n = mb_strtolower(trim((string) $name));
+        if ($n === '') {
+            return '';
+        }
+        $n = strtr($n, ['ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue', 'ß' => 'ss']);
+        $n = (string) preg_replace('/[^a-z0-9 ]+/', ' ', $n);
+        $stop = ['ag', 'se', 'gmbh', 'kg', 'vvag', 'a', 'g', 'e', 'v', 'co',
+            'versicherung', 'versicherungs', 'versicherungen', 'versicherungsverein',
+            'autoversicherung', 'krankenversicherung', 'lebensversicherung',
+            'sachversicherung', 'direktversicherung', 'allgemeine', 'deutschland'];
+        $words = array_filter(explode(' ', $n), fn ($w) => $w !== '' && !in_array($w, $stop, true));
+        return implode(' ', $words);
     }
 
     /**

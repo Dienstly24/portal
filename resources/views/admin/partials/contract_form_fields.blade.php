@@ -127,7 +127,12 @@
 .end-mode-chip input:focus-visible + span{outline:2px solid #17A65B;outline-offset:2px;}
 </style>
 <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;">
-    <div class="field"><label>Kündigungsdatum</label><input type="date" name="cancellation_date" value="{{ $val('cancellation_date', $c && $c->cancellation_date ? \Carbon\Carbon::parse($c->cancellation_date)->format('Y-m-d') : '') }}"></div>
+    <div class="field"><label>Kündigungsdatum <span style="font-weight:400;color:var(--ink-soft);">(eingereicht am)</span></label>
+        <input type="date" id="contract-cancel" name="cancellation_date" value="{{ $val('cancellation_date', $c && $c->cancellation_date ? \Carbon\Carbon::parse($c->cancellation_date)->format('Y-m-d') : '') }}">
+        {{-- Live-Hinweis: wann die Kuendigung wirklich wirkt (KFZ: 1 Monat
+             Frist zum Ablauf, sonst verlaengert sich der Vertrag ums Jahr). --}}
+        <div id="cancel-effect-hint" style="font-size:11.5px;color:var(--ink-soft);margin-top:5px;"></div>
+    </div>
     <div class="field"><label>Notizen</label><input type="text" name="notes" value="{{ $val('notes', $c->notes ?? '') }}" placeholder="Interne Notizen..."></div>
 </div>
 
@@ -333,6 +338,47 @@ function contractEndSync() {
     }
 }
 
+// ---- Kuendigungs-Hinweis: wann wirkt die Kuendigung wirklich? ----
+// Das Kuendigungsdatum ist das EINREICHUNGS-Datum; der Vertrag endet zum
+// Ablauf. KFZ (deutsches Recht): Frist ein Monat zum Ablauf - verpasst
+// verlaengert sich der Vertrag um ein weiteres Versicherungsjahr.
+function contractCancelHint() {
+    const hint = document.getElementById('cancel-effect-hint');
+    const cancel = document.getElementById('contract-cancel');
+    if (!hint || !cancel) return;
+    hint.textContent = ''; hint.style.color = '';
+    if (!cancel.value) return;
+    const submitted = new Date(cancel.value + 'T00:00:00');
+    const endVal = document.getElementById('contract-end').value;
+    if (!endVal) {
+        hint.textContent = 'Kein Ablauf hinterlegt – das erfasste Datum gilt als Vertragsende.';
+        return;
+    }
+    const ablauf = new Date(endVal + 'T00:00:00');
+    const fmt = d => [String(d.getDate()).padStart(2, '0'), String(d.getMonth() + 1).padStart(2, '0'), d.getFullYear()].join('.');
+    // Einen Monat zurueck, Monatsende geklammert (31.03. -> 28./29.02.).
+    const minusMonat = d => {
+        const x = new Date(d); const tag = x.getDate();
+        x.setDate(1); x.setMonth(x.getMonth() - 1);
+        const letzter = new Date(x.getFullYear(), x.getMonth() + 1, 0).getDate();
+        x.setDate(Math.min(tag, letzter));
+        return x;
+    };
+    if (document.getElementById('sparte').value === 'kfz') {
+        let ende = new Date(ablauf); let verpasst = false; let i = 0;
+        while (minusMonat(ende) < submitted && i++ < 10) { ende.setFullYear(ende.getFullYear() + 1); verpasst = true; }
+        if (verpasst) {
+            hint.textContent = '⚠ Kündigungsfrist (1 Monat vor Ablauf) verpasst – wirksam erst zum ' + fmt(ende) + '.';
+            hint.style.color = '#A32D2D';
+        } else {
+            hint.textContent = '✓ Frist gewahrt – Vertrag endet zum Ablauf ' + fmt(ende) + '.';
+            hint.style.color = '#0E7A41';
+        }
+    } else {
+        hint.textContent = 'Kündigung wirksam zum ' + fmt(ablauf >= submitted ? ablauf : submitted) + '.';
+    }
+}
+
 // Heute-Button: setzt den Beginn auf das heutige Datum (lokale Zeit).
 function contractSetToday() {
     const el = document.getElementById('contract-start');
@@ -356,5 +402,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (manual && !manual.checked) { manual.checked = true; document.getElementById('end-mode-hint').textContent = 'Automatik aus – Ablauf manuell gesetzt.'; }
     });
     contractEndSync();
+    // Kuendigungs-Hinweis folgt Kuendigungsdatum, Ablauf und Sparte.
+    ['change', 'input'].forEach(function (ev) {
+        document.getElementById('contract-cancel')?.addEventListener(ev, contractCancelHint);
+        end.addEventListener(ev, contractCancelHint);
+    });
+    document.getElementById('sparte').addEventListener('change', contractCancelHint);
+    contractCancelHint();
 });
 </script>

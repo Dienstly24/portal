@@ -188,13 +188,75 @@ class Contract extends Model {
     ];
 
     /**
-     * Schlauer Anzeige-Status (Betreiber-Feedback 25.07.2026): das rohe
+     * Wirksames Vertragsende bei erfasster Kuendigung (Betreiber-Feedback
+     * 26.07.2026): cancellation_date ist das EINREICHUNGS-Datum der
+     * Kuendigung (meist "heute"), der Vertrag endet aber erst zum Ablauf
+     * (end_date). Regeln:
+     *  - Ablauf hinterlegt: die Kuendigung wirkt zum Ablauf. KFZ-Sonderfall
+     *    nach deutschem Recht (Frist EIN MONAT zum Ablauf): geht die
+     *    Kuendigung spaeter als einen Monat vor Ablauf ein, verlaengert
+     *    sich der Vertrag um ein weiteres Versicherungsjahr - der Ablauf
+     *    wird jahresweise vorgerueckt, bis die Frist gewahrt ist.
+     *    (Sonderkuendigung nach Schaden/Beitragserhoehung: dann den Ablauf
+     *    manuell auf das tatsaechliche Ende setzen.)
+     *  - Kein Ablauf hinterlegt: das erfasste Datum selbst gilt als Ende
+     *    (Altdaten bzw. bereits als Enddatum gepflegte Kuendigungen).
+     *  - Nie frueher als das Einreichungsdatum.
+     */
+    public function effectiveCancellationDate(): ?Carbon {
+        if (empty($this->cancellation_date)) {
+            return null;
+        }
+        $submitted = Carbon::parse($this->cancellation_date)->startOfDay();
+        $end = $this->end_date ? Carbon::parse($this->end_date)->startOfDay() : null;
+        if (!$end) {
+            return $submitted;
+        }
+        if ($this->type === 'kfz') {
+            $guard = 0;
+            while ($end->copy()->subMonthNoOverflow()->lessThan($submitted) && $guard++ < 10) {
+                $end = $end->addYear();
+            }
+            return $end;
+        }
+        return $end->greaterThanOrEqualTo($submitted) ? $end : $submitted;
+    }
+
+    /**
+     * Ende des Versicherungsschutzes fuer die Doppelversicherungs-Pruefung
+     * (null = offen/unbefristet):
+     *  - E-Scooter enden fix zum Saisonende (bedarf keiner Kuendigung).
+     *  - Erfasste Kuendigung -> wirksames Ende (effectiveCancellationDate).
+     *  - Status cancelled/expired ohne Kuendigungsdatum -> Ablauf; ganz ohne
+     *    Datum als beendet behandeln (blockiert nichts).
+     *  - Laufender Vertrag ohne Kuendigung: verlaengert sich stillschweigend,
+     *    ein blosses Ablaufdatum ist deshalb KEIN Ende -> offen.
+     */
+    public function coverageEndsAt(): ?Carbon {
+        if ($this->type === 'escooter' && $this->end_date) {
+            return Carbon::parse($this->end_date)->startOfDay();
+        }
+        if ($effective = $this->effectiveCancellationDate()) {
+            return $effective;
+        }
+        if (in_array($this->status, ['cancelled', 'expired'], true)) {
+            if ($this->end_date) {
+                return Carbon::parse($this->end_date)->startOfDay();
+            }
+            return $this->start_date ? Carbon::parse($this->start_date)->startOfDay() : Carbon::today();
+        }
+        return null;
+    }
+
+    /**
+     * Schlauer Anzeige-Status (Betreiber-Feedback 25./26.07.2026): das rohe
      * status-Feld allein greift zu kurz. Eine erfasste Kuendigung
-     * (cancellation_date) erscheint als "Gekuendigt zum <Datum>", ein
-     * abgeschlossener Vertrag mit Beginn in der Zukunft als
-     * "Aktiv ab <Datum>". Der GESPEICHERTE Status bleibt unveraendert -
-     * Statistiken, Filter und der Provisions-Storno haengen daran; hier
-     * geht es nur um die Anzeige in Listen und Detailseiten.
+     * (cancellation_date) erscheint als "Gekuendigt zum <wirksames Ende>"
+     * (Ablauf-Logik siehe effectiveCancellationDate), ein abgeschlossener
+     * Vertrag mit Beginn in der Zukunft als "Aktiv ab <Datum>". Der
+     * GESPEICHERTE Status bleibt unveraendert - Statistiken, Filter und der
+     * Provisions-Storno haengen daran; hier geht es nur um die Anzeige in
+     * Listen und Detailseiten.
      *
      * Rueckgabe fuer die Views:
      *   key       maschinenlesbarer Zustand (active, active_upcoming,
@@ -206,15 +268,16 @@ class Contract extends Model {
      */
     public function displayStatus(): array {
         $today = Carbon::today();
-        $cancellation = $this->cancellation_date ? Carbon::parse($this->cancellation_date)->startOfDay() : null;
         $start = $this->start_date ? Carbon::parse($this->start_date)->startOfDay() : null;
 
         // Kuendigung erfasst: zaehlt fuer laufende UND bereits auf
-        // cancelled gestellte Vertraege. Zukuenftiges Datum = Vertrag
-        // laeuft noch bis dahin (orange), erreichtes Datum = beendet (rot).
-        if ($cancellation && in_array($this->status, ['active', 'cancelled'], true)) {
-            $date = $cancellation->format('d.m.Y');
-            $upcoming = $cancellation->greaterThan($today);
+        // cancelled gestellte Vertraege. Angezeigt wird das WIRKSAME Ende
+        // (Ablauf), nicht das Einreichungsdatum. Zukuenftiges Ende =
+        // Vertrag laeuft noch bis dahin (orange), erreicht = beendet (rot).
+        if (in_array($this->status, ['active', 'cancelled'], true)
+            && ($ende = $this->effectiveCancellationDate())) {
+            $date = $ende->format('d.m.Y');
+            $upcoming = $ende->greaterThan($today);
             return [
                 'key'       => $upcoming ? 'cancelled_upcoming' : 'cancelled',
                 'badge'     => $upcoming ? 'pending' : 'rejected',

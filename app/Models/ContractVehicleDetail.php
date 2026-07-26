@@ -40,6 +40,39 @@ class ContractVehicleDetail extends Model
         'additional_drivers' => 'array',
     ];
 
+    /**
+     * Kennzeichen fuer den Identitaets-Vergleich normalisieren:
+     * Grossschreibung, alle Trenner raus und Umlaute der Ortskennung auf die
+     * ASCII-Basis gefaltet (LUEN/"LÜN" -> LUN). Hintergrund: Versicherer-
+     * Dokumente, OCR und Handeingabe liefern dasselbe Kennzeichen mal mit,
+     * mal ohne Umlaut ("LÜN-G 1110" vs. "LUN-G 1110") - fuer Duplikat- und
+     * Doppelversicherungs-Pruefung muessen beide Schreibweisen dasselbe
+     * Fahrzeug treffen. Die Faltung ist kollisionsfrei: Umlaute kommen nur
+     * in der Ortskennung vor und kein deutsches Unterscheidungszeichen
+     * existiert sowohl mit als auch ohne Umlaut (LUN/TOL/OHR ... sind nicht
+     * vergeben). NUR fuer Vergleiche - gespeichert wird das Original.
+     */
+    public static function normalizePlate(?string $plate): ?string
+    {
+        if (blank($plate)) {
+            return null;
+        }
+        $p = mb_strtoupper(trim($plate));
+        $p = strtr($p, ['Ä' => 'A', 'Ö' => 'O', 'Ü' => 'U']);
+        $p = (string) preg_replace('/[^A-Z0-9]+/', '', $p);
+        return $p !== '' ? $p : null;
+    }
+
+    /** FIN/VIN fuer den Identitaets-Vergleich normalisieren (nur Vergleich). */
+    public static function normalizeVin(?string $vin): ?string
+    {
+        if (blank($vin)) {
+            return null;
+        }
+        $v = (string) preg_replace('/[^A-Z0-9]+/', '', mb_strtoupper(trim($vin)));
+        return $v !== '' ? $v : null;
+    }
+
     /** Fahrzeugtypen (Ein-Klick-Buttons im Formular). */
     public const VEHICLE_TYPES = [
         'pkw'         => ['label' => 'PKW',         'icon' => '🚗'],
