@@ -157,6 +157,88 @@ class ContractDeduplicationTest extends TestCase
         $this->assertSame(2, Contract::where('customer_id', $customer->id)->count());
     }
 
+    // Betreiber-Vorgabe 26.07.2026: ein Dokument des NEUEN Versicherers fuer
+    // dasselbe Fahrzeug ist ein WECHSEL -> eigener Vertrag (alter gekuendigt
+    // zum X, neuer aktiv ab X), KEIN Update des Altvertrags.
+    public function test_insurer_switch_creates_separate_contract_for_same_plate(): void
+    {
+        $customer = $this->customer();
+        $intake = app(DocumentIntakeService::class);
+
+        $first = $this->doc([
+            'versicherung' => ['insurer' => 'ADAC Autoversicherung AG', 'sparte' => 'kfz', 'start_date' => '2025-09-03'],
+            'kfz' => ['license_plate' => 'LÜN-G 1110'],
+        ]);
+        $alt = $intake->createContractFromExtraction($first, $customer, null);
+
+        $second = $this->doc([
+            'versicherung' => ['insurer' => 'Neodigital', 'sparte' => 'kfz', 'start_date' => '2026-09-03'],
+            'kfz' => ['license_plate' => 'LUN-G 1110'],
+        ]);
+        $neu = $intake->createContractFromExtraction($second, $customer, null);
+
+        $this->assertNotSame($alt->id, $neu->id);
+        $this->assertSame(2, Contract::where('customer_id', $customer->id)->count());
+
+        // Wechsel-Automatik: der Altvertrag bekommt die Kuendigung erfasst -
+        // Ablauf = Beginn des neuen Vertrags, Einreichung dokumentiert,
+        // alles nachvollziehbar in der Version History (Quelle: Dokument).
+        $alt->refresh();
+        $this->assertSame('2026-09-03', (string) $alt->end_date);
+        $this->assertNotNull($alt->cancellation_date);
+        $this->assertSame('Gekündigt zum 03.09.2026', $alt->displayStatus()['label']);
+        $this->assertTrue(
+            ContractRevision::where('contract_id', $alt->id)
+                ->where('field', 'end_date')->where('source', 'document')->exists()
+        );
+    }
+
+    // Wechsel-Dokument OHNE Beginn: keine Verkettung moeglich -> der
+    // Altvertrag bleibt unangetastet (keine erfundenen Daten).
+    public function test_switch_document_without_start_leaves_old_contract_untouched(): void
+    {
+        $customer = $this->customer();
+        $intake = app(DocumentIntakeService::class);
+
+        $first = $this->doc([
+            'versicherung' => ['insurer' => 'ADAC Autoversicherung AG', 'sparte' => 'kfz', 'start_date' => '2025-09-03'],
+            'kfz' => ['license_plate' => 'K-WW 12'],
+        ]);
+        $alt = $intake->createContractFromExtraction($first, $customer, null);
+
+        $second = $this->doc([
+            'versicherung' => ['insurer' => 'Neodigital', 'sparte' => 'kfz'],
+            'kfz' => ['license_plate' => 'K-WW 12'],
+        ]);
+        $intake->createContractFromExtraction($second, $customer, null);
+
+        $this->assertSame(2, Contract::where('customer_id', $customer->id)->count());
+        $this->assertNull($alt->fresh()->cancellation_date);
+    }
+
+    // Gleicher Versicherer (Kurzform "ADAC"), Kennzeichen einmal mit und
+    // einmal ohne Umlaut geschrieben -> dasselbe Fahrzeug, KEIN Duplikat.
+    public function test_umlaut_plate_variant_with_same_insurer_updates_existing(): void
+    {
+        $customer = $this->customer();
+        $intake = app(DocumentIntakeService::class);
+
+        $first = $this->doc([
+            'versicherung' => ['insurer' => 'ADAC Autoversicherung AG', 'sparte' => 'kfz', 'premium_amount' => 116.68],
+            'kfz' => ['license_plate' => 'LÜN-G 1110'],
+        ]);
+        $contract = $intake->createContractFromExtraction($first, $customer, null);
+
+        $second = $this->doc([
+            'versicherung' => ['insurer' => 'ADAC', 'sparte' => 'kfz', 'premium_amount' => 121.50],
+            'kfz' => ['license_plate' => 'LUN-G1110'],
+        ]);
+        $result = $intake->createContractFromExtraction($second, $customer, null);
+
+        $this->assertSame($contract->id, $result->id);
+        $this->assertSame(1, Contract::where('customer_id', $customer->id)->count());
+    }
+
     public function test_empty_new_value_never_overwrites_existing(): void
     {
         $customer = $this->customer();

@@ -9,12 +9,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Schlauer Anzeige-Status der Vertraege (Betreiber-Feedback 25.07.2026):
- * eine erfasste Kuendigung (cancellation_date) erscheint als
- * "Gekuendigt zum <Datum>", ein abgeschlossener Vertrag mit Beginn in der
- * Zukunft als "Aktiv ab <Datum>" - in Kundenakte, Vertragsliste und
- * Kundenportal. Der gespeicherte status-Wert bleibt dabei unveraendert
- * (Statistik, Filter und Provisions-Storno haengen daran).
+ * Schlauer Anzeige-Status der Vertraege (Betreiber-Feedback 25./26.07.2026):
+ * cancellation_date ist das EINREICHUNGS-Datum der Kuendigung - angezeigt
+ * wird das WIRKSAME Ende ("Gekuendigt zum <Ablauf>", KFZ mit Ein-Monats-
+ * Frist nach deutschem Recht). Ein abgeschlossener Vertrag mit Beginn in
+ * der Zukunft erscheint als "Aktiv ab <Datum>". Der gespeicherte
+ * status-Wert bleibt unveraendert (Statistik, Filter, Provisions-Storno).
  */
 class ContractDisplayStatusTest extends TestCase
 {
@@ -48,9 +48,55 @@ class ContractDisplayStatusTest extends TestCase
         $this->assertSame('active', $st['badge']);
     }
 
-    // Kuendigung erfasst, Datum in der Zukunft: "Gekündigt zum <Datum>" (orange),
-    // obwohl der Roh-Status weiterhin active ist.
-    public function test_future_cancellation_shows_gekuendigt_zum(): void
+    // Kernfall: Kuendigung HEUTE eingereicht, Ablauf in der Zukunft ->
+    // "Gekündigt zum <Ablauf>" (nicht zum Einreichungsdatum!), orange.
+    public function test_cancellation_is_effective_at_ablauf_not_submission_date(): void
+    {
+        $ablauf = now()->addMonths(3);
+        $st = $this->contract([
+            'start_date' => now()->subYear()->toDateString(),
+            'end_date' => $ablauf->toDateString(),
+            'cancellation_date' => now()->toDateString(),
+        ])->displayStatus();
+
+        $this->assertSame('cancelled_upcoming', $st['key']);
+        $this->assertSame('Gekündigt zum ' . $ablauf->format('d.m.Y'), $st['label']);
+        $this->assertSame('pending', $st['badge']);
+        $this->assertSame($ablauf->format('d.m.Y'), $st['params']['date']);
+    }
+
+    // Frist knapp/verpasst? Der SERVER vertraut den ERFASSTEN Daten (der
+    // rote Live-Hinweis im Formular beraet beim Eintragen; Sonderkuendigung
+    // und Wechsel-Kette waeren sonst falsch): wirksam zum Ablauf.
+    public function test_missed_deadline_still_trusts_recorded_ablauf(): void
+    {
+        $ablauf = now()->addDays(14);
+        $st = $this->contract([
+            'end_date' => $ablauf->toDateString(),
+            'cancellation_date' => now()->toDateString(),
+        ])->displayStatus();
+
+        $this->assertSame('cancelled_upcoming', $st['key']);
+        $this->assertSame('Gekündigt zum ' . $ablauf->format('d.m.Y'), $st['label']);
+    }
+
+    // Andere Sparten identisch: wirksam zum Ablauf.
+    public function test_non_kfz_uses_ablauf(): void
+    {
+        $ablauf = now()->addDays(14);
+        $st = $this->contract([
+            'type' => 'hausrat',
+            'end_date' => $ablauf->toDateString(),
+            'cancellation_date' => now()->toDateString(),
+        ])->displayStatus();
+
+        $this->assertSame('Gekündigt zum ' . $ablauf->format('d.m.Y'), $st['label']);
+        $this->assertSame('pending', $st['badge']);
+    }
+
+    // Ohne hinterlegten Ablauf gilt das erfasste Datum selbst als Ende
+    // (Altdaten/Sonderkuendigung).
+    public function test_cancellation_without_ablauf_uses_submitted_date(): void
     {
         $cancelAt = now()->addDays(40);
         $st = $this->contract([
@@ -61,17 +107,19 @@ class ContractDisplayStatusTest extends TestCase
         $this->assertSame('cancelled_upcoming', $st['key']);
         $this->assertSame('Gekündigt zum ' . $cancelAt->format('d.m.Y'), $st['label']);
         $this->assertSame('pending', $st['badge']);
-        $this->assertSame('Gekündigt zum :date', $st['label_key']);
-        $this->assertSame($cancelAt->format('d.m.Y'), $st['params']['date']);
     }
 
-    // Kuendigungsdatum erreicht/ueberschritten: weiterhin mit Datum, aber rot.
-    public function test_reached_cancellation_date_is_red(): void
+    // Wirksames Ende erreicht/ueberschritten: weiterhin mit Datum, aber rot.
+    public function test_reached_effective_end_is_red(): void
     {
-        $st = $this->contract(['cancellation_date' => now()->subDay()->toDateString()])->displayStatus();
+        $st = $this->contract([
+            'end_date' => now()->subMonths(2)->toDateString(),
+            'cancellation_date' => now()->subMonths(4)->toDateString(),
+        ])->displayStatus();
+
         $this->assertSame('cancelled', $st['key']);
         $this->assertSame('rejected', $st['badge']);
-        $this->assertSame('Gekündigt zum ' . now()->subDay()->format('d.m.Y'), $st['label']);
+        $this->assertSame('Gekündigt zum ' . now()->subMonths(2)->format('d.m.Y'), $st['label']);
     }
 
     // Beginn in der Zukunft: "Aktiv ab <Datum>" (blau) statt schlicht "Aktiv".
@@ -111,45 +159,46 @@ class ContractDisplayStatusTest extends TestCase
     }
 
     // Kundenakte (Beraterwelt) zeigt beide schlauen Labels wie im Screenshot:
-    // gekuendigter Altvertrag + Folgevertrag mit Beginn in der Zukunft.
+    // Altvertrag "Gekündigt zum <Ablauf>" + Folgevertrag "Aktiv ab <Ablauf>".
     public function test_admin_customer_file_shows_smart_labels(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $customer = $this->makeCustomer();
-        $cancelAt = now()->addDays(30);
-        $startAt = now()->addDays(31);
+        $ablauf = now()->addMonths(2);
 
         Contract::create([
             'customer_id' => $customer->id, 'type' => 'kfz',
             'insurer' => 'ADAC Autoversicherung AG', 'status' => 'active',
             'start_date' => now()->subYear()->toDateString(),
-            'cancellation_date' => $cancelAt->toDateString(),
+            'end_date' => $ablauf->toDateString(),
+            'cancellation_date' => now()->toDateString(),
         ]);
         Contract::create([
             'customer_id' => $customer->id, 'type' => 'kfz',
             'insurer' => 'Neodigital', 'status' => 'active',
-            'start_date' => $startAt->toDateString(),
+            'start_date' => $ablauf->toDateString(),
         ]);
 
         $this->actingAs($admin)->get(route('admin.customer', $customer->id))
             ->assertOk()
-            ->assertSee('Gekündigt zum ' . $cancelAt->format('d.m.Y'))
-            ->assertSee('Aktiv ab ' . $startAt->format('d.m.Y'));
+            ->assertSee('Gekündigt zum ' . $ablauf->format('d.m.Y'))
+            ->assertSee('Aktiv ab ' . $ablauf->format('d.m.Y'));
     }
 
-    // Kundenportal (Vertragsliste) zeigt die schlauen Labels ebenfalls.
+    // Kundenportal (Vertragsliste) zeigt das wirksame Ende ebenfalls.
     public function test_portal_contract_list_shows_smart_labels(): void
     {
         $customer = $this->makeCustomer();
-        $cancelAt = now()->addDays(30);
+        $ablauf = now()->addMonths(2);
         Contract::create([
             'customer_id' => $customer->id, 'type' => 'kfz',
             'insurer' => 'ADAC Autoversicherung AG', 'status' => 'active',
-            'cancellation_date' => $cancelAt->toDateString(),
+            'end_date' => $ablauf->toDateString(),
+            'cancellation_date' => now()->toDateString(),
         ]);
 
         $this->actingAs($customer->user)->get(route('portal.contracts'))
             ->assertOk()
-            ->assertSee('Gekündigt zum ' . $cancelAt->format('d.m.Y'));
+            ->assertSee('Gekündigt zum ' . $ablauf->format('d.m.Y'));
     }
 }

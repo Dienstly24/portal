@@ -153,7 +153,45 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   MaLo-ID ...) werden nur ergaenzt, wenn leer. Anzeige des Verlaufs auf der
   Vertrags-Bearbeiten-Seite (`partials/contract_revisions.blade.php`). Nur
   wenn kein passender Vertrag existiert, wird ein neuer angelegt -> genau EIN
-  Vertrag je Fahrzeug (Single Source of Truth).
+  Vertrag je Fahrzeug UND Versicherer. Praezisierung 26.07.2026: die
+  Fahrzeug-Identitaet (FIN/Kennzeichen) ordnet nur beim SELBEN Versicherer
+  zu (`insurersLookAlike`, "ADAC" = "ADAC Autoversicherung AG"); die Police
+  eines ANDEREN Versicherers fuer dasselbe Auto ist ein WECHSEL und wird ein
+  eigener Vertrag. Kennzeichen-Vergleich zentral + umlaut-tolerant
+  (`ContractVehicleDetail::normalizePlate`, "LUEN-G 1110" = "LUN-G1110").
+- **Vertrags-Lebenszyklus: schlauer Status, Kuendigung, Wechsel-Automatik**
+  (Betreiber-Vorgabe 25./26.07.2026): `cancellation_date` ist das
+  EINREICHUNGS-Datum der Kuendigung (Formular-Label "eingereicht am"), der
+  Vertrag endet zum Ablauf: `Contract::effectiveCancellationDate()` = Ablauf
+  (nie frueher als die Einreichung; ohne Ablauf gilt das erfasste Datum).
+  Die deutsche KFZ-Frist (EIN Monat zum Ablauf, 31.12.-Vertrag -> letzter
+  Kuendigungstag 30.11.) prueft das Formular als LIVE-HINWEIS (gruen Frist
+  gewahrt / rot verpasst inkl. regulaerem Folgejahr-Datum); GESPEICHERT
+  wird, was der Betreiber erfasst (Fakten, inkl. Sonderkuendigung - nie
+  still "korrigieren"). Anzeige ueberall via `Contract::displayStatus()`
+  (eine Quelle): "Gekündigt zum <wirksames Ende>" (orange bis dahin, dann
+  rot), "Aktiv ab <Beginn>" (blau) fuer Zukunfts-Vertraege. Der
+  GESPEICHERTE status wird taeglich 05:15 von `contracts:apply-endings`
+  nachgezogen: erreichtes wirksames Ende -> cancelled, E-Scooter nach
+  Saisonende -> expired; beides NATUERLICHE Enden OHNE Provisions-Storno
+  (`endsWithoutStorno`); laufende Vertraege ohne Kuendigung bleiben aktiv
+  (stillschweigende Verlaengerung - ein blosses Ablaufdatum ist KEIN
+  Ende). Statuswechsel stehen als System-Eintrag in der Version History.
+  **Doppelversicherungs-Schutz + Wechsel-Automatik**
+  (`VehicleOverlapGuard` + `ContractSwitchService`): dasselbe Fahrzeug
+  (FIN -> Kennzeichen umlaut-tolerant -> HSN+TSN als letzte Stufe) darf
+  nie zwei Vertraege mit ueberschneidendem Zeitraum haben. Neuer Vertrag
+  fuer dasselbe Fahrzeug bei ANDEREM Versicherer = WECHSEL: der
+  Altvertrag bekommt automatisch die Kuendigung erfasst (eingereicht
+  heute, Ablauf = Beginn des neuen; ein fruehere Ablauf bleibt) - greift
+  im Admin-Formular (Hinweis in der Erfolgsmeldung) UND im
+  Dokumenten-Eingang; ohne Beginn keine Automatik (keine erfundenen
+  Daten). GLEICHER Versicherer = Duplikat -> Anlegen wird mit
+  handlungsleitender Meldung abgelehnt. Bearbeiten blockiert nur (aendert
+  nie still Altvertraege). Die Wechsel-Kette "Gekündigt zum X" -> "Aktiv
+  ab X" ist erlaubt (halb-offene Intervalle), Zweitwagen sowieso. Tests:
+  `ContractDisplayStatusTest`, `VehicleOverlapGuardTest`,
+  `ContractEndingsCommandTest`, `ContractDeduplicationTest`.
 - **Neukunden-Bericht + Vermittler-Provisionen** (Betreiber-Vorgabe
   25.07.2026): `/admin/reports/neukunden` (`ReportController::newCustomers`,
   Tab auf der Berichte-Seite) zeigt die Neukunden des Monats (blaetterbar,
@@ -187,10 +225,15 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   (nie Betraege erfinden); Werber nachtraeglich setzen bucht offene
   Vertraege nach (Idempotenz: je Vertrag genau EINE Neuvertrag-Provision).
   Workflow offen -> freigegeben -> ausgezahlt (oder storniert), Statuswege
-  begrenzt (`updateStatus`). Kuendigung (`status=cancelled`) oder Loeschung
-  eines Vertrags erzeugt automatisch eine NEGATIVE Gegenbuchung
-  (type=storno, `related_provision_id`) - Originale werden NIE geloescht
-  (Finanzhistorie; Kunden-Purge per FK-Kaskade bucht bewusst NICHT).
+  begrenzt (`updateStatus`). Storno-Regel (praezisiert 26.07.2026): die
+  Provision gibt es EINMALIG je Verkauf - ein NATUERLICHES Vertragsende
+  (Wechsel-Kette, Tages-Job `contracts:apply-endings` stellt cancelled;
+  Flag `Contract::$endsWithoutStorno`) bucht KEIN Storno, die Provision
+  bleibt verdient. Nur MANUELLE Stornierung (Formular status=cancelled)
+  oder Loeschung eines Vertrags erzeugt die automatische NEGATIVE
+  Gegenbuchung (type=storno, `related_provision_id`) - Originale werden
+  NIE geloescht (Finanzhistorie; Kunden-Purge per FK-Kaskade bucht
+  bewusst NICHT).
   Betrags-Anpassung/Bonus/Abzug nur mit Grund; JEDE Aenderung steht im
   unveraenderlichen `provision_audit_logs` (wer/wann/alt/neu/Grund).
   Monatsbericht `/admin/provisionen/bericht` (je Empfaenger: Neukunden,

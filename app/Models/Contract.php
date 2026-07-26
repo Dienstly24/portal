@@ -7,6 +7,16 @@ use Illuminate\Support\Str;
 class Contract extends Model {
     protected $keyType = 'string';
     public $incrementing = false;
+
+    /**
+     * Transientes Flag (nicht persistiert): true, wenn der Statuswechsel auf
+     * cancelled ein NATUERLICHES Vertragsende ist (Wechsel-Kette bzw.
+     * Tages-Job contracts:apply-endings). Dann KEIN Provisions-Storno - die
+     * Vermittler-Provision gibt es einmalig je Verkauf und sie bleibt bei
+     * regulaerem Vertragsende verdient (Betreiber-Klarstellung 26.07.2026).
+     * Storno weiterhin bei Loeschung und manueller Stornierung im Formular.
+     */
+    public bool $endsWithoutStorno = false;
     protected $fillable = ['customer_id','contract_number','type','type_other','subtype','insurer','status','start_date','end_date','pdf_path','notes','cancellation_date','premium_amount','premium_interval'];
 
     protected $casts = [
@@ -188,13 +198,96 @@ class Contract extends Model {
     ];
 
     /**
-     * Schlauer Anzeige-Status (Betreiber-Feedback 25.07.2026): das rohe
+     * Wirksames Vertragsende bei erfasster Kuendigung (Betreiber-Feedback
+     * 26.07.2026): cancellation_date ist das EINREICHUNGS-Datum der
+     * Kuendigung (meist "heute"), der Vertrag endet zum Ablauf (end_date).
+     * Ohne Ablauf gilt das erfasste Datum selbst als Ende (Altdaten/
+     * Sonderkuendigung); nie frueher als die Einreichung. Die deutsche
+     * Kuendigungsfrist (KFZ: EIN MONAT zum Ablauf) prueft das Formular als
+     * LIVE-HINWEIS beim Erfassen - gespeicherte Daten werden bewusst nicht
+     * still "korrigiert": der Betreiber erfasst Fakten (inkl.
+     * Sonderkuendigung und Wechsel-Kette), keine erfundenen Daten.
+     */
+    public function effectiveCancellationDate(): ?Carbon {
+        if (empty($this->cancellation_date)) {
+            return null;
+        }
+        $submitted = Carbon::parse($this->cancellation_date)->startOfDay();
+        $end = $this->end_date ? Carbon::parse($this->end_date)->startOfDay() : null;
+        if (!$end) {
+            return $submitted;
+        }
+        return $end->greaterThanOrEqualTo($submitted) ? $end : $submitted;
+    }
+
+    /**
+     * Zwei Versicherer-Angaben grob vergleichen ("ADAC Autoversicherung AG"
+     * = "ADAC"): Kleinschreibung, Umlaute gefaltet, Rechtsform- und
+     * Branchenwoerter entfernt, dann Gleichheit oder Enthaltensein. Fehlt
+     * eine Angabe (oder bleibt nichts uebrig), gilt sie als passend.
+     * Genutzt vom Dokumenten-Eingang (Duplikat vs. Wechsel) und der
+     * Wechsel-Automatik im Admin-Formular.
+     */
+    public static function insurersLookAlike(?string $a, ?string $b): bool {
+        $na = self::normalizeInsurerName($a);
+        $nb = self::normalizeInsurerName($b);
+        if ($na === '' || $nb === '') {
+            return true;
+        }
+        return $na === $nb || str_contains($na, $nb) || str_contains($nb, $na);
+    }
+
+    /** Versicherer-Namen auf seinen unterscheidenden Kern reduzieren. */
+    private static function normalizeInsurerName(?string $name): string {
+        $n = mb_strtolower(trim((string) $name));
+        if ($n === '') {
+            return '';
+        }
+        $n = strtr($n, ['ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue', 'ß' => 'ss']);
+        $n = (string) preg_replace('/[^a-z0-9 ]+/', ' ', $n);
+        $stop = ['ag', 'se', 'gmbh', 'kg', 'vvag', 'a', 'g', 'e', 'v', 'co',
+            'versicherung', 'versicherungs', 'versicherungen', 'versicherungsverein',
+            'autoversicherung', 'krankenversicherung', 'lebensversicherung',
+            'sachversicherung', 'direktversicherung', 'allgemeine', 'deutschland'];
+        $words = array_filter(explode(' ', $n), fn ($w) => $w !== '' && !in_array($w, $stop, true));
+        return implode(' ', $words);
+    }
+
+    /**
+     * Ende des Versicherungsschutzes fuer die Doppelversicherungs-Pruefung
+     * (null = offen/unbefristet):
+     *  - E-Scooter enden fix zum Saisonende (bedarf keiner Kuendigung).
+     *  - Erfasste Kuendigung -> wirksames Ende (effectiveCancellationDate).
+     *  - Status cancelled/expired ohne Kuendigungsdatum -> Ablauf; ganz ohne
+     *    Datum als beendet behandeln (blockiert nichts).
+     *  - Laufender Vertrag ohne Kuendigung: verlaengert sich stillschweigend,
+     *    ein blosses Ablaufdatum ist deshalb KEIN Ende -> offen.
+     */
+    public function coverageEndsAt(): ?Carbon {
+        if ($this->type === 'escooter' && $this->end_date) {
+            return Carbon::parse($this->end_date)->startOfDay();
+        }
+        if ($effective = $this->effectiveCancellationDate()) {
+            return $effective;
+        }
+        if (in_array($this->status, ['cancelled', 'expired'], true)) {
+            if ($this->end_date) {
+                return Carbon::parse($this->end_date)->startOfDay();
+            }
+            return $this->start_date ? Carbon::parse($this->start_date)->startOfDay() : Carbon::today();
+        }
+        return null;
+    }
+
+    /**
+     * Schlauer Anzeige-Status (Betreiber-Feedback 25./26.07.2026): das rohe
      * status-Feld allein greift zu kurz. Eine erfasste Kuendigung
-     * (cancellation_date) erscheint als "Gekuendigt zum <Datum>", ein
-     * abgeschlossener Vertrag mit Beginn in der Zukunft als
-     * "Aktiv ab <Datum>". Der GESPEICHERTE Status bleibt unveraendert -
-     * Statistiken, Filter und der Provisions-Storno haengen daran; hier
-     * geht es nur um die Anzeige in Listen und Detailseiten.
+     * (cancellation_date) erscheint als "Gekuendigt zum <wirksames Ende>"
+     * (Ablauf-Logik siehe effectiveCancellationDate), ein abgeschlossener
+     * Vertrag mit Beginn in der Zukunft als "Aktiv ab <Datum>". Der
+     * GESPEICHERTE Status bleibt unveraendert - Statistiken, Filter und der
+     * Provisions-Storno haengen daran; hier geht es nur um die Anzeige in
+     * Listen und Detailseiten.
      *
      * Rueckgabe fuer die Views:
      *   key       maschinenlesbarer Zustand (active, active_upcoming,
@@ -206,15 +299,16 @@ class Contract extends Model {
      */
     public function displayStatus(): array {
         $today = Carbon::today();
-        $cancellation = $this->cancellation_date ? Carbon::parse($this->cancellation_date)->startOfDay() : null;
         $start = $this->start_date ? Carbon::parse($this->start_date)->startOfDay() : null;
 
         // Kuendigung erfasst: zaehlt fuer laufende UND bereits auf
-        // cancelled gestellte Vertraege. Zukuenftiges Datum = Vertrag
-        // laeuft noch bis dahin (orange), erreichtes Datum = beendet (rot).
-        if ($cancellation && in_array($this->status, ['active', 'cancelled'], true)) {
-            $date = $cancellation->format('d.m.Y');
-            $upcoming = $cancellation->greaterThan($today);
+        // cancelled gestellte Vertraege. Angezeigt wird das WIRKSAME Ende
+        // (Ablauf), nicht das Einreichungsdatum. Zukuenftiges Ende =
+        // Vertrag laeuft noch bis dahin (orange), erreicht = beendet (rot).
+        if (in_array($this->status, ['active', 'cancelled'], true)
+            && ($ende = $this->effectiveCancellationDate())) {
+            $date = $ende->format('d.m.Y');
+            $upcoming = $ende->greaterThan($today);
             return [
                 'key'       => $upcoming ? 'cancelled_upcoming' : 'cancelled',
                 'badge'     => $upcoming ? 'pending' : 'rejected',
@@ -268,7 +362,9 @@ class Contract extends Model {
         static::created(fn ($m) => app(\App\Services\Provision\ContractProvisionService::class)
             ->createForContract($m));
         static::updated(function ($m) {
-            if ($m->wasChanged('status') && $m->status === 'cancelled') {
+            // endsWithoutStorno: natuerliches Vertragsende (Wechsel/Tages-Job)
+            // laesst die einmalige Verkaufs-Provision unangetastet.
+            if ($m->wasChanged('status') && $m->status === 'cancelled' && !$m->endsWithoutStorno) {
                 app(\App\Services\Provision\ContractProvisionService::class)
                     ->createStornoForContract($m, 'Vertrag gekuendigt/storniert');
             }
