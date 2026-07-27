@@ -591,6 +591,7 @@ class DocumentIntakeService
                 'consumption_kwh' => $energie['consumption_kwh'] ?? null,
                 'tariff' => $energie['tariff'] ?? null,
                 'customer_number' => $energie['customer_number'] ?? null,
+                'grid_operator' => $energie['grid_operator'] ?? null,
                 'payment_amount' => $ins['premium_amount'] ?? null,
                 'payment_interval' => $ins['premium_interval'] ?? null,
                 // Vorversorger (bisheriger Lieferant beim Wechsel) + dessen
@@ -891,6 +892,7 @@ class DocumentIntakeService
                 'malo_id' => $energie['malo_id'] ?? null,
                 'meter_reading' => $energie['meter_reading'] ?? null,
                 'customer_number' => $energie['customer_number'] ?? null,
+                'grid_operator' => $energie['grid_operator'] ?? null,
                 'payment_amount' => $ins['premium_amount'] ?? null,
                 'previous_provider' => $energie['previous_provider'] ?? null,
             ];
@@ -1001,6 +1003,7 @@ class DocumentIntakeService
             'malo_id' => ['label' => 'MaLo-ID'],
             'meter_reading' => ['label' => 'Zaehlerstand'],
             'customer_number' => ['label' => 'Kundennummer (Anbieter)'],
+            'grid_operator' => ['label' => 'Netzbetreiber'],
             'payment_amount' => ['label' => 'Abschlag', 'format' => [$this, 'fmtEuro']],
             'previous_provider' => ['label' => 'Vorversorger'],
         ];
