@@ -149,6 +149,7 @@ class KfzContractRedesignTest extends TestCase
         $this->actingAs($this->admin())->post(route('admin.contract.store', $customer->id), $this->base([
             'vehicle' => $this->fullVehicle([
                 'previous_insurer' => 'Generali',
+                'previous_contract_number' => 'AS-987654321',
                 'previous_insurance_since' => 'länger als 3 Jahre',
                 'previous_insurance_terminated_by_insurer' => '0',
             ]),
@@ -156,6 +157,7 @@ class KfzContractRedesignTest extends TestCase
 
         $veh = Contract::where('customer_id', $customer->id)->firstOrFail()->vehicleDetail;
         $this->assertSame('Generali', $veh->previous_insurer);
+        $this->assertSame('AS-987654321', $veh->previous_contract_number);
         $this->assertSame('länger als 3 Jahre', $veh->previous_insurance_since);
         $this->assertFalse($veh->previous_insurance_terminated_by_insurer);
         $this->assertNotNull($veh->previous_insurance_terminated_by_insurer);

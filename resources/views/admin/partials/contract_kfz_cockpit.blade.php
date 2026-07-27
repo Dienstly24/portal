@@ -138,10 +138,15 @@
 
         {{-- Vorversicherung: wo war der Kunde vorher versichert (Wechsel-Info
              aus dem Beratungsprotokoll). Nur zeigen, wenn hinterlegt. --}}
-        @if($veh->previous_insurer)
+        @if($veh->previous_insurer || $veh->previous_contract_number)
         <div style="background:#1B1E24;border:1px solid #2A2E36;border-radius:10px;padding:10px 12px;">
             <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#8A919E;font-weight:700;">Vorversicherung</div>
+            @if($veh->previous_insurer)
             <div style="font-size:14px;font-weight:800;margin-top:3px;">{{ $veh->previous_insurer }}</div>
+            @endif
+            @if($veh->previous_contract_number)
+            <div style="font-size:11.5px;color:#8A919E;margin-top:3px;">Vertragsnummer: {{ $veh->previous_contract_number }}</div>
+            @endif
             @if($veh->previous_insurance_since)
             <div style="font-size:11.5px;color:#8A919E;margin-top:3px;">Dort versichert: {{ $veh->previous_insurance_since }}</div>
             @endif

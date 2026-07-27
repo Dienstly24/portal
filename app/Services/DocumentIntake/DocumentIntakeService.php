@@ -557,6 +557,7 @@ class DocumentIntakeService
                 'extras' => !empty($kfz['extras']) ? $kfz['extras'] : null,
                 // Vorversicherung (bisheriger Kfz-Versicherer beim Wechsel).
                 'previous_insurer' => $ins['previous_insurer'] ?? null,
+                'previous_contract_number' => $ins['previous_contract_number'] ?? null,
                 'previous_insurance_since' => $ins['previous_insurance_since'] ?? null,
                 'previous_insurance_terminated_by_insurer' => $ins['previous_insurance_terminated'] ?? null,
                 // Schadenfreiheitsklassen (z.B. aus der ADAC-Beitragsinformation
@@ -857,6 +858,7 @@ class DocumentIntakeService
                 'sf_liability_class' => $kfz['sf_liability_class'] ?? null,
                 'sf_comprehensive_class' => $kfz['sf_comprehensive_class'] ?? null,
                 'previous_insurer' => $ins['previous_insurer'] ?? null,
+                'previous_contract_number' => $ins['previous_contract_number'] ?? null,
             ];
             // Zusatzleistungen ERGAENZEN (nie entfernen): so geht z.B. ein
             // bereits erfasster Schutzbrief nicht verloren, wenn ihn ein
@@ -984,6 +986,7 @@ class DocumentIntakeService
             'sf_liability_class' => ['label' => 'SF-Klasse Haftpflicht'],
             'sf_comprehensive_class' => ['label' => 'SF-Klasse Vollkasko'],
             'previous_insurer' => ['label' => 'Vorversicherer'],
+            'previous_contract_number' => ['label' => 'Vertragsnummer Vorversicherer'],
             'extras' => ['label' => 'Zusatzleistungen', 'format' => [$this, 'fmtExtras']],
         ];
     }

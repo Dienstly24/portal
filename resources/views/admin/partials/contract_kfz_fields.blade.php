@@ -318,6 +318,7 @@
     <div class="kfz-card-sub">Wo war der Kunde vor diesem Vertrag versichert? Wird beim Wechsel aus dem Beratungsprotokoll übernommen.</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div class="field"><label>Vorheriger Versicherer</label><input type="text" name="vehicle[previous_insurer]" maxlength="120" value="{{ $vd('previous_insurer', $veh->previous_insurer ?? '') }}" placeholder="z. B. Generali" style="{{ $kfzInputStyle }}"></div>
+        <div class="field"><label>Vertragsnummer beim Vorversicherer</label><input type="text" name="vehicle[previous_contract_number]" maxlength="60" value="{{ $vd('previous_contract_number', $veh->previous_contract_number ?? '') }}" placeholder="Nummer des alten Vertrags" style="{{ $kfzInputStyle }}"></div>
         <div class="field"><label>Dort versichert seit</label><input type="text" name="vehicle[previous_insurance_since]" maxlength="60" value="{{ $vd('previous_insurance_since', $veh->previous_insurance_since ?? '') }}" placeholder="z. B. länger als 3 Jahre" style="{{ $kfzInputStyle }}"></div>
     </div>
     <div class="kfz-subline">Kündigung durch Vorversicherer</div>
