@@ -571,6 +571,7 @@ class AdminController extends Controller
 
             // Vorversicherung (bisheriger Kfz-Versicherer beim Wechsel).
             'vehicle.previous_insurer' => 'nullable|string|max:120',
+            'vehicle.previous_contract_number' => 'nullable|string|max:60',
             'vehicle.previous_insurance_since' => 'nullable|string|max:60',
             'vehicle.previous_insurance_terminated_by_insurer' => 'nullable|in:0,1',
             // SF-Einstufung (Haftpflicht / Vollkasko getrennt)
@@ -714,6 +715,7 @@ class AdminController extends Controller
                 'annual_mileage' => $blank('annual_mileage') === 'custom' ? $blank('annual_mileage_custom') : $blank('annual_mileage'),
                 // Vorversicherung: leerer Radio ("") = unbekannt (null).
                 'previous_insurer' => $blank('previous_insurer'),
+                'previous_contract_number' => $blank('previous_contract_number'),
                 'previous_insurance_since' => $blank('previous_insurance_since'),
                 'previous_insurance_terminated_by_insurer' => $blank('previous_insurance_terminated_by_insurer') === null
                     ? null : ($v['previous_insurance_terminated_by_insurer'] === '1'),

@@ -155,6 +155,9 @@ trait ValidatesExtractedFields
             // Kfz wird sie in contract_vehicle_details festgehalten; sonst reine
             // Anzeige-Info fuer den Mitarbeiter.
             'previous_insurer' => $this->cleanString($in['previous_insurer'] ?? null, 120),
+            // Vertragsnummer beim Vorversicherer (Vorvertrag) - z.B. aus dem
+            // Beratungsprotokoll oder einem Schreiben des alten Versicherers.
+            'previous_contract_number' => $this->cleanString($in['previous_contract_number'] ?? null, 60),
             // Seit wann beim Vorversicherer (Freitext, z.B. "länger als 3 Jahre").
             'previous_insurance_since' => $this->cleanString($in['previous_insurance_since'] ?? null, 60),
             // Hat der Vorversicherer gekuendigt? (false MUSS erhalten bleiben.)

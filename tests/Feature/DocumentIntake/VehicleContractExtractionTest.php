@@ -175,6 +175,7 @@ class VehicleContractExtractionTest extends TestCase
                     'insurer' => 'DA Direkt', 'sparte' => 'kfz', 'start_date' => '2026-02-04',
                     'tariff' => 'Komfort Smart mit Werkstattbindung',
                     'previous_insurer' => 'Generali',
+                    'previous_contract_number' => 'AID222887673',
                     'previous_insurance_since' => 'länger als 3 Jahre',
                     'previous_insurance_terminated' => false,
                 ],
@@ -196,6 +197,7 @@ class VehicleContractExtractionTest extends TestCase
         $this->assertSame(500, (int) $veh->vollkasko_deductible);
         $this->assertContains('werkstattbindung', $veh->extras);
         $this->assertSame('Generali', $veh->previous_insurer);
+        $this->assertSame('AID222887673', $veh->previous_contract_number);
         $this->assertSame('länger als 3 Jahre', $veh->previous_insurance_since);
         $this->assertFalse((bool) $veh->previous_insurance_terminated_by_insurer);
         $this->assertNotNull($veh->previous_insurance_terminated_by_insurer);
