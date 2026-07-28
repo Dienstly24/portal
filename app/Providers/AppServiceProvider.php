@@ -70,6 +70,7 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(\App\Services\Ai\TemplateParsers\DslAuftragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\EweVertragsbestaetigungParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\EnergieAuftragParser::class),
+                $app->make(\App\Services\Ai\TemplateParsers\PrivathaftpflichtAntragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\GewerbeBeratungsdokumentationParser::class),
                 // Zuletzt: kompakter Kontaktdaten-Block (nur wenn kein echtes
                 // Dokument passt - er triggert auf E-Mail+IBAN+PLZ in kurzem Text).
