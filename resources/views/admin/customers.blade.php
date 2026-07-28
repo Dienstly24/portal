@@ -5,6 +5,7 @@
 // Bildsprache spricht). Unbekannte Typen fallen auf 'andere' zurück.
 $typeConfig = [
     'kfz'                 => ['icon'=>'🚗','label'=>'KFZ','bg'=>'#E6F1FB'],
+    'schutzbrief'         => ['icon'=>'🆘','label'=>'Schutzbrief/Mobilclub','bg'=>'#FEF3C7'],
     'krankenversicherung' => ['icon'=>'🏥','label'=>'Kranken','bg'=>'#D9F4E6'],
     'kranken'             => ['icon'=>'🏥','label'=>'Kranken','bg'=>'#D9F4E6'],
     'krankenzusatz'       => ['icon'=>'🩺','label'=>'Krankenzusatz','bg'=>'#DEF1E8'],

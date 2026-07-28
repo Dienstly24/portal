@@ -87,6 +87,10 @@ class Contract extends Model {
      */
     public const TYPES = [
         'kfz'                 => ['label' => 'KFZ',                  'icon' => '🚗', 'color' => '#185FA5', 'bg' => '#E6F1FB'],
+        // Schutzbrief / Mobilclub-Mitgliedschaft (Betreiber-Vorgabe 28.07.2026):
+        // eigene Sparte statt "Sonstige", weil viele Kunden eine ADAC-
+        // Mitgliedschaft haben. Die Stufe (Basis/Plus/Premium) ist ein subtype.
+        'schutzbrief'         => ['label' => 'Schutzbrief / Mobilclub', 'icon' => '🆘', 'color' => '#92400E', 'bg' => '#FEF3C7'],
         'krankenversicherung' => ['label' => 'Krankenversicherung', 'icon' => '🏥', 'color' => '#3B7A57', 'bg' => '#E4F0E7'],
         'krankenzusatz'       => ['label' => 'Krankenzusatz',       'icon' => '🩺', 'color' => '#2F8F6B', 'bg' => '#DEF1E8'],
         'leben'               => ['label' => 'Leben',               'icon' => '❤️', 'color' => '#993556', 'bg' => '#FBEAF0'],
@@ -130,7 +134,9 @@ class Contract extends Model {
     /**
      * Untergruppen (subtype-Spalte) je Sparte. Bei der Krankenversicherung
      * steuert GKV/PKV die Wechsel-Erinnerungen (§175 SGB V); die Krankenzusatz-
-     * Arten sind rein beschreibend. Neue Untergruppe = hier eine Zeile ergaenzen.
+     * Arten sind rein beschreibend. Beim Schutzbrief/Mobilclub ist die
+     * Untergruppe die Mitgliedschafts-Stufe (Namen wie beim ADAC, passen aber
+     * auch fuer andere Clubs). Neue Untergruppe = hier eine Zeile ergaenzen.
      */
     public const SUBTYPES = [
         'krankenversicherung' => [
@@ -141,6 +147,11 @@ class Contract extends Model {
             'ambulant'        => 'Ambulante Zusatzversicherung',
             'zahnzusatz'      => 'Zahnzusatzversicherung',
             'auslandskranken' => 'Auslandskrankenversicherung',
+        ],
+        'schutzbrief' => [
+            'basis'   => 'Basis-Mitgliedschaft',
+            'plus'    => 'Plus-Mitgliedschaft',
+            'premium' => 'Premium-Mitgliedschaft',
         ],
     ];
 

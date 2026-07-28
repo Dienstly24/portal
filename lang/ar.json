@@ -386,5 +386,15 @@
     "Vorschau": "معاينة",
     "In neuem Tab öffnen": "فتح في تبويب جديد",
     "Neuer Tab": "تبويب جديد",
-    "Schließen": "إغلاق"
+    "Schließen": "إغلاق",
+    "Mitgliedschaft": "العضوية",
+    "Art": "النوع",
+    "Basis-Mitgliedschaft": "عضوية أساسية (Basis)",
+    "Plus-Mitgliedschaft": "عضوية بلس (Plus)",
+    "Premium-Mitgliedschaft": "عضوية بريميوم (Premium)",
+    "Gesetzlich (GKV)": "تأمين صحي حكومي (GKV)",
+    "Privat (PKV)": "تأمين صحي خاص (PKV)",
+    "Ambulante Zusatzversicherung": "تأمين إضافي للعلاج الخارجي",
+    "Zahnzusatzversicherung": "تأمين إضافي للأسنان",
+    "Auslandskrankenversicherung": "تأمين صحي للسفر خارج البلاد"
 }

@@ -1,8 +1,8 @@
 @extends('layouts.portal')
 @section('content')
 @php
-$typeIcons = ['kfz'=>'🚗','strom'=>'⚡','gas'=>'🔥','strom_gas'=>'⚡','internet'=>'📶','haftpflicht'=>'🛡️','hausrat'=>'🏠','rechtsschutz'=>'⚖️','krankenversicherung'=>'🏥','leben'=>'❤️','unfall'=>'🚑','andere'=>'📋'];
-$typeLabels = ['kfz'=>'KFZ','strom'=>'Strom','gas'=>'Gas','strom_gas'=>'Strom/Gas','internet'=>'Internet','haftpflicht'=>'Haftpflicht','hausrat'=>'Hausrat','rechtsschutz'=>'Rechtsschutz','krankenversicherung'=>'Krankenversicherung','leben'=>'Leben','unfall'=>'Unfall','andere'=>'Andere'];
+$typeIcons = ['kfz'=>'🚗','schutzbrief'=>'🆘','strom'=>'⚡','gas'=>'🔥','strom_gas'=>'⚡','internet'=>'📶','haftpflicht'=>'🛡️','hausrat'=>'🏠','rechtsschutz'=>'⚖️','krankenversicherung'=>'🏥','leben'=>'❤️','unfall'=>'🚑','andere'=>'📋'];
+$typeLabels = ['kfz'=>'KFZ','schutzbrief'=>'Schutzbrief / Mobilclub','strom'=>'Strom','gas'=>'Gas','strom_gas'=>'Strom/Gas','internet'=>'Internet','haftpflicht'=>'Haftpflicht','hausrat'=>'Hausrat','rechtsschutz'=>'Rechtsschutz','krankenversicherung'=>'Krankenversicherung','leben'=>'Leben','unfall'=>'Unfall','andere'=>'Andere'];
 $intervalLabels = ['monatlich'=>'Monatlich','vierteljaehrlich'=>'Vierteljährlich','halbjaehrlich'=>'Halbjährlich','jaehrlich'=>'Jährlich'];
 $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
 @endphp
@@ -26,6 +26,10 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
     <div class="card-title">Vertragsdaten</div>
     <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Vertragsnummer</span><span style="font-weight:600;font-size:13.5px;">{{ $contract->contract_number ?? '—' }}</span></div>
     <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Vertragstyp</span><span style="font-weight:600;font-size:13.5px;">{{ $contract->typeLabel() }}</span></div>
+    {{-- Untergruppe (z.B. ADAC Basis-/Plus-/Premium-Mitgliedschaft, GKV/PKV) --}}
+    @if($contract->subtypeLabel())
+    <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ $contract->type === 'schutzbrief' ? __('Mitgliedschaft') : __('Art') }}</span><span style="font-weight:600;font-size:13.5px;">{{ __($contract->subtypeLabel()) }}</span></div>
+    @endif
     <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Startdatum</span><span style="font-weight:600;font-size:13.5px;">{{ $d($contract->start_date) }}</span></div>
     <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Enddatum</span><span style="font-weight:600;font-size:13.5px;">{{ $d($contract->end_date) }}</span></div>
     <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Kündigungsdatum</span><span style="font-weight:600;font-size:13.5px;">{{ $d($contract->cancellation_date) }}</span></div>
