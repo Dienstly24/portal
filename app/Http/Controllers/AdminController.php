@@ -155,7 +155,13 @@ class AdminController extends Controller
         // Betreuer (nur admin/manager sehen den Filter, serverseitig aber
         // unschaedlich fuer Mitarbeiter, da deren Portfolio ohnehin gescoped ist).
         if ($request->filled('betreuer')) {
-            $query->whereHas('betreuer', fn($q) => $q->where('users.id', $request->betreuer));
+            // "ohne" = noch keinem Mitarbeiter zugewiesen (offene Kunden finden
+            // und direkt in der Liste zuweisen).
+            if ($request->betreuer === 'ohne') {
+                $query->whereDoesntHave('betreuer');
+            } else {
+                $query->whereHas('betreuer', fn($q) => $q->where('users.id', $request->betreuer));
+            }
         }
         // E-Mail vorhanden / fehlt (echte Adresse, kein Import-Platzhalter).
         if ($request->email === 'mit') {
@@ -1852,6 +1858,47 @@ class AdminController extends Controller
             }
         });
         return back()->with('success', $count . ' Kunden wurden ' . $employee->name . ' zugewiesen.');
+    }
+
+    /**
+     * Betreuer eines einzelnen Kunden direkt aus der Kundenliste setzen
+     * (Popover in der Betreuer-Spalte). Die Auswahl ersetzt die bisherige
+     * Zuweisung vollstaendig (Mehrfachauswahl moeglich, leere Auswahl = kein
+     * Betreuer). Bereits zugewiesene Nutzer, die im Popover gar nicht zur
+     * Auswahl stehen (z. B. ein Admin ueber die Sichtbarkeit im
+     * Neukunden-Bericht), bleiben erhalten - es geht nichts still verloren.
+     */
+    public function setBetreuer(Request $request, $id) {
+        $this->authorizeCustomerAccess($id);
+        $request->validate([
+            'betreuer' => 'nullable|array',
+            'betreuer.*' => 'integer',
+        ]);
+        $customer = Customer::with(['user', 'betreuer'])->findOrFail($id);
+
+        // Auswahlbare Mitarbeiter = exakt die Liste im Popover.
+        $selectable = \App\Models\User::whereIn('role', ['employee', 'manager', 'support'])
+            ->pluck('id')->map(fn($i) => (int) $i)->all();
+        $chosen = \App\Models\User::whereIn('id', $request->input('betreuer', []))
+            ->whereIn('id', $selectable)->pluck('id')->map(fn($i) => (int) $i)->all();
+        $keep = $customer->betreuer->pluck('id')->map(fn($i) => (int) $i)
+            ->reject(fn($i) => in_array($i, $selectable, true))->all();
+
+        $previous = $customer->betreuer->pluck('name')->implode(', ');
+        $customer->betreuer()->sync(array_values(array_unique(array_merge($chosen, $keep))));
+
+        $names = \App\Models\User::whereIn('id', $chosen)->orderBy('name')->pluck('name')->implode(', ');
+        \App\Models\ActivityLog::record('customer_reassigned', 'customer', $customer->id, [
+            'customer' => $customer->user?->name,
+            'from' => $previous !== '' ? $previous : 'niemand',
+            'to' => $names !== '' ? $names : 'niemand',
+            'mode' => 'ersetzt',
+            'quelle' => 'Kundenliste',
+        ]);
+
+        return back()->with('success', $names !== ''
+            ? 'Betreuer gesetzt: ' . $names . '.'
+            : 'Betreuer entfernt - der Kunde ist jetzt offen.');
     }
 
     public function destroyCustomer($id) {
