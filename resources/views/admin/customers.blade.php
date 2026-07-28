@@ -75,6 +75,7 @@ $typeConfig = [
             <label class="flt-lbl">Betreuer</label>
             <select name="betreuer" class="flt-sel" onchange="this.form.submit()">
                 <option value="">Alle</option>
+                <option value="ohne" {{ request('betreuer') === 'ohne' ? 'selected' : '' }}>— ohne Betreuer —</option>
                 @foreach($employees as $e)
                 <option value="{{ $e->id }}" {{ request('betreuer') == $e->id ? 'selected' : '' }}>{{ $e->name }}</option>
                 @endforeach
@@ -247,12 +248,48 @@ function confirmBulkDelete(form) {
             <td title="Einladung: {{ $c->user?->invitation_sent_at?->format('d.m.Y') ?? '—' }} · Passwort gesetzt: {{ $c->user?->portal_password_set_at ? 'Ja' : 'Nein' }}">
                 <span style="background:{{ $ps['bg'] }};color:{{ $ps['color'] }};border-radius:12px;padding:2px 10px;font-size:11.5px;white-space:nowrap;">{{ $ps['label'] }}</span>
             </td>
-            <td style="font-size:12.5px;">
+            {{-- Betreuer: admin/manager weisen direkt hier zu (Popover je Zeile,
+                 Mehrfachauswahl). Zelle ist .noNav, damit der Klick nicht die
+                 Zeilennavigation in die Kundenakte ausloest. --}}
+            <td class="noNav" style="font-size:12.5px;">
+                @if(in_array(auth()->user()->role, ['admin','manager']))
+                <details class="pop">
+                    <summary class="btr-trigger" title="Betreuer zuweisen">
+                        @forelse($c->betreuer as $b)
+                        <span class="btr-badge">{{ $b->name }}</span>
+                        @empty
+                        <span class="btr-open">— offen —</span>
+                        @endforelse
+                        <span class="btr-caret" aria-hidden="true">▾</span>
+                    </summary>
+                    <div class="pop-panel">
+                        <form method="POST" action="{{ route('admin.customers.betreuer', $c->id) }}" style="margin:0;display:grid;gap:6px;">
+                            @csrf
+                            <label class="flt-lbl">Betreuer für {{ $c->user?->name }}</label>
+                            @if($employees->count() > 8)
+                            <input type="text" class="btr-search" placeholder="Mitarbeiter suchen…" autocomplete="off">
+                            @endif
+                            <div class="btr-list">
+                                @foreach($employees as $e)
+                                <label class="btr-opt">
+                                    <input type="checkbox" name="betreuer[]" value="{{ $e->id }}"
+                                        {{ $c->betreuer->contains('id', $e->id) ? 'checked' : '' }}>
+                                    <span>{{ $e->name }}</span>
+                                </label>
+                                @endforeach
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-sm" style="margin-top:4px;">Speichern</button>
+                            <span style="font-size:11.5px;color:var(--ink-soft);">Keine Auswahl = kein Betreuer.</span>
+                        </form>
+                    </div>
+                </details>
+                @else
                 @forelse($c->betreuer as $b)
-                <span style="background:#D9F4E6;color:#17A65B;border-radius:12px;padding:2px 10px;display:inline-block;margin:1px 0;">{{ $b->name }}</span>
+                <span class="btr-badge">{{ $b->name }}</span>
                 @empty
-                <span style="color:#B5651D;">— offen —</span>
+                <span class="btr-open">— offen —</span>
                 @endforelse
+                @endif
             </td>
             {{-- Aktive Verträge als Icons (eager-geladen, nur status=active) --}}
             <td style="white-space:nowrap;">
@@ -350,7 +387,40 @@ function confirmBulkDelete(form) {
 [x-cloak] { display: none !important; }
 .rowmenu-item { display:block; width:100%; text-align:left; padding:9px 12px; border-radius:7px; font-size:13.5px; color:var(--ink); text-decoration:none; box-sizing:border-box; }
 .rowmenu-item:hover { background:#F4F7F5; }
+/* Betreuer-Zuweisung direkt in der Zeile (Popover). */
+.pop { position:relative; display:inline-block; }
+.pop summary { list-style:none; cursor:pointer; }
+.pop summary::-webkit-details-marker { display:none; }
+.pop[open] .pop-panel { display:block; }
+.pop-panel { position:absolute; top:calc(100% + 6px); left:0; z-index:40; background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 10px 30px rgba(19,26,23,.14); padding:14px; min-width:240px; }
+.btr-trigger { display:inline-flex; align-items:center; gap:5px; flex-wrap:wrap; padding:3px 6px; border-radius:9px; border:1px solid transparent; }
+.btr-trigger:hover, .pop[open] .btr-trigger { border-color:var(--line); background:#fff; }
+.btr-caret { color:var(--ink-soft); font-size:11px; }
+.btr-badge { background:#D9F4E6; color:#17A65B; border-radius:12px; padding:2px 10px; display:inline-block; margin:1px 0; }
+.btr-open { color:#B5651D; }
+.btr-list { display:grid; gap:2px; max-height:240px; overflow-y:auto; }
+.btr-opt { display:flex; align-items:center; gap:8px; font-size:13px; white-space:nowrap; padding:3px 4px; border-radius:6px; cursor:pointer; }
+.btr-opt:hover { background:#F4F7F5; }
+.btr-opt input { width:16px; height:16px; accent-color:#17A65B; cursor:pointer; }
+.btr-search { padding:6px 9px; border:1px solid var(--line); border-radius:8px; font-size:13px; }
 </style>
+<script>
+// Betreuer-Popover: daneben klicken schliesst; Suchfeld filtert die Liste.
+document.addEventListener('click', function (e) {
+    document.querySelectorAll('details.pop[open]').forEach(function (d) {
+        if (!d.contains(e.target)) d.removeAttribute('open');
+    });
+});
+document.querySelectorAll('.btr-search').forEach(function (input) {
+    input.addEventListener('input', function () {
+        var term = input.value.trim().toLowerCase();
+        input.closest('form').querySelectorAll('.btr-opt').forEach(function (opt) {
+            var hit = opt.textContent.toLowerCase().indexOf(term) !== -1;
+            opt.style.display = hit ? '' : 'none';
+        });
+    });
+});
+</script>
 <script id="rowLinkScript">
 document.querySelectorAll('tr.rowLink').forEach(function (row) {
     row.addEventListener('click', function (e) {
