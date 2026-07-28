@@ -118,6 +118,12 @@ Schedule::call(function () {
 // Button im Backend.
 Schedule::command('escooter:renewal-reminders')->dailyAt('08:40');
 
+// 08:45 — Schutzbrief/Mobilclub (z.B. ADAC-Mitgliedschaft): Erinnerung an die
+// automatische Jahres-Verlaengerung. Fenster ab 5 Monaten vor dem Stichtag
+// (= 7 Monate nach Beginn) bis zum letzten Kuendigungstag (3 Monate vorher) -
+// danach ist eine Kuendigung nicht mehr moeglich. Einmal pro Jahr je Vertrag.
+Schedule::command('schutzbrief:renewal-reminders')->dailyAt('08:45');
+
 // Alle 5 Minuten — geplante E-Mail-Kampagnen anstoßen (Paket B1)
 Schedule::call(fn() => \App\Jobs\SendCampaignJob::dispatchDueScheduled())->everyFiveMinutes();
 

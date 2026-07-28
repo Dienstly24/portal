@@ -523,6 +523,19 @@ class DocumentIntakeService
         // Beitrag). Contract::saving erzwingt zudem den Saison-Ablauf.
         $defaultInterval = $type === 'escooter' ? 'einmalig' : 'monthly';
 
+        // Schutzbrief/Mobilclub (z.B. ADAC-Mitgliedschaft) beginnt SOFORT
+        // (Betreiber-Vorgabe 28.07.2026): ab 0 Uhr des Tages, an dem das
+        // Dokument hochgeladen wurde. Laufzeit 1 Jahr mit automatischer
+        // jaehrlicher Verlaengerung - das Ablaufdatum ist der Verlaengerungs-
+        // Stichtag (fuer die Erinnerung 3 Monate vorher), KEIN Vertragsende
+        // (stillschweigende Verlaengerung).
+        $startDate = $ins['start_date'] ?? null;
+        $endDate = $ins['end_date'] ?? null;
+        if ($type === 'schutzbrief' && $startDate === null) {
+            $startDate = ($document->created_at ?? now())->toDateString();
+            $endDate = $endDate ?? \Carbon\Carbon::parse($startDate)->addYear()->toDateString();
+        }
+
         $contract = Contract::create([
             'customer_id' => $customer->id,
             'contract_number' => $ins['contract_number'] ?? null,
@@ -530,8 +543,8 @@ class DocumentIntakeService
             'subtype' => $subtype,
             'insurer' => $ins['insurer'] ?? null,
             'status' => 'active',
-            'start_date' => $ins['start_date'] ?? null,
-            'end_date' => $ins['end_date'] ?? null,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
             'premium_amount' => $ins['premium_amount'] ?? null,
             'premium_interval' => $ins['premium_interval'] ?? $defaultInterval,
         ]);
