@@ -144,12 +144,19 @@ trait ValidatesExtractedFields
     {
         if (!is_array($in)) return [];
         $sparte = $in['sparte'] ?? null;
+        $sparte = (is_string($sparte) && isset(Contract::TYPES[$sparte])) ? $sparte : null;
+        // Untergruppe (z.B. Mitgliedschafts-Stufe basis/plus/premium beim
+        // Schutzbrief/Mobilclub) - nur gueltige Schluessel der jeweiligen Sparte.
+        $subtype = $in['subtype'] ?? null;
+        $subtype = ($sparte !== null && is_string($subtype)
+            && isset(Contract::SUBTYPES[$sparte][$subtype])) ? $subtype : null;
         $interval = $in['premium_interval'] ?? null;
         $premium = $in['premium_amount'] ?? null;
         return array_filter([
             'insurer' => $this->cleanString($in['insurer'] ?? null, 120),
             'contract_number' => $this->cleanString($in['contract_number'] ?? null, 60),
-            'sparte' => (is_string($sparte) && isset(Contract::TYPES[$sparte])) ? $sparte : null,
+            'sparte' => $sparte,
+            'subtype' => $subtype,
             'start_date' => $this->cleanDate($in['start_date'] ?? null),
             'end_date' => $this->cleanDate($in['end_date'] ?? null),
             'premium_amount' => (is_numeric($premium) && $premium > 0 && $premium < 1000000) ? round((float) $premium, 2) : null,
