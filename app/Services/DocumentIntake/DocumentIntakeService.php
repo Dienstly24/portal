@@ -511,6 +511,13 @@ class DocumentIntakeService
                 default => null,
             }
             : null;
+        // Von der Extraktion gelieferte Untergruppe (z.B. Mitgliedschafts-
+        // Stufe basis/plus/premium der ADAC-Mitgliedschaft) - bereits gegen
+        // Contract::SUBTYPES validiert (validatedInsurance).
+        if ($subtype === null && isset($ins['subtype'])
+            && isset(Contract::SUBTYPES[$type][$ins['subtype']])) {
+            $subtype = $ins['subtype'];
+        }
 
         // E-Scooter: Einmalbeitrag als Standard-Zahlweise (kein laufender
         // Beitrag). Contract::saving erzwingt zudem den Saison-Ablauf.
