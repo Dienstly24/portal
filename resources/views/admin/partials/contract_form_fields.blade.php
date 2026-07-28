@@ -26,11 +26,25 @@
     </select>
 </div>
 
-{{-- Sonstige: Freitext, was für ein Vertrag das ist (z.B. ADAC Schutzbrief) --}}
+{{-- Sonstige: Freitext, was für ein Vertrag das ist (Schutzbrief/Mobilclub
+     hat inzwischen eine eigene Sparte und gehört nicht mehr hierher) --}}
 <div id="type-other-wrap" class="field" style="display:none;">
     <label>Was für ein Vertrag? *</label>
     <input type="text" name="type_other" maxlength="120" value="{{ $val('type_other', $c->type_other ?? '') }}"
-        placeholder="z. B. ADAC Schutzbrief, Mobil-Club (ACV), Reise-Schutz ...">
+        placeholder="z. B. Reise-Schutz, Sterbegeldversicherung, Tierhalterhaftpflicht ...">
+</div>
+
+{{-- Schutzbrief / Mobilclub: Mitgliedschafts-Stufe wie beim ADAC
+     (Basis/Plus/Premium). Optional lassen, wenn die Stufe nicht bekannt ist
+     oder der Anbieter (z.B. reiner KFZ-Schutzbrief) keine Stufen kennt. --}}
+<div id="subtype-wrap-schutzbrief" class="field subtype-wrap" style="display:none;">
+    <label>Mitgliedschaft / Tarifstufe</label>
+    <select name="subtype" data-subtype-for="schutzbrief" disabled style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+        <option value="">— bitte wählen —</option>
+        @foreach(\App\Models\Contract::SUBTYPES['schutzbrief'] as $ok => $ol)
+        <option value="{{ $ok }}" {{ $curSub === $ok ? 'selected' : '' }}>{{ $ol }}</option>
+        @endforeach
+    </select>
 </div>
 
 {{-- Krankenversicherung: GKV/PKV steuert die Wechsel-Erinnerungen --}}

@@ -6,12 +6,12 @@
 </div>
 @php
 $typeIcons = [
-    'kfz' => '🚗', 'strom' => '⚡', 'gas' => '🔥', 'strom_gas' => '⚡', 'internet' => '📶', 'haftpflicht' => '🛡️',
+    'kfz' => '🚗', 'schutzbrief' => '🆘', 'strom' => '⚡', 'gas' => '🔥', 'strom_gas' => '⚡', 'internet' => '📶', 'haftpflicht' => '🛡️',
     'hausrat' => '🏠', 'rechtsschutz' => '⚖️', 'krankenversicherung' => '🏥',
     'leben' => '❤️', 'unfall' => '🚑', 'andere' => '📋',
 ];
 $typeLabels = [
-    'kfz' => 'KFZ', 'strom' => 'Strom', 'gas' => 'Gas', 'strom_gas' => 'Strom/Gas', 'internet' => 'Internet', 'haftpflicht' => 'Haftpflicht',
+    'kfz' => 'KFZ', 'schutzbrief' => 'Schutzbrief / Mobilclub', 'strom' => 'Strom', 'gas' => 'Gas', 'strom_gas' => 'Strom/Gas', 'internet' => 'Internet', 'haftpflicht' => 'Haftpflicht',
     'hausrat' => 'Hausrat', 'rechtsschutz' => 'Rechtsschutz', 'krankenversicherung' => 'Krankenversicherung',
     'leben' => 'Leben', 'unfall' => 'Unfall', 'andere' => 'Andere',
 ];
@@ -77,6 +77,7 @@ $typeLabels = [
                 <div class="field"><label>Versicherungsart *</label>
                     <select name="type" required>
                         <option value="kfz">🚗 KFZ</option>
+                        <option value="schutzbrief">🆘 Schutzbrief / Mobilclub (z. B. ADAC)</option>
                         <option value="krankenversicherung">🏥 Krankenversicherung</option>
                         <option value="haftpflicht">🛡️ Haftpflicht</option>
                         <option value="rechtsschutz">⚖️ Rechtsschutz</option>

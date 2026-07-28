@@ -110,6 +110,55 @@ class ContractManagementTest extends TestCase
         $this->assertNull(Contract::where('customer_id', $customer->id)->first()->subtype);
     }
 
+    // 2e) Schutzbrief/Mobilclub (Betreiber-Vorgabe 28.07.2026): eigene Sparte
+    // mit den drei Mitgliedschafts-Stufen wie beim ADAC (Basis/Plus/Premium).
+    public function test_schutzbrief_stores_mitgliedschaft_stufe(): void
+    {
+        $customer = $this->makeCustomer();
+        $expected = [
+            'basis'   => 'Basis-Mitgliedschaft',
+            'plus'    => 'Plus-Mitgliedschaft',
+            'premium' => 'Premium-Mitgliedschaft',
+        ];
+
+        foreach ($expected as $stufe => $label) {
+            $this->actingAs($this->admin())
+                ->post(route('admin.contract.store', $customer->id), $this->base([
+                    'type' => 'schutzbrief', 'insurer' => 'ADAC', 'subtype' => $stufe,
+                ]))
+                ->assertSessionHas('success');
+
+            $contract = Contract::where('customer_id', $customer->id)
+                ->where('subtype', $stufe)->first();
+            $this->assertNotNull($contract);
+            $this->assertSame('schutzbrief', $contract->type);
+            $this->assertSame('Schutzbrief / Mobilclub', $contract->typeLabel());
+            $this->assertSame($label, $contract->subtypeLabel());
+        }
+    }
+
+    // 2f) Die Stufe ist optional (reiner KFZ-Schutzbrief ohne Club-Stufen) und
+    // eine fremde Untergruppe (z.B. "gkv") bleibt auch hier draussen.
+    public function test_schutzbrief_stufe_is_optional_and_guarded(): void
+    {
+        $customer = $this->makeCustomer();
+
+        $this->actingAs($this->admin())
+            ->post(route('admin.contract.store', $customer->id), $this->base([
+                'type' => 'schutzbrief', 'insurer' => 'HUK-Coburg Schutzbrief',
+            ]))
+            ->assertSessionHas('success');
+        $this->assertNull(Contract::where('customer_id', $customer->id)->first()->subtype);
+
+        $this->actingAs($this->admin())
+            ->post(route('admin.contract.store', $customer->id), $this->base([
+                'type' => 'schutzbrief', 'insurer' => 'ACE', 'subtype' => 'gkv',
+            ]))
+            ->assertSessionHas('success');
+        $this->assertNull(Contract::where('customer_id', $customer->id)
+            ->where('insurer', 'ACE')->first()->subtype);
+    }
+
     // 2d) Beitrag + Zahlweise werden gespeichert und korrekt normiert.
     public function test_premium_amount_and_interval_are_stored(): void
     {
