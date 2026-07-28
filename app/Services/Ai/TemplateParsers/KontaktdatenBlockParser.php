@@ -140,10 +140,14 @@ class KontaktdatenBlockParser implements DocumentTemplateParser
         }
 
         // Telefon/Handy: erstes Token, das (ohne Trennzeichen) wie eine deutsche
-        // 0-Nummer aussieht - auch wenn es in einer Zeile mit Ort/PLZ steht.
+        // Nummer aussieht - als 0-Nummer ODER im internationalen Format
+        // ("+4915226593331" -> 015226593331). Auch in einer Zeile mit Ort/PLZ.
         foreach (preg_split('/\s+/', implode(' ', $lines)) ?: [] as $token) {
-            $digits = preg_replace('/[\/()+\-]/', '', $token);
-            if (preg_match('/^0\d{9,14}$/', (string) $digits)) {
+            $digits = (string) preg_replace('/[\/()\-]/', '', $token);
+            // +49/0049 in fuehrende 0 normalisieren.
+            $digits = (string) preg_replace('/^(?:\+|00)49/', '0', $digits);
+            $digits = str_replace('+', '', $digits);
+            if (preg_match('/^0\d{9,14}$/', $digits)) {
                 $raw['phone'] = $digits;
                 break;
             }
@@ -167,8 +171,14 @@ class KontaktdatenBlockParser implements DocumentTemplateParser
             $gender = stripos($m[1], 'Fr') === 0 ? 'female' : 'male';
             $line = trim(mb_substr($line, mb_strlen($m[0])));
         }
-        // Datum am Ende (dd.mm.yyyy oder dd.mm.yy) abschneiden.
-        $line = trim((string) preg_replace('/\s+\d{2}\.\d{2}\.(?:\d{4}|\d{2})\s*$/u', '', $line));
+        // Datumsangaben am Ende abschneiden - auch MEHRERE nebeneinander
+        // ("08.07.92 & 12.11.24": Geburtsdatum + z.B. Fuehrerschein-/
+        // Bescheinigungsdatum), mit "/", "-", "&" oder Leerzeichen getrennt.
+        $line = trim((string) preg_replace(
+            '/\s+\d{2}\.\d{2}\.(?:\d{4}|\d{2})(?:\s*[\/\-&]?\s*\d{2}\.\d{2}\.(?:\d{4}|\d{2}))*\s*$/u',
+            '',
+            $line
+        ));
 
         // 2-5 Grosswoerter (Buchstaben + Bindestrich), nichts anderes.
         if (!preg_match('/^([A-ZÄÖÜ][\p{L}\-]+)((?:\s+[A-ZÄÖÜ][\p{L}\-]+){1,4})$/u', $line, $m)) {

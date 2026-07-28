@@ -145,6 +145,37 @@ class KontaktdatenBlockParserTest extends TestCase
         $this->assertSame('DE55285622970035526700', $r['data']['bank']['iban']);
     }
 
+    public function test_two_dates_on_the_name_line_and_international_phone(): void
+    {
+        // BEIDE Daten stehen direkt auf der NAMENszeile ("Haya Afara 08.07.92 &
+        // 12.11.24") - der Name muss trotzdem erkannt werden; das Geburtsdatum
+        // ist das erste Datum, das zweite (z.B. Fuehrerschein/Bescheinigung)
+        // erscheint in der Zusammenfassung. Telefon im +49-Format.
+        $text = implode("\n", [
+            'Haya Afara 08.07.92 & 12.11.24',
+            'Birkenweg 20',
+            '74731 Walldürn',
+            '+4915226593331',
+            'hayasande475@gmail.com',
+            'DE97 6735 2565 0001 5899 28',
+        ]);
+        $r = (new KontaktdatenBlockParser())->parse($text);
+
+        $this->assertNotNull($r);
+        $p = $r['data']['person'];
+        $this->assertSame('Haya', $p['first_name']);
+        $this->assertSame('Afara', $p['last_name']);
+        $this->assertSame('1992-07-08', $p['birth_date']); // erstes Datum
+        $this->assertStringContainsString('12.11.2024', $r['summary']); // zweites Datum sichtbar
+        $this->assertSame('Birkenweg', $p['street']);
+        $this->assertSame('20', $p['house_number']);
+        $this->assertSame('74731', $p['zip']);
+        $this->assertSame('Walldürn', $p['city']);
+        $this->assertSame('015226593331', $p['phone']); // +49 -> fuehrende 0
+        $this->assertSame('hayasande475@gmail.com', $p['email']);
+        $this->assertSame('DE97673525650001589928', $r['data']['bank']['iban']);
+    }
+
     public function test_requires_email_iban_and_plz(): void
     {
         // Ohne IBAN kein Kontaktblock (zu schwaches Signal).
