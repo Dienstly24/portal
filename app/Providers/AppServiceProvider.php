@@ -67,6 +67,7 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(\App\Services\Ai\TemplateParsers\MeldebestaetigungParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\AufenthaltstitelParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\DslAuftragParser::class),
+                $app->make(\App\Services\Ai\TemplateParsers\EweVertragsbestaetigungParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\EnergieAuftragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\GewerbeBeratungsdokumentationParser::class),
                 // Zuletzt: kompakter Kontaktdaten-Block (nur wenn kein echtes

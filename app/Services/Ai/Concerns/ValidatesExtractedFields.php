@@ -97,6 +97,9 @@ trait ValidatesExtractedFields
             'consumption_kwh' => (is_numeric($consumption) && $consumption > 0 && $consumption < 1000000) ? (int) $consumption : null,
             'tariff' => $this->cleanString($in['tariff'] ?? null, 80),
             'customer_number' => $this->cleanString($in['customer_number'] ?? null, 40),
+            // Netzbetreiber (verteilt die Energie im Netzgebiet) - aus der
+            // Vertragsbestaetigung; eigene Spalte am Energievertrag.
+            'grid_operator' => $this->cleanString($in['grid_operator'] ?? null, 120),
             // Vorversorger (bisheriger Lieferant beim Wechsel) + dessen
             // Kundennummer - aus dem Strom-/Gas-Auftrag.
             'previous_provider' => $this->cleanString($in['previous_provider'] ?? null, 150),
