@@ -64,6 +64,64 @@ class Document extends Model {
         return in_array($this->ai_type, self::NEW_BUSINESS_TYPES, true);
     }
 
+    /**
+     * Dokumenttypen, die ein ANTRAG/AUFTRAG sind (Vertrag noch nicht
+     * bestaetigt): der Kunde hat beauftragt, die Gesellschaft hat noch nicht
+     * bestaetigt. Solche Dokumente tragen typischerweise noch keine
+     * Vertragsnummer.
+     */
+    public const APPLICATION_AI_TYPES = [
+        'energieauftrag', 'internetvertrag', 'beratungsprotokoll',
+        'beitrittserklaerung', 'familienversicherung', 'versicherungsvertrag',
+    ];
+
+    /**
+     * Dokumenttypen, die den ABSCHLUSS belegen (Police, Versicherungsschein,
+     * Vertragsbestaetigung) - sie bringen die endgueltigen Daten.
+     */
+    public const CONFIRMATION_AI_TYPES = [
+        'versicherungspolice', 'kfz_vertrag', 'escooter_vertrag',
+    ];
+
+    /**
+     * Vertrags-Stufe, die dieses Dokument belegt (Contract::STAGE_*) oder null,
+     * wenn sich das nicht sicher sagen laesst.
+     *
+     * Reihenfolge (Betreiber-Vorgabe 29.07.2026):
+     *  1. Ausdrueckliche Angabe der Extraktion (versicherung.document_stage) -
+     *     die Vorlagen-Parser und die KI kennen ihr Dokument am besten.
+     *  2. Eindeutige Dokumenttypen (Police/Versicherungsschein = Vertrag).
+     *  3. Antrags-Typen: MIT Vertragsnummer ist es die Bestaetigung (z.B. die
+     *     EWE-Vertragsbestaetigung, die denselben Typ 'energieauftrag' traegt
+     *     wie der Auftrag), OHNE Nummer der Antrag.
+     *  4. Sonst: eine Vertragsnummer belegt einen bestaetigten Vertrag,
+     *     ansonsten bleibt die Stufe offen (null = Automatik haelt sich raus).
+     *
+     * @param array<string,mixed> $extracted validiertes Analyse-Ergebnis
+     */
+    public static function contractStageFor(?string $aiType, array $extracted): ?string {
+        $ins = $extracted['versicherung'] ?? [];
+        $explicit = $ins['document_stage'] ?? null;
+        if (in_array($explicit, [Contract::STAGE_ANTRAG, Contract::STAGE_VERTRAG], true)) {
+            return $explicit;
+        }
+
+        $hasNumber = !blank($ins['contract_number'] ?? null);
+
+        if (in_array($aiType, self::CONFIRMATION_AI_TYPES, true)) {
+            return Contract::STAGE_VERTRAG;
+        }
+        if (in_array($aiType, self::APPLICATION_AI_TYPES, true)) {
+            return $hasNumber ? Contract::STAGE_VERTRAG : Contract::STAGE_ANTRAG;
+        }
+        return $hasNumber ? Contract::STAGE_VERTRAG : null;
+    }
+
+    /** Vertrags-Stufe dieses Dokuments aus seinem eigenen Analyse-Ergebnis. */
+    public function contractStage(): ?string {
+        return self::contractStageFor($this->ai_type, $this->ai_extracted ?? []);
+    }
+
     protected function casts(): array {
         return [
             // Verschluesselt at rest: kann IBAN/Versichertennummern enthalten

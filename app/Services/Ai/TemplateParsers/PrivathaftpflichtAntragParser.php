@@ -159,7 +159,10 @@ class PrivathaftpflichtAntragParser implements DocumentTemplateParser
     /** @return array<string,mixed> */
     private function parseInsurance(string $text): array
     {
-        $raw = ['sparte' => 'haftpflicht'];
+        // Antrag/Angebot - noch keine Police: Stufe 'antrag'. Der spaeter
+        // zugestellte Versicherungsschein ergaenzt denselben Vertrag
+        // (Versicherungsscheinnummer, endgueltiger Beginn, Beitrag).
+        $raw = ['sparte' => 'haftpflicht', 'document_stage' => \App\Models\Contract::STAGE_ANTRAG];
 
         // Versicherer ("AXA Versicherung AG").
         if (preg_match('/\b([A-ZÄÖÜ][\wÄÖÜäöüß.\-]*(?:\s+[A-ZÄÖÜ][\wÄÖÜäöüß.\-]*){0,3}\s+Versicherung(?:s)?\s+AG)\b/u', $text, $m)) {

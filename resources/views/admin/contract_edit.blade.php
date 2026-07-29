@@ -11,6 +11,17 @@
     <div class="page-sub">{{ $contract->typeIcon() }} {{ $contract->typeLabel() }} · {{ $contract->insurer }}</div>
 </div>
 
+@if($contract->isApplication())
+{{-- Aus einem Auftrag/Antrag entstanden: die Vertragsbestaetigung fehlt noch. --}}
+<div style="background:#FEF3C7;border:1px solid #E8C36A;border-radius:10px;padding:14px 16px;margin-bottom:20px;max-width:980px;font-size:13px;">
+    <b>📝 Antrag – wartet auf die Vertragsbestätigung.</b>
+    Dieser Vertrag wurde aus einem Auftrag/Antrag angelegt. Sobald die Vertragsbestätigung
+    (Police, Versicherungsschein) hochgeladen wird, erkennt das System sie als dasselbe
+    Geschäft und ergänzt automatisch Vertragsnummer, Kundennummer und die endgültigen
+    Angaben – jede Änderung steht unten im Änderungsverlauf.
+</div>
+@endif
+
 @if($errors->any())
 <div style="background:#F9E3E3;border:1px solid #F0A0A0;border-radius:10px;padding:16px;margin-bottom:20px;max-width:800px;">
     <div style="font-weight:700;color:#A32D2D;margin-bottom:8px;">Bitte korrigieren Sie folgende Fehler:</div>

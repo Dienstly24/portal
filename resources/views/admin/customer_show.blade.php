@@ -468,6 +468,7 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
             <td style="padding:12px;">
                 @php $st = $c->displayStatus(); @endphp
                 <span class="badge badge-{{ $st['badge'] }}" style="white-space:nowrap;">{{ $st['label'] }}</span>
+                @include('admin.partials.contract_stage_badge', ['contract' => $c])
             </td>
             <td style="padding:12px;font-size:12px;color:var(--ink-soft);">
                 {{ $c->added_by ?? 'System' }}

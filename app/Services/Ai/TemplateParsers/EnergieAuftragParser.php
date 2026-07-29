@@ -186,13 +186,28 @@ class EnergieAuftragParser implements DocumentTemplateParser
             $raw['previous_customer_number'] = $prevNr;
         }
 
+        // Tarifpreise des Auftrags: Grundpreis (EUR/Monat) und Arbeitspreis
+        // (Cent/kWh) - eigene Felder am Energievertrag, unabhaengig vom
+        // spaeter festgelegten Abschlag.
+        if (preg_match('/(\d+(?:\.\d{3})*,\d{2})\s*Euro\s*\/\s*Monat/u', $text, $m)) {
+            $raw['base_price'] = (float) str_replace(['.', ','], ['', '.'], $m[1]);
+        }
+        if (preg_match('/(\d+(?:\.\d{3})*,\d{1,3})\s*Cent\s*\/\s*kWh/u', $text, $m)) {
+            $raw['working_price'] = (float) str_replace(['.', ','], ['', '.'], $m[1]);
+        }
+
         return $this->validatedEnergy($raw);
     }
 
     /** @return array<string,mixed> */
     private function parseContract(string $text, string $sparte): array
     {
-        $raw = ['sparte' => $sparte];
+        // Ein AUFTRAG ist noch keine Vertragsbestaetigung: der Vertrag wird
+        // "mit Erhalt der Vertragsbestaetigung wirksam". Der daraus angelegte
+        // Vertrag bleibt deshalb in der Stufe 'antrag' und wird spaeter von der
+        // Bestaetigung (Vertrags-/Kundennummer, MaLo, Beginn, Abschlag)
+        // ergaenzt - statt ein zweiter Vertrag zu entstehen.
+        $raw = ['sparte' => $sparte, 'document_stage' => \App\Models\Contract::STAGE_ANTRAG];
 
         if (preg_match('/(EWE\s+VERTRIEB\s+GmbH)/u', $text, $m)) {
             $raw['insurer'] = 'EWE VERTRIEB GmbH';

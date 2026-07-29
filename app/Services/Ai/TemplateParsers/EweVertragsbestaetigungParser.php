@@ -40,6 +40,11 @@ class EweVertragsbestaetigungParser implements DocumentTemplateParser
         $insRaw = [
             'insurer' => 'EWE VERTRIEB GmbH',
             'sparte' => $sparte,
+            // Dies ist die BESTAETIGUNG des Vertrags: sie darf einen frueher
+            // hochgeladenen Auftrag desselben Kunden vervollstaendigen
+            // (Vertragsnummer, Kundennummer, MaLo-ID, Lieferbeginn, Abschlag)
+            // statt einen zweiten Vertrag anzulegen.
+            'document_stage' => \App\Models\Contract::STAGE_VERTRAG,
         ];
         if (($nr = $this->labelValue('Ihre Vertragsnummer')) !== null && preg_match('/\d{6,}/', $nr, $m)) {
             $insRaw['contract_number'] = $m[0];
@@ -81,6 +86,18 @@ class EweVertragsbestaetigungParser implements DocumentTemplateParser
         if (isset($insurance['tariff'])) {
             $enRaw['tariff'] = $insurance['tariff'];
         }
+        // Tarifpreise aus der Produktdetails-Tabelle. Die Spalten sind je
+        // Preis netto UND brutto ("25,18  29,96   201,92  240,29") - erfasst
+        // wird der BRUTTOPREIS (der zweite Wert je Paar), weil der Kunde ihn
+        // zahlt. Der Grundpreis steht bei EWE pro JAHR; die Vertragsakte fuehrt
+        // ihn pro MONAT -> wird umgerechnet.
+        $preise = $this->productPrices($prodCols);
+        if ($preise['working_price'] !== null) {
+            $enRaw['working_price'] = $preise['working_price'];
+        }
+        if ($preise['base_price'] !== null) {
+            $enRaw['base_price'] = $preise['base_price'];
+        }
         // Netzbetreiber (erste Firmenzeile im Netzbetreiber-Block).
         if (($grid = $this->blockValue('zuständiger Netzbetreiber')) !== null) {
             $enRaw['grid_operator'] = $grid;
@@ -115,6 +132,40 @@ class EweVertragsbestaetigungParser implements DocumentTemplateParser
                 'energie' => $energie,
             ],
         ];
+    }
+
+    /**
+     * Arbeits- und Grundpreis aus den Zahlenspalten der Produktdetails-Zeile.
+     * Layout: "<Sparte> <Produkt> <Preisgarantie> <Lieferbeginn> <AP netto>
+     * <AP brutto> <GP netto> <GP brutto>". Genommen wird jeweils der BRUTTO-
+     * Wert; steht der Grundpreis laut Tabellenkopf pro JAHR, wird er auf den
+     * Monat umgerechnet (die Vertragsakte fuehrt EUR/Monat). Bei einer
+     * unerwarteten Spaltenzahl bleibt es lieber leer als falsch.
+     *
+     * @param list<string> $cols
+     * @return array{working_price: ?float, base_price: ?float}
+     */
+    private function productPrices(array $cols): array
+    {
+        $zahlen = [];
+        foreach ($cols as $c) {
+            if (preg_match('/^\d{1,3}(?:\.\d{3})*,\d{2}$/', trim($c))) {
+                $zahlen[] = (float) str_replace(['.', ','], ['', '.'], trim($c));
+            }
+        }
+
+        [$working, $base] = match (count($zahlen)) {
+            4 => [$zahlen[1], $zahlen[3]], // netto/brutto je Preis -> brutto
+            2 => [$zahlen[0], $zahlen[1]], // nur ein Wert je Preis
+            default => [null, null],
+        };
+
+        // Grundpreis-Einheit aus der Kopfzeile der Tabelle.
+        if ($base !== null && preg_match('/Grundpreis\s*\(\s*Euro\s*\/\s*Jahr/ui', $this->text())) {
+            $base = round($base / 12, 2);
+        }
+
+        return ['working_price' => $working, 'base_price' => $base];
     }
 
     /** @return array<string,mixed> */

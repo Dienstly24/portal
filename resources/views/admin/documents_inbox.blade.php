@@ -632,6 +632,13 @@ window.docReview = (function() {
             if (energie.malo_id) parts.push('MaLo: ' + energie.malo_id);
             if (energie.consumption_kwh) parts.push(energie.consumption_kwh + ' kWh/Jahr');
             if (energie.meter_reading) parts.push('Stand: ' + energie.meter_reading);
+            // Stufe des Dokuments: ein Auftrag legt den Vertrag an, die
+            // spaetere Bestaetigung ERGAENZT genau diesen Vertrag.
+            if (ins.document_stage === 'antrag') {
+                parts.push('📝 Auftrag/Antrag – Vertragsbestätigung folgt später');
+            } else if (ins.document_stage === 'vertrag') {
+                parts.push('✅ Vertragsbestätigung – ergänzt einen vorhandenen Auftrag, statt ihn zu verdoppeln');
+            }
             el('review-contract-info').textContent = parts.join(' · ');
         }
     }

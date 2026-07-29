@@ -176,6 +176,29 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   eines ANDEREN Versicherers fuer dasselbe Auto ist ein WECHSEL und wird ein
   eigener Vertrag. Kennzeichen-Vergleich zentral + umlaut-tolerant
   (`ContractVehicleDetail::normalizePlate`, "LUEN-G 1110" = "LUN-G1110").
+- **Auftrag zuerst, Vertrag spaeter: ein Vorgang, EIN Vertrag**
+  (Betreiber-Vorgabe 29.07.2026, Details in
+  `docs/AUFTRAG_UND_VERTRAG_ZUSAMMENFUEHREN.md`): Zuerst wird der
+  AUFTRAG/ANTRAG hochgeladen (viele Daten, aber keine Bestaetigung), Wochen
+  spaeter die VERTRAGSBESTAETIGUNG/POLICE mit Vertragsnummer, Kundennummer,
+  MaLo-ID, Lieferbeginn und Abschlag. Beide teilen oft KEIN hartes Merkmal
+  (EWE-Auftrag nennt nur die Zaehlernummer, die Bestaetigung nur die MaLo-ID)
+  - frueher entstanden daraus zwei Vertraege. Neu: `contracts.stage`
+  (`antrag`/`vertrag`/null=Altbestand) haelt die Stufe fest;
+  `Document::contractStageFor()` leitet sie aus `versicherung.document_stage`
+  (Parser/KI), dem Dokumenttyp und dem Vorhandensein einer Vertragsnummer ab.
+  `DocumentIntakeService::findApplicationContractForConfirmation()` ergaenzt
+  den vorhandenen ANTRAGS-Vertrag statt ein Duplikat anzulegen - streng:
+  gleiche Sparte (Strom != Gas), gleiche Gesellschaft, kein Widerspruch in
+  MaLo/Zaehler/FIN/Kennzeichen, max. 12 Monate alt; bei mehreren offenen
+  Antraegen entscheidet ein Indiz (Tarif/Fahrzeug), sonst wird NICHT geraten.
+  Uebernahme: endgueltige Vertragsnummer ersetzt eine vorlaeufige
+  Auftragsnummer, leere neue Werte loeschen nie Bestand, Stufe wandert nur
+  vorwaerts, jede Aenderung in der Version History + Glocke an den Betreuer
+  (und KEINE doppelte Provision). Spaetere Post findet ihren Vertrag ueber
+  Vertragsnummer, FIN/Kennzeichen, MaLo, NORMALISIERTE Zaehlernummer
+  ("1 LOG00 9228 3078" = "1LOG0092283078", Zaehlerfoto traegt den Stand nach)
+  und die Kundennummer beim Versorger. Tests: `ContractConfirmationTest`.
 - **Vertrags-Lebenszyklus: schlauer Status, Kuendigung, Wechsel-Automatik**
   (Betreiber-Vorgabe 25./26.07.2026): `cancellation_date` ist das
   EINREICHUNGS-Datum der Kuendigung (Formular-Label "eingereicht am"), der
