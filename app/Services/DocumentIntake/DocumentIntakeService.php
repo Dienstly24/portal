@@ -764,6 +764,18 @@ class DocumentIntakeService
             $endDate = $endDate ?? \Carbon\Carbon::parse($startDate)->addYear()->toDateString();
         }
 
+        // Versorgerwechsel ohne genanntes Beginndatum (z.B. LichtBlick-Auftrag,
+        // Wechsel von den Stadtwerken): der Parser meldet den SPAETESTEN
+        // erwarteten Beginn in Tagen nach dem Upload (14 Tage Kuendigungsfrist
+        // + Bearbeitung = 20, Betreiber-Regel 29.07.2026). Der voraussichtliche
+        // Beginn wird relativ zum Upload-Tag gesetzt; die spaetere
+        // Vertragsbestaetigung ersetzt ihn durch das endgueltige Datum
+        // (feldgenau in der Version History).
+        if ($startDate === null && isset($ins['expected_start_within_days'])) {
+            $startDate = ($document->created_at ?? now())
+                ->copy()->addDays((int) $ins['expected_start_within_days'])->toDateString();
+        }
+
         $contract = Contract::create([
             'customer_id' => $customer->id,
             'contract_number' => $ins['contract_number'] ?? null,
