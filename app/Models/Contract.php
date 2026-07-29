@@ -17,7 +17,7 @@ class Contract extends Model {
      * Storno weiterhin bei Loeschung und manueller Stornierung im Formular.
      */
     public bool $endsWithoutStorno = false;
-    protected $fillable = ['customer_id','contract_number','type','type_other','subtype','insurer','status','start_date','end_date','pdf_path','notes','cancellation_date','premium_amount','premium_interval'];
+    protected $fillable = ['customer_id','contract_number','type','type_other','subtype','insurer','status','stage','start_date','end_date','pdf_path','notes','cancellation_date','premium_amount','premium_interval'];
 
     protected $casts = [
         'premium_amount' => 'decimal:2',
@@ -198,6 +198,35 @@ class Contract extends Model {
 
     public function typeIcon(): string {
         return self::TYPES[$this->type]['icon'] ?? self::LEGACY_TYPES[$this->type]['icon'] ?? '📋';
+    }
+
+    /**
+     * Vertrags-STUFE (stage) - Betreiber-Vorgabe 29.07.2026. Ein Vertrag
+     * entsteht in zwei Schritten: zuerst der AUFTRAG/ANTRAG (viele Daten, aber
+     * noch keine Bestaetigung), spaeter die VERTRAGSBESTAETIGUNG/POLICE mit
+     * Vertragsnummer, Kundennummer, endgueltigem Beginn und Abschlag.
+     *
+     * Nur ein Vertrag der Stufe 'antrag' darf von einem spaeter hochgeladenen
+     * Bestaetigungs-Dokument automatisch ERGAENZT werden (statt ein Duplikat
+     * anzulegen). null = Altbestand/manuell angelegt -> die Automatik fasst
+     * ihn nie an.
+     */
+    public const STAGE_ANTRAG = 'antrag';
+    public const STAGE_VERTRAG = 'vertrag';
+
+    public const STAGE_LABELS = [
+        self::STAGE_ANTRAG  => 'Antrag – wartet auf Vertragsbestätigung',
+        self::STAGE_VERTRAG => 'Vertrag bestätigt',
+    ];
+
+    /** Wartet dieser Vertrag noch auf seine Vertragsbestaetigung/Police? */
+    public function isApplication(): bool {
+        return $this->stage === self::STAGE_ANTRAG;
+    }
+
+    /** Anzeige-Label der Vertragsstufe (oder null bei Altbestand). */
+    public function stageLabel(): ?string {
+        return self::STAGE_LABELS[$this->stage] ?? null;
     }
 
     /** Roh-Status -> deutsches Label (eine Quelle fuer alle Listen). */

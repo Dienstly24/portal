@@ -286,6 +286,10 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         ->middleware('throttle:300,10')->name('documents.smart_upload');
     Route::get('/documents/customer-search', [\App\Http\Controllers\SmartDocumentUploadController::class, 'customerSearch'])
         ->middleware('throttle:600,1')->name('documents.customer_search');
+    // Vorschlaege beim Oeffnen des Zuordnungs-Dialogs (keine eigene Eingabe
+    // noetig) - gleiches grosszuegiges Limit wie die manuelle Kundensuche.
+    Route::get('/documents/{id}/kunden-vorschlaege', [\App\Http\Controllers\SmartDocumentUploadController::class, 'customerSuggestions'])
+        ->middleware('throttle:600,1')->name('documents.customer_suggestions');
     Route::get('/documents/{id}/analyse-status', [\App\Http\Controllers\SmartDocumentUploadController::class, 'adminStatus'])
         ->middleware('throttle:2400,1')->name('documents.analyse_status');
     Route::post('/documents/{id}/assign', [\App\Http\Controllers\SmartDocumentUploadController::class, 'assign'])

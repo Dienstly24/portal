@@ -163,6 +163,17 @@
         </div>
 
         <div id="review-body">
+        {{-- Automatische Zuordnungs-Vorschlaege: die naechstliegenden Kunden
+             zu den gelesenen Angaben. Steht bewusst GANZ OBEN und wird beim
+             Oeffnen geladen - der Mitarbeiter soll nicht selbst suchen
+             muessen. Jeder Vorschlag nennt seinen Grund; ausgewaehlt wird
+             immer bewusst per Klick. --}}
+        <div id="review-suggestions" style="display:none;border:1px solid var(--line);background:#F7F5EF;border-radius:10px;padding:11px 12px;margin-bottom:12px;">
+            <div id="review-suggestions-head" style="font-weight:700;font-size:13.5px;margin-bottom:7px;"></div>
+            <div id="review-suggestions-list" style="display:grid;gap:6px;"></div>
+            <div id="review-suggestions-note" style="font-size:12px;color:var(--ink-soft);margin-top:7px;"></div>
+        </div>
+
         {{-- Kundensuche (Modus: zuordnen) --}}
         <div id="review-assign-block">
             <div class="field" style="margin-bottom:6px;">
@@ -412,6 +423,10 @@ window.docReview = (function() {
 
         el('review-submit').textContent = 'Kunden anlegen & alle zuordnen';
         el('doc-review-modal').style.display = 'flex';
+        // Vorgang: die Vorschlaege dienen als Dubletten-Warnung. Zugeordnet
+        // wird ein Vorgang nicht per Klick (dafuer die Dokumente einzeln) -
+        // deshalb bewusst ohne Auswahl-Button.
+        loadSuggestions(batch.ids[0], 'batch', (batch.ids || []).slice(1));
     }
 
     // Manuelle Mehrfachauswahl -> Batch-Vorschau vom Server holen (gleiche
@@ -559,6 +574,7 @@ window.docReview = (function() {
 
         el('review-submit').textContent = mode === 'create' ? 'Kunden anlegen & Dokument zuordnen' : 'Zuordnen & übernehmen';
         el('doc-review-modal').style.display = 'flex';
+        loadSuggestions(docId, mode, null);
     }
 
     function renderApplyFields(doc) {
@@ -641,6 +657,13 @@ window.docReview = (function() {
             if (energie.malo_id) parts.push('MaLo: ' + energie.malo_id);
             if (energie.consumption_kwh) parts.push(energie.consumption_kwh + ' kWh/Jahr');
             if (energie.meter_reading) parts.push('Stand: ' + energie.meter_reading);
+            // Stufe des Dokuments: ein Auftrag legt den Vertrag an, die
+            // spaetere Bestaetigung ERGAENZT genau diesen Vertrag.
+            if (ins.document_stage === 'antrag') {
+                parts.push('📝 Auftrag/Antrag – Vertragsbestätigung folgt später');
+            } else if (ins.document_stage === 'vertrag') {
+                parts.push('✅ Vertragsbestätigung – ergänzt einen vorhandenen Auftrag, statt ihn zu verdoppeln');
+            }
             el('review-contract-info').textContent = parts.join(' · ');
         }
     }
@@ -655,6 +678,125 @@ window.docReview = (function() {
             chosen.style.display = 'none';
             chosen.textContent = '';
         }
+    }
+
+    // ---- Automatische Vorschlaege -------------------------------------
+    // Beim Oeffnen des Dialogs werden die naechstliegenden Kunden zum
+    // Dokument geladen (Identitaetsmerkmale wie Vertragsnummer/Kennzeichen
+    // zuerst, dann Personendaten). Im Zuordnungs-Modus waehlt ein Klick den
+    // Kunden aus; im Neuanlage-/Vorgang-Modus warnt die Liste vor einer
+    // Dublette - so faellt "Kein Kunde gefunden" nicht mehr auf den
+    // Mitarbeiter zurueck.
+    var suggestSeq = 0;
+
+    function suggestUrl(docId) {
+        return @json(route('admin.documents.customer_suggestions', ['id' => '__ID__'])).replace('__ID__', encodeURIComponent(docId));
+    }
+
+    function loadSuggestions(docId, mode, extraIds) {
+        var seq = ++suggestSeq;
+        var box = el('review-suggestions');
+        var list = el('review-suggestions-list');
+        var note = el('review-suggestions-note');
+        list.innerHTML = '';
+        note.textContent = '';
+        box.style.display = '';
+        el('review-suggestions-head').textContent = '🔎 Passende Kunden werden gesucht…';
+
+        var url = suggestUrl(docId);
+        (extraIds || []).forEach(function(id, i) { url += (i === 0 ? '?' : '&') + 'ids[]=' + encodeURIComponent(id); });
+
+        fetch(url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(res) {
+                if (seq !== suggestSeq) return; // veraltete Antwort verwerfen
+                renderSuggestions(res, mode);
+            })
+            .catch(function() {
+                if (seq !== suggestSeq) return;
+                box.style.display = 'none';
+            });
+    }
+
+    function renderSuggestions(res, mode) {
+        var box = el('review-suggestions');
+        var list = el('review-suggestions-list');
+        var note = el('review-suggestions-note');
+        var items = (res && res.suggestions) || [];
+        var hidden = (res && res.hidden) || 0;
+
+        if (!items.length) {
+            if (!hidden) { box.style.display = 'none'; return; }
+            el('review-suggestions-head').textContent = '👤 Möglicher Kunde erkannt';
+            note.textContent = hidden + ' möglicher Kunde liegt außerhalb Ihres Portfolios – bitte an Admin/Manager übergeben.';
+            return;
+        }
+
+        el('review-suggestions-head').textContent = mode === 'assign'
+            ? '🔎 Vorschläge aus dem Dokument – bitte prüfen und auswählen'
+            : '⚠ Ähnliche Kunden gefunden – vielleicht ist es einer davon?';
+
+        items.forEach(function(s) {
+            list.appendChild(suggestionRow(s, mode));
+        });
+
+        note.textContent = hidden
+            ? 'Weitere ' + hidden + ' mögliche Kunden liegen außerhalb Ihres Portfolios.'
+            : (mode === 'assign' ? '' : 'Trifft keiner zu, unten wie geplant einen neuen Kunden anlegen.');
+    }
+
+    // Eine Vorschlagszeile. Alle Werte per textContent - nichts aus der
+    // Analyse wird als HTML interpretiert.
+    function suggestionRow(s, mode) {
+        var clickable = mode === 'assign' || mode === 'create';
+        var row = document.createElement(clickable ? 'button' : 'div');
+        row.style.cssText = 'display:block;width:100%;text-align:start;border:1px solid ' + (s.score > 90 ? '#17A65B' : 'var(--line)')
+            + ';background:#fff;border-radius:8px;padding:9px 11px;font-size:13px;'
+            + (clickable ? 'cursor:pointer;' : '');
+        if (clickable) row.type = 'button';
+
+        var head = document.createElement('div');
+        head.style.cssText = 'display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;';
+        var name = document.createElement('strong');
+        name.textContent = (s.name || '—') + (s.customer_number ? ' · ' + s.customer_number : '');
+        var score = document.createElement('span');
+        score.style.cssText = 'font-size:12px;color:' + (s.score > 90 ? '#128a4b' : 'var(--ink-soft)') + ';';
+        score.textContent = 'Übereinstimmung ' + s.score + '%';
+        head.appendChild(name); head.appendChild(score);
+        row.appendChild(head);
+
+        (s.reasons || []).forEach(function(reason) {
+            var line = document.createElement('div');
+            line.style.cssText = 'font-size:12px;color:var(--ink-soft);margin-top:2px;';
+            line.textContent = '• ' + reason;
+            row.appendChild(line);
+        });
+
+        if (clickable) {
+            var hint = document.createElement('div');
+            hint.style.cssText = 'font-size:12px;color:#128a4b;font-weight:600;margin-top:5px;';
+            hint.textContent = 'Diesem Kunden zuordnen →';
+            row.appendChild(hint);
+            row.onclick = function() { pickSuggestion(s); };
+        }
+        return row;
+    }
+
+    // Vorschlag uebernehmen. Aus der Neuanlage heraus wird dabei bewusst in
+    // den Zuordnungs-Modus gewechselt (statt eine Dublette anzulegen).
+    function pickSuggestion(s) {
+        var label = (s.name || '—') + ' (' + (s.customer_number || '') + ')';
+        if (current && current.mode === 'create') {
+            current.mode = 'assign';
+            el('review-title').textContent = 'Dokument zuordnen';
+            el('review-assign-block').style.display = '';
+            el('review-create-block').style.display = 'none';
+            el('review-name-block').style.display = 'none';
+            el('review-submit').textContent = 'Zuordnen & übernehmen';
+        }
+        chooseCustomer(s.customer_id, label);
+        el('review-error').style.display = 'none';
+        el('review-suggestions').scrollIntoView({ block: 'nearest' });
     }
 
     var searchSeq = 0;
@@ -962,7 +1104,14 @@ window.docReview = (function() {
         selectAll: selectAll,
         bulkDelete: bulkDelete,
         stay: stay,
-        close: function() { el('doc-review-modal').style.display = 'none'; current = null; },
+        close: function() {
+            el('doc-review-modal').style.display = 'none';
+            current = null;
+            // Laufende Vorschlags-Antwort verwerfen, sonst blendet sie sich
+            // in den naechsten (anderen) Dialog hinein.
+            suggestSeq++;
+            el('review-suggestions').style.display = 'none';
+        },
         submit: submit,
         reanalyze: reanalyze,
     };

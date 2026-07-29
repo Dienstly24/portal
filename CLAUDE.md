@@ -138,6 +138,23 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   tesseract-ocr tesseract-ocr-deu poppler-utils` auf dem VPS, danach
   `OCR_ENABLED=true` in der `.env`. Rohtext wird bewusst NICHT gespeichert
   (Datenminimierung) - nur das validierte Extraktionsergebnis.
+- **Zuordnungs-Vorschlaege im Dokumenten-Eingang** (Betreiber-Vorgabe
+  29.07.2026): Beim Oeffnen von „Kunden zuordnen…" / „Neuen Kunden
+  erstellen" laedt der Dialog SOFORT die naechstliegenden Kunden
+  (`SmartDocumentUploadController::customerSuggestions` ->
+  `DocumentIntakeService::findSuggestions`) - der Mitarbeiter soll nicht
+  selbst suchen muessen, auch wenn die automatische Erkennung („Kein Kunde
+  gefunden", Score < 40) nichts lieferte. Zwei Quellen: HARTE
+  Identitaetsmerkmale aus dem Dokument (Vertrags-/Mitgliedsnummer,
+  FIN/Kennzeichen normalisiert, MaLo-ID, Zaehlernummer -> Score 100) und
+  WEICHE Personendaten ueber `CustomerMatchingService::topMatches()` mit
+  bewusst breiterem Kandidatenpool als `match()` (jedes Namenswort ab 3
+  Zeichen, Firmenname, PLZ) - so taucht ein Kunde auch bei abweichender
+  Schreibweise auf. Jeder Vorschlag nennt seinen GRUND, ausgewaehlt wird
+  immer per Klick (nie automatisch). Im Neuanlage-Modus dient dieselbe
+  Liste als Dubletten-Warnung und wechselt per Klick in die Zuordnung.
+  Portfolio-Scope wie ueberall: fremde Kunden werden nur als Anzahl
+  gemeldet, nie mit Namen. Tests in `SmartDocumentUploadTest`.
 - **Vertrags-Duplikat-Schutz + Version History** (`DocumentIntakeService`,
   Betreiber-Vorgabe 23.07.2026): Ein neu importiertes Dokument fuer ein
   bereits erfasstes Fahrzeug/eine Police erzeugt KEIN Duplikat mehr.
@@ -159,6 +176,29 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   eines ANDEREN Versicherers fuer dasselbe Auto ist ein WECHSEL und wird ein
   eigener Vertrag. Kennzeichen-Vergleich zentral + umlaut-tolerant
   (`ContractVehicleDetail::normalizePlate`, "LUEN-G 1110" = "LUN-G1110").
+- **Auftrag zuerst, Vertrag spaeter: ein Vorgang, EIN Vertrag**
+  (Betreiber-Vorgabe 29.07.2026, Details in
+  `docs/AUFTRAG_UND_VERTRAG_ZUSAMMENFUEHREN.md`): Zuerst wird der
+  AUFTRAG/ANTRAG hochgeladen (viele Daten, aber keine Bestaetigung), Wochen
+  spaeter die VERTRAGSBESTAETIGUNG/POLICE mit Vertragsnummer, Kundennummer,
+  MaLo-ID, Lieferbeginn und Abschlag. Beide teilen oft KEIN hartes Merkmal
+  (EWE-Auftrag nennt nur die Zaehlernummer, die Bestaetigung nur die MaLo-ID)
+  - frueher entstanden daraus zwei Vertraege. Neu: `contracts.stage`
+  (`antrag`/`vertrag`/null=Altbestand) haelt die Stufe fest;
+  `Document::contractStageFor()` leitet sie aus `versicherung.document_stage`
+  (Parser/KI), dem Dokumenttyp und dem Vorhandensein einer Vertragsnummer ab.
+  `DocumentIntakeService::findApplicationContractForConfirmation()` ergaenzt
+  den vorhandenen ANTRAGS-Vertrag statt ein Duplikat anzulegen - streng:
+  gleiche Sparte (Strom != Gas), gleiche Gesellschaft, kein Widerspruch in
+  MaLo/Zaehler/FIN/Kennzeichen, max. 12 Monate alt; bei mehreren offenen
+  Antraegen entscheidet ein Indiz (Tarif/Fahrzeug), sonst wird NICHT geraten.
+  Uebernahme: endgueltige Vertragsnummer ersetzt eine vorlaeufige
+  Auftragsnummer, leere neue Werte loeschen nie Bestand, Stufe wandert nur
+  vorwaerts, jede Aenderung in der Version History + Glocke an den Betreuer
+  (und KEINE doppelte Provision). Spaetere Post findet ihren Vertrag ueber
+  Vertragsnummer, FIN/Kennzeichen, MaLo, NORMALISIERTE Zaehlernummer
+  ("1 LOG00 9228 3078" = "1LOG0092283078", Zaehlerfoto traegt den Stand nach)
+  und die Kundennummer beim Versorger. Tests: `ContractConfirmationTest`.
 - **Vertrags-Lebenszyklus: schlauer Status, Kuendigung, Wechsel-Automatik**
   (Betreiber-Vorgabe 25./26.07.2026): `cancellation_date` ist das
   EINREICHUNGS-Datum der Kuendigung (Formular-Label "eingereicht am"), der

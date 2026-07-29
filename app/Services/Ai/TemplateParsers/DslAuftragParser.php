@@ -212,7 +212,11 @@ class DslAuftragParser implements DocumentTemplateParser
     /** @return array<string,mixed> */
     private function parseContract(string $text): array
     {
-        $raw = ['sparte' => 'internet'];
+        // Der DSL-Auftrag ist noch keine Vertragsbestaetigung des Providers:
+        // Stufe 'antrag'. Der spaeter zugestellte Provider-Vertrag ergaenzt
+        // denselben Vertrag (finale Vertragsnummer, Preise) statt einen
+        // zweiten anzulegen.
+        $raw = ['sparte' => 'internet', 'document_stage' => \App\Models\Contract::STAGE_ANTRAG];
 
         // Anbieter (z.B. Telekom, Vodafone, 1&1, o2).
         if (preg_match('/Anbieter\s*:?\s*([^\r\n]+?)(?:\s{2,}|$)/mu', $text, $m)) {

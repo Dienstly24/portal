@@ -1378,6 +1378,118 @@ class SmartDocumentUploadTest extends TestCase
             ->assertOk();
     }
 
+    /**
+     * Beim Oeffnen des Zuordnungs-Dialogs sollen die naechstliegenden Kunden
+     * SOFORT vorgeschlagen werden - der Mitarbeiter soll nicht selbst suchen
+     * muessen, auch wenn die automatische Erkennung keinen Treffer hatte.
+     */
+    public function test_customer_suggestions_propose_nearest_customers_from_document_data(): void
+    {
+        Storage::fake('local');
+        $treffer = $this->makeCustomer(['birth_date' => '1985-04-12'], ['name' => 'Jawad Twaij']);
+        $this->makeCustomer([], ['name' => 'Ganz Anders']);
+
+        $doc = Document::create([
+            'customer_id' => null, 'category' => 'other', 'file_name' => 'adac.png',
+            'file_path' => 'documents/eingang/adac.png', 'disk' => 'local',
+            'ai_status' => 'done', 'ai_extracted' => [
+                'person' => ['first_name' => 'Jawad', 'last_name' => 'Twaij', 'birth_date' => '1985-04-12'],
+            ],
+        ]);
+
+        $response = $this->actingAs($this->makeAdmin())
+            ->getJson(route('admin.documents.customer_suggestions', $doc->id))
+            ->assertOk();
+
+        $this->assertSame((string) $treffer->id, $response->json('suggestions.0.customer_id'));
+        $this->assertSame('Jawad Twaij', $response->json('suggestions.0.name'));
+        $this->assertGreaterThan(0, $response->json('suggestions.0.score'));
+        // Jeder Vorschlag nennt seinen Grund - es wird nichts geraten.
+        $this->assertNotEmpty($response->json('suggestions.0.reasons'));
+        $this->assertNotContains('Ganz Anders', array_column($response->json('suggestions'), 'name'));
+    }
+
+    /**
+     * Auch bei abweichender Schreibweise des Nachnamens muss ein Vorschlag
+     * entstehen (breiterer Kandidatenpool als beim automatischen Match).
+     */
+    public function test_customer_suggestions_find_customer_despite_spelling_difference(): void
+    {
+        Storage::fake('local');
+        $customer = $this->makeCustomer([], ['name' => 'Jawad Tweij']);
+
+        $doc = Document::create([
+            'customer_id' => null, 'category' => 'other', 'file_name' => 'scan.pdf',
+            'file_path' => 'documents/eingang/scan.pdf', 'disk' => 'local',
+            'ai_status' => 'done', 'ai_extracted' => [
+                'person' => ['first_name' => 'Jawad', 'last_name' => 'Twaij'],
+            ],
+        ]);
+
+        $response = $this->actingAs($this->makeAdmin())
+            ->getJson(route('admin.documents.customer_suggestions', $doc->id))
+            ->assertOk();
+
+        $this->assertContains((string) $customer->id, array_column($response->json('suggestions'), 'customer_id'));
+    }
+
+    /**
+     * Harte Identitaetsmerkmale (Vertrags-/Mitgliedsnummer, Kennzeichen)
+     * wiegen schwerer als der Name: das Dokument gehoert dem Kunden, bei dem
+     * die Nummer bereits erfasst ist.
+     */
+    public function test_customer_suggestions_use_contract_identity(): void
+    {
+        Storage::fake('local');
+        $customer = $this->makeCustomer([], ['name' => 'Voellig Anderer Name']);
+        Contract::create([
+            'customer_id' => $customer->id, 'contract_number' => '736703670',
+            'type' => 'sonstiges', 'insurer' => 'ADAC', 'status' => 'active',
+        ]);
+
+        $doc = Document::create([
+            'customer_id' => null, 'category' => 'other', 'file_name' => 'adac.png',
+            'file_path' => 'documents/eingang/adac.png', 'disk' => 'local',
+            'ai_status' => 'done', 'ai_extracted' => [
+                'versicherung' => ['insurer' => 'ADAC', 'contract_number' => '736703670'],
+            ],
+        ]);
+
+        $response = $this->actingAs($this->makeAdmin())
+            ->getJson(route('admin.documents.customer_suggestions', $doc->id))
+            ->assertOk();
+
+        $this->assertSame((string) $customer->id, $response->json('suggestions.0.customer_id'));
+        $this->assertSame(100, $response->json('suggestions.0.score'));
+    }
+
+    /**
+     * Sichtbarkeit wie ueberall: Kunden ausserhalb des Portfolios werden
+     * NICHT genannt, nur als Zahl gemeldet (Uebergabe an Admin/Manager).
+     */
+    public function test_customer_suggestions_respect_portfolio_scope(): void
+    {
+        Storage::fake('local');
+        $this->makeCustomer([], ['name' => 'Fremder Kunde']);
+
+        $employee = User::factory()->create(['role' => 'employee', 'can_see_all_customers' => false]);
+        $doc = Document::create([
+            'customer_id' => null, 'category' => 'other', 'file_name' => 'scan.pdf',
+            'file_path' => 'documents/eingang/scan.pdf', 'disk' => 'local', 'uploaded_by' => $employee->id,
+            'ai_status' => 'done', 'ai_extracted' => [
+                'person' => ['first_name' => 'Fremder', 'last_name' => 'Kunde'],
+            ],
+        ]);
+
+        $response = $this->actingAs($employee)
+            ->getJson(route('admin.documents.customer_suggestions', $doc->id))
+            ->assertOk()
+            ->assertDontSee('Fremder Kunde');
+
+        $this->assertSame([], $response->json('suggestions'));
+        $this->assertGreaterThan(0, $response->json('hidden'));
+    }
+
     public function test_assign_returns_clean_404_for_deleted_customer(): void
     {
         Storage::fake('local');

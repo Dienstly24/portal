@@ -34,7 +34,7 @@ class ContractEnergyDetail extends Model
         // gesetzt wurde.
         static::saving(function ($m) {
             if ($m->isDirty('meter_number')) {
-                $m->meter_number_normalized = self::normalizeMeterNumber($m->meter_number);
+                $m->meter_number_normalized = self::normalizeMeter($m->meter_number);
             }
         });
     }
@@ -43,21 +43,6 @@ class ContractEnergyDetail extends Model
     /** Zaehlerstands-Historie, juengste Ablesung zuerst. */
     public function meterReadings() {
         return $this->hasMany(MeterReading::class)->orderByDesc('reading_date')->orderByDesc('created_at');
-    }
-
-    /**
-     * Zaehlernummer fuer den Vergleich normalisieren: nur A-Z und Ziffern,
-     * gross. So trifft "1 LOG00 9228 3078" dieselbe Nummer wie
-     * "1LOG0092283078" - Trennzeichen auf dem Zaehler und in der
-     * Vertragsbestaetigung unterscheiden sich regelmaessig.
-     */
-    public static function normalizeMeterNumber(?string $number): ?string
-    {
-        if (blank($number)) {
-            return null;
-        }
-        $n = (string) preg_replace('/[^A-Z0-9]/', '', mb_strtoupper(trim($number)));
-        return $n !== '' ? $n : null;
     }
 
     /** Juengste Ablesung des Zaehlwerks (Standard: Bezug). */
@@ -200,5 +185,23 @@ class ContractEnergyDetail extends Model
     {
         $registers = $this->meterReadings->pluck('register')->unique()->values()->all();
         return $registers !== [] ? $registers : [MeterReading::REGISTER_DEFAULT];
+    }
+
+    /**
+     * Zaehlernummer auf ihren Kern reduzieren (Grossbuchstaben, ohne
+     * Leerzeichen/Trennstriche): auf dem Zaehler steht "1 LOG00 9228 3078",
+     * im Auftrag "1LOG0092283078" - dieselbe Nummer. Der Vergleich laeuft
+     * deshalb IMMER ueber diese Normalisierung, sonst landet das Zaehlerfoto
+     * nicht am richtigen Vertrag.
+     */
+    public static function normalizeMeter(?string $value): ?string {
+        $clean = strtoupper((string) preg_replace('/[^A-Za-z0-9]/', '', (string) $value));
+        return $clean !== '' ? $clean : null;
+    }
+
+    /** MaLo-ID (Marktlokations-ID) auf die reinen Ziffern reduzieren. */
+    public static function normalizeMalo(?string $value): ?string {
+        $clean = (string) preg_replace('/\D/', '', (string) $value);
+        return $clean !== '' ? $clean : null;
     }
 }

@@ -78,7 +78,7 @@ class MeterReadingService
      */
     public function candidates(?string $meterNumber): array
     {
-        $normalized = ContractEnergyDetail::normalizeMeterNumber($meterNumber);
+        $normalized = ContractEnergyDetail::normalizeMeter($meterNumber);
         if ($normalized === null || mb_strlen($normalized) < self::MIN_PARTIAL_LENGTH) {
             return [];
         }
@@ -242,7 +242,7 @@ class MeterReadingService
                 return null;
             }
 
-            $normalized = ContractEnergyDetail::normalizeMeterNumber($number);
+            $normalized = ContractEnergyDetail::normalizeMeter($number);
             if ($normalized !== null) {
                 $matches = $details->filter(function ($detail) use ($normalized) {
                     $stored = (string) $detail->meter_number_normalized;
