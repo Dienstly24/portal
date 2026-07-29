@@ -347,6 +347,11 @@ window.docReview = (function() {
             return g === 'male' ? 'Männlich' : (g === 'female' ? 'Weiblich' : null);
         } },
         { key: 'email2', label: 'E-Mail (Login / Portal-Zugang)', from: function(x) { return get(x, 'person', 'email'); } },
+        { key: 'occupation', label: 'Beruf', from: function(x) { return get(x, 'person', 'occupation'); } },
+        { key: 'employer', label: 'Arbeitgeber', from: function(x) {
+            var p = x.person || {};
+            return [p.employer_name, p.employer_address].filter(Boolean).join(' · ') || null;
+        } },
         { key: 'health_insurance', label: 'Krankenkasse / Versichertennummer', from: function(x) {
             var g = x.gesundheit || {};
             var parts = [g.health_insurance_company, g.health_insurance_number];

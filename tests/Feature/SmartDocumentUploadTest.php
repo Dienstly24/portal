@@ -456,6 +456,47 @@ class SmartDocumentUploadTest extends TestCase
         ]);
     }
 
+    public function test_apply_fields_takes_occupation_and_employer_from_arbeitsvertrag(): void
+    {
+        Storage::fake('local');
+        Storage::disk('local')->put('documents/eingang/vertrag.pdf', '%PDF-1.4');
+
+        $doc = Document::create([
+            'customer_id' => null,
+            'category' => 'other',
+            'file_name' => 'Arbeitsvertrag.pdf',
+            'file_path' => 'documents/eingang/vertrag.pdf',
+            'disk' => 'local',
+            'visibility' => 'internal',
+            'ai_status' => 'done',
+            'ai_type' => 'arbeitsvertrag',
+            'ai_confidence' => 66,
+            'ai_extracted' => [
+                'person' => [
+                    'first_name' => 'Al Ali', 'last_name' => 'Mohammad',
+                    'occupation' => 'Bauhelfer',
+                    'employer_name' => 'DF Bau GmbH',
+                    'employer_address' => 'Beethovenstrasse 31, 66126 Saarbruecken',
+                ],
+            ],
+        ]);
+
+        $customer = $this->makeCustomer();
+        $admin = $this->makeAdmin();
+
+        $this->actingAs($admin)->postJson(route('admin.documents.assign', $doc->id), [
+            'customer_id' => (string) $customer->id,
+            'apply_fields' => ['occupation', 'employer'],
+        ])->assertOk()->assertJson(['ok' => true]);
+
+        // Beruf + Arbeitgeber (Name und Anschrift) wurden in die leeren
+        // Kundenfelder uebernommen.
+        $customer->refresh();
+        $this->assertSame('Bauhelfer', $customer->occupation);
+        $this->assertSame('DF Bau GmbH', $customer->employer_name);
+        $this->assertSame('Beethovenstrasse 31, 66126 Saarbruecken', $customer->employer_address);
+    }
+
     /* ---------------------------------------------------------------
      | Automatische Portal-Einladung bei Vertrag aus Dokument
      * -------------------------------------------------------------- */
@@ -902,11 +943,14 @@ class SmartDocumentUploadTest extends TestCase
 
     public function test_excluded_fields_are_never_applied_to_customer(): void
     {
-        // Betreiber-Vorgabe: Beruf, Fuehrerscheindatum und weitere Fahrer werden
+        // Betreiber-Vorgabe: Fuehrerscheindatum und weitere Fahrer werden
         // NIE automatisch uebernommen (oft ungenau) - sie stehen nicht auf der
         // apply_fields-Whitelist und werden abgewiesen. (Familienstand/Geschlecht
         // sind seit dem KKH-Beitrittsformular erlaubt: dort strukturiert +
-        // zuverlaessig; das Kfz-Protokoll liefert sie ohnehin nicht.)
+        // zuverlaessig; das Kfz-Protokoll liefert sie ohnehin nicht. Beruf/
+        // Arbeitgeber sind seit dem Arbeitsvertrag-Parser erlaubt - der
+        // Vertrag nennt beides woertlich, die Uebernahme bleibt eine bewusste
+        // Mitarbeiter-Auswahl.)
         Storage::fake('local');
         Storage::disk('local')->put('documents/eingang/scan2.pdf', '%PDF-1.4');
         $doc = Document::create([
@@ -920,7 +964,7 @@ class SmartDocumentUploadTest extends TestCase
         ]);
         $admin = $this->makeAdmin();
 
-        foreach (['occupation', 'fuehrerscheindatum', 'weitere_fahrer'] as $field) {
+        foreach (['fuehrerscheindatum', 'weitere_fahrer'] as $field) {
             $this->actingAs($admin)->postJson(route('admin.documents.create_customer', $doc->id), [
                 'apply_fields' => [$field],
             ])->assertStatus(422);

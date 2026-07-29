@@ -43,6 +43,10 @@
         <div class="field"><label>Beruf</label><input type="text" name="occupation" value="{{ old('occupation', $customer->occupation) }}" placeholder="z.B. Ingenieur"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="field"><label>Arbeitgeber</label><input type="text" name="employer_name" value="{{ old('employer_name', $customer->employer_name) }}" placeholder="z.B. DF Bau GmbH"></div>
+        <div class="field"><label>Arbeitgeber-Anschrift</label><input type="text" name="employer_address" value="{{ old('employer_address', $customer->employer_address) }}" placeholder="z.B. Beethovenstraße 31, 66126 Saarbrücken"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
                 <div class="field"><label>Geschlecht</label>
             <select name="gender" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
                 <option value="">— Nicht angegeben —</option>

@@ -30,6 +30,7 @@ class Document extends Model {
         'geburtsurkunde'       => ['label' => 'Geburtsurkunde',       'category' => 'identity'],
         'familienbescheinigung'=> ['label' => 'Familienbescheinigung','category' => 'identity'],
         'gehaltsabrechnung'    => ['label' => 'Gehaltsabrechnung',    'category' => 'other'],
+        'arbeitsvertrag'       => ['label' => 'Arbeitsvertrag',       'category' => 'other'],
         'personalausweis'      => ['label' => 'Personalausweis',      'category' => 'identity'],
         'aufenthaltstitel'     => ['label' => 'Aufenthaltstitel',     'category' => 'identity'],
         'reisepass'            => ['label' => 'Reisepass',            'category' => 'identity'],

@@ -340,7 +340,7 @@ class SmartDocumentUploadController extends Controller
         $this->validateJson($request, [
             'customer_id' => 'required|uuid',
             'apply_fields' => 'nullable|array',
-            'apply_fields.*' => 'string|in:birth_date,birth_place,address,phone,nationality,marital_status,gender,email2,health_insurance,iban',
+            'apply_fields.*' => 'string|in:birth_date,birth_place,address,phone,nationality,marital_status,gender,email2,health_insurance,iban,occupation,employer',
             'create_contract' => 'nullable|boolean',
             'visibility' => 'nullable|in:customer,internal',
         ]);
@@ -406,7 +406,7 @@ class SmartDocumentUploadController extends Controller
 
         $this->validateJson($request, [
             'apply_fields' => 'nullable|array',
-            'apply_fields.*' => 'string|in:birth_date,birth_place,address,phone,nationality,marital_status,gender,email2,health_insurance,iban',
+            'apply_fields.*' => 'string|in:birth_date,birth_place,address,phone,nationality,marital_status,gender,email2,health_insurance,iban,occupation,employer',
             'create_contract' => 'nullable|boolean',
             'visibility' => 'nullable|in:customer,internal',
             // Konnte der Name nicht sicher gelesen werden, traegt der
@@ -494,7 +494,7 @@ class SmartDocumentUploadController extends Controller
             'document_ids' => 'required|array|min:1|max:10',
             'document_ids.*' => 'uuid',
             'apply_fields' => 'nullable|array',
-            'apply_fields.*' => 'string|in:birth_date,birth_place,address,phone,nationality,marital_status,gender,email2,health_insurance,iban',
+            'apply_fields.*' => 'string|in:birth_date,birth_place,address,phone,nationality,marital_status,gender,email2,health_insurance,iban,occupation,employer',
             'create_contract' => 'nullable|boolean',
             'visibility' => 'nullable|in:customer,internal',
             // Optional: Krankenkassen-Fall (Familie + Wechsel). Die UI fragt
