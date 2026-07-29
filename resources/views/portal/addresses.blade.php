@@ -60,11 +60,11 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
 @endif
 
 <div id="add-address-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
-    <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:460px;position:relative;">
+    <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:460px;position:relative;max-height:88vh;overflow-y:auto;">
         <button onclick="document.getElementById('add-address-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:6px;">Adresse hinzufügen</div>
-        <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">Wird nach Prüfung durch unser Team übernommen.</p>
-        <form method="POST" action="{{ route('portal.addresses.store') }}">
+        <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">Wird nach Prüfung durch unser Team übernommen. Ein Nachweis der Anschrift ist erforderlich.</p>
+        <form method="POST" action="{{ route('portal.addresses.store') }}" enctype="multipart/form-data">
             @csrf
             @include('portal._address_fields')
             <button type="submit" class="btn btn-primary" style="width:100%;">Zur Prüfung einreichen</button>
@@ -73,11 +73,11 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
 </div>
 
 <div id="change-address-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
-    <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:460px;position:relative;">
+    <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:460px;position:relative;max-height:88vh;overflow-y:auto;">
         <button onclick="document.getElementById('change-address-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:6px;">Adressänderung beantragen</div>
-        <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">Die Änderung wird erst nach Prüfung wirksam.</p>
-        <form method="POST" id="change-address-form" action="">
+        <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">Die Änderung wird erst nach Prüfung wirksam. Bitte laden Sie einen Nachweis der neuen Anschrift hoch.</p>
+        <form method="POST" id="change-address-form" action="" enctype="multipart/form-data">
             @csrf
             @include('portal._address_fields', ['prefix' => 'ca-'])
             <button type="submit" class="btn btn-primary" style="width:100%;">Änderung einreichen</button>

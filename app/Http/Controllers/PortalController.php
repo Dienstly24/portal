@@ -661,6 +661,13 @@ class PortalController extends Controller
             // Bankverbindung (Review Punkt 4 - alles auf einer Seite)
             'iban' => ['nullable', 'string', 'max:34', 'regex:/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/'],
             'account_holder' => 'nullable|string|max:255',
+            // Nachweise fuer sensible Aenderungen (Name, Anschrift, Bank)
+            // und "ab wann gilt die Aenderung" (Betreiber-Vorgabe 29.07.2026).
+            'effective_from' => 'nullable|date|after_or_equal:-5 years',
+            'proof' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
+            'proof_back' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
+            'proof_kind' => 'nullable|in:meldebescheinigung,id_front,other',
+            'bank_proof' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
         ]);
 
         $service = app(\App\Services\ChangeRequestService::class);
@@ -703,19 +710,55 @@ class PortalController extends Controller
             $profileNew['email'] = $data['email'];
         }
 
+        // Nachweispflicht (Betreiber-Vorgabe 29.07.2026): Name, Anschrift und
+        // Bankverbindung aendern wir nur mit Beleg. Der Antrag wird gar nicht
+        // erst angelegt - sonst haette der Kunde den Eindruck, die Aenderung
+        // sei unterwegs, obwohl sie zwingend abgelehnt werden muesste.
+        $bankChange = $request->filled('iban') && $data['iban'] !== $customer->iban;
+        $sensitiveProfile = array_intersect(
+            array_keys($profileNew),
+            \App\Services\ChangeRequest\ChangeProofPolicy::SENSITIVE_PROFILE_FIELDS
+        ) !== [];
+
+        if ($sensitiveProfile && !$request->hasFile('proof')) {
+            return back()->withInput()->with('error', __('Für Änderungen an Name, Geburtsdatum oder Anschrift benötigen wir einen Nachweis (Ausweis oder Meldebescheinigung). Bitte laden Sie ihn im Abschnitt „Nachweis“ hoch.'));
+        }
+        if ($bankChange && !$request->hasFile('bank_proof')) {
+            return back()->withInput()->with('error', __('Für eine neue Bankverbindung benötigen wir einen Kontonachweis (Foto der Bankkarte oder Kontoauszug mit sichtbarer IBAN).'));
+        }
+
+        $identityProofs = [];
+        if ($request->hasFile('proof')) {
+            $kind = $request->input('proof_kind');
+            $identityProofs[in_array($kind, ['meldebescheinigung', 'id_front', 'other'], true) ? $kind : 'id_front']
+                = $request->file('proof');
+        }
+        if ($request->hasFile('proof_back')) {
+            $identityProofs['id_back'] = $request->file('proof_back');
+        }
+
         if ($profileNew) {
-            $service->submit($customer, 'profile', $profileOld, $profileNew, 'Profiländerung beantragt: ' . implode(', ', array_keys($profileNew)));
+            $service->submit(
+                $customer, 'profile', $profileOld, $profileNew,
+                'Profiländerung beantragt: ' . implode(', ', array_keys($profileNew)),
+                requestedBy: null,
+                proofFiles: $sensitiveProfile ? $identityProofs : [],
+                effectiveFrom: $data['effective_from'] ?? null,
+            );
             $created++;
         }
 
         // Bankverbindung als EIGENER, unabhängiger Change Request (Review Punkt 9)
-        if ($request->filled('iban') && $data['iban'] !== $customer->iban) {
+        if ($bankChange) {
             $service->submit(
                 $customer,
                 'bank',
                 ['iban' => $customer->iban ? '••••' . substr($customer->iban, -4) : null, 'account_holder' => $customer->account_holder],
                 ['iban' => $data['iban'], 'account_holder' => ($data['account_holder'] ?? null) ?: ($customer->account_holder ?? auth()->user()->name)],
-                'Neue Bankverbindung beantragt'
+                'Neue Bankverbindung beantragt',
+                requestedBy: null,
+                proofFiles: ['bank_proof' => $request->file('bank_proof')],
+                effectiveFrom: $data['effective_from'] ?? null,
             );
             $created++;
         }

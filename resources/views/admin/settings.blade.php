@@ -54,6 +54,26 @@
 </div>
 
 <div class="card">
+    <div class="card-title" style="margin-bottom:20px;">🔄 Kundenänderungen (Nachweise)</div>
+    <div class="field">
+        <label>Automatische Freigabe geprüfter Änderungen</label>
+        <select name="change_request_auto_approve">
+            @foreach(\App\Services\ChangeRequest\ChangeProofPolicy::AUTO_APPROVE_MODES as $key => $label)
+            <option value="{{ $key }}" {{ $settings['change_request_auto_approve'] === $key ? 'selected' : '' }}>{{ $label }}</option>
+            @endforeach
+        </select>
+    </div>
+    <div style="background:#F7F5EF;border-radius:8px;padding:14px;font-size:13px;color:var(--ink-soft);">
+        Sensible Änderungen (Bankverbindung, Adresse, Name) verlangen im Portal immer einen Nachweis.
+        Das System liest den Nachweis (PDF-Textebene bzw. OCR) und prüft, ob die beantragten Angaben
+        wirklich darin stehen. Nur wenn ALLE Pflichtangaben gefunden wurden, greift die automatische
+        Freigabe – über jede Übernahme informiert die Glocke.
+        Ein Treffer belegt den Inhalt des Dokuments, nicht dessen Echtheit; deshalb bleibt die
+        Bankverbindung in der Standardeinstellung beim Vier-Augen-Prinzip.
+    </div>
+</div>
+
+<div class="card">
     <div class="card-title" style="margin-bottom:20px;">📧 E-Mail Einstellungen</div>
     <div class="field">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">

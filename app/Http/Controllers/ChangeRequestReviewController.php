@@ -1,27 +1,45 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Models\ActivityLog;
+use App\Models\ChangeRequestDocument;
 use App\Models\CustomerChangeRequest;
+use App\Models\CustomerMessage;
+use App\Services\ChangeRequest\ChangeProofVerifier;
 use App\Services\ChangeRequestService;
+use App\Services\CustomerMessageNotifier;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Mitarbeiter-Bereich "Kundenänderungen": offene Self-Service-Anträge
  * prüfen, genehmigen oder ablehnen. Erst bei Genehmigung wendet der
  * ChangeRequestService die Daten an (in einer Transaktion).
+ *
+ * Zu jeder sensiblen Änderung (Bank, Adresse, Name) liegen der Nachweis
+ * des Kunden und das Ergebnis der automatischen Prüfung vor - der
+ * Mitarbeiter sieht auf einen Blick, ob der beantragte Wert wirklich im
+ * Dokument steht. Rückfragen ("ab wann gilt das?") gehen mit einem Klick
+ * als Chat-Nachricht an den Kunden.
+ *
  * Sichtbarkeit: admin/manager alles, support/employee nur zugewiesene
  * Kunden (inkl. Vertretungen) - via Policy und Listen-Scoping.
  */
 class ChangeRequestReviewController extends Controller
 {
+    /** Vorschläge für die Rückfrage im Chat (ein Klick statt Abtippen). */
+    public const QUICK_QUESTIONS = [
+        'effective' => 'ab wann die Änderung gelten soll',
+        'proof' => 'einen Nachweis (Ausweis / Meldebescheinigung)',
+        'quality' => 'ein besser lesbares Foto des Nachweises',
+    ];
+
     public function index(Request $request)
     {
         $status = in_array($request->query('status'), ['pending', 'approved', 'rejected'], true)
             ? $request->query('status') : 'pending';
 
-        $query = CustomerChangeRequest::with(['customer.user', 'requester', 'reviewer'])
+        $query = CustomerChangeRequest::with(['customer.user', 'requester', 'reviewer', 'documents'])
+            ->withCount(['notifications', 'notifications as open_notifications' => fn($q) => $q->where('status', 'pending')])
             ->where('status', $status)
             ->orderBy('created_at', $status === 'pending' ? 'asc' : 'desc');
 
@@ -61,15 +79,92 @@ class ChangeRequestReviewController extends Controller
         $path = $changeRequest->new_data['document_path'] ?? null;
         abort_if(!$path, 404);
         $disk = $changeRequest->new_data['document_disk'] ?? 'public';
-        abort_unless(\Illuminate\Support\Facades\Storage::disk($disk)->exists($path), 404);
-        return \Illuminate\Support\Facades\Storage::disk($disk)->download(
+        abort_unless(Storage::disk($disk)->exists($path), 404);
+        return Storage::disk($disk)->download(
             $path, $changeRequest->new_data['document_name'] ?? basename($path)
         );
     }
 
+    /**
+     * Nachweis (Ausweis, Meldebescheinigung, Kontonachweis) anzeigen -
+     * inline für Bilder/PDF, damit der Mitarbeiter ihn direkt neben den
+     * beantragten Daten sieht. Immer über die private Disk und den
+     * Portfolio-Check, nie per öffentlicher URL.
+     */
+    public function proof($id, Request $request)
+    {
+        $document = ChangeRequestDocument::with('changeRequest')->findOrFail($id);
+        $this->authorize('review', $document->changeRequest);
+
+        $disk = Storage::disk($document->disk ?: 'local');
+        abort_unless($disk->exists($document->file_path), 404);
+
+        if ($request->boolean('download') || !$document->isViewable()) {
+            return $disk->download($document->file_path, $document->file_name);
+        }
+
+        return $disk->response($document->file_path, $document->file_name, [
+            'Content-Type' => $document->mimeType(),
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    /** Prüfung erneut anstoßen (z.B. nachdem OCR auf dem Server aktiviert wurde). */
+    public function recheck($id, ChangeProofVerifier $verifier)
+    {
+        $changeRequest = CustomerChangeRequest::with('documents')->findOrFail($id);
+        $this->authorize('review', $changeRequest);
+
+        if ($changeRequest->documents()->count() === 0) {
+            return back()->with('error', 'Zu dieser Anfrage liegt kein Nachweis vor.');
+        }
+        if (!$verifier->isAvailable()) {
+            return back()->with('error', 'Automatische Prüfung nicht verfügbar (OCR ist auf dem Server nicht aktiviert).');
+        }
+
+        $result = $verifier->verify($changeRequest);
+        $state = CustomerChangeRequest::PROOF_STATES[$result['status']] ?? [];
+
+        return back()->with('success', 'Nachweis erneut geprüft: ' . ($state['label'] ?? $result['status']));
+    }
+
+    /**
+     * Rückfrage an den Kunden: legt eine Chat-Nachricht an (gleicher Weg
+     * wie der Kunden-Chat) und führt den Mitarbeiter direkt in die
+     * Unterhaltung. So bleibt die Frage "ab wann gilt Ihre neue Adresse?"
+     * dort, wo die Antwort später ankommt.
+     */
+    public function ask(Request $request, $id)
+    {
+        $changeRequest = CustomerChangeRequest::with('customer.user')->findOrFail($id);
+        $this->authorize('review', $changeRequest);
+
+        $data = $request->validate([
+            'body' => 'required|string|max:2000',
+            'email_mode' => 'nullable|in:' . implode(',', CustomerMessage::EMAIL_MODES),
+        ]);
+
+        // Standard "hint": der Kunde bekommt nur den Hinweis auf eine neue
+        // Nachricht per E-Mail, den Inhalt liest er im Portal (Datenschutz).
+        $emailMode = $data['email_mode'] ?? 'hint';
+
+        $message = CustomerMessage::create([
+            'customer_id' => $changeRequest->customer_id,
+            'sender_id' => auth()->id(),
+            'body' => $data['body'],
+            'from_staff' => true,
+            'email_mode' => $emailMode,
+        ]);
+        CustomerMessageNotifier::notifyCustomer($message, $emailMode);
+
+        return redirect()
+            ->route('admin.customer_chat', ['kunde' => $changeRequest->customer_id])
+            ->with('success', 'Rückfrage an den Kunden gesendet.');
+    }
+
     public function action(Request $request, $id, ChangeRequestService $service)
     {
-        $changeRequest = CustomerChangeRequest::findOrFail($id);
+        $changeRequest = CustomerChangeRequest::with('customer.user')->findOrFail($id);
         $this->authorize('review', $changeRequest);
 
         $data = $request->validate([
@@ -77,64 +172,25 @@ class ChangeRequestReviewController extends Controller
             'notes' => 'nullable|string|max:1000',
         ]);
 
-        if ($changeRequest->status !== 'pending') {
-            return back()->with('error', 'Diese Anfrage wurde bereits bearbeitet.');
+        $result = $data['action'] === 'approve'
+            ? $service->approve($changeRequest, auth()->user(), $data['notes'] ?? null)
+            : $service->reject($changeRequest, auth()->user(), $data['notes'] ?? null);
+
+        if (!$result['ok']) {
+            return back()->with('error', $result['error']);
         }
 
-        DB::transaction(function () use ($changeRequest, $data, $service) {
-            if ($data['action'] === 'approve') {
-                // Erst anwenden - schlägt das fehl, bleibt der Antrag pending
-                $service->apply($changeRequest);
-            }
-
-            $changeRequest->update([
-                'status' => $data['action'] === 'approve' ? 'approved' : 'rejected',
-                'reviewed_by' => auth()->id(),
-                'reviewed_at' => now(),
-                'notes' => $data['notes'] ?? null,
-            ]);
-
-            // Punkt 11: Audit-Log ("Admin Ahmad genehmigte neue Bankverbindung")
-            ActivityLog::create([
-                'user_id' => auth()->id(),
-                'action' => $data['action'] === 'approve' ? 'change_request_approved' : 'change_request_rejected',
-                'entity_type' => 'change_request',
-                'entity_id' => $changeRequest->id,
-                'meta' => json_encode([
-                    'customer' => $changeRequest->customer?->user?->name,
-                    'customer_id' => (string) $changeRequest->customer_id,
-                    'type' => $changeRequest->type,
-                    'type_label' => $changeRequest->typeLabel(),
-                    'notes' => $data['notes'] ?? null,
-                ], JSON_UNESCAPED_UNICODE),
-            ]);
-        });
-
-        $this->notifyCustomer($changeRequest, $data['action'], $data['notes'] ?? null);
-
-        return back()->with('success', $data['action'] === 'approve'
-            ? 'Anfrage genehmigt – die Kundendaten wurden aktualisiert.'
-            : 'Anfrage abgelehnt.');
-    }
-
-    /**
-     * Statusmeldung an den Kunden (Review Punkt 8, Schritt 5):
-     * Portal-Glocke informiert über Genehmigung/Ablehnung.
-     */
-    private function notifyCustomer(CustomerChangeRequest $changeRequest, string $action, ?string $notes): void
-    {
-        $userId = $changeRequest->customer?->user_id;
-        if (!$userId) {
-            return;
+        if ($data['action'] === 'reject') {
+            return back()->with('success', 'Anfrage abgelehnt.');
         }
-        $approved = $action === 'approve';
-        \App\Support\Facades\Notify::push($userId, [
-            'type' => \App\Services\Notifications\NotificationService::TYPE_CHANGE_REQUEST,
-            'title' => 'Änderungsanfrage ' . ($approved ? 'genehmigt' : 'abgelehnt'),
-            'body' => 'Ihre Änderung (' . $changeRequest->typeLabel() . ') wurde '
-                . ($approved ? 'genehmigt und übernommen.' : 'abgelehnt.' . ($notes ? ' Grund: ' . \Illuminate\Support\Str::limit($notes, 120) : '')),
-            'link' => route('portal.change_requests'),
-            'dedup_key' => 'change-request-decision-' . $changeRequest->id,
-        ]);
+
+        if ($result['notifications'] > 0) {
+            return redirect()
+                ->route('admin.change_requests.notifications', $changeRequest->id)
+                ->with('success', 'Anfrage genehmigt – die Kundendaten wurden aktualisiert. '
+                    . $result['notifications'] . ' Mitteilung(en) an Gesellschaften wurden vorbereitet.');
+        }
+
+        return back()->with('success', 'Anfrage genehmigt – die Kundendaten wurden aktualisiert.');
     }
 }

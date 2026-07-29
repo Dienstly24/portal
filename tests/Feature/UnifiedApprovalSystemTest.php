@@ -15,6 +15,13 @@ class UnifiedApprovalSystemTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Nachweise fuer sensible Aenderungen landen auf der privaten Disk.
+        \Illuminate\Support\Facades\Storage::fake('local');
+    }
+
     private function makeCustomer(): Customer
     {
         $user = User::factory()->create(['role' => 'customer']);
@@ -42,9 +49,9 @@ class UnifiedApprovalSystemTest extends TestCase
         $u = $customer->user;
 
         $this->actingAs($u)->post(route('portal.profile.update'), ['phone' => '040 222222']);
-        $this->actingAs($u)->post(route('portal.profile.update'), ['iban' => 'DE89370400440532013000']);
+        $this->actingAs($u)->post(route('portal.profile.update'), ['iban' => 'DE89370400440532013000', 'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf')]);
         $this->actingAs($u)->post(route('portal.family.store'), ['name' => 'Kind A', 'relation' => 'kind']);
-        $this->actingAs($u)->post(route('portal.addresses.store'), ['type' => 'billing', 'street' => 'Weg 1', 'zip' => '20095', 'city' => 'Hamburg']);
+        $this->actingAs($u)->post(route('portal.addresses.store'), ['type' => 'billing', 'street' => 'Weg 1', 'zip' => '20095', 'city' => 'Hamburg', 'proof' => \Illuminate\Http\UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf')]);
         $this->actingAs($u)->post(route('portal.contacts.store'), ['type' => 'email', 'label' => 'geschaeftlich', 'value' => 'work@example.com']);
         $this->actingAs($u)->post(route('portal.contacts.store'), ['type' => 'phone', 'label' => 'privat', 'value' => '+49 170 123456']);
         $this->actingAs($u)->post(route('portal.contracts.report'), ['type' => 'hausrat', 'insurer' => 'Allianz']);
@@ -65,9 +72,9 @@ class UnifiedApprovalSystemTest extends TestCase
         $u = $customer->user;
         $admin = User::factory()->create(['role' => 'admin']);
 
-        $this->actingAs($u)->post(route('portal.profile.update'), ['phone' => '040 333333', 'iban' => 'DE89370400440532013000']);
+        $this->actingAs($u)->post(route('portal.profile.update'), ['phone' => '040 333333', 'iban' => 'DE89370400440532013000', 'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf')]);
         $this->actingAs($u)->post(route('portal.family.store'), ['name' => 'Kind B', 'relation' => 'kind']);
-        $this->actingAs($u)->post(route('portal.addresses.store'), ['type' => 'postal', 'street' => 'Postweg 2', 'zip' => '20095', 'city' => 'Hamburg']);
+        $this->actingAs($u)->post(route('portal.addresses.store'), ['type' => 'postal', 'street' => 'Postweg 2', 'zip' => '20095', 'city' => 'Hamburg', 'proof' => \Illuminate\Http\UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf')]);
         $this->actingAs($u)->post(route('portal.contacts.store'), ['type' => 'email', 'label' => 'privat', 'value' => 'neu@example.com']);
         $this->actingAs($u)->post(route('portal.contracts.report'), ['type' => 'kfz', 'insurer' => 'HUK']);
 
