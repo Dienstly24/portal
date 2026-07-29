@@ -140,6 +140,57 @@ class AufenthaltstitelParserTest extends TestCase
         $this->assertStringContainsString('10.07.2027', $r['summary']);
     }
 
+    public function test_birth_place_survives_single_space_column_merge(): void
+    {
+        // Reale OCR-Ausgabe verschmilzt die beiden Spalten teils mit nur
+        // EINEM Leerzeichen - der Ort steht dann hinter dem Anmerkungs-Text.
+        $ocr = str_replace(
+            [
+                '1. ANMERKUNGEN/REMARKS          3. GEBURTSORT/PLACE OF BIRTH',
+                'ERWERBSTAETIGKEIT ERLAUBT       DEIR EZZOR',
+            ],
+            [
+                '1. ANMERKUNGEN/REMARKS 3. GEBURTSORT/PLACE OF BIRTH',
+                'ERWERBSTAETIGKEIT ERLAUBT DEIR EZZOR',
+            ],
+            $this->backSideOcr()
+        );
+        $r = (new AufenthaltstitelParser())->parse($ocr);
+
+        $this->assertNotNull($r);
+        $this->assertSame('Deir Ezzor', $r['data']['person']['birth_place']);
+    }
+
+    public function test_birth_place_on_label_line(): void
+    {
+        // Ort direkt hinter der Beschriftung in derselben Zeile.
+        $ocr = str_replace(
+            [
+                '1. ANMERKUNGEN/REMARKS          3. GEBURTSORT/PLACE OF BIRTH',
+                'ERWERBSTAETIGKEIT ERLAUBT       DEIR EZZOR',
+            ],
+            [
+                '3. GEBURTSORT/PLACE OF BIRTH DEIR EZZOR',
+                'ERWERBSTAETIGKEIT ERLAUBT',
+            ],
+            $this->backSideOcr()
+        );
+        $r = (new AufenthaltstitelParser())->parse($ocr);
+
+        $this->assertNotNull($r);
+        $this->assertSame('Deir Ezzor', $r['data']['person']['birth_place']);
+    }
+
+    public function test_back_side_without_readable_birth_place_leaves_it_empty(): void
+    {
+        // Nur Anmerkungs-Text, kein Ort -> Feld bleibt leer statt falsch.
+        $ocr = str_replace('DEIR EZZOR', '', $this->backSideOcr());
+        $r = (new AufenthaltstitelParser())->parse($ocr);
+
+        $this->assertNotNull($r);
+        $this->assertArrayNotHasKey('birth_place', $r['data']['person']);
+    }
+
     public function test_back_side_with_broken_check_digit_drops_field(): void
     {
         // Geburtsdatum-Pruefziffer kaputt (OCR-Zahlendreher) -> das Datum
