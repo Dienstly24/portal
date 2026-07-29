@@ -111,7 +111,25 @@ class PortalController extends Controller
             ->where('type', 'contract')->where('status', 'pending')->latest()->get()
             ->first(fn($r) => ($r->new_data['id'] ?? null) === $contract->id);
 
-        return view('portal.contract_show', ['contract' => $contract, 'pendingChange' => $pendingChange]);
+        // Zaehlerfotos, aus denen noch KEINE Ablesung entstanden ist: entweder
+        // laeuft die Auswertung noch oder der Stand war nicht lesbar. Beides
+        // gehoert offen angezeigt - sonst wartet der Kunde vergeblich auf
+        // einen Wert, den nie jemand eingetragen hat.
+        $openMeterPhotos = collect();
+        if ($contract->isEnergy() && $contract->energyDetail) {
+            $used = $contract->energyDetail->meterReadings->pluck('document_id')->filter()->all();
+            $openMeterPhotos = \App\Models\Document::where('contract_id', $contract->id)
+                ->where('file_name', 'like', 'Zaehlerfoto%')
+                ->whereNotIn('id', $used ?: ['-'])
+                ->where('created_at', '>=', now()->subDays(30))
+                ->latest()->get();
+        }
+
+        return view('portal.contract_show', [
+            'contract' => $contract,
+            'pendingChange' => $pendingChange,
+            'openMeterPhotos' => $openMeterPhotos,
+        ]);
     }
 
     /**

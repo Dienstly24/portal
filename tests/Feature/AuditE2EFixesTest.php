@@ -119,6 +119,11 @@ class AuditE2EFixesTest extends TestCase
         // und braucht daher 'unsafe-eval' - sonst brechen alle Dropdowns/Menues
         // (Regression-Guard).
         $this->assertStringContainsString("'unsafe-eval'", $csp);
+        // Der Dokumenten-Scanner, das Zaehlerfoto und die Banner-Vorschau
+        // verarbeiten Bilder ueber URL.createObjectURL(). Ohne blob: in
+        // img-src bricht die Bildverarbeitung still ab und der Upload eines
+        // Fotos schlaegt fehl (Regression-Guard).
+        $this->assertStringContainsString('blob:', $csp);
     }
 
     // INT-8: Fehlgeschlagener Login landet im Audit-Trail (ohne Passwort).

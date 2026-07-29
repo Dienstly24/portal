@@ -334,6 +334,25 @@ class MeterReadingTest extends TestCase
         $this->assertSame((string) $contract->id, (string) $document->contract_id);
     }
 
+    public function test_portal_zeigt_offenes_zaehlerfoto_an(): void
+    {
+        // Ohne laufenden Queue-Worker bleibt die Auswertung liegen. Der Kunde
+        // darf dann nicht im Unklaren bleiben - das Foto wird als offen
+        // ausgewiesen, statt spurlos zu verschwinden.
+        Storage::fake('local');
+        $customer = $this->customer();
+        $contract = $this->energyContract($customer, '1LOG0092283078');
+
+        $this->actingAs($customer->user)->post(route('portal.contracts.meter', $contract->id), [
+            'photo' => UploadedFile::fake()->image('zaehler.jpg'),
+        ])->assertRedirect();
+
+        $this->actingAs($customer->user)
+            ->get(route('portal.contracts.show', $contract->id))
+            ->assertOk()
+            ->assertSee('Zählerfoto', false);
+    }
+
     public function test_kunde_sieht_fremden_vertrag_nicht(): void
     {
         $fremd = $this->energyContract($this->customer('Fremd'), '1LOG0092283078');

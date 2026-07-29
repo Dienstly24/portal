@@ -212,8 +212,20 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
     </p>
     @endif
 
+    {{-- Hochgeladene Fotos, aus denen noch kein Stand entstanden ist --}}
+    @foreach($openMeterPhotos ?? [] as $photo)
+    <div style="background:#FBF6E8;border:1px solid #E0DCD0;border-radius:10px;padding:10px 12px;margin-top:12px;font-size:12.5px;">
+        @if($photo->aiInProgress())
+            ⏳ {{ __('Ihr Zählerfoto vom :datum wird gerade ausgewertet.', ['datum' => $photo->created_at->format('d.m.Y H:i')]) }}
+        @else
+            📷 {{ __('Ihr Zählerfoto vom :datum konnten wir nicht automatisch auslesen – unser Team schaut es sich an. Sie können den Stand auch direkt eintragen.', ['datum' => $photo->created_at->format('d.m.Y H:i')]) }}
+        @endif
+    </div>
+    @endforeach
+
     {{-- Meldung: Zahl und/oder Foto des Zaehlers --}}
-    <form method="POST" action="{{ route('portal.contracts.meter', $contract->id) }}" enctype="multipart/form-data" style="margin-top:12px;">
+    <form method="POST" action="{{ route('portal.contracts.meter', $contract->id) }}" enctype="multipart/form-data"
+          id="meter-form" style="margin-top:12px;">
         @csrf
         <div class="field">
             <label>{{ __('Aktuellen Zählerstand melden') }}</label>
@@ -249,8 +261,97 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
             </p>
         </div>
 
-        <button type="submit" class="btn btn-primary">{{ __('Zählerstand melden') }}</button>
+        <div id="meter-photo-hint" style="display:none;font-size:12px;color:var(--ink-soft);margin-bottom:10px;"></div>
+        <button type="submit" class="btn btn-primary" id="meter-submit">{{ __('Zählerstand melden') }}</button>
     </form>
+
+{{--
+    Handy-Fotos sind schnell 10 MB gross und wuerden am Server-Limit mit
+    einer rohen "413"-Seite scheitern. Das Foto wird daher - wie im
+    Dokumenten-Scanner - VOR dem Absenden im Browser auf max. 2000px
+    verkleinert und als JPEG kodiert (fuer die Zaehlerablesung mehr als
+    ausreichend, spart dem Kunden ausserdem mobiles Datenvolumen).
+    Kann der Browser das Bild nicht dekodieren (z.B. HEIC ohne native
+    Unterstuetzung), wird die Originaldatei gesendet - und nur, wenn sie zu
+    gross ist, mit einer verstaendlichen Meldung abgefangen.
+--}}
+<script>
+(function() {
+    var form = document.getElementById('meter-form');
+    if (!form || !window.DataTransfer) return;
+    var input = form.querySelector('input[name="photo"]');
+    var button = document.getElementById('meter-submit');
+    var hint = document.getElementById('meter-photo-hint');
+    var MAX_BYTES = 10 * 1024 * 1024;   // Server-Limit der Anwendung
+    var ready = false;
+
+    function say(text, isError) {
+        hint.textContent = text;
+        hint.style.color = isError ? '#A32D2D' : 'var(--ink-soft)';
+        hint.style.display = text ? '' : 'none';
+    }
+
+    function shrink(file) {
+        return new Promise(function(resolve, reject) {
+            var url = URL.createObjectURL(file);
+            var img = new Image();
+            img.onload = function() {
+                try {
+                    var max = 2000;
+                    var scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+                    var canvas = document.createElement('canvas');
+                    canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+                    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                    canvas.toBlob(function(blob) {
+                        URL.revokeObjectURL(url);
+                        blob ? resolve(blob) : reject(new Error('encode'));
+                    }, 'image/jpeg', 0.85);
+                } catch (e) { URL.revokeObjectURL(url); reject(e); }
+            };
+            img.onerror = function() { URL.revokeObjectURL(url); reject(new Error('decode')); };
+            img.src = url;
+        });
+    }
+
+    input.addEventListener('change', function() { ready = false; say(''); });
+
+    form.addEventListener('submit', function(event) {
+        var file = input.files && input.files[0];
+        if (!file || ready) return;                       // nichts zu tun
+        if (file.type === 'application/pdf') {            // PDF bleibt unveraendert
+            if (file.size > MAX_BYTES) {
+                event.preventDefault();
+                say('{{ __('Diese Datei ist zu groß (max. 10 MB). Bitte laden Sie ein Foto statt einer großen Datei hoch.') }}', true);
+            }
+            return;
+        }
+
+        event.preventDefault();
+        button.disabled = true;
+        say('{{ __('Foto wird vorbereitet …') }}');
+
+        shrink(file).then(function(blob) {
+            var name = (file.name || 'zaehler.jpg').replace(/\.[^.]+$/, '') + '.jpg';
+            var transfer = new DataTransfer();
+            transfer.items.add(new File([blob], name, { type: 'image/jpeg' }));
+            input.files = transfer.files;
+        }).catch(function() {
+            // Browser konnte das Bild nicht verkleinern - Original senden.
+        }).then(function() {
+            var current = input.files && input.files[0];
+            if (current && current.size > MAX_BYTES) {
+                button.disabled = false;
+                say('{{ __('Das Foto ist zu groß (max. 10 MB). Bitte machen Sie ein neues Foto mit geringerer Auflösung.') }}', true);
+                return;
+            }
+            ready = true;
+            say('');
+            form.submit();
+        });
+    });
+})();
+</script>
 
     {{-- Verbrauchshistorie: je Ablesung der Verbrauch seit der vorherigen --}}
     @if(count($meterHistory) > 0)

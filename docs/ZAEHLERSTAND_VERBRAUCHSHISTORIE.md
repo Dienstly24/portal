@@ -134,12 +134,43 @@ letzten Stand samt Verbrauch.
 erkannten Stand und den Hinweis, dass er beim Zuordnen in die
 Verbrauchshistorie uebernommen wird.
 
+## Upload eines Handy-Fotos (wichtig)
+
+Zwei Stolpersteine, die den Upload frueher **still** scheitern liessen -
+beide sind behoben:
+
+1. **Dateigroesse.** Handy-Fotos sind schnell 5-12 MB. Das Formular
+   verkleinert das Bild daher **im Browser** auf max. 2000 px und kodiert es
+   als JPEG (q 0.85) - aus 10 MB / 4000x3000 werden rund 0,5 MB / 2000x1500.
+   Fuer das Ablesen mehr als ausreichend, spart mobiles Datenvolumen und
+   umgeht die Server-Limits (`client_max_body_size`, `post_max_size`), die
+   sonst eine rohe **413**-Fehlerseite erzeugen (siehe
+   `docs/UPLOAD_413_NGINX_PHP_LIMITS.md`). Bleibt eine Datei danach ueber
+   10 MB, erscheint eine verstaendliche Meldung statt der 413-Seite.
+2. **Content-Security-Policy.** Die Bildverarbeitung nutzt
+   `URL.createObjectURL()` (`blob:`-URLs). Die CSP erlaubte in `img-src`
+   nur `self data: https:` - der Browser verweigerte das Laden ("Refused to
+   load the image"), die Verkleinerung brach **still** ab. `blob:` ist jetzt
+   in `img-src` erlaubt (`SecurityHeaders`). Das betraf nicht nur das
+   Zaehlerfoto, sondern auch den **Dokumenten-Scanner im Kundenportal** und
+   die Banner-Vorschau in der Beraterwelt. Regression-Guard:
+   `AuditE2EFixesTest::test_csp_header_present_on_html_response`.
+
 ## Betrieb
 
 Die kostenlose Leseebene haengt an der OCR-Konfiguration
 (`OCR_ENABLED=true`, auf dem VPS aktiv). Ist sie aus und kein KI-Anbieter
 konfiguriert, wird das Foto trotzdem in der Kundenakte abgelegt und das
 Team per Glocke informiert - der Stand kann dann von Hand erfasst werden.
+
+**Queue-Worker ist Pflicht.** Das Auslesen laeuft als Job
+(`AnalyzeDocumentJob`, `QUEUE_CONNECTION=database`). Ohne laufenden
+`php artisan queue:work` bleibt das Dokument auf `ai_status = pending` und
+es entsteht nie eine Ablesung - der Kunde haette sonst nur die Zusage "wir
+lesen den Stand aus" gesehen und nie ein Ergebnis. Die Portal-Karte weist
+solche Fotos deshalb offen aus ("wird gerade ausgewertet" bzw. "konnten wir
+nicht automatisch auslesen"), damit der Zustand sichtbar ist. Betrieb siehe
+`docs/DEPLOYMENT.md` (zwei Dienste: `queue:work` **und** `schedule:work`).
 
 ## Tests
 
