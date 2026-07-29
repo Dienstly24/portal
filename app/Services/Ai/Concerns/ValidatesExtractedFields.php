@@ -208,6 +208,14 @@ trait ValidatesExtractedFields
             'document_stage' => in_array($in['document_stage'] ?? null,
                 [Contract::STAGE_ANTRAG, Contract::STAGE_VERTRAG], true)
                 ? $in['document_stage'] : null,
+            // Spaetester erwarteter Beginn in Tagen NACH dem Upload (z.B.
+            // Stadtwerke-Wechsel: 14 Tage Kuendigungsfrist + Bearbeitung = 20).
+            // Nur gesetzt, wenn das Dokument selbst KEIN Beginndatum nennt;
+            // die Vertragsanlage rechnet daraus den voraussichtlichen Beginn.
+            'expected_start_within_days' => (is_numeric($in['expected_start_within_days'] ?? null)
+                && (int) $in['expected_start_within_days'] >= 1
+                && (int) $in['expected_start_within_days'] <= 60)
+                ? (int) $in['expected_start_within_days'] : null,
         ], fn ($v) => $v !== null && $v !== '');
     }
 
