@@ -94,8 +94,40 @@ class CustomerMatchingService
         return new MatchResult($a, min(100, $score), $breakdown);
     }
 
-    /** Begrenzter Kandidatenpool statt Volltabellen-Scan bei jedem Matching-Lauf. */
-    private function candidatePool(array $criteria, ?string $excludeId = null)
+    /**
+     * Beste Kandidaten (nicht nur der eine Treffer) zu einem Kriterien-Satz.
+     * Grundlage fuer die Zuordnungs-Vorschlaege im Dokumenten-Eingang: der
+     * Mitarbeiter soll die naechstliegenden Kunden sofort sehen und nicht
+     * selbst suchen muessen. Der Kandidatenpool ist dafuer bewusst BREITER
+     * als bei match() - auch ein einzelnes Namenswort (Vorname, zweiter
+     * Nachname) oder die PLZ holt Kandidaten heran, damit bei abweichender
+     * Schreibweise ueberhaupt ein Vorschlag entsteht.
+     *
+     * @param  array<string,mixed>  $criteria
+     * @return list<MatchResult>  absteigend nach Score, nur Kandidaten > 0
+     */
+    public function topMatches(array $criteria, int $limit = 5, ?string $excludeId = null): array
+    {
+        $scored = [];
+        foreach ($this->candidatePool($criteria, $excludeId, broad: true) as $customer) {
+            [$score, $breakdown] = $this->score($customer, $criteria);
+            if ($score <= 0) {
+                continue;
+            }
+            $scored[] = new MatchResult($customer, min(100, $score), $breakdown);
+        }
+
+        usort($scored, fn (MatchResult $a, MatchResult $b) => $b->score <=> $a->score);
+
+        return array_slice($scored, 0, max(1, $limit));
+    }
+
+    /**
+     * Begrenzter Kandidatenpool statt Volltabellen-Scan bei jedem Matching-Lauf.
+     * $broad erweitert den Pool fuer die Vorschlagsliste (siehe topMatches);
+     * die automatische Erkennung (match()) bleibt bewusst auf dem engen Pool.
+     */
+    private function candidatePool(array $criteria, ?string $excludeId = null, bool $broad = false)
     {
         $query = Customer::with(['user', 'addresses']);
 
@@ -103,7 +135,7 @@ class CustomerMatchingService
             $query->where('id', '!=', $excludeId);
         }
 
-        $query->where(function ($q) use ($criteria) {
+        $query->where(function ($q) use ($criteria, $broad) {
             $any = false;
 
             if (!empty($criteria['birth_date'])) {
@@ -119,7 +151,7 @@ class CustomerMatchingService
             if (trim($name) !== '') {
                 $lastNamePart = $criteria['last_name'] ?? Str::afterLast($name, ' ');
                 if ($lastNamePart !== '') {
-                    $q->orWhereHas('user', fn ($u) => $u->where('name', 'like', '%' . $lastNamePart . '%'));
+                    $q->orWhereHas('user', fn ($u) => $u->where('name', 'like', '%' . $this->escapeLike($lastNamePart) . '%'));
                     $any = true;
                 }
             }
@@ -128,13 +160,59 @@ class CustomerMatchingService
                 $any = true;
             }
 
+            if ($broad) {
+                $any = $this->broadenPool($q, $criteria, $name) || $any;
+            }
+
             // Keine Kriterien angegeben: leerer Pool statt Volltabellen-Match.
             if (!$any) {
                 $q->whereRaw('1 = 0');
             }
         });
 
-        return $query->limit(50)->get();
+        return $query->limit($broad ? 80 : 50)->get();
+    }
+
+    /**
+     * Zusatz-Kandidaten fuer die Vorschlagsliste: JEDES Namenswort (ab 3
+     * Zeichen, also auch der Vorname), Firmenname und PLZ. Damit taucht ein
+     * Kunde auch dann auf, wenn der Nachname im Dokument anders geschrieben
+     * ist als in der Akte - die Bewertung uebernimmt weiterhin score().
+     *
+     * @return bool ob mindestens eine Bedingung ergaenzt wurde
+     */
+    private function broadenPool($q, array $criteria, string $name): bool
+    {
+        $any = false;
+
+        $tokens = preg_split('/\s+/', trim($name), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        if (!empty($criteria['company_name'])) {
+            $tokens[] = (string) $criteria['company_name'];
+        }
+        foreach (array_unique($tokens) as $token) {
+            if (mb_strlen($token) < 3) {
+                continue;
+            }
+            $like = '%' . $this->escapeLike($token) . '%';
+            $q->orWhereHas('user', fn ($u) => $u->where('name', 'like', $like));
+            $q->orWhere('company_name', 'like', $like);
+            $any = true;
+        }
+
+        if (!empty($criteria['zip'])) {
+            $zip = trim((string) $criteria['zip']);
+            $q->orWhere('address_zip', $zip);
+            $q->orWhereHas('addresses', fn ($a) => $a->where('zip', $zip));
+            $any = true;
+        }
+
+        return $any;
+    }
+
+    /** LIKE-Platzhalter aus Dokument-/Nutzerdaten maskieren. */
+    private function escapeLike(string $value): string
+    {
+        return addcslashes($value, '%_\\');
     }
 
     /** @return array{0: int, 1: array<string, array{points: int, max: int, reason: string}>} */

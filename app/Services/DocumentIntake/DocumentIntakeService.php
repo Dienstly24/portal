@@ -171,6 +171,189 @@ class DocumentIntakeService
     }
 
     /**
+     * Zuordnungs-Vorschlaege fuer den Dokumenten-Eingang: die naechstliegenden
+     * Kunden zu einem Analyse-Ergebnis. Damit sieht der Mitarbeiter beim Klick
+     * auf "Kunden zuordnen" sofort Namen, statt selbst suchen zu muessen.
+     *
+     * Zwei Quellen, bewusst in dieser Reihenfolge:
+     * 1. HARTE Identitaetsmerkmale aus dem Dokument (Vertragsnummer, FIN,
+     *    Kennzeichen, MaLo-ID, Zaehlernummer): ist das
+     *    Merkmal bereits an einem Vertrag/Fahrzeug eines Kunden erfasst, ist
+     *    die Zuordnung so gut wie sicher.
+     * 2. WEICHE Personendaten (Name, Geburtsdatum, E-Mail, Adresse, Telefon)
+     *    ueber die gewichtete Kundenerkennung - mit breiterem Kandidatenpool
+     *    als beim automatischen Match, damit auch abweichende Schreibweisen
+     *    auftauchen.
+     *
+     * Es wird nichts geraten: jeder Vorschlag nennt seinen GRUND, die Auswahl
+     * bleibt eine bewusste Mitarbeiter-Aktion.
+     *
+     * @param  array<string,mixed>  $extracted
+     * @return list<array{customer_id:string,name:?string,customer_number:?string,email:?string,score:int,tier:string,reasons:list<string>}>
+     */
+    public function findSuggestions(array $extracted, int $limit = 5): array
+    {
+        /** @var array<string,array{customer: Customer, score: int, reasons: list<string>}> $found */
+        $found = [];
+
+        foreach ($this->identityHits($extracted) as [$customer, $reason]) {
+            $this->collectSuggestion($found, $customer, 100, [$reason]);
+        }
+
+        $criteria = $this->matchCriteria($extracted);
+        if ($criteria !== []) {
+            foreach ($this->matcher->topMatches($criteria, $limit + 3) as $result) {
+                if ($result->hasMatch()) {
+                    $this->collectSuggestion($found, $result->customer, $result->score, $this->suggestionReasons($result));
+                }
+            }
+        }
+
+        $suggestions = array_values($found);
+        usort($suggestions, fn ($a, $b) => $b['score'] <=> $a['score']);
+
+        return array_map(fn ($s) => [
+            'customer_id' => (string) $s['customer']->id,
+            'name' => $s['customer']->user?->name ?: $s['customer']->company_name,
+            'customer_number' => $s['customer']->customer_number,
+            'email' => $s['customer']->user?->email,
+            'score' => $s['score'],
+            'tier' => (new \App\Services\Matching\MatchResult($s['customer'], $s['score']))->tier(),
+            'reasons' => array_values(array_unique($s['reasons'])),
+        ], array_slice($suggestions, 0, $limit));
+    }
+
+    /**
+     * Kunden, bei denen ein hartes Identitaetsmerkmal des Dokuments bereits
+     * erfasst ist. Kennzeichen/FIN werden zusaetzlich NORMALISIERT verglichen
+     * ("LUEN-G 1110" = "LUENG1110"), weil die Schreibweise je Dokument
+     * abweicht.
+     *
+     * @param  array<string,mixed>  $extracted
+     * @return list<array{0: Customer, 1: string}>
+     */
+    private function identityHits(array $extracted): array
+    {
+        $ins = $extracted['versicherung'] ?? [];
+        $kfz = $extracted['kfz'] ?? [];
+        $energie = $extracted['energie'] ?? [];
+
+        $hits = [];
+
+        // Merkmale, die als Freitext eindeutig genug sind (Kundensuche deckt
+        // Vertrag, Fahrzeug, Energie-Zaehler und Kundenstamm gemeinsam ab).
+        $tokens = [
+            // Die ADAC-Mitgliedsnummer landet bewusst in contract_number.
+            'Vertragsnummer' => $ins['contract_number'] ?? null,
+            'MaLo-ID' => $energie['malo_id'] ?? null,
+            'Zaehlernummer' => $energie['meter_number'] ?? null,
+        ];
+        foreach ($tokens as $label => $value) {
+            $value = trim((string) ($value ?? ''));
+            // Kurze Nummern (z.B. "12") wuerden halbe Bestaende treffen.
+            if (mb_strlen($value) < 5) {
+                continue;
+            }
+            foreach (Customer::with('user')->search($value)->limit(3)->get() as $customer) {
+                $hits[] = [$customer, $label . ' ' . $value . ' ist bei diesem Kunden erfasst'];
+            }
+        }
+
+        foreach ($this->vehicleIdentityHits($kfz) as $hit) {
+            $hits[] = $hit;
+        }
+
+        return $hits;
+    }
+
+    /**
+     * Fahrzeug-Identitaet (FIN/Kennzeichen) normalisiert gegen die erfassten
+     * Fahrzeuge pruefen. Vorgefiltert wird ueber die laengste Ziffernfolge,
+     * damit kein Volltabellen-Scan noetig ist.
+     *
+     * @param  array<string,mixed>  $kfz
+     * @return list<array{0: Customer, 1: string}>
+     */
+    private function vehicleIdentityHits(array $kfz): array
+    {
+        $hits = [];
+        $wanted = [
+            'FIN' => ContractVehicleDetail::normalizeVin($kfz['vin'] ?? null),
+            'Kennzeichen' => ContractVehicleDetail::normalizePlate($kfz['license_plate'] ?? null),
+        ];
+
+        foreach ($wanted as $label => $normalized) {
+            if ($normalized === null || mb_strlen($normalized) < 4) {
+                continue;
+            }
+            $column = $label === 'FIN' ? 'vin' : 'license_plate';
+            $needle = $this->longestDigitRun($normalized);
+            $details = ContractVehicleDetail::query()
+                ->when($needle !== null, fn ($q) => $q->where($column, 'like', '%' . $needle . '%'))
+                ->whereNotNull($column)
+                ->with('contract.customer.user')
+                ->limit(50)->get();
+
+            foreach ($details as $detail) {
+                $value = $label === 'FIN'
+                    ? ContractVehicleDetail::normalizeVin($detail->vin)
+                    : ContractVehicleDetail::normalizePlate($detail->license_plate);
+                $customer = $detail->contract?->customer;
+                if ($value === $normalized && $customer) {
+                    $hits[] = [$customer, $label . ' ' . ($detail->{$column}) . ' ist bei diesem Kunden erfasst'];
+                }
+            }
+        }
+
+        return $hits;
+    }
+
+    /** Laengste zusammenhaengende Ziffernfolge als Vorfilter fuer LIKE. */
+    private function longestDigitRun(string $value): ?string
+    {
+        preg_match_all('/\d+/', $value, $matches);
+        $runs = array_filter($matches[0] ?? [], fn ($r) => strlen($r) >= 3);
+        if ($runs === []) {
+            return null;
+        }
+        usort($runs, fn ($a, $b) => strlen($b) <=> strlen($a));
+        return $runs[0];
+    }
+
+    /**
+     * Bestwert je Kunde behalten und die Gruende zusammenfuehren - derselbe
+     * Kunde kann ueber mehrere Merkmale gefunden werden.
+     *
+     * @param  array<string,array{customer: Customer, score: int, reasons: list<string>}>  $found
+     * @param  list<string>  $reasons
+     */
+    private function collectSuggestion(array &$found, Customer $customer, int $score, array $reasons): void
+    {
+        $key = (string) $customer->id;
+        if (!isset($found[$key])) {
+            $found[$key] = ['customer' => $customer, 'score' => $score, 'reasons' => $reasons];
+            return;
+        }
+        $found[$key]['score'] = max($found[$key]['score'], $score);
+        $found[$key]['reasons'] = array_merge($found[$key]['reasons'], $reasons);
+    }
+
+    /**
+     * Die aussagekraeftigsten Treffergruende eines Matchings (nur Punkte > 0,
+     * hoechste zuerst, maximal drei) - der Mitarbeiter soll auf einen Blick
+     * sehen, WARUM ein Kunde vorgeschlagen wird.
+     *
+     * @return list<string>
+     */
+    private function suggestionReasons(\App\Services\Matching\MatchResult $result): array
+    {
+        $parts = array_filter($result->breakdown, fn ($b) => ($b['points'] ?? 0) > 0);
+        uasort($parts, fn ($a, $b) => $b['points'] <=> $a['points']);
+
+        return array_slice(array_values(array_map(fn ($b) => (string) $b['reason'], $parts)), 0, 3);
+    }
+
+    /**
      * Eingangs-Dokument einem Kunden zuordnen: Datei in den Kundenordner
      * verschieben, Zuordnung speichern, protokollieren. $auto = durch die
      * Analyse (eindeutiger Match), sonst durch einen Mitarbeiter.
