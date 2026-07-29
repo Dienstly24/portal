@@ -289,7 +289,8 @@ class CustomerMergeService
     {
         $fields = [
             'phone', 'mobile', 'address', 'address2', 'iban', 'iban2', 'birth_date',
-            'marital_status', 'nationality', 'occupation', 'email2', 'company_name',
+            'marital_status', 'nationality', 'occupation', 'employer_name',
+            'employer_address', 'email2', 'company_name',
             'company_type', 'customer_type', 'gender', 'birth_place',
             'address_street', 'address_house_number', 'address_house_suffix',
             'address_zip', 'address_city', 'health_insurance_number',

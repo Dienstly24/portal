@@ -33,6 +33,12 @@ trait ValidatesExtractedFields
             // Firmenname (z.B. bei einem Gewerbe-Energievertrag: "Bisso
             // Shawarma Einzeluntern.") - fliesst in die Kundenanlage.
             'company_name' => $this->cleanString($in['company_name'] ?? null, 150),
+            // Beruf + Arbeitgeber (Name und Anschrift der Firma) - z.B. aus
+            // dem Arbeitsvertrag oder der Gehaltsabrechnung. NICHT mit
+            // company_name verwechseln (das ist die eigene Firma des Kunden).
+            'occupation' => $this->cleanString($in['occupation'] ?? null, 100),
+            'employer_name' => $this->cleanString($in['employer_name'] ?? null, 150),
+            'employer_address' => $this->cleanString($in['employer_address'] ?? null, 200),
             // Geschlecht/Familienstand nur aus eindeutigen Quellen (z.B. das
             // strukturierte Kranken-Beitrittsformular) - Wertelisten wie in der
             // Kundenakte, Unbekanntes faellt heraus.

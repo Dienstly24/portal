@@ -1094,6 +1094,8 @@ class AdminController extends Controller
             'nationality' => $request->nationality,
             'birth_place' => $request->birth_place,
             'occupation' => $request->occupation,
+            'employer_name' => $request->employer_name,
+            'employer_address' => $request->employer_address,
             'customer_type' => $request->customer_type,
             'company_name' => $request->company_name,
             'company_type' => $request->company_type,

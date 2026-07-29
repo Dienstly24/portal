@@ -7,11 +7,21 @@ use App\Services\Ai\Contracts\DocumentTemplateParser;
 /**
  * Gratis-Parser fuer den deutschen elektronischen Aufenthaltstitel (eAT,
  * "AUFENTHALTSTITEL"/Aufenthaltserlaubnis) aus der OCR-Textebene eines
- * einzelnen Kartenfotos. Die Karte ist bundesweit einheitlich mit festen
- * (zweisprachigen) Beschriftungen aufgebaut: NAMEN/SURNAMES, Vornamen/
- * Forenames, GESCHLECHT/SEX, STAATSANGEHOERIGKEIT/NATIONALITY, GEBURTSDATUM/
- * DATE OF BIRTH, ART DES TITELS, KARTE GUELTIG BIS. Daraus werden Name,
- * Geschlecht, Staatsangehoerigkeit und Geburtsdatum gelesen.
+ * einzelnen Kartenfotos - VORDER- und RUECKSEITE:
+ *
+ * - VORDERSEITE: feste (zweisprachige) Beschriftungen NAMEN/SURNAMES,
+ *   Vornamen/Forenames, GESCHLECHT/SEX, STAATSANGEHOERIGKEIT/NATIONALITY,
+ *   GEBURTSDATUM/DATE OF BIRTH, ART DES TITELS, KARTE GUELTIG BIS. Daraus
+ *   werden Name, Geschlecht, Staatsangehoerigkeit und Geburtsdatum gelesen.
+ * - RUECKSEITE: sie traegt KEINE dieser Beschriftungen, dafuer die
+ *   maschinenlesbare Zone (MRZ, ICAO 9303 TD1: drei Zeilen a 30 Zeichen,
+ *   Zeile 1 beginnt mit "AR" + Ausstellerstaat + Dokumentennummer). Die MRZ
+ *   ist genormt und OCR-freundlich (OCR-B) und wird deterministisch samt
+ *   Pruefziffern dekodiert: Name, Geburtsdatum, Geschlecht,
+ *   Staatsangehoerigkeit, Dokumentennummer, Ablauf. Zusaetzlich werden die
+ *   Klartext-Bloecke der Rueckseite gelesen: Anschrift (Aufkleber
+ *   "Anschrift/Address/Adresse" -> Strasse/Hausnummer/PLZ/Ort) und
+ *   GEBURTSORT/PLACE OF BIRTH.
  *
  * Bewusst NUR fuer eine EINZELNE Karte: zeigt ein Foto mehrere Karten (z.B.
  * eine ganze Familie mit mehreren Aufenthaltstiteln und Gesundheitskarten),
@@ -45,6 +55,22 @@ class AufenthaltstitelParser implements DocumentTemplateParser
     {
         $text = (string) preg_replace('/\x{00ad}\s*/u', '', $text);
         $upper = mb_strtoupper($text);
+        $this->lines = array_map('trim', preg_split('/\R/', $text) ?: []);
+
+        // Mehrere Karten auf einem Bild (Familie) -> der KI-Vision ueberlassen,
+        // die jede Person korrekt zuordnet. Erkennung an mehrfach auftretenden
+        // Kartenmarkern (Vorderseite) bzw. MRZ-Bloecken (Rueckseite).
+        $mrzCount = $this->td1DataLineCount();
+        if ($mrzCount > 1 || $this->markerCount($upper) > 1) {
+            return null;
+        }
+
+        // RUECKSEITE: sie traegt keine Vorderseiten-Beschriftungen, aber die
+        // maschinenlesbare Zone (TD1-MRZ) - sie ist die verlaesslichste Quelle
+        // und gewinnt auch bei einem kombinierten Vorder-/Rueckseiten-Scan.
+        if ($mrzCount === 1) {
+            return $this->parseBackSide();
+        }
 
         // Nur der Aufenthaltstitel (eAT). Personalausweis/Reisepass bewusst
         // ausgeschlossen (eigene Typen).
@@ -53,30 +79,7 @@ class AufenthaltstitelParser implements DocumentTemplateParser
             return null;
         }
 
-        // Mehrere Karten auf einem Bild (Familie) -> der KI-Vision ueberlassen,
-        // die jede Person korrekt zuordnet. Erkennung an mehrfach auftretenden
-        // Kartenmarkern.
-        if ($this->markerCount($upper) > 1) {
-            return null;
-        }
-
-        $this->lines = array_map('trim', preg_split('/\R/', $text) ?: []);
-
-        $raw = [];
-
-        // Name (NAMEN/SURNAMES) und Vornamen (Forenames): auf der Karte steht
-        // der Nachname (Grossbuchstaben) in der Zeile unter der Beschriftung,
-        // der/die Vorname(n) in der Zeile darunter.
-        $surnameIdx = $this->lineIndex('/\b(?:NAMEN|SURNAMES?)\b/i');
-        if ($surnameIdx !== null) {
-            $vals = $this->nextNonEmpty($surnameIdx, 2);
-            if (isset($vals[0]) && $this->looksLikeName($vals[0])) {
-                $raw['last_name'] = $this->normalizeName($vals[0]);
-            }
-            if (isset($vals[1]) && $this->looksLikeName($vals[1])) {
-                $raw['first_name'] = $this->normalizeName($vals[1]);
-            }
-        }
+        $raw = $this->frontNames();
 
         // Geschlecht + Staatsangehoerigkeit + Geburtsdatum stehen zusammen in
         // EINER Wertzeile ("M   IRQ   28 03 1987").
@@ -115,6 +118,326 @@ class AufenthaltstitelParser implements DocumentTemplateParser
                 'energie' => [],
             ],
         ];
+    }
+
+    /**
+     * RUECKSEITE der Karte: Personendaten aus der TD1-MRZ (drei Zeilen a 30
+     * Zeichen, mit Pruefziffern), Anschrift und Geburtsort aus den
+     * Klartext-Bloecken. Fehlen Felder (z.B. beim kombinierten Vorder-/
+     * Rueckseiten-Scan), ergaenzen die Vorderseiten-Beschriftungen.
+     */
+    private function parseBackSide(): ?array
+    {
+        $mrz = $this->td1Fields();
+        if ($mrz === null) {
+            return null; // MRZ vorhanden, aber nicht sicher dekodierbar -> KI.
+        }
+
+        $raw = $mrz;
+
+        // Kombinierter Scan: fehlende Felder aus den Vorderseiten-
+        // Beschriftungen ergaenzen (nie MRZ-Werte ueberschreiben).
+        foreach ($this->frontNames() as $k => $v) {
+            $raw[$k] ??= $v;
+        }
+        $aux = [];
+        $this->fillSexNationalityBirth($aux);
+        foreach ($aux as $k => $v) {
+            $raw[$k] ??= $v;
+        }
+
+        // Anschrift-Aufkleber ("Anschrift/Address/Adresse": PLZ Ort und
+        // Strasse Hausnummer) + Geburtsort ("GEBURTSORT/PLACE OF BIRTH").
+        $raw = [...$raw, ...$this->backAddress()];
+        $raw['birth_place'] ??= $this->backBirthPlace();
+
+        $expiry = $raw['card_expiry'] ?? null;
+        unset($raw['card_expiry']);
+
+        $person = $this->validatedPerson(array_filter($raw, fn ($v) => $v !== null && $v !== ''));
+        if (($person['last_name'] ?? null) === null && ($person['first_name'] ?? null) === null) {
+            return null; // Ohne belastbaren Namen der normalen Analyse/KI ueberlassen.
+        }
+
+        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $address = trim(
+            (($person['street'] ?? '') !== '' ? trim(($person['street'] ?? '') . ' ' . ($person['house_number'] ?? '')) . ', ' : '')
+            . trim(($person['zip'] ?? '') . ' ' . ($person['city'] ?? ''))
+        );
+        $address = trim($address, ', ');
+
+        return [
+            'type' => 'aufenthaltstitel',
+            'confidence' => 76,
+            'summary' => 'Aufenthaltstitel (Rueckseite, maschinenlesbare Zone gelesen)'
+                . ($name !== '' ? ' - ' . $name : '')
+                . (isset($person['nationality']) ? ' - Staatsangehoerigkeit ' . $person['nationality'] : '')
+                . ($expiry !== null ? ' - gueltig bis ' . $expiry : '')
+                . ($address !== '' ? ' - Anschrift ' . $address : '')
+                . ' - Felder gratis aus der Karte gelesen (ohne KI).',
+            'title' => 'Aufenthaltstitel' . ($name !== '' ? ' ' . $name : ''),
+            'data' => [
+                'person' => $person,
+                'versicherung' => [],
+                'kfz' => [],
+                'gesundheit' => [],
+                'bank' => [],
+                'personen' => [],
+                'energie' => [],
+            ],
+        ];
+    }
+
+    /**
+     * Anzahl der TD1-MRZ-Datenzeilen (Geburtsdatum+Pruefziffer+Geschlecht+
+     * Ablauf+Pruefziffer+Staatsangehoerigkeit) im Text - Basis fuer die
+     * Rueckseiten-Erkennung und den Mehr-Karten-Schutz.
+     */
+    private function td1DataLineCount(): int
+    {
+        $count = 0;
+        foreach ($this->mrzLines() as $line) {
+            if (preg_match('/^\d{6}\d[MFX<]\d{6}\d[A-Z]{3}[A-Z0-9<]*$/', $line)) {
+                $count++;
+            }
+        }
+        return $count;
+    }
+
+    /**
+     * Dekodiert die TD1-MRZ der Rueckseite (Pruefziffern-validiert):
+     *   Zeile 1: AR + Ausstellerstaat + Dokumentennummer(9) + Pruefziffer
+     *   Zeile 2: Geburt(6) Pruef Geschlecht Ablauf(6) Pruef Staat(3)
+     *   Zeile 3: NACHNAME<<VORNAMEN
+     *
+     * @return array<string,mixed>|null null, wenn die Datenzeile fehlt.
+     */
+    private function td1Fields(): ?array
+    {
+        $lines = $this->mrzLines();
+
+        $dataIdx = null;
+        $data = [];
+        foreach ($lines as $i => $line) {
+            if (preg_match('/^(\d{6})(\d)([MFX<])(\d{6})(\d)([A-Z]{3})[A-Z0-9<]*$/', $line, $m)) {
+                $dataIdx = $i;
+                $data = $m;
+                break;
+            }
+        }
+        if ($dataIdx === null) {
+            return null;
+        }
+
+        $raw = [];
+
+        // Geburtsdatum/Ablauf nur mit stimmiger Pruefziffer uebernehmen -
+        // ein OCR-Zahlendreher darf nie ein falsches Datum erzeugen.
+        if ($this->mrzCheckDigit($data[1]) === (int) $data[2]) {
+            $raw['birth_date'] = $this->mrzDate($data[1], false);
+        }
+        $raw['gender'] = match ($data[3]) {
+            'M' => 'male',
+            'F' => 'female',
+            default => null,
+        };
+        if ($this->mrzCheckDigit($data[4]) === (int) $data[5]) {
+            $raw['card_expiry'] = $this->displayDate($this->mrzDate($data[4], true));
+        }
+        $raw['nationality'] = $this->nationality($data[6]);
+
+        // Zeile 1 (davor): "AR" + Ausstellerstaat + Dokumentennummer + Pruefziffer.
+        foreach ($lines as $line) {
+            if (preg_match('/^AR([A-Z]{1,3})<{0,2}([A-Z0-9]{9})(\d)/', $line, $m)
+                && $this->mrzCheckDigit($m[2]) === (int) $m[3]) {
+                $raw['id_number'] = $m[2];
+                break;
+            }
+        }
+
+        // Zeile 3 (danach): NACHNAME<<VORNAMEN ("<" als Fueller).
+        foreach ($lines as $j => $line) {
+            if ($j <= $dataIdx || !str_contains($line, '<<') || !preg_match('/^[A-Z<]+$/', $line)) {
+                continue;
+            }
+            $parts = preg_split('/<</', $line, 2) ?: [];
+            $surname = $this->mrzName($parts[0] ?? '');
+            $given = $this->mrzName($parts[1] ?? '');
+            if ($surname !== '') {
+                $raw['last_name'] = $surname;
+            }
+            if ($given !== '') {
+                $raw['first_name'] = $given;
+            }
+            break;
+        }
+
+        return array_filter($raw, fn ($v) => $v !== null && $v !== '');
+    }
+
+    /**
+     * MRZ-taugliche Zeilen: Leerraum entfernt, Grossschreibung, nur
+     * A-Z/0-9/< und ausreichend lang. Die Original-Zeilenindexe bleiben als
+     * Schluessel erhalten (fuer die Reihenfolge Zeile 2 -> Zeile 3).
+     *
+     * @return array<int,string>
+     */
+    private function mrzLines(): array
+    {
+        $out = [];
+        foreach ($this->lines as $i => $line) {
+            $c = strtoupper((string) preg_replace('/\s+/', '', $line));
+            if (mb_strlen($c) >= 24 && preg_match('/^[A-Z0-9<]+$/', $c)) {
+                $out[$i] = $c;
+            }
+        }
+        return $out;
+    }
+
+    /** ICAO-9303-Pruefziffer (Gewichte 7/3/1; "<"=0, A=10 ... Z=35). */
+    private function mrzCheckDigit(string $value): int
+    {
+        $weights = [7, 3, 1];
+        $sum = 0;
+        foreach (str_split($value) as $i => $ch) {
+            $v = match (true) {
+                $ch === '<' => 0,
+                ctype_digit($ch) => (int) $ch,
+                default => ord($ch) - ord('A') + 10,
+            };
+            $sum += $v * $weights[$i % 3];
+        }
+        return $sum % 10;
+    }
+
+    /** MRZ-Datum "YYMMDD" -> "JJJJ-MM-TT". $expiry steuert die Jahrhundertwahl. */
+    private function mrzDate(string $yymmdd, bool $expiry): ?string
+    {
+        if (!preg_match('/^(\d{2})(\d{2})(\d{2})$/', $yymmdd, $m)) {
+            return null;
+        }
+        $yy = (int) $m[1];
+        // Ablauf liegt in der Zukunft -> 20YY. Geburtsdatum: Pivot bei 30
+        // (00-30 -> 20YY, 31-99 -> 19YY) - deterministisch, ohne "heute".
+        $year = $expiry ? 2000 + $yy : ($yy <= 30 ? 2000 + $yy : 1900 + $yy);
+        if (!checkdate((int) $m[2], (int) $m[3], $year)) {
+            return null;
+        }
+        return sprintf('%04d-%02d-%02d', $year, (int) $m[2], (int) $m[3]);
+    }
+
+    /** MRZ-Namensteil ("ALALI", "SAFA<PETER") -> "Alali", "Safa Peter". */
+    private function mrzName(string $part): string
+    {
+        $part = trim(str_replace('<', ' ', $part));
+        $part = (string) preg_replace('/\s+/', ' ', $part);
+        return $part === '' ? '' : mb_convert_case($part, MB_CASE_TITLE, 'UTF-8');
+    }
+
+    private function displayDate(?string $iso): ?string
+    {
+        if ($iso === null) {
+            return null;
+        }
+        return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $iso, $m) ? $m[3] . '.' . $m[2] . '.' . $m[1] : $iso;
+    }
+
+    /**
+     * Anschrift-Aufkleber der Rueckseite: nach der Beschriftung "Anschrift/
+     * Address/Adresse" folgen "PLZ Ort" und "Strasse Hausnummer" (in
+     * beliebiger Reihenfolge). Werte rechts einer breiten Spaltenluecke
+     * (z.B. die Dokumentennummer daneben) werden abgeschnitten.
+     *
+     * @return array<string,string>
+     */
+    private function backAddress(): array
+    {
+        $idx = $this->lineIndex('/\bAnschrift\b|\bAdresse\b/iu');
+        if ($idx === null) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($this->nextNonEmpty($idx, 3) as $value) {
+            // Nur die eigene Spalte betrachten (vor einer 2+-Leerzeichen-Luecke).
+            foreach (preg_split('/\s{2,}/', $value) ?: [] as $col) {
+                $col = trim($col);
+                if (!isset($out['zip']) && preg_match('/^(\d{5})\s+(\p{Lu}[\p{L}.\-]*(?:\s\p{L}[\p{L}.\-]+)*)$/u', $col, $m)) {
+                    $out['zip'] = $m[1];
+                    $out['city'] = $m[2];
+                } elseif (!isset($out['street']) && preg_match('/^(\p{Lu}[\p{L}.\-]*(?:\s\p{L}[\p{L}.\-]+)*)\s+(\d{1,4}(?:\s?[a-zA-Z])?)$/u', $col, $m)) {
+                    $out['street'] = $m[1];
+                    $out['house_number'] = trim($m[2]);
+                }
+            }
+        }
+        // Nur uebernehmen, wenn wenigstens PLZ+Ort ODER Strasse sicher sind.
+        return (isset($out['zip']) || isset($out['street'])) ? $out : [];
+    }
+
+    /**
+     * Geburtsort ("3. GEBURTSORT/PLACE OF BIRTH"): der Wert steht in der
+     * Zeile darunter in derselben Spalte (links daneben laufen die
+     * ANMERKUNGEN weiter). Unsichere Treffer bleiben leer.
+     */
+    private function backBirthPlace(): ?string
+    {
+        $idx = $this->lineIndex('/GEBURTSORT|PLACE OF BIRTH/i');
+        if ($idx === null) {
+            return null;
+        }
+
+        // Spaltenposition der Beschriftung bestimmen.
+        $labelCols = preg_split('/\s{2,}/', trim($this->lines[$idx])) ?: [];
+        $labelPos = null;
+        foreach ($labelCols as $i => $col) {
+            if (preg_match('/GEBURTSORT|PLACE OF BIRTH/i', $col)) {
+                $labelPos = $i;
+                break;
+            }
+        }
+
+        foreach ($this->nextNonEmpty($idx, 1) as $value) {
+            $cols = array_map('trim', preg_split('/\s{2,}/', trim($value)) ?: []);
+            $candidate = $cols[$labelPos ?? 0] ?? null;
+            // Einspaltige OCR-Ausgabe: einziger Wert in der Folgezeile.
+            if ($candidate === null && count($cols) === 1) {
+                $candidate = $cols[0];
+            }
+            if ($candidate === null) {
+                return null;
+            }
+            // Nur plausible Ortsnamen (Grossbuchstaben der Karte), keine
+            // Anmerkungs-Texte ("ERWERBSTAETIGKEIT ERLAUBT ...").
+            if (preg_match('/^\p{Lu}[\p{Lu} \-\.]{1,40}$/u', $candidate)
+                && !preg_match('/ERWERBST|ERLAUBT|GESTATTET|SIEHE|ZUSATZ|BLATT/i', $candidate)) {
+                return mb_convert_case($candidate, MB_CASE_TITLE, 'UTF-8');
+            }
+            return null;
+        }
+        return null;
+    }
+
+    /**
+     * Vorderseite: Nachname (NAMEN/SURNAMES) in der Zeile unter der
+     * Beschriftung, Vorname(n) (Forenames) in der Zeile darunter.
+     *
+     * @return array<string,string>
+     */
+    private function frontNames(): array
+    {
+        $raw = [];
+        $surnameIdx = $this->lineIndex('/\b(?:NAMEN|SURNAMES?)\b/i');
+        if ($surnameIdx !== null) {
+            $vals = $this->nextNonEmpty($surnameIdx, 2);
+            if (isset($vals[0]) && $this->looksLikeName($vals[0])) {
+                $raw['last_name'] = $this->normalizeName($vals[0]);
+            }
+            if (isset($vals[1]) && $this->looksLikeName($vals[1])) {
+                $raw['first_name'] = $this->normalizeName($vals[1]);
+            }
+        }
+        return $raw;
     }
 
     /** @param array<string,mixed> $raw */

@@ -63,6 +63,7 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(\App\Services\Ai\TemplateParsers\ErsatzbescheinigungParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\GesundheitskarteParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\GehaltsabrechnungParser::class),
+                $app->make(\App\Services\Ai\TemplateParsers\ArbeitsvertragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\GeburtsurkundeParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\ReisepassMrzParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\MeldebestaetigungParser::class),

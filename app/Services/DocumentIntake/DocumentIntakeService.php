@@ -48,7 +48,7 @@ class DocumentIntakeService
     }
 
     /** Ausweis-Dokumente liefern die verlaesslichsten Personendaten. */
-    private const IDENTITY_TYPES = ['personalausweis', 'reisepass'];
+    private const IDENTITY_TYPES = ['personalausweis', 'reisepass', 'aufenthaltstitel'];
     private const LICENSE_TYPES = ['fuehrerschein'];
 
     /**
@@ -625,6 +625,13 @@ class DocumentIntakeService
                 })(),
                 'nationality' => $set('nationality', $person['nationality'] ?? null),
                 'marital_status' => $set('marital_status', $person['marital_status'] ?? null),
+                // Beruf + Arbeitgeber (Name und Anschrift) - z.B. aus dem
+                // Arbeitsvertrag oder der Gehaltsabrechnung.
+                'occupation' => $set('occupation', $person['occupation'] ?? null),
+                'employer' => (function () use ($set, $person): void {
+                    $set('employer_name', $person['employer_name'] ?? null);
+                    $set('employer_address', $person['employer_address'] ?? null);
+                })(),
                 'gender' => $set('gender', $person['gender'] ?? null),
                 // Bewusst KEIN reines email2: die gelesene Adresse soll primaer
                 // die Haupt-Login-Adresse werden (Portal-Zugang), sonst email2.

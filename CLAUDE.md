@@ -138,6 +138,28 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   tesseract-ocr tesseract-ocr-deu poppler-utils` auf dem VPS, danach
   `OCR_ENABLED=true` in der `.env`. Rohtext wird bewusst NICHT gespeichert
   (Datenminimierung) - nur das validierte Extraktionsergebnis.
+- **eAT-Rueckseite + Arbeitsvertrag im Dokumenten-Eingang** (Betreiber-
+  Vorgabe 29.07.2026): Der `AufenthaltstitelParser` liest jetzt auch die
+  RUECKSEITE der Aufenthaltstitel-Karte - sie traegt keine Vorderseiten-
+  Beschriftungen, dafuer die TD1-MRZ (drei Zeilen, beginnend "AR...").
+  Dekodierung deterministisch MIT Pruefziffern-Validierung (kaputte
+  Pruefziffer -> Feld wird verworfen, nie falsch uebernommen): Name,
+  Geburtsdatum, Geschlecht, Staatsangehoerigkeit, Dokumentennummer, Ablauf;
+  zusaetzlich Anschrift-Aufkleber (-> strukturierte Adresse) und
+  GEBURTSORT. Der eAT zaehlt beim Batch-Merge als Ausweis-Dokument
+  (Personendaten-Hoheit). Neuer Dokumenttyp `arbeitsvertrag`
+  (`ArbeitsvertragParser`): liest aus dem Vertragskopf den ARBEITGEBER
+  (Firmenname per Rechtsform-Erkennung + Anschrift; "vertreten durch" wird
+  uebersprungen), den Arbeitnehmer (Name/Anschrift/Anrede->Geschlecht)
+  sowie Taetigkeit ("als Bauhelfer eingestellt") und Beginn. Kundenakte
+  hat dafuer die Felder `employer_name`/`employer_address` (Bearbeiten-
+  Formular neben Beruf, Merge-faehig); Uebernahme im Review-Modal ueber
+  die neuen apply-Gruppen `occupation`/`employer` - Beruf ist damit
+  bewusst wieder auf der Whitelist (der Arbeitsvertrag nennt ihn
+  woertlich; die Uebernahme bleibt eine Mitarbeiter-Auswahl,
+  Fuehrerscheindatum/weitere Fahrer bleiben ausgeschlossen). Tests:
+  `AufenthaltstitelParserTest`, `ArbeitsvertragParserTest`,
+  `SmartDocumentUploadTest`.
 - **Zuordnungs-Vorschlaege im Dokumenten-Eingang** (Betreiber-Vorgabe
   29.07.2026): Beim Oeffnen von „Kunden zuordnen…" / „Neuen Kunden
   erstellen" laedt der Dialog SOFORT die naechstliegenden Kunden

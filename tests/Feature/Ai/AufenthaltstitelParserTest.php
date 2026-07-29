@@ -84,6 +84,85 @@ class AufenthaltstitelParserTest extends TestCase
         $this->assertNull((new AufenthaltstitelParser())->parse($twoCards));
     }
 
+    /**
+     * Rueckseite der Karte (wie ein echtes Kundenfoto): keine Vorderseiten-
+     * Beschriftungen, dafuer TD1-MRZ (drei Zeilen), Anschrift-Aufkleber und
+     * Geburtsort. Pruefziffern des Beispiels sind ICAO-korrekt.
+     */
+    private function backSideOcr(): string
+    {
+        return implode("\n", [
+            '1. ANMERKUNGEN/REMARKS          3. GEBURTSORT/PLACE OF BIRTH',
+            'ERWERBSTAETIGKEIT ERLAUBT       DEIR EZZOR',
+            'SIEHE ZUSATZBLATT',
+            'AUGENFARBE/EYE COLOUR',
+            'BRAUN',
+            'GROESSE/HEIGHT',
+            '175cm',
+            '2. AUSSTELLUNGSDATUM-BEHOERDE/',
+            'DATE OF ISSUE - AUTHORITY',
+            '11 07 2024 - ZAB Saarland',
+            'Anschrift/Address/Adresse       YZ96LLV6N',
+            '66113 Saarbruecken',
+            'Hochwaldstrasse 9',
+            'ARD<<YZ96LLV6N6<<<<<<<<<<<<<<<',
+            '0503235M2707107SYR<<<<<<<<<<<2',
+            'ALALI<<MOHAMMAD<<<<<<<<<<<<<<<',
+        ]);
+    }
+
+    public function test_parses_back_side_via_mrz(): void
+    {
+        $r = (new AufenthaltstitelParser())->parse($this->backSideOcr());
+
+        $this->assertNotNull($r);
+        $this->assertSame('aufenthaltstitel', $r['type']);
+
+        $p = $r['data']['person'];
+        // Name aus MRZ-Zeile 3 (NACHNAME<<VORNAMEN).
+        $this->assertSame('Alali', $p['last_name']);
+        $this->assertSame('Mohammad', $p['first_name']);
+        // Geburtsdatum/Geschlecht/Staat aus der MRZ-Datenzeile.
+        $this->assertSame('2005-03-23', $p['birth_date']);
+        $this->assertSame('male', $p['gender']);
+        $this->assertSame('Syrien', $p['nationality']);
+        // Dokumentennummer aus MRZ-Zeile 1 (Pruefziffer-validiert).
+        $this->assertSame('YZ96LLV6N', $p['id_number']);
+        // Anschrift-Aufkleber -> strukturierte Adresse.
+        $this->assertSame('Hochwaldstrasse', $p['street']);
+        $this->assertSame('9', $p['house_number']);
+        $this->assertSame('66113', $p['zip']);
+        $this->assertSame('Saarbruecken', $p['city']);
+        // Geburtsort aus der GEBURTSORT-Spalte.
+        $this->assertSame('Deir Ezzor', $p['birth_place']);
+
+        // Ablauf (MRZ) in der Zusammenfassung sichtbar.
+        $this->assertStringContainsString('10.07.2027', $r['summary']);
+    }
+
+    public function test_back_side_with_broken_check_digit_drops_field(): void
+    {
+        // Geburtsdatum-Pruefziffer kaputt (OCR-Zahlendreher) -> das Datum
+        // wird verworfen, die uebrigen Felder bleiben.
+        $ocr = str_replace('0503235M', '0503234M', $this->backSideOcr());
+        $r = (new AufenthaltstitelParser())->parse($ocr);
+
+        $this->assertNotNull($r);
+        $this->assertArrayNotHasKey('birth_date', $r['data']['person']);
+        $this->assertSame('Alali', $r['data']['person']['last_name']);
+    }
+
+    public function test_two_back_sides_are_left_to_ai(): void
+    {
+        // Zwei Karten-Rueckseiten in einem Foto -> null (KI ordnet zu).
+        $two = $this->backSideOcr() . "\n" . str_replace(
+            ['ALALI<<MOHAMMAD', '0503235M'],
+            ['MAHMOOD<<BARAKA', '9211305F'],
+            $this->backSideOcr()
+        );
+        $this->assertNull((new AufenthaltstitelParser())->parse($two));
+    }
+
     public function test_ignores_unrelated_documents(): void
     {
         $this->assertNull((new AufenthaltstitelParser())->parse('Irgendein anderes Dokument'));

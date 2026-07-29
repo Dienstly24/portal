@@ -36,6 +36,7 @@ class HeuristicDocumentClassifier
         'geburtsurkunde' => ['GEBURTSURKUNDE'],
         'familienbescheinigung' => ['FAMILIENBESCHEINIGUNG', 'FAMILIENVERSICHERUNG', 'MITGLIEDSBESCHEINIGUNG'],
         'gehaltsabrechnung' => ['GEHALTSABRECHNUNG', 'ENTGELTABRECHNUNG', 'LOHNABRECHNUNG', 'VERDIENSTABRECHNUNG'],
+        'arbeitsvertrag' => ['ARBEITSVERTRAG', 'ANSTELLUNGSVERTRAG', 'DIENSTVERTRAG'],
         'versicherungspolice' => ['VERSICHERUNGSPOLICE', 'VERSICHERUNGSSCHEIN'],
         'versicherungsvertrag' => ['VERSICHERUNGSVERTRAG', 'VERSICHERUNGSANTRAG'],
         'beratungsprotokoll' => ['BERATUNGSPROTOKOLL', 'BERATUNGSVERZICHT'],
