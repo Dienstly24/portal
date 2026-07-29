@@ -524,6 +524,22 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
                         @if($e->malo_id) · MaLo-ID: <b>{{ $e->malo_id }}</b>@endif
                         @if($e->grid_operator) · Netz: {{ $e->grid_operator }}@endif
                         @if($e->previous_provider) · Vorher: {{ $e->previous_provider }}@if($e->previous_customer_number) (Kd-Nr. {{ $e->previous_customer_number }})@endif @endif
+                        {{-- Zaehlerstand + Verbrauch (29.07.2026): der letzte gemeldete
+                             Stand und was seit der vorherigen Ablesung verbraucht wurde. --}}
+                        @php $eLatest = $e->latestMeterReading(); $eStatus = $e->consumptionStatus(); @endphp
+                        @if($eLatest)
+                            <br>📊 Zählerstand <b>{{ $eLatest->formatted() }}</b> ({{ $eLatest->reading_date->format('d.m.Y') }}, {{ $eLatest->sourceLabel() }})
+                            @if($eStatus)
+                                · Verbrauch <b>{{ \App\Models\MeterReading::formatValue($eStatus['consumption'], $e->readingUnit()) }}</b> in {{ $eStatus['days'] }} Tagen
+                                @if($eStatus['projected'] && $eStatus['expected'])
+                                    @if($eStatus['exceeded'])
+                                        <b style="color:#A32D2D;">⚠️ hochgerechnet {{ number_format($eStatus['projected'], 0, ',', '.') }} {{ $e->readingUnit() }}/Jahr – über dem vereinbarten Verbrauch</b>
+                                    @else
+                                        · hochgerechnet {{ number_format($eStatus['projected'], 0, ',', '.') }} {{ $e->readingUnit() }}/Jahr
+                                    @endif
+                                @endif
+                            @endif
+                        @endif
                     @elseif($i = $c->internetDetail)
                         📶 {{ $i->tariff ?? 'Tarif —' }}@if($i->speed) · {{ $i->speed }}@endif
                         @if($i->price_regular !== null) · {{ number_format((float) $i->price_regular, 2, ',', '.') }} €/Monat @endif

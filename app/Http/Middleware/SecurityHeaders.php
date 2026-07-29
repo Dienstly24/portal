@@ -40,7 +40,17 @@ class SecurityHeaders
                     "object-src 'none'",
                     "frame-ancestors 'self'",
                     "form-action 'self'",
-                    "img-src 'self' data: https:",
+                    // blob: ist noetig, damit die Seite selbst erzeugte Bilder
+                    // anzeigen und verarbeiten kann: der Dokumenten-Scanner im
+                    // Kundenportal (Seiten-Vorschau + Verkleinern aufs JPEG),
+                    // das Zaehlerfoto und die Banner-Vorschau nutzen alle
+                    // URL.createObjectURL(). Ohne blob: bricht die Bild-
+                    // verarbeitung still ab (Konsole: "Refused to load the
+                    // image"). Sicherheitlich unbedenklich: blob:-URLs sind
+                    // same-origin und koennen nur von bereits laufendem
+                    // Seiten-Skript erzeugt werden - kein zusaetzlicher
+                    // XSS-Weg, im Gegensatz zu einer fremden Host-Freigabe.
+                    "img-src 'self' data: blob: https:",
                     "font-src 'self' data: https://fonts.bunny.net",
                     "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
                     // 'unsafe-eval' ist noetig, weil Alpine.js v3 (Standard-Build)

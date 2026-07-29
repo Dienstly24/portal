@@ -102,7 +102,7 @@ class PortalController extends Controller
     public function contractShow($id) {
         $customer = $this->getCustomer();
         $contract = Contract::where('customer_id', $customer->id)
-            ->with(['vehicleDetail.mileageReadings', 'energyDetail', 'internetDetail'])
+            ->with(['vehicleDetail.mileageReadings', 'energyDetail.meterReadings', 'internetDetail'])
             ->where('id', $id)->firstOrFail();
 
         // Offene Vertragsaenderung fuer genau diesen Vertrag (new_data ist
@@ -111,7 +111,25 @@ class PortalController extends Controller
             ->where('type', 'contract')->where('status', 'pending')->latest()->get()
             ->first(fn($r) => ($r->new_data['id'] ?? null) === $contract->id);
 
-        return view('portal.contract_show', ['contract' => $contract, 'pendingChange' => $pendingChange]);
+        // Zaehlerfotos, aus denen noch KEINE Ablesung entstanden ist: entweder
+        // laeuft die Auswertung noch oder der Stand war nicht lesbar. Beides
+        // gehoert offen angezeigt - sonst wartet der Kunde vergeblich auf
+        // einen Wert, den nie jemand eingetragen hat.
+        $openMeterPhotos = collect();
+        if ($contract->isEnergy() && $contract->energyDetail) {
+            $used = $contract->energyDetail->meterReadings->pluck('document_id')->filter()->all();
+            $openMeterPhotos = \App\Models\Document::where('contract_id', $contract->id)
+                ->where('file_name', 'like', 'Zaehlerfoto%')
+                ->whereNotIn('id', $used ?: ['-'])
+                ->where('created_at', '>=', now()->subDays(30))
+                ->latest()->get();
+        }
+
+        return view('portal.contract_show', [
+            'contract' => $contract,
+            'pendingChange' => $pendingChange,
+            'openMeterPhotos' => $openMeterPhotos,
+        ]);
     }
 
     /**
@@ -145,6 +163,120 @@ class PortalController extends Controller
         ]);
 
         return back()->with('success', __('Vielen Dank! Ihr Kilometerstand wurde gespeichert.'));
+    }
+
+    /**
+     * Kunde meldet den aktuellen Zaehlerstand seines Energievertrags -
+     * als Zahl, als Zaehlerfoto oder beides (Betreiber-Vorgabe 29.07.2026).
+     *
+     * Jede Meldung wird als eigene Ablesung gespeichert; aus dem Abstand zur
+     * vorherigen ergibt sich der Verbrauch. Kommt nur ein Foto, uebernimmt
+     * die Dokumentanalyse ("kostenlos zuerst") das Ablesen und traegt den
+     * Stand automatisch nach - erkannt wird der Vertrag ueber die
+     * Zaehlernummer auf dem Foto.
+     */
+    public function contractMeterStore(Request $request, $id, \App\Services\Energy\MeterReadingService $meterReadings) {
+        $customer = $this->getCustomer();
+        $contract = Contract::where('customer_id', $customer->id)
+            ->whereIn('type', Contract::ENERGY_TYPES)->with('energyDetail')
+            ->where('id', $id)->firstOrFail();
+        $detail = $contract->energyDetail;
+        abort_unless($detail, 404);
+
+        $data = $request->validate([
+            'reading' => 'nullable|numeric|min:0|max:99999999',
+            'reading_date' => 'nullable|date|before_or_equal:today',
+            'register' => 'nullable|in:' . implode(',', array_keys(\App\Models\MeterReading::REGISTERS)),
+            'photo' => 'nullable|file|mimes:jpg,jpeg,png,webp,heic,heif,pdf|max:10240',
+        ]);
+
+        if (!isset($data['reading']) && !$request->hasFile('photo')) {
+            return back()->withErrors([
+                'reading' => __('Bitte geben Sie den Zählerstand ein oder laden Sie ein Foto des Zählers hoch.'),
+            ])->withInput();
+        }
+
+        $register = $data['register'] ?? \App\Models\MeterReading::REGISTER_DEFAULT;
+        $readingDate = $data['reading_date'] ?? now()->toDateString();
+
+        // Ein Zaehler laeuft nicht rueckwaerts - Tippfehler frueh abfangen.
+        // Ein Zaehlerwechsel ist moeglich, wird aber vom Team erfasst.
+        if (isset($data['reading'])) {
+            $latest = $detail->meterReadings()->where('register', $register)->first();
+            if ($latest && (float) $data['reading'] < (float) $latest->reading) {
+                return back()->withErrors([
+                    'reading' => __('Der Zählerstand kann nicht kleiner sein als Ihre letzte Meldung (:stand).', [
+                        'stand' => $latest->formatted(),
+                    ]),
+                ])->withInput();
+            }
+        }
+
+        $document = $request->hasFile('photo')
+            ? $this->storeMeterPhoto($request->file('photo'), $customer, $contract)
+            : null;
+
+        if (isset($data['reading'])) {
+            $meterReadings->record($detail, (float) $data['reading'], [
+                'register' => $register,
+                'reading_date' => $readingDate,
+                'source' => 'customer',
+                'document_id' => $document?->id,
+                'created_by' => $customer->user?->name,
+            ]);
+
+            return back()->with('success', __('Vielen Dank! Ihr Zählerstand wurde gespeichert.'));
+        }
+
+        return back()->with('success', __('Vielen Dank! Wir lesen Ihr Zählerfoto aus und tragen den Stand ein.'));
+    }
+
+    /**
+     * Zaehlerfoto als Dokument des Kunden ablegen und zur Analyse anstossen.
+     * Das Foto ist der Beleg zur Ablesung und bleibt in der Kundenakte.
+     */
+    private function storeMeterPhoto(\Illuminate\Http\UploadedFile $file, Customer $customer, Contract $contract): \App\Models\Document {
+        $path = $file->store('customers/' . $customer->id . '/documents', 'local');
+
+        $document = \App\Models\Document::create([
+            'id' => Str::uuid(),
+            'customer_id' => $customer->id,
+            'contract_id' => $contract->id,
+            'category' => 'other',
+            'file_name' => 'Zaehlerfoto ' . now()->format('d.m.Y') . '.' . $file->getClientOriginalExtension(),
+            'file_path' => $path,
+            'disk' => 'local',
+            'visibility' => 'customer',
+            'uploaded_by' => auth()->id(),
+            'file_size' => $file->getSize(),
+            'ai_status' => 'pending',
+        ]);
+
+        \App\Jobs\AnalyzeDocumentJob::dispatch((string) $document->id);
+
+        \App\Support\Facades\Notify::pushMany(
+            \App\Models\User::whereIn('role', ['admin','manager','support'])->where('is_active', true)->pluck('id'),
+            [
+                'type' => \App\Services\Notifications\NotificationService::TYPE_DOCUMENT,
+                'title' => 'Neues Zählerfoto',
+                'body' => ($customer->user?->name ?? 'Ein Kunde') . ' hat ein Zählerfoto hochgeladen.',
+                'link' => route('admin.contract.edit', $contract->id),
+                'dedup_key' => 'meter-photo-' . $document->id,
+            ]
+        );
+
+        \App\Models\ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'meter_photo_uploaded_by_customer',
+            'entity_type' => 'document',
+            'entity_id' => $document->id,
+            'meta' => json_encode([
+                'customer_id' => (string) $customer->id,
+                'contract_id' => (string) $contract->id,
+            ], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        return $document;
     }
 
     public function tickets() {

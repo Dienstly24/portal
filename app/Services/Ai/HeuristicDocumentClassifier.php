@@ -3,6 +3,7 @@ namespace App\Services\Ai;
 
 use App\Models\Document;
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
+use App\Services\Energy\MeterPhotoReader;
 
 /**
  * Kostenloser Fallback OHNE KI-Anbieter: einfache Stichwort-Erkennung des
@@ -54,6 +55,10 @@ class HeuristicDocumentClassifier
 
         $type = $this->detectType($text);
 
+        // Zaehlerfoto: Nummer und Stand liest die kostenlose Stufe selbst -
+        // ein Foto hat kaum Text, die KI wuerde hier nur Geld kosten.
+        $energie = $type === 'zaehlerfoto' ? (new MeterPhotoReader())->read($text) : [];
+
         $raw = [
             'person' => ['email' => $this->findEmail($text)],
             'kfz' => [
@@ -75,6 +80,7 @@ class HeuristicDocumentClassifier
                 'versicherung' => [],
                 'kfz' => $this->validatedVehicle($raw['kfz']),
                 'gesundheit' => [],
+                'energie' => $this->validatedEnergy($energie),
                 'bank' => $this->validatedBank($raw['bank']),
             ],
         ];
@@ -90,6 +96,14 @@ class HeuristicDocumentClassifier
                 }
             }
         }
+
+        // Erst wenn KEIN Stichwort greift, das Zaehlerfoto pruefen: eine
+        // Energierechnung nennt auch Zaehlernummer und Stand, ist aber eine
+        // Rechnung - der Stichwort-Katalog behaelt daher den Vortritt.
+        if ((new MeterPhotoReader())->looksLikeMeterPhoto($text)) {
+            return 'zaehlerfoto';
+        }
+
         return 'sonstiges';
     }
 

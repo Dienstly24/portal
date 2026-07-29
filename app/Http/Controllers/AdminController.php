@@ -303,7 +303,7 @@ class AdminController extends Controller
                 ['viewed_at' => now()]
             );
         }
-        $customer = Customer::with(['user','contracts.vehicleDetail.claims','contracts.vehicleDetail.mileageReadings','contracts.energyDetail','contracts.internetDetail','contracts.switchReminders','tickets','documents','family','changeRequests.reviewer'])->findOrFail($id);
+        $customer = Customer::with(['user','contracts.vehicleDetail.claims','contracts.vehicleDetail.mileageReadings','contracts.energyDetail.meterReadings','contracts.internetDetail','contracts.switchReminders','tickets','documents','family','changeRequests.reviewer'])->findOrFail($id);
         // Interner Chat & Notizen (nur Staff - Zugriff bereits oben geprüft)
         $internalChat = \App\Models\InternalMessage::chat()->where('customer_id', $id)->with('sender')->orderBy('created_at')->get();
         $internalNotes = \App\Models\InternalMessage::note()->where('customer_id', $id)->with('sender')->latest()->get();
@@ -400,9 +400,83 @@ class AdminController extends Controller
     }
 
     public function contractEdit($id) {
-        $contract = Contract::with(['vehicleDetail.claims','vehicleDetail.mileageReadings','vehicleDetail.sfHistory','energyDetail','internetDetail','customer.user','revisions.changedBy'])->findOrFail($id);
+        $contract = Contract::with(['vehicleDetail.claims','vehicleDetail.mileageReadings','vehicleDetail.sfHistory','energyDetail.meterReadings','internetDetail','customer.user','revisions.changedBy'])->findOrFail($id);
         $this->authorizeCustomerAccess($contract->customer_id);
         return view('admin.contract_edit', compact('contract'));
+    }
+
+    /**
+     * Zaehlerstand eines Energievertrags von Hand erfassen (z.B. telefonische
+     * Meldung des Kunden). Jede Ablesung ist eine eigene Zeile - der Verlauf
+     * bleibt vollstaendig erhalten und ergibt die Verbrauchshistorie.
+     */
+    public function contractMeterReadingStore(Request $request, $id, \App\Services\Energy\MeterReadingService $meterReadings) {
+        $contract = Contract::with('energyDetail')->findOrFail($id);
+        $this->authorizeCustomerAccess($contract->customer_id);
+        $detail = $contract->energyDetail;
+        if (!$detail) {
+            return back()->withErrors(['reading' => 'Für diesen Vertrag sind keine Energie-Daten hinterlegt.']);
+        }
+
+        $data = $request->validate([
+            'reading' => 'required|numeric|min:0|max:99999999',
+            'reading_date' => 'nullable|date|before_or_equal:today',
+            'register' => 'nullable|in:' . implode(',', array_keys(\App\Models\MeterReading::REGISTERS)),
+        ]);
+
+        $entry = $meterReadings->record($detail, (float) $data['reading'], [
+            'register' => $data['register'] ?? \App\Models\MeterReading::REGISTER_DEFAULT,
+            'reading_date' => $data['reading_date'] ?? now()->toDateString(),
+            'source' => 'staff',
+            'created_by' => auth()->user()->name,
+        ]);
+
+        if (!$entry) {
+            return back()->withErrors(['reading' => 'Der Zählerstand konnte nicht gespeichert werden.']);
+        }
+
+        return back()->with('success', 'Zählerstand erfasst: ' . $entry->formatted()
+            . ' (' . $entry->reading_date->format('d.m.Y') . ').');
+    }
+
+    /**
+     * Fehlerhafte Ablesung entfernen (nur admin/manager). Der Bestandswert
+     * "aktueller Zaehlerstand" wird auf die dann juengste Ablesung
+     * zurueckgesetzt, damit Anzeige und Historie zusammenpassen.
+     */
+    public function contractMeterReadingDestroy($id, $readingId) {
+        $contract = Contract::with('energyDetail')->findOrFail($id);
+        $this->authorizeCustomerAccess($contract->customer_id);
+        $detail = $contract->energyDetail;
+        abort_unless($detail, 404);
+
+        $reading = \App\Models\MeterReading::where('contract_energy_detail_id', $detail->id)
+            ->where('id', $readingId)->firstOrFail();
+        $register = $reading->register;
+        $reading->delete();
+
+        if ($register === \App\Models\MeterReading::REGISTER_DEFAULT) {
+            $newest = \App\Models\MeterReading::where('contract_energy_detail_id', $detail->id)
+                ->where('register', $register)
+                ->orderByDesc('reading_date')->orderByDesc('created_at')->first();
+            $detail->meter_reading = $newest
+                ? rtrim(rtrim(number_format((float) $newest->reading, 3, '.', ''), '0'), '.')
+                : null;
+            $detail->save();
+        }
+
+        \App\Models\ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'meter_reading_deleted',
+            'entity_type' => 'contract',
+            'entity_id' => $contract->id,
+            'meta' => json_encode([
+                'reading' => (string) $reading->reading,
+                'reading_date' => $reading->reading_date?->toDateString(),
+            ], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        return back()->with('success', 'Ablesung wurde gelöscht.');
     }
 
     public function contractUpdate(Request $request, $id) {
