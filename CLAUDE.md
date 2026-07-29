@@ -214,6 +214,35 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   des Geburtstags-Jobs war im ENUM ungueltig); gueltige Typen zentral in
   `Task::TYPES`. Kundenakte-Header hat Button "Aufgabe / Wiedervorlage"
   (oeffnet das Modal vorbefuellt). Tests: `TaskSystemTest`.
+- **Kundenaenderungen: Nachweispflicht + automatische Pruefung +
+  Mitteilungen an Gesellschaften** (Betreiber-Vorgabe 29.07.2026, Details
+  in `docs/NACHWEIS_KUNDENAENDERUNGEN.md`): Sensible Self-Service-
+  Aenderungen (Bankverbindung, Anschrift, Name/Geburtsdatum) werden nur
+  MIT Nachweis angenommen - Kontonachweis, Meldebescheinigung oder Ausweis
+  (`ChangeProofPolicy` ist die eine Quelle dafuer, wer was braucht); der
+  Kunde erfasst zusaetzlich "Gueltig ab" (`effective_from`, nie geraten).
+  Nachweise liegen auf der PRIVATEN Disk unter
+  `customers/{id}/nachweise` (Kundenloeschung raeumt sie mit weg), Zugriff
+  nur ueber `admin.change_requests.proof` + Portfolio-Policy.
+  `ChangeProofVerifier` (Job `VerifyChangeRequestProofJob`) liest den Beleg
+  "kostenlos zuerst" (PDF-Textebene, sonst OCR - KEIN KI-Aufruf) und prueft
+  nur, ob der BEANTRAGTE Wert darin steht: IBAN exakt bzw. OCR-tolerant
+  (O/0, I/1, S/5), Adresse umlaut- und "str./strasse"-tolerant, Name
+  ueber Namensteile. Rohtext wird NIE gespeichert (Datenminimierung), nur
+  das Ergebnis (`proof_status` verified/partial/mismatch/unreadable/
+  missing + Pruefpunkte). Automatische Freigabe nur bei `verified` und nur
+  nach Einstellung (Einstellungen -> Kundenaenderungen; Standard: Adresse/
+  Name automatisch, BANK bleibt Vier-Augen-Prinzip - ein Treffer belegt den
+  Inhalt des Dokuments, nicht seine Echtheit); jede Uebernahme meldet die
+  Glocke. Nach der Freigabe entsteht je Gesellschaft des Kunden EIN
+  fertiger Entwurf (`InsurerNotificationBuilder`, Tabelle
+  `change_notifications`, Seite `/admin/change-requests/{id}/mitteilungen`)
+  mit alter/neuer Angabe, Vertragsnummern und "gueltig ab"; Versand ist
+  IMMER eine bewusste Mitarbeiter-Aktion (Nachweis optional als Anhang,
+  Protokoll in der Kundenakte), Alternativen "per Post/Portal erledigt".
+  Rueckfragen gehen mit einem Klick als Chat-Nachricht raus und fuehren
+  direkt in die Unterhaltung (`admin.change_requests.ask` -> Kundenchat).
+  Tests: `ChangeRequestVerificationTest`.
 - **Neukunden-Bericht + Vermittler-Provisionen** (Betreiber-Vorgabe
   25.07.2026): `/admin/reports/neukunden` (`ReportController::newCustomers`,
   Tab auf der Berichte-Seite) zeigt die Neukunden des Monats (blaetterbar,

@@ -16,6 +16,13 @@ class SelfServiceTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Nachweise landen auf der privaten Disk - im Test gefaked.
+        \Illuminate\Support\Facades\Storage::fake('local');
+    }
+
     private function makeCustomer(): Customer
     {
         $user = User::factory()->create(['role' => 'customer']);
@@ -53,6 +60,7 @@ class SelfServiceTest extends TestCase
         $customer = $this->makeCustomer();
 
         $this->actingAs($customer->user)->post(route('portal.bank.store'), [
+            'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
             'iban' => 'DE89370400440532013000',
             'account_holder' => 'Max Mustermann',
         ])->assertSessionHas('success');
@@ -70,6 +78,7 @@ class SelfServiceTest extends TestCase
         $customer = $this->makeCustomer();
 
         $this->actingAs($customer->user)->post(route('portal.bank.store'), [
+            'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
             'iban' => 'DE89370400440532013000',
             'account_holder' => 'Max Mustermann',
         ]);
@@ -116,6 +125,7 @@ class SelfServiceTest extends TestCase
     {
         $customer = $this->makeCustomer();
         $this->actingAs($customer->user)->post(route('portal.bank.store'), [
+            'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
             'iban' => 'DE89370400440532013000', 'account_holder' => 'Max',
         ]);
 
@@ -141,6 +151,7 @@ class SelfServiceTest extends TestCase
     {
         $customer = $this->makeCustomer();
         $this->actingAs($customer->user)->post(route('portal.bank.store'), [
+            'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
             'iban' => 'DE89370400440532013000', 'account_holder' => 'Max Mustermann',
         ]);
         $request = CustomerChangeRequest::first();
@@ -190,6 +201,7 @@ class SelfServiceTest extends TestCase
     {
         $customer = $this->makeCustomer();
         $this->actingAs($customer->user)->post(route('portal.bank.store'), [
+            'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
             'iban' => 'DE89370400440532013000', 'account_holder' => 'Max',
         ]);
 
@@ -225,6 +237,7 @@ class SelfServiceTest extends TestCase
     {
         $victim = $this->makeCustomer();
         $this->actingAs($victim->user)->post(route('portal.bank.store'), [
+            'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
             'iban' => 'DE89370400440532013000', 'account_holder' => 'Opfer',
         ]);
         $request = CustomerChangeRequest::first();
@@ -245,6 +258,7 @@ class SelfServiceTest extends TestCase
     {
         $customer = $this->makeCustomer();
         $this->actingAs($customer->user)->post(route('portal.bank.store'), [
+            'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
             'iban' => 'DE89370400440532013000', 'account_holder' => 'Max',
         ]);
         $request = CustomerChangeRequest::first();
@@ -265,6 +279,7 @@ class SelfServiceTest extends TestCase
 
         $customer = $this->makeCustomer();
         $this->actingAs($customer->user)->post(route('portal.bank.store'), [
+            'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
             'iban' => 'DE89370400440532013000', 'account_holder' => 'Max',
         ]);
 
@@ -279,6 +294,7 @@ class SelfServiceTest extends TestCase
     {
         $customer = $this->makeCustomer();
         $this->actingAs($customer->user)->post(route('portal.bank.store'), [
+            'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
             'iban' => 'DE89370400440532013000', 'account_holder' => 'Max',
         ]);
         $request = CustomerChangeRequest::first();

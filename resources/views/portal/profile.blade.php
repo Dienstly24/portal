@@ -5,7 +5,7 @@
 
 @if($pending > 0)<div class="notice">Sie haben aktuell {{ $pending }} Änderung(en) in Prüfung. <a href="{{ route('portal.change_requests') }}" style="color:var(--petrol);font-weight:600;">Status ansehen →</a></div>@endif
 
-<form method="POST" action="{{ route('portal.profile.update') }}">
+<form method="POST" action="{{ route('portal.profile.update') }}" enctype="multipart/form-data">
     @csrf
 
     {{-- Persönliche Daten --}}
@@ -76,7 +76,33 @@
             <div class="field"><label>{{ __('IBAN') }}</label><input type="text" name="iban" value="" placeholder="{{ $customer?->iban ? '••••' . substr($customer->iban, -4) : 'DE…' }}" oninput="this.value=this.value.toUpperCase().replace(/\s/g,'')"></div>
             <div class="field"><label>{{ __('Kontoinhaber') }}</label><input type="text" name="account_holder" value="{{ $customer?->account_holder }}"></div>
         </div>
-        <p style="font-size:12px;color:var(--ink-soft);">🔒 Bank- und Steuerdaten werden verschlüsselt gespeichert und erst nach Freigabe übernommen.</p>
+        <div class="field"><label>{{ __('Kontonachweis') }} ({{ __('bei neuer IBAN erforderlich') }})</label><input type="file" name="bank_proof" accept=".pdf,.jpg,.jpeg,.png,.webp"></div>
+        <p style="font-size:12px;color:var(--ink-soft);">🔒 {{ __('Foto der Bankkarte oder Kontoauszug – IBAN und Name müssen lesbar sein. Bank- und Steuerdaten werden verschlüsselt gespeichert und erst nach Freigabe übernommen.') }}</p>
+    </div>
+
+    {{-- Nachweis fuer Name/Geburtsdatum/Anschrift: ohne Beleg nehmen wir
+         diese Aenderungen nicht an (Schutz vor Identitaetsmissbrauch). --}}
+    <div class="card">
+        <div class="card-title">📎 {{ __('Nachweis') }}</div>
+        <p style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">
+            {{ __('Ändern Sie Name, Geburtsdatum oder Anschrift? Dann laden Sie bitte einen Nachweis hoch – Ausweis (Vorder- und Rückseite) oder Meldebescheinigung. Ohne Nachweis können wir diese Änderungen nicht übernehmen.') }}
+        </p>
+        <div class="grid-2">
+            <div class="field">
+                <label>{{ __('Art des Nachweises') }}</label>
+                <select name="proof_kind">
+                    <option value="id_front">{{ __('Ausweis (Vorderseite)') }}</option>
+                    <option value="meldebescheinigung">{{ __('Meldebescheinigung') }}</option>
+                    <option value="other">{{ __('Anderer Nachweis') }}</option>
+                </select>
+            </div>
+            <div class="field"><label>{{ __('Gültig ab') }}</label><input type="date" name="effective_from" value="{{ old('effective_from') }}"></div>
+        </div>
+        <div class="grid-2">
+            <div class="field"><label>{{ __('Nachweis / Vorderseite') }}</label><input type="file" name="proof" accept=".pdf,.jpg,.jpeg,.png,.webp"></div>
+            <div class="field"><label>{{ __('Rückseite (optional)') }}</label><input type="file" name="proof_back" accept=".pdf,.jpg,.jpeg,.png,.webp"></div>
+        </div>
+        <p style="font-size:11.5px;color:var(--ink-soft);">{{ __('Erlaubt: PDF oder Foto (JPG, PNG, WEBP), max. 10 MB je Datei.') }}</p>
     </div>
 
     <button type="submit" class="btn btn-primary">{{ __('Änderungen einreichen') }}</button>

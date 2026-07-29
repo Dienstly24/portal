@@ -396,5 +396,20 @@
     "Privat (PKV)": "تأمين صحي خاص (PKV)",
     "Ambulante Zusatzversicherung": "تأمين إضافي للعلاج الخارجي",
     "Zahnzusatzversicherung": "تأمين إضافي للأسنان",
-    "Auslandskrankenversicherung": "تأمين صحي للسفر خارج البلاد"
+    "Auslandskrankenversicherung": "تأمين صحي للسفر خارج البلاد",
+    "Nachweis": "إثبات",
+    "Kontonachweis": "إثبات الحساب البنكي",
+    "bei neuer IBAN erforderlich": "مطلوب عند تغيير رقم الحساب IBAN",
+    "Foto der Bankkarte oder Kontoauszug – IBAN und Name müssen lesbar sein. Bank- und Steuerdaten werden verschlüsselt gespeichert und erst nach Freigabe übernommen.": "صورة بطاقة البنك أو كشف حساب – يجب أن يكون رقم IBAN والاسم واضحين. تُحفظ البيانات البنكية والضريبية مشفّرة ولا تُعتمد إلا بعد الموافقة.",
+    "Ändern Sie Name, Geburtsdatum oder Anschrift? Dann laden Sie bitte einen Nachweis hoch – Ausweis (Vorder- und Rückseite) oder Meldebescheinigung. Ohne Nachweis können wir diese Änderungen nicht übernehmen.": "هل تغيّر الاسم أو تاريخ الميلاد أو العنوان؟ يرجى رفع إثبات – الهوية (من الجهتين) أو شهادة تسجيل السكن. بدون إثبات لا يمكننا اعتماد هذه التعديلات.",
+    "Art des Nachweises": "نوع الإثبات",
+    "Ausweis (Vorderseite)": "الهوية (الوجه الأمامي)",
+    "Meldebescheinigung": "شهادة تسجيل السكن",
+    "Anderer Nachweis": "إثبات آخر",
+    "Gültig ab": "ساري اعتباراً من",
+    "Nachweis / Vorderseite": "الإثبات / الوجه الأمامي",
+    "Rückseite (optional)": "الوجه الخلفي (اختياري)",
+    "Erlaubt: PDF oder Foto (JPG, PNG, WEBP), max. 10 MB je Datei.": "المسموح: ملف PDF أو صورة (JPG, PNG, WEBP)، بحد أقصى 10 ميغابايت للملف.",
+    "Für Änderungen an Name, Geburtsdatum oder Anschrift benötigen wir einen Nachweis (Ausweis oder Meldebescheinigung). Bitte laden Sie ihn im Abschnitt „Nachweis“ hoch.": "لتعديل الاسم أو تاريخ الميلاد أو العنوان نحتاج إلى إثبات (الهوية أو شهادة تسجيل السكن). يرجى رفعه في قسم «الإثبات».",
+    "Für eine neue Bankverbindung benötigen wir einen Kontonachweis (Foto der Bankkarte oder Kontoauszug mit sichtbarer IBAN).": "لتغيير الحساب البنكي نحتاج إلى إثبات الحساب (صورة بطاقة البنك أو كشف حساب يظهر فيه رقم IBAN)."
 }

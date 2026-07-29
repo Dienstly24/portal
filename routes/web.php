@@ -256,6 +256,16 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/change-requests', [\App\Http\Controllers\ChangeRequestReviewController::class, 'index'])->name('change_requests');
     Route::post('/change-requests/{id}/action', [\App\Http\Controllers\ChangeRequestReviewController::class, 'action'])->name('change_requests.action');
     Route::get('/change-requests/{id}/document', [\App\Http\Controllers\ChangeRequestReviewController::class, 'document'])->name('change_requests.document');
+    // Nachweis (Ausweis/Meldebescheinigung/Kontonachweis) + automatische Pruefung
+    Route::get('/change-requests/nachweis/{id}', [\App\Http\Controllers\ChangeRequestReviewController::class, 'proof'])->name('change_requests.proof');
+    Route::post('/change-requests/{id}/nachweis-pruefen', [\App\Http\Controllers\ChangeRequestReviewController::class, 'recheck'])->name('change_requests.recheck');
+    // Rueckfrage an den Kunden (fuehrt direkt in die Unterhaltung)
+    Route::post('/change-requests/{id}/rueckfrage', [\App\Http\Controllers\ChangeRequestReviewController::class, 'ask'])->name('change_requests.ask');
+    // Mitteilungen an die Gesellschaften (nach der Freigabe vorbereitet)
+    Route::get('/change-requests/{id}/mitteilungen', [\App\Http\Controllers\ChangeNotificationController::class, 'index'])->name('change_requests.notifications');
+    Route::post('/mitteilungen/{id}', [\App\Http\Controllers\ChangeNotificationController::class, 'update'])->name('change_notifications.update');
+    Route::post('/mitteilungen/{id}/senden', [\App\Http\Controllers\ChangeNotificationController::class, 'send'])->name('change_notifications.send');
+    Route::post('/mitteilungen/{id}/erledigt', [\App\Http\Controllers\ChangeNotificationController::class, 'skip'])->name('change_notifications.skip');
     // Smart Document Upload (CRM): Dokumenten-Eingang, Drag&Drop-Analyse, Zuordnung
     Route::get('/dokumenten-eingang', [\App\Http\Controllers\SmartDocumentUploadController::class, 'inbox'])->name('documents.inbox');
     // Rate-Limits bewusst grosszuegig (10-fach ggue. Ausgangswert): der

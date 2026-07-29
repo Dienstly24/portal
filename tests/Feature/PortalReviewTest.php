@@ -16,6 +16,12 @@ class PortalReviewTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Storage::fake('local');
+    }
+
     private function makeCustomer(): Customer
     {
         $user = User::factory()->create(['role' => 'customer']);
@@ -49,6 +55,7 @@ class PortalReviewTest extends TestCase
         $this->actingAs($customer->user)->post(route('portal.profile.update'), [
             'address_street' => 'Musterstraße', 'address_house_number' => '20', 'address_house_suffix' => 'a',
             'address_zip' => '20095', 'address_city' => 'Hamburg', 'birth_place' => 'Bremen', 'tax_id' => '99887766554',
+            'proof' => \Illuminate\Http\UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf'),
         ])->assertSessionHas('success');
 
         $cr = CustomerChangeRequest::where('type', 'profile')->first();
@@ -74,6 +81,8 @@ class PortalReviewTest extends TestCase
         $this->actingAs($user)->post(route('portal.profile.update'), [
             'first_name' => 'Neu', 'last_name' => 'Name', 'email' => 'neu@example.com',
             'birth_date' => '1990-05-17', 'birth_place' => 'Aleppo', 'nationality' => 'Syrisch',
+            // Namens-/Geburtsdatumsaenderung ist nachweispflichtig
+            'proof' => UploadedFile::fake()->create('ausweis.pdf', 60, 'application/pdf'),
         ])->assertSessionHas('success');
 
         $cr = CustomerChangeRequest::where('type', 'profile')->firstOrFail();
@@ -111,10 +120,11 @@ class PortalReviewTest extends TestCase
         // Bank + Profil in einem Submit -> zwei getrennte Requests
         $this->actingAs($customer->user)->post(route('portal.profile.update'), [
             'iban' => 'DE89370400440532013000', 'address_city' => 'Köln',
+            'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf'), 'proof' => \Illuminate\Http\UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf'),
         ]);
         // Weitere Änderung, obwohl die erste noch pending ist -> nicht blockiert
         $this->actingAs($customer->user)->post(route('portal.profile.update'), [
-            'iban' => 'DE12500105170648489890',
+            'iban' => 'DE12500105170648489890', 'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf'),
         ])->assertSessionHas('success');
 
         $this->assertSame(2, CustomerChangeRequest::where('type', 'bank')->count());
@@ -172,7 +182,9 @@ class PortalReviewTest extends TestCase
     public function test_customer_is_notified_when_request_is_decided(): void
     {
         $customer = $this->makeCustomer();
-        $this->actingAs($customer->user)->post(route('portal.profile.update'), ['iban' => 'DE89370400440532013000']);
+        $this->actingAs($customer->user)->post(route('portal.profile.update'), [
+            'iban' => 'DE89370400440532013000', 'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf'),
+        ]);
         $cr = CustomerChangeRequest::first();
 
         $admin = User::factory()->create(['role' => 'admin']);
