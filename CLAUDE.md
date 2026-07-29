@@ -138,6 +138,23 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   tesseract-ocr tesseract-ocr-deu poppler-utils` auf dem VPS, danach
   `OCR_ENABLED=true` in der `.env`. Rohtext wird bewusst NICHT gespeichert
   (Datenminimierung) - nur das validierte Extraktionsergebnis.
+- **Zuordnungs-Vorschlaege im Dokumenten-Eingang** (Betreiber-Vorgabe
+  29.07.2026): Beim Oeffnen von „Kunden zuordnen…" / „Neuen Kunden
+  erstellen" laedt der Dialog SOFORT die naechstliegenden Kunden
+  (`SmartDocumentUploadController::customerSuggestions` ->
+  `DocumentIntakeService::findSuggestions`) - der Mitarbeiter soll nicht
+  selbst suchen muessen, auch wenn die automatische Erkennung („Kein Kunde
+  gefunden", Score < 40) nichts lieferte. Zwei Quellen: HARTE
+  Identitaetsmerkmale aus dem Dokument (Vertrags-/Mitgliedsnummer,
+  FIN/Kennzeichen normalisiert, MaLo-ID, Zaehlernummer -> Score 100) und
+  WEICHE Personendaten ueber `CustomerMatchingService::topMatches()` mit
+  bewusst breiterem Kandidatenpool als `match()` (jedes Namenswort ab 3
+  Zeichen, Firmenname, PLZ) - so taucht ein Kunde auch bei abweichender
+  Schreibweise auf. Jeder Vorschlag nennt seinen GRUND, ausgewaehlt wird
+  immer per Klick (nie automatisch). Im Neuanlage-Modus dient dieselbe
+  Liste als Dubletten-Warnung und wechselt per Klick in die Zuordnung.
+  Portfolio-Scope wie ueberall: fremde Kunden werden nur als Anzahl
+  gemeldet, nie mit Namen. Tests in `SmartDocumentUploadTest`.
 - **Vertrags-Duplikat-Schutz + Version History** (`DocumentIntakeService`,
   Betreiber-Vorgabe 23.07.2026): Ein neu importiertes Dokument fuer ein
   bereits erfasstes Fahrzeug/eine Police erzeugt KEIN Duplikat mehr.

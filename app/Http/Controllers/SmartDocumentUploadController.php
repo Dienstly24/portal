@@ -767,6 +767,46 @@ class SmartDocumentUploadController extends Controller
     }
 
     /**
+     * Zuordnungs-Vorschlaege zu einem Eingangs-Dokument: die naechstliegenden
+     * Kunden aus den gelesenen Angaben (Identitaetsmerkmale zuerst, dann
+     * Personendaten). Wird beim Oeffnen des Zuordnungs-Dialogs geladen, damit
+     * der Mitarbeiter nicht selbst suchen muss.
+     *
+     * Sichtbarkeit wie ueberall: Kunden ausserhalb des Portfolios werden NICHT
+     * genannt - nur als Zahl gemeldet, damit der Mitarbeiter weiss, dass er an
+     * Admin/Manager uebergeben muss.
+     */
+    public function customerSuggestions(Request $request, $id)
+    {
+        $document = Document::findOrFail($id);
+        $this->authorizeDocument($document);
+
+        // Mehrfachauswahl: Vorschlaege aus allen ausgewaehlten Dokumenten
+        // gemeinsam (gleiche Zusammenfuehrung wie bei der Batch-Vorschau).
+        $extraIds = array_filter((array) $request->input('ids', []));
+        $extracted = $document->ai_extracted ?: [];
+        if ($extraIds !== []) {
+            $documents = Document::whereIn('id', array_merge([$document->id], $extraIds))
+                ->whereNull('customer_id')->get()
+                ->each(fn ($d) => $this->authorizeDocument($d));
+            $extracted = $this->intake->mergeExtractions($documents);
+            unset($extracted['_conflicts']);
+        }
+
+        $suggestions = $this->intake->findSuggestions($extracted);
+        $user = auth()->user();
+        $visible = array_values(array_filter(
+            $suggestions,
+            fn ($s) => $user->canAccessCustomer($s['customer_id'])
+        ));
+
+        return response()->json([
+            'suggestions' => $visible,
+            'hidden' => count($suggestions) - count($visible),
+        ]);
+    }
+
+    /**
      * Analyse erneut anstossen. Ist ein KI-Anbieter konfiguriert, erzwingt
      * die manuelle Wiederholung die kostenpflichtige KI-Stufe (Mitarbeiter-
      * Eskalation ueber den "Mit KI analysieren"-Button) - die kostenlose
