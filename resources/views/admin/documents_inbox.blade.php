@@ -255,6 +255,15 @@
             <div id="review-apply-fields" style="display:grid;grid-template-columns:1fr;gap:6px;margin-bottom:12px;"></div>
         </div>
 
+        {{-- Zaehlerfoto: erkannter Stand + Hinweis auf die Verbrauchshistorie --}}
+        <div id="review-meter-section" style="display:none;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;background:#F1EEE5;">
+            <div style="font-size:13.5px;font-weight:700;">📊 Zählerstand erkannt</div>
+            <div id="review-meter-info" style="color:var(--ink-soft);font-size:12.5px;margin-top:4px;"></div>
+            <div style="color:var(--ink-soft);font-size:12px;margin-top:6px;">
+                Beim Zuordnen wird der Stand automatisch in die Verbrauchshistorie des passenden Energievertrags übernommen.
+            </div>
+        </div>
+
         {{-- Vertrag --}}
         <div id="review-contract-section" style="display:none;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;">
             <label style="display:flex;gap:9px;align-items:flex-start;font-size:13.5px;cursor:pointer;">
@@ -301,6 +310,8 @@
         'id' => $d->id,
         'file_name' => $d->file_name,
         'type_label' => $d->aiTypeLabel(),
+        // Der Typ steuert im Modal den Zaehlerfoto-Hinweis (Verbrauchshistorie).
+        'ai_type' => $d->ai_type,
         'summary' => $d->ai_summary,
         'confidence' => $d->ai_confidence,
         'source' => $d->ai_source,
@@ -602,6 +613,20 @@ window.docReview = (function() {
         var ins = (doc.extracted || {}).versicherung || {};
         var kfz = (doc.extracted || {}).kfz || {};
         var energie = (doc.extracted || {}).energie || {};
+        // Zaehlerfoto: der erkannte Stand gehoert in die Verbrauchshistorie,
+        // nicht in einen neuen Vertrag - daher eigener Hinweisblock.
+        var isMeterPhoto = doc.ai_type === 'zaehlerfoto' && (energie.meter_number || energie.meter_reading);
+        el('review-meter-section').style.display = isMeterPhoto ? '' : 'none';
+        if (isMeterPhoto) {
+            var meterParts = [];
+            if (energie.meter_number) meterParts.push('Zähler: ' + energie.meter_number);
+            if (energie.meter_reading) {
+                meterParts.push('Stand: ' + energie.meter_reading + ' ' + (energie.meter_unit || 'kWh'));
+            }
+            if (energie.meter_register) meterParts.push('Zählwerk: ' + energie.meter_register);
+            el('review-meter-info').textContent = meterParts.join(' · ');
+        }
+
         var has = ins.insurer || ins.contract_number;
         el('review-contract-section').style.display = has ? '' : 'none';
         el('review-create-contract').checked = false;

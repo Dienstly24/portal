@@ -243,6 +243,29 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   Rueckfragen gehen mit einem Klick als Chat-Nachricht raus und fuehren
   direkt in die Unterhaltung (`admin.change_requests.ask` -> Kundenchat).
   Tests: `ChangeRequestVerificationTest`.
+- **Zaehlerstand + Verbrauchshistorie** (Betreiber-Vorgabe 29.07.2026,
+  Details in `docs/ZAEHLERSTAND_VERBRAUCHSHISTORIE.md`): Ein Foto des
+  Stromzaehlers genuegt - `MeterPhotoReader` liest KOSTENLOS (OCR/Textebene,
+  KI nur als Eskalation) Zaehlernummer und Stand; die Nummer ist die Bruecke
+  zum erfassten Energievertrag und damit zum Kunden (`MeterReadingService::
+  locate()`, exakt oder Teiltreffer "92283078" = "1LOG0092283078", Tier
+  `auto` wie eine Vertragsnummer). Jede Ablesung ist eine eigene Zeile
+  (`meter_readings`, analog `vehicle_mileage_readings`) mit Wert, Einheit
+  (kWh/m³), OBIS-Zaehlwerk, Ablesetag und EXAKTEM Meldezeitpunkt
+  (`captured_at` = Upload-Zeitpunkt), Quelle (staff/customer/document) und
+  dem Foto als Beleg; `contract_energy_details.meter_reading` bleibt als
+  "aktueller Stand" und wird mitgefuehrt. Verbrauch =
+  Differenz zweier Staende (`consumptionHistory()`/`consumptionStatus()`)
+  inkl. Tagesschnitt und Jahres-Hochrechnung gegen den vereinbarten
+  Verbrauch (erst ab 14 Tagen Zeitraum - kuerzer wird NICHT hochgerechnet).
+  Bezug (1.8.0) und Einspeisung (2.8.0, Zweirichtungszaehler/PV) strikt
+  getrennt. Regeln: mehrere Kunden zur selben Nummer -> KEINE Zuordnung
+  (nie raten); ohne lesbaren Stand KEINE Ablesung; ein niedrigerer Stand
+  wird gespeichert, markiert und ueberschreibt den Bestand nicht;
+  identische Meldung nicht doppelt (idempotent). Anzeige: Portal-Karte
+  „Zählerstand & Verbrauch" (Wert und/oder Handy-Foto melden) und
+  Energie-Cockpit auf der Vertrags-Bearbeiten-Seite; Loeschen einer
+  Ablesung nur admin/manager. Tests: `MeterReadingTest`.
 - **Neukunden-Bericht + Vermittler-Provisionen** (Betreiber-Vorgabe
   25.07.2026): `/admin/reports/neukunden` (`ReportController::newCustomers`,
   Tab auf der Berichte-Seite) zeigt die Neukunden des Monats (blaetterbar,

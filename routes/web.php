@@ -122,6 +122,9 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     // KFZ: Kunde meldet den aktuellen Kilometerstand (Historie bleibt erhalten)
     Route::post('/contracts/{id}/kilometerstand', [PortalController::class, 'contractMileageStore'])
         ->middleware('throttle:10,1')->name('contracts.mileage');
+    // Energie: Kunde meldet den Zaehlerstand (Wert und/oder Zaehlerfoto)
+    Route::post('/contracts/{id}/zaehlerstand', [PortalController::class, 'contractMeterStore'])
+        ->middleware('throttle:10,1')->name('contracts.meter');
     Route::get('/change-requests', [\App\Http\Controllers\SelfServiceController::class, 'changeRequests'])->name('change_requests');
     Route::get('/documents/{id}/download', [PortalController::class, 'documentDownload'])->name('documents.download');
     Route::get('/documents/{id}/view', [PortalController::class, 'documentView'])->name('documents.view');
@@ -222,6 +225,12 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::put('/contracts/{id}', [AdminController::class, 'contractUpdate'])->name('contract.update');
     Route::delete('/contracts/{id}', [AdminController::class, 'contractDestroy'])->name('contract.destroy');
     Route::post('/contracts/{customerId}', [AdminController::class, 'contractStore'])->name('contract.store');
+    // Energie: Zaehlerstand von Hand erfassen; Loeschen einer fehlerhaften
+    // Ablesung bleibt admin/manager vorbehalten (Historie ist Datenbestand).
+    Route::post('/contracts/{id}/zaehlerstand', [AdminController::class, 'contractMeterReadingStore'])
+        ->name('contract.meter_reading.store');
+    Route::delete('/contracts/{id}/zaehlerstand/{readingId}', [AdminController::class, 'contractMeterReadingDestroy'])
+        ->middleware('role:admin,manager')->name('contract.meter_reading.destroy');
 
     // Tickets (Workflow: Status, Zuweisung, Eigenschaften, Notizen, Antwort)
     Route::get('/tickets', [\App\Http\Controllers\TicketController::class, 'index'])->name('tickets');

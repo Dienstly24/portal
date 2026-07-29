@@ -171,6 +171,37 @@ class DocumentIntakeService
     }
 
     /**
+     * Kunde ueber die ZAEHLERNUMMER eines Zaehlerfotos finden. Auf einem
+     * Zaehler steht kein Name - die Nummer ist die einzige Bruecke zum
+     * bereits erfassten Energievertrag und damit zum Kunden. Sie ist ein
+     * hartes Identitaetsmerkmal (wie eine Vertragsnummer), daher Tier 'auto';
+     * treffen mehrere Kunden zu, liefert der Service bewusst nichts.
+     */
+    public function findMeterMatch(array $extracted): ?array
+    {
+        $number = ($extracted['energie'] ?? [])['meter_number'] ?? null;
+        if (blank($number)) {
+            return null;
+        }
+
+        $located = app(\App\Services\Energy\MeterReadingService::class)->locate($number);
+        if ($located === null) {
+            return null;
+        }
+
+        $customer = $located['customer'];
+        return [
+            'customer_id' => (string) $customer->id,
+            'name' => $customer->user?->name,
+            'customer_number' => $customer->customer_number,
+            'score' => 95,
+            'tier' => 'auto',
+            // Fuer die Review-UI: der Treffer kommt vom Zaehler, nicht vom Namen.
+            'via' => 'meter_number',
+        ];
+    }
+
+    /**
      * Eingangs-Dokument einem Kunden zuordnen: Datei in den Kundenordner
      * verschieben, Zuordnung speichern, protokollieren. $auto = durch die
      * Analyse (eindeutiger Match), sonst durch einen Mitarbeiter.
@@ -680,6 +711,18 @@ class DocumentIntakeService
      */
     public function linkMatchingContract(Document $document, Customer $customer): ?Contract
     {
+        // Zaehlerfoto: den abgelesenen Stand in die Verbrauchshistorie des
+        // Energievertrags schreiben. Laeuft VOR dem Abbruch weiter unten,
+        // damit auch ein bereits mit dem Vertrag verknuepftes Foto
+        // (Portal-Upload aus der Vertragsansicht) erfasst wird.
+        if ($document->ai_type === 'zaehlerfoto') {
+            try {
+                app(\App\Services\Energy\MeterReadingService::class)->recordFromDocument($document, $customer);
+            } catch (\Throwable $e) {
+                report($e); // darf die Zuordnung nie blockieren
+            }
+        }
+
         if ($document->contract_id) {
             return null;
         }

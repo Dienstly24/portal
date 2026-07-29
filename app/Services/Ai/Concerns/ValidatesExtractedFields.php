@@ -90,10 +90,22 @@ trait ValidatesExtractedFields
         }
         $reading = $in['meter_reading'] ?? null;
         $consumption = $in['consumption_kwh'] ?? null;
+        // Zaehlwerk (OBIS) nur aus dem bekannten Katalog - ein Zweirichtungs-
+        // zaehler zaehlt Bezug UND Einspeisung, die nie vermischt werden duerfen.
+        $register = $this->cleanString($in['meter_register'] ?? null, 10);
+        if ($register !== null && !isset(\App\Models\MeterReading::REGISTERS[$register])) {
+            $register = null;
+        }
+        $unit = $this->cleanString($in['meter_unit'] ?? null, 10);
+        if ($unit !== null && !in_array($unit, ['kWh', 'm³'], true)) {
+            $unit = null;
+        }
         return array_filter([
             'meter_number' => $this->cleanString($in['meter_number'] ?? null, 30),
             'malo_id' => $malo,
             'meter_reading' => (is_numeric($reading) && $reading >= 0 && $reading < 100000000) ? round((float) $reading, 1) : null,
+            'meter_register' => $register,
+            'meter_unit' => $unit,
             'consumption_kwh' => (is_numeric($consumption) && $consumption > 0 && $consumption < 1000000) ? (int) $consumption : null,
             'tariff' => $this->cleanString($in['tariff'] ?? null, 80),
             'customer_number' => $this->cleanString($in['customer_number'] ?? null, 40),

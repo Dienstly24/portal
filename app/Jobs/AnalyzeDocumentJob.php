@@ -94,7 +94,12 @@ class AnalyzeDocumentJob implements ShouldQueue
         try {
             $extracted = $result['data'];
             if (!$document->customer_id) {
-                $match = $intake->findMatch($extracted);
+                // Zaehlerfoto: die Zaehlernummer ist das einzige und zugleich
+                // haerteste Identitaetsmerkmal auf einem Zaehler - sie fuehrt
+                // direkt zum Energievertrag und damit zum Kunden. Erst wenn
+                // sie nicht trifft, greift das uebliche Personen-Matching.
+                $match = $result['type'] === 'zaehlerfoto' ? $intake->findMeterMatch($extracted) : null;
+                $match ??= $intake->findMatch($extracted);
                 $extracted['match'] = $match;
             }
 
