@@ -376,9 +376,14 @@ class AufenthaltstitelParser implements DocumentTemplateParser
     }
 
     /**
-     * Geburtsort ("3. GEBURTSORT/PLACE OF BIRTH"): der Wert steht in der
-     * Zeile darunter in derselben Spalte (links daneben laufen die
-     * ANMERKUNGEN weiter). Unsichere Treffer bleiben leer.
+     * Geburtsort ("3. GEBURTSORT/PLACE OF BIRTH"): der Wert steht auf der
+     * Karte UNTER der Beschriftung, in der OCR-Ausgabe je nach Layout aber
+     * an unterschiedlichen Stellen - hinter der Beschriftung in derselben
+     * Zeile, in derselben Spalte der Folgezeile, oder (wenn die OCR die
+     * Spalten mit nur EINEM Leerzeichen verschmilzt) hinter dem
+     * Anmerkungs-Text ("ERWERBSTAETIGKEIT ERLAUBT DEIR EZZOR"). Alle
+     * Kandidaten durchlaufen dieselbe Bereinigung; unsichere Treffer
+     * bleiben leer.
      */
     private function backBirthPlace(): ?string
     {
@@ -387,7 +392,17 @@ class AufenthaltstitelParser implements DocumentTemplateParser
             return null;
         }
 
-        // Spaltenposition der Beschriftung bestimmen.
+        $candidates = [];
+
+        // 1) Wert hinter der LETZTEN Beschriftung in derselben Zeile
+        //    ("... GEBURTSORT/PLACE OF BIRTH DEIR EZZOR").
+        if (preg_match('/^.*(?:GEBURTSORT|BIRTH)\b[\s\/.:]*([\p{Lu}][\p{Lu} \-\.]{1,40})$/u', trim($this->lines[$idx]), $m)) {
+            $candidates[] = $m[1];
+        }
+
+        // 2) Folgezeilen: bevorzugt dieselbe Spalte wie die Beschriftung,
+        //    danach alle uebrigen Spalten (die Bereinigung sortiert
+        //    Anmerkungs-/Merkmalstexte aus).
         $labelCols = preg_split('/\s{2,}/', trim($this->lines[$idx])) ?: [];
         $labelPos = null;
         foreach ($labelCols as $i => $col) {
@@ -396,26 +411,51 @@ class AufenthaltstitelParser implements DocumentTemplateParser
                 break;
             }
         }
-
-        foreach ($this->nextNonEmpty($idx, 1) as $value) {
+        foreach ($this->nextNonEmpty($idx, 2) as $value) {
             $cols = array_map('trim', preg_split('/\s{2,}/', trim($value)) ?: []);
-            $candidate = $cols[$labelPos ?? 0] ?? null;
-            // Einspaltige OCR-Ausgabe: einziger Wert in der Folgezeile.
-            if ($candidate === null && count($cols) === 1) {
-                $candidate = $cols[0];
+            if ($labelPos !== null && isset($cols[$labelPos])) {
+                $candidates[] = $cols[$labelPos];
             }
-            if ($candidate === null) {
-                return null;
+            foreach ($cols as $col) {
+                $candidates[] = $col;
             }
-            // Nur plausible Ortsnamen (Grossbuchstaben der Karte), keine
-            // Anmerkungs-Texte ("ERWERBSTAETIGKEIT ERLAUBT ...").
-            if (preg_match('/^\p{Lu}[\p{Lu} \-\.]{1,40}$/u', $candidate)
-                && !preg_match('/ERWERBST|ERLAUBT|GESTATTET|SIEHE|ZUSATZ|BLATT/i', $candidate)) {
-                return mb_convert_case($candidate, MB_CASE_TITLE, 'UTF-8');
+        }
+
+        foreach ($candidates as $candidate) {
+            $place = $this->cleanBirthPlace($candidate);
+            if ($place !== null) {
+                return $place;
             }
-            return null;
         }
         return null;
+    }
+
+    /**
+     * Kandidat zu einem plausiblen Geburtsort bereinigen. Bekannte
+     * Anmerkungs-Phrasen der Rueckseite ("ERWERBSTAETIGKEIT ERLAUBT",
+     * "SIEHE ZUSATZBLATT") werden vorn abgeschnitten - die OCR verschmilzt
+     * die Spalten teils mit nur einem Leerzeichen. Bleibt danach kein
+     * reiner Ortsname (Grossbuchstaben der Karte) uebrig oder enthaelt er
+     * ein Beschriftungs-/Merkmalswort, wird der Kandidat verworfen.
+     */
+    private function cleanBirthPlace(string $candidate): ?string
+    {
+        $candidate = trim($candidate);
+        $candidate = (string) preg_replace(
+            '/\b(?:ERWERBST\p{Lu}*|BESCH\p{Lu}*FTIGUNG|T\p{Lu}*TIGKEIT|NICHT|ERLAUBT|GESTATTET|SIEHE|ZUSATZBLATT|ZUSATZ|BLATT)\b[\s\-]*/u',
+            ' ',
+            $candidate
+        );
+        $candidate = trim((string) preg_replace('/\s+/', ' ', $candidate));
+
+        if (!preg_match('/^\p{Lu}[\p{Lu} \-\.]{1,40}$/u', $candidate)) {
+            return null;
+        }
+        // Beschriftungen und Merkmalswerte der Karte sind kein Ortsname.
+        if (preg_match('/ANMERKUNG|REMARK|GEBURTSORT|BIRTH|PLACE|AUGENFARBE|EYE|COLOU?R|BRAUN|BLAU|GR[UÜ]N|GRUEN|GRAU|SCHWARZ|GR[OÖ]SSE|GROESSE|HEIGHT|AUSSTELLUNG|BEH[OÖ]RDE|BEHOERDE|DATE|ISSUE|AUTHORITY|ANSCHRIFT|ADDRESS|ADRESSE|BUNDESDRUCKEREI|KARTE|SIEGEL/iu', $candidate)) {
+            return null;
+        }
+        return mb_convert_case($candidate, MB_CASE_TITLE, 'UTF-8');
     }
 
     /**
