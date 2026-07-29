@@ -90,9 +90,16 @@ trait ValidatesExtractedFields
         }
         $reading = $in['meter_reading'] ?? null;
         $consumption = $in['consumption_kwh'] ?? null;
+        // Tarifpreise: Arbeitspreis in ct/kWh, Grundpreis in EUR/Monat -
+        // Grenzen bewusst weit, aber so eng, dass ein verrutschter Wert
+        // (z.B. der Jahres-Grundpreis in der Monatsspalte) auffaellt.
+        $working = $in['working_price'] ?? null;
+        $base = $in['base_price'] ?? null;
         return array_filter([
             'meter_number' => $this->cleanString($in['meter_number'] ?? null, 30),
             'malo_id' => $malo,
+            'working_price' => (is_numeric($working) && $working > 0 && $working < 200) ? round((float) $working, 3) : null,
+            'base_price' => (is_numeric($base) && $base > 0 && $base < 1000) ? round((float) $base, 2) : null,
             'meter_reading' => (is_numeric($reading) && $reading >= 0 && $reading < 100000000) ? round((float) $reading, 1) : null,
             'consumption_kwh' => (is_numeric($consumption) && $consumption > 0 && $consumption < 1000000) ? (int) $consumption : null,
             'tariff' => $this->cleanString($in['tariff'] ?? null, 80),
@@ -176,6 +183,13 @@ trait ValidatesExtractedFields
             // Tarif-/Produktbezeichnung (z.B. "Magenta Zuhause L" beim
             // Internet-Auftrag) - Anzeige-Info.
             'tariff' => $this->cleanString($in['tariff'] ?? null, 80),
+            // Stufe des Dokuments: 'antrag' (Auftrag/Antrag, noch nicht
+            // bestaetigt) oder 'vertrag' (Police/Vertragsbestaetigung). Steuert
+            // im Dokumenten-Eingang, ob ein spaeteres Dokument den vorhandenen
+            // Antrags-Vertrag ERGAENZT statt ein Duplikat anzulegen.
+            'document_stage' => in_array($in['document_stage'] ?? null,
+                [Contract::STAGE_ANTRAG, Contract::STAGE_VERTRAG], true)
+                ? $in['document_stage'] : null,
         ], fn ($v) => $v !== null && $v !== '');
     }
 

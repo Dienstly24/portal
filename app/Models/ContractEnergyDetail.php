@@ -29,4 +29,22 @@ class ContractEnergyDetail extends Model
         static::creating(fn($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
     public function contract() { return $this->belongsTo(Contract::class); }
+
+    /**
+     * Zaehlernummer auf ihren Kern reduzieren (Grossbuchstaben, ohne
+     * Leerzeichen/Trennstriche): auf dem Zaehler steht "1 LOG00 9228 3078",
+     * im Auftrag "1LOG0092283078" - dieselbe Nummer. Der Vergleich laeuft
+     * deshalb IMMER ueber diese Normalisierung, sonst landet das Zaehlerfoto
+     * nicht am richtigen Vertrag.
+     */
+    public static function normalizeMeter(?string $value): ?string {
+        $clean = strtoupper((string) preg_replace('/[^A-Za-z0-9]/', '', (string) $value));
+        return $clean !== '' ? $clean : null;
+    }
+
+    /** MaLo-ID (Marktlokations-ID) auf die reinen Ziffern reduzieren. */
+    public static function normalizeMalo(?string $value): ?string {
+        $clean = (string) preg_replace('/\D/', '', (string) $value);
+        return $clean !== '' ? $clean : null;
+    }
 }

@@ -85,11 +85,19 @@ class EweVertragsbestaetigungParserTest extends TestCase
         $this->assertSame(50.0, $v['premium_amount']); // Monatliche Zahlung, NICHT der Nettobetrag
         $this->assertSame('monthly', $v['premium_interval']);
         $this->assertSame('EWE Zuhause+ Grünstrom 24', $v['tariff']);
+        // Die Bestaetigung belegt den Abschluss: Stufe 'vertrag'. Damit
+        // vervollstaendigt sie einen frueher hochgeladenen Auftrag, statt
+        // einen zweiten Vertrag anzulegen.
+        $this->assertSame('vertrag', $v['document_stage']);
 
         $e = $r['data']['energie'];
         $this->assertSame('50307481544', $e['malo_id']);
         $this->assertSame('22434078', $e['customer_number']); // Kundennummer beim Anbieter
         $this->assertSame('Bayernwerk Netz', $e['grid_operator']);
+        // Tarifpreise: jeweils der BRUTTO-Wert; der Grundpreis steht pro Jahr
+        // (240,29) und wird auf den Monat umgerechnet.
+        $this->assertSame(29.96, $e['working_price']);
+        $this->assertSame(20.02, $e['base_price']);
 
         // Weder die maskierte Kunden-IBAN noch die Bankverbindung der EWE
         // duerfen als Bank uebernommen werden.

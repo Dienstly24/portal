@@ -383,6 +383,7 @@ class AdminController extends Controller
             'subtype' => Contract::normalizeSubtype($request->type, $request->subtype),
             'insurer' => $request->insurer,
             'status' => $request->status,
+            'stage' => $request->filled('stage') ? $request->stage : null,
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
             'cancellation_date' => $request->cancellation_date,
@@ -419,6 +420,7 @@ class AdminController extends Controller
             'subtype' => Contract::normalizeSubtype($request->type, $request->subtype),
             'insurer' => $request->insurer,
             'status' => $request->status,
+            'stage' => $request->filled('stage') ? $request->stage : null,
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
             'cancellation_date' => $request->cancellation_date,
@@ -499,6 +501,11 @@ class AdminController extends Controller
             // Echte Versicherungsnummer, optional, aber eindeutig.
             'contract_number' => ['nullable', 'string', 'max:255', \Illuminate\Validation\Rule::unique('contracts', 'contract_number')->ignore($ignoreId)],
             'status' => 'required|in:active,pending,cancelled,expired',
+            // Vertragsstufe: 'antrag' (Auftrag liegt vor, Bestaetigung fehlt)
+            // oder 'vertrag' (Police/Bestaetigung liegt vor). Steuert, ob ein
+            // spaeter hochgeladenes Bestaetigungs-Dokument diesen Vertrag
+            // ergaenzt statt ein Duplikat anzulegen.
+            'stage' => 'nullable|in:' . implode(',', array_keys(Contract::STAGE_LABELS)),
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'cancellation_date' => 'nullable|date',

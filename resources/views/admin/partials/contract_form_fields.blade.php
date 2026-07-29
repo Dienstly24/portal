@@ -121,6 +121,23 @@
         <input type="date" id="contract-end" name="end_date" value="{{ $endVal }}">
     </div>
 </div>
+{{-- Vertragsstufe: Auftrag/Antrag oder bestaetigter Vertrag. "Antrag" sorgt
+     dafuer, dass die spaeter hochgeladene Vertragsbestaetigung/Police GENAU
+     DIESEN Vertrag ergaenzt, statt einen zweiten anzulegen. --}}
+<div class="field">
+    <label>Vertragsstufe</label>
+    <select name="stage" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+        @php $curStage = old('stage', $c->stage ?? ''); @endphp
+        <option value="" {{ $curStage === '' ? 'selected' : '' }}>— keine Angabe —</option>
+        @foreach(\App\Models\Contract::STAGE_LABELS as $stk => $stl)
+        <option value="{{ $stk }}" {{ $curStage === $stk ? 'selected' : '' }}>{{ $stl }}</option>
+        @endforeach
+    </select>
+    <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">
+        „Antrag“ = Auftrag liegt vor, Bestätigung fehlt noch. Die später hochgeladene
+        Vertragsbestätigung ergänzt dann automatisch diesen Vertrag.
+    </div>
+</div>
 {{-- Ablauf-Automatik: 12 Monate Laufzeit oder Ende des Kalenderjahres -
      der Ablauf wird aus dem Beginn errechnet und folgt jeder Aenderung.
      Manuelles Tippen im Ablauf-Feld schaltet automatisch auf "Manuell". --}}

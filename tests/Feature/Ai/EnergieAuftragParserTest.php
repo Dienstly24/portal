@@ -79,9 +79,15 @@ class EnergieAuftragParserTest extends TestCase
         $this->assertSame('EWE VERTRIEB GmbH', $v['insurer']);
         $this->assertSame(12.5, $v['premium_amount']);
         $this->assertSame('monthly', $v['premium_interval']);
+        // Ein Auftrag ist noch KEINE Vertragsbestaetigung: Stufe 'antrag' -
+        // die spaetere Bestaetigung ergaenzt denselben Vertrag.
+        $this->assertSame('antrag', $v['document_stage']);
 
         $e = $r['data']['energie'];
         $this->assertSame('EWE business Grünstrom', $e['tariff']);
+        // Tarifpreise: Grundpreis (EUR/Monat) und Arbeitspreis (ct/kWh).
+        $this->assertSame(12.5, $e['base_price']);
+        $this->assertSame(28.0, $e['working_price']);
         $this->assertSame(3500, $e['consumption_kwh']);
         // Trotz der interleaved rechten AGB-Zeile ("...lichen Verträge...")
         // wird die richtige Zaehlernummer gelesen.

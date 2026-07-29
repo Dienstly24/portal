@@ -66,7 +66,10 @@
                 @if($c->end_date)<div>{{ \Carbon\Carbon::parse($c->end_date)->format('d.m.Y') }}</div>@endif
             </td>
             @php $st = $c->displayStatus(); @endphp
-            <td><span class="badge badge-{{ $st['badge'] }}" style="white-space:nowrap;">{{ $st['label'] }}</span></td>
+            <td>
+                <span class="badge badge-{{ $st['badge'] }}" style="white-space:nowrap;">{{ $st['label'] }}</span>
+                @include('admin.partials.contract_stage_badge', ['contract' => $c])
+            </td>
             <td>
                 <div style="font-size:13px;font-weight:600;">{{ $c->contract_number ?: '—' }}</div>
             </td>
