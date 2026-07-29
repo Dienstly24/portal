@@ -29,8 +29,11 @@ class EnergieAuftragParser implements DocumentTemplateParser
         $upper = mb_strtoupper($text);
         // Energie-Auftrag: Anbieter EWE + die energietypische Preis-Struktur
         // (Grundpreis + Arbeitspreis). Grenzt gegen DSL-/Versicherungs-
-        // Auftraege ab (die diese Kombination nicht tragen).
-        if (!str_contains($upper, 'EWE')
+        // Auftraege ab (die diese Kombination nicht tragen). WICHTIG: "EWE"
+        // nur als eigenstaendiges Wort - haeufige deutsche Woerter wie
+        // "jEWEils" enthalten die Buchstabenfolge und liessen sonst fremde
+        // Energie-Auftraege (z.B. LichtBlick) faelschlich als EWE erscheinen.
+        if (!preg_match('/\bEWE\b/u', $upper)
             || !str_contains($upper, 'GRUNDPREIS')
             || !str_contains($upper, 'ARBEITSPREIS')) {
             return null;
@@ -211,7 +214,8 @@ class EnergieAuftragParser implements DocumentTemplateParser
 
         if (preg_match('/(EWE\s+VERTRIEB\s+GmbH)/u', $text, $m)) {
             $raw['insurer'] = 'EWE VERTRIEB GmbH';
-        } elseif (str_contains(mb_strtoupper($text), 'EWE')) {
+        } elseif (preg_match('/\bEWE\b/u', mb_strtoupper($text))) {
+            // Nur als eigenstaendiges Wort ("jEWEils" zaehlt nicht).
             $raw['insurer'] = 'EWE';
         }
 

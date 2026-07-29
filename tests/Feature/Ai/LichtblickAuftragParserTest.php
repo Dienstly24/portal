@@ -68,6 +68,11 @@ class LichtblickAuftragParserTest extends TestCase
             '               Kundennummer beim derzeitigen Stromversorger          Abschlag im Monat',
             '                1800                                      kWh',
             '               Letzter Jahresstromverbrauch',
+            '',
+            // AGB-Zeile wie im echten Auftrag: "jeweils" enthaelt die
+            // Buchstabenfolge "EWE" - genau damit hatte der generische
+            // EWE-Parser das Dokument frueher faelschlich vereinnahmt.
+            '               Der Vertrag verlängert sich jeweils um ein weiteres Jahr zum jeweiligen Ablauf.',
         ]);
     }
 
@@ -160,5 +165,16 @@ class LichtblickAuftragParserTest extends TestCase
         $this->assertNull((new LichtblickAuftragParser())->parse('Irgendein anderes Dokument'));
         // LichtBlick erwaehnt, aber kein Auftrag.
         $this->assertNull((new LichtblickAuftragParser())->parse("LichtBlick SE\nJahresrechnung Strom"));
+    }
+
+    public function test_ewe_parsers_do_not_claim_the_lichtblick_order(): void
+    {
+        // Produktionsfehler 29.07.2026: "jEWEils" (AGB) + Grundpreis +
+        // Arbeitspreis liessen den generischen EWE-Auftrag-Parser den
+        // LichtBlick-Auftrag als "Strom-Auftrag - EWE" vereinnahmen. Seit dem
+        // Wort-Grenzen-Abgleich (\bEWE\b) greifen beide EWE-Parser hier nicht.
+        $text = $this->auftragText();
+        $this->assertNull((new \App\Services\Ai\TemplateParsers\EnergieAuftragParser())->parse($text));
+        $this->assertNull((new \App\Services\Ai\TemplateParsers\EweVertragsbestaetigungParser())->parse($text));
     }
 }
