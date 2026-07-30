@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- Interims-Sitemap der statischen Website. Nach dem Umzug auf Laravel
+     (www.dienstly24.de) wird die Sitemap automatisch generiert
+     (/sitemap.xml, SeoController) und enthaelt alle Seiten DE+AR. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://dienstly24.de/</loc>
-    <lastmod>2026-07-14</lastmod>
+    <loc>https://www.dienstly24.de/</loc>
+    <lastmod>2026-07-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>

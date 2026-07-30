@@ -1,4 +1,29 @@
-Dienstly24 - Website (statisch)
+Dienstly24 - Website (statisch) - SOFORT-HOTFIX 30.07.2026
+================================
+
+WICHTIG - beim naechsten Upload auf Hostinger unbedingt:
+1. Den kompletten Ordner INKLUSIVE der Datei ".htaccess" und des neuen
+   Ordners assets/fonts/ hochladen (im Dateimanager "versteckte Dateien
+   anzeigen" aktivieren, sonst fehlt die .htaccess).
+2. Die Datei "dienstly24websiteupload.zip" auf dem Server LOESCHEN
+   (P0-5: sie macht den kompletten Quellcode oeffentlich abrufbar).
+   Die .htaccess blockiert solche Dateien kuenftig zusaetzlich.
+3. Danach testen: Formular absenden (legt ein Ticket im Portal an),
+   WhatsApp-Button, keine fonts.googleapis.com-Requests mehr (DevTools).
+
+Was der Hotfix aendert:
+- Kontaktformular sendet an das Portal-System (Ticket + Support-Mail)
+  statt "mailto:" (P0-1). Spam-Schutz: Token + Honeypot + Filter.
+- WhatsApp-Float-Button auf allen Seiten (P0-3).
+- Schriften lokal aus assets/fonts/ (P0-4, DSGVO - kein Google mehr).
+- Canonical/Sitemap/robots auf https://www.dienstly24.de (Domain-Strategie).
+- .htaccess: 301-Redirects (www/https/.com), Blockliste fuer
+  zip/bak/sql/env/..., Caching, Sicherheitsheader (P1-5).
+
+HINWEIS: Dieser statische Stand ist nur die Uebergangsloesung. Die
+Website zieht als naechstes komplett ins Laravel-Portal um
+(www.dienstly24.de wird vom Portal-Server ausgeliefert, Bilder-Upload
+unter /admin/medien) - siehe docs/WEBSITE_MERGE_UMSETZUNG.md im Repo.
 ================================
 
 Inhalt

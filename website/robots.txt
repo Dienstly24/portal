@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://dienstly24.de/sitemap.xml
+Sitemap: https://www.dienstly24.de/sitemap.xml
