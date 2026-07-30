@@ -33,6 +33,24 @@ class RedirectWebsiteHost
             );
         }
 
+        /*
+         * Alt-URLs der Marketing-Seiten, die frueher unter
+         * portal.dienstly24.de/leistungen/... erreichbar waren, auf den
+         * kanonischen Host umleiten (Auftrag P1-4). Erst nach dem
+         * DNS-Umzug aktiv (WEBSITE_MARKETING_REDIRECT), sonst zeigte die
+         * Umleitung auf die statische Site, die diese Seiten nicht hat.
+         * Der Login-/Portalbereich bleibt unberuehrt.
+         */
+        if (config('website.marketing_redirect')
+            && ! WebsiteHosts::isWebsiteRequest($request)
+            && $request->isMethod('GET')
+            && $request->is(...(array) config('website.marketing_paths'))) {
+            return redirect()->to(
+                'https://' . WebsiteHosts::canonical() . $request->getRequestUri(),
+                301
+            );
+        }
+
         return $next($request);
     }
 }

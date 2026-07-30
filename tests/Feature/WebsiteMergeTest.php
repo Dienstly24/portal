@@ -68,6 +68,56 @@ class WebsiteMergeTest extends TestCase
             ->assertRedirect('https://www.dienstly24.de/impressum');
     }
 
+    /**
+     * P1-4: Nach dem DNS-Umzug wandern die alten Marketing-URLs des
+     * Portal-Hosts per 301 auf den kanonischen Host - aber NICHT vorher
+     * (dann liegt dort noch die statische Site ohne /leistungen) und nie
+     * der Login-/Portalbereich.
+     */
+    public function test_marketing_paths_move_to_canonical_host_only_after_cutover(): void
+    {
+        $this->seed(\Database\Seeders\ServicePageSeeder::class);
+
+        // Vor dem Umzug (Standard): Portal-Host liefert weiter aus.
+        $this->get('https://portal.dienstly24.de/leistungen/kfz-versicherung')->assertOk();
+
+        config(['website.marketing_redirect' => true]);
+
+        $this->get('https://portal.dienstly24.de/leistungen/kfz-versicherung')
+            ->assertStatus(301)
+            ->assertRedirect('https://www.dienstly24.de/leistungen/kfz-versicherung');
+        $this->get('https://portal.dienstly24.de/leistungen')
+            ->assertStatus(301)
+            ->assertRedirect('https://www.dienstly24.de/leistungen');
+        $this->get('https://portal.dienstly24.de/ar')
+            ->assertStatus(301)
+            ->assertRedirect('https://www.dienstly24.de/ar');
+
+        // Der Anwendungsbereich bleibt unberuehrt - sonst kaeme kein Kunde
+        // mehr ins Portal.
+        $this->get('https://portal.dienstly24.de/login')->assertOk();
+        $this->get('https://portal.dienstly24.de/hilfe')->assertOk();
+        // Und auf dem Website-Host wird natuerlich nichts umgeleitet.
+        $this->get('https://www.dienstly24.de/leistungen/kfz-versicherung')->assertOk();
+    }
+
+    /**
+     * Zwei Dateien werden von AUSSEN referenziert und muessen den Umzug
+     * ueberleben, sonst brechen sie still: das BIMI-Logo (steht im
+     * DNS-TXT-Eintrag default._bimi und zeigt das Markenlogo im
+     * Mail-Programm) und die Google-Search-Console-Bestaetigung.
+     */
+    public function test_externally_referenced_files_exist_in_public(): void
+    {
+        $this->assertFileExists(public_path('dienstly-bimi-logo.svg'),
+            'BIMI-Logo fehlt - der DNS-Eintrag default._bimi zeigt darauf.');
+        $this->assertFileExists(public_path('googled3a1b012f4607d0c.html'),
+            'Search-Console-Bestaetigung fehlt - Property-Verifizierung ginge verloren.');
+
+        // Keine Route darf die Dateien verschatten (Blade-Fallback statt Datei).
+        $this->assertStringNotContainsString('<html', file_get_contents(public_path('googled3a1b012f4607d0c.html')));
+    }
+
     public function test_old_static_html_urls_redirect_to_clean_routes(): void
     {
         $this->get('https://www.dienstly24.de/impressum.html')

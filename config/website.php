@@ -25,6 +25,22 @@ return [
     // (z. B. eine Staging-Domain). Kommagetrennt in der .env pflegbar.
     'extra_hosts' => array_filter(array_map('trim', explode(',', (string) env('WEBSITE_EXTRA_HOSTS', '')))),
 
+    /*
+     * Alt-URLs des Portal-Hosts auf den Website-Host umleiten (Auftrag
+     * P1-4: "301 von den alten portal.-Links auf die neuen").
+     *
+     * Bewusst ein SCHALTER, kein Automatismus: Vor dem DNS-Umzug liegt
+     * auf www.dienstly24.de noch die statische Uebergangs-Site OHNE
+     * /leistungen - eine Umleitung dorthin liefe ins Leere. Erst am
+     * Umzugstag, wenn www von dieser App bedient wird, wird
+     * WEBSITE_MARKETING_REDIRECT=true gesetzt (Schritt in der
+     * Cutover-Checkliste).
+     */
+    'marketing_redirect' => (bool) env('WEBSITE_MARKETING_REDIRECT', false),
+
+    // Pfade, die dann vom Portal-Host auf den kanonischen Host wandern.
+    'marketing_paths' => ['leistungen', 'leistungen/*', 'ar', 'ar/*'],
+
     // Kontaktdaten der Website (eine Quelle fuer Header, Footer, Schema.org).
     'phone_display' => '+49 179 9673909',
     'phone_e164' => '+491799673909',
