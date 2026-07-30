@@ -1,6 +1,7 @@
 <?php
 namespace App\Services\Ai\TemplateParsers;
 
+use App\Services\Ai\Concerns\ReadsDocumentPages;
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
 use App\Services\Ai\Contracts\DocumentTemplateParser;
 
@@ -24,6 +25,7 @@ use App\Services\Ai\Contracts\DocumentTemplateParser;
  */
 class PrivathaftpflichtAntragParser implements DocumentTemplateParser
 {
+    use ReadsDocumentPages;
     use ValidatesExtractedFields;
 
     /** @var list<string> */
@@ -36,7 +38,7 @@ class PrivathaftpflichtAntragParser implements DocumentTemplateParser
         $text = (string) preg_replace('/\x{00ad}\s*/u', '', $text);
         $upper = mb_strtoupper($text);
 
-        if (str_contains($upper, 'CHECK24') || str_contains($upper, 'BERATUNGSPROTOKOLL')) {
+        if ($this->looksLikeComparisonProtocol($text)) {
             return null;
         }
         // Nur Privathaftpflicht-Antraege/-Angebote (nicht die fertige Police

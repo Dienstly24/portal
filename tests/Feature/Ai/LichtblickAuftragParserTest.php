@@ -76,6 +76,39 @@ class LichtblickAuftragParserTest extends TestCase
         ]);
     }
 
+    /**
+     * Der echte Auftrag ist 13 Seiten lang: Seite 1 ist das Formular, danach
+     * folgen AGB, Widerrufsbelehrung und Datenschutzhinweise. Genau dieser
+     * Rechtstext hat den Auftrag zweimal unlesbar gemacht - er nennt auf einer
+     * Folgeseite "Beratungsprotokolle" (Ausschlussmerkmal fuer fremde
+     * Vergleichsangebote). Seiten sind per Form-Feed getrennt.
+     */
+    private function mehrseitigerAuftrag(): string
+    {
+        return implode("\f", [
+            $this->auftragText(),
+            "Allgemeine Geschaeftsbedingungen\nDer Vertrag verlängert sich jeweils um ein Jahr.",
+            "Datenschutzhinweise\nWir verarbeiten Ihre Daten aus der Vertragsanbahnung (z.B. aus\n"
+                . "Beratungsprotokollen), soweit dies erforderlich ist.",
+        ]);
+    }
+
+    public function test_reads_only_the_form_page_of_the_full_document(): void
+    {
+        // Produktionsfehler 30.07.2026: "Analyse fehlgeschlagen - keine
+        // verwertbare Analyse-Antwort", weil das Wort "Beratungsprotokollen"
+        // im Datenschutzhinweis auf Seite 12 stand. Gelesen wird jetzt nur
+        // noch Seite 1, das Formular selbst.
+        $r = (new LichtblickAuftragParser())->parse($this->mehrseitigerAuftrag());
+
+        $this->assertNotNull($r);
+        $this->assertSame('Altahan', $r['data']['person']['last_name']);
+        $this->assertSame('42811442', $r['data']['energie']['meter_number']);
+        $this->assertSame('51214022992', $r['data']['energie']['malo_id']);
+        $this->assertSame('1657453', $r['data']['versicherung']['contract_number']);
+        $this->assertSame(20, $r['data']['versicherung']['expected_start_within_days']);
+    }
+
     public function test_parses_switch_order_with_expected_start(): void
     {
         $r = (new LichtblickAuftragParser())->parse($this->auftragText());
@@ -176,5 +209,10 @@ class LichtblickAuftragParserTest extends TestCase
         $text = $this->auftragText();
         $this->assertNull((new \App\Services\Ai\TemplateParsers\EnergieAuftragParser())->parse($text));
         $this->assertNull((new \App\Services\Ai\TemplateParsers\EweVertragsbestaetigungParser())->parse($text));
+
+        // Auch mit den Rechtstext-Seiten des echten Dokuments.
+        $voll = $this->mehrseitigerAuftrag();
+        $this->assertNull((new \App\Services\Ai\TemplateParsers\EnergieAuftragParser())->parse($voll));
+        $this->assertNull((new \App\Services\Ai\TemplateParsers\EweVertragsbestaetigungParser())->parse($voll));
     }
 }

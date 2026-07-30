@@ -50,6 +50,24 @@ class RelevantPageSelectorTest extends TestCase
         $this->assertSame($text, (new RelevantPageSelector())->reduce($text));
     }
 
+    public function test_marker_in_the_legal_text_of_a_later_page_does_not_match(): void
+    {
+        // Ein fremdes Dokument (LichtBlick-Auftrag) nennt "Beratungsprotokolle"
+        // nur im Datenschutzhinweis einer Folgeseite. Wuerde das als Profil-
+        // Treffer zaehlen, bliebe ausgerechnet die Datenseite auf der Strecke.
+        config(['services.document_profiles' => [
+            ['markers' => ['BERATUNGSPROTOKOLL'], 'pages' => [1, 2, 4]],
+        ]]);
+
+        $text = $this->pagesText([
+            'Seite1 Auftrag LichtBlick OekoStrom - Zaehlernummer 42811442',
+            'Seite2 AGB',
+            'Seite3 Datenschutz: Daten aus Beratungsprotokollen',
+        ]);
+
+        $this->assertSame($text, (new RelevantPageSelector())->reduce($text));
+    }
+
     public function test_single_page_text_is_untouched(): void
     {
         $text = 'BERATUNGSPROTOKOLL aber nur eine Seite ohne Form-Feed';

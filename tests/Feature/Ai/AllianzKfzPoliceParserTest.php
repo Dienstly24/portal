@@ -113,11 +113,38 @@ class AllianzKfzPoliceParserTest extends TestCase
         $this->assertSame([], $r['data']['bank']);
     }
 
+    public function test_legal_text_mentioning_consultation_protocols_does_not_block_the_police(): void
+    {
+        // "Beratungsprotokoll" ist ein gewoehnliches Fachwort und steht auch in
+        // den Datenschutzhinweisen einer Police. Nur auf der ERSTEN Seite macht
+        // es ein Dokument zum fremden Vergleichsangebot - im Kleingedruckten
+        // einer Folgeseite darf es die Police nicht unlesbar machen.
+        $text = $this->policeText()
+            . "\f" . "Datenschutzhinweise\nWir verarbeiten Daten aus Beratungsprotokollen.";
+
+        $r = (new AllianzKfzPoliceParser())->parse($text);
+
+        $this->assertNotNull($r);
+        $this->assertSame('AS-9708926939', $r['data']['versicherung']['contract_number']);
+    }
+
     public function test_ignores_check24_protocol_and_unrelated_documents(): void
     {
         $protocol = "Vorlaeufiges Beratungsprotokoll zur Kfz-Versicherung - CHECK24\n"
             . "Gewaehlter Tarif: Allianz Direct Komfort";
         $this->assertNull((new AllianzKfzPoliceParser())->parse($protocol));
+
+        // Auch mehrseitig: ein Protokoll nennt sich auf Seite 1 selbst so -
+        // das genuegt, um es von allen Vertrags-Parsern fernzuhalten, selbst
+        // wenn eine Folgeseite wie eine Police klingt.
+        $mehrseitig = implode("\n", [
+            'Vorlaeufiges Beratungsprotokoll zur Kfz-Versicherung',
+            'Erstellt am 30.07.2026 fuer Max Mustermann, Musterweg 1, 24103 Kiel',
+            'Ihr Wunsch: Haftpflicht mit Teilkasko, Selbstbeteiligung 150 EUR',
+            'Gewaehlter Tarif: Allianz Direct Komfort - Jahresbeitrag 512,40 EUR',
+            'Dieses Protokoll dokumentiert Ihre Angaben und unsere Empfehlung.',
+        ]) . "\f" . 'Seite 2 Versicherungsschein Kfz-Versicherung Allianz';
+        $this->assertNull((new AllianzKfzPoliceParser())->parse($mehrseitig));
 
         $this->assertNull((new AllianzKfzPoliceParser())->parse('Irgendein anderes Dokument'));
         // DA-Direkt-Police darf NICHT von diesem Parser vereinnahmt werden.

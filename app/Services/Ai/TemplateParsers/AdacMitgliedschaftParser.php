@@ -1,6 +1,7 @@
 <?php
 namespace App\Services\Ai\TemplateParsers;
 
+use App\Services\Ai\Concerns\ReadsDocumentPages;
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
 use App\Services\Ai\Contracts\DocumentTemplateParser;
 
@@ -23,6 +24,7 @@ use App\Services\Ai\Contracts\DocumentTemplateParser;
  */
 class AdacMitgliedschaftParser implements DocumentTemplateParser
 {
+    use ReadsDocumentPages;
     use ValidatesExtractedFields;
 
     /** Jahresbeitrag (EUR) -> Mitgliedschafts-Stufe (Betreiber-Vorgabe). */
@@ -40,8 +42,7 @@ class AdacMitgliedschaftParser implements DocumentTemplateParser
         $upper = mb_strtoupper($text);
         // Nur die ADAC-Mitgliedschaft selbst - NICHT die ADAC-Autoversicherung
         // (eigener Parser) und kein CHECK24-Protokoll.
-        if (str_contains($upper, 'CHECK24') || str_contains($upper, 'BERATUNGSPROTOKOLL')
-            || str_contains($upper, 'AUTOVERSICHERUNG')) {
+        if ($this->looksLikeComparisonProtocol($text) || str_contains($upper, 'AUTOVERSICHERUNG')) {
             return null;
         }
         if (!str_contains($upper, 'ADAC') || !str_contains($upper, 'MITGLIED')) {

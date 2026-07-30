@@ -1,6 +1,7 @@
 <?php
 namespace App\Services\Ai\TemplateParsers;
 
+use App\Services\Ai\Concerns\ReadsDocumentPages;
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
 use App\Services\Ai\Contracts\DocumentTemplateParser;
 
@@ -22,6 +23,7 @@ use App\Services\Ai\Contracts\DocumentTemplateParser;
  */
 class AllianzKfzPoliceParser implements DocumentTemplateParser
 {
+    use ReadsDocumentPages;
     use ValidatesExtractedFields;
 
     private const INSURER = 'Allianz';
@@ -37,7 +39,7 @@ class AllianzKfzPoliceParser implements DocumentTemplateParser
         $upper = mb_strtoupper($text);
         // Nur die echte Allianz-Kfz-Police - NICHT ein CHECK24-Beratungsprotokoll
         // (Angebot), das die Allianz nur als moeglichen Tarif nennt.
-        if (str_contains($upper, 'CHECK24') || str_contains($upper, 'BERATUNGSPROTOKOLL')) {
+        if ($this->looksLikeComparisonProtocol($text)) {
             return null;
         }
         if (!str_contains($upper, 'ALLIANZ')

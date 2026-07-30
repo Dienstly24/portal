@@ -28,7 +28,13 @@ class RelevantPageSelector
             return $text; // Einseitig / keine Seitentrennung -> nichts zu tun.
         }
 
-        $upper = mb_strtoupper($text);
+        // Ein Profil greift nur, wenn sich das Dokument auf seiner ERSTEN Seite
+        // als solches zu erkennen gibt. Wuerde das ganze Dokument durchsucht,
+        // reichte eine Erwaehnung im Rechtstext einer Folgeseite ("...
+        // Beratungsprotokolle ..." im Datenschutzhinweis des LichtBlick-
+        // Auftrags), um ein voellig fremdes Dokument auf die Seiten eines
+        // anderen Formulars zu stutzen - und genau die Datenseite zu verlieren.
+        $upper = mb_strtoupper(rtrim($pages[0]));
         foreach ($this->profiles() as $profile) {
             $markers = (array) ($profile['markers'] ?? []);
             $wanted = (array) ($profile['pages'] ?? []);
@@ -63,8 +69,10 @@ class RelevantPageSelector
     {
         return config('services.document_profiles', [
             // CHECK24-Beratungsprotokoll (Kfz): nur diese Seiten tragen
-            // Kunden-/Fahrzeug-/Tarifdaten (Betreiber-Vorgabe).
-            ['markers' => ['BERATUNGSPROTOKOLL'], 'pages' => [1, 2, 4, 5, 6, 7]],
+            // Kunden-/Fahrzeug-/Tarifdaten (Betreiber-Vorgabe). Die Marke
+            // "CHECK24" steht ebenfalls im Kopf der ersten Seite und erkennt
+            // das Protokoll auch dann, wenn es sich anders betitelt.
+            ['markers' => ['BERATUNGSPROTOKOLL', 'CHECK24'], 'pages' => [1, 2, 4, 5, 6, 7]],
         ]);
     }
 }
