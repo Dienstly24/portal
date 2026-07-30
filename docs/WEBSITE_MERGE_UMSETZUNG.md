@@ -73,6 +73,22 @@ getrenntes statisches Hosting, kein FTP, eine Codebasis, ein Deploy.
   Hochladen/Ersetzen/Bearbeiten alle Staff-Rollen ("Redakteur").
 - Website bindet Bilder ueber `website/partials/picture.blade.php` ein:
   `<picture>` mit srcset/sizes, width/height (CLS), lazy loading.
+- **Marken-Slots (P1-1e)**: `logo-hell`, `logo-dunkel`, `logo-symbol-hell`
+  und `favicon` ueberschreiben die generierten Dateien aus
+  `public/images` in der GESAMTEN Anwendung (Website DE/AR, Rechtsseiten,
+  Login, Kundenportal, Beraterwelt) - aufgeloest ueber
+  `App\Support\BrandAssets`, mit Rueckfall auf den Bestand, wenn kein
+  Bild zugewiesen ist. Favicon erzeugt automatisch 32/180/512 px.
+  Transparenz bleibt erhalten: erkennt der Generator einen Alphakanal,
+  ist die universelle Fallback-Variante **PNG statt JPG** (ein JPG legte
+  sonst einen weissen Kasten hinter die Wortmarke). Marken-Slots duerfen
+  nur admin/manager belegen, ersetzen oder aushaengen - ein falsches Logo
+  wirkt auf alle Bereiche, ein Leistungsbild nur auf eine Karte.
+- Die Slot-Aufloesung cacht bewusst **rohe Spaltenwerte statt
+  Eloquent-Objekte** in EINEM Cache-Eintrag: serialisierte Modelle kommen
+  aus einem echten Cache-Store (database/file/redis) als
+  `__PHP_Incomplete_Class` zurueck und legten jede Seite mit Bild-Slot
+  lahm (im Browsertest aufgefallen, Regressionstest vorhanden).
 
 ### SEO / Infrastruktur
 - `robots.txt` dynamisch: NUR der kanonische Host (www.dienstly24.de)

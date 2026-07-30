@@ -58,9 +58,16 @@ return [
      * Bild-Slots der Website: Jeder Platz hat einen festen Namen; die
      * Redaktion laedt unter /admin/medien ein Bild hoch und waehlt den
      * Slot aus einer Liste - kein Dateiname, kein FTP, kein Code.
-     * Logo-/Favicon-Dateien laufen bewusst NICHT ueber Slots, sondern
-     * ueber die bestehende Logo-Pipeline (public/images, aus logo.png
-     * generiert) - siehe CLAUDE.md "Logo-Assets".
+     *
+     * Optionale Zusatzangaben je Slot (sonst gelten die Standardwerte
+     * aus 'media' weiter unten):
+     *   'widths'  => Zielbreiten der erzeugten Varianten
+     *   'formats' => erzeugte Formate (Standard: avif+webp+jpg, bzw.
+     *                avif+webp+png sobald das Original Transparenz hat)
+     *
+     * Marken-Slots (logo-*, favicon) UEBERSCHREIBEN die mitgelieferten
+     * Dateien unter public/images - ist kein Bild zugewiesen, bleibt
+     * alles beim generierten Bestand (siehe CLAUDE.md "Logo-Assets").
      */
     'slots' => [
         'hero-startseite' => [
@@ -98,6 +105,42 @@ return [
         'og-image-social' => [
             'label' => 'Social-Media-Vorschaubild (og:image)',
             'hint' => 'Exakt 1200x630, JPG/PNG. Wird beim Teilen (WhatsApp/Facebook) angezeigt.',
+        ],
+
+        /*
+         * Marken-Slots (Auftrag P1-1e). Ueberschreiben die generierten
+         * Dateien aus public/images auf der GESAMTEN Anwendung - Website,
+         * Kundenportal, Beraterwelt und Login. Bewusst nur PNG/WebP:
+         * Wortmarken brauchen Transparenz und scharfe Kanten, JPG wuerde
+         * einen weissen Kasten hinter das Logo legen.
+         */
+        'logo-hell' => [
+            'label' => 'Logo hell (weisse Wortmarke fuer dunkle Flaechen)',
+            'hint' => 'PNG/WebP mit TRANSPARENTEM Hintergrund, mind. 320px hoch. Ersetzt logo-white.png in Website-Kopfzeile, Fusszeile, Login und Portal.',
+            'widths' => [240, 480, 720],
+            'formats' => ['webp', 'png'],
+            'admin_only' => true,
+        ],
+        'logo-dunkel' => [
+            'label' => 'Logo dunkel (farbige Wortmarke fuer helle Flaechen)',
+            'hint' => 'PNG/WebP mit TRANSPARENTEM Hintergrund, mind. 320px hoch. Ersetzt logo-transparent.png in der Beraterwelt-Kopfzeile.',
+            'widths' => [240, 480, 720],
+            'formats' => ['webp', 'png'],
+            'admin_only' => true,
+        ],
+        'logo-symbol-hell' => [
+            'label' => 'Logo-Symbol hell (nur das D-Zeichen, weiss)',
+            'hint' => 'Quadratisches PNG/WebP mit transparentem Hintergrund. Ersetzt logo-icon-white.png in den dunklen Seitenleisten.',
+            'widths' => [96, 192, 512],
+            'formats' => ['webp', 'png'],
+            'admin_only' => true,
+        ],
+        'favicon' => [
+            'label' => 'Favicon / App-Symbol (Browser-Tab und Handy-Startbildschirm)',
+            'hint' => 'QUADRATISCHES PNG, mind. 512x512, transparenter Hintergrund. Erzeugt automatisch 32px, 180px (Apple) und 512px.',
+            'widths' => [32, 180, 512],
+            'formats' => ['png'],
+            'admin_only' => true,
         ],
     ],
 

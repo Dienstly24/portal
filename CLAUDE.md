@@ -102,7 +102,18 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   IMMER relativ `/storage/...` (P0-6: nie APP_URL/IP-abhaengig, gleiche
   Regel in `ServicePage::imageUrl()`). Slot exklusiv - Vorgaenger wandert
   ins Archiv, nie geloescht; Papierkorb 30 Tage (`media:purge-trash`).
-  Loeschen nur admin/manager, Upload alle Staff-Rollen. Reparatur-Befehle:
+  Loeschen nur admin/manager, Upload alle Staff-Rollen. MARKEN-SLOTS
+  (`logo-hell`, `logo-dunkel`, `logo-symbol-hell`, `favicon`, Flag
+  `admin_only`): ueberschreiben die Dateien aus `public/images` in der
+  GESAMTEN App (Website, Portal, Beraterwelt, Login) ueber
+  `App\Support\BrandAssets` - nie wieder Logo-Dateien per FTP tauschen;
+  ohne zugewiesenes Bild bleibt der generierte Bestand. Transparenz:
+  erkennt der Generator einen Alphakanal, ist die Fallback-Variante PNG
+  statt JPG (sonst weisser Kasten hinter der Wortmarke). WICHTIG:
+  `MediaAsset::forSlot()` cacht ROHE Spaltenwerte (ein Eintrag, dann
+  `newFromBuilder`) - Eloquent-Objekte im Cache kommen aus
+  database/file/redis als `__PHP_Incomplete_Class` zurueck (500 auf
+  jeder Seite). Reparatur-Befehle:
   `service-pages:fix-umlauts --write` (P0-7, `UmlautRepair`-Wortliste +
   Warnung beim Speichern im Admin) und `website:fix-storage-urls --write`.
   Tests: `MediaLibraryTest`.

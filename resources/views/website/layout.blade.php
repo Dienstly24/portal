@@ -83,7 +83,7 @@
 
 {{-- Header --}}
 <header class="site" id="hdr"><div class="nav">
-  <a href="{{ $homeUrl }}" aria-label="Dienstly24"><img class="logo-img" src="/images/logo-white.png" alt="Dienstly24 Logo" width="113" height="40"></a>
+  <a href="{{ $homeUrl }}" aria-label="Dienstly24"><img class="logo-img" src="{{ \App\Support\BrandAssets::logoLight() }}" alt="Dienstly24 Logo" width="113" height="40"></a>
   <nav class="nav-links" id="menu" aria-label="{{ $isAr ? 'القائمة الرئيسية' : 'Hauptmenü' }}">
     <a href="{{ $anchor('leistungen') }}">{{ $isAr ? 'الخدمات' : 'Leistungen' }}</a>
     <a href="{{ $anchor('ablauf') }}">{{ $isAr ? 'آلية العمل' : 'Ablauf' }}</a>
@@ -111,7 +111,7 @@
 <footer class="site"><div class="container">
   <div class="fgrid">
     <div class="fbrand">
-      <img src="/images/logo-white.png" alt="Dienstly24" width="108" height="38" style="height:38px;width:auto;" loading="lazy">
+      <img src="{{ \App\Support\BrandAssets::logoLight() }}" alt="Dienstly24" width="108" height="38" style="height:38px;width:auto;" loading="lazy">
       <p>{{ $isAr
           ? 'جهة الاتصال الشخصية لكم في شؤون التأمين وتسجيل السيارات والكهرباء والغاز – بالألمانية والعربية.'
           : 'Ihr persönlicher Ansprechpartner für Versicherungen, Kfz-Zulassung sowie Strom & Gas – auf Deutsch und Arabisch.' }}</p>

@@ -31,7 +31,7 @@ a{color:#185FA5;}
 </head>
 <body>
 <div class="top">
-    <a class="logo" href="https://dienstly24.de"><img src="/images/logo-white.png" alt="Dienstly24"></a>
+    <a class="logo" href="https://dienstly24.de"><img src="{{ \App\Support\BrandAssets::logoLight() }}" alt="Dienstly24"></a>
     <a class="back" href="{{ route('login') }}">→ Zum Kundenportal-Login</a>
 </div>
 

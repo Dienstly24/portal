@@ -57,7 +57,7 @@ label{display:block;font-size:13.5px;margin-bottom:7px;color:#dde0e5;}
 <div class="bg"><div class="orb orb-a"></div><div class="orb orb-b"></div></div>
 
 <div class="topbar rise d1">
-    <img src="/images/logo-white.png" alt="Dienstly24">
+    <img src="{{ \App\Support\BrandAssets::logoLight() }}" alt="Dienstly24">
     <div class="lang-switch"><a href="{{ route('locale.switch', $rtl ? 'de' : 'ar') }}">🌐 {{ $rtl ? 'Deutsch' : 'العربية' }}</a></div>
 </div>
 

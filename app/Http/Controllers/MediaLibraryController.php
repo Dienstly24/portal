@@ -33,6 +33,22 @@ class MediaLibraryController extends Controller
         'image/svg+xml' => 'svg',
     ];
 
+    /**
+     * Slots, die dieser Nutzer belegen darf. Marken-Slots (Logo, Favicon)
+     * bleiben admin/manager vorbehalten: Ein versehentlich getauschtes
+     * Firmenlogo wirkt auf ALLE Bereiche inklusive Kundenportal, waehrend
+     * ein Leistungsbild nur eine Karte betrifft.
+     */
+    private function allowedSlots(Request $request): array
+    {
+        $isManager = in_array($request->user()->role, ['admin', 'manager'], true);
+
+        return array_filter(
+            (array) config('website.slots'),
+            fn ($conf) => $isManager || empty($conf['admin_only'])
+        );
+    }
+
     public function index(Request $request)
     {
         $q = trim((string) $request->input('q', ''));
@@ -55,12 +71,15 @@ class MediaLibraryController extends Controller
 
         $slots = config('website.slots');
         $slotUsage = MediaAsset::whereNotNull('slot')->pluck('slot')->flip();
+        // Marken-Slots stehen nur admin/manager zur Auswahl.
+        $assignableSlots = $this->allowedSlots($request);
 
         return view('admin.media', [
             'assets' => $assets,
             'trashed' => $trashed,
             'usedBytes' => $usedBytes,
             'slots' => $slots,
+            'assignableSlots' => $assignableSlots,
             'slotUsage' => $slotUsage,
             'q' => $q,
             'slotFilter' => $slotFilter,
@@ -76,7 +95,7 @@ class MediaLibraryController extends Controller
             'alt_de' => 'required|string|max:500',
             'alt_ar' => 'required|string|max:500',
             'credit' => 'nullable|string|max:500',
-            'slot' => ['nullable', Rule::in(array_keys((array) config('website.slots')))],
+            'slot' => ['nullable', Rule::in(array_keys($this->allowedSlots($request)))],
             'title' => 'nullable|string|max:150',
         ], [], [
             'files' => 'Dateien',
@@ -128,8 +147,10 @@ class MediaLibraryController extends Controller
             Storage::disk('local')->put($originalPath, $content);
             $asset->forceFill(['original_path' => $originalPath])->save();
 
-            // Varianten sofort erzeugen (kein Queue-Worker noetig).
-            ProcessMediaAssetJob::dispatchSync($asset);
+            // Varianten sofort erzeugen (kein Queue-Worker noetig). Der
+            // Zielslot geht mit: Marken-Slots (Logo/Favicon) brauchen
+            // andere Groessen und Formate als Inhaltsbilder.
+            ProcessMediaAssetJob::dispatchSync($asset, $request->input('slot') ?: null);
             $asset->refresh();
 
             if ($request->filled('slot') && $asset->processing_status === 'ready') {
@@ -149,7 +170,7 @@ class MediaLibraryController extends Controller
             'alt_de' => 'required|string|max:500',
             'alt_ar' => 'required|string|max:500',
             'credit' => 'nullable|string|max:500',
-            'slot' => ['nullable', Rule::in(array_keys((array) config('website.slots')))],
+            'slot' => ['nullable', Rule::in(array_keys($this->allowedSlots($request)))],
         ], [], [
             'alt_de' => 'Alt-Text (Deutsch)',
             'alt_ar' => 'Alt-Text (Arabisch)',
@@ -163,9 +184,27 @@ class MediaLibraryController extends Controller
         ])->save();
 
         $newSlot = $data['slot'] ?? null;
+        // Sitzt das Bild in einem Marken-Slot, den dieser Nutzer gar nicht
+        // auswaehlen darf, bleibt die Zuweisung unangetastet - sonst wuerde
+        // ein Redakteur beim Speichern der Alt-Texte das Firmenlogo
+        // versehentlich aus dem Slot werfen.
+        if ($asset->slot && ! array_key_exists($asset->slot, $this->allowedSlots($request))) {
+            $newSlot = $asset->slot;
+        }
         if ($newSlot !== $asset->slot) {
             if ($newSlot && $asset->processing_status !== 'ready') {
                 return back()->withErrors(['slot' => 'Bild ist noch nicht fertig verarbeitet und kann keinem Slot zugewiesen werden.']);
+            }
+            // Marken-Slots (Logo/Favicon) haben eigene Groessen/Formate:
+            // beim Wechsel in einen solchen Slot neu erzeugen, sonst haette
+            // ein spaeter zugewiesenes Favicon keine 32px-Variante.
+            if ($newSlot && $this->needsRebuild($asset, $newSlot)) {
+                app(\App\Services\Media\ImageVariantGenerator::class)->deleteVariants($asset);
+                ProcessMediaAssetJob::dispatchSync($asset, $newSlot);
+                $asset->refresh();
+                if ($asset->processing_status !== 'ready') {
+                    return back()->withErrors(['slot' => 'Bild konnte fuer diesen Slot nicht aufbereitet werden: ' . $asset->processing_error]);
+                }
             }
             $newSlot ? $this->assignSlot($asset, $newSlot) : $asset->forceFill(['slot' => null])->save();
         }
@@ -183,6 +222,11 @@ class MediaLibraryController extends Controller
         $request->validate([
             'file' => 'required|file|max:' . (int) config('website.media.max_upload_kb'),
         ]);
+
+        // Marken-Bilder (Logo/Favicon) darf nur die Verwaltung austauschen.
+        if ($asset->slot && ! array_key_exists($asset->slot, $this->allowedSlots($request))) {
+            return back()->withErrors(['file' => 'Dieses Bild gehoert zu einem Marken-Platz (Logo/Favicon) und kann nur von Administration oder Leitung ersetzt werden.']);
+        }
 
         $file = $request->file('file');
         $mime = strtolower((string) $file->getMimeType());
@@ -219,10 +263,9 @@ class MediaLibraryController extends Controller
         Storage::disk('local')->put($originalPath, $content);
         $new->forceFill(['original_path' => $originalPath])->save();
 
-        ProcessMediaAssetJob::dispatchSync($new);
-        $new->refresh();
-
         $slot = $asset->slot;
+        ProcessMediaAssetJob::dispatchSync($new, $slot);
+        $new->refresh();
         if ($slot && $new->processing_status === 'ready') {
             $this->assignSlot($new, $slot); // archiviert das alte automatisch
         }
@@ -251,6 +294,40 @@ class MediaLibraryController extends Controller
         return redirect()->route('admin.media')->with('success', 'Bild wiederhergestellt (ohne Slot - bei Bedarf neu zuweisen).');
     }
 
+    /**
+     * Muessen die Varianten fuer diesen Slot neu erzeugt werden? Ja, wenn
+     * der Slot eigene Breiten/Formate vorgibt (Marken-Slots) und die
+     * vorhandenen Varianten dazu nicht passen.
+     */
+    private function needsRebuild(MediaAsset $asset, string $slot): bool
+    {
+        $conf = (array) config('website.slots.' . $slot, []);
+        if (! isset($conf['widths']) && ! isset($conf['formats'])) {
+            return false;
+        }
+        if ($asset->isSvg()) {
+            return false; // Vektor: eine Datei passt fuer jede Groesse
+        }
+
+        $have = (array) $asset->variants;
+        $haveWidths = array_map(fn ($v) => (int) $v['width'], $have);
+        $haveFormats = array_unique(array_map(fn ($v) => (string) $v['format'], $have));
+
+        foreach ((array) ($conf['widths'] ?? []) as $w) {
+            // Breiten oberhalb des Originals werden bewusst nie erzeugt.
+            if ($w <= (int) $asset->width && ! in_array((int) $w, $haveWidths, true)) {
+                return true;
+            }
+        }
+        foreach ((array) ($conf['formats'] ?? []) as $f) {
+            if (! in_array($f, $haveFormats, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /** Slot exklusiv setzen: bisheriges Slot-Bild wandert ins Archiv. */
     private function assignSlot(MediaAsset $asset, string $slot): void
     {
@@ -258,7 +335,8 @@ class MediaLibraryController extends Controller
             MediaAsset::where('slot', $slot)->where('id', '!=', $asset->id)->update(['slot' => null]);
             $asset->forceFill(['slot' => $slot])->save();
         });
-        // Cache der Slot-Aufloesung leeren (Model-Event deckt das Update-Query nicht ab).
-        \Illuminate\Support\Facades\Cache::forget('website-media-slot:' . $slot);
+        // Cache der Slot-Aufloesung leeren (Model-Event deckt das
+        // Massen-Update im Transaktionsblock nicht ab).
+        MediaAsset::flushSlotCache();
     }
 }

@@ -13,7 +13,7 @@
 <div class="bg"></div>
 
 <div class="topbar">
-    <img src="/images/logo-white.png" alt="Dienstly24">
+    <img src="{{ \App\Support\BrandAssets::logoLight() }}" alt="Dienstly24">
     <div class="lang-switch"><a href="{{ route('locale.switch', $rtl ? 'de' : 'ar') }}">🌐 {{ $rtl ? 'Deutsch' : 'العربية' }}</a></div>
 </div>
 

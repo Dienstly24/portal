@@ -23,14 +23,17 @@ class ProcessMediaAssetJob implements ShouldQueue
 
     public int $timeout = 120;
 
-    public function __construct(public MediaAsset $asset)
-    {
+    public function __construct(
+        public MediaAsset $asset,
+        /** Slot, dem das Bild gleich zugewiesen wird - bestimmt Groessen/Formate. */
+        public ?string $intendedSlot = null,
+    ) {
     }
 
     public function handle(ImageVariantGenerator $generator): void
     {
         try {
-            $generator->generate($this->asset);
+            $generator->generate($this->asset, $this->intendedSlot);
         } catch (\Throwable $e) {
             $this->asset->forceFill([
                 'processing_status' => 'failed',
