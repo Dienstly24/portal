@@ -20,13 +20,13 @@ class GewerbeBeratungsdokumentationParserTest extends TestCase
         return str_pad($left, 44) . $right;
     }
 
-    private function dokuText(): string
+    private function dokuText(string $sparte = 'Frachtführerhaftpflicht'): string
     {
         return implode("\n", [
             '21.07.2026',
             'Beratungsdokumentation Ihres',
             'Vermittlungsauftrags:',
-            'Frachtführerhaftpflicht',
+            $sparte,
             $this->twoCol('Vorschlag für:', 'Ansprechpartner:'),
             $this->twoCol('Testfirma Transport Einzelunternehmen', 'Max Makler'),
             'Ahmed Testkunde',
@@ -34,11 +34,11 @@ class GewerbeBeratungsdokumentationParserTest extends TestCase
             $this->twoCol('87781 Ungerhausen', '22523 Hamburg'),
             $this->twoCol('', 'E-Mail: makler@dienstly24.de'),
             $this->twoCol('Beratungsdokumentation', 'Vorgangsnummer:'),
-            $this->twoCol('Frachtführerhaftpflicht', '3114192'),
+            $this->twoCol($sparte, '3114192'),
             $this->twoCol('Gewünschter Versicherungsbeginn', '22.07.2026'),
             ' Unsere Empfehlung',
             $this->twoCol(' Versicherer:', 'Helvetia Versicherungs-AG'),
-            $this->twoCol(' Produkt:', 'Frachtführerhaftpflicht'),
+            $this->twoCol(' Produkt:', $sparte),
             $this->twoCol(' Versicherungssumme:', '2,5 Mio. €'),
             $this->twoCol(' Zahlweise:', 'Jährlich'),
             $this->twoCol(' Selbstbehalt:', '300 €'),
@@ -57,11 +57,38 @@ class GewerbeBeratungsdokumentationParserTest extends TestCase
 
         $v = $r['data']['versicherung'];
         $this->assertSame('Helvetia Versicherungs-AG', $v['insurer']);
-        $this->assertSame('haftpflicht', $v['sparte']);
+        $this->assertSame('frachtfuehrerhaftpflicht', $v['sparte']);
         $this->assertSame('Frachtführerhaftpflicht', $v['tariff']);
         $this->assertSame(892.5, $v['premium_amount']);
         $this->assertSame('yearly', $v['premium_interval']);
         $this->assertSame('2026-07-22', $v['start_date']);
+    }
+
+    /**
+     * Gewerbliche Sparten (Betreiber-Vorgabe 30.07.2026): Betriebs- und
+     * Frachtfuehrerhaftpflicht versichern den BETRIEB und bekommen eine eigene
+     * Sparte - sie duerfen nicht in der privaten Sammelsparte "haftpflicht"
+     * landen, obwohl beide Namen das Wort enthalten.
+     */
+    public function test_maps_commercial_liability_to_its_own_sparte(): void
+    {
+        $parser = new GewerbeBeratungsdokumentationParser();
+
+        $betrieb = $parser->parse($this->dokuText('Betriebshaftpflicht'));
+        $this->assertSame('betriebshaftpflicht', $betrieb['data']['versicherung']['sparte']);
+        $this->assertSame('Betriebshaftpflicht', $betrieb['data']['versicherung']['tariff']);
+
+        // Dieselbe Sparte heisst in anderen Unterlagen "Verkehrshaftung".
+        $verkehr = $parser->parse($this->dokuText('Verkehrshaftungsversicherung'));
+        $this->assertSame('frachtfuehrerhaftpflicht', $verkehr['data']['versicherung']['sparte']);
+
+        // Beide sind als gewerblich gekennzeichnet und gueltige Sparten.
+        foreach (['betriebshaftpflicht', 'frachtfuehrerhaftpflicht'] as $key) {
+            $this->assertContains($key, \App\Models\Contract::typeKeys());
+            $this->assertContains($key, \App\Models\Contract::commercialTypeKeys());
+        }
+        // Die private Haftpflicht bleibt privat.
+        $this->assertNotContains('haftpflicht', \App\Models\Contract::commercialTypeKeys());
     }
 
     public function test_reads_customer_from_left_column_not_broker(): void

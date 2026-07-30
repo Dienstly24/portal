@@ -20,9 +20,18 @@
     <select name="type" id="sparte" required onchange="contractToggleSections()"
         style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
         <option value="">Bitte auswählen</option>
+        {{-- Privat zuerst, gewerbliche Sparten (Betriebs-/Frachtfuehrer-
+             haftpflicht) in einer eigenen Gruppe darunter --}}
         @foreach(\App\Models\Contract::TYPES as $key => $cfg)
+        @continue(!empty($cfg['gewerblich']))
         <option value="{{ $key }}" {{ $curType === $key ? 'selected' : '' }}>{{ $cfg['icon'] }} {{ $cfg['label'] }}</option>
         @endforeach
+        <optgroup label="Gewerblich">
+            @foreach(\App\Models\Contract::TYPES as $key => $cfg)
+            @continue(empty($cfg['gewerblich']))
+            <option value="{{ $key }}" {{ $curType === $key ? 'selected' : '' }}>{{ $cfg['icon'] }} {{ $cfg['label'] }}</option>
+            @endforeach
+        </optgroup>
     </select>
 </div>
 

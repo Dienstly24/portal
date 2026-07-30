@@ -81,6 +81,16 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   ergänzen.
 - **Banner-Verwaltung**: `BannerController`, Statistik-Dashboard unter
   `/admin/banners/statistik`. Routen auf `role:admin,manager` beschränkt.
+- **Gewerbliche Sparten** (Betreiber-Vorgabe 30.07.2026): `betriebshaftpflicht`
+  und `frachtfuehrerhaftpflicht` sind EIGENE Sparten in `Contract::TYPES`
+  (Flag `'gewerblich' => true`, Gruppe „Gewerblich" im Vertragsformular,
+  `Contract::isCommercial()`/`commercialTypeKeys()`) - sie versichern den
+  BETRIEB, nicht die Privatperson, und dürfen nicht in der privaten
+  Sammelsparte `haftpflicht` landen. Die Fonds-Finanz-Beratungsdokumentation
+  liest sie gratis (`GewerbeBeratungsdokumentationParser`, Sparte aus dem Kopf
+  „Vermittlungsauftrags: …"; „Verkehrshaftungsversicherung" = Frachtführer).
+  Neue Sparte = eine Zeile in `Contract::TYPES`, keine Migration
+  (`type` ist String). Tests: `GewerblicheSpartenTest`.
 - **Farbschema „Smaragd & Gold"** (Betreiber-Entscheidung 22.07.2026,
   ersetzt „Graphit + Smaragd"; Richtungswahl dokumentiert in
   `docs/design/design-richtungen.html`): Smaragd bleibt Marken- und

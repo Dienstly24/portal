@@ -189,6 +189,13 @@ class GewerbeBeratungsdokumentationParser implements DocumentTemplateParser
     {
         $n = mb_strtolower($name);
         return match (true) {
+            // GEWERBLICHE Sparten zuerst - sie tragen das Wort "haftpflicht"
+            // ebenfalls und wuerden sonst in der privaten Sammelsparte landen.
+            // Die Verkehrshaftungsversicherung des Frachtfuehrers heisst in den
+            // Unterlagen mal "Frachtfuehrerhaftpflicht", mal "Verkehrshaftung".
+            str_contains($n, 'frachtführer') || str_contains($n, 'frachtfuehrer')
+                || str_contains($n, 'verkehrshaftung')                         => 'frachtfuehrerhaftpflicht',
+            str_contains($n, 'betriebshaftpflicht')                            => 'betriebshaftpflicht',
             str_contains($n, 'rechtsschutz')                                   => 'rechtsschutz',
             str_contains($n, 'unfall')                                         => 'unfall',
             str_contains($n, 'inhalt') || str_contains($n, 'geschäft')
