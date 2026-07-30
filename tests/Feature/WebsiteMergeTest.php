@@ -68,6 +68,39 @@ class WebsiteMergeTest extends TestCase
             ->assertRedirect('https://www.dienstly24.de/impressum');
     }
 
+    /**
+     * P1-4: Nach dem DNS-Umzug wandern die alten Marketing-URLs des
+     * Portal-Hosts per 301 auf den kanonischen Host - aber NICHT vorher
+     * (dann liegt dort noch die statische Site ohne /leistungen) und nie
+     * der Login-/Portalbereich.
+     */
+    public function test_marketing_paths_move_to_canonical_host_only_after_cutover(): void
+    {
+        $this->seed(\Database\Seeders\ServicePageSeeder::class);
+
+        // Vor dem Umzug (Standard): Portal-Host liefert weiter aus.
+        $this->get('https://portal.dienstly24.de/leistungen/kfz-versicherung')->assertOk();
+
+        config(['website.marketing_redirect' => true]);
+
+        $this->get('https://portal.dienstly24.de/leistungen/kfz-versicherung')
+            ->assertStatus(301)
+            ->assertRedirect('https://www.dienstly24.de/leistungen/kfz-versicherung');
+        $this->get('https://portal.dienstly24.de/leistungen')
+            ->assertStatus(301)
+            ->assertRedirect('https://www.dienstly24.de/leistungen');
+        $this->get('https://portal.dienstly24.de/ar')
+            ->assertStatus(301)
+            ->assertRedirect('https://www.dienstly24.de/ar');
+
+        // Der Anwendungsbereich bleibt unberuehrt - sonst kaeme kein Kunde
+        // mehr ins Portal.
+        $this->get('https://portal.dienstly24.de/login')->assertOk();
+        $this->get('https://portal.dienstly24.de/hilfe')->assertOk();
+        // Und auf dem Website-Host wird natuerlich nichts umgeleitet.
+        $this->get('https://www.dienstly24.de/leistungen/kfz-versicherung')->assertOk();
+    }
+
     public function test_old_static_html_urls_redirect_to_clean_routes(): void
     {
         $this->get('https://www.dienstly24.de/impressum.html')

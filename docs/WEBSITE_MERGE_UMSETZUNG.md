@@ -213,6 +213,9 @@ endet mit diesem Plan. Risiko bei Nichtstun: Inhalte laufen auseinander.
   **300 Sekunden** senken (Rueckweg wird dadurch schnell).
   ADMIN_BASIC_AUTH auf dem VPS setzen (Bedingung, siehe unten).
   Backup-Lauf + Restore-Test dokumentiert OK.
+- **Arabische Schritt-fuer-Schritt-Fassung fuer den Betreiber**:
+  `docs/UMZUG_SCHRITT_FUER_SCHRITT_AR.md` (alle Befehle, beide
+  Webserver-Varianten, Verifikationsliste, Rollback).
 - **T-0 (DIENSTAG, 09:00-11:00 Uhr - nie freitags/abends)**:
   1. A-Records dienstly24.de + www (+ .com) auf den VPS/Cloudflare.
   2. Verifikation (Reihenfolge, alles dokumentieren):
@@ -250,6 +253,12 @@ endet mit diesem Plan. Risiko bei Nichtstun: Inhalte laufen auseinander.
    (Pflicht, s. u.). Optional `WEBSITE_CANONICAL_HOST`,
    `WEBSITE_EXTRA_HOSTS`/`STAGING_HOSTS`/`STAGING_BASIC_AUTH` (Staging).
    Danach `php artisan config:cache`.
+4b. **Nach erfolgreichem Umzug**: `WEBSITE_MARKETING_REDIRECT=true`
+   setzen (+ `config:cache`). Erst dann leitet der Portal-Host die alten
+   Marketing-URLs (`portal.dienstly24.de/leistungen/...`, `/ar/...`) per
+   301 auf den kanonischen Host um (Auftrag P1-4) - vorher liefe die
+   Umleitung auf die statische Site, die diese Seiten nicht hat. Der
+   Login-/Portalbereich ist von der Regel ausgenommen.
 5. Nach dem Deploy einmalig:
    `php artisan storage:link` (falls noch nicht vorhanden),
    `php artisan service-pages:fix-umlauts --write`,
