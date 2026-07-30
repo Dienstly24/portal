@@ -77,7 +77,14 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   umleiten, Schleifengefahr). REGEL: Website-Seiten laden NIE externe
   Ressourcen (Google Fonts -> Abmahnung; Schriften liegen lokal in
   `public/fonts/`, Subsets je Sprache). robots.txt/sitemap.xml dynamisch
-  (`SeoController`: Website-Host offen, portal/admin disallow + noindex).
+  (`SeoController`: NUR der kanonische Host offen; portal/admin UND
+  Staging-/Extra-Hosts disallow + noindex). Schutzschichten
+  (`ExtraBasicAuth`, Betreiber-Bedingung): `ADMIN_BASIC_AUTH=user:pass`
+  = zweite Auth-Schicht vor /admin (Pflicht bis 2FA existiert);
+  `STAGING_HOSTS`+`STAGING_BASIC_AUTH` (+`WEBSITE_EXTRA_HOSTS`) =
+  passwortgeschuetzte Vorschau-Domain. Cutover-Plan (TTL 300s, dienstags
+  vormittags, Rollback, statisches Hosting nach 1 Woche abschalten):
+  `docs/WEBSITE_MERGE_UMSETZUNG.md`; Backup+Restore-Test: `scripts/backup.sh`.
   Formular `POST /kontakt` -> Ticket (source=website) + Einwilligungs-
   Protokoll (`consent_given_at/ip/text` auf tickets) + Bestaetigungs-Mail
   (`WebsiteInquiryConfirmationMail`, DE/AR) + `/kontakt/danke`;

@@ -26,7 +26,9 @@ STAMP="$(date '+%Y%m%d-%H%M')"
 cd "$APP_DIR"
 
 # .env einlesen (nur DB_*-Variablen, ohne die Datei auszufuehren).
-env_val() { grep -E "^$1=" .env | head -1 | cut -d= -f2- | tr -d '"'; }
+# "|| true": fehlt eine optionale Variable, liefert grep Status 1 -
+# ohne das wuerde set -e/-o pipefail das ganze Skript abbrechen.
+env_val() { { grep -E "^$1=" .env | head -1 | cut -d= -f2- | tr -d '"'; } || true; }
 DB_HOST="$(env_val DB_HOST)"; DB_HOST="${DB_HOST:-127.0.0.1}"
 DB_PORT="$(env_val DB_PORT)"; DB_PORT="${DB_PORT:-3306}"
 DB_NAME="$(env_val DB_DATABASE)"

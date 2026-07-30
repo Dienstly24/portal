@@ -34,8 +34,8 @@ Inhalt
 - assets/images/ ........ alle Bilder (frei austauschbar)
     logo-white.png ...... Wortmarke (Kopfzeile aller Seiten)
     favicon.png ......... Browser-Symbol
-    hero-office.jpg ..... PLATZHALTER - durch eigenes Foto ersetzen
-    kat-gesundheit.jpg .. PLATZHALTER - durch eigenes Foto ersetzen
+    (hero-office.jpg / kat-gesundheit.jpg waren ungenutzte
+    Platzhalter und wurden am 30.07.2026 entfernt - P0-2 Bonus)
 
 Bilder tauschen
 ---------------
@@ -56,15 +56,17 @@ ACHTUNG rechtlich: Das aktuelle leistung-kfz-versicherung.webp
 zeigt ein BMW-Fahrzeug MIT ERKENNBAREM BMW-EMBLEM - das verstoesst
 gegen den eigenen Hinweis unten (keine Marken-Logos ohne Freigabe).
 Bitte zeitnah durch ein neutrales Motiv ersetzen; bis dahin auf
-eigenes Risiko online. Ausserdem haben hero-shield.webp und die
-Kartenbilder SCHWARZE Hintergruende - fuer die weissen Karten und
-den gruenen Hero sind Bilder mit transparentem Hintergrund die
-deutlich bessere Wahl (siehe unten).
+eigenes Risiko online. Ausserdem haben die beiden KARTENBILDER
+(Kfz, Zahnzusatz) SCHWARZE Hintergruende - fuer die weissen Karten
+sind Bilder mit transparentem Hintergrund die deutlich bessere Wahl
+(siehe unten). Das Hero-Schild hat bereits einen Alphakanal
+(transparente Ecken, eingebackener dunkler Glow).
 
 - assets/images/hero-shield.webp -> 3D-Schild im Hero.
-    WebP/PNG mit TRANSPARENTEM Hintergrund (Alphakanal), ca. 600x600,
-    ohne Schlagschatten. Fehlt die Datei, zeigt die Seite automatisch
-    die eingebaute Schild-Grafik.
+    WebP/PNG mit TRANSPARENTEM Hintergrund (Alphakanal); die
+    mitgelieferte Datei ist 600x900 Hochformat - neue Bilder am
+    besten im selben Format. Fehlt die Datei, zeigt die Seite
+    automatisch die eingebaute Schild-Grafik.
 - assets/images/leistung-<name>.webp -> Bild oben in der jeweiligen
     Leistungskarte (ersetzt die Icon-Kachel automatisch). Namen:
       leistung-kfz-versicherung.webp   leistung-krankenversicherung.webp

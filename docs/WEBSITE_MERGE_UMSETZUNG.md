@@ -75,9 +75,10 @@ getrenntes statisches Hosting, kein FTP, eine Codebasis, ein Deploy.
   `<picture>` mit srcset/sizes, width/height (CLS), lazy loading.
 
 ### SEO / Infrastruktur
-- `robots.txt` dynamisch: Website-Host offen (+ Sitemap), portal./admin.
-  komplett gesperrt; `X-Robots-Tag: noindex` auf /admin, /login, /portal,
-  /partner, /register.
+- `robots.txt` dynamisch: NUR der kanonische Host (www.dienstly24.de)
+  ist offen (+ Sitemap); portal./admin. und Staging-/Vorschau-Hosts
+  komplett gesperrt; `X-Robots-Tag: noindex` auf /admin, /login,
+  /portal, /partner, /register sowie auf allen Staging-Antworten.
 - `sitemap.xml` dynamisch aus echten Inhalten (Startseite DE/AR,
   Leistungsseiten DE/AR mit echtem lastmod aus der DB, Rechtsseiten).
 - Fehlerseiten 404/500 im Markendesign, zweisprachig, mit WhatsApp.
@@ -278,8 +279,9 @@ endet mit diesem Plan. Risiko bei Nichtstun: Inhalte laufen auseinander.
 
 ## Tests
 
-`tests/Feature/WebsiteMergeTest.php` (22) + `tests/Feature/MediaLibraryTest.php` (10):
+`tests/Feature/WebsiteMergeTest.php` (22) + `tests/Feature/MediaLibraryTest.php`
+(10) + `tests/Feature/ExtraBasicAuthTest.php` (5):
 Startseite DE/AR, Redirects, Rechtsseiten, Formular inkl. Einwilligung/
 Honeypot/Mails, Purge, robots/sitemap/noindex, hreflang, Umlaut-Reparatur,
-Storage-URLs, Medien-Upload/Varianten/Slots/MIME/SVG/Papierkorb/Rollen.
-Gesamtsuite: 1315 Tests gruen.
+Storage-URLs, Medien-Upload/Varianten/Slots/MIME/SVG/Papierkorb/Rollen,
+Admin-Basic-Auth, Staging-Gate. Gesamtsuite: 1320 Tests gruen.

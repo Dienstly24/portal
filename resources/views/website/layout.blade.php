@@ -70,7 +70,9 @@
 @yield('head-extra')
 </head>
 <body id="top">
-<a href="{{ $anchor('leistungen') }}" class="skip">{{ $isAr ? 'الانتقال إلى المحتوى' : 'Zum Inhalt springen' }}</a>
+{{-- Skip-Link zielt auf die main-Landmark der AKTUELLEN Seite (nicht
+     mehr auf /#leistungen - auf Unterseiten verliess das die Seite). --}}
+<a href="#main" class="skip">{{ $isAr ? 'الانتقال إلى المحتوى' : 'Zum Inhalt springen' }}</a>
 
 {{-- Top bar --}}
 <div class="topbar"><div class="container">
