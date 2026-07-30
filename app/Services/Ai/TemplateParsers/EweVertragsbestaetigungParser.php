@@ -27,7 +27,9 @@ class EweVertragsbestaetigungParser implements DocumentTemplateParser
     public function parse(string $text): ?array
     {
         $upper = mb_strtoupper($text);
-        if (!str_contains($upper, 'EWE')
+        // "EWE" nur als eigenstaendiges Wort - "jEWEils" u.ae. enthalten die
+        // Buchstabenfolge und wuerden sonst fremde Dokumente vereinnahmen.
+        if (!preg_match('/\bEWE\b/u', $upper)
             || (!str_contains($upper, 'VERTRAGSBESTÄTIGUNG') && !str_contains($upper, 'VERTRAGSBESTAETIGUNG'))) {
             return null;
         }
