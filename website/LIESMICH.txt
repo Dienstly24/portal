@@ -45,16 +45,32 @@ Fuer ein anderes Bild im HTML den Pfad "assets/images/..." anpassen.
 
 Optionale Bild-Slots der Startseite (hochladen genuegt)
 -------------------------------------------------------
-- assets/images/hero-shield.png -> 3D-Schild im Hero.
-    PNG mit TRANSPARENTEM Hintergrund (Alphakanal), ca. 1024x1024,
+SEIT DEM HOTFIX 30.07.2026 NUTZEN DIE SLOTS .webp-DATEIEN (P1-2:
+die frueheren PNGs waren 1.4-1.8 MB pro Bild; als WebP sind es
+48-73 KB). Die vorhandenen Bilder liegen bereits komprimiert bei:
+hero-shield.webp, leistung-kfz-versicherung.webp,
+leistung-zahnzusatz.webp - beim Upload NICHT durch die alten
+grossen PNGs ersetzen!
+
+ACHTUNG rechtlich: Das aktuelle leistung-kfz-versicherung.webp
+zeigt ein BMW-Fahrzeug MIT ERKENNBAREM BMW-EMBLEM - das verstoesst
+gegen den eigenen Hinweis unten (keine Marken-Logos ohne Freigabe).
+Bitte zeitnah durch ein neutrales Motiv ersetzen; bis dahin auf
+eigenes Risiko online. Ausserdem haben hero-shield.webp und die
+Kartenbilder SCHWARZE Hintergruende - fuer die weissen Karten und
+den gruenen Hero sind Bilder mit transparentem Hintergrund die
+deutlich bessere Wahl (siehe unten).
+
+- assets/images/hero-shield.webp -> 3D-Schild im Hero.
+    WebP/PNG mit TRANSPARENTEM Hintergrund (Alphakanal), ca. 600x600,
     ohne Schlagschatten. Fehlt die Datei, zeigt die Seite automatisch
     die eingebaute Schild-Grafik.
-- assets/images/leistung-<name>.png -> Bild oben in der jeweiligen
+- assets/images/leistung-<name>.webp -> Bild oben in der jeweiligen
     Leistungskarte (ersetzt die Icon-Kachel automatisch). Namen:
-      leistung-kfz-versicherung.png   leistung-krankenversicherung.png
-      leistung-zahnzusatz.png         leistung-kfz-zulassung.png
-      leistung-kennzeichen.png        leistung-strom-gas.png
-    PNG ca. 800x600, weisser oder transparenter Hintergrund passt
+      leistung-kfz-versicherung.webp   leistung-krankenversicherung.webp
+      leistung-zahnzusatz.webp         leistung-kfz-zulassung.webp
+      leistung-kennzeichen.webp        leistung-strom-gas.webp
+    WebP ca. 600x450, weisser oder transparenter Hintergrund passt
     (Karten sind weiss). WICHTIG: keine Marken-Logos/Embleme im Bild
     (z. B. BMW) - siehe rechtlicher Hinweis unten.
 - assets/images/hamburg.jpg -> Foto in der Karte "Warum Dienstly24?".

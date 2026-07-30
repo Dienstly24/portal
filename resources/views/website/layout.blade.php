@@ -58,6 +58,7 @@
      das benoetigte Subset; kritische Schrift vorab laden. --}}
 @if($isAr)
 <link rel="preload" href="/fonts/ibm-plex-sans-arabic-arabic-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/ibm-plex-sans-arabic-arabic-700.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/amiri-arabic-700.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/fonts/fonts-ar.css">
 @else
@@ -80,7 +81,7 @@
 
 {{-- Header --}}
 <header class="site" id="hdr"><div class="nav">
-  <a href="{{ $homeUrl }}" aria-label="Dienstly24"><img class="logo-img" src="/images/logo-white.png" alt="Dienstly24 Logo" width="160" height="40"></a>
+  <a href="{{ $homeUrl }}" aria-label="Dienstly24"><img class="logo-img" src="/images/logo-white.png" alt="Dienstly24 Logo" width="113" height="40"></a>
   <nav class="nav-links" id="menu" aria-label="{{ $isAr ? 'القائمة الرئيسية' : 'Hauptmenü' }}">
     <a href="{{ $anchor('leistungen') }}">{{ $isAr ? 'الخدمات' : 'Leistungen' }}</a>
     <a href="{{ $anchor('ablauf') }}">{{ $isAr ? 'آلية العمل' : 'Ablauf' }}</a>
@@ -100,30 +101,32 @@
   </div>
 </div></header>
 
+<main id="main">
 @yield('content')
+</main>
 
 {{-- Footer --}}
 <footer class="site"><div class="container">
   <div class="fgrid">
     <div class="fbrand">
-      <img src="/images/logo-white.png" alt="Dienstly24" width="152" height="38" style="height:38px;width:auto;" loading="lazy">
+      <img src="/images/logo-white.png" alt="Dienstly24" width="108" height="38" style="height:38px;width:auto;" loading="lazy">
       <p>{{ $isAr
           ? 'جهة الاتصال الشخصية لكم في شؤون التأمين وتسجيل السيارات والكهرباء والغاز – بالألمانية والعربية.'
           : 'Ihr persönlicher Ansprechpartner für Versicherungen, Kfz-Zulassung sowie Strom & Gas – auf Deutsch und Arabisch.' }}</p>
     </div>
-    <div><h4>{{ $isAr ? 'الخدمات' : 'Leistungen' }}</h4><ul>
+    <div><h3 class="ftitle">{{ $isAr ? 'الخدمات' : 'Leistungen' }}</h3><ul>
       <li><a href="{{ ($isAr ? '/ar' : '') . '/leistungen/kfz-versicherung' }}">{{ $isAr ? 'تأمين السيارات' : 'Kfz-Versicherung' }}</a></li>
       <li><a href="{{ ($isAr ? '/ar' : '') . '/leistungen/krankenversicherung' }}">{{ $isAr ? 'التأمين الصحي' : 'Krankenversicherung' }}</a></li>
       <li><a href="{{ ($isAr ? '/ar' : '') . '/leistungen/kfz-zulassung' }}">{{ $isAr ? 'تسجيل السيارات' : 'Kfz-Zulassung' }}</a></li>
       <li><a href="{{ ($isAr ? '/ar' : '') . '/leistungen/strom-gas' }}">{{ $isAr ? 'الكهرباء والغاز' : 'Strom & Gas' }}</a></li>
     </ul></div>
-    <div><h4>{{ $isAr ? 'الشركة' : 'Unternehmen' }}</h4><ul>
+    <div><h3 class="ftitle">{{ $isAr ? 'الشركة' : 'Unternehmen' }}</h3><ul>
       <li><a href="{{ $anchor('ueber') }}">{{ $isAr ? 'من نحن' : 'Über uns' }}</a></li>
       <li><a href="{{ $anchor('ablauf') }}">{{ $isAr ? 'آلية العمل' : 'Ablauf' }}</a></li>
       <li><a href="{{ $anchor('stimmen') }}">{{ $isAr ? 'آراء العملاء' : 'Kundenstimmen' }}</a></li>
       <li><a href="https://portal.dienstly24.de/login">{{ $isAr ? 'بوابة العملاء' : 'Kundenportal' }}</a></li>
     </ul></div>
-    <div><h4>{{ $isAr ? 'اتصل بنا' : 'Kontakt' }}</h4><ul>
+    <div><h3 class="ftitle">{{ $isAr ? 'اتصل بنا' : 'Kontakt' }}</h3><ul>
       <li><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.13.96.36 1.9.7 2.8a2 2 0 0 1-.45 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.27a2 2 0 0 1 2.1-.45c.9.34 1.84.57 2.8.7A2 2 0 0 1 22 16.9z"/></svg><a href="tel:{{ $phoneE164 }}" class="telnum">{{ $phoneDisplay }}</a></li>
       <li><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg><a href="mailto:{{ $mail }}">{{ $mail }}</a></li>
       <li><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>{{ $addr['street'] }}, {{ $addr['zip'] }} {{ $addr['city'] }}</li>

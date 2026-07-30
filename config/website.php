@@ -36,6 +36,25 @@ return [
     'whatsapp' => env('WEBSITE_WHATSAPP', '491799673909'),
 
     /*
+     * Zusaetzliche Schutzschichten (ExtraBasicAuth-Middleware).
+     * WICHTIG: Werte hier ueber config() lesen, nie env() in Middleware -
+     * in Produktion laeuft config:cache und env() waere leer.
+     *
+     * ADMIN_BASIC_AUTH="benutzer:passwort" legt eine zweite
+     * Authentifizierungs-Schicht VOR den kompletten /admin-Bereich
+     * (Bedingung des Betreibers: Upload-Panel nie nur mit einem einzigen
+     * Passwort oeffentlich, solange kein 2FA existiert).
+     *
+     * STAGING_HOSTS="neu.dienstly24.de" + STAGING_BASIC_AUTH="user:pass"
+     * schuetzen eine Staging-/Vorschau-Domain komplett per Basic-Auth
+     * und setzen noindex (zusammen mit WEBSITE_EXTRA_HOSTS zeigt so eine
+     * Domain die Website zum Durchklicken VOR dem DNS-Umzug).
+     */
+    'admin_basic_auth' => env('ADMIN_BASIC_AUTH'),
+    'staging_basic_auth' => env('STAGING_BASIC_AUTH'),
+    'staging_hosts' => array_filter(array_map('trim', explode(',', (string) env('STAGING_HOSTS', '')))),
+
+    /*
      * Bild-Slots der Website: Jeder Platz hat einen festen Namen; die
      * Redaktion laedt unter /admin/medien ein Bild hoch und waehlt den
      * Slot aus einer Liste - kein Dateiname, kein FTP, kein Code.

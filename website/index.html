@@ -182,7 +182,7 @@ header.scrolled{background:rgba(15,21,18,.96);box-shadow:0 10px 30px rgba(10,16,
 .chipf{animation:floaty 5s ease-in-out infinite;}
 .chipf.f2{animation-delay:1.2s;}.chipf.f3{animation-delay:2.4s;}.chipf.f4{animation-delay:3.6s;}
 @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
-/* Optionaler Bild-Slot: assets/images/hero-shield.png (transparentes PNG).
+/* Optionaler Bild-Slot: assets/images/hero-shield.webp (transparentes PNG).
    Fehlt die Datei, bleibt automatisch die eingebaute SVG-Grafik sichtbar. */
 .hero-shield-img{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);width:56%;max-width:250px;filter:drop-shadow(0 26px 46px rgba(6,20,12,.6));}
 .hero-visual.hat-bild .hero-shield-img{display:block;animation:floatys 6s ease-in-out infinite;}
@@ -366,9 +366,9 @@ html.js .reveal.in{opacity:1;transform:none;}
       </div>
     </div>
     <div class="hero-visual" aria-hidden="true">
-      <img class="hero-shield-img" src="assets/images/hero-shield.png" alt=""
+      <img class="hero-shield-img" src="assets/images/hero-shield.webp" alt=""
            onload="this.closest('.hero-visual').classList.add('hat-bild')"
-           onerror="this.remove()">
+>
       <svg viewBox="0 0 440 440" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="shieldG" x1="120" y1="60" x2="330" y2="400" gradientUnits="userSpaceOnUse">
@@ -437,32 +437,32 @@ html.js .reveal.in{opacity:1;transform:none;}
   </div>
   <div class="grid3">
     <a class="svc reveal" href="https://portal.dienstly24.de/leistungen/kfz-versicherung">
-      <img class="svc-bild" src="assets/images/leistung-kfz-versicherung.png" alt="" onload="this.closest('.svc').classList.add('hat-bild')" onerror="this.remove()">
+      <img class="svc-bild" src="assets/images/leistung-kfz-versicherung.webp" alt="" onload="this.closest('.svc').classList.add('hat-bild')">
       <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15h18M5 15v-3l2-4h10l2 4v3M6 15v2.5M18 15v2.5"/><circle cx="8.2" cy="15" r="0.4"/><circle cx="15.8" cy="15" r="0.4"/></svg></div><h3 class="i18n" data-de="Kfz-Versicherung" data-ar="تأمين السيارة">Kfz-Versicherung</h3>
       <p class="i18n" data-de="Haftpflicht, Teil- und Vollkasko verständlich erklärt – wir finden den passenden Schutz." data-ar="شرح واضح للمسؤولية والتأمين الجزئي والشامل – ومنلاقيلك الأنسب.">Haftpflicht, Teil- und Vollkasko verständlich erklärt – wir finden den passenden Schutz.</p>
       <span class="go i18n" data-de="Mehr & anfragen →" data-ar="التفاصيل والطلب →">Mehr & anfragen →</span></a>
     <a class="svc reveal" href="https://portal.dienstly24.de/leistungen/krankenversicherung">
-      <img class="svc-bild" src="assets/images/leistung-krankenversicherung.png" alt="" onload="this.closest('.svc').classList.add('hat-bild')" onerror="this.remove()">
+      <img class="svc-bild" src="assets/images/leistung-krankenversicherung.webp" alt="" onload="this.closest('.svc').classList.add('hat-bild')">
       <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linejoin="round"><path d="M9.5 3.5h5v6h6v5h-6v6h-5v-6h-6v-5h6Z"/></svg></div><h3 class="i18n" data-de="Krankenversicherung" data-ar="التأمين الصحي">Krankenversicherung</h3>
       <p class="i18n" data-de="Gesetzlich oder privat – wir beraten zu den Optionen, die zu Ihrer Situation passen." data-ar="حكومي أو خاص – منساعدك تختار الأنسب لوضعك.">Gesetzlich oder privat – wir beraten zu den Optionen, die zu Ihrer Situation passen.</p>
       <span class="go i18n" data-de="Mehr & anfragen →" data-ar="التفاصيل والطلب →">Mehr & anfragen →</span></a>
     <a class="svc reveal" href="https://portal.dienstly24.de/leistungen/zahnzusatzversicherung">
-      <img class="svc-bild" src="assets/images/leistung-zahnzusatz.png" alt="" onload="this.closest('.svc').classList.add('hat-bild')" onerror="this.remove()">
+      <img class="svc-bild" src="assets/images/leistung-zahnzusatz.webp" alt="" onload="this.closest('.svc').classList.add('hat-bild')">
       <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.2C9.6 3.4 5.6 4 5.6 7.8c0 2.6 1.7 3.6 2.1 6 .3 1.9.7 4.4 1.5 5.6h1.1l.9-5.6c.5-.7 1.1-.7 1.6 0l.9 5.6h1.1c.8-1.2 1.2-3.7 1.5-5.6.4-2.4 2.1-3.4 2.1-6 0-3.8-4-4.4-6.4-2.6Z"/></svg></div><h3 class="i18n" data-de="Zahnzusatzversicherung" data-ar="تأمين الأسنان الإضافي">Zahnzusatzversicherung</h3>
       <p class="i18n" data-de="Höhere Erstattung bei Zahnersatz und Behandlungen – wir zeigen, was sich lohnt." data-ar="تغطية أعلى لتركيبات وعلاجات الأسنان – منوريك شو بيستاهل.">Höhere Erstattung bei Zahnersatz und Behandlungen – wir zeigen, was sich lohnt.</p>
       <span class="go i18n" data-de="Mehr & anfragen →" data-ar="التفاصيل والطلب →">Mehr & anfragen →</span></a>
     <a class="svc reveal" href="https://portal.dienstly24.de/leistungen/kfz-zulassung">
-      <img class="svc-bild" src="assets/images/leistung-kfz-zulassung.png" alt="" onload="this.closest('.svc').classList.add('hat-bild')" onerror="this.remove()">
+      <img class="svc-bild" src="assets/images/leistung-kfz-zulassung.webp" alt="" onload="this.closest('.svc').classList.add('hat-bild')">
       <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="4.5" width="13" height="16" rx="2"/><path d="M9.5 4.5V3h5v1.5M9 10h6M9 13.5h6M9 17h3.5"/></svg></div><h3 class="i18n" data-de="Kfz-Zulassungsservice" data-ar="خدمة تسجيل السيارات">Kfz-Zulassungsservice</h3>
       <p class="i18n" data-de="An-, Um- und Abmeldung ohne Behördengang und ohne Warteschlange." data-ar="تسجيل وتحويل وإلغاء بدون زيارة الدائرة وبدون طوابير.">An-, Um- und Abmeldung ohne Behördengang und ohne Warteschlange.</p>
       <span class="go i18n" data-de="Mehr & anfragen →" data-ar="التفاصيل والطلب →">Mehr & anfragen →</span></a>
     <a class="svc reveal" href="https://portal.dienstly24.de/leistungen/kennzeichen-per-post">
-      <img class="svc-bild" src="assets/images/leistung-kennzeichen.png" alt="" onload="this.closest('.svc').classList.add('hat-bild')" onerror="this.remove()">
+      <img class="svc-bild" src="assets/images/leistung-kennzeichen.webp" alt="" onload="this.closest('.svc').classList.add('hat-bild')">
       <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="8" width="19" height="8" rx="2"/><path d="M6 8v8M8.5 12h3M14 12h4.5"/></svg></div><h3 class="i18n" data-de="Kennzeichen per Post" data-ar="لوحات بالبريد">Kennzeichen per Post</h3>
       <p class="i18n" data-de="Neue Kennzeichen versiegelt und bequem nach Hause geliefert – auch mit Wunschkennzeichen." data-ar="لوحات جديدة مختومة بتوصل لبيتك – وحتى برقم خاص.">Neue Kennzeichen versiegelt und bequem nach Hause geliefert – auch mit Wunschkennzeichen.</p>
       <span class="go i18n" data-de="Mehr & anfragen →" data-ar="التفاصيل والطلب →">Mehr & anfragen →</span></a>
     <a class="svc reveal" href="https://portal.dienstly24.de/leistungen/strom-gas">
-      <img class="svc-bild" src="assets/images/leistung-strom-gas.png" alt="" onload="this.closest('.svc').classList.add('hat-bild')" onerror="this.remove()">
+      <img class="svc-bild" src="assets/images/leistung-strom-gas.webp" alt="" onload="this.closest('.svc').classList.add('hat-bild')">
       <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linejoin="round"><path d="M13 3 6 13.5h5L10 21l8-11h-5l0-7Z"/></svg></div><h3 class="i18n" data-de="Strom & Gas" data-ar="الكهرباء والغاز">Strom & Gas</h3>
       <p class="i18n" data-de="Tarif prüfen und beim Anbieterwechsel sparen – Kündigung und Anmeldung übernehmen wir." data-ar="فحص التعرفة وتوفير عند تبديل المزوّد – مننتكفّل بكل الإجراءات.">Tarif prüfen und beim Anbieterwechsel sparen – Kündigung und Anmeldung übernehmen wir.</p>
       <span class="go i18n" data-de="Mehr & anfragen →" data-ar="التفاصيل والطلب →">Mehr & anfragen →</span></a>
@@ -489,7 +489,7 @@ html.js .reveal.in{opacity:1;transform:none;}
     <div class="promise-visual" aria-hidden="true">
       <img class="promise-foto" src="assets/images/hamburg.jpg" alt=""
            onload="this.closest('.promise-visual').classList.add('hat-foto')"
-           onerror="this.remove()">
+>
       <svg viewBox="0 0 600 90" preserveAspectRatio="none" aria-hidden="true"><path d="M0 90 V70 H40 V56 H70 V74 H110 V48 H135 L140 30 L145 48 H170 V74 H215 V60 H255 V40 H285 V74 H330 V64 H375 V44 H400 L406 20 L412 44 H438 V74 H490 V56 H535 V74 H600 V90 Z" fill="#1A5A45"/></svg>
       <img class="promise-logo" src="assets/images/logo-white.png" alt="">
     </div>

@@ -20,6 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Domain-Strategie der Website: Nicht-kanonische Hosts (ohne www,
         // .com, http) per 301 auf https://www.dienstly24.de umleiten.
         $middleware->prepend(\App\Http\Middleware\RedirectWebsiteHost::class);
+        // Zusaetzliche Basic-Auth-Schichten: /admin (bis 2FA existiert)
+        // und Staging-Hosts. No-Op ohne gesetzte Umgebungsvariablen.
+        $middleware->prepend(\App\Http\Middleware\ExtraBasicAuth::class);
         // Defensive Sicherheitsheader auf jede Antwort.
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
         // Sprache (de/ar) je Kunde bzw. Session – nach StartSession.
