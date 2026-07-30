@@ -25,6 +25,13 @@ class SecurityHeaders
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->headers->set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
 
+        // Anwendungsbereiche (Beraterwelt, Login, Kunden-/Partnerportal) haben
+        // in Suchmaschinen nichts verloren - zusaetzlich zur robots.txt auch
+        // als Header, damit es fuer bereits bekannte URLs verbindlich ist.
+        if ($request->is('admin', 'admin/*', 'login', 'register', 'portal', 'portal/*', 'partner', 'partner/*', 'password/*')) {
+            $response->headers->set('X-Robots-Tag', 'noindex, nofollow');
+        }
+
         // Content-Security-Policy (Audit SEC-1): moderate Defense-in-Depth-Schicht
         // gegen XSS/Clickjacking. Inline-Styles/-Handler sind derzeit noch noetig
         // (grosse Blade-Flaeche), daher 'unsafe-inline'; object/base/frame sind

@@ -139,7 +139,7 @@
         <div class="field"><label>Bild (JPG/PNG/WEBP, max. 4 MB)</label>
             <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp">
             @if($page->image_path)
-                <div style="margin-top:8px;"><img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($page->image_path) }}" alt="" style="max-height:90px;border-radius:8px;"></div>
+                <div style="margin-top:8px;"><img src="{{ $page->imageUrl() }}" alt="" style="max-height:90px;border-radius:8px;"></div>
             @endif
         </div>
         <div class="grid-2">

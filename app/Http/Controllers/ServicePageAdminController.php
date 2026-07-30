@@ -37,7 +37,7 @@ class ServicePageAdminController extends Controller
         ServicePage::create($data);
 
         return redirect()->route('admin.service_pages')
-            ->with('status', 'Leistungsseite angelegt.');
+            ->with('status', 'Leistungsseite angelegt.' . $this->umlautWarning($data));
     }
 
     public function edit(ServicePage $servicePage)
@@ -59,7 +59,32 @@ class ServicePageAdminController extends Controller
         $servicePage->update($data);
 
         return redirect()->route('admin.service_pages')
-            ->with('status', 'Leistungsseite gespeichert.');
+            ->with('status', 'Leistungsseite gespeichert.' . $this->umlautWarning($data));
+    }
+
+    /**
+     * P0-7: Warnhinweis, wenn deutsche Texte ohne Umlaute erfasst wurden
+     * ("verstaendlich" statt "verständlich") - haeufige Ursache war eine
+     * Tastatur ohne deutsche Belegung. Speichert trotzdem (kein Blocker),
+     * aber der Hinweis macht den Fehler sofort sichtbar.
+     */
+    private function umlautWarning(array $data): string
+    {
+        $texts = [];
+        foreach (['title_de', 'subtitle_de', 'intro_de', 'highlights_de', 'body_de', 'meta_description_de', 'providers'] as $field) {
+            $texts[] = (string) ($data[$field] ?? '');
+        }
+        $texts[] = json_encode($data['faq'] ?? [], JSON_UNESCAPED_UNICODE);
+        $texts[] = json_encode($data['fields'] ?? [], JSON_UNESCAPED_UNICODE);
+
+        $hits = \App\Services\UmlautRepair::findSuspicious(implode("\n", $texts));
+        if ($hits === []) {
+            return '';
+        }
+        return ' ⚠ Hinweis: Moeglicherweise fehlende Umlaute in: '
+            . implode(', ', array_slice($hits, 0, 8))
+            . (count($hits) > 8 ? ' …' : '')
+            . ' — Reparatur: php artisan service-pages:fix-umlauts --write';
     }
 
     public function toggle(ServicePage $servicePage)

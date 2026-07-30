@@ -5,6 +5,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dienstly24 — {{ __('Unsere Leistungen') }}</title>
+{{-- Canonical/hreflang auf dem Website-Host (P1-3/P1-4) --}}
+<link rel="canonical" href="{{ \App\Support\WebsiteHosts::url($rtl ? '/ar/leistungen' : '/leistungen') }}">
+<link rel="alternate" hreflang="de" href="{{ \App\Support\WebsiteHosts::url('/leistungen') }}">
+<link rel="alternate" hreflang="ar" href="{{ \App\Support\WebsiteHosts::url('/ar/leistungen') }}">
+<link rel="alternate" hreflang="x-default" href="{{ \App\Support\WebsiteHosts::url('/leistungen') }}">
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 <style>
 :root{--green:#17A65B;--mint:#3ddc8e;--paper:#0B1310;--paper2:#15171b;--line:rgba(255,255,255,.14);--muted:#9aa1ab;}
@@ -61,5 +66,6 @@ body{font-family:'Inter',Arial,sans-serif;min-height:100vh;color:#eef1ee;display
     <a href="{{ url('/datenschutz') }}">{{ __('Datenschutz') }}</a><span class="sep">·</span>
     <a href="{{ route('login') }}">{{ __('Kundenportal') }}</a>
 </div>
+@include('website.partials.whatsapp')
 </body>
 </html>

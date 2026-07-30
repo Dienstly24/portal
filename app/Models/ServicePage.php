@@ -37,6 +37,30 @@ class ServicePage extends Model
         return 'slug';
     }
 
+    /**
+     * Oeffentliche URL des Seitenbilds - IMMER relativ (/storage/...).
+     * Hintergrund (P0-6): Storage::url() haengt von APP_URL ab; mit falsch
+     * konfiguriertem APP_URL entstanden auf dem Server absolute Links auf
+     * die rohe Server-IP (http://187.../storage/...) -> Mixed Content,
+     * blockierte Bilder, IP-Leak. Relative URLs funktionieren auf jedem
+     * Host (www/portal/admin) und koennen nie auf eine IP zeigen.
+     */
+    public function imageUrl(): ?string
+    {
+        $path = trim((string) $this->image_path);
+        if ($path === '') {
+            return null;
+        }
+        // Historisch absolut gespeicherte URLs (inkl. IP-Basen) reparieren.
+        if (preg_match('#^https?://[^/]+/storage/(.+)$#i', $path, $m)) {
+            $path = $m[1];
+        }
+        if (str_starts_with($path, '/storage/')) {
+            return $path;
+        }
+        return '/storage/' . ltrim($path, '/');
+    }
+
     public function scopeActive(Builder $q): Builder
     {
         return $q->where('is_active', true);

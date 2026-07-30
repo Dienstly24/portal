@@ -51,16 +51,16 @@ class ServicePageSeeder extends Seeder
                 'icon' => '🚗',
                 'title_de' => 'Kfz-Versicherung',
                 'title_ar' => 'تأمين السيارة',
-                'subtitle_de' => 'Haftpflicht, Teilkasko und Vollkasko verstaendlich erklaert',
+                'subtitle_de' => 'Haftpflicht, Teilkasko und Vollkasko verständlich erklärt',
                 'subtitle_ar' => 'شرح واضح للمسؤولية والتأمين الجزئي والشامل',
-                'intro_de' => 'Die Kfz-Versicherung schuetzt Sie vor den finanziellen Folgen eines '
+                'intro_de' => 'Die Kfz-Versicherung schützt Sie vor den finanziellen Folgen eines '
                     . 'Verkehrsunfalls. Die Kfz-Haftpflicht ist in Deutschland gesetzlich '
-                    . 'vorgeschrieben und deckt Schaeden, die Sie anderen zufuegen. Teil- und '
-                    . 'Vollkasko sind freiwillig und schuetzen zusaetzlich Ihr eigenes Fahrzeug.',
+                    . 'vorgeschrieben und deckt Schäden, die Sie anderen zufügen. Teil- und '
+                    . 'Vollkasko sind freiwillig und schützen zusätzlich Ihr eigenes Fahrzeug.',
                 'intro_ar' => 'تأمين السيارة بيحميك من التبعات المالية لحادث سير. تأمين المسؤولية '
                     . '(Haftpflicht) إلزامي قانونياً بألمانيا وبيغطي الأضرار يلي بتسببها للغير. '
                     . 'أما التأمين الجزئي (Teilkasko) والشامل (Vollkasko) فاختياريان وبيحميان سيارتك.',
-                'highlights_de' => "Gesetzlich vorgeschriebene Haftpflicht\nTeilkasko z. B. bei Diebstahl, Glasbruch, Wildunfall\nVollkasko auch bei selbst verschuldeten Schaeden\nWir vergleichen die Tarife und erklaeren die Unterschiede",
+                'highlights_de' => "Gesetzlich vorgeschriebene Haftpflicht\nTeilkasko z. B. bei Diebstahl, Glasbruch, Wildunfall\nVollkasko auch bei selbst verschuldeten Schäden\nWir vergleichen die Tarife und erklären die Unterschiede",
                 'highlights_ar' => "تأمين المسؤولية الإلزامي\nالتأمين الجزئي مثلاً للسرقة وكسر الزجاج وحوادث الحيوانات\nالتأمين الشامل حتى للأضرار بخطئك\nمنقارنلك التعرفات ومنشرحلك الفروقات",
                 'meta_description_de' => 'Kfz-Versicherung verständlich erklärt: Haftpflicht, Teil- und Vollkasko im Vergleich. Anbieterunabhängige Beratung auf Deutsch und Arabisch – kostenlos anfragen.',
                 'meta_description_ar' => 'تأمين السيارة بوضوح: المسؤولية والتأمين الجزئي والشامل. استشارة مستقلة عن الشركات بالعربي والألماني – اطلب مجاناً.',
@@ -76,13 +76,13 @@ class ServicePageSeeder extends Seeder
                     [
                         'q_de' => 'Was kostet mich die Beratung?',
                         'q_ar' => 'قديش بتكلّفني الاستشارة؟',
-                        'a_de' => 'Die Beratung ist fuer Sie kostenlos und unverbindlich.',
+                        'a_de' => 'Die Beratung ist für Sie kostenlos und unverbindlich.',
                         'a_ar' => 'الاستشارة مجانية وبدون أي التزام.',
                     ],
                 ],
                 'fields' => [
                     ['label_de' => 'Fahrzeug (Marke / Modell)', 'label_ar' => 'السيارة (الماركة / الموديل)', 'type' => 'text', 'options_de' => '', 'options_ar' => '', 'required' => false],
-                    ['label_de' => 'Gewuenschte Deckung', 'label_ar' => 'التغطية المطلوبة', 'type' => 'select', 'options_de' => 'Haftpflicht, Teilkasko, Vollkasko', 'options_ar' => 'مسؤولية, تأمين جزئي, تأمين شامل', 'required' => true],
+                    ['label_de' => 'Gewünschte Deckung', 'label_ar' => 'التغطية المطلوبة', 'type' => 'select', 'options_de' => 'Haftpflicht, Teilkasko, Vollkasko', 'options_ar' => 'مسؤولية, تأمين جزئي, تأمين شامل', 'required' => true],
                     ['label_de' => 'Erstzulassung (Jahr)', 'label_ar' => 'سنة أول ترخيص', 'type' => 'number', 'options_de' => '', 'options_ar' => '', 'required' => false],
                 ],
             ],
@@ -92,12 +92,12 @@ class ServicePageSeeder extends Seeder
                 'icon' => '🩺',
                 'title_de' => 'Krankenversicherung',
                 'title_ar' => 'التأمين الصحي',
-                'subtitle_de' => 'Gesetzlich oder privat - wir beraten zur passenden Loesung',
+                'subtitle_de' => 'Gesetzlich oder privat - wir beraten zur passenden Lösung',
                 'subtitle_ar' => 'حكومي أو خاص - منساعدك تختار الأنسب',
-                'intro_de' => 'In Deutschland besteht eine Krankenversicherungspflicht. Sie koennen '
+                'intro_de' => 'In Deutschland besteht eine Krankenversicherungspflicht. Sie können '
                     . 'sich gesetzlich (GKV) oder unter bestimmten Voraussetzungen privat (PKV) '
                     . 'versichern. Welche Variante zu Ihnen passt, haengt von Beruf, Einkommen und '
-                    . 'persoenlicher Situation ab - wir erklaeren Ihnen die Optionen.',
+                    . 'persönlicher Situation ab - wir erklären Ihnen die Optionen.',
                 'intro_ar' => 'بألمانيا التأمين الصحي إلزامي. فيك تتأمّن حكومي (GKV) أو - ضمن شروط - '
                     . 'خاص (PKV). أي خيار بيناسبك بيعتمد على المهنة والدخل ووضعك الشخصي - ومنشرحلك '
                     . 'الخيارات بوضوح.',
@@ -112,7 +112,7 @@ class ServicePageSeeder extends Seeder
                     [
                         'q_de' => 'Kann ich von gesetzlich zu privat wechseln?',
                         'q_ar' => 'فيني بدّل من الحكومي للخاص؟',
-                        'a_de' => 'Ein Wechsel ist unter bestimmten Voraussetzungen moeglich (z. B. Einkommen, Beruf). Wir pruefen Ihre Situation individuell.',
+                        'a_de' => 'Ein Wechsel ist unter bestimmten Voraussetzungen möglich (z. B. Einkommen, Beruf). Wir prüfen Ihre Situation individuell.',
                         'a_ar' => 'التبديل ممكن ضمن شروط (الدخل، المهنة). منراجع وضعك بشكل فردي.',
                     ],
                 ],
@@ -123,14 +123,14 @@ class ServicePageSeeder extends Seeder
                 'icon' => '🦷',
                 'title_de' => 'Zahnzusatzversicherung',
                 'title_ar' => 'تأمين الأسنان الإضافي',
-                'subtitle_de' => 'Hoehere Erstattung bei Zahnersatz und Behandlungen',
+                'subtitle_de' => 'Höhere Erstattung bei Zahnersatz und Behandlungen',
                 'subtitle_ar' => 'تغطية أعلى لتركيبات وعلاجات الأسنان',
-                'intro_de' => 'Die gesetzliche Krankenversicherung uebernimmt bei Zahnersatz oft nur '
+                'intro_de' => 'Die gesetzliche Krankenversicherung übernimmt bei Zahnersatz oft nur '
                     . 'einen Teil der Kosten. Eine Zahnzusatzversicherung erhoeht die Erstattung '
                     . 'z. B. bei Kronen, Implantaten oder professioneller Zahnreinigung.',
                 'intro_ar' => 'التأمين الحكومي غالباً بيغطي جزء بس من تكاليف تركيبات الأسنان. تأمين '
                     . 'الأسنان الإضافي بيرفع نسبة التغطية مثلاً للتيجان والزرعات وتنظيف الأسنان.',
-                'highlights_de' => "Hoehere Erstattung bei Zahnersatz\nLeistungen fuer Kronen, Implantate, Inlays\nOft auch professionelle Zahnreinigung\nWir zeigen, welcher Tarif sich lohnt",
+                'highlights_de' => "Höhere Erstattung bei Zahnersatz\nLeistungen für Kronen, Implantate, Inlays\nOft auch professionelle Zahnreinigung\nWir zeigen, welcher Tarif sich lohnt",
                 'highlights_ar' => "تغطية أعلى للتركيبات\nتغطية للتيجان والزرعات والحشوات\nغالباً تنظيف احترافي للأسنان\nمنوريك أي تعرفة بتستاهل",
                 'meta_description_de' => 'Zahnzusatzversicherung: höhere Erstattung bei Zahnersatz, Implantaten und Zahnreinigung. Anbieterunabhängige Beratung auf Deutsch und Arabisch.',
                 'meta_description_ar' => 'تأمين الأسنان الإضافي: تغطية أعلى للتركيبات والزرعات وتنظيف الأسنان. استشارة مستقلة بالعربي والألماني.',
@@ -146,12 +146,12 @@ class ServicePageSeeder extends Seeder
                 'title_ar' => 'خدمة تسجيل السيارات',
                 'subtitle_de' => 'An-, Um- und Abmeldung ohne Warteschlange',
                 'subtitle_ar' => 'تسجيل وتحويل وإلغاء بدون طوابير',
-                'intro_de' => 'Wir uebernehmen die komplette Zulassung Ihres Fahrzeugs bei der '
+                'intro_de' => 'Wir übernehmen die komplette Zulassung Ihres Fahrzeugs bei der '
                     . 'Zulassungsstelle - Anmeldung, Ummeldung oder Abmeldung. Sie sparen sich den '
-                    . 'Behoerdengang und die Wartezeit.',
+                    . 'Behördengang und die Wartezeit.',
                 'intro_ar' => 'مننجزلك تسجيل سيارتك كامل بدائرة المرور - تسجيل جديد أو تحويل أو إلغاء. '
                     . 'بتوفّر عليك زيارة الدائرة ووقت الانتظار.',
-                'highlights_de' => "Anmeldung, Ummeldung, Abmeldung\nKein Behoerdengang, keine Warteschlange\nAuch mit Wunschkennzeichen moeglich\nSchnelle und sichere Abwicklung",
+                'highlights_de' => "Anmeldung, Ummeldung, Abmeldung\nKein Behördengang, keine Warteschlange\nAuch mit Wunschkennzeichen möglich\nSchnelle und sichere Abwicklung",
                 'highlights_ar' => "تسجيل، تحويل، إلغاء\nبدون زيارة الدائرة وبدون طوابير\nممكن كمان لوحة برقم خاص\nإنجاز سريع وآمن",
                 'meta_description_de' => 'Kfz-Zulassungsservice: An-, Um- und Abmeldung ohne Behördengang und Warteschlange – schnell, sicher und auf Wunsch mit Wunschkennzeichen.',
                 'meta_description_ar' => 'خدمة تسجيل السيارات: تسجيل وتحويل وإلغاء بدون زيارة الدائرة وبدون طوابير – سريع وآمن ومع لوحة برقم خاص عند الطلب.',
@@ -179,11 +179,11 @@ class ServicePageSeeder extends Seeder
                 'subtitle_de' => 'Neue Kennzeichen versiegelt nach Hause geliefert',
                 'subtitle_ar' => 'لوحات جديدة مختومة بتوصل لبيتك',
                 'intro_de' => 'Sie bestellen Ihre neuen Kennzeichen bequem online, wir liefern sie '
-                    . 'versiegelt direkt zu Ihnen nach Hause - schnell, sicher und guenstig. Auf '
+                    . 'versiegelt direkt zu Ihnen nach Hause - schnell, sicher und günstig. Auf '
                     . 'Wunsch auch mit Wunschkennzeichen.',
                 'intro_ar' => 'بتطلب لوحاتك الجديدة أونلاين، ومنوصّلها مختومة لعندك عالبيت - بسرعة '
                     . 'وأمان وسعر مناسب. وإذا بدك برقم خاص كمان.',
-                'highlights_de' => "Bestellung bequem von zu Hause\nVersiegelte Lieferung nach Hause\nAuch Wunschkennzeichen moeglich\nSchnell, sicher und guenstig",
+                'highlights_de' => "Bestellung bequem von zu Hause\nVersiegelte Lieferung nach Hause\nAuch Wunschkennzeichen möglich\nSchnell, sicher und günstig",
                 'highlights_ar' => "طلب مريح من البيت\nتوصيل مختوم لعنوانك\nممكن رقم خاص\nسريع وآمن وبسعر منافس",
                 'meta_description_de' => 'Kfz-Kennzeichen per Post: neue Nummernschilder versiegelt nach Hause geliefert – bequem, schnell und günstig, auch mit Wunschkennzeichen.',
                 'meta_description_ar' => 'لوحات السيارة بالبريد: لوحات جديدة مختومة بتوصل لبيتك – مريح وسريع وبسعر مناسب، ومع رقم خاص عند الطلب.',
@@ -197,11 +197,11 @@ class ServicePageSeeder extends Seeder
                 'icon' => '⚡',
                 'title_de' => 'Strom & Gas',
                 'title_ar' => 'الكهرباء والغاز',
-                'subtitle_de' => 'Tarif pruefen und beim Anbieterwechsel sparen',
+                'subtitle_de' => 'Tarif prüfen und beim Anbieterwechsel sparen',
                 'subtitle_ar' => 'فحص التعرفة وتوفير عند تبديل المزوّد',
-                'intro_de' => 'Die Energiepreise aendern sich staendig. Wir pruefen Ihren aktuellen '
+                'intro_de' => 'Die Energiepreise ändern sich ständig. Wir prüfen Ihren aktuellen '
                     . 'Tarif und zeigen Ihnen, wie viel Sie durch einen Anbieterwechsel sparen '
-                    . 'koennen. Die Kuendigung und Anmeldung uebernehmen wir - Ihre Versorgung '
+                    . 'können. Die Kündigung und Anmeldung übernehmen wir - Ihre Versorgung '
                     . 'laeuft ohne Unterbrechung weiter.',
                 'intro_ar' => 'أسعار الطاقة عم تتغير باستمرار. منراجع تعرفتك الحالية ومنوريك قديش '
                     . 'فيك توفّر إذا بدّلت المزوّد. مننتكفّل بإلغاء العقد القديم وتسجيل الجديد، '
@@ -215,7 +215,7 @@ class ServicePageSeeder extends Seeder
                 'body_ar' => "## وفّر عند تبديل المزوّد\nأسعار الطاقة عم تتغيّر باستمرار. منراجع تعرفتك الحالية ومنوريك قديش فيك توفّر إذا بدّلت المزوّد – كهرباء أو غاز أو الاثنين.\n\n## التبديل سهل\n- مننتكفّل بإلغاء العقد القديم وتسجيل الجديد.\n- التزويد بيضل شغّال بدون انقطاع.\n- بتضل عارف كل شي – منشرحلك كل خطوة.\n\n## شو منحتاج\nللمقارنة بتكفي فاتورتك السنوية الأخيرة أو استهلاكك التقريبي بالكيلوواط ساعة مع الرمز البريدي. بس اسأل – بالعربي أو الألماني.",
                 'faq' => [
                     [
-                        'q_de' => 'Was brauche ich fuer den Vergleich?',
+                        'q_de' => 'Was brauche ich für den Vergleich?',
                         'q_ar' => 'شو بتحتاجوا مني للمقارنة؟',
                         'a_de' => 'Nur Ihre letzte Jahresabrechnung oder Ihren ungefaehren Jahresverbrauch in kWh.',
                         'a_ar' => 'بس فاتورتك السنوية الأخيرة أو استهلاكك التقريبي بالكيلوواط ساعة.',
@@ -245,7 +245,7 @@ class ServicePageSeeder extends Seeder
                 'faq' => [],
                 'fields' => [
                     ['label_de' => 'Motorrad (Marke / Modell)', 'label_ar' => 'الدراجة (ماركة/موديل)', 'type' => 'text', 'options_de' => '', 'options_ar' => '', 'required' => false],
-                    ['label_de' => 'Gewuenschte Deckung', 'label_ar' => 'التغطية المطلوبة', 'type' => 'select', 'options_de' => 'Haftpflicht, Teilkasko, Vollkasko', 'options_ar' => 'مسؤولية, جزئي, شامل', 'required' => false],
+                    ['label_de' => 'Gewünschte Deckung', 'label_ar' => 'التغطية المطلوبة', 'type' => 'select', 'options_de' => 'Haftpflicht, Teilkasko, Vollkasko', 'options_ar' => 'مسؤولية, جزئي, شامل', 'required' => false],
                 ],
             ],
             [
