@@ -1,6 +1,7 @@
 <?php
 namespace App\Services\Ai\TemplateParsers;
 
+use App\Services\Ai\Concerns\ReadsDocumentPages;
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
 use App\Services\Ai\Contracts\DocumentTemplateParser;
 
@@ -18,6 +19,7 @@ use App\Services\Ai\Contracts\DocumentTemplateParser;
  */
 class AdacAutoversicherungParser implements DocumentTemplateParser
 {
+    use ReadsDocumentPages;
     use ValidatesExtractedFields;
 
     private const INSURER = 'ADAC Autoversicherung AG';
@@ -31,7 +33,7 @@ class AdacAutoversicherungParser implements DocumentTemplateParser
         $upper = mb_strtoupper($text);
         // Nur die ADAC-Schreiben selbst - NICHT das CHECK24-Beratungsprotokoll,
         // das die ADAC nur als moeglichen Versicherer/Zweitwagen erwaehnt.
-        if (str_contains($upper, 'CHECK24') || str_contains($upper, 'BERATUNGSPROTOKOLL')) {
+        if ($this->looksLikeComparisonProtocol($text)) {
             return null;
         }
         if (!str_contains($upper, 'ADAC AUTOVERSICHERUNG')

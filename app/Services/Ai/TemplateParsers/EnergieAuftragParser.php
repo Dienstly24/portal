@@ -1,6 +1,7 @@
 <?php
 namespace App\Services\Ai\TemplateParsers;
 
+use App\Services\Ai\Concerns\ReadsDocumentPages;
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
 use App\Services\Ai\Contracts\DocumentTemplateParser;
 
@@ -22,10 +23,15 @@ use App\Services\Ai\Contracts\DocumentTemplateParser;
  */
 class EnergieAuftragParser implements DocumentTemplateParser
 {
+    use ReadsDocumentPages;
     use ValidatesExtractedFields;
 
     public function parse(string $text): ?array
     {
+        // Erste Seite = das Auftragsformular (Betreiber-Vorgabe 30.07.2026).
+        // Die Folgeseiten sind AGB/Datenschutz und tragen nichts bei; ihr
+        // Rechtstext erzeugt nur Fehltreffer (Sparte, Preise, Anbietername).
+        $text = $this->firstPage($text);
         $upper = mb_strtoupper($text);
         // Energie-Auftrag: Anbieter EWE + die energietypische Preis-Struktur
         // (Grundpreis + Arbeitspreis). Grenzt gegen DSL-/Versicherungs-

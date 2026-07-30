@@ -1,6 +1,7 @@
 <?php
 namespace App\Services\Ai\TemplateParsers;
 
+use App\Services\Ai\Concerns\ReadsDocumentPages;
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
 use App\Services\Ai\Contracts\DocumentTemplateParser;
 
@@ -27,11 +28,19 @@ use App\Services\Ai\Contracts\DocumentTemplateParser;
  * daraus den voraussichtlichen Beginn (die spaetere Vertragsbestaetigung
  * ersetzt ihn mit dem endgueltigen Datum, feldgenau in der Version History).
  *
+ * Gelesen wird ausschliesslich die ERSTE Seite (Betreiber-Vorgabe 30.07.2026):
+ * dort steht das komplette Auftragsformular, die Seiten 2 ff. sind AGB,
+ * Widerrufsbelehrung und Datenschutzhinweise. Dieser Rechtstext hat das
+ * Dokument frueher zweimal unlesbar gemacht - er nennt "Beratungsprotokolle"
+ * (Ausschlussmerkmal fuer Vergleichsangebote) und mit "jeweils" die
+ * Buchstabenfolge "EWE".
+ *
  * Alle Werte durchlaufen die harte Feldvalidierung; unsichere Felder bleiben
  * leer statt falsch.
  */
 class LichtblickAuftragParser implements DocumentTemplateParser
 {
+    use ReadsDocumentPages;
     use ValidatesExtractedFields;
 
     /**
@@ -47,9 +56,12 @@ class LichtblickAuftragParser implements DocumentTemplateParser
     public function parse(string $text): ?array
     {
         $text = (string) preg_replace('/\x{00ad}\s*/u', '', $text);
+        // Nur das Auftragsformular selbst lesen (Seite 1) - die Seiten 2 ff.
+        // tragen ausschliesslich Rechtstext und wuerden die Erkennung stoeren.
+        $text = $this->firstPage($text);
         $upper = mb_strtoupper($text);
 
-        if (str_contains($upper, 'CHECK24') || str_contains($upper, 'BERATUNGSPROTOKOLL')) {
+        if ($this->looksLikeComparisonProtocol($text)) {
             return null;
         }
         // Nur der LichtBlick-Auftrag selbst (nicht eine spaetere Rechnung o.ae.).

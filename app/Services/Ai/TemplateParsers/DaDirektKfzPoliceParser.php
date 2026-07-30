@@ -1,6 +1,7 @@
 <?php
 namespace App\Services\Ai\TemplateParsers;
 
+use App\Services\Ai\Concerns\ReadsDocumentPages;
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
 use App\Services\Ai\Contracts\DocumentTemplateParser;
 
@@ -22,6 +23,7 @@ use App\Services\Ai\Contracts\DocumentTemplateParser;
  */
 class DaDirektKfzPoliceParser implements DocumentTemplateParser
 {
+    use ReadsDocumentPages;
     use ValidatesExtractedFields;
 
     private const INSURER = 'DA Direkt';
@@ -34,7 +36,7 @@ class DaDirektKfzPoliceParser implements DocumentTemplateParser
         $upper = mb_strtoupper($text);
         // Nur der echte DA-Direkt-Kfz-Versicherungsschein - NICHT das
         // CHECK24-Beratungsprotokoll (Angebot), das DA Direkt nur als Tarif nennt.
-        if (str_contains($upper, 'CHECK24') || str_contains($upper, 'BERATUNGSPROTOKOLL')) {
+        if ($this->looksLikeComparisonProtocol($text)) {
             return null;
         }
         if (!str_contains($upper, 'DA DIREKT')

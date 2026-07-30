@@ -1,6 +1,7 @@
 <?php
 namespace App\Services\Ai\TemplateParsers;
 
+use App\Services\Ai\Concerns\ReadsDocumentPages;
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
 use App\Services\Ai\Contracts\DocumentTemplateParser;
 
@@ -21,6 +22,7 @@ use App\Services\Ai\Contracts\DocumentTemplateParser;
  */
 class AdmiralDirektKfzParser implements DocumentTemplateParser
 {
+    use ReadsDocumentPages;
     use ValidatesExtractedFields;
 
     private const INSURER = 'AdmiralDirekt';
@@ -35,7 +37,7 @@ class AdmiralDirektKfzParser implements DocumentTemplateParser
         $upper = mb_strtoupper($text);
         // Nur die AdmiralDirekt-Schreiben selbst - NICHT ein CHECK24-
         // Beratungsprotokoll (Angebot), das AdmiralDirekt nur als Tarif nennt.
-        if (str_contains($upper, 'CHECK24') || str_contains($upper, 'BERATUNGSPROTOKOLL')) {
+        if ($this->looksLikeComparisonProtocol($text)) {
             return null;
         }
         if (!str_contains($upper, 'ADMIRALDIREKT')
