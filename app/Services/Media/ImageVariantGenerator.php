@@ -16,7 +16,13 @@ use Illuminate\Support\Str;
  */
 class ImageVariantGenerator
 {
-    public function generate(MediaAsset $asset): void
+    /**
+     * @param string|null $intendedSlot Slot, dem das Bild gleich zugewiesen
+     *   wird. Marken-Slots (Logo/Favicon) brauchen andere Groessen und
+     *   Formate als Inhaltsbilder - die stehen in config/website.php und
+     *   muessen VOR dem Erzeugen bekannt sein.
+     */
+    public function generate(MediaAsset $asset, ?string $intendedSlot = null): void
     {
         $original = Storage::disk('local')->path($asset->original_path);
 
@@ -49,12 +55,26 @@ class ImageVariantGenerator
             $srcH = imagesy($img);
             $asset->forceFill(['width' => $srcW, 'height' => $srcH])->save();
 
+            // Slot-spezifische Vorgaben (Marken-Slots brauchen kleinere
+            // Groessen und PNG statt JPG) - sonst die Standardwerte.
+            $slotConf = (array) config('website.slots.' . (string) ($intendedSlot ?? $asset->slot), []);
+
             // Zielbreiten: nie hochskalieren; sehr kleine Originale bekommen
             // genau eine Variante in Originalbreite.
-            $widths = array_values(array_filter((array) config('website.media.variant_widths'), fn ($w) => $w <= $srcW));
+            $wanted = (array) ($slotConf['widths'] ?? config('website.media.variant_widths'));
+            $widths = array_values(array_filter($wanted, fn ($w) => $w <= $srcW));
             if ($widths === []) {
-                $widths = [$srcW];
+                $widths = [min($srcW, max($wanted))];
             }
+
+            /*
+             * Formate: Hat das Original Transparenz (Logos, freigestellte
+             * Grafiken), ist PNG die universelle Fallback-Variante - JPG
+             * kann keine Transparenz und wuerde einen weissen Kasten hinter
+             * das Motiv legen. Ohne Transparenz bleibt JPG (kleiner).
+             */
+            $formats = (array) ($slotConf['formats']
+                ?? ($this->hasAlpha($img, $asset->mime) ? ['avif', 'webp', 'png'] : ['avif', 'webp', 'jpg']));
 
             $variants = [];
             foreach ($widths as $targetW) {
@@ -66,7 +86,7 @@ class ImageVariantGenerator
                 imagesavealpha($scaled, true);
                 $targetH = imagesy($scaled);
 
-                foreach (['avif', 'webp', 'jpg'] as $format) {
+                foreach ($formats as $format) {
                     $blob = $this->encodeUnderLimit($scaled, $format, (int) config('website.media.variant_max_bytes'));
                     if ($blob === null) {
                         continue; // Format nicht verfuegbar (z. B. AVIF ohne libavif)
@@ -81,8 +101,10 @@ class ImageVariantGenerator
             }
             imagedestroy($img);
 
-            if (! array_filter($variants, fn ($v) => $v['format'] === 'jpg')) {
-                throw new \RuntimeException('Keine JPG-Fallback-Variante erzeugt.');
+            // Ohne universelle Fallback-Variante (PNG oder JPG) koennte ein
+            // alter Browser das Bild gar nicht anzeigen -> harter Fehler.
+            if (! array_filter($variants, fn ($v) => in_array($v['format'], ['png', 'jpg'], true))) {
+                throw new \RuntimeException('Keine PNG-/JPG-Fallback-Variante erzeugt.');
             }
 
             $asset->forceFill([
@@ -124,6 +146,9 @@ class ImageVariantGenerator
             'avif' => function_exists('imageavif') ? [60, 50, 40, 30] : null,
             'webp' => function_exists('imagewebp') ? [78, 68, 55, 42, 30] : null,
             'jpg' => [82, 72, 60, 48, 35],
+            // PNG ist verlustfrei: Stufe 1 = volle Qualitaet, Stufe 2 =
+            // Notfall-Quantisierung auf 255 Farben (nur wenn zu gross).
+            'png' => [1, 2],
             default => null,
         };
         if ($qualities === null) {
@@ -137,6 +162,7 @@ class ImageVariantGenerator
                 'webp' => imagewebp($img, null, $quality),
                 // JPG kennt keine Transparenz: auf Weiss zusammenfuehren.
                 'jpg' => imagejpeg($this->flattenOnWhite($img), null, $quality),
+                'png' => imagepng($quality === 1 ? $img : $this->quantize($img), null, 9),
             };
             $blob = ob_get_clean();
             return $ok && $blob !== false && $blob !== '' ? $blob : null;
@@ -155,6 +181,57 @@ class ImageVariantGenerator
         // Auch die niedrigste Stufe liefert ein Ergebnis - lieber knapp
         // ueber dem Limit ausliefern als gar kein Bild.
         return $blob;
+    }
+
+    /**
+     * Hat das Bild echte Transparenz? JPEG kann keine haben; sonst wird
+     * eine verkleinerte Kopie geprueft (schnell und fuer reale Motive
+     * zuverlaessig - Logos haben grosse freigestellte Flaechen).
+     */
+    private function hasAlpha(\GdImage $img, string $mime): bool
+    {
+        if ($mime === 'image/jpeg') {
+            return false;
+        }
+
+        $w = imagesx($img);
+        $h = imagesy($img);
+        $probe = $w > 200 ? imagescale($img, 200, -1, IMG_NEAREST_NEIGHBOUR) : $img;
+        if ($probe === false) {
+            $probe = $img;
+        }
+
+        $found = false;
+        for ($x = 0, $pw = imagesx($probe); $x < $pw && ! $found; $x++) {
+            for ($y = 0, $ph = imagesy($probe); $y < $ph; $y++) {
+                // Bit 24-30 des Farbwerts = Alpha (0 = deckend, 127 = klar).
+                if (((imagecolorat($probe, $x, $y) >> 24) & 0x7F) > 0) {
+                    $found = true;
+                    break;
+                }
+            }
+        }
+        if ($probe !== $img) {
+            imagedestroy($probe);
+        }
+
+        return $found;
+    }
+
+    /** Notfall-Verkleinerung fuer zu grosse PNGs: 255 Farben statt Truecolor. */
+    private function quantize(\GdImage $img): \GdImage
+    {
+        $w = imagesx($img);
+        $h = imagesy($img);
+        $copy = imagecreatetruecolor($w, $h);
+        imagealphablending($copy, false);
+        imagesavealpha($copy, true);
+        imagefill($copy, 0, 0, imagecolorallocatealpha($copy, 0, 0, 0, 127));
+        imagecopy($copy, $img, 0, 0, 0, 0, $w, $h);
+        imagetruecolortopalette($copy, true, 255);
+        imagesavealpha($copy, true);
+
+        return $copy;
     }
 
     private function flattenOnWhite(\GdImage $img): \GdImage

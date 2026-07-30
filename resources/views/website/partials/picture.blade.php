@@ -8,11 +8,12 @@
              class="{{ $imgClass ?? '' }}" @if($lazy ?? true) loading="lazy" @endif decoding="async">
     @else
         @php([$w, $h] = $asset->displaySize())
+        @php($fallbackSet = $asset->srcset($asset->fallbackFormat()))
         <picture>
             @if($asset->srcset('avif'))<source type="image/avif" srcset="{{ $asset->srcset('avif') }}" sizes="{{ $sizes ?? '100vw' }}">@endif
             @if($asset->srcset('webp'))<source type="image/webp" srcset="{{ $asset->srcset('webp') }}" sizes="{{ $sizes ?? '100vw' }}">@endif
             <img src="{{ $asset->fallbackUrl() }}"
-                 @if($asset->srcset('jpg')) srcset="{{ $asset->srcset('jpg') }}" sizes="{{ $sizes ?? '100vw' }}" @endif
+                 @if($fallbackSet) srcset="{{ $fallbackSet }}" sizes="{{ $sizes ?? '100vw' }}" @endif
                  alt="{{ $asset->alt() }}" width="{{ $w }}" height="{{ $h }}"
                  class="{{ $imgClass ?? '' }}" @if($lazy ?? true) loading="lazy" @endif decoding="async">
         </picture>

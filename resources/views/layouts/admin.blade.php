@@ -149,7 +149,7 @@ table tr:hover td{background:#EDEAE0;}
 <button class="admin-mobile-btn" type="button" id="am-btn" aria-label="Menü öffnen">☰</button>
 <div class="sidebar" id="admin-sidebar">
     {{-- Kompakte Marke wie bei grossen Panels (nur das D-Symbol) --}}
-    <div class="sidebar-logo"><a href="{{ route('admin.dashboard') }}" title="Dienstly24"><img src="/images/logo-icon-white.png" alt="Dienstly24" style="height:42px;width:auto;"></a></div>
+    <div class="sidebar-logo"><a href="{{ route('admin.dashboard') }}" title="Dienstly24"><img src="{{ \App\Support\BrandAssets::logoSymbolLight() }}" alt="Dienstly24" style="height:42px;width:auto;"></a></div>
     {{-- Badge-Zaehler einmalig berechnen, damit auch eingeklappte Gruppen-Header
          die offenen Vorgaenge als Summe anzeigen koennen (keine Doppelabfragen). --}}
     @php
@@ -410,7 +410,7 @@ table tr:hover td{background:#EDEAE0;}
     </div>
 </div>
 <div class="header">
-    <a href="{{ route('admin.dashboard') }}" title="Dienstly24" style="flex:none;margin-right:6px;"><img src="/images/logo-transparent.png" alt="Dienstly24" style="height:30px;width:auto;display:block;"></a>
+    <a href="{{ route('admin.dashboard') }}" title="Dienstly24" style="flex:none;margin-right:6px;"><img src="{{ \App\Support\BrandAssets::logoDark() }}" alt="Dienstly24" style="height:30px;width:auto;display:block;"></a>
     <div class="header-search">
         <span class="search-icon">🔍</span>
         <input type="text" id="global-search" placeholder="Suche nach Kunden, Verträge, Tickets..."

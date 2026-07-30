@@ -35,7 +35,7 @@
 </head>
 <body>
 <header><div class="nav">
-  <a href="/"><img src="/images/logo-white.png" alt="Dienstly24" width="152" height="38"></a>
+  <a href="/"><img src="{{ \App\Support\BrandAssets::logoLight() }}" alt="Dienstly24" width="152" height="38"></a>
   <a class="back" href="/">← Zur Startseite</a>
 </div></header>
 <main>

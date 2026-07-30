@@ -41,7 +41,7 @@
                 <label>Platz auf der Website (Slot, optional)</label>
                 <select name="slot">
                     <option value="">— nur in Bibliothek ablegen —</option>
-                    @foreach($slots as $key => $slot)
+                    @foreach($assignableSlots as $key => $slot)
                         <option value="{{ $key }}" @selected(old('slot') === $key)>{{ $slot['label'] }} {{ isset($slotUsage[$key]) ? '(belegt – wird ersetzt)' : '(frei)' }}</option>
                     @endforeach
                 </select>
@@ -121,12 +121,17 @@
                             <div class="field"><label>Alt AR *</label><input type="text" name="alt_ar" value="{{ $asset->alt_ar }}" required maxlength="500" dir="rtl"></div>
                             <div class="field"><label>Bildnachweis</label><input type="text" name="credit" value="{{ $asset->credit }}" maxlength="500"></div>
                             <div class="field"><label>Slot</label>
+                                @if($asset->slot && !array_key_exists($asset->slot, $assignableSlots))
+                                    {{-- Marken-Platz: nur Administration/Leitung darf ihn aendern --}}
+                                    <input type="text" value="{{ $slots[$asset->slot]['label'] ?? $asset->slot }} (nur Verwaltung)" disabled>
+                                @else
                                 <select name="slot">
                                     <option value="">— kein Slot (Archiv) —</option>
-                                    @foreach($slots as $key => $slot)
+                                    @foreach($assignableSlots as $key => $slot)
                                         <option value="{{ $key }}" @selected($asset->slot === $key)>{{ $slot['label'] }}</option>
                                     @endforeach
                                 </select>
+                                @endif
                             </div>
                             <button type="submit" class="btn btn-primary" style="padding:7px 14px;font-size:12.5px;">Speichern</button>
                         </form>

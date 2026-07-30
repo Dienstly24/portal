@@ -185,7 +185,7 @@ form textarea{min-height:90px;resize:vertical;}
 {{-- Mobile Topbar: Hamburger + Logo, Glocke sitzt fix rechts daneben --}}
 <header class="topbar">
     <button class="topbar-btn" type="button" id="m-btn" aria-label="Menü öffnen" aria-controls="portal-sidebar" aria-expanded="false">☰</button>
-    <a class="topbar-logo" href="{{ route('portal.dashboard') }}" title="Dienstly24"><img src="/images/logo-white.png" alt="Dienstly24"></a>
+    <a class="topbar-logo" href="{{ route('portal.dashboard') }}" title="Dienstly24"><img src="{{ \App\Support\BrandAssets::logoLight() }}" alt="Dienstly24"></a>
     {{-- Platzhalter haelt das Logo mittig (rechts steht die fixe Glocke) --}}
     <span style="width:44px;flex:none;"></span>
 </header>
@@ -193,7 +193,7 @@ form textarea{min-height:90px;resize:vertical;}
 <div class="sidebar" id="portal-sidebar">
     <button class="sidebar-close" type="button" id="sidebar-close" aria-label="Menü schließen">✕</button>
     {{-- Kompakte Marke wie bei grossen Panels (nur das D-Symbol) --}}
-    <div class="brand"><a href="{{ route('portal.dashboard') }}" title="Dienstly24"><img src="/images/logo-icon-white.png" alt="Dienstly24" style="height:46px;width:auto;"></a></div>
+    <div class="brand"><a href="{{ route('portal.dashboard') }}" title="Dienstly24"><img src="{{ \App\Support\BrandAssets::logoSymbolLight() }}" alt="Dienstly24" style="height:46px;width:auto;"></a></div>
     <a href="{{ route('portal.dashboard') }}" class="nav-item {{ request()->routeIs('portal.dashboard') ? 'active' : '' }}">{{ __('Dashboard') }}</a>
     <a href="{{ route('portal.contracts') }}" class="nav-item {{ request()->routeIs('portal.contracts*') ? 'active' : '' }}">{{ __('Meine Verträge') }}</a>
     <a href="{{ route('portal.documents') }}" class="nav-item {{ request()->routeIs('portal.documents*') ? 'active' : '' }}">{{ __('Dokumente') }}</a>

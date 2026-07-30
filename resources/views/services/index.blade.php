@@ -41,7 +41,7 @@ body{font-family:'Inter',Arial,sans-serif;min-height:100vh;color:#eef1ee;display
 <body>
 <div class="bg"></div>
 <div class="topbar">
-    <a href="{{ url('/') }}"><img src="/images/logo-white.png" alt="Dienstly24"></a>
+    <a href="{{ url('/') }}"><img src="{{ \App\Support\BrandAssets::logoLight() }}" alt="Dienstly24"></a>
     <div class="lang-switch"><a href="{{ route('locale.switch', $rtl ? 'de' : 'ar') }}">🌐 {{ $rtl ? 'Deutsch' : 'العربية' }}</a></div>
 </div>
 

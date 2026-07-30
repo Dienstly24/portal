@@ -140,7 +140,7 @@ label{display:block;font-size:13px;margin-bottom:7px;color:#cfd5cf;font-weight:5
 <div class="bg"></div>
 
 <div class="topbar">
-    <a href="{{ url('/') }}"><img src="/images/logo-white.png" alt="Dienstly24"></a>
+    <a href="{{ url('/') }}"><img src="{{ \App\Support\BrandAssets::logoLight() }}" alt="Dienstly24"></a>
     <div class="lang-switch"><a href="{{ route('locale.switch', $rtl ? 'de' : 'ar') }}">🌐 {{ $rtl ? 'Deutsch' : 'العربية' }}</a></div>
 </div>
 

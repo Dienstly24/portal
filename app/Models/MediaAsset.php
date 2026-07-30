@@ -32,18 +32,22 @@ class MediaAsset extends Model
         'size_bytes' => 'integer',
     ];
 
+    /** Cache-Schluessel der Slot-Belegung (ein Eintrag fuer alle Slots). */
+    public const SLOT_CACHE_KEY = 'website-media-slots';
+
     protected static function booted(): void
     {
-        // Slot-Aufloesung ist auf jeder Website-Seite noetig -> gecacht;
-        // jede Aenderung an Bildern raeumt den Cache vollstaendig auf.
-        $flush = function (self $asset) {
-            foreach (array_keys((array) config('website.slots')) as $slot) {
-                Cache::forget('website-media-slot:' . $slot);
-            }
-        };
+        // Slot-Aufloesung ist auf jeder Seite noetig -> gecacht; jede
+        // Aenderung an Bildern raeumt den Cache auf.
+        $flush = fn () => self::flushSlotCache();
         static::saved($flush);
         static::deleted($flush);
         static::restored($flush);
+    }
+
+    public static function flushSlotCache(): void
+    {
+        Cache::forget(self::SLOT_CACHE_KEY);
     }
 
     public function uploader()
@@ -51,17 +55,33 @@ class MediaAsset extends Model
         return $this->belongsTo(User::class, 'uploaded_by');
     }
 
-    /** Aktives Bild eines Slots (gecacht, null wenn keins zugewiesen). */
+    /**
+     * Aktives Bild eines Slots (null, wenn keins zugewiesen ist).
+     *
+     * Gecacht wird bewusst EIN Eintrag mit den ROHEN Spaltenwerten aller
+     * Slots - nicht die Eloquent-Objekte selbst: Serialisierte Modelle
+     * kommen aus einem echten Cache-Store (database/file/redis) als
+     * __PHP_Incomplete_Class zurueck und legen damit jede Seite lahm.
+     * Ausserdem braucht eine Seite mit zwoelf Slots so nur EINEN
+     * Cache-Zugriff statt zwoelf.
+     */
     public static function forSlot(string $slot): ?self
     {
-        return Cache::remember(
-            'website-media-slot:' . $slot,
-            now()->addMinutes(30),
-            fn () => self::where('slot', $slot)
+        $all = Cache::remember(self::SLOT_CACHE_KEY, now()->addMinutes(30), function () {
+            return self::whereNotNull('slot')
                 ->where('processing_status', 'ready')
-                ->latest('updated_at')
-                ->first()
-        );
+                ->orderBy('updated_at')
+                ->get()
+                // Bei (theoretisch unmoeglicher) Doppelbelegung gewinnt das
+                // zuletzt aktualisierte Bild.
+                ->keyBy('slot')
+                ->map(fn (self $asset) => $asset->getAttributes())
+                ->all();
+        });
+
+        $attributes = $all[$slot] ?? null;
+
+        return $attributes ? (new self)->newFromBuilder($attributes) : null;
     }
 
     /** Alt-Text in der aktiven Sprache (ar mit Fallback de). */
@@ -96,15 +116,44 @@ class MediaAsset extends Model
         return '/storage/' . ltrim($path, '/');
     }
 
-    /** Groesste JPG-Variante als <img>-Fallback (SVG: Originaldatei). */
+    /**
+     * Format der universellen Fallback-Variante: PNG, sobald das Original
+     * Transparenz hat (Logos, freigestellte Motive), sonst JPG.
+     */
+    public function fallbackFormat(): string
+    {
+        return $this->variantsOf('png') !== [] ? 'png' : 'jpg';
+    }
+
+    /** Groesste Fallback-Variante als <img>-Quelle (SVG: Originaldatei). */
     public function fallbackUrl(): ?string
     {
         if ($this->isSvg()) {
             $first = (array) ($this->variants[0] ?? null);
             return $first ? self::publicUrl($first['path']) : null;
         }
-        $jpgs = $this->variantsOf('jpg');
-        $last = end($jpgs);
+        $list = $this->variantsOf($this->fallbackFormat());
+        $last = end($list);
+        return $last ? self::publicUrl($last['path']) : null;
+    }
+
+    /**
+     * URL der kleinsten Variante, die mindestens $width breit ist (sonst
+     * der groessten). Fuer Stellen mit fester Anzeigegroesse - z. B. das
+     * 32px-Favicon oder das Logo in der Kopfzeile.
+     */
+    public function variantUrl(int $width, ?string $format = null): ?string
+    {
+        if ($this->isSvg()) {
+            return $this->fallbackUrl();
+        }
+        $list = $this->variantsOf($format ?? $this->fallbackFormat());
+        foreach ($list as $variant) {
+            if ((int) $variant['width'] >= $width) {
+                return self::publicUrl($variant['path']);
+            }
+        }
+        $last = end($list);
         return $last ? self::publicUrl($last['path']) : null;
     }
 
@@ -120,8 +169,8 @@ class MediaAsset extends Model
     /** Abmessungen der groessten Variante [width, height] fuer CLS-freie <img>. */
     public function displaySize(): array
     {
-        $jpgs = $this->variantsOf('jpg');
-        $last = end($jpgs);
+        $list = $this->variantsOf($this->fallbackFormat());
+        $last = end($list);
         if ($last) {
             return [(int) $last['width'], (int) $last['height']];
         }

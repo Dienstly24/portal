@@ -219,7 +219,7 @@
         @include('website.partials.picture', ['asset' => $hamburgImg, 'imgClass' => 'promise-foto', 'sizes' => '(max-width:840px) 92vw, 420px'])
       @else
         <svg viewBox="0 0 600 90" preserveAspectRatio="none" aria-hidden="true"><path d="M0 90 V70 H40 V56 H70 V74 H110 V48 H135 L140 30 L145 48 H170 V74 H215 V60 H255 V40 H285 V74 H330 V64 H375 V44 H400 L406 20 L412 44 H438 V74 H490 V56 H535 V74 H600 V90 Z" fill="#1A5A45"/></svg>
-        <img class="promise-logo" src="/images/logo-white.png" alt="" width="250" height="88" loading="lazy">
+        <img class="promise-logo" src="{{ \App\Support\BrandAssets::logoLight() }}" alt="" width="250" height="88" loading="lazy">
       @endif
     </div>
     <div>
