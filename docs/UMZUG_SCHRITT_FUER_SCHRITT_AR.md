@@ -177,17 +177,26 @@ bash /var/www/dienstly24/portal/scripts/backup.sh
 
 في hPanel ← Domains ← DNS لـ `dienstly24.de`:
 
-| النوع | الاسم | القيمة |
+**انتبه — الوضع الفعلي (فُحص 30.07.2026)**: لا يوجد سجل `A` للجذر ولا
+للـ `www`. الموجود:
+- `ALIAS @` ← `dienstly24.de.cdn.hstgr.net`
+- `CNAME www` ← `www.dienstly24.de.cdn.hstgr.net`
+
+أي أن الموقع يمرّ حالياً عبر شبكة Hostinger. لذلك النقل ليس "تعديل
+قيمة" بل **حذف وإنشاء**، لأن `ALIAS`/`CNAME` لا يمكن أن يشيرا إلى IP:
+
+| الإجراء | السجل الحالي | البديل |
 |---|---|---|
-| A | `@` | عنوان IP للـ VPS |
-| A | `www` | عنوان IP للـ VPS |
+| احذف ثم أنشئ | `ALIAS @` → cdn.hstgr.net | `A` · `@` · `187.127.70.161` · TTL 300 |
+| احذف ثم أنشئ | `CNAME www` → cdn.hstgr.net | `A` · `www` · `187.127.70.161` · TTL 300 |
 
-كرّر نفس الشيء لـ `dienstly24.com` (إن كنت أبقيت التحويل من hPanel كما هو
-الآن، يمكنك تركه — التحويل يعمل بالفعل).
+نفّذ الحذف والإنشاء **مباشرة بعد بعضهما** لكل سجل (ثوانٍ، لا دقائق).
+الـ TTL أصلاً 300 على السجلّين، فلا حاجة لتخفيضه.
 
-⚠️ **لا تلمس** سجلات `portal` و`admin` — هما يعملان أصلاً.
-⚠️ **لا تلمس** سجلات `MX` و`TXT` — بريدك وإعدادات SPF/DKIM تعتمد عليها.
-حذفها يوقف بريد الشركة.
+⚠️ **لا تلمس** `A portal` و`A admin` — يشيران للسيرفر ويعملان.
+⚠️ **لا تلمس** `MX` ولا `TXT @` (SPF) ولا سجلات `_domainkey` (DKIM)
+ولا `autoconfig`/`autodiscover` — بريد الشركة يتوقف فوراً بحذفها.
+⚠️ `A ftp` يخص الاستضافة المشتركة — اتركه إلى ما بعد إطفائها.
 
 انتظر 10–15 دقيقة، ثم أصدر شهادة SSL (الخطوة 4).
 
@@ -223,6 +232,8 @@ P1-4). بوابة العملاء وتسجيل الدخول لا تتأثر إط�
 افتح في المتصفح وتأكد:
 
 ```
+✅ https://dienstly24.de/dienstly-bimi-logo.svg  → شعار BIMI (يشير له DNS)
+✅ https://www.dienstly24.de/googled3a1b012f4607d0c.html → تحقق Search Console
 ✅ https://www.dienstly24.de/                    → الموقع الجديد
 ✅ http://dienstly24.de/                         → تحويل إلى www + https
 ✅ https://dienstly24.com/                       → تحويل إلى www.dienstly24.de

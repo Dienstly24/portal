@@ -101,6 +101,23 @@ class WebsiteMergeTest extends TestCase
         $this->get('https://www.dienstly24.de/leistungen/kfz-versicherung')->assertOk();
     }
 
+    /**
+     * Zwei Dateien werden von AUSSEN referenziert und muessen den Umzug
+     * ueberleben, sonst brechen sie still: das BIMI-Logo (steht im
+     * DNS-TXT-Eintrag default._bimi und zeigt das Markenlogo im
+     * Mail-Programm) und die Google-Search-Console-Bestaetigung.
+     */
+    public function test_externally_referenced_files_exist_in_public(): void
+    {
+        $this->assertFileExists(public_path('dienstly-bimi-logo.svg'),
+            'BIMI-Logo fehlt - der DNS-Eintrag default._bimi zeigt darauf.');
+        $this->assertFileExists(public_path('googled3a1b012f4607d0c.html'),
+            'Search-Console-Bestaetigung fehlt - Property-Verifizierung ginge verloren.');
+
+        // Keine Route darf die Dateien verschatten (Blade-Fallback statt Datei).
+        $this->assertStringNotContainsString('<html', file_get_contents(public_path('googled3a1b012f4607d0c.html')));
+    }
+
     public function test_old_static_html_urls_redirect_to_clean_routes(): void
     {
         $this->get('https://www.dienstly24.de/impressum.html')
