@@ -12,8 +12,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->alias(['role' => \App\Http\Middleware\EnsureUserRole::class]);
+        $middleware->alias([
+            'role' => \App\Http\Middleware\EnsureUserRole::class,
+            'forceLocale' => \App\Http\Middleware\SetRequestLocale::class,
+        ]);
         $middleware->validateCsrfTokens(except: ['api/website-inquiry', 'api/website-contact']);
+        // Domain-Strategie der Website: Nicht-kanonische Hosts (ohne www,
+        // .com, http) per 301 auf https://www.dienstly24.de umleiten.
+        $middleware->prepend(\App\Http\Middleware\RedirectWebsiteHost::class);
         // Defensive Sicherheitsheader auf jede Antwort.
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
         // Sprache (de/ar) je Kunde bzw. Session – nach StartSession.

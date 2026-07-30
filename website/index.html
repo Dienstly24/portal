@@ -11,17 +11,17 @@
 <meta name="robots" content="index, follow">
 <meta name="author" content="Dienstly24">
 <meta name="theme-color" content="#0F1512">
-<link rel="canonical" href="https://dienstly24.de/">
+<link rel="canonical" href="https://www.dienstly24.de/">
 <link rel="icon" type="image/png" href="assets/images/favicon.png">
 <link rel="apple-touch-icon" href="assets/images/favicon.png">
 
 <!-- Open Graph -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Dienstly24">
-<meta property="og:url" content="https://dienstly24.de/">
+<meta property="og:url" content="https://www.dienstly24.de/">
 <meta property="og:title" content="Dienstly24 – Versicherung, Kfz-Zulassung & Energie">
 <meta property="og:description" content="Anbieterunabhängige Beratung zu Versicherungen, Kfz-Zulassung und Energie – kostenlos, persönlich und auf Deutsch & Arabisch.">
-<meta property="og:image" content="https://dienstly24.de/assets/images/og-image.jpg">
+<meta property="og:image" content="https://www.dienstly24.de/assets/images/og-image.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:locale" content="de_DE">
@@ -31,7 +31,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Dienstly24 – Versicherung, Kfz-Zulassung & Energie">
 <meta name="twitter:description" content="Anbieterunabhängige Beratung – kostenlos, persönlich und auf Deutsch & Arabisch.">
-<meta name="twitter:image" content="https://dienstly24.de/assets/images/og-image.jpg">
+<meta name="twitter:image" content="https://www.dienstly24.de/assets/images/og-image.jpg">
 
 <!-- Structured Data: InsuranceAgency -->
 <script type="application/ld+json">
@@ -39,8 +39,8 @@
   "@context": "https://schema.org",
   "@type": "InsuranceAgency",
   "name": "Dienstly24",
-  "url": "https://dienstly24.de/",
-  "image": "https://dienstly24.de/assets/images/og-image.jpg",
+  "url": "https://www.dienstly24.de/",
+  "image": "https://www.dienstly24.de/assets/images/og-image.jpg",
   "description": "Anbieterunabhängige Beratung zu Versicherungen, Kfz-Zulassung und Energie – auf Deutsch und Arabisch.",
   "telephone": "+49-179-9673909",
   "email": "info@dienstly24.de",
@@ -88,9 +88,7 @@
 }
 </script>
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Amiri:wght@700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/fonts/fonts.css">
 <style>
 /* ==========================================================
    DIENSTLY24 DESIGN TOKENS — Richtung D „Smaragd & Gold"
@@ -574,21 +572,29 @@ html.js .reveal.in{opacity:1;transform:none;}
       <li><span class="ic">📍</span><span>Furtweg 51a, 22523 Hamburg</span></li>
     </ul>
   </div>
-  <form class="form reveal" action="mailto:info@dienstly24.de" method="post" enctype="text/plain">
+  <!-- P0-1: Formular sendet serverseitig an das Portal-System (Ticket +
+       Support-Mail) statt "mailto:". Mehrstufiger Spam-Schutz siehe
+       WebsiteContactController (Token, Mindest-Ausfuellzeit, Honeypot). -->
+  <form class="form reveal" id="kontaktForm" action="https://portal.dienstly24.de/api/website-contact" method="post" novalidate>
     <div class="row">
-      <div class="field"><label class="i18n" data-de="Name" data-ar="الاسم">Name</label><input type="text" name="Name" required></div>
-      <div class="field"><label class="i18n" data-de="E-Mail oder Telefon" data-ar="بريد أو هاتف">E-Mail oder Telefon</label><input type="text" name="Kontakt" required></div>
+      <div class="field"><label for="kf-name" class="i18n" data-de="Name" data-ar="الاسم">Name</label><input type="text" id="kf-name" name="name" required maxlength="150"></div>
+      <div class="field"><label for="kf-kontakt" class="i18n" data-de="E-Mail oder Telefon" data-ar="البريد الإلكتروني أو الهاتف">E-Mail oder Telefon</label><input type="text" id="kf-kontakt" name="kontakt" required maxlength="190"></div>
     </div>
-    <div class="field"><label class="i18n" data-de="Gewünschte Leistung" data-ar="الخدمة المطلوبة">Gewünschte Leistung</label>
-      <select name="Leistung">
+    <div class="field"><label for="kf-leistung" class="i18n" data-de="Gewünschte Leistung" data-ar="الخدمة المطلوبة">Gewünschte Leistung</label>
+      <select id="kf-leistung" name="leistung">
         <option>Kfz-Versicherung</option><option>Krankenversicherung</option><option>Zahnzusatzversicherung</option>
         <option>Kfz-Zulassungsservice</option><option>Kennzeichen per Post</option><option>Strom & Gas</option><option>Sonstiges</option>
       </select>
     </div>
-    <div class="field"><label class="i18n" data-de="Ihre Nachricht" data-ar="رسالتك">Ihre Nachricht</label><textarea name="Nachricht" rows="4"></textarea></div>
+    <div class="field"><label for="kf-nachricht" class="i18n" data-de="Ihre Nachricht" data-ar="رسالتكم">Ihre Nachricht</label><textarea id="kf-nachricht" name="nachricht" rows="4" maxlength="5000"></textarea></div>
+    <!-- Honeypot: fuer Menschen unsichtbar; Bots fuellen es aus -->
+    <div style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;" aria-hidden="true">
+      <label for="kf-website">Website</label><input type="text" id="kf-website" name="website" tabindex="-1" autocomplete="off">
+    </div>
     <div class="consent"><input type="checkbox" required id="c1"><label for="c1" style="margin:0;"><span class="i18n" data-de="Ich stimme der Verarbeitung meiner Angaben zur Bearbeitung meiner Anfrage zu." data-ar="أوافق على معالجة بياناتي لغرض الرد على طلبي.">Ich stimme der Verarbeitung meiner Angaben zur Bearbeitung meiner Anfrage zu.</span> <a href="datenschutz.html" class="i18n" data-de="Datenschutz" data-ar="سياسة الخصوصية">Datenschutz</a></label></div>
-    <button type="submit" class="btn btn-primary" style="width:100%;"><span class="i18n" data-de="Anfrage senden" data-ar="إرسال الطلب">Anfrage senden</span></button>
-    <p style="font-size:.72rem;color:var(--muted);text-align:center;margin-top:12px;" class="i18n" data-de="Beim Absenden öffnet sich Ihr E-Mail-Programm. Alternativ per WhatsApp oder Telefon." data-ar="عند الإرسال بيفتح برنامج الإيميل. أو عبر واتساب أو تلفون.">Beim Absenden öffnet sich Ihr E-Mail-Programm. Alternativ per WhatsApp oder Telefon.</p>
+    <button type="submit" class="btn btn-primary" id="kf-submit" style="width:100%;"><span class="i18n" data-de="Anfrage senden" data-ar="إرسال الطلب">Anfrage senden</span></button>
+    <p id="kf-status" style="display:none;font-size:.86rem;font-weight:600;text-align:center;margin-top:12px;" role="status"></p>
+    <p style="font-size:.72rem;color:var(--muted);text-align:center;margin-top:12px;" class="i18n" data-de="Ihre Anfrage wird direkt und sicher an uns übermittelt. Alternativ per WhatsApp oder Telefon." data-ar="يُرسل طلبكم إلينا مباشرة بشكل آمن. أو تواصلوا عبر واتساب أو الهاتف.">Ihre Anfrage wird direkt und sicher an uns übermittelt. Alternativ per WhatsApp oder Telefon.</p>
   </form>
 </div></div></section>
 
@@ -627,10 +633,30 @@ html.js .reveal.in{opacity:1;transform:none;}
   </div>
 </div></footer>
 
+<!-- P0-3: WhatsApp-Float (offizielles Icon, vorbefuellter Text je Sprache) -->
+<style>
+.wa-float{position:fixed;bottom:20px;inset-inline-end:18px;z-index:150;display:flex;align-items:center;gap:10px;background:#25D366;color:#fff;border-radius:99px;padding:13px 18px;font-weight:700;font-size:.9rem;box-shadow:0 10px 26px rgba(11,61,32,.35);text-decoration:none;transition:transform .25s ease,box-shadow .25s ease;}
+.wa-float:hover{transform:translateY(-3px);box-shadow:0 16px 34px rgba(11,61,32,.45);color:#fff;}
+.wa-float svg{width:22px;height:22px;fill:#fff;flex:none;}
+@media(max-width:640px){.wa-float{padding:13px;bottom:16px;}.wa-float .wa-label{display:none;}}
+</style>
+<a class="wa-float" id="waFloat" href="https://wa.me/491799673909" target="_blank" rel="noopener" aria-label="WhatsApp">
+  <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16.04 3C9.02 3 3.32 8.7 3.32 15.72c0 2.24.59 4.43 1.71 6.36L3.2 29l7.11-1.86a12.66 12.66 0 0 0 5.73 1.38h.01c7.01 0 12.72-5.7 12.72-12.72 0-3.4-1.32-6.6-3.72-9A12.65 12.65 0 0 0 16.04 3zm0 23.38h-.01c-1.9 0-3.76-.51-5.38-1.47l-.39-.23-4.22 1.1 1.13-4.11-.25-.42a10.53 10.53 0 0 1-1.61-5.6c0-5.83 4.75-10.57 10.58-10.57 2.83 0 5.48 1.1 7.48 3.1a10.5 10.5 0 0 1 3.1 7.48c0 5.83-4.75 10.57-10.57 10.57zm5.8-7.92c-.32-.16-1.88-.93-2.17-1.03-.29-.11-.5-.16-.72.16-.21.32-.82 1.03-1.01 1.24-.19.21-.37.24-.69.08-.32-.16-1.34-.5-2.56-1.58-.95-.85-1.58-1.89-1.77-2.21-.19-.32-.02-.49.14-.65.14-.14.32-.37.48-.56.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.72-1.72-.98-2.36-.26-.62-.52-.54-.72-.55l-.61-.01c-.21 0-.56.08-.85.4-.29.32-1.12 1.09-1.12 2.65 0 1.56 1.14 3.07 1.3 3.29.16.21 2.25 3.44 5.45 4.82.76.33 1.36.53 1.82.68.77.24 1.46.21 2.01.13.61-.09 1.88-.77 2.15-1.51.27-.74.27-1.38.19-1.51-.08-.13-.29-.21-.61-.37z"/></svg>
+  <span class="wa-label">WhatsApp</span>
+</a>
+
 <script>
 (function(){
   var saved = 'de';
   try { saved = localStorage.getItem('d24_lang') || 'de'; } catch(e) {}
+  // WhatsApp-Link je Sprache vorbefuellen
+  function waUpdate(lang){
+    var t = lang==='ar'
+      ? 'مرحباً Dienstly24، أريد استشارة بخصوص خدماتكم.'
+      : 'Hallo Dienstly24, ich interessiere mich für eine Beratung.';
+    var el = document.getElementById('waFloat');
+    if (el) el.href = 'https://wa.me/491799673909?text=' + encodeURIComponent(t);
+  }
   function apply(lang){
     document.documentElement.lang = lang;
     document.documentElement.dir = lang==='ar' ? 'rtl' : 'ltr';
@@ -642,7 +668,9 @@ html.js .reveal.in{opacity:1;transform:none;}
       b.classList.toggle('active', b.getAttribute('data-lang')===lang);
     });
     try { localStorage.setItem('d24_lang', lang); } catch(e) {}
+    waUpdate(lang);
   }
+  waUpdate(saved);
   document.querySelectorAll('.lang button').forEach(function(b){
     b.addEventListener('click', function(){ apply(b.getAttribute('data-lang')); });
   });
@@ -665,6 +693,76 @@ html.js .reveal.in{opacity:1;transform:none;}
   }
   var co=new IntersectionObserver(function(es){es.forEach(function(e){ if(e.isIntersecting){ count(e.target); co.unobserve(e.target);} });},{threshold:.5});
   document.querySelectorAll('.num[data-count]').forEach(function(el){ co.observe(el); });
+
+  // ===== Kontaktformular -> Portal-API (P0-1) =====
+  // Token-Flow gegen Bots: beim Laden Token holen; zu schnelles Absenden
+  // beantwortet der Server mit Token-Fehler -> frisches Token holen, kurz
+  // warten, automatisch erneut senden (ein Mensch verliert nie eine Anfrage).
+  var API = 'https://portal.dienstly24.de/api/website-contact';
+  var form = document.getElementById('kontaktForm');
+  if (form) {
+    var tokenValue = null;
+    function fetchToken(){
+      return fetch(API + '/token').then(function(r){ return r.json(); })
+        .then(function(d){ tokenValue = d.token; })
+        .catch(function(){ tokenValue = null; });
+    }
+    fetchToken();
+    var statusEl = document.getElementById('kf-status');
+    var submitBtn = document.getElementById('kf-submit');
+    function say(deMsg, arMsg, ok){
+      var lang = document.documentElement.lang === 'ar' ? 'ar' : 'de';
+      statusEl.textContent = lang === 'ar' ? arMsg : deMsg;
+      statusEl.style.display = 'block';
+      statusEl.style.color = ok ? 'var(--emerald-deep)' : '#B3261E';
+    }
+    function payload(){
+      return {
+        token: tokenValue,
+        name: document.getElementById('kf-name').value,
+        kontakt: document.getElementById('kf-kontakt').value,
+        leistung: document.getElementById('kf-leistung').value,
+        nachricht: document.getElementById('kf-nachricht').value,
+        website: document.getElementById('kf-website').value
+      };
+    }
+    function send(retry){
+      return fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload())
+      }).then(function(r){ return r.json().then(function(d){ return { s: r.status, d: d }; }); })
+        .then(function(res){
+          if (res.d && res.d.success) {
+            form.reset();
+            say('Vielen Dank! Ihre Anfrage ist bei uns eingegangen – wir melden uns in der Regel innerhalb von 24 Stunden.',
+                'شكراً لكم! وصلنا طلبكم وسنتواصل معكم عادةً خلال 24 ساعة.', true);
+            fetchToken();
+            return;
+          }
+          if (res.d && res.d.error === 'token' && retry > 0) {
+            say('Einen Moment – Ihre Anfrage wird gesendet …', 'لحظة من فضلكم – يتم إرسال طلبكم …', true);
+            return fetchToken().then(function(){
+              return new Promise(function(rs){ setTimeout(rs, 6000); });
+            }).then(function(){ return send(retry - 1); });
+          }
+          throw new Error('send failed');
+        });
+    }
+    form.addEventListener('submit', function(e){
+      e.preventDefault();
+      if (!form.reportValidity()) return;
+      submitBtn.disabled = true;
+      say('Wird gesendet …', 'جارٍ الإرسال …', true);
+      var start = tokenValue ? Promise.resolve() : fetchToken();
+      start.then(function(){ return send(2); })
+        .catch(function(){
+          say('Senden fehlgeschlagen. Bitte rufen Sie uns an (+49 179 9673909) oder schreiben Sie per WhatsApp.',
+              'تعذر الإرسال. يرجى الاتصال بنا (+49 179 9673909) أو مراسلتنا عبر واتساب.', false);
+        })
+        .finally(function(){ submitBtn.disabled = false; });
+    });
+  }
 })();
 </script>
 </body>

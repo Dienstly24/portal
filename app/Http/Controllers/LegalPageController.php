@@ -24,6 +24,9 @@ class LegalPageController extends Controller
         'datenschutz' => 'Datenschutzerklärung',
         'cookie-richtlinie' => 'Cookie-Richtlinie',
         'kontakt' => 'Kontakt',
+        'widerruf' => 'Widerrufsbelehrung',
+        'erstinformation' => 'Erstinformation',
+        'bildnachweise' => 'Bildnachweise',
     ];
 
     public const DEFAULT_EXTERNAL_BASE = 'https://dienstly24.de';
@@ -40,6 +43,23 @@ class LegalPageController extends Controller
     public function show(string $page)
     {
         abort_unless(array_key_exists($page, self::PAGES), 404);
+
+        // Website-Hosts (www.dienstly24.de) rendern die Website-Rechtsseiten
+        // IMMER lokal - nie extern umleiten, sonst entsteht mit einer auf
+        // die eigene Domain zeigenden "Rechtsseiten-Quelle" eine
+        // Redirect-Schleife (seit dem Merge IST diese App die Website).
+        if (\App\Support\WebsiteHosts::isWebsiteRequest(request())) {
+            if ($page === 'kontakt') {
+                return redirect('/#kontakt');
+            }
+            return app(WebsiteController::class)->legal($page);
+        }
+
+        // Die neuen Website-Seiten ohne Portal-Fallback (Widerruf,
+        // Erstinformation, Bildnachweise) liegen nur als Website-Views vor.
+        if (in_array($page, ['widerruf', 'erstinformation', 'bildnachweise'], true)) {
+            return app(WebsiteController::class)->legal($page);
+        }
 
         $base = rtrim((string) SystemSetting::get('legal_external_base', self::DEFAULT_EXTERNAL_BASE), '/');
         if ($base !== '') {

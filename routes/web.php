@@ -13,7 +13,38 @@ use App\Http\Controllers\TarifrechnerController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', \App\Http\Controllers\HomeController::class);
+Route::get('/', \App\Http\Controllers\HomeController::class)->name('home');
+
+// ===================== Marketing-Website (www.dienstly24.de) =====================
+// Serverseitig gerenderte Website (Merge 30.07.2026). '/' zeigt auf den
+// Website-Hosts die Startseite (HomeController), auf portal./admin. weiter
+// das Login-Verhalten. /website = Vorschau der Startseite auf jedem Host.
+Route::get('/website', [\App\Http\Controllers\WebsiteController::class, 'home'])->name('website.home');
+Route::post('/kontakt', [\App\Http\Controllers\WebsiteController::class, 'submitContact'])
+    ->middleware('throttle:8,1')
+    ->name('website.contact.submit');
+Route::get('/kontakt/danke', [\App\Http\Controllers\WebsiteController::class, 'thanks'])->name('website.thanks');
+
+// SEO: dynamische robots.txt (hostabhaengig) + Sitemap aus echten Inhalten.
+Route::get('/robots.txt', [\App\Http\Controllers\SeoController::class, 'robots'])->name('seo.robots');
+Route::get('/sitemap.xml', [\App\Http\Controllers\SeoController::class, 'sitemap'])->name('seo.sitemap');
+
+// Alt-URLs der statischen Website (Google-Index/Backlinks): .html -> sauber.
+Route::get('/index.html', fn () => redirect('/', 301));
+Route::get('/{page}.html', fn (string $page) => redirect('/' . $page, 301))
+    ->whereIn('page', array_keys(\App\Http\Controllers\WebsiteController::LEGAL_PAGES));
+
+// Arabische Sprachversion: ECHTE URLs unter /ar (hreflang in den Views).
+Route::prefix('ar')->name('ar.')->middleware('forceLocale:ar')->group(function () {
+    Route::get('/', [\App\Http\Controllers\WebsiteController::class, 'home'])->name('website.home');
+    Route::get('/kontakt/danke', [\App\Http\Controllers\WebsiteController::class, 'thanks'])->name('website.thanks');
+    Route::get('/leistungen', [\App\Http\Controllers\ServicePageController::class, 'index'])->name('services.index');
+    Route::get('/leistungen/{slug}', [\App\Http\Controllers\ServicePageController::class, 'show'])->name('services.show');
+    Route::get('/{page}', [\App\Http\Controllers\LegalPageController::class, 'show'])
+        ->whereIn('page', array_merge(array_keys(\App\Http\Controllers\WebsiteController::LEGAL_PAGES), ['kontakt']))
+        ->name('legal');
+});
+// ================================================================================
 
 // Öffentliche Leistungsseiten (Definition + Kurzinfos + FAQ je Leistung).
 // Das Anfrageformular erzeugt ein Ticket im System (source=website).
@@ -24,9 +55,10 @@ Route::post('/leistungen/{slug}/anfrage', [\App\Http\Controllers\ServicePageCont
     ->name('services.submit');
 
 // Öffentliche Rechts-/Infoseiten (Impressum, AGB, Datenschutzerklärung,
-// Cookie-Richtlinie, Kontakt) – IMMER erreichbar, im Portal gehostet.
+// Cookie-Richtlinie, Kontakt, Widerruf, Erstinformation, Bildnachweise) –
+// IMMER erreichbar. Auf den Website-Hosts rendern sie die Website-Versionen.
 Route::get('/{page}', [\App\Http\Controllers\LegalPageController::class, 'show'])
-    ->whereIn('page', ['impressum', 'agb', 'datenschutz', 'cookie-richtlinie', 'kontakt'])
+    ->whereIn('page', array_merge(array_keys(\App\Http\Controllers\WebsiteController::LEGAL_PAGES), ['kontakt']))
     ->name('legal');
 
 // Sprachumschalter (de/ar): für Gäste per Session, für eingeloggte Kunden
@@ -337,6 +369,19 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         Route::post('/service-pages/{servicePage}/toggle', [\App\Http\Controllers\ServicePageAdminController::class, 'toggle'])->name('service_pages.toggle');
         Route::delete('/service-pages/{servicePage}', [\App\Http\Controllers\ServicePageAdminController::class, 'destroy'])->name('service_pages.delete');
     });
+
+    // Medienverwaltung der Website (P1-1): Bilder hochladen, Slot waehlen,
+    // Alt-Texte pflegen - sofort live, ohne FTP/Code. Hochladen/Ersetzen/
+    // Bearbeiten fuer alle Staff-Rollen ("Redakteur"); Loeschen/
+    // Wiederherstellen nur admin/manager.
+    Route::get('/medien', [\App\Http\Controllers\MediaLibraryController::class, 'index'])->name('media');
+    Route::post('/medien', [\App\Http\Controllers\MediaLibraryController::class, 'store'])->name('media.store');
+    Route::put('/medien/{asset}', [\App\Http\Controllers\MediaLibraryController::class, 'update'])->name('media.update');
+    Route::post('/medien/{asset}/ersetzen', [\App\Http\Controllers\MediaLibraryController::class, 'replace'])->name('media.replace');
+    Route::delete('/medien/{asset}', [\App\Http\Controllers\MediaLibraryController::class, 'destroy'])
+        ->name('media.delete')->middleware('role:admin,manager');
+    Route::post('/medien/{id}/wiederherstellen', [\App\Http\Controllers\MediaLibraryController::class, 'restore'])
+        ->name('media.restore')->middleware('role:admin,manager');
 
     // E-Mail-Posteingang: Zuordnungen bestätigen/zuweisen (Priorität 8).
     // DSGVO/Zugriff (Plan 3.3): Mailinhalte unbekannter Absender sind

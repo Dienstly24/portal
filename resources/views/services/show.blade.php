@@ -14,11 +14,17 @@
 <title>Dienstly24 — {{ $page->t('title') }}</title>
 @if($page->t('meta_description'))<meta name="description" content="{{ $page->t('meta_description') }}">@endif
 <meta name="robots" content="index, follow">
-<link rel="canonical" href="{{ url('/leistungen/' . $page->slug) }}">
+{{-- Canonical/hreflang IMMER auf dem Website-Host (www.dienstly24.de):
+     DE- und AR-Version sind echte URLs (P1-3/P1-4). --}}
+@php $sPath = '/leistungen/' . $page->slug; @endphp
+<link rel="canonical" href="{{ \App\Support\WebsiteHosts::url($rtl ? '/ar' . $sPath : $sPath) }}">
+<link rel="alternate" hreflang="de" href="{{ \App\Support\WebsiteHosts::url($sPath) }}">
+<link rel="alternate" hreflang="ar" href="{{ \App\Support\WebsiteHosts::url('/ar' . $sPath) }}">
+<link rel="alternate" hreflang="x-default" href="{{ \App\Support\WebsiteHosts::url($sPath) }}">
 <meta property="og:type" content="website">
 <meta property="og:title" content="{{ $page->t('title') }} – Dienstly24">
 @if($page->t('meta_description'))<meta property="og:description" content="{{ $page->t('meta_description') }}">@endif
-<meta property="og:url" content="{{ url('/leistungen/' . $page->slug) }}">
+<meta property="og:url" content="{{ \App\Support\WebsiteHosts::url($rtl ? '/ar' . $sPath : $sPath) }}">
 <script type="application/ld+json">
 {!! json_encode([
     '@context' => 'https://schema.org',
@@ -150,7 +156,8 @@ label{display:block;font-size:13px;margin-bottom:7px;color:#cfd5cf;font-weight:5
             @if($page->t('subtitle'))<div class="sub">{{ $page->t('subtitle') }}</div>@endif
         </div>
         @if($page->image_path)
-            <img class="hero-bild" src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($page->image_path) }}" alt="">
+            {{-- Relative URL (P0-6): nie APP_URL/IP-abhaengig --}}
+            <img class="hero-bild" src="{{ $page->imageUrl() }}" alt="{{ $page->t('title') }}">
         @endif
     </div>
     @if($page->t('intro'))<p class="lead">{{ $page->t('intro') }}</p>@endif
@@ -262,5 +269,9 @@ label{display:block;font-size:13px;margin-bottom:7px;color:#cfd5cf;font-weight:5
     <a href="{{ url('/datenschutz') }}">{{ __('Datenschutz') }}</a><span class="sep">·</span>
     <a href="{{ route('login') }}">{{ __('Kundenportal') }}</a>
 </div>
+{{-- WhatsApp-Float mit leistungsspezifischem Text (P0-3) --}}
+@include('website.partials.whatsapp', ['waText' => $rtl
+    ? 'مرحباً Dienstly24، أريد استشارة بخصوص: ' . $page->t('title')
+    : 'Hallo Dienstly24, ich interessiere mich für: ' . $page->title_de])
 </body>
 </html>

@@ -20,6 +20,12 @@ Schedule::command('emails:prune-unmatched')->dailyAt('03:30');
 // 04:00 — Geloeste Tickets ohne Kundenreaktion nach 7 Tagen automatisch schliessen
 Schedule::command('tickets:auto-close')->dailyAt('04:00');
 
+// 04:10 — DSGVO: unkonvertierte Website-Anfragen nach 6 Monaten loeschen (P0-1)
+Schedule::command('tickets:purge-website-leads')->dailyAt('04:10');
+
+// 04:15 — Medien-Papierkorb: endgueltig loeschen nach 30 Tagen (P1-1)
+Schedule::command('media:purge-trash')->dailyAt('04:15');
+
 // Alle 15 Minuten — verwaiste Arbeitssitzungen beenden (Browser zu ohne Logout)
 Schedule::command('activity:close-stale')->everyFifteenMinutes();
 

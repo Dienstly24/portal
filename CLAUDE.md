@@ -64,12 +64,49 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
 - **Hilfe-Formular**: `SupportFormController` → `/hilfe`. Aus der Mail mit
   verschlüsseltem Kunden-Token vorbefüllt; Absenden legt automatisch ein
   Ticket an, verknüpft mit der Kundenakte.
-- **Website-Kontaktformular** (`website/index.html`): sendet per JS an
+- **Marketing-Website IM PORTAL (Merge, Betreiber-Auftrag 30.07.2026)**:
+  `www.dienstly24.de` wird von DIESER App ausgeliefert (`WebsiteController`,
+  Views `resources/views/website/`, Assets `public/website-assets/` -
+  NIE `public/website/`, das verschattet die Vorschau-Route `/website`).
+  `config/website.php` = kanonischer Host, Redirect-Hosts, Kontaktdaten,
+  Bild-Slots. `RedirectWebsiteHost` leitet non-www/.com/http per 301 um;
+  `/` zeigt auf Website-Hosts die Startseite (sonst Portal-Verhalten).
+  ECHTE arabische URLs unter `/ar/...` (`forceLocale:ar`, Hocharabisch,
+  hreflang de/ar/x-default); Rechtsseiten aus der alten statischen Site
+  portiert (`website/legal/`, auf Website-Hosts immer lokal - nie extern
+  umleiten, Schleifengefahr). REGEL: Website-Seiten laden NIE externe
+  Ressourcen (Google Fonts -> Abmahnung; Schriften liegen lokal in
+  `public/fonts/`, Subsets je Sprache). robots.txt/sitemap.xml dynamisch
+  (`SeoController`: Website-Host offen, portal/admin disallow + noindex).
+  Formular `POST /kontakt` -> Ticket (source=website) + Einwilligungs-
+  Protokoll (`consent_given_at/ip/text` auf tickets) + Bestaetigungs-Mail
+  (`WebsiteInquiryConfirmationMail`, DE/AR) + `/kontakt/danke`;
+  unkonvertierte Website-Leads loescht `tickets:purge-website-leads` nach
+  6 Monaten. Fehlerseiten 404/500 zweisprachig im Markendesign.
+  Go-Live-Schritte (DNS/vHost/Cloudflare/APP_URL): `docs/WEBSITE_MERGE_UMSETZUNG.md`;
+  arabische Betreiber-Anleitung: `docs/ANLEITUNG_MEDIEN_UND_ANFRAGEN_AR.md`.
+  Tests: `WebsiteMergeTest`.
+- **Medienverwaltung `/admin/medien`** (`MediaLibraryController`,
+  `MediaAsset`): Bild hochladen -> Slot waehlen (feste Plaetze aus
+  `config/website.php`) -> Alt-Texte DE+AR (PFLICHT) -> sofort live.
+  Automatisch AVIF/WebP/JPG in 480/960/1600px, jede Variante < 200 KB,
+  EXIF weg (`ImageVariantGenerator`); echte MIME-Pruefung + SVG-Sanitizer;
+  Original privat (`media-originals/`), nur Varianten oeffentlich, URLs
+  IMMER relativ `/storage/...` (P0-6: nie APP_URL/IP-abhaengig, gleiche
+  Regel in `ServicePage::imageUrl()`). Slot exklusiv - Vorgaenger wandert
+  ins Archiv, nie geloescht; Papierkorb 30 Tage (`media:purge-trash`).
+  Loeschen nur admin/manager, Upload alle Staff-Rollen. Reparatur-Befehle:
+  `service-pages:fix-umlauts --write` (P0-7, `UmlautRepair`-Wortliste +
+  Warnung beim Speichern im Admin) und `website:fix-storage-urls --write`.
+  Tests: `MediaLibraryTest`.
+- **Website-Kontaktformular der STATISCHEN Uebergangs-Site**
+  (`website/index.html`, bis der DNS-Umzug durch ist): sendet per JS an
   `POST /api/website-contact` (`WebsiteContactController`) statt per Mail.
   Mehrstufiger Spam-Schutz: JS-Einmal-Token mit Mindest-Ausfuellzeit,
   Honeypot, Throttle, `SpamFilter` (Spam wird still verworfen). Echte
   Anfragen werden Tickets (Quelle `website`) + Glocke + Support-Mail.
-  Details/Inbetriebnahme: `docs/SPAM_SCHUTZ_WEBSITE_ANFRAGE.md`.
+  Details/Inbetriebnahme: `docs/SPAM_SCHUTZ_WEBSITE_ANFRAGE.md`;
+  Upload-Hinweise (inkl. `.htaccess`, zip loeschen): `website/LIESMICH.txt`.
 - **Rechtsseiten** (`/impressum`, `/agb`, `/datenschutz`,
   `/cookie-richtlinie`, `/kontakt`): leiten standardmäßig auf die offizielle
   Website weiter (`LegalPageController`, Basis-URL unter Einstellungen →
@@ -407,8 +444,17 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   aufwärmen, „Kein Spam"/Kontakt-Signal, Microsoft SNDS/JMRP. Nächster
   Schritt: Testversand an mail-tester.com. Details + Checkliste in
   `docs/EMAIL_ZUSTELLBARKEIT_SPF_DKIM_DMARC.md`.
-- **WordPress-Rechtsseiten** (`dienstly24.de/impressum` etc.) sind leer und
-  müssen mit Inhalt gefüllt werden.
+- **Rechtsseiten liegen jetzt in der App** (`/impressum` etc., seit dem
+  Website-Merge 30.07.2026) - der fruehere Punkt "WordPress-Rechtsseiten
+  fuellen" ist damit erledigt. Offen bleibt die finale PRUEFUNG der Texte
+  durch Rechtsanwalt/Datenschutzbeauftragten vor dem Livegang (Hinweise
+  stehen als Kommentare in den Views).
+- **Website-Go-Live** (nach dem Merge): DNS/vHost/Cloudflare-Umzug von
+  www.dienstly24.de auf den VPS + `APP_URL` setzen + einmalige
+  Reparatur-Befehle - Checkliste in `docs/WEBSITE_MERGE_UMSETZUNG.md`.
+  Ausserdem vom Betreiber zu bestaetigen: schriftliche Freigaben der
+  zitierten Kundenstimmen + Belegbarkeit "3.000+ Kunden" (UWG). 2FA fuer
+  /admin und Cloudflare Turnstile sind bewusst offene Folgepakete.
 - **Finale Logo-Dateien** kommen vom Betreiber (bevorzugt SVG, sonst PNG
   transparent ≥320px hoch; Light- und Dark-Variante; optional 512×512 Icon).
 - **Partner-Portal** (voller Ausbau) und **E-Mail-Einwilligung des Kunden
