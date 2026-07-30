@@ -22,6 +22,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prepend(\App\Http\Middleware\RedirectWebsiteHost::class);
         // Defensive Sicherheitsheader auf jede Antwort.
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+        // Zusaetzliche Basic-Auth-Schichten: /admin (bis 2FA existiert)
+        // und Staging-Hosts. No-Op ohne gesetzte Umgebungsvariablen.
+        // Bewusst NACH SecurityHeaders angehaengt, damit auch die
+        // 401-Challenge die Sicherheitsheader traegt.
+        $middleware->append(\App\Http\Middleware\ExtraBasicAuth::class);
         // Sprache (de/ar) je Kunde bzw. Session – nach StartSession.
         $middleware->appendToGroup('web', \App\Http\Middleware\SetLocale::class);
         // Aktivitaetserfassung fuer Mitarbeiter: global in der Web-Gruppe,

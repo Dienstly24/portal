@@ -75,9 +75,10 @@ getrenntes statisches Hosting, kein FTP, eine Codebasis, ein Deploy.
   `<picture>` mit srcset/sizes, width/height (CLS), lazy loading.
 
 ### SEO / Infrastruktur
-- `robots.txt` dynamisch: Website-Host offen (+ Sitemap), portal./admin.
-  komplett gesperrt; `X-Robots-Tag: noindex` auf /admin, /login, /portal,
-  /partner, /register.
+- `robots.txt` dynamisch: NUR der kanonische Host (www.dienstly24.de)
+  ist offen (+ Sitemap); portal./admin. und Staging-/Vorschau-Hosts
+  komplett gesperrt; `X-Robots-Tag: noindex` auf /admin, /login,
+  /portal, /partner, /register sowie auf allen Staging-Antworten.
 - `sitemap.xml` dynamisch aus echten Inhalten (Startseite DE/AR,
   Leistungsseiten DE/AR mit echtem lastmod aus der DB, Rechtsseiten).
 - Fehlerseiten 404/500 im Markendesign, zweisprachig, mit WhatsApp.
@@ -97,6 +98,126 @@ WhatsApp-Button, lokale Fonts, `.htaccess` (301 www/https/.com,
 Blockliste, Caching, Security-Header), canonical auf www. Details:
 `website/LIESMICH.txt`.
 
+## Gemessene Ergebnisse (Stand 30.07.2026, lokal)
+
+Lighthouse (Mobil-Emulation, Chromium headless, artisan serve - also OHNE
+HTTP/2, Brotli und CDN; Produktionswerte werden eher besser):
+
+| Seite | Performance | Accessibility | Best Practices | SEO | LCP | CLS | Gewicht |
+|---|---|---|---|---|---|---|---|
+| Startseite DE | **100** | **100** | 96 | 69* | 1,7 s | **0** | **142 KB** |
+| Startseite AR | **95** | **100** | 96 | 69* | 2,8 s** | **0** | 310 KB |
+
+\* SEO 69 ist ein LOKALES Artefakt: Der Test-Host ist kein kanonischer
+Host, robots.txt sperrt ihn absichtlich (Staging-Verhalten) -> Lighthouse
+meldet "blocked from indexing". Auf www.dienstly24.de ist die Seite offen;
+der Wert ist nach dem Go-Live mit PageSpeed Insights zu bestaetigen.
+Best Practices 96 = fehlendes HTTPS im lokalen Test.
+\** AR-LCP liegt lokal knapp ueber dem 2,5-s-Ziel (groessere arabische
+Schriften unter simuliertem Slow-4G). CLS wurde von 0,148 auf 0 gebracht
+(metrik-angepasste Fallback-Fonts in fonts-ar.css, echte Font-Metriken).
+
+Statische Uebergangs-Site: Bild-Payload von ~4,9 MB (drei PNGs mit
+1,4-1,8 MB) auf **188 KB WebP** reduziert - Startseite gesamt jetzt
+unter 0,4 MB statt ~5 MB.
+
+Security-Header (Beleg per curl, jede Antwort): X-Content-Type-Options,
+X-Frame-Options, Referrer-Policy, Permissions-Policy, CSP; HSTS ab HTTPS.
+Die externen Grades (securityheaders.com = erwartbar A, ssllabs.com haengt
+von der TLS-Konfiguration des Servers/Cloudflare ab) sind erst nach dem
+Go-Live messbar - Teil der Abnahme-Checkliste unten.
+
+## Bild-Slots: Zustand und Empfehlung (P0-2)
+
+- Die Website zeigt fuer JEDEN leeren Slot ihre eingebaute Markengrafik
+  (Icon-Kachel/SVG-Schild) - serverseitig entschieden, kein
+  onerror-Entfernen mehr, nichts ist "leer" oder kaputt.
+- Zwei der sechs Leistungskarten-Bilder existieren (Kfz, Zahnzusatz);
+  vier wurden nie erstellt (Kranken, Zulassung, Kennzeichen, Strom&Gas).
+  Sie entstehen kuenftig in < 1 Minute je Bild ueber /admin/medien.
+- **ACHTUNG Rechtsrisiko**: Das vorhandene Kfz-Bild zeigt ein
+  BMW-Fahrzeug MIT ERKENNBAREM EMBLEM - das verstoesst gegen die eigene
+  Regel (keine Marken-Logos ohne Freigabe, siehe website/LIESMICH.txt).
+  Empfehlung: zeitnah durch neutrales Motiv ersetzen.
+- Die vorhandenen Bilder haben SCHWARZE Hintergruende; die Karten sind
+  weiss, der Hero gruen. Fuer den Laravel-Auftritt wurden sie deshalb
+  bewusst NICHT vorbefuellt - die eingebauten Grafiken passen besser,
+  bis saubere Assets (transparenter Hintergrund) hochgeladen werden.
+
+## Backup + Restore-Test (Auftrag "Definition of Done")
+
+- `scripts/backup.sh`: taeglicher DB-Dump (mysqldump
+  --single-transaction) + storage/app + .env-Kopie nach
+  /var/backups/dienstly24, Rotation 14 Tage. Cron:
+  `30 2 * * * cd /var/www/dienstly24/portal && bash scripts/backup.sh >> /var/log/dienstly24-backup.log 2>&1`
+- ZWEITER Speicherort ausserhalb des VPS ist Pflicht (z. B. Hetzner
+  Storage Box per rclone) - ein Backup auf derselben Maschine schuetzt
+  nicht vor Totalausfall.
+- **Restore-Test** (mindestens einmal vor Abnahme, danach
+  vierteljaehrlich, dauert ~15 Minuten):
+  1. `mysql -e "CREATE DATABASE restore_test"`
+  2. `gunzip < /var/backups/dienstly24/db-<neuestes>.sql.gz | mysql restore_test`
+  3. Stichproben: `mysql restore_test -e "SELECT COUNT(*) FROM customers; SELECT COUNT(*) FROM contracts; SELECT MAX(created_at) FROM tickets;"`
+     - Zahlen muessen zur Produktion passen (max. 1 Tag Rueckstand).
+  4. `mkdir /tmp/restore-test && tar -xzf /var/backups/dienstly24/storage-<neuestes>.tar.gz -C /tmp/restore-test`
+     - Stichprobe: ein bekanntes Kundendokument oeffnen.
+  5. Aufraeumen: `mysql -e "DROP DATABASE restore_test"` + Ordner loeschen.
+  6. Ergebnis mit Datum in einer Checkliste festhalten (wer, wann, ok?).
+
+## Staging / Vorschau zum Durchklicken (VOR dem DNS-Umzug)
+
+Der Betreiber will die neue Website selbst durchklicken, bevor
+www.dienstly24.de umzieht - so geht es OHNE zweite Installation:
+1. DNS: `neu.dienstly24.de` als A-Record auf den VPS zeigen lassen
+   (beruehrt www/portal/admin nicht) + TLS-Zertifikat.
+2. vHost: `neu.dienstly24.de` als Alias auf den Laravel-vHost.
+3. Server-`.env`:
+   `WEBSITE_EXTRA_HOSTS=neu.dienstly24.de` (Host zeigt die Website),
+   `STAGING_HOSTS=neu.dienstly24.de`,
+   `STAGING_BASIC_AUTH=vorschau:<starkes-passwort>`
+   -> danach `php artisan config:cache`.
+4. Ergebnis: `https://neu.dienstly24.de` zeigt die komplette neue
+   Website (DE/AR, Formulare, Leistungsseiten) hinter
+   Benutzername/Passwort, mit noindex und gesperrter robots.txt.
+   Formular-Einsendungen erzeugen ECHTE Tickets (gleiche Datenbank) -
+   fuer den Test gewuenscht, Test-Tickets danach schliessen.
+5. Nach dem Go-Live die drei Variablen leeren und den DNS-Eintrag
+   entfernen.
+
+## Verbindlicher Umschaltplan (Cutover)
+
+Es laufen bewusst ZWEI Auslieferungen parallel (statisch auf Hostinger,
+Laravel auf dem VPS) - dieser Zustand ist NUR die Uebergangsphase und
+endet mit diesem Plan. Risiko bei Nichtstun: Inhalte laufen auseinander.
+
+- **T-7 bis T-2**: Staging (oben) einrichten; Betreiber klickt alles
+  durch und gibt schriftlich frei (Formular DE+AR von echten Geraeten,
+  WhatsApp-Button, Rechtsseiten, Sprachumschalter).
+- **T-1 (Montag)**: TTL der DNS-Eintraege von dienstly24.de/www/.com auf
+  **300 Sekunden** senken (Rueckweg wird dadurch schnell).
+  ADMIN_BASIC_AUTH auf dem VPS setzen (Bedingung, siehe unten).
+  Backup-Lauf + Restore-Test dokumentiert OK.
+- **T-0 (DIENSTAG, 09:00-11:00 Uhr - nie freitags/abends)**:
+  1. A-Records dienstly24.de + www (+ .com) auf den VPS/Cloudflare.
+  2. Verifikation (Reihenfolge, alles dokumentieren):
+     `curl -I https://www.dienstly24.de/` (200, Security-Header),
+     `curl -I http://dienstly24.de/` und `https://dienstly24.com/`
+     (301 auf https://www.dienstly24.de), Formular-Testeintrag
+     (Ticket + 2 Mails), /ar, /leistungen/kfz-versicherung,
+     /impressum, /sitemap.xml, /robots.txt, Portal-Login unveraendert
+     (portal./admin. wurden nicht angefasst).
+  3. Search Console: Sitemap einreichen, Adressaenderung von
+     dienstly24.de -> www.dienstly24.de anstossen.
+- **Rollback** (falls irgendetwas Kritisches nicht laeuft): A-Records
+  zurueck auf Hostinger - bei TTL 300 weltweit in Minuten wirksam. Der
+  statische Hotfix-Stand bleibt dort bis T+7 UNANGETASTET liegen.
+- **T+7**: Wenn eine Woche stabil: statisches Hosting stilllegen
+  (Dateien vom Hostinger-Webroot entfernen), TTL wieder auf 3600+,
+  Staging-Zugang abbauen. AB JETZT gibt es nur noch EINE Quelle.
+- **Verantwortlich**: DNS/Server-Schritte = Betreiber bzw. Server-Admin;
+  Verifikations-Checkliste kann Claude im Anschluss per Browser-Test
+  gegen die Live-Domain abarbeiten und dokumentieren.
+
 ## Go-Live-Checkliste (Server, vom Betreiber/Admin auszufuehren)
 
 1. **Sofort (Phase 1)**: `website/`-Ordner inkl. `.htaccess` +
@@ -109,8 +230,10 @@ Blockliste, Caching, Security-Header), canonical auf www. Details:
 3. **vHost**: die vier Hostnamen als ServerAlias/server_name auf den
    bestehenden Laravel-vHost legen; TLS-Zertifikate ausstellen.
 4. **.env auf dem Server**: `APP_URL=https://www.dienstly24.de` (Ursache
-   der frueheren IP-Links). Optional `WEBSITE_CANONICAL_HOST`,
-   `WEBSITE_EXTRA_HOSTS` (Staging).
+   der frueheren IP-Links) und `ADMIN_BASIC_AUTH=benutzer:passwort`
+   (Pflicht, s. u.). Optional `WEBSITE_CANONICAL_HOST`,
+   `WEBSITE_EXTRA_HOSTS`/`STAGING_HOSTS`/`STAGING_BASIC_AUTH` (Staging).
+   Danach `php artisan config:cache`.
 5. Nach dem Deploy einmalig:
    `php artisan storage:link` (falls noch nicht vorhanden),
    `php artisan service-pages:fix-umlauts --write`,
@@ -126,8 +249,16 @@ Blockliste, Caching, Security-Header), canonical auf www. Details:
 
 - **2FA fuer /admin** (Auftrag P1-1a): Die Anwendung hat noch kein
   Zwei-Faktor-Login - eigenes Arbeitspaket (alle Admin-Bereiche, nicht nur
-  Medien). Bis dahin: starke Passwoerter, Zugriff idealerweise per
-  Cloudflare Access zusaetzlich schuetzen.
+  Medien). **BEDINGUNG bis dahin (Betreiber-Vorgabe): /admin geht NICHT
+  oeffentlich ohne zweite Schicht online.** Umgesetzt als
+  `ADMIN_BASIC_AUTH=benutzer:passwort` in der Server-`.env` (+
+  `php artisan config:cache`): zusaetzliche HTTP-Basic-Auth VOR dem
+  gesamten /admin-Bereich (`ExtraBasicAuth`-Middleware; ergaenzt das
+  normale Login, ersetzt es nicht). Alternative/zusaetzlich: IP-Allowlist
+  oder Cloudflare Access auf admin.dienstly24.de. Apache/FPM-Hinweis:
+  Authorization-Header durchreichen
+  (`SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1` bzw.
+  `CGIPassAuth On`); bei Nginx/FPM Standard ok.
 - **Cloudflare Turnstile** (Auftrag P0-1): optionale zusaetzliche
   Spam-Schicht; aktuell Honeypot + SpamFilter + Throttle + (statisch)
   Token-Flow. Nachruestbar im `WebsiteController::submitContact`.
@@ -148,8 +279,9 @@ Blockliste, Caching, Security-Header), canonical auf www. Details:
 
 ## Tests
 
-`tests/Feature/WebsiteMergeTest.php` (22) + `tests/Feature/MediaLibraryTest.php` (10):
+`tests/Feature/WebsiteMergeTest.php` (22) + `tests/Feature/MediaLibraryTest.php`
+(10) + `tests/Feature/ExtraBasicAuthTest.php` (5):
 Startseite DE/AR, Redirects, Rechtsseiten, Formular inkl. Einwilligung/
 Honeypot/Mails, Purge, robots/sitemap/noindex, hreflang, Umlaut-Reparatur,
-Storage-URLs, Medien-Upload/Varianten/Slots/MIME/SVG/Papierkorb/Rollen.
-Gesamtsuite: 1315 Tests gruen.
+Storage-URLs, Medien-Upload/Varianten/Slots/MIME/SVG/Papierkorb/Rollen,
+Admin-Basic-Auth, Staging-Gate. Gesamtsuite: 1320 Tests gruen.

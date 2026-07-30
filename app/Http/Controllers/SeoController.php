@@ -23,7 +23,10 @@ class SeoController extends Controller
 {
     public function robots(Request $request)
     {
-        if (WebsiteHosts::isWebsiteRequest($request)) {
+        // NUR der kanonische Host ist fuer Suchmaschinen offen - Staging-/
+        // Vorschau-Hosts (WEBSITE_EXTRA_HOSTS) zeigen zwar die Website,
+        // duerfen aber nie indexiert werden (Duplicate Content).
+        if (strtolower($request->getHost()) === strtolower(WebsiteHosts::canonical())) {
             $lines = [
                 'User-agent: *',
                 'Disallow: /admin',

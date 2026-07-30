@@ -1,5 +1,27 @@
 /* Lokal gehostete Schriften (DSGVO: keine Google-Server).
-   Arabische Seiten: arabische Subsets + Latin-Fallback fuer Markennamen. */
+   Arabische Seiten: arabische Subsets + Latin-Fallback fuer Markennamen.
+
+   CLS-Schutz: Metrik-angepasste Fallback-Schriften. Amiri/IBM Plex Sans
+   Arabic haben deutlich andere Zeilenmetriken als Systemschriften - ohne
+   Anpassung springt das Layout beim Font-Swap (gemessen: CLS 0.148).
+   Die Overrides uebernehmen die ECHTEN Metriken der Webfonts (aus den
+   woff2-Dateien gelesen: Amiri asc 1124/desc 634, Plex asc 1085/desc 415
+   bei UPM 1000), damit der Zeilenumbruch vor und nach dem Swap gleich
+   hoch ist. */
+@font-face {
+  font-family: 'Amiri Fallback';
+  src: local('Noto Naskh Arabic'), local('Times New Roman'), local('DejaVu Serif');
+  ascent-override: 112.4%;
+  descent-override: 63.4%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'IBM Plex Sans Arabic Fallback';
+  src: local('Noto Sans Arabic'), local('Segoe UI'), local('Arial'), local('DejaVu Sans');
+  ascent-override: 108.5%;
+  descent-override: 41.5%;
+  line-gap-override: 0%;
+}
 @font-face {
   font-family: 'Amiri';
   font-style: normal;
@@ -15,13 +37,8 @@
   font-display: swap;
   src: url('/fonts/ibm-plex-sans-arabic-arabic-400.woff2') format('woff2');
 }
-@font-face {
-  font-family: 'IBM Plex Sans Arabic';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('/fonts/ibm-plex-sans-arabic-arabic-500.woff2') format('woff2');
-}
+/* Gewicht 500 wird auf der Website praktisch nicht genutzt (ein einziges
+   Kleinst-Element) - der Browser nimmt automatisch 400/600. Spart 45 KB. */
 @font-face {
   font-family: 'IBM Plex Sans Arabic';
   font-style: normal;
