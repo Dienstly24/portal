@@ -95,6 +95,13 @@ class Contract extends Model {
         'krankenzusatz'       => ['label' => 'Krankenzusatz',       'icon' => '🩺', 'color' => '#2F8F6B', 'bg' => '#DEF1E8'],
         'leben'               => ['label' => 'Leben',               'icon' => '❤️', 'color' => '#993556', 'bg' => '#FBEAF0'],
         'haftpflicht'         => ['label' => 'Haftpflicht',         'icon' => '🛡️', 'color' => '#6D28D9', 'bg' => '#F0E6FB'],
+        // GEWERBLICHE Sparten (Betreiber-Vorgabe 30.07.2026): eigene Zeilen
+        // statt der privaten Sammel-Sparte "Haftpflicht". Betriebs- und
+        // Frachtfuehrerhaftpflicht versichern den BETRIEB, nicht die Person -
+        // andere Gesellschaften, andere Beitraege, andere Beratung. Das Flag
+        // 'gewerblich' gruppiert sie in den Formularen.
+        'betriebshaftpflicht' => ['label' => 'Betriebshaftpflicht', 'icon' => '🏭', 'color' => '#5B21B6', 'bg' => '#EDE9FE', 'gewerblich' => true],
+        'frachtfuehrerhaftpflicht' => ['label' => 'Frachtführerhaftpflicht', 'icon' => '🚚', 'color' => '#1F4E79', 'bg' => '#E4EDF6', 'gewerblich' => true],
         'hausrat'             => ['label' => 'Hausrat',             'icon' => '🏠', 'color' => '#3B7A57', 'bg' => '#E4F0E7'],
         'rechtsschutz'        => ['label' => 'Rechtsschutz',        'icon' => '⚖️', 'color' => '#92400E', 'bg' => '#FEF3C7'],
         'unfall'              => ['label' => 'Unfall',              'icon' => '🚑', 'color' => '#A32D2D', 'bg' => '#F9E3E3'],
@@ -129,6 +136,16 @@ class Contract extends Model {
     /** Ist dies ein Energievertrag (Strom oder Gas)? */
     public function isEnergy(): bool {
         return in_array($this->type, self::ENERGY_TYPES, true);
+    }
+
+    /** Gewerbliche Sparten (versichern den Betrieb, nicht die Privatperson). */
+    public static function commercialTypeKeys(): array {
+        return array_keys(array_filter(self::TYPES, fn ($cfg) => !empty($cfg['gewerblich'])));
+    }
+
+    /** Ist dies ein gewerblicher Vertrag? */
+    public function isCommercial(): bool {
+        return !empty(self::TYPES[$this->type]['gewerblich']);
     }
 
     /**
