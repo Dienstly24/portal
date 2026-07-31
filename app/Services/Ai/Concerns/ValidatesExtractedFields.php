@@ -262,6 +262,9 @@ trait ValidatesExtractedFields
             'manufacturer' => $this->cleanString($in['manufacturer'] ?? null, 60),
             'model' => $this->cleanString($in['model'] ?? null, 80),
             'first_registration' => $this->cleanDate($in['first_registration'] ?? null),
+            // Motorleistung in kW (Zulassungsbescheinigung Feld P.2 bzw.
+            // "Staerke in kW" im Antrag) - gleiche Grenzen wie im Formular.
+            'power_kw' => $intInRange($in['power_kw'] ?? null, 1, 2000),
             // Schadenfreiheitsklasse (Haftpflicht/Vollkasko) - nur wenn sie einer
             // gueltigen SF-Klasse entspricht (M, S, 0, 1/2, SF 1-50).
             'sf_liability_class' => $this->cleanSfClass($in['sf_liability_class'] ?? null),

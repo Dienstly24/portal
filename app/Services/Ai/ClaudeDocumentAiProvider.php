@@ -136,7 +136,7 @@ class ClaudeDocumentAiProvider implements DocumentAiProviderInterface
             . '"data": {'
             . '"person": {"first_name": "", "last_name": "", "birth_date": "JJJJ-MM-TT", "birth_place": "", "street": "", "house_number": "", "zip": "", "city": "", "email": "", "phone": "", "nationality": "", "id_number": "", "occupation": "", "employer_name": "", "employer_address": ""}, '
             . '"versicherung": {"insurer": "", "contract_number": "", "sparte": <einer aus: ' . $sparten . '>, "start_date": "JJJJ-MM-TT", "end_date": "JJJJ-MM-TT", "premium_amount": <Zahl>, "premium_interval": <einer aus: ' . $intervals . '>, "document_stage": <antrag|vertrag>}, '
-            . '"kfz": {"license_plate": "", "vin": "", "hsn": "", "tsn": "", "manufacturer": "", "model": "", "first_registration": "JJJJ-MM-TT", '
+            . '"kfz": {"license_plate": "", "vin": "", "hsn": "", "tsn": "", "manufacturer": "", "model": "", "first_registration": "JJJJ-MM-TT", "power_kw": <Zahl kW>, '
             . '"has_teilkasko": true, "teilkasko_deductible": <Zahl Euro>, "has_vollkasko": false, "vollkasko_deductible": <Zahl Euro>, '
             . '"holder_type": <einer aus: versicherungsnehmer, abweichender_halter>, "annual_mileage": <Zahl km pro Jahr>}, '
             . '"gesundheit": {"health_insurance_company": "", "health_insurance_number": ""}, '
@@ -201,7 +201,8 @@ class ClaudeDocumentAiProvider implements DocumentAiProviderInterface
             . 'type fahrzeugbrief) die genormten Feld-Codes lesen: A=kfz.license_plate (amtliches Kennzeichen), '
             . 'D.1=kfz.manufacturer (Marke), D.3=kfz.model (Handelsbezeichnung), E=kfz.vin (Fahrzeug-Identifizierungsnummer/FIN), '
             . '(2.1)=kfz.hsn (zu 2.1, Herstellerschluessel), (2.2)=kfz.tsn (zu 2.2, Typschluessel), B=kfz.first_registration '
-            . '(Datum der Erstzulassung), C.1.1=person.last_name, C.1.2=person.first_name, C.1.3=person.street/zip/city (Halter). '
+            . '(Datum der Erstzulassung), P.2=kfz.power_kw (Nennleistung in kW, ganze Zahl), '
+            . 'C.1.1=person.last_name, C.1.2=person.first_name, C.1.3=person.street/zip/city (Halter). '
             . 'Keine Versicherungsdaten erfinden - der Fahrzeugschein enthaelt keine.';
     }
 
