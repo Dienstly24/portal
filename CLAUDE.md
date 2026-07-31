@@ -136,6 +136,14 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   ergänzen.
 - **Banner-Verwaltung**: `BannerController`, Statistik-Dashboard unter
   `/admin/banners/statistik`. Routen auf `role:admin,manager` beschränkt.
+- **Kfz-Angebot der Sparkassen DirektVersicherung**
+  (`SparkasseDirektKfzParser`, 31.07.2026): Spaltenlayout (Beschriftung links,
+  Wert rechts), Stufe `antrag`. Bewusst NICHT übernommen: die Empfehlung
+  „FahrerSchutzPlus" (nicht gewählt, verfälscht sonst den Beitrag), die
+  Service-Adressen des Versicherers und monatsgenaue Angaben
+  (Erstzulassung „01.2004") - ein Tag wäre erfunden, die Angabe steht dafür in
+  der Zusammenfassung. `power_kw` ist jetzt ein extrahierbares Fahrzeugfeld
+  (Validierung, Vertragsanlage, Version History, KI-Prompt Feld P.2).
 - **Gewerbliche Sparten** (Betreiber-Vorgabe 30.07.2026): `betriebshaftpflicht`
   und `frachtfuehrerhaftpflicht` sind EIGENE Sparten in `Contract::TYPES`
   (Flag `'gewerblich' => true`, Gruppe „Gewerblich" im Vertragsformular,
