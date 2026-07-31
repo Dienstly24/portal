@@ -215,11 +215,17 @@ class LichtblickAuftragParser implements DocumentTemplateParser
         }
 
         // Bisheriger Versorger ("Stadtwerke Rendsburg GmbH" ueber
-        // "Derzeitiger Stromversorger").
+        // "Derzeitiger Stromversorger"). Ist das Feld LEER, steht darueber die
+        // Ankreuz-Zeile des Abschnitts ("Ich möchte LichtBlick ÖkoStrom in
+        // meiner/m jetzigen Wohnung/Haus beziehen.") - ein Formularsatz und
+        // der Name des NEUEN Anbieters sind nie der bisherige Versorger; dann
+        // bleibt das Feld leer statt falsch.
         $prevLine = $this->rawValueAbove('Derzeitiger Strom') ?? $this->rawValueAbove('Derzeitiger Gas');
         if ($prevLine !== null) {
             $prev = trim($this->columns($prevLine)[0] ?? '');
-            if (preg_match('/\p{L}{3,}/u', $prev) && mb_strlen($prev) <= 100) {
+            if (preg_match('/\p{L}{3,}/u', $prev) && mb_strlen($prev) <= 100
+                && mb_stripos($prev, 'LichtBlick') === false
+                && !preg_match('/\.\s*$/u', $prev)) {
                 $raw['previous_provider'] = $prev;
             }
         }

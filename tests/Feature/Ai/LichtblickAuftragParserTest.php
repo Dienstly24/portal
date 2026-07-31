@@ -170,6 +170,27 @@ class LichtblickAuftragParserTest extends TestCase
         $this->assertArrayNotHasKey('expected_start_within_days', $v);
     }
 
+    public function test_empty_previous_provider_stays_empty_instead_of_form_text(): void
+    {
+        // Auftrag 1659475 (30.07.2026): das Feld "Derzeitiger Stromversorger"
+        // war LEER - darueber steht die Ankreuz-Zeile "Ich möchte LichtBlick
+        // ÖkoStrom in meiner/m jetzigen Wohnung/Haus beziehen." Die wurde
+        // faelschlich als bisheriger Versorger uebernommen. Ein leeres Feld
+        // bleibt jetzt leer; alle uebrigen Felder kommen weiterhin an.
+        $r = (new LichtblickAuftragParser())->parse($this->auftragText(versorger: ''));
+
+        $this->assertNotNull($r);
+        $this->assertArrayNotHasKey('previous_provider', $r['data']['energie']);
+        // Ohne bekannten Vorversorger auch KEIN geschaetzter Beginn
+        // (die 14-Tage-Regel gilt nur fuer Stadtwerke).
+        $this->assertArrayNotHasKey('expected_start_within_days', $r['data']['versicherung']);
+        // Der Rest des Formulars ist davon unberuehrt.
+        $this->assertSame('Altahan', $r['data']['person']['last_name']);
+        $this->assertSame('altahanmashoer@gmail.com', $r['data']['person']['email']);
+        $this->assertSame('42811442', $r['data']['energie']['meter_number']);
+        $this->assertSame('1657453', $r['data']['versicherung']['contract_number']);
+    }
+
     public function test_no_estimate_when_previous_provider_is_not_stadtwerke(): void
     {
         // Anderer Vorversorger (kein Stadtwerk) -> die 14-Tage-Regel gilt nicht,
