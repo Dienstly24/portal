@@ -136,6 +136,18 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   ergänzen.
 - **Banner-Verwaltung**: `BannerController`, Statistik-Dashboard unter
   `/admin/banners/statistik`. Routen auf `role:admin,manager` beschränkt.
+- **Strom-/Gas-AUFTRAEGE (Formularseite)**: Ein Auftrag hat **KEINE
+  Vertragsnummer** (Betreiber-Vorgabe 02.08.2026) - die Auftragsnummer steht
+  nur in der Zusammenfassung, nie in `contract_number` (falsche Angabe in der
+  Kundenakte). Die spaetere Vertragsbestaetigung bringt die echte Nummer und
+  findet ihren Vertrag ueber MaLo-ID/Zaehlernummer. Parser:
+  `LichtblickAuftragParser` (Werte UEBER der Beschriftung) und
+  `PlanBNetZeroAuftragParser` (Beschriftung/Wert NEBENeinander, zweimal je
+  Zeile; leeres Feld -> naechste Zelle ist selbst eine Beschriftung -> bleibt
+  leer). BRUTTO-Preise uebernehmen. IBAN aus dem SEPA-Mandat nur, wenn der
+  KONTOINHABER der Antragsteller ist (sonst landet das Versorger- oder ein
+  Fremdkonto in der Akte). Kein geschaetzter Lieferbeginn ausser beim
+  Stadtwerke-Wechsel (14 Tage Frist -> 20 Tage).
 - **Kfz-Angebot der Sparkassen DirektVersicherung**
   (`SparkasseDirektKfzParser`, 31.07.2026): Spaltenlayout (Beschriftung links,
   Wert rechts), Stufe `antrag`. Bewusst NICHT übernommen: die Empfehlung

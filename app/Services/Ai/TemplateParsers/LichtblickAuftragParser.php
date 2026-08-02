@@ -89,6 +89,7 @@ class LichtblickAuftragParser implements DocumentTemplateParser
             'confidence' => 76,
             'summary' => 'LichtBlick ' . $sparteLabel . '-Auftrag (Versorgerwechsel)'
                 . ($name !== '' ? ' - ' . $name : '')
+                . (($order = $this->orderNumber()) !== null ? ' - Auftragsnummer ' . $order : '')
                 . (isset($energie['previous_provider']) ? ' - Wechsel von ' . $energie['previous_provider'] : '')
                 . (isset($energie['consumption_kwh']) ? ' - ' . number_format($energie['consumption_kwh'], 0, ',', '.') . ' kWh/Jahr' : '')
                 . (isset($insurance['start_date'])
@@ -277,13 +278,13 @@ class LichtblickAuftragParser implements DocumentTemplateParser
             'tariff' => $energie['tariff'] ?? null,
         ];
 
-        // Auftragsnummer (Wert ueber "UVP", entspricht der order-Nummer) als
-        // VORLAEUFIGE Vertragsnummer - die Vertragsbestaetigung ersetzt sie
-        // spaeter durch die endgueltige Nummer (Auftrag-zuerst-System).
-        $orderLine = $this->rightValueAbove('UVP');
-        if ($orderLine !== null && preg_match('/^(\d{5,12})$/', trim($orderLine), $m)) {
-            $raw['contract_number'] = $m[1];
-        }
+        // HINWEIS zur Auftragsnummer (Wert ueber "UVP"): sie wird BEWUSST NICHT
+        // als Vertragsnummer gefuehrt (Betreiber-Vorgabe 02.08.2026) - ein
+        // Auftrag hat noch keine Vertragsnummer, und eine Auftragsnummer in
+        // diesem Feld ist eine falsche Angabe in der Kundenakte. Sie steht in
+        // der Zusammenfassung; die spaetere Vertragsbestaetigung bringt die
+        // echte Nummer und findet ihren Vertrag ueber MaLo-ID/Zaehlernummer
+        // (Auftrag-zuerst-System).
 
         // Ausdruecklich gewuenschter Lieferbeginn (Wertzeile ueber bzw. hinter
         // "Datum des Lieferbeginns") - meist LEER (= naechstmoeglich).
@@ -409,6 +410,16 @@ class LichtblickAuftragParser implements DocumentTemplateParser
             return $vals === [] ? null : implode(' ', array_reverse($vals));
         }
         return null;
+    }
+
+    /**
+     * Auftragsnummer aus dem Kopf (Wert ueber "UVP") - nur fuer die
+     * Zusammenfassung, sie ist KEINE Vertragsnummer.
+     */
+    private function orderNumber(): ?string
+    {
+        $line = $this->rightValueAbove('UVP');
+        return ($line !== null && preg_match('/^(\d{5,12})$/', trim($line), $m)) ? $m[1] : null;
     }
 
     /** Wie rawValueAbove, aber nur die erste Spalte als getrimmter Wert. */
