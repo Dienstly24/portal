@@ -8,8 +8,9 @@ use Tests\TestCase;
 /**
  * Gratis-Parser fuer den LichtBlick-Auftrag (Versorgerwechsel, z.B. von den
  * Stadtwerken): liest Person (Geburtsdatum als TTMMJJ), Zaehlernummer/MaLo-ID,
- * bisherigen Versorger samt Kundennummer, Verbrauch, Tarifpreise, Kunden-IBAN
- * und die Auftragsnummer als vorlaeufige Vertragsnummer (Stufe 'antrag').
+ * bisherigen Versorger samt Kundennummer, Verbrauch, Tarifpreise und
+ * Kunden-IBAN (Stufe 'antrag'). Die Auftragsnummer steht nur in der
+ * Zusammenfassung - sie ist KEINE Vertragsnummer.
  * Ohne genannten Lieferbeginn + Stadtwerke-Wechsel meldet er den spaetesten
  * erwarteten Beginn (20 Tage: 14 Tage Kuendigungsfrist + Bearbeitung).
  * Synthetische Daten, gleiche Zweispalten-Struktur wie das Original.
@@ -105,7 +106,10 @@ class LichtblickAuftragParserTest extends TestCase
         $this->assertSame('Altahan', $r['data']['person']['last_name']);
         $this->assertSame('42811442', $r['data']['energie']['meter_number']);
         $this->assertSame('51214022992', $r['data']['energie']['malo_id']);
-        $this->assertSame('1657453', $r['data']['versicherung']['contract_number']);
+        // Die Auftragsnummer steht in der Zusammenfassung, NICHT als
+        // Vertragsnummer (ein Auftrag hat noch keine).
+        $this->assertArrayNotHasKey('contract_number', $r['data']['versicherung']);
+        $this->assertStringContainsString('Auftragsnummer 1657453', $r['summary']);
         $this->assertSame(20, $r['data']['versicherung']['expected_start_within_days']);
     }
 
@@ -132,8 +136,12 @@ class LichtblickAuftragParserTest extends TestCase
         $v = $r['data']['versicherung'];
         $this->assertSame('LichtBlick', $v['insurer']);
         $this->assertSame('strom', $v['sparte']);
-        // Auftragsnummer als VORLAEUFIGE Vertragsnummer, Stufe 'antrag'.
-        $this->assertSame('1657453', $v['contract_number']);
+        // Die Auftragsnummer ist KEINE Vertragsnummer (Betreiber-Vorgabe
+        // 02.08.2026): sie steht in der Zusammenfassung, das Feld bleibt leer.
+        // Die spaetere Vertragsbestaetigung bringt die echte Nummer und findet
+        // ihren Vertrag ueber MaLo-ID/Zaehlernummer.
+        $this->assertArrayNotHasKey('contract_number', $v);
+        $this->assertStringContainsString('Auftragsnummer 1657453', $r['summary']);
         $this->assertSame('antrag', $v['document_stage']);
         $this->assertSame('LichtBlick ÖkoStrom', $v['tariff']);
         // Abschlag 64,24 passt rechnerisch zum neuen Tarif -> uebernommen.
@@ -168,6 +176,27 @@ class LichtblickAuftragParserTest extends TestCase
         $v = $r['data']['versicherung'];
         $this->assertSame('2026-09-01', $v['start_date']);
         $this->assertArrayNotHasKey('expected_start_within_days', $v);
+    }
+
+    public function test_empty_previous_provider_stays_empty_instead_of_form_text(): void
+    {
+        // Auftrag 1659475 (30.07.2026): das Feld "Derzeitiger Stromversorger"
+        // war LEER - darueber steht die Ankreuz-Zeile "Ich möchte LichtBlick
+        // ÖkoStrom in meiner/m jetzigen Wohnung/Haus beziehen." Die wurde
+        // faelschlich als bisheriger Versorger uebernommen. Ein leeres Feld
+        // bleibt jetzt leer; alle uebrigen Felder kommen weiterhin an.
+        $r = (new LichtblickAuftragParser())->parse($this->auftragText(versorger: ''));
+
+        $this->assertNotNull($r);
+        $this->assertArrayNotHasKey('previous_provider', $r['data']['energie']);
+        // Ohne bekannten Vorversorger auch KEIN geschaetzter Beginn
+        // (die 14-Tage-Regel gilt nur fuer Stadtwerke).
+        $this->assertArrayNotHasKey('expected_start_within_days', $r['data']['versicherung']);
+        // Der Rest des Formulars ist davon unberuehrt.
+        $this->assertSame('Altahan', $r['data']['person']['last_name']);
+        $this->assertSame('altahanmashoer@gmail.com', $r['data']['person']['email']);
+        $this->assertSame('42811442', $r['data']['energie']['meter_number']);
+        $this->assertStringContainsString('Auftragsnummer 1657453', $r['summary']);
     }
 
     public function test_no_estimate_when_previous_provider_is_not_stadtwerke(): void

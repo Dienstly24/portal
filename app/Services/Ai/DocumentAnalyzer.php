@@ -85,20 +85,28 @@ class DocumentAnalyzer
      */
     public function analyze(Document $document, bool $forceAi = false, bool $fresh = false): ?array
     {
-        // Tier 0 (noch vor der kostenlosen Textstufe): Ist dieselbe Datei schon
-        // einmal analysiert worden (identischer Inhalts-Hash -> duplicate_of),
-        // wird ihr fertiges Ergebnis uebernommen - kein erneutes Lesen der
-        // Datei, vor allem kein zweiter (kostenpflichtiger) KI-Aufruf fuer ein
-        // Dokument, das der Betrieb nachweislich schon hat. Nur ohne bewusste
-        // KI-Erzwingung (forceAi) und ohne bewusste Neu-Analyse (fresh).
-        if (!$forceAi && !$fresh) {
-            $reused = $this->reuseFromDuplicate($document);
-            if ($reused !== null) {
+        // Duplikat-Wiederverwendung (identischer Inhalts-Hash -> duplicate_of):
+        // das fertige Ergebnis des Zwillings spart OCR und vor allem den
+        // zweiten (kostenpflichtigen) KI-Aufruf. Sie greift aber erst NACH den
+        // Vorlagen-Parsern auf der Textebene - die sind gratis und werden
+        // laufend verbessert; ein erneut hochgeladenes Dokument soll das
+        // BESTE aktuelle Ergebnis bekommen, nicht die Kopie eines veralteten
+        // (z.B. lueckenhaften KI-)Ergebnisses von vor der Verbesserung.
+        // Nur ohne bewusste KI-Erzwingung (forceAi) und Neu-Analyse (fresh).
+        $reuse = (!$forceAi && !$fresh)
+            ? fn () => $this->reuseFromDuplicate($document)
+            : fn () => null;
+
+        try {
+            [$binary, $mime] = $this->readFile($document);
+        } catch (\RuntimeException $e) {
+            // Datei nicht lesbar (fehlt/zu gross/unbekannter Typ): fuer ein
+            // Duplikat rettet das gespeicherte Zwillings-Ergebnis die Analyse.
+            if (($reused = $reuse()) !== null) {
                 return $reused;
             }
+            throw $e;
         }
-
-        [$binary, $mime] = $this->readFile($document);
 
         // Erzwungene KI-Eskalation: kostenlose Stufe ueberspringen.
         if ($forceAi && $this->provider->isEnabled()) {
@@ -132,18 +140,33 @@ class DocumentAnalyzer
             $freeText = $this->pdfText->extract($binary);
             $fromTextLayer = $freeText !== '';
         }
-        if ($freeText === '' && $this->ocr->isAvailable()) {
-            $freeText = $this->ocr->extract($binary, $mime);
-        }
 
-        // Bekanntes, immer gleich aufgebautes Formular auf dem Gratis-Text
-        // (OCR bei Bild-PDF, oder saubere Textebene)? Dann GRATIS per fester
-        // Regel lesen (kein KI-Aufruf) - z.B. die als Bild-PDF hochgeladene
-        // KKH-Beitrittserklaerung oder das CHECK24-Kfz-Protokoll.
+        // Bekanntes, immer gleich aufgebautes Formular auf der sauberen
+        // Textebene? Dann GRATIS per fester Regel lesen (kein KI-Aufruf).
         if ($freeText !== '') {
             $parsed = $this->templateParser->parse($freeText);
             if ($parsed !== null) {
                 return [...$parsed, 'source' => 'template'];
+            }
+        }
+
+        // Kein Vorlagen-Treffer auf der Textebene: jetzt darf das fertige
+        // Ergebnis des inhaltsgleichen Zwillings uebernommen werden - es spart
+        // OCR (CPU bei Scans) und die KI-Eskalation.
+        if (($reused = $reuse()) !== null) {
+            return $reused;
+        }
+
+        if ($freeText === '' && $this->ocr->isAvailable()) {
+            $freeText = $this->ocr->extract($binary, $mime);
+
+            // Bekanntes Formular auf dem OCR-Text (z.B. die als Bild-PDF
+            // hochgeladene KKH-Beitrittserklaerung)? Ebenfalls gratis lesen.
+            if ($freeText !== '') {
+                $parsed = $this->templateParser->parse($freeText);
+                if ($parsed !== null) {
+                    return [...$parsed, 'source' => 'template'];
+                }
             }
         }
 

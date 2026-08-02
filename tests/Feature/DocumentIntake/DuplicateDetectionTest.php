@@ -144,10 +144,14 @@ class DuplicateDetectionTest extends TestCase
         $this->assertArrayNotHasKey('match', $result['data']);
     }
 
-    public function test_fresh_analysis_rereads_duplicate_instead_of_reusing(): void
+    public function test_improved_template_parser_beats_stale_duplicate_result(): void
     {
-        // Nach einer Parser-Verbesserung muss "Neu analysieren" die Datei
-        // WIRKLICH neu lesen - nicht das alte Duplikat-Ergebnis kopieren.
+        // Produktionsfall 31.07.2026 (LichtBlick-Auftrag): der Betrieb laedt
+        // dieselbe Datei erneut hoch, NACHDEM der Vorlagen-Parser verbessert
+        // wurde - frueher kopierte das Duplikat stur das alte, lueckenhafte
+        // (KI-)Ergebnis. Die Gratis-Vorlagenstufe auf der Textebene laeuft
+        // jetzt VOR der Wiederverwendung: erneut hochgeladene Dokumente
+        // bekommen das BESTE aktuelle Ergebnis, ohne einen Cent KI-Kosten.
         $content = "%PDF-1.4\nAlt analysiert\n%%EOF";
         $original = $this->docWithContent($content, [
             'ai_status' => 'done',
@@ -173,14 +177,48 @@ class DuplicateDetectionTest extends TestCase
             new Check24KfzProtocolParser(),
         );
 
-        // Ohne fresh: altes Ergebnis wird wiederverwendet.
-        $reused = $analyzer->analyze($duplicate->fresh());
-        $this->assertSame('sonstiges', $reused['type']);
+        // Auch OHNE "Neu analysieren" gewinnt der Vorlagen-Parser.
+        $result = $analyzer->analyze($duplicate->fresh());
+        $this->assertSame('beratungsprotokoll', $result['type']);
+        $this->assertSame('template', $result['source']);
 
-        // Mit fresh: die Datei wird neu gelesen -> neues Template-Ergebnis.
+        // "Neu analysieren" liest ebenfalls frisch.
         $freshResult = $analyzer->analyze($duplicate->fresh(), forceAi: false, fresh: true);
         $this->assertSame('beratungsprotokoll', $freshResult['type']);
         $this->assertSame('template', $freshResult['source']);
+    }
+
+    public function test_unreadable_duplicate_file_still_reuses_twin_result(): void
+    {
+        // Ist die Datei des Duplikats nicht mehr lesbar (geloescht/verschoben),
+        // rettet das gespeicherte Zwillings-Ergebnis die Analyse weiterhin.
+        $content = "%PDF-1.4\nZwilling vorhanden\n%%EOF";
+        $original = $this->docWithContent($content, [
+            'ai_status' => 'done',
+            'ai_type' => 'sepa_mandat',
+            'ai_extracted' => ['bank' => ['iban' => 'DE89370400440532013000']],
+        ]);
+        $duplicate = $this->docWithContent($content, ['ai_status' => 'pending']);
+        $this->assertSame((string) $original->id, (string) $duplicate->duplicate_of);
+        Storage::disk('local')->delete($duplicate->file_path);
+
+        $provider = new class implements DocumentAiProviderInterface {
+            public function isEnabled(): bool { return false; }
+            public function model(): string { return 'fake'; }
+            public function analyze(string $binary, string $mime, string $ocrText, bool $preferText = false): ?array { return null; }
+        };
+        $analyzer = new DocumentAnalyzer(
+            $provider,
+            $this->fakeOcr(),
+            $this->fakePdfText(''),
+            new RelevantPageSelector(),
+            new Check24KfzProtocolParser(),
+        );
+
+        $result = $analyzer->analyze($duplicate->fresh());
+
+        $this->assertSame('sepa_mandat', $result['type']);
+        $this->assertSame('DE89370400440532013000', $result['data']['bank']['iban']);
     }
 
     public function test_inbox_shows_duplicate_warning(): void
