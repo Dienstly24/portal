@@ -58,15 +58,21 @@ class TesseractTextExtractor implements TextExtractorInterface
             // reicht das nicht, eskaliert DocumentAnalyzer ohnehin zur KI.
             $deadline = microtime(true) + max(5, (int) config('services.ocr.max_seconds', 60));
 
-            $text = '';
+            // Seiten wie bei pdftotext mit Form-Feed ("\f") trennen: nur so
+            // koennen die Vorlagen-Parser auch bei einem SCAN die Regel
+            // "Auftrag = nur die Formularseite" anwenden (ReadsDocumentPages)
+            // - sonst zaehlt der Rechtstext der Folgeseiten wieder mit und
+            // verstummt den Parser (z.B. "Beratungsprotokollen" im
+            // Datenschutzhinweis).
+            $pages = [];
             foreach ($images as $image) {
                 if (microtime(true) >= $deadline) {
-                    Log::warning('OCR-Zeitbudget erschoepft - Teilergebnis nach ' . mb_strlen($text) . ' Zeichen.');
+                    Log::warning('OCR-Zeitbudget erschoepft - Teilergebnis nach ' . count($pages) . ' Seiten.');
                     break;
                 }
-                $text .= $this->ocrImage($image) . "\n";
+                $pages[] = trim($this->ocrImage($image));
             }
-            return trim($text);
+            return trim(implode("\f", $pages), " \t\n\r\0\x0B\f");
         } catch (\Throwable $e) {
             Log::warning('OCR-Extraktion fehlgeschlagen: ' . $e->getMessage());
             return '';
