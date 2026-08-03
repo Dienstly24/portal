@@ -111,6 +111,33 @@ class TesseractTextExtractorTest extends TestCase
         $this->assertStringNotContainsStringIgnoringCase('CHARLIETHREE', $text);
     }
 
+    public function test_pdf_pages_are_separated_by_form_feed(): void
+    {
+        config([
+            'services.ocr.enabled' => true,
+            'services.ocr.languages' => 'eng',
+        ]);
+        if (!$this->tesseractInstalledForRealCheck() || !$this->pdftoppmInstalledForRealCheck()) {
+            $this->markTestSkipped('tesseract/pdftoppm-Binary auf diesem System nicht installiert.');
+        }
+
+        $pdf = (new \App\Services\Pdf\ImagesToPdfService())->build([
+            $this->makeTextImage('ALPHAONE'),
+            $this->makeTextImage('BRAVOTWO'),
+        ]);
+
+        $text = (new TesseractTextExtractor())->extract($pdf, 'application/pdf');
+
+        // Seiten sind wie bei pdftotext mit Form-Feed getrennt - nur so gilt
+        // die Regel "Auftrag = nur die Formularseite" (ReadsDocumentPages)
+        // auch fuer SCANS; sonst wuerde der Rechtstext der Folgeseiten die
+        // Vorlagen-Parser wieder verstummen lassen.
+        $this->assertStringContainsString("\f", $text);
+        [$first] = explode("\f", $text, 2);
+        $this->assertStringContainsStringIgnoringCase('ALPHAONE', $first);
+        $this->assertStringNotContainsStringIgnoringCase('BRAVOTWO', $first);
+    }
+
     private function tesseractInstalledForRealCheck(): bool
     {
         return $this->binaryUsable('tesseract', ['--version']);

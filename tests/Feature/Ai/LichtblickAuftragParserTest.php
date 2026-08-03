@@ -229,6 +229,108 @@ class LichtblickAuftragParserTest extends TestCase
         $this->assertNull((new LichtblickAuftragParser())->parse("LichtBlick SE\nJahresrechnung Strom"));
     }
 
+    /**
+     * OCR-Text eines unterschriebenen SCANS (Auftrag 1660903, 03.08.2026):
+     * keine Spalten-Ausrichtung (nur EIN Leerzeichen zwischen den Spalten,
+     * "Hussam 210785"), Haken als "✔", das Lieferdatum steht UNTER seiner
+     * Beschriftung, Umzugs-Variante mit Zaehlerstand bei Schluesseluebergabe.
+     * Seiten kommen aus dem OCR jetzt Form-Feed-getrennt - der Rechtstext der
+     * Folgeseiten ("Beratungsprotokollen") darf den Parser nicht stoppen.
+     */
+    private function gescannterUmzugsAuftrag(): string
+    {
+        $seite1 = implode("\n", [
+            'Auftrag',
+            'LichtBlick ÖkoStrom',
+            '03.08.2026',
+            'Datum',
+            '1660903',
+            'UVP',
+            '1 Adresse/Lieferstelle',
+            'Deine Kundendaten',
+            '☐ Frau ✔ Herr ☐ Divers ☐ Firma',
+            'Firma USt-IdNr.',
+            'Ghurra',
+            'Nachname',
+            'Hussam 210785',
+            'Vorname Geburtsdatum',
+            'Händelstr. 16',
+            'Straße Hausnummer',
+            '44627 Herne',
+            'Postleitzahl Ort',
+            '01575-0171881',
+            'Telefon- oder Mobilnummer tagsüber (für Rückfragen)',
+            'hossamgurra998@example.com',
+            'E-Mail-Adresse (erforderlich)',
+            '2 Daten zur Stromversorgung',
+            '600701',
+            '– oder –',
+            'Zählernummer MaLo-ID',
+            'Datum des Lieferbeginns:',
+            '06.08.2026',
+            'Derzeitiger Stromversorger',
+            '78,57',
+            'Kundennummer beim derzeitigen Stromversorger Abschlag im Monat',
+            '2400 kWh',
+            'Letzter Jahresstromverbrauch',
+            '– oder –',
+            '✔ Ich ziehe um. / Ich bin umgezogen.',
+            '042536 kWh',
+            'Zählerstand bei Schlüsselübergabe Geschätzter Jahresstromverbrauch',
+            '3 Dein ÖkoStrom',
+            'Arbeitspreis: 30,66 Cent/kWh 25,76 Cent/kWh',
+            'Grundpreis: 17,25 €/Monat 14,50 €/Monat',
+            '4 Einzugsermächtigung',
+            'DE29426501501155013160',
+            'IBAN',
+        ]);
+
+        return $seite1
+            . "\fWiderrufsbelehrung\nDer Vertrag verlängert sich jeweils um ein weiteres Jahr."
+            . "\fDatenschutzhinweise\nWir verarbeiten Daten aus der Vertragsanbahnung (z. B. aus Beratungsprotokollen).";
+    }
+
+    public function test_reads_scanned_order_from_ocr_text(): void
+    {
+        $r = (new LichtblickAuftragParser())->parse($this->gescannterUmzugsAuftrag());
+
+        $this->assertNotNull($r);
+
+        $p = $r['data']['person'];
+        $this->assertSame('Hussam', $p['first_name']);
+        $this->assertSame('Ghurra', $p['last_name']);
+        $this->assertSame('male', $p['gender']);
+        // "210785" aus der einspaltig gelesenen Zeile "Hussam 210785".
+        $this->assertSame('1985-07-21', $p['birth_date']);
+        $this->assertSame('Händelstr.', $p['street']);
+        $this->assertSame('16', $p['house_number']);
+        $this->assertSame('44627', $p['zip']);
+        $this->assertSame('Herne', $p['city']);
+        $this->assertSame('015750171881', $p['phone']);
+        $this->assertSame('hossamgurra998@example.com', $p['email']);
+
+        $v = $r['data']['versicherung'];
+        // Das Lieferdatum steht UNTER "Datum des Lieferbeginns:".
+        $this->assertSame('2026-08-06', $v['start_date']);
+        // Abschlag 78,57 passt zum Tarif (30,66 x 2400 / 12 + 17,25).
+        $this->assertSame(78.57, $v['premium_amount']);
+        $this->assertSame('antrag', $v['document_stage']);
+        $this->assertArrayNotHasKey('contract_number', $v);
+
+        $e = $r['data']['energie'];
+        $this->assertSame('600701', $e['meter_number']);
+        $this->assertSame(2400, $e['consumption_kwh']);
+        // Umzug: Zaehlerstand bei Schluesseluebergabe ist eine echte Ablesung.
+        $this->assertSame(42536.0, $e['meter_reading']);
+        $this->assertSame(30.66, $e['working_price']);
+        $this->assertSame(17.25, $e['base_price']);
+        // Kein Vorversorger eingetragen -> Feld bleibt leer.
+        $this->assertArrayNotHasKey('previous_provider', $e);
+
+        $this->assertSame('DE29426501501155013160', $r['data']['bank']['iban']);
+        $this->assertStringContainsString('Auftragsnummer 1660903', $r['summary']);
+    }
+
     public function test_ewe_parsers_do_not_claim_the_lichtblick_order(): void
     {
         // Produktionsfehler 29.07.2026: "jEWEils" (AGB) + Grundpreis +

@@ -122,13 +122,16 @@ class LichtblickAuftragParser implements DocumentTemplateParser
     {
         $raw = [];
 
-        // Anrede-Ankreuzzeile ("Frau  4 Herr  Divers  Firma"): die Marke (4/X)
-        // steht direkt VOR der gewaehlten Option.
+        // Anrede-Ankreuzzeile ("Frau  4 Herr  Divers  Firma"): die Marke steht
+        // direkt VOR der gewaehlten Option. In der digitalen Textebene rendert
+        // der Haken als "4"/"X"; liest OCR einen SCAN, kommt er als Haken-
+        // Zeichen oder "v"/"V" an - die Zeile selbst ist durch die drei
+        // Anreden eindeutig, daher sind die Marken hier unverwechselbar.
         foreach ($this->lines as $line) {
             if (preg_match('/\bFrau\b/u', $line) && preg_match('/\bHerr\b/u', $line) && preg_match('/\bDivers\b/u', $line)) {
-                if (preg_match('/[4Xx]\s+Frau\b/u', $line)) {
+                if (preg_match('/[4Xx✓✔vV]\s+Frau\b/u', $line)) {
                     $raw['gender'] = 'female';
-                } elseif (preg_match('/[4Xx]\s+Herr\b/u', $line)) {
+                } elseif (preg_match('/[4Xx✓✔vV]\s+Herr\b/u', $line)) {
                     $raw['gender'] = 'male';
                 }
                 break;
@@ -138,18 +141,18 @@ class LichtblickAuftragParser implements DocumentTemplateParser
         $raw['last_name'] = $this->valueAbove('Nachname');
         // Die Vorname-Zeile traegt rechts das Geburtsdatum als TTMMJJ:
         // " Mashhour                021180" ueber "Vorname     Geburtsdatum".
+        // Das Datum wird auf der GANZEN Zeile gesucht (OCR eines Scans trennt
+        // die Spalten oft nur mit EINEM Leerzeichen: "Hussam 210785") und aus
+        // dem Namen entfernt.
         $vornameLine = $this->rawValueAbove('Vorname');
         if ($vornameLine !== null) {
-            $cols = $this->columns($vornameLine);
-            $raw['first_name'] = $cols[0] ?? null;
-            foreach ($cols as $c) {
-                if (preg_match('/^(\d{2})(\d{2})(\d{2})$/', trim($c), $m)) {
-                    $yy = (int) $m[3];
-                    $raw['birth_date'] = ($yy <= 30 ? 2000 + $yy : 1900 + $yy)
-                        . '-' . $m[2] . '-' . $m[1];
-                    break;
-                }
+            if (preg_match('/\b(\d{2})(\d{2})(\d{2})\b/', $vornameLine, $m)) {
+                $yy = (int) $m[3];
+                $raw['birth_date'] = ($yy <= 30 ? 2000 + $yy : 1900 + $yy)
+                    . '-' . $m[2] . '-' . $m[1];
             }
+            $first = trim((string) preg_replace('/\s*\b\d{6}\b.*$/u', '', $this->columns($vornameLine)[0] ?? ''));
+            $raw['first_name'] = $first !== '' ? $first : null;
         }
 
         // Strasse + Hausnummer stehen in EINER Wertzeile ueber "Straße ... Hausnummer".
@@ -241,10 +244,19 @@ class LichtblickAuftragParser implements DocumentTemplateParser
             }
         }
 
-        // Letzter Jahresverbrauch ("1800   kWh").
-        $consLine = $this->rawValueAbove('Letzter Jahres');
+        // Letzter Jahresverbrauch ("1800   kWh"); beim Umzug traegt das
+        // Formular stattdessen den GESCHAETZTEN Jahresverbrauch.
+        $consLine = $this->rawValueAbove('Letzter Jahres') ?? $this->rawValueAbove('Geschätzter Jahres');
         if ($consLine !== null && preg_match('/([\d.]+)\s*kWh/iu', $consLine, $m)) {
             $raw['consumption_kwh'] = (int) str_replace('.', '', $m[1]);
+        }
+
+        // Umzugs-Variante: der Zaehlerstand bei Schluesseluebergabe ist eine
+        // echte Ablesung und gehoert in die Akte ("042536 kWh" ueber
+        // "Zählerstand bei Schlüsselübergabe").
+        $standLine = $this->rawValueAbove('Zählerstand bei Schlüssel') ?? $this->rawValueAbove('Zaehlerstand bei Schluessel');
+        if ($standLine !== null && preg_match('/\b0*(\d{1,8})\b\s*kWh/iu', $standLine, $m)) {
+            $raw['meter_reading'] = (float) $m[1];
         }
 
         // Tarifpreise (Brutto-Spalte): "Arbeitspreis: 33,93 Cent/kWh ...",
@@ -286,15 +298,17 @@ class LichtblickAuftragParser implements DocumentTemplateParser
         // echte Nummer und findet ihren Vertrag ueber MaLo-ID/Zaehlernummer
         // (Auftrag-zuerst-System).
 
-        // Ausdruecklich gewuenschter Lieferbeginn (Wertzeile ueber bzw. hinter
-        // "Datum des Lieferbeginns") - meist LEER (= naechstmoeglich).
+        // Ausdruecklich gewuenschter Lieferbeginn - meist LEER
+        // (= naechstmoeglich). Das Datum kann in derselben Zeile stehen, in
+        // der Wertzeile DARUEBER (digitale Textebene) oder - bei der
+        // Formularvariante mit Eintrag unter der Ueberschrift bzw. im OCR
+        // eines Scans - direkt DARUNTER.
         $start = null;
         foreach ($this->lines as $i => $line) {
             if (mb_stripos($line, 'Datum des Lieferbeginns') === false) {
                 continue;
             }
-            // Datum in derselben Zeile oder der Wertzeile darueber.
-            foreach ([$line, $this->lines[$i - 1] ?? ''] as $cand) {
+            foreach ([$line, $this->lines[$i - 1] ?? '', $this->lines[$i + 1] ?? ''] as $cand) {
                 if (preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $cand, $m)) {
                     $start = $m[3] . '-' . $m[2] . '-' . $m[1];
                     break 2;
