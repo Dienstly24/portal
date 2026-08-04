@@ -124,6 +124,25 @@ class MetaAdsController extends Controller
         return back()->with('success', 'Tagesbudget auf ' . number_format($eur, 2, ',', '.') . ' EUR geaendert.');
     }
 
+    /**
+     * Schutzgrenze (max. Tagesbudget) aendern - NUR Admin (Route-Middleware):
+     * die Grenze schuetzt vor Tippfehlern mit echtem Geld, deshalb liegt sie
+     * eine Rolle hoeher als das Anlegen der Anzeigen selbst.
+     */
+    public function updateCap(Request $request)
+    {
+        $eur = (int) $request->validate([
+            'max_daily_budget_eur' => 'required|integer|min:1|max:' . MetaAdsService::CAP_CEILING_EUR,
+        ])['max_daily_budget_eur'];
+
+        $alt = MetaAdsService::maxDailyBudgetEur();
+        \App\Models\SystemSetting::set('meta_ads_max_daily_budget', (string) $eur);
+        $this->log('meta_ads_cap_changed', 'schutzgrenze', ['alt_eur' => $alt, 'neu_eur' => $eur]);
+
+        return redirect()->route('admin.werbung')
+            ->with('success', 'Schutzgrenze auf ' . $eur . ' EUR pro Tag geaendert.');
+    }
+
     public function destroy(string $campaignId, MetaAdsService $ads)
     {
         try {

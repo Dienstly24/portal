@@ -35,9 +35,22 @@ class MetaAdsService
         return !empty($cfg['token']) && !empty($cfg['ad_account_id']) && !empty($cfg['page_id']);
     }
 
+    /** Absolute Obergrenze fuer die Schutzgrenze selbst (Tippfehler-Schutz). */
+    public const CAP_CEILING_EUR = 10000;
+
+    /**
+     * Schutzgrenze fuers Tagesbudget: vom Admin in der Oberflaeche
+     * einstellbar (SystemSetting), Fallback ist der .env-Wert
+     * META_ADS_MAX_DAILY_BUDGET (Default 100 EUR).
+     */
     public static function maxDailyBudgetEur(): int
     {
-        return max(1, (int) config('services.meta.ads_max_daily_budget', 100));
+        $stored = \App\Models\SystemSetting::get('meta_ads_max_daily_budget');
+        $eur = is_numeric($stored) && (int) $stored >= 1
+            ? (int) $stored
+            : (int) config('services.meta.ads_max_daily_budget', 100);
+
+        return min(max(1, $eur), self::CAP_CEILING_EUR);
     }
 
     private function account(): string

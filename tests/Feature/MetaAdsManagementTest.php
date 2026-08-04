@@ -246,6 +246,46 @@ class MetaAdsManagementTest extends TestCase
             ->assertRedirect(route('admin.dashboard'));
     }
 
+    // ---------------- Schutzgrenze (max. Tagesbudget) ----------------
+
+    public function test_admin_kann_die_schutzgrenze_in_der_oberflaeche_aendern(): void
+    {
+        Http::fake();
+        $this->assertSame(100, MetaAdsService::maxDailyBudgetEur()); // .env-Fallback
+
+        $this->actingAs($this->admin)->post(route('admin.werbung.cap'), ['max_daily_budget_eur' => 30])
+            ->assertRedirect(route('admin.werbung'))->assertSessionHas('success');
+
+        $this->assertSame(30, MetaAdsService::maxDailyBudgetEur());
+        $this->assertSame(1, ActivityLog::where('action', 'meta_ads_cap_changed')->count());
+
+        // Die neue Grenze greift sofort: 50 EUR Tagesbudget wird abgelehnt.
+        $banner = $this->makePromotedBanner();
+        $this->actingAs($this->admin)->post(route('admin.werbung.store', $banner->id), [
+            'objective' => 'klicks', 'daily_budget_eur' => 50,
+            'age_min' => 20, 'age_max' => 60, 'language' => 'alle',
+        ])->assertSessionHasErrors('daily_budget_eur');
+        Http::assertNothingSent();
+    }
+
+    public function test_manager_darf_die_schutzgrenze_nicht_aendern(): void
+    {
+        $manager = User::factory()->create(['role' => 'manager']);
+
+        $this->actingAs($manager)->post(route('admin.werbung.cap'), ['max_daily_budget_eur' => 5000])
+            ->assertRedirect(route('admin.dashboard'));
+
+        $this->assertSame(100, MetaAdsService::maxDailyBudgetEur());
+    }
+
+    public function test_schutzgrenze_hat_eine_absolute_obergrenze(): void
+    {
+        $this->actingAs($this->admin)->post(route('admin.werbung.cap'), ['max_daily_budget_eur' => 20000])
+            ->assertSessionHasErrors('max_daily_budget_eur');
+
+        $this->assertSame(100, MetaAdsService::maxDailyBudgetEur());
+    }
+
     // ---------------- Kennzahlen (Insights) ----------------
 
     public function test_kennzahlen_werden_geholt_und_angezeigt(): void

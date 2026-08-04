@@ -193,8 +193,11 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   object_story_id, automatische Platzierungen FB+IG, Sprach-Targeting
   DE/AR via adlocale-Suche - IDs NIE raten). GELD-REGELN: jede neue
   Anzeige entsteht PAUSED (Start = bewusster Klick), Tagesbudget hart
-  gedeckelt (`META_ADS_MAX_DAILY_BUDGET`, Default 100 EUR, Validierung
-  in Controller UND Service), Budgets in EUR angezeigt und erst im
+  gedeckelt: Schutzgrenze aendert der ADMIN in der Oberflaeche
+  (SystemSetting `meta_ads_max_daily_budget`, Karte unten auf
+  /admin/werbung, absolute Obergrenze 10000; Fallback .env
+  `META_ADS_MAX_DAILY_BUDGET`, Default 100 EUR; Validierung in
+  Controller UND Service), Budgets in EUR angezeigt und erst im
   Service in Cent umgerechnet (Marketing API = Minor Units!),
   halbfertige Kampagnen werden bei Fehlern aufgeraeumt, JEDE Aktion im
   ActivityLog (`meta_ad_*`). `META_AD_ACCOUNT_ID` findet der Assistent

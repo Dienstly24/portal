@@ -100,5 +100,25 @@
     <p style="font-size:12px;color:var(--ink-soft);margin-top:10px;">💡 Neue Anzeigen entstehen immer PAUSIERT und geben erst nach „▶ Starten" Geld aus. Zahlungsmittel (Kreditkarte) verwaltet Meta selbst – das ist der einzige Schritt, der dort bleibt.</p>
     @endif
 </div>
+
+{{-- Schutzgrenze: nur der Admin darf sie aendern (eine Rolle ueber den
+     Anzeigen-Aktionen) - jede Aenderung steht im Aktivitaets-Log. --}}
+<div class="card">
+    <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;">
+        <div style="flex:1;min-width:260px;">
+            <div style="font-weight:600;font-size:14px;">🛡 Schutzgrenze: max. Tagesbudget</div>
+            <div style="font-size:12.5px;color:var(--ink-soft);margin-top:4px;">Kein Tagesbudget im System kann über <strong>{{ $maxBudget }} EUR</strong> gesetzt werden – Schutz vor Tippfehlern mit echtem Geld. Gilt für neue Anzeigen und Budget-Änderungen.</div>
+        </div>
+        @if(auth()->user()->role === 'admin')
+        <form method="POST" action="{{ route('admin.werbung.cap') }}" style="display:flex;gap:8px;align-items:center;">
+            @csrf
+            <input type="number" name="max_daily_budget_eur" value="{{ $maxBudget }}" min="1" max="{{ \App\Services\Social\MetaAdsService::CAP_CEILING_EUR }}" step="1" required style="width:100px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;text-align:right;background:#F7F5EF;"> <span style="font-size:13px;">EUR/Tag</span>
+            <button type="submit" class="btn btn-ghost btn-sm">💾 Grenze ändern</button>
+        </form>
+        @else
+        <span style="font-size:12px;color:var(--ink-soft);">Änderbar nur durch den Admin.</span>
+        @endif
+    </div>
+</div>
 @endif
 @endsection

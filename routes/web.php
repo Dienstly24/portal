@@ -383,6 +383,10 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         Route::post('/werbung/{campaignId}/status', [\App\Http\Controllers\MetaAdsController::class, 'status'])->whereNumber('campaignId')->name('werbung.status');
         Route::post('/werbung/{campaignId}/budget', [\App\Http\Controllers\MetaAdsController::class, 'budget'])->whereNumber('campaignId')->name('werbung.budget');
         Route::post('/werbung/{campaignId}/delete', [\App\Http\Controllers\MetaAdsController::class, 'destroy'])->whereNumber('campaignId')->name('werbung.delete');
+        // Schutzgrenze (max. Tagesbudget): bewusst NUR Admin - eine Rolle
+        // ueber denen, die Anzeigen anlegen/steuern duerfen.
+        Route::post('/werbung/schutzgrenze', [\App\Http\Controllers\MetaAdsController::class, 'updateCap'])
+            ->middleware('role:admin')->name('werbung.cap');
 
         // Leistungsseiten (oeffentliche /leistungen/*): Inhalte pflegbar durch
         // admin/manager - Texte DE/AR, Kurzinfos, FAQ, Bild, Reihenfolge.
