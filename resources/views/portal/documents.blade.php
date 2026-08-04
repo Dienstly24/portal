@@ -100,7 +100,7 @@
         <summary>
             <span class="fold-ico">{{ $contract?->typeIcon() ?? '📁' }}</span>
             <span>
-                {{ $contract?->typeLabel() ?? 'Vertrag' }}
+                {{ __($contract?->typeLabel() ?? 'Vertrag') }}
                 <span class="fold-sub">{{ $contract?->insurer }}@if($contract?->contract_number) · {{ $contract->contract_number }}@endif</span>
             </span>
             <span class="fold-count">{{ $docs->count() }}</span>
