@@ -4,6 +4,7 @@ namespace App\Services\Mailbox;
 use App\Models\EmailAccount;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 /**
  * OAuth2-Anbindung für Gmail / Microsoft 365 (Phase 2, Architekturplan
@@ -38,7 +39,13 @@ class OAuthTokenService
     public function authorizationUrl(EmailAccount $account): string
     {
         $this->assertConfigured($account);
-        $state = Crypt::encryptString((string) $account->id);
+        // CSRF-Schutz (Audit): der State bindet die Rueckleitung an DIESE
+        // Sitzung. Eine zufaellige Nonce liegt in der Session; nur wer den
+        // Consent hier gestartet hat, kann den Callback gueltig abschliessen.
+        // Der verschluesselte State schuetzt zusaetzlich vor Manipulation.
+        $nonce = Str::random(40);
+        session(['email_oauth_state' => ['account' => (string) $account->id, 'nonce' => $nonce]]);
+        $state = Crypt::encryptString($account->id . '|' . $nonce);
         $redirect = route('admin.email_accounts.oauth_callback');
 
         if ($account->provider === 'gmail_oauth') {
@@ -67,7 +74,21 @@ class OAuthTokenService
     /** Callback: Code gegen Tokens tauschen, Refresh-Token verschlüsselt ablegen. */
     public function handleCallback(string $code, string $state): EmailAccount
     {
-        $account = EmailAccount::findOrFail(Crypt::decryptString($state));
+        [$accountId, $nonce] = array_pad(explode('|', Crypt::decryptString($state), 2), 2, null);
+
+        // Der Callback muss aus derselben Sitzung stammen, die den Consent
+        // gestartet hat (State-Nonce). Fehlt sie oder weicht sie ab (fremd
+        // untergeschobener/alter Link), wird abgelehnt - die Nonce ist
+        // einmalig und wird sofort verbraucht.
+        $expected = session('email_oauth_state');
+        session()->forget('email_oauth_state');
+        if (! is_array($expected)
+            || ! hash_equals((string) ($expected['nonce'] ?? ''), (string) $nonce)
+            || ! hash_equals((string) ($expected['account'] ?? ''), (string) $accountId)) {
+            throw new \RuntimeException('OAuth-Rueckleitung ungueltig oder abgelaufen. Bitte im Admin erneut "Verbinden" starten.');
+        }
+
+        $account = EmailAccount::findOrFail($accountId);
         $this->assertConfigured($account);
 
         $response = Http::asForm()->post($this->tokenEndpoint($account), $this->tokenRequest($account, [

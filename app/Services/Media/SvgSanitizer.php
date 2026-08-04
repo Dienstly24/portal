@@ -14,7 +14,13 @@ namespace App\Services\Media;
  */
 class SvgSanitizer
 {
-    private const FORBIDDEN_TAGS = ['script', 'foreignobject', 'iframe', 'embed', 'object', 'animation', 'audio', 'video'];
+    // Skript- und Einbettungselemente sowie SMIL-Animationen: <animate>, <set>,
+    // <animateTransform/-Motion> und <handler> koennen Attribute (auch href und
+    // Event-Handler) zur LAUFZEIT umschreiben und umgehen so die statische
+    // Attributpruefung unten (z. B. <set attributeName="onload" to="...">). In
+    // einem Marken-/Logo-SVG wird nichts davon gebraucht - komplett entfernen.
+    private const FORBIDDEN_TAGS = ['script', 'foreignobject', 'iframe', 'embed', 'object', 'animation', 'audio', 'video',
+        'animate', 'animatetransform', 'animatemotion', 'set', 'discard', 'handler'];
 
     public static function sanitize(string $svg): ?string
     {

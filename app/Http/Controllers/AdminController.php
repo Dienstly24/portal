@@ -1104,8 +1104,13 @@ class AdminController extends Controller
             'health_insurance_number' => $request->health_insurance_number ?: null,
             'pension_insurance_number' => $request->pension_insurance_number ?: null,
             'tax_id' => $request->tax_id ?: null,
-            // Zuordnung zu einem Vertriebspartner (dessen Portal ihn dann sieht).
-            'partner_id' => $request->partner_id ?: null,
+            // Zuordnung zu einem Vertriebspartner (dessen Portal ihn dann sieht) -
+            // steuert eine Datensicht (Partner-Portal), daher darf sie NUR die
+            // Verwaltung setzen (analog zum Werber/acquired_by). Fuer uebrige
+            // Rollen bleibt der Bestand unveraendert - kein stiller Datenabfluss.
+            'partner_id' => in_array(auth()->user()->role, ['admin', 'manager'], true)
+                ? ($request->partner_id ?: null)
+                : $customer->partner_id,
         ];
 
         // Strukturierte Adressfelder (wie sie das Kundenportal liest) mit

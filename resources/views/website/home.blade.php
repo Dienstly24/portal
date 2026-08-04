@@ -54,7 +54,7 @@
             'Kfz-Zulassungsservice', 'Kennzeichen per Post', 'Strom- und Gasberatung',
         ]),
     ],
-], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}
 </script>
 <script type="application/ld+json">
 {!! json_encode([
@@ -74,7 +74,7 @@
         ['Wie lange dauert die Bearbeitung meiner Anfrage?', 'In der Regel melden wir uns innerhalb von 24 Stunden bei Ihnen.'],
         ['Wie kann ich eine Anfrage stellen?', 'Am einfachsten über das Kontaktformular, per WhatsApp oder telefonisch unter +49 179 9673909.'],
     ]),
-], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}
 </script>
 @endsection
 

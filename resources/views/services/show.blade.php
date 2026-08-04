@@ -40,7 +40,7 @@
         'telephone' => '+49-179-9673909',
         'address' => ['@type' => 'PostalAddress', 'streetAddress' => 'Furtweg 51a', 'postalCode' => '22523', 'addressLocality' => 'Hamburg', 'addressCountry' => 'DE'],
     ],
-], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}
 </script>
 @if(count($faq))
 <script type="application/ld+json">
@@ -52,7 +52,7 @@
         'name' => $f['q'],
         'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f['a']],
     ])->all(),
-], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}
 </script>
 @endif
 @vite(['resources/css/app.css', 'resources/js/app.js'])

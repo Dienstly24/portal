@@ -116,4 +116,33 @@ class EmailAccountManagementTest extends TestCase
         $this->actingAs($admin)->post(route('admin.email_accounts.test', $account->id))->assertRedirect();
         $this->assertStringContainsString('noch nicht verbunden', $account->fresh()->last_error);
     }
+
+    /**
+     * OAuth-CSRF-Schutz: der Callback bindet ueber eine Session-Nonce an die
+     * Sitzung, die den Consent gestartet hat. Ein gueltig verschluesselter
+     * State mit fremder Nonce (untergeschobener/replayter Link) wird abgelehnt
+     * und legt KEINE Tokens ab.
+     */
+    public function test_oauth_callback_rejects_state_without_matching_session_nonce(): void
+    {
+        $admin = $this->admin();
+        $account = EmailAccount::create([
+            'name' => 'Gmail',
+            'email_address' => 'gmail2@dienstly24.de',
+            'provider' => 'gmail_oauth',
+            'folders' => ['INBOX'],
+            'is_active' => true,
+        ]);
+
+        // Verschluesselter State, aber die Nonce passt zu keiner Session.
+        $forgedState = \Illuminate\Support\Facades\Crypt::encryptString($account->id . '|fremde-nonce');
+
+        $this->actingAs($admin)
+            ->get(route('admin.email_accounts.oauth_callback', ['code' => 'irrelevant', 'state' => $forgedState]))
+            ->assertRedirect(route('admin.email_accounts.index'))
+            ->assertSessionHas('error');
+
+        // Kein Token-Tausch erfolgt: credentials bleiben leer.
+        $this->assertEmpty($account->fresh()->credentials ?? []);
+    }
 }
