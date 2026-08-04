@@ -2,7 +2,7 @@
 @section('content')
 <div class="toolbar">
     <div><div class="page-title">{{ __('Meine Verträge') }}</div><div class="page-sub">{{ __('Alle Ihre Verträge im Überblick.') }}</div></div>
-    <button onclick="document.getElementById('report-contract-modal').style.display='flex'" class="btn btn-gold">+ Neuen Vertrag melden</button>
+    <button onclick="document.getElementById('report-contract-modal').style.display='flex'" class="btn btn-gold">+ {{ __('Neuen Vertrag melden') }}</button>
 </div>
 @php
 $typeIcons = [
@@ -58,7 +58,7 @@ $typeLabels = [
         @if($c->hasPremium())
         <div style="font-size:13px;font-weight:600;margin-top:8px;">{{ $eur($c->premium_amount) }} <span style="font-size:11.5px;color:var(--ink-soft);font-weight:500;">/ {{ __(\App\Models\Contract::PREMIUM_INTERVALS[$c->premium_interval]['label'] ?? 'Monatlich') }}</span></div>
         @endif
-        @if($c->start_date)<div style="font-size:12px;color:var(--ink-soft);margin-top:6px;">Seit {{ \Carbon\Carbon::parse($c->start_date)->format('d.m.Y') }}</div>@endif
+        @if($c->start_date)<div style="font-size:12px;color:var(--ink-soft);margin-top:6px;">{{ __('Seit :date', ['date' => \Carbon\Carbon::parse($c->start_date)->format('d.m.Y')]) }}</div>@endif
         <div class="metric-cta" style="margin-top:12px;">{{ __('Details ansehen') }} →</div>
     </a>
     @endforeach
