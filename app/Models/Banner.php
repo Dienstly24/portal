@@ -30,6 +30,12 @@ class Banner extends Model
         return $this->hasMany(BannerUserView::class);
     }
 
+    /** Optionaler Social-Media-Post (Social-Publishing, Phase 1). */
+    public function socialPost()
+    {
+        return $this->hasOne(BannerSocialPost::class);
+    }
+
     /** Ausspielbare Banner: aktiv, kein Entwurf, im geplanten Zeitfenster. */
     public function scopeCurrent(Builder $q): Builder
     {

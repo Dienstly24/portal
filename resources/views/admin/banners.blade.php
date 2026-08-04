@@ -7,7 +7,10 @@
             <div class="page-title">Bannerverwaltung</div>
             <div class="page-sub">Werbebanner im Kundenportal – Bild, Video oder GIF, planbar, mit Klick-Ziel und Statistiken. Mehrere aktive Banner rotieren als Slider.</div>
         </div>
-        <a href="{{ route('admin.banners.stats') }}" class="btn btn-ghost">📊 Statistik-Dashboard</a>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <a href="{{ route('admin.werbung') }}" class="btn btn-ghost">🎯 Werbeanzeigen</a>
+            <a href="{{ route('admin.banners.stats') }}" class="btn btn-ghost">📊 Statistik-Dashboard</a>
+        </div>
     </div>
 </div>
 
@@ -98,6 +101,8 @@
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;border-top:1px solid var(--line);padding-top:12px;">
             <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('edit-{{ $b->id }}').style.display = document.getElementById('edit-{{ $b->id }}').style.display === 'none' ? 'block' : 'none'">✏️ Bearbeiten</button>
             <button type="button" class="btn btn-ghost btn-sm" onclick="previewBanner('{{ asset('storage/' . $b->media_path) }}', '{{ $b->media_type }}', '{{ addslashes($b->title) }}')">👁 Vorschau</button>
+            @php $socialKlicks = $b->socialPost?->totalClicks() ?? 0; @endphp
+            <a href="{{ route('admin.banners.social', $b->id) }}" class="btn btn-ghost btn-sm">📣 Social-Media{{ $b->socialPost && $b->socialPost->channels->isNotEmpty() ? ' (' . number_format($socialKlicks, 0, ',', '.') . ' ' . ($socialKlicks === 1 ? 'Klick' : 'Klicks') . ')' : '' }}</a>
             <form method="POST" action="{{ route('admin.banners.toggle', $b->id) }}">@csrf<button type="submit" class="btn btn-ghost btn-sm">{{ $b->is_active ? '⏸ Deaktivieren' : '▶ Aktivieren' }}</button></form>
             <form method="POST" action="{{ route('admin.banners.reset_stats', $b->id) }}" onsubmit="return confirm('Statistiken dieses Banners wirklich auf null setzen?');">@csrf<button type="submit" class="btn btn-ghost btn-sm">🔄 Statistik zurücksetzen</button></form>
             <form method="POST" action="{{ route('admin.banners.delete', $b->id) }}" onsubmit="return confirm('Banner {{ addslashes($b->title) }} endgültig löschen?');">@csrf<button type="submit" class="btn btn-sm" style="background:#F9E3E3;color:#A32D2D;border:1px solid #F0A0A0;">🗑 Löschen</button></form>

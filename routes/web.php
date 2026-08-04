@@ -73,6 +73,11 @@ Route::get('/sprache/{locale}', function (string $locale) {
     return back();
 })->name('locale.switch');
 
+// Social-Media-Kurzlinks (/s/{code}): oeffentlich, zaehlt den Klick je
+// Plattform (Banner-Social-Publishing) und leitet zum Klick-Ziel weiter.
+Route::get('/s/{code}', [\App\Http\Controllers\SocialLinkController::class, 'redirect'])
+    ->middleware('throttle:120,1')->name('social.redirect');
+
 // Abmeldung von Marketing-Mails (UWG §7 / DSGVO): öffentlich, ohne Login,
 // Token pro Kunde. Ratenbegrenzt gegen Token-Raten.
 Route::get('/abmelden/{token}', [\App\Http\Controllers\UnsubscribeController::class, 'handle'])
@@ -358,6 +363,30 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         Route::post('/banners/{banner}/move', [\App\Http\Controllers\BannerController::class, 'move'])->name('banners.move');
         Route::post('/banners/{banner}/reset-stats', [\App\Http\Controllers\BannerController::class, 'resetStats'])->name('banners.reset_stats');
         Route::post('/banners/{banner}/delete', [\App\Http\Controllers\BannerController::class, 'destroy'])->name('banners.delete');
+
+        // Social-Publishing je Banner: Bildformate fuer Facebook/Instagram/
+        // TikTok, Beitragstexte DE/AR, Tracking-Kurzlinks, Veroeffentlichungs-
+        // Protokoll und Download-Paket.
+        Route::get('/banners/{banner}/social', [\App\Http\Controllers\BannerSocialController::class, 'show'])->name('banners.social');
+        Route::post('/banners/{banner}/social', [\App\Http\Controllers\BannerSocialController::class, 'save'])->name('banners.social.save');
+        Route::post('/banners/{banner}/social/{platform}/veroeffentlicht', [\App\Http\Controllers\BannerSocialController::class, 'markPublished'])->name('banners.social.published');
+        Route::post('/banners/{banner}/social/{platform}/api-post', [\App\Http\Controllers\BannerSocialController::class, 'publishNow'])->name('banners.social.publish_now');
+        Route::post('/banners/{banner}/social/zahlen', [\App\Http\Controllers\BannerSocialController::class, 'refreshInsights'])->name('banners.social.refresh_insights');
+        Route::get('/banners/{banner}/social/paket', [\App\Http\Controllers\BannerSocialController::class, 'downloadZip'])->name('banners.social.zip');
+
+        // Werbeanzeigen-Steuerung (Meta Marketing API): Uebersicht,
+        // Start/Pause, Budget, Loeschen, "Banner bewerben" - alles aus dem
+        // System, ohne Meta zu oeffnen.
+        Route::get('/werbung', [\App\Http\Controllers\MetaAdsController::class, 'index'])->name('werbung');
+        Route::get('/werbung/neu/{banner}', [\App\Http\Controllers\MetaAdsController::class, 'create'])->name('werbung.neu');
+        Route::post('/werbung/neu/{banner}', [\App\Http\Controllers\MetaAdsController::class, 'store'])->name('werbung.store');
+        Route::post('/werbung/{campaignId}/status', [\App\Http\Controllers\MetaAdsController::class, 'status'])->whereNumber('campaignId')->name('werbung.status');
+        Route::post('/werbung/{campaignId}/budget', [\App\Http\Controllers\MetaAdsController::class, 'budget'])->whereNumber('campaignId')->name('werbung.budget');
+        Route::post('/werbung/{campaignId}/delete', [\App\Http\Controllers\MetaAdsController::class, 'destroy'])->whereNumber('campaignId')->name('werbung.delete');
+        // Schutzgrenze (max. Tagesbudget): bewusst NUR Admin - eine Rolle
+        // ueber denen, die Anzeigen anlegen/steuern duerfen.
+        Route::post('/werbung/schutzgrenze', [\App\Http\Controllers\MetaAdsController::class, 'updateCap'])
+            ->middleware('role:admin')->name('werbung.cap');
 
         // Leistungsseiten (oeffentliche /leistungen/*): Inhalte pflegbar durch
         // admin/manager - Texte DE/AR, Kurzinfos, FAQ, Bild, Reihenfolge.

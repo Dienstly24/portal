@@ -19,7 +19,7 @@ class BannerController extends Controller
 {
     public function index()
     {
-        $banners = Banner::orderBy('sort_order')->orderBy('id')->get();
+        $banners = Banner::with('socialPost.channels')->orderBy('sort_order')->orderBy('id')->get();
         $creators = \App\Models\User::whereIn('id', $banners->pluck('created_by')->merge($banners->pluck('updated_by'))->filter()->unique())
             ->pluck('name', 'id');
 
@@ -53,7 +53,17 @@ class BannerController extends Controller
         $totalImpressions = (int) $banners->sum('total_impressions');
         $totalClicks = (int) $banners->sum('total_clicks');
 
+        // Social-Publishing: Klicks je Plattform ueber die Tracking-Kurzlinks
+        // (getrennt von den Portal-Klicks - andere Zielgruppe, eigene Zahlen).
+        $socialPosts = \App\Models\BannerSocialPost::with(['channels.publisher', 'banner'])->get()
+            ->filter(fn ($p) => $p->banner && $p->channels->isNotEmpty())
+            ->sortByDesc(fn ($p) => $p->totalClicks())
+            ->values();
+
         return view('admin.banner_stats', [
+            'socialPosts' => $socialPosts,
+            // Seiten-Ueberblick von Meta (nur Cache-Lesen, kein API-Aufruf).
+            'metaPage' => \Illuminate\Support\Facades\Cache::get(\App\Services\Social\MetaInsightsService::PAGE_CACHE_KEY),
             'banners' => $banners,
             'labels' => $labels,
             'impressions' => $impressions,
@@ -87,6 +97,12 @@ class BannerController extends Controller
         $data['updated_by'] = auth()->id();
         $data['is_draft'] = $request->boolean('is_draft');
         $banner->update($data);
+
+        // Neues Medium -> die Social-Bildformate passen nicht mehr dazu und
+        // werden sofort neu erzeugt (nur wenn ein Social-Post existiert).
+        if ($request->hasFile('media') && $banner->socialPost()->exists()) {
+            app(\App\Services\Social\SocialFormatGenerator::class)->generate($banner);
+        }
 
         return back()->with('success', 'Banner aktualisiert – Änderungen sind sofort wirksam.');
     }
@@ -137,6 +153,8 @@ class BannerController extends Controller
     public function destroy(Banner $banner)
     {
         try { Storage::disk('public')->delete($banner->media_path); } catch (\Throwable $e) {}
+        // Social-Formate mit wegraeumen (DB-Zeilen fallen per FK-Kaskade).
+        app(\App\Services\Social\SocialFormatGenerator::class)->delete($banner);
         $banner->delete();
         return back()->with('success', 'Banner gelöscht.');
     }

@@ -71,6 +71,54 @@
     </table>
 </div>
 
+{{-- Meta-Seiten-Ueberblick (Cache aus social:refresh-insights) --}}
+@if(!empty($metaPage))
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">📘 Meta-Seite: {{ $metaPage['name'] ?? '' }}</div>
+        <span style="font-size:12px;color:var(--ink-soft);">Stand: {{ \Illuminate\Support\Carbon::parse($metaPage['refreshed_at'])->format('d.m.Y H:i') }}</span>
+    </div>
+    <div style="display:flex;gap:26px;flex-wrap:wrap;font-size:14px;">
+        <span>👥 <strong>{{ number_format($metaPage['followers'] ?? 0, 0, ',', '.') }}</strong> Follower</span>
+        <span>👍 <strong>{{ number_format($metaPage['fans'] ?? 0, 0, ',', '.') }}</strong> „Gefällt mir"</span>
+        <span>👁 <strong>{{ number_format($metaPage['page_views_28d'] ?? 0, 0, ',', '.') }}</strong> Seitenaufrufe (28 Tage)</span>
+        <a href="{{ route('admin.werbung') }}" style="font-size:13px;">🎯 Zu den Werbeanzeigen →</a>
+    </div>
+</div>
+@endif
+
+{{-- Social-Media: Klicks ueber die Tracking-Kurzlinks (getrennt von den
+     Portal-Klicks - andere Zielgruppe, deshalb bewusst keine gemeinsame CTR) --}}
+@if($socialPosts->isNotEmpty())
+<div class="card">
+    <div class="card-title">📣 Social-Media – Klicks über Tracking-Links</div>
+    <div style="overflow-x:auto;">
+    <table>
+        <thead><tr><th>Banner</th><th>Plattform</th><th style="text-align:right;">Klicks</th><th>Letzter Klick</th><th>Veröffentlicht</th></tr></thead>
+        <tbody>
+        @foreach($socialPosts as $sp)
+            @foreach($sp->channels->sortBy('platform') as $ch)
+            @php $info = $ch->platformInfo(); @endphp
+            <tr>
+                <td style="font-weight:600;">
+                    @if($loop->first)<a href="{{ route('admin.banners.social', $sp->banner_id) }}">{{ $sp->banner->title }}</a>@endif
+                </td>
+                <td style="white-space:nowrap;">{{ $info['icon'] }} {{ $info['label'] }}</td>
+                <td style="text-align:right;font-weight:600;">{{ number_format($ch->clicks, 0, ',', '.') }}</td>
+                <td style="color:var(--ink-soft);font-size:12.5px;">{{ $ch->last_click_at?->format('d.m.Y H:i') ?? '—' }}</td>
+                <td style="font-size:12.5px;">
+                    @if($ch->published_at)<span style="color:#3B7A57;font-weight:600;">✓ {{ $ch->published_at->format('d.m.Y') }}</span>{{ $ch->publisher ? ' von ' . $ch->publisher->name : '' }}
+                    @else<span style="color:var(--ink-soft);">noch nicht</span>@endif
+                </td>
+            </tr>
+            @endforeach
+        @endforeach
+        </tbody>
+    </table>
+    </div>
+</div>
+@endif
+
 <script>
 (function () {
     const labels = @json($labels);

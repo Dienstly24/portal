@@ -151,3 +151,11 @@ Schedule::call(function () {
         } catch (\Throwable $e) { \Log::warning('Portal reminder failed: ' . $e->getMessage()); }
     }
 })->dailyAt('09:00');
+
+// Alle 15 Minuten: faellige Social-Media-Posts (Banner-Social-Publishing)
+// ueber die Meta Graph API veroeffentlichen (genau ein Auto-Versuch je Kanal).
+Schedule::command('social:publish-scheduled')->everyFifteenMinutes()->withoutOverlapping();
+
+// Alle 6 Stunden: Kennzahlen (Likes/Reichweite) der Social-Posts und den
+// Seiten-Ueberblick von Meta holen - Anzeige ohne API-Aufruf beim Seitenaufbau.
+Schedule::command('social:refresh-insights')->everySixHours()->withoutOverlapping();
