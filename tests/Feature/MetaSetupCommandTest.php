@@ -31,23 +31,34 @@ class MetaSetupCommandTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_assistent_findet_seite_und_instagram_und_schreibt_env(): void
+    /** Fake: Seitenliste + Werbekonten wie von der Graph-API geliefert. */
+    private function fakeGraph(array $pages, array $adAccounts = [['id' => 'act_777', 'name' => 'Dienstly24 Werbekonto']]): void
     {
-        Http::fake(function ($request) {
+        Http::fake(function ($request) use ($pages, $adAccounts) {
             if (str_contains($request->url(), '/me/accounts')) {
-                return Http::response(['data' => [[
-                    'id' => '111222333',
-                    'name' => 'Dienstly24',
-                    'instagram_business_account' => ['id' => '444555666', 'username' => 'dienstly24'],
-                ]]]);
+                return Http::response(['data' => $pages]);
+            }
+            if (str_contains($request->url(), '/me/adaccounts')) {
+                return Http::response(['data' => $adAccounts]);
             }
             return Http::response(['error' => ['message' => 'unerwartet']], 400);
         });
+    }
 
+    public function test_assistent_findet_seite_instagram_und_werbekonto_und_schreibt_env(): void
+    {
+        $this->fakeGraph([[
+            'id' => '111222333',
+            'name' => 'Dienstly24',
+            'instagram_business_account' => ['id' => '444555666', 'username' => 'dienstly24'],
+        ]]);
+
+        // Hinweis: nur EIN Output-Substring - ueberlappende Substrings in
+        // mehreren expectsOutputToContain kollidieren im Mock. Die
+        // .env-Asserts unten pruefen das eigentliche Verhalten.
         $this->artisan('meta:einrichten')
             ->expectsQuestion('System-User-Token einfuegen (Eingabe bleibt unsichtbar)', 'TOK-GEHEIM')
-            ->expectsOutputToContain('Dienstly24')
-            ->expectsOutputToContain('@dienstly24')
+            ->expectsOutputToContain('Werbekonto')
             ->assertSuccessful();
 
         $env = file_get_contents($this->envDatei);
@@ -55,6 +66,7 @@ class MetaSetupCommandTest extends TestCase
         $this->assertStringContainsString("META_PAGE_ID=111222333\n", $env);
         $this->assertStringNotContainsString('META_PAGE_ID=alt', $env);
         $this->assertStringContainsString("META_IG_USER_ID=444555666\n", $env);
+        $this->assertStringContainsString("META_AD_ACCOUNT_ID=act_777\n", $env);
         $this->assertStringContainsString("META_ACCESS_TOKEN=TOK-GEHEIM\n", $env);
         $this->assertStringContainsString("APP_NAME=Test\n", $env);
         $this->assertSame(1, substr_count($env, 'META_PAGE_ID='));
@@ -62,10 +74,10 @@ class MetaSetupCommandTest extends TestCase
 
     public function test_mehrere_seiten_fuehren_zur_auswahl(): void
     {
-        Http::fake(['graph.facebook.com/*' => Http::response(['data' => [
+        $this->fakeGraph([
             ['id' => '1', 'name' => 'Seite A'],
             ['id' => '2', 'name' => 'Dienstly24'],
-        ]])]);
+        ]);
 
         $this->artisan('meta:einrichten')
             ->expectsQuestion('System-User-Token einfuegen (Eingabe bleibt unsichtbar)', 'TOK')
@@ -77,9 +89,7 @@ class MetaSetupCommandTest extends TestCase
 
     public function test_ohne_instagram_wird_nur_facebook_eingerichtet(): void
     {
-        Http::fake(['graph.facebook.com/*' => Http::response(['data' => [
-            ['id' => '111', 'name' => 'Dienstly24'],
-        ]])]);
+        $this->fakeGraph([['id' => '111', 'name' => 'Dienstly24']]);
 
         $this->artisan('meta:einrichten')
             ->expectsQuestion('System-User-Token einfuegen (Eingabe bleibt unsichtbar)', 'TOK')
@@ -87,6 +97,18 @@ class MetaSetupCommandTest extends TestCase
             ->assertSuccessful();
 
         $this->assertStringContainsString("META_IG_USER_ID=\n", file_get_contents($this->envDatei));
+    }
+
+    public function test_ohne_werbekonto_bleibt_anzeigen_steuerung_aus(): void
+    {
+        $this->fakeGraph([['id' => '111', 'name' => 'Dienstly24']], []);
+
+        $this->artisan('meta:einrichten')
+            ->expectsQuestion('System-User-Token einfuegen (Eingabe bleibt unsichtbar)', 'TOK')
+            ->expectsOutputToContain('KEINES zugewiesen')
+            ->assertSuccessful();
+
+        $this->assertStringContainsString("META_AD_ACCOUNT_ID=\n", file_get_contents($this->envDatei));
     }
 
     public function test_ungueltiges_token_wird_erklaert_und_nichts_geschrieben(): void

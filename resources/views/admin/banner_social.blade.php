@@ -141,9 +141,16 @@
 <div class="card">
     <div class="card-header">
         <div class="card-title">🔗 Veröffentlichung &amp; Tracking-Links</div>
-        <span style="font-size:12px;color:{{ ($metaConfigured['facebook'] || $metaConfigured['instagram']) ? '#3B7A57' : 'var(--ink-soft)' }};">
-            Meta-API: {{ ($metaConfigured['facebook'] || $metaConfigured['instagram']) ? '✓ verbunden' : 'nicht konfiguriert' }}
-        </span>
+        <div style="display:flex;gap:10px;align-items:center;">
+            @if($post && $post->channels->whereNotNull('external_post_id')->isNotEmpty())
+            <form method="POST" action="{{ route('admin.banners.social.refresh_insights', $banner->id) }}">
+                @csrf<button type="submit" class="btn btn-ghost btn-sm">🔄 Zahlen von Meta holen</button>
+            </form>
+            @endif
+            <span style="font-size:12px;color:{{ ($metaConfigured['facebook'] || $metaConfigured['instagram']) ? '#3B7A57' : 'var(--ink-soft)' }};">
+                Meta-API: {{ ($metaConfigured['facebook'] || $metaConfigured['instagram']) ? '✓ verbunden' : 'nicht konfiguriert' }}
+            </span>
+        </div>
     </div>
     @if(!$post || $post->channels->isEmpty())
     <p style="font-size:13.5px;color:var(--ink-soft);">Noch keine Plattform ausgewählt – oben Plattformen anhaken und speichern.</p>
@@ -176,6 +183,14 @@
                 @else
                 <span style="color:var(--ink-soft);">noch nicht</span>
                 @endif
+                @if($ch->insights)
+                <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;" title="Stand: {{ $ch->insights_refreshed_at?->format('d.m.Y H:i') }}">
+                    👍 {{ number_format($ch->insights['likes'] ?? 0, 0, ',', '.') }}
+                    · 💬 {{ number_format($ch->insights['comments'] ?? 0, 0, ',', '.') }}
+                    @if(($ch->insights['shares'] ?? 0) > 0) · ↪ {{ number_format($ch->insights['shares'], 0, ',', '.') }} @endif
+                    · 👁 {{ number_format($ch->insights['reach'] ?? 0, 0, ',', '.') }} erreicht
+                </div>
+                @endif
                 @if($ch->publish_error)
                 <div style="font-size:11.5px;color:#A32D2D;max-width:240px;margin-top:4px;">⚠ {{ $ch->publish_error }}</div>
                 @endif
@@ -184,6 +199,9 @@
                 <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start;">
                     @if($ch->external_post_id)
                     <a href="{{ $ch->external_url ?: 'https://www.facebook.com/' . $ch->external_post_id }}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">↗ Beitrag ansehen</a>
+                    @if($ch->platform === 'facebook' && \App\Services\Social\MetaAdsService::configured())
+                    <a href="{{ route('admin.werbung.neu', $banner->id) }}" class="btn btn-ghost btn-sm">📢 Bewerben</a>
+                    @endif
                     @else
                     {{-- API-Posten nur solange nicht (manuell) veroeffentlicht:
                          sonst waere ein Doppel-Post auf der Plattform moeglich. --}}

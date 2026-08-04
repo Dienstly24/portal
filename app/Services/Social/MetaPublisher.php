@@ -2,7 +2,6 @@
 namespace App\Services\Social;
 
 use App\Models\BannerSocialChannel;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -27,6 +26,10 @@ class MetaPublisher
 
     /** Instagram-Limit fuer Bildunterschriften (Zeichen). */
     private const IG_CAPTION_MAX = 2200;
+
+    public function __construct(private MetaGraphClient $graph)
+    {
+    }
 
     public static function configuredFor(string $platform): bool
     {
@@ -168,27 +171,11 @@ class MetaPublisher
         return [$mediaId, $externalUrl];
     }
 
-    /** Graph-API-Aufruf mit verstaendlicher Fehlermeldung. */
+    /** Graph-API-Aufruf (gemeinsamer Client). */
     private function call(string $method, string $path, array $params): array
     {
-        $url = 'https://graph.facebook.com/'
-            . config('services.meta.graph_version', 'v23.0') . '/' . ltrim($path, '/');
-        $params['access_token'] = (string) config('services.meta.token');
-
-        try {
-            $resp = $method === 'get'
-                ? Http::timeout(25)->get($url, $params)
-                : Http::timeout(25)->asForm()->post($url, $params);
-        } catch (\Throwable $e) {
-            throw new \RuntimeException('Meta-API nicht erreichbar: ' . $e->getMessage());
-        }
-
-        $json = $resp->json() ?? [];
-        if ($resp->failed() || isset($json['error'])) {
-            $msg = $json['error']['message'] ?? ('HTTP ' . $resp->status());
-            throw new \RuntimeException('Meta-API: ' . $msg);
-        }
-
-        return $json;
+        return $method === 'get'
+            ? $this->graph->get($path, $params)
+            : $this->graph->post($path, $params);
     }
 }

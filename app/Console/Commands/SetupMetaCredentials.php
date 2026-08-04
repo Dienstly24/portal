@@ -72,16 +72,38 @@ class SetupMetaCredentials extends Command
 
         $ig = $page['instagram_business_account'] ?? null;
 
+        // Werbekonto fuer die Anzeigen-Steuerung - optional: ohne bleibt
+        // das Posten voll nutzbar, nur /admin/werbung bleibt deaktiviert.
+        $adAccountId = '';
+        $adAccountName = null;
+        $adAccounts = $this->graphGet('me/adaccounts', ['fields' => 'id,name', 'limit' => 25], $token);
+        $adData = $adAccounts['data'] ?? [];
+        if (!empty($adData)) {
+            if (count($adData) === 1) {
+                $konto = $adData[0];
+            } else {
+                $namen = array_map(fn ($a) => $a['name'] . ' (' . $a['id'] . ')', $adData);
+                $auswahl = $this->choice('Mehrere Werbekonten gefunden - welches soll das System nutzen?', $namen);
+                $konto = $adData[array_search($auswahl, $namen, true)];
+            }
+            $adAccountId = $konto['id']; // kommt bereits als act_...
+            $adAccountName = $konto['name'];
+        }
+
         $this->newLine();
         $this->info('Gefunden:');
         $this->line('  Facebook-Seite: ' . $page['name'] . ' (ID ' . $page['id'] . ')');
         $this->line($ig
             ? '  Instagram:      @' . ($ig['username'] ?? '?') . ' (ID ' . $ig['id'] . ')'
             : '  Instagram:      KEIN Business-Konto mit der Seite verknuepft - es wird nur Facebook eingerichtet.');
+        $this->line($adAccountName
+            ? '  Werbekonto:     ' . $adAccountName . ' (' . $adAccountId . ')'
+            : '  Werbekonto:     KEINES zugewiesen - Anzeigen-Steuerung bleibt aus (im Business Manager dem Systembenutzer das Werbekonto zuweisen, dann neu ausfuehren).');
 
         $env->set([
             'META_PAGE_ID' => $page['id'],
             'META_IG_USER_ID' => $ig['id'] ?? '',
+            'META_AD_ACCOUNT_ID' => $adAccountId,
             'META_ACCESS_TOKEN' => $token,
         ]);
 
@@ -121,6 +143,16 @@ class SetupMetaCredentials extends Command
             $this->info('Instagram: @' . ($ig['username'] ?? '?') . ' - Verbindung OK.');
         } else {
             $this->warn('Instagram ist nicht konfiguriert (nur Facebook aktiv).');
+        }
+
+        if (!empty($cfg['ad_account_id'])) {
+            $konto = $this->graphGet((string) $cfg['ad_account_id'], ['fields' => 'name'], (string) $cfg['token']);
+            if ($konto === null) {
+                return self::FAILURE;
+            }
+            $this->info('Werbekonto: ' . ($konto['name'] ?? '?') . ' - Verbindung OK.');
+        } else {
+            $this->warn('Werbekonto ist nicht konfiguriert (Anzeigen-Steuerung aus).');
         }
 
         return self::SUCCESS;

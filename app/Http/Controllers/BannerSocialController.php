@@ -153,6 +153,32 @@ class BannerSocialController extends Controller
             ->with('success', $channel->platformInfo()['label'] . ': Beitrag wurde ueber die Meta-API veroeffentlicht.');
     }
 
+    /** Kennzahlen (Likes/Kommentare/Reichweite) sofort von Meta holen. */
+    public function refreshInsights(Banner $banner)
+    {
+        $post = $banner->socialPost()->with('channels')->firstOrFail();
+        $service = app(\App\Services\Social\MetaInsightsService::class);
+
+        $ok = 0;
+        $fehler = null;
+        foreach ($post->channels->whereNotNull('external_post_id') as $channel) {
+            try {
+                $service->refreshChannel($channel);
+                $ok++;
+            } catch (\Throwable $e) {
+                $fehler = $e->getMessage();
+            }
+        }
+
+        if ($ok === 0) {
+            return redirect()->route('admin.banners.social', $banner->id)
+                ->withErrors(['publish' => $fehler ?: 'Keine per API veroeffentlichten Beitraege vorhanden.']);
+        }
+
+        return redirect()->route('admin.banners.social', $banner->id)
+            ->with('success', 'Kennzahlen von Meta aktualisiert (' . $ok . ' Beitraege).');
+    }
+
     /** Veroeffentlichung je Plattform protokollieren bzw. zuruecknehmen. */
     public function markPublished(Banner $banner, string $platform)
     {

@@ -38,6 +38,12 @@ return [
         'ig_user_id' => env('META_IG_USER_ID'),
         'token' => env('META_ACCESS_TOKEN'),
         'graph_version' => env('META_GRAPH_VERSION', 'v23.0'),
+        // Werbekonto (act_...) fuer die Anzeigen-Steuerung aus dem System
+        // (Phase 3). Der Assistent meta:einrichten findet es automatisch.
+        'ad_account_id' => env('META_AD_ACCOUNT_ID'),
+        // Schutzgrenze: hoechstes Tagesbudget in EUR, das aus dem System
+        // heraus gesetzt werden kann (echtes Geld - bewusst gedeckelt).
+        'ads_max_daily_budget' => (int) env('META_ADS_MAX_DAILY_BUDGET', 100),
     ],
 
     'resend' => [

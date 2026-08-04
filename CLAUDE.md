@@ -181,7 +181,26 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   neuer Zeitplan setzt den Versuch zurueck). Manuell als veroeffentlicht
   markierte Kanaele und vorhandene `external_post_id` werden NIE
   angefasst; TikTok bewusst ohne API (App-Audit) - nur manuell.
-  Tests: `BannerSocialPublishingTest`, `MetaSocialPublishingTest`.
+  **Phase 3 (Vollsteuerung ohne Meta zu oeffnen, 04.08.2026)**:
+  `MetaGraphClient` (gemeinsamer Graph-Client), `MetaInsightsService`
+  (Kennzahlen je Beitrag: Likes/Kommentare/Shares/Reichweite als
+  `channels.insights`; Seiten-Ueberblick Follower/Aufrufe im Cache -
+  Dashboard liest NUR Cache, nie live-API; Refresh alle 6 h via
+  `social:refresh-insights` + Button) und `MetaAdsService`/`/admin/werbung`
+  (Marketing API: Kampagnen-Liste mit Ausgaben/Klicks/CPC,
+  Start/Pause/Budget/Loeschen, "Banner bewerben" erstellt
+  Kampagne+Adset+Creative+Ad aus dem veroeffentlichten FB-Beitrag,
+  object_story_id, automatische Platzierungen FB+IG, Sprach-Targeting
+  DE/AR via adlocale-Suche - IDs NIE raten). GELD-REGELN: jede neue
+  Anzeige entsteht PAUSED (Start = bewusster Klick), Tagesbudget hart
+  gedeckelt (`META_ADS_MAX_DAILY_BUDGET`, Default 100 EUR, Validierung
+  in Controller UND Service), Budgets in EUR angezeigt und erst im
+  Service in Cent umgerechnet (Marketing API = Minor Units!),
+  halbfertige Kampagnen werden bei Fehlern aufgeraeumt, JEDE Aktion im
+  ActivityLog (`meta_ad_*`). `META_AD_ACCOUNT_ID` findet der Assistent
+  automatisch (me/adaccounts). Zahlungsmittel sind API-seitig NICHT
+  pflegbar (einziger Schritt, der bei Meta bleibt - steht so in der
+  Anleitung). Tests: `MetaAdsManagementTest`.
 - **Strom-/Gas-AUFTRAEGE (Formularseite)**: Ein Auftrag hat **KEINE
   Vertragsnummer** (Betreiber-Vorgabe 02.08.2026) - die Auftragsnummer steht
   nur in der Zusammenfassung, nie in `contract_number` (falsche Angabe in der

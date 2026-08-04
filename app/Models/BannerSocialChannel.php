@@ -21,6 +21,8 @@ class BannerSocialChannel extends Model
         'last_click_at' => 'datetime',
         'published_at' => 'datetime',
         'auto_attempted_at' => 'datetime',
+        'insights' => 'array',
+        'insights_refreshed_at' => 'datetime',
     ];
 
     public function post()

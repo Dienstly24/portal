@@ -7,7 +7,10 @@
             <div class="page-title">Bannerverwaltung</div>
             <div class="page-sub">Werbebanner im Kundenportal – Bild, Video oder GIF, planbar, mit Klick-Ziel und Statistiken. Mehrere aktive Banner rotieren als Slider.</div>
         </div>
-        <a href="{{ route('admin.banners.stats') }}" class="btn btn-ghost">📊 Statistik-Dashboard</a>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <a href="{{ route('admin.werbung') }}" class="btn btn-ghost">🎯 Werbeanzeigen</a>
+            <a href="{{ route('admin.banners.stats') }}" class="btn btn-ghost">📊 Statistik-Dashboard</a>
+        </div>
     </div>
 </div>
 

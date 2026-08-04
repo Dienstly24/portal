@@ -371,7 +371,18 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         Route::post('/banners/{banner}/social', [\App\Http\Controllers\BannerSocialController::class, 'save'])->name('banners.social.save');
         Route::post('/banners/{banner}/social/{platform}/veroeffentlicht', [\App\Http\Controllers\BannerSocialController::class, 'markPublished'])->name('banners.social.published');
         Route::post('/banners/{banner}/social/{platform}/api-post', [\App\Http\Controllers\BannerSocialController::class, 'publishNow'])->name('banners.social.publish_now');
+        Route::post('/banners/{banner}/social/zahlen', [\App\Http\Controllers\BannerSocialController::class, 'refreshInsights'])->name('banners.social.refresh_insights');
         Route::get('/banners/{banner}/social/paket', [\App\Http\Controllers\BannerSocialController::class, 'downloadZip'])->name('banners.social.zip');
+
+        // Werbeanzeigen-Steuerung (Meta Marketing API): Uebersicht,
+        // Start/Pause, Budget, Loeschen, "Banner bewerben" - alles aus dem
+        // System, ohne Meta zu oeffnen.
+        Route::get('/werbung', [\App\Http\Controllers\MetaAdsController::class, 'index'])->name('werbung');
+        Route::get('/werbung/neu/{banner}', [\App\Http\Controllers\MetaAdsController::class, 'create'])->name('werbung.neu');
+        Route::post('/werbung/neu/{banner}', [\App\Http\Controllers\MetaAdsController::class, 'store'])->name('werbung.store');
+        Route::post('/werbung/{campaignId}/status', [\App\Http\Controllers\MetaAdsController::class, 'status'])->whereNumber('campaignId')->name('werbung.status');
+        Route::post('/werbung/{campaignId}/budget', [\App\Http\Controllers\MetaAdsController::class, 'budget'])->whereNumber('campaignId')->name('werbung.budget');
+        Route::post('/werbung/{campaignId}/delete', [\App\Http\Controllers\MetaAdsController::class, 'destroy'])->whereNumber('campaignId')->name('werbung.delete');
 
         // Leistungsseiten (oeffentliche /leistungen/*): Inhalte pflegbar durch
         // admin/manager - Texte DE/AR, Kurzinfos, FAQ, Bild, Reihenfolge.

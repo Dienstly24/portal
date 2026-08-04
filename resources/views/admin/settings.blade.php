@@ -17,6 +17,7 @@
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;">
         <a href="{{ route('admin.service_pages') }}" class="hub-tile">🧩 <span>Leistungsseiten</span></a>
         <a href="{{ route('admin.banners') }}" class="hub-tile">📢 <span>Banner</span></a>
+        <a href="{{ route('admin.werbung') }}" class="hub-tile">🎯 <span>Werbeanzeigen</span></a>
         <a href="{{ route('admin.templates') }}" class="hub-tile">📋 <span>Vorlagen</span></a>
         <a href="{{ route('admin.import_export') }}" class="hub-tile">⬆️ <span>Import / Export</span></a>
         <a href="{{ route('admin.lexoffice.contacts') }}" class="hub-tile">🧮 <span>lexoffice-Kontakte</span></a>

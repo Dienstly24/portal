@@ -71,6 +71,22 @@
     </table>
 </div>
 
+{{-- Meta-Seiten-Ueberblick (Cache aus social:refresh-insights) --}}
+@if(!empty($metaPage))
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">📘 Meta-Seite: {{ $metaPage['name'] ?? '' }}</div>
+        <span style="font-size:12px;color:var(--ink-soft);">Stand: {{ \Illuminate\Support\Carbon::parse($metaPage['refreshed_at'])->format('d.m.Y H:i') }}</span>
+    </div>
+    <div style="display:flex;gap:26px;flex-wrap:wrap;font-size:14px;">
+        <span>👥 <strong>{{ number_format($metaPage['followers'] ?? 0, 0, ',', '.') }}</strong> Follower</span>
+        <span>👍 <strong>{{ number_format($metaPage['fans'] ?? 0, 0, ',', '.') }}</strong> „Gefällt mir"</span>
+        <span>👁 <strong>{{ number_format($metaPage['page_views_28d'] ?? 0, 0, ',', '.') }}</strong> Seitenaufrufe (28 Tage)</span>
+        <a href="{{ route('admin.werbung') }}" style="font-size:13px;">🎯 Zu den Werbeanzeigen →</a>
+    </div>
+</div>
+@endif
+
 {{-- Social-Media: Klicks ueber die Tracking-Kurzlinks (getrennt von den
      Portal-Klicks - andere Zielgruppe, deshalb bewusst keine gemeinsame CTR) --}}
 @if($socialPosts->isNotEmpty())

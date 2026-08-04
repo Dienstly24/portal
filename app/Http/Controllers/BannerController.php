@@ -62,6 +62,8 @@ class BannerController extends Controller
 
         return view('admin.banner_stats', [
             'socialPosts' => $socialPosts,
+            // Seiten-Ueberblick von Meta (nur Cache-Lesen, kein API-Aufruf).
+            'metaPage' => \Illuminate\Support\Facades\Cache::get(\App\Services\Social\MetaInsightsService::PAGE_CACHE_KEY),
             'banners' => $banners,
             'labels' => $labels,
             'impressions' => $impressions,
