@@ -204,7 +204,7 @@ document.getElementById('hero-chat').addEventListener('click', function (e) {
     <div style="display:flex;flex-direction:column;gap:8px;">
         @foreach($completeness['missing'] as $m)
         <a href="{{ route($m['route']) }}" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border:1px solid var(--line);border-radius:8px;text-decoration:none;color:var(--ink);font-size:13.5px;{{ !empty($m['optional']) ? 'opacity:.7;' : '' }}">
-            <span>⚠ {{ $m['label'] }}</span>
+            <span>⚠ {{ __($m['label']) }}</span>
             <span style="color:var(--petrol);font-size:12px;">{{ __('ergänzen') }} →</span>
         </a>
         @endforeach
@@ -219,7 +219,7 @@ document.getElementById('hero-chat').addEventListener('click', function (e) {
     <a href="{{ route('portal.contracts.show', $c->id) }}" class="item-row row-link" title="{{ __('Vertrag öffnen') }}" style="color:inherit;text-decoration:none;">
         <div>
             <div style="font-weight:600;font-size:14px;">{{ $c->insurer }}</div>
-            <div style="font-size:13px;color:var(--ink-soft);">{{ $c->contract_number }} · {{ ucfirst($c->type) }}</div>
+            <div style="font-size:13px;color:var(--ink-soft);">{{ $c->contract_number }} · {{ __($c->typeLabel()) }}</div>
         </div>
         <span style="display:flex;gap:6px;align-items:center;">
             @php $st = $c->displayStatus(); @endphp
@@ -228,7 +228,7 @@ document.getElementById('hero-chat').addEventListener('click', function (e) {
         </span>
     </a>
     @empty
-    <p style="color:var(--ink-soft);font-size:14px;">Noch keine Verträge vorhanden.</p>
+    <p style="color:var(--ink-soft);font-size:14px;">{{ __('Noch keine Verträge vorhanden.') }}</p>
     @endforelse
 </div>
 <div class="card">
@@ -240,7 +240,7 @@ document.getElementById('hero-chat').addEventListener('click', function (e) {
             <div style="font-size:13px;color:var(--ink-soft);">{{ $t->created_at->format('d.m.Y') }}</div>
         </div>
         <span style="display:flex;gap:6px;align-items:center;">
-            <span class="badge badge-{{ $t->status === 'open' ? 'open' : 'closed' }}">{{ $t->status === 'open' ? 'Offen' : 'In Bearbeitung' }}</span>
+            <span class="badge badge-{{ $t->status === 'open' ? 'open' : 'closed' }}">{{ __($t->status === 'open' ? 'Offen' : 'In Bearbeitung') }}</span>
             <span style="color:var(--ink-soft);font-size:12px;">→</span>
         </span>
     </a>
