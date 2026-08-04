@@ -82,6 +82,32 @@ class ServicePageTest extends TestCase
             ->assertSee('application/ld+json', false);          // structured data
     }
 
+    /**
+     * Die JSON-LD-Structured-Data stehen in einem <script>-Block. Enthaelt der
+     * (von admin/manager pflegbare) Titel ein "</script>", darf das nicht aus
+     * dem Block ausbrechen -> JSON_HEX_TAG escaped die spitzen Klammern.
+     */
+    public function test_json_ld_escapes_script_breakout_in_title(): void
+    {
+        $this->makePage([
+            'title_de' => 'Kfz</script><script>alert(1)</script>',
+            'meta_description_de' => 'SEO',
+        ]);
+
+        $res = $this->get('/leistungen/kfz-versicherung');
+        $res->assertOk();
+
+        $content = $res->getContent();
+        // Kein ausbruchsfaehiges Live-Tag: die eingeschleuste Sequenz erscheint
+        // nirgends woertlich (weder im <script>-JSON-LD noch in HTML-Attributen).
+        $this->assertStringNotContainsString('</script><script>alert(1)', $content);
+        $this->assertStringNotContainsString('<script>alert(1)</script>', $content);
+        // Structured Data sind noch da und die spitzen Klammern hex-escaped
+        // (JSON_HEX_TAG -> <..., Ziffernfall egal).
+        $this->assertStringContainsString('application/ld+json', $content);
+        $this->assertMatchesRegularExpression('/u003c\/script/i', $content);
+    }
+
     public function test_body_escapes_html(): void
     {
         $this->makePage(['body_de' => 'Text mit <script>alert(1)</script> drin']);

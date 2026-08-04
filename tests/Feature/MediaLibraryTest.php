@@ -114,6 +114,29 @@ class MediaLibraryTest extends TestCase
         $this->assertStringContainsString('<rect', $clean);
     }
 
+    /**
+     * SMIL-Animationen (<animate>/<set>) koennen Attribute zur Laufzeit
+     * umschreiben (z. B. href/Event-Handler setzen) und so die statische
+     * Attributpruefung umgehen. Sie werden komplett entfernt.
+     */
+    public function test_svg_smil_animation_elements_are_stripped(): void
+    {
+        $dirty = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">'
+            . '<a><set attributeName="href" to="javascript:alert(1)"/><circle r="5"/></a>'
+            . '<rect width="10" height="10"><animate attributeName="onload" to="alert(2)"/></rect>'
+            . '<animatetransform attributeName="transform" to="scale(2)"/></svg>';
+
+        $clean = SvgSanitizer::sanitize($dirty);
+
+        $this->assertNotNull($clean);
+        $this->assertStringNotContainsStringIgnoringCase('<set', $clean);
+        $this->assertStringNotContainsStringIgnoringCase('<animate', $clean);
+        $this->assertStringNotContainsString('javascript:', $clean);
+        // Statische, harmlose Formen bleiben erhalten.
+        $this->assertStringContainsString('<circle', $clean);
+        $this->assertStringContainsString('<rect', $clean);
+    }
+
     public function test_slot_assignment_is_exclusive_and_archives_previous(): void
     {
         Storage::fake('public');

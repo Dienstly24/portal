@@ -74,9 +74,13 @@ class OAuthMailboxTest extends TestCase
         ])]);
 
         $account = $this->account('gmail_oauth');
-        $state = \Illuminate\Support\Facades\Crypt::encryptString((string) $account->id);
 
-        app(OAuthTokenService::class)->handleCallback('the-code', $state);
+        // Realer Ablauf: authorizationUrl() legt die State-Nonce in der Session
+        // ab; der Callback verlangt exakt diese Nonce (CSRF-Schutz).
+        $service = app(OAuthTokenService::class);
+        parse_str((string) parse_url($service->authorizationUrl($account), PHP_URL_QUERY), $params);
+
+        $service->handleCallback('the-code', $params['state']);
 
         $account->refresh();
         $this->assertSame('rt-1', $account->credentials['refresh_token']);
@@ -204,9 +208,14 @@ class OAuthMailboxTest extends TestCase
 
         $admin = User::factory()->create(['role' => 'admin']);
         $account = $this->account('gmail_oauth');
-        $state = \Illuminate\Support\Facades\Crypt::encryptString((string) $account->id);
 
-        $this->actingAs($admin)
+        // Die State-Nonce (CSRF-Schutz) muss in der Sitzung liegen, die den
+        // Callback traegt - so, wie sie authorizationUrl() beim "Verbinden" ablegt.
+        $nonce = 'route-nonce';
+        $state = \Illuminate\Support\Facades\Crypt::encryptString($account->id . '|' . $nonce);
+
+        $this->withSession(['email_oauth_state' => ['account' => (string) $account->id, 'nonce' => $nonce]])
+            ->actingAs($admin)
             ->get(route('admin.email_accounts.oauth_callback', ['code' => 'c', 'state' => $state]))
             ->assertRedirect(route('admin.email_accounts.index'));
 
