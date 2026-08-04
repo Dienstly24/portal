@@ -14,7 +14,7 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
         <span style="font-size:40px;line-height:1;">{{ $contract->typeIcon() }}</span>
         <div>
             <div class="page-title" style="margin-bottom:2px;">{{ $contract->insurer }}</div>
-            <div class="page-sub" style="margin-bottom:0;">{{ $contract->typeLabel() }}</div>
+            <div class="page-sub" style="margin-bottom:0;">{{ __($contract->typeLabel()) }}</div>
         </div>
         @php $st = $contract->displayStatus(); @endphp
         <span class="badge badge-{{ $st['badge'] }}" style="margin-left:auto;white-space:nowrap;">{{ __($st['label_key'], $st['params']) }}</span>
@@ -25,7 +25,7 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
 <div class="card">
     <div class="card-title">Vertragsdaten</div>
     <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Vertragsnummer</span><span style="font-weight:600;font-size:13.5px;">{{ $contract->contract_number ?? '—' }}</span></div>
-    <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Vertragstyp</span><span style="font-weight:600;font-size:13.5px;">{{ $contract->typeLabel() }}</span></div>
+    <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Vertragstyp</span><span style="font-weight:600;font-size:13.5px;">{{ __($contract->typeLabel()) }}</span></div>
     {{-- Untergruppe (z.B. ADAC Basis-/Plus-/Premium-Mitgliedschaft, GKV/PKV) --}}
     @if($contract->subtypeLabel())
     <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ $contract->type === 'schutzbrief' ? __('Mitgliedschaft') : __('Art') }}</span><span style="font-weight:600;font-size:13.5px;">{{ __($contract->subtypeLabel()) }}</span></div>
@@ -136,7 +136,7 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
 {{-- Sparte Strom / Gas --}}
 @if($e = $contract->energyDetail)
 <div class="card">
-    <div class="card-title">{{ $contract->typeIcon() }} {{ $contract->typeLabel() }}vertrag</div>
+    <div class="card-title">{{ $contract->typeIcon() }} {{ __($contract->typeLabel()) }}</div>
     @if($e->tariff)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Tarif</span><span style="font-weight:600;font-size:13.5px;">{{ $e->tariff }}</span></div>@endif
     @if($e->customer_number)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Kundennummer</span><span style="font-weight:600;font-size:13.5px;">{{ $e->customer_number }}</span></div>@endif
     <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Zählernummer</span><span style="font-weight:600;font-size:13.5px;">{{ $e->meter_number ?? '—' }}</span></div>

@@ -18,7 +18,7 @@ $typeLabels = [
 @endphp
 
 @if($contracts->isEmpty())
-<div class="card"><p style="color:var(--ink-soft);font-size:14px;padding:12px 0;">Noch keine Verträge vorhanden. Melden Sie Ihren ersten Vertrag über den Button oben.</p></div>
+<div class="card"><p style="color:var(--ink-soft);font-size:14px;padding:12px 0;">{{ __('Noch keine Verträge vorhanden. Melden Sie Ihren ersten Vertrag über den Button oben.') }}</p></div>
 @else
 {{-- Kosten-Statistik: auf den Monat normierte Summe aller aktiven Vertraege,
      damit unterschiedliche Zahlweisen (monatlich/jaehrlich ...) vergleichbar sind. --}}
@@ -54,7 +54,7 @@ $typeLabels = [
             <span class="badge badge-{{ $st['badge'] }}" style="white-space:nowrap;">{{ __($st['label_key'], $st['params']) }}</span>
         </div>
         <div style="font-weight:700;font-size:15px;margin-bottom:2px;">{{ $c->insurer }}</div>
-        <div style="font-size:12.5px;color:var(--ink-soft);">{{ $c->typeLabel() }}@if($c->contract_number) · {{ $c->contract_number }}@endif</div>
+        <div style="font-size:12.5px;color:var(--ink-soft);">{{ __($c->typeLabel()) }}@if($c->contract_number) · {{ $c->contract_number }}@endif</div>
         @if($c->hasPremium())
         <div style="font-size:13px;font-weight:600;margin-top:8px;">{{ $eur($c->premium_amount) }} <span style="font-size:11.5px;color:var(--ink-soft);font-weight:500;">/ {{ __(\App\Models\Contract::PREMIUM_INTERVALS[$c->premium_interval]['label'] ?? 'Monatlich') }}</span></div>
         @endif
