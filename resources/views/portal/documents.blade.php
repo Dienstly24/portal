@@ -3,7 +3,7 @@
 <div class="toolbar">
     <div>
         <div class="page-title">{{ __('Dokumente') }}</div>
-        <div class="page-sub" style="margin-bottom:0;">Alle Ihre Dokumente und Unterlagen. Sie können hier auch eigene Dokumente hochladen.</div>
+        <div class="page-sub" style="margin-bottom:0;">{{ __('Alle Ihre Dokumente und Unterlagen. Sie können hier auch eigene Dokumente hochladen.') }}</div>
     </div>
     <button onclick="smartScan.open()" class="btn btn-gold">+ {{ __('Dokument hinzufügen') }}</button>
 </div>
@@ -14,8 +14,8 @@
 {{-- Angeforderte Dokumente (Architekturplan Abschnitt 14: klare Statusanzeige) --}}
 @if($documentRequests->isNotEmpty())
 <div class="card" style="margin-bottom:20px;">
-    <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Angeforderte Dokumente</div>
-    <div style="font-size:13px;color:var(--ink-soft);margin-bottom:12px;">Wir benötigen die folgenden Unterlagen von Ihnen. Nach dem Hochladen prüft unser Team Ihr Dokument.</div>
+    <div style="font-weight:700;font-size:15px;margin-bottom:4px;">{{ __('Angeforderte Dokumente') }}</div>
+    <div style="font-size:13px;color:var(--ink-soft);margin-bottom:12px;">{{ __('Wir benötigen die folgenden Unterlagen von Ihnen. Nach dem Hochladen prüft unser Team Ihr Dokument.') }}</div>
     @foreach($documentRequests as $req)
     <div style="border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:10px;
         {{ $req->status === 'rejected' ? 'border-color:#E4B4B4;background:#FDF7F7;' : '' }}
@@ -24,12 +24,12 @@
             <div style="min-width:220px;">
                 <div style="font-weight:600;font-size:14px;">{{ $req->title }}</div>
                 @if($req->description)<div style="font-size:13px;color:var(--ink-soft);margin-top:2px;">{{ $req->description }}</div>@endif
-                @if($req->contract)<div style="font-size:12px;color:var(--ink-soft);margin-top:2px;">Vertrag: {{ $req->contract->contract_number }} ({{ $req->contract->insurer }})</div>@endif
+                @if($req->contract)<div style="font-size:12px;color:var(--ink-soft);margin-top:2px;">{{ __('Vertrag') }}: {{ $req->contract->contract_number }} ({{ $req->contract->insurer }})</div>@endif
                 @if($req->deadline && in_array($req->status, ['open','rejected']))
-                    <div style="font-size:12px;color:{{ $req->deadline->isPast() ? '#B3261E' : 'var(--ink-soft)' }};margin-top:2px;">Frist: {{ $req->deadline->format('d.m.Y') }}</div>
+                    <div style="font-size:12px;color:{{ $req->deadline->isPast() ? '#B3261E' : 'var(--ink-soft)' }};margin-top:2px;">{{ __('Frist') }}: {{ $req->deadline->format('d.m.Y') }}</div>
                 @endif
                 @if($req->status === 'rejected' && $req->rejection_note)
-                    <div style="font-size:13px;color:#B3261E;margin-top:6px;">Hinweis unseres Teams: {{ $req->rejection_note }}</div>
+                    <div style="font-size:13px;color:#B3261E;margin-top:6px;">{{ __('Hinweis unseres Teams') }}: {{ $req->rejection_note }}</div>
                 @endif
             </div>
             <div style="text-align:right;">
@@ -43,10 +43,10 @@
         <form method="POST" action="{{ route('portal.document_requests.upload', $req->id) }}" enctype="multipart/form-data" style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap;">
             @csrf
             <input type="file" name="document" required accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,.gif,.doc,.docx" style="font-size:13px;">
-            <button type="submit" class="btn btn-gold" style="padding:7px 16px;font-size:13px;">{{ $req->status === 'rejected' ? 'Erneut hochladen' : 'Hochladen' }}</button>
+            <button type="submit" class="btn btn-gold" style="padding:7px 16px;font-size:13px;">{{ $req->status === 'rejected' ? __('Erneut hochladen') : __('Hochladen') }}</button>
         </form>
         @elseif($req->status === 'uploaded')
-        <div style="font-size:13px;color:var(--ink-soft);margin-top:8px;">✓ Ihr Dokument ist eingegangen und wird von unserem Team geprüft.</div>
+        <div style="font-size:13px;color:var(--ink-soft);margin-top:8px;">{{ __('✓ Ihr Dokument ist eingegangen und wird von unserem Team geprüft.') }}</div>
         @endif
     </div>
     @endforeach
@@ -90,7 +90,7 @@
 @endphp
 
 @if($documents->isEmpty())
-<div class="card"><p style="color:var(--ink-soft);font-size:14px;padding:12px 0;text-align:center;">📂 Noch keine Dokumente vorhanden. Laden Sie oben Ihr erstes Dokument hoch.</p></div>
+<div class="card"><p style="color:var(--ink-soft);font-size:14px;padding:12px 0;text-align:center;">{{ __('📂 Noch keine Dokumente vorhanden. Laden Sie oben Ihr erstes Dokument hoch.') }}</p></div>
 @else
 
     {{-- Ein Ordner je Vertrag --}}
@@ -117,7 +117,7 @@
     <details class="doc-folder" open>
         <summary>
             <span class="fold-ico">📁</span>
-            <span>Weitere Dokumente <span class="fold-sub">ohne Vertragszuordnung</span></span>
+            <span>{{ __('Weitere Dokumente') }}<span class="fold-sub">{{ __('ohne Vertragszuordnung') }}</span></span>
             <span class="fold-count">{{ $withoutContract->count() }}</span>
             <span class="fold-chev">▸</span>
         </summary>
