@@ -136,6 +136,30 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   ergänzen.
 - **Banner-Verwaltung**: `BannerController`, Statistik-Dashboard unter
   `/admin/banners/statistik`. Routen auf `role:admin,manager` beschränkt.
+  **Social-Publishing (Phase 1, Betreiber-Auftrag 04.08.2026)**: je Banner
+  die Seite `/admin/banners/{id}/social` (`BannerSocialController`) mit
+  Beitragstext DE/AR, oeffentlichem https-Klick-Ziel und den drei
+  tatsaechlich genutzten Plattformen Facebook/Instagram/TikTok
+  (`BannerSocialPost::PLATFORMS`). `SocialFormatGenerator` erzeugt aus dem
+  Banner-Bild JPGs 1080x1080 (Feed), 1080x1920 (Story/Reel), 1200x630
+  (Link-Vorschau): Seitenverhaeltnis nahe am Ziel -> mittiger Zuschnitt,
+  sonst KOMPLETT eingepasst auf Gruen-Graphit `#131A17` (breite
+  Text-Banner nie zerschneiden); Videos werden nicht umgerechnet (kein
+  ffmpeg), GIF nutzt das 1. Bild - Original liegt dem ZIP-Paket bei
+  (Formate + Texte + Links, `ZipArchive` mit class_exists-Guard). Je
+  Plattform ein Tracking-Kurzlink `/s/{code}` (`SocialLinkController`,
+  oeffentlich, throttle): zaehlt den Klick, haengt utm_source/medium/
+  campaign an (Fragment-sicher) - Kurzlinks NIE an `Banner::current()`
+  koppeln, veroeffentlichte Beitraege bleiben dauerhaft klickbar.
+  Social-Klicks sind bewusst GETRENNT von den Portal-Klicks (eigene Karte
+  im Statistik-Dashboard, keine gemeinsame CTR). Veroeffentlichung ist in
+  Phase 1 eine Mitarbeiter-Aktion: "Als veroeffentlicht markieren"
+  protokolliert wer/wann, optionale Wiedervorlage erinnert (faellig am
+  Startdatum). Abwaehlen einer Plattform loescht ihren Kanal samt
+  Klickzahlen (Hinweis steht im Formular). Phase 2 (direktes Posten via
+  Meta Graph API auf FB-Seite + IG-Business; Tokens nur Server-`.env`)
+  ist bewusst offen und setzt auf denselben Daten auf. Tests:
+  `BannerSocialPublishingTest`.
 - **Strom-/Gas-AUFTRAEGE (Formularseite)**: Ein Auftrag hat **KEINE
   Vertragsnummer** (Betreiber-Vorgabe 02.08.2026) - die Auftragsnummer steht
   nur in der Zusammenfassung, nie in `contract_number` (falsche Angabe in der
