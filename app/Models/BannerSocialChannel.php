@@ -14,11 +14,13 @@ class BannerSocialChannel extends Model
     protected $fillable = [
         'banner_social_post_id', 'platform', 'short_code',
         'clicks', 'last_click_at', 'published_at', 'published_by',
+        'external_post_id', 'external_url', 'publish_error', 'auto_attempted_at',
     ];
 
     protected $casts = [
         'last_click_at' => 'datetime',
         'published_at' => 'datetime',
+        'auto_attempted_at' => 'datetime',
     ];
 
     public function post()

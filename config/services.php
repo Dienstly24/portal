@@ -28,6 +28,18 @@ return [
         ['markers' => ['BERATUNGSPROTOKOLL'], 'pages' => [1, 2, 4, 5, 6, 7]],
     ],
 
+    // Meta Graph API (Banner-Social-Publishing Phase 2): direktes Posten
+    // auf die EIGENE Facebook-Seite + das verknuepfte Instagram-Business-
+    // Konto. System-User-Token aus dem Business Manager (laeuft nicht ab);
+    // Werte NUR in der Server-.env, nie im Repo/Chat. Einrichtung Schritt
+    // fuer Schritt: docs/ANLEITUNG_META_API_AR.md
+    'meta' => [
+        'page_id' => env('META_PAGE_ID'),
+        'ig_user_id' => env('META_IG_USER_ID'),
+        'token' => env('META_ACCESS_TOKEN'),
+        'graph_version' => env('META_GRAPH_VERSION', 'v23.0'),
+    ],
+
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],

@@ -370,6 +370,7 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         Route::get('/banners/{banner}/social', [\App\Http\Controllers\BannerSocialController::class, 'show'])->name('banners.social');
         Route::post('/banners/{banner}/social', [\App\Http\Controllers\BannerSocialController::class, 'save'])->name('banners.social.save');
         Route::post('/banners/{banner}/social/{platform}/veroeffentlicht', [\App\Http\Controllers\BannerSocialController::class, 'markPublished'])->name('banners.social.published');
+        Route::post('/banners/{banner}/social/{platform}/api-post', [\App\Http\Controllers\BannerSocialController::class, 'publishNow'])->name('banners.social.publish_now');
         Route::get('/banners/{banner}/social/paket', [\App\Http\Controllers\BannerSocialController::class, 'downloadZip'])->name('banners.social.zip');
 
         // Leistungsseiten (oeffentliche /leistungen/*): Inhalte pflegbar durch

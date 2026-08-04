@@ -21,7 +21,11 @@ class BannerSocialPost extends Model
 
     protected $fillable = [
         'banner_id', 'caption_de', 'caption_ar', 'target_url',
-        'created_by', 'updated_by',
+        'scheduled_for', 'created_by', 'updated_by',
+    ];
+
+    protected $casts = [
+        'scheduled_for' => 'datetime',
     ];
 
     public function banner()

@@ -156,10 +156,27 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   Phase 1 eine Mitarbeiter-Aktion: "Als veroeffentlicht markieren"
   protokolliert wer/wann, optionale Wiedervorlage erinnert (faellig am
   Startdatum). Abwaehlen einer Plattform loescht ihren Kanal samt
-  Klickzahlen (Hinweis steht im Formular). Phase 2 (direktes Posten via
-  Meta Graph API auf FB-Seite + IG-Business; Tokens nur Server-`.env`)
-  ist bewusst offen und setzt auf denselben Daten auf. Tests:
-  `BannerSocialPublishingTest`.
+  Klickzahlen (Hinweis steht im Formular).
+  **Phase 2 (Meta Graph API, 04.08.2026)**: `MetaPublisher` postet direkt
+  auf die EIGENE FB-Seite (Foto-Beitrag; Video-Banner -> Link-Beitrag)
+  und IG-Business (Container-Flow media -> media_publish; braucht eine
+  OEFFENTLICH abrufbare Bild-URL -> APP_URL muss die echte Domain sein).
+  Beitragstext = DE + AR + Tracking-Link; zu langer IG-Text (> 2200) wird
+  ABGELEHNT, nie still gekuerzt. Konfiguration `config/services.php`
+  'meta' aus `META_PAGE_ID`/`META_IG_USER_ID`/`META_ACCESS_TOKEN`
+  (System-User-Token, laeuft nicht ab, NUR Server-`.env`; kein App-Review
+  noetig - eigene Assets, Standard Access; arabische Einrichtungs-
+  Anleitung: `docs/ANLEITUNG_META_API_AR.md`). Sofort-Posten per Button
+  „Jetzt per API posten"; geplanter Versand ueber `scheduled_for` +
+  Command `social:publish-scheduled` (alle 15 Min): genau EIN
+  Auto-Versuch je Kanal (`auto_attempted_at` wird VOR dem API-Aufruf
+  gesetzt - nie-doppelt-posten schlaegt Retry), Fehler stehen als
+  `publish_error` am Kanal + Glocke an den Ersteller, erneuter Versuch
+  ist eine bewusste Mitarbeiter-Aktion (Button „Erneut versuchen" bzw.
+  neuer Zeitplan setzt den Versuch zurueck). Manuell als veroeffentlicht
+  markierte Kanaele und vorhandene `external_post_id` werden NIE
+  angefasst; TikTok bewusst ohne API (App-Audit) - nur manuell.
+  Tests: `BannerSocialPublishingTest`, `MetaSocialPublishingTest`.
 - **Strom-/Gas-AUFTRAEGE (Formularseite)**: Ein Auftrag hat **KEINE
   Vertragsnummer** (Betreiber-Vorgabe 02.08.2026) - die Auftragsnummer steht
   nur in der Zusammenfassung, nie in `contract_number` (falsche Angabe in der

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Models\Banner;
 use App\Models\BannerSocialChannel;
 use App\Models\BannerSocialPost;
+use App\Services\Social\MetaPublisher;
 use App\Services\Social\SocialFormatGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -29,6 +30,10 @@ class BannerSocialController extends Controller
             'post' => $post,
             'formats' => SocialFormatGenerator::existing($banner),
             'canZip' => class_exists(\ZipArchive::class),
+            'metaConfigured' => [
+                'facebook' => MetaPublisher::configuredFor('facebook'),
+                'instagram' => MetaPublisher::configuredFor('instagram'),
+            ],
         ]);
     }
 
@@ -43,18 +48,26 @@ class BannerSocialController extends Controller
             'platforms' => 'nullable|array',
             'platforms.*' => 'in:' . implode(',', array_keys(BannerSocialPost::PLATFORMS)),
             'create_task' => 'nullable|boolean',
+            'auto_publish' => 'nullable|boolean',
+            'scheduled_for' => 'nullable|date|required_if:auto_publish,1',
         ], [
             'target_url.url' => 'Das Klick-Ziel muss eine oeffentliche https://-Adresse sein (z. B. eine Seite der Website).',
+            'scheduled_for.required_if' => 'Bitte einen Zeitpunkt fuer die automatische Veroeffentlichung angeben.',
         ]);
 
         $post = BannerSocialPost::firstOrNew(['banner_id' => $banner->id]);
         if (!$post->exists) {
             $post->created_by = auth()->id();
         }
+        $scheduledFor = $request->boolean('auto_publish') && !empty($data['scheduled_for'])
+            ? \Illuminate\Support\Carbon::parse($data['scheduled_for'])
+            : null;
+        $scheduleChanged = ($post->scheduled_for?->toDateTimeString()) !== ($scheduledFor?->toDateTimeString());
         $post->fill([
             'caption_de' => $data['caption_de'] ?? null,
             'caption_ar' => $data['caption_ar'] ?? null,
             'target_url' => $data['target_url'] ?? null,
+            'scheduled_for' => $scheduledFor,
             'updated_by' => auth()->id(),
         ])->save();
 
@@ -68,6 +81,14 @@ class BannerSocialController extends Controller
                 ['platform' => $platform],
                 ['short_code' => BannerSocialChannel::generateCode($platform)]
             );
+        }
+
+        // Neuer/verschobener Auto-Zeitpunkt -> fruehere (fehlgeschlagene)
+        // Auto-Versuche zuruecksetzen, damit der Planer erneut ansetzt.
+        // Bereits erstellte Beitraege (external_post_id) bleiben unberuehrt.
+        if ($scheduleChanged) {
+            $post->channels()->whereNull('external_post_id')
+                ->update(['auto_attempted_at' => null, 'publish_error' => null]);
         }
 
         $generated = app(SocialFormatGenerator::class)->generate($banner);
@@ -100,6 +121,36 @@ class BannerSocialController extends Controller
         // Bewusst explizit statt back(): der Referer kann (z. B. nach einem
         // Kurzlink-Aufruf in derselben Session) woanders hinzeigen.
         return redirect()->route('admin.banners.social', $banner->id)->with('success', $msg);
+    }
+
+    /**
+     * Sofort ueber die Meta Graph API veroeffentlichen (Facebook/Instagram).
+     * Fehler werden verstaendlich am Kanal gespeichert und angezeigt -
+     * ein erneuter Klick ist der bewusste zweite Versuch.
+     */
+    public function publishNow(Banner $banner, string $platform)
+    {
+        $post = $banner->socialPost()->firstOrFail();
+        $channel = $post->channels()->where('platform', $platform)->firstOrFail();
+
+        // Bereits (manuell) als veroeffentlicht markiert -> kein API-Post,
+        // sonst laege der Beitrag doppelt auf der Plattform.
+        if ($channel->published_at && !$channel->external_post_id) {
+            return redirect()->route('admin.banners.social', $banner->id)
+                ->withErrors(['publish' => 'Bereits als veroeffentlicht markiert - erst zuruecksetzen, dann per API posten.']);
+        }
+
+        try {
+            app(MetaPublisher::class)->publish($channel, auth()->id());
+        } catch (\Throwable $e) {
+            $channel->forceFill(['publish_error' => $e->getMessage()])->save();
+
+            return redirect()->route('admin.banners.social', $banner->id)
+                ->withErrors(['publish' => $e->getMessage()]);
+        }
+
+        return redirect()->route('admin.banners.social', $banner->id)
+            ->with('success', $channel->platformInfo()['label'] . ': Beitrag wurde ueber die Meta-API veroeffentlicht.');
     }
 
     /** Veroeffentlichung je Plattform protokollieren bzw. zuruecknehmen. */
