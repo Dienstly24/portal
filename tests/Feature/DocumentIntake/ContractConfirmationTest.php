@@ -143,6 +143,66 @@ class ContractConfirmationTest extends TestCase
         $this->assertSame($editor->id, $stufe->changed_by);
     }
 
+    /**
+     * Betreiber-Fall 03.08.2026 (LichtBlick): der Auftrag wurde ohne
+     * Vertragsnummer erfasst (ein Auftrag hat keine); Wochen spaeter kommt die
+     * Vertragsbestaetigung als Handyfoto mit der echten Vertragsnummer,
+     * Kundennummer und dem Lieferbeginn. Erwartung: derselbe Vertrag wird
+     * vervollstaendigt - Bruecke ist die Zaehlernummer/MaLo-ID.
+     */
+    public function test_lichtblick_confirmation_completes_the_order_contract(): void
+    {
+        $customer = $this->customer();
+        $intake = app(DocumentIntakeService::class);
+
+        $auftrag = $intake->createContractFromExtraction($this->doc([
+            'versicherung' => [
+                'insurer' => 'LichtBlick', 'sparte' => 'strom',
+                'document_stage' => Contract::STAGE_ANTRAG,
+                'premium_amount' => 64.24, 'premium_interval' => 'monthly',
+            ],
+            'energie' => [
+                'meter_number' => '42811442', 'malo_id' => '51214022992',
+                'consumption_kwh' => 1800, 'tariff' => 'LichtBlick ÖkoStrom',
+                'previous_provider' => 'Stadtwerke Rendsburg GmbH',
+            ],
+        ]), $customer, null);
+        $this->assertNotNull($auftrag);
+        $this->assertNull($auftrag->contract_number);
+        $this->assertTrue($auftrag->isApplication());
+
+        // Die Bestaetigung (Foto-OCR): endgueltige Nummern + Lieferbeginn.
+        $result = $intake->createContractFromExtraction($this->doc([
+            'versicherung' => [
+                'insurer' => 'LichtBlick', 'sparte' => 'strom',
+                'contract_number' => '31682484', 'start_date' => '2026-08-15',
+                'premium_amount' => 65.00, 'premium_interval' => 'monthly',
+                'document_stage' => Contract::STAGE_VERTRAG, 'tariff' => 'ÖkoStrom 24',
+            ],
+            'energie' => [
+                'meter_number' => '42811442', 'malo_id' => '51214022992',
+                'customer_number' => '21363427',
+            ],
+        ]), $customer, null);
+
+        // Kein zweiter Vertrag - der Antrags-Vertrag ist jetzt bestaetigt.
+        $this->assertSame($auftrag->id, $result->id);
+        $this->assertSame(1, Contract::where('customer_id', $customer->id)->count());
+
+        $result->refresh();
+        $this->assertSame('31682484', $result->contract_number);
+        $this->assertSame(Contract::STAGE_VERTRAG, $result->stage);
+        $this->assertSame('2026-08-15', (string) $result->start_date);
+        $this->assertSame('65.00', (string) $result->premium_amount);
+
+        $en = ContractEnergyDetail::where('contract_id', $result->id)->first();
+        $this->assertSame('42811442', $en->meter_number);
+        $this->assertSame('51214022992', $en->malo_id);
+        $this->assertSame('21363427', $en->customer_number);
+        // Der Vorversorger aus dem Auftrag bleibt erhalten.
+        $this->assertSame('Stadtwerke Rendsburg GmbH', $en->previous_provider);
+    }
+
     public function test_confirmation_of_a_different_provider_creates_its_own_contract(): void
     {
         // Auftrag bei EWE, Bestaetigung von einem ANDEREN Versorger: das ist

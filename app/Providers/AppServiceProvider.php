@@ -71,6 +71,7 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(\App\Services\Ai\TemplateParsers\AufenthaltstitelParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\DslAuftragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\EweVertragsbestaetigungParser::class),
+                $app->make(\App\Services\Ai\TemplateParsers\LichtblickVertragsbestaetigungParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\LichtblickAuftragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\PlanBNetZeroAuftragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\EnergieAuftragParser::class),
