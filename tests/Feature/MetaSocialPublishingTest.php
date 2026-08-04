@@ -32,6 +32,7 @@ class MetaSocialPublishingTest extends TestCase
             'page_id' => 'PAGE1',
             'ig_user_id' => 'IG1',
             'token' => 'TESTTOKEN',
+            'page_token' => 'PTOK', // Seiten-Posts brauchen das PAGE-Token
             'graph_version' => 'v23.0',
         ]]);
     }
@@ -78,6 +79,9 @@ class MetaSocialPublishingTest extends TestCase
             }
             if (str_contains($url, '/IG1/media')) {
                 return Http::response(['id' => 'C500']);
+            }
+            if (str_contains($url, '/C500')) {
+                return Http::response(['id' => 'C500', 'status_code' => 'FINISHED']);
             }
             if (str_contains($url, '/M900')) {
                 return Http::response(['id' => 'M900', 'permalink' => 'https://www.instagram.com/p/abc123/']);
@@ -196,13 +200,59 @@ class MetaSocialPublishingTest extends TestCase
         $this->assertStringContainsString('zu lang', BannerSocialChannel::where('platform', 'instagram')->first()->publish_error);
     }
 
+    public function test_facebook_ohne_page_token_leitet_es_zur_laufzeit_ab(): void
+    {
+        config(['services.meta.page_token' => null]);
+        Http::fake(function ($request) {
+            $url = $request->url();
+            if (str_contains($url, '/PAGE1/photos')) {
+                return Http::response(['id' => '111', 'post_id' => 'PAGE1_222']);
+            }
+            if (str_contains($url, '/PAGE1')) {
+                return Http::response(['id' => 'PAGE1', 'access_token' => 'ABGELEITET']);
+            }
+            return Http::response(['error' => ['message' => 'unerwartet']], 400);
+        });
+        $banner = $this->makePostedBanner(['platforms' => ['facebook']]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.banners.social.publish_now', [$banner->id, 'facebook']))
+            ->assertSessionHas('success');
+
+        // Erst das Seiten-Token holen, dann posten.
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'fields=access_token'));
+        $this->assertSame('PAGE1_222', BannerSocialChannel::first()->external_post_id);
+    }
+
+    public function test_instagram_container_fehler_wird_verstaendlich_gemeldet(): void
+    {
+        Http::fake(function ($request) {
+            $url = $request->url();
+            if (str_contains($url, '/IG1/media')) {
+                return Http::response(['id' => 'C500']);
+            }
+            if (str_contains($url, '/C500')) {
+                return Http::response(['id' => 'C500', 'status_code' => 'ERROR']);
+            }
+            return Http::response(['error' => ['message' => 'unerwartet']], 400);
+        });
+        $banner = $this->makePostedBanner(['platforms' => ['instagram']]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.banners.social.publish_now', [$banner->id, 'instagram']))
+            ->assertSessionHasErrors('publish');
+
+        $this->assertStringContainsString('verarbeiten', BannerSocialChannel::first()->publish_error);
+        $this->assertNull(BannerSocialChannel::first()->external_post_id);
+    }
+
     // ---------------- Geplanter Auto-Versand ----------------
 
     public function test_speichern_setzt_und_entfernt_den_zeitplan(): void
     {
         $banner = $this->makePostedBanner([
             'auto_publish' => 1,
-            'scheduled_for' => now()->addDay()->format('Y-m-d\TH:i'),
+            'scheduled_for' => now(BannerSocialPost::OPERATOR_TZ)->addDay()->format('Y-m-d\TH:i'),
         ]);
         $post = BannerSocialPost::where('banner_id', $banner->id)->first();
         $this->assertNotNull($post->scheduled_for);
@@ -222,13 +272,43 @@ class MetaSocialPublishingTest extends TestCase
         ])->assertSessionHasErrors('scheduled_for');
     }
 
+    public function test_zeitplan_wird_als_deutsche_zeit_interpretiert(): void
+    {
+        // Winterdatum (UTC+1): 09:00 deutsche Zeit = 08:00 UTC im Speicher.
+        $banner = $this->makePostedBanner([
+            'auto_publish' => 1,
+            'scheduled_for' => '2027-01-15T09:00',
+        ]);
+
+        $post = BannerSocialPost::where('banner_id', $banner->id)->first();
+        $this->assertSame('2027-01-15 08:00:00', $post->scheduled_for->toDateTimeString());
+
+        // Die Oberflaeche zeigt wieder deutsche Zeit an.
+        $this->actingAs($this->admin)->get(route('admin.banners.social', $banner->id))
+            ->assertOk()->assertSee('2027-01-15T09:00');
+    }
+
+    public function test_vergangener_zeitpunkt_wird_abgelehnt(): void
+    {
+        $banner = $this->makePostedBanner();
+
+        $this->actingAs($this->admin)->post(route('admin.banners.social.save', $banner->id), [
+            'caption_de' => 'x', 'platforms' => ['facebook'],
+            'auto_publish' => 1,
+            'scheduled_for' => now(\App\Models\BannerSocialPost::OPERATOR_TZ)->subMinutes(30)->format('Y-m-d\TH:i'),
+        ])->assertSessionHasErrors('scheduled_for');
+
+        $this->assertNull(BannerSocialPost::where('banner_id', $banner->id)->first()->scheduled_for);
+    }
+
     public function test_planer_veroeffentlicht_faellige_posts_und_meldet_die_glocke(): void
     {
         $this->fakeGraphOk();
         $banner = $this->makePostedBanner([
             'auto_publish' => 1,
-            'scheduled_for' => now()->subMinutes(10)->format('Y-m-d\TH:i'),
+            'scheduled_for' => now(BannerSocialPost::OPERATOR_TZ)->addHour()->format('Y-m-d\TH:i'),
         ]);
+        BannerSocialPost::query()->update(['scheduled_for' => now()->subMinutes(10)]);
 
         $this->artisan('social:publish-scheduled')->assertSuccessful();
 
@@ -257,8 +337,9 @@ class MetaSocialPublishingTest extends TestCase
         $this->makePostedBanner([
             'platforms' => ['facebook'],
             'auto_publish' => 1,
-            'scheduled_for' => now()->subMinute()->format('Y-m-d\TH:i'),
+            'scheduled_for' => now(BannerSocialPost::OPERATOR_TZ)->addHour()->format('Y-m-d\TH:i'),
         ]);
+        BannerSocialPost::query()->update(['scheduled_for' => now()->subMinute()]);
 
         $this->artisan('social:publish-scheduled')->assertSuccessful();
 
@@ -279,15 +360,16 @@ class MetaSocialPublishingTest extends TestCase
         $banner = $this->makePostedBanner([
             'platforms' => ['facebook'],
             'auto_publish' => 1,
-            'scheduled_for' => now()->subMinute()->format('Y-m-d\TH:i'),
+            'scheduled_for' => now(BannerSocialPost::OPERATOR_TZ)->addHour()->format('Y-m-d\TH:i'),
         ]);
+        BannerSocialPost::query()->update(['scheduled_for' => now()->subMinute()]);
         $this->artisan('social:publish-scheduled');
         $this->assertNotNull(BannerSocialChannel::first()->auto_attempted_at);
 
         // Betreiber plant neu -> Versuch und Fehler werden zurueckgesetzt.
         $this->actingAs($this->admin)->post(route('admin.banners.social.save', $banner->id), [
             'caption_de' => 'Jetzt wechseln!', 'platforms' => ['facebook'],
-            'auto_publish' => 1, 'scheduled_for' => now()->addHour()->format('Y-m-d\TH:i'),
+            'auto_publish' => 1, 'scheduled_for' => now(BannerSocialPost::OPERATOR_TZ)->addHour()->format('Y-m-d\TH:i'),
         ]);
 
         $ch = BannerSocialChannel::first();
@@ -314,8 +396,9 @@ class MetaSocialPublishingTest extends TestCase
         $banner = $this->makePostedBanner([
             'platforms' => ['facebook'],
             'auto_publish' => 1,
-            'scheduled_for' => now()->subMinute()->format('Y-m-d\TH:i'),
+            'scheduled_for' => now(BannerSocialPost::OPERATOR_TZ)->addHour()->format('Y-m-d\TH:i'),
         ]);
+        BannerSocialPost::query()->update(['scheduled_for' => now()->subMinute()]);
         $this->actingAs($this->admin)->post(route('admin.banners.social.published', [$banner->id, 'facebook']));
 
         $this->artisan('social:publish-scheduled')->assertSuccessful();

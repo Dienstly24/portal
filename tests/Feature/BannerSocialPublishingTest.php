@@ -121,6 +121,24 @@ class BannerSocialPublishingTest extends TestCase
         $this->assertNull($post->channels()->where('platform', 'instagram')->first());
     }
 
+    public function test_veroeffentlichte_kanaele_ueberleben_das_abwaehlen(): void
+    {
+        $banner = $this->makeImageBanner();
+        $this->savePost($banner, ['platforms' => ['facebook', 'instagram']]);
+        // Facebook manuell als veroeffentlicht markieren -> Kurzlink ist im Live-Beitrag.
+        $this->actingAs($this->admin)->post(route('admin.banners.social.published', [$banner->id, 'facebook']));
+
+        // Beide abwaehlen: Instagram (unveroeffentlicht) verschwindet,
+        // Facebook bleibt samt Kurzlink erhalten + Hinweis in der Meldung.
+        $this->savePost($banner, ['platforms' => ['tiktok']])
+            ->assertSessionHas('success', fn ($msg) => str_contains($msg, 'bereits ver'));
+
+        $post = BannerSocialPost::where('banner_id', $banner->id)->first();
+        $this->assertNotNull($post->channels()->where('platform', 'facebook')->first());
+        $this->assertNull($post->channels()->where('platform', 'instagram')->first());
+        $this->assertNotNull($post->channels()->where('platform', 'tiktok')->first());
+    }
+
     public function test_klick_ziel_muss_oeffentliche_https_url_sein(): void
     {
         $banner = $this->makeImageBanner();
@@ -327,7 +345,7 @@ class BannerSocialPublishingTest extends TestCase
             ->assertOk()->assertSee('Tracking-Link')->assertSee('Feed-Post');
 
         $this->actingAs($this->admin)->get(route('admin.banners'))
-            ->assertOk()->assertSee('Social-Media (1 Klicks)');
+            ->assertOk()->assertSee('Social-Media (1 Klick)');
 
         $this->actingAs($this->admin)->get(route('admin.banners.stats'))
             ->assertOk()->assertSee('Social-Media – Klicks über Tracking-Links');

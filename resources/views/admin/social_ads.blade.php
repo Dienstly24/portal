@@ -11,7 +11,7 @@
     </div>
 </div>
 
-@if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
+{{-- Erfolgsmeldung rendert das Layout zentral; hier nur Fehler. --}}
 @if($errors->any())<div class="alert alert-error">{{ $errors->first() }}</div>@endif
 
 @if(!$configured)
@@ -52,6 +52,8 @@
     @elseif(empty($campaigns))
     <p style="font-size:13.5px;color:var(--ink-soft);">Noch keine Kampagnen. Einen Banner per API posten und dann über „📢 Bewerben" die erste Anzeige erstellen – sie startet erst nach Ihrem Klick.</p>
     @else
+    {{-- overflow-x: 8 Spalten inkl. Budget-Formular sind breiter als Handy/Tablet --}}
+    <div style="overflow-x:auto;">
     <table>
         <thead><tr><th>Kampagne</th><th>Status</th><th style="text-align:right;">Tagesbudget</th><th style="text-align:right;">Ausgegeben</th><th style="text-align:right;">Impressionen</th><th style="text-align:right;">Klicks</th><th style="text-align:right;">Ø Klickpreis</th><th>Aktionen</th></tr></thead>
         <tbody>
@@ -74,7 +76,8 @@
             <td style="text-align:right;">
                 <form method="POST" action="{{ route('admin.werbung.budget', $c['id']) }}" style="display:flex;gap:4px;justify-content:flex-end;align-items:center;">
                     @csrf
-                    <input type="number" name="daily_budget_eur" value="{{ $c['daily_budget_eur'] !== null ? number_format($c['daily_budget_eur'], 0, '.', '') : '' }}" min="1" max="{{ $maxBudget }}" step="1" style="width:70px;padding:5px 7px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;text-align:right;background:#F7F5EF;"> €
+                    {{-- exakten Wert zeigen (nicht runden - sonst aendert Speichern still das Budget) --}}
+                    <input type="number" name="daily_budget_eur" value="{{ $c['daily_budget_eur'] !== null ? rtrim(rtrim(number_format($c['daily_budget_eur'], 2, '.', ''), '0'), '.') : '' }}" min="1" max="{{ $maxBudget }}" step="0.01" style="width:80px;padding:5px 7px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;text-align:right;background:#F7F5EF;"> €
                     <button type="submit" class="btn btn-ghost btn-sm" title="Tagesbudget speichern">💾</button>
                 </form>
             </td>
@@ -84,11 +87,12 @@
             <td style="text-align:right;">{{ $c['cpc_eur'] !== null ? number_format($c['cpc_eur'], 2, ',', '.') . ' €' : '—' }}</td>
             <td>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                    <form method="POST" action="{{ route('admin.werbung.status', $c['id']) }}" @if(!$aktiv) onsubmit="return confirm('Anzeige „{{ addslashes($c['name']) }}" jetzt starten? Ab dann wird Budget ausgegeben.');" @endif>
+                    {{-- Js::from statt addslashes: korrektes JS-Escaping, auch bei Zeilenumbruechen im Kampagnennamen --}}
+                    <form method="POST" action="{{ route('admin.werbung.status', $c['id']) }}" @if(!$aktiv) onsubmit="return confirm({{ \Illuminate\Support\Js::from('Anzeige „' . $c['name'] . '" jetzt starten? Ab dann wird Budget ausgegeben.') }});" @endif>
                         @csrf<input type="hidden" name="action" value="{{ $aktiv ? 'pause' : 'start' }}">
                         <button type="submit" class="btn {{ $aktiv ? 'btn-ghost' : 'btn-primary' }} btn-sm">{{ $aktiv ? '⏸ Pausieren' : '▶ Starten' }}</button>
                     </form>
-                    <form method="POST" action="{{ route('admin.werbung.delete', $c['id']) }}" onsubmit="return confirm('Kampagne „{{ addslashes($c['name']) }}" endgültig löschen?');">
+                    <form method="POST" action="{{ route('admin.werbung.delete', $c['id']) }}" onsubmit="return confirm({{ \Illuminate\Support\Js::from('Kampagne „' . $c['name'] . '" endgültig löschen?') }});">
                         @csrf<button type="submit" class="btn btn-sm" style="background:#F9E3E3;color:#A32D2D;border:1px solid #F0A0A0;">🗑</button>
                     </form>
                 </div>
@@ -97,6 +101,7 @@
         @endforeach
         </tbody>
     </table>
+    </div>
     <p style="font-size:12px;color:var(--ink-soft);margin-top:10px;">💡 Neue Anzeigen entstehen immer PAUSIERT und geben erst nach „▶ Starten" Geld aus. Zahlungsmittel (Kreditkarte) verwaltet Meta selbst – das ist der einzige Schritt, der dort bleibt.</p>
     @endif
 </div>

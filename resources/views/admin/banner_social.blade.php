@@ -85,8 +85,12 @@
                 🚀 Automatisch veröffentlichen – Facebook &amp; Instagram über die Meta-API
             </label>
             <div id="scheduledWrap" style="display:{{ old('auto_publish', $post?->scheduled_for) ? 'flex' : 'none' }};gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap;">
-                <span style="font-size:13px;">Zeitpunkt:</span>
-                <input type="datetime-local" name="scheduled_for" value="{{ old('scheduled_for', $post?->scheduled_for?->format('Y-m-d\TH:i')) }}" style="max-width:220px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;background:#F7F5EF;font-family:inherit;">
+                <span style="font-size:13px;">Zeitpunkt (deutsche Zeit):</span>
+                {{-- Eingabe/Anzeige in deutscher Zeit; gespeichert wird UTC (app.timezone). --}}
+                <input type="datetime-local" name="scheduled_for"
+                    value="{{ old('scheduled_for', $post?->scheduled_for?->timezone(\App\Models\BannerSocialPost::OPERATOR_TZ)->format('Y-m-d\TH:i')) }}"
+                    min="{{ now(\App\Models\BannerSocialPost::OPERATOR_TZ)->format('Y-m-d\TH:i') }}"
+                    style="max-width:220px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;background:#F7F5EF;font-family:inherit;">
                 <span style="font-size:12px;color:var(--ink-soft);">Der Planer prüft alle 15 Minuten. TikTok bleibt manuell (TikTok öffnet seine API nur nach App-Audit).</span>
             </div>
             @if(!$metaConfigured['facebook'] && !$metaConfigured['instagram'])
@@ -155,6 +159,8 @@
     @if(!$post || $post->channels->isEmpty())
     <p style="font-size:13.5px;color:var(--ink-soft);">Noch keine Plattform ausgewählt – oben Plattformen anhaken und speichern.</p>
     @else
+    {{-- overflow-x: die Tabelle ist breiter als schmale Viewports (Handy) --}}
+    <div style="overflow-x:auto;">
     <table>
         <thead><tr><th>Plattform</th><th>Tracking-Link (in den Beitrag)</th><th style="text-align:right;">Klicks</th><th>Letzter Klick</th><th>Veröffentlicht</th><th></th></tr></thead>
         <tbody>
@@ -179,7 +185,10 @@
                 @if($ch->publisher)<span style="color:var(--ink-soft);"> von {{ $ch->publisher->name }}</span>
                 @elseif($ch->external_post_id)<span style="color:var(--ink-soft);"> automatisch</span>@endif
                 @elseif($post->scheduled_for && in_array($ch->platform, \App\Services\Social\MetaPublisher::AUTO_PLATFORMS) && !$ch->auto_attempted_at)
-                <span style="color:#185FA5;">⏱ geplant {{ $post->scheduled_for->format('d.m.Y H:i') }}</span>
+                <span style="color:#185FA5;">⏱ geplant {{ $post->scheduled_for->timezone(\App\Models\BannerSocialPost::OPERATOR_TZ)->format('d.m.Y H:i') }} Uhr</span>
+                @unless($metaConfigured[$ch->platform] ?? false)
+                <div style="font-size:11.5px;color:#92400E;margin-top:3px;">⚠ Meta-API nicht verbunden - der Planer kann nicht posten (php artisan meta:einrichten).</div>
+                @endunless
                 @else
                 <span style="color:var(--ink-soft);">noch nicht</span>
                 @endif
@@ -222,6 +231,7 @@
         @endforeach
         </tbody>
     </table>
+    </div>
     @endif
 
     {{-- Kurzanleitung je Plattform --}}

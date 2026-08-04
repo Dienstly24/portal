@@ -33,6 +33,7 @@ class MetaAdsManagementTest extends TestCase
             'page_id' => 'PAGE1',
             'ig_user_id' => 'IG1',
             'token' => 'TOK',
+            'page_token' => 'PTOK',
             'graph_version' => 'v23.0',
             'ad_account_id' => 'act_777',
             'ads_max_daily_budget' => 100,
@@ -97,16 +98,19 @@ class MetaAdsManagementTest extends TestCase
         Http::assertSent(fn ($r) => str_contains($r->url(), '/act_777/campaigns')
             && ($r['status'] ?? '') === 'PAUSED'
             && ($r['daily_budget'] ?? 0) == 1000
-            && ($r['objective'] ?? '') === 'OUTCOME_TRAFFIC');
+            && ($r['objective'] ?? '') === 'OUTCOME_TRAFFIC'
+            && ($r['bid_strategy'] ?? '') === 'LOWEST_COST_WITHOUT_CAP');
         // Anzeigengruppe: Deutschland + Alter + arabische Sprach-ID von Meta.
         Http::assertSent(function ($r) {
             if (!str_contains($r->url(), '/act_777/adsets')) {
                 return false;
             }
             $t = $r['targeting'] ?? '';
+            // CBO: bid_strategy gehoert an die Kampagne - NICHT ans Adset.
             return str_contains($t, '"countries":["DE"]')
                 && str_contains($t, '"age_min":20')
                 && str_contains($t, '"locales":[28]')
+                && !isset($r['bid_strategy'])
                 && ($r['status'] ?? '') === 'PAUSED';
         });
         // Anzeige nutzt den echten Beitrag (object_story_id).

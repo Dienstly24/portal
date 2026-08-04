@@ -47,7 +47,8 @@ class MetaInsightsService
             return;
         }
         $pageId = (string) config('services.meta.page_id');
-
+        // Seiten-Basisdaten gehen mit dem System-User-Token, die
+        // Insights-Endpunkte verlangen das PAGE Access Token.
         $page = $this->graph->get($pageId, ['fields' => 'followers_count,fan_count,name']);
 
         $views = 0;
@@ -55,7 +56,7 @@ class MetaInsightsService
             $resp = $this->graph->get($pageId . '/insights', [
                 'metric' => 'page_views_total',
                 'period' => 'days_28',
-            ]);
+            ], $this->graph->pageToken());
             $values = $resp['data'][0]['values'] ?? [];
             $views = (int) (end($values)['value'] ?? 0);
         } catch (\Throwable $e) {
@@ -74,13 +75,15 @@ class MetaInsightsService
     /** @return array{likes:int,comments:int,shares:int,reach:int} */
     private function facebookPost(string $postId): array
     {
+        // Seiten-Beitraege (Lesen + Insights) verlangen das PAGE Token.
+        $pageToken = $this->graph->pageToken();
         $post = $this->graph->get($postId, [
             'fields' => 'reactions.summary(true).limit(0),comments.summary(true).limit(0),shares',
-        ]);
+        ], $pageToken);
 
         $reach = 0;
         try {
-            $resp = $this->graph->get($postId . '/insights', ['metric' => 'post_impressions_unique']);
+            $resp = $this->graph->get($postId . '/insights', ['metric' => 'post_impressions_unique'], $pageToken);
             $reach = (int) ($resp['data'][0]['values'][0]['value'] ?? 0);
         } catch (\Throwable $e) {
         }

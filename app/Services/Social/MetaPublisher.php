@@ -56,16 +56,16 @@ class MetaPublisher
             return;
         }
         if (!in_array($channel->platform, self::AUTO_PLATFORMS, true)) {
-            throw new \RuntimeException('Diese Plattform unterstuetzt kein API-Posten (nur manuell).');
+            throw new \RuntimeException('Diese Plattform unterstützt kein API-Posten (nur manuell).');
         }
         if (!self::configuredFor($channel->platform)) {
-            throw new \RuntimeException('Meta-API nicht konfiguriert (META_... in der Server-.env, Anleitung: docs/ANLEITUNG_META_API_AR.md).');
+            throw new \RuntimeException('Meta-API nicht verbunden - einmalig auf dem Server php artisan meta:einrichten ausführen (Anleitung: docs/ANLEITUNG_META_API_AR.md).');
         }
 
         $post = $channel->post()->with('banner')->first();
         $banner = $post?->banner;
         if (!$banner) {
-            throw new \RuntimeException('Zugehoeriger Banner nicht gefunden.');
+            throw new \RuntimeException('Zugehöriger Banner nicht gefunden.');
         }
 
         $caption = $this->composeCaption($post, $channel);
@@ -108,18 +108,21 @@ class MetaPublisher
     private function publishFacebook(string $caption, ?string $imageUrl, string $fallbackLink): array
     {
         $pageId = config('services.meta.page_id');
+        // Seiten-Beitraege verlangen das PAGE Access Token - das
+        // System-User-Token wird von /{page-id}/photos|feed abgelehnt.
+        $pageToken = $this->graph->pageToken();
 
         if ($imageUrl) {
-            $resp = $this->call('post', $pageId . '/photos', [
+            $resp = $this->graph->post($pageId . '/photos', [
                 'url' => $imageUrl,
                 'message' => $caption,
-            ]);
+            ], $pageToken);
         } else {
             // Video-Banner ohne Bildformate: Link-Beitrag (Text + Kurzlink).
-            $resp = $this->call('post', $pageId . '/feed', [
+            $resp = $this->graph->post($pageId . '/feed', [
                 'message' => $caption,
                 'link' => $fallbackLink,
-            ]);
+            ], $pageToken);
         }
 
         $externalId = (string) ($resp['post_id'] ?? $resp['id'] ?? '');
@@ -134,11 +137,11 @@ class MetaPublisher
     private function publishInstagram(string $caption, ?string $imageUrl): array
     {
         if (!$imageUrl) {
-            throw new \RuntimeException('Instagram benoetigt ein Bild - dieses Banner hat keine erzeugten Bildformate (Video?).');
+            throw new \RuntimeException('Instagram benötigt ein Bild - dieses Banner hat keine erzeugten Bildformate (Video?).');
         }
         if (mb_strlen($caption) > self::IG_CAPTION_MAX) {
             // Nie still kuerzen - der Betreiber entscheidet, was wegfaellt.
-            throw new \RuntimeException('Beitragstext fuer Instagram zu lang (max. ' . self::IG_CAPTION_MAX . ' Zeichen inkl. Link) - bitte kuerzen.');
+            throw new \RuntimeException('Beitragstext für Instagram zu lang (max. ' . self::IG_CAPTION_MAX . ' Zeichen inkl. Link) - bitte kürzen.');
         }
 
         $igUserId = config('services.meta.ig_user_id');
@@ -152,12 +155,26 @@ class MetaPublisher
             throw new \RuntimeException('Meta-API: Instagram-Container ohne ID.');
         }
 
+        // Container-Status abwarten: media_publish direkt nach der Anlage
+        // schlaegt gelegentlich mit "Media not ready" fehl (transient).
+        // Kurz und begrenzt pollen statt den Fehler zum Dauerfehler zu machen.
+        for ($versuch = 0; $versuch < 4; $versuch++) {
+            $status = $this->call('get', $creationId, ['fields' => 'status_code'])['status_code'] ?? 'FINISHED';
+            if ($status === 'FINISHED') {
+                break;
+            }
+            if ($status === 'ERROR') {
+                throw new \RuntimeException('Meta-API: Instagram konnte das Bild nicht verarbeiten (Bild-URL öffentlich erreichbar? APP_URL korrekt?).');
+            }
+            sleep(2); // IN_PROGRESS -> kurz warten
+        }
+
         $published = $this->call('post', $igUserId . '/media_publish', [
             'creation_id' => $creationId,
         ]);
         $mediaId = (string) ($published['id'] ?? '');
         if ($mediaId === '') {
-            throw new \RuntimeException('Meta-API: Instagram-Veroeffentlichung ohne Media-ID.');
+            throw new \RuntimeException('Meta-API: Instagram-Veröffentlichung ohne Media-ID.');
         }
 
         // Permalink ist Komfort - ein Fehler hier macht den Post nicht kaputt.

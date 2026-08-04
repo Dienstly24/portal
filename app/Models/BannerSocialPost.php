@@ -12,6 +12,13 @@ use Illuminate\Database\Eloquent\Model;
  */
 class BannerSocialPost extends Model
 {
+    /**
+     * Zeitzone des Betreibers fuer Zeiteingaben/-anzeigen (app.timezone
+     * ist UTC): scheduled_for wird als deutsche Zeit erfasst, in UTC
+     * gespeichert und zur Anzeige zurueckgerechnet.
+     */
+    public const OPERATOR_TZ = 'Europe/Berlin';
+
     /** Unterstuetzte Plattformen (eine Quelle fuer Formulare/Anzeige/Codes). */
     public const PLATFORMS = [
         'facebook'  => ['label' => 'Facebook',  'icon' => '📘', 'prefix' => 'fb'],

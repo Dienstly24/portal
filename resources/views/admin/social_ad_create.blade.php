@@ -37,9 +37,12 @@
                 <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">Region: Deutschland. Ausspielung automatisch auf Facebook + Instagram.</div>
             </div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
+        {{-- .grid-2 kollabiert am Handy auf eine Spalte (Inline-4er-Grid nicht) --}}
+        <div class="grid-2">
             <div class="field"><label>Alter von</label><input type="number" name="age_min" value="{{ old('age_min', 20) }}" min="18" max="65"></div>
             <div class="field"><label>Alter bis</label><input type="number" name="age_max" value="{{ old('age_max', 65) }}" min="18" max="65"></div>
+        </div>
+        <div class="grid-2">
             <div class="field"><label>Tagesbudget (EUR, max. {{ $maxBudget }})</label><input type="number" name="daily_budget_eur" value="{{ old('daily_budget_eur', 10) }}" min="1" max="{{ $maxBudget }}" step="1" required></div>
             <div class="field"><label>Ende (optional)</label><input type="date" name="end_date" value="{{ old('end_date') }}"><div style="font-size:11.5px;color:var(--ink-soft);margin-top:3px;">leer = läuft bis zum Pausieren</div></div>
         </div>

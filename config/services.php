@@ -37,6 +37,10 @@ return [
         'page_id' => env('META_PAGE_ID'),
         'ig_user_id' => env('META_IG_USER_ID'),
         'token' => env('META_ACCESS_TOKEN'),
+        // PAGE Access Token: Pflicht fuer Seiten-Posts/-Insights (das
+        // System-User-Token reicht dort nicht). Schreibt der Assistent;
+        // fehlt es, leitet MetaGraphClient::pageToken() es zur Laufzeit ab.
+        'page_token' => env('META_PAGE_ACCESS_TOKEN'),
         'graph_version' => env('META_GRAPH_VERSION', 'v23.0'),
         // Werbekonto (act_...) fuer die Anzeigen-Steuerung aus dem System
         // (Phase 3). Der Assistent meta:einrichten findet es automatisch.

@@ -51,17 +51,29 @@ class BannerSocialController extends Controller
             'auto_publish' => 'nullable|boolean',
             'scheduled_for' => 'nullable|date|required_if:auto_publish,1',
         ], [
-            'target_url.url' => 'Das Klick-Ziel muss eine oeffentliche https://-Adresse sein (z. B. eine Seite der Website).',
-            'scheduled_for.required_if' => 'Bitte einen Zeitpunkt fuer die automatische Veroeffentlichung angeben.',
+            'caption_de.max' => 'Der deutsche Beitragstext ist zu lang (max. 3000 Zeichen).',
+            'caption_ar.max' => 'Der arabische Beitragstext ist zu lang (max. 3000 Zeichen).',
+            'target_url.url' => 'Das Klick-Ziel muss eine öffentliche https://-Adresse sein (z. B. eine Seite der Website).',
+            'scheduled_for.required_if' => 'Bitte einen Zeitpunkt für die automatische Veröffentlichung angeben.',
         ]);
 
         $post = BannerSocialPost::firstOrNew(['banner_id' => $banner->id]);
         if (!$post->exists) {
             $post->created_by = auth()->id();
         }
+        // Der Betreiber gibt DEUTSCHE Uhrzeit ein; app.timezone ist UTC.
+        // Deshalb als Europe/Berlin interpretieren und in UTC speichern -
+        // sonst postet der Planer 1-2 Stunden spaeter als gedacht.
         $scheduledFor = $request->boolean('auto_publish') && !empty($data['scheduled_for'])
-            ? \Illuminate\Support\Carbon::parse($data['scheduled_for'])
+            ? \Illuminate\Support\Carbon::parse($data['scheduled_for'], BannerSocialPost::OPERATOR_TZ)->utc()
             : null;
+        if ($scheduledFor && $scheduledFor->lte(now())) {
+            // Nach der Zeitzonen-Umrechnung pruefen (after:now auf dem
+            // rohen String liesse Berlin-Zeiten im Offset-Fenster durch).
+            return back()->withInput()->withErrors([
+                'scheduled_for' => 'Der geplante Zeitpunkt liegt in der Vergangenheit - bitte eine künftige Uhrzeit wählen (für „sofort" den Button „Jetzt per API posten" nutzen).',
+            ]);
+        }
         $scheduleChanged = ($post->scheduled_for?->toDateTimeString()) !== ($scheduledFor?->toDateTimeString());
         $post->fill([
             'caption_de' => $data['caption_de'] ?? null,
@@ -73,9 +85,15 @@ class BannerSocialController extends Controller
 
         // Kanaele mit der Auswahl synchronisieren: neue Plattformen bekommen
         // einen eindeutigen Kurzlink, abgewaehlte werden entfernt; bestehende
-        // behalten Code und Klickzahlen.
+        // behalten Code und Klickzahlen. VEROEFFENTLICHTE Kanaele werden NIE
+        // geloescht: der Kurzlink steht bereits im Live-Beitrag (wuerde tot)
+        // und ohne published_at koennte der Planer erneut posten.
         $selected = $data['platforms'] ?? [];
-        $post->channels()->whereNotIn('platform', $selected)->delete();
+        $geschuetzt = $post->channels()
+            ->whereNotIn('platform', $selected)
+            ->where(fn ($q) => $q->whereNotNull('published_at')->orWhereNotNull('external_post_id'))
+            ->get();
+        $post->channels()->whereNotIn('platform', array_merge($selected, $geschuetzt->pluck('platform')->all()))->delete();
         foreach ($selected as $platform) {
             $post->channels()->firstOrCreate(
                 ['platform' => $platform],
@@ -102,7 +120,7 @@ class BannerSocialController extends Controller
             \App\Models\Task::create([
                 'assigned_to' => auth()->id(),
                 'created_by' => auth()->id(),
-                'title' => 'Social-Media-Post veroeffentlichen: ' . $banner->title,
+                'title' => 'Social-Media-Post veröffentlichen: ' . $banner->title,
                 'description' => 'Bildformate, Texte und Tracking-Links: ' . route('admin.banners.social', $banner->id),
                 'type' => 'follow_up',
                 'status' => 'open',
@@ -115,7 +133,11 @@ class BannerSocialController extends Controller
         if ($banner->media_type === 'image') {
             $msg .= $generated
                 ? ' Bildformate wurden neu erzeugt.'
-                : ' Bildformate konnten nicht erzeugt werden (Medium pruefen).';
+                : ' Bildformate konnten nicht erzeugt werden (Medium prüfen).';
+        }
+        if ($geschuetzt->isNotEmpty()) {
+            $labels = $geschuetzt->map(fn ($ch) => $ch->platformInfo()['label'])->implode(', ');
+            $msg .= ' Hinweis: ' . $labels . ' wurde bereits veröffentlicht und bleibt samt Tracking-Link erhalten.';
         }
 
         // Bewusst explizit statt back(): der Referer kann (z. B. nach einem
@@ -137,7 +159,7 @@ class BannerSocialController extends Controller
         // sonst laege der Beitrag doppelt auf der Plattform.
         if ($channel->published_at && !$channel->external_post_id) {
             return redirect()->route('admin.banners.social', $banner->id)
-                ->withErrors(['publish' => 'Bereits als veroeffentlicht markiert - erst zuruecksetzen, dann per API posten.']);
+                ->withErrors(['publish' => 'Bereits als veröffentlicht markiert - erst zurücksetzen, dann per API posten.']);
         }
 
         try {
@@ -150,7 +172,7 @@ class BannerSocialController extends Controller
         }
 
         return redirect()->route('admin.banners.social', $banner->id)
-            ->with('success', $channel->platformInfo()['label'] . ': Beitrag wurde ueber die Meta-API veroeffentlicht.');
+            ->with('success', $channel->platformInfo()['label'] . ': Beitrag wurde über die Meta-API veröffentlicht.');
     }
 
     /** Kennzahlen (Likes/Kommentare/Reichweite) sofort von Meta holen. */
@@ -169,14 +191,20 @@ class BannerSocialController extends Controller
                 $fehler = $e->getMessage();
             }
         }
+        // Seiten-Ueberblick (Follower/Aufrufe) gleich mit auffrischen -
+        // die Anleitung verspricht es, und der Betreiber erwartet es.
+        try {
+            $service->refreshPageOverview();
+        } catch (\Throwable $e) {
+        }
 
         if ($ok === 0) {
             return redirect()->route('admin.banners.social', $banner->id)
-                ->withErrors(['publish' => $fehler ?: 'Keine per API veroeffentlichten Beitraege vorhanden.']);
+                ->withErrors(['publish' => $fehler ?: 'Keine per API veröffentlichten Beiträge vorhanden.']);
         }
 
         return redirect()->route('admin.banners.social', $banner->id)
-            ->with('success', 'Kennzahlen von Meta aktualisiert (' . $ok . ' Beitraege).');
+            ->with('success', 'Kennzahlen von Meta aktualisiert (' . $ok . ' ' . ($ok === 1 ? 'Beitrag' : 'Beiträge') . ').');
     }
 
     /** Veroeffentlichung je Plattform protokollieren bzw. zuruecknehmen. */
@@ -185,16 +213,23 @@ class BannerSocialController extends Controller
         $post = $banner->socialPost()->firstOrFail();
         $channel = $post->channels()->where('platform', $platform)->firstOrFail();
 
+        // Per API erstellte Beitraege sind Fakten - das Protokoll dazu
+        // laesst sich nicht "zuruecksetzen" (der Beitrag ist ja live).
+        if ($channel->external_post_id) {
+            return redirect()->route('admin.banners.social', $banner->id)
+                ->withErrors(['publish' => 'Dieser Beitrag wurde über die Meta-API veröffentlicht - das Protokoll kann nicht zurückgesetzt werden.']);
+        }
+
         if ($channel->published_at) {
             $channel->update(['published_at' => null, 'published_by' => null]);
 
             return redirect()->route('admin.banners.social', $banner->id)
-                ->with('success', 'Veroeffentlichung zurueckgesetzt.');
+                ->with('success', 'Veröffentlichung zurückgesetzt.');
         }
         $channel->update(['published_at' => now(), 'published_by' => auth()->id()]);
 
         return redirect()->route('admin.banners.social', $banner->id)
-            ->with('success', $channel->platformInfo()['label'] . ' als veroeffentlicht markiert.');
+            ->with('success', $channel->platformInfo()['label'] . ' als veröffentlicht markiert.');
     }
 
     /** Download-Paket: alle Bildformate + Beitragstexte + Tracking-Links. */

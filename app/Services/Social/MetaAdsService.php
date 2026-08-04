@@ -111,7 +111,7 @@ class MetaAdsService
     public function setStatus(string $campaignId, string $status): void
     {
         if (!in_array($status, ['ACTIVE', 'PAUSED'], true)) {
-            throw new \RuntimeException('Ungueltiger Status.');
+            throw new \RuntimeException('Ungültiger Status.');
         }
         $this->graph->post($campaignId, ['status' => $status]);
     }
@@ -141,7 +141,7 @@ class MetaAdsService
         $channel = $banner->socialPost?->channelFor('facebook');
         $storyId = $channel?->external_post_id;
         if (!$storyId) {
-            throw new \RuntimeException('Dieser Banner hat noch keinen per API veroeffentlichten Facebook-Beitrag - zuerst posten, dann bewerben.');
+            throw new \RuntimeException('Dieser Banner hat noch keinen per API veröffentlichten Facebook-Beitrag - zuerst posten, dann bewerben.');
         }
         $this->assertBudget($opts['daily_budget_eur']);
 
@@ -151,11 +151,15 @@ class MetaAdsService
         // 1) Kampagne (CBO: Budget liegt an der Kampagne), PAUSIERT.
         // special_ad_categories: Versicherung/Energie fallen in der EU nicht
         // unter Metas Sonderkategorien (Kredit/Jobs/Wohnen/Politik).
+        // Bei Kampagnen-Budget (CBO) gehoert die bid_strategy an die
+        // KAMPAGNE - ein Adset mit eigener bid_strategy lehnt die
+        // Marketing API dann ab (Pre-Merge-Review).
         $campaignId = (string) $this->graph->post($this->account() . '/campaigns', [
             'name' => $name,
             'objective' => $klicks ? 'OUTCOME_TRAFFIC' : 'OUTCOME_AWARENESS',
             'status' => 'PAUSED',
             'daily_budget' => (int) round($opts['daily_budget_eur'] * 100),
+            'bid_strategy' => 'LOWEST_COST_WITHOUT_CAP',
             'special_ad_categories' => '[]',
         ])['id'];
 
@@ -175,7 +179,6 @@ class MetaAdsService
                 'campaign_id' => $campaignId,
                 'billing_event' => 'IMPRESSIONS',
                 'optimization_goal' => $klicks ? 'LINK_CLICKS' : 'REACH',
-                'bid_strategy' => 'LOWEST_COST_WITHOUT_CAP',
                 'targeting' => json_encode($targeting),
                 'status' => 'PAUSED',
                 'start_time' => now()->toIso8601String(),
@@ -214,7 +217,7 @@ class MetaAdsService
     {
         $max = self::maxDailyBudgetEur();
         if ($eur < 1 || $eur > $max) {
-            throw new \RuntimeException('Tagesbudget muss zwischen 1 und ' . $max . ' EUR liegen (Schutzgrenze META_ADS_MAX_DAILY_BUDGET).');
+            throw new \RuntimeException('Tagesbudget muss zwischen 1 und ' . $max . ' EUR liegen - die Schutzgrenze ändert der Admin unten auf der Seite Werbeanzeigen.');
         }
     }
 

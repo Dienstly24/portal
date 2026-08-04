@@ -92,6 +92,7 @@
 @if($socialPosts->isNotEmpty())
 <div class="card">
     <div class="card-title">📣 Social-Media – Klicks über Tracking-Links</div>
+    <div style="overflow-x:auto;">
     <table>
         <thead><tr><th>Banner</th><th>Plattform</th><th style="text-align:right;">Klicks</th><th>Letzter Klick</th><th>Veröffentlicht</th></tr></thead>
         <tbody>
@@ -114,6 +115,7 @@
         @endforeach
         </tbody>
     </table>
+    </div>
 </div>
 @endif
 

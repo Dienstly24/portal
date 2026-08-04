@@ -159,8 +159,20 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   Klickzahlen (Hinweis steht im Formular).
   **Phase 2 (Meta Graph API, 04.08.2026)**: `MetaPublisher` postet direkt
   auf die EIGENE FB-Seite (Foto-Beitrag; Video-Banner -> Link-Beitrag)
-  und IG-Business (Container-Flow media -> media_publish; braucht eine
-  OEFFENTLICH abrufbare Bild-URL -> APP_URL muss die echte Domain sein).
+  und IG-Business (Container-Flow media -> media_publish mit
+  status_code-Polling; braucht eine OEFFENTLICH abrufbare Bild-URL ->
+  APP_URL muss die echte Domain sein). WICHTIG (Pre-Merge-Review):
+  Seiten-Posts/-Insights verlangen das PAGE Access Token
+  (`META_PAGE_ACCESS_TOKEN`, holt der Assistent aus /me/accounts;
+  Fallback: `MetaGraphClient::pageToken()` leitet es zur Laufzeit ab) -
+  das System-User-Token allein reicht NUR fuer IG- und act_...-Endpunkte.
+  Tokens gehen IMMER als Bearer-Header raus (nie Query/Body - sonst
+  Token in Fehlermeldungen bzw. kaputtes DELETE). Zeitplanung:
+  `scheduled_for` wird als DEUTSCHE Zeit erfasst
+  (`BannerSocialPost::OPERATOR_TZ` = Europe/Berlin), in UTC gespeichert
+  (app.timezone!) und zur Anzeige zurueckgerechnet; Vergangenheit wird
+  abgelehnt. Abwaehlen einer Plattform loescht NIE veroeffentlichte
+  Kanaele (Kurzlink steht im Live-Beitrag).
   Beitragstext = DE + AR + Tracking-Link; zu langer IG-Text (> 2200) wird
   ABGELEHNT, nie still gekuerzt. Konfiguration `config/services.php`
   'meta' aus `META_PAGE_ID`/`META_IG_USER_ID`/`META_ACCESS_TOKEN`

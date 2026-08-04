@@ -32,8 +32,10 @@ class MetaSetupCommandTest extends TestCase
     }
 
     /** Fake: Seitenliste + Werbekonten wie von der Graph-API geliefert. */
-    private function fakeGraph(array $pages, array $adAccounts = [['id' => 'act_777', 'name' => 'Dienstly24 Werbekonto']]): void
+    private function fakeGraph(array $pages, array $adAccounts = [['id' => 'act_777', 'name' => 'Dienstly24 Werbekonto', 'currency' => 'EUR']]): void
     {
+        // Jede Seite liefert (wie die echte API) ihr PAGE Access Token mit.
+        $pages = array_map(fn ($p) => $p + ['access_token' => 'PTOK-' . $p['id']], $pages);
         Http::fake(function ($request) use ($pages, $adAccounts) {
             if (str_contains($request->url(), '/me/accounts')) {
                 return Http::response(['data' => $pages]);
@@ -68,6 +70,8 @@ class MetaSetupCommandTest extends TestCase
         $this->assertStringContainsString("META_IG_USER_ID=444555666\n", $env);
         $this->assertStringContainsString("META_AD_ACCOUNT_ID=act_777\n", $env);
         $this->assertStringContainsString("META_ACCESS_TOKEN=TOK-GEHEIM\n", $env);
+        // PAGE-Token wird mitgespeichert - Seiten-Posts brauchen es zwingend.
+        $this->assertStringContainsString("META_PAGE_ACCESS_TOKEN=PTOK-111222333\n", $env);
         $this->assertStringContainsString("APP_NAME=Test\n", $env);
         $this->assertSame(1, substr_count($env, 'META_PAGE_ID='));
     }
@@ -111,6 +115,26 @@ class MetaSetupCommandTest extends TestCase
         $this->assertStringContainsString("META_AD_ACCOUNT_ID=\n", file_get_contents($this->envDatei));
     }
 
+    public function test_ohne_seiten_token_bricht_der_assistent_ab(): void
+    {
+        Http::fake(function ($request) {
+            if (str_contains($request->url(), '/me/accounts')) {
+                return Http::response(['data' => [['id' => '111', 'name' => 'Dienstly24']]]); // ohne access_token
+            }
+            if (str_contains($request->url(), '/me/adaccounts')) {
+                return Http::response(['data' => []]);
+            }
+            return Http::response(['error' => ['message' => 'unerwartet']], 400);
+        });
+
+        $this->artisan('meta:einrichten')
+            ->expectsQuestion('System-User-Token einfuegen (Eingabe bleibt unsichtbar)', 'TOK')
+            ->expectsOutputToContain('kein Seiten-Token')
+            ->assertFailed();
+
+        $this->assertStringNotContainsString('META_ACCESS_TOKEN=TOK', file_get_contents($this->envDatei));
+    }
+
     public function test_ungueltiges_token_wird_erklaert_und_nichts_geschrieben(): void
     {
         Http::fake(['graph.facebook.com/*' => Http::response([
@@ -147,7 +171,7 @@ class MetaSetupCommandTest extends TestCase
 
     public function test_pruefen_testet_bestehende_verbindung(): void
     {
-        config(['services.meta' => ['page_id' => 'P1', 'ig_user_id' => 'I1', 'token' => 'TOK', 'graph_version' => 'v23.0']]);
+        config(['services.meta' => ['page_id' => 'P1', 'ig_user_id' => 'I1', 'token' => 'TOK', 'page_token' => 'PTOK', 'graph_version' => 'v23.0']]);
         Http::fake(function ($request) {
             if (str_contains($request->url(), '/P1')) {
                 return Http::response(['name' => 'Dienstly24', 'id' => 'P1']);
