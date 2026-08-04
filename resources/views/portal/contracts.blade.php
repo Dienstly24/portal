@@ -69,32 +69,32 @@ $typeLabels = [
 <div id="report-contract-modal" class="d24-modal">
     <div class="d24-modal-box">
         <button onclick="document.getElementById('report-contract-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
-        <div style="font-size:18px;font-weight:700;margin-bottom:6px;">Neuen Vertrag melden</div>
-        <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">Unser Team prüft Ihre Meldung und nimmt den Vertrag anschließend auf.</p>
+        <div style="font-size:18px;font-weight:700;margin-bottom:6px;">{{ __('Neuen Vertrag melden') }}</div>
+        <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">{{ __('Unser Team prüft Ihre Meldung und nimmt den Vertrag anschließend auf.') }}</p>
         <form method="POST" action="{{ route('portal.contracts.report') }}" enctype="multipart/form-data">
             @csrf
             <div class="grid-2">
-                <div class="field"><label>Versicherungsart *</label>
+                <div class="field"><label>{{ __('Versicherungsart *') }}</label>
                     <select name="type" required>
-                        <option value="kfz">🚗 KFZ</option>
-                        <option value="schutzbrief">🆘 Schutzbrief / Mobilclub (z. B. ADAC)</option>
-                        <option value="krankenversicherung">🏥 Krankenversicherung</option>
-                        <option value="haftpflicht">🛡️ Haftpflicht</option>
-                        <option value="rechtsschutz">⚖️ Rechtsschutz</option>
-                        <option value="hausrat">🏠 Hausrat</option>
-                        <option value="leben">❤️ Leben</option>
-                        <option value="unfall">🚑 Unfall</option>
-                        <option value="internet">📶 Internet</option>
-                        <option value="strom">⚡ Strom</option>
-                        <option value="gas">🔥 Gas</option>
-                        <option value="andere">📋 Andere</option>
+                        <option value="kfz">{{ __('🚗 KFZ') }}</option>
+                        <option value="schutzbrief">{{ __('🆘 Schutzbrief / Mobilclub (z. B. ADAC)') }}</option>
+                        <option value="krankenversicherung">{{ __('🏥 Krankenversicherung') }}</option>
+                        <option value="haftpflicht">{{ __('🛡️ Haftpflicht') }}</option>
+                        <option value="rechtsschutz">{{ __('⚖️ Rechtsschutz') }}</option>
+                        <option value="hausrat">{{ __('🏠 Hausrat') }}</option>
+                        <option value="leben">{{ __('❤️ Leben') }}</option>
+                        <option value="unfall">{{ __('🚑 Unfall') }}</option>
+                        <option value="internet">{{ __('📶 Internet') }}</option>
+                        <option value="strom">{{ __('⚡ Strom') }}</option>
+                        <option value="gas">{{ __('🔥 Gas') }}</option>
+                        <option value="andere">{{ __('📋 Andere') }}</option>
                     </select>
                 </div>
-                <div class="field"><label>Gesellschaft *</label><input type="text" name="insurer" required maxlength="255" placeholder="z.B. Allianz"></div>
+                <div class="field"><label>{{ __('Gesellschaft *') }}</label><input type="text" name="insurer" required maxlength="255" placeholder="{{ __('z.B. Allianz') }}"></div>
             </div>
-            <div class="field"><label>Vertragsnummer</label><input type="text" name="contract_number" maxlength="100" placeholder="Optional"></div>
-            <div class="field"><label>Dokument (PDF/JPG/PNG, max. 10 MB)</label><input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png"></div>
-            <button type="submit" class="btn btn-primary" style="width:100%;">Vertrag melden</button>
+            <div class="field"><label>{{ __('Vertragsnummer') }}</label><input type="text" name="contract_number" maxlength="100" placeholder="Optional"></div>
+            <div class="field"><label>{{ __('Dokument (PDF/JPG/PNG, max. 10 MB)') }}</label><input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png"></div>
+            <button type="submit" class="btn btn-primary" style="width:100%;">{{ __('Vertrag melden') }}</button>
         </form>
     </div>
 </div>

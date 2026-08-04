@@ -144,15 +144,15 @@ document.getElementById('hero-chat').addEventListener('click', function (e) {
 </script>
 @endunless
 <div class="grid-3">
-    <a href="{{ route('portal.contracts') }}" class="metric metric-link" title="Zur Vertragsübersicht">
+    <a href="{{ route('portal.contracts') }}" class="metric metric-link" title="{{ __('Zur Vertragsübersicht') }}">
         <div class="label">📑 {{ __('Aktive Verträge') }}</div><div class="value">{{ $contractsCount }}</div>
         <div class="metric-cta">{{ __('Verträge ansehen') }} →</div>
     </a>
-    <a href="{{ route('portal.tickets') }}" class="metric metric-link" title="Zu Ihren Nachrichten">
+    <a href="{{ route('portal.tickets') }}" class="metric metric-link" title="{{ __('Zu Ihren Nachrichten') }}">
         <div class="label">💬 {{ __('Offene Anfragen') }}</div><div class="value">{{ $openTickets }}</div>
         <div class="metric-cta">{{ __('Nachrichten öffnen') }} →</div>
     </a>
-    <a href="{{ route('portal.change_requests') }}" class="metric metric-link" title="Status Ihrer Änderungsanfragen">
+    <a href="{{ route('portal.change_requests') }}" class="metric metric-link" title="{{ __('Status Ihrer Änderungsanfragen') }}">
         <div class="label">🔄 {{ __('Änderungen in Prüfung') }}</div><div class="value">{{ $pendingApprovals }}</div>
         <div class="metric-cta">{{ __('Status ansehen') }} →</div>
     </a>
@@ -245,7 +245,7 @@ document.getElementById('hero-chat').addEventListener('click', function (e) {
         </span>
     </a>
     @empty
-    <p style="color:var(--ink-soft);font-size:14px;">Noch keine Anfragen vorhanden.</p>
+    <p style="color:var(--ink-soft);font-size:14px;">{{ __('Noch keine Anfragen vorhanden.') }}</p>
     @endforelse
 </div>
 @endsection

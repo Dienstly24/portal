@@ -184,14 +184,14 @@ form textarea{min-height:90px;resize:vertical;}
 <body>
 {{-- Mobile Topbar: Hamburger + Logo, Glocke sitzt fix rechts daneben --}}
 <header class="topbar">
-    <button class="topbar-btn" type="button" id="m-btn" aria-label="Menü öffnen" aria-controls="portal-sidebar" aria-expanded="false">☰</button>
+    <button class="topbar-btn" type="button" id="m-btn" aria-label="{{ __('Menü öffnen') }}" aria-controls="portal-sidebar" aria-expanded="false">☰</button>
     <a class="topbar-logo" href="{{ route('portal.dashboard') }}" title="Dienstly24"><img src="{{ \App\Support\BrandAssets::logoLight() }}" alt="Dienstly24"></a>
     {{-- Platzhalter haelt das Logo mittig (rechts steht die fixe Glocke) --}}
     <span style="width:44px;flex:none;"></span>
 </header>
 <div class="sidebar-overlay" id="sidebar-overlay"></div>
 <div class="sidebar" id="portal-sidebar">
-    <button class="sidebar-close" type="button" id="sidebar-close" aria-label="Menü schließen">✕</button>
+    <button class="sidebar-close" type="button" id="sidebar-close" aria-label="{{ __('Menü schließen') }}">✕</button>
     {{-- Kompakte Marke wie bei grossen Panels (nur das D-Symbol) --}}
     <div class="brand"><a href="{{ route('portal.dashboard') }}" title="Dienstly24"><img src="{{ \App\Support\BrandAssets::logoSymbolLight() }}" alt="Dienstly24" style="height:46px;width:auto;"></a></div>
     <a href="{{ route('portal.dashboard') }}" class="nav-item {{ request()->routeIs('portal.dashboard') ? 'active' : '' }}">{{ __('Dashboard') }}</a>
@@ -240,7 +240,7 @@ form textarea{min-height:90px;resize:vertical;}
     @if(session('error'))<div class="alert-error">{{ session('error') }}</div>@endif
     @if($errors->any())
     <div class="alert-error">
-        <strong>Bitte prüfen Sie Ihre Eingaben:</strong>
+        <strong>{{ __('Bitte prüfen Sie Ihre Eingaben:') }}</strong>
         <ul style="margin:6px 0 0;padding-left:18px;">
             @foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach
         </ul>
@@ -255,7 +255,7 @@ form textarea{min-height:90px;resize:vertical;}
         <a href="{{ route('portal.contracts') }}" class="tab-item {{ request()->routeIs('portal.contracts*') ? 'active' : '' }}"><span class="tab-ico">📑</span><span class="tab-label">{{ __('Verträge') }}</span></a>
         <a href="{{ route('portal.documents') }}" class="tab-item {{ request()->routeIs('portal.documents*') ? 'active' : '' }}"><span class="tab-ico">📄</span><span class="tab-label">{{ __('Dokumente') }}</span></a>
         <a href="{{ route('portal.messages') }}" class="tab-item {{ request()->routeIs('portal.messages*') ? 'active' : '' }}" style="position:relative;"><span class="tab-ico">💬</span><span class="tab-label">{{ __('Nachrichten') }}</span>@if($unreadMsgs > 0)<span style="position:absolute;top:6px;inset-inline-end:22%;width:9px;height:9px;border-radius:50%;background:#E24B4A;border:2px solid var(--petrol);"></span>@endif</a>
-        <button type="button" class="tab-item" id="tab-more" aria-label="Menü öffnen"><span class="tab-ico">☰</span><span class="tab-label">{{ __('Mehr') }}</span></button>
+        <button type="button" class="tab-item" id="tab-more" aria-label="{{ __('Menü öffnen') }}"><span class="tab-ico">☰</span><span class="tab-label">{{ __('Mehr') }}</span></button>
     </div>
 </nav>
 <script>

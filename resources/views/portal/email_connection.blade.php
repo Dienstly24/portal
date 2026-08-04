@@ -24,7 +24,7 @@
         <div class="card-title">↪️ {{ __('Weiterleitung einrichten') }}</div>
         <ul style="font-size:14px;color:var(--ink);line-height:1.8;padding-left:20px;margin:0;">
             <li><strong>Gmail:</strong> {{ __('Einstellungen → Weiterleitung → Adresse hinzufuegen; Filter fuer Absender Ihrer Versicherer/Energieanbieter anlegen.') }}</li>
-            <li><strong>Outlook / Microsoft 365:</strong> {{ __('Einstellungen → E-Mail → Regeln → Weiterleiten an die obige Adresse.') }}</li>
+            <li><strong>{{ __('Outlook / Microsoft 365:') }}</strong> {{ __('Einstellungen → E-Mail → Regeln → Weiterleiten an die obige Adresse.') }}</li>
             <li>{{ __('Empfehlung: Nur Post von Versicherungs- und Energieunternehmen weiterleiten.') }}</li>
         </ul>
     </div>
