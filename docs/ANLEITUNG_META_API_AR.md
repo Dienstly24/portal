@@ -59,30 +59,37 @@ veröffentlichen»).
      - `instagram_content_publish`
 5. **انسخ الـ Token فوراً واحفظه** — لن يظهر مرة أخرى.
 
-## الخطوة 3: معرفة الـ IDs
+## الخطوة 3: تشغيل معالج الإعداد على السيرفر (أمر واحد فقط!)
 
-- **Page-ID**: في Business-Einstellungen → Konten → Seiten → اضغط على
-  الصفحة، الـ ID يظهر تحت اسمها. (أو في صفحة الفيسبوك: Info/Über →
-  «Seiten-ID».)
-- **Instagram-User-ID**: في Business-Einstellungen → Konten →
-  Instagram-Konten → اضغط على الحساب، الـ ID يظهر تحت اسمه.
-  (هذا رقم طويل — وليس اسم المستخدم.)
-
-## الخطوة 4: إدخال القيم على السيرفر
-
-على السيرفر (VPS) عدّل ملف `/var/www/dienstly24/portal/.env` وأضف:
+لا تحتاج للبحث عن أي أرقام أو تعديل ملفات يدوياً. ادخل إلى السيرفر
+(VPS) ونفّذ:
 
 ```
-META_PAGE_ID=رقم_الصفحة
-META_IG_USER_ID=رقم_حساب_انستغرام
-META_ACCESS_TOKEN=التوكن_الطويل
+cd /var/www/dienstly24/portal && php artisan meta:einrichten
 ```
 
-ثم فعّل الإعدادات:
+المعالج سيقوم بكل شيء:
+
+1. يطلب منك **لصق الـ Token** (الكتابة تبقى مخفية على الشاشة).
+2. **يكتشف تلقائياً** صفحة الفيسبوك وحساب الإنستغرام المربوطين بالـ
+   Token ويعرض أسماءها للتأكيد.
+3. **يفحص الاتصال** فوراً — وإذا كان هناك خطأ (صلاحية ناقصة، token
+   منتهي...) يشرح لك بالضبط ما العمل.
+4. **يحفظ القيم بنفسه** في ملف `.env` ويفعّلها.
+
+بعدها مباشرة تظهر أزرار «Jetzt per API posten» والجدولة التلقائية في
+صفحة Social-Media لكل بانر.
+
+للتأكد من الاتصال في أي وقت لاحق:
 
 ```
-cd /var/www/dienstly24/portal && php artisan config:cache
+php artisan meta:einrichten --pruefen
 ```
+
+> **بديل يدوي** (فقط إذا رغبت): أضف القيم بنفسك في `.env`
+> (`META_PAGE_ID`، `META_IG_USER_ID`، `META_ACCESS_TOKEN`) ثم نفّذ
+> `php artisan config:cache`. الـ IDs تجدها في Business-Einstellungen →
+> Konten → Seiten / Instagram-Konten.
 
 ---
 

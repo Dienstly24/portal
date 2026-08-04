@@ -166,7 +166,12 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   'meta' aus `META_PAGE_ID`/`META_IG_USER_ID`/`META_ACCESS_TOKEN`
   (System-User-Token, laeuft nicht ab, NUR Server-`.env`; kein App-Review
   noetig - eigene Assets, Standard Access; arabische Einrichtungs-
-  Anleitung: `docs/ANLEITUNG_META_API_AR.md`). Sofort-Posten per Button
+  Anleitung: `docs/ANLEITUNG_META_API_AR.md`). Einrichtung fuer den
+  Betreiber per Assistent `php artisan meta:einrichten` (fragt NUR das
+  Token ab, findet Seite/IG-Konto selbst via /me/accounts, testet die
+  Verbindung, schreibt die .env via `EnvFileWriter`; `--pruefen` =
+  reiner Verbindungstest) - Token NIE durch den Chat schicken lassen.
+  Sofort-Posten per Button
   „Jetzt per API posten"; geplanter Versand ueber `scheduled_for` +
   Command `social:publish-scheduled` (alle 15 Min): genau EIN
   Auto-Versuch je Kanal (`auto_attempted_at` wird VOR dem API-Aufruf
