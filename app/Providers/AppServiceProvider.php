@@ -56,6 +56,7 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(\App\Services\Ai\TemplateParsers\AdmiralDirektKfzParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\EuropaGoKfzParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\SparkasseDirektKfzParser::class),
+                $app->make(\App\Services\Ai\TemplateParsers\WgvKfzPoliceParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\BayerischeEscooterParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\KkhBeitrittserklaerungParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\NovitasBeitrittserklaerungParser::class),

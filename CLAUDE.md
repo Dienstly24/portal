@@ -257,6 +257,18 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   KONTOINHABER der Antragsteller ist (sonst landet das Versorger- oder ein
   Fremdkonto in der Akte). Kein geschaetzter Lieferbeginn ausser beim
   Stadtwerke-Wechsel (14 Tage Frist -> 20 Tage).
+- **Kfz-Versicherungsschein der WGV** (`WgvKfzPoliceParser`, 05.08.2026):
+  kommt als HANDYFOTO - die Feldsuche laesst Doppelpunkt, Spaltenabstand UND
+  einfaches Leerzeichen zu und schaut notfalls in die Folgezeile (gleiche
+  Lehre wie bei der Meldebestaetigung). Liest Schein-/Kundennummer, Tarif,
+  Laufzeit, den WIEDERKEHRENDEN Folgebeitrag (nicht den Jahresbeitrag),
+  Fahrzeug inkl. FIN/HSN/TSN/Leistung/Erstzulassung/Zulassung auf Halter/
+  SF-Klasse/Jahresfahrleistung/Kilometerstand sowie Person + Geburtsdatum.
+  Deckung NUR aus dem Abschnitt „Versicherungsumfang" - der Rechtstext der
+  Beitragsseite nennt „Kaskoversicherung" bloss beispielhaft. KEINE Bankdaten:
+  die Kunden-IBAN ist maskiert, die vollstaendige gehoert der WGV. Neue
+  Fahrzeugfelder `acquisition_date`, `initial_mileage`, `vehicle_type` sind
+  jetzt extrahierbar (Validierung, Vertragsanlage, Version History).
 - **Kfz-Angebot der Sparkassen DirektVersicherung**
   (`SparkasseDirektKfzParser`, 31.07.2026): Spaltenlayout (Beschriftung links,
   Wert rechts), Stufe `antrag`. Bewusst NICHT übernommen: die Empfehlung

@@ -1063,7 +1063,9 @@ class DocumentIntakeService
                 'manufacturer' => $kfz['manufacturer'] ?? null,
                 'model' => $kfz['model'] ?? null,
                 'first_registration' => $kfz['first_registration'] ?? null,
+                'acquisition_date' => $kfz['acquisition_date'] ?? null,
                 'power_kw' => $kfz['power_kw'] ?? null,
+                'initial_mileage' => $kfz['initial_mileage'] ?? null,
                 // Zusaetzliche Tarif-/Fahrzeugfakten (validiert in
                 // ValidatesExtractedFields::validatedVehicle).
                 'has_teilkasko' => $kfz['has_teilkasko'] ?? null,
@@ -1627,7 +1629,9 @@ class DocumentIntakeService
                 'manufacturer' => $kfz['manufacturer'] ?? null,
                 'model' => $kfz['model'] ?? null,
                 'first_registration' => $kfz['first_registration'] ?? null,
+                'acquisition_date' => $kfz['acquisition_date'] ?? null,
                 'power_kw' => $kfz['power_kw'] ?? null,
+                'initial_mileage' => $kfz['initial_mileage'] ?? null,
                 'has_teilkasko' => $kfz['has_teilkasko'] ?? null,
                 'teilkasko_deductible' => $kfz['teilkasko_deductible'] ?? null,
                 'has_vollkasko' => $kfz['has_vollkasko'] ?? null,
@@ -1650,7 +1654,7 @@ class DocumentIntakeService
             // Feste Fahrzeug-Identitaets-/Stammfelder nur ERGAENZEN, wenn leer -
             // eine abweichende Schreibweise (z.B. "S-AB 1234" vs "S-AB1234")
             // ist keine echte Aenderung und darf den Bestand nicht ueberschreiben.
-            foreach (['license_plate', 'vin', 'hsn', 'tsn', 'manufacturer', 'model', 'first_registration', 'power_kw'] as $static) {
+            foreach (['license_plate', 'vin', 'hsn', 'tsn', 'manufacturer', 'model', 'first_registration', 'acquisition_date', 'power_kw', 'initial_mileage'] as $static) {
                 if (filled($veh->{$static})) {
                     unset($vehProposed[$static]);
                 }
@@ -1809,7 +1813,9 @@ class DocumentIntakeService
             'manufacturer' => ['label' => 'Hersteller'],
             'model' => ['label' => 'Modell'],
             'first_registration' => ['label' => 'Erstzulassung', 'format' => [$this, 'fmtDate']],
+            'acquisition_date' => ['label' => 'Zulassung auf Halter', 'format' => [$this, 'fmtDate']],
             'power_kw' => ['label' => 'Leistung (kW)'],
+            'initial_mileage' => ['label' => 'Kilometerstand bei Beginn', 'format' => [$this, 'fmtKm']],
             'has_teilkasko' => ['label' => 'Teilkasko'],
             'teilkasko_deductible' => ['label' => 'SB Teilkasko', 'format' => [$this, 'fmtDeductible']],
             'has_vollkasko' => ['label' => 'Vollkasko'],

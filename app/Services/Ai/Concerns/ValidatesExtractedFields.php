@@ -257,14 +257,22 @@ trait ValidatesExtractedFields
         return array_filter([
             'license_plate' => $plate !== null ? mb_strtoupper($plate) : null,
             'vin' => $vin !== null ? strtoupper($vin) : null,
+            // Fahrzeugart nur aus der bekannten Werteliste (PKW, LKW ...).
+            'vehicle_type' => isset(\App\Models\ContractVehicleDetail::VEHICLE_TYPES[$in['vehicle_type'] ?? null])
+                ? $in['vehicle_type'] : null,
             'hsn' => $this->cleanString($in['hsn'] ?? null, 6),
             'tsn' => $this->cleanString($in['tsn'] ?? null, 5),
             'manufacturer' => $this->cleanString($in['manufacturer'] ?? null, 60),
             'model' => $this->cleanString($in['model'] ?? null, 80),
             'first_registration' => $this->cleanDate($in['first_registration'] ?? null),
+            // Zulassung auf den Versicherungsnehmer ("Erstzulassung auf VN") -
+            // wann das Fahrzeug zu DIESEM Halter kam.
+            'acquisition_date' => $this->cleanDate($in['acquisition_date'] ?? null),
             // Motorleistung in kW (Zulassungsbescheinigung Feld P.2 bzw.
             // "Staerke in kW" im Antrag) - gleiche Grenzen wie im Formular.
             'power_kw' => $intInRange($in['power_kw'] ?? null, 1, 2000),
+            // Kilometerstand bei Vertragsbeginn (steht so im Versicherungsschein).
+            'initial_mileage' => $intInRange($in['initial_mileage'] ?? null, 0, 2000000),
             // Schadenfreiheitsklasse (Haftpflicht/Vollkasko) - nur wenn sie einer
             // gueltigen SF-Klasse entspricht (M, S, 0, 1/2, SF 1-50).
             'sf_liability_class' => $this->cleanSfClass($in['sf_liability_class'] ?? null),
