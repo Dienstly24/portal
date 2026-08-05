@@ -1031,6 +1031,43 @@ window.docReview = (function() {
         .catch(function() { btn.disabled = false; });
     }
 
+    /**
+     * Mehrere Personen auf EINER Aufnahme (z.B. die Gesundheitskarten einer
+     * Familie): fuer jede erkannte Person einen eigenen Kunden anlegen.
+     * Bereits erfasste Personen werden uebersprungen und gemeldet.
+     */
+    function createFromPersons(docId, count, btn) {
+        if (!confirm('Fuer die ' + count + ' erkannten Personen je einen Kunden anlegen?\n\n'
+            + 'Bereits erfasste Personen werden uebersprungen.')) return;
+        btn.disabled = true;
+        fetch(@json(route('admin.documents.create_customers_persons', ['id' => '__ID__'])).replace('__ID__', docId), {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': @json(csrf_token()),
+            },
+            body: JSON.stringify({}),
+        }).then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })
+        .then(function(res) {
+            if (!res.ok) {
+                btn.disabled = false;
+                alert(res.json.message || 'Kunden konnten nicht angelegt werden.');
+                return;
+            }
+            var msg = (res.json.created || []).length + ' Kunden angelegt:\n'
+                + (res.json.created || []).map(function(c) { return '· ' + c.name + ' (' + c.customer_number + ')'; }).join('\n');
+            if ((res.json.skipped || []).length) {
+                msg += '\n\nUebersprungen (bereits erfasst):\n'
+                    + res.json.skipped.map(function(s) { return '· ' + s.name; }).join('\n');
+            }
+            alert(msg);
+            window.location.reload();
+        })
+        .catch(function() { btn.disabled = false; });
+    }
+
     // --- Manuelle Mehrfachauswahl (Checkboxen im Eingang) ---
     function selectedBoxes() {
         return Array.from(document.querySelectorAll('.inbox-select:checked'));
@@ -1119,6 +1156,7 @@ window.docReview = (function() {
         },
         submit: submit,
         reanalyze: reanalyze,
+        createFromPersons: createFromPersons,
     };
 })();
 

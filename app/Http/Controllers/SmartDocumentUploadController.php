@@ -482,6 +482,106 @@ class SmartDocumentUploadController extends Controller
     }
 
     /**
+     * MEHRERE Kunden aus EINEM Dokument anlegen (Betreiber-Vorgabe
+     * 05.08.2026): Eine Aufnahme kann mehrere Personen tragen - typisch die
+     * Gesundheitskarten einer ganzen Familie, nebeneinander fotografiert. Der
+     * Parser liefert je Karte eine Person; hier wird daraus je ein Kunde.
+     *
+     * Regeln:
+     * - Existiert zu einer Person schon ein Kunde (Namens-/Geburtsdatums-
+     *   Treffer), wird KEIN zweiter angelegt - er wird gemeldet und
+     *   uebersprungen.
+     * - Die Krankenkassen-Daten der jeweiligen Karte landen beim jeweiligen
+     *   Kunden (Versichertennummer ist personenbezogen, nie geteilt).
+     * - Das Dokument wird dem ERSTEN Kunden zugeordnet und bleibt fuer die
+     *   uebrigen ueber die Familien-Beziehung auffindbar.
+     * - Personen mit gleichem Familiennamen werden untereinander als Familie
+     *   verknuepft (transkriptions-tolerant). Abweichende Namen bleiben
+     *   unverknuepft - das entscheidet der Mitarbeiter.
+     */
+    public function createCustomersFromPersons(Request $request, $id)
+    {
+        $document = Document::findOrFail($id);
+        $this->authorizeDocument($document);
+
+        if ($document->customer_id) {
+            return response()->json(['message' => 'Dokument ist bereits einem Kunden zugeordnet.'], 422);
+        }
+
+        $extracted = $document->ai_extracted ?? [];
+        $people = $this->intake->personsFromExtraction($extracted);
+        if (count($people) < 2) {
+            return response()->json(['message' => 'In diesem Dokument wurde nur eine Person erkannt - bitte "Neuen Kunden erstellen" verwenden.'], 422);
+        }
+
+        $created = [];
+        $skipped = [];
+        $customers = [];
+        foreach ($people as $person) {
+            $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+            $criteria = array_filter([
+                'first_name' => $person['first_name'] ?? null,
+                'last_name' => $person['last_name'] ?? null,
+                'full_name' => $name,
+                'birth_date' => $person['birth_date'] ?? null,
+            ]);
+
+            try {
+                $customer = app(CustomerAutoCreationService::class)->createFromUnmatched(
+                    $criteria,
+                    'manual',
+                    auth()->id(),
+                );
+            } catch (DuplicateCustomerException $e) {
+                $skipped[] = [
+                    'name' => $name,
+                    'reason' => 'bereits vorhanden (' . ($e->matchResult->customer?->user?->name ?? '?') . ')',
+                    'customer_id' => $e->matchResult->customer?->id,
+                ];
+                if ($e->matchResult->customer !== null) {
+                    $customers[] = $e->matchResult->customer;
+                }
+                continue;
+            }
+
+            $this->intake->applyPersonToCustomer($customer, $person, auth()->id());
+            $customers[] = $customer;
+            $created[] = [
+                'name' => $name,
+                'customer_id' => $customer->id,
+                'customer_number' => $customer->customer_number,
+                'customer_url' => route('admin.customer', $customer->id),
+            ];
+        }
+
+        if ($created === []) {
+            return response()->json([
+                'message' => 'Es wurde kein neuer Kunde angelegt - alle erkannten Personen sind bereits erfasst.',
+                'skipped' => $skipped,
+            ], 422);
+        }
+
+        // Dokument dem ersten Kunden zuordnen und die Familie verknuepfen.
+        $this->intake->assignToCustomer($document, $customers[0], auth()->id());
+        if ($request->filled('visibility')) {
+            $document->update(['visibility' => $request->visibility, 'updated_by' => auth()->id()]);
+        }
+        $linked = $this->intake->linkSameFamilyName($customers, 'Gemeinsame Gesundheitskarten-Aufnahme', auth()->id());
+
+        $this->markDecision($document, 'accepted');
+
+        return response()->json([
+            'ok' => true,
+            'created' => $created,
+            'skipped' => $skipped,
+            'linked' => $linked,
+        ]);
+    }
+
+    /**
      * Neuen Kunden aus MEHREREN Eingangs-Dokumenten anlegen (Ausweis + Bank-
      * karte + Fuehrerschein + Beratungsprotokoll gehoeren zu EINEM Kunden).
      * Die Extraktionen werden zusammengefuehrt (Feld-Hoheit nach Dokumenttyp),

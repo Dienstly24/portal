@@ -216,6 +216,21 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   automatisch (me/adaccounts). Zahlungsmittel sind API-seitig NICHT
   pflegbar (einziger Schritt, der bei Meta bleibt - steht so in der
   Anleitung). Tests: `MetaAdsManagementTest`.
+- **Gesundheitskarten einer FAMILIE auf EINER Aufnahme** (Betreiber-Vorgabe
+  05.08.2026): `GesundheitskarteParser` liest BEIDE Seiten und MEHRERE Karten
+  je Bild (Bloecke ueber die Karten-Ueberschriften; Versalien-Nachnamen werden
+  normalisiert, Vorder-/Rueckseite derselben Karte ueber die
+  Versichertennummer zusammengefuehrt). Eine Karte zaehlt nur mit Name UND
+  Versichertennummer im SELBEN Block - sonst lieber eine Karte weniger als
+  eine Fehlzuordnung. Die Traeger-Kennnummer (z.B. 104491707) ist die
+  Institutionsnummer der KASSE (bei allen Versicherten gleich) und wird NIE
+  als Versichertennummer uebernommen; nur "1 Buchstabe + 9 Ziffern" zaehlt.
+  Weitere Karten stehen in `personen`; Button „👪 N Kunden anlegen" im Eingang
+  (`SmartDocumentUploadController::createCustomersFromPersons`) legt je Person
+  einen Kunden an (bereits erfasste werden gemeldet und uebersprungen),
+  schreibt die Kassendaten personenbezogen und verknuepft nur Personen mit
+  gleichem Familiennamen (`linkSameFamilyName`). Tests:
+  `GesundheitskartenFamilieTest`.
 - **Meldebestaetigung + Haushalt** (`MeldebestaetigungParser`,
   `DocumentIntakeService::linkMeldebestaetigungHousehold`, Betreiber-Vorgabe
   04.08.2026): Zwei Bauformen werden gelesen - "Familienname: Najm" UND das

@@ -333,6 +333,10 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         ->middleware('throttle:300,10')->name('documents.assign');
     Route::post('/documents/{id}/create-customer', [\App\Http\Controllers\SmartDocumentUploadController::class, 'createCustomer'])
         ->middleware('throttle:300,10')->name('documents.create_customer');
+    // Mehrere Personen auf EINER Aufnahme (z.B. die Gesundheitskarten einer
+    // Familie) - je Person ein Kunde.
+    Route::post('/documents/{id}/create-customers-from-persons', [\App\Http\Controllers\SmartDocumentUploadController::class, 'createCustomersFromPersons'])
+        ->middleware('throttle:300,10')->name('documents.create_customers_persons');
     // Mehrere Eingangs-Dokumente (Ausweis + Bankkarte + Fuehrerschein +
     // Protokoll) zu EINEM neuen Kunden zusammenfuehren.
     Route::post('/documents/create-customer-batch', [\App\Http\Controllers\SmartDocumentUploadController::class, 'createCustomerFromDocuments'])

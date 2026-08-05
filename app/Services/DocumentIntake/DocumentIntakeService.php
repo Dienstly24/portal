@@ -47,6 +47,121 @@ class DocumentIntakeService
         ]);
     }
 
+    /**
+     * Alle Personen eines Dokuments - die Hauptperson und die zusaetzlich
+     * erkannten (z.B. je eine Gesundheitskarte einer Familie auf einer
+     * Aufnahme). Dubletten (gleicher Name) fallen heraus.
+     *
+     * @param array<string,mixed> $extracted
+     * @return list<array<string,mixed>>
+     */
+    public function personsFromExtraction(array $extracted): array
+    {
+        $all = [];
+        $person = $extracted['person'] ?? [];
+        if (is_array($person) && $person !== []) {
+            // Die Kassen-Daten der Hauptperson stehen in "gesundheit".
+            $health = $extracted['gesundheit'] ?? [];
+            $all[] = $person + array_filter([
+                'health_insurance_number' => is_array($health) ? ($health['health_insurance_number'] ?? null) : null,
+                'health_insurance_company' => is_array($health) ? ($health['health_insurance_company'] ?? null) : null,
+                'health_insurance_type' => is_array($health) ? ($health['health_insurance_type'] ?? null) : null,
+            ]);
+        }
+        foreach (($extracted['personen'] ?? []) as $entry) {
+            if (is_array($entry) && $entry !== []) {
+                // Kasse/Art gelten fuer alle Karten derselben Aufnahme.
+                $health = $extracted['gesundheit'] ?? [];
+                $all[] = $entry + array_filter([
+                    'health_insurance_company' => is_array($health) ? ($health['health_insurance_company'] ?? null) : null,
+                    'health_insurance_type' => is_array($health) ? ($health['health_insurance_type'] ?? null) : null,
+                ]);
+            }
+        }
+
+        $seen = [];
+        $out = [];
+        foreach ($all as $p) {
+            $key = $this->normalizeName(trim(($p['first_name'] ?? '') . ' ' . ($p['last_name'] ?? '')));
+            if ($key === '' || isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $out[] = $p;
+        }
+
+        return $out;
+    }
+
+    /**
+     * Personendaten einer erkannten Karte/Person auf einen (neu angelegten)
+     * Kunden schreiben - nur LEERE Felder, nie Bestand ueberschreiben.
+     *
+     * @param array<string,mixed> $person
+     * @return list<string> uebernommene Felder
+     */
+    public function applyPersonToCustomer(Customer $customer, array $person, ?int $byUserId): array
+    {
+        $map = [
+            'birth_date' => 'birth_date',
+            'gender' => 'gender',
+            'health_insurance_number' => 'health_insurance_number',
+            'health_insurance_company' => 'health_insurance_company',
+            'health_insurance_type' => 'health_insurance_type',
+        ];
+
+        $update = [];
+        foreach ($map as $from => $column) {
+            $value = $person[$from] ?? null;
+            if ($value !== null && $value !== '' && blank($customer->{$column})) {
+                $update[$column] = $value;
+            }
+        }
+        if ($update === []) {
+            return [];
+        }
+
+        $customer->fill($update);
+        $customer->save();
+
+        return array_keys($update);
+    }
+
+    /**
+     * Kunden mit gleichem Familiennamen untereinander als Familie verknuepfen
+     * (transkriptions-tolerant, siehe familyNameSkeleton). Abweichende Namen
+     * bleiben bewusst unverknuepft - das entscheidet der Mitarbeiter.
+     *
+     * @param list<Customer> $customers
+     * @return int Anzahl angelegter/aktualisierter Beziehungen
+     */
+    public function linkSameFamilyName(array $customers, string $note, ?int $byUserId): int
+    {
+        $count = 0;
+        foreach ($customers as $i => $a) {
+            foreach (array_slice($customers, $i + 1) as $b) {
+                if ((string) $a->id === (string) $b->id) {
+                    continue;
+                }
+                $nameA = (string) preg_replace('/.*\s/u', '', trim((string) ($a->user?->name ?? '')));
+                $nameB = (string) preg_replace('/.*\s/u', '', trim((string) ($b->user?->name ?? '')));
+                $skeleton = $this->familyNameSkeleton($nameA);
+                if ($skeleton === '' || $skeleton !== $this->familyNameSkeleton($nameB)) {
+                    continue;
+                }
+
+                [$x, $y] = \App\Models\CustomerRelationship::pairKey((string) $a->id, (string) $b->id);
+                \App\Models\CustomerRelationship::updateOrCreate(
+                    ['customer_a_id' => $x, 'customer_b_id' => $y],
+                    ['type' => 'family', 'note' => $note . ' (gleicher Familienname)', 'created_by' => $byUserId]
+                );
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
     /** Ausweis-Dokumente liefern die verlaesslichsten Personendaten. */
     private const IDENTITY_TYPES = ['personalausweis', 'reisepass', 'aufenthaltstitel'];
     private const LICENSE_TYPES = ['fuehrerschein'];
