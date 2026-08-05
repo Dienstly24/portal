@@ -11,11 +11,21 @@ use App\Services\Ai\Contracts\DocumentTemplateParser;
  * (Familienname, Vorname, Geburtsdatum, Anschrift) - besonders wertvoll, weil
  * die aktuelle deutsche Wohnadresse amtlich bestaetigt ist.
  *
+ * Zwei Schreibweisen sind verbreitet und werden beide gelesen:
+ * "Familienname: Najm" (Doppelpunkt) und das Spaltenlayout ohne Doppelpunkt
+ * ("Familienname        Najm", Stadt Backnang u.a.). Die Beschriftungen
+ * duerfen einen Zusatz in Klammern tragen ("Vorname(n)").
+ *
+ * Zusaetzlich wird der UMZUG festgehalten: Wohnungsstatus, EINZUGSDATUM (ab
+ * wann die neue Anschrift gilt) und Anmeldedatum stehen in der
+ * Zusammenfassung, damit der Mitarbeiter die Adressaenderung mit Stichtag
+ * uebernehmen kann.
+ *
  * Bewusst NICHT uebernommen werden die Kontaktdaten der Behoerde selbst
- * (Telefon, E-Mail des Buergerbueros) und deren Bankverbindung im Fussbereich
- * (z.B. Sparkasse mit IBAN) - das ist NICHT die Bank des Kunden. Alle Werte
- * durchlaufen die harte Feldvalidierung; unsichere Felder bleiben leer statt
- * falsch.
+ * (Sachbearbeitung, Telefon, E-Mail des Buergerbueros) und deren
+ * Bankverbindung im Fussbereich - das ist NICHT die Bank des Kunden. Alle
+ * Werte durchlaufen die harte Feldvalidierung; unsichere Felder bleiben leer
+ * statt falsch.
  */
 class MeldebestaetigungParser implements DocumentTemplateParser
 {
@@ -27,7 +37,12 @@ class MeldebestaetigungParser implements DocumentTemplateParser
     public function parse(string $text): ?array
     {
         $upper = mb_strtoupper($text);
-        if (!str_contains($upper, 'MELDEBEST') && !str_contains($upper, 'MELDEBESCH')) {
+        // Behoerden setzen die Ueberschrift gern GESPERRT ("M e l d e b e s t
+        // ä t i g u n g"). Fuer die Typ-Erkennung daher auf einer Fassung ohne
+        // jeden Zwischenraum suchen - sonst bleibt genau das Dokument
+        // unerkannt, dessen Titel am deutlichsten dasteht.
+        $compact = (string) preg_replace('/\s+/u', '', $upper);
+        if (!str_contains($compact, 'MELDEBEST') && !str_contains($compact, 'MELDEBESCH')) {
             return null;
         }
 
@@ -61,14 +76,27 @@ class MeldebestaetigungParser implements DocumentTemplateParser
         }
 
         $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
-        $regDate = $this->labelValue('Anmeldedatum') ?? $this->labelValue('Einzugsdatum');
+        $regDate = $this->labelValue('Anmeldedatum');
+        $moveIn = $this->labelValue('Einzugsdatum');
+        $status = $this->labelValue('Wohnungsstatus');
+        // Minderjaehrig? Das Alter entscheidet die Vertragsanlage darueber, ob
+        // das Kind mit dem Haushalt verknuepft wird - hier nur als Hinweis
+        // fuer den Mitarbeiter.
+        $minor = isset($person['birth_date']) && $this->isMinor($person['birth_date']);
+
         return [
             'type' => 'meldebescheinigung',
             'confidence' => 74,
             'summary' => 'Meldebestaetigung (Buergerbuero/Einwohnermeldeamt)'
                 . ($name !== '' ? ' - ' . $name : '')
-                . (isset($person['zip']) ? ' - ' . $person['zip'] . ' ' . ($person['city'] ?? '') : '')
+                . ($minor ? ' - MINDERJAEHRIG (Kind)' : '')
+                . (isset($person['street'])
+                    ? ' - neue Anschrift: ' . $person['street'] . ' ' . ($person['house_number'] ?? '')
+                    : '')
+                . (isset($person['zip']) ? ', ' . $person['zip'] . ' ' . ($person['city'] ?? '') : '')
+                . ($moveIn !== null ? ' - eingezogen ' . $moveIn : '')
                 . ($regDate !== null ? ' - angemeldet ' . $regDate : '')
+                . ($status !== null ? ' - ' . $status : '')
                 . ' - Felder gratis aus dem Schreiben gelesen (ohne KI).',
             'title' => 'Meldebestaetigung' . ($name !== '' ? ' ' . $name : ''),
             'data' => [
@@ -83,13 +111,32 @@ class MeldebestaetigungParser implements DocumentTemplateParser
         ];
     }
 
+    /** Ist die Person am Ausstellungstag noch keine 18? */
+    private function isMinor(string $birthDate): bool
+    {
+        try {
+            $birth = new \DateTimeImmutable($birthDate);
+        } catch (\Throwable) {
+            return false;
+        }
+        // Stichtag ist das Datum des Schreibens, sonst heute.
+        $issued = null;
+        if (preg_match('/Datum\s*:?\s*(\d{2})\.(\d{2})\.(\d{4})/u', implode("\n", $this->lines), $m)) {
+            $issued = @\DateTimeImmutable::createFromFormat('!d.m.Y', $m[1] . '.' . $m[2] . '.' . $m[3]);
+        }
+        $ref = $issued ?: new \DateTimeImmutable('today');
+
+        return $birth->diff($ref)->y < 18;
+    }
+
     /** @param array<string,mixed> $raw */
     private function fillAddress(array &$raw): void
     {
         foreach ($this->lines as $i => $line) {
-            // Nur "Anschrift:" (Kunde), nicht "Hausanschrift" (Behoerde).
-            if (!preg_match('/(?:^|\s)Anschrift\s*:\s*(\S.*?)\s*$/u', $line, $m)
-                || preg_match('/Hausanschrift/u', $line)) {
+            // Nur "Anschrift" des Kunden, nicht die "Hausanschrift" der
+            // Behoerde. Mit Doppelpunkt ODER im Spaltenlayout.
+            if (preg_match('/Hausanschrift/u', $line)
+                || !preg_match('/(?:^|\s)Anschrift\s*(?::\s*|\s{2,})(\S.*?)\s*$/u', $line, $m)) {
                 continue;
             }
             $street = trim($m[1]);
@@ -110,15 +157,37 @@ class MeldebestaetigungParser implements DocumentTemplateParser
         }
     }
 
-    /** Wert nach "Label:" bis Zeilenende (Label links, Wert nach Doppelpunkt). */
+    /**
+     * Wert zu einer Beschriftung. Zwei Schreibweisen sind erlaubt:
+     * "Familienname: Najm" (Doppelpunkt) und das Spaltenlayout ohne
+     * Doppelpunkt ("Familienname        Najm"). Ein Klammer-Zusatz an der
+     * Beschriftung ("Vorname(n)") wird toleriert.
+     *
+     * Ohne Doppelpunkt muessen mindestens zwei Leerzeichen folgen - sonst
+     * wuerde ein Fliesstext, der zufaellig mit dem Beschriftungswort beginnt,
+     * als Feldwert gelesen.
+     */
     private function labelValue(string $label): ?string
     {
+        $pattern = '/^\s*' . preg_quote($label, '/') . '(?:\([^)]*\))?\s*(?::\s*|\s{2,})(\S.*?)\s*$/u';
         foreach ($this->lines as $line) {
-            if (preg_match('/^\s*' . preg_quote($label, '/') . '\s*:\s*(\S.*?)\s*$/u', $line, $m)) {
+            if (preg_match($pattern, $line, $m)) {
                 $val = trim($m[1]);
                 if ($val !== '') {
                     return $val;
                 }
+            }
+        }
+        return null;
+    }
+
+    /** Zeilennummer der Beschriftung (fuer mehrzeilige Werte wie die Anschrift). */
+    private function labelLineIndex(string $label): ?int
+    {
+        $pattern = '/^\s*' . preg_quote($label, '/') . '(?:\([^)]*\))?\s*(?::|\s{2,}|\s*$)/u';
+        foreach ($this->lines as $i => $line) {
+            if (preg_match($pattern, $line)) {
+                return $i;
             }
         }
         return null;

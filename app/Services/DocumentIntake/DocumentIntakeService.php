@@ -458,6 +458,16 @@ class DocumentIntakeService
             }
         }
 
+        // Meldebestaetigung eines KINDES: mit den Erwachsenen desselben
+        // Haushalts verknuepfen (Betreiber-Vorgabe 04.08.2026).
+        if ($document->ai_type === 'meldebescheinigung') {
+            try {
+                $this->linkMeldebestaetigungHousehold($document, $customer, $byUserId);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
         return true;
     }
 
@@ -472,6 +482,137 @@ class DocumentIntakeService
      *
      * @return list<string> Namen der tatsaechlich verknuepften Eltern
      */
+    /**
+     * Meldebestaetigung eines KINDES mit dem Haushalt verknuepfen
+     * (Betreiber-Vorgabe 04.08.2026): Die Bestaetigungen einer Familie kommen
+     * als Stapel - je ein Blatt fuer Vater, Mutter und Kind, alle mit
+     * derselben Anschrift. Ist die Person minderjaehrig, sucht das System die
+     * bereits erfassten ERWACHSENEN an genau dieser Anschrift und legt die
+     * Familien-Beziehung an - der Mitarbeiter muss sie nicht von Hand pflegen.
+     *
+     * Belastbar wird das durch die Kombination: gleiche Anschrift (Strasse +
+     * Hausnummer + PLZ) UND passender Familienname. Der Name wird tolerant
+     * verglichen, weil arabische Namen unterschiedlich transkribiert werden
+     * ("Najm" / "Al-Najm" / "Najim" sind dieselbe Familie).
+     *
+     * Bewusst NICHT behauptet wird, WER Vater und wer Mutter ist: die
+     * Meldebestaetigung belegt nur den gemeinsamen Haushalt. Die Beziehung
+     * traegt daher den neutralen Typ "family" samt Begruendung; die
+     * Elternrolle pflegt der Mitarbeiter (oder die Geburtsurkunde liefert sie).
+     *
+     * @return list<string> Namen der verknuepften Haushalts-Mitglieder
+     */
+    public function linkMeldebestaetigungHousehold(Document $document, Customer $child, ?int $byUserId): array
+    {
+        $person = $document->ai_extracted['person'] ?? [];
+        if (!is_array($person)) {
+            return [];
+        }
+
+        $birth = $person['birth_date'] ?? null;
+        $street = $person['street'] ?? null;
+        $houseNo = $person['house_number'] ?? null;
+        $zip = $person['zip'] ?? null;
+        $lastName = $person['last_name'] ?? null;
+        if (!is_string($birth) || !is_string($street) || !is_string($zip) || !is_string($lastName)) {
+            return [];
+        }
+
+        // Nur fuer Kinder - fuer Erwachsene waere eine automatische
+        // Familien-Beziehung reine Spekulation.
+        $issued = $document->created_at ?? now();
+        try {
+            $birthDate = new \DateTimeImmutable($birth);
+        } catch (\Throwable) {
+            return [];
+        }
+        if ($birthDate->diff(new \DateTimeImmutable($issued->toDateString()))->y >= 18) {
+            return [];
+        }
+
+        $skeleton = $this->familyNameSkeleton($lastName);
+        if ($skeleton === '') {
+            return [];
+        }
+
+        $linked = [];
+        $candidates = Customer::with('user')
+            ->where('id', '!=', $child->id)
+            ->where('address_zip', $zip)
+            ->where('address_street', $street)
+            ->when($houseNo !== null && $houseNo !== '', fn ($q) => $q->where('address_house_number', $houseNo))
+            ->whereNotNull('birth_date')
+            ->limit(50)
+            ->get();
+
+        foreach ($candidates as $adult) {
+            // Nur Erwachsene: ein Geschwisterkind ist kein Elternteil, und
+            // ohne Geburtsdatum laesst sich das nicht sagen.
+            try {
+                $adultBirth = new \DateTimeImmutable((string) $adult->birth_date);
+            } catch (\Throwable) {
+                continue;
+            }
+            if ($adultBirth->diff(new \DateTimeImmutable($issued->toDateString()))->y < 18) {
+                continue;
+            }
+            // Familienname muss passen (transkriptions-tolerant).
+            $adultName = (string) ($adult->user?->name ?? '');
+            $adultLast = (string) preg_replace('/.*\s/u', '', trim($adultName));
+            if ($this->familyNameSkeleton($adultLast) !== $skeleton) {
+                continue;
+            }
+
+            [$a, $b] = \App\Models\CustomerRelationship::pairKey((string) $child->id, (string) $adult->id);
+            \App\Models\CustomerRelationship::updateOrCreate(
+                ['customer_a_id' => $a, 'customer_b_id' => $b],
+                [
+                    'type' => 'family',
+                    'note' => 'Aus Meldebestätigung: gleicher Haushalt (' . $street
+                        . ($houseNo !== null && $houseNo !== '' ? ' ' . $houseNo : '')
+                        . ', ' . $zip . ') und Familienname - Kind',
+                    'created_by' => $byUserId,
+                ]
+            );
+            $linked[] = $adultName;
+
+            ActivityLog::create([
+                'user_id' => $byUserId,
+                'action' => 'customer_relationship_linked',
+                'entity_type' => 'customer',
+                'entity_id' => (string) $child->id,
+                'meta' => json_encode([
+                    'household_customer_id' => (string) $adult->id,
+                    'source' => 'meldebescheinigung',
+                    'document_id' => (string) $document->id,
+                ], JSON_UNESCAPED_UNICODE),
+            ]);
+        }
+
+        return $linked;
+    }
+
+    /**
+     * Vergleichsform eines Familiennamens. Arabische Namen werden
+     * unterschiedlich transkribiert - "Najm", "Al-Najm" und "Najim" sind
+     * dieselbe Familie. Daher: Kleinschreibung, arabischer Artikel (al-/el-)
+     * entfernt, Umlaute aufgeloest und die Vokale nach dem ersten Buchstaben
+     * gestrichen (Konsonanten-Skelett). Zusammen mit der identischen Anschrift
+     * ist das belastbar genug fuer eine Haushalts-Beziehung.
+     */
+    private function familyNameSkeleton(string $name): string
+    {
+        $n = mb_strtolower(trim($name));
+        $n = strtr($n, ['ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue', 'ß' => 'ss']);
+        $n = (string) preg_replace('/^(al|el|ad|as|ar|abu|abd)[\s\-]+/u', '', $n);
+        $n = (string) preg_replace('/[^a-z]/u', '', $n);
+        if ($n === '') {
+            return '';
+        }
+
+        return mb_substr($n, 0, 1) . preg_replace('/[aeiouy]/', '', mb_substr($n, 1));
+    }
+
     public function linkBirthCertificateParents(Document $document, Customer $child, ?int $byUserId): array
     {
         $personen = $document->ai_extracted['personen'] ?? [];

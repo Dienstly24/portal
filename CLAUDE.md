@@ -216,6 +216,20 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   automatisch (me/adaccounts). Zahlungsmittel sind API-seitig NICHT
   pflegbar (einziger Schritt, der bei Meta bleibt - steht so in der
   Anleitung). Tests: `MetaAdsManagementTest`.
+- **Meldebestaetigung + Haushalt** (`MeldebestaetigungParser`,
+  `DocumentIntakeService::linkMeldebestaetigungHousehold`, Betreiber-Vorgabe
+  04.08.2026): Zwei Bauformen werden gelesen - "Familienname: Najm" UND das
+  Spaltenlayout ohne Doppelpunkt (Stadt Backnang, Beschriftung mit
+  Klammer-Zusatz "Vorname(n)"); die Ueberschrift steht oft GESPERRT
+  ("M e l d e b e s t ä t i g u n g") - die Typ-Erkennung laeuft daher auf
+  einer Textfassung ohne jeden Zwischenraum. Neue Anschrift + Einzugs-/
+  Anmeldedatum stehen in der Zusammenfassung. Ist die Person MINDERJAEHRIG,
+  wird sie automatisch mit den erfassten ERWACHSENEN derselben Anschrift
+  verknuepft (`CustomerRelationship` type 'family'); Familienname
+  transkriptions-tolerant ueber ein Konsonanten-Skelett ("Najm" = "Al-Najm" =
+  "Najim"). Bewusst NICHT behauptet: wer Vater/Mutter ist - die
+  Meldebestaetigung belegt nur den Haushalt. Tests:
+  `MeldebestaetigungParserTest`, `MeldebestaetigungHaushaltTest`.
 - **Strom-/Gas-AUFTRAEGE (Formularseite)**: Ein Auftrag hat **KEINE
   Vertragsnummer** (Betreiber-Vorgabe 02.08.2026) - die Auftragsnummer steht
   nur in der Zusammenfassung, nie in `contract_number` (falsche Angabe in der
