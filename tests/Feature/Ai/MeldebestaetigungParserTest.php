@@ -80,6 +80,80 @@ class MeldebestaetigungParserTest extends TestCase
         $this->assertSame('meldebescheinigung', $r['type']);
     }
 
+    /**
+     * Zweite verbreitete Bauform (Stadt Backnang u.a.): Spaltenlayout OHNE
+     * Doppelpunkt, Beschriftung mit Klammer-Zusatz ("Vorname(n)") und die
+     * Ueberschrift GESPERRT gesetzt ("M e l d e b e s t ä t i g u n g").
+     */
+    private function backnangText(string $vorname = 'Khaled', string $nachname = 'Najm', string $geburt = '13.12.2024'): string
+    {
+        return implode("\n", [
+            'Stadt Backnang',
+            'Rechts- und Ordnungsamt',
+            'Bürgeramt',
+            'Im Biegel 13',
+            '71522 Backnang',
+            'Stadt Backnang, Am Rathaus 1, 71522 Backnang',
+            $vorname . ' ' . $nachname,
+            'Gartenstraße 105',
+            '71522 Backnang',
+            'Sachbearbeitung: Lydia Klass',
+            'Telefon: 07191 894-444',
+            'E-Mail: l.klass@backnang.de',
+            'Datum: 04.08.2026',
+            'M e l d e b e s t ä t i g u n g (gemäß § 24 Abs. 2 BMG)',
+            'Familienname          ' . $nachname,
+            'Vorname(n)            ' . $vorname,
+            'Geburtsdatum          ' . $geburt,
+            'Angemeldete Wohnung',
+            'Wohnungsstatus        alleinige Wohnung',
+            'Einzugsdatum          01.08.2026',
+            'Anmeldedatum          04.08.2026',
+            'Anschrift             Gartenstraße 105',
+            '                      71522 Backnang',
+            'Backnang, 04.08.2026',
+        ]);
+    }
+
+    public function test_parses_column_layout_with_spaced_heading(): void
+    {
+        $r = (new MeldebestaetigungParser())->parse($this->backnangText());
+
+        $this->assertNotNull($r);
+        $p = $r['data']['person'];
+        $this->assertSame('Najm', $p['last_name']);
+        $this->assertSame('Khaled', $p['first_name']);
+        $this->assertSame('2024-12-13', $p['birth_date']);
+        // Die NEUE Anschrift des Kunden, nicht die der Behoerde (Im Biegel 13).
+        $this->assertSame('Gartenstraße', $p['street']);
+        $this->assertSame('105', $p['house_number']);
+        $this->assertSame('71522', $p['zip']);
+        $this->assertSame('Backnang', $p['city']);
+
+        // Umzugs-Eckdaten stehen fuer den Mitarbeiter in der Zusammenfassung.
+        $this->assertStringContainsString('eingezogen 01.08.2026', $r['summary']);
+        $this->assertStringContainsString('angemeldet 04.08.2026', $r['summary']);
+        $this->assertStringContainsString('Gartenstraße 105', $r['summary']);
+
+        // Die Sachbearbeiterin der Behoerde ist NICHT der Kunde.
+        $this->assertArrayNotHasKey('email', $p);
+        $this->assertSame([], $r['data']['bank']);
+    }
+
+    public function test_marks_minors_and_leaves_adults_unmarked(): void
+    {
+        // Kind (2024 geboren, Schreiben von 2026) -> Hinweis fuer den
+        // Mitarbeiter; die Haushalts-Verknuepfung haengt daran.
+        $kind = (new MeldebestaetigungParser())->parse($this->backnangText());
+        $this->assertStringContainsString('MINDERJAEHRIG', $kind['summary']);
+
+        $erwachsen = (new MeldebestaetigungParser())->parse(
+            $this->backnangText('Mohamad', 'Najim', '10.02.1999')
+        );
+        $this->assertStringNotContainsString('MINDERJAEHRIG', $erwachsen['summary']);
+        $this->assertSame('1999-02-10', $erwachsen['data']['person']['birth_date']);
+    }
+
     public function test_ignores_unrelated_documents(): void
     {
         $this->assertNull((new MeldebestaetigungParser())->parse('Irgendein anderes Dokument'));
