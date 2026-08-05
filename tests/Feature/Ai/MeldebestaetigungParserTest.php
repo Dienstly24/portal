@@ -140,6 +140,94 @@ class MeldebestaetigungParserTest extends TestCase
         $this->assertSame([], $r['data']['bank']);
     }
 
+    /**
+     * Dritte Bauform - dieselbe Bescheinigung als HANDYFOTO. Die OCR eines
+     * Fotos kennt kein Spaltenraster und setzt zwischen Beschriftung und Wert
+     * oft nur EIN Leerzeichen; genau daran scheiterte die Erkennung
+     * vollstaendig (kein Name, kein Geburtsdatum, keine Anschrift).
+     */
+    public function test_parses_photo_ocr_with_single_spaces(): void
+    {
+        $text = implode("\n", [
+            'Stadt Backnang',
+            'Rechts- und Ordnungsamt',
+            'Mohamad Najim',
+            'Gartenstraße 105',
+            '71522 Backnang',
+            'Sachbearbeitung: Lydia Klass',
+            'Telefon: 07191 894-444',
+            'Datum: 04.08.2026',
+            'M e l d e b e s t ä t i g u n g (gemäß § 24 Abs. 2 BMG)',
+            'Familienname Najim',
+            'Vorname(n) Mohamad',
+            'Geburtsdatum 10.02.1999',
+            'Angemeldete Wohnung',
+            'Wohnungsstatus alleinige Wohnung',
+            'Einzugsdatum 01.08.2026',
+            'Anmeldedatum 04.08.2026',
+            'Anschrift Gartenstraße 105',
+            '71522 Backnang',
+            'Backnang, 04.08.2026',
+        ]);
+
+        $r = (new MeldebestaetigungParser())->parse($text);
+
+        $this->assertNotNull($r);
+        $p = $r['data']['person'];
+        $this->assertSame('Najim', $p['last_name']);
+        $this->assertSame('Mohamad', $p['first_name']);
+        $this->assertSame('1999-02-10', $p['birth_date']);
+        $this->assertSame('Gartenstraße', $p['street']);
+        $this->assertSame('105', $p['house_number']);
+        $this->assertSame('71522', $p['zip']);
+        $this->assertSame('Backnang', $p['city']);
+        $this->assertStringContainsString('eingezogen 01.08.2026', $r['summary']);
+    }
+
+    public function test_value_on_the_next_line_is_read(): void
+    {
+        // Die OCR bricht Beschriftung und Wert manchmal in zwei Zeilen um.
+        $text = implode("\n", [
+            'Meldebestätigung',
+            'Familienname',
+            'Najm',
+            'Vorname(n)',
+            'Khaled',
+            'Geburtsdatum',
+            '13.12.2024',
+            'Anschrift',
+            'Gartenstraße 105',
+            '71522 Backnang',
+        ]);
+
+        $r = (new MeldebestaetigungParser())->parse($text);
+
+        $this->assertNotNull($r);
+        $this->assertSame('Najm', $r['data']['person']['last_name']);
+        $this->assertSame('Khaled', $r['data']['person']['first_name']);
+        $this->assertSame('2024-12-13', $r['data']['person']['birth_date']);
+        $this->assertSame('Gartenstraße', $r['data']['person']['street']);
+    }
+
+    public function test_empty_field_stays_empty_instead_of_taking_the_next_label(): void
+    {
+        // Leeres Feld: unter der Beschriftung folgt gleich die naechste -
+        // dann bleibt der Wert leer statt die Beschriftung zu uebernehmen.
+        $text = implode("\n", [
+            'Meldebestätigung',
+            'Familienname Najm',
+            'Vorname(n)',
+            'Geburtsdatum 13.12.2024',
+        ]);
+
+        $r = (new MeldebestaetigungParser())->parse($text);
+
+        $this->assertNotNull($r);
+        $this->assertSame('Najm', $r['data']['person']['last_name']);
+        $this->assertArrayNotHasKey('first_name', $r['data']['person']);
+        $this->assertSame('2024-12-13', $r['data']['person']['birth_date']);
+    }
+
     public function test_marks_minors_and_leaves_adults_unmarked(): void
     {
         // Kind (2024 geboren, Schreiben von 2026) -> Hinweis fuer den

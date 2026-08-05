@@ -129,54 +129,86 @@ class MeldebestaetigungParser implements DocumentTemplateParser
         return $birth->diff($ref)->y < 18;
     }
 
-    /** @param array<string,mixed> $raw */
+    /**
+     * Anschrift des KUNDEN (nicht die "Hausanschrift" der Behoerde): Strasse +
+     * Hausnummer stehen beim Label, PLZ + Ort in einer der Folgezeilen.
+     *
+     * @param array<string,mixed> $raw
+     */
     private function fillAddress(array &$raw): void
     {
-        foreach ($this->lines as $i => $line) {
-            // Nur "Anschrift" des Kunden, nicht die "Hausanschrift" der
-            // Behoerde. Mit Doppelpunkt ODER im Spaltenlayout.
-            if (preg_match('/Hausanschrift/u', $line)
-                || !preg_match('/(?:^|\s)Anschrift\s*(?::\s*|\s{2,})(\S.*?)\s*$/u', $line, $m)) {
-                continue;
-            }
-            $street = trim($m[1]);
-            if (preg_match('/^(.*\D)\s+(\d+(?:\s*[a-zA-Z])?)\s*$/u', $street, $s)) {
-                $raw['street'] = trim($s[1]);
-                $raw['house_number'] = trim((string) preg_replace('/\s+/', ' ', $s[2]));
-            } elseif (preg_match('/\p{L}/u', $street)) {
-                $raw['street'] = $street;
-            }
-            for ($j = $i + 1; $j < count($this->lines) && $j <= $i + 4; $j++) {
-                if (preg_match('/(?<!\d)(\d{5})\s+([A-ZÄÖÜ][\p{L}.\-]+(?:[ \-][A-ZÄÖÜ]?[\p{L}.\-]+)*)/u', $this->lines[$j], $z)) {
-                    $raw['zip'] = $z[1];
-                    $raw['city'] = trim((string) preg_replace('/\s{2,}.*$/u', '', $z[2]));
-                    break;
-                }
-            }
+        $i = $this->labelLineIndex('Anschrift');
+        $street = $this->labelValue('Anschrift');
+        if ($i === null || $street === null || preg_match('/Hausanschrift/u', $this->lines[$i])) {
             return;
+        }
+
+        if (preg_match('/^(.*\D)\s+(\d+(?:\s*[a-zA-Z])?)\s*$/u', $street, $s)) {
+            $raw['street'] = trim($s[1]);
+            $raw['house_number'] = trim((string) preg_replace('/\s+/', ' ', $s[2]));
+        } elseif (preg_match('/\p{L}/u', $street)) {
+            $raw['street'] = $street;
+        }
+
+        for ($j = $i + 1; $j < count($this->lines) && $j <= $i + 4; $j++) {
+            if (preg_match('/(?<!\d)(\d{5})\s+([A-ZÄÖÜ][\p{L}.\-]+(?:[ \-][A-ZÄÖÜ]?[\p{L}.\-]+)*)/u', $this->lines[$j], $z)) {
+                $raw['zip'] = $z[1];
+                $raw['city'] = trim((string) preg_replace('/\s{2,}.*$/u', '', $z[2]));
+                break;
+            }
         }
     }
 
     /**
-     * Wert zu einer Beschriftung. Zwei Schreibweisen sind erlaubt:
-     * "Familienname: Najm" (Doppelpunkt) und das Spaltenlayout ohne
-     * Doppelpunkt ("Familienname        Najm"). Ein Klammer-Zusatz an der
-     * Beschriftung ("Vorname(n)") wird toleriert.
-     *
-     * Ohne Doppelpunkt muessen mindestens zwei Leerzeichen folgen - sonst
-     * wuerde ein Fliesstext, der zufaellig mit dem Beschriftungswort beginnt,
-     * als Feldwert gelesen.
+     * Beschriftungen dieser Bescheinigungen. Steht statt eines Wertes die
+     * NAECHSTE Beschriftung in der Folgezeile, war das Feld leer.
+     */
+    private const LABELS = [
+        'Familienname', 'Geburtsname', 'Vorname', 'Vornamen', 'Geburtsdatum',
+        'Geburtsort', 'Wohnungsstatus', 'Einzugsdatum', 'Anmeldedatum',
+        'Auszugsdatum', 'Anschrift', 'Hausanschrift', 'Gemeindeschlüssel',
+        'Staatsangehörigkeit', 'Familienstand', 'Angemeldete Wohnung',
+    ];
+
+    /**
+     * Beschriftung am Zeilenanfang - mit Doppelpunkt ("Familienname: Najm"),
+     * im Spaltenlayout ("Familienname        Najm") ODER mit nur EINEM
+     * Leerzeichen. Letzteres ist der Normalfall, wenn das Schreiben als
+     * HANDYFOTO ankommt: die OCR eines Fotos kennt keine Spaltenraster und
+     * setzt zwischen Beschriftung und Wert oft nur ein Leerzeichen. Ein
+     * Klammer-Zusatz ("Vorname(n)") wird toleriert, auch mit von der OCR
+     * verlesenen Klammern.
+     */
+    private function labelRegex(string $label): string
+    {
+        return '/^\s*' . preg_quote($label, '/')
+            . '\s*(?:[\(\[\{][^\)\]\}\n]{0,12}[\)\]\}]?)?\s*:?/u';
+    }
+
+    /**
+     * Wert zu einer Beschriftung - in derselben Zeile dahinter oder, wenn die
+     * Zeile nur die Beschriftung traegt, in der naechsten nicht-leeren Zeile.
+     * Folgt dort die naechste Beschriftung, war das Feld leer und bleibt leer.
      */
     private function labelValue(string $label): ?string
     {
-        $pattern = '/^\s*' . preg_quote($label, '/') . '(?:\([^)]*\))?\s*(?::\s*|\s{2,})(\S.*?)\s*$/u';
-        foreach ($this->lines as $line) {
-            if (preg_match($pattern, $line, $m)) {
-                $val = trim($m[1]);
-                if ($val !== '') {
-                    return $val;
-                }
+        $re = $this->labelRegex($label);
+        foreach ($this->lines as $i => $line) {
+            if (!preg_match($re, $line, $m)) {
+                continue;
             }
+            $rest = trim(mb_substr($line, mb_strlen($m[0])));
+            if ($rest !== '') {
+                return $rest;
+            }
+            for ($j = $i + 1; $j < count($this->lines); $j++) {
+                $next = trim($this->lines[$j]);
+                if ($next === '') {
+                    continue;
+                }
+                return $this->isLabelLine($next) ? null : $next;
+            }
+            return null;
         }
         return null;
     }
@@ -184,12 +216,23 @@ class MeldebestaetigungParser implements DocumentTemplateParser
     /** Zeilennummer der Beschriftung (fuer mehrzeilige Werte wie die Anschrift). */
     private function labelLineIndex(string $label): ?int
     {
-        $pattern = '/^\s*' . preg_quote($label, '/') . '(?:\([^)]*\))?\s*(?::|\s{2,}|\s*$)/u';
+        $re = $this->labelRegex($label);
         foreach ($this->lines as $i => $line) {
-            if (preg_match($pattern, $line)) {
+            if (preg_match($re, $line)) {
                 return $i;
             }
         }
         return null;
+    }
+
+    /** Beginnt die Zeile mit einer bekannten Beschriftung? */
+    private function isLabelLine(string $line): bool
+    {
+        foreach (self::LABELS as $label) {
+            if (preg_match($this->labelRegex($label), $line)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
