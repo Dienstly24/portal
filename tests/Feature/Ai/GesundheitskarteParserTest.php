@@ -35,7 +35,9 @@ class GesundheitskarteParserTest extends TestCase
         $this->assertSame('gesundheitskarte', $r['type']);
 
         $p = $r['data']['person'];
-        $this->assertSame('ALALI', $p['last_name']);
+        // Die Karte druckt den Nachnamen in VERSALIEN - in der Kundenakte
+        // steht er in normaler Schreibweise ("ALALI" -> "Alali").
+        $this->assertSame('Alali', $p['last_name']);
         $this->assertSame('Mohammad', $p['first_name']);
         $this->assertSame('2005-03-23', $p['birth_date']);
 
@@ -55,7 +57,7 @@ class GesundheitskarteParserTest extends TestCase
             $this->card('KARAOGLAN', 'Güner', '08/08/1977', 'U905252417', '109938503 - BAHN-BKK', '80276001920001978734')
         );
         $p = $r['data']['person'];
-        $this->assertSame('KARAOGLAN', $p['last_name']);
+        $this->assertSame('Karaoglan', $p['last_name']);
         $this->assertSame('Güner', $p['first_name']);
         $this->assertSame('1977-08-08', $p['birth_date']);
         $this->assertSame('U905252417', $r['data']['gesundheit']['health_insurance_number']);

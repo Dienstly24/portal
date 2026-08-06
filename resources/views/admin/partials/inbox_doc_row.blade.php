@@ -2,6 +2,9 @@
      Erwartet: $doc, $aiEnabled, $providerEnabled --}}
 @php
     $extracted = $doc->ai_extracted ?? []; $match = $extracted['match'] ?? null;
+    // Mehrere Personen auf EINER Aufnahme (z.B. die Gesundheitskarten einer
+    // Familie): dann kann je Person ein Kunde angelegt werden.
+    $personCount = (int) (!empty($extracted['person']) ? 1 : 0) + count($extracted['personen'] ?? []);
     // Duplikat: dieselbe Datei wurde schon einmal hochgeladen. Kundenname nur,
     // wenn der Betrachter den betreffenden Kunden ohnehin sehen darf.
     $dupOrig = $doc->duplicate_of ? $doc->duplicateOriginal : null;
@@ -92,6 +95,15 @@
             {{-- Immer moeglich: den Namen kann der Mitarbeiter im Modal auch
                  selbst eintragen, falls er nicht (sicher) gelesen wurde. --}}
             <button type="button" class="btn btn-gold btn-sm" onclick="docReview.open(@js($doc->id), 'create', null, null)">Neuen Kunden erstellen</button>
+            @if($personCount > 1)
+            {{-- Eine Aufnahme, mehrere Personen (z.B. die Gesundheitskarten
+                 einer Familie): je Person ein Kunde, in einem Schritt. --}}
+            <button type="button" class="btn btn-gold btn-sm"
+                onclick="docReview.createFromPersons(@js($doc->id), {{ $personCount }}, this)"
+                title="Fuer jede erkannte Person einen eigenen Kunden anlegen (bereits erfasste Personen werden uebersprungen)">
+                👪 {{ $personCount }} Kunden anlegen
+            </button>
+            @endif
             @if($aiEnabled)
             {{-- Laesst die normale kostenlose Kette (Vorlagen/OCR, ggf. KI) neu
                  laufen - auch bei Duplikaten wird die Datei wirklich neu gelesen,
