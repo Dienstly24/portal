@@ -296,6 +296,19 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   Sammelsparte `haftpflicht` landen. Die Fonds-Finanz-Beratungsdokumentation
   liest sie gratis (`GewerbeBeratungsdokumentationParser`, Sparte aus dem Kopf
   „Vermittlungsauftrags: …"; „Verkehrshaftungsversicherung" = Frachtführer).
+  Das Schwesterdokument **„Deckungsauftrag zur <Sparte>"** (Fonds Finanz/
+  Thinksurance, 06.08.2026) liest `DeckungsauftragParser`: VN-Block „Daten
+  des Versicherungsnehmers" (nie der Vermittler rechts/unten), Versicherer/
+  Tarif/Praemie gemaess Zahlweise (brutto), Stufe `antrag` - Vorgangs- und
+  RV-Nummer sind KEINE Vertragsnummern (nur Zusammenfassung, die echte
+  Nummer bringt die Police via findApplicationContractForConfirmation).
+  Beginn aus den RISIKOANGABEN (der Schutz-Abschnitt verweist selbst mit
+  „siehe Risikoangaben" darauf); der ISO-Zeitraum „Beginn / Ende" der
+  Beitragsberechnung gilt nur ersatzweise. Das Gewerbe-Fahrzeug
+  (Kennzeichen) steht NUR in der Zusammenfassung, nie in data.kfz - sonst
+  wuerde die Fahrzeug-Identitaet spaetere Kfz-Dokumente desselben Autos
+  faelschlich dem Haftpflicht-Vertrag zuordnen. IBAN nur, wenn der
+  Kontoinhaber der VN ist. Tests: `DeckungsauftragParserTest`.
   Neue Sparte = eine Zeile in `Contract::TYPES`, keine Migration
   (`type` ist String). Tests: `GewerblicheSpartenTest`.
 - **Farbschema „Smaragd & Gold"** (Betreiber-Entscheidung 22.07.2026,
@@ -355,6 +368,13 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   tesseract-ocr tesseract-ocr-deu poppler-utils` auf dem VPS, danach
   `OCR_ENABLED=true` in der `.env`. Rohtext wird bewusst NICHT gespeichert
   (Datenminimierung) - nur das validierte Extraktionsergebnis.
+  DUPLIKAT-REGEL (Lehre 31.07. + 06.08.2026): die Wiederverwendung des
+  Zwillings-Ergebnisses (identischer Content-Hash) greift erst NACH den
+  Vorlagen-Parsern - auf der Textebene UND auf dem OCR-Text - und spart
+  nur noch Heuristik + KI-Eskalation. Sonst kopiert ein erneut
+  hochgeladenes FOTO (z.B. Meldebestaetigung) fuer immer das alte
+  Fehl-Ergebnis von vor der Parser-Verbesserung. Tests:
+  `DuplicateDetectionTest`.
 - **eAT-Rueckseite + Arbeitsvertrag im Dokumenten-Eingang** (Betreiber-
   Vorgabe 29.07.2026): Der `AufenthaltstitelParser` liest jetzt auch die
   RUECKSEITE der Aufenthaltstitel-Karte - sie traegt keine Vorderseiten-

@@ -79,6 +79,7 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(\App\Services\Ai\TemplateParsers\EnergieAuftragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\PrivathaftpflichtAntragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\GewerbeBeratungsdokumentationParser::class),
+                $app->make(\App\Services\Ai\TemplateParsers\DeckungsauftragParser::class),
                 // Kontakt-/SEPA-Ansicht eines Antragsportals (beschriftete
                 // Felder) - VOR dem generischen Kontaktdaten-Block.
                 $app->make(\App\Services\Ai\TemplateParsers\KontaktSepaDatenParser::class),

@@ -188,6 +188,52 @@ class DuplicateDetectionTest extends TestCase
         $this->assertSame('template', $freshResult['source']);
     }
 
+    public function test_improved_parser_beats_stale_duplicate_for_photo_ocr(): void
+    {
+        // Produktionsfall 06.08.2026 (Meldebestaetigung als HANDYFOTO): das
+        // Foto wurde VOR der Parser-Verbesserung analysiert und schlug fehl;
+        // der erneute Upload kopierte stur das alte Fehl-Ergebnis, weil die
+        // Duplikat-Wiederverwendung VOR dem OCR griff - der verbesserte
+        // Parser kam fuer Fotos nie zum Zug. Jetzt laeuft OCR + Vorlagen-
+        // Parser (gratis) zuerst, die Wiederverwendung spart nur noch die
+        // KI-Eskalation.
+        $content = 'FOTO-BYTES-MELDEBESTAETIGUNG';
+        $original = $this->docWithContent($content, [
+            'ai_status' => 'done',
+            'ai_type' => 'sonstiges',
+            'ai_extracted' => [],
+            'file_name' => 'melde.jpg',
+        ]);
+        $duplicate = $this->docWithContent($content, [
+            'ai_status' => 'pending',
+            'file_name' => 'melde.jpg',
+        ]);
+        $this->assertSame((string) $original->id, (string) $duplicate->duplicate_of);
+
+        $provider = new class implements DocumentAiProviderInterface {
+            public function isEnabled(): bool { return false; }
+            public function model(): string { return 'fake'; }
+            public function analyze(string $binary, string $mime, string $ocrText, bool $preferText = false): ?array { return null; }
+        };
+        $ocrText = "M e l d e b e s t ä t i g u n g (gemäß § 24 Abs. 2 BMG)\n"
+            . "Familienname Muster\nVorname(n) Karim\nGeburtsdatum 10.02.1999\n"
+            . "Anschrift Musterweg 5\n71522 Backnang\n";
+        $analyzer = new DocumentAnalyzer(
+            $provider,
+            $this->fakeOcr(available: true, text: $ocrText),
+            $this->fakePdfText(''),
+            new RelevantPageSelector(),
+            new \App\Services\Ai\TemplateParsers\MeldebestaetigungParser(),
+        );
+
+        $result = $analyzer->analyze($duplicate->fresh());
+
+        $this->assertSame('meldebescheinigung', $result['type']);
+        $this->assertSame('template', $result['source']);
+        $this->assertSame('Karim', $result['data']['person']['first_name']);
+        $this->assertSame('Muster', $result['data']['person']['last_name']);
+    }
+
     public function test_unreadable_duplicate_file_still_reuses_twin_result(): void
     {
         // Ist die Datei des Duplikats nicht mehr lesbar (geloescht/verschoben),
