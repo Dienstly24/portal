@@ -1065,6 +1065,7 @@ class DocumentIntakeService
                 'first_registration' => $kfz['first_registration'] ?? null,
                 'acquisition_date' => $kfz['acquisition_date'] ?? null,
                 'power_kw' => $kfz['power_kw'] ?? null,
+                'fuel_type' => $kfz['fuel_type'] ?? null,
                 'initial_mileage' => $kfz['initial_mileage'] ?? null,
                 // Zusaetzliche Tarif-/Fahrzeugfakten (validiert in
                 // ValidatesExtractedFields::validatedVehicle).
@@ -1631,6 +1632,7 @@ class DocumentIntakeService
                 'first_registration' => $kfz['first_registration'] ?? null,
                 'acquisition_date' => $kfz['acquisition_date'] ?? null,
                 'power_kw' => $kfz['power_kw'] ?? null,
+                'fuel_type' => $kfz['fuel_type'] ?? null,
                 'initial_mileage' => $kfz['initial_mileage'] ?? null,
                 'has_teilkasko' => $kfz['has_teilkasko'] ?? null,
                 'teilkasko_deductible' => $kfz['teilkasko_deductible'] ?? null,
@@ -1654,7 +1656,7 @@ class DocumentIntakeService
             // Feste Fahrzeug-Identitaets-/Stammfelder nur ERGAENZEN, wenn leer -
             // eine abweichende Schreibweise (z.B. "S-AB 1234" vs "S-AB1234")
             // ist keine echte Aenderung und darf den Bestand nicht ueberschreiben.
-            foreach (['license_plate', 'vin', 'hsn', 'tsn', 'manufacturer', 'model', 'first_registration', 'acquisition_date', 'power_kw', 'initial_mileage'] as $static) {
+            foreach (['license_plate', 'vin', 'hsn', 'tsn', 'manufacturer', 'model', 'first_registration', 'acquisition_date', 'power_kw', 'fuel_type', 'initial_mileage'] as $static) {
                 if (filled($veh->{$static})) {
                     unset($vehProposed[$static]);
                 }
@@ -1815,6 +1817,7 @@ class DocumentIntakeService
             'first_registration' => ['label' => 'Erstzulassung', 'format' => [$this, 'fmtDate']],
             'acquisition_date' => ['label' => 'Zulassung auf Halter', 'format' => [$this, 'fmtDate']],
             'power_kw' => ['label' => 'Leistung (kW)'],
+            'fuel_type' => ['label' => 'Kraftstoff'],
             'initial_mileage' => ['label' => 'Kilometerstand bei Beginn', 'format' => [$this, 'fmtKm']],
             'has_teilkasko' => ['label' => 'Teilkasko'],
             'teilkasko_deductible' => ['label' => 'SB Teilkasko', 'format' => [$this, 'fmtDeductible']],

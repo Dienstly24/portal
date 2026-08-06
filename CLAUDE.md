@@ -257,6 +257,17 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   KONTOINHABER der Antragsteller ist (sonst landet das Versorger- oder ein
   Fremdkonto in der Akte). Kein geschaetzter Lieferbeginn ausser beim
   Stadtwerke-Wechsel (14 Tage Frist -> 20 Tage).
+- **Kfz-ANTRAG aus der NAFI-Maklersoftware** (`NafiKfzAntragParser`,
+  06.08.2026): ueber ALLE Gesellschaften gleich aufgebaut (Itzehoer, VHV …) -
+  der Versicherer steht als Feld im Dokument. Liest Person (inkl.
+  Familienstand/Staatsangehoerigkeit/Status), Tarif, Beginn/Hauptfaelligkeit,
+  Gesamtbeitrag + Zahlungsperiode, Fahrzeug (Kennzeichen „RD - AS 1212" wird
+  normalisiert, FIN, Wagnisart, HSN+Hersteller, Leistung, Kraftstoff,
+  Erstzulassung, Zulassung auf Halter, SF, Fahrleistung, Kilometerstand) und
+  Zusatzleistungen. Deckung kommt aus dem FELD „Gewuenschte Kaskoart", nie aus
+  Stichwoertern. IBAN/BIC nur, wenn „Zahlungspflichtige Person" der
+  Versicherungsnehmer ist. Stufe `antrag`: NAFI-Vorgangs-ID und eVB-Nummer
+  sind KEINE Vertragsnummern (stehen nur in der Zusammenfassung).
 - **Kfz-Versicherungsschein der WGV** (`WgvKfzPoliceParser`, 05.08.2026):
   kommt als HANDYFOTO - die Feldsuche laesst Doppelpunkt, Spaltenabstand UND
   einfaches Leerzeichen zu und schaut notfalls in die Folgezeile (gleiche

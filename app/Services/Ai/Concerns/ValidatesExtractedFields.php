@@ -273,6 +273,9 @@ trait ValidatesExtractedFields
             'power_kw' => $intInRange($in['power_kw'] ?? null, 1, 2000),
             // Kilometerstand bei Vertragsbeginn (steht so im Versicherungsschein).
             'initial_mileage' => $intInRange($in['initial_mileage'] ?? null, 0, 2000000),
+            // Kraftstoff nur aus der bekannten Werteliste (Benzin, Diesel ...);
+            // die Antraege schreiben ihn ausgeschrieben ("Diesel").
+            'fuel_type' => $this->cleanFuelType($in['fuel_type'] ?? null),
             // Schadenfreiheitsklasse (Haftpflicht/Vollkasko) - nur wenn sie einer
             // gueltigen SF-Klasse entspricht (M, S, 0, 1/2, SF 1-50).
             'sf_liability_class' => $this->cleanSfClass($in['sf_liability_class'] ?? null),
@@ -375,6 +378,36 @@ trait ValidatesExtractedFields
      * und gegen die gueltigen Klassen pruefen (M, S, 0, 1/2, 1-50). Alles
      * andere wird verworfen - lieber leer als eine falsche Einstufung.
      */
+    /**
+     * Kraftstoff auf den Katalog abbilden. Die Antraege schreiben ihn
+     * ausgeschrieben ("Diesel", "Super Benzin", "Plug-in-Hybrid").
+     */
+    private function cleanFuelType(mixed $value): ?string
+    {
+        if (!is_string($value)) {
+            return null;
+        }
+        $v = mb_strtolower(trim($value));
+        if ($v === '') {
+            return null;
+        }
+        if (isset(\App\Models\ContractVehicleDetail::FUEL_TYPES[$v])) {
+            return $v;
+        }
+
+        return match (true) {
+            str_contains($v, 'plug')                              => 'plugin_hybrid',
+            str_contains($v, 'hybrid')                            => 'hybrid',
+            str_contains($v, 'diesel')                            => 'diesel',
+            str_contains($v, 'benzin'), str_contains($v, 'super') => 'benzin',
+            str_contains($v, 'elektro'), str_contains($v, 'strom') => 'elektro',
+            str_contains($v, 'autogas'), str_contains($v, 'lpg')  => 'autogas',
+            str_contains($v, 'erdgas'), str_contains($v, 'cng')   => 'erdgas',
+            str_contains($v, 'wasserstoff')                       => 'wasserstoff',
+            default                                               => null,
+        };
+    }
+
     private function cleanSfClass(mixed $value): ?string
     {
         if (!is_string($value)) return null;
