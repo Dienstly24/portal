@@ -11,7 +11,10 @@ $labels = [
     'customer_messages' => 'Portal-Nachrichten', 'customer_consents' => 'Einwilligungen (DSGVO)',
     'document_requests' => 'Dokumentanfragen', 'tasks' => 'Aufgaben', 'email_messages' => 'E-Mail-Zuordnungen',
     'approval_requests' => 'Freigaben', 'employee_customers' => 'Betreuer-Zuordnungen',
-    'external_references' => 'Externe Kennungen',
+    'external_references' => 'Externe Kennungen', 'customer_relationships' => 'Verwandte-Kunden-Verknüpfungen',
+    'contract_histories' => 'Vertragshistorie', 'meter_readings' => 'Zählerstände',
+    'provisions' => 'Provisionen', 'customer_views' => 'Zuletzt-geöffnet-Einträge',
+    'favorite_customers' => 'Favoriten-Markierungen',
 ];
 @endphp
 <div class="page-header">
@@ -21,7 +24,8 @@ $labels = [
 <div class="card" style="max-width:680px;">
     <div style="background:#FEF3C7;border-radius:8px;padding:14px 18px;margin-bottom:20px;font-size:13.5px;color:#92400E;line-height:1.6;">
         ⚠ <strong>Hauptkunde:</strong> {{ $customer->user?->name }} ({{ $customer->customer_number }})<br>
-        Alle Verträge, Tickets, Dokumente, Familie, Fahrzeuge, Notizen, Nachrichten, Einwilligungen und Termine des Duplikats werden auf den Hauptkunden übertragen. Fehlende Stammdaten werden ergänzt. <strong>Es wird nichts gelöscht</strong> außer der dann leeren Duplikat-Akte. Diese Aktion kann nicht rückgängig gemacht werden.
+        Alle Verträge, Tickets, Dokumente, Familie, Fahrzeuge, Notizen, Nachrichten, Einwilligungen und Termine des Duplikats werden auf den Hauptkunden übertragen. Fehlende Stammdaten werden ergänzt. <strong>Es wird nichts gelöscht</strong> außer der dann leeren Duplikat-Akte. Diese Aktion kann nicht rückgängig gemacht werden.<br><br>
+        🔐 <strong>Portal-Zugang bleibt erhalten:</strong> Der besser gepflegte Login-Account (echte E-Mail-Adresse statt Import-Platzhalter, gesetztes Passwort, erfolgte Logins) überlebt automatisch – unabhängig davon, welche Akte als Hauptkunde gewählt ist. Eine zweite echte E-Mail-Adresse wird als alternative E-Mail gesichert.
     </div>
 
     @if($suggested)

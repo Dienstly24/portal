@@ -3,7 +3,9 @@ namespace App\Services\Matching;
 
 use App\Models\ActivityLog;
 use App\Models\Customer;
+use App\Models\CustomerRelationship;
 use App\Models\CustomerTimeline;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -12,7 +14,8 @@ use Illuminate\Support\Facades\Schema;
  * geloescht, ABER erst nachdem ALLE abhaengigen Daten auf den Hauptkunden
  * umgehaengt wurden - Vertraege, Dokumente, Tickets, Termine, Notizen,
  * Familie, Fahrzeuge, Nachrichten, Einwilligungen (DSGVO),
- * Dokumentanfragen, Aufgaben, E-Mail-Zuordnungen und externe Kennungen.
+ * Dokumentanfragen, Aufgaben, E-Mail-Zuordnungen, externe Kennungen und
+ * Verwandte-Kunden-Verknuepfungen (customer_a_id/customer_b_id).
  *
  * Hintergrund: Fast alle customer_id-Fremdschluessel stehen auf
  * ON DELETE CASCADE. Ein simples "Duplikat loeschen" wuerde daher genau die
@@ -21,6 +24,17 @@ use Illuminate\Support\Facades\Schema;
  * damit auch kuenftige Tabellen automatisch abgedeckt sind) plus die
  * polymorphen externen Referenzen. Erst danach faellt die leere Duplikat-
  * Huelle weg. Nichts wird geloescht ausser dem leeren Duplikat selbst.
+ *
+ * PORTAL-ZUGANG (Lehre 06.08.2026): Name und Login-E-Mail liegen am User,
+ * nicht am Kunden. Frueher wurde der User des Duplikats IMMER geloescht -
+ * war der Hauptkunde ein Import-Rumpf (Platzhalter-E-Mail
+ * @dienstly24.internal, kein Passwort) und das Duplikat der echte
+ * Portal-Account, verlor der Kunde E-Mail, Passwort und Login-Historie.
+ * Jetzt bleibt der besser gepflegte Account erhalten (echte E-Mail >
+ * Platzhalter, gesetztes Passwort, erfolgte Logins), unabhaengig von der
+ * Merge-Richtung; die Login-Adresse des unterlegenen Accounts wandert nach
+ * email2. Zusaetzlich wirkt eine Marketing-Abmeldung des Duplikats fort
+ * (DSGVO: Opt-out geht nie verloren).
  */
 class CustomerMergeService
 {
@@ -72,30 +86,48 @@ class CustomerMergeService
             // 3) Polymorphe externe Kennungen (Lexoffice/Fonds-Finanz) umhaengen.
             $moved['external_references'] = $this->mergeExternalReferences($primary, $duplicate);
 
-            // 4) Fehlende Stammdaten vom Duplikat ergaenzen (nie ueberschreiben).
+            // 3b) Verwandte-Kunden-Verknuepfungen (customer_a_id/customer_b_id)
+            //     umhaengen - die laufen NICHT ueber den customer_id-Abgleich
+            //     und wuerden sonst per FK-Kaskade mitgeloescht (Familie weg).
+            $moved['customer_relationships'] = $this->mergeRelationships($primary, $duplicate);
+
+            // 4) Portal-Zugang sichern: der besser gepflegte Account bleibt.
+            $dupName = $duplicate->user?->name;
+            $dupNumber = $duplicate->customer_number;
+            $userIdBefore = $primary->user_id;
+            $loserUser = $this->preservePortalAccount($primary, $duplicate);
+
+            // 5) Fehlende Stammdaten vom Duplikat ergaenzen (nie ueberschreiben).
             $this->fillMissingFields($primary, $duplicate);
             $primary->save();
 
-            // 5) Leere Duplikat-Huelle + verwaisten User entfernen.
-            $dupName = $duplicate->user?->name;
-            $dupUser = $duplicate->user;
+            // 6) Leere Duplikat-Huelle entfernen. Den unterlegenen User nur
+            //    dann, wenn KEINE Kundenakte mehr auf ihn zeigt -
+            //    customers.user_id kaskadiert, ein verfruehtes Loeschen wuerde
+            //    eine noch verknuepfte Akte mitreissen.
             $duplicate->delete();
-            if ($dupUser && $dupUser->id !== $primary->user_id) {
-                $dupUser->delete();
+            if ($loserUser
+                && (int) $loserUser->id !== (int) $primary->user_id
+                && !Customer::where('user_id', $loserUser->id)->exists()) {
+                $loserUser->delete();
             }
 
             $moved = array_filter($moved, fn ($n) => $n > 0);
 
-            // 6) Protokoll: Audit-Log + Kunden-Timeline (nachvollziehbar).
+            // 7) Protokoll: Audit-Log + Kunden-Timeline (nachvollziehbar).
             ActivityLog::create([
                 'user_id'     => $actorId,
                 'action'      => 'customers_merged',
                 'entity_type' => 'customer',
                 'entity_id'   => $primary->id,
                 'meta'        => json_encode([
-                    'merged_from' => $dupName,
-                    'into'        => $primary->user?->name,
-                    'moved'       => $moved,
+                    'merged_from'        => $dupName,
+                    'merged_from_number' => $dupNumber,
+                    'into'               => $primary->user?->name,
+                    'into_number'        => $primary->customer_number,
+                    // Nachvollziehbar, welcher Portal-Zugang ueberlebt hat.
+                    'portal_account'     => (int) $primary->user_id === (int) $userIdBefore ? 'hauptkunde' : 'duplikat',
+                    'moved'              => $moved,
                 ], JSON_UNESCAPED_UNICODE),
             ]);
 
@@ -105,7 +137,7 @@ class CustomerMergeService
                     'user_id'     => $actorId,
                     'type'        => 'merge',
                     'title'       => 'Kunde zusammengefuehrt',
-                    'description' => 'Duplikat "' . ($dupName ?? 'Unbekannt') . '" wurde in diese Akte uebernommen.',
+                    'description' => 'Duplikat "' . ($dupName ?? 'Unbekannt') . '" (Kundennummer ' . ($dupNumber ?? '-') . ') wurde in diese Akte uebernommen.',
                     'meta'        => ['moved' => $moved],
                 ]);
             }
@@ -137,7 +169,156 @@ class CustomerMergeService
         if ($refs > 0) {
             $counts['external_references'] = $refs;
         }
+        if (Schema::hasTable('customer_relationships')) {
+            $rels = DB::table('customer_relationships')
+                ->where('customer_a_id', $duplicate->id)
+                ->orWhere('customer_b_id', $duplicate->id)->count();
+            if ($rels > 0) {
+                $counts['customer_relationships'] = $rels;
+            }
+        }
         return $counts;
+    }
+
+    /**
+     * Entscheidet, welcher Login-Account (User) die vereinte Akte traegt, und
+     * haengt den Hauptkunden bei Bedarf auf den Account des Duplikats um.
+     * Massstab ist die Portal-Qualitaet: echte E-Mail schlaegt Import-
+     * Platzhalter, dann zaehlen gesetztes Passwort, erfolgte Logins,
+     * verschickte Einladung. Bei Gleichstand bleibt der Account des
+     * Hauptkunden (stabiles Verhalten).
+     *
+     * Die Login-Adresse des unterlegenen Accounts wird - wenn echt und
+     * abweichend - als alternative E-Mail (email2) gesichert; beim
+     * Uebernehmen des Duplikat-Accounts gilt dessen im Portal gewaehlte
+     * Sprache weiter.
+     *
+     * @return User|null Der unterlegene Account (zum Aufraeumen) oder null,
+     *         wenn es nichts zu entscheiden gibt (gleicher/fehlender User).
+     */
+    private function preservePortalAccount(Customer $primary, Customer $duplicate): ?User
+    {
+        $primaryUser = $primary->user;
+        $dupUser = $duplicate->user;
+
+        if ($dupUser === null || ($primaryUser !== null && (int) $dupUser->id === (int) $primaryUser->id)) {
+            return null;
+        }
+
+        $adoptDuplicateUser = $this->portalAccountScore($dupUser) > $this->portalAccountScore($primaryUser);
+
+        if ($adoptDuplicateUser) {
+            $primary->user_id = $dupUser->id;
+            $primary->setRelation('user', $dupUser);
+            // Der Inhaber des uebernommenen Accounts hat seine Sprache im
+            // Portal selbst gewaehlt - sie gilt fuer die vereinte Akte weiter.
+            if (!empty($duplicate->preferred_lang) && $duplicate->preferred_lang !== $primary->preferred_lang) {
+                $primary->preferred_lang = $duplicate->preferred_lang;
+            }
+            $loser = $primaryUser;
+        } else {
+            $loser = $dupUser;
+        }
+
+        $kept = $adoptDuplicateUser ? $dupUser : $primaryUser;
+        if ($loser !== null
+            && $loser->hasRealEmail()
+            && $loser->email !== $kept?->email
+            && empty($primary->email2)) {
+            $primary->email2 = $loser->email;
+        }
+
+        return $loser;
+    }
+
+    /**
+     * Portal-Qualitaet eines Login-Accounts. Die echte E-Mail dominiert
+     * bewusst alles andere (100): ein aktivierter Account mit Platzhalter-
+     * Adresse ist nicht erreichbar und kann sein Passwort nie zuruecksetzen.
+     * Ein deaktivierter Account verliert Punkte, bleibt aber vor einem
+     * Import-Rumpf (Reaktivieren ist moeglich, Datenverlust nicht).
+     */
+    private function portalAccountScore(?User $user): int
+    {
+        if ($user === null) {
+            return -1000;
+        }
+        $score = 0;
+        if ($user->hasRealEmail()) {
+            $score += 100;
+        }
+        if ($user->portal_password_set_at !== null) {
+            $score += 40;
+        }
+        if ($user->first_login_at !== null) {
+            $score += 20;
+        }
+        if ($user->last_login_at !== null) {
+            $score += 10;
+        }
+        if ($user->invitation_sent_at !== null) {
+            $score += 5;
+        }
+        if ($user->email_verified_at !== null) {
+            $score += 2;
+        }
+        if (isset($user->is_active) && !$user->is_active) {
+            $score -= 50;
+        }
+        return $score;
+    }
+
+    /**
+     * Haengt Verwandte-Kunden-Verknuepfungen (Familie/Haushalt/„kein
+     * Duplikat") vom Duplikat auf den Hauptkunden um. Die Tabelle nutzt
+     * customer_a_id/customer_b_id (Paar in fester Reihenfolge a < b) und
+     * faellt deshalb durch den generischen customer_id-Abgleich; ohne
+     * Umhaengen wuerde die FK-Kaskade beim Loeschen des Duplikats die
+     * Familien-Verknuepfungen mitreissen.
+     *
+     * Regeln: Das Paar Hauptkunde<->Duplikat selbst ist nach dem Merge
+     * gegenstandslos (kein Selbst-Paar). Umgehaengte Paare werden neu
+     * normalisiert (a < b); existiert das Paar am Hauptkunden bereits,
+     * wird die Duplikat-Zeile verworfen (UNIQUE-Kollision).
+     */
+    private function mergeRelationships(Customer $primary, Customer $duplicate): int
+    {
+        if (!Schema::hasTable('customer_relationships')) {
+            return 0;
+        }
+
+        $p = (string) $primary->id;
+        $d = (string) $duplicate->id;
+
+        DB::table('customer_relationships')
+            ->where(function ($q) use ($p, $d) {
+                $q->where(function ($qq) use ($p, $d) {
+                    $qq->where('customer_a_id', $p)->where('customer_b_id', $d);
+                })->orWhere(function ($qq) use ($p, $d) {
+                    $qq->where('customer_a_id', $d)->where('customer_b_id', $p);
+                });
+            })
+            ->delete();
+
+        $moved = 0;
+        $rows = DB::table('customer_relationships')
+            ->where('customer_a_id', $d)
+            ->orWhere('customer_b_id', $d)
+            ->get();
+        foreach ($rows as $row) {
+            $other = (string) ($row->customer_a_id === $d ? $row->customer_b_id : $row->customer_a_id);
+            [$a, $b] = CustomerRelationship::pairKey($p, $other);
+            $exists = DB::table('customer_relationships')
+                ->where('customer_a_id', $a)->where('customer_b_id', $b)->exists();
+            if ($exists) {
+                DB::table('customer_relationships')->where('id', $row->id)->delete();
+                continue;
+            }
+            DB::table('customer_relationships')->where('id', $row->id)
+                ->update(['customer_a_id' => $a, 'customer_b_id' => $b]);
+            $moved++;
+        }
+        return $moved;
     }
 
     /**
@@ -301,6 +482,20 @@ class CustomerMergeService
             if (empty($primary->$f) && !empty($duplicate->$f)) {
                 $primary->$f = $duplicate->$f;
             }
+        }
+
+        // DSGVO: Eine Marketing-Abmeldung wirkt fort. Hat sich das Duplikat
+        // abgemeldet, darf die vereinte Akte nicht wieder anschreibbar werden.
+        if ($duplicate->unsubscribed_at && !$primary->unsubscribed_at) {
+            $primary->unsubscribed_at = $duplicate->unsubscribed_at;
+            $primary->marketing_consent = false;
+        }
+
+        // "Letzter Kontakt" ist ein Zuletzt-Fakt - der neuere Stand gewinnt
+        // (sonst meldet die Wiedervorlage einen laengst kontaktierten Kunden).
+        if ($duplicate->last_contact
+            && (!$primary->last_contact || $duplicate->last_contact > $primary->last_contact)) {
+            $primary->last_contact = $duplicate->last_contact;
         }
     }
 
