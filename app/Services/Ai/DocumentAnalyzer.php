@@ -86,12 +86,13 @@ class DocumentAnalyzer
     public function analyze(Document $document, bool $forceAi = false, bool $fresh = false): ?array
     {
         // Duplikat-Wiederverwendung (identischer Inhalts-Hash -> duplicate_of):
-        // das fertige Ergebnis des Zwillings spart OCR und vor allem den
-        // zweiten (kostenpflichtigen) KI-Aufruf. Sie greift aber erst NACH den
-        // Vorlagen-Parsern auf der Textebene - die sind gratis und werden
-        // laufend verbessert; ein erneut hochgeladenes Dokument soll das
-        // BESTE aktuelle Ergebnis bekommen, nicht die Kopie eines veralteten
-        // (z.B. lueckenhaften KI-)Ergebnisses von vor der Verbesserung.
+        // das fertige Ergebnis des Zwillings spart vor allem den zweiten
+        // (kostenpflichtigen) KI-Aufruf. Sie greift aber erst NACH den
+        // Vorlagen-Parsern - auf der Textebene UND auf dem OCR-Text - denn
+        // die sind gratis und werden laufend verbessert; ein erneut
+        // hochgeladenes Dokument (auch ein FOTO) soll das BESTE aktuelle
+        // Ergebnis bekommen, nicht die Kopie eines veralteten Fehlversuchs
+        // von vor der Verbesserung.
         // Nur ohne bewusste KI-Erzwingung (forceAi) und Neu-Analyse (fresh).
         $reuse = (!$forceAi && !$fresh)
             ? fn () => $this->reuseFromDuplicate($document)
@@ -150,13 +151,12 @@ class DocumentAnalyzer
             }
         }
 
-        // Kein Vorlagen-Treffer auf der Textebene: jetzt darf das fertige
-        // Ergebnis des inhaltsgleichen Zwillings uebernommen werden - es spart
-        // OCR (CPU bei Scans) und die KI-Eskalation.
-        if (($reused = $reuse()) !== null) {
-            return $reused;
-        }
-
+        // Kein Vorlagen-Treffer auf der Textebene: bei Scans/Fotos zuerst
+        // noch OCR + Vorlagen-Parser versuchen - Tesseract ist gratis (nur
+        // CPU). Frueher griff hier die Duplikat-Wiederverwendung VOR dem OCR:
+        // ein Foto, das einmal vor einer Parser-Verbesserung fehlschlug,
+        // kopierte sein schlechtes Alt-Ergebnis bei jedem erneuten Upload -
+        // der verbesserte Parser kam fuer Fotos nie zum Zug.
         if ($freeText === '' && $this->ocr->isAvailable()) {
             $freeText = $this->ocr->extract($binary, $mime);
 
@@ -168,6 +168,13 @@ class DocumentAnalyzer
                     return [...$parsed, 'source' => 'template'];
                 }
             }
+        }
+
+        // Erst jetzt darf das fertige Ergebnis des inhaltsgleichen Zwillings
+        // uebernommen werden - es spart die Heuristik und vor allem die
+        // (kostenpflichtige) KI-Eskalation.
+        if (($reused = $reuse()) !== null) {
+            return $reused;
         }
 
         // Saubere Textebene: bekannte Formulare auf die relevanten Seiten

@@ -368,6 +368,13 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   tesseract-ocr tesseract-ocr-deu poppler-utils` auf dem VPS, danach
   `OCR_ENABLED=true` in der `.env`. Rohtext wird bewusst NICHT gespeichert
   (Datenminimierung) - nur das validierte Extraktionsergebnis.
+  DUPLIKAT-REGEL (Lehre 31.07. + 06.08.2026): die Wiederverwendung des
+  Zwillings-Ergebnisses (identischer Content-Hash) greift erst NACH den
+  Vorlagen-Parsern - auf der Textebene UND auf dem OCR-Text - und spart
+  nur noch Heuristik + KI-Eskalation. Sonst kopiert ein erneut
+  hochgeladenes FOTO (z.B. Meldebestaetigung) fuer immer das alte
+  Fehl-Ergebnis von vor der Parser-Verbesserung. Tests:
+  `DuplicateDetectionTest`.
 - **eAT-Rueckseite + Arbeitsvertrag im Dokumenten-Eingang** (Betreiber-
   Vorgabe 29.07.2026): Der `AufenthaltstitelParser` liest jetzt auch die
   RUECKSEITE der Aufenthaltstitel-Karte - sie traegt keine Vorderseiten-
