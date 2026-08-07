@@ -34,9 +34,29 @@ class MailboxSyncService
     {
         $results = [];
         foreach (EmailAccount::where('is_active', true)->get() as $account) {
-            $results[$account->email_address] = $this->syncAccount($account);
+            try {
+                $results[$account->email_address] = $this->syncAccount($account);
+            } catch (\Throwable $e) {
+                // Ein Fehler in EINEM Postfach darf die anderen nicht blockieren
+                // (Audit MAILBOX-1). Protokollieren, Fehler am Konto vermerken,
+                // mit dem naechsten Postfach weitermachen.
+                \Log::warning('Mailbox-Sync fehlgeschlagen (' . $account->email_address . '): ' . $e->getMessage());
+                $account->update(['last_error' => mb_substr($e->getMessage(), 0, 200)]);
+                $results[$account->email_address] = 0;
+            }
         }
         return $results;
+    }
+
+    /** Kopf-Feld auf die Spaltenbreite kuerzen - MySQL strict wirft sonst
+     *  "Data too long" (z.B. langer Betreff/Anzeigename), und der ganze
+     *  Sync-Lauf bricht ab (Audit MAILBOX-1). */
+    private function clip(?string $value, int $max = 255): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+        return mb_strlen($value) > $max ? mb_substr($value, 0, $max) : $value;
     }
 
     public function syncAccount(EmailAccount $account): int
@@ -63,60 +83,71 @@ class MailboxSyncService
 
         $maxReceived = null; // hoechstes tatsaechlich verarbeitetes Empfangsdatum dieser Runde
         foreach ($messages as $data) {
-            // Kundenseitiges Import-Postfach (Variante A): nur Mails mit
-            // gueltigem Einwilligungs-Token UND erlaubter Absenderdomain
-            // werden ueberhaupt gespeichert. Alles andere (fremde/private
-            // Weiterleitung) wird sofort verworfen - Data Minimization.
-            $importCustomer = null;
-            if ($account->is_customer_import) {
-                $importCustomer = $this->importService()->resolveConsentingCustomer($data);
-                if ($importCustomer === null || !$this->importService()->isAllowedSender($data->fromAddress)) {
-                    continue;
-                }
-            }
-
-            $message = EmailMessage::firstOrCreate(
-                ['email_account_id' => $account->id, 'message_uid' => $data->uid],
-                [
-                    'from_address' => $data->fromAddress,
-                    'from_name' => $data->fromName,
-                    'to_address' => $data->toAddress,
-                    'subject' => $data->subject,
-                    'body_text' => $data->bodyText,
-                    'body_html' => $data->bodyHtml,
-                    'received_at' => $data->receivedAt,
-                    'raw_headers' => $data->headers,
-                ]
-            );
-
-            // Empfangsdatum aller GESEHENEN (auch bereits bekannten) Mails
-            // beruecksichtigen, damit die Wasserstandsmarke nicht ueber noch
-            // ungeholte Mails hinausspringt (Audit INT-4).
+            // Wasserstandsmarke fuer JEDE gesehene Mail ZUERST vorruecken -
+            // auch wenn Speichern/Verarbeiten unten scheitert. Sonst haengt eine
+            // einzelne "Gift"-Mail (Betreff > 255 Zeichen -> MySQL-strict "Data
+            // too long", oder ein Verarbeitungsfehler) den Cursor fest und der
+            // Sync wiederholt sie alle 2 Minuten endlos (Audit MAILBOX-1 /
+            // INT-4: aller GESEHENEN Mails).
             if ($data->receivedAt && (!$maxReceived || $data->receivedAt->gt($maxReceived))) {
                 $maxReceived = $data->receivedAt->copy();
             }
 
-            if (!$message->wasRecentlyCreated) {
-                continue; // bereits bekannt (Unique-Constraint email_account_id+message_uid) - kein Duplikat verarbeiten
+            try {
+                // Kundenseitiges Import-Postfach (Variante A): nur Mails mit
+                // gueltigem Einwilligungs-Token UND erlaubter Absenderdomain
+                // werden ueberhaupt gespeichert. Alles andere (fremde/private
+                // Weiterleitung) wird sofort verworfen - Data Minimization.
+                $importCustomer = null;
+                if ($account->is_customer_import) {
+                    $importCustomer = $this->importService()->resolveConsentingCustomer($data);
+                    if ($importCustomer === null || !$this->importService()->isAllowedSender($data->fromAddress)) {
+                        continue;
+                    }
+                }
+
+                // Kopf-Felder auf Spaltenbreite kuerzen (varchar(255)).
+                $message = EmailMessage::firstOrCreate(
+                    ['email_account_id' => $account->id, 'message_uid' => $data->uid],
+                    [
+                        'from_address' => $this->clip($data->fromAddress),
+                        'from_name' => $this->clip($data->fromName),
+                        'to_address' => $this->clip($data->toAddress),
+                        'subject' => $this->clip($data->subject),
+                        'body_text' => $data->bodyText,
+                        'body_html' => $data->bodyHtml,
+                        'received_at' => $data->receivedAt,
+                        'raw_headers' => $data->headers,
+                    ]
+                );
+
+                if (!$message->wasRecentlyCreated) {
+                    continue; // bereits bekannt (Unique-Constraint email_account_id+message_uid) - kein Duplikat verarbeiten
+                }
+
+                $stored++;
+
+                // Dateien VOR der Verarbeitung sichern, damit Analyse-Stufen
+                // (PDF-Auswertung) darauf zugreifen können - aber noch ohne
+                // Kundenakte-Bezug.
+                $this->attachments->storeFiles($message, $data->attachments);
+
+                if ($importCustomer !== null) {
+                    // Kunde steht durch das Token DETERMINISTISCH fest - kein
+                    // Score-Matching, direkt bestaetigte Zuordnung.
+                    $this->workflow->processForCustomer($message, $importCustomer);
+                } else {
+                    $this->workflow->process($message);
+                }
+
+                // In die Akte übernehmen NUR bei bestätigter Zuordnung (H1).
+                $this->attachments->createDocuments($message->fresh());
+            } catch (\Throwable $e) {
+                // Eine problematische Mail darf nie den ganzen Postfach-Lauf
+                // stoppen (Audit MAILBOX-1): protokollieren, ueberspringen. Die
+                // Marke ist oben bereits vorgerueckt -> kein endloses Erneut-Holen.
+                \Log::warning('Mailbox-Sync: Nachricht uebersprungen (' . $data->uid . '): ' . $e->getMessage());
             }
-
-            $stored++;
-
-            // Dateien VOR der Verarbeitung sichern, damit Analyse-Stufen
-            // (PDF-Auswertung) darauf zugreifen können - aber noch ohne
-            // Kundenakte-Bezug.
-            $this->attachments->storeFiles($message, $data->attachments);
-
-            if ($importCustomer !== null) {
-                // Kunde steht durch das Token DETERMINISTISCH fest - kein
-                // Score-Matching, direkt bestaetigte Zuordnung.
-                $this->workflow->processForCustomer($message, $importCustomer);
-            } else {
-                $this->workflow->process($message);
-            }
-
-            // In die Akte übernehmen NUR bei bestätigter Zuordnung (H1).
-            $this->attachments->createDocuments($message->fresh());
         }
 
             if ($maxReceived && (!$overallMax || $maxReceived->gt($overallMax))) {

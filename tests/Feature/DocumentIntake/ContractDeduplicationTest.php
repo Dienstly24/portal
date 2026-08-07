@@ -193,6 +193,63 @@ class ContractDeduplicationTest extends TestCase
         );
     }
 
+    // Audit INTAKE-1: "R+V" darf nicht mit einem fremden Versicherer verwechselt
+    // werden (fruehere Normalisierung schrumpfte "R+V" auf "r", Teilstring von
+    // fast jedem Namen). Eine Generali-Police fuer dasselbe Kennzeichen ist ein
+    // WECHSEL -> eigener Vertrag, nicht Ueberschreiben des R+V-Bestands.
+    public function test_rv_insurer_not_confused_with_other_insurer_on_same_plate(): void
+    {
+        $customer = $this->customer();
+        $intake = app(DocumentIntakeService::class);
+
+        $rv = $intake->createContractFromExtraction($this->doc([
+            'versicherung' => ['insurer' => 'R+V Allgemeine Versicherung AG', 'sparte' => 'kfz', 'start_date' => '2025-09-03'],
+            'kfz' => ['license_plate' => 'RD-AS 1212'],
+        ]), $customer, null);
+
+        $generali = $intake->createContractFromExtraction($this->doc([
+            'versicherung' => ['insurer' => 'Generali', 'sparte' => 'kfz', 'start_date' => '2026-09-03'],
+            'kfz' => ['license_plate' => 'RD-AS 1212'],
+        ]), $customer, null);
+
+        $this->assertNotSame($rv->id, $generali->id, 'Generali darf den R+V-Vertrag nicht ueberschreiben');
+        $this->assertSame(2, Contract::where('customer_id', $customer->id)->count());
+        $rv->refresh();
+        $this->assertSame('R+V Allgemeine Versicherung AG', $rv->insurer, 'R+V-Bestand bleibt erhalten');
+
+        // Gegenprobe: derselbe Versicherer (R+V-Variante) bleibt EIN Vertrag.
+        $rvAgain = $intake->createContractFromExtraction($this->doc([
+            'versicherung' => ['insurer' => 'R+V Versicherung', 'sparte' => 'kfz', 'start_date' => '2025-09-03', 'premium_amount' => 411],
+            'kfz' => ['license_plate' => 'RD-AS 1212'],
+        ]), $customer, null);
+        $this->assertSame($rv->id, $rvAgain->id, 'R+V-Variante aktualisiert den bestehenden R+V-Vertrag');
+    }
+
+    // Audit INTAKE-2: MaLo-ID/Zaehlernummer bezeichnen den physischen Zaehler,
+    // nicht den Versorger - beim Anbieterwechsel bleiben sie gleich. Die
+    // Bestaetigung eines ANDEREN Versorgers (gleiche MaLo) ist ein Wechsel und
+    // darf den Bestandsvertrag nicht ueberschreiben.
+    public function test_energy_supplier_switch_creates_separate_contract_for_same_malo(): void
+    {
+        $customer = $this->customer();
+        $intake = app(DocumentIntakeService::class);
+
+        $lichtblick = $intake->createContractFromExtraction($this->doc([
+            'versicherung' => ['insurer' => 'LichtBlick', 'sparte' => 'strom', 'start_date' => '2025-08-01'],
+            'energie' => ['meter_number' => '1LOG0092283078', 'malo_id' => '51234567890'],
+        ], 'energievertrag'), $customer, null);
+
+        $eon = $intake->createContractFromExtraction($this->doc([
+            'versicherung' => ['insurer' => 'E.ON Energie Deutschland', 'sparte' => 'strom', 'start_date' => '2026-08-01'],
+            'energie' => ['meter_number' => '1LOG0092283078', 'malo_id' => '51234567890'],
+        ], 'energievertrag'), $customer, null);
+
+        $this->assertNotSame($lichtblick->id, $eon->id, 'E.ON darf den LichtBlick-Vertrag nicht ueberschreiben');
+        $this->assertSame(2, Contract::where('customer_id', $customer->id)->count());
+        $lichtblick->refresh();
+        $this->assertSame('LichtBlick', $lichtblick->insurer, 'LichtBlick-Bestand bleibt erhalten');
+    }
+
     // Wechsel-Dokument OHNE Beginn: keine Verkettung moeglich -> der
     // Altvertrag bleibt unangetastet (keine erfundenen Daten).
     public function test_switch_document_without_start_leaves_old_contract_untouched(): void

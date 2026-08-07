@@ -162,10 +162,16 @@ class ReportController extends Controller
         if ($isManager) {
             $userRates = User::whereIn('id', $all->pluck('acquired_by')->filter()->unique())->get()->keyBy('id');
             $partnerRates = Partner::whereIn('id', $all->pluck('acquired_by_partner_id')->filter()->unique())->get()->keyBy('id');
-            // Bereits erfasste Provisionen des Zeitraums, um Doppel-Erfassung sichtbar zu machen
-            $existing = Provision::where('status', '!=', 'storniert')
-                ->whereDate('period_from', $from->toDateString())
-                ->whereDate('period_to', $to->toDateString())
+            // Bereits gebuchte Provisionen fuer die NEUKUNDEN dieses Zeitraums.
+            // Bewusst ueber die Kunden-IDs statt ueber period_from/period_to:
+            // die AUTOMATISCHEN Neuvertrag-Buchungen (Contract::created-Hook)
+            // tragen keine Periode. Der fruehere Datumsfilter sah sie daher NIE
+            // (period_from/to = NULL) und meldete "0 bereits erfasst" - die
+            // Ein-Klick-Erfassung buchte dann on top der Automatik ein zweites
+            // Mal (Doppelvverguetung, Audit PROV-1). Jetzt zaehlt jede nicht
+            // stornierte Buchung dieser Kunden (Automatik + evtl. manuell).
+            $existing = Provision::whereIn('customer_id', $all->pluck('id'))
+                ->where('status', '!=', 'storniert')
                 ->get();
             $provisionRows = $leaderboard
                 ->filter(fn($row) => $row['key'] !== '')

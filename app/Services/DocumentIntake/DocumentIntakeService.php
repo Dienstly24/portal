@@ -1318,12 +1318,25 @@ class DocumentIntakeService
             foreach (['malo', 'meter', 'customer_number'] as $merkmal) {
                 foreach ($energyContracts as $energyContract) {
                     $en = $energyContract->energyDetail;
+                    // MaLo-ID/Zaehlernummer bezeichnen die MARKTLOKATION (den
+                    // physischen Zaehler), nicht den Versorger - beim
+                    // Anbieterwechsel bleiben sie gleich. Ohne Versorger-Abgleich
+                    // wuerde die Bestaetigung eines ANDEREN Versorgers (z.B. E.ON
+                    // statt LichtBlick, gleiche MaLo) den Bestandsvertrag
+                    // ueberschreiben statt einen Wechsel als eigenen Vertrag
+                    // anzulegen - Bestand + Neugeschaefts-Provision gingen
+                    // verloren (Audit INTAKE-2). Gleiche Regel wie beim Fahrzeug
+                    // (FIN/Kennzeichen nur beim selben Versicherer) und wie bei
+                    // der Kundennummer. Der Auftrag->Vertrag-Abgleich desselben
+                    // Versorgers laeuft ueber findApplicationContractForConfirmation
+                    // (ebenfalls versorger-gebunden) und bleibt unberuehrt.
+                    $sameInsurer = $this->insurersLookAlike($energyContract->insurer, $ins['insurer'] ?? null);
                     $hit = match ($merkmal) {
-                        'malo' => $malo !== null && $malo === \App\Models\ContractEnergyDetail::normalizeMalo($en->malo_id),
-                        'meter' => $meter !== null && $meter === \App\Models\ContractEnergyDetail::normalizeMeter($en->meter_number),
+                        'malo' => $malo !== null && $malo === \App\Models\ContractEnergyDetail::normalizeMalo($en->malo_id) && $sameInsurer,
+                        'meter' => $meter !== null && $meter === \App\Models\ContractEnergyDetail::normalizeMeter($en->meter_number) && $sameInsurer,
                         default => $energyCustomerNumber !== ''
                             && strcasecmp(trim((string) $en->customer_number), $energyCustomerNumber) === 0
-                            && $this->insurersLookAlike($energyContract->insurer, $ins['insurer'] ?? null),
+                            && $sameInsurer,
                     };
                     if ($hit) {
                         return $energyContract;

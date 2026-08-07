@@ -152,6 +152,25 @@ class BannerController extends Controller
 
     public function destroy(Banner $banner)
     {
+        // Veroeffentlichte Social-Kanaele duerfen NIE ueber die FK-Kaskade
+        // mit-geloescht werden: ihre /s/{code}-Kurzlinks stehen dauerhaft in
+        // den Live-Beitraegen auf Facebook/Instagram und muessen klickbar
+        // bleiben ("veroeffentlichte Beitraege bleiben dauerhaft klickbar").
+        // Ein Banner-Loeschen wuerde short_code, external_post_id UND die
+        // Klickzahlen vernichten -> tote Links + Statistik weg (Audit BANNER-1).
+        // Zum Ausblenden bitte deaktivieren (toggle) statt loeschen.
+        $publishedChannels = $banner->socialPost
+            ? $banner->socialPost->channels()
+                ->where(function ($q) {
+                    $q->whereNotNull('published_at')->orWhereNotNull('external_post_id');
+                })->count()
+            : 0;
+        if ($publishedChannels > 0) {
+            return back()->with('error',
+                'Dieser Banner hat veroeffentlichte Social-Beitraege mit aktiven Tracking-Links. '
+                . 'Bitte deaktivieren statt loeschen - sonst gehen die Kurzlinks und Klickzahlen der Live-Beitraege verloren.');
+        }
+
         try { Storage::disk('public')->delete($banner->media_path); } catch (\Throwable $e) {}
         // Social-Formate mit wegraeumen (DB-Zeilen fallen per FK-Kaskade).
         app(\App\Services\Social\SocialFormatGenerator::class)->delete($banner);
