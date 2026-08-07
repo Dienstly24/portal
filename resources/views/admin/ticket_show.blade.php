@@ -159,6 +159,20 @@
 </div>
 @endif
 
+@if($ticket->consent_given_at)
+{{-- DSGVO-Einwilligungsnachweis (Art. 7 Abs. 1): war bisher gespeichert,
+     aber fuer das Team unsichtbar. Beleg jetzt einsehbar. --}}
+<div class="card" style="background:#F0FDF4;">
+    <div class="card-title">Einwilligungsnachweis (DSGVO)</div>
+    <p style="font-size:13px;color:var(--ink-soft);">
+        ✅ Zugestimmt am
+        {{ \Illuminate\Support\Carbon::parse($ticket->consent_given_at)->format('d.m.Y H:i') }}
+        @if($ticket->consent_ip) · IP {{ $ticket->consent_ip }}@endif
+        @if($ticket->consent_text)<br><span style="font-style:italic;">„{{ $ticket->consent_text }}"</span>@endif
+    </p>
+</div>
+@endif
+
 <div class="card">
     <div class="card-title">Beschreibung</div>
     <p style="font-size:14px;color:var(--ink-soft);line-height:1.7;white-space:pre-line;">{{ $ticket->description }}</p>

@@ -11,12 +11,15 @@ class Ticket extends Model {
     public $incrementing = false;
     protected $fillable = ['ticket_number','customer_id','assigned_to','type','status','subject','description',
         'priority','source','guest_name','guest_email','guest_phone',
+        'consent_given_at','consent_ip','consent_text',
         'first_response_at','resolved_at','closed_at','closed_by','due_at','reopened_count','rating','rating_comment'];
     protected $casts = [
         'first_response_at' => 'datetime',
         'resolved_at' => 'datetime',
         'closed_at' => 'datetime',
         'due_at' => 'datetime',
+        // DSGVO-Einwilligungszeitpunkt sauber als Carbon (Audit FLOW-3).
+        'consent_given_at' => 'datetime',
     ];
 
     /** Alle Workflow-Stati mit deutschen Labels (Beraterwelt). */

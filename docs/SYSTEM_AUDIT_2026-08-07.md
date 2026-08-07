@@ -273,8 +273,139 @@ eine Produktentscheidung. Nach Prioritaet:
   Admin und als Kunde funktioniert; keine Konsolenfehler, keine externen
   Requests.
 
-## Teststatus
+## Teststatus (Runde 1)
 
 `php artisan test`: **gruen** (1484 + 13 neue Regressionstests). Neue Dateien:
 `tests/Feature/AuthorizationHardeningTest.php`,
 `tests/Feature/LexofficeServiceFallbackTest.php`.
+
+---
+
+# Runde 2 - Vertiefter Funktions-/Flow-Audit (07.08.2026)
+
+Zweiter, tieferer Durchgang mit Schwerpunkt auf der Frage "funktioniert die
+Website und haengt sie richtig am System": Lead-/Anfragen-Wege, Tickets,
+Kundenservice, Kundenportal. Diesmal wurden die Tatebstaende zusaetzlich
+**live durchgespielt** (Headless-Browser: Kontaktformular, Leistungs-Anfrage,
+Hilfe-Formular echt abgeschickt) und in DB + Beraterwelt verifiziert.
+
+## Ergebnis Runde 2
+
+Die Website ist **korrekt mit dem System verdrahtet**: alle vier
+Lead-Eingaenge (`/kontakt`, `/leistungen/{slug}/anfrage`, `/api/website-contact`,
+`/api/website-inquiry`) legen ein `source=website`-Ticket an, loesen die
+Team-Glocke aus und landen im richtigen Posteingang (`/admin/inquiries` fuer
+Gast-Leads ohne Kundenbezug, `/admin/tickets` sobald ein Kunde per E-Mail
+gematcht wird - **kein** `source`-Filter schliesst Website-Tickets aus). Das
+Kundenportal ist **sauber gescopet** - der Portal-Audit fand **keine einzige
+IDOR** ueber alle `{id}`-Routen; sensible Aenderungen laufen ausnahmslos ueber
+den Nachweis-pflichtigen Change-Request-Flow.
+
+Der Live-Test bestaetigte: Kontaktformular -> Ticket + Einwilligung + Danke;
+Leistungs-Anfrage -> Ticket; Hilfe -> Ticket; alle drei mit Team-Glocke; alle
+drei in der Beraterwelt sichtbar; Einwilligungs-Karte im Ticket sichtbar.
+
+## In diesem PR behoben (Runde 2, mit Tests)
+
+### DSGVO-BUG - Website-Lead-Loeschung liess Gast-Daten dauerhaft in der DB
+`app/Console/Commands/PurgeWebsiteLeads.php`
+
+`tickets:purge-website-leads` rief `$ticket->delete()` - `Ticket` nutzt aber
+`SoftDeletes`, also blieb die Zeile mit `deleted_at` erhalten und trug
+Gast-Name/E-Mail/Telefon/IP/Freitext **fuer immer** weiter, unsichtbar in
+JEDER Oberflaeche (die Papierkorb-/Anfragen-Ansichten filtern sie weg). Der
+Docblock verspricht ausdruecklich "nach der Frist darf nichts uebrig bleiben".
+Der bestehende Test uebersah es, weil `Ticket::find()` Soft-Deletes ohnehin
+ausblendet. **Fix**: `forceDelete()` + physische Anhang-Dateien loeschen.
+Test: `WebsiteMergeTest::test_purge_hard_deletes_lead_leaving_no_soft_deleted_pii`.
+
+### FLOW - Leistungs-Anfrage speicherte keinen Einwilligungsnachweis
+`app/Http/Controllers/ServicePageController.php`
+
+Das Formular verlangt `consent => accepted`, speicherte aber - anders als das
+Kontaktformular - **kein** `consent_given_at/ip/text`. Leistungs-Leads hatten
+also keinen DSGVO-Beleg. **Fix**: Einwilligungsprotokoll (Zeitpunkt/IP/Text in
+der gezeigten Sprache) wie beim Kontaktformular. Test: `ServiceInquiryFlowTest`.
+
+### FLOW - Leistungs-Anfrage schickte dem Interessenten keine Bestaetigung
+`app/Http/Controllers/ServicePageController.php`
+
+Nur die Team-Mail ging raus; der Anfragende bekam - anders als bei `/kontakt` -
+**keine** Eingangsbestaetigung. **Fix**: `WebsiteInquiryConfirmationMail`
+(DE/AR) an die Lead-E-Mail. Test: `ServiceInquiryFlowTest`.
+
+### FLOW - Einwilligungsnachweis war gespeichert, aber fuer das Team unsichtbar
+`resources/views/admin/ticket_show.blade.php`, `app/Models/Ticket.php`
+
+Die `consent_*`-Spalten wurden vom Kontaktformular befuellt, aber **keine**
+Admin-Ansicht zeigte sie - die Art.-7-Evidenz war unsichtbar, obwohl die
+Datenschutzseite ihre Speicherung verspricht. **Fix**: Einwilligungs-Karte im
+Ticket (Zeitpunkt/IP/Text), `consent_given_at`-Cast + `consent_*` in
+`$fillable`. Live im Ticket verifiziert.
+
+### FLOW/Haertung - Portal-Dokumentanzeige ohne nosniff
+`app/Http/Controllers/PortalController.php`
+
+`documentView` lieferte inline ohne `X-Content-Type-Options: nosniff` (der
+Schwester-Weg `viewAttachment` setzt ihn). **Fix**: Header ergaenzt.
+
+### Robustheit - `tickets.type` von ENUM auf String
+`database/migrations/2026_08_07_120000_change_tickets_type_to_string.php`
+
+Dieselbe latente Falle wie bei `tasks.type` (die schon einmal zuschlug) und
+`tickets.status`: `tickets.type` war noch ein MySQL-ENUM. Ein neuer Typ-Wert
+haette auf MySQL still einen 500 geworfen, waehrend die SQLite-Tests gruen
+bleiben. `Ticket::TYPES` + `in:`-Validierung sind die Quelle der Wahrheit.
+**Fix**: additive Migration ENUM -> `string(30)`, Muster wie beim
+Status/`tasks.type`-Fix.
+
+### Kosmetik - Anfragen-Liste beschriftete Hilfe-Leads als "E-Mail"
+`resources/views/admin/inquiries.blade.php`
+
+Quelle jetzt korrekt je Wert (🌐 Website / 🆘 Hilfe / 📧 E-Mail).
+
+## Offen aus Runde 2 - Empfehlung fuer den Betreiber
+
+1. **DSGVO-Aufbewahrung (mittel):** nur `source=website`-Gast-Leads haben eine
+   Loeschfrist. Gast-Tickets aus `hilfe-formular` und `email` sammeln sich
+   unbegrenzt mit Gast-PII an. Empfehlung: analoge Purge-Frist (Frist ist eine
+   Betreiber-Entscheidung, daher hier nicht gesetzt).
+2. **Support-Rolle ohne Glocke bei Gast-Leads (niedrig):** `TicketNotifier`
+   benachrichtigt bei neuen Tickets nur admin/manager. Support-Nutzer sehen
+   `/admin/inquiries`, bekommen aber keine Glocke fuer Hilfe-/E-Mail-Gast-Leads
+   (Website-Leads haben ersatzweise die Team-Mail). `storeManual` (manuelle
+   Anfrage) loest bewusst gar keine Glocke aus.
+3. **Kein "Lead -> Kunde uebernehmen" (niedrig):** Website-/Hilfe-Gast-Leads
+   werden nicht automatisch mit einem spaeter angelegten Kunden verknuepft
+   (nur E-Mail-Quelle wird beim Bestaetigen rueckverknuepft). Ein
+   Uebernehmen-Button in `/admin/inquiries` waere hilfreich.
+4. **Portal-Erstlogin (niedrig, Design):** Start-Passwort = Geburtsdatum, kein
+   erzwungener Wechsel beim ersten Login (bereits in Runde 1 vermerkt).
+5. **Mini-UX:** Dashboard-"Vollstaendigkeit" prueft `health_insurance_company`,
+   das Profilformular bietet aber nur die KV-Nummer - der Hinweis "Krankenkasse
+   fehlt" ist fuer den Kunden nicht direkt ausraeumbar.
+
+## Verifiziert sauber (Runde 2)
+
+- **Kundenportal**: keine IDOR ueber alle `{id}`-Routen; jeder Datensatz wird
+  gegen den eigenen `Customer` aufgeloest; alle Uploads auf privater Disk;
+  sensible Aenderungen nur ueber Change-Request + Nachweis; identische
+  Domain-Schicht wie die Beraterwelt (gleiche `Contract::displayStatus()`,
+  `ChangeProofPolicy`) -> Kunde und Team sehen konsistenten Stand.
+- **Ticket-Lebenszyklus**: Erstellung -> Zuweisung -> Antwort -> Schluss mit
+  konsistenten Glocken; interne Notizen nie fuer Kunden sichtbar
+  (`is_internal=false` beim Antworten strukturell erzwungen); Anhaenge privat;
+  Rollen-Gating bei Loeschen/Endgueltig-Loeschen passt zur DSGVO-Regel;
+  `auto-close` ueberspringt wartende Tickets; Magic-Login signiert + rollen-
+  gehaertet.
+- **CSRF**: nur die zwei API-Endpunkte ausgenommen; die zwei In-Portal-Formulare
+  behalten CSRF + Throttle; `/api/website-inquiry` faellt bei fehlendem Token
+  geschlossen (401); `/api/website-contact` verwirft Spam mit HTTP 200 (nie 500).
+- **Bestaetigungs-Mails** zweisprachig, tabellenbasiert, ohne SVG, korrekte
+  Empfaenger.
+
+## Teststatus (Runde 2)
+
+`php artisan test`: **gruen** - 1489 Tests, 0 Fehler (+4 neue Tests gegenueber
+Runde 1). Neue Datei: `tests/Feature/ServiceInquiryFlowTest.php`; erweitert:
+`tests/Feature/WebsiteMergeTest.php`.
