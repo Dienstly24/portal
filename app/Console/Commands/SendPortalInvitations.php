@@ -76,6 +76,7 @@ class SendPortalInvitations extends Command
 
         $sent = 0;
         $skipped = 0;
+        $ohneGeburtsdatum = 0; // 'setlink'-Versand: kein Startpasswort moeglich
         foreach ($candidates as $user) {
             $customer = $user->customer;
             if ($customer === null || !$user->hasRealEmail()) {
@@ -83,8 +84,11 @@ class SendPortalInvitations extends Command
                 continue;
             }
             try {
-                $portal->sendInvitation($customer);
+                $mode = $portal->sendInvitation($customer);
                 $sent++;
+                if ($mode === 'setlink') {
+                    $ohneGeburtsdatum++;
+                }
             } catch (\Throwable $e) {
                 $skipped++;
                 Log::warning('Portal-Einladung fehlgeschlagen (' . $user->email . '): ' . $e->getMessage());
@@ -97,11 +101,14 @@ class SendPortalInvitations extends Command
                 'action' => 'portal_invitations_batch',
                 'entity_type' => 'user',
                 'entity_id' => null,
-                'meta' => json_encode(['sent' => $sent, 'skipped' => $skipped, 'cap' => $cap], JSON_UNESCAPED_UNICODE),
+                'meta' => json_encode(['sent' => $sent, 'skipped' => $skipped, 'ohne_geburtsdatum' => $ohneGeburtsdatum, 'cap' => $cap], JSON_UNESCAPED_UNICODE),
             ]);
         }
 
         $this->info("$sent Einladung(en) versendet, $skipped uebersprungen (Budget $cap, heute gesamt " . ($sentToday + $sent) . ').');
+        if ($ohneGeburtsdatum > 0) {
+            $this->warn("$ohneGeburtsdatum davon OHNE Geburtsdatum (nur Passwort-Link statt Startpasswort) - Geburtsdaten ergaenzen, damit die Startpasswort-Regel greift.");
+        }
         return self::SUCCESS;
     }
 }

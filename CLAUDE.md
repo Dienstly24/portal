@@ -61,6 +61,18 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   CID-Inline via `{{ isset($message) ? $message->embed(public_path(...)) : url(...) }}`.
 - **Willkommens-Mail** = `CustomerWelcomeMail` + `customer_welcome.blade.php`
   (kompakt, ein Bildschirm). Enthält Magic-Login (90 Tage) und Hilfe-Button.
+- **Portal-Einladung & Startpasswort** (`PortalAccessService`, Lehre
+  07.08.2026): Startpasswort = GEBURTSDATUM (TT.MM.JJJJ). OHNE Geburtsdatum
+  faellt der Versand auf einen zeitlich begrenzten Passwort-Setzen-Link
+  zurueck (`setlink`) - viele Kunden aktivieren so nie. Deshalb warnt das
+  System ueberall, wo eingeladen wird, solange das Geburtsdatum fehlt
+  (Kundenakte-Box + Confirm, Einladungs-/Reset-Flash als `warning`,
+  Neuanlage, E-Mail-Nachtrag, Batch-Bericht `portal:send-invitations`):
+  zuerst Geburtsdatum ergaenzen, dann einladen. `sendInvitation()` liefert
+  den Modus zurueck. Anzeige EHRLICH halten: `portal_password_set_at` setzt
+  das SYSTEM beim Versand (Zeile "Passwort eingerichtet", Badge "Zugang
+  eingerichtet - noch kein Login") - aktiv ist ein Kunde erst ab "Erster
+  Login". Tests: `PortalAccountManagementTest`.
 - **Hilfe-Formular**: `SupportFormController` → `/hilfe`. Aus der Mail mit
   verschlüsseltem Kunden-Token vorbefüllt; Absenden legt automatisch ein
   Ticket an, verknüpft mit der Kundenakte.

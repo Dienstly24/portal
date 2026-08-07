@@ -1011,7 +1011,14 @@ class AdminController extends Controller
                         new \App\Mail\CustomerWelcomeMail($customer, 'manual', $request->password)
                     );
                 } else {
-                    app(\App\Services\Portal\PortalAccessService::class)->sendInvitation($customer, auth()->id());
+                    $mode = app(\App\Services\Portal\PortalAccessService::class)->sendInvitation($customer, auth()->id());
+                    if ($mode === 'setlink') {
+                        // Ohne Geburtsdatum gibt es KEIN Startpasswort - nur einen
+                        // zeitlich begrenzten Link. Ohne Hinweis wirkt die Einladung
+                        // erfolgreich, der Kunde kann aber oft nie aktivieren
+                        // (Betreiber-Meldung 07.08.2026).
+                        session()->flash('warning', 'Kein Geburtsdatum hinterlegt: Die Einladung enthaelt statt des Startpassworts nur einen zeitlich begrenzten Passwort-Link. Bitte Geburtsdatum ergaenzen und die Einladung erneut senden.');
+                    }
                 }
             } catch (\Throwable $e) {
                 \Log::warning('Welcome mail failed: ' . $e->getMessage());
@@ -1160,7 +1167,10 @@ class AdminController extends Controller
                     && $user->first_login_at === null) {
                     // Noch kein Portal-Zugang angestossen -> Standard-Einladung
                     // (Startpasswort = Geburtsdatum bzw. Passwort-Setzen-Link).
-                    app(\App\Services\Portal\PortalAccessService::class)->sendInvitation($customer, auth()->id());
+                    $mode = app(\App\Services\Portal\PortalAccessService::class)->sendInvitation($customer, auth()->id());
+                    if ($mode === 'setlink') {
+                        session()->flash('warning', 'Kein Geburtsdatum hinterlegt: Die Einladung enthaelt statt des Startpassworts nur einen zeitlich begrenzten Passwort-Link. Bitte Geburtsdatum ergaenzen und die Einladung erneut senden.');
+                    }
                     $invited = true;
                 }
             } catch (\Throwable $e) {

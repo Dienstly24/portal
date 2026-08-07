@@ -441,6 +441,7 @@ table tr:hover td{background:#EDEAE0;}
     <div class="main-inner">
         @if(session('success'))<div class="alert alert-success">✓ {{ session('success') }}</div>@endif
         @if(session('error'))<div class="alert alert-error">✗ {{ session('error') }}</div>@endif
+        @if(session('warning'))<div class="alert alert-warning">⚠ {{ session('warning') }}</div>@endif
         @yield('content')
     </div>
 </div>

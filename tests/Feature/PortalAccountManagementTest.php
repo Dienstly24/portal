@@ -331,6 +331,72 @@ class PortalAccountManagementTest extends TestCase
         $this->assertFalse((bool) $customer->user->fresh()->is_active);
     }
 
+    /**
+     * Betreiber-Meldung 07.08.2026: Einladung ohne Geburtsdatum sah aus wie
+     * ein Erfolg, der Kunde konnte den Zugang aber nie aktivieren (kein
+     * Startpasswort, nur ein ablaufender Link) - niemand wurde gewarnt.
+     */
+    public function test_invite_without_birthdate_flashes_warning_instead_of_plain_success(): void
+    {
+        $customer = $this->customer([], ['birth_date' => null]);
+
+        $response = $this->actingAs($this->admin)->post(route('admin.customer.portal.invite', $customer->id));
+
+        $response->assertSessionHas('warning');
+        $response->assertSessionMissing('success');
+        $this->assertStringContainsString('KEIN Geburtsdatum', session('warning'));
+        $this->assertStringContainsString('erneut senden', session('warning'));
+        // Die Mail geht trotzdem raus (Set-Link-Fallback bleibt erlaubt).
+        Mail::assertSent(CustomerWelcomeMail::class, fn ($m) => $m->mode === 'setlink');
+    }
+
+    public function test_invite_with_birthdate_success_names_the_startpassword_rule(): void
+    {
+        $customer = $this->customer();
+
+        $this->actingAs($this->admin)->post(route('admin.customer.portal.invite', $customer->id))
+            ->assertSessionHas('success');
+
+        $this->assertStringContainsString('Startpasswort ist das Geburtsdatum', session('success'));
+    }
+
+    public function test_portal_reset_without_birthdate_flashes_warning(): void
+    {
+        $customer = $this->customer([], ['birth_date' => null]);
+
+        $this->actingAs($this->admin)->post(route('admin.customer.portal.reset', $customer->id))
+            ->assertSessionHas('warning');
+
+        $this->assertStringContainsString('KEIN Geburtsdatum', session('warning'));
+    }
+
+    public function test_customer_page_warns_when_birthdate_is_missing(): void
+    {
+        $ohne = $this->customer([], ['birth_date' => null]);
+        $mit = $this->customer(['email' => 'mit-datum@kunde.de']);
+
+        $this->actingAs($this->admin)->get(route('admin.customer', $ohne->id))
+            ->assertOk()
+            ->assertSee('Kein Geburtsdatum hinterlegt', false)
+            ->assertSee('Geburtsdatum jetzt ergänzen', false);
+
+        $this->actingAs($this->admin)->get(route('admin.customer', $mit->id))
+            ->assertOk()
+            ->assertDontSee('Kein Geburtsdatum hinterlegt');
+    }
+
+    public function test_new_customer_with_email_but_without_birthdate_flashes_warning(): void
+    {
+        $this->actingAs($this->admin)->post(route('admin.customers.store'), [
+            'first_name' => 'Ohne', 'last_name' => 'Datum',
+            'email' => 'ohne-datum@neu.de',
+        ])->assertRedirect();
+
+        // Einladung ging als Set-Link raus -> Mitarbeiter sieht die Warnung.
+        $this->assertStringContainsString('Kein Geburtsdatum hinterlegt', session('warning'));
+        Mail::assertSent(CustomerWelcomeMail::class, fn ($m) => $m->mode === 'setlink');
+    }
+
     public function test_employee_cannot_use_portal_controls(): void
     {
         $employee = User::factory()->create(['role' => 'employee']);
