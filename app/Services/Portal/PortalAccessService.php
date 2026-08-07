@@ -40,9 +40,16 @@ class PortalAccessService
      * Bewusstes Zuruecksetzen laeuft ueber resetPortal(), das den
      * Timestamp vorher leert.
      *
+     * @return string Versandmodus: 'birthdate' (Startpasswort = Geburtsdatum)
+     *         oder 'setlink' (KEIN Geburtsdatum hinterlegt - nur zeitlich
+     *         begrenzter Passwort-Setzen-Link). Der Aufrufer soll bei
+     *         'setlink' warnen: ohne Geburtsdatum gilt die Startpasswort-
+     *         Regel nicht, und der Link laeuft ab (Betreiber-Meldung
+     *         07.08.2026: Einladung sah erfolgreich aus, der Kunde konnte
+     *         den Zugang aber nie aktivieren).
      * @throws \RuntimeException wenn keine echte E-Mail vorliegt
      */
-    public function sendInvitation(Customer $customer, ?int $actorId = null): void
+    public function sendInvitation(Customer $customer, ?int $actorId = null): string
     {
         $user = $customer->user;
         if ($user === null || !$user->hasRealEmail()) {
@@ -88,6 +95,8 @@ class PortalAccessService
             'entity_id' => $customer->id,
             'meta' => json_encode(['mode' => $mode, 'email' => $user->email], JSON_UNESCAPED_UNICODE),
         ]);
+
+        return $mode;
     }
 
     /**
@@ -154,8 +163,10 @@ class PortalAccessService
      * Portal zurücksetzen: neues Startpasswort (Geburtsdatum) bzw.
      * Set-Link, Login-Historie des Portals bleibt erhalten; der Kunde
      * bekommt die Einladung erneut.
+     *
+     * @return string Versandmodus wie sendInvitation() ('birthdate'/'setlink').
      */
-    public function resetPortal(Customer $customer, ?int $actorId = null): void
+    public function resetPortal(Customer $customer, ?int $actorId = null): string
     {
         $user = $customer->user;
         if ($user === null || !$user->hasRealEmail()) {
@@ -163,7 +174,7 @@ class PortalAccessService
         }
 
         $user->forceFill(['portal_password_set_at' => null])->save();
-        $this->sendInvitation($customer, $actorId);
+        $mode = $this->sendInvitation($customer, $actorId);
 
         ActivityLog::create([
             'user_id' => $actorId,
@@ -172,6 +183,8 @@ class PortalAccessService
             'entity_id' => $customer->id,
             'meta' => json_encode(['email' => $user->email], JSON_UNESCAPED_UNICODE),
         ]);
+
+        return $mode;
     }
 
     /** Portal-Login aktivieren/deaktivieren (users.is_active). */

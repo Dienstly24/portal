@@ -53,15 +53,28 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
             </div>
             <div style="display:grid;grid-template-columns:auto auto;gap:2px 18px;font-size:12.5px;color:var(--ink-soft);">
                 <span>Einladung gesendet:</span><strong>{{ $portalUser?->invitation_sent_at?->format('d.m.Y H:i') ?? '—' }}</strong>
-                <span>Account aktiviert:</span><strong>{{ $portalUser?->portal_password_set_at?->format('d.m.Y H:i') ?? '—' }}</strong>
+                {{-- Bewusst "Passwort eingerichtet" statt "Account aktiviert": das
+                     Startpasswort setzt das SYSTEM beim Einladungsversand - ob der
+                     Kunde aktiv wurde, zeigt erst "Erster Login". --}}
+                <span>Passwort eingerichtet:</span><strong>{{ $portalUser?->portal_password_set_at?->format('d.m.Y H:i') ?? '—' }}</strong>
                 <span>Erster Login:</span><strong>{{ $portalUser?->first_login_at?->format('d.m.Y H:i') ?? '—' }}</strong>
                 <span>Letzter Login:</span><strong>{{ $portalUser?->last_login_at?->format('d.m.Y H:i') ?? '—' }}</strong>
             </div>
+            @if(!$customer->birth_date)
+            <div style="margin-top:10px;background:#FEF3C7;border:1px solid #F0E0B0;border-radius:8px;padding:9px 12px;font-size:12.5px;color:#92400E;line-height:1.55;max-width:520px;">
+                ⚠ <strong>Kein Geburtsdatum hinterlegt:</strong> Die Einladung enthält dann <strong>kein Startpasswort</strong>
+                (Regel: Geburtsdatum TT.MM.JJJJ), sondern nur einen zeitlich begrenzten Link zum Passwort-Setzen –
+                viele Kunden aktivieren den Zugang so nie.
+                <a href="{{ route('admin.customer.edit', $customer->id) }}" style="color:#92400E;font-weight:700;">Geburtsdatum jetzt ergänzen →</a>
+            </div>
+            @endif
         </div>
         @if(auth()->user()->role === 'admin')
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
             <form method="POST" action="{{ route('admin.customer.portal.invite', $customer->id) }}"
-                onsubmit="return confirm('Einladung mit Startpasswort (Geburtsdatum TT.MM.JJJJ) bzw. Passwort-Link an den Kunden senden?');">
+                onsubmit="return confirm('{{ $customer->birth_date
+                    ? 'Einladung mit Startpasswort (Geburtsdatum TT.MM.JJJJ) an den Kunden senden?'
+                    : 'ACHTUNG: Kein Geburtsdatum hinterlegt! Die Einladung enthaelt dann KEIN Startpasswort, nur einen zeitlich begrenzten Passwort-Link. Besser zuerst das Geburtsdatum ergaenzen (Bearbeiten). Trotzdem jetzt senden?' }}');">
                 @csrf<button type="submit" class="btn btn-gold btn-sm">📧 Einladung senden</button>
             </form>
             <form method="POST" action="{{ route('admin.customer.portal.reset_link', $customer->id) }}">

@@ -115,7 +115,10 @@ class Customer extends Model {
             return ['key' => 'erster_login', 'label' => 'Aktiv – Login erfolgt', 'color' => '#3B7A57', 'bg' => '#E4F0E7'];
         }
         if ($user->portal_password_set_at !== null) {
-            return ['key' => 'aktiviert', 'label' => 'Aktiviert – noch kein Login', 'color' => '#185FA5', 'bg' => '#E6F1FB'];
+            // Bewusst NICHT "Aktiviert": das Startpasswort richtet das SYSTEM
+            // beim Einladungsversand ein - aktiv wird der Kunde erst mit dem
+            // ersten Login (Betreiber-Missverstaendnis 07.08.2026).
+            return ['key' => 'aktiviert', 'label' => 'Zugang eingerichtet – noch kein Login', 'color' => '#185FA5', 'bg' => '#E6F1FB'];
         }
         if ($user->invitation_sent_at !== null) {
             return ['key' => 'einladung_gesendet', 'label' => 'Einladung gesendet', 'color' => '#92400E', 'bg' => '#FEF3C7'];

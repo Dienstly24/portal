@@ -61,6 +61,18 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   CID-Inline via `{{ isset($message) ? $message->embed(public_path(...)) : url(...) }}`.
 - **Willkommens-Mail** = `CustomerWelcomeMail` + `customer_welcome.blade.php`
   (kompakt, ein Bildschirm). Enthält Magic-Login (90 Tage) und Hilfe-Button.
+- **Portal-Einladung & Startpasswort** (`PortalAccessService`, Lehre
+  07.08.2026): Startpasswort = GEBURTSDATUM (TT.MM.JJJJ). OHNE Geburtsdatum
+  faellt der Versand auf einen zeitlich begrenzten Passwort-Setzen-Link
+  zurueck (`setlink`) - viele Kunden aktivieren so nie. Deshalb warnt das
+  System ueberall, wo eingeladen wird, solange das Geburtsdatum fehlt
+  (Kundenakte-Box + Confirm, Einladungs-/Reset-Flash als `warning`,
+  Neuanlage, E-Mail-Nachtrag, Batch-Bericht `portal:send-invitations`):
+  zuerst Geburtsdatum ergaenzen, dann einladen. `sendInvitation()` liefert
+  den Modus zurueck. Anzeige EHRLICH halten: `portal_password_set_at` setzt
+  das SYSTEM beim Versand (Zeile "Passwort eingerichtet", Badge "Zugang
+  eingerichtet - noch kein Login") - aktiv ist ein Kunde erst ab "Erster
+  Login". Tests: `PortalAccountManagementTest`.
 - **Hilfe-Formular**: `SupportFormController` → `/hilfe`. Aus der Mail mit
   verschlüsseltem Kunden-Token vorbefüllt; Absenden legt automatisch ein
   Ticket an, verknüpft mit der Kundenakte.
@@ -579,6 +591,25 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   „Zählerstand & Verbrauch" (Wert und/oder Handy-Foto melden) und
   Energie-Cockpit auf der Vertrags-Bearbeiten-Seite; Loeschen einer
   Ablesung nur admin/manager. Tests: `MeterReadingTest`.
+- **Kunden-Zusammenfuehrung** (`CustomerMergeService`, Lehre 06.08.2026 -
+  gemeldeter Datenverlust nach Duplikat-Merge): Der Merge haengt JEDE Tabelle
+  mit customer_id um (Schema-Abgleich) PLUS die Sonderfaelle, die daran
+  vorbeilaufen: `customer_relationships` (customer_a_id/customer_b_id -
+  Familie/Haushalt; Paar neu normalisiert a<b, Selbst-Paar entfaellt,
+  Kollisionen dedupliziert - sonst reisst die FK-Kaskade die
+  Familien-Verknuepfungen mit) und der PORTAL-ZUGANG: Name/Login-E-Mail
+  liegen am USER, nicht am Kunden. Der besser gepflegte Account ueberlebt
+  IMMER (echte E-Mail schlaegt `import-...@dienstly24.internal`-Platzhalter,
+  dann Passwort gesetzt/Logins/Einladung), egal in welcher Richtung
+  zusammengefuehrt wird - der Hauptkunde uebernimmt notfalls den User des
+  Duplikats (inkl. dessen Portal-Sprache). Die Login-Adresse des
+  unterlegenen Accounts wandert nach email2 (Platzhalter nie); geloescht
+  wird der unterlegene User nur, wenn KEINE Kundenakte mehr auf ihn zeigt
+  (customers.user_id kaskadiert!). Marketing-Abmeldung des Duplikats wirkt
+  fort (DSGVO-Opt-out geht nie verloren), `last_contact` nimmt den neueren
+  Stand. Bulk-/Auto-Merge vereint weiterhin in den AELTESTEN Datensatz
+  (Kundennummern-Kontinuitaet) - der Portal-Account wandert dank Adoption
+  trotzdem mit. Tests: `CustomerMergeDataPreservationTest`.
 - **Neukunden-Bericht + Vermittler-Provisionen** (Betreiber-Vorgabe
   25.07.2026): `/admin/reports/neukunden` (`ReportController::newCustomers`,
   Tab auf der Berichte-Seite) zeigt die Neukunden des Monats (blaetterbar,
