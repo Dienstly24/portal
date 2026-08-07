@@ -16,11 +16,15 @@ class LexofficeService {
     }
 
     private function http() {
+        // throw: false - sonst wirft retry() nach dem letzten Fehlversuch eine
+        // RequestException, bevor die Aufrufer $r->successful() pruefen koennen.
+        // Folge waere HTTP 500 auf jeder Lexoffice-Seite bei ungueltigem Key
+        // oder API-Ausfall statt des vorgesehenen leeren Fallbacks (Audit INT-3).
         return Http::withHeaders([
             'Authorization' => 'Bearer ' . $this->apiKey,
             'Accept' => 'application/json',
             'Content-Type' => 'application/json',
-        ])->retry(2, 500);
+        ])->retry(2, 500, throw: false);
     }
 
     /**

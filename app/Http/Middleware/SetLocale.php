@@ -26,9 +26,12 @@ class SetLocale
 
         $locale = $locale ?: $request->session()->get('locale');
 
-        if (in_array($locale, ['de', 'ar'], true)) {
-            app()->setLocale($locale);
-        }
+        // Fallback Deutsch: ohne aktive de/ar-Wahl blieb die App bisher auf
+        // APP_LOCALE=en stehen - oeffentliche deutsche Seiten (Login, Website,
+        // Leistungsseiten) lieferten dann <html lang="en"> und ein Google
+        // widersprechendes hreflang-Signal (Audit I18N-1). Jetzt immer eine
+        // der unterstuetzten Sprachen setzen.
+        app()->setLocale(in_array($locale, ['de', 'ar'], true) ? $locale : 'de');
 
         return $next($request);
     }

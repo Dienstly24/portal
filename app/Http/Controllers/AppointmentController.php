@@ -12,12 +12,16 @@ class AppointmentController extends Controller
     use ScopesCustomerAccess;
 
     public function index() {
+        $visible = $this->visibleCustomerIds();
         $appointments = Appointment::with(['customer.user','assignedTo'])
             ->where('starts_at', '>=', now()->startOfDay())
             ->orderBy('starts_at')
-            ->when($this->visibleCustomerIds() !== null, fn($q) => $q->whereIn('customer_id', $this->visibleCustomerIds()))->get();
+            ->when($visible !== null, fn($q) => $q->whereIn('customer_id', $visible))->get();
+        // Portfolio-Scope auch auf die Vergangenheitsliste (Audit SEC-P2):
+        // sonst sieht ein Mitarbeiter Titel/Zeiten/Kundennamen fremder Termine.
         $past = Appointment::with(['customer.user','assignedTo'])
             ->where('starts_at', '<', now()->startOfDay())
+            ->when($visible !== null, fn($q) => $q->whereIn('customer_id', $visible))
             ->orderByDesc('starts_at')
             ->take(20)
             ->get();
@@ -26,11 +30,15 @@ class AppointmentController extends Controller
 
     public function store(Request $request) {
         $request->validate([
-            'customer_id' => 'required',
+            'customer_id' => 'required|exists:customers,id',
             'title' => 'required',
             'starts_at' => 'required|date',
             'ends_at' => 'required|date|after:starts_at',
         ]);
+        // Nur fuer Kunden im eigenen Portfolio anlegen (Audit SEC-P2) - sonst
+        // koennte ueber eine fremde customer_id ein Termin samt Timeline-Eintrag
+        // in eine fremde Kundenakte geschrieben werden.
+        abort_unless(auth()->user()->canAccessCustomer($request->customer_id), 403);
         $appointment = Appointment::create([
             'customer_id' => $request->customer_id,
             'assigned_to' => $request->assigned_to ?? auth()->id(),
@@ -52,7 +60,10 @@ class AppointmentController extends Controller
 
     public function update(Request $request, $id) {
         $request->validate(['status' => 'required|in:scheduled,completed,cancelled']);
-        Appointment::findOrFail($id)->update(['status' => $request->status]);
+        $appointment = Appointment::findOrFail($id);
+        // Nur Termine eigener Kunden aendern (Audit SEC-P2).
+        abort_unless(auth()->user()->canAccessCustomer($appointment->customer_id), 403);
+        $appointment->update(['status' => $request->status]);
         return back()->with('success', 'Termin aktualisiert.');
     }
 }

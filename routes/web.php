@@ -526,7 +526,7 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
 
     // Mitarbeiter
     Route::get('/employees', [EmployeeController::class, 'index'])->name('employees')->middleware('role:admin,manager');
-    Route::get('/employees/customer-search', [EmployeeController::class, 'customerSearch'])->name('employees.customer-search');
+    Route::get('/employees/customer-search', [EmployeeController::class, 'customerSearch'])->name('employees.customer-search')->middleware('role:admin,manager');
     Route::get('/employees/create', [EmployeeController::class, 'create'])->name('employees.create')->middleware('role:admin,manager');
     Route::post('/employees', [EmployeeController::class, 'store'])->name('employees.store')->middleware('role:admin,manager');
     Route::get('/employees/{id}/edit', [EmployeeController::class, 'edit'])->name('employees.edit')->middleware('role:admin,manager');

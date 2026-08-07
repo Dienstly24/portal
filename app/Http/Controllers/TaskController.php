@@ -98,7 +98,9 @@ class TaskController extends Controller
         }
 
         // Kunden-Chip fuer aktiven customer-Filter (Deep-Link aus Kundenakte).
-        $filterCustomer = $request->filled('customer')
+        // Nur im eigenen Portfolio-Scope, sonst leakt ?customer=<uuid> den
+        // Namen eines fremden Kunden (Audit SEC-P2).
+        $filterCustomer = ($request->filled('customer') && $user->canAccessCustomer($request->get('customer')))
             ? Customer::with('user')->find($request->get('customer')) : null;
 
         return view('admin.tasks', [
@@ -161,8 +163,23 @@ class TaskController extends Controller
         return back()->with('success', $msg);
     }
 
+    /**
+     * Darf der angemeldete Nutzer diese Aufgabe bearbeiten/loeschen?
+     * Verwaltung (admin/manager) immer; sonst nur eigene Aufgaben
+     * (zugewiesen oder selbst erstellt) bzw. Aufgaben zu einem Kunden im
+     * eigenen Portfolio - deckungsgleich mit der Sichtbarkeit in index().
+     */
+    private function authorizeTask(Task $task): void {
+        $user = auth()->user();
+        if (in_array($user->role, ['admin', 'manager'], true)) return;
+        $own = $task->assigned_to === $user->id || $task->created_by === $user->id;
+        $portfolio = $task->customer_id && $user->canAccessCustomer($task->customer_id);
+        abort_unless($own || $portfolio, 403);
+    }
+
     public function update(Request $request, $id) {
         $task = Task::findOrFail($id);
+        $this->authorizeTask($task);
 
         // 1) Schnell-Verschieben aus der Liste (+1 Tag ... +1 Monat).
         if ($request->filled('postpone_days')) {
@@ -198,7 +215,9 @@ class TaskController extends Controller
     }
 
     public function destroy($id) {
-        Task::findOrFail($id)->delete();
+        $task = Task::findOrFail($id);
+        $this->authorizeTask($task);
+        $task->delete();
         return back()->with('success', 'Aufgabe gelöscht.');
     }
 
