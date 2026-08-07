@@ -92,6 +92,14 @@ class ServicePageController extends Controller
             $description .= "\n\n--- Angaben ---\n" . implode("\n", $extraLines);
         }
 
+        // DSGVO-Einwilligungsprotokoll wie beim Kontaktformular: das Formular
+        // verlangt 'consent' => accepted, also muss auch hier der Nachweis
+        // (Zeitpunkt/IP/Text in der gezeigten Sprache) am Ticket gespeichert
+        // werden - sonst fehlt Leistungs-Leads der Beleg (Audit FLOW-1).
+        $consentText = app()->getLocale() === 'ar'
+            ? 'أوافق على معالجة بياناتي لغرض الرد على طلبي.'
+            : 'Ich stimme der Verarbeitung meiner Angaben zur Bearbeitung meiner Anfrage zu.';
+
         $ticket = Ticket::forceCreate([
             'id' => Str::uuid(),
             'customer_id' => $customer?->id,
@@ -104,6 +112,9 @@ class ServicePageController extends Controller
             'guest_name' => $data['name'],
             'guest_email' => $customer ? null : ($data['email'] ?? null),
             'guest_phone' => $data['phone'] ?? null,
+            'consent_given_at' => now(),
+            'consent_ip' => $request->ip(),
+            'consent_text' => $consentText,
         ]);
 
         \App\Services\TicketNotifier::notifyNewTicket($ticket);
@@ -115,6 +126,18 @@ class ServicePageController extends Controller
                     ->send(new \App\Mail\SupportInquiryMail($ticket, $customer?->customer_number));
             } catch (\Throwable $e) {
                 \Log::warning('Service-Anfrage-Mail fehlgeschlagen: ' . $e->getMessage());
+            }
+        }
+
+        // Eingangsbestaetigung an den Interessenten - wie beim Kontaktformular
+        // (bisher bekam ein Leistungs-Anfragender keine Rueckmeldung, Audit
+        // FLOW-2). Nur bei gueltiger E-Mail und in der gezeigten Sprache.
+        if (!empty($data['email'])) {
+            try {
+                \Illuminate\Support\Facades\Mail::to($data['email'])
+                    ->send(new \App\Mail\WebsiteInquiryConfirmationMail($ticket, app()->getLocale() === 'ar' ? 'ar' : 'de'));
+            } catch (\Throwable $e) {
+                \Log::warning('Service-Anfrage Bestaetigungs-Mail fehlgeschlagen: ' . $e->getMessage());
             }
         }
 

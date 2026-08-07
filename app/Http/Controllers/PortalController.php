@@ -466,8 +466,10 @@ class PortalController extends Controller
         $disk = $doc->disk ?: 'public';
         abort_unless(\Illuminate\Support\Facades\Storage::disk($disk)->exists($doc->file_path), 404);
         // Content-Disposition: inline -> Browser zeigt die Datei an, statt sie
-        // herunterzuladen. Nur fuer den Kunden selbst zugaenglich.
-        return \Illuminate\Support\Facades\Storage::disk($disk)->response($doc->file_path, $doc->file_name);
+        // herunterzuladen. Nur fuer den Kunden selbst zugaenglich. nosniff wie
+        // beim Nachrichten-Anhang (Audit FLOW-4, Konsistenz-Haertung).
+        return \Illuminate\Support\Facades\Storage::disk($disk)
+            ->response($doc->file_path, $doc->file_name, ['X-Content-Type-Options' => 'nosniff']);
     }
 
     /**

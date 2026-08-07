@@ -246,6 +246,24 @@ class WebsiteMergeTest extends TestCase
         $this->assertNotNull(Ticket::find($fresh->id));
     }
 
+    public function test_purge_hard_deletes_lead_leaving_no_soft_deleted_pii(): void
+    {
+        $old = Ticket::forceCreate([
+            'id' => \Illuminate\Support\Str::uuid(), 'source' => 'website', 'type' => 'offer',
+            'priority' => 'mittel', 'status' => 'open', 'subject' => 'Alt',
+            'description' => 'Vertrauliche Nachricht', 'guest_name' => 'Alt Gast',
+            'guest_email' => 'alt@example.com', 'consent_ip' => '203.0.113.9',
+        ]);
+        Ticket::where('id', $old->id)->update(['created_at' => now()->subMonths(7)]);
+
+        $this->artisan('tickets:purge-website-leads')->assertSuccessful();
+
+        // Echte Loeschung: der Datensatz darf auch als Soft-Delete NICHT
+        // uebrig bleiben (DSGVO - sonst bleibt Gast-PII fuer immer in der DB).
+        $this->assertNull(Ticket::withTrashed()->find($old->id));
+        $this->assertDatabaseMissing('tickets', ['id' => $old->id]);
+    }
+
     // ---------- SEO ----------
 
     public function test_robots_txt_depends_on_host(): void

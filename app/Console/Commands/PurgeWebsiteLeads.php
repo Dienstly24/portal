@@ -44,6 +44,10 @@ class PurgeWebsiteLeads extends Command
                 // nach der Frist darf nichts von der Anfrage uebrig bleiben.
                 foreach ($ticket->attachments as $attachment) {
                     try {
+                        // Erst die physische Datei, dann die Zeile - TicketAttachment
+                        // hat keinen deleting-Hook, sonst bleibt die Datei verwaist.
+                        \Illuminate\Support\Facades\Storage::disk($attachment->disk ?? 'public')
+                            ->delete($attachment->file_path);
                         $attachment->delete();
                     } catch (\Throwable $e) {
                         \Log::warning('Website-Lead-Purge: Anhang nicht loeschbar: ' . $e->getMessage());
@@ -51,7 +55,12 @@ class PurgeWebsiteLeads extends Command
                 }
                 $ticket->messages()->delete();
                 $ticket->events()->delete();
-                $ticket->delete();
+                // forceDelete statt delete: Ticket nutzt SoftDeletes - ein
+                // reiner delete() liesse die Gast-PII (Name/E-Mail/Telefon/IP/
+                // Nachricht) mit gesetztem deleted_at dauerhaft in der DB und in
+                // KEINER Oberflaeche sichtbar. DSGVO-Loeschfrist erfordert echte
+                // Loeschung (Audit FLOW-5).
+                $ticket->forceDelete();
                 $deleted++;
             }
         });
