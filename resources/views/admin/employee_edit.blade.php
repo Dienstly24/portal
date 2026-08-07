@@ -57,7 +57,7 @@
         return ['id' => $c->id, 'name' => $c->user?->name, 'number' => $c->customer_number];
     })->values();
 @endphp
-<script type="application/json" id="preselectedData">{!! json_encode($preselectedCustomers) !!}</script>
+<script type="application/json" id="preselectedData">@json($preselectedCustomers)</script>
 <input type="hidden" name="assigned_customers_present" value="1">
 <div id="assignBox">
     <div style="font-size:13px;color:var(--ink-soft);margin-bottom:10px;">Aktuell zugewiesen: <strong id="assignCount">{{ count($assignedIds) }}</strong> Kunden</div>

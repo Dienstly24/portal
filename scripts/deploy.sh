@@ -54,6 +54,14 @@ php artisan tickets:attachments-private || true
 #     gepflegten Inhalte).
 php artisan db:seed --class=ServicePageSeeder --force || true
 
+# 4d) Storage-Symlink public/storage -> storage/app/public sicherstellen.
+#     Ohne ihn liefern die relativen /storage/...-URLs (Medienbibliothek,
+#     Leistungsseiten-Bilder, Marken-Assets) auf einem frisch ausgecheckten
+#     public/ einen 404. Idempotent: existiert der Link bereits, passiert
+#     nichts; ein evtl. fehlender Link wird angelegt. Deploy bricht hier
+#     nicht ab (nur Hinweis), falls z. B. ein echtes Verzeichnis im Weg liegt.
+php artisan storage:link || true
+
 # 5) Produktions-Caches neu aufbauen.
 php artisan config:cache
 php artisan route:cache

@@ -27,6 +27,10 @@ class EmployeeController extends Controller
             'name' => 'required',
             'email' => 'required|email|unique:users',
             'password' => 'required|min:8',
+            // access_level ist eine ENUM-Spalte - ohne Whitelist wuerde ein
+            // abweichender Wert unter MySQL strict einen 500 ausloesen
+            // (update() validiert bereits genauso, Audit DATA-P2).
+            'access_level' => 'nullable|in:full,limited',
         ]);
 
         $plainPassword = $request->password;
@@ -287,7 +291,12 @@ class EmployeeController extends Controller
         $employee = User::findOrFail($id);
         if ($employee->id === auth()->id()) abort(403, 'Eigenes Konto kann nicht deaktiviert werden.');
         if ($employee->role === 'admin' && auth()->user()->role !== 'admin') abort(403);
-        $employee->update(['is_active' => !$employee->is_active]);
+        // is_active steht bewusst NICHT in User::$fillable (System-Spalte).
+        // update() verwarf die Aenderung daher still - der "Deaktivieren"-
+        // Button war wirkungslos, das Konto behielt vollen Zugriff und
+        // Log/Meldung behaupteten das Gegenteil (Audit DATA-P0). forceFill
+        // wie bei den uebrigen System-Spalten (vgl. PortalAccessService).
+        $employee->forceFill(['is_active' => !$employee->is_active])->save();
         ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => $employee->is_active ? 'employee_activated' : 'employee_deactivated',

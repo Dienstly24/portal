@@ -82,7 +82,13 @@ class TarifrechnerController extends Controller
     }
 
     public function storeAnnouncement(Request $request) {
-        $request->validate(['title'=>'required','body'=>'required']);
+        // priority ist eine ENUM-Spalte (normal/important/urgent) - Whitelist
+        // gegen 500 unter MySQL strict (Audit DATA-P2).
+        $request->validate([
+            'title' => 'required',
+            'body' => 'required',
+            'priority' => 'nullable|in:normal,important,urgent',
+        ]);
         Announcement::create([
             'created_by' => auth()->id(),
             'title' => $request->title,
