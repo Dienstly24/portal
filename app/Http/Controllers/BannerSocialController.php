@@ -155,6 +155,16 @@ class BannerSocialController extends Controller
         $post = $banner->socialPost()->firstOrFail();
         $channel = $post->channels()->where('platform', $platform)->firstOrFail();
 
+        // Bereits ueber die API veroeffentlicht (external_post_id gesetzt) ->
+        // NICHT erneut posten, sonst laege der Beitrag doppelt auf der Plattform.
+        // Deckt den Doppelklick UND den Fall ab, dass der geplante Lauf den
+        // Beitrag zwischenzeitlich schon abgesetzt hat (Audit CONC-3; der
+        // geplante Lauf beansprucht seinerseits atomar per auto_attempted_at).
+        if ($channel->external_post_id) {
+            return redirect()->route('admin.banners.social', $banner->id)
+                ->withErrors(['publish' => 'Dieser Beitrag wurde bereits über die Meta-API veröffentlicht.']);
+        }
+
         // Bereits (manuell) als veroeffentlicht markiert -> kein API-Post,
         // sonst laege der Beitrag doppelt auf der Plattform.
         if ($channel->published_at && !$channel->external_post_id) {

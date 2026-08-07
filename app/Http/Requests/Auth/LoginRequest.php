@@ -49,7 +49,12 @@ class LoginRequest extends FormRequest
         $remember = $this->boolean('remember');
 
         $user = \App\Models\User::where('email', $email)->first();
-        if ($user && !$user->is_active) {
+        // is_active === NULL gilt ueberall sonst als AKTIV (Alt-/Importkonten,
+        // vgl. EnsureUserRole/MagicLoginController/AdminController). Ohne den
+        // isset-Guard sperrte gerade das Passwort-Login solche Konten aus,
+        // waehrend Admin-UI und Magic-Login sie als aktiv fuehren (Audit
+        // AUTH-1). Nur ein AUSDRUECKLICH auf false gesetztes Konto ist gesperrt.
+        if ($user && isset($user->is_active) && !$user->is_active) {
             RateLimiter::hit($this->throttleKey());
             throw ValidationException::withMessages([
                 'email' => 'Dieses Konto wurde deaktiviert. Bitte wenden Sie sich an die Verwaltung.',

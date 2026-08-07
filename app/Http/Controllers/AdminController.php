@@ -1546,7 +1546,13 @@ class AdminController extends Controller
             return $p;
         }, $result['pairs']);
 
-        $strongCount = count(array_filter($pairs, fn ($p) => $p['score'] >= $autoMin));
+        // Wie im Merge-All-Pfad: Paare mit widersprechendem Identitaetsmerkmal
+        // zaehlen NICHT als "sicher" (Audit MERGE-1), damit die Button-Zahl der
+        // tatsaechlichen Aktion entspricht.
+        $strongCount = count(array_filter(
+            $pairs,
+            fn ($p) => $p['score'] >= $autoMin && !$detection->hasIdentityConflict($p['primary'], $p['duplicate'])
+        ));
 
         return view('admin.customer_duplicates', [
             'pairs'       => $pairs,
@@ -1735,11 +1741,20 @@ class AdminController extends Controller
 
         // Frischer Scan (nie auf veraltete Seiten-Daten verlassen).
         $result = $detection->scan($this->visibleCustomerIds());
-        $strong = array_values(array_filter($result['pairs'], fn ($p) => $p['score'] >= $min));
+        // Paare mit widersprechendem Identitaetsmerkmal (verschiedenes
+        // Geburtsdatum/kein gemeinsames Namenswort) NIE unbeaufsichtigt
+        // zusammenfuehren - gemeinsames Konto/Vertrag hebt den Score sonst auf
+        // >= 85, obwohl es zwei Personen sein koennen (Audit MERGE-1). Diese
+        // bleiben der manuellen Einzelpruefung vorbehalten.
+        $strong = array_values(array_filter(
+            $result['pairs'],
+            fn ($p) => $p['score'] >= $min && !$detection->hasIdentityConflict($p['primary'], $p['duplicate'])
+        ));
 
         if ($strong === []) {
             return redirect()->route('admin.customers.duplicates')
-                ->with('success', "Keine sicheren Treffer (>= {$min} %) zum automatischen Zusammenführen gefunden.");
+                ->with('success', "Keine sicheren Treffer (>= {$min} %) zum automatischen Zusammenführen gefunden. "
+                    . 'Verdachtsfaelle mit abweichendem Geburtsdatum/Namen bitte einzeln pruefen.');
         }
 
         $edges = [];

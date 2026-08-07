@@ -549,3 +549,155 @@ Migration oder groesseres Redesign):
 `php artisan test`: **gruen** - 0 Fehler (+10 neue Regressionstests gegenueber
 Runde 2). Erweitert: `NewCustomerReportTest`, `ContractDeduplicationTest`,
 `MailboxSyncServiceTest`, `BannerSocialPublishingTest`.
+
+---
+
+# Runde 4 - Nebenlaeufigkeit, Merge, Auth, Verifikation (07.08.2026)
+
+Vierte Runde, Schwerpunkt auf bisher nicht tief gepruueften Systemen
+(Kunden-Merge/Matching/Import, Auth-Flows, Nachweis-Verifikation, Zaehler,
+Partner-Portal) UND einer geziel­ten **Nebenlaeufigkeits-/Idempotenz-Analyse**
+(check-then-act-Races, fehlende UNIQUE-Indizes, nicht-atomare Updates gegen
+Produktion = MySQL). Larastan war als statischer Analysator vorgesehen, liess
+sich aber wegen GitHub-Auth ueber den Proxy nicht installieren - ersetzt durch
+adversarische Tiefenpruefung.
+
+## In diesem PR behoben (Runde 4, mit Tests)
+
+### P1 (Datenverlust, irreversibel) - "Alle sicheren zusammenfuehren" verschmolz VERSCHIEDENE Personen
+`app/Services/Matching/DuplicateDetectionService.php`, `app/Http/Controllers/AdminController.php`
+
+Ein GEMEINSAMES Konto (IBAN) oder eine gemeinsame Vertragsnummer hob den
+Konfidenz-Score auf >= 85 - unabhaengig von Name/Geburtsdatum. Der Ein-Klick
+"Alle sicheren zusammenfuehren" (Schwelle 40) verschmolz solche Paare
+unbeaufsichtigt und UNWIDERRUFLICH in den aeltesten Datensatz. Ein Ehepaar
+mit gemeinsamem Konto (verschiedene Nachnamen) oder Vater/Sohn (gleicher Name,
+anderes Geburtsdatum) wurde so zu einer Person zusammengefuehrt - eine echte
+Kundenakte samt Vertraegen/Dokumenten verschwand. **Fix**: neue
+`hasIdentityConflict()`-Pruefung schliesst Paare mit widersprechendem
+Geburtsdatum oder ohne gemeinsames Namenswort vom UNBEAUFSICHTIGTEN Merge aus
+(manuelle Einzelpruefung bleibt moeglich); die Button-Zahl folgt. Tests:
+`DuplicateBulkMergeTest`.
+
+### P1 (Geld) - Doppelte Neuvertrag-Provision unter Nebenlaeufigkeit
+`app/Services/Provision/ContractProvisionService.php`
+
+Die Idempotenz "genau eine Neuvertrag-Provision je Vertrag" war ein
+check-then-act (`exists()` dann `create()`) OHNE UNIQUE-Index und ohne Sperre.
+Zwei gleichzeitige Ausloeser (Formular-Doppelklick, created-Hook vs.
+nachtraegliche Werber-Buchung) konnten beide den Check bestehen und den Werber
+DOPPELT verguenten. **Fix**: `DB::transaction` + `lockForUpdate` auf den Vertrag
+serialisiert die Buchung (ein UNIQUE-Index scheidet aus, weil Boni/Storno
+legitim mehrfach je Vertrag vorkommen). Tests: bestehende `ProvisionManagementTest`
+gruen.
+
+### P2 (Verfuegbarkeit) - Kundennummern-Kollision warf 500 statt neu zu ziehen
+`app/Models/Customer.php`
+
+`CustomerNumberGenerator` zieht die Nummer per check-then-act; die
+`customers.customer_number`-UNIQUE verhindert Duplikate, aber der Verlierer
+zweier gleichzeitiger Anlagen bekam eine unbehandelte `QueryException` (500 /
+Import-Fehlerzeile). **Fix**: `Customer::save()` faengt die
+`UniqueConstraintViolationException` und zieht die Nummer EINMAL neu - Muster
+wie `Ticket::save`. (Von zwei Audit-Straengen unabhaengig gemeldet.)
+
+### P2 (Doppel-Post) - Geplanter Social-Versand vs. "Jetzt posten"
+`app/Console/Commands/PublishScheduledSocialPosts.php`, `app/Http/Controllers/BannerSocialController.php`
+
+Der geplante Lauf beanspruchte den Kanal per read-then-write
+(`forceFill(auto_attempted_at)->save()`); ein gleichzeitiger "Jetzt per API
+posten"-Klick konnte denselben Beitrag doppelt veroeffentlichen. **Fix**:
+atomarer Claim (`whereNull(auto_attempted_at)->update(...)`, nur bei
+affected==1 weiter); `publishNow` lehnt einen bereits per API veroeffentlichten
+Kanal (external_post_id) ab.
+
+### P2 (Auth) - Passwort-Bestaetigung ohne Throttle
+`routes/auth.php`
+
+`POST confirm-password` hatte - anders als Login/Reset - kein Rate-Limit. Eine
+gekaperte Session (z.B. ueber einen geleakten Magic-Login-Link) konnte das echte
+Passwort unbegrenzt raten. **Fix**: `throttle:6,1`.
+
+### P2 (Verifikation) - Echte Nachweise scheiterten an Zeilenumbruch
+`app/Services/ChangeRequest/ChangeProofVerifier.php`
+
+`squash()` entfernte nur Leerzeichen, nicht Zeilenumbrueche - eine ueber zwei
+Zeilen umbrochene IBAN/Name im OCR/PDF-Text passte nie auf die einzeilige Nadel,
+sodass ein KORREKTER Nachweis faelschlich als "mismatch" galt (fail-closed, aber
+die Gratis-Pruefung war auf mehrzeiligen Layouts praktisch tot). **Fix**: alle
+Whitespaces (inkl. `\R`) entfernen. (Sicherheits-Gegenprobe: die OCR-Toleranz
+kann weiterhin KEINE andere IBAN akzeptieren - nur Buchstabe->Ziffer, nie
+Ziffer->Ziffer.)
+
+### P2/P3 (Resilienz) - geplante Kommandos gehaertet
+`routes/console.php`
+
+`withoutOverlapping()` fuer `tickets:auto-close`, `health:apply-due-switches`,
+`contracts:apply-endings` (manueller Lauf darf den geplanten nicht doppeln).
+Die "Kind wird 15"-Closure nutzte fest `created_by/assigned_to = 1` (FK-Fehler,
+falls User 1 fehlt -> Kinder wegen Ein-Tages-Fenster dauerhaft uebersprungen):
+jetzt echter Admin/Manager, per-Datensatz-try/catch und Tages-Idempotenz.
+
+### P3 (Auth) - is_active=NULL konsistent als aktiv
+`app/Http/Requests/Auth/LoginRequest.php`
+
+Das Passwort-Login wertete `is_active=NULL` (Alt-/Importkonten) als deaktiviert,
+waehrend der Rest der App NULL als aktiv fuehrt. **Fix**: isset-Angleichung.
+
+## Offen aus Runde 4 - Empfehlung fuer den Betreiber
+
+Bestaetigt, aber bewusst NICHT hier (Produktentscheidung, Migration mit
+Bestandsdaten-Risiko oder groesseres Redesign):
+
+1. **UNIQUE-Index auf `customers.user_id`**: verhindert doppelte Kundenakten aus
+   dem gleichzeitigen `firstOrCreate` im Portal - braucht vorab eine
+   Bestands-Deduplizierung (Merge), daher kein blindes Migrations-Script.
+2. **Import-Dubletten ohne Geburtsdatum**: der 70-Punkte-Tier wird ohne
+   `birth_date` nie erreicht (Max 65) -> Wiederimport legt stille Doppel-Kunden
+   an bzw. wirft bei E-Mail-Kollision Fehlerzeilen; Preview/Commit weichen ab.
+3. **Nachweis-Verifikation zu grosszuegig bei Auto-Freigabe**: Name/Adresse per
+   Teilstring/Nachname-Substring koennen falsch matchen; bei Default
+   Auto-Freigabe (Adresse/Name) mutieren so Identitaets-/Meldedaten ohne
+   Vier-Augen. Empfehlung: wortgenaue/zeilenverankerte Treffer, Namens-Tie
+   verpflichtend, oder Auto-Freigabe-Default auf "aus". (Bank bleibt korrekt
+   Vier-Augen.)
+4. **Passwort-Reset-Nutzer-Enumeration**: unterschiedliche Antworten fuer
+   bekannte/unbekannte E-Mail. Empfehlung: eine generische Antwort.
+5. **Magic-Login 90 Tage, mehrfach nutzbar**: nach dem Setzen eines echten
+   Passworts nicht invalidiert. Empfehlung: Einmal-Nutzung/Invalidierung.
+6. **`SendCampaignJob`**: `timeout(600) > retry_after(360)` + nicht idempotent
+   (kein `failed()`, kein Skip bereits gesendeter Empfaenger) -> Doppelversand,
+   sobald ein zweiter Worker laeuft. Latent unter Ein-Worker-Deploy.
+7. **`CommissionController::book`**: nicht idempotent gegen verlorene
+   Lexoffice-Antwort (Doppelbeleg). **UNIQUE-Indizes** auf `meter_readings`
+   und `change_notifications` (aktuell check-then-act).
+8. **`User.$fillable` enthaelt `role`/`access_level`/`can_*`**: aktuell nirgends
+   ausnutzbar (alle Schreibpfade hardcoden die Rolle), aber ein stehender
+   Footgun - `role`/`access_level` besser `$guarded`.
+9. **`VehicleOverlapGuard` VIN-vs-Kennzeichen-Asymmetrie** (Runde 3), Meter
+   Rueckdatierungs-Flag, DSGVO-Aufbewahrung Hilfe-/E-Mail-Gast-Leads,
+   Gmail-Provider-Paginierung.
+
+## Verifiziert sauber (Runde 4, adversarisch)
+
+- **Kunden-Merge**: keine FK-Tabelle mit customer_id uebersehen (schema-getrieben
+  + Sonderfaelle Relationship/Portal-User); Opt-out bleibt erhalten;
+  `deleteCollidingDuplicateRows` verhindert den Remap-500; keine doppelten
+  Kundennummern.
+- **Partner-Portal**: keine IDOR (partner-gebunden), Partner sehen nur eigene
+  Kunden/Provisionen; Deaktivierung wirkt auf bestehende Sessions; keine
+  Rollen-Eskalation ueber Registrierung/Import (Rolle hart `customer`).
+- **Nachweis**: nie KI-Aufruf, kein Rohtext gespeichert, Bank bleibt
+  Vier-Augen, OCR-Toleranz akzeptiert keine ANDERE IBAN; Zaehler-Mathematik
+  ohne Division durch 0, Hochrechnung erst ab 14 Tagen, Bezug/Einspeisung
+  getrennt, Portal-Zaehler streng auf den eigenen Vertrag gescopet.
+- **Race-sicher bereits im Code**: Ticketnummern (UNIQUE + Retry),
+  `AnalyzeDocumentJob` (atomarer Claim), Dokument-Zuordnung (whereNull-Claim),
+  Erneuerungs-Erinnerungen (UNIQUE + Claim), atomare Zaehler (`increment`),
+  `firstOrCreate` auf UNIQUE-Kombis, `withoutOverlapping` auf den Langlaeufern.
+
+## Teststatus (Runde 4)
+
+`php artisan test`: **gruen** - 0 Fehler (+4 neue Regressionstests). Erweitert:
+`DuplicateBulkMergeTest`, `Auth/AuthenticationTest`; unveraendert gruen:
+`ProvisionManagementTest`, `BannerSocialPublishingTest`, `ChangeRequestVerificationTest`.

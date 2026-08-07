@@ -55,9 +55,20 @@ class PublishScheduledSocialPosts extends Command
             $link = $banner ? route('admin.banners.social', $banner->id) : null;
             $empfaenger = (int) ($channel->post?->created_by ?? 0);
 
-            // Versuch VOR dem API-Aufruf verbrauchen (Doppel-Post-Schutz,
-            // auch wenn der Prozess mitten im Aufruf abbrechen sollte).
-            $channel->forceFill(['auto_attempted_at' => now()])->save();
+            // Versuch ATOMAR VOR dem API-Aufruf verbrauchen (Doppel-Post-Schutz):
+            // nur wenn noch niemand - weder ein zweiter Lauf noch ein
+            // "Jetzt posten"-Klick - den Kanal beansprucht hat. affected==0 ->
+            // ein anderer Prozess ist bereits dran, ueberspringen. Das reine
+            // forceFill()->save() war ein read-then-write und konnte parallel zum
+            // manuellen Sofort-Post doppelt veroeffentlichen (Audit CONC-3).
+            $claimed = BannerSocialChannel::whereKey($channel->id)
+                ->whereNull('auto_attempted_at')
+                ->whereNull('published_at')
+                ->whereNull('external_post_id')
+                ->update(['auto_attempted_at' => now()]);
+            if ($claimed === 0) {
+                continue;
+            }
 
             try {
                 $publisher->publish($channel, null);

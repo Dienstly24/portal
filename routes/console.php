@@ -18,7 +18,8 @@ Schedule::command('mailboxes:sync')->everyTwoMinutes()->withoutOverlapping();
 Schedule::command('emails:prune-unmatched')->dailyAt('03:30');
 
 // 04:00 — Geloeste Tickets ohne Kundenreaktion nach 7 Tagen automatisch schliessen
-Schedule::command('tickets:auto-close')->dailyAt('04:00');
+// withoutOverlapping: ein manueller Lauf darf nicht mit dem geplanten kollidieren.
+Schedule::command('tickets:auto-close')->dailyAt('04:00')->withoutOverlapping();
 
 // 04:10 — DSGVO: unkonvertierte Website-Anfragen nach 6 Monaten loeschen (P0-1)
 Schedule::command('tickets:purge-website-leads')->dailyAt('04:10');
@@ -51,13 +52,13 @@ Schedule::command('documents:prune-unassigned')->dailyAt('03:50');
 
 // 06:30 — Faellige Krankenkassenwechsel aktivieren (pending Kranken-Vertraege
 // am Stichtag -> aktiv + Kasse des Kunden umstellen)
-Schedule::command('health:apply-due-switches')->dailyAt('06:30');
+Schedule::command('health:apply-due-switches')->dailyAt('06:30')->withoutOverlapping();
 
 // 05:15 — Erreichte Vertragsenden anwenden: "gekuendigt zum X" wird am Tag X
 // wirklich cancelled (Model-Hook bucht die Storno-Gegenbuchung der
 // Vermittler-Provision), E-Scooter werden nach dem Saisonende expired.
 // Status, Zahlen und Tab-Filter folgen so von selbst der Realitaet.
-Schedule::command('contracts:apply-endings')->dailyAt('05:15');
+Schedule::command('contracts:apply-endings')->dailyAt('05:15')->withoutOverlapping();
 
 // Stuendlich tagsueber — automatische Portal-Einladungen: neue Kunden ohne
 // Klick einladen, Bestand alphabetisch im Tagesbudget (~100/Tag) abarbeiten,
@@ -67,21 +68,43 @@ Schedule::command('portal:send-invitations')->hourly()->between('8:00', '19:00')
 
 // 07:30 — Aufgabe: Kind wird in 4 Monaten 15
 Schedule::call(function () {
+    // Einen ECHTEN Admin/Manager als Eigentuemer nehmen - der frueher fest
+    // codierte "1" existiert nicht zwingend (geloescht/nie diese ID), was einen
+    // FK-Fehler warf und die betroffenen Kinder wegen des Ein-Tages-Fensters
+    // dauerhaft uebersprang (Audit SCHED-1). Ohne Staff-Konto: nichts tun.
+    $ownerId = \App\Models\User::whereIn('role', ['admin', 'manager'])
+        ->where('is_active', '!=', false)->orderBy('id')->value('id');
+    if ($ownerId === null) {
+        return;
+    }
     $target = now()->addMonths(4)->subYears(15)->toDateString();
     $kids = \App\Models\CustomerFamily::with('customer.user')
         ->where('relation', 'Kind')->whereDate('birth_date', $target)->get();
     foreach ($kids as $kid) {
-        \App\Models\Task::forceCreate([
-            'title' => '🎂 ' . $kid->name . ' wird in 4 Monaten 15 Jahre alt',
-            'description' => 'Kunde: ' . ($kid->customer?->user?->name ?? '—') . ' (' . ($kid->customer?->customer_number ?? '—') . '). Beratungstermin zu Versicherungsoptionen ab 15 vereinbaren.',
-            'type' => 'reminder',
-            'status' => 'open',
-            'priority' => 'medium',
-            'due_date' => now()->addDays(14)->toDateString(),
-            'created_by' => 1,
-            'assigned_to' => 1,
-            'customer_id' => $kid->customer_id,
-        ]);
+        try {
+            $title = '🎂 ' . $kid->name . ' wird in 4 Monaten 15 Jahre alt';
+            // Idempotent: bei einem zweiten Lauf am selben Tag (manuell/zweiter
+            // Cron) keine doppelte Aufgabe.
+            $exists = \App\Models\Task::where('customer_id', $kid->customer_id)
+                ->where('type', 'reminder')->where('title', $title)
+                ->whereDate('created_at', now()->toDateString())->exists();
+            if ($exists) {
+                continue;
+            }
+            \App\Models\Task::forceCreate([
+                'title' => $title,
+                'description' => 'Kunde: ' . ($kid->customer?->user?->name ?? '—') . ' (' . ($kid->customer?->customer_number ?? '—') . '). Beratungstermin zu Versicherungsoptionen ab 15 vereinbaren.',
+                'type' => 'reminder',
+                'status' => 'open',
+                'priority' => 'medium',
+                'due_date' => now()->addDays(14)->toDateString(),
+                'created_by' => $ownerId,
+                'assigned_to' => $ownerId,
+                'customer_id' => $kid->customer_id,
+            ]);
+        } catch (\Throwable $e) {
+            \Log::warning('Kind-wird-15-Aufgabe uebersprungen (' . $kid->id . '): ' . $e->getMessage());
+        }
     }
 })->dailyAt('07:30');
 

@@ -113,6 +113,32 @@ class DuplicateBulkMergeTest extends TestCase
         $this->assertEquals(2, Customer::whereIn('id', [$w1->id, $w2->id])->count());
     }
 
+    // Audit MERGE-1: ein GEMEINSAMES Konto (IBAN) hebt den Score auf >= 85,
+    // aber ein Ehepaar mit gemeinsamem Konto sind ZWEI Personen. Bei
+    // abweichendem Namen (kein gemeinsames Wort) ODER abweichendem Geburtsdatum
+    // darf "Alle sicheren zusammenfuehren" sie NICHT unbeaufsichtigt loeschen.
+    public function test_merge_all_never_collapses_different_people_sharing_an_iban(): void
+    {
+        // Ehepaar, gemeinsames Konto, unterschiedliche Nachnamen.
+        $frau = $this->customer('Anna Schmidt', 'anna@example.com');
+        $mann = $this->customer('Peter Meier', 'peter@example.com');
+        $frau->update(['iban' => 'DE89370400440532013000']);
+        $mann->update(['iban' => 'DE89 3704 0044 0532 0130 00']);
+
+        // Vater/Sohn, gleicher Name, gemeinsames Konto, aber anderes Geburtsdatum.
+        $vater = $this->customer('Hans Gross', 'hans1@example.com');
+        $sohn = $this->customer('Hans Gross', 'hans2@example.com');
+        $vater->update(['iban' => 'DE12500105170648489890', 'birth_date' => '1960-03-01']);
+        $sohn->update(['iban' => 'DE12 5001 0517 0648 4898 90', 'birth_date' => '1990-03-01']);
+
+        $this->actingAs($this->admin())->post(route('admin.customers.duplicates.merge_all'))
+            ->assertRedirect(route('admin.customers.duplicates'));
+
+        // Alle vier Personen bleiben erhalten - kein irreversibler Fehl-Merge.
+        $this->assertEquals(2, Customer::whereIn('id', [$frau->id, $mann->id])->count());
+        $this->assertEquals(2, Customer::whereIn('id', [$vater->id, $sohn->id])->count());
+    }
+
     public function test_employee_cannot_bulk_merge(): void
     {
         $employee = User::factory()->create(['role' => 'employee']);
