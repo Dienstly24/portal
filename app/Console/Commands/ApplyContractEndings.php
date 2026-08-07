@@ -38,16 +38,26 @@ class ApplyContractEndings extends Command
         $gekuendigt = 0;
         $abgelaufen = 0;
 
+        $fehler = 0;
+
         // 1) Kuendigungen, deren wirksames Ende erreicht ist.
+        // Pro Vertrag gekapselt: ein einzelner fehlerhafter Datensatz darf nicht
+        // den gesamten Tageslauf (und damit alle folgenden Vertraege) stoppen
+        // (Audit RESIL-1, Muster wie SendTaskAutoEmails::process).
         $mitKuendigung = Contract::where('status', 'active')
             ->whereNotNull('cancellation_date')->get();
         foreach ($mitKuendigung as $contract) {
-            $ende = $contract->effectiveCancellationDate();
-            if (!$ende || $ende->greaterThan($today)) {
-                continue;
+            try {
+                $ende = $contract->effectiveCancellationDate();
+                if (!$ende || $ende->greaterThan($today)) {
+                    continue;
+                }
+                $this->setStatus($recorder, $contract, 'cancelled');
+                $gekuendigt++;
+            } catch (\Throwable $e) {
+                $fehler++;
+                \Log::warning('contracts:apply-endings: Vertrag ' . $contract->id . ' uebersprungen: ' . $e->getMessage());
             }
-            $this->setStatus($recorder, $contract, 'cancelled');
-            $gekuendigt++;
         }
 
         // 2) E-Scooter nach Saisonende (nur ohne Kuendigungsfall).
@@ -55,11 +65,17 @@ class ApplyContractEndings extends Command
             ->whereNull('cancellation_date')->whereNotNull('end_date')
             ->whereDate('end_date', '<', $today)->get();
         foreach ($escooter as $contract) {
-            $this->setStatus($recorder, $contract, 'expired');
-            $abgelaufen++;
+            try {
+                $this->setStatus($recorder, $contract, 'expired');
+                $abgelaufen++;
+            } catch (\Throwable $e) {
+                $fehler++;
+                \Log::warning('contracts:apply-endings: E-Scooter ' . $contract->id . ' uebersprungen: ' . $e->getMessage());
+            }
         }
 
-        $this->info('Umgestellt: ' . $gekuendigt . ' gekuendigt, ' . $abgelaufen . ' abgelaufen (E-Scooter).');
+        $this->info('Umgestellt: ' . $gekuendigt . ' gekuendigt, ' . $abgelaufen . ' abgelaufen (E-Scooter).'
+            . ($fehler > 0 ? ' ' . $fehler . ' uebersprungen (siehe Log).' : ''));
         return self::SUCCESS;
     }
 

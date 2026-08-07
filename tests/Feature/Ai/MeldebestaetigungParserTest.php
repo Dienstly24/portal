@@ -70,6 +70,29 @@ class MeldebestaetigungParserTest extends TestCase
         $this->assertArrayNotHasKey('phone', $p);
     }
 
+    // Audit PARSER-1: die (amtlich uebliche) Pluralform "Vornamen:" darf nicht
+    // als Praefix von "Vorname" verlesen werden - fruener lief ein "n:" in den
+    // Vornamen ("n: Jana Maria").
+    public function test_plural_vornamen_label_is_read_cleanly(): void
+    {
+        $text = implode("\n", [
+            'Stadt Backnang',
+            'Meldebestaetigung',
+            'Anmeldedatum:         01.03.2026',
+            'Anschrift:            Musterweg 3',
+            '                      71522 Backnang',
+            'Familienname:         Beispiel',
+            'Vornamen:             Jana Maria',
+            'Geburtsdatum:         14.07.1994',
+        ]);
+
+        $r = (new MeldebestaetigungParser())->parse($text);
+
+        $this->assertNotNull($r);
+        $this->assertSame('Jana Maria', $r['data']['person']['first_name']);
+        $this->assertSame('Beispiel', $r['data']['person']['last_name']);
+    }
+
     public function test_type_is_registered_and_heuristic_classifies_it(): void
     {
         $this->assertArrayHasKey('meldebescheinigung', Document::AI_TYPES);

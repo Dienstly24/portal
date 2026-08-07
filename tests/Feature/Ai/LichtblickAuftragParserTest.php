@@ -168,6 +168,38 @@ class LichtblickAuftragParserTest extends TestCase
         $this->assertStringContainsString('Stadtwerke Rendsburg GmbH', $r['summary']);
     }
 
+    // Audit PARSER-2: nennt der SEPA-Block ausdruecklich einen ABWEICHENDEN
+    // Kontoinhaber (Dritt-/Firmenkonto), darf die IBAN nicht in die Kundenakte
+    // (VN = "Altahan"). Fehlt das Feld, bleibt die Eigenauftrags-Annahme.
+    public function test_iban_dropped_when_account_holder_differs_from_applicant(): void
+    {
+        $text = str_replace(
+            "                                                                                                                IBAN",
+            "               Kontoinhaber: Bau Fremd GmbH\n"
+            . "                                                                                                                IBAN",
+            $this->auftragText()
+        );
+
+        $r = (new LichtblickAuftragParser())->parse($text);
+
+        $this->assertNotNull($r);
+        $this->assertArrayNotHasKey('iban', $r['data']['bank']);
+    }
+
+    public function test_iban_kept_when_account_holder_matches_applicant(): void
+    {
+        $text = str_replace(
+            "                                                                                                                IBAN",
+            "               Kontoinhaber: Mashhour Altahan\n"
+            . "                                                                                                                IBAN",
+            $this->auftragText()
+        );
+
+        $r = (new LichtblickAuftragParser())->parse($text);
+
+        $this->assertSame('DE58214500000105742795', $r['data']['bank']['iban']);
+    }
+
     public function test_explicit_delivery_date_wins_over_estimate(): void
     {
         $r = (new LichtblickAuftragParser())->parse($this->auftragText(mitLieferbeginn: true));

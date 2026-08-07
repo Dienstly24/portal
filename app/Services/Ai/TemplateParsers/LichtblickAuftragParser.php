@@ -74,7 +74,7 @@ class LichtblickAuftragParser implements DocumentTemplateParser
         $person = $this->parsePerson();
         $energie = $this->parseEnergy();
         $insurance = $this->parseInsurance($upper, $energie);
-        $bank = $this->parseBank();
+        $bank = $this->parseBank($person);
 
         // Ohne belastbaren Kern der normalen Analyse/KI ueberlassen.
         if (($person['last_name'] ?? null) === null
@@ -348,19 +348,49 @@ class LichtblickAuftragParser implements DocumentTemplateParser
     }
 
     /**
-     * Kunden-IBAN aus dem SEPA-Block (rechte Spalte). Die einzige deutsche
-     * IBAN im Dokument ist die des Kunden - die Kreditor-ID der LichtBlick
-     * ("DE41ZZZ...") faellt durch das Nur-Ziffern-Muster.
+     * Kunden-IBAN aus dem SEPA-Block (rechte Spalte). Die deutsche IBAN im
+     * Dokument ist normalerweise die des Kunden - die Kreditor-ID der
+     * LichtBlick ("DE41ZZZ...") faellt durch das Nur-Ziffern-Muster.
      *
+     * Nennt das Formular jedoch AUSDRUECKLICH einen abweichenden Kontoinhaber
+     * (Dritt-/Firmenkonto), wird die IBAN NICHT uebernommen - sonst landet ein
+     * Fremdkonto in der Kundenakte (CLAUDE.md: "IBAN nur, wenn der
+     * Kontoinhaber der Antragsteller ist"; Audit PARSER-2). Fehlt ein
+     * Kontoinhaber-Feld (Standardlayout), gilt die Eigenauftrags-Annahme.
+     *
+     * @param array<string,mixed> $person
      * @return array<string,mixed>
      */
-    private function parseBank(): array
+    private function parseBank(array $person = []): array
     {
         $raw = [];
         if (preg_match('/\bDE\d{2}(?:[ ]?\d){18}\b/', $this->text(), $m)) {
+            $last = $person['last_name'] ?? null;
+            if ($last !== null && ($holder = $this->accountHolderName()) !== null
+                && mb_stripos($holder, (string) $last) === false) {
+                return $this->validatedBank([]); // abweichender Kontoinhaber -> keine IBAN
+            }
             $raw['iban'] = strtoupper((string) preg_replace('/\s+/', '', $m[0]));
         }
         return $this->validatedBank($raw);
+    }
+
+    /** Explizit genannter Kontoinhaber, falls das Formular ihn auffuehrt. */
+    private function accountHolderName(): ?string
+    {
+        foreach ($this->lines as $i => $line) {
+            if (preg_match('/^\s*Kontoinhaber(?:in)?\b\s*:?\s*(.*)$/u', $line, $m)) {
+                $val = trim($m[1]);
+                if ($val !== '') {
+                    return $val;
+                }
+                // Wert steht (Spaltenlayout) in der Zeile DARUEBER.
+                if ($i > 0 && trim($this->lines[$i - 1]) !== '') {
+                    return trim($this->lines[$i - 1]);
+                }
+            }
+        }
+        return null;
     }
 
     /**
