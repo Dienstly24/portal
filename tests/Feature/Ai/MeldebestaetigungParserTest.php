@@ -184,6 +184,81 @@ class MeldebestaetigungParserTest extends TestCase
         $this->assertStringContainsString('eingezogen 01.08.2026', $r['summary']);
     }
 
+    /**
+     * Produktionsfall 06.08.2026: die Foto-OCR verliest das Label "Anschrift"
+     * - Name und Geburtsdatum kamen an, die neue Adresse fehlte. Fallback:
+     * das ANSCHRIFTFELD des Briefes traegt dieselbe neue Meldeadresse direkt
+     * unter dem Kundennamen (Namens-Anker); die rechte Briefkopf-Spalte
+     * (Sachbearbeitung/Telefon/...) klebt die OCR mit EINEM Leerzeichen an
+     * und wird abgeschnitten.
+     */
+    public function test_unreadable_anschrift_label_falls_back_to_letter_window(): void
+    {
+        $text = implode("\n", [
+            'Stadt Backnang',
+            'Rechts- und Ordnungsamt',
+            'Bürgeramt',
+            'Im Biegel 13',
+            '71522 Backnang',
+            'Stadt Backnang, Am Rathaus 1, 71522 Backnang',
+            'Mohamad Najim Sachbearbeitung: Lydia Klass',
+            'Gartenstraße 105 Telefon: 07191 894-444',
+            '71522 Backnang Telefax: 07191 894-133',
+            'E-Mail: l.klass@backnang.de',
+            'Datum: 04.08.2026',
+            'M e l d e b e s t ä t i g u n g (gemäß § 24 Abs. 2 BMG)',
+            'Familienname Najim',
+            'Vorname(n) Mohamad',
+            'Geburtsdatum 10.02.1999',
+            'Angemeldete Wohnung',
+            'Wohnungsstatus alleinige Wohnung',
+            'Einzugsdatum 01.08.2026',
+            'Anmeldedatum 04.08.2026',
+            'Anschritt Gartenstraße 105',
+            '71522 Backnang',
+        ]);
+
+        $r = (new MeldebestaetigungParser())->parse($text);
+
+        $this->assertNotNull($r);
+        $p = $r['data']['person'];
+        $this->assertSame('Najim', $p['last_name']);
+        $this->assertSame('Mohamad', $p['first_name']);
+        $this->assertSame('1999-02-10', $p['birth_date']);
+        // Adresse aus dem Anschriftfeld des Briefes - NICHT "Im Biegel 13"
+        // (Behoerde) und ohne die angeklebte rechte Spalte.
+        $this->assertSame('Gartenstraße', $p['street']);
+        $this->assertSame('105', $p['house_number']);
+        $this->assertSame('71522', $p['zip']);
+        $this->assertSame('Backnang', $p['city']);
+        // Die Kontaktdaten der Sachbearbeiterin bleiben draussen.
+        $this->assertArrayNotHasKey('email', $p);
+        $this->assertArrayNotHasKey('phone', $p);
+    }
+
+    public function test_letter_window_never_takes_authority_address(): void
+    {
+        // Ohne Namens-Anker (kein Kundenname ueber einer Adresse) bleibt die
+        // Adresse leer - die Behoerdenadresse landet NIE in der Kundenakte.
+        $text = implode("\n", [
+            'Stadt Backnang',
+            'Bürgeramt',
+            'Im Biegel 13',
+            '71522 Backnang',
+            'Meldebestätigung',
+            'Familienname Muster',
+            'Vorname(n) Karim',
+            'Geburtsdatum 10.02.1999',
+        ]);
+
+        $r = (new MeldebestaetigungParser())->parse($text);
+
+        $this->assertNotNull($r);
+        $this->assertSame('Muster', $r['data']['person']['last_name']);
+        $this->assertArrayNotHasKey('street', $r['data']['person']);
+        $this->assertArrayNotHasKey('zip', $r['data']['person']);
+    }
+
     public function test_value_on_the_next_line_is_read(): void
     {
         // Die OCR bricht Beschriftung und Wert manchmal in zwei Zeilen um.

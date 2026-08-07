@@ -112,7 +112,9 @@ class AllianzKfzPoliceParser implements DocumentTemplateParser
             if (count($block) >= 3
                 && preg_match('/^[A-ZÄÖÜ][\p{L}\-]+(?:\s+[A-ZÄÖÜ][\p{L}\-]+)+$/u', $block[0])
                 && preg_match('/^(\d{5})\s+(.+)$/', $block[2], $z)) {
-                $nameParts = preg_split('/\s+/', $block[0]) ?: [];
+                // Firmen-Policen (AKB-NF) schreiben den Namen in VERSALIEN
+                // ("MOHAMAD ADNAN RANKO") - fuer die Kundenakte normalisieren.
+                $nameParts = preg_split('/\s+/', $this->tidyName($block[0])) ?: [];
                 $raw['last_name'] = array_pop($nameParts);
                 $raw['first_name'] = implode(' ', $nameParts) ?: null;
                 if (preg_match('/^(.*\D)\s*(\d+(?:\s*[a-zA-Z])?)\s*$/u', $block[1], $s)) {
@@ -141,10 +143,22 @@ class AllianzKfzPoliceParser implements DocumentTemplateParser
         $raw = [];
 
         if (($v = $this->labelValue('Amtliches Kennzeichen')) !== null) {
-            $raw['license_plate'] = $v;
+            // "DU KA 684" -> einheitlich "DU-KA 684" (wie auf der
+            // Beitragsrechnung; die Fahrzeug-Identitaet vergleicht ohnehin
+            // normalisiert).
+            $raw['license_plate'] = preg_match('/^([A-ZÄÖÜ]{1,3})[ \-]([A-ZÄÖÜ]{1,2})\s?(\d{1,4}[EH]?)$/u', trim($v), $p)
+                ? $p[1] . '-' . $p[2] . ' ' . $p[3]
+                : $v;
         }
         if (($v = $this->labelValue('Hersteller')) !== null) {
-            $raw['manufacturer'] = $v;
+            $raw['manufacturer'] = $this->tidyName($v);
+        }
+        // Fahrzeugart ("LKW bis 3,5 t zulGG Werkverkehr") + Leistung ("96 KW").
+        if (($v = $this->labelValue('Fahrzeugart')) !== null) {
+            $raw['vehicle_type'] = $this->mapVehicleType($v);
+        }
+        if (($v = $this->labelValue('Leistung')) !== null && preg_match('/(\d{1,4})\s*KW/iu', $v, $m)) {
+            $raw['power_kw'] = (int) $m[1];
         }
         if (($v = $this->labelValue('Hersteller-Schlüssel-Nr.')) !== null && preg_match('/\b(\d{4})\b/', $v, $m)) {
             $raw['hsn'] = $m[1];
@@ -172,15 +186,30 @@ class AllianzKfzPoliceParser implements DocumentTemplateParser
             $raw['has_vollkasko'] = $hasVoll;
         }
 
+        // Selbstbeteiligungen ("Vollkaskoversicherung mit einer
+        // Selbstbeteiligung von 300 EUR").
+        if (preg_match('/Vollkaskoversicherung mit einer Selbstbeteiligung von\s+([\d.]+)\s*EUR/u', $text, $m)) {
+            $raw['vollkasko_deductible'] = (int) str_replace('.', '', $m[1]);
+        }
+        if (preg_match('/Teilkaskoversicherung mit einer Selbstbeteiligung von\s+([\d.]+)\s*EUR/u', $text, $m)) {
+            $raw['teilkasko_deductible'] = (int) str_replace('.', '', $m[1]);
+        }
+
         // Zusatzleistung Schutzbrief (Schluessel aus ContractVehicleDetail::EXTRAS).
         if (stripos($text, 'Schutzbrief') !== false) {
             $raw['extras'] = ['schutzbrief'];
         }
 
-        // SF-Klasse Haftpflicht ("Kfz-Haftpflichtversicherung ... Klasse 0
-        // (Beitragssatz 110 %)").
-        if (preg_match('/Klasse\s+(\d{1,2}(?:\/\d)?|[MS])\s*\(Beitragssatz/u', $text, $m)) {
+        // SF-Klassen je Baustein ("Kfz-Haftpflichtversicherung / Klasse 0
+        // (Beitragssatz 110 %)" und "Kaskoversicherung / Klasse 0
+        // (Beitragssatz 60 %)"); Fallback: erste Klassen-Angabe = Haftpflicht.
+        if (preg_match('/Kfz-Haftpflichtversicherung\s+Klasse\s+(\d{1,2}(?:\/\d)?|[MS])\s*\(Beitragssatz/u', $text, $m)) {
             $raw['sf_liability_class'] = strtoupper($m[1]);
+        } elseif (preg_match('/Klasse\s+(\d{1,2}(?:\/\d)?|[MS])\s*\(Beitragssatz/u', $text, $m)) {
+            $raw['sf_liability_class'] = strtoupper($m[1]);
+        }
+        if (preg_match('/(?<!Haftpflichtversicherung\s)(?<!Haftpflicht)Kaskoversicherung\s+Klasse\s+(\d{1,2}(?:\/\d)?|[MS])\s*\(Beitragssatz/u', $text, $m)) {
+            $raw['sf_comprehensive_class'] = strtoupper($m[1]);
         }
 
         return $this->validatedVehicle($raw);
@@ -212,6 +241,32 @@ class AllianzKfzPoliceParser implements DocumentTemplateParser
         }
 
         return $this->validatedInsurance(array_filter($raw, fn ($v) => $v !== null && $v !== ''));
+    }
+
+    /** VERSALIEN-Woerter ("MOHAMAD", "FORD") normalisieren, Rest unveraendert. */
+    private function tidyName(string $value): string
+    {
+        $words = preg_split('/\s+/u', trim($value)) ?: [];
+        foreach ($words as &$w) {
+            if (mb_strlen($w) >= 2 && $w === mb_strtoupper($w) && preg_match('/\p{L}{2,}/u', $w)) {
+                $w = mb_convert_case(mb_strtolower($w), MB_CASE_TITLE, 'UTF-8');
+            }
+        }
+        return implode(' ', $words);
+    }
+
+    /** Fahrzeugart auf den Katalog abbilden ("LKW bis 3,5 t ..." -> lkw). */
+    private function mapVehicleType(string $value): ?string
+    {
+        $v = mb_strtolower($value);
+        return match (true) {
+            str_contains($v, 'pkw') || str_contains($v, 'personenkraftwagen') => 'pkw',
+            str_contains($v, 'lkw') || str_contains($v, 'lastkraft')          => 'lkw',
+            str_contains($v, 'transporter')                                   => 'transporter',
+            str_contains($v, 'anhänger') || str_contains($v, 'anhaenger')     => 'anhaenger',
+            str_contains($v, 'wohnmobil')                                     => 'wohnmobil',
+            default                                                           => null,
+        };
     }
 
     /** Zahlungsperiode aus dem Fliesstext ("vierteljaehrliche Zahlungsperiode"). */

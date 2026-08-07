@@ -309,6 +309,20 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   wuerde die Fahrzeug-Identitaet spaetere Kfz-Dokumente desselben Autos
   faelschlich dem Haftpflicht-Vertrag zuordnen. IBAN nur, wenn der
   Kontoinhaber der VN ist. Tests: `DeckungsauftragParserTest`.
+  Die zugehoerigen POLICEN (Stufe `vertrag`, echte Vertragsnummer,
+  06.08.2026): `InterlloydPoliceParser` (Interlloyd/ARAG-Versicherungsschein,
+  Sparte aus dem Produktnamen "BHV Business Secure" -> betriebshaftpflicht,
+  unbekanntes Produkt laesst die Sparte bewusst leer; "Praemie gemaess
+  Zahlungsweise" = wiederkehrender BRUTTO-Betrag; Tag darf einstellig sein
+  "1.01.2028"; Kunden-Nr. ist KEINE Vertragsnummer -> Zusammenfassung) und
+  `DialogFrachtfuehrerPoliceParser` (Dialog Verkehrshaftungsschutz,
+  Jahresbeitrag BRUTTO - die "netto"-Zeile faellt am Regex vorbei; Zahlweise
+  vierteljaehrlich nur als Text, der Betrag wird NIE selbst geteilt). Beide:
+  Kundenblock aus der LINKEN Spalte (rechts Makler/Service - nie Kundendaten),
+  letztes Namenswort = Nachname (wie Allianz), versichertes GEWERBE-Fahrzeug
+  nur in der Zusammenfassung (data.kfz bleibt leer - dasselbe Fahrzeug hat
+  eine eigene Kfz-Police, hier Allianz DU-KA 684). Tests:
+  `InterlloydPoliceParserTest`, `DialogFrachtfuehrerPoliceParserTest`.
   Neue Sparte = eine Zeile in `Contract::TYPES`, keine Migration
   (`type` ist String). Tests: `GewerblicheSpartenTest`.
 - **Farbschema „Smaragd & Gold"** (Betreiber-Entscheidung 22.07.2026,

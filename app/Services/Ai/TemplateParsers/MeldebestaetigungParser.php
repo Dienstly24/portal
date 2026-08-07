@@ -68,6 +68,10 @@ class MeldebestaetigungParser implements DocumentTemplateParser
         // Anschrift (Kunde, NICHT die "Hausanschrift" der Behoerde): Strasse +
         // Hausnummer in der Label-Zeile, PLZ + Ort in der Folgezeile.
         $this->fillAddress($raw);
+        // Handyfoto-Fallback: liest die OCR das Feld "Anschrift" nicht (Label
+        // verlesen, Spalte zerrissen), steht dieselbe NEUE Anschrift im
+        // Anschriftfeld des Briefes - direkt unter dem Namen des Kunden.
+        $this->fillAddressFromLetterWindow($raw);
 
         $person = $this->validatedPerson(array_filter($raw, fn ($v) => $v !== null && $v !== ''));
 
@@ -157,6 +161,80 @@ class MeldebestaetigungParser implements DocumentTemplateParser
                 break;
             }
         }
+    }
+
+    /**
+     * Fallback fuer Handyfotos: das ANSCHRIFTFELD des Briefes traegt dieselbe
+     * neue Meldeadresse (die Bestaetigung wird an die frisch angemeldete
+     * Wohnung geschickt). Uebernommen wird NUR mit Namens-Anker - die Zeile
+     * ueber der Strasse muss exakt der erkannte Kundenname sein - damit nie
+     * die Absender-/Behoerdenadresse (z.B. "Im Biegel 13") in der Akte landet.
+     * Die rechte Briefkopf-Spalte (Sachbearbeitung/Telefon/...) wird
+     * abgeschnitten, auch wenn die Foto-OCR sie mit nur EINEM Leerzeichen an
+     * die linke Spalte klebt.
+     *
+     * @param array<string,mixed> $raw
+     */
+    private function fillAddressFromLetterWindow(array &$raw): void
+    {
+        if (isset($raw['street']) || isset($raw['zip'])) {
+            return;
+        }
+        $first = trim((string) ($raw['first_name'] ?? ''));
+        $last = trim((string) ($raw['last_name'] ?? ''));
+        if ($first === '' || $last === '') {
+            return; // ohne vollen Namen kein sicherer Anker
+        }
+        $namen = [mb_strtolower($first . ' ' . $last), mb_strtolower($last . ' ' . $first)];
+
+        foreach ($this->lines as $i => $line) {
+            if (!in_array(mb_strtolower($this->leftCell($line)), $namen, true)) {
+                continue;
+            }
+            $streetIdx = null;
+            $end = min(count($this->lines), $i + 4);
+            for ($j = $i + 1; $j < $end; $j++) {
+                $cand = $this->leftCell($this->lines[$j]);
+                if ($cand === '') {
+                    continue;
+                }
+                if ($streetIdx === null
+                    && preg_match('/^(.*\D)\s+(\d+(?:\s*[a-zA-Z])?)$/u', $cand, $s)
+                    && preg_match('/\p{L}{3,}/u', $s[1])
+                    && !preg_match('/(?<!\d)\d{5}\s/u', $cand)) {
+                    $raw['street'] = trim($s[1]);
+                    $raw['house_number'] = trim((string) preg_replace('/\s+/', ' ', $s[2]));
+                    $streetIdx = $j;
+                    $end = min(count($this->lines), $j + 4);
+                    continue;
+                }
+                if ($streetIdx !== null
+                    && preg_match('/(?<!\d)(\d{5})\s+([A-ZÄÖÜ][\p{L}.\-]+(?:[ \-][A-ZÄÖÜ]?[\p{L}.\-]+)*)/u', $cand, $z)) {
+                    $raw['zip'] = $z[1];
+                    $raw['city'] = trim((string) preg_replace('/\s{2,}.*$/u', '', $z[2]));
+                    return;
+                }
+            }
+            if ($streetIdx !== null) {
+                return; // Strasse gefunden, PLZ blieb unleserlich
+            }
+        }
+    }
+
+    /**
+     * Linke Spalte einer Briefkopf-Zeile: am Spaltenabstand (2+ Leerzeichen)
+     * getrennt; klebt die Foto-OCR die rechte Spalte mit nur EINEM
+     * Leerzeichen an, wird ab deren bekannten Beschriftungen abgeschnitten.
+     */
+    private function leftCell(string $line): string
+    {
+        $cell = trim((string) (preg_split('/\s{2,}/', trim($line))[0] ?? ''));
+
+        return trim((string) preg_replace(
+            '/\s*(?:Sachbearbeitung|Telefon|Telefax|Fax|E-Mail|Unser Zeichen|Zimmer|Datum)\b.*$/ui',
+            '',
+            $cell
+        ));
     }
 
     /**
