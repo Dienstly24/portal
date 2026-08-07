@@ -291,7 +291,21 @@ class Contract extends Model {
         if ($na === '' || $nb === '') {
             return true;
         }
-        return $na === $nb || str_contains($na, $nb) || str_contains($nb, $na);
+        if ($na === $nb) {
+            return true;
+        }
+        // Enthaltensein (z.B. "ADAC" in "ADAC Autoversicherung AG") NUR bei
+        // tragfaehiger Laenge. Ein auf 1-2 Zeichen geschrumpfter Kern - etwa
+        // "R+V" -> "r", weil das Branchenwort 'v' entfaellt - ist sonst
+        // Teilstring fast jedes Namens ("r" in "geneRali") und wuerde FREMDE
+        // Versicherer faelschlich als gleich behandeln. Dann wuerde eine
+        // Wechsel-Police den Bestandsvertrag ueberschreiben statt einen
+        // eigenen Vertrag anzulegen (Audit INTAKE-1). Bei kurzem Kern zaehlt
+        // nur die exakte Gleichheit oben.
+        if (min(mb_strlen($na), mb_strlen($nb)) < 3) {
+            return false;
+        }
+        return str_contains($na, $nb) || str_contains($nb, $na);
     }
 
     /** Versicherer-Namen auf seinen unterscheidenden Kern reduzieren. */

@@ -323,6 +323,32 @@ class BannerSocialPublishingTest extends TestCase
         $this->assertSame(0, BannerSocialChannel::count());
     }
 
+    // Audit BANNER-1: ein Banner mit VEROEFFENTLICHTEN Social-Kanaelen darf
+    // nicht geloescht werden - die FK-Kaskade wuerde short_code/external_post_id
+    // und die Klickzahlen der Live-Beitraege vernichten und die /s/-Kurzlinks
+    // toeten. Stattdessen deaktivieren.
+    public function test_banner_mit_veroeffentlichtem_kanal_wird_nicht_geloescht(): void
+    {
+        $banner = $this->makeImageBanner();
+        $this->savePost($banner);
+        $post = BannerSocialPost::where('banner_id', $banner->id)->first();
+        $fb = $post->channels()->where('platform', 'facebook')->first();
+        $fb->forceFill(['published_at' => now(), 'published_by' => $this->admin->id])->save();
+        $fb->recordClick();
+        $code = $fb->short_code;
+
+        $this->actingAs($this->admin)->post(route('admin.banners.delete', $banner->id))
+            ->assertRedirect()->assertSessionHas('error');
+
+        // Banner UND Kanal (Kurzlink + Klicks) bleiben erhalten.
+        $this->assertNotNull(Banner::find($banner->id));
+        $this->assertNotNull(BannerSocialChannel::find($fb->id));
+        $this->assertSame(1, (int) BannerSocialChannel::find($fb->id)->clicks);
+
+        // Der Live-Kurzlink funktioniert weiterhin (kein 404).
+        $this->get('/s/' . $code)->assertRedirect();
+    }
+
     public function test_mitarbeiter_hat_keinen_zugriff(): void
     {
         $employee = User::factory()->create(['role' => 'employee']);

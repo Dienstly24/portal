@@ -237,6 +237,49 @@ class NewCustomerReportTest extends TestCase
         $this->assertNotNull($provision->paid_at);
     }
 
+    // Audit PROV-1: die automatische Neuvertrag-Provision (Contract::created)
+    // traegt keine Periode. Der fruehere "bereits erfasst"-Filter suchte nur
+    // ueber period_from/to und sah sie NIE -> die Ein-Klick-Erfassung buchte
+    // ein zweites Mal. Jetzt zaehlt die Erkennung ueber die Neukunden dieses
+    // Zeitraums und die Ein-Klick-Nachbuchung entfaellt, sobald gebucht ist.
+    public function test_neukunden_report_erkennt_automatische_buchung_und_bietet_keine_doppel_erfassung(): void
+    {
+        $werber = $this->employee(['name' => 'Auto Werber', 'provision_fixed' => 25.00, 'provision_percent' => 0]);
+        $customer = $this->customer(['name' => 'Auto Kunde'], ['acquired_by' => $werber->id]);
+        Contract::create([
+            'customer_id' => $customer->id, 'type' => 'kfz', 'insurer' => 'HUK',
+            'status' => 'active', 'start_date' => now()->format('Y-m-d'),
+            'premium_amount' => 300, 'premium_interval' => 'jaehrlich',
+        ]);
+
+        // Genau EINE automatische Provision entstanden.
+        $this->assertSame(1, Provision::where('type', 'neuvertrag')->count());
+
+        $response = $this->actingAs($this->admin)->get(route('admin.reports.neukunden'));
+        $response->assertOk()
+            ->assertSee('bereits gebucht')            // Automatik wird erkannt
+            ->assertSee('Automatisch gebucht')        // Ein-Klick durch Hinweis ersetzt
+            ->assertDontSee('name="amount"', false);  // keine Doppel-Erfassung angeboten
+    }
+
+    public function test_neukunden_report_bietet_ein_klick_wenn_noch_nichts_gebucht(): void
+    {
+        // Werber OHNE Satz -> keine automatische Buchung -> Ein-Klick als Fallback.
+        $werber = $this->employee(['name' => 'Ohne Satz', 'provision_fixed' => null, 'provision_percent' => null]);
+        $customer = $this->customer(['name' => 'Fallback Kunde'], ['acquired_by' => $werber->id]);
+        Contract::create([
+            'customer_id' => $customer->id, 'type' => 'kfz', 'insurer' => 'HUK',
+            'status' => 'active', 'start_date' => now()->format('Y-m-d'),
+            'premium_amount' => 300, 'premium_interval' => 'jaehrlich',
+        ]);
+
+        $this->assertSame(0, Provision::count());
+
+        $this->actingAs($this->admin)->get(route('admin.reports.neukunden'))
+            ->assertOk()
+            ->assertSee('name="amount"', false);  // Ein-Klick-Erfassung verfuegbar
+    }
+
     public function test_provision_fuer_partner_erfassen(): void
     {
         $partner = Partner::create(['name' => 'Fonds Finanz']);

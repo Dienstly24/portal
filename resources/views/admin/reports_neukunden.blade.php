@@ -156,19 +156,28 @@
                 <td style="white-space:nowrap;">
                     <b>{{ number_format($row['suggested'], 2, ',', '.') }} €</b>
                     @if($row['already'] > 0)
-                    <div style="font-size:11.5px;color:#17A65B;">✓ {{ number_format($row['already'], 2, ',', '.') }} € bereits erfasst</div>
+                    <div style="font-size:11.5px;color:#17A65B;">✓ {{ number_format($row['already'], 2, ',', '.') }} € bereits gebucht</div>
                     @endif
                 </td>
                 <td style="padding-right:20px;">
-                    <form method="POST" action="{{ route('admin.provisions.store') }}" style="display:flex;gap:6px;align-items:center;margin:0;">
-                        @csrf
-                        <input type="hidden" name="empfaenger" value="{{ $row['key'] }}">
-                        <input type="hidden" name="period_from" value="{{ $from->format('Y-m-d') }}">
-                        <input type="hidden" name="period_to" value="{{ $to->format('Y-m-d') }}">
-                        <input type="hidden" name="note" value="Neukunden {{ $from->format('d.m.Y') }} - {{ $to->format('d.m.Y') }}: {{ $row['customers'] }} Kunden, {{ $row['contracts'] }} Vertraege">
-                        <input type="number" name="amount" step="0.01" min="0.01" value="{{ $row['suggested'] > 0 ? number_format($row['suggested'], 2, '.', '') : '' }}" required placeholder="0,00" style="width:90px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:13px;">
-                        <button type="submit" class="btn btn-primary btn-sm">Erfassen</button>
-                    </form>
+                    @if($row['already'] > 0)
+                        {{-- Automatik (Contract::created) hat fuer diese Neukunden bereits
+                             gebucht - keine Ein-Klick-Nachbuchung, sonst doppelt (Audit PROV-1).
+                             Anpassungen laufen bewusst ueber die Provisions-Seite. --}}
+                        <a href="{{ route('admin.provisions') }}" class="btn btn-ghost btn-sm">Automatisch gebucht · verwalten →</a>
+                    @else
+                        {{-- Kein Satz hinterlegt o. Werber erst nachtraeglich gesetzt und
+                             noch nichts gebucht: manuelle Ein-Klick-Erfassung als Fallback. --}}
+                        <form method="POST" action="{{ route('admin.provisions.store') }}" style="display:flex;gap:6px;align-items:center;margin:0;">
+                            @csrf
+                            <input type="hidden" name="empfaenger" value="{{ $row['key'] }}">
+                            <input type="hidden" name="period_from" value="{{ $from->format('Y-m-d') }}">
+                            <input type="hidden" name="period_to" value="{{ $to->format('Y-m-d') }}">
+                            <input type="hidden" name="note" value="Neukunden {{ $from->format('d.m.Y') }} - {{ $to->format('d.m.Y') }}: {{ $row['customers'] }} Kunden, {{ $row['contracts'] }} Vertraege">
+                            <input type="number" name="amount" step="0.01" min="0.01" value="{{ $row['suggested'] > 0 ? number_format($row['suggested'], 2, '.', '') : '' }}" required placeholder="0,00" style="width:90px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:13px;">
+                            <button type="submit" class="btn btn-primary btn-sm">Erfassen</button>
+                        </form>
+                    @endif
                 </td>
             </tr>
             @endforeach

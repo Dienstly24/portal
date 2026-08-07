@@ -409,3 +409,143 @@ Quelle jetzt korrekt je Wert (🌐 Website / 🆘 Hilfe / 📧 E-Mail).
 `php artisan test`: **gruen** - 1489 Tests, 0 Fehler (+4 neue Tests gegenueber
 Runde 1). Neue Datei: `tests/Feature/ServiceInquiryFlowTest.php`; erweitert:
 `tests/Feature/WebsiteMergeTest.php`.
+
+---
+
+# Runde 3 - Tiefenpruefung der Fachlogik + Live-Betrieb (07.08.2026)
+
+Dritte Runde, Schwerpunkt auf den bis dahin nur gestreiften, geschaeftskritischen
+Subsystemen: Dokumenten-Analyse/Parser, Vertrags-/Provisions-Lebenszyklus,
+Mailbox/Meta-Integration. Zusaetzlich ein **Live-Betriebstest**: alle 19
+geplanten Kommandos real ausgefuehrt, alle Detail-/Bearbeiten-/Berichts-Seiten
+mit echten IDs aufgerufen, der Geld-Pfad (Provisionsbuchung/Storno) real
+durchgespielt.
+
+## Live-Betrieb: sauber
+
+- Volle Testsuite gruen; **alle 19 Scheduler-Kommandos** ohne Fehler; **jede**
+  Admin-Detail-/Bearbeiten-/Berichts-/Statistik-Seite liefert 200 (kein 500);
+  Vertragsanlage -> Provisionshaken bucht genau eine Provision mit korrektem
+  Empfaenger/Betrag, idempotent, Storno bei manueller Kuendigung.
+
+## In diesem PR behoben (Runde 3, mit Tests)
+
+### P1 (Geld) - Neukunden-Ein-Klick buchte Provisionen DOPPELT
+`app/Http/Controllers/ReportController.php`, `resources/views/admin/reports_neukunden.blade.php`
+
+Jeder Vertrag bucht automatisch eine Neuvertrag-Provision (Contract::created)
+- OHNE Periode. Die "bereits erfasst"-Erkennung im Neukunden-Bericht filterte
+aber auf `period_from/period_to` und sah die automatischen Buchungen daher NIE
+("0 bereits erfasst"). Ein Klick auf "Erfassen" legte dann eine ZWEITE
+Provision on top an -> Doppelverguetung, und der Monatsbericht summierte beide.
+**Fix**: Erkennung ueber die Neukunden des Zeitraums (statt Periodendatum), und
+die Ein-Klick-Nachbuchung entfaellt, sobald automatisch gebucht wurde (Hinweis
++ Link zur Provisions-Seite; manueller Fallback nur, wenn noch nichts gebucht
+ist). Tests: `NewCustomerReportTest`.
+
+### P1 (Datenverlust) - "R+V" wurde mit fremden Versicherern verwechselt
+`app/Models/Contract.php` (`insurersLookAlike`)
+
+`normalizeInsurerName` entfernt das Branchenwort 'v', wodurch **"R+V" auf "r"**
+schrumpft; die anschliessende Teilstring-Pruefung machte "r" zum Treffer fast
+jedes Namens ("r" in "geneRali"). Folge: eine Generali-Kfz-Police fuer dasselbe
+Kennzeichen galt als GLEICHER Versicherer -> der R+V-Bestandsvertrag wurde
+ueberschrieben statt ein Wechsel als eigener Vertrag angelegt (Bestand +
+Neugeschaefts-Provision verloren). **Fix**: Teilstring-Treffer nur bei
+tragfaehiger Kernlaenge (>= 3 Zeichen); kurze Kerne verlangen exakte
+Gleichheit. Tests: `ContractDeduplicationTest`.
+
+### P1 (Datenverlust) - Energie-Anbieterwechsel ueberschrieb den Altvertrag
+`app/Services/DocumentIntake/DocumentIntakeService.php` (`findExistingContractByIdentity`, Energie-Zweig)
+
+MaLo-ID/Zaehlernummer bezeichnen den physischen Zaehler, nicht den Versorger -
+beim Wechsel bleiben sie gleich. Der MaLo-/Zaehler-Treffer hatte (anders als der
+Fahrzeug-Zweig und die Kundennummer) KEINEN Versorger-Abgleich, sodass die
+E.ON-Bestaetigung mit gleicher MaLo den LichtBlick-Vertrag ueberschrieb
+(Bestand + Provision weg, kein Wechsel). **Fix**: `insurersLookAlike`-Guard auch
+auf MaLo/Zaehler (gleiche Regel wie Fahrzeug/Kundennummer); der
+Auftrag->Vertrag-Abgleich desselben Versorgers laeuft ohnehin ueber
+`findApplicationContractForConfirmation` und bleibt unberuehrt. Tests:
+`ContractDeduplicationTest`.
+
+### P1 (Betrieb) - Eine "Gift"-Mail legte den GESAMTEN Postfach-Sync lahm
+`app/Services/Mailbox/MailboxSyncService.php`
+
+Die Kopf-Felder sind `varchar(255)`; unter MySQL strict wirft ein Betreff/
+Anzeigename > 255 Zeichen "Data too long". Da die Nachrichten-Verarbeitung nicht
+gekapselt war, brach der ganze Lauf ab, `last_synced_at` rueckte nie vor und der
+2-Minuten-Job holte dieselbe Mail endlos erneut (Dauerausfall aller Postfaecher,
+per langem Betreff ausloesbar). **Fix**: Kopf-Felder auf Spaltenbreite kuerzen,
+Wasserstandsmarke je gesehener Mail ZUERST vorruecken, jede Nachricht in
+try/catch (ueberspringen statt Abbruch), zusaetzlich je-Postfach-Guard in
+`syncAllActive`. Tests: `MailboxSyncServiceTest`.
+
+### P1/P2 (Datenverlust) - Banner-Loeschen zerstoerte veroeffentlichte Social-Links
+`app/Http/Controllers/BannerController.php`
+
+`Banner` hat kein SoftDeletes; `delete()` kaskadierte auf
+`banner_social_posts` -> `banner_social_channels` und vernichtete `short_code`,
+`external_post_id` und Klickzahlen AUCH bei bereits auf Facebook/Instagram
+veroeffentlichten Beitraegen -> deren Live-`/s/{code}`-Kurzlinks liefen ins
+404, Statistik weg (verletzt "veroeffentlichte Beitraege bleiben dauerhaft
+klickbar"). **Fix**: Loeschen wird abgelehnt, sobald veroeffentlichte Kanaele
+existieren, mit Hinweis auf Deaktivieren statt Loeschen. Tests:
+`BannerSocialPublishingTest`.
+
+## Offen aus Runde 3 - Empfehlung fuer den Betreiber
+
+Bestaetigte, aber bewusst NICHT hier behobene Punkte (verhaltensaendernd,
+Migration oder groesseres Redesign):
+
+1. **`tickets.type`-Analogie fuer weitere ENUMs**: bereits in Runde 1/2
+   adressiert; keine offene ENUM-Falle mehr in den gepruueften Pfaden.
+2. **Gmail-Provider Seitennavigation (P2)**: `messages.list` liefert die 50
+   NEUESTEN und ignoriert `nextPageToken`, waehrend die Marke vorwaerts wandert
+   -> bei > 50 Mails/Fenster koennen aeltere Gmail-Mails verloren gehen. Fix
+   braucht aufsteigende Sortierung/Paginierung im Gmail-Provider.
+3. **Nicht-idempotenter manueller Social-Retry (P2/P3)**: geht der API-Response
+   verloren (Timeout), kann "Erneut versuchen" doppelt posten (der Auto-Weg ist
+   per `auto_attempted_at` geschuetzt). Idempotenz-Schluessel noetig; zusaetzlich
+   IG-Sofortversand besser in einen Job auslagern (Runde 1, Punkt 6).
+4. **`contracts:apply-endings` ohne per-Datensatz-try/catch**: ein einzelner
+   fehlerhafter Vertrag stoppt den Tageslauf fuer die restlichen (Muster wie
+   `SendTaskAutoEmails::process`).
+5. **`CommissionController::book` nicht idempotent** gegen verlorene
+   Lexoffice-Antwort (Doppelbeleg moeglich) - Idempotenz/Transaktion um den
+   externen Aufruf.
+6. **VehicleOverlapGuard VIN-vs-Kennzeichen-Asymmetrie**: ein Fahrzeug, das
+   einmal nur mit FIN, einmal nur mit Kennzeichen erfasst ist, wird als zwei
+   Fahrzeuge behandelt -> Doppelversicherung nicht erkannt.
+7. **DSGVO-Aufbewahrung** fuer `hilfe-formular`/`email`-Gast-Leads;
+   `emails:prune-unmatched` behaelt `suggested`- und haengengebliebene
+   Nachrichten unbegrenzt.
+8. **Meldebestaetigung "Vornamen"-Praefix**, LichtBlick-IBAN ohne
+   Kontoinhaber-Pruefung, Haushalts-Verknuepfung ohne Hausnummer - Parser-
+   Feinheiten mit begrenztem Radius (Details im Parser-Audit).
+9. **Neukunden-Leaderboard** zeigt Mitarbeitern das Jahresbeitrags-Volumen
+   (Provisionsbetraege sind korrekt verborgen) - je nach Auslegung "Betrag".
+
+## Verifiziert sauber (Runde 3, adversarisch geprueft)
+
+- **Meta/Token**: Token nur als Bearer-Header (nie Query/Body/Log); IG-Caption
+  > 2200 wird abgelehnt; ein Auto-Versuch je Kanal; neue Anzeigen PAUSED;
+  Budget-Deckel in Controller UND Service (Obergrenze 10000); EUR->Cent nur im
+  Service; Insights-Dashboard liest nur Cache; `/s/{code}` ohne Open-Redirect,
+  atomarer Klickzaehler, entkoppelt von `Banner::current()`.
+- **Dokumenten-Intake**: Gesundheitskarte Instituts- vs Versichertennummer;
+  Auftrags-/eVB-/Vorgangsnummern nie als Vertragsnummer; Brutto statt Netto;
+  Deckung aus dem richtigen Feld; MRZ mit Pruefziffern; IBAN-Kontoinhaber-Gate
+  (ausser LichtBlick, s.o.); `ContractRevisionRecorder` ueberschreibt nie mit
+  Leerwerten; atomare `whereNull`-Zuordnung; Duplikat-Wiederverwendung erst
+  nach den Vorlagen-Parsern.
+- **Provisionen**: genau eine Neuvertrag-Buchung je Vertrag; natuerliche Enden
+  (Wechsel-Kette, Tages-Job) buchen KEIN Storno (`endsWithoutStorno` ueberlebt
+  den Recorder); Storno idempotent; Kunden-Purge kaskadiert ohne Storno;
+  Werber-Exklusivitaet; Wechsel-Datum-Mathematik korrekt (halb-offene
+  Intervalle).
+
+## Teststatus (Runde 3)
+
+`php artisan test`: **gruen** - 0 Fehler (+10 neue Regressionstests gegenueber
+Runde 2). Erweitert: `NewCustomerReportTest`, `ContractDeduplicationTest`,
+`MailboxSyncServiceTest`, `BannerSocialPublishingTest`.

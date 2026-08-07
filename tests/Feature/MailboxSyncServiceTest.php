@@ -94,6 +94,34 @@ class MailboxSyncServiceTest extends TestCase
         $this->assertNull($account->last_error);
     }
 
+    // Audit MAILBOX-1: eine Mail mit ueberlangem Betreff/Anzeigenamen (auf
+    // MySQL strict "Data too long") darf den Sync nicht abstuerzen lassen und
+    // die Wasserstandsmarke nicht blockieren. Kopf-Felder werden gekuerzt.
+    public function test_sync_clips_oversized_headers_and_advances_watermark(): void
+    {
+        $account = $this->account();
+        $data = new MailboxMessageData(
+            uid: 'INBOX:long',
+            fromAddress: 'kunde@example.com',
+            fromName: str_repeat('N', 400),
+            toAddress: 'info@dienstly24.de',
+            subject: str_repeat('A', 400),
+            bodyText: 'Text',
+            bodyHtml: null,
+            receivedAt: Carbon::now(),
+        );
+
+        $stored = $this->serviceWithQueue([$data])->syncAccount($account);
+
+        $this->assertSame(1, $stored);
+        $msg = EmailMessage::first();
+        $this->assertNotNull($msg);
+        $this->assertSame(255, mb_strlen($msg->subject));
+        $this->assertSame(255, mb_strlen($msg->from_name));
+        $account->refresh();
+        $this->assertNotNull($account->last_synced_at); // Marke vorgerueckt -> kein Endlos-Retry
+    }
+
     public function test_sync_is_idempotent_on_repeated_uid(): void
     {
         $account = $this->account();
