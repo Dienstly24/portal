@@ -42,6 +42,19 @@ class AuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
+    // Audit AUTH-1: nur ein AUSDRUECKLICH deaktiviertes Konto (is_active=false)
+    // wird ausgesperrt; die isset-Angleichung an EnsureUserRole/AdminController
+    // behandelt NULL (Alt-/Importkonten) konsistent als aktiv.
+    public function test_explicitly_deactivated_user_cannot_authenticate(): void
+    {
+        $user = User::factory()->create(['is_active' => false]);
+
+        $this->post('/login', ['email' => $user->email, 'password' => 'password'])
+            ->assertSessionHasErrors('email');
+
+        $this->assertGuest();
+    }
+
     public function test_users_can_logout(): void
     {
         $user = User::factory()->create();

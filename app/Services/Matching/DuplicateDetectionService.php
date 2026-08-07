@@ -413,6 +413,32 @@ class DuplicateDetectionService
         return (int) min(100, $base);
     }
 
+    /**
+     * Duerfen zwei Kunden UNBEAUFSICHTIGT (Ein-Klick "Alle sicheren
+     * zusammenfuehren") verschmolzen werden? Nein, sobald ein HARTES
+     * Identitaetsmerkmal WIDERSPRICHT - denn ein gemeinsames Konto (IBAN) oder
+     * eine gemeinsame Vertragsnummer hebt den Score auf >= 85, obwohl es sich
+     * um ZWEI verschiedene Personen handeln kann (Ehepaar mit gemeinsamem
+     * Konto, Eltern/Kind). Ein irreversibler Merge wuerde dann eine echte
+     * Person loeschen (Audit MERGE-1). Solche Paare bleiben der MANUELLEN
+     * Einzelpruefung vorbehalten.
+     */
+    public function hasIdentityConflict(Customer $a, Customer $b): bool
+    {
+        // Verschiedene, jeweils gesetzte Geburtsdaten -> verschiedene Personen.
+        if (!empty($a->birth_date) && !empty($b->birth_date)
+            && (string) $a->birth_date !== (string) $b->birth_date) {
+            return true;
+        }
+        // Namen ohne EIN gemeinsames Wort -> verschiedene Personen.
+        $ta = array_values(array_filter(explode(' ', $this->nameKey($a->user?->name)), fn ($t) => $t !== ''));
+        $tb = array_values(array_filter(explode(' ', $this->nameKey($b->user?->name)), fn ($t) => $t !== ''));
+        if ($ta !== [] && $tb !== [] && array_intersect($ta, $tb) === []) {
+            return true;
+        }
+        return false;
+    }
+
     /** @param array<int, ?string> $left @param array<int, ?string> $right */
     private function sharesKey(array $left, array $right, callable $norm): bool
     {

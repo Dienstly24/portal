@@ -287,6 +287,29 @@ class Customer extends Model {
     }
 
     /**
+     * Faengt die seltene Kollision zweier zeitgleich vergebener Kundennummern
+     * ab (Unique-Index auf customer_number): die Nummer wird von den Aufrufern
+     * vorab per CustomerNumberGenerator gezogen (check-then-act), sodass zwei
+     * gleichzeitige Anlagen dieselbe Nummer erhalten koennen. Statt eines 500ers
+     * wird die Nummer EINMAL neu gezogen und erneut gespeichert - Muster wie
+     * Ticket::save (Audit CONC-2). Die DB-UNIQUE bleibt die eigentliche
+     * Absicherung gegen echte Duplikate.
+     */
+    public function save(array $options = [])
+    {
+        try {
+            return parent::save($options);
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            if (!$this->exists && $this->customer_number
+                && str_contains($e->getMessage(), 'customer_number')) {
+                $this->customer_number = app(\App\Services\CustomerNumberGenerator::class)->generate();
+                return parent::save($options);
+            }
+            throw $e;
+        }
+    }
+
+    /**
      * Zaehler-Cache der Dubletten-Verdachtsfaelle verwerfen. Ueber den Service,
      * damit der Cache-Schluessel (Versionsnummer) nur an EINER Stelle definiert
      * ist.

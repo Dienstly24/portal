@@ -6,6 +6,7 @@ use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\Provision;
 use App\Models\ProvisionAuditLog;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Automatische Vermittler-Provisionen (Provisions-Management, Betreiber-
@@ -54,13 +55,6 @@ class ContractProvisionService
             return null;
         }
 
-        // Idempotenz: je Vertrag genau EINE automatische Neuvertrag-Provision.
-        $exists = Provision::where('contract_id', $contract->id)
-            ->where('type', 'neuvertrag')->exists();
-        if ($exists) {
-            return null;
-        }
-
         $rate = $werberUser
             ? $this->rates->forUser($werberUser, $contract->type)
             : $this->rates->forPartner($werberPartner, $contract->type);
@@ -73,34 +67,50 @@ class ContractProvisionService
             return null;
         }
 
-        $provision = Provision::create([
-            'user_id' => $werberUser?->id,
-            'partner_id' => $werberPartner?->id,
-            'customer_id' => $customer->id,
-            'contract_id' => $contract->id,
-            'contract_type' => $contract->type,
-            'insurer' => $contract->insurer,
-            'type' => 'neuvertrag',
-            'amount' => $amount,
-            'status' => 'offen',
-            'note' => $this->buildNote('Automatisch: Neuvertrag', $contract),
-            'created_by' => auth()->check() && auth()->user()->isStaff() ? auth()->id() : null,
-        ]);
+        // Idempotenz RACE-SICHER: die Zeilensperre auf den Vertrag serialisiert
+        // gleichzeitige Aufrufe (Formular-Doppelklick, created-Hook vs.
+        // nachtraegliche Werber-Buchung, zwei Verwalter). Ohne sie koennten
+        // beide den exists()-Check bestehen und den Werber DOPPELT verguenten -
+        // ein reiner UNIQUE-Index auf (contract_id,type) scheidet aus, weil
+        // Boni/Abzuege/Storno legitim mehrfach je Vertrag vorkommen (Audit
+        // CONC-1). lockForUpdate ist auf SQLite ein No-Op (Tests), wirkt aber
+        // auf MySQL/Produktion.
+        return DB::transaction(function () use ($contract, $customer, $werberUser, $werberPartner, $rate, $amount) {
+            Contract::whereKey($contract->getKey())->lockForUpdate()->first();
 
-        ProvisionAuditLog::write(
-            $provision, 'created', 'amount', null,
-            number_format($amount, 2, '.', ''),
-            'Automatische Anlage bei Vertragsanlage'
-            . ($rate['source'] === 'sparte' ? ' (Sparten-Satz)' : ' (globaler Satz)'),
-        );
-        ActivityLog::record('provision_auto_created', 'provision', $provision->id, [
-            'empfaenger' => $provision->recipientName(),
-            'betrag' => $amount,
-            'sparte' => $contract->type,
-            'vertrag' => (string) $contract->id,
-        ]);
+            if (Provision::where('contract_id', $contract->id)->where('type', 'neuvertrag')->exists()) {
+                return null;
+            }
 
-        return $provision;
+            $provision = Provision::create([
+                'user_id' => $werberUser?->id,
+                'partner_id' => $werberPartner?->id,
+                'customer_id' => $customer->id,
+                'contract_id' => $contract->id,
+                'contract_type' => $contract->type,
+                'insurer' => $contract->insurer,
+                'type' => 'neuvertrag',
+                'amount' => $amount,
+                'status' => 'offen',
+                'note' => $this->buildNote('Automatisch: Neuvertrag', $contract),
+                'created_by' => auth()->check() && auth()->user()->isStaff() ? auth()->id() : null,
+            ]);
+
+            ProvisionAuditLog::write(
+                $provision, 'created', 'amount', null,
+                number_format($amount, 2, '.', ''),
+                'Automatische Anlage bei Vertragsanlage'
+                . ($rate['source'] === 'sparte' ? ' (Sparten-Satz)' : ' (globaler Satz)'),
+            );
+            ActivityLog::record('provision_auto_created', 'provision', $provision->id, [
+                'empfaenger' => $provision->recipientName(),
+                'betrag' => $amount,
+                'sparte' => $contract->type,
+                'vertrag' => (string) $contract->id,
+            ]);
+
+            return $provision;
+        });
     }
 
     /**

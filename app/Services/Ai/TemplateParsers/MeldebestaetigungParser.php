@@ -50,8 +50,12 @@ class MeldebestaetigungParser implements DocumentTemplateParser
 
         $raw = [];
         $raw['last_name'] = $this->labelValue('Familienname');
-        // "Vorname" bevorzugt; sonst der gebraeuchliche Vorname.
-        $raw['first_name'] = $this->labelValue('Vorname') ?? $this->labelValue('Gebräuchlicher Vorname');
+        // "Vorname" bevorzugt; sonst die (haeufigere) Pluralform "Vornamen"
+        // bzw. der gebraeuchliche Vorname. Die Wortgrenze im labelRegex
+        // trennt beide Formen jetzt sauber.
+        $raw['first_name'] = $this->labelValue('Vorname')
+            ?? $this->labelValue('Vornamen')
+            ?? $this->labelValue('Gebräuchlicher Vorname');
         $birth = $this->labelValue('Geburtsdatum');
         if ($birth !== null && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $birth, $m)) {
             $raw['birth_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
@@ -259,7 +263,13 @@ class MeldebestaetigungParser implements DocumentTemplateParser
      */
     private function labelRegex(string $label): string
     {
+        // (?![\p{L}]) - die Beschriftung darf nicht in ein LAENGERES Wort
+        // hineinragen: sonst matcht "Vorname" auch die (legal uebliche) Zeile
+        // "Vornamen: Jana" und laesst ein "n:" in den Vornamen laufen (Audit
+        // PARSER-1). Der Klammer-Zusatz "Vorname(n)" bleibt erlaubt, weil "("
+        // kein Buchstabe ist.
         return '/^\s*' . preg_quote($label, '/')
+            . '(?![\p{L}])'
             . '\s*(?:[\(\[\{][^\)\]\}\n]{0,12}[\)\]\}]?)?\s*:?/u';
     }
 

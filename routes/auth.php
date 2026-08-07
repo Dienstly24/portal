@@ -60,7 +60,11 @@ Route::middleware('auth')->group(function () {
     Route::get('confirm-password', [ConfirmablePasswordController::class, 'show'])
         ->name('password.confirm');
 
-    Route::post('confirm-password', [ConfirmablePasswordController::class, 'store']);
+    // Throttle wie bei Login/Reset: sonst kann ein gekaperte Session (z.B. ueber
+    // einen geleakten Magic-Login-Link) das echte Passwort unbegrenzt raten und
+    // damit die Passwort-Bestaetigung aushebeln (Audit AUTH-3).
+    Route::post('confirm-password', [ConfirmablePasswordController::class, 'store'])
+        ->middleware('throttle:6,1');
 
     Route::put('password', [PasswordController::class, 'update'])->name('password.update');
 

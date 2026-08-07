@@ -302,10 +302,14 @@ class ChangeProofVerifier
         return trim(preg_replace('/[ \t]+/', ' ', $text) ?? '');
     }
 
-    /** Wie normalize(), zusaetzlich ohne jedes Leerzeichen (IBAN, Namen). */
+    /** Wie normalize(), zusaetzlich ohne JEDEN Zwischenraum (IBAN, Namen).
+     *  ALLE Whitespaces (auch Zeilenumbrueche) entfernen: normalize() laesst
+     *  \n/\r stehen, sodass eine ueber zwei Zeilen umbrochene IBAN
+     *  ("DE89...\n...3000") sonst nie auf die einzeilige Nadel passt und ein
+     *  echter Nachweis faelschlich als "mismatch" gilt (Audit VERIFY-1). */
     private function squash(string $text): string
     {
-        return str_replace(' ', '', $this->normalize($text));
+        return preg_replace('/\s+/u', '', $this->normalize($text)) ?? '';
     }
 
     /** "STRASSE"/"STR."/"STR" auf eine Form bringen, Zeilen erhalten. */
