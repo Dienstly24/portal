@@ -43,10 +43,28 @@ class EmailMarketingController extends Controller
             'body' => 'required|string',
             'target' => 'required|in:' . implode(',', EmailCampaign::TARGETS),
             'action' => 'nullable|in:send,draft,schedule',
-            'scheduled_for' => 'required_if:action,schedule|nullable|date|after:now',
+            // after:now bewusst NICHT hier - der Eingabewert ist deutsche
+            // Ortszeit und wird erst nach der UTC-Umrechnung gegen jetzt geprueft.
+            'scheduled_for' => 'required_if:action,schedule|nullable|date',
             'draft_id' => 'nullable|uuid',
         ]);
         $action = $data['action'] ?? 'send';
+
+        // Geplante Zeit als DEUTSCHE Ortszeit (datetime-local) interpretieren und
+        // in UTC speichern (app.timezone!). Sonst feuert die Kampagne 1-2h zu
+        // spaet - genau der Fehler, den die Social-Posts ueber OPERATOR_TZ schon
+        // loesen (Audit MKT-2). Vergangenheit erst nach der Umrechnung ablehnen.
+        $scheduledFor = null;
+        if ($action === 'schedule' && !empty($data['scheduled_for'])) {
+            $scheduledFor = \Illuminate\Support\Carbon::parse(
+                $data['scheduled_for'], \App\Models\BannerSocialPost::OPERATOR_TZ
+            )->utc();
+            if ($scheduledFor->isPast()) {
+                return back()->withInput()->withErrors([
+                    'scheduled_for' => 'Der geplante Zeitpunkt liegt in der Vergangenheit.',
+                ]);
+            }
+        }
 
         $campaign = null;
         if (!empty($data['draft_id'])) {
@@ -62,7 +80,7 @@ class EmailMarketingController extends Controller
             'body' => $data['body'],
             'target' => $data['target'],
             'status' => match ($action) { 'draft' => 'draft', 'schedule' => 'scheduled', default => 'sending' },
-            'scheduled_for' => $action === 'schedule' ? $data['scheduled_for'] : null,
+            'scheduled_for' => $scheduledFor,
         ];
         if ($campaign) {
             $campaign->update($attributes);
@@ -76,7 +94,9 @@ class EmailMarketingController extends Controller
         }
         return back()->with('success', $action === 'draft'
             ? 'Entwurf gespeichert.'
-            : 'Kampagne geplant für ' . $campaign->scheduled_for->format('d.m.Y H:i') . '.');
+            // Zur Anzeige zurueck in deutsche Ortszeit rechnen (gespeichert ist UTC).
+            : 'Kampagne geplant für ' . $campaign->scheduled_for
+                ->timezone(\App\Models\BannerSocialPost::OPERATOR_TZ)->format('d.m.Y H:i') . ' Uhr.');
     }
 
     /** Entwurf / geplante Kampagne sofort versenden. */

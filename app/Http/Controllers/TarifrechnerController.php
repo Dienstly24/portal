@@ -88,6 +88,8 @@ class TarifrechnerController extends Controller
             'title' => 'required',
             'body' => 'required',
             'priority' => 'nullable|in:normal,important,urgent',
+            // Gegen 500 bei krummem Datum unter MySQL strict (Audit ANN-1).
+            'expires_at' => 'nullable|date',
         ]);
         Announcement::create([
             'created_by' => auth()->id(),

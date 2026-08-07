@@ -701,3 +701,100 @@ Bestandsdaten-Risiko oder groesseres Redesign):
 `php artisan test`: **gruen** - 0 Fehler (+4 neue Regressionstests). Erweitert:
 `DuplicateBulkMergeTest`, `Auth/AuthenticationTest`; unveraendert gruen:
 `ProvisionManagementTest`, `BannerSocialPublishingTest`, `ChangeRequestVerificationTest`.
+
+---
+
+# Runde 5 - Vollsimulation + letzte Subsysteme (07.08.2026)
+
+Fuenfte Runde: **Live-Simulation ALLER Kern-Workflows** gegen die echte
+Modell-/Service-Schicht plus Tiefenpruefung der letzten nicht auditierten
+Subsysteme (Aktivitaetserfassung, Benachrichtigungen, Medien, E-Mail-
+Marketing, Backup, Ankuendigungen).
+
+## Vollsimulation: 23/23 gruen
+
+Jeder Workflow wurde end-to-end durchgespielt und das Ergebnis geprueft:
+Vertrag->Provision(Betrag/Empfaenger)->Kuendigung->Storno; Versicherer- UND
+Versorger-Wechsel legen je einen eigenen Vertrag an (Bestand erhalten);
+Ticket Anlage->Zuweisung->Antwort->Kundenantwort(reopen)->Schluss inkl.
+Glocken, interne Notiz nie kundensichtbar; Merge erhaelt beide Vertraege;
+Portal-Einladung (birthdate/setlink); Zaehlerstand->Verbrauch; Bank-Aenderung
+bleibt Vier-Augen; erledigte Aufgabe versendet nie. Zusaetzlich: alle 18
+Admin- und 6 oeffentlichen Seiten liefern 200 (kein 500).
+
+## In diesem PR behoben (Runde 5, mit Tests)
+
+### P2 (Zustellbarkeit/DSGVO) - Ein-Klick-Abmeldung (RFC 8058) war tot
+`app/Http/Controllers/UnsubscribeController.php`, `routes/web.php`, `bootstrap/app.php`
+
+Die Marketing-Mail setzt `List-Unsubscribe-Post: List-Unsubscribe=One-Click`,
+aber `/abmelden/{token}` existierte nur als GET und war nicht CSRF-ausgenommen.
+Der native "Abmelden"-Button von Gmail/Yahoo/Apple sendet einen Server-POST ->
+405/419 -> der Kunde wurde NICHT abgemeldet, obwohl der Header genau das
+verspricht (und grosse Anbieter das von Massenversendern verlangen). **Fix**:
+POST-Route + `oneClick()` (200) + CSRF-Ausnahme `abmelden/*`. Test:
+`EmailMarketingImprovementsTest`.
+
+### P2 (Go-Live-Ausfall) - kein Vertrauens-Proxy -> HTTPS-Redirect-Schleife
+`bootstrap/app.php`
+
+`RedirectWebsiteHost` leitet bei `!secure()` auf https um; ohne
+`trustProxies` ignoriert Laravel aber `X-Forwarded-Proto`. Beim Cloudflare-
+Cutover ueber HTTP entsteht eine 301-Endlosschleife (gesamte Website down);
+zudem sind alle IPs (ActivityLog/WorkSession/throttle) die Proxy-IP. **Fix**:
+`trustProxies(at: '*', headers: X-Forwarded-*)`.
+
+### P3 (Timing) - geplante Kampagnen feuerten 1-2h zu spaet
+`app/Http/Controllers/EmailMarketingController.php`, View
+
+`scheduled_for` wurde als UTC gespeichert, obwohl der Betreiber deutsche
+Ortszeit eingibt (dieselbe Falle, die die Social-Posts via OPERATOR_TZ schon
+loesen). **Fix**: Eingabe als Europe/Berlin -> UTC, Anzeige zurueckgerechnet,
+Vergangenheitspruefung nach der Umrechnung. Test: `EmailMarketingImprovementsTest`.
+
+### P3 (Scope) - geloeschter Ersteller -> Kampagne an ALLE Kunden
+`app/Jobs/SendCampaignJob.php`
+
+War der Kampagnen-Ersteller geloescht (created_by genullt), fiel der
+Empfaengerkreis auf ALLE marktbaren Kunden zurueck statt auf das Portfolio.
+**Fix**: kein aufloesbarer Ersteller -> leere Liste (kein Massenversand).
+
+### P3 (Haertung) - diverse
+- `InternalNotificationController`: Badge-Zahl wird jetzt wie die Liste
+  Portfolio-gescopet (Zahl passt zur Anzeige).
+- `scripts/backup.sh`: `tar`-Exit 1 ("file changed as we read it") wird
+  toleriert -> Backup bricht bei laufenden Uploads nicht mehr vor .env-Kopie/
+  Rotation ab.
+- `TarifrechnerController`: `expires_at` validiert (`nullable|date`, 500-Schutz).
+- `ImageVariantGenerator`: Pixelmasse-Deckel (50 MP) VOR dem Dekodieren
+  (Dekompressions-Bomben-Schutz gegen OOM-500).
+
+## Offen aus Runde 5 - Empfehlung fuer den Betreiber
+
+1. **Aktivitaets-/Kampagnen-Zeitzonen weiter vereinheitlichen**: die Reports
+   bucketieren noch nach UTC-Kalendertag; nur der Kampagnen-Versand ist jetzt
+   auf Berlin umgestellt. (Gehoert zur groesseren Zeitzonen-Vereinheitlichung
+   aus Runde 1, Punkt 1.)
+2. Die uebrigen offenen Punkte aus Runde 1-4 (UNIQUE `customers.user_id`,
+   Import-Dubletten, Nachweis-Auto-Freigabe-Strenge, Reset-Enumeration,
+   Magic-Login-Einmalnutzung, `SendCampaignJob`-Idempotenz/Timeout,
+   Commission-Idempotenz) bleiben bestehen.
+
+## Verifiziert sauber (Runde 5)
+
+- **Medien**: `forSlot` cacht Rohspalten (kein `__PHP_Incomplete_Class`), echte
+  MIME-Pruefung, SVG-Sanitizer vor Ablage, Slot-Exklusivitaet, private
+  Originale/oeffentliche Varianten - solide.
+- **Aktivitaetserfassung**: exakt-einmal-Gutschrift der aktiven Sekunden (CAS),
+  Stale-Session-Schluss, DSGVO-Prune nur der Navigations-Zeilen.
+- **Benachrichtigungen**: mark-read strikt auf den eigenen Nutzer gescopet
+  (kein Fremdzugriff); Dokumentanfragen-Lebenszyklus + Upload-Scope korrekt.
+- **Ankuendigungen**: keine XSS (escaped Ausgabe). **deploy.sh**: solide
+  (Wartungsmodus-trap, Vite-Backup/Restore, storage:link, Cache, FPM-Reload).
+  **SEO/Redirect**: keine logische Schleife (nur die o.g. Proxy-Abhaengigkeit).
+
+## Teststatus (Runde 5)
+
+`php artisan test`: **gruen** - 0 Fehler (+3 neue Regressionstests).
+Live-Simulation aller Workflows 23/23; alle Admin-/oeffentlichen Seiten 200.
+Erweitert: `EmailMarketingImprovementsTest`.

@@ -106,8 +106,20 @@ class InternalNotificationController extends Controller
             ->map(fn($i) => collect($i)->except('sort'))
             ->values();
 
-        $unread = InternalNotification::where('user_id', $user->id)->unread()->count()
-            + $unreadConversations->count();
+        // Badge-Zahl MUSS zur sichtbaren Liste passen (Audit NOTIF-1): fuer
+        // Portfolio-begrenzte Mitarbeiter nur ungelesene Meldungen zaehlen, die
+        // auch angezeigt werden - Systemmeldungen (mit Titel) ODER Meldungen zu
+        // einem noch sichtbaren Kunden. Verwaltung (see-all) zaehlt alles.
+        $unreadQuery = InternalNotification::where('user_id', $user->id)->unread();
+        if (!$user->canSeeAllCustomers()) {
+            $visible = $user->visibleCustomerIdsWithSubstitution();
+            $unreadQuery->where(function ($q) use ($visible) {
+                $q->whereNotNull('title')
+                    ->orWhereHas('message', fn($m) => $m->whereIn('customer_id', $visible))
+                    ->orWhereHas('changeRequest', fn($c) => $c->whereIn('customer_id', $visible));
+            });
+        }
+        $unread = $unreadQuery->count() + $unreadConversations->count();
 
         return response()->json(['unread' => $unread, 'items' => $items]);
     }

@@ -16,6 +16,11 @@ use Illuminate\Support\Str;
  */
 class ImageVariantGenerator
 {
+    /** Obergrenze der Pixelmasse (Dekompressions-Bomben-Schutz, ~200 MB je
+     *  Truecolor-Kopie bei 512M-Limit). Website-Assets/Handyfotos liegen weit
+     *  darunter; echte Bilder werden nicht abgelehnt. */
+    private const MAX_PIXELS = 50_000_000;
+
     /**
      * @param string|null $intendedSlot Slot, dem das Bild gleich zugewiesen
      *   wird. Marken-Slots (Logo/Favicon) brauchen andere Groessen und
@@ -44,7 +49,17 @@ class ImageVariantGenerator
         ini_set('memory_limit', '512M');
 
         try {
-            $img = @imagecreatefromstring((string) file_get_contents($original));
+            $bytes = (string) file_get_contents($original);
+            // Dekompressions-Bombe abwehren: ein kleines, stark komprimiertes
+            // Bild kann zu >100 Megapixeln dekodieren und den Speicher sprengen
+            // (fatal, nicht abfangbar -> 500 + haengender Upload). Pixelmasse
+            // VOR dem Dekodieren pruefen (Audit MEDIA-1).
+            $dim = @getimagesizefromstring($bytes);
+            if ($dim !== false && ($dim[0] * $dim[1]) > self::MAX_PIXELS) {
+                throw new \RuntimeException('Bild ist zu gross (max. '
+                    . (self::MAX_PIXELS / 1_000_000) . ' Megapixel).');
+            }
+            $img = @imagecreatefromstring($bytes);
             if ($img === false) {
                 throw new \RuntimeException('Bild konnte nicht gelesen werden (Format beschaedigt?).');
             }

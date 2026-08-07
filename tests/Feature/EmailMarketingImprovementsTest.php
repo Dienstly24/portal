@@ -73,6 +73,39 @@ class EmailMarketingImprovementsTest extends TestCase
         $this->get('/abmelden/gibt-es-nicht')->assertNotFound();
     }
 
+    // Audit MAIL-1: RFC-8058-Ein-Klick (Server-POST von Gmail/Yahoo) muss
+    // ohne CSRF-Token funktionieren und den Kunden wirklich abmelden.
+    public function test_one_click_unsubscribe_post_works_without_csrf(): void
+    {
+        $customer = $this->customer();
+        $token = $customer->unsubscribeToken();
+
+        $this->post('/abmelden/' . $token)->assertOk();
+
+        $customer->refresh();
+        $this->assertFalse($customer->marketing_consent);
+        $this->assertNotNull($customer->unsubscribed_at);
+
+        $this->post('/abmelden/gibt-es-nicht')->assertNotFound();
+    }
+
+    // Audit MKT-2: geplante Zeit wird als deutsche Ortszeit erfasst und in UTC
+    // gespeichert - sonst feuert die Kampagne 1-2h zu spaet.
+    public function test_scheduled_for_is_stored_as_utc_from_berlin_input(): void
+    {
+        $this->customer();
+        $berlin = now()->timezone('Europe/Berlin')->addDay()->setTime(14, 0);
+
+        $this->actingAs($this->admin)->post(route('admin.email_marketing.send'), [
+            'subject' => 'Plan', 'body' => 'Text', 'target' => 'all',
+            'action' => 'schedule', 'scheduled_for' => $berlin->format('Y-m-d H:i:s'),
+        ])->assertSessionHas('success');
+
+        $stored = EmailCampaign::firstOrFail()->scheduled_for; // UTC (app.timezone)
+        $this->assertSame($berlin->copy()->utc()->format('Y-m-d H:i'), $stored->format('Y-m-d H:i'));
+        $this->assertSame('14:00', $stored->timezone('Europe/Berlin')->format('H:i'));
+    }
+
     public function test_campaign_send_skips_unsubscribed_and_logs_each_recipient(): void
     {
         Mail::fake();
@@ -123,9 +156,13 @@ class EmailMarketingImprovementsTest extends TestCase
         Mail::fake();
         $this->customer();
 
+        // scheduled_for wird als deutsche Ortszeit erfasst (Audit MKT-2) -
+        // daher die Eingabe in Europe/Berlin bilden, damit der gespeicherte
+        // UTC-Zeitpunkt real +1h in der Zukunft liegt.
         $this->actingAs($this->admin)->post(route('admin.email_marketing.send'), [
             'subject' => 'Geplant', 'body' => 'Bald', 'target' => 'all',
-            'action' => 'schedule', 'scheduled_for' => now()->addHour()->format('Y-m-d H:i:s'),
+            'action' => 'schedule',
+            'scheduled_for' => now()->timezone('Europe/Berlin')->addHour()->format('Y-m-d H:i:s'),
         ]);
         $this->assertEquals('scheduled', EmailCampaign::firstOrFail()->status);
 
