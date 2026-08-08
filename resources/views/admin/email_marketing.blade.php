@@ -73,7 +73,8 @@
         </div>
         <div class="field">
             <label>Geplanter Versand (nur für „Später senden")</label>
-            <input type="datetime-local" name="scheduled_for" min="{{ now()->format('Y-m-d\TH:i') }}" value="{{ old('scheduled_for', isset($draft) && $draft?->scheduled_for ? $draft->scheduled_for->format('Y-m-d\TH:i') : '') }}" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+            {{-- Eingabe/Anzeige in deutscher Ortszeit; gespeichert wird UTC (Audit MKT-2). --}}
+            <input type="datetime-local" name="scheduled_for" min="{{ now()->timezone(\App\Models\BannerSocialPost::OPERATOR_TZ)->format('Y-m-d\TH:i') }}" value="{{ old('scheduled_for', isset($draft) && $draft?->scheduled_for ? $draft->scheduled_for->timezone(\App\Models\BannerSocialPost::OPERATOR_TZ)->format('Y-m-d\TH:i') : '') }}" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
         </div>
         <div style="background:#E6F1FB;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#185FA5;">
             ℹ Der Versand läuft im Hintergrund über die Warteschlange. Jede Mail enthält automatisch einen Abmelde-Link; abgemeldete Kunden werden übersprungen.
@@ -131,7 +132,7 @@
             <div style="font-weight:600;font-size:14px;">{{ $c->subject }}</div>
             <div style="font-size:12px;color:var(--ink-soft);">
                 @if($c->status === 'scheduled' && $c->scheduled_for)
-                    Geplant für {{ $c->scheduled_for->format('d.m.Y H:i') }}
+                    Geplant für {{ $c->scheduled_for->timezone(\App\Models\BannerSocialPost::OPERATOR_TZ)->format('d.m.Y H:i') }} Uhr
                 @else
                     Entwurf · {{ $c->updated_at->format('d.m.Y H:i') }}
                 @endif

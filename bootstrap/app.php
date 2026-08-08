@@ -16,7 +16,21 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\EnsureUserRole::class,
             'forceLocale' => \App\Http\Middleware\SetRequestLocale::class,
         ]);
-        $middleware->validateCsrfTokens(except: ['api/website-inquiry', 'api/website-contact']);
+        // Vertrauens-Proxy (Cloudflare + nginx vor PHP-FPM auf dem VPS): ohne
+        // dies ignoriert $request->secure()/ip() die X-Forwarded-*-Header. Folge
+        // waere (a) beim Cloudflare-Cutover ueber HTTP eine 301-Endlosschleife
+        // im HTTPS-Redirect (RedirectWebsiteHost) -> gesamte Website down, und
+        // (b) falsche IPs in ActivityLog/WorkSession und in ALLEN throttle-
+        // Buckets (Login/Reset/Website-Formular) -> Rate-Limits kollabieren auf
+        // wenige Proxy-IPs (Audit NET-1). Die App ist nur ueber den Proxy
+        // erreichbar; ist der Origin direkt erreichbar, auf CF-Ranges einengen.
+        $middleware->trustProxies(at: '*', headers: Request::HEADER_X_FORWARDED_FOR
+            | Request::HEADER_X_FORWARDED_HOST
+            | Request::HEADER_X_FORWARDED_PORT
+            | Request::HEADER_X_FORWARDED_PROTO);
+        // abmelden/* (POST): RFC-8058-Ein-Klick-Abmeldung ist ein
+        // Server-zu-Server-POST von Gmail/Yahoo ohne Session/CSRF-Token.
+        $middleware->validateCsrfTokens(except: ['api/website-inquiry', 'api/website-contact', 'abmelden/*']);
         // Domain-Strategie der Website: Nicht-kanonische Hosts (ohne www,
         // .com, http) per 301 auf https://www.dienstly24.de umleiten.
         $middleware->prepend(\App\Http\Middleware\RedirectWebsiteHost::class);

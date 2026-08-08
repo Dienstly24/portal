@@ -83,6 +83,12 @@ Route::get('/s/{code}', [\App\Http\Controllers\SocialLinkController::class, 'red
 Route::get('/abmelden/{token}', [\App\Http\Controllers\UnsubscribeController::class, 'handle'])
     ->middleware('throttle:30,1')
     ->name('unsubscribe');
+// Ein-Klick-Abmeldung (RFC 8058): der native "Abmelden"-Button von
+// Gmail/Yahoo/Apple sendet einen POST an die List-Unsubscribe-URL. CSRF-
+// Ausnahme in bootstrap/app.php (kein Session-Kontext bei diesem Server-POST).
+Route::post('/abmelden/{token}', [\App\Http\Controllers\UnsubscribeController::class, 'oneClick'])
+    ->middleware('throttle:30,1')
+    ->name('unsubscribe.oneclick');
 
 // Magischer Erst-Login aus der Willkommens-Mail: signiert (90 Tage),
 // nur Kunden-Accounts, ratenbegrenzt. Details im MagicLoginController.

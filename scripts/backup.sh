@@ -54,9 +54,14 @@ echo "  DB-Dump: $(du -h "$BACKUP_DIR/db-$STAMP.sql.gz" | cut -f1)"
 
 # 2) Dateien: private Ablage (Dokumente, Nachweise, Medien-Originale)
 #    und oeffentliche Medien-Varianten. Caches/Sessions bleiben draussen.
+#    Exit-Code 1 ("file changed as we read it") wird toleriert: bei laufenden
+#    Uploads schreibt/loescht die App parallel in storage/app; unter
+#    `set -e` wuerde das den ganzen Backup-Lauf VOR .env-Kopie und Rotation
+#    abbrechen (Audit BACKUP-1). Nur >=2 (echter Fehler) bricht ab.
 tar -czf "$BACKUP_DIR/storage-$STAMP.tar.gz" \
   --exclude='storage/framework' --exclude='storage/logs' \
-  storage/app
+  storage/app || { rc=$?; [ "$rc" -le 1 ] || exit "$rc"; \
+  echo "  Hinweis: tar meldete waehrend des Laufs geaenderte Dateien (rc=1) - Backup dennoch erstellt."; }
 echo "  Dateien: $(du -h "$BACKUP_DIR/storage-$STAMP.tar.gz" | cut -f1)"
 
 # 3) .env-Kopie (enthaelt Zugangsdaten -> nur root/Deploy-User lesbar).

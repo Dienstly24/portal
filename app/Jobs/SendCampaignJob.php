@@ -75,9 +75,15 @@ class SendCampaignJob implements ShouldQueue
     private function recipients(EmailCampaign $campaign)
     {
         $creator = $campaign->createdBy;
-        $ids = null;
-        if ($creator && !$creator->canSeeAllCustomers()) {
+        if (!$creator) {
+            // Kein (mehr) aufloesbarer Ersteller (Konto geloescht -> created_by
+            // genullt): das Portfolio ist unbekannt. Dann NICHT an alle Kunden
+            // senden (Portfolio-Scope-Schutz, Audit MKT-1) - leere Liste.
+            $ids = [];
+        } elseif (!$creator->canSeeAllCustomers()) {
             $ids = $creator->assignedCustomers()->pluck('customers.id')->toArray();
+        } else {
+            $ids = null; // see-all -> keine Einschraenkung
         }
 
         $base = Customer::with('user')
