@@ -401,8 +401,12 @@ class ChangeRequestService
                 'category' => 'contract',
                 'file_name' => $data['document_name'] ?? basename($data['document_path']),
                 'file_path' => $data['document_path'],
-                // Ältere, vor der Umstellung eingereichte Anträge liegen noch auf 'public'
-                'disk' => $data['document_disk'] ?? 'public',
+                // Neue Dokumente immer privat (Audit SEC-5): der aktuelle Weg
+                // (SelfServiceController) setzt document_disk explizit auf 'local';
+                // fehlt es doch einmal, ist der sichere Default die PRIVATE Disk -
+                // nie 'public' (waere sonst ueber den /storage-Symlink ohne Auth
+                // abrufbar).
+                'disk' => $data['document_disk'] ?? 'local',
             ]);
         }
     }
