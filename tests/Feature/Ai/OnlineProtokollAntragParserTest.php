@@ -82,12 +82,31 @@ class OnlineProtokollAntragParserTest extends TestCase
             '                         Versicherungssumme        unbegrenzt',
             '                               Selbstbeteiligung     300/150 EUR',
             '',
+            '                               Spezial Straf RS    ja',
+            '                           Erw. Internet-Schutz    ja',
+            '',
             '                             Netto Jahresbeitrag     231,15 EUR',
             '                       Jahresbeitrag inkl. Steuer    275,07 EUR',
             '                       Beitrag gemäß Zahlweise       26,62 EUR',
             '',
             'Beratungsdokumentation',
+            'Angaben des Kunden zu seinem Versicherungsbedarf und seinen Wünschen',
+            '',
+            '                                                   Privat-RS           Ja',
+            '',
+            '                                                  Berufs-RS            Ja',
+            '',
+            '                  Verkehrs-RS Familie (für alle KFZ)                   Ja',
+            '',
+            '                            Eigentums- und Mieter-RS                   Ja',
+            '',
+            '                        VERMIETETE Wohneinheiten                       nein',
+            '',
+            '                           Erweiterter Internet-Schutz                 nein',
             '             Gewünschter Versicherungsbeginn          schnellstmöglich',
+            '',
+            // Spaetere Filterkriterien gehoeren NICHT zu den Bausteinen.
+            '                      Rechtsschutz für Unterhalt      Nein',
             '',
             '         (19165482-O/199/125) Datum: 09.08.2026, 16:36 Uhr     Unterschrift: ____',
         ]);
@@ -136,6 +155,15 @@ class OnlineProtokollAntragParserTest extends TestCase
         // Kein abweichender Kontoinhaber eingetragen -> IBAN des Antragstellers.
         $this->assertSame('DE02574501200131078784', $r['data']['bank']['iban']);
         $this->assertSame('Karim Muster', $r['data']['bank']['account_holder']);
+
+        // Deckungs-Bausteine: auf einen Blick, ob der Schutz umfassend ist
+        // (4 von 6 gewuenscht) - das Filterkriterium "Rechtsschutz fuer
+        // Unterhalt" nach dem Block gehoert NICHT dazu.
+        $this->assertStringContainsString('Gewuenschte Bausteine (4 von 6): Privat-RS, Berufs-RS, Verkehrs-RS Familie (für alle KFZ), Eigentums- und Mieter-RS', $r['summary']);
+        $this->assertStringContainsString('NICHT gewuenscht: VERMIETETE Wohneinheiten, Erweiterter Internet-Schutz', $r['summary']);
+        $this->assertStringNotContainsString('Unterhalt', $r['summary']);
+        // Die tatsaechlich beantragten Zusatz-Bausteine aus den Antragsdaten.
+        $this->assertStringContainsString('Laut Antragsdaten: Spezial Straf RS ja, Erw. Internet-Schutz ja', $r['summary']);
     }
 
     public function test_foreign_account_holder_blocks_bank(): void
