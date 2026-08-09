@@ -117,6 +117,8 @@ $sb = $statusBadge[$message->match_status] ?? ['#EEF0F3', '#555', $message->matc
 </div>
 
 <script>
+// XSS-Schutz (Audit SEC-2): Kundenname/-nummer nie roh in innerHTML.
+function escapeHtml(t){const d=document.createElement('div');d.textContent=t==null?'':t;return d.innerHTML;}
 document.querySelectorAll('.assign-form').forEach(form => {
     const search = form.querySelector('.assign-search');
     const results = form.querySelector('.assign-results');
@@ -137,7 +139,7 @@ document.querySelectorAll('.assign-form').forEach(form => {
                     items.forEach(c => {
                         const div = document.createElement('div');
                         div.style.cssText = 'padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--line);';
-                        div.innerHTML = '<strong>' + (c.name ?? '—') + '</strong> <span style="color:var(--ink-soft);">(' + (c.number ?? '') + ')</span>';
+                        div.innerHTML = '<strong>' + escapeHtml(c.name ?? '—') + '</strong> <span style="color:var(--ink-soft);">(' + escapeHtml(c.number ?? '') + ')</span>';
                         div.onmouseover = () => div.style.background = '#F8F9FA';
                         div.onmouseout = () => div.style.background = '#fff';
                         div.onclick = () => {

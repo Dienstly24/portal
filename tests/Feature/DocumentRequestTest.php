@@ -161,4 +161,37 @@ class DocumentRequestTest extends TestCase
             ['title' => 'Test']
         )->assertForbidden();
     }
+
+    public function test_index_list_is_scoped_to_employee_portfolio(): void
+    {
+        // Fremder Kunde (nicht zugewiesen) mit offener Anfrage.
+        $this->request(['title' => 'Fremd-Meldebescheinigung-XYZ']);
+
+        // Zugewiesener Kunde mit eigener Anfrage.
+        $assignedUser = User::factory()->create(['role' => 'customer']);
+        $assigned = Customer::create(['user_id' => $assignedUser->id, 'customer_number' => 'K-2001']);
+        DocumentRequest::create([
+            'customer_id' => $assigned->id,
+            'title' => 'Zugewiesen-Ausweis-ABC',
+            'status' => 'open',
+            'requested_by' => $this->admin->id,
+        ]);
+
+        $employee = User::factory()->create(['role' => 'employee', 'can_see_all_customers' => false]);
+        // (string)-Cast: $assigned->id ist direkt nach create() ein UUID-Objekt;
+        // attach() wuerde es sonst per (array)-Cast zerlegen.
+        $employee->assignedCustomers()->attach((string) $assigned->id);
+
+        // Eingeschraenkter Mitarbeiter sieht NUR die Anfrage seines Kunden.
+        $this->actingAs($employee)->get(route('admin.document_requests'))
+            ->assertOk()
+            ->assertSee('Zugewiesen-Ausweis-ABC')
+            ->assertDontSee('Fremd-Meldebescheinigung-XYZ');
+
+        // Admin (sieht alle) sieht weiterhin beide.
+        $this->actingAs($this->admin)->get(route('admin.document_requests'))
+            ->assertOk()
+            ->assertSee('Zugewiesen-Ausweis-ABC')
+            ->assertSee('Fremd-Meldebescheinigung-XYZ');
+    }
 }

@@ -151,12 +151,14 @@
 </div>
 
 <script>
+// XSS-Schutz (Audit SEC-2): Banner-Titel nie roh in innerHTML.
+function escapeHtml(t){const d=document.createElement('div');d.textContent=t==null?'':t;return d.innerHTML;}
 function previewBanner(src, type, title) {
     const body = document.getElementById('previewBody');
     const media = type === 'video'
         ? '<video src="' + src + '" style="width:100%;height:auto;max-height:70vh;display:block;" autoplay muted loop playsinline></video>'
         : '<img src="' + src + '" style="width:100%;height:auto;max-height:70vh;object-fit:contain;display:block;">';
-    body.innerHTML = media + '<span style="position:absolute;left:0;right:0;bottom:0;padding:14px 18px;background:linear-gradient(transparent,rgba(0,0,0,.65));color:#fff;font-weight:700;font-size:15px;">' + title + ' <span style="font-weight:400;font-size:12.5px;">– Mehr erfahren →</span></span>';
+    body.innerHTML = media + '<span style="position:absolute;left:0;right:0;bottom:0;padding:14px 18px;background:linear-gradient(transparent,rgba(0,0,0,.65));color:#fff;font-weight:700;font-size:15px;">' + escapeHtml(title) + ' <span style="font-weight:400;font-size:12.5px;">– Mehr erfahren →</span></span>';
     document.getElementById('previewModal').style.display = 'flex';
 }
 // Vorschau VOR dem Speichern: liest die gewählte Datei lokal (FileReader).

@@ -46,6 +46,14 @@ class SvgSanitizer
                         $el->removeChild($child);
                         continue;
                     }
+                    // <style> bleibt erhalten (Logo-SVGs nutzen interne CSS-
+                    // Klassen), aber externe Ressourcen raus: @import und externe
+                    // url(...) - die Website laedt NIE Fremdressourcen (DSGVO/
+                    // Abmahnung, Audit SEC-4).
+                    if (strtolower($child->localName) === 'style') {
+                        $child->textContent = self::sanitizeCss($child->textContent);
+                        continue;
+                    }
                     $walk($child);
                 }
             }
@@ -66,11 +74,34 @@ class SvgSanitizer
                 }
                 if (stripos($value, 'javascript:') !== false) {
                     $el->removeAttributeNode($attr);
+                    continue;
+                }
+                // Inline-style-Attribut: externe url(...) neutralisieren.
+                if ($name === 'style') {
+                    $attr->value = self::sanitizeCss($value);
                 }
             }
         };
         $walk($dom->documentElement);
 
         return $dom->saveXML($dom->documentElement);
+    }
+
+    /**
+     * Entfernt externe Ressourcen aus CSS (in <style> oder style=""):
+     * @import und externe url(...) (http/https/protokollrelativ) werden
+     * neutralisiert; interne Referenzen (#id) und data:-URIs bleiben.
+     */
+    private static function sanitizeCss(string $css): string
+    {
+        $css = preg_replace('/@import\b[^;]*;?/i', '', $css) ?? $css;
+        $css = preg_replace_callback('/url\(\s*([\'"]?)([^\'")]+)\1\s*\)/i', function ($m) {
+            $u = trim($m[2]);
+            if (preg_match('#^(https?:)?//#i', $u) || stripos($u, 'javascript:') !== false) {
+                return "url('#')";
+            }
+            return $m[0];
+        }, $css) ?? $css;
+        return $css;
     }
 }

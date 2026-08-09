@@ -1491,8 +1491,10 @@ class AdminController extends Controller
         abort_unless(\Illuminate\Support\Facades\Storage::disk($disk)->exists($doc->file_path), 404);
         // ?view=1 -> im Browser anzeigen (Vorschau, z.B. "Anzeigen"-Button im
         // Dokumenten-Eingang); sonst herunterladen.
+        // nosniff wie beim Portal-Endpunkt (Audit SEC-3): verhindert, dass der
+        // Browser eine Vorschau-Datei als HTML/Skript interpretiert.
         return $request->boolean('view')
-            ? \Illuminate\Support\Facades\Storage::disk($disk)->response($doc->file_path, $doc->file_name)
+            ? \Illuminate\Support\Facades\Storage::disk($disk)->response($doc->file_path, $doc->file_name, ['X-Content-Type-Options' => 'nosniff'])
             : \Illuminate\Support\Facades\Storage::disk($disk)->download($doc->file_path, $doc->file_name);
     }
 

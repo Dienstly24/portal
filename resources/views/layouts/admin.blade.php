@@ -164,7 +164,8 @@ table tr:hover td{background:#EDEAE0;}
         $openTasks = \App\Models\Task::where('assigned_to', $navUser->id)->where('status','!=','done')->count();
         $suggestedMails = in_array($navRole, ['admin','manager','support'])
             ? \App\Models\EmailMessage::where('match_status', 'suggested')->count() : 0;
-        $docReqCount = \App\Models\DocumentRequest::awaitingReview()->count();
+        $docReqCount = \App\Models\DocumentRequest::awaitingReview()
+            ->when(!$navCanAll, fn($q) => $q->whereIn('customer_id', $navUser->visibleCustomerIdsWithSubstitution()))->count();
         // Eingeschraenkte Mitarbeiter sehen im Eingang nur eigene Uploads - Badge muss dazu passen.
         $docInboxCount = \App\Models\Document::inbox()
             ->when(!$navCanAll, fn($q) => $q->where('uploaded_by', $navUser->id))->count();
@@ -473,8 +474,8 @@ function globalSearch(q) {
                    onmouseover="this.style.background='#F7F5EF'" onmouseout="this.style.background='transparent'">
                     <span style="font-size:18px;">${item.icon}</span>
                     <div>
-                        <div style="font-weight:600;font-size:13px;">${item.title}</div>
-                        <div style="font-size:11px;color:#6B7280;">${item.sub || ''}</div>
+                        <div style="font-weight:600;font-size:13px;">${escapeHtml(item.title)}</div>
+                        <div style="font-size:11px;color:#6B7280;">${escapeHtml(item.sub || '')}</div>
                     </div>
                 </a>
             `).join('');

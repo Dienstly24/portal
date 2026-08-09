@@ -68,6 +68,8 @@
 </div>
 <script>
 (function () {
+    // XSS-Schutz (Audit SEC-2): Kundendaten (Name/Nummer/E-Mail) nie roh in innerHTML.
+    function escapeHtml(t){var d=document.createElement('div');d.textContent=t==null?'':t;return d.innerHTML;}
     var preselected = JSON.parse(document.getElementById('preselectedData').textContent);
     var selected = {};
     var box = document.getElementById('assignSelected');
@@ -84,7 +86,7 @@
             var c = selected[id];
             var chip = document.createElement('span');
             chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:#D9F4E6;border:1px solid #17A65B;border-radius:20px;padding:5px 12px;font-size:12.5px;';
-            chip.innerHTML = '👤 ' + c.name + ' <span style="color:var(--ink-soft);">' + (c.number || '') + '</span>';
+            chip.innerHTML = '👤 ' + escapeHtml(c.name) + ' <span style="color:var(--ink-soft);">' + escapeHtml(c.number || '') + '</span>';
             var x = document.createElement('a');
             x.textContent = '✕';
             x.style.cssText = 'cursor:pointer;color:#A32D2D;font-weight:700;';
@@ -113,7 +115,7 @@
                     list.forEach(function (c) {
                         var row = document.createElement('div');
                         row.style.cssText = 'padding:10px 14px;cursor:pointer;font-size:13.5px;border-bottom:1px solid var(--line);';
-                        row.innerHTML = '<strong>' + c.name + '</strong> · ' + (c.number || '') + ' <span style="color:var(--ink-soft);">' + (c.email || '') + '</span>' + (selected[c.id] ? ' ✅' : '');
+                        row.innerHTML = '<strong>' + escapeHtml(c.name) + '</strong> · ' + escapeHtml(c.number || '') + ' <span style="color:var(--ink-soft);">' + escapeHtml(c.email || '') + '</span>' + (selected[c.id] ? ' ✅' : '');
                         row.onmouseover = function () { row.style.background = 'var(--canvas)'; };
                         row.onmouseout = function () { row.style.background = '#fff'; };
                         row.onclick = function () {

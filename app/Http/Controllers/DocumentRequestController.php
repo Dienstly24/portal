@@ -19,10 +19,19 @@ class DocumentRequestController extends Controller
 {
     public function index()
     {
+        // Portfolio-Sichtbarkeit wie ueberall im Admin-Bereich (Audit AC-1):
+        // eingeschraenkte Mitarbeiter sehen nur Anfragen ihrer eigenen Kunden -
+        // sonst leckt die Liste Namen/Vertragsnummern fremder Kunden.
+        $user = auth()->user();
+        $scope = fn ($q) => $q->when(
+            !$user->canSeeAllCustomers(),
+            fn ($qq) => $qq->whereIn('customer_id', $user->visibleCustomerIdsWithSubstitution())
+        );
+
         $awaitingReview = DocumentRequest::with(['customer.user', 'contract', 'document'])
-            ->awaitingReview()->orderBy('uploaded_at')->get();
+            ->awaitingReview()->tap($scope)->orderBy('uploaded_at')->get();
         $open = DocumentRequest::with(['customer.user', 'contract'])
-            ->openForCustomer()->orderBy('deadline')->get();
+            ->openForCustomer()->tap($scope)->orderBy('deadline')->get();
 
         return view('admin.document_requests', compact('awaitingReview', 'open'));
     }

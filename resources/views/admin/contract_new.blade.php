@@ -46,6 +46,8 @@
 
 <script>
 const customers = @json($customers->map(fn($c) => ['id' => $c->id, 'name' => $c->user?->name, 'email' => $c->user?->email]));
+// XSS-Schutz (Audit SEC-2): Kundenname/-mail nie roh in innerHTML.
+function escapeHtml(t){const d=document.createElement('div');d.textContent=t==null?'':t;return d.innerHTML;}
 
 function searchCustomer(q) {
     const dd = document.getElementById('customer-dropdown');
@@ -57,8 +59,8 @@ function searchCustomer(q) {
         dd.innerHTML = results.map(c => `<div onclick="selectCustomer('${c.id}', this.dataset.name)" data-name="${(c.name||'').replace(/"/g,'&quot;')}"
             style="padding:12px 16px;cursor:pointer;font-size:14px;border-bottom:1px solid var(--line);"
             onmouseover="this.style.background='#F8F9FA'" onmouseout="this.style.background='#fff'">
-            <div style="font-weight:600;">${c.name}</div>
-            <div style="font-size:12px;color:var(--ink-soft);">${c.email||''}</div>
+            <div style="font-weight:600;">${escapeHtml(c.name)}</div>
+            <div style="font-size:12px;color:var(--ink-soft);">${escapeHtml(c.email||'')}</div>
         </div>`).join('');
     }
     dd.style.display='block';
