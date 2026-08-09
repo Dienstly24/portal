@@ -300,6 +300,19 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   (Erstzulassung „01.2004") - ein Tag wäre erfunden, die Angabe steht dafür in
   der Zusammenfassung. `power_kw` ist jetzt ein extrahierbares Fahrzeugfeld
   (Validierung, Vertragsanlage, Version History, KI-Prompt Feld P.2).
+- **Antrag aus dem Online-Vergleichsportal des Maklerbundes** (Mr-Money /
+  www.online-protokoll.de, 09.08.2026): `OnlineProtokollAntragParser` liest
+  den Antrag (z.B. "Antrag Rechtsschutzversicherung", BavariaDirekt-OERAG)
+  gratis: Sparte aus dem TITEL (unbekannte Sparte bleibt bewusst leer),
+  Anbieter/Tarif, Beginn NUR als echtes Datum ("schnellstmoeglich" der
+  Beratungsdoku wird nie geraten), "Beitrag gemaess Zahlweise" = BRUTTO.
+  Ein Antrag traegt KEINE Vertragsnummer (Stufe `antrag`) - die
+  Protokoll-Nr. steht nur in der Zusammenfassung, die spaetere Police
+  ergaenzt denselben Vertrag (findApplicationContractForConfirmation).
+  Klein/GROSS getippte Namen werden normalisiert ("kadro" -> "Kadro");
+  IBAN nur ohne eingetragenen abweichenden Kontoinhaber; die
+  Vermittler-Daten (Mr-Money, post@makler-bund.de) werden NIE Kundendaten.
+  Tests: `OnlineProtokollAntragParserTest`.
 - **Gewerbliche Sparten** (Betreiber-Vorgabe 30.07.2026): `betriebshaftpflicht`
   und `frachtfuehrerhaftpflicht` sind EIGENE Sparten in `Contract::TYPES`
   (Flag `'gewerblich' => true`, Gruppe „Gewerblich" im Vertragsformular,
