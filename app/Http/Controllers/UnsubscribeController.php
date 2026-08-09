@@ -10,26 +10,38 @@ use App\Models\Customer;
  */
 class UnsubscribeController extends Controller
 {
-    /** Klick im Mail-Body (GET) - zeigt die Bestaetigungsseite. */
+    /** Klick im Mail-Body (GET) - zeigt die Bestaetigungsseite, aendert NICHTS. */
     public function handle(string $token)
     {
-        $customer = $this->unsubscribe($token);
-        return view('unsubscribe', ['lang' => $customer->preferred_lang ?? 'de']);
+        // KEINE Statusaenderung im GET (Audit MAIL-2): Mail-Sicherheits-Scanner
+        // und Link-Prefetcher (Outlook/AV-Gateways) rufen Links in E-Mails
+        // automatisch ab und wuerden Kunden sonst ungewollt abmelden. Erst der
+        // ausdrueckliche POST (Button bzw. RFC-8058-Ein-Klick) meldet ab.
+        $customer = Customer::where('unsubscribe_token', $token)->firstOrFail();
+        return view('unsubscribe_confirm', [
+            'lang' => $customer->preferred_lang ?? 'de',
+            'token' => $token,
+        ]);
     }
 
     /**
-     * Ein-Klick-Abmeldung (RFC 8058): Gmail/Yahoo/Apple senden bei Klick auf
-     * ihren nativen "Abmelden"-Button einen Server-zu-Server-POST an die
-     * List-Unsubscribe-URL und erwarten eine 2xx-Antwort ohne Interaktion.
-     * Fehlte diese POST-Route, quittierte der Server mit 405/419 und der Kunde
-     * wurde NICHT abgemeldet - obwohl der Header genau das versprach und
-     * grosse Anbieter das inzwischen von Massenversendern verlangen (Audit
-     * MAIL-1). Kein View, keine Weiterleitung - nur 200.
+     * Abmeldung ausfuehren (POST) - zwei Aufrufer:
+     * - Mensch: Klick auf "Abmelden" auf der Bestaetigungsseite (Formular-POST)
+     *   -> HTML-Erfolgsseite.
+     * - RFC 8058 Ein-Klick (Gmail/Yahoo/Apple): Server-zu-Server-POST mit Body
+     *   "List-Unsubscribe=One-Click" an die List-Unsubscribe-URL, erwartet eine
+     *   2xx-Antwort ohne Interaktion (Audit MAIL-1). Kein View - nur 200.
      */
-    public function oneClick(string $token)
+    public function oneClick(string $token, \Illuminate\Http\Request $request)
     {
-        $this->unsubscribe($token);
-        return response('OK', 200)->header('Content-Type', 'text/plain');
+        $customer = $this->unsubscribe($token);
+
+        // Maschinen-Client (One-Click-Body bzw. keine HTML-Erwartung): nur 200.
+        if ($request->input('List-Unsubscribe') === 'One-Click' || ! $request->acceptsHtml()) {
+            return response('OK', 200)->header('Content-Type', 'text/plain');
+        }
+
+        return view('unsubscribe', ['lang' => $customer->preferred_lang ?? 'de']);
     }
 
     /** Idempotente Abmeldung; wirft 404 bei unbekanntem Token. */

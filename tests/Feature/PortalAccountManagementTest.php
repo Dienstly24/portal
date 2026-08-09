@@ -198,21 +198,26 @@ class PortalAccountManagementTest extends TestCase
         });
     }
 
-    public function test_password_reset_for_unknown_email_shows_clear_message_not_500(): void
+    public function test_password_reset_for_unknown_email_shows_generic_message_not_500(): void
     {
+        // Anti-Enumeration (Audit AUTH-2): unbekannte Adresse liefert dieselbe
+        // neutrale Meldung wie ein existierendes Konto - kein Fehler, kein 500.
         $this->post(route('password.email'), ['email' => 'gibtsnicht@example.com'])
-            ->assertSessionHasErrors('email')
-            ->assertStatus(302); // Redirect zurück, kein 500
+            ->assertStatus(302)
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('status', fn ($s) => str_contains((string) $s, 'Falls ein Konto'));
     }
 
-    public function test_password_reset_for_internal_placeholder_email_shows_clear_message(): void
+    public function test_password_reset_for_internal_placeholder_email_shows_generic_message(): void
     {
         $this->customer(['email' => 'import-xyz@dienstly24.internal']);
 
-        $response = $this->post(route('password.email'), ['email' => 'import-xyz@dienstly24.internal']);
+        // Interne Import-Adresse: gleiche neutrale Meldung (kein Konto-Orakel),
+        // aber es wird NICHTS versendet (kann keine Mail empfangen).
+        $this->post(route('password.email'), ['email' => 'import-xyz@dienstly24.internal'])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('status', fn ($s) => str_contains((string) $s, 'Falls ein Konto'));
 
-        $response->assertSessionHasErrors('email');
-        $this->assertStringContainsString('kein E-Mail-Versand möglich', session('errors')->first('email'));
         Mail::assertNothingSent();
     }
 

@@ -36,11 +36,15 @@ class PasswordResetLinkController extends Controller
 
         $email = mb_strtolower(trim($request->input('email')));
 
-        // Interne Import-Adressen können keine Mails empfangen.
+        // Anti-Enumeration (Audit AUTH-2): ein existierendes, ein unbekanntes und
+        // ein Import-Platzhalter-Konto muessen die GLEICHE Antwort erhalten -
+        // sonst ist der Reset-Dialog ein Orakel "ist X Kunde bei uns?".
+        $genericSent = 'Falls ein Konto mit dieser E-Mail-Adresse existiert, haben wir Ihnen einen Link zum Zurücksetzen des Passworts gesendet. Bitte prüfen Sie auch Ihren Spam-Ordner.';
+
+        // Interne Import-Adressen können keine Mails empfangen - NICHT senden,
+        // aber die gleiche neutrale Meldung zeigen (kein Konto-Orakel).
         if (str_contains($email, '@dienstly24.internal')) {
-            return back()->withInput($request->only('email'))->withErrors([
-                'email' => 'Für dieses Konto ist kein E-Mail-Versand möglich. Bitte wenden Sie sich an uns, damit wir Ihre Zugangsdaten einrichten.',
-            ]);
+            return back()->with('status', $genericSent);
         }
 
         try {
@@ -52,14 +56,17 @@ class PasswordResetLinkController extends Controller
             ]);
         }
 
-        return $status == Password::RESET_LINK_SENT
-            ? back()->with('status', 'Wir haben Ihnen einen Link zum Zurücksetzen des Passworts per E-Mail gesendet. Bitte prüfen Sie auch Ihren Spam-Ordner.')
-            : back()->withInput($request->only('email'))->withErrors([
-                'email' => match ($status) {
-                    Password::INVALID_USER => 'Zu dieser E-Mail-Adresse haben wir kein Konto gefunden.',
-                    Password::RESET_THROTTLED => 'Sie haben bereits kürzlich einen Link angefordert. Bitte warten Sie einen Moment.',
-                    default => 'Der Link konnte nicht versendet werden. Bitte versuchen Sie es erneut.',
-                },
-            ]);
+        // Erfolg UND "kein Konto" liefern die identische Meldung. Nur echtes
+        // Throttling wird neutral genannt (verraet kein Konto - es begrenzt die
+        // Anfrage-Rate der IP/Adresse unabhaengig von der Existenz).
+        if ($status === Password::RESET_LINK_SENT || $status === Password::INVALID_USER) {
+            return back()->with('status', $genericSent);
+        }
+
+        return back()->withInput($request->only('email'))->withErrors([
+            'email' => $status === Password::RESET_THROTTLED
+                ? 'Zu viele Anfragen. Bitte warten Sie einen Moment und versuchen Sie es erneut.'
+                : 'Der Link konnte nicht versendet werden. Bitte versuchen Sie es erneut.',
+        ]);
     }
 }

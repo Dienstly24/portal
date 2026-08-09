@@ -930,6 +930,14 @@ class PortalController extends Controller
             'portal_password_set_at' => now(),
         ])->save();
 
+        // Andere Sitzungen dieses Kontos beenden (Audit AUTH-3): nach einer
+        // Passwortaenderung werden mitgelaufene/fremde Geraete abgemeldet, die
+        // aktuelle Sitzung bleibt aktiv. DB-Session-Treiber.
+        \Illuminate\Support\Facades\DB::table('sessions')
+            ->where('user_id', auth()->id())
+            ->where('id', '!=', session()->getId())
+            ->delete();
+
         \App\Models\ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => 'portal_password_changed',

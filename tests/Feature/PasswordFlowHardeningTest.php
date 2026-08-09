@@ -207,4 +207,64 @@ class PasswordFlowHardeningTest extends TestCase
 
         $this->assertTrue(Hash::check('stunden-spaeter-1', $user->fresh()->password));
     }
+
+    // ---------- Anti-Enumeration (Audit AUTH-2) ----------
+
+    public function test_reset_request_gives_same_answer_for_known_and_unknown_email(): void
+    {
+        $this->customer(); // erika@kunde.de existiert
+
+        $this->post(route('password.email'), ['email' => 'erika@kunde.de'])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('status', fn ($s) => str_contains((string) $s, 'Falls ein Konto'));
+
+        // Unbekannte Adresse -> IDENTISCHE Meldung, kein Fehler "kein Konto".
+        $this->post(route('password.email'), ['email' => 'niemand-sonst@example.com'])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('status', fn ($s) => str_contains((string) $s, 'Falls ein Konto'));
+    }
+
+    // ---------- Sitzungs-Invalidierung bei Passwortwechsel (Audit AUTH-3) ----------
+
+    public function test_password_reset_invalidates_users_existing_sessions(): void
+    {
+        $customer = $this->customer();
+        $user = $customer->user;
+        $token = Password::broker()->createToken($user);
+
+        \Illuminate\Support\Facades\DB::table('sessions')->insert([
+            ['id' => 'sess-user', 'user_id' => $user->id, 'ip_address' => '1.1.1.1', 'user_agent' => 'x', 'payload' => '', 'last_activity' => now()->timestamp],
+            ['id' => 'sess-foreign', 'user_id' => $this->admin->id, 'ip_address' => '2.2.2.2', 'user_agent' => 'y', 'payload' => '', 'last_activity' => now()->timestamp],
+        ]);
+
+        $this->post(route('password.store'), [
+            'token' => $token, 'email' => $user->email,
+            'password' => 'neu-nach-reset-1', 'password_confirmation' => 'neu-nach-reset-1',
+        ])->assertSessionHasNoErrors();
+
+        // Sitzung des Kontos ist weg, fremde Sitzung unberuehrt.
+        $this->assertDatabaseMissing('sessions', ['id' => 'sess-user']);
+        $this->assertDatabaseHas('sessions', ['id' => 'sess-foreign']);
+    }
+
+    public function test_portal_password_change_invalidates_other_sessions(): void
+    {
+        $customer = $this->customer();
+        app(PortalAccessService::class)->sendInvitation($customer, $this->admin->id);
+        $user = $customer->user->fresh();
+
+        \Illuminate\Support\Facades\DB::table('sessions')->insert([
+            ['id' => 'other-device', 'user_id' => $user->id, 'ip_address' => '1.1.1.1', 'user_agent' => 'x', 'payload' => '', 'last_activity' => now()->timestamp],
+            ['id' => 'foreign-user', 'user_id' => $this->admin->id, 'ip_address' => '2.2.2.2', 'user_agent' => 'y', 'payload' => '', 'last_activity' => now()->timestamp],
+        ]);
+
+        // Startpasswort = Geburtsdatum 15.03.1985.
+        $this->actingAs($user)->post(route('portal.profile.password'), [
+            'current_password' => '15.03.1985',
+            'password' => 'neues-sicheres-1', 'password_confirmation' => 'neues-sicheres-1',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseMissing('sessions', ['id' => 'other-device']);
+        $this->assertDatabaseHas('sessions', ['id' => 'foreign-user']);
+    }
 }

@@ -55,27 +55,27 @@ class EmailMarketingImprovementsTest extends TestCase
 
     // ---------------- Paket A ----------------
 
-    public function test_unsubscribe_link_marks_customer_and_is_idempotent(): void
+    // Audit MAIL-2: GET aendert NICHTS (Mail-Scanner/Prefetch melden Kunden
+    // sonst ungewollt ab), zeigt nur die Bestaetigungsseite mit POST-Formular.
+    public function test_unsubscribe_get_shows_confirmation_without_changing_state(): void
     {
         $customer = $this->customer();
         $token = $customer->unsubscribeToken();
 
-        $this->get('/abmelden/' . $token)->assertOk()->assertSee('erfolgreich abgemeldet');
+        $this->get('/abmelden/' . $token)->assertOk()
+            ->assertDontSee('erfolgreich abgemeldet')
+            ->assertSee('/abmelden/' . $token, false); // POST-Formular-Ziel
 
         $customer->refresh();
-        $this->assertFalse($customer->marketing_consent);
-        $this->assertNotNull($customer->unsubscribed_at);
-        $firstStamp = $customer->unsubscribed_at;
-
-        $this->get('/abmelden/' . $token)->assertOk();
-        $this->assertEquals($firstStamp, $customer->fresh()->unsubscribed_at);
+        $this->assertTrue((bool) $customer->marketing_consent);
+        $this->assertNull($customer->unsubscribed_at);
 
         $this->get('/abmelden/gibt-es-nicht')->assertNotFound();
     }
 
-    // Audit MAIL-1: RFC-8058-Ein-Klick (Server-POST von Gmail/Yahoo) muss
-    // ohne CSRF-Token funktionieren und den Kunden wirklich abmelden.
-    public function test_one_click_unsubscribe_post_works_without_csrf(): void
+    // Erst der POST meldet ab - Button (Mensch) und RFC-8058-Ein-Klick teilen
+    // die Route. Ohne CSRF-Token (Route ist bewusst ausgenommen). Idempotent.
+    public function test_unsubscribe_post_marks_customer_and_is_idempotent(): void
     {
         $customer = $this->customer();
         $token = $customer->unsubscribeToken();
@@ -83,10 +83,27 @@ class EmailMarketingImprovementsTest extends TestCase
         $this->post('/abmelden/' . $token)->assertOk();
 
         $customer->refresh();
-        $this->assertFalse($customer->marketing_consent);
+        $this->assertFalse((bool) $customer->marketing_consent);
         $this->assertNotNull($customer->unsubscribed_at);
+        $firstStamp = $customer->unsubscribed_at;
+
+        $this->post('/abmelden/' . $token)->assertOk();
+        $this->assertEquals($firstStamp, $customer->fresh()->unsubscribed_at);
 
         $this->post('/abmelden/gibt-es-nicht')->assertNotFound();
+    }
+
+    // Audit MAIL-1: RFC-8058-Ein-Klick (Server-POST von Gmail/Yahoo mit
+    // One-Click-Body) liefert eine schlichte 200 ohne View und meldet ab.
+    public function test_one_click_unsubscribe_returns_plain_ok(): void
+    {
+        $customer = $this->customer();
+        $token = $customer->unsubscribeToken();
+
+        $response = $this->post('/abmelden/' . $token, ['List-Unsubscribe' => 'One-Click']);
+        $response->assertOk();
+        $this->assertSame('OK', $response->getContent());
+        $this->assertFalse((bool) $customer->fresh()->marketing_consent);
     }
 
     // Audit MKT-2: geplante Zeit wird als deutsche Ortszeit erfasst und in UTC

@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
@@ -51,6 +52,12 @@ class NewPasswordController extends Controller
                     'portal_password_set_at' => now(),
                 ])->save();
 
+                // Bestehende Sitzungen dieses Kontos beenden (Audit AUTH-3):
+                // Wer per kompromittiertem Zugang eingeloggt war, wird nach dem
+                // Reset ausgeloggt. Der Anfragende ist hier Gast, seine eigene
+                // Sitzung ist nicht betroffen. DB-Session-Treiber.
+                DB::table('sessions')->where('user_id', $user->id)->delete();
+
                 event(new PasswordReset($user));
             }
         );
@@ -61,7 +68,7 @@ class NewPasswordController extends Controller
                     : back()->withInput($request->only('email'))
                         ->withErrors(['email' => match ($status) {
                             Password::INVALID_TOKEN => 'Dieser Link ist abgelaufen oder ungültig. Bitte fordern Sie einen neuen Link an.',
-                            Password::INVALID_USER => 'Zu dieser E-Mail-Adresse haben wir kein Konto gefunden.',
+                            // INVALID_USER bewusst NICHT gesondert (Anti-Enumeration).
                             default => 'Das Passwort konnte nicht geändert werden. Bitte fordern Sie einen neuen Link an.',
                         }]);
     }
