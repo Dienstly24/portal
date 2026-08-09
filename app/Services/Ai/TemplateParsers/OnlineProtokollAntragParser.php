@@ -249,7 +249,67 @@ class OnlineProtokollAntragParser implements DocumentTemplateParser
         if (($v = $this->labelValue('Selbstbeteiligung')) !== null) {
             $out .= ' Selbstbeteiligung: ' . $v . '.';
         }
+        // Deckungs-Bausteine: auf einen Blick, ob der Schutz UMFASSEND oder
+        // nur ein einzelner Baustein ist (Betreiber-Hinweis 09.08.2026).
+        [$ja, $nein] = $this->bausteine();
+        if ($ja !== [] || $nein !== []) {
+            $out .= ' Gewuenschte Bausteine (' . count($ja) . ' von ' . (count($ja) + count($nein)) . '): '
+                . ($ja !== [] ? implode(', ', $ja) : 'keine')
+                . ($nein !== [] ? ' - NICHT gewuenscht: ' . implode(', ', $nein) : '')
+                . '.';
+        }
+        $zusatz = [];
+        foreach (['Spezial Straf RS', 'Erw. Internet-Schutz', 'Singlerabatt'] as $label) {
+            if (($v = $this->labelValue($label)) !== null && preg_match('/^(ja|nein)$/iu', trim($v))) {
+                $zusatz[] = $label . ' ' . mb_strtolower(trim($v));
+            }
+        }
+        if ($zusatz !== []) {
+            $out .= ' Laut Antragsdaten: ' . implode(', ', $zusatz) . '.';
+        }
         return $out;
+    }
+
+    /**
+     * Deckungs-Bausteine aus dem Bedarfsblock "Angaben des Kunden zu seinem
+     * Versicherungsbedarf": die zusammenhaengenden Ja/nein-Zeilen direkt
+     * unter der Ueberschrift (die erste Zeile ohne Ja/nein beendet den
+     * Block - die spaeteren Filterkriterien gehoeren nicht dazu).
+     *
+     * @return array{0: list<string>, 1: list<string>} [gewaehlt, abgewaehlt]
+     */
+    private function bausteine(): array
+    {
+        $lines = preg_split('/\R/', $this->text) ?: [];
+        $start = null;
+        foreach ($lines as $i => $line) {
+            if (mb_stripos($line, 'Angaben des Kunden zu seinem Versicherungsbedarf') !== false) {
+                $start = $i;
+                break;
+            }
+        }
+        if ($start === null) {
+            return [[], []];
+        }
+
+        $ja = [];
+        $nein = [];
+        for ($i = $start + 1, $n = count($lines); $i < $n; $i++) {
+            $line = trim($lines[$i]);
+            if ($line === '') {
+                continue;
+            }
+            if (!preg_match('/^(\S.*?)\s{2,}(Ja|Nein|ja|nein)$/u', $line, $m)) {
+                break;
+            }
+            if (mb_strtolower($m[2]) === 'ja') {
+                $ja[] = trim($m[1]);
+            } else {
+                $nein[] = trim($m[1]);
+            }
+        }
+
+        return [$ja, $nein];
     }
 
     /** Sparte aus dem Antragstitel - unbekannt bleibt leer. */
