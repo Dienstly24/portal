@@ -83,7 +83,9 @@ class SystemAuditRegressionTest extends TestCase
     public function test_user_role_can_be_set_to_manager(): void
     {
         $user = User::factory()->create(['role' => 'employee']);
-        $user->update(['role' => 'manager']);
+        // 'role' ist nicht mehr mass-assignable (Audit AUTH-4) - explizit setzen;
+        // dieser Test sichert weiterhin ab, dass die Spalte 'manager' akzeptiert.
+        $user->forceFill(['role' => 'manager'])->save();
 
         $this->assertSame('manager', $user->fresh()->role);
     }

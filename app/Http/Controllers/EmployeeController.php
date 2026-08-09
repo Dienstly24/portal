@@ -39,7 +39,6 @@ class EmployeeController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => bcrypt($plainPassword),
-            'role' => 'employee',
             'access_level' => $request->access_level ?? 'full',
             'can_see_all_customers' => $request->has('can_see_all_customers'),
             'can_manage_contracts' => $request->has('can_manage_contracts'),
@@ -48,6 +47,8 @@ class EmployeeController extends Controller
             'can_send_emails' => $request->has('can_send_emails'),
             'can_import_export' => $request->has('can_import_export'),
         ]);
+        // Rolle (Privileg) NICHT mass-assignen (Audit AUTH-4) - explizit setzen.
+        $employee->forceFill(['role' => 'employee'])->save();
 
         // بناء قائمة الصلاحيات للإيميل
         $permLabels = [];
@@ -189,9 +190,12 @@ class EmployeeController extends Controller
             'provision_percent' => 'nullable|numeric|min:0|max:100',
         ]);
         \Illuminate\Support\Facades\DB::transaction(function () use ($request, $employee) {
+            // Rolle (Privileg) NICHT mass-assignen (Audit AUTH-4) - auf
+            // {employee|manager} geklemmt und separat per forceFill gesetzt.
+            $newRole = in_array($request->role, ['employee', 'manager']) ? $request->role : $employee->role;
+            $employee->forceFill(['role' => $newRole])->save();
             $employee->update([
                 'name' => $request->name,
-                'role' => in_array($request->role, ['employee', 'manager']) ? $request->role : $employee->role,
                 'access_level' => $request->access_level ?? 'full',
                 'can_see_all_customers' => $request->has('can_see_all_customers'),
                 'can_manage_contracts' => $request->has('can_manage_contracts'),

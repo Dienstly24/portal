@@ -51,8 +51,8 @@ class LexofficeController extends Controller
             'name' => $name,
             'email' => $email,
             'password' => bcrypt(Str::random(12)),
-            'role' => 'customer',
         ]);
+        $user->forceFill(['role' => 'customer'])->save();
 
         $address = '';
         if(isset($contact['addresses']['billing'][0])) {

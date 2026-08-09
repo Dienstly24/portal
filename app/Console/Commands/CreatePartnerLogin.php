@@ -40,16 +40,15 @@ class CreatePartnerLogin extends Command
 
         $user = User::where('email', $email)->first();
         if ($user) {
-            $user->update(['password' => $password, 'role' => 'partner', 'name' => $name]);
+            $user->forceFill(['password' => $password, 'role' => 'partner', 'name' => $name])->save();
         } else {
             $user = User::create([
                 'id' => (string) Str::uuid(),
                 'name' => $name,
                 'email' => $email,
                 'password' => $password,
-                'role' => 'partner',
-                'email_verified_at' => now(),
             ]);
+            $user->forceFill(['role' => 'partner', 'email_verified_at' => now()])->save();
         }
 
         $partner->update(['user_id' => $user->id]);

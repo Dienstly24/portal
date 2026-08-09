@@ -193,4 +193,25 @@ class AuthorizationHardeningTest extends TestCase
             ->assertRedirect();
         $this->assertTrue((bool) $employee->fresh()->is_active);
     }
+
+    // Audit AUTH-4: 'role' darf NICHT ueber Mass-Assignment gesetzt werden -
+    // sonst waere ein kuenftiges User::create($request->all()) auf einer
+    // kundenerreichbaren Route eine Rechte-Eskalation.
+    public function test_role_is_not_mass_assignable(): void
+    {
+        // Anlegen mit role im Array -> role wird verworfen (nicht fillable).
+        $user = User::create([
+            'name' => 'Eskalation',
+            'email' => 'esk@example.com',
+            'password' => bcrypt('geheim-123'),
+            'role' => 'admin',
+        ]);
+        $this->assertNotSame('admin', $user->fresh()->role);
+
+        // Update mit role im Array -> ignoriert, andere Felder gehen durch.
+        $customer = User::factory()->create(['role' => 'customer']);
+        $customer->update(['role' => 'admin', 'name' => 'Geaendert']);
+        $this->assertSame('customer', $customer->fresh()->role);
+        $this->assertSame('Geaendert', $customer->fresh()->name);
+    }
 }

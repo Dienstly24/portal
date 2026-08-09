@@ -33,17 +33,17 @@ class SetAdminPassword extends Command
 
         if ($user) {
             // Passwort wird durch das 'hashed'-Cast automatisch gehasht.
-            $user->update(['password' => $password, 'role' => 'admin']);
+            $user->forceFill(['password' => $password, 'role' => 'admin'])->save();
             $this->info("Passwort für bestehendes Konto {$email} zurückgesetzt und Rolle=admin gesetzt.");
         } else {
-            User::create([
+            $user = User::create([
                 'id' => (string) Str::uuid(),
                 'name' => (string) $this->option('name'),
                 'email' => $email,
                 'password' => $password,
-                'role' => 'admin',
                 'email_verified_at' => now(),
             ]);
+            $user->forceFill(['role' => 'admin'])->save();
             $this->info("Neues Admin-Konto {$email} angelegt.");
         }
 

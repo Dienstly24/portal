@@ -966,8 +966,8 @@ class AdminController extends Controller
             // Platzhalter - das nutzbare Passwort setzt gleich der
             // PortalAccessService (manuell/Geburtsdatum/Set-Link).
             'password' => bcrypt(\Illuminate\Support\Str::random(40)),
-            'role' => 'customer',
         ]);
+        $user->forceFill(['role' => 'customer'])->save();
         $customer = Customer::create([
             'user_id' => $user->id,
             'customer_number' => app(\App\Services\CustomerNumberGenerator::class)->generate(),

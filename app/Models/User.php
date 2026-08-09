@@ -6,7 +6,12 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable {
     use HasFactory, Notifiable;
-    protected $fillable = ['name','email','password','role','access_level','can_see_all_customers','can_manage_contracts','can_manage_tickets','can_approve_changes','can_send_emails','can_import_export','provision_fixed','provision_percent'];
+    // 'role' ist BEWUSST NICHT mass-assignable (Audit AUTH-4): sonst koennte
+    // ein kuenftiges User::create($request->all()) / ->update($request->all())
+    // auf einer kundenerreichbaren Route zur Rechte-Eskalation fuehren. Die
+    // Rolle wird nur explizit per forceFill an den wenigen legitimen Stellen
+    // gesetzt (Registrierung, Mitarbeiterverwaltung, Kunden-/Import-Anlage, CLI).
+    protected $fillable = ['name','email','password','access_level','can_see_all_customers','can_manage_contracts','can_manage_tickets','can_approve_changes','can_send_emails','can_import_export','provision_fixed','provision_percent'];
     protected $hidden = ['password','remember_token'];
     protected $casts = [
         'email_verified_at' => 'datetime',

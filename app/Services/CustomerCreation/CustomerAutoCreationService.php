@@ -58,8 +58,8 @@ class CustomerAutoCreationService
                 'name' => $name,
                 'email' => ($email !== null && $email !== '') ? $email : null,
                 'password' => bcrypt(Str::random(32)),
-                'role' => 'customer',
             ]);
+            $user->forceFill(['role' => 'customer'])->save();
 
             // Zusammengesetzte Alt-Adresse (Kompatibilität) aus strukturierten Feldern.
             $address = $data['address'] ?? trim(

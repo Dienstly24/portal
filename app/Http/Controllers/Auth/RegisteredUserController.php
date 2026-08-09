@@ -55,9 +55,9 @@ class RegisteredUserController extends Controller
                 'name' => trim($request->first_name . ' ' . $request->last_name),
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
-                'role' => 'customer',
                 'portal_password_set_at' => now(),
             ]);
+            $user->forceFill(['role' => 'customer'])->save();
 
             $customer = Customer::create([
                 'user_id' => $user->id,
