@@ -7,7 +7,9 @@ use Tests\TestCase;
 
 /**
  * Parser fuer die DSL-/Internet-Auftragsbestaetigung (z.B. CHECK24
- * "Ihr DSL Anschluss"): liest Kundendaten + Tarif gratis aus dem Auftrag.
+ * "Ihr DSL Anschluss" oder Kabel-Auftrag fuer Vodafone Kabel Deutschland):
+ * liest Kundendaten + Tarif + ALLE Preisdetails gratis aus dem Auftrag
+ * (Betreiber-Vorgabe 10.08.2026).
  */
 class DslAuftragParserTest extends TestCase
 {
@@ -43,6 +45,54 @@ class DslAuftragParserTest extends TestCase
         ]);
     }
 
+    /**
+     * Kabel-Auftrag fuer Vodafone Kabel Deutschland (CHECK24-Uebersicht mit
+     * Preisuebersicht rechts): preisvariabler Tarif, einmalige Kosten,
+     * Router "Vodafone Station", Cashback und Mindestlaufzeit.
+     */
+    private function kabelAuftragText(): string
+    {
+        return implode("\n", [
+            'Ihre Kundendaten',
+            'Adresse           Dunya Al Obaidi',
+            '                  Grafenstr. 19',
+            '                  24768 Rendsburg',
+            'Handynummer für Rückfragen    0176 75722643',
+            'E-Mail            Durp930@gmail.com',
+            'Geburtsdatum      15.09.2006',
+            'IBAN              DE6821************7192',
+            'Kreditinstitut    Sparkasse Mittelholstein',
+            'Zahlungsart       Bankeinzug',
+            'Ihre Anschlussdaten',
+            'Anschlusstermin   schnellstmöglich',
+            'Ihr Tarif',
+            'Anbieter          Vodafone Kabel Deutschland',
+            'Tarif             Young GigaZuhause 300 Kabel',
+            'Max. Download     300 MBit/s',
+            'Max. Upload       75,0 MBit/s',
+            'Mindestlaufzeit   24 Monate',
+            'Kündigungsfrist   1 Monat',
+            'Verlängerung      1 Monat',
+            'Preisübersicht',
+            'Tarifkosten                     einmalig   monatlich',
+            'Grundgebühr Monat 1 - 9                    19,99 €',
+            'Grundgebühr Monat 10 - 24                  49,99 €',
+            'Bereitstellungsgebühr           49,99 €',
+            'Versandkosten                    9,99 €',
+            'Basis Kabelfernsehen (TV Connect)           0,00 €',
+            'Hardware & Optionen',
+            'Vodafone Station                            4,99 €',
+            'Festnetz- und Mobilfunk-Flatrate            0,00 €',
+            'Vorteile',
+            'CHECK24.net Cashback                    - 430,00 €',
+            'Durchschnitt pro Monat   28,31 €',
+            'Mtl. Kosten ab dem 25. Monat               54,98 €',
+            'Kosten ab dem 25. Monat im Detail       monatlich',
+            'Grundgebühr                                49,99 €',
+            'Vodafone Station                            4,99 €',
+        ]);
+    }
+
     public function test_parses_dsl_auftrag(): void
     {
         $r = (new DslAuftragParser())->parse($this->auftragText());
@@ -68,7 +118,8 @@ class DslAuftragParserTest extends TestCase
         $this->assertSame(34.79, $v['premium_amount']);
         $this->assertSame('monthly', $v['premium_interval']);
 
-        // Internet-Detaildaten (preisvariabler Tarif, Router, Bonus/Gutschein).
+        // Internet-Detaildaten (preisvariabler Tarif, Router, Bonus/Gutschein,
+        // einmalige Kosten, Mindestlaufzeit).
         $i = $r['data']['internet'];
         $this->assertSame('Magenta Zuhause L', $i['tariff']);
         $this->assertSame('100 MBit/s', $i['speed']);
@@ -81,9 +132,78 @@ class DslAuftragParserTest extends TestCase
         $this->assertSame(6.95, $i['router_price']);
         $this->assertSame(155.00, $i['bonus_amount']);
         $this->assertSame(100.00, $i['voucher_amount']);
+        $this->assertSame(6.95, $i['shipping_fee']);
+        $this->assertSame(24, $i['min_duration_months']);
+        // Keine Bereitstellungsgebuehr im Dokument -> Feld bleibt leer.
+        $this->assertArrayNotHasKey('setup_fee', $i);
 
         // Maskierte IBAN wird NICHT als Bankverbindung uebernommen.
         $this->assertArrayNotHasKey('iban', $r['data']['bank']);
+    }
+
+    public function test_parses_vodafone_kabel_auftrag_vollstaendig(): void
+    {
+        $r = (new DslAuftragParser())->parse($this->kabelAuftragText());
+        $this->assertNotNull($r);
+        $this->assertSame('internetvertrag', $r['type']);
+
+        $p = $r['data']['person'];
+        $this->assertSame('Dunya', $p['first_name']);
+        $this->assertSame('Al Obaidi', $p['last_name']);
+        $this->assertSame('2006-09-15', $p['birth_date']);
+        $this->assertSame('Grafenstr.', $p['street']);
+        $this->assertSame('19', $p['house_number']);
+        $this->assertSame('24768', $p['zip']);
+        $this->assertSame('Rendsburg', $p['city']);
+        $this->assertSame('017675722643', $p['phone']);
+        $this->assertSame('durp930@gmail.com', $p['email']);
+
+        $v = $r['data']['versicherung'];
+        $this->assertSame('internet', $v['sparte']);
+        // Anbieter ist die FIRMA - nie der Tarifname (die Ueberschrift
+        // "Ihr Tarif" darf den Tarif-Ausdruck nicht verwirren).
+        $this->assertSame('Vodafone Kabel Deutschland', $v['insurer']);
+        $this->assertSame('Young GigaZuhause 300 Kabel', $v['tariff']);
+        $this->assertSame(\App\Models\Contract::STAGE_ANTRAG, $v['document_stage']);
+        $this->assertSame(28.31, $v['premium_amount']);
+        $this->assertSame('monthly', $v['premium_interval']);
+        // Kein Auftragsnummern-Feld auf der Uebersicht, "schnellstmoeglich"
+        // wird nie als Beginn geraten.
+        $this->assertArrayNotHasKey('contract_number', $v);
+        $this->assertArrayNotHasKey('start_date', $v);
+
+        $i = $r['data']['internet'];
+        $this->assertSame('Young GigaZuhause 300 Kabel', $i['tariff']);
+        $this->assertSame('300 MBit/s', $i['speed']);
+        $this->assertSame('75,0 MBit/s', $i['upload_speed']);
+        $this->assertSame(19.99, $i['price_initial']);
+        $this->assertSame(9, $i['price_initial_months']);
+        $this->assertSame(49.99, $i['price_regular']);
+        $this->assertSame(49.99, $i['setup_fee']);
+        $this->assertSame(9.99, $i['shipping_fee']);
+        $this->assertSame(24, $i['min_duration_months']);
+        $this->assertTrue($i['has_router']);
+        $this->assertSame('Vodafone Station', $i['router_name']);
+        $this->assertSame(4.99, $i['router_price']);
+        $this->assertSame(430.00, $i['bonus_amount']);
+        $this->assertArrayNotHasKey('voucher_amount', $i);
+
+        // Maskierte IBAN / Kreditinstitut werden NICHT uebernommen.
+        $this->assertArrayNotHasKey('iban', $r['data']['bank']);
+
+        // Zusammenfassung nennt ALLE Details, auch die ohne eigenes Feld
+        // (Kuendigungsfrist, Kosten nach der Mindestlaufzeit, Anschlusstermin,
+        // inklusive 0,00-Optionen).
+        $this->assertStringContainsString('Vodafone Kabel Deutschland', $r['summary']);
+        $this->assertStringContainsString('Grundgebuehr 19,99 EUR/Monat (Monat 1-9), danach 49,99 EUR/Monat', $r['summary']);
+        $this->assertStringContainsString('einmalig: Bereitstellung 49,99 EUR + Versand 9,99 EUR', $r['summary']);
+        $this->assertStringContainsString('Router Vodafone Station 4,99 EUR/Monat', $r['summary']);
+        $this->assertStringContainsString('Bonus/Cashback 430,00 EUR', $r['summary']);
+        $this->assertStringContainsString('Mindestlaufzeit 24 Monate (Kuendigungsfrist 1 Monat, Verlaengerung 1 Monat)', $r['summary']);
+        $this->assertStringContainsString('ab Monat 25: 54,98 EUR/Monat', $r['summary']);
+        $this->assertStringContainsString('Durchschnitt 28,31 EUR/Monat', $r['summary']);
+        $this->assertStringContainsString('Basis Kabelfernsehen (TV Connect)', $r['summary']);
+        $this->assertStringContainsString('Anschlusstermin schnellstmöglich', $r['summary']);
     }
 
     public function test_ignores_non_dsl_documents(): void

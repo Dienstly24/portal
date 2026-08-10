@@ -610,6 +610,9 @@ class AdminController extends Controller
             'internet.router_price' => 'nullable|numeric|min:0|max:99999.99',
             'internet.bonus_amount' => 'nullable|numeric|min:0|max:99999999.99',
             'internet.voucher_amount' => 'nullable|numeric|min:0|max:99999999.99',
+            'internet.setup_fee' => 'nullable|numeric|min:0|max:99999.99',
+            'internet.shipping_fee' => 'nullable|numeric|min:0|max:99999.99',
+            'internet.min_duration_months' => 'nullable|integer|min:0|max:60',
             // ---- E-Scooter (schlankes Fahrzeug-Detail, eigener Namensraum) ----
             'escooter.license_plate' => 'nullable|string|max:20',
             'escooter.manufacturer' => 'nullable|string|max:255',
@@ -712,7 +715,7 @@ class AdminController extends Controller
         } elseif ($contract->type === 'internet') {
             // has_router ist eine Checkbox - fehlt im Request, wenn nicht gesetzt.
             $internet = collect($request->input('internet', []))
-                ->only(['tariff','speed','upload_speed','price_initial','price_initial_months','price_regular','router_name','router_price','bonus_amount','voucher_amount'])
+                ->only(['tariff','speed','upload_speed','price_initial','price_initial_months','price_regular','router_name','router_price','bonus_amount','voucher_amount','setup_fee','shipping_fee','min_duration_months'])
                 ->map(fn($val) => $val === '' ? null : $val)
                 ->all();
             $internet['has_router'] = $request->boolean('internet.has_router');

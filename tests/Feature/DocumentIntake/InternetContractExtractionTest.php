@@ -60,6 +60,9 @@ class InternetContractExtractionTest extends TestCase
                     'router_price' => 6.95,
                     'bonus_amount' => 155.00,
                     'voucher_amount' => 100.00,
+                    'setup_fee' => 49.99,
+                    'shipping_fee' => 6.95,
+                    'min_duration_months' => 24,
                 ],
             ],
         ]);
@@ -89,6 +92,10 @@ class InternetContractExtractionTest extends TestCase
         $this->assertEquals(6.95, (float) $net->router_price);
         $this->assertEquals(155.00, (float) $net->bonus_amount);
         $this->assertEquals(100.00, (float) $net->voucher_amount);
+        // Einmalige Kosten + Mindestlaufzeit (Betreiber-Vorgabe 10.08.2026).
+        $this->assertEquals(49.99, (float) $net->setup_fee);
+        $this->assertEquals(6.95, (float) $net->shipping_fee);
+        $this->assertSame(24, $net->min_duration_months);
     }
 
     public function test_reupload_updates_same_contract_without_duplicate(): void
