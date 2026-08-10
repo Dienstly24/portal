@@ -143,6 +143,7 @@ trait ValidatesExtractedFields
         if (!is_array($in)) return [];
         $euro = fn ($v) => (is_numeric($v) && $v >= 0 && $v < 100000) ? round((float) $v, 2) : null;
         $months = $in['price_initial_months'] ?? null;
+        $minDuration = $in['min_duration_months'] ?? null;
         $out = array_filter([
             'tariff' => $this->cleanString($in['tariff'] ?? null, 120),
             'speed' => $this->cleanString($in['speed'] ?? null, 30),
@@ -154,6 +155,12 @@ trait ValidatesExtractedFields
             'router_price' => $euro($in['router_price'] ?? null),
             'bonus_amount' => $euro($in['bonus_amount'] ?? null),
             'voucher_amount' => $euro($in['voucher_amount'] ?? null),
+            // Einmalige Kosten (Bereitstellung/Anschluss, Versand) und die
+            // Mindestlaufzeit in Monaten - Betreiber-Vorgabe 10.08.2026:
+            // der Auftrag soll VOLLSTAENDIG in der Vertragsakte stehen.
+            'setup_fee' => $euro($in['setup_fee'] ?? null),
+            'shipping_fee' => $euro($in['shipping_fee'] ?? null),
+            'min_duration_months' => (is_numeric($minDuration) && $minDuration > 0 && $minDuration <= 60) ? (int) $minDuration : null,
         ], fn ($v) => $v !== null && $v !== '');
         // Router als eingeschlossen werten, wenn ausdruecklich gesetzt oder ein
         // Router-Modell/Preis erkannt wurde.

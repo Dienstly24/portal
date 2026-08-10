@@ -6,22 +6,40 @@ use App\Services\Ai\Contracts\DocumentTemplateParser;
 
 /**
  * Parser fuer die Auftragsbestaetigung eines DSL-/Internet-Anschlusses (z.B.
- * die CHECK24-Uebersicht "Ihr DSL Anschluss"). Der Auftrag traegt bereits alle
- * Kern-Daten, auf die sich der Betrieb stuetzt:
+ * die CHECK24-Uebersicht "Ihr DSL Anschluss" oder der Kabel-Auftrag fuer
+ * Vodafone Kabel Deutschland). Der Auftrag traegt bereits alle Kern-Daten,
+ * auf die sich der Betrieb stuetzt (Betreiber-Vorgabe 10.08.2026: ALLE
+ * Details des Auftrags gehoeren in die Vertragsakte):
  *
  *   Kundendaten : Name, Anschrift, Handynummer, E-Mail, Geburtsdatum
  *   Tarif       : Anbieter, Tarif, Download/Upload, Mindestlaufzeit,
  *                 Kuendigungsfrist, Durchschnittspreis pro Monat
- *   Auftrag     : Auftragsnummer
+ *   Preise      : Grundgebuehr-Stufen (Aktionspreis -> regulaerer Preis),
+ *                 einmalige Kosten (Bereitstellungsgebuehr, Versandkosten),
+ *                 Router-Modell + Aufpreis, Bonus/Cashback und Gutschriften,
+ *                 Kosten nach der Mindestlaufzeit (nur Zusammenfassung)
+ *   Auftrag     : Auftragsnummer, Anschlusstermin
  *
  * Ergebnis: Typ 'internetvertrag' (Sparte internet). Der spaeter zugestellte
  * Provider-Vertrag mit der finalen Vertragsnummer laesst sich ergaenzend
  * hochladen. Die IBAN ist im Auftrag ueblicherweise maskiert (DE46****2425)
- * und wird bewusst NICHT als Bankverbindung uebernommen.
+ * und wird bewusst NICHT als Bankverbindung uebernommen. Ein Anschlusstermin
+ * wird nur als Beginn uebernommen, wenn er ein ECHTES Datum ist -
+ * "schnellstmoeglich" wird nie geraten.
  */
 class DslAuftragParser implements DocumentTemplateParser
 {
     use ValidatesExtractedFields;
+
+    /**
+     * Bekannte Router-Modelle der grossen Anbieter (Telekom Speedport,
+     * AVM FRITZ!Box, 1&1 HomeServer, Vodafone Station/EasyBox, o2 HomeBox,
+     * Kabel: Connect Box / GigaCube ...). Ein generisches "Router" waere zu
+     * riskant ("Routergutschrift" ist ein Abzug, kein Geraet).
+     */
+    private const ROUTER_MODELS = 'Speedport|FRITZ!?\s?Box|FritzBox|Home\s?Server'
+        . '|Easy\s?Box|Connect\s?Box|Home\s?Box|Giga\s?Cube|Giga\s?Box|Speedbox'
+        . '|Kabelrouter|Vodafone\s+(?:Power\s?)?Station';
 
     public function parse(string $text): ?array
     {
@@ -39,23 +57,27 @@ class DslAuftragParser implements DocumentTemplateParser
         $lines = array_map('rtrim', preg_split('/\R/', $text) ?: []);
 
         $person = $this->parsePerson($text, $lines);
-        $contract = $this->parseContract($text);
+        $contract = $this->parseContract($text, $lines);
         $internet = $this->parseInternet($text);
+        $zusatz = $this->parseZusatz($text, $lines);
 
         // Ohne belastbaren Kern (Anbieter/Tarif oder Name) der KI ueberlassen.
         if ($contract === [] && $person === []) {
             return null;
         }
 
+        // Ohne "Durchschnitt pro Monat" (steht nicht auf jedem Auftrag) ist
+        // der regulaere Monatspreis der ehrlichste Beitrag.
+        if (empty($contract['premium_amount']) && !empty($internet['price_regular'])) {
+            $contract['premium_amount'] = $internet['price_regular'];
+            $contract['premium_interval'] = 'monthly';
+        }
+
         $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
         return [
             'type' => 'internetvertrag',
             'confidence' => 70,
-            'summary' => 'Internet-/DSL-Auftrag'
-                . (isset($contract['insurer']) ? ' - ' . $contract['insurer'] : '')
-                . (isset($contract['tariff']) ? ' ' . $contract['tariff'] : '')
-                . ($name !== '' ? ' - ' . $name : '')
-                . ' - Felder gratis aus dem Auftrag gelesen (ohne KI).',
+            'summary' => $this->buildSummary($name, $contract, $internet, $zusatz),
             'title' => 'Internet-/DSL-Auftrag' . ($name !== '' ? ' ' . $name : ''),
             'data' => [
                 'person' => $person,
@@ -71,9 +93,88 @@ class DslAuftragParser implements DocumentTemplateParser
     }
 
     /**
+     * Zusammenfassung mit ALLEN Auftrags-Details (Betreiber-Vorgabe
+     * 10.08.2026): Preisstufen, einmalige Kosten, Router, Bonus, Laufzeit,
+     * Kosten nach der Mindestlaufzeit, Anschlusstermin. Werte, die kein
+     * eigenes Vertragsfeld haben (Kuendigungsfrist, "ab Monat 25" ...),
+     * stehen NUR hier.
+     *
+     * @param array<string,mixed> $contract
+     * @param array<string,mixed> $internet
+     * @param array<string,mixed> $zusatz
+     */
+    private function buildSummary(string $name, array $contract, array $internet, array $zusatz): string
+    {
+        $teile = [];
+        $teile[] = 'Internet-/DSL-Auftrag'
+            . (isset($contract['insurer']) ? ' - ' . $contract['insurer'] : '')
+            . (isset($contract['tariff']) ? ' ' . $contract['tariff'] : '')
+            . ($name !== '' ? ' - ' . $name : '');
+
+        if (isset($internet['speed'])) {
+            $teile[] = $internet['speed']
+                . (isset($internet['upload_speed']) ? ' / ' . $internet['upload_speed'] . ' Upload' : '');
+        }
+        if (isset($internet['price_initial'], $internet['price_initial_months'])) {
+            $teile[] = 'Grundgebuehr ' . $this->euro($internet['price_initial'])
+                . '/Monat (Monat 1-' . $internet['price_initial_months'] . ')'
+                . (isset($internet['price_regular']) ? ', danach ' . $this->euro($internet['price_regular']) . '/Monat' : '');
+        } elseif (isset($internet['price_regular'])) {
+            $teile[] = 'Grundgebuehr ' . $this->euro($internet['price_regular']) . '/Monat';
+        }
+
+        $einmalig = [];
+        if (isset($internet['setup_fee'])) {
+            $einmalig[] = 'Bereitstellung ' . $this->euro($internet['setup_fee']);
+        }
+        if (isset($internet['shipping_fee'])) {
+            $einmalig[] = 'Versand ' . $this->euro($internet['shipping_fee']);
+        }
+        if ($einmalig !== []) {
+            $teile[] = 'einmalig: ' . implode(' + ', $einmalig);
+        }
+
+        if (!empty($internet['has_router'])) {
+            $teile[] = 'Router' . (isset($internet['router_name']) ? ' ' . $internet['router_name'] : '')
+                . (isset($internet['router_price']) ? ' ' . $this->euro($internet['router_price']) . '/Monat' : '');
+        }
+        if (isset($internet['bonus_amount'])) {
+            $teile[] = 'Bonus/Cashback ' . $this->euro($internet['bonus_amount']);
+        }
+        if (isset($internet['voucher_amount'])) {
+            $teile[] = 'Gutschrift ' . $this->euro($internet['voucher_amount']);
+        }
+        if (isset($internet['min_duration_months'])) {
+            $frist = isset($zusatz['kuendigungsfrist'])
+                ? ' (Kuendigungsfrist ' . $zusatz['kuendigungsfrist']
+                    . (isset($zusatz['verlaengerung']) ? ', Verlaengerung ' . $zusatz['verlaengerung'] : '')
+                    . ')'
+                : '';
+            $teile[] = 'Mindestlaufzeit ' . $internet['min_duration_months'] . ' Monate' . $frist;
+        }
+        if (isset($zusatz['after_term_month'], $zusatz['after_term_price'])) {
+            $teile[] = 'ab Monat ' . $zusatz['after_term_month'] . ': '
+                . $this->euro($zusatz['after_term_price']) . '/Monat';
+        }
+        if (isset($zusatz['durchschnitt'])) {
+            $teile[] = 'Durchschnitt ' . $this->euro($zusatz['durchschnitt']) . '/Monat';
+        }
+        if (!empty($zusatz['inklusive'])) {
+            $teile[] = 'inklusive: ' . implode(', ', $zusatz['inklusive']);
+        }
+        if (isset($zusatz['anschlusstermin'])) {
+            $teile[] = 'Anschlusstermin ' . $zusatz['anschlusstermin'];
+        }
+        $teile[] = 'Felder gratis aus dem Auftrag gelesen (ohne KI).';
+
+        return implode(' - ', $teile);
+    }
+
+    /**
      * Internet-Detaildaten aus der CHECK24-Preisuebersicht: Tarifname,
      * Download/Upload, preisvariabler Tarif (Grundgebuehr-Stufen), Router
-     * (inklusive/Aufpreis) sowie Bonus/Gutschein (stehen als Abzug -155,00 EUR).
+     * (inklusive/Aufpreis), Bonus/Gutschein (stehen als Abzug -155,00 EUR),
+     * einmalige Kosten (Bereitstellung, Versand) und Mindestlaufzeit.
      *
      * @return array<string,mixed>
      */
@@ -81,8 +182,10 @@ class DslAuftragParser implements DocumentTemplateParser
     {
         $raw = [];
 
-        // Tarifname (auch fuer die Detailtabelle).
-        if (preg_match('/\bTarif\b\s*:?\s+([^\r\n]+?)(?:\s{2,}|$)/mu', $text, $m)) {
+        // Tarifname (auch fuer die Detailtabelle). Nur MIT Wert auf derselben
+        // Zeile (\h = horizontaler Leerraum) - sonst frisst sich der Ausdruck
+        // ueber die Ueberschrift "Ihr Tarif" in die Folgezeile.
+        if (preg_match('/\bTarif\b\h*:?\h+([^\r\n]+?)(?:\s{2,}|$)/mu', $text, $m)) {
             $raw['tariff'] = trim($m[1]);
         }
 
@@ -103,12 +206,32 @@ class DslAuftragParser implements DocumentTemplateParser
             $raw['price_initial'] = $this->amount($first[3]);
             $raw['price_initial_months'] = (int) $first[2];
             $raw['price_regular'] = $this->amount($last[3]);
+        } elseif (preg_match('/Grundgeb(?:ü|ue|u)hr(?!\s*Monat)[^\d\r\n]{0,40}?(\d{1,3}(?:\.\d{3})*,\d{2})/iu', $text, $m)) {
+            // Fester Tarif ohne Preisstufen: eine Grundgebuehr = regulaerer Preis.
+            $raw['price_regular'] = $this->amount($m[1]);
         }
 
-        // Router (z.B. "Telekom Speedport Smart 4", "AVM FRITZ!Box 7590"):
-        // Name aus der ersten Fundstelle, Aufpreis = hoechster Betrag auf den
-        // Router-Zeilen (die Aktionsstufe ist oft 0,00, danach der Aufpreis).
-        if (preg_match('/((?:Telekom|AVM|Vodafone|1&1|o2)?\s*(?:Speedport|FRITZ!?\s?Box|FritzBox)[A-Za-z0-9 .\-!]*?)(?=\s{2,}|\s*Monat|\s*\d+\s*[-–—])/iu', $text, $m)) {
+        // Einmalige Kosten: Bereitstellungs-/Anschluss-/Einrichtungsgebuehr
+        // ("was kostet die Schaltung") und Versandkosten fuer den Router.
+        if (preg_match('/(?:Bereitstellungs?|Anschluss|Einrichtungs?|Aktivierungs?)[\- ]?(?:geb(?:ü|ue|u)hr|preis|entgelt|kosten)[^\d\r\n]{0,45}?(\d{1,3}(?:\.\d{3})*,\d{2})/iu', $text, $m)) {
+            $raw['setup_fee'] = $this->amount($m[1]);
+        }
+        if (preg_match('/Versand(?:kosten|pauschale)?[^\d\r\n]{0,45}?(\d{1,3}(?:\.\d{3})*,\d{2})/iu', $text, $m)) {
+            $raw['shipping_fee'] = $this->amount($m[1]);
+        }
+
+        // Mindestlaufzeit (Monate): beim Auftrag gibt es noch keinen
+        // Anschlusstermin, Beginn/Ablauf des Vertrags bleiben also leer -
+        // die Laufzeit muss deshalb als eigenes Feld in die Akte.
+        if (preg_match('/(?:Mindest(?:vertrags)?laufzeit|Vertragslaufzeit)\D{0,25}?(\d{1,2})\s*Monat/iu', $text, $m)) {
+            $raw['min_duration_months'] = (int) $m[1];
+        }
+
+        // Router (z.B. "Telekom Speedport Smart 4", "AVM FRITZ!Box 7590",
+        // "Vodafone Station"): Name aus der ersten Fundstelle, Aufpreis =
+        // hoechster Betrag auf den Router-Zeilen (die Aktionsstufe ist oft
+        // 0,00, danach der Aufpreis).
+        if (preg_match('/((?:(?:Telekom|AVM|Vodafone|1&1|o2)\s+)?(?:' . self::ROUTER_MODELS . ')[A-Za-z0-9 .\-!+]*?)(?=\s{2,}|\s*Monat\b|\s*\d+\s*[-–—]|\s*\d{1,3}(?:\.\d{3})*,\d{2}|\s*[\r\n]|\s*$)/iu', $text, $m)) {
             $raw['has_router'] = true;
             $name = trim((string) preg_replace('/\s+/', ' ', $m[1]));
             if ($name !== '') {
@@ -117,7 +240,7 @@ class DslAuftragParser implements DocumentTemplateParser
             // Alle Betraege auf Zeilen mit Router-Bezug einsammeln -> Maximum.
             $prices = [];
             foreach (preg_split('/\R/', $text) ?: [] as $line) {
-                if (preg_match('/Speedport|FRITZ!?\s?Box|FritzBox/iu', $line)
+                if (preg_match('/' . self::ROUTER_MODELS . '/iu', $line)
                     && preg_match_all('/(\d{1,3}(?:\.\d{3})*,\d{2})/u', $line, $pm)) {
                     foreach ($pm[1] as $p) {
                         $prices[] = $this->amount($p);
@@ -141,10 +264,63 @@ class DslAuftragParser implements DocumentTemplateParser
         return $this->validatedInternet(array_filter($raw, fn ($v) => $v !== null && $v !== ''));
     }
 
+    /**
+     * Angaben ohne eigenes Vertragsfeld - sie gehoeren trotzdem zur vollen
+     * Auskunft und stehen deshalb in der Zusammenfassung: Kuendigungsfrist,
+     * Verlaengerung, Kosten nach der Mindestlaufzeit ("Mtl. Kosten ab dem
+     * 25. Monat"), Durchschnittspreis, Anschlusstermin und die im Preis
+     * enthaltenen 0,00-Optionen (z.B. "Basis Kabelfernsehen (TV Connect)").
+     *
+     * @param list<string> $lines
+     * @return array<string,mixed>
+     */
+    private function parseZusatz(string $text, array $lines): array
+    {
+        $raw = [];
+
+        if (preg_match('/K(?:ü|ue|u)ndigungsfrist\D{0,25}?(\d{1,2})\s*(Monat(?:e|en)?|Woche(?:n)?|Tag(?:e|en)?)/iu', $text, $m)) {
+            $raw['kuendigungsfrist'] = $m[1] . ' ' . $m[2];
+        }
+        if (preg_match('/Verl(?:ä|ae|a)ngerung\D{0,25}?(\d{1,2})\s*(Monat(?:e|en)?|Woche(?:n)?|Tag(?:e|en)?)/iu', $text, $m)) {
+            $raw['verlaengerung'] = $m[1] . ' ' . $m[2];
+        }
+        if (preg_match('/Kosten ab dem\s*(\d{1,3})\.\s*Monat[^\d\r\n]{0,40}?(\d{1,3}(?:\.\d{3})*,\d{2})/iu', $text, $m)) {
+            $raw['after_term_month'] = (int) $m[1];
+            $raw['after_term_price'] = $this->amount($m[2]);
+        }
+        if (preg_match('/Durchschnitt pro Monat[^\d]*(\d{1,3}(?:\.\d{3})*,\d{2})/u', $text, $m)) {
+            $raw['durchschnitt'] = $this->amount($m[1]);
+        }
+        if (preg_match('/Anschlusstermin\h*:?\h*([^\r\n]+?)(?:\s{2,}|$)/mu', $text, $m) && trim($m[1]) !== '') {
+            $raw['anschlusstermin'] = trim($m[1]);
+        }
+
+        // Im Preis enthaltene 0,00-Positionen (TV-Option, Flatrate ...).
+        // Grundgebuehr-/Router-Aktionsstufen und Einmalkosten zaehlen nicht.
+        $inklusive = [];
+        foreach ($lines as $line) {
+            if (preg_match('/^\s*(\p{L}[^\r\n]{2,60}?)\s+[-–—]?\s*0,00\s*€?\s*$/u', $line, $m)
+                && !preg_match('/Monat|Grundgeb|Versand|Bereitstellung|' . self::ROUTER_MODELS . '/iu', $m[1])) {
+                $inklusive[] = trim((string) preg_replace('/\s{2,}/', ' ', $m[1]));
+            }
+        }
+        if ($inklusive !== []) {
+            $raw['inklusive'] = array_slice(array_values(array_unique($inklusive)), 0, 3);
+        }
+
+        return $raw;
+    }
+
     /** Deutschen Geldbetrag ("1.234,56") als float. */
     private function amount(string $s): float
     {
         return (float) str_replace(['.', ','], ['', '.'], $s);
+    }
+
+    /** Betrag fuer die Zusammenfassung ("49,99 EUR"). */
+    private function euro(float $v): string
+    {
+        return number_format($v, 2, ',', '.') . ' EUR';
     }
 
     /**
@@ -209,8 +385,11 @@ class DslAuftragParser implements DocumentTemplateParser
         return $this->validatedPerson(array_filter($raw, fn ($v) => $v !== null && $v !== ''));
     }
 
-    /** @return array<string,mixed> */
-    private function parseContract(string $text): array
+    /**
+     * @param list<string> $lines
+     * @return array<string,mixed>
+     */
+    private function parseContract(string $text, array $lines): array
     {
         // Der DSL-Auftrag ist noch keine Vertragsbestaetigung des Providers:
         // Stufe 'antrag'. Der spaeter zugestellte Provider-Vertrag ergaenzt
@@ -218,25 +397,73 @@ class DslAuftragParser implements DocumentTemplateParser
         // zweiten anzulegen.
         $raw = ['sparte' => 'internet', 'document_stage' => \App\Models\Contract::STAGE_ANTRAG];
 
-        // Anbieter (z.B. Telekom, Vodafone, 1&1, o2).
-        if (preg_match('/Anbieter\s*:?\s*([^\r\n]+?)(?:\s{2,}|$)/mu', $text, $m)) {
+        // Anbieter (z.B. Telekom, Vodafone Kabel Deutschland, 1&1, o2) -
+        // Wert neben dem Label (\h haelt die Suche auf derselben Zeile, sonst
+        // wuerde ein allein stehendes Label die Folgezeile einsammeln); bei
+        // Spalten-/Foto-OCR notfalls kontrolliert in der Folgezeile (gleiche
+        // Lehre wie beim WGV-Handyfoto).
+        if (preg_match('/Anbieter\h*:?\h+([^\r\n]+?)(?:\s{2,}|$)/mu', $text, $m)) {
             $raw['insurer'] = trim($m[1]);
+        } elseif (($v = $this->valueOnNextLine($lines, '/^Anbieter\s*:?$/iu')) !== null) {
+            $raw['insurer'] = $v;
         }
-        // Tarif (z.B. "Magenta Zuhause L").
-        if (preg_match('/\bTarif\b\s*:?\s+([^\r\n]+?)(?:\s{2,}|$)/mu', $text, $m)) {
+        // Tarif (z.B. "Magenta Zuhause L", "Young GigaZuhause 300 Kabel") -
+        // die Ueberschrift "Ihr Tarif" (ohne Wert dahinter) matcht nicht.
+        if (preg_match('/\bTarif\b\h*:?\h+([^\r\n]+?)(?:\s{2,}|$)/mu', $text, $m)) {
             $raw['tariff'] = trim($m[1]);
+        } elseif (($v = $this->valueOnNextLine($lines, '/^Tarif\s*:?$/iu')) !== null) {
+            $raw['tariff'] = $v;
         }
         // Auftragsnummer als Vertrags-/Auftragsnummer (bis der finale
         // Provider-Vertrag mit eigener Nummer nachgereicht wird).
         if (preg_match('/Auftragsnummer\s*:?\s*([A-Z0-9\-]{4,})/u', $text, $m)) {
             $raw['contract_number'] = trim($m[1]);
         }
+        // Anschlusstermin: nur ein ECHTES Datum wird als Beginn uebernommen -
+        // "schnellstmoeglich" wird nie geraten (die spaetere Bestaetigung des
+        // Providers bringt den Termin und ergaenzt DIESEN Vertrag).
+        if (preg_match('/Anschlusstermin[^\d\r\n]{0,25}?(\d{1,2})\.(\d{1,2})\.(\d{4})/u', $text, $m)) {
+            $raw['start_date'] = sprintf('%04d-%02d-%02d', $m[3], $m[2], $m[1]);
+        }
         // Durchschnittspreis pro Monat -> Monatsbeitrag.
         if (preg_match('/Durchschnitt pro Monat[^\d]*(\d{1,3}(?:\.\d{3})*,\d{2})/u', $text, $m)) {
-            $raw['premium_amount'] = (float) str_replace(['.', ','], ['', '.'], $m[1]);
+            $raw['premium_amount'] = $this->amount($m[1]);
             $raw['premium_interval'] = 'monthly';
         }
 
         return $this->validatedInsurance(array_filter($raw, fn ($v) => $v !== null && $v !== ''));
+    }
+
+    /**
+     * Wert aus der Folgezeile eines allein stehenden Labels: Spalten-/Foto-OCR
+     * trennt Label und Wert oft in eigene Zeilen. Ist die naechste Zeile
+     * selbst eine Beschriftung, bleibt das Feld leer (PlanB-Lehre: nie den
+     * Wert eines anderen Feldes uebernehmen).
+     *
+     * @param list<string> $lines
+     */
+    private function valueOnNextLine(array $lines, string $labelRe): ?string
+    {
+        $andereLabels = '/^(Anbieter|Tarif(?:kosten)?|Max\.|Mindestlaufzeit|K(?:ü|ue|u)ndigungsfrist'
+            . '|Verl(?:ä|ae|a)ngerung|Anschlusstermin|Grundgeb|IBAN|E-?Mail|Geburtsdatum|Zahlungsart'
+            . '|Kreditinstitut|Handynummer|Adresse|Preis|Vorteile|Hardware|Ihre?\b)/iu';
+        foreach ($lines as $i => $line) {
+            if (!preg_match($labelRe, trim($line))) {
+                continue;
+            }
+            $max = min($i + 3, count($lines));
+            for ($j = $i + 1; $j < $max; $j++) {
+                $v = trim($lines[$j]);
+                if ($v === '') {
+                    continue;
+                }
+                if (preg_match($andereLabels, $v) || !preg_match('/\p{L}{2,}/u', $v)) {
+                    return null;
+                }
+                return $v;
+            }
+            return null;
+        }
+        return null;
     }
 }

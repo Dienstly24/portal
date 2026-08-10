@@ -263,8 +263,11 @@
         <div class="field"><label>Tarif</label><input type="text" name="internet[tariff]" maxlength="255" value="{{ $val('internet.tariff', $net->tariff ?? '') }}" placeholder="z. B. Magenta Zuhause L"></div>
         <div class="field"><label>Geschwindigkeit (Download)</label><input type="text" name="internet[speed]" maxlength="30" value="{{ $val('internet.speed', $net->speed ?? '') }}" placeholder="z. B. 100 Mbit/s"></div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr;gap:16px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div class="field"><label>Upload-Geschwindigkeit (optional)</label><input type="text" name="internet[upload_speed]" maxlength="30" value="{{ $val('internet.upload_speed', $net->upload_speed ?? '') }}" placeholder="z. B. 40 Mbit/s"></div>
+        {{-- Beim Auftrag gibt es noch keinen Anschlusstermin ("schnellstmoeglich"),
+             Beginn/Ablauf sind leer - die Laufzeit steht deshalb als eigenes Feld. --}}
+        <div class="field"><label>Mindestlaufzeit (Monate)</label><input type="number" step="1" min="0" max="60" name="internet[min_duration_months]" value="{{ $val('internet.min_duration_months', $net->min_duration_months ?? '') }}" placeholder="z. B. 24"></div>
     </div>
 
     {{-- Preisvariabler Tarif: Aktionsphase + regulaerer Preis. --}}
@@ -286,6 +289,14 @@
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;">
         <div class="field"><label>Router-Modell</label><input type="text" name="internet[router_name]" maxlength="120" value="{{ $val('internet.router_name', $net->router_name ?? '') }}" placeholder="z. B. Telekom Speedport Smart 4"></div>
         <div class="field"><label>Router-Aufpreis (€/Monat)</label><input type="number" step="0.01" min="0" name="internet[router_price]" value="{{ $val('internet.router_price', $net && $net->router_price !== null ? rtrim(rtrim(number_format((float) $net->router_price, 2, '.', ''), '0'), '.') : '') }}" placeholder="0,00 = inklusive"></div>
+    </div>
+
+    {{-- Einmalige Kosten beim Abschluss: Bereitstellung ("was kostet die
+         Schaltung") und Versand des Routers - stehen im Auftrag als "einmalig". --}}
+    <div style="font-weight:600;font-size:13px;margin:10px 0 8px;color:var(--ink);">Einmalige Kosten</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="field"><label>Bereitstellungsgebühr (€ einmalig)</label><input type="number" step="0.01" min="0" name="internet[setup_fee]" value="{{ $val('internet.setup_fee', $net && $net->setup_fee !== null ? rtrim(rtrim(number_format((float) $net->setup_fee, 2, '.', ''), '0'), '.') : '') }}" placeholder="z. B. 49,99"></div>
+        <div class="field"><label>Versandkosten (€ einmalig)</label><input type="number" step="0.01" min="0" name="internet[shipping_fee]" value="{{ $val('internet.shipping_fee', $net && $net->shipping_fee !== null ? rtrim(rtrim(number_format((float) $net->shipping_fee, 2, '.', ''), '0'), '.') : '') }}" placeholder="z. B. 9,99"></div>
     </div>
 
     {{-- Einmalige Vorteile beim Abschluss (Cashback/Bonus, Gutschein/Gutschrift). --}}

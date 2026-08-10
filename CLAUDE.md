@@ -269,6 +269,27 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   KONTOINHABER der Antragsteller ist (sonst landet das Versorger- oder ein
   Fremdkonto in der Akte). Kein geschaetzter Lieferbeginn ausser beim
   Stadtwerke-Wechsel (14 Tage Frist -> 20 Tage).
+- **Internet-/DSL-AUFTRAG (CHECK24, z.B. Vodafone Kabel)** (`DslAuftragParser`,
+  Vollausbau 10.08.2026): der Auftrag steht KOMPLETT in der Vertragsakte
+  (Sparte `internet`, Stufe `antrag`, Detailtabelle
+  `contract_internet_details`): Anbieter = die FIRMA (z.B. "Vodafone Kabel
+  Deutschland") - NIE der Tarifname; Label-Regexe bleiben per \h auf ihrer
+  Zeile, sonst frisst sich der Ausdruck ueber die Ueberschrift "Ihr Tarif"
+  in die Folgezeile (genau so entstand die Fehlzuordnung). Gelesen werden
+  Tarif, Download/Upload, Grundgebuehr-Stufen (Aktionspreis Monat 1-N ->
+  danach regulaer), einmalige Kosten (`setup_fee` Bereitstellung,
+  `shipping_fee` Versand), `min_duration_months` (beim Auftrag gibt es
+  keinen Beginn - "schnellstmoeglich" wird nie geraten, nur ein ECHTES
+  Anschlusstermin-Datum wird start_date), Router inkl. "Vodafone Station"
+  (Aufpreis = hoechster Betrag der Router-Zeilen; nie generisch "Router" -
+  "Routergutschrift" ist ein Abzug) sowie Bonus/Cashback + Gutschrift.
+  Beitrag = "Durchschnitt pro Monat", ersatzweise der regulaere Preis.
+  OHNE eigenes Feld und deshalb NUR in der Zusammenfassung:
+  Kuendigungsfrist/Verlaengerung, "Kosten ab Monat 25", 0,00-Inklusiv-
+  Optionen (TV, Flatrate), Anschlusstermin. Maskierte IBAN/Kreditinstitut
+  werden NIE Bankdaten. Anzeige ueberall: Kundenakte-Vertragszeile,
+  Portal-Vertragsseite, Review-Modal im Eingang, Vertragsformular.
+  Tests: `DslAuftragParserTest`, `InternetContractExtractionTest`.
 - **Kfz-ANTRAG aus der NAFI-Maklersoftware** (`NafiKfzAntragParser`,
   06.08.2026): ueber ALLE Gesellschaften gleich aufgebaut (Itzehoer, VHV …) -
   der Versicherer steht als Feld im Dokument. Liest Person (inkl.

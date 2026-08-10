@@ -1130,7 +1130,8 @@ class DocumentIntakeService
         }
 
         // Internet-/DSL-Vertrag: Tarif, Geschwindigkeit, preisvariabler Tarif,
-        // Router und Bonus/Gutschein aus dem Auftrag in die Internet-Detailtabelle.
+        // Router, Bonus/Gutschein, einmalige Kosten (Bereitstellung/Versand)
+        // und Mindestlaufzeit aus dem Auftrag in die Internet-Detailtabelle.
         $internet = $data['internet'] ?? [];
         if ($type === 'internet' && $internet !== []) {
             \App\Models\ContractInternetDetail::create(array_filter([
@@ -1146,6 +1147,9 @@ class DocumentIntakeService
                 'router_price' => $internet['router_price'] ?? null,
                 'bonus_amount' => $internet['bonus_amount'] ?? null,
                 'voucher_amount' => $internet['voucher_amount'] ?? null,
+                'setup_fee' => $internet['setup_fee'] ?? null,
+                'shipping_fee' => $internet['shipping_fee'] ?? null,
+                'min_duration_months' => $internet['min_duration_months'] ?? null,
             ], fn ($v) => $v !== null));
         }
 
@@ -1724,6 +1728,9 @@ class DocumentIntakeService
                 'router_price' => $internet['router_price'] ?? null,
                 'bonus_amount' => $internet['bonus_amount'] ?? null,
                 'voucher_amount' => $internet['voucher_amount'] ?? null,
+                'setup_fee' => $internet['setup_fee'] ?? null,
+                'shipping_fee' => $internet['shipping_fee'] ?? null,
+                'min_duration_months' => $internet['min_duration_months'] ?? null,
             ];
             // has_router nur ergaenzen, wenn im Dokument gesetzt (true) - ein
             // fehlender Router-Block soll ein bereits erfasstes "mit Router"
@@ -1881,6 +1888,9 @@ class DocumentIntakeService
             'router_price' => ['label' => 'Router-Aufpreis', 'format' => [$this, 'fmtEuro']],
             'bonus_amount' => ['label' => 'Bonus/Cashback', 'format' => [$this, 'fmtEuro']],
             'voucher_amount' => ['label' => 'Gutschein', 'format' => [$this, 'fmtEuro']],
+            'setup_fee' => ['label' => 'Bereitstellungsgebuehr (einmalig)', 'format' => [$this, 'fmtEuro']],
+            'shipping_fee' => ['label' => 'Versandkosten (einmalig)', 'format' => [$this, 'fmtEuro']],
+            'min_duration_months' => ['label' => 'Mindestlaufzeit (Monate)'],
         ];
     }
 

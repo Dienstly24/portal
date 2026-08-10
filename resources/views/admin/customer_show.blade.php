@@ -554,10 +554,18 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
                             @endif
                         @endif
                     @elseif($i = $c->internetDetail)
-                        📶 {{ $i->tariff ?? 'Tarif —' }}@if($i->speed) · {{ $i->speed }}@endif
-                        @if($i->price_regular !== null) · {{ number_format((float) $i->price_regular, 2, ',', '.') }} €/Monat @endif
-                        @if($i->has_router) · Router{{ $i->router_name ? ': ' . $i->router_name : '' }}@endif
-                        @if($i->bonus_amount !== null) · Bonus {{ number_format((float) $i->bonus_amount, 2, ',', '.') }} € @endif
+                        📶 {{ $i->tariff ?? 'Tarif —' }}@if($i->speed) · {{ $i->speed }}@if($i->upload_speed) / {{ $i->upload_speed }} Upload @endif @endif
+                        @if($i->price_initial !== null) · <b>{{ number_format((float) $i->price_initial, 2, ',', '.') }} €/Monat</b>@if($i->price_initial_months) (Monat 1–{{ $i->price_initial_months }})@endif @endif
+                        @if($i->price_regular !== null) · {{ $i->price_initial !== null ? 'danach ' : '' }}<b>{{ number_format((float) $i->price_regular, 2, ',', '.') }} €/Monat</b>@endif
+                        @if($i->min_duration_months) · Mindestlaufzeit {{ $i->min_duration_months }} Monate @endif
+                        @if($i->has_router || $i->setup_fee !== null || $i->shipping_fee !== null || $i->bonus_amount !== null || $i->voucher_amount !== null)
+                            <br>
+                            @if($i->has_router)📡 Router{{ $i->router_name ? ': ' . $i->router_name : '' }}@if($i->router_price !== null) ({{ (float) $i->router_price > 0 ? number_format((float) $i->router_price, 2, ',', '.') . ' €/Monat' : 'inklusive' }})@endif @endif
+                            @if($i->setup_fee !== null) {{ $i->has_router ? '· ' : '' }}Bereitstellung einmalig {{ number_format((float) $i->setup_fee, 2, ',', '.') }} € @endif
+                            @if($i->shipping_fee !== null) · Versand einmalig {{ number_format((float) $i->shipping_fee, 2, ',', '.') }} € @endif
+                            @if($i->bonus_amount !== null) · Bonus <b>{{ number_format((float) $i->bonus_amount, 2, ',', '.') }} €</b>@endif
+                            @if($i->voucher_amount !== null) · Gutschrift {{ number_format((float) $i->voucher_amount, 2, ',', '.') }} € @endif
+                        @endif
                     @endif
                 </div>
             </td>

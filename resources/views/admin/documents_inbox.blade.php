@@ -634,6 +634,7 @@ window.docReview = (function() {
         var ins = (doc.extracted || {}).versicherung || {};
         var kfz = (doc.extracted || {}).kfz || {};
         var energie = (doc.extracted || {}).energie || {};
+        var net = (doc.extracted || {}).internet || {};
         // Zaehlerfoto: der erkannte Stand gehoert in die Verbrauchshistorie,
         // nicht in einen neuen Vertrag - daher eigener Hinweisblock.
         var isMeterPhoto = doc.ai_type === 'zaehlerfoto' && (energie.meter_number || energie.meter_reading);
@@ -662,6 +663,19 @@ window.docReview = (function() {
             if (energie.malo_id) parts.push('MaLo: ' + energie.malo_id);
             if (energie.consumption_kwh) parts.push(energie.consumption_kwh + ' kWh/Jahr');
             if (energie.meter_reading) parts.push('Stand: ' + energie.meter_reading);
+            // Internet-/DSL-Auftrag: ALLE gelesenen Tarif-Details anzeigen
+            // (Betreiber-Vorgabe 10.08.2026), damit der Mitarbeiter die volle
+            // Uebernahme vor der Zuordnung prueft.
+            if (net.tariff) parts.push('Tarif: ' + net.tariff);
+            if (net.speed) parts.push(net.speed + (net.upload_speed ? ' / ' + net.upload_speed : ''));
+            if (net.price_initial != null && net.price_initial_months) parts.push('Monat 1–' + net.price_initial_months + ': ' + net.price_initial + ' €');
+            if (net.price_regular != null) parts.push('danach ' + net.price_regular + ' €/Monat');
+            if (net.setup_fee != null) parts.push('Bereitstellung einmalig ' + net.setup_fee + ' €');
+            if (net.shipping_fee != null) parts.push('Versand einmalig ' + net.shipping_fee + ' €');
+            if (net.router_name) parts.push('Router: ' + net.router_name + (net.router_price != null ? ' (' + net.router_price + ' €/Monat)' : ''));
+            if (net.bonus_amount != null) parts.push('Bonus ' + net.bonus_amount + ' €');
+            if (net.voucher_amount != null) parts.push('Gutschrift ' + net.voucher_amount + ' €');
+            if (net.min_duration_months) parts.push('Mindestlaufzeit ' + net.min_duration_months + ' Monate');
             // Stufe des Dokuments: ein Auftrag legt den Vertrag an, die
             // spaetere Bestaetigung ERGAENZT genau diesen Vertrag.
             if (ins.document_stage === 'antrag') {
