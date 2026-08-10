@@ -422,7 +422,9 @@ window.docReview = (function() {
 
         chooseCustomer(null, null);
         renderApplyFields({ extracted: batch.merged || {} });
-        renderContract({ extracted: batch.merged || {} });
+        // ai_type-Hinweis mitgeben, damit der Zaehlerstand-Block auch im
+        // Batch-Modus erscheint, wenn ein Zaehlerfoto im Vorgang ist.
+        renderContract({ extracted: batch.merged || {}, ai_type: batch.has_meter_photo ? 'zaehlerfoto' : null });
         renderUncertainty(batch.merged || {}, null, null);
         renderFamily(batch);
 

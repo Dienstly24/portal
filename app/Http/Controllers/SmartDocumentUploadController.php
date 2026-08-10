@@ -737,6 +737,14 @@ class SmartDocumentUploadController extends Controller
      * Mehrere Dokumente auf einmal loeschen (Select-All / Bulk-Delete im
      * Eingang). Jedes Dokument wird einzeln berechtigt geprueft; Datei +
      * Datensatz werden entfernt und protokolliert. Hart auf 100 begrenzt.
+     *
+     * Bewusst nur EINGANGS-Dokumente (noch keinem Kunden zugeordnet): der
+     * Bulk-Loeschknopf ist Teil der Eingangs-Triage. Bereits zugeordnete
+     * Dokumente (Vertraege, Policen, Ausweise in einer Kundenakte) duerfen
+     * hier NICHT mit weggeloescht werden - sie werden einzeln in der
+     * Kundenakte entfernt (mit der dortigen Berechtigung). Der ganze Vorgang
+     * laeuft in einer Transaktion: bricht ein Dokument die Berechtigung, wird
+     * NICHTS geloescht (kein Teil-Loeschen mit anschliessendem 403).
      */
     public function bulkDelete(Request $request)
     {
@@ -746,32 +754,53 @@ class SmartDocumentUploadController extends Controller
         ]);
 
         $ids = array_values(array_unique($request->input('document_ids')));
-        $documents = Document::whereIn('id', $ids)->get();
-
-        $deleted = 0;
+        // Nur unzugeordnete Eingangs-Dokumente - zugeordnete bleiben unberuehrt.
+        $documents = Document::whereIn('id', $ids)->whereNull('customer_id')->get();
         foreach ($documents as $document) {
             $this->authorizeDocument($document);
+        }
+
+        $deleted = \Illuminate\Support\Facades\DB::transaction(function () use ($documents) {
+            $count = 0;
+            foreach ($documents as $document) {
+                ActivityLog::create([
+                    'user_id' => auth()->id(),
+                    'action' => 'document_deleted',
+                    'entity_type' => 'document',
+                    'entity_id' => $document->id,
+                    'meta' => json_encode([
+                        'customer_id' => null,
+                        'file' => $document->file_name,
+                        'bulk' => true,
+                    ], JSON_UNESCAPED_UNICODE),
+                ]);
+                $document->delete();
+                $count++;
+            }
+            return $count;
+        });
+
+        // Dateien erst NACH erfolgreichem Commit loeschen (ein Rollback darf
+        // keine bereits entfernte Datei hinterlassen). Fehlt eine Datei schon,
+        // ist der Datensatz trotzdem weg - kein harter Fehler.
+        foreach ($documents as $document) {
             try {
                 Storage::disk($document->disk ?: 'local')->delete($document->file_path);
             } catch (\Throwable $e) {
-                // Datei evtl. schon weg - Datensatz trotzdem entfernen.
+                // Datei evtl. schon weg - ignorieren.
             }
-            ActivityLog::create([
-                'user_id' => auth()->id(),
-                'action' => 'document_deleted',
-                'entity_type' => 'document',
-                'entity_id' => $document->id,
-                'meta' => json_encode([
-                    'customer_id' => $document->customer_id ? (string) $document->customer_id : null,
-                    'file' => $document->file_name,
-                    'bulk' => true,
-                ], JSON_UNESCAPED_UNICODE),
-            ]);
-            $document->delete();
-            $deleted++;
         }
 
-        return response()->json(['ok' => true, 'deleted' => $deleted]);
+        // Wurde ein ausgewaehltes Dokument uebersprungen (weil bereits
+        // zugeordnet), ehrlich zurueckmelden statt stillschweigend weniger zu
+        // loeschen als angeklickt.
+        $skipped = count($ids) - $deleted;
+
+        return response()->json([
+            'ok' => true,
+            'deleted' => $deleted,
+            'skipped' => $skipped,
+        ]);
     }
 
     /**
@@ -834,6 +863,10 @@ class SmartDocumentUploadController extends Controller
             'persons' => $persons,
             'haupt_suggest' => count($persons) >= 2 ? $familyService->suggestHauptIndex($persons) : 0,
             'has_health_cards' => $group->contains(fn ($d) => $d->ai_type === 'gesundheitskarte'),
+            // Ist ein Zaehlerfoto im Vorgang, kann das Review-Modal den
+            // abgelesenen Stand anzeigen (sonst blieb der Hinweisblock im
+            // Batch-Modus immer aus - dem merged-Objekt fehlt ein ai_type).
+            'has_meter_photo' => $group->contains(fn ($d) => $d->ai_type === 'zaehlerfoto'),
         ];
     }
 
@@ -883,7 +916,14 @@ class SmartDocumentUploadController extends Controller
 
         // Mehrfachauswahl: Vorschlaege aus allen ausgewaehlten Dokumenten
         // gemeinsam (gleiche Zusammenfuehrung wie bei der Batch-Vorschau).
-        $extraIds = array_filter((array) $request->input('ids', []));
+        // Eingabe wie bei den Schwester-Endpunkten validieren (Array aus
+        // UUIDs, hart begrenzt) - sonst laeuft eine beliebig lange/kaputte
+        // Liste in whereIn (Query-Kosten bzw. 500 bei verschachteltem Wert).
+        $this->validateJson($request, [
+            'ids' => 'nullable|array|max:10',
+            'ids.*' => 'uuid',
+        ]);
+        $extraIds = array_values(array_unique(array_filter((array) $request->input('ids', []))));
         $extracted = $document->ai_extracted ?: [];
         if ($extraIds !== []) {
             $documents = Document::whereIn('id', array_merge([$document->id], $extraIds))
@@ -932,6 +972,35 @@ class SmartDocumentUploadController extends Controller
         // Button). fresh=true: das Duplikat-Ergebnis wird bewusst NICHT
         // wiederverwendet, die Datei wird wirklich neu gelesen.
         $forceAi = $request->boolean('force_ai') && $this->analyzer->providerEnabled();
+
+        // Kostenbremse fuer die ERZWUNGENE KI-Stufe (jeder Klick = ein
+        // bezahlter Claude-Aufruf, der die gratis Vorstufe ueberspringt):
+        // 1) nur Verwaltung (admin/manager) darf sie ausloesen - Mitarbeiter/
+        //    Support bekommen weiterhin den kostenlosen Re-Run (Parser/OCR);
+        // 2) zusaetzlich ein enges Tageslimit je Nutzer, damit auch ein
+        //    Verwaltungs-Account nicht versehentlich hunderte Aufrufe erzeugt.
+        //    Das grosszuegige Routen-Throttle (300/10min) schuetzt davor nicht.
+        if ($forceAi) {
+            if (!in_array(auth()->user()->role, ['admin', 'manager'], true)) {
+                return response()->json([
+                    'message' => 'Die kostenpflichtige KI-Analyse darf nur die Verwaltung (Admin/Manager) ausloesen. '
+                        . 'Die kostenlose Neuanalyse steht dir weiter zur Verfuegung.',
+                ], 403);
+            }
+            $limit = max(1, (int) config('services.ocr.force_ai_daily_limit', 40));
+            $executed = \Illuminate\Support\Facades\RateLimiter::attempt(
+                'force-ai-doc:' . auth()->id(),
+                $limit,
+                fn () => true,
+                86400,
+            );
+            if (!$executed) {
+                return response()->json([
+                    'message' => 'Tageslimit fuer die kostenpflichtige KI-Analyse erreicht (' . $limit
+                        . '/Tag). Bitte morgen erneut oder die kostenlose Neuanalyse nutzen.',
+                ], 429);
+            }
+        }
 
         $document->update(['ai_status' => 'pending', 'ai_error' => null]);
         AnalyzeDocumentJob::dispatch($document->id, forceAi: $forceAi, fresh: true);

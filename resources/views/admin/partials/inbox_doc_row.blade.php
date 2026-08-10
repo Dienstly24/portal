@@ -110,16 +110,22 @@
                  damit Parser-Verbesserungen auf Bestandsdokumente wirken. --}}
             <button type="button" class="btn btn-ghost btn-sm" onclick="docReview.reanalyze(@js($doc->id), this, false)" title="Analyse (gratis zuerst) neu ausfuehren">🔄 Neu analysieren</button>
             @endif
-            @if($providerEnabled ?? false)
-            {{-- Erzwingt bewusst die kostenpflichtige KI-Stufe (ueberspringt die kostenlose OCR-Vorstufe). --}}
+            @if(($providerEnabled ?? false) && in_array(auth()->user()->role, ['admin','manager'], true))
+            {{-- Erzwingt bewusst die kostenpflichtige KI-Stufe (ueberspringt die
+                 kostenlose OCR-Vorstufe). Nur Verwaltung (Kostenbremse) - der
+                 Server prueft die Rolle und ein Tageslimit zusaetzlich. --}}
             <button type="button" class="btn btn-ghost btn-sm" onclick="docReview.reanalyze(@js($doc->id), this, true)" title="Kostenpflichtige KI-Analyse (Claude) erzwingen">🤖 Mit KI analysieren</button>
             @endif
+            @endif
+            {{-- Loeschen ist IMMER moeglich - auch bei laufender oder
+                 festgefahrener Analyse (z.B. ausgefallener Queue-Worker),
+                 damit ein in „pending"/„processing" haengendes Dokument aus dem
+                 Eingang entfernt werden kann. --}}
             <form method="POST" action="{{ route('admin.documents.destroy', $doc->id) }}" style="margin:0;"
                 onsubmit="return confirm('Dokument „{{ addslashes($doc->file_name) }}“ wirklich löschen?');">
                 @csrf @method('DELETE')
                 <button type="submit" class="btn btn-ghost btn-sm" style="color:#A32D2D;" title="Löschen">🗑</button>
             </form>
-            @endif
         </div>
     </div>
 </div>

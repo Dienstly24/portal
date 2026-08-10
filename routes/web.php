@@ -352,8 +352,9 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::post('/documents/batch-preview', [\App\Http\Controllers\SmartDocumentUploadController::class, 'batchPreview'])
         ->middleware('throttle:1200,1')->name('documents.batch_preview');
     // Mehrere Eingangs-Dokumente auf einmal loeschen (Select-All / Bulk-Delete).
-    // Hinweis: Das Throttle begrenzt nur die Request-Frequenz; die feste
-    // DSGVO-Obergrenze von max. 30 Kunden pro Bulk-Aktion bleibt im Controller.
+    // Hinweis: Das Throttle begrenzt nur die Request-Frequenz. Der Controller
+    // loescht bewusst NUR unzugeordnete Eingangs-Dokumente (max. 100/Request,
+    // in einer Transaktion) - zugeordnete Kundendokumente bleiben unberuehrt.
     Route::post('/documents/bulk-delete', [\App\Http\Controllers\SmartDocumentUploadController::class, 'bulkDelete'])
         ->middleware('throttle:300,10')->name('documents.bulk_delete');
     Route::post('/documents/{id}/reanalyze', [\App\Http\Controllers\SmartDocumentUploadController::class, 'reanalyze'])

@@ -33,11 +33,15 @@ class AnalyzePendingDocuments extends Command
         // schneller auf als die frueheren 45 Min.
         $stuck = Document::where('ai_status', 'processing')
             ->where('updated_at', '<', now()->subMinutes(20))->get();
+        $intake = app(\App\Services\DocumentIntake\DocumentIntakeService::class);
         foreach ($stuck as $document) {
             $document->update([
                 'ai_status' => 'failed',
                 'ai_error' => 'Analyse abgebrochen (Zeitueberschreitung).',
             ]);
+            // Auch der Zeitueberschreitungs-Fall bekommt jetzt einen aktiven
+            // Hinweis (frueher verstummte ein festgefahrenes Dokument).
+            $intake->notifyAnalysisFailed($document);
         }
 
         $this->info(sprintf('%d erneut angestossen, %d als fehlgeschlagen markiert.', $pending->count(), $stuck->count()));

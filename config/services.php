@@ -153,5 +153,9 @@ return [
         'max_pages' => env('OCR_MAX_PAGES', 10),
         'max_seconds' => env('OCR_MAX_SECONDS', 60),
         'page_timeout' => env('OCR_PAGE_TIMEOUT', 20),
+        // Kostenbremse: wie oft ein einzelner Verwaltungs-Account pro Tag die
+        // ERZWUNGENE (kostenpflichtige) KI-Analyse ausloesen darf. Der
+        // kostenlose Re-Run (Parser/OCR) ist davon nicht betroffen.
+        'force_ai_daily_limit' => env('OCR_FORCE_AI_DAILY_LIMIT', 40),
     ],
 ];

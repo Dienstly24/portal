@@ -27,6 +27,55 @@ class DocumentIntakeService
     {
     }
 
+    /**
+     * Glocken-Hinweis, wenn die Analyse eines Dokuments endgueltig
+     * fehlgeschlagen ist (Betreiber-Vorgabe Audit 10.08.2026): ein Fehler war
+     * bisher nur sichtbar, wenn jemand zufaellig in den Eingang schaute -
+     * zugeordnete Dokumente fielen sogar aus der 30er-Liste. Jetzt bekommt der
+     * zustaendige Mitarbeiter aktiv einen Hinweis mit direktem Link.
+     *
+     * Empfaenger: bei einem Eingangs-Dokument der (interne) Hochlader, sonst
+     * der Betreuer des Kunden - ersatzweise Admin/Manager. Fehler beim
+     * Benachrichtigen duerfen den Fehlerpfad nie weiter eskalieren.
+     */
+    public function notifyAnalysisFailed(Document $document): void
+    {
+        try {
+            $recipients = collect();
+            $link = route('admin.documents.inbox');
+
+            if ($document->customer_id) {
+                $customer = Customer::with('user')->find($document->customer_id);
+                if ($customer) {
+                    $recipients = $customer->betreuer()->get();
+                    $link = route('admin.customer', $customer->id) . '#tab-dokumente';
+                }
+            } elseif ($document->uploaded_by) {
+                $uploader = \App\Models\User::find($document->uploaded_by);
+                if ($uploader && $uploader->isStaff() && $uploader->is_active) {
+                    $recipients = collect([$uploader]);
+                }
+            }
+
+            if ($recipients->isEmpty()) {
+                $recipients = \App\Models\User::whereIn('role', ['admin', 'manager'])
+                    ->where('is_active', true)->get();
+            }
+
+            \App\Support\Facades\Notify::pushMany($recipients->pluck('id'), [
+                'type' => \App\Services\Notifications\NotificationService::TYPE_DOCUMENT,
+                'title' => 'Dokument-Analyse fehlgeschlagen',
+                'body' => 'Die KI-Analyse von „' . $document->file_name . '" ist fehlgeschlagen. '
+                    . 'Bitte im Dokumenten-Eingang erneut versuchen oder das Dokument manuell zuordnen.',
+                'link' => $link,
+                // Genau EIN Hinweis je Dokument (Retry/Scheduler doppeln nicht).
+                'dedup_key' => 'doc-failed-' . $document->id,
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
     /** Match-Kriterien aus dem validierten Analyse-Ergebnis ableiten. */
     public function matchCriteria(array $extracted): array
     {
