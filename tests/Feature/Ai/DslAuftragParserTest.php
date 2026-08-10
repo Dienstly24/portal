@@ -206,6 +206,154 @@ class DslAuftragParserTest extends TestCase
         $this->assertStringContainsString('Anschlusstermin schnellstmöglich', $r['summary']);
     }
 
+    /**
+     * ECHTES Spalten-OCR eines Screenshots (mit Chromium + Tesseract PSM 3
+     * nachgestellt, Lehre 10.08.2026): Tesseract liest die CHECK24-Karten
+     * als SPALTEN-Bloecke - erst alle Beschriftungen, dann alle Werte, dann
+     * die Betraege. Kein Label trifft seinen Wert auf einer Zeile; vor dem
+     * Fix blieben nur Name und Adresse uebrig.
+     */
+    private function kabelAuftragSpaltenOcrText(): string
+    {
+        return implode("\n", [
+            'Ihre Kundendaten', '',
+            'Adresse', '',
+            'Handynummer für Rückfragen',
+            'E-Mail', '',
+            'Geburtsdatum', '',
+            'IBAN', '',
+            'Kreditinstitut', '',
+            'Zahlungsart', '',
+            'Ihre Anschlussdaten', '',
+            'Anschlusstermin', '',
+            'Ihr Tarif', '',
+            'Anbieter', '',
+            'Tarif', '',
+            'Max. Download',
+            'Max. Upload',
+            'Mindestlaufzeit',
+            'Kündigungsfrist', '',
+            'Verlängerung', '',
+            'Dunya Al Obaidi',
+            'Grafenstr. 19',
+            '24768 Rendsburg', '',
+            '0176 75722643',
+            'Durp930@gmail.com',
+            '15.09.2006', '',
+            'DE6821* 7192',
+            'Sparkasse Mittelholstein', '',
+            'Bankeinzug', '',
+            'schnellstmöglich', '',
+            'Vodafone Kabel Deutschland',
+            'Young GigaZuhause 300 Kabel', '',
+            '300 MBit/s',
+            '75,0 MBit/s',
+            '24 Monate',
+            '1 Monat',
+            '1 Monat', '',
+            'ändern', '',
+            'ändern', '',
+            'Preisübersicht', '',
+            'Tarifkosten', '',
+            'Grundgebühr Monat 1-9',
+            'Grundgebühr Monat 10 - 24',
+            'Bereitstellungsgebühr',
+            'Versandkosten', '',
+            'Basis Kabelfernsehen (TV Connect)', '',
+            'Hardware & Optionen',
+            'Vodafone Station', '',
+            'Festnetz- und Mobilfunk-Flatrate', '',
+            'Vorteile',
+            'CHECK24.net Cashback', '',
+            'Durchschnitt pro Monat', '',
+            'Wie errechnet sich der Durchschnitt pro Monat?', '',
+            'einmalig monatlich', '',
+            '19,99 €',
+            '49,99 €',
+            '49,99 €',
+            '9,99€',
+            '0,00€', '',
+            '4,99€',
+            '0,00€', '',
+            '- 430,00 €', '',
+            '28,31€', '',
+            'Wir berücksichtigen alle innerhalb der ersten 24 Monate anfallenden Kosten und',
+            'Vergünstigungen. Daraus ermitteln wir zur besseren Vergleichbarkeit den rechnerischen', '',
+            'Durchschnittspreis pro Monat.', '',
+            'Preise inkl. MwSt. Alle Angaben ohne Gewähr.', '',
+            'Mtl. Kosten ab dem 25. Monat',
+            'Kosten ab dem 25. Monat im Detail', '',
+            'Grundgebühr',
+            'Vodafone Station', '',
+            '54,98 €', '',
+            'monatlich', '',
+            '49,99 €',
+            '4,99€',
+        ]);
+    }
+
+    public function test_parses_spalten_ocr_eines_screenshots_vollstaendig(): void
+    {
+        $r = (new DslAuftragParser())->parse($this->kabelAuftragSpaltenOcrText());
+        $this->assertNotNull($r);
+
+        $p = $r['data']['person'];
+        $this->assertSame('Dunya', $p['first_name']);
+        $this->assertSame('Al Obaidi', $p['last_name']);
+        $this->assertSame('2006-09-15', $p['birth_date']);
+        $this->assertSame('017675722643', $p['phone']);
+        $this->assertSame('durp930@gmail.com', $p['email']);
+        $this->assertSame('24768', $p['zip']);
+
+        $v = $r['data']['versicherung'];
+        $this->assertSame('Vodafone Kabel Deutschland', $v['insurer']);
+        $this->assertSame('Young GigaZuhause 300 Kabel', $v['tariff']);
+        $this->assertSame(28.31, $v['premium_amount']);
+        // Das blosse Label "IBAN" o.ae. darf nie zur Auftragsnummer werden.
+        $this->assertArrayNotHasKey('contract_number', $v);
+        $this->assertArrayNotHasKey('start_date', $v);
+
+        $i = $r['data']['internet'];
+        $this->assertSame('300 MBit/s', $i['speed']);
+        $this->assertSame('75,0 MBit/s', $i['upload_speed']);
+        $this->assertSame(19.99, $i['price_initial']);
+        $this->assertSame(9, $i['price_initial_months']);
+        $this->assertSame(49.99, $i['price_regular']);
+        $this->assertSame(49.99, $i['setup_fee']);
+        $this->assertSame(9.99, $i['shipping_fee']);
+        $this->assertSame(24, $i['min_duration_months']);
+        $this->assertTrue($i['has_router']);
+        $this->assertSame('Vodafone Station', $i['router_name']);
+        $this->assertSame(4.99, $i['router_price']);
+        $this->assertSame(430.00, $i['bonus_amount']);
+
+        $this->assertStringContainsString('Mindestlaufzeit 24 Monate (Kuendigungsfrist 1 Monat, Verlaengerung 1 Monat)', $r['summary']);
+        $this->assertStringContainsString('ab Monat 25: 54,98 EUR/Monat', $r['summary']);
+        $this->assertStringContainsString('Anschlusstermin schnellstmöglich', $r['summary']);
+    }
+
+    /**
+     * Spalten-OCR OHNE rekonstruierbare Paare (nur die Kundendaten-Karte
+     * lesbar): der Parser darf NICHT mit "nur Name und Adresse" gewinnen -
+     * null laesst die Analyse normal weiterlaufen (KI-Eskalation liest das
+     * Bild vollstaendig).
+     */
+    public function test_gibt_auf_statt_fast_leer_zu_gewinnen(): void
+    {
+        $text = implode("\n", [
+            'Ihre Kundendaten',
+            'Adresse',
+            'Geburtsdatum',
+            'Anbieter',
+            'Mindestlaufzeit',
+            'Max. Download in MBit/s und Internet', // Trigger-Woerter vorhanden
+            'Dunya Al Obaidi',
+            'Grafenstr. 19',
+            '24768 Rendsburg',
+        ]);
+        $this->assertNull((new DslAuftragParser())->parse($text));
+    }
+
     public function test_ignores_non_dsl_documents(): void
     {
         $this->assertNull((new DslAuftragParser())->parse('Irgendein Dokument ohne Tarif und Anbieter.'));
