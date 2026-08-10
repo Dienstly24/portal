@@ -149,9 +149,12 @@ class PdfTextLayerExtractor
 
     private function binaryWorks(): bool
     {
-        static $cache = null;
-        if ($cache !== null) {
-            return $cache;
+        // Nur ERFOLGE cachen: ein transienter Fehler (Timeout unter Last) darf
+        // die kostenlose Textebene nicht fuer die gesamte Worker-Lebensdauer
+        // deaktivieren und alles still zum bezahlten KI-Vision umleiten.
+        static $cache = false;
+        if ($cache) {
+            return true;
         }
         try {
             $process = new Process([$this->binary(), '-v']);
@@ -159,10 +162,12 @@ class PdfTextLayerExtractor
             $process->run();
             // pdftotext -v schreibt die Version nach STDERR und liefert je nach
             // Version einen Nicht-Null-Exitcode; das Vorhandensein zaehlt.
-            return $cache = ($process->isSuccessful()
-                || str_contains($process->getErrorOutput(), 'pdftotext'));
+            if ($process->isSuccessful() || str_contains($process->getErrorOutput(), 'pdftotext')) {
+                return $cache = true;
+            }
         } catch (\Throwable) {
-            return $cache = false;
+            // Nicht cachen - beim naechsten Aufruf erneut versuchen.
         }
+        return false;
     }
 }

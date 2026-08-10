@@ -1882,4 +1882,185 @@ class SmartDocumentUploadTest extends TestCase
 
         $this->assertSame('DE89370400440532013000', $customer->fresh()->iban);
     }
+
+    /* ---------------------------------------------------------------
+     | Audit-Fixes (10.08.2026): Kostenbremse KI, Bulk-Delete-Schutz,
+     | Fehler-Benachrichtigung, ids-Validierung
+     * -------------------------------------------------------------- */
+
+    private function makeEmployee(): User
+    {
+        return User::factory()->create(['role' => 'employee']);
+    }
+
+    private function inboxPdf(?int $uploadedBy = null, array $attrs = []): Document
+    {
+        $path = 'documents/eingang/' . uniqid() . '.pdf';
+        Storage::disk('local')->put($path, '%PDF-1.4 fake');
+        return Document::create(array_merge([
+            'customer_id' => null,
+            'category' => 'other',
+            'file_name' => 'scan.pdf',
+            'file_path' => $path,
+            'disk' => 'local',
+            'ai_status' => 'done',
+            'ai_type' => 'sonstiges',
+            'uploaded_by' => $uploadedBy,
+        ], $attrs));
+    }
+
+    public function test_force_ai_is_denied_for_non_admin_but_free_reanalyze_stays_open(): void
+    {
+        Storage::fake('local');
+        $this->enableAi();
+        $this->fakeAnalysis($this->gesundheitskartePayload());
+        $employee = $this->makeEmployee();
+        // Eingangs-Dokument des Mitarbeiters selbst (authorizeDocument ok).
+        $doc = $this->inboxPdf($employee->id);
+
+        // Erzwungene (kostenpflichtige) KI ist der Verwaltung vorbehalten.
+        $this->actingAs($employee)
+            ->postJson(route('admin.documents.reanalyze', $doc->id), ['force_ai' => 1])
+            ->assertStatus(403);
+
+        // Der kostenlose Re-Run bleibt fuer den Mitarbeiter moeglich.
+        $this->actingAs($employee)
+            ->postJson(route('admin.documents.reanalyze', $doc->id), ['force_ai' => 0])
+            ->assertOk();
+    }
+
+    public function test_force_ai_daily_limit_returns_429_when_exhausted(): void
+    {
+        Storage::fake('local');
+        $this->enableAi();
+        $this->fakeAnalysis($this->gesundheitskartePayload());
+        config(['services.ocr.force_ai_daily_limit' => 1]);
+        $admin = $this->makeAdmin();
+        $doc = $this->inboxPdf($admin->id);
+
+        // Erster erzwungener KI-Lauf: erlaubt.
+        $this->actingAs($admin)
+            ->postJson(route('admin.documents.reanalyze', $doc->id), ['force_ai' => 1])
+            ->assertOk();
+
+        // Zweiter am selben Tag: Tageslimit erreicht -> 429.
+        $this->actingAs($admin)
+            ->postJson(route('admin.documents.reanalyze', $doc->id), ['force_ai' => 1])
+            ->assertStatus(429);
+    }
+
+    public function test_bulk_delete_only_removes_unassigned_inbox_documents(): void
+    {
+        Storage::fake('local');
+        $admin = $this->makeAdmin();
+        $customer = $this->makeCustomer();
+
+        $inboxA = $this->inboxPdf($admin->id);
+        $inboxB = $this->inboxPdf($admin->id);
+        // Bereits einem Kunden zugeordnetes Dokument - darf NICHT mitgeloescht werden.
+        $assigned = $this->inboxPdf($admin->id, ['customer_id' => $customer->id]);
+
+        $response = $this->actingAs($admin)->postJson(route('admin.documents.bulk_delete'), [
+            'document_ids' => [(string) $inboxA->id, (string) $inboxB->id, (string) $assigned->id],
+        ]);
+
+        $response->assertOk()->assertJson(['ok' => true, 'deleted' => 2, 'skipped' => 1]);
+        $this->assertNull(Document::find($inboxA->id));
+        $this->assertNull(Document::find($inboxB->id));
+        // Das zugeordnete Kundendokument bleibt erhalten.
+        $this->assertNotNull(Document::find($assigned->id));
+    }
+
+    public function test_failed_analysis_notifies_the_uploader(): void
+    {
+        Storage::fake('local');
+        $this->enableAi();
+        // Claude antwortet mit HTTP 500 -> die Analyse schlaegt fehl.
+        Http::fake(['api.anthropic.com/*' => Http::response('error', 500)]);
+        $admin = $this->makeAdmin();
+
+        $path = 'documents/eingang/' . uniqid() . '.pdf';
+        Storage::disk('local')->put($path, '%PDF-1.4 fake');
+        $doc = Document::create([
+            'customer_id' => null, 'category' => 'other', 'file_name' => 'kaputt.pdf',
+            'file_path' => $path, 'disk' => 'local', 'ai_status' => 'pending', 'uploaded_by' => $admin->id,
+        ]);
+
+        \App\Jobs\AnalyzeDocumentJob::dispatch($doc->id);
+
+        $this->assertSame('failed', $doc->fresh()->ai_status);
+        $this->assertDatabaseHas('internal_notifications', [
+            'user_id' => $admin->id,
+            'dedup_key' => 'doc-failed-' . $doc->id,
+        ]);
+    }
+
+    public function test_customer_suggestions_rejects_too_many_ids(): void
+    {
+        Storage::fake('local');
+        $admin = $this->makeAdmin();
+        $doc = $this->inboxPdf($admin->id);
+
+        $this->actingAs($admin)
+            ->getJson(route('admin.documents.customer_suggestions', $doc->id) . '?' . http_build_query([
+                'ids' => array_map(fn ($i) => \Illuminate\Support\Str::uuid()->toString(), range(1, 11)),
+            ]))
+            ->assertStatus(422);
+    }
+
+    public function test_extracted_bic_is_applied_with_the_bank_group(): void
+    {
+        Storage::fake('local');
+        $this->enableAi();
+        $this->fakeAnalysis(array_merge($this->gesundheitskartePayload(), [
+            'data' => [
+                'person' => ['first_name' => 'Max', 'last_name' => 'Mustermann'],
+                'bank' => ['iban' => 'DE89370400440532013000', 'bic' => 'COBADEFFXXX', 'account_holder' => 'Max Mustermann'],
+            ],
+        ]));
+
+        Storage::disk('local')->put('documents/eingang/mandat.pdf', '%PDF-1.4 fake');
+        $doc = Document::create([
+            'customer_id' => null, 'category' => 'other', 'file_name' => 'mandat.pdf',
+            'file_path' => 'documents/eingang/mandat.pdf', 'disk' => 'local', 'ai_status' => 'pending',
+        ]);
+        \App\Jobs\AnalyzeDocumentJob::dispatch($doc->id);
+        $this->assertSame('COBADEFFXXX', $doc->fresh()->ai_extracted['bank']['bic']);
+
+        $admin = $this->makeAdmin();
+        $customer = $this->makeCustomer();
+        $this->actingAs($admin)->postJson(route('admin.documents.assign', $doc->id), [
+            'customer_id' => (string) $customer->id,
+            'apply_fields' => ['iban'],
+        ])->assertOk();
+
+        $fresh = $customer->fresh();
+        $this->assertSame('DE89370400440532013000', $fresh->iban);
+        $this->assertSame('COBADEFFXXX', $fresh->bic);
+    }
+
+    public function test_ai_document_provider_can_be_disabled_and_defaults_safely(): void
+    {
+        // Ausdruecklich abgeschaltet -> Null-Provider (nur kostenlose Stufe).
+        config(['services.ai_document_provider' => 'none']);
+        $this->app->forgetInstance(\App\Services\Ai\Contracts\DocumentAiProviderInterface::class);
+        $provider = $this->app->make(\App\Services\Ai\Contracts\DocumentAiProviderInterface::class);
+        $this->assertInstanceOf(\App\Services\Ai\NullDocumentAiProvider::class, $provider);
+        $this->assertFalse($provider->isEnabled());
+
+        // Unbekannter Wert -> sicherer Rueckfall auf Claude (kein Absturz).
+        config(['services.ai_document_provider' => 'tippfehler']);
+        $this->app->forgetInstance(\App\Services\Ai\Contracts\DocumentAiProviderInterface::class);
+        $this->assertInstanceOf(
+            \App\Services\Ai\ClaudeDocumentAiProvider::class,
+            $this->app->make(\App\Services\Ai\Contracts\DocumentAiProviderInterface::class)
+        );
+    }
+
+    public function test_queue_health_command_runs(): void
+    {
+        $exit = \Illuminate\Support\Facades\Artisan::call('queue:health');
+        $this->assertContains($exit, [0, 1]);
+        $this->assertStringContainsString('Analyse-Status', \Illuminate\Support\Facades\Artisan::output());
+    }
 }

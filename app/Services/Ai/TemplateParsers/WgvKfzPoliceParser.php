@@ -51,6 +51,15 @@ class WgvKfzPoliceParser implements DocumentTemplateParser
         if ($this->looksLikeComparisonProtocol($text)) {
             return null;
         }
+        // Der NAFI-Maklerantrag ("Antrag Kraftfahrtversicherung") nennt die
+        // gewaehlte Gesellschaft als FELD - waehlt der Makler WGV, traegt der
+        // ANTRAG sowohl "WGV" als auch "Kraftfahrtversicherung" und wuerde
+        // sonst hier als bestaetigter Versicherungsschein (Stufe 'vertrag')
+        // gelesen. Ein Versicherungsschein der WGV traegt diese Antrags-
+        // Ueberschrift nie - die Erkennung bleibt also unberuehrt.
+        if (preg_match('/ANTRAG\s+KRAFTFAHRTVERSICHERUNG/u', $upper)) {
+            return null;
+        }
         if (!str_contains($upper, 'WGV')
             || (!str_contains($upper, 'KRAFTFAHRTVERSICHERUNG') && !str_contains($upper, 'KFZ-VERSICHERUNG'))) {
             return null;

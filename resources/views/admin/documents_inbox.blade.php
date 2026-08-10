@@ -275,6 +275,12 @@
             </div>
         </div>
 
+        {{-- Weitere erkannte Identitaetsangabe, die NICHT automatisch
+             gespeichert wird (Ausweis-/Dokumentennummer). Bewusst kein
+             Dauerfeld (Datenminimierung) - nur zur Kenntnis fuer den
+             Mitarbeiter, damit nichts unbemerkt verloren geht. --}}
+        <div id="review-identity-note" style="display:none;font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;"></div>
+
         {{-- Vertrag --}}
         <div id="review-contract-section" style="display:none;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;">
             <label style="display:flex;gap:9px;align-items:flex-start;font-size:13.5px;cursor:pointer;">
@@ -370,9 +376,9 @@ window.docReview = (function() {
             if (g.previous_insurer) parts.push('zuvor: ' + g.previous_insurer);
             return parts.filter(Boolean).join(' · ') || null;
         } },
-        { key: 'iban', label: 'IBAN / Kontoinhaber', from: function(x) {
+        { key: 'iban', label: 'IBAN / Kontoinhaber / BIC', from: function(x) {
             var b = x.bank || {};
-            return [b.iban, b.account_holder].filter(Boolean).join(' · ') || null;
+            return [b.iban, b.account_holder, b.bic ? ('BIC ' + b.bic) : null].filter(Boolean).join(' · ') || null;
         } },
     ];
 
@@ -422,7 +428,9 @@ window.docReview = (function() {
 
         chooseCustomer(null, null);
         renderApplyFields({ extracted: batch.merged || {} });
-        renderContract({ extracted: batch.merged || {} });
+        // ai_type-Hinweis mitgeben, damit der Zaehlerstand-Block auch im
+        // Batch-Modus erscheint, wenn ein Zaehlerfoto im Vorgang ist.
+        renderContract({ extracted: batch.merged || {}, ai_type: batch.has_meter_photo ? 'zaehlerfoto' : null });
         renderUncertainty(batch.merged || {}, null, null);
         renderFamily(batch);
 
@@ -635,6 +643,18 @@ window.docReview = (function() {
         var kfz = (doc.extracted || {}).kfz || {};
         var energie = (doc.extracted || {}).energie || {};
         var net = (doc.extracted || {}).internet || {};
+        var person = (doc.extracted || {}).person || {};
+        // Ausweis-/Dokumentennummer sichtbar machen (wird nicht dauerhaft
+        // gespeichert - Datenminimierung), damit sie nicht unbemerkt verfaellt.
+        var idNote = el('review-identity-note');
+        if (idNote) {
+            if (person.id_number) {
+                idNote.textContent = 'ℹ️ Ausweis-/Dokumentennummer erkannt: ' + person.id_number + ' (wird nicht dauerhaft gespeichert).';
+                idNote.style.display = '';
+            } else {
+                idNote.style.display = 'none';
+            }
+        }
         // Zaehlerfoto: der erkannte Stand gehoert in die Verbrauchshistorie,
         // nicht in einen neuen Vertrag - daher eigener Hinweisblock.
         var isMeterPhoto = doc.ai_type === 'zaehlerfoto' && (energie.meter_number || energie.meter_reading);
@@ -657,12 +677,35 @@ window.docReview = (function() {
             if (ins.insurer) parts.push(ins.insurer);
             if (ins.contract_number) parts.push('Nr. ' + ins.contract_number);
             if (ins.sparte) parts.push('Sparte: ' + ins.sparte);
-            if (ins.premium_amount) parts.push(ins.premium_amount + ' €');
+            // Beitrag MIT Zahlweise (sonst sehen 500 €/Jahr und 500 €/Monat gleich aus).
+            if (ins.premium_amount) {
+                var iv = { monthly: '/Monat', quarterly: '/Quartal', 'semi-annually': '/Halbjahr', yearly: '/Jahr', 'one-time': ' einmalig', einmalig: ' einmalig' }[ins.premium_interval] || '';
+                parts.push(ins.premium_amount + ' €' + iv);
+            }
+            if (ins.start_date) parts.push('ab ' + ins.start_date);
+            // Fahrzeug: die uebernommenen Kerndaten sichtbar machen (nicht nur
+            // das Kennzeichen) - der Mitarbeiter bestaetigt sonst Ungesehenes.
             if (kfz.license_plate) parts.push('Kennzeichen: ' + kfz.license_plate);
+            if (kfz.manufacturer || kfz.model) parts.push([kfz.manufacturer, kfz.model].filter(Boolean).join(' '));
+            if (kfz.vin) parts.push('FIN: ' + kfz.vin);
+            if (kfz.first_registration) parts.push('EZ ' + kfz.first_registration);
+            if (kfz.power_kw) parts.push(kfz.power_kw + ' kW');
+            if (kfz.fuel_type) parts.push(kfz.fuel_type);
+            if (kfz.has_vollkasko) parts.push('Vollkasko' + (kfz.vollkasko_deductible != null ? ' (SB ' + kfz.vollkasko_deductible + ' €)' : ''));
+            else if (kfz.has_teilkasko) parts.push('Teilkasko' + (kfz.teilkasko_deductible != null ? ' (SB ' + kfz.teilkasko_deductible + ' €)' : ''));
+            if (kfz.sf_liability_class) parts.push('SF-Haftpflicht ' + kfz.sf_liability_class);
             if (energie.meter_number) parts.push('Zähler: ' + energie.meter_number);
             if (energie.malo_id) parts.push('MaLo: ' + energie.malo_id);
             if (energie.consumption_kwh) parts.push(energie.consumption_kwh + ' kWh/Jahr');
             if (energie.meter_reading) parts.push('Stand: ' + energie.meter_reading);
+            // Energie: Tarif + Preise + Netzbetreiber (bislang unsichtbar, aber
+            // in den Vertrag uebernommen).
+            if (energie.tariff) parts.push('Tarif: ' + energie.tariff);
+            if (energie.working_price) parts.push('Arbeitspreis ' + energie.working_price + ' ct/kWh');
+            if (energie.base_price) parts.push('Grundpreis ' + energie.base_price + ' €/Monat');
+            if (energie.grid_operator) parts.push('Netz: ' + energie.grid_operator);
+            if (energie.customer_number) parts.push('Kundennr. ' + energie.customer_number);
+            if (energie.previous_provider) parts.push('Vorversorger: ' + energie.previous_provider);
             // Internet-/DSL-Auftrag: ALLE gelesenen Tarif-Details anzeigen
             // (Betreiber-Vorgabe 10.08.2026), damit der Mitarbeiter die volle
             // Uebernahme vor der Zuordnung prueft.

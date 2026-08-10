@@ -50,6 +50,13 @@ class SparkasseDirektKfzParser implements DocumentTemplateParser
         if ($this->looksLikeComparisonProtocol($text)) {
             return null;
         }
+        // Der NAFI-Maklerantrag traegt die Ueberschrift "Antrag
+        // Kraftfahrtversicherung" und nennt die Gesellschaft nur als Feld -
+        // er darf nicht mit dem hiesigen Layout der Sparkassen
+        // DirektVersicherung gelesen werden (eigener NAFI-Parser).
+        if (preg_match('/ANTRAG\s+KRAFTFAHRTVERSICHERUNG/u', $upper)) {
+            return null;
+        }
         // Nur die Unterlagen der Sparkassen DirektVersicherung zur
         // Kfz-Versicherung (Angebot/Antrag).
         if (!str_contains($upper, 'SPARKASSEN DIREKTVERSICHERUNG')

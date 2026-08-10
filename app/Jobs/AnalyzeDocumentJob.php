@@ -83,6 +83,16 @@ class AnalyzeDocumentJob implements ShouldQueue
             return;
         }
 
+        // Schutzgurt fuer den Typ: die KI-Antwort ist bereits gegen
+        // Document::AI_TYPES validiert, die Vorlagen-Parser liefern ihren Typ
+        // aber verbatim. Ein (kuenftiger) Tippfehler im Parser-Typ wuerde
+        // sonst ein ungueltiges ai_type schreiben und beim Kategorie-Zugriff
+        // (AI_TYPES[$type]['category']) sogar den Job werfen. Unbekannt ->
+        // 'sonstiges', der Mitarbeiter korrigiert den Typ, die Felder bleiben.
+        if (!isset(\App\Models\Document::AI_TYPES[$result['type'] ?? ''])) {
+            $result['type'] = 'sonstiges';
+        }
+
         // Die (u.U. kostenpflichtige) Analyse war erfolgreich. Ihr Ergebnis
         // MUSS zuerst persistiert werden - schlaegt danach das Matching oder
         // das Speichern fehl, darf das Dokument nicht in 'processing' haengen
@@ -200,6 +210,14 @@ class AnalyzeDocumentJob implements ShouldQueue
             'ai_status' => 'failed',
             'ai_error' => mb_substr($message, 0, 300),
         ]);
+
+        // Aktiver Hinweis an den zustaendigen Mitarbeiter - ein Fehler soll
+        // nicht unbemerkt im Eingang liegen bleiben. Best effort.
+        try {
+            app(DocumentIntakeService::class)->notifyAnalysisFailed($document);
+        } catch (\Throwable $e) {
+            Log::warning('Fehler-Benachrichtigung fehlgeschlagen (' . $document->id . '): ' . $e->getMessage());
+        }
     }
 
     /** Erkannten Titel in einen gefahrlosen Dateinamen umwandeln. */

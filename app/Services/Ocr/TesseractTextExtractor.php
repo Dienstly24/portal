@@ -131,24 +131,45 @@ class TesseractTextExtractor implements TextExtractorInterface
         ]);
         $process->setTimeout(max(5, (int) config('services.ocr.page_timeout', 20)));
         $process->run();
-        return $process->isSuccessful() ? $process->getOutput() : '';
+        if ($process->isSuccessful()) {
+            return $process->getOutput();
+        }
+        // Frueher verstummte OCR hier komplett: eine fehlende Sprachdatei
+        // (z.B. tesseract-ocr-ara bei OCR_LANGUAGES=deu+eng+ara) laesst
+        // tesseract auf JEDER Seite mit Nicht-Null aussteigen, das Ergebnis
+        // war '' und alles eskalierte still zum bezahlten KI-Vision. Jetzt
+        // wird der Grund protokolliert (mit `ocr:check` gezielt pruefbar).
+        Log::warning('OCR (tesseract) Seite fehlgeschlagen (Sprachen '
+            . config('services.ocr.languages', 'deu+eng') . '): '
+            . trim($process->getErrorOutput()));
+        return '';
     }
 
+    /**
+     * Binary-Probe mit Cache - aber nur ERFOLGE werden gecacht. Ein
+     * transienter Fehler (z.B. 5s-Timeout unter Last) darf die Stufe nicht
+     * fuer die gesamte Worker-Lebensdauer (queue:work laeuft stundenlang)
+     * lahmlegen und alles still zum bezahlten KI-Vision umleiten - er wird
+     * beim naechsten Dokument erneut geprueft.
+     */
     private function binaryWorks(string $binary, array $args): bool
     {
         static $cache = [];
         $key = $binary . ' ' . implode(' ', $args);
-        if (array_key_exists($key, $cache)) {
-            return $cache[$key];
+        if (!empty($cache[$key])) {
+            return true;
         }
         try {
             $process = new Process([$binary, ...$args]);
             $process->setTimeout(5);
             $process->run();
-            return $cache[$key] = $process->isSuccessful();
+            if ($process->isSuccessful()) {
+                return $cache[$key] = true;
+            }
         } catch (\Throwable) {
-            return $cache[$key] = false;
+            // Nicht cachen - beim naechsten Aufruf erneut versuchen.
         }
+        return false;
     }
 
     private function tesseractBinary(): string

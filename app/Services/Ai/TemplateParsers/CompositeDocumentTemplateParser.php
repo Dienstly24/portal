@@ -2,6 +2,7 @@
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Services\Ai\Contracts\DocumentTemplateParser;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Buendelt mehrere Vorlagen-Parser (CHECK24-Kfz-Protokoll, KKH-Beitritts-
@@ -12,15 +13,26 @@ use App\Services\Ai\Contracts\DocumentTemplateParser;
  */
 class CompositeDocumentTemplateParser implements DocumentTemplateParser
 {
-    /** @param iterable<DocumentTemplateParser> $parsers */
-    public function __construct(private readonly iterable $parsers)
+    /** @param array<DocumentTemplateParser> $parsers */
+    public function __construct(private readonly array $parsers)
     {
     }
 
     public function parse(string $text): ?array
     {
         foreach ($this->parsers as $parser) {
-            $result = $parser->parse($text);
+            // Ein einzelner fehlerhafter Parser darf NICHT die gesamte
+            // (kostenlose) Analyse eines JEDEN Dokuments zum Absturz bringen -
+            // alle Parser laufen auf jedem Text, und ein Wurf hier wuerde das
+            // Dokument auf 'failed' setzen und sogar die KI-Eskalation
+            // verhindern. Deshalb jeden Parser isolieren: bei einem Fehler
+            // protokollieren und mit dem naechsten Parser weitermachen.
+            try {
+                $result = $parser->parse($text);
+            } catch (\Throwable $e) {
+                Log::warning('Vorlagen-Parser ' . $parser::class . ' fehlgeschlagen: ' . $e->getMessage());
+                continue;
+            }
             if ($result !== null) {
                 return $result;
             }
