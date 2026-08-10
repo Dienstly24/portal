@@ -360,4 +360,44 @@ class DslAuftragParserTest extends TestCase
         // Eine Kfz-Police (Anbieter, aber kein Internet-Marker) nicht anfassen.
         $this->assertNull((new DslAuftragParser())->parse("Anbieter: ADAC\nMindestlaufzeit 12 Monate\nKfz-Haftpflicht"));
     }
+
+    /**
+     * REGRESSION (Audit 10.08.2026): Ein STROM-/GAS-Auftrag enthaelt regulaer
+     * "Anbieterwechsel", "Netzanschluss" und eine "Mindestlaufzeit" - das darf
+     * den DSL-Parser NICHT ausloesen (frueher wurde der Energie-Auftrag
+     * faelschlich als Internet-Vertrag mit leeren Energiedaten beansprucht,
+     * sodass sich kein Energievertrag mehr anlegen liess).
+     */
+    public function test_does_not_claim_energy_orders(): void
+    {
+        $stromAuftrag = implode("\n", [
+            'Stromliefervertrag - Auftragsbestätigung',
+            'Anbieter          Stadtwerke Musterstadt',
+            'Ihr Anbieterwechsel wird zum nächstmöglichen Termin durchgeführt.',
+            'Netzanschluss / Netzbetreiber: Netze BW',
+            'Marktlokation (MaLo-ID): 51238973456',
+            'Zählernummer      1 LOG00 9228 3078',
+            'Jahresverbrauch   3.500 kWh',
+            'Arbeitspreis      28,50 ct/kWh',
+            'Grundpreis        12,90 EUR/Monat',
+            'Mindestlaufzeit   12 Monate',
+        ]);
+
+        $this->assertNull(
+            (new DslAuftragParser())->parse($stromAuftrag),
+            'Ein Strom-/Gas-Auftrag darf nicht als DSL-/Internet-Vertrag gelesen werden.'
+        );
+    }
+
+    /**
+     * Der Datenteil eines Formulars steht auf Seite 1; die AGB-Folgeseiten
+     * eines Energie-Auftrags (mit "Anbieterwechsel"/"Netzanschluss"/
+     * "Mindestlaufzeit") duerfen den DSL-Parser nicht mehr ausloesen.
+     */
+    public function test_ignores_agb_noise_on_later_pages(): void
+    {
+        $seite1 = "Stromliefervertrag der Stadtwerke\nKunde: Max Mustermann\nMarktlokation 51238973456\nJahresverbrauch 3500 kWh";
+        $agb = "Allgemeine Geschäftsbedingungen\nMindestlaufzeit und Anbieterwechsel: ... Der Netzanschluss ...";
+        $this->assertNull((new DslAuftragParser())->parse($seite1 . "\f" . $agb));
+    }
 }

@@ -1,6 +1,7 @@
 <?php
 namespace App\Services\Ai\TemplateParsers;
 
+use App\Services\Ai\Concerns\ReadsDocumentPages;
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
 use App\Services\Ai\Contracts\DocumentTemplateParser;
 
@@ -29,6 +30,7 @@ use App\Services\Ai\Contracts\DocumentTemplateParser;
  */
 class DslAuftragParser implements DocumentTemplateParser
 {
+    use ReadsDocumentPages;
     use ValidatesExtractedFields;
 
     /**
@@ -43,13 +45,32 @@ class DslAuftragParser implements DocumentTemplateParser
 
     public function parse(string $text): ?array
     {
+        // NUR die erste Seite (der Auftrag traegt seine Daten dort; danach nur
+        // AGB/Datenschutz). Frueher las der Parser das GANZE PDF und griff die
+        // Woerter "Anbieterwechsel"/"Netzanschluss"/"Mindestlaufzeit" aus dem
+        // Rechtstext eines STROM-/GAS-Auftrags ab - und beanspruchte diesen
+        // faelschlich als Internet-Vertrag (leere Energiedaten -> kein Vertrag).
+        $text = $this->firstPage($text);
         $upper = mb_strtoupper($text);
-        // DSL-/Internet-Auftrag: Anbieter + Mindestlaufzeit + ein klarer
-        // Internet-Marker (MBit/DSL/Anschluss). Grenzt gegen Versicherungs-/
-        // Energie-Dokumente ab.
-        $hasInternetMarker = str_contains($upper, 'MBIT') || str_contains($upper, 'DSL')
-            || str_contains($upper, 'ANSCHLUSS') || str_contains($upper, 'MAGENTA')
-            || str_contains($upper, 'INTERNET');
+
+        // Klar als STROM-/GAS-Dokument erkennbar? Dann NIE ein Internet-Auftrag
+        // (die Energie-Parser bzw. die KI uebernehmen). Diese Merkmale kommen in
+        // einem echten DSL-Auftrag nicht vor.
+        if (preg_match('/\b(MARKTLOKATION|MALO|Z(?:AE|Ä)HLERNUMMER|KILOWATTSTUNDE|ARBEITSPREIS|GRUNDPREIS|STROMLIEFER|GASLIEFER|OEKOSTROM|ÖKOSTROM)\b/u', $upper) === 1
+            || str_contains($upper, 'KWH')) {
+            return null;
+        }
+
+        // DSL-/Internet-Auftrag: Anbieter + Mindestlaufzeit + ein EINDEUTIGER
+        // Internet-Marker. Bewusst KEIN blosses "ANSCHLUSS"/"INTERNET" als
+        // Teilstring mehr (traf "Netzanschluss"/"Anbieterwechsel" jedes
+        // Energie-Auftrags) - nur telekom-spezifische Begriffe bzw. das
+        // Wort mit Wortgrenze.
+        $hasInternetMarker = str_contains($upper, 'MBIT') || str_contains($upper, 'GBIT')
+            || str_contains($upper, 'MAGENTA') || str_contains($upper, 'GLASFASER')
+            || preg_match('/\b(V?DSL|INTERNET)\b/u', $upper) === 1
+            || str_contains($upper, 'INTERNETANSCHLUSS') || str_contains($upper, 'DSL-ANSCHLUSS')
+            || str_contains($upper, 'GLASFASERANSCHLUSS') || str_contains($upper, 'KABELANSCHLUSS');
         if (!str_contains($upper, 'ANBIETER') || !str_contains($upper, 'MINDESTLAUFZEIT') || !$hasInternetMarker) {
             return null;
         }

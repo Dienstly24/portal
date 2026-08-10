@@ -12,6 +12,19 @@
 <div style="background:#FEF3C7;color:#92400E;padding:12px 16px;border-radius:8px;margin-bottom:16px;">
     ⚠ KI-Analyse ist nicht konfiguriert (<code>ANTHROPIC_API_KEY</code> fehlt). Uploads werden gespeichert, aber nicht automatisch analysiert.
 </div>
+@elseif(!($providerEnabled ?? true))
+{{-- Die kostenlose Basisebene (Textebene/OCR + Vorlagen-Parser) laeuft, aber
+     die KI-Analyse ist AUS. Einfache Dokumente und bekannte Formulare
+     (z.B. CHECK24-Beratungsprotokoll) werden weiter erkannt; komplexe/neue
+     Vertraege, die die KI braucht, werden NICHT vollstaendig gelesen. Das ist
+     genau das Symptom "Vertraege werden nicht mehr erkannt" - der Hinweis
+     macht die Ursache sofort sichtbar. --}}
+<div style="background:#FEF3C7;color:#92400E;padding:12px 16px;border-radius:8px;margin-bottom:16px;">
+    ⚠ Die <strong>KI-Analyse ist derzeit ausgeschaltet</strong> – nur die kostenlose Basiserkennung (OCR/Textebene und bekannte Formulare) läuft.
+    Komplexe oder neue <strong>Verträge werden dann nicht mehr automatisch vollständig erkannt</strong>.
+    Ursache prüfen: gültiger <code>ANTHROPIC_API_KEY</code> und <code>AI_DOCUMENT_PROVIDER=claude</code> in der Server-<code>.env</code>
+    (Diagnose: <code>php artisan ocr:check</code>).
+</div>
 @endif
 
 {{-- Drag&Drop Smart-Upload (ohne Kundenzuordnung -> Eingang) --}}
