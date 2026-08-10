@@ -252,13 +252,27 @@ class DocumentAnalyzer
      *   werden zur genauen KI-Analyse eskaliert (auf dem billigen Textweg).
      * - Der Dokumenttyp wurde erkannt (nicht 'sonstiges') UND mindestens ein
      *   strukturiertes Feld (IBAN, FIN, Kennzeichen, E-Mail ...) extrahiert.
+     * - AUSNAHME: Ein Dokument, das NEUES Geschaeft bedeutet (Auftrag/Antrag/
+     *   Beratungsprotokoll/Police), ist ohne Vertragsdaten NICHT ausreichend.
+     *   Die kostenlose Heuristik liest keinen Versicherer/keine Sparte - wuerde
+     *   sie hier "reicht" melden (z.B. weil eine E-Mail erkannt wurde), bliebe
+     *   der Vertrag ohne Versicherer und liesse sich NICHT anlegen. Solche
+     *   Dokumente muessen zur KI eskalieren (die Vertragsdaten extrahiert).
      */
     private function ocrResultSufficient(array $result, string $text): bool
     {
         if (mb_strlen($text) > max(200, (int) config('services.ocr.heuristic_max_chars', 2500))) {
             return false;
         }
-        if (($result['type'] ?? 'sonstiges') === 'sonstiges') {
+        $type = $result['type'] ?? 'sonstiges';
+        if ($type === 'sonstiges') {
+            return false;
+        }
+        // Vertrags-/Geschaefts-Dokument ohne Vertragsdaten -> immer eskalieren.
+        if (in_array($type, \App\Models\Document::NEW_BUSINESS_TYPES, true)
+            && empty($result['data']['versicherung'])
+            && empty($result['data']['energie'])
+            && empty($result['data']['internet'])) {
             return false;
         }
         foreach ($result['data'] ?? [] as $group) {

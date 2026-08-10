@@ -165,6 +165,26 @@ class DocumentCostOptimizationTest extends TestCase
         $this->assertSame('DE89370400440532013000', $result['data']['bank']['iban']);
     }
 
+    public function test_contract_document_without_contract_data_escalates_to_ai(): void
+    {
+        // Kurzer Beratungsprotokoll-Text: die Heuristik erkennt den Typ UND
+        // eine E-Mail (ein Feld ist gefuellt) - aber KEINE Vertragsdaten.
+        // Frueher galt das als "reicht" und die KI wurde gespart -> der Vertrag
+        // blieb ohne Versicherer und liess sich nicht anlegen (genau die
+        // gemeldete Regression). Jetzt MUSS ein Geschaefts-Dokument ohne
+        // Vertragsdaten zur KI eskalieren.
+        $text = "Beratungsprotokoll zur Kfz-Versicherung\nKontakt: kunde@example.com\nWir haben Sie beraten.";
+        $this->assertLessThan(2500, mb_strlen($text));
+
+        $provider = $this->recordingProvider($this->aiPayload('beratungsprotokoll'));
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector(), new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser());
+
+        $result = $analyzer->analyze($this->pdfDocument());
+
+        $this->assertTrue($provider->called, 'Geschaefts-Dokument ohne Vertragsdaten muss zur KI eskalieren');
+        $this->assertSame('ai', $result['source']);
+    }
+
     public function test_without_text_layer_falls_back_to_vision(): void
     {
         // Keine Textebene (Scan) und kein OCR -> KI mit Bild/PDF (preferText false).
