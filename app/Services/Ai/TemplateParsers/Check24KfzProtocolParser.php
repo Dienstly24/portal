@@ -318,10 +318,30 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
     /** Die ausgewaehlte Tarifzeile (nach "folgenden Tarif:") oder null. */
     private function selectedTariffLine(string $text): ?string
     {
-        if (preg_match('/folgenden Tarif:\s*\R+\s*([^\r\n]+)/u', $text, $m)) {
+        // Der Fliesstext bricht das Wort "folgenden" je nach Umbruch mitten
+        // durch ("... waehlte der Versicherungsnehmer selbststaendig folgen\n
+        // den Tarif:") - der Marker muss den Zeilen-/Trennstrich-Umbruch
+        // innerhalb des Wortes tolerieren, sonst bleibt der gewaehlte Tarif
+        // (und damit der VERSICHERER) ungelesen und die Review-UI bietet
+        // "Vertrag anlegen" nicht an (gemeldete Regression 10.08.2026).
+        if (preg_match('/folgen[\s\-\x{00ad}]*den\s+Tarif\s*:\s*\R+\s*([^\r\n]+)/u', $text, $m)) {
             $line = trim($m[1]);
-            return $line !== '' ? $line : null;
+            if ($line !== '') {
+                return $line;
+            }
         }
+
+        // Fallback ohne Marker: der Kopf des gewaehlten Tarif-Blocks steht
+        // unmittelbar UEBER der Zeile "Angaben ohne Gewähr" (einmalig im
+        // Protokoll). Nur verwenden, wenn diese Struktur eindeutig ist.
+        if (preg_match_all('/([^\r\n]+)\R+\s*Angaben ohne Gew[aä]hr/u', $text, $all) === 1) {
+            $line = trim($all[1][0]);
+            // Plausibel: kurzer Titel, keine Beschriftungszeile ("...:").
+            if ($line !== '' && mb_strlen($line) <= 90 && !str_ends_with($line, ':')) {
+                return $line;
+            }
+        }
+
         return null;
     }
 

@@ -266,4 +266,70 @@ class Check24KfzProtocolParserTest extends TestCase
         // Auch ein Nicht-Kfz-Beratungsprotokoll ohne CHECK24 nicht anfassen.
         $this->assertNull((new Check24KfzProtocolParser())->parse('Beratungsprotokoll zur Krankenversicherung'));
     }
+
+    /**
+     * REGRESSION (echtes Protokoll 10.08.2026): der Fliesstext bricht das Wort
+     * "folgenden" am Zeilenende mitten durch ("... selbststaendig folgen\n
+     * den Tarif:"), danach folgen Leerzeilen bis zur Tarifzeile. Der Marker
+     * muss das tolerieren - sonst bleibt der VERSICHERER ungelesen und die
+     * Review-UI bietet "Vertrag anlegen/verknuepfen" nicht mehr an.
+     */
+    public function test_reads_insurer_when_folgenden_is_line_broken(): void
+    {
+        $text = implode("\n", [
+            'Vorläufiges Beratungsprotokoll zur Kfz-Versicherung',
+            '  CHECK24 Vergleichsportal                 E-Mail: kfz-beratung@check24.de',
+            '  Versicherungsnehmer',
+            '  Max Mustermann                           Teststr. 12',
+            '  Geboren am 01.02.1990                    12345 Berlin',
+            '  HSN/TSN: 0005/AZC',
+            '  Versicherungsbeginn: 10.08.2026          Deckung: mit Teilkasko',
+            '  Zahlweise: monatlich',
+            // Genau die Struktur aus dem echten PDF: Wort-Umbruch + Leerzeilen.
+            'hat. Aus diesen von Seiten des Vermittlers aufgezeigten Angeboten wählte der Versicherungsnehmer selbstständig folgen',
+            'den Tarif:',
+            '',
+            '',
+            'WGV Optimal Kasko Select',
+            'Angaben ohne Gewähr',
+            '',
+            'Gesamtbeitrag (inkl. Versicherungssteuer)   138,60 € monatlich',
+        ]);
+
+        $r = (new Check24KfzProtocolParser())->parse($text);
+
+        $this->assertNotNull($r);
+        $v = $r['data']['versicherung'];
+        $this->assertSame('WGV', $v['insurer']);
+        $this->assertSame('Optimal Kasko Select', $v['tariff']);
+        $this->assertSame(138.6, $v['premium_amount']);
+        $this->assertSame('monthly', $v['premium_interval']);
+    }
+
+    /**
+     * Fehlt der "folgenden Tarif:"-Marker ganz (andere Textfassung), traegt
+     * der Kopf des Tarif-Blocks direkt UEBER "Angaben ohne Gewähr" den
+     * gewaehlten Tarif - der Fallback liest ihn von dort.
+     */
+    public function test_falls_back_to_tariff_heading_above_angaben_ohne_gewaehr(): void
+    {
+        $text = implode("\n", [
+            'Vorläufiges Beratungsprotokoll zur Kfz-Versicherung',
+            '  CHECK24 Vergleichsportal',
+            '  Versicherungsnehmer',
+            '  Max Mustermann                           Teststr. 12',
+            '  HSN/TSN: 1234/ABC',
+            '  Versicherungsbeginn: 01.08.2026',
+            '',
+            'HUK24 Classic mit Werkstattbindung',
+            'Angaben ohne Gewähr',
+            '',
+            'Gesamtbeitrag (inkl. Versicherungssteuer)   150,00 € monatlich',
+        ]);
+
+        $r = (new Check24KfzProtocolParser())->parse($text);
+
+        $this->assertNotNull($r);
+        $this->assertSame('HUK24', $r['data']['versicherung']['insurer']);
+    }
 }
