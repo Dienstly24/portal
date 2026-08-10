@@ -1484,6 +1484,27 @@ class AdminController extends Controller
         return back()->with('success', 'Dokument gelöscht.');
     }
 
+    /**
+     * Aufloesung fuer direkte Dokument-Links (GET /admin/documents/{id}).
+     * Eine eigene Detailseite existiert nicht - der Aufruf kommt aus dem
+     * Browser-Verlauf (Formular-Action des Bearbeiten-/Loeschen-Dialogs),
+     * aus alten Lesezeichen oder von Hand gekuerzten Download-Links.
+     * Statt einer 404-Sackgasse: dorthin weiterleiten, wo das Dokument
+     * tatsaechlich liegt (Kundenakte bzw. Dokumenten-Eingang).
+     */
+    public function documentShow($id) {
+        $doc = \App\Models\Document::find($id);
+        if (!$doc) {
+            return redirect()->route('admin.documents.inbox')
+                ->with('warning', 'Dokument nicht gefunden - es wurde geloescht oder der Link ist veraltet.');
+        }
+        $this->authorizeDocumentAccess($doc);
+        if ($doc->customer_id !== null) {
+            return redirect()->to(route('admin.customer', $doc->customer_id) . '#tab-dokumente');
+        }
+        return redirect()->route('admin.documents.inbox');
+    }
+
     public function documentDownload(\Illuminate\Http\Request $request, $id) {
         $doc = \App\Models\Document::findOrFail($id);
         $this->authorizeDocumentAccess($doc);

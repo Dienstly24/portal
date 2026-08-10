@@ -361,6 +361,12 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         ->middleware('throttle:300,10')->name('documents.reanalyze');
     Route::get('/documents/{id}/download', [AdminController::class, 'documentDownload'])->name('documents.download');
     Route::post('/documents/{id}/replace', [AdminController::class, 'documentReplace'])->name('documents.replace');
+    // Direkter Dokument-Link (GET /admin/documents/{id}): eine eigene
+    // Detailseite gibt es bewusst nicht. Solche Aufrufe entstehen z.B. ueber
+    // den Browser-Verlauf (die Formular-Action des Bearbeiten-/Loeschen-
+    // Dialogs landet dort als Adresse) oder alte Lesezeichen und liefen
+    // bisher ins 404. Stattdessen zum richtigen Ort weiterleiten.
+    Route::get('/documents/{id}', [AdminController::class, 'documentShow'])->name('documents.show');
     Route::put('/documents/{id}', [AdminController::class, 'documentUpdate'])->name('documents.update');
     Route::delete('/documents/{id}', [AdminController::class, 'documentDestroy'])->name('documents.destroy');
     // Banner: Marketing-Verwaltung nur für Admin/Manager (Sicherheits-Fix:
