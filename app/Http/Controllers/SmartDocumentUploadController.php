@@ -752,7 +752,7 @@ class SmartDocumentUploadController extends Controller
         foreach ($documents as $document) {
             $this->authorizeDocument($document);
             try {
-                Storage::disk($document->disk ?: 'public')->delete($document->file_path);
+                Storage::disk($document->disk ?: 'local')->delete($document->file_path);
             } catch (\Throwable $e) {
                 // Datei evtl. schon weg - Datensatz trotzdem entfernen.
             }

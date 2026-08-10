@@ -373,7 +373,7 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
                 @csrf
                 <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin:0;" title="Datei ersetzen">↺<input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" style="display:none;" onchange="this.form.submit()"></label>
             </form>
-            <form method="POST" action="{{ route('admin.documents.destroy', $d->id) }}" onsubmit="return confirm('Dokument „{{ $d->file_name }}“ wirklich löschen?');" style="display:inline;margin:0;">
+            <form method="POST" action="{{ route('admin.documents.destroy', $d->id) }}" onsubmit="return confirm('Dokument „{{ addslashes($d->file_name) }}“ wirklich löschen?');" style="display:inline;margin:0;">
                 @csrf @method('DELETE')
                 <button type="submit" class="btn btn-ghost btn-sm" style="color:#A32D2D;" title="Löschen">🗑</button>
             </form>

@@ -55,7 +55,7 @@
                     <div style="margin-top:7px;display:flex;gap:8px;flex-wrap:wrap;">
                         <a href="{{ route('admin.documents.download', $dupOrig->id) }}?view=1" target="_blank" class="btn btn-ghost btn-sm">👁 Original anzeigen</a>
                         <form method="POST" action="{{ route('admin.documents.destroy', $doc->id) }}" style="margin:0;"
-                            onsubmit="return confirm('Dieses doppelte Dokument „{{ $doc->file_name }}“ wirklich löschen?');">
+                            onsubmit="return confirm('Dieses doppelte Dokument „{{ addslashes($doc->file_name) }}“ wirklich löschen?');">
                             @csrf @method('DELETE')
                             <button type="submit" class="btn btn-ghost btn-sm" style="color:#A32D2D;">🗑 Duplikat löschen</button>
                         </form>
@@ -115,7 +115,7 @@
             <button type="button" class="btn btn-ghost btn-sm" onclick="docReview.reanalyze(@js($doc->id), this, true)" title="Kostenpflichtige KI-Analyse (Claude) erzwingen">🤖 Mit KI analysieren</button>
             @endif
             <form method="POST" action="{{ route('admin.documents.destroy', $doc->id) }}" style="margin:0;"
-                onsubmit="return confirm('Dokument „{{ $doc->file_name }}“ wirklich löschen?');">
+                onsubmit="return confirm('Dokument „{{ addslashes($doc->file_name) }}“ wirklich löschen?');">
                 @csrf @method('DELETE')
                 <button type="submit" class="btn btn-ghost btn-sm" style="color:#A32D2D;" title="Löschen">🗑</button>
             </form>
