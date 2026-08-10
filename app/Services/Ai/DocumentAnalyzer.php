@@ -125,7 +125,7 @@ class DocumentAnalyzer
             if ($rawTextLayer !== '') {
                 $parsed = $this->templateParser->parse($rawTextLayer);
                 if ($parsed !== null) {
-                    return [...$parsed, 'source' => 'template'];
+                    return $this->acceptTemplateOrEscalate($parsed, $binary, $mime, $rawTextLayer);
                 }
             }
         }
@@ -147,7 +147,7 @@ class DocumentAnalyzer
         if ($freeText !== '') {
             $parsed = $this->templateParser->parse($freeText);
             if ($parsed !== null) {
-                return [...$parsed, 'source' => 'template'];
+                return $this->acceptTemplateOrEscalate($parsed, $binary, $mime, $freeText);
             }
         }
 
@@ -165,7 +165,7 @@ class DocumentAnalyzer
             if ($freeText !== '') {
                 $parsed = $this->templateParser->parse($freeText);
                 if ($parsed !== null) {
-                    return [...$parsed, 'source' => 'template'];
+                    return $this->acceptTemplateOrEscalate($parsed, $binary, $mime, $freeText);
                 }
             }
         }
@@ -206,6 +206,64 @@ class DocumentAnalyzer
     {
         $result = $this->provider->analyze($binary, $mime, $ocrText, $preferText);
         return $result !== null ? [...$result, 'source' => 'ai'] : null;
+    }
+
+    /**
+     * Vertrags-Dokumenttypen, deren Kern der VERSICHERER/ANBIETER ist: ohne
+     * ihn (und ohne Vertragsnummer) laesst sich kein Vertrag anlegen - die
+     * Review-UI zeigt die "Vertrag anlegen"-Box dann gar nicht erst an.
+     * Bewusst OHNE die Kranken-Formulare (beitrittserklaerung,
+     * familienversicherung): deren Kasse steht in "gesundheit", nicht in
+     * "versicherung" - sie wuerden sonst grundlos KI kosten.
+     */
+    private const CONTRACT_CORE_TYPES = [
+        'kfz_vertrag', 'escooter_vertrag', 'versicherungsvertrag',
+        'beratungsprotokoll', 'energieauftrag', 'internetvertrag',
+    ];
+
+    /**
+     * Sicherheitsnetz fuer Vorlagen-Treffer (Lehre 10.08.2026 - echtes
+     * CHECK24-Protokoll): ein Vorlagen-Parser kann ein Vertrags-Dokument
+     * erkennen, aber am Layout-Detail scheitern und OHNE Versicherer
+     * zurueckkommen. Wuerde das Ergebnis einfach uebernommen, bietet die
+     * Review-UI "Vertrag anlegen/verknuepfen" nicht an - genau der gemeldete
+     * Ausfall. Deshalb: fehlt einem VERTRAGS-Dokument (CONTRACT_CORE_TYPES)
+     * sowohl Versicherer als auch Vertragsnummer, wird zur KI eskaliert
+     * (billiger Textweg). Liefert die KI nichts Brauchbares, bleibt das
+     * kostenlose Vorlagen-Ergebnis erhalten (besser als nichts).
+     *
+     * @param array<string,mixed> $parsed validiertes Vorlagen-Ergebnis
+     * @return array<string,mixed>
+     */
+    private function acceptTemplateOrEscalate(array $parsed, string $binary, string $mime, string $text): array
+    {
+        $template = [...$parsed, 'source' => 'template'];
+
+        if (!in_array($parsed['type'] ?? '', self::CONTRACT_CORE_TYPES, true)) {
+            return $template;
+        }
+        $ins = $parsed['data']['versicherung'] ?? [];
+        if (!blank($ins['insurer'] ?? null) || !blank($ins['contract_number'] ?? null)) {
+            return $template;
+        }
+        if (!$this->provider->isEnabled()) {
+            return $template;
+        }
+
+        // Textweg bevorzugen, wenn der Text nicht kaputt kodiert ist - sonst
+        // Vision (beste Qualitaet bei Scans). Der Text kann hier auch die ROHE
+        // Textebene sein (Mojibake-Faelle) - dann lieber das Bild/PDF senden.
+        $preferText = $text !== '' && !$this->pdfText->isLikelyGarbled($text);
+        try {
+            $ai = $this->runProvider($binary, $mime, $preferText ? $text : '', $preferText);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning(
+                'KI-Eskalation nach Vorlagen-Treffer ohne Versicherer fehlgeschlagen: ' . $e->getMessage()
+            );
+            return $template;
+        }
+
+        return $ai ?? $template;
     }
 
     /**

@@ -87,9 +87,11 @@ class DocumentCostOptimizationTest extends TestCase
 
     public function test_check24_protocol_is_parsed_for_free_without_ai(): void
     {
-        // Bekanntes Formular -> Gratis-Parser greift, KEIN KI-Aufruf.
+        // Bekanntes Formular MIT gelesenem Versicherer -> Gratis-Parser
+        // greift vollstaendig, KEIN KI-Aufruf.
         $text = "Vorlaeufiges Beratungsprotokoll zur Kfz-Versicherung - CHECK24\n"
-            . "HSN/TSN: 1234/ABC\nHalter: Versicherungsnehmer\nVersicherungsbeginn: 01.08.2026\n";
+            . "HSN/TSN: 1234/ABC\nHalter: Versicherungsnehmer\nVersicherungsbeginn: 01.08.2026\n"
+            . "waehlte der Versicherungsnehmer selbstständig folgenden Tarif:\n\nHUK24 Classic\n";
         $provider = $this->recordingProvider($this->aiPayload());
         $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector(), new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser());
 
@@ -97,6 +99,43 @@ class DocumentCostOptimizationTest extends TestCase
 
         $this->assertFalse($provider->called, 'bekanntes Formular darf keine KI kosten');
         $this->assertSame('template', $result['source']);
+        $this->assertSame('beratungsprotokoll', $result['type']);
+        $this->assertSame('HUK24', $result['data']['versicherung']['insurer']);
+    }
+
+    /**
+     * Sicherheitsnetz (Lehre 10.08.2026): erkennt der Vorlagen-Parser ein
+     * VERTRAGS-Dokument, scheitert aber am Versicherer (Layout-Variante),
+     * wird zur KI eskaliert - sonst fehlt in der Review-UI die "Vertrag
+     * anlegen"-Box und der gemeldete Ausfall wiederholt sich.
+     */
+    public function test_template_hit_without_insurer_escalates_to_ai(): void
+    {
+        // CHECK24-Protokoll OHNE lesbare Tarif-/Versicherer-Zeile.
+        $text = "Vorlaeufiges Beratungsprotokoll zur Kfz-Versicherung - CHECK24\n"
+            . "HSN/TSN: 1234/ABC\nHalter: Versicherungsnehmer\nVersicherungsbeginn: 01.08.2026\n";
+        $provider = $this->recordingProvider($this->aiPayload());
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector(), new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser());
+
+        $result = $analyzer->analyze($this->pdfDocument());
+
+        $this->assertTrue($provider->called, 'Vertrags-Dokument ohne Versicherer muss zur KI eskalieren');
+        $this->assertTrue($provider->preferText, 'saubere Textebene -> billiger Textweg');
+        $this->assertSame('ai', $result['source']);
+    }
+
+    /** Liefert die KI dabei nichts Brauchbares, bleibt das Gratis-Ergebnis erhalten. */
+    public function test_template_hit_is_kept_when_escalation_fails(): void
+    {
+        $text = "Vorlaeufiges Beratungsprotokoll zur Kfz-Versicherung - CHECK24\n"
+            . "HSN/TSN: 1234/ABC\nHalter: Versicherungsnehmer\nVersicherungsbeginn: 01.08.2026\n";
+        $provider = $this->recordingProvider(null); // KI antwortet unbrauchbar
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector(), new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser());
+
+        $result = $analyzer->analyze($this->pdfDocument());
+
+        $this->assertTrue($provider->called);
+        $this->assertSame('template', $result['source'], 'KI-Fehlschlag darf das Vorlagen-Ergebnis nicht verwerfen');
         $this->assertSame('beratungsprotokoll', $result['type']);
     }
 
