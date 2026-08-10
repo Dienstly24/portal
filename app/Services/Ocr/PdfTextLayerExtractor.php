@@ -127,8 +127,13 @@ class PdfTextLayerExtractor
         if (mb_strlen($text) < 400) {
             return false;
         }
-        // 1) Steuer-/C1-Zeichen -> sicheres Mojibake-Signal.
-        if (preg_match_all('/[\x00-\x08\x0B\x0C\x0E-\x1F\x{0080}-\x{009F}]/u', $text) >= 5) {
+        // 1) Steuer-/C1-Zeichen -> sicheres Mojibake-Signal. WICHTIG: Form-Feed
+        // (\x0C) gehoert NICHT dazu - pdftotext trennt damit die SEITEN. Ein
+        // mehrseitiges, voellig sauberes PDF (Beratungsprotokoll: 19 Seiten =
+        // 14+ Form-Feeds) galt sonst als "kaputt kodiert" und verlor seine
+        // gesamte Textebene -> teure Vision statt billigem Textweg (Lehre
+        // 10.08.2026, echtes Kundenprotokoll).
+        if (preg_match_all('/[\x00-\x08\x0B\x0E-\x1F\x{0080}-\x{009F}]/u', $text) >= 5) {
             return true;
         }
         // 2) Zu wenige deutsche Allerweltswoerter.
