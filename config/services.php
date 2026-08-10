@@ -157,5 +157,9 @@ return [
         // ERZWUNGENE (kostenpflichtige) KI-Analyse ausloesen darf. Der
         // kostenlose Re-Run (Parser/OCR) ist davon nicht betroffen.
         'force_ai_daily_limit' => env('OCR_FORCE_AI_DAILY_LIMIT', 40),
+        // Rueckstau-Alarm: so viele seit >30 Min unbearbeitete (pending)
+        // Dokumente deuten auf einen toten Queue-Worker hin -> Glocke an die
+        // Verwaltung (INT-10). 0 schaltet den Alarm ab.
+        'pending_backlog_alert' => env('OCR_PENDING_BACKLOG_ALERT', 10),
     ],
 ];

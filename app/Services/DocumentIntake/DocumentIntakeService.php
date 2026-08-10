@@ -957,6 +957,9 @@ class DocumentIntakeService
                 'iban' => (function () use ($set, $bank): void {
                     $set('iban', $bank['iban'] ?? null);
                     $set('account_holder', $bank['account_holder'] ?? null);
+                    // BIC gehoert zur Bankverbindung und reist mit ihr (aus dem
+                    // SEPA-Mandat gelesen) - fuellt nur ein leeres Feld.
+                    $set('bic', $bank['bic'] ?? null);
                 })(),
                 default => null,
             };

@@ -96,8 +96,19 @@ class AppServiceProvider extends ServiceProvider
         // ein weiterer Anbieter spaeter ohne Umbau des restlichen Systems
         // ergaenzt werden kann (siehe DocumentAiProviderInterface).
         $this->app->bind(DocumentAiProviderInterface::class, function ($app) {
-            return match (config('services.ai_document_provider', 'claude')) {
-                default => $app->make(ClaudeDocumentAiProvider::class),
+            $provider = strtolower(trim((string) config('services.ai_document_provider', 'claude')));
+            return match ($provider) {
+                'claude' => $app->make(ClaudeDocumentAiProvider::class),
+                // Ausdruecklich abgeschaltet: nur die kostenlose Basisebene.
+                'none', 'off', 'disabled', 'null', '' => $app->make(\App\Services\Ai\NullDocumentAiProvider::class),
+                // Unbekannter Wert: nicht still verschlucken - warnen und auf
+                // den Standard (Claude) zurueckfallen.
+                default => tap($app->make(ClaudeDocumentAiProvider::class), function () use ($provider) {
+                    \Illuminate\Support\Facades\Log::warning(
+                        'Unbekannter AI_DOCUMENT_PROVIDER "' . $provider . '" - faellt auf Claude zurueck '
+                        . '(gueltig: claude, none).'
+                    );
+                }),
             };
         });
 

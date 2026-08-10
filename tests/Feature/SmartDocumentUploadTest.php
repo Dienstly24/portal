@@ -2007,4 +2007,60 @@ class SmartDocumentUploadTest extends TestCase
             ]))
             ->assertStatus(422);
     }
+
+    public function test_extracted_bic_is_applied_with_the_bank_group(): void
+    {
+        Storage::fake('local');
+        $this->enableAi();
+        $this->fakeAnalysis(array_merge($this->gesundheitskartePayload(), [
+            'data' => [
+                'person' => ['first_name' => 'Max', 'last_name' => 'Mustermann'],
+                'bank' => ['iban' => 'DE89370400440532013000', 'bic' => 'COBADEFFXXX', 'account_holder' => 'Max Mustermann'],
+            ],
+        ]));
+
+        Storage::disk('local')->put('documents/eingang/mandat.pdf', '%PDF-1.4 fake');
+        $doc = Document::create([
+            'customer_id' => null, 'category' => 'other', 'file_name' => 'mandat.pdf',
+            'file_path' => 'documents/eingang/mandat.pdf', 'disk' => 'local', 'ai_status' => 'pending',
+        ]);
+        \App\Jobs\AnalyzeDocumentJob::dispatch($doc->id);
+        $this->assertSame('COBADEFFXXX', $doc->fresh()->ai_extracted['bank']['bic']);
+
+        $admin = $this->makeAdmin();
+        $customer = $this->makeCustomer();
+        $this->actingAs($admin)->postJson(route('admin.documents.assign', $doc->id), [
+            'customer_id' => (string) $customer->id,
+            'apply_fields' => ['iban'],
+        ])->assertOk();
+
+        $fresh = $customer->fresh();
+        $this->assertSame('DE89370400440532013000', $fresh->iban);
+        $this->assertSame('COBADEFFXXX', $fresh->bic);
+    }
+
+    public function test_ai_document_provider_can_be_disabled_and_defaults_safely(): void
+    {
+        // Ausdruecklich abgeschaltet -> Null-Provider (nur kostenlose Stufe).
+        config(['services.ai_document_provider' => 'none']);
+        $this->app->forgetInstance(\App\Services\Ai\Contracts\DocumentAiProviderInterface::class);
+        $provider = $this->app->make(\App\Services\Ai\Contracts\DocumentAiProviderInterface::class);
+        $this->assertInstanceOf(\App\Services\Ai\NullDocumentAiProvider::class, $provider);
+        $this->assertFalse($provider->isEnabled());
+
+        // Unbekannter Wert -> sicherer Rueckfall auf Claude (kein Absturz).
+        config(['services.ai_document_provider' => 'tippfehler']);
+        $this->app->forgetInstance(\App\Services\Ai\Contracts\DocumentAiProviderInterface::class);
+        $this->assertInstanceOf(
+            \App\Services\Ai\ClaudeDocumentAiProvider::class,
+            $this->app->make(\App\Services\Ai\Contracts\DocumentAiProviderInterface::class)
+        );
+    }
+
+    public function test_queue_health_command_runs(): void
+    {
+        $exit = \Illuminate\Support\Facades\Artisan::call('queue:health');
+        $this->assertContains($exit, [0, 1]);
+        $this->assertStringContainsString('Analyse-Status', \Illuminate\Support\Facades\Artisan::output());
+    }
 }

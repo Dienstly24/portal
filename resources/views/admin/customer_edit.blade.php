@@ -94,7 +94,7 @@
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
             <div class="field"><label>Kontoinhaber (falls abweichend)</label><input type="text" name="account_holder" value="{{ old('account_holder', $customer->account_holder) }}" placeholder="Optional"></div>
-            <div></div>
+            <div class="field"><label>BIC (optional)</label><input type="text" name="bic" value="{{ old('bic', $customer->bic) }}" placeholder="Optional - bei deutschen IBAN meist ableitbar"></div>
         </div>
     </div>
 <div style="border-top:1px solid var(--line);margin-top:20px;"></div>
