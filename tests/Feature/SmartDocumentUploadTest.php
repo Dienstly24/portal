@@ -2041,20 +2041,24 @@ class SmartDocumentUploadTest extends TestCase
 
     public function test_ai_document_provider_can_be_disabled_and_defaults_safely(): void
     {
+        $resolve = function () {
+            $this->app->forgetInstance(\App\Services\Ai\Contracts\DocumentAiProviderInterface::class);
+            return $this->app->make(\App\Services\Ai\Contracts\DocumentAiProviderInterface::class);
+        };
+
         // Ausdruecklich abgeschaltet -> Null-Provider (nur kostenlose Stufe).
         config(['services.ai_document_provider' => 'none']);
-        $this->app->forgetInstance(\App\Services\Ai\Contracts\DocumentAiProviderInterface::class);
-        $provider = $this->app->make(\App\Services\Ai\Contracts\DocumentAiProviderInterface::class);
-        $this->assertInstanceOf(\App\Services\Ai\NullDocumentAiProvider::class, $provider);
-        $this->assertFalse($provider->isEnabled());
+        $this->assertInstanceOf(\App\Services\Ai\NullDocumentAiProvider::class, $resolve());
+
+        // LEER darf NICHT abschalten - das ist der Standard (Claude). Sonst
+        // legt ein leeres AI_DOCUMENT_PROVIDER in Produktion die Analyse still
+        // (Regressionsschutz - genau dieser Fall wurde behoben).
+        config(['services.ai_document_provider' => '']);
+        $this->assertInstanceOf(\App\Services\Ai\ClaudeDocumentAiProvider::class, $resolve());
 
         // Unbekannter Wert -> sicherer Rueckfall auf Claude (kein Absturz).
         config(['services.ai_document_provider' => 'tippfehler']);
-        $this->app->forgetInstance(\App\Services\Ai\Contracts\DocumentAiProviderInterface::class);
-        $this->assertInstanceOf(
-            \App\Services\Ai\ClaudeDocumentAiProvider::class,
-            $this->app->make(\App\Services\Ai\Contracts\DocumentAiProviderInterface::class)
-        );
+        $this->assertInstanceOf(\App\Services\Ai\ClaudeDocumentAiProvider::class, $resolve());
     }
 
     public function test_queue_health_command_runs(): void

@@ -71,12 +71,16 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(\App\Services\Ai\TemplateParsers\ReisepassMrzParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\MeldebestaetigungParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\AufenthaltstitelParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\DslAuftragParser::class),
+                // Energie-Parser (Strom/Gas) VOR dem DSL-Parser: ein echter
+                // Energie-Auftrag wird von seinem spezifischen Parser erkannt;
+                // der breitere DSL-Parser kommt erst danach zum Zug (frueher
+                // beanspruchte er Energie-Auftraege faelschlich als Internet).
                 $app->make(\App\Services\Ai\TemplateParsers\EweVertragsbestaetigungParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\LichtblickVertragsbestaetigungParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\LichtblickAuftragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\PlanBNetZeroAuftragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\EnergieAuftragParser::class),
+                $app->make(\App\Services\Ai\TemplateParsers\DslAuftragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\PrivathaftpflichtAntragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\OnlineProtokollAntragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\GewerbeBeratungsdokumentationParser::class),
@@ -96,13 +100,22 @@ class AppServiceProvider extends ServiceProvider
         // ein weiterer Anbieter spaeter ohne Umbau des restlichen Systems
         // ergaenzt werden kann (siehe DocumentAiProviderInterface).
         $this->app->bind(DocumentAiProviderInterface::class, function ($app) {
+            // WICHTIG: LEER/nicht gesetzt bedeutet STANDARD (Claude), NICHT
+            // "abgeschaltet" - frueher ergab jeder Wert (auch '') per
+            // `default => Claude` den Claude-Provider. Nur AUSDRUECKLICHE
+            // Abschalt-Schluessel deaktivieren die KI, damit ein leeres
+            // AI_DOCUMENT_PROVIDER in der Produktion die Analyse nicht
+            // versehentlich stilllegt.
             $provider = strtolower(trim((string) config('services.ai_document_provider', 'claude')));
+            if ($provider === '') {
+                $provider = 'claude';
+            }
             return match ($provider) {
                 'claude' => $app->make(ClaudeDocumentAiProvider::class),
                 // Ausdruecklich abgeschaltet: nur die kostenlose Basisebene.
-                'none', 'off', 'disabled', 'null', '' => $app->make(\App\Services\Ai\NullDocumentAiProvider::class),
+                'none', 'off', 'disabled' => $app->make(\App\Services\Ai\NullDocumentAiProvider::class),
                 // Unbekannter Wert: nicht still verschlucken - warnen und auf
-                // den Standard (Claude) zurueckfallen.
+                // den Standard (Claude) zurueckfallen (Verhalten wie zuvor).
                 default => tap($app->make(ClaudeDocumentAiProvider::class), function () use ($provider) {
                     \Illuminate\Support\Facades\Log::warning(
                         'Unbekannter AI_DOCUMENT_PROVIDER "' . $provider . '" - faellt auf Claude zurueck '

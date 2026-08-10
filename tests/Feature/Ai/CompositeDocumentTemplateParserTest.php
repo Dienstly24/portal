@@ -100,4 +100,32 @@ class CompositeDocumentTemplateParserTest extends TestCase
 
         $this->assertNull($result);
     }
+
+    /**
+     * REGRESSION (Audit 10.08.2026): ein STROM-/GAS-Auftrag darf ueber die
+     * ECHTE Parser-Reihenfolge NIE als Internet-Vertrag herauskommen (der
+     * DSL-Parser beanspruchte ihn frueher wegen "Anbieterwechsel"/
+     * "Netzanschluss"/"Mindestlaufzeit"). Ein generischer Stadtwerke-Auftrag
+     * trifft keinen spezifischen Energie-Parser -> Composite liefert null und
+     * die normale Analyse (KI/Heuristik) erkennt den Energie-Auftrag.
+     */
+    public function test_energy_order_is_never_claimed_as_internet(): void
+    {
+        $stromAuftrag = implode("\n", [
+            'Stromliefervertrag - Auftragsbestätigung',
+            'Anbieter          Stadtwerke Musterstadt',
+            'Ihr Anbieterwechsel wird zum nächstmöglichen Termin durchgeführt.',
+            'Netzanschluss / Netzbetreiber: Netze BW',
+            'Marktlokation (MaLo-ID): 51238973456',
+            'Jahresverbrauch   3.500 kWh',
+            'Arbeitspreis      28,50 ct/kWh',
+            'Mindestlaufzeit   12 Monate',
+        ]);
+
+        $result = app(DocumentTemplateParser::class)->parse($stromAuftrag);
+
+        // Entweder null (dann uebernimmt KI/Heuristik als Energie-Auftrag) -
+        // aber NIEMALS faelschlich ein Internet-Vertrag.
+        $this->assertNotSame('internetvertrag', $result['type'] ?? null);
+    }
 }
