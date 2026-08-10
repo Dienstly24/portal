@@ -289,6 +289,20 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   Optionen (TV, Flatrate), Anschlusstermin. Maskierte IBAN/Kreditinstitut
   werden NIE Bankdaten. Anzeige ueberall: Kundenakte-Vertragszeile,
   Portal-Vertragsseite, Review-Modal im Eingang, Vertragsformular.
+  SPALTEN-OCR (Lehre 10.08.2026, mit Chromium+Tesseract nachgestellt):
+  Tesseract (PSM 3) liest die CHECK24-Karten eines SCREENSHOTS als
+  Spalten-Bloecke - erst alle Beschriftungen, dann alle Werte, dann die
+  Betraege; kein Label trifft seinen Wert auf einer Zeile (es blieben nur
+  Name+Adresse uebrig). `pairColumnLayout()` rekonstruiert die Paare
+  KONSERVATIV (MBit/s-Werte als Anker der Tarif-Karte; Preisliste nur bei
+  EXAKT gleicher Anzahl Positionsnamen/Betraege; selbst-identifizierende
+  Werte Geburtsdatum/Handynummer, Zukunfts-Datum nie Geburtsdatum) und
+  haengt sie als synthetische "Label  Wert"-Zeilen an - danach greifen die
+  normalen Regexe. Findet der Parser KEINEN Vertragskern, gibt er null
+  zurueck, damit die KI-Eskalation das Bild vollstaendig liest, statt mit
+  einer fast leeren Akte zu "gewinnen". Zeilen-Regexe (Anbieter/Tarif/
+  Durchschnitt/Auftragsnummer) bleiben per \h auf ihrer Zeile - sonst
+  frisst das blosse Label die Folgezeile bzw. den ersten Listen-Betrag.
   Tests: `DslAuftragParserTest`, `InternetContractExtractionTest`.
 - **Kfz-ANTRAG aus der NAFI-Maklersoftware** (`NafiKfzAntragParser`,
   06.08.2026): ueber ALLE Gesellschaften gleich aufgebaut (Itzehoer, VHV …) -
