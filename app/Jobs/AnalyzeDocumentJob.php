@@ -154,9 +154,12 @@ class AnalyzeDocumentJob implements ShouldQueue
                 'document_id' => $document->id,
                 'skill' => DocumentAnalyzer::SKILL,
                 'model' => $analyzer->model(),
-                'input_hash' => Storage::disk($disk)->exists($document->file_path)
-                    ? hash('sha256', Storage::disk($disk)->get($document->file_path))
-                    : hash('sha256', $document->id),
+                // Inhalts-Hash liegt bereits am Dokument (beim Anlegen streamend
+                // berechnet) - die bis zu 20 MB grosse Datei nicht erneut lesen.
+                'input_hash' => $document->content_hash
+                    ?? (Storage::disk($disk)->exists($document->file_path)
+                        ? hash('sha256', Storage::disk($disk)->get($document->file_path))
+                        : hash('sha256', $document->id)),
                 'output' => [
                     'type' => $result['type'],
                     'confidence' => $result['confidence'],

@@ -271,11 +271,26 @@ class CustomerMatchingService
         $best = 0.0;
         $addresses = $customer->addresses->isNotEmpty() ? $customer->addresses : collect();
 
+        // Die STRUKTURIERTEN Kundenspalten (address_street/zip) sind heute der
+        // Normalfall (Neuanlage, Dokumenten-Eingang, Bearbeiten-Formular) -
+        // CustomerAddress-Zeilen entstehen nur ueber Self-Service-Aenderungen.
+        // Ohne diesen Zweig bekam die Mehrheit der Kunden trotz identischer
+        // Anschrift 0 Adresspunkte (Audit-Fund: Matching/Vorschlaege verloren
+        // bis zu 10 von 100 Punkten).
+        if ($customer->address_street || $customer->address_zip) {
+            $zipMatch = !empty($criteria['zip']) && $customer->address_zip
+                && trim($customer->address_zip) === trim($criteria['zip']);
+            $streetSim = !empty($criteria['street']) && $customer->address_street
+                ? $this->textSimilarity($customer->address_street, $criteria['street'])
+                : 0.0;
+            $best = max($best, ($zipMatch ? 0.5 : 0.0) + ($streetSim * 0.5));
+        }
+
         // Fallback auf das einzelne Freitext-Adressfeld, falls keine strukturierten Adressen vorliegen.
         if ($addresses->isEmpty() && $customer->address) {
             $candidateStreet = $customer->address;
             $inputStreet = trim(($criteria['street'] ?? '') . ' ' . ($criteria['zip'] ?? '') . ' ' . ($criteria['city'] ?? ''));
-            return $inputStreet !== '' ? $this->textSimilarity($candidateStreet, $inputStreet) : 0.0;
+            return max($best, $inputStreet !== '' ? $this->textSimilarity($candidateStreet, $inputStreet) : 0.0);
         }
 
         foreach ($addresses as $addr) {

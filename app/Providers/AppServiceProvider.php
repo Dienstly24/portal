@@ -83,8 +83,14 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(\App\Services\Ai\TemplateParsers\DslAuftragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\PrivathaftpflichtAntragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\OnlineProtokollAntragParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\GewerbeBeratungsdokumentationParser::class),
+                // Deckungsauftrag VOR der Beratungsdokumentation: beide sind
+                // Fonds-Finanz-Schwesterdokumente (Vorgangsnummer). Kommt ein
+                // BUENDEL-PDF mit beiden Teilen, gewinnt so der Teil mit den
+                // VERTRAGSDATEN (Versicherer/Praemie, Stufe antrag) - die reine
+                // Beratungsdoku ohne "Deckungsauftrag"-Wort bleibt unberuehrt
+                // (der Deckungsauftrag-Parser weicht ihr nachweislich aus).
                 $app->make(\App\Services\Ai\TemplateParsers\DeckungsauftragParser::class),
+                $app->make(\App\Services\Ai\TemplateParsers\GewerbeBeratungsdokumentationParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\InterlloydPoliceParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\DialogFrachtfuehrerPoliceParser::class),
                 // Kontakt-/SEPA-Ansicht eines Antragsportals (beschriftete

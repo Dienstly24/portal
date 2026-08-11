@@ -153,6 +153,44 @@ class PortalReviewTest extends TestCase
         $this->assertDatabaseHas('internal_notifications', ['user_id' => $admin->id, 'title' => 'Neues Kundendokument']);
     }
 
+    // Audit 10.08.2026: der klassische Portal-Upload wird jetzt ebenfalls
+    // analysiert (frueher nur der Smart-Scanner) - der Kunde bekommt auch so
+    // die automatische Erkennung/Zuordnung.
+    public function test_classic_portal_upload_is_queued_for_analysis(): void
+    {
+        Storage::fake('local');
+        config(['services.anthropic.key' => 'test-key']); // Analyse "konfiguriert"
+        $this->makeCustomer();
+        $customer = $this->makeCustomer();
+
+        $this->actingAs($customer->user)->post(route('portal.documents.upload'), [
+            'document' => UploadedFile::fake()->create('police.pdf', 100, 'application/pdf'),
+        ])->assertSessionHas('success');
+
+        $doc = Document::where('customer_id', $customer->id)->first();
+        $this->assertNotNull($doc);
+        // Analyse wurde angestossen (Sync-Queue lief den Job sofort durch ->
+        // Status nicht mehr der Ausgangswert 'none'; ohne echten KI-Key/OCR
+        // endet er als 'done' oder 'failed', jedenfalls angestossen).
+        $this->assertNotSame('none', $doc->ai_status);
+    }
+
+    public function test_classic_portal_upload_of_office_file_is_not_analyzed(): void
+    {
+        Storage::fake('local');
+        config(['services.anthropic.key' => 'test-key']);
+        $customer = $this->makeCustomer();
+
+        $this->actingAs($customer->user)->post(route('portal.documents.upload'), [
+            'document' => UploadedFile::fake()->create('vertrag.docx', 30),
+        ])->assertSessionHas('success');
+
+        $doc = Document::where('customer_id', $customer->id)->first();
+        // docx wird nicht analysiert (kein PDF/Bild) -> ai_status bleibt beim
+        // DB-Standard 'none'.
+        $this->assertSame('none', $doc->ai_status);
+    }
+
     // Punkt 7: hochgeladenes Dokument ist im Portal des Kunden sichtbar
     public function test_uploaded_document_appears_in_customer_portal(): void
     {

@@ -209,4 +209,18 @@ class SparkasseDirektKfzParserTest extends TestCase
         // Andere Sparte derselben Gesellschaft.
         $this->assertNull($parser->parse("Sparkassen DirektVersicherung AG\nUnfallversicherung"));
     }
+
+    /**
+     * Ein NAFI-Maklerantrag, der die Sparkassen DirektVersicherung als
+     * Gesellschaft nennt, traegt die Ueberschrift "Antrag
+     * Kraftfahrtversicherung" - er gehoert zum NAFI-Parser, nicht in dieses
+     * Spaltenlayout (Ausschluss-Riegel).
+     */
+    public function test_nafi_antrag_is_left_to_its_own_parser(): void
+    {
+        $text = "Antrag Kraftfahrtversicherung\n"
+            . "Versicherer / Risikoträger: Sparkassen DirektVersicherung\n"
+            . "KFZ-VERSICHERUNG\nAmtliches Kennzeichen: RD-AS 1212";
+        $this->assertNull((new SparkasseDirektKfzParser())->parse($text));
+    }
 }

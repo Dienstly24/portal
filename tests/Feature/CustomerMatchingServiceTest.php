@@ -57,6 +57,34 @@ class CustomerMatchingServiceTest extends TestCase
         $this->assertLessThanOrEqual(90, $result->score);
     }
 
+    public function test_structured_address_columns_score_address_points(): void
+    {
+        // Der Normalfall heute: Anschrift in den STRUKTURIERTEN Spalten
+        // (address_street/zip), keine CustomerAddress-Zeile. Frueher gab das
+        // 0 Adresspunkte trotz identischer Anschrift (Audit-Fund).
+        $user = User::factory()->create(['role' => 'customer', 'name' => 'Lea Beispiel', 'email' => 'lea@example.com']);
+        $customer = Customer::create([
+            'user_id' => $user->id,
+            'customer_number' => 'C-LEA',
+            'birth_date' => '1988-07-07',
+            'address_street' => 'Mühlenstraße 26a',
+            'address_zip' => '21509',
+            'address_city' => 'Glinde',
+        ]);
+        $this->assertCount(0, $customer->addresses); // keine strukturierte Adress-Zeile
+
+        $result = (new CustomerMatchingService())->match([
+            'full_name' => 'Lea Beispiel',
+            'birth_date' => '1988-07-07',
+            'street' => 'Mühlenstraße 26a',
+            'zip' => '21509',
+            'city' => 'Glinde',
+        ]);
+
+        $this->assertArrayHasKey('address', $result->breakdown);
+        $this->assertGreaterThan(0, $result->breakdown['address']['points'], 'strukturierte Anschrift muss Adresspunkte geben');
+    }
+
     public function test_no_matching_signals_yields_manual_tier_without_match(): void
     {
         $this->makeCustomer('Peter Beispiel', 'peter@example.com', '1975-03-03');
