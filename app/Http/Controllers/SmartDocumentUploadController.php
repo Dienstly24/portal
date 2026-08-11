@@ -368,6 +368,17 @@ class SmartDocumentUploadController extends Controller
         $contract = null;
         if ($request->boolean('create_contract')) {
             $contract = $this->intake->createContractFromExtraction($document, $customer, auth()->id());
+            // Zaehlerfoto: der abgelesene Stand gehoert IMMER in die
+            // Verbrauchshistorie - auch wenn der Mitarbeiter zusaetzlich
+            // "Vertrag anlegen" gewaehlt hat (sonst lief die Erfassung nur im
+            // linkMatchingContract-Zweig; Erfassung ist idempotent).
+            if ($document->ai_type === 'zaehlerfoto') {
+                try {
+                    app(\App\Services\Energy\MeterReadingService::class)->recordFromDocument($document, $customer);
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            }
         } else {
             $contract = $this->intake->linkMatchingContract($document, $customer);
         }

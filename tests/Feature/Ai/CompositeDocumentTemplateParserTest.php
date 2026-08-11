@@ -102,6 +102,44 @@ class CompositeDocumentTemplateParserTest extends TestCase
     }
 
     /**
+     * Ein Buendel-PDF mit Deckungsauftrag UND Beratungsdokumentation (beide
+     * Fonds-Finanz, gleiche Vorgangsnummer) muss ueber die echte Reihenfolge
+     * als DECKUNGSAUFTRAG (Vertragsdaten, Stufe antrag) herauskommen, nicht als
+     * reines Beratungsprotokoll ohne Vertragskern.
+     */
+    public function test_deckungsauftrag_wins_over_beratungsdokumentation_in_bundle(): void
+    {
+        $text = implode("\n", [
+            'Deckungsauftrag zur',
+            'Frachtführerhaftpflicht',
+            'Deckungsauftrag für:                             Ansprechpartner:',
+            'Karim Muster Einzelunternehmen                   FondsFinanz',
+            'Vorgangsnummer:                7654321',
+            'Informationen zur Beitragsberechnung',
+            'Produktname                                                    CargoTrucker (06/2022)',
+            'Beginn / Ende                                                  2026-08-07/2027-08-06',
+            'Gesamtprämie brutto                                            238',
+            'Daten des Versicherungsnehmers',
+            'Firmenname                                              Karim Muster',
+            'Rechtsform                                              Einzelunternehmen',
+            'Anschrift                                               Musterallee 7',
+            '                                                        24768 Rendsburg',
+            '',
+            // ... angehaengte Beratungsdokumentation desselben Vorgangs:
+            'BERATUNGSDOKUMENTATION',
+            'Vorgangsnummer: 7654321',
+            'Vorschlag für:',
+            'Karim Muster',
+        ]);
+
+        $result = app(DocumentTemplateParser::class)->parse($text);
+
+        $this->assertNotNull($result);
+        $this->assertSame('versicherungsvertrag', $result['type'], 'Deckungsauftrag (Vertragsdaten) muss gewinnen, nicht die Beratungsdoku');
+        $this->assertSame(Contract::STAGE_ANTRAG, $result['data']['versicherung']['document_stage'] ?? null);
+    }
+
+    /**
      * REGRESSION (Audit 10.08.2026): ein STROM-/GAS-Auftrag darf ueber die
      * ECHTE Parser-Reihenfolge NIE als Internet-Vertrag herauskommen (der
      * DSL-Parser beanspruchte ihn frueher wegen "Anbieterwechsel"/

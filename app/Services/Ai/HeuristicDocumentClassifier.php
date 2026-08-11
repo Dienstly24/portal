@@ -34,7 +34,12 @@ class HeuristicDocumentClassifier
         'fahrzeugbrief' => ['ZULASSUNGSBESCHEINIGUNG TEIL II', 'FAHRZEUGBRIEF'],
         'gesundheitskarte' => ['GESUNDHEITSKARTE', 'VERSICHERTENKARTE', 'KRANKENVERSICHERUNGSKARTE'],
         'geburtsurkunde' => ['GEBURTSURKUNDE'],
-        'familienbescheinigung' => ['FAMILIENBESCHEINIGUNG', 'FAMILIENVERSICHERUNG', 'MITGLIEDSBESCHEINIGUNG'],
+        // Bewusst OHNE das blosse Wort "FAMILIENVERSICHERUNG": das ist der
+        // Titel des Kranken-AUFNAHME-Formulars (eigener AI-Typ
+        // 'familienversicherung', NEUES Geschaeft). Als Stichwort hier wurde
+        // das Formular faelschlich zum Identitaets-Dokument erklaert und
+        // umging Eskalation und Neugeschaefts-Behandlung (Audit F6).
+        'familienbescheinigung' => ['FAMILIENBESCHEINIGUNG', 'MITGLIEDSBESCHEINIGUNG'],
         'gehaltsabrechnung' => ['GEHALTSABRECHNUNG', 'ENTGELTABRECHNUNG', 'LOHNABRECHNUNG', 'VERDIENSTABRECHNUNG'],
         'arbeitsvertrag' => ['ARBEITSVERTRAG', 'ANSTELLUNGSVERTRAG', 'DIENSTVERTRAG'],
         'versicherungspolice' => ['VERSICHERUNGSPOLICE', 'VERSICHERUNGSSCHEIN'],

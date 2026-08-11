@@ -45,12 +45,16 @@ class LichtblickVertragsbestaetigungParser implements DocumentTemplateParser
         if ($this->looksLikeComparisonProtocol($text)) {
             return null;
         }
-        // Nur die Bestaetigungs-/Abschlagsschreiben: sie tragen die beiden
-        // Kopf-Beschriftungen MIT Doppelpunkt und Wert. Der AUFTRAG (eigener
-        // Parser) hat keine "Vertragsnummer:" - dort gibt es noch keine.
-        if (!str_contains($upper, 'LICHTBLICK')
-            || !preg_match('/Kundennummer:\s*\d{5,12}/iu', $text)
-            || !preg_match('/Vertragsnummer:\s*\d{5,15}/iu', $text)) {
+        // Erkennung NUR auf der ERSTEN Seite (Briefkopf des Bestaetigungs-/
+        // Abschlagsschreibens): die beiden Kopf-Beschriftungen MIT Doppelpunkt
+        // und Wert stehen dort. Der AUFTRAG (eigener Parser, laeuft danach) hat
+        // keine "Vertragsnummer:" - taucht das Wort ausnahmsweise im Rechtstext
+        // einer Folgeseite auf, darf es die Bestaetigung nicht vortaeuschen.
+        // Die WERTE liest der Parser weiterhin aus dem vollen Text.
+        $head = $this->firstPage($text);
+        if (!str_contains(mb_strtoupper($head), 'LICHTBLICK')
+            || !preg_match('/Kundennummer:\s*\d{5,12}/iu', $head)
+            || !preg_match('/Vertragsnummer:\s*\d{5,15}/iu', $head)) {
             return null;
         }
 

@@ -279,6 +279,26 @@ class PortalController extends Controller
         return $document;
     }
 
+    /**
+     * Analyse fuer einen klassischen Portal-Upload anstossen (Luecke aus dem
+     * Audit 10.08.2026: nur der Smart-Scanner analysierte - das normale
+     * Upload-Formular und die Dokumentenanfrage legten Dokumente OHNE
+     * Analyse ab, der Kunde bekam keine automatische Erkennung/Zuordnung).
+     * Nur fuer analysierbare Typen (PDF/Bild) und nur, wenn die Analyse
+     * konfiguriert ist - doc/xlsx/heic bleiben wie bisher ohne Analyse.
+     */
+    private function dispatchAnalysis(\App\Models\Document $document, \Illuminate\Http\UploadedFile $file): void {
+        $ext = strtolower($file->getClientOriginalExtension());
+        if (!in_array($ext, ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'gif'], true)) {
+            return;
+        }
+        if (!app(\App\Services\Ai\DocumentAnalyzer::class)->isEnabled()) {
+            return;
+        }
+        $document->update(['ai_status' => 'pending']);
+        \App\Jobs\AnalyzeDocumentJob::dispatch((string) $document->id);
+    }
+
     public function tickets() {
         $customer = $this->getCustomer();
         return view('portal.tickets', [
@@ -584,6 +604,10 @@ class PortalController extends Controller
             'uploaded_at' => now(),
         ]);
 
+        // Angeforderte Dokumente ebenfalls analysieren (Typ erkennen,
+        // Vertrag verknuepfen) - der Kunde ist bereits zugeordnet.
+        $this->dispatchAnalysis($doc, $file);
+
         \App\Models\ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => 'document_request_uploaded',
@@ -648,6 +672,10 @@ class PortalController extends Controller
             'uploaded_by' => auth()->id(),
             'file_size' => $file->getSize(),
         ]);
+
+        // Klassischer Upload analysiert jetzt ebenfalls (wie der Smart-
+        // Scanner): Typ erkennen, Daten lesen, passenden Vertrag verknuepfen.
+        $this->dispatchAnalysis($doc, $file);
 
         // Benachrichtigung an Staff (Notification Center)
         \App\Support\Facades\Notify::pushMany(
