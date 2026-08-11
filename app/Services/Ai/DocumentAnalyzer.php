@@ -125,7 +125,7 @@ class DocumentAnalyzer
             if ($rawTextLayer !== '') {
                 $parsed = $this->templateParser->parse($rawTextLayer);
                 if ($parsed !== null) {
-                    return $this->acceptTemplateOrEscalate($parsed, $binary, $mime, $rawTextLayer);
+                    return $this->acceptTemplateOrEscalate($parsed, $binary, $mime, $rawTextLayer, true, $reuse);
                 }
             }
         }
@@ -142,12 +142,22 @@ class DocumentAnalyzer
             $fromTextLayer = $freeText !== '';
         }
 
+        // HYBRID-Schutz: eine WINZIGE Textebene (nur Briefkopf/Fusszeile eines
+        // ansonsten gescannten PDFs) wuerde sonst die gesamte Analyse blenden -
+        // OCR liefe nie, und die KI bekaeme nur den Stummel als "Text". Ist OCR
+        // verfuegbar, wird so eine Mini-Ebene verworfen und der Scan normal
+        // gelesen; ohne OCR bleibt der Stummel (besser als nichts).
+        if ($fromTextLayer && mb_strlen($freeText) < 200 && $this->ocr->isAvailable()) {
+            $freeText = '';
+            $fromTextLayer = false;
+        }
+
         // Bekanntes, immer gleich aufgebautes Formular auf der sauberen
         // Textebene? Dann GRATIS per fester Regel lesen (kein KI-Aufruf).
         if ($freeText !== '') {
             $parsed = $this->templateParser->parse($freeText);
             if ($parsed !== null) {
-                return $this->acceptTemplateOrEscalate($parsed, $binary, $mime, $freeText);
+                return $this->acceptTemplateOrEscalate($parsed, $binary, $mime, $freeText, true, $reuse);
             }
         }
 
@@ -165,7 +175,10 @@ class DocumentAnalyzer
             if ($freeText !== '') {
                 $parsed = $this->templateParser->parse($freeText);
                 if ($parsed !== null) {
-                    return $this->acceptTemplateOrEscalate($parsed, $binary, $mime, $freeText);
+                    // OCR-Text eines Scans/Fotos: die Eskalation soll VISION
+                    // nutzen (beste Qualitaet bei Scans), nie den fehler-
+                    // anfaelligen OCR-Text als "verlaesslich" behandeln.
+                    return $this->acceptTemplateOrEscalate($parsed, $binary, $mime, $freeText, false, $reuse);
                 }
             }
         }
@@ -219,6 +232,10 @@ class DocumentAnalyzer
     private const CONTRACT_CORE_TYPES = [
         'kfz_vertrag', 'escooter_vertrag', 'versicherungsvertrag',
         'beratungsprotokoll', 'energieauftrag', 'internetvertrag',
+        // Auch eine POLICE lebt vom Versicherer/der Vertragsnummer - ein
+        // Versicherungsschein-Foto, das die Heuristik nur an einer E-Mail
+        // "erkannte", blieb sonst ohne Vertragskern liegen (Audit 10.08.2026).
+        'versicherungspolice',
     ];
 
     /**
@@ -235,25 +252,35 @@ class DocumentAnalyzer
      * @param array<string,mixed> $parsed validiertes Vorlagen-Ergebnis
      * @return array<string,mixed>
      */
-    private function acceptTemplateOrEscalate(array $parsed, string $binary, string $mime, string $text): array
+    private function acceptTemplateOrEscalate(array $parsed, string $binary, string $mime, string $text, bool $fromTextLayer, ?callable $reuse = null): array
     {
         $template = [...$parsed, 'source' => 'template'];
 
         if (!in_array($parsed['type'] ?? '', self::CONTRACT_CORE_TYPES, true)) {
             return $template;
         }
-        $ins = $parsed['data']['versicherung'] ?? [];
-        if (!blank($ins['insurer'] ?? null) || !blank($ins['contract_number'] ?? null)) {
+        if ($this->hasContractCore($parsed)) {
             return $template;
         }
         if (!$this->provider->isEnabled()) {
             return $template;
         }
 
-        // Textweg bevorzugen, wenn der Text nicht kaputt kodiert ist - sonst
-        // Vision (beste Qualitaet bei Scans). Der Text kann hier auch die ROHE
-        // Textebene sein (Mojibake-Faelle) - dann lieber das Bild/PDF senden.
-        $preferText = $text !== '' && !$this->pdfText->isLikelyGarbled($text);
+        // KOSTENDECKEL: fuer denselben Inhalt (Duplikat, identischer Hash)
+        // wird die Eskalation nur EINMAL bezahlt. Hat der Zwilling den
+        // Vertragskern bereits (typisch: seine eigene KI-Eskalation), wird
+        // sein Ergebnis uebernommen; hat auch er keinen, bringt ein weiterer
+        // bezahlter Versuch nichts - das Vorlagen-Ergebnis bleibt. Nur eine
+        // bewusste Neu-Analyse (fresh) bzw. Erst-Uploads zahlen.
+        if ($reuse !== null && ($reused = $reuse()) !== null) {
+            return $this->hasContractCore($reused) ? $reused : $template;
+        }
+
+        // Textweg nur bei ZUVERLAESSIGEM Text: einer echten, nicht kaputt
+        // kodierten PDF-Textebene. OCR-Text eines Scans/Fotos ist dafuer zu
+        // fehleranfaellig - dort Vision (beste Qualitaet bei Scans), wie auf
+        // dem normalen Eskalationsweg auch.
+        $preferText = $fromTextLayer && $text !== '' && !$this->pdfText->isLikelyGarbled($text);
         try {
             $ai = $this->runProvider($binary, $mime, $preferText ? $text : '', $preferText);
         } catch (\Throwable $e) {
@@ -263,7 +290,19 @@ class DocumentAnalyzer
             return $template;
         }
 
-        return $ai ?? $template;
+        // Die KI-Antwort ersetzt das (praezise) Vorlagen-Ergebnis nur, wenn
+        // sie WIRKLICH liefert, wozu eskaliert wurde: den Vertragskern.
+        // Eine leere/duennere KI-Antwort (gueltiges JSON ohne Versicherer,
+        // Typ 'sonstiges') wuerde sonst gelesene Felder wegwerfen und die
+        // Kategorie verfaelschen - dann lieber das Vorlagen-Ergebnis behalten.
+        return ($ai !== null && $this->hasContractCore($ai)) ? $ai : $template;
+    }
+
+    /** Traegt das Analyse-Ergebnis einen Vertragskern (Versicherer/Vertragsnummer)? */
+    private function hasContractCore(array $result): bool
+    {
+        $ins = $result['data']['versicherung'] ?? [];
+        return !blank($ins['insurer'] ?? null) || !blank($ins['contract_number'] ?? null);
     }
 
     /**
@@ -327,7 +366,11 @@ class DocumentAnalyzer
             return false;
         }
         // Vertrags-/Geschaefts-Dokument ohne Vertragsdaten -> immer eskalieren.
-        if (in_array($type, \App\Models\Document::NEW_BUSINESS_TYPES, true)
+        // Gleiche Typliste wie das Vorlagen-Sicherheitsnetz (inkl.
+        // versicherungspolice: ein Versicherungsschein-Foto wurde sonst allein
+        // wegen einer erkannten Service-E-Mail als "ausreichend" akzeptiert
+        // und blieb ohne Versicherer - kein "Vertrag anlegen" moeglich).
+        if (in_array($type, self::CONTRACT_CORE_TYPES, true)
             && empty($result['data']['versicherung'])
             && empty($result['data']['energie'])
             && empty($result['data']['internet'])) {

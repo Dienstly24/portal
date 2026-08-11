@@ -109,19 +109,138 @@ class DocumentCostOptimizationTest extends TestCase
      * wird zur KI eskaliert - sonst fehlt in der Review-UI die "Vertrag
      * anlegen"-Box und der gemeldete Ausfall wiederholt sich.
      */
+    /** CHECK24-Protokoll OHNE lesbare Tarif-/Versicherer-Zeile (Vorlagen-Netz). */
+    private function insurerlessProtocolText(): string
+    {
+        return "Vorlaeufiges Beratungsprotokoll zur Kfz-Versicherung - CHECK24\n"
+            . "HSN/TSN: 1234/ABC\nHalter: Versicherungsnehmer\nVersicherungsbeginn: 01.08.2026\n";
+    }
+
     public function test_template_hit_without_insurer_escalates_to_ai(): void
     {
-        // CHECK24-Protokoll OHNE lesbare Tarif-/Versicherer-Zeile.
-        $text = "Vorlaeufiges Beratungsprotokoll zur Kfz-Versicherung - CHECK24\n"
-            . "HSN/TSN: 1234/ABC\nHalter: Versicherungsnehmer\nVersicherungsbeginn: 01.08.2026\n";
-        $provider = $this->recordingProvider($this->aiPayload());
-        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector(), new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser());
+        $payload = $this->aiPayload();
+        $payload['data'] = ['versicherung' => ['insurer' => 'WGV']];
+        $provider = $this->recordingProvider($payload);
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($this->insurerlessProtocolText()), new RelevantPageSelector(), new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser());
 
         $result = $analyzer->analyze($this->pdfDocument());
 
         $this->assertTrue($provider->called, 'Vertrags-Dokument ohne Versicherer muss zur KI eskalieren');
         $this->assertTrue($provider->preferText, 'saubere Textebene -> billiger Textweg');
         $this->assertSame('ai', $result['source']);
+        $this->assertSame('WGV', $result['data']['versicherung']['insurer']);
+    }
+
+    public function test_worse_ai_result_does_not_replace_template(): void
+    {
+        // Die KI antwortet mit gueltigem, aber LEEREM JSON (kein Versicherer,
+        // keine Vertragsnummer) - das praezise Vorlagen-Ergebnis bleibt.
+        $provider = $this->recordingProvider($this->aiPayload('sonstiges'));
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($this->insurerlessProtocolText()), new RelevantPageSelector(), new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser());
+
+        $result = $analyzer->analyze($this->pdfDocument());
+
+        $this->assertTrue($provider->called);
+        $this->assertSame('template', $result['source'], 'leere KI-Antwort darf die Vorlage nicht ersetzen');
+        $this->assertSame('beratungsprotokoll', $result['type']);
+    }
+
+    public function test_duplicate_twin_prevents_second_paid_escalation(): void
+    {
+        // Identischer Inhalt wurde schon einmal (bezahlt) eskaliert - der
+        // Zwilling traegt den Versicherer. Ein erneuter Upload desselben
+        // Inhalts darf NICHT noch einmal zahlen, sondern uebernimmt ihn.
+        Storage::fake('local');
+        Storage::disk('local')->put('docs/twin.pdf', '%PDF-1.4 twin-inhalt');
+        $twin = Document::create([
+            'customer_id' => null, 'category' => 'other', 'file_name' => 'twin.pdf',
+            'file_path' => 'docs/twin.pdf', 'disk' => 'local', 'visibility' => 'staff',
+            'ai_status' => 'done', 'ai_type' => 'beratungsprotokoll', 'ai_source' => 'ai',
+            'ai_confidence' => 90,
+            'ai_extracted' => ['versicherung' => ['insurer' => 'WGV', 'tariff' => 'Optimal']],
+        ]);
+        Storage::disk('local')->put('docs/copy.pdf', '%PDF-1.4 twin-inhalt');
+        $copy = Document::create([
+            'customer_id' => null, 'category' => 'other', 'file_name' => 'copy.pdf',
+            'file_path' => 'docs/copy.pdf', 'disk' => 'local', 'visibility' => 'staff',
+            'ai_status' => 'pending',
+        ]);
+        $this->assertSame((string) $twin->id, (string) $copy->duplicate_of);
+
+        $provider = $this->recordingProvider($this->aiPayload());
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($this->insurerlessProtocolText()), new RelevantPageSelector(), new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser());
+
+        $result = $analyzer->analyze($copy);
+
+        $this->assertFalse($provider->called, 'identischer Inhalt darf nur EINMAL KI kosten');
+        $this->assertSame('WGV', $result['data']['versicherung']['insurer']);
+    }
+
+    public function test_scan_escalation_uses_vision_not_ocr_text(): void
+    {
+        // Vorlagen-Treffer auf OCR-Text eines Scans (keine Textebene): die
+        // Eskalation soll das BILD senden (Vision), nicht den OCR-Text.
+        $payload = $this->aiPayload();
+        $payload['data'] = ['versicherung' => ['insurer' => 'WGV']];
+        $provider = $this->recordingProvider($payload);
+        $analyzer = new DocumentAnalyzer(
+            $provider,
+            $this->fakeOcr(true, $this->insurerlessProtocolText()),
+            $this->fakePdfText('', true),
+            new RelevantPageSelector(),
+            new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser(),
+        );
+
+        $analyzer->analyze($this->pdfDocument());
+
+        $this->assertTrue($provider->called);
+        $this->assertFalse($provider->preferText, 'Scan -> Vision, nicht der fehleranfaellige OCR-Text');
+    }
+
+    public function test_short_police_photo_escalates_instead_of_weak_accept(): void
+    {
+        // Versicherungsschein-Foto: Heuristik erkennt den Typ und EINE E-Mail -
+        // frueher galt das als "ausreichend" (ohne Versicherer, keine
+        // Vertrag-anlegen-Box). Jetzt eskaliert es zur KI.
+        $text = "VERSICHERUNGSSCHEIN Kfz-Versicherung\nService: kontakt@versicherer-beispiel.de";
+        $payload = $this->aiPayload('versicherungspolice');
+        $payload['data'] = ['versicherung' => ['insurer' => 'Beispiel Versicherung', 'contract_number' => 'VS-1']];
+        $provider = $this->recordingProvider($payload);
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector(), new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser());
+
+        $result = $analyzer->analyze($this->pdfDocument());
+
+        $this->assertTrue($provider->called, 'Police ohne Vertragskern muss zur KI eskalieren');
+        $this->assertSame('ai', $result['source']);
+    }
+
+    public function test_tiny_text_layer_falls_through_to_ocr(): void
+    {
+        // Hybrid-PDF: gescannter Inhalt + Mini-Textebene (nur Fusszeile).
+        // Mit verfuegbarem OCR darf der Stummel die Analyse nicht blenden.
+        $stub = 'Seite 1 von 2 - www.beispiel.de - Servicenummer 0800 1234567';
+        $this->assertLessThan(200, mb_strlen($stub));
+        $kkh = "Beitrittserklärung\nMustermann Max\nNachname Vorname\n"
+            . "01.02.1990 Aleppo Männlich\nGeburtsdatum Geburtsort Geschlecht\n"
+            . "B123456789\nRentenbezieher\nKrankenversicherungsnummer\n"
+            . "01.09.2026 x\nMitgliedschaftsbeginn Zum Zeitpunkt\n"
+            . "KKH Kaufmännische Krankenkasse - 30125 Hannover";
+
+        $provider = $this->recordingProvider($this->aiPayload());
+        $analyzer = new DocumentAnalyzer(
+            $provider,
+            $this->fakeOcr(true, $kkh),
+            $this->fakePdfText($stub, true),
+            new RelevantPageSelector(),
+            new \App\Services\Ai\TemplateParsers\CompositeDocumentTemplateParser([
+                new \App\Services\Ai\TemplateParsers\KkhBeitrittserklaerungParser(),
+            ]),
+        );
+
+        $result = $analyzer->analyze($this->pdfDocument());
+
+        $this->assertFalse($provider->called);
+        $this->assertSame('beitrittserklaerung', $result['type'], 'OCR muss den Scan trotz Mini-Textebene lesen');
     }
 
     /** Liefert die KI dabei nichts Brauchbares, bleibt das Gratis-Ergebnis erhalten. */
