@@ -151,6 +151,36 @@ class LichtblickVertragsbestaetigungParserTest extends TestCase
         $this->assertNull((new LichtblickAuftragParser())->parse($this->abschlagsuebersichtText()));
     }
 
+    /**
+     * REGRESSION (Audit 11.08.2026): ein LichtBlick-AUFTRAG (Seite 1 ohne
+     * Vertragsnummer), dessen AGB-Folgeseiten die Woerter "Kundennummer:" und
+     * "Vertragsnummer:" im Rechtstext tragen, darf NICHT als Bestaetigung
+     * (Stufe vertrag) vereinnahmt werden - die Erkennung laeuft nur auf der
+     * ersten Seite.
+     */
+    public function test_does_not_claim_order_with_agb_labels_on_later_pages(): void
+    {
+        // Realistische erste Seite (Auftrags-Formular, > 200 Zeichen, damit
+        // firstPage() sie als echte Seite nimmt) - OHNE "Vertragsnummer:".
+        $seite1 = implode("\n", [
+            'LichtBlick SE - Ihr Auftrag für ÖkoStrom',
+            'Vielen Dank für Ihren Wechsel zu LichtBlick. Wir kümmern uns um alles Weitere,',
+            'einschließlich der Kündigung bei Ihrem bisherigen Anbieter.',
+            'Kundennummer:   20097',
+            'Lieferstelle: Musterstraße 1, 20095 Hamburg',
+            'Zählernummer 42811442',
+            'Jahresverbrauch 3500 kWh',
+            'Ihr gewählter Tarif: LichtBlick ÖkoStrom mit Preisgarantie bis Ende des Jahres.',
+        ]);
+        // Folgeseite (AGB/Rechtstext) mit den Bestaetigungs-Beschriftungen:
+        $agb = "Allgemeine Geschäftsbedingungen\nBei Rueckfragen halten Sie Ihre "
+            . "Vertragsnummer: 1234567 und Ihre Kundennummer: 20097 bereit.";
+        $this->assertGreaterThan(200, mb_strlen($seite1));
+
+        $result = (new LichtblickVertragsbestaetigungParser())->parse($seite1 . "\f" . $agb);
+        $this->assertNull($result, 'Der Auftrag darf nicht ueber AGB-Labels als Bestaetigung gelesen werden.');
+    }
+
     public function test_ignores_unrelated_documents(): void
     {
         $parser = new LichtblickVertragsbestaetigungParser();
