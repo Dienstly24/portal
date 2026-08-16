@@ -260,15 +260,19 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
 - **Auftrags-Uebersicht aus dem VERTRIEBSPORTAL als Screenshot**
   (`EnergiePortalAuftragParser`, 16.08.2026): der Betrieb arbeitet Energie-
   Auftraege im Portal ab und laedt die Uebersichtsseite als BILD hoch
-  (z.B. RheinEnergie "Fair Ökostrom 24"). Screenshot-OCR kennt kein
-  Spaltenraster - eine Zeile traegt Zellen MEHRERER Spalten
-  ("Abnehmer  Privat  Mail: kunde@..."), deshalb wird zellenweise gelesen
-  (Trennung am Spaltenabstand) und der Kontoinhaber SPALTENGENAU geprueft
-  (Zeichenposition der Ueberschrift; sonst uebertoent die
-  Belieferungsanschrift links jeden fremden Kontoinhaber rechts -> keine
+  (z.B. RheinEnergie "Fair Ökostrom 24"). LEHRE aus dem echten Lauf: die
+  OCR erhaelt das Spaltenraster NICHT - die drei Spalten stehen mit nur
+  EINEM Leerzeichen in derselben Zeile ("Produkt Fair Ökostrom 24 IBAN:
+  DE82...", "Herr Max Muster Herr Max Muster"). Deshalb NIE auf
+  Spaltenabstaende verlassen, sondern auf das BESCHRIFTUNGS-VOKABULAR
+  (`KNOWN_LABELS`): die Beschriftung darf mitten in der Zeile stehen, ihr
+  Wert endet an der naechsten bekannten Beschriftung bzw. an einer PLZ der
+  Nachbarspalte; doppelt gesetzte Texte ("X X") werden zusammengefasst und
+  die zweite Anrede laeuft nie in den Namen. Der Kontoinhaber wird ueber
+  ALLE Namen unter seiner Ueberschrift geprueft (fremder Name -> keine
   Bankuebernahme). Adresse nur aus einem VOLLSTAENDIGEN Block (Strasse UND
   PLZ/Ort) mit Strassen-Plausibilitaet, sonst wuerde die Reiterleiste
-  ("Dokumente 1") zur Anschrift. Der Grundpreis steht je JAHR, die
+  ("Übersicht Dokumente 1 Anfrage zum Vertrag") zur Anschrift. Der Grundpreis steht je JAHR, die
   Kundenakte fuehrt ihn je MONAT (`base_price` = EUR/Monat!) - deterministisch
   /12 umgerechnet, BEIDE Werte stehen in der Zusammenfassung. Stufe
   `antrag`, Auftragsnummer NIE als Vertragsnummer; "schnellstmoeglich" ist
