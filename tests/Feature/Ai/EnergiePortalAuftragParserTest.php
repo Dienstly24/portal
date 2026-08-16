@@ -120,6 +120,82 @@ class EnergiePortalAuftragParserTest extends TestCase
         $this->assertStringContainsString('Portal-Status: 1000', $r['summary']);
     }
 
+    /**
+     * Produktionsfall 16.08.2026: die echte Screenshot-OCR erhaelt das
+     * Spaltenraster NICHT - die drei Spalten landen mit nur EINEM Leerzeichen
+     * in derselben Zeile. Vorher fehlten dadurch Name, Anschrift, Bank,
+     * MaLo-ID und Zaehlernummer komplett, und der Tarif trug die IBAN der
+     * Nachbarspalte.
+     */
+    public function test_reads_columns_glued_with_single_spaces(): void
+    {
+        $text = implode("\n", [
+            '1672525 - Musterenergie AG - Fair Ökostrom 24',
+            'Herr Karim Muster',
+            'Übersicht Dokumente 1 Anfrage zum Vertrag',
+            'Musterenergie Belieferungsanschrift Anschrift des Kontoinhaber',
+            'Tarifübersicht Herr Karim Muster Herr Karim Muster',
+            'Musterallee 141 Musterallee 141',
+            'Anbieter Musterenergie AG 24768 Rendsburg 24768 Rendsburg',
+            'Produkt Fair Ökostrom 24 geboren am: 03.04.1978',
+            'Abnehmer Privat Konto: 0105653802',
+            'Tariftyp Strom Tel: +49 0176 23681009 BLZ: 21450000 (Sparkasse Muster)',
+            'Mail: karim.muster@example.com IBAN: DE82214500000105653802',
+            'Tarifdaten BIC: NOLADE21RDB',
+            'Grundpreis 167,80 € / Jahr Belieferung',
+            'Arbeitspreis 32,45 ct / kWh Auftragsnummer 1672525',
+            '1 Monat Kündigungsfrist Netzbetreiber Stadtwerke Muster GmbH',
+            '24 Monate E-Preisgarantie MaLo-ID 51214126166',
+            '24 Monate Vertragslaufzeit Vorjahresverbrauch HT 2800 kWh / Jahr',
+            'Status 1000 - Auftrag komplett erfasst, wartend auf manuelle Prüfung',
+            'Lieferdatum gew. Lieferdatum schnellstmöglich',
+            'Zählernummer 1EBZ0103873550',
+            'Lieferdatum ist voraussichtlich bish. Kundennummer 200063867',
+            'Vorversorger Stadtwerke Muster GmbH',
+            'Kundennummer Unterschriftsdatum 16.08.2026',
+            'Zusatzinfos',
+            'Zahlung erfolgt per Bankeinzug',
+        ]);
+
+        $r = (new EnergiePortalAuftragParser())->parse($text);
+
+        $this->assertNotNull($r);
+        $p = $r['data']['person'];
+        // Der Name steht doppelt in der Zeile (Anschrift + Kontoinhaber) -
+        // die zweite Anrede darf nicht in den Namen laufen.
+        $this->assertSame('Karim', $p['first_name']);
+        $this->assertSame('Muster', $p['last_name']);
+        $this->assertSame('1978-04-03', $p['birth_date']);
+        // Anschrift statt Reiterleiste ("Übersicht Dokumente 1 Anfrage ...").
+        $this->assertSame('Musterallee', $p['street']);
+        $this->assertSame('141', $p['house_number']);
+        $this->assertSame('24768', $p['zip']);
+        $this->assertSame('Rendsburg', $p['city']);
+        $this->assertSame('karim.muster@example.com', $p['email']);
+        $this->assertSame('017623681009', $p['phone']);
+
+        // Beschriftungen mitten in der Zeile werden gefunden.
+        $e = $r['data']['energie'];
+        $this->assertSame('51214126166', $e['malo_id']);
+        $this->assertSame('1EBZ0103873550', $e['meter_number']);
+        $this->assertSame('200063867', $e['previous_customer_number']);
+        $this->assertSame('Stadtwerke Muster GmbH', $e['grid_operator']);
+        $this->assertSame(2800, $e['consumption_kwh']);
+        $this->assertSame(32.45, $e['working_price']);
+        $this->assertSame(13.98, $e['base_price']);
+        // Der Tarif endet vor der Beschriftung der Nachbarspalte - frueher
+        // hing die IBAN daran.
+        $this->assertSame('Fair Ökostrom 24', $e['tariff']);
+
+        // Der Anbieter endet vor der Anschrift der Nachbarspalte.
+        $this->assertSame('Musterenergie AG', $r['data']['versicherung']['insurer']);
+
+        $b = $r['data']['bank'];
+        $this->assertSame('DE82214500000105653802', $b['iban']);
+        $this->assertSame('NOLADE21RDB', $b['bic']);
+        $this->assertSame('Karim Muster', $b['account_holder']);
+    }
+
     public function test_reads_block_wise_ocr_output(): void
     {
         // Manche OCR-Laeufe geben die Spalten NACHEINANDER aus (Block fuer
