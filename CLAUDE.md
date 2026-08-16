@@ -257,6 +257,23 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   "Najim"). Bewusst NICHT behauptet: wer Vater/Mutter ist - die
   Meldebestaetigung belegt nur den Haushalt. Tests:
   `MeldebestaetigungParserTest`, `MeldebestaetigungHaushaltTest`.
+- **Auftrags-Uebersicht aus dem VERTRIEBSPORTAL als Screenshot**
+  (`EnergiePortalAuftragParser`, 16.08.2026): der Betrieb arbeitet Energie-
+  Auftraege im Portal ab und laedt die Uebersichtsseite als BILD hoch
+  (z.B. RheinEnergie "Fair Ökostrom 24"). Screenshot-OCR kennt kein
+  Spaltenraster - eine Zeile traegt Zellen MEHRERER Spalten
+  ("Abnehmer  Privat  Mail: kunde@..."), deshalb wird zellenweise gelesen
+  (Trennung am Spaltenabstand) und der Kontoinhaber SPALTENGENAU geprueft
+  (Zeichenposition der Ueberschrift; sonst uebertoent die
+  Belieferungsanschrift links jeden fremden Kontoinhaber rechts -> keine
+  Bankuebernahme). Adresse nur aus einem VOLLSTAENDIGEN Block (Strasse UND
+  PLZ/Ort) mit Strassen-Plausibilitaet, sonst wuerde die Reiterleiste
+  ("Dokumente 1") zur Anschrift. Der Grundpreis steht je JAHR, die
+  Kundenakte fuehrt ihn je MONAT (`base_price` = EUR/Monat!) - deterministisch
+  /12 umgerechnet, BEIDE Werte stehen in der Zusammenfassung. Stufe
+  `antrag`, Auftragsnummer NIE als Vertragsnummer; "schnellstmoeglich" ist
+  kein Datum -> beim Stadtwerke-Vorversorger greift die 20-Tage-Regel.
+  Tests: `EnergiePortalAuftragParserTest`.
 - **Strom-/Gas-AUFTRAEGE (Formularseite)**: Ein Auftrag hat **KEINE
   Vertragsnummer** (Betreiber-Vorgabe 02.08.2026) - die Auftragsnummer steht
   nur in der Zusammenfassung, nie in `contract_number` (falsche Angabe in der
