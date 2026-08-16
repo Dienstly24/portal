@@ -72,6 +72,54 @@ class TesseractTextExtractorTest extends TestCase
         $this->assertStringContainsStringIgnoringCase('RECHNUNG', $text);
     }
 
+    /**
+     * Lehre 16.08.2026 (Bildschirmfoto eines Vertriebsportals): kleine
+     * Screenshots kommen mit ~150 dpi und feiner Schrift - Tesseract
+     * verwechselt darin aehnliche Zeichen ("NOLADE21RDB" -> "NOLADE2IRDB").
+     * Kleine Bilder werden deshalb vor der OCR verdoppelt. Geprueft wird das
+     * Ergebnis (feine Schrift wird lesbar), nicht die interne Umsetzung.
+     */
+    public function test_small_screenshot_is_upscaled_before_ocr(): void
+    {
+        // Geprueft wird die Vorstufe direkt (ohne Tesseract), damit der Test
+        // ueberall deterministisch laeuft: kleine Bilder werden verdoppelt,
+        // grosse bleiben unveraendert, Abschalten wird respektiert.
+        $dir = sys_get_temp_dir() . '/dienstly_upscale_test_' . bin2hex(random_bytes(4));
+        mkdir($dir, 0700, true);
+
+        try {
+            $klein = $dir . '/klein.png';
+            $img = imagecreatetruecolor(400, 200);
+            imagefill($img, 0, 0, imagecolorallocate($img, 255, 255, 255));
+            imagepng($img, $klein);
+            imagedestroy($img);
+
+            $extractor = new TesseractTextExtractor();
+            $aufruf = function (string $pfad) use ($extractor, $dir): string {
+                $method = new \ReflectionMethod($extractor, 'upscaleIfSmall');
+                $method->setAccessible(true);
+                return (string) $method->invoke($extractor, $pfad, $dir);
+            };
+
+            config(['services.ocr.upscale_below_px' => 2600]);
+            $gross = $aufruf($klein);
+            $this->assertNotSame($klein, $gross, 'Kleines Bild muss vergroessert werden.');
+            $this->assertSame([800, 400], array_slice((array) getimagesize($gross), 0, 2));
+
+            // Abschaltbar - dann bleibt das Original.
+            config(['services.ocr.upscale_below_px' => 0]);
+            $this->assertSame($klein, $aufruf($klein));
+
+            // Grosse Aufnahmen (Handyfotos) bleiben unveraendert: Skalieren
+            // bringt dort nichts und kostet nur Rechenzeit.
+            config(['services.ocr.upscale_below_px' => 300]);
+            $this->assertSame($klein, $aufruf($klein));
+        } finally {
+            array_map('unlink', glob($dir . '/*') ?: []);
+            @rmdir($dir);
+        }
+    }
+
     public function test_real_tesseract_reads_pdf_via_pdftoppm(): void
     {
         config(['services.ocr.enabled' => true]);

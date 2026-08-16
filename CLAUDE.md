@@ -277,7 +277,18 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   /12 umgerechnet, BEIDE Werte stehen in der Zusammenfassung. Stufe
   `antrag`, Auftragsnummer NIE als Vertragsnummer; "schnellstmoeglich" ist
   kein Datum -> beim Stadtwerke-Vorversorger greift die 20-Tage-Regel.
-  Tests: `EnergiePortalAuftragParserTest`.
+  Anbieter + Produkt kommen bevorzugt aus der grossen KOPFZEILE
+  ("1672525 - RheinEnergie AG - Fair Ökostrom 24") - die kleine Tarif-Tabelle
+  liest die OCR gern verstuemmelt ("Fair ö 24", "Tarityp"); die Sparte
+  entscheidet dann der Produktname. Die IBAN wird per PRUEFZIFFER (Mod 97)
+  validiert und gegen die separat gedruckte Konto-/BLZ-Angabe geprueft:
+  eine kaputte IBAN wird NIE uebernommen, eine Abweichung steht als Hinweis
+  in der Zusammenfassung. Tests: `EnergiePortalAuftragParserTest`.
+  OCR-VORSTUFE (gleiche Lehre, mit Chromium-Replik + Tesseract nachgestellt):
+  kleine Bilder (< `OCR_UPSCALE_BELOW_PX`, Default 2600 px Kantenlaenge)
+  werden in `TesseractTextExtractor` vor der Erkennung VERDOPPELT -
+  Screenshots kommen mit ~150 dpi, sonst verwechselt Tesseract aehnliche
+  Zeichen ("NOLADE21RDB" -> "NOLADE2IRDB", "Tariftyp" -> "Tarityp").
 - **Strom-/Gas-AUFTRAEGE (Formularseite)**: Ein Auftrag hat **KEINE
   Vertragsnummer** (Betreiber-Vorgabe 02.08.2026) - die Auftragsnummer steht
   nur in der Zusammenfassung, nie in `contract_number` (falsche Angabe in der
