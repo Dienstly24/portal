@@ -80,6 +80,9 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(\App\Services\Ai\TemplateParsers\LichtblickAuftragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\PlanBNetZeroAuftragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\EnergieAuftragParser::class),
+                // Auftrags-Uebersicht aus dem Vertriebsportal (Screenshot) -
+                // nach den PDF-Auftraegen der Versorger, vor dem DSL-Parser.
+                $app->make(\App\Services\Ai\TemplateParsers\EnergiePortalAuftragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\DslAuftragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\PrivathaftpflichtAntragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\OnlineProtokollAntragParser::class),
