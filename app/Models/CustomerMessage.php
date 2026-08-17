@@ -15,8 +15,11 @@ class CustomerMessage extends Model
 
     public const EMAIL_MODES = ['none', 'hint', 'full'];
 
-    protected $fillable = ['customer_id', 'sender_id', 'body', 'from_staff', 'read_at', 'email_mode'];
-    protected $casts = ['from_staff' => 'boolean', 'read_at' => 'datetime'];
+    protected $fillable = ['customer_id', 'sender_id', 'body', 'from_staff', 'ai_generated', 'read_at', 'email_mode'];
+    protected $casts = ['from_staff' => 'boolean', 'ai_generated' => 'boolean', 'read_at' => 'datetime'];
+
+    /** Anzeigename des Assistenten - eine Quelle fuer Portal und Beraterwelt. */
+    public const AI_SENDER_NAME = 'Dienstly24 Assistent';
 
     protected static function boot() {
         parent::boot();
@@ -47,8 +50,14 @@ class CustomerMessage extends Model
             'id' => $this->id,
             'from_staff' => $this->from_staff,
             'own' => $staffView ? $this->from_staff : !$this->from_staff,
+            // Der Kunde MUSS erkennen, dass zunaechst ein Assistent antwortet
+            // (Spezifikation Abschnitt 26); der Mitarbeiter sieht dieselbe
+            // Kennzeichnung in der Beraterwelt (Abschnitt 27).
+            'ai' => (bool) $this->ai_generated,
             'sender' => $this->from_staff
-                ? ($this->sender?->name ?? 'Dienstly24 Team')
+                ? ($this->ai_generated
+                    ? __(self::AI_SENDER_NAME)
+                    : ($this->sender?->name ?? 'Dienstly24 Team'))
                 : ($this->customer?->user?->name ?? __('Kunde')),
             'show_sender' => $this->from_staff,
             'body' => $this->body,

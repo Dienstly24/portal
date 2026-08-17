@@ -9,7 +9,15 @@
         <div class="d24c-av">D24</div>
         <div>
             <div class="chatpage-name">{{ __('Ihr Dienstly24 Team') }}</div>
-            <div class="chatpage-status">{{ __('Wir antworten schnellstmöglich') }}</div>
+            {{-- Transparenz-Pflicht (Spezifikation Abschnitt 26): der Kunde
+                 muss erkennen, dass zunaechst ein Assistent antwortet. Der
+                 Hinweis erscheint nur, wenn der Assistent wirklich aktiv
+                 ist - sonst waere er eine falsche Behauptung. --}}
+            @if($aiActive ?? false)
+                <div class="chatpage-status">🤖 {{ __('Unser KI-Assistent antwortet sofort – Ihr Berater übernimmt jederzeit.') }}</div>
+            @else
+                <div class="chatpage-status">{{ __('Wir antworten schnellstmöglich') }}</div>
+            @endif
         </div>
     </div>
     <div class="d24c-scroll" id="chat-scroll">
@@ -25,8 +33,8 @@
                     <div class="d24c-day">{{ $day }}</div>
                     @php $lastDay = $day; @endphp
                 @endif
-                <div class="d24c-bub {{ $m->from_staff ? 'them' : 'me' }}" data-mid="{{ $m->id }}">
-                    @if($m->from_staff)<span class="d24c-sender">{{ $m->sender?->name ?? 'Dienstly24 Team' }}</span>@endif
+                <div class="d24c-bub {{ $m->from_staff ? 'them' : 'me' }}{{ $m->ai_generated ? ' ai' : '' }}" data-mid="{{ $m->id }}">
+                    @if($m->from_staff)<span class="d24c-sender">{{ $m->ai_generated ? __(\App\Models\CustomerMessage::AI_SENDER_NAME) : ($m->sender?->name ?? 'Dienstly24 Team') }}@if($m->ai_generated)<span class="d24c-ai">🤖 {{ __('KI-Assistent') }}</span>@endif</span>@endif
                     <span class="d24c-body">{{ $m->body }}</span>
                     @foreach($m->attachments as $att)
                     <span class="d24c-att">

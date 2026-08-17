@@ -10,6 +10,7 @@ window.D24ChatL10n = {
     read: @json(__('Gelesen')),
     sent: @json(__('Gesendet')),
     clear: @json(__('Auswahl entfernen')),
+    ai: @json(__('KI-Assistent')),
     empty: @json(__('Noch keine Nachrichten – schreiben Sie uns einfach. Wir melden uns schnellstmöglich.'))
 };
 window.D24Chat = (function () {
@@ -36,9 +37,12 @@ window.D24Chat = (function () {
         const own = (m.own !== undefined) ? m.own : !m.from_staff;
         const showSender = (m.show_sender !== undefined) ? m.show_sender : m.from_staff;
         const ticks = own ? ('<span class="d24c-ticks' + (m.read ? ' read' : '') + '" title="' + esc(m.read ? L.read : L.sent) + '">' + (m.read ? '✓✓' : '✓') + '</span>') : '';
-        const sender = showSender ? '<span class="d24c-sender">' + esc(m.sender) + '</span>' : '';
+        // KI-Antworten werden gekennzeichnet, damit der Kunde immer weiss,
+        // dass hier ein Assistent geschrieben hat (Spezifikation 26/27).
+        const aiTag = m.ai ? '<span class="d24c-ai">🤖 ' + esc(L.ai) + '</span>' : '';
+        const sender = showSender ? '<span class="d24c-sender">' + esc(m.sender) + aiTag + '</span>' : '';
         const atts = (m.attachments || []).map(attHtml).join('');
-        return '<div class="d24c-bub ' + (own ? 'me' : 'them') + '" data-mid="' + esc(m.id) + '">' + sender
+        return '<div class="d24c-bub ' + (own ? 'me' : 'them') + (m.ai ? ' ai' : '') + '" data-mid="' + esc(m.id) + '">' + sender
             + '<span class="d24c-body">' + esc(m.body) + '</span>' + atts
             + '<span class="d24c-tm">' + esc(m.time) + ticks + '</span></div>';
     }

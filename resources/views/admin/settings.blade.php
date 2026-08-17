@@ -22,12 +22,18 @@
         <a href="{{ route('admin.import_export') }}" class="hub-tile">⬆️ <span>Import / Export</span></a>
         <a href="{{ route('admin.lexoffice.contacts') }}" class="hub-tile">🧮 <span>lexoffice-Kontakte</span></a>
         <a href="{{ route('admin.email_accounts.index') }}" class="hub-tile">📬 <span>E-Mail-Postfächer</span></a>
+        <a href="{{ route('admin.ai_knowledge') }}" class="hub-tile">📚 <span>KI-Wissensbasis</span></a>
     </div>
 </div>
 <style>
 .hub-tile{display:flex;align-items:center;gap:10px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);text-decoration:none;font-size:13.5px;font-weight:600;transition:.15s;}
 .hub-tile:hover{border-color:var(--gold);box-shadow:0 4px 14px rgba(0,0,0,.08);transform:translateY(-1px);}
 .hub-tile span{flex:1;}
+/* Schalter des KI-Assistenten: die globale input{width:100%}-Regel wuerde
+   die Kaesten strecken und den Beschriftungstext aus der Karte schieben. */
+.ki-toggle{display:flex;gap:9px;align-items:flex-start;cursor:pointer;margin-bottom:11px;font-size:13.5px;line-height:1.45;}
+.ki-toggle input[type=checkbox]{width:17px;height:17px;flex:none;margin:1px 0 0;accent-color:#17A65B;}
+.ki-toggle span{min-width:0;}
 </style>
 
 <form method="POST" action="{{ route('admin.settings.update') }}">
@@ -71,6 +77,58 @@
         Freigabe – über jede Übernahme informiert die Glocke.
         Ein Treffer belegt den Inhalt des Dokuments, nicht dessen Echtheit; deshalb bleibt die
         Bankverbindung in der Standardeinstellung beim Vier-Augen-Prinzip.
+    </div>
+</div>
+
+{{-- KI-Kundenassistent (Spezifikation Abschnitt 30). Der Assistent ist im
+     Standard AUS und geht erst nach bewusster Freigabe in Betrieb. Das
+     Marker-Feld ai_assistant_form sorgt dafuer, dass nicht angehakte
+     Kaesten wirklich als "aus" gespeichert werden. --}}
+<div class="card">
+    <div class="card-title" style="margin-bottom:8px;">🤖 KI-Kundenassistent</div>
+    <input type="hidden" name="ai_assistant_form" value="1">
+    @if(!($assistantProviderReady ?? false))
+    <div style="background:#FBF3E7;border:1px solid #E2C89A;border-radius:8px;padding:12px;font-size:13px;color:#8a5b1f;margin-bottom:12px;">
+        ⚠️ Es ist <strong>kein API-Schlüssel</strong> hinterlegt. Der Assistent kann nicht antworten,
+        solange <code>OPENAI_API_KEY</code> in der Server-<code>.env</code> fehlt. Kundenanfragen
+        bearbeitet dann wie bisher das Team.
+    </div>
+    @endif
+    <label class="ki-toggle">
+        <input type="checkbox" name="ai_assistant_enabled" value="1" @checked($settings['ai_assistant_enabled'] === '1')>
+        <span><strong>KI-Kundenassistent aktiv</strong> – Hauptschalter (Notbremse)</span>
+    </label>
+    <label class="ki-toggle">
+        <input type="checkbox" name="ai_assistant_auto_reply" value="1" @checked($settings['ai_assistant_auto_reply'] === '1')>
+        <span>Automatische Antworten im Kundenchat</span>
+    </label>
+    <label class="ki-toggle">
+        <input type="checkbox" name="ai_assistant_auto_document_request" value="1" @checked($settings['ai_assistant_auto_document_request'] === '1')>
+        <span>Automatische Dokumentenanforderung</span>
+    </label>
+    <label class="ki-toggle">
+        <input type="checkbox" name="ai_assistant_auto_ticket" value="1" @checked($settings['ai_assistant_auto_ticket'] === '1')>
+        <span>Automatische Vorgangs-/Ticket-Erstellung</span>
+    </label>
+    <label class="ki-toggle">
+        <input type="checkbox" name="ai_assistant_auto_handover" value="1" @checked($settings['ai_assistant_auto_handover'] === '1')>
+        <span>Automatische Übergabe an Mitarbeiter (Vorgang anlegen)</span>
+    </label>
+    <div class="field">
+        <label>Maximale automatische Antworten pro Vorgang</label>
+        <input type="number" name="ai_assistant_max_replies_per_case" min="0" max="100"
+               value="{{ $settings['ai_assistant_max_replies_per_case'] }}">
+    </div>
+    <div style="background:#F7F5EF;border-radius:8px;padding:14px;font-size:13px;color:var(--ink-soft);">
+        Der Assistent arbeitet nur innerhalb des Dienstly24-Kundenservice (Verträge, Vorgänge,
+        Dokumente, Status) und ausschließlich mit den Daten des jeweils angemeldeten Kunden.
+        Bei Unsicherheit, bei rechtlich oder vertraglich verbindlichen Fragen und bei Beschwerden
+        übergibt er an das Team – er entscheidet nie selbst. Die Glocke informiert das Team über
+        jede Übergabe, <strong>auch wenn die automatische Übergabe abgeschaltet ist</strong>
+        (dann entsteht nur kein Vorgang).
+        <br><br>
+        Nur was in der Wissensbasis steht, gibt der Assistent als allgemeine Auskunft weiter:
+        <a href="{{ route('admin.ai_knowledge') }}">📚 Wissensbasis pflegen →</a>
     </div>
 </div>
 

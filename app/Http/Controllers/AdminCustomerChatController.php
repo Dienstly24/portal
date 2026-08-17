@@ -66,6 +66,15 @@ class AdminCustomerChatController extends Controller
             // abtippen muss.
             $ticketPrefill = CustomerMessage::where('customer_id', $active->id)
                 ->fromCustomer()->latest()->value('body');
+
+            // KI-Panel (Spezifikation Abschnitt 27): Zustand, letzte Aktion,
+            // Uebergabegrund und die Dokumentenlage - damit der Mitarbeiter
+            // den Fall ohne Lesen des ganzen Chats uebernehmen kann.
+            $aiConversation = \App\Models\AiConversation::forCustomer($active->id);
+            $aiSettings = app(\App\Services\Ai\Assistant\AssistantSettings::class);
+            $aiDocuments = app(\App\Services\Ai\Assistant\DocumentStatusReader::class)->overview($active);
+            $aiLastLog = \App\Models\AiAssistantLog::where('customer_id', $active->id)
+                ->latest()->first();
         }
 
         return view('admin.customer_chat', [
@@ -75,6 +84,10 @@ class AdminCustomerChatController extends Controller
             'timeline' => $timeline,
             'timelineVersion' => $timelineVersion ?? '',
             'activeTicket' => $activeTicket,
+            'aiConversation' => $aiConversation ?? null,
+            'aiSettings' => $aiSettings ?? null,
+            'aiDocuments' => $aiDocuments ?? [],
+            'aiLastLog' => $aiLastLog ?? null,
             'ticketPrefill' => $ticketPrefill ?? '',
             'templates' => \App\Models\MessageTemplate::where('category', 'kunde')
                 ->orderBy('sort')->orderBy('name')->get(['id', 'name']),
