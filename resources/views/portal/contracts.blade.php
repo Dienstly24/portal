@@ -23,7 +23,12 @@ $typeLabels = [
 {{-- Kosten-Statistik: auf den Monat normierte Summe aller aktiven Vertraege,
      damit unterschiedliche Zahlweisen (monatlich/jaehrlich ...) vergleichbar sind. --}}
 @php
-    $activeContracts = $contracts->where('status', 'active');
+    // Aktive Vertraege zentral aus dem Modell (Contract::isCurrentlyActive) -
+    // gleiche Definition wie in der Beraterwelt. Ein zum Ablauf gekuendigter
+    // oder abgelaufener Vertrag zaehlt nicht mehr zu den laufenden Kosten.
+    $activeContracts = $contracts->filter(fn($c) => $c->isCurrentlyActive());
+    $pendingContracts = $contracts->filter(fn($c) => $c->isPendingStatus());
+    $historyContracts = $contracts->filter(fn($c) => $c->isHistoric());
     $monthlyTotal = $activeContracts->sum(fn($c) => $c->monthlyPremium());
     $yearlyTotal  = $activeContracts->sum(fn($c) => $c->yearlyPremium());
     $withPremium  = $activeContracts->filter(fn($c) => $c->hasPremium())->count();
@@ -45,9 +50,30 @@ $typeLabels = [
     <div style="font-size:11.5px;color:var(--ink-soft);margin-top:10px;">{{ __('Basierend auf :count aktiven Verträgen mit hinterlegtem Beitrag.', ['count' => $withPremium]) }}</div>
 </div>
 @endif
+{{-- Laufende Vertraege zuerst, beendete Vertraege in einem eigenen Abschnitt
+     darunter: die Kundin/der Kunde sieht auf einen Blick, was heute gilt, und
+     verwechselt einen gekuendigten Vertrag nicht mit einem laufenden. --}}
+@php
+    $abschnitte = [
+        ['contracts' => $activeContracts,  'title' => 'Laufende Verträge',    'hint' => null, 'muted' => false],
+        ['contracts' => $pendingContracts, 'title' => 'In Bearbeitung',       'hint' => 'Diese Verträge sind noch nicht abgeschlossen.', 'muted' => true],
+        ['contracts' => $historyContracts, 'title' => 'Beendete Verträge',    'hint' => 'Diese Verträge sind beendet und gelten nicht mehr. Sie bleiben für Ihre Unterlagen sichtbar.', 'muted' => true],
+    ];
+@endphp
+@foreach($abschnitte as $abschnitt)
+@if($abschnitt['contracts']->isNotEmpty())
+<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:4px 0 12px;">
+    <div class="card-title" style="margin-bottom:0;">{{ __($abschnitt['title']) }}</div>
+    <span style="font-size:12.5px;color:var(--ink-soft);">({{ $abschnitt['contracts']->count() }})</span>
+</div>
+@if($abschnitt['hint'])
+<div style="font-size:12.5px;color:var(--ink-soft);background:var(--canvas);border:1px solid var(--line);border-radius:8px;padding:9px 12px;margin-bottom:14px;line-height:1.55;">
+    {{ __($abschnitt['hint']) }}
+</div>
+@endif
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:24px;">
-    @foreach($contracts as $c)
-    <a href="{{ route('portal.contracts.show', $c->id) }}" class="card metric-link" style="margin-bottom:0;text-decoration:none;color:var(--ink);">
+    @foreach($abschnitt['contracts'] as $c)
+    <a href="{{ route('portal.contracts.show', $c->id) }}" class="card metric-link" style="margin-bottom:0;text-decoration:none;color:var(--ink);{{ $abschnitt['muted'] ? 'background:var(--canvas);opacity:.85;' : '' }}">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;">
             <span style="font-size:34px;line-height:1;">{{ $c->typeIcon() }}</span>
             @php $st = $c->displayStatus(); @endphp
@@ -63,6 +89,8 @@ $typeLabels = [
     </a>
     @endforeach
 </div>
+@endif
+@endforeach
 @endif
 
 {{-- Modal: Neuen Vertrag melden (erzeugt nur einen Change Request) --}}

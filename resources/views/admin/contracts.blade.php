@@ -18,20 +18,42 @@
 </div>
 
 @php
-    $active = $contracts->where('status','active');
-    $inactive = $contracts->where('status','!=','active');
+    // Gruppierung zentral aus dem Modell (Contract::statusGroup()) - dieselbe
+    // Quelle wie Vertragsstruktur, Kennzahlen und Filter. Ein Vertrag mit
+    // status=active, dessen wirksames Ende erreicht ist, gilt hier korrekt
+    // als beendet (frueher zaehlte er als "aktiv").
+    $groups = $contracts->groupBy(fn($c) => $c->statusGroup());
+    $G = \App\Models\Contract::class;
+    $countAktiv = ($groups[$G::GROUP_ACTIVE] ?? collect())->count();
+    $countAnbahnung = ($groups[$G::GROUP_PENDING] ?? collect())->count();
+    $countHistorie = ($groups[$G::GROUP_HISTORY] ?? collect())->count();
 @endphp
 
-<div style="display:flex;gap:0;border-bottom:2px solid var(--line);margin-bottom:20px;">
-    <button onclick="showTab('active')" id="tab-active"
+{{-- Bestandsgruppen statt "aktiv / inaktiv": eindeutige Bezeichnungen, damit
+     "Inaktive Verträge" nicht mit "deaktivierter Zugang" oder "in Bearbeitung"
+     verwechselt wird (Betreiber-Vorgabe 17.08.2026). --}}
+<div style="display:flex;gap:0;border-bottom:2px solid var(--line);margin-bottom:16px;flex-wrap:wrap;">
+    <button onclick="showTab('aktiv')" id="tab-aktiv" class="ctab"
         style="padding:12px 20px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:700;color:var(--petrol);border-bottom:2px solid var(--petrol);margin-bottom:-2px;">
-        Aktive Verträge ({{ $active->count() }})
+        ✅ Aktiver Bestand ({{ $countAktiv }})
     </button>
-    <button onclick="showTab('inactive')" id="tab-inactive"
+    <button onclick="showTab('anbahnung')" id="tab-anbahnung" class="ctab"
         style="padding:12px 20px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:500;color:var(--ink-soft);border-bottom:2px solid transparent;margin-bottom:-2px;">
-        Inaktive Verträge ({{ $inactive->count() }})
+        🕓 In Bearbeitung ({{ $countAnbahnung }})
+    </button>
+    <button onclick="showTab('historie')" id="tab-historie" class="ctab"
+        style="padding:12px 20px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:500;color:var(--ink-soft);border-bottom:2px solid transparent;margin-bottom:-2px;">
+        🗄 Beendet / Historie ({{ $countHistorie }})
+    </button>
+    <button onclick="showTab('alle')" id="tab-alle" class="ctab"
+        style="padding:12px 20px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:500;color:var(--ink-soft);border-bottom:2px solid transparent;margin-bottom:-2px;">
+        Alle ({{ $contracts->count() }})
     </button>
 </div>
+
+{{-- Hinweisleiste: sagt fuer jede Gruppe ausdruecklich, ob die gezeigten
+     Vertraege zum aktiven Bestand zaehlen. --}}
+<div id="group-hint" style="font-size:12.5px;border-radius:8px;padding:10px 14px;margin-bottom:16px;line-height:1.55;"></div>
 
 <div style="font-size:14px;font-weight:700;margin-bottom:14px;" id="contract-count">{{ $contracts->count() }} Verträge</div>
 
@@ -50,8 +72,12 @@
         </thead>
         <tbody>
         @forelse($contracts as $c)
-        @php $cfg = $c->typeConfig(); @endphp
-        <tr class="contract-row" data-status="{{ $c->status }}"
+        @php
+            $cfg = $c->typeConfig();
+            $cGroup = $c->statusGroup();
+            $cHistoric = $cGroup === \App\Models\Contract::GROUP_HISTORY;
+        @endphp
+        <tr class="contract-row{{ $cHistoric ? ' contract-row-historic' : '' }}" data-status="{{ $c->status }}" data-group="{{ $cGroup }}"
             data-search="{{ strtolower($c->insurer . ' ' . $c->contract_number . ' ' . ($c->customer?->user?->name ?? '')) }}">
             <td style="padding:14px 20px;">
                 <div style="width:40px;height:40px;border-radius:10px;background:{{ $cfg['bg'] }};display:flex;align-items:center;justify-content:center;font-size:20px;">{{ $c->typeIcon() }}</div>
@@ -68,6 +94,12 @@
             @php $st = $c->displayStatus(); @endphp
             <td>
                 <span class="badge badge-{{ $st['badge'] }}" style="white-space:nowrap;">{{ $st['label'] }}</span>
+                {{-- Klare Kennzeichnung: gehoert NICHT zum aktiven Bestand. --}}
+                @if($st['historic'])
+                <div style="margin-top:4px;"><span class="contract-histflag">🗄 Historie – nicht aktiv</span></div>
+                @elseif($cGroup === \App\Models\Contract::GROUP_PENDING)
+                <div style="margin-top:4px;"><span class="contract-histflag">🕓 Noch nicht im Bestand</span></div>
+                @endif
                 @include('admin.partials.contract_stage_badge', ['contract' => $c])
             </td>
             <td>
@@ -85,17 +117,40 @@
     </table>
 </div>
 
+<style>
+/* Beendete Vertraege bleiben in der Historie sichtbar, sind aber nie mit
+   aktiven Vertraegen zu verwechseln (ausgegraut + Textkennzeichen). */
+.contract-row-historic{background:#F3F0E8;}
+.contract-row-historic td{opacity:.72;}
+.contract-histflag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.02em;
+    text-transform:uppercase;color:#5F6B62;background:#EAE6DA;border:1px solid #E0DCD0;
+    border-radius:6px;padding:1px 6px;white-space:nowrap;}
+</style>
 <script>
-let currentTab = 'active';
+// Bestandsgruppen (Spiegel von Contract::GROUP_*): 'alle' = kein Filter.
+let currentTab = 'aktiv';
+
+const GROUP_HINTS = {
+    'aktiv':     {text: '✅ Aktiver Bestand: laufende Verträge – nur diese zählen als aktive Verträge und bilden die Vertragsstruktur der Kunden.', bg: '#E7F6EE', border: '#BFE6D2', color: '#0E7A41'},
+    'anbahnung': {text: '🕓 In Bearbeitung: Antrag/Angebot noch nicht abgeschlossen – zählt NICHT zum aktiven Bestand.', bg: '#FEF3C7', border: '#F0E0B0', color: '#92400E'},
+    'historie':  {text: '🗄 Beendet / Historie: gekündigte und abgelaufene Verträge. Nur zur Nachvollziehbarkeit sichtbar – sie zählen NICHT als aktive Verträge und erscheinen nicht in der Vertragsstruktur.', bg: '#F3F0E8', border: '#E0DCD0', color: '#5F6B62'},
+    'alle':      {text: 'ℹ️ Alle Verträge (aktiv + Historie gemischt). Beendete Verträge sind ausgegraut und mit „Historie – nicht aktiv" gekennzeichnet.', bg: '#EEF0F3', border: '#E0DCD0', color: '#5F6B62'},
+};
 
 function showTab(tab) {
     currentTab = tab;
-    document.getElementById('tab-active').style.color = tab === 'active' ? 'var(--petrol)' : 'var(--ink-soft)';
-    document.getElementById('tab-active').style.borderBottomColor = tab === 'active' ? 'var(--petrol)' : 'transparent';
-    document.getElementById('tab-active').style.fontWeight = tab === 'active' ? '700' : '500';
-    document.getElementById('tab-inactive').style.color = tab === 'inactive' ? 'var(--petrol)' : 'var(--ink-soft)';
-    document.getElementById('tab-inactive').style.borderBottomColor = tab === 'inactive' ? 'var(--petrol)' : 'transparent';
-    document.getElementById('tab-inactive').style.fontWeight = tab === 'inactive' ? '700' : '500';
+    document.querySelectorAll('.ctab').forEach(btn => {
+        const on = btn.id === 'tab-' + tab;
+        btn.style.color = on ? 'var(--petrol)' : 'var(--ink-soft)';
+        btn.style.borderBottomColor = on ? 'var(--petrol)' : 'transparent';
+        btn.style.fontWeight = on ? '700' : '500';
+    });
+    const hint = document.getElementById('group-hint');
+    const cfg = GROUP_HINTS[tab] || GROUP_HINTS['alle'];
+    hint.textContent = cfg.text;
+    hint.style.background = cfg.bg;
+    hint.style.border = '1px solid ' + cfg.border;
+    hint.style.color = cfg.color;
     filterContracts();
 }
 
@@ -103,15 +158,21 @@ function filterContracts() {
     const q = document.getElementById('contract-search').value.toLowerCase();
     let count = 0;
     document.querySelectorAll('.contract-row').forEach(row => {
-        const statusMatch = currentTab === 'active' ? row.dataset.status === 'active' : row.dataset.status !== 'active';
+        const groupMatch = currentTab === 'alle' || row.dataset.group === currentTab;
         const searchMatch = !q || row.dataset.search.includes(q);
-        const show = statusMatch && searchMatch;
+        const show = groupMatch && searchMatch;
         row.style.display = show ? '' : 'none';
         if(show) count++;
     });
-    document.getElementById('contract-count').textContent = count + ' Verträge';
+    // Deutsche Ein-/Mehrzahl korrekt bilden ("1 aktiver Vertrag").
+    const eins = count === 1;
+    const label = currentTab === 'aktiv' ? (eins ? ' aktiver Vertrag' : ' aktive Verträge')
+        : (currentTab === 'historie' ? (eins ? ' beendeter Vertrag (Historie)' : ' beendete Verträge (Historie)')
+        : (currentTab === 'anbahnung' ? (eins ? ' Vertrag in Bearbeitung' : ' Verträge in Bearbeitung')
+        : (eins ? ' Vertrag' : ' Verträge')));
+    document.getElementById('contract-count').textContent = count + label;
 }
 
-document.addEventListener('DOMContentLoaded', () => filterContracts());
+document.addEventListener('DOMContentLoaded', () => showTab('aktiv'));
 </script>
 @endsection

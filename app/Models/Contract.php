@@ -246,13 +246,215 @@ class Contract extends Model {
         return self::STAGE_LABELS[$this->stage] ?? null;
     }
 
+    /**
+     * Gespeicherte Status-Werte. Vier Zustaende, fachlich in DREI Gruppen
+     * (siehe GROUP_*): aktiver Bestand, Anbahnung, Historie.
+     */
+    public const STATUS_ACTIVE = 'active';
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_CANCELLED = 'cancelled';
+    public const STATUS_EXPIRED = 'expired';
+
     /** Roh-Status -> deutsches Label (eine Quelle fuer alle Listen). */
     public const STATUS_LABELS = [
-        'active'    => 'Aktiv',
-        'pending'   => 'In Bearbeitung',
-        'cancelled' => 'Gekündigt',
-        'expired'   => 'Abgelaufen',
+        self::STATUS_ACTIVE    => 'Aktiv',
+        self::STATUS_PENDING   => 'In Bearbeitung',
+        self::STATUS_CANCELLED => 'Gekündigt',
+        self::STATUS_EXPIRED   => 'Abgelaufen',
     ];
+
+    /**
+     * BESTANDSGRUPPEN (Betreiber-Vorgabe 17.08.2026, die eine Quelle fuer
+     * "aktiv" im ganzen System). Der rohe status-Wert allein genuegt nicht:
+     * ein Vertrag mit status=active, dessen wirksames Ende erreicht ist
+     * (Kuendigung zum X, E-Scooter-Saisonende), ist FAKTISCH beendet, auch
+     * wenn der Tages-Job contracts:apply-endings den Status erst nachts
+     * nachzieht. Deshalb entscheidet immer statusGroup()/isCurrentlyActive()
+     * - nie ein direkter Vergleich status === 'active'.
+     *
+     *   GROUP_ACTIVE   aktueller Bestand: laeuft heute oder ist ab einem
+     *                  Zukunftstag abgeschlossen ("Aktiv ab ..."), auch mit
+     *                  Kuendigung zu einem noch nicht erreichten Ende.
+     *   GROUP_PENDING  Anbahnung ("In Bearbeitung") - noch KEIN Bestand,
+     *                  aber auch keine Historie.
+     *   GROUP_HISTORY  Historie: gekuendigt, abgelaufen, beendet. Zaehlt
+     *                  NIE zur Vertragsstruktur und nie zu den aktiven
+     *                  Vertraegen.
+     */
+    public const GROUP_ACTIVE = 'aktiv';
+    public const GROUP_PENDING = 'anbahnung';
+    public const GROUP_HISTORY = 'historie';
+
+    /** Status, die (bei laufender Deckung) zum aktiven Bestand zaehlen. */
+    public const ACTIVE_STATUSES = [self::STATUS_ACTIVE];
+
+    /** Status, die immer Historie sind - unabhaengig von jedem Datum. */
+    public const HISTORIC_STATUSES = [self::STATUS_CANCELLED, self::STATUS_EXPIRED];
+
+    /** Anzeige-Namen der Bestandsgruppen (Filter, Tabs, Ueberschriften). */
+    public const GROUP_LABELS = [
+        self::GROUP_ACTIVE  => 'Aktiver Bestand',
+        self::GROUP_PENDING => 'In Bearbeitung',
+        self::GROUP_HISTORY => 'Beendet / Historie',
+    ];
+
+    /**
+     * Status-Auswahl im Vertragsformular: sprechendes Label + Erklaerung, was
+     * der Status fachlich bedeutet. Bewusst getrennt von STATUS_LABELS - in
+     * Listen soll das Badge kurz bleiben ("Gekündigt"), in der AUSWAHL muss
+     * dagegen unmissverstaendlich sein, was der Status ausloest (Vertrag
+     * verlaesst den aktiven Bestand bzw. die Vertragsstruktur).
+     */
+    public const STATUS_OPTIONS = [
+        self::STATUS_ACTIVE => [
+            'label' => 'Aktiv – laufender Vertrag',
+            'group' => self::GROUP_ACTIVE,
+            'hint'  => 'Zaehlt zum aktiven Bestand und erscheint in der Vertragsstruktur.',
+        ],
+        self::STATUS_PENDING => [
+            'label' => 'In Bearbeitung – noch nicht aktiv',
+            'group' => self::GROUP_PENDING,
+            'hint'  => 'Angebot/Antrag in Arbeit: zaehlt NICHT zum aktiven Bestand.',
+        ],
+        self::STATUS_CANCELLED => [
+            'label' => 'Inaktiv / Gekündigt',
+            'group' => self::GROUP_HISTORY,
+            'hint'  => 'Beendet durch Kuendigung: nur noch in der Historie sichtbar.',
+        ],
+        self::STATUS_EXPIRED => [
+            'label' => 'Beendet / Abgelaufen',
+            'group' => self::GROUP_HISTORY,
+            'hint'  => 'Laufzeit beendet: nur noch in der Historie sichtbar.',
+        ],
+    ];
+
+    /** Gueltige Status-Schluessel (Validierungs-Whitelist). */
+    public static function statusKeys(): array {
+        return array_keys(self::STATUS_OPTIONS);
+    }
+
+    /**
+     * Ist die Deckung an diesem Tag (Standard: heute) beendet? Die EINE
+     * Datums-Regel hinter isCurrentlyActive(), scopeHistoric() und dem
+     * Tages-Job contracts:apply-endings:
+     *  - Status cancelled/expired -> immer beendet.
+     *  - Erfasste Kuendigung -> beendet, sobald das WIRKSAME Ende erreicht
+     *    ist (effectiveCancellationDate, Tag des Endes zaehlt als beendet -
+     *    wie displayStatus() und der Tages-Job).
+     *  - E-Scooter -> beendet NACH dem Saisonende (Ablauftag selbst laeuft
+     *    noch, identisch zur Regel in contracts:apply-endings).
+     *  - Sonst offen: Versicherungen verlaengern sich stillschweigend, ein
+     *    blosses Ablaufdatum ist KEIN Ende (Betreiber-Vorgabe 26.07.2026).
+     */
+    public function hasCoverageEnded(?Carbon $on = null): bool {
+        $on = ($on ? $on->copy() : Carbon::today())->startOfDay();
+        if (in_array($this->status, self::HISTORIC_STATUSES, true)) {
+            return true;
+        }
+        if ($ende = $this->effectiveCancellationDate()) {
+            return $ende->lessThanOrEqualTo($on);
+        }
+        if ($this->isEscooter() && $this->end_date) {
+            return Carbon::parse($this->end_date)->startOfDay()->lessThan($on);
+        }
+        return false;
+    }
+
+    /**
+     * DIE Definition von "aktiv" (Vertragsstruktur, Zaehler, Kennzahlen):
+     * Status aktiv UND Deckung noch nicht beendet. Ein Vertrag mit Beginn in
+     * der Zukunft ("Aktiv ab ...") gehoert dazu - er ist abgeschlossen und
+     * die aktuelle Kundenbeziehung dieser Sparte.
+     */
+    public function isCurrentlyActive(): bool {
+        return in_array($this->status, self::ACTIVE_STATUSES, true) && !$this->hasCoverageEnded();
+    }
+
+    /** Historie: gekuendigt/abgelaufen/beendet - nie Teil der Struktur. */
+    public function isHistoric(): bool {
+        return $this->statusGroup() === self::GROUP_HISTORY;
+    }
+
+    /** In Anbahnung ("In Bearbeitung") - noch kein Bestand. */
+    public function isPendingStatus(): bool {
+        return $this->status === self::STATUS_PENDING;
+    }
+
+    /** Bestandsgruppe dieses Vertrags (GROUP_ACTIVE|GROUP_PENDING|GROUP_HISTORY). */
+    public function statusGroup(): string {
+        if ($this->isPendingStatus()) {
+            return self::GROUP_PENDING;
+        }
+        return $this->isCurrentlyActive() ? self::GROUP_ACTIVE : self::GROUP_HISTORY;
+    }
+
+    /** Anzeige-Name der Bestandsgruppe ("Aktiver Bestand", ...). */
+    public function statusGroupLabel(): string {
+        return self::GROUP_LABELS[$this->statusGroup()];
+    }
+
+    /**
+     * Query-Fassung von isCurrentlyActive() - Wort fuer Wort dieselbe Regel
+     * (Datenbank statt PHP), damit Listen, Filter und Kennzahlen nie von der
+     * Anzeige abweichen. Nutzung: Contract::currentlyActive(),
+     * $customer->contracts()->currentlyActive(), whereHas('contracts', fn($q)
+     * => $q->currentlyActive()).
+     */
+    public function scopeCurrentlyActive($query) {
+        $today = Carbon::today()->toDateString();
+        return $query->whereIn('status', self::ACTIVE_STATUSES)
+            // Keine Kuendigung ODER wirksames Ende noch nicht erreicht.
+            // Wirksames Ende = max(end_date, cancellation_date), also noch
+            // offen, sobald EINES der beiden Daten in der Zukunft liegt.
+            ->where(function ($w) use ($today) {
+                $w->whereNull('cancellation_date')
+                    ->orWhereDate('cancellation_date', '>', $today)
+                    ->orWhere(fn ($x) => $x->whereNotNull('end_date')->whereDate('end_date', '>', $today));
+            })
+            // E-Scooter: nach dem Saisonende nicht mehr aktiv.
+            ->where(function ($w) use ($today) {
+                $w->where('type', '!=', 'escooter')
+                    ->orWhereNull('end_date')
+                    ->orWhereDate('end_date', '>=', $today);
+            });
+    }
+
+    /**
+     * Query-Fassung von isHistoric(): gekuendigt/abgelaufen ODER Status noch
+     * aktiv, aber das wirksame Ende ist erreicht (Tages-Job zieht den Status
+     * erst nachts nach). "In Bearbeitung" ist bewusst NICHT enthalten.
+     */
+    public function scopeHistoric($query) {
+        $today = Carbon::today()->toDateString();
+        return $query->where(function ($q) use ($today) {
+            $q->whereIn('status', self::HISTORIC_STATUSES)
+                // Gekuendigt, wirksames Ende (max aus beiden Daten) erreicht.
+                ->orWhere(fn ($w) => $w->whereIn('status', self::ACTIVE_STATUSES)
+                    ->whereNotNull('cancellation_date')
+                    ->whereDate('cancellation_date', '<=', $today)
+                    ->where(fn ($e) => $e->whereNull('end_date')->orWhereDate('end_date', '<=', $today)))
+                // E-Scooter nach Saisonende.
+                ->orWhere(fn ($w) => $w->whereIn('status', self::ACTIVE_STATUSES)
+                    ->where('type', 'escooter')
+                    ->whereNotNull('end_date')
+                    ->whereDate('end_date', '<', $today));
+        });
+    }
+
+    /** Query-Fassung von isPendingStatus() ("In Bearbeitung"). */
+    public function scopeInProgress($query) {
+        return $query->where('status', self::STATUS_PENDING);
+    }
+
+    /** Eine Bestandsgruppe als Query-Filter (GROUP_*); alles andere = kein Filter. */
+    public function scopeStatusGroup($query, ?string $group) {
+        return match ($group) {
+            self::GROUP_ACTIVE  => $query->currentlyActive(),
+            self::GROUP_PENDING => $query->inProgress(),
+            self::GROUP_HISTORY => $query->historic(),
+            default             => $query,
+        };
+    }
 
     /**
      * Wirksames Vertragsende bei erfasster Kuendigung (Betreiber-Feedback
@@ -335,13 +537,13 @@ class Contract extends Model {
      *    ein blosses Ablaufdatum ist deshalb KEIN Ende -> offen.
      */
     public function coverageEndsAt(): ?Carbon {
-        if ($this->type === 'escooter' && $this->end_date) {
+        if ($this->isEscooter() && $this->end_date) {
             return Carbon::parse($this->end_date)->startOfDay();
         }
         if ($effective = $this->effectiveCancellationDate()) {
             return $effective;
         }
-        if (in_array($this->status, ['cancelled', 'expired'], true)) {
+        if (in_array($this->status, self::HISTORIC_STATUSES, true)) {
             if ($this->end_date) {
                 return Carbon::parse($this->end_date)->startOfDay();
             }
@@ -367,10 +569,17 @@ class Contract extends Model {
      *   label     fertiges deutsches Label ("Gekündigt zum 03.09.2026")
      *   label_key Uebersetzungs-Key fuer __() im Kundenportal (:date-Platzhalter)
      *   params    Parameter fuer __() ([] oder ['date' => '03.09.2026'])
+     *   group     Bestandsgruppe (GROUP_ACTIVE|GROUP_PENDING|GROUP_HISTORY) -
+     *             identisch zu statusGroup(), damit Badge und Vertragsstruktur
+     *             NIE gegensaetzliche Aussagen treffen koennen
+     *   historic  true = Historie (beendet), zaehlt nicht zum aktiven Bestand
      */
     public function displayStatus(): array {
         $today = Carbon::today();
         $start = $this->start_date ? Carbon::parse($this->start_date)->startOfDay() : null;
+        // Die Gruppe kommt IMMER aus derselben Quelle wie die Vertragsstruktur.
+        $group = $this->statusGroup();
+        $with = fn (array $st) => $st + ['group' => $group, 'historic' => $group === self::GROUP_HISTORY];
 
         // Kuendigung erfasst: zaehlt fuer laufende UND bereits auf
         // cancelled gestellte Vertraege. Angezeigt wird das WIRKSAME Ende
@@ -380,30 +589,47 @@ class Contract extends Model {
             && ($ende = $this->effectiveCancellationDate())) {
             $date = $ende->format('d.m.Y');
             $upcoming = $ende->greaterThan($today);
-            return [
+            return $with([
                 'key'       => $upcoming ? 'cancelled_upcoming' : 'cancelled',
                 'badge'     => $upcoming ? 'pending' : 'rejected',
                 'label'     => 'Gekündigt zum ' . $date,
                 'label_key' => 'Gekündigt zum :date',
                 'params'    => ['date' => $date],
-            ];
+            ]);
+        }
+
+        // Erreichtes Ende trotz Status "aktiv" (E-Scooter nach Saisonende;
+        // der Tages-Job contracts:apply-endings zieht den Status erst nachts
+        // nach): NIE als "Aktiv" anzeigen - sonst behauptet das Badge einen
+        // aktiven Vertrag, den die Vertragsstruktur zu Recht nicht mehr
+        // fuehrt (Inkonsistenz Anzeige vs. Datenlogik).
+        if ($this->status === self::STATUS_ACTIVE && $this->hasCoverageEnded($today)) {
+            $ende = $this->coverageEndsAt();
+            $date = $ende?->format('d.m.Y');
+            return $with([
+                'key'       => 'expired',
+                'badge'     => 'closed',
+                'label'     => $date ? 'Abgelaufen am ' . $date : 'Abgelaufen',
+                'label_key' => $date ? 'Abgelaufen am :date' : 'Abgelaufen',
+                'params'    => $date ? ['date' => $date] : [],
+            ]);
         }
 
         // Abgeschlossen, aber der Beginn liegt in der Zukunft: "Aktiv ab".
         if ($this->status === 'active' && $start && $start->greaterThan($today)) {
             $date = $start->format('d.m.Y');
-            return [
+            return $with([
                 'key'       => 'active_upcoming',
                 'badge'     => 'open',
                 'label'     => 'Aktiv ab ' . $date,
                 'label_key' => 'Aktiv ab :date',
                 'params'    => ['date' => $date],
-            ];
+            ]);
         }
 
         $label = self::STATUS_LABELS[$this->status] ?? ucfirst((string) $this->status);
         $badge = ['active' => 'active', 'pending' => 'pending', 'cancelled' => 'rejected', 'expired' => 'closed'][$this->status] ?? 'pending';
-        return ['key' => (string) $this->status, 'badge' => $badge, 'label' => $label, 'label_key' => $label, 'params' => []];
+        return $with(['key' => (string) $this->status, 'badge' => $badge, 'label' => $label, 'label_key' => $label, 'params' => []]);
     }
 
     protected static function boot() {

@@ -287,8 +287,11 @@ class MeterReadingService
             }
         }
 
+        // Zweite Stufe: der AKTIVE Vertrag (Contract::isCurrentlyActive - nicht
+        // der rohe Status; ein zum Ablauf gekuendigter Vertrag ist beendet und
+        // soll die Ablesung nicht bekommen, solange ein laufender existiert).
         foreach ($candidates as $detail) {
-            if ($detail->contract?->status === 'active') {
+            if ($detail->contract?->isCurrentlyActive()) {
                 return $detail;
             }
         }

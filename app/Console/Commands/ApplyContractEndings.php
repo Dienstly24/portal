@@ -44,10 +44,14 @@ class ApplyContractEndings extends Command
         // Pro Vertrag gekapselt: ein einzelner fehlerhafter Datensatz darf nicht
         // den gesamten Tageslauf (und damit alle folgenden Vertraege) stoppen
         // (Audit RESIL-1, Muster wie SendTaskAutoEmails::process).
-        $mitKuendigung = Contract::where('status', 'active')
+        $mitKuendigung = Contract::whereIn('status', Contract::ACTIVE_STATUSES)
             ->whereNotNull('cancellation_date')->get();
         foreach ($mitKuendigung as $contract) {
             try {
+                // Dieselbe Regel wie Contract::hasCoverageEnded()/displayStatus():
+                // beendet, sobald das WIRKSAME Ende erreicht ist. Die Anzeige
+                // fuehrt den Vertrag ab diesem Tag ohnehin als beendet - hier
+                // wird nur der gespeicherte Status nachgezogen.
                 $ende = $contract->effectiveCancellationDate();
                 if (!$ende || $ende->greaterThan($today)) {
                     continue;
@@ -60,8 +64,9 @@ class ApplyContractEndings extends Command
             }
         }
 
-        // 2) E-Scooter nach Saisonende (nur ohne Kuendigungsfall).
-        $escooter = Contract::where('status', 'active')->where('type', 'escooter')
+        // 2) E-Scooter nach Saisonende (nur ohne Kuendigungsfall) - identische
+        // Grenze wie Contract::hasCoverageEnded() (Ablauftag laeuft noch).
+        $escooter = Contract::whereIn('status', Contract::ACTIVE_STATUSES)->where('type', 'escooter')
             ->whereNull('cancellation_date')->whereNotNull('end_date')
             ->whereDate('end_date', '<', $today)->get();
         foreach ($escooter as $contract) {

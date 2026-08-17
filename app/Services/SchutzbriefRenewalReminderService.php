@@ -75,7 +75,7 @@ class SchutzbriefRenewalReminderService
 
         $contracts = Contract::with(['customer.user', 'switchReminders'])
             ->where('type', 'schutzbrief')
-            ->where('status', 'active')
+            ->currentlyActive()
             ->when($visibleCustomerIds !== null, fn ($q) => $q->whereIn('customer_id', $visibleCustomerIds))
             ->get();
 

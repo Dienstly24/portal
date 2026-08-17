@@ -20,7 +20,10 @@ class PortalController extends Controller
         $customer = $this->getCustomer();
         return view('portal.dashboard', [
             'customer' => $customer,
-            'contractsCount' => Contract::where('customer_id', $customer->id)->where('status','active')->count(),
+            // "Meine aktiven Verträge": gleiche Definition wie in der
+            // Beraterwelt (Contract::currentlyActive) - gekuendigte und
+            // abgelaufene Vertraege zaehlen nicht mit.
+            'contractsCount' => Contract::where('customer_id', $customer->id)->currentlyActive()->count(),
             'openTickets' => Ticket::where('customer_id', $customer->id)->whereIn('status',['open','in_progress'])->count(),
             'pendingApprovals' => \App\Models\CustomerChangeRequest::where('customer_id', $customer->id)->where('status','pending')->count(),
             'contracts' => Contract::where('customer_id', $customer->id)->latest()->take(3)->get(),

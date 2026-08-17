@@ -93,7 +93,10 @@ class SendCampaignJob implements ShouldQueue
         return match (true) {
             $campaign->target === 'all' => $base,
             in_array($campaign->target, ['de', 'ar'], true) => $base->where('preferred_lang', $campaign->target),
-            default => $base->whereHas('contracts', fn($q) => $q->where('type', $campaign->target)->where('status', 'active')),
+            // Sparten-Kampagne: nur Kunden mit einem AKTIVEN Vertrag dieser
+            // Sparte (Contract::currentlyActive) - wer gekuendigt hat, ist kein
+            // Bestandskunde dieser Sparte mehr.
+            default => $base->whereHas('contracts', fn($q) => $q->where('type', $campaign->target)->currentlyActive()),
         };
     }
 
