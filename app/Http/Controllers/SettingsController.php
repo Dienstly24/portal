@@ -26,7 +26,19 @@ class SettingsController extends Controller
             'legal_datenschutz' => SystemSetting::get('legal_datenschutz', ''),
             'legal_cookies' => SystemSetting::get('legal_cookies', ''),
         ];
-        return view('admin.settings', compact('settings'));
+
+        // KI-Kundenassistent (Spezifikation Abschnitt 30): Betriebsschalter
+        // liegen als SystemSetting, damit der Betreiber ohne Deploy
+        // eingreifen kann - inklusive Notbremse.
+        $assistant = app(\App\Services\Ai\Assistant\AssistantSettings::class);
+        $settings = array_merge($settings, $assistant->all());
+
+        return view('admin.settings', [
+            'settings' => $settings,
+            // Ist der Anbieter ueberhaupt einsatzbereit (API-Key gesetzt)?
+            // Ehrliche Anzeige: der Schalter allein macht keinen Assistenten.
+            'assistantProviderReady' => app(\App\Services\Ai\Assistant\Contracts\AssistantProviderInterface::class)->isEnabled(),
+        ]);
     }
 
     public function update(Request $request) {
@@ -40,6 +52,23 @@ class SettingsController extends Controller
         foreach ($fields as $field) {
             if ($request->has($field)) {
                 SystemSetting::set($field, $request->input($field));
+            }
+        }
+
+        // KI-Kundenassistent: Schalter kommen als Checkboxen, ein nicht
+        // angehakter Kasten sendet NICHTS. Deshalb werden sie immer alle
+        // geschrieben (0 oder 1) - sonst liesse sich ein Schalter nie
+        // ausschalten. Nur bei einem abgeschickten Assistenten-Formular
+        // (Marker-Feld), damit ein anderes Formular sie nicht zuruecksetzt.
+        if ($request->has('ai_assistant_form')) {
+            foreach (\App\Services\Ai\Assistant\AssistantSettings::DEFAULTS as $key => $default) {
+                if ($key === 'ai_assistant_max_replies_per_case') {
+                    // Zahl: 0 = unbegrenzt, hart begrenzt gegen Tippfehler.
+                    $value = (int) $request->input($key, $default);
+                    SystemSetting::set($key, (string) max(0, min(100, $value)));
+                    continue;
+                }
+                SystemSetting::set($key, $request->boolean($key) ? '1' : '0');
             }
         }
         // Der API-Key wird nur noch in system_settings gespeichert.

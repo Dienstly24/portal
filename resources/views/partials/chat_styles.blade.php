@@ -11,7 +11,11 @@
 .d24c-bub{max-width:76%;padding:9px 12px;border-radius:13px;font-size:14px;line-height:1.55;box-shadow:0 1px 1px rgba(0,0,0,.06);display:flex;flex-direction:column;gap:2px;}
 .d24c-bub.them{background:#fff;align-self:flex-start;border-start-start-radius:4px;}
 .d24c-bub.me{background:var(--gold-soft,#d9f4e6);align-self:flex-end;border-start-end-radius:4px;}
-.d24c-sender{font-size:11.5px;font-weight:700;color:#128a4b;}
+.d24c-sender{font-size:11.5px;font-weight:700;color:#128a4b;display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;}
+/* Kennzeichnung der KI-Antworten (Spezifikation 26/27): Gold-Akzent des
+   Farbschemas "Smaragd & Gold" - erkennbar, aber nicht aufdringlich. */
+.d24c-ai{font-size:10px;font-weight:700;letter-spacing:.02em;color:#8a7538;background:rgba(184,161,107,.18);border:1px solid rgba(184,161,107,.45);border-radius:999px;padding:1px 7px;}
+.d24c-bub.ai{border-left:2px solid rgba(184,161,107,.55);}
 .d24c-body{white-space:pre-line;word-break:break-word;}
 .d24c-att{display:flex;align-items:center;flex-wrap:wrap;gap:6px;background:rgba(19,26,23,.06);border-radius:9px;padding:6px 9px;margin-top:4px;font-size:12.5px;}
 .d24c-att-n{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}

@@ -467,6 +467,33 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // Vorgang direkt aus der Unterhaltung eroeffnen (Anfrage -> Ticket)
     Route::post('/kundenchat/{id}/ticket', [\App\Http\Controllers\AdminCustomerChatController::class, 'createTicket'])
         ->name('customer_chat.ticket');
+
+    /*
+    | KI-Kundenassistent: menschliche Kontrolle (Spezifikation 15/27).
+    | Alle Staff-Rollen duerfen uebernehmen bzw. die KI schalten - aber nur
+    | fuer Kunden im eigenen Portfolio (Pruefung im Controller).
+    */
+    Route::post('/ki-assistent/{id}/uebernehmen', [\App\Http\Controllers\AiAssistantController::class, 'takeOver'])
+        ->name('ai_assistant.take_over');
+    Route::post('/ki-assistent/{id}/deaktivieren', [\App\Http\Controllers\AiAssistantController::class, 'deactivate'])
+        ->name('ai_assistant.deactivate');
+    Route::post('/ki-assistent/{id}/aktivieren', [\App\Http\Controllers\AiAssistantController::class, 'reactivate'])
+        ->name('ai_assistant.reactivate');
+
+    /*
+    | Wissensbasis des Assistenten: was hier steht, sagt die KI ALLEN
+    | Kunden - deshalb nur Verwaltung (admin/manager).
+    */
+    Route::middleware('role:admin,manager')->group(function () {
+        Route::get('/ki-wissensbasis', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeIndex'])
+            ->name('ai_knowledge');
+        Route::post('/ki-wissensbasis', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeStore'])
+            ->name('ai_knowledge.store');
+        Route::put('/ki-wissensbasis/{id}', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeUpdate'])
+            ->name('ai_knowledge.update');
+        Route::delete('/ki-wissensbasis/{id}', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeDestroy'])
+            ->name('ai_knowledge.destroy');
+    });
     Route::get('/vorlagen', [\App\Http\Controllers\MessageTemplateController::class, 'index'])->name('templates');
     Route::get('/vorlagen/liste', [\App\Http\Controllers\MessageTemplateController::class, 'list'])->name('templates.list');
     Route::get('/vorlagen/{id}/render', [\App\Http\Controllers\MessageTemplateController::class, 'render'])->name('templates.render');

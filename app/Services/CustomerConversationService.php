@@ -51,7 +51,15 @@ class CustomerConversationService
             ->each(function ($m) use (&$items) {
                 $items->push(array_merge($this->base('chat', 'bubble', $m->created_at), [
                     'own' => $m->from_staff,
-                    'sender' => $m->from_staff ? ($m->sender?->name ?? 'Dienstly24 Team') : null,
+                    // KI-Antworten nennen den Assistenten, nicht "das Team" -
+                    // der Mitarbeiter muss erkennen, was automatisch
+                    // geschrieben wurde (Spezifikation Abschnitt 27).
+                    'sender' => $m->from_staff
+                        ? ($m->ai_generated
+                            ? CustomerMessage::AI_SENDER_NAME
+                            : ($m->sender?->name ?? 'Dienstly24 Team'))
+                        : null,
+                    'ai' => (bool) $m->ai_generated,
                     'body' => $m->body,
                     'read' => $m->read_at !== null,
                     'icon' => '💬',
@@ -197,6 +205,9 @@ class CustomerConversationService
             'time' => $at->format('H:i'),
             'own' => false,
             'sender' => null,
+            // Nur Chat-Blasen koennen von der KI stammen; der Schluessel
+            // existiert trotzdem ueberall, damit die View nie pruefen muss.
+            'ai' => false,
             'title' => null,
             'body' => null,
             'url' => null,

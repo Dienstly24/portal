@@ -12,9 +12,12 @@
     @endif
     @if($item['style'] === 'bubble')
     @php $m = $item['message']; @endphp
-    <div class="d24c-bub {{ $item['own'] ? 'me' : 'them' }}" data-kind="{{ $item['kind'] }}" @if($m) data-mid="{{ $m->id }}" @endif>
+    <div class="d24c-bub {{ $item['own'] ? 'me' : 'them' }}{{ !empty($item['ai']) ? ' ai' : '' }}" data-kind="{{ $item['kind'] }}" @if($m) data-mid="{{ $m->id }}" @endif>
         @if($item['tag'])<a class="kx-tag" href="{{ $item['url'] }}">{{ $item['tag'] }}</a>@endif
-        @if($item['own'] && $item['sender'])<span class="d24c-sender">{{ $item['sender'] }}</span>@endif
+        {{-- KI-Antworten auch in der Beraterwelt kennzeichnen (Spezifikation
+             Abschnitt 27): der Mitarbeiter muss sehen, was der Assistent
+             geschrieben hat und was ein Kollege. --}}
+        @if($item['own'] && $item['sender'])<span class="d24c-sender">{{ $item['sender'] }}@if(!empty($item['ai']))<span class="d24c-ai">🤖 {{ __('KI-Assistent') }}</span>@endif</span>@endif
         <span class="d24c-body">{{ $item['body'] }}</span>
         @if($m)
         @foreach($m->attachments as $att)

@@ -116,6 +116,66 @@ return [
     'ai_text_provider' => env('AI_TEXT_PROVIDER', 'claude'),
 
     /*
+    |--------------------------------------------------------------------------
+    | KI-Kundenassistent (Portal-Chat) - Betreiber-Auftrag 17.08.2026
+    |--------------------------------------------------------------------------
+    |
+    | Der API-Key gehoert AUSSCHLIESSLICH in die Server-`.env` (bzw. ein
+    | GitHub Secret) - NIE ins Repository, ins HTML, in JavaScript oder in
+    | Logs. Der Kunde spricht immer nur mit dem Portal, nie mit OpenAI.
+    |
+    |   OPENAI_API_KEY=sk-...        <- hier hinterlegen (Server-.env)
+    |
+    | Ohne Key bleibt der Assistent stumm und das Team bearbeitet die
+    | Anfragen wie vorher (Fallback, Spezifikation Abschnitt 31).
+    */
+    'openai' => [
+        'key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_MODEL', 'gpt-5'),
+        'base_url' => env('OPENAI_BASE_URL', 'https://api.openai.com/v1'),
+        // Antwortlaenge: der Assistent soll KURZ antworten (Abschnitt 17).
+        'max_output_tokens' => env('OPENAI_MAX_OUTPUT_TOKENS', 700),
+        // Zeitgrenzen (Abschnitt 32): lieber Fallback als haengender Job.
+        'timeout' => env('OPENAI_TIMEOUT', 45),
+        'connect_timeout' => env('OPENAI_CONNECT_TIMEOUT', 10),
+        // Manche Modelle akzeptieren nur den Standardwert - leer lassen
+        // sendet den Parameter gar nicht mit.
+        'temperature' => env('OPENAI_TEMPERATURE'),
+        // Keine Speicherung der Konversation beim Anbieter (Datenschutz,
+        // Abschnitt 21). Bewusst per Default aus.
+        'store' => env('OPENAI_STORE', false),
+    ],
+
+    /*
+    | Austauschbarer Anbieter des Kundenassistenten ('openai', 'none') -
+    | siehe App\Services\Ai\Assistant\Contracts\AssistantProviderInterface.
+    | 'none' schaltet den Assistenten hart ab.
+    */
+    'ai_assistant_provider' => env('AI_ASSISTANT_PROVIDER', 'openai'),
+
+    /*
+    | Technische Obergrenzen des Assistenten (Abschnitt 32). Die
+    | BETRIEBLICHEN Schalter (an/aus, Automatiken, Antworten je Vorgang)
+    | pflegt der Betreiber in der Beraterwelt unter Einstellungen -
+    | siehe App\Services\Ai\Assistant\AssistantSettings.
+    */
+    'ai_assistant' => [
+        // Harte Obergrenze der Tool-Runden je Kundennachricht: verhindert
+        // Endlosschleifen und unkontrolliertes Tool Calling.
+        'max_tool_rounds' => env('AI_ASSISTANT_MAX_TOOL_ROUNDS', 5),
+        'max_tool_calls' => env('AI_ASSISTANT_MAX_TOOL_CALLS', 10),
+        // Nachrichten je Kunde und Stunde (Kostenbremse pro Kunde).
+        'rate_per_hour' => env('AI_ASSISTANT_RATE_PER_HOUR', 20),
+        // Gesamtzahl der KI-Antworten pro Tag ueber ALLE Kunden.
+        'daily_reply_limit' => env('AI_ASSISTANT_DAILY_LIMIT', 500),
+        // Laengere Kundennachrichten werden gekuerzt an das Modell gegeben
+        // (Schutz gegen Token-Explosion durch eingefuegte Textwaende).
+        'max_message_chars' => env('AI_ASSISTANT_MAX_MESSAGE_CHARS', 4000),
+        // So viele vorangehende Chat-Nachrichten kommen als Verlauf mit.
+        'history_messages' => env('AI_ASSISTANT_HISTORY_MESSAGES', 8),
+    ],
+
+    /*
     | Kostenlose OCR-Basisebene (Tesseract) fuer den Smart Document Upload.
     | Standardmaessig AUS: erst nach Installation von `tesseract-ocr`,
     | `tesseract-ocr-deu` und (fuer PDFs) `poppler-utils` auf dem Server

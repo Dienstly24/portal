@@ -47,6 +47,25 @@
 .kx-ticket-btn{border:1px solid var(--petrol);background:var(--petrol);color:#fff;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer;}
 .kx-ticket-btn:hover{background:var(--petrol-dark);}
 /* Problem-Cockpit: aktiver Vorgang als Balken unter dem Kopf */
+/* KI-Panel der Unterhaltung (Spezifikation 27). Gold = Akzentfarbe des
+   Farbschemas "Smaragd & Gold"; eine offene Uebergabe faellt bewusst
+   deutlicher auf (warmes Rot), damit sie nicht uebersehen wird. */
+.kx-ai{padding:8px 14px;background:#FBFAF6;border-bottom:1px solid var(--line);font-size:12.5px;}
+.kx-ai.on{background:#F6F8F4;}
+.kx-ai.handover{background:#FBF3E7;border-bottom-color:#E2C89A;}
+.kx-ai.off{background:#F5F5F2;}
+.kx-ai-head{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+.kx-ai-state{font-weight:800;}
+.kx-ai-emp{color:var(--ink-soft);}
+.kx-ai-btns{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap;}
+.kx-ai-btns form{margin:0;}
+.kx-ai-btn{background:#fff;border:1px solid var(--line);border-radius:999px;padding:3px 11px;font-size:11.5px;cursor:pointer;color:var(--ink-soft);}
+.kx-ai-btn.primary{background:#17A65B;border-color:#128a4b;color:#fff;font-weight:700;}
+.kx-ai-reason{margin-top:4px;font-weight:600;color:#8a5b1f;}
+.kx-ai-sum{margin-top:4px;white-space:pre-line;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 9px;}
+.kx-ai-facts{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;}
+.kx-ai-fact{background:#fff;border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-size:11.5px;color:var(--ink-soft);}
+.kx-ai-fact.warn{background:#FBF3E7;border-color:#E2C89A;color:#8a5b1f;font-weight:600;}
 .kx-cockpit{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:8px 14px;background:#F3F1E8;border-bottom:1px solid var(--line);text-decoration:none;color:var(--ink);font-size:12.5px;}
 .kx-cockpit:hover{background:#ECE9DC;}
 .kx-cockpit.overdue{background:#FBECEC;border-bottom-color:#E4B4B4;}
@@ -127,6 +146,9 @@
             </div>
             <a class="kchat-head-link" href="{{ route('admin.customer', $active->id) }}">Kundenakte →</a>
         </div>
+        {{-- KI-Panel: Zustand, Zusammenfassung und die Steuerung
+             (Übernehmen / KI deaktivieren / wieder aktivieren). --}}
+        @includeWhen(isset($aiConversation), 'admin.partials.ai_assistant_panel')
         {{-- Problem-Cockpit: der aktive Vorgang auf einen Blick. Macht die
              Unterhaltung zur Problemloese-Zentrale (Status, Prioritaet,
              SLA/Ueberfaellig) statt nur zum Chatfenster. --}}

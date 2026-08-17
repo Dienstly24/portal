@@ -35,7 +35,18 @@ class PortalMessageController extends Controller
             ->fromStaff()->unread()
             ->update(['read_at' => now()]);
 
-        return view('portal.messages', compact('customer', 'messages'));
+        // Kennzeichnung im Chat-Kopf nur, wenn der Assistent fuer DIESEN
+        // Kunden wirklich antwortet (Assistent global an, automatische
+        // Antworten an, kein Mitarbeiter hat uebernommen).
+        // Es gibt hoechstens EINEN Steuerstand je Kunde (unique); fehlt er,
+        // hat der Assistent noch nie geantwortet und ist damit aktiv.
+        $settings = app(\App\Services\Ai\Assistant\AssistantSettings::class);
+        $conversation = \App\Models\AiConversation::where('customer_id', $customer->id)->first();
+        $aiActive = $settings->enabled()
+            && $settings->autoReply()
+            && ($conversation === null || $conversation->canAutoReply());
+
+        return view('portal.messages', compact('customer', 'messages', 'aiActive'));
     }
 
     /**
@@ -82,6 +93,15 @@ class PortalMessageController extends Controller
         CustomerMessageController::storeAttachments($request, $message);
 
         CustomerMessageNotifier::notifyStaffOfReply($message);
+
+        // KI-Kundenassistent: antwortet asynchron, damit der Kunde nicht auf
+        // den KI-Dienst wartet (der Chat-Feed pollt und zeigt die Antwort von
+        // selbst). Der Dienst prueft alle Schalter und Grenzen selbst - hier
+        // wird nur angestossen. Das Team wurde oben bereits benachrichtigt,
+        // also aendert die KI nichts am bisherigen Ablauf.
+        if (app(\App\Services\Ai\Assistant\AssistantSettings::class)->enabled()) {
+            \App\Jobs\AnswerCustomerMessageJob::dispatch($message->id);
+        }
 
         // Chat-UI sendet per fetch() und rendert die Blase selbst.
         if ($request->wantsJson()) {

@@ -144,6 +144,56 @@ class AppServiceProvider extends ServiceProvider
             };
         });
 
+        // KI-Kundenassistent (Betreiber-Auftrag 17.08.2026): austauschbarer
+        // Anbieter mit Tool-Calling. 'none' schaltet ihn hart ab; ein leerer
+        // Wert bedeutet STANDARD (openai), nicht "aus" - gleiche Lehre wie
+        // beim Dokument-Anbieter oben.
+        $this->app->bind(
+            \App\Services\Ai\Assistant\Contracts\AssistantProviderInterface::class,
+            function ($app) {
+                $provider = strtolower(trim((string) config('services.ai_assistant_provider', 'openai')));
+                if ($provider === '') {
+                    $provider = 'openai';
+                }
+                return match ($provider) {
+                    'openai' => $app->make(\App\Services\Ai\Assistant\OpenAiAssistantProvider::class),
+                    'none', 'off', 'disabled' => $app->make(\App\Services\Ai\Assistant\NullAssistantProvider::class),
+                    default => tap($app->make(\App\Services\Ai\Assistant\OpenAiAssistantProvider::class), function () use ($provider) {
+                        \Illuminate\Support\Facades\Log::warning(
+                            'Unbekannter AI_ASSISTANT_PROVIDER "' . $provider . '" - faellt auf OpenAI zurueck '
+                            . '(gueltig: openai, none).'
+                        );
+                    }),
+                };
+            }
+        );
+
+        // WHITELIST der Funktionen, die der Kundenassistent aufrufen darf
+        // (Spezifikation Abschnitt 6/7). Was hier NICHT steht, kann die KI
+        // nicht ausfuehren - es gibt bewusst kein Tool fuer freie
+        // Datenbankabfragen, Vertragsaenderungen, Kuendigungen oder
+        // Zahlungen. Neue Faehigkeit = hier eine Zeile, nach Freigabe des
+        // Betreibers.
+        $this->app->singleton(
+            \App\Services\Ai\Assistant\Tools\AssistantToolRegistry::class,
+            fn ($app) => new \App\Services\Ai\Assistant\Tools\AssistantToolRegistry([
+                // Lesend (immer erlaubt)
+                $app->make(\App\Services\Ai\Assistant\Tools\GetCustomerProfileTool::class),
+                $app->make(\App\Services\Ai\Assistant\Tools\GetCustomerContractsTool::class),
+                $app->make(\App\Services\Ai\Assistant\Tools\GetRelevantContractInformationTool::class),
+                $app->make(\App\Services\Ai\Assistant\Tools\GetOpenTicketsTool::class),
+                $app->make(\App\Services\Ai\Assistant\Tools\GetProcessStatusTool::class),
+                $app->make(\App\Services\Ai\Assistant\Tools\GetRequiredDocumentsTool::class),
+                $app->make(\App\Services\Ai\Assistant\Tools\GetMissingDocumentsTool::class),
+                $app->make(\App\Services\Ai\Assistant\Tools\GetDocumentStatusTool::class),
+                $app->make(\App\Services\Ai\Assistant\Tools\SearchKnowledgeTool::class),
+                // Schreibend (jedes prueft zusaetzlich seinen Schalter)
+                $app->make(\App\Services\Ai\Assistant\Tools\CreateTicketTool::class),
+                $app->make(\App\Services\Ai\Assistant\Tools\RequestDocumentTool::class),
+                $app->make(\App\Services\Ai\Assistant\Tools\EscalateToTeamTool::class),
+            ])
+        );
+
         // Registry der Workflow-Step-Handler (Blueprint Saeule 1): Typ ->
         // Handler. Neue Schritt-Typen werden hier additiv registriert, der
         // Engine-Kern bleibt unveraendert.

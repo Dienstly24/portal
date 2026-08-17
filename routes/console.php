@@ -47,6 +47,11 @@ Schedule::command('tasks:send-auto-emails')->hourly()->between('8:00', '18:00')-
 // Alle 10 Minuten — Sicherheitsnetz Smart Document Upload: haengende KI-Analysen neu anstossen
 Schedule::command('documents:analyze-pending')->everyTenMinutes()->withoutOverlapping();
 
+// Alle 10 Minuten — Sicherheitsnetz KI-Kundenassistent: Kundennachrichten,
+// deren Antwort-Job verloren ging (Queue-Worker aus), erneut anstossen.
+// Doppelte Antworten sind ausgeschlossen (Protokoll-Sperre im Dienst).
+Schedule::command('ai:answer-pending')->everyTenMinutes()->withoutOverlapping();
+
 // 03:50 — DSGVO: nie zugeordnete Eingangs-Dokumente nach Aufbewahrungsfrist loeschen
 Schedule::command('documents:prune-unassigned')->dailyAt('03:50');
 

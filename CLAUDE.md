@@ -454,6 +454,83 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   `logo.png` = Original mit weissem Hintergrund (Quelle der Varianten).
   Willkommens-Mail bewusst OHNE Logo-Bild (Outlook blockiert CID) –
   Textmarke im Hero.
+- **KI-Kundenassistent im Portal-Chat** (Betreiber-Auftrag 17.08.2026,
+  Ist-Architektur + Integrationsplan:
+  `docs/KI_KUNDENASSISTENT_INTEGRATIONSPLAN.md`): Der Assistent ist KEIN
+  allgemeiner Chatbot, sondern arbeitet NUR im Dienstly24-Kundenservice
+  (Kunden, Vertraege, Vorgaenge/Tickets, Dokumente, fehlende Unterlagen,
+  Status) und NUR mit den Daten des ANGEMELDETEN Kunden. Kern:
+  `CustomerAssistantService` (`app/Services/Ai/Assistant/`). Angebaut, nicht
+  eingebaut: Antworten sind normale `customer_messages` (Flag
+  `ai_generated`), Vorgaenge sind `tickets` (`source = 'ai_assistant'`),
+  Anforderungen sind `document_requests` - dieselben Tabellen wie beim
+  Mitarbeiter, deshalb erscheint der Upload-Bereich im Portal von selbst.
+  Neu sind nur Steuer-/Protokolltabellen (`ai_conversations`,
+  `ai_assistant_logs`, `ai_knowledge_entries`).
+  ABLAUF (Sperren von guenstig nach teuer, jede kann vorher beenden):
+  Schalter des Betreibers -> Zustand der Unterhaltung -> Grenzen ->
+  **kostenlose deterministische Vorpruefung** (`AssistantScopeGuard`:
+  Bereich, Regel-Umgehung, Mitarbeiter-Wunsch; DE/EN/AR) -> erst dann der
+  API-Aufruf. Eine Wetter-Frage und ein „Vergiss deine Regeln" kosten damit
+  NICHTS und erreichen das Modell nie. Geschaeftswoerter schlagen die
+  Ablehnungsliste (sonst faellt eine echte Anfrage durchs Raster).
+  ANBIETER: `AssistantProviderInterface` (eigene Schnittstelle, weil
+  `AiProviderInterface` kein Tool-Calling kennt - bestehende Nutzer bleiben
+  unberuehrt), Implementierung `OpenAiAssistantProvider` gegen die
+  **Responses API** (`/v1/responses`), Auswahl per `AI_ASSISTANT_PROVIDER`
+  ('none' = hart aus). Key NUR als Bearer-Header und NUR aus der
+  Server-`.env` (`OPENAI_API_KEY`) - nie Repo/HTML/JS/Logs.
+  TOOLS = die einzige Handlungsmoeglichkeit (`AssistantToolRegistry` ist die
+  Whitelist): lesend `getCustomerProfile`, `getCustomerContracts`,
+  `getRelevantContractInformation`, `getOpenTickets`, `getProcessStatus`,
+  `getRequiredDocuments`, `getMissingDocuments`, `getDocumentStatus`,
+  `searchKnowledge`; schreibend `createTicket`, `requestDocument`,
+  `escalateToTeam`. Es gibt bewusst KEIN Tool fuer SQL, Vertragsaenderung,
+  Kuendigung, Zahlung, Dokumentfreigabe oder andere Kunden. **KEIN
+  Tool-Schema enthaelt eine Kunden-ID** - die Akte kommt aus der Sitzung
+  (`AssistantToolContext`, readonly); Tools mit Bezugsobjekt pruefen die
+  Zugehoerigkeit und melden sonst „nicht gefunden".
+  NICHTS ERFINDEN: fehlt eine Angabe in den Kundendaten ODER in der
+  Wissensbasis (`AiKnowledgeEntry`, Pflege `/admin/ki-wissensbasis`, nur
+  admin/manager), wird UEBERGEBEN statt geraten. Verbindliches
+  (Kuendigung, Genehmigung, Geld, Deckung, Dokumentabnahme) ist immer
+  Mitarbeiter-Sache. Ein eingegangenes Dokument gilt nur als
+  „eingegangen/in Pruefung", nie als anerkannt.
+  UEBERGABE (`HandoverService`) erzeugt IMMER drei Dinge: Uebergabe-Status
+  (KI schweigt), Vorgang (bestehender offener wird wiederverwendet) und
+  Glocke ans Team mit Zusammenfassung aus ECHTEN Daten (nie vom Modell
+  formuliert). Die Glocke geht auch raus, wenn die Uebergabe-Automatik AUS
+  ist - dann entsteht nur kein Vorgang.
+  MENSCHLICHE KONTROLLE: `ai_conversations` fuehrt je Kunde `ai_active` /
+  `handover_required` / `assigned_employee_id`; `canAutoReply()` ist die EINE
+  Bedingung. Panel im Kunden-Chat der Beraterwelt (Zustand, Grund,
+  Zusammenfassung, fehlende Dokumente, letzte Aktion) mit „Übernehmen",
+  „KI deaktivieren", „KI wieder aktivieren". Nach einer Uebernahme
+  antwortet die KI nie mehr von selbst.
+  DUPLIKAT-SCHUTZ: genau EINE Antwort je Kundennachricht (Sperre ueber
+  `ai_assistant_logs.customer_message_id` - deshalb ist ein zweiter Anlauf
+  durch `ai:answer-pending` gefahrlos); offener Vorgang gleicher Art/aehnlichem
+  Betreff wird ergaenzt statt dupliziert; dasselbe Dokument wird nie zweimal
+  angefordert (umlaut-/teiltreffer-toleranter Titelvergleich).
+  GRENZEN (`config/services.php` 'ai_assistant'): Tool-Runden und
+  Gesamtaufrufe hart gedeckelt (keine Endlosschleife), Antworten je Vorgang
+  (Einstellung), Rate je Kunde/Stunde, Tageslimit, Timeout; lange
+  Kundennachrichten werden gekuerzt. Job `AnswerCustomerMessageJob` laeuft
+  asynchron mit `tries = 1` (ein Retry wuerde doppelt antworten); Nachlauf
+  `ai:answer-pending` alle 10 Min als Sicherheitsnetz bei totem Worker.
+  FALLBACK: jeder Fehler/Ausfall -> ehrliche Nachricht an den Kunden +
+  Uebergabe + Glocke „KI-Service nicht verfuegbar". Der Kundenservice faellt
+  nie aus.
+  SCHALTER (Beraterwelt -> Einstellungen, `AssistantSettings`): Assistent
+  an/aus (Notbremse), automatische Antworten, Dokumentenanforderung,
+  Ticket-Erstellung, Uebergabe, max. Antworten je Vorgang. **Voreinstellung
+  AUS** - eine Integration schaltet sich nicht selbst live.
+  DATENSCHUTZ: an das Modell gehen nur die Felder der jeweiligen Frage -
+  NIE IBAN/BIC/Kontoinhaber, Steuer-ID, Gesundheits-/Ausweisdaten; das
+  Protokoll speichert KEINEN Nachrichtentext und keinen Prompt (nur Absicht,
+  Tools, Aktionen, Ergebnis; Details verschluesselt). Kennzeichnung „🤖
+  KI-Assistent" im Portal-Chat (Transparenzpflicht). Tests:
+  `CustomerAssistantTest` (Abnahmefaelle 1-17 der Spezifikation).
 - **Smart Document Upload** (`SmartDocumentUploadController`,
   `DocumentAnalyzer`): Analyse laeuft **„kostenlos zuerst"** (Betreiber-
   Entscheidung) und der KI-Anbieter ist austauschbar
@@ -816,6 +893,23 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   Ausserdem vom Betreiber zu bestaetigen: schriftliche Freigaben der
   zitierten Kundenstimmen + Belegbarkeit "3.000+ Kunden" (UWG). 2FA fuer
   /admin und Cloudflare Turnstile sind bewusst offene Folgepakete.
+- **KI-Kundenassistent: Inbetriebnahme** (Code ist fertig, Stand
+  17.08.2026). Vom Betreiber zu erledigen, in dieser Reihenfolge:
+  1. `OPENAI_API_KEY=sk-...` in die Server-`.env` unter
+     `/var/www/dienstly24/portal` eintragen (NIE ins Repo/den Chat).
+  2. Wissensbasis fuellen: `/admin/ki-wissensbasis` - solange sie leer ist,
+     beantwortet der Assistent nur, was aus der Kundenakte belegbar ist,
+     und uebergibt alles andere an das Team (das ist ein sicherer, aber
+     wenig hilfreicher Zustand).
+  3. Erst danach in `/admin/settings` -> „🤖 KI-Kundenassistent" den
+     Hauptschalter einschalten (Voreinstellung ist AUS).
+  4. Queue-Worker muss laufen (die Antwort ist ein Job); ohne Worker greift
+     nach 10 Min das Sicherheitsnetz `ai:answer-pending`.
+  Rechtlich noch zu klaeren, BEVOR der Schalter auf produktiv geht:
+  Auftragsverarbeitungsvertrag/DPA mit OpenAI, Aufbewahrungsoptionen der
+  API, Ergaenzung von Datenschutzerklaerung und Verarbeitungsverzeichnis
+  (Hinweis im Chat, dass zunaechst ein Assistent antwortet, ist technisch
+  umgesetzt).
 - **Finale Logo-Dateien** kommen vom Betreiber (bevorzugt SVG, sonst PNG
   transparent ≥320px hoch; Light- und Dark-Variante; optional 512×512 Icon).
 - **Partner-Portal** (voller Ausbau) und **E-Mail-Einwilligung des Kunden
