@@ -94,6 +94,7 @@ class AppServiceProvider extends ServiceProvider
                 // (der Deckungsauftrag-Parser weicht ihr nachweislich aus).
                 $app->make(\App\Services\Ai\TemplateParsers\DeckungsauftragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\GewerbeBeratungsdokumentationParser::class),
+                $app->make(\App\Services\Ai\TemplateParsers\AndsafeGewerbePoliceParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\InterlloydPoliceParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\DialogFrachtfuehrerPoliceParser::class),
                 // Kontakt-/SEPA-Ansicht eines Antragsportals (beschriftete
