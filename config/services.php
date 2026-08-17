@@ -134,6 +134,11 @@ return [
         // Freischaltung wie OCR gekoppelt (Default = OCR_ENABLED); separat
         // per OCR_TEXT_LAYER abschaltbar. In Produktion ist OCR_ENABLED=true,
         // damit ist die Textebene aktiv (nur poppler-utils noetig).
+        // Bildschirmfotos kommen mit ~150 dpi und feiner Schrift: Tesseract
+        // verwechselt darin aehnliche Zeichen (1/I, f verschluckt). Bilder
+        // UNTERHALB dieser Kantenlaenge werden vor der OCR verdoppelt -
+        // gratis und deutlich genauer. 0 schaltet das Vergroessern ab.
+        'upscale_below_px' => env('OCR_UPSCALE_BELOW_PX', 2600),
         'text_layer' => env('OCR_TEXT_LAYER', env('OCR_ENABLED', false)),
         'text_layer_max_pages' => env('OCR_TEXT_LAYER_MAX_PAGES', 15),
         // Oberhalb dieser Zeichenzahl ist ein Dokument fuer die einfache

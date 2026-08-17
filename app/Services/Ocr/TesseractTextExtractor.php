@@ -121,7 +121,59 @@ class TesseractTextExtractor implements TextExtractorInterface
         }
         $path = $dir . '/input.' . $ext;
         file_put_contents($path, $binary);
-        return [$path];
+
+        return [$this->upscaleIfSmall($path, $dir)];
+    }
+
+    /**
+     * KLEINE Bilder vor der OCR vergroessern (Lehre 16.08.2026, mit
+     * Chromium+Tesseract nachgestellt): Bildschirmfotos kommen mit ~150 dpi
+     * und feiner Schrift; Tesseract verwechselt darin regelmaessig aehnliche
+     * Zeichen ("NOLADE21RDB" -> "NOLADE2IRDB", "Tariftyp" -> "Tarityp"). Eine
+     * einfache Verdopplung (bikubisch) behebt genau diese Verwechslungen -
+     * gratis, ohne KI. Groessere Aufnahmen (Handyfotos) bleiben unveraendert,
+     * denn dort bringt Skalieren nichts und kostet nur Rechenzeit.
+     *
+     * Faellt irgendetwas aus (kein GD, kaputtes Bild, Speicher), wird das
+     * Original weiterverwendet - die OCR-Stufe darf nie blockieren.
+     */
+    private function upscaleIfSmall(string $path, string $dir): string
+    {
+        $grenze = max(0, (int) config('services.ocr.upscale_below_px', 2600));
+        if ($grenze === 0 || !extension_loaded('gd')) {
+            return $path;
+        }
+
+        try {
+            $info = @getimagesize($path);
+            if (!is_array($info) || ($info[0] ?? 0) < 1 || ($info[1] ?? 0) < 1) {
+                return $path;
+            }
+            [$breite, $hoehe] = $info;
+            if (max($breite, $hoehe) >= $grenze) {
+                return $path;
+            }
+
+            $quelle = @imagecreatefromstring((string) file_get_contents($path));
+            if ($quelle === false) {
+                return $path;
+            }
+            $ziel = @imagecreatetruecolor($breite * 2, $hoehe * 2);
+            if ($ziel === false) {
+                imagedestroy($quelle);
+                return $path;
+            }
+            $ok = imagecopyresampled($ziel, $quelle, 0, 0, 0, 0, $breite * 2, $hoehe * 2, $breite, $hoehe);
+            $gross = $dir . '/input-2x.png';
+            $ok = $ok && imagepng($ziel, $gross);
+            imagedestroy($quelle);
+            imagedestroy($ziel);
+
+            return ($ok && is_file($gross)) ? $gross : $path;
+        } catch (\Throwable $e) {
+            Log::warning('OCR: Vergroessern des Bildes fehlgeschlagen: ' . $e->getMessage());
+            return $path;
+        }
     }
 
     private function ocrImage(string $path): string

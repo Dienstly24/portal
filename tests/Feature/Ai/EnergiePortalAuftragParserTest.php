@@ -229,6 +229,68 @@ class EnergiePortalAuftragParserTest extends TestCase
         $this->assertSame([], $r['data']['bank']);
     }
 
+    /**
+     * Am ECHTEN OCR-Lauf nachgestellt (Chromium-Replik + Tesseract): die
+     * kleine Tarif-Tabelle kommt verstuemmelt an ("Produkt Fair ö 24"),
+     * waehrend die grosse KOPFZEILE sauber gelesen wird. Anbieter und
+     * Produkt stammen deshalb bevorzugt aus der Kopfzeile; die Sparte
+     * entscheidet der Produktname, wenn die OCR "Tariftyp" verliest.
+     */
+    public function test_header_line_wins_over_garbled_table(): void
+    {
+        $text = implode("\n", [
+            'Ei 1672525 - Musterenergie AG - Fair Ökostrom 24',
+            'Herr Karim Muster',
+            'RheinEnergie Belieferungsanschrift Anschrift des Kontoinhaber',
+            'Herr Karim Muster Herr Karim Muster',
+            'Tarifübersicht Musterallee 141 Musterallee 141',
+            'Anbieter Musterenergie AG 24768 Rendsburg 24768 Rendsburg',
+            'Produkt Fair ö 24 geboren am: 03.04.1978',
+            '" air Okostrom Konto: 0105653802',
+            'Tarityp Mail: karim.muster@example.com IBAN: DE82214500000105653802',
+            'BIC: NOLADE21RDB',
+            'Auftragsnummer 1672525',
+            'MaLo-ID 51214126166',
+            'Vorversorger Stadtwerke Muster GmbH',
+        ]);
+
+        $r = (new EnergiePortalAuftragParser())->parse($text);
+
+        $this->assertNotNull($r);
+        // Sauberer Produktname aus der Kopfzeile statt "Fair ö 24".
+        $this->assertSame('Fair Ökostrom 24', $r['data']['energie']['tariff']);
+        $this->assertSame('Musterenergie AG', $r['data']['versicherung']['insurer']);
+        // Verlesene Beschriftung "Tarityp" -> Sparte aus dem Produktnamen.
+        $this->assertSame('strom', $r['data']['versicherung']['sparte']);
+        $this->assertSame('DE82214500000105653802', $r['data']['bank']['iban']);
+        $this->assertSame('NOLADE21RDB', $r['data']['bank']['bic']);
+    }
+
+    public function test_broken_iban_is_never_taken(): void
+    {
+        // Ein von der OCR verlesenes Zeichen macht die Pruefziffer ungueltig -
+        // eine kaputte IBAN darf NIE in die Kundenakte.
+        $r = (new EnergiePortalAuftragParser())->parse($this->screenshotText([
+            'IBAN: DE82214500000105653802' => 'IBAN: DE82214500000105653803',
+        ]));
+
+        $this->assertNotNull($r);
+        $this->assertArrayNotHasKey('iban', $r['data']['bank']);
+        $this->assertStringContainsString('Pruefziffer stimmt nicht', $r['summary']);
+    }
+
+    public function test_iban_deviating_from_printed_account_is_flagged(): void
+    {
+        // Gueltige IBAN, die aber NICHT zur separat gedruckten Konto-/BLZ-
+        // Angabe passt -> uebernommen, aber mit Pruefhinweis.
+        $r = (new EnergiePortalAuftragParser())->parse($this->screenshotText([
+            'BLZ: 21450000 (Sparkasse Muster)' => 'BLZ: 20050550 (Sparkasse Muster)',
+        ]));
+
+        $this->assertSame('DE82214500000105653802', $r['data']['bank']['iban']);
+        $this->assertStringContainsString('weichen ab', $r['summary']);
+    }
+
     public function test_foreign_account_holder_is_not_taken(): void
     {
         $r = (new EnergiePortalAuftragParser())->parse($this->screenshotText([

@@ -82,6 +82,9 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
     /** @var list<string> */
     private array $lines = [];
 
+    /** Hinweis zur Bankverbindung fuer die Zusammenfassung (Abweichung o.ae.). */
+    private ?string $bankHinweis = null;
+
     public function parse(string $text): ?array
     {
         $this->text = (string) preg_replace('/\x{00ad}\s*/u', '', $text);
@@ -119,6 +122,7 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
                 . ($name !== '' ? ' - ' . $name : '')
                 . $this->extras($energie, $insurance)
                 . ($bank !== [] ? ' Bankverbindung des Kunden uebernommen.' : ' Ohne Bankuebernahme.')
+                . ($this->bankHinweis !== null ? ' HINWEIS: ' . $this->bankHinweis . '.' : '')
                 . ' Felder gratis aus der Auftragsuebersicht gelesen (ohne KI).',
             'title' => ($insurance['insurer'] ?? 'Energie') . ' ' . $art . '-Auftrag'
                 . ($name !== '' ? ' ' . $name : ''),
@@ -258,12 +262,29 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
 
         $raw = [];
         if (($v = $this->labelValue('IBAN')) !== null) {
-            $iban = strtoupper((string) preg_replace('/\s+/', '', $v));
-            if (preg_match('/^DE\d{20}$/', $iban)) {
+            $iban = strtoupper((string) preg_replace('/[^A-Z0-9]/i', '', $v));
+            // PRUEFZIFFER (Modulo 97): ein von der OCR verlesenes Zeichen faellt
+            // damit auf - eine kaputte IBAN darf NIE in die Kundenakte.
+            if (preg_match('/^DE\d{20}$/', $iban) && $this->ibanChecksumValid($iban)) {
                 $raw['iban'] = $iban;
+                // Gegenprobe mit der separat gedruckten Kontonummer + BLZ: die
+                // deutsche IBAN besteht genau daraus (BLZ + 10-stellige Kontonr.).
+                $blz = (string) preg_replace('/\D/', '', (string) $this->labelValue('BLZ'));
+                $konto = (string) preg_replace('/\D/', '', (string) $this->labelValue('Konto'));
+                if (strlen($blz) >= 8 && $konto !== '') {
+                    $erwartet = substr($blz, 0, 8) . str_pad(substr($konto, 0, 10), 10, '0', STR_PAD_LEFT);
+                    if ($erwartet !== substr($iban, 4)) {
+                        $this->bankHinweis = 'IBAN und die separat gedruckte Konto-/BLZ-Angabe weichen ab - bitte pruefen';
+                    }
+                }
+            } elseif (preg_match('/^DE\d{20}$/', $iban)) {
+                $this->bankHinweis = 'IBAN im Bild nicht eindeutig lesbar (Pruefziffer stimmt nicht) - nicht uebernommen';
             }
         }
-        if (($v = $this->labelValue('BIC')) !== null && preg_match('/^[A-Z0-9]{8,11}$/', strtoupper(trim($v)))) {
+        // BIC nur im offiziellen Format (4 Buchstaben Bank, 2 Land, 2 Ort,
+        // optional 3 Filiale).
+        if (($v = $this->labelValue('BIC')) !== null
+            && preg_match('/^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?$/', strtoupper(trim($v)))) {
             $raw['bic'] = strtoupper(trim($v));
         }
         if ($raw !== []) {
@@ -273,12 +294,36 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
         return $this->validatedBank($raw);
     }
 
+    /**
+     * Kopfzeile der Ansicht: "<Auftragsnummer> - <Anbieter> - <Produkt>".
+     * Sie ist gross gesetzt und damit die ZUVERLAESSIGSTE Quelle - in der
+     * Tarif-Tabelle verliest die OCR den Produktnamen gern ("orodukt ea 2a").
+     *
+     * @return array{nummer: ?string, anbieter: ?string, produkt: ?string}
+     */
+    private function kopfzeile(): array
+    {
+        foreach (array_slice($this->lines, 0, 4) as $line) {
+            if (preg_match('/(?:^|\s)(\d{5,12})\s*[-–]\s*([^-–]{3,60}?)\s*[-–]\s*(\S[^\n]{2,60})$/u', trim($line), $m)) {
+                return [
+                    'nummer' => $m[1],
+                    'anbieter' => trim($m[2]),
+                    'produkt' => trim($m[3]),
+                ];
+            }
+        }
+        return ['nummer' => null, 'anbieter' => null, 'produkt' => null];
+    }
+
     /** @return array<string,mixed> */
     private function parseEnergy(): array
     {
         $raw = [];
 
-        $raw['tariff'] = $this->labelValue('Produkt');
+        // Produktname bevorzugt aus der KOPFZEILE: sie ist gross gesetzt und
+        // wird sauber gelesen, waehrend die kleine Tarif-Tabelle im Bild gern
+        // verstuemmelt ankommt ("Fair ö 24" statt "Fair Ökostrom 24").
+        $raw['tariff'] = $this->kopfzeile()['produkt'] ?? $this->labelValue('Produkt');
         $raw['grid_operator'] = $this->labelValue('Netzbetreiber');
         $raw['previous_provider'] = $this->labelValue('Vorversorger');
 
@@ -342,19 +387,20 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
     private function parseContract(array $energie): array
     {
         $raw = [
-            'insurer' => $this->labelValue('Anbieter'),
+            'insurer' => $this->kopfzeile()['anbieter'] ?? $this->labelValue('Anbieter'),
             'tariff' => $energie['tariff'] ?? null,
             // Ein Auftrag ist noch keine Bestaetigung.
             'document_stage' => Contract::STAGE_ANTRAG,
         ];
 
-        // Sparte aus dem Feld "Tariftyp" (nicht aus Stichwoertern im Text).
+        // Sparte aus dem Feld "Tariftyp"; verliest die OCR die Beschriftung
+        // ("Tarityp"), entscheidet der Produktname ("Fair Ökostrom 24").
         $typ = mb_strtolower((string) ($this->labelValue('Tariftyp') ?? ''));
+        $produkt = mb_strtolower((string) ($raw['tariff'] ?? ''));
         $raw['sparte'] = match (true) {
-            str_contains($typ, 'gas')   => 'gas',
-            str_contains($typ, 'strom') => 'strom',
-            default                     => str_contains(mb_strtolower((string) ($energie['tariff'] ?? '')), 'gas')
-                ? 'gas' : 'strom',
+            str_contains($typ, 'gas'), str_contains($produkt, 'gas')     => 'gas',
+            str_contains($typ, 'strom'), str_contains($produkt, 'strom') => 'strom',
+            default                                                      => 'strom',
         };
 
         // Lieferbeginn NUR als echtes Datum ("schnellstmoeglich" ist keins).
@@ -379,8 +425,9 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
     private function extras(array $energie, array $insurance): string
     {
         $out = '.';
-        if (($v = $this->labelValue('Auftragsnummer')) !== null && preg_match('/^[\w\-]{4,30}$/u', trim($v))) {
-            $out .= ' Auftragsnummer ' . trim($v) . ' (keine Vertragsnummer - die bringt erst die Vertragsbestaetigung).';
+        $nummer = $this->labelValue('Auftragsnummer') ?? $this->kopfzeile()['nummer'];
+        if ($nummer !== null && preg_match('/^[\w\-]{4,30}$/u', trim($nummer))) {
+            $out .= ' Auftragsnummer ' . trim($nummer) . ' (keine Vertragsnummer - die bringt erst die Vertragsbestaetigung).';
         }
         if (isset($energie['malo_id'])) {
             $out .= ' MaLo-ID ' . $energie['malo_id'] . '.';
@@ -485,6 +532,27 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
             return true;
         }
         return preg_match('/\p{L}{3,}/u', $n) === 1 && count(preg_split('/\s+/u', $n) ?: []) >= 2;
+    }
+
+    /**
+     * IBAN-Pruefziffer nach ISO 7064 (Modulo 97): die ersten vier Zeichen
+     * wandern ans Ende, Buchstaben werden zu Zahlen (A=10 ... Z=35), der Rest
+     * der Division durch 97 muss 1 sein. Damit faellt ein von der OCR
+     * verlesenes Zeichen praktisch immer auf.
+     */
+    private function ibanChecksumValid(string $iban): bool
+    {
+        $umgestellt = mb_substr($iban, 4) . mb_substr($iban, 0, 4);
+        $zahl = '';
+        foreach (str_split($umgestellt) as $zeichen) {
+            $zahl .= ctype_alpha($zeichen) ? (string) (ord(strtoupper($zeichen)) - 55) : $zeichen;
+        }
+        $rest = 0;
+        foreach (str_split($zahl, 7) as $block) {
+            $rest = (int) ((string) $rest . $block) % 97;
+        }
+
+        return $rest === 1;
     }
 
     /** "+49 0176 23681009" -> "017623681009"; sonst null. */
