@@ -293,7 +293,7 @@ function confirmBulkDelete(form) {
             </td>
             {{-- Aktive Verträge als Icons (eager-geladen, nur status=active) --}}
             <td style="white-space:nowrap;">
-                @php $activeTypes = $c->contracts->pluck('type')->unique(); @endphp
+                @php $activeTypes = $c->contracts->filter(fn($v) => $v->isCurrentlyActive())->pluck('type')->unique(); @endphp
                 @forelse($activeTypes as $t)
                     @php $cfg = $typeConfig[$t] ?? $typeConfig['andere']; @endphp
                     <span title="{{ $cfg['label'] }}" aria-label="{{ $cfg['label'] }}"

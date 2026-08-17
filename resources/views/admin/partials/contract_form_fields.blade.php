@@ -112,12 +112,35 @@
     }
 @endphp
 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+    {{-- Status-Auswahl (Betreiber-Vorgabe 17.08.2026): sprechende Labels statt
+         nackter Statuswoerter, Gruppierung nach Bestandswirkung und ein
+         Live-Hinweis, was der gewaehlte Status ausloest. Quelle:
+         Contract::STATUS_OPTIONS - dieselbe Liste validiert der Controller. --}}
     <div class="field"><label>Status *</label>
-        <select name="status" required style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
-            @foreach(['active'=>'Aktiv','pending'=>'In Bearbeitung','cancelled'=>'Gekündigt','expired'=>'Abgelaufen'] as $sk => $sl)
-            <option value="{{ $sk }}" {{ $curStatus === $sk ? 'selected' : '' }}>{{ $sl }}</option>
-            @endforeach
+        <select name="status" id="contract-status" required onchange="contractStatusHint()" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+            <optgroup label="Aktueller Bestand">
+                @foreach(\App\Models\Contract::STATUS_OPTIONS as $sk => $so)
+                @if($so['group'] === \App\Models\Contract::GROUP_ACTIVE)
+                <option value="{{ $sk }}" {{ $curStatus === $sk ? 'selected' : '' }}>{{ $so['label'] }}</option>
+                @endif
+                @endforeach
+            </optgroup>
+            <optgroup label="Noch kein Bestand">
+                @foreach(\App\Models\Contract::STATUS_OPTIONS as $sk => $so)
+                @if($so['group'] === \App\Models\Contract::GROUP_PENDING)
+                <option value="{{ $sk }}" {{ $curStatus === $sk ? 'selected' : '' }}>{{ $so['label'] }}</option>
+                @endif
+                @endforeach
+            </optgroup>
+            <optgroup label="Beendet / Historie">
+                @foreach(\App\Models\Contract::STATUS_OPTIONS as $sk => $so)
+                @if($so['group'] === \App\Models\Contract::GROUP_HISTORY)
+                <option value="{{ $sk }}" {{ $curStatus === $sk ? 'selected' : '' }}>{{ $so['label'] }}</option>
+                @endif
+                @endforeach
+            </optgroup>
         </select>
+        <div id="contract-status-hint" style="font-size:11.5px;color:var(--ink-soft);margin-top:5px;line-height:1.5;"></div>
     </div>
     <div class="field"><label>Beginn</label>
         <div style="display:flex;gap:8px;">
@@ -432,6 +455,21 @@ function contractCancelHint() {
     }
 }
 
+// ---- Status-Hinweis: was bewirkt der gewaehlte Status? ----
+// Hinweistexte aus Contract::STATUS_OPTIONS gespiegelt, damit Auswahl und
+// Fachregel nicht auseinanderlaufen (eine Quelle).
+const CONTRACT_STATUS_HINTS = @json(collect(\App\Models\Contract::STATUS_OPTIONS)->map(fn ($o) => ['hint' => $o['hint'], 'group' => $o['group']]));
+
+function contractStatusHint() {
+    const sel = document.getElementById('contract-status');
+    const box = document.getElementById('contract-status-hint');
+    if (!sel || !box) return;
+    const cfg = CONTRACT_STATUS_HINTS[sel.value];
+    if (!cfg) { box.textContent = ''; return; }
+    box.textContent = (cfg.group === 'aktiv' ? '✅ ' : (cfg.group === 'historie' ? '🗄 ' : '🕓 ')) + cfg.hint;
+    box.style.color = cfg.group === 'aktiv' ? '#0E7A41' : 'var(--ink-soft)';
+}
+
 // Heute-Button: setzt den Beginn auf das heutige Datum (lokale Zeit).
 function contractSetToday() {
     const el = document.getElementById('contract-start');
@@ -462,5 +500,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     document.getElementById('sparte').addEventListener('change', contractCancelHint);
     contractCancelHint();
+    contractStatusHint();
 });
 </script>

@@ -59,7 +59,7 @@ class EscooterRenewalReminderService
 
         $contracts = Contract::with(['customer.user', 'vehicleDetail', 'switchReminders'])
             ->where('type', 'escooter')
-            ->where('status', 'active')
+            ->currentlyActive()
             ->when($visibleCustomerIds !== null, fn($q) => $q->whereIn('customer_id', $visibleCustomerIds))
             ->get();
 

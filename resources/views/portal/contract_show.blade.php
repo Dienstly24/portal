@@ -19,6 +19,13 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
         @php $st = $contract->displayStatus(); @endphp
         <span class="badge badge-{{ $st['badge'] }}" style="margin-left:auto;white-space:nowrap;">{{ __($st['label_key'], $st['params']) }}</span>
     </div>
+    {{-- Beendeter Vertrag: unmissverstaendlich sagen, dass er nicht mehr gilt
+         (der Badge allein koennte als "laeuft noch" gelesen werden). --}}
+    @if($st['historic'])
+    <div style="font-size:12.5px;color:var(--ink-soft);background:var(--canvas);border:1px solid var(--line);border-radius:8px;padding:9px 12px;margin-top:12px;line-height:1.55;">
+        {{ __('Dieser Vertrag ist beendet und gilt nicht mehr. Er bleibt für Ihre Unterlagen sichtbar.') }}
+    </div>
+    @endif
 </div>
 
 {{-- Allgemeine Vertragsdaten --}}

@@ -11,6 +11,22 @@
     <div class="page-sub">{{ $contract->typeIcon() }} {{ $contract->typeLabel() }} · {{ $contract->insurer }}</div>
 </div>
 
+{{-- Bestandszustand auch in den Vertragsdetails eindeutig nennen (dieselbe
+     Quelle wie Liste und Vertragsstruktur: Contract::displayStatus/statusGroup). --}}
+@php $editStatus = $contract->displayStatus(); @endphp
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
+    <span class="badge badge-{{ $editStatus['badge'] }}" style="white-space:nowrap;">{{ $editStatus['label'] }}</span>
+    <span style="font-size:12.5px;color:var(--ink-soft);">
+        @if($editStatus['historic'])
+        🗄 <strong>Beendet / Historie</strong> – dieser Vertrag zählt nicht zum aktiven Bestand und erscheint nicht in der Vertragsstruktur des Kunden.
+        @elseif($contract->isPendingStatus())
+        🕓 <strong>In Bearbeitung</strong> – noch nicht im Bestand; erscheint nicht in der Vertragsstruktur.
+        @else
+        ✅ <strong>Aktiver Bestand</strong> – zählt zu den aktiven Verträgen und erscheint in der Vertragsstruktur.
+        @endif
+    </span>
+</div>
+
 @if($contract->isApplication())
 {{-- Aus einem Auftrag/Antrag entstanden: die Vertragsbestaetigung fehlt noch. --}}
 <div style="background:#FEF3C7;border:1px solid #E8C36A;border-radius:10px;padding:14px 16px;margin-bottom:20px;max-width:980px;font-size:13px;">

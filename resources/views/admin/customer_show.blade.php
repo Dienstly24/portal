@@ -4,9 +4,29 @@
 @php
 // Zentrale Sparten-Definition (Contract::TYPES) - eine Quelle für alle Views.
 $typeConfig = \App\Models\Contract::TYPES;
-$activeTypes = $customer->contracts->where('status','active')->pluck('type')->unique()->toArray();
-// Anzahl aller Vertraege je Sparte - fuer die Zaehler-Badges an den Struktur-Symbolen.
-$typeCounts = $customer->contracts->countBy('type')->toArray();
+// AKTUELLE VERTRAGSSTRUKTUR = ausschliesslich aktive Vertraege (Betreiber-
+// Vorgabe 17.08.2026). Gekuendigte/abgelaufene Vertraege bleiben in der
+// Registerkarte "Verträge" unter "Beendet / Historie" nachvollziehbar,
+// erhoehen aber NIE die Zahl der aktiven Vertraege. Die Zuordnung kommt
+// zentral aus Contract::isCurrentlyActive() - nie aus status === 'active',
+// sonst wuerde z.B. ein zum Ablauf gekuendigter Vertrag mitzaehlen.
+$aktiveVertraege = $customer->contracts->filter(fn($c) => $c->isCurrentlyActive());
+$historieVertraege = $customer->contracts->filter(fn($c) => $c->isHistoric());
+$anbahnungVertraege = $customer->contracts->filter(fn($c) => $c->isPendingStatus());
+$activeTypes = $aktiveVertraege->pluck('type')->unique()->toArray();
+// Zaehler-Badges an den Struktur-Symbolen: NUR aktive Vertraege.
+$typeCounts = $aktiveVertraege->countBy('type')->toArray();
+// Historie/Anbahnung je Sparte - nur fuer den Tooltip, nie fuer das Badge.
+$historieCounts = $historieVertraege->countBy('type')->toArray();
+$anbahnungCounts = $anbahnungVertraege->countBy('type')->toArray();
+// WECHSEL-KETTE: Ein bereits gekuendigter Vertrag laeuft bis zum Ablauf noch
+// (Betreiber-Regel 26.07.2026: "Gekündigt zum X" ist bis dahin aktiv), der
+// Folgevertrag ist "Aktiv ab X". Beide sind heute aktiv - deshalb kann eine
+// Sparte kurzzeitig 2 aktive Vertraege haben. Damit die Zahl erklaerbar ist,
+// wird der auslaufende Vertrag im Tooltip ausgewiesen (nie als Historie
+// gezaehlt, er laeuft ja noch).
+$auslaufendCounts = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_date))->countBy('type')->toArray();
+$auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_date))->count();
 @endphp
 
 <div class="page-header">
@@ -106,7 +126,9 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
 <div class="cust-tabs">
     <button type="button" class="cust-tab active" data-tab="tab-uebersicht" onclick="showCustTab('tab-uebersicht',this)">📄 Übersicht</button>
     <button type="button" id="cust-tab-familie" class="cust-tab" data-tab="tab-familie" onclick="showCustTab('tab-familie',this)">👨‍👩‍👦 Familie <span style="opacity:.7;">({{ $customer->family->count() }})</span></button>
-    <button type="button" class="cust-tab" data-tab="tab-vertraege" onclick="showCustTab('tab-vertraege',this)">📑 Verträge <span style="opacity:.7;">({{ $customer->contracts->count() }})</span></button>
+    {{-- Zaehler nennt AKTIV und GESAMT getrennt: die Registerkarte enthaelt
+         auch die Historie, der aktive Bestand ist aber die fuehrende Zahl. --}}
+    <button type="button" class="cust-tab" data-tab="tab-vertraege" onclick="showCustTab('tab-vertraege',this)">📑 Verträge <span style="opacity:.7;">({{ $aktiveVertraege->count() }} aktiv @if($customer->contracts->count() !== $aktiveVertraege->count())/ {{ $customer->contracts->count() }} gesamt @endif)</span></button>
     <button type="button" class="cust-tab" data-tab="tab-dokumente" onclick="showCustTab('tab-dokumente',this)">📎 Dokumente <span style="opacity:.7;">({{ $customer->documents->count() }})</span></button>
     <button type="button" class="cust-tab" data-tab="tab-tickets" onclick="showCustTab('tab-tickets',this)">🎫 Tickets <span style="opacity:.7;">({{ $customer->tickets->count() }})</span></button>
     <button type="button" class="cust-tab" data-tab="tab-kommunikation" onclick="showCustTab('tab-kommunikation',this)">🧭 Kommunikation <span style="opacity:.7;">({{ $conversationTimeline->count() }})</span></button>
@@ -123,15 +145,60 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
     .vstruct-tile:hover{transform:translateY(-3px);}
     .vstruct-tile:hover .vstruct-icon{box-shadow:0 5px 16px rgba(0,0,0,.14);}
     .vstruct-tile:focus-visible{outline:2px solid var(--accent,#17A65B);outline-offset:3px;border-radius:12px;}
+    /* Beendete Vertraege (Historie) sind auch beim Mischen mit aktiven
+       Vertraegen sofort als "nicht mehr aktiv" erkennbar: ausgegraut,
+       gedeckter Hintergrund, zusaetzlich das Textkennzeichen unten. */
+    .contract-row-historic{background:#F3F0E8;color:var(--ink-soft);}
+    .contract-row-historic td{opacity:.72;}
+    .contract-histflag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.02em;
+        text-transform:uppercase;color:#5F6B62;background:#EAE6DA;border:1px solid #E0DCD0;
+        border-radius:6px;padding:1px 6px;white-space:nowrap;}
 </style>
 <div class="card" style="margin-bottom:20px;">
-    <div class="card-title" style="margin-bottom:6px;">Vertragsstruktur</div>
-    <p style="font-size:12px;color:var(--ink-soft);margin:0 0 16px;">Symbol anklicken, um die Verträge dieser Sparte zu öffnen.</p>
+    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+        <div class="card-title" style="margin-bottom:0;">Aktuelle Vertragsstruktur</div>
+        <span style="font-size:12px;font-weight:600;color:#0E7A41;background:#E7F6EE;border:1px solid #BFE6D2;border-radius:999px;padding:2px 10px;">
+            {{ $aktiveVertraege->count() }} {{ $aktiveVertraege->count() === 1 ? 'aktiver Vertrag' : 'aktive Verträge' }}
+        </span>
+    </div>
+    <p style="font-size:12px;color:var(--ink-soft);margin:0 0 16px;line-height:1.6;">
+        Zeigt <strong>ausschließlich aktive Verträge</strong>. Symbol anklicken, um die Verträge dieser Sparte zu öffnen.
+        @if($historieVertraege->count() || $anbahnungVertraege->count())
+        <br>
+        @if($historieVertraege->count())
+        {{ $historieVertraege->count() === 1
+            ? '1 beendeter Vertrag (gekündigt/abgelaufen) zählt nicht mit und steht'
+            : $historieVertraege->count() . ' beendete Verträge (gekündigt/abgelaufen) zählen nicht mit und stehen' }}
+        in der Registerkarte „Verträge“ unter <strong>„Beendet / Historie“</strong>.
+        @endif
+        @if($anbahnungVertraege->count())
+        {{ $anbahnungVertraege->count() }} Vertrag/Verträge „In Bearbeitung“ zählen ebenfalls nicht zum aktiven Bestand.
+        @endif
+        @endif
+        @if($auslaufendGesamt > 0)
+        <br>Hinweis: {{ $auslaufendGesamt === 1 ? 'ein aktiver Vertrag ist' : $auslaufendGesamt . ' aktive Verträge sind' }}
+        bereits <strong>gekündigt und läuft noch bis zum Ablauf</strong> – bis dahin zählt er zum Bestand
+        (Versicherer-Wechsel: „Gekündigt zum X“ + „Aktiv ab X“).
+        @endif
+    </p>
     <div style="display:flex;gap:12px;flex-wrap:wrap;">
         @foreach($typeConfig as $key => $cfg)
-        @php $isActive = in_array($key, $activeTypes); $count = $typeCounts[$key] ?? 0; @endphp
+        @php
+            $isActive = in_array($key, $activeTypes);
+            $count = $typeCounts[$key] ?? 0;
+            // Tooltip nennt Historie/Anbahnung ausdruecklich, damit niemand
+            // die kleinere Badge-Zahl fuer Datenverlust haelt.
+            $tipExtra = [];
+            if (($auslaufendCounts[$key] ?? 0) > 0) $tipExtra[] = ($auslaufendCounts[$key]) . ' davon gekündigt (läuft noch bis zum Ablauf)';
+            if (($historieCounts[$key] ?? 0) > 0) $tipExtra[] = ($historieCounts[$key]) . ' beendet (Historie)';
+            if (($anbahnungCounts[$key] ?? 0) > 0) $tipExtra[] = ($anbahnungCounts[$key]) . ' in Bearbeitung';
+            $tip = $count > 0
+                ? $count . ' aktive' . ($count === 1 ? 'r Vertrag' : ' Verträge') . ' – ' . $cfg['label'] . ' öffnen'
+                : 'Kein aktiver Vertrag – ' . $cfg['label'] . ' anlegen';
+            if ($tipExtra) $tip .= ' · ' . implode(', ', $tipExtra);
+        @endphp
         <div class="vstruct-tile" role="button" tabindex="0"
-            title="{{ $count > 0 ? $count . ' Vertrag/Verträge – ' . $cfg['label'] . ' öffnen' : 'Keine Verträge – ' . $cfg['label'] . ' anlegen' }}"
+            title="{{ $tip }}"
             style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;"
             onclick="openContractType('{{ $key }}')"
             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openContractType('{{ $key }}');}">
@@ -407,7 +474,9 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
 {{-- Beitrags-Statistik: was zahlt der Kunde ueber alle AKTIVEN Vertraege
      (auf den Monat normiert, damit unterschiedliche Zahlweisen vergleichbar sind). --}}
 @php
-    $activeContracts = $customer->contracts->where('status', 'active');
+    // Gleiche Quelle wie die Vertragsstruktur: nur AKTIVE Vertraege - ein
+    // gekuendigter Vertrag darf die laufenden Kosten nicht aufblaehen.
+    $activeContracts = $aktiveVertraege;
     $monthlyTotal = $activeContracts->sum(fn($c) => $c->monthlyPremium());
     $yearlyTotal  = $activeContracts->sum(fn($c) => $c->yearlyPremium());
     $withPremium  = $activeContracts->filter(fn($c) => $c->hasPremium())->count();
@@ -434,15 +503,31 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
 @endif
 {{-- Verträge --}}
 <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-        <div class="card-title">Verträge</div>
-        <select id="filter-type" onchange="filterContracts()" style="padding:6px 12px;border:1px solid var(--line);border-radius:6px;font-size:13px;">
-            <option value="">Alle Typen</option>
-            @foreach($typeConfig as $key => $cfg)
-            <option value="{{ $key }}">{{ $cfg['icon'] }} {{ $cfg['label'] }}</option>
-            @endforeach
-        </select>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px;flex-wrap:wrap;">
+        <div class="card-title" style="margin-bottom:0;">Verträge</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            {{-- Bestandsgruppe: aktiver Bestand (Standard) / Historie / alles.
+                 Historie ist bewusst NICHT vorausgewaehlt und wird beim
+                 Anzeigen klar als beendet gekennzeichnet (Zeilen ausgegraut,
+                 Badge "Historie", Hinweiszeile ueber der Tabelle). --}}
+            <select id="filter-group" onchange="filterContracts()" style="padding:6px 12px;border:1px solid var(--line);border-radius:6px;font-size:13px;">
+                <option value="aktiv">✅ Aktiver Bestand ({{ $aktiveVertraege->count() }})</option>
+                @if($anbahnungVertraege->count())
+                <option value="anbahnung">🕓 In Bearbeitung ({{ $anbahnungVertraege->count() }})</option>
+                @endif
+                <option value="historie">🗄 Beendet / Historie ({{ $historieVertraege->count() }})</option>
+                <option value="">Alle Verträge ({{ $customer->contracts->count() }})</option>
+            </select>
+            <select id="filter-type" onchange="filterContracts()" style="padding:6px 12px;border:1px solid var(--line);border-radius:6px;font-size:13px;">
+                <option value="">Alle Typen</option>
+                @foreach($typeConfig as $key => $cfg)
+                <option value="{{ $key }}">{{ $cfg['icon'] }} {{ $cfg['label'] }}</option>
+                @endforeach
+            </select>
+        </div>
     </div>
+    {{-- Hinweis-Leiste: erklaert die gerade gezeigte Gruppe (per JS umgeschaltet). --}}
+    <div id="contract-group-hint" style="display:none;font-size:12.5px;border-radius:8px;padding:9px 12px;margin-bottom:14px;line-height:1.55;"></div>
     <table id="contracts-table" style="width:100%;border-collapse:collapse;font-size:14px;">
         <thead><tr style="background:#F8F9FA;">
             <th style="text-align:left;padding:10px 12px;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--line);">Typ</th>
@@ -456,8 +541,14 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
         </tr></thead>
         <tbody>
         @forelse($customer->contracts as $c)
-        @php $cfg = $typeConfig[$c->type] ?? $typeConfig['andere']; @endphp
-        <tr class="contract-row row-link" data-type="{{ $c->type }}" style="border-bottom:1px solid var(--line);" onclick="rowNav(event, '{{ route('admin.contract.edit', $c->id) }}')" title="Vertrag öffnen">
+        @php
+            $cfg = $typeConfig[$c->type] ?? $typeConfig['andere'];
+            // Bestandsgruppe zentral aus dem Modell - dieselbe Quelle wie die
+            // Vertragsstruktur, damit Liste und Struktur nie widersprechen.
+            $cGroup = $c->statusGroup();
+            $cHistoric = $cGroup === \App\Models\Contract::GROUP_HISTORY;
+        @endphp
+        <tr class="contract-row row-link{{ $cHistoric ? ' contract-row-historic' : '' }}" data-type="{{ $c->type }}" data-group="{{ $cGroup }}" style="border-bottom:1px solid var(--line);" onclick="rowNav(event, '{{ route('admin.contract.edit', $c->id) }}')" title="{{ $cHistoric ? 'Beendeter Vertrag (Historie) – öffnen' : 'Vertrag öffnen' }}">
             <td style="padding:12px;">
                 <div style="display:flex;align-items:center;gap:8px;">
                     <span style="width:32px;height:32px;border-radius:8px;background:{{ $cfg['bg'] }};display:flex;align-items:center;justify-content:center;font-size:16px;">{{ $c->typeIcon() }}</span>
@@ -481,6 +572,13 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
             <td style="padding:12px;">
                 @php $st = $c->displayStatus(); @endphp
                 <span class="badge badge-{{ $st['badge'] }}" style="white-space:nowrap;">{{ $st['label'] }}</span>
+                {{-- Eindeutige Kennzeichnung: dieser Vertrag ist NICHT Teil der
+                     aktuellen Vertragsstruktur (Betreiber-Vorgabe 17.08.2026). --}}
+                @if($st['historic'])
+                <div style="margin-top:4px;"><span class="contract-histflag">🗄 Historie – nicht aktiv</span></div>
+                @elseif($cGroup === \App\Models\Contract::GROUP_PENDING)
+                <div style="margin-top:4px;"><span class="contract-histflag">🕓 Noch nicht im Bestand</span></div>
+                @endif
                 @include('admin.partials.contract_stage_badge', ['contract' => $c])
             </td>
             <td style="padding:12px;font-size:12px;color:var(--ink-soft);">
@@ -505,7 +603,9 @@ $typeCounts = $customer->contracts->countBy('type')->toArray();
             </td>
         </tr>
         @if($c->vehicleDetail || $c->energyDetail || $c->internetDetail)
-        <tr class="contract-row" data-type="{{ $c->type }}">
+        {{-- Detailzeile traegt dieselbe Gruppe wie ihre Vertragszeile, damit
+             beide Zeilen im Filter immer zusammen ein-/ausgeblendet werden. --}}
+        <tr class="contract-row{{ $cHistoric ? ' contract-row-historic' : '' }}" data-type="{{ $c->type }}" data-group="{{ $cGroup }}">
             <td colspan="8" style="padding:4px 12px 12px;">
                 <div style="font-size:12.5px;color:var(--ink-soft);background:var(--canvas);border:1px solid var(--line);border-radius:8px;padding:8px 12px;">
                     @if($v = $c->vehicleDetail)
@@ -1068,8 +1168,10 @@ function smartReanalyze(docId, btn) {
                 <div class="field"><label>Zu Vertrag zuordnen (optional)</label>
                     <select name="contract_id" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
                         <option value="">— kein Vertrag —</option>
+                        {{-- Alle Vertraege waehlbar (auch beendete - Post kommt
+                             auch zu Altvertraegen), beendete aber gekennzeichnet. --}}
                         @foreach($customer->contracts as $ct)
-                        <option value="{{ $ct->id }}">{{ $ct->typeIcon() }} {{ $ct->insurer }}@if($ct->contract_number) · {{ $ct->contract_number }}@endif</option>
+                        <option value="{{ $ct->id }}">{{ $ct->typeIcon() }} {{ $ct->insurer }}@if($ct->contract_number) · {{ $ct->contract_number }}@endif @if($ct->isHistoric()) · beendet @elseif($ct->isPendingStatus()) · in Bearbeitung @endif</option>
                         @endforeach
                     </select>
                 </div>
@@ -1161,24 +1263,54 @@ function smartReanalyze(docId, btn) {
 const CONTRACT_TYPE_LABELS = @json(collect($typeConfig)->map(fn($c) => $c['label']));
 const CONTRACT_CREATE_URL  = @json(route('admin.contract.create', $customer->id));
 
+// Gruppen-Texte der Hinweisleiste: was der Nutzer gerade sieht und was das
+// fuer den aktiven Bestand bedeutet (Betreiber-Vorgabe 17.08.2026).
+const CONTRACT_GROUP_HINTS = {
+    'aktiv':     {text: '✅ Aktiver Bestand: nur laufende Verträge – genau diese bilden die aktuelle Vertragsstruktur.', bg: '#E7F6EE', border: '#BFE6D2', color: '#0E7A41'},
+    'anbahnung': {text: '🕓 In Bearbeitung: noch nicht abgeschlossen – diese Verträge zählen NICHT zum aktiven Bestand und erscheinen nicht in der Vertragsstruktur.', bg: '#FEF3C7', border: '#F0E0B0', color: '#92400E'},
+    'historie':  {text: '🗄 Beendet / Historie: gekündigte und abgelaufene Verträge. Sie sind nur zur Nachvollziehbarkeit sichtbar, zählen NICHT als aktive Verträge und erscheinen nicht in der Vertragsstruktur.', bg: '#F3F0E8', border: '#E0DCD0', color: '#5F6B62'},
+    '':          {text: 'ℹ️ Alle Verträge (aktiv + Historie gemischt). Beendete Verträge sind ausgegraut und mit „Historie – nicht aktiv" gekennzeichnet; sie zählen nicht zum aktiven Bestand.', bg: '#EEF0F3', border: '#E0DCD0', color: '#5F6B62'},
+};
+
 function filterContracts() {
     const type = document.getElementById('filter-type').value;
+    const groupSel = document.getElementById('filter-group');
+    const group = groupSel ? groupSel.value : '';
     const rows = document.querySelectorAll('.contract-row');
     let visible = 0;
     rows.forEach(row => {
-        const show = !type || row.dataset.type === type;
+        const typeMatch = !type || row.dataset.type === type;
+        const groupMatch = !group || row.dataset.group === group;
+        const show = typeMatch && groupMatch;
         row.style.display = show ? '' : 'none';
-        if (show) visible++;
+        // Nur Hauptzeilen zaehlen (Detailzeilen haben kein data-status-Feld
+        // und wuerden die Anzahl verdoppeln).
+        if (show && row.classList.contains('row-link')) visible++;
     });
-    // Hinweis + Anlage-Button zeigen, wenn nach einer Sparte gefiltert wird,
-    // es Vertraege gibt, aber keinen dieser Sparte.
+    // Hinweisleiste zur gewaehlten Gruppe.
+    const gh = document.getElementById('contract-group-hint');
+    if (gh) {
+        const cfg = CONTRACT_GROUP_HINTS[group] || CONTRACT_GROUP_HINTS[''];
+        gh.textContent = cfg.text;
+        gh.style.background = cfg.bg;
+        gh.style.border = '1px solid ' + cfg.border;
+        gh.style.color = cfg.color;
+        gh.style.display = '';
+    }
+    // Hinweis + Anlage-Button zeigen, wenn die aktuelle Auswahl leer ist.
+    // Wichtig: der Text nennt die GRUPPE, damit "kein aktiver Vertrag" nicht
+    // mit "kein Vertrag vorhanden" verwechselt wird (die Historie kann
+    // durchaus Verträge dieser Sparte enthalten).
     const hint = document.getElementById('contract-type-empty');
     if (hint) {
-        if (type && rows.length > 0 && visible === 0) {
-            document.getElementById('contract-type-empty-text').textContent =
-                'Keine Verträge der Sparte „' + (CONTRACT_TYPE_LABELS[type] || type) + '".';
-            document.getElementById('contract-type-empty-add').href =
-                CONTRACT_CREATE_URL + '?type=' + encodeURIComponent(type);
+        if (rows.length > 0 && visible === 0) {
+            const gruppe = group === 'aktiv' ? 'aktiven ' : (group === 'historie' ? 'beendeten ' : (group === 'anbahnung' ? 'Verträge „In Bearbeitung" ' : ''));
+            document.getElementById('contract-type-empty-text').textContent = type
+                ? 'Keine ' + gruppe + 'Verträge der Sparte „' + (CONTRACT_TYPE_LABELS[type] || type) + '".'
+                : 'Keine ' + gruppe + 'Verträge vorhanden.';
+            document.getElementById('contract-type-empty-add').href = type
+                ? CONTRACT_CREATE_URL + '?type=' + encodeURIComponent(type)
+                : CONTRACT_CREATE_URL;
             hint.style.display = '';
         } else {
             hint.style.display = 'none';
@@ -1187,16 +1319,24 @@ function filterContracts() {
 }
 
 // Klick auf ein Struktur-Symbol: zur Vertraege-Registerkarte wechseln,
-// auf die Sparte filtern und zur Liste scrollen.
+// auf die Sparte filtern und zur Liste scrollen. Die Struktur zeigt AKTIVE
+// Vertraege - der Klick fuehrt daher in den aktiven Bestand dieser Sparte.
 function openContractType(key) {
     const tabBtn = document.querySelector('.cust-tab[data-tab="tab-vertraege"]');
     if (tabBtn) showCustTab('tab-vertraege', tabBtn);
     const sel = document.getElementById('filter-type');
     if (sel) sel.value = key;
+    const grp = document.getElementById('filter-group');
+    if (grp) grp.value = 'aktiv';
     filterContracts();
     const table = document.getElementById('contracts-table');
     if (table) table.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+
+// Startzustand herstellen: die Auswahl steht auf "Aktiver Bestand", also
+// muessen die Historie-Zeilen beim Laden ausgeblendet werden (sonst zeigt die
+// Tabelle etwas anderes als der Filter behauptet).
+document.addEventListener('DOMContentLoaded', filterContracts);
 </script>
 
 <div style="display:flex;gap:10px;margin-top:24px;padding-top:20px;border-top:1px solid var(--line);">
@@ -1258,7 +1398,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <select name="contract_id" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;">
                             <option value="">— keiner —</option>
                             @foreach($customer->contracts as $ct)
-                            <option value="{{ $ct->id }}">{{ $ct->contract_number }} ({{ $ct->insurer }})</option>
+                            <option value="{{ $ct->id }}">{{ $ct->contract_number }} ({{ $ct->insurer }}@if($ct->isHistoric()) · beendet @endif)</option>
                             @endforeach
                         </select>
                     </div>
@@ -1306,8 +1446,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="field"><label>Zu Vertrag zuordnen</label>
                     <select name="contract_id" id="doc-edit-contract" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
                         <option value="">— kein Vertrag —</option>
+                        {{-- Alle Vertraege waehlbar (auch beendete - Post kommt
+                             auch zu Altvertraegen), beendete aber gekennzeichnet. --}}
                         @foreach($customer->contracts as $ct)
-                        <option value="{{ $ct->id }}">{{ $ct->typeIcon() }} {{ $ct->insurer }}@if($ct->contract_number) · {{ $ct->contract_number }}@endif</option>
+                        <option value="{{ $ct->id }}">{{ $ct->typeIcon() }} {{ $ct->insurer }}@if($ct->contract_number) · {{ $ct->contract_number }}@endif @if($ct->isHistoric()) · beendet @elseif($ct->isPendingStatus()) · in Bearbeitung @endif</option>
                         @endforeach
                     </select>
                 </div>

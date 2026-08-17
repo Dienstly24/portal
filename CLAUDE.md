@@ -564,6 +564,39 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   Vertragsnummer, FIN/Kennzeichen, MaLo, NORMALISIERTE Zaehlernummer
   ("1 LOG00 9228 3078" = "1LOG0092283078", Zaehlerfoto traegt den Stand nach)
   und die Kundennummer beim Versorger. Tests: `ContractConfirmationTest`.
+- **AKTIV vs. HISTORIE: die eine Definition** (Betreiber-Vorgabe 17.08.2026,
+  Lehre aus "Strom-Symbol zeigte 2 obwohl nur 1 Vertrag laeuft"): Fachregel ist
+  „**Aktuelle Vertragsstruktur = ausschliesslich aktuell aktive Vertraege**".
+  NIE `status === 'active'` vergleichen - immer `Contract::isCurrentlyActive()`
+  (PHP) bzw. den deckungsgleichen Scope `currentlyActive()` (Query); Gegenstueck
+  `isHistoric()`/`historic()`, „In Bearbeitung" ist `isPendingStatus()`/
+  `inProgress()`. `statusGroup()` liefert genau EINE von drei Gruppen
+  (`GROUP_ACTIVE`/`GROUP_PENDING`/`GROUP_HISTORY`) - Gruppen sind disjunkt und
+  vollstaendig, `displayStatus()` traegt sie als `group`/`historic` mit, damit
+  Badge und Struktur nie widersprechen. Aktiv heisst: Status aktiv UND Deckung
+  nicht beendet (`hasCoverageEnded()`: cancelled/expired immer beendet;
+  Kuendigung ab dem WIRKSAMEN Ende beendet; E-Scooter NACH Saisonende; ein
+  blosses Ablaufdatum ist KEIN Ende - stillschweigende Verlaengerung). Ein
+  Vertrag mit Beginn in der Zukunft („Aktiv ab") gehoert zum Bestand; in der
+  WECHSEL-KETTE sind Altvertrag („Gekündigt zum X", laeuft noch) und
+  Folgevertrag („Aktiv ab X") beide aktiv - die Kundenakte weist den
+  auslaufenden Vertrag deshalb ausdruecklich aus, damit die Zahl erklaerbar
+  bleibt. Historie bleibt sichtbar (Filter „Beendet / Historie", Zeilen
+  ausgegraut + Kennzeichen „Historie – nicht aktiv"), zaehlt aber NIE mit:
+  Vertragsstruktur/Zaehler-Badges, Beitragsuebersicht, Dashboard-Kennzahl,
+  Kundenliste (Sparten-Filter/-Kennzahl, Vertrags-Icons), Berichte,
+  Ablauf-Warnungen, Sparten-Kampagnen, Portal (Zaehler + „Laufende" vs.
+  „Beendete Verträge"). Der Tages-Job `contracts:apply-endings` zieht nur den
+  GESPEICHERTEN Status nach - er darf die Zahl aktiver Vertraege nie aendern
+  (die Anzeige fuehrt den Vertrag vorher schon als beendet). Bewusste
+  Ausnahme: das Provisions-Management folgt weiter dem ROHEN Status
+  (`ContractProvisionService`: 'active'/'pending' beim Anlegen) - die
+  Provision entsteht beim Verkauf, nicht beim Bestandszustand. Status-Auswahl
+  im Formular kommt aus `Contract::STATUS_OPTIONS` (sprechende Labels
+  „Inaktiv / Gekündigt", „Beendet / Abgelaufen", gruppiert nach Wirkung,
+  Live-Hinweis) - dieselbe Liste validiert der Controller
+  (`Contract::statusKeys()`). Tests: `ContractStatusLogicTest` (Abnahmefaelle
+  1-7 + Parität Modell/Query).
 - **Vertrags-Lebenszyklus: schlauer Status, Kuendigung, Wechsel-Automatik**
   (Betreiber-Vorgabe 25./26.07.2026): `cancellation_date` ist das
   EINREICHUNGS-Datum der Kuendigung (Formular-Label "eingereicht am"), der

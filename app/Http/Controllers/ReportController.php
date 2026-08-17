@@ -20,13 +20,22 @@ class ReportController extends Controller
         $ids = $this->visibleCustomerIds();
         $cf = function ($q) use ($ids) { return $ids === null ? $q : $q->whereIn('customer_id', $ids); };
 
+        // Vertraege des Zeitraums nach BESTANDSGRUPPE (Contract::statusGroup()
+        // als Query: currentlyActive/inProgress/historic). Frueher zaehlte hier
+        // der rohe Status - ein zum Ablauf gekuendigter Vertrag erschien dann
+        // als "aktiv", waehrend die Kundenakte ihn korrekt als beendet fuehrte.
         $contracts = [
-            'active' => $cf(Contract::where('status','active'))->whereBetween('created_at',[$from,$to])->count(),
-            'pending' => $cf(Contract::where('status','pending'))->whereBetween('created_at',[$from,$to])->count(),
+            'active' => $cf(Contract::currentlyActive())->whereBetween('created_at',[$from,$to])->count(),
+            'pending' => $cf(Contract::inProgress())->whereBetween('created_at',[$from,$to])->count(),
+            'historic' => $cf(Contract::historic())->whereBetween('created_at',[$from,$to])->count(),
+            // Roh-Status weiterhin einzeln ausgewiesen (Aufteilung der Historie).
             'cancelled' => $cf(Contract::where('status','cancelled'))->whereBetween('created_at',[$from,$to])->count(),
             'expired' => $cf(Contract::where('status','expired'))->whereBetween('created_at',[$from,$to])->count(),
             'total' => $cf(Contract::whereBetween('created_at',[$from,$to]))->count(),
             'by_type' => $cf(Contract::whereBetween('created_at',[$from,$to]))->selectRaw('type, count(*) as count')->groupBy('type')->pluck('count','type'),
+            // Sparten-Verteilung des AKTIVEN Bestands (zeitraum-unabhaengig) -
+            // beantwortet "welche Sparten laufen aktuell", ohne Historie.
+            'active_by_type' => $cf(Contract::currentlyActive())->selectRaw('type, count(*) as count')->groupBy('type')->pluck('count','type'),
         ];
 
         $tickets = [
@@ -44,18 +53,20 @@ class ReportController extends Controller
             'firma' => Customer::where('customer_type','firma')->when($ids !== null, fn($q) => $q->whereIn('customers.id', $ids))->count(),
         ];
 
+        // Bald ablaufend / ueberfaellig: nur AKTIVE Vertraege - ein bereits
+        // gekuendigter Vertrag braucht keine Ablauf-Warnung mehr.
         $expiring = $cf(Contract::with('customer.user'))
             ->whereNotNull('end_date')
             ->whereDate('end_date','>=',now())
             ->whereDate('end_date','<=',now()->addDays(30))
-            ->where('status','active')
+            ->currentlyActive()
             ->orderBy('end_date')
             ->get();
 
         $warnings = $cf(Contract::with('customer.user'))
             ->whereNotNull('end_date')
             ->whereDate('end_date','<',now())
-            ->where('status','active')
+            ->currentlyActive()
             ->count();
 
         return view('admin.reports', compact('contracts','tickets','customers_stats','expiring','warnings','from','to'));

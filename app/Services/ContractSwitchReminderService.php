@@ -73,9 +73,12 @@ class ContractSwitchReminderService
         $due = [];
 
         // ---- End-Datum-basierte Sparten (Internet, Strom/Gas, Kfz) ----
+        // Nur AKTIVE Vertraege OHNE erfasste Kuendigung: wer bereits gekuendigt
+        // hat (Wechsel laeuft), braucht keine "jetzt wechseln"-Erinnerung mehr.
         $contracts = Contract::with(['customer.user', 'switchReminders'])
             ->whereIn('type', array_keys(self::END_DATE_RULES))
-            ->where('status', 'active')
+            ->currentlyActive()
+            ->whereNull('cancellation_date')
             ->whereNotNull('end_date')
             ->when($visibleCustomerIds !== null, fn($q) => $q->whereIn('customer_id', $visibleCustomerIds))
             ->get();
@@ -113,7 +116,7 @@ class ContractSwitchReminderService
         $gkv = Contract::with(['customer.user', 'switchReminders'])
             ->where('type', 'krankenversicherung')
             ->where('subtype', 'gkv')
-            ->where('status', 'active')
+            ->currentlyActive()
             ->whereNotNull('start_date')
             ->when($visibleCustomerIds !== null, fn($q) => $q->whereIn('customer_id', $visibleCustomerIds))
             ->get();

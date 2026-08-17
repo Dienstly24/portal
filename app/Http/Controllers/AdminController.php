@@ -63,7 +63,10 @@ class AdminController extends Controller
         $ids = $this->visibleCustomerIds();
         return view('admin.dashboard', [
             'totalCustomers' => $ids === null ? Customer::count() : count($ids),
-            'activeContracts' => Contract::where('status','active')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->count(),
+            // AKTIVE Vertraege = Contract::currentlyActive() (eine Quelle):
+            // gekuendigte, abgelaufene und beendete Vertraege zaehlen nie mit,
+            // auch wenn der gespeicherte Status noch auf "active" steht.
+            'activeContracts' => Contract::currentlyActive()->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->count(),
             // Gleiche Definition wie der Karten-Link (status=aktiv, nur Kundentickets),
             // damit die Zahl der Liste nach dem Klick entspricht.
             'openTickets' => Ticket::customerOnly()->active()->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->count(),
@@ -79,7 +82,10 @@ class AdminController extends Controller
                 ->join('customer_views', 'customer_views.customer_id', '=', 'customers.id')
                 ->where('customer_views.user_id', auth()->id())
                 ->when($ids !== null, fn($q) => $q->whereIn('customers.id', $ids))
-                ->with('user')->withCount('contracts')
+                // Zaehler auf der Kundenkarte: AKTIVE Vertraege (gleiche
+                // Definition wie ueberall), nicht alle je erfassten.
+                ->with('user')
+                ->withCount(['contracts as active_contracts_count' => fn($q) => $q->currentlyActive()])
                 ->orderByDesc('customer_views.viewed_at')
                 ->take(8)->get(),
         ]);
@@ -90,11 +96,14 @@ class AdminController extends Controller
         // Hinweis-Badge: Anzahl offener Dubletten-Verdachtsfaelle (kurz gecacht).
         $dupCount = $detection->countCached($this->visibleCustomerIds());
         // Aktive Verträge mitladen (nur benötigte Spalten) für die Vertrags-Icons
-        // in der Liste – ohne N+1-Abfragen pro Zeile.
+        // in der Liste – ohne N+1-Abfragen pro Zeile. currentlyActive() liest
+        // dabei cancellation_date/end_date/type mit, weil die Regel diese
+        // Spalten braucht (SELECT ohne sie wuerde die Bedingung leer laufen).
         $query = $this->scopeCustomers(Customer::with([
             'user',
             'betreuer',
-            'contracts' => fn($q) => $q->where('status', 'active')->select('id', 'customer_id', 'type', 'status'),
+            'contracts' => fn($q) => $q->currentlyActive()
+                ->select('id', 'customer_id', 'type', 'status', 'start_date', 'end_date', 'cancellation_date'),
         ]));
         // Filter (E-Mail, Sparte, Portal-Status, Vertrags-Ablauf, letzter Kontakt,
         // Betreuer) + Sortierung aus den GET-Parametern anwenden.
@@ -116,7 +125,7 @@ class AdminController extends Controller
             'ohne_email' => $this->scopeCustomers(Customer::query())
                                 ->whereDoesntHave('user', fn($u) => $this->scopeRealEmail($u))->count(),
             'ablauf'     => $this->scopeCustomers(Customer::query())
-                                ->whereHas('contracts', fn($q) => $q->where('status', 'active')
+                                ->whereHas('contracts', fn($q) => $q->currentlyActive()
                                     ->whereNotNull('end_date')
                                     ->whereBetween('end_date', [today(), today()->addDays(60)]))->count(),
             'kontakt'    => $this->scopeCustomers(Customer::query())
@@ -132,7 +141,7 @@ class AdminController extends Controller
     /** Zaehlt Kunden mit mind. einem AKTIVEN Vertrag der Sparte (portfolio-gescoped). */
     private function countBySparte(string $type): int {
         return $this->scopeCustomers(Customer::query())
-            ->whereHas('contracts', fn($q) => $q->where('status', 'active')->where('type', $type))
+            ->whereHas('contracts', fn($q) => $q->currentlyActive()->where('type', $type))
             ->count();
     }
 
@@ -169,9 +178,10 @@ class AdminController extends Controller
         } elseif ($request->email === 'ohne') {
             $query->whereDoesntHave('user', fn($u) => $this->scopeRealEmail($u));
         }
-        // Sparte: mind. ein aktiver Vertrag dieses Typs.
+        // Sparte: mind. ein aktiver Vertrag dieses Typs (gleiche Definition wie
+        // die Sparten-Kennzahl und die Vertrags-Icons der Liste).
         if ($request->filled('sparte')) {
-            $query->whereHas('contracts', fn($q) => $q->where('status', 'active')->where('type', $request->sparte));
+            $query->whereHas('contracts', fn($q) => $q->currentlyActive()->where('type', $request->sparte));
         }
         // Alphabet-Index: Kundenname (users.name) beginnt mit dem gewaehlten
         // Buchstaben. "XYZ" fasst die seltenen Anfangsbuchstaben X/Y/Z zusammen.
@@ -196,7 +206,7 @@ class AdminController extends Controller
         // Vertrag laeuft demnaechst ab: aktiver Vertrag mit end_date im Fenster.
         if ($request->filled('ablauf')) {
             $days = max(1, (int) $request->ablauf);
-            $query->whereHas('contracts', fn($q) => $q->where('status', 'active')
+            $query->whereHas('contracts', fn($q) => $q->currentlyActive()
                 ->whereNotNull('end_date')
                 ->whereBetween('end_date', [today(), today()->addDays($days)]));
         }
@@ -327,6 +337,9 @@ class AdminController extends Controller
 
     public function contracts() {
         $ids = $this->visibleCustomerIds();
+        // Alle Vertraege laden; die Gruppierung in aktiven Bestand / in
+        // Bearbeitung / Historie macht die View ueber Contract::statusGroup()
+        // (dieselbe Quelle wie Vertragsstruktur und Kennzahlen).
         $contracts = Contract::with('customer.user')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->latest()->get();
         return view('admin.contracts', compact('contracts'));
     }
@@ -574,7 +587,9 @@ class AdminController extends Controller
             'insurer' => 'required|string|max:255',
             // Echte Versicherungsnummer, optional, aber eindeutig.
             'contract_number' => ['nullable', 'string', 'max:255', \Illuminate\Validation\Rule::unique('contracts', 'contract_number')->ignore($ignoreId)],
-            'status' => 'required|in:active,pending,cancelled,expired',
+            // Status-Whitelist aus derselben Quelle wie die Auswahl im Formular
+            // (Contract::STATUS_OPTIONS) - kein zweiter, driftender Wertevorrat.
+            'status' => 'required|in:' . implode(',', Contract::statusKeys()),
             // Vertragsstufe: 'antrag' (Auftrag liegt vor, Bestaetigung fehlt)
             // oder 'vertrag' (Police/Bestaetigung liegt vor). Steuert, ob ein
             // spaeter hochgeladenes Bestaetigungs-Dokument diesen Vertrag

@@ -447,7 +447,6 @@
     "Vorschau": "معاينة",
     "In neuem Tab öffnen": "فتح في تبويب جديد",
     "Neuer Tab": "تبويب جديد",
-    "Schließen": "إغلاق",
     "Mitgliedschaft": "العضوية",
     "Art": "النوع",
     "Basis-Mitgliedschaft": "عضوية أساسية (Basis)",
@@ -647,5 +646,11 @@
     "Persönliche Daten, Adresse und Bankverbindung an einem Ort. Änderungen werden von unserem Team geprüft – Sie können mehrere Änderungen gleichzeitig einreichen.": "بياناتك الشخصية وعنوانك وحسابك البنكي في مكان واحد. تُراجَع التعديلات من فريقنا – ويمكنك إرسال عدة تعديلات في آنٍ واحد.",
     "⏳ Für diesen Vertrag liegt bereits eine Änderungsanfrage in Prüfung (eingereicht am :date). Sie können nach der Bearbeitung eine weitere Änderung einreichen.": "⏳ يوجد لهذا العقد طلب تعديل قيد المراجعة بالفعل (أُرسل في :date). يمكنك إرسال تعديل آخر بعد المعالجة.",
     "✏️ Änderung an diesem Vertrag beantragen": "✏️ طلب تعديل على هذا العقد",
-    "Passen Sie die Vertragsdaten an oder beschreiben Sie im Feld „Anmerkung\" gewünschte Änderungen bzw. Ergänzungen. Ihre Anfrage wird erst nach Freigabe durch unser Team wirksam.": "عدّل بيانات العقد أو صف التعديلات/الإضافات المطلوبة في حقل «ملاحظة». لا يسري طلبك إلا بعد موافقة فريقنا."
+    "Passen Sie die Vertragsdaten an oder beschreiben Sie im Feld „Anmerkung\" gewünschte Änderungen bzw. Ergänzungen. Ihre Anfrage wird erst nach Freigabe durch unser Team wirksam.": "عدّل بيانات العقد أو صف التعديلات/الإضافات المطلوبة في حقل «ملاحظة». لا يسري طلبك إلا بعد موافقة فريقنا.",
+    "Laufende Verträge": "العقود السارية",
+    "Beendete Verträge": "العقود المنتهية",
+    "Diese Verträge sind beendet und gelten nicht mehr. Sie bleiben für Ihre Unterlagen sichtbar.": "هذه العقود منتهية ولم تعد سارية. تبقى ظاهرة لك للاطلاع والحفظ في سجلاتك.",
+    "Diese Verträge sind noch nicht abgeschlossen.": "هذه العقود لم تُبرم بعد.",
+    "Abgelaufen am :date": "منتهي في :date",
+    "Dieser Vertrag ist beendet und gilt nicht mehr. Er bleibt für Ihre Unterlagen sichtbar.": "هذا العقد منتهٍ ولم يعد سارياً. يبقى ظاهراً لك للاطلاع والحفظ في سجلاتك."
 }

@@ -69,28 +69,36 @@
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;">
     <div class="metric-card">
         <div class="metric-icon icon-green">✅</div>
-        <div class="metric-label">Aktivierte Verträge</div>
+        <div class="metric-label">Aktiver Bestand</div>
         <div class="metric-value">{{ $contracts['active'] }}</div>
-        <div class="metric-sub">{{ $contracts['total'] > 0 ? round($contracts['active']/$contracts['total']*100) : 0 }}% Abschlussrate</div>
+        <div class="metric-sub">{{ $contracts['total'] > 0 ? round($contracts['active']/$contracts['total']*100) : 0 }}% der Neuanlagen laufen noch</div>
     </div>
     <div class="metric-card">
         <div class="metric-icon icon-amber">⏳</div>
         <div class="metric-label">In Bearbeitung</div>
         <div class="metric-value">{{ $contracts['pending'] }}</div>
-        <div class="metric-sub">Ausstehende Aktivierung</div>
+        <div class="metric-sub">Noch nicht im Bestand</div>
     </div>
     <div class="metric-card">
         <div class="metric-icon icon-blue">📄</div>
-        <div class="metric-label">Gesamtverträge</div>
+        <div class="metric-label">Neu angelegt (Zeitraum)</div>
         <div class="metric-value">{{ $contracts['total'] }}</div>
-        <div class="metric-sub">Alle Verträge</div>
+        <div class="metric-sub">Aktiv + in Bearbeitung + beendet</div>
     </div>
     <div class="metric-card">
         <div class="metric-icon icon-red">❌</div>
-        <div class="metric-label">Gekündigt / Abgelaufen</div>
-        <div class="metric-value">{{ $contracts['cancelled'] + $contracts['expired'] }}</div>
-        <div class="metric-sub">Inaktive Verträge</div>
+        <div class="metric-label">Beendet / Historie</div>
+        <div class="metric-value">{{ $contracts['historic'] }}</div>
+        <div class="metric-sub">Gekündigt {{ $contracts['cancelled'] }} · Abgelaufen {{ $contracts['expired'] }} – zählen nicht zum Bestand</div>
     </div>
+</div>
+{{-- Klarstellung, damit die Zahlen nicht falsch gelesen werden: die Karten
+     zaehlen die im ZEITRAUM angelegten Vertraege, gruppiert nach ihrem
+     heutigen Zustand (Contract::statusGroup()). "Beendet" enthaelt auch
+     Vertraege, deren wirksames Kuendigungsende bereits erreicht ist. --}}
+<div style="font-size:12px;color:var(--ink-soft);margin:-16px 0 24px;line-height:1.55;">
+    Gezählt werden die im gewählten Zeitraum <strong>angelegten</strong> Verträge, gruppiert nach ihrem
+    <strong>heutigen</strong> Zustand. Beendete Verträge (gekündigt/abgelaufen) zählen nie zum aktiven Bestand.
 </div>
 
 <div class="grid-2">
