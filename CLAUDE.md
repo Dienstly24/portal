@@ -401,6 +401,19 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   wuerde die Fahrzeug-Identitaet spaetere Kfz-Dokumente desselben Autos
   faelschlich dem Haftpflicht-Vertrag zuordnen. IBAN nur, wenn der
   Kontoinhaber der VN ist. Tests: `DeckungsauftragParserTest`.
+  Die POLICE des Online-Gewerbeversicherers **andsafe AG** (Provinzial,
+  24.07.2026) liest `AndsafeGewerbePoliceParser`: Sparte AUSSCHLIESSLICH
+  aus dem Feld "Versicherung" (der Abschnitt "Optionale Einschluesse" nennt
+  zusaetzlich eine Privathaftpflicht - sie ist ein Baustein und darf die
+  Sparte nicht kippen; unbekanntes Produkt laesst die Sparte leer),
+  Beitrag = "Gesamtforderung" zur "Vereinbarten Zahlungsweise" (der
+  wiederkehrende BRUTTO-Betrag; Jahresbeitrag nur ersatzweise, der
+  "Nettobeitrag" der Bausteine NIE). KEINE Bankdaten: die Kunden-IBAN ist
+  maskiert ("DEXXXX...2807"), die vollstaendige IBAN im Brieffuss gehoert
+  der andsafe AG. Mehrzeilige Werte werden ent-silbentrennt
+  ("resul-\ntierende" -> "resultierende"). Gewerbe/Umsatz/Versicherungs-
+  summe/Selbstbeteiligung stehen in der Zusammenfassung. Tests:
+  `AndsafeGewerbePoliceParserTest`.
   Die zugehoerigen POLICEN (Stufe `vertrag`, echte Vertragsnummer,
   06.08.2026): `InterlloydPoliceParser` (Interlloyd/ARAG-Versicherungsschein,
   Sparte aus dem Produktnamen "BHV Business Secure" -> betriebshaftpflicht,
