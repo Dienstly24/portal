@@ -836,6 +836,214 @@ class CustomerAssistantTest extends TestCase
         $this->assertSame(0, $this->staffReplyCount($customer));
     }
 
+    // --------------------------------- Anbieter Claude (bestehender Schluessel)
+
+    /** Claude-Betrieb: derselbe ANTHROPIC_API_KEY wie die Dokumentanalyse. */
+    private function useClaude(): void
+    {
+        config([
+            'services.ai_assistant_provider' => 'claude',
+            'services.anthropic.key' => 'sk-ant-test-nur-fuer-tests',
+            'services.anthropic.assistant_model' => 'claude-opus-5',
+            'services.openai.key' => '',
+        ]);
+        app()->forgetInstance(\App\Services\Ai\Assistant\Contracts\AssistantProviderInterface::class);
+    }
+
+    /** Antwort der Anthropic Messages API: Werkzeugaufruf, dann Text. */
+    private function fakeClaudeToolThenText(string $tool, array $arguments, string $text): void
+    {
+        Http::fake([
+            'api.anthropic.com/*' => Http::sequence()
+                ->push([
+                    'model' => 'claude-opus-5',
+                    'stop_reason' => 'tool_use',
+                    'content' => [[
+                        'type' => 'tool_use',
+                        'id' => 'toolu_1',
+                        'name' => $tool,
+                        'input' => $arguments === [] ? new \stdClass() : $arguments,
+                    ]],
+                    'usage' => ['input_tokens' => 90, 'output_tokens' => 18],
+                ])
+                ->push([
+                    'model' => 'claude-opus-5',
+                    'stop_reason' => 'end_turn',
+                    'content' => [['type' => 'text', 'text' => $text]],
+                    'usage' => ['input_tokens' => 140, 'output_tokens' => 42],
+                ]),
+        ]);
+    }
+
+    public function test_claude_anbieter_beantwortet_mit_dem_vorhandenen_schluessel(): void
+    {
+        $this->useClaude();
+        $customer = $this->makeCustomer();
+        DocumentRequest::create([
+            'customer_id' => $customer->id,
+            'title' => 'Meldebescheinigung',
+            'status' => 'open',
+        ]);
+
+        $this->fakeClaudeToolThenText(
+            'getMissingDocuments',
+            [],
+            'Es fehlt noch die Meldebescheinigung. Bitte laden Sie diese im Portal hoch.'
+        );
+
+        $reply = $this->assistant()->handleCustomerMessage(
+            $this->message($customer, 'Welche Unterlagen fehlen mir noch?')
+        );
+
+        $this->assertStringContainsString('Meldebescheinigung', $reply->body);
+        $this->assertTrue($reply->ai_generated);
+
+        $log = AiAssistantLog::where('customer_id', $customer->id)->firstOrFail();
+        $this->assertSame('claude', $log->provider);
+        $this->assertSame('claude-opus-5', $log->model);
+        $this->assertContains('getMissingDocuments', $log->tools);
+    }
+
+    public function test_claude_schluessel_geht_als_header_und_ohne_sampling_parameter(): void
+    {
+        $this->useClaude();
+        $customer = $this->makeCustomer();
+        Http::fake(['api.anthropic.com/*' => Http::response([
+            'model' => 'claude-opus-5',
+            'stop_reason' => 'end_turn',
+            'content' => [['type' => 'text', 'text' => 'Gerne, ich prüfe das für Sie.']],
+            'usage' => ['input_tokens' => 50, 'output_tokens' => 12],
+        ])]);
+
+        $this->assistant()->handleCustomerMessage($this->message($customer, 'Frage zu meinem Vertrag.'));
+
+        Http::assertSent(function ($request) {
+            $this->assertSame('sk-ant-test-nur-fuer-tests', $request->header('x-api-key')[0]);
+            $this->assertSame('2023-06-01', $request->header('anthropic-version')[0]);
+            $this->assertStringNotContainsString('sk-ant-test-nur-fuer-tests', $request->body());
+
+            // Sampling-Parameter werden von den aktuellen Modellen mit
+            // HTTP 400 abgelehnt - sie duerfen nicht mitgesendet werden.
+            foreach (['temperature', 'top_p', 'top_k'] as $verboten) {
+                $this->assertArrayNotHasKey($verboten, $request->data());
+            }
+
+            return true;
+        });
+    }
+
+    public function test_claude_erhaelt_erst_alle_aufrufe_dann_alle_ergebnisse(): void
+    {
+        $this->useClaude();
+        $customer = $this->makeCustomer();
+
+        // Zwei Funktionsaufrufe in EINER Runde (paralleler Aufruf).
+        Http::fake([
+            'api.anthropic.com/*' => Http::sequence()
+                ->push([
+                    'model' => 'claude-opus-5',
+                    'stop_reason' => 'tool_use',
+                    'content' => [
+                        ['type' => 'tool_use', 'id' => 'toolu_1', 'name' => 'getCustomerProfile', 'input' => new \stdClass()],
+                        ['type' => 'tool_use', 'id' => 'toolu_2', 'name' => 'getMissingDocuments', 'input' => new \stdClass()],
+                    ],
+                    'usage' => ['input_tokens' => 80, 'output_tokens' => 20],
+                ])
+                ->push([
+                    'model' => 'claude-opus-5',
+                    'stop_reason' => 'end_turn',
+                    'content' => [['type' => 'text', 'text' => 'Ihre Unterlagen sind vollständig.']],
+                    'usage' => ['input_tokens' => 160, 'output_tokens' => 30],
+                ]),
+        ]);
+
+        $this->assistant()->handleCustomerMessage(
+            $this->message($customer, 'Fehlen bei mir noch Unterlagen?')
+        );
+
+        // Zweiter Aufruf: die Messages-API verlangt ALLE tool_use in EINER
+        // Assistenten-Nachricht und ALLE tool_result in der EINEN
+        // darauffolgenden Nutzer-Nachricht.
+        $requests = collect(Http::recorded())->map(fn ($pair) => $pair[0]);
+        $second = $requests->last();
+        $messages = collect($second->data()['messages']);
+
+        $assistantMsg = $messages->firstWhere('role', 'assistant');
+        $this->assertCount(2, $assistantMsg['content']);
+        $this->assertSame('tool_use', $assistantMsg['content'][0]['type']);
+        $this->assertSame('tool_use', $assistantMsg['content'][1]['type']);
+
+        $resultMsg = $messages->last();
+        $this->assertSame('user', $resultMsg['role']);
+        $this->assertCount(2, $resultMsg['content']);
+        $this->assertSame('tool_result', $resultMsg['content'][0]['type']);
+        $this->assertSame('toolu_1', $resultMsg['content'][0]['tool_use_id']);
+        $this->assertSame('toolu_2', $resultMsg['content'][1]['tool_use_id']);
+    }
+
+    public function test_claude_sicherheits_ablehnung_fuehrt_zur_uebergabe(): void
+    {
+        $this->useClaude();
+        $customer = $this->makeCustomer();
+
+        Http::fake(['api.anthropic.com/*' => Http::response([
+            'model' => 'claude-opus-5',
+            'stop_reason' => 'refusal',
+            'content' => [],
+            'usage' => ['input_tokens' => 40, 'output_tokens' => 0],
+        ])]);
+
+        $reply = $this->assistant()->handleCustomerMessage(
+            $this->message($customer, 'Wie ist der Status meines Vorgangs?')
+        );
+
+        // Keine leere Blase: der Kunde bekommt die ehrliche Uebergabe.
+        $this->assertNotSame('', trim($reply->body));
+        $this->assertTrue(
+            AiConversation::where('customer_id', $customer->id)->value('handover_required')
+        );
+    }
+
+    public function test_ohne_anthropic_schluessel_greift_der_fallback(): void
+    {
+        $this->useClaude();
+        config(['services.anthropic.key' => '']);
+        $customer = $this->makeCustomer();
+
+        $reply = $this->assistant()->handleCustomerMessage(
+            $this->message($customer, 'Welche Unterlagen fehlen mir?')
+        );
+
+        $this->assertStringContainsString('nicht verfügbar', $reply->body);
+        $this->assertSame(
+            AiConversation::REASON_SERVICE_DOWN,
+            AiConversation::where('customer_id', $customer->id)->value('handover_reason')
+        );
+    }
+
+    public function test_anbieter_ist_per_konfiguration_austauschbar(): void
+    {
+        $contract = \App\Services\Ai\Assistant\Contracts\AssistantProviderInterface::class;
+
+        config(['services.ai_assistant_provider' => 'claude']);
+        app()->forgetInstance($contract);
+        $this->assertSame('claude', app($contract)->name());
+
+        config(['services.ai_assistant_provider' => 'openai']);
+        app()->forgetInstance($contract);
+        $this->assertSame('openai', app($contract)->name());
+
+        config(['services.ai_assistant_provider' => 'none']);
+        app()->forgetInstance($contract);
+        $this->assertSame('none', app($contract)->name());
+        $this->assertFalse(app($contract)->isEnabled());
+
+        // Leer bedeutet STANDARD (claude), nicht "abgeschaltet".
+        config(['services.ai_assistant_provider' => '']);
+        app()->forgetInstance($contract);
+        $this->assertSame('claude', app($contract)->name());
+    }
+
     // ------------------------------------------- Menschliche Kontrolle (15/16)
 
     public function test_mitarbeiter_uebernimmt_und_ki_schweigt(): void
@@ -1163,6 +1371,25 @@ class CustomerAssistantTest extends TestCase
         $this->assertTrue($settings->autoReply());
         $this->assertFalse($settings->autoTicket(), 'Ein nicht angehakter Kasten muss als AUS gespeichert werden.');
         $this->assertSame(5, $settings->maxRepliesPerCase());
+    }
+
+    public function test_warnung_nennt_den_schluessel_des_gewaehlten_anbieters(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contract = \App\Services\Ai\Assistant\Contracts\AssistantProviderInterface::class;
+
+        config(['services.ai_assistant_provider' => 'claude', 'services.anthropic.key' => '']);
+        app()->forgetInstance($contract);
+        $this->actingAs($admin)->get(route('admin.settings'))->assertOk()->assertSee('ANTHROPIC_API_KEY');
+
+        config(['services.ai_assistant_provider' => 'openai', 'services.openai.key' => '']);
+        app()->forgetInstance($contract);
+        $this->actingAs($admin)->get(route('admin.settings'))->assertOk()->assertSee('OPENAI_API_KEY');
+
+        // Mit hinterlegtem Schluessel verschwindet die Warnung.
+        config(['services.ai_assistant_provider' => 'claude', 'services.anthropic.key' => 'sk-ant-x']);
+        app()->forgetInstance($contract);
+        $this->actingAs($admin)->get(route('admin.settings'))->assertOk()->assertDontSee('kein API-Schlüssel');
     }
 
     public function test_assistent_ist_im_standard_abgeschaltet(): void

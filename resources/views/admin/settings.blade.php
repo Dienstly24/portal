@@ -90,8 +90,8 @@
     @if(!($assistantProviderReady ?? false))
     <div style="background:#FBF3E7;border:1px solid #E2C89A;border-radius:8px;padding:12px;font-size:13px;color:#8a5b1f;margin-bottom:12px;">
         ⚠️ Es ist <strong>kein API-Schlüssel</strong> hinterlegt. Der Assistent kann nicht antworten,
-        solange <code>OPENAI_API_KEY</code> in der Server-<code>.env</code> fehlt. Kundenanfragen
-        bearbeitet dann wie bisher das Team.
+        solange <code>{{ $assistantKeyName ?? 'ANTHROPIC_API_KEY' }}</code> in der
+        Server-<code>.env</code> fehlt. Kundenanfragen bearbeitet dann wie bisher das Team.
     </div>
     @endif
     <label class="ki-toggle">

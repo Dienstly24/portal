@@ -33,11 +33,19 @@ class SettingsController extends Controller
         $assistant = app(\App\Services\Ai\Assistant\AssistantSettings::class);
         $settings = array_merge($settings, $assistant->all());
 
+        $assistantProvider = app(\App\Services\Ai\Assistant\Contracts\AssistantProviderInterface::class);
+
         return view('admin.settings', [
             'settings' => $settings,
             // Ist der Anbieter ueberhaupt einsatzbereit (API-Key gesetzt)?
             // Ehrliche Anzeige: der Schalter allein macht keinen Assistenten.
-            'assistantProviderReady' => app(\App\Services\Ai\Assistant\Contracts\AssistantProviderInterface::class)->isEnabled(),
+            'assistantProviderReady' => $assistantProvider->isEnabled(),
+            // Der Name des benoetigten Schluessels haengt vom gewaehlten
+            // Anbieter ab - sonst schickt die Warnung den Betreiber zum
+            // falschen Eintrag in der .env.
+            'assistantKeyName' => $assistantProvider->name() === 'openai'
+                ? 'OPENAI_API_KEY'
+                : 'ANTHROPIC_API_KEY',
         ]);
     }
 
