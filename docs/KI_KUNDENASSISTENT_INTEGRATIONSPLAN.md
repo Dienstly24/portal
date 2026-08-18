@@ -130,6 +130,7 @@ Nutzer (`EmailClassificationService`, Workflow-Engine) bleiben unberuehrt.
 ```
 app/Services/Ai/Assistant/
   Contracts/AssistantProviderInterface.php   Tool-Calling-Vertrag
+  ClaudeAssistantProvider.php                Anthropic Messages API (Standard)
   OpenAiAssistantProvider.php                OpenAI Responses API
   CustomerAssistantService.php               Orchestrierung (der Kern)
   AssistantSettings.php                      Schalter aus SystemSetting
@@ -180,13 +181,34 @@ siehe `docs/NACHWEIS_KUNDENAENDERUNGEN.md`), Dokument freigeben/ablehnen,
 Zahlung/Erstattung, Provision, Mail-Versand, Zugriff auf andere Kunden,
 freie SQL-Abfragen.
 
-### 2.7 Konfiguration
+### 2.7 Konfiguration und Anbieterwahl
 
-`config/services.php` → `openai` (`OPENAI_API_KEY`, `OPENAI_MODEL`, Limits)
-und `ai_assistant_provider` (`AI_ASSISTANT_PROVIDER`, Default `openai`,
-`none` schaltet ab). Betriebsschalter liegen als `SystemSetting` im
-Admin-Bereich (Abschnitt 30), damit der Betreiber ohne Deploy eingreifen
-kann.
+`AI_ASSISTANT_PROVIDER` waehlt den Anbieter; `none` schaltet hart ab, ein
+leerer Wert bedeutet **Standard**, nicht „aus".
+
+| Wert | Schluessel | Was das bedeutet |
+|---|---|---|
+| `claude` (**Standard**) | der bereits vorhandene `ANTHROPIC_API_KEY` | Betreiber-Entscheidung 17.08.2026: **kein neuer Zugang**. Das System nutzt Anthropic schon fuer die Dokumentanalyse — kein zweites Konto, keine zweite Fakturierung, kein zweiter AV-Vertrag. |
+| `openai` | eigenes `OPENAI_API_KEY` | Wie urspruenglich spezifiziert. Erfordert Konto, Zahlungsmittel und einen zweiten Auftragsverarbeitungsvertrag. |
+
+**Ein Anthropic-Schluessel funktioniert nie bei OpenAI und umgekehrt** —
+das sind getrennte Anbieter mit getrennten Endpunkten. Genau dafuer
+existiert `AssistantProviderInterface`: der Wechsel ist eine Zeile in der
+`.env`, kein Umbau.
+
+Anbieter-Besonderheiten, die im Code stehen und beim Wechsel gelten:
+
+- **Claude:** keine Sampling-Parameter senden (`temperature`/`top_p`/
+  `top_k` → HTTP 400). Denken NICHT abschalten — ohne Denken schreiben die
+  Modelle Funktionsaufrufe gelegentlich als Fliesstext, der Aufruf laeuft
+  dann nie und es gibt keine Fehlermeldung; stattdessen `effort=low`.
+  `max_tokens` deckelt Denk- **und** Antwort-Tokens gemeinsam.
+- **Beide:** eine Werkzeug-Runde geht als *erst alle Aufrufe, dann alle
+  Ergebnisse* in den Verlauf. Anthropic verlangt das ausdruecklich
+  (aufgeteilt lernt das Modell, keine parallelen Aufrufe mehr zu machen).
+
+Betriebsschalter liegen als `SystemSetting` im Admin-Bereich
+(Abschnitt 30), damit der Betreiber ohne Deploy eingreifen kann.
 
 **Der API-Key gehoert ausschliesslich in die Server-`.env`** (bzw. GitHub
 Secret) — nie in Repo, HTML, JavaScript oder Logs.

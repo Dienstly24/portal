@@ -99,6 +99,22 @@ return [
         // Person, Vertrag, Fahrzeug/Tarif, Personenliste und Energie - zu
         // knappe Werte schneiden die Antwort mittendrin ab (ungueltiges JSON).
         'document_max_tokens' => env('ANTHROPIC_DOCUMENT_MAX_TOKENS', 4096),
+        'base_url' => env('ANTHROPIC_BASE_URL', 'https://api.anthropic.com/v1'),
+
+        /*
+        | KI-Kundenassistent ueber Claude (Betreiber-Entscheidung
+        | 17.08.2026): nutzt DENSELBEN ANTHROPIC_API_KEY wie die
+        | Dokumentanalyse - kein zweiter Zugang noetig.
+        */
+        'assistant_model' => env('ANTHROPIC_ASSISTANT_MODEL', 'claude-opus-5'),
+        // Deckelt Denk- UND Antwort-Tokens gemeinsam: grosszuegig, damit die
+        // kurze Antwort nicht mitten im Satz abbricht.
+        'assistant_max_tokens' => env('ANTHROPIC_ASSISTANT_MAX_TOKENS', 4096),
+        // Kundenservice-Auskunft ist eine Nachschlage-Aufgabe: wenig
+        // Denkaufwand genuegt und haelt Kosten und Wartezeit niedrig.
+        'assistant_effort' => env('ANTHROPIC_ASSISTANT_EFFORT', 'low'),
+        'assistant_timeout' => env('ANTHROPIC_ASSISTANT_TIMEOUT', 45),
+        'assistant_connect_timeout' => env('ANTHROPIC_ASSISTANT_CONNECT_TIMEOUT', 10),
     ],
 
     /*
@@ -147,11 +163,18 @@ return [
     ],
 
     /*
-    | Austauschbarer Anbieter des Kundenassistenten ('openai', 'none') -
-    | siehe App\Services\Ai\Assistant\Contracts\AssistantProviderInterface.
-    | 'none' schaltet den Assistenten hart ab.
+    | Austauschbarer Anbieter des Kundenassistenten ('claude', 'openai',
+    | 'none') - siehe
+    | App\Services\Ai\Assistant\Contracts\AssistantProviderInterface.
+    |
+    | Voreinstellung 'claude' (Betreiber-Entscheidung 17.08.2026): der
+    | Assistent nutzt damit DENSELBEN ANTHROPIC_API_KEY wie die
+    | Dokumentanalyse - kein zweiter Anbieter-Zugang, keine zweite
+    | Fakturierung, kein zweiter AV-Vertrag. 'openai' bleibt vollwertig
+    | verfuegbar (dann zusaetzlich OPENAI_API_KEY setzen); 'none' schaltet
+    | den Assistenten hart ab.
     */
-    'ai_assistant_provider' => env('AI_ASSISTANT_PROVIDER', 'openai'),
+    'ai_assistant_provider' => env('AI_ASSISTANT_PROVIDER', 'claude'),
 
     /*
     | Technische Obergrenzen des Assistenten (Abschnitt 32). Die

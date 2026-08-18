@@ -145,23 +145,25 @@ class AppServiceProvider extends ServiceProvider
         });
 
         // KI-Kundenassistent (Betreiber-Auftrag 17.08.2026): austauschbarer
-        // Anbieter mit Tool-Calling. 'none' schaltet ihn hart ab; ein leerer
-        // Wert bedeutet STANDARD (openai), nicht "aus" - gleiche Lehre wie
-        // beim Dokument-Anbieter oben.
+        // Anbieter mit Tool-Calling. Standard ist 'claude' - der Assistent
+        // nutzt damit denselben ANTHROPIC_API_KEY wie die Dokumentanalyse.
+        // 'none' schaltet ihn hart ab; ein leerer Wert bedeutet STANDARD,
+        // nicht "aus" - gleiche Lehre wie beim Dokument-Anbieter oben.
         $this->app->bind(
             \App\Services\Ai\Assistant\Contracts\AssistantProviderInterface::class,
             function ($app) {
-                $provider = strtolower(trim((string) config('services.ai_assistant_provider', 'openai')));
+                $provider = strtolower(trim((string) config('services.ai_assistant_provider', 'claude')));
                 if ($provider === '') {
-                    $provider = 'openai';
+                    $provider = 'claude';
                 }
                 return match ($provider) {
+                    'claude', 'anthropic' => $app->make(\App\Services\Ai\Assistant\ClaudeAssistantProvider::class),
                     'openai' => $app->make(\App\Services\Ai\Assistant\OpenAiAssistantProvider::class),
                     'none', 'off', 'disabled' => $app->make(\App\Services\Ai\Assistant\NullAssistantProvider::class),
-                    default => tap($app->make(\App\Services\Ai\Assistant\OpenAiAssistantProvider::class), function () use ($provider) {
+                    default => tap($app->make(\App\Services\Ai\Assistant\ClaudeAssistantProvider::class), function () use ($provider) {
                         \Illuminate\Support\Facades\Log::warning(
-                            'Unbekannter AI_ASSISTANT_PROVIDER "' . $provider . '" - faellt auf OpenAI zurueck '
-                            . '(gueltig: openai, none).'
+                            'Unbekannter AI_ASSISTANT_PROVIDER "' . $provider . '" - faellt auf Claude zurueck '
+                            . '(gueltig: claude, openai, none).'
                         );
                     }),
                 };

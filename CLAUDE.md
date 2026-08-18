@@ -476,10 +476,27 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   Ablehnungsliste (sonst faellt eine echte Anfrage durchs Raster).
   ANBIETER: `AssistantProviderInterface` (eigene Schnittstelle, weil
   `AiProviderInterface` kein Tool-Calling kennt - bestehende Nutzer bleiben
-  unberuehrt), Implementierung `OpenAiAssistantProvider` gegen die
-  **Responses API** (`/v1/responses`), Auswahl per `AI_ASSISTANT_PROVIDER`
-  ('none' = hart aus). Key NUR als Bearer-Header und NUR aus der
-  Server-`.env` (`OPENAI_API_KEY`) - nie Repo/HTML/JS/Logs.
+  unberuehrt), Auswahl per `AI_ASSISTANT_PROVIDER` ('none' = hart aus, leer
+  = Standard `claude`). ZWEI Implementierungen:
+  `ClaudeAssistantProvider` (**Standard**, Betreiber-Entscheidung
+  17.08.2026) gegen die Anthropic **Messages API** mit Tool Use - nutzt
+  DENSELBEN `ANTHROPIC_API_KEY` wie die Dokumentanalyse, also kein zweiter
+  Zugang, keine zweite Fakturierung, kein zweiter AV-Vertrag; Schluessel
+  als `x-api-key`-Header. Und `OpenAiAssistantProvider` gegen die
+  **Responses API** (`/v1/responses`, Bearer-Header, braucht ein eigenes
+  `OPENAI_API_KEY`). Ein Anthropic-Schluessel funktioniert NIE bei OpenAI
+  und umgekehrt - getrennte Anbieter. Beim Claude-Weg NIE
+  `temperature`/`top_p`/`top_k` senden (aktuelle Modelle antworten mit
+  HTTP 400) und das Denken NICHT abschalten: ohne Denken schreiben die
+  Modelle Funktionsaufrufe gelegentlich als FLIESSTEXT - der Aufruf laeuft
+  dann nie, ohne Fehlermeldung. Stattdessen `effort=low` (Kundenservice ist
+  Nachschlagen, keine Grundsatzanalyse); `max_tokens` deckelt Denk- UND
+  Antwort-Tokens GEMEINSAM, daher grosszuegig (4096) trotz kurzer Antwort.
+  Werkzeug-Runden gehen als ERST alle Aufrufe, DANN alle Ergebnisse in den
+  Verlauf (Anthropic verlangt alle `tool_use` in EINER Assistenten- und
+  alle `tool_result` in der EINEN Folge-Nachricht; aufgeteilt lernt das
+  Modell, keine parallelen Aufrufe mehr zu machen). Key NUR aus der
+  Server-`.env` - nie Repo/HTML/JS/Logs.
   TOOLS = die einzige Handlungsmoeglichkeit (`AssistantToolRegistry` ist die
   Whitelist): lesend `getCustomerProfile`, `getCustomerContracts`,
   `getRelevantContractInformation`, `getOpenTickets`, `getProcessStatus`,
@@ -895,8 +912,12 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   /admin und Cloudflare Turnstile sind bewusst offene Folgepakete.
 - **KI-Kundenassistent: Inbetriebnahme** (Code ist fertig, Stand
   17.08.2026). Vom Betreiber zu erledigen, in dieser Reihenfolge:
-  1. `OPENAI_API_KEY=sk-...` in die Server-`.env` unter
-     `/var/www/dienstly24/portal` eintragen (NIE ins Repo/den Chat).
+  1. KEIN neuer Schluessel noetig: der Assistent laeuft im Standard ueber
+     Claude und nutzt den bereits gesetzten `ANTHROPIC_API_KEY`. Nur
+     pruefen, dass er in der Server-`.env` unter
+     `/var/www/dienstly24/portal` steht (NIE ins Repo/den Chat). Nur wer
+     stattdessen OpenAI will, braucht Konto + `OPENAI_API_KEY` +
+     `AI_ASSISTANT_PROVIDER=openai` + eigenen AV-Vertrag.
   2. Wissensbasis fuellen: `/admin/ki-wissensbasis` - solange sie leer ist,
      beantwortet der Assistent nur, was aus der Kundenakte belegbar ist,
      und uebergibt alles andere an das Team (das ist ein sicherer, aber
@@ -906,10 +927,12 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   4. Queue-Worker muss laufen (die Antwort ist ein Job); ohne Worker greift
      nach 10 Min das Sicherheitsnetz `ai:answer-pending`.
   Rechtlich noch zu klaeren, BEVOR der Schalter auf produktiv geht:
-  Auftragsverarbeitungsvertrag/DPA mit OpenAI, Aufbewahrungsoptionen der
-  API, Ergaenzung von Datenschutzerklaerung und Verarbeitungsverzeichnis
-  (Hinweis im Chat, dass zunaechst ein Assistent antwortet, ist technisch
-  umgesetzt).
+  Auftragsverarbeitungsvertrag/DPA mit dem genutzten Anbieter (bei Claude
+  besteht die Beziehung wegen der Dokumentanalyse bereits - dann ist nur zu
+  pruefen, ob der Vertrag die Kundenkommunikation mit abdeckt),
+  Aufbewahrungsoptionen der API, Ergaenzung von Datenschutzerklaerung und
+  Verarbeitungsverzeichnis (Hinweis im Chat, dass zunaechst ein Assistent
+  antwortet, ist technisch umgesetzt).
 - **Finale Logo-Dateien** kommen vom Betreiber (bevorzugt SVG, sonst PNG
   transparent ≥320px hoch; Light- und Dark-Variante; optional 512×512 Icon).
 - **Partner-Portal** (voller Ausbau) und **E-Mail-Einwilligung des Kunden

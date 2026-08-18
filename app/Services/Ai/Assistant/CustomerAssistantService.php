@@ -239,6 +239,8 @@ class CustomerAssistantService
             // Funktionsaufrufe abarbeiten. Der Aufruf selbst MUSS mit seinem
             // Ergebnis in den Verlauf, sonst weiss das Modell nicht, was
             // seine Funktion geliefert hat.
+            $roundCalls = [];
+            $roundResults = [];
             foreach ($turn->toolCalls as $index => $call) {
                 if ($calls >= $maxCalls) {
                     break;
@@ -249,18 +251,26 @@ class CustomerAssistantService
                 $result = $this->tools->execute($call['name'], $call['arguments'], $context);
 
                 $raw = $turn->rawCalls[$index] ?? null;
-                $history[] = [
+                $roundCalls[] = [
                     'role' => 'tool_call',
                     'call_id' => $call['call_id'],
                     'name' => $call['name'],
                     'arguments' => $raw['arguments'] ?? json_encode($call['arguments'], JSON_UNESCAPED_UNICODE),
                 ];
-                $history[] = [
+                $roundResults[] = [
                     'role' => 'tool_result',
                     'call_id' => $call['call_id'],
                     'output' => json_encode($result, JSON_UNESCAPED_UNICODE) ?: '{}',
                 ];
             }
+
+            // ERST alle Aufrufe, DANN alle Ergebnisse - nicht abwechselnd.
+            // Beide Anbieter erwarten diese Gruppierung: bei Anthropic
+            // gehoeren alle tool_use in EINE Assistenten-Nachricht und alle
+            // tool_result in die EINE darauffolgende Nutzer-Nachricht;
+            // aufgeteilt bringt das dem Modell bei, kuenftig keine
+            // parallelen Aufrufe mehr zu machen.
+            $history = array_merge($history, $roundCalls, $roundResults);
 
             if ($calls >= $maxCalls) {
                 // Grenze erreicht: eine letzte Runde OHNE Funktionen, damit
