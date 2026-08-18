@@ -99,9 +99,14 @@ class EmailMarketingController extends Controller
                 ->timezone(\App\Models\BannerSocialPost::OPERATOR_TZ)->format('d.m.Y H:i') . ' Uhr.');
     }
 
-    /** Entwurf / geplante Kampagne sofort versenden. */
+    /**
+     * Entwurf / geplante Kampagne sofort versenden - und den Rest einer
+     * abgebrochenen Kampagne fortsetzen: bereits angeschriebene Empfaenger
+     * ueberspringt SendCampaignJob (Protokolleintrag in email_logs), es
+     * geht also niemand doppelt an.
+     */
     public function dispatchCampaign(string $id) {
-        $campaign = $this->ownCampaign($id, ['draft', 'scheduled']);
+        $campaign = $this->ownCampaign($id, ['draft', 'scheduled', 'failed']);
         $campaign->update(['status' => 'sending', 'scheduled_for' => null]);
         SendCampaignJob::dispatch($campaign->id);
         return back()->with('success', 'Kampagne wird im Hintergrund versendet.');
