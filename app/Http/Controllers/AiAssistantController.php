@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 use App\Models\ActivityLog;
 use App\Models\AiConversation;
 use App\Models\AiKnowledgeEntry;
+use App\Models\AiKnowledgeGap;
 use App\Models\Customer;
+use App\Services\Ai\Assistant\KnowledgeBase;
 use Illuminate\Http\Request;
 
 /**
@@ -64,6 +66,10 @@ class AiAssistantController extends Controller
     {
         $entries = AiKnowledgeEntry::with(['creator', 'editor'])
             ->when($request->query('kategorie'), fn ($q, $c) => $q->where('category', $c))
+            // Entwuerfe zuerst durchsehen zu koennen ist der Normalfall,
+            // nachdem ki:wissensbasis-vorschlag gelaufen ist.
+            ->when($request->query('status') === 'entwurf', fn ($q) => $q->where('active', false))
+            ->when($request->query('status') === 'aktiv', fn ($q) => $q->where('active', true))
             ->when(trim((string) $request->query('q')) !== '', function ($q) use ($request) {
                 $term = '%' . trim((string) $request->query('q')) . '%';
                 $q->where(fn ($q) => $q->where('title', 'like', $term)
@@ -78,6 +84,8 @@ class AiAssistantController extends Controller
             'entries' => $entries,
             'categories' => AiKnowledgeEntry::CATEGORIES,
             'languages' => AiKnowledgeEntry::LANGUAGES,
+            'draftCount' => AiKnowledgeEntry::drafts()->count(),
+            'activeCount' => AiKnowledgeEntry::active()->count(),
         ]);
     }
 
@@ -98,7 +106,11 @@ class AiAssistantController extends Controller
             'meta' => json_encode(['title' => $entry->title], JSON_UNESCAPED_UNICODE),
         ]);
 
-        return back()->with('success', 'Wissensbasis-Eintrag angelegt.');
+        // Deckt der neue Eintrag eine gemeldete Luecke ab, ist sie erledigt.
+        $geschlossen = $entry->active ? $this->closeCoveredGaps() : 0;
+
+        return back()->with('success', 'Wissensbasis-Eintrag angelegt.'
+            . ($geschlossen > 0 ? ' ' . $geschlossen . ' offene Wissenslücke(n) sind damit beantwortet.' : ''));
     }
 
     public function knowledgeUpdate(Request $request, $id)
@@ -117,6 +129,63 @@ class AiAssistantController extends Controller
         return back()->with('success', 'Wissensbasis-Eintrag aktualisiert.');
     }
 
+    /**
+     * Sammelaktion fuer Entwuerfe (Betreiber-Auftrag 18.08.2026).
+     *
+     * Nach ki:wissensbasis-vorschlag liegen Dutzende Entwuerfe bereit;
+     * jeden einzeln zu speichern waere die eigentliche Huerde vor dem
+     * Livegang. Freigegeben wird trotzdem NUR, was der Mitarbeiter
+     * ausdruecklich ankreuzt - es gibt bewusst kein "alles freigeben"
+     * ueber ungelesene Eintraege hinweg.
+     */
+    public function knowledgeBulk(Request $request)
+    {
+        $data = $request->validate([
+            'aktion' => 'required|in:freigeben,deaktivieren,loeschen',
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'string',
+        ]);
+
+        $entries = AiKnowledgeEntry::whereIn('id', $data['ids'])->get();
+        if ($entries->isEmpty()) {
+            return back()->with('success', 'Kein Eintrag ausgewählt.');
+        }
+
+        $aktion = $data['aktion'];
+        foreach ($entries as $entry) {
+            if ($aktion === 'loeschen') {
+                $entry->delete();
+                continue;
+            }
+            $entry->update([
+                'active' => $aktion === 'freigeben',
+                'updated_by' => auth()->id(),
+            ]);
+        }
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'ai_knowledge_bulk_' . $aktion,
+            'entity_type' => 'ai_knowledge_entry',
+            'entity_id' => null,
+            'meta' => json_encode([
+                'anzahl' => $entries->count(),
+                'titel' => $entries->pluck('title')->take(20)->all(),
+            ], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        $geschlossen = $aktion === 'freigeben' ? $this->closeCoveredGaps() : 0;
+
+        $text = [
+            'freigeben' => 'Einträge freigegeben - der Assistent nutzt sie ab sofort.'
+                . ($geschlossen > 0 ? ' ' . $geschlossen . ' offene Wissenslücke(n) sind damit beantwortet.' : ''),
+            'deaktivieren' => 'Einträge deaktiviert - der Assistent nutzt sie nicht mehr.',
+            'loeschen' => 'Einträge gelöscht.',
+        ][$aktion];
+
+        return back()->with('success', $entries->count() . ' ' . $text);
+    }
+
     public function knowledgeDestroy($id)
     {
         $entry = AiKnowledgeEntry::findOrFail($id);
@@ -132,6 +201,239 @@ class AiAssistantController extends Controller
         ]);
 
         return back()->with('success', 'Wissensbasis-Eintrag gelöscht.');
+    }
+
+    // ---------------------------------------------------------------
+    // Wissensluecken: wonach gefragt wurde, ohne dass eine Antwort
+    // hinterlegt ist (Betreiber-Auftrag 18.08.2026).
+    //
+    // Der Assistent lernt NICHT von selbst - er wiederholt nur, was ein
+    // Mensch freigegeben hat. Er kann aber melden, was ihm gefehlt hat.
+    // Diese Liste ist genau diese Rueckmeldung, nach Haeufigkeit sortiert.
+    // ---------------------------------------------------------------
+
+    public function knowledgeGaps(Request $request)
+    {
+        $status = $request->query('status', AiKnowledgeGap::STATUS_OPEN);
+
+        $gaps = AiKnowledgeGap::with('resolver')
+            ->when($status !== 'alle', fn ($q) => $q->where('status', $status))
+            ->when($request->query('bereich'), fn ($q, $b) => $q->where('scope', $b))
+            // Haeufigstes zuerst: das ist die Reihenfolge, in der sich die
+            // Arbeit an der Wissensbasis am schnellsten auszahlt.
+            ->orderByDesc('hits')->orderByDesc('last_seen_at')
+            ->paginate(30)
+            ->withQueryString();
+
+        return view('admin.ai_knowledge_gaps', [
+            'gaps' => $gaps,
+            'openCount' => AiKnowledgeGap::open()->count(),
+            'categories' => AiKnowledgeEntry::CATEGORIES,
+            'languages' => AiKnowledgeEntry::LANGUAGES,
+            'scopes' => AiKnowledgeGap::SCOPE_LABELS,
+            'status' => $status,
+        ]);
+    }
+
+    /**
+     * Antwort zu einer Luecke schreiben: legt den Wissenseintrag an und
+     * schliesst die Luecke in einem Schritt. Genau der Weg, den sich der
+     * Betreiber vorstellt - einmal beantworten, ab dann beantwortet es
+     * der Assistent selbst.
+     */
+    public function knowledgeGapAnswer(Request $request, $id)
+    {
+        $gap = AiKnowledgeGap::findOrFail($id);
+        $data = $this->validateEntry($request);
+
+        $entry = AiKnowledgeEntry::create($data + [
+            'created_by' => auth()->id(),
+            'updated_by' => auth()->id(),
+        ]);
+
+        $gap->update([
+            'status' => AiKnowledgeGap::STATUS_DONE,
+            'resolved_entry_id' => $entry->id,
+            'resolved_by' => auth()->id(),
+            'resolved_at' => now(),
+        ]);
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'ai_knowledge_gap_answered',
+            'entity_type' => 'ai_knowledge_entry',
+            'entity_id' => $entry->id,
+            'meta' => json_encode(['thema' => $gap->topic, 'titel' => $entry->title], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        $hinweis = $entry->active
+            ? 'Antwort gespeichert und aktiv - der Assistent nutzt sie ab sofort.'
+            : 'Antwort als Entwurf gespeichert - sie wirkt erst nach der Freigabe.';
+
+        return back()->with('success', $hinweis);
+    }
+
+    /** Luecke ohne Antwort erledigen (ignorieren) oder wieder oeffnen. */
+    public function knowledgeGapStatus(Request $request, $id)
+    {
+        $gap = AiKnowledgeGap::findOrFail($id);
+        $data = $request->validate([
+            'status' => 'required|in:' . implode(',', [
+                AiKnowledgeGap::STATUS_OPEN,
+                AiKnowledgeGap::STATUS_IGNORED,
+            ]),
+        ]);
+
+        $gap->update([
+            'status' => $data['status'],
+            'resolved_by' => $data['status'] === AiKnowledgeGap::STATUS_IGNORED ? auth()->id() : null,
+            'resolved_at' => $data['status'] === AiKnowledgeGap::STATUS_IGNORED ? now() : null,
+        ]);
+
+        return back()->with('success', $data['status'] === AiKnowledgeGap::STATUS_IGNORED
+            ? 'Thema ignoriert - es taucht wieder auf, wenn erneut danach gefragt wird.'
+            : 'Thema wieder geöffnet.');
+    }
+
+    /**
+     * Mehrere Fragen und Antworten auf einmal erfassen.
+     *
+     * Ohne das ist jede Frage ein eigenes Formular - bei 40 Fragen ist
+     * genau das der Grund, warum die Wissensbasis leer bleibt.
+     *
+     * Format (Bloecke durch Leerzeile getrennt), deutsch oder arabisch
+     * beschriftet:
+     *   F: Habt ihr Stromangebote?
+     *   A: Ja - wir vergleichen ...
+     */
+    public function knowledgeImport(Request $request)
+    {
+        $data = $request->validate([
+            'text' => 'required|string|max:100000',
+            'category' => 'required|string|in:' . implode(',', array_keys(AiKnowledgeEntry::CATEGORIES)),
+            'language' => 'nullable|string|in:' . implode(',', array_keys(AiKnowledgeEntry::LANGUAGES)),
+        ]);
+
+        $paare = $this->parseQuestionAnswerText($data['text']);
+        if ($paare === []) {
+            return back()->withErrors([
+                'text' => 'Keine Frage/Antwort-Paare erkannt. Jede Frage beginnt mit "F:" (oder "س:"), '
+                    . 'jede Antwort mit "A:" (oder "ج:"), Paare durch eine Leerzeile getrennt.',
+            ]);
+        }
+
+        $sofortAktiv = $request->boolean('active');
+        $angelegt = 0;
+        foreach ($paare as $paar) {
+            AiKnowledgeEntry::create([
+                'title' => mb_substr($paar['frage'], 0, 250),
+                'category' => $data['category'],
+                'language' => ($data['language'] ?? null) ?: null,
+                'content' => $paar['antwort'],
+                'keywords' => null,
+                'active' => $sofortAktiv,
+                'created_by' => auth()->id(),
+                'updated_by' => auth()->id(),
+            ]);
+            $angelegt++;
+        }
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'ai_knowledge_imported',
+            'entity_type' => 'ai_knowledge_entry',
+            'entity_id' => null,
+            'meta' => json_encode(['anzahl' => $angelegt, 'aktiv' => $sofortAktiv], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        $geschlossen = $sofortAktiv ? $this->closeCoveredGaps() : 0;
+
+        return back()->with('success', $angelegt . ' Einträge angelegt'
+            . ($sofortAktiv ? ' und aktiv' : ' (Entwürfe – bitte freigeben)') . '.'
+            . ($geschlossen > 0 ? ' ' . $geschlossen . ' offene Wissenslücke(n) sind damit beantwortet.' : ''));
+    }
+
+    /**
+     * Frage/Antwort-Bloecke aus Fliesstext lesen. Bewusst streng: ein
+     * Block ohne beides wird uebersprungen, statt eine halbe Antwort in
+     * die Wissensbasis zu schreiben.
+     *
+     * @return list<array{frage:string,antwort:string}>
+     */
+    private function parseQuestionAnswerText(string $text): array
+    {
+        $zeilen = preg_split('/\r\n|\r|\n/', $text) ?: [];
+        $paare = [];
+        $frage = null;
+        $antwort = [];
+
+        $sichern = function () use (&$paare, &$frage, &$antwort) {
+            $inhalt = trim(implode("\n", $antwort));
+            if ($frage !== null && $frage !== '' && $inhalt !== '') {
+                $paare[] = ['frage' => $frage, 'antwort' => $inhalt];
+            }
+            $frage = null;
+            $antwort = [];
+        };
+
+        foreach ($zeilen as $zeile) {
+            $zeile = rtrim($zeile);
+            if (preg_match('/^\s*(?:F|Frage|س|سؤال)\s*[:：]\s*(.*)$/u', $zeile, $m)) {
+                $sichern();
+                $frage = trim($m[1]);
+                continue;
+            }
+            if (preg_match('/^\s*(?:A|Antwort|ج|جواب|إجابة)\s*[:：]\s*(.*)$/u', $zeile, $m)) {
+                $antwort = [trim($m[1])];
+                continue;
+            }
+            if (trim($zeile) === '') {
+                // Leerzeile trennt Bloecke - aber nur, wenn schon eine
+                // Antwort begonnen hat (mehrzeilige Antworten bleiben heil).
+                if ($antwort !== []) {
+                    $sichern();
+                }
+                continue;
+            }
+            if ($antwort !== []) {
+                $antwort[] = $zeile;
+            }
+        }
+        $sichern();
+
+        return $paare;
+    }
+
+    /**
+     * Offene Luecken schliessen, die von der Wissensbasis inzwischen
+     * abgedeckt sind. Massstab ist die ECHTE Suche des Assistenten - eine
+     * Luecke gilt erst als beantwortet, wenn er den Eintrag auch findet.
+     */
+    private function closeCoveredGaps(): int
+    {
+        $suche = app(KnowledgeBase::class);
+        $geschlossen = 0;
+
+        foreach (AiKnowledgeGap::open()->get() as $gap) {
+            $treffer = $suche->search(
+                $gap->topic,
+                $gap->language,
+                1,
+                publicOnly: $gap->scope === AiKnowledgeGap::SCOPE_WEBSITE
+            );
+            if ($treffer->isEmpty()) {
+                continue;
+            }
+            $gap->update([
+                'status' => AiKnowledgeGap::STATUS_DONE,
+                'resolved_entry_id' => $treffer->first()->id,
+                // Kein resolved_by: das war das System, kein Mitarbeiter.
+                'resolved_at' => now(),
+            ]);
+            $geschlossen++;
+        }
+
+        return $geschlossen;
     }
 
     /** @return array<string,mixed> */

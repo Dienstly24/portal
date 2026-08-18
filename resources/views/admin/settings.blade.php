@@ -23,6 +23,7 @@
         <a href="{{ route('admin.lexoffice.contacts') }}" class="hub-tile">🧮 <span>lexoffice-Kontakte</span></a>
         <a href="{{ route('admin.email_accounts.index') }}" class="hub-tile">📬 <span>E-Mail-Postfächer</span></a>
         <a href="{{ route('admin.ai_knowledge') }}" class="hub-tile">📚 <span>KI-Wissensbasis</span></a>
+        <a href="{{ route('admin.ai_knowledge_gaps') }}" class="hub-tile">❓ <span>Wissenslücken</span></a>
     </div>
 </div>
 <style>
@@ -129,6 +130,9 @@
         <br><br>
         Nur was in der Wissensbasis steht, gibt der Assistent als allgemeine Auskunft weiter:
         <a href="{{ route('admin.ai_knowledge') }}">📚 Wissensbasis pflegen →</a>
+        <br>
+        Wonach gefragt wurde, ohne dass eine Antwort hinterlegt ist – nach Häufigkeit sortiert:
+        <a href="{{ route('admin.ai_knowledge_gaps') }}">❓ Wissenslücken ansehen →</a>
     </div>
 </div>
 

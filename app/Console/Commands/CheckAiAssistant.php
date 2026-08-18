@@ -214,14 +214,29 @@ class CheckAiAssistant extends Command
             ? AiKnowledgeEntry::where('active', true)->count()
             : 0;
 
+        $entwuerfe = Schema::hasTable('ai_knowledge_entries')
+            ? AiKnowledgeEntry::where('active', false)->count()
+            : 0;
+
         if ($eintraege > 0) {
             $this->ok($eintraege . ' aktive Wissenseintraege.');
+            if ($entwuerfe > 0) {
+                $this->line('   Zusaetzlich ' . $entwuerfe . ' Entwuerfe (inaktiv) - der Assistent nutzt sie nicht.');
+                $this->line('   Durchsehen und freigeben: /admin/ki-wissensbasis (Filter "Nur Entwürfe").');
+            }
         } else {
             $this->warnung('Wissensbasis ist LEER.');
             $this->line('   Das ist kein Fehler, aber der Assistent wirkt dadurch nutzlos: er darf');
             $this->line('   nichts behaupten, was nicht belegt ist, und uebergibt fast jede allgemeine');
             $this->line('   Frage an das Team. Fragen zur eigenen Akte beantwortet er trotzdem.');
-            $this->hinweise[] = 'Wissensbasis fuellen: /admin/ki-wissensbasis';
+            if ($entwuerfe > 0) {
+                $this->line('   ' . $entwuerfe . ' Entwuerfe liegen bereit, aber KEINER ist freigegeben.');
+                $this->line('   Durchsehen und freigeben: /admin/ki-wissensbasis (Filter "Nur Entwürfe").');
+            }
+            $this->line('   Schnellster Start: php artisan ki:wissensbasis-vorschlag --schreiben');
+            $this->line('   (uebertraegt die Texte der Leistungsseiten woertlich als INAKTIVE Entwuerfe;');
+            $this->line('   freigegeben wird von Hand unter /admin/ki-wissensbasis).');
+            $this->hinweise[] = 'Wissensbasis fuellen: php artisan ki:wissensbasis-vorschlag --schreiben, dann freigeben unter /admin/ki-wissensbasis';
         }
     }
 

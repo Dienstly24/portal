@@ -507,6 +507,17 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
             ->name('ai_knowledge');
         Route::post('/ki-wissensbasis', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeStore'])
             ->name('ai_knowledge.store');
+        Route::post('/ki-wissensbasis/import', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeImport'])
+            ->name('ai_knowledge.import');
+        // Wissensluecken: wonach der Assistent vergeblich gesucht hat.
+        Route::get('/ki-wissensluecken', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeGaps'])
+            ->name('ai_knowledge_gaps');
+        Route::post('/ki-wissensluecken/{id}/antwort', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeGapAnswer'])
+            ->name('ai_knowledge_gaps.answer');
+        Route::post('/ki-wissensluecken/{id}/status', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeGapStatus'])
+            ->name('ai_knowledge_gaps.status');
+        Route::post('/ki-wissensbasis/sammelaktion', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeBulk'])
+            ->name('ai_knowledge.bulk');
         Route::put('/ki-wissensbasis/{id}', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeUpdate'])
             ->name('ai_knowledge.update');
         Route::delete('/ki-wissensbasis/{id}', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeDestroy'])
