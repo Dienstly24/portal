@@ -75,6 +75,11 @@ class AdminCustomerChatController extends Controller
             $aiDocuments = app(\App\Services\Ai\Assistant\DocumentStatusReader::class)->overview($active);
             $aiLastLog = \App\Models\AiAssistantLog::where('customer_id', $active->id)
                 ->latest()->first();
+            // Vorgangsstand des Verkaufsassistenten (Abschnitte 13/15/16):
+            // Anliegen, Zustand, bekannte und fehlende Angaben, Angebot,
+            // Pruefstand, naechster Schritt und eine etwaige Stoerung.
+            $aiBriefing = app(\App\Services\Ai\Assistant\EmployeeAssistantService::class)
+                ->briefing($active, $aiConversation);
         }
 
         return view('admin.customer_chat', [
@@ -88,6 +93,7 @@ class AdminCustomerChatController extends Controller
             'aiSettings' => $aiSettings ?? null,
             'aiDocuments' => $aiDocuments ?? [],
             'aiLastLog' => $aiLastLog ?? null,
+            'aiBriefing' => $aiBriefing ?? null,
             'ticketPrefill' => $ticketPrefill ?? '',
             'templates' => \App\Models\MessageTemplate::where('category', 'kunde')
                 ->orderBy('sort')->orderBy('name')->get(['id', 'name']),

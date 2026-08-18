@@ -46,22 +46,22 @@ final class RequirementProfile
      */
     private const FIELDS = [
         self::INTENT_NEW_INTERNET => [
-            ['key' => 'installation_address', 'label' => 'Vollstaendige Anschlussadresse', 'required' => true, 'stage' => 'bedarf'],
+            ['key' => 'installation_address', 'label' => 'Vollständige Anschlussadresse', 'required' => true, 'stage' => 'bedarf'],
             ['key' => 'situation', 'label' => 'Umzug oder bestehender Anschluss', 'required' => true, 'stage' => 'bedarf'],
             ['key' => 'current_provider', 'label' => 'Aktueller Anbieter', 'required' => false, 'stage' => 'bedarf'],
-            ['key' => 'desired_speed', 'label' => 'Gewuenschte Geschwindigkeit', 'required' => false, 'stage' => 'bedarf'],
-            ['key' => 'desired_start', 'label' => 'Gewuenschter Starttermin', 'required' => false, 'stage' => 'bedarf'],
+            ['key' => 'desired_speed', 'label' => 'Gewünschte Geschwindigkeit', 'required' => false, 'stage' => 'bedarf'],
+            ['key' => 'desired_start', 'label' => 'Gewünschter Starttermin', 'required' => false, 'stage' => 'bedarf'],
         ],
         self::INTENT_CONTRACT_CHANGE => [
             ['key' => 'current_provider', 'label' => 'Aktueller Anbieter', 'required' => true, 'stage' => 'bedarf'],
             ['key' => 'current_tariff', 'label' => 'Aktueller Tarif', 'required' => false, 'stage' => 'bedarf'],
-            ['key' => 'contract_end', 'label' => 'Laufzeitende oder Kuendigungsfrist', 'required' => false, 'stage' => 'bedarf'],
+            ['key' => 'contract_end', 'label' => 'Laufzeitende oder Kündigungsfrist', 'required' => false, 'stage' => 'bedarf'],
             ['key' => 'installation_address', 'label' => 'Anschlussadresse', 'required' => true, 'stage' => 'bedarf'],
-            ['key' => 'change_reason', 'label' => 'Grund fuer den Wechsel', 'required' => false, 'stage' => 'bedarf'],
+            ['key' => 'change_reason', 'label' => 'Grund für den Wechsel', 'required' => false, 'stage' => 'bedarf'],
         ],
         self::INTENT_UPGRADE => [
             ['key' => 'current_tariff', 'label' => 'Aktueller Tarif', 'required' => true, 'stage' => 'bedarf'],
-            ['key' => 'desired_speed', 'label' => 'Gewuenschte Geschwindigkeit', 'required' => true, 'stage' => 'bedarf'],
+            ['key' => 'desired_speed', 'label' => 'Gewünschte Geschwindigkeit', 'required' => true, 'stage' => 'bedarf'],
             ['key' => 'installation_address', 'label' => 'Anschlussadresse', 'required' => false, 'stage' => 'bedarf'],
         ],
     ];
@@ -75,12 +75,12 @@ final class RequirementProfile
      * nur "liegt vor" (Abschnitt 11).
      */
     private const CONTRACT_FIELDS = [
-        ['key' => 'full_name', 'label' => 'Vollstaendiger Name', 'required' => true, 'stage' => 'vertrag'],
+        ['key' => 'full_name', 'label' => 'Vollständiger Name', 'required' => true, 'stage' => 'vertrag'],
         ['key' => 'email', 'label' => 'E-Mail-Adresse', 'required' => true, 'stage' => 'vertrag', 'sensitive' => true],
         ['key' => 'birthdate', 'label' => 'Geburtsdatum', 'required' => true, 'stage' => 'vertrag', 'sensitive' => true],
         ['key' => 'billing_address', 'label' => 'Rechnungsanschrift', 'required' => false, 'stage' => 'vertrag'],
         ['key' => 'phone', 'label' => 'Telefonnummer', 'required' => false, 'stage' => 'vertrag', 'sensitive' => true],
-        ['key' => 'iban', 'label' => 'IBAN fuer das SEPA-Lastschriftmandat', 'required' => true, 'stage' => 'vertrag', 'sensitive' => true],
+        ['key' => 'iban', 'label' => 'IBAN für das SEPA-Lastschriftmandat', 'required' => true, 'stage' => 'vertrag', 'sensitive' => true],
     ];
 
     /** Alle Felder eines Anliegens (Bedarf + Vertrag). */

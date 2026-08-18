@@ -155,6 +155,164 @@ class AiAssistantController extends Controller
         return $data;
     }
 
+    // ---------------------------------------------------------------
+    // Verkaufsassistent (Betreiber-Auftrag 18.08.2026)
+    // ---------------------------------------------------------------
+
+    /**
+     * Angebot fuer ein Gespraech hinterlegen (Abschnitt 5).
+     *
+     * Phase 1: das ist die zentrale Mitarbeiter-Aktion. Sobald das
+     * Angebot steht, fuehrt die KI das Gespraech weiter - deshalb wird
+     * die Unterhaltung hier auch NICHT stumm geschaltet.
+     */
+    public function storeOffer(Request $request, $customerId)
+    {
+        $customer = $this->authorizedCustomer($customerId);
+
+        $data = $request->validate([
+            'label' => 'required|string|max:10',
+            'provider' => 'nullable|string|max:120',
+            'product' => 'required|string|max:160',
+            'speed' => 'nullable|string|max:60',
+            'price' => 'nullable|numeric|min:0|max:99999',
+            'price_period' => 'nullable|string|max:20',
+            'duration_months' => 'nullable|integer|min:0|max:120',
+            'terms' => 'nullable|string|max:1000',
+        ]);
+
+        $conversation = AiConversation::forCustomer($customer->id);
+
+        // Gleiche Kennung nicht doppelt: der Mitarbeiter korrigiert damit
+        // ein Angebot, statt ein zweites "A" anzulegen.
+        $angebot = \App\Models\AiOffer::updateOrCreate(
+            [
+                'conversation_id' => $conversation->id,
+                'label' => mb_strtoupper(trim($data['label'])),
+            ],
+            [
+                'provider' => $data['provider'] ?? null,
+                'product' => $data['product'],
+                'speed' => $data['speed'] ?? null,
+                'price' => $data['price'] ?? null,
+                'price_period' => $data['price_period'] ?: 'monat',
+                'duration_months' => $data['duration_months'] ?? null,
+                'terms' => $data['terms'] ?? null,
+                'origin' => \App\Models\AiOffer::ORIGIN_EMPLOYEE,
+                'created_by' => auth()->id(),
+            ]
+        );
+
+        app(\App\Services\Ai\Assistant\Sales\ConversationJournal::class)->record(
+            $conversation,
+            \App\Models\AiConversationEvent::EVENT_OFFER_ADDED,
+            ['angebot' => $angebot->label, 'produkt' => $angebot->product],
+            \App\Models\AiConversationEvent::ACTOR_STAFF,
+            auth()->id(),
+        );
+
+        // Der Vorgang wartet nicht mehr - die KI darf wieder fuehren.
+        $conversation->resume();
+        $conversation->moveTo(
+            \App\Services\Ai\Assistant\Sales\ConversationState::OFFER_PRESENTED,
+            'Angebot hinterlegt'
+        );
+
+        $this->log('ai_assistant_offer_added', $customer);
+
+        return back()->with('success', 'Angebot ' . $angebot->label
+            . ' hinterlegt. Der Assistent stellt es dem Kunden bei der nächsten Nachricht vor.');
+    }
+
+    /** Angebot wieder entfernen (Tippfehler, ueberholtes Angebot). */
+    public function destroyOffer($customerId, $offerId)
+    {
+        $customer = $this->authorizedCustomer($customerId);
+        $conversation = AiConversation::forCustomer($customer->id);
+
+        $angebot = \App\Models\AiOffer::where('conversation_id', $conversation->id)
+            ->findOrFail($offerId);
+
+        // Ein bereits GEWAEHLTES Angebot bleibt stehen: es ist Teil der
+        // Vorgangsgeschichte, und der Kunde hat ihm zugestimmt.
+        if ($angebot->isSelected()) {
+            return back()->with('error', 'Dieses Angebot hat der Kunde bereits gewählt und '
+                . 'kann nicht gelöscht werden.');
+        }
+
+        $angebot->delete();
+        $this->log('ai_assistant_offer_removed', $customer);
+
+        return back()->with('success', 'Angebot entfernt.');
+    }
+
+    /**
+     * Antwortvorschlag fuer den Mitarbeiter (Abschnitt 16). Wird NIE
+     * automatisch gesendet - der Mitarbeiter entscheidet.
+     */
+    public function suggestReply($customerId, \App\Services\Ai\Assistant\EmployeeAssistantService $assistant)
+    {
+        $customer = $this->authorizedCustomer($customerId);
+        $conversation = AiConversation::forCustomer($customer->id);
+
+        $ergebnis = $assistant->suggestReply($customer, $conversation);
+        $this->log('ai_assistant_reply_suggested', $customer);
+
+        return response()->json([
+            'ok' => $ergebnis['vorschlag'] !== null,
+            'vorschlag' => $ergebnis['vorschlag'],
+            'fehler' => $ergebnis['fehler'],
+        ]);
+    }
+
+    /**
+     * Nach einer Stoerung erneut versuchen (Abschnitt 13): die letzte
+     * unbeantwortete Kundennachricht wird noch einmal angestossen.
+     */
+    public function retry($customerId)
+    {
+        $customer = $this->authorizedCustomer($customerId);
+        $conversation = AiConversation::forCustomer($customer->id);
+
+        $letzte = \App\Models\CustomerMessage::where('customer_id', $customer->id)
+            ->fromCustomer()
+            ->latest()
+            ->first();
+
+        if (!$letzte) {
+            return back()->with('error', 'Es liegt keine Kundennachricht vor.');
+        }
+
+        // Die Sperre gegen doppelte Antworten haengt am Protokoll-Eintrag
+        // der Nachricht - fuer einen bewussten neuen Versuch wird er
+        // entfernt, sonst passiert wieder nichts.
+        \App\Models\AiAssistantLog::where('customer_message_id', $letzte->id)->delete();
+
+        $conversation->resume();
+        $conversation->reactivate();
+
+        \App\Jobs\AnswerCustomerMessageJob::dispatch($letzte->id);
+
+        $this->log('ai_assistant_retry', $customer);
+
+        return back()->with('success', 'Neuer Versuch gestartet. Die Antwort erscheint in Kürze im Chat.');
+    }
+
+    /** Interessenten aus dem Website-Assistenten (Abschnitt 20). */
+    public function leads(Request $request)
+    {
+        $leads = \App\Models\AiLead::query()
+            ->when($request->filled('zustand'), fn ($q) => $q->where('state', $request->string('zustand')))
+            ->latest()
+            ->paginate(25)
+            ->withQueryString();
+
+        return view('admin.ai_leads', [
+            'leads' => $leads,
+            'zustand' => $request->string('zustand')->toString(),
+        ]);
+    }
+
     private function authorizedCustomer($customerId): Customer
     {
         abort_unless(auth()->user()->canAccessCustomer($customerId), 403);

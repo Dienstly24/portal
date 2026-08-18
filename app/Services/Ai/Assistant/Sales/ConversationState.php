@@ -44,7 +44,10 @@ final class ConversationState
         self::COLLECTING_REQUIREMENTS => [self::COLLECTING_ADDRESS, self::WAITING_FOR_OFFER, self::COMPLETED],
         self::COLLECTING_ADDRESS => [self::COLLECTING_REQUIREMENTS, self::WAITING_FOR_OFFER],
         self::WAITING_FOR_OFFER => [self::OFFER_PRESENTED, self::COLLECTING_REQUIREMENTS],
-        self::OFFER_PRESENTED => [self::WAITING_FOR_CUSTOMER_DECISION, self::WAITING_FOR_OFFER],
+        // Zustimmung darf direkt nach dem Vorstellen kommen: viele Kunden
+        // antworten sofort mit "passt so" - ein Zwischenschritt waere nur
+        // Buerokratie und wuerde die Zusage verschlucken.
+        self::OFFER_PRESENTED => [self::WAITING_FOR_CUSTOMER_DECISION, self::CUSTOMER_ACCEPTED, self::WAITING_FOR_OFFER],
         self::WAITING_FOR_CUSTOMER_DECISION => [self::CUSTOMER_ACCEPTED, self::WAITING_FOR_OFFER, self::COMPLETED],
         self::CUSTOMER_ACCEPTED => [self::COLLECTING_CONTRACT_DATA],
         self::COLLECTING_CONTRACT_DATA => [self::VERIFYING_DATA],
@@ -134,17 +137,17 @@ final class ConversationState
     public static function nextAction(?string $state): string
     {
         return match ($state) {
-            self::NEW, self::IDENTIFYING_CUSTOMER => 'Anliegen des Kunden klaeren',
+            self::NEW, self::IDENTIFYING_CUSTOMER => 'Anliegen des Kunden klären',
             self::COLLECTING_REQUIREMENTS => 'Fehlende Angaben erfragen',
-            self::COLLECTING_ADDRESS => 'Anschrift vervollstaendigen',
+            self::COLLECTING_ADDRESS => 'Anschrift vervollständigen',
             self::WAITING_FOR_OFFER => 'Angebot hinterlegen (Mitarbeiter)',
             self::OFFER_PRESENTED, self::WAITING_FOR_CUSTOMER_DECISION => 'Entscheidung des Kunden abwarten',
-            self::CUSTOMER_ACCEPTED, self::COLLECTING_CONTRACT_DATA => 'Vertragsdaten vervollstaendigen',
+            self::CUSTOMER_ACCEPTED, self::COLLECTING_CONTRACT_DATA => 'Vertragsdaten vervollständigen',
             self::VERIFYING_DATA => 'Pruefung der Angaben abwarten',
             self::VERIFICATION_PASSED, self::CONTRACT_READY => 'Vertrag abschliessen (Mitarbeiter)',
             self::COMPLETED => 'Nichts offen',
-            self::HUMAN_REQUIRED => 'Unterhaltung uebernehmen',
-            default => 'Anliegen des Kunden klaeren',
+            self::HUMAN_REQUIRED => 'Unterhaltung übernehmen',
+            default => 'Anliegen des Kunden klären',
         };
     }
 }

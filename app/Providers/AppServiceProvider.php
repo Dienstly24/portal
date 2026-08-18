@@ -207,6 +207,19 @@ class AppServiceProvider extends ServiceProvider
             ])
         );
 
+        // Whitelist des WEBSITE-Assistenten (Spezifikation Abschnitt 19):
+        // bewusst nur drei Werkzeuge. Ein nicht angemeldeter Besucher hat
+        // keinerlei Zugriff auf Kundendaten - es gibt technisch kein
+        // Werkzeug dafuer.
+        $this->app->singleton(
+            \App\Services\Ai\Assistant\Website\LeadToolRegistry::class,
+            fn ($app) => new \App\Services\Ai\Assistant\Website\LeadToolRegistry([
+                $app->make(\App\Services\Ai\Assistant\Website\Tools\SearchPublicKnowledgeTool::class),
+                $app->make(\App\Services\Ai\Assistant\Website\Tools\SaveLeadInformationTool::class),
+                $app->make(\App\Services\Ai\Assistant\Website\Tools\RequestHumanContactTool::class),
+            ])
+        );
+
         // Woher kommen Angebote? Phase 1: ein Mitarbeiter hinterlegt sie.
         // Phase 2 tauscht HIER die Implementierung - sonst aendert sich
         // nichts (Spezifikation Abschnitte 6 und 25).

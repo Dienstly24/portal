@@ -39,6 +39,10 @@ return new class extends Migration
             $table->text('contact')->nullable();
             $table->text('address')->nullable();
             $table->text('collected')->nullable();
+            // Gespraechsverlauf des Besuchers. Bewusst AM LEAD und nicht in
+            // customer_messages: dort haengt jede Zeile an einer Kundenakte,
+            // die es hier (noch) nicht gibt.
+            $table->text('transcript')->nullable();
 
             $table->string('customer_status', 30)->nullable();
             $table->string('verification_status', 30)->nullable();

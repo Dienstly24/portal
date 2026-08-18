@@ -21,7 +21,7 @@ class KnowledgeBase
     /**
      * @return Collection<int,AiKnowledgeEntry> nach Trefferqualitaet sortiert
      */
-    public function search(string $query, ?string $language = null, int $limit = 4): Collection
+    public function search(string $query, ?string $language = null, int $limit = 4, bool $publicOnly = false): Collection
     {
         $terms = $this->terms($query);
         if ($terms === []) {
@@ -29,6 +29,9 @@ class KnowledgeBase
         }
 
         $entries = AiKnowledgeEntry::active()
+            // Website-Besucher sehen nur oeffentlich geeignete Kategorien -
+            // interne Ablaeufe und Leitfaeden bleiben im Haus.
+            ->when($publicOnly, fn ($q) => $q->whereIn('category', AiKnowledgeEntry::PUBLIC_CATEGORIES))
             // Sprachneutrale Eintraege gelten immer, sprachgebundene nur
             // fuer ihre Sprache.
             ->when($language, fn ($q) => $q->where(function ($q) use ($language) {

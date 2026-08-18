@@ -32,7 +32,7 @@ class AiLead extends Model
 
     protected $fillable = [
         'customer_id', 'source', 'intent', 'state', 'service', 'contact',
-        'address', 'collected', 'customer_status', 'verification_status',
+        'address', 'collected', 'transcript', 'customer_status', 'verification_status',
         'next_action', 'selected_offer_id', 'assigned_employee_id', 'ticket_id',
     ];
 
@@ -48,6 +48,7 @@ class AiLead extends Model
             'contact' => 'encrypted:array',
             'address' => 'encrypted',
             'collected' => 'encrypted:array',
+            'transcript' => 'encrypted:array',
         ];
     }
 
@@ -82,6 +83,25 @@ class AiLead extends Model
             $daten[$key] = (string) $wert;
         }
         $this->forceFill(['collected' => $daten])->save();
+
+        return $this;
+    }
+
+    /**
+     * Gespraechsverlauf (aeltester zuerst). Begrenzt, damit ein sehr
+     * langes Gespraech die Zeile nicht sprengt.
+     */
+    public function transcriptData(): array
+    {
+        return is_array($this->transcript) ? $this->transcript : [];
+    }
+
+    public function appendTranscript(string $role, string $text): self
+    {
+        $verlauf = $this->transcriptData();
+        $verlauf[] = ['rolle' => $role, 'text' => mb_substr(trim($text), 0, 1000)];
+
+        $this->forceFill(['transcript' => array_slice($verlauf, -20)])->save();
 
         return $this;
     }

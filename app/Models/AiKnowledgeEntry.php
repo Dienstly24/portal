@@ -22,7 +22,19 @@ class AiKnowledgeEntry extends Model
         'dokumente' => 'Benötigte Unterlagen',
         'produkt' => 'Produkte / Dienstleistungen',
         'eskalation' => 'Eskalationsregel',
+        'leitfaden' => 'Gesprächsleitfaden (Stil & Ablauf)',
     ];
+
+    /**
+     * Was ein NICHT ANGEMELDETER Website-Besucher zu sehen bekommen darf
+     * (Spezifikation Abschnitte 19 und 22).
+     *
+     * Interne Ablaeufe, Eskalationsregeln und Gespraechsleitfaeden sind
+     * Arbeitsanweisungen fuer das Team - sie gehoeren nicht auf die
+     * oeffentliche Website, auch nicht sinngemaess durch eine KI
+     * wiedergegeben.
+     */
+    public const PUBLIC_CATEGORIES = ['faq', 'dokumente', 'produkt'];
 
     public const LANGUAGES = ['de' => 'Deutsch', 'ar' => 'Arabisch', 'en' => 'Englisch'];
 

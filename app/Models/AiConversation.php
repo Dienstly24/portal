@@ -262,7 +262,7 @@ class AiConversation extends Model
             'status' => self::STATUS_PAUSED,
             'paused_reason' => Str::limit($reason, 190),
             'current_step' => $currentStep ?: $this->current_step,
-            'next_action' => 'Erneut versuchen oder Unterhaltung uebernehmen',
+            'next_action' => 'Erneut versuchen oder Unterhaltung übernehmen',
             'last_error_at' => now(),
         ])->save();
 

@@ -65,6 +65,27 @@
 .kx-ai-sum{margin-top:4px;white-space:pre-line;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 9px;}
 .kx-ai-facts{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;}
 .kx-ai-fact{background:#fff;border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-size:11.5px;color:var(--ink-soft);}
+/* Verkaufsassistent: Vorgangsstand, Angebote, Stoerungsanzeige. */
+.kx-ai-error{margin-top:6px;background:#FDECEC;border:1px solid #E9B6B6;border-radius:8px;padding:8px 10px;font-size:12px;color:#8A2B2B;}
+.kx-ai-sales{margin-top:6px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;}
+.kx-ai-sales-head{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;}
+.kx-ai-badge{background:#F1EEE5;border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-size:11.5px;color:var(--ink);}
+.kx-ai-badge.state{background:#EAF6EF;border-color:#BFE0CC;}
+.kx-ai-badge.ok{background:#EAF6EF;border-color:#9ED2B4;color:#14603A;}
+.kx-ai-badge.warn{background:#FBF3E7;border-color:#E2C89A;color:#8a5b1f;}
+.kx-ai-kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:2px 14px;margin-bottom:5px;}
+.kx-ai-kv span{color:var(--ink-soft);}
+.kx-ai-missing{color:#8a5b1f;margin-bottom:4px;}
+.kx-ai-next{margin-bottom:6px;}
+.kx-ai-offer{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:5px 0;border-top:1px solid var(--line);}
+.kx-ai-offer.chosen{color:#14603A;}
+.kx-ai-offerform{margin-top:6px;}
+.kx-ai-offerform summary{cursor:pointer;color:var(--brand);font-weight:600;}
+.kx-ai-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px 10px;margin:8px 0;}
+.kx-ai-grid label{display:flex;flex-direction:column;gap:2px;font-size:11.5px;color:var(--ink-soft);}
+.kx-ai-grid label.wide{grid-column:1/-1;}
+/* Eigene Breite: die globale Regel input{width:100%} sprengt sonst das Raster. */
+.kx-ai-grid input{width:100%;box-sizing:border-box;padding:4px 7px;font-size:12px;border:1px solid var(--line);border-radius:6px;}
 .kx-ai-fact.warn{background:#FBF3E7;border-color:#E2C89A;color:#8a5b1f;font-weight:600;}
 .kx-cockpit{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:8px 14px;background:#F3F1E8;border-bottom:1px solid var(--line);text-decoration:none;color:var(--ink);font-size:12.5px;}
 .kx-cockpit:hover{background:#ECE9DC;}

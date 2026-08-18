@@ -481,6 +481,24 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         ->name('ai_assistant.reactivate');
 
     /*
+    | Verkaufsassistent (Betreiber-Auftrag 18.08.2026): Angebote hinterlegen,
+    | Antwortvorschlag holen, nach einer Stoerung erneut versuchen. Alle
+    | Staff-Rollen, aber nur fuer Kunden im eigenen Portfolio (Controller).
+    */
+    Route::post('/ki-assistent/{id}/angebot', [\App\Http\Controllers\AiAssistantController::class, 'storeOffer'])
+        ->name('ai_assistant.offer.store');
+    Route::delete('/ki-assistent/{id}/angebot/{offer}', [\App\Http\Controllers\AiAssistantController::class, 'destroyOffer'])
+        ->name('ai_assistant.offer.destroy');
+    Route::get('/ki-assistent/{id}/antwortvorschlag', [\App\Http\Controllers\AiAssistantController::class, 'suggestReply'])
+        ->name('ai_assistant.suggest');
+    Route::post('/ki-assistent/{id}/erneut-versuchen', [\App\Http\Controllers\AiAssistantController::class, 'retry'])
+        ->name('ai_assistant.retry');
+
+    // Interessenten aus dem Website-Assistenten.
+    Route::get('/interessenten', [\App\Http\Controllers\AiAssistantController::class, 'leads'])
+        ->name('leads.index');
+
+    /*
     | Wissensbasis des Assistenten: was hier steht, sagt die KI ALLEN
     | Kunden - deshalb nur Verwaltung (admin/manager).
     */
@@ -668,3 +686,16 @@ Route::get('/api/website-contact/token', [\App\Http\Controllers\WebsiteContactCo
 Route::post('/api/website-contact', [\App\Http\Controllers\WebsiteContactController::class, 'submit'])
     ->middleware('throttle:10,1')
     ->name('api.contact.store');
+
+// Website-Assistent fuer nicht angemeldete Besucher (KI-Verkaufsassistent,
+// Spezifikation Abschnitt 19). Oeffentlich, deshalb gedrosselt; die
+// Zuordnung laeuft ueber die Server-Sitzung, nie ueber den Request.
+Route::get('/api/website-assistent/status', [\App\Http\Controllers\WebsiteAssistantController::class, 'status'])
+    ->middleware('throttle:60,1')
+    ->name('api.assistant.status');
+Route::get('/api/website-assistent/verlauf', [\App\Http\Controllers\WebsiteAssistantController::class, 'history'])
+    ->middleware('throttle:60,1')
+    ->name('api.assistant.history');
+Route::post('/api/website-assistent', [\App\Http\Controllers\WebsiteAssistantController::class, 'send'])
+    ->middleware('throttle:20,1')
+    ->name('api.assistant.send');
