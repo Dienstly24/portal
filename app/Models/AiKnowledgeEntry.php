@@ -40,7 +40,7 @@ class AiKnowledgeEntry extends Model
 
     protected $fillable = [
         'title', 'category', 'content', 'language', 'keywords', 'active',
-        'created_by', 'updated_by',
+        'source_key', 'created_by', 'updated_by',
     ];
 
     protected function casts(): array
@@ -58,6 +58,28 @@ class AiKnowledgeEntry extends Model
     public function editor() { return $this->belongsTo(User::class, 'updated_by'); }
 
     public function scopeActive($q) { return $q->where('active', true); }
+
+    /** Nur Entwuerfe (noch nicht freigegeben). */
+    public function scopeDrafts($q) { return $q->where('active', false); }
+
+    /**
+     * Woher der Eintrag stammt - in Klartext fuer die Oberflaeche.
+     * Ohne Quelle: von Hand angelegt (der Normalfall).
+     */
+    public function sourceLabel(): ?string
+    {
+        $key = trim((string) $this->source_key);
+        if ($key === '') {
+            return null;
+        }
+        if (str_starts_with($key, 'servicepage:')) {
+            $slug = explode(':', $key)[1] ?? '';
+
+            return 'Leistungsseite ' . $slug;
+        }
+
+        return $key;
+    }
 
     public function categoryLabel(): string
     {

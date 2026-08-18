@@ -562,6 +562,30 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   teilweise. Arabische Betreiber-Anleitung:
   `docs/ANLEITUNG_KI_ASSISTENT_AR.md`. Tests: `CustomerAssistantTest`
   (Abnahmefaelle 1-17 der Spezifikation), `AssistantDiagnosisCommandTest`.
+  WISSENSBASIS FUELLEN (Betreiber-Auftrag 18.08.2026): die leere
+  Wissensbasis war die eigentliche Huerde vor dem Livegang - fertiger
+  Assistent, der fast alles ans Team uebergibt. Die Antworten stehen aber
+  laengst im System: die Leistungsseiten (`ServicePage`) tragen je Sparte
+  Einleitung, Leistungspunkte, Anbieterliste und zweisprachige haeufige
+  Fragen. `ki:wissensbasis-vorschlag` (`DraftKnowledgeBaseEntries`)
+  uebertraegt genau diese Texte WOERTLICH als Eintraege - bewusst OHNE
+  Umformulieren/Zusammenfassen/Ergaenzen (sonst stuende in der Wissensbasis
+  eine Aussage, die niemand geprueft hat, und der Assistent gaebe sie
+  weiter); der ausfuehrliche `body` bleibt draussen (Website-Fliesstext
+  verwaessert die Stichwortsuche). Jeder Entwurf entsteht INAKTIV, traegt
+  seine Herkunft (`ai_knowledge_entries.source_key`, z.B.
+  `servicepage:kfz-versicherung:faq:0:de`) und wird erst durch die
+  Freigabe unter `/admin/ki-wissensbasis` zur Auskunft. Der source_key ist
+  auch der Duplikat-Schutz: ein zweiter Lauf legt nichts doppelt an und
+  ueberschreibt NIE einen Eintrag, den ein Mensch geaendert hat; von Hand
+  angelegte Eintraege haben keine Quelle und werden von keinem Befehl
+  angefasst. In der Pflegeseite: Filter „Nur Entwürfe", Herkunft je Zeile
+  und Sammelaktion (freigeben/deaktivieren/loeschen) ueber die
+  ANGEKREUZTEN Eintraege - bewusst kein „alles freigeben" ueber ungelesene
+  Texte hinweg; das Sammel-Formular liegt wegen der Bearbeiten-Formulare je
+  Zeile ausserhalb der Liste (`form="bulkForm"`, verschachtelte Formulare
+  waeren ungueltig). `ki:pruefen` meldet wartende Entwuerfe getrennt von
+  aktiven Eintraegen. Tests: `KnowledgeBaseDraftTest`.
 - **KI-VERKAUFSASSISTENT (Ausbau, Betreiber-Auftrag 18.08.2026, 28
   Abschnitte; Plan: `docs/KI_VERKAUFSASSISTENT_PLAN.md`)**: aus dem
   reaktiven Frage-Antwort-Assistenten wird ein FUEHRENDES Gespraech
@@ -998,7 +1022,10 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   2. Wissensbasis fuellen: `/admin/ki-wissensbasis` - solange sie leer ist,
      beantwortet der Assistent nur, was aus der Kundenakte belegbar ist,
      und uebergibt alles andere an das Team (das ist ein sicherer, aber
-     wenig hilfreicher Zustand).
+     wenig hilfreicher Zustand). Startpunkt auf dem Server:
+     `php artisan ki:wissensbasis-vorschlag --schreiben` uebernimmt die
+     Texte der Leistungsseiten woertlich als INAKTIVE Entwuerfe; danach
+     im Admin lesen, anpassen und freigeben (Filter „Nur Entwürfe").
   3. Erst danach in `/admin/settings` -> „🤖 KI-Kundenassistent" den
      Hauptschalter einschalten (Voreinstellung ist AUS).
   4. Nach jedem Schritt `php artisan ki:pruefen` auf dem Server laufen

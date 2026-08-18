@@ -507,6 +507,8 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
             ->name('ai_knowledge');
         Route::post('/ki-wissensbasis', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeStore'])
             ->name('ai_knowledge.store');
+        Route::post('/ki-wissensbasis/sammelaktion', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeBulk'])
+            ->name('ai_knowledge.bulk');
         Route::put('/ki-wissensbasis/{id}', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeUpdate'])
             ->name('ai_knowledge.update');
         Route::delete('/ki-wissensbasis/{id}', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeDestroy'])

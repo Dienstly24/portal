@@ -64,6 +64,10 @@ class AiAssistantController extends Controller
     {
         $entries = AiKnowledgeEntry::with(['creator', 'editor'])
             ->when($request->query('kategorie'), fn ($q, $c) => $q->where('category', $c))
+            // Entwuerfe zuerst durchsehen zu koennen ist der Normalfall,
+            // nachdem ki:wissensbasis-vorschlag gelaufen ist.
+            ->when($request->query('status') === 'entwurf', fn ($q) => $q->where('active', false))
+            ->when($request->query('status') === 'aktiv', fn ($q) => $q->where('active', true))
             ->when(trim((string) $request->query('q')) !== '', function ($q) use ($request) {
                 $term = '%' . trim((string) $request->query('q')) . '%';
                 $q->where(fn ($q) => $q->where('title', 'like', $term)
@@ -78,6 +82,8 @@ class AiAssistantController extends Controller
             'entries' => $entries,
             'categories' => AiKnowledgeEntry::CATEGORIES,
             'languages' => AiKnowledgeEntry::LANGUAGES,
+            'draftCount' => AiKnowledgeEntry::drafts()->count(),
+            'activeCount' => AiKnowledgeEntry::active()->count(),
         ]);
     }
 
@@ -115,6 +121,60 @@ class AiAssistantController extends Controller
         ]);
 
         return back()->with('success', 'Wissensbasis-Eintrag aktualisiert.');
+    }
+
+    /**
+     * Sammelaktion fuer Entwuerfe (Betreiber-Auftrag 18.08.2026).
+     *
+     * Nach ki:wissensbasis-vorschlag liegen Dutzende Entwuerfe bereit;
+     * jeden einzeln zu speichern waere die eigentliche Huerde vor dem
+     * Livegang. Freigegeben wird trotzdem NUR, was der Mitarbeiter
+     * ausdruecklich ankreuzt - es gibt bewusst kein "alles freigeben"
+     * ueber ungelesene Eintraege hinweg.
+     */
+    public function knowledgeBulk(Request $request)
+    {
+        $data = $request->validate([
+            'aktion' => 'required|in:freigeben,deaktivieren,loeschen',
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'string',
+        ]);
+
+        $entries = AiKnowledgeEntry::whereIn('id', $data['ids'])->get();
+        if ($entries->isEmpty()) {
+            return back()->with('success', 'Kein Eintrag ausgewählt.');
+        }
+
+        $aktion = $data['aktion'];
+        foreach ($entries as $entry) {
+            if ($aktion === 'loeschen') {
+                $entry->delete();
+                continue;
+            }
+            $entry->update([
+                'active' => $aktion === 'freigeben',
+                'updated_by' => auth()->id(),
+            ]);
+        }
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'ai_knowledge_bulk_' . $aktion,
+            'entity_type' => 'ai_knowledge_entry',
+            'entity_id' => null,
+            'meta' => json_encode([
+                'anzahl' => $entries->count(),
+                'titel' => $entries->pluck('title')->take(20)->all(),
+            ], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        $text = [
+            'freigeben' => 'Einträge freigegeben - der Assistent nutzt sie ab sofort.',
+            'deaktivieren' => 'Einträge deaktiviert - der Assistent nutzt sie nicht mehr.',
+            'loeschen' => 'Einträge gelöscht.',
+        ][$aktion];
+
+        return back()->with('success', $entries->count() . ' ' . $text);
     }
 
     public function knowledgeDestroy($id)
