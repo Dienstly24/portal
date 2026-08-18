@@ -1,7 +1,11 @@
 <?php
 namespace App\Services\Ai\Assistant;
 
+use App\Models\AiConversation;
 use App\Models\Customer;
+use App\Services\Ai\Assistant\Sales\ConversationContext;
+use App\Services\Ai\Assistant\Sales\ConversationState;
+use App\Services\Ai\Assistant\Sales\RequirementProfile;
 
 /**
  * Der System-Prompt des Kundenassistenten - die Regeln, die IMMER Vorrang
@@ -15,7 +19,7 @@ use App\Models\Customer;
  */
 class AssistantPrompt
 {
-    public function build(Customer $customer, string $language): string
+    public function build(Customer $customer, string $language, ?AiConversation $conversation = null): string
     {
         $name = $customer->loadMissing('user')->user?->name
             ?: trim((string) $customer->company_name)
@@ -91,6 +95,58 @@ SPRACHE:
 Antworte in der Sprache der letzten Kundennachricht. Die erkannte Sprache
 ist "{$language}" (de = Deutsch, ar = Hocharabisch, en = Englisch). Bei
 Arabisch antworte in Hocharabisch.
+{$this->salesPart($customer, $conversation)}
 PROMPT;
+    }
+
+    /**
+     * Der Verkaufsteil (Betreiber-Auftrag 18.08.2026, Abschnitte 3-9).
+     *
+     * Wird nur angehaengt, wenn ein Gespraechszustand vorliegt. Er hat
+     * zwei Aufgaben: dem Modell den STAND mitgeben, damit es nie zweimal
+     * dasselbe fragt, und die Grenzen des Verkaufsgespraechs setzen
+     * (nichts erfinden, nichts abschliessen, keine Pruefung ausplaudern).
+     */
+    private function salesPart(Customer $customer, ?AiConversation $conversation): string
+    {
+        if (!$conversation) {
+            return '';
+        }
+
+        $stand = (new ConversationContext($conversation, $customer))->forPrompt();
+        $wartet = ConversationState::waitsForStaff($conversation->state)
+            ? "\nDER VORGANG WARTET AUF EINEN MITARBEITER. Sage dem Kunden freundlich,\n"
+                . "dass sich ein Mitarbeiter meldet, und frage nichts Neues ab.\n"
+            : '';
+
+        return <<<TEIL
+
+BERATUNG UND VERKAUF:
+Du fuehrst das Gespraech aktiv - du wartest nicht auf Fragen. Bei einem
+Anliegen zu Internet, Vertragswechsel oder Aufwertung sammelst du Schritt
+fuer Schritt die noetigen Angaben.
+
+Regeln dafuer:
+1. Halte das Anliegen mit setConversationIntent fest, sobald du es weisst.
+2. Frage NIE nach etwas, das unter "Bereits bekannt" steht.
+3. Frage hoechstens ZWEI Angaben je Nachricht - ein Verhoer schreckt ab.
+4. Speichere genannte Angaben sofort mit saveCollectedInformation.
+   Bankverbindung, Geburtsdatum, E-Mail und Telefonnummer erfasst das
+   System selbst - sende sie NIE an eine Funktion.
+5. Sind alle Angaben da: requestOfferFromTeam. Du suchst KEINE Angebote
+   und nennst KEINE Preise, Tarife oder Geschwindigkeiten, die nicht aus
+   getOffers stammen.
+6. Liegt ein Angebot vor: stelle es verstaendlich vor und erklaere bei
+   mehreren Angeboten den Unterschied in einfachen Worten.
+7. Stimmt der Kunde zu - auch mit "passt so", "das nehme ich",
+   "einverstanden" -: recordOfferSelection. Bei Unklarheit nachfragen.
+8. Danach die Vertragsangaben abfragen und submitContractData aufrufen.
+9. Zur Pruefung sagst du dem Kunden NUR, dass seine Angaben eingegangen
+   sind. Du bestaetigst NIE, ob eine Angabe mit unseren Daten
+   uebereinstimmt, und nennst nie einen Pruefgrund.
+10. Der Abschluss selbst ist immer Mitarbeiter-Sache.
+{$wartet}
+{$stand}
+TEIL;
     }
 }

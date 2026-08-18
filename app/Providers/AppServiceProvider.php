@@ -193,7 +193,39 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(\App\Services\Ai\Assistant\Tools\CreateTicketTool::class),
                 $app->make(\App\Services\Ai\Assistant\Tools\RequestDocumentTool::class),
                 $app->make(\App\Services\Ai\Assistant\Tools\EscalateToTeamTool::class),
+                // Verkaufsassistent (Betreiber-Auftrag 18.08.2026):
+                // Gespraechsfuehrung, Angebote, Vertragsdaten. Bewusst
+                // dieselbe Whitelist - es gibt keinen zweiten Weg, auf
+                // Daten zuzugreifen.
+                $app->make(\App\Services\Ai\Assistant\Tools\Sales\GetConversationStateTool::class),
+                $app->make(\App\Services\Ai\Assistant\Tools\Sales\GetOffersTool::class),
+                $app->make(\App\Services\Ai\Assistant\Tools\Sales\SetConversationIntentTool::class),
+                $app->make(\App\Services\Ai\Assistant\Tools\Sales\SaveCollectedInformationTool::class),
+                $app->make(\App\Services\Ai\Assistant\Tools\Sales\RequestOfferFromTeamTool::class),
+                $app->make(\App\Services\Ai\Assistant\Tools\Sales\RecordOfferSelectionTool::class),
+                $app->make(\App\Services\Ai\Assistant\Tools\Sales\SubmitContractDataTool::class),
             ])
+        );
+
+        // Whitelist des WEBSITE-Assistenten (Spezifikation Abschnitt 19):
+        // bewusst nur drei Werkzeuge. Ein nicht angemeldeter Besucher hat
+        // keinerlei Zugriff auf Kundendaten - es gibt technisch kein
+        // Werkzeug dafuer.
+        $this->app->singleton(
+            \App\Services\Ai\Assistant\Website\LeadToolRegistry::class,
+            fn ($app) => new \App\Services\Ai\Assistant\Website\LeadToolRegistry([
+                $app->make(\App\Services\Ai\Assistant\Website\Tools\SearchPublicKnowledgeTool::class),
+                $app->make(\App\Services\Ai\Assistant\Website\Tools\SaveLeadInformationTool::class),
+                $app->make(\App\Services\Ai\Assistant\Website\Tools\RequestHumanContactTool::class),
+            ])
+        );
+
+        // Woher kommen Angebote? Phase 1: ein Mitarbeiter hinterlegt sie.
+        // Phase 2 tauscht HIER die Implementierung - sonst aendert sich
+        // nichts (Spezifikation Abschnitte 6 und 25).
+        $this->app->bind(
+            \App\Services\Ai\Assistant\Sales\Offers\OfferSourceInterface::class,
+            \App\Services\Ai\Assistant\Sales\Offers\ManualOfferSource::class
         );
 
         // Registry der Workflow-Step-Handler (Blueprint Saeule 1): Typ ->

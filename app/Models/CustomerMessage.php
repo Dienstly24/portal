@@ -21,6 +21,18 @@ class CustomerMessage extends Model
     /** Anzeigename des Assistenten - eine Quelle fuer Portal und Beraterwelt. */
     public const AI_SENDER_NAME = 'Dienstly24 Assistent';
 
+    /**
+     * Nachrichtentext OHNE sensible Angaben - nur fuer den Weg zum
+     * KI-Modell (SlotExtractor ersetzt IBAN, Geburtsdatum & Co. durch
+     * Platzhalter). Der gespeicherte `body` bleibt unveraendert, damit der
+     * Kunde im Chat sieht, was er geschrieben hat.
+     *
+     * BEWUSST ALS ECHTE KLASSEN-EIGENSCHAFT deklariert: eine dynamisch
+     * gesetzte Eigenschaft wuerde bei Eloquent als ATTRIBUT landen und
+     * beim naechsten save() als Spalte geschrieben werden wollen.
+     */
+    public ?string $aiSafeBody = null;
+
     protected static function boot() {
         parent::boot();
         static::creating(fn($m) => $m->id = $m->id ?: (string) Str::uuid());

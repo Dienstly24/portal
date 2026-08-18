@@ -11,6 +11,14 @@ use App\Services\CustomerMessageNotifier;
 use App\Services\Notifications\NotificationService;
 use App\Support\Facades\Notify;
 use Illuminate\Support\Facades\Cache;
+use App\Models\AiConversationEvent;
+use App\Services\Ai\Assistant\Sales\AcceptanceDetector;
+use App\Services\Ai\Assistant\Sales\ConversationContext;
+use App\Services\Ai\Assistant\Sales\ConversationJournal;
+use App\Services\Ai\Assistant\Sales\ConversationState;
+use App\Services\Ai\Assistant\Sales\IntentClassifier;
+use App\Services\Ai\Assistant\Sales\RequirementProfile;
+use App\Services\Ai\Assistant\Sales\SlotExtractor;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -45,6 +53,10 @@ class CustomerAssistantService
         private AssistantPrompt $prompt,
         private HandoverService $handover,
         private LanguageDetector $languageDetector,
+        private SlotExtractor $slots,
+        private IntentClassifier $intents,
+        private AcceptanceDetector $acceptance,
+        private ConversationJournal $journal,
     ) {
     }
 
@@ -124,11 +136,30 @@ class CustomerAssistantService
             return $this->handleGuardVerdict($verdict, $message, $conversation, $language, $started);
         }
 
+        // --- Stufe 4b: sensible Angaben serverseitig herausloesen -----------
+        // Muss VOR jedem Modellkontakt passieren: was hier erkannt wird,
+        // ist danach im Nachrichtentext ersetzt und erreicht das Modell
+        // nie (Abschnitte 9/10/11). Kostet nichts, ist deterministisch.
+        $this->collectFromMessage($message, $conversation);
+        $this->detectAcceptance($message, $conversation);
+
+        // --- Stufe 4c: erste Einschaetzung des Anliegens --------------------
+        // Nur, wenn noch keine vorliegt. Damit hat der Mitarbeiter selbst
+        // dann eine Kategorie, wenn das Modell gleich darauf ausfaellt.
+        if (!$conversation->intent) {
+            $vermutet = $this->intents->classify((string) $message->body);
+            $conversation->forceFill([
+                'intent' => $vermutet,
+                'category' => $this->intents->category($vermutet, true),
+            ])->save();
+        }
+
         // --- Stufe 5: Dialog mit dem Modell ---------------------------------
         if (!$this->provider->isEnabled()) {
             return $this->fallback($message, $conversation, $language, $started, 'Kein KI-Anbieter konfiguriert');
         }
 
+        $conversation->forceFill(['current_step' => 'Antwort erstellen'])->save();
         $context = new AssistantToolContext($customer, $conversation, $language);
 
         try {
@@ -176,6 +207,13 @@ class CustomerAssistantService
             'last_ai_response' => Str::limit($text, 500),
             'last_ai_at' => now(),
             'auto_reply_count' => $conversation->auto_reply_count + 1,
+            // Abschnitt 13: eine gelungene Runde raeumt eine fruehere
+            // Stoerung ab und haelt den letzten erfolgreichen Schritt fest.
+            'status' => AiConversation::STATUS_RUNNING,
+            'paused_reason' => null,
+            'last_successful_step' => 'Antwort an den Kunden',
+            'current_step' => null,
+            'next_action' => ConversationState::nextAction($conversation->state),
         ])->save();
 
         $this->countDailyReply();
@@ -212,7 +250,7 @@ class CustomerAssistantService
         $maxCalls = max(1, (int) config('services.ai_assistant.max_tool_calls', 10));
         $maxTokens = (int) config('services.openai.max_output_tokens', 700);
 
-        $instructions = $this->prompt->build($context->customer, $language);
+        $instructions = $this->prompt->build($context->customer, $language, $context->conversation);
         $history = $this->history($message);
         $schemas = $this->tools->schemas();
 
@@ -336,12 +374,95 @@ class CustomerAssistantService
             ];
         }
 
+        // Der bereinigte Text (ohne IBAN & Co.), falls die Vorstufe gelaufen
+        // ist - sonst der Originaltext.
+        $letzte = trim((string) ($message->aiSafeBody ?? $message->body));
+
         $history[] = [
             'role' => 'user',
-            'text' => Str::limit(trim((string) $message->body), $maxChars),
+            'text' => Str::limit($letzte, $maxChars),
         ];
 
         return $history;
+    }
+
+    /**
+     * Sensible Angaben aus der Kundennachricht herausloesen und
+     * serverseitig festhalten (Abschnitte 9/10/11).
+     *
+     * Der Nachrichtentext im Chat bleibt unveraendert - der Kunde soll
+     * sehen, was er geschrieben hat. Ersetzt wird nur, was ZUM MODELL
+     * geht: dafuer merkt sich diese Methode den bereinigten Text am
+     * Nachrichtenobjekt (nicht in der Datenbank).
+     */
+    private function collectFromMessage(CustomerMessage $message, AiConversation $conversation): void
+    {
+        $ergebnis = $this->slots->extract((string) $message->body);
+
+        if ($ergebnis['found'] !== []) {
+            $conversation->remember($ergebnis['found']);
+            $this->journal->collected(
+                $conversation,
+                array_keys($ergebnis['found']),
+                AiConversationEvent::ACTOR_CUSTOMER
+            );
+        }
+
+        // Nur der Text FUER DAS MODELL wird ersetzt.
+        $message->aiSafeBody = $ergebnis['text'];
+    }
+
+    /**
+     * Sicherheitsnetz fuer die Zustimmung (Abschnitt 4).
+     *
+     * Zustaendig ist das Modell (es kennt den Zusammenhang). Hat es die
+     * Zusage aber uebersehen, obwohl sie eindeutig ist und ein Angebot
+     * vorliegt, wird sie hier festgehalten - sonst haengt ein
+     * kaufbereiter Kunde im Zustand "wartet auf Entscheidung".
+     */
+    private function detectAcceptance(CustomerMessage $message, AiConversation $conversation): void
+    {
+        if (!in_array($conversation->state, [
+            ConversationState::OFFER_PRESENTED,
+            ConversationState::WAITING_FOR_CUSTOMER_DECISION,
+        ], true)) {
+            return;
+        }
+
+        $angebote = $conversation->offers()->get();
+        if ($angebote->isEmpty()) {
+            return;
+        }
+
+        $ergebnis = $this->acceptance->check(
+            (string) $message->body,
+            $angebote->pluck('label')->all()
+        );
+        if (!$ergebnis['accepted']) {
+            return;
+        }
+
+        // Ohne benanntes Angebot nur dann uebernehmen, wenn es genau EINES
+        // gibt - bei zwei Angeboten waere jede Wahl geraten.
+        $gewaehlt = $ergebnis['label']
+            ? $angebote->first(fn ($a) => mb_strtoupper($a->label) === mb_strtoupper($ergebnis['label']))
+            : ($angebote->count() === 1 ? $angebote->first() : null);
+
+        if (!$gewaehlt) {
+            return;
+        }
+
+        $vorher = (string) $conversation->state;
+        $gewaehlt->forceFill(['selected_at' => now()])->save();
+        $conversation->forceFill(['selected_offer_id' => $gewaehlt->id])->save();
+
+        if ($conversation->moveTo(ConversationState::CUSTOMER_ACCEPTED, 'Zustimmung erkannt')) {
+            $this->journal->stateChanged($conversation, $vorher, $conversation->state);
+        }
+        $this->journal->record($conversation, AiConversationEvent::EVENT_OFFER_SELECTED, [
+            'angebot' => $gewaehlt->label,
+            'erkannt_durch' => 'Sicherheitsnetz',
+        ], AiConversationEvent::ACTOR_SYSTEM);
     }
 
     /**
@@ -406,6 +527,15 @@ class CustomerAssistantService
         float $started,
         string $error,
     ): CustomerMessage {
+        // Abschnitt 13: die Stoerung wird SICHTBAR - Grund, letzter
+        // erfolgreicher Schritt und der Schritt, an dem es scheiterte,
+        // stehen am Gespraech. Nie wieder "es passiert einfach nichts".
+        $conversation->pause($error, $conversation->current_step ?: 'Antwort erstellen');
+        $this->journal->record($conversation, AiConversationEvent::EVENT_ERROR, [
+            'fehler' => Str::limit($error, 200),
+            'schritt' => $conversation->current_step,
+        ], AiConversationEvent::ACTOR_SYSTEM);
+
         $this->handover->handOver(
             $message->customer,
             $conversation,

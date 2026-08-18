@@ -62,6 +62,115 @@ class HandoverService
     }
 
     /**
+     * Angebot beim Team anfordern (Spezifikation Abschnitt 5).
+     *
+     * Bewusst KEINE vollstaendige Uebergabe: der Vorgang wandert zum
+     * Mitarbeiter, das Gespraech bleibt aber bei der KI. Sobald das
+     * Angebot hinterlegt ist, fuehrt sie es weiter - wuerde sie hier
+     * stummgeschaltet, muesste der Mitarbeiter jedes Angebot selbst
+     * erklaeren, und der Gewinn des Assistenten waere dahin.
+     */
+    public function requestOffer(
+        Customer $customer,
+        AiConversation $conversation,
+        \App\Services\Ai\Assistant\Sales\ConversationContext $context,
+    ): ?Ticket {
+        $summary = $this->offerSummary($customer, $conversation, $context);
+
+        $conversation->forceFill([
+            'summary' => $summary,
+            'next_action' => 'Angebot hinterlegen (Mitarbeiter)',
+        ])->save();
+
+        $ticket = null;
+        if ($this->settings->autoTicket()) {
+            $ticket = $this->ensureOfferTicket($customer, $conversation, $summary);
+        }
+
+        $customer->loadMissing('user');
+        $name = $customer->user?->name ?: trim((string) $customer->company_name) ?: 'Kunde';
+
+        $recipients = $customer->betreuer()->pluck('users.id')
+            ->merge(User::whereIn('role', ['admin', 'manager'])->pluck('id'))
+            ->unique()->values();
+
+        Notify::pushMany($recipients, [
+            'type' => NotificationService::TYPE_MESSAGE,
+            'title' => '💡 Angebot gesucht: Kunde wartet',
+            'body' => $name . ' (Nr. ' . $customer->customer_number . ') – '
+                . \App\Services\Ai\Assistant\Sales\RequirementProfile::intentLabel($conversation->intent)
+                . ($ticket ? ' · Vorgang ' . $ticket->ticket_number : ''),
+            'link' => route('admin.customer_chat') . '?kunde=' . $customer->id,
+            'dedup_key' => 'ai-offer-' . $customer->id,
+        ]);
+
+        return $ticket;
+    }
+
+    /**
+     * Zusammenfassung des Bedarfs - aus ECHTEN erfassten Angaben, nie vom
+     * Modell formuliert. Sensible Angaben erscheinen nur als "liegt vor".
+     */
+    public function offerSummary(
+        Customer $customer,
+        AiConversation $conversation,
+        \App\Services\Ai\Assistant\Sales\ConversationContext $context,
+    ): string {
+        $lines = ['Anliegen: ' . \App\Services\Ai\Assistant\Sales\RequirementProfile::intentLabel($conversation->intent)];
+
+        $bekannt = $context->known();
+        foreach (\App\Services\Ai\Assistant\Sales\RequirementProfile::fieldsForStage($conversation->intent, 'bedarf') as $feld) {
+            $wert = $bekannt[$feld['key']] ?? null;
+            if ($wert === null || trim((string) $wert) === '') {
+                continue;
+            }
+            $lines[] = $feld['label'] . ': ' . Str::limit((string) $wert, 120);
+        }
+
+        $fortschritt = $context->progress('bedarf');
+        $lines[] = 'Erfasst: ' . $fortschritt['erledigt'] . '/' . $fortschritt['gesamt'] . ' Pflichtangaben';
+        $lines[] = 'Nächster Schritt: Angebot auswählen und im Kundenchat hinterlegen.';
+
+        return implode("\n", $lines);
+    }
+
+    /** Ein Angebots-Vorgang je Kunde - kein zweiter fuer dieselbe Anfrage. */
+    private function ensureOfferTicket(Customer $customer, AiConversation $conversation, string $summary): ?Ticket
+    {
+        $existing = Ticket::where('customer_id', $customer->id)
+            ->where('source', 'ai_assistant')
+            ->where('subject', 'like', 'Angebot gesucht%')
+            ->active()
+            ->latest()
+            ->first();
+
+        if ($existing) {
+            $existing->messages()->create([
+                'sender_id' => null,
+                'body' => "Aktualisierter Bedarf des KI-Assistenten:\n" . $summary,
+                'is_internal' => true,
+            ]);
+
+            return $existing;
+        }
+
+        $ticket = Ticket::create([
+            'customer_id' => $customer->id,
+            'type' => 'other',
+            'status' => 'open',
+            'subject' => 'Angebot gesucht: ' . \App\Services\Ai\Assistant\Sales\RequirementProfile::intentLabel($conversation->intent),
+            'description' => $summary,
+            'priority' => 'hoch',
+            'source' => 'ai_assistant',
+            'assigned_to' => $this->assignee($customer),
+        ]);
+
+        $ticket->logEvent('note_added', 'Bedarf vollständig erfasst durch den KI-Assistenten.');
+
+        return $ticket;
+    }
+
+    /**
      * Zusammenfassung fuer den Mitarbeiter (Abschnitt 14): er soll den
      * Fall in Sekunden erfassen, ohne den Chat zu lesen. Bewusst aus
      * ECHTEN Daten gebaut, nicht vom Modell formuliert - eine erfundene
