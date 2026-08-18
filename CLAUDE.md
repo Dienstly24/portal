@@ -562,6 +562,69 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   teilweise. Arabische Betreiber-Anleitung:
   `docs/ANLEITUNG_KI_ASSISTENT_AR.md`. Tests: `CustomerAssistantTest`
   (Abnahmefaelle 1-17 der Spezifikation), `AssistantDiagnosisCommandTest`.
+- **KI-VERKAUFSASSISTENT (Ausbau, Betreiber-Auftrag 18.08.2026, 28
+  Abschnitte; Plan: `docs/KI_VERKAUFSASSISTENT_PLAN.md`)**: aus dem
+  reaktiven Frage-Antwort-Assistenten wird ein FUEHRENDES Gespraech
+  (Bedarf erfassen -> Angebot -> Zusage -> Vertragsdaten -> Pruefung ->
+  Abschluss durch den Mitarbeiter). Angebaut wie zuvor: keine Aenderung an
+  `customers`, `contracts`, `tickets`, `document_requests`,
+  `customer_messages`.
+  ZUSTAND ist ein FELD, nicht der Verlauf (`ai_conversations.state`,
+  `ConversationState`): NEW -> IDENTIFYING_CUSTOMER ->
+  COLLECTING_REQUIREMENTS -> COLLECTING_ADDRESS -> WAITING_FOR_OFFER ->
+  OFFER_PRESENTED -> WAITING_FOR_CUSTOMER_DECISION -> CUSTOMER_ACCEPTED ->
+  COLLECTING_CONTRACT_DATA -> VERIFYING_DATA -> VERIFICATION_PASSED ->
+  CONTRACT_READY -> COMPLETED, quer dazu HUMAN_REQUIRED (aus JEDEM Zustand
+  erlaubt). Gewechselt wird NUR ueber `moveTo()` und nur ueber erlaubte
+  Uebergaenge - ein Modell kann nicht per Fliesstext von "gerade begonnen"
+  auf "Vertrag fertig" springen.
+  NIE ZWEIMAL FRAGEN (`RequirementProfile` je Anliegen +
+  `ConversationContext`): der Prompt bekommt "bereits bekannt" und "noch
+  offen"; Angaben aus der KUNDENAKTE zaehlen als bekannt (ein
+  Bestandskunde diktiert seine Anschrift nicht noch einmal).
+  SENSIBLE WERTE ERREICHEN DAS MODELL NIE (`SlotExtractor`, Abschnitte
+  9/10/11): IBAN (Mod-97-Pruefziffer), E-Mail, Geburtsdatum und
+  Telefonnummer werden VOR dem Modellkontakt aus der Nachricht geloest,
+  verschluesselt gespeichert und durch Platzhalter ersetzt; das Modell
+  sieht "liegt vor". `saveCollectedInformation` LEHNT sensible Felder ab -
+  kaeme so ein Wert vom Modell zurueck, waere er geraten.
+  STILLE PRUEFUNG (`InternalVerificationService`): nach aussen nur
+  VERIFICATION_PASSED/FAILED/PENDING - kein Grund, kein Bestandswert,
+  weder an das Modell noch an den Kunden (sonst waere der Chat ein Orakel
+  zum Erraten gespeicherter Daten). Pruefpunkte sieht nur der Mitarbeiter.
+  ANGEBOTE (Phase 1): der MITARBEITER hinterlegt sie im KI-Panel
+  (`ai_offers`); die KI sucht nichts und nennt keinen Preis, der nicht aus
+  `getOffers` stammt. `OfferSourceInterface`/`ManualOfferSource` - Phase 2
+  (Angebotssuche) tauscht NUR die Bindung in `AppServiceProvider`.
+  ZUSTIMMUNG (Abschnitt 4): das MODELL entscheidet (Zusammenhang),
+  `AcceptanceDetector` ist das Netz fuer eindeutige Faelle; bei ZWEI
+  Angeboten ohne Benennung wird NICHTS gewaehlt (nie raten), eine
+  Verneinung schlaegt jede Zustimmung.
+  STOERUNG IST SICHTBAR (Abschnitt 13): `status`/`paused_reason`/
+  `last_successful_step`/`current_step`/`next_action` am Gespraech, rote
+  Karte im KI-Panel mit "Erneut versuchen" (loescht die Antwort-Sperre der
+  letzten Nachricht und stoesst sie neu an). Nie wieder "es passiert
+  einfach nichts".
+  WEBSITE-ASSISTENT (19/20): `/api/website-assistent` + Chatfenster in
+  `website/partials/assistant.blade.php` (DE/AR, RTL, KEINE externen
+  Ressourcen). Trennung ist STRUKTURELL: eigener `LeadContext`, eigene
+  Schnittstelle `LeadTool`, eigene Whitelist mit genau drei Funktionen
+  (searchKnowledge nur `PUBLIC_CATEGORIES`, saveLeadInformation,
+  requestHumanContact) - ein Kunden-Werkzeug passt typmaessig gar nicht
+  hinein. Die Lead-Kennung kommt IMMER aus der Server-Sitzung, nie aus dem
+  Request. Interessenten stehen in `ai_leads` (`/admin/interessenten`),
+  die Uebergabe erzeugt genau EINEN Vorgang mit Gastdaten.
+  MITARBEITER-ASSISTENT (15/16): `EmployeeAssistantService` trennt FAKTEN
+  (Zusammenfassung, bekannt/fehlend, Fortschritt, Angebot, Pruefstand,
+  naechster Schritt - deterministisch) von FORMULIERUNG (Antwortvorschlag,
+  einziger Modellaufruf, wird NIE automatisch gesendet).
+  STIL LERNEN (17): `ki:leitfaden-entwurf` misst Laenge/Ansprache/
+  Begruessung/Rueckfragen an echten Mitarbeiter-Antworten und legt einen
+  INAKTIVEN Entwurf in der Wissensbasis an (Kategorie `leitfaden`).
+  Bewusst KEIN Nachtrainieren und kein woertliches Nachahmen.
+  AUDIT (23): `ai_conversation_events` getrennt vom Chattext - Feldnamen
+  und Ergebnisse, NIE Werte. Arabische Betreiber-Anleitung:
+  `docs/ANLEITUNG_KI_VERKAUFSASSISTENT_AR.md`. Tests: `SalesAssistantTest`.
 - **Smart Document Upload** (`SmartDocumentUploadController`,
   `DocumentAnalyzer`): Analyse laeuft **„kostenlos zuerst"** (Betreiber-
   Entscheidung) und der KI-Anbieter ist austauschbar
