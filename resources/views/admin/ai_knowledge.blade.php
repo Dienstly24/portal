@@ -21,6 +21,51 @@
 @if(session('success'))<div style="background:#D9F4E6;color:#17A65B;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
 @if($errors->any())<div style="background:#FBE9E9;color:#B3261E;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ $errors->first() }}</div>@endif
 
+{{-- Mehrere Fragen auf einmal: bei 40 Fragen ist ein Formular je Eintrag
+     der eigentliche Grund, warum die Wissensbasis leer bleibt. --}}
+<div class="card" style="margin-bottom:24px;">
+    <div class="card-title" style="margin-bottom:6px;">📥 Mehrere Fragen auf einmal</div>
+    <div style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">
+        Fragen und Antworten untereinander schreiben oder einfügen – jede Frage mit <code>F:</code>,
+        jede Antwort mit <code>A:</code> (arabisch: <code>س:</code> / <code>ج:</code>), Paare durch eine Leerzeile getrennt.
+        Antworten dürfen mehrzeilig sein.
+    </div>
+    <form method="POST" action="{{ route('admin.ai_knowledge.import') }}">
+        @csrf
+        <div class="field">
+            <textarea name="text" rows="8" required maxlength="100000" placeholder="F: Habt ihr Stromangebote?
+A: Ja. Wir vergleichen anbieterunabhängig Strom- und Gastarife und melden uns mit passenden Angeboten.
+
+F: Was kostet die Beratung?
+A: Die Beratung ist kostenlos und unverbindlich.">{{ old('text') }}</textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div class="field">
+                <label>Kategorie für alle *</label>
+                <select name="category" required>
+                    @foreach($categories as $key => $label)
+                    <option value="{{ $key }}" @selected($key === 'faq')>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="field">
+                <label>Sprache für alle</label>
+                <select name="language">
+                    <option value="">Alle Sprachen</option>
+                    @foreach($languages as $key => $label)
+                    <option value="{{ $key }}">{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </div>
+        <label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin-bottom:14px;">
+            <input type="checkbox" name="active" value="1">
+            <span>Sofort aktiv (sonst als Entwurf zum Nachlesen)</span>
+        </label>
+        <button type="submit" class="btn btn-primary">Einträge anlegen</button>
+    </form>
+</div>
+
 <div class="card" style="margin-bottom:24px;">
     <div class="card-title" style="margin-bottom:14px;">➕ Neuer Eintrag</div>
     <form method="POST" action="{{ route('admin.ai_knowledge.store') }}">
@@ -81,6 +126,7 @@
         @endforeach
     </select>
     <button type="submit" class="btn">Filtern</button>
+    <a href="{{ route('admin.ai_knowledge_gaps') }}" class="btn">Wissenslücken ansehen</a>
 </form>
 
 {{-- Leeres Ziel-Formular: die Auswahlkaestchen und Knopfe der Liste

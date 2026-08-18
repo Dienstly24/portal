@@ -2,6 +2,7 @@
 namespace App\Services\Ai\Assistant\Tools;
 
 use App\Models\AiKnowledgeEntry;
+use App\Models\AiKnowledgeGap;
 use App\Services\Ai\Assistant\KnowledgeBase;
 
 /**
@@ -61,6 +62,13 @@ class SearchKnowledgeTool implements AssistantTool
         }
 
         $entries = $this->knowledgeBase->search($query, $context->language);
+
+        // Fehlschlag festhalten: sonst erfaehrt niemand, dass eine Frage
+        // ohne hinterlegte Antwort gestellt wurde (nur der Suchbegriff,
+        // kein Kundenbezug - siehe AiKnowledgeGap).
+        if ($entries->isEmpty()) {
+            AiKnowledgeGap::record($query, AiKnowledgeGap::SCOPE_CUSTOMER, $context->language);
+        }
 
         return [
             'treffer' => $entries->count(),

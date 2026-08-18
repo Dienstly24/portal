@@ -1,6 +1,7 @@
 <?php
 namespace App\Services\Ai\Assistant\Website\Tools;
 
+use App\Models\AiKnowledgeGap;
 use App\Services\Ai\Assistant\KnowledgeBase;
 use App\Services\Ai\Assistant\Website\LeadContext;
 use App\Services\Ai\Assistant\Website\LeadTool;
@@ -55,6 +56,13 @@ class SearchPublicKnowledgeTool implements LeadTool
         }
 
         $treffer = $this->knowledgeBase->search($query, $context->language, 4, publicOnly: true);
+
+        // Auch die Fragen der Website-Besucher sind eine Rueckmeldung
+        // ueber unsere Wissensbasis - getrennt gezaehlt, weil hier nur
+        // die oeffentlichen Kategorien durchsucht werden.
+        if ($treffer->isEmpty()) {
+            AiKnowledgeGap::record($query, AiKnowledgeGap::SCOPE_WEBSITE, $context->language);
+        }
 
         return [
             'treffer' => $treffer->count(),

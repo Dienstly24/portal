@@ -586,6 +586,33 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   Zeile ausserhalb der Liste (`form="bulkForm"`, verschachtelte Formulare
   waeren ungueltig). `ki:pruefen` meldet wartende Entwuerfe getrennt von
   aktiven Eintraegen. Tests: `KnowledgeBaseDraftTest`.
+  WISSENSLUECKEN + SAMMELERFASSUNG (Betreiber-Auftrag 18.08.2026, Frage
+  „lernt das System aus unseren Antworten?"): NEIN - es gibt kein
+  Nachtrainieren und kein selbsttaetiges Lernen; der Assistent wiederholt
+  ausschliesslich, was ein Mensch freigegeben hat (`ki:leitfaden-entwurf`
+  misst nur den STIL, nie den Inhalt). Was fehlte, war die Rueckmeldung:
+  fand `searchKnowledge` nichts, uebergab der Assistent stumm ans Team und
+  niemand erfuhr, dass eine Frage keine Antwort hat. Neu: jede erfolglose
+  Suche landet in `ai_knowledge_gaps` (`AiKnowledgeGap::record`), Seite
+  `/admin/ki-wissensluecken` nach HAEUFIGKEIT sortiert - „einmal
+  beantworten, ab dann beantwortet es der Assistent selbst" (Formular je
+  Luecke legt den Eintrag an UND schliesst sie). Gespeichert wird NUR der
+  Suchbegriff (die Stichworte des Modells, nicht der Nachrichtentext) plus
+  Zaehler - KEIN Kundenbezug, keine Nachricht: die Luecke ist eine Aussage
+  ueber UNSERE Wissensbasis, nicht ueber einen Kunden. Dedupliziert ueber
+  ein normalisiertes `topic_key` (klein, umlaut-neutral, Woerter sortiert:
+  „Angebote Strom" = „strom angebote"), Portal- und Website-Assistent
+  getrennt gezaehlt (`scope`, Website durchsucht nur `PUBLIC_CATEGORIES`).
+  Eine erledigte Luecke wird bei erneutem Fehlschlag WIEDER GEOEFFNET (dann
+  findet die Suche den Eintrag nicht - Titel/Stichwoerter stimmen nicht);
+  ignoriert bleibt ignoriert, der Zaehler laeuft weiter. Massstab fuers
+  Schliessen ist die ECHTE Suche (`closeCoveredGaps` nach Anlegen/Freigabe;
+  ein ENTWURF schliesst nie eine Luecke - der Assistent findet ihn ja
+  nicht). Dazu Sammelerfassung `POST /admin/ki-wissensbasis/import`:
+  Frage/Antwort-Bloecke als Fliesstext (`F:`/`A:`, arabisch `س:`/`ج:`,
+  Leerzeile trennt, mehrzeilige Antworten erlaubt) - ein Block ohne beides
+  wird UEBERSPRUNGEN statt halb angelegt, unlesbarer Text wird abgelehnt.
+  Tests: `KnowledgeGapTest`.
 - **KI-VERKAUFSASSISTENT (Ausbau, Betreiber-Auftrag 18.08.2026, 28
   Abschnitte; Plan: `docs/KI_VERKAUFSASSISTENT_PLAN.md`)**: aus dem
   reaktiven Frage-Antwort-Assistenten wird ein FUEHRENDES Gespraech
