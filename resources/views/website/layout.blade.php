@@ -67,6 +67,8 @@
 <link rel="stylesheet" href="/fonts/fonts-de.css">
 @endif
 <link rel="stylesheet" href="/website-assets/site.css?v={{ @filemtime(public_path('website-assets/site.css')) ?: 1 }}">
+{{-- Fuer den Website-Assistenten (POST per fetch). --}}
+<meta name="csrf-token" content="{{ csrf_token() }}">
 @yield('head-extra')
 </head>
 <body id="top">
@@ -147,6 +149,7 @@
 </div></footer>
 
 @include('website.partials.whatsapp')
+@include('website.partials.assistant')
 <script src="/website-assets/site.js?v={{ @filemtime(public_path('website-assets/site.js')) ?: 1 }}" defer></script>
 </body>
 </html>

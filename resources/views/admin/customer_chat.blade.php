@@ -315,6 +315,14 @@
                 <option value="{{ $tpl->id }}">{{ $tpl->name }}</option>
                 @endforeach
             </select>
+            {{-- Antwortvorschlag (Spezifikation Abschnitt 16): schreibt in
+                 das Eingabefeld, sendet NIE selbst. Der Mitarbeiter liest,
+                 aendert und entscheidet. --}}
+            <button type="button" id="kc-suggest" class="kx-note-btn"
+                    style="background:#fff;border-color:var(--line);color:var(--ink-soft);"
+                    data-url="{{ route('admin.ai_assistant.suggest', $active->id) }}">
+                🤖 Antwortvorschlag
+            </button>
             <span class="opt-label">✉️ E-Mail an den Kunden:</span>
             <select name="email_mode" form="kc-form" aria-label="E-Mail-Modus">
                 <option value="hint" selected>Nur Hinweis (ohne Inhalt)</option>
@@ -323,6 +331,7 @@
             </select>
         </div>
         <div class="d24c-files" id="kc-files" hidden></div>
+
         <form class="d24c-comp" id="kc-form" method="POST" action="{{ route('admin.customer.messages.store', $active->id) }}" enctype="multipart/form-data"
               @if($activeTicket) data-ticket-action="{{ route('admin.ticket.reply', $activeTicket->id) }}" data-ticket-nr="{{ $activeTicket->ticket_number }}" @endif>
             @csrf
@@ -450,4 +459,30 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 @endif
+<script>
+// Antwortvorschlag holen (Abschnitt 16). Bewusst NUR einfuegen: gesendet
+// wird ausschliesslich durch den Mitarbeiter.
+document.addEventListener('click', function (e) {
+    var btn = e.target.closest('#kc-suggest');
+    if (!btn) { return; }
+
+    var eingabe = document.getElementById('kc-input') || document.querySelector('.d24c-comp textarea, .d24c-comp input[type="text"]');
+    var alt = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '🤖 Vorschlag wird erstellt …';
+
+    fetch(btn.dataset.url, { headers: { 'Accept': 'application/json' } })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+            if (d.ok && d.vorschlag && eingabe) {
+                eingabe.value = d.vorschlag;
+                eingabe.focus();
+            } else {
+                alert(d.fehler || 'Es konnte kein Vorschlag erstellt werden.');
+            }
+        })
+        .catch(function () { alert('Der Vorschlag konnte nicht geladen werden.'); })
+        .finally(function () { btn.disabled = false; btn.textContent = alt; });
+});
+</script>
 @endsection

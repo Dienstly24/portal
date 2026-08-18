@@ -738,6 +738,39 @@ class SalesAssistantTest extends TestCase
         $this->assertDatabaseHas('ai_offers', ['id' => $angebot->id]);
     }
 
+    // ---------------------------------- Abschnitt 17: Stil lernen
+
+    public function test_leitfaden_entwurf_wird_nie_automatisch_aktiv(): void
+    {
+        $customer = $this->makeCustomer();
+        $staff = User::factory()->create(['role' => 'support']);
+
+        for ($i = 0; $i < 25; $i++) {
+            CustomerMessage::create([
+                'customer_id' => $customer->id,
+                'sender_id' => $staff->id,
+                'body' => 'Guten Tag, vielen Dank für Ihre Nachricht. '
+                    . 'Wir haben Ihren Vorgang geprüft und melden uns mit dem Ergebnis. '
+                    . 'Können Sie uns noch die Vertragsnummer nennen?',
+                'from_staff' => true,
+            ]);
+        }
+
+        $this->artisan('ki:leitfaden-entwurf', ['--schreiben' => true])
+            ->assertExitCode(0);
+
+        $entwurf = AiKnowledgeEntry::where('category', 'leitfaden')->first();
+
+        $this->assertNotNull($entwurf);
+        // Entscheidend: der Entwurf ist INAKTIV, bis ein Mensch ihn freigibt.
+        $this->assertFalse((bool) $entwurf->active);
+    }
+
+    public function test_leitfaden_braucht_genug_material(): void
+    {
+        $this->artisan('ki:leitfaden-entwurf')->assertExitCode(1);
+    }
+
     public function test_erneut_versuchen_stoesst_die_letzte_nachricht_neu_an(): void
     {
         $customer = $this->makeCustomer();
