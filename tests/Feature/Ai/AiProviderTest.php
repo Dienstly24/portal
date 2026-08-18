@@ -62,6 +62,30 @@ class AiProviderTest extends TestCase
         });
     }
 
+    /**
+     * Regression: frueher ging temperature=0.0 mit jedem Aufruf raus. Die
+     * aktuellen Claude-Modelle lehnen Sampling-Parameter mit HTTP 400 ab -
+     * mit dem konfigurierten Standardmodell haette damit JEDER Aufruf der
+     * Workflow-Engine fehlschlagen muessen.
+     */
+    public function test_complete_sends_no_sampling_parameters(): void
+    {
+        config(['services.anthropic.key' => 'test-key']);
+        Http::fake(['api.anthropic.com/*' => Http::response([
+            'content' => [['type' => 'text', 'text' => 'ok']],
+        ])]);
+
+        app(AiProviderInterface::class)->complete(AiRequest::text('s', 'p'));
+
+        Http::assertSent(function ($request) {
+            foreach (['temperature', 'top_p', 'top_k'] as $verboten) {
+                $this->assertArrayNotHasKey($verboten, $request->data());
+            }
+
+            return true;
+        });
+    }
+
     public function test_complete_throws_when_not_configured(): void
     {
         config(['services.anthropic.key' => '']);

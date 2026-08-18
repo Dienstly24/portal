@@ -99,7 +99,9 @@ return [
         // Person, Vertrag, Fahrzeug/Tarif, Personenliste und Energie - zu
         // knappe Werte schneiden die Antwort mittendrin ab (ungueltiges JSON).
         'document_max_tokens' => env('ANTHROPIC_DOCUMENT_MAX_TOKENS', 4096),
-        'base_url' => env('ANTHROPIC_BASE_URL', 'https://api.anthropic.com/v1'),
+        // HOST-Wurzel ohne Versionspfad (Konvention der offiziellen
+        // Anthropic-SDKs); den Pfad /v1/messages haengt der Client an.
+        'base_url' => env('ANTHROPIC_BASE_URL', 'https://api.anthropic.com'),
 
         /*
         | KI-Kundenassistent ueber Claude (Betreiber-Entscheidung

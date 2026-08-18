@@ -42,7 +42,11 @@ class ClaudeTextProvider implements AiProviderInterface
         ])->timeout(60)->post('https://api.anthropic.com/v1/messages', [
             'model' => $this->model(),
             'max_tokens' => $request->maxTokens,
-            'temperature' => $request->temperature,
+            // BEWUSST KEINE Sampling-Parameter (temperature/top_p/top_k):
+            // die aktuellen Claude-Modelle lehnen sie mit HTTP 400 ab. Frueher
+            // ging hier temperature=0.0 mit raus - mit dem konfigurierten
+            // Standardmodell haette jeder Aufruf der Workflow-Engine
+            // fehlschlagen muessen. Verhalten steuert der System-Prompt.
             'system' => $request->system,
             'messages' => [[
                 'role' => 'user',
