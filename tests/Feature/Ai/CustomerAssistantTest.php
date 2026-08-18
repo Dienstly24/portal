@@ -981,6 +981,44 @@ class CustomerAssistantTest extends TestCase
         $this->assertSame('toolu_2', $resultMsg['content'][1]['tool_use_id']);
     }
 
+    /**
+     * Regression aus dem Live-Test: die Hosting-Umgebung setzte
+     * ANTHROPIC_BASE_URL auf die HOST-Wurzel ohne "/v1" (Konvention der
+     * offiziellen SDKs). Wer nur "/messages" anhaengt, ruft dann einen
+     * Pfad auf, den es nicht gibt - jeder Aufruf liefe ins Leere.
+     */
+    public function test_endpunkt_folgt_der_basis_url_konvention(): void
+    {
+        $this->useClaude();
+        $customer = $this->makeCustomer();
+        $antwort = [
+            'model' => 'claude-opus-5',
+            'stop_reason' => 'end_turn',
+            'content' => [['type' => 'text', 'text' => 'ok']],
+            'usage' => ['input_tokens' => 10, 'output_tokens' => 2],
+        ];
+
+        // Host-Wurzel ohne Versionspfad (so setzen es Umgebungen).
+        config(['services.anthropic.base_url' => 'https://api.anthropic.com']);
+        Http::fake(['*' => Http::response($antwort)]);
+        $this->assistant()->handleCustomerMessage($this->message($customer, 'Frage zum Vertrag.'));
+        Http::assertSent(fn ($r) => $r->url() === 'https://api.anthropic.com/v1/messages');
+
+        // Basis MIT /v1 wird toleriert - kein doppeltes /v1/v1.
+        $kunde2 = $this->makeCustomer();
+        config(['services.anthropic.base_url' => 'https://api.anthropic.com/v1']);
+        Http::fake(['*' => Http::response($antwort)]);
+        $this->assistant()->handleCustomerMessage($this->message($kunde2, 'Frage zum Vertrag.'));
+        Http::assertSent(fn ($r) => $r->url() === 'https://api.anthropic.com/v1/messages');
+
+        // Eigener Host (Proxy/Gateway) funktioniert ebenso.
+        $kunde3 = $this->makeCustomer();
+        config(['services.anthropic.base_url' => 'http://127.0.0.1:8899']);
+        Http::fake(['*' => Http::response($antwort)]);
+        $this->assistant()->handleCustomerMessage($this->message($kunde3, 'Frage zum Vertrag.'));
+        Http::assertSent(fn ($r) => $r->url() === 'http://127.0.0.1:8899/v1/messages');
+    }
+
     public function test_claude_sicherheits_ablehnung_fuehrt_zur_uebergabe(): void
     {
         $this->useClaude();

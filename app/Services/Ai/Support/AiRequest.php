@@ -11,6 +11,11 @@ namespace App\Services\Ai\Support;
  *   ['type' => 'image',    'mime' => 'image/jpeg',      'data' => <binary>]
  * So bleibt die Vision-Faehigkeit erhalten, ohne die Engine an einen
  * Anbieter zu binden.
+ *
+ * BEWUSST OHNE Sampling-Parameter (temperature/top_p/top_k): die aktuellen
+ * Modelle lehnen sie mit HTTP 400 ab, und kein Aufrufer hat sie je gesetzt.
+ * Das Feld war damit nur eine Falle fuer den naechsten Adapter. Verhalten
+ * wird ueber den System-Prompt gesteuert.
  */
 final class AiRequest
 {
@@ -19,7 +24,6 @@ final class AiRequest
         public readonly string $system,
         public readonly array $parts,
         public readonly int $maxTokens = 1024,
-        public readonly float $temperature = 0.0,
     ) {
     }
 
@@ -37,7 +41,6 @@ final class AiRequest
             $this->system,
             [['type' => $type, 'mime' => $mime, 'data' => $binary], ...$this->parts],
             $this->maxTokens,
-            $this->temperature,
         );
     }
 }

@@ -106,11 +106,27 @@ class ClaudeAssistantProvider implements AssistantProviderInterface
         return $this->parse($response->json() ?? []);
     }
 
+    /**
+     * Endpunkt aus der Basis-URL.
+     *
+     * KONVENTION (wie bei den offiziellen Anthropic-SDKs): ANTHROPIC_BASE_URL
+     * ist die HOST-Wurzel ohne Versionspfad, der Pfad `/v1/messages` kommt
+     * vom Client. Genau so setzen Hosting-Umgebungen die Variable - eine
+     * Basis ohne `/v1` haette hier sonst zu `.../messages` gefuehrt und
+     * jeden Aufruf ins Leere laufen lassen.
+     *
+     * Eine Basis, die `/v1` bereits mitbringt, wird toleriert (frueherer
+     * Standardwert dieses Projekts), damit bestehende Konfigurationen nicht
+     * plötzlich `/v1/v1/messages` ansprechen.
+     */
     private function endpoint(): string
     {
-        $base = rtrim((string) config('services.anthropic.base_url', 'https://api.anthropic.com/v1'), '/');
+        $base = rtrim((string) config('services.anthropic.base_url', 'https://api.anthropic.com'), '/');
+        if (str_ends_with($base, '/v1')) {
+            $base = substr($base, 0, -3);
+        }
 
-        return $base . '/messages';
+        return rtrim($base, '/') . '/v1/messages';
     }
 
     /**
