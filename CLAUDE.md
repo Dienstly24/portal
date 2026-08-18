@@ -546,8 +546,22 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   NIE IBAN/BIC/Kontoinhaber, Steuer-ID, Gesundheits-/Ausweisdaten; das
   Protokoll speichert KEINEN Nachrichtentext und keinen Prompt (nur Absicht,
   Tools, Aktionen, Ergebnis; Details verschluesselt). Kennzeichnung „🤖
-  KI-Assistent" im Portal-Chat (Transparenzpflicht). Tests:
-  `CustomerAssistantTest` (Abnahmefaelle 1-17 der Spezifikation).
+  KI-Assistent" im Portal-Chat (Transparenzpflicht).
+  STOERUNGSSUCHE (Lehre 18.08.2026 - "die KI antwortet nicht"): der
+  Assistent ist eine KETTE (Schalter -> Anbieter/Schluessel/Endpunkt ->
+  Migrationen -> Queue-Worker -> Wissensbasis). Reisst ein Glied, sieht der
+  Betreiber IMMER dasselbe (keine Antwort), obwohl jede Ursache eine andere
+  Loesung hat. Deshalb `php artisan ki:pruefen` (`CheckAiAssistant`, nur
+  lesend): prueft die Kette in Betriebsreihenfolge, zeigt die Ergebnisse der
+  letzten 7 Tage aus `ai_assistant_logs` (kein Protokoll = nie angestossen
+  -> Schalter/Worker; `fallback` = Dienst gestoert) und nennt die naechsten
+  Schritte; Exitcode 1 = handlungsbeduerftig. `--live` sendet einen echten
+  Mini-Aufruf - die EINZIGE Pruefung, die Schluessel, Endpunkt UND
+  Modellfreigabe beweist (401 falscher Schluessel, 404 Modell/Endpunkt,
+  Timeout Netz/Firewall). Der Schluessel wird NIE ausgegeben, auch nicht
+  teilweise. Arabische Betreiber-Anleitung:
+  `docs/ANLEITUNG_KI_ASSISTENT_AR.md`. Tests: `CustomerAssistantTest`
+  (Abnahmefaelle 1-17 der Spezifikation), `AssistantDiagnosisCommandTest`.
 - **Smart Document Upload** (`SmartDocumentUploadController`,
   `DocumentAnalyzer`): Analyse laeuft **„kostenlos zuerst"** (Betreiber-
   Entscheidung) und der KI-Anbieter ist austauschbar
@@ -924,7 +938,10 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
      wenig hilfreicher Zustand).
   3. Erst danach in `/admin/settings` -> „🤖 KI-Kundenassistent" den
      Hauptschalter einschalten (Voreinstellung ist AUS).
-  4. Queue-Worker muss laufen (die Antwort ist ein Job); ohne Worker greift
+  4. Nach jedem Schritt `php artisan ki:pruefen` auf dem Server laufen
+     lassen - der Befehl nennt das jeweils naechste fehlende Glied;
+     `--live` beweist zusaetzlich Schluessel/Endpunkt/Modell.
+  5. Queue-Worker muss laufen (die Antwort ist ein Job); ohne Worker greift
      nach 10 Min das Sicherheitsnetz `ai:answer-pending`.
   Rechtlich noch zu klaeren, BEVOR der Schalter auf produktiv geht:
   Auftragsverarbeitungsvertrag/DPA mit dem genutzten Anbieter (bei Claude
