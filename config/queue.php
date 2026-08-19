@@ -42,8 +42,11 @@ return [
             'queue' => env('DB_QUEUE', 'default'),
             // WICHTIG: retry_after MUSS groesser sein als das laengste Job-
             // Timeout, sonst nimmt ein zweiter Worker den Job an, waehrend der
-            // erste noch laeuft. AnalyzeDocumentJob hat $timeout=300 (Claude-
-            // Vision-HTTP bis 180s) -> Default 360s haelt sicheren Abstand.
+            // erste noch laeuft. AnalyzeDocumentJob und SendCampaignJob haben
+            // $timeout=300 (Claude-Vision-HTTP bis 180s; Kampagne sendet in
+            // Stapeln und setzt sich selbst fort) -> Default 360s haelt
+            // sicheren Abstand. Wer diesen Wert SENKT, muss die Job-Timeouts
+            // mitsenken - sonst versendet eine Kampagne doppelt.
             'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 360),
             'after_commit' => false,
         ],

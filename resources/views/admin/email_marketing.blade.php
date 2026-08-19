@@ -12,9 +12,13 @@
         'sending' => ['Wird gesendet…', 'badge-pending'],
         'scheduled' => ['Geplant', 'badge-pending'],
         'draft' => ['Entwurf', 'badge-closed'],
+        // Abgebrochener Versand (Worker-Absturz/Timeout): darf nicht als
+        // "Wird gesendet…" verschwinden - der Ersteller bekommt zusaetzlich
+        // eine Glocken-Meldung (SendCampaignJob::failed).
+        'failed' => ['Abgebrochen', 'badge-closed'],
     ];
     $drafts = $campaigns->whereIn('status', ['draft', 'scheduled']);
-    $sentCampaigns = $campaigns->whereIn('status', ['sent', 'sending']);
+    $sentCampaigns = $campaigns->whereIn('status', ['sent', 'sending', 'failed']);
 @endphp
 
 <div class="metrics-grid" style="grid-template-columns:repeat(3,1fr);">
@@ -168,7 +172,15 @@
                 @endif
             </div>
         </div>
-        <span class="badge {{ $badge }}">{{ $label }}</span>
+        <div style="display:flex;gap:6px;align-items:center;">
+            @if($c->status === 'failed')
+            <form method="POST" action="{{ route('admin.email_marketing.dispatch', $c->id) }}"
+                  onsubmit="return confirm('Versand fortsetzen? Bereits angeschriebene Empfaenger werden uebersprungen.')">@csrf
+                <button type="submit" class="btn btn-primary" style="padding:5px 10px;font-size:12px;">Fortsetzen</button>
+            </form>
+            @endif
+            <span class="badge {{ $badge }}">{{ $label }}</span>
+        </div>
     </div>
     @empty
     <p style="color:var(--ink-soft);font-size:14px;">Noch keine Kampagnen.</p>

@@ -129,6 +129,132 @@ class EmailMarketingImprovementsTest extends TestCase
         $this->assertDatabaseMissing('email_logs', ['user_id' => $unsubscribed->user_id]);
     }
 
+    // ---------------- Doppelversand-Schutz (Audit 18.08.2026) ----------------
+
+    // Der Job-Timeout MUSS unter dem retry_after der Queue liegen - sonst
+    // holt ein zweiter Worker den Job, waehrend der erste noch sendet.
+    public function test_job_timeout_stays_below_queue_retry_after(): void
+    {
+        $job = new SendCampaignJob('egal');
+        $retryAfter = (int) config('queue.connections.database.retry_after');
+
+        $this->assertGreaterThan(0, $retryAfter);
+        $this->assertLessThan(
+            $retryAfter,
+            $job->timeout,
+            'SendCampaignJob::$timeout muss kleiner als retry_after sein (Doppelversand-Gefahr).'
+        );
+    }
+
+    // Ein zweiter Lauf derselben Kampagne (Retry / doppelt ausgelieferter
+    // Job) darf niemanden erneut anschreiben.
+    public function test_second_run_never_mails_the_same_recipient_twice(): void
+    {
+        Mail::fake();
+        $customer = $this->customer();
+
+        $campaign = EmailCampaign::create([
+            'created_by' => $this->admin->id, 'subject' => 'Angebot',
+            'body' => 'Hallo', 'target' => 'all', 'status' => 'sending',
+        ]);
+
+        (new SendCampaignJob($campaign->id))->handle();
+        Mail::assertSent(CampaignMail::class, 1);
+
+        // Zweiter Lauf: Kampagne steht wieder auf 'sending' (so, wie ein
+        // erneut ausgelieferter Job sie vorfaende).
+        $campaign->update(['status' => 'sending']);
+        (new SendCampaignJob($campaign->id))->handle();
+
+        Mail::assertSent(CampaignMail::class, 1);
+        $this->assertEquals(1, EmailLog::where('campaign_id', $campaign->id)->count());
+        $this->assertEquals(1, $campaign->fresh()->sent_count);
+        $this->assertDatabaseHas('email_logs', [
+            'campaign_id' => $campaign->id, 'user_id' => $customer->user_id, 'status' => 'sent',
+        ]);
+    }
+
+    // Die Datenbank haelt die Regel selbst - auch wenn zwei Laeufe exakt
+    // gleichzeitig denselben Empfaenger greifen.
+    public function test_database_rejects_duplicate_recipient_log_per_campaign(): void
+    {
+        $customer = $this->customer();
+        $campaign = EmailCampaign::create([
+            'created_by' => $this->admin->id, 'subject' => 'A', 'body' => 'B',
+            'target' => 'all', 'status' => 'sending',
+        ]);
+        $attrs = [
+            'campaign_id' => $campaign->id, 'user_id' => $customer->user_id,
+            'email' => 'a@b.test', 'subject' => 'A', 'type' => 'campaign', 'status' => 'sent',
+        ];
+        EmailLog::create($attrs);
+
+        $this->expectException(\Illuminate\Database\UniqueConstraintViolationException::class);
+        EmailLog::create($attrs);
+    }
+
+    // Protokolleintraege OHNE Kampagne (Systemmails) bleiben unbegrenzt
+    // moeglich - der Unique-Index greift nur bei campaign_id.
+    public function test_unique_index_does_not_block_system_mails(): void
+    {
+        $customer = $this->customer();
+        foreach (['erste', 'zweite'] as $subject) {
+            EmailLog::create([
+                'campaign_id' => null, 'user_id' => $customer->user_id,
+                'email' => 'a@b.test', 'subject' => $subject,
+                'type' => 'contract_switch', 'status' => 'sent',
+            ]);
+        }
+        $this->assertEquals(2, EmailLog::whereNull('campaign_id')->count());
+    }
+
+    // Abgebrochener Versand darf nicht stumm auf "Wird gesendet..." stehen
+    // bleiben: Status sichtbar + Glocke an den Ersteller.
+    public function test_failed_job_marks_campaign_and_notifies_creator(): void
+    {
+        Mail::fake();
+        $this->customer();
+        $campaign = EmailCampaign::create([
+            'created_by' => $this->admin->id, 'subject' => 'Abbruch', 'body' => 'Text',
+            'target' => 'all', 'status' => 'sending',
+        ]);
+
+        (new SendCampaignJob($campaign->id))->failed(new \RuntimeException('Worker abgestuerzt'));
+
+        $this->assertEquals('failed', $campaign->fresh()->status);
+        $this->assertDatabaseHas('internal_notifications', [
+            'user_id' => $this->admin->id,
+            'dedup_key' => 'campaign-failed-' . $campaign->id,
+        ]);
+    }
+
+    // Nach dem Abbruch kann der Mitarbeiter den Rest fortsetzen - bereits
+    // Angeschriebene bleiben aussen vor.
+    public function test_failed_campaign_can_be_resumed_without_resending(): void
+    {
+        Mail::fake();
+        $alreadyMailed = $this->customer();
+        $campaign = EmailCampaign::create([
+            'created_by' => $this->admin->id, 'subject' => 'Rest', 'body' => 'Text',
+            'target' => 'all', 'status' => 'sending',
+        ]);
+        (new SendCampaignJob($campaign->id))->handle();
+        Mail::assertSent(CampaignMail::class, 1);
+
+        $campaign->update(['status' => 'failed']);
+        $neu = $this->customer(); // kam erst nach dem Abbruch dazu
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.email_marketing.dispatch', $campaign->id))
+            ->assertSessionHas('success');
+        (new SendCampaignJob($campaign->id))->handle();
+
+        Mail::assertSent(CampaignMail::class, 2); // genau EINE weitere
+        $this->assertEquals('sent', $campaign->fresh()->status);
+        $this->assertEquals(1, EmailLog::where('user_id', $alreadyMailed->user_id)->count());
+        $this->assertEquals(1, EmailLog::where('user_id', $neu->user_id)->count());
+    }
+
     public function test_campaign_mail_contains_unsubscribe_link(): void
     {
         $html = (new CampaignMail('Betreff', 'Text', 'Max', 'https://example.test/abmelden/tok'))->render();
