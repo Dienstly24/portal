@@ -669,6 +669,14 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         Route::get('/invoices/{id}/download', [LexofficeController::class, 'downloadInvoice'])->name('invoice.download');
     });
 
+    // Systemzustand: laeuft im Hintergrund noch alles? (nur lesend)
+    Route::middleware('role:admin,manager')->group(function () {
+        Route::get('/systemzustand', [\App\Http\Controllers\SystemHealthController::class, 'index'])
+            ->name('system_health');
+        Route::get('/systemzustand.json', [\App\Http\Controllers\SystemHealthController::class, 'json'])
+            ->name('system_health.json');
+    });
+
     // Einstellungen & Termine
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings')->middleware('role:admin');
     Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update')->middleware('role:admin');

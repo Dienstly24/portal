@@ -111,7 +111,7 @@ Schedule::call(function () {
             \Log::warning('Kind-wird-15-Aufgabe uebersprungen (' . $kid->id . '): ' . $e->getMessage());
         }
     }
-})->dailyAt('07:30');
+})->name('kind-wird-15-aufgabe')->dailyAt('07:30');
 
 // 08:00 — Geburtstags-E-Mails
 Schedule::call(function () {
@@ -135,7 +135,7 @@ Schedule::call(function () {
             Mail::to($email)->send(new BirthdayMail($f->customer->user->name, $f->name, false, $f->customer->preferred_lang ?? 'de'));
         } catch (\Throwable $e) { \Log::warning('Birthday mail failed: ' . $e->getMessage()); }
     }
-})->dailyAt('08:00');
+})->name('geburtstags-mails')->dailyAt('08:00');
 
 // 08:30 — Spartenspezifische Wechsel-Erinnerungen (Verbesserungsplan Paket C,
 // ersetzt die pauschale 30/14/7-Logik). Regeln, Empfängerfilter und
@@ -144,7 +144,7 @@ Schedule::call(function () {
 Schedule::call(function () {
     $sent = app(\App\Services\ContractSwitchReminderService::class)->run();
     if ($sent > 0) \Log::info("Wechsel-Erinnerungen: {$sent} Mails versendet.");
-})->dailyAt('08:30');
+})->name('wechsel-erinnerungen')->dailyAt('08:30');
 
 // 08:40 — E-Scooter-Erneuerung: aktive E-Scooter-Vertraege Anfang Februar an
 // das ablaufende Kennzeichen erinnern (neues gilt ab 01.03.). Idempotent, das
@@ -159,7 +159,8 @@ Schedule::command('escooter:renewal-reminders')->dailyAt('08:40');
 Schedule::command('schutzbrief:renewal-reminders')->dailyAt('08:45');
 
 // Alle 5 Minuten — geplante E-Mail-Kampagnen anstoßen (Paket B1)
-Schedule::call(fn() => \App\Jobs\SendCampaignJob::dispatchDueScheduled())->everyFiveMinutes();
+Schedule::call(fn() => \App\Jobs\SendCampaignJob::dispatchDueScheduled())
+    ->name('kampagnen-versand')->everyFiveMinutes();
 
 // 09:00 — Portal-Erinnerung nach 3 Tagen ohne Login
 Schedule::call(function () {
@@ -178,7 +179,7 @@ Schedule::call(function () {
             $u->forceFill(['portal_reminder_sent_at' => now()])->save();
         } catch (\Throwable $e) { \Log::warning('Portal reminder failed: ' . $e->getMessage()); }
     }
-})->dailyAt('09:00');
+})->name('portal-erinnerung')->dailyAt('09:00');
 
 // Alle 15 Minuten: faellige Social-Media-Posts (Banner-Social-Publishing)
 // ueber die Meta Graph API veroeffentlichen (genau ein Auto-Versuch je Kanal).
