@@ -16,6 +16,11 @@ class User extends Authenticatable {
         'portal_password_set_at' => 'datetime',
         'password_changed_at' => 'datetime',
         'must_change_password' => 'boolean',
+        // Das 2FA-Geheimnis ist gleichwertig zum Passwort: wer es hat,
+        // erzeugt gueltige Codes. Deshalb verschluesselt at rest.
+        'two_factor_secret' => 'encrypted',
+        'two_factor_recovery_codes' => 'encrypted:array',
+        'two_factor_confirmed_at' => 'datetime',
         'password' => 'hashed',
         'can_see_all_customers' => 'boolean',
         'can_manage_contracts' => 'boolean',
@@ -136,6 +141,23 @@ class User extends Authenticatable {
             'password_changed_at' => now(),
             'must_change_password' => false,
         ])->save();
+    }
+
+    /** Ist die Zwei-Faktor-Anmeldung fertig eingerichtet und bestaetigt? */
+    public function hasTwoFactor(): bool
+    {
+        return $this->two_factor_secret !== null && $this->two_factor_confirmed_at !== null;
+    }
+
+    /**
+     * Braucht dieses Konto zwingend eine zweite Schicht? Alle internen
+     * Rollen - sie sehen fremde personenbezogene Daten. Kundenkonten
+     * bewusst NICHT: dort waere die Huerde groesser als der Gewinn, und
+     * ein Kunde sieht ausschliesslich seine eigenen Daten.
+     */
+    public function requiresTwoFactor(): bool
+    {
+        return $this->isStaff() || $this->role === 'partner';
     }
 
     public function isAdmin() { return $this->role === 'admin'; }

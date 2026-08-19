@@ -59,6 +59,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // eigenes getauscht werden. NACH AuthenticateSession, damit die
         // Sitzungspruefung zuerst greift.
         $middleware->appendToGroup('web', \App\Http\Middleware\EnsurePasswordChanged::class);
+        // Zweiter Faktor fuer die Beraterwelt. NACH dem Passwortwechsel:
+        // erst ein eigenes Passwort, dann die zweite Schicht - in der
+        // umgekehrten Reihenfolge richtet jemand 2FA fuer ein Konto ein,
+        // dessen Passwort noch das oeffentlich bekannte Geburtsdatum ist.
+        $middleware->appendToGroup('web', \App\Http\Middleware\EnsureTwoFactor::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

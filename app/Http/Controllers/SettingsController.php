@@ -25,6 +25,10 @@ class SettingsController extends Controller
             'legal_agb' => SystemSetting::get('legal_agb', ''),
             'legal_datenschutz' => SystemSetting::get('legal_datenschutz', ''),
             'legal_cookies' => SystemSetting::get('legal_cookies', ''),
+            // Sicherheit: Zwei-Faktor-Pflicht fuer Personal. Voreinstellung
+            // AN - eine Schutzschicht, die man erst einschalten muss, ist
+            // in der Praxis meistens aus.
+            'two_factor_required' => SystemSetting::get('two_factor_required', '1'),
         ];
 
         // KI-Kundenassistent (Spezifikation Abschnitt 30): Betriebsschalter
@@ -61,6 +65,13 @@ class SettingsController extends Controller
             if ($request->has($field)) {
                 SystemSetting::set($field, $request->input($field));
             }
+        }
+
+        // Zwei-Faktor-Pflicht: eigener Marker, damit ein anderes Formular
+        // die Sicherheitsschicht nicht versehentlich abschaltet. Ohne
+        // Marker bleibt der bisherige Wert stehen.
+        if ($request->has('security_form')) {
+            SystemSetting::set('two_factor_required', $request->boolean('two_factor_required') ? '1' : '0');
         }
 
         // KI-Kundenassistent: Schalter kommen als Checkboxen, ein nicht

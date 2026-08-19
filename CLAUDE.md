@@ -100,8 +100,50 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   Ohne sie kamen alle Validierungsmeldungen auf Englisch - ausgerechnet
   in den Passwort-Formularen.
 - Tests: `PasswordSecurityTest`, `PasswordFlowHardeningTest`.
-- **Offen (bewusst NICHT in diesem Paket)**: 2FA fuer `/admin`.
-  `ExtraBasicAuth` bleibt bis dahin die zweite Schicht.
+
+## Zwei-Faktor-Anmeldung (Betreiber-Vorgabe 18.08.2026)
+
+- **Pflicht fuer alle internen Rollen** (admin/manager/support/employee)
+  UND partner - sie sehen fremde personenbezogene Daten. Kundenkonten
+  bewusst NICHT: ein Kunde sieht nur die eigenen Daten, die Huerde waere
+  groesser als der Gewinn. Steuerung: `User::requiresTwoFactor()`.
+- **Voreinstellung AN** (`SystemSetting two_factor_required`, Schalter
+  unter Einstellungen -> Sicherheit). Anders als beim KI-Assistenten ist
+  AUS hier die Ausnahme: eine Schutzschicht, die man erst einschalten
+  muss, ist in der Praxis meistens aus.
+- **Niemand kann sich aussperren** - das war die Bedingung fuer die
+  Pflicht: Einrichtung fuehrt das System beim naechsten Login selbst
+  durch (`EnsureTwoFactor` -> `/sicherheit/zwei-faktor`), es gibt
+  8 Ersatzcodes (gehasht wie Passwoerter, je genau EINMAL nutzbar),
+  Admin-Reset in der Mitarbeiterakte (**nur admin**) und als letzte
+  Rettung `php artisan 2fa:zuruecksetzen <email>` auf dem Server
+  (`--alle-anzeigen` listet, wer eingerichtet hat). Abmelden,
+  Sprachwechsel und Rechtsseiten bleiben in jedem Zustand erreichbar.
+- **Erst bestaetigen, dann scharf**: `two_factor_confirmed_at` wird nur
+  gesetzt, wenn ein gueltiger Code eingegeben wurde. Wer die Seite nur
+  geoeffnet hat, ist nicht ausgesperrt. Ein bereits bestaetigtes
+  Geheimnis wird NIE still ersetzt (sonst macht ein Seitenaufruf die
+  funktionierende App ungueltig).
+- **Sitzungsschluessel traegt die Benutzer-ID** (`2fa_ok:<id>`) - ein
+  blosses Flag wuerde nach einem Kontowechsel in derselben Sitzung
+  weitergelten.
+- **Alles selbst gebaut, aber geprueft**: `App\Support\Totp` (RFC 6238,
+  gegen die amtlichen Testvektoren getestet) und `App\Support\QrCode`
+  (Byte-Modus, Fehlerkorrektur M, Versionen 1-20). Der QR-Code ist ein
+  INLINE-SVG - das Geheimnis erreicht nie eine Datei, keinen Cache und
+  keinen fremden Dienst. Der Schluessel steht IMMER auch abtippbar da
+  (Telefon ohne Kamera). Die Golden-Hashes in `tests/Unit/QrCodeTest.php`
+  sichern den geprueften Stand ab; aendert sich einer, wurde die
+  Erzeugung veraendert - das faellt sonst erst beim Mitarbeiter auf, der
+  seine App nicht einrichten kann.
+- **Raten wird teuer**: 5 Fehlversuche je Konto+IP (300 s Sperre) plus
+  Route-Throttle; jeder Fehlversuch und jede Aenderung am zweiten Faktor
+  steht im ActivityLog (`two_factor_*`) - der Code selbst nie.
+- `ExtraBasicAuth` bleibt als zusaetzliche Schicht bestehen, ist aber
+  nicht mehr der einzige Schutz.
+- Tests: `TwoFactorTest`, `tests/Unit/TotpTest.php`,
+  `tests/Unit/QrCodeTest.php`. Arabische Betreiber-Anleitung:
+  `docs/ANLEITUNG_ZWEI_FAKTOR_AR.md`.
 
 ## Kundennummern
 

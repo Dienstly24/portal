@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\PasswordSetupController;
+use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
@@ -79,6 +80,29 @@ Route::middleware('auth')->group(function () {
     Route::post('passwort-festlegen', [PasswordSetupController::class, 'forcedStore'])
         ->middleware('throttle:10,1')
         ->name('password.forced.store');
+
+    /*
+    | Zwei-Faktor-Anmeldung (Beraterwelt). Die Seiten liegen bewusst
+    | AUSSERHALB der /admin-Gruppe: wer den zweiten Faktor noch nicht
+    | erbracht hat, darf /admin ja gerade nicht betreten - erreichen muss
+    | er diese Seiten trotzdem.
+    */
+    Route::get('sicherheit/zwei-faktor', [TwoFactorController::class, 'setup'])
+        ->name('two_factor.setup');
+    Route::post('sicherheit/zwei-faktor', [TwoFactorController::class, 'setupStore'])
+        ->middleware('throttle:10,1')->name('two_factor.setup.store');
+
+    Route::get('sicherheit/ersatzcodes', [TwoFactorController::class, 'recoveryCodes'])
+        ->name('two_factor.recovery_codes');
+    Route::post('sicherheit/ersatzcodes', [TwoFactorController::class, 'regenerate'])
+        ->middleware('throttle:10,1')->name('two_factor.recovery_codes.renew');
+
+    Route::get('sicherheit/bestaetigen', [TwoFactorController::class, 'challenge'])
+        ->name('two_factor.challenge');
+    // Zusaetzlich zur eigenen Bremse im Controller (die zaehlt je Konto),
+    // damit ein Angreifer nicht ueber viele Konten hinweg raten kann.
+    Route::post('sicherheit/bestaetigen', [TwoFactorController::class, 'challengeStore'])
+        ->middleware('throttle:20,1')->name('two_factor.challenge.store');
 
     Route::get('verify-email', EmailVerificationPromptController::class)
         ->name('verification.notice');

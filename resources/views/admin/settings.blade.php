@@ -81,6 +81,28 @@
     </div>
 </div>
 
+{{-- Sicherheit: Zwei-Faktor-Pflicht fuer die Beraterwelt. Eigener
+     Marker (security_form), damit ein anderes Formular die Schutzschicht
+     nicht versehentlich abschaltet. --}}
+<div class="card">
+    <div class="card-title" style="margin-bottom:8px;">&#128737; Sicherheit</div>
+    <input type="hidden" name="security_form" value="1">
+    <label class="ki-toggle">
+        <input type="checkbox" name="two_factor_required" value="1"
+               @checked(($settings['two_factor_required'] ?? '1') === '1')>
+        <span><strong>Zwei-Faktor-Anmeldung fuer Personal verpflichtend</strong></span>
+    </label>
+    <div style="font-size:12.5px;color:var(--ink-soft);line-height:1.6;margin-top:8px;">
+        Jedes Mitarbeiter-, Manager-, Support- und Partner-Konto braucht zusaetzlich zum Passwort
+        einen sechsstelligen Code aus einer Authenticator-App. Die Einrichtung fuehrt das System
+        beim naechsten Login selbst durch - niemand kann sich dabei aussperren, und Ersatzcodes
+        gibt es fuer den Fall eines verlorenen Telefons.
+        <strong>Diese Einstellung nur abschalten, wenn es einen konkreten Grund gibt:</strong>
+        hinter der Beraterwelt liegen Kundendaten, Gesundheitsangaben, Bankverbindungen und
+        Ausweiskopien. Kundenkonten sind von der Pflicht bewusst nicht betroffen.
+    </div>
+</div>
+
 {{-- KI-Kundenassistent (Spezifikation Abschnitt 30). Der Assistent ist im
      Standard AUS und geht erst nach bewusster Freigabe in Betrieb. Das
      Marker-Feld ai_assistant_form sorgt dafuer, dass nicht angehakte

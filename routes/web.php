@@ -612,6 +612,10 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // wiederherzustellen (Link geht nur an seine hinterlegte Adresse).
     Route::post('/employees/{id}/einladung', [EmployeeController::class, 'resendInvitation'])
         ->name('employees.resend_invitation')->middleware('role:admin,manager');
+    // Zwei-Faktor zuruecksetzen (verlorenes Telefon). Nur admin - es
+    // entfernt die zweite Schicht eines fremden Kontos.
+    Route::post('/employees/{id}/zwei-faktor-zuruecksetzen', [EmployeeController::class, 'resetTwoFactor'])
+        ->name('employees.reset_two_factor')->middleware('role:admin');
     Route::get('/team', [EmployeeController::class, 'teamPage'])->name('team.verwaltung')->middleware('role:admin,manager');
     Route::post('/team/transfer', [EmployeeController::class, 'transferPortfolio'])->name('team.transfer')->middleware('role:admin,manager');
     Route::post('/team/substitution', [EmployeeController::class, 'storeSubstitution'])->name('team.substitution.store')->middleware('role:admin,manager');

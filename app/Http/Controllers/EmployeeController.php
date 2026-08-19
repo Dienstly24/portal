@@ -409,6 +409,35 @@ class EmployeeController extends Controller
         return back()->with('success', 'Einladung erneut gesendet. Der Mitarbeiter legt sein Passwort selbst fest.');
     }
 
+    /**
+     * Zwei-Faktor-Anmeldung eines Mitarbeiters zuruecksetzen.
+     *
+     * Notwendig, weil ein verlorenes Telefon OHNE diese Moeglichkeit ein
+     * dauerhaft gesperrtes Konto bedeutet (die Ersatzcodes liegen nur
+     * gehasht vor und sind bewusst nicht wiederherstellbar).
+     *
+     * Bewusst nur fuer admin: Wer das darf, kann die zweite Schicht eines
+     * fremden Kontos entfernen - das ist gleichwertig zum Zuruecksetzen
+     * eines Passworts und gehoert nicht in die Hand jedes Managers.
+     * Beim naechsten Login richtet der Mitarbeiter sie neu ein; das
+     * Zuruecksetzen steht im Aktivitaetsprotokoll.
+     */
+    public function resetTwoFactor($id, \App\Services\TwoFactorService $twoFactor) {
+        $employee = User::findOrFail($id);
+
+        if (! $employee->requiresTwoFactor()) {
+            return back()->with('error', 'Fuer dieses Konto ist keine Zwei-Faktor-Anmeldung vorgesehen.');
+        }
+        if (! $employee->hasTwoFactor()) {
+            return back()->with('warning', 'Fuer dieses Konto ist derzeit keine Zwei-Faktor-Anmeldung eingerichtet.');
+        }
+
+        $twoFactor->disable($employee, auth()->id(), 'two_factor_reset_by_admin');
+
+        return back()->with('success', 'Zwei-Faktor-Anmeldung zurueckgesetzt. '
+            . $employee->name . ' richtet sie beim naechsten Login neu ein.');
+    }
+
     public function storeSubstitution(Request $request) {
         $request->validate([
             'absent_user_id' => 'required|exists:users,id',
