@@ -69,6 +69,13 @@ class ProfileTest extends TestCase
         // also wird der faellige Wechsel fuer diesen Test erledigt.
         $customer->user->forceFill(['must_change_password' => false])->save();
 
+        // Frische Sitzung fuer den Kontowechsel. Die Sitzung traegt seit der
+        // Haertung den Passwort-Hash des angemeldeten Kontos
+        // (AuthenticateSession); hier war eben noch der Admin angemeldet.
+        // In der Praxis gibt es diesen Fall nicht ohne Abmeldung - und die
+        // leert die Sitzung. Im Test muss das ausdruecklich passieren.
+        $this->flushSession();
+
         // Und die Werte erscheinen im Kundenportal (nicht leer).
         $this->actingAs($customer->user->fresh())
             ->get(route('portal.profile'))

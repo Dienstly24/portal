@@ -272,6 +272,25 @@ class AppServiceProvider extends ServiceProvider
         // Aktivitaetserfassung: Arbeitssitzungen an Login/Logout koppeln.
         // Fehler in der Erfassung duerfen Login/Logout nie blockieren.
         Event::listen(Login::class, function (Login $event): void {
+            // Sitzungs-Passworthash bei JEDER Anmeldung neu setzen.
+            //
+            // Seit AuthenticateSession in der Web-Gruppe liegt, wirft die
+            // Middleware jeden raus, dessen Sitzung einen anderen Hash
+            // traegt als das Konto - genau so sterben fremde Sitzungen nach
+            // einem Passwortwechsel. auth()->logout() entfernt aber NUR die
+            // Anmelde-Schluessel, nicht den gemerkten Hash. Wechselt jemand
+            // innerhalb derselben Sitzung das Konto (Magic-Login aus der
+            // Willkommens-Mail, waehrend noch ein anderes Konto angemeldet
+            // ist), bliebe der Hash des VORIGEN Kontos stehen - und der
+            // frisch Angemeldete floege beim naechsten Klick wieder raus,
+            // ohne erkennbaren Grund. Deshalb hier, an EINER Stelle fuer
+            // alle Anmeldewege.
+            try {
+                \App\Support\SessionPasswordHash::refresh(request());
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
             try {
                 if ($event->user instanceof \App\Models\User) {
                     app(ActivityTracker::class)->handleLogin($event->user, request());

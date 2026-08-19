@@ -28,13 +28,21 @@ class SessionPasswordHash
 {
     public static function refresh(Request $request): void
     {
-        if (! $request->hasSession() || ! $request->user()) {
+        if (! $request->hasSession()) {
+            return;
+        }
+
+        // Beim Login-Ereignis ist der Guard schon gesetzt, $request->user()
+        // aber je nach Zeitpunkt noch nicht aufgeloest - deshalb beide
+        // Quellen.
+        $user = $request->user() ?? Auth::user();
+        if (! $user) {
             return;
         }
 
         $request->session()->put(
             'password_hash_' . Auth::getDefaultDriver(),
-            $request->user()->getAuthPassword(),
+            $user->getAuthPassword(),
         );
     }
 }
