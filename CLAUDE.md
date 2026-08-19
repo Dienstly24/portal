@@ -145,6 +145,46 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   `tests/Unit/QrCodeTest.php`. Arabische Betreiber-Anleitung:
   `docs/ANLEITUNG_ZWEI_FAKTOR_AR.md`.
 
+## Systemzustand-Seite (Betreiber-Auftrag 19.08.2026)
+
+- **Warum**: die riskanten Teile laufen im HINTERGRUND (Warteschlange,
+  Planer, externe Dienste). Faellt dort etwas aus, gibt es keine
+  Fehlermeldung und keine leere Seite - es passiert einfach nichts mehr.
+  Analysen bleiben "in Pruefung", Erinnerungen gehen nicht raus, die KI
+  schweigt. Bisher fiel das erst auf, wenn sich ein Kunde beschwert hat.
+- `/admin/systemzustand` (`SystemHealthController`, `SystemHealthService`,
+  View `admin/system_health.blade.php`), **nur admin/manager**. Die Seite
+  ist REIN LESEND - kein Knopf, der etwas ausloest. Vier Abschnitte:
+  Warteschlange, geplante Aufgaben, externe Dienste, Anmeldung/Sicherheit.
+- **NIE ein Geheimnis ausgeben**, auch nicht teilweise: zu Schluesseln steht
+  ausschliesslich "gesetzt" oder "fehlt" (Test sichert das ab). Ebenso
+  **keine kostenpflichtigen Aufrufe beim Seitenaufbau** - geprueft wird die
+  KONFIGURATION. Den echten Live-Test macht bewusst nur
+  `php artisan ki:pruefen --live`.
+- **Geplante Aufgaben: Laravel merkt sich den letzten Lauf NICHT.** Deshalb
+  Tabelle `scheduled_task_runs` (eine Zeile je Aufgabe, kein Lauf-Archiv)
+  plus Listener auf `ScheduledTaskStarting/Finished/Failed` im
+  `AppServiceProvider`. Erst damit ist ein fehlender Cron-Eintrag oder eine
+  falsche Planer-Zeitzone sichtbar. Das Protokollieren darf den Betrieb NIE
+  stoeren - jeder Fehler dort wird geschluckt, die Aufgabe laeuft weiter.
+  Ein erfolgreicher Lauf loescht `last_error` (sonst stuende dauerhaft eine
+  behobene Meldung da), die Fehler-ZAEHLER bleiben (Historie).
+- **Der Planer ist im Web-Aufruf leer**: `routes/console.php` wird nur im
+  Console-Kontext geladen. `SystemHealthService::scheduledEvents()` stoesst
+  daher den Console-Kernel an (idempotent) - ohne diesen Schritt meldete die
+  Seite "keine geplanten Aufgaben", also ausgerechnet dort Fehlalarm, wo sie
+  Vertrauen schaffen soll. Die Closures in `routes/console.php` haben
+  deshalb jetzt `->name(...)` - ohne Namen faellt jede Closure auf denselben
+  Schluessel.
+- **Toter Worker**: nicht die Stapelhoehe zaehlt, sondern das ALTER des
+  aeltesten Jobs (> 15 Min = niemand holt ihn ab). Ein voller Stapel ist
+  normal, ein alter Job nie. Bei leerer Warteschlange ist ein toter Worker
+  prinzipiell nicht erkennbar - die Seite sagt das ehrlich dazu.
+- `/admin/systemzustand.json` liefert dieselbe Ampel fuer externe
+  Ueberwachung (**HTTP 503**, wenn etwas handlungsbeduerftig ist) - bewusst
+  nur Titel/Zustand/Kurzfassung, keine Einzelwerte.
+- Tests: `SystemHealthTest`.
+
 ## Kundennummern
 
 - Neuanlage: `JJ` + 5-stellig laufend (2026 → `2600001`, `2600002` …) via

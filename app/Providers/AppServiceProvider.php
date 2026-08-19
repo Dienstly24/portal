@@ -18,7 +18,11 @@ use App\Services\Workflow\Handlers\ReviewStepHandler;
 use App\Services\Workflow\StepHandlerRegistry;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
+use Illuminate\Console\Events\ScheduledTaskFailed;
+use Illuminate\Console\Events\ScheduledTaskFinished;
+use Illuminate\Console\Events\ScheduledTaskStarting;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -309,5 +313,79 @@ class AppServiceProvider extends ServiceProvider
                 report($e);
             }
         });
+
+        $this->protokolliereGeplanteAufgaben();
+    }
+
+    /**
+     * Jeden Lauf einer geplanten Aufgabe festhalten (Systemzustand-Seite).
+     *
+     * Laravel merkt sich das nicht. Faellt der Cron-Eintrag weg oder steht
+     * der Planer auf der falschen Zeitzone, passiert einfach nichts - ohne
+     * Fehlermeldung. Erst dieses Protokoll macht den stillen Ausfall auf
+     * /admin/systemzustand sichtbar.
+     *
+     * Das Protokollieren darf den Betrieb NIE stoeren: jeder Fehler hier
+     * (z.B. Tabelle noch nicht migriert) wird geschluckt, die Aufgabe selbst
+     * laeuft weiter.
+     */
+    private function protokolliereGeplanteAufgaben(): void
+    {
+        Event::listen(ScheduledTaskStarting::class, function (ScheduledTaskStarting $event): void {
+            $this->schreibeAufgabenlauf($event->task, ['last_started_at' => now()]);
+        });
+
+        Event::listen(ScheduledTaskFinished::class, function (ScheduledTaskFinished $event): void {
+            $exitCode = $event->task->exitCode;
+            // Closures haben keinen Exitcode - kein Fehler ist dann Erfolg.
+            $erfolg = $exitCode === null || (int) $exitCode === 0;
+
+            $werte = [
+                'last_finished_at' => now(),
+                'runtime_ms' => (int) round(((float) $event->runtime) * 1000),
+                'exit_code' => $exitCode === null ? null : (int) $exitCode,
+            ];
+            // Erfolg loescht den alten Fehler - sonst stuende auf der Seite
+            // dauerhaft eine laengst behobene Meldung.
+            $werte += $erfolg
+                ? ['last_success_at' => now(), 'last_error' => null]
+                : ['last_failed_at' => now(), 'last_error' => 'Exitcode ' . $exitCode];
+
+            $this->schreibeAufgabenlauf($event->task, $werte, zaehleLauf: true, zaehleFehler: ! $erfolg);
+        });
+
+        Event::listen(ScheduledTaskFailed::class, function (ScheduledTaskFailed $event): void {
+            $this->schreibeAufgabenlauf($event->task, [
+                'last_finished_at' => now(),
+                'last_failed_at' => now(),
+                // Nur die Kurzfassung - kein Stacktrace in der Datenbank.
+                'last_error' => mb_substr($event->exception->getMessage(), 0, 500),
+            ], zaehleLauf: true, zaehleFehler: true);
+        });
+    }
+
+    /** Eine Aufgabenzeile fortschreiben. Fehler werden bewusst geschluckt. */
+    private function schreibeAufgabenlauf(object $task, array $werte, bool $zaehleLauf = false, bool $zaehleFehler = false): void
+    {
+        try {
+            if (! Schema::hasTable('scheduled_task_runs')) {
+                return;
+            }
+
+            $key = \App\Models\ScheduledTaskRun::keyFor($task->getSummaryForDisplay());
+            $lauf = \App\Models\ScheduledTaskRun::firstOrNew(['task_key' => $key]);
+            $lauf->fill($werte);
+
+            if ($zaehleLauf) {
+                $lauf->run_count = (int) $lauf->run_count + 1;
+            }
+            if ($zaehleFehler) {
+                $lauf->fail_count = (int) $lauf->fail_count + 1;
+            }
+
+            $lauf->save();
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 }
