@@ -26,19 +26,21 @@ class EmployeeController extends Controller
         $request->validate([
             'name' => 'required',
             'email' => 'required|email|unique:users',
-            'password' => 'required|min:8',
             // access_level ist eine ENUM-Spalte - ohne Whitelist wuerde ein
             // abweichender Wert unter MySQL strict einen 500 ausloesen
             // (update() validiert bereits genauso, Audit DATA-P2).
             'access_level' => 'nullable|in:full,limited',
         ]);
 
-        $plainPassword = $request->password;
-
+        // KEIN vom Admin gesetztes Klartext-Passwort mehr (Betreiber-Vorgabe
+        // 18.08.2026): Das Konto bekommt ein zufaelliges, NIEMANDEM bekanntes
+        // Passwort; der Mitarbeiter setzt sein eigenes ueber einen signierten
+        // Einladungs-Link. Damit steht nie wieder ein Passwort im Postfach
+        // des Admins, im Postfach des Mitarbeiters oder im Logfile.
         $employee = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'password' => bcrypt($plainPassword),
+            'password' => bcrypt(Str::random(48)),
             'role' => 'employee',
             'access_level' => $request->access_level ?? 'full',
             'can_see_all_customers' => $request->has('can_see_all_customers'),
@@ -58,15 +60,21 @@ class EmployeeController extends Controller
         if($request->has('can_import_export')) $permLabels[] = '📤 Import / Export';
         if($request->has('can_see_all_customers')) $permLabels[] = '👥 Zugriff auf alle Kunden';
 
-        // إرسال إيميل الترحيب
+        // Einladung mit Passwort-Setzen-Link (kein Klartext-Passwort).
+        $setPasswordUrl = \App\Http\Controllers\Auth\PasswordSetupController::invitationUrl($employee);
+        $mailSent = true;
         try {
             Mail::to($employee->email)->send(new EmployeeWelcomeMail(
                 $employee->name,
                 $employee->email,
-                $plainPassword,
-                $permLabels
+                $setPasswordUrl,
+                $permLabels,
+                \App\Http\Controllers\Auth\PasswordSetupController::INVITATION_DAYS,
             ));
-        } catch(\Throwable $e) { \Log::warning("Welcome-Mail fehlgeschlagen: ".$e->getMessage()); }
+        } catch(\Throwable $e) {
+            $mailSent = false;
+            \Log::warning("Welcome-Mail fehlgeschlagen: ".$e->getMessage());
+        }
 
         // تسجيل النشاط
         ActivityLog::create([
@@ -77,7 +85,21 @@ class EmployeeController extends Controller
             'meta' => json_encode(['name' => $employee->name, 'email' => $employee->email]),
         ]);
 
-        return redirect()->route('admin.employees')->with('success', 'Mitarbeiter erstellt und Zugangsdaten per E-Mail gesendet.');
+        // Kommt die Mail nicht raus, darf das nicht still bleiben - sonst
+        // wartet ein neuer Mitarbeiter auf eine Einladung, die es nie gab.
+        if (! $mailSent) {
+            return redirect()->route('admin.employees')->with(
+                'warning',
+                'Mitarbeiter erstellt, aber die Einladungs-E-Mail konnte NICHT versendet werden. '
+                . 'Bitte die Einladung erneut senden, sobald der Mailversand wieder laeuft.'
+            );
+        }
+
+        return redirect()->route('admin.employees')->with(
+            'success',
+            'Mitarbeiter erstellt. Er hat eine Einladung erhalten und legt sein Passwort selbst fest '
+            . '(Link ' . \App\Http\Controllers\Auth\PasswordSetupController::INVITATION_DAYS . ' Tage gueltig).'
+        );
     }
 
     public function edit($id) {
@@ -339,6 +361,52 @@ class EmployeeController extends Controller
             ]);
         });
         return back()->with('success', count($customerIds) . ' Kunden von ' . $from->name . ' an ' . $to->name . ' uebertragen.');
+    }
+
+    /**
+     * Einladung erneut senden (Zugang wiederherstellen).
+     *
+     * Muss es geben, seit die Verwaltung KEIN Passwort mehr vergibt: sonst
+     * haette ein Mitarbeiter, dessen Einladungs-Link abgelaufen oder in
+     * dessen Spam-Ordner gelandet ist, gar keinen Weg mehr ins Konto - und
+     * die Verwaltung auch keinen, ihm zu helfen. Der Link geht immer nur
+     * an die hinterlegte Adresse des Kontos; die Verwaltung erfaehrt kein
+     * Passwort, weder ein altes noch ein neues.
+     */
+    public function resendInvitation($id) {
+        $employee = User::findOrFail($id);
+
+        if (! $employee->isStaff()) {
+            return back()->with('error', 'Dieses Konto ist kein Mitarbeiter-Konto.');
+        }
+        if (! $employee->hasRealEmail()) {
+            return back()->with('error', 'Fuer dieses Konto ist keine echte E-Mail-Adresse hinterlegt.');
+        }
+
+        $setPasswordUrl = \App\Http\Controllers\Auth\PasswordSetupController::invitationUrl($employee);
+
+        try {
+            Mail::to($employee->email)->send(new EmployeeWelcomeMail(
+                $employee->name,
+                $employee->email,
+                $setPasswordUrl,
+                [],
+                \App\Http\Controllers\Auth\PasswordSetupController::INVITATION_DAYS,
+            ));
+        } catch (\Throwable $e) {
+            \Log::warning('Einladung erneut senden fehlgeschlagen: ' . $e->getMessage());
+            return back()->with('error', 'Die E-Mail konnte nicht versendet werden. Bitte spaeter erneut versuchen.');
+        }
+
+        ActivityLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'employee_invitation_resent',
+            'entity_type' => 'user',
+            'entity_id' => $employee->id,
+            'meta' => json_encode(['email' => $employee->email], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        return back()->with('success', 'Einladung erneut gesendet. Der Mitarbeiter legt sein Passwort selbst fest.');
     }
 
     public function storeSubstitution(Request $request) {

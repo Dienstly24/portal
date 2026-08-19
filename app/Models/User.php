@@ -14,6 +14,8 @@ class User extends Authenticatable {
         'invitation_sent_at' => 'datetime',
         'first_login_at' => 'datetime',
         'portal_password_set_at' => 'datetime',
+        'password_changed_at' => 'datetime',
+        'must_change_password' => 'boolean',
         'password' => 'hashed',
         'can_see_all_customers' => 'boolean',
         'can_manage_contracts' => 'boolean',
@@ -100,6 +102,40 @@ class User extends Authenticatable {
         if (!$this->isStaff()) return false;
         if ($this->canSeeAllCustomers()) return true;
         return in_array((string) $customerId, array_map('strval', $this->visibleCustomerIdsWithSubstitution()), true);
+    }
+
+    /**
+     * Muss dieser Nutzer beim naechsten Aufruf ein eigenes Passwort
+     * setzen? Zwei Faelle, bewusst zusammengefasst (Betreiber-Vorgabe
+     * 18.08.2026):
+     *  a) must_change_password ist gesetzt (System hat das Passwort
+     *     vergeben - Geburtsdatum, Admin-Reset, CLI).
+     *  b) Kundenkonto mit nutzbarem Passwort, das noch NIE selbst
+     *     geaendert wurde (Altbestand vor dieser Regel).
+     * Konten ohne nutzbares Passwort (reiner Magic-Login) sind bewusst
+     * NICHT betroffen - die fuehrt der Portal-Flow ohnehin zum Setzen.
+     */
+    public function needsPasswordChange(): bool
+    {
+        return (bool) ($this->must_change_password ?? false);
+    }
+
+    /**
+     * Passwort setzen und alle Nebenbuchungen an EINER Stelle erledigen:
+     * Zwangswechsel aufheben, Zeitstempel fuehren, Portal-Status
+     * markieren. Vorher lag das in vier Controllern verstreut und war
+     * jedes Mal etwas anders (mal ohne portal_password_set_at, mal ohne
+     * Zeitstempel) - genau so entstehen "Passwort gesetzt, trotzdem
+     * wieder gefragt"-Meldungen.
+     */
+    public function setPassword(string $plain): void
+    {
+        $this->forceFill([
+            'password' => bcrypt($plain),
+            'portal_password_set_at' => now(),
+            'password_changed_at' => now(),
+            'must_change_password' => false,
+        ])->save();
     }
 
     public function isAdmin() { return $this->role === 'admin'; }

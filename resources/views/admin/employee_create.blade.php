@@ -13,7 +13,16 @@
         <div class="field"><label>Name *</label><input type="text" name="name" required placeholder="Max Mustermann"></div>
         <div class="field"><label>E-Mail *</label><input type="email" name="email" required placeholder="max@dienstly24.de"></div>
     </div>
-    <div class="field"><label>Passwort *</label><input type="password" name="password" required placeholder="Mindestens 8 Zeichen"></div>
+    {{--
+        Kein Passwort-Feld mehr (Betreiber-Vorgabe 18.08.2026): Der neue
+        Mitarbeiter bekommt eine Einladung und legt sein Passwort selbst
+        fest. So kennt es ausser ihm niemand - auch die Verwaltung nicht.
+    --}}
+    <div style="background:#F6F3EA;border:1px solid #E0DCD0;border-left:3px solid #17A65B;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13.5px;color:#4A564E;line-height:1.6;">
+        <strong>&#128273; Passwort:</strong> Sie vergeben kein Passwort.
+        Der Mitarbeiter erhaelt eine Einladung per E-Mail und legt sein
+        eigenes Passwort fest (Link 14 Tage gueltig).
+    </div>
 </div>
 
 <div class="card" style="max-width:700px;">

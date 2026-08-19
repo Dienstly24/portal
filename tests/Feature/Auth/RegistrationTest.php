@@ -24,8 +24,9 @@ class RegistrationTest extends TestCase
             'first_name' => 'Test',
             'last_name' => 'User',
             'email' => 'test@example.com',
-            'password' => 'password',
-            'password_confirmation' => 'password',
+            // Mindestlaenge 12 (App\Support\PasswordPolicy)
+            'password' => 'test-passwort-2026',
+            'password_confirmation' => 'test-passwort-2026',
             'agb' => '1',
         ]);
 

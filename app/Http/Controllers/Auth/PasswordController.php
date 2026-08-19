@@ -5,8 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\Auth;
 
 class PasswordController extends Controller
 {
@@ -17,12 +16,17 @@ class PasswordController extends Controller
     {
         $validated = $request->validateWithBag('updatePassword', [
             'current_password' => ['required', 'current_password'],
-            'password' => ['required', Password::defaults(), 'confirmed'],
+            'password' => ['required', \App\Support\PasswordPolicy::for($request->user()), 'confirmed'],
         ]);
 
-        $request->user()->update([
-            'password' => Hash::make($validated['password']),
-        ]);
+        $request->user()->setPassword($validated['password']);
+
+        // Andere offene Sitzungen dieses Kontos beenden - ein
+        // Passwortwechsel soll fremde Zugriffe wirklich aussperren, nicht
+        // nur den Schluessel umbenennen. Wirkt ueber die
+        // AuthenticateSession-Middleware in der Web-Gruppe.
+        Auth::logoutOtherDevices($validated['password']);
+        \App\Support\SessionPasswordHash::refresh($request);
 
         return back()->with('status', 'password-updated');
     }

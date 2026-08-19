@@ -96,12 +96,17 @@ return [
         'users' => [
             'provider' => 'users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
-            // 72 Stunden statt Laravel-Default 60 Minuten: Der Passwort-
-            // Setzen-Link der Willkommens-Mail nutzt denselben Broker.
-            // Kunden lesen die Mail oft erst Stunden/Tage spaeter - ein
-            // 60-Minuten-Link war fuer sie praktisch immer abgelaufen.
+            // Selbst angeforderte Reset-Links sind bewusst kurzlebig
+            // (60 Minuten, Betreiber-Vorgabe 18.08.2026). Der fruehere
+            // Wert 4320 (3 Tage) stammte daher, dass DERSELBE Broker auch
+            // die Portal-EINLADUNGEN ausstellte - die brauchen lange
+            // Gueltigkeit, weil Kunden die Mail oft erst Tage spaeter
+            // lesen. Einladungen laufen jetzt ueber einen SIGNIERTEN Link
+            // (PasswordSetupController, 14 Tage), damit beide Faelle die
+            // Frist bekommen, die zu ihnen passt - statt einer Frist, die
+            // fuer den einen zu lang und fuer den anderen zu kurz ist.
             // Token bleiben einmal-nutzbar und gehasht gespeichert.
-            'expire' => (int) env('AUTH_PASSWORD_RESET_EXPIRE', 4320),
+            'expire' => (int) env('AUTH_PASSWORD_RESET_EXPIRE', 60),
             'throttle' => 60,
         ],
     ],
@@ -118,5 +123,21 @@ return [
     */
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Abgleich gegen bekannte Datenlecks
+    |--------------------------------------------------------------------------
+    |
+    | Jedes neu gesetzte Passwort wird gegen HaveIBeenPwned geprueft
+    | (k-Anonymity: es geht nur ein 5-Zeichen-Hash-Praefix raus, nie das
+    | Passwort und nie die E-Mail-Adresse). Faellt der Dienst aus, gilt das
+    | Passwort als bestanden - der Abgleich kann niemanden aussperren.
+    | Abschaltbar, falls der Server dorthin keine Verbindung hat.
+    | Die eigentliche Regel steht in App\Support\PasswordPolicy.
+    |
+    */
+
+    'password_breach_check' => filter_var(env('PASSWORD_BREACH_CHECK', true), FILTER_VALIDATE_BOOL),
 
 ];

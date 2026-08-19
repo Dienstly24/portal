@@ -12,6 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
+use App\Http\Controllers\Auth\PasswordSetupController;
 use Tests\TestCase;
 
 /**
@@ -190,21 +191,78 @@ class PasswordFlowHardeningTest extends TestCase
         $this->assertStringContainsString('email=erika%40kunde.de', $mail->setPasswordUrl);
     }
 
-    public function test_reset_token_is_still_valid_after_several_hours(): void
+    /**
+     * Dasselbe fachliche Beduerfnis wie zuvor ("Willkommens-Mail wird erst
+     * am Abend gelesen"), nur mit dem neuen Mechanismus geprueft: Der
+     * EINLADUNGS-Link ist ein signierter Link mit 14 Tagen Gueltigkeit.
+     * Der Reset-Broker ist seit der Passwort-Haertung bewusst auf 60
+     * Minuten gestellt - das ist fuer ein selbst angefordertes
+     * "Passwort vergessen" richtig und fuer eine Einladung falsch,
+     * deshalb sind es jetzt zwei getrennte Wege.
+     */
+    public function test_invitation_link_is_still_valid_after_several_hours(): void
     {
-        // Willkommens-Mails werden oft erst am Abend gelesen - der
-        // fruehere 60-Minuten-Default machte den Set-Link nutzlos.
         $customer = $this->customer([], ['birth_date' => null]);
         $user = $customer->user;
-        $token = Password::broker()->createToken($user);
+
+        $url = PasswordSetupController::invitationUrl($user);
 
         $this->travel(8)->hours();
 
-        $this->post(route('password.store'), [
-            'token' => $token, 'email' => 'erika@kunde.de',
+        $this->get($url)->assertOk();
+
+        $this->post($url, [
             'password' => 'stunden-spaeter-1', 'password_confirmation' => 'stunden-spaeter-1',
         ])->assertSessionHasNoErrors();
 
         $this->assertTrue(Hash::check('stunden-spaeter-1', $user->fresh()->password));
+    }
+
+    /**
+     * Gegenprobe: Nach Ablauf der 14 Tage ist der Einladungs-Link tot.
+     * Ein Link, der ewig gilt, ist ein Dauer-Generalschluessel zum Konto.
+     */
+    public function test_invitation_link_expires(): void
+    {
+        $customer = $this->customer([], ['birth_date' => null]);
+        $url = PasswordSetupController::invitationUrl($customer->user);
+
+        $this->travel(PasswordSetupController::INVITATION_DAYS + 1)->days();
+
+        $this->get($url)->assertForbidden();
+    }
+
+    /**
+     * Der Einladungs-Link ueberlebt den Domainwechsel: Kundenmails
+     * entstehen auf admin.dienstly24.de, CustomerWelcomeMail schreibt sie
+     * auf die Portal-Domain um. Waere die Signatur ueber den HOST gebildet,
+     * waere jeder Kundenlink nach dem Umschreiben ungueltig.
+     */
+    public function test_invitation_link_survives_host_rewrite(): void
+    {
+        $customer = $this->customer([], ['birth_date' => null]);
+        $url = PasswordSetupController::invitationUrl($customer->user);
+
+        $teile = parse_url($url);
+        $pfadMitQuery = ($teile['path'] ?? '/') . (isset($teile['query']) ? '?' . $teile['query'] : '');
+
+        // Aufruf unter einem ANDEREN Host - Signatur muss halten.
+        $this->get('https://portal.dienstly24.de' . $pfadMitQuery)->assertOk();
+    }
+
+    /** Manipulierte Konto-ID macht den Link ungueltig. */
+    public function test_invitation_link_cannot_be_pointed_at_another_account(): void
+    {
+        $customer = $this->customer([], ['birth_date' => null]);
+        $url = PasswordSetupController::invitationUrl($customer->user);
+
+        $fremd = \App\Models\User::factory()->create(['role' => 'customer']);
+        $manipuliert = preg_replace(
+            '#/zugang/passwort-festlegen/\d+#',
+            '/zugang/passwort-festlegen/' . $fremd->id,
+            $url
+        );
+
+        $this->get($manipuliert)->assertForbidden();
     }
 }

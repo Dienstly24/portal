@@ -47,6 +47,62 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
 - Magic-Login-Link nie in QR-Codes oder geteilten Assets einbetten.
 - Terminal-Befehle für den Nutzer immer **Deutsch/ASCII**.
 
+## Passwoerter & Zugang (Betreiber-Vorgabe 18.08.2026 - "Sicherheit sehr hoch")
+
+- **EINE Regel fuer alle Pfade**: `App\Support\PasswordPolicy`. Kunden
+  mind. **12** Zeichen, Personal/Partner mind. **14** (sie sehen fremde
+  personenbezogene Daten). KEIN Zeichenklassen-Zwang (BSI/NIST: Laenge
+  schlaegt Komplexitaet - erzwungene Sonderzeichen erzeugen "Passwort1!").
+  Stattdessen **Abgleich gegen bekannte Datenlecks** (HaveIBeenPwned,
+  k-Anonymity; in Tests aus, per `PASSWORD_BREACH_CHECK` abschaltbar,
+  faellt bei Netzfehler auf "bestanden" zurueck). `Password::defaults()`
+  ist in `AppServiceProvider` auf diese Quelle verdrahtet - neue Pfade
+  bekommen die Regel automatisch.
+- **NIE ein Klartext-Passwort verschicken oder anzeigen.** Die
+  Mitarbeiter-Anlage hat kein Passwort-Feld mehr; es geht eine Einladung
+  mit **signiertem Link** raus (`PasswordSetupController::invitationUrl`,
+  **14 Tage**, `EmployeeWelcomeMail` bewusst NICHT queued - sie ist der
+  einzige Weg ins Konto). Zugang wiederherstellen = "Einladung erneut
+  senden" (`employees.resend_invitation`), nie ein vergebenes Passwort.
+- **Signatur RELATIV** (`absolute: false` + `signed:relative`):
+  `CustomerWelcomeMail` schreibt jeden Kundenlink auf die Portal-Domain
+  um - eine ueber den HOST mitsignierte Adresse waere danach ungueltig.
+- **Zwei Fristen, zwei Wege**: Selbst angeforderter Reset-Link = Broker,
+  **60 Minuten** (`AUTH_PASSWORD_RESET_EXPIRE`). Einladung = signierter
+  Link, 14 Tage. Frueher teilten sie sich einen Broker mit 3 Tagen - eine
+  Frist, die fuer das eine zu lang und fuer das andere zu kurz war.
+- **Startpasswort = Geburtsdatum bleibt**, aber es haelt nicht mehr
+  dauerhaft: `users.must_change_password` + Middleware
+  `EnsurePasswordChanged` fuehren beim naechsten Aufruf auf
+  `/passwort-festlegen`. Das Geburtsdatum steht auf jedem Ausweis und in
+  jedem Versicherungsschein - als Dauer-Passwort ist es oeffentlich.
+  Erreichbar bleiben Abmelden, Sprachwechsel, Rechtsseiten und die
+  regulaeren Passwort-Formulare (sonst Sackgasse). `resetPortal()` stellt
+  den Zwang wieder scharf. Das bisherige Passwort erneut zu setzen wird
+  abgelehnt.
+- **Passwortwechsel wirft fremde Sitzungen raus**:
+  `AuthenticateSession` liegt in der Web-Gruppe, jeder Wechsel ruft
+  `logoutOtherDevices()`. Danach IMMER
+  `App\Support\SessionPasswordHash::refresh($request)` - sonst fliegt der
+  Nutzer aus seiner EIGENEN Sitzung und denkt, es habe nicht geklappt.
+  Alle Schreibwege laufen ueber `User::setPassword()` (Zeitstempel,
+  `portal_password_set_at`, Zwang aufheben an EINER Stelle).
+- **"Passwort vergessen" ist auf Kunden zugeschnitten** (gemeldetes
+  Problem: Kunden fanden den Weg nicht): Kennung ist E-Mail **oder
+  KUNDENNUMMER** (steht auf jedem Schreiben) oder die Zweitadresse
+  `email2`; Ergebnis ist eine **eigene Seite** mit Schritt-fuer-Schritt-
+  Erklaerung, Spam-Hinweis, Gueltigkeitsdauer und Hilfe-Link. Die Antwort
+  ist IMMER dieselbe, ob das Konto existiert oder nicht (keine
+  Enumeration, DSGVO Art. 32) - einzige Ausnahme sind die internen
+  `@dienstly24.internal`-Platzhalter, die technisch keine Mail empfangen
+  koennen. Das Feld `email` wird weiterhin akzeptiert (alte Lesezeichen).
+- **Arabische Formularfehler**: `lang/ar/validation.php` existiert jetzt.
+  Ohne sie kamen alle Validierungsmeldungen auf Englisch - ausgerechnet
+  in den Passwort-Formularen.
+- Tests: `PasswordSecurityTest`, `PasswordFlowHardeningTest`.
+- **Offen (bewusst NICHT in diesem Paket)**: 2FA fuer `/admin`.
+  `ExtraBasicAuth` bleibt bis dahin die zweite Schicht.
+
 ## Kundennummern
 
 - Neuanlage: `JJ` + 5-stellig laufend (2026 → `2600001`, `2600002` …) via

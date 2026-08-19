@@ -31,10 +31,15 @@ class NewPasswordController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        // Laengen-Regel nach der ROLLE des Kontos, nicht nach dem gerade
+        // angemeldeten Nutzer: hier ist niemand angemeldet, und ein
+        // Mitarbeiter-Konto braucht mehr Zeichen als ein Kundenkonto.
+        $target = User::where('email', $request->input('email'))->first();
+
         $request->validate([
             'token' => ['required'],
             'email' => ['required', 'email'],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'password' => ['required', 'confirmed', \App\Support\PasswordPolicy::for($target)],
         ]);
 
         // Here we will attempt to reset the user's password. If it is successful we
@@ -43,21 +48,25 @@ class NewPasswordController extends Controller
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function (User $user) use ($request) {
-                $user->forceFill([
-                    'password' => Hash::make($request->password),
-                    'remember_token' => Str::random(60),
-                    // Portal-Status: ab jetzt existiert ein selbst
-                    // gewähltes, nutzbares Passwort.
-                    'portal_password_set_at' => now(),
-                ])->save();
+                // EINE Stelle fuer alle Nebenbuchungen (Portal-Status,
+                // Zeitstempel, Zwangswechsel aufheben) - siehe
+                // User::setPassword().
+                $user->setPassword($request->password);
+                $user->forceFill(['remember_token' => Str::random(60)])->save();
 
                 event(new PasswordReset($user));
             }
         );
 
+        // Wer den Link benutzt, waehrend er per Magic-Login schon angemeldet
+        // ist, darf danach nicht durch AuthenticateSession rausfliegen.
+        if ($status == Password::PASSWORD_RESET) {
+            \App\Support\SessionPasswordHash::refresh($request);
+        }
+
         // Deutsche Meldungen statt englischer Framework-Texte.
         return $status == Password::PASSWORD_RESET
-                    ? redirect()->route('login')->with('status', 'Ihr Passwort wurde geändert. Sie können sich jetzt anmelden.')
+                    ? redirect()->route('login')->with('status', 'Ihr Passwort wurde geändert. Sie können sich jetzt anmelden. Offene Sitzungen auf anderen Geräten wurden beendet.')
                     : back()->withInput($request->only('email'))
                         ->withErrors(['email' => match ($status) {
                             Password::INVALID_TOKEN => 'Dieser Link ist abgelaufen oder ungültig. Bitte fordern Sie einen neuen Link an.',

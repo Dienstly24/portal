@@ -246,6 +246,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // EINE Passwort-Regel fuer alle Pfade, die Rules\Password::defaults()
+        // benutzen (Registrierung, Reset, Profil-Aenderung). Die Laenge
+        // richtet sich nach der Rolle des Kontos, das gerade ein Passwort
+        // setzt - Personal sieht fremde personenbezogene Daten und braucht
+        // daher mehr. Quelle: App\Support\PasswordPolicy.
+        \Illuminate\Validation\Rules\Password::defaults(
+            fn () => \App\Support\PasswordPolicy::for(auth()->user())
+        );
+
         // Fail-fast, falls Produktion versehentlich auf SQLite laeuft (Audit DB-6):
         // der committete Default ist SQLite; ohne korrekte .env faellt die App
         // sonst still auf eine lokale database.sqlite zurueck (Daten-Divergenz,
