@@ -961,9 +961,11 @@ class AdminController extends Controller
             // E-Mail optional: liegt keine echte Adresse vor, bleibt das Feld
             // leer (kein Dummy) - der Mitarbeiter traegt sie spaeter nach.
             'email' => 'nullable|email|unique:users',
-            // Passwort ist jetzt optional: ohne Eingabe greift der
-            // Startpasswort-Flow (Geburtsdatum TT.MM.JJJJ bzw. Set-Link).
-            'password' => 'nullable|min:8',
+            // Passwort ist optional: ohne Eingabe greift der Startpasswort-
+            // Flow (Geburtsdatum TT.MM.JJJJ bzw. Einladungs-Link). Regel aus
+            // der EINEN Quelle - vorher galt hier 'min:8', waehrend Portal
+            // und Reset laengst mehr verlangten.
+            'password' => ['nullable', \App\Support\PasswordPolicy::customer()],
             // Bankverbindung darf schon bei der Neuanlage erfasst werden.
             'iban' => 'nullable|string|max:40',
             'account_holder' => 'nullable|string|max:120',
@@ -1022,14 +1024,20 @@ class AdminController extends Controller
         if ($user->hasRealEmail()) {
             try {
                 if ($request->filled('password')) {
+                    // Von der Verwaltung vergebenes Passwort: gilt als
+                    // system-vergeben -> beim ersten Login Pflichtwechsel.
+                    // Es wird BEWUSST NICHT per E-Mail verschickt (Betreiber-
+                    // Vorgabe 18.08.2026): ein Klartext-Passwort in einem
+                    // Postfach bleibt dort fuer immer, samt Backups. Der
+                    // Mitarbeiter nennt es dem Kunden persoenlich.
                     $user->forceFill([
                         'password' => bcrypt($request->password),
                         'portal_password_set_at' => now(),
-                        'invitation_sent_at' => now(),
+                        'must_change_password' => true,
                     ])->save();
-                    \Illuminate\Support\Facades\Mail::to($user->email)->send(
-                        new \App\Mail\CustomerWelcomeMail($customer, 'manual', $request->password)
-                    );
+                    session()->flash('warning', 'Passwort gesetzt. Aus Sicherheitsgruenden wird es NICHT per E-Mail verschickt - '
+                        . 'bitte teilen Sie es dem Kunden persoenlich mit. Beim ersten Login muss er ein eigenes Passwort festlegen. '
+                        . 'Alternativ koennen Sie in der Kundenakte eine Einladung senden.');
                 } else {
                     $mode = app(\App\Services\Portal\PortalAccessService::class)->sendInvitation($customer, auth()->id());
                     if ($mode === 'setlink') {
@@ -1069,7 +1077,7 @@ class AdminController extends Controller
             'last_name' => 'required',
             'email' => 'nullable|email|unique:users,email,' . $user->id,
             'portal_email' => 'nullable|email|unique:users,email,' . $user->id,
-            'new_password' => 'nullable|min:8',
+            'new_password' => ['nullable', \App\Support\PasswordPolicy::customer()],
             'health_insurance_type' => 'nullable|in:gesetzlich,privat',
             'gender' => 'nullable|in:male,female,diverse',
             'bic' => 'nullable|string|max:20',
@@ -1162,12 +1170,26 @@ class AdminController extends Controller
         $userData['email'] = ($newEmail !== null && $newEmail !== '') ? $newEmail : null;
         if ($request->filled('new_password')) {
             $userData['password'] = bcrypt($request->new_password);
-            $userData['portal_password_set_at'] = now();
         }
         // Zustand VOR dem Speichern merken: hatte der Kunde bisher eine echte
         // (nutzbare) E-Mail? Nur so laesst sich "E-Mail neu nachgetragen" erkennen.
         $hadRealEmail = $user->hasRealEmail();
         $user->update($userData);
+
+        // Portal-Status-Spalten stehen bewusst NICHT in User::$fillable (sie
+        // gehoeren dem System, nicht dem Formular) - update() wuerde sie still
+        // verwerfen. Deshalb forceFill, wie an allen anderen Stellen auch
+        // (gleiche Falle wie seinerzeit bei is_active).
+        if ($request->filled('new_password')) {
+            $user->forceFill([
+                'portal_password_set_at' => now(),
+                // Von der Verwaltung vergeben = system-vergeben: beim ersten
+                // Login ist ein eigenes Passwort faellig. Hier gesetzt und
+                // nicht im Einladungs-Block weiter unten, weil der nur bei
+                // NEU hinzugekommener E-Mail-Adresse ueberhaupt laeuft.
+                'must_change_password' => true,
+            ])->save();
+        }
 
         // Automatische Portal-Einladung, sobald eine echte E-Mail NEU nachgetragen
         // wird (analog zur Neuanlage in storeCustomer). So muss der Mitarbeiter die
@@ -1177,13 +1199,11 @@ class AdminController extends Controller
             try {
                 $customer->setRelation('user', $user);
                 if ($request->filled('new_password')) {
-                    // Passwort wurde in diesem Schritt gesetzt -> manuelle Willkommens-
-                    // Mail mit dem Zugangspasswort (kein Ueberschreiben durch Set-Link).
-                    $user->forceFill(['invitation_sent_at' => now()])->save();
-                    \Illuminate\Support\Facades\Mail::to($user->email)->send(
-                        new \App\Mail\CustomerWelcomeMail($customer, 'manual', $request->new_password)
-                    );
-                    $invited = true;
+                    // Passwort wurde in diesem Schritt gesetzt: gilt als
+                    // system-vergeben (Pflichtwechsel beim ersten Login) und
+                    // wird NICHT per E-Mail verschickt - siehe storeCustomer.
+                    session()->flash('warning', 'Passwort gesetzt. Aus Sicherheitsgruenden wird es NICHT per E-Mail verschickt - '
+                        . 'bitte teilen Sie es dem Kunden persoenlich mit. Beim ersten Login muss er ein eigenes Passwort festlegen.');
                 } elseif ($user->invitation_sent_at === null
                     && $user->portal_password_set_at === null
                     && $user->first_login_at === null) {

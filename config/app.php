@@ -69,6 +69,28 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Zeitzone des Aufgabenplaners
+    |--------------------------------------------------------------------------
+    |
+    | Die ANWENDUNG bleibt bewusst auf UTC: alle bereits gespeicherten
+    | Zeitstempel sind UTC, und ein Wechsel wuerde neue Werte in Ortszeit
+    | daneben schreiben - ein dauerhaft gemischter Datenbestand, der sich
+    | nachtraeglich kaum noch sauber trennen laesst.
+    |
+    | Der PLANER dagegen muss in deutscher Ortszeit denken. Alle Zeiten in
+    | routes/console.php sind als solche gemeint und kommentiert ("taeglich
+    | 05:15", "Einladungen 8-19 Uhr"), feuerten unter UTC im Sommer aber
+    | zwei Stunden spaeter - Kunden-Einladungen und Geburtstagsmails gingen
+    | entsprechend verschoben raus. Laravel liest diesen Wert beim Bau des
+    | Schedule; damit stimmen alle Zeitangaben wieder mit dem ueberein, was
+    | danebensteht - inklusive automatischer Sommerzeit-Umstellung.
+    |
+    */
+
+    'schedule_timezone' => env('APP_SCHEDULE_TIMEZONE', 'Europe/Berlin'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |

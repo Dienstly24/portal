@@ -65,19 +65,30 @@ class PortalAccessService
                 $user->forceFill([
                     'password' => bcrypt($initialPassword),
                     'portal_password_set_at' => now(),
+                    // Das Geburtsdatum steht auf jedem Ausweis, in jedem
+                    // Versicherungsschein und in jeder Meldebestaetigung -
+                    // als Dauer-Passwort ist es faktisch oeffentlich.
+                    // Deshalb beim ersten Login Pflicht-Wechsel (Betreiber-
+                    // Vorgabe 18.08.2026). Der Kunde meldet sich weiterhin
+                    // mit dem Geburtsdatum an; er kommt nur nicht mehr
+                    // dauerhaft damit durch.
+                    'must_change_password' => true,
                 ])->save();
             }
             $mode = 'birthdate';
         } else {
             // Kein Geburtsdatum: zufälliges (unbekanntes) Passwort + Link
-            // zum Selbst-Setzen über den regulären Reset-Broker.
+            // zum Selbst-Setzen.
             if (!$hasUsablePassword) {
                 $user->forceFill(['password' => bcrypt(Str::random(40))])->save();
             }
-            // createToken() laesst das Passwort unangetastet - der Link
-            // funktioniert auch, wenn der Kunde schon eines gesetzt hat.
-            $token = Password::broker()->createToken($user);
-            $setPasswordUrl = route('password.reset', ['token' => $token, 'email' => $user->email]);
+            // SIGNIERTER Link statt Reset-Broker-Token: der Broker ist seit
+            // der Haertung auf 60 Minuten gestellt (Self-Service-Reset), was
+            // fuer eine Einladung viel zu kurz waere - Kunden lesen die Mail
+            // oft erst Tage spaeter. Der signierte Link haelt 14 Tage,
+            // haengt am APP_KEY und laesst das Passwort unangetastet, bis
+            // der Kunde selbst eines setzt.
+            $setPasswordUrl = \App\Http\Controllers\Auth\PasswordSetupController::invitationUrl($user);
             $mode = 'setlink';
         }
 
@@ -173,7 +184,15 @@ class PortalAccessService
             throw new \RuntimeException('Kunde hat keine echte E-Mail-Adresse – Zurücksetzen nicht möglich.');
         }
 
-        $user->forceFill(['portal_password_set_at' => null])->save();
+        // must_change_password mit zuruecksetzen: nach einem Admin-Reset ist
+        // das Passwort wieder ein vom SYSTEM vergebenes und muss beim
+        // naechsten Login gegen ein eigenes getauscht werden. Ohne diese
+        // Zeile behielte ein Kunde, der frueher schon einmal gewechselt hat,
+        // dauerhaft sein Geburtsdatum als Passwort.
+        $user->forceFill([
+            'portal_password_set_at' => null,
+            'must_change_password' => false,
+        ])->save();
         $mode = $this->sendInvitation($customer, $actorId);
 
         ActivityLog::create([

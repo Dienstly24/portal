@@ -14,6 +14,13 @@ class User extends Authenticatable {
         'invitation_sent_at' => 'datetime',
         'first_login_at' => 'datetime',
         'portal_password_set_at' => 'datetime',
+        'password_changed_at' => 'datetime',
+        'must_change_password' => 'boolean',
+        // Das 2FA-Geheimnis ist gleichwertig zum Passwort: wer es hat,
+        // erzeugt gueltige Codes. Deshalb verschluesselt at rest.
+        'two_factor_secret' => 'encrypted',
+        'two_factor_recovery_codes' => 'encrypted:array',
+        'two_factor_confirmed_at' => 'datetime',
         'password' => 'hashed',
         'can_see_all_customers' => 'boolean',
         'can_manage_contracts' => 'boolean',
@@ -100,6 +107,57 @@ class User extends Authenticatable {
         if (!$this->isStaff()) return false;
         if ($this->canSeeAllCustomers()) return true;
         return in_array((string) $customerId, array_map('strval', $this->visibleCustomerIdsWithSubstitution()), true);
+    }
+
+    /**
+     * Muss dieser Nutzer beim naechsten Aufruf ein eigenes Passwort
+     * setzen? Zwei Faelle, bewusst zusammengefasst (Betreiber-Vorgabe
+     * 18.08.2026):
+     *  a) must_change_password ist gesetzt (System hat das Passwort
+     *     vergeben - Geburtsdatum, Admin-Reset, CLI).
+     *  b) Kundenkonto mit nutzbarem Passwort, das noch NIE selbst
+     *     geaendert wurde (Altbestand vor dieser Regel).
+     * Konten ohne nutzbares Passwort (reiner Magic-Login) sind bewusst
+     * NICHT betroffen - die fuehrt der Portal-Flow ohnehin zum Setzen.
+     */
+    public function needsPasswordChange(): bool
+    {
+        return (bool) ($this->must_change_password ?? false);
+    }
+
+    /**
+     * Passwort setzen und alle Nebenbuchungen an EINER Stelle erledigen:
+     * Zwangswechsel aufheben, Zeitstempel fuehren, Portal-Status
+     * markieren. Vorher lag das in vier Controllern verstreut und war
+     * jedes Mal etwas anders (mal ohne portal_password_set_at, mal ohne
+     * Zeitstempel) - genau so entstehen "Passwort gesetzt, trotzdem
+     * wieder gefragt"-Meldungen.
+     */
+    public function setPassword(string $plain): void
+    {
+        $this->forceFill([
+            'password' => bcrypt($plain),
+            'portal_password_set_at' => now(),
+            'password_changed_at' => now(),
+            'must_change_password' => false,
+        ])->save();
+    }
+
+    /** Ist die Zwei-Faktor-Anmeldung fertig eingerichtet und bestaetigt? */
+    public function hasTwoFactor(): bool
+    {
+        return $this->two_factor_secret !== null && $this->two_factor_confirmed_at !== null;
+    }
+
+    /**
+     * Braucht dieses Konto zwingend eine zweite Schicht? Alle internen
+     * Rollen - sie sehen fremde personenbezogene Daten. Kundenkonten
+     * bewusst NICHT: dort waere die Huerde groesser als der Gewinn, und
+     * ein Kunde sieht ausschliesslich seine eigenen Daten.
+     */
+    public function requiresTwoFactor(): bool
+    {
+        return $this->isStaff() || $this->role === 'partner';
     }
 
     public function isAdmin() { return $this->role === 'admin'; }

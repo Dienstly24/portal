@@ -166,17 +166,38 @@ class PortalAccountManagementTest extends TestCase
         Mail::assertSent(CustomerWelcomeMail::class, fn ($m) => $m->mode === 'birthdate');
     }
 
-    public function test_store_customer_with_manual_password_still_works(): void
+    /**
+     * Ein von der Verwaltung vergebenes Passwort wird weiterhin gesetzt -
+     * aber seit der Passwort-Haertung (18.08.2026) NICHT mehr per E-Mail
+     * verschickt: ein Klartext-Passwort bleibt sonst dauerhaft in einem
+     * Postfach samt Backups. Der Mitarbeiter nennt es persoenlich, und
+     * beim ersten Login ist ein eigenes Passwort faellig.
+     */
+    public function test_manually_set_password_is_never_mailed_and_forces_a_change(): void
     {
         $this->actingAs($this->admin)->post(route('admin.customers.store'), [
             'first_name' => 'Manu', 'last_name' => 'Ell',
-            'email' => 'manu@ell.de', 'password' => 'super-sicher-123',
+            'email' => 'manu@ell.de', 'password' => 'super-sicheres-passwort',
         ])->assertRedirect();
 
         $user = User::where('email', 'manu@ell.de')->first();
-        $this->assertTrue(Hash::check('super-sicher-123', $user->password));
+        $this->assertTrue(Hash::check('super-sicheres-passwort', $user->password));
         $this->assertNotNull($user->portal_password_set_at);
-        Mail::assertSent(CustomerWelcomeMail::class, fn ($m) => $m->mode === 'manual');
+        $this->assertTrue((bool) $user->must_change_password);
+
+        // Entscheidend: KEINE Mail mit dem Passwort.
+        Mail::assertNotSent(CustomerWelcomeMail::class);
+    }
+
+    /** Die Regel gilt auch hier - zu kurze Passwoerter werden abgelehnt. */
+    public function test_manually_set_password_must_satisfy_the_policy(): void
+    {
+        $this->actingAs($this->admin)->post(route('admin.customers.store'), [
+            'first_name' => 'Kurz', 'last_name' => 'Pw',
+            'email' => 'kurz@pw.de', 'password' => 'kurz123',
+        ])->assertSessionHasErrors('password');
+
+        $this->assertDatabaseMissing('users', ['email' => 'kurz@pw.de']);
     }
 
     // ---------- Passwort-Reset (kein 500 mehr) ----------
@@ -185,24 +206,40 @@ class PortalAccountManagementTest extends TestCase
     {
         $this->customer();
 
+        // Ergebnis ist seit der Haertung eine eigene Seite (statt eines
+        // Streifens ueber dem Formular, der uebersehen wurde).
         $this->post(route('password.email'), ['email' => 'erika@kunde.de'])
-            ->assertSessionHas('status')
+            ->assertRedirect(route('password.request.sent'))
             ->assertSessionHasNoErrors();
 
         Mail::assertSent(PasswordResetMail::class, function (PasswordResetMail $m) {
             $html = $m->render();
+            // Wortlaut wurde mit der Passwort-Haertung bewusst klarer
+            // gefasst (der Kunde soll auf den ersten Blick verstehen, was
+            // zu tun ist). Geprueft wird deshalb, WAS die Mail leisten
+            // muss - nicht mehr der alte Satzbau.
             return $m->hasTo('erika@kunde.de')
                 && str_contains($html, 'Passwort zurücksetzen')
-                && str_contains($html, 'Sie erhalten diese E-Mail, weil Sie uns darum gebeten haben')
+                && str_contains($html, 'Neues Passwort festlegen')
+                && str_contains($html, 'gueltig')
                 && str_contains($html, 'Bitte ignorieren Sie diese E-Mail, falls diese Anfrage nicht von Ihnen stammt');
         });
     }
 
-    public function test_password_reset_for_unknown_email_shows_clear_message_not_500(): void
+    /**
+     * Urspruengliche Absicht des Tests: eine unbekannte Adresse darf keinen
+     * 500 ausloesen. Seit der Haertung (18.08.2026) gilt zusaetzlich: sie
+     * darf sich auch nicht von einer bekannten Adresse UNTERSCHEIDEN -
+     * sonst kann jeder durchprobieren, wer bei uns Kunde ist.
+     */
+    public function test_password_reset_for_unknown_email_is_indistinguishable(): void
     {
         $this->post(route('password.email'), ['email' => 'gibtsnicht@example.com'])
-            ->assertSessionHasErrors('email')
-            ->assertStatus(302); // Redirect zurück, kein 500
+            ->assertRedirect(route('password.request.sent'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseMissing('password_reset_tokens', ['email' => 'gibtsnicht@example.com']);
+        Mail::assertNothingSent();
     }
 
     public function test_password_reset_for_internal_placeholder_email_shows_clear_message(): void
@@ -211,21 +248,30 @@ class PortalAccountManagementTest extends TestCase
 
         $response = $this->post(route('password.email'), ['email' => 'import-xyz@dienstly24.internal']);
 
-        $response->assertSessionHasErrors('email');
-        $this->assertStringContainsString('kein E-Mail-Versand möglich', session('errors')->first('email'));
+        // Einzige Ausnahme von der Schweige-Antwort: interne Platzhalter kann
+        // niemand von aussen erraten, und sie koennen technisch keine Mail
+        // empfangen - hier hilft der klare Hinweis mehr als Schweigen.
+        $response->assertSessionHasErrors('identifier');
+        $this->assertStringContainsString('kein E-Mail-Versand möglich', session('errors')->first('identifier'));
         Mail::assertNothingSent();
     }
 
-    public function test_mailer_failure_shows_message_instead_of_500(): void
+    /**
+     * Kern des Tests bleibt: ein toter Mailserver darf beim Kunden nie als
+     * HTTP 500 ankommen. Die Meldung ist seit der Haertung bewusst dieselbe
+     * wie im Erfolgsfall (ein abweichender Fehlertext waere wieder ein
+     * Enumerations-Signal); der Fehler steht im Log, und die Ergebnisseite
+     * fuehrt den Kunden ueber "Es kommt keine E-Mail an?" zur Hilfe.
+     */
+    public function test_mailer_failure_shows_the_same_page_instead_of_500(): void
     {
         $this->customer();
         // Mailer wirft (z. B. SMTP down) - vorher: HTTP 500 beim Kunden.
         Mail::shouldReceive('to')->andThrow(new \RuntimeException('SMTP connection refused'));
 
-        $response = $this->post(route('password.email'), ['email' => 'erika@kunde.de']);
-
-        $response->assertStatus(302)->assertSessionHasErrors('email');
-        $this->assertStringContainsString('konnte gerade nicht versendet werden', session('errors')->first('email'));
+        $this->post(route('password.email'), ['email' => 'erika@kunde.de'])
+            ->assertRedirect(route('password.request.sent'))
+            ->assertSessionHasNoErrors();
     }
 
     public function test_full_reset_cycle_sets_password_and_marks_it_set(): void
@@ -446,8 +492,11 @@ class PortalAccountManagementTest extends TestCase
         $customer2 = $this->customer(['email' => 'mit-pw@kunde.de']);
         $customer2->user->forceFill(['created_at' => now()->subDays(4), 'portal_password_set_at' => now()])->save();
 
-        // Scheduler zur Reminder-Zeit (09:00) laufen lassen
-        $this->travelTo(now()->setTime(9, 0));
+        // Scheduler zur Reminder-Zeit laufen lassen. Die 09:00 in
+        // routes/console.php sind deutsche ORTSZEIT (app.schedule_timezone),
+        // die Anwendung rechnet aber in UTC - deshalb wird hier der
+        // Zeitpunkt angesteuert, zu dem die Uhr in Deutschland 09:00 zeigt.
+        $this->travelTo(\Illuminate\Support\Carbon::now('Europe/Berlin')->setTime(9, 0));
         \Illuminate\Support\Facades\Artisan::call('schedule:run');
 
         // Ohne nutzbares Passwort: KEINE "Bitte einloggen"-Mail (Sackgasse)

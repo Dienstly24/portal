@@ -21,9 +21,13 @@ class PasswordResetMail extends Mailable
 
     public string $resetUrl;
 
+    /** Gueltigkeit in Minuten - steht so auch in der Mail (Transparenz). */
+    public int $validMinutes;
+
     public function __construct(public User $user, string $token)
     {
         $this->resetUrl = route('password.reset', ['token' => $token, 'email' => $user->email]);
+        $this->validMinutes = (int) config('auth.passwords.users.expire', 60);
     }
 
     public function envelope(): Envelope

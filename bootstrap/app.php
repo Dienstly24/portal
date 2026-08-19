@@ -46,6 +46,24 @@ return Application::configure(basePath: dirname(__DIR__))
         // Aktivitaetserfassung fuer Mitarbeiter: global in der Web-Gruppe,
         // damit sie serverseitig laeuft und nicht umgangen werden kann.
         $middleware->appendToGroup('web', \App\Http\Middleware\TrackStaffActivity::class);
+        // Sitzungen an den Passwort-Hash koppeln: aendert jemand sein
+        // Passwort, sterben ALLE anderen offenen Sitzungen dieses Kontos
+        // (gestohlenes Geraet, geteiltes Startpasswort, Magic-Link, der
+        // weitergeleitet wurde). Ohne dies blieb eine fremde Sitzung nach
+        // dem Passwortwechsel bis zum Session-Ablauf gueltig - der Wechsel
+        // war also kein Rauswurf, sondern nur eine Umbenennung des
+        // Schluessels. (Betreiber-Vorgabe 18.08.2026)
+        $middleware->appendToGroup('web', \Illuminate\Session\Middleware\AuthenticateSession::class);
+        // Vom SYSTEM vergebene Passwoerter (Startpasswort = Geburtsdatum,
+        // Admin-Reset, CLI) muessen beim naechsten Aufruf gegen ein
+        // eigenes getauscht werden. NACH AuthenticateSession, damit die
+        // Sitzungspruefung zuerst greift.
+        $middleware->appendToGroup('web', \App\Http\Middleware\EnsurePasswordChanged::class);
+        // Zweiter Faktor fuer die Beraterwelt. NACH dem Passwortwechsel:
+        // erst ein eigenes Passwort, dann die zweite Schicht - in der
+        // umgekehrten Reihenfolge richtet jemand 2FA fuer ein Konto ein,
+        // dessen Passwort noch das oeffentlich bekannte Geburtsdatum ist.
+        $middleware->appendToGroup('web', \App\Http\Middleware\EnsureTwoFactor::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

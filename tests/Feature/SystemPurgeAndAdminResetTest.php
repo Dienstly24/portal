@@ -44,13 +44,13 @@ class SystemPurgeAndAdminResetTest extends TestCase
 
     public function test_admin_set_password_creates_new_admin(): void
     {
-        $this->artisan('admin:set-password', ['email' => 'neu@dienstly24.de', 'password' => 'geheim1234'])
+        $this->artisan('admin:set-password', ['email' => 'neu@dienstly24.de', 'password' => 'geheim-1234-sicher'])
             ->assertExitCode(0);
 
         $user = User::where('email', 'neu@dienstly24.de')->first();
         $this->assertNotNull($user);
         $this->assertSame('admin', $user->role);
-        $this->assertTrue(Hash::check('geheim1234', $user->password));
+        $this->assertTrue(Hash::check('geheim-1234-sicher', $user->password));
     }
 
     public function test_admin_set_password_resets_existing_account(): void

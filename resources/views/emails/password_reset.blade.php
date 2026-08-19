@@ -4,14 +4,18 @@
 <body style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:30px 0;"><tr><td align="center">
 <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:10px;overflow:hidden;">
-<tr><td style="background:#17191d;padding:25px 30px;">
+<tr><td style="background:#131A17;padding:25px 30px;">
 <h1 style="color:#ffffff;margin:0;font-size:22px;">Passwort zurücksetzen</h1>
 </td></tr>
 <tr><td style="padding:30px;">
 <p style="font-size:15px;color:#333;">Guten Tag,</p>
-<p style="font-size:15px;color:#333;">Sie erhalten diese E-Mail, weil Sie uns darum gebeten haben, Ihre Zugangsdaten für Ihr Konto zurückzusetzen. Bitte klicken Sie auf den folgenden Link und folgen Sie dann den Anweisungen.</p>
+<p style="font-size:15px;color:#333;">Sie haben ein neues Passwort fuer Ihren Dienstly24-Zugang angefordert. Klicken Sie einfach auf den Button - danach koennen Sie direkt ein neues Passwort eingeben.</p>
 <p style="text-align:center;margin:28px 0;">
-    <a href="{{ $resetUrl }}" style="background:#17A65B;color:#ffffff;padding:12px 30px;border-radius:8px;text-decoration:none;font-size:15px;">Passwort zurücksetzen</a>
+    <a href="{{ $resetUrl }}" style="background:#17A65B;color:#ffffff;padding:14px 34px;border-radius:8px;text-decoration:none;font-size:16px;font-weight:bold;display:inline-block;">Neues Passwort festlegen</a>
+</p>
+<p style="font-size:13px;color:#8A6D1F;background:#F6F0DC;border:1px solid #E0DCD0;border-radius:8px;padding:12px 14px;line-height:1.6;text-align:center;">
+&#9201; Dieser Link ist <strong>{{ $validMinutes >= 60 ? intdiv($validMinutes, 60) . ' Stunde' . (intdiv($validMinutes, 60) === 1 ? '' : 'n') : $validMinutes . ' Minuten' }}</strong> gueltig und funktioniert nur einmal.
+Ist er abgelaufen, fordern Sie einfach einen neuen an.
 </p>
 <p style="font-size:13px;color:#666;">Falls der Button nicht funktioniert, kopieren Sie bitte diesen Link in Ihren Browser:<br>
 <a href="{{ $resetUrl }}" style="color:#17A65B;word-break:break-all;">{{ $resetUrl }}</a></p>

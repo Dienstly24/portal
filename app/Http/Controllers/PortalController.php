@@ -945,7 +945,11 @@ class PortalController extends Controller
         // verlangen war eine Sackgasse: Passwort festlegen unmoeglich.
         $hasUsablePassword = auth()->user()->portal_password_set_at !== null;
 
-        $rules = ['password' => ['required', 'confirmed', 'min:8']];
+        // Regel kommt aus der EINEN Quelle (PasswordPolicy) - vorher stand
+        // hier 'min:8', waehrend Registrierung und Reset laengst mehr
+        // verlangten. Der Kunde bekam dann im Portal ein Passwort
+        // akzeptiert, das der Reset-Weg abgelehnt haette.
+        $rules = ['password' => ['required', 'confirmed', \App\Support\PasswordPolicy::customer()]];
         if ($hasUsablePassword) {
             $rules['current_password'] = ['required', 'current_password'];
         }
@@ -953,13 +957,14 @@ class PortalController extends Controller
         $request->validate($rules, [
             'current_password.current_password' => 'Das aktuelle Passwort ist nicht korrekt.',
             'password.confirmed' => 'Die Passwort-Bestätigung stimmt nicht überein.',
-            'password.min' => 'Das neue Passwort muss mindestens 8 Zeichen lang sein.',
         ]);
 
-        auth()->user()->forceFill([
-            'password' => bcrypt($request->password),
-            'portal_password_set_at' => now(),
-        ])->save();
+        auth()->user()->setPassword($request->password);
+
+        // Andere offene Sitzungen dieses Kontos beenden (z. B. ein Geraet,
+        // auf dem noch das bekannte Startpasswort benutzt wurde).
+        \Illuminate\Support\Facades\Auth::logoutOtherDevices($request->password);
+        \App\Support\SessionPasswordHash::refresh($request);
 
         \App\Models\ActivityLog::create([
             'user_id' => auth()->id(),

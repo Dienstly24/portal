@@ -78,4 +78,47 @@ class ImportCustomersJob implements ShouldQueue
             ]);
         }
     }
+
+    /**
+     * Scheitert der Import, MUSS der Betreiber davon erfahren
+     * (Audit 18.08.2026 - stiller Fehlschlag).
+     *
+     * Vorher endete ein abgebrochener Import so: die hochgeladene CSV war
+     * geloescht (das `finally` oben raeumt sie bewusst weg), es kam KEINE
+     * Benachrichtigung, und in der Oberflaeche sah alles aus wie immer.
+     * Der Betreiber wartete auf Kunden, die nie ankamen. Jetzt gibt es
+     * eine ehrliche Meldung samt Hinweis, dass die Datei erneut
+     * hochgeladen werden muss.
+     */
+    public function failed(?\Throwable $e): void
+    {
+        Log::error('Kunden-Import fehlgeschlagen', [
+            'path' => $this->path,
+            'fehler' => $e?->getMessage() ?? 'unbekannt',
+        ]);
+
+        // Rohdaten auch im Fehlerfall nicht liegen lassen (Datenminimierung).
+        if (is_file($this->path)) {
+            @unlink($this->path);
+        }
+
+        if (! $this->actorId) {
+            return;
+        }
+
+        try {
+            \App\Support\Facades\Notify::push($this->actorId, [
+                'type'  => \App\Services\Notifications\NotificationService::TYPE_IMPORT,
+                'title' => 'Kunden-Import FEHLGESCHLAGEN',
+                'body'  => 'Der Import wurde abgebrochen und ist NICHT vollstaendig durchgelaufen. '
+                    . 'Moeglicherweise wurde ein Teil der Kunden bereits angelegt - bitte pruefen Sie '
+                    . 'die Kundenliste, bevor Sie die Datei erneut hochladen. Grund: '
+                    . mb_substr((string) ($e?->getMessage() ?? 'unbekannt'), 0, 200),
+                'link'  => route('admin.import_export'),
+                'dedup_key' => 'import_failed:' . md5($this->path),
+            ]);
+        } catch (\Throwable $inner) {
+            Log::warning('Hinweis zum fehlgeschlagenen Import konnte nicht zugestellt werden: ' . $inner->getMessage());
+        }
+    }
 }

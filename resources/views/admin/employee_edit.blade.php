@@ -193,7 +193,49 @@
 </div>
 </form>
 
-<div style="max-width:700px;margin-top:40px;border:1px solid #F0D5D5;border-radius:12px;overflow:hidden;">
+{{--
+    Zugang: seit der Passwort-Haertung vergibt die Verwaltung KEIN Passwort
+    mehr. Der einzige Weg, einem Mitarbeiter den Zugang wiederherzustellen,
+    ist eine neue Einladung an seine hinterlegte Adresse.
+--}}
+<div style="max-width:700px;margin-top:32px;border:1px solid var(--line);border-radius:12px;overflow:hidden;">
+    <div style="background:#F6F3EA;padding:12px 20px;font-size:13px;font-weight:700;color:#16211C;">&#128273; Zugang</div>
+    <div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+        <div style="font-size:13px;color:var(--ink-soft);line-height:1.5;">
+            <strong>Einladung erneut senden</strong><br>
+            Der Mitarbeiter erhaelt einen Link (14 Tage gueltig) und legt sein Passwort selbst fest.
+            Passwoerter werden grundsaetzlich nicht von der Verwaltung vergeben und nie per E-Mail verschickt.
+        </div>
+        <form method="POST" action="{{ route('admin.employees.resend_invitation', $employee->id) }}" style="margin:0;">
+            @csrf
+            <button type="submit" class="btn btn-ghost" style="white-space:nowrap;">&#9993; Einladung senden</button>
+        </form>
+    </div>
+    @if(auth()->user()->role === 'admin')
+    <div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;border-top:1px solid var(--line);">
+        <div style="font-size:13px;color:var(--ink-soft);line-height:1.5;">
+            <strong>Zwei-Faktor-Anmeldung</strong>
+            @if($employee->hasTwoFactor())
+                <span style="color:#17A65B;">&#10003; aktiv seit {{ $employee->two_factor_confirmed_at?->format('d.m.Y') }}</span><br>
+                Nur zuruecksetzen, wenn das Telefon verloren ist UND keine Ersatzcodes mehr vorliegen.
+                Der Mitarbeiter richtet sie beim naechsten Login neu ein.
+            @else
+                <span style="color:#B5651D;">noch nicht eingerichtet</span><br>
+                Der Mitarbeiter wird beim naechsten Login automatisch durch die Einrichtung gefuehrt.
+            @endif
+        </div>
+        @if($employee->hasTwoFactor())
+        <form method="POST" action="{{ route('admin.employees.reset_two_factor', $employee->id) }}"
+              onsubmit="return confirm('Zwei-Faktor-Anmeldung von {{ $employee->name }} wirklich zuruecksetzen?');" style="margin:0;">
+            @csrf
+            <button type="submit" class="btn btn-ghost" style="white-space:nowrap;color:#B5651D;border-color:#B5651D;">&#128260; Zuruecksetzen</button>
+        </form>
+        @endif
+    </div>
+    @endif
+</div>
+
+<div style="max-width:700px;margin-top:24px;border:1px solid #F0D5D5;border-radius:12px;overflow:hidden;">
     <div style="background:#FBF3F3;padding:12px 20px;font-size:13px;font-weight:700;color:#A32D2D;">Gefahrenzone</div>
     <div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:1px solid #F0D5D5;">
         <div style="font-size:13px;color:var(--ink-soft);line-height:1.5;"><strong>{{ $employee->is_active ? 'Konto deaktivieren' : 'Konto aktivieren' }}</strong><br>{{ $employee->is_active ? 'Login wird gesperrt, alle Daten und Zuweisungen bleiben erhalten. Empfohlen statt Loeschen.' : 'Konto ist derzeit deaktiviert. Login wieder freigeben.' }}</div>
