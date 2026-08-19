@@ -82,6 +82,28 @@
         </div>
     @endif
 
+    {{-- Der naechste Schritt bleibt IMMER sichtbar - er ist die eine
+         Information, die der Mitarbeiter zum Weiterarbeiten braucht. --}}
+    @if($briefing && $aiConversation->intent)
+        <div class="kx-ai-next">Nächster Schritt: <strong>{{ $briefing['naechster_schritt'] }}</strong>@if($angebote->isEmpty() && $briefing['zustand'] !== 'Neu') · <span class="kx-ai-missing">noch kein Angebot hinterlegt</span>@endif</div>
+    @endif
+
+    {{-- Zusammenfassung und Vorgangsstand sind BEIDE einklappbar (Lehre
+         19.08.2026 - gemeldet: "die Unterhaltung ist nicht zu sehen"): das
+         Panel wuchs mit jedem Ausbau und drueckte den Nachrichtenverlauf im
+         Flex-Layout auf null - der Mitarbeiter sah weder die Kundenfrage
+         noch die eigene Antwort. Standard ist deshalb ZUGEKLAPPT; die
+         Kopfzeile, ein etwaiger Uebergabegrund und eine Stoerung stehen
+         immer da. Der Zustand wird je Browser gemerkt. --}}
+    @if($aiConversation->summary || ($briefing && $aiConversation->intent))
+    <details class="kx-ai-more" data-ki-panel>
+        <summary>
+            <span class="kx-ai-more-t">Zusammenfassung &amp; Vorgangsstand</span>
+            @if($aiConversation->summary)
+            <span class="kx-ai-more-p">{{ \Illuminate\Support\Str::limit(strtok($aiConversation->summary, "\n"), 90) }}</span>
+            @endif
+        </summary>
+
     @if($aiConversation->summary)
         <div class="kx-ai-sum">{{ $aiConversation->summary }}</div>
     @endif
@@ -115,8 +137,6 @@
             @if(!empty($briefing['fehlend']))
                 <div class="kx-ai-missing">Noch offen: {{ implode(', ', $briefing['fehlend']) }}</div>
             @endif
-
-            <div class="kx-ai-next">Nächster Schritt: <strong>{{ $briefing['naechster_schritt'] }}</strong></div>
 
             {{-- Angebote: Phase 1 hinterlegt sie der Mitarbeiter. Solange
                  keines vorliegt, nennt die KI bewusst keine Preise. --}}
@@ -157,6 +177,8 @@
                 </details>
             </div>
         </div>
+    @endif
+    </details>
     @endif
 
     <div class="kx-ai-facts">
