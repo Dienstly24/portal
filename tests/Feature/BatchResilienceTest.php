@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Models\DocumentRequest;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Support\Facades\Notify;
 use Illuminate\Console\Command;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -144,7 +145,7 @@ class BatchResilienceTest extends TestCase
 
     // --------------------------------------------- Vorgaenge automatisch schliessen
 
-    public function test_ein_kaputter_vorgang_blockiert_das_schliessen_der_anderen_nicht(): void
+    public function test_eine_fehlgeschlagene_glocke_blockiert_das_schliessen_der_anderen_nicht(): void
     {
         $tickets = collect(range(1, 3))->map(fn ($i) => Ticket::create([
             'customer_id' => $this->kunde()->id,
@@ -156,18 +157,26 @@ class BatchResilienceTest extends TestCase
             'resolved_at' => now()->subDays(10),
         ]));
 
+        // Realistischer Ausfall: die Portal-Glocke fuer EINEN Vorgang
+        // scheitert. Frueher endete damit der ganze Lauf - alle folgenden
+        // geloesten Vorgaenge blieben offen.
         $kaputt = $tickets[1]->id;
-        Event::listen('eloquent.updating: ' . Ticket::class, function (Ticket $t) use ($kaputt) {
-            if ($t->id === $kaputt) {
-                throw new \RuntimeException('Vorgang kaputt');
+        Notify::shouldReceive('push')->andReturnUsing(function (int $userId, array $attrs) use ($kaputt) {
+            if (str_contains($attrs['dedup_key'] ?? '', $kaputt)) {
+                throw new \RuntimeException('Glocke kaputt');
             }
-        });
 
+            return null;
+        });
+        Notify::shouldReceive('pushMany')->andReturn(0);
+
+        // Der Lauf laeuft durch und meldet den Fehler ERST danach.
         $this->artisan('tickets:auto-close')->assertExitCode(1);
 
-        $this->assertSame('closed', $tickets[0]->fresh()->status);
-        $this->assertSame('closed', $tickets[2]->fresh()->status);
-        $this->assertSame('resolved', $tickets[1]->fresh()->status);
+        // Entscheidend: auch die Vorgaenge NACH dem kaputten sind geschlossen.
+        foreach ($tickets as $ticket) {
+            $this->assertSame('closed', $ticket->fresh()->status);
+        }
     }
 
     // ------------------------------------------- Fristen-Erinnerung an Kunden
