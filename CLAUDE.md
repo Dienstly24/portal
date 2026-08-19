@@ -185,6 +185,37 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   nur Titel/Zustand/Kurzfassung, keine Einzelwerte.
 - Tests: `SystemHealthTest`.
 
+## Batch-Laeufe: ein kaputter Datensatz stoppt nie den ganzen Lauf (19.08.2026)
+
+- **Lehre**: die geplanten Aufgaben arbeiten Listen ab. Ohne Absicherung
+  beendet die ERSTE Ausnahme den gesamten Lauf - ein Kunde mit kaputter
+  Adresse verhinderte, dass ALLE weiteren ihre Erinnerung bekamen. Und weil
+  das im Hintergrund passiert, merkte es niemand.
+- Gemeinsamer Baustein `App\Console\Concerns\ProcessesRecordsSafely`:
+  `verarbeiteEinzeln($records, $handler, $label)` faengt je Datensatz,
+  protokolliert MIT Kennung (Log + Befehlsausgabe) und macht weiter;
+  `ergebnisMitUebersprungenen()` liefert am Ende **Exitcode 1**.
+  Reihenfolge ist Absicht: erst alles Machbare erledigen, DANN ehrlich
+  melden. Der Exitcode macht die Aufgabe auf `/admin/systemzustand` rot -
+  ein sichtbarer Teilausfall ist besser als ein stiller.
+- Abgesichert: `documents:analyze-pending` und `ai:answer-pending` (die
+  SICHERHEITSNETZE - ausgerechnet sie waren ungeschuetzt; beim ersten ist
+  zusaetzlich der Rueckstau-Alarm gekapselt, damit die Meldung "Worker tot"
+  nicht an etwas anderem scheitert), `health:apply-due-switches`,
+  `tickets:auto-close`, `document-requests:remind`, `tasks:remind`.
+- Die Erinnerungs-DIENSTE (`EscooterRenewalReminderService`,
+  `SchutzbriefRenewalReminderService`, `ContractSwitchReminderService`)
+  waren bereits je Vertrag abgesichert - dort wurde bewusst nichts
+  geaendert.
+- `reminder_sent_at` wird weiterhin erst NACH erfolgreichem Versand
+  gesetzt: ein voruebergehender Mailfehler soll es morgen erneut versuchen.
+  Eine dauerhaft kaputte Adresse meldet der Lauf dann taeglich - sichtbar,
+  statt dass der Kunde still nie erinnert wird.
+- Nebenbei behoben: `health:apply-due-switches` schrieb sein ActivityLog-
+  `meta` vor-`json_encode`t, obwohl die Spalte als Array gecastet ist
+  (doppelte Kodierung) - laeuft jetzt ueber `ActivityLog::record()`.
+- Tests: `BatchResilienceTest`.
+
 ## Kundennummern
 
 - Neuanlage: `JJ` + 5-stellig laufend (2026 → `2600001`, `2600002` …) via

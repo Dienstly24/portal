@@ -1,6 +1,7 @@
 <?php
 namespace App\Console\Commands;
 
+use App\Console\Concerns\ProcessesRecordsSafely;
 use App\Models\ActivityLog;
 use App\Models\Contract;
 use Illuminate\Console\Command;
@@ -13,6 +14,8 @@ use Illuminate\Console\Command;
  */
 class ApplyDueHealthSwitches extends Command
 {
+    use ProcessesRecordsSafely;
+
     protected $signature = 'health:apply-due-switches {--dry-run : Nur anzeigen, nichts aendern}';
     protected $description = 'Aktiviert faellige Krankenkassenwechsel (pending Kranken-Vertraege am Stichtag)';
 
@@ -30,29 +33,30 @@ class ApplyDueHealthSwitches extends Command
             return self::SUCCESS;
         }
 
-        foreach ($due as $contract) {
+        // Je Vertrag abgesichert: bricht der Lauf beim ersten Problem ab,
+        // behalten ALLE folgenden Kunden ihre alte Krankenkasse in der Akte -
+        // ab dem Stichtag ist das schlicht falsch, und niemand sieht es.
+        $erledigt = $this->verarbeiteEinzeln($due, function (Contract $contract) {
             if ($this->option('dry-run')) {
                 $this->line('- ' . ($contract->customer?->customer_number ?? '?') . ' -> ' . $contract->insurer . ' (ab ' . $contract->start_date . ')');
-                continue;
+
+                return;
             }
 
             $contract->update(['status' => 'active']);
             $contract->customer?->fill(['health_insurance_company' => $contract->insurer])->save();
 
-            ActivityLog::create([
-                'user_id' => null,
-                'action' => 'health_switch_applied',
-                'entity_type' => 'contract',
-                'entity_id' => $contract->id,
-                'meta' => json_encode([
-                    'customer_id' => (string) $contract->customer_id,
-                    'insurer' => $contract->insurer,
-                    'start_date' => (string) $contract->start_date,
-                ], JSON_UNESCAPED_UNICODE),
+            // ueber record(): meta ist als Array gecastet - ein vorab
+            // json_encode()-ter String wuerde ein ZWEITES Mal kodiert.
+            ActivityLog::record('health_switch_applied', 'contract', $contract->id, [
+                'customer_id' => (string) $contract->customer_id,
+                'insurer' => $contract->insurer,
+                'start_date' => (string) $contract->start_date,
             ]);
-        }
+        }, 'Vertrag');
 
-        $this->info($due->count() . ' Krankenkassenwechsel ' . ($this->option('dry-run') ? 'faellig (dry-run).' : 'aktiviert.'));
-        return self::SUCCESS;
+        $this->info($erledigt . ' Krankenkassenwechsel ' . ($this->option('dry-run') ? 'faellig (dry-run).' : 'aktiviert.'));
+
+        return $this->ergebnisMitUebersprungenen(self::SUCCESS);
     }
 }
