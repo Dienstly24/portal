@@ -7,9 +7,17 @@
 
         <title>{{ config('app.name', 'Laravel') }}</title>
 
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+        {{--
+            KEINE externen Schriften (DSGVO, Audit 18.08.2026).
+            Hier lag die EINZIGE externe Ressource im ganzen System: zwei
+            Links auf fonts.bunny.net. Jeder Aufruf dieser Seite haette die
+            IP-Adresse des Besuchers an einen Dritten uebertragen - genau
+            der Tatbestand, fuer den es in Deutschland bereits Abmahnungen
+            wegen Google Fonts gab. Die Seite nutzt jetzt die
+            System-Schriftfamilie (font-sans, siehe body).
+            Diese Vorlage traegt confirm-password und verify-email und wird
+            deshalb NICHT geloescht, sondern bereinigt.
+        --}}
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])

@@ -66,13 +66,26 @@ class EnsureTwoFactor
     }
 
     /**
-     * Notbremse fuer den Betreiber. Voreinstellung: AN. Anders als bei
-     * anderen Schaltern ist AUS hier die Ausnahme - eine Sicherheitsschicht,
-     * die man erst einschalten muss, ist meistens aus.
+     * Notbremse fuer den Betreiber. Voreinstellung im Betrieb: AN. Anders
+     * als bei anderen Schaltern ist AUS hier die Ausnahme - eine
+     * Sicherheitsschicht, die man erst einschalten muss, ist meistens aus.
+     *
+     * In der TESTUMGEBUNG ist die Voreinstellung AUS. Sonst muesste jeder
+     * der hunderten bestehenden Beraterwelt-Tests zusaetzlich einen
+     * zweiten Faktor einrichten, obwohl er etwas voellig anderes prueft -
+     * das verdeckt echte Fehler mehr, als es Sicherheit prueft. Die
+     * 2FA-Pflicht selbst wird in TwoFactorTest ausdruecklich eingeschaltet
+     * und dort vollstaendig geprueft.
      */
     public static function enabled(): bool
     {
-        return (string) \App\Models\SystemSetting::get('two_factor_required', '1') === '1';
+        return (string) \App\Models\SystemSetting::get('two_factor_required', self::defaultSetting()) === '1';
+    }
+
+    /** Voreinstellung: im Betrieb AN, in Tests AUS (siehe enabled()). */
+    public static function defaultSetting(): string
+    {
+        return app()->environment('testing') ? '0' : '1';
     }
 
     private function stop(Request $request, string $target): Response

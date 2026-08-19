@@ -89,7 +89,7 @@
     <input type="hidden" name="security_form" value="1">
     <label class="ki-toggle">
         <input type="checkbox" name="two_factor_required" value="1"
-               @checked(($settings['two_factor_required'] ?? '1') === '1')>
+               @checked(($settings['two_factor_required'] ?? \App\Http\Middleware\EnsureTwoFactor::defaultSetting()) === '1')>
         <span><strong>Zwei-Faktor-Anmeldung fuer Personal verpflichtend</strong></span>
     </label>
     <div style="font-size:12.5px;color:var(--ink-soft);line-height:1.6;margin-top:8px;">

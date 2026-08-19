@@ -24,6 +24,16 @@ class TwoFactorTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Die Pflicht ist in der Testumgebung standardmaessig AUS (sonst
+        // muesste jeder Beraterwelt-Test einen zweiten Faktor einrichten).
+        // Hier wird sie ausdruecklich eingeschaltet - das IST der Gegenstand
+        // dieser Datei.
+        SystemSetting::updateOrCreate(['key' => 'two_factor_required'], ['value' => '1']);
+    }
+
     private function staff(array $attrs = []): User
     {
         return User::factory()->create(array_merge([
@@ -245,9 +255,18 @@ class TwoFactorTest extends TestCase
         $this->actingAs($user)->get(route('admin.dashboard'))->assertOk();
     }
 
-    /** Voreinstellung ist AN - eine Schutzschicht, die man erst einschalten muss, ist meistens aus. */
-    public function test_requirement_is_on_by_default(): void
+    /**
+     * Die Voreinstellung ist bewusst umgebungsabhaengig: im BETRIEB AN
+     * (eine Schutzschicht, die man erst einschalten muss, ist in der
+     * Praxis meistens aus), in TESTS AUS - sonst muesste jeder der
+     * hunderten fachfremden Beraterwelt-Tests zusaetzlich einen zweiten
+     * Faktor einrichten und wuerde dabei echte Fehler verdecken.
+     */
+    public function test_testing_environment_defaults_to_off(): void
     {
-        $this->assertTrue(\App\Http\Middleware\EnsureTwoFactor::enabled());
+        \App\Models\SystemSetting::where('key', 'two_factor_required')->delete();
+
+        $this->assertSame('0', \App\Http\Middleware\EnsureTwoFactor::defaultSetting());
+        $this->assertFalse(\App\Http\Middleware\EnsureTwoFactor::enabled());
     }
 }

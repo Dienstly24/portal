@@ -28,7 +28,7 @@ class SettingsController extends Controller
             // Sicherheit: Zwei-Faktor-Pflicht fuer Personal. Voreinstellung
             // AN - eine Schutzschicht, die man erst einschalten muss, ist
             // in der Praxis meistens aus.
-            'two_factor_required' => SystemSetting::get('two_factor_required', '1'),
+            'two_factor_required' => SystemSetting::get('two_factor_required', \App\Http\Middleware\EnsureTwoFactor::defaultSetting()),
         ];
 
         // KI-Kundenassistent (Spezifikation Abschnitt 30): Betriebsschalter
