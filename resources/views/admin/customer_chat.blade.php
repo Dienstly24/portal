@@ -24,6 +24,11 @@
 .kchat-unread{background:#E24B4A;color:#fff;border-radius:999px;font-size:11px;font-weight:800;min-width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;padding:0 6px;flex:none;}
 .kchat-none{padding:26px 18px;text-align:center;color:var(--ink-soft);font-size:13.5px;line-height:1.7;}
 .kchat-thread{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--surface);position:relative;}
+/* Nachrichtenverlauf: nie kleiner als eine lesbare Hoehe. Kopf, KI-Panel,
+   Cockpit und Leisten geben notfalls nach (sie sind in sich scrollbar
+   bzw. umbrechbar) - der Chat selbst nicht. */
+.kchat-thread .d24c-scroll{min-height:180px;}
+.kchat-head,.kx-cockpit,.kx-bar,.kchat-opts,.d24c-comp,.d24c-files{flex:0 0 auto;}
 .kchat-head{display:flex;align-items:center;gap:11px;padding:11px 14px;background:linear-gradient(135deg,var(--petrol),var(--petrol-dark));color:#fff;}
 .kchat-head-name{font-weight:700;font-size:14.5px;}
 .kchat-head-sub{font-size:11.5px;color:var(--akzent-hell);}
@@ -50,7 +55,11 @@
 /* KI-Panel der Unterhaltung (Spezifikation 27). Gold = Akzentfarbe des
    Farbschemas "Smaragd & Gold"; eine offene Uebergabe faellt bewusst
    deutlicher auf (warmes Rot), damit sie nicht uebersehen wird. */
-.kx-ai{padding:8px 14px;background:#FBFAF6;border-bottom:1px solid var(--line);font-size:12.5px;}
+.kx-ai{padding:8px 14px;background:#FBFAF6;border-bottom:1px solid var(--line);font-size:12.5px;
+       /* HARTE Obergrenze (Lehre 19.08.2026): das Panel darf den
+          Nachrichtenverlauf nie verdraengen - aufgeklappt scrollt es in
+          sich selbst, statt die Chat-Liste auf null Pixel zu druecken. */
+       flex:0 1 auto;min-height:0;max-height:32vh;overflow-y:auto;}
 .kx-ai.on{background:#F6F8F4;}
 .kx-ai.handover{background:#FBF3E7;border-bottom-color:#E2C89A;}
 .kx-ai.off{background:#F5F5F2;}
@@ -86,6 +95,13 @@
 .kx-ai-grid label.wide{grid-column:1/-1;}
 /* Eigene Breite: die globale Regel input{width:100%} sprengt sonst das Raster. */
 .kx-ai-grid input{width:100%;box-sizing:border-box;padding:4px 7px;font-size:12px;border:1px solid var(--line);border-radius:6px;}
+.kx-ai-more{margin-top:5px;}
+.kx-ai-more>summary{cursor:pointer;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;color:var(--ink-soft);list-style:none;}
+.kx-ai-more>summary::-webkit-details-marker{display:none;}
+.kx-ai-more>summary::before{content:'▸';color:var(--brand);font-weight:700;}
+.kx-ai-more[open]>summary::before{content:'▾';}
+.kx-ai-more-t{font-weight:700;color:var(--ink);}
+.kx-ai-more-p{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .kx-ai-fact.warn{background:#FBF3E7;border-color:#E2C89A;color:#8a5b1f;font-weight:600;}
 .kx-cockpit{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:8px 14px;background:#F3F1E8;border-bottom:1px solid var(--line);text-decoration:none;color:var(--ink);font-size:12.5px;}
 .kx-cockpit:hover{background:#ECE9DC;}
@@ -380,6 +396,18 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
     });
+
+    // KI-Panel: Zusammenfassung/Vorgangsstand sind zugeklappt, damit der
+    // Nachrichtenverlauf sichtbar bleibt. Wer sie offen haben will,
+    // bekommt sie beim naechsten Kunden wieder offen (je Browser gemerkt).
+    const kiPanel = document.querySelector('[data-ki-panel]');
+    if (kiPanel) {
+        try { if (localStorage.getItem('d24-ki-panel') === 'offen') kiPanel.open = true; } catch (e) {}
+        kiPanel.addEventListener('toggle', function () {
+            try { localStorage.setItem('d24-ki-panel', kiPanel.open ? 'offen' : 'zu'); } catch (e) {}
+            scroller.scrollTop = scroller.scrollHeight;
+        });
+    }
 
     // Kanalwahl im Composer: Portal-Chat (AJAX) oder Ticket-Antwort
     // (klassischer POST; Feld status ist beim Ticket Pflicht).
