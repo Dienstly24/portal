@@ -29,7 +29,7 @@ class QrCodeTest extends TestCase
         ));
     }
 
-    /** @dataProvider goldenSamples */
+    #[\PHPUnit\Framework\Attributes\DataProvider('goldenSamples')]
     public function test_matrix_stays_byte_for_byte_stable(string $text, int $size, string $sha1): void
     {
         $matrix = QrCode::matrix($text);

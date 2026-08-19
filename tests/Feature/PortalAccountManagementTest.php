@@ -214,9 +214,14 @@ class PortalAccountManagementTest extends TestCase
 
         Mail::assertSent(PasswordResetMail::class, function (PasswordResetMail $m) {
             $html = $m->render();
+            // Wortlaut wurde mit der Passwort-Haertung bewusst klarer
+            // gefasst (der Kunde soll auf den ersten Blick verstehen, was
+            // zu tun ist). Geprueft wird deshalb, WAS die Mail leisten
+            // muss - nicht mehr der alte Satzbau.
             return $m->hasTo('erika@kunde.de')
                 && str_contains($html, 'Passwort zurücksetzen')
-                && str_contains($html, 'Sie erhalten diese E-Mail, weil Sie uns darum gebeten haben')
+                && str_contains($html, 'Neues Passwort festlegen')
+                && str_contains($html, 'gueltig')
                 && str_contains($html, 'Bitte ignorieren Sie diese E-Mail, falls diese Anfrage nicht von Ihnen stammt');
         });
     }
@@ -487,8 +492,11 @@ class PortalAccountManagementTest extends TestCase
         $customer2 = $this->customer(['email' => 'mit-pw@kunde.de']);
         $customer2->user->forceFill(['created_at' => now()->subDays(4), 'portal_password_set_at' => now()])->save();
 
-        // Scheduler zur Reminder-Zeit (09:00) laufen lassen
-        $this->travelTo(now()->setTime(9, 0));
+        // Scheduler zur Reminder-Zeit laufen lassen. Die 09:00 in
+        // routes/console.php sind deutsche ORTSZEIT (app.schedule_timezone),
+        // die Anwendung rechnet aber in UTC - deshalb wird hier der
+        // Zeitpunkt angesteuert, zu dem die Uhr in Deutschland 09:00 zeigt.
+        $this->travelTo(\Illuminate\Support\Carbon::now('Europe/Berlin')->setTime(9, 0));
         \Illuminate\Support\Facades\Artisan::call('schedule:run');
 
         // Ohne nutzbares Passwort: KEINE "Bitte einloggen"-Mail (Sackgasse)

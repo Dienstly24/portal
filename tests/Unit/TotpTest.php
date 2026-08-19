@@ -17,7 +17,7 @@ class TotpTest extends TestCase
         return Totp::base32Encode('12345678901234567890');
     }
 
-    /** @dataProvider rfcVectors */
+    #[\PHPUnit\Framework\Attributes\DataProvider('rfcVectors')]
     public function test_matches_rfc_6238_vectors(int $time, string $expected): void
     {
         $this->assertSame($expected, Totp::code($this->rfcSecret(), $time, 8));

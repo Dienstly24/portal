@@ -62,7 +62,7 @@ class OperationsHardeningTest extends TestCase
 
     // ---------- Indizes ----------
 
-    /** @dataProvider hotPaths */
+    #[\PHPUnit\Framework\Attributes\DataProvider('hotPaths')]
     public function test_hot_columns_are_indexed(string $table, string $column): void
     {
         $this->assertTrue(Schema::hasTable($table), "Tabelle {$table} fehlt.");
@@ -93,10 +93,28 @@ class OperationsHardeningTest extends TestCase
                 continue;
             }
             $inhalt = file_get_contents($file->getPathname());
-            // Nur echte Ladevorgaenge zaehlen (src/href), keine Kommentare
-            // oder Fliesstext, der einen Anbieter beim Namen nennt.
-            if (preg_match('/(?:src|href)\s*=\s*["\']https?:\/\/(?!www\.w3\.org)/i', $inhalt)) {
-                $treffer[] = str_replace(resource_path('views') . '/', '', $file->getPathname());
+
+            // Es geht ausschliesslich um GELADENE Ressourcen - also um das,
+            // was der Browser des Besuchers von einem fremden Server holt
+            // und dabei seine IP-Adresse preisgibt: Stylesheets, Schriften,
+            // Skripte, Bilder. Ein gewoehnlicher Link (<a href="https://...">)
+            // ist ausdruecklich KEIN Problem: er wird erst geladen, wenn
+            // der Nutzer ihn selbst anklickt. Wer hier zu breit prueft,
+            // meldet jede Firmen-Verlinkung in jeder E-Mail als Verstoss -
+            // und die Pruefung wird abgeschaltet, statt zu schuetzen.
+            $muster = [
+                '/<link\b[^>]*href\s*=\s*["\']https?:\/\//i',   // Stylesheets, Schriften
+                '/<script\b[^>]*src\s*=\s*["\']https?:\/\//i',  // fremde Skripte
+                '/<img\b[^>]*src\s*=\s*["\']https?:\/\//i',     // fremde Bilder
+                '/@import\s+(?:url\()?["\']?https?:\/\//i',    // CSS-Import
+                '/url\(\s*["\']?https?:\/\//i',                 // Schriften/Bilder in CSS
+            ];
+
+            foreach ($muster as $regex) {
+                if (preg_match($regex, $inhalt)) {
+                    $treffer[] = str_replace(resource_path('views') . '/', '', $file->getPathname());
+                    break;
+                }
             }
         }
 

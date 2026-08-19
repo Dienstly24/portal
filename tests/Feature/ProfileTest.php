@@ -62,8 +62,15 @@ class ProfileTest extends TestCase
         $this->assertSame('20095', $customer->address_zip);
         $this->assertSame('Hamburg', $customer->address_city);
 
+        // Die automatische Einladung setzt das Startpasswort (Geburtsdatum)
+        // und verlangt deshalb beim ersten Aufruf einen Wechsel - das ist
+        // seit der Passwort-Haertung so gewollt und in PasswordSecurityTest
+        // geprueft. Hier geht es um die ADRESSE, nicht um das Passwort;
+        // also wird der faellige Wechsel fuer diesen Test erledigt.
+        $customer->user->forceFill(['must_change_password' => false])->save();
+
         // Und die Werte erscheinen im Kundenportal (nicht leer).
-        $this->actingAs($customer->user)
+        $this->actingAs($customer->user->fresh())
             ->get(route('portal.profile'))
             ->assertOk()
             ->assertSee('Musterweg')
