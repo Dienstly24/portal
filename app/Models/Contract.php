@@ -446,6 +446,40 @@ class Contract extends Model {
         return $query->where('status', self::STATUS_PENDING);
     }
 
+    /**
+     * Freitextsuche ueber die Vertragsliste - DIESELBEN Felder, die die
+     * Liste anzeigt: Gesellschaft, Vertragsnummer, Kundenname, Kundennummer.
+     *
+     * Frueher lief diese Suche im Browser ueber die bereits geladenen
+     * Zeilen. Das setzte voraus, dass ALLE Vertraege im HTML stehen - genau
+     * die Annahme, die mit wachsendem Bestand die Seite umbringt. Deshalb
+     * sucht jetzt die Datenbank.
+     *
+     * Mehrere Woerter werden UND-verknuepft (jedes Wort muss irgendwo
+     * treffen); %/_ werden maskiert, damit eine Nutzereingabe keine
+     * LIKE-Platzhalter erzeugt.
+     */
+    public function scopeSearch($query, ?string $term) {
+        $term = trim((string) ($term ?? ''));
+        if ($term === '') {
+            return $query;
+        }
+
+        foreach (preg_split('/\s+/', $term, -1, PREG_SPLIT_NO_EMPTY) ?: [$term] as $token) {
+            $like = '%' . addcslashes($token, '%_\\') . '%';
+            $query->where(function ($w) use ($like) {
+                $w->where('insurer', 'like', $like)
+                    ->orWhere('contract_number', 'like', $like)
+                    ->orWhereHas('customer', function ($c) use ($like) {
+                        $c->where('customer_number', 'like', $like)
+                            ->orWhereHas('user', fn ($u) => $u->where('name', 'like', $like));
+                    });
+            });
+        }
+
+        return $query;
+    }
+
     /** Eine Bestandsgruppe als Query-Filter (GROUP_*); alles andere = kein Filter. */
     public function scopeStatusGroup($query, ?string $group) {
         return match ($group) {

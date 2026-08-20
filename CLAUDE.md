@@ -216,6 +216,39 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   (doppelte Kodierung) - laeuft jetzt ueber `ActivityLog::record()`.
 - Tests: `BatchResilienceTest`.
 
+## Grosse Listen: nichts mehr unbegrenzt laden (20.08.2026)
+
+- **Lehre**: `/admin/contracts` lud ALLE Vertraege und filterte sie per
+  JavaScript ueber die fertigen Tabellenzeilen; `/admin/contracts/new`
+  schrieb den KOMPLETTEN Kundenbestand als JSON ins HTML. Das funktioniert
+  genau so lange, wie die Zahlen klein sind - danach waechst jeder
+  Seitenaufruf linear mit dem Bestand, bis er in ein Speicher- oder
+  Zeitlimit laeuft. Und es faellt erst auf, wenn es zu spaet ist.
+- **Vertragsliste**: Gruppe UND Suche laufen jetzt in der DATENBANK,
+  Ausgabe seitenweise (50). Die Gruppen-Definition bleibt die EINE Quelle -
+  `Contract::scopeStatusGroup()` ist der Query-Spiegel von
+  `statusGroup()`, Badge/Zaehler/Filter koennen sich nicht widersprechen.
+  Die Reiter-Zaehler sind reine COUNT-Abfragen (keine Zeile wird geladen)
+  und folgen der Suche, damit die Zahl zum Gezeigten passt. Reiter und
+  Suche sind normale Links/GET-Formulare - Stand teilbar und
+  zurueck-tauglich. `alle` ist eine bewusste Auswahl, Standard bleibt der
+  aktive Bestand.
+- **Neuer `Contract::scopeSearch`**: Gesellschaft, Vertragsnummer,
+  Kundenname, Kundennummer; mehrere Woerter UND-verknuepft, `%`/`_`
+  maskiert (Nutzereingabe erzeugt nie einen LIKE-Platzhalter).
+- **Kundenauswahl im Vertragsformular**: Sofort-Suche gegen
+  `admin.contract.customer_search` (JSON, portfolio-gescoped, max. 8) -
+  derselbe Weg wie im Aufgaben- und E-Mail-Formular. Trefferliste wird per
+  `textContent` gebaut, nicht per HTML-String: Kundennamen sind Fremddaten.
+  Interne `@dienstly24.internal`-Platzhalter werden NIE als Kontakt
+  ausgegeben.
+- Tests: `LargeListPerformanceTest`; `ContractStatusLogicTest` Fall 5
+  nachgezogen (Historie steht jetzt auf ihrem Reiter, nicht auf jeder
+  Seite).
+- **Noch offen** (gleiche Klasse, nicht in diesem Paket):
+  `EmailInboxController::index`, `ReportController::index`,
+  `AdminController::mergeForm`, `ImportExportController::export`.
+
 ## Kundennummern
 
 - Neuanlage: `JJ` + 5-stellig laufend (2026 → `2600001`, `2600002` …) via

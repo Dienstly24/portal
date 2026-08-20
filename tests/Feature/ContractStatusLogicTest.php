@@ -277,15 +277,25 @@ class ContractStatusLogicTest extends TestCase
         $this->contract($customer, ['start_date' => now()->subMonth()->toDateString()]);
         $this->contract($customer, ['status' => 'cancelled', 'insurer' => 'Alt Strom']);
 
+        // Die Liste filtert seit dem Umbau in der DATENBANK und oeffnet auf
+        // dem aktiven Bestand: die Zaehler trennen die Gruppen, gezeigt wird
+        // nur die gewaehlte.
         $this->actingAs($this->admin())->get(route('admin.contracts'))
             ->assertOk()
             // Eindeutige Bezeichnungen statt "Inaktive Verträge".
             ->assertSee('Aktiver Bestand (1)')
             ->assertSee('Beendet / Historie (1)')
-            // Kennzeichnung an der Zeile + Gruppen-Zuordnung fuer den Filter.
+            ->assertSee('data-group="aktiv"', false)
+            ->assertDontSee('data-group="historie"', false);
+
+        // Auf dem Historie-Reiter steht der beendete Vertrag - eindeutig
+        // gekennzeichnet.
+        $this->actingAs($this->admin())
+            ->get(route('admin.contracts', ['gruppe' => 'historie']))
+            ->assertOk()
             ->assertSee('Historie – nicht aktiv', false)
             ->assertSee('data-group="historie"', false)
-            ->assertSee('data-group="aktiv"', false);
+            ->assertDontSee('data-group="aktiv"', false);
     }
 
     /**

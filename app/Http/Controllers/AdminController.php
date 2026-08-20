@@ -335,20 +335,89 @@ class AdminController extends Controller
         return view('admin.customer_show', compact('customer', 'internalChat', 'internalNotes', 'customerMessages', 'relations', 'conversationTimeline'));
     }
 
-    public function contracts() {
+    /**
+     * Vertragsliste. Gruppe (aktiver Bestand / in Bearbeitung / Historie)
+     * und Suche laufen in der DATENBANK, nicht im Browser.
+     *
+     * Vorher lud die Seite ALLE Vertraege und filterte sie per JavaScript
+     * ueber die fertigen Tabellenzeilen. Das funktioniert genau so lange,
+     * wie der Bestand klein ist - danach waechst jeder Seitenaufruf linear
+     * mit der Gesamtzahl, bis die Seite in ein Speicher- oder Zeitlimit
+     * laeuft. Und es faellt erst auf, wenn es zu spaet ist.
+     *
+     * Die Gruppen-Definition bleibt die EINE Quelle: scopeStatusGroup()
+     * ist der Query-Spiegel von Contract::statusGroup() - Badge, Zaehler
+     * und Filter koennen sich nicht widersprechen.
+     */
+    public function contracts(Request $request) {
         $ids = $this->visibleCustomerIds();
-        // Alle Vertraege laden; die Gruppierung in aktiven Bestand / in
-        // Bearbeitung / Historie macht die View ueber Contract::statusGroup()
-        // (dieselbe Quelle wie Vertragsstruktur und Kennzahlen).
-        $contracts = Contract::with('customer.user')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->latest()->get();
-        return view('admin.contracts', compact('contracts'));
+        $suche = trim((string) $request->query('q', ''));
+
+        // "alle" ist eine bewusste Auswahl, kein Standard: die Liste oeffnet
+        // wie bisher auf dem aktiven Bestand.
+        $gruppen = [Contract::GROUP_ACTIVE, Contract::GROUP_PENDING, Contract::GROUP_HISTORY, 'alle'];
+        $gruppe = in_array($request->query('gruppe'), $gruppen, true)
+            ? (string) $request->query('gruppe')
+            : Contract::GROUP_ACTIVE;
+
+        $basis = fn () => Contract::query()
+            ->when($ids !== null, fn ($q) => $q->whereIn('customer_id', $ids))
+            ->search($suche);
+
+        // Zaehler je Gruppe als reine COUNT-Abfragen - es wird keine einzige
+        // Zeile geladen, nur gezaehlt. Sie folgen der Suche, damit die Zahl
+        // in den Reitern zum Gezeigten passt.
+        $zaehler = [
+            Contract::GROUP_ACTIVE => $basis()->statusGroup(Contract::GROUP_ACTIVE)->count(),
+            Contract::GROUP_PENDING => $basis()->statusGroup(Contract::GROUP_PENDING)->count(),
+            Contract::GROUP_HISTORY => $basis()->statusGroup(Contract::GROUP_HISTORY)->count(),
+            'alle' => $basis()->count(),
+        ];
+
+        $contracts = $basis()
+            ->with('customer.user')
+            ->statusGroup($gruppe === 'alle' ? null : $gruppe)
+            ->latest()
+            ->paginate(50)
+            ->withQueryString();
+
+        return view('admin.contracts', compact('contracts', 'gruppe', 'suche', 'zaehler'));
     }
 
     public function contractNew() {
-        // Vorher eine Route-Closure in web.php (verhindert route:cache) und
-        // ohne Portfolio-Scoping. (Audit M8/M1)
-        $customers = $this->scopeCustomers(Customer::with('user'))->get();
-        return view('admin.contract_new', compact('customers'));
+        // Die Kundenauswahl laedt NICHT mehr alle Kunden in die Seite: das
+        // Formular fragt bei jedem Tastendruck contractCustomerSearch() -
+        // derselbe Weg wie im Aufgaben- und E-Mail-Formular. Vorher stand
+        // der komplette Kundenbestand als JSON im HTML, was mit jedem
+        // Neukunden waechst und irgendwann jeden Aufruf des Formulars
+        // ausbremst.
+        return view('admin.contract_new');
+    }
+
+    /**
+     * Sofort-Suche der Kundenauswahl im Vertragsformular (JSON).
+     *
+     * Portfolio-Scoping wie ueberall; die Suche selbst kommt aus
+     * Customer::scopeSearch (Name, Kundennummer, Telefon, E-Mail, Anschrift)
+     * und ist damit deutlich treffsicherer als der frueher rein auf den
+     * Namen begrenzte Browser-Filter.
+     */
+    public function contractCustomerSearch(Request $request) {
+        $q = trim((string) $request->query('q', ''));
+
+        $basis = $this->scopeCustomers(Customer::with('user'));
+        $customers = $q === ''
+            ? $basis->latest()->take(8)->get()
+            : $basis->search($q)->take(8)->get();
+
+        return response()->json([
+            'customers' => $customers->map(fn (Customer $c) => [
+                'id' => $c->id,
+                'name' => $c->user?->name ?? '—',
+                'email' => $c->user?->hasRealEmail() ? $c->user->email : null,
+                'number' => $c->customer_number,
+            ])->values(),
+        ]);
     }
 
     public function contractCreate($customerId) {

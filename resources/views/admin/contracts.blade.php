@@ -1,61 +1,74 @@
 @extends('layouts.admin')
 @section('content')
+@php
+    $G = \App\Models\Contract::class;
+    // Reiter: Schluessel = Wert des Query-Parameters "gruppe".
+    $reiter = [
+        $G::GROUP_ACTIVE  => ['✅ Aktiver Bestand', 'aktiver Vertrag', 'aktive Verträge'],
+        $G::GROUP_PENDING => ['🕓 In Bearbeitung', 'Vertrag in Bearbeitung', 'Verträge in Bearbeitung'],
+        $G::GROUP_HISTORY => ['🗄 Beendet / Historie', 'beendeter Vertrag (Historie)', 'beendete Verträge (Historie)'],
+        'alle'            => ['Alle', 'Vertrag', 'Verträge'],
+    ];
+    // Hinweisleiste: sagt fuer jede Gruppe ausdruecklich, ob die gezeigten
+    // Vertraege zum aktiven Bestand zaehlen.
+    $hinweise = [
+        $G::GROUP_ACTIVE  => ['✅ Aktiver Bestand: laufende Verträge – nur diese zählen als aktive Verträge und bilden die Vertragsstruktur der Kunden.', '#E7F6EE', '#BFE6D2', '#0E7A41'],
+        $G::GROUP_PENDING => ['🕓 In Bearbeitung: Antrag/Angebot noch nicht abgeschlossen – zählt NICHT zum aktiven Bestand.', '#FEF3C7', '#F0E0B0', '#92400E'],
+        $G::GROUP_HISTORY => ['🗄 Beendet / Historie: gekündigte und abgelaufene Verträge. Nur zur Nachvollziehbarkeit sichtbar – sie zählen NICHT als aktive Verträge und erscheinen nicht in der Vertragsstruktur.', '#F3F0E8', '#E0DCD0', '#5F6B62'],
+        'alle'            => ['ℹ️ Alle Verträge (aktiv + Historie gemischt). Beendete Verträge sind ausgegraut und mit „Historie – nicht aktiv" gekennzeichnet.', '#EEF0F3', '#E0DCD0', '#5F6B62'],
+    ];
+    $h = $hinweise[$gruppe] ?? $hinweise['alle'];
+    $anzahl = $contracts->total();
+    $wort = $anzahl === 1 ? ($reiter[$gruppe][1] ?? 'Vertrag') : ($reiter[$gruppe][2] ?? 'Verträge');
+@endphp
+
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Verträge</span></div>
     <div class="page-title">Verträge</div>
 </div>
 
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:16px;">
-    <div style="position:relative;flex:1;max-width:500px;">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:16px;flex-wrap:wrap;">
+    {{-- Suche laeuft in der Datenbank: Gesellschaft, Vertragsnummer,
+         Kundenname, Kundennummer (Contract::scopeSearch). --}}
+    <form method="GET" action="{{ route('admin.contracts') }}" style="position:relative;flex:1;max-width:500px;">
+        <input type="hidden" name="gruppe" value="{{ $gruppe }}">
         <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--ink-soft);">🔍</span>
-        <input type="text" id="contract-search" placeholder="Verträge durchsuchen" onkeyup="filterContracts()"
+        <input type="text" name="q" value="{{ $suche }}" placeholder="Verträge durchsuchen"
             style="width:100%;padding:11px 14px 11px 42px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff;">
-    </div>
+        @if($suche !== '')
+        <a href="{{ route('admin.contracts', ['gruppe' => $gruppe]) }}" title="Suche zurücksetzen"
+            style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--ink-soft);text-decoration:none;font-size:16px;">✕</a>
+        @endif
+    </form>
     <a href="{{ route('admin.contract.new') }}" class="btn btn-primary" style="white-space:nowrap;">
         <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
         Vertrag anlegen
     </a>
 </div>
 
-@php
-    // Gruppierung zentral aus dem Modell (Contract::statusGroup()) - dieselbe
-    // Quelle wie Vertragsstruktur, Kennzahlen und Filter. Ein Vertrag mit
-    // status=active, dessen wirksames Ende erreicht ist, gilt hier korrekt
-    // als beendet (frueher zaehlte er als "aktiv").
-    $groups = $contracts->groupBy(fn($c) => $c->statusGroup());
-    $G = \App\Models\Contract::class;
-    $countAktiv = ($groups[$G::GROUP_ACTIVE] ?? collect())->count();
-    $countAnbahnung = ($groups[$G::GROUP_PENDING] ?? collect())->count();
-    $countHistorie = ($groups[$G::GROUP_HISTORY] ?? collect())->count();
-@endphp
-
 {{-- Bestandsgruppen statt "aktiv / inaktiv": eindeutige Bezeichnungen, damit
      "Inaktive Verträge" nicht mit "deaktivierter Zugang" oder "in Bearbeitung"
-     verwechselt wird (Betreiber-Vorgabe 17.08.2026). --}}
+     verwechselt wird (Betreiber-Vorgabe 17.08.2026). Die Zaehler kommen aus
+     COUNT-Abfragen und folgen der Suche. --}}
 <div style="display:flex;gap:0;border-bottom:2px solid var(--line);margin-bottom:16px;flex-wrap:wrap;">
-    <button onclick="showTab('aktiv')" id="tab-aktiv" class="ctab"
-        style="padding:12px 20px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:700;color:var(--petrol);border-bottom:2px solid var(--petrol);margin-bottom:-2px;">
-        ✅ Aktiver Bestand ({{ $countAktiv }})
-    </button>
-    <button onclick="showTab('anbahnung')" id="tab-anbahnung" class="ctab"
-        style="padding:12px 20px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:500;color:var(--ink-soft);border-bottom:2px solid transparent;margin-bottom:-2px;">
-        🕓 In Bearbeitung ({{ $countAnbahnung }})
-    </button>
-    <button onclick="showTab('historie')" id="tab-historie" class="ctab"
-        style="padding:12px 20px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:500;color:var(--ink-soft);border-bottom:2px solid transparent;margin-bottom:-2px;">
-        🗄 Beendet / Historie ({{ $countHistorie }})
-    </button>
-    <button onclick="showTab('alle')" id="tab-alle" class="ctab"
-        style="padding:12px 20px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:500;color:var(--ink-soft);border-bottom:2px solid transparent;margin-bottom:-2px;">
-        Alle ({{ $contracts->count() }})
-    </button>
+    @foreach($reiter as $key => $texte)
+    @php $aktiv = $gruppe === $key; @endphp
+    <a href="{{ route('admin.contracts', array_filter(['gruppe' => $key, 'q' => $suche])) }}"
+        style="padding:12px 20px;text-decoration:none;font-size:14px;margin-bottom:-2px;
+               font-weight:{{ $aktiv ? '700' : '500' }};
+               color:{{ $aktiv ? 'var(--petrol)' : 'var(--ink-soft)' }};
+               border-bottom:2px solid {{ $aktiv ? 'var(--petrol)' : 'transparent' }};">
+        {{ $texte[0] }} ({{ $zaehler[$key] ?? 0 }})
+    </a>
+    @endforeach
 </div>
 
-{{-- Hinweisleiste: sagt fuer jede Gruppe ausdruecklich, ob die gezeigten
-     Vertraege zum aktiven Bestand zaehlen. --}}
-<div id="group-hint" style="font-size:12.5px;border-radius:8px;padding:10px 14px;margin-bottom:16px;line-height:1.55;"></div>
+<div style="font-size:12.5px;border-radius:8px;padding:10px 14px;margin-bottom:16px;line-height:1.55;
+    background:{{ $h[1] }};border:1px solid {{ $h[2] }};color:{{ $h[3] }};">{{ $h[0] }}</div>
 
-<div style="font-size:14px;font-weight:700;margin-bottom:14px;" id="contract-count">{{ $contracts->count() }} Verträge</div>
+<div style="font-size:14px;font-weight:700;margin-bottom:14px;">
+    {{ $anzahl }} {{ $wort }}@if($suche !== '') <span style="font-weight:500;color:var(--ink-soft);">für „{{ $suche }}"</span>@endif
+</div>
 
 <div class="card" style="padding:0;overflow:hidden;">
     <table id="contracts-table">
@@ -77,8 +90,7 @@
             $cGroup = $c->statusGroup();
             $cHistoric = $cGroup === \App\Models\Contract::GROUP_HISTORY;
         @endphp
-        <tr class="contract-row{{ $cHistoric ? ' contract-row-historic' : '' }}" data-status="{{ $c->status }}" data-group="{{ $cGroup }}"
-            data-search="{{ strtolower($c->insurer . ' ' . $c->contract_number . ' ' . ($c->customer?->user?->name ?? '')) }}">
+        <tr class="contract-row{{ $cHistoric ? ' contract-row-historic' : '' }}" data-status="{{ $c->status }}" data-group="{{ $cGroup }}">
             <td style="padding:14px 20px;">
                 <div style="width:40px;height:40px;border-radius:10px;background:{{ $cfg['bg'] }};display:flex;align-items:center;justify-content:center;font-size:20px;">{{ $c->typeIcon() }}</div>
             </td>
@@ -111,11 +123,35 @@
             </td>
         </tr>
         @empty
-        <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--ink-soft);">Keine Verträge vorhanden.</td></tr>
+        <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--ink-soft);">
+            @if($suche !== '')Keine Verträge zu „{{ $suche }}" in dieser Gruppe.@else Keine Verträge in dieser Gruppe.@endif
+        </td></tr>
         @endforelse
         </tbody>
     </table>
 </div>
+
+{{-- Seitennavigation (an das App-Design angepasst, ohne Framework-Theme) --}}
+@if($contracts->hasPages())
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 2px;flex-wrap:wrap;">
+    <div style="font-size:13px;color:var(--ink-soft);">
+        {{ $contracts->firstItem() }}–{{ $contracts->lastItem() }} von {{ $contracts->total() }} Verträgen
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+        @if($contracts->onFirstPage())
+            <span class="btn btn-ghost btn-sm" style="opacity:.45;pointer-events:none;">← Zurück</span>
+        @else
+            <a href="{{ $contracts->previousPageUrl() }}" class="btn btn-ghost btn-sm">← Zurück</a>
+        @endif
+        <span style="font-size:13px;color:var(--ink-soft);">Seite {{ $contracts->currentPage() }} / {{ $contracts->lastPage() }}</span>
+        @if($contracts->hasMorePages())
+            <a href="{{ $contracts->nextPageUrl() }}" class="btn btn-ghost btn-sm">Weiter →</a>
+        @else
+            <span class="btn btn-ghost btn-sm" style="opacity:.45;pointer-events:none;">Weiter →</span>
+        @endif
+    </div>
+</div>
+@endif
 
 <style>
 /* Beendete Vertraege bleiben in der Historie sichtbar, sind aber nie mit
@@ -126,53 +162,4 @@
     text-transform:uppercase;color:#5F6B62;background:#EAE6DA;border:1px solid #E0DCD0;
     border-radius:6px;padding:1px 6px;white-space:nowrap;}
 </style>
-<script>
-// Bestandsgruppen (Spiegel von Contract::GROUP_*): 'alle' = kein Filter.
-let currentTab = 'aktiv';
-
-const GROUP_HINTS = {
-    'aktiv':     {text: '✅ Aktiver Bestand: laufende Verträge – nur diese zählen als aktive Verträge und bilden die Vertragsstruktur der Kunden.', bg: '#E7F6EE', border: '#BFE6D2', color: '#0E7A41'},
-    'anbahnung': {text: '🕓 In Bearbeitung: Antrag/Angebot noch nicht abgeschlossen – zählt NICHT zum aktiven Bestand.', bg: '#FEF3C7', border: '#F0E0B0', color: '#92400E'},
-    'historie':  {text: '🗄 Beendet / Historie: gekündigte und abgelaufene Verträge. Nur zur Nachvollziehbarkeit sichtbar – sie zählen NICHT als aktive Verträge und erscheinen nicht in der Vertragsstruktur.', bg: '#F3F0E8', border: '#E0DCD0', color: '#5F6B62'},
-    'alle':      {text: 'ℹ️ Alle Verträge (aktiv + Historie gemischt). Beendete Verträge sind ausgegraut und mit „Historie – nicht aktiv" gekennzeichnet.', bg: '#EEF0F3', border: '#E0DCD0', color: '#5F6B62'},
-};
-
-function showTab(tab) {
-    currentTab = tab;
-    document.querySelectorAll('.ctab').forEach(btn => {
-        const on = btn.id === 'tab-' + tab;
-        btn.style.color = on ? 'var(--petrol)' : 'var(--ink-soft)';
-        btn.style.borderBottomColor = on ? 'var(--petrol)' : 'transparent';
-        btn.style.fontWeight = on ? '700' : '500';
-    });
-    const hint = document.getElementById('group-hint');
-    const cfg = GROUP_HINTS[tab] || GROUP_HINTS['alle'];
-    hint.textContent = cfg.text;
-    hint.style.background = cfg.bg;
-    hint.style.border = '1px solid ' + cfg.border;
-    hint.style.color = cfg.color;
-    filterContracts();
-}
-
-function filterContracts() {
-    const q = document.getElementById('contract-search').value.toLowerCase();
-    let count = 0;
-    document.querySelectorAll('.contract-row').forEach(row => {
-        const groupMatch = currentTab === 'alle' || row.dataset.group === currentTab;
-        const searchMatch = !q || row.dataset.search.includes(q);
-        const show = groupMatch && searchMatch;
-        row.style.display = show ? '' : 'none';
-        if(show) count++;
-    });
-    // Deutsche Ein-/Mehrzahl korrekt bilden ("1 aktiver Vertrag").
-    const eins = count === 1;
-    const label = currentTab === 'aktiv' ? (eins ? ' aktiver Vertrag' : ' aktive Verträge')
-        : (currentTab === 'historie' ? (eins ? ' beendeter Vertrag (Historie)' : ' beendete Verträge (Historie)')
-        : (currentTab === 'anbahnung' ? (eins ? ' Vertrag in Bearbeitung' : ' Verträge in Bearbeitung')
-        : (eins ? ' Vertrag' : ' Verträge')));
-    document.getElementById('contract-count').textContent = count + label;
-}
-
-document.addEventListener('DOMContentLoaded', () => showTab('aktiv'));
-</script>
 @endsection
