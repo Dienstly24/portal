@@ -45,23 +45,61 @@
 </div>
 
 <script>
-const customers = @json($customers->map(fn($c) => ['id' => $c->id, 'name' => $c->user?->name, 'email' => $c->user?->email]));
+// Kundenauswahl per Sofort-Suche am Server - der Kundenbestand steht
+// bewusst NICHT mehr komplett im HTML (waechst sonst mit jedem Neukunden).
+let sucheTimer = null;
+let letzteSuche = 0;
 
 function searchCustomer(q) {
     const dd = document.getElementById('customer-dropdown');
-    if(!q) { dd.style.display='none'; return; }
-    const results = customers.filter(c => c.name && c.name.toLowerCase().includes(q.toLowerCase()));
-    if(!results.length) {
-        dd.innerHTML = '<div style="padding:12px 16px;color:var(--ink-soft);font-size:13px;">Keine Einträge vorhanden</div>';
+    if (!q) { dd.style.display = 'none'; return; }
+
+    // Kurz warten, damit nicht jeder Tastendruck eine Abfrage ausloest.
+    clearTimeout(sucheTimer);
+    sucheTimer = setTimeout(() => {
+        const lauf = ++letzteSuche;
+        fetch('{{ route('admin.contract.customer_search') }}?q=' + encodeURIComponent(q), {
+            headers: {'Accept': 'application/json'},
+        })
+            .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))
+            .then(data => {
+                // Eine ueberholte Antwort darf ein neueres Ergebnis nie ueberschreiben.
+                if (lauf !== letzteSuche) return;
+                zeigeTreffer(data.customers || []);
+            })
+            .catch(() => {
+                if (lauf !== letzteSuche) return;
+                dd.innerHTML = '<div style="padding:12px 16px;color:#A32D2D;font-size:13px;">Suche nicht erreichbar – bitte erneut versuchen.</div>';
+                dd.style.display = 'block';
+            });
+    }, 200);
+}
+
+function zeigeTreffer(results) {
+    const dd = document.getElementById('customer-dropdown');
+    if (!results.length) {
+        dd.innerHTML = '<div style="padding:12px 16px;color:var(--ink-soft);font-size:13px;">Keine Kunden gefunden</div>';
     } else {
-        dd.innerHTML = results.map(c => `<div onclick="selectCustomer('${c.id}', this.dataset.name)" data-name="${(c.name||'').replace(/"/g,'&quot;')}"
-            style="padding:12px 16px;cursor:pointer;font-size:14px;border-bottom:1px solid var(--line);"
-            onmouseover="this.style.background='#F8F9FA'" onmouseout="this.style.background='#fff'">
-            <div style="font-weight:600;">${c.name}</div>
-            <div style="font-size:12px;color:var(--ink-soft);">${c.email||''}</div>
-        </div>`).join('');
+        dd.innerHTML = '';
+        results.forEach(c => {
+            const zeile = document.createElement('div');
+            zeile.style.cssText = 'padding:12px 16px;cursor:pointer;font-size:14px;border-bottom:1px solid var(--line);';
+            zeile.onmouseover = () => zeile.style.background = '#F8F9FA';
+            zeile.onmouseout = () => zeile.style.background = '#fff';
+            // textContent statt HTML-Zusammenbau: Kundennamen sind Fremddaten.
+            const name = document.createElement('div');
+            name.style.fontWeight = '600';
+            name.textContent = c.name;
+            const unten = document.createElement('div');
+            unten.style.cssText = 'font-size:12px;color:var(--ink-soft);';
+            unten.textContent = [c.number, c.email].filter(Boolean).join(' · ');
+            zeile.appendChild(name);
+            zeile.appendChild(unten);
+            zeile.addEventListener('click', () => selectCustomer(c.id, c.name));
+            dd.appendChild(zeile);
+        });
     }
-    dd.style.display='block';
+    dd.style.display = 'block';
 }
 
 function selectCustomer(id, name) {
