@@ -1,6 +1,7 @@
 <?php
 namespace App\Console\Commands;
 
+use App\Console\Concerns\ProcessesRecordsSafely;
 use App\Models\Task;
 use App\Services\Notifications\NotificationService;
 use App\Support\Facades\Notify;
@@ -15,6 +16,8 @@ use Illuminate\Console\Command;
  */
 class RemindDueTasks extends Command
 {
+    use ProcessesRecordsSafely;
+
     protected $signature = 'tasks:remind';
     protected $description = 'Erinnert Mitarbeiter per Glocke an heute faellige und ueberfaellige Aufgaben';
 
@@ -28,15 +31,17 @@ class RemindDueTasks extends Command
             ->get()
             ->groupBy('assigned_to');
 
-        $notified = 0;
-        foreach ($byAssignee as $userId => $tasks) {
+        // Je Mitarbeiter abgesichert: eine kaputte Aufgabe darf nicht dazu
+        // fuehren, dass das halbe Team seine Wiedervorlagen nicht sieht.
+        $notified = $this->verarbeiteEinzeln($byAssignee->keys(), function ($userId) use ($byAssignee) {
+            $tasks = $byAssignee[$userId];
             $todayDue = $tasks->filter(fn(Task $t) => $t->due_date->isToday())->count();
             $overdue = $tasks->filter(fn(Task $t) => $t->due_date->lt(today()))->count();
 
             $parts = [];
             if ($todayDue > 0) $parts[] = $todayDue . ' heute fällig';
             if ($overdue > 0) $parts[] = $overdue . ' überfällig';
-            if ($parts === []) continue;
+            if ($parts === []) return;
 
             Notify::push((int) $userId, [
                 'type' => NotificationService::TYPE_SYSTEM,
@@ -45,10 +50,10 @@ class RemindDueTasks extends Command
                 'link' => route('admin.tasks', ['tab' => 'mine', 'due' => $overdue > 0 ? 'overdue' : 'today']),
                 'dedup_key' => 'tasks-due-' . $userId,
             ]);
-            $notified++;
-        }
+        }, 'Mitarbeiter');
 
         $this->info("$notified Mitarbeiter benachrichtigt.");
-        return self::SUCCESS;
+
+        return $this->ergebnisMitUebersprungenen(self::SUCCESS);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Concerns\ProcessesRecordsSafely;
 use App\Models\Ticket;
 use Illuminate\Console\Command;
 
@@ -12,6 +13,8 @@ use Illuminate\Console\Command;
  */
 class AutoCloseResolvedTickets extends Command
 {
+    use ProcessesRecordsSafely;
+
     protected $signature = 'tickets:auto-close {--days=7 : Tage seit Loesung ohne Kundenreaktion} {--dry-run : Nur anzeigen, nichts schliessen}';
 
     protected $description = 'Geloeste Tickets ohne Kundenreaktion automatisch schliessen';
@@ -24,10 +27,14 @@ class AutoCloseResolvedTickets extends Command
             ->where('resolved_at', '<=', now()->subDays($days))
             ->get();
 
-        foreach ($tickets as $ticket) {
+        // Je Vorgang abgesichert: ein Ticket mit kaputtem Bezug (geloeschter
+        // Kunde, fehlender Portal-Nutzer) darf nicht verhindern, dass alle
+        // uebrigen geloesten Vorgaenge geschlossen werden.
+        $verarbeitet = $this->verarbeiteEinzeln($tickets, function (Ticket $ticket) use ($days) {
             if ($this->option('dry-run')) {
                 $this->line('Wuerde schliessen: ' . $ticket->ticket_number . ' – ' . $ticket->subject);
-                continue;
+
+                return;
             }
             $ticket->transitionTo('closed', null, 'auto_closed');
             // Portal-Glocke: Kunde weiss, dass der Vorgang abgeschlossen ist
@@ -40,9 +47,10 @@ class AutoCloseResolvedTickets extends Command
                     'dedup_key' => 'ticket-autoclosed-' . $ticket->id,
                 ]);
             }
-        }
+        }, 'Vorgang');
 
-        $this->info($tickets->count() . ' geloeste Tickets verarbeitet.');
-        return self::SUCCESS;
+        $this->info($verarbeitet . ' geloeste Tickets verarbeitet.');
+
+        return $this->ergebnisMitUebersprungenen(self::SUCCESS);
     }
 }

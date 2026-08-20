@@ -1,6 +1,7 @@
 <?php
 namespace App\Console\Commands;
 
+use App\Console\Concerns\ProcessesRecordsSafely;
 use App\Jobs\AnswerCustomerMessageJob;
 use App\Models\AiAssistantLog;
 use App\Models\CustomerMessage;
@@ -24,6 +25,8 @@ use Illuminate\Console\Command;
  */
 class AnswerPendingCustomerMessages extends Command
 {
+    use ProcessesRecordsSafely;
+
     protected $signature = 'ai:answer-pending';
     protected $description = 'Unbearbeitete Kundennachrichten erneut an den KI-Assistenten geben (Queue-Ausfall)';
 
@@ -44,8 +47,10 @@ class AnswerPendingCustomerMessages extends Command
             ->limit(25)
             ->get();
 
-        $dispatched = 0;
-        foreach ($candidates as $message) {
+        // Je Nachricht abgesichert: eine kaputte Nachricht darf nicht dazu
+        // fuehren, dass ALLE anderen Kunden weiter auf niemanden warten -
+        // dieser Befehl ist das letzte Netz vor genau diesem Zustand.
+        $dispatched = $this->verarbeiteEinzeln($candidates, function (CustomerMessage $message) {
             // Nur die JUENGSTE Nachricht einer Unterhaltung beantworten -
             // auf einen ganzen Rueckstau nachtraeglich einzeln zu antworten
             // waere fuer den Kunden verwirrend.
@@ -53,15 +58,14 @@ class AnswerPendingCustomerMessages extends Command
                 ->where('created_at', '>', $message->created_at)
                 ->exists();
             if ($newer) {
-                continue;
+                return;
             }
 
             AnswerCustomerMessageJob::dispatch($message->id);
-            $dispatched++;
-        }
+        }, 'Kundennachricht');
 
-        $this->info($dispatched . ' Kundennachricht(en) erneut an den KI-Assistenten gegeben.');
+        $this->info($dispatched . ' Kundennachricht(en) geprueft und ggf. erneut an den KI-Assistenten gegeben.');
 
-        return self::SUCCESS;
+        return $this->ergebnisMitUebersprungenen(self::SUCCESS);
     }
 }

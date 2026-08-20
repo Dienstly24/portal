@@ -1,6 +1,7 @@
 <?php
 namespace App\Console\Commands;
 
+use App\Console\Concerns\ProcessesRecordsSafely;
 use App\Jobs\AnalyzeDocumentJob;
 use App\Models\Document;
 use Illuminate\Console\Command;
@@ -12,6 +13,8 @@ use Illuminate\Console\Command;
  */
 class AnalyzePendingDocuments extends Command
 {
+    use ProcessesRecordsSafely;
+
     protected $signature = 'documents:analyze-pending';
     protected $description = 'Wartende Dokument-Analysen erneut anstossen, festgefahrene beenden';
 
@@ -21,10 +24,13 @@ class AnalyzePendingDocuments extends Command
         $pending = Document::where('ai_status', 'pending')
             ->where('updated_at', '<', now()->subMinutes(10))
             ->orderBy('updated_at')->limit(10)->get();
-        foreach ($pending as $document) {
+        // Je Dokument abgesichert: ein einzelnes kaputtes Dokument darf das
+        // Sicherheitsnetz nicht ausser Kraft setzen - sonst bleiben alle
+        // anderen haengenden Analysen fuer immer liegen.
+        $wiederAngestossen = $this->verarbeiteEinzeln($pending, function (Document $document) {
             $document->touch(); // verhindert Doppel-Dispatch im naechsten Lauf
             AnalyzeDocumentJob::dispatch($document->id);
-        }
+        }, 'Dokument');
 
         // processing aelter als 20 Minuten: festgefahren -> als Fehler markieren,
         // Mitarbeiter koennen ueber die Review-UI neu analysieren. Ein regulaerer
@@ -34,7 +40,7 @@ class AnalyzePendingDocuments extends Command
         $stuck = Document::where('ai_status', 'processing')
             ->where('updated_at', '<', now()->subMinutes(20))->get();
         $intake = app(\App\Services\DocumentIntake\DocumentIntakeService::class);
-        foreach ($stuck as $document) {
+        $abgebrochen = $this->verarbeiteEinzeln($stuck, function (Document $document) use ($intake) {
             $document->update([
                 'ai_status' => 'failed',
                 'ai_error' => 'Analyse abgebrochen (Zeitueberschreitung).',
@@ -42,7 +48,7 @@ class AnalyzePendingDocuments extends Command
             // Auch der Zeitueberschreitungs-Fall bekommt jetzt einen aktiven
             // Hinweis (frueher verstummte ein festgefahrenes Dokument).
             $intake->notifyAnalysisFailed($document);
-        }
+        }, 'Dokument');
 
         // Rueckstau-Alarm (INT-10): seit >30 Min unbearbeitete Dokumente
         // (created_at, nicht updated_at - das Re-Dispatch oben "touched" den
@@ -51,6 +57,10 @@ class AnalyzePendingDocuments extends Command
         // zwar noch und reiht neu ein, aber niemand arbeitet die Queue ab.
         // Ein deduplizierter Glocken-Hinweis an die Verwaltung macht das
         // sichtbar, statt dass Uploads still liegen bleiben.
+        // Auch der Alarm selbst laeuft abgesichert: ausgerechnet die Meldung
+        // "der Worker ist tot" darf nicht daran scheitern, dass etwas anderes
+        // kaputt ist.
+        try {
         $threshold = (int) config('services.ocr.pending_backlog_alert', 10);
         if ($threshold > 0) {
             $backlog = Document::where('ai_status', 'pending')
@@ -71,8 +81,13 @@ class AnalyzePendingDocuments extends Command
                 $this->warn(sprintf('Rueckstau-Alarm: %d Dokumente seit >30 Min pending.', $backlog));
             }
         }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Rueckstau-Alarm fehlgeschlagen: ' . $e->getMessage(), ['exception' => $e]);
+            $this->warn('Rueckstau-Alarm konnte nicht gesendet werden: ' . $e->getMessage());
+        }
 
-        $this->info(sprintf('%d erneut angestossen, %d als fehlgeschlagen markiert.', $pending->count(), $stuck->count()));
-        return self::SUCCESS;
+        $this->info(sprintf('%d erneut angestossen, %d als fehlgeschlagen markiert.', $wiederAngestossen, $abgebrochen));
+
+        return $this->ergebnisMitUebersprungenen(self::SUCCESS);
     }
 }
