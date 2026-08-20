@@ -87,6 +87,14 @@ class SettingsController extends Controller
                     SystemSetting::set($key, (string) max(0, min(100, $value)));
                     continue;
                 }
+                if ($key === 'ai_assistant_resume_quiet_hours') {
+                    // Ruhefrist: mindestens 1 Stunde (0 hiesse, die KI faellt
+                    // dem Mitarbeiter mitten im Gespraech ins Wort), hoechstens
+                    // 30 Tage.
+                    $value = (int) $request->input($key, $default);
+                    SystemSetting::set($key, (string) max(1, min(720, $value)));
+                    continue;
+                }
                 SystemSetting::set($key, $request->boolean($key) ? '1' : '0');
             }
         }

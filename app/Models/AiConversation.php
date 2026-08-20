@@ -52,6 +52,8 @@ class AiConversation extends Model
     protected $fillable = [
         'customer_id', 'ai_active', 'handover_required', 'handover_reason', 'handover_at',
         'assigned_employee_id', 'last_ai_action', 'last_ai_response', 'summary',
+        // Wiederaufnahme nach einer Uebernahme (Betreiber-Vorgabe 20.08.2026)
+        'auto_resume', 'resume_not_before', 'resume_ticket_id', 'resumed_at',
         'last_ai_at', 'auto_reply_count',
         // Verkaufsassistent (Abschnitte 12/13/14)
         'state', 'intent', 'category', 'channel', 'lead_id', 'collected',
@@ -68,6 +70,7 @@ class AiConversation extends Model
     protected $attributes = [
         'ai_active' => true,
         'handover_required' => false,
+        'auto_resume' => true,
         'auto_reply_count' => 0,
         'state' => ConversationState::NEW,
         'channel' => 'portal',
@@ -81,6 +84,9 @@ class AiConversation extends Model
             'handover_required' => 'boolean',
             'handover_at' => 'datetime',
             'last_ai_at' => 'datetime',
+            'auto_resume' => 'boolean',
+            'resume_not_before' => 'datetime',
+            'resumed_at' => 'datetime',
             'auto_reply_count' => 'integer',
             // Enthalten Kundendaten (letzte Antwort, Zusammenfassung fuer
             // den Mitarbeiter) -> verschluesselt at rest, wie AiDecision.
@@ -143,10 +149,29 @@ class AiConversation extends Model
     }
 
     /**
+     * Gruende, nach denen die KI NIE von selbst zurueckkommt
+     * (Betreiber-Entscheidung 20.08.2026). Eine Beschwerde bleibt
+     * Chefsache: eine automatische Antwort danach liest sich wie
+     * Gleichgueltigkeit, egal wie gut sie formuliert ist.
+     */
+    public const NO_AUTO_RESUME_REASONS = [
+        self::REASON_COMPLAINT,
+    ];
+
+    /**
      * Mitarbeiter uebernimmt: KI aus, Uebergabe erledigt, Zaehler zurueck
      * (das Gespraech beginnt fuer die KI danach neu).
+     *
+     * Die Uebernahme gilt dem VORGANG, nicht dem Kunden: `resume_ticket_id`
+     * und `resume_not_before` halten fest, wann die KI wieder einfache
+     * Anfragen beantworten darf (siehe ConversationResumeService). Wer sie
+     * dauerhaft aus haben will, nutzt deactivate() - das ist der Knopf
+     * "KI deaktivieren" und setzt auto_resume auf false.
+     *
+     * @param string|null $ticketId Vorgang, dessen Abschluss die KI freigibt
+     * @param int $quietHours Ruhefrist ohne Mitarbeiter-Nachricht
      */
-    public function takeOver(int $employeeId): self
+    public function takeOver(int $employeeId, ?string $ticketId = null, int $quietHours = 24): self
     {
         $this->forceFill([
             'ai_active' => false,
@@ -154,13 +179,51 @@ class AiConversation extends Model
             'handover_reason' => self::REASON_STAFF,
             'assigned_employee_id' => $employeeId,
             'auto_reply_count' => 0,
+            'auto_resume' => true,
+            'resume_ticket_id' => $ticketId,
+            'resume_not_before' => now()->addHours(max(1, $quietHours)),
+            'resumed_at' => null,
         ])->save();
 
         return $this;
     }
 
-    /** KI wieder freigeben (bewusste Mitarbeiter-Aktion, Abschnitt 15). */
-    public function reactivate(): self
+    /**
+     * Ruhefrist neu setzen - aufgerufen, sobald ein Mitarbeiter dem Kunden
+     * schreibt. Solange am Fall gearbeitet wird, faengt die Frist wieder
+     * von vorne an; die KI faellt niemandem ins Wort.
+     */
+    public function postponeResume(int $quietHours = 24): self
+    {
+        if (!$this->auto_resume) {
+            return $this;
+        }
+
+        $this->forceFill([
+            'resume_not_before' => now()->addHours(max(1, $quietHours)),
+        ])->save();
+
+        return $this;
+    }
+
+    /**
+     * Darf die KI diesen Fall ueberhaupt von selbst wieder uebernehmen?
+     * Beschwerden und ein bewusstes "dauerhaft aus" schliessen das aus.
+     */
+    public function mayAutoResume(): bool
+    {
+        return $this->auto_resume
+            && !in_array((string) $this->handover_reason, self::NO_AUTO_RESUME_REASONS, true);
+    }
+
+    /**
+     * KI wieder freigeben. Standard ist die bewusste Mitarbeiter-Aktion
+     * (Abschnitt 15); $automatisch = true kommt aus der Wiederaufnahme
+     * nach abgeschlossenem Vorgang bzw. abgelaufener Ruhefrist und wird
+     * am Gespraech vermerkt (resumed_at), damit im Panel steht, dass hier
+     * niemand geklickt hat.
+     */
+    public function reactivate(bool $automatisch = false): self
     {
         $this->forceFill([
             'ai_active' => true,
@@ -168,15 +231,29 @@ class AiConversation extends Model
             'handover_reason' => null,
             'handover_at' => null,
             'auto_reply_count' => 0,
+            'auto_resume' => true,
+            'resume_not_before' => null,
+            'resume_ticket_id' => null,
+            'resumed_at' => $automatisch ? now() : null,
         ])->save();
 
         return $this;
     }
 
-    /** KI stumm schalten, ohne eine Uebergabe zu behaupten. */
+    /**
+     * KI stumm schalten, ohne eine Uebergabe zu behaupten - und zwar
+     * DAUERHAFT: das ist die bewusste Entscheidung "dieser Kunde wird von
+     * Menschen betreut". Keine Ruhefrist holt sie zurueck, nur der Knopf
+     * "KI wieder aktivieren".
+     */
     public function deactivate(): self
     {
-        $this->forceFill(['ai_active' => false])->save();
+        $this->forceFill([
+            'ai_active' => false,
+            'auto_resume' => false,
+            'resume_not_before' => null,
+            'resume_ticket_id' => null,
+        ])->save();
 
         return $this;
     }

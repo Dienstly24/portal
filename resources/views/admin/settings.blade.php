@@ -142,6 +142,24 @@
         <input type="number" name="ai_assistant_max_replies_per_case" min="0" max="100"
                value="{{ $settings['ai_assistant_max_replies_per_case'] }}">
     </div>
+    {{-- Wiederaufnahme (Betreiber-Vorgabe 20.08.2026): eine Uebernahme gilt
+         dem VORGANG, nicht dem Kunden. Ohne diese Regel blieb ein Kunde nach
+         einer einzigen Uebergabe dauerhaft ohne automatische Antwort. --}}
+    <label class="ki-toggle">
+        <input type="checkbox" name="ai_assistant_auto_resume" value="1" @checked($settings['ai_assistant_auto_resume'] === '1')>
+        <span>KI übernimmt nach erledigtem Vorgang wieder (Wiederaufnahme)</span>
+    </label>
+    <div class="field">
+        <label>Ruhefrist nach der letzten Mitarbeiter-Nachricht (Stunden)</label>
+        <input type="number" name="ai_assistant_resume_quiet_hours" min="1" max="720"
+               value="{{ $settings['ai_assistant_resume_quiet_hours'] }}">
+        <div style="font-size:12.5px;color:var(--ink-soft);margin-top:4px;">
+            Die KI kommt zurück, sobald der übernommene Vorgang abgeschlossen ist –
+            spätestens nach dieser Frist ohne Nachricht eines Mitarbeiters. Jede eigene
+            Nachricht startet die Frist neu. <strong>Beschwerden bleiben immer beim Team</strong>,
+            ebenso jede Unterhaltung, in der „KI deaktivieren“ gedrückt wurde.
+        </div>
+    </div>
     <div style="background:#F7F5EF;border-radius:8px;padding:14px;font-size:13px;color:var(--ink-soft);">
         Der Assistent arbeitet nur innerhalb des Dienstly24-Kundenservice (Verträge, Vorgänge,
         Dokumente, Status) und ausschließlich mit den Daten des jeweils angemeldeten Kunden.

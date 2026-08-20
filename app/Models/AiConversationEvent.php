@@ -36,6 +36,7 @@ class AiConversationEvent extends Model
     public const EVENT_VERIFICATION = 'verification_run';
     public const EVENT_HANDOVER = 'handover';
     public const EVENT_TAKEOVER = 'staff_takeover';
+    public const EVENT_RESUMED = 'ai_resumed';
     public const EVENT_ERROR = 'error';
     public const EVENT_LEAD = 'lead_created';
 
@@ -50,6 +51,7 @@ class AiConversationEvent extends Model
         self::EVENT_VERIFICATION => 'Prüfung durchgeführt',
         self::EVENT_HANDOVER => 'An das Team übergeben',
         self::EVENT_TAKEOVER => 'Mitarbeiter hat übernommen',
+        self::EVENT_RESUMED => 'KI hat wieder übernommen',
         self::EVENT_ERROR => 'Störung',
         self::EVENT_LEAD => 'Interessent angelegt',
     ];

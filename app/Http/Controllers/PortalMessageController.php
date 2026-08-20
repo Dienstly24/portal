@@ -42,9 +42,13 @@ class PortalMessageController extends Controller
         // hat der Assistent noch nie geantwortet und ist damit aktiv.
         $settings = app(\App\Services\Ai\Assistant\AssistantSettings::class);
         $conversation = \App\Models\AiConversation::where('customer_id', $customer->id)->first();
+        // Auch eine faellige Wiederaufnahme zaehlt als "KI zustaendig"
+        // (Betreiber-Vorgabe 20.08.2026): die Kennzeichnung soll dem
+        // naechsten Schritt entsprechen, nicht dem Stand von gestern.
         $aiActive = $settings->enabled()
             && $settings->autoReply()
-            && ($conversation === null || $conversation->canAutoReply());
+            && app(\App\Services\Ai\Assistant\ConversationResumeService::class)
+                ->isAiOnDuty($customer, $conversation);
 
         return view('portal.messages', compact('customer', 'messages', 'aiActive'));
     }
