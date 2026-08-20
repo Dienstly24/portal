@@ -84,52 +84,72 @@ class ImportExportController extends Controller
         ]);
     }
 
+    /**
+     * Voll-Export der Kundenliste als CSV.
+     *
+     * Wird GESTREAMT und in Bloecken gelesen: vorher lagen erst alle Kunden
+     * als Modelle im Speicher und dann zusaetzlich die komplette CSV als
+     * String - der Bedarf wuchs also doppelt mit dem Bestand, bis der Export
+     * ins Speicherlimit lief. Jetzt bleibt der Verbrauch konstant,
+     * unabhaengig davon, ob 100 oder 100.000 Kunden exportiert werden.
+     */
     public function export() {
-        $customers = Customer::with('user')->when($this->visibleCustomerIds() !== null, fn($q) => $q->whereIn('customers.id', $this->visibleCustomerIds()))->get();
+        $ids = $this->visibleCustomerIds();
+        $basis = fn () => Customer::with('user')
+            ->when($ids !== null, fn ($q) => $q->whereIn('customers.id', $ids));
 
-        $csv = Writer::createFromString('');
-        // Schutz vor CSV-/Formel-Injection (Audit INT-1): kunden-kontrollierte
-        // Felder mit fuehrendem = + - @ werden neutralisiert, sonst fuehren sie
-        // beim Oeffnen in Excel/LibreOffice (DDE) Formeln aus.
-        $csv->addFormatter(new EscapeFormula());
-        $csv->insertOne([
-            'Kundennummer','Vorname','Nachname','E-Mail','Telefon','Mobil',
-            'Adresse','IBAN','Geburtsdatum','Familienstand','Sprache',
-            'Firmenname','Rechtsform','Kundentyp','Erstellt am'
-        ]);
-
-        foreach ($customers as $c) {
-            $nameParts = explode(' ', $c->user?->name ?? '', 2);
-            $csv->insertOne([
-                $c->customer_number,
-                $nameParts[0] ?? '',
-                $nameParts[1] ?? '',
-                $c->user?->email ?? '',
-                $c->phone ?? '',
-                $c->mobile ?? '',
-                $c->address ?? '',
-                $c->iban ?? '',
-                $c->birth_date ?? '',
-                $c->marital_status ?? '',
-                $c->preferred_lang ?? 'de',
-                $c->company_name ?? '',
-                $c->company_type ?? '',
-                $c->customer_type ?? 'privat',
-                $c->created_at?->format('d.m.Y') ?? '',
-            ]);
-        }
-
+        // Vor dem Streamen protokollieren: sobald die Ausgabe laeuft, ist der
+        // Export ohnehin nicht mehr aufzuhalten - und der Audit-Trail darf
+        // nicht davon abhaengen, dass der Download sauber endet.
         // Voll-Export personenbezogener Daten (inkl. IBAN) protokollieren
         // (Audit INT-8) - hochsensibler Vorgang, gehoert in den Audit-Trail.
         \App\Models\ActivityLog::record('customers_exported', 'customer', null, [
-            'count' => $customers->count(),
+            'count' => $basis()->count(),
         ]);
 
-        return response((string) $csv)
-            ->header('Content-Type', 'text/csv; charset=UTF-8')
-            ->header('Content-Disposition', 'attachment; filename="kunden_' . date('Y-m-d') . '.csv"');
-    }
+        $dateiname = 'kunden_' . date('Y-m-d') . '.csv';
 
+        return response()->streamDownload(function () use ($basis) {
+            $csv = Writer::createFromStream(fopen('php://output', 'w'));
+            // Schutz vor CSV-/Formel-Injection (Audit INT-1): kunden-kontrollierte
+            // Felder mit fuehrendem = + - @ werden neutralisiert, sonst fuehren sie
+            // beim Oeffnen in Excel/LibreOffice (DDE) Formeln aus.
+            $csv->addFormatter(new EscapeFormula());
+            $csv->insertOne([
+                'Kundennummer','Vorname','Nachname','E-Mail','Telefon','Mobil',
+                'Adresse','IBAN','Geburtsdatum','Familienstand','Sprache',
+                'Firmenname','Rechtsform','Kundentyp','Erstellt am'
+            ]);
+
+            // chunkById statt get(): es liegen nie mehr als 500 Kunden
+            // gleichzeitig im Speicher.
+            $basis()->chunkById(500, function ($kunden) use ($csv) {
+                foreach ($kunden as $c) {
+                    $nameParts = explode(' ', $c->user?->name ?? '', 2);
+                    $csv->insertOne([
+                        $c->customer_number,
+                        $nameParts[0] ?? '',
+                        $nameParts[1] ?? '',
+                        $c->user?->email ?? '',
+                        $c->phone ?? '',
+                        $c->mobile ?? '',
+                        $c->address ?? '',
+                        $c->iban ?? '',
+                        $c->birth_date ?? '',
+                        $c->marital_status ?? '',
+                        $c->preferred_lang ?? 'de',
+                        $c->company_name ?? '',
+                        $c->company_type ?? '',
+                        $c->customer_type ?? 'privat',
+                        $c->created_at?->format('d.m.Y') ?? '',
+                    ]);
+                }
+                flush();
+            }, 'customers.id', 'id');
+        }, $dateiname, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
     public function template() {
         $csv = Writer::createFromString('');
         $csv->addFormatter(new EscapeFormula());

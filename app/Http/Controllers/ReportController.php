@@ -55,13 +55,16 @@ class ReportController extends Controller
 
         // Bald ablaufend / ueberfaellig: nur AKTIVE Vertraege - ein bereits
         // gekuendigter Vertrag braucht keine Ablauf-Warnung mehr.
-        $expiring = $cf(Contract::with('customer.user'))
+        // Bewusst gedeckelt: bei grossem Bestand koennen in 30 Tagen sehr
+        // viele Vertraege auslaufen - die Berichtsseite soll dann nicht mit
+        // der Liste wachsen. Die Gesamtzahl steht daneben.
+        $expiringBasis = $cf(Contract::with('customer.user'))
             ->whereNotNull('end_date')
             ->whereDate('end_date','>=',now())
             ->whereDate('end_date','<=',now()->addDays(30))
-            ->currentlyActive()
-            ->orderBy('end_date')
-            ->get();
+            ->currentlyActive();
+        $expiringTotal = (clone $expiringBasis)->count();
+        $expiring = $expiringBasis->orderBy('end_date')->limit(50)->get();
 
         $warnings = $cf(Contract::with('customer.user'))
             ->whereNotNull('end_date')
@@ -69,7 +72,7 @@ class ReportController extends Controller
             ->currentlyActive()
             ->count();
 
-        return view('admin.reports', compact('contracts','tickets','customers_stats','expiring','warnings','from','to'));
+        return view('admin.reports', compact('contracts','tickets','customers_stats','expiring','expiringTotal','warnings','from','to'));
     }
 
     /**

@@ -395,17 +395,23 @@ class AdminController extends Controller
     }
 
     /**
-     * Sofort-Suche der Kundenauswahl im Vertragsformular (JSON).
+     * Sofort-Suche der Kundenauswahl (JSON) - genutzt vom Vertragsformular
+     * und vom Zusammenfuehren-Formular.
      *
      * Portfolio-Scoping wie ueberall; die Suche selbst kommt aus
      * Customer::scopeSearch (Name, Kundennummer, Telefon, E-Mail, Anschrift)
      * und ist damit deutlich treffsicherer als der frueher rein auf den
      * Namen begrenzte Browser-Filter.
+     *
+     * `exclude` blendet einen Kunden aus - beim Zusammenfuehren darf der
+     * Hauptkunde nicht als sein eigenes Duplikat waehlbar sein.
      */
-    public function contractCustomerSearch(Request $request) {
+    public function customerSearch(Request $request) {
         $q = trim((string) $request->query('q', ''));
+        $exclude = (string) $request->query('exclude', '');
 
-        $basis = $this->scopeCustomers(Customer::with('user'));
+        $basis = $this->scopeCustomers(Customer::with('user'))
+            ->when($exclude !== '', fn ($query) => $query->where('customers.id', '!=', $exclude));
         $customers = $q === ''
             ? $basis->latest()->take(8)->get()
             : $basis->search($q)->take(8)->get();
@@ -2029,8 +2035,10 @@ class AdminController extends Controller
     public function mergeForm($id, \App\Services\Matching\CustomerMergeService $merge, \App\Services\Matching\CustomerMatchingService $matcher) {
         $this->authorizeCustomerAccess($id);
         $customer = \App\Models\Customer::with(['user', 'addresses'])->findOrFail($id);
-        $others = $this->scopeCustomers(\App\Models\Customer::with('user')->where('id', '!=', $id))->get()
-            ->sortBy(fn($c) => $c->user?->name ?? '');
+        // Die Auswahlliste laedt NICHT mehr den gesamten Kundenbestand in ein
+        // <select>: das Formular sucht ueber admin.customers.search. Der
+        // Vorschlag unten wird weiterhin serverseitig ermittelt - genau der
+        // ist der eigentliche Zweck der Seite.
 
         // Vorauswahl bestimmen: entweder explizit aus der Dubletten-Pruefung
         // (?duplicate=) oder - falls nicht - automatisch der wahrscheinlichste
@@ -2039,18 +2047,21 @@ class AdminController extends Controller
         $suggested = null;
         $preview = [];
         if ($dupId = request('duplicate')) {
-            $suggested = $others->firstWhere('id', $dupId);
+            // Nur innerhalb des eigenen Portfolios und nie der Kunde selbst.
+            $suggested = $this->scopeCustomers(\App\Models\Customer::with('user')->where('id', '!=', $id))
+                ->where('customers.id', $dupId)->first();
         } else {
             $match = $matcher->matchExisting($customer);
             if ($match->hasMatch() && $match->score >= \App\Services\Matching\DuplicateDetectionService::DEFAULT_THRESHOLD) {
-                $suggested = $others->firstWhere('id', (string) $match->customer->id);
+                $suggested = $this->scopeCustomers(\App\Models\Customer::with('user')->where('id', '!=', $id))
+                    ->where('customers.id', (string) $match->customer->id)->first();
             }
         }
         if ($suggested) {
             $preview = $merge->preview($suggested);
         }
 
-        return view('admin.customer_merge', compact('customer', 'others', 'suggested', 'preview'));
+        return view('admin.customer_merge', compact('customer', 'suggested', 'preview'));
     }
 
     public function mergeCustomers(Request $request, $id, \App\Services\Matching\CustomerMergeService $merge) {

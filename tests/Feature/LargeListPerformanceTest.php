@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\User;
+use App\Models\EmailAccount;
+use App\Models\EmailMessage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -207,7 +209,7 @@ class LargeListPerformanceTest extends TestCase
         $this->kunde('Bernd Zweiter');
 
         $antwort = $this->actingAs($this->admin())
-            ->getJson(route('admin.contract.customer_search', ['q' => 'Anna']));
+            ->getJson(route('admin.customers.search', ['q' => 'Anna']));
 
         $antwort->assertOk();
         $namen = collect($antwort->json('customers'))->pluck('name');
@@ -224,7 +226,7 @@ class LargeListPerformanceTest extends TestCase
         $mitarbeiter->assignedCustomers()->attach((string) $eigen->id);
 
         $antwort = $this->actingAs($mitarbeiter)
-            ->getJson(route('admin.contract.customer_search', ['q' => 'Kunde']));
+            ->getJson(route('admin.customers.search', ['q' => 'Kunde']));
 
         $namen = collect($antwort->json('customers'))->pluck('name');
         $this->assertSame(['Eigener Kunde'], $namen->all());
@@ -240,12 +242,115 @@ class LargeListPerformanceTest extends TestCase
         Customer::create(['user_id' => $user->id, 'customer_number' => 'C-INTERN1']);
 
         $antwort = $this->actingAs($this->admin())
-            ->getJson(route('admin.contract.customer_search', ['q' => 'Ohne Mail']));
+            ->getJson(route('admin.customers.search', ['q' => 'Ohne Mail']));
 
         $treffer = collect($antwort->json('customers'))->firstWhere('name', 'Ohne Mail');
         $this->assertNotNull($treffer);
         // Die interne Platzhalter-Adresse kann keine Mail empfangen - sie
         // als Kontakt anzuzeigen waere irrefuehrend.
         $this->assertNull($treffer['email']);
+    }
+
+    // ------------------------------------------- Zusammenfuehren-Formular
+
+    public function test_das_zusammenfuehren_formular_traegt_den_bestand_nicht_mehr_im_html(): void
+    {
+        $haupt = $this->kunde('Julia Schmidt');
+        $this->kunde('Voellig Unbeteiligt');
+
+        $this->actingAs($this->admin())->get(route('admin.customer.merge', $haupt->id))
+            ->assertOk()
+            // Frueher stand jeder Kunde als <option> in der Auswahlliste.
+            ->assertDontSee('Voellig Unbeteiligt');
+    }
+
+    public function test_die_kundensuche_kann_den_eigenen_kunden_ausschliessen(): void
+    {
+        $haupt = $this->kunde('Julia Schmidt');
+        $this->kunde('Julia Schmidt Zwei');
+
+        $antwort = $this->actingAs($this->admin())->getJson(
+            route('admin.customers.search', ['q' => 'Julia', 'exclude' => $haupt->id])
+        );
+
+        $namen = collect($antwort->json('customers'))->pluck('name');
+        // Niemand fuehrt einen Kunden mit sich selbst zusammen.
+        $this->assertNotContains('Julia Schmidt', $namen->all());
+        $this->assertContains('Julia Schmidt Zwei', $namen->all());
+    }
+
+    // ------------------------------------------------------------- Export
+
+    public function test_der_export_wird_gestreamt_und_bleibt_vollstaendig(): void
+    {
+        foreach (['Anna Erste', 'Bernd Zweiter', 'Clara Dritte'] as $name) {
+            $this->kunde($name);
+        }
+
+        $antwort = $this->actingAs($this->admin())->get(route('admin.export'))->assertOk();
+
+        // Gestreamt: der Inhalt kommt aus streamedContent(), nicht aus getContent().
+        $inhalt = $antwort->streamedContent();
+        foreach (['Anna', 'Bernd', 'Clara'] as $teil) {
+            $this->assertStringContainsString($teil, $inhalt);
+        }
+        $antwort->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
+    }
+
+    public function test_der_export_protokolliert_die_richtige_anzahl(): void
+    {
+        foreach (['Anna Erste', 'Bernd Zweiter'] as $name) {
+            $this->kunde($name);
+        }
+
+        $this->actingAs($this->admin())->get(route('admin.export'))->assertOk();
+
+        $eintrag = \App\Models\ActivityLog::where('action', 'customers_exported')->latest('created_at')->firstOrFail();
+        $this->assertSame(2, $eintrag->metaArray()['count']);
+    }
+
+    public function test_der_export_zeigt_nie_fremde_kunden(): void
+    {
+        $eigen = $this->kunde('Eigener Kunde');
+        $this->kunde('Fremder Kunde');
+
+        $mitarbeiter = User::factory()->create(['role' => 'employee', 'can_import_export' => true]);
+        $mitarbeiter->assignedCustomers()->attach((string) $eigen->id);
+
+        $inhalt = $this->actingAs($mitarbeiter)->get(route('admin.export'))
+            ->assertOk()->streamedContent();
+
+        $this->assertStringContainsString('Eigener', $inhalt);
+        $this->assertStringNotContainsString('Fremder', $inhalt);
+    }
+
+    // ------------------------------------------------- E-Mail-Eingang
+
+    public function test_der_eingang_deckelt_die_liste_und_nennt_die_gesamtzahl(): void
+    {
+        $kunde = $this->kunde('Max Muster');
+        $konto = EmailAccount::create([
+            'name' => 'Test', 'email_address' => 'info@dienstly24.de',
+            'provider' => 'imap', 'folders' => ['INBOX'], 'is_active' => true,
+        ]);
+
+        for ($i = 0; $i < 105; $i++) {
+            EmailMessage::create([
+                'email_account_id' => $konto->id,
+                'message_uid' => 'uid-' . $i,
+                'customer_id' => $kunde->id,
+                'match_status' => 'suggested',
+                'subject' => 'Testmail ' . $i,
+                'from_address' => 'kunde' . $i . '@example.com',
+                'received_at' => now()->subMinutes(200 - $i),
+            ]);
+        }
+
+        $antwort = $this->actingAs($this->admin())->get(route('admin.email_inbox'))->assertOk();
+
+        // Die Ueberschrift nennt den ganzen Stapel ...
+        $antwort->assertSee('Zuordnung bestätigen (105)', false);
+        // ... sagt aber ehrlich, dass nur ein Teil gezeigt wird.
+        $antwort->assertSee('die ältesten 100 werden gezeigt', false);
     }
 }

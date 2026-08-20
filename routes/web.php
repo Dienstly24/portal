@@ -260,13 +260,15 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::delete('/customers/family/{id}', [AdminController::class, 'destroyFamily'])->name('customer.family.delete');
     Route::post('/customers/{id}/vehicles', [AdminController::class, 'storeVehicle'])->name('customer.vehicle.store');
 
+    // Sofort-Suche der Kundenauswahl (Vertragsformular, Zusammenfuehren).
+    // Eigener Pfad statt /contracts/... - so kann keine Route-Reihenfolge
+    // ihn als Vertrags-ID missdeuten.
+    Route::get('/kunden-suche', [AdminController::class, 'customerSearch'])->name('customers.search');
+
     // Verträge
     Route::get('/contracts', [AdminController::class, 'contracts'])->name('contracts');
     Route::get('/contracts/new', [AdminController::class, 'contractNew'])->name('contract.new');
-    // Sofort-Suche im Vertragsformular. VOR /contracts/{id}... registriert,
-    // damit "kunden-suche" nicht als Vertrags-ID gelesen wird.
-    Route::get('/contracts/kunden-suche', [AdminController::class, 'contractCustomerSearch'])
-        ->name('contract.customer_search');
+
     Route::get('/contracts/create/{customerId}', [AdminController::class, 'contractCreate'])->name('contract.create');
     Route::get('/contracts/{id}/edit', [AdminController::class, 'contractEdit'])->name('contract.edit');
     Route::put('/contracts/{id}', [AdminController::class, 'contractUpdate'])->name('contract.update');

@@ -156,6 +156,13 @@
             <th></th>
         </tr></thead>
         <tbody>
+        @if($expiringTotal > $expiring->count())
+        {{-- Ehrlich sagen, dass die Liste gekuerzt ist. --}}
+        <tr><td colspan="6" style="padding:10px 20px;font-size:12.5px;color:var(--ink-soft);background:#F8F9FA;">
+            {{ $expiringTotal }} Verträge laufen in den nächsten 30 Tagen ab –
+            gezeigt werden die {{ $expiring->count() }} mit dem frühesten Ablauf.
+        </td></tr>
+        @endif
         @forelse($expiring as $c)
         @php $days = now()->diffInDays(\Carbon\Carbon::parse($c->end_date)); @endphp
         <tr class="row-link" onclick="rowNav(event, '{{ route('admin.contract.edit', $c->id) }}')" title="Vertrag öffnen">

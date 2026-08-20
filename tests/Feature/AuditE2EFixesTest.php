@@ -36,8 +36,10 @@ class AuditE2EFixesTest extends TestCase
     public function test_csv_export_escapes_formula_injection(): void
     {
         $this->customerWithName('=SUM(1+9)');
+        // Der Export wird gestreamt (konstanter Speicherbedarf), der Inhalt
+        // steht deshalb in streamedContent() statt in getContent().
         $body = $this->actingAs($this->admin())->get(route('admin.export'))
-            ->assertOk()->getContent();
+            ->assertOk()->streamedContent();
 
         // Der gefaehrliche Wert darf nicht unescaped als Zellenanfang auftauchen.
         $this->assertStringNotContainsString(',=SUM(1+9)', $body);

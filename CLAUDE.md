@@ -245,9 +245,26 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
 - Tests: `LargeListPerformanceTest`; `ContractStatusLogicTest` Fall 5
   nachgezogen (Historie steht jetzt auf ihrem Reiter, nicht auf jeder
   Seite).
-- **Noch offen** (gleiche Klasse, nicht in diesem Paket):
-  `EmailInboxController::index`, `ReportController::index`,
-  `AdminController::mergeForm`, `ImportExportController::export`.
+- **Teil 2 (20.08.2026), damit ist die Klasse abgeschlossen**:
+  `AdminController::mergeForm` lud den GANZEN Bestand in ein `<select>` -
+  jetzt dieselbe Sofort-Suche; der serverseitig ermittelte Vorschlag bleibt
+  (er ist der Zweck der Seite). `ImportExportController::export` wird
+  GESTREAMT (`streamDownload` + `chunkById(500)`): vorher lagen erst alle
+  Kunden als Modelle und dann die komplette CSV als String im Speicher -
+  der Bedarf wuchs doppelt. Der Audit-Eintrag entsteht VOR dem Streamen
+  (er darf nicht davon abhaengen, dass der Download sauber endet).
+  `EmailInboxController::index` (Vorschlaege, 100) und
+  `ReportController::index` (bald ablaufend, 50) sind gedeckelt - beide
+  nennen die GESAMTZAHL und sagen ausdruecklich, dass gekuerzt wurde:
+  eine still gekuerzte Liste laesst den Eingang faelschlich abgearbeitet
+  aussehen.
+- **Eine Kundensuche fuer beide Formulare**: `admin.customers.search`
+  (`AdminController::customerSearch`, Pfad `/admin/kunden-suche` - bewusst
+  nicht unter `/contracts/...`, damit keine Route-Reihenfolge ihn als
+  Vertrags-ID missdeutet). `exclude` blendet einen Kunden aus (beim
+  Zusammenfuehren darf der Hauptkunde nicht sein eigenes Duplikat sein).
+  Die Endpunkte in `TaskController` und `ComposeEmailController` bleiben
+  eigenstaendig - sie liefern einen reicheren Datensatz (Betreuer usw.).
 
 ## Kundennummern
 

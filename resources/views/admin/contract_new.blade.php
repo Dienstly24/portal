@@ -58,7 +58,7 @@ function searchCustomer(q) {
     clearTimeout(sucheTimer);
     sucheTimer = setTimeout(() => {
         const lauf = ++letzteSuche;
-        fetch('{{ route('admin.contract.customer_search') }}?q=' + encodeURIComponent(q), {
+        fetch('{{ route('admin.customers.search') }}?q=' + encodeURIComponent(q), {
             headers: {'Accept': 'application/json'},
         })
             .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))
