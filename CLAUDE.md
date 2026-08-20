@@ -1102,6 +1102,52 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   Gesellschaft, Kunden-E-Mail, eVB-Nummer (nur Zusammenfassung, KEINE
   Vertragsnummer); "Tag der Zulassung" ist kein Datum und wird nie geraten.
   Tests: `ContractReferenceNumberTest`, `AntragBestaetigungParserTest`.
+- **Vermittler-Abrechnung: Vertrag und Abrechnung zusammenfuehren**
+  (Betreiber-Auftrag 20.08.2026, Details in
+  `docs/VERMITTLER_ABRECHNUNG_ABGLEICH.md`): Zwischen Abschluss und Geld
+  liegen bis zu 90 Tage und ZWEI Nummern - beim Abschluss die
+  **Referenz-Nr.** der Antragsbestaetigung (`1477-6741-9200-53`, oft die
+  einzige Kennung, eine Vertragsnummer gibt es noch nicht), spaeter in der
+  Abrechnungsdatei die **`Id` des Vermittlers** (`9753224`). Die Bruecke
+  `Referenz-Nr. -> Vertrag -> Vermittler-ID -> Abrechnung -> Provision`
+  wird DAUERHAFT gespeichert (`contracts.reference_number` +
+  `contracts.vermittler_id`); ist sie einmal hergestellt, genuegt in jeder
+  spaeteren Datei die `Id` - die Spalte `Referenz-Nr.` DARF FEHLEN.
+  VIER GRUNDREGELN (als Test festgehalten): **nie raten** (abweichende
+  Referenz bei gleicher ID, doppelte Referenz-Nr., unbekannter Status-Code,
+  Stornogrund an nicht storniertem Datensatz -> `Prüfung erforderlich`,
+  nie eine automatische Zuordnung); **nie Vertragsdaten aendern** (der
+  Import schreibt NUR die `vermittler_*`-Spalten, einzige Ausnahme ist das
+  ERGAENZEN einer leeren Referenz-Nr.); **nie loeschen** (fehlt ein Vertrag
+  in der Datei, heisst das `Nicht in Abrechnung gefunden` - nie
+  "storniert", nie "geloescht"; storniert wird nur, was die Abrechnung als
+  storniert ausweist); **nie doppelt** (natuerlicher Schluessel ist die
+  `Id`, unique - ein erneuter Import derselben Datei aktualisiert und
+  meldet "Bereits importiert"). Abrechnungsstatus
+  (`Contract::VERMITTLER_STATUSES`) und Vertragsstatus (`status`/`stage`)
+  sind GETRENNTE Wahrheiten und ueberschreiben sich nie: der Vermittler kann
+  stornieren, waehrend der Vertrag laeuft. Status-Codes des Vermittlers an
+  EINER Stelle (`VermittlerStatusMap`, TARIFCHECK24: 1 bestaetigt,
+  2 storniert, 4 abgerechnet); ein UNBEKANNTER Code wird nie geraten.
+  Der Abgleich in die Gegenrichtung (Vertraege, die in der Datei fehlen)
+  ist bewusst eng gefasst - nur Vertraege ohne bisherigen Treffer, ohne
+  Vermittler-ID, mit einer Referenz-Nr. im FORMAT DIESER DATEI (Massstab
+  kommt aus der Datei selbst) und aelter als ihr juengster Datensatz;
+  sonst stuenden fremde Vorgaenge (Energieportal, Maklerpool) faelschlich
+  als "nicht abgerechnet" da. HISTORIE UEBERLEBT DAS LOESCHEN:
+  `vermittler_settlements` (eine Zeile je Abrechnungs-Datensatz) und
+  `vermittler_match_events` haengen mit `nullOnDelete` am Vertrag und
+  tragen Referenz-Nr., Vermittler-ID und eine Klartext-Kopie von
+  Vertrag/Kunde - bei einer Rueckfrage zu einem Storno ist belegbar, dass
+  der Vertrag existierte. Oberflaeche `/admin/vermittler-abrechnung`
+  (**nur admin/manager** - hier stehen Provisionsbetraege): Import mit
+  sofortigem Ergebnis, Prüfliste (unklare Datensaetze werden per
+  Sofort-Suche von Hand zugeordnet, nie automatisch), Auswertung je
+  Produkt/Kunde plus Bestaetigungsquote des Vermittlers. In der
+  Vertragsakte die Box "🤝 Vermittler / Abrechnung" mit beiden Kennungen,
+  Stand, Provision, Stornogrund und der Historie der Zuordnung. Beide
+  Kennungen sind in der globalen Suche und in `Contract::scopeSearch`
+  findbar. Tests: `VermittlerAbrechnungTest`.
 - **Auftrag zuerst, Vertrag spaeter: ein Vorgang, EIN Vertrag**
   (Betreiber-Vorgabe 29.07.2026, Details in
   `docs/AUFTRAG_UND_VERTRAG_ZUSAMMENFUEHREN.md`): Zuerst wird der

@@ -664,6 +664,20 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         Route::get('/provisionen/{id}', [\App\Http\Controllers\ProvisionController::class, 'show'])->whereUuid('id')->name('provisions.show');
         Route::post('/provisionen/{id}/status', [\App\Http\Controllers\ProvisionController::class, 'updateStatus'])->name('provisions.status');
         Route::post('/provisionen/{id}/betrag', [\App\Http\Controllers\ProvisionController::class, 'adjustAmount'])->name('provisions.amount');
+
+        // Vermittler-Abrechnung: CSV des Vermittlers einlesen, Vertraege
+        // zuordnen, Abweichungen pruefen (Betreiber-Auftrag 20.08.2026).
+        // Gleiche Zugriffsregel wie das uebrige Provisions-Management -
+        // hier stehen Provisionsbetraege.
+        Route::prefix('vermittler-abrechnung')->name('vermittler.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\VermittlerAbrechnungController::class, 'index'])->name('index');
+            Route::post('/import', [\App\Http\Controllers\VermittlerAbrechnungController::class, 'import'])->name('import');
+            Route::get('/pruefung', [\App\Http\Controllers\VermittlerAbrechnungController::class, 'review'])->name('review');
+            Route::get('/bericht', [\App\Http\Controllers\VermittlerAbrechnungController::class, 'report'])->name('report');
+            Route::get('/vertrag-suche', [\App\Http\Controllers\VermittlerAbrechnungController::class, 'contractSearch'])->name('contract_search');
+            Route::post('/datensatz/{id}/zuordnen', [\App\Http\Controllers\VermittlerAbrechnungController::class, 'link'])->whereUuid('id')->name('link');
+            Route::get('/{id}', [\App\Http\Controllers\VermittlerAbrechnungController::class, 'show'])->whereUuid('id')->name('show');
+        });
     });
 
     // lexoffice

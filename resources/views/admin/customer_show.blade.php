@@ -566,6 +566,11 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
                 @if($c->reference_number)
                     <div style="font-size:11px;color:var(--ink-soft);" title="Referenz-/Vorgangsnummer des Antrags">Ref. {{ $c->reference_number }}</div>
                 @endif
+                {{-- Vermittler-ID: unter dieser Nummer steht der Vertrag in der
+                     Abrechnung des Vermittlers (Abgleich 20.08.2026). --}}
+                @if($c->vermittler_id)
+                    <div style="font-size:11px;color:var(--ink-soft);" title="Vermittler-ID / Abrechnungs-ID">ID {{ $c->vermittler_id }}</div>
+                @endif
             </td>
             <td style="padding:12px;color:var(--ink-soft);font-size:13px;">{{ $c->start_date ? \Carbon\Carbon::parse($c->start_date)->format('d.m.Y') : '—' }}</td>
             <td style="padding:12px;font-size:13px;white-space:nowrap;">

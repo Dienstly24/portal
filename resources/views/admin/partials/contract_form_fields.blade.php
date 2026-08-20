@@ -98,6 +98,15 @@
         <input type="text" name="reference_number" maxlength="60" value="{{ $val('reference_number', $c->reference_number ?? '') }}" placeholder="z. B. 1477-6741-9200-53">
         <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">Nummer des Antrags/Vorgangs beim Portal oder Vermittler. Spätere Post (Bestätigung, Abrechnung) mit dieser Nummer findet den Vertrag automatisch.</div>
     </div>
+    <div class="field">
+        {{-- Vermittler-ID: die `Id`, unter der dieser Vertrag in der
+             Abrechnungsdatei des Vermittlers steht. Bei der Anlage ist sie
+             noch leer - sie kommt Wochen spaeter mit der Abrechnung und wird
+             dann automatisch ueber die Referenz-Nr. zugeordnet. --}}
+        <label>Vermittler-ID / Abrechnungs-ID</label>
+        <input type="text" name="vermittler_id" maxlength="60" value="{{ $val('vermittler_id', $c->vermittler_id ?? '') }}" placeholder="Kommt mit der Abrechnung – meist leer lassen">
+        <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">Nummer des Datensatzes in der Abrechnung des Vermittlers. Wird beim CSV-Import automatisch über die Referenz-Nr. zugeordnet – hier nur eintragen, wenn sie bereits bekannt ist.</div>
+    </div>
 </div>
 @php
     // Ablauf-Automatik: Modus aus den Bestandsdaten ableiten, damit eine

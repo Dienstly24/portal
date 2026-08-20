@@ -17,10 +17,12 @@ class Contract extends Model {
      * Storno weiterhin bei Loeschung und manueller Stornierung im Formular.
      */
     public bool $endsWithoutStorno = false;
-    protected $fillable = ['customer_id','contract_number','reference_number','type','type_other','subtype','insurer','status','stage','start_date','end_date','pdf_path','notes','cancellation_date','premium_amount','premium_interval'];
+    protected $fillable = ['customer_id','contract_number','reference_number','vermittler_id','vermittler_status','vermittler_matched_at','vermittler_last_import_id','vermittler_last_imported_at','type','type_other','subtype','insurer','status','stage','start_date','end_date','pdf_path','notes','cancellation_date','premium_amount','premium_interval'];
 
     protected $casts = [
         'premium_amount' => 'decimal:2',
+        'vermittler_matched_at' => 'datetime',
+        'vermittler_last_imported_at' => 'datetime',
     ];
 
     /**
@@ -470,6 +472,12 @@ class Contract extends Model {
             $query->where(function ($w) use ($like) {
                 $w->where('insurer', 'like', $like)
                     ->orWhere('contract_number', 'like', $like)
+                    // Vermittler-Kennungen sind fuer den Betrieb echte
+                    // Suchbegriffe: die Referenz-Nr. steht auf der
+                    // Antragsbestaetigung, die Vermittler-ID in der
+                    // Abrechnung - beide fuehren zum selben Vertrag.
+                    ->orWhere('reference_number', 'like', $like)
+                    ->orWhere('vermittler_id', 'like', $like)
                     ->orWhereHas('customer', function ($c) use ($like) {
                         $c->where('customer_number', 'like', $like)
                             ->orWhereHas('user', fn ($u) => $u->where('name', 'like', $like));
@@ -716,4 +724,102 @@ class Contract extends Model {
     public function revisions() { return $this->hasMany(ContractRevision::class)->orderByDesc('created_at'); }
     /** Vermittler-Provisionen dieses Vertrags (inkl. Storno-Gegenbuchungen). */
     public function provisions() { return $this->hasMany(Provision::class); }
+
+    // ---------------------------------------------------------------
+    // Vermittler-Abrechnung (Betreiber-Auftrag 20.08.2026)
+    //
+    // Zusatzschicht ueber dem Vertrag: sie beantwortet die Frage "hat der
+    // Vermittler diesen Vertrag bestaetigt und abgerechnet?" - und aendert
+    // dabei NIE den fachlichen Vertragsstatus (status/stage). Beides sind
+    // getrennte Wahrheiten und duerfen sich nie gegenseitig ueberschreiben.
+    // ---------------------------------------------------------------
+
+    public const VERMITTLER_NEU = 'neu';
+    public const VERMITTLER_REFERENZ = 'referenz_hinterlegt';
+    public const VERMITTLER_ID_ZUGEORDNET = 'id_zugeordnet';
+    public const VERMITTLER_IN_ABRECHNUNG = 'in_abrechnung';
+    public const VERMITTLER_ABGERECHNET = 'abgerechnet';
+    public const VERMITTLER_STORNIERT = 'storniert';
+    public const VERMITTLER_NICHT_GEFUNDEN = 'nicht_gefunden';
+    public const VERMITTLER_PRUEFUNG = 'pruefung';
+
+    /** Abrechnungsstatus mit deutschem Label und Anzeige-Merkmalen. */
+    public const VERMITTLER_STATUSES = [
+        self::VERMITTLER_NEU            => ['label' => 'Neu',                        'icon' => '·',  'badge' => 'closed'],
+        self::VERMITTLER_REFERENZ       => ['label' => 'Referenz hinterlegt',        'icon' => '📌', 'badge' => 'open'],
+        self::VERMITTLER_ID_ZUGEORDNET  => ['label' => 'ID zugeordnet',              'icon' => '🔗', 'badge' => 'open'],
+        self::VERMITTLER_IN_ABRECHNUNG  => ['label' => 'In Abrechnung gefunden',     'icon' => '✓',  'badge' => 'active'],
+        self::VERMITTLER_ABGERECHNET    => ['label' => 'Bestätigt / Abgerechnet',    'icon' => '✅', 'badge' => 'active'],
+        self::VERMITTLER_STORNIERT      => ['label' => 'Storniert',                  'icon' => '⛔', 'badge' => 'danger'],
+        self::VERMITTLER_NICHT_GEFUNDEN => ['label' => 'Nicht in Abrechnung gefunden','icon' => '❓', 'badge' => 'pending'],
+        self::VERMITTLER_PRUEFUNG       => ['label' => 'Prüfung erforderlich',       'icon' => '⚠',  'badge' => 'danger'],
+    ];
+
+    /**
+     * Zustaende VOR dem ersten Treffer in einer Abrechnung. Nur solche
+     * Vertraege duerfen ein "Nicht in Abrechnung gefunden" bekommen - ein
+     * bereits abgerechneter oder stornierter Vertrag wird von einem spaeteren
+     * Lauf nie mehr zurueckgestuft.
+     */
+    public const VERMITTLER_PRE_MATCH = [
+        self::VERMITTLER_NEU,
+        self::VERMITTLER_REFERENZ,
+        self::VERMITTLER_NICHT_GEFUNDEN,
+    ];
+
+    public static function vermittlerStatusKeys(): array
+    {
+        return array_keys(self::VERMITTLER_STATUSES);
+    }
+
+    /**
+     * Aktueller Abrechnungsstatus - nie null. Ohne gespeicherten Wert wird er
+     * aus dem Bestand abgeleitet: mit hinterlegter Referenz-Nr. gilt der
+     * Vertrag als "Referenz hinterlegt", sonst als "Neu". So stimmt die
+     * Anzeige auch fuer Altvertraege, ohne dass eine Migration Daten erfindet.
+     */
+    public function vermittlerStatus(): string
+    {
+        if ($this->vermittler_status && isset(self::VERMITTLER_STATUSES[$this->vermittler_status])) {
+            return $this->vermittler_status;
+        }
+        if (filled($this->vermittler_id)) {
+            return self::VERMITTLER_ID_ZUGEORDNET;
+        }
+        return filled($this->reference_number) ? self::VERMITTLER_REFERENZ : self::VERMITTLER_NEU;
+    }
+
+    public function vermittlerStatusLabel(): string
+    {
+        return self::VERMITTLER_STATUSES[$this->vermittlerStatus()]['label'];
+    }
+
+    public function vermittlerStatusBadge(): string
+    {
+        return self::VERMITTLER_STATUSES[$this->vermittlerStatus()]['badge'];
+    }
+
+    public function vermittlerStatusIcon(): string
+    {
+        return self::VERMITTLER_STATUSES[$this->vermittlerStatus()]['icon'];
+    }
+
+    /** Abrechnungs-Datensaetze des Vermittlers zu diesem Vertrag. */
+    public function vermittlerSettlements()
+    {
+        return $this->hasMany(VermittlerSettlement::class, 'contract_id')
+            ->orderByDesc('statement_date')->orderByDesc('created_at');
+    }
+
+    /** Historie der Zuordnung (aelteste zuerst - sie erzaehlt den Verlauf). */
+    public function vermittlerEvents()
+    {
+        return $this->hasMany(VermittlerMatchEvent::class, 'contract_id')->orderBy('created_at');
+    }
+
+    /** Vergleichsschluessel der Referenz-Nr. (nur fuer die Zuordnung). */
+    public function referenceKey(): ?string
+    {
+        return \App\Services\Vermittler\VermittlerReference::key($this->reference_number);
+    }
 }
