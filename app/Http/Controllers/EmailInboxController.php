@@ -37,10 +37,15 @@ class EmailInboxController extends Controller
         // der Liste sehen. Die Aktions-Endpunkte pruefen canAccessCustomer -
         // die Listenansicht war bisher ungescoped.
         $user = auth()->user();
-        $suggested = EmailMessage::with(['customer.user', 'account'])
+        $vorschlaege = EmailMessage::with(['customer.user', 'account'])
             ->where('match_status', 'suggested')
-            ->when(!$user->canSeeAllCustomers(), fn ($q) => $q->whereIn('customer_id', $user->visibleCustomerIdsWithSubstitution()))
-            ->orderBy('received_at')->get();
+            ->when(!$user->canSeeAllCustomers(), fn ($q) => $q->whereIn('customer_id', $user->visibleCustomerIdsWithSubstitution()));
+
+        // Gedeckelt: arbeitet niemand den Eingang ab, stapeln sich die
+        // Vorschlaege - und die Seite wuerde mit dem Stapel wachsen, bis sie
+        // nicht mehr laedt. Die Gesamtzahl wird trotzdem ehrlich genannt.
+        $suggestedTotal = (clone $vorschlaege)->count();
+        $suggested = $vorschlaege->orderBy('received_at')->limit(100)->get();
 
         $unmatched = EmailMessage::with(['account', 'aiDecisions' => fn ($q) => $q->suggested()])
             ->where('match_status', 'unmatched')
@@ -54,7 +59,7 @@ class EmailInboxController extends Controller
             'change_requests' => CustomerChangeRequest::pending()->count(),
         ];
 
-        return view('admin.email_inbox', compact('suggested', 'unmatched', 'queues'));
+        return view('admin.email_inbox', compact('suggested', 'suggestedTotal', 'unmatched', 'queues'));
     }
 
     /**

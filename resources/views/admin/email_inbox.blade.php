@@ -26,7 +26,16 @@
 
 {{-- Stufe 70-90%: Ein-Klick-Bestätigung (Architekturplan Abschnitt 13) --}}
 <div class="card" style="padding:0;overflow:hidden;margin-bottom:24px;">
-    <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">Zuordnung bestätigen ({{ $suggested->count() }})</div>
+    <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">
+        Zuordnung bestätigen ({{ $suggestedTotal }})
+        @if($suggestedTotal > $suggested->count())
+        {{-- Ehrlich sagen, dass die Liste gekuerzt ist - sonst haelt man den
+             Eingang faelschlich fuer abgearbeitet. --}}
+        <span style="font-weight:500;font-size:12.5px;color:var(--ink-soft);">
+            – die ältesten {{ $suggested->count() }} werden gezeigt, die übrigen nach dem Bearbeiten
+        </span>
+        @endif
+    </div>
     @forelse($suggested as $m)
     <div style="padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:center;">
         <div style="min-width:260px;flex:1;">
