@@ -443,6 +443,22 @@ class DocumentIntakeService
             'MaLo-ID' => $energie['malo_id'] ?? null,
             'Zaehlernummer' => $energie['meter_number'] ?? null,
         ];
+
+        // Referenz-/Vorgangsnummer: nennt ein spaeteres Dokument (Bestaetigung,
+        // Abrechnung der Gesellschaft) diese Nummer, ist der Vertrag - und
+        // damit der Kunde - eindeutig gefunden.
+        $referenz = trim((string) ($ins['reference_number'] ?? ''));
+        if (mb_strlen($referenz) >= 5) {
+            $treffer = Contract::with('customer.user')
+                ->where(function ($q) use ($referenz) {
+                    $q->where('reference_number', $referenz)->orWhere('contract_number', $referenz);
+                })->limit(3)->get();
+            foreach ($treffer as $contract) {
+                if ($contract->customer) {
+                    $hits[] = [$contract->customer, 'Referenznummer ' . $referenz . ' gehoert zu einem Vertrag dieses Kunden'];
+                }
+            }
+        }
         foreach ($tokens as $label => $value) {
             $value = trim((string) ($value ?? ''));
             // Kurze Nummern (z.B. "12") wuerden halbe Bestaende treffen.
@@ -1087,6 +1103,9 @@ class DocumentIntakeService
         $contract = Contract::create([
             'customer_id' => $customer->id,
             'contract_number' => $ins['contract_number'] ?? null,
+            // Referenz-/Vorgangsnummer der Antragsstrecke: die Bruecke zu
+            // spaeterer Post (Bestaetigung, Abrechnung der Gesellschaft).
+            'reference_number' => $ins['reference_number'] ?? null,
             'type' => $type,
             'subtype' => $subtype,
             'insurer' => $ins['insurer'] ?? null,
@@ -1327,6 +1346,23 @@ class DocumentIntakeService
             }
         }
 
+        // 1b. Referenz-/Vorgangsnummer der Antragsstrecke: die Nummer, die
+        // Portal, Gesellschaft und spaetere Post gemeinsam nennen. Sie
+        // identifiziert den Vorgang genauso eindeutig wie eine
+        // Vertragsnummer - und ist beim Antrag oft das EINZIGE harte
+        // Merkmal (Betreiber-Vorgabe 17.08.2026).
+        $referenz = trim((string) ($ins['reference_number'] ?? ''));
+        if (mb_strlen($referenz) >= 5) {
+            $byReference = Contract::where('customer_id', $customer->id)
+                ->where(function ($q) use ($referenz) {
+                    $q->where('reference_number', $referenz)
+                        ->orWhere('contract_number', $referenz);
+                })->first();
+            if ($byReference) {
+                return $byReference;
+            }
+        }
+
         // 2./3. Fahrzeug-Identitaet: erst FIN/VIN, dann Kennzeichen - in PHP
         // verglichen, damit Umlaut-Schreibweisen dasselbe Fahrzeug treffen
         // ("LÜN-G 1110" = "LUN-G1110"; SQL-upper() kann keine Umlaute falten).
@@ -1561,6 +1597,15 @@ class DocumentIntakeService
         $energie = $data['energie'] ?? [];
         $kfz = $data['kfz'] ?? [];
 
+        // Staerkstes Indiz: dieselbe Referenz-/Vorgangsnummer - die
+        // Bestaetigung nennt genau den Vorgang, aus dem der Antrag stammt.
+        $referenz = trim((string) ($ins['reference_number'] ?? ''));
+        if (mb_strlen($referenz) >= 5
+            && ($referenz === trim((string) $contract->reference_number)
+                || $referenz === trim((string) $contract->contract_number))) {
+            return true;
+        }
+
         $tariff = $this->normalizeTariff($energie['tariff'] ?? ($ins['tariff'] ?? null));
         if ($tariff !== null) {
             foreach ([$contract->energyDetail?->tariff, $contract->internetDetail?->tariff] as $known) {
@@ -1683,6 +1728,12 @@ class DocumentIntakeService
         if ((blank($contract->contract_number) || $bestaetigt) && !blank($newNumber)
             && !Contract::where('contract_number', $newNumber)->where('id', '!=', $contract->id)->exists()) {
             $contractProposed['contract_number'] = $newNumber;
+        }
+        // Referenz-/Vorgangsnummer: nur ERGAENZEN, nie ueberschreiben - sie
+        // gehoert zum urspruenglichen Vorgang und bleibt die Bruecke zu
+        // spaeterer Post.
+        if (blank($contract->reference_number) && !blank($ins['reference_number'] ?? null)) {
+            $contractProposed['reference_number'] = $ins['reference_number'];
         }
         $changed = $recorder->apply($contract, $contract, $contractProposed, $this->contractRevisionSpec(), $ctx);
 
@@ -1868,6 +1919,7 @@ class DocumentIntakeService
         return [
             'insurer' => ['label' => 'Versicherer'],
             'contract_number' => ['label' => 'Vertragsnummer'],
+            'reference_number' => ['label' => 'Referenz-/Vorgangsnummer'],
             'start_date' => ['label' => 'Vertragsbeginn', 'format' => [$this, 'fmtDate']],
             'end_date' => ['label' => 'Vertragsende', 'format' => [$this, 'fmtDate']],
             'premium_amount' => ['label' => 'Beitrag', 'format' => [$this, 'fmtEuro']],

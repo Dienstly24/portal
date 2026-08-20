@@ -170,6 +170,10 @@ class DeckungsauftragParser implements DocumentTemplateParser
     {
         $raw = ['document_stage' => Contract::STAGE_ANTRAG];
 
+        // Vorgangsnummer = Referenz des Maklerpools: KEINE Vertragsnummer,
+        // aber die Bruecke zu spaeterer Post (Police, Abrechnung).
+        $raw['reference_number'] = $this->vorgangsnummer();
+
         // Sparte aus dem Titel "Deckungsauftrag zur <Sparte>" (im Kopf jeder
         // Seite wiederholt; der Treffer "Vorgangsnummer" der Kopfzeile wird
         // uebersprungen).
