@@ -6,5 +6,6 @@
     <a href="{{ route('admin.provisions.rates') }}" class="rep-tab {{ $active === 'saetze' ? 'rep-tab-active' : '' }}">Sätze</a>
     <a href="{{ route('admin.provisions.report') }}" class="rep-tab {{ $active === 'bericht' ? 'rep-tab-active' : '' }}">Monatsbericht</a>
     <a href="{{ route('admin.provisions.dashboard') }}" class="rep-tab {{ $active === 'dashboard' ? 'rep-tab-active' : '' }}">Dashboard</a>
+    <a href="{{ route('admin.vermittler.index') }}" class="rep-tab">Vermittler-Abrechnung</a>
     <a href="{{ route('admin.reports.neukunden') }}" class="rep-tab" style="margin-left:auto;">Zum Neukunden-Bericht →</a>
 </div>

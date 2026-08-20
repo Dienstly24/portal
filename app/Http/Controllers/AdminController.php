@@ -467,6 +467,7 @@ class AdminController extends Controller
             // automatische Fantasienummer mehr (Betreiber-Feedback).
             'contract_number' => $request->filled('contract_number') ? trim($request->contract_number) : null,
             'reference_number' => $request->filled('reference_number') ? trim($request->reference_number) : null,
+            'vermittler_id' => $request->filled('vermittler_id') ? trim($request->vermittler_id) : null,
             'type' => $request->type,
             'type_other' => $request->type === 'andere' ? ($request->type_other ?: null) : null,
             'subtype' => Contract::normalizeSubtype($request->type, $request->subtype),
@@ -483,6 +484,11 @@ class AdminController extends Controller
         ]);
 
         $this->syncContractDetails($contract, $request);
+        // Bei der Neuanlage erfasste Vermittler-Kennungen gehen sofort in die
+        // Historie - und eine bereits importierte, bisher unzugeordnete
+        // Abrechnungszeile findet damit ihren Vertrag.
+        app(\App\Services\Vermittler\VermittlerLinkService::class)
+            ->recordContractEdit($contract, ['reference_number' => null, 'vermittler_id' => null], auth()->id());
 
         return redirect()->route('admin.customer', $customerId)
             ->with('success', 'Vertrag erfolgreich hinzugefügt.' . $switchNote);
@@ -576,9 +582,17 @@ class AdminController extends Controller
             return back()->withErrors(['vehicle_overlap' => $conflictError])->withInput();
         }
 
+        // Vermittler-Kennungen VOR der Aenderung merken: die Historie soll
+        // zeigen, wann eine Referenz-Nr./ID von Hand kam (20.08.2026).
+        $vermittlerBefore = [
+            'reference_number' => $contract->reference_number,
+            'vermittler_id' => $contract->vermittler_id,
+        ];
+
         $contract->update([
             'contract_number' => $request->filled('contract_number') ? trim($request->contract_number) : null,
             'reference_number' => $request->filled('reference_number') ? trim($request->reference_number) : null,
+            'vermittler_id' => $request->filled('vermittler_id') ? trim($request->vermittler_id) : null,
             'type' => $request->type,
             'type_other' => $request->type === 'andere' ? ($request->type_other ?: null) : null,
             'subtype' => Contract::normalizeSubtype($request->type, $request->subtype),
@@ -594,6 +608,8 @@ class AdminController extends Controller
         ]);
 
         $this->syncContractDetails($contract, $request);
+        app(\App\Services\Vermittler\VermittlerLinkService::class)
+            ->recordContractEdit($contract, $vermittlerBefore, auth()->id());
 
         return redirect()->route('admin.customer', $contract->customer_id)->with('success', 'Vertrag aktualisiert.');
     }
@@ -668,6 +684,10 @@ class AdminController extends Controller
             // Bewusst NICHT unique: ein Vorgang kann zwei Vertraege tragen
             // (z.B. Buendel Strom + Gas).
             'reference_number' => 'nullable|string|max:60',
+            // Vermittler-ID (die `Id` aus der Abrechnungsdatei). Eindeutig:
+            // ein Abrechnungs-Datensatz gehoert zu genau einem Vertrag -
+            // zwei Vertraege mit derselben ID waeren ein Zuordnungsfehler.
+            'vermittler_id' => ['nullable', 'string', 'max:60', \Illuminate\Validation\Rule::unique('contracts', 'vermittler_id')->ignore($ignoreId)],
             // Status-Whitelist aus derselben Quelle wie die Auswahl im Formular
             // (Contract::STATUS_OPTIONS) - kein zweiter, driftender Wertevorrat.
             'status' => 'required|in:' . implode(',', Contract::statusKeys()),
@@ -2230,6 +2250,9 @@ class AdminController extends Controller
             ->where(function($query) use ($q) {
                 $query->where('contract_number','like',"%$q%")
                       ->orWhere('reference_number','like',"%$q%")
+                      // Vermittler-ID aus der Abrechnung: oft die einzige
+                      // Nummer, die bei einer Rueckfrage vorliegt.
+                      ->orWhere('vermittler_id','like',"%$q%")
                       ->orWhere('insurer','like',"%$q%");
             })
             ->limit(3)->get()->map(fn($c) => [
