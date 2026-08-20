@@ -64,9 +64,19 @@ class ErrorVisibilityTest extends TestCase
 
     public function test_ein_serverfehler_zaehlt_auch_als_http_ausnahme(): void
     {
-        $e = new \Symfony\Component\HttpKernel\Exception\ServiceUnavailableException(null, 'Wartung');
-
-        $this->assertTrue(ErrorRecorder::shouldRecord($e));
+        // Generische HttpException statt einer Unterklasse: die Regel haengt
+        // am STATUS (>= 500), nicht an einer bestimmten Klasse.
+        $this->assertTrue(ErrorRecorder::shouldRecord(
+            new \Symfony\Component\HttpKernel\Exception\HttpException(503, 'Wartung')
+        ));
+        $this->assertTrue(ErrorRecorder::shouldRecord(
+            new \Symfony\Component\HttpKernel\Exception\HttpException(500, 'Serverfehler')
+        ));
+        // Und die Gegenprobe: alles unter 500 ist eine Antwort an den
+        // Nutzer, kein Systemfehler.
+        $this->assertFalse(ErrorRecorder::shouldRecord(
+            new \Symfony\Component\HttpKernel\Exception\HttpException(429, 'Zu viele Anfragen')
+        ));
     }
 
     // ------------------------------------------------------ Zusammenfassen
