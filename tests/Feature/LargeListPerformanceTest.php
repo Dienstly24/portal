@@ -269,8 +269,11 @@ class LargeListPerformanceTest extends TestCase
         $haupt = $this->kunde('Julia Schmidt');
         $this->kunde('Julia Schmidt Zwei');
 
+        // (string) ist hier PFLICHT: $haupt->id haelt bis zum naechsten Laden
+        // ein Uuid-OBJEKT, und http_build_query() hinter route() verwirft
+        // objektwertige Parameter - der Ausschluss kaeme nie am Server an.
         $antwort = $this->actingAs($this->admin())->getJson(
-            route('admin.customers.search', ['q' => 'Julia', 'exclude' => $haupt->id])
+            route('admin.customers.search', ['q' => 'Julia', 'exclude' => (string) $haupt->id])
         );
 
         $namen = collect($antwort->json('customers'))->pluck('name');
@@ -309,19 +312,18 @@ class LargeListPerformanceTest extends TestCase
         $this->assertSame(2, $eintrag->metaArray()['count']);
     }
 
-    public function test_der_export_zeigt_nie_fremde_kunden(): void
+    public function test_der_export_bleibt_admin_und_manager_vorbehalten(): void
     {
-        $eigen = $this->kunde('Eigener Kunde');
-        $this->kunde('Fremder Kunde');
+        $this->kunde('Eigener Kunde');
 
+        // Der Voll-Export enthaelt personenbezogene Daten inkl. IBAN - die
+        // Route ist deshalb role:admin,manager. Das Portfolio-Scoping im
+        // Controller bleibt als zweite Schicht bestehen, falls die
+        // Berechtigung je erweitert wird.
         $mitarbeiter = User::factory()->create(['role' => 'employee', 'can_import_export' => true]);
-        $mitarbeiter->assignedCustomers()->attach((string) $eigen->id);
 
-        $inhalt = $this->actingAs($mitarbeiter)->get(route('admin.export'))
-            ->assertOk()->streamedContent();
-
-        $this->assertStringContainsString('Eigener', $inhalt);
-        $this->assertStringNotContainsString('Fremder', $inhalt);
+        $this->actingAs($mitarbeiter)->get(route('admin.export'))
+            ->assertRedirect(route('admin.dashboard'));
     }
 
     // ------------------------------------------------- E-Mail-Eingang

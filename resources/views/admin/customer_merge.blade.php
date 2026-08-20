@@ -97,7 +97,7 @@ $labels = [
         clearTimeout(timer);
         timer = setTimeout(() => {
             const dieser = ++lauf;
-            fetch('{{ route('admin.customers.search') }}?exclude={{ $customer->id }}&q=' + encodeURIComponent(q),
+            fetch('{{ route('admin.customers.search') }}?exclude={{ (string) $customer->id }}&q=' + encodeURIComponent(q),
                 {headers: {'Accept': 'application/json'}})
                 .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))
                 .then(data => {
