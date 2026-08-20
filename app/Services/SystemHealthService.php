@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\ActivityLog;
 use App\Models\AiKnowledgeEntry;
 use App\Models\Document;
+use App\Models\ErrorEvent;
 use App\Models\ScheduledTaskRun;
 use App\Models\User;
 use Illuminate\Console\Scheduling\Schedule;
@@ -54,6 +55,7 @@ class SystemHealthService
             'schedule' => $this->schedule(),
             'integrations' => $this->integrations(),
             'security' => $this->security(),
+            'errors' => $this->errors(),
         ];
 
         return [
@@ -539,6 +541,60 @@ class SystemHealthService
             'title' => 'Anmeldung & Sicherheit',
             'status' => $this->worstOf(array_column($items, 'status')),
             'summary' => $failedLogins . ' fehlgeschlagene Anmeldungen, ' . $failedTwoFactor . ' fehlgeschlagene 2FA-Eingaben (24 h).',
+            'items' => $items,
+        ];
+    }
+
+    // ============================================================== Fehler
+
+    /**
+     * Unerwartete Fehler (500er), die echte Nutzer getroffen haben.
+     *
+     * Bisher landeten sie ausschliesslich in storage/logs/laravel.log -
+     * einer Datei, die im Alltag niemand oeffnet. Der Betreiber erfuhr davon
+     * erst, wenn sich jemand beschwert hat.
+     */
+    public function errors(): array
+    {
+        if (! Schema::hasTable('error_events')) {
+            return [
+                'title' => 'Fehler',
+                'status' => self::INFO,
+                'summary' => 'Fehlererfassung noch nicht eingerichtet.',
+                'items' => [],
+            ];
+        }
+
+        $offen24h = ErrorEvent::open()->seenSince(now()->subDay())->count();
+        $offen7t = ErrorEvent::open()->seenSince(now()->subDays(7))->count();
+        $haeufigster = ErrorEvent::open()->seenSince(now()->subDays(7))
+            ->orderByDesc('occurrences')->first();
+
+        $items = [[
+            'label' => 'Neue Fehler (24 h)',
+            'value' => (string) $offen24h,
+            'status' => $offen24h > 0 ? self::FAIL : self::OK,
+            'hint' => $offen24h > 0 ? 'Einzeln ansehen: /admin/fehler' : null,
+        ], [
+            'label' => 'Offene Fehler (7 Tage)',
+            'value' => (string) $offen7t,
+            'status' => $offen7t > 0 ? self::WARN : self::OK,
+        ]];
+
+        if ($haeufigster) {
+            $items[] = [
+                'label' => 'Haeufigster offener Fehler',
+                'value' => $haeufigster->shortClass() . ' (' . $haeufigster->occurrences . '×)',
+                'status' => self::INFO,
+                'hint' => $haeufigster->shortFile() . ':' . $haeufigster->line
+                    . ($haeufigster->route ? ' · ' . $haeufigster->route : ''),
+            ];
+        }
+
+        return [
+            'title' => 'Fehler',
+            'status' => $this->worstOf(array_column($items, 'status')),
+            'summary' => $offen24h . ' in den letzten 24 Stunden, ' . $offen7t . ' offen in 7 Tagen.',
             'items' => $items,
         ];
     }
