@@ -387,6 +387,9 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
     private function parseContract(array $energie): array
     {
         $raw = [
+            // Auftragsnummer des Portals = Referenz des Vorgangs (KEINE
+            // Vertragsnummer) - die Bruecke zur spaeteren Vertragsbestaetigung.
+            'reference_number' => $this->labelValue('Auftragsnummer') ?? $this->kopfzeile()['nummer'],
             'insurer' => $this->kopfzeile()['anbieter'] ?? $this->labelValue('Anbieter'),
             'tariff' => $energie['tariff'] ?? null,
             // Ein Auftrag ist noch keine Bestaetigung.

@@ -283,6 +283,9 @@ class LichtblickAuftragParser implements DocumentTemplateParser
     private function parseInsurance(string $upper, array $energie): array
     {
         $raw = [
+            // Auftragsnummer = Referenz des Vorgangs (KEINE Vertragsnummer,
+            // siehe Hinweis unten) - Bruecke zur Vertragsbestaetigung.
+            'reference_number' => $this->orderNumber(),
             'insurer' => 'LichtBlick',
             'sparte' => str_contains($upper, 'ÖKOGAS') || str_contains($upper, 'OEKOGAS') ? 'gas' : 'strom',
             // Auftrag = Angebot des Kunden, noch keine Bestaetigung.

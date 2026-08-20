@@ -221,6 +221,9 @@ class PlanBNetZeroAuftragParser implements DocumentTemplateParser
     private function parseInsurance(string $upper, array $energie): array
     {
         $raw = [
+            // Auftragsnummer = Referenz des Vorgangs (KEINE Vertragsnummer) -
+            // Bruecke zur spaeteren Vertragsbestaetigung.
+            'reference_number' => $this->orderNumber(),
             'insurer' => self::INSURER,
             'sparte' => str_contains($upper, 'AUFTRAG GASLIEFERUNG') ? 'gas' : 'strom',
             // Auftrag = Beauftragung des Kunden, noch keine Bestaetigung.

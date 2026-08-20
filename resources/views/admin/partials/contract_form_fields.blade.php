@@ -89,6 +89,15 @@
         <input type="text" name="contract_number" maxlength="255" value="{{ $val('contract_number', $c->contract_number ?? '') }}" placeholder="Optional – später nachtragbar">
         <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">Leer lassen, falls die echte Nummer noch nicht vorliegt. Es wird keine automatische Nummer erzeugt.</div>
     </div>
+    <div class="field">
+        {{-- Referenz-/Vorgangsnummer der Antragsstrecke: Portal-Referenz,
+             Auftrags-, Vorgangs- oder Protokollnummer. Damit laesst sich der
+             Vorgang spaeter wiederfinden - auch bevor die echte
+             Versicherungsnummer vorliegt. --}}
+        <label>Referenz-/Vorgangsnummer</label>
+        <input type="text" name="reference_number" maxlength="60" value="{{ $val('reference_number', $c->reference_number ?? '') }}" placeholder="z. B. 1477-6741-9200-53">
+        <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">Nummer des Antrags/Vorgangs beim Portal oder Vermittler. Spätere Post (Bestätigung, Abrechnung) mit dieser Nummer findet den Vertrag automatisch.</div>
+    </div>
 </div>
 @php
     // Ablauf-Automatik: Modus aus den Bestandsdaten ableiten, damit eine

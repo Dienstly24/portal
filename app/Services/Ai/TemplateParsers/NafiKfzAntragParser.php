@@ -246,6 +246,9 @@ class NafiKfzAntragParser implements DocumentTemplateParser
     {
         $raw = [
             'sparte' => 'kfz',
+            // NAFI-Vorgangsnummer = Referenz des Vorgangs (KEINE
+            // Vertragsnummer) - Bruecke zur spaeteren Police.
+            'reference_number' => $this->labelValue('Vorgang') ?? $this->labelValue('Vorgangsnummer'),
             // Ein ANTRAG ist noch kein Vertrag - und hat keine Vertragsnummer.
             'document_stage' => Contract::STAGE_ANTRAG,
         ];

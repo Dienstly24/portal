@@ -17,7 +17,7 @@ class Contract extends Model {
      * Storno weiterhin bei Loeschung und manueller Stornierung im Formular.
      */
     public bool $endsWithoutStorno = false;
-    protected $fillable = ['customer_id','contract_number','type','type_other','subtype','insurer','status','stage','start_date','end_date','pdf_path','notes','cancellation_date','premium_amount','premium_interval'];
+    protected $fillable = ['customer_id','contract_number','reference_number','type','type_other','subtype','insurer','status','stage','start_date','end_date','pdf_path','notes','cancellation_date','premium_amount','premium_interval'];
 
     protected $casts = [
         'premium_amount' => 'decimal:2',

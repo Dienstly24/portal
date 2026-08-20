@@ -187,6 +187,12 @@ trait ValidatesExtractedFields
         return array_filter([
             'insurer' => $this->cleanString($in['insurer'] ?? null, 120),
             'contract_number' => $this->cleanString($in['contract_number'] ?? null, 60),
+            // Referenz-/Vorgangsnummer der Antragsstrecke (Portal-Referenz,
+            // Auftrags-, Vorgangs- oder Protokollnummer). NICHT die
+            // Vertragsnummer - aber die Bruecke, um spaetere Post
+            // (Bestaetigung, Provisions-/Abrechnungsdatei) demselben Vertrag
+            // zuzuordnen.
+            'reference_number' => $this->cleanString($in['reference_number'] ?? null, 60),
             'sparte' => $sparte,
             'subtype' => $subtype,
             'start_date' => $this->cleanDate($in['start_date'] ?? null),

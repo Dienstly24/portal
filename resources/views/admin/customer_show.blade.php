@@ -559,7 +559,14 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
                 </div>
             </td>
             <td style="padding:12px;">{{ $c->insurer }}</td>
-            <td style="padding:12px;font-family:monospace;font-size:13px;">{{ $c->contract_number }}</td>
+            <td style="padding:12px;font-family:monospace;font-size:13px;">
+                {{ $c->contract_number }}
+                {{-- Referenz-/Vorgangsnummer: beim Antrag oft die einzige
+                     Kennung - spaetere Post findet damit ihren Vertrag. --}}
+                @if($c->reference_number)
+                    <div style="font-size:11px;color:var(--ink-soft);" title="Referenz-/Vorgangsnummer des Antrags">Ref. {{ $c->reference_number }}</div>
+                @endif
+            </td>
             <td style="padding:12px;color:var(--ink-soft);font-size:13px;">{{ $c->start_date ? \Carbon\Carbon::parse($c->start_date)->format('d.m.Y') : '—' }}</td>
             <td style="padding:12px;font-size:13px;white-space:nowrap;">
                 @if($c->hasPremium())

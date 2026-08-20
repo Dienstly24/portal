@@ -1046,6 +1046,29 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   eines ANDEREN Versicherers fuer dasselbe Auto ist ein WECHSEL und wird ein
   eigener Vertrag. Kennzeichen-Vergleich zentral + umlaut-tolerant
   (`ContractVehicleDetail::normalizePlate`, "LUEN-G 1110" = "LUN-G1110").
+- **Referenz-/Vorgangsnummer am Vertrag** (`contracts.reference_number`,
+  Betreiber-Vorgabe 17.08.2026): Ein ANTRAG hat KEINE Vertragsnummer - aber
+  jedes Portal vergibt eine eigene Kennung (Referenznummer der
+  Antragsstrecke, Auftragsnummer des Energieportals, Vorgangsnummer des
+  Maklerpools, Protokoll-Nr. des Vergleichsrechners, NAFI-Vorgang). Genau
+  diese Nummer teilt der Betrieb mit anderen Systemen und findet damit
+  spaeter wieder, WELCHER Vertrag bestaetigt wurde. Sie steht im eigenen
+  Feld (nie in `contract_number`), ist im Vertragsformular pflegbar, in der
+  Kundenakte sichtbar ("Ref. …") und in der globalen Suche findbar. Die
+  Parser fuellen sie automatisch (`AntragBestaetigungParser`,
+  Deckungsauftrag, Online-Protokoll, Energie-Portal, LichtBlick, PLAN-B,
+  NAFI). Zuordnung: `findExistingContractByIdentity` und
+  `sharesDistinctiveDetail` erkennen den Vorgang daran wieder,
+  `identityHits` liefert den KUNDEN (Score 100) - eine hochgeladene
+  Abrechnung, die nur die Referenz nennt, landet damit am richtigen Kunden
+  und Vertrag. Regeln: nur ERGAENZEN, nie ueberschreiben (der urspruengliche
+  Vorgangsschluessel bleibt); nicht unique (ein Vorgang kann Strom + Gas
+  tragen); ab 5 Zeichen (kurze Nummern treffen halbe Bestaende). Der
+  `AntragBestaetigungParser` liest die Abschluss-Seite einer Antragsstrecke
+  ("Vielen Dank, Ihr Antrag ist bei uns eingegangen"): Referenznummer,
+  Gesellschaft, Kunden-E-Mail, eVB-Nummer (nur Zusammenfassung, KEINE
+  Vertragsnummer); "Tag der Zulassung" ist kein Datum und wird nie geraten.
+  Tests: `ContractReferenceNumberTest`, `AntragBestaetigungParserTest`.
 - **Auftrag zuerst, Vertrag spaeter: ein Vorgang, EIN Vertrag**
   (Betreiber-Vorgabe 29.07.2026, Details in
   `docs/AUFTRAG_UND_VERTRAG_ZUSAMMENFUEHREN.md`): Zuerst wird der

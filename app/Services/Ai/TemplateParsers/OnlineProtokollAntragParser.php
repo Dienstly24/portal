@@ -150,6 +150,12 @@ class OnlineProtokollAntragParser implements DocumentTemplateParser
     {
         $raw = ['document_stage' => Contract::STAGE_ANTRAG];
 
+        // Antrags-/Protokollnummer des Vergleichsportals: KEINE
+        // Vertragsnummer, aber die Bruecke zu spaeterer Post.
+        if (preg_match('/\((\d{6,}-[A-Z0-9]+\/\d+\/\d+)\)/u', $this->text, $mNr)) {
+            $raw['reference_number'] = $mNr[1];
+        }
+
         // Sparte aus dem Titel ("Antrag" + "Rechtsschutzversicherung") -
         // unbekannte Sparten bleiben bewusst leer.
         if (preg_match('/\bAntrag\s*\R\s*([\p{L}][\p{L} \-]*versicherung)\b/iu', $this->text, $m)) {

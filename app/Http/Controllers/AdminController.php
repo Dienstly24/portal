@@ -466,6 +466,7 @@ class AdminController extends Controller
             // Echte Versicherungsnummer wird spaeter nachgetragen -> KEINE
             // automatische Fantasienummer mehr (Betreiber-Feedback).
             'contract_number' => $request->filled('contract_number') ? trim($request->contract_number) : null,
+            'reference_number' => $request->filled('reference_number') ? trim($request->reference_number) : null,
             'type' => $request->type,
             'type_other' => $request->type === 'andere' ? ($request->type_other ?: null) : null,
             'subtype' => Contract::normalizeSubtype($request->type, $request->subtype),
@@ -577,6 +578,7 @@ class AdminController extends Controller
 
         $contract->update([
             'contract_number' => $request->filled('contract_number') ? trim($request->contract_number) : null,
+            'reference_number' => $request->filled('reference_number') ? trim($request->reference_number) : null,
             'type' => $request->type,
             'type_other' => $request->type === 'andere' ? ($request->type_other ?: null) : null,
             'subtype' => Contract::normalizeSubtype($request->type, $request->subtype),
@@ -662,6 +664,10 @@ class AdminController extends Controller
             'insurer' => 'required|string|max:255',
             // Echte Versicherungsnummer, optional, aber eindeutig.
             'contract_number' => ['nullable', 'string', 'max:255', \Illuminate\Validation\Rule::unique('contracts', 'contract_number')->ignore($ignoreId)],
+            // Referenz-/Vorgangsnummer der Antragsstrecke (Portal/Vermittler).
+            // Bewusst NICHT unique: ein Vorgang kann zwei Vertraege tragen
+            // (z.B. Buendel Strom + Gas).
+            'reference_number' => 'nullable|string|max:60',
             // Status-Whitelist aus derselben Quelle wie die Auswahl im Formular
             // (Contract::STATUS_OPTIONS) - kein zweiter, driftender Wertevorrat.
             'status' => 'required|in:' . implode(',', Contract::statusKeys()),
@@ -2223,6 +2229,7 @@ class AdminController extends Controller
             ->when($vids !== null, fn($qq) => $qq->whereIn('customer_id', $vids))
             ->where(function($query) use ($q) {
                 $query->where('contract_number','like',"%$q%")
+                      ->orWhere('reference_number','like',"%$q%")
                       ->orWhere('insurer','like',"%$q%");
             })
             ->limit(3)->get()->map(fn($c) => [
