@@ -173,6 +173,17 @@ class BannerSocialController extends Controller
                 ->withErrors(['publish' => 'Bereits als veröffentlicht markiert - erst zurücksetzen, dann per API posten.']);
         }
 
+        // Was OHNE API-Aufruf feststeht, wird SOFORT gemeldet - nicht erst
+        // per Glocke. Wer "Jetzt posten" drueckt und der Text ist zu lang,
+        // soll das auf der Seite lesen und nicht auf etwas warten, das nie
+        // passieren wird.
+        if ($fehler = app(MetaPublisher::class)->preflight($channel)) {
+            $channel->forceFill(['publish_error' => $fehler])->save();
+
+            return redirect()->route('admin.banners.social', $banner->id)
+                ->withErrors(['publish' => $fehler]);
+        }
+
         // Versuch ATOMAR beanspruchen - erst danach darf gepostet werden.
         // Die Pruefungen oben lesen nur; zwischen Lesen und Posten passt ein
         // zweiter Klick oder der geplante Lauf. Ein UPDATE mit Bedingung

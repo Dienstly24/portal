@@ -27,6 +27,14 @@ class MetaPublisher
     /** Instagram-Limit fuer Bildunterschriften (Zeichen). */
     private const IG_CAPTION_MAX = 2200;
 
+    /**
+     * Die zwei Instagram-Ablehnungen als Konstante: sie werden an ZWEI
+     * Stellen geworfen (Vorabpruefung und als letzte Absicherung im
+     * Versand). Zwei getippte Texte laufen mit der Zeit auseinander.
+     */
+    private const IG_OHNE_BILD = 'Instagram benötigt ein Bild - dieses Banner hat keine erzeugten Bildformate (Video?).';
+    private const IG_TEXT_ZU_LANG = 'Beitragstext für Instagram zu lang (max. 2200 Zeichen inkl. Link) - bitte kürzen.';
+
     public function __construct(private MetaGraphClient $graph)
     {
     }
@@ -50,23 +58,55 @@ class MetaPublisher
      * Beitrag (external_post_id) wird nie erneut gepostet.
      * $actorId = ausloesender Mitarbeiter, null = geplanter Auto-Versand.
      */
-    public function publish(BannerSocialChannel $channel, ?int $actorId = null): void
+    /**
+     * Alles pruefen, was OHNE einen API-Aufruf feststeht.
+     *
+     * Der Versand laeuft im Hintergrund - eine Ablehnung, die man vorher
+     * kennt, darf den Mitarbeiter aber nicht erst per Glocke erreichen.
+     * "TikTok kann das nicht", "Meta ist nicht verbunden" oder "der Text ist
+     * zu lang" gehoeren SOFORT auf die Seite, sonst klickt man und wartet
+     * auf etwas, das nie passieren wird.
+     *
+     * @return string|null Fehlermeldung oder null, wenn nichts dagegen spricht.
+     */
+    public function preflight(BannerSocialChannel $channel): ?string
     {
-        if ($channel->external_post_id) {
-            return;
-        }
         if (!in_array($channel->platform, self::AUTO_PLATFORMS, true)) {
-            throw new \RuntimeException('Diese Plattform unterstützt kein API-Posten (nur manuell).');
+            return 'Diese Plattform unterstützt kein API-Posten (nur manuell).';
         }
         if (!self::configuredFor($channel->platform)) {
-            throw new \RuntimeException('Meta-API nicht verbunden - einmalig auf dem Server php artisan meta:einrichten ausführen (Anleitung: docs/ANLEITUNG_META_API_AR.md).');
+            return 'Meta-API nicht verbunden - einmalig auf dem Server php artisan meta:einrichten ausführen (Anleitung: docs/ANLEITUNG_META_API_AR.md).';
         }
 
         $post = $channel->post()->with('banner')->first();
         $banner = $post?->banner;
         if (!$banner) {
-            throw new \RuntimeException('Zugehöriger Banner nicht gefunden.');
+            return 'Zugehöriger Banner nicht gefunden.';
         }
+
+        if ($channel->platform === 'instagram') {
+            if (!$this->publicImageUrl($banner)) {
+                return self::IG_OHNE_BILD;
+            }
+            if (mb_strlen($this->composeCaption($post, $channel)) > self::IG_CAPTION_MAX) {
+                return self::IG_TEXT_ZU_LANG;
+            }
+        }
+
+        return null;
+    }
+
+    public function publish(BannerSocialChannel $channel, ?int $actorId = null): void
+    {
+        if ($channel->external_post_id) {
+            return;
+        }
+        if ($fehler = $this->preflight($channel)) {
+            throw new \RuntimeException($fehler);
+        }
+
+        $post = $channel->post()->with('banner')->first();
+        $banner = $post?->banner;
 
         $caption = $this->composeCaption($post, $channel);
         $imageUrl = $this->publicImageUrl($banner);
@@ -136,12 +176,13 @@ class MetaPublisher
     /** @return array{0:string,1:?string} [external_post_id, external_url] */
     private function publishInstagram(string $caption, ?string $imageUrl): array
     {
+        // Letzte Absicherung - preflight() hat beides bereits geprueft.
         if (!$imageUrl) {
-            throw new \RuntimeException('Instagram benötigt ein Bild - dieses Banner hat keine erzeugten Bildformate (Video?).');
+            throw new \RuntimeException(self::IG_OHNE_BILD);
         }
         if (mb_strlen($caption) > self::IG_CAPTION_MAX) {
             // Nie still kuerzen - der Betreiber entscheidet, was wegfaellt.
-            throw new \RuntimeException('Beitragstext für Instagram zu lang (max. ' . self::IG_CAPTION_MAX . ' Zeichen inkl. Link) - bitte kürzen.');
+            throw new \RuntimeException(self::IG_TEXT_ZU_LANG);
         }
 
         $igUserId = config('services.meta.ig_user_id');
