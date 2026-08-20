@@ -55,6 +55,33 @@
         </span>
     </div>
 
+    {{-- Wer ist gerade zustaendig - und ab wann wieder die KI? Ohne diese
+         Zeile stand da nur "KI deaktiviert" und niemand wusste, dass der
+         Kunde auf eine neue Frage keine automatische Antwort mehr bekommt
+         (Lehre 20.08.2026). --}}
+    @if(!$aiConversation->ai_active && ($aiSettings->autoResume() ?? false))
+        @if(!$aiConversation->mayAutoResume())
+            <div class="kx-ai-reason">🔒 Dauerhaft beim Team – die KI kommt nur über „KI wieder aktivieren“ zurück.</div>
+        @elseif($aiConversation->resume_ticket_id || $aiConversation->resume_not_before)
+            @php
+                // Blade-Direktiven nie an ein Wort kleben ("Uhr@else") - sie
+                // werden dann NICHT uebersetzt und die Seite bricht mit
+                // einem Parse-Fehler ab. Text deshalb hier zusammenbauen.
+                $wann = $aiConversation->resume_not_before
+                    ? 'am ' . $aiConversation->resume_not_before->format('d.m.Y H:i') . ' Uhr'
+                    : 'nach der Ruhefrist';
+                $satz = $aiConversation->resume_ticket_id
+                    ? 'sobald der Vorgang abgeschlossen ist – spätestens ' . $wann
+                    : $wann;
+            @endphp
+            <div class="kx-ai-next">
+                🤖 Die KI übernimmt wieder, {{ $satz }}. Jede eigene Nachricht verlängert die Frist.
+            </div>
+        @endif
+    @elseif($aiConversation->resumed_at)
+        <div class="kx-ai-next">🤖 Die KI hat am {{ $aiConversation->resumed_at->format('d.m.Y H:i') }} Uhr selbst wieder übernommen (Vorgang erledigt bzw. Ruhefrist abgelaufen).</div>
+    @endif
+
     @if($uebergabe && $aiConversation->reasonLabel())
         <div class="kx-ai-reason">Übergabegrund: {{ $aiConversation->reasonLabel() }}@if($aiConversation->handover_at) · {{ $aiConversation->handover_at->format('d.m.Y H:i') }}@endif</div>
     @endif

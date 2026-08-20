@@ -80,6 +80,11 @@ class AdminCustomerChatController extends Controller
             // Pruefstand, naechster Schritt und eine etwaige Stoerung.
             $aiBriefing = app(\App\Services\Ai\Assistant\EmployeeAssistantService::class)
                 ->briefing($active, $aiConversation);
+            // Wiederaufnahme (Betreiber-Vorgabe 20.08.2026): das Panel sagt
+            // ausdruecklich, WANN die KI wieder einspringt - "KI aus" ohne
+            // Zeitangabe war die eigentliche Ursache der Meldung, dass ein
+            // Kunde nach einer Uebergabe nie wieder eine Antwort bekam.
+            $aiResume = app(\App\Services\Ai\Assistant\ConversationResumeService::class);
         }
 
         return view('admin.customer_chat', [
@@ -94,6 +99,7 @@ class AdminCustomerChatController extends Controller
             'aiDocuments' => $aiDocuments ?? [],
             'aiLastLog' => $aiLastLog ?? null,
             'aiBriefing' => $aiBriefing ?? null,
+            'aiResume' => $aiResume ?? null,
             'ticketPrefill' => $ticketPrefill ?? '',
             'templates' => \App\Models\MessageTemplate::where('category', 'kunde')
                 ->orderBy('sort')->orderBy('name')->get(['id', 'name']),

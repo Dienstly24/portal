@@ -25,6 +25,8 @@ class AssistantSettings
         'ai_assistant_auto_ticket' => '1',
         'ai_assistant_auto_handover' => '1',
         'ai_assistant_max_replies_per_case' => '10',
+        'ai_assistant_auto_resume' => '1',
+        'ai_assistant_resume_quiet_hours' => '24',
     ];
 
     /** KI-Kundenassistent insgesamt (Hauptschalter / Notbremse). */
@@ -69,6 +71,27 @@ class AssistantSettings
     public function maxRepliesPerCase(): int
     {
         return max(0, (int) $this->value('ai_assistant_max_replies_per_case'));
+    }
+
+    /**
+     * Darf die KI nach einer Uebernahme von selbst zurueckkommen, sobald
+     * der Vorgang abgeschlossen ist bzw. die Ruhefrist abgelaufen
+     * (Betreiber-Vorgabe 20.08.2026)? AUS bedeutet: jede Uebernahme wirkt
+     * dauerhaft, die KI kehrt nur per Knopf zurueck (Stand bis 19.08.2026).
+     */
+    public function autoResume(): bool
+    {
+        return $this->flag('ai_assistant_auto_resume');
+    }
+
+    /**
+     * Ruhefrist in Stunden: so lange nach der letzten Mitarbeiter-Nachricht
+     * bleibt der Mensch zustaendig. Mindestens 1 Stunde - eine Frist von 0
+     * hiesse, die KI faellt dem Kollegen mitten im Gespraech ins Wort.
+     */
+    public function resumeQuietHours(): int
+    {
+        return max(1, (int) $this->value('ai_assistant_resume_quiet_hours'));
     }
 
     /** Aktueller Stand aller Schalter (fuer die Einstellungen-Seite). */

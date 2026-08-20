@@ -741,8 +741,26 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   `handover_required` / `assigned_employee_id`; `canAutoReply()` ist die EINE
   Bedingung. Panel im Kunden-Chat der Beraterwelt (Zustand, Grund,
   Zusammenfassung, fehlende Dokumente, letzte Aktion) mit „Übernehmen",
-  „KI deaktivieren", „KI wieder aktivieren". Nach einer Uebernahme
-  antwortet die KI nie mehr von selbst.
+  „KI deaktivieren", „KI wieder aktivieren".
+  WIEDERAUFNAHME (Betreiber-Vorgabe 20.08.2026, ersetzt „nach einer
+  Uebernahme antwortet die KI nie mehr von selbst"): eine Uebernahme gilt
+  dem VORGANG, nicht dem Kunden - sonst blieb ein Kunde nach EINER
+  Uebergabe dauerhaft ohne automatische Antwort, auch bei einem voellig
+  neuen Anliegen Tage spaeter (genau so gemeldet). `ConversationResumeService`
+  holt die KI deterministisch zurueck, sobald (1) der bei der Uebernahme
+  vermerkte Vorgang `resolved/closed` ist oder (2) die Ruhefrist ohne
+  Mitarbeiter-Nachricht abgelaufen ist (`resume_not_before`, Standard 24 h,
+  Einstellung `ai_assistant_resume_quiet_hours`). JEDE echte
+  Mitarbeiter-Nachricht schiebt die Frist vor (Model-Hook in
+  `CustomerMessage::created` - gilt damit fuer jeden Schreibweg); eine
+  KI-Antwort nie. NIE automatisch zurueck kommt sie bei einer BESCHWERDE
+  (`AiConversation::NO_AUTO_RESUME_REASONS`) und nach „KI deaktivieren"
+  (`auto_resume = false` = bewusst dauerhaft beim Team). Schalter
+  `ai_assistant_auto_resume` (AN) stellt das alte Verhalten wieder her.
+  Das Panel nennt IMMER den Zeitpunkt der Rueckkehr - „KI deaktiviert"
+  ohne Datum war die eigentliche Ursache der Meldung; die Wiederaufnahme
+  steht als `ai_resumed` im Ereignisprotokoll, nie im Chattext.
+  Tests: `AssistantResumeTest`.
   DUPLIKAT-SCHUTZ: genau EINE Antwort je Kundennachricht (Sperre ueber
   `ai_assistant_logs.customer_message_id` - deshalb ist ein zweiter Anlauf
   durch `ai:answer-pending` gefahrlos); offener Vorgang gleicher Art/aehnlichem

@@ -57,6 +57,7 @@ class CustomerAssistantService
         private IntentClassifier $intents,
         private AcceptanceDetector $acceptance,
         private ConversationJournal $journal,
+        private ConversationResumeService $resume,
     ) {
     }
 
@@ -102,6 +103,13 @@ class CustomerAssistantService
         }
 
         // --- Stufe 2: Zustand der Unterhaltung ------------------------------
+        // Zuerst die Wiederaufnahme pruefen (Betreiber-Vorgabe 20.08.2026):
+        // eine Uebernahme gilt dem VORGANG. Ist der abgeschlossen oder die
+        // Ruhefrist abgelaufen, ist die KI wieder zustaendig - sonst bliebe
+        // ein Kunde nach einer einzigen Uebergabe fuer immer ohne
+        // automatische Antwort. Kostet nichts, entscheidet kein Modell.
+        $this->resume->resumeIfDue($customer, $conversation);
+
         if (!$conversation->canAutoReply()) {
             $this->log($conversation, $message, AiAssistantLog::OUTCOME_SKIPPED, [
                 'grund' => $conversation->handover_required

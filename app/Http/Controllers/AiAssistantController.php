@@ -29,11 +29,32 @@ class AiAssistantController extends Controller
     {
         $customer = $this->authorizedCustomer($customerId);
         $conversation = AiConversation::forCustomer($customer->id);
-        $conversation->takeOver(auth()->id());
+
+        // Die Uebernahme gilt dem VORGANG, nicht dem Kunden
+        // (Betreiber-Vorgabe 20.08.2026): der juengste offene Vorgang gibt
+        // die KI wieder frei, sobald er abgeschlossen ist; ersatzweise
+        // greift die Ruhefrist. Wer die KI dauerhaft aus haben will,
+        // nutzt "KI deaktivieren".
+        $einstellungen = app(\App\Services\Ai\Assistant\AssistantSettings::class);
+        $vorgang = \App\Models\Ticket::where('customer_id', $customer->id)
+            ->whereNotIn('status', ['resolved', 'closed'])
+            ->latest()->first();
+
+        $conversation->takeOver(auth()->id(), $vorgang?->id, $einstellungen->resumeQuietHours());
 
         $this->log('ai_assistant_take_over', $customer);
 
-        return back()->with('success', 'Sie haben die Unterhaltung übernommen. Der KI-Assistent antwortet nicht mehr automatisch.');
+        $hinweis = 'Sie haben die Unterhaltung übernommen. Der KI-Assistent antwortet nicht mehr automatisch';
+        if ($einstellungen->autoResume()) {
+            $hinweis .= $vorgang
+                ? ' – bis Vorgang #' . $vorgang->ticket_number . ' abgeschlossen ist oder '
+                    . $einstellungen->resumeQuietHours() . ' Stunden ohne Ihre Nachricht vergehen.'
+                : ' – bis ' . $einstellungen->resumeQuietHours() . ' Stunden ohne Ihre Nachricht vergangen sind.';
+        } else {
+            $hinweis .= '.';
+        }
+
+        return back()->with('success', $hinweis);
     }
 
     /** KI fuer diesen Kunden stumm schalten (ohne Uebergabe zu behaupten). */
@@ -44,7 +65,7 @@ class AiAssistantController extends Controller
 
         $this->log('ai_assistant_deactivated', $customer);
 
-        return back()->with('success', 'Der KI-Assistent ist für diesen Kunden deaktiviert.');
+        return back()->with('success', 'Der KI-Assistent ist für diesen Kunden dauerhaft deaktiviert – er kommt erst mit "KI wieder aktivieren" zurück.');
     }
 
     /** KI wieder freigeben - bewusste Mitarbeiter-Aktion. */

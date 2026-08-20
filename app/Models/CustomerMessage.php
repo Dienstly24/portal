@@ -36,6 +36,20 @@ class CustomerMessage extends Model
     protected static function boot() {
         parent::boot();
         static::creating(fn($m) => $m->id = $m->id ?: (string) Str::uuid());
+        // Schreibt ein MENSCH an den Kunden, faengt die Ruhefrist der
+        // Wiederaufnahme neu an (Betreiber-Vorgabe 20.08.2026): solange am
+        // Fall gearbeitet wird, faellt die KI niemandem ins Wort. Hier im
+        // Modell und nicht im Controller, damit es fuer JEDEN Schreibweg
+        // gilt (Kundenchat, Kundenakte, Aufgaben-Automatik).
+        static::created(function ($m) {
+            if (!$m->from_staff || $m->ai_generated) {
+                return;
+            }
+            $steuerstand = AiConversation::where('customer_id', $m->customer_id)->first();
+            $steuerstand?->postponeResume(
+                app(\App\Services\Ai\Assistant\AssistantSettings::class)->resumeQuietHours()
+            );
+        });
     }
 
     public function customer() { return $this->belongsTo(Customer::class); }
