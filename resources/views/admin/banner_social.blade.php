@@ -214,7 +214,14 @@
                     @else
                     {{-- API-Posten nur solange nicht (manuell) veroeffentlicht:
                          sonst waere ein Doppel-Post auf der Plattform moeglich. --}}
-                    @if(!$ch->published_at && ($metaConfigured[$ch->platform] ?? false))
+                    @if($ch->publishInFlight())
+                    {{-- Ein Versuch laeuft im Hintergrund. Der Knopf ist weg,
+                         damit niemand denselben Beitrag zweimal absetzt. --}}
+                    <span class="btn btn-ghost btn-sm" style="opacity:.7;pointer-events:none;">⏳ Wird veröffentlicht …</span>
+                    <div style="font-size:11.5px;color:var(--ink-soft);max-width:240px;">
+                        Läuft im Hintergrund – Sie bekommen eine Benachrichtigung, sobald der Beitrag online ist.
+                    </div>
+                    @elseif(!$ch->published_at && ($metaConfigured[$ch->platform] ?? false))
                     <form method="POST" action="{{ route('admin.banners.social.publish_now', [$banner->id, $ch->platform]) }}" onsubmit="return confirm('Diesen Beitrag jetzt auf {{ $info['label'] }} veröffentlichen?');">
                         @csrf
                         <button type="submit" class="btn btn-primary btn-sm">🚀 {{ $ch->publish_error ? 'Erneut versuchen' : 'Jetzt per API posten' }}</button>

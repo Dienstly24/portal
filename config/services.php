@@ -70,7 +70,16 @@ return [
     'inquiry' => [
         'support_email' => env('INQUIRY_SUPPORT_EMAIL'),'token' => env('INQUIRY_TOKEN')],
 
-    'lexoffice' => ['key' => env('LEXOFFICE_API_KEY')],
+    'lexoffice' => [
+        'key' => env('LEXOFFICE_API_KEY'),
+        // Ohne ausdrueckliches Zeitlimit wartet Laravel 30 s je Versuch -
+        // mit retry(2) also bis zu 90 s, in denen ein Mitarbeiter vor einer
+        // haengenden Seite sitzt und ein PHP-Prozess blockiert ist. Bei einer
+        // Buchhaltungs-API ist ein Ausfall kein Sonderfall, sondern
+        // gelegentlich Alltag.
+        'timeout' => (int) env('LEXOFFICE_TIMEOUT', 10),
+        'connect_timeout' => (int) env('LEXOFFICE_CONNECT_TIMEOUT', 5),
+    ],
 
     /*
     | OAuth-Apps für die Postfach-Anbindung (Phase 2). Die Client-IDs

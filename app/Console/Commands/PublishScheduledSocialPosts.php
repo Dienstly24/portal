@@ -33,10 +33,15 @@ class PublishScheduledSocialPosts extends Command
 
     public function handle(MetaPublisher $publisher): int
     {
+        // Laufende Sofort-Versaende (publish_started_at) sind ausgenommen:
+        // sonst postet der Planer denselben Kanal ein zweites Mal, waehrend
+        // der Job noch arbeitet.
+        $frei = now()->subMinutes(BannerSocialChannel::PUBLISH_STALE_MINUTES);
         $due = BannerSocialChannel::query()
             ->whereNull('external_post_id')
             ->whereNull('published_at')
             ->whereNull('auto_attempted_at')
+            ->where(fn ($q) => $q->whereNull('publish_started_at')->orWhere('publish_started_at', '<', $frei))
             ->whereIn('platform', MetaPublisher::AUTO_PLATFORMS)
             ->whereHas('post', fn ($q) => $q->whereNotNull('scheduled_for')->where('scheduled_for', '<=', now()))
             ->with('post.banner')
@@ -65,7 +70,8 @@ class PublishScheduledSocialPosts extends Command
                 ->whereNull('auto_attempted_at')
                 ->whereNull('published_at')
                 ->whereNull('external_post_id')
-                ->update(['auto_attempted_at' => now()]);
+                ->where(fn ($q) => $q->whereNull('publish_started_at')->orWhere('publish_started_at', '<', $frei))
+                ->update(['auto_attempted_at' => now(), 'publish_started_at' => now()]);
             if ($claimed === 0) {
                 continue;
             }
@@ -85,7 +91,12 @@ class PublishScheduledSocialPosts extends Command
                 }
             } catch (\Throwable $e) {
                 $failed++;
-                $channel->forceFill(['publish_error' => $e->getMessage()])->save();
+                // Marker loesen: der Mitarbeiter soll sofort erneut
+                // versuchen koennen, nicht erst nach der Stale-Frist.
+                $channel->forceFill([
+                    'publish_error' => $e->getMessage(),
+                    'publish_started_at' => null,
+                ])->save();
                 $this->error($label . ': ' . $e->getMessage());
                 if ($empfaenger) {
                     Notify::push($empfaenger, [

@@ -21,11 +21,27 @@ class LexofficeService {
         // RequestException, bevor die Aufrufer $r->successful() pruefen koennen.
         // Folge waere HTTP 500 auf jeder Lexoffice-Seite bei ungueltigem Key
         // oder API-Ausfall statt des vorgesehenen leeren Fallbacks (Audit INT-3).
-        return Http::withHeaders([
-            'Authorization' => 'Bearer ' . $this->apiKey,
+        return $this->baseHttp()->withHeaders([
             'Accept' => 'application/json',
             'Content-Type' => 'application/json',
         ])->retry(2, 500, throw: false);
+    }
+
+    /**
+     * Gemeinsame Grundlage ALLER Lexoffice-Aufrufe: Zugang plus - der
+     * eigentliche Punkt - ein ausdrueckliches Zeitlimit.
+     *
+     * Ohne das wartet Laravel 30 s je Versuch (mit retry(2) bis zu 90 s).
+     * Solange sitzt ein Mitarbeiter vor einer haengenden Seite und ein
+     * PHP-Prozess ist blockiert; bei genug parallelen Aufrufen nimmt ein
+     * Ausfall der Buchhaltungs-API die ganze Beraterwelt mit. Lieber nach
+     * wenigen Sekunden ehrlich aufgeben - die Aufrufer haben bereits einen
+     * Fallback fuer "nicht erreichbar".
+     */
+    private function baseHttp() {
+        return Http::withToken($this->apiKey)
+            ->timeout((int) config('services.lexoffice.timeout', 10))
+            ->connectTimeout((int) config('services.lexoffice.connect_timeout', 5));
     }
 
     /**
@@ -106,13 +122,11 @@ class LexofficeService {
     }
 
     public function renderInvoicePdf(string $id): ?string {
-        $r = $this->attempt(fn() => Http::withHeaders(['Authorization' => 'Bearer ' . $this->apiKey])
-            ->post("$this->baseUrl/invoices/$id/document"));
+        $r = $this->attempt(fn() => $this->baseHttp()->post("$this->baseUrl/invoices/$id/document"));
         if(!$r || !$r->successful()) { if($r) $this->logFailure("renderInvoicePdf.document($id)", $r); return null; }
         $fileId = $r->json()['documentFileId'] ?? null;
         if(!$fileId) return null;
-        $pdf = $this->attempt(fn() => Http::withHeaders(['Authorization' => 'Bearer ' . $this->apiKey])
-            ->get("$this->baseUrl/files/$fileId"));
+        $pdf = $this->attempt(fn() => $this->baseHttp()->get("$this->baseUrl/files/$fileId"));
         if(!$pdf || !$pdf->successful()) { if($pdf) $this->logFailure("renderInvoicePdf.file($fileId)", $pdf); return null; }
         return $pdf->body();
     }
@@ -178,7 +192,7 @@ class LexofficeService {
             Log::warning('Lexoffice uploadVoucher: Datei nicht lesbar', ['path' => $filePath]);
             return null;
         }
-        $r = $this->attempt(fn() => Http::withHeaders(['Authorization' => 'Bearer ' . $this->apiKey])
+        $r = $this->attempt(fn() => $this->baseHttp()
             ->attach('file', file_get_contents($filePath), $fileName)
             ->post("$this->baseUrl/files", ['type' => 'voucher']));
         if($r && $r->successful()) return $r->json()['id'] ?? null;
