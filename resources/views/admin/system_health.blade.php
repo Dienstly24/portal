@@ -54,6 +54,12 @@
                 </div>
             @endforeach
 
+            @if($key === 'errors')
+            <div style="margin-top:12px;">
+                <a href="{{ route('admin.errors') }}" class="sh-btn">Fehler einzeln ansehen →</a>
+            </div>
+            @endif
+
             @if($key === 'schedule')
                 @if($section['last_any_run'])
                     <div class="sh-zeile">
@@ -125,6 +131,7 @@
         <li><code>php artisan ocr:check</code> — OCR-Programme und Sprachdateien</li>
         <li><code>php artisan ki:pruefen --live</code> — KI-Assistent inkl. echtem Testaufruf</li>
         <li><code>php artisan schedule:list</code> — geplante Aufgaben mit naechster Faelligkeit</li>
+        <li><code>tail -n 200 storage/logs/laravel.log</code> — vollstaendiger Stacktrace zu einem Fehler</li>
         <li><code>timedatectl status</code> — Server-Uhr (2FA erlaubt nur ±30 Sekunden Abweichung)</li>
     </ul>
     <div class="sh-summary" style="margin-top:10px;">

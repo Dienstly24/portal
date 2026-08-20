@@ -185,6 +185,39 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   nur Titel/Zustand/Kurzfassung, keine Einzelwerte.
 - Tests: `SystemHealthTest`.
 
+## Sichtbare Fehler (20.08.2026) - Ergaenzung zur Systemzustand-Seite
+
+- **Warum**: ein 500er trifft einen ECHTEN Nutzer und landet in
+  `storage/logs/laravel.log` - einer Datei, die im Alltag niemand oeffnet.
+  Der Betreiber erfuhr davon nur, wenn sich jemand beschwert hat.
+- `ErrorRecorder::record()` haengt in `bootstrap/app.php` an
+  `$exceptions->report()`; die normale Behandlung (Logdatei, Fehlerseite)
+  laeuft danach UNVERAENDERT weiter. Die Logdatei bleibt die ausfuehrliche
+  Quelle (Stacktrace), die Tabelle ist nur das SIGNAL "etwas ist kaputt".
+- **Eine Zeile je FINGERABDRUCK** (`sha1(Klasse|Datei|Zeile)`), nicht je
+  Auftreten: ein Fehler, der 5000-mal auftritt, ist EIN Problem - und die
+  Tabelle bleibt klein.
+- **NUR DEFEKTE.** 404, 403, Validierung, abgelaufenes CSRF-Token,
+  ModelNotFound und Throttle sind normales Nutzerverhalten (Liste
+  `ErrorRecorder::IGNORED`, dazu jede HTTP-Ausnahme < 500). Wuerden sie
+  mitgezaehlt, ginge der eine echte Defekt zwischen tausend
+  Rauscheintraegen unter - die Anzeige waere wertlos.
+- **KEINE personenbezogenen Inhalte**: Klasse, gekuerzte Meldung (500
+  Zeichen), Datei/Zeile, Routenname bzw. Pfad OHNE Query-String, Methode,
+  Status, zuletzt betroffener Nutzer. NIE Formularfelder, Query-Parameter,
+  Header, Cookies oder IP (Test sichert das ab).
+- **Das Aufzeichnen darf nie selbst fehlschlagen** - jeder Fehler darin
+  wird geschluckt, sonst wuerde aus einem Fehler ein zweiter und die
+  Fehlerseite erreichte den Nutzer nie.
+- Anzeige: Abschnitt "Fehler" auf `/admin/systemzustand` + Liste
+  `/admin/fehler` (nur admin/manager) mit "Erledigt"/"Wieder oeffnen".
+  Ein erneutes Auftreten OEFFNET einen erledigten Fehler wieder - behoben
+  ist er erst, wenn er ausbleibt.
+- `errors:prune` (taeglich 03:55) loescht nur ERLEDIGTE Eintraege aelter
+  als 30 Tage. Ein offener Fehler bleibt stehen, egal wie alt: ein Problem
+  verschwindet nicht durch Ignorieren.
+- Tests: `ErrorVisibilityTest`.
+
 ## Batch-Laeufe: ein kaputter Datensatz stoppt nie den ganzen Lauf (19.08.2026)
 
 - **Lehre**: die geplanten Aufgaben arbeiten Listen ab. Ohne Absicherung

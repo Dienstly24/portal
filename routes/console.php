@@ -52,6 +52,10 @@ Schedule::command('documents:analyze-pending')->everyTenMinutes()->withoutOverla
 // Doppelte Antworten sind ausgeschlossen (Protokoll-Sperre im Dienst).
 Schedule::command('ai:answer-pending')->everyTenMinutes()->withoutOverlapping();
 
+// 03:55 — Erledigte Fehlereintraege aufraeumen. Offene bleiben stehen,
+// egal wie alt: ein Problem verschwindet nicht durch Ignorieren.
+Schedule::command('errors:prune')->dailyAt('03:55');
+
 // 03:50 — DSGVO: nie zugeordnete Eingangs-Dokumente nach Aufbewahrungsfrist loeschen
 Schedule::command('documents:prune-unassigned')->dailyAt('03:50');
 

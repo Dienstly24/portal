@@ -677,6 +677,13 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
 
     // Systemzustand: laeuft im Hintergrund noch alles? (nur lesend)
     Route::middleware('role:admin,manager')->group(function () {
+        // Fehlerliste: was geht im Betrieb wirklich kaputt.
+        Route::get('/fehler', [\App\Http\Controllers\ErrorEventController::class, 'index'])
+            ->name('errors');
+        Route::post('/fehler/{id}/erledigt', [\App\Http\Controllers\ErrorEventController::class, 'resolve'])
+            ->name('errors.resolve');
+        Route::post('/fehler/{id}/wieder-oeffnen', [\App\Http\Controllers\ErrorEventController::class, 'reopen'])
+            ->name('errors.reopen');
         Route::get('/systemzustand', [\App\Http\Controllers\SystemHealthController::class, 'index'])
             ->name('system_health');
         Route::get('/systemzustand.json', [\App\Http\Controllers\SystemHealthController::class, 'json'])

@@ -69,4 +69,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
+        // Jeden unerwarteten Fehler zusaetzlich in error_events festhalten,
+        // damit er auf /admin/systemzustand sichtbar wird. Die Logdatei
+        // bleibt die ausfuehrliche Quelle (Stacktrace) - sie oeffnet im
+        // Alltag nur niemand, und genau deshalb blieb bisher jeder 500er
+        // unbemerkt, bis sich ein Kunde beschwert hat.
+        // Der Recorder schluckt eigene Fehler; die normale Behandlung
+        // (Logdatei, Fehlerseite) laeuft danach unveraendert weiter.
+        $exceptions->report(function (\Throwable $e): void {
+            \App\Support\ErrorRecorder::record($e);
+        });
     })->create();
