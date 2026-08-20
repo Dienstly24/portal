@@ -141,14 +141,19 @@ class MetaSocialPublishingTest extends TestCase
         Http::fake(['graph.facebook.com/*' => Http::response(['error' => ['message' => '(#200) Permissions error']], 400)]);
         $banner = $this->makePostedBanner();
 
+        // Der Versand laeuft seit dem Umbau im Hintergrund: ein Fehler, der
+        // erst beim API-Aufruf entsteht, kann die Seite gar nicht mehr
+        // erreichen. Entscheidend bleibt, dass er FESTGEHALTEN wird und
+        // nichts veroeffentlicht wurde.
         $this->actingAs($this->admin)
-            ->post(route('admin.banners.social.publish_now', [$banner->id, 'facebook']))
-            ->assertSessionHasErrors('publish');
+            ->post(route('admin.banners.social.publish_now', [$banner->id, 'facebook']));
 
         $ch = BannerSocialChannel::where('platform', 'facebook')->first();
         $this->assertNull($ch->external_post_id);
         $this->assertNull($ch->published_at);
         $this->assertStringContainsString('(#200) Permissions error', $ch->publish_error);
+        // Marker geloest -> ein bewusster zweiter Versuch ist moeglich.
+        $this->assertNull($ch->publish_started_at);
     }
 
     public function test_ohne_konfiguration_kein_api_aufruf(): void
@@ -238,12 +243,14 @@ class MetaSocialPublishingTest extends TestCase
         });
         $banner = $this->makePostedBanner(['platforms' => ['instagram']]);
 
+        // Auch dieser Fehler entsteht erst beim API-Aufruf, also im
+        // Hintergrund-Job - er steht am Kanal, nicht in der Session.
         $this->actingAs($this->admin)
-            ->post(route('admin.banners.social.publish_now', [$banner->id, 'instagram']))
-            ->assertSessionHasErrors('publish');
+            ->post(route('admin.banners.social.publish_now', [$banner->id, 'instagram']));
 
         $this->assertStringContainsString('verarbeiten', BannerSocialChannel::first()->publish_error);
         $this->assertNull(BannerSocialChannel::first()->external_post_id);
+        $this->assertNull(BannerSocialChannel::first()->publish_started_at);
     }
 
     // ---------------- Geplanter Auto-Versand ----------------

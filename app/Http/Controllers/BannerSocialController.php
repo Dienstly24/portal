@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Models\Banner;
 use App\Models\BannerSocialChannel;
 use App\Models\BannerSocialPost;
+use App\Jobs\PublishSocialChannelJob;
 use App\Services\Social\MetaPublisher;
 use App\Services\Social\SocialFormatGenerator;
 use Illuminate\Http\Request;
@@ -172,17 +173,43 @@ class BannerSocialController extends Controller
                 ->withErrors(['publish' => 'Bereits als veröffentlicht markiert - erst zurücksetzen, dann per API posten.']);
         }
 
-        try {
-            app(MetaPublisher::class)->publish($channel, auth()->id());
-        } catch (\Throwable $e) {
-            $channel->forceFill(['publish_error' => $e->getMessage()])->save();
+        // Was OHNE API-Aufruf feststeht, wird SOFORT gemeldet - nicht erst
+        // per Glocke. Wer "Jetzt posten" drueckt und der Text ist zu lang,
+        // soll das auf der Seite lesen und nicht auf etwas warten, das nie
+        // passieren wird.
+        if ($fehler = app(MetaPublisher::class)->preflight($channel)) {
+            $channel->forceFill(['publish_error' => $fehler])->save();
 
             return redirect()->route('admin.banners.social', $banner->id)
-                ->withErrors(['publish' => $e->getMessage()]);
+                ->withErrors(['publish' => $fehler]);
         }
 
+        // Versuch ATOMAR beanspruchen - erst danach darf gepostet werden.
+        // Die Pruefungen oben lesen nur; zwischen Lesen und Posten passt ein
+        // zweiter Klick oder der geplante Lauf. Ein UPDATE mit Bedingung
+        // laesst genau einen Beanspruchenden durch (Audit CONC-3).
+        $frei = now()->subMinutes(\App\Models\BannerSocialChannel::PUBLISH_STALE_MINUTES);
+        $beansprucht = \App\Models\BannerSocialChannel::whereKey($channel->id)
+            ->whereNull('external_post_id')
+            ->whereNull('published_at')
+            ->where(fn ($q) => $q->whereNull('publish_started_at')->orWhere('publish_started_at', '<', $frei))
+            ->update(['publish_started_at' => now(), 'publish_error' => null]);
+
+        if ($beansprucht === 0) {
+            return redirect()->route('admin.banners.social', $banner->id)
+                ->withErrors(['publish' => 'Für diesen Kanal läuft bereits eine Veröffentlichung. Bitte kurz warten und die Seite neu laden.']);
+        }
+
+        // Der Versand laeuft im HINTERGRUND. Der Instagram-Weg (Container,
+        // Verarbeitung abwarten, veroeffentlichen, Permalink) dauert im
+        // schlechtesten Fall rund drei Minuten - laenger als jede uebliche
+        // PHP-Laufzeitgrenze. Riss der Request dabei ab, stand der Beitrag
+        // womoeglich schon auf Instagram, ohne dass die App es wusste.
+        PublishSocialChannelJob::dispatch($channel->id, auth()->id());
+
         return redirect()->route('admin.banners.social', $banner->id)
-            ->with('success', $channel->platformInfo()['label'] . ': Beitrag wurde über die Meta-API veröffentlicht.');
+            ->with('success', $channel->platformInfo()['label']
+                . ': Veröffentlichung gestartet. Sie bekommen eine Benachrichtigung, sobald der Beitrag online ist.');
     }
 
     /** Kennzahlen (Likes/Kommentare/Reichweite) sofort von Meta holen. */

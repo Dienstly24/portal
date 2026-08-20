@@ -249,6 +249,39 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   (doppelte Kodierung) - laeuft jetzt ueber `ActivityLog::record()`.
 - Tests: `BatchResilienceTest`.
 
+## Kein Web-Request wartet minutenlang auf einen fremden Dienst (20.08.2026)
+
+- **Lexoffice** rief ohne ausdrueckliches Zeitlimit auf: Laravel wartet dann
+  30 s je Versuch, mit `retry(2)` also bis zu 90 s. Drei Aufrufe (PDF
+  rendern, Datei holen, Beleg hochladen) liefen ausserdem an `http()` vorbei
+  und hatten gar keine Wiederholung. Jetzt eine gemeinsame Grundlage
+  `baseHttp()` mit `timeout` (10 s) und `connectTimeout` (5 s),
+  konfigurierbar ueber `LEXOFFICE_TIMEOUT`/`LEXOFFICE_CONNECT_TIMEOUT`. Die
+  Aufrufer hatten bereits einen Fallback fuer "nicht erreichbar" - es fehlte
+  nur die Bereitschaft, rechtzeitig aufzugeben.
+- **Social-Sofortpost laeuft jetzt als Job** (`PublishSocialChannelJob`).
+  Der Instagram-Weg (Container anlegen, bis zu 4x auf die Verarbeitung
+  warten, veroeffentlichen, Permalink holen) dauert im schlechtesten Fall
+  rund DREI MINUTEN - laenger als jede uebliche PHP-Laufzeitgrenze. Riss der
+  Request dabei ab, stand der Beitrag womoeglich schon auf Instagram,
+  waehrend die App nichts davon wusste: der naechste Klick postete ihn ein
+  zweites Mal.
+- **Neuer Marker `banner_social_channels.publish_started_at`** = "ein
+  Versuch ist unterwegs". Der Controller beansprucht ihn ATOMAR
+  (`UPDATE ... WHERE publish_started_at IS NULL ...`) - die bisherige
+  Lesen-dann-Pruefen-Folge liess zwischen Klick und Post einen zweiten
+  Klick durch. Der geplante Lauf respektiert den Marker ebenfalls.
+- **Selbstheilend**: `PUBLISH_STALE_MINUTES` (15) gibt einen Kanal wieder
+  frei, wenn der Worker mitten im Versand stirbt - lieber ein spaeterer
+  zweiter Versuch als ein Beitrag, den niemand mehr anstossen kann. Dazu
+  raeumt `failed()` den Marker ab.
+- `tries = 1` wie beim geplanten Versand: ein Retry koennte einen bereits
+  abgesetzten Beitrag doppelt veroeffentlichen. Ein erneuter Versuch bleibt
+  eine bewusste Mitarbeiter-Aktion. Weil der Versand nicht mehr im Request
+  passiert, meldet eine GLOCKE Erfolg oder Fehler; die Oberflaeche zeigt
+  solange "Wird veröffentlicht …" statt des Knopfes.
+- Tests: `ExternalServiceTimeoutTest`.
+
 ## Grosse Listen: nichts mehr unbegrenzt laden (20.08.2026)
 
 - **Lehre**: `/admin/contracts` lud ALLE Vertraege und filterte sie per
