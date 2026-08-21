@@ -10,12 +10,6 @@ use App\Services\Ai\Contracts\AiProviderInterface;
 use App\Services\Ai\Contracts\DocumentAiProviderInterface;
 use App\Services\Ocr\TesseractTextExtractor;
 use App\Services\Ocr\TextExtractorInterface;
-use App\Services\Workflow\Handlers\ApplyChangeStepHandler;
-use App\Services\Workflow\Handlers\DraftReplyStepHandler;
-use App\Services\Workflow\Handlers\ExtractDataStepHandler;
-use App\Services\Workflow\Handlers\RequestDocumentStepHandler;
-use App\Services\Workflow\Handlers\ReviewStepHandler;
-use App\Services\Workflow\StepHandlerRegistry;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Console\Events\ScheduledTaskFailed;
@@ -142,9 +136,9 @@ class AppServiceProvider extends ServiceProvider
             };
         });
 
-        // Provider-unabhaengige LLM-Schicht der Workflow-Engine (Saeule 8):
-        // ein weiterer Anbieter (OpenAI, Gemini, Azure) braucht nur eine
-        // neue Implementierung + einen Zweig hier, keine Engine-Aenderung.
+        // Provider-unabhaengige LLM-Schicht fuer Freitext (heute:
+        // EmailDraftService). Ein weiterer Anbieter (OpenAI, Gemini, Azure)
+        // braucht nur eine neue Implementierung + einen Zweig hier.
         $this->app->bind(AiProviderInterface::class, function ($app) {
             return match (config('services.ai_text_provider', 'claude')) {
                 default => $app->make(ClaudeTextProvider::class),
@@ -235,17 +229,6 @@ class AppServiceProvider extends ServiceProvider
             \App\Services\Ai\Assistant\Sales\Offers\ManualOfferSource::class
         );
 
-        // Registry der Workflow-Step-Handler (Blueprint Saeule 1): Typ ->
-        // Handler. Neue Schritt-Typen werden hier additiv registriert, der
-        // Engine-Kern bleibt unveraendert.
-        $this->app->singleton(StepHandlerRegistry::class, function ($app) {
-            return (new StepHandlerRegistry())
-                ->register($app->make(ReviewStepHandler::class))
-                ->register($app->make(RequestDocumentStepHandler::class))
-                ->register($app->make(ExtractDataStepHandler::class))
-                ->register($app->make(ApplyChangeStepHandler::class))
-                ->register($app->make(DraftReplyStepHandler::class));
-        });
     }
 
     /**

@@ -264,4 +264,61 @@ class SystemHealthTest extends TestCase
             $this->assertSame(['title', 'status', 'summary'], array_keys($abschnitt));
         }
     }
+
+    // ------------------------------------------------- Datenhaltung / Redis
+
+    public function test_der_zustand_nennt_die_treiber_fuer_sitzungen_cache_und_queue(): void
+    {
+        config(['session.driver' => 'database', 'cache.default' => 'database', 'queue.default' => 'database']);
+
+        $eintrag = collect(app(SystemHealthService::class)->integrations()['items'])
+            ->firstWhere('label', 'Sitzungen / Cache / Warteschlange');
+
+        $this->assertNotNull($eintrag);
+        $this->assertStringContainsString('Sitzungen: database', $eintrag['value']);
+        // Datenbank ist ein tragfaehiger Standard - kein Alarm.
+        $this->assertSame(SystemHealthService::INFO, $eintrag['status']);
+    }
+
+    public function test_eingestelltes_aber_unerreichbares_redis_wird_rot(): void
+    {
+        // Redis eingestellt, aber es laeuft keines: genau der Fall, der bei
+        // einer Umstellung still schiefgehen wuerde.
+        config([
+            'session.driver' => 'redis',
+            'database.redis.default.host' => '127.0.0.1',
+            'database.redis.default.port' => 65535,
+        ]);
+
+        $eintrag = collect(app(SystemHealthService::class)->integrations()['items'])
+            ->firstWhere('label', 'Sitzungen / Cache / Warteschlange');
+
+        $this->assertSame(SystemHealthService::FAIL, $eintrag['status']);
+        $this->assertStringContainsString('NICHT erreichbar', $eintrag['value']);
+    }
+
+    // --------------------------------------- Toter Workflow-Bestand ist weg
+
+    public function test_die_tote_workflow_engine_existiert_nicht_mehr(): void
+    {
+        foreach ([
+            \App\Models\WorkflowRun::class,
+            \App\Models\WorkflowDefinition::class,
+            \App\Models\AiActionLog::class,
+        ] as $klasse) {
+            $this->assertFalse(class_exists($klasse), $klasse . ' sollte entfernt sein.');
+        }
+
+        foreach (['workflow_definitions', 'workflow_runs', 'workflow_step_runs', 'ai_action_logs'] as $tabelle) {
+            $this->assertFalse(Schema::hasTable($tabelle), $tabelle . ' sollte entfernt sein.');
+        }
+    }
+
+    public function test_die_gleichnamigen_aber_lebenden_dienste_bleiben(): void
+    {
+        // Nur aehnlich benannt - beide sind in Betrieb und duerfen nicht
+        // dem Aufraeumen zum Opfer fallen.
+        $this->assertTrue(class_exists(\App\Services\Workflow\EmailWorkflowService::class));
+        $this->assertTrue(class_exists(\App\Services\Workflow\SystemUserResolver::class));
+    }
 }
