@@ -76,6 +76,20 @@ class DisplayTimezoneTest extends TestCase
         $this->assertSame('UTC', $gespeichert->timezone->getName());
     }
 
+    public function test_localtime_laesst_den_uebergebenen_wert_unberuehrt(): void
+    {
+        // Dieselbe Zusicherung wie oben, aber direkt am Helfer - unabhaengig
+        // davon, wie Carbon das Makro an die Instanz bindet. Genau diese
+        // Bindung war zweimal die Fehlerquelle.
+        $gespeichert = Carbon::parse('2026-08-21 14:30:00', 'UTC');
+
+        $angezeigt = LocalTime::for($gespeichert);
+
+        $this->assertSame('16:30', $angezeigt->format('H:i'));
+        $this->assertSame('14:30', $gespeichert->format('H:i'));
+        $this->assertSame('UTC', $gespeichert->timezone->getName());
+    }
+
     public function test_mehrfaches_lokal_verschiebt_nicht_weiter(): void
     {
         // Zwei Ausgaben desselben Werts auf einer Seite sind der Normalfall.

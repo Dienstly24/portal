@@ -48,7 +48,16 @@ class LocalTime
         }
 
         try {
-            return Carbon::parse($value)->setTimezone(self::zone());
+            // IMMER eine neue Instanz aufbauen - der uebergebene Wert darf
+            // nicht veraendert werden. Sonst wuerde eine einzige Anzeige den
+            // Zeitpunkt am Model-Attribut verschieben und alles, was im
+            // selben Request noch damit rechnet (Fristen, Vergleiche, weitere
+            // Ausgaben), laege zwei Stunden daneben - ohne Fehlermeldung.
+            $moment = $value instanceof \DateTimeInterface
+                ? Carbon::instance($value)
+                : Carbon::parse($value);
+
+            return $moment->setTimezone(self::zone());
         } catch (\Throwable $e) {
             return null;
         }
