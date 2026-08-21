@@ -176,11 +176,151 @@ class KontaktdatenBlockParserTest extends TestCase
         $this->assertSame('DE97673525650001589928', $r['data']['bank']['iban']);
     }
 
-    public function test_requires_email_iban_and_plz(): void
+    /**
+     * Der gemeldete Fall (21.08.2026), mit erfundenen Werten im GLEICHEN
+     * Aufbau (echte Kundendaten gehoeren nicht ins Repository): derselbe
+     * Kontaktzettel als Screenshot,
+     * einmal mit gruenem Hintergrund und farbigen Links, einmal schwarz auf
+     * weiss. Fuer die OCR sind das zwei verschiedene Bilder - der Parser muss
+     * beide Fassungen lesen, auch wenn die Erkennung Zeichen verwechselt.
+     */
+    public function test_reads_reported_contact_note(): void
     {
-        // Ohne IBAN kein Kontaktblock (zu schwaches Signal).
-        $noIban = "Max Mustermann 01.01.1990\nTeststr. 1\n12345 Berlin\nmax@example.com";
-        $this->assertNull((new KontaktdatenBlockParser())->parse($noIban));
+        $text = implode("\n", [
+            'Nabil Karimi 30.07.85 & 07.08.24',
+            'Hohe Wiesen 3',
+            '88284 Wolpertswende',
+            '01791234567',
+            'nabil.karimi@example.com',
+            'DE89 3704 0044 0532 0130 00',
+        ]);
+
+        $r = (new KontaktdatenBlockParser())->parse($text);
+        $this->assertNotNull($r);
+        $p = $r['data']['person'];
+
+        $this->assertSame('Nabil', $p['first_name']);
+        $this->assertSame('Karimi', $p['last_name']);
+        $this->assertSame('1985-07-30', $p['birth_date']);
+        $this->assertStringContainsString('07.08.2024', $r['summary']);
+        $this->assertSame('Hohe Wiesen', $p['street']);
+        $this->assertSame('3', $p['house_number']);
+        $this->assertSame('88284', $p['zip']);
+        $this->assertSame('Wolpertswende', $p['city']);
+        $this->assertSame('01791234567', $p['phone']);
+        $this->assertSame('nabil.karimi@example.com', $p['email']);
+        $this->assertSame('DE89370400440532013000', $r['data']['bank']['iban']);
+    }
+
+    public function test_repairs_typical_ocr_damage_in_iban_and_email(): void
+    {
+        // Genau die Verwechslungen, an denen die Erkennung eines hellen
+        // Screenshots scheitert: O statt 0 in der IBAN, fehlender Punkt vor
+        // der Endung in der E-Mail.
+        $text = implode("\n", [
+            'Nabil Karimi 30.07.85 & 07.08.24',
+            'Hohe Wiesen 3',
+            '88284 Wolpertswende',
+            '01791234567',
+            'nabil.karimi@example com',
+            'DE89 37O4 OO44 O532 O13O OO',
+        ]);
+
+        $r = (new KontaktdatenBlockParser())->parse($text);
+        $this->assertNotNull($r);
+        $this->assertSame('nabil.karimi@example.com', $r['data']['person']['email']);
+        // IBAN wird nur uebernommen, weil die Pruefziffer nach der Reparatur stimmt.
+        $this->assertSame('DE89370400440532013000', $r['data']['bank']['iban']);
+    }
+
+    public function test_repairs_ocr_damage_measured_on_a_real_screenshot(): void
+    {
+        // Genau die Ausgabe, die Tesseract aus einem nachgestellten
+        // Chat-Screenshot (340 px breit, JPEG-komprimiert) geliefert hat:
+        // "DE89" wird zu "DEB9", das "@" zu "@®". Beides liess den Block
+        // frueher komplett durchfallen.
+        $text = implode("\n", [
+            'Nabil Karimi 30.07.85 & 07.08.24',
+            'Hohe Wiesen 3',
+            '88284 Wolpertswende',
+            '01791234567',
+            'nabil.karimi@®example.com',
+            'DEB9 3704 0044 0532 0130 00',
+        ]);
+
+        $r = (new KontaktdatenBlockParser())->parse($text);
+        $this->assertNotNull($r);
+        $this->assertSame('nabil.karimi@example.com', $r['data']['person']['email']);
+        $this->assertSame('DE89370400440532013000', $r['data']['bank']['iban']);
+        $this->assertSame(70, $r['confidence']);
+    }
+
+    public function test_never_takes_an_iban_with_broken_checksum(): void
+    {
+        // Eine IBAN, die sich nicht reparieren laesst (falsche Pruefziffer),
+        // wird NIE uebernommen - der Block wird aber trotzdem gelesen.
+        $text = implode("\n", [
+            'Nabil Karimi 30.07.85',
+            'Hohe Wiesen 3',
+            '88284 Wolpertswende',
+            '01791234567',
+            'nabil.karimi@example.com',
+            'DE89 3704 0044 0532 0130 01',
+        ]);
+
+        $r = (new KontaktdatenBlockParser())->parse($text);
+        $this->assertNotNull($r);
+        $this->assertSame([], $r['data']['bank']);
+        $this->assertStringContainsString('Keine gueltige IBAN', $r['summary']);
+        $this->assertLessThan(70, $r['confidence']);
+    }
+
+    public function test_reads_grouped_phone_number(): void
+    {
+        $text = implode("\n", [
+            'Nabil Karimi 30.07.85',
+            'Hohe Wiesen 3',
+            '88284 Wolpertswende',
+            '0179 123 4567',
+            'nabil.karimi@example.com',
+        ]);
+
+        $p = (new KontaktdatenBlockParser())->parse($text)['data']['person'];
+        $this->assertSame('01791234567', $p['phone']);
+    }
+
+    public function test_letterhead_without_personal_signal_is_not_a_contact_block(): void
+    {
+        // Nur Anschrift + Telefon (Briefkopf) reicht NICHT - ohne E-Mail oder
+        // IBAN ist das kein Kontaktzettel des Kunden.
+        $text = "Muster Handel\nHauptstr. 5\n12345 Berlin\n030123456789";
+        $this->assertNull((new KontaktdatenBlockParser())->parse($text));
+    }
+
+    public function test_short_document_is_not_a_contact_block(): void
+    {
+        // Kurz genug fuer den Block, aber es ist ersichtlich ein Dokument.
+        $text = implode("\n", [
+            'Rechnung Nr. 4711',
+            'Max Mustermann',
+            'Hauptstr. 5',
+            '12345 Berlin',
+            'max@example.com',
+            'DE89 3704 0044 0532 0130 00',
+        ]);
+        $this->assertNull((new KontaktdatenBlockParser())->parse($text));
+    }
+
+    public function test_requires_two_signals_with_one_personal(): void
+    {
+        // E-Mail + PLZ/Ort genuegen jetzt (frueher war die IBAN Pflicht - EIN
+        // von der OCR verlesenes Zeichen liess den ganzen Block durchfallen).
+        $ohneIban = "Max Mustermann 01.01.1990\nTeststr. 1\n12345 Berlin\nmax@example.com";
+        $this->assertNotNull((new KontaktdatenBlockParser())->parse($ohneIban));
+
+        // Nur ein persoenliches Signal ohne zweites Signal reicht nicht.
+        $nurEmail = "Max Mustermann\nmax@example.com";
+        $this->assertNull((new KontaktdatenBlockParser())->parse($nurEmail));
 
         $this->assertNull((new KontaktdatenBlockParser())->parse('Nur irgendein kurzer Text'));
     }

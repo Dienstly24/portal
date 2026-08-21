@@ -1087,6 +1087,40 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   hochgeladenes FOTO (z.B. Meldebestaetigung) fuer immer das alte
   Fehl-Ergebnis von vor der Parser-Verbesserung. Tests:
   `DuplicateDetectionTest`.
+- **Der Kontakt-Screenshot darf nicht an seiner Darstellung scheitern**
+  (Lehre 21.08.2026, gemeldet): Derselbe Kontaktzettel (Name + zwei Daten,
+  Anschrift, Handynummer, E-Mail, IBAN) wurde als Screenshot einmal erkannt
+  und einmal nicht - der einzige Unterschied war die DARSTELLUNG (heller
+  gruener Hintergrund mit farbigen Links gegenueber schwarz auf weiss).
+  MIT CHROMIUM + TESSERACT NACHGESTELLT (340 px breiter, JPEG-komprimierter
+  Chat-Screenshot beider Fassungen): die OCR liest den Text fast perfekt,
+  verliest aber je Fassung EIN ANDERES Zeichen - weiss "DE89" -> "DEB9",
+  gruen "@" -> "@®". Fuer den alten `KontaktdatenBlockParser`, der E-Mail UND
+  IBAN UND PLZ+Ort verlangte, war damit BEIDE Male gar nichts da: das
+  Dokument landete als "Sonstiges Dokument / Kein Kunde gefunden" im Eingang.
+  Nicht die Farbe war das Problem, sondern die Alles-oder-nichts-Regel.
+  **Bewusst NICHT geaendert wurde die Bildvorstufe.** Der Versuch, kleine
+  Aufnahmen staerker (3x/4x statt 2x) oder in Graustufen mit angehobenem
+  Kontrast zu lesen, wurde gemessen und VERWORFEN: er repariert die IBAN und
+  zerlegt dafuer die Postleitzahl ("88284" -> "85284") und das "@". Mehr
+  Vorverarbeitung verschiebt die Fehler nur - die Robustheit gehoert in den
+  Parser.
+  **Geaendert wurde der Parser** (`KontaktdatenBlockParser` + neuer
+  gemeinsamer Baustein `App\Services\Ai\Concerns\RepairsOcrText`): es
+  genuegen ZWEI von {E-Mail, IBAN, PLZ+Ort, Telefonnummer}, davon mindestens
+  eines PERSOENLICH (E-Mail oder IBAN) - ein blosser Briefkopf (nur Anschrift
+  + Telefon) loest also weiterhin nicht aus, ebenso wenig ein kurzer Text mit
+  Dokumentwoertern (Rechnung, Police, Antrag ...). Typische
+  OCR-Verwechslungen in der IBAN (B/8, O/0, I/1, S/5 ...) werden
+  zurueckgesetzt, uebernommen wird der Wert aber NUR mit gueltiger
+  PRUEFZIFFER (Mod 97) - eine geratene Bankverbindung kann so nicht
+  entstehen; ohne gueltige IBAN bleibt `bank` leer und die Zusammenfassung
+  sagt es ausdruecklich. Bei der E-Mail werden nur eindeutige
+  Erkennungsfehler repariert ("©"/"®" statt "@", verdoppeltes "@", "(at)",
+  fehlender Punkt vor der Endung). Die Zusammenfassung nennt nur noch die
+  Felder, die WIRKLICH gelesen wurden, und die Konfidenz sinkt (58 statt 70),
+  wenn ein Signal fehlt - der Mitarbeiter sieht im Review, dass er
+  hinschauen soll. Tests: `KontaktdatenBlockParserTest`.
 - **eAT-Rueckseite + Arbeitsvertrag im Dokumenten-Eingang** (Betreiber-
   Vorgabe 29.07.2026): Der `AufenthaltstitelParser` liest jetzt auch die
   RUECKSEITE der Aufenthaltstitel-Karte - sie traegt keine Vorderseiten-
