@@ -307,12 +307,17 @@ class AppServiceProvider extends ServiceProvider
         // View und keine Umrechnung im Model-Cast: ein Cast wuerde auch
         // Werte umstellen, die in WHERE-Bedingungen gehen - aus einem
         // sichtbaren Anzeigefehler wuerde ein stiller Abfragefehler.
+        // clone statt copy(): copy() hat den Aufrufer in dieser Carbon-Fassung
+        // NICHT verschont - ->lokal() verschob den Zeitpunkt am Original und
+        // damit fuer alles, was im selben Request noch damit rechnet. Ein
+        // eigener Test hat das gefangen; `clone` kann es bauartbedingt nicht.
         Carbon::macro('lokal', function () {
             /** @var Carbon $this */
-            return $this->copy()->setTimezone(\App\Support\LocalTime::zone());
+            return (clone $this)->setTimezone(\App\Support\LocalTime::zone());
         });
         CarbonImmutable::macro('lokal', function () {
             /** @var CarbonImmutable $this */
+            // Unveraenderlich: setTimezone liefert ohnehin eine neue Instanz.
             return $this->setTimezone(\App\Support\LocalTime::zone());
         });
 

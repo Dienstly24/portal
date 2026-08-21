@@ -57,14 +57,33 @@ class DisplayTimezoneTest extends TestCase
         $this->assertSame('15:30', Carbon::parse('2026-01-21 14:30:00', 'UTC')->lokal()->format('H:i'));
     }
 
+    /**
+     * Der wichtigste Test dieser Datei - er hat im ersten Anlauf einen echten
+     * Fehler gefangen: die erste Fassung des Makros benutzte copy(), was den
+     * Aufrufer NICHT verschont hat. Eine einzige Anzeige haette den Zeitpunkt
+     * am Model-Attribut verschoben, und alles, was im selben Request noch
+     * damit rechnet (Fristen, Vergleiche, weitere Ausgaben), waere zwei
+     * Stunden daneben gewesen - ohne dass irgendwo ein Fehler auftaucht.
+     */
     public function test_lokal_veraendert_das_original_nicht(): void
     {
         $gespeichert = Carbon::parse('2026-08-21 14:30:00', 'UTC');
-        $gespeichert->lokal();
 
-        // Sonst wuerde ein einmaliges Anzeigen den Wert fuer alle folgenden
-        // Berechnungen im selben Request verschieben.
+        $angezeigt = $gespeichert->lokal();
+
+        $this->assertSame('16:30', $angezeigt->format('H:i'));
         $this->assertSame('14:30', $gespeichert->format('H:i'));
+        $this->assertSame('UTC', $gespeichert->timezone->getName());
+    }
+
+    public function test_mehrfaches_lokal_verschiebt_nicht_weiter(): void
+    {
+        // Zwei Ausgaben desselben Werts auf einer Seite sind der Normalfall.
+        $gespeichert = Carbon::parse('2026-08-21 14:30:00', 'UTC');
+
+        $this->assertSame('16:30', $gespeichert->lokal()->format('H:i'));
+        $this->assertSame('16:30', $gespeichert->lokal()->format('H:i'));
+        $this->assertSame('16:30', $gespeichert->lokal()->lokal()->format('H:i'));
     }
 
     public function test_kurz_vor_mitternacht_verschiebt_sich_der_TAG(): void
