@@ -1,6 +1,7 @@
 <?php
 namespace App\Services\Ai\TemplateParsers;
 
+use App\Services\Ai\Concerns\RepairsOcrText;
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
 use App\Services\Ai\Contracts\DocumentTemplateParser;
 
@@ -15,8 +16,10 @@ use App\Services\Ai\Contracts\DocumentTemplateParser;
  *   DE44 1001 0010 0461 1063 8
  *
  * Anders als bei laufendem Freitext ist das ein klar strukturierter, kurzer
- * Block. Der Parser greift nur, wenn mehrere starke Signale zusammenkommen
- * (E-Mail UND IBAN UND eine PLZ+Ort in einem KURZEN Text). Weil solche Bloecke
+ * Block. Der Parser greift nur, wenn mehrere starke Signale zusammenkommen:
+ * ZWEI von {E-Mail, IBAN, PLZ+Ort, Telefonnummer} in einem KURZEN Text, davon
+ * mindestens eines persoenlich (E-Mail oder IBAN), und kein Wort, das ein
+ * echtes Dokument verraet. Weil solche Bloecke
  * (per OCR) oft "verrutschen" - mehrere Felder in einer Zeile, PLZ am Zeilenende
  * und Ort in der naechsten - liest der Parser die Felder robust heraus statt
  * strikt "ein Feld je Zeile" zu erwarten:
@@ -28,11 +31,23 @@ use App\Services\Ai\Contracts\DocumentTemplateParser;
  */
 class KontaktdatenBlockParser implements DocumentTemplateParser
 {
+    use RepairsOcrText;
     use ValidatesExtractedFields;
 
     /** Laenger als das ist es kein kompakter Kontaktblock mehr. */
     private const MAX_CHARS = 600;
     private const MAX_LINES = 14;
+
+    /**
+     * Woerter, die ein ECHTES Dokument verraten (Brief, Rechnung, Police).
+     * Ein Briefkopf traegt ebenfalls Anschrift und Telefonnummer - er darf
+     * aber nie als Kontaktzettel des Kunden gelesen werden.
+     */
+    private const DOKUMENT_WOERTER = [
+        'rechnung', 'versicherungsschein', 'police', 'antrag', 'vertrag',
+        'beitrag', 'mahnung', 'angebot', 'bescheinigung', 'kündigung',
+        'kuendigung', 'sehr geehrte', 'seite 1', 'ust-id', 'steuernummer',
+    ];
 
     public function parse(string $text): ?array
     {
@@ -47,16 +62,35 @@ class KontaktdatenBlockParser implements DocumentTemplateParser
         }
 
         $joined = implode("\n", $lines);
-        $email = $this->firstEmail($joined);
-        $iban = $this->firstIban($joined);
+
+        // Ein echtes Dokument (Brief/Rechnung/Police) ist kein Kontaktzettel -
+        // auch wenn Anschrift und Telefonnummer darin stehen.
+        $klein = mb_strtolower($joined);
+        foreach (self::DOKUMENT_WOERTER as $wort) {
+            if (str_contains($klein, $wort)) {
+                return null;
+            }
+        }
+
+        $email = $this->ocrEmail($joined);
+        $iban = $this->ocrGermanIban($joined);
         $zipCity = $this->firstZipCity($lines);
+        $phone = $this->firstPhone($lines);
 
         // Starke Signale muessen zusammenkommen (deliberater Kontaktblock).
-        if ($email === null || $iban === null || $zipCity === null) {
+        // Frueher waren E-Mail UND IBAN UND PLZ+Ort Pflicht - EIN von der OCR
+        // verlesenes Zeichen (heller Hintergrund, andere Schrift, farbiger
+        // Link) liess damit den ganzen Block durchfallen, und derselbe Zettel
+        // wurde einmal erkannt und einmal nicht. Jetzt genuegen ZWEI Signale,
+        // davon mindestens eines persoenlich (E-Mail oder IBAN): ein blosser
+        // Briefkopf (nur Anschrift + Telefon) loest weiterhin nicht aus.
+        $persoenlich = ($email !== null ? 1 : 0) + ($iban !== null ? 1 : 0);
+        $signale = $persoenlich + ($zipCity !== null ? 1 : 0) + ($phone !== null ? 1 : 0);
+        if ($persoenlich < 1 || $signale < 2) {
             return null;
         }
 
-        $person = $this->parsePerson($lines, $email, $zipCity);
+        $person = $this->parsePerson($lines, $email, $zipCity, $phone);
         if (($person['first_name'] ?? null) === null && ($person['last_name'] ?? null) === null) {
             return null; // ohne Namen der normalen Analyse ueberlassen
         }
@@ -67,18 +101,25 @@ class KontaktdatenBlockParser implements DocumentTemplateParser
         // verloren, sondern wird sichtbar in der Zusammenfassung genannt.
         $secondDate = $this->secondDateBesideBirth($joined);
 
+        // Vollstaendiger Block (E-Mail + IBAN + PLZ/Ort) bleibt bei 70; ein
+        // Block, bei dem ein Signal fehlt oder unlesbar war, wird ehrlich
+        // niedriger bewertet - der Mitarbeiter sieht im Review, dass er
+        // genauer hinschauen soll.
+        $vollstaendig = $email !== null && $iban !== null && $zipCity !== null;
+
         $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
         return [
             'type' => 'kontaktdaten',
-            'confidence' => 70,
+            'confidence' => $vollstaendig ? 70 : 58,
             'summary' => 'Kontaktdaten' . ($name !== '' ? ' - ' . $name : '')
                 . (isset($person['birth_date']) ? ' - geb. ' . $this->displayDate($person['birth_date']) : '')
                 . ($secondDate !== null ? ' - weiteres Datum ' . $secondDate . ' (z.B. Aufenthaltstitel/Bescheinigung)' : '')
-                . ' (Name, Anschrift, Telefon, E-Mail, IBAN gratis gelesen).',
+                . ' (' . implode(', ', $this->gelesenFelder($person, $iban)) . ' gratis gelesen).'
+                . ($iban === null ? ' Keine gueltige IBAN erkannt - bitte pruefen.' : ''),
             'title' => 'Kontaktdaten' . ($name !== '' ? ' ' . $name : ''),
             'data' => [
                 'person' => $person,
-                'bank' => $this->validatedBank(['iban' => $iban]),
+                'bank' => $iban === null ? [] : $this->validatedBank(['iban' => $iban]),
                 'versicherung' => [],
                 'gesundheit' => [],
                 'kfz' => [],
@@ -90,12 +131,17 @@ class KontaktdatenBlockParser implements DocumentTemplateParser
 
     /**
      * @param list<string> $lines
-     * @param array{0:int,1:string,2:string} $zipCity [Zeilenindex, PLZ, Ort]
+     * @param array{0:int,1:string,2:string}|null $zipCity [Zeilenindex, PLZ, Ort]
      * @return array<string,mixed>
      */
-    private function parsePerson(array $lines, string $email, array $zipCity): array
+    private function parsePerson(array $lines, ?string $email, ?array $zipCity, ?string $phone): array
     {
-        $raw = ['email' => $email, 'zip' => $zipCity[1], 'city' => $zipCity[2]];
+        $raw = [
+            'email' => $email,
+            'zip' => $zipCity[1] ?? null,
+            'city' => $zipCity[2] ?? null,
+            'phone' => $phone,
+        ];
 
         // Name: erste Zeile, die (ohne Anrede, ohne Datum) aus 2-5 Grosswoertern
         // besteht. Anrede -> Geschlecht (NICHT als Vorname).
@@ -120,7 +166,7 @@ class KontaktdatenBlockParser implements DocumentTemplateParser
         // Block stehen Datum, Strasse und PLZ oft in EINER Zeile), dann
         // "<Strasse> <Hausnr>" lesen. Name-/E-Mail-Zeilen auslassen.
         foreach ($lines as $i => $line) {
-            if ($i === $nameIdx || str_contains($line, '@') || $this->firstIban($line) !== null) {
+            if ($i === $nameIdx || str_contains($line, '@') || $this->ocrGermanIban($line) !== null) {
                 continue;
             }
             $clean = (string) preg_replace('/\d{2}\.\d{2}\.(?:\d{4}|\d{2})/u', ' ', $line); // Datum entfernen
@@ -132,23 +178,9 @@ class KontaktdatenBlockParser implements DocumentTemplateParser
             }
             if (preg_match('/([A-ZÄÖÜ][\p{L}.\-]+(?:\s+[A-ZÄÖÜ][\p{L}.\-]+)?)\s+(\d{1,4}\s*[a-zA-Z]?)\b/u', $clean, $m)
                 && preg_match('/\p{L}{3,}/u', $m[1])
-                && mb_strtolower(trim($m[1])) !== mb_strtolower($zipCity[2])) {
+                && mb_strtolower(trim($m[1])) !== mb_strtolower((string) ($zipCity[2] ?? ''))) {
                 $raw['street'] = trim($m[1]);
                 $raw['house_number'] = trim((string) preg_replace('/\s+/', ' ', $m[2]));
-                break;
-            }
-        }
-
-        // Telefon/Handy: erstes Token, das (ohne Trennzeichen) wie eine deutsche
-        // Nummer aussieht - als 0-Nummer ODER im internationalen Format
-        // ("+4915226593331" -> 015226593331). Auch in einer Zeile mit Ort/PLZ.
-        foreach (preg_split('/\s+/', implode(' ', $lines)) ?: [] as $token) {
-            $digits = (string) preg_replace('/[\/()\-]/', '', $token);
-            // +49/0049 in fuehrende 0 normalisieren.
-            $digits = (string) preg_replace('/^(?:\+|00)49/', '0', $digits);
-            $digits = str_replace('+', '', $digits);
-            if (preg_match('/^0\d{9,14}$/', $digits)) {
-                $raw['phone'] = $digits;
                 break;
             }
         }
@@ -229,23 +261,66 @@ class KontaktdatenBlockParser implements DocumentTemplateParser
         return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $iso, $m) ? $m[3] . '.' . $m[2] . '.' . $m[1] : $iso;
     }
 
-    private function firstEmail(string $text): ?string
+    /**
+     * Telefon/Handy: erstes Token, das wie eine deutsche Nummer aussieht - als
+     * 0-Nummer ODER im internationalen Format ("+4915226593331" ->
+     * 015226593331). Auch in einer Zeile mit Ort/PLZ, und auch in Gruppen
+     * geschrieben ("0179 698 6119"): steht eine Zeile ausschliesslich aus
+     * Ziffern und Leerzeichen, werden diese zusammengezogen.
+     *
+     * @param list<string> $lines
+     */
+    private function firstPhone(array $lines): ?string
     {
-        return preg_match('/[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}/i', $text, $m)
-            ? strtolower($m[0]) : null;
+        $kandidaten = [];
+        foreach ($lines as $line) {
+            // Reine Ziffern-/Trennzeichen-Zeile: als EINE Nummer lesen.
+            if (preg_match('/^[\d +\/()\-]{9,25}$/u', trim($line))) {
+                $kandidaten[] = trim($line);
+            }
+            foreach (preg_split('/\s+/', $line) ?: [] as $token) {
+                $kandidaten[] = $token;
+            }
+        }
+
+        foreach ($kandidaten as $kandidat) {
+            $digits = (string) preg_replace('/[\s\/()\-]/u', '', $kandidat);
+            // +49/0049 in fuehrende 0 normalisieren.
+            $digits = (string) preg_replace('/^(?:\+|00)49/', '0', $digits);
+            $digits = str_replace('+', '', $digits);
+            if (preg_match('/^0\d{9,14}$/', $digits)) {
+                return $digits;
+            }
+        }
+
+        return null;
     }
 
     /**
-     * Deutsche IBAN (DE + 20 Ziffern), auch mit unregelmaessigen Leerzeichen-
-     * Gruppen aus dem OCR ("DE44 1001 0010 0461 1063 8"). Ziffernanzahl wird
-     * grosszuegig zugelassen; die harte Validierung prueft danach das Format.
+     * Nennt in der Zusammenfassung nur die Felder, die WIRKLICH gelesen
+     * wurden - frueher stand dort pauschal "Name, Anschrift, Telefon, E-Mail,
+     * IBAN", auch wenn die Haelfte fehlte.
+     *
+     * @param array<string,mixed> $person
+     * @return list<string>
      */
-    private function firstIban(string $text): ?string
+    private function gelesenFelder(array $person, ?string $iban): array
     {
-        if (preg_match('/\bDE\d{2}(?:[ ]?\d){12,26}\b/', $text, $m)) {
-            return strtoupper((string) preg_replace('/\s+/', '', $m[0]));
+        $felder = ['Name'];
+        if (($person['street'] ?? null) !== null || ($person['zip'] ?? null) !== null) {
+            $felder[] = 'Anschrift';
         }
-        return null;
+        if (($person['phone'] ?? null) !== null) {
+            $felder[] = 'Telefon';
+        }
+        if (($person['email'] ?? null) !== null) {
+            $felder[] = 'E-Mail';
+        }
+        if ($iban !== null) {
+            $felder[] = 'IBAN';
+        }
+
+        return $felder;
     }
 
     /**
