@@ -274,7 +274,7 @@
                 <div style="font-size:12px;color:var(--ink-soft);">Nr. {{ $c->customer_number }}</div>
             </td>
             <td style="vertical-align:top;white-space:nowrap;">
-                <div>{{ $c->created_at->format('d.m.Y') }}</div>
+                <div>{{ $c->created_at->lokal()->format('d.m.Y') }}</div>
                 <div style="font-size:12px;color:var(--ink-soft);">von {{ $c->creator?->name ?? 'System' }}</div>
             </td>
             <td style="vertical-align:top;">

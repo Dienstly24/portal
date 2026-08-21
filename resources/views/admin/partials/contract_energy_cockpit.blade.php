@@ -29,7 +29,7 @@
             <div style="font-size:12.5px;color:#B9BFC9;">
                 @if($meterLatest)
                     Stand vom {{ $meterLatest->reading_date->format('d.m.Y') }}
-                    @if($meterLatest->captured_at) · erfasst {{ $meterLatest->captured_at->format('d.m.Y H:i') }} Uhr @endif
+                    @if($meterLatest->captured_at) · erfasst {{ $meterLatest->captured_at->lokal()->format('d.m.Y H:i') }} Uhr @endif
                     · {{ $meterLatest->sourceLabel() }}
                 @else
                     Sobald ein Zählerfoto hochgeladen wird, erscheint der Stand hier automatisch.
@@ -94,7 +94,7 @@
             <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;">
                 <span style="font-size:12.5px;color:#B9BFC9;">
                     {{ $r->reading_date->format('d.m.Y') }}
-                    @if($r->captured_at) · {{ $r->captured_at->format('H:i') }} Uhr @endif
+                    @if($r->captured_at) · {{ $r->captured_at->lokal()->format('H:i') }} Uhr @endif
                     · {{ $r->sourceLabel() }}@if($r->created_by) ({{ $r->created_by }})@endif
                     @if($r->document_id)
                     · <a href="{{ route('admin.documents.download', $r->document_id) }}" target="_blank" style="color:#5BD79A;">📎 Foto</a>

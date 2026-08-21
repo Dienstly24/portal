@@ -74,9 +74,9 @@ class GetProcessStatusTool implements AssistantTool
             'thema' => $ticket->subject,
             'art' => $ticket->typeLabel(),
             'status' => $ticket->portalStatusLabel(),
-            'erstellt' => $ticket->created_at?->format('d.m.Y'),
+            'erstellt' => $ticket->created_at?->lokal()->format('d.m.Y'),
             'letzte_rueckmeldung' => $lastMessage
-                ? $lastMessage->created_at?->format('d.m.Y')
+                ? $lastMessage->created_at?->lokal()->format('d.m.Y')
                 : null,
             'abgeschlossen' => in_array($ticket->status, ['resolved', 'closed'], true),
         ];

@@ -24,7 +24,7 @@
                     @if($doc->page_count)<span style="font-weight:400;color:var(--ink-soft);font-size:12.5px;"> · {{ $doc->page_count }} Seiten</span>@endif
                 </div>
                 <div style="font-size:12.5px;color:var(--ink-soft);margin-top:2px;">
-                    Hochgeladen {{ $doc->created_at->format('d.m.Y H:i') }}@if($doc->uploader) von {{ $doc->uploader->name }}@endif
+                    Hochgeladen {{ $doc->created_at->lokal()->format('d.m.Y H:i') }}@if($doc->uploader) von {{ $doc->uploader->name }}@endif
                 </div>
                 <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
                     @if($doc->aiInProgress())
@@ -44,7 +44,7 @@
                 {{-- Warnung: identische Datei bereits im System vorhanden. --}}
                 <div style="margin-top:10px;border:1px solid #E4A11B;background:#FEF6E7;border-radius:10px;padding:10px 12px;font-size:13px;color:#8A5A00;">
                     ⚠ <strong>Bereits vorhanden.</strong>
-                    Diese Datei wurde am {{ $dupOrig->created_at->format('d.m.Y') }} schon hochgeladen
+                    Diese Datei wurde am {{ $dupOrig->created_at->lokal()->format('d.m.Y') }} schon hochgeladen
                     @if($dupCustomerName)
                         und Kunde <strong>{{ $dupCustomerName }}</strong> zugeordnet.
                     @elseif($dupOrig->customer_id)

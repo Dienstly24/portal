@@ -71,7 +71,7 @@ $rejected = $requests->where('status','rejected');
     <div class="item-row">
         <div>
             <div style="font-size:14px;font-weight:600;">{{ $r->new_data['name'] ?? 'Familienmitglied' }}</div>
-            <div style="font-size:12px;color:var(--ink-soft);">{{ $r->created_at->format('d.m.Y') }} @if($r->notes) · Grund: {{ $r->notes }} @endif</div>
+            <div style="font-size:12px;color:var(--ink-soft);">{{ $r->created_at->lokal()->format('d.m.Y') }} @if($r->notes) · Grund: {{ $r->notes }} @endif</div>
         </div>
         <span class="badge" style="background:#F9E3E3;color:#A32D2D;">{{ __('Abgelehnt') }}</span>
     </div>

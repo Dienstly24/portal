@@ -50,7 +50,7 @@
             <span style="background:#F1EEE5;border-radius:999px;padding:2px 10px;font-size:12.5px;">{{ $gap->hits }}× gefragt</span>
             <span style="font-size:12.5px;color:var(--ink-soft);">
                 {{ $gap->scopeLabel() }}
-                @if($gap->last_seen_at) · zuletzt {{ $gap->last_seen_at->format('d.m.Y H:i') }}@endif
+                @if($gap->last_seen_at) · zuletzt {{ $gap->last_seen_at->lokal()->format('d.m.Y H:i') }}@endif
                 @if($gap->status === 'erledigt') · erledigt{{ $gap->resolver ? ' von ' . $gap->resolver->name : ' (automatisch)' }}@endif
                 @if($gap->status === 'ignoriert') · ignoriert @endif
             </span>

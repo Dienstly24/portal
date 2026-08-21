@@ -69,7 +69,7 @@
     <div class="item-row row-link" onclick="rowNav(event, '{{ route('admin.ticket', $t->id) }}')" title="Antrag öffnen">
         <div>
             <div style="font-weight:600;font-size:14px;">{{ $t->subject }}</div>
-            <div style="font-size:12px;color:var(--ink-soft);">{{ $t->customer?->user?->name }} · {{ $t->created_at->format('d.m.Y') }}</div>
+            <div style="font-size:12px;color:var(--ink-soft);">{{ $t->customer?->user?->name }} · {{ $t->created_at->lokal()->format('d.m.Y') }}</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
             <span class="badge badge-{{ $t->status === 'open' ? 'open' : ($t->status === 'closed' ? 'closed' : 'pending') }}">{{ ['open'=>'Offen','in_progress'=>'In Bearbeitung','waiting'=>'Wartend','closed'=>'Geschlossen'][$t->status] ?? $t->status }}</span>

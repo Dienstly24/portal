@@ -9,7 +9,7 @@
     <div class="item-row">
         <div>
             <div style="font-weight:600;font-size:14px;">{{ $t->subject }}</div>
-            <div style="font-size:13px;color:var(--ink-soft);">{{ $t->ticket_number }} · {{ $t->created_at->format('d.m.Y') }} · {{ __($t->typeLabel()) }}</div>
+            <div style="font-size:13px;color:var(--ink-soft);">{{ $t->ticket_number }} · {{ $t->created_at->lokal()->format('d.m.Y') }} · {{ __($t->typeLabel()) }}</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
             <span class="badge badge-{{ $t->statusBadge() }}">{{ __($t->portalStatusLabel()) }}</span>

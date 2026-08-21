@@ -361,6 +361,45 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   Blade-Flaeche mit Inline-Styles und `onclick`; `unsafe-eval` haengt an
   Alpine.js).
 
+## Zeitzone: gespeichert UTC, GEZEIGT deutsche Ortszeit (21.08.2026)
+
+- **Lehre**: `app.timezone` steht auf UTC, der Betrieb sitzt in Deutschland.
+  Jede Anzeige war damit im Sommer ZWEI STUNDEN zu frueh - inklusive des
+  DSGVO-Einwilligungszeitpunkts auf dem Ticket. Zwei Stunden Abweichung
+  sehen plausibel aus, deshalb faellt es niemandem auf.
+- **`app.timezone` bleibt UTC.** Wuerde man sie auf Europe/Berlin stellen,
+  schriebe Laravel neue Zeitstempel in Ortszeit: der Altbestand laege in
+  UTC, alles Neue in Ortszeit - und man saehe einer Zeile NICHT an, welche
+  von beiden sie ist. Ein solcher Mischbestand ist hinterher nicht mehr
+  sauber zu reparieren. Ein Test sichert `app.timezone === 'UTC'` ab.
+- **Umgerechnet wird bei der AUSGABE**: `Carbon::lokal()` (Makro im
+  `AppServiceProvider`) plus `App\Support\LocalTime`; Zone aus
+  `app.display_timezone` (`APP_DISPLAY_TIMEZONE`, Standard Europe/Berlin).
+  Echte Zeitzone statt festem Offset - ein Offset waere zweimal im Jahr
+  falsch.
+- **NICHT im Model-Cast umrechnen.** Dann traegt auch jeder Wert, der in
+  eine WHERE-Bedingung geht, Ortszeit und wird gegen eine UTC-Spalte
+  verglichen - aus einem sichtbaren Anzeigefehler wuerde ein STILLER
+  Abfragefehler. Die Umrechnung gehoert an die Oberflaeche, nicht in die
+  Daten.
+- **Auch reine Datums-Anzeigen von Zeitpunkt-Spalten** (`..._at`) werden
+  umgerechnet: um 23:30 UTC ist in Deutschland schon der naechste Tag - sonst
+  stuende der falsche TAG da. Reine Datums-Spalten (`start_date`,
+  `birth_date`, `deadline` ...) bleiben unberuehrt: sie tragen keine Uhrzeit
+  und damit keine Zeitzone.
+- **Bewusst NICHT umgestellt**: `datetime-local`-Formularwerte (sie rechnen
+  laengst selbst auf `OPERATOR_TZ` um und gehen zurueck an den Server),
+  `diffForHumans()` (eine Differenz ist zeitzonenunabhaengig) sowie
+  Gruppierungs-Schluessel fuer Diagramme (`TicketController`,
+  `ProvisionController`: `format('Y-m-d')` als Achsen-Schluessel) und
+  `SeoController` (sitemap lastmod) - dort muss das Format zur uebrigen
+  Berechnung passen, nicht zur Anzeige.
+- **Zwei Waechter-Tests** verhindern den Rueckfall: keine View darf eine
+  Uhrzeit ohne `->lokal()` ausgeben, und keine `..._at`-Spalte darf ohne
+  `->lokal()` formatiert werden. Ohne sie waere die naechste neue View
+  wieder in UTC.
+- Tests: `DisplayTimezoneTest`.
+
 ## Kundennummern
 
 - Neuanlage: `JJ` + 5-stellig laufend (2026 → `2600001`, `2600002` …) via

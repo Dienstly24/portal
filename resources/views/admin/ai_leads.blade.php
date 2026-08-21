@@ -59,7 +59,7 @@
             <tbody>
             @foreach($leads as $lead)
                 <tr>
-                    <td style="white-space:nowrap;">{{ $lead->created_at->format('d.m.Y H:i') }}</td>
+                    <td style="white-space:nowrap;">{{ $lead->created_at->lokal()->format('d.m.Y H:i') }}</td>
                     <td>
                         <strong>{{ $lead->displayName() }}</strong>
                         @php $kontakt = $lead->contactData(); @endphp

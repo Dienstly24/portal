@@ -27,7 +27,7 @@ $sb = $statusBadge[$message->match_status] ?? ['#EEF0F3', '#555', $message->matc
             <table style="font-size:13px;color:var(--ink-soft);line-height:1.9;">
                 <tr><td style="padding-right:14px;vertical-align:top;">Von</td><td style="color:var(--ink);"><strong>{{ $message->from_name ?: $message->from_address }}</strong> &lt;{{ $message->from_address }}&gt;</td></tr>
                 @if($message->to_address)<tr><td style="padding-right:14px;">An</td><td style="color:var(--ink);">{{ $message->to_address }}</td></tr>@endif
-                <tr><td style="padding-right:14px;">Datum</td><td style="color:var(--ink);">{{ ($message->received_at ?? $message->created_at)?->format('d.m.Y H:i') }}</td></tr>
+                <tr><td style="padding-right:14px;">Datum</td><td style="color:var(--ink);">{{ ($message->received_at ?? $message->created_at)?->lokal()->format('d.m.Y H:i') }}</td></tr>
                 <tr><td style="padding-right:14px;">Postfach</td><td style="color:var(--ink);">{{ $message->account?->email_address ?? '—' }}</td></tr>
                 <tr><td style="padding-right:14px;">Kategorie</td><td><span class="badge badge-pending">{{ $message->categoryLabel() }}</span></td></tr>
             </table>

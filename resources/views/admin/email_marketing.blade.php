@@ -136,9 +136,9 @@
             <div style="font-weight:600;font-size:14px;">{{ $c->subject }}</div>
             <div style="font-size:12px;color:var(--ink-soft);">
                 @if($c->status === 'scheduled' && $c->scheduled_for)
-                    Geplant für {{ $c->scheduled_for->timezone(\App\Models\BannerSocialPost::OPERATOR_TZ)->format('d.m.Y H:i') }} Uhr
+                    Geplant für {{ $c->scheduled_for->timezone(\App\Models\BannerSocialPost::OPERATOR_TZ)->lokal()->format('d.m.Y H:i') }} Uhr
                 @else
-                    Entwurf · {{ $c->updated_at->format('d.m.Y H:i') }}
+                    Entwurf · {{ $c->updated_at->lokal()->format('d.m.Y H:i') }}
                 @endif
             </div>
         </div>
@@ -166,7 +166,7 @@
         <div>
             <div style="font-weight:600;font-size:14px;">{{ $c->subject }}</div>
             <div style="font-size:12px;color:var(--ink-soft);">
-                {{ $c->sent_at?->format('d.m.Y H:i') }} · {{ $c->sent_count }} gesendet
+                {{ $c->sent_at?->lokal()->format('d.m.Y H:i') }} · {{ $c->sent_count }} gesendet
                 @if($c->failed_count > 0)
                     · <span style="color:#A32D2D;">{{ $c->failed_count }} fehlgeschlagen</span>
                 @endif

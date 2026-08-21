@@ -34,8 +34,8 @@ $c = $colors[$a->priority];
             </div>
             <p style="font-size:14px;color:var(--ink-soft);line-height:1.7;margin:0 0 10px;">{{ $a->body }}</p>
             <div style="font-size:12px;color:var(--ink-soft);">
-                {{ $a->createdBy?->name }} · {{ $a->created_at->format('d.m.Y H:i') }}
-                @if($a->expires_at) · Läuft ab: {{ $a->expires_at->format('d.m.Y') }} @endif
+                {{ $a->createdBy?->name }} · {{ $a->created_at->lokal()->format('d.m.Y H:i') }}
+                @if($a->expires_at) · Läuft ab: {{ $a->expires_at->lokal()->format('d.m.Y') }} @endif
             </div>
         </div>
         <form method="POST" action="{{ route('admin.announcements.destroy', $a->id) }}" onsubmit="return confirm('Löschen?')">

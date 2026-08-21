@@ -10,6 +10,8 @@ use App\Services\Ai\Contracts\AiProviderInterface;
 use App\Services\Ai\Contracts\DocumentAiProviderInterface;
 use App\Services\Ocr\TesseractTextExtractor;
 use App\Services\Ocr\TextExtractorInterface;
+use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Console\Events\ScheduledTaskFailed;
@@ -303,6 +305,28 @@ class AppServiceProvider extends ServiceProvider
                 report($e);
             }
         });
+
+        // Anzeige-Zeitzone: ->lokal() rechnet einen gespeicherten Zeitpunkt
+        // (UTC) in deutsche Ortszeit um. Bewusst ein EXPLIZITER Aufruf in der
+        // View und keine Umrechnung im Model-Cast: ein Cast wuerde auch
+        // Werte umstellen, die in WHERE-Bedingungen gehen - aus einem
+        // sichtbaren Anzeigefehler wuerde ein stiller Abfragefehler.
+        // Beide Makros delegieren an LocalTime::for(). Das ist Absicht: dort
+        // wird die Instanz nachweislich NEU aufgebaut. Weder copy() noch
+        // clone haben den Aufrufer in dieser Carbon-Fassung zuverlaessig
+        // verschont - ->lokal() verschob den Zeitpunkt am Original mit. Ein
+        // eigener Test hat das gefangen, zweimal. Jetzt gibt es genau EINE
+        // Stelle, an der die Umrechnung passiert, und sie ist getestet.
+        // BEWUSST eine gewoehnliche Closure, KEINE Arrow-Function: eine
+        // Arrow-Function bindet $this fest an die Stelle, an der sie
+        // geschrieben wurde (hier den ServiceProvider) und laesst sich
+        // nicht umbinden. Carbon muss $this aber auf die Zeit-Instanz
+        // setzen koennen, sonst zeigt das Makro auf das falsche Objekt.
+        $lokal = function () {
+            return \App\Support\LocalTime::for($this);
+        };
+        Carbon::macro('lokal', $lokal);
+        CarbonImmutable::macro('lokal', $lokal);
 
         $this->protokolliereGeplanteAufgaben();
     }

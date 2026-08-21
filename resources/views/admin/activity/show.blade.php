@@ -144,8 +144,8 @@
         <tbody>
         @forelse($sessions as $s)
         <tr>
-            <td style="padding:13px 20px;white-space:nowrap;">{{ $s->login_at->format('d.m.Y H:i') }}</td>
-            <td style="white-space:nowrap;">{{ $s->logout_at?->format('d.m.Y H:i') ?? '— aktiv —' }}</td>
+            <td style="padding:13px 20px;white-space:nowrap;">{{ $s->login_at->lokal()->format('d.m.Y H:i') }}</td>
+            <td style="white-space:nowrap;">{{ $s->logout_at?->lokal()->format('d.m.Y H:i') ?? '— aktiv —' }}</td>
             <td>
                 @if($s->ended_by)
                 <span class="badge badge-closed">{{ $endedLabels[$s->ended_by] ?? $s->ended_by }}</span>
@@ -183,7 +183,7 @@
         <tbody>
         @forelse($timeline as $log)
         <tr>
-            <td style="padding:11px 20px;font-size:13px;color:var(--ink-soft);white-space:nowrap;">{{ $log->created_at->format('d.m.Y H:i:s') }}</td>
+            <td style="padding:11px 20px;font-size:13px;color:var(--ink-soft);white-space:nowrap;">{{ $log->created_at->lokal()->format('d.m.Y H:i:s') }}</td>
             <td>
                 <span class="badge {{ $log->is_productive ? 'badge-active' : 'badge-closed' }}">{{ $catalog->labelFor($log->action) }}</span>
                 @if(($log->metaArray()['failed'] ?? false))

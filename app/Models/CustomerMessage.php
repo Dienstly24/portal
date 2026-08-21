@@ -89,8 +89,8 @@ class CustomerMessage extends Model
             'body' => $this->body,
             'day' => $this->created_at->isToday()
                 ? __('Heute')
-                : ($this->created_at->isYesterday() ? __('Gestern') : $this->created_at->format('d.m.Y')),
-            'time' => $this->created_at->format('H:i'),
+                : ($this->created_at->isYesterday() ? __('Gestern') : $this->created_at->lokal()->format('d.m.Y')),
+            'time' => $this->created_at->lokal()->format('H:i'),
             'read' => $this->read_at !== null,
             'attachments' => $this->attachments->map(fn ($a) => [
                 'id' => $a->id,

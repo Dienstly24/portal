@@ -324,7 +324,7 @@ class SmartDocumentUploadController extends Controller
 
         return [
             'file_name' => $document->file_name,
-            'uploaded_at' => $original->created_at->format('d.m.Y'),
+            'uploaded_at' => $original->created_at->lokal()->format('d.m.Y'),
             'customer_name' => $customerName,
             'in_inbox' => $original->customer_id === null,
         ];

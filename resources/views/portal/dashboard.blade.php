@@ -237,7 +237,7 @@ document.getElementById('hero-chat').addEventListener('click', function (e) {
     <a href="{{ route('portal.tickets.show', $t->id) }}" class="item-row row-link" title="{{ __('Anfrage öffnen') }}" style="color:inherit;text-decoration:none;">
         <div>
             <div style="font-weight:600;font-size:14px;">{{ $t->subject }}</div>
-            <div style="font-size:13px;color:var(--ink-soft);">{{ $t->created_at->format('d.m.Y') }}</div>
+            <div style="font-size:13px;color:var(--ink-soft);">{{ $t->created_at->lokal()->format('d.m.Y') }}</div>
         </div>
         <span style="display:flex;gap:6px;align-items:center;">
             <span class="badge badge-{{ $t->status === 'open' ? 'open' : 'closed' }}">{{ __($t->status === 'open' ? 'Offen' : 'In Bearbeitung') }}</span>

@@ -212,7 +212,7 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
                 <div style="font-weight:600;line-height:1.35;">{{ $t->subject }}</div>
                 <div style="font-size:12px;color:var(--ink-soft);margin-top:2px;">
                     <span style="font-variant-numeric:tabular-nums;">{{ $t->ticket_number }}</span>
-                    · {{ $t->typeLabel() }} · erstellt {{ $t->created_at->format('d.m.Y') }}
+                    · {{ $t->typeLabel() }} · erstellt {{ $t->created_at->lokal()->format('d.m.Y') }}
                 </div>
             </td>
             <td>
@@ -238,8 +238,11 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
                 </span>
             </td>
             <td style="font-size:13px;color:var(--ink-soft);white-space:nowrap;">{{ $t->assignedTo?->name ?? '—' }}</td>
+            {{-- Einmal umrechnen, dann beides aus derselben Quelle: sonst
+                 koennen Datum und Uhrzeit in EINER Zelle auseinanderlaufen
+                 (ein Vorgang um 01:30 Berlin liegt in UTC noch am Vortag). --}}
             @php $ts = $trashView ? $t->deleted_at : $t->updated_at; @endphp
-            <td style="color:var(--ink-soft);white-space:nowrap;font-size:13px;">{{ $ts->format('d.m.Y') }}<div style="font-size:11.5px;">{{ $ts->format('H:i') }} Uhr</div></td>
+            <td style="color:var(--ink-soft);white-space:nowrap;font-size:13px;">{{ $ts?->lokal()->format('d.m.Y') }}<div style="font-size:11.5px;">{{ $ts?->lokal()->format('H:i') }} Uhr</div></td>
             <td>
                 <span class="badge badge-{{ $t->statusBadge() }}">{{ $t->statusLabel() }}</span>
                 @if($trashView)<div style="font-size:11px;color:#A32D2D;font-weight:600;margin-top:5px;white-space:nowrap;">🗑️ im Papierkorb</div>

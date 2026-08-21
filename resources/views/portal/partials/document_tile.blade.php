@@ -23,7 +23,7 @@
             @if($d->aiInProgress())<span class="doc-tag" style="background:#FEF3C7;color:#92400E;">{{ __('Wird analysiert…') }}</span>@endif
             @if($d->uploaded_by === auth()->id())<span class="doc-tag doc-tag-you">{{ __('von Ihnen') }}</span>@endif
         </div>
-        <div class="doc-date">{{ $d->created_at->format('d.m.Y') }}</div>
+        <div class="doc-date">{{ $d->created_at->lokal()->format('d.m.Y') }}</div>
     </div>
     <div class="doc-actions">
         <a href="{{ route('portal.documents.view', $d->id) }}" target="_blank" rel="noopener" class="view">{{ __('👁 Ansehen') }}</a>

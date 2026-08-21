@@ -6,7 +6,7 @@
         {{ $provision->typeLabel() }} über {{ number_format((float) $provision->amount, 2, ',', '.') }} €
         <span class="wb-badge {{ ['offen' => 'wb-offen', 'freigegeben' => 'wb-frei', 'ausgezahlt' => 'wb-mit', 'storniert' => 'wb-storno'][$provision->status] ?? 'wb-none' }}">{{ $provision->statusLabel() }}</span>
     </div>
-    <div class="page-sub">Empfänger: {{ $provision->recipientName() }} · erfasst am {{ $provision->created_at->format('d.m.Y H:i') }} von {{ $provision->creator?->name ?? 'System' }}</div>
+    <div class="page-sub">Empfänger: {{ $provision->recipientName() }} · erfasst am {{ $provision->created_at->lokal()->format('d.m.Y H:i') }} von {{ $provision->creator?->name ?? 'System' }}</div>
 </div>
 
 @if(session('success'))<div style="background:#D9F4E6;color:#17A65B;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
@@ -40,11 +40,11 @@
                     <td>{{ $provision->note ?? '—' }}</td></tr>
                 @if($provision->approved_at)
                 <tr><td style="color:var(--ink-soft);padding:6px 0;">Freigegeben</td>
-                    <td>{{ $provision->approved_at->format('d.m.Y H:i') }} · {{ $provision->approver?->name ?? '—' }}</td></tr>
+                    <td>{{ $provision->approved_at->lokal()->format('d.m.Y H:i') }} · {{ $provision->approver?->name ?? '—' }}</td></tr>
                 @endif
                 @if($provision->paid_at)
                 <tr><td style="color:var(--ink-soft);padding:6px 0;">Ausgezahlt</td>
-                    <td>{{ $provision->paid_at->format('d.m.Y H:i') }} · {{ $provision->payer?->name ?? '—' }}</td></tr>
+                    <td>{{ $provision->paid_at->lokal()->format('d.m.Y H:i') }} · {{ $provision->payer?->name ?? '—' }}</td></tr>
                 @endif
                 @if($provision->relatedProvision)
                 <tr><td style="color:var(--ink-soft);padding:6px 0;">Gegenbuchung zu</td>
@@ -118,7 +118,7 @@
             <tbody>
             @forelse($provision->auditLogs as $log)
             <tr>
-                <td style="padding:10px 16px;font-size:12.5px;white-space:nowrap;">{{ $log->created_at->format('d.m.Y H:i') }}</td>
+                <td style="padding:10px 16px;font-size:12.5px;white-space:nowrap;">{{ $log->created_at->lokal()->format('d.m.Y H:i') }}</td>
                 <td style="font-size:12.5px;">{{ $log->user?->name ?? 'System' }}</td>
                 <td><span class="wb-badge wb-none">{{ $log->actionLabel() }}</span></td>
                 <td style="font-size:12.5px;">

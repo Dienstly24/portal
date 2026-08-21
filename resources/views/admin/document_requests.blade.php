@@ -21,7 +21,7 @@
                 <div style="font-size:13px;color:var(--ink-soft);">
                     <a href="{{ route('admin.customer', $req->customer_id) }}">{{ $req->customer->user?->name ?? 'Kunde' }}</a>
                     @if($req->contract) · Vertrag {{ $req->contract->contract_number }} @endif
-                    · hochgeladen {{ $req->uploaded_at?->format('d.m.Y H:i') }}
+                    · hochgeladen {{ $req->uploaded_at?->lokal()->format('d.m.Y H:i') }}
                 </div>
                 @if($req->document)
                 <div style="font-size:13px;margin-top:6px;">
