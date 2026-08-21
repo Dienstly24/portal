@@ -216,7 +216,7 @@
         <div style="font-size:13px;color:var(--ink-soft);line-height:1.5;">
             <strong>Zwei-Faktor-Anmeldung</strong>
             @if($employee->hasTwoFactor())
-                <span style="color:#17A65B;">&#10003; aktiv seit {{ $employee->two_factor_confirmed_at?->format('d.m.Y') }}</span><br>
+                <span style="color:#17A65B;">&#10003; aktiv seit {{ $employee->two_factor_confirmed_at?->lokal()->format('d.m.Y') }}</span><br>
                 Nur zuruecksetzen, wenn das Telefon verloren ist UND keine Ersatzcodes mehr vorliegen.
                 Der Mitarbeiter richtet sie beim naechsten Login neu ein.
             @else

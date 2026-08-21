@@ -245,7 +245,7 @@ function confirmBulkDelete(form) {
             @php $addr = $c->fullAddress(); @endphp
             <td style="color:var(--ink-soft);font-size:13px;white-space:nowrap;">{{ $addr !== '' ? $addr : '—' }}</td>
             @php $ps = $c->portalStatus(); @endphp
-            <td title="Einladung: {{ $c->user?->invitation_sent_at?->format('d.m.Y') ?? '—' }} · Passwort gesetzt: {{ $c->user?->portal_password_set_at ? 'Ja' : 'Nein' }}">
+            <td title="Einladung: {{ $c->user?->invitation_sent_at?->lokal()->format('d.m.Y') ?? '—' }} · Passwort gesetzt: {{ $c->user?->portal_password_set_at ? 'Ja' : 'Nein' }}">
                 <span style="background:{{ $ps['bg'] }};color:{{ $ps['color'] }};border-radius:12px;padding:2px 10px;font-size:11.5px;white-space:nowrap;">{{ $ps['label'] }}</span>
             </td>
             {{-- Betreuer: admin/manager weisen direkt hier zu (Popover je Zeile,

@@ -66,7 +66,7 @@
             </td>
             <td style="text-align:right;font-weight:700;font-size:14px;">{{ $f->occurrences }}</td>
             <td style="font-size:12px;color:var(--ink-soft);white-space:nowrap;">
-                {{ $f->last_seen_at?->format('d.m. H:i') ?? '—' }}
+                {{ $f->last_seen_at?->lokal()->format('d.m. H:i') ?? '—' }}
                 @if($f->lastUser)<div>{{ $f->lastUser->name }}</div>@endif
             </td>
             <td style="padding-right:20px;white-space:nowrap;">

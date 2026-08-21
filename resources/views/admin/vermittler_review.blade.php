@@ -91,7 +91,7 @@
                     <td style="padding:8px;">{{ $contract->reference_number ?: '—' }}</td>
                     <td style="padding:8px;">{{ $contract->vermittler_id ?: '—' }}</td>
                     <td style="padding:8px;"><span class="badge badge-{{ $contract->vermittlerStatusBadge() }}">{{ $contract->vermittlerStatusLabel() }}</span></td>
-                    <td style="padding:8px;color:var(--ink-soft);">{{ $contract->vermittler_last_imported_at?->format('d.m.Y') ?: '—' }}</td>
+                    <td style="padding:8px;color:var(--ink-soft);">{{ $contract->vermittler_last_imported_at?->lokal()->format('d.m.Y') ?: '—' }}</td>
                 </tr>
             @endforeach
             </tbody>

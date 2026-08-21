@@ -17,13 +17,13 @@
             @else · 👤 {{ $ticket->guest_name ?? 'Gast' }}
             @endif
             <span style="color:var(--ink-soft);">(via {{ $quelle }})</span>
-            · {{ $ticket->created_at->format('d.m.Y H:i') }}
+            · {{ $ticket->created_at->lokal()->format('d.m.Y H:i') }}
             · {{ $ticket->priorityLabel() }}
         </div>
     </div>
     <div style="text-align:right;">
         <span class="badge badge-{{ $ticket->statusBadge() }}">{{ $ticket->statusLabel() }}</span>
-        @if($ticket->isOverdue())<div style="font-size:12px;color:#A32D2D;font-weight:600;margin-top:6px;">⏰ Reaktionszeit überschritten (fällig {{ $ticket->due_at->format('d.m.Y H:i') }})</div>@endif
+        @if($ticket->isOverdue())<div style="font-size:12px;color:#A32D2D;font-weight:600;margin-top:6px;">⏰ Reaktionszeit überschritten (fällig {{ $ticket->due_at->lokal()->format('d.m.Y H:i') }})</div>@endif
     </div>
 </div>
 
@@ -32,7 +32,7 @@
 <div class="card" style="background:#F9E3E3;border-color:#EFC7C7;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
         <div style="font-size:13.5px;color:#7A1F1F;line-height:1.6;">
-            🗑️ <strong>Dieses Ticket liegt im Papierkorb</strong> (gelöscht am {{ $ticket->deleted_at->format('d.m.Y H:i') }}).
+            🗑️ <strong>Dieses Ticket liegt im Papierkorb</strong> (gelöscht am {{ $ticket->deleted_at->lokal()->format('d.m.Y H:i') }}).
             Es ist für Kunden und in der Ticketliste nicht mehr sichtbar. Zum Bearbeiten zuerst wiederherstellen.
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -138,11 +138,11 @@
     <div class="card">
         <div class="card-title">Details & Fristen</div>
         <table style="font-size:13.5px;">
-            <tr><td style="color:var(--ink-soft);padding:7px 0;">Erstellt</td><td style="padding:7px 0;">{{ $ticket->created_at->format('d.m.Y H:i') }}</td></tr>
-            <tr><td style="color:var(--ink-soft);padding:7px 0;">Reaktion fällig bis</td><td style="padding:7px 0;{{ $ticket->isOverdue() ? 'color:#A32D2D;font-weight:600;' : '' }}">{{ $ticket->due_at?->format('d.m.Y H:i') ?? '—' }}</td></tr>
-            <tr><td style="color:var(--ink-soft);padding:7px 0;">Erste Antwort</td><td style="padding:7px 0;">{{ $ticket->first_response_at?->format('d.m.Y H:i') ?? 'noch keine' }}</td></tr>
-            @if($ticket->resolved_at)<tr><td style="color:var(--ink-soft);padding:7px 0;">Gelöst am</td><td style="padding:7px 0;">{{ $ticket->resolved_at->format('d.m.Y H:i') }}</td></tr>@endif
-            @if($ticket->closed_at)<tr><td style="color:var(--ink-soft);padding:7px 0;">Geschlossen am</td><td style="padding:7px 0;">{{ $ticket->closed_at->format('d.m.Y H:i') }}{{ $ticket->closedBy ? ' von ' . $ticket->closedBy->name : '' }}</td></tr>@endif
+            <tr><td style="color:var(--ink-soft);padding:7px 0;">Erstellt</td><td style="padding:7px 0;">{{ $ticket->created_at->lokal()->format('d.m.Y H:i') }}</td></tr>
+            <tr><td style="color:var(--ink-soft);padding:7px 0;">Reaktion fällig bis</td><td style="padding:7px 0;{{ $ticket->isOverdue() ? 'color:#A32D2D;font-weight:600;' : '' }}">{{ $ticket->due_at?->lokal()->format('d.m.Y H:i') ?? '—' }}</td></tr>
+            <tr><td style="color:var(--ink-soft);padding:7px 0;">Erste Antwort</td><td style="padding:7px 0;">{{ $ticket->first_response_at?->lokal()->format('d.m.Y H:i') ?? 'noch keine' }}</td></tr>
+            @if($ticket->resolved_at)<tr><td style="color:var(--ink-soft);padding:7px 0;">Gelöst am</td><td style="padding:7px 0;">{{ $ticket->resolved_at->lokal()->format('d.m.Y H:i') }}</td></tr>@endif
+            @if($ticket->closed_at)<tr><td style="color:var(--ink-soft);padding:7px 0;">Geschlossen am</td><td style="padding:7px 0;">{{ $ticket->closed_at->lokal()->format('d.m.Y H:i') }}{{ $ticket->closedBy ? ' von ' . $ticket->closedBy->name : '' }}</td></tr>@endif
             @if($ticket->reopened_count > 0)<tr><td style="color:var(--ink-soft);padding:7px 0;">Wiedereröffnet</td><td style="padding:7px 0;">{{ $ticket->reopened_count }}×</td></tr>@endif
             @if($ticket->rating)<tr><td style="color:var(--ink-soft);padding:7px 0;">Kundenbewertung</td><td style="padding:7px 0;">{{ str_repeat('★', $ticket->rating) }}{{ str_repeat('☆', 5 - $ticket->rating) }} ({{ $ticket->rating }}/5){{ $ticket->rating_comment ? ' – „' . $ticket->rating_comment . '"' : '' }}</td></tr>@endif
         </table>
@@ -166,7 +166,7 @@
     <div class="card-title">Einwilligungsnachweis (DSGVO)</div>
     <p style="font-size:13px;color:var(--ink-soft);">
         ✅ Zugestimmt am
-        {{ \Illuminate\Support\Carbon::parse($ticket->consent_given_at)->format('d.m.Y H:i') }}
+        {{ \Illuminate\Support\Carbon::parse($ticket->consent_given_at)->lokal()->format('d.m.Y H:i') }}
         @if($ticket->consent_ip) · IP {{ $ticket->consent_ip }}@endif
         @if($ticket->consent_text)<br><span style="font-style:italic;">„{{ $ticket->consent_text }}"</span>@endif
     </p>
@@ -183,7 +183,7 @@
     <div class="card-title">📎 Anhänge ({{ $attachments->count() }})</div>
     @foreach($attachments as $a)
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);">
-        <span style="font-size:13.5px;">{{ $a->file_name }} <span style="color:var(--ink-soft);font-size:11.5px;">· {{ $a->created_at->format('d.m.Y H:i') }}</span></span>
+        <span style="font-size:13.5px;">{{ $a->file_name }} <span style="color:var(--ink-soft);font-size:11.5px;">· {{ $a->created_at->lokal()->format('d.m.Y H:i') }}</span></span>
         <span style="display:flex;gap:8px;"><a href="{{ route('admin.attachment.download', $a->id) }}" class="btn btn-ghost btn-sm">⬇ Herunterladen</a></span>
     </div>
     @endforeach
@@ -201,7 +201,7 @@
     @forelse($customerMessages as $m)
     @php $fromCustomer = $m->sender_id === $ticket->customer?->user_id; @endphp
     <div style="margin-bottom:16px;padding:12px 16px;border-radius:8px;background:{{ $fromCustomer ? '#EFF6FF' : 'var(--canvas)' }};border:1px solid var(--line);">
-        <div style="font-size:12px;color:var(--ink-soft);margin-bottom:6px;">{{ $fromCustomer ? '👤' : '🏢' }} {{ $m->sender?->name ?? 'Dienstly24 Team (Konto entfernt)' }} · {{ $m->created_at->format('d.m.Y H:i') }}</div>
+        <div style="font-size:12px;color:var(--ink-soft);margin-bottom:6px;">{{ $fromCustomer ? '👤' : '🏢' }} {{ $m->sender?->name ?? 'Dienstly24 Team (Konto entfernt)' }} · {{ $m->created_at->lokal()->format('d.m.Y H:i') }}</div>
         <div style="font-size:14px;line-height:1.6;white-space:pre-line;">{{ $m->body }}</div>
     </div>
     @empty
@@ -246,7 +246,7 @@
     <div class="card-title">🔒 Interne Notizen <span style="font-size:11.5px;font-weight:400;color:var(--ink-soft);">(nur für das Team – der Kunde sieht das nicht)</span></div>
     @foreach($internalNotes as $n)
     <div style="margin-bottom:12px;padding:10px 14px;border-radius:8px;background:#FDF6E9;border:1px solid #F7E7D6;">
-        <div style="font-size:12px;color:var(--ink-soft);margin-bottom:4px;">{{ $n->sender?->name ?? 'Dienstly24 Team (Konto entfernt)' }} · {{ $n->created_at->format('d.m.Y H:i') }}</div>
+        <div style="font-size:12px;color:var(--ink-soft);margin-bottom:4px;">{{ $n->sender?->name ?? 'Dienstly24 Team (Konto entfernt)' }} · {{ $n->created_at->lokal()->format('d.m.Y H:i') }}</div>
         <div style="font-size:13.5px;line-height:1.6;white-space:pre-line;">{{ $n->body }}</div>
     </div>
     @endforeach
@@ -272,7 +272,7 @@
             <strong>{{ $e->label() }}</strong>
             @if($e->details)<span style="color:var(--ink-soft);"> – {{ $e->details }}</span>@endif
         </div>
-        <span style="color:var(--ink-soft);white-space:nowrap;">{{ $e->user?->name ?? 'System' }} · {{ $e->created_at->format('d.m.Y H:i') }}</span>
+        <span style="color:var(--ink-soft);white-space:nowrap;">{{ $e->user?->name ?? 'System' }} · {{ $e->created_at->lokal()->format('d.m.Y H:i') }}</span>
     </div>
     @empty
     <p style="color:var(--ink-soft);font-size:14px;">Kein Verlauf vorhanden.</p>

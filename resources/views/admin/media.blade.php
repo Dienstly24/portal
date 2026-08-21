@@ -108,7 +108,7 @@
                 </div>
                 <div style="padding:10px 12px;font-size:12.5px;">
                     <b title="{{ $asset->original_name }}">{{ Str::limit($asset->title, 34) }}</b><br>
-                    <span style="color:var(--ink-soft);">{{ $asset->width }}×{{ $asset->height }} · {{ $fmtBytes($asset->totalBytes()) }} · {{ $asset->created_at->format('d.m.Y') }}</span><br>
+                    <span style="color:var(--ink-soft);">{{ $asset->width }}×{{ $asset->height }} · {{ $fmtBytes($asset->totalBytes()) }} · {{ $asset->created_at->lokal()->format('d.m.Y') }}</span><br>
                     @if($asset->slot)
                         <span style="display:inline-block;margin-top:4px;background:#e8f5ee;color:#128a4b;border-radius:99px;padding:2px 9px;font-weight:600;">📌 {{ $slots[$asset->slot]['label'] ?? $asset->slot }}</span>
                     @endif
@@ -164,7 +164,7 @@
         @foreach($trashed as $asset)
             <tr style="border-top:1px solid var(--line,#eee);">
                 <td style="padding:6px;">{{ $asset->title }} <span style="color:var(--ink-soft);">({{ $asset->original_name }})</span></td>
-                <td style="padding:6px;">{{ $asset->deleted_at->format('d.m.Y H:i') }}</td>
+                <td style="padding:6px;">{{ $asset->deleted_at->lokal()->format('d.m.Y H:i') }}</td>
                 <td style="padding:6px;">{{ $asset->deleted_at->addDays((int) config('website.media.trash_days'))->format('d.m.Y') }}</td>
                 <td style="padding:6px;text-align:end;">
                     @if($isManager)

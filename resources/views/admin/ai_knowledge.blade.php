@@ -187,7 +187,7 @@ A: Die Beratung ist kostenlos und unverbindlich.">{{ old('text') }}</textarea>
                 <span style="font-size:12.5px;color:var(--ink-soft);">
                     {{ $entry->categoryLabel() }} · {{ $entry->languageLabel() }}
                     @if($entry->editor) · zuletzt {{ $entry->editor->name }}@endif
-                    @if($entry->updated_at) · {{ $entry->updated_at->format('d.m.Y H:i') }}@endif
+                    @if($entry->updated_at) · {{ $entry->updated_at->lokal()->format('d.m.Y H:i') }}@endif
                 </span>
             </div>
         </form>

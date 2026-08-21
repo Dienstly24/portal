@@ -83,11 +83,11 @@
                     <span>👤 <strong>{{ $b->uniqueViewers() }}</strong> Kunden</span>
                     <span>🖱 <strong>{{ number_format($b->total_clicks, 0, ',', '.') }}</strong> Klicks</span>
                     <span>📈 CTR <strong>{{ number_format($b->ctr(), 1, ',', '.') }} %</strong></span>
-                    <span style="color:var(--ink-soft);">Zuletzt gezeigt: {{ $b->last_shown_at?->format('d.m.Y H:i') ?? '—' }}</span>
+                    <span style="color:var(--ink-soft);">Zuletzt gezeigt: {{ $b->last_shown_at?->lokal()->format('d.m.Y H:i') ?? '—' }}</span>
                 </div>
                 <div style="font-size:11.5px;color:var(--ink-soft);margin-top:6px;">
-                    Erstellt: {{ $b->created_at->format('d.m.Y H:i') }}{{ $b->created_by && isset($creators[$b->created_by]) ? ' von ' . $creators[$b->created_by] : '' }}
-                    @if($b->updated_by) · Zuletzt geändert: {{ $b->updated_at->format('d.m.Y H:i') }}{{ isset($creators[$b->updated_by]) ? ' von ' . $creators[$b->updated_by] : '' }} @endif
+                    Erstellt: {{ $b->created_at->lokal()->format('d.m.Y H:i') }}{{ $b->created_by && isset($creators[$b->created_by]) ? ' von ' . $creators[$b->created_by] : '' }}
+                    @if($b->updated_by) · Zuletzt geändert: {{ $b->updated_at->lokal()->format('d.m.Y H:i') }}{{ isset($creators[$b->updated_by]) ? ' von ' . $creators[$b->updated_by] : '' }} @endif
                 </div>
             </div>
             {{-- Sortierung --}}

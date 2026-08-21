@@ -159,7 +159,7 @@
                     <div class="kchat-meta">
                         <div class="kchat-name">
                             <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $c->user?->name ?? 'Ohne Namen' }}</span>
-                            <span class="kchat-time">{{ $last?->created_at->isToday() ? $last->created_at->format('H:i') : $last?->created_at->format('d.m.y') }}</span>
+                            <span class="kchat-time">{{ $last?->created_at->isToday() ? $last->created_at->lokal()->format('H:i') : $last?->created_at->lokal()->format('d.m.y') }}</span>
                         </div>
                         <div class="kchat-snippet">{{ $last?->from_staff ? 'Sie: ' : '' }}{{ \Illuminate\Support\Str::limit(trim($last->body ?? ''), 44) ?: '📎 Anhang' }}</div>
                     </div>
@@ -196,9 +196,9 @@
             <span class="kx-cp-prio">{{ $activeTicket->priorityLabel() }}</span>
             <span class="kx-cp-subject">{{ \Illuminate\Support\Str::limit($activeTicket->subject, 48) }}</span>
             @if($activeTicket->isOverdue())
-            <span class="kx-cp-sla overdue">⏰ SLA überfällig – Frist war {{ $activeTicket->due_at->format('d.m. H:i') }}</span>
+            <span class="kx-cp-sla overdue">⏰ SLA überfällig – Frist war {{ $activeTicket->due_at->lokal()->format('d.m. H:i') }}</span>
             @elseif($activeTicket->due_at && !$activeTicket->first_response_at && !$activeTicket->isFinished())
-            <span class="kx-cp-sla">⏱ Erstantwort bis {{ $activeTicket->due_at->format('d.m. H:i') }}</span>
+            <span class="kx-cp-sla">⏱ Erstantwort bis {{ $activeTicket->due_at->lokal()->format('d.m. H:i') }}</span>
             @endif
         </a>
         @endif

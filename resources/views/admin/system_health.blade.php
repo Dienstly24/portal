@@ -22,7 +22,7 @@
     <div style="flex:1;min-width:0;">
         <div class="sh-gesamt-titel" style="color:{{ $gesamt[0] }};">{{ $gesamt[3] }}</div>
         <div class="sh-meta">
-            Stand {{ $health['generated_at']->format('d.m.Y H:i:s') }} ·
+            Stand {{ $health['generated_at']->lokal()->format('d.m.Y H:i:s') }} ·
             Umgebung {{ $health['environment'] }} ·
             Planer-Zeitzone {{ $health['schedule_timezone'] }} (Anwendung {{ $health['app_timezone'] }})
         </div>
@@ -65,7 +65,7 @@
                     <div class="sh-zeile">
                         <div class="sh-zeile-kopf">
                             <span class="sh-label">Letzter Planer-Lauf (irgendeine Aufgabe)</span>
-                            <span class="sh-wert">{{ $section['last_any_run']->format('d.m.Y H:i') }}</span>
+                            <span class="sh-wert">{{ $section['last_any_run']->lokal()->format('d.m.Y H:i') }}</span>
                         </div>
                     </div>
                 @else
@@ -95,7 +95,7 @@
                             <td><code class="sh-cron">{{ $task['expression'] }}</code></td>
                             <td>
                                 @if($task['last_run'])
-                                    {{ $task['last_run']->format('d.m. H:i') }}
+                                    {{ $task['last_run']->lokal()->format('d.m. H:i') }}
                                     @if($task['runtime_ms'] !== null)
                                         <span class="sh-dezent">({{ $task['runtime_ms'] }} ms)</span>
                                     @endif

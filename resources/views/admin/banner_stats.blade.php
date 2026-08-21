@@ -62,7 +62,7 @@
             <td style="text-align:right;">{{ $b->uniqueViewers() }}</td>
             <td style="text-align:right;">{{ number_format($b->total_clicks, 0, ',', '.') }}</td>
             <td style="text-align:right;font-weight:600;">{{ number_format($b->ctr(), 1, ',', '.') }} %</td>
-            <td style="color:var(--ink-soft);font-size:12.5px;">{{ $b->last_shown_at?->format('d.m.Y H:i') ?? '—' }}</td>
+            <td style="color:var(--ink-soft);font-size:12.5px;">{{ $b->last_shown_at?->lokal()->format('d.m.Y H:i') ?? '—' }}</td>
         </tr>
         @empty
         <tr><td colspan="7" style="text-align:center;color:var(--ink-soft);padding:22px;">Noch keine Banner vorhanden.</td></tr>
@@ -76,7 +76,7 @@
 <div class="card">
     <div class="card-header">
         <div class="card-title">📘 Meta-Seite: {{ $metaPage['name'] ?? '' }}</div>
-        <span style="font-size:12px;color:var(--ink-soft);">Stand: {{ \Illuminate\Support\Carbon::parse($metaPage['refreshed_at'])->format('d.m.Y H:i') }}</span>
+        <span style="font-size:12px;color:var(--ink-soft);">Stand: {{ \Illuminate\Support\Carbon::parse($metaPage['refreshed_at'])->lokal()->format('d.m.Y H:i') }}</span>
     </div>
     <div style="display:flex;gap:26px;flex-wrap:wrap;font-size:14px;">
         <span>👥 <strong>{{ number_format($metaPage['followers'] ?? 0, 0, ',', '.') }}</strong> Follower</span>
@@ -105,9 +105,9 @@
                 </td>
                 <td style="white-space:nowrap;">{{ $info['icon'] }} {{ $info['label'] }}</td>
                 <td style="text-align:right;font-weight:600;">{{ number_format($ch->clicks, 0, ',', '.') }}</td>
-                <td style="color:var(--ink-soft);font-size:12.5px;">{{ $ch->last_click_at?->format('d.m.Y H:i') ?? '—' }}</td>
+                <td style="color:var(--ink-soft);font-size:12.5px;">{{ $ch->last_click_at?->lokal()->format('d.m.Y H:i') ?? '—' }}</td>
                 <td style="font-size:12.5px;">
-                    @if($ch->published_at)<span style="color:#3B7A57;font-weight:600;">✓ {{ $ch->published_at->format('d.m.Y') }}</span>{{ $ch->publisher ? ' von ' . $ch->publisher->name : '' }}
+                    @if($ch->published_at)<span style="color:#3B7A57;font-weight:600;">✓ {{ $ch->published_at->lokal()->format('d.m.Y') }}</span>{{ $ch->publisher ? ' von ' . $ch->publisher->name : '' }}
                     @else<span style="color:var(--ink-soft);">noch nicht</span>@endif
                 </td>
             </tr>

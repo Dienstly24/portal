@@ -40,7 +40,7 @@
         </div>
         <div>
             <div style="font-size:11.5px;color:var(--ink-soft);">Letzter Abgleich</div>
-            <div style="font-weight:600;">{{ $contract->vermittler_last_imported_at?->format('d.m.Y') ?: '—' }}</div>
+            <div style="font-weight:600;">{{ $contract->vermittler_last_imported_at?->lokal()->format('d.m.Y') ?: '—' }}</div>
         </div>
     </div>
 
@@ -94,7 +94,7 @@
             <div style="font-weight:600;margin-bottom:6px;">Historie der Zuordnung</div>
             @foreach($vEvents as $event)
             <div style="border-left:2px solid var(--line);padding:4px 0 4px 10px;margin-bottom:4px;">
-                <span style="color:var(--ink-soft);">{{ $event->created_at?->format('d.m.Y H:i') }}</span>
+                <span style="color:var(--ink-soft);">{{ $event->created_at?->lokal()->format('d.m.Y H:i') }}</span>
                 · <b>{{ $event->actionLabel() }}</b>
                 @if($event->detail) · {{ $event->detail }} @endif
                 @if($event->user) · {{ $event->user->name }} @endif

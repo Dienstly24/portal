@@ -238,10 +238,10 @@
     <div style="padding:16px;border-radius:10px;background:{{ $psEdit['bg'] }};margin-bottom:20px;">
         <div style="font-weight:600;font-size:14px;color:{{ $psEdit['color'] }};">{{ $psEdit['label'] }}</div>
         <div style="font-size:12.5px;margin-top:6px;color:var(--ink-soft);">
-            Einladung: {{ $customer->user?->invitation_sent_at?->format('d.m.Y') ?? '—' }}
+            Einladung: {{ $customer->user?->invitation_sent_at?->lokal()->format('d.m.Y') ?? '—' }}
             · Passwort gesetzt: {{ $customer->user?->portal_password_set_at ? 'Ja' : 'Nein' }}
-            · Erster Login: {{ $customer->user?->first_login_at?->format('d.m.Y') ?? '—' }}
-            · Letzter Login: {{ $customer->user?->last_login_at?->format('d.m.Y') ?? '—' }}
+            · Erster Login: {{ $customer->user?->first_login_at?->lokal()->format('d.m.Y') ?? '—' }}
+            · Letzter Login: {{ $customer->user?->last_login_at?->lokal()->format('d.m.Y') ?? '—' }}
         </div>
         <div style="font-size:12px;margin-top:6px;color:var(--ink-soft);">Aktionen (Einladung, Reset, Deaktivieren) finden Sie in der Kundenakte.</div>
     </div>

@@ -141,7 +141,7 @@ class ImportExportController extends Controller
                         $c->company_name ?? '',
                         $c->company_type ?? '',
                         $c->customer_type ?? 'privat',
-                        $c->created_at?->format('d.m.Y') ?? '',
+                        $c->created_at?->lokal()->format('d.m.Y') ?? '',
                     ]);
                 }
                 flush();

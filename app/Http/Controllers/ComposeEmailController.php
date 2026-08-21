@@ -190,7 +190,7 @@ class ComposeEmailController extends Controller
             abort_unless(auth()->user()->canAccessCustomer($request->customer_id), 403);
             $customer = Customer::with('user')->findOrFail($request->customer_id);
             $history = CustomerMessage::where('customer_id', $customer->id)->latest()->take(4)->get()
-                ->map(fn($m) => $m->created_at->format('d.m.Y') . ' '
+                ->map(fn($m) => $m->created_at->lokal()->format('d.m.Y') . ' '
                     . ($m->from_staff ? 'Wir' : 'Kunde') . ': ' . \Illuminate\Support\Str::limit(trim($m->body), 90))
                 ->all();
         }

@@ -175,17 +175,17 @@
                 </div>
             </td>
             <td style="text-align:right;font-weight:600;">{{ number_format($ch->clicks, 0, ',', '.') }}</td>
-            <td style="color:var(--ink-soft);font-size:12.5px;">{{ $ch->last_click_at?->format('d.m.Y H:i') ?? '—' }}</td>
+            <td style="color:var(--ink-soft);font-size:12.5px;">{{ $ch->last_click_at?->lokal()->format('d.m.Y H:i') ?? '—' }}</td>
             <td style="font-size:12.5px;">
                 @if($ch->published_at)
-                <span style="color:#3B7A57;font-weight:600;">✓ {{ $ch->published_at->format('d.m.Y H:i') }}</span>
+                <span style="color:#3B7A57;font-weight:600;">✓ {{ $ch->published_at->lokal()->format('d.m.Y H:i') }}</span>
                 @if($ch->external_post_id)
                 <span style="background:#E4F0E7;color:#3B7A57;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:600;">API</span>
                 @endif
                 @if($ch->publisher)<span style="color:var(--ink-soft);"> von {{ $ch->publisher->name }}</span>
                 @elseif($ch->external_post_id)<span style="color:var(--ink-soft);"> automatisch</span>@endif
                 @elseif($post->scheduled_for && in_array($ch->platform, \App\Services\Social\MetaPublisher::AUTO_PLATFORMS) && !$ch->auto_attempted_at)
-                <span style="color:#185FA5;">⏱ geplant {{ $post->scheduled_for->timezone(\App\Models\BannerSocialPost::OPERATOR_TZ)->format('d.m.Y H:i') }} Uhr</span>
+                <span style="color:#185FA5;">⏱ geplant {{ $post->scheduled_for->timezone(\App\Models\BannerSocialPost::OPERATOR_TZ)->lokal()->format('d.m.Y H:i') }} Uhr</span>
                 @unless($metaConfigured[$ch->platform] ?? false)
                 <div style="font-size:11.5px;color:#92400E;margin-top:3px;">⚠ Meta-API nicht verbunden - der Planer kann nicht posten (php artisan meta:einrichten).</div>
                 @endunless
@@ -193,7 +193,7 @@
                 <span style="color:var(--ink-soft);">noch nicht</span>
                 @endif
                 @if($ch->insights)
-                <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;" title="Stand: {{ $ch->insights_refreshed_at?->format('d.m.Y H:i') }}">
+                <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;" title="Stand: {{ $ch->insights_refreshed_at?->lokal()->format('d.m.Y H:i') }}">
                     👍 {{ number_format($ch->insights['likes'] ?? 0, 0, ',', '.') }}
                     · 💬 {{ number_format($ch->insights['comments'] ?? 0, 0, ',', '.') }}
                     @if(($ch->insights['shares'] ?? 0) > 0) · ↪ {{ number_format($ch->insights['shares'], 0, ',', '.') }} @endif

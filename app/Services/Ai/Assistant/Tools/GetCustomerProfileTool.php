@@ -50,7 +50,7 @@ class GetCustomerProfileTool implements AssistantTool
                 : null,
             'geburtsdatum_hinterlegt' => $customer->birth_date !== null,
             'sprache' => $customer->preferred_lang ?: 'de',
-            'kunde_seit' => $customer->created_at?->format('d.m.Y'),
+            'kunde_seit' => $customer->created_at?->lokal()->format('d.m.Y'),
         ];
     }
 }

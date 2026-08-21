@@ -223,9 +223,9 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
     @foreach($openMeterPhotos ?? [] as $photo)
     <div style="background:#FBF6E8;border:1px solid #E0DCD0;border-radius:10px;padding:10px 12px;margin-top:12px;font-size:12.5px;">
         @if($photo->aiInProgress())
-            ⏳ {{ __('Ihr Zählerfoto vom :datum wird gerade ausgewertet.', ['datum' => $photo->created_at->format('d.m.Y H:i')]) }}
+            ⏳ {{ __('Ihr Zählerfoto vom :datum wird gerade ausgewertet.', ['datum' => $photo->created_at->lokal()->format('d.m.Y H:i')]) }}
         @else
-            📷 {{ __('Ihr Zählerfoto vom :datum konnten wir nicht automatisch auslesen – unser Team schaut es sich an. Sie können den Stand auch direkt eintragen.', ['datum' => $photo->created_at->format('d.m.Y H:i')]) }}
+            📷 {{ __('Ihr Zählerfoto vom :datum konnten wir nicht automatisch auslesen – unser Team schaut es sich an. Sie können den Stand auch direkt eintragen.', ['datum' => $photo->created_at->lokal()->format('d.m.Y H:i')]) }}
         @endif
     </div>
     @endforeach
@@ -371,7 +371,7 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
                 <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;">
                     <span style="{{ $rowL }}">
                         {{ $r->reading_date->format('d.m.Y') }}
-                        @if($r->captured_at)<span style="font-size:11.5px;"> · {{ $r->captured_at->format('H:i') }} {{ __('Uhr') }}</span>@endif
+                        @if($r->captured_at)<span style="font-size:11.5px;"> · {{ $r->captured_at->lokal()->format('H:i') }} {{ __('Uhr') }}</span>@endif
                         @if($r->isFeedIn())<span style="font-size:11.5px;"> · {{ __('Einspeisung') }}</span>@endif
                     </span>
                     <span style="{{ $rowV }}">{{ $r->formatted() }}</span>
@@ -423,7 +423,7 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
 
 {{-- Aenderung beantragen (Self-Service, Vier-Augen-Prinzip) --}}
 @if(!empty($pendingChange))
-<div class="notice" style="margin-top:16px;">{{ __('⏳ Für diesen Vertrag liegt bereits eine Änderungsanfrage in Prüfung (eingereicht am :date). Sie können nach der Bearbeitung eine weitere Änderung einreichen.', ['date' => $pendingChange->created_at->format('d.m.Y H:i')]) }}</div>
+<div class="notice" style="margin-top:16px;">{{ __('⏳ Für diesen Vertrag liegt bereits eine Änderungsanfrage in Prüfung (eingereicht am :date). Sie können nach der Bearbeitung eine weitere Änderung einreichen.', ['date' => $pendingChange->created_at->lokal()->format('d.m.Y H:i')]) }}</div>
 @endif
 
 <details class="card" style="margin-top:16px;" {{ ($errors->any() || !empty($pendingChange)) ? 'open' : '' }}>

@@ -41,7 +41,7 @@
         <div style="min-width:260px;flex:1;">
             <div style="font-weight:600;font-size:14px;"><a href="{{ route('admin.email_inbox.show', $m->id) }}">{{ $m->subject ?: '(kein Betreff)' }}</a></div>
             <div style="font-size:12.5px;color:var(--ink-soft);margin-top:2px;">
-                von {{ $m->from_name ?: $m->from_address }} · {{ $m->received_at?->format('d.m.Y H:i') ?? $m->created_at->format('d.m.Y H:i') }}
+                von {{ $m->from_name ?: $m->from_address }} · {{ $m->received_at?->lokal()->format('d.m.Y H:i') ?? $m->created_at->lokal()->format('d.m.Y H:i') }}
                 · <span class="badge badge-pending">{{ $m->categoryLabel() }}</span>
             </div>
             <div style="font-size:13px;margin-top:6px;">
@@ -68,7 +68,7 @@
             <div style="min-width:260px;flex:1;">
                 <div style="font-weight:600;font-size:14px;"><a href="{{ route('admin.email_inbox.show', $m->id) }}">{{ $m->subject ?: '(kein Betreff)' }}</a></div>
                 <div style="font-size:12.5px;color:var(--ink-soft);margin-top:2px;">
-                    von {{ $m->from_name ?: $m->from_address }} · {{ $m->received_at?->format('d.m.Y H:i') ?? $m->created_at->format('d.m.Y H:i') }}
+                    von {{ $m->from_name ?: $m->from_address }} · {{ $m->received_at?->lokal()->format('d.m.Y H:i') ?? $m->created_at->lokal()->format('d.m.Y H:i') }}
                     · <span class="badge badge-pending">{{ $m->categoryLabel() }}</span>
                 </div>
                 @if($m->body_text)<div style="font-size:12.5px;color:var(--ink-soft);margin-top:4px;">{{ Str::limit($m->body_text, 140) }}</div>@endif

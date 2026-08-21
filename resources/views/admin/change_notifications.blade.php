@@ -42,7 +42,7 @@ $proof = $changeRequest->proofState();
         </div>
         <div>
             @if($n->status === 'sent')
-                <span class="badge badge-active">✓ Gesendet {{ $n->sent_at?->format('d.m.Y H:i') }}@if($n->sender) · {{ $n->sender->name }}@endif</span>
+                <span class="badge badge-active">✓ Gesendet {{ $n->sent_at?->lokal()->format('d.m.Y H:i') }}@if($n->sender) · {{ $n->sender->name }}@endif</span>
             @elseif($n->status === 'skipped')
                 <span class="badge" style="background:#EFEAD8;color:#7A6A34;">Erledigt{{ $n->channel ? ' · ' . (\App\Models\ChangeNotification::CHANNEL_LABELS[$n->channel] ?? $n->channel) : '' }}</span>
             @else
