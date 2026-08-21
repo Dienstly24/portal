@@ -12,7 +12,7 @@
 <tr><td style="color:#6B7280;">E-Mail-Adresse</td><td style="font-weight:bold;">{{ $ticket->guest_email }}</td></tr>
 @if($ticket->guest_phone)<tr><td style="color:#6B7280;">Telefon</td><td style="font-weight:bold;">{{ $ticket->guest_phone }}</td></tr>@endif
 <tr><td style="color:#6B7280;">Betreff</td><td style="font-weight:bold;">{{ $ticket->subject }}</td></tr>
-<tr><td style="color:#6B7280;">Datum/Uhrzeit</td><td style="font-weight:bold;">{{ $ticket->created_at->format('d.m.Y H:i') }} Uhr</td></tr>
+<tr><td style="color:#6B7280;">Datum/Uhrzeit</td><td style="font-weight:bold;">{{ $ticket->created_at->lokal()->format('d.m.Y H:i') }} Uhr</td></tr>
 </table>
 <div style="margin-top:16px;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;color:#333;">{{ $ticket->description }}</div>
 </td></tr>

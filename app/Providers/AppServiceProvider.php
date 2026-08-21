@@ -10,6 +10,8 @@ use App\Services\Ai\Contracts\AiProviderInterface;
 use App\Services\Ai\Contracts\DocumentAiProviderInterface;
 use App\Services\Ocr\TesseractTextExtractor;
 use App\Services\Ocr\TextExtractorInterface;
+use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Console\Events\ScheduledTaskFailed;
@@ -298,6 +300,20 @@ class AppServiceProvider extends ServiceProvider
             } catch (\Throwable $e) {
                 report($e);
             }
+        });
+
+        // Anzeige-Zeitzone: ->lokal() rechnet einen gespeicherten Zeitpunkt
+        // (UTC) in deutsche Ortszeit um. Bewusst ein EXPLIZITER Aufruf in der
+        // View und keine Umrechnung im Model-Cast: ein Cast wuerde auch
+        // Werte umstellen, die in WHERE-Bedingungen gehen - aus einem
+        // sichtbaren Anzeigefehler wuerde ein stiller Abfragefehler.
+        Carbon::macro('lokal', function () {
+            /** @var Carbon $this */
+            return $this->copy()->setTimezone(\App\Support\LocalTime::zone());
+        });
+        CarbonImmutable::macro('lokal', function () {
+            /** @var CarbonImmutable $this */
+            return $this->setTimezone(\App\Support\LocalTime::zone());
         });
 
         $this->protokolliereGeplanteAufgaben();

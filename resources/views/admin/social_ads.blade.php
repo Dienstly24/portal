@@ -37,7 +37,7 @@
         <div class="metric-icon icon-amber">👁</div>
         <div class="metric-label">Seitenaufrufe (28 Tage)</div>
         <div class="metric-value">{{ number_format($pageInsights['page_views_28d'] ?? 0, 0, ',', '.') }}</div>
-        <div class="metric-sub">Stand: {{ \Illuminate\Support\Carbon::parse($pageInsights['refreshed_at'])->format('d.m.Y H:i') }}</div>
+        <div class="metric-sub">Stand: {{ \Illuminate\Support\Carbon::parse($pageInsights['refreshed_at'])->lokal()->format('d.m.Y H:i') }}</div>
     </div>
 </div>
 @endif

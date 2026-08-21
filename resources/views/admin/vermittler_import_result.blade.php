@@ -8,7 +8,7 @@
         <span>Import-Ergebnis</span>
     </div>
     <div class="page-title">Import abgeschlossen</div>
-    <div class="page-sub">{{ $import->filename }} · {{ $import->created_at?->format('d.m.Y H:i') }} · {{ $import->importer?->name ?? 'System' }}</div>
+    <div class="page-sub">{{ $import->filename }} · {{ $import->created_at?->lokal()->format('d.m.Y H:i') }} · {{ $import->importer?->name ?? 'System' }}</div>
 </div>
 
 {{-- Zusammenfassung: ein Import endet nie ohne klares Ergebnis. --}}

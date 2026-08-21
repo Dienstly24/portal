@@ -72,13 +72,13 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
                 <span style="font-size:12.5px;color:var(--ink-soft);">Passwort gesetzt: <strong>{{ $portalUser?->portal_password_set_at ? 'Ja' : 'Nein' }}</strong></span>
             </div>
             <div style="display:grid;grid-template-columns:auto auto;gap:2px 18px;font-size:12.5px;color:var(--ink-soft);">
-                <span>Einladung gesendet:</span><strong>{{ $portalUser?->invitation_sent_at?->format('d.m.Y H:i') ?? '—' }}</strong>
+                <span>Einladung gesendet:</span><strong>{{ $portalUser?->invitation_sent_at?->lokal()->format('d.m.Y H:i') ?? '—' }}</strong>
                 {{-- Bewusst "Passwort eingerichtet" statt "Account aktiviert": das
                      Startpasswort setzt das SYSTEM beim Einladungsversand - ob der
                      Kunde aktiv wurde, zeigt erst "Erster Login". --}}
-                <span>Passwort eingerichtet:</span><strong>{{ $portalUser?->portal_password_set_at?->format('d.m.Y H:i') ?? '—' }}</strong>
-                <span>Erster Login:</span><strong>{{ $portalUser?->first_login_at?->format('d.m.Y H:i') ?? '—' }}</strong>
-                <span>Letzter Login:</span><strong>{{ $portalUser?->last_login_at?->format('d.m.Y H:i') ?? '—' }}</strong>
+                <span>Passwort eingerichtet:</span><strong>{{ $portalUser?->portal_password_set_at?->lokal()->format('d.m.Y H:i') ?? '—' }}</strong>
+                <span>Erster Login:</span><strong>{{ $portalUser?->first_login_at?->lokal()->format('d.m.Y H:i') ?? '—' }}</strong>
+                <span>Letzter Login:</span><strong>{{ $portalUser?->last_login_at?->lokal()->format('d.m.Y H:i') ?? '—' }}</strong>
             </div>
             @if(!$customer->birth_date)
             <div style="margin-top:10px;background:#FEF3C7;border:1px solid #F0E0B0;border-radius:8px;padding:9px 12px;font-size:12.5px;color:#92400E;line-height:1.55;max-width:520px;">
@@ -348,7 +348,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
             </span>
         </div>
         <div style="color:var(--ink-soft);font-size:12px;margin-top:2px;">
-            von {{ $cm->from_name ?: $cm->from_address }} · {{ ($cm->received_at ?? $cm->created_at)->format('d.m.Y H:i') }}
+            von {{ $cm->from_name ?: $cm->from_address }} · {{ ($cm->received_at ?? $cm->created_at)->lokal()->format('d.m.Y H:i') }}
             @if($cm->match_status === 'suggested') · <span style="color:#92400E;">Zuordnung unbestätigt</span>@endif
         </div>
     @if($canOpenMail)
@@ -409,7 +409,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
             <div style="font-size:14px;font-weight:600;">{{ $d->file_name }}</div>
             <div style="font-size:12px;color:var(--ink-soft);display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:2px;">
                 <span>{{ \App\Models\Document::CATEGORIES[$d->category] ?? ucfirst($d->category) }}</span>
-                <span>· {{ $d->created_at->format('d.m.Y') }}</span>
+                <span>· {{ $d->created_at->lokal()->format('d.m.Y') }}</span>
                 @if(($d->visibility ?? 'customer') === 'internal')<span style="background:#F7E7D6;color:#B5651D;padding:1px 6px;border-radius:4px;">🔒 intern</span>@else<span style="background:#EAF2FB;color:#185FA5;padding:1px 6px;border-radius:4px;">👤 Kunde</span>@endif
                 @if($docContract)<span style="background:#D9F4E6;color:#17A65B;padding:1px 6px;border-radius:4px;">{{ $docContract->typeIcon() }} {{ $docContract->insurer }}</span>@endif
                 @if($d->aiInProgress())<span style="background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:4px;">⏳ KI-Analyse läuft</span>
@@ -717,7 +717,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
         <tr class="row-link" onclick="rowNav(event, '{{ route('admin.ticket', $t->id) }}')" title="Antrag öffnen">
             <td style="padding:12px;font-weight:600;">{{ $t->subject }}</td>
             <td style="padding:12px;color:var(--ink-soft);">{{ ucfirst(str_replace('_',' ',$t->type)) }}</td>
-            <td style="padding:12px;color:var(--ink-soft);font-size:13px;">{{ $t->created_at->format('d.m.Y') }}</td>
+            <td style="padding:12px;color:var(--ink-soft);font-size:13px;">{{ $t->created_at->lokal()->format('d.m.Y') }}</td>
             <td style="padding:12px;"><span class="badge badge-{{ $t->status === 'open' ? 'open' : 'closed' }}">{{ ['open'=>'Offen','in_progress'=>'In Bearb.','waiting'=>'Wartend','closed'=>'Geschlossen'][$t->status] ?? $t->status }}</span></td>
             <td style="padding:12px;"><a href="{{ route('admin.ticket', $t->id) }}" class="btn btn-ghost btn-sm">Details</a></td>
         </tr>
@@ -769,7 +769,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
             <div class="chat-avatar" style="{{ $staffSide ? 'background:var(--gold);' : '' }}">{{ strtoupper(mb_substr($msg->sender?->name ?? '??', 0, 2)) }}</div>
             <div style="max-width:75%;">
                 <div style="font-size:11px;color:var(--ink-soft);margin-bottom:3px;{{ $staffSide ? 'text-align:right;' : '' }}">
-                    {{ $msg->sender?->name ?? 'Gelöschter Nutzer' }} · {{ $msg->created_at->format('d.m.Y H:i') }}
+                    {{ $msg->sender?->name ?? 'Gelöschter Nutzer' }} · {{ $msg->created_at->lokal()->format('d.m.Y H:i') }}
                 </div>
                 <div class="chat-bubble" style="{{ $staffSide ? 'background:var(--petrol);color:#fff;border-bottom-right-radius:4px;' : 'background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px;' }}">
                     {!! nl2br(e($msg->body)) !!}
@@ -789,7 +789,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
                 @endif
                 <div style="font-size:10.5px;color:var(--ink-soft);margin-top:3px;{{ $staffSide ? 'text-align:right;' : '' }}">
                     @if($staffSide)
-                        {{ $msg->read_at ? '✓✓ Vom Kunden gelesen ' . $msg->read_at->format('d.m.Y H:i') : '✓ Zugestellt' }}
+                        {{ $msg->read_at ? '✓✓ Vom Kunden gelesen ' . $msg->read_at->lokal()->format('d.m.Y H:i') : '✓ Zugestellt' }}
                         @if($msg->email_mode === 'full') · ✉️ Text per E-Mail @elseif($msg->email_mode === 'hint') · ✉️ E-Mail-Hinweis @endif
                     @endif
                 </div>
@@ -860,7 +860,7 @@ function openMessagesTab() {
             <div class="chat-avatar" style="{{ $own ? 'background:var(--gold);' : '' }}">{{ strtoupper(mb_substr($msg->sender?->name ?? '??', 0, 2)) }}</div>
             <div style="max-width:75%;">
                 <div style="font-size:11px;color:var(--ink-soft);margin-bottom:3px;{{ $own ? 'text-align:right;' : '' }}">
-                    {{ $msg->sender?->name ?? 'Gelöschter Nutzer' }} · {{ $msg->created_at->format('d.m.Y H:i') }}
+                    {{ $msg->sender?->name ?? 'Gelöschter Nutzer' }} · {{ $msg->created_at->lokal()->format('d.m.Y H:i') }}
                 </div>
                 <div class="chat-bubble" style="{{ $own ? 'background:var(--petrol);color:#fff;border-bottom-right-radius:4px;' : 'background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px;' }}">
                     {!! $msg->renderedMessage() !!}
@@ -901,7 +901,7 @@ function openMessagesTab() {
         <div style="flex:1;">
             <div style="font-size:13px;line-height:1.5;">{{ $n->note }}</div>
             <div style="font-size:11px;color:var(--ink-soft);margin-top:3px;">
-                {{ $n->createdBy?->name }} · {{ $n->created_at->format('d.m.Y H:i') }}
+                {{ $n->createdBy?->name }} · {{ $n->created_at->lokal()->format('d.m.Y H:i') }}
                 @if($n->due_date) · Fällig: {{ \Carbon\Carbon::parse($n->due_date)->format('d.m.Y') }} @endif
             </div>
         </div>
@@ -929,7 +929,7 @@ function openMessagesTab() {
     <div style="padding:10px 12px;border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:8px;margin-bottom:10px;background:#FDFDFB;">
         <div style="font-size:13px;line-height:1.55;">{!! $note->renderedMessage() !!}</div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:5px;">
-            <span style="font-size:11px;color:var(--ink-soft);">{{ $note->sender?->name ?? 'Gelöschter Nutzer' }} · {{ $note->created_at->format('d.m.Y H:i') }}</span>
+            <span style="font-size:11px;color:var(--ink-soft);">{{ $note->sender?->name ?? 'Gelöschter Nutzer' }} · {{ $note->created_at->lokal()->format('d.m.Y H:i') }}</span>
             @can('delete', $note)
             <form method="POST" action="{{ route('admin.internal.destroy', $note->id) }}" onsubmit="return confirm('Notiz wirklich löschen?');" style="margin:0;">
                 @csrf @method('DELETE')
@@ -961,8 +961,8 @@ function openMessagesTab() {
         <div>
             <div style="font-size:14px;font-weight:600;">{{ $cr->typeLabel() }}</div>
             <div style="font-size:12px;color:var(--ink-soft);">
-                Eingereicht {{ $cr->created_at->format('d.m.Y H:i') }}
-                @if($cr->reviewer) · {{ $cr->status === 'approved' ? 'genehmigt' : 'abgelehnt' }} von {{ $cr->reviewer->name }} am {{ $cr->reviewed_at?->format('d.m.Y H:i') }}@endif
+                Eingereicht {{ $cr->created_at->lokal()->format('d.m.Y H:i') }}
+                @if($cr->reviewer) · {{ $cr->status === 'approved' ? 'genehmigt' : 'abgelehnt' }} von {{ $cr->reviewer->name }} am {{ $cr->reviewed_at?->lokal()->format('d.m.Y H:i') }}@endif
                 @if($cr->notes) · Notiz: {{ $cr->notes }}@endif
             </div>
         </div>

@@ -85,7 +85,7 @@
             @foreach($imports as $import)
                 <tr style="border-top:1px solid var(--line);">
                     <td style="padding:8px;"><a href="{{ route('admin.vermittler.show', $import->id) }}">{{ $import->filename }}</a></td>
-                    <td style="padding:8px;">{{ $import->created_at?->format('d.m.Y H:i') }}</td>
+                    <td style="padding:8px;">{{ $import->created_at?->lokal()->format('d.m.Y H:i') }}</td>
                     <td style="padding:8px;">{{ $import->rows_total }}</td>
                     <td style="padding:8px;">{{ $import->rows_matched + $import->rows_new_link }}</td>
                     <td style="padding:8px;">{{ $import->rows_unmatched }}</td>

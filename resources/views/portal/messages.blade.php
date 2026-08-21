@@ -27,7 +27,7 @@
                 @php
                     $day = $m->created_at->isToday()
                         ? __('Heute')
-                        : ($m->created_at->isYesterday() ? __('Gestern') : $m->created_at->format('d.m.Y'));
+                        : ($m->created_at->isYesterday() ? __('Gestern') : $m->created_at->lokal()->format('d.m.Y'));
                 @endphp
                 @if($day !== $lastDay)
                     <div class="d24c-day">{{ $day }}</div>
@@ -45,7 +45,7 @@
                         </span>
                     </span>
                     @endforeach
-                    <span class="d24c-tm">{{ $m->created_at->format('H:i') }}@unless($m->from_staff)<span class="d24c-ticks{{ $m->read_at ? ' read' : '' }}" title="{{ $m->read_at ? __('Gelesen') : __('Gesendet') }}">{{ $m->read_at ? '✓✓' : '✓' }}</span>@endunless</span>
+                    <span class="d24c-tm">{{ $m->created_at->lokal()->format('H:i') }}@unless($m->from_staff)<span class="d24c-ticks{{ $m->read_at ? ' read' : '' }}" title="{{ $m->read_at ? __('Gelesen') : __('Gesendet') }}">{{ $m->read_at ? '✓✓' : '✓' }}</span>@endunless</span>
                 </div>
             @empty
                 <div class="d24c-empty">👋 {{ __('Noch keine Nachrichten – schreiben Sie uns einfach. Wir melden uns schnellstmöglich.') }}</div>

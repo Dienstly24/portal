@@ -69,6 +69,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Anzeige-Zeitzone
+    |--------------------------------------------------------------------------
+    |
+    | GESPEICHERT wird weiterhin in UTC (siehe 'timezone' oben) - daran darf
+    | sich nichts aendern, sonst laege der Altbestand in UTC und alles Neue in
+    | Ortszeit, ohne dass man den Zeilen ansieht, welche welche ist. Diese
+    | Einstellung gilt AUSSCHLIESSLICH fuer die ANZEIGE: Carbon::lokal()
+    | rechnet einen gespeicherten Zeitpunkt hierher um.
+    |
+    | Warum das noetig ist: der Betrieb sitzt in Deutschland. Ein Zeitstempel,
+    | der 14:30 zeigt, obwohl der Vorgang um 16:30 stattfand, ist schlicht
+    | falsch - bei der DSGVO-Einwilligung sogar rechtlich heikel.
+    |
+    */
+
+    'display_timezone' => env('APP_DISPLAY_TIMEZONE', 'Europe/Berlin'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Zeitzone des Aufgabenplaners
     |--------------------------------------------------------------------------
     |

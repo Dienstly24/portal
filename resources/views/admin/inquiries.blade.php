@@ -19,7 +19,7 @@
             <td style="color:var(--ink-soft);font-size:13px;">{{ $t->guest_email }}@if($t->guest_phone)<br>{{ $t->guest_phone }}@endif</td>
             <td>@switch($t->source)@case('website')🌐 Website @break@case('hilfe-formular')🆘 Hilfe @break@case('email')📧 E-Mail @break@default📨 {{ $t->source ?? '—' }}@endswitch</td>
             <td>{{ \App\Models\Ticket::PRIORITIES[$t->priority]['icon'] ?? '🟡' }}</td>
-            <td style="color:var(--ink-soft);">{{ $t->created_at->format('d.m.Y') }}</td>
+            <td style="color:var(--ink-soft);">{{ $t->created_at->lokal()->format('d.m.Y') }}</td>
             <td><span class="badge badge-{{ $t->statusBadge() }}">{{ $t->statusLabel() }}</span></td>
             <td><a href="{{ route('admin.ticket', $t->id) }}" class="btn btn-ghost btn-sm">Details</a></td>
         </tr>

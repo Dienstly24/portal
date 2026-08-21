@@ -204,11 +204,11 @@
             <td>
                 <span class="wb-badge {{ ['offen' => 'wb-offen', 'freigegeben' => 'wb-frei', 'ausgezahlt' => 'wb-mit', 'storniert' => 'wb-storno'][$p->status] ?? 'wb-none' }}">{{ $p->statusLabel() }}</span>
                 @if($p->status === 'ausgezahlt' && $p->paid_at)
-                <div style="font-size:11.5px;color:var(--ink-soft);margin-top:2px;">{{ $p->paid_at->format('d.m.Y') }} · {{ $p->payer?->name ?? '—' }}</div>
+                <div style="font-size:11.5px;color:var(--ink-soft);margin-top:2px;">{{ $p->paid_at->lokal()->format('d.m.Y') }} · {{ $p->payer?->name ?? '—' }}</div>
                 @endif
             </td>
             <td style="font-size:12.5px;color:var(--ink-soft);white-space:nowrap;">
-                {{ $p->created_at->format('d.m.Y') }}<br>{{ $p->creator?->name ?? 'System' }}
+                {{ $p->created_at->lokal()->format('d.m.Y') }}<br>{{ $p->creator?->name ?? 'System' }}
             </td>
             <td style="padding-right:20px;white-space:nowrap;">
                 @if($p->status === 'offen')

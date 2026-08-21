@@ -68,7 +68,7 @@
                 // werden dann NICHT uebersetzt und die Seite bricht mit
                 // einem Parse-Fehler ab. Text deshalb hier zusammenbauen.
                 $wann = $aiConversation->resume_not_before
-                    ? 'am ' . $aiConversation->resume_not_before->format('d.m.Y H:i') . ' Uhr'
+                    ? 'am ' . $aiConversation->resume_not_before->lokal()->format('d.m.Y H:i') . ' Uhr'
                     : 'nach der Ruhefrist';
                 $satz = $aiConversation->resume_ticket_id
                     ? 'sobald der Vorgang abgeschlossen ist – spätestens ' . $wann
@@ -79,11 +79,11 @@
             </div>
         @endif
     @elseif($aiConversation->resumed_at)
-        <div class="kx-ai-next">🤖 Die KI hat am {{ $aiConversation->resumed_at->format('d.m.Y H:i') }} Uhr selbst wieder übernommen (Vorgang erledigt bzw. Ruhefrist abgelaufen).</div>
+        <div class="kx-ai-next">🤖 Die KI hat am {{ $aiConversation->resumed_at->lokal()->format('d.m.Y H:i') }} Uhr selbst wieder übernommen (Vorgang erledigt bzw. Ruhefrist abgelaufen).</div>
     @endif
 
     @if($uebergabe && $aiConversation->reasonLabel())
-        <div class="kx-ai-reason">Übergabegrund: {{ $aiConversation->reasonLabel() }}@if($aiConversation->handover_at) · {{ $aiConversation->handover_at->format('d.m.Y H:i') }}@endif</div>
+        <div class="kx-ai-reason">Übergabegrund: {{ $aiConversation->reasonLabel() }}@if($aiConversation->handover_at) · {{ $aiConversation->handover_at->lokal()->format('d.m.Y H:i') }}@endif</div>
     @endif
 
     {{-- Abschnitt 13: eine Stoerung darf NIE unsichtbar bleiben. Der

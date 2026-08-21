@@ -60,12 +60,12 @@ class GetOpenTicketsTool implements AssistantTool
                 'thema' => $t->subject,
                 'art' => $t->typeLabel(),
                 'status' => $t->portalStatusLabel(),
-                'erstellt' => $t->created_at?->format('d.m.Y'),
+                'erstellt' => $t->created_at?->lokal()->format('d.m.Y'),
             ])->values()->all(),
             'aenderungsantraege' => $changeRequests->map(fn (CustomerChangeRequest $r) => [
                 'art' => $r->typeLabel(),
                 'status' => 'In Pruefung',
-                'eingereicht' => $r->created_at?->format('d.m.Y'),
+                'eingereicht' => $r->created_at?->lokal()->format('d.m.Y'),
             ])->values()->all(),
         ];
     }

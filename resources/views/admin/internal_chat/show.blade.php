@@ -25,7 +25,7 @@
             <div style="display:flex;gap:10px;margin-bottom:14px;align-items:flex-end;{{ $own ? 'flex-direction:row-reverse;' : '' }}">
                 <div style="width:32px;height:32px;border-radius:50%;background:{{ $own ? 'var(--gold)' : 'var(--petrol)' }};color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:none;">{{ strtoupper(mb_substr($m->sender?->name ?? '??', 0, 2)) }}</div>
                 <div style="max-width:75%;">
-                    <div style="font-size:11px;color:var(--ink-soft);margin-bottom:3px;{{ $own ? 'text-align:right;' : '' }}">{{ $m->sender?->name ?? 'Gelöschter Nutzer' }} · {{ $m->created_at->format('d.m.Y H:i') }}</div>
+                    <div style="font-size:11px;color:var(--ink-soft);margin-bottom:3px;{{ $own ? 'text-align:right;' : '' }}">{{ $m->sender?->name ?? 'Gelöschter Nutzer' }} · {{ $m->created_at->lokal()->format('d.m.Y H:i') }}</div>
                     <div style="padding:10px 14px;border-radius:12px;font-size:13.5px;line-height:1.55;{{ $own ? 'background:var(--petrol);color:#fff;border-bottom-right-radius:4px;' : 'background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px;' }}">{{ $m->body }}</div>
                 </div>
             </div>

@@ -25,7 +25,7 @@
             'subject' => $t->auto_email_subject,
             'body' => $t->auto_email_body,
             'send_on' => $t->auto_email_send_on?->format('Y-m-d'),
-            'sent_at' => $t->auto_email_sent_at?->format('d.m.Y H:i'),
+            'sent_at' => $t->auto_email_sent_at?->lokal()->format('d.m.Y H:i'),
             'error' => $t->auto_email_error,
         ],
     ]]);
@@ -151,7 +151,7 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
                 @endif
                 @endif
                 @if($t->status === 'done' && $t->completed_at)
-                <span style="background:#D9F4E6;color:#0F7A43;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;">✓ Erledigt {{ $t->completed_at->format('d.m.Y') }}</span>
+                <span style="background:#D9F4E6;color:#0F7A43;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;">✓ Erledigt {{ $t->completed_at->lokal()->format('d.m.Y') }}</span>
                 @endif
             </div>
             @if($t->description)<div style="font-size:13px;color:var(--ink-soft);margin-top:3px;overflow:hidden;text-overflow:ellipsis;">{{ \Illuminate\Support\Str::limit($t->description, 160) }}</div>@endif
@@ -169,7 +169,7 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
                 @if($t->auto_email_status === 'pending')
                 <span style="background:#F5EFDD;color:#8A7635;border-radius:999px;padding:2px 10px;font-weight:600;" title="Wird automatisch an den Kunden gesendet">⏱️ E-Mail geplant {{ $t->auto_email_send_on?->format('d.m.Y') }}</span>
                 @elseif($t->auto_email_status === 'sent')
-                <span style="background:#D9F4E6;color:#0F7A43;border-radius:999px;padding:2px 10px;font-weight:600;" title="{{ $t->auto_email_subject }}">✉️✓ E-Mail gesendet {{ $t->auto_email_sent_at?->format('d.m.Y') }}</span>
+                <span style="background:#D9F4E6;color:#0F7A43;border-radius:999px;padding:2px 10px;font-weight:600;" title="{{ $t->auto_email_subject }}">✉️✓ E-Mail gesendet {{ $t->auto_email_sent_at?->lokal()->format('d.m.Y') }}</span>
                 @elseif($t->auto_email_status === 'failed')
                 <span style="background:#F9E3E3;color:#A32D2D;border-radius:999px;padding:2px 10px;font-weight:600;" title="{{ $t->auto_email_error }}">⚠️ E-Mail fehlgeschlagen</span>
                 @elseif($t->auto_email_status === 'skipped')

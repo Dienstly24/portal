@@ -40,7 +40,7 @@
             <td>
                 <span class="badge {{ $a->is_active ? 'badge-active' : 'badge-pending' }}">{{ $a->is_active ? 'Aktiv' : 'Inaktiv' }}</span>
             </td>
-            <td style="font-size:13px;color:var(--ink-soft);">{{ $a->last_synced_at?->format('d.m.Y H:i') ?? 'noch nie' }}</td>
+            <td style="font-size:13px;color:var(--ink-soft);">{{ $a->last_synced_at?->lokal()->format('d.m.Y H:i') ?? 'noch nie' }}</td>
             <td style="font-size:13px;color:var(--ink-soft);">{{ $a->messages_count }}</td>
             <td style="padding-right:20px;white-space:nowrap;">
                 @if($a->isOAuth())

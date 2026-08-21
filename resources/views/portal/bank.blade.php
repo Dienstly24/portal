@@ -59,7 +59,7 @@
     <div class="item-row">
         <div>
             <div style="font-size:14px;">{{ __('IBAN endend auf') }}<b>{{ substr($r->new_data['iban'] ?? '', -4) }}</b></div>
-            <div style="font-size:12px;color:var(--ink-soft);">{{ $r->created_at->format('d.m.Y H:i') }} @if($r->notes) · {{ $r->notes }} @endif</div>
+            <div style="font-size:12px;color:var(--ink-soft);">{{ $r->created_at->lokal()->format('d.m.Y H:i') }} @if($r->notes) · {{ $r->notes }} @endif</div>
         </div>
         <span class="badge {{ $r->status === 'approved' ? 'badge-active' : '' }}" style="{{ $r->status === 'rejected' ? 'background:#F9E3E3;color:#A32D2D;' : '' }}">{{ $r->status === 'approved' ? __('Genehmigt') : __('Abgelehnt') }}</span>
     </div>

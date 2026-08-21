@@ -9,9 +9,9 @@
         <div>
             <div style="font-size:14px;font-weight:600;">{{ $r->typeLabel() }}</div>
             <div style="font-size:12px;color:var(--ink-soft);">
-                Eingereicht: {{ $r->created_at->format('d.m.Y H:i') }}
+                Eingereicht: {{ $r->created_at->lokal()->format('d.m.Y H:i') }}
                 @if($r->effective_from) · Gültig ab: {{ $r->effective_from->format('d.m.Y') }} @endif
-                @if($r->reviewed_at) · Bearbeitet: {{ $r->reviewed_at->format('d.m.Y H:i') }} @endif
+                @if($r->reviewed_at) · Bearbeitet: {{ $r->reviewed_at->lokal()->format('d.m.Y H:i') }} @endif
                 @if($r->status === 'rejected' && $r->notes) · Grund: {{ $r->notes }} @endif
             </div>
             @if($r->status === 'pending' && $r->proof_status === 'missing')

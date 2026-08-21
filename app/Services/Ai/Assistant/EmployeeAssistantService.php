@@ -81,7 +81,7 @@ class EmployeeAssistantService
                 'grund' => $conversation->paused_reason,
                 'letzter_schritt' => $conversation->last_successful_step,
                 'aktueller_schritt' => $conversation->current_step,
-                'zeitpunkt' => $conversation->last_error_at?->format('d.m.Y H:i'),
+                'zeitpunkt' => $conversation->last_error_at?->lokal()->format('d.m.Y H:i'),
             ] : null,
             'fehlende_dokumente' => array_map(
                 fn ($d) => (string) ($d['titel'] ?? '?'),

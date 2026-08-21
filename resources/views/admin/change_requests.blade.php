@@ -53,10 +53,10 @@ $fmt = fn($v) => $valueLabels[$v] ?? $v;
             </div>
             <div style="font-size:13px;color:var(--ink-soft);margin-bottom:12px;">
                 Kunde: <a href="{{ route('admin.customer', $r->customer_id) }}" style="color:var(--petrol);font-weight:600;">{{ $r->customer?->user?->name ?? '—' }}</a>
-                · Eingereicht: {{ $r->created_at->format('d.m.Y H:i') }}
+                · Eingereicht: {{ $r->created_at->lokal()->format('d.m.Y H:i') }}
                 @if($r->effective_from) · <b>Gültig ab: {{ $r->effective_from->format('d.m.Y') }}</b>
                 @elseif($r->requiresProof()) · <span style="color:#B5651D;">Gültig-ab fehlt</span> @endif
-                @if($r->reviewer) · Bearbeitet von {{ $r->reviewer->name }} am {{ $r->reviewed_at?->format('d.m.Y H:i') }} @endif
+                @if($r->reviewer) · Bearbeitet von {{ $r->reviewer->name }} am {{ $r->reviewed_at?->lokal()->format('d.m.Y H:i') }} @endif
             </div>
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
@@ -126,7 +126,7 @@ $fmt = fn($v) => $valueLabels[$v] ?? $v;
                 </div>
                 @endif
                 @if($r->proof_checked_at)
-                <div style="font-size:11.5px;color:var(--ink-soft);margin-top:8px;">Automatisch geprüft am {{ $r->proof_checked_at->format('d.m.Y H:i') }} · Ein Treffer belegt, dass die Angabe im Dokument steht – die Echtheit des Dokuments prüft weiterhin der Mensch.</div>
+                <div style="font-size:11.5px;color:var(--ink-soft);margin-top:8px;">Automatisch geprüft am {{ $r->proof_checked_at->lokal()->format('d.m.Y H:i') }} · Ein Treffer belegt, dass die Angabe im Dokument steht – die Echtheit des Dokuments prüft weiterhin der Mensch.</div>
                 @endif
             </div>
             @endif

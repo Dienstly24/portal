@@ -78,7 +78,7 @@
 
 <div class="footer">
     <span>Vertraulich - nur fuer die Verwaltung (admin/manager).</span>
-    <span>Erstellt am {{ now()->format('d.m.Y H:i') }}</span>
+    <span>Erstellt am {{ now()->lokal()->format('d.m.Y H:i') }}</span>
 </div>
 </body>
 </html>

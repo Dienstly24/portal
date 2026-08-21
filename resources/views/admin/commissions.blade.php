@@ -32,7 +32,7 @@
         @csrf
         <div style="min-width:180px;">
             <div style="font-weight:600;font-size:14px;"><a href="{{ route('admin.partners.show', $c->partner_id) }}">{{ $c->partner->name }}</a></div>
-            <div style="font-size:12px;color:var(--ink-soft);">erfasst {{ $c->created_at->format('d.m.Y H:i') }}</div>
+            <div style="font-size:12px;color:var(--ink-soft);">erfasst {{ $c->created_at->lokal()->format('d.m.Y H:i') }}</div>
         </div>
         <div>
             <label style="font-size:11px;color:var(--ink-soft);display:block;">Gutschrift-Nr.</label>
@@ -76,7 +76,7 @@
             <td style="font-size:13px;font-weight:600;">{{ $c->amount !== null ? number_format($c->amount, 2, ',', '.') . ' €' : '—' }}</td>
             <td><span class="badge {{ $c->status === 'booked' ? 'badge-active' : 'badge-danger' }}">{{ $c->statusLabel() }}</span></td>
             <td style="font-size:13px;color:var(--ink-soft);">{{ $c->reviewer?->name ?? '—' }}</td>
-            <td style="font-size:13px;color:var(--ink-soft);">{{ $c->reviewed_at?->format('d.m.Y H:i') ?? '—' }}</td>
+            <td style="font-size:13px;color:var(--ink-soft);">{{ $c->reviewed_at?->lokal()->format('d.m.Y H:i') ?? '—' }}</td>
         </tr>
         @empty
         <tr><td colspan="6" style="text-align:center;padding:28px;color:var(--ink-soft);">Noch keine bearbeiteten Gutschriften.</td></tr>

@@ -48,7 +48,7 @@ $color = $typeColors[$event['type']] ?? $typeColors['default'];
         @endif
         @if($event['desc'])<div style="font-size:12px;color:var(--ink-soft);margin-top:2px;">{{ $event['desc'] }}</div>@endif
         <div style="font-size:11px;color:var(--ink-soft);margin-top:4px;">
-            {{ $event['user'] ?? 'System' }} · {{ \Carbon\Carbon::parse($event['date'])->format('d.m.Y H:i') }}
+            {{ $event['user'] ?? 'System' }} · {{ \Carbon\Carbon::parse($event['date'])->lokal()->format('d.m.Y H:i') }}
         </div>
     </div>
 </div>

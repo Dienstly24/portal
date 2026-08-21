@@ -150,7 +150,7 @@
                     @elseif($doc->ai_status === 'failed')<span class="badge" style="background:#FBE9E9;color:#B3261E;">Fehler</span>
                     @endif
                 </td>
-                <td style="padding:10px 20px;color:var(--ink-soft);">{{ $doc->created_at->format('d.m.Y H:i') }}</td>
+                <td style="padding:10px 20px;color:var(--ink-soft);">{{ $doc->created_at->lokal()->format('d.m.Y H:i') }}</td>
             </tr>
         @empty
             <tr><td colspan="5" style="padding:18px 20px;color:var(--ink-soft);">Noch keine analysierten Dokumente.</td></tr>

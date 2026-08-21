@@ -64,7 +64,7 @@ class GetDocumentStatusTool implements AssistantTool
             'letzte_uploads' => $uploads->map(fn (Document $d) => [
                 'dateiname' => $d->file_name,
                 'art' => $d->aiTypeLabel() ?: ($d->category ?: null),
-                'eingegangen_am' => $d->created_at?->format('d.m.Y'),
+                'eingegangen_am' => $d->created_at?->lokal()->format('d.m.Y'),
                 // Ehrlich: die Analyse laeuft ggf. noch, geprueft hat sie
                 // niemand. Kein "akzeptiert" behaupten.
                 'stand' => $d->aiInProgress() ? 'Eingegangen, wird verarbeitet' : 'Eingegangen',

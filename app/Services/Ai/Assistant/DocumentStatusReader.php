@@ -39,7 +39,7 @@ class DocumentStatusReader
                 ? trim($r->contract->typeLabel() . ' ' . ($r->contract->insurer ?? ''))
                 : null,
             'grund_ablehnung' => $r->status === 'rejected' ? $r->rejection_note : null,
-            'eingegangen' => $r->uploaded_at?->format('d.m.Y'),
+            'eingegangen' => $r->uploaded_at?->lokal()->format('d.m.Y'),
         ], fn ($v) => $v !== null && $v !== ''))->values()->all();
 
         $missing = $requests->whereIn('status', ['open', 'rejected']);
