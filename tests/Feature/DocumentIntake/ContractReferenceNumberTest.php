@@ -155,4 +155,138 @@ class ContractReferenceNumberTest extends TestCase
         $contract->refresh();
         $this->assertSame('1477-6741-9200-53', $contract->reference_number);
     }
+
+    /**
+     * Das Beratungsprotokoll des Vergleichsportals: viele Sachdaten
+     * (Gesellschaft, Beitrag, Beginn), aber KEINE Kennung - weder
+     * Vertrags- noch Referenznummer.
+     */
+    private function protokoll(array $ueberschreiben = []): array
+    {
+        return [
+            'versicherung' => array_merge([
+                'insurer' => 'WGV',
+                'sparte' => 'kfz',
+                'premium_amount' => 80.49,
+                'premium_interval' => 'monthly',
+                'start_date' => '2026-08-21',
+                'document_stage' => Contract::STAGE_ANTRAG,
+            ], $ueberschreiben),
+        ];
+    }
+
+    /** Die Abschluss-Seite der Antragsstrecke: nur die Referenznummer. */
+    private function bestaetigung(array $ueberschreiben = []): array
+    {
+        return [
+            'versicherung' => array_merge([
+                'insurer' => 'WGV',
+                'sparte' => 'kfz',
+                'reference_number' => '1417-6729-0230-64',
+                'document_stage' => Contract::STAGE_ANTRAG,
+            ], $ueberschreiben),
+        ];
+    }
+
+    /**
+     * Gemeldeter Fehler 21.08.2026: Protokoll UND Bestaetigungs-Screenshot
+     * gehoeren zu EINEM Antrag - es entstanden aber zwei Vertraege. Die
+     * Bestaetigung darf nur die Referenznummer nachtragen.
+     */
+    public function test_confirmation_page_only_adds_the_reference_to_the_application(): void
+    {
+        $customer = $this->customer();
+        $intake = app(DocumentIntakeService::class);
+
+        $vertrag = $intake->createContractFromExtraction($this->doc($this->protokoll()), $customer, null);
+        $this->assertNotNull($vertrag);
+        $this->assertNull($vertrag->reference_number);
+
+        $ergebnis = $intake->createContractFromExtraction(
+            $this->doc($this->bestaetigung()), $customer, null
+        );
+
+        $this->assertSame($vertrag->id, $ergebnis->id);
+        $this->assertSame(1, Contract::where('customer_id', $customer->id)->count());
+
+        $ergebnis->refresh();
+        $this->assertSame('1417-6729-0230-64', $ergebnis->reference_number);
+        // Die Sachdaten des Protokolls bleiben unangetastet.
+        $this->assertSame('80.49', (string) $ergebnis->premium_amount);
+        $this->assertSame('2026-08-21', substr((string) $ergebnis->start_date, 0, 10));
+        $this->assertTrue($ergebnis->isApplication());
+    }
+
+    /** Andere Reihenfolge, gleiches Ergebnis: erst der Screenshot, dann das Protokoll. */
+    public function test_protocol_after_the_confirmation_stays_one_contract(): void
+    {
+        $customer = $this->customer();
+        $intake = app(DocumentIntakeService::class);
+
+        $huelle = $intake->createContractFromExtraction($this->doc($this->bestaetigung()), $customer, null);
+        $ergebnis = $intake->createContractFromExtraction($this->doc($this->protokoll()), $customer, null);
+
+        $this->assertSame($huelle->id, $ergebnis->id);
+        $this->assertSame(1, Contract::where('customer_id', $customer->id)->count());
+
+        $ergebnis->refresh();
+        $this->assertSame('1417-6729-0230-64', $ergebnis->reference_number);
+        $this->assertSame('80.49', (string) $ergebnis->premium_amount);
+        $this->assertSame('2026-08-21', substr((string) $ergebnis->start_date, 0, 10));
+    }
+
+    /** Eine ANDERE Gesellschaft ist ein eigener Vorgang - nie zusammenfuehren. */
+    public function test_confirmation_of_another_insurer_stays_separate(): void
+    {
+        $customer = $this->customer();
+        $intake = app(DocumentIntakeService::class);
+
+        $intake->createContractFromExtraction($this->doc($this->protokoll()), $customer, null);
+        $intake->createContractFromExtraction(
+            $this->doc($this->bestaetigung(['insurer' => 'HUK24'])), $customer, null
+        );
+
+        $this->assertSame(2, Contract::where('customer_id', $customer->id)->count());
+    }
+
+    /**
+     * Zwei offene Antraege mit EIGENEN Sachdaten (z.B. zwei Fahrzeuge bei
+     * derselben Gesellschaft): welcher gemeint ist, steht nicht fest - dann
+     * wird nicht geraten, die Bestaetigung wird ein eigener Vertrag.
+     */
+    public function test_ambiguous_applications_are_never_guessed(): void
+    {
+        $customer = $this->customer();
+        $intake = app(DocumentIntakeService::class);
+
+        $intake->createContractFromExtraction($this->doc($this->protokoll()), $customer, null);
+        $intake->createContractFromExtraction(
+            $this->doc($this->protokoll(['premium_amount' => 61.20, 'start_date' => '2026-09-01'])),
+            $customer,
+            null
+        );
+        $this->assertSame(2, Contract::where('customer_id', $customer->id)->count());
+
+        $intake->createContractFromExtraction($this->doc($this->bestaetigung()), $customer, null);
+
+        $this->assertSame(3, Contract::where('customer_id', $customer->id)->count());
+    }
+
+    /**
+     * Ein Vertrag, der bereits eine ANDERE Referenz traegt, gehoert zu einem
+     * anderen Vorgang - die neue Bestaetigung haengt sich nicht an ihn.
+     */
+    public function test_application_with_another_reference_is_not_taken_over(): void
+    {
+        $customer = $this->customer();
+        $intake = app(DocumentIntakeService::class);
+
+        $intake->createContractFromExtraction(
+            $this->doc($this->protokoll(['reference_number' => '5555-1111-2222-33'])), $customer, null
+        );
+
+        $intake->createContractFromExtraction($this->doc($this->bestaetigung()), $customer, null);
+
+        $this->assertSame(2, Contract::where('customer_id', $customer->id)->count());
+    }
 }

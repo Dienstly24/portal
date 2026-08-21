@@ -1044,7 +1044,12 @@ class DocumentIntakeService
             // Kein hartes Merkmal getroffen: ist dies die BESTAETIGUNG zu einem
             // frueher hochgeladenen Auftrag, wird dieser vervollstaendigt statt
             // ein zweiter Vertrag angelegt (Betreiber-Vorgabe 29.07.2026).
-            ?? $this->findApplicationContractForConfirmation($customer, $data, $stage);
+            ?? $this->findApplicationContractForConfirmation($customer, $data, $stage)
+            // Beide Dokumente sind noch ANTRAEGE desselben Vorgangs
+            // (Beratungsprotokoll + Antrags-Bestaetigung mit Referenznummer):
+            // die Referenz gehoert an den vorhandenen Vertrag, sie ist kein
+            // zweiter Vertrag (Betreiber-Vorgabe 21.08.2026).
+            ?? $this->findApplicationContractForSameProcess($customer, $data, $stage);
         if ($existing) {
             return $this->updateContractFromExtraction($existing, $document, $customer, $byUserId, $data);
         }
@@ -1518,6 +1523,151 @@ class DocumentIntakeService
         $confirmed = $candidates->filter(fn (Contract $c) => $this->sharesDistinctiveDetail($c, $data))->values();
 
         return $confirmed->count() === 1 ? $confirmed->first() : null;
+    }
+
+    /**
+     * Wie lange zwei Dokumente DESSELBEN Antrags-Vorgangs auseinanderliegen
+     * duerfen. Beratungsprotokoll und Antrags-Bestaetigung entstehen in
+     * derselben Antragsstrecke, hochgeladen werden sie oft am selben Tag,
+     * spaetestens wenige Wochen spaeter. Bewusst enger als die 12 Monate der
+     * Bestaetigungs-Suche: dort belegt eine POLICE den Zusammenhang, hier
+     * stehen sich zwei gleichrangige Antraege gegenueber.
+     */
+    private const PROCESS_MATCH_MAX_AGE_DAYS = 60;
+
+    /**
+     * Betreiber-Meldung 21.08.2026: Zu EINEM Antrag laedt der Betrieb ZWEI
+     * Dokumente hoch - das Beratungsprotokoll des Vergleichsportals (Tarif,
+     * Beitrag, Beginn, aber keine Kennung) und den Screenshot der
+     * Abschluss-Seite ("Ihr Antrag ist bei uns eingegangen") mit der
+     * REFERENZNUMMER. Beide sind Stufe 'antrag', keines nennt eine
+     * Vertragsnummer, und sie teilen kein hartes Merkmal - also legte der
+     * Eingang zwei Vertraege fuer denselben Vorgang an.
+     *
+     * Gewollt ist: die Referenznummer wandert an den vorhandenen Vertrag.
+     * Genau ein Vertrag, eine Kennung - die Bruecke zur spaeteren Post.
+     *
+     * Zusammengefuehrt wird nur, wenn EINE der beiden Seiten nichts als die
+     * Referenz mitbringt (Regel "nie raten"):
+     *  - das neue Dokument traegt nur die Referenz (Bestaetigungs-Seite) und
+     *    trifft einen vorhandenen Antrag, oder
+     *  - das neue Dokument bringt die Sachdaten (Protokoll, keine Referenz)
+     *    und trifft eine vorhandene Referenz-Huelle.
+     * Dazu immer: gleiche Sparte, gleiche - und BEIDSEITS GENANNTE -
+     * Gesellschaft, kein Widerspruch in den harten Merkmalen, hoechstens
+     * 60 Tage alt. Zwei Vertraege mit jeweils eigenen Sachdaten werden nie
+     * verschmolzen, mehrdeutige Faelle nie geraten - dann bleibt es beim
+     * eigenen Vertrag und der Mitarbeiter sieht beide.
+     *
+     * @param array<string,mixed> $data validiertes Analyse-Ergebnis
+     * @param ?string $stage Stufe des neuen Dokuments (Contract::STAGE_*)
+     */
+    public function findApplicationContractForSameProcess(Customer $customer, array $data, ?string $stage): ?Contract
+    {
+        // Nur zwei ANTRAEGE desselben Vorgangs. Eine Bestaetigung/Police
+        // laeuft ueber findApplicationContractForConfirmation.
+        if ($stage !== Contract::STAGE_ANTRAG) {
+            return null;
+        }
+
+        $ins = $data['versicherung'] ?? [];
+        $type = $ins['sparte'] ?? null;
+        if ($type === null || !isset(Contract::TYPES[$type])) {
+            return null;
+        }
+        // Ohne genannte Gesellschaft waere die Zuordnung geraten - der
+        // Abgleich ist hier bewusst strenger als sonst (dort gilt eine
+        // fehlende Angabe als "passt").
+        if (blank($ins['insurer'] ?? null)) {
+            return null;
+        }
+
+        $types = [$type];
+        if (in_array($type, Contract::ENERGY_TYPES, true)) {
+            $types[] = 'strom_gas';
+        }
+
+        $referenz = trim((string) ($ins['reference_number'] ?? ''));
+        $nurReferenz = $this->bringsOnlyProcessReference($data);
+        // Weder Referenz-Dokument noch Sachdaten-Dokument ohne Referenz:
+        // dann stehen sich zwei eigenstaendige Antraege gegenueber.
+        if (!$nurReferenz && $referenz !== '') {
+            return null;
+        }
+
+        $candidates = Contract::where('customer_id', $customer->id)
+            ->where('stage', Contract::STAGE_ANTRAG)
+            ->whereIn('type', $types)
+            ->whereIn('status', ['active', 'pending'])
+            ->where('created_at', '>=', now()->subDays(self::PROCESS_MATCH_MAX_AGE_DAYS))
+            ->whereNotNull('insurer')
+            ->with(['energyDetail', 'vehicleDetail'])
+            ->get()
+            ->filter(function (Contract $c) use ($data, $ins, $nurReferenz) {
+                if (blank($c->insurer)
+                    || !$this->insurersLookAlike($c->insurer, $ins['insurer'] ?? null)
+                    || $this->identityContradicts($c, $data)) {
+                    return false;
+                }
+
+                // Das neue Dokument bringt nur die Referenz - der Bestand
+                // darf seine Sachdaten behalten und bekommt die Kennung.
+                // Traegt er bereits eine ANDERE Referenz, ist er ein eigener
+                // Vorgang (hier, wo sonst nichts die beiden verbindet, zaehlt
+                // das als Ausschluss).
+                if ($nurReferenz) {
+                    return blank($c->reference_number)
+                        || strcasecmp(trim((string) $c->reference_number), trim((string) ($ins['reference_number'] ?? ''))) === 0;
+                }
+
+                // Umgekehrter Weg: zuerst die Bestaetigungs-Seite, danach das
+                // Protokoll. Ergaenzt wird nur die reine Referenz-Huelle.
+                return $this->isProcessReferenceShell($c);
+            })
+            ->values();
+
+        return $candidates->count() === 1 ? $candidates->first() : null;
+    }
+
+    /**
+     * Bringt das Dokument NICHTS ausser der Vorgangs-Referenz? Genau das ist
+     * die Abschluss-Seite einer Antragsstrecke: Referenznummer, Gesellschaft,
+     * E-Mail - aber weder Vertragsnummer noch Beitrag noch Beginn.
+     *
+     * @param array<string,mixed> $data
+     */
+    private function bringsOnlyProcessReference(array $data): bool
+    {
+        $ins = $data['versicherung'] ?? [];
+
+        if (mb_strlen(trim((string) ($ins['reference_number'] ?? ''))) < 5) {
+            return false;
+        }
+
+        foreach (['contract_number', 'start_date', 'end_date', 'premium_amount'] as $feld) {
+            if (!blank($ins[$feld] ?? null)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Ist der Vertrag eine reine Referenz-Huelle - aus einer Bestaetigungs-
+     * Seite entstanden, ohne eigene Sachdaten? Nur so eine Huelle darf ein
+     * spaeter hochgeladenes Protokoll aufnehmen; ein Vertrag mit Beitrag
+     * oder Beginn ist ein eigener Vorgang.
+     */
+    private function isProcessReferenceShell(Contract $contract): bool
+    {
+        if (blank($contract->reference_number) || filled($contract->contract_number)) {
+            return false;
+        }
+
+        return blank($contract->start_date)
+            && blank($contract->end_date)
+            && blank($contract->premium_amount);
     }
 
     /**
