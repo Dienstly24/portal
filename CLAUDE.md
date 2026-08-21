@@ -1169,6 +1169,29 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   ("Vielen Dank, Ihr Antrag ist bei uns eingegangen"): Referenznummer,
   Gesellschaft, Kunden-E-Mail, eVB-Nummer (nur Zusammenfassung, KEINE
   Vertragsnummer); "Tag der Zulassung" ist kein Datum und wird nie geraten.
+  **EIN Vorgang = EIN Vertrag, auch bei zwei Dokumenten** (Lehre
+  21.08.2026): Zu einem Antrag laedt der Betrieb ZWEI Dinge hoch - das
+  Beratungsprotokoll des Vergleichsportals (Tarif, Beitrag, Beginn, aber
+  keine Kennung) und den Screenshot der Abschluss-Seite mit der
+  REFERENZNUMMER. Beide sind Stufe `antrag`, keines nennt eine
+  Vertragsnummer, sie teilen kein hartes Merkmal - es entstanden zwei
+  Vertraege fuer denselben Vorgang, am selben Tag, beim selben Kunden.
+  `findApplicationContractForSameProcess` fuehrt sie zusammen: die
+  Referenznummer wandert an den vorhandenen Vertrag, es entsteht kein
+  zweiter. Beide Reihenfolgen (Protokoll zuerst / Screenshot zuerst)
+  fuehren zum selben Ergebnis. Zusammengefuehrt wird NUR, wenn eine der
+  beiden Seiten nichts als die Referenz mitbringt (`bringsOnlyProcessReference`
+  bzw. `isProcessReferenceShell`) - zwei Antraege mit jeweils eigenen
+  Sachdaten (zwei Fahrzeuge bei derselben Gesellschaft) bleiben getrennt.
+  Dazu immer: gleiche Sparte, gleiche und BEIDSEITS GENANNTE Gesellschaft
+  (fehlt sie, wird nicht zugeordnet - anders als im uebrigen Abgleich, wo
+  eine fehlende Angabe als "passt" gilt), kein Widerspruch in den harten
+  Merkmalen, hoechstens 60 Tage alt (enger als die 12 Monate der
+  Bestaetigungs-Suche: dort belegt eine POLICE den Zusammenhang, hier
+  stehen sich zwei gleichrangige Antraege gegenueber), und ein Vertrag mit
+  bereits vergebener ANDERER Referenz ist ein eigener Vorgang. Bleiben
+  mehrere Kandidaten, wird NICHT geraten - dann entsteht wie bisher ein
+  eigener Vertrag und der Mitarbeiter sieht beide.
   Tests: `ContractReferenceNumberTest`, `AntragBestaetigungParserTest`.
 - **Vermittler-Abrechnung: Vertrag und Abrechnung zusammenfuehren**
   (Betreiber-Auftrag 20.08.2026, Details in
