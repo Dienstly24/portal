@@ -384,6 +384,9 @@ class SystemHealthService
             'hint' => $lex ? null : 'Optional. Ohne Schluessel bleibt der Rechnungsbereich leer.',
         ];
 
+        // --- Datenhaltung fuer Sitzungen, Cache und Warteschlange
+        $items[] = $this->storageItem();
+
         // --- E-Mail-Versand
         $mailer = (string) config('mail.default');
         $items[] = [
@@ -440,6 +443,60 @@ class SystemHealthService
                 ? 'Wissensbasis leer - der Assistent uebergibt fast alles ans Team. Start: php artisan ki:wissensbasis-vorschlag --schreiben'
                 : 'Vollstaendige Diagnose: php artisan ki:pruefen --live',
         ];
+    }
+
+    /**
+     * Womit laufen Sitzungen, Cache und Warteschlange - und ist das erreichbar?
+     *
+     * Die Datenbank ist fuer alle drei ein tragfaehiger Standard, aber sie
+     * bezahlt jede Sitzung und jeden Job mit Schreibzugriffen. Wer auf Redis
+     * umstellt, will vor allem EINES sofort wissen: hat es geklappt? Genau
+     * das beantwortet diese Zeile - inklusive echtem PING, wenn Redis
+     * eingestellt ist. Ein Umzug, der still auf die Datenbank zurueckfaellt,
+     * waere sonst monatelang unbemerkt.
+     */
+    private function storageItem(): array
+    {
+        $treiber = [
+            'Sitzungen' => (string) config('session.driver'),
+            'Cache' => (string) config('cache.default'),
+            'Warteschlange' => (string) config('queue.default'),
+        ];
+        $wert = implode(', ', array_map(
+            fn ($name, $treiber) => $name . ': ' . $treiber,
+            array_keys($treiber),
+            $treiber
+        ));
+
+        $nutztRedis = in_array('redis', $treiber, true);
+        if (! $nutztRedis) {
+            return [
+                'label' => 'Sitzungen / Cache / Warteschlange',
+                'value' => $wert,
+                'status' => self::INFO,
+                'hint' => 'Datenbank ist ein tragfaehiger Standard. Redis entlastet sie spuerbar - '
+                    . 'Umstellung: docs/ANLEITUNG_REDIS_AR.md',
+            ];
+        }
+
+        // Echter PING - nur so ist bewiesen, dass die Umstellung wirkt.
+        try {
+            \Illuminate\Support\Facades\Redis::connection()->ping();
+
+            return [
+                'label' => 'Sitzungen / Cache / Warteschlange',
+                'value' => $wert . ' - Redis erreichbar',
+                'status' => self::OK,
+            ];
+        } catch (\Throwable $e) {
+            return [
+                'label' => 'Sitzungen / Cache / Warteschlange',
+                'value' => $wert . ' - Redis NICHT erreichbar',
+                'status' => self::FAIL,
+                'hint' => 'Redis ist eingestellt, antwortet aber nicht. Auf dem Server pruefen: '
+                    . 'systemctl status redis-server und redis-cli ping (erwartet: PONG).',
+            ];
+        }
     }
 
     /** Sind die OCR-Programme auf dem Server vorhanden? */

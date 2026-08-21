@@ -332,6 +332,35 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   Die Endpunkte in `TaskController` und `ComposeEmailController` bleiben
   eigenstaendig - sie liefern einen reicheren Datensatz (Betreuer usw.).
 
+## Aufraeumen und Betriebswahl (20.08.2026)
+
+- **Toter Workflow-Engine-Bestand entfernt**: Definitionen, Laeufe,
+  Schritte, Prompts und `ai_action_logs` (5 Tabellen), Engine, Installer,
+  Step-Handler, `workflow:install` und die zugehoerigen Tests. Nachweis:
+  KEINE Route, KEIN Controller, KEINE Oberflaeche hat je einen Lauf
+  gestartet - geschrieben wurde ausschliesslich aus der Engine selbst und
+  ihren Tests. Toter Code ist nicht neutral: er sieht wie ein Feature aus
+  und zwingt jeden, der die Kundenakte erweitert, zur Pruefung "redet das
+  hier mit?" - Antwort immer nein.
+  **NICHT betroffen, nur aehnlich benannt und in Betrieb**:
+  `EmailWorkflowService` (E-Mail-Eingang), `CommissionWorkflowService`,
+  `EmailClassificationService`, `SystemUserResolver`.
+  Die urspruengliche Erstellungs-Migration bleibt liegen (nie eine bereits
+  gelaufene Migration loeschen), eine neue Migration wirft die Tabellen weg.
+- **Redis ist eine Server-Entscheidung, keine Code-Aenderung**: die App ist
+  fertig verdrahtet (`REDIS_CLIENT=phpredis`, kein Composer-Paket noetig).
+  Die Systemzustand-Seite zeigt jetzt die Treiber fuer Sitzungen, Cache und
+  Warteschlange und macht bei eingestelltem Redis einen ECHTEN PING - ein
+  Umzug, der still auf die Datenbank zurueckfaellt, waere sonst monatelang
+  unbemerkt. Anleitung: `docs/ANLEITUNG_REDIS_AR.md` (inkl. der zwei
+  Fallen: wartende Jobs wandern NICHT mit, und der Worker muss neu
+  gestartet werden).
+- **CSP**: `fonts.bunny.net` ist raus - die Schriften liegen laengst lokal.
+  Ein Fremdhost, der nicht mehr gebraucht wird, gehoert nicht in die
+  Freigabe. `unsafe-inline`/`unsafe-eval` bleiben vorerst (grosse
+  Blade-Flaeche mit Inline-Styles und `onclick`; `unsafe-eval` haengt an
+  Alpine.js).
+
 ## Kundennummern
 
 - Neuanlage: `JJ` + 5-stellig laufend (2026 → `2600001`, `2600002` …) via

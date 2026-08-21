@@ -36,7 +36,7 @@ class SecurityHeaders
         // gegen XSS/Clickjacking. Inline-Styles/-Handler sind derzeit noch noetig
         // (grosse Blade-Flaeche), daher 'unsafe-inline'; object/base/frame sind
         // hart eingeschraenkt. Nur auf HTML-Antworten setzen (nicht auf
-        // PDF-/CSV-Downloads). Fonts von bunny.net sind explizit erlaubt.
+        // PDF-/CSV-Downloads). Externe Hosts sind NICHT freigegeben.
         if (! $response->headers->has('Content-Security-Policy')) {
             $contentType = (string) $response->headers->get('Content-Type');
             $isHtml = $contentType === '' || str_contains($contentType, 'text/html');
@@ -58,8 +58,14 @@ class SecurityHeaders
                     // Seiten-Skript erzeugt werden - kein zusaetzlicher
                     // XSS-Weg, im Gegensatz zu einer fremden Host-Freigabe.
                     "img-src 'self' data: blob: https:",
-                    "font-src 'self' data: https://fonts.bunny.net",
-                    "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
+                    // Kein externer Schrift-Host mehr: die Google-/Bunny-Fonts
+                    // sind raus, alle Schriften liegen lokal in public/fonts.
+                    // Ein Host, der nicht mehr gebraucht wird, gehoert auch
+                    // nicht mehr in die Freigabe - jeder erlaubte Fremdhost
+                    // ist ein moeglicher Weg fuer eingeschleusten Inhalt und
+                    // (bei Schriften) ein DSGVO-Thema.
+                    "font-src 'self' data:",
+                    "style-src 'self' 'unsafe-inline'",
                     // 'unsafe-eval' ist noetig, weil Alpine.js v3 (Standard-Build)
                     // seine Direktiven (x-data/x-show/@click) per Function()
                     // auswertet. Ohne dies bricht Alpine still und Dropdowns/Menues
