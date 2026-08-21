@@ -60,6 +60,41 @@
     </form>
 </div>
 
+{{-- Vorgangsliste: der Schritt VOR der Abrechnung. Genau hier entsteht die
+     Bruecke Referenz-Nr. -> Vermittler-ID, damit spaetere Abrechnungsdateien
+     ihren Vertrag auch ohne Referenz-Nr. finden. --}}
+<div class="card" style="max-width:980px;">
+    <div style="font-weight:700;font-size:14px;margin-bottom:6px;">Vorgangsliste einlesen (offene Vorgänge)</div>
+    <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;">
+        Die Übersicht der offenen Vorgänge aus dem Vermittler-Portal (<b>Datum · Produkt · ID · Status</b> mit
+        „Referenznummer" je Zeile). Sie ist die einzige Stelle, an der <b>beide Nummern zusammen</b> stehen, bevor die
+        Abrechnung kommt: einmal eingelesen, findet jede spätere Abrechnungsdatei ihren Vertrag über die ID allein.
+        <br><br>
+        <b>Am genauesten ist ein CSV-Export</b> aus dem Portal. Screenshot (PNG/JPG) und PDF gehen auch – dabei liest
+        die Texterkennung die Tabelle, und wenn sie sich bei der Zuordnung der Referenznummern nicht sicher ist,
+        wird <b>nichts</b> automatisch verknüpft, sondern alles zur Prüfung gestellt.
+        <br><br>
+        Diese Liste ist <b>keine Abrechnung</b>: es entsteht daraus keine Provision, kein Storno und kein
+        „Nicht in Abrechnung gefunden".
+    </div>
+
+    @unless($ocrAvailable)
+    <div style="background:#FEF3C7;border:1px solid #E8C36A;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12.5px;">
+        Die Texterkennung (OCR) ist auf diesem Server nicht aktiv – Screenshots und gescannte PDF können daher nicht
+        gelesen werden. Ein CSV-Export funktioniert unabhängig davon.
+    </div>
+    @endunless
+
+    <form method="POST" action="{{ route('admin.vermittler.vorgangsliste') }}" enctype="multipart/form-data">
+        @csrf
+        <div class="field" style="max-width:520px;">
+            <label>Datei (CSV, PDF, PNG, JPG) *</label>
+            <input type="file" name="liste_datei" accept=".csv,.txt,.pdf,.png,.jpg,.jpeg,.webp" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top:14px;">Vorgangsliste einlesen</button>
+    </form>
+</div>
+
 @if($openCount > 0)
 <div style="background:#FEF3C7;border:1px solid #E8C36A;border-radius:10px;padding:14px 16px;margin:20px 0;max-width:980px;font-size:13px;">
     <b>⚠ {{ $openCount }} Datensätze warten auf eine Entscheidung.</b>

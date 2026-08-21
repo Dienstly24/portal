@@ -79,6 +79,20 @@
                         Diesem Kunden zuordnen
                     </button>
                 </div>
+                @elseif($doc->type === 'vermittler_vorgangsliste')
+                {{-- Liste mehrerer Vorgaenge: gehoert strukturell nicht in den
+                     Eingang (ein Dokument = ein Kunde). Statt "Kein Kunde
+                     gefunden" der Weg, der wirklich weiterhilft. --}}
+                <div style="margin-top:10px;background:#E6F1FB;border:1px solid #B7D4EE;border-radius:8px;padding:10px 12px;font-size:12.5px;">
+                    <b>Das ist eine Liste mehrerer Vorgänge – kein Kundendokument.</b>
+                    Sie lässt sich keinem einzelnen Kunden zuordnen.
+                    @if(in_array(auth()->user()?->role, ['admin','manager'], true))
+                    Unter <a href="{{ route('admin.vermittler.index') }}">Vermittler-Abrechnung → Vorgangsliste einlesen</a>
+                    wird daraus für <b>jeden</b> Vorgang die Verbindung Referenz-Nr. → Vermittler-ID hergestellt.
+                    @else
+                    Sie wird unter „Vermittler-Abrechnung" eingelesen – das übernimmt die Geschäftsführung.
+                    @endif
+                </div>
                 @elseif($doc->ai_status === 'done')
                 <div style="margin-top:10px;font-size:13px;color:var(--ink-soft);">Kein Kunde gefunden.</div>
                 @endif
@@ -90,6 +104,9 @@
                  Dokument es sich handelt. --}}
             <a href="{{ route('admin.documents.download', $doc->id) }}?view=1" target="_blank" class="btn btn-ghost btn-sm" title="Ueberfahren zeigt eine Schnellvorschau, Klick oeffnet"
                 data-preview-url="{{ route('admin.documents.download', $doc->id) }}?view=1" data-preview-name="{{ $doc->file_name }}">👁 Anzeigen</a>
+            @if($doc->type === 'vermittler_vorgangsliste' && in_array(auth()->user()?->role, ['admin','manager'], true))
+            <a href="{{ route('admin.vermittler.index') }}" class="btn btn-primary btn-sm">🤝 Zur Vermittler-Abrechnung</a>
+            @endif
             @if(!$doc->aiInProgress())
             <button type="button" class="btn btn-primary btn-sm" onclick="docReview.open(@js($doc->id), 'assign', null, null)">Kunden zuordnen…</button>
             {{-- Immer moeglich: den Namen kann der Mitarbeiter im Modal auch

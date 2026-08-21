@@ -43,6 +43,10 @@ class Document extends Model {
         'sepa_mandat'          => ['label' => 'SEPA-Mandat',          'category' => 'other'],
         'kontaktdaten'         => ['label' => 'Kontaktdaten',         'category' => 'identity'],
         'schadenmeldung'       => ['label' => 'Schadenmeldung',       'category' => 'claim'],
+        // Liste MEHRERER Vorgaenge des Vermittlers - kein Kundendokument:
+        // sie gehoert zu keinem einzelnen Kunden und wird unter
+        // Vermittler-Abrechnung eingelesen, nicht hier zugeordnet.
+        'vermittler_vorgangsliste' => ['label' => 'Vermittler-Vorgangsliste', 'category' => 'other'],
         'sonstiges'            => ['label' => 'Sonstiges Dokument',   'category' => 'other'],
     ];
 

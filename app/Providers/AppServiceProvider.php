@@ -46,6 +46,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             \App\Services\Ai\Contracts\DocumentTemplateParser::class,
             fn ($app) => new \App\Services\Ai\TemplateParsers\CompositeDocumentTemplateParser([
+                // ZUERST: die Vorgangsliste des Vermittlers ist kein
+                // Kundendokument. Wird sie frueh erkannt, kostet sie keinen
+                // KI-Aufruf und der Eingang nennt den richtigen Weg.
+                $app->make(\App\Services\Ai\TemplateParsers\VermittlerVorgangslisteHinweisParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\Check24KfzProtocolParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\AdacAutoversicherungParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\AdacMitgliedschaftParser::class),

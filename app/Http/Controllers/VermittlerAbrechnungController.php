@@ -7,7 +7,9 @@ use App\Models\VermittlerImport;
 use App\Models\VermittlerSettlement;
 use App\Services\Vermittler\VermittlerAbrechnungImporter;
 use App\Services\Vermittler\VermittlerLinkService;
+use App\Services\Vermittler\VermittlerListeReader;
 use App\Services\Vermittler\VermittlerReportService;
+use App\Services\Vermittler\VermittlerVorgangslisteImporter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -27,6 +29,7 @@ class VermittlerAbrechnungController extends Controller
             'imports' => VermittlerImport::with('importer')->latest()->limit(20)->get(),
             'openCount' => VermittlerSettlement::needsReview()->count(),
             'performance' => app(VermittlerReportService::class)->performance(),
+            'ocrAvailable' => app(VermittlerListeReader::class)->ocrAvailable(),
         ]);
     }
 
@@ -72,6 +75,53 @@ class VermittlerAbrechnungController extends Controller
 
         return redirect()->route('admin.vermittler.show', $import->id)
             ->with('success', 'Import abgeschlossen: ' . $import->rows_total . ' Datensätze gelesen.');
+    }
+
+    /**
+     * Vorgangsliste einlesen (Screenshot, PDF oder CSV der offenen
+     * Vorgaenge). Sie stellt die Bruecke Referenz-Nr. -> Vermittler-ID her,
+     * BEVOR die erste Abrechnung kommt - und rechnet bewusst nichts ab.
+     */
+    public function importVorgangsliste(Request $request, VermittlerListeReader $reader, VermittlerVorgangslisteImporter $importer)
+    {
+        $request->validate([
+            'liste_datei' => 'required|file|mimes:csv,txt,pdf,jpg,jpeg,png,webp|max:20480',
+        ], [], ['liste_datei' => 'Datei']);
+
+        $file = $request->file('liste_datei');
+
+        try {
+            $parsed = $reader->rows(
+                $file->getPathname(),
+                (string) $file->getMimeType(),
+                (string) $file->getClientOriginalName(),
+            );
+            $import = $importer->importRows(
+                $parsed['rows'],
+                $parsed['ambiguous'],
+                $parsed['notes'],
+                (string) $file->getClientOriginalName(),
+                auth()->id(),
+            );
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Die Vorgangsliste konnte nicht gelesen werden: ' . $e->getMessage());
+        }
+
+        if ($import->rows_total === 0) {
+            $import->delete();
+            return back()->with('error', 'In der Datei wurde kein einziger Vorgang erkannt. '
+                . 'Erwartet wird die Liste mit Spalten Datum / Produkt / ID / Status und der Referenznummer je Vorgang.');
+        }
+
+        ActivityLog::record('vermittler_vorgangsliste_import', 'vermittler_import', $import->id, [
+            'filename' => $import->filename,
+            'rows_total' => $import->rows_total,
+            'rows_new_link' => $import->rows_new_link,
+        ]);
+
+        return redirect()->route('admin.vermittler.show', $import->id)
+            ->with('success', 'Vorgangsliste gelesen: ' . $import->rows_total . ' Vorgänge, '
+                . $import->rows_new_link . ' neu mit einem Vertrag verknüpft.');
     }
 
     /** Ergebnis eines Laufs: Zusammenfassung + Zeilen. */
