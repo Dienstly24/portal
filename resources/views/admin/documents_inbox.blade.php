@@ -147,7 +147,11 @@
                 <td style="padding:10px 12px;">{{ $doc->vermittlerImport?->rows_new_link ?? '—' }}</td>
                 <td style="padding:10px 12px;">{{ $doc->vermittlerImport?->rows_review ?? '—' }}</td>
                 <td style="padding:10px 20px;color:var(--ink-soft);">
-                    {{ $doc->updated_at?->format('d.m.Y H:i') }}
+                    {{-- Zeitpunkt des LAUFS, nicht der letzten Aenderung am
+                         Dokument: "Eingelesen" soll auch dann stimmen, wenn
+                         das Dokument spaeter noch einmal angefasst wird.
+                         Anzeige in Ortszeit (gespeichert wird UTC). --}}
+                    {{ ($doc->vermittlerImport?->created_at ?? $doc->updated_at)?->lokal()->format('d.m.Y H:i') }}
                     @if($doc->vermittler_import_id && in_array(auth()->user()?->role, ['admin','manager'], true))
                     · <a href="{{ route('admin.vermittler.show', $doc->vermittler_import_id) }}">Ergebnis ansehen</a>
                     @endif
