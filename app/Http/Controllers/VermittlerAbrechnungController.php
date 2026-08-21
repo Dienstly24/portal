@@ -3,12 +3,16 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\Contract;
+use App\Models\Document;
 use App\Models\VermittlerImport;
 use App\Models\VermittlerSettlement;
 use App\Services\Vermittler\VermittlerAbrechnungImporter;
 use App\Services\Vermittler\VermittlerLinkService;
+use App\Services\Vermittler\VermittlerListeReader;
 use App\Services\Vermittler\VermittlerReportService;
+use App\Services\Vermittler\VermittlerVorgangslisteImporter;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -27,6 +31,7 @@ class VermittlerAbrechnungController extends Controller
             'imports' => VermittlerImport::with('importer')->latest()->limit(20)->get(),
             'openCount' => VermittlerSettlement::needsReview()->count(),
             'performance' => app(VermittlerReportService::class)->performance(),
+            'ocrAvailable' => app(VermittlerListeReader::class)->ocrAvailable(),
         ]);
     }
 
@@ -72,6 +77,113 @@ class VermittlerAbrechnungController extends Controller
 
         return redirect()->route('admin.vermittler.show', $import->id)
             ->with('success', 'Import abgeschlossen: ' . $import->rows_total . ' Datensätze gelesen.');
+    }
+
+    /**
+     * Vorgangsliste einlesen (Screenshot, PDF oder CSV der offenen
+     * Vorgaenge). Sie stellt die Bruecke Referenz-Nr. -> Vermittler-ID her,
+     * BEVOR die erste Abrechnung kommt - und rechnet bewusst nichts ab.
+     */
+    public function importVorgangsliste(Request $request, VermittlerListeReader $reader, VermittlerVorgangslisteImporter $importer)
+    {
+        $request->validate([
+            'liste_datei' => 'required|file|mimes:csv,txt,pdf,jpg,jpeg,png,webp|max:20480',
+        ], [], ['liste_datei' => 'Datei']);
+
+        $file = $request->file('liste_datei');
+
+        try {
+            $parsed = $reader->rows(
+                $file->getPathname(),
+                (string) $file->getMimeType(),
+                (string) $file->getClientOriginalName(),
+            );
+            $import = $importer->importRows(
+                $parsed['rows'],
+                $parsed['ambiguous'],
+                $parsed['notes'],
+                (string) $file->getClientOriginalName(),
+                auth()->id(),
+            );
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Die Vorgangsliste konnte nicht gelesen werden: ' . $e->getMessage());
+        }
+
+        if ($import->rows_total === 0) {
+            $import->delete();
+            return back()->with('error', 'In der Datei wurde kein einziger Vorgang erkannt. '
+                . 'Erwartet wird die Liste mit Spalten Datum / Produkt / ID / Status und der Referenznummer je Vorgang.');
+        }
+
+        ActivityLog::record('vermittler_vorgangsliste_import', 'vermittler_import', $import->id, [
+            'filename' => $import->filename,
+            'rows_total' => $import->rows_total,
+            'rows_new_link' => $import->rows_new_link,
+        ]);
+
+        return redirect()->route('admin.vermittler.show', $import->id)
+            ->with('success', 'Vorgangsliste gelesen: ' . $import->rows_total . ' Vorgänge, '
+                . $import->rows_new_link . ' neu mit einem Vertrag verknüpft.');
+    }
+
+    /**
+     * Eine Vorgangsliste einlesen, die BEREITS im Dokumenten-Eingang liegt
+     * (Betreiber-Wunsch 21.08.2026: dort arbeiten die Mitarbeiter, dort soll
+     * der Knopf sein - nicht in einem Verwaltungsbereich, den man erst
+     * finden muss).
+     *
+     * Die Datei wird dafuer erneut gelesen: der Eingang speichert bewusst
+     * KEINEN Rohtext (Datenminimierung), also entsteht er hier neu und
+     * verschwindet nach dem Lauf wieder.
+     */
+    public function importFromDocument(string $id, VermittlerListeReader $reader, VermittlerVorgangslisteImporter $importer)
+    {
+        $document = Document::findOrFail($id);
+
+        if ($document->customer_id !== null) {
+            return back()->with('error', 'Dieses Dokument ist bereits einem Kunden zugeordnet – eine Vorgangsliste gehört zu keinem einzelnen Kunden.');
+        }
+        if ($document->vermittler_import_id !== null) {
+            return redirect()->route('admin.vermittler.show', $document->vermittler_import_id);
+        }
+
+        $disk = Storage::disk($document->disk ?: 'local');
+        if (!$disk->exists($document->file_path)) {
+            return back()->with('error', 'Die Datei ist nicht mehr vorhanden.');
+        }
+
+        try {
+            $parsed = $reader->rowsFromBinary($disk->get($document->file_path), '', (string) $document->file_name);
+            if ($parsed['rows'] === []) {
+                return back()->with('error', 'In dieser Datei wurde kein einziger Vorgang erkannt. '
+                    . 'Erwartet wird die Liste mit Datum, Produkt, ID und Status sowie der Referenznummer je Vorgang – '
+                    . 'am zuverlässigsten als CSV-Export aus dem Vermittler-Portal.');
+            }
+            $import = $importer->importRows(
+                $parsed['rows'],
+                $parsed['ambiguous'],
+                $parsed['notes'],
+                (string) $document->file_name,
+                auth()->id(),
+            );
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Die Vorgangsliste konnte nicht gelesen werden: ' . $e->getMessage());
+        }
+
+        // Das Dokument bleibt erhalten (nie automatisch loeschen), verlaesst
+        // aber "Nicht zugeordnet" - es ist erledigt, nicht offen.
+        $document->update(['vermittler_import_id' => $import->id]);
+
+        ActivityLog::record('vermittler_vorgangsliste_import', 'vermittler_import', $import->id, [
+            'document_id' => $document->id,
+            'filename' => $import->filename,
+            'rows_total' => $import->rows_total,
+            'rows_new_link' => $import->rows_new_link,
+        ]);
+
+        return redirect()->route('admin.vermittler.show', $import->id)
+            ->with('success', 'Vorgangsliste gelesen: ' . $import->rows_total . ' Vorgänge, '
+                . $import->rows_new_link . ' neu mit einem Vertrag verknüpft.');
     }
 
     /** Ergebnis eines Laufs: Zusammenfassung + Zeilen. */

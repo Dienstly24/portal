@@ -672,6 +672,13 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         Route::prefix('vermittler-abrechnung')->name('vermittler.')->group(function () {
             Route::get('/', [\App\Http\Controllers\VermittlerAbrechnungController::class, 'index'])->name('index');
             Route::post('/import', [\App\Http\Controllers\VermittlerAbrechnungController::class, 'import'])->name('import');
+            // Vorgangsliste (offene Vorgaenge) als Screenshot/PDF/CSV: stellt
+            // die Bruecke Referenz-Nr. -> Vermittler-ID her, bevor abgerechnet
+            // wird.
+            Route::post('/vorgangsliste', [\App\Http\Controllers\VermittlerAbrechnungController::class, 'importVorgangsliste'])->name('vorgangsliste');
+            // Dieselbe Verarbeitung direkt aus dem Dokumenten-Eingang heraus:
+            // dort liegt die Datei bereits, dort arbeiten die Mitarbeiter.
+            Route::post('/dokument/{id}/einlesen', [\App\Http\Controllers\VermittlerAbrechnungController::class, 'importFromDocument'])->whereUuid('id')->name('from_document');
             Route::get('/pruefung', [\App\Http\Controllers\VermittlerAbrechnungController::class, 'review'])->name('review');
             Route::get('/bericht', [\App\Http\Controllers\VermittlerAbrechnungController::class, 'report'])->name('report');
             Route::get('/vertrag-suche', [\App\Http\Controllers\VermittlerAbrechnungController::class, 'contractSearch'])->name('contract_search');

@@ -28,16 +28,10 @@ use Illuminate\Support\Carbon;
  */
 class VermittlerAbrechnungImporter
 {
-    /** @var array<string,string> normalisierte Vermittler-ID => contract_id */
-    private array $byVermittlerId = [];
-
-    /** @var array<string,array<int,string>> normalisierte Referenz => contract_ids */
-    private array $byReference = [];
-
-    /** @var array<string,Contract> geladene Vertraege je contract_id */
-    private array $contracts = [];
-
-    public function __construct(private VermittlerCsvReader $reader) {}
+    public function __construct(
+        private VermittlerCsvReader $reader,
+        private VermittlerContractIndex $index,
+    ) {}
 
     /**
      * Liest die Datei, ordnet jede Zeile zu und liefert den Import-Lauf.
@@ -55,7 +49,7 @@ class VermittlerAbrechnungImporter
             'imported_by' => $userId,
         ]);
 
-        $this->loadContractIndex();
+        $this->index->load();
 
         $counts = [
             'rows_total' => 0, 'rows_matched' => 0, 'rows_new_link' => 0,
@@ -196,9 +190,8 @@ class VermittlerAbrechnungImporter
      */
     private function match(string $vermittlerId, ?string $refDisplay, ?string $refKey, string $statusCode, ?string $stornoReason): array
     {
-        $idKey = VermittlerReference::key($vermittlerId);
-        $viaId = $idKey !== null ? ($this->contracts[$this->byVermittlerId[$idKey] ?? ''] ?? null) : null;
-        $viaRef = $refKey !== null ? ($this->byReference[$refKey] ?? []) : [];
+        $viaId = $this->index->byId($vermittlerId);
+        $viaRef = $this->index->byReference($refDisplay);
 
         $status = VermittlerStatusMap::forCode($statusCode);
         // Unbekannter Status-Code: der Datensatz wird gespeichert, aber der
@@ -249,10 +242,7 @@ class VermittlerAbrechnungImporter
         }
 
         if (count($viaRef) === 1) {
-            $contract = $this->contracts[$viaRef[0]] ?? null;
-            if ($contract === null) {
-                return ['contract' => null, 'result' => 'unmatched', 'note' => null, 'status' => null];
-            }
+            $contract = $viaRef[0];
             if (filled($contract->vermittler_id) && !VermittlerReference::same($contract->vermittler_id, $vermittlerId)) {
                 return [
                     'contract' => $contract,
@@ -321,7 +311,7 @@ class VermittlerAbrechnungImporter
         }
 
         $contract->forceFill($update)->saveQuietly();
-        $this->rememberContract($contract);
+        $this->index->remember($contract);
 
         foreach ($events as [$action, $detail]) {
             VermittlerMatchEvent::record($action, [
@@ -394,31 +384,5 @@ class VermittlerAbrechnungImporter
             });
 
         return $marked;
-    }
-
-    /** Vertraege mit Referenz-Nr. oder Vermittler-ID einmalig in den Index laden. */
-    private function loadContractIndex(): void
-    {
-        Contract::with('customer.user')
-            ->where(function ($q) {
-                $q->where('reference_number', '!=', '')->whereNotNull('reference_number')
-                    ->orWhere(fn ($w) => $w->where('vermittler_id', '!=', '')->whereNotNull('vermittler_id'));
-            })
-            ->chunkById(500, fn ($chunk) => $chunk->each(fn ($c) => $this->rememberContract($c)));
-    }
-
-    private function rememberContract(Contract $contract): void
-    {
-        $this->contracts[$contract->id] = $contract;
-
-        $idKey = VermittlerReference::key($contract->vermittler_id);
-        if ($idKey !== null) {
-            $this->byVermittlerId[$idKey] = $contract->id;
-        }
-
-        $refKey = $contract->referenceKey();
-        if ($refKey !== null && !in_array($contract->id, $this->byReference[$refKey] ?? [], true)) {
-            $this->byReference[$refKey][] = $contract->id;
-        }
     }
 }

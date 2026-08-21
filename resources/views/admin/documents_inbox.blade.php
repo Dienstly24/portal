@@ -122,6 +122,48 @@
     <iframe id="doc-quicklook-frame" src="about:blank" title="Vorschau" style="width:100%;height:calc(100% - 32px);border:0;background:#F7F5EF;"></iframe>
 </div>
 
+{{-- Eingelesene Vermittler-Vorgangslisten: erledigt, aber ohne Kunden.
+     Sie stehen hier statt unter "Nicht zugeordnet" - dort waeren sie eine
+     Daueraufgabe, die keine ist. Geloescht wird nichts. --}}
+@if(isset($vorgangslisten) && $vorgangslisten->isNotEmpty())
+<div class="card" style="padding:0;overflow:hidden;">
+    <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">🤝 Eingelesene Vermittler-Vorgangslisten</div>
+    <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:13.5px;">
+        <thead>
+            <tr style="text-align:start;color:var(--ink-soft);font-size:12px;">
+                <th style="text-align:start;padding:10px 20px;">Datei</th>
+                <th style="text-align:start;padding:10px 12px;">Vorgänge</th>
+                <th style="text-align:start;padding:10px 12px;">Neu verknüpft</th>
+                <th style="text-align:start;padding:10px 12px;">Prüfung</th>
+                <th style="text-align:start;padding:10px 20px;">Eingelesen</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach($vorgangslisten as $doc)
+            <tr style="border-top:1px solid var(--line);">
+                <td style="padding:10px 20px;"><a href="{{ route('admin.documents.download', $doc->id) }}?view=1" target="_blank">{{ $doc->file_name }}</a></td>
+                <td style="padding:10px 12px;">{{ $doc->vermittlerImport?->rows_total ?? '—' }}</td>
+                <td style="padding:10px 12px;">{{ $doc->vermittlerImport?->rows_new_link ?? '—' }}</td>
+                <td style="padding:10px 12px;">{{ $doc->vermittlerImport?->rows_review ?? '—' }}</td>
+                <td style="padding:10px 20px;color:var(--ink-soft);">
+                    {{-- Zeitpunkt des LAUFS, nicht der letzten Aenderung am
+                         Dokument: "Eingelesen" soll auch dann stimmen, wenn
+                         das Dokument spaeter noch einmal angefasst wird.
+                         Anzeige in Ortszeit (gespeichert wird UTC). --}}
+                    {{ ($doc->vermittlerImport?->created_at ?? $doc->updated_at)?->lokal()->format('d.m.Y H:i') }}
+                    @if($doc->vermittler_import_id && in_array(auth()->user()?->role, ['admin','manager'], true))
+                    · <a href="{{ route('admin.vermittler.show', $doc->vermittler_import_id) }}">Ergebnis ansehen</a>
+                    @endif
+                </td>
+            </tr>
+        @endforeach
+        </tbody>
+    </table>
+    </div>
+</div>
+@endif
+
 {{-- Zuletzt analysierte, bereits zugeordnete Dokumente --}}
 <div class="card" style="padding:0;overflow:hidden;">
     <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">Zuletzt analysiert &amp; zugeordnet</div>

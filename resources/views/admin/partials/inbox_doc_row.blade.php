@@ -79,6 +79,22 @@
                         Diesem Kunden zuordnen
                     </button>
                 </div>
+                @elseif($doc->type === 'vermittler_vorgangsliste')
+                {{-- Liste mehrerer Vorgaenge: gehoert strukturell nicht in den
+                     Eingang (ein Dokument = ein Kunde). Statt "Kein Kunde
+                     gefunden" steht hier, was das Dokument IST und was ein
+                     Klick damit macht - erledigt wird es an Ort und Stelle. --}}
+                <div style="margin-top:10px;background:#E6F1FB;border:1px solid #B7D4EE;border-radius:8px;padding:10px 12px;font-size:12.5px;">
+                    <b>Liste mehrerer Vorgänge – kein Kundendokument.</b>
+                    Sie gehört zu keinem einzelnen Kunden und wird deshalb auch keinem zugeordnet.
+                    @if(in_array(auth()->user()?->role, ['admin','manager'], true))
+                    Ein Klick auf <b>„Vorgangsliste einlesen"</b> verbindet für <b>jeden</b> Vorgang
+                    die Referenz-Nr. mit der Vermittler-ID – damit findet jede spätere Abrechnung ihren Vertrag.
+                    Es entsteht dabei keine Provision und kein Storno.
+                    @else
+                    Sie wird unter „Vermittler-Abrechnung" eingelesen – das übernimmt die Geschäftsführung.
+                    @endif
+                </div>
                 @elseif($doc->ai_status === 'done')
                 <div style="margin-top:10px;font-size:13px;color:var(--ink-soft);">Kein Kunde gefunden.</div>
                 @endif
@@ -90,6 +106,25 @@
                  Dokument es sich handelt. --}}
             <a href="{{ route('admin.documents.download', $doc->id) }}?view=1" target="_blank" class="btn btn-ghost btn-sm" title="Ueberfahren zeigt eine Schnellvorschau, Klick oeffnet"
                 data-preview-url="{{ route('admin.documents.download', $doc->id) }}?view=1" data-preview-name="{{ $doc->file_name }}">👁 Anzeigen</a>
+            @php
+                // Der Knopf steht dort, wo die Datei schon liegt. Zusaetzlich
+                // bei "Sonstiges" als Rueckfallebene: erkennt die
+                // Texterkennung die Tabelle einmal nicht sicher, soll der
+                // Eingang trotzdem keine Sackgasse sein.
+                $istListe = $doc->type === 'vermittler_vorgangsliste';
+                $listeMoeglich = in_array(auth()->user()?->role, ['admin','manager'], true)
+                    && !$doc->aiInProgress()
+                    && ($istListe || $doc->type === 'sonstiges');
+            @endphp
+            @if($listeMoeglich)
+            <form method="POST" action="{{ route('admin.vermittler.from_document', $doc->id) }}" style="margin:0;"
+                @unless($istListe) onsubmit="return confirm('Diese Datei als Vermittler-Vorgangsliste einlesen? Es werden nur Referenz-Nr. und Vermittler-ID verknüpft – am Vertrag selbst ändert sich nichts.');" @endunless>
+                @csrf
+                <button type="submit" class="btn {{ $istListe ? 'btn-primary' : 'btn-ghost' }} btn-sm">
+                    🤝 Vorgangsliste einlesen
+                </button>
+            </form>
+            @endif
             @if(!$doc->aiInProgress())
             <button type="button" class="btn btn-primary btn-sm" onclick="docReview.open(@js($doc->id), 'assign', null, null)">Kunden zuordnen…</button>
             {{-- Immer moeglich: den Namen kann der Mitarbeiter im Modal auch

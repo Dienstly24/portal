@@ -31,6 +31,84 @@ Beide Nummern stehen am Vertrag (`contracts.reference_number` und
 `contracts.vermittler_id`). Ist die Verbindung einmal hergestellt, genuegt in
 jeder spaeteren Datei die `Id` - die Spalte `Referenz-Nr.` darf fehlen.
 
+## Die Vorgangsliste: der Schritt VOR der Abrechnung
+
+Gemeldeter Fall 21.08.2026: die Uebersicht der OFFENEN Vorgaenge aus dem
+Portal wurde als Screenshot in den **Dokumenten-Eingang** geladen, damit das
+System jede `Id` mit ihrer Referenz-Nr. verbindet. Das Ergebnis war
+"Sonstiges Dokument / Kein Kunde gefunden".
+
+Das war kein Fehler, sondern der falsche Weg: der Dokumenten-Eingang ordnet
+IMMER **ein** Dokument **einem** Kunden zu. Eine Liste mit den Vorgaengen
+vieler Kunden kann er strukturell nicht verarbeiten - er muesste einen
+Kunden waehlen, und jede Wahl waere falsch.
+
+Richtig ist: **Vermittler-Abrechnung -> Vorgangsliste einlesen**. Dort wird
+die Liste zeilenweise gelesen und fuer JEDEN Vorgang die Bruecke
+`Referenz-Nr. -> Vermittler-ID` hergestellt. Damit findet jede spaetere
+Abrechnungsdatei ihren Vertrag ueber die `Id` allein.
+
+Diese Liste ist **keine Abrechnung**. Aus ihr entsteht nie eine Provision,
+nie ein Storno und nie ein "Nicht in Abrechnung gefunden" - aus dem Fehlen
+eines Vertrags in einer Liste OFFENER Posten laesst sich nichts folgern.
+Und weil sie immer aelter ist als eine Abrechnung, stuft sie einen bereits
+abgerechneten oder stornierten Vertrag nie zurueck
+(`VermittlerStatusMap::mayAdvance`).
+
+### Drei Eingangsformate, zwei Genauigkeiten
+
+| Format | Weg | Genauigkeit |
+| --- | --- | --- |
+| CSV/TXT | Spalten sind beschriftet | **exakt** - hier kann nichts verrutschen |
+| PDF mit Textebene | `pdftotext` | exakt |
+| Screenshot / Scan | Texterkennung + Zeilen-Parser | gut, aber pruefbedürftig |
+
+Beim Bild-Weg gilt die OCR-Lehre aus den uebrigen Parsern: auf
+Spaltenabstaende ist kein Verlass. Gelesen wird ueber ANKER - eine
+Vorgangs-Id ist eine allein stehende 6- bis 10-stellige Zahl, eine
+Referenz-Nr. haengt an ihrer Beschriftung, und sie gehoert zum zuletzt
+gesehenen Vorgang. Faellt dabei eine zweite Referenz-Nr. auf denselben
+Vorgang, hat die Erkennung die Tabelle spaltenweise gelesen: dann ist KEINE
+Paarung mehr belegbar, und der Import verknuepft in dieser Datei
+**gar nichts**, sondern stellt alles zur Pruefung. Lieber eine Datei zur
+Ansicht als eine Abrechnung am falschen Kunden.
+
+### Erledigt wird sie DORT, wo sie liegt
+
+Betreiber-Wunsch 21.08.2026: "besser als in den Admin-Bereich zu gehen und
+nicht zu wissen was". Deshalb steht der Knopf **im Dokumenten-Eingang** an
+der Zeile der Datei - ein Klick auf *"Vorgangsliste einlesen"* liest sie
+und zeigt das Ergebnis. Der Weg ueber `/admin/vermittler-abrechnung`
+(Datei direkt hochladen) bleibt zusaetzlich bestehen.
+
+Zwei Details, die den Unterschied zwischen "funktioniert" und "fuehlt sich
+richtig an" ausmachen:
+
+* Nach dem Einlesen merkt sich das Dokument seinen Lauf
+  (`documents.vermittler_import_id`) und verlaesst **"Nicht zugeordnet"** -
+  es gehoert zu keinem Kunden, ist aber erledigt. Es steht danach im
+  Abschnitt "Eingelesene Vermittler-Vorgangslisten" mit Zaehlern und einem
+  Link zum Ergebnis. **Geloescht wird nie etwas.**
+* Der Knopf erscheint auch bei "Sonstiges Dokument" (nur admin/manager) -
+  als Rueckfallebene, falls die Texterkennung die Tabelle einmal nicht
+  sicher als Liste erkennt. Dann fragt er vorher nach. So endet der Eingang
+  in keinem Fall in einer Sackgasse.
+
+Die Verarbeitung selbst bleibt admin/manager: sie schreibt die
+Vermittler-ID an Vertraege und fuehrt auf die Ergebnisseite, auf der
+Provisionsbetraege stehen.
+
+### Der Eingang zeigt jetzt den Weg
+
+`VermittlerVorgangslisteHinweisParser` erkennt eine solche Liste im
+Dokumenten-Eingang (gratis, ohne KI-Aufruf), benennt sie als
+`vermittler_vorgangsliste` und verlinkt auf die richtige Seite. Die
+Erkennung ist bewusst STRENG - verlangt werden mindestens drei Vorgaenge
+und mindestens zwei verschiedene Referenz-Nummern. Ein einzelner Antrag,
+eine Police oder ein Deckungsauftrag tragen genau EINE Nummer und koennen
+diese Huerde gar nicht nehmen; ein Fehlalarm wuerde ein echtes
+Kundendokument von seiner Kundenakte fernhalten.
+
 ## Die vier Grundregeln
 
 Sie stehen ueber jeder Bequemlichkeit und sind in
@@ -113,18 +191,25 @@ genau das braucht man bei einer Rueckfrage zu einem Storno.
 | --- | --- |
 | Datei lesen (tolerant, DE-Zahlen, Latin-1) | `App\Services\Vermittler\VermittlerCsvReader` |
 | Zuordnung + Gegen-Abgleich | `App\Services\Vermittler\VermittlerAbrechnungImporter` |
+| Vorgangsliste lesen (CSV/PDF/Bild) | `App\Services\Vermittler\VermittlerListeReader` |
+| Vorgangsliste: Tabelle aus OCR-Text | `App\Services\Vermittler\VermittlerVorgangslisteParser` |
+| Vorgangsliste: Bruecke herstellen | `App\Services\Vermittler\VermittlerVorgangslisteImporter` |
+| Nachschlagewerk beider Importe | `App\Services\Vermittler\VermittlerContractIndex` |
+| Hinweis im Dokumenten-Eingang | `App\Services\Ai\TemplateParsers\VermittlerVorgangslisteHinweisParser` |
 | Kennungen normalisieren (nur zum Vergleich) | `App\Services\Vermittler\VermittlerReference` |
 | Status-Codes | `App\Services\Vermittler\VermittlerStatusMap` |
 | Manuelle Zuordnung + Historie am Formular | `App\Services\Vermittler\VermittlerLinkService` |
 | Auswertung | `App\Services\Vermittler\VermittlerReportService` |
 | Oberflaeche | `/admin/vermittler-abrechnung` (nur admin/manager) |
 | Box in der Vertragsakte | `admin/partials/contract_vermittler_box.blade.php` |
-| Tests | `tests/Feature/VermittlerAbrechnungTest.php` |
+| Tests | `tests/Feature/VermittlerAbrechnungTest.php`, `tests/Feature/VermittlerVorgangslisteTest.php` |
 
 ## Bedienung in drei Schritten
 
 1. **Vertrag anlegen** - Referenz-Nr. der Antragsbestaetigung im Feld
    "Referenz-/Vorgangsnummer" erfassen. Die Vermittler-ID bleibt leer.
+   (Alternativ: die Vorgangsliste des Portals einlesen - sie traegt die
+   Vermittler-ID an jedem Vertrag nach, dessen Referenz-Nr. erfasst ist.)
 2. **Abrechnung einlesen** - `/admin/vermittler-abrechnung`, CSV hochladen.
    Das Ergebnis erscheint sofort: zugeordnet, neu verknuepft, nicht
    gefunden, Prüfung, storniert, bereits importiert.

@@ -1216,6 +1216,52 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   Stand, Provision, Stornogrund und der Historie der Zuordnung. Beide
   Kennungen sind in der globalen Suche und in `Contract::scopeSearch`
   findbar. Tests: `VermittlerAbrechnungTest`.
+  **VORGANGSLISTE - der Schritt VOR der Abrechnung (Lehre 21.08.2026)**:
+  Der Betreiber lud die Uebersicht der OFFENEN Vorgaenge als Screenshot in
+  den DOKUMENTEN-EINGANG, um jede `Id` mit ihrer Referenz-Nr. zu verbinden;
+  Ergebnis war "Sonstiges Dokument / Kein Kunde gefunden". Das ist kein
+  Fehler, sondern der falsche Weg: der Eingang ordnet IMMER ein Dokument
+  EINEM Kunden zu - eine Liste mit den Vorgaengen VIELER Kunden kann er
+  strukturell nicht verarbeiten. Richtig ist
+  `/admin/vermittler-abrechnung` -> "Vorgangsliste einlesen"
+  (`VermittlerListeReader` + `VermittlerVorgangslisteImporter`): CSV/TXT
+  (**exakt**, Spalten beschriftet - immer vorzuziehen), PDF-Textebene oder
+  Screenshot per OCR. Sie stellt NUR die Bruecke her: `vermittler_id` an den
+  ueber die Referenz-Nr. gefundenen Vertrag, Status `id_zugeordnet`,
+  Historien-Eintrag. Eine Liste offener Posten ist KEINE Abrechnung - nie
+  eine Provision, nie ein Storno, nie ein "Nicht in Abrechnung gefunden"
+  (aus dem Fehlen in einer OFFENEN-Liste folgt nichts); und weil sie immer
+  aelter ist als eine Abrechnung, stuft sie einen abgerechneten/stornierten
+  Vertrag nie zurueck (`VermittlerStatusMap::mayAdvance`, Rangfolge).
+  Dieselbe `Id` bekommt spaeter die echte Abrechnung - die Zeile in
+  `vermittler_settlements` wird ERGAENZT, nie doppelt angelegt.
+  OCR-LEHRE (wie Energieportal/CHECK24): auf Spaltenabstaende ist kein
+  Verlass - `VermittlerVorgangslisteParser` liest ueber ANKER (Vorgangs-Id =
+  allein stehende 6-10-stellige Zahl; Referenz-Nr. haengt an ihrer
+  Beschriftung und gehoert zum zuletzt gesehenen Vorgang; Datum und
+  gruppierte Nummern werden vorher entfernt, damit "2026" nie eine Id wird).
+  Faellt eine ZWEITE Referenz-Nr. auf denselben Vorgang, hat die Erkennung
+  die Tabelle spaltenweise gelesen -> `ambiguous`, und dann wird in dieser
+  Datei GAR NICHTS verknuepft, alles geht in die Pruefliste (eine falsch
+  gepaarte Zahl haengt die Abrechnung eines FREMDEN Kunden an den Vertrag).
+  Der Eingang selbst erkennt die Liste jetzt gratis
+  (`VermittlerVorgangslisteHinweisParser`, Dokumenttyp
+  `vermittler_vorgangsliste`) und verlinkt auf die richtige Seite, statt in
+  der Sackgasse "Kein Kunde gefunden" zu enden - Erkennung bewusst STRENG
+  (mind. 3 Vorgaenge UND 2 verschiedene Referenz-Nummern), denn ein
+  Fehlalarm wuerde ein echtes Kundendokument von seiner Akte fernhalten.
+  BEDIENT WIRD SIE IM EINGANG (Betreiber-Wunsch 21.08.2026 - "besser als in
+  den Admin-Bereich gehen und nicht wissen was"): Knopf "Vorgangsliste
+  einlesen" an der Dokumentzeile (`admin.vermittler.from_document`, liest
+  die Datei erneut von der Storage-Disk - Rohtext wird weiterhin nie
+  gespeichert). Danach traegt das Dokument `vermittler_import_id`, verlaesst
+  "Nicht zugeordnet" (sonst stuende dort dauerhaft eine Aufgabe, die keine
+  ist) und steht im Abschnitt "Eingelesene Vermittler-Vorgangslisten" -
+  GELOESCHT wird nie etwas. Der Knopf erscheint zusaetzlich bei
+  "Sonstiges Dokument" (mit Rueckfrage) als Rueckfallebene, falls die
+  Erkennung die Tabelle einmal nicht als Liste einstuft. Verarbeitung bleibt
+  admin/manager (sie fuehrt auf die Seite mit den Provisionsbetraegen).
+  Tests: `VermittlerVorgangslisteTest`.
 - **Auftrag zuerst, Vertrag spaeter: ein Vorgang, EIN Vertrag**
   (Betreiber-Vorgabe 29.07.2026, Details in
   `docs/AUFTRAG_UND_VERTRAG_ZUSAMMENFUEHREN.md`): Zuerst wird der

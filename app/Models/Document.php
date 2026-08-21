@@ -7,7 +7,7 @@ class Document extends Model {
     protected $keyType = 'string';
     public $incrementing = false;
     protected $fillable = ['customer_id','contract_id','intake_batch','category','file_name','file_path','disk','visibility','color','uploaded_by','updated_by','file_size','content_hash','duplicate_of',
-        'ai_status','ai_type','ai_confidence','ai_source','ai_summary','ai_extracted','ai_error','ai_processed_at','page_count'];
+        'ai_status','ai_type','ai_confidence','ai_source','ai_summary','ai_extracted','ai_error','ai_processed_at','page_count','vermittler_import_id'];
 
     public const CATEGORIES = ['contract' => 'Verträge', 'police' => 'Policen', 'invoice' => 'Rechnungen', 'identity' => 'Identität', 'claim' => 'Schaden', 'other' => 'Sonstige'];
 
@@ -43,6 +43,10 @@ class Document extends Model {
         'sepa_mandat'          => ['label' => 'SEPA-Mandat',          'category' => 'other'],
         'kontaktdaten'         => ['label' => 'Kontaktdaten',         'category' => 'identity'],
         'schadenmeldung'       => ['label' => 'Schadenmeldung',       'category' => 'claim'],
+        // Liste MEHRERER Vorgaenge des Vermittlers - kein Kundendokument:
+        // sie gehoert zu keinem einzelnen Kunden und wird unter
+        // Vermittler-Abrechnung eingelesen, nicht hier zugeordnet.
+        'vermittler_vorgangsliste' => ['label' => 'Vermittler-Vorgangsliste', 'category' => 'other'],
         'sonstiges'            => ['label' => 'Sonstiges Dokument',   'category' => 'other'],
     ];
 
@@ -141,6 +145,15 @@ class Document extends Model {
     public function scopeCustomerVisible($q) { return $q->where('visibility', 'customer'); }
     /** Dokumenten-Eingang: hochgeladen ohne Kundenzuordnung (nur Mitarbeiter). */
     public function scopeInbox($q) { return $q->whereNull('customer_id'); }
+
+    /**
+     * Bereits als Vermittler-Vorgangsliste eingelesen? Solche Dokumente
+     * gehoeren zu keinem Kunden und sind trotzdem erledigt - sie stehen
+     * deshalb nicht mehr unter "Nicht zugeordnet".
+     */
+    public function isVermittlerListeVerarbeitet(): bool { return $this->vermittler_import_id !== null; }
+
+    public function vermittlerImport() { return $this->belongsTo(VermittlerImport::class, 'vermittler_import_id'); }
     protected static function boot() {
         parent::boot();
         static::creating(function ($m) {
