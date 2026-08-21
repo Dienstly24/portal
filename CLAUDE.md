@@ -1211,6 +1211,17 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   der Sackgasse "Kein Kunde gefunden" zu enden - Erkennung bewusst STRENG
   (mind. 3 Vorgaenge UND 2 verschiedene Referenz-Nummern), denn ein
   Fehlalarm wuerde ein echtes Kundendokument von seiner Akte fernhalten.
+  BEDIENT WIRD SIE IM EINGANG (Betreiber-Wunsch 21.08.2026 - "besser als in
+  den Admin-Bereich gehen und nicht wissen was"): Knopf "Vorgangsliste
+  einlesen" an der Dokumentzeile (`admin.vermittler.from_document`, liest
+  die Datei erneut von der Storage-Disk - Rohtext wird weiterhin nie
+  gespeichert). Danach traegt das Dokument `vermittler_import_id`, verlaesst
+  "Nicht zugeordnet" (sonst stuende dort dauerhaft eine Aufgabe, die keine
+  ist) und steht im Abschnitt "Eingelesene Vermittler-Vorgangslisten" -
+  GELOESCHT wird nie etwas. Der Knopf erscheint zusaetzlich bei
+  "Sonstiges Dokument" (mit Rueckfrage) als Rueckfallebene, falls die
+  Erkennung die Tabelle einmal nicht als Liste einstuft. Verarbeitung bleibt
+  admin/manager (sie fuehrt auf die Seite mit den Provisionsbetraegen).
   Tests: `VermittlerVorgangslisteTest`.
 - **Auftrag zuerst, Vertrag spaeter: ein Vorgang, EIN Vertrag**
   (Betreiber-Vorgabe 29.07.2026, Details in

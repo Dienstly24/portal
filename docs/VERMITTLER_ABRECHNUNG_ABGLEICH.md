@@ -73,6 +73,31 @@ Paarung mehr belegbar, und der Import verknuepft in dieser Datei
 **gar nichts**, sondern stellt alles zur Pruefung. Lieber eine Datei zur
 Ansicht als eine Abrechnung am falschen Kunden.
 
+### Erledigt wird sie DORT, wo sie liegt
+
+Betreiber-Wunsch 21.08.2026: "besser als in den Admin-Bereich zu gehen und
+nicht zu wissen was". Deshalb steht der Knopf **im Dokumenten-Eingang** an
+der Zeile der Datei - ein Klick auf *"Vorgangsliste einlesen"* liest sie
+und zeigt das Ergebnis. Der Weg ueber `/admin/vermittler-abrechnung`
+(Datei direkt hochladen) bleibt zusaetzlich bestehen.
+
+Zwei Details, die den Unterschied zwischen "funktioniert" und "fuehlt sich
+richtig an" ausmachen:
+
+* Nach dem Einlesen merkt sich das Dokument seinen Lauf
+  (`documents.vermittler_import_id`) und verlaesst **"Nicht zugeordnet"** -
+  es gehoert zu keinem Kunden, ist aber erledigt. Es steht danach im
+  Abschnitt "Eingelesene Vermittler-Vorgangslisten" mit Zaehlern und einem
+  Link zum Ergebnis. **Geloescht wird nie etwas.**
+* Der Knopf erscheint auch bei "Sonstiges Dokument" (nur admin/manager) -
+  als Rueckfallebene, falls die Texterkennung die Tabelle einmal nicht
+  sicher als Liste erkennt. Dann fragt er vorher nach. So endet der Eingang
+  in keinem Fall in einer Sackgasse.
+
+Die Verarbeitung selbst bleibt admin/manager: sie schreibt die
+Vermittler-ID an Vertraege und fuehrt auf die Ergebnisseite, auf der
+Provisionsbetraege stehen.
+
 ### Der Eingang zeigt jetzt den Weg
 
 `VermittlerVorgangslisteHinweisParser` erkennt eine solche Liste im

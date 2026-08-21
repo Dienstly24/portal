@@ -36,7 +36,18 @@ class VermittlerCsvReader
      */
     public function read(string $path): array
     {
-        $raw = (string) file_get_contents($path);
+        return $this->readString((string) file_get_contents($path));
+    }
+
+    /**
+     * Dieselbe Lesung auf einem bereits geladenen Inhalt - fuer Dateien, die
+     * nicht als Pfad vorliegen (z.B. ein Dokument aus dem Dokumenten-Eingang,
+     * das auf einer Storage-Disk liegt).
+     *
+     * @return array{header: array<string,int>, rows: array<int,array<string,?string>>, missing: array<int,string>}
+     */
+    public function readString(string $raw): array
+    {
         // Der Vermittler liefert teils Latin-1. Ohne Umwandlung wuerden
         // Umlaute in Stornogruenden als Fragezeichen gespeichert.
         if (!mb_check_encoding($raw, 'UTF-8')) {

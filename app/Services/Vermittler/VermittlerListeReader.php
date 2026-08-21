@@ -20,6 +20,16 @@ use App\Services\Ocr\TextExtractorInterface;
  */
 class VermittlerListeReader
 {
+    /** Dateityp aus der Endung, wenn kein MIME-Type mitgeliefert wird. */
+    private const MIME_BY_EXTENSION = [
+        'pdf' => 'application/pdf',
+        'png' => 'image/png',
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'webp' => 'image/webp',
+        'gif' => 'image/gif',
+    ];
+
     public function __construct(
         private TextExtractorInterface $ocr,
         private PdfTextLayerExtractor $pdfText,
@@ -33,13 +43,25 @@ class VermittlerListeReader
      */
     public function rows(string $path, string $mime, string $filename): array
     {
+        return $this->rowsFromBinary((string) file_get_contents($path), $mime, $filename);
+    }
+
+    /**
+     * Dieselbe Lesung auf einem bereits geladenen Inhalt - fuer Dateien, die
+     * nicht als Pfad vorliegen, z.B. ein bereits hochgeladenes Dokument aus
+     * dem Dokumenten-Eingang (dort liegt die Datei auf einer Storage-Disk).
+     *
+     * @return array{rows: array<int,array<string,?string>>, ambiguous: bool, notes: array<int,string>, source: string}
+     */
+    public function rowsFromBinary(string $binary, string $mime, string $filename): array
+    {
         $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 
         if (in_array($extension, ['csv', 'txt'], true) || str_contains($mime, 'csv')) {
-            return $this->fromCsv($path);
+            return $this->fromCsv($binary);
         }
 
-        return $this->fromText($this->text($path, $mime, $extension)) + ['source' => 'ocr'];
+        return $this->fromText($this->text($binary, $mime, $extension)) + ['source' => 'ocr'];
     }
 
     /** Ist die Texterkennung fuer Bilder ueberhaupt verfuegbar? */
@@ -52,9 +74,9 @@ class VermittlerListeReader
      * CSV: die Spalten sind beschriftet, also wird nichts rekonstruiert.
      * Deshalb kann diese Quelle auch nie "mehrdeutig" sein.
      */
-    private function fromCsv(string $path): array
+    private function fromCsv(string $binary): array
     {
-        $parsed = $this->csv->read($path);
+        $parsed = $this->csv->readString($binary);
 
         $rows = [];
         foreach ($parsed['rows'] as $row) {
@@ -80,9 +102,12 @@ class VermittlerListeReader
         return $this->parser->parse($text);
     }
 
-    private function text(string $path, string $mime, string $extension): string
+    private function text(string $binary, string $mime, string $extension): string
     {
-        $binary = (string) file_get_contents($path);
+        // Der Dateityp kommt notfalls aus der Endung: ein gespeichertes
+        // Dokument traegt keinen Upload-MIME-Type mehr, und die
+        // Texterkennung braucht den richtigen Typ, um das Bild abzulegen.
+        $mime = $mime !== '' ? $mime : self::MIME_BY_EXTENSION[$extension] ?? 'image/png';
 
         if ($extension === 'pdf' || str_contains($mime, 'pdf')) {
             $text = $this->pdfText->isAvailable() ? $this->pdfText->extract($binary) : '';
@@ -98,7 +123,7 @@ class VermittlerListeReader
             );
         }
 
-        $text = $this->ocr->extract($binary, $mime ?: 'image/png');
+        $text = $this->ocr->extract($binary, $mime);
         if (trim($text) === '') {
             throw new \RuntimeException('Aus der Datei liess sich kein Text lesen. Bitte einen schärferen Screenshot oder einen CSV-Export verwenden.');
         }

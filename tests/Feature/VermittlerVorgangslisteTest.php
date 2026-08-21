@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Contract;
+use App\Models\Document;
 use App\Models\Customer;
 use App\Models\User;
 use App\Models\VermittlerSettlement;
@@ -12,6 +13,7 @@ use App\Services\Vermittler\VermittlerVorgangslisteImporter;
 use App\Services\Vermittler\VermittlerVorgangslisteParser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -329,6 +331,114 @@ class VermittlerVorgangslisteTest extends TestCase
         ])->assertRedirect();
 
         // Ein Lauf ohne erkannten Vorgang wird nicht gespeichert.
+        $this->assertDatabaseCount('vermittler_imports', 0);
+    }
+
+    // ---------------------------------------------------------------
+    // Der Weg, den der Betreiber tatsaechlich geht: aus dem
+    // Dokumenten-Eingang heraus, wo die Datei schon liegt
+    // ---------------------------------------------------------------
+
+    /** Eine Datei im Eingang als Vorgangsliste einlesen - ein Klick, kein Umweg. */
+    private function inboxDocument(string $inhalt, string $name = 'vorgaenge.csv'): Document
+    {
+        Storage::fake('local');
+        Storage::disk('local')->put('inbox/' . $name, $inhalt);
+
+        return Document::create([
+            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'file_name' => $name,
+            'file_path' => 'inbox/' . $name,
+            'disk' => 'local',
+            'category' => 'sonstiges',
+            'ai_status' => 'done',
+            'ai_type' => 'vermittler_vorgangsliste',
+        ]);
+    }
+
+    public function test_list_can_be_processed_directly_from_the_document_inbox(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contract = $this->contract($this->customer(), ['reference_number' => '1477-6741-9200-53']);
+
+        $document = $this->inboxDocument(
+            "Datum;Produkt;ID;Status;Referenznummer\n"
+            . "20.08.2026;Kfz-Versicherung Abschluss;9783872;offen;1477-6741-9200-53\n"
+        );
+
+        $this->actingAs($admin)
+            ->post('/admin/vermittler-abrechnung/dokument/' . $document->id . '/einlesen')
+            ->assertRedirect();
+
+        $this->assertSame('9783872', $contract->refresh()->vermittler_id);
+        $this->assertNotNull($document->refresh()->vermittler_import_id, 'Das Dokument merkt sich seinen Lauf.');
+    }
+
+    /** Erledigt heisst: raus aus "Nicht zugeordnet" - aber nie geloescht. */
+    public function test_processed_list_leaves_the_open_inbox_but_is_kept(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->contract($this->customer(), ['reference_number' => '1477-6741-9200-53']);
+
+        $document = $this->inboxDocument(
+            "Datum;Produkt;ID;Status;Referenznummer\n"
+            . "20.08.2026;Kfz-Versicherung Abschluss;9783872;offen;1477-6741-9200-53\n"
+        );
+
+        $this->assertTrue(Document::inbox()->whereNull('vermittler_import_id')->where('id', $document->id)->exists());
+
+        $this->actingAs($admin)->post('/admin/vermittler-abrechnung/dokument/' . $document->id . '/einlesen');
+
+        $this->assertDatabaseHas('documents', ['id' => $document->id]);
+        $this->assertFalse(Document::inbox()->whereNull('vermittler_import_id')->where('id', $document->id)->exists());
+        $this->actingAs($admin)->get('/admin/dokumenten-eingang')
+            ->assertOk()
+            ->assertSee('Eingelesene Vermittler-Vorgangslisten');
+    }
+
+    /** Zweimal auf den Knopf: der zweite Klick fuehrt nur zum Ergebnis. */
+    public function test_second_click_does_not_import_twice(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->contract($this->customer(), ['reference_number' => '1477-6741-9200-53']);
+        $document = $this->inboxDocument(
+            "Datum;Produkt;ID;Status;Referenznummer\n"
+            . "20.08.2026;Kfz-Versicherung Abschluss;9783872;offen;1477-6741-9200-53\n"
+        );
+
+        $this->actingAs($admin)->post('/admin/vermittler-abrechnung/dokument/' . $document->id . '/einlesen');
+        $this->actingAs($admin)->post('/admin/vermittler-abrechnung/dokument/' . $document->id . '/einlesen');
+
+        $this->assertDatabaseCount('vermittler_imports', 1);
+        $this->assertSame(1, VermittlerSettlement::count());
+    }
+
+    /** Eine Datei ohne Vorgaenge wird abgelehnt - das Dokument bleibt offen. */
+    public function test_a_document_without_vorgaenge_is_refused_and_stays_open(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $document = $this->inboxDocument("nur irgendein Text\n", 'irgendwas.csv');
+
+        $this->actingAs($admin)
+            ->post('/admin/vermittler-abrechnung/dokument/' . $document->id . '/einlesen')
+            ->assertSessionHas('error');
+
+        $this->assertNull($document->refresh()->vermittler_import_id);
+        $this->assertDatabaseCount('vermittler_imports', 0);
+    }
+
+    /** Ein bereits zugeordnetes Kundendokument ist nie eine Vorgangsliste. */
+    public function test_document_of_a_customer_is_never_processed_as_a_list(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = $this->customer();
+        $document = $this->inboxDocument("Datum;Produkt;ID;Status\n20.08.2026;Kfz;9783872;offen\n");
+        $document->update(['customer_id' => $customer->id]);
+
+        $this->actingAs($admin)
+            ->post('/admin/vermittler-abrechnung/dokument/' . $document->id . '/einlesen')
+            ->assertSessionHas('error');
+
         $this->assertDatabaseCount('vermittler_imports', 0);
     }
 

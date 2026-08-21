@@ -134,8 +134,19 @@ class SmartDocumentUploadController extends Controller
         // im Eingang nur ihre eigenen Uploads (extrahierte Daten koennen
         // sensibel sein); Admin/Manager sehen alles.
         $inbox = Document::inbox()->with(['uploader', 'duplicateOriginal.customer.user'])
+            // Bereits eingelesene Vermittler-Vorgangslisten sind ERLEDIGT -
+            // sie gehoeren nur zu keinem Kunden. Blieben sie unter "Nicht
+            // zugeordnet" stehen, saehe der Mitarbeiter eine Daueraufgabe,
+            // die keine ist. Sie stehen weiter unten in ihrem eigenen
+            // Abschnitt (und werden nie automatisch geloescht).
+            ->whereNull('vermittler_import_id')
             ->when(!$user->canSeeAllCustomers(), fn ($q) => $q->where('uploaded_by', $user->id))
             ->latest()->get();
+
+        $vorgangslisten = Document::whereNotNull('vermittler_import_id')
+            ->when(!$user->canSeeAllCustomers(), fn ($q) => $q->where('uploaded_by', $user->id))
+            ->with(['uploader', 'vermittlerImport'])
+            ->latest()->limit(10)->get();
 
         // Match-Vorschlaege ausserhalb des eigenen Portfolios bereinigen,
         // BEVOR die View (inkl. des JSON-Blobs fuers Review-Modal) sie
@@ -165,6 +176,7 @@ class SmartDocumentUploadController extends Controller
             'batchGroups' => $batchGroups,
             'batchData' => $batchData,
             'recentDocuments' => $recent,
+            'vorgangslisten' => $vorgangslisten,
             'aiEnabled' => $this->analyzer->isEnabled(),
             'providerEnabled' => $this->analyzer->providerEnabled(),
         ]);
