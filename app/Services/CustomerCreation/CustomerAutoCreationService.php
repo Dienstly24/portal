@@ -57,7 +57,7 @@ class CustomerAutoCreationService
             $user = User::create([
                 'name' => $name,
                 'email' => ($email !== null && $email !== '') ? $email : null,
-                'password' => bcrypt(Str::random(32)),
+                'password' => $this->placeholderPassword(),
                 'role' => 'customer',
             ]);
 
@@ -129,6 +129,29 @@ class CustomerAutoCreationService
 
             return $customer;
         });
+    }
+
+    /**
+     * Unbrauchbares Startpasswort fuer eine automatisch angelegte Akte.
+     *
+     * WARUM GEMERKT UND NICHT JEDESMAL NEU: bcrypt ist mit Absicht teuer
+     * (~230 ms bei Kostenstufe 12). Beim Einlesen einer Abrechnung entstehen
+     * mehrere hundert Akten auf einmal - das waren gemessene 86 von 88
+     * Sekunden Laufzeit, aufgewendet fuer ein Passwort, das per Konstruktion
+     * NIE jemand benutzt: der Klartext ist zufaellig, wird nirgends
+     * gespeichert, nicht ausgegeben und nicht verschickt. Den Zugang stellt
+     * spaeter `PortalAccessService` her, und der setzt ueber
+     * `User::setPassword()` ohnehin einen neuen Wert.
+     *
+     * Der Wert gilt nur fuer DIESEN Vorgang (eine Instanz des Dienstes);
+     * ein neuer Lauf erzeugt einen neuen. Er wird bewusst nie
+     * zurueckgegeben oder protokolliert.
+     */
+    private ?string $placeholderPassword = null;
+
+    private function placeholderPassword(): string
+    {
+        return $this->placeholderPassword ??= bcrypt(Str::random(40));
     }
 
     /** Bestehende (z. B. bereits hochgeladene) Dokumente nachträglich mit dem neuen Kunden verknüpfen. */

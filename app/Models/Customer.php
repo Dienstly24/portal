@@ -8,7 +8,7 @@ class Customer extends Model {
     public const SOURCES = ['manual', 'website', 'email_import', 'fonds_finanz', 'import', 'lexoffice'];
 
     protected $fillable = [
-        'user_id','partner_id','customer_number','source','created_by','acquired_by','acquired_by_partner_id',
+        'user_id','partner_id','customer_number','source','commission_import_id','created_by','acquired_by','acquired_by_partner_id',
         'birth_date','address','address2',
         'iban','iban2','marital_status','phone','mobile','preferred_lang',
         'company_name','company_type','customer_type','email2',

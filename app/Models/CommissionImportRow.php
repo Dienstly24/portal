@@ -31,10 +31,16 @@ class CommissionImportRow extends Model
 
     protected $fillable = [
         'import_id', 'row_number', 'raw', 'mapped', 'result', 'message',
-        'contract_id', 'match_reason', 'dedupe_key',
+        'contract_id', 'customer_id', 'created_contract', 'created_customer',
+        'match_reason', 'dedupe_key',
     ];
 
-    protected $casts = ['raw' => 'array', 'mapped' => 'array'];
+    protected $casts = [
+        'raw' => 'array',
+        'mapped' => 'array',
+        'created_contract' => 'boolean',
+        'created_customer' => 'boolean',
+    ];
 
     protected static function boot()
     {
@@ -44,6 +50,17 @@ class CommissionImportRow extends Model
 
     public function import() { return $this->belongsTo(CommissionImport::class, 'import_id'); }
     public function contract() { return $this->belongsTo(Contract::class); }
+    public function customer() { return $this->belongsTo(Customer::class); }
+
+    /**
+     * Kann aus dieser nicht zugeordneten Zeile ein Vertrag entstehen? Der
+     * Merker wird beim Pruefen gesetzt, damit die Vorschau die Anzahl nennen
+     * kann, ohne jede Zeile erneut zu deuten.
+     */
+    public function isBuildable(): bool
+    {
+        return $this->result === self::NICHT_ZUGEORDNET && $this->match_reason === 'anlegbar';
+    }
 
     public function resultLabel(): string { return self::RESULTS[$this->result]['label'] ?? $this->result; }
     public function resultBadge(): string { return self::RESULTS[$this->result]['badge'] ?? 'closed'; }
