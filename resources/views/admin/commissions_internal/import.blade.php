@@ -34,6 +34,11 @@
         Trennzeichen (<code>;</code> <code>,</code> Tabulator) und Kodierung (UTF-8, UTF-8 mit BOM, ISO-8859-1/Windows-1252)
         erkennt das System selbst; beides lässt sich in der Vorschau überschreiben.
         Bei Excel-Dateien mit mehreren Tabellenblättern wird das gewählte Blatt in der Vorschau angezeigt und kann gewechselt werden.
+        <br><br>
+        <b>Zwei Arten von Dateien werden gelesen.</b> Eine <b>Abrechnung</b> enthält Provisionsbeträge – daraus entstehen Provisionen.
+        Eine <b>Auftrags-/Kundenliste</b> aus einem Vertriebsportal enthält gar keine Beträge, dafür Name, Anschrift,
+        Geburtsdatum, Telefon und Zählernummer – daraus entstehen nur Kunden und Verträge. Welche der beiden vorliegt,
+        erkennt das System an der Betragsspalte; in der Vorschau lässt es sich umstellen.
     </div>
 
     <form method="POST" action="{{ route('admin.commissions_internal.upload') }}" enctype="multipart/form-data">
@@ -70,6 +75,15 @@
                     <label>Tabellenblatt (Excel)</label>
                     <input type="text" name="sheet" placeholder="leer = erstes Blatt">
                 </div>
+                <div class="field" style="margin:0;">
+                    <label>Betriebsart</label>
+                    <select name="modus">
+                        <option value="">Automatisch erkennen</option>
+                        @foreach(\App\Services\CommissionImport\ColumnMap::MODES as $key => $label)
+                        <option value="{{ $key }}">{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
         </details>
 
@@ -93,13 +107,23 @@
             @foreach($imports as $import)
             <tr style="border-top:1px solid var(--line);">
                 <td style="padding:8px;"><a href="{{ route('admin.commissions_internal.preview', $import->id) }}">{{ $import->filename }}</a></td>
-                <td style="padding:8px;">{{ strtoupper($import->format) }}@if($import->sheet_name) <span style="color:var(--ink-soft);">· {{ $import->sheet_name }}</span>@endif</td>
+                <td style="padding:8px;">
+                    {{ strtoupper($import->format) }}@if($import->sheet_name) <span style="color:var(--ink-soft);">· {{ $import->sheet_name }}</span>@endif
+                    @unless($import->isAbrechnung())<div style="color:var(--ink-soft);font-size:11.5px;">Auftragsliste</div>@endunless
+                </td>
                 <td style="padding:8px;">{{ $import->rows_total }}</td>
                 <td style="padding:8px;">
                     <span style="color:#128a4b;">{{ $import->rows_new }} neu</span> ·
                     {{ $import->rows_updated }} akt. · {{ $import->rows_duplicate }} dupl. ·
                     <span style="color:#B5651D;">{{ $import->rows_unmatched }} ohne Vertrag</span> ·
                     <span style="color:#A32D2D;">{{ $import->rows_invalid }} fehlerhaft</span>
+                    @if($import->contracts_created > 0)
+                    <div style="color:#128a4b;">
+                        + {{ $import->contracts_created }} Verträge
+                        @if($import->customers_created > 0), {{ $import->customers_created }} Kunden @endif
+                        angelegt
+                    </div>
+                    @endif
                 </td>
                 <td style="padding:8px;">
                     <span class="badge badge-{{ $import->isDraft() ? 'pending' : ($import->status === 'importiert' ? 'active' : 'closed') }}">{{ $import->statusLabel() }}</span>

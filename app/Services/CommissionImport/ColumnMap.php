@@ -165,6 +165,44 @@ class ColumnMap
             'hint' => 'Falls die Quelle sie schon mitliefert',
             'aliases' => ['rechnungsnummer', 'rechnungsnr', 'invoicenumber', 'rechnung'],
         ],
+        'customer_address' => [
+            'label' => 'Anschrift des Kunden',
+            'type' => 'text',
+            'hint' => 'Einzeilig ("Weinberggasse 8, 94209 Regen") – wird zerlegt',
+            'aliases' => ['anschrift', 'adresse', 'strasse', 'strassehausnummer', 'address'],
+        ],
+        'customer_birth_date' => [
+            'label' => 'Geburtsdatum des Kunden',
+            'type' => 'datum',
+            'aliases' => ['geburtsdatum', 'gebdatum', 'geburtstag', 'birthdate'],
+        ],
+        'customer_phone' => [
+            'label' => 'Telefon des Kunden',
+            'type' => 'text',
+            'aliases' => ['telefonnummer', 'telefon', 'handynummer', 'mobil', 'mobilnummer', 'phone'],
+        ],
+        'meter_number' => [
+            'label' => 'Zählernummer (Energie)',
+            'type' => 'text',
+            'aliases' => ['zaehlernummer', 'zaehlernr', 'zahlernummer', 'meternumber'],
+        ],
+        'consumption' => [
+            'label' => 'Verbrauch (kWh/Jahr)',
+            'type' => 'zahl',
+            'aliases' => ['verbrauch', 'jahresverbrauch'],
+        ],
+        'contract_start' => [
+            'label' => 'Vertragsbeginn / Lieferbeginn',
+            'type' => 'datum',
+            'hint' => 'Nur ein ECHTES Datum – "schnellstmöglich" wird nie geraten',
+            'aliases' => ['lieferbeginn', 'vertragsbeginn', 'beginn', 'versicherungsbeginn', 'startdatum'],
+        ],
+        'status_text' => [
+            'label' => 'Status im Klartext (Auftragsliste)',
+            'type' => 'text',
+            'hint' => 'z. B. "Auftrag wurde an den Anbieter übermittelt"',
+            'aliases' => ['auftrstatustext', 'auftragsstatustext', 'auftragsstatus'],
+        ],
         'notes' => [
             'label' => 'Bemerkung (interne Notiz)',
             'type' => 'text',
@@ -243,24 +281,58 @@ class ColumnMap
     }
 
     /**
+     * Betriebsarten der Datei. Dieselbe Oberflaeche liest zwei Dinge, die
+     * verschiedene Pflichtspalten haben:
+     *  - ABRECHNUNG: traegt Betraege, es entstehen Provisionen.
+     *  - AUFTRAGSLISTE: traegt Kundendaten ohne einen einzigen Betrag
+     *    (Vertriebsportal), es entstehen NUR Kunden und Vertraege.
+     * Beides in einen Modus zu zwingen hiesse, entweder die Auftragsliste als
+     * "fehlerhaft" abzulehnen oder in der Abrechnung den fehlenden Betrag
+     * durchgehen zu lassen - beides waere falsch.
+     */
+    public const MODE_ABRECHNUNG = 'provisionen';
+    public const MODE_AUFTRAGSLISTE = 'auftragsliste';
+
+    public const MODES = [
+        self::MODE_ABRECHNUNG => 'Abrechnung – enthält Provisionsbeträge',
+        self::MODE_AUFTRAGSLISTE => 'Auftrags-/Kundenliste – ohne Beträge',
+    ];
+
+    /**
+     * Betriebsart aus der Kopfzeile vorschlagen: ohne Betragsspalte kann es
+     * keine Abrechnung sein. Der Admin kann den Vorschlag umstellen.
+     *
+     * @param array<string,int> $map
+     */
+    public static function suggestMode(array $map): string
+    {
+        return isset($map['amount']) ? self::MODE_ABRECHNUNG : self::MODE_AUFTRAGSLISTE;
+    }
+
+    /**
      * Zuordnung pruefen. Zurueck kommen KLARTEXT-Fehler, keine Codes - sie
      * stehen so in der Oberflaeche.
      *
      * @param array<string,int|null> $map
      * @return array<int,string>
      */
-    public static function validate(array $map): array
+    public static function validate(array $map, string $mode = self::MODE_ABRECHNUNG): array
     {
         $errors = [];
         $map = array_filter($map, fn ($v) => $v !== null && $v !== '');
 
-        if (!isset($map['amount'])) {
-            $errors[] = 'Die Spalte für den Provisionsbetrag ist nicht zugeordnet. Ohne Betrag lässt sich keine Provision anlegen.';
+        if ($mode === self::MODE_ABRECHNUNG && !isset($map['amount'])) {
+            $errors[] = 'Die Spalte für den Provisionsbetrag ist nicht zugeordnet. Ohne Betrag lässt sich keine Provision anlegen – '
+                . 'enthält die Datei gar keine Beträge, bitte die Betriebsart auf "Auftrags-/Kundenliste" stellen.';
+        }
+        if ($mode === self::MODE_AUFTRAGSLISTE && !isset($map['customer_name'])) {
+            $errors[] = 'Für eine Auftrags-/Kundenliste muss die Spalte mit dem Kundennamen zugeordnet sein – '
+                . 'sie ist das Einzige, woraus eine Kundenakte entstehen kann.';
         }
         if (array_intersect_key($map, array_flip(self::KEY_FIELDS)) === []) {
             $errors[] = 'Es ist keine Kennung zugeordnet. Mindestens eine von: '
                 . implode(', ', array_map(fn ($f) => self::label($f), self::KEY_FIELDS))
-                . ' wird gebraucht, um die Provision einem Vertrag zuzuordnen.';
+                . ' wird gebraucht, um die Zeile einem Vertrag zuzuordnen.';
         }
 
         $duplicates = array_diff_assoc($map, array_unique($map));

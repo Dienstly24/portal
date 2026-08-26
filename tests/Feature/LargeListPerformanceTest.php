@@ -34,7 +34,16 @@ class LargeListPerformanceTest extends TestCase
 
     private function kunde(string $name, array $attrs = []): Customer
     {
-        $user = User::factory()->create(['role' => 'customer', 'name' => $name]);
+        // E-Mail bewusst AUS DEM NAMEN ableiten statt sie der Faker-
+        // Zufallsquelle zu ueberlassen: die Kundensuche durchsucht auch die
+        // E-Mail, und rund jede hundertste Zufallsadresse enthaelt zufaellig
+        // den gesuchten Namensteil ("anna") - der Test schlug dann ohne
+        // erkennbaren Grund fehl.
+        $user = User::factory()->create([
+            'role' => 'customer',
+            'name' => $name,
+            'email' => 'kunde-' . substr(md5($name . uniqid()), 0, 12) . '@example.test',
+        ]);
 
         return Customer::create(array_merge([
             'user_id' => $user->id,

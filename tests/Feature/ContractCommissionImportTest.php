@@ -11,7 +11,9 @@ use App\Models\Customer;
 use App\Models\User;
 use App\Services\CommissionImport\CommissionImportService;
 use App\Services\CommissionImport\ColumnMap;
+use App\Services\CommissionImport\ColumnMap as Cols;
 use App\Services\CommissionImport\CsvTableReader;
+use App\Services\CommissionImport\PersonNameParser;
 use App\Services\CommissionImport\ValueParser;
 use App\Services\CommissionImport\XlsxTableReader;
 use App\Support\CommissionStatus;
@@ -384,15 +386,39 @@ class ContractCommissionImportTest extends TestCase
         $this->assertSame(2, ContractCommission::count());
     }
 
-    public function test_doppelte_zeile_in_derselben_datei_wird_als_duplikat_gemeldet(): void
+    public function test_gleiche_zeile_zweimal_in_einer_datei_sind_zwei_positionen(): void
     {
+        // LEHRE aus der echten Abrechnung: derselbe Vertrag steht dort mit
+        // demselben Betrag am selben Tag bis zu ZEHNMAL - das sind zehn
+        // Fälligkeiten, nicht ein Datensatz, der neunmal zu viel da ist.
+        // Sie als Duplikate zu verwerfen hätte die Abrechnung verfälscht.
         $this->contract($this->customer(), ['internal_contract_number' => 'V19613073']);
-        $import = $this->service()->analyze($this->file($this->poolCsv([[], []])), 'abrechnung.csv');
+        $import = $this->service()->analyze($this->file($this->poolCsv([[], [], []])), 'abrechnung.csv');
 
-        $this->assertSame(1, $import->rows_new);
-        $this->assertSame(1, $import->rows_duplicate);
+        $this->assertSame(3, $import->rows_new);
+        $this->assertSame(0, $import->rows_duplicate);
         $this->service()->confirm($import);
-        $this->assertSame(1, ContractCommission::count());
+        $this->assertSame(3, ContractCommission::count());
+        $this->assertSame('12.30', number_format((float) ContractCommission::sum('amount'), 2, '.', ''));
+    }
+
+    public function test_dieselbe_datei_mit_wiederholten_positionen_bleibt_idempotent(): void
+    {
+        // Die Position innerhalb der Datei geht in den Schlüssel ein. Weil
+        // die Reihenfolge einer Datei feststeht, ergibt derselbe Upload
+        // wieder dieselben Schlüssel - sonst wäre die Doppel-Import-Sperre
+        // durch die Positionszählung ausgehebelt.
+        $this->contract($this->customer(), ['internal_contract_number' => 'V19613073']);
+        $csv = $this->poolCsv([[], [], []]);
+
+        $this->service()->confirm($this->service()->analyze($this->file($csv), 'lauf1.csv'));
+        $this->assertSame(3, ContractCommission::count());
+
+        $second = $this->service()->analyze($this->file($csv), 'lauf2.csv');
+        $this->assertSame(3, $second->rows_duplicate);
+        $this->assertSame(0, $second->rows_new);
+        $this->service()->confirm($second);
+        $this->assertSame(3, ContractCommission::count());
     }
 
     // ------------------------------------------------ 5. NIE RATEN
@@ -406,8 +432,11 @@ class ContractCommissionImportTest extends TestCase
         $this->assertSame(0, $import->rows_new);
         $this->service()->confirm($import);
 
-        $this->assertSame(0, ContractCommission::count());
+        // Es entsteht KEIN Vertrag - die Provision selbst bleibt aber
+        // erhalten und wartet unter "Nicht zugeordnet" auf eine Entscheidung.
         $this->assertSame(1, Contract::count());
+        $this->assertSame(1, ContractCommission::count());
+        $this->assertNull(ContractCommission::sole()->contract_id);
         $this->assertStringContainsString('Kein Vertrag gefunden', (string) CommissionImportRow::first()->message);
     }
 
@@ -734,6 +763,7 @@ class ContractCommissionImportTest extends TestCase
         $this->assertSame(1, $import->rows_invalid);
 
         $this->actingAs($admin)->post(route('admin.commissions_internal.remap', $import->id), [
+            'modus' => Cols::MODE_ABRECHNUNG,
             'spalte' => ['internal_contract_number' => 0, 'amount' => 1],
         ])->assertRedirect();
 
@@ -789,6 +819,350 @@ class ContractCommissionImportTest extends TestCase
         $this->assertSame('RE-2026-0815', $commission->invoice_number);
         $this->assertNull($commission->payment_date);
         $this->assertSame(CommissionStatus::OFFEN, $commission->status);
+    }
+
+    // ---------------------------- 12. NICHTS GEHT VERLOREN (26.08.2026)
+
+    public function test_nicht_zugeordnete_provision_wird_trotzdem_aufbewahrt(): void
+    {
+        // Kein einziger Vertrag im Bestand - frueher wurde die Zeile beim
+        // Bestaetigen stillschweigend verworfen. In den echten Dateien des
+        // Betriebs betraf das ueber 90 % aller Zeilen.
+        $import = $this->service()->analyze($this->file($this->poolCsv([[]])), 'abrechnung.csv');
+        $this->assertSame(1, $import->rows_unmatched);
+
+        $this->service()->confirm($import);
+
+        $commission = ContractCommission::sole();
+        $this->assertNull($commission->contract_id);
+        $this->assertSame(ContractCommission::MATCH_OFFEN, $commission->match_status);
+        $this->assertSame('V19613073', $commission->internal_contract_number);
+        $this->assertSame('4.10', (string) $commission->amount);
+        $this->assertSame(1, $import->fresh()->rows_unlinked_kept);
+        // Und sie ist ueber den Filter "ohne Vertrag" auffindbar.
+        $this->assertSame(1, ContractCommission::unmatched()->count());
+    }
+
+    public function test_aufbewahrte_provision_wird_beim_zweiten_lauf_nicht_verdoppelt(): void
+    {
+        $csv = $this->poolCsv([[]]);
+        $this->service()->confirm($this->service()->analyze($this->file($csv), 'lauf1.csv'));
+
+        $second = $this->service()->analyze($this->file($csv), 'lauf2.csv');
+        $this->assertSame(1, $second->rows_duplicate);
+        $this->service()->confirm($second);
+
+        $this->assertSame(1, ContractCommission::count());
+    }
+
+    public function test_zwei_gleiche_zeilen_ohne_vertrag_kollidieren_nicht(): void
+    {
+        // Beide Zeilen werden geschrieben, obwohl sie identisch sind und
+        // keinen Vertrag haben - der eindeutige Schlüssel darf daran nicht
+        // scheitern.
+        $import = $this->service()->analyze($this->file($this->poolCsv([[], []])), 'abrechnung.csv');
+
+        $this->assertSame(2, $import->rows_unmatched);
+
+        $this->service()->confirm($import);
+        $this->assertSame(2, ContractCommission::count());
+        $this->assertSame(2, ContractCommission::unmatched()->count());
+    }
+
+    public function test_nicht_zugeordnete_zeile_laesst_sich_von_hand_verknuepfen(): void
+    {
+        $contract = $this->contract($this->customer(), ['internal_contract_number' => 'V-SPAETER']);
+        $this->service()->confirm($this->service()->analyze($this->file($this->poolCsv([[]])), 'abrechnung.csv'));
+        $commission = ContractCommission::sole();
+
+        $this->actingAs($this->admin())
+            ->post(route('admin.commissions_internal.link', $commission->id), ['contract_id' => $contract->id])
+            ->assertRedirect();
+
+        $this->assertSame($contract->id, $commission->fresh()->contract_id);
+    }
+
+    public function test_grosse_datei_wird_vollstaendig_uebernommen(): void
+    {
+        // WAECHTER gegen einen Fehler, der an den echten Dateien auffiel:
+        // die Verarbeitung blätterte nach `id`, sortierte aber nach
+        // Zeilennummer - dabei fielen Zeilen still aus dem Lauf (von 1711
+        // kamen nur 689 an). Die Datei ist bewusst größer als ein Chunk.
+        $rows = [];
+        for ($i = 1; $i <= 450; $i++) {
+            $rows[] = ['intern' => 'V' . str_pad((string) $i, 8, '0', STR_PAD_LEFT), 'betrag' => '10,00'];
+        }
+        $import = $this->service()->analyze($this->file($this->poolCsv($rows)), 'gross.csv');
+        $this->assertSame(450, $import->rows_total);
+        $this->assertSame(450, $import->rows_unmatched);
+
+        $this->service()->confirm($import);
+
+        $this->assertSame(450, ContractCommission::count());
+        $this->assertSame('4500.00', number_format((float) ContractCommission::sum('amount'), 2, '.', ''));
+    }
+
+    public function test_platzhalter_datum_macht_die_zeile_nicht_fehlerhaft(): void
+    {
+        // Das Vertriebsportal schreibt ein fehlendes Geburtsdatum als
+        // "00.00.0000". Das als kaputtes Datum zu werten hätte die ganze
+        // Zeile verworfen - samt Name, Anschrift und Vertrag.
+        $csv = "Vertragsnummer intern;Kunde;Provisionsbetrag;Geburtsdatum\n"
+            . "V19613073;VN Muster, Max;100,00;00.00.0000\n";
+        $import = $this->service()->analyze($this->file($csv), 'abrechnung.csv');
+
+        $this->assertSame(0, $import->rows_invalid);
+        $this->assertSame(1, $import->rows_buildable);
+
+        // Ein wirklich verstümmeltes Datum wird weiterhin gemeldet.
+        $bad = $this->service()->analyze(
+            $this->file("Vertragsnummer intern;Provisionsbetrag;Geburtsdatum\nV19613073;100,00;32.13.9999\n"),
+            'kaputt.csv'
+        );
+        $this->assertSame(1, $bad->rows_invalid);
+    }
+
+    // ---------------------------- 13. VERTRAEGE UND KUNDEN ANLEGEN
+
+    public function test_vertrag_und_kunde_entstehen_nur_auf_ausdruecklichen_wunsch(): void
+    {
+        $import = $this->service()->analyze($this->file($this->poolCsv([[]])), 'abrechnung.csv');
+        $this->assertSame(1, $import->rows_buildable);
+
+        // Ohne Haken passiert nichts.
+        $this->service()->confirm($import);
+        $this->assertSame(0, Contract::count());
+        $this->assertSame(0, Customer::count());
+    }
+
+    public function test_mit_haken_entstehen_vertrag_und_kundenakte(): void
+    {
+        $import = $this->service()->analyze(
+            $this->file($this->poolCsv([['kunde' => 'VN RANKO, MOHAMAD ADNAN']])),
+            'abrechnung.csv'
+        );
+        $import = $this->service()->confirm($import, null, buildContracts: true);
+
+        $this->assertSame(1, $import->contracts_created);
+        $this->assertSame(1, $import->customers_created);
+
+        $contract = Contract::sole();
+        $this->assertSame('V19613073', $contract->internal_contract_number);
+        $this->assertSame('2793227640', $contract->contract_number);
+        $this->assertSame('Dialog Versicherung AG', $contract->insurer);
+        $this->assertSame('betriebshaftpflicht', $contract->type);
+        $this->assertSame($import->id, $contract->commission_import_id);
+
+        // Der Name kommt lesbar in die Akte, nicht als "VN RANKO, MOHAMAD ADNAN".
+        $this->assertSame('Mohamad Adnan Ranko', Customer::sole()->user->name);
+
+        // Und die Provision haengt jetzt am neuen Vertrag.
+        $this->assertSame($contract->id, ContractCommission::sole()->contract_id);
+    }
+
+    public function test_neu_angelegter_vertrag_zaehlt_nie_zum_aktiven_bestand(): void
+    {
+        // Dass Geld geflossen ist, belegt: es GAB den Vertrag - nicht, dass er
+        // heute laeuft. Er darf die Vertragsstruktur des Kunden nicht
+        // aufblaehen, bevor ihn ein Mensch bestaetigt hat.
+        $this->service()->confirm(
+            $this->service()->analyze($this->file($this->poolCsv([[]])), 'abrechnung.csv'),
+            null,
+            buildContracts: true
+        );
+
+        $contract = Contract::sole();
+        $this->assertSame(Contract::STATUS_PENDING, $contract->status);
+        $this->assertFalse($contract->isCurrentlyActive());
+        $this->assertSame(0, Contract::currentlyActive()->count());
+        $this->assertStringContainsString('NICHT geprüft', (string) $contract->notes);
+    }
+
+    public function test_vorhandener_kunde_wird_nicht_dupliziert(): void
+    {
+        $existing = $this->customer('Mohamad Adnan Ranko');
+        $csv = $this->poolCsv([['kunde' => 'VN RANKO, MOHAMAD ADNAN']]);
+
+        $import = $this->service()->confirm(
+            $this->service()->analyze($this->file($csv), 'abrechnung.csv'),
+            null,
+            buildContracts: true
+        );
+
+        $this->assertSame(1, Customer::count());
+        $this->assertSame(0, $import->customers_created);
+        $this->assertSame(1, $import->contracts_created);
+        $this->assertSame((string) $existing->id, (string) Contract::sole()->customer_id);
+    }
+
+    public function test_ohne_kundennamen_wird_nichts_angelegt(): void
+    {
+        // Der Export des Vergleichsportals hat gar keine Namensspalte.
+        $csv = "Id;Provision;Datum\n9787196;75,00;25.08.2026\n";
+        $import = $this->service()->analyze($this->file($csv), 'tc24.csv');
+
+        $this->assertSame(1, $import->rows_unmatched);
+        $this->assertSame(0, $import->rows_buildable);
+
+        $import = $this->service()->confirm($import, null, buildContracts: true);
+
+        $this->assertSame(0, Contract::count());
+        $this->assertSame(0, Customer::count());
+        // Die Provision selbst bleibt trotzdem erhalten.
+        $this->assertSame(1, ContractCommission::count());
+        $this->assertNull(ContractCommission::sole()->contract_id);
+    }
+
+    public function test_anlegen_wird_protokolliert(): void
+    {
+        $admin = $this->admin();
+        $this->actingAs($admin);
+        $this->service()->confirm(
+            $this->service()->analyze($this->file($this->poolCsv([[]])), 'abrechnung.csv', $admin->id),
+            $admin->id,
+            buildContracts: true
+        );
+
+        $actions = CommissionAuditLog::pluck('action')->all();
+        $this->assertContains('kunde_angelegt', $actions);
+        $this->assertContains('vertrag_angelegt', $actions);
+    }
+
+    // ---------------------------- 14. AUFTRAGSLISTE OHNE BETRAEGE
+
+    /** Die Bauform des Energie-Vertriebsportals: Kundendaten, kein Betrag. */
+    private function orderCsv(array $rows): string
+    {
+        $header = 'VP-Name;Auftr.-Nr.;Anlagedatum;Auftr.-Statustext;Kunden;Anschrift;Geburtsdatum;'
+            . 'Telefonnummer;Zählernummer;Verbrauch;Tarif/Produkt';
+        $lines = [$header];
+        foreach ($rows as $row) {
+            $lines[] = implode(';', [
+                'Herr Ahmad Albhre',
+                $row['auftrag'] ?? '1672525',
+                '16.08.2026',
+                'Auftrag wurde an den Anbieter übermittelt',
+                $row['kunde'] ?? 'Herr Muhieddin Termanini',
+                $row['anschrift'] ?? 'Alte Kieler Landstr. 141, 24768 Rendsburg',
+                $row['geburt'] ?? '03.04.1978',
+                '+49 0176 23681009',
+                $row['zaehler'] ?? '1EBZ0103873550',
+                '2800',
+                $row['produkt'] ?? 'RheinEnergie AG - Fair Ökostrom 24',
+            ]);
+        }
+        return implode("\n", $lines) . "\n";
+    }
+
+    public function test_auftragsliste_ohne_betragsspalte_ist_kein_fehler(): void
+    {
+        // Genau dieser Fall meldete vorher 584 von 584 Zeilen als fehlerhaft.
+        $import = $this->service()->analyze($this->file($this->orderCsv([[]])), 'order.csv');
+
+        $this->assertSame(Cols::MODE_AUFTRAGSLISTE, $import->mode);
+        $this->assertSame(0, $import->rows_invalid);
+        $this->assertSame(1, $import->rows_unmatched);
+        $this->assertSame(1, $import->rows_buildable);
+    }
+
+    public function test_auftragsliste_legt_kunde_und_vertrag_mit_allen_daten_an(): void
+    {
+        $import = $this->service()->confirm(
+            $this->service()->analyze($this->file($this->orderCsv([[]])), 'order.csv'),
+            null,
+            buildContracts: true
+        );
+
+        $this->assertSame(1, $import->contracts_created);
+        $this->assertSame(1, $import->customers_created);
+        // Aus einer Auftragsliste entsteht NIE eine Provision.
+        $this->assertSame(0, ContractCommission::count());
+
+        $customer = Customer::sole();
+        $this->assertSame('Muhieddin Termanini', $customer->user->name);
+        $this->assertSame('male', $customer->gender);
+        $this->assertStringStartsWith('1978-04-03', (string) $customer->birth_date);
+        $this->assertSame('Alte Kieler Landstr.', $customer->address_street);
+        $this->assertSame('141', $customer->address_house_number);
+        $this->assertSame('24768', $customer->address_zip);
+        $this->assertSame('Rendsburg', $customer->address_city);
+
+        $contract = Contract::sole();
+        $this->assertSame('strom', $contract->type);
+        $this->assertSame('1672525', $contract->reference_number);
+        $this->assertStringContainsString('1EBZ0103873550', (string) $contract->notes);
+    }
+
+    public function test_auftragsliste_meldet_bereits_erfasste_vertraege_statt_sie_zu_verdoppeln(): void
+    {
+        $this->contract($this->customer(), ['reference_number' => '1672525', 'type' => 'strom']);
+
+        $import = $this->service()->analyze($this->file($this->orderCsv([[]])), 'order.csv');
+
+        $this->assertSame(0, $import->rows_unmatched);
+        $this->assertSame(1, $import->rows_duplicate);
+
+        $this->service()->confirm($import, null, buildContracts: true);
+        $this->assertSame(1, Contract::count());
+    }
+
+    public function test_betriebsart_laesst_sich_umstellen(): void
+    {
+        // Eine Abrechnung, deren Betragsspalte ungewoehnlich heisst, wird
+        // zunaechst als Auftragsliste erkannt - der Admin stellt um.
+        $csv = "Vertragsnummer intern;Kunde;Wert der Buchung\nV19613073;VN Muster, Max;100,00\n";
+        $import = $this->service()->analyze($this->file($csv), 'fremd.csv');
+        $this->assertSame(Cols::MODE_AUFTRAGSLISTE, $import->mode);
+
+        $this->actingAs($this->admin())->post(route('admin.commissions_internal.remap', $import->id), [
+            'modus' => Cols::MODE_ABRECHNUNG,
+            'spalte' => ['internal_contract_number' => 0, 'customer_name' => 1, 'amount' => 2],
+        ])->assertRedirect();
+
+        $import->refresh();
+        $this->assertSame(Cols::MODE_ABRECHNUNG, $import->mode);
+        $this->assertSame(0, $import->rows_invalid);
+        $this->assertSame(1, $import->rows_unmatched);
+    }
+
+    // ---------------------------- 15. NAMEN UND ANSCHRIFTEN
+
+    public function test_namen_der_fremdsysteme_werden_lesbar(): void
+    {
+        $parser = new PersonNameParser();
+
+        $this->assertSame('Mohamad Adnan Ranko', $parser->parse('VN RANKO, MOHAMAD ADNAN')['name']);
+        $this->assertSame('Sven Kaergel', $parser->parse('VN Kaergel, Sven')['name']);
+        // Haengendes Komma ohne Vorname: es wird NICHT gedreht.
+        $this->assertSame('Ahmed Al Huweij', $parser->parse('VN Ahmed Al Huweij, ')['name']);
+        $this->assertSame('Saddam Alahmad Al Hakkar', $parser->parse('Herr Saddam Alahmad Al Hakkar')['name']);
+        $this->assertSame('female', $parser->parse('Frau Hend Al Mohamad')['gender']);
+        // Eine Firma bleibt unangetastet.
+        $this->assertSame('Muster Transporte GmbH', $parser->parse('Muster Transporte GmbH')['name']);
+        $this->assertTrue($parser->parse('Muster Transporte GmbH')['company']);
+        $this->assertNull($parser->parse('VN , ')['name']);
+
+        // Namenszusaetze gehoeren zum Nachnamen.
+        $this->assertSame('Al Jashi', $parser->lastName('VN Al Khatib Al Jashi, Ahmad'));
+    }
+
+    public function test_einzeilige_anschrift_wird_zerlegt(): void
+    {
+        $a = ValueParser::address('Alte Kieler Landstr. 141, 24768 Rendsburg');
+        $this->assertSame('Alte Kieler Landstr.', $a['street']);
+        $this->assertSame('141', $a['house_number']);
+        $this->assertSame('24768', $a['zip']);
+        $this->assertSame('Rendsburg', $a['city']);
+
+        $b = ValueParser::address('Schützenstr. 11a, 12526 Berlin');
+        $this->assertSame('11a', $b['house_number']);
+
+        // Ohne PLZ wird NICHTS zerlegt - eine halb erkannte Adresse waere
+        // schlechter als eine unzerlegte.
+        $c = ValueParser::address('Irgendein Text');
+        $this->assertNull($c['zip']);
+        $this->assertNull($c['street']);
+        $this->assertSame('Irgendein Text', $c['raw']);
     }
 
     // ------------------------------------------------ Hilfsmittel: XLSX bauen

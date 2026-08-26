@@ -22,9 +22,10 @@ class CommissionImport extends Model
     public const VERWORFEN = 'verworfen';
 
     protected $fillable = [
-        'filename', 'file_hash', 'format', 'delimiter', 'encoding', 'sheet_name',
+        'filename', 'file_hash', 'format', 'mode', 'delimiter', 'encoding', 'sheet_name',
         'sheet_names', 'header', 'column_map', 'status', 'rows_total', 'rows_new',
         'rows_updated', 'rows_duplicate', 'rows_unmatched', 'rows_invalid',
+        'rows_buildable', 'rows_unlinked_kept', 'contracts_created', 'customers_created',
         'imported_by', 'confirmed_at',
     ];
 
@@ -46,6 +47,18 @@ class CommissionImport extends Model
     public function importer() { return $this->belongsTo(User::class, 'imported_by'); }
 
     public function isDraft(): bool { return $this->status === self::ENTWURF; }
+
+    /** Ist die Datei eine Abrechnung (mit Betraegen) oder eine Auftragsliste? */
+    public function isAbrechnung(): bool
+    {
+        return $this->mode !== \App\Services\CommissionImport\ColumnMap::MODE_AUFTRAGSLISTE;
+    }
+
+    public function modeLabel(): string
+    {
+        return \App\Services\CommissionImport\ColumnMap::MODES[$this->mode]
+            ?? \App\Services\CommissionImport\ColumnMap::MODES[\App\Services\CommissionImport\ColumnMap::MODE_ABRECHNUNG];
+    }
 
     /** Anzahl der Zeilen, die uebernommen wuerden (neu + aktualisiert). */
     public function applicableCount(): int

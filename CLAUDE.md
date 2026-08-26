@@ -1389,6 +1389,60 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   liest Kennungen aus einem Rechnungstext und zeigt Vertrag, Kunde und
   erwartete Provisionen; verknuepft wird bewusst je Provision und eine
   Rechnung bestaetigt NIE eine Zahlung (sie belegt eine Forderung).
+  **NICHTS GEHT VERLOREN + NEUANLAGE (Betreiber-Entscheidung 26.08.2026)**:
+  Der erste Lauf auf den echten Dateien zeigte die eigentliche Luecke - in
+  der Maklerpool-Abrechnung fand der Abgleich 1867 von 1969 Zeilen keinen
+  Vertrag, nicht weil die Zuordnung schlecht waere, sondern weil die
+  Vertraege nie im Portal erfasst wurden. Zwei Aenderungen:
+  (1) Eine NICHT ZUGEORDNETE Zeile wird trotzdem geschrieben - als Provision
+  ohne Vertrag (`contract_id = null`, Liste "Nicht zugeordnet", jederzeit von
+  Hand verknuepfbar). Sie stillschweigend zu verwerfen hiess, ueber 90 % der
+  Zeilen wegzuwerfen. (2) Auf AUSDRUECKLICHEN Haken entstehen daraus Vertrag
+  und - wenn noetig - Kundenakte (`CommissionContractBuilder`). Kein
+  Automatismus: ein Lauf legt mehrere hundert Datensaetze an, die Anzahl
+  steht deshalb VOR der Entscheidung in der Vorschau (`rows_buildable`).
+  GRENZEN: ohne verwertbaren KUNDENNAMEN entsteht nichts (der
+  Vergleichsportal-Export hat gar keine Namensspalte - daraus wuerde eine
+  leere Akte ohne Menschen darin); der neue Vertrag ist NIE `active`,
+  sondern `pending` ("In Bearbeitung") - dass Geld geflossen ist, belegt,
+  dass es den Vertrag GAB, nicht dass er heute laeuft; ein VORHANDENER Kunde
+  wird nie dupliziert. Herkunft steht an Vertrag und Kunde
+  (`commission_import_id`) und in den Notizen ("NICHT geprüft").
+  KUNDENZUORDNUNG: zuerst EXAKTER Namenstreffer (normalisiert, im Lauf
+  gecacht) - er muss EINDEUTIG sein, zwei gleichnamige Akten heissen "nichts
+  anlegen"; erst danach der unscharfe Abgleich, und dort gilt nur Stufe
+  `auto` (`confirm` heisst "koennte sein" - daraus darf nichts werden). Der
+  unscharfe Abgleich laeuft genau EINMAL je Zeile, naemlich im
+  Duplikatsschutz von `CustomerAutoCreationService`.
+  NAMEN/ADRESSEN aus Fremdformaten: `PersonNameParser` ("VN RANKO, MOHAMAD
+  ADNAN" -> "Mohamad Adnan Ranko", Anrede -> Geschlecht, Firma bleibt
+  unangetastet, haengendes Komma dreht nicht) und `ValueParser::address`
+  (Anker ist die PLZ, nicht das Komma; ohne PLZ wird NICHTS zerlegt).
+  **ZWEI BETRIEBSARTEN** (`commission_imports.mode`): eine ABRECHNUNG traegt
+  Betraege (Provisionen entstehen), eine AUFTRAGSLISTE aus dem
+  Vertriebsportal traegt Kundendaten OHNE einen einzigen Betrag (nur Kunden
+  und Vertraege entstehen, nie eine Provision). Beides in einen Modus zu
+  zwingen hiess, eine vollstaendige Datei als "fehlerhaft" abzulehnen - genau
+  das passierte mit 584 von 584 Zeilen. Erkannt wird die Art an der
+  Betragsspalte, umstellbar in der Vorschau.
+  **DREI FEHLER, DIE ERST DIE ECHTEN DATEN ZEIGTEN** (als Test festgehalten):
+  `chunkById` blaetterte nach `id`, waehrend ein zusaetzliches
+  `orderBy('row_number')` die Reihenfolge bestimmte - dabei fielen Zeilen
+  still aus dem Lauf (von 1711 kamen 689 an); jetzt blaettert es nach
+  `row_number`. Mehrfach vorkommende POSITIONEN sind keine Duplikate -
+  derselbe Vertrag steht mit demselben Betrag am selben Tag bis zu zehnmal
+  in der Abrechnung (zehn Faelligkeiten), deshalb geht die Position
+  innerhalb der Datei in den `dedupe_key` ein; weil die Reihenfolge einer
+  Datei feststeht, bleibt derselbe Upload trotzdem idempotent. Und
+  "00.00.0000" ist ein PLATZHALTER fuer "nicht angegeben", kein kaputtes
+  Datum - es als Fehler zu werten verwarf die ganze Zeile samt Name,
+  Anschrift und Vertrag (`ValueParser::isEmptyDatePlaceholder`).
+  **LAUFZEIT**: 86 von 88 Sekunden eines Laufs steckten in `bcrypt` - fuer
+  ein Startpasswort, das per Konstruktion NIE jemand benutzt.
+  `CustomerAutoCreationService` merkt sich den Platzhalter-Hash jetzt je
+  Vorgang (Klartext ist zufaellig, wird nie gespeichert oder verschickt;
+  den echten Zugang setzt spaeter `PortalAccessService`). Die drei echten
+  Dateien laufen damit in rund 13 Sekunden statt 160.
   Tests: `ContractCommissionImportTest`.
 
 - **Auftrag zuerst, Vertrag spaeter: ein Vorgang, EIN Vertrag**

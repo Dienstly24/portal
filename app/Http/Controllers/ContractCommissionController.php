@@ -149,6 +149,8 @@ class ContractCommissionController extends Controller implements HasMiddleware
                 $request->input('delimiter') ?: null,
                 $request->input('encoding') ?: null,
                 $request->input('sheet') ?: null,
+                null,
+                $request->input('modus') ?: null,
             );
         } catch (\Throwable $e) {
             return back()->with('error', 'Die Datei konnte nicht gelesen werden: ' . $e->getMessage())->withInput();
@@ -174,7 +176,8 @@ class ContractCommissionController extends Controller implements HasMiddleware
             'import' => $import,
             'rows' => $rows->paginate(100)->withQueryString(),
             'fields' => ColumnMap::FIELDS,
-            'mapErrors' => ColumnMap::validate((array) $import->column_map),
+            'mapErrors' => ColumnMap::validate((array) $import->column_map, (string) $import->mode),
+            'modes' => ColumnMap::MODES,
             'filter' => $filter,
         ]);
     }
@@ -192,7 +195,7 @@ class ContractCommissionController extends Controller implements HasMiddleware
         }
 
         try {
-            $service->remap($import, $map);
+            $service->remap($import, $map, $request->input('modus') ?: null);
         } catch (\Throwable $e) {
             return back()->with('error', $e->getMessage());
         }
@@ -202,19 +205,37 @@ class ContractCommissionController extends Controller implements HasMiddleware
     }
 
     /** Schritt 5: Entwurf bestaetigen - erst hier werden Daten geschrieben. */
-    public function confirm(string $id, CommissionImportService $service)
+    public function confirm(Request $request, string $id, CommissionImportService $service)
     {
         $import = CommissionImport::findOrFail($id);
 
         try {
-            $import = $service->confirm($import, auth()->id());
+            // Das Anlegen von Vertraegen und Kunden ist ein AUSDRUECKLICHER
+            // Haken, kein Standard: ein Lauf kann hunderte Datensaetze
+            // erzeugen, und das soll niemand versehentlich ausloesen.
+            $import = $service->confirm($import, auth()->id(), $request->boolean('vertraege_anlegen'));
         } catch (\Throwable $e) {
             return back()->with('error', $e->getMessage());
         }
 
+        $parts = [];
+        if ($import->isAbrechnung()) {
+            $parts[] = $import->rows_new . ' neu';
+            $parts[] = $import->rows_updated . ' aktualisiert';
+            if ($import->rows_unlinked_kept > 0) {
+                $parts[] = $import->rows_unlinked_kept . ' ohne Vertrag aufbewahrt';
+            }
+        }
+        if ($import->contracts_created > 0) {
+            $parts[] = $import->contracts_created . ' Verträge angelegt';
+        }
+        if ($import->customers_created > 0) {
+            $parts[] = $import->customers_created . ' Kunden angelegt';
+        }
+
         return redirect()->route('admin.commissions_internal.preview', $import->id)->with(
             'success',
-            'Import übernommen: ' . $import->rows_new . ' neu, ' . $import->rows_updated . ' aktualisiert.'
+            'Import übernommen: ' . ($parts === [] ? 'nichts zu übernehmen.' : implode(', ', $parts) . '.')
         );
     }
 

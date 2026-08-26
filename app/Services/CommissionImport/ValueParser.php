@@ -76,7 +76,7 @@ class ValueParser
     public static function date(?string $value): ?Carbon
     {
         $value = trim((string) $value);
-        if ($value === '') {
+        if ($value === '' || self::isEmptyDatePlaceholder($value)) {
             return null;
         }
 
@@ -114,6 +114,26 @@ class ValueParser
     }
 
     /**
+     * Schreibweisen, mit denen Fremdsysteme "kein Datum" ausdruecken.
+     *
+     * WARUM DAS WICHTIG IST: Das Vertriebsportal schreibt ein fehlendes
+     * Geburtsdatum als "00.00.0000". Wird das als kaputtes Datum gewertet,
+     * faellt die GANZE Zeile als fehlerhaft aus - und mit ihr Name,
+     * Anschrift und Vertrag, die vollstaendig da sind. Der Platzhalter ist
+     * kein Fehler der Datei, sondern ihre Art, "nicht angegeben" zu sagen.
+     * Ein wirklich VERSTUEMMELTES Datum wird weiterhin gemeldet.
+     */
+    private const EMPTY_DATES = [
+        '00.00.0000', '0000-00-00', '00/00/0000', '0.0.0000',
+        '-', '--', 'n/a', 'na', 'unbekannt', 'keine angabe', 'kein datum',
+    ];
+
+    public static function isEmptyDatePlaceholder(string $value): bool
+    {
+        return in_array(mb_strtolower(trim($value)), self::EMPTY_DATES, true);
+    }
+
+    /**
      * Waehrung: Kuerzel aus der Spalte oder aus dem Betrag ("1.234,00 EUR").
      * Ohne Angabe bleibt es beim Standard des Betriebs - eine erfundene
      * Fremdwaehrung waere schlimmer als eine unterstellte Hauswaehrung.
@@ -131,6 +151,52 @@ class ValueParser
             }
         }
         return preg_match('/^[A-Z]{3}$/', $value) ? $value : $default;
+    }
+
+    /**
+     * Einzeilige Anschrift in ihre Teile zerlegen
+     * ("Alte Kieler Landstr. 141, 24768 Rendsburg").
+     *
+     * Der ANKER ist die deutsche Postleitzahl (genau fuenf Ziffern als
+     * eigenes Wort) - nicht das Komma: es fehlt in manchen Exporten, und
+     * eine Strasse wie "Str. des 17. Juni 12" enthaelt selbst Ziffern.
+     * Laesst sich die PLZ nicht finden, wird NICHTS zerlegt und die Zeile
+     * bleibt als Ganzes stehen: eine halb erkannte Adresse ist schlechter
+     * als eine unzerlegte.
+     *
+     * @return array{street:?string,house_number:?string,zip:?string,city:?string,raw:?string}
+     */
+    public static function address(?string $value): array
+    {
+        $raw = trim(preg_replace('/\s+/u', ' ', (string) $value) ?? '');
+        $empty = ['street' => null, 'house_number' => null, 'zip' => null, 'city' => null, 'raw' => null];
+        if ($raw === '') {
+            return $empty;
+        }
+
+        if (!preg_match('/(?:^|[,\s])(\d{5})\s+(.+)$/u', $raw, $m, PREG_OFFSET_CAPTURE)) {
+            return array_merge($empty, ['raw' => mb_substr($raw, 0, 190)]);
+        }
+
+        $zip = $m[1][0];
+        $city = trim($m[2][0], " ,");
+        $before = trim(mb_strcut($raw, 0, $m[1][1]), " ,");
+
+        // Hausnummer = letzte Zahl (mit moeglichem Buchstaben) der Strasse.
+        $street = $before;
+        $houseNumber = null;
+        if (preg_match('/^(.*?)[\s,]+(\d+\s*[a-zA-Z]?(?:\s*[-\/]\s*\d+\s*[a-zA-Z]?)?)$/u', $before, $h)) {
+            $street = trim($h[1], " ,");
+            $houseNumber = trim($h[2]);
+        }
+
+        return [
+            'street' => $street !== '' ? mb_substr($street, 0, 190) : null,
+            'house_number' => $houseNumber !== null && $houseNumber !== '' ? mb_substr($houseNumber, 0, 20) : null,
+            'zip' => $zip,
+            'city' => $city !== '' ? mb_substr($city, 0, 190) : null,
+            'raw' => mb_substr($raw, 0, 190),
+        ];
     }
 
     /** Text kuerzen, ohne mitten in einem Mehrbyte-Zeichen zu schneiden. */

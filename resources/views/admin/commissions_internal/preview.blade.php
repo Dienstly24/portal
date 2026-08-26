@@ -28,6 +28,7 @@
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;font-size:13px;">
         <div><div style="font-size:11.5px;color:var(--ink-soft);">Dateiname</div><div style="font-weight:600;">{{ $import->filename }}</div></div>
         <div><div style="font-size:11.5px;color:var(--ink-soft);">Format</div><div style="font-weight:600;">{{ strtoupper($import->format) }}</div></div>
+        <div><div style="font-size:11.5px;color:var(--ink-soft);">Betriebsart</div><div style="font-weight:600;">{{ $import->modeLabel() }}</div></div>
         <div><div style="font-size:11.5px;color:var(--ink-soft);">Zeilen (ohne Kopf)</div><div style="font-weight:600;">{{ $import->rows_total }}</div></div>
         <div><div style="font-size:11.5px;color:var(--ink-soft);">Spalten</div><div style="font-weight:600;">{{ count((array) $import->header) }}</div></div>
         <div><div style="font-size:11.5px;color:var(--ink-soft);">Trennzeichen</div><div style="font-weight:600;">{{ $import->delimiterLabel() }}</div></div>
@@ -67,6 +68,20 @@
 
     <form method="POST" action="{{ route('admin.commissions_internal.remap', $import->id) }}">
         @csrf
+        {{-- Die Betriebsart entscheidet, welche Spalten Pflicht sind. Sie
+             gehoert deshalb ueber die Zuordnung, nicht daneben. --}}
+        <div class="field" style="max-width:420px;">
+            <label>Betriebsart der Datei</label>
+            <select name="modus" @disabled(!$import->isDraft())>
+                @foreach($modes as $key => $label)
+                <option value="{{ $key }}" @selected($import->mode === $key)>{{ $label }}</option>
+                @endforeach
+            </select>
+            <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">
+                Eine <b>Auftrags-/Kundenliste</b> hat keine Beträge – aus ihr entstehen nur Kunden und Verträge,
+                nie eine Provision.
+            </div>
+        </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;">
             @foreach($fields as $field => $definition)
             <div class="field" style="margin:0;">
@@ -102,7 +117,7 @@
         ['neu', 'neue Datensätze', $import->rows_new, '#128a4b'],
         ['aktualisiert', 'aktualisierte Datensätze', $import->rows_updated, '#1E6FA8'],
         ['duplikat', 'Duplikate (werden übersprungen)', $import->rows_duplicate, 'var(--ink-soft)'],
-        ['nicht_zugeordnet', 'nicht zugeordnete Verträge', $import->rows_unmatched, '#B5651D'],
+        ['nicht_zugeordnet', 'ohne passenden Vertrag', $import->rows_unmatched, '#B5651D'],
         ['fehlerhaft', 'fehlerhafte Datensätze', $import->rows_invalid, '#A32D2D'],
     ];
 @endphp
@@ -118,6 +133,22 @@
         @endforeach
     </div>
 
+    @if(!$import->isDraft() && ($import->contracts_created > 0 || $import->customers_created > 0 || $import->rows_unlinked_kept > 0))
+    <div style="margin-top:14px;background:#D9F4E6;border:1px solid #9BD9BB;border-radius:8px;padding:10px 12px;font-size:12.5px;">
+        <b>Übernommen.</b>
+        @if($import->contracts_created > 0)
+        {{ $import->contracts_created }} Verträge
+        @if($import->customers_created > 0) und {{ $import->customers_created }} Kundenakten @endif
+        wurden neu angelegt (Status „In Bearbeitung“) –
+        <a href="{{ route('admin.contracts', ['gruppe' => 'pending']) }}">zur Prüfung</a>.
+        @endif
+        @if($import->rows_unlinked_kept > 0)
+        {{ $import->rows_unlinked_kept }} Provisionen wurden ohne Vertrag aufbewahrt –
+        <a href="{{ route('admin.commissions_internal.index', ['zuordnung' => 'offen']) }}">Liste „Nicht zugeordnet“</a>.
+        @endif
+    </div>
+    @endif
+
     @if($import->rows_unmatched + $import->rows_invalid > 0)
     <div style="margin-top:14px;font-size:12.5px;">
         <a href="{{ route('admin.commissions_internal.errors', $import->id) }}">⬇ Fehlerhafte und nicht zugeordnete Zeilen als CSV herunterladen</a>
@@ -129,22 +160,62 @@
     <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line);">
         <div style="font-weight:700;font-size:14px;margin-bottom:6px;">Schritt 5 · Bestätigen</div>
         <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;">
-            Übernommen werden <b>{{ $import->applicableCount() }}</b> Zeilen ({{ $import->rows_new }} neu,
-            {{ $import->rows_updated }} aktualisiert). Duplikate, fehlerhafte und nicht zugeordnete Zeilen
-            werden <b>nicht</b> geschrieben – sie bleiben hier stehen.
+            @if($import->isAbrechnung())
+            Übernommen werden <b>{{ $import->applicableCount() + $import->rows_unmatched }}</b> Zeilen:
+            {{ $import->rows_new }} neu, {{ $import->rows_updated }} aktualisiert und
+            <b>{{ $import->rows_unmatched }} ohne Vertrag</b> – auch sie werden gespeichert und stehen danach
+            in der Liste „Nicht zugeordnet“, wo sie sich jederzeit von Hand verknüpfen lassen.
+            Nur Duplikate und fehlerhafte Zeilen werden übersprungen.
+            @else
+            Diese Datei enthält keine Beträge – es wird <b>keine Provision</b> gebucht.
+            Übernommen werden nur Kunden und Verträge, und nur wenn Sie das unten ausdrücklich anhaken.
+            @endif
         </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <form method="POST" action="{{ route('admin.commissions_internal.confirm', $import->id) }}" style="margin:0;"
-                  onsubmit="return confirm('Import bestätigen? Es werden {{ $import->applicableCount() }} Provisionen geschrieben.');">
-                @csrf
-                <button type="submit" class="btn btn-primary" @disabled($import->applicableCount() === 0)>Import bestätigen</button>
-            </form>
-            <form method="POST" action="{{ route('admin.commissions_internal.discard', $import->id) }}" style="margin:0;"
-                  onsubmit="return confirm('Entwurf verwerfen? Es wurde nichts übernommen.');">
-                @csrf
-                <button type="submit" class="btn">Entwurf verwerfen</button>
-            </form>
-        </div>
+
+        {{-- Der Haken, der aus fremden Zeilen eigenen Bestand macht. Er ist
+             bewusst nicht vorausgewählt und nennt die Anzahl VORHER: ein Lauf
+             kann hunderte Akten anlegen. --}}
+        <form method="POST" action="{{ route('admin.commissions_internal.confirm', $import->id) }}" style="margin:0;"
+              onsubmit="return confirm('Import bestätigen?');">
+            @csrf
+            @if($import->rows_buildable > 0)
+            <label style="display:flex;align-items:flex-start;gap:8px;font-size:12.5px;max-width:760px;margin-bottom:14px;
+                          background:#FEF3C7;border:1px solid #E8C36A;border-radius:8px;padding:12px 14px;">
+                <input type="checkbox" name="vertraege_anlegen" value="1" style="margin-top:2px;">
+                <span>
+                    <b>Fehlende Verträge (und Kunden) anlegen – {{ $import->rows_buildable }} Zeilen.</b>
+                    Aus jeder dieser Zeilen entsteht ein Vertrag mit den Angaben der Datei
+                    (Gesellschaft, Sparte, Produkt, beide Vertragsnummern). Gibt es den Kunden noch nicht,
+                    wird auch eine Kundenakte angelegt – ein <b>vorhandener</b> Kunde wird nie dupliziert.
+                    <br>
+                    Jeder neue Vertrag bekommt den Status <b>„In Bearbeitung“</b> und zählt damit <b>nicht</b>
+                    zum aktiven Bestand: dass eine Provision geflossen ist, belegt, dass es den Vertrag
+                    <i>gab</i> – nicht, dass er heute läuft. Bitte anschließend prüfen.
+                    @if($import->rows_unmatched > $import->rows_buildable)
+                    <br>
+                    <span style="color:var(--ink-soft);">
+                        Für die übrigen {{ $import->rows_unmatched - $import->rows_buildable }} Zeilen fehlt ein
+                        verwertbarer Kundenname – daraus wird bewusst nichts angelegt.
+                    </span>
+                    @endif
+                </span>
+            </label>
+            @elseif($import->rows_unmatched > 0)
+            <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;max-width:760px;">
+                Keine der nicht zugeordneten Zeilen trägt einen verwertbaren Kundennamen –
+                es lässt sich daraus kein Vertrag anlegen.
+            </div>
+            @endif
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button type="submit" class="btn btn-primary">Import bestätigen</button>
+        </form>
+                <form method="POST" action="{{ route('admin.commissions_internal.discard', $import->id) }}" style="margin:0;"
+                      onsubmit="return confirm('Entwurf verwerfen? Es wurde nichts übernommen.');">
+                    @csrf
+                    <button type="submit" class="btn">Entwurf verwerfen</button>
+                </form>
+            </div>
     </div>
     @endif
 </div>
