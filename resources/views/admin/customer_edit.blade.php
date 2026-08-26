@@ -267,6 +267,17 @@
 </div>
 </form>
 
+{{-- Loesch-Formulare der Familienmitglieder: bewusst AUSSERHALB des
+     Bearbeiten-Formulars. Ein Formular im Formular ist ungueltiges HTML - der
+     Browser verwirft das innere, der Klick auf "Entfernen" schickte dann das
+     Kunden-Formular ab (samt _method=DELETE) statt das Mitglied zu loeschen.
+     Die Knoepfe in den Karten verweisen per form-Attribut hierher. --}}
+@foreach(($customer->family ?? collect()) as $f)
+<form method="POST" id="family-delete-{{ $f->id }}" action="{{ route('admin.customer.family.delete', $f->id) }}" style="display:none;">
+    @csrf @method('DELETE')
+</form>
+@endforeach
+
 <script>
 window.IS_FIRMA = {{ ($customer->customer_type ?? 'privat') === 'firma' ? 'true' : 'false' }};
 function showTab(tab) {

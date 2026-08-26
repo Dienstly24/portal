@@ -33,12 +33,13 @@
 @endphp
 <div style="border:1px solid var(--line);border-radius:12px;padding:16px;background:var(--surface,#FBFAF6);position:relative;">
     @if($showDelete)
-    <form method="POST" action="{{ route('admin.customer.family.delete', $f->id) }}"
-          onsubmit="return confirm('Familienmitglied „{{ addslashes($f->name) }}“ wirklich entfernen?')"
-          style="position:absolute;top:8px;right:10px;margin:0;">
-        @csrf @method('DELETE')
-        <button type="submit" title="Entfernen" style="background:none;border:0;cursor:pointer;color:#A32D2D;font-size:14px;padding:0;line-height:1;">✕</button>
-    </form>
+    {{-- Der Knopf gehoert per form-Attribut zu einem Formular AUSSERHALB des
+         Bearbeiten-Formulars (siehe customer_edit.blade.php). Ein Formular IM
+         Formular ist ungueltiges HTML - der Browser wirft das innere weg und
+         der Klick sendet dann das Kunden-Formular ab, statt zu loeschen. --}}
+    <button type="submit" form="family-delete-{{ $f->id }}" title="Entfernen"
+            onclick="return confirm('Familienmitglied „{{ addslashes($f->name) }}“ wirklich entfernen?')"
+            style="position:absolute;top:8px;right:10px;background:none;border:0;cursor:pointer;color:#A32D2D;font-size:14px;padding:0;line-height:1;">✕</button>
     @endif
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;{{ $showDelete ? 'padding-right:18px;' : '' }}">
         <div style="width:44px;height:44px;border-radius:10px;background:#EDEAE0;display:flex;align-items:center;justify-content:center;font-size:24px;flex:none;">{{ $icon }}</div>
