@@ -687,6 +687,46 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         });
     });
 
+    // Interne Provisionen: Provisionsdaten aus Fremdsystemen (Maklerpool,
+    // Vergleichsportal, Energieportal) einlesen und an den Vertrag binden
+    // (Betreiber-Auftrag 26.08.2026).
+    //
+    // ZUGRIFF ueber das RECHT `provisionen-verwalten`, nicht ueber eine
+    // Rolle: Provisionsdaten sind intern und vertraulich, und ein Recht wird
+    // einzeln vergeben, waehrend eine Rolle mit der Zeit um Aufgaben
+    // waechst. Die Pruefung steht zusaetzlich im Controller.
+    Route::prefix('interne-provisionen')->name('commissions_internal.')
+        ->middleware('can:provisionen-verwalten')->group(function () {
+        $c = \App\Http\Controllers\ContractCommissionController::class;
+
+        Route::get('/', [$c, 'index'])->name('index');
+        Route::get('/export', [$c, 'export'])->name('export');
+        Route::get('/protokoll', [$c, 'auditLog'])->name('audit');
+        Route::get('/rechnungsabgleich', [$c, 'invoiceMatch'])->name('invoice');
+        Route::get('/vertrag-suche', [$c, 'contractSearch'])->name('contract_search');
+
+        // Import in fuenf Schritten: Upload -> Erkennung -> Zuordnung ->
+        // Pruefung -> Bestaetigung. Erst der letzte Schritt schreibt.
+        Route::get('/import', [$c, 'importForm'])->name('import');
+        Route::post('/import', [$c, 'upload'])->name('upload');
+        Route::get('/import/{id}', [$c, 'preview'])->whereUuid('id')->name('preview');
+        Route::post('/import/{id}/zuordnung', [$c, 'remap'])->whereUuid('id')->name('remap');
+        Route::post('/import/{id}/bestaetigen', [$c, 'confirm'])->whereUuid('id')->name('confirm');
+        Route::post('/import/{id}/verwerfen', [$c, 'discard'])->whereUuid('id')->name('discard');
+        Route::get('/import/{id}/fehler.csv', [$c, 'errorExport'])->whereUuid('id')->name('errors');
+
+        // Die Detailroute steht ZULETZT - sonst verschluckt sie die festen
+        // Pfade oben (gleiche Lehre wie bei der Kundensuche).
+        Route::get('/{id}', [$c, 'show'])->whereUuid('id')->name('show');
+        Route::put('/{id}', [$c, 'update'])->whereUuid('id')->name('update');
+        Route::post('/{id}/status', [$c, 'updateStatus'])->whereUuid('id')->name('status');
+        Route::post('/{id}/zahlung', [$c, 'pay'])->whereUuid('id')->name('pay');
+        Route::post('/{id}/zuordnen', [$c, 'link'])->whereUuid('id')->name('link');
+        Route::post('/{id}/zuordnung-loesen', [$c, 'unlink'])->whereUuid('id')->name('unlink');
+        Route::post('/{id}/rechnung', [$c, 'linkInvoice'])->whereUuid('id')->name('invoice_link');
+        Route::post('/{id}/rechnung-loesen', [$c, 'unlinkInvoice'])->whereUuid('id')->name('invoice_unlink');
+    });
+
     // lexoffice
     Route::prefix('lexoffice')->name('lexoffice.')->middleware('role:admin,manager')->group(function () {
         Route::get('/contacts', [LexofficeController::class, 'contacts'])->name('contacts');

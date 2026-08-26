@@ -6,7 +6,7 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable {
     use HasFactory, Notifiable;
-    protected $fillable = ['name','email','password','role','access_level','can_see_all_customers','can_manage_contracts','can_manage_tickets','can_approve_changes','can_send_emails','can_import_export','provision_fixed','provision_percent'];
+    protected $fillable = ['name','email','password','role','access_level','can_see_all_customers','can_manage_contracts','can_manage_tickets','can_approve_changes','can_send_emails','can_import_export','can_manage_commissions','provision_fixed','provision_percent'];
     protected $hidden = ['password','remember_token'];
     protected $casts = [
         'email_verified_at' => 'datetime',
@@ -27,6 +27,7 @@ class User extends Authenticatable {
         'can_manage_tickets' => 'boolean',
         'can_approve_changes' => 'boolean',
         'can_send_emails' => 'boolean',
+        'can_manage_commissions' => 'boolean',
         'can_import_export' => 'boolean',
         'provision_fixed' => 'decimal:2',
         'provision_percent' => 'decimal:2',

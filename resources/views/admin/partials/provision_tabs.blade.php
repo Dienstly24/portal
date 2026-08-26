@@ -7,5 +7,8 @@
     <a href="{{ route('admin.provisions.report') }}" class="rep-tab {{ $active === 'bericht' ? 'rep-tab-active' : '' }}">Monatsbericht</a>
     <a href="{{ route('admin.provisions.dashboard') }}" class="rep-tab {{ $active === 'dashboard' ? 'rep-tab-active' : '' }}">Dashboard</a>
     <a href="{{ route('admin.vermittler.index') }}" class="rep-tab">Vermittler-Abrechnung</a>
+    @can('provisionen-verwalten')
+    <a href="{{ route('admin.commissions_internal.index') }}" class="rep-tab">Interne Provisionen</a>
+    @endcan
     <a href="{{ route('admin.reports.neukunden') }}" class="rep-tab" style="margin-left:auto;">Zum Neukunden-Bericht →</a>
 </div>

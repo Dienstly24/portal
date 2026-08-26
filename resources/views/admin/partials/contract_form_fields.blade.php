@@ -90,6 +90,16 @@
         <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">Leer lassen, falls die echte Nummer noch nicht vorliegt. Es wird keine automatische Nummer erzeugt.</div>
     </div>
     <div class="field">
+        {{-- Interne Vertragsnummer des Fremdsystems (Maklerpool, Pool-Portal).
+             Sie ist der SCHLUESSEL des Provisions-Imports: steht sie hier,
+             findet jede spaetere Abrechnung und jede Rechnung ihren Vertrag
+             ohne weitere Angabe. Bewusst ein EIGENES Feld neben der
+             Versicherungsnummer - es sind zwei Nummern aus zwei Systemen. --}}
+        <label>Interne Vertragsnummer (Pool/Fremdsystem)</label>
+        <input type="text" name="internal_contract_number" maxlength="60" value="{{ $val('internal_contract_number', $c->internal_contract_number ?? '') }}" placeholder="z. B. V19613073">
+        <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">Schlüssel für die Provisionsabrechnung. Wird beim Import automatisch ergänzt, sobald sie in einer Datei auftaucht.</div>
+    </div>
+    <div class="field">
         {{-- Referenz-/Vorgangsnummer der Antragsstrecke: Portal-Referenz,
              Auftrags-, Vorgangs- oder Protokollnummer. Damit laesst sich der
              Vorgang spaeter wiederfinden - auch bevor die echte

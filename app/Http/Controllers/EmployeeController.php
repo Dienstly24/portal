@@ -49,6 +49,7 @@ class EmployeeController extends Controller
             'can_approve_changes' => $request->has('can_approve_changes'),
             'can_send_emails' => $request->has('can_send_emails'),
             'can_import_export' => $request->has('can_import_export'),
+            'can_manage_commissions' => $request->has('can_manage_commissions'),
         ]);
 
         // بناء قائمة الصلاحيات للإيميل
@@ -58,6 +59,7 @@ class EmployeeController extends Controller
         if($request->has('can_approve_changes')) $permLabels[] = '✅ Änderungen genehmigen';
         if($request->has('can_send_emails')) $permLabels[] = '📧 E-Mails senden';
         if($request->has('can_import_export')) $permLabels[] = '📤 Import / Export';
+        if($request->has('can_manage_commissions')) $permLabels[] = '💶 Provisionen verwalten';
         if($request->has('can_see_all_customers')) $permLabels[] = '👥 Zugriff auf alle Kunden';
 
         // Einladung mit Passwort-Setzen-Link (kein Klartext-Passwort).
@@ -222,6 +224,7 @@ class EmployeeController extends Controller
                 'can_approve_changes' => $request->has('can_approve_changes'),
                 'can_send_emails' => $request->has('can_send_emails'),
                 'can_import_export' => $request->has('can_import_export'),
+            'can_manage_commissions' => $request->has('can_manage_commissions'),
                 'provision_fixed' => $request->filled('provision_fixed') ? round((float) $request->provision_fixed, 2) : null,
                 'provision_percent' => $request->filled('provision_percent') ? round((float) $request->provision_percent, 2) : null,
             ]);
@@ -241,6 +244,7 @@ class EmployeeController extends Controller
             'access_level' => $employee->access_level,
             'can_see_all_customers' => $employee->can_see_all_customers,
             'can_import_export' => $employee->can_import_export,
+            'can_manage_commissions' => $employee->can_manage_commissions,
         ]);
 
         return redirect()->route('admin.employees')->with('success', 'Mitarbeiter aktualisiert.');
