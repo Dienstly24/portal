@@ -147,6 +147,10 @@
                 ['can_approve_changes','Änderungen genehmigen','Kundendaten-Änderungen genehmigen','✅'],
                 ['can_send_emails','E-Mails senden','E-Mail Marketing nutzen','📧'],
                 ['can_import_export','Import / Export','Kunden importieren und exportieren','📊'],
+                // Provisionsdaten sind intern und vertraulich - dieses Recht
+                // oeffnet Betraege, Empfaenger und Abrechnungen. Es wird
+                // einzeln vergeben, nie ueber die Rolle mitgeliefert.
+                ['can_manage_commissions','Provisionen verwalten','Interne Provisionen sehen, importieren und abrechnen','💶'],
             ] as $perm)
             <div class="perm-card" id="card-{{ $perm[0] }}"
                 onclick="togglePerm('{{ $perm[0] }}')"
@@ -267,7 +271,7 @@ function togglePerm(name) {
     check.textContent = cb.checked ? '\u2713' : '';
 }
 function selectAllPerms(state) {
-    ['can_manage_contracts','can_manage_tickets','can_approve_changes','can_send_emails','can_import_export'].forEach(function (name) {
+    ['can_manage_contracts','can_manage_tickets','can_approve_changes','can_send_emails','can_import_export','can_manage_commissions'].forEach(function (name) {
         var cb = document.getElementById(name);
         if (cb && cb.checked !== state) togglePerm(name);
     });

@@ -1319,6 +1319,78 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   Erkennung die Tabelle einmal nicht als Liste einstuft. Verarbeitung bleibt
   admin/manager (sie fuehrt auf die Seite mit den Provisionsbetraegen).
   Tests: `VermittlerVorgangslisteTest`.
+- **Interne Provisionen: Fremd-Abrechnungen an den eigenen Vertrag binden**
+  (Betreiber-Auftrag 26.08.2026, Anleitung
+  `docs/ANLEITUNG_PROVISIONEN_IMPORT_AR.md`): Ein DRITTER Provisions-Strang
+  neben den beiden bestehenden - und bewusst nicht mit ihnen verschmolzen:
+  `provisions` = AUSGANG an eigene Mitarbeiter/Partner, `vermittler_settlements`
+  = der EINE Vermittler TARIFCHECK24 mit festem Format und EINER Kennung,
+  `contract_commissions` = EINGANG aus BELIEBIG vielen Quellen (Maklerpool,
+  Vergleichsportal, Energieportal) mit fremden Spalten, mehreren Kennungen,
+  mehreren Provisionen je Vertrag, Waehrungen und Teilzahlungen. Die drei zu
+  vereinen hiesse, eine der drei Wahrheiten zu verbiegen.
+  **DIE BRUECKE**: `contracts.internal_contract_number` (Maklerpool
+  "V19613073") kommt NEBEN `contract_number` (Nummer der Gesellschaft) und
+  `reference_number` (Vorgangsnummer der Antragsstrecke) - drei Nummern aus
+  drei Systemen; eine davon zu ueberschreiben kappt eine Bruecke, die spaeter
+  gebraucht wird. Zugeordnet wird nach TRENNSCHAERFE: interne Vertragsnummer
+  -> Vermittler-Id -> Referenz-Nr. -> Auftr.-Nr. -> Vertragsnummer der
+  Gesellschaft (`CommissionMatcher`). Fehlende Kennungen werden am Vertrag
+  ERGAENZT, vorhandene NIE ueberschrieben - danach genuegt in jeder weiteren
+  Datei die eine Nummer.
+  **ZWEISTUFIGER IMPORT** ist die eigentliche Anforderung, nicht Komfort: ein
+  einstufiger Import zeigt sein Ergebnis erst, NACHDEM er geschrieben hat -
+  wer dann "3 Vertraege nicht gefunden" liest, hat keine Wahl mehr.
+  `analyze()` legt einen ENTWURF ab (`commission_imports` +
+  `commission_import_rows`, Rohzellen UND Deutung je Zeile), `confirm()`
+  schreibt. Dazwischen: Erkennung, Spaltenzuordnung (`ColumnMap`, aenderbar
+  ohne erneuten Upload via `remap()`), fuenf Zahlen (neu/aktualisiert/
+  duplikat/nicht zugeordnet/fehlerhaft) und ein CSV-Export der Fehlerzeilen.
+  **DATEIEN WERDEN AM INHALT ERKANNT, nicht an der Endung** - genau daran
+  scheiterte der bisherige Weg: `mimes` reicht bei CSV nicht (Excel-CSV kommt
+  als text/plain, application/vnd.ms-excel oder octet-stream an), und eine als
+  ".csv" gespeicherte XLSX ist Alltag. Geprueft wird die ENDUNG, gelesen wird
+  nach den ersten Bytes (`TableReader::detectFormat`). CSV:
+  BOM/UTF-16/Windows-1252 erkannt (Reihenfolge ist Absicht - wer zuerst nach
+  Latin-1 fragt, zerstoert gute UTF-8-Dateien), Trennzeichen `;`/`,`/Tab/`|`
+  NUR AUSSERHALB von Anfuehrungszeichen gezaehlt (sonst gewinnt das Komma aus
+  "Alte Kieler Landstr. 141, 24768 Rendsburg"). XLSX/XLS ohne Fremdpaket
+  (`XlsxTableReader` per ZipArchive+XMLReader im Strom, `XlsTableReader` +
+  `OleCompoundFile` fuer BIFF8) - ein Tabellen-Framework nur zum Lesen waere
+  ein grosses Paket im Sicherheitsupdate-Pfad einer Anwendung mit Kundendaten.
+  Datumsformate werden erkannt, Formeln mit ihrem GESPEICHERTEN Ergebnis
+  gelesen, Makros nie angefasst. Mehrere Tabellenblaetter werden ALLE genannt
+  und sind waehlbar - "das erste Blatt ist das richtige" stimmt nicht.
+  **VIER GRUNDREGELN** wie beim Vermittler-Abgleich: nie raten (zwei Treffer,
+  ein Widerspruch oder eine zu kurze Kennung -> "nicht zugeordnet"; der NAME
+  zaehlt NIE), nie einen Vertrag anlegen, nie Vertragsdaten aendern (Ausnahme:
+  leere Kennung ergaenzen), nie doppelt (`dedupe_key` unique aus Kennung +
+  Provisionsart + Datum + Datensatz-Nr. + BETRAG - der Betrag gehoert dazu,
+  weil echte Abrechnungen zwei Positionen desselben Vertrags am selben Tag
+  fuehren). `row_hash` trennt "unveraendert" (Duplikat) von "geaendert"
+  (Aktualisierung). Eine erfasste ZAHLUNG nimmt keine Datei zurueck.
+  **STATUS** in `App\Support\CommissionStatus` (offen/faellig/bezahlt/
+  teilweise_bezahlt/storniert/unklar) - ein unbekannter Fremdwert wird
+  `unklar`, nie geraten; ein Stornogrund ohne Storno-Status ebenfalls.
+  **VERTRAULICH**: Zugriff ueber das RECHT `provisionen-verwalten` (Gate im
+  `AppServiceProvider`: admin ODER `users.can_manage_commissions`), geprueft
+  an der ROUTE **und** im Controller **und** in der Vertragsakte-Box. Es gibt
+  bewusst KEINE Beziehung von `Customer` hierher - so kann ein `with()` im
+  Portal die Provisionen nicht versehentlich mitladen. Ein Test sichert ab,
+  dass Betrag, Empfaenger und interne Nummer im Kundenportal NIRGENDS im HTML
+  stehen.
+  **PROTOKOLL** `commission_audit_logs` (eigene Tabelle, nicht der allgemeine
+  ActivityLog - hier stehen Betraege): Upload, Import, Aenderung, Status,
+  Zahlung, Rechnung, Zuordnung, Aenderung der internen Vertragsnummer, Export
+  - mit Nutzer, Zeit, Vorher/Nachher, Datei. KEIN Loeschweg aus der
+  Oberflaeche. Das Protokollieren darf nie den Vorgang scheitern lassen
+  (Fehler wird geschluckt, wie beim ErrorRecorder).
+  **RECHNUNGEN** sind vorbereitet, nicht halb gebaut: `InvoiceCommissionMatcher`
+  liest Kennungen aus einem Rechnungstext und zeigt Vertrag, Kunde und
+  erwartete Provisionen; verknuepft wird bewusst je Provision und eine
+  Rechnung bestaetigt NIE eine Zahlung (sie belegt eine Forderung).
+  Tests: `ContractCommissionImportTest`.
+
 - **Auftrag zuerst, Vertrag spaeter: ein Vorgang, EIN Vertrag**
   (Betreiber-Vorgabe 29.07.2026, Details in
   `docs/AUFTRAG_UND_VERTRAG_ZUSAMMENFUEHREN.md`): Zuerst wird der

@@ -17,7 +17,7 @@ class Contract extends Model {
      * Storno weiterhin bei Loeschung und manueller Stornierung im Formular.
      */
     public bool $endsWithoutStorno = false;
-    protected $fillable = ['customer_id','contract_number','reference_number','vermittler_id','vermittler_status','vermittler_matched_at','vermittler_last_import_id','vermittler_last_imported_at','type','type_other','subtype','insurer','status','stage','start_date','end_date','pdf_path','notes','cancellation_date','premium_amount','premium_interval'];
+    protected $fillable = ['customer_id','contract_number','internal_contract_number','reference_number','vermittler_id','vermittler_status','vermittler_matched_at','vermittler_last_import_id','vermittler_last_imported_at','type','type_other','subtype','insurer','status','stage','start_date','end_date','pdf_path','notes','cancellation_date','premium_amount','premium_interval'];
 
     protected $casts = [
         'premium_amount' => 'decimal:2',
@@ -478,6 +478,10 @@ class Contract extends Model {
                     // Abrechnung - beide fuehren zum selben Vertrag.
                     ->orWhere('reference_number', 'like', $like)
                     ->orWhere('vermittler_id', 'like', $like)
+                    // Die INTERNE Vertragsnummer des Fremdsystems steht auf
+                    // jeder Abrechnung und auf jeder spaeteren Rechnung -
+                    // ohne sie in der Suche waere die Bruecke nur halb da.
+                    ->orWhere('internal_contract_number', 'like', $like)
                     ->orWhereHas('customer', function ($c) use ($like) {
                         $c->where('customer_number', 'like', $like)
                             ->orWhereHas('user', fn ($u) => $u->where('name', 'like', $like));
@@ -805,6 +809,19 @@ class Contract extends Model {
     }
 
     /** Abrechnungs-Datensaetze des Vermittlers zu diesem Vertrag. */
+    /**
+     * Interne Provisionen zu diesem Vertrag (Betreiber-Auftrag 26.08.2026).
+     *
+     * VERTRAULICH: Diese Beziehung darf nur in der Beraterwelt geladen
+     * werden. Sie ist bewusst NICHT Teil eines `$with` und hat kein
+     * Gegenstueck am Kunden-Modell - so kann sie im Portal nicht
+     * versehentlich mitgeladen und ausgegeben werden.
+     */
+    public function commissions()
+    {
+        return $this->hasMany(ContractCommission::class)->orderByDesc('commission_date');
+    }
+
     public function vermittlerSettlements()
     {
         return $this->hasMany(VermittlerSettlement::class, 'contract_id')

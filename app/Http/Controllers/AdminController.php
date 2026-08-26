@@ -466,6 +466,7 @@ class AdminController extends Controller
             // Echte Versicherungsnummer wird spaeter nachgetragen -> KEINE
             // automatische Fantasienummer mehr (Betreiber-Feedback).
             'contract_number' => $request->filled('contract_number') ? trim($request->contract_number) : null,
+            'internal_contract_number' => $request->filled('internal_contract_number') ? trim($request->internal_contract_number) : null,
             'reference_number' => $request->filled('reference_number') ? trim($request->reference_number) : null,
             'vermittler_id' => $request->filled('vermittler_id') ? trim($request->vermittler_id) : null,
             'type' => $request->type,
@@ -585,12 +586,14 @@ class AdminController extends Controller
         // Vermittler-Kennungen VOR der Aenderung merken: die Historie soll
         // zeigen, wann eine Referenz-Nr./ID von Hand kam (20.08.2026).
         $vermittlerBefore = [
+            'internal_contract_number' => $contract->internal_contract_number,
             'reference_number' => $contract->reference_number,
             'vermittler_id' => $contract->vermittler_id,
         ];
 
         $contract->update([
             'contract_number' => $request->filled('contract_number') ? trim($request->contract_number) : null,
+            'internal_contract_number' => $request->filled('internal_contract_number') ? trim($request->internal_contract_number) : null,
             'reference_number' => $request->filled('reference_number') ? trim($request->reference_number) : null,
             'vermittler_id' => $request->filled('vermittler_id') ? trim($request->vermittler_id) : null,
             'type' => $request->type,
@@ -610,6 +613,20 @@ class AdminController extends Controller
         $this->syncContractDetails($contract, $request);
         app(\App\Services\Vermittler\VermittlerLinkService::class)
             ->recordContractEdit($contract, $vermittlerBefore, auth()->id());
+
+        // Die INTERNE Vertragsnummer ist der Schluessel der Provisionsabrechnung.
+        // Wird sie von Hand geaendert, gehoert das ins Provisions-Protokoll -
+        // sonst laesst sich spaeter nicht mehr erklaeren, warum eine
+        // Abrechnung ploetzlich einen anderen Vertrag trifft.
+        if (($vermittlerBefore['internal_contract_number'] ?? null) !== $contract->internal_contract_number) {
+            app(\App\Services\CommissionImport\CommissionAuditLogger::class)->log('vertragsnummer_geaendert', null, [
+                'contract_id' => $contract->id,
+                'internal_contract_number' => $contract->internal_contract_number,
+                'field' => 'internal_contract_number',
+                'old_value' => $vermittlerBefore['internal_contract_number'] ?? null,
+                'new_value' => $contract->internal_contract_number,
+            ]);
+        }
 
         return redirect()->route('admin.customer', $contract->customer_id)->with('success', 'Vertrag aktualisiert.');
     }
@@ -683,6 +700,7 @@ class AdminController extends Controller
             // Referenz-/Vorgangsnummer der Antragsstrecke (Portal/Vermittler).
             // Bewusst NICHT unique: ein Vorgang kann zwei Vertraege tragen
             // (z.B. Buendel Strom + Gas).
+            'internal_contract_number' => 'nullable|string|max:60',
             'reference_number' => 'nullable|string|max:60',
             // Vermittler-ID (die `Id` aus der Abrechnungsdatei). Eindeutig:
             // ein Abrechnungs-Datensatz gehoert zu genau einem Vertrag -
@@ -2250,6 +2268,7 @@ class AdminController extends Controller
             ->where(function($query) use ($q) {
                 $query->where('contract_number','like',"%$q%")
                       ->orWhere('reference_number','like',"%$q%")
+                      ->orWhere('internal_contract_number','like',"%$q%")
                       // Vermittler-ID aus der Abrechnung: oft die einzige
                       // Nummer, die bei einer Rueckfrage vorliegt.
                       ->orWhere('vermittler_id','like',"%$q%")

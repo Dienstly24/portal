@@ -247,6 +247,16 @@ class AppServiceProvider extends ServiceProvider
         // richtet sich nach der Rolle des Kontos, das gerade ein Passwort
         // setzt - Personal sieht fremde personenbezogene Daten und braucht
         // daher mehr. Quelle: App\Support\PasswordPolicy.
+        // Provisionsdaten sind INTERN: Zugriff hat der Admin - und sonst nur,
+        // wer das Recht ausdruecklich bekommen hat. Bewusst KEINE Rolle als
+        // Kriterium: eine Rolle waechst mit der Zeit um Aufgaben, ein Recht
+        // wird einzeln vergeben. Die Regel steht hier an EINER Stelle und
+        // wird von Routen, Controllern und Views gemeinsam benutzt.
+        \Illuminate\Support\Facades\Gate::define(
+            'provisionen-verwalten',
+            fn ($user) => $user->role === 'admin' || (bool) ($user->can_manage_commissions ?? false)
+        );
+
         \Illuminate\Validation\Rules\Password::defaults(
             fn () => \App\Support\PasswordPolicy::for(auth()->user())
         );

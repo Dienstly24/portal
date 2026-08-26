@@ -57,6 +57,11 @@
 {{-- Vermittler / Abrechnung: Referenz-Nr., Vermittler-ID und Abrechnungsstand --}}
 @include('admin.partials.contract_vermittler_box', ['contract' => $contract])
 
+{{-- Interne Provisionen: was diese Police uns eingebracht hat. Bewusst
+     unterhalb der Vermittler-Box - beides sind Geld-Angaben, beide gehoeren
+     nur in die Beraterwelt. --}}
+@include('admin.partials.contract_commission_box', ['contract' => $contract])
+
 <div class="card" style="max-width:980px;">
     <form method="POST" action="{{ route('admin.contract.update', $contract->id) }}">
         @csrf @method('PUT')
