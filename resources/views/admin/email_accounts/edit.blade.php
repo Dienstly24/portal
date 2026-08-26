@@ -17,10 +17,14 @@
 <div style="margin-top:20px;max-width:900px;display:flex;gap:10px;">
     <button type="submit" class="btn btn-primary">Änderungen speichern</button>
     <a href="{{ route('admin.email_accounts.index') }}" class="btn btn-ghost">Abbrechen</a>
-    <form method="POST" action="{{ route('admin.email_accounts.destroy', $account->id) }}" onsubmit="return confirm('Postfach wirklich entfernen?');" style="margin-left:auto;">
-        @csrf @method('DELETE')
-        <button type="submit" class="btn btn-ghost" style="color:#B3261E;">Postfach löschen</button>
-    </form>
+    {{-- Knopf gehoert per form-Attribut zum Loesch-Formular UNTER dem
+         Bearbeiten-Formular: ein Formular im Formular ist ungueltiges HTML. --}}
+    <button type="submit" form="email-account-delete" class="btn btn-ghost" style="margin-left:auto;color:#B3261E;"
+            onclick="return confirm('Postfach wirklich entfernen?');">Postfach löschen</button>
 </div>
+</form>
+
+<form method="POST" id="email-account-delete" action="{{ route('admin.email_accounts.destroy', $account->id) }}" style="display:none;">
+    @csrf @method('DELETE')
 </form>
 @endsection

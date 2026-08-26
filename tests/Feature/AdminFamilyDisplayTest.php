@@ -76,4 +76,60 @@ class AdminFamilyDisplayTest extends TestCase
         $this->assertSame('Baraka Mustermann', $member->name);
         $this->assertSame('female', $member->gender);
     }
+
+    /**
+     * Der Entfernen-Knopf darf NICHT in einem Formular im Formular stecken:
+     * der Browser wirft das innere Formular weg, der Klick schickte dann das
+     * Kunden-Formular ab und das Mitglied blieb stehen (gemeldet: Ehepartner
+     * liess sich nicht loeschen).
+     */
+    public function test_family_delete_form_is_not_nested_inside_edit_form(): void
+    {
+        $customer = $this->makeCustomer();
+        $spouse = CustomerFamily::create([
+            'customer_id' => $customer->id,
+            'name' => 'Baraka Mustermann',
+            'relation' => 'ehepartner',
+        ]);
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('admin.customer.edit', $customer->id))
+            ->assertOk()
+            ->getContent();
+
+        // Knopf verweist per form-Attribut auf das ausgelagerte Formular
+        $this->assertStringContainsString('form="family-delete-' . $spouse->id . '"', $html);
+        $this->assertStringContainsString('id="family-delete-' . $spouse->id . '"', $html);
+
+        // Im Bearbeiten-Formular selbst steht kein weiteres <form>
+        $start = strpos($html, 'action="' . route('admin.customer.update', $customer->id) . '"');
+        $this->assertNotFalse($start);
+        $end = strpos($html, '</form>', $start);
+        $this->assertNotFalse($end);
+        $this->assertStringNotContainsString('<form', substr($html, $start, $end - $start));
+    }
+
+    public function test_admin_can_delete_spouse(): void
+    {
+        $customer = $this->makeCustomer();
+        $spouse = CustomerFamily::create([
+            'customer_id' => $customer->id,
+            'name' => 'Baraka Mustermann',
+            'relation' => 'ehepartner',
+        ]);
+        $child = CustomerFamily::create([
+            'customer_id' => $customer->id,
+            'name' => 'Karam Mustermann',
+            'relation' => 'kind',
+        ]);
+
+        $this->actingAs($this->admin())
+            ->delete(route('admin.customer.family.delete', $spouse->id))
+            ->assertRedirect(route('admin.customer.edit', $customer->id));
+
+        $this->assertDatabaseMissing('customer_family', ['id' => $spouse->id]);
+        $this->assertDatabaseHas('customer_family', ['id' => $child->id]);
+        // Der Kunde selbst bleibt unangetastet
+        $this->assertDatabaseHas('customers', ['id' => $customer->id]);
+    }
 }
