@@ -58,13 +58,24 @@ class CommissionImportService
     ): CommissionImport {
         $table = $this->reader->read($path, $delimiter, $encoding, $sheetName);
         $map = $this->cleanMap($columnMap ?? ColumnMap::suggest($table->header));
-        $mode = isset(ColumnMap::MODES[$mode]) ? $mode : ColumnMap::suggestMode($map);
+
+        // WOHER kommt die Datei? Die Erkennung entscheidet nichts allein - sie
+        // benennt die Quelle fuer den Mitarbeiter und stellt die Betriebsart
+        // passend ein. Eine UNBEKANNTE Quelle wird nie abgelehnt; dann
+        // entscheidet wie bisher die Betragsspalte.
+        $provider = CommissionSourceProfile::detect($table->header);
+        $mode = match (true) {
+            isset(ColumnMap::MODES[$mode]) => $mode,
+            CommissionSourceProfile::mode($provider) !== null => CommissionSourceProfile::mode($provider),
+            default => ColumnMap::suggestMode($map),
+        };
 
         $import = CommissionImport::create([
             'filename' => mb_substr($filename, 0, 255),
             'file_hash' => (string) hash_file('sha256', $path),
             'format' => $table->format,
             'mode' => $mode,
+            'provider' => $provider,
             'delimiter' => $table->delimiter,
             'encoding' => $table->encoding,
             'sheet_name' => $table->sheetName,
@@ -628,6 +639,7 @@ class CommissionImportService
             'invoice_number' => ValueParser::text($mapped['invoice_number'] ?? null, 60),
             'notes' => $mapped['notes'] ?? null,
             'source_file' => $import->filename,
+            'provider' => $import->provider,
             'dedupe_key' => $row->dedupe_key,
             'row_hash' => $this->rowHash($mapped),
             'updated_by' => $userId,

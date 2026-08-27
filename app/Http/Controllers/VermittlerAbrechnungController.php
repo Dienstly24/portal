@@ -59,8 +59,17 @@ class VermittlerAbrechnungController extends Controller
                 $request->boolean('reconcile', true),
             );
         } catch (\Throwable $e) {
+            // SACKGASSE VERMEIDEN (Betreiber-Meldung 26.08.2026): Diese Seite
+            // liest ausschliesslich das Format EINES Vermittlers
+            // (TARIFCHECK24, Pflichtspalte "Id"). Der Betrieb bekommt aber
+            // Dateien aus mehreren Quellen - Maklerpool, Energie-Portal - und
+            // sah bisher nur "Die Spalte Id fehlt", ohne zu erfahren, wohin
+            // die Datei stattdessen gehoert. Deshalb wird hier erkannt, WAS
+            // die Datei ist, und der richtige Weg genannt.
+            $hinweis = $this->wrongImporterHint($stored);
             @unlink($stored);
-            return back()->with('error', 'Die Datei konnte nicht gelesen werden: ' . $e->getMessage());
+
+            return back()->with('error', 'Die Datei konnte nicht gelesen werden: ' . $e->getMessage() . $hinweis);
         }
 
         // Die Originaldatei wird bewusst NICHT dauerhaft aufbewahrt - die
@@ -279,5 +288,38 @@ class VermittlerAbrechnungController extends Controller
             'products' => $reports->byProduct(),
             'customers' => $reports->byCustomer(),
         ]);
+    }
+
+    /**
+     * Erkennt, ob die hochgeladene Datei zu einer ANDEREN Quelle gehoert, und
+     * liefert einen Klartext-Hinweis mit dem richtigen Weg.
+     *
+     * Bewusst rein LESEND und fehlertolerant: der Hinweis ist eine Zugabe zu
+     * einer bereits fehlgeschlagenen Verarbeitung. Scheitert auch er, bleibt
+     * es bei der urspruenglichen Meldung - er darf sie nie ersetzen oder
+     * einen zweiten Fehler erzeugen.
+     */
+    private function wrongImporterHint(string $path): string
+    {
+        try {
+            $table = app(\App\Services\CommissionImport\TableReader::class)->read($path);
+            $provider = \App\Services\CommissionImport\CommissionSourceProfile::detect($table->header);
+        } catch (\Throwable) {
+            return '';
+        }
+
+        if (\App\Services\CommissionImport\CommissionSourceProfile::belongsToVermittlerImport($provider)) {
+            return ''; // gehoert hierher - dann ist wirklich die Datei kaputt
+        }
+
+        $quelle = $provider !== null
+            ? 'Erkannt wurde: ' . \App\Services\CommissionImport\CommissionSourceProfile::label($provider) . '. '
+            : 'Die Spalten passen zu keiner hier bekannten Vermittler-Abrechnung. ';
+
+        return ' ' . $quelle
+            . 'Diese Seite liest ausschließlich die Abrechnung von TARIFCHECK24. '
+            . 'Dateien aus anderen Quellen (Maklerpool, Energie-Vertriebsportal, weitere Portale) '
+            . 'liest „Interne Provisionen“ – dort werden die Spalten erkannt und lassen sich vor dem '
+            . 'Import zuordnen: ' . route('admin.commissions_internal.import');
     }
 }
