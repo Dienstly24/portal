@@ -970,6 +970,74 @@ class SmartDocumentUploadController extends Controller
     }
 
     /**
+     * DIAGNOSE: den TATSAECHLICH erkannten Text eines Dokuments anzeigen.
+     *
+     * WARUM (Betreiber-Frage 28.08.2026 - "warum wird die E-Mail nicht
+     * erkannt, sie steht doch immer an derselben Stelle?"): Wenn ein Feld
+     * fehlt, sieht der Betreiber das BILD - dort steht die Angabe klar
+     * lesbar. Was der Parser sieht, ist aber der OCR-TEXT, und der kann an
+     * einer einzigen Stelle anders aussehen ("Maii" statt "Mail", "©" statt
+     * "@"). Ohne diesen Text ist jede Fehlersuche RATEN: man aendert eine
+     * Regel, laedt neu hoch, schaut nach - und faengt von vorn an. Diese
+     * Ansicht beendet das: sie zeigt in fuenf Sekunden, woran es liegt.
+     *
+     * KOSTENLOS und OHNE KI - es laeuft dieselbe gratis Vorstufe wie bei der
+     * Analyse (PDF-Textebene, sonst Tesseract). Der Text wird NICHT
+     * gespeichert (Datenminimierung, wie ueberall sonst): er wird bei jedem
+     * Aufruf neu aus der Datei gelesen und nur ausgegeben.
+     *
+     * Nur admin/manager: der Rohtext enthaelt das GANZE Dokument und damit
+     * mehr als die geprueften Felder.
+     */
+    public function ocrText(string $id, \App\Services\Ocr\PdfTextLayerExtractor $pdfText, \App\Services\Ocr\TesseractTextExtractor $ocr)
+    {
+        $document = Document::findOrFail($id);
+        $this->authorizeDocument($document);
+        if (!in_array(auth()->user()?->role, ['admin', 'manager'], true)) {
+            return response()->json([
+                'message' => 'Der erkannte Rohtext ist der Verwaltung vorbehalten (er enthaelt das ganze Dokument).',
+            ], 403);
+        }
+
+        $disk = Storage::disk($document->disk ?: 'local');
+        if (!$disk->exists($document->file_path)) {
+            return response()->json(['message' => 'Die Datei ist nicht mehr vorhanden.'], 404);
+        }
+
+        $binary = $disk->get($document->file_path);
+        $mime = $document->mime_type ?: 'application/octet-stream';
+
+        // Gleiche Reihenfolge wie die Analyse: erst die (gratis, fehlerfreie)
+        // Textebene eines digitalen PDF, sonst OCR. So sieht der Betreiber
+        // genau den Text, mit dem der Parser gearbeitet hat.
+        $quelle = null;
+        $text = '';
+        if (str_contains($mime, 'pdf') && $pdfText->isAvailable()) {
+            $text = $pdfText->extract($binary);
+            $quelle = $text !== '' ? 'PDF-Textebene (digitales PDF, fehlerfrei)' : null;
+        }
+        if ($text === '' && $ocr->isAvailable()) {
+            $text = $ocr->extract($binary, $mime);
+            $quelle = $text !== '' ? 'OCR (Tesseract) - Bild/Scan, Lesefehler moeglich' : $quelle;
+        }
+
+        if ($text === '') {
+            return response()->json([
+                'message' => $ocr->isAvailable() || $pdfText->isAvailable()
+                    ? 'Aus dieser Datei liess sich kein Text gewinnen.'
+                    : 'Weder OCR noch PDF-Textebene sind auf diesem Server verfuegbar.',
+            ], 422);
+        }
+
+        return response()->json([
+            'quelle' => $quelle,
+            'zeichen' => mb_strlen($text),
+            'hinweis' => 'Dieser Text wird NICHT gespeichert - er wurde soeben aus der Datei gelesen.',
+            'text' => $text,
+        ]);
+    }
+
+    /**
      * Analyse erneut anstossen. Ist ein KI-Anbieter konfiguriert, erzwingt
      * die manuelle Wiederholung die kostenpflichtige KI-Stufe (Mitarbeiter-
      * Eskalation ueber den "Mit KI analysieren"-Button) - die kostenlose

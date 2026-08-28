@@ -152,6 +152,13 @@
             <button type="button" class="btn btn-ghost btn-sm" onclick="docReview.reanalyze(@js($doc->id), this, true)" title="Kostenpflichtige KI-Analyse (Claude) erzwingen">🤖 Mit KI analysieren</button>
             @endif
             @endif
+            @if(in_array(auth()->user()->role, ['admin','manager'], true))
+            {{-- Diagnose: fehlt ein Feld, sieht man im BILD die Angabe klar
+                 stehen - der Parser arbeitet aber mit dem ERKANNTEN Text, und
+                 der kann an einer Stelle anders aussehen ("Maii" statt "Mail").
+                 Kostenlos, ohne KI, wird nicht gespeichert. --}}
+            <button type="button" class="btn btn-ghost btn-sm" onclick="docReview.showOcrText(@js($doc->id), this)" title="Zeigt den Text, mit dem die Erkennung gearbeitet hat (gratis, ohne KI)">🔎 Erkannter Text</button>
+            @endif
             {{-- Loeschen ist IMMER moeglich - auch bei laufender oder
                  festgefahrener Analyse (z.B. ausgefallener Queue-Worker),
                  damit ein in „pending"/„processing" haengendes Dokument aus dem

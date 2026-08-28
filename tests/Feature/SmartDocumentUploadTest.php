@@ -2067,4 +2067,56 @@ class SmartDocumentUploadTest extends TestCase
         $this->assertContains($exit, [0, 1]);
         $this->assertStringContainsString('Analyse-Status', \Illuminate\Support\Facades\Artisan::output());
     }
+
+    /* ---------------------------------------------------------------
+     | DIAGNOSE: der tatsaechlich erkannte Text
+     * ------------------------------------------------------------- */
+
+    /**
+     * Fehlt ein Feld, sieht der Betreiber im BILD die Angabe klar stehen -
+     * die Erkennung arbeitet aber mit dem OCR-TEXT, der an einer einzigen
+     * Stelle anders aussehen kann. Ohne diesen Text ist jede Fehlersuche
+     * Raten: Regel aendern, neu hochladen, nachschauen, von vorn.
+     */
+    public function test_erkannter_text_wird_nur_der_verwaltung_gezeigt(): void
+    {
+        Storage::fake('local');
+        $doc = $this->inboxPdf();
+
+        // Mitarbeiter: der Rohtext ist das GANZE Dokument und damit mehr als
+        // die geprueften Felder - er bleibt der Verwaltung vorbehalten.
+        $this->actingAs($this->makeEmployee())
+            ->getJson(route('admin.documents.ocr_text', $doc->id))
+            ->assertForbidden();
+    }
+
+    public function test_erkannter_text_wird_nie_gespeichert(): void
+    {
+        Storage::fake('local');
+        $doc = $this->inboxPdf();
+
+        $this->actingAs($this->makeAdmin())
+            ->getJson(route('admin.documents.ocr_text', $doc->id));
+
+        // Datenminimierung wie ueberall: der Text wird bei jedem Aufruf neu
+        // aus der Datei gelesen und NIE am Dokument abgelegt.
+        $doc->refresh();
+        $this->assertNull($doc->ai_extracted['ocr_text'] ?? null);
+        foreach (array_keys($doc->getAttributes()) as $spalte) {
+            $this->assertStringNotContainsString('ocr_text', $spalte);
+            $this->assertStringNotContainsString('raw_text', $spalte);
+        }
+    }
+
+    public function test_erkannter_text_meldet_eine_fehlende_datei_verstaendlich(): void
+    {
+        Storage::fake('local');
+        $doc = $this->inboxPdf();
+        Storage::disk('local')->delete($doc->file_path);
+
+        $this->actingAs($this->makeAdmin())
+            ->getJson(route('admin.documents.ocr_text', $doc->id))
+            ->assertStatus(404)
+            ->assertJsonPath('message', 'Die Datei ist nicht mehr vorhanden.');
+    }
 }
