@@ -672,6 +672,172 @@ class ContractCommissionImportTest extends TestCase
         $response->assertDontSee('V19613073');
     }
 
+    /**
+     * Energievertrag im Kundenportal (Betreiber-Vorgabe 28.08.2026, Punkt 5):
+     * Der Kunde sieht seinen Vertrag mit allen Daten, die IHN betreffen -
+     * Tarif, Zaehlernummer, Preise. Alles, was die ABRECHNUNG betrifft, ist
+     * ein internes Unternehmensdatum und darf in seiner Ansicht nirgends
+     * auftauchen: nicht die Provision, nicht der Empfaenger, nicht die
+     * Vermittler-Id und nicht die internen Vertragsnummern, ueber die wir
+     * abrechnen.
+     */
+    // ----------------------- Energie: die Bruecke Auftrag -> Abrechnung
+
+    /**
+     * Abrechnung eines Energie-Vertriebsportals OHNE jede Vertragsnummer
+     * (Betreiber-Auftrag 28.08.2026). Genau das ist der Regelfall: zum
+     * Zeitpunkt des Auftrags gab es noch keine Vertragsnummer, und die
+     * Abrechnung Wochen spaeter nennt nur Zaehlernummer und Betrag. Die
+     * Zaehlernummer steht seit dem Auftrag in der Akte - sie ist die Bruecke.
+     */
+    private function energieCsv(array $rows): string
+    {
+        $header = 'Abrechnungsnummer;Abrechnungsdatum;Zählernummer;MaLo-ID;Kunde;'
+            . 'Produktname;Gesellschaft;Provisionsbetrag;Provisionsart';
+        $lines = [$header];
+        foreach ($rows as $row) {
+            $lines[] = implode(';', [
+                $row['abrechnung'] ?? '77001',
+                $row['datum'] ?? '2026-11-02',
+                $row['zaehler'] ?? '1 EBZ0 1037 16819',
+                $row['malo'] ?? '',
+                $row['kunde'] ?? 'Hammadi, Imane',
+                $row['produkt'] ?? 'PBNZE NEO P0',
+                $row['gesellschaft'] ?? 'PLAN B NET ZERO ENERGY',
+                $row['betrag'] ?? '85,00',
+                $row['art'] ?? 'Abschlussprovision',
+            ]);
+        }
+        return implode("\r\n", $lines) . "\r\n";
+    }
+
+    private function energieVertrag(Customer $customer, array $energie = [], array $vertrag = []): Contract
+    {
+        $contract = $this->contract($customer, array_merge([
+            'type' => 'strom',
+            'insurer' => 'PLAN B NET ZERO ENERGY',
+            'stage' => Contract::STAGE_ANTRAG,
+            'reference_number' => '1687519',
+        ], $vertrag));
+        \App\Models\ContractEnergyDetail::create(array_merge([
+            'contract_id' => $contract->id,
+            'meter_number' => '1EBZ0103716819',
+            'tariff' => 'PBNZE NEO P0',
+        ], $energie));
+
+        return $contract;
+    }
+
+    public function test_abrechnung_findet_den_energievertrag_ueber_die_zaehlernummer(): void
+    {
+        $customer = $this->customer('Imane Hammadi');
+        $contract = $this->energieVertrag($customer);
+
+        $import = $this->service()->analyze($this->file($this->energieCsv([[]]), 'energie.csv'), 'energie.csv');
+        $this->service()->confirm($import);
+
+        $commission = \App\Models\ContractCommission::first();
+        $this->assertNotNull($commission);
+        // Die Zaehlernummer steht in der Datei mit Leerzeichen, in der Akte
+        // ohne - verglichen wird deshalb normalisiert.
+        $this->assertSame((string) $contract->id, (string) $commission->contract_id);
+        $this->assertSame('Zählernummer', $commission->match_reason);
+        $this->assertSame((string) $customer->id, (string) $commission->customer_id);
+    }
+
+    public function test_abrechnung_findet_den_energievertrag_ueber_die_malo_id(): void
+    {
+        $customer = $this->customer('Imane Hammadi');
+        $contract = $this->energieVertrag($customer, ['meter_number' => null, 'malo_id' => '51214126166']);
+
+        $import = $this->service()->analyze(
+            $this->file($this->energieCsv([['zaehler' => '', 'malo' => '51214126166']]), 'energie.csv'),
+            'energie.csv'
+        );
+        $this->service()->confirm($import);
+
+        $this->assertSame((string) $contract->id,
+            (string) \App\Models\ContractCommission::first()?->contract_id);
+    }
+
+    public function test_zaehlernummer_an_zwei_vertraegen_ordnet_nichts_zu(): void
+    {
+        // An EINER Lieferstelle koennen Strom und Gas haengen. Welchem der
+        // beiden Vertraege die Provision gehoert, sagt die Zaehlernummer
+        // nicht - also wird nichts zugeordnet, wie ueberall sonst auch.
+        $customer = $this->customer('Imane Hammadi');
+        $this->energieVertrag($customer, [], ['reference_number' => 'REF-STROM-1']);
+        $this->energieVertrag($customer, [], ['type' => 'gas', 'reference_number' => 'REF-GAS-1']);
+
+        $import = $this->service()->analyze($this->file($this->energieCsv([[]]), 'energie.csv'), 'energie.csv');
+        $this->service()->confirm($import);
+
+        $commission = \App\Models\ContractCommission::first();
+        $this->assertNotNull($commission, 'Die Zeile muss trotzdem erfasst werden - nichts geht verloren.');
+        $this->assertNull($commission->contract_id);
+        // Der Grund steht in der Pruefliste - er nennt das Problem, statt
+        // nur "nicht zugeordnet" zu melden.
+        $this->assertStringContainsString('trifft 2 Verträge',
+            (string) \App\Models\CommissionImportRow::first()?->message);
+    }
+
+    public function test_vertragsnummer_schlaegt_die_zaehlernummer(): void
+    {
+        // Trennschaerfe entscheidet die Reihenfolge: die interne
+        // Vertragsnummer meint EINEN Vertrag, die Zaehlernummer eine
+        // Lieferstelle. Steht beides in der Zeile, gewinnt die schaerfere.
+        $customer = $this->customer('Imane Hammadi');
+        $richtig = $this->energieVertrag($customer, ['meter_number' => '1EBZ9999999999'],
+            ['internal_contract_number' => 'V19613073']);
+        $this->energieVertrag($customer, [], ['type' => 'gas', 'reference_number' => 'REF-GAS-2']);
+
+        $header = 'Abrechnungsnummer;Abrechnungsdatum;Vertragsnummer intern;Zählernummer;'
+            . 'Kunde;Provisionsbetrag;Provisionsart';
+        $csv = $header . "\r\n" . implode(';', [
+            '77002', '2026-11-02', 'V19613073', '1EBZ0103716819',
+            'Hammadi, Imane', '85,00', 'Abschlussprovision',
+        ]) . "\r\n";
+
+        $import = $this->service()->analyze($this->file($csv, 'energie.csv'), 'energie.csv');
+        $this->service()->confirm($import);
+
+        $commission = \App\Models\ContractCommission::first();
+        $this->assertSame((string) $richtig->id, (string) $commission->contract_id);
+        $this->assertSame('Interne Vertragsnummer', $commission->match_reason);
+    }
+
+    public function test_energievertrag_zeigt_dem_kunden_keine_abrechnungsdaten(): void
+    {
+        $customer = $this->customer();
+        $contract = $this->contract($customer, [
+            'type' => 'strom',
+            'insurer' => 'PLAN B NET ZERO ENERGY',
+            'internal_contract_number' => 'V19613073',
+            'vermittler_id' => '9753224',
+            'contract_number' => 'POL-1',
+        ]);
+        \App\Models\ContractEnergyDetail::create([
+            'contract_id' => $contract->id,
+            'meter_number' => '1EBZ0103716819',
+            'tariff' => 'PBNZE NEO P0',
+        ]);
+        $this->service()->confirm($this->service()->analyze(
+            $this->file($this->poolCsv([['betrag' => '4711,11', 'empfaenger' => 'Geheimer Empfaenger']])),
+            'abrechnung.csv'
+        ));
+
+        $response = $this->actingAs($customer->user)->get(route('portal.contracts.show', $contract->id));
+        $response->assertOk();
+        // Was den Kunden angeht, steht da.
+        $response->assertSee('1EBZ0103716819');
+        // Was uns angeht, steht nicht da.
+        $response->assertDontSee('4711,11');
+        $response->assertDontSee('4711.11');
+        $response->assertDontSee('Geheimer Empfaenger');
+        $response->assertDontSee('V19613073');
+        $response->assertDontSee('9753224');
+    }
+
     public function test_provisionsbox_erscheint_in_der_vertragsakte_nur_fuer_berechtigte(): void
     {
         $contract = $this->contract($this->customer(), ['internal_contract_number' => 'V19613073']);

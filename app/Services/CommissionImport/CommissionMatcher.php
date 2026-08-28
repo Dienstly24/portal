@@ -2,6 +2,7 @@
 namespace App\Services\CommissionImport;
 
 use App\Models\Contract;
+use App\Models\ContractEnergyDetail;
 use App\Services\Vermittler\VermittlerReference;
 
 /**
@@ -30,6 +31,9 @@ class CommissionMatcher
     /** @var array<string,Contract> */
     private array $contracts = [];
 
+    /** @var array<string,array<string,array<int,string>>> Kennung => Schluessel => contract_ids */
+    private array $energyIndex = [];
+
     private bool $loaded = false;
 
     /**
@@ -55,6 +59,26 @@ class CommissionMatcher
         'reference_number' => 'Referenz-Nr.',
         'order_number' => 'Auftr.-Nr.',
         'external_contract_number' => 'Vertragsnummer der Gesellschaft',
+        'meter_number' => 'Zählernummer',
+        'malo_id' => 'MaLo-ID',
+    ];
+
+    /**
+     * Kennungen des ENERGIEVERTRAGS - sie stehen nicht am Vertrag selbst,
+     * sondern an seinen Energie-Details, und werden deshalb ueber eine
+     * eigene Normalisierung verglichen (die Zaehlernummer steht auf dem
+     * Zaehler mit Leerzeichen, im Auftrag ohne).
+     *
+     * Sie laufen NACH allen Vertragsnummern: eine Marktlokation kann Strom
+     * UND Gas tragen und ueber die Jahre mehrere Vertraege nacheinander.
+     * Genau dafuer gibt es die Mehrdeutigkeits-Regel unten - zwei Treffer
+     * heissen "nichts zuordnen", nicht "den ersten nehmen".
+     *
+     * @var array<string,callable-string>
+     */
+    private const ENERGY_LOOKUP = [
+        'meter_number' => 'normalizeMeter',
+        'malo_id' => 'normalizeMalo',
     ];
 
     public function load(): void
@@ -71,6 +95,30 @@ class CommissionMatcher
                 }
             })
             ->chunkById(500, fn ($chunk) => $chunk->each(fn ($c) => $this->remember($c)));
+
+        // Energie-Kennungen getrennt laden: sie haengen an den Details, und
+        // die Vertragsabfrage oben findet Energievertraege ohne jede
+        // Vertragsnummer gar nicht - genau die aber, die eine Abrechnung nur
+        // ueber die Zaehlernummer wiederfindet.
+        ContractEnergyDetail::query()
+            ->select(['id', 'contract_id', 'meter_number', 'malo_id'])
+            ->where(function ($q) {
+                $q->orWhere(fn ($w) => $w->whereNotNull('meter_number')->where('meter_number', '!=', ''))
+                  ->orWhere(fn ($w) => $w->whereNotNull('malo_id')->where('malo_id', '!=', ''));
+            })
+            ->chunkById(500, function ($chunk) {
+                foreach ($chunk as $detail) {
+                    foreach (self::ENERGY_LOOKUP as $feld => $normalizer) {
+                        $key = ContractEnergyDetail::{$normalizer}($detail->{$feld});
+                        if ($key === null || $detail->contract_id === null) {
+                            continue;
+                        }
+                        if (!in_array($detail->contract_id, $this->energyIndex[$feld][$key] ?? [], true)) {
+                            $this->energyIndex[$feld][$key][] = $detail->contract_id;
+                        }
+                    }
+                }
+            });
     }
 
     public function remember(Contract $contract): void
@@ -134,6 +182,42 @@ class CommissionMatcher
                 'reason' => self::REASON[$field],
                 'note' => null,
             ];
+        }
+
+        // Erst wenn keine Vertragsnummer getroffen hat: die Kennungen der
+        // LIEFERSTELLE. Sie sind unschaerfer, aber bei Energie-Abrechnungen
+        // oft die einzige Bruecke - ein Auftrag hat noch keine Vertragsnummer,
+        // eine Zaehlernummer hat er von Anfang an.
+        foreach (self::ENERGY_LOOKUP as $field => $normalizer) {
+            $value = $mapped[$field] ?? null;
+            $key = ContractEnergyDetail::{$normalizer}(is_string($value) ? $value : null);
+            // Kurze Zahlenfolgen treffen halbe Bestaende - dieselbe
+            // Mindestlaenge wie bei den Vertragsnummern.
+            if ($key === null || strlen($key) < VermittlerReference::MIN_LENGTH) {
+                continue;
+            }
+            $tried[] = self::REASON[$field] . ' „' . $value . '“';
+
+            $ids = $this->energyIndex[$field][$key] ?? [];
+            if ($ids === []) {
+                continue;
+            }
+            if (count($ids) > 1) {
+                return [
+                    'contract' => null,
+                    'reason' => null,
+                    'note' => self::REASON[$field] . ' „' . $value . '“ trifft ' . count($ids)
+                        . ' Verträge (an einer Lieferstelle können Strom und Gas hängen).'
+                        . ' Es wurde bewusst nichts zugeordnet.',
+                ];
+            }
+            $contract = $this->contracts[$ids[0]] ?? Contract::with('customer.user')->find($ids[0]);
+            if ($contract === null) {
+                continue;
+            }
+            $this->contracts[$contract->id] = $contract;
+
+            return ['contract' => $contract, 'reason' => self::REASON[$field], 'note' => null];
         }
 
         return [

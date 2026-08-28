@@ -1488,6 +1488,75 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   bekommt diesen Hinweis bewusst NICHT - dort ist wirklich die Datei kaputt.
   Tests: `ContractCommissionImportTest`.
 
+- **Energie-Auftrag: jedes Feld mit Erkennungssicherheit, IBAN aus zwei
+  Quellen, Bruecke zur Provision** (Betreiber-Auftrag 28.08.2026, Details in
+  `docs/ENERGIE_AUFTRAG_ERKENNUNG_UND_PROVISION.md`): Gemeldet war "es werden
+  nur ein Teil der Daten erkannt". Nachgestellt zeigte sich: die Erkennung las
+  bereits Name, Geburtsdatum, Anschrift, Telefon, Geschlecht, Tarif,
+  Zaehlernummer, Verbrauch, Arbeits-/Grundpreis, Netzbetreiber und
+  Auftragsnummer - es fehlten genau DREI Dinge, und alle drei aus demselben
+  Grund: **eine Alles-oder-nichts-Regel je Feld**.
+  (1) Der LIEFERBEGINN stand unter "Neueinzug zum" - ein Neueinzug ist kein
+  Anbieterwechsel, deshalb steht dort ein anderes Wort; die Erkennung kannte
+  nur die Wechsel-Beschriftungen. Jetzt werden elf Schreibweisen gesucht
+  (`Lieferbeginn`, `Belieferungsbeginn`, `Beginn der Belieferung`,
+  `Neueinzug (zum)`, `Einzug(sdatum)`, `Vertragsbeginn` ...), ebenso beim
+  Geburtsdatum und beim Telefon. Ein Beginn wird weiterhin NIE geraten
+  ("schnellstmoeglich" ist kein Datum); stammt er aus einer EINZUGS-
+  Beschriftung, sagt die Zusammenfassung das und die 20-Tage-Regel des
+  Stadtwerke-Wechsels greift nicht.
+  (2) Die E-MAIL fiel am `@` aus - auf einem Screenshot das fehleranfaelligste
+  Zeichen (`©`/`®`/verdoppelt). Der Parser nutzt jetzt denselben Baustein wie
+  der Kontakt-Screenshot (`RepairsOcrText`); eine reparierte Adresse gilt
+  bewusst als "bitte pruefen", nicht als "sicher".
+  (3) Die IBAN wurde bei EINEM verlesenen Zeichen still verworfen - obwohl
+  Kontonummer und BLZ separat danebenstehen. Eine deutsche IBAN besteht
+  rechnerisch genau daraus (BLZ + Kontonr., Pruefziffern nach ISO 7064
+  GERECHNET, nicht abgelesen), also wird sie nachgerechnet. ABER eine
+  gerechnete IBAN hat IMMER eine gueltige Pruefziffer, auch bei verlesener
+  BLZ - sie zaehlt deshalb nur, wenn die abgedruckte IBAN sie BESTAETIGT
+  (Kontoteil gleich unter Zulassung der OCR-Verwechslungen) oder gar keine
+  abgedruckt ist. WIDERSPRECHEN sich beide Quellen, wird NICHTS uebernommen
+  (frueher: uebernommen mit Hinweis - einen Hinweis ueberliest man). Die
+  Kontoinhaber-Regel bleibt: fremder Name -> keine Bankuebernahme.
+  **ERKENNUNGSSICHERHEIT JE FELD** (`App\Support\FieldRecognition`,
+  `data.feldstatus`, Schluessel `gruppe.feld`): vier Zustaende
+  `sicher` / `pruefen` / `fehlt` / `widerspruch`. Bisher gab es EINE Konfidenz
+  fuers ganze Dokument und eine feste Liste von vier Standardfeldern - also
+  faktisch die Aufforderung, alles zu pruefen. Im Review-Dialog steht das
+  Kennzeichen nur, WO es etwas sagt (ein "sicher" an jedem Feld waere
+  Ziergrafik und wuerde die zwei Felder verstecken, um die es geht); der
+  Kasten oben trennt widerspruechlich / bitte pruefen / nicht gelesen. Ohne
+  Feldstatus (aeltere Analysen, KI) bleibt das alte Verhalten.
+  **WELCHE NUMMER IST WELCHE**: `DE09...` ist die IBAN, KEINE Vertragsnummer;
+  `1687519` ist die AUFTRAGSNUMMER des Vertriebsportals (-> `reference_number`,
+  nie `contract_number` - ein Auftrag hat keine Vertragsnummer). Ein Vertrag
+  fuehrt bis zu vier Kennungen aus vier Systemen, die sich nie ueberschreiben:
+  `contract_number` (Gesellschaft), `reference_number` (Vorgang),
+  `internal_contract_number` (Maklerpool), `vermittler_id`. Der Review-Dialog
+  beschriftet sie jetzt getrennt ("Vertrags-Nr." / "Auftrags-/Referenz-Nr.") -
+  zwei Nummern unter einem "Nr." sind die Vorstufe zur Verwechslung.
+  **PROVISIONSABRECHNUNG FINDET DEN ENERGIEVERTRAG**: `CommissionMatcher`
+  kennt zusaetzlich `meter_number` und `malo_id` (neue Spalte in `ColumnMap`,
+  Vergleich ueber `ContractEnergyDetail::normalizeMeter/normalizeMalo` - auf
+  dem Zaehler steht "1 EBZ0 1037 16819", im Auftrag "1EBZ0103716819"). Sie
+  stehen bewusst am ENDE der Reihenfolge: sie identifizieren eine
+  LIEFERSTELLE, nicht einen Vertrag (Strom + Gas an derselben Marktlokation),
+  und zwei Treffer heissen wie ueberall "nichts zuordnen" - mit dem Grund im
+  Klartext in der Pruefliste. Unverzichtbar sind sie trotzdem: die Abrechnung
+  eines Energie-Vertriebsportals fuehrt oft gar keine Vertragsnummer, weil es
+  zum Zeitpunkt des Auftrags noch keine gab. Die vier Grundregeln gelten
+  unveraendert (nie raten, nie anlegen, nie Vertragsdaten aendern, der NAME
+  zaehlt nie); eine Zeile ohne Treffer geht nicht verloren.
+  **PROVISION BLEIBT INTERN** - die Trennung liegt in der Struktur, nicht im
+  Frontend: keine Beziehung von `Customer` zu den Provisionen (ein `with()`
+  im Portal kann sie gar nicht mitladen), eigenes Recht
+  `provisionen-verwalten` an Route UND Controller UND Vertragsakte, eigenes
+  Protokoll `commission_audit_logs`. Neuer Test: auf der PORTAL-Detailseite
+  eines Energievertrags steht die Zaehlernummer, aber weder Betrag noch
+  Empfaenger noch interne Nummer noch Vermittler-Id.
+  Tests: `EnergiePortalAuftragParserTest`, `ContractCommissionImportTest`.
+
 - **Familien- und Kundenbeziehungen: bestehende Akten VERKNUEPFEN, nie
   zusammenfuehren** (Betreiber-Auftrag 28.08.2026): Beim Einlesen mehrerer
   Gesundheitskarten EINER Familie ist je Karte eine eigene Kundenakte

@@ -2,8 +2,10 @@
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Models\Contract;
+use App\Services\Ai\Concerns\RepairsOcrText;
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
 use App\Services\Ai\Contracts\DocumentTemplateParser;
+use App\Support\FieldRecognition;
 
 /**
  * Parser fuer die AUFTRAGS-UEBERSICHT aus dem Vertriebsportal eines
@@ -49,6 +51,7 @@ use App\Services\Ai\Contracts\DocumentTemplateParser;
  */
 class EnergiePortalAuftragParser implements DocumentTemplateParser
 {
+    use RepairsOcrText;
     use ValidatesExtractedFields;
 
     /** Stadtwerke-Wechsel: 14 Tage Kuendigungsfrist + Bearbeitung. */
@@ -60,21 +63,36 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
      * Kontoinhaber" vor "Kontoinhaber" greift. Sie dienen doppelt: als
      * Suchbegriff und als ENDE-Marke des davorstehenden Wertes.
      *
+     * Enthalten sind auch die BEDIENELEMENTE der Ansicht ("Übersicht",
+     * "Dokumente", "Anfrage zum Vertrag") - sie tragen keinen Inhalt, stehen
+     * aber in derselben OCR-Zeile und wuerden sonst als Anschrift gelesen.
+     *
+     * Und bewusst MEHRERE Schreibweisen je Angabe: dasselbe Feld heisst je
+     * Portal/Anbieter "Lieferbeginn", "gew. Lieferdatum", "Neueinzug zum"
+     * oder "Beginn der Belieferung". Eine Erkennung, die nur EINE Schreibweise
+     * kennt, liest denselben Auftrag beim naechsten Anbieter nicht mehr.
+     *
      * @var list<string>
      */
     private const KNOWN_LABELS = [
-        'Anschrift des Kontoinhaber', 'Belieferungsanschrift',
-        'bish. Kundennummer', 'bisherige Kundennummer', 'Vorjahresverbrauch',
-        'Unterschriftsdatum', 'gew. Lieferdatum', 'Zählernummer', 'Netzbetreiber',
-        'Auftragsnummer', 'Kundennummer', 'Vorversorger', 'Tarifübersicht',
-        'Arbeitspreis', 'Kontoinhaber', 'Zusatzinfos', 'Lieferdatum',
-        'Grundpreis', 'Belieferung', 'Tarifdaten', 'geboren am', 'Telefon',
-        'Abnehmer', 'Tariftyp', 'Anbieter', 'Zahlung', 'Produkt', 'MaLo-ID',
-        'Status', 'E-Mail', 'Konto', 'MaLo', 'Mail', 'IBAN', 'BLZ', 'BIC', 'Tel',
-        // Bedienelemente der Ansicht - kein Inhalt, aber sie stehen in
-        // derselben OCR-Zeile und wuerden sonst als Anschrift gelesen
-        // ("Übersicht Dokumente 1 Anfrage zum Vertrag").
-        'Anfrage zum Vertrag', 'Dokumente', 'Übersicht',
+        'Anschrift des Kontoinhaber', 'Beginn der Belieferung',
+        'bisherige Kundennummer', 'Belieferungsanschrift',
+        'Anfrage zum Vertrag', 'Vertragskontonummer',
+        'Belieferungsbeginn', 'Unterschriftsdatum', 'Vorjahresverbrauch',
+        'bish. Kundennummer', 'gew. Lieferbeginn', 'gew. Lieferdatum',
+        'Auftragseingang', 'Auftragsnummer', 'Referenznummer',
+        'Tarifübersicht', 'Vertragsbeginn', 'Vertragsnummer',
+        'Auftragsdatum', 'Bestellnummer', 'Eingangsdatum',
+        'Marktlokation', 'Netzbetreiber', 'Neueinzug zum',
+        'Arbeitspreis', 'Einzugsdatum', 'Geburtsdatum', 'Kontoinhaber',
+        'Kundennummer', 'Lieferbeginn', 'Messlokation', 'Referenz-Nr.',
+        'Vorversorger', 'Zählernummer', 'Belieferung', 'Lieferdatum',
+        'Mobilnummer', 'Zusatzinfos', 'Einzug zum', 'Geburtstag',
+        'Grundpreis', 'Tarifdaten', 'geboren am', 'Dokumente',
+        'Neueinzug', 'Übersicht', 'Abnehmer', 'Anbieter', 'Tariftyp',
+        'MaLo-ID', 'Produkt', 'Telefon', 'Zahlung', 'E-Mail', 'Status',
+        'Handy', 'Konto', 'Mobil', 'IBAN', 'MaLo', 'Mail', 'MeLo', 'BIC',
+        'BLZ', 'Fax', 'Tel',
     ];
 
     private string $text = '';
@@ -85,8 +103,15 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
     /** Hinweis zur Bankverbindung fuer die Zusammenfassung (Abweichung o.ae.). */
     private ?string $bankHinweis = null;
 
+    /** Erkennungssicherheit je Feld - siehe App\Support\FieldRecognition. */
+    private FieldRecognition $felder;
+
+    /** Lieferbeginn stammt aus einem EINZUG (Neuanschluss), nicht aus einem Wechsel. */
+    private bool $einzug = false;
+
     public function parse(string $text): ?array
     {
+        $this->felder = new FieldRecognition();
         $this->text = (string) preg_replace('/\x{00ad}\s*/u', '', $text);
         $upper = mb_strtoupper($this->text);
 
@@ -134,6 +159,11 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
                 'bank' => $bank,
                 'personen' => [],
                 'energie' => $energie,
+                // Erkennungssicherheit JE FELD - der Mitarbeiter soll im
+                // Review nur die unsicheren Angaben kontrollieren muessen,
+                // nicht alle. Bewusst eine eigene Gruppe: sie traegt keine
+                // Kundendaten und wird von keiner Uebernahme angefasst.
+                FieldRecognition::KEY => $this->felder->toArray(),
             ],
         ];
     }
@@ -199,19 +229,53 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
             }
         }
 
-        if (($v = $this->labelValue('geboren am')) !== null
-            && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $v, $m)) {
-            $raw['birth_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+        // Geburtsdatum: je Portal "geboren am", "Geburtsdatum" oder
+        // "Geburtstag" - alle drei meinen dasselbe Feld.
+        foreach (['geboren am', 'Geburtsdatum', 'Geburtstag'] as $label) {
+            if (($v = $this->labelValue($label)) !== null
+                && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $v, $m)) {
+                $raw['birth_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+                break;
+            }
         }
-        if (($v = $this->labelValue('Tel') ?? $this->labelValue('Telefon')) !== null) {
-            $raw['phone'] = $this->normalizePhone($v);
-        }
-        if (($v = $this->labelValue('Mail') ?? $this->labelValue('E-Mail')) !== null
-            && preg_match('/[\w.+\-]+@[\w.\-]+\.\w{2,}/u', $v, $m)) {
-            $raw['email'] = mb_strtolower($m[0]);
+        foreach (['Tel', 'Telefon', 'Mobil', 'Mobilnummer', 'Handy'] as $label) {
+            if (($v = $this->labelValue($label)) !== null
+                && ($nummer = $this->normalizePhone($v)) !== null) {
+                $raw['phone'] = $nummer;
+                break;
+            }
         }
 
-        return $this->validatedPerson(array_filter($raw, fn ($v) => $v !== null && $v !== ''));
+        // E-MAIL (gemeldeter Ausfall 28.08.2026): das "@" ist auf einem
+        // Screenshot das mit Abstand fehleranfaelligste Zeichen - Tesseract
+        // liest es je nach Darstellung als "©"/"®" oder verdoppelt es. Der
+        // frueher benutzte harte Ausdruck fand dann GAR NICHTS, und im Review
+        // stand "E-Mail nicht automatisch gelesen", obwohl die Adresse gut
+        // sichtbar im Dokument steht. Repariert wird ueber denselben
+        // gemeinsamen Baustein wie beim Kontakt-Screenshot.
+        foreach (['Mail', 'E-Mail'] as $label) {
+            if (($v = $this->labelValue($label)) === null) {
+                continue;
+            }
+            if (preg_match('/[\w.+\-]+@[\w.\-]+\.\w{2,}/u', $v, $m)) {
+                $raw['email'] = mb_strtolower($m[0]);
+            } elseif (($repariert = $this->ocrEmail($v)) !== null) {
+                $raw['email'] = $repariert;
+                $this->felder->pruefen('person.email',
+                    'Zeichen der Adresse waren nicht eindeutig lesbar und wurden korrigiert');
+            }
+            if (isset($raw['email'])) {
+                break;
+            }
+        }
+
+        $person = $this->validatedPerson(array_filter($raw, fn ($v) => $v !== null && $v !== ''));
+        $this->felder->gruppe('person', $person, [
+            'first_name', 'last_name', 'birth_date', 'gender',
+            'street', 'house_number', 'zip', 'city', 'phone', 'email',
+        ]);
+
+        return $person;
     }
 
     /**
@@ -261,37 +325,167 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
         }
 
         $raw = [];
-        if (($v = $this->labelValue('IBAN')) !== null) {
-            $iban = strtoupper((string) preg_replace('/[^A-Z0-9]/i', '', $v));
-            // PRUEFZIFFER (Modulo 97): ein von der OCR verlesenes Zeichen faellt
-            // damit auf - eine kaputte IBAN darf NIE in die Kundenakte.
-            if (preg_match('/^DE\d{20}$/', $iban) && $this->ibanChecksumValid($iban)) {
-                $raw['iban'] = $iban;
-                // Gegenprobe mit der separat gedruckten Kontonummer + BLZ: die
-                // deutsche IBAN besteht genau daraus (BLZ + 10-stellige Kontonr.).
-                $blz = (string) preg_replace('/\D/', '', (string) $this->labelValue('BLZ'));
-                $konto = (string) preg_replace('/\D/', '', (string) $this->labelValue('Konto'));
-                if (strlen($blz) >= 8 && $konto !== '') {
-                    $erwartet = substr($blz, 0, 8) . str_pad(substr($konto, 0, 10), 10, '0', STR_PAD_LEFT);
-                    if ($erwartet !== substr($iban, 4)) {
-                        $this->bankHinweis = 'IBAN und die separat gedruckte Konto-/BLZ-Angabe weichen ab - bitte pruefen';
-                    }
-                }
-            } elseif (preg_match('/^DE\d{20}$/', $iban)) {
-                $this->bankHinweis = 'IBAN im Bild nicht eindeutig lesbar (Pruefziffer stimmt nicht) - nicht uebernommen';
+        $gedruckt = $this->ibanRoh();
+        $gelesen = $this->ibanGelesen();
+        $gerechnet = $this->ibanAusKontoUndBlz();
+
+        // ZWEI unabhaengige Quellen fuer dieselbe Bankverbindung - das Portal
+        // druckt die IBAN UND (separat) Kontonummer + BLZ. Eine deutsche IBAN
+        // besteht genau daraus, also laesst sie sich aus der zweiten Quelle
+        // NACHRECHNEN, Pruefziffern eingeschlossen. Das ist der Gewinn
+        // gegenueber "22 Zeichen am Stueck fehlerfrei ablesen": zwei kurze
+        // Zahlenfelder verliest die OCR selten beide zugleich.
+        //
+        // ABER: gerechnet ist nicht geprueft. Die Pruefziffer einer selbst
+        // gerechneten IBAN stimmt IMMER - auch wenn die BLZ verlesen wurde.
+        // Deshalb zaehlt eine gerechnete IBAN nur, wenn die abgedruckte sie
+        // BESTAETIGT oder gar keine abgedruckt ist. Und wo sich zwei Quellen
+        // widersprechen, wird NICHTS uebernommen: eine falsche Bankverbindung
+        // kostet mehr als eine fehlende, und welche Angabe stimmt, entscheidet
+        // kein Parser.
+        $status = null;
+        $iban = null;
+        if ($gelesen !== null && $gerechnet !== null) {
+            if ($gelesen === $gerechnet) {
+                $iban = $gelesen;
+                $status = [FieldRecognition::SICHER, null];
+            } else {
+                $this->bankHinweis = 'IBAN (' . $gelesen . ') und die separat gedruckte Konto-/BLZ-Angabe ('
+                    . $gerechnet . ') widersprechen sich - keine Bankverbindung uebernommen, bitte manuell pruefen';
+                $status = [FieldRecognition::WIDERSPRUCH, $this->bankHinweis];
             }
+        } elseif ($gelesen !== null) {
+            $iban = $gelesen;
+            $status = [FieldRecognition::SICHER, null];
+        } elseif ($gerechnet !== null) {
+            if ($gedruckt === null) {
+                $iban = $gerechnet;
+                $status = [FieldRecognition::PRUEFEN, 'aus Kontonummer + BLZ berechnet (eine IBAN war nicht abgedruckt)'];
+                $this->bankHinweis = 'IBAN aus Kontonummer + BLZ berechnet - bitte pruefen';
+            } elseif ($this->gleicheKontoverbindung($gedruckt, $gerechnet)) {
+                // Die abgedruckte IBAN war nur an einzelnen Zeichen unlesbar
+                // und deckt sich sonst mit Konto + BLZ - zwei Quellen, ein
+                // Ergebnis. Genau das ist eine belegte Reparatur, kein Raten.
+                $iban = $gerechnet;
+                $status = [FieldRecognition::PRUEFEN,
+                    'abgedruckte IBAN war nicht sauber lesbar, deckt sich aber mit Kontonummer + BLZ'];
+                $this->bankHinweis = 'IBAN war im Bild nicht sauber lesbar und wurde aus Kontonummer + BLZ berechnet - bitte pruefen';
+            } else {
+                $this->bankHinweis = 'abgedruckte IBAN und die Konto-/BLZ-Angabe passen nicht zusammen'
+                    . ' - keine Bankverbindung uebernommen, bitte manuell pruefen';
+                $status = [FieldRecognition::WIDERSPRUCH, $this->bankHinweis];
+            }
+        } elseif ($gedruckt !== null) {
+            $this->bankHinweis = 'IBAN im Bild nicht eindeutig lesbar (Pruefziffer stimmt nicht) - nicht uebernommen';
+            $status = [FieldRecognition::PRUEFEN, $this->bankHinweis];
+        } else {
+            $status = [FieldRecognition::FEHLT, null];
         }
+        $this->felder->set('bank.iban', $status[0], $status[1]);
+
+        if ($iban === null) {
+            return [];
+        }
+        $raw['iban'] = $iban;
+
         // BIC nur im offiziellen Format (4 Buchstaben Bank, 2 Land, 2 Ort,
         // optional 3 Filiale).
         if (($v = $this->labelValue('BIC')) !== null
             && preg_match('/^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?$/', strtoupper(trim($v)))) {
             $raw['bic'] = strtoupper(trim($v));
         }
-        if ($raw !== []) {
-            $raw['account_holder'] = $voll;
-        }
+        $raw['account_holder'] = $voll;
 
         return $this->validatedBank($raw);
+    }
+
+    /**
+     * Der ROHWERT der IBAN-Zeile (nur Buchstaben/Ziffern, ohne jede Pruefung).
+     * Er beantwortet allein die Frage "stand ueberhaupt eine IBAN da?" - und
+     * dient als Gegenprobe fuer eine gerechnete IBAN.
+     */
+    private function ibanRoh(): ?string
+    {
+        $v = $this->labelValue('IBAN');
+        if ($v === null) {
+            return null;
+        }
+        $roh = strtoupper((string) preg_replace('/[^A-Z0-9]/i', '', $v));
+
+        return mb_strlen($roh) >= 20 ? $roh : null;
+    }
+
+    /**
+     * Beschreiben zwei IBAN dieselbe Kontoverbindung, wenn man typische
+     * OCR-Verwechslungen (B/8, O/0, I/1 ...) zulaesst? Verglichen wird nur
+     * der KONTOTEIL (BLZ + Kontonummer) - die beiden Pruefziffern sind bei
+     * der gerechneten IBAN ohnehin neu bestimmt und taugen nicht zum Beleg.
+     */
+    private function gleicheKontoverbindung(string $a, string $b): bool
+    {
+        $bban = static function (string $iban): string {
+            $ziffern = strtr(mb_substr($iban, 4), self::OCR_ZIFFERN);
+
+            return (string) preg_replace('/\D/', '', $ziffern);
+        };
+
+        return $bban($a) !== '' && $bban($a) === $bban($b);
+    }
+
+    /**
+     * Die ABGEDRUCKTE IBAN - mit Reparatur typischer OCR-Verwechslungen
+     * (B/8, O/0, I/1, S/5 ...) und PFLICHT-Pruefziffer. Ohne gueltige
+     * Pruefziffer gibt es keinen Rueckgabewert: eine geratene Bankverbindung
+     * darf nie entstehen.
+     */
+    private function ibanGelesen(): ?string
+    {
+        $v = $this->labelValue('IBAN');
+        if ($v === null) {
+            return null;
+        }
+        $iban = strtoupper((string) preg_replace('/[^A-Z0-9]/i', '', $v));
+        if (preg_match('/^DE\d{20}$/', $iban) && $this->ibanChecksumValid($iban)) {
+            return $iban;
+        }
+
+        // Zeichenweise Reparatur des Trait (gleiche Regel wie beim
+        // Kontakt-Screenshot) - uebernommen wird auch hier nur, was die
+        // Pruefziffer besteht.
+        return $this->ocrGermanIban($v);
+    }
+
+    /**
+     * IBAN aus den SEPARAT gedruckten Feldern "Konto" und "BLZ" berechnen.
+     *
+     * Eine deutsche IBAN ist rein rechnerisch: DE + zwei Pruefziffern +
+     * 8-stellige BLZ + 10-stellige Kontonummer (links mit Nullen gefuellt).
+     * Die Pruefziffern ergeben sich nach ISO 7064 aus dem Rest - sie werden
+     * also NICHT abgelesen, sondern gerechnet. Damit haengt die
+     * Bankverbindung nicht mehr daran, dass die OCR 22 Zeichen am Stueck
+     * fehlerfrei liest.
+     *
+     * Die Klammerzusaetze der Zeile ("43050001 (Sparkasse Bochum)") stoeren
+     * nicht: gelesen wird die erste Ziffernfolge passender Laenge.
+     */
+    private function ibanAusKontoUndBlz(): ?string
+    {
+        $blz = (string) preg_replace('/\D/', '', (string) $this->labelValue('BLZ'));
+        $konto = (string) preg_replace('/\D/', '', (string) $this->labelValue('Konto'));
+        if (strlen($blz) < 8 || $konto === '' || strlen($konto) > 10) {
+            return null;
+        }
+        $bban = substr($blz, 0, 8) . str_pad($konto, 10, '0', STR_PAD_LEFT);
+
+        // Pruefziffer: 98 - (BBAN + "DE00" als Zahl) mod 97.
+        $zahl = $bban . '131400';
+        $rest = 0;
+        foreach (str_split($zahl, 7) as $block) {
+            $rest = (int) ((string) $rest . $block) % 97;
+        }
+        $iban = 'DE' . str_pad((string) (98 - $rest), 2, '0', STR_PAD_LEFT) . $bban;
+
+        return $this->ibanChecksumValid($iban) ? $iban : null;
     }
 
     /**
@@ -357,8 +551,33 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
         if ($monat !== null) {
             $raw['base_price'] = $monat;
         }
+        // Kundennummer BEIM ANBIETER (nicht die des Vorversorgers und nicht
+        // die Auftragsnummer) - sie ist eine der Kennungen, ueber die eine
+        // spaetere Abrechnung ihren Vertrag wiederfindet. In der leeren
+        // Eingabemaske des Portals steht das Feld ohne Wert; labelValue
+        // liefert dann null und es wird nichts gesetzt.
+        $auftrag = trim((string) ($this->labelValue('Auftragsnummer') ?? $this->kopfzeile()['nummer'] ?? ''));
+        foreach (['Kundennummer', 'Vertragskontonummer'] as $label) {
+            $v = trim((string) $this->labelValue($label));
+            if ($v === '' || !preg_match('/^[\w\-\/]{4,40}$/u', $v)) {
+                continue;
+            }
+            // Nie die Auftragsnummer und nie die Nummer des Vorversorgers
+            // recyceln - das waeren zwei verschiedene Dinge unter einem Namen.
+            if ($v === $auftrag || $v === ($raw['previous_customer_number'] ?? null)) {
+                continue;
+            }
+            $raw['customer_number'] = $v;
+            break;
+        }
 
-        return $this->validatedEnergy(array_filter($raw, fn ($v) => $v !== null && $v !== ''));
+        $energie = $this->validatedEnergy(array_filter($raw, fn ($v) => $v !== null && $v !== ''));
+        $this->felder->gruppe('energie', $energie, [
+            'tariff', 'meter_number', 'malo_id', 'consumption_kwh',
+            'working_price', 'base_price', 'grid_operator',
+        ]);
+
+        return $energie;
     }
 
     /**
@@ -406,16 +625,39 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
             default                                                      => 'strom',
         };
 
-        // Lieferbeginn NUR als echtes Datum ("schnellstmoeglich" ist keins).
-        $lieferdatum = $this->labelValue('gew. Lieferdatum') ?? $this->labelValue('Lieferdatum');
-        if ($lieferdatum !== null && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $lieferdatum, $m)) {
+        // LIEFERBEGINN - NUR als echtes Datum ("schnellstmoeglich" ist keins).
+        //
+        // Und bewusst ueber MEHRERE Schreibweisen: derselbe Sachverhalt heisst
+        // je nach Portal und je nach Vorgangsart anders. Beim WECHSEL steht
+        // "gew. Lieferdatum"/"Lieferbeginn", beim EINZUG in eine neue Wohnung
+        // dagegen "Neueinzug zum" - genau daran scheiterte der gemeldete
+        // Auftrag: das Datum stand gut lesbar im Dokument, die Erkennung kannte
+        // nur die Wechsel-Beschriftung und der Vertrag blieb ohne Beginn.
+        $this->einzug = false;
+        foreach (['gew. Lieferbeginn', 'gew. Lieferdatum', 'Beginn der Belieferung',
+                  'Belieferungsbeginn', 'Lieferbeginn', 'Lieferdatum',
+                  'Neueinzug zum', 'Neueinzug', 'Einzug zum', 'Einzugsdatum',
+                  'Vertragsbeginn'] as $label) {
+            $v = $this->labelValue($label);
+            if ($v === null || !preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $v, $m)) {
+                continue;
+            }
             $raw['start_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
-        } elseif (preg_match('/stadtwerke/iu', (string) ($energie['previous_provider'] ?? ''))) {
+            $this->einzug = str_contains(mb_strtolower($label), 'einzug');
+            break;
+        }
+        if (!isset($raw['start_date'])
+            && preg_match('/stadtwerke/iu', (string) ($energie['previous_provider'] ?? ''))) {
             // Stadtwerke-Wechsel: 14 Tage Kuendigungsfrist + Bearbeitung.
             $raw['expected_start_within_days'] = self::EXPECTED_START_DAYS;
         }
 
-        return $this->validatedInsurance(array_filter($raw, fn ($v) => $v !== null && $v !== ''));
+        $insurance = $this->validatedInsurance(array_filter($raw, fn ($v) => $v !== null && $v !== ''));
+        $this->felder->gruppe('versicherung', $insurance, [
+            'insurer', 'reference_number', 'sparte', 'tariff', 'start_date',
+        ]);
+
+        return $insurance;
     }
 
     /**
@@ -478,6 +720,17 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
         if (($v = $this->labelValue('Zahlung')) !== null) {
             $out .= ' Zahlung: ' . $v . '.';
         }
+        if ($this->einzug && isset($insurance['start_date'])) {
+            $out .= ' Neueinzug (Neuanschluss, kein Anbieterwechsel) zum '
+                . date('d.m.Y', strtotime($insurance['start_date'])) . '.';
+        }
+        if (($v = $this->labelValue('Auftragseingang') ?? $this->labelValue('Auftragsdatum')
+            ?? $this->labelValue('Eingangsdatum')) !== null) {
+            $out .= ' Auftragseingang: ' . $v . '.';
+        }
+        if (isset($energie['customer_number'])) {
+            $out .= ' Kundennummer beim Anbieter: ' . $energie['customer_number'] . '.';
+        }
         if (isset($insurance['expected_start_within_days'])) {
             $out .= ' Lieferbeginn nicht angegeben: voraussichtlich binnen ~'
                 . $insurance['expected_start_within_days']
@@ -535,27 +788,6 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
             return true;
         }
         return preg_match('/\p{L}{3,}/u', $n) === 1 && count(preg_split('/\s+/u', $n) ?: []) >= 2;
-    }
-
-    /**
-     * IBAN-Pruefziffer nach ISO 7064 (Modulo 97): die ersten vier Zeichen
-     * wandern ans Ende, Buchstaben werden zu Zahlen (A=10 ... Z=35), der Rest
-     * der Division durch 97 muss 1 sein. Damit faellt ein von der OCR
-     * verlesenes Zeichen praktisch immer auf.
-     */
-    private function ibanChecksumValid(string $iban): bool
-    {
-        $umgestellt = mb_substr($iban, 4) . mb_substr($iban, 0, 4);
-        $zahl = '';
-        foreach (str_split($umgestellt) as $zeichen) {
-            $zahl .= ctype_alpha($zeichen) ? (string) (ord(strtoupper($zeichen)) - 55) : $zeichen;
-        }
-        $rest = 0;
-        foreach (str_split($zahl, 7) as $block) {
-            $rest = (int) ((string) $rest . $block) % 97;
-        }
-
-        return $rest === 1;
     }
 
     /** "+49 0176 23681009" -> "017623681009"; sonst null. */
