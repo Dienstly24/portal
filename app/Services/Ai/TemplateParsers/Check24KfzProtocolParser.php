@@ -28,6 +28,11 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
     private const KNOWN_INSURERS = [
         'Sparkassen DirektVersicherung', 'SV SparkassenVersicherung',
         'DA Direkt', 'Allianz Direct', 'HUK-COBURG', 'HUK24', 'CosmosDirekt',
+        // CHECK24 schreibt denselben Versicherer mit Leerzeichen
+        // ("Cosmos Direkt Basis mit Werkstattbindung"). Ohne diese
+        // Schreibweise griff nur der Notbehelf "erstes Wort": der
+        // Vertrag entstand unter "Cosmos" mit Tarif "Direkt Basis ...".
+        'Cosmos Direkt',
         'Signal Iduna', 'Direct Line', 'BavariaDirekt', 'Rhion Digital', 'Rhion',
         'Allianz', 'AXA', 'HDI', 'DEVK', 'ADAC', 'Verti', 'Generali', 'WGV',
         'R+V24', 'R+V', 'VHV', 'LVM', 'Gothaer', 'Württembergische',

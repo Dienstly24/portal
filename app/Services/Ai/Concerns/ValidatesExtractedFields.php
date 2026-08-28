@@ -17,13 +17,17 @@ trait ValidatesExtractedFields
         if (!is_array($in)) return [];
         $gender = $in['gender'] ?? null;
         $marital = $in['marital_status'] ?? null;
+        [$street, $houseNumber] = $this->splitStreetAndHouseNumber(
+            $in['street'] ?? null,
+            $in['house_number'] ?? null
+        );
         return array_filter([
             'first_name' => $this->cleanString($in['first_name'] ?? null, 80),
             'last_name' => $this->cleanString($in['last_name'] ?? null, 80),
             'birth_date' => $this->cleanDate($in['birth_date'] ?? null),
             'birth_place' => $this->cleanString($in['birth_place'] ?? null, 100),
-            'street' => $this->cleanString($in['street'] ?? null, 120),
-            'house_number' => $this->cleanString($in['house_number'] ?? null, 10),
+            'street' => $this->cleanString($street, 120),
+            'house_number' => $this->cleanString($houseNumber, 10),
             'zip' => $this->cleanZip($in['zip'] ?? null),
             'city' => $this->cleanString($in['city'] ?? null, 100),
             'email' => $this->cleanEmail($in['email'] ?? null),
@@ -45,6 +49,64 @@ trait ValidatesExtractedFields
             'gender' => in_array($gender, ['male', 'female'], true) ? $gender : null,
             'marital_status' => in_array($marital, ['ledig', 'verheiratet', 'geschieden', 'verwitwet'], true) ? $marital : null,
         ], fn ($v) => $v !== null && $v !== '');
+    }
+
+    /**
+     * Strasse und Hausnummer trennen - EINE Regel fuer ALLE Quellen.
+     *
+     * Lehre 28.08.2026 (gemeldet am CHECK24-Beratungsprotokoll): jeder
+     * Vorlagen-Parser spaltet die Hausnummer selbst ab, die KI-Antwort und
+     * die OCR-Heuristik aber nicht. Ein Modell, das die Anschrift so
+     * abschreibt, wie sie im Dokument steht ("Hintere Gasse 23"), liefert
+     * `street` mit Nummer und `house_number` leer - in der Kundenakte bleibt
+     * das Feld "Hausnummer" dann leer, obwohl die Nummer gelesen wurde. Weil
+     * jede Quelle durch diese Validierung laeuft, gehoert die Regel hierher
+     * und nicht in den 25. Parser.
+     *
+     * KONSERVATIV: getrennt wird nur, wenn vor der Nummer noch ein
+     * BUCHSTABEN-Teil steht ("Hintere Gasse"), sonst bliebe aus "23" eine
+     * Strasse ohne Namen. Steht die Nummer bereits im eigenen Feld, wird sie
+     * am Ende der Strasse nur ENTFERNT (sonst stuende "Hintere Gasse 23 23"
+     * in der Akte) - der bereits erkannte Wert wird nie ueberschrieben.
+     *
+     * @return array{0:?string,1:?string} [Strasse, Hausnummer]
+     */
+    private function splitStreetAndHouseNumber(mixed $street, mixed $houseNumber): array
+    {
+        if (!is_string($street)) {
+            return [$street, $houseNumber];
+        }
+        $trimmed = trim($street);
+        if ($trimmed === '') {
+            return [$street, $houseNumber];
+        }
+
+        // Hausnummer am Ende: "23", "21 b", "21b", "12-14", "12/1".
+        $pattern = '/^(.*\p{L}.*?)[\s,]+(\d{1,4}\s?[a-zA-Z]?(?:\s*[-\/]\s*\d{1,4}\s?[a-zA-Z]?)?)$/u';
+        if (!preg_match($pattern, $trimmed, $m)) {
+            return [$street, $houseNumber];
+        }
+        $streetPart = rtrim(trim($m[1]), ',');
+        $numberPart = trim((string) preg_replace('/\s+/', ' ', $m[2]));
+        if ($streetPart === '') {
+            return [$street, $houseNumber];
+        }
+
+        $existing = is_string($houseNumber) ? trim($houseNumber) : '';
+        if ($existing === '') {
+            return [$streetPart, $numberPart];
+        }
+
+        // Nummer steht doppelt (Strasse UND eigenes Feld) - nur wenn beide
+        // dieselbe Nummer meinen, wird sie aus der Strasse entfernt. Bei
+        // ABWEICHUNG bleibt alles unveraendert: dann wird nicht geraten,
+        // welche der beiden Angaben stimmt.
+        $normalize = fn (string $v): string => mb_strtolower((string) preg_replace('/[\s.\-\/]/', '', $v));
+        if ($normalize($existing) === $normalize($numberPart)) {
+            return [$streetPart, $existing];
+        }
+
+        return [$street, $houseNumber];
     }
 
     /**
