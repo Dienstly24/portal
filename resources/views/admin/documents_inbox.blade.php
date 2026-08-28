@@ -437,6 +437,61 @@ window.docReview = (function() {
         } },
     ];
 
+    // ERKENNUNGSSICHERHEIT JE FELD (Betreiber-Vorgabe 28.08.2026).
+    // Die Analyse liefert unter `feldstatus` je Feld einen von vier
+    // Zustaenden. Frueher gab es nur EINE Konfidenz fuer das ganze Dokument -
+    // der Mitarbeiter musste daraufhin alles kontrollieren, also genau das,
+    // was die Automatik ersparen soll.
+    var STATUS_STYLE = {
+        sicher:      { text: '✓ sicher',            color: '#17A65B', bg: '#E8F7EF' },
+        pruefen:     { text: '⚠ bitte prüfen',      color: '#8A5A00', bg: '#FEF6E7' },
+        widerspruch: { text: '⚠ widersprüchlich',   color: '#B42318', bg: '#FDECEA' },
+        fehlt:       { text: '– nicht erkannt',     color: '#5F6B62', bg: '#F1EEE5' }
+    };
+
+    // Ein Anzeigeblock kann mehrere Felder buendeln ("Adresse"). Dann gilt
+    // der SCHLECHTESTE Zustand - sonst verdeckt der sauber gelesene Ort die
+    // unlesbare Hausnummer daneben.
+    var STATUS_FIELDS = {
+        birth_date: ['person.birth_date'],
+        birth_place: ['person.birth_place'],
+        address: ['person.street', 'person.house_number', 'person.zip', 'person.city'],
+        phone: ['person.phone'],
+        gender: ['person.gender'],
+        email2: ['person.email'],
+        occupation: ['person.occupation'],
+        iban: ['bank.iban']
+    };
+    var STATUS_RANK = { sicher: 0, fehlt: 1, pruefen: 2, widerspruch: 3 };
+
+    function fieldStatus(extracted, keys) {
+        var all = (extracted || {}).feldstatus || {};
+        var worst = null, hint = null;
+        (keys || []).forEach(function(key) {
+            var entry = all[key];
+            if (!entry || !STATUS_RANK.hasOwnProperty(entry.status)) return;
+            if (worst === null || STATUS_RANK[entry.status] > STATUS_RANK[worst]) {
+                worst = entry.status; hint = entry.hinweis || null;
+            }
+        });
+        return worst === null ? null : { status: worst, hinweis: hint };
+    }
+
+    // Kleines Kennzeichen hinter dem Wert. Nur wo es etwas sagt: "sicher" an
+    // jedem einzelnen Feld waere Ziergrafik und wuerde die zwei Felder
+    // verstecken, um die es geht.
+    function statusBadge(state) {
+        if (!state || state.status === 'sicher') return null;
+        var style = STATUS_STYLE[state.status];
+        if (!style) return null;
+        var badge = document.createElement('span');
+        badge.textContent = style.text;
+        badge.style.cssText = 'margin-left:8px;padding:1px 7px;border-radius:999px;font-size:11px;'
+            + 'font-weight:600;white-space:nowrap;color:' + style.color + ';background:' + style.bg + ';';
+        if (state.hinweis) badge.title = state.hinweis;
+        return badge;
+    }
+
     function get(x, a, b) { return (x[a] || {})[b] || null; }
     function el(id) { return document.getElementById(id); }
 
@@ -663,34 +718,98 @@ window.docReview = (function() {
             strong.textContent = group.label + ': ';
             span.appendChild(strong);
             span.appendChild(document.createTextNode(value));
+            var badge = statusBadge(fieldStatus(doc.extracted, STATUS_FIELDS[group.key]));
+            if (badge) span.appendChild(badge);
             label.appendChild(cb); label.appendChild(span);
             wrap.appendChild(label);
         });
         el('review-extract-section').style.display = any ? '' : 'none';
     }
 
-    // Unsicherheits-Hinweis: warnt bei niedriger Konfidenz/OCR und listet
-    // wichtige Standardfelder, die NICHT gelesen wurden. Es wird nichts
-    // geraten - der Mitarbeiter ergaenzt bewusst.
+    // Klartext je Feldschluessel fuer den Unsicherheits-Hinweis. Die
+    // Schluessel spiegeln den Aufbau von `data`; hier bekommen sie den Namen,
+    // unter dem der Mitarbeiter das Feld kennt.
+    var FIELD_LABELS = {
+        'person.first_name': 'Vorname', 'person.last_name': 'Nachname',
+        'person.birth_date': 'Geburtsdatum', 'person.gender': 'Geschlecht',
+        'person.street': 'Straße', 'person.house_number': 'Hausnummer',
+        'person.zip': 'PLZ', 'person.city': 'Ort',
+        'person.phone': 'Telefon', 'person.email': 'E-Mail',
+        'bank.iban': 'IBAN',
+        'versicherung.insurer': 'Anbieter', 'versicherung.tariff': 'Tarif',
+        'versicherung.start_date': 'Lieferbeginn / Vertragsbeginn',
+        'versicherung.reference_number': 'Auftrags-/Referenznummer',
+        'versicherung.sparte': 'Sparte',
+        'energie.meter_number': 'Zählernummer', 'energie.malo_id': 'MaLo-ID',
+        'energie.consumption_kwh': 'Verbrauch', 'energie.tariff': 'Tarif',
+        'energie.working_price': 'Arbeitspreis', 'energie.base_price': 'Grundpreis',
+        'energie.grid_operator': 'Netzbetreiber',
+        'energie.customer_number': 'Kundennummer beim Anbieter'
+    };
+
+    function fieldLabel(key) {
+        return FIELD_LABELS[key] || key.split('.').pop();
+    }
+
+    // Unsicherheits-Hinweis. Liegt eine feldgenaue Bewertung vor, wird sie
+    // benutzt: der Mitarbeiter soll NUR die unsicheren Angaben kontrollieren
+    // muessen. Ohne sie (aeltere Analysen, KI-Ergebnisse) bleibt es beim
+    // bisherigen Verhalten mit den vier Standardfeldern. Es wird nie etwas
+    // geraten - was fehlt, ergaenzt der Mitarbeiter bewusst.
     function renderUncertainty(extracted, confidence, source) {
         var box = el('review-uncertainty');
         var p = (extracted || {}).person || {};
-        var checks = [
-            { label: 'Geburtsdatum', ok: !!p.birth_date },
-            { label: 'Adresse', ok: !!(p.street || p.zip || p.city) },
-            { label: 'Telefon', ok: !!p.phone },
-            { label: 'E-Mail', ok: !!p.email },
-        ];
-        var missing = checks.filter(function(c) { return !c.ok; }).map(function(c) { return c.label; });
+        var status = (extracted || {}).feldstatus || null;
         var lowConf = (source === 'ocr') || (confidence != null && confidence < 60);
-        if (!lowConf && !missing.length) { box.style.display = 'none'; return; }
+
+        var missing = [], check = [], conflict = [];
+        if (status && Object.keys(status).length) {
+            Object.keys(status).forEach(function(key) {
+                var st = (status[key] || {}).status;
+                if (st === 'fehlt') missing.push(fieldLabel(key));
+                else if (st === 'pruefen') check.push(fieldLabel(key));
+                else if (st === 'widerspruch') conflict.push(fieldLabel(key));
+            });
+        } else {
+            [
+                { label: 'Geburtsdatum', ok: !!p.birth_date },
+                { label: 'Adresse', ok: !!(p.street || p.zip || p.city) },
+                { label: 'Telefon', ok: !!p.phone },
+                { label: 'E-Mail', ok: !!p.email }
+            ].forEach(function(c) { if (!c.ok) missing.push(c.label); });
+        }
+
+        if (!lowConf && !missing.length && !check.length && !conflict.length) {
+            box.style.display = 'none';
+            return;
+        }
         box.style.display = '';
-        el('review-uncertainty-head').textContent = lowConf
-            ? '⚠ Unsichere Erkennung – bitte alle Felder sorgfältig prüfen.'
-            : '⚠ Einige Angaben konnten nicht sicher gelesen werden.';
-        el('review-uncertainty-missing').textContent = missing.length
-            ? 'Nicht automatisch gelesen (bitte manuell ergänzen): ' + missing.join(', ') + '.'
-            : '';
+        el('review-uncertainty-head').textContent = conflict.length
+            ? '⚠ Widersprüchliche Angaben – bitte diese Felder klären.'
+            : (lowConf
+                ? '⚠ Unsichere Erkennung – bitte die genannten Felder prüfen.'
+                : '⚠ Einige Angaben konnten nicht sicher gelesen werden.');
+
+        // textContent statt HTML: die Werte stammen aus einem fremden Dokument.
+        var lines = [];
+        if (conflict.length) {
+            lines.push('Widersprüchliche Angaben – nichts übernommen, bitte manuell prüfen: '
+                + conflict.join(', ') + '.');
+        }
+        if (check.length) {
+            lines.push('Erkannt, aber nicht eindeutig (bitte prüfen): ' + check.join(', ') + '.');
+        }
+        if (missing.length) {
+            lines.push('Nicht automatisch gelesen (bitte manuell ergänzen): ' + missing.join(', ') + '.');
+        }
+        var wrap = el('review-uncertainty-missing');
+        wrap.innerHTML = '';
+        lines.forEach(function(line) {
+            var div = document.createElement('div');
+            div.textContent = line;
+            div.style.marginTop = '2px';
+            wrap.appendChild(div);
+        });
     }
 
     function renderContract(doc) {
@@ -724,13 +843,22 @@ window.docReview = (function() {
             el('review-meter-info').textContent = meterParts.join(' · ');
         }
 
-        var has = ins.insurer || ins.contract_number;
+        var has = ins.insurer || ins.contract_number || ins.reference_number;
         el('review-contract-section').style.display = has ? '' : 'none';
         el('review-create-contract').checked = false;
         if (has) {
             var parts = [];
             if (ins.insurer) parts.push(ins.insurer);
-            if (ins.contract_number) parts.push('Nr. ' + ins.contract_number);
+            // DREI VERSCHIEDENE NUMMERN - sie werden nie vermischt, weil sie
+            // Verschiedenes bedeuten und aus verschiedenen Systemen stammen:
+            //   Vertrags-Nr.  = die Nummer der Gesellschaft/des Versorgers
+            //                   (gibt es beim Auftrag noch gar nicht)
+            //   Auftrags-/Ref.= die Kennung des VORGANGS im Vertriebsportal;
+            //                   ueber sie findet die spaetere Bestaetigung und
+            //                   die Provisionsabrechnung ihren Vertrag wieder
+            //   Kundennr.     = die Nummer des Kunden BEIM Anbieter (unten)
+            if (ins.contract_number) parts.push('Vertrags-Nr. ' + ins.contract_number);
+            if (ins.reference_number) parts.push('Auftrags-/Referenz-Nr. ' + ins.reference_number);
             if (ins.sparte) parts.push('Sparte: ' + ins.sparte);
             // Beitrag MIT Zahlweise (sonst sehen 500 €/Jahr und 500 €/Monat gleich aus).
             if (ins.premium_amount) {

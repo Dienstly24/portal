@@ -184,7 +184,16 @@ class ColumnMap
         'meter_number' => [
             'label' => 'Zählernummer (Energie)',
             'type' => 'text',
-            'aliases' => ['zaehlernummer', 'zaehlernr', 'zahlernummer', 'meternumber'],
+            'hint' => 'Zuordnung, wenn die Abrechnung keine Vertragsnummer führt',
+            'aliases' => ['zaehlernummer', 'zaehlernr', 'zahlernummer', 'zaehler',
+                'meternumber', 'zaehlpunktnummer'],
+        ],
+        'malo_id' => [
+            'label' => 'MaLo-ID (Marktlokation)',
+            'type' => 'text',
+            'hint' => '11-stellig – identifiziert die Lieferstelle, nicht den Vertrag',
+            'aliases' => ['maloid', 'malo', 'marktlokation', 'marktlokationsid',
+                'marktlokationsnummer'],
         ],
         'consumption' => [
             'label' => 'Verbrauch (kWh/Jahr)',
@@ -210,10 +219,25 @@ class ColumnMap
         ],
     ];
 
-    /** Felder, die eine Zuordnung zum Vertrag herstellen koennen. */
+    /**
+     * Felder, die eine Zuordnung zum Vertrag herstellen koennen - nach
+     * TRENNSCHAERFE sortiert, absteigend.
+     *
+     * Die ENERGIE-Kennungen stehen bewusst am Ende (Betreiber-Auftrag
+     * 28.08.2026). Grund: Zaehlernummer und MaLo-ID identifizieren eine
+     * LIEFERSTELLE, nicht einen Vertrag - an derselben Marktlokation koennen
+     * Strom und Gas haengen, und ueber die Jahre auch mehrere Vertraege
+     * nacheinander. Sie sind deshalb die letzte Bruecke, nicht die erste.
+     * Treffen sie mehr als einen Vertrag, wird wie ueberall NICHTS zugeordnet.
+     *
+     * Sie sind aber unverzichtbar: die Abrechnung eines Energie-Vertriebs-
+     * portals fuehrt haeufig gar keine Vertragsnummer, weil es zum Zeitpunkt
+     * des Auftrags noch keine gab - die Zaehlernummer ist dort die einzige
+     * dauerhafte Kennung.
+     */
     public const KEY_FIELDS = [
         'internal_contract_number', 'reference_number', 'vermittler_id',
-        'order_number', 'external_contract_number',
+        'order_number', 'external_contract_number', 'meter_number', 'malo_id',
     ];
 
     /** @return array<int,string> */

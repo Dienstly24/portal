@@ -266,29 +266,53 @@ class EnergiePortalAuftragParserTest extends TestCase
         $this->assertSame('NOLADE21RDB', $r['data']['bank']['bic']);
     }
 
-    public function test_broken_iban_is_never_taken(): void
+    public function test_broken_iban_is_repaired_from_account_and_bank_code(): void
     {
-        // Ein von der OCR verlesenes Zeichen macht die Pruefziffer ungueltig -
-        // eine kaputte IBAN darf NIE in die Kundenakte.
+        // Nur die PRUEFZIFFER ist verlesen; Konto + BLZ stehen separat und
+        // sauber daneben. Eine deutsche IBAN besteht genau aus diesen beiden
+        // Feldern, also wird sie NACHGERECHNET statt verworfen - das ist der
+        // Unterschied zwischen "nicht lesbar" und "nicht vorhanden".
+        $r = (new EnergiePortalAuftragParser())->parse($this->screenshotText([
+            'IBAN: DE82214500000105653802' => 'IBAN: DE83214500000105653802',
+        ]));
+
+        $this->assertNotNull($r);
+        $this->assertSame('DE82214500000105653802', $r['data']['bank']['iban']);
+        // Uebernommen, aber ausdruecklich als pruefbeduerftig gekennzeichnet.
+        $this->assertSame('pruefen', $r['data']['feldstatus']['bank.iban']['status']);
+        $this->assertStringContainsString('Kontonummer + BLZ', $r['summary']);
+    }
+
+    public function test_unreadable_iban_without_account_data_is_never_taken(): void
+    {
+        // Ohne zweite Quelle bleibt es beim alten, strengen Verhalten: eine
+        // IBAN ohne gueltige Pruefziffer kommt NIE in die Kundenakte.
         $r = (new EnergiePortalAuftragParser())->parse($this->screenshotText([
             'IBAN: DE82214500000105653802' => 'IBAN: DE82214500000105653803',
+            'Konto: 0105653802' => '',
+            'BLZ: 21450000 (Sparkasse Muster)' => '',
         ]));
 
         $this->assertNotNull($r);
         $this->assertArrayNotHasKey('iban', $r['data']['bank']);
+        $this->assertSame('pruefen', $r['data']['feldstatus']['bank.iban']['status']);
         $this->assertStringContainsString('Pruefziffer stimmt nicht', $r['summary']);
     }
 
-    public function test_iban_deviating_from_printed_account_is_flagged(): void
+    public function test_iban_contradicting_the_printed_account_is_not_taken(): void
     {
-        // Gueltige IBAN, die aber NICHT zur separat gedruckten Konto-/BLZ-
-        // Angabe passt -> uebernommen, aber mit Pruefhinweis.
+        // Gueltige IBAN, die NICHT zur separat gedruckten Konto-/BLZ-Angabe
+        // passt: zwei Quellen im selben Dokument sagen Verschiedenes. Frueher
+        // wurde die IBAN uebernommen und ein Hinweis angehaengt - einen
+        // Hinweis ueberliest man. Jetzt wird NICHTS uebernommen und das Feld
+        // steht als "widersprüchliche Angaben" im Review.
         $r = (new EnergiePortalAuftragParser())->parse($this->screenshotText([
             'BLZ: 21450000 (Sparkasse Muster)' => 'BLZ: 20050550 (Sparkasse Muster)',
         ]));
 
-        $this->assertSame('DE82214500000105653802', $r['data']['bank']['iban']);
-        $this->assertStringContainsString('weichen ab', $r['summary']);
+        $this->assertArrayNotHasKey('iban', $r['data']['bank']);
+        $this->assertSame('widerspruch', $r['data']['feldstatus']['bank.iban']['status']);
+        $this->assertStringContainsString('widersprechen sich', $r['summary']);
     }
 
     public function test_foreign_account_holder_is_not_taken(): void
@@ -325,5 +349,127 @@ class EnergiePortalAuftragParserTest extends TestCase
         $this->assertNull($parser->parse(
             "LichtBlick ÖkoStrom\nAuftragsnummer 1659475\nArbeitspreis: 33,93 Cent/kWh"
         ));
+    }
+
+    /**
+     * ZWEITE Bauform desselben Portals (gemeldeter Fall 28.08.2026): ein
+     * NEUEINZUG statt eines Anbieterwechsels. Das aendert drei Dinge -
+     * der Lieferbeginn heisst "Neueinzug zum" statt "gew. Lieferdatum", es
+     * gibt keinen Vorversorger, und der Anbietername steht nur in der
+     * Kopfzeile. Genau daran scheiterte der gemeldete Auftrag.
+     */
+    private function neueinzugText(array $ersetzungen = []): string
+    {
+        $text = implode("\n", [
+            '1687519 - Nullenergie AG - NEO P0',
+            'Frau Amira Beispiel',
+            '',
+            'Übersicht     Dokumente 1     Anfrage zum Vertrag',
+            '',
+            'Nullenergie                     Belieferungsanschrift                    Anschrift des Kontoinhaber',
+            '',
+            'Tarifübersicht                  Frau Amira Beispiel                      Frau Amira Beispiel',
+            '                                Musterring 12                            Musterring 12',
+            'Anbieter    Nullenergie AG      44787 Musterstadt                        44787 Musterstadt',
+            '                                geboren am: 27.04.1985',
+            'Produkt       NEO P0',
+            '                                Tel: +49 015563 045916                   Konto: 0105653802',
+            'Abnehmer      Privat            Mail: amira.beispiel@example.com         BLZ: 21450000 (Sparkasse Muster)',
+            '                                                                         IBAN: DE82214500000105653802',
+            'Tariftyp      Strom                                                      BIC: NOLADE21RDB',
+            '',
+            'Tarifdaten                      Belieferung',
+            '',
+            'Grundpreis    128,40 € / Jahr   Auftragsnummer         1687519',
+            '',
+            'Arbeitspreis  28,57 ct / kWh    Netzbetreiber          Musterstadt Netz GmbH',
+            '',
+            '4 Wochen Kündigungsfrist        Vorjahresverbrauch HT  2200 kWh / Jahr',
+            '',
+            '12 Monate E-Preisgarantie       Status                 1000 - Auftrag komplett erfasst',
+            '',
+            '12 Monate Vertragslaufzeit      Neueinzug zum          01.09.2026',
+            '',
+            'Lieferdatum                     Zählernummer           1EBZ0103716819',
+            '',
+            'Lieferdatum ist voraussichtlich Unterschriftsdatum     28.08.2026',
+            '',
+            '                                Zusatzinfos',
+            '',
+            '                                Zahlung                erfolgt per Bankeinzug',
+        ]);
+
+        return str_replace(array_keys($ersetzungen), array_values($ersetzungen), $text);
+    }
+
+    public function test_neueinzug_liefert_den_vertragsbeginn(): void
+    {
+        $r = (new EnergiePortalAuftragParser())->parse($this->neueinzugText());
+
+        $this->assertNotNull($r);
+        // Der Beginn stand im Dokument - nur unter einer anderen Beschriftung.
+        $this->assertSame('2026-09-01', $r['data']['versicherung']['start_date']);
+        $this->assertStringContainsString('Neueinzug (Neuanschluss, kein Anbieterwechsel)', $r['summary']);
+        // Ohne Vorversorger wird KEIN Beginn geschaetzt - hier gibt es einen
+        // echten, also braucht es die 20-Tage-Regel gar nicht.
+        $this->assertArrayNotHasKey('expected_start_within_days', $r['data']['versicherung']);
+
+        // Und die uebrigen Kernangaben stehen vollstaendig da.
+        $this->assertSame('amira.beispiel@example.com', $r['data']['person']['email']);
+        $this->assertSame('015563045916', $r['data']['person']['phone']);
+        $this->assertSame('DE82214500000105653802', $r['data']['bank']['iban']);
+        $this->assertSame('1687519', $r['data']['versicherung']['reference_number']);
+        $this->assertSame('1EBZ0103716819', $r['data']['energie']['meter_number']);
+    }
+
+    /**
+     * Dieselbe Beschriftung in weiteren Schreibweisen - die Erkennung darf
+     * nicht an EINEM Wort haengen, sonst liest sie den naechsten Anbieter
+     * nicht mehr.
+     */
+    public function test_lieferbeginn_wird_unter_mehreren_beschriftungen_gefunden(): void
+    {
+        foreach (['Lieferbeginn      ', 'Belieferungsbeginn', 'Vertragsbeginn    ',
+                  'Einzugsdatum      ', 'Einzug zum        '] as $label) {
+            $r = (new EnergiePortalAuftragParser())->parse(
+                $this->neueinzugText(['Neueinzug zum ' => $label])
+            );
+            $this->assertSame('2026-09-01', $r['data']['versicherung']['start_date'] ?? null,
+                'Beschriftung "' . trim($label) . '" wurde nicht gelesen.');
+        }
+    }
+
+    /**
+     * Das "@" ist auf einem Screenshot das fehleranfaelligste Zeichen -
+     * genau daran scheiterte die E-Mail im gemeldeten Auftrag.
+     */
+    public function test_verlesenes_at_zeichen_verhindert_die_email_nicht_mehr(): void
+    {
+        foreach (['©', '®', '@®', '(at)'] as $verlesen) {
+            $r = (new EnergiePortalAuftragParser())->parse($this->neueinzugText([
+                'amira.beispiel@example.com' => 'amira.beispiel' . $verlesen . 'example.com',
+            ]));
+            $this->assertSame('amira.beispiel@example.com', $r['data']['person']['email'] ?? null,
+                'Schreibweise "' . $verlesen . '" wurde nicht repariert.');
+            // Repariert heisst NICHT "sicher" - der Mitarbeiter soll hinsehen.
+            $this->assertSame('pruefen', $r['data']['feldstatus']['person.email']['status']);
+        }
+    }
+
+    /** Jedes Feld traegt seinen Zustand - der Mitarbeiter prueft nur die unsicheren. */
+    public function test_feldstatus_benennt_gelesene_und_fehlende_angaben(): void
+    {
+        $r = (new EnergiePortalAuftragParser())->parse($this->neueinzugText([
+            'Tel: +49 015563 045916' => '                      ',
+        ]));
+
+        $status = $r['data']['feldstatus'];
+        $this->assertSame('sicher', $status['person.birth_date']['status']);
+        $this->assertSame('sicher', $status['versicherung.start_date']['status']);
+        $this->assertSame('sicher', $status['energie.meter_number']['status']);
+        // Nicht im Dokument gefunden -> "fehlt". Es wird nichts geraten.
+        $this->assertSame('fehlt', $status['person.phone']['status']);
+        $this->assertSame('fehlt', $status['energie.malo_id']['status']);
+        $this->assertArrayNotHasKey('phone', $r['data']['person']);
     }
 }

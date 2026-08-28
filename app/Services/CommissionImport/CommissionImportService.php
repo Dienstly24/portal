@@ -517,7 +517,7 @@ class CommissionImportService
             }
         }
         if (!$hasKey) {
-            $errors[] = 'Die Zeile enthält keine verwertbare Kennung (Interne Vertragsnummer, Referenz-Nr., Id oder Auftr.-Nr.).';
+            $errors[] = 'Die Zeile enthält keine verwertbare Kennung (Interne Vertragsnummer, Referenz-Nr., Id, Auftr.-Nr., Zählernummer oder MaLo-ID).';
         }
 
         return $errors;
