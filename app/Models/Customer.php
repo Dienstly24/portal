@@ -193,7 +193,11 @@ class Customer extends Model {
         foreach ($tokens as $token) {
             // %/_ maskieren, damit Nutzereingaben keine LIKE-Platzhalter werden.
             $like = '%' . addcslashes($token, '%_\\') . '%';
-            $query->where(function ($w) use ($like) {
+            // Ein Suchwort, das ein DATUM ist (12.03.2012 / 2012-03-12), trifft
+            // zusaetzlich das Geburtsdatum - die Familienzuordnung sucht
+            // bestehende Kunden ausdruecklich auch darueber.
+            $birthDate = static::parseDateToken($token);
+            $query->where(function ($w) use ($like, $birthDate) {
                 // Direkte Kundenfelder (inkl. strukturierte Anschrift + PLZ/Ort).
                 $w->where('customer_number', 'like', $like)
                   ->orWhere('phone', 'like', $like)
@@ -230,9 +234,34 @@ class Customer extends Model {
                       ->orWhere('vin', 'like', $like)
                       ->orWhere('brand', 'like', $like)
                       ->orWhere('model', 'like', $like));
+                // Bewusst ganz am Ende der ODER-Kette: als erste Bedingung
+                // wuerde das folgende where() zu einem UND und die uebrigen
+                // Felder waeren nicht mehr durchsuchbar.
+                if ($birthDate !== null) {
+                    $w->orWhereDate('birth_date', $birthDate);
+                }
             });
         }
         return $query;
+    }
+
+    /**
+     * Ein Suchwort als Datum lesen - oder null, wenn es keines ist. Bewusst
+     * nur die beiden eindeutigen Schreibweisen (deutsch und ISO): eine
+     * grosszuegigere Erkennung wuerde reine Zahlen (PLZ, Kundennummer) zu
+     * Datumsangaben machen und die Suche verwaessern.
+     */
+    public static function parseDateToken(string $token): ?string
+    {
+        $token = trim($token);
+        foreach (['d.m.Y', 'Y-m-d'] as $format) {
+            $date = \DateTime::createFromFormat('!' . $format, $token);
+            if ($date !== false && $date->format($format) === $token) {
+                return $date->format('Y-m-d');
+            }
+        }
+
+        return null;
     }
 
     /** Token für den öffentlichen Abmelde-Link (lazy erzeugt). */
@@ -327,6 +356,15 @@ class Customer extends Model {
     public function documents() { return $this->hasMany(Document::class); }
     public function consents() { return $this->hasMany(CustomerConsent::class); }
     public function family() { return $this->hasMany(CustomerFamily::class); }
+
+    /**
+     * Familienbeziehungen zu ANDEREN Kundenakten, ausgehend von diesem Kunden:
+     * "X ist <Rolle> von mir". Die Gegenrichtung steht in familyRelationsOf().
+     */
+    public function familyRelations() { return $this->hasMany(CustomerFamilyRelation::class, 'customer_id'); }
+
+    /** Beziehungen, in denen dieser Kunde das verknuepfte Mitglied ist ("ich bin <Rolle> von X"). */
+    public function familyRelationsOf() { return $this->hasMany(CustomerFamilyRelation::class, 'related_customer_id'); }
     public function vehicles() { return $this->hasMany(CustomerVehicle::class); }
     public function messages() { return $this->hasMany(CustomerMessage::class); }
     public function notes() { return $this->hasMany(CustomerNote::class)->latest(); }
@@ -378,6 +416,142 @@ class Customer extends Model {
             $values['acquired_by_partner_id'] = Partner::whereKey(substr($key, 2))->value('id');
         }
         return $values;
+    }
+
+    /**
+     * Ab diesem Alter gilt ein Familienmitglied nicht mehr als abhaengig,
+     * sondern als eigenstaendiger Kunde (Betreiber-Vorgabe 28.08.2026).
+     */
+    public const DEPENDENT_AGE = 15;
+
+    /** Stammdaten, die ein abhaengiges Kind von der Bezugsperson erben kann. */
+    public const INHERITABLE_FIELDS = ['address', 'email', 'phone', 'mobile'];
+
+    /** Alter in Jahren oder null, wenn kein Geburtsdatum erfasst ist (nie schaetzen). */
+    public function age(): ?int
+    {
+        if (empty($this->birth_date)) {
+            return null;
+        }
+
+        return \Illuminate\Support\Carbon::parse($this->birth_date)->age;
+    }
+
+    /**
+     * Beziehungen, in denen dieser Kunde als ABHAENGIGES Familienmitglied an
+     * einer Bezugsperson haengt. Grundlage fuer Status und Datenvererbung.
+     */
+    public function dependencyRelations()
+    {
+        return $this->familyRelationsOf()->where('is_dependent', true);
+    }
+
+    /**
+     * Bezugspersonen (Eltern/Hauptkunden), von denen dieser Kunde heute
+     * abhaengig ist. Reihenfolge = Anlage-Reihenfolge; die erste gilt als
+     * Haupt-Bezugsperson.
+     *
+     * @return \Illuminate\Support\Collection<int, Customer>
+     */
+    public function familyGuardians(): \Illuminate\Support\Collection
+    {
+        return $this->dependencyRelations()
+            ->with(['customer.user'])
+            ->orderBy('created_at')
+            ->get()
+            ->filter(fn (CustomerFamilyRelation $r) => $r->dependentNow() && $r->customer !== null)
+            ->map(fn (CustomerFamilyRelation $r) => $r->customer)
+            ->values();
+    }
+
+    /** Haupt-Bezugsperson eines abhaengigen Familienmitglieds (oder null). */
+    public function familyGuardian(): ?Customer
+    {
+        return $this->familyGuardians()->first();
+    }
+
+    /**
+     * Ist dieser Kunde heute ein abhaengiges Familienmitglied (Kind < 15 mit
+     * hinterlegter Bezugsperson)? Wird IMMER aus Alter + Beziehung abgeleitet,
+     * nie aus einer eigenen Statusspalte - eine solche koennte aus dem Takt
+     * laufen, und der Uebergang mit 15 wuerde davon abhaengen, dass der
+     * Tageslauf gelaufen ist.
+     */
+    public function isFamilyDependent(): bool
+    {
+        return $this->familyGuardian() !== null;
+    }
+
+    /**
+     * KUNDENSTATUS (bewusst getrennt von der Familienrolle):
+     * 'familienmitglied' (abhaengig), 'hauptkunde' (fuehrt eine Familie) oder
+     * 'eigenstaendig'. Abgeleitet, damit Anzeige und Wirklichkeit nie
+     * auseinanderlaufen.
+     */
+    public function familyStatus(): array
+    {
+        if ($guardian = $this->familyGuardian()) {
+            return [
+                'key' => 'familienmitglied',
+                'label' => 'Familienmitglied / Kind – abhängig von ' . ($guardian->user?->name ?: 'Hauptkunde'),
+                'short' => 'Familienmitglied',
+                'color' => '#92400E', 'bg' => '#FEF3C7',
+                'guardian' => $guardian,
+            ];
+        }
+
+        if ($this->familyRelations()->where('is_dependent', true)->exists()) {
+            return [
+                'key' => 'hauptkunde', 'label' => 'Hauptkunde der Familie', 'short' => 'Hauptkunde',
+                'color' => '#128a4b', 'bg' => '#D9F4E6', 'guardian' => null,
+            ];
+        }
+
+        return [
+            'key' => 'eigenstaendig', 'label' => 'Eigenständiger Kunde', 'short' => 'Eigenständig',
+            'color' => '#185FA5', 'bg' => '#E6F1FB', 'guardian' => null,
+        ];
+    }
+
+    /** Rohwert eines vererbbaren Stammdatums an DIESEM Kunden (ohne Vererbung). */
+    private function ownContactValue(string $field): string
+    {
+        return trim((string) match ($field) {
+            'address' => $this->fullAddress(),
+            'email'   => $this->user?->hasRealEmail() ? $this->user->email : ($this->email2 ?? ''),
+            'phone'   => $this->phone ?? '',
+            'mobile'  => $this->mobile ?? '',
+            default   => '',
+        });
+    }
+
+    /**
+     * Wirksames Stammdatum eines Kunden - eigener Wert schlaegt IMMER den
+     * geerbten (Betreiber-Vorgabe 28.08.2026).
+     *
+     * Bewusst KEINE physische Kopie in die Kindakte: die Kontaktdaten der
+     * Familie stehen genau einmal (bei der Bezugsperson) und werden hier
+     * gelesen. Eine Kopie waere ab dem ersten Umzug falsch, ohne dass es
+     * jemandem auffaellt.
+     *
+     * @return array{value:string, inherited:bool, source:?Customer}
+     */
+    public function effectiveContact(string $field): array
+    {
+        $own = $this->ownContactValue($field);
+        if ($own !== '') {
+            return ['value' => $own, 'inherited' => false, 'source' => null];
+        }
+
+        // Geerbt wird nur, solange das Familienmitglied abhaengig ist.
+        foreach ($this->familyGuardians() as $guardian) {
+            $value = $guardian->ownContactValue($field);
+            if ($value !== '') {
+                return ['value' => $value, 'inherited' => true, 'source' => $guardian];
+            }
+        }
+
+        return ['value' => '', 'inherited' => false, 'source' => null];
     }
 
     /** Aktive E-Mail-Verarbeitungs-Einwilligung (oder null). */

@@ -42,6 +42,13 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
                 @if($customer->birth_date)
                 <span style="font-size:13px;font-weight:600;color:var(--ink-soft);background:var(--surface-soft,#F7F5EF);border:1px solid var(--line);border-radius:12px;padding:2px 10px;white-space:nowrap;">🎂 {{ \Carbon\Carbon::parse($customer->birth_date)->format('d.m.Y') }}</span>
                 @endif
+                {{-- KUNDENSTATUS (nicht die Familienrolle): abgeleitet aus Alter
+                     und Familienverknuepfung, damit Anzeige und Wirklichkeit nie
+                     auseinanderlaufen. --}}
+                @php $famStatus = $customer->familyStatus(); @endphp
+                @if($famStatus['key'] !== 'eigenstaendig')
+                <span style="font-size:12.5px;font-weight:600;color:{{ $famStatus['color'] }};background:{{ $famStatus['bg'] }};border-radius:12px;padding:2px 10px;white-space:nowrap;">{{ $famStatus['label'] }}</span>
+                @endif
             </div>
             <div style="font-size:14px;color:var(--ink-soft);">
                 {{ $customer->customer_number }}@if($customer->user?->email) · {{ $customer->user?->email }}@endif
@@ -125,7 +132,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
 </style>
 <div class="cust-tabs">
     <button type="button" class="cust-tab active" data-tab="tab-uebersicht" onclick="showCustTab('tab-uebersicht',this)">📄 Übersicht</button>
-    <button type="button" id="cust-tab-familie" class="cust-tab" data-tab="tab-familie" onclick="showCustTab('tab-familie',this)">👨‍👩‍👦 Familie <span style="opacity:.7;">({{ $customer->family->count() }})</span></button>
+    <button type="button" id="cust-tab-familie" class="cust-tab" data-tab="tab-familie" onclick="showCustTab('tab-familie',this)">👨‍👩‍👦 Familie <span style="opacity:.7;">({{ $customer->family->count() + $familie['all']->count() }})</span></button>
     {{-- Zaehler nennt AKTIV und GESAMT getrennt: die Registerkarte enthaelt
          auch die Historie, der aktive Bestand ist aber die fuehrende Zahl. --}}
     <button type="button" class="cust-tab" data-tab="tab-vertraege" onclick="showCustTab('tab-vertraege',this)">📑 Verträge <span style="opacity:.7;">({{ $aktiveVertraege->count() }} aktiv @if($customer->contracts->count() !== $aktiveVertraege->count())/ {{ $customer->contracts->count() }} gesamt @endif)</span></button>
@@ -226,8 +233,15 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
 <div class="card">
     <div class="card-title" style="margin-bottom:16px;">Persönliche Daten</div>
     <table style="width:100%;font-size:14px;">
-        <tr><td style="color:var(--ink-soft);padding:8px 0;width:130px;">Telefon</td><td>{{ $customer->phone ?? '—' }}</td></tr>
-        <tr><td style="color:var(--ink-soft);padding:8px 0;border-top:1px solid var(--line);">Adresse</td><td style="border-top:1px solid var(--line);">{{ $customer->address ?? '—' }}</td></tr>
+        {{-- Kontaktdaten eines abhaengigen Familienmitglieds: eigener Wert
+             schlaegt IMMER den geerbten. Geerbte Werte werden NICHT in die
+             Kindakte kopiert, sondern hier gelesen - eine Kopie waere ab dem
+             ersten Umzug still falsch. --}}
+        @php $famTel = $customer->effectiveContact('phone'); $famAdr = $customer->effectiveContact('address'); @endphp
+        <tr><td style="color:var(--ink-soft);padding:8px 0;width:130px;">Telefon</td><td>{{ $famTel['value'] !== '' ? $famTel['value'] : '—' }}
+            @if($famTel['inherited'])<span style="font-size:11px;background:#FEF3C7;color:#92400E;border-radius:999px;padding:1px 8px;margin-left:6px;">vom Elternteil übernommen</span>@endif</td></tr>
+        <tr><td style="color:var(--ink-soft);padding:8px 0;border-top:1px solid var(--line);">Adresse</td><td style="border-top:1px solid var(--line);">{{ $famAdr['value'] !== '' ? $famAdr['value'] : ($customer->address ?? '—') }}
+            @if($famAdr['inherited'])<span style="font-size:11px;background:#FEF3C7;color:#92400E;border-radius:999px;padding:1px 8px;margin-left:6px;">vom Elternteil übernommen</span>@endif</td></tr>
         <tr><td style="color:var(--ink-soft);padding:8px 0;border-top:1px solid var(--line);">IBAN</td><td style="border-top:1px solid var(--line);">{{ $customer->iban ? '••••' . substr($customer->iban,-4) : '—' }}</td></tr>
         <tr><td style="color:var(--ink-soft);padding:8px 0;border-top:1px solid var(--line);">Geburtsdatum</td><td style="border-top:1px solid var(--line);">{{ $customer->birth_date ? \Carbon\Carbon::parse($customer->birth_date)->format('d.m.Y') : '—' }}</td></tr>
         <tr><td style="color:var(--ink-soft);padding:8px 0;border-top:1px solid var(--line);">Familienstand</td><td style="border-top:1px solid var(--line);">{{ $customer->marital_status ?? '—' }}</td></tr>
@@ -274,7 +288,27 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
     @empty
     <p style="color:var(--ink-soft);font-size:13px;margin:4px 0 0;">Keine Familienmitglieder hinterlegt.</p>
     @endforelse
-    <a href="{{ route('admin.customer.edit', $customer->id) }}#familie" class="btn btn-ghost" style="width:100%;margin-top:14px;font-size:12.5px;text-align:center;">✏️ Familie bearbeiten</a>
+
+    {{-- Familienkarte: verknuepfte KUNDENAKTEN. Jedes Mitglied ist anklickbar
+         und fuehrt direkt in sein eigenes Kundenprofil. --}}
+    @if($familie['all']->isNotEmpty())
+    <div style="border-top:1px solid var(--line);margin-top:12px;padding-top:12px;">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin-bottom:8px;">Verknüpfte Kunden</div>
+        @foreach($familie['all'] as $famRel)
+        @php $famMitglied = $famRel->relatedCustomer; $famAlter = $famMitglied->age(); @endphp
+        <div style="display:flex;align-items:center;gap:10px;padding:7px 0;{{ !$loop->first ? 'border-top:1px solid var(--line);' : '' }}">
+            <div style="font-size:20px;flex:none;">{{ \App\Models\CustomerFamilyRelation::roleEmoji($famRel->relationship_type) }}</div>
+            <div style="flex:1;min-width:0;">
+                <a href="{{ route('admin.customer', $famMitglied->id) }}" style="font-size:13.5px;font-weight:600;color:var(--ink);text-decoration:none;">{{ $famMitglied->user?->name ?? 'Kunde' }}</a>
+                <div style="font-size:12px;color:var(--ink-soft);">{{ \App\Models\CustomerFamilyRelation::roleLabel($famRel->relationship_type) }}@if($famAlter !== null) · {{ $famAlter }} J.@endif · {{ $famRel->dependentNow() ? 'Familienmitglied' : 'Eigenständiger Kunde' }}</div>
+            </div>
+        </div>
+        @endforeach
+    </div>
+    @endif
+
+    <button type="button" onclick="document.getElementById('cust-tab-familie').click()" class="btn btn-ghost" style="width:100%;margin-top:14px;font-size:12.5px;text-align:center;">👪 Familie &amp; Kinder verwalten</button>
+    <a href="{{ route('admin.customer.edit', $customer->id) }}#familie" class="btn btn-ghost" style="width:100%;margin-top:8px;font-size:12.5px;text-align:center;">✏️ Familie bearbeiten</a>
 </div>
 
 {{-- Verwandte Kunden: andere Akten mit gemeinsamen Merkmalen (Telefon,
@@ -364,12 +398,13 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
 
 {{-- ================= Familie-Tab ================= --}}
 <div class="tab-section" id="tab-familie" style="display:none;">
+@include('admin.partials.family_relations', ['customer' => $customer, 'familie' => $familie])
 <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:10px;">
-        <div class="card-title" style="margin-bottom:0;">👨‍👩‍👦 Familie & Kinder ({{ $customer->family->count() }})</div>
+        <div class="card-title" style="margin-bottom:0;">👨‍👩‍👦 Familienmitglieder ohne eigene Kundenakte ({{ $customer->family->count() }})</div>
         <a href="{{ route('admin.customer.edit', $customer->id) }}#familie" class="btn btn-gold btn-sm">✏️ Familie bearbeiten</a>
     </div>
-    <p style="font-size:12px;color:var(--ink-soft);margin:0 0 18px;">Ehepartner und Kinder des Kunden mit vollstaendigen Angaben (Geburtsdatum, Geschlecht, Krankenkasse, KV-Nummer, KV-Status).</p>
+    <p style="font-size:12px;color:var(--ink-soft);margin:0 0 18px;">Personen, die <strong>keinen eigenen Kundendatensatz</strong> haben – erfasst mit Geburtsdatum, Geschlecht, Krankenkasse, KV-Nummer und KV-Status. Familienmitglieder mit eigener Akte stehen oben unter „Verknüpfte Kunden".</p>
     @if($customer->family->count())
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;">
         @foreach($customer->family as $f)

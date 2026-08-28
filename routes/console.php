@@ -40,6 +40,11 @@ Schedule::command('document-requests:remind')->dailyAt('08:15');
 // ueber heute faellige + ueberfaellige Aufgaben (Aufgaben-Ausbau 26.07.2026)
 Schedule::command('tasks:remind')->dailyAt('07:45');
 
+// 05:40 — Familienmitglieder, die 15 geworden sind, auf "eigenstaendiger Kunde"
+// umstellen. Reiner Statuswechsel: die Familienbeziehung bleibt bestehen, kein
+// Vertrag wird angefasst (Betreiber-Vorgabe 28.08.2026).
+Schedule::command('familie:uebergaenge-anwenden')->dailyAt('05:40');
+
 // Stuendlich tagsueber — geplante Aufgaben-E-Mails ("in 14 Tagen nachfassen")
 // am Stichtag an den Kunden versenden; erledigte Aufgaben versenden nie.
 Schedule::command('tasks:send-auto-emails')->hourly()->between('8:00', '18:00')->withoutOverlapping();

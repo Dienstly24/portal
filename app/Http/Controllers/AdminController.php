@@ -332,7 +332,12 @@ class AdminController extends Controller
             $customer,
             includeEmails: in_array(auth()->user()->role, ['admin', 'manager', 'support'], true),
         );
-        return view('admin.customer_show', compact('customer', 'internalChat', 'internalNotes', 'customerMessages', 'relations', 'conversationTimeline'));
+        // Familienstruktur: verknuepfte KUNDENAKTEN (Ehepartner, Kinder,
+        // Eltern) mit Rolle, Alter und Abhaengigkeit. Bewusst getrennt von
+        // $customer->family - dort stehen Personen OHNE eigene Akte.
+        $familie = app(\App\Services\Family\FamilyRelationService::class)->overview($customer);
+
+        return view('admin.customer_show', compact('customer', 'internalChat', 'internalNotes', 'customerMessages', 'relations', 'conversationTimeline', 'familie'));
     }
 
     /**

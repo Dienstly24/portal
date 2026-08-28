@@ -210,6 +210,20 @@
         </div>
     </div>
     <div style="font-size:12px;color:var(--ink-soft);margin-top:10px;">💡 Neue Einträge werden beim Klick auf „Speichern“ übernommen.</div>
+    {{-- Familienmitglieder mit EIGENER Kundenakte (z. B. aus einer eigenen
+         Gesundheitskarte entstanden) werden nicht hier erfasst, sondern im
+         Kundenprofil verknuepft - dort bleibt ihr Datensatz vollstaendig
+         erhalten. Die Bedienung liegt bewusst dort, weil dieses Formular ein
+         einziges grosses Formular ist und ein Formular im Formular ungueltig
+         waere. --}}
+    <div style="border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:16px;background:var(--surface-soft,#F7F5EF);">
+        <div style="font-size:13px;font-weight:600;margin-bottom:6px;">👪 Familienmitglied mit eigener Kundenakte?</div>
+        <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;">
+            Existiert das Familienmitglied bereits als eigener Kunde (z. B. über eine eigene Gesundheitskarte angelegt),
+            wird es <strong>verknüpft statt neu angelegt</strong> – der bestehende Datensatz mit Verträgen, Dokumenten und Historie bleibt erhalten.
+        </div>
+        <a href="{{ route('admin.customer', $customer->id) }}#familie" class="btn btn-ghost" style="font-size:12.5px;">Bestehenden Kunden verknüpfen →</a>
+    </div>
 </div>
 
 {{-- Tab: Firma --}}
