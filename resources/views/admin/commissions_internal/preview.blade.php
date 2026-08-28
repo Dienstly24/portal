@@ -28,6 +28,7 @@
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;font-size:13px;">
         <div><div style="font-size:11.5px;color:var(--ink-soft);">Dateiname</div><div style="font-weight:600;">{{ $import->filename }}</div></div>
         <div><div style="font-size:11.5px;color:var(--ink-soft);">Format</div><div style="font-weight:600;">{{ strtoupper($import->format) }}</div></div>
+        <div><div style="font-size:11.5px;color:var(--ink-soft);">Erkannte Quelle</div><div style="font-weight:600;">{{ $import->providerLabel() }}</div></div>
         <div><div style="font-size:11.5px;color:var(--ink-soft);">Betriebsart</div><div style="font-weight:600;">{{ $import->modeLabel() }}</div></div>
         <div><div style="font-size:11.5px;color:var(--ink-soft);">Zeilen (ohne Kopf)</div><div style="font-weight:600;">{{ $import->rows_total }}</div></div>
         <div><div style="font-size:11.5px;color:var(--ink-soft);">Spalten</div><div style="font-weight:600;">{{ count((array) $import->header) }}</div></div>
@@ -35,6 +36,18 @@
         <div><div style="font-size:11.5px;color:var(--ink-soft);">Kodierung</div><div style="font-weight:600;">{{ $import->encoding ?: '—' }}</div></div>
         <div><div style="font-size:11.5px;color:var(--ink-soft);">Tabellenblatt</div><div style="font-weight:600;">{{ $import->sheet_name ?: '— (keine Excel-Datei)' }}</div></div>
     </div>
+
+    @if($import->providerHint())
+    <div style="margin-top:14px;background:#EEF6F1;border:1px solid #9BD9BB;border-radius:8px;padding:10px 12px;font-size:12.5px;">
+        <b>{{ $import->providerLabel() }}.</b> {{ $import->providerHint() }}
+    </div>
+    @else
+    <div style="margin-top:14px;background:#FEF3C7;border:1px solid #E8C36A;border-radius:8px;padding:10px 12px;font-size:12.5px;">
+        <b>Quelle nicht erkannt.</b> Das ist kein Fehler – die Datei lässt sich trotzdem importieren.
+        Bitte in Schritt 3 prüfen, ob die Spalten richtig zugeordnet sind; die Zuordnung entscheidet,
+        nicht die Erkennung.
+    </div>
+    @endif
 
     @if(count((array) $import->sheet_names) > 1)
     <div style="margin-top:14px;background:#FEF3C7;border:1px solid #E8C36A;border-radius:8px;padding:10px 12px;font-size:12.5px;">

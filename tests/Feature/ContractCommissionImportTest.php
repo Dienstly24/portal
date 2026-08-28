@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\CommissionImport\CommissionImportService;
 use App\Services\CommissionImport\ColumnMap;
 use App\Services\CommissionImport\ColumnMap as Cols;
+use App\Services\CommissionImport\CommissionSourceProfile;
 use App\Services\CommissionImport\CsvTableReader;
 use App\Services\CommissionImport\PersonNameParser;
 use App\Services\CommissionImport\ValueParser;
@@ -1163,6 +1164,130 @@ class ContractCommissionImportTest extends TestCase
         $this->assertNull($c['zip']);
         $this->assertNull($c['street']);
         $this->assertSame('Irgendein Text', $c['raw']);
+    }
+
+    // ---------------------------- 16. MEHRERE QUELLEN, MEHRERE FORMATE
+
+    public function test_die_drei_echten_quellen_werden_erkannt(): void
+    {
+        $pool = ['Abrechnungsnummer', 'Abrechnungsdatum', 'Vertragsnummer extern', 'Vertragsnummer intern',
+            'Kunde', 'Produktname', 'Gesellschaft', 'Sparte', 'Provisionsbetrag', 'Provisionsart', 'Kontoinhaber'];
+        $portal = ['Datum', 'Produkt', 'Id', 'Status', 'Provision', 'Tracking-Id', 'Stornogrund', 'Referenz-Nr.'];
+        $energie = ['VP-Name', 'Auftr.-Nr.', 'Ihre Auftr.-Nr.', 'Anlagedatum', 'Auftr.-Status',
+            'Auftr.-Statustext', 'Kunden', 'Anschrift', 'Geburtsdatum', 'Telefonnummer', 'Zählernummer'];
+
+        $this->assertSame('maklerpool', CommissionSourceProfile::detect($pool));
+        $this->assertSame('tarifcheck24', CommissionSourceProfile::detect($portal));
+        $this->assertSame('energie_vertriebsportal', CommissionSourceProfile::detect($energie));
+
+        // Eine UNBEKANNTE Quelle ist kein Fehler - sie hat nur kein Profil.
+        $this->assertNull(CommissionSourceProfile::detect(['Vertrag', 'Betrag', 'Wann']));
+        $this->assertSame(CommissionSourceProfile::UNKNOWN_LABEL, CommissionSourceProfile::label(null));
+    }
+
+    public function test_die_quelle_steht_am_import_und_an_der_provision(): void
+    {
+        $this->contract($this->customer(), ['internal_contract_number' => 'V19613073']);
+        $import = $this->service()->analyze($this->file($this->poolCsv([[]])), 'abrechnung.csv');
+
+        $this->assertSame('maklerpool', $import->provider);
+        $this->assertSame('Maklerpool-Abrechnung', $import->providerLabel());
+
+        $this->service()->confirm($import);
+        $this->assertSame('maklerpool', ContractCommission::sole()->provider);
+    }
+
+    public function test_die_quelle_bestimmt_die_betriebsart(): void
+    {
+        // Die Auftragsliste hat keine Betragsspalte - das Profil stellt die
+        // Betriebsart, ohne dass jemand sie von Hand waehlen muss.
+        $import = $this->service()->analyze($this->file($this->orderCsv([[]])), 'order.csv');
+
+        $this->assertSame('energie_vertriebsportal', $import->provider);
+        $this->assertSame(Cols::MODE_AUFTRAGSLISTE, $import->mode);
+    }
+
+    public function test_unbekannte_quelle_wird_trotzdem_importiert(): void
+    {
+        // Der naechste Maklerpool darf ohne Code-Aenderung importiert werden -
+        // sonst waere aus "mehrere Quellen" wieder "eine Quelle, nur eine
+        // andere".
+        $this->contract($this->customer(), ['internal_contract_number' => 'V77777777']);
+        $csv = "Interne Vertragsnummer;Kunde;Provision;Provisionsdatum\n"
+            . "V77777777;VN Neu, Anna;250,00;15.08.2026\n";
+
+        $import = $this->service()->analyze($this->file($csv), 'fremder-pool.csv');
+
+        $this->assertNull($import->provider);
+        $this->assertSame(0, $import->rows_invalid);
+        $this->assertSame(1, $import->rows_new);
+
+        $this->service()->confirm($import);
+        $this->assertSame('250.00', (string) ContractCommission::sole()->amount);
+    }
+
+    public function test_liste_laesst_sich_nach_quelle_filtern(): void
+    {
+        $this->contract($this->customer(), ['internal_contract_number' => 'V19613073']);
+        $this->service()->confirm($this->service()->analyze($this->file($this->poolCsv([[]])), 'pool.csv'));
+        $this->service()->confirm($this->service()->analyze(
+            $this->file("Id;Provision;Status;Datum\n9787196;75,00;1;25.08.2026\n"),
+            'tc24.csv'
+        ));
+        $this->assertSame(2, ContractCommission::count());
+
+        $antwort = $this->actingAs($this->admin())
+            ->get(route('admin.commissions_internal.index', ['quelle' => 'maklerpool']));
+
+        $antwort->assertOk()->assertSee('Maklerpool-Abrechnung');
+        $this->assertSame(1, $antwort->viewData('commissions')->total());
+    }
+
+    // ---------------------------- 17. KEINE SACKGASSE AUF DER FALSCHEN SEITE
+
+    public function test_falsche_seite_nennt_die_richtige(): void
+    {
+        // Genau der gemeldete Fall: die Auftragsliste des Energieportals
+        // landet auf der TARIFCHECK24-Seite. Vorher stand dort nur
+        // "Die Spalte Id fehlt" - ohne jeden Weg weiter.
+        $upload = UploadedFile::fake()->createWithContent('order.csv', $this->orderCsv([[]]));
+
+        $this->actingAs($this->admin())
+            ->post(route('admin.vermittler.import'), ['csv_file' => $upload])
+            ->assertRedirect();
+
+        $meldung = (string) session('error');
+        $this->assertStringContainsString('Energie-Vertriebsportal', $meldung);
+        $this->assertStringContainsString(route('admin.commissions_internal.import'), $meldung);
+    }
+
+    public function test_echte_vermittler_datei_bekommt_keinen_falschen_hinweis(): void
+    {
+        // Eine TARIFCHECK24-Datei gehoert dorthin - dann darf kein Hinweis
+        // auf die andere Seite erscheinen, auch wenn der Import scheitert.
+        $upload = UploadedFile::fake()->createWithContent(
+            'tc24.csv',
+            "Datum;Produkt;Id;Status;Provision;Tracking-Id;Stornogrund;Referenz-Nr.\n"
+            . "2026-08-25 00:00:00;Kfz-Versicherung Abschluss;9787196;1;75;;;1437-7875-9260-98\n"
+        );
+
+        $this->actingAs($this->admin())
+            ->post(route('admin.vermittler.import'), ['csv_file' => $upload])
+            ->assertRedirect();
+
+        $this->assertStringNotContainsString(
+            route('admin.commissions_internal.import'),
+            (string) session('error')
+        );
+    }
+
+    public function test_vermittler_seite_weist_vorab_auf_die_andere_hin(): void
+    {
+        $this->actingAs($this->admin())
+            ->get(route('admin.vermittler.index'))
+            ->assertOk()
+            ->assertSee('nur für die Abrechnung von TARIFCHECK24', false)
+            ->assertSee(route('admin.commissions_internal.import'), false);
     }
 
     // ------------------------------------------------ Hilfsmittel: XLSX bauen

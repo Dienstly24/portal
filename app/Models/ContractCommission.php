@@ -32,7 +32,7 @@ class ContractCommission extends Model
         'company', 'sparte', 'amount', 'currency', 'vat_amount', 'reserve_amount',
         'paid_amount', 'commission_date', 'due_date', 'payment_date', 'status',
         'storno_reason', 'invoice_number', 'invoice_date', 'invoice_amount',
-        'invoice_linked_at', 'invoice_document_id', 'source_file', 'notes',
+        'invoice_linked_at', 'invoice_document_id', 'source_file', 'provider', 'notes',
         'dedupe_key', 'row_hash', 'created_by', 'updated_by',
     ];
 
@@ -71,6 +71,12 @@ class ContractCommission extends Model
     public function import() { return $this->belongsTo(CommissionImport::class, 'import_id'); }
     public function invoiceDocument() { return $this->belongsTo(Document::class, 'invoice_document_id'); }
     public function auditLogs() { return $this->hasMany(CommissionAuditLog::class, 'commission_id')->latest('created_at'); }
+
+    /** Klartext der Quelle, aus der diese Provision stammt. */
+    public function providerLabel(): string
+    {
+        return \App\Services\CommissionImport\CommissionSourceProfile::label($this->provider);
+    }
 
     public function statusLabel(): string { return CommissionStatus::label($this->status); }
     public function statusBadge(): string { return CommissionStatus::badge($this->status); }

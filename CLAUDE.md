@@ -1443,6 +1443,25 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   Vorgang (Klartext ist zufaellig, wird nie gespeichert oder verschickt;
   den echten Zugang setzt spaeter `PortalAccessService`). Die drei echten
   Dateien laufen damit in rund 13 Sekunden statt 160.
+  **MEHRERE QUELLEN, MEHRERE FORMATE (Betreiber-Meldung 26.08.2026)**: Der
+  Betrieb bekommt Abrechnungen aus verschiedenen Systemen, und jedes nennt
+  seine Kennung anders - `Id` (Vergleichsportal), `Vertragsnummer intern`
+  (Maklerpool), `Auftr.-Nr.` (Energie-Vertriebsportal).
+  `CommissionSourceProfile` erkennt die Quelle an der Kopfzeile, benennt sie
+  in der Vorschau, stellt die Betriebsart passend ein und wird an Import UND
+  Provision gespeichert (`provider`) - erst damit ist "was hat uns welcher
+  Vermittler gebracht?" eine Abfrage und nicht eine Suche ueber Dateinamen.
+  Filter und Export folgen der Quelle. ERKENNUNG, KEINE VORAUSSETZUNG: eine
+  unbekannte Quelle wird NIE abgelehnt, sie laeuft ueber die normale
+  Spaltenzuordnung - sonst waere aus "mehrere Quellen" wieder "eine Quelle,
+  nur eine andere".
+  **KEINE SACKGASSE AUF DER FALSCHEN SEITE**: `/admin/vermittler-abrechnung`
+  liest ausschliesslich TARIFCHECK24 (Pflichtspalte `Id`). Wer dort eine
+  Maklerpool-Abrechnung hochlud, bekam nur "Die Spalte Id fehlt" - ohne
+  jeden Weg weiter. Jetzt steht der Wegweiser VOR dem Upload auf der Seite,
+  und schlaegt ein Import fehl, erkennt `wrongImporterHint()` die tatsaechliche
+  Quelle und nennt den richtigen Weg samt Link. Eine echte TARIFCHECK24-Datei
+  bekommt diesen Hinweis bewusst NICHT - dort ist wirklich die Datei kaputt.
   Tests: `ContractCommissionImportTest`.
 
 - **Auftrag zuerst, Vertrag spaeter: ein Vorgang, EIN Vertrag**

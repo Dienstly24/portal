@@ -99,7 +99,7 @@
     <div style="overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
             <thead><tr style="text-align:left;color:var(--ink-soft);">
-                <th style="padding:8px;">Datei</th><th style="padding:8px;">Format</th>
+                <th style="padding:8px;">Datei</th><th style="padding:8px;">Quelle</th><th style="padding:8px;">Format</th>
                 <th style="padding:8px;">Zeilen</th><th style="padding:8px;">Ergebnis</th>
                 <th style="padding:8px;">Zustand</th><th style="padding:8px;">Von</th><th style="padding:8px;">Wann</th>
             </tr></thead>
@@ -107,6 +107,7 @@
             @foreach($imports as $import)
             <tr style="border-top:1px solid var(--line);">
                 <td style="padding:8px;"><a href="{{ route('admin.commissions_internal.preview', $import->id) }}">{{ $import->filename }}</a></td>
+                <td style="padding:8px;">{{ $import->providerLabel() }}</td>
                 <td style="padding:8px;">
                     {{ strtoupper($import->format) }}@if($import->sheet_name) <span style="color:var(--ink-soft);">· {{ $import->sheet_name }}</span>@endif
                     @unless($import->isAbrechnung())<div style="color:var(--ink-soft);font-size:11.5px;">Auftragsliste</div>@endunless

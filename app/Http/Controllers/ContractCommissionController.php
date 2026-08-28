@@ -55,6 +55,14 @@ class ContractCommissionController extends Controller implements HasMiddleware
         if (CommissionStatus::isValid($request->query('status'))) {
             $query->where('status', $request->query('status'));
         }
+        // Filter nach QUELLE: die Frage des Betriebs lautet "was hat uns
+        // welcher Vermittler gebracht?" - dafuer taugt der Dateiname nicht,
+        // er wechselt mit jedem Export.
+        if ($request->filled('quelle')) {
+            $request->query('quelle') === 'unbekannt'
+                ? $query->whereNull('provider')
+                : $query->where('provider', $request->query('quelle'));
+        }
         if ($request->filled('empfaenger')) {
             $query->where('recipient_name', 'like', '%' . addcslashes((string) $request->query('empfaenger'), '%_\\') . '%');
         }
@@ -88,7 +96,8 @@ class ContractCommissionController extends Controller implements HasMiddleware
                 ->paginate(50)->withQueryString(),
             'totals' => $totals,
             'statuses' => CommissionStatus::ALL,
-            'filters' => $request->only(['q', 'status', 'empfaenger', 'kunde', 'vertrag', 'zuordnung', 'von', 'bis']),
+            'filters' => $request->only(['q', 'status', 'quelle', 'empfaenger', 'kunde', 'vertrag', 'zuordnung', 'von', 'bis']),
+            'providers' => \App\Services\CommissionImport\CommissionSourceProfile::PROFILES,
             'unmatchedCount' => ContractCommission::unmatched()->count(),
             'draftCount' => CommissionImport::where('status', CommissionImport::ENTWURF)->count(),
         ]);
@@ -534,6 +543,11 @@ class ContractCommissionController extends Controller implements HasMiddleware
         if (CommissionStatus::isValid($request->query('status'))) {
             $query->where('status', $request->query('status'));
         }
+        if ($request->filled('quelle')) {
+            $request->query('quelle') === 'unbekannt'
+                ? $query->whereNull('provider')
+                : $query->where('provider', $request->query('quelle'));
+        }
         if ($request->filled('von')) {
             $query->whereDate('commission_date', '>=', $request->query('von'));
         }
@@ -553,7 +567,7 @@ class ContractCommissionController extends Controller implements HasMiddleware
                 'Interne Vertragsnummer', 'Vertragsnummer', 'Kunde', 'Provisionsempfänger',
                 'Provisionsart', 'Produkt', 'Gesellschaft', 'Betrag', 'Währung',
                 'Provisionsdatum', 'Fälligkeitsdatum', 'Zahlungsdatum', 'Status',
-                'Rechnungsnummer', 'Quelle',
+                'Rechnungsnummer', 'Quelle', 'Datei',
             ], ';');
             $query->orderBy('commission_date')->chunkById(500, function ($rows) use ($out) {
                 foreach ($rows as $c) {
@@ -565,7 +579,7 @@ class ContractCommissionController extends Controller implements HasMiddleware
                         $c->currency,
                         $c->commission_date?->format('d.m.Y'), $c->due_date?->format('d.m.Y'),
                         $c->payment_date?->format('d.m.Y'), $c->statusLabel(),
-                        $c->invoice_number, $c->source_file,
+                        $c->invoice_number, $c->providerLabel(), $c->source_file,
                     ], ';');
                 }
             });

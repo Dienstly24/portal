@@ -33,6 +33,22 @@
     @endforeach
 </div>
 
+{{-- WEGWEISER (Betreiber-Meldung 26.08.2026): Diese Seite liest NUR das
+     Format eines einzigen Vermittlers. Wer hier eine Maklerpool-Abrechnung
+     oder eine Auftragsliste hochlaedt, bekam bisher nur "Die Spalte Id
+     fehlt" - eine Sackgasse. Der Hinweis steht deshalb VOR dem Upload. --}}
+@can('provisionen-verwalten')
+<div style="background:#FEF3C7;border:1px solid #E8C36A;border-radius:10px;padding:14px 16px;margin-bottom:20px;max-width:980px;font-size:13px;">
+    <b>Diese Seite ist nur für die Abrechnung von TARIFCHECK24</b> (Pflichtspalte <code>Id</code>).
+    <div style="margin-top:6px;">
+        Dateien aus <b>anderen Quellen</b> – Maklerpool („Vertragsnummer intern“), Energie-Vertriebsportal
+        („Auftr.-Nr.“) oder einem weiteren Portal – gehören nach
+        <a href="{{ route('admin.commissions_internal.import') }}"><b>Interne Provisionen → CSV / Excel importieren</b></a>.
+        Dort erkennt das System die Quelle selbst, zeigt die Spalten zur Prüfung an und schreibt erst nach Ihrer Bestätigung.
+    </div>
+</div>
+@endcan
+
 <div class="card" style="max-width:980px;">
     <div style="font-weight:700;font-size:14px;margin-bottom:6px;">Abrechnungsdatei (CSV) einlesen</div>
     <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;">

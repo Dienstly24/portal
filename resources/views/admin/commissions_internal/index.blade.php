@@ -64,6 +64,16 @@
             </select>
         </div>
         <div class="field" style="margin:0;">
+            <label>Quelle</label>
+            <select name="quelle">
+                <option value="">Alle Quellen</option>
+                @foreach($providers as $key => $profile)
+                <option value="{{ $key }}" @selected(($filters['quelle'] ?? '') === $key)>{{ $profile['label'] }}</option>
+                @endforeach
+                <option value="unbekannt" @selected(($filters['quelle'] ?? '') === 'unbekannt')>Unbekannte Quelle</option>
+            </select>
+        </div>
+        <div class="field" style="margin:0;">
             <label>Provisionsempfänger</label>
             <input type="text" name="empfaenger" value="{{ $filters['empfaenger'] ?? '' }}">
         </div>
@@ -137,7 +147,10 @@
                     <td style="padding:8px;white-space:nowrap;">{{ $c->due_date?->format('d.m.Y') ?: '—' }}</td>
                     <td style="padding:8px;white-space:nowrap;">{{ $c->payment_date?->format('d.m.Y') ?: '—' }}</td>
                     <td style="padding:8px;"><span class="badge badge-{{ $c->statusBadge() }}">{{ $c->statusIcon() }} {{ $c->statusLabel() }}</span></td>
-                    <td style="padding:8px;color:var(--ink-soft);font-size:11.5px;">{{ $c->source_file ?: '—' }}</td>
+                    <td style="padding:8px;color:var(--ink-soft);font-size:11.5px;">
+                        {{ $c->providerLabel() }}
+                        @if($c->source_file)<div>{{ $c->source_file }}</div>@endif
+                    </td>
                     <td style="padding:8px;color:var(--ink-soft);font-size:11.5px;white-space:nowrap;">{{ $c->updated_at?->lokal()->format('d.m.Y H:i') }}</td>
                 </tr>
             @endforeach

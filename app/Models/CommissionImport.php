@@ -22,7 +22,7 @@ class CommissionImport extends Model
     public const VERWORFEN = 'verworfen';
 
     protected $fillable = [
-        'filename', 'file_hash', 'format', 'mode', 'delimiter', 'encoding', 'sheet_name',
+        'filename', 'file_hash', 'format', 'mode', 'provider', 'delimiter', 'encoding', 'sheet_name',
         'sheet_names', 'header', 'column_map', 'status', 'rows_total', 'rows_new',
         'rows_updated', 'rows_duplicate', 'rows_unmatched', 'rows_invalid',
         'rows_buildable', 'rows_unlinked_kept', 'contracts_created', 'customers_created',
@@ -52,6 +52,17 @@ class CommissionImport extends Model
     public function isAbrechnung(): bool
     {
         return $this->mode !== \App\Services\CommissionImport\ColumnMap::MODE_AUFTRAGSLISTE;
+    }
+
+    /** Klartext der erkannten Quelle ("Maklerpool-Abrechnung"). */
+    public function providerLabel(): string
+    {
+        return \App\Services\CommissionImport\CommissionSourceProfile::label($this->provider);
+    }
+
+    public function providerHint(): ?string
+    {
+        return \App\Services\CommissionImport\CommissionSourceProfile::hint($this->provider);
     }
 
     public function modeLabel(): string
