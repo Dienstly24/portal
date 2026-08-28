@@ -472,4 +472,68 @@ class EnergiePortalAuftragParserTest extends TestCase
         $this->assertSame('fehlt', $status['energie.malo_id']['status']);
         $this->assertArrayNotHasKey('phone', $r['data']['person']);
     }
+
+    /**
+     * Die E-Mail kann an ZWEI Stellen brechen, nicht nur an einer: am WERT
+     * (das "@") und an der BESCHRIFTUNG. "Mail:" steht im Portal
+     * unterstrichen, und ein Unterstrich verschmilzt beim Erkennen gern mit
+     * dem Wort. Bricht die Beschriftung, half die Wert-Reparatur nicht - die
+     * Suche fand ja gar keine Stelle zum Reparieren.
+     */
+    public function test_email_wird_auch_ohne_lesbare_beschriftung_gefunden(): void
+    {
+        foreach (['Maii:', 'Mall:', 'MaiI:', ''] as $verlesen) {
+            $r = (new EnergiePortalAuftragParser())->parse($this->neueinzugText([
+                'Mail: amira.beispiel@example.com' => $verlesen . ' amira.beispiel@example.com',
+            ]));
+            $this->assertSame('amira.beispiel@example.com', $r['data']['person']['email'] ?? null,
+                'Beschriftung "' . $verlesen . '" liess die Adresse verschwinden.');
+            // Ohne Beschriftung ist die Adresse plausibel, nicht belegt.
+            $this->assertSame('pruefen', $r['data']['feldstatus']['person.email']['status']);
+        }
+    }
+
+    /** Beide Bruchstellen zugleich: Beschriftung UND "@" verlesen. */
+    public function test_email_wird_auch_bei_zwei_lesefehlern_gefunden(): void
+    {
+        foreach (['©', '®', '€', '°'] as $statt) {
+            $r = (new EnergiePortalAuftragParser())->parse($this->neueinzugText([
+                'Mail: amira.beispiel@example.com' => 'Maii: amira.beispiel' . $statt . 'example.com',
+            ]));
+            $this->assertSame('amira.beispiel@example.com', $r['data']['person']['email'] ?? null,
+                '"' . $statt . '" statt "@" liess die Adresse verschwinden.');
+        }
+    }
+
+    /**
+     * Die Rueckfallebene darf NIE eine fremde Adresse zur Kundenadresse
+     * machen - sonst stuende der Kundenservice des Versorgers als Kontakt in
+     * der Kundenakte und bekaeme unsere Post.
+     */
+    public function test_fremde_adressen_werden_nie_zur_kundenadresse(): void
+    {
+        foreach ([
+            'service@fremdanbieter.de',      // Sammelpostfach
+            'info@fremdanbieter.de',         // Sammelpostfach
+            'kundenservice@fremdanbieter.de',// Sammelpostfach
+            'abrechnung@nullenergie.de',     // Domain = der Anbieter dieses Auftrags
+            'berater@dienstly24.de',         // unser eigenes Haus
+        ] as $fremd) {
+            $r = (new EnergiePortalAuftragParser())->parse($this->neueinzugText([
+                'Mail: amira.beispiel@example.com' => $fremd,
+            ]));
+            $this->assertArrayNotHasKey('email', $r['data']['person'],
+                '"' . $fremd . '" wurde faelschlich als Kundenadresse uebernommen.');
+            $this->assertSame('fehlt', $r['data']['feldstatus']['person.email']['status']);
+        }
+    }
+
+    /** Steht die Adresse beschriftet da, gilt sie als belegt - nicht als Fund. */
+    public function test_beschriftete_adresse_bleibt_sicher(): void
+    {
+        $r = (new EnergiePortalAuftragParser())->parse($this->neueinzugText());
+
+        $this->assertSame('amira.beispiel@example.com', $r['data']['person']['email']);
+        $this->assertSame('sicher', $r['data']['feldstatus']['person.email']['status']);
+    }
 }
