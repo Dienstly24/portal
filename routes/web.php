@@ -255,6 +255,12 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::post('/customers/{id}/notes', [AdminController::class, 'storeNote'])->name('customer.note.store');
     Route::post('/customers/{id}/documents', [AdminController::class, 'storeDocument'])->name('customer.document.store');
     Route::post('/customers/{id}/family', [AdminController::class, 'storeFamily'])->name('customer.family.store');
+    // Familien- und Kundenbeziehungen: verknuepft ausschliesslich BESTEHENDE
+    // Kundenakten (es entsteht nie ein neuer Kunde, es wird nie einer geloescht).
+    Route::get('/customers/{id}/familie/kunden-suche', [\App\Http\Controllers\CustomerFamilyRelationController::class, 'search'])->name('customer.family.search');
+    Route::post('/customers/{id}/familie/verknuepfen', [\App\Http\Controllers\CustomerFamilyRelationController::class, 'link'])->name('customer.family.link');
+    Route::post('/customers/{id}/familie/{relation}/rolle', [\App\Http\Controllers\CustomerFamilyRelationController::class, 'updateRole'])->name('customer.family.role');
+    Route::delete('/customers/{id}/familie/{relation}', [\App\Http\Controllers\CustomerFamilyRelationController::class, 'unlink'])->name('customer.family.unlink');
     // Loeschen als DELETE (nicht GET): zustandsaendernde Aktion gehoert hinter
     // CSRF-Schutz; ein GET waere per Link-Prefetch/Scanner ungewollt ausloesbar.
     Route::delete('/customers/family/{id}', [AdminController::class, 'destroyFamily'])->name('customer.family.delete');
@@ -264,6 +270,12 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // Eigener Pfad statt /contracts/... - so kann keine Route-Reihenfolge
     // ihn als Vertrags-ID missdeuten.
     Route::get('/kunden-suche', [AdminController::class, 'customerSearch'])->name('customers.search');
+
+    // "Kinder werden 15": Familienmitglieder mit bevorstehender
+    // Verselbststaendigung. Bewusst NICHT unter /customers/... - dort wuerde
+    // die Route-Reihenfolge sie als Kunden-ID missdeuten.
+    Route::get('/familie/uebergaenge', [\App\Http\Controllers\CustomerFamilyRelationController::class, 'transitions'])->name('family.transitions');
+    Route::post('/familie/uebergaenge/{relation}/vorbereiten', [\App\Http\Controllers\CustomerFamilyRelationController::class, 'prepareTransition'])->name('family.prepare_transition');
 
     // Verträge
     Route::get('/contracts', [AdminController::class, 'contracts'])->name('contracts');

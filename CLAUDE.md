@@ -1464,6 +1464,70 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   bekommt diesen Hinweis bewusst NICHT - dort ist wirklich die Datei kaputt.
   Tests: `ContractCommissionImportTest`.
 
+- **Familien- und Kundenbeziehungen: bestehende Akten VERKNUEPFEN, nie
+  zusammenfuehren** (Betreiber-Auftrag 28.08.2026): Beim Einlesen mehrerer
+  Gesundheitskarten EINER Familie ist je Karte eine eigene Kundenakte
+  entstanden. Diese Akten sind RICHTIG - an ihnen haengen Dokumente,
+  Vertraege, Vorgaenge und Historie. Sie werden deshalb weder geloescht noch
+  zusammengefuehrt, sondern zu einer Familie verbunden.
+  **EIGENE TABELLE `customer_family_relations`** (`CustomerFamilyRelation`),
+  bewusst NEBEN `customer_relationships`: letztere beantwortet genau EINE
+  Frage ("kein Duplikat") und speichert das Paar SORTIERT (a<b), hat also
+  keine Richtung - "Zania ist Tochter von Jehad" passt da nicht hinein, ohne
+  die Bedeutung der Tabelle zu verbiegen. Lesart einer Zeile:
+  "`related_customer_id` ist `relationship_type` von `customer_id`". Jede
+  Beziehung existiert als PAAR (Hin- UND Rueckrichtung, Gegenrolle ueber
+  `inverseRole()` nach dem GESCHLECHT der Bezugsperson, unbekannt ->
+  neutrale Form) - sonst kaeme man vom Kind nie zu den Eltern zurueck.
+  Einzige Schreibstelle ist `FamilyRelationService`.
+  **STATUS UND ROLLE SIND GETRENNT** (Betreiber-Vorgabe 13): die Rolle steht
+  an der Beziehung (Vater/Mutter/Ehepartner/Sohn/Tochter/...), der
+  KUNDENSTATUS wird ABGELEITET (`Customer::familyStatus()`:
+  familienmitglied / hauptkunde / eigenstaendig). Abgeleitet, weil eine
+  eigene Statusspalte aus dem Takt laufen wuerde: mit 15 wechselt der Status
+  dann auch ohne Cron-Lauf (`dependentNow()` prueft IMMER das Alter). Eine
+  16-jaehrige Tochter ist eigenstaendige Kundin UND bleibt Tochter.
+  **ABHAENGIG NUR MIT BELEG**: `is_dependent` wird gesetzt, wenn die Rolle
+  ein KIND beschreibt UND das Geburtsdatum ein Alter unter 15 belegt. OHNE
+  Geburtsdatum entsteht keine Abhaengigkeit - ein Alter wird nie geraten.
+  Das Flag steht immer nur an der Zeile der Bezugsperson (ein Elternteil ist
+  nie vom Kind abhaengig).
+  **STAMMDATEN WERDEN GELESEN, NICHT KOPIERT** (`effectiveContact()`,
+  Felder Adresse/E-Mail/Telefon/Mobil): der eigene Wert schlaegt IMMER den
+  geerbten; fehlt er, wird der Wert der Bezugsperson ANGEZEIGT (mit Badge
+  "vom Elternteil übernommen"). Eine physische Kopie in die Kindakte waere
+  ab dem ersten Umzug still falsch. Geerbt wird nur, solange die
+  Abhaengigkeit besteht.
+  **UEBERGANG MIT 15** (`familie:uebergaenge-anwenden`, taeglich 05:40): es
+  wird NICHTS geloescht, NICHTS neu angelegt und KEIN Vertrag angefasst -
+  nur `is_dependent` faellt weg (`independent_since` haelt den Tag fest).
+  Die Familienbeziehung BLEIBT (Betreiber-Vorgabe 8): aus "Kind, abhaengig"
+  wird "eigenstaendige Kundin, Tochter von Jehad". Timeline-Eintrag + Glocke
+  an die Betreuer sagen ausdruecklich, dass Vertraege zu pruefen sind.
+  **VORSCHAU + VORBEREITUNG**: `/admin/familie/uebergaenge` ("Kinder werden
+  15") listet nach verbleibender Zeit sortiert; Vorlaufzeit 3/6/12 Monate
+  (`SystemSetting family_transition_lead_months`, Standard 6, aenderbar nur
+  admin/manager). "Übergang vorbereiten" legt eine WIEDERVORLAGE an und
+  vermerkt `transition_prepared_at` - mehr nicht (Betreiber-Vorgabe 15:
+  keine automatische Vertragsaenderung).
+  **BEDIENUNG IM KUNDENPROFIL** (`admin/partials/family_relations.blade.php`,
+  Registerkarte "Familie"): "Bestehenden Kunden hinzufügen" sucht ueber
+  Name, Kundennummer, GEBURTSDATUM (TT.MM.JJJJ / ISO, neu in
+  `Customer::scopeSearch` - die Datums-Bedingung steht am ENDE der
+  ODER-Kette, als erste haette sie alle anderen Felder zu einem UND
+  gemacht), E-Mail, Telefon und Anschrift; Rolle waehlen, fertig. Die
+  Trefferliste wird per `textContent` gebaut (Kundennamen sind Fremddaten).
+  Bereits als "verwandt/kein Duplikat" markierte Akten - genau der Bestand
+  aus dem Gesundheitskarten-Stapel - stehen als VORSCHLAG oben; die Rolle
+  vergibt immer ein Mensch, vorgeschlagen wird nie eine. Portfolio-Scope
+  gilt fuer BEIDE Seiten (sonst koennte man ueber eine Verknuepfung einen
+  fremden Kunden sichtbar machen). Das Verknuepfen traegt das Paar
+  zusaetzlich in `customer_relationships` ein (eine Familie ist keine
+  Dublette); das LOESEN entfernt nur die Rolle - "kein Duplikat" bleibt
+  wahr, beide Akten bleiben vollstaendig bestehen.
+  `customer_family` (Personen OHNE eigene Akte) bleibt unveraendert daneben
+  bestehen - beide Listen stehen getrennt beschriftet in der Registerkarte.
+  Tests: `CustomerFamilyRelationTest` (Abnahmefaelle 1-17).
 - **Auftrag zuerst, Vertrag spaeter: ein Vorgang, EIN Vertrag**
   (Betreiber-Vorgabe 29.07.2026, Details in
   `docs/AUFTRAG_UND_VERTRAG_ZUSAMMENFUEHREN.md`): Zuerst wird der
