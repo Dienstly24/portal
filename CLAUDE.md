@@ -1111,6 +1111,29 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   hochgeladenes FOTO (z.B. Meldebestaetigung) fuer immer das alte
   Fehl-Ergebnis von vor der Parser-Verbesserung. Tests:
   `DuplicateDetectionTest`.
+- **Hausnummer: EINE Trennregel fuer alle Quellen** (Lehre 28.08.2026,
+  gemeldet am CHECK24-Beratungsprotokoll): Die Vorlagen-Parser spalten die
+  Hausnummer jeder fuer sich von der Strasse ab - die KI-Antwort und die
+  OCR-Heuristik aber nicht. Schreibt das Modell die Anschrift so ab, wie sie
+  im Dokument steht ("Hintere Gasse 23"), kam `street` mit Nummer und
+  `house_number` LEER an: in der Kundenakte fehlte die Hausnummer, obwohl sie
+  gelesen wurde. Die Regel liegt jetzt in `ValidatesExtractedFields::
+  splitStreetAndHouseNumber()` - der Stelle, durch die JEDE Quelle laeuft
+  (Parser, KI, Heuristik), statt im 25. Parser. KONSERVATIV: getrennt wird
+  nur, wenn vor der Nummer ein Buchstaben-Teil steht (aus "23" wird nie eine
+  Strasse ohne Namen), Endungen wie "21 b", "7a", "12-14", "12/1" bleiben
+  erhalten, "Straße des 17. Juni" wird nicht zerschnitten. Steht die Nummer
+  DOPPELT (in der Strasse und im eigenen Feld), wird sie aus der Strasse
+  entfernt - sonst stuende "Hintere Gasse 23 23" in der Akte;
+  WIDERSPRECHEN sich beide (23 gegen 25), bleibt alles unveraendert und der
+  Mitarbeiter entscheidet - geraten wird nie. Der kostenlose Textebenen-Weg
+  las die Nummer bereits richtig (mit `pdftotext -layout` am echten
+  Protokoll nachgestellt); betroffen war der KI-Weg (auch der Knopf
+  "🤖 Mit KI analysieren"). Nebenbei: CHECK24 schreibt "Cosmos Direkt" MIT
+  Leerzeichen - ohne diese Schreibweise in `KNOWN_INSURERS` griff der
+  Notbehelf "erstes Wort" und der Vertrag entstand unter dem Versicherer
+  "Cosmos" mit dem Tarif "Direkt Basis mit Werkstattbindung".
+  Tests: `HausnummerTrennungTest`.
 - **Der Kontakt-Screenshot darf nicht an seiner Darstellung scheitern**
   (Lehre 21.08.2026, gemeldet): Derselbe Kontaktzettel (Name + zwei Daten,
   Anschrift, Handynummer, E-Mail, IBAN) wurde als Screenshot einmal erkannt
