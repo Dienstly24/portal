@@ -246,26 +246,22 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
             }
         }
 
-        // E-MAIL (gemeldeter Ausfall 28.08.2026): das "@" ist auf einem
-        // Screenshot das mit Abstand fehleranfaelligste Zeichen - Tesseract
-        // liest es je nach Darstellung als "©"/"®" oder verdoppelt es. Der
-        // frueher benutzte harte Ausdruck fand dann GAR NICHTS, und im Review
-        // stand "E-Mail nicht automatisch gelesen", obwohl die Adresse gut
-        // sichtbar im Dokument steht. Repariert wird ueber denselben
-        // gemeinsamen Baustein wie beim Kontakt-Screenshot.
-        foreach (['Mail', 'E-Mail'] as $label) {
-            if (($v = $this->labelValue($label)) === null) {
-                continue;
-            }
-            if (preg_match('/[\w.+\-]+@[\w.\-]+\.\w{2,}/u', $v, $m)) {
-                $raw['email'] = mb_strtolower($m[0]);
-            } elseif (($repariert = $this->ocrEmail($v)) !== null) {
-                $raw['email'] = $repariert;
-                $this->felder->pruefen('person.email',
-                    'Zeichen der Adresse waren nicht eindeutig lesbar und wurden korrigiert');
-            }
-            if (isset($raw['email'])) {
-                break;
+        // E-MAIL: die haeufigste Fehlstelle auf einem Screenshot - und sie
+        // kann an ZWEI Stellen brechen, nicht nur an einer:
+        //  (a) am WERT: das "@" liest Tesseract je nach Darstellung als
+        //      "©"/"®"/"€" oder verdoppelt es;
+        //  (b) an der BESCHRIFTUNG: "Mail:" steht im Portal unterstrichen,
+        //      und ein Unterstrich verschmilzt beim Erkennen gern mit dem
+        //      Wort ("Maii", "Mall", "MaiI"). Dann findet die Suche nach der
+        //      Beschriftung gar nichts - obwohl die Adresse sauber dasteht.
+        // Deshalb zuerst der beschriftete Weg, danach die Suche im ganzen
+        // Dokument. Der zweite Weg ist bewusst der zweite: eine beschriftete
+        // Adresse ist belegt, eine gefundene nur plausibel.
+        [$email, $hinweis] = $this->email();
+        if ($email !== null) {
+            $raw['email'] = $email;
+            if ($hinweis !== null) {
+                $this->felder->pruefen('person.email', $hinweis);
             }
         }
 
@@ -397,6 +393,83 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
         $raw['account_holder'] = $voll;
 
         return $this->validatedBank($raw);
+    }
+
+    /**
+     * E-Mail des Kunden als [Adresse, Pruefhinweis].
+     *
+     * Reihenfolge ist Absicht: erst die Beschriftung ("Mail"/"E-Mail"), dann
+     * - nur wenn die nichts liefert - die Suche im ganzen Dokument. Eine
+     * beschriftete Adresse ist BELEGT; eine bloss gefundene ist plausibel und
+     * wird deshalb immer als "bitte pruefen" gekennzeichnet.
+     *
+     * @return array{0: ?string, 1: ?string}
+     */
+    private function email(): array
+    {
+        foreach (['Mail', 'E-Mail'] as $label) {
+            if (($v = $this->labelValue($label)) === null) {
+                continue;
+            }
+            if (preg_match('/[\w.+\-]+@[\w.\-]+\.\w{2,}/u', $v, $m)) {
+                return [mb_strtolower($m[0]), null];
+            }
+            if (($repariert = $this->ocrEmail($v)) !== null) {
+                return [$repariert, 'Zeichen der Adresse waren nicht eindeutig lesbar und wurden korrigiert'];
+            }
+        }
+
+        // Rueckfallebene: die erste Adresse im Dokument, die dem KUNDEN
+        // gehoeren kann. Adressen des Versorgers oder des eigenen Hauses
+        // werden ausgeschlossen - sonst stuende der Kundenservice des
+        // Anbieters als Kontakt in der Kundenakte.
+        foreach ($this->lines as $line) {
+            $kandidat = $this->ocrEmail($line);
+            if ($kandidat !== null && !$this->istFremdadresse($kandidat)) {
+                return [$kandidat, 'ohne Beschriftung im Dokument gefunden - bitte pruefen, ob sie dem Kunden gehoert'];
+            }
+        }
+
+        return [null, null];
+    }
+
+    /**
+     * Gehoert die Adresse erkennbar NICHT dem Kunden? Zwei Merkmale, beide
+     * konservativ: ein typisches Sammelpostfach als Empfaenger, oder eine
+     * Domain, die den Namen des Versorgers bzw. unseres eigenen Hauses traegt.
+     * Im Zweifel gilt eine Adresse als Kundenadresse - der Mitarbeiter sieht
+     * sie im Review ohnehin als "bitte pruefen".
+     */
+    private function istFremdadresse(string $email): bool
+    {
+        [$lokal, $domain] = array_pad(explode('@', mb_strtolower($email), 2), 2, '');
+        if ($domain === '') {
+            return true;
+        }
+        $sammelpostfach = [
+            'info', 'service', 'kontakt', 'support', 'hilfe', 'kundenservice',
+            'kundenbetreuung', 'post', 'mail', 'noreply', 'no-reply', 'datenschutz',
+            'impressum', 'vertrieb', 'buchhaltung', 'widerruf', 'presse', 'team',
+        ];
+        if (in_array(preg_replace('/[^a-z\-]/', '', $lokal) ?? '', $sammelpostfach, true)) {
+            return true;
+        }
+
+        // Domain-Kern ("plan-b-energie.de" -> "planbenergie") gegen den Namen
+        // des Anbieters und gegen die eigene Domain halten.
+        $kern = static fn (string $v): string => (string) preg_replace('/[^a-z0-9]/', '', mb_strtolower($v));
+        $teile = explode('.', $domain);
+        $domainKern = $kern($teile[count($teile) - 2] ?? $domain);
+        if ($domainKern === '' || str_contains($domainKern, 'dienstly24')) {
+            return true;
+        }
+
+        $anbieter = $kern((string) ($this->kopfzeile()['anbieter'] ?? $this->labelValue('Anbieter') ?? ''));
+        if ($anbieter === '' || mb_strlen($domainKern) < 4) {
+            return false;
+        }
+
+        return str_contains($anbieter, $domainKern) || str_contains($domainKern, $anbieter);
     }
 
     /**

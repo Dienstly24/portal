@@ -1505,10 +1505,20 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   ("schnellstmoeglich" ist kein Datum); stammt er aus einer EINZUGS-
   Beschriftung, sagt die Zusammenfassung das und die 20-Tage-Regel des
   Stadtwerke-Wechsels greift nicht.
-  (2) Die E-MAIL fiel am `@` aus - auf einem Screenshot das fehleranfaelligste
-  Zeichen (`©`/`®`/verdoppelt). Der Parser nutzt jetzt denselben Baustein wie
-  der Kontakt-Screenshot (`RepairsOcrText`); eine reparierte Adresse gilt
-  bewusst als "bitte pruefen", nicht als "sicher".
+  (2) Die E-MAIL bricht an ZWEI Stellen, nicht an einer (Nachtrag nach dem
+  Livegang 28.08.2026 - nach der ersten Runde fehlte sie weiterhin): am WERT
+  das `@` (auf einem Screenshot das fehleranfaelligste Zeichen - `©`/`®`/`€`/
+  `°`/verdoppelt; alle diese Zeichen sind in einer Adresse NIE zulaessig und
+  werden deshalb gefahrlos zu `@`, ein BUCHSTABE steht bewusst nicht in der
+  Liste - "a" statt "@" waere Raten) und an der BESCHRIFTUNG: "Mail:" steht
+  im Portal UNTERSTRICHEN, und der Unterstrich verschmilzt beim Erkennen mit
+  dem Wort ("Maii"/"Mall"). Bricht die Beschriftung, half die Wert-Reparatur
+  nicht - es gab ja keine Stelle zum Reparieren. Deshalb zweistufig: erst der
+  beschriftete Weg, dann die Suche im GANZEN Dokument. Eine so gefundene
+  Adresse ist plausibel, nicht belegt -> immer "bitte pruefen"; und
+  `istFremdadresse()` haelt Sammelpostfaecher (info/service/kontakt ...), die
+  Domain des ANBIETERS dieses Auftrags und unser eigenes Haus fern, damit nie
+  der Kundenservice des Versorgers als Kundenkontakt in der Akte landet.
   (3) Die IBAN wurde bei EINEM verlesenen Zeichen still verworfen - obwohl
   Kontonummer und BLZ separat danebenstehen. Eine deutsche IBAN besteht
   rechnerisch genau daraus (BLZ + Kontonr., Pruefziffern nach ISO 7064

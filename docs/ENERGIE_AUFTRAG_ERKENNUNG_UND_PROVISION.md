@@ -21,7 +21,7 @@ Luecken:
 | Angabe | Befund | Ursache |
 |---|---|---|
 | **Lieferbeginn 01.09.2026** | fehlte auch bei perfektem Text | Die Beschriftung heisst hier **"Neueinzug zum"**. Die Erkennung kannte nur die WECHSEL-Beschriftungen ("gew. Lieferdatum", "Lieferdatum"). Ein Neueinzug ist kein Anbieterwechsel - und genau deshalb steht dort ein anderes Wort. |
-| **E-Mail** | fehlte im echten Lauf, nicht im sauberen Text | Das `@` ist auf einem Screenshot das fehleranfaelligste Zeichen; Tesseract liest es je nach Darstellung als `©`/`®` oder verdoppelt es. Der harte Ausdruck fand dann GAR NICHTS. |
+| **E-Mail** | fehlte im echten Lauf, nicht im sauberen Text | ZWEI Bruchstellen (die zweite zeigte sich erst nach dem Livegang): das `@` als fehleranfaelligstes Zeichen des Screenshots - UND die unterstrichene Beschriftung "Mail:", deren Unterstrich beim Erkennen mit dem Wort verschmilzt. Bricht die Beschriftung, gibt es fuer die Wert-Reparatur gar keine Stelle mehr. Siehe 2.2. |
 | **IBAN** | wurde bei EINEM verlesenen Zeichen still verworfen | Die Pruefziffer schlug fehl, und der Parser gab auf - obwohl Kontonummer und BLZ separat und sauber daneben stehen. |
 
 Alles Uebrige (Name, Geburtsdatum, Anschrift, Telefon, Geschlecht, Tarif,
@@ -56,14 +56,46 @@ Weiterhin gilt: **ein Beginn wird nie geraten.** "schnellstmoeglich" ist kein
 Datum. Einzige Ausnahme bleibt der Stadtwerke-Wechsel (14 Tage
 Kuendigungsfrist + Bearbeitung).
 
-### 2.2 E-Mail: gemeinsame OCR-Reparatur
+### 2.2 E-Mail: zwei Bruchstellen, zwei Stufen
 
-Der Parser nutzt jetzt denselben Baustein wie der Kontakt-Screenshot
-(`App\Services\Ai\Concerns\RepairsOcrText`): `©`/`®`/`(at)` und ein
-verdoppeltes `@` werden zurueckgesetzt, ein fehlender Punkt vor einer
-bekannten Endung ergaenzt. Eine so reparierte Adresse gilt **nicht als
-"sicher"**, sondern als "bitte pruefen" - der Mitarbeiter sieht im Review,
-dass er hinsehen soll.
+**Nachtrag nach dem ersten Livegang (28.08.2026).** Die erste Runde reparierte
+nur den WERT - und die Adresse fehlte im echten Lauf trotzdem. Grund: die
+E-Mail kann an ZWEI Stellen brechen.
+
+**(a) Der Wert.** Das `@` liest die OCR je nach Schrift und Hintergrund als
+`©`, `®`, `€`, `¢`, `°` oder `¤`, oder sie verdoppelt es. Alle diese Zeichen
+sind in einer E-Mail-Adresse **nie zulaessig** - sie duerfen deshalb gefahrlos
+zu `@` werden. Ein BUCHSTABE steht bewusst nicht in dieser Liste: "a" statt
+"@" liesse sich von einem echten Namensbestandteil nicht unterscheiden, und
+aus einer Reparatur wuerde Raten. Zustaendig ist der gemeinsame Baustein
+`App\Services\Ai\Concerns\RepairsOcrText` (derselbe wie beim
+Kontakt-Screenshot).
+
+**(b) Die Beschriftung.** "Mail:" steht in dieser Portal-Ansicht
+**unterstrichen**, und ein Unterstrich verschmilzt beim Erkennen gern mit dem
+Wort ("Maii", "Mall", "MaiI"). Bricht die Beschriftung, half die Reparatur aus
+(a) gar nicht - die Suche fand ja keine Stelle, an der sie haette reparieren
+koennen. Genau das war der verbliebene Ausfall.
+
+Deshalb laeuft die Erkennung jetzt **zweistufig**:
+
+1. **beschrifteter Weg** (`Mail` / `E-Mail`) - eine so gelesene Adresse ist
+   BELEGT und gilt als `sicher`;
+2. **Suche im ganzen Dokument**, nur wenn Stufe 1 nichts liefert - eine so
+   gefundene Adresse ist plausibel, nicht belegt, und gilt immer als
+   `pruefen`.
+
+Damit Stufe 2 nie eine fremde Adresse zur Kundenadresse macht, filtert
+`istFremdadresse()`:
+
+* typische **Sammelpostfaecher** (`info`, `service`, `kontakt`, `support`,
+  `kundenservice`, `noreply`, `datenschutz` ...),
+* die **Domain des Anbieters** dieses Auftrags (Vergleich des Domain-Kerns
+  gegen den Anbieternamen aus der Kopfzeile),
+* unsere **eigene Domain** (`dienstly24`).
+
+Sonst stuende der Kundenservice des Versorgers als Kontakt in der Kundenakte
+und bekaeme unsere Post.
 
 ### 2.3 IBAN: zwei Quellen, eine Regel
 
@@ -276,6 +308,10 @@ Zaehlernummer, Lieferbeginn, Vertragsnummer des Versorgers.
   - zweite Bauform (Neueinzug) des Portals, vollstaendig gelesen
   - Lieferbeginn unter fuenf weiteren Beschriftungen
   - `@` als `©`/`®`/`@®`/`(at)` verlesen -> Adresse trotzdem erkannt, Status "pruefen"
+  - Beschriftung "Mail:" verlesen ("Maii"/"Mall") oder ganz fehlend ->
+    Adresse ueber die Rueckfallebene gefunden, Status "pruefen"
+  - fremde Adressen (Sammelpostfach, Anbieter-Domain, eigenes Haus) werden
+    NIE zur Kundenadresse
   - IBAN aus Konto + BLZ nachgerechnet; Widerspruch -> nichts uebernommen;
     ohne zweite Quelle bleibt es beim strengen Verhalten
   - Feldstatus benennt gelesene UND fehlende Angaben

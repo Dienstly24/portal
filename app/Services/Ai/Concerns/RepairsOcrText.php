@@ -91,10 +91,19 @@ trait RepairsOcrText
      */
     protected function ocrEmail(string $text): ?string
     {
-        // Das "@" verliest die OCR bei Screenshots regelmaessig als "©"/"®"
-        // (oder verdoppelt es, "@®" -> "@@"); "(at)" kommt aus abgetippten
-        // Adressen. Mehrere "@" hintereinander werden wieder zu einem.
-        $text = (string) preg_replace('/\s*(?:\(at\)|\[at\]|\{at\}|[©®]|@)\s*/iu', '@', $text);
+        // Das "@" verliest die OCR bei Screenshots regelmaessig - je nach
+        // Schrift und Hintergrund als "©", "®", "€", "¢", "°" oder "¤" (oder
+        // verdoppelt, "@®" -> "@@"); "(at)" kommt aus abgetippten Adressen.
+        // Alle hier gelisteten Zeichen sind in einer E-Mail-Adresse NIE
+        // zulaessig - sie koennen deshalb gefahrlos zu "@" werden. Ein
+        // Buchstabe stuende nicht in dieser Liste: "a" statt "@" liesse sich
+        // von einem echten Namensbestandteil nicht unterscheiden, und aus
+        // einer Reparatur wuerde Raten. Mehrere "@" werden wieder zu einem.
+        $text = (string) preg_replace(
+            '/\s*(?:\(at\)|\[at\]|\{at\}|[©®€¢°¤§]|@)\s*/iu',
+            '@',
+            $text
+        );
         $text = (string) preg_replace('/@{2,}/u', '@', $text);
 
         if (preg_match('/[a-z0-9._%+\-]+@[a-z0-9\-]+(?:\.[a-z0-9\-]+)*\.[a-z]{2,}/i', $text, $m)) {
