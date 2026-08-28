@@ -642,6 +642,30 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   werden in `TesseractTextExtractor` vor der Erkennung VERDOPPELT -
   Screenshots kommen mit ~150 dpi, sonst verwechselt Tesseract aehnliche
   Zeichen ("NOLADE21RDB" -> "NOLADE2IRDB", "Tariftyp" -> "Tarityp").
+- **Gruenwelt-LIEFERBESTAETIGUNG (Strom/Gas)** (`GruenweltLieferbestaetigungParser`,
+  28.08.2026): das Bestaetigungsschreiben NACH dem Auftrag (Gruenwelt
+  Waermestrom GmbH / Gruenwelt Energie GmbH, digitale Textebene). Stufe
+  `vertrag` - es ERGAENZT den vorhandenen Antrags-Vertrag ueber
+  Zaehlernummer/MaLo-ID/Referenz-Nr., statt einen zweiten anzulegen. Die
+  BESTELLNUMMER ist die Kennung des Vorgangs (`reference_number`), der
+  Vertrag laeuft unter der VERTRAGSKONTONUMMER (`contract_number`) - eine
+  Bestellnummer wird nie zur Vertragsnummer. Gelesen werden Lieferbeginn,
+  Tarif, Arbeitspreis brutto, Grundpreis (steht je JAHR -> /12 in
+  `base_price` EUR/Monat, beide Werte in der Zusammenfassung),
+  Jahresverbrauch, Zaehlernummer, MaLo-ID und der monatliche BRUTTO-Abschlag.
+  KEINE Bankdaten: die Kunden-IBAN ist maskiert ("DE70 XXXX ... 55 30"), die
+  vollstaendige IBAN im Brieffuss gehoert Gruenwelt selbst (Aareal Bank).
+  Der namentlich genannte Betrieb ist der MESSSTELLENbetreiber - den
+  Netzbetreiber nennt das Schreiben nicht, `grid_operator` bleibt deshalb
+  leer und der Name steht nur in der Zusammenfassung (ebenso Laufzeit,
+  Kuendigungsfrist, Verlaengerung, Preisgarantie - daraus wird NIE ein
+  Enddatum gerechnet, die Verlaengerung laeuft "auf unbestimmte Zeit").
+  LEHRE ZUM BRIEFKOPF: im Empfaengerblock steht rechts auf DERSELBEN Zeile
+  die Service-Spalte des Versorgers (E-Mail/Telefon/Fax). Gelesen wird die
+  Zelle an der SPALTENPOSITION der Anrede - nicht "die erste Zelle der
+  Zeile": wo der Empfaengerblock eine Zeile auslaesst, steht dort die
+  Service-Spalte, und "Telefon 0800 5555 773" waere zum Kundennamen geworden.
+  Tests: `GruenweltLieferbestaetigungParserTest`.
 - **Strom-/Gas-AUFTRAEGE (Formularseite)**: Ein Auftrag hat **KEINE
   Vertragsnummer** (Betreiber-Vorgabe 02.08.2026) - die Auftragsnummer steht
   nur in der Zusammenfassung, nie in `contract_number` (falsche Angabe in der

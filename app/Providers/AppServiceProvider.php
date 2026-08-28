@@ -81,6 +81,7 @@ class AppServiceProvider extends ServiceProvider
                 // beanspruchte er Energie-Auftraege faelschlich als Internet).
                 $app->make(\App\Services\Ai\TemplateParsers\EweVertragsbestaetigungParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\LichtblickVertragsbestaetigungParser::class),
+                $app->make(\App\Services\Ai\TemplateParsers\GruenweltLieferbestaetigungParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\LichtblickAuftragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\PlanBNetZeroAuftragParser::class),
                 $app->make(\App\Services\Ai\TemplateParsers\EnergieAuftragParser::class),
