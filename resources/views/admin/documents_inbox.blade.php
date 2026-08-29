@@ -203,6 +203,26 @@
 </div>
 
 {{-- Review-/Zuordnungs-Modal --}}
+{{-- DIAGNOSE: der TATSAECHLICH erkannte Text (Betreiber-Frage 28.08.2026).
+     Fehlt ein Feld, sieht man im BILD die Angabe klar stehen - die Erkennung
+     arbeitet aber mit diesem Text, und der kann an genau einer Stelle anders
+     aussehen. Ohne ihn ist jede Fehlersuche Raten. Kostenlos, ohne KI, und der
+     Text wird NICHT gespeichert. --}}
+<div id="ocr-text-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:210;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:var(--surface);border-radius:14px;max-width:900px;width:100%;max-height:86vh;display:flex;flex-direction:column;overflow:hidden;">
+        <div style="padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:12px;">
+            <div style="flex:1;min-width:0;">
+                <div style="font-weight:600;font-size:16px;">🔎 Erkannter Text (das, womit die Erkennung gearbeitet hat)</div>
+                <div id="ocr-text-source" style="font-size:12px;color:var(--muted);margin-top:3px;"></div>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="docReview.copyOcrText(this)">Kopieren</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="docReview.closeOcrText()">Schließen</button>
+        </div>
+        <div style="padding:10px 20px 0;font-size:12px;color:var(--muted);" id="ocr-text-note"></div>
+        <pre id="ocr-text-body" style="margin:12px 20px 20px;padding:14px;background:var(--canvas);border:1px solid var(--line);border-radius:10px;overflow:auto;flex:1;white-space:pre;font-size:12.5px;line-height:1.55;"></pre>
+    </div>
+</div>
+
 <div id="doc-review-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:26px;width:100%;max-width:620px;position:relative;max-height:92vh;overflow-y:auto;">
         <button type="button" onclick="docReview.close()" style="position:absolute;top:14px;right:14px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
@@ -1272,6 +1292,43 @@ window.docReview = (function() {
     }
 
     /**
+     * Zeigt den TATSAECHLICH erkannten Text eines Dokuments.
+     *
+     * Fehlt ein Feld, sieht man im Bild die Angabe klar stehen - die
+     * Erkennung arbeitet aber mit diesem Text, und der kann an genau einer
+     * Stelle anders aussehen ("Maii" statt "Mail", "©" statt "@"). Ohne ihn
+     * ist jede Fehlersuche Raten. Kostenlos, ohne KI; der Text wird nicht
+     * gespeichert, sondern bei jedem Aufruf neu aus der Datei gelesen.
+     */
+    function showOcrText(docId, btn) {
+        btn.disabled = true;
+        fetch(@json(route('admin.documents.ocr_text', ['id' => '__ID__'])).replace('__ID__', docId), {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' },
+        }).then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })
+        .then(function(res) {
+            btn.disabled = false;
+            if (!res.ok) { alert(res.json.message || 'Der erkannte Text konnte nicht gelesen werden.'); return; }
+            el('ocr-text-source').textContent = (res.json.quelle || '') + ' · ' + res.json.zeichen + ' Zeichen';
+            el('ocr-text-note').textContent = res.json.hinweis || '';
+            // textContent, nie innerHTML: der Text stammt aus einem fremden Dokument.
+            el('ocr-text-body').textContent = res.json.text || '';
+            el('ocr-text-modal').style.display = 'flex';
+        })
+        .catch(function() { btn.disabled = false; });
+    }
+
+    function copyOcrText(btn) {
+        var text = el('ocr-text-body').textContent || '';
+        if (!navigator.clipboard) { return; }
+        navigator.clipboard.writeText(text).then(function() {
+            var alt = btn.textContent;
+            btn.textContent = '✓ Kopiert';
+            setTimeout(function() { btn.textContent = alt; }, 1500);
+        });
+    }
+
+    /**
      * Mehrere Personen auf EINER Aufnahme (z.B. die Gesundheitskarten einer
      * Familie): fuer jede erkannte Person einen eigenen Kunden anlegen.
      * Bereits erfasste Personen werden uebersprungen und gemeldet.
@@ -1396,6 +1453,9 @@ window.docReview = (function() {
         },
         submit: submit,
         reanalyze: reanalyze,
+        showOcrText: showOcrText,
+        copyOcrText: copyOcrText,
+        closeOcrText: function() { el('ocr-text-modal').style.display = 'none'; },
         createFromPersons: createFromPersons,
     };
 })();

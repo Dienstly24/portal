@@ -377,6 +377,12 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         ->middleware('throttle:300,10')->name('documents.bulk_delete');
     Route::post('/documents/{id}/reanalyze', [\App\Http\Controllers\SmartDocumentUploadController::class, 'reanalyze'])
         ->middleware('throttle:300,10')->name('documents.reanalyze');
+    // Diagnose: der TATSAECHLICH erkannte Text. Er steht VOR der Route
+    // '/documents/{id}', damit der feste Pfad nicht als Dokument-ID gilt.
+    // Kostenlos, ohne KI, wird nicht gespeichert - Rechtepruefung im Controller
+    // (nur admin/manager, der Rohtext ist das ganze Dokument).
+    Route::get('/documents/{id}/erkannter-text', [\App\Http\Controllers\SmartDocumentUploadController::class, 'ocrText'])
+        ->middleware('throttle:120,10')->name('documents.ocr_text');
     Route::get('/documents/{id}/download', [AdminController::class, 'documentDownload'])->name('documents.download');
     Route::post('/documents/{id}/replace', [AdminController::class, 'documentReplace'])->name('documents.replace');
     // Direkter Dokument-Link (GET /admin/documents/{id}): eine eigene
