@@ -43,6 +43,20 @@
 
     <form method="POST" action="{{ route('admin.commissions_internal.upload') }}" enctype="multipart/form-data">
         @csrf
+        {{-- Die QUELLE steht vor der Datei: sie entscheidet ueber die
+             Fristen, gegen die spaeter "erwartet / ueberfaellig / fehlt"
+             gemessen wird. Leer lassen ist erlaubt - dann schlaegt die
+             Erkennung anhand des Dateiformats einen Pool vor. --}}
+        <div class="field" style="max-width:560px;">
+            <label>Quelle / Pool</label>
+            <select name="pool">
+                <option value="">Automatisch aus dem Dateiformat erkennen</option>
+                @foreach($pools as $key => $pool)
+                <option value="{{ $key }}">{{ $pool->name }} <span>({{ $pool->deadlineLabel() }})</span></option>
+                @endforeach
+            </select>
+        </div>
+
         <div class="field" style="max-width:560px;">
             <label>CSV- oder Excel-Datei *</label>
             <input type="file" name="datei" required

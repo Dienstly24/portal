@@ -32,7 +32,9 @@ class ContractCommission extends Model
         'company', 'sparte', 'amount', 'currency', 'vat_amount', 'reserve_amount',
         'paid_amount', 'commission_date', 'due_date', 'payment_date', 'status',
         'storno_reason', 'invoice_number', 'invoice_date', 'invoice_amount',
-        'invoice_linked_at', 'invoice_document_id', 'source_file', 'provider', 'notes',
+        'invoice_linked_at', 'invoice_document_id', 'source_file', 'source_row', 'raw',
+        'provider', 'pool', 'commission_kind', 'booking_date', 'gross_amount',
+        'net_amount', 'booking_reason', 'notes',
         'dedupe_key', 'row_hash', 'created_by', 'updated_by',
     ];
 
@@ -47,6 +49,10 @@ class ContractCommission extends Model
         'payment_date' => 'date',
         'invoice_date' => 'date',
         'invoice_linked_at' => 'datetime',
+        'booking_date' => 'date',
+        'gross_amount' => 'decimal:2',
+        'net_amount' => 'decimal:2',
+        'raw' => 'array',
     ];
 
     /** Zuordnungs-Zustand: haben wir den Vertrag gefunden? */
@@ -76,6 +82,29 @@ class ContractCommission extends Model
     public function providerLabel(): string
     {
         return \App\Services\CommissionImport\CommissionSourceProfile::label($this->provider);
+    }
+
+    /** Der Pool, aus dem diese Provision stammt (Klartext). */
+    public function poolLabel(): string
+    {
+        return app(\App\Services\Provisionsmanagement\PoolRegistry::class)->label($this->pool);
+    }
+
+    /**
+     * Provisionsart in unserer Lesart. Die Bezeichnung der QUELLE steht
+     * daneben in `commission_type` und bleibt der Beleg - wer die Deutung
+     * anzweifelt, sieht das Original in derselben Zeile.
+     */
+    public function kindLabel(): string
+    {
+        return \App\Support\CommissionKind::label($this->commission_kind);
+    }
+
+    /** Das Datum, nach dem ausgewertet wird (dieselbe Leiter wie im Bericht). */
+    public function effectiveDate(): ?\Illuminate\Support\Carbon
+    {
+        return $this->commission_date ?? $this->booking_date
+            ?? ($this->created_at ? $this->created_at->copy()->startOfDay() : null);
     }
 
     public function statusLabel(): string { return CommissionStatus::label($this->status); }
