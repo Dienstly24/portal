@@ -705,6 +705,38 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         });
     });
 
+    // PROVISIONSMANAGEMENT (Betreiber-Auftrag 02.09.2026): der zentrale
+    // Bereich fuer alle Provisionen - Dashboard, Importe, Abrechnungen,
+    // Buchungen, Vertraege, fehlende Provisionen, Auswertungen, Pools.
+    //
+    // ZUGRIFF wie im uebrigen Provisionsteil ueber das RECHT
+    // `provisionen-verwalten`. Der Menuepunkt allein ist KEINE Berechtigung:
+    // dieselbe Pruefung steht zusaetzlich im Controller, damit ein direkt
+    // aufgerufener Pfad genauso abgewiesen wird wie ein Klick.
+    Route::prefix('provisionsmanagement')->name('provisionsmanagement.')
+        ->middleware('can:provisionen-verwalten')->group(function () {
+        $p = \App\Http\Controllers\ProvisionsmanagementController::class;
+
+        Route::get('/', [$p, 'dashboard'])->name('dashboard');
+        Route::get('/importe', [$p, 'imports'])->name('imports');
+        Route::get('/abrechnungen', [$p, 'statements'])->name('statements');
+        Route::get('/vertraege', [$p, 'contracts'])->name('contracts');
+        Route::get('/fehlende-provisionen', [$p, 'missingList'])->name('missing');
+        Route::get('/unklare-zuordnungen', [$p, 'unclear'])->name('unclear');
+        Route::get('/auswertungen', [$p, 'analytics'])->name('analytics');
+        Route::get('/auswertungen/export.csv', [$p, 'export'])->name('export');
+        Route::get('/einstellungen', [$p, 'settings'])->name('settings');
+        Route::post('/einstellungen/pool', [$p, 'poolStore'])->name('pool_store');
+        Route::put('/einstellungen/pool/{id}', [$p, 'poolUpdate'])->whereUuid('id')->name('pool_update');
+        Route::post('/neu-berechnen', [$p, 'recalculate'])->name('recalculate');
+        Route::get('/kunde/{id}', [$p, 'customer'])->whereUuid('id')->name('customer');
+
+        // Die Vertragsroute steht ZULETZT - sonst verschluckt sie die festen
+        // Pfade oben (dieselbe Lehre wie bei der Kundensuche).
+        Route::get('/vertrag/{id}', [$p, 'contract'])->whereUuid('id')->name('contract');
+        Route::post('/vertrag/{id}/nachverfolgung', [$p, 'followup'])->whereUuid('id')->name('followup');
+    });
+
     // Interne Provisionen: Provisionsdaten aus Fremdsystemen (Maklerpool,
     // Vergleichsportal, Energieportal) einlesen und an den Vertrag binden
     // (Betreiber-Auftrag 26.08.2026).

@@ -1590,6 +1590,70 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   Empfaenger noch interne Nummer noch Vermittler-Id.
   Tests: `EnergiePortalAuftragParserTest`, `ContractCommissionImportTest`.
 
+- **PROVISIONSMANAGEMENT: ein Bereich fuer alle Pools** (Betreiber-Auftrag
+  02.09.2026, Details in `docs/PROVISIONSMANAGEMENT.md`, arabische Anleitung
+  `docs/ANLEITUNG_PROVISIONSMANAGEMENT_AR.md`): Aus „Vermittler-Abrechnung“ +
+  „Interne Provisionen“ wird `/admin/provisionsmanagement` mit Dashboard,
+  Importen, Abrechnungen, Buchungen, Vertraegen, fehlenden Provisionen,
+  unklaren Zuordnungen, Auswertungen und Einstellungen (eine Navigation,
+  `commissions_internal/_tabs.blade.php`, von beiden Controllern benutzt).
+  UMGEBAUT, NICHT DANEBENGEBAUT: die Tabellen des Provisions-Imports
+  (26.08.2026) tragen den Kern weiter - ein zweites Datenmodell haette
+  dieselbe Provision zweimal gefuehrt.
+  **POOL statt Dateiname**: `commission_pools` (CHECK24, Maklerpool,
+  Energie, Versicherung, Fonds Finanz, Sonstiger) traegt je Quelle zwei
+  Zahlen - `expected_months` (ab wann faellig) und `check_months` (ab wann
+  FEHLEND). Sie sind EINSTELLUNG, nicht Code: ein neuer Pool entsteht in der
+  Oberflaeche, sonst liefen seine Vertraege bis zum naechsten Deployment
+  ohne Frist, also unsichtbar. `pool` steht an Import, Buchung und Vertrag;
+  der Vertrag lernt ihn beim Import, aber nur wenn er noch keinen hat.
+  **DIE ZEIT WAR DAS FEHLENDE STUECK**: zwischen Abschluss und Geld liegen
+  Monate. `CommissionStatusEngine` leitet `contracts.commission_status` aus
+  Buchungen + Fristen ab (neu/erwartet/erhalten/laufend/vollstaendig/
+  fehlt/ueberfaellig/storniert/korrektur/pruefung/geklaert,
+  `App\Support\ContractCommissionStatus`). Die Uhr beginnt am ABSCHLUSS
+  (signing_date -> application_date -> start_date -> Anlagedatum); ohne
+  jedes Datum bleibt der Vertrag `neu` und landet in keiner Mahnliste. Nur
+  Vertraege MIT Pool oder MIT Buchung nehmen teil - sonst stuende der halbe
+  Bestand als "Provision fehlt" da und die Liste waere Rauschen. Taeglich
+  04:10 `provisionen:status-aktualisieren`, zusaetzlich nach jedem
+  bestaetigten Import fuer die beruehrten Vertraege: eine spaeter
+  eingegangene Provision macht aus "fehlt" von selbst "erhalten".
+  DREI WAHRHEITEN, die sich nie ueberschreiben: `contracts.status` (laeuft
+  der Vertrag?), `contract_commissions.status` (ist DIESE Buchung bezahlt?),
+  `contracts.commission_status` (ist der Vertrag verguetet?).
+  **CHECK24 Referenz-Nr. <-> Pool-Id** (`commission_reference_links`,
+  `ReferenceLinkService`): die erste Datei mit BEIDEN Kennungen speichert das
+  Paar dauerhaft; ab dann findet auch eine Datei den Vertrag, die nur noch
+  die Id fuehrt. Zwei verschiedene Referenzen zu einer Id heissen NICHTS
+  ZUORDNEN - eine falsch gepaarte Zahl haengt Geld an einen fremden Vertrag.
+  **PROVISIONSART gedeutet, Original behalten**: `commission_kind`
+  (`App\Support\CommissionKind`) neben dem Text der Quelle in
+  `commission_type`. Storno wird VOR Abschluss geprueft ("APStorno" enthaelt
+  "AP"); ein negativer Betrag ohne Bezeichnung ist im Provisionsgeschaeft
+  immer eine Rueckbuchung, ein unbekannter TEXT dagegen `sonstige` - nie
+  geraten. NETTO IST DIE SUMME, nicht Brutto minus Storno: Rueckbuchungen
+  stehen bereits negativ in den Dateien (AP +3,07 / APStorno -3,66 = -0,59).
+  **HERKUNFT BIS AUF DIE ZEILE** (§5): `source_file`, `source_row`, `pool`,
+  `provider`, `import_id` und die ORIGINAL-Spaltenwerte (`raw`) an jeder
+  Buchung.
+  **FEHLENDE PROVISIONEN + NACHVERFOLGUNG**: `/fehlende-provisionen` mit
+  Filtern (Pool, Monat, Produkt, Mitarbeiter, Kunde) und
+  `commission_followups` (offen -> Pool kontaktiert -> in Klaerung ->
+  geklaert, mit Datum, Ansprechpartner, Antwort). "Geklaert" ist die einzige
+  MENSCHLICHE Entscheidung, die der Nachtlauf in Ruhe laesst
+  (`ContractCommissionStatus::MANUELL`); wird der Fall wieder geoeffnet,
+  rechnet das System normal weiter.
+  **SICHERHEIT unveraendert streng**: Recht `provisionen-verwalten` an ROUTE
+  UND Controller; keine Beziehung von `Customer` zu den Provisionen (ein
+  `with()` im Portal kann sie gar nicht mitladen); eigenes Protokoll
+  `commission_audit_logs` OHNE Loeschweg. Tests halten fest, dass Kunde,
+  Mitarbeiter und Support ohne Recht weder Betraege noch Pool-Ids noch
+  Wirtschaftlichkeitsdaten sehen - auch beim direkten Aufruf der URL.
+  BEWUSST NICHT zusammengelegt mit `provisions` (AUSGANG an eigene
+  Mitarbeiter) und `vermittler_settlements` (der EINE Vermittler
+  TARIFCHECK24). Tests: `ProvisionsmanagementTest` (Abnahmefaelle 1-12).
+
 - **Familien- und Kundenbeziehungen: bestehende Akten VERKNUEPFEN, nie
   zusammenfuehren** (Betreiber-Auftrag 28.08.2026): Beim Einlesen mehrerer
   Gesundheitskarten EINER Familie ist je Karte eine eigene Kundenakte

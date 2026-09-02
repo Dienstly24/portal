@@ -22,7 +22,7 @@ class CommissionImport extends Model
     public const VERWORFEN = 'verworfen';
 
     protected $fillable = [
-        'filename', 'file_hash', 'format', 'mode', 'provider', 'delimiter', 'encoding', 'sheet_name',
+        'filename', 'file_hash', 'format', 'mode', 'provider', 'pool', 'delimiter', 'encoding', 'sheet_name',
         'sheet_names', 'header', 'column_map', 'status', 'rows_total', 'rows_new',
         'rows_updated', 'rows_duplicate', 'rows_unmatched', 'rows_invalid',
         'rows_buildable', 'rows_unlinked_kept', 'contracts_created', 'customers_created',
@@ -47,6 +47,12 @@ class CommissionImport extends Model
     public function importer() { return $this->belongsTo(User::class, 'imported_by'); }
 
     public function isDraft(): bool { return $this->status === self::ENTWURF; }
+
+    /** Aus welchem Pool stammt diese Datei? (Klartext, nie nur der Schluessel) */
+    public function poolLabel(): string
+    {
+        return app(\App\Services\Provisionsmanagement\PoolRegistry::class)->label($this->pool);
+    }
 
     /** Ist die Datei eine Abrechnung (mit Betraegen) oder eine Auftragsliste? */
     public function isAbrechnung(): bool

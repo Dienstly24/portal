@@ -72,6 +72,14 @@ class ContractCommissionController extends Controller implements HasMiddleware
         if ($request->filled('vertrag')) {
             $query->where('contract_id', $request->query('vertrag'));
         }
+        // Buchungen EINER Abrechnung - der Weg von der Abrechnungsliste des
+        // Provisionsmanagements zu den Zeilen, die daraus entstanden sind.
+        if ($request->filled('import')) {
+            $query->where('import_id', $request->query('import'));
+        }
+        if ($request->filled('pool')) {
+            $query->where('pool', $request->query('pool'));
+        }
         if ($request->query('zuordnung') === 'offen') {
             $query->whereNull('contract_id');
         }
@@ -96,7 +104,7 @@ class ContractCommissionController extends Controller implements HasMiddleware
                 ->paginate(50)->withQueryString(),
             'totals' => $totals,
             'statuses' => CommissionStatus::ALL,
-            'filters' => $request->only(['q', 'status', 'quelle', 'empfaenger', 'kunde', 'vertrag', 'zuordnung', 'von', 'bis']),
+            'filters' => $request->only(['q', 'status', 'quelle', 'empfaenger', 'kunde', 'vertrag', 'zuordnung', 'von', 'bis', 'import', 'pool']),
             'providers' => \App\Services\CommissionImport\CommissionSourceProfile::PROFILES,
             'unmatchedCount' => ContractCommission::unmatched()->count(),
             'draftCount' => CommissionImport::where('status', CommissionImport::ENTWURF)->count(),
@@ -122,6 +130,9 @@ class ContractCommissionController extends Controller implements HasMiddleware
         return view('admin.commissions_internal.import', [
             'imports' => CommissionImport::with('importer')->latest()->limit(20)->get(),
             'extensions' => TableReader::EXTENSIONS,
+            // §6: Die Quelle wird VOR dem Lesen gewaehlt - sie entscheidet
+            // ueber die Fristen, gegen die spaeter gemessen wird.
+            'pools' => app(\App\Services\Provisionsmanagement\PoolRegistry::class)->active(),
         ]);
     }
 
@@ -160,6 +171,11 @@ class ContractCommissionController extends Controller implements HasMiddleware
                 $request->input('sheet') ?: null,
                 null,
                 $request->input('modus') ?: null,
+                // §6: Der Admin waehlt beim Upload die QUELLE. Sie ist die
+                // Grundlage der Fristen - ohne Pool gaebe es kein "erwartet"
+                // und damit auch kein "fehlt". Leer bleibt erlaubt: die
+                // Erkennung schlaegt dann anhand des Dateiformats einen vor.
+                $request->input('pool') ?: null,
             );
         } catch (\Throwable $e) {
             return back()->with('error', 'Die Datei konnte nicht gelesen werden: ' . $e->getMessage())->withInput();

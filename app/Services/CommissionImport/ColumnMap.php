@@ -110,6 +110,17 @@ class ColumnMap
             'aliases' => ['provisionsbetrag', 'provision', 'betrag', 'summeineur', 'summe',
                 'verguetung', 'courtage', 'amount', 'commission'],
         ],
+        'gross_amount' => [
+            'label' => 'Bruttobetrag',
+            'type' => 'zahl',
+            'hint' => 'Falls die Quelle brutto und netto getrennt ausweist',
+            'aliases' => ['bruttobetrag', 'brutto', 'provisionbrutto', 'grossamount'],
+        ],
+        'net_amount' => [
+            'label' => 'Nettobetrag',
+            'type' => 'zahl',
+            'aliases' => ['nettobetrag', 'netto', 'provisionnetto', 'netamount'],
+        ],
         'currency' => [
             'label' => 'Währung',
             'type' => 'text',
@@ -137,6 +148,12 @@ class ColumnMap
             'aliases' => ['provisionsdatum', 'abrechnungsdatum', 'datum', 'buchungsdatum',
                 'abschlussdatum', 'anlagedatum', 'date'],
         ],
+        'booking_date' => [
+            'label' => 'Buchungsdatum',
+            'type' => 'datum',
+            'hint' => 'Wann der Pool gebucht hat – kann vom Provisionsdatum abweichen',
+            'aliases' => ['buchungstag', 'buchungdatum', 'valuta', 'valutadatum', 'bookingdate'],
+        ],
         'due_date' => [
             'label' => 'Fälligkeitsdatum',
             'type' => 'datum',
@@ -158,6 +175,12 @@ class ColumnMap
             'label' => 'Stornogrund',
             'type' => 'text',
             'aliases' => ['stornogrund', 'storno', 'stornierungsgrund'],
+        ],
+        'booking_reason' => [
+            'label' => 'Buchungsgrund',
+            'type' => 'text',
+            'hint' => 'Klartext der Quelle zu dieser Buchung',
+            'aliases' => ['buchungsgrund', 'buchungstext', 'grund', 'verwendungszweck', 'bookingreason'],
         ],
         'invoice_number' => [
             'label' => 'Rechnungsnummer',

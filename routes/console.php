@@ -61,6 +61,11 @@ Schedule::command('ai:answer-pending')->everyTenMinutes()->withoutOverlapping();
 // egal wie alt: ein Problem verschwindet nicht durch Ignorieren.
 Schedule::command('errors:prune')->dailyAt('03:55');
 
+// Provisionsmanagement: Fristen laufen ab, ohne dass jemand etwas tut.
+// Frueh am Morgen, damit die Liste "Fehlende Provisionen" schon steht, wenn
+// der Betrieb den Tag beginnt.
+Schedule::command('provisionen:status-aktualisieren')->dailyAt('04:10');
+
 // 03:50 — DSGVO: nie zugeordnete Eingangs-Dokumente nach Aufbewahrungsfrist loeschen
 Schedule::command('documents:prune-unassigned')->dailyAt('03:50');
 

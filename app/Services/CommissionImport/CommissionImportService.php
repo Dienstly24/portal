@@ -5,7 +5,11 @@ use App\Models\CommissionImport;
 use App\Models\CommissionImportRow;
 use App\Models\Contract;
 use App\Models\ContractCommission;
+use App\Services\Provisionsmanagement\CommissionStatusEngine;
+use App\Services\Provisionsmanagement\PoolRegistry;
+use App\Services\Provisionsmanagement\ReferenceLinkService;
 use App\Services\Vermittler\VermittlerReference;
+use App\Support\CommissionKind;
 use App\Support\CommissionStatus;
 use Illuminate\Support\Facades\DB;
 
@@ -30,8 +34,21 @@ class CommissionImportService
         private CommissionMatcher $matcher,
         private CommissionAuditLogger $audit,
         private CommissionContractBuilder $builder,
+        private ReferenceLinkService $links,
+        private CommissionStatusEngine $statusEngine,
+        private PoolRegistry $pools,
     ) {
     }
+
+    /**
+     * Vertraege, die dieser Lauf beruehrt hat - ihr Provisions-Zustand wird
+     * NACH dem Schreiben einmal neu berechnet (§7: "Provision später
+     * importiert -> Status automatisch aktualisiert"). Gesammelt statt je
+     * Zeile gerechnet: derselbe Vertrag steht in einer Abrechnung vielfach.
+     *
+     * @var array<string,true>
+     */
+    private array $touchedContracts = [];
 
     /**
      * Bereits vorhandene Provisionen des gerade verarbeiteten Chunks,
@@ -55,6 +72,7 @@ class CommissionImportService
         ?string $sheetName = null,
         ?array $columnMap = null,
         ?string $mode = null,
+        ?string $pool = null,
     ): CommissionImport {
         $table = $this->reader->read($path, $delimiter, $encoding, $sheetName);
         $map = $this->cleanMap($columnMap ?? ColumnMap::suggest($table->header));
@@ -76,6 +94,11 @@ class CommissionImportService
             'format' => $table->format,
             'mode' => $mode,
             'provider' => $provider,
+            // Der POOL ist die Wahl des Admins beim Upload. Fehlt sie, wird
+            // der Pool aus dem erkannten Dateiformat VORGESCHLAGEN - aber
+            // nie erzwungen: eine unbekannte Datei bekommt keinen Pool
+            // untergeschoben, sie bleibt ohne, bis jemand entscheidet.
+            'pool' => $pool ?: $this->pools->forProfile($provider),
             'delimiter' => $table->delimiter,
             'encoding' => $table->encoding,
             'sheet_name' => $table->sheetName,
@@ -194,7 +217,7 @@ class CommissionImportService
                     // VORGANG - und beim zweiten Treffer bricht der Lauf an der
                     // eindeutigen Vertragsnummer ab.
                     if ($unmatched && $buildContracts) {
-                        $again = $this->matcher->match($mapped);
+                        $again = $this->matchRow($import, $mapped);
                         if ($again['contract'] !== null && $this->matcher->conflict($again['contract'], $mapped) === null) {
                             $row->forceFill([
                                 'contract_id' => $again['contract']->id,
@@ -256,6 +279,21 @@ class CommissionImportService
             ]);
         });
 
+        // §7: Erst NACH dem Schreiben den Provisions-Zustand der beruehrten
+        // Vertraege neu berechnen. Eine spaeter eingegangene Provision macht
+        // aus "Provision fehlt" damit von selbst "Provision erhalten" - ohne
+        // dass jemand einen Status pflegen muss. Ausserhalb der Transaktion,
+        // weil ein Fehler in der Nachberechnung den bereits korrekt
+        // gebuchten Import nicht zurueckrollen darf.
+        if ($this->touchedContracts !== []) {
+            try {
+                $this->statusEngine->refreshAll(array_keys($this->touchedContracts));
+            } catch (\Throwable $e) {
+                report($e);
+            }
+            $this->touchedContracts = [];
+        }
+
         $this->audit->log('import_bestaetigt', null, [
             'import_id' => $import->id,
             'source_file' => $import->filename,
@@ -297,6 +335,44 @@ class CommissionImportService
             $clean[$field] = (int) $index;
         }
         return $clean;
+    }
+
+    /**
+     * Zuordnung einer Zeile - erst ueber die Kennungen am Vertrag, dann
+     * ueber das gespeicherte Paar Referenz-Nr. <-> Pool-Id (§15).
+     *
+     * Die zweite Stufe ist der ganze Zweck des Mappings: die spaetere
+     * Abrechnung fuehrt oft NUR noch die Id des Pools. Ohne sie waere jede
+     * Folgedatei "nicht zugeordnet", obwohl der Zusammenhang laengst
+     * bekannt ist.
+     *
+     * @param array<string,mixed> $mapped
+     * @return array{contract:?Contract,reason:?string,note:?string}
+     */
+    private function matchRow(CommissionImport $import, array $mapped): array
+    {
+        $match = $this->matcher->match($mapped);
+        if ($match['contract'] !== null) {
+            return $match;
+        }
+
+        foreach (['vermittler_id', 'external_id', 'order_number'] as $feld) {
+            $wert = is_string($mapped[$feld] ?? null) ? $mapped[$feld] : null;
+            $link = $this->links->resolveByExternalId($import->pool, $wert);
+            if ($link['note'] !== null) {
+                // Mehrdeutig: lieber nichts zuordnen als Geld an einen
+                // fremden Vertrag haengen.
+                return ['contract' => null, 'reason' => null, 'note' => $link['note']];
+            }
+            if ($link['contract'] !== null) {
+                return [
+                    'contract' => $link['contract'],
+                    'reason' => 'Pool-Id ↔ Referenz-Nr. ' . $link['reference'],
+                    'note' => null,
+                ];
+            }
+        }
+        return $match;
     }
 
     /** @param array<string,int> $map */
@@ -368,7 +444,7 @@ class CommissionImportService
                 continue;
             }
 
-            $match = $this->matcher->match($mapped);
+            $match = $this->matchRow($import, $mapped);
             $contract = $match['contract'];
             $conflict = $contract !== null ? $this->matcher->conflict($contract, $mapped) : null;
 
@@ -599,6 +675,15 @@ class CommissionImportService
             $status = CommissionStatus::UNKLAR;
         }
 
+        // Provisionsart in unserer Lesart - der Originaltext bleibt in
+        // `commission_type` stehen. Ein NEGATIVER Betrag ohne Bezeichnung
+        // gilt als Storno: im Provisionsgeschaeft gibt es keinen anderen
+        // Grund fuer ein Minus (§12/§13).
+        $kind = CommissionKind::detect(
+            is_string($mapped['commission_type'] ?? null) ? $mapped['commission_type'] : null,
+            $amount === null ? null : (float) $amount
+        );
+
         $attributes = [
             'import_id' => $import->id,
             'internal_contract_number' => VermittlerReference::display($mapped['internal_contract_number'] ?? null),
@@ -623,6 +708,7 @@ class CommissionImportService
             'recipient_name' => $mapped['recipient_name'] ?? null,
             'recipient_number' => $mapped['recipient_number'] ?? null,
             'commission_type' => $mapped['commission_type'] ?? null,
+            'commission_kind' => $kind,
             'product_name' => $mapped['product_name'] ?? null,
             'company' => $mapped['company'] ?? null,
             'sparte' => ValueParser::text($mapped['sparte'] ?? null, 60),
@@ -632,14 +718,25 @@ class CommissionImportService
             'reserve_amount' => $mapped['reserve_amount'] ?? null,
             'paid_amount' => $paid,
             'commission_date' => $mapped['commission_date'] ?? null,
+            'booking_date' => $mapped['booking_date'] ?? null,
             'due_date' => $mapped['due_date'] ?? null,
             'payment_date' => $mapped['payment_date'] ?? null,
             'status' => $status,
             'storno_reason' => ValueParser::text($mapped['storno_reason'] ?? null, 255),
+            'booking_reason' => ValueParser::text($mapped['booking_reason'] ?? null, 255),
+            'gross_amount' => $mapped['gross_amount'] ?? null,
+            'net_amount' => $mapped['net_amount'] ?? null,
             'invoice_number' => ValueParser::text($mapped['invoice_number'] ?? null, 60),
             'notes' => $mapped['notes'] ?? null,
             'source_file' => $import->filename,
+            // Herkunft bis auf die Zeile genau (§5): Datei, Pool, Zeile und
+            // die ORIGINAL-Spaltenwerte. Der Admin muss spaeter sagen
+            // koennen, woher eine Zahl stammt - eine Deutung allein ist
+            // dafuer kein Beleg.
+            'source_row' => $row->row_number,
+            'raw' => is_array($row->raw) ? $row->raw : null,
             'provider' => $import->provider,
+            'pool' => $import->pool,
             'dedupe_key' => $row->dedupe_key,
             'row_hash' => $this->rowHash($mapped),
             'updated_by' => $userId,
@@ -676,6 +773,27 @@ class CommissionImportService
         }
 
         if ($contract !== null) {
+            $this->touchedContracts[$contract->id] = true;
+
+            // §15: Fuehrt die Zeile BEIDE Kennungen, wird das Paar dauerhaft
+            // gespeichert - ab dann findet auch eine Datei den Vertrag, die
+            // nur noch die Id des Pools kennt.
+            $this->links->remember(
+                $import->pool,
+                is_string($mapped['reference_number'] ?? null) ? $mapped['reference_number'] : $contract->reference_number,
+                is_string($mapped['vermittler_id'] ?? null) ? $mapped['vermittler_id'] : (is_string($mapped['external_id'] ?? null) ? $mapped['external_id'] : null),
+                $contract
+            );
+
+            // Der Vertrag lernt seinen Pool - aber nur, wenn er noch keinen
+            // hat. Ein vorhandener Pool gehoert zu einem anderen Vorgang und
+            // wird nie still ueberschrieben (dieselbe Regel wie bei den
+            // Kennungen).
+            if (blank($contract->pool) && filled($import->pool)) {
+                $contract->pool = $import->pool;
+                $contract->saveQuietly();
+            }
+
             // Die Bruecke dauerhaft machen: fehlende Kennungen am Vertrag
             // ergaenzen, damit die naechste Datei ohne Referenz-Nr. auskommt.
             foreach ($this->matcher->completeIdentifiers($contract, $mapped) as $filled) {

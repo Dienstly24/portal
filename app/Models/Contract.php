@@ -17,10 +17,18 @@ class Contract extends Model {
      * Storno weiterhin bei Loeschung und manueller Stornierung im Formular.
      */
     public bool $endsWithoutStorno = false;
-    protected $fillable = ['customer_id','contract_number','internal_contract_number','commission_import_id','reference_number','vermittler_id','vermittler_status','vermittler_matched_at','vermittler_last_import_id','vermittler_last_imported_at','type','type_other','subtype','insurer','status','stage','start_date','end_date','pdf_path','notes','cancellation_date','premium_amount','premium_interval'];
+    protected $fillable = ['customer_id','contract_number','internal_contract_number','commission_import_id','reference_number','vermittler_id','vermittler_status','vermittler_matched_at','vermittler_last_import_id','vermittler_last_imported_at','pool','type','type_other','subtype','insurer','status','stage','start_date','application_date','signing_date','end_date','pdf_path','notes','cancellation_date','premium_amount','premium_interval'];
 
     protected $casts = [
         'premium_amount' => 'decimal:2',
+        // Provisionsmanagement (02.09.2026): reine Datumsspalten, deshalb
+        // 'date' und nicht 'datetime' - sie tragen keine Uhrzeit und damit
+        // keine Zeitzone (siehe Lehre zur Anzeige-Zeitzone).
+        'application_date' => 'date',
+        'signing_date' => 'date',
+        'expected_commission_date' => 'date',
+        'commission_check_date' => 'date',
+        'commission_status_at' => 'datetime',
         'vermittler_matched_at' => 'datetime',
         'vermittler_last_imported_at' => 'datetime',
     ];
@@ -820,6 +828,26 @@ class Contract extends Model {
     public function commissions()
     {
         return $this->hasMany(ContractCommission::class)->orderByDesc('commission_date');
+    }
+
+    /**
+     * Bearbeitungsstand einer fehlenden Provision (§19). Genauso
+     * VERTRAULICH wie die Buchungen selbst - kein Gegenstueck am Kunden.
+     */
+    public function commissionFollowup()
+    {
+        return $this->hasOne(CommissionFollowup::class, 'contract_id');
+    }
+
+    /** Klartext des Provisions-Zustands (eine Quelle fuer alle Ansichten). */
+    public function commissionStatusLabel(): string
+    {
+        return \App\Support\ContractCommissionStatus::label($this->commission_status);
+    }
+
+    public function commissionStatusBadge(): string
+    {
+        return \App\Support\ContractCommissionStatus::badge($this->commission_status);
     }
 
     public function vermittlerSettlements()
