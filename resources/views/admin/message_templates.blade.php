@@ -24,6 +24,8 @@
     </div>
 </div>
 
+@include('admin.partials.email_tabs', ['active' => 'vorlagen'])
+
 {{-- Platzhalter-Referenz --}}
 <div class="card" style="margin-bottom:20px;">
     <div class="card-title" style="margin-bottom:10px;">🧩 Verfügbare Platzhalter</div>
