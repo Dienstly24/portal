@@ -1,0 +1,61 @@
+# Automatische Abhaengigkeits-Updates (Audit SEC-3).
+#
+# Warum ueberhaupt: der Audit fand 16 offene Sicherheitshinweise in
+# Paketen, die niemand bewusst installiert hat (guzzlehttp/guzzle und
+# league/commonmark sind TRANSITIVE Abhaengigkeiten von Laravel). Genau
+# solche Pakete fallen ohne Automatik durch - man sieht sie in keiner
+# composer.json und denkt bei einem Update nicht an sie.
+version: 2
+
+updates:
+  # ------------------------------------------------------------------
+  # PHP / Composer
+  # ------------------------------------------------------------------
+  - package-ecosystem: composer
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Berlin
+    open-pull-requests-limit: 5
+    labels: ["abhaengigkeiten", "sicherheit"]
+    commit-message:
+      prefix: "composer"
+    groups:
+      # Patch-/Minor-Updates gebuendelt: 30 einzelne PRs liest niemand,
+      # und was niemand liest, wird auch nicht gemergt.
+      php-minor-und-patch:
+        update-types: ["minor", "patch"]
+    ignore:
+      # Major-Sprung des Frameworks ist eine bewusste Entscheidung mit
+      # Migrationsaufwand, kein woechentlicher Automatismus.
+      - dependency-name: "laravel/framework"
+        update-types: ["version-update:semver-major"]
+
+  # ------------------------------------------------------------------
+  # JavaScript / npm
+  # ------------------------------------------------------------------
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Berlin
+    open-pull-requests-limit: 5
+    labels: ["abhaengigkeiten", "sicherheit"]
+    commit-message:
+      prefix: "npm"
+    groups:
+      js-minor-und-patch:
+        update-types: ["minor", "patch"]
+
+  # ------------------------------------------------------------------
+  # GitHub Actions selbst (veraltete Actions sind ein eigener Angriffsweg)
+  # ------------------------------------------------------------------
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    labels: ["abhaengigkeiten"]

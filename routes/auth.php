@@ -17,7 +17,37 @@ Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->name('register');
 
-    Route::post('register', [RegisteredUserController::class, 'store'])->middleware('throttle:8,1');
+    /*
+    | Selbst-Registrierung, zweistufig (Audit SEC-1). Der POST legt nur
+    | eine Vormerkung an; User, Kundenakte und Kundennummer entstehen
+    | erst beim Klick auf den Bestaetigungslink.
+    |
+    | Zwei Bremsen mit unterschiedlichem Zweck:
+    |  - 'throttle:5,10'  je IP: haelt einen einzelnen Absender klein.
+    |  - RateLimiter 'registrierung' (AppServiceProvider) zaehlt
+    |    zusaetzlich je E-Mail-Adresse - ein Botnetz mit vielen IPs kann
+    |    damit trotzdem nicht dieselbe Adresse zuspammen.
+    */
+    Route::post('register', [RegisteredUserController::class, 'store'])
+        ->middleware(['throttle:registrierung']);
+
+    // Zwischenseite "Bitte bestaetigen Sie Ihre E-Mail-Adresse".
+    Route::get('register/bestaetigung-noetig', [RegisteredUserController::class, 'pending'])
+        ->name('register.pending');
+
+    // Der Klick aus dem Postfach. Das Token schuetzt den Vorgang; der
+    // Throttle bremst das Durchprobieren von Tokens.
+    Route::get('register/bestaetigen/{token}', [RegisteredUserController::class, 'verify'])
+        ->middleware('throttle:12,1')
+        ->name('register.verify');
+
+    // Bestaetigungsmail erneut anfordern. Zusaetzlich zum Route-Throttle
+    // deckelt PendingRegistration::MAX_SENDS die Gesamtzahl je Vormerkung -
+    // ein reiner Zeit-Throttle gibt nach Ablauf wieder Luft und taugt
+    // deshalb nicht gegen das Zuspammen einer FREMDEN Adresse.
+    Route::post('register/erneut-senden', [RegisteredUserController::class, 'resendRequest'])
+        ->middleware(['throttle:registrierung'])
+        ->name('register.resend');
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
@@ -25,14 +55,14 @@ Route::middleware('guest')->group(function () {
     // Zusaetzlicher per-IP-Limiter gegen Password-Spraying ueber viele Konten;
     // der feinere email+IP-Limiter steckt weiterhin in LoginRequest. (Audit SEC-5)
     Route::post('login', [AuthenticatedSessionController::class, 'store'])
-        ->middleware('throttle:20,1');
+        ->middleware('throttle:anmeldung');
 
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');
 
     // Throttle gegen Adress-Probing / Mail-Bombing beim Reset-Versand. (Audit SEC-4)
     Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
-        ->middleware('throttle:6,1')
+        ->middleware('throttle:passwort-reset')
         ->name('password.email');
 
     // Ergebnisseite "Wir haben Ihnen eine E-Mail geschickt" - erklaert die
@@ -65,7 +95,7 @@ Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])
     ->name('password.reset');
 
 Route::post('reset-password', [NewPasswordController::class, 'store'])
-    ->middleware('throttle:6,1')
+    ->middleware('throttle:passwort-reset')
     ->name('password.store');
 
 Route::middleware('auth')->group(function () {

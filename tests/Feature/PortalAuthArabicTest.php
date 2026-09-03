@@ -39,8 +39,17 @@ class PortalAuthArabicTest extends TestCase
 
     // ---------------- Registrierung ----------------
 
+    /**
+     * Seit Audit SEC-1 zweistufig: der POST legt nur eine Vormerkung an,
+     * die Kundenakte (und damit die Kundennummer) entsteht erst mit der
+     * Bestaetigung der E-Mail-Adresse. Geprueft wird hier weiterhin, dass
+     * am ENDE eine vollstaendige Akte mit Jahresnummer steht - nur eben
+     * nach dem Klick statt sofort.
+     */
     public function test_registration_creates_full_customer_with_year_number(): void
     {
+        \Illuminate\Support\Facades\Mail::fake();
+
         $response = $this->post('/register', [
             'first_name' => 'Omar',
             'last_name' => 'Beispiel',
@@ -51,16 +60,36 @@ class PortalAuthArabicTest extends TestCase
             'agb' => '1',
         ]);
 
-        $response->assertRedirect(route('portal.dashboard'));
+        // Schritt 1: nur die Vormerkung, noch kein Konto.
+        $response->assertRedirect(route('register.pending'));
+        $this->assertGuest();
+        $this->assertDatabaseMissing('users', ['email' => 'omar@neu.de']);
+
+        // Schritt 2: der Link aus der Bestaetigungsmail.
+        $token = null;
+        \Illuminate\Support\Facades\Mail::assertSent(
+            \App\Mail\RegistrationVerificationMail::class,
+            function ($mail) use (&$token) {
+                if (preg_match('#/register/bestaetigen/([A-Za-z0-9]+)#', $mail->verifyUrl, $m)) {
+                    $token = $m[1];
+                }
+
+                return true;
+            }
+        );
+        $this->assertNotNull($token);
+
+        $this->get(route('register.verify', ['token' => $token]))
+            ->assertRedirect(route('portal.dashboard'));
         $this->assertAuthenticated();
 
         $user = User::where('email', 'omar@neu.de')->first();
         $this->assertSame('customer', $user->role);
 
         $customer = Customer::where('user_id', $user->id)->first();
-        $this->assertNotNull($customer, 'Registrierung muss eine Kundenakte anlegen.');
+        $this->assertNotNull($customer, 'Die Bestaetigung muss eine Kundenakte anlegen.');
         $this->assertSame('website', $customer->source);
-        $this->assertSame('1992-05-10', $customer->birth_date);
+        $this->assertSame('1992-05-10', $customer->birth_date->format('Y-m-d'));
         $this->assertMatchesRegularExpression('/^\d{7}$/', $customer->customer_number); // JJ+5-stellig
     }
 

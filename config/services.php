@@ -70,6 +70,28 @@ return [
     'inquiry' => [
         'support_email' => env('INQUIRY_SUPPORT_EMAIL'),'token' => env('INQUIRY_TOKEN')],
 
+    /*
+    | Cloudflare Turnstile: Bot-Schutz der Selbst-Registrierung (Audit SEC-1).
+    | Turnstile statt reCAPTCHA, weil Cloudflare ohnehin der Edge-Proxy ist -
+    | kein zusaetzlicher Drittanbieter, kein zusaetzlicher AV-Vertrag, und die
+    | Loesung kommt ohne Nutzer-Raetsel aus.
+    |
+    | Die Pruefung laeuft SERVERSEITIG gegen siteverify. Das Widget allein ist
+    | wertlos: ein Bot spricht ohnehin nicht mit dem Browser-JavaScript,
+    | sondern direkt mit POST /register.
+    |
+    | Ohne Secret laeuft die Registrierung im Nur-Honeypot-Modus (Entwicklung
+    | und Tests). In Produktion ist das Secret Pflicht - `required()` in
+    | TurnstileVerifier lehnt dort ohne Secret jede Registrierung ab, statt
+    | den Schutz still zu ueberspringen.
+    */
+    'turnstile' => [
+        'site_key' => env('TURNSTILE_SITE_KEY'),
+        'secret_key' => env('TURNSTILE_SECRET_KEY'),
+        'verify_url' => env('TURNSTILE_VERIFY_URL', 'https://challenges.cloudflare.com/turnstile/v0/siteverify'),
+        'timeout' => (int) env('TURNSTILE_TIMEOUT', 5),
+    ],
+
     'lexoffice' => [
         'key' => env('LEXOFFICE_API_KEY'),
         // Ohne ausdrueckliches Zeitlimit wartet Laravel 30 s je Versuch -

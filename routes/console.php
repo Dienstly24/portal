@@ -202,3 +202,8 @@ Schedule::command('social:publish-scheduled')->everyFifteenMinutes()->withoutOve
 // Alle 6 Stunden: Kennzahlen (Likes/Reichweite) der Social-Posts und den
 // Seiten-Ueberblick von Meta holen - Anzeige ohne API-Aufruf beim Seitenaufbau.
 Schedule::command('social:refresh-insights')->everySixHours()->withoutOverlapping();
+
+// Taeglich 03:40: abgelaufene, nie bestaetigte Registrierungs-Vormerkungen
+// loeschen (Audit SEC-1). Datenminimierung UND Freigabe der Adresse - eine
+// blockierte Adresse verhindert sonst die spaetere echte Registrierung.
+Schedule::command('registrierungen:aufraeumen')->dailyAt('03:40');

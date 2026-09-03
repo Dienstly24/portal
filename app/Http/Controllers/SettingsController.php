@@ -1,7 +1,7 @@
 <?php
 namespace App\Http\Controllers;
+use App\Http\Requests\Admin\UpdateSettingsRequest;
 use App\Models\SystemSetting;
-use Illuminate\Http\Request;
 
 class SettingsController extends Controller
 {
@@ -53,7 +53,9 @@ class SettingsController extends Controller
         ]);
     }
 
-    public function update(Request $request) {
+    public function update(UpdateSettingsRequest $request) {
+        // Ab hier gilt nur noch, was UpdateSettingsRequest geprueft hat.
+        $validated = $request->validated();
         $fields = [
             'company_name','company_email','company_phone','company_address',
             'portal_url','admin_url','contract_reminder_days',
@@ -62,8 +64,10 @@ class SettingsController extends Controller
             'legal_impressum','legal_agb','legal_datenschutz','legal_cookies'
         ];
         foreach ($fields as $field) {
-            if ($request->has($field)) {
-                SystemSetting::set($field, $request->input($field));
+            // array_key_exists statt $request->has(): geschrieben wird nur,
+            // was die Validierung durchgelassen hat - nie der Rohwert.
+            if (array_key_exists($field, $validated)) {
+                SystemSetting::set($field, trim((string) ($validated[$field] ?? '')));
             }
         }
 
@@ -83,7 +87,7 @@ class SettingsController extends Controller
             foreach (\App\Services\Ai\Assistant\AssistantSettings::DEFAULTS as $key => $default) {
                 if ($key === 'ai_assistant_max_replies_per_case') {
                     // Zahl: 0 = unbegrenzt, hart begrenzt gegen Tippfehler.
-                    $value = (int) $request->input($key, $default);
+                    $value = (int) ($validated[$key] ?? $default);
                     SystemSetting::set($key, (string) max(0, min(100, $value)));
                     continue;
                 }
@@ -91,7 +95,7 @@ class SettingsController extends Controller
                     // Ruhefrist: mindestens 1 Stunde (0 hiesse, die KI faellt
                     // dem Mitarbeiter mitten im Gespraech ins Wort), hoechstens
                     // 30 Tage.
-                    $value = (int) $request->input($key, $default);
+                    $value = (int) ($validated[$key] ?? $default);
                     SystemSetting::set($key, (string) max(1, min(720, $value)));
                     continue;
                 }
