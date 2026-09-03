@@ -40,7 +40,7 @@
         @forelse($imports as $import)
         <tr>
             <td><b>{{ $import->filename }}</b><div style="font-size:11px;color:var(--ink-soft);">{{ strtoupper($import->format) }}</div></td>
-            <td>{{ $import->poolLabel() }}<div style="font-size:11px;color:var(--ink-soft);">{{ $import->providerLabel ?? '' }}</div></td>
+            <td>{{ $import->poolLabel() }}<div style="font-size:11px;color:var(--ink-soft);">{{ $import->providerLabel() }}</div></td>
             <td>{{ ucfirst($import->status) }}</td>
             <td style="text-align:right;">{{ $import->rows_total }}</td>
             <td style="text-align:right;">{{ $import->rows_total - $import->rows_unmatched }}</td>
