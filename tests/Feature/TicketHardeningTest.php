@@ -158,7 +158,10 @@ class TicketHardeningTest extends TestCase
 
         $this->actingAs($admin)->get(route('admin.dashboard'))
             ->assertOk()
-            ->assertSee('nav-badge">1</span>', false);
+            // Seitenleiste seit 03.09.2026: das Badge traegt seinen Ton
+            // (gold = wartet auf uns) und sagt im Titel, was es bedeutet.
+            ->assertSee('nav-badge nav-badge-attention', false)
+            ->assertSee('>1</span>', false);
     }
 
     // ---------------- Benachrichtigungen ----------------
