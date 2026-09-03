@@ -385,6 +385,62 @@ class ProvisionsmanagementTest extends TestCase
 
     // ------------------------------------------------- Ergaenzende Zusagen
 
+    /**
+     * JEDE Seite des Bereichs muss sich oeffnen lassen - mit Daten und ohne.
+     *
+     * Gelernt am echten Betrieb: die Import-Historie warf einen 500er, weil
+     * in der View eine METHODE ohne Klammern stand (`$import->providerLabel`).
+     * Eloquent deutet das als Beziehung und wirft - im Test fiel es nicht auf,
+     * weil zwar die Zahlen der Seite geprueft waren, aber nie ihr AUFRUF.
+     * Dieser Test ruft deshalb stumpf alles auf, was einen Menuepunkt hat.
+     */
+    public function test_jede_seite_des_bereichs_laesst_sich_oeffnen(): void
+    {
+        $admin = $this->admin();
+        $contract = $this->contract($this->customer(), ['reference_number' => 'REF-12345']);
+
+        $seiten = fn () => [
+            route('admin.provisionsmanagement.dashboard'),
+            route('admin.provisionsmanagement.imports'),
+            route('admin.provisionsmanagement.statements'),
+            route('admin.provisionsmanagement.contracts'),
+            route('admin.provisionsmanagement.contract', $contract->id),
+            route('admin.provisionsmanagement.missing'),
+            route('admin.provisionsmanagement.unclear'),
+            route('admin.provisionsmanagement.unclear', ['art' => 'status']),
+            route('admin.provisionsmanagement.analytics'),
+            route('admin.provisionsmanagement.settings'),
+            route('admin.provisionsmanagement.export'),
+            // Die Nachbarseiten teilen sich die Navigation - ein Fehler dort
+            // trifft denselben Bereich.
+            route('admin.commissions_internal.index'),
+            route('admin.commissions_internal.import'),
+            route('admin.commissions_internal.audit'),
+            route('admin.commissions_internal.invoice'),
+        ];
+
+        // 1. Leerer Bestand: die haeufigste Lage kurz nach dem Livegang.
+        foreach ($seiten() as $url) {
+            $this->actingAs($admin)->get($url)->assertOk();
+        }
+
+        // 2. Mit Daten - erst dann laufen die Zeilen der Tabellen durch.
+        $this->importiere($this->check24Csv([
+            ['betrag' => '120,00'],
+            ['betrag' => '-20,00', 'status' => 'storniert', 'stornogrund' => 'Widerruf'],
+        ]));
+        $this->importiere($this->check24Csv([['referenz' => 'REF-OHNE', 'id' => '556677']]));
+        app(CommissionStatusEngine::class)->refreshAll();
+
+        foreach ($seiten() as $url) {
+            $this->actingAs($admin)->get($url)->assertOk();
+        }
+
+        $this->actingAs($admin)
+            ->get(route('admin.provisionsmanagement.customer', $contract->customer_id))
+            ->assertOk();
+    }
+
     public function test_pool_fristen_sind_einstellung_und_wirken_sofort(): void
     {
         $pool = CommissionPool::where('key', 'check24')->sole();
