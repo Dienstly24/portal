@@ -22,9 +22,19 @@ return Application::configure(basePath: dirname(__DIR__))
         // im HTTPS-Redirect (RedirectWebsiteHost) -> gesamte Website down, und
         // (b) falsche IPs in ActivityLog/WorkSession und in ALLEN throttle-
         // Buckets (Login/Reset/Website-Formular) -> Rate-Limits kollabieren auf
-        // wenige Proxy-IPs (Audit NET-1). Die App ist nur ueber den Proxy
-        // erreichbar; ist der Origin direkt erreichbar, auf CF-Ranges einengen.
-        $middleware->trustProxies(at: '*', headers: Request::HEADER_X_FORWARDED_FOR
+        // wenige Proxy-IPs (Audit NET-1).
+        //
+        // Seit Audit SEC-2 ist die Liste EXPLIZIT statt '*'. Ein '*' glaubt
+        // den Header auch dann, wenn die Anfrage direkt am Proxy vorbei auf
+        // den Origin trifft - dann darf der Absender seine Client-IP frei
+        // erfinden und bekommt fuer jeden Versuch einen frischen
+        // Rate-Limit-Eimer, waehrend ActivityLog und die
+        // DSGVO-Einwilligungsnachweise eine erfundene IP festhalten.
+        // Standard: Cloudflare-Ranges + Loopback (config/trustedproxy.php),
+        // ueberschreibbar per TRUSTED_PROXIES in der Server-.env.
+        // Die Netzwerkseite steht in docs/SICHERHEIT_NETZWERK_ORIGIN.md -
+        // Laravel allein kann den direkten Origin-Zugriff nicht schliessen.
+        $middleware->trustProxies(at: \App\Support\TrustedProxies::resolve(), headers: Request::HEADER_X_FORWARDED_FOR
             | Request::HEADER_X_FORWARDED_HOST
             | Request::HEADER_X_FORWARDED_PORT
             | Request::HEADER_X_FORWARDED_PROTO);

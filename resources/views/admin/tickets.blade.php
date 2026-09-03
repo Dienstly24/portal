@@ -113,7 +113,7 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
         </div>
         <div class="field" style="flex:1;min-width:140px;margin-bottom:0;">
             <label>Typ</label>
-            <select name="type" onchange="this.form.submit()">
+            <select name="type" data-h-change="3c951a7e95">
                 <option value="">Alle</option>
                 @foreach(\App\Models\Ticket::TYPES as $key => $label)
                 <option value="{{ $key }}" {{ request('type') === $key ? 'selected' : '' }}>{{ $label }}</option>
@@ -122,7 +122,7 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
         </div>
         <div class="field" style="flex:1;min-width:140px;margin-bottom:0;">
             <label>Priorität</label>
-            <select name="priority" onchange="this.form.submit()">
+            <select name="priority" data-h-change="3c951a7e95">
                 <option value="">Alle</option>
                 @foreach(\App\Models\Ticket::PRIORITIES as $key => $p)
                 <option value="{{ $key }}" {{ request('priority') === $key ? 'selected' : '' }}>{{ $p['icon'] }} {{ $p['label'] }}</option>
@@ -131,7 +131,7 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
         </div>
         <div class="field" style="flex:1;min-width:160px;margin-bottom:0;">
             <label>Zugewiesen an</label>
-            <select name="assigned" onchange="this.form.submit()">
+            <select name="assigned" data-h-change="3c951a7e95">
                 <option value="">Alle</option>
                 <option value="me" {{ request('assigned') === 'me' ? 'selected' : '' }}>Mir zugewiesen</option>
                 <option value="none" {{ request('assigned') === 'none' ? 'selected' : '' }}>Nicht zugewiesen</option>
@@ -142,7 +142,7 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
         </div>
         <div class="field" style="flex:1;min-width:170px;margin-bottom:0;">
             <label>Sortierung</label>
-            <select name="sort" onchange="this.form.submit()">
+            <select name="sort" data-h-change="3c951a7e95">
                 @foreach(['aktualisiert' => 'Zuletzt aktualisiert', 'neueste' => 'Neueste zuerst', 'aelteste' => 'Älteste zuerst', 'prioritaet' => 'Priorität (dringend zuerst)', 'faellig' => 'Fälligkeit (SLA)'] as $key => $label)
                 <option value="{{ $key }}" {{ $sort === $key ? 'selected' : '' }}>{{ $label }}</option>
                 @endforeach
@@ -155,23 +155,13 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
     </form>
 </div>
 
-<div x-data="{
-    selected: [],
-    pageIds: @js($showBulk ? $tickets->pluck('id')->map(fn($i) => (string) $i)->values() : []),
-    toggleAll(ev) { this.selected = ev.target.checked ? [...this.pageIds] : []; },
-    doBulk(action) {
-        if (action === 'delete' && !confirm(this.selected.length + ' Ticket(s) in den Papierkorb verschieben?')) return;
-        this.$refs.bulkAction.value = action;
-        this.$refs.bulkForm.submit();
-    }
-}">
+<div data-bulk>
 <div class="card" style="padding:0;overflow:visible;">
     <table class="tickets-table">
         <thead><tr>
             @if($showBulk)
             <th class="noNav" style="width:40px;padding-left:20px;">
-                <input type="checkbox" class="ticket-check" title="Alle auswählen"
-                    :checked="selected.length === pageIds.length && pageIds.length > 0" @change="toggleAll($event)">
+                <input type="checkbox" class="ticket-check" title="Alle auswählen" data-bulk-all>
             </th>
             <th style="width:44px;"></th>
             @else
@@ -200,7 +190,7 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
         <tr class="ticket-row" data-href="{{ route('admin.ticket', $t->id) }}" style="cursor:pointer;">
             @if($showBulk)
             <td class="noNav" style="padding-left:20px;">
-                <input type="checkbox" class="ticket-check" value="{{ $t->id }}" x-model="selected">
+                <input type="checkbox" class="ticket-check" value="{{ $t->id }}" data-bulk-item>
             </td>
             @endif
             {{-- Typ-Icon als farbige Kachel (wie Kunden-/Vertragsliste) --}}
@@ -250,10 +240,10 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
             </td>
             {{-- Aktionen: 3-Punkte-Menue. Zelle .noNav, damit der Klick hier NICHT
                  die Zeilennavigation ausloest. --}}
-            <td class="noNav" style="text-align:right;padding-right:16px;position:relative;" x-data="{open:false}">
-                <button type="button" @click="open=!open" aria-haspopup="true" :aria-expanded="open" title="Aktionen"
+            <td class="noNav" data-menu style="text-align:right;padding-right:16px;position:relative;">
+                <button type="button" data-menu-trigger aria-haspopup="true" aria-expanded="false" title="Aktionen"
                     style="background:none;border:none;cursor:pointer;font-size:18px;line-height:1;color:var(--ink-soft);padding:4px 10px;border-radius:6px;letter-spacing:1px;">•••</button>
-                <div x-show="open" x-cloak @click.outside="open=false" @keydown.escape.window="open=false"
+                <div data-menu-panel hidden
                     style="position:absolute;right:12px;top:100%;z-index:50;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);min-width:230px;padding:6px;">
                     <a href="{{ route('admin.ticket', $t->id) }}" class="rowmenu-item">🎫 Ticket öffnen</a>
                     @if($t->customer)
@@ -267,7 +257,7 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
                         </form>
                         @if($me->role === 'admin')
                         <form method="POST" action="{{ route('admin.ticket.forcedelete', $t->id) }}"
-                            onsubmit="return confirm('Ticket {{ $t->ticket_number }} ENDGÜLTIG löschen? Nachrichten, Verlauf und Anhänge werden unwiderruflich entfernt.')">
+                            data-confirm="Ticket {{ $t->ticket_number }} ENDGÜLTIG löschen? Nachrichten, Verlauf und Anhänge werden unwiderruflich entfernt.">
                             @csrf @method('DELETE')
                             <button type="submit" class="rowmenu-item rowmenu-danger">🗑️ Endgültig löschen</button>
                         </form>
@@ -293,7 +283,7 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
                         @if($canDelete)
                         <div class="rowmenu-sep"></div>
                         <form method="POST" action="{{ route('admin.ticket.delete', $t->id) }}"
-                            onsubmit="return confirm('Ticket {{ $t->ticket_number }} in den Papierkorb verschieben?')">
+                            data-confirm="Ticket {{ $t->ticket_number }} in den Papierkorb verschieben?">
                             @csrf @method('DELETE')
                             <button type="submit" class="rowmenu-item rowmenu-danger">🗑️ In den Papierkorb</button>
                         </form>
@@ -313,18 +303,18 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
 
 @if($showBulk)
 {{-- Bulk-Aktionsleiste: erscheint, sobald Tickets ausgewaehlt sind --}}
-<form method="POST" action="{{ route('admin.tickets.bulk') }}" x-ref="bulkForm" x-show="selected.length > 0" x-cloak class="bulk-bar">
+<form method="POST" action="{{ route('admin.tickets.bulk') }}" data-bulk-form hidden class="bulk-bar">
     @csrf
-    <input type="hidden" name="action" x-ref="bulkAction">
-    <template x-for="id in selected" :key="id"><input type="hidden" name="ids[]" :value="id"></template>
-    <span class="bulk-count"><strong x-text="selected.length"></strong>&nbsp;ausgewählt</span>
-    <select name="status" @change="$event.target.value && doBulk('status')">
+    <input type="hidden" name="action" data-bulk-action>
+    {{-- Die ausgewaehlten IDs traegt ui.js als versteckte Felder nach --}}
+    <span class="bulk-count"><strong data-bulk-count>0</strong>&nbsp;ausgewählt</span>
+    <select name="status" data-bulk-select="status">
         <option value="">Status setzen…</option>
         @foreach(\App\Models\Ticket::STATUSES as $key => $label)
         <option value="{{ $key }}">{{ $label }}</option>
         @endforeach
     </select>
-    <select name="assigned_to" @change="$event.target.value && doBulk('assign')">
+    <select name="assigned_to" data-bulk-select="assign">
         <option value="">Zuweisen an…</option>
         <option value="me">Mir zuweisen</option>
         <option value="none">Zuweisung entfernen</option>
@@ -332,16 +322,16 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
         <option value="{{ $u->id }}">{{ $u->name }}</option>
         @endforeach
     </select>
-    <select name="priority" @change="$event.target.value && doBulk('priority')">
+    <select name="priority" data-bulk-select="priority">
         <option value="">Priorität setzen…</option>
         @foreach(\App\Models\Ticket::PRIORITIES as $key => $p)
         <option value="{{ $key }}">{{ $p['icon'] }} {{ $p['label'] }}</option>
         @endforeach
     </select>
     @if($canDelete)
-    <button type="button" class="bulk-delete" @click="doBulk('delete')">🗑️ Löschen</button>
+    <button type="button" class="bulk-delete" data-bulk-do="delete">🗑️ Löschen</button>
     @endif
-    <button type="button" class="bulk-clear" @click="selected=[]" title="Auswahl aufheben">✕</button>
+    <button type="button" class="bulk-clear" data-bulk-clear title="Auswahl aufheben">✕</button>
 </form>
 @endif
 </div>
@@ -364,7 +354,7 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
 @endif
 
 <style>
-[x-cloak]{display:none !important;}
+
 .tickets-table td{padding-top:12px;padding-bottom:12px;vertical-align:middle;}
 .ticket-row{transition:background .12s;}
 .ticket-row:hover td{background:#E6E9ED;}
@@ -387,7 +377,7 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
 .bulk-bar .bulk-clear{background:none;border:none;color:#9aa0a8;font-size:15px;cursor:pointer;padding:4px 6px;}
 .bulk-bar .bulk-clear:hover{color:#fff;}
 </style>
-<script>
+<script @cspNonce>
 document.querySelectorAll('tr.ticket-row').forEach(function (row) {
     row.addEventListener('click', function (e) {
         if (e.target.closest('.noNav') || e.target.closest('a') || e.target.closest('button')) return;
@@ -396,3 +386,14 @@ document.querySelectorAll('tr.ticket-row').forEach(function (row) {
 });
 </script>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["3c951a7e95"] = function (event) { this.form.submit() };
+</script>
+@endPushOnce

@@ -35,7 +35,7 @@
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Aufgaben</span></div>
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
         <div class="page-title">Aufgaben</div>
-        <button onclick="openTaskCreate()" class="btn btn-gold">+ Aufgabe erstellen</button>
+        <button data-h-click="e98173f7fb" class="btn btn-gold">+ Aufgabe erstellen</button>
     </div>
 </div>
 
@@ -64,7 +64,7 @@
         @if($tab !== 'done')
         <div>
             <label style="font-size:12px;color:var(--ink-soft);display:block;margin-bottom:4px;font-weight:600;">Status</label>
-            <select name="status" onchange="this.form.submit()" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-width:130px;">
+            <select name="status" data-h-change="df663d9750" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-width:130px;">
                 <option value="">Alle</option>
                 <option value="open" {{ request('status')==='open'?'selected':'' }}>Offen</option>
                 <option value="in_progress" {{ request('status')==='in_progress'?'selected':'' }}>In Bearbeitung</option>
@@ -73,7 +73,7 @@
         @endif
         <div>
             <label style="font-size:12px;color:var(--ink-soft);display:block;margin-bottom:4px;font-weight:600;">Aufgabentyp</label>
-            <select name="type" onchange="this.form.submit()" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-width:140px;">
+            <select name="type" data-h-change="df663d9750" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-width:140px;">
                 <option value="">Alle</option>
                 @foreach(\App\Models\Task::TYPES as $tKey => $tDef)
                 <option value="{{ $tKey }}" {{ request('type')===$tKey?'selected':'' }}>{{ $tDef['icon'] }} {{ $tDef['label'] }}</option>
@@ -118,7 +118,7 @@
     <div style="font-size:34px;margin-bottom:10px;">✅</div>
     <div style="font-weight:600;color:var(--ink);margin-bottom:6px;">Keine Aufgaben gefunden</div>
     <div style="font-size:13px;margin-bottom:18px;">Lege eine Aufgabe oder Wiedervorlage an – z. B. „Kunde in 14 Tagen nachfassen".</div>
-    <button onclick="openTaskCreate()" class="btn btn-gold">+ Aufgabe erstellen</button>
+    <button data-h-click="e98173f7fb" class="btn btn-gold">+ Aufgabe erstellen</button>
 </div>
 @else
 <div style="display:flex;flex-direction:column;gap:10px;">
@@ -181,7 +181,7 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
             @if($t->status !== 'done')
             <form method="POST" action="{{ route('admin.tasks.update', $t->id) }}">
                 @csrf @method('PUT')
-                <select name="postpone_days" onchange="if(this.value)this.form.submit()" title="Fälligkeit verschieben" style="padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;background:#fff;color:var(--ink-soft);max-width:92px;">
+                <select name="postpone_days" data-h-change="4e7c046741" title="Fälligkeit verschieben" style="padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;background:#fff;color:var(--ink-soft);max-width:92px;">
                     <option value="">⏩ Später</option>
                     <option value="1">+1 Tag</option>
                     <option value="3">+3 Tage</option>
@@ -193,14 +193,14 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
             @endif
             <form method="POST" action="{{ route('admin.tasks.update', $t->id) }}">
                 @csrf @method('PUT')
-                <select name="status" onchange="this.form.submit()" style="padding:6px 10px;border:1px solid var(--line);border-radius:6px;font-size:12px;">
+                <select name="status" data-h-change="df663d9750" style="padding:6px 10px;border:1px solid var(--line);border-radius:6px;font-size:12px;">
                     @foreach(\App\Models\Task::STATUSES as $sKey => $sLabel)
                     <option value="{{ $sKey }}" {{ $t->status===$sKey?'selected':'' }}>{{ $sLabel }}{{ $sKey==='done'?' ✓':'' }}</option>
                     @endforeach
                 </select>
             </form>
-            <button type="button" onclick="openTaskEdit('{{ $t->id }}')" style="border:none;background:none;cursor:pointer;color:var(--ink-soft);font-size:16px;padding:4px;" title="Bearbeiten">✏️</button>
-            <form method="POST" action="{{ route('admin.tasks.destroy', $t->id) }}" onsubmit="return confirm('Aufgabe löschen?')">
+            <button type="button" data-h-click="1b8d89a956" data-a0="{{ $t->id }}" style="border:none;background:none;cursor:pointer;color:var(--ink-soft);font-size:16px;padding:4px;" title="Bearbeiten">✏️</button>
+            <form method="POST" action="{{ route('admin.tasks.destroy', $t->id) }}" data-h-submit="a2ccef7c87">
                 @csrf @method('DELETE')
                 <button type="submit" style="border:none;background:none;cursor:pointer;color:var(--ink-soft);font-size:18px;padding:4px;" title="Löschen">🗑</button>
             </form>
@@ -215,7 +215,7 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
 {{-- Aufgaben-Modal (Anlegen + Bearbeiten) --}}
 <div id="task-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:640px;position:relative;margin:auto 0;">
-        <button onclick="closeTaskModal()" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;color:var(--ink-soft);">✕</button>
+        <button data-h-click="d085771a23" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;color:var(--ink-soft);">✕</button>
         <div id="tf-heading" style="font-size:18px;font-weight:700;margin-bottom:18px;">Neue Aufgabe</div>
 
         @if($errors->any())
@@ -251,10 +251,10 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
 
             <div class="field" style="margin-bottom:10px;"><label>Fällig am</label>
                 <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                    <input type="date" name="due_date" id="tf-due" style="width:170px;" onchange="clearDueChips()">
+                    <input type="date" name="due_date" id="tf-due" style="width:170px;" data-h-change="abdcfeee46">
                     <div style="display:flex;gap:6px;flex-wrap:wrap;" id="tf-due-chips">
                         @foreach([0=>'Heute',1=>'Morgen',3=>'+3 Tage',7=>'+1 Woche',10=>'+10 Tage',20=>'+20 Tage',30=>'+1 Monat'] as $d=>$lbl)
-                        <button type="button" class="due-chip" data-days="{{ $d }}" onclick="pickDue({{ $d }}, this)"
+                        <button type="button" class="due-chip" data-days="{{ $d }}" data-h-click="task-faellig" data-tage="{{ $d }}"
                             style="border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 11px;font-size:12px;cursor:pointer;color:var(--ink);">{{ $lbl }}</button>
                         @endforeach
                     </div>
@@ -278,7 +278,7 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
                         <strong id="tk-picked-name"></strong>
                         <span style="color:var(--ink-soft);" id="tk-picked-sub"></span>
                     </span>
-                    <button type="button" onclick="clearTkCustomer()" style="border:none;background:none;cursor:pointer;color:var(--ink-soft);font-size:15px;" title="Kunde entfernen">✕</button>
+                    <button type="button" data-h-click="607c69ec0a" style="border:none;background:none;cursor:pointer;color:var(--ink-soft);font-size:15px;" title="Kunde entfernen">✕</button>
                 </div>
                 <input type="text" id="tk-search" autocomplete="off" placeholder="Kunde suchen: Name, Nummer, E-Mail, Firma, Kennzeichen…">
                 <div id="tk-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);max-height:280px;overflow-y:auto;z-index:50;margin-top:4px;"></div>
@@ -288,14 +288,14 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
             @if($canAutoEmail)
             <div id="tf-ae-wrap" style="display:none;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:16px;background:var(--surface);">
                 <label style="display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13.5px;font-weight:600;">
-                    <input type="checkbox" name="auto_email" value="1" id="tf-ae" onchange="toggleAeFields()" style="width:auto;">
+                    <input type="checkbox" name="auto_email" value="1" id="tf-ae" data-h-change="315059b22f" style="width:auto;">
                     ⏱️✉️ E-Mail automatisch an den Kunden senden
                 </label>
                 <div id="tf-ae-hint" style="font-size:12px;color:var(--ink-soft);margin-top:5px;">Die E-Mail geht am gewählten Tag ab 08:00 Uhr automatisch raus – z. B. eine Erinnerung oder Unterlagen-Anforderung. Wird die Aufgabe vorher erledigt, wird nichts gesendet.</div>
                 <div id="tf-ae-fields" style="display:none;margin-top:12px;">
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
                         <div class="field" style="margin-bottom:12px;"><label>Vorlage</label>
-                            <select id="tf-ae-template" onchange="applyAeTemplate()">
+                            <select id="tf-ae-template" data-h-change="13317bb20f">
                                 <option value="">– Frei schreiben –</option>
                                 @foreach($templates as $tpl)
                                 <option value="{{ $tpl->id }}">{{ $tpl->name }}</option>
@@ -305,7 +305,7 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
                         <div class="field" style="margin-bottom:12px;"><label>Senden am *</label>
                             <div style="display:flex;gap:6px;align-items:center;">
                                 <input type="date" name="auto_email_send_on" id="tf-ae-date" style="flex:1;">
-                                <button type="button" onclick="aeDateFromDue()" title="Sendetermin = Fälligkeitstag" style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 10px;font-size:12px;cursor:pointer;white-space:nowrap;">= Fällig am</button>
+                                <button type="button" data-h-click="2e2af50239" title="Sendetermin = Fälligkeitstag" style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 10px;font-size:12px;cursor:pointer;white-space:nowrap;">= Fällig am</button>
                             </div>
                         </div>
                     </div>
@@ -314,7 +314,7 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
                     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
                         <span style="font-size:11.5px;color:var(--ink-soft);">Platzhalter:</span>
                         @foreach($placeholders as $ph => $phLabel)
-                        <button type="button" onclick="insertPh('{{ $mustache($ph) }}')" title="{{ $phLabel }}"
+                        <button type="button" data-h-click="7b9cae84d2" data-a0="{{ $mustache($ph) }}" title="{{ $phLabel }}"
                             style="border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 9px;font-size:11.5px;cursor:pointer;color:var(--ink-soft);font-family:monospace;">{{ $mustache($ph) }}</button>
                         @endforeach
                     </div>
@@ -328,14 +328,14 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
             <div class="field"><label>Beschreibung</label><textarea name="description" id="tf-description" maxlength="5000" placeholder="Details zur Aufgabe…" style="min-height:80px;"></textarea></div>
 
             <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
-                <button type="button" onclick="closeTaskModal()" class="btn btn-ghost">Abbrechen</button>
+                <button type="button" data-h-click="d085771a23" class="btn btn-ghost">Abbrechen</button>
                 <button type="submit" class="btn btn-primary" id="tf-submit">Aufgabe erstellen</button>
             </div>
         </form>
     </div>
 </div>
 
-<script>
+<script @cspNonce>
 const TASKS = @json($taskData);
 const TEMPLATES = @json($templates->keyBy('id'));
 const PRESELECTED = @json($preselected);
@@ -597,3 +597,42 @@ document.addEventListener('DOMContentLoaded', () => {
 @endif
 </script>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["e98173f7fb"] = function (event) { openTaskCreate() };
+window.__h["df663d9750"] = function (event) { this.form.submit() };
+window.__h["4e7c046741"] = function (event) { if(this.value)this.form.submit() };
+window.__h["a2ccef7c87"] = function (event) { return confirm('Aufgabe löschen?') };
+window.__h["d085771a23"] = function (event) { closeTaskModal() };
+window.__h["abdcfeee46"] = function (event) { clearDueChips() };
+window.__h["607c69ec0a"] = function (event) { clearTkCustomer() };
+window.__h["315059b22f"] = function (event) { toggleAeFields() };
+window.__h["13317bb20f"] = function (event) { applyAeTemplate() };
+window.__h["2e2af50239"] = function (event) { aeDateFromDue() };
+</script>
+@endPushOnce
+
+{{-- Ereignis-Handler mit veraenderlichem Wert (Audit SEC-4):
+     der Wert steht in data-a0, der Code ist fuer alle Zeilen
+     derselbe. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["1b8d89a956"] = function (event) { openTaskEdit(this.dataset.a0) };
+window.__h["7b9cae84d2"] = function (event) { insertPh(this.dataset.a0) };
+</script>
+@endPushOnce
+
+{{-- Faelligkeits-Vorgabe (Audit SEC-4) --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["task-faellig"] = function (event) { pickDue(Number(this.dataset.tage), this) };
+</script>
+@endPushOnce

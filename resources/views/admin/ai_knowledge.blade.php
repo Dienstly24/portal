@@ -133,7 +133,7 @@ A: Die Beratung ist kostenlos und unverbindlich.">{{ old('text') }}</textarea>
      verweisen ueber form="bulkForm" darauf. Die Eintraege tragen jeweils ein
      eigenes Bearbeiten-Formular - verschachtelte Formulare waeren ungueltig. --}}
 <form method="POST" action="{{ route('admin.ai_knowledge.bulk') }}" id="bulkForm"
-      onsubmit="return confirm('Ausgewählte Einträge ändern? Freigegebene Einträge gibt der Assistent ab sofort als Auskunft weiter.');">@csrf</form>
+      data-h-submit="dedb37970b">@csrf</form>
 
 <div class="card" style="padding:0;overflow:hidden;">
     <div style="padding:16px 20px;border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
@@ -192,7 +192,7 @@ A: Die Beratung ist kostenlos und unverbindlich.">{{ old('text') }}</textarea>
             </div>
         </form>
         <form method="POST" action="{{ route('admin.ai_knowledge.destroy', $entry->id) }}"
-              onsubmit="return confirm('Diesen Eintrag löschen? Der Assistent kann das Thema danach nicht mehr beantworten und übergibt an das Team.');"
+              data-h-submit="0c1f891b07"
               style="margin-top:8px;">
             @csrf @method('DELETE')
             <button type="submit" class="btn" style="color:#B3261E;">Löschen</button>
@@ -213,3 +213,15 @@ A: Die Beratung ist kostenlos und unverbindlich.">{{ old('text') }}</textarea>
 
 <div style="margin-top:16px;">{{ $entries->links() }}</div>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["dedb37970b"] = function (event) { return confirm('Ausgewählte Einträge ändern? Freigegebene Einträge gibt der Assistent ab sofort als Auskunft weiter.'); };
+window.__h["0c1f891b07"] = function (event) { return confirm('Diesen Eintrag löschen? Der Assistent kann das Thema danach nicht mehr beantworten und übergibt an das Team.'); };
+</script>
+@endPushOnce

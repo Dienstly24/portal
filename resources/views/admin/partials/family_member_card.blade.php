@@ -38,7 +38,7 @@
          Formular ist ungueltiges HTML - der Browser wirft das innere weg und
          der Klick sendet dann das Kunden-Formular ab, statt zu loeschen. --}}
     <button type="submit" form="family-delete-{{ $f->id }}" title="Entfernen"
-            onclick="return confirm('Familienmitglied „{{ addslashes($f->name) }}“ wirklich entfernen?')"
+            data-confirm="Familienmitglied „{{ $f->name }}“ wirklich entfernen?"
             style="position:absolute;top:8px;right:10px;background:none;border:0;cursor:pointer;color:#A32D2D;font-size:14px;padding:0;line-height:1;">✕</button>
     @endif
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;{{ $showDelete ? 'padding-right:18px;' : '' }}">

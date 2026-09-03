@@ -38,5 +38,5 @@
         </form>
     </div>
 </div>
-<script>document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('chat-scroll');if(b)b.scrollTop=b.scrollHeight;});</script>
+<script @cspNonce>document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('chat-scroll');if(b)b.scrollTop=b.scrollHeight;});</script>
 @endsection

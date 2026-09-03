@@ -19,18 +19,18 @@
       · <a href="{{ route('legal', 'datenschutz') }}" style="color:#3ddc8e;text-decoration:none;">{{ __('Datenschutzerklärung') }}</a>
     </div>
     <div style="display:flex;gap:10px;flex:none;flex-wrap:wrap;">
-      <button type="button" onclick="d24CookieChoice('essential')"
+      <button type="button" data-h-click="40a6c72830"
               style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#dde0e5;font-size:13.5px;font-weight:600;padding:10px 18px;border-radius:10px;cursor:pointer;">
         {{ __('Nur notwendige') }}
       </button>
-      <button type="button" onclick="d24CookieChoice('all')"
+      <button type="button" data-h-click="224c8d4a0b"
               style="background:linear-gradient(180deg,#19b463,#128a4b);border:1px solid #1fc06e;color:#fff;font-size:13.5px;font-weight:700;padding:10px 20px;border-radius:10px;cursor:pointer;">
         {{ __('Alle akzeptieren') }}
       </button>
     </div>
   </div>
 </div>
-<script>
+<script @cspNonce>
 (function(){
   function getCookie(n){return document.cookie.split('; ').find(r=>r.startsWith(n+'='))?.split('=')[1];}
   function setCookie(n,v){var d=new Date();d.setTime(d.getTime()+365*24*60*60*1000);document.cookie=n+'='+v+';expires='+d.toUTCString()+';path=/;SameSite=Lax';}
@@ -45,3 +45,15 @@
   }
 })();
 </script>
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["40a6c72830"] = function (event) { d24CookieChoice('essential') };
+window.__h["224c8d4a0b"] = function (event) { d24CookieChoice('all') };
+</script>
+@endPushOnce

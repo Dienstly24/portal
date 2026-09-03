@@ -40,7 +40,7 @@
                 <div style="display:flex;gap:6px;align-items:center;">
                     <a href="{{ route('admin.lexoffice.invoice.download', $inv['id']) }}" class="btn btn-ghost btn-sm">PDF</a>
                     @if(isset($inv['address']['supplement']) || true)
-                    <button onclick="document.getElementById('send-{{ $inv['id'] }}').style.display='block'" class="btn btn-primary btn-sm">📧 Senden</button>
+                    <button data-show="send-{{ $inv['id'] }}" class="btn btn-primary btn-sm">📧 Senden</button>
                     @endif
                 </div>
                 <div id="send-{{ $inv['id'] }}" style="display:none;margin-top:8px;">

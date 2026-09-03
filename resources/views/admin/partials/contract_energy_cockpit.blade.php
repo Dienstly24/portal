@@ -104,7 +104,7 @@
                     {{ $r->formatted() }}
                     @if($canManage)
                     <form method="POST" action="{{ route('admin.contract.meter_reading.destroy', [$contract->id, $r->id]) }}"
-                          style="display:inline;" onsubmit="return confirm('Diese Ablesung wirklich löschen?');">
+                          style="display:inline;" data-h-submit="4448456bbc">
                         @csrf @method('DELETE')
                         <button type="submit" title="Ablesung löschen"
                                 style="background:none;border:none;color:#8A919E;cursor:pointer;font-size:12px;padding:0 0 0 6px;">✕</button>
@@ -177,3 +177,14 @@
     </form>
 </div>
 @endif
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["4448456bbc"] = function (event) { return confirm('Diese Ablesung wirklich löschen?'); };
+</script>
+@endPushOnce

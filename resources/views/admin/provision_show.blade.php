@@ -68,7 +68,7 @@
                 </form>
                 @endif
                 @if(in_array($provision->status, ['offen', 'freigegeben'], true))
-                <form method="POST" action="{{ route('admin.provisions.status', $provision->id) }}" style="margin:0;" onsubmit="return confirm('Buchung als ausgezahlt markieren?');">
+                <form method="POST" action="{{ route('admin.provisions.status', $provision->id) }}" style="margin:0;" data-h-submit="ca992b67d5">
                     @csrf<input type="hidden" name="status" value="ausgezahlt">
                     <button type="submit" class="btn btn-gold btn-sm">Auszahlen</button>
                 </form>
@@ -78,7 +78,7 @@
                 </form>
                 @endif
                 @if(in_array($provision->status, ['storniert', 'ausgezahlt'], true))
-                <form method="POST" action="{{ route('admin.provisions.status', $provision->id) }}" style="margin:0;" onsubmit="return confirm('Buchung wieder oeffnen? Freigabe und Auszahlung werden zurueckgesetzt.');">
+                <form method="POST" action="{{ route('admin.provisions.status', $provision->id) }}" style="margin:0;" data-h-submit="b259b55e04">
                     @csrf<input type="hidden" name="status" value="offen">
                     <button type="submit" class="btn btn-ghost btn-sm">Wieder öffnen (Korrektur)</button>
                 </form>
@@ -137,3 +137,15 @@
 </div>
 @include('admin.partials.provision_styles')
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["ca992b67d5"] = function (event) { return confirm('Buchung als ausgezahlt markieren?'); };
+window.__h["b259b55e04"] = function (event) { return confirm('Buchung wieder oeffnen? Freigabe und Auszahlung werden zurueckgesetzt.'); };
+</script>
+@endPushOnce

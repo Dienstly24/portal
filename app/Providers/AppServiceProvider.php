@@ -243,6 +243,26 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->registerRateLimiters();
+
+        /*
+        | Content-Security-Policy (Audit SEC-4).
+        |
+        | @cspNonce setzt das nonce-Attribut auf ein <script>. Nur damit
+        | laeuft ein eingebettetes Skript noch - genau das ist der Sinn:
+        | ein per XSS eingeschleustes <script> kennt den Zufallswert
+        | dieser Antwort nicht.
+        |
+        | Den Wert an Laravels Vite-Helfer zu haengen erledigt
+        | SecurityHeaders je Anfrage - hier waere er einmalig fuer den
+        | ganzen Prozess und passte ab der zweiten Antwort nicht mehr.
+        */
+        \Illuminate\Support\Facades\Blade::directive(
+            'cspNonce',
+            fn () => "<?php echo \App\Support\CspNonce::attribute(); ?>"
+        );
+
+
         // EINE Passwort-Regel fuer alle Pfade, die Rules\Password::defaults()
         // benutzen (Registrierung, Reset, Profil-Aenderung). Die Laenge
         // richtet sich nach der Rolle des Kontos, das gerade ein Passwort
@@ -413,4 +433,77 @@ class AppServiceProvider extends ServiceProvider
             report($e);
         }
     }
+
+    /**
+     * Benannte Rate-Limiter fuer die sicherheitsrelevanten Formulare
+     * (Audit SEC-1 / SEC-2).
+     *
+     * Warum nicht einfach 'throttle:8,1' je Route? Weil ein reiner
+     * IP-Eimer zwei Luecken hat:
+     *  1. Ein Botnetz verteilt seine Versuche auf viele IPs. Gegen das
+     *     Zuspammen EINER fremden Adresse hilft nur ein Eimer, der die
+     *     Adresse mitzaehlt.
+     *  2. Umgekehrt sitzen hinter einer Firmen-IP viele echte Nutzer.
+     *
+     * Deshalb zaehlt jeder Limiter hier ZWEI Eimer gleichzeitig: einen
+     * je IP und einen je Ziel-Adresse. Der striktere gewinnt.
+     *
+     * Die IP kommt aus $request->ip() und damit aus der vertrauens-
+     * wuerdigen Proxy-Kette (config/trustedproxy.php). Ein selbst
+     * gesetzter X-Forwarded-For-Header aendert den Schluessel NICHT mehr,
+     * solange die Anfrage nicht ueber einen eingetragenen Proxy kam -
+     * genau das war der Befund von SEC-2.
+     */
+    private function registerRateLimiters(): void
+    {
+        // Registrierung und "Bestaetigung erneut senden".
+        \Illuminate\Support\Facades\RateLimiter::for('registrierung', function ($request) {
+            return [
+                \Illuminate\Cache\RateLimiting\Limit::perMinutes(10, 5)
+                    ->by('reg-ip:' . $request->ip()),
+                // Je Adresse deutlich enger: eine echte Person registriert
+                // sich einmal, nicht fuenfmal in zehn Minuten.
+                \Illuminate\Cache\RateLimiting\Limit::perMinutes(60, 3)
+                    ->by('reg-mail:' . self::mailKey($request->input('email'))),
+            ];
+        });
+
+        // Anmeldung. Zusaetzlich zum feineren email+IP-Limiter in
+        // LoginRequest, der die Fehlversuche EINES Kontos zaehlt.
+        \Illuminate\Support\Facades\RateLimiter::for('anmeldung', function ($request) {
+            return [
+                \Illuminate\Cache\RateLimiting\Limit::perMinute(20)
+                    ->by('login-ip:' . $request->ip()),
+                \Illuminate\Cache\RateLimiting\Limit::perMinutes(15, 10)
+                    ->by('login-mail:' . self::mailKey($request->input('email'))),
+            ];
+        });
+
+        // Passwort vergessen. Der Adress-Eimer ist hier der wichtigere:
+        // ohne ihn laesst sich ein fremdes Postfach mit Reset-Mails
+        // fluten, solange der Angreifer nur genug IPs hat.
+        \Illuminate\Support\Facades\RateLimiter::for('passwort-reset', function ($request) {
+            return [
+                \Illuminate\Cache\RateLimiting\Limit::perMinutes(10, 6)
+                    ->by('reset-ip:' . $request->ip()),
+                \Illuminate\Cache\RateLimiting\Limit::perMinutes(60, 4)
+                    ->by('reset-kennung:' . self::mailKey(
+                        $request->input('email') ?? $request->input('kennung')
+                    )),
+            ];
+        });
+    }
+
+    /**
+     * Normalisierter Schluesselanteil aus einer Kennung. Gehasht, damit
+     * keine E-Mail-Adresse im Klartext in den Cache-Schluessel (und damit
+     * in Redis-Keys oder Logs) geraet.
+     */
+    private static function mailKey(mixed $value): string
+    {
+        $value = \Illuminate\Support\Str::lower(trim((string) $value));
+
+        return $value === '' ? 'leer' : sha1($value);
+    }
+
 }

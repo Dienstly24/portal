@@ -78,7 +78,7 @@ $proof = $changeRequest->proofState();
         </label>
         @endif
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button type="submit" class="btn btn-primary" onclick="return confirm('Mitteilung jetzt an die Gesellschaft senden?');">📤 Senden</button>
+            <button type="submit" class="btn btn-primary" data-h-click="d72a4421d0">📤 Senden</button>
             <button type="submit" formaction="{{ route('admin.change_notifications.update', $n->id) }}" class="btn btn-ghost">💾 Entwurf speichern</button>
         </div>
     </form>
@@ -109,3 +109,14 @@ $proof = $changeRequest->proofState();
 </div>
 @endforelse
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["d72a4421d0"] = function (event) { return confirm('Mitteilung jetzt an die Gesellschaft senden?'); };
+</script>
+@endPushOnce

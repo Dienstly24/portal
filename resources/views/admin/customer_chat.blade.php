@@ -220,7 +220,7 @@
                 <form method="POST" action="{{ route('admin.ticket.status', $activeTicket->id) }}" class="kx-status">
                     @csrf
                     <span>Status ändern:</span>
-                    <select name="status" onchange="this.form.submit()" aria-label="Ticket-Status">
+                    <select name="status" data-h-change="d150febeb6" aria-label="Ticket-Status">
                         @foreach(\App\Models\Ticket::STATUSES as $val => $label)
                         <option value="{{ $val }}" @selected($activeTicket->status === $val)>{{ $label }}</option>
                         @endforeach
@@ -242,9 +242,9 @@
                 <a class="kx-note-btn" style="background:#fff;border-color:var(--line);color:var(--ink-soft);text-decoration:none;" href="{{ route('admin.email.compose', ['customer_id' => $active->id]) }}">✉️ E-Mail verfassen</a>
                 @endif
                 @if(auth()->user()->role !== 'employee' || auth()->user()->can_manage_tickets)
-                <button type="button" class="kx-ticket-btn" onclick="document.getElementById('kx-ticket-modal').style.display='flex'">🎫 Vorgang erstellen</button>
+                <button type="button" class="kx-ticket-btn" data-h-click="b107d356de">🎫 Vorgang erstellen</button>
                 @endif
-                <button type="button" class="kx-note-btn" onclick="const n=document.getElementById('kx-note');n.hidden=!n.hidden;if(!n.hidden)n.querySelector('textarea').focus();">🔒 Notiz</button>
+                <button type="button" class="kx-note-btn" data-h-click="f9296021a4">🔒 Notiz</button>
             </div>
         </div>
         <form id="kx-note" method="POST" action="{{ route('admin.customer.note.store', $active->id) }}" class="kx-note" hidden
@@ -261,18 +261,18 @@
             <input type="hidden" name="type" value="chat" disabled id="kx-note-type">
             <button type="submit" class="btn btn-gold" style="padding:7px 16px;font-size:13px;">Speichern</button>
         </form>
-        <button type="button" id="kx-refresh" class="kx-refresh" hidden onclick="location.reload()">⟳ Neue Ereignisse – Ansicht aktualisieren</button>
+        <button type="button" id="kx-refresh" class="kx-refresh" hidden data-h-click="30398ee11c">⟳ Neue Ereignisse – Ansicht aktualisieren</button>
 
         {{-- "Anfrage -> Conversation -> Ticket": Vorgang aus der laufenden
              Unterhaltung eroeffnen, Beschreibung aus der letzten
              Kundennachricht vorbefuellt. Der Chatverlauf bleibt erhalten. --}}
         @if(auth()->user()->role !== 'employee' || auth()->user()->can_manage_tickets)
-        <div id="kx-ticket-modal" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.5);align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)this.style.display='none'">
+        <div id="kx-ticket-modal" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.5);align-items:center;justify-content:center;padding:20px;" data-h-click="adf8b47a88">
             <form method="POST" action="{{ route('admin.customer_chat.ticket', $active->id) }}" style="background:#fff;border-radius:14px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;padding:24px;">
                 @csrf
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
                     <div style="font-size:16px;font-weight:700;">🎫 Vorgang erstellen</div>
-                    <button type="button" onclick="document.getElementById('kx-ticket-modal').style.display='none'" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--ink-soft);">✕</button>
+                    <button type="button" data-h-click="b3689b9352" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--ink-soft);">✕</button>
                 </div>
                 <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;">Für {{ $active->user?->name ?? 'diesen Kunden' }} (Nr. {{ $active->customer_number }}). Der Chatverlauf bleibt erhalten – das Ticket ist nur der Bearbeitungs-Status.</p>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
@@ -302,7 +302,7 @@
                     <input type="checkbox" name="assign_me" value="1" style="width:auto;"> Mir zuweisen und direkt in Bearbeitung nehmen
                 </label>
                 <div style="display:flex;gap:10px;justify-content:flex-end;">
-                    <button type="button" onclick="document.getElementById('kx-ticket-modal').style.display='none'" class="btn btn-ghost" style="padding:8px 16px;font-size:13px;">Abbrechen</button>
+                    <button type="button" data-h-click="b3689b9352" class="btn btn-ghost" style="padding:8px 16px;font-size:13px;">Abbrechen</button>
                     <button type="submit" class="btn btn-gold" style="padding:8px 18px;font-size:13px;">Vorgang eröffnen</button>
                 </div>
             </form>
@@ -369,7 +369,7 @@
 @include('partials.chat_core')
 @include('partials.doc_preview')
 @if($active)
-<script>
+<script @cspNonce>
 document.addEventListener('DOMContentLoaded', function () {
     const list = document.getElementById('kc-list');
     const scroller = document.getElementById('kc-scroll');
@@ -487,7 +487,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 @endif
-<script>
+<script @cspNonce>
 // Antwortvorschlag holen (Abschnitt 16). Bewusst NUR einfuegen: gesendet
 // wird ausschliesslich durch den Mitarbeiter.
 document.addEventListener('click', function (e) {
@@ -514,3 +514,19 @@ document.addEventListener('click', function (e) {
 });
 </script>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["d150febeb6"] = function (event) { this.form.submit() };
+window.__h["b107d356de"] = function (event) { document.getElementById('kx-ticket-modal').style.display='flex' };
+window.__h["f9296021a4"] = function (event) { const n=document.getElementById('kx-note');n.hidden=!n.hidden;if(!n.hidden)n.querySelector('textarea').focus(); };
+window.__h["30398ee11c"] = function (event) { location.reload() };
+window.__h["adf8b47a88"] = function (event) { if(event.target===this)this.style.display='none' };
+window.__h["b3689b9352"] = function (event) { document.getElementById('kx-ticket-modal').style.display='none' };
+</script>
+@endPushOnce

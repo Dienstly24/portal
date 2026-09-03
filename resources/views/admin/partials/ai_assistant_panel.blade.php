@@ -175,7 +175,7 @@
                             <span class="kx-ai-badge ok">gewählt</span>
                         @else
                             <form method="POST" action="{{ route('admin.ai_assistant.offer.destroy', [$active->id, $angebot->id]) }}"
-                                  onsubmit="return confirm('Angebot {{ $angebot->label }} entfernen?');">
+                                  data-confirm="Angebot {{ $angebot->label }} entfernen?">
                                 @csrf @method('DELETE')
                                 <button type="submit" class="kx-ai-btn">Entfernen</button>
                             </form>

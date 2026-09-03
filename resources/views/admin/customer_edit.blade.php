@@ -23,9 +23,9 @@
 @csrf @method('PUT')
 {{-- Tabs --}}
 <div style="display:flex;gap:0;border-bottom:2px solid var(--line);margin-bottom:24px;">
-    <button type="button" onclick="showTab('basis')" id="tab-basis" style="padding:11px 18px;border:none;background:none;cursor:pointer;font-size:13.5px;font-weight:700;color:var(--petrol);border-bottom:2px solid var(--petrol);margin-bottom:-2px;">Basisdaten</button>
-    <button type="button" onclick="showTab('familie')" id="tab-familie" style="padding:11px 18px;border:none;background:none;cursor:pointer;font-size:13.5px;font-weight:500;color:var(--ink-soft);border-bottom:2px solid transparent;margin-bottom:-2px;">Familie</button>
-    <button type="button" onclick="showTab('portal')" id="tab-portal" style="padding:11px 18px;border:none;background:none;cursor:pointer;font-size:13.5px;font-weight:500;color:var(--ink-soft);border-bottom:2px solid transparent;margin-bottom:-2px;">Portal-Zugang</button>
+    <button type="button" data-h-click="1256420201" id="tab-basis" style="padding:11px 18px;border:none;background:none;cursor:pointer;font-size:13.5px;font-weight:700;color:var(--petrol);border-bottom:2px solid var(--petrol);margin-bottom:-2px;">Basisdaten</button>
+    <button type="button" data-h-click="07455f39cc" id="tab-familie" style="padding:11px 18px;border:none;background:none;cursor:pointer;font-size:13.5px;font-weight:500;color:var(--ink-soft);border-bottom:2px solid transparent;margin-bottom:-2px;">Familie</button>
+    <button type="button" data-h-click="ff2fed20ee" id="tab-portal" style="padding:11px 18px;border:none;background:none;cursor:pointer;font-size:13.5px;font-weight:500;color:var(--ink-soft);border-bottom:2px solid transparent;margin-bottom:-2px;">Portal-Zugang</button>
 </div>
 
 {{-- Tab: Basisdaten --}}
@@ -292,7 +292,7 @@
 </form>
 @endforeach
 
-<script>
+<script @cspNonce>
 window.IS_FIRMA = {{ ($customer->customer_type ?? 'privat') === 'firma' ? 'true' : 'false' }};
 function showTab(tab) {
     ['basis','familie','portal'].forEach(t => {
@@ -313,3 +313,16 @@ function showTab(tab) {
 </script>
 @include('admin.partials.phone_hints')
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["1256420201"] = function (event) { showTab('basis') };
+window.__h["07455f39cc"] = function (event) { showTab('familie') };
+window.__h["ff2fed20ee"] = function (event) { showTab('portal') };
+</script>
+@endPushOnce

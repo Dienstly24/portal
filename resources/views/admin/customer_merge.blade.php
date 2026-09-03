@@ -42,7 +42,7 @@ $labels = [
     </div>
     @endif
 
-    <form method="POST" action="{{ route('admin.customer.merge.do', $customer->id) }}" onsubmit="return confirm('Wirklich zusammenführen? Alle Daten des Duplikats werden übertragen, die leere Duplikat-Akte danach gelöscht.');">
+    <form method="POST" action="{{ route('admin.customer.merge.do', $customer->id) }}" data-h-submit="25eb1da5ed">
         @csrf
         {{-- Sofort-Suche statt einer Auswahlliste ueber den ganzen Bestand:
              das <select> wuchs mit jedem Neukunden mit. --}}
@@ -66,7 +66,7 @@ $labels = [
         </div>
     </form>
 </div>
-<script>
+<script @cspNonce>
 // Duplikat-Auswahl per Sofort-Suche (admin.customers.search). Der eigene
 // Kunde ist ueber "exclude" ausgeschlossen - niemand fuehrt einen Kunden
 // mit sich selbst zusammen.
@@ -147,3 +147,14 @@ $labels = [
 })();
 </script>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["25eb1da5ed"] = function (event) { return confirm('Wirklich zusammenführen? Alle Daten des Duplikats werden übertragen, die leere Duplikat-Akte danach gelöscht.'); };
+</script>
+@endPushOnce

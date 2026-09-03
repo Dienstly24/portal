@@ -119,7 +119,7 @@
 </div>
 @endif
 
-<script>
+<script @cspNonce>
 (function () {
     const labels = @json($labels);
     const grid = { color: 'rgba(0,0,0,.05)' };

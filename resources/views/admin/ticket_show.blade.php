@@ -42,7 +42,7 @@
             </form>
             @if($me->role === 'admin')
             <form method="POST" action="{{ route('admin.ticket.forcedelete', $ticket->id) }}"
-                onsubmit="return confirm('Ticket {{ $ticket->ticket_number }} ENDGÜLTIG löschen? Nachrichten, Verlauf und Anhänge werden unwiderruflich entfernt.')">
+                data-confirm="Ticket {{ $ticket->ticket_number }} ENDGÜLTIG löschen? Nachrichten, Verlauf und Anhänge werden unwiderruflich entfernt.">
                 @csrf @method('DELETE')
                 <button type="submit" class="btn btn-ghost" style="color:#A32D2D;">🗑️ Endgültig löschen</button>
             </form>
@@ -289,7 +289,7 @@
             Es verschwindet aus der Ticketliste und dem Kundenportal, kann aber jederzeit wiederhergestellt werden.
         </div>
         <form method="POST" action="{{ route('admin.ticket.delete', $ticket->id) }}"
-            onsubmit="return confirm('Ticket {{ $ticket->ticket_number }} in den Papierkorb verschieben?')">
+            data-confirm="Ticket {{ $ticket->ticket_number }} in den Papierkorb verschieben?">
             @csrf @method('DELETE')
             <button type="submit" class="btn btn-ghost" style="color:#A32D2D;border-color:#EFC7C7;">🗑️ In den Papierkorb</button>
         </form>

@@ -182,11 +182,11 @@
     <div class="kfz-chip-row" style="margin-bottom:4px;">
         <span class="kfz-fixed-chip">✓ Haftpflicht (Pflicht)</span>
         <label class="kfz-chip big">
-            <input type="checkbox" id="kfz-tk" name="vehicle[has_teilkasko]" value="1" {{ $hasTk ? 'checked' : '' }} onchange="kfzSync()">
+            <input type="checkbox" id="kfz-tk" name="vehicle[has_teilkasko]" value="1" {{ $hasTk ? 'checked' : '' }} data-h-change="78b9583e66">
             <span>Teilkasko</span>
         </label>
         <label class="kfz-chip big">
-            <input type="checkbox" id="kfz-vk" name="vehicle[has_vollkasko]" value="1" {{ $hasVk ? 'checked' : '' }} onchange="kfzSync()">
+            <input type="checkbox" id="kfz-vk" name="vehicle[has_vollkasko]" value="1" {{ $hasVk ? 'checked' : '' }} data-h-change="78b9583e66">
             <span>Vollkasko</span>
         </label>
     </div>
@@ -236,7 +236,7 @@
     <div id="kfz-driver-list" style="display:none;margin-top:12px;">
         <div class="kfz-subline">Weitere Fahrer</div>
         <div id="kfz-drivers"></div>
-        <button type="button" class="kfz-row-btn" onclick="kfzAddDriver()">+ Fahrer hinzufügen</button>
+        <button type="button" class="kfz-row-btn" data-h-click="565b7d45ea">+ Fahrer hinzufügen</button>
     </div>
 </div>
 
@@ -247,7 +247,7 @@
     <div class="kfz-subline" style="margin-top:0;">Fahrzeughalter</div>
     <div class="kfz-chip-row">
         @foreach(VD::HOLDER_TYPES as $key => $label)
-        <label class="kfz-chip"><input type="radio" name="vehicle[holder_type]" value="{{ $key }}" {{ $curHolder === $key ? 'checked' : '' }} onchange="kfzSync()"><span>{{ $label }}</span></label>
+        <label class="kfz-chip"><input type="radio" name="vehicle[holder_type]" value="{{ $key }}" {{ $curHolder === $key ? 'checked' : '' }} data-h-change="78b9583e66"><span>{{ $label }}</span></label>
         @endforeach
     </div>
     <div id="kfz-holder-name" class="field" style="display:none;margin-top:10px;max-width:420px;">
@@ -276,12 +276,12 @@
     @endif
     <div class="kfz-subline">Jährliche Fahrleistung (vereinbart)</div>
     <div class="kfz-chip-row">
-        <label class="kfz-chip"><input type="radio" name="vehicle[annual_mileage]" value="" {{ $curAnnual === '' ? 'checked' : '' }} onchange="kfzSync()"><span>keine Angabe</span></label>
+        <label class="kfz-chip"><input type="radio" name="vehicle[annual_mileage]" value="" {{ $curAnnual === '' ? 'checked' : '' }} data-h-change="78b9583e66"><span>keine Angabe</span></label>
         @foreach(VD::ANNUAL_MILEAGE_OPTIONS as $km)
-        <label class="kfz-chip"><input type="radio" name="vehicle[annual_mileage]" value="{{ $km }}" {{ !$isCustomAnnual && $curAnnual !== '' && (int) $curAnnual === $km ? 'checked' : '' }} onchange="kfzSync()"><span>{{ number_format($km, 0, ',', '.') }} km</span></label>
+        <label class="kfz-chip"><input type="radio" name="vehicle[annual_mileage]" value="{{ $km }}" {{ !$isCustomAnnual && $curAnnual !== '' && (int) $curAnnual === $km ? 'checked' : '' }} data-h-change="78b9583e66"><span>{{ number_format($km, 0, ',', '.') }} km</span></label>
         @endforeach
         {{-- Sonderfaelle (8.000, 18.500, 22.500 km ...) per Freifeld --}}
-        <label class="kfz-chip"><input type="radio" id="kfz-annual-custom-radio" name="vehicle[annual_mileage]" value="custom" {{ $isCustomAnnual ? 'checked' : '' }} onchange="kfzSync()"><span>✏️ Eigene Fahrleistung</span></label>
+        <label class="kfz-chip"><input type="radio" id="kfz-annual-custom-radio" name="vehicle[annual_mileage]" value="custom" {{ $isCustomAnnual ? 'checked' : '' }} data-h-change="78b9583e66"><span>✏️ Eigene Fahrleistung</span></label>
     </div>
     <div id="kfz-annual-custom" class="field" style="display:none;margin-top:10px;max-width:280px;">
         <label>Eigene Fahrleistung (km/Jahr)</label>
@@ -345,7 +345,7 @@
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:560px;">
             <div class="field"><label>SF-Klasse</label>
-                <select name="vehicle[{{ $branch['prefix'] }}_class]" class="kfz-sf-class" data-branch="{{ $branch['short'] }}" onchange="kfzSync()" style="{{ $kfzInputStyle }}">
+                <select name="vehicle[{{ $branch['prefix'] }}_class]" class="kfz-sf-class" data-branch="{{ $branch['short'] }}" data-h-change="78b9583e66" style="{{ $kfzInputStyle }}">
                     <option value="">— keine Angabe —</option>
                     @foreach(VD::sfClassKeys() as $key)
                     <option value="{{ $key }}" {{ $branch['data']['class'] === $key ? 'selected' : '' }}>{{ VD::sfLabel($key) }}</option>
@@ -357,7 +357,7 @@
         <div style="margin:6px 0 4px;font-size:12px;color:var(--ink-soft);">Art der SF-Klasse</div>
         <div class="kfz-chip-row">
             @foreach(VD::SF_TYPES as $key => $label)
-            <label class="kfz-chip"><input type="radio" name="vehicle[{{ $branch['prefix'] }}_type]" value="{{ $key }}" {{ $branch['data']['type'] === $key ? 'checked' : '' }} onchange="kfzSync()"><span>{{ $key === 'tatsaechlich' ? '✅' : '⭐' }} {{ $label }}</span></label>
+            <label class="kfz-chip"><input type="radio" name="vehicle[{{ $branch['prefix'] }}_type]" value="{{ $key }}" {{ $branch['data']['type'] === $key ? 'checked' : '' }} data-h-change="78b9583e66"><span>{{ $key === 'tatsaechlich' ? '✅' : '⭐' }} {{ $label }}</span></label>
             @endforeach
         </div>
         <div id="kfz-sonder-{{ $branch['short'] }}" style="display:none;margin-top:10px;background:var(--canvas);border:1px solid var(--line);border-radius:10px;padding:12px;">
@@ -403,10 +403,10 @@
     <div class="kfz-card-title">⚠️ Schäden</div>
     <div class="kfz-card-sub">Alle Schadenfälle mit Datum, Art, Höhe und Stand der Regulierung.</div>
     <div id="kfz-claims"></div>
-    <button type="button" class="kfz-row-btn" onclick="kfzAddClaim()">+ Schaden hinzufügen</button>
+    <button type="button" class="kfz-row-btn" data-h-click="90204f6c8a">+ Schaden hinzufügen</button>
 </div>
 
-<script>
+<script @cspNonce>
 // ---- Kataloge/Bestand aus PHP (einmalig gerendert) ----
 const KFZ_CLAIM_TYPES = @json(VehicleClaim::TYPES);
 const KFZ_CLAIM_STATUSES = @json(VehicleClaim::STATUSES);
@@ -432,7 +432,7 @@ function kfzAddDriver(d) {
             <input type="date" name="vehicle[additional_drivers][${i}][birth_date]" value="${kfzEsc(d.birth_date)}" style="${KFZ_INPUT}"></div>
         <div><label style="font-size:11.5px;color:var(--ink-soft);">Führerschein seit</label>
             <input type="date" name="vehicle[additional_drivers][${i}][license_date]" value="${kfzEsc(d.license_date)}" style="${KFZ_INPUT}"></div>
-        <button type="button" class="kfz-remove" title="Fahrer entfernen" onclick="this.parentElement.remove();kfzSummary()">✕</button>`;
+        <button type="button" class="kfz-remove" title="Fahrer entfernen" data-h-click="kfz-entfernen">✕</button>`;
     document.getElementById('kfz-drivers').appendChild(row);
 }
 
@@ -458,7 +458,7 @@ function kfzAddClaim(cl) {
                 <input type="text" name="vehicle[claim_rows][${i}][insurer]" maxlength="255" value="${kfzEsc(cl.insurer)}" placeholder="Versicherer" style="${KFZ_INPUT}">
                 <input type="text" name="vehicle[claim_rows][${i}][notes]" maxlength="2000" value="${kfzEsc(cl.notes)}" placeholder="Notizen" style="${KFZ_INPUT}">
             </div></div>
-        <button type="button" class="kfz-remove" title="Schaden entfernen" onclick="this.parentElement.remove();kfzSummary()">✕</button>`;
+        <button type="button" class="kfz-remove" title="Schaden entfernen" data-h-click="kfz-entfernen">✕</button>`;
     document.getElementById('kfz-claims').appendChild(row);
 }
 
@@ -540,3 +540,19 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('section-kfz').addEventListener('input', kfzSummary);
 });
 </script>
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["78b9583e66"] = function (event) { kfzSync() };
+// Entfernen-Knopf: wird von kfzAddDriver()/kfzAddClaim() per JavaScript
+// erzeugt und traegt deshalb nur das data-Attribut, keinen Code.
+window.__h["kfz-entfernen"] = function (event) { this.parentElement.remove(); kfzSummary(); };
+window.__h["565b7d45ea"] = function (event) { kfzAddDriver() };
+window.__h["90204f6c8a"] = function (event) { kfzAddClaim() };
+</script>
+@endPushOnce

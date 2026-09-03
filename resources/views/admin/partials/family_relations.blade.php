@@ -25,7 +25,7 @@
 <div class="card" id="familie-verknuepfungen">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:10px;">
         <div class="card-title" style="margin-bottom:0;">👪 Familie &amp; Kinder – verknüpfte Kunden ({{ $gesamt }})</div>
-        <button type="button" class="btn btn-gold btn-sm" onclick="famSucheOeffnen()">Bestehenden Kunden hinzufügen</button>
+        <button type="button" class="btn btn-gold btn-sm" data-h-click="2b70a0c57e">Bestehenden Kunden hinzufügen</button>
     </div>
     <p style="font-size:12px;color:var(--ink-soft);margin:0 0 16px;">
         Familienmitglieder mit <strong>eigener Kundenakte</strong>. Die Verknüpfung wird in beide Richtungen
@@ -146,7 +146,7 @@
                         <button type="submit" class="btn btn-ghost" style="padding:5px 10px;font-size:12px;">Rolle ändern</button>
                     </form>
                     <form method="POST" action="{{ route('admin.customer.family.unlink', [$customer->id, $rel->id]) }}"
-                          onsubmit="return confirm('Nur die Verknüpfung wird aufgehoben – die Kundenakte von „{{ addslashes($mitglied->user?->name ?? 'Kunde') }}“ bleibt mit allen Verträgen und Dokumenten bestehen. Fortfahren?');">
+                          data-confirm="Nur die Verknüpfung wird aufgehoben – die Kundenakte von „{{ $mitglied->user?->name ?? 'Kunde' }}“ bleibt mit allen Verträgen und Dokumenten bestehen. Fortfahren?">
                         @csrf @method('DELETE')
                         <button type="submit" class="btn btn-ghost" style="padding:5px 10px;font-size:12px;color:#A32D2D;">Verknüpfung lösen</button>
                     </form>
@@ -163,14 +163,14 @@
     <div style="background:var(--surface,#FBFAF6);border-radius:14px;max-width:620px;width:100%;padding:22px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
             <div class="card-title" style="margin-bottom:0;">Bestehenden Kunden hinzufügen</div>
-            <button type="button" onclick="document.getElementById('fam-suche-modal').style.display='none'" style="background:none;border:0;font-size:20px;cursor:pointer;color:var(--ink-soft);">×</button>
+            <button type="button" data-h-click="7152198f01" style="background:none;border:0;font-size:20px;cursor:pointer;color:var(--ink-soft);">×</button>
         </div>
         <p style="font-size:12px;color:var(--ink-soft);margin:0 0 14px;">
             Suche nach Vorname, Nachname, Kundennummer, Geburtsdatum (TT.MM.JJJJ), E-Mail, Telefon oder Anschrift.
             Der gefundene Kunde wird <strong>verknüpft, nicht kopiert</strong> – sein Datensatz bleibt unverändert.
         </p>
         <input type="text" id="fam-suche-feld" placeholder="z. B. Ebraheem, 2600610 oder 12.03.2012"
-               oninput="famSucheStarten()" autocomplete="off"
+               data-h-input="12b45f2c35" autocomplete="off"
                style="width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:9px;font-size:14px;">
         <div id="fam-suche-treffer" style="margin-top:12px;"></div>
     </div>
@@ -182,7 +182,7 @@
     <input type="hidden" name="relationship_type" id="fam-link-role">
 </form>
 
-<script>
+<script @cspNonce>
 const FAM_SUCHE_URL = @js(route('admin.customer.family.search', $customer->id));
 const FAM_ROLLEN = @js(collect(\App\Models\CustomerFamilyRelation::SELECTABLE_ROLES)
     ->mapWithKeys(fn($r) => [$r => \App\Models\CustomerFamilyRelation::ROLES[$r]])->all());
@@ -267,3 +267,16 @@ function famVerknuepfen(id, rolle) {
     document.getElementById('fam-link-form').submit();
 }
 </script>
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["2b70a0c57e"] = function (event) { famSucheOeffnen() };
+window.__h["7152198f01"] = function (event) { document.getElementById('fam-suche-modal').style.display='none' };
+window.__h["12b45f2c35"] = function (event) { famSucheStarten() };
+</script>
+@endPushOnce

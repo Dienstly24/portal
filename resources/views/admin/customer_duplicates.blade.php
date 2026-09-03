@@ -29,7 +29,7 @@
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
         @if($strongCount > 0)
         <form method="POST" action="{{ route('admin.customers.duplicates.merge_all') }}" style="margin:0;"
-              onsubmit="return confirm('Alle sicheren Treffer (>= {{ $autoMin }} % Übereinstimmung) automatisch zusammenführen?\n\nNur eindeutige Dubletten (gleiche E-Mail, Telefon, IBAN, Vertragsnummer oder Name + Geburtsdatum). Schwächere Treffer (nur gleicher Name) bleiben zur manuellen Prüfung. Alle Daten bleiben erhalten.');">
+              data-confirm="Alle sicheren Treffer (>= {{ $autoMin }} % Übereinstimmung) automatisch zusammenführen?&#10;&#10;Nur eindeutige Dubletten (gleiche E-Mail, Telefon, IBAN, Vertragsnummer oder Name + Geburtsdatum). Schwächere Treffer (nur gleicher Name) bleiben zur manuellen Prüfung. Alle Daten bleiben erhalten.">
             @csrf
             <button type="submit" class="btn btn-primary" style="background:#128a4b;">✓ Alle sicheren zusammenführen ({{ $strongCount }})</button>
         </form>
@@ -64,7 +64,7 @@ $chipDefs = [
     <span style="font-size:12.5px;color:var(--ink-soft);align-self:center;margin-right:2px;">Schnellfilter:</span>
     @foreach($chipDefs as $key => [$label, $cnt])
         @if($key === 'all' || $cnt > 0)
-        <button type="button" class="catChip {{ $key === 'all' ? 'active' : '' }}" data-cat="{{ $key }}" onclick="filterCat('{{ $key }}', this)">{{ $label }} <span class="chipCount">({{ $cnt }})</span></button>
+        <button type="button" class="catChip {{ $key === 'all' ? 'active' : '' }}" data-cat="{{ $key }}" data-h-click="79e704b028" data-a0="{{ $key }}">{{ $label }} <span class="chipCount">({{ $cnt }})</span></button>
         @endif
     @endforeach
 </div>
@@ -79,14 +79,14 @@ $chipDefs = [
 {{-- Eigenstaendiges Formular fuer die Sammel-Zusammenfuehrung. Die Checkboxen
      unten gehoeren per form="bulkMergeForm" dazu; der Button uebertraegt die
      Auswahl per JS und verlangt eine bewusste Bestaetigung. --}}
-<form method="POST" action="{{ route('admin.customers.duplicates.merge') }}" id="bulkMergeForm" onsubmit="return confirmBulkMerge(this);">@csrf</form>
+<form method="POST" action="{{ route('admin.customers.duplicates.merge') }}" id="bulkMergeForm" data-h-submit="faa8ae9065">@csrf</form>
 <form method="POST" action="{{ route('admin.customers.duplicates.dismiss_bulk') }}" id="bulkDismissForm">@csrf<input type="hidden" name="type" id="bulkDismissType" value="not_duplicate"></form>
 
 <div id="mergeBar" style="display:none;position:sticky;top:0;z-index:10;background:#131A17;color:#fff;border-radius:10px;padding:12px 20px;margin-bottom:14px;align-items:center;gap:14px;flex-wrap:wrap;">
     <span style="font-size:13.5px;font-weight:600;"><span id="mergeCount">0</span> Paar(e) ausgewählt</span>
     <div style="margin-left:auto;display:flex;gap:10px;flex-wrap:wrap;">
-        <button type="button" onclick="submitBulkDismiss('spouse')" class="btn btn-ghost" style="padding:8px 16px;font-size:13px;background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.25);" title="Ausgewählte als Ehepaar verknüpfen – beide Akten bleiben erhalten, nichts wird zusammengeführt">💍 Ehepaar</button>
-        <button type="button" onclick="submitBulkDismiss('not_duplicate')" class="btn btn-ghost" style="padding:8px 16px;font-size:13px;background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.25);" title="Ausgewählte als „kein Duplikat" markieren – wandern zu Verwandte Kunden">✕ Kein Duplikat</button>
+        <button type="button" data-h-click="7d9525c2b0" class="btn btn-ghost" style="padding:8px 16px;font-size:13px;background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.25);" title="Ausgewählte als Ehepaar verknüpfen – beide Akten bleiben erhalten, nichts wird zusammengeführt">💍 Ehepaar</button>
+        <button type="button" data-h-click="4c8f74a446" class="btn btn-ghost" style="padding:8px 16px;font-size:13px;background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.25);" title="Ausgewählte als „kein Duplikat" markieren – wandern zu Verwandte Kunden">✕ Kein Duplikat</button>
         <button type="submit" form="bulkMergeForm" class="btn btn-primary" style="padding:8px 18px;font-size:13px;">Zusammenführen</button>
     </div>
 </div>
@@ -117,7 +117,7 @@ $chipDefs = [
                  allen Vertraegen erhalten, das Paar wird nur als Ehepaar
                  gekennzeichnet und wandert zu „Verwandte Kunden". --}}
             <form method="POST" action="{{ route('admin.customers.duplicates.dismiss') }}" style="margin:0;"
-                  onsubmit="return confirm('Als Ehepaar verknüpfen? BEIDE Kunden bleiben mit allen Verträgen und Dokumenten erhalten – es wird nichts gelöscht und nichts zusammengeführt. Das Paar erscheint unter „Verwandte Kunden".');">
+                  data-h-submit="9613ca88a9".');">
                 @csrf
                 <input type="hidden" name="customer_a" value="{{ $primary->id }}">
                 <input type="hidden" name="customer_b" value="{{ $duplicate->id }}">
@@ -125,7 +125,7 @@ $chipDefs = [
                 <button type="submit" class="btn btn-ghost" style="padding:8px 14px;" title="Kein Duplikat – die beiden sind ein Ehepaar. Beide Akten und Verträge bleiben erhalten.">💍 Ehepaar</button>
             </form>
             <form method="POST" action="{{ route('admin.customers.duplicates.dismiss') }}" style="margin:0;"
-                  onsubmit="return confirm('Als „kein Duplikat" markieren? Das Paar verschwindet aus dieser Liste und erscheint unter „Verwandte Kunden".');">
+                  data-h-submit="f893ccbc80" markieren? Das Paar verschwindet aus dieser Liste und erscheint unter „Verwandte Kunden".');">
                 @csrf
                 <input type="hidden" name="customer_a" value="{{ $primary->id }}">
                 <input type="hidden" name="customer_b" value="{{ $duplicate->id }}">
@@ -163,7 +163,7 @@ $chipDefs = [
 </div>
 @endforeach
 
-<script>
+<script @cspNonce>
 // Schnellfilter: zeigt nur Paare der gewaehlten Kategorie (Name/Adresse/...).
 // Versteckte Paare werden abgewaehlt, damit Sammel-Aktionen nur das Sichtbare
 // betreffen.
@@ -242,3 +242,28 @@ function submitBulkDismiss(type) {
 </script>
 @endif
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["faa8ae9065"] = function (event) { return confirmBulkMerge(this); };
+window.__h["7d9525c2b0"] = function (event) { submitBulkDismiss('spouse') };
+window.__h["4c8f74a446"] = function (event) { submitBulkDismiss('not_duplicate') };
+window.__h["9613ca88a9"] = function (event) { return confirm('Als Ehepaar verknüpfen? BEIDE Kunden bleiben mit allen Verträgen und Dokumenten erhalten – es wird nichts gelöscht und nichts zusammengeführt. Das Paar erscheint unter „Verwandte Kunden };
+window.__h["f893ccbc80"] = function (event) { return confirm('Als „kein Duplikat };
+</script>
+@endPushOnce
+
+{{-- Ereignis-Handler mit veraenderlichem Wert (Audit SEC-4):
+     der Wert steht in data-a0, der Code ist fuer alle Zeilen
+     derselbe. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["79e704b028"] = function (event) { filterCat(this.dataset.a0, this) };
+</script>
+@endPushOnce

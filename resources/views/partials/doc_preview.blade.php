@@ -30,13 +30,13 @@
             <span id="docpv-modal-name" style="font-weight:700;font-size:14px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
             <a id="docpv-modal-tab" href="#" target="_blank" rel="noopener" class="btn btn-ghost" style="padding:6px 12px;font-size:12.5px;" title="{{ __('In neuem Tab öffnen') }}">↗ {{ __('Neuer Tab') }}</a>
             <a id="docpv-modal-download" href="#" class="btn btn-ghost" style="padding:6px 12px;font-size:12.5px;" title="{{ __('Herunterladen') }}">⬇ {{ __('Herunterladen') }}</a>
-            <button type="button" onclick="docPreview.close()" class="btn btn-ghost" title="{{ __('Schließen') }} (Esc)" style="padding:6px 12px;font-size:16px;line-height:1;">✕</button>
+            <button type="button" data-h-click="737e8fe322" class="btn btn-ghost" title="{{ __('Schließen') }} (Esc)" style="padding:6px 12px;font-size:16px;line-height:1;">✕</button>
         </div>
         <div id="docpv-modal-body" style="flex:1;min-height:0;background:#F7F5EF;display:flex;align-items:center;justify-content:center;overflow:auto;"></div>
     </div>
 </div>
 
-<script>
+<script @cspNonce>
 window.docPreview = (function () {
     var ql = document.getElementById('docpv-quicklook');
     var qlName = document.getElementById('docpv-quicklook-name');
@@ -153,3 +153,14 @@ window.docPreview = (function () {
 })();
 </script>
 @endonce
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["737e8fe322"] = function (event) { docPreview.close() };
+</script>
+@endPushOnce

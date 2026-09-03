@@ -110,9 +110,15 @@ class OperationsHardeningTest extends TestCase
                 '/url\(\s*["\']?https?:\/\//i',                 // Schriften/Bilder in CSS
             ];
 
+            // Eine einzige, NAMENTLICH benannte Ausnahme (Audit SEC-1):
+            // das Turnstile-Widget im Registrierungsformular. Begruendung
+            // und Grenzen stehen in self::ERLAUBTE_FREMDRESSOURCEN.
+            $relativ = str_replace(resource_path('views') . '/', '', $file->getPathname());
+            $inhalt = $this->ausnahmenEntfernen($relativ, $inhalt);
+
             foreach ($muster as $regex) {
                 if (preg_match($regex, $inhalt)) {
-                    $treffer[] = str_replace(resource_path('views') . '/', '', $file->getPathname());
+                    $treffer[] = $relativ;
                     break;
                 }
             }
@@ -120,4 +126,54 @@ class OperationsHardeningTest extends TestCase
 
         $this->assertSame([], $treffer, 'Diese Vorlagen laden fremde Ressourcen: ' . implode(', ', $treffer));
     }
+
+    /**
+     * Ausnahmen von der Regel "keine fremden Ressourcen" (Audit SEC-1).
+     *
+     * Es gibt genau EINE, und sie ist an Datei UND Zeile gebunden:
+     * das Cloudflare-Turnstile-Widget auf dem Registrierungsformular.
+     *
+     * Warum vertretbar:
+     *  - Turnstile ist eine SICHERHEITSMASSNAHME, kein Marketing- oder
+     *    Komfort-Einbau. Ohne serverseitig geprueften Bot-Schutz ist die
+     *    oeffentliche Registrierung der Weg, ueber den ein Bot echte
+     *    Kundenakten und Kundennummern erzeugt (genau der Befund SEC-1).
+     *  - Cloudflare ist ohnehin der Edge-Proxy dieses Auftritts und sieht
+     *    damit die IP JEDES Besuchers bereits. Das Widget fuegt keinen
+     *    NEUEN Empfaenger personenbezogener Daten hinzu - anders als es
+     *    seinerzeit die Google-Schriften taten, wegen derer diese Regel
+     *    ueberhaupt entstanden ist.
+     *  - Es laedt auf EINER Seite (Registrierung), nicht im Layout, und
+     *    nur, wenn ein Schluessel konfiguriert ist.
+     *
+     * Offen fuer den Betreiber: Turnstile gehoert in die
+     * Datenschutzerklaerung (Empfaenger, Zweck, Rechtsgrundlage
+     * Art. 6 Abs. 1 lit. f - Schutz vor missbraeuchlicher Anmeldung).
+     * Vermerkt in docs/SICHERHEIT_SEC_1_BIS_5.md.
+     *
+     * Jede ANDERE fremde Ressource - auch in derselben Datei - laesst
+     * den Test weiterhin fehlschlagen.
+     */
+    private const ERLAUBTE_FREMDRESSOURCEN = [
+        'auth/register.blade.php' => [
+            '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>',
+        ],
+    ];
+
+    private function ausnahmenEntfernen(string $relativ, string $inhalt): string
+    {
+        foreach (self::ERLAUBTE_FREMDRESSOURCEN[$relativ] ?? [] as $erlaubt) {
+            $this->assertStringContainsString(
+                $erlaubt,
+                $inhalt,
+                "Die eingetragene Ausnahme fuer {$relativ} steht nicht mehr in der Datei. "
+                . 'Bitte den Eintrag entfernen, statt eine tote Ausnahme stehen zu lassen.'
+            );
+
+            $inhalt = str_replace($erlaubt, '', $inhalt);
+        }
+
+        return $inhalt;
+    }
+
 }

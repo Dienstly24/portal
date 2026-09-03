@@ -3,7 +3,7 @@
      Kunden-Chat der Beraterwelt. Die Perspektive steckt im Payload
      (m.own aus CustomerMessage::toChatPayload), damit Blasen, Lesehaken
      und Anhaenge ueberall identisch funktionieren. --}}
-<script>
+<script @cspNonce>
 window.D24ChatL10n = {
     view: @json(__('Anzeigen')),
     download: @json(__('Herunterladen')),

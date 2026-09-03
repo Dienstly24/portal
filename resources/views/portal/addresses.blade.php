@@ -5,7 +5,7 @@
         <div class="page-title">{{ __('🏠 Meine Adressen') }}</div>
         <div class="page-sub" style="margin-bottom:0;">{{ __('Adressen hinzufügen oder Änderungen beantragen – Änderungen werden geprüft.') }}</div>
     </div>
-    <button onclick="document.getElementById('add-address-modal').style.display='flex'" class="btn btn-gold">{{ __('+ Adresse hinzufügen') }}</button>
+    <button data-h-click="da03196f68" class="btn btn-gold">{{ __('+ Adresse hinzufügen') }}</button>
 </div>
 
 @php
@@ -37,7 +37,7 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
         </div>
         <p style="font-size:13.5px;line-height:1.6;color:var(--ink-soft);">{{ $a->street }}<br>{{ $a->zip }} {{ $a->city }}<br>{{ $a->country }}</p>
         @php $addressPayload = $a->only(['id','type','street','zip','city','country']); @endphp
-        <button onclick='openAddressChange(@json($addressPayload))' class="btn btn-ghost" style="margin-top:12px;font-size:12.5px;padding:7px 14px;">{{ __('✏️ Änderung beantragen') }}</button>
+        <button data-h-click="adresse-aendern" data-payload="{{ json_encode($addressPayload) }}" class="btn btn-ghost" style="margin-top:12px;font-size:12.5px;padding:7px 14px;">{{ __('✏️ Änderung beantragen') }}</button>
     </div>
     @endforeach
 
@@ -61,7 +61,7 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
 
 <div id="add-address-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:460px;position:relative;max-height:88vh;overflow-y:auto;">
-        <button onclick="document.getElementById('add-address-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="54cb0c1ef9" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:6px;">{{ __('Adresse hinzufügen') }}</div>
         <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">{{ __('Wird nach Prüfung durch unser Team übernommen. Ein Nachweis der Anschrift ist erforderlich.') }}</p>
         <form method="POST" action="{{ route('portal.addresses.store') }}" enctype="multipart/form-data">
@@ -74,7 +74,7 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
 
 <div id="change-address-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:460px;position:relative;max-height:88vh;overflow-y:auto;">
-        <button onclick="document.getElementById('change-address-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="acdc5aefa0" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:6px;">{{ __('Adressänderung beantragen') }}</div>
         <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">{{ __('Die Änderung wird erst nach Prüfung wirksam. Bitte laden Sie einen Nachweis der neuen Anschrift hoch.') }}</p>
         <form method="POST" id="change-address-form" action="" enctype="multipart/form-data">
@@ -85,7 +85,7 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
     </div>
 </div>
 
-<script>
+<script @cspNonce>
 function openAddressChange(a) {
     document.getElementById('change-address-form').action = '{{ url('portal/addresses') }}/' + a.id + '/change';
     document.getElementById('ca-type').value = a.type;
@@ -97,3 +97,17 @@ function openAddressChange(a) {
 }
 </script>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["da03196f68"] = function (event) { document.getElementById('add-address-modal').style.display='flex' };
+window.__h["adresse-aendern"] = function (event) { openAddressChange(JSON.parse(this.dataset.payload)) };
+window.__h["54cb0c1ef9"] = function (event) { document.getElementById('add-address-modal').style.display='none' };
+window.__h["acdc5aefa0"] = function (event) { document.getElementById('change-address-modal').style.display='none' };
+</script>
+@endPushOnce

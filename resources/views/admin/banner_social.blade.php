@@ -81,7 +81,7 @@
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px;font-weight:600;">
                 <input type="checkbox" name="auto_publish" value="1" style="width:16px;height:16px;padding:0;margin:0;appearance:auto;-webkit-appearance:checkbox;background:none;border:none;border-radius:0;accent-color:#17A65B;"
                     {{ old('auto_publish', $post?->scheduled_for) ? 'checked' : '' }}
-                    onchange="document.getElementById('scheduledWrap').style.display = this.checked ? 'flex' : 'none'">
+                    data-h-change="2b75e0458d">
                 🚀 Automatisch veröffentlichen – Facebook &amp; Instagram über die Meta-API
             </label>
             <div id="scheduledWrap" style="display:{{ old('auto_publish', $post?->scheduled_for) ? 'flex' : 'none' }};gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap;">
@@ -170,8 +170,8 @@
             <td style="font-weight:600;white-space:nowrap;">{{ $info['icon'] }} {{ $info['label'] }}</td>
             <td>
                 <div style="display:flex;gap:6px;align-items:center;max-width:380px;">
-                    <input type="text" readonly value="{{ $ch->shortUrl() }}" id="link-{{ $ch->id }}" style="font-size:12.5px;flex:1;" onclick="this.select()">
-                    <button type="button" class="btn btn-ghost btn-sm" onclick="copyLink('link-{{ $ch->id }}', this)">📋 Kopieren</button>
+                    <input type="text" readonly value="{{ $ch->shortUrl() }}" id="link-{{ $ch->id }}" style="font-size:12.5px;flex:1;" data-h-click="6536db7a85">
+                    <button type="button" class="btn btn-ghost btn-sm" data-h-click="d3f9784441" data-a0="link-{{ $ch->id }}">📋 Kopieren</button>
                 </div>
             </td>
             <td style="text-align:right;font-weight:600;">{{ number_format($ch->clicks, 0, ',', '.') }}</td>
@@ -222,7 +222,7 @@
                         Läuft im Hintergrund – Sie bekommen eine Benachrichtigung, sobald der Beitrag online ist.
                     </div>
                     @elseif(!$ch->published_at && ($metaConfigured[$ch->platform] ?? false))
-                    <form method="POST" action="{{ route('admin.banners.social.publish_now', [$banner->id, $ch->platform]) }}" onsubmit="return confirm('Diesen Beitrag jetzt auf {{ $info['label'] }} veröffentlichen?');">
+                    <form method="POST" action="{{ route('admin.banners.social.publish_now', [$banner->id, $ch->platform]) }}" data-confirm="Diesen Beitrag jetzt auf {{ $info['label'] }} veröffentlichen?">
                         @csrf
                         <button type="submit" class="btn btn-primary btn-sm">🚀 {{ $ch->publish_error ? 'Erneut versuchen' : 'Jetzt per API posten' }}</button>
                     </form>
@@ -252,7 +252,7 @@
     </div>
 </div>
 
-<script>
+<script @cspNonce>
 function copyLink(id, btn) {
     const input = document.getElementById(id);
     input.select();
@@ -266,3 +266,25 @@ function copyLink(id, btn) {
 }
 </script>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["2b75e0458d"] = function (event) { document.getElementById('scheduledWrap').style.display = this.checked ? 'flex' : 'none' };
+window.__h["6536db7a85"] = function (event) { this.select() };
+</script>
+@endPushOnce
+
+{{-- Ereignis-Handler mit veraenderlichem Wert (Audit SEC-4):
+     der Wert steht in data-a0, der Code ist fuer alle Zeilen
+     derselbe. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["d3f9784441"] = function (event) { copyLink(this.dataset.a0, this) };
+</script>
+@endPushOnce

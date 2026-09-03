@@ -25,7 +25,7 @@
 <meta property="og:title" content="{{ $page->t('title') }} – Dienstly24">
 @if($page->t('meta_description'))<meta property="og:description" content="{{ $page->t('meta_description') }}">@endif
 <meta property="og:url" content="{{ \App\Support\WebsiteHosts::url($rtl ? '/ar' . $sPath : $sPath) }}">
-<script type="application/ld+json">
+<script type="application/ld+json" @cspNonce>
 {!! json_encode([
     '@context' => 'https://schema.org',
     '@type' => 'Service',
@@ -43,7 +43,7 @@
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}
 </script>
 @if(count($faq))
-<script type="application/ld+json">
+<script type="application/ld+json" @cspNonce>
 {!! json_encode([
     '@context' => 'https://schema.org',
     '@type' => 'FAQPage',
@@ -273,5 +273,7 @@ label{display:block;font-size:13px;margin-bottom:7px;color:#cfd5cf;font-weight:5
 @include('website.partials.whatsapp', ['waText' => $rtl
     ? 'مرحباً Dienstly24، أريد استشارة بخصوص: ' . $page->t('title')
     : 'Hallo Dienstly24, ich interessiere mich für: ' . $page->title_de])
+{{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
+@stack('cspScripts')
 </body>
 </html>

@@ -7,14 +7,14 @@
             <div class="page-title">Termine</div>
             <div class="page-sub">Kundentermine verwalten</div>
         </div>
-        <button onclick="document.getElementById('add-appointment-modal').style.display='flex'" class="btn btn-gold">+ Neuer Termin</button>
+        <button data-h-click="d766695e1e" class="btn btn-gold">+ Neuer Termin</button>
     </div>
 </div>
 
 <div class="card">
     <div class="card-title" style="margin-bottom:16px;">📅 Kommende Termine</div>
     @forelse($appointments as $a)
-    <div class="{{ $a->customer_id ? 'row-link' : '' }}" @if($a->customer_id) onclick="rowNav(event, '{{ route('admin.customer', $a->customer_id) }}')" title="Kundenakte öffnen" @endif style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);">
+    <div class="{{ $a->customer_id ? 'row-link' : '' }}" @if($a->customer_id) data-row-nav="{{ route('admin.customer', $a->customer_id) }}" title="Kundenakte öffnen" @endif style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);">
         <div style="display:flex;align-items:center;gap:12px;">
             <div style="width:48px;height:48px;border-radius:10px;background:#E6F1FB;display:flex;flex-direction:column;align-items:center;justify-content:center;">
                 <div style="font-size:16px;font-weight:700;color:#185FA5;line-height:1;">{{ $a->starts_at->lokal()->format('d') }}</div>
@@ -34,7 +34,7 @@
             </span>
             <form method="POST" action="{{ route('admin.appointments.update', $a->id) }}">
                 @csrf @method('PUT')
-                <select name="status" onchange="this.form.submit()" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;">
+                <select name="status" data-h-change="f4af518eb6" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;">
                     <option value="scheduled" {{ $a->status==='scheduled'?'selected':'' }}>Geplant</option>
                     <option value="completed" {{ $a->status==='completed'?'selected':'' }}>Erledigt</option>
                     <option value="cancelled" {{ $a->status==='cancelled'?'selected':'' }}>Abgesagt</option>
@@ -51,7 +51,7 @@
 <div class="card" style="margin-top:16px;">
     <div class="card-title" style="margin-bottom:16px;">Vergangene Termine</div>
     @foreach($past as $a)
-    <div class="{{ $a->customer_id ? 'row-link' : '' }}" @if($a->customer_id) onclick="rowNav(event, '{{ route('admin.customer', $a->customer_id) }}')" title="Kundenakte öffnen" @endif style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);opacity:.7;">
+    <div class="{{ $a->customer_id ? 'row-link' : '' }}" @if($a->customer_id) data-row-nav="{{ route('admin.customer', $a->customer_id) }}" title="Kundenakte öffnen" @endif style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);opacity:.7;">
         <div>
             <div style="font-size:13px;font-weight:600;">{{ $a->title }}</div>
             <div style="font-size:11px;color:var(--ink-soft);">
@@ -72,7 +72,7 @@
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:520px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
             <div style="font-size:17px;font-weight:700;">Neuer Termin</div>
-            <button onclick="document.getElementById('add-appointment-modal').style.display='none'" style="border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+            <button data-h-click="8464169003" style="border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         </div>
         <form method="POST" action="{{ route('admin.appointments.store') }}">
             @csrf
@@ -98,10 +98,23 @@
             </div>
             <div class="field"><label>Notizen</label><textarea name="notes" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;min-height:70px;font-family:inherit;resize:vertical;"></textarea></div>
             <div style="display:flex;gap:10px;justify-content:flex-end;">
-                <button type="button" onclick="document.getElementById('add-appointment-modal').style.display='none'" class="btn btn-ghost">Abbrechen</button>
+                <button type="button" data-h-click="8464169003" class="btn btn-ghost">Abbrechen</button>
                 <button type="submit" class="btn btn-primary">Termin speichern</button>
             </div>
         </form>
     </div>
 </div>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["d766695e1e"] = function (event) { document.getElementById('add-appointment-modal').style.display='flex' };
+window.__h["f4af518eb6"] = function (event) { this.form.submit() };
+window.__h["8464169003"] = function (event) { document.getElementById('add-appointment-modal').style.display='none' };
+</script>
+@endPushOnce

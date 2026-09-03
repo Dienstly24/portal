@@ -67,11 +67,102 @@ jobs:
         run: php artisan test
 
   # ---------------------------------------------------------------------
+  # 1b) Sicherheits-Gate: bekannte Schwachstellen in Abhaengigkeiten
+  #     (Audit SEC-3). Eigener Job, damit im Actions-Ueberblick sofort
+  #     sichtbar ist, WORAN es lag - ein Schritt innerhalb von "Tests"
+  #     laesst nur "Tests rot" stehen, und dann sucht man an der falschen
+  #     Stelle.
+  # ---------------------------------------------------------------------
+  audit:
+    name: Sicherheitspruefung der Abhaengigkeiten
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PHP 8.3 einrichten
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_sqlite, sqlite3, bcmath, intl, gd, zip
+          coverage: none
+
+      - name: Abhängigkeiten installieren
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      # composer audit endet mit Exitcode != 0, sobald ein Hinweis
+      # vorliegt - der Job wird damit rot und der Deploy laeuft nicht.
+      # Bewusst OHNE --ignore-severity: eine "nur mittlere" Luecke ist
+      # eine Luecke, und die Ausnahme waere schnell die Regel.
+      # Muss ein Hinweis einmal wirklich stehen bleiben (Abhaengigkeit
+      # laesst sich nicht aufloesen), wird er in composer.json unter
+      # extra.audit.ignore MIT BEGRUENDUNG eingetragen - dann steht die
+      # Entscheidung im Repository und nicht in diesem Workflow.
+      - name: composer audit (Produktions- und Dev-Abhängigkeiten)
+        run: composer audit
+
+      - name: Node einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+
+      # npm audit: nur Produktionsabhaengigkeiten und erst ab "high".
+      # Der JS-Baum besteht hier fast nur aus Build-Werkzeug (vite,
+      # tailwind), das nie im Browser eines Kunden landet - jede
+      # Schwachstelle darin waere ein Hinweis ohne Angriffsflaeche und
+      # wuerde das Gate unglaubwuerdig machen.
+      - name: npm audit (Produktionsabhängigkeiten)
+        run: npm audit --omit=dev --audit-level=high
+
+  # ---------------------------------------------------------------------
+  # 1c) Cloudflare-Ranges: meldet, wenn die hinterlegte Trusted-Proxy-Liste
+  #     von der veroeffentlichten abweicht (Audit SEC-2). Blockiert den
+  #     Deploy NICHT - eine Abweichung ist ein Pflegehinweis, kein Defekt,
+  #     und ein nicht erreichbarer Cloudflare-Endpunkt darf kein Deploy
+  #     verhindern.
+  # ---------------------------------------------------------------------
+  proxy-liste:
+    name: Cloudflare-Ranges abgleichen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      # Der Abgleich ist ein PFLEGEHINWEIS, kein Gate: eine Abweichung
+      # muss ein Mensch bewerten (Cloudflare hat Ranges geaendert), und
+      # ein nicht erreichbarer Endpunkt darf schon gar nichts bedeuten.
+      # Das Ergebnis steht deshalb in der Zusammenfassung des Laufs,
+      # statt als roter Haken - ein Haken, der regelmaessig ohne Defekt
+      # rot ist, wird nach der zweiten Woche ignoriert.
+      - name: Cloudflare-Ranges vergleichen (nur Hinweis)
+        run: |
+          set +e
+          ausgabe=$(bash scripts/pruefe-cloudflare-ips.sh 2>&1)
+          code=$?
+          echo "$ausgabe"
+          {
+            case $code in
+              0) echo "### ✅ Cloudflare-Ranges sind aktuell" ;;
+              2) echo "### ℹ️ Cloudflare-Liste nicht abrufbar - nichts zu melden" ;;
+              *) echo "### ⚠️ Cloudflare-Ranges weichen ab - bitte config/trustedproxy.php pruefen" ;;
+            esac
+            echo
+            echo '```'
+            echo "$ausgabe"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------
   # 2) Deploy: läuft NUR nach grünem Test-Gate und NUR bei Push auf main
   # ---------------------------------------------------------------------
   deploy:
     name: Deploy auf Produktionsserver
-    needs: test
+    # Der Deploy haengt an BEIDEN Gates: gruene Tests UND keine bekannten
+    # Schwachstellen in den Abhaengigkeiten (Audit SEC-3).
+    needs: [test, audit]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: production

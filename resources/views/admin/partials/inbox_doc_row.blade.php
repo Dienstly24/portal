@@ -55,7 +55,7 @@
                     <div style="margin-top:7px;display:flex;gap:8px;flex-wrap:wrap;">
                         <a href="{{ route('admin.documents.download', $dupOrig->id) }}?view=1" target="_blank" class="btn btn-ghost btn-sm">👁 Original anzeigen</a>
                         <form method="POST" action="{{ route('admin.documents.destroy', $doc->id) }}" style="margin:0;"
-                            onsubmit="return confirm('Dieses doppelte Dokument „{{ addslashes($doc->file_name) }}“ wirklich löschen?');">
+                            data-confirm="Dieses doppelte Dokument „{{ $doc->file_name }}“ wirklich löschen?">
                             @csrf @method('DELETE')
                             <button type="submit" class="btn btn-ghost btn-sm" style="color:#A32D2D;">🗑 Duplikat löschen</button>
                         </form>
@@ -75,7 +75,9 @@
                     👤 Kunde gefunden: <strong>{{ $match['name'] ?? '—' }}</strong>
                     ({{ $match['customer_number'] ?? '—' }}) · Übereinstimmung {{ $match['score'] }}%
                     <button type="button" class="btn btn-gold btn-sm" style="margin-inline-start:10px;"
-                        onclick="docReview.open(@js($doc->id), 'assign', @js($match['customer_id']), @js(($match['name'] ?? '') . ' (' . ($match['customer_number'] ?? '') . ')'))">
+                        data-h-click="inbox-zuordnen-treffer" data-doc="{{ $doc->id }}"
+                        data-kunde="{{ $match['customer_id'] }}"
+                        data-label="{{ ($match['name'] ?? '') . ' (' . ($match['customer_number'] ?? '') . ')' }}">
                         Diesem Kunden zuordnen
                     </button>
                 </div>
@@ -118,7 +120,7 @@
             @endphp
             @if($listeMoeglich)
             <form method="POST" action="{{ route('admin.vermittler.from_document', $doc->id) }}" style="margin:0;"
-                @unless($istListe) onsubmit="return confirm('Diese Datei als Vermittler-Vorgangsliste einlesen? Es werden nur Referenz-Nr. und Vermittler-ID verknüpft – am Vertrag selbst ändert sich nichts.');" @endunless>
+                @unless($istListe) data-h-submit="8d1cd8c00a" @endunless>
                 @csrf
                 <button type="submit" class="btn {{ $istListe ? 'btn-primary' : 'btn-ghost' }} btn-sm">
                     🤝 Vorgangsliste einlesen
@@ -126,15 +128,15 @@
             </form>
             @endif
             @if(!$doc->aiInProgress())
-            <button type="button" class="btn btn-primary btn-sm" onclick="docReview.open(@js($doc->id), 'assign', null, null)">Kunden zuordnen…</button>
+            <button type="button" class="btn btn-primary btn-sm" data-h-click="inbox-zuordnen" data-doc="{{ $doc->id }}">Kunden zuordnen…</button>
             {{-- Immer moeglich: den Namen kann der Mitarbeiter im Modal auch
                  selbst eintragen, falls er nicht (sicher) gelesen wurde. --}}
-            <button type="button" class="btn btn-gold btn-sm" onclick="docReview.open(@js($doc->id), 'create', null, null)">Neuen Kunden erstellen</button>
+            <button type="button" class="btn btn-gold btn-sm" data-h-click="inbox-neu" data-doc="{{ $doc->id }}">Neuen Kunden erstellen</button>
             @if($personCount > 1)
             {{-- Eine Aufnahme, mehrere Personen (z.B. die Gesundheitskarten
                  einer Familie): je Person ein Kunde, in einem Schritt. --}}
             <button type="button" class="btn btn-gold btn-sm"
-                onclick="docReview.createFromPersons(@js($doc->id), {{ $personCount }}, this)"
+                data-h-click="inbox-personen" data-doc="{{ $doc->id }}" data-anzahl="{{ $personCount }}"
                 title="Fuer jede erkannte Person einen eigenen Kunden anlegen (bereits erfasste Personen werden uebersprungen)">
                 👪 {{ $personCount }} Kunden anlegen
             </button>
@@ -143,13 +145,13 @@
             {{-- Laesst die normale kostenlose Kette (Vorlagen/OCR, ggf. KI) neu
                  laufen - auch bei Duplikaten wird die Datei wirklich neu gelesen,
                  damit Parser-Verbesserungen auf Bestandsdokumente wirken. --}}
-            <button type="button" class="btn btn-ghost btn-sm" onclick="docReview.reanalyze(@js($doc->id), this, false)" title="Analyse (gratis zuerst) neu ausfuehren">🔄 Neu analysieren</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-h-click="inbox-neu-analyse" data-doc="{{ $doc->id }}" title="Analyse (gratis zuerst) neu ausfuehren">🔄 Neu analysieren</button>
             @endif
             @if(($providerEnabled ?? false) && in_array(auth()->user()->role, ['admin','manager'], true))
             {{-- Erzwingt bewusst die kostenpflichtige KI-Stufe (ueberspringt die
                  kostenlose OCR-Vorstufe). Nur Verwaltung (Kostenbremse) - der
                  Server prueft die Rolle und ein Tageslimit zusaetzlich. --}}
-            <button type="button" class="btn btn-ghost btn-sm" onclick="docReview.reanalyze(@js($doc->id), this, true)" title="Kostenpflichtige KI-Analyse (Claude) erzwingen">🤖 Mit KI analysieren</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-h-click="inbox-ki-analyse" data-doc="{{ $doc->id }}" title="Kostenpflichtige KI-Analyse (Claude) erzwingen">🤖 Mit KI analysieren</button>
             @endif
             @endif
             @if(in_array(auth()->user()->role, ['admin','manager'], true))
@@ -157,17 +159,42 @@
                  stehen - der Parser arbeitet aber mit dem ERKANNTEN Text, und
                  der kann an einer Stelle anders aussehen ("Maii" statt "Mail").
                  Kostenlos, ohne KI, wird nicht gespeichert. --}}
-            <button type="button" class="btn btn-ghost btn-sm" onclick="docReview.showOcrText(@js($doc->id), this)" title="Zeigt den Text, mit dem die Erkennung gearbeitet hat (gratis, ohne KI)">🔎 Erkannter Text</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-h-click="inbox-ocr-text" data-doc="{{ $doc->id }}" title="Zeigt den Text, mit dem die Erkennung gearbeitet hat (gratis, ohne KI)">🔎 Erkannter Text</button>
             @endif
             {{-- Loeschen ist IMMER moeglich - auch bei laufender oder
                  festgefahrener Analyse (z.B. ausgefallener Queue-Worker),
                  damit ein in „pending"/„processing" haengendes Dokument aus dem
                  Eingang entfernt werden kann. --}}
             <form method="POST" action="{{ route('admin.documents.destroy', $doc->id) }}" style="margin:0;"
-                onsubmit="return confirm('Dokument „{{ addslashes($doc->file_name) }}“ wirklich löschen?');">
+                data-confirm="Dokument „{{ $doc->file_name }}“ wirklich löschen?">
                 @csrf @method('DELETE')
                 <button type="submit" class="btn btn-ghost btn-sm" style="color:#A32D2D;" title="Löschen">🗑</button>
             </form>
         </div>
     </div>
 </div>
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["inbox-zuordnen-treffer"] = function (event) { docReview.open(this.dataset.doc, 'assign', this.dataset.kunde, this.dataset.label) };
+window.__h["8d1cd8c00a"] = function (event) { return confirm('Diese Datei als Vermittler-Vorgangsliste einlesen? Es werden nur Referenz-Nr. und Vermittler-ID verknüpft – am Vertrag selbst ändert sich nichts.'); };
+window.__h["inbox-zuordnen"] = function (event) { docReview.open(this.dataset.doc, 'assign', null, null) };
+window.__h["inbox-neu"] = function (event) { docReview.open(this.dataset.doc, 'create', null, null) };
+window.__h["inbox-neu-analyse"] = function (event) { docReview.reanalyze(this.dataset.doc, this, false) };
+window.__h["inbox-ki-analyse"] = function (event) { docReview.reanalyze(this.dataset.doc, this, true) };
+window.__h["inbox-ocr-text"] = function (event) { docReview.showOcrText(this.dataset.doc, this) };
+</script>
+@endPushOnce
+
+{{-- Kunden aus den erkannten Personen anlegen (Audit SEC-4) --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["inbox-personen"] = function (event) { docReview.createFromPersons(this.dataset.doc, Number(this.dataset.anzahl), this) };
+</script>
+@endPushOnce

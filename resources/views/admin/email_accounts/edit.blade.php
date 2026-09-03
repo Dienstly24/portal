@@ -20,7 +20,7 @@
     {{-- Knopf gehoert per form-Attribut zum Loesch-Formular UNTER dem
          Bearbeiten-Formular: ein Formular im Formular ist ungueltiges HTML. --}}
     <button type="submit" form="email-account-delete" class="btn btn-ghost" style="margin-left:auto;color:#B3261E;"
-            onclick="return confirm('Postfach wirklich entfernen?');">Postfach löschen</button>
+            data-h-click="2e98d51642">Postfach löschen</button>
 </div>
 </form>
 
@@ -28,3 +28,14 @@
     @csrf @method('DELETE')
 </form>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["2e98d51642"] = function (event) { return confirm('Postfach wirklich entfernen?'); };
+</script>
+@endPushOnce

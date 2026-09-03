@@ -1,6 +1,6 @@
 {{-- Inline-Hinweis, wenn eine Mobilnummer im Telefon-Feld steht (oder umgekehrt).
      Spiegelt die Server-Validierung (App\Support\GermanPhone) im Browser. --}}
-<script>
+<script @cspNonce>
 (function () {
     function norm(v) {
         v = (v || '').replace(/[^\d+]/g, '');

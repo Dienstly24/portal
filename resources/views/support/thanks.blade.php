@@ -28,5 +28,7 @@ body{font-family:'Inter',Arial,sans-serif;min-height:100vh;color:#fff;display:fl
     <p>@if($customer){{ __('Sie können den Status jederzeit im Kundenportal unter „Anfragen" verfolgen.') }}@else{{ __('Wir melden uns per E-Mail bei Ihnen.') }}@endif</p>
     <a class="btn" href="{{ route('login') }}">{{ __('Zum Kundenportal') }}</a>
 </div>
+{{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
+@stack('cspScripts')
 </body>
 </html>

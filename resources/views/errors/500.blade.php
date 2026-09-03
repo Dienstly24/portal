@@ -42,5 +42,7 @@ p{color:var(--muted);font-size:.95rem;margin-bottom:8px;}
   </div>
 </div>
 @include('website.partials.whatsapp')
+{{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
+@stack('cspScripts')
 </body>
 </html>

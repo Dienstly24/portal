@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Admin\UpdateSettingsRequest;
 use App\Models\SystemSetting;
 
 /**
@@ -62,8 +63,22 @@ class LegalPageController extends Controller
         }
 
         $base = rtrim((string) SystemSetting::get('legal_external_base', self::DEFAULT_EXTERNAL_BASE), '/');
-        if ($base !== '') {
-            $suffix = SystemSetting::get('legal_external_suffix', self::DEFAULT_EXTERNAL_SUFFIX);
+        // Zweite Pruefung beim LESEN (Audit SEC-5): der Wert fliesst in
+        // einen Location-Header und schickt damit jeden Besucher weiter.
+        // Die Validierung im Formular allein genuegt dafuer nicht - in
+        // system_settings kann ein Wert auch aus der Zeit VOR der
+        // Validierung stehen (oder per CLI/Seeder gesetzt worden sein).
+        // Ist er nicht sauber, wird NICHT weitergeleitet, sondern die
+        // eigene Portalseite gerendert: der Betrieb laeuft weiter, nur
+        // eben ohne unkontrolliertes Ziel.
+        if ($base !== '' && UpdateSettingsRequest::legalBaseError($base) === null) {
+            $suffix = (string) SystemSetting::get('legal_external_suffix', self::DEFAULT_EXTERNAL_SUFFIX);
+            // Suffix ebenfalls eng gefasst: nur eine Dateiendung, sonst
+            // liesse sich am Host-Check vorbei ein fremdes Ziel anhaengen.
+            if (! preg_match('/^(\.[A-Za-z0-9]{1,10})?$/', $suffix)) {
+                $suffix = '';
+            }
+
             return redirect()->away($base . '/' . $page . $suffix);
         }
 

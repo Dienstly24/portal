@@ -18,7 +18,7 @@
             <form method="POST" action="{{ route('admin.templates.seed') }}" style="margin:0;">
                 @csrf<button type="submit" class="btn btn-ghost">✨ Standard-Vorlagen anlegen</button>
             </form>
-            <button type="button" class="btn btn-gold" onclick="openTplModal()">+ Neue Vorlage</button>
+            <button type="button" class="btn btn-gold" data-h-click="28e50ec260">+ Neue Vorlage</button>
         </div>
         @endif
     </div>
@@ -55,7 +55,7 @@
                  erzeugt kaputtes PHP -> 500 erst zur Laufzeit. --}}
             <button type="button" class="btn btn-ghost btn-sm tpl-edit"
                 data-tpl="{{ json_encode($tpl->only(['id', 'name', 'category', 'subject', 'body', 'sort'])) }}">✏️ Bearbeiten</button>
-            <form method="POST" action="{{ route('admin.templates.destroy', $tpl->id) }}" onsubmit="return confirm('Diese Vorlage wirklich löschen?');" style="margin:0;">
+            <form method="POST" action="{{ route('admin.templates.destroy', $tpl->id) }}" data-h-submit="71874c9e45" style="margin:0;">
                 @csrf @method('DELETE')
                 <button type="submit" class="btn btn-ghost btn-sm" style="color:#A32D2D;">Löschen</button>
             </form>
@@ -72,7 +72,7 @@
 {{-- Modal: Vorlage anlegen/bearbeiten --}}
 <div id="tpl-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center;padding:16px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:560px;max-width:94vw;max-height:92vh;overflow-y:auto;position:relative;">
-        <button onclick="document.getElementById('tpl-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="0ca5a5877d" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div id="tpl-modal-title" style="font-size:17px;font-weight:700;margin-bottom:16px;">Neue Vorlage</div>
         <form id="tpl-form" method="POST" action="{{ route('admin.templates.store') }}">
             @csrf
@@ -106,12 +106,12 @@
             </div>
             <div style="display:flex;gap:10px;margin-top:18px;">
                 <button type="submit" class="btn btn-gold">Speichern</button>
-                <button type="button" class="btn btn-ghost" onclick="document.getElementById('tpl-modal').style.display='none'">Abbrechen</button>
+                <button type="button" class="btn btn-ghost" data-h-click="0ca5a5877d">Abbrechen</button>
             </div>
         </form>
     </div>
 </div>
-<script>
+<script @cspNonce>
 function openTplModal(tpl) {
     const form = document.getElementById('tpl-form');
     document.getElementById('tpl-modal-title').textContent = tpl ? 'Vorlage bearbeiten' : 'Neue Vorlage';
@@ -134,3 +134,16 @@ document.querySelectorAll('.tpl-edit').forEach(function(btn) {
 @endif
 
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["28e50ec260"] = function (event) { openTplModal() };
+window.__h["71874c9e45"] = function (event) { return confirm('Diese Vorlage wirklich löschen?'); };
+window.__h["0ca5a5877d"] = function (event) { document.getElementById('tpl-modal').style.display='none' };
+</script>
+@endPushOnce

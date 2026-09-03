@@ -189,7 +189,7 @@
              bewusst nicht vorausgewählt und nennt die Anzahl VORHER: ein Lauf
              kann hunderte Akten anlegen. --}}
         <form method="POST" action="{{ route('admin.commissions_internal.confirm', $import->id) }}" style="margin:0;"
-              onsubmit="return confirm('Import bestätigen?');">
+              data-h-submit="4b3b78fcbc">
             @csrf
             @if($import->rows_buildable > 0)
             <label style="display:flex;align-items:flex-start;gap:8px;font-size:12.5px;max-width:760px;margin-bottom:14px;
@@ -224,7 +224,7 @@
                 <button type="submit" class="btn btn-primary">Import bestätigen</button>
         </form>
                 <form method="POST" action="{{ route('admin.commissions_internal.discard', $import->id) }}" style="margin:0;"
-                      onsubmit="return confirm('Entwurf verwerfen? Es wurde nichts übernommen.');">
+                      data-h-submit="c8a9036d7d">
                     @csrf
                     <button type="submit" class="btn">Entwurf verwerfen</button>
                 </form>
@@ -283,3 +283,15 @@
     @endif
 </div>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["4b3b78fcbc"] = function (event) { return confirm('Import bestätigen?'); };
+window.__h["c8a9036d7d"] = function (event) { return confirm('Entwurf verwerfen? Es wurde nichts übernommen.'); };
+</script>
+@endPushOnce

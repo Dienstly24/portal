@@ -55,7 +55,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
             </div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <button type="button" class="btn btn-ghost" onclick="openMessagesTab()">📨 Nachricht senden</button>
+            <button type="button" class="btn btn-ghost" data-h-click="2e6547eb33">📨 Nachricht senden</button>
             @if(in_array(auth()->user()->role, ['admin','manager','support']) || auth()->user()->can_send_emails)
             <a href="{{ route('admin.email.compose', ['customer_id' => $customer->id]) }}" class="btn btn-ghost">✉️ E-Mail verfassen</a>
             @endif
@@ -99,7 +99,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
         @if(auth()->user()->role === 'admin')
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
             <form method="POST" action="{{ route('admin.customer.portal.invite', $customer->id) }}"
-                onsubmit="return confirm('{{ $customer->birth_date
+                data-confirm="{{ $customer->birth_date
                     ? 'Einladung mit Startpasswort (Geburtsdatum TT.MM.JJJJ) an den Kunden senden?'
                     : 'ACHTUNG: Kein Geburtsdatum hinterlegt! Die Einladung enthaelt dann KEIN Startpasswort, nur einen zeitlich begrenzten Passwort-Link. Besser zuerst das Geburtsdatum ergaenzen (Bearbeiten). Trotzdem jetzt senden?' }}');">
                 @csrf<button type="submit" class="btn btn-gold btn-sm">📧 Einladung senden</button>
@@ -108,11 +108,11 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
                 @csrf<button type="submit" class="btn btn-ghost btn-sm">🔑 Reset-Link senden</button>
             </form>
             <form method="POST" action="{{ route('admin.customer.portal.reset', $customer->id) }}"
-                onsubmit="return confirm('Portal wirklich zurücksetzen? Das Passwort wird neu gesetzt und die Einladung erneut versendet.');">
+                data-h-submit="1ad1ce2c1c">
                 @csrf<button type="submit" class="btn btn-ghost btn-sm">↺ Portal zurücksetzen</button>
             </form>
             <form method="POST" action="{{ route('admin.customer.portal.toggle', $customer->id) }}"
-                onsubmit="return confirm('{{ ($portalUser?->is_active ?? true) ? 'Portal-Login für diesen Kunden deaktivieren?' : 'Portal-Login wieder aktivieren?' }}');">
+                data-confirm="{{ ($portalUser?->is_active ?? true) ? 'Portal-Login für diesen Kunden deaktivieren?' : 'Portal-Login wieder aktivieren?' }}">
                 @csrf<button type="submit" class="btn btn-ghost btn-sm">{{ ($portalUser?->is_active ?? true) ? '🚫 Deaktivieren' : '✅ Aktivieren' }}</button>
             </form>
         </div>
@@ -131,18 +131,18 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
 .chat-avatar{width:32px;height:32px;border-radius:50%;background:var(--petrol);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:none;}
 </style>
 <div class="cust-tabs">
-    <button type="button" class="cust-tab active" data-tab="tab-uebersicht" onclick="showCustTab('tab-uebersicht',this)">📄 Übersicht</button>
-    <button type="button" id="cust-tab-familie" class="cust-tab" data-tab="tab-familie" onclick="showCustTab('tab-familie',this)">👨‍👩‍👦 Familie <span style="opacity:.7;">({{ $customer->family->count() + $familie['all']->count() }})</span></button>
+    <button type="button" class="cust-tab active" data-tab="tab-uebersicht" data-h-click="d2815a66b5">📄 Übersicht</button>
+    <button type="button" id="cust-tab-familie" class="cust-tab" data-tab="tab-familie" data-h-click="bd7b7fc256">👨‍👩‍👦 Familie <span style="opacity:.7;">({{ $customer->family->count() + $familie['all']->count() }})</span></button>
     {{-- Zaehler nennt AKTIV und GESAMT getrennt: die Registerkarte enthaelt
          auch die Historie, der aktive Bestand ist aber die fuehrende Zahl. --}}
-    <button type="button" class="cust-tab" data-tab="tab-vertraege" onclick="showCustTab('tab-vertraege',this)">📑 Verträge <span style="opacity:.7;">({{ $aktiveVertraege->count() }} aktiv @if($customer->contracts->count() !== $aktiveVertraege->count())/ {{ $customer->contracts->count() }} gesamt @endif)</span></button>
-    <button type="button" class="cust-tab" data-tab="tab-dokumente" onclick="showCustTab('tab-dokumente',this)">📎 Dokumente <span style="opacity:.7;">({{ $customer->documents->count() }})</span></button>
-    <button type="button" class="cust-tab" data-tab="tab-tickets" onclick="showCustTab('tab-tickets',this)">🎫 Tickets <span style="opacity:.7;">({{ $customer->tickets->count() }})</span></button>
-    <button type="button" class="cust-tab" data-tab="tab-kommunikation" onclick="showCustTab('tab-kommunikation',this)">🧭 Kommunikation <span style="opacity:.7;">({{ $conversationTimeline->count() }})</span></button>
-    <button type="button" class="cust-tab" data-tab="tab-nachrichten" onclick="showCustTab('tab-nachrichten',this)">📨 Nachrichten <span style="opacity:.7;">({{ $customerMessages->count() }})</span></button>
-    <button type="button" class="cust-tab" data-tab="tab-intern" onclick="showCustTab('tab-intern',this)">💬 Intern <span style="opacity:.7;">({{ $internalChat->count() }})</span></button>
-    <button type="button" class="cust-tab" data-tab="tab-notizen" onclick="showCustTab('tab-notizen',this)">📝 Notizen</button>
-    <button type="button" class="cust-tab" data-tab="tab-verlauf" onclick="showCustTab('tab-verlauf',this)">🔄 Verlauf</button>
+    <button type="button" class="cust-tab" data-tab="tab-vertraege" data-h-click="9e4bdc2fb5">📑 Verträge <span style="opacity:.7;">({{ $aktiveVertraege->count() }} aktiv @if($customer->contracts->count() !== $aktiveVertraege->count())/ {{ $customer->contracts->count() }} gesamt @endif)</span></button>
+    <button type="button" class="cust-tab" data-tab="tab-dokumente" data-h-click="bced4692cd">📎 Dokumente <span style="opacity:.7;">({{ $customer->documents->count() }})</span></button>
+    <button type="button" class="cust-tab" data-tab="tab-tickets" data-h-click="4448baa374">🎫 Tickets <span style="opacity:.7;">({{ $customer->tickets->count() }})</span></button>
+    <button type="button" class="cust-tab" data-tab="tab-kommunikation" data-h-click="5e908ed579">🧭 Kommunikation <span style="opacity:.7;">({{ $conversationTimeline->count() }})</span></button>
+    <button type="button" class="cust-tab" data-tab="tab-nachrichten" data-h-click="16a5892592">📨 Nachrichten <span style="opacity:.7;">({{ $customerMessages->count() }})</span></button>
+    <button type="button" class="cust-tab" data-tab="tab-intern" data-h-click="91f0bd31dc">💬 Intern <span style="opacity:.7;">({{ $internalChat->count() }})</span></button>
+    <button type="button" class="cust-tab" data-tab="tab-notizen" data-h-click="dbd72c2ee1">📝 Notizen</button>
+    <button type="button" class="cust-tab" data-tab="tab-verlauf" data-h-click="8eed7ed30f">🔄 Verlauf</button>
 </div>
 <div class="tab-section" id="tab-uebersicht">
 {{-- Vertragsstruktur Icons: Klick oeffnet die Vertraege-Registerkarte,
@@ -207,8 +207,8 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
         <div class="vstruct-tile" role="button" tabindex="0"
             title="{{ $tip }}"
             style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;"
-            onclick="openContractType('{{ $key }}')"
-            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openContractType('{{ $key }}');}">
+            data-h-click="a1bc6ea58c" data-a0="{{ $key }}"
+            data-h-keydown="sparte-taste" data-a0="{{ $key }}">
             <div class="vstruct-icon" style="position:relative;width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;
                 background:{{ $isActive ? $cfg['bg'] : '#EEF0F3' }};
                 border:2px solid {{ $isActive ? $cfg['color'] : '#E5E1D6' }};
@@ -259,7 +259,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
         <div class="card-title" style="margin-bottom:0;">👨‍👩‍👦 Familie ({{ $customer->family->count() }})</div>
         @if($customer->family->count())
-        <button type="button" onclick="document.getElementById('cust-tab-familie').click()" class="btn btn-ghost" style="padding:6px 12px;font-size:12.5px;">Alle Details →</button>
+        <button type="button" data-h-click="a721382507" class="btn btn-ghost" style="padding:6px 12px;font-size:12.5px;">Alle Details →</button>
         @endif
     </div>
     @forelse($customer->family as $f)
@@ -307,7 +307,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
     </div>
     @endif
 
-    <button type="button" onclick="document.getElementById('cust-tab-familie').click()" class="btn btn-ghost" style="width:100%;margin-top:14px;font-size:12.5px;text-align:center;">👪 Familie &amp; Kinder verwalten</button>
+    <button type="button" data-h-click="a721382507" class="btn btn-ghost" style="width:100%;margin-top:14px;font-size:12.5px;text-align:center;">👪 Familie &amp; Kinder verwalten</button>
     <a href="{{ route('admin.customer.edit', $customer->id) }}#familie" class="btn btn-ghost" style="width:100%;margin-top:8px;font-size:12.5px;text-align:center;">✏️ Familie bearbeiten</a>
 </div>
 
@@ -427,9 +427,9 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
         <div class="card-title" style="margin-bottom:0;">📎 Dokumente</div>
         <div style="display:flex;gap:8px;">
-            <button onclick="document.getElementById('request-doc-modal').style.display='flex'" class="btn btn-ghost btn-sm">📩 Dokument anfordern</button>
-            <button onclick="document.getElementById('smart-doc-modal').style.display='flex'" class="btn btn-primary btn-sm">⚡ Smart-Upload (KI)</button>
-            <button onclick="document.getElementById('add-doc-modal').style.display='flex'" class="btn btn-gold btn-sm">+ Hochladen</button>
+            <button data-h-click="fc4994b3a7" class="btn btn-ghost btn-sm">📩 Dokument anfordern</button>
+            <button data-h-click="3af726e69b" class="btn btn-primary btn-sm">⚡ Smart-Upload (KI)</button>
+            <button data-h-click="8cde53335d" class="btn btn-gold btn-sm">+ Hochladen</button>
         </div>
     </div>
     @php $docs = $customer->documents; @endphp
@@ -449,7 +449,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
                 @if($docContract)<span style="background:#D9F4E6;color:#17A65B;padding:1px 6px;border-radius:4px;">{{ $docContract->typeIcon() }} {{ $docContract->insurer }}</span>@endif
                 @if($d->aiInProgress())<span style="background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:4px;">⏳ KI-Analyse läuft</span>
                 @elseif($d->ai_status === 'failed')<span style="background:#FBE9E9;color:#B3261E;padding:1px 6px;border-radius:4px;" title="{{ $d->ai_error }}">⚠ KI-Analyse fehlgeschlagen</span>
-                    <button type="button" onclick="smartReanalyze(@js($d->id), this)" style="border:none;background:none;color:#185FA5;cursor:pointer;font-size:12px;padding:0;">erneut analysieren</button>
+                    <button type="button" data-h-click="doc-neu-analyse" data-doc="{{ $d->id }}" style="border:none;background:none;color:#185FA5;cursor:pointer;font-size:12px;padding:0;">erneut analysieren</button>
                 @elseif($d->aiTypeLabel())<span style="background:#d9f4e6;color:#128a4b;padding:1px 6px;border-radius:4px;" title="{{ $d->ai_summary }}">⚡ {{ $d->aiTypeLabel() }}</span>@endif
                 @if($d->uploader)<span>· {{ $d->uploader->name }}</span>@endif
             </div>
@@ -470,12 +470,12 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
             <button type="button" class="btn btn-ghost btn-sm" title="Bearbeiten"
                 data-doc-id="{{ $d->id }}" data-doc-name="{{ $d->file_name }}" data-doc-category="{{ $d->category }}"
                 data-doc-visibility="{{ $d->visibility ?? 'customer' }}" data-doc-color="{{ $d->color ?? 'green' }}" data-doc-contract="{{ $d->contract_id }}"
-                onclick="openDocEditFromBtn(this)">✏️</button>
+                data-h-click="165ce16963">✏️</button>
             <form method="POST" action="{{ route('admin.documents.replace', $d->id) }}" enctype="multipart/form-data" style="display:inline;margin:0;">
                 @csrf
-                <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin:0;" title="Datei ersetzen">↺<input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" style="display:none;" onchange="this.form.submit()"></label>
+                <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin:0;" title="Datei ersetzen">↺<input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" style="display:none;" data-h-change="7020c6975c"></label>
             </form>
-            <form method="POST" action="{{ route('admin.documents.destroy', $d->id) }}" onsubmit="return confirm('Dokument „{{ addslashes($d->file_name) }}“ wirklich löschen?');" style="display:inline;margin:0;">
+            <form method="POST" action="{{ route('admin.documents.destroy', $d->id) }}" data-confirm="Dokument „{{ $d->file_name }}“ wirklich löschen?" style="display:inline;margin:0;">
                 @csrf @method('DELETE')
                 <button type="submit" class="btn btn-ghost btn-sm" style="color:#A32D2D;" title="Löschen">🗑</button>
             </form>
@@ -545,7 +545,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
                  Historie ist bewusst NICHT vorausgewaehlt und wird beim
                  Anzeigen klar als beendet gekennzeichnet (Zeilen ausgegraut,
                  Badge "Historie", Hinweiszeile ueber der Tabelle). --}}
-            <select id="filter-group" onchange="filterContracts()" style="padding:6px 12px;border:1px solid var(--line);border-radius:6px;font-size:13px;">
+            <select id="filter-group" data-h-change="2a1a3b4648" style="padding:6px 12px;border:1px solid var(--line);border-radius:6px;font-size:13px;">
                 <option value="aktiv">✅ Aktiver Bestand ({{ $aktiveVertraege->count() }})</option>
                 @if($anbahnungVertraege->count())
                 <option value="anbahnung">🕓 In Bearbeitung ({{ $anbahnungVertraege->count() }})</option>
@@ -553,7 +553,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
                 <option value="historie">🗄 Beendet / Historie ({{ $historieVertraege->count() }})</option>
                 <option value="">Alle Verträge ({{ $customer->contracts->count() }})</option>
             </select>
-            <select id="filter-type" onchange="filterContracts()" style="padding:6px 12px;border:1px solid var(--line);border-radius:6px;font-size:13px;">
+            <select id="filter-type" data-h-change="2a1a3b4648" style="padding:6px 12px;border:1px solid var(--line);border-radius:6px;font-size:13px;">
                 <option value="">Alle Typen</option>
                 @foreach($typeConfig as $key => $cfg)
                 <option value="{{ $key }}">{{ $cfg['icon'] }} {{ $cfg['label'] }}</option>
@@ -583,7 +583,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
             $cGroup = $c->statusGroup();
             $cHistoric = $cGroup === \App\Models\Contract::GROUP_HISTORY;
         @endphp
-        <tr class="contract-row row-link{{ $cHistoric ? ' contract-row-historic' : '' }}" data-type="{{ $c->type }}" data-group="{{ $cGroup }}" style="border-bottom:1px solid var(--line);" onclick="rowNav(event, '{{ route('admin.contract.edit', $c->id) }}')" title="{{ $cHistoric ? 'Beendeter Vertrag (Historie) – öffnen' : 'Vertrag öffnen' }}">
+        <tr class="contract-row row-link{{ $cHistoric ? ' contract-row-historic' : '' }}" data-type="{{ $c->type }}" data-group="{{ $cGroup }}" style="border-bottom:1px solid var(--line);" data-row-nav="{{ route('admin.contract.edit', $c->id) }}" title="{{ $cHistoric ? 'Beendeter Vertrag (Historie) – öffnen' : 'Vertrag öffnen' }}">
             <td style="padding:12px;">
                 <div style="display:flex;align-items:center;gap:8px;">
                     <span style="width:32px;height:32px;border-radius:8px;background:{{ $cfg['bg'] }};display:flex;align-items:center;justify-content:center;font-size:16px;">{{ $c->typeIcon() }}</span>
@@ -643,7 +643,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
             </td>
             <td style="padding:12px;text-align:right;white-space:nowrap;">
                 <a href="{{ route('admin.contract.edit', $c->id) }}" class="btn btn-ghost btn-sm" title="Vertrag bearbeiten">✏️ Bearbeiten</a>
-                <form method="POST" action="{{ route('admin.contract.destroy', $c->id) }}" onsubmit="return confirm('Vertrag {{ $c->insurer }} wirklich löschen?');" style="display:inline;margin:0;">
+                <form method="POST" action="{{ route('admin.contract.destroy', $c->id) }}" data-confirm="Vertrag {{ $c->insurer }} wirklich löschen?" style="display:inline;margin:0;">
                     @csrf @method('DELETE')
                     <button type="submit" class="btn btn-ghost btn-sm" style="color:#A32D2D;" title="Vertrag löschen">🗑</button>
                 </form>
@@ -749,7 +749,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
         </tr></thead>
         <tbody>
         @forelse($customer->tickets as $t)
-        <tr class="row-link" onclick="rowNav(event, '{{ route('admin.ticket', $t->id) }}')" title="Antrag öffnen">
+        <tr class="row-link" data-row-nav="{{ route('admin.ticket', $t->id) }}" title="Antrag öffnen">
             <td style="padding:12px;font-weight:600;">{{ $t->subject }}</td>
             <td style="padding:12px;color:var(--ink-soft);">{{ ucfirst(str_replace('_',' ',$t->type)) }}</td>
             <td style="padding:12px;color:var(--ink-soft);font-size:13px;">{{ $t->created_at->lokal()->format('d.m.Y') }}</td>
@@ -838,7 +838,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
         @csrf
         @php $msgTemplates = \App\Models\MessageTemplate::where('category', 'kunde')->orderBy('sort')->orderBy('name')->get(['id', 'name']); @endphp
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
-            <select id="msg-template" onchange="applyMsgTemplate(this.value)" style="padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;max-width:280px;">
+            <select id="msg-template" data-h-change="64ebdc94d3" style="padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;max-width:280px;">
                 <option value="">📋 Vorlage einfügen…</option>
                 @foreach($msgTemplates as $tpl)
                 <option value="{{ $tpl->id }}">{{ $tpl->name }}</option>
@@ -864,7 +864,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
         <button type="submit" class="btn btn-gold" style="margin-top:12px;">📨 Nachricht senden</button>
     </form>
 </div>
-<script>
+<script @cspNonce>
 function applyMsgTemplate(id) {
     if (!id) return;
     fetch('{{ url('admin/vorlagen') }}/' + id + '/render?customer_id={{ $customer->id }}', {headers: {'Accept': 'application/json'}})
@@ -901,7 +901,7 @@ function openMessagesTab() {
                     {!! $msg->renderedMessage() !!}
                 </div>
                 @can('delete', $msg)
-                <form method="POST" action="{{ route('admin.internal.destroy', $msg->id) }}" onsubmit="return confirm('Nachricht wirklich löschen?');" style="margin-top:2px;{{ $own ? 'text-align:right;' : '' }}">
+                <form method="POST" action="{{ route('admin.internal.destroy', $msg->id) }}" data-h-submit="433a66b886" style="margin-top:2px;{{ $own ? 'text-align:right;' : '' }}">
                     @csrf @method('DELETE')
                     <button type="submit" style="border:none;background:none;color:var(--ink-soft);font-size:11px;cursor:pointer;">Löschen</button>
                 </form>
@@ -927,7 +927,7 @@ function openMessagesTab() {
 <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
         <div class="card-title">Notizen & Aufgaben</div>
-        <button onclick="document.getElementById('add-note-modal').style.display='flex'" style="width:28px;height:28px;border-radius:50%;border:none;background:var(--petrol);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
+        <button data-h-click="ebfbbe8505" style="width:28px;height:28px;border-radius:50%;border:none;background:var(--petrol);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
     </div>
     @php $notes = \App\Models\CustomerNote::where('customer_id',$customer->id)->with('createdBy')->latest()->get(); @endphp
     @forelse($notes as $n)
@@ -966,7 +966,7 @@ function openMessagesTab() {
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:5px;">
             <span style="font-size:11px;color:var(--ink-soft);">{{ $note->sender?->name ?? 'Gelöschter Nutzer' }} · {{ $note->created_at->lokal()->format('d.m.Y H:i') }}</span>
             @can('delete', $note)
-            <form method="POST" action="{{ route('admin.internal.destroy', $note->id) }}" onsubmit="return confirm('Notiz wirklich löschen?');" style="margin:0;">
+            <form method="POST" action="{{ route('admin.internal.destroy', $note->id) }}" data-h-submit="4154b9bc38" style="margin:0;">
                 @csrf @method('DELETE')
                 <button type="submit" style="border:none;background:none;color:var(--ink-soft);font-size:11px;cursor:pointer;">Löschen</button>
             </form>
@@ -1021,7 +1021,7 @@ function openMessagesTab() {
 {{-- Add Note Modal --}}
 <div id="add-note-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:480px;position:relative;">
-        <button onclick="document.getElementById('add-note-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="3581a2b096" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:20px;">Notiz / Aufgabe hinzufügen</div>
         <form method="POST" action="{{ route('admin.customer.note.store', $customer->id) }}">
             @csrf
@@ -1034,7 +1034,7 @@ function openMessagesTab() {
             <div class="field"><label>Text *</label><textarea name="note" required style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;min-height:90px;font-family:inherit;resize:vertical;" placeholder="Notiz oder Aufgabenbeschreibung..."></textarea></div>
             <div class="field"><label>Fälligkeitsdatum (optional)</label><input type="date" name="due_date"></div>
             <div style="display:flex;gap:10px;justify-content:flex-end;">
-                <button type="button" onclick="document.getElementById('add-note-modal').style.display='none'" class="btn btn-ghost">Abbrechen</button>
+                <button type="button" data-h-click="3581a2b096" class="btn btn-ghost">Abbrechen</button>
                 <button type="submit" class="btn btn-primary">Hinzufügen</button>
             </div>
         </form>
@@ -1044,7 +1044,7 @@ function openMessagesTab() {
 {{-- Smart-Upload Modal (KI): Typ wird automatisch erkannt, Daten extrahiert --}}
 <div id="smart-doc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:520px;position:relative;">
-        <button onclick="document.getElementById('smart-doc-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="18823f210f" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:6px;">⚡ Smart-Upload (KI)</div>
         <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;">
             Dateien hochladen – die KI erkennt den Dokumenttyp, liest die Daten und ordnet passende Verträge automatisch zu.
@@ -1074,12 +1074,12 @@ function openMessagesTab() {
             <div id="smart-progress-label" style="font-size:12px;color:var(--ink-soft);margin-top:5px;">0%</div>
         </div>
         <div style="display:flex;gap:10px;justify-content:flex-end;">
-            <button type="button" onclick="document.getElementById('smart-doc-modal').style.display='none'" class="btn btn-ghost">Abbrechen</button>
+            <button type="button" data-h-click="18823f210f" class="btn btn-ghost">Abbrechen</button>
             <button type="button" class="btn btn-primary" id="smart-upload-btn">⚡ Hochladen &amp; analysieren</button>
         </div>
     </div>
 </div>
-<script>
+<script @cspNonce>
 // Fehlgeschlagene KI-Analyse direkt aus der Kundenakte neu anstossen
 function smartReanalyze(docId, btn) {
     btn.disabled = true;
@@ -1177,7 +1177,7 @@ function smartReanalyze(docId, btn) {
 {{-- Add Document Modal --}}
 <div id="add-doc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:520px;position:relative;">
-        <button onclick="document.getElementById('add-doc-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="4d5e9a4c85" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:20px;">Dokumente hochladen</div>
         <form method="POST" action="{{ route('admin.customer.document.store', $customer->id) }}" enctype="multipart/form-data" id="doc-upload-form">
             @csrf
@@ -1230,13 +1230,13 @@ function smartReanalyze(docId, btn) {
                 <div id="upload-progress-label" style="font-size:12px;color:var(--ink-soft);margin-top:5px;">0%</div>
             </div>
             <div style="display:flex;gap:10px;justify-content:flex-end;">
-                <button type="button" onclick="document.getElementById('add-doc-modal').style.display='none'" class="btn btn-ghost">Abbrechen</button>
+                <button type="button" data-h-click="4d5e9a4c85" class="btn btn-ghost">Abbrechen</button>
                 <button type="submit" class="btn btn-primary">Hochladen</button>
             </div>
         </form>
     </div>
 </div>
-<script>
+<script @cspNonce>
 (function() {
     const form = document.getElementById('doc-upload-form');
     const dz = document.getElementById('dropzone');
@@ -1305,7 +1305,7 @@ function smartReanalyze(docId, btn) {
 </script>
 </div>
 
-<script>
+<script @cspNonce>
 // Sparten-Labels und Anlage-URL fuer den Filter-Hinweis (aus PHP gespiegelt).
 const CONTRACT_TYPE_LABELS = @json(collect($typeConfig)->map(fn($c) => $c['label']));
 const CONTRACT_CREATE_URL  = @json(route('admin.contract.create', $customer->id));
@@ -1388,14 +1388,14 @@ document.addEventListener('DOMContentLoaded', filterContracts);
 
 <div style="display:flex;gap:10px;margin-top:24px;padding-top:20px;border-top:1px solid var(--line);">
     <a href="{{ route('admin.customer.merge', $customer->id) }}" class="btn btn-ghost">🔀 Mit Duplikat zusammenführen</a>
-    <form method="POST" action="{{ route('admin.customers.delete', $customer->id) }}" onsubmit="return confirm('Kunde {{ $customer->user?->name }} wirklich ENDGÜLTIG löschen? Alle Verträge, Tickets und Dokumente gehen verloren!') && confirm('Wirklich sicher? Diese Aktion kann NICHT rückgängig gemacht werden.');" style="margin:0;">
+    <form method="POST" action="{{ route('admin.customers.delete', $customer->id) }}" data-confirm="Kunde {{ $customer->user?->name }} wirklich ENDGÜLTIG löschen? Alle Verträge, Tickets und Dokumente gehen verloren!" data-confirm-2="Wirklich sicher? Diese Aktion kann NICHT rückgängig gemacht werden." style="margin:0;">
         @csrf @method('DELETE')
         <button type="submit" class="btn btn-ghost" style="color:#A32D2D;border-color:#A32D2D;">🗑 Kunde löschen</button>
     </form>
 </div>
 
 
-<script>
+<script @cspNonce>
 function showCustTab(id, btn) {
     document.querySelectorAll('.tab-section').forEach(el => el.style.display = el.id === id ? '' : 'none');
     document.querySelectorAll('.cust-tab').forEach(el => el.classList.toggle('active', el === btn));
@@ -1421,7 +1421,7 @@ document.addEventListener('DOMContentLoaded', () => {
 {{-- Modal: Dokument anfordern (Priorität 7) --}}
 <div id="request-doc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:440px;max-width:92vw;position:relative;">
-        <button onclick="document.getElementById('request-doc-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="d23d5db945" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:17px;font-weight:700;margin-bottom:6px;">Dokument anfordern</div>
         <div style="font-size:13px;color:var(--ink-soft);margin-bottom:16px;">Der Kunde wird per E-Mail informiert und kann direkt im Portal hochladen.</div>
         <form method="POST" action="{{ route('admin.document_requests.store', $customer->id) }}">
@@ -1452,7 +1452,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
             <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
-                <button type="button" class="btn btn-ghost" onclick="document.getElementById('request-doc-modal').style.display='none'">Abbrechen</button>
+                <button type="button" class="btn btn-ghost" data-h-click="d23d5db945">Abbrechen</button>
                 <button type="submit" class="btn btn-gold">Anfordern & Kunde informieren</button>
             </div>
         </form>
@@ -1462,7 +1462,7 @@ document.addEventListener('DOMContentLoaded', () => {
 {{-- Modal: Dokument bearbeiten (Vertragszuordnung, Kategorie, Sichtbarkeit, Priorität, Name) --}}
 <div id="doc-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:480px;position:relative;">
-        <button onclick="document.getElementById('doc-edit-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="d8a6407304" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:20px;">Dokument bearbeiten</div>
         <form method="POST" id="doc-edit-form" action="">
             @csrf @method('PUT')
@@ -1502,13 +1502,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
             <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
-                <button type="button" class="btn btn-ghost" onclick="document.getElementById('doc-edit-modal').style.display='none'">Abbrechen</button>
+                <button type="button" class="btn btn-ghost" data-h-click="d8a6407304">Abbrechen</button>
                 <button type="submit" class="btn btn-primary">Speichern</button>
             </div>
         </form>
     </div>
 </div>
-<script>
+<script @cspNonce>
 function openDocEditFromBtn(btn) {
     openDocEdit(btn.dataset.docId, btn.dataset.docName, btn.dataset.docCategory, btn.dataset.docVisibility, btn.dataset.docColor, btn.dataset.docContract);
 }
@@ -1526,3 +1526,60 @@ function openDocEdit(id, name, category, visibility, color, contractId) {
 {{-- Dokument-Vorschau (Schnellvorschau beim Ueberfahren, grosses Fenster bei Klick) --}}
 @include('partials.doc_preview')
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["2e6547eb33"] = function (event) { openMessagesTab() };
+window.__h["1ad1ce2c1c"] = function (event) { return confirm('Portal wirklich zurücksetzen? Das Passwort wird neu gesetzt und die Einladung erneut versendet.'); };
+window.__h["d2815a66b5"] = function (event) { showCustTab('tab-uebersicht',this) };
+window.__h["bd7b7fc256"] = function (event) { showCustTab('tab-familie',this) };
+window.__h["9e4bdc2fb5"] = function (event) { showCustTab('tab-vertraege',this) };
+window.__h["bced4692cd"] = function (event) { showCustTab('tab-dokumente',this) };
+window.__h["4448baa374"] = function (event) { showCustTab('tab-tickets',this) };
+window.__h["5e908ed579"] = function (event) { showCustTab('tab-kommunikation',this) };
+window.__h["16a5892592"] = function (event) { showCustTab('tab-nachrichten',this) };
+window.__h["91f0bd31dc"] = function (event) { showCustTab('tab-intern',this) };
+window.__h["dbd72c2ee1"] = function (event) { showCustTab('tab-notizen',this) };
+window.__h["8eed7ed30f"] = function (event) { showCustTab('tab-verlauf',this) };
+window.__h["a721382507"] = function (event) { document.getElementById('cust-tab-familie').click() };
+window.__h["fc4994b3a7"] = function (event) { document.getElementById('request-doc-modal').style.display='flex' };
+window.__h["3af726e69b"] = function (event) { document.getElementById('smart-doc-modal').style.display='flex' };
+window.__h["8cde53335d"] = function (event) { document.getElementById('add-doc-modal').style.display='flex' };
+window.__h["doc-neu-analyse"] = function (event) { smartReanalyze(this.dataset.doc, this) };
+window.__h["165ce16963"] = function (event) { openDocEditFromBtn(this) };
+window.__h["7020c6975c"] = function (event) { this.form.submit() };
+window.__h["2a1a3b4648"] = function (event) { filterContracts() };
+window.__h["64ebdc94d3"] = function (event) { applyMsgTemplate(this.value) };
+window.__h["433a66b886"] = function (event) { return confirm('Nachricht wirklich löschen?'); };
+window.__h["ebfbbe8505"] = function (event) { document.getElementById('add-note-modal').style.display='flex' };
+window.__h["4154b9bc38"] = function (event) { return confirm('Notiz wirklich löschen?'); };
+window.__h["3581a2b096"] = function (event) { document.getElementById('add-note-modal').style.display='none' };
+window.__h["18823f210f"] = function (event) { document.getElementById('smart-doc-modal').style.display='none' };
+window.__h["4d5e9a4c85"] = function (event) { document.getElementById('add-doc-modal').style.display='none' };
+window.__h["d23d5db945"] = function (event) { document.getElementById('request-doc-modal').style.display='none' };
+window.__h["d8a6407304"] = function (event) { document.getElementById('doc-edit-modal').style.display='none' };
+</script>
+@endPushOnce
+
+{{-- Ereignis-Handler mit veraenderlichem Wert (Audit SEC-4):
+     der Wert steht in data-a0, der Code ist fuer alle Zeilen
+     derselbe. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["a1bc6ea58c"] = function (event) { openContractType(this.dataset.a0) };
+</script>
+@endPushOnce
+
+{{-- Sparten-Kachel per Tastatur oeffnen (Audit SEC-4) --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["sparte-taste"] = function (event) { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openContractType(this.dataset.a0); } };
+</script>
+@endPushOnce

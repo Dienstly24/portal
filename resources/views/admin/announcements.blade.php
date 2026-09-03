@@ -7,7 +7,7 @@
             <div class="page-title">Ankündigungen</div>
             <div class="page-sub">Interne Mitteilungen für Ihr Team</div>
         </div>
-        <button onclick="document.getElementById('add-ann-modal').style.display='flex'" class="btn btn-gold">+ Neue Ankündigung</button>
+        <button data-h-click="dc50ce1357" class="btn btn-gold">+ Neue Ankündigung</button>
     </div>
 </div>
 
@@ -38,7 +38,7 @@ $c = $colors[$a->priority];
                 @if($a->expires_at) · Läuft ab: {{ $a->expires_at->lokal()->format('d.m.Y') }} @endif
             </div>
         </div>
-        <form method="POST" action="{{ route('admin.announcements.destroy', $a->id) }}" onsubmit="return confirm('Löschen?')">
+        <form method="POST" action="{{ route('admin.announcements.destroy', $a->id) }}" data-h-submit="14579d00be">
             @csrf @method('DELETE')
             <button type="submit" style="border:none;background:none;cursor:pointer;color:var(--ink-soft);font-size:18px;">🗑</button>
         </form>
@@ -51,7 +51,7 @@ $c = $colors[$a->priority];
 {{-- Modal --}}
 <div id="add-ann-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:520px;position:relative;">
-        <button onclick="document.getElementById('add-ann-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="8f89fd6f1d" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:20px;">Neue Ankündigung</div>
         <form method="POST" action="{{ route('admin.announcements.store') }}">
             @csrf
@@ -68,10 +68,23 @@ $c = $colors[$a->priority];
                 <div class="field"><label>Läuft ab am</label><input type="date" name="expires_at"></div>
             </div>
             <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
-                <button type="button" onclick="document.getElementById('add-ann-modal').style.display='none'" class="btn btn-ghost">Abbrechen</button>
+                <button type="button" data-h-click="8f89fd6f1d" class="btn btn-ghost">Abbrechen</button>
                 <button type="submit" class="btn btn-primary">Erstellen</button>
             </div>
         </form>
     </div>
 </div>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["dc50ce1357"] = function (event) { document.getElementById('add-ann-modal').style.display='flex' };
+window.__h["14579d00be"] = function (event) { return confirm('Löschen?') };
+window.__h["8f89fd6f1d"] = function (event) { document.getElementById('add-ann-modal').style.display='none' };
+</script>
+@endPushOnce

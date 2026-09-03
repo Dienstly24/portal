@@ -11,5 +11,16 @@
         <div class="field" style="margin-bottom:8px;"><label>Antwort (AR)</label>
             <textarea name="faq_a_ar[]" rows="2" maxlength="2000" dir="rtl">{{ $a_ar ?? '' }}</textarea></div>
     </div>
-    <button type="button" class="btn btn-ghost" style="padding:5px 12px;color:#A32D2D;" onclick="removeFaqRow(this)">Entfernen</button>
+    <button type="button" class="btn btn-ghost" style="padding:5px 12px;color:#A32D2D;" data-h-click="d3cf6a107e">Entfernen</button>
 </div>
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["d3cf6a107e"] = function (event) { removeFaqRow(this) };
+</script>
+@endPushOnce

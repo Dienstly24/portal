@@ -31,12 +31,12 @@
     <div style="margin-bottom:20px;">
         <label style="font-size:13px;color:var(--ink-soft);font-weight:600;display:block;margin-bottom:10px;">Kundenzugriff</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <label onclick="toggleLimited(false)" id="lbl-full"
+            <label data-h-click="fe8f1e7f34" id="lbl-full"
                 style="border:2px solid {{ $employee->can_see_all_customers ? 'var(--petrol)' : 'var(--line)' }};border-radius:10px;padding:16px;cursor:pointer;background:{{ $employee->can_see_all_customers ? '#D9F4E6' : '#fff' }};">
                 <div style="font-weight:700;margin-bottom:4px;">Alle Kunden</div>
                 <div style="font-size:12px;color:var(--ink-soft);">Mitarbeiter sieht alle Kunden</div>
             </label>
-            <label onclick="toggleLimited(true)" id="lbl-limited"
+            <label data-h-click="99f92ffd1f" id="lbl-limited"
                 style="border:2px solid {{ !$employee->can_see_all_customers ? 'var(--petrol)' : 'var(--line)' }};border-radius:10px;padding:16px;cursor:pointer;background:{{ !$employee->can_see_all_customers ? '#D9F4E6' : '#fff' }};">
                 <div style="font-weight:700;margin-bottom:4px;">Begrenzte Kunden</div>
                 <div style="font-size:12px;color:var(--ink-soft);">Nur zugewiesene Kunden</div>
@@ -57,7 +57,7 @@
         return ['id' => $c->id, 'name' => $c->user?->name, 'number' => $c->customer_number];
     })->values();
 @endphp
-<script type="application/json" id="preselectedData">@json($preselectedCustomers)</script>
+<script type="application/json" id="preselectedData" @cspNonce>@json($preselectedCustomers)</script>
 <input type="hidden" name="assigned_customers_present" value="1">
 <div id="assignBox">
     <div style="font-size:13px;color:var(--ink-soft);margin-bottom:10px;">Aktuell zugewiesen: <strong id="assignCount">{{ count($assignedIds) }}</strong> Kunden</div>
@@ -66,7 +66,7 @@
     <div id="assignResults" style="display:none;border:1px solid var(--line);border-radius:10px;background:#fff;max-height:220px;overflow-y:auto;margin-bottom:12px;"></div>
     <div id="assignSelected" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
 </div>
-<script>
+<script @cspNonce>
 (function () {
     var preselected = JSON.parse(document.getElementById('preselectedData').textContent);
     var selected = {};
@@ -138,8 +138,8 @@
         <label style="font-size:13px;color:var(--ink-soft);font-weight:600;display:block;margin-bottom:12px;">Berechtigungen</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
             <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px;">
-                <button type="button" onclick="selectAllPerms(true)" class="btn btn-ghost btn-sm">✓ Alle auswählen</button>
-                <button type="button" onclick="selectAllPerms(false)" class="btn btn-ghost btn-sm">✗ Alle abwählen</button>
+                <button type="button" data-h-click="a067bc2e64" class="btn btn-ghost btn-sm">✓ Alle auswählen</button>
+                <button type="button" data-h-click="54084ca47e" class="btn btn-ghost btn-sm">✗ Alle abwählen</button>
             </div>
             @foreach([
                 ['can_manage_contracts','Verträge verwalten','Verträge hinzufügen und bearbeiten','📄'],
@@ -153,7 +153,7 @@
                 ['can_manage_commissions','Provisionen verwalten','Interne Provisionen sehen, importieren und abrechnen','💶'],
             ] as $perm)
             <div class="perm-card" id="card-{{ $perm[0] }}"
-                onclick="togglePerm('{{ $perm[0] }}')"
+                data-h-click="df369be7fe" data-a0="{{ $perm[0] }}"
                 style="border:2px solid {{ $employee->{$perm[0]} ? 'var(--petrol)' : 'var(--line)' }};border-radius:10px;padding:14px;cursor:pointer;background:{{ $employee->{$perm[0]} ? '#D9F4E6' : '#fff' }};transition:.15s;user-select:none;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
                     <span style="font-size:24px;">{{ $perm[3] }}</span>
@@ -230,7 +230,7 @@
         </div>
         @if($employee->hasTwoFactor())
         <form method="POST" action="{{ route('admin.employees.reset_two_factor', $employee->id) }}"
-              onsubmit="return confirm('Zwei-Faktor-Anmeldung von {{ $employee->name }} wirklich zuruecksetzen?');" style="margin:0;">
+              data-confirm="Zwei-Faktor-Anmeldung von {{ $employee->name }} wirklich zuruecksetzen?" style="margin:0;">
             @csrf
             <button type="submit" class="btn btn-ghost" style="white-space:nowrap;color:#B5651D;border-color:#B5651D;">&#128260; Zuruecksetzen</button>
         </form>
@@ -251,7 +251,7 @@
     @if(auth()->user()->role === 'admin')
     <div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
         <div style="font-size:13px;color:var(--ink-soft);line-height:1.5;">Mitarbeiter dauerhaft entfernen.<br>Kundenzuweisungen werden aufgehoben, Kundendaten bleiben erhalten.</div>
-        <form method="POST" action="{{ route('admin.employees.destroy', $employee->id) }}" onsubmit="return confirm('Mitarbeiter {{ $employee->name }} wirklich ENDGUELTIG loeschen?') && confirm('Sicher? Diese Aktion kann nicht rueckgaengig gemacht werden.');" style="margin:0;">
+        <form method="POST" action="{{ route('admin.employees.destroy', $employee->id) }}" data-confirm="Mitarbeiter {{ $employee->name }} wirklich ENDGUELTIG loeschen?" data-confirm-2="Sicher? Diese Aktion kann nicht rueckgaengig gemacht werden." style="margin:0;">
             @csrf @method('DELETE')
             <button type="submit" class="btn btn-ghost" style="color:#A32D2D;border-color:#A32D2D;white-space:nowrap;">&#128465; Mitarbeiter loeschen</button>
         </form>
@@ -259,7 +259,7 @@
     @endif
 </div>
 
-<script>
+<script @cspNonce>
 function togglePerm(name) {
     var cb = document.getElementById(name);
     var card = document.getElementById('card-' + name);
@@ -289,3 +289,27 @@ function toggleLimited(limited) {
 }
 </script>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["fe8f1e7f34"] = function (event) { toggleLimited(false) };
+window.__h["99f92ffd1f"] = function (event) { toggleLimited(true) };
+window.__h["a067bc2e64"] = function (event) { selectAllPerms(true) };
+window.__h["54084ca47e"] = function (event) { selectAllPerms(false) };
+</script>
+@endPushOnce
+
+{{-- Ereignis-Handler mit veraenderlichem Wert (Audit SEC-4):
+     der Wert steht in data-a0, der Code ist fuer alle Zeilen
+     derselbe. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["df369be7fe"] = function (event) { togglePerm(this.dataset.a0) };
+</script>
+@endPushOnce

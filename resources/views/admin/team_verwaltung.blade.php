@@ -8,7 +8,7 @@
     <div class="card">
         <div class="card-title">Bestandsuebertragung</div>
         <p style="font-size:13px;color:var(--ink-soft);margin-bottom:16px;">Alle Kunden eines Mitarbeiters dauerhaft an einen anderen uebertragen (z.B. bei Ausscheiden).</p>
-        <form method="POST" action="{{ route('admin.team.transfer') }}" onsubmit="return confirm('Wirklich ALLE Kunden uebertragen? Der bisherige Betreuer verliert den Zugriff.');">
+        <form method="POST" action="{{ route('admin.team.transfer') }}" data-h-submit="b94c157ba9">
             @csrf
             <div class="field">
                 <label>Von Mitarbeiter</label>
@@ -76,7 +76,7 @@
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;">
                     @if($isActive)<span style="background:#D9F4E6;color:#17A65B;border-radius:10px;padding:2px 10px;font-size:11px;">Aktiv</span>@endif
-                    <form method="POST" action="{{ route('admin.team.substitution.destroy', $sub->id) }}" onsubmit="return confirm('Vertretung beenden?');" style="margin:0;">
+                    <form method="POST" action="{{ route('admin.team.substitution.destroy', $sub->id) }}" data-h-submit="1c3db3de95" style="margin:0;">
                         @csrf @method('DELETE')
                         <button type="submit" style="background:none;border:none;color:#A32D2D;cursor:pointer;font-size:13px;">&#10005;</button>
                     </form>
@@ -88,3 +88,15 @@
     </div>
 </div>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["b94c157ba9"] = function (event) { return confirm('Wirklich ALLE Kunden uebertragen? Der bisherige Betreuer verliert den Zugriff.'); };
+window.__h["1c3db3de95"] = function (event) { return confirm('Vertretung beenden?'); };
+</script>
+@endPushOnce

@@ -84,7 +84,7 @@
             ℹ Der Versand läuft im Hintergrund über die Warteschlange. Jede Mail enthält automatisch einen Abmelde-Link; abgemeldete Kunden werden übersprungen.
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;">
-            <button type="submit" name="action" value="send" class="btn btn-primary" style="flex:1 1 100%;justify-content:center;" onclick="return confirmMassSend(this.form)">📤 Jetzt senden</button>
+            <button type="submit" name="action" value="send" class="btn btn-primary" style="flex:1 1 100%;justify-content:center;" data-h-click="0d9c71b0f7">📤 Jetzt senden</button>
             <button type="submit" name="action" value="schedule" class="btn btn-ghost" style="flex:1;justify-content:center;">🕐 Später senden</button>
             <button type="submit" name="action" value="draft" class="btn btn-ghost" style="flex:1;justify-content:center;">💾 Entwurf</button>
             <button type="submit" formaction="{{ route('admin.email_marketing.preview') }}" formtarget="_blank" class="btn btn-ghost" style="flex:1;justify-content:center;">👁 Vorschau</button>
@@ -147,7 +147,7 @@
             <form method="POST" action="{{ route('admin.email_marketing.dispatch', $c->id) }}">@csrf
                 <button type="submit" class="btn btn-primary" style="padding:5px 10px;font-size:12px;">Senden</button>
             </form>
-            <form method="POST" action="{{ route('admin.email_marketing.destroy', $c->id) }}" onsubmit="return confirm('Diesen Entwurf löschen?')">@csrf @method('DELETE')
+            <form method="POST" action="{{ route('admin.email_marketing.destroy', $c->id) }}" data-h-submit="96b26ded73">@csrf @method('DELETE')
                 <button type="submit" class="btn btn-ghost" style="padding:5px 10px;font-size:12px;color:#A32D2D;">Löschen</button>
             </form>
         </div>
@@ -175,7 +175,7 @@
         <div style="display:flex;gap:6px;align-items:center;">
             @if($c->status === 'failed')
             <form method="POST" action="{{ route('admin.email_marketing.dispatch', $c->id) }}"
-                  onsubmit="return confirm('Versand fortsetzen? Bereits angeschriebene Empfaenger werden uebersprungen.')">@csrf
+                  data-h-submit="b268483b4c">@csrf
                 <button type="submit" class="btn btn-primary" style="padding:5px 10px;font-size:12px;">Fortsetzen</button>
             </form>
             @endif
@@ -189,7 +189,7 @@
 
 </div>
 </div>
-<script>
+<script @cspNonce>
 // Bestaetigung vor Massenversand (Audit UX-7): nennt Zielgruppe + (fuer "Alle")
 // die Empfaengerzahl, damit niemand versehentlich an alle Kunden sendet.
 function confirmMassSend(form) {
@@ -199,3 +199,16 @@ function confirmMassSend(form) {
 }
 </script>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["0d9c71b0f7"] = function (event) { return confirmMassSend(this.form) };
+window.__h["96b26ded73"] = function (event) { return confirm('Diesen Entwurf löschen?') };
+window.__h["b268483b4c"] = function (event) { return confirm('Versand fortsetzen? Bereits angeschriebene Empfaenger werden uebersprungen.') };
+</script>
+@endPushOnce

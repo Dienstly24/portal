@@ -88,11 +88,11 @@
             <td>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;">
                     {{-- Js::from statt addslashes: korrektes JS-Escaping, auch bei Zeilenumbruechen im Kampagnennamen --}}
-                    <form method="POST" action="{{ route('admin.werbung.status', $c['id']) }}" @if(!$aktiv) onsubmit="return confirm({{ \Illuminate\Support\Js::from('Anzeige „' . $c['name'] . '" jetzt starten? Ab dann wird Budget ausgegeben.') }});" @endif>
+                    <form method="POST" action="{{ route('admin.werbung.status', $c['id']) }}" @if(!$aktiv) data-confirm="Anzeige „{{ $c['name'] }}“ jetzt starten? Ab dann wird Budget ausgegeben." @endif>
                         @csrf<input type="hidden" name="action" value="{{ $aktiv ? 'pause' : 'start' }}">
                         <button type="submit" class="btn {{ $aktiv ? 'btn-ghost' : 'btn-primary' }} btn-sm">{{ $aktiv ? '⏸ Pausieren' : '▶ Starten' }}</button>
                     </form>
-                    <form method="POST" action="{{ route('admin.werbung.delete', $c['id']) }}" onsubmit="return confirm({{ \Illuminate\Support\Js::from('Kampagne „' . $c['name'] . '" endgültig löschen?') }});">
+                    <form method="POST" action="{{ route('admin.werbung.delete', $c['id']) }}" data-confirm="Kampagne „{{ $c['name'] }}“ endgültig löschen?">
                         @csrf<button type="submit" class="btn btn-sm" style="background:#F9E3E3;color:#A32D2D;border:1px solid #F0A0A0;">🗑</button>
                     </form>
                 </div>

@@ -96,7 +96,7 @@
             </tr></thead>
             <tbody>
             @forelse($leaderboard as $row)
-            <tr class="row-link" onclick="rowNav(event, '{{ route('admin.reports.neukunden', array_merge(request()->except(['werber','page']), ['werber' => $row['key'] === '' ? 'keiner' : $row['key']])) }}')" title="Liste filtern">
+            <tr class="row-link" data-row-nav="{{ route('admin.reports.neukunden', array_merge(request()->except(['werber','page']), ['werber' => $row['key'] === '' ? 'keiner' : $row['key']])) }}" title="Liste filtern">
                 <td style="padding:10px 20px;">
                     <div style="display:flex;align-items:center;gap:8px;">
                         @if($row['kind'] === 'mitarbeiter')<span class="wb-badge wb-mit">👤 Mitarbeiter</span>
@@ -198,7 +198,7 @@
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Werber</label>
-            <select name="werber" class="flt-sel" onchange="this.form.submit()">
+            <select name="werber" class="flt-sel" data-h-change="17e692883c">
                 <option value="">Alle</option>
                 <option value="keiner" {{ request('werber') === 'keiner' ? 'selected' : '' }}>Ohne Werber</option>
                 <optgroup label="Mitarbeiter">
@@ -215,7 +215,7 @@
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Angelegt von</label>
-            <select name="angelegt_von" class="flt-sel" onchange="this.form.submit()">
+            <select name="angelegt_von" class="flt-sel" data-h-change="17e692883c">
                 <option value="">Alle</option>
                 <option value="system" {{ request('angelegt_von') === 'system' ? 'selected' : '' }}>System / Import</option>
                 @foreach($employees as $e)
@@ -225,7 +225,7 @@
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Gesellschaft</label>
-            <select name="gesellschaft" class="flt-sel" onchange="this.form.submit()">
+            <select name="gesellschaft" class="flt-sel" data-h-change="17e692883c">
                 <option value="">Alle</option>
                 @foreach($insurers as $ins)
                 <option value="{{ $ins }}" {{ request('gesellschaft') === $ins ? 'selected' : '' }}>{{ $ins }}</option>
@@ -234,7 +234,7 @@
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Sparte</label>
-            <select name="sparte" class="flt-sel" onchange="this.form.submit()">
+            <select name="sparte" class="flt-sel" data-h-change="17e692883c">
                 <option value="">Alle</option>
                 @foreach(\App\Models\Contract::TYPES as $key => $cfg)
                 <option value="{{ $key }}" {{ request('sparte') === $key ? 'selected' : '' }}>{{ $cfg['icon'] }} {{ $cfg['label'] }}</option>
@@ -243,7 +243,7 @@
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Vertrag</label>
-            <select name="vertrag" class="flt-sel" onchange="this.form.submit()">
+            <select name="vertrag" class="flt-sel" data-h-change="17e692883c">
                 <option value="">Egal</option>
                 <option value="mit" {{ request('vertrag') === 'mit' ? 'selected' : '' }}>Mit Vertrag</option>
                 <option value="ohne" {{ request('vertrag') === 'ohne' ? 'selected' : '' }}>Ohne Vertrag</option>
@@ -268,7 +268,7 @@
         </tr></thead>
         <tbody>
         @forelse($customers as $c)
-        <tr class="row-link" onclick="rowNav(event, '{{ route('admin.customer', $c->id) }}')" title="Kundenakte öffnen">
+        <tr class="row-link" data-row-nav="{{ route('admin.customer', $c->id) }}" title="Kundenakte öffnen">
             <td style="padding:14px 20px;vertical-align:top;">
                 <a href="{{ route('admin.customer', $c->id) }}" style="font-weight:700;color:inherit;">{{ $c->user?->name ?? '—' }}</a>
                 <div style="font-size:12px;color:var(--ink-soft);">Nr. {{ $c->customer_number }}</div>
@@ -399,7 +399,7 @@
 .vt-pending, .vt-cancelled_upcoming { background:#F7E7D6; color:#B5651D; }
 .vt-cancelled, .vt-expired { background:#F9E3E3; color:#A32D2D; }
 </style>
-<script>
+<script @cspNonce>
 // Offene Popover schliessen, wenn daneben geklickt wird (details-Element).
 document.addEventListener('click', function (e) {
     document.querySelectorAll('details.pop[open]').forEach(function (d) {
@@ -408,3 +408,14 @@ document.addEventListener('click', function (e) {
 });
 </script>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["17e692883c"] = function (event) { this.form.submit() };
+</script>
+@endPushOnce

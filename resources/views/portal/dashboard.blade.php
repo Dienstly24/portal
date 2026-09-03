@@ -29,7 +29,7 @@
         @endforeach
     </div>
     @endif
-    <script>
+    <script @cspNonce>
     (function(){
         const slides=document.querySelectorAll('#banner-carousel .banner-slide');
         const dots=document.querySelectorAll('#banner-carousel .banner-dot');
@@ -103,7 +103,7 @@
         </a>
     </div>
 </div>
-<script>
+<script @cspNonce>
 document.getElementById('hero-chat').addEventListener('click', function (e) {
     if (window.d24ChatOpen && window.matchMedia('(min-width:821px)').matches) {
         e.preventDefault();
@@ -128,10 +128,10 @@ document.getElementById('hero-chat').addEventListener('click', function (e) {
     </div>
     <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
         <a href="{{ route('portal.email_connection') }}" class="btn" style="padding:8px 18px;font-size:13.5px;">{{ __('Jetzt aktivieren') }} →</a>
-        <button type="button" onclick="d24DismissEmailOnboarding()" style="background:none;border:1px solid var(--line);color:var(--ink-soft);font-size:13.5px;padding:8px 16px;border-radius:10px;cursor:pointer;">{{ __('Später') }}</button>
+        <button type="button" data-h-click="25a14582c5" style="background:none;border:1px solid var(--line);color:var(--ink-soft);font-size:13.5px;padding:8px 16px;border-radius:10px;cursor:pointer;">{{ __('Später') }}</button>
     </div>
 </div>
-<script>
+<script @cspNonce>
 (function(){
     if(localStorage.getItem('email_onboarding_dismissed')!=='1'){
         var el=document.getElementById('email-onboarding');if(el)el.style.display='block';
@@ -249,3 +249,14 @@ document.getElementById('hero-chat').addEventListener('click', function (e) {
     @endforelse
 </div>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["25a14582c5"] = function (event) { d24DismissEmailOnboarding() };
+</script>
+@endPushOnce

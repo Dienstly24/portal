@@ -97,5 +97,7 @@ label{display:block;font-size:13.5px;margin-bottom:7px;color:#dde0e5;}
     <span class="sep">|</span>
     <span>© {{ date('Y') }} Dienstly24</span>
 </div>
+{{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
+@stack('cspScripts')
 </body>
 </html>

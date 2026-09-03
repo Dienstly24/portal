@@ -91,5 +91,7 @@ Antworten Sie einfach <strong>auf diese E-Mail</strong> – wir uebernehmen die 
 </td></tr>
 </table>
 </td></tr></table>
+{{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
+@stack('cspScripts')
 </body>
 </html>

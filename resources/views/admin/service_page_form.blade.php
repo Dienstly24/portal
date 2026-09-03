@@ -100,7 +100,7 @@
                 @endforeach
             @endif
         </div>
-        <button type="button" class="btn btn-ghost" onclick="addFaqRow()">➕ FAQ-Eintrag</button>
+        <button type="button" class="btn btn-ghost" data-h-click="cf14ccbbba">➕ FAQ-Eintrag</button>
     </div>
 
     <div class="card">
@@ -131,7 +131,7 @@
                 @endforeach
             @endif
         </div>
-        <button type="button" class="btn btn-ghost" onclick="addFieldRow()">➕ Formularfeld</button>
+        <button type="button" class="btn btn-ghost" data-h-click="4ee39d47cd">➕ Formularfeld</button>
     </div>
 
     <div class="card">
@@ -162,7 +162,7 @@
 <template id="fieldRowTpl">
     @include('admin.partials.service_field_row', ['label_de' => '', 'label_ar' => '', 'type' => 'text', 'options_de' => '', 'options_ar' => '', 'required' => false])
 </template>
-<script>
+<script @cspNonce>
 function addFaqRow() {
     var tpl = document.getElementById('faqRowTpl');
     document.getElementById('faqRows').appendChild(tpl.content.cloneNode(true));
@@ -175,3 +175,15 @@ function addFieldRow() {
 function removeFieldRow(btn) { btn.closest('.field-row').remove(); }
 </script>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["cf14ccbbba"] = function (event) { addFaqRow() };
+window.__h["4ee39d47cd"] = function (event) { addFieldRow() };
+</script>
+@endPushOnce

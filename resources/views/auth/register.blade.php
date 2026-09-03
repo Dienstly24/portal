@@ -122,8 +122,23 @@ label{display:block;font-size:13.5px;margin-bottom:7px;color:#dde0e5;}
             <span>{{ __('Optional: Ich willige ein, dass vertragsbezogene E-Mails automatisch in meiner Kundenakte archiviert werden, damit Dienstly24 mich besser betreuen kann. Freiwillig und jederzeit widerrufbar.') }}</span>
         </label>
 
+        {{-- Cloudflare Turnstile (Audit SEC-1). Das Widget ist nur die
+             sichtbare Haelfte; entschieden wird SERVERSEITIG in
+             TurnstileVerifier. Ohne konfigurierten Schluessel erscheint
+             hier nichts - dann greift in Produktion die Ablehnung im
+             Verifier, in der Entwicklung der Honeypot. --}}
+        @if($turnstileSiteKey !== '')
+            <div class="cf-turnstile" data-sitekey="{{ $turnstileSiteKey }}"
+                 data-theme="dark" data-language="{{ $rtl ? 'ar' : 'de' }}"
+                 style="margin:10px 0;"></div>
+        @endif
+
         <button type="submit" class="btn">{{ __('Konto erstellen') }}</button>
     </form>
+
+    <p class="hint" style="text-align:center;margin-top:10px;">
+        {{ __('Nach dem Absenden erhalten Sie eine E-Mail zur Bestätigung. Ihr Konto wird erst nach dem Klick auf den Bestätigungslink angelegt.') }}
+    </p>
 
     <p class="login-line">{{ __('Bereits registriert?') }} <a href="{{ route('login') }}">{{ __('Zum Login') }}</a></p>
 </div>
@@ -142,5 +157,12 @@ label{display:block;font-size:13.5px;margin-bottom:7px;color:#dde0e5;}
     <span>© {{ date('Y') }} Dienstly24</span>
 </div>
 @include('partials.cookie_consent')
+@if($turnstileSiteKey !== '')
+    {{-- Externer Host: in SecurityHeaders ausdruecklich fuer script-src
+         freigegeben (challenges.cloudflare.com). Kein weiterer Fremdhost. --}}
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+@endif
+{{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
+@stack('cspScripts')
 </body>
 </html>

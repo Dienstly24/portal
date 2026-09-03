@@ -150,6 +150,10 @@ table tr:hover td{background:#EDEAE0;}
     .cust-tabs{overflow-x:auto;}
 }
 .admin-mobile-btn{display:none;position:fixed;top:11px;left:12px;z-index:130;background:var(--petrol-dark);color:#fff;border:none;border-radius:8px;width:42px;height:42px;font-size:20px;cursor:pointer;align-items:center;justify-content:center;}
+/* Treffer der globalen Suche: Hover als CSS statt als
+   onmouseover-Handler (Audit SEC-4) - Darstellung gehoert ohnehin
+   nicht in ein Ereignis-Attribut. */
+.gs-treffer:hover{background:#F7F5EF;}
 </style>
     @include('partials.favicon')
 </head>
@@ -179,20 +183,20 @@ table tr:hover td{background:#EDEAE0;}
     <div class="header-search">
         <span class="search-icon">🔍</span>
         <input type="text" id="global-search" placeholder="Suche nach Kunden, Verträge, Tickets..."
-        oninput="globalSearch(this.value)" onkeydown="globalSearchKey(event)" autocomplete="off">
+        data-h-input="0ee4d7cadb" data-h-keydown="6044971a98" autocomplete="off">
     <div id="search-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);max-height:320px;overflow-y:auto;z-index:200;margin-top:4px;"></div>
     </div>
     <div class="header-actions">
         {{-- Einheitliches Notification Center: EINE Glocke, EIN Dropdown --}}
         <div style="position:relative;">
-            <button type="button" class="icon-btn" id="notif-bell" title="Benachrichtigungen" onclick="toggleNotifications()">
+            <button type="button" class="icon-btn" id="notif-bell" title="Benachrichtigungen" data-h-click="93c2b711c3">
                 🔔
                 <span class="notif-dot" id="notif-dot" style="display:none;"></span>
             </button>
             <div id="notif-dropdown" style="display:none;position:absolute;top:46px;right:0;width:380px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:300;overflow:hidden;">
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);">
                     <span style="font-size:13px;font-weight:700;">Benachrichtigungen</span>
-                    <button type="button" onclick="markAllNotifsRead()" style="border:none;background:none;color:var(--ink-soft);font-size:12px;cursor:pointer;">Alle gelesen</button>
+                    <button type="button" data-h-click="a5390eb93d" style="border:none;background:none;color:var(--ink-soft);font-size:12px;cursor:pointer;">Alle gelesen</button>
                 </div>
                 <div id="notif-list" style="max-height:400px;overflow-y:auto;">
                     <p style="padding:16px;font-size:13px;color:var(--ink-soft);">Laden…</p>
@@ -210,7 +214,7 @@ table tr:hover td{background:#EDEAE0;}
         @yield('content')
     </div>
 </div>
-<script>
+<script @cspNonce>
 let searchTimeout;
 // Enter in der Kopfzeilen-Suche: zur vollstaendigen Kundenliste springen, die
 // serverseitig ueber ALLE Kundenfelder sucht (Name, Nummer, Telefon, Anschrift,
@@ -234,8 +238,7 @@ function globalSearch(q) {
         .then(data => {
             if (!data.length) { results.style.display = 'none'; return; }
             results.innerHTML = data.map(item => `
-                <a href="${item.url}" style="display:flex;align-items:center;gap:10px;padding:10px 14px;text-decoration:none;color:#152826;border-bottom:1px solid #E5E1D6;"
-                   onmouseover="this.style.background='#F7F5EF'" onmouseout="this.style.background='transparent'">
+                <a href="${item.url}" class="gs-treffer" style="display:flex;align-items:center;gap:10px;padding:10px 14px;text-decoration:none;color:#152826;border-bottom:1px solid #E5E1D6;">
                     <span style="font-size:18px;">${item.icon}</span>
                     <div>
                         <div style="font-weight:600;font-size:13px;">${item.title}</div>
@@ -276,7 +279,7 @@ function loadNotifications() {
                 return;
             }
             list.innerHTML = data.items.map(function(n) { return ''
-                + '<a href="' + n.url + '" onclick="markNotifRead(\'' + n.id + '\')" '
+                + '<a href="' + n.url + '" data-h-click="notif-gelesen" data-a0="' + n.id + '" '
                 + 'style="display:flex;gap:10px;padding:11px 16px;text-decoration:none;color:#152826;border-bottom:1px solid #E5E1D6;background:' + (n.read ? 'transparent' : '#F0F7F3') + ';">'
                 + '<span style="font-size:18px;line-height:1.2;flex:none;">' + n.icon + '</span>'
                 + '<span style="min-width:0;">'
@@ -292,6 +295,11 @@ function toggleNotifications() {
     dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
     if (dd.style.display === 'block') loadNotifications();
 }
+// Wird an per JavaScript erzeugten Links gebraucht; die ID steht als
+// Datenwert am Link, nie als Code (Audit SEC-4).
+window.__h = window.__h || {};
+window.__h["notif-gelesen"] = function (event) { markNotifRead(this.dataset.a0); };
+
 function markNotifRead(id) {
     fetch('/admin/notifications/' + id + '/read', {method: 'POST', headers: {'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json'}}).catch(function(){});
 }
@@ -307,7 +315,7 @@ document.addEventListener('visibilitychange', function() {
     if (document.visibilityState === 'visible') loadNotifications();
 });
 </script>
-<script>
+<script @cspNonce>
 document.getElementById('am-btn')?.addEventListener('click', function(){ document.getElementById('admin-sidebar').classList.toggle('open'); });
 
 // ===== Navigation: Aufklappen und gemerkter Zustand =====
@@ -343,5 +351,25 @@ function toggleNavGroup(btn) {
     });
 })();
 </script>
+
+{{-- Ereignis-Verdrahtung der Seite (Audit SEC-4). Die Bloecke landen
+     hier am Ende des Body, damit sie auch aus Partials heraus (etwa
+     einer Tabellenzeile) gueltiges HTML ergeben - ein <script @cspNonce> mitten
+     in einer <table> wuerde der Browser herausloesen. --}}
+@stack('cspScripts')
 </body>
 </html>
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["0ee4d7cadb"] = function (event) { globalSearch(this.value) };
+window.__h["6044971a98"] = function (event) { globalSearchKey(event) };
+window.__h["93c2b711c3"] = function (event) { toggleNotifications() };
+window.__h["a5390eb93d"] = function (event) { markAllNotifsRead() };
+</script>
+@endPushOnce

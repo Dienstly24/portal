@@ -117,10 +117,13 @@ class AuditE2EFixesTest extends TestCase
         $this->assertNotNull($csp);
         $this->assertStringContainsString("frame-ancestors 'self'", $csp);
         $this->assertStringContainsString("object-src 'none'", $csp);
-        // Alpine.js (x-data/x-show/@click) wertet Direktiven per Function() aus
-        // und braucht daher 'unsafe-eval' - sonst brechen alle Dropdowns/Menues
-        // (Regression-Guard).
-        $this->assertStringContainsString("'unsafe-eval'", $csp);
+        // UMGEKEHRT seit Audit SEC-4: 'unsafe-eval' ist RAUS. Es stand hier,
+        // weil Alpine.js seine Direktiven per Function() auswertete; Alpine
+        // ist durch resources/js/ui.js ersetzt. Ein 'unsafe-eval' erlaubt
+        // jede Auswertung von Zeichenketten als Code - also genau den
+        // Schritt, den ein XSS-Angriff braucht.
+        $this->assertStringNotContainsString("'unsafe-eval'", $csp);
+        $this->assertStringNotContainsString("'unsafe-inline'", $this->scriptSrc($csp));
         // Der Dokumenten-Scanner, das Zaehlerfoto und die Banner-Vorschau
         // verarbeiten Bilder ueber URL.createObjectURL(). Ohne blob: in
         // img-src bricht die Bildverarbeitung still ab und der Upload eines
@@ -173,4 +176,17 @@ class AuditE2EFixesTest extends TestCase
         $this->assertDatabaseHas('tasks', ['id' => $task->id, 'assigned_to' => null, 'created_by' => null]);
         $this->assertDatabaseMissing('users', ['id' => $employee->id]);
     }
+    /** Nur die script-src-Direktive aus der Richtlinie. */
+    private function scriptSrc(string $csp): string
+    {
+        foreach (explode(';', $csp) as $teil) {
+            $teil = trim($teil);
+            if (str_starts_with($teil, 'script-src ')) {
+                return $teil;
+            }
+        }
+
+        return '';
+    }
+
 }

@@ -78,7 +78,7 @@
     <div class="card-title">🗂️ Bibliothek</div>
     <form method="GET" action="{{ route('admin.media') }}" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
         <input type="text" name="q" value="{{ $q }}" placeholder="Suche: Titel, Dateiname, Alt-Text" style="max-width:280px;">
-        <select name="slot" onchange="this.form.submit()">
+        <select name="slot" data-h-change="b8b2b5ce91">
             <option value="">Alle Slots</option>
             @foreach($slots as $key => $slot)<option value="{{ $key }}" @selected($slotFilter === $key)>{{ $slot['label'] }}</option>@endforeach
         </select>
@@ -142,7 +142,7 @@
                         </form>
                         @if($isManager)
                             <form method="POST" action="{{ route('admin.media.delete', $asset) }}" style="margin-top:10px;"
-                                  onsubmit="return confirm('{{ $asset->slot ? 'ACHTUNG: Dieses Bild ist einem aktiven Slot zugewiesen - die Website zeigt dann den eingebauten Fallback. ' : '' }}In den Papierkorb legen? (30 Tage wiederherstellbar)');">
+                                  data-confirm="{{ $asset->slot ? 'ACHTUNG: Dieses Bild ist einem aktiven Slot zugewiesen - die Website zeigt dann den eingebauten Fallback. ' : '' }}In den Papierkorb legen? (30 Tage wiederherstellbar)">
                                 @csrf @method('DELETE')
                                 <button type="submit" class="btn btn-ghost" style="padding:7px 14px;font-size:12.5px;color:#b3261e;">🗑 In den Papierkorb</button>
                             </form>
@@ -180,7 +180,7 @@
 </div>
 @endif
 
-<script>
+<script @cspNonce>
 (function () {
     var dz = document.getElementById('dropzone'), input = document.getElementById('fileInput'),
         label = document.getElementById('dropFiles'), form = document.getElementById('uploadForm'),
@@ -208,3 +208,14 @@
 })();
 </script>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["b8b2b5ce91"] = function (event) { this.form.submit() };
+</script>
+@endPushOnce

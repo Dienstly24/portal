@@ -134,7 +134,7 @@
 </div>
 
 @if($rows->count() > 1)
-<script>
+<script @cspNonce>
 (function () {
     var el = document.getElementById('activityCompareChart');
     if (!el || typeof Chart === 'undefined') return;
