@@ -125,14 +125,35 @@ jobs:
   proxy-liste:
     name: Cloudflare-Ranges abgleichen
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
           coverage: none
-      - run: bash scripts/pruefe-cloudflare-ips.sh
+      # Der Abgleich ist ein PFLEGEHINWEIS, kein Gate: eine Abweichung
+      # muss ein Mensch bewerten (Cloudflare hat Ranges geaendert), und
+      # ein nicht erreichbarer Endpunkt darf schon gar nichts bedeuten.
+      # Das Ergebnis steht deshalb in der Zusammenfassung des Laufs,
+      # statt als roter Haken - ein Haken, der regelmaessig ohne Defekt
+      # rot ist, wird nach der zweiten Woche ignoriert.
+      - name: Cloudflare-Ranges vergleichen (nur Hinweis)
+        run: |
+          set +e
+          ausgabe=$(bash scripts/pruefe-cloudflare-ips.sh 2>&1)
+          code=$?
+          echo "$ausgabe"
+          {
+            case $code in
+              0) echo "### ✅ Cloudflare-Ranges sind aktuell" ;;
+              2) echo "### ℹ️ Cloudflare-Liste nicht abrufbar - nichts zu melden" ;;
+              *) echo "### ⚠️ Cloudflare-Ranges weichen ab - bitte config/trustedproxy.php pruefen" ;;
+            esac
+            echo
+            echo '```'
+            echo "$ausgabe"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # ---------------------------------------------------------------------
   # 2) Deploy: läuft NUR nach grünem Test-Gate und NUR bei Push auf main

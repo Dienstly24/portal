@@ -27,10 +27,29 @@ fi
 
 veroeffentlicht=$(printf '%s\n%s\n' "$v4" "$v6" | tr -d '\r' | grep -v '^$' | sort)
 
+# config/trustedproxy.php ruft env() auf - das ist ein Laravel-Helfer und
+# ohne Autoloader nicht definiert. Ein blosses `require` waere hier also
+# ein Fatal Error, die Liste kaeme LEER zurueck, und der Abgleich haette
+# jede Cloudflare-Range als "fehlt" gemeldet. Deshalb ein Notbehelf-env().
 hinterlegt=$(php -r '
+if (!function_exists("env")) {
+    function env($schluessel, $standard = null) {
+        $wert = getenv($schluessel);
+        return $wert === false ? $standard : $wert;
+    }
+}
 $c = require "config/trustedproxy.php";
 foreach ($c["cloudflare"] as $r) { echo $r, PHP_EOL; }
 ' | sort)
+
+# Eine leere hinterlegte Liste ist immer ein Skriptfehler, nie ein echter
+# Befund - sonst meldet der Abgleich lautstark "alles fehlt" und niemand
+# glaubt ihm beim naechsten Mal noch.
+if [ -z "$hinterlegt" ]; then
+  echo "!! Die Liste aus config/trustedproxy.php liess sich nicht lesen."
+  echo "!! Das ist ein Fehler DIESES Skripts, kein Befund - es wird nichts gemeldet."
+  exit 2
+fi
 
 fehlend=$(comm -23 <(echo "$veroeffentlicht") <(echo "$hinterlegt"))
 ueberzaehlig=$(comm -13 <(echo "$veroeffentlicht") <(echo "$hinterlegt"))
