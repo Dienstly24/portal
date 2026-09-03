@@ -15,6 +15,9 @@
     <a href="{{ route('admin.provisions.rates') }}" class="rep-tab">Sätze</a>
     <a href="{{ route('admin.provisions.report') }}" class="rep-tab">Monatsbericht</a>
     <a href="{{ route('admin.provisions.dashboard') }}" class="rep-tab">Dashboard</a>
+    @can('provisionen-verwalten')
+    <a href="{{ route('admin.provisionsmanagement.dashboard') }}" class="rep-tab" style="margin-left:auto;">Provisionsmanagement →</a>
+    @endcan
 </div>
 <style>
 .rep-tab { padding:9px 18px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:13.5px; font-weight:600; color:var(--ink); text-decoration:none; }

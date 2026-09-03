@@ -20,5 +20,10 @@
     <a href="{{ route('admin.commissions_internal.import') }}" class="rep-tab {{ ($active ?? '') === 'import' ? 'rep-tab-active' : '' }}">＋ Neue Abrechnung importieren</a>
     <a href="{{ route('admin.commissions_internal.invoice') }}" class="rep-tab {{ ($active ?? '') === 'rechnung' ? 'rep-tab-active' : '' }}">Rechnungsabgleich</a>
     <a href="{{ route('admin.commissions_internal.audit') }}" class="rep-tab {{ ($active ?? '') === 'protokoll' ? 'rep-tab-active' : '' }}">Protokoll</a>
+    {{-- Bruecke zu den beiden Nachbar-Bereichen. Seit die Seitenleiste nur
+         noch EINEN Punkt "Provisionen" fuehrt, sind sie ausschliesslich von
+         hier aus erreichbar - ein Bereich ohne Weg dorthin waere geloescht,
+         ohne es zu sein. --}}
+    <a href="{{ route('admin.commissions') }}" class="rep-tab">Auszahlungen an eigene Vermittler</a>
     <a href="{{ route('admin.vermittler.index') }}" class="rep-tab" style="margin-left:auto;">TARIFCHECK24-Abgleich →</a>
 </div>

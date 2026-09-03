@@ -10,6 +10,8 @@
     <div style="font-size:14px;color:var(--ink-soft);">Kunde suchen, Vorlage wählen, prüfen, senden – Platzhalter und Anrede werden automatisch gefüllt.</div>
 </div>
 
+@include('admin.partials.email_tabs', ['active' => 'verfassen'])
+
 <style>
 .compose-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start;}
 @media (max-width:1100px){.compose-grid{grid-template-columns:1fr;}}

@@ -199,14 +199,20 @@ class CustomerConversationTimelineTest extends TestCase
             ->assertSee('Ticket erstellt: Akten-Test-Ticket');
     }
 
-    public function test_sidebar_hat_email_gruppe_und_umbenannte_zentrale(): void
+    /**
+     * Seit dem Navigations-Umbau (03.09.2026) liegen Kundenchat und E-Mail
+     * im gemeinsamen POSTFACH - die eigene E-Mail-Gruppe gibt es nicht mehr.
+     * Der Kern der Pruefung bleibt: beide Wege stehen in der Seitenleiste.
+     */
+    public function test_sidebar_fuehrt_kundenchat_und_email_im_postfach(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
 
         $this->actingAs($admin)->get(route('admin.dashboard'))
             ->assertOk()
-            ->assertSee('Kundenkommunikation')
-            ->assertSee('data-group="email"', false)
-            ->assertSee('Posteingang');
+            ->assertSee('data-group="postfach"', false)
+            ->assertSee('Kundenchat')
+            ->assertSee(route('admin.customer_chat'), false)
+            ->assertSee(route('admin.email_inbox'), false);
     }
 }
