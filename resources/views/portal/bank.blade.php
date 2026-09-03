@@ -25,7 +25,7 @@
         <div class="card-title">{{ __('Neue Bankverbindung beantragen') }}</div>
         <form method="POST" action="{{ route('portal.bank.store') }}" enctype="multipart/form-data">
             @csrf
-            <div class="field"><label>{{ __('IBAN *') }}</label><input type="text" name="iban" required maxlength="34" placeholder="DE00 0000 0000 0000 0000 00" oninput="this.value=this.value.toUpperCase().replace(/\s/g,'')"></div>
+            <div class="field"><label>{{ __('IBAN *') }}</label><input type="text" name="iban" required maxlength="34" placeholder="DE00 0000 0000 0000 0000 00" data-h-input="41f899c4a0"></div>
             <div class="field"><label>{{ __('Kontoinhaber *') }}</label><input type="text" name="account_holder" required maxlength="255" value="{{ auth()->user()->name }}"></div>
             <div class="field">
                 <label>{{ __('Gültig ab') }}</label>
@@ -67,3 +67,14 @@
 </div>
 @endif
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["41f899c4a0"] = function (event) { this.value=this.value.toUpperCase().replace(/\s/g,'') };
+</script>
+@endPushOnce

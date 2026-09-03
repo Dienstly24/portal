@@ -101,7 +101,7 @@
     @endif
 </div>
 
-<script>
+<script @cspNonce>
 // Sofort-Suche nach dem Vertrag (nie der gesamte Bestand im HTML - gleiche
 // Regel wie in den uebrigen Formularen). Treffer werden per textContent
 // gebaut: Kunden- und Vertragsnamen sind Fremddaten.

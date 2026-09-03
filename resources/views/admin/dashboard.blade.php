@@ -66,7 +66,7 @@
         <a href="{{ route('admin.tickets') }}" class="card-link">Alle anzeigen →</a>
     </div>
     @forelse($recentTickets as $t)
-    <div class="item-row row-link" onclick="rowNav(event, '{{ route('admin.ticket', $t->id) }}')" title="Antrag öffnen">
+    <div class="item-row row-link" data-row-nav="{{ route('admin.ticket', $t->id) }}" title="Antrag öffnen">
         <div>
             <div style="font-weight:600;font-size:14px;">{{ $t->subject }}</div>
             <div style="font-size:12px;color:var(--ink-soft);">{{ $t->customer?->user?->name }} · {{ $t->created_at->lokal()->format('d.m.Y') }}</div>
@@ -99,7 +99,7 @@
     </div>
 </div>
 
-<script>
+<script @cspNonce>
 const ctx = document.getElementById('contractChart').getContext('2d');
 new Chart(ctx, {
     type: 'doughnut',

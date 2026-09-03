@@ -165,7 +165,7 @@
         @endif
         @forelse($expiring as $c)
         @php $days = now()->diffInDays(\Carbon\Carbon::parse($c->end_date)); @endphp
-        <tr class="row-link" onclick="rowNav(event, '{{ route('admin.contract.edit', $c->id) }}')" title="Vertrag öffnen">
+        <tr class="row-link" data-row-nav="{{ route('admin.contract.edit', $c->id) }}" title="Vertrag öffnen">
             <td style="padding:13px 20px;font-weight:600;">{{ $c->customer?->user?->name ?? '—' }}</td>
             <td><a href="{{ route('admin.contract.edit', $c->id) }}" style="color:inherit;">{{ $c->insurer }}</a></td>
             <td>{{ ['kfz'=>'KFZ','krankenversicherung'=>'Kranken','internet'=>'Internet','strom'=>'Strom','gas'=>'Gas','strom_gas'=>'Strom & Gas','andere'=>'Andere'][$c->type] ?? $c->type }}</td>
@@ -186,7 +186,7 @@
     </table>
 </div>
 
-<script>
+<script @cspNonce>
 const contractTypes = @json($contracts['by_type']);
 const typeLabels = @json($typeLabels);
 const labels = Object.keys(contractTypes).map(k => typeLabels[k] || k);

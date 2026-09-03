@@ -31,7 +31,7 @@
 <div class="card" style="margin-bottom:20px;">
     {{-- Tastaturbedienbar (Audit A11Y-2): role=button + tabindex + Enter/Space --}}
     <div id="inbox-dropzone" role="button" tabindex="0" aria-label="Dateien zum Hochladen auswaehlen oder hierher ziehen"
-        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('inbox-files').click();}"
+        data-h-keydown="66dc0af444"
         style="border:2px dashed var(--line);border-radius:12px;padding:30px;text-align:center;cursor:pointer;transition:.15s;">
         <div style="font-size:34px;margin-bottom:6px;" aria-hidden="true">📥</div>
         <div style="font-size:14px;color:var(--ink-soft);">Dateien hierher ziehen oder <span style="color:var(--gold);font-weight:600;">durchsuchen</span></div>
@@ -61,7 +61,7 @@
         <span>Nicht zugeordnet ({{ $inboxDocuments->count() }})</span>
         @if($inboxDocuments->count() > 0)
         <label style="margin-inline-start:auto;font-weight:500;font-size:12.5px;color:var(--ink-soft);display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
-            <input type="checkbox" id="inbox-select-all" onchange="docReview.selectAll(this.checked)"> Alle auswaehlen
+            <input type="checkbox" id="inbox-select-all" data-h-change="3cd194d928"> Alle auswaehlen
         </label>
         @endif
     </div>
@@ -78,7 +78,7 @@
                 @if($meta && !empty($meta['conflicts']))
                     <span class="badge" style="background:#FBE9E9;color:#B3261E;">⚠ {{ implode(' ', $meta['conflicts']) }}</span>
                 @elseif($meta && $meta['ready'] && $meta['has_name'])
-                    <button type="button" class="btn btn-gold btn-sm" onclick="docReview.openBatch(@js($batchId))">
+                    <button type="button" class="btn btn-gold btn-sm" data-h-click="stapel-oeffnen" data-batch="{{ $batchId }}">
                         Neuen Kunden aus allen {{ $groupDocs->count() }} anlegen
                     </button>
                 @elseif($meta && !$meta['ready'])
@@ -107,9 +107,9 @@
      Checkbox markiert ist. --}}
 <div id="inbox-selection-bar" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:150;background:#0F1512;color:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.30);padding:11px 16px;align-items:center;gap:14px;flex-wrap:wrap;max-width:calc(100% - 32px);">
     <span style="font-size:13.5px;"><strong id="inbox-selection-count">0</strong>&nbsp;Dokumente ausgewaehlt</span>
-    <button type="button" class="btn btn-gold btn-sm" id="inbox-selection-merge" onclick="docReview.openSelection()">🗂 Zu EINEM Kunden zusammenfuehren</button>
-    <button type="button" class="btn btn-ghost btn-sm" style="color:#fff;border-color:rgba(255,120,120,.55);" onclick="docReview.bulkDelete()">🗑 Loeschen</button>
-    <button type="button" class="btn btn-ghost btn-sm" style="color:#fff;border-color:rgba(255,255,255,.35);" onclick="docReview.clearSelection()">Aufheben</button>
+    <button type="button" class="btn btn-gold btn-sm" id="inbox-selection-merge" data-h-click="30707c1762">🗂 Zu EINEM Kunden zusammenfuehren</button>
+    <button type="button" class="btn btn-ghost btn-sm" style="color:#fff;border-color:rgba(255,120,120,.55);" data-h-click="654337d4fb">🗑 Loeschen</button>
+    <button type="button" class="btn btn-ghost btn-sm" style="color:#fff;border-color:rgba(255,255,255,.35);" data-h-click="e29850ed68">Aufheben</button>
 </div>
 
 {{-- Schnellvorschau (Quick-Look): erscheint beim Ueberfahren eines Dokuments,
@@ -215,8 +215,8 @@
                 <div style="font-weight:600;font-size:16px;">🔎 Erkannter Text (das, womit die Erkennung gearbeitet hat)</div>
                 <div id="ocr-text-source" style="font-size:12px;color:var(--muted);margin-top:3px;"></div>
             </div>
-            <button type="button" class="btn btn-ghost btn-sm" onclick="docReview.copyOcrText(this)">Kopieren</button>
-            <button type="button" class="btn btn-ghost btn-sm" onclick="docReview.closeOcrText()">Schließen</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-h-click="466c2de1a6">Kopieren</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-h-click="81bc6bbfae">Schließen</button>
         </div>
         <div style="padding:10px 20px 0;font-size:12px;color:var(--muted);" id="ocr-text-note"></div>
         <pre id="ocr-text-body" style="margin:12px 20px 20px;padding:14px;background:var(--canvas);border:1px solid var(--line);border-radius:10px;overflow:auto;flex:1;white-space:pre;font-size:12.5px;line-height:1.55;"></pre>
@@ -225,7 +225,7 @@
 
 <div id="doc-review-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:26px;width:100%;max-width:620px;position:relative;max-height:92vh;overflow-y:auto;">
-        <button type="button" onclick="docReview.close()" style="position:absolute;top:14px;right:14px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button type="button" data-h-click="d10e859b20" style="position:absolute;top:14px;right:14px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:17px;font-weight:700;margin-bottom:4px;" id="review-title">Dokument zuordnen</div>
         <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;" id="review-doc-name"></div>
 
@@ -375,8 +375,8 @@
         <div id="review-error" style="display:none;background:#FBE9E9;color:#B3261E;padding:9px 12px;border-radius:8px;font-size:13px;margin-bottom:12px;"></div>
 
         <div style="display:flex;gap:10px;justify-content:flex-end;">
-            <button type="button" class="btn btn-ghost" onclick="docReview.close()">Abbrechen</button>
-            <button type="button" class="btn btn-gold" id="review-submit" onclick="docReview.submit()">Zuordnen &amp; übernehmen</button>
+            <button type="button" class="btn btn-ghost" data-h-click="d10e859b20">Abbrechen</button>
+            <button type="button" class="btn btn-gold" id="review-submit" data-h-click="368883223d">Zuordnen &amp; übernehmen</button>
         </div>
         </div>{{-- /review-body --}}
 
@@ -387,14 +387,14 @@
             <div id="review-success-msg" style="font-size:15.5px;font-weight:700;margin-bottom:6px;"></div>
             <div id="review-success-sub" style="font-size:13px;color:var(--ink-soft);margin-bottom:20px;"></div>
             <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-                <button type="button" class="btn btn-ghost" onclick="docReview.stay()">Im Eingang bleiben</button>
+                <button type="button" class="btn btn-ghost" data-h-click="ead9668286">Im Eingang bleiben</button>
                 <a id="review-success-link" href="#" class="btn btn-gold">Zur Kundenakte →</a>
             </div>
         </div>
     </div>
 </div>
 
-<script>
+<script @cspNonce>
 // Daten der Eingangs-Dokumente fuer das Review-Modal (nur Anzeige;
 // alle Werte werden per textContent gesetzt - kein HTML aus KI-Ausgaben).
 @php
@@ -1604,3 +1604,24 @@ window.docReview = (function() {
 })();
 </script>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["66dc0af444"] = function (event) { if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('inbox-files').click();} };
+window.__h["3cd194d928"] = function (event) { docReview.selectAll(this.checked) };
+window.__h["stapel-oeffnen"] = function (event) { docReview.openBatch(this.dataset.batch) };
+window.__h["30707c1762"] = function (event) { docReview.openSelection() };
+window.__h["654337d4fb"] = function (event) { docReview.bulkDelete() };
+window.__h["e29850ed68"] = function (event) { docReview.clearSelection() };
+window.__h["466c2de1a6"] = function (event) { docReview.copyOcrText(this) };
+window.__h["81bc6bbfae"] = function (event) { docReview.closeOcrText() };
+window.__h["d10e859b20"] = function (event) { docReview.close() };
+window.__h["368883223d"] = function (event) { docReview.submit() };
+window.__h["ead9668286"] = function (event) { docReview.stay() };
+</script>
+@endPushOnce

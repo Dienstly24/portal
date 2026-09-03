@@ -64,14 +64,14 @@ body.vp-searching .vp-card.vp-hidden{display:none;}
             <div class="page-title">Vergleichsportale</div>
             <div class="page-sub">Link-Center — alle Portale &amp; Rechner mit einem Klick</div>
         </div>
-        <button onclick="vpOpenAdd()" class="btn btn-gold">+ Link hinzufügen</button>
+        <button data-h-click="b6bd22cb76" class="btn btn-gold">+ Link hinzufügen</button>
     </div>
 </div>
 
 <div class="vp-searchbar">
     <span class="vp-search-icon">🔍</span>
     <input type="text" id="vp-search" placeholder="Suchen … z.B. „NAFI“, „Check24“ oder „Strom“" autocomplete="off">
-    <button type="button" class="vp-search-clear" id="vp-search-clear" onclick="vpClearSearch()" title="Löschen">✕</button>
+    <button type="button" class="vp-search-clear" id="vp-search-clear" data-h-click="f56dcbf96c" title="Löschen">✕</button>
 </div>
 
 {{-- Favoriten (localStorage) --}}
@@ -99,7 +99,7 @@ body.vp-searching .vp-card.vp-hidden{display:none;}
             <div class="vp-card-title">{{ $cat['label'] }}</div>
             <div class="vp-card-count">{{ $catLinks->count() }} {{ $catLinks->count() === 1 ? 'Link' : 'Links' }}</div>
         </div>
-        <button class="vp-card-add" title="Link zu {{ $cat['label'] }} hinzufügen" onclick="vpOpenAdd('{{ $key }}')">+</button>
+        <button class="vp-card-add" title="Link zu {{ $cat['label'] }} hinzufügen" data-h-click="0bf237006b" data-a0="{{ $key }}">+</button>
     </div>
     <ul class="vp-links" data-cat="{{ $key }}">
         @foreach($catLinks as $i => $link)
@@ -108,12 +108,12 @@ body.vp-searching .vp-card.vp-hidden{display:none;}
             data-cat="{{ $key }}" data-icon="{{ $cat['icon'] }}">
             <span class="vp-drag" title="Ziehen zum Sortieren">⠿</span>
             <a class="vp-link-main" href="{{ $link->url }}" target="_blank" rel="noopener"
-               onclick="vpRecord('{{ $link->id }}')">
+               data-h-click="28508b80be" data-a0="{{ $link->id }}">
                 <span class="vp-link-title">{{ $link->title }} <span class="go">↗</span></span>
                 @if($link->description)<span class="vp-link-desc">{{ $link->description }}</span>@endif
             </a>
-            <button class="vp-star" data-id="{{ $link->id }}" onclick="vpToggleFav('{{ $link->id }}')" title="Favorit">☆</button>
-            <form method="POST" action="{{ route('admin.tarifrechner.destroy', $link->id) }}" onsubmit="return confirm('Link löschen?')" style="margin:0;">
+            <button class="vp-star" data-id="{{ $link->id }}" data-h-click="23828877dc" data-a0="{{ $link->id }}" title="Favorit">☆</button>
+            <form method="POST" action="{{ route('admin.tarifrechner.destroy', $link->id) }}" data-h-submit="b06266b145" style="margin:0;">
                 @csrf @method('DELETE')
                 <button type="submit" class="vp-del" title="Löschen">🗑</button>
             </form>
@@ -121,7 +121,7 @@ body.vp-searching .vp-card.vp-hidden{display:none;}
         @endforeach
     </ul>
     @if($catLinks->count() > 6)
-    <button class="vp-more" onclick="vpToggleMore(this)" data-more="{{ $catLinks->count() - 6 }}">+ {{ $catLinks->count() - 6 }} weitere anzeigen</button>
+    <button class="vp-more" data-h-click="0a8849b520" data-more="{{ $catLinks->count() - 6 }}">+ {{ $catLinks->count() - 6 }} weitere anzeigen</button>
     @endif
 </div>
 @endforeach
@@ -132,7 +132,7 @@ body.vp-searching .vp-card.vp-hidden{display:none;}
     <div style="font-size:38px;margin-bottom:12px;">🔗</div>
     <div style="font-weight:700;font-size:16px;margin-bottom:6px;">Noch keine Links</div>
     <div style="color:var(--ink-soft);font-size:14px;margin-bottom:18px;">Legen Sie die ersten Vergleichsportale und Rechner an.</div>
-    <button onclick="vpOpenAdd()" class="btn btn-gold">+ Ersten Link hinzufügen</button>
+    <button data-h-click="b6bd22cb76" class="btn btn-gold">+ Ersten Link hinzufügen</button>
 </div>
 @endif
 
@@ -145,7 +145,7 @@ body.vp-searching .vp-card.vp-hidden{display:none;}
 {{-- Modal: Link hinzufügen --}}
 <div id="add-link-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:480px;position:relative;">
-        <button onclick="vpCloseAdd()" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="bf00d05c23" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:20px;">Neuen Link hinzufügen</div>
         <form method="POST" action="{{ route('admin.tarifrechner.store') }}">
             @csrf
@@ -160,14 +160,14 @@ body.vp-searching .vp-card.vp-hidden{display:none;}
             <div class="field"><label>URL *</label><input type="url" name="url" required placeholder="https://..."></div>
             <div class="field"><label>Beschreibung</label><input type="text" name="description" placeholder="Optional"></div>
             <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
-                <button type="button" onclick="vpCloseAdd()" class="btn btn-ghost">Abbrechen</button>
+                <button type="button" data-h-click="bf00d05c23" class="btn btn-ghost">Abbrechen</button>
                 <button type="submit" class="btn btn-gold">Hinzufügen</button>
             </div>
         </form>
     </div>
 </div>
 
-<script>
+<script @cspNonce>
 const VP_CSRF = '{{ csrf_token() }}';
 const VP_REORDER_URL = '{{ route('admin.tarifrechner.reorder') }}';
 const VP_FAV_KEY = 'vp_favs', VP_RECENT_KEY = 'vp_recent', VP_RECENT_MAX = 8;
@@ -200,7 +200,7 @@ function vpSyncStars(){
     });
 }
 function vpChip(l){
-    return `<a class="vp-chip" href="${encodeURI(l.url)}" target="_blank" rel="noopener" onclick="vpRecord('${l.id}')" title="${vpEsc(l.title)}"><span class="ico">${l.icon||'🔗'}</span><span class="txt">${vpEsc(l.title)}</span></a>`;
+    return `<a class="vp-chip" href="${encodeURI(l.url)}" target="_blank" rel="noopener" data-h-click="28508b80be" data-a0="${l.id}" title="${vpEsc(l.title)}"><span class="ico">${l.icon||'🔗'}</span><span class="txt">${vpEsc(l.title)}</span></a>`;
 }
 function vpEsc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function vpRenderFavs(){
@@ -343,3 +343,30 @@ vpSyncStars();
 vpInitDnd();
 </script>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["b6bd22cb76"] = function (event) { vpOpenAdd() };
+window.__h["f56dcbf96c"] = function (event) { vpClearSearch() };
+window.__h["b06266b145"] = function (event) { return confirm('Link löschen?') };
+window.__h["0a8849b520"] = function (event) { vpToggleMore(this) };
+window.__h["bf00d05c23"] = function (event) { vpCloseAdd() };
+</script>
+@endPushOnce
+
+{{-- Ereignis-Handler mit veraenderlichem Wert (Audit SEC-4):
+     der Wert steht in data-a0, der Code ist fuer alle Zeilen
+     derselbe. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["0bf237006b"] = function (event) { vpOpenAdd(this.dataset.a0) };
+window.__h["28508b80be"] = function (event) { vpRecord(this.dataset.a0) };
+window.__h["23828877dc"] = function (event) { vpToggleFav(this.dataset.a0) };
+</script>
+@endPushOnce

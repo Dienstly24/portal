@@ -30,12 +30,12 @@
     <div style="margin-bottom:20px;">
         <label style="font-size:13px;color:var(--ink-soft);font-weight:600;display:block;margin-bottom:10px;">Kundenzugriff</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <div onclick="selectAccess('full')" id="lbl-full"
+            <div data-h-click="3eadc9b4dd" id="lbl-full"
                 style="border:2px solid var(--line);border-radius:10px;padding:16px;cursor:pointer;background:#fff;transition:.15s;">
                 <div style="font-weight:700;margin-bottom:4px;">👥 Alle Kunden</div>
                 <div style="font-size:12px;color:var(--ink-soft);">Mitarbeiter sieht alle Kunden</div>
             </div>
-            <div onclick="selectAccess('limited')" id="lbl-limited"
+            <div data-h-click="bdf352c9c0" id="lbl-limited"
                 style="border:2px solid var(--gold);border-radius:10px;padding:16px;cursor:pointer;background:#D9F4E6;transition:.15s;">
                 <div style="font-weight:700;margin-bottom:4px;">🔒 Begrenzte Kunden</div>
                 <div style="font-size:12px;color:var(--ink-soft);">Nur zugewiesene Kunden</div>
@@ -51,8 +51,8 @@
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
             <label style="font-size:13px;color:var(--ink-soft);font-weight:600;">Berechtigungen</label>
             <div style="display:flex;gap:8px;">
-                <button type="button" onclick="selectAllPerms(true)" class="btn btn-ghost btn-sm">✓ Alle auswählen</button>
-                <button type="button" onclick="selectAllPerms(false)" class="btn btn-ghost btn-sm">✗ Alle abwählen</button>
+                <button type="button" data-h-click="8802664bc1" class="btn btn-ghost btn-sm">✓ Alle auswählen</button>
+                <button type="button" data-h-click="392bf09bc6" class="btn btn-ghost btn-sm">✗ Alle abwählen</button>
             </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -67,7 +67,7 @@
                  OHNE Rechte, der Admin vergibt bewusst. Frueher waren alle
                  Rechte + Voll-Zugriff vorausgewaehlt. --}}
             <div class="perm-card" id="card-{{ $perm[0] }}"
-                onclick="togglePerm('{{ $perm[0] }}')"
+                data-h-click="741d401b2c" data-a0="{{ $perm[0] }}"
                 style="border:2px solid var(--line);border-radius:10px;padding:14px;cursor:pointer;background:#fff;transition:.15s;user-select:none;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
                     <span style="font-size:24px;">{{ $perm[3] }}</span>
@@ -88,7 +88,7 @@
 </div>
 </form>
 
-<script>
+<script @cspNonce>
 const permIds = ['can_manage_contracts','can_manage_tickets','can_approve_changes','can_send_emails','can_import_export'];
 
 function selectAccess(type) {
@@ -126,3 +126,27 @@ function selectAllPerms(select) {
 }
 </script>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["3eadc9b4dd"] = function (event) { selectAccess('full') };
+window.__h["bdf352c9c0"] = function (event) { selectAccess('limited') };
+window.__h["8802664bc1"] = function (event) { selectAllPerms(true) };
+window.__h["392bf09bc6"] = function (event) { selectAllPerms(false) };
+</script>
+@endPushOnce
+
+{{-- Ereignis-Handler mit veraenderlichem Wert (Audit SEC-4):
+     der Wert steht in data-a0, der Code ist fuer alle Zeilen
+     derselbe. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["741d401b2c"] = function (event) { togglePerm(this.dataset.a0) };
+</script>
+@endPushOnce

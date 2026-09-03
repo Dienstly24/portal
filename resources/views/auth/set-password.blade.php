@@ -64,7 +64,7 @@
                        autocomplete="new-password" minlength="{{ $minLength }}"
                        placeholder="{{ __('Neues Passwort eingeben') }}">
                 <button type="button" class="eye"
-                        onclick="const p=document.getElementById('password');p.type=p.type==='password'?'text':'password';">👁</button>
+                        data-h-click="afc4a7846d">👁</button>
             </div>
 
             <ul class="rules">
@@ -104,5 +104,18 @@
     <a href="{{ route('legal', 'datenschutz') }}">{{ __('Datenschutzerklärung') }}</a>
     <span>© {{ date('Y') }} Dienstly24</span>
 </div>
+{{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
+@stack('cspScripts')
 </body>
 </html>
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["afc4a7846d"] = function (event) { const p=document.getElementById('password');p.type=p.type==='password'?'text':'password'; };
+</script>
+@endPushOnce

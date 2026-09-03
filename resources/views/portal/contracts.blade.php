@@ -2,7 +2,7 @@
 @section('content')
 <div class="toolbar">
     <div><div class="page-title">{{ __('Meine Verträge') }}</div><div class="page-sub">{{ __('Alle Ihre Verträge im Überblick.') }}</div></div>
-    <button onclick="document.getElementById('report-contract-modal').style.display='flex'" class="btn btn-gold">+ {{ __('Neuen Vertrag melden') }}</button>
+    <button data-h-click="3422f5c9da" class="btn btn-gold">+ {{ __('Neuen Vertrag melden') }}</button>
 </div>
 @php
 $typeIcons = [
@@ -96,7 +96,7 @@ $typeLabels = [
 {{-- Modal: Neuen Vertrag melden (erzeugt nur einen Change Request) --}}
 <div id="report-contract-modal" class="d24-modal">
     <div class="d24-modal-box">
-        <button onclick="document.getElementById('report-contract-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="7467ced66a" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:6px;">{{ __('Neuen Vertrag melden') }}</div>
         <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">{{ __('Unser Team prüft Ihre Meldung und nimmt den Vertrag anschließend auf.') }}</p>
         <form method="POST" action="{{ route('portal.contracts.report') }}" enctype="multipart/form-data">
@@ -127,3 +127,15 @@ $typeLabels = [
     </div>
 </div>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["3422f5c9da"] = function (event) { document.getElementById('report-contract-modal').style.display='flex' };
+window.__h["7467ced66a"] = function (event) { document.getElementById('report-contract-modal').style.display='none' };
+</script>
+@endPushOnce

@@ -67,5 +67,7 @@ body{font-family:'Inter',Arial,sans-serif;min-height:100vh;color:#eef1ee;display
     <a href="{{ route('login') }}">{{ __('Kundenportal') }}</a>
 </div>
 @include('website.partials.whatsapp')
+{{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
+@stack('cspScripts')
 </body>
 </html>

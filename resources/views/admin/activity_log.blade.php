@@ -57,7 +57,7 @@ $actionLabels = [
                 };
             }
         @endphp
-        <tr @if($entityUrl) class="row-link" onclick="rowNav(event, '{{ $entityUrl }}')" title="Verknüpften Datensatz öffnen" @endif>
+        <tr @if($entityUrl) class="row-link" data-row-nav="{{ $entityUrl }}" title="Verknüpften Datensatz öffnen" @endif>
             <td style="padding:13px 20px;font-size:13px;color:var(--ink-soft);white-space:nowrap;">
                 {{ $log->created_at->lokal()->format('d.m.Y H:i') }}
             </td>

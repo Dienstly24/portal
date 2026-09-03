@@ -73,7 +73,7 @@
     <div class="card">
         <div class="card-title">🏦 {{ __('Bankverbindung') }}</div>
         <div class="grid-2">
-            <div class="field"><label>{{ __('IBAN') }}</label><input type="text" name="iban" value="" placeholder="{{ $customer?->iban ? '••••' . substr($customer->iban, -4) : 'DE…' }}" oninput="this.value=this.value.toUpperCase().replace(/\s/g,'')"></div>
+            <div class="field"><label>{{ __('IBAN') }}</label><input type="text" name="iban" value="" placeholder="{{ $customer?->iban ? '••••' . substr($customer->iban, -4) : 'DE…' }}" data-h-input="1020851b2f"></div>
             <div class="field"><label>{{ __('Kontoinhaber') }}</label><input type="text" name="account_holder" value="{{ $customer?->account_holder }}"></div>
         </div>
         <div class="field"><label>{{ __('Kontonachweis') }} ({{ __('bei neuer IBAN erforderlich') }})</label><input type="file" name="bank_proof" accept=".pdf,.jpg,.jpeg,.png,.webp"></div>
@@ -141,3 +141,14 @@
     </form>
 </div>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["1020851b2f"] = function (event) { this.value=this.value.toUpperCase().replace(/\s/g,'') };
+</script>
+@endPushOnce

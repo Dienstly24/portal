@@ -7,7 +7,7 @@
 
 <div style="display:grid;grid-template-columns:340px 1fr;gap:20px;align-items:start;">
     <div class="card">
-        <button onclick="document.getElementById('new-conv-modal').style.display='flex'" class="btn btn-primary" style="width:100%;margin-bottom:14px;">+ Neue Unterhaltung</button>
+        <button data-h-click="e794190c4c" class="btn btn-primary" style="width:100%;margin-bottom:14px;">+ Neue Unterhaltung</button>
         @forelse($conversations as $c)
         <a href="{{ route('admin.chat.show', $c->id) }}" style="display:block;padding:12px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;text-decoration:none;color:var(--ink);">
             <div style="font-weight:600;font-size:14px;">{{ $c->subject }}</div>
@@ -24,3 +24,14 @@
 
 @include('admin.internal_chat._new_modal')
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["e794190c4c"] = function (event) { document.getElementById('new-conv-modal').style.display='flex' };
+</script>
+@endPushOnce

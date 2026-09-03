@@ -245,6 +245,24 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->registerRateLimiters();
 
+        /*
+        | Content-Security-Policy (Audit SEC-4).
+        |
+        | @cspNonce setzt das nonce-Attribut auf ein <script>. Nur damit
+        | laeuft ein eingebettetes Skript noch - genau das ist der Sinn:
+        | ein per XSS eingeschleustes <script> kennt den Zufallswert
+        | dieser Antwort nicht.
+        |
+        | Den Wert an Laravels Vite-Helfer zu haengen erledigt
+        | SecurityHeaders je Anfrage - hier waere er einmalig fuer den
+        | ganzen Prozess und passte ab der zweiten Antwort nicht mehr.
+        */
+        \Illuminate\Support\Facades\Blade::directive(
+            'cspNonce',
+            fn () => "<?php echo \App\Support\CspNonce::attribute(); ?>"
+        );
+
+
         // EINE Passwort-Regel fuer alle Pfade, die Rules\Password::defaults()
         // benutzen (Registrierung, Reset, Profil-Aenderung). Die Laenge
         // richtet sich nach der Rolle des Kontos, das gerade ein Passwort

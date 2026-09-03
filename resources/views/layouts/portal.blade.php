@@ -258,7 +258,7 @@ form textarea{min-height:90px;resize:vertical;}
         <button type="button" class="tab-item" id="tab-more" aria-label="{{ __('Menü öffnen') }}"><span class="tab-ico">☰</span><span class="tab-label">{{ __('Mehr') }}</span></button>
     </div>
 </nav>
-<script>
+<script @cspNonce>
 // Drawer-Navigation: Overlay, ESC, Auto-Schliessen bei Linkklick, Swipe
 (function(){
     const sb = document.getElementById('portal-sidebar');
@@ -304,13 +304,18 @@ form textarea{min-height:90px;resize:vertical;}
                 const list = document.getElementById('p-bell-list');
                 if (!data.items.length) { list.innerHTML = '<p style="padding:14px;font-size:13px;color:#6B7280;">Keine Benachrichtigungen.</p>'; return; }
                 list.innerHTML = data.items.map(function(n) { return ''
-                    + '<a href="' + n.url + '" onclick="pMarkRead(\'' + n.id + '\')" style="display:block;padding:10px 14px;text-decoration:none;color:#152826;border-bottom:1px solid #EEE;background:' + (n.read ? 'transparent' : '#F0F7F3') + ';">'
+                    + '<a href="' + n.url + '" data-h-click="portal-notif-gelesen" data-a0="' + n.id + '" style="display:block;padding:10px 14px;text-decoration:none;color:#152826;border-bottom:1px solid #EEE;background:' + (n.read ? 'transparent' : '#F0F7F3') + ';">'
                     + '<span style="display:block;font-size:12.5px;font-weight:600;">' + esc(n.title) + '</span>'
                     + '<span style="display:block;font-size:12px;color:#6B7280;margin-top:2px;">' + esc(n.body) + '</span>'
                     + '<span style="display:block;font-size:11px;color:#9CA3AF;margin-top:2px;">' + esc(n.time) + '</span></a>';
                 }).join('');
             }).catch(function(){});
     }
+    // Wird an per JavaScript erzeugten Links gebraucht; die ID steht als
+    // Datenwert am Link, nie als Code (Audit SEC-4).
+    window.__h = window.__h || {};
+    window.__h["portal-notif-gelesen"] = function (event) { window.pMarkRead(this.dataset.a0); };
+
     window.pMarkRead = function(id) {
         fetch('/portal/notifications/' + id + '/read', {method: 'POST', headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'}}).catch(function(){});
     };
@@ -340,5 +345,11 @@ form textarea{min-height:90px;resize:vertical;}
     @include('portal.partials.chat_widget')
 @endunless
 @include('partials.cookie_consent')
+
+{{-- Ereignis-Verdrahtung der Seite (Audit SEC-4). Die Bloecke landen
+     hier am Ende des Body, damit sie auch aus Partials heraus (etwa
+     einer Tabellenzeile) gueltiges HTML ergeben - ein <script @cspNonce> mitten
+     in einer <table> wuerde der Browser herausloesen. --}}
+@stack('cspScripts')
 </body>
 </html>

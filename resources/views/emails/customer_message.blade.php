@@ -47,5 +47,7 @@ Dienstly24 · {{ $lang === 'ar' ? 'هذه رسالة تلقائية من بوا�
 </td></tr>
 </table>
 </td></tr></table>
+{{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
+@stack('cspScripts')
 </body>
 </html>

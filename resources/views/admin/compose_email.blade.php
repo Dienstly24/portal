@@ -52,8 +52,8 @@
         </div>
         <div id="anrede-row" style="display:none;margin:-6px 0 12px;">
             <span style="font-size:12px;color:var(--ink-soft);margin-right:6px;">Anrede einfügen:</span>
-            <button type="button" class="tpl-chip" onclick="insertSalutation('formell')">Formell</button>
-            <button type="button" class="tpl-chip" onclick="insertSalutation('locker')">Locker („Hallo Vorname")</button>
+            <button type="button" class="tpl-chip" data-h-click="427e41f7d7">Formell</button>
+            <button type="button" class="tpl-chip" data-h-click="e2dab8de00">Locker („Hallo Vorname")</button>
         </div>
         <div class="field" style="margin-bottom:6px;">
             <label>Nachricht *</label>
@@ -67,9 +67,9 @@
         </div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
             <button type="submit" class="btn btn-gold">✉️ E-Mail senden</button>
-            <button type="button" class="btn btn-ghost" onclick="openPreview()">👁️ Vorschau</button>
+            <button type="button" class="btn btn-ghost" data-h-click="f95a91326e">👁️ Vorschau</button>
             @if($aiAvailable)
-            <button type="button" class="btn btn-ghost" onclick="toggleAiPanel()">✨ KI-Entwurf</button>
+            <button type="button" class="btn btn-ghost" data-h-click="601cd06c70">✨ KI-Entwurf</button>
             @endif
             <a href="{{ route('admin.email.compose') }}" class="btn btn-ghost" style="margin-left:auto;">↺ Leeren</a>
         </div>
@@ -78,7 +78,7 @@
             <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Worum soll es in der E-Mail gehen?</label>
             <textarea id="ai-goal" rows="2" maxlength="1000" placeholder="z. B. Angebot zur KFZ-Versicherung nachfassen und um Rückmeldung bis Freitag bitten" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-family:inherit;"></textarea>
             <div style="display:flex;gap:10px;align-items:center;margin-top:8px;">
-                <button type="button" class="btn btn-primary btn-sm" id="ai-go" onclick="requestAiDraft()">Entwurf erstellen</button>
+                <button type="button" class="btn btn-primary btn-sm" id="ai-go" data-h-click="9c8866127c">Entwurf erstellen</button>
                 <span id="ai-status" style="font-size:12.5px;color:var(--ink-soft);"></span>
             </div>
             <p style="font-size:11.5px;color:var(--ink-soft);margin-top:8px;">Die KI nutzt Kundenname, Anrede und die letzten Interaktionen als Kontext. Der Entwurf wird nie automatisch gesendet – Sie prüfen und senden selbst.</p>
@@ -92,7 +92,7 @@
     <div class="card-title" style="margin-bottom:10px;">🧩 Platzhalter <span style="font-weight:400;font-size:12px;color:var(--ink-soft);">(Klick fügt an Cursor-Position ein)</span></div>
     <div style="display:flex;flex-wrap:wrap;gap:8px;">
         @foreach($placeholders as $key => $desc)
-        <span title="{{ $desc }}" onclick="insertPlaceholder('{{ $key }}')" style="font-size:12.5px;background:var(--canvas);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-family:monospace;cursor:pointer;">&#123;&#123;{{ $key }}&#125;&#125;</span>
+        <span title="{{ $desc }}" data-h-click="b18c951023" data-a0="{{ $key }}" style="font-size:12.5px;background:var(--canvas);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-family:monospace;cursor:pointer;">&#123;&#123;{{ $key }}&#125;&#125;</span>
         @endforeach
     </div>
 </div>
@@ -113,8 +113,8 @@
                 <div style="font-weight:700;font-size:14px;" id="cc-name"></div>
                 <div style="font-size:12px;color:var(--ink-soft);" id="cc-sub"></div>
             </div>
-            <button type="button" class="sc-star" id="cc-star" title="Als Favorit merken" onclick="toggleFavorite()">☆</button>
-            <button type="button" class="sc-star" title="Kundenbezug entfernen" onclick="clearCustomer()">✕</button>
+            <button type="button" class="sc-star" id="cc-star" title="Als Favorit merken" data-h-click="7176e84622">☆</button>
+            <button type="button" class="sc-star" title="Kundenbezug entfernen" data-h-click="0463a1f9f2">✕</button>
         </div>
         <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:12.5px;margin-top:8px;color:var(--ink-soft);" id="cc-details"></div>
         <div id="cc-history-wrap" style="display:none;margin-top:10px;">
@@ -148,7 +148,7 @@
 {{-- Vorschau-Modal --}}
 <div id="preview-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:120;align-items:center;justify-content:center;padding:16px;">
     <div style="background:#F7F5EF;border-radius:14px;width:640px;max-width:95vw;max-height:92vh;overflow-y:auto;position:relative;padding:22px;">
-        <button onclick="document.getElementById('preview-modal').style.display='none'" style="position:absolute;top:12px;right:14px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="21904e4644" style="position:absolute;top:12px;right:14px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;">An: <span id="pv-to"></span> · Betreff: <strong id="pv-subject"></strong> <span id="pv-att"></span></div>
         <div style="background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08);">
             <div style="background:#131A17;padding:18px 24px;"><span style="color:#fff;font-size:18px;font-weight:bold;">Dienstly<span style="color:#17A65B;">24</span></span></div>
@@ -158,8 +158,8 @@
     </div>
 </div>
 
-<script type="application/json" id="tpl-data">@json($templates)</script>
-<script>
+<script type="application/json" id="tpl-data" @cspNonce>@json($templates)</script>
+<script @cspNonce>
 const TEMPLATES = JSON.parse(document.getElementById('tpl-data').textContent);
 const INITIAL_CUSTOMER = @json($customer?->id);
 const CSRF = '{{ csrf_token() }}';
@@ -496,3 +496,31 @@ if (INITIAL_CUSTOMER) selectCustomer(INITIAL_CUSTOMER);
 </script>
 
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["427e41f7d7"] = function (event) { insertSalutation('formell') };
+window.__h["e2dab8de00"] = function (event) { insertSalutation('locker') };
+window.__h["f95a91326e"] = function (event) { openPreview() };
+window.__h["601cd06c70"] = function (event) { toggleAiPanel() };
+window.__h["9c8866127c"] = function (event) { requestAiDraft() };
+window.__h["7176e84622"] = function (event) { toggleFavorite() };
+window.__h["0463a1f9f2"] = function (event) { clearCustomer() };
+window.__h["21904e4644"] = function (event) { document.getElementById('preview-modal').style.display='none' };
+</script>
+@endPushOnce
+
+{{-- Ereignis-Handler mit veraenderlichem Wert (Audit SEC-4):
+     der Wert steht in data-a0, der Code ist fuer alle Zeilen
+     derselbe. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["b18c951023"] = function (event) { insertPlaceholder(this.dataset.a0) };
+</script>
+@endPushOnce

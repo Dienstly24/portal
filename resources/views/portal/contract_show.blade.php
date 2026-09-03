@@ -282,7 +282,7 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
     Unterstuetzung), wird die Originaldatei gesendet - und nur, wenn sie zu
     gross ist, mit einer verstaendlichen Meldung abgefangen.
 --}}
-<script>
+<script @cspNonce>
 (function() {
     var form = document.getElementById('meter-form');
     if (!form || !window.DataTransfer) return;

@@ -7,7 +7,7 @@
             <div class="page-title">Partnerverwaltung</div>
             <div class="page-sub">Makler- und Vertriebspartner mit automatischer Erkennung eingehender Provisions-Mails.</div>
         </div>
-        <button onclick="document.getElementById('add-partner-modal').style.display='flex'" class="btn btn-gold">+ Partner anlegen</button>
+        <button data-h-click="b32170c3e8" class="btn btn-gold">+ Partner anlegen</button>
     </div>
 </div>
 
@@ -54,10 +54,22 @@
             @csrf
             @include('admin._partner_fields', ['partner' => null])
             <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
-                <button type="button" class="btn btn-ghost" onclick="document.getElementById('add-partner-modal').style.display='none'">Abbrechen</button>
+                <button type="button" class="btn btn-ghost" data-h-click="9587053fa9">Abbrechen</button>
                 <button type="submit" class="btn btn-gold">Anlegen</button>
             </div>
         </form>
     </div>
 </div>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["b32170c3e8"] = function (event) { document.getElementById('add-partner-modal').style.display='flex' };
+window.__h["9587053fa9"] = function (event) { document.getElementById('add-partner-modal').style.display='none' };
+</script>
+@endPushOnce

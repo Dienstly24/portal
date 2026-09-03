@@ -5,7 +5,7 @@
         <div class="page-title">{{ __('👨‍👩‍👦 Meine Familie') }}</div>
         <div class="page-sub" style="margin-bottom:0;">{{ __('Familienmitglieder hinzufügen oder Änderungen beantragen – jede Angabe wird von unserem Team geprüft.') }}</div>
     </div>
-    <button onclick="document.getElementById('add-family-modal').style.display='flex'" class="btn btn-gold">+ {{ __('Familienmitglied hinzufügen') }}</button>
+    <button data-h-click="af24f60d8a" class="btn btn-gold">+ {{ __('Familienmitglied hinzufügen') }}</button>
 </div>
 
 @php
@@ -41,10 +41,10 @@ $rejected = $requests->where('status','rejected');
             @endif
         </div>
         @php $familyPayload = $m->only(['id','name','relation','birth_date']); @endphp
-        <button onclick='openFamilyChange(@json($familyPayload))' class="btn btn-ghost" style="margin-top:12px;font-size:12.5px;padding:7px 14px;">✏️ {{ __('Änderung beantragen') }}</button>
+        <button data-h-click="familie-aendern" data-payload="{{ json_encode($familyPayload) }}" class="btn btn-ghost" style="margin-top:12px;font-size:12.5px;padding:7px 14px;">✏️ {{ __('Änderung beantragen') }}</button>
         @unless(in_array($m->id, $pendingChangeIds))
         <form method="POST" action="{{ route('portal.family.delete', $m->id) }}" style="margin-top:8px;"
-            onsubmit="return confirm('Löschung von {{ addslashes($m->name) }} beantragen?\n\nDie Löschung wird erst nach Prüfung durch unser Team wirksam.');">
+            data-confirm="Löschung von {{ $m->name }} beantragen?&#10;&#10;Die Löschung wird erst nach Prüfung durch unser Team wirksam.">
             @csrf
             <button type="submit" class="btn btn-ghost" style="font-size:12.5px;padding:7px 14px;color:#A32D2D;border-color:#F0A0A0;">🗑 {{ __('Löschung beantragen') }}</button>
         </form>
@@ -82,7 +82,7 @@ $rejected = $requests->where('status','rejected');
 {{-- Modal: Hinzufügen --}}
 <div id="add-family-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:440px;position:relative;">
-        <button onclick="document.getElementById('add-family-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="5e8c29c2d3" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:6px;">{{ __('Familienmitglied hinzufügen') }}</div>
         <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">{{ __('Die Angaben werden erst nach Prüfung durch unser Team übernommen.') }}</p>
         <form method="POST" action="{{ route('portal.family.store') }}">
@@ -121,7 +121,7 @@ $rejected = $requests->where('status','rejected');
 {{-- Modal: Änderung beantragen --}}
 <div id="change-family-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:440px;position:relative;">
-        <button onclick="document.getElementById('change-family-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="521b43ae9a" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:6px;">{{ __('Änderung beantragen') }}</div>
         <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">{{ __('Die Änderung wird erst nach Prüfung wirksam.') }}</p>
         <form method="POST" id="change-family-form" action="">
@@ -142,7 +142,7 @@ $rejected = $requests->where('status','rejected');
     </div>
 </div>
 
-<script>
+<script @cspNonce>
 function openFamilyChange(m) {
     document.getElementById('change-family-form').action = '{{ url('portal/family') }}/' + m.id + '/change';
     document.getElementById('cf-name').value = m.name || '';
@@ -152,3 +152,17 @@ function openFamilyChange(m) {
 }
 </script>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["af24f60d8a"] = function (event) { document.getElementById('add-family-modal').style.display='flex' };
+window.__h["familie-aendern"] = function (event) { openFamilyChange(JSON.parse(this.dataset.payload)) };
+window.__h["5e8c29c2d3"] = function (event) { document.getElementById('add-family-modal').style.display='none' };
+window.__h["521b43ae9a"] = function (event) { document.getElementById('change-family-modal').style.display='none' };
+</script>
+@endPushOnce

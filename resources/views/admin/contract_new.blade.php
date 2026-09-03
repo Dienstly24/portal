@@ -19,7 +19,7 @@
     <div class="field">
         <label style="font-weight:700;font-size:15px;">Versicherungsnehmer *</label>
         <div style="position:relative;">
-            <input type="text" id="customer-search" placeholder="Kundendaten durchsuchen" oninput="searchCustomer(this.value)" autocomplete="off"
+            <input type="text" id="customer-search" placeholder="Kundendaten durchsuchen" data-h-input="82f5c2602a" autocomplete="off"
                 style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#fff;">
             <div id="customer-dropdown" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:8px;margin-top:4px;max-height:200px;overflow-y:auto;z-index:50;display:none;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
         </div>
@@ -44,7 +44,7 @@
     </form>
 </div>
 
-<script>
+<script @cspNonce>
 // Kundenauswahl per Sofort-Suche am Server - der Kundenbestand steht
 // bewusst NICHT mehr komplett im HTML (waechst sonst mit jedem Neukunden).
 let sucheTimer = null;
@@ -128,3 +128,14 @@ document.addEventListener('click', e => {
 });
 </script>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["82f5c2602a"] = function (event) { searchCustomer(this.value) };
+</script>
+@endPushOnce

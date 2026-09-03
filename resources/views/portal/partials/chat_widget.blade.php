@@ -39,7 +39,7 @@
         <span class="cw-badge" id="cw-badge" @if($cwUnread <= 0) hidden @endif>{{ $cwUnread > 9 ? '9+' : $cwUnread }}</span>
     </button>
 </div>
-<script>
+<script @cspNonce>
 document.addEventListener('DOMContentLoaded', function () {
     const panel = document.getElementById('cw-panel');
     const fab = document.getElementById('cw-fab');

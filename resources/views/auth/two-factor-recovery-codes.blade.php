@@ -52,7 +52,7 @@
                 @endforeach
             </div>
 
-            <button type="button" class="btn noprint" onclick="window.print();">🖨️ {{ __('Codes drucken') }}</button>
+            <button type="button" class="btn noprint" data-h-click="4c26e6bc6a">🖨️ {{ __('Codes drucken') }}</button>
             <a class="btn-ghost noprint" href="{{ route('admin.dashboard') }}">{{ __('Weiter zur Beraterwelt') }}</a>
         @else
             @if($active)
@@ -90,5 +90,18 @@
     <a href="{{ route('legal', 'datenschutz') }}">{{ __('Datenschutzerklärung') }}</a>
     <span>© {{ date('Y') }} Dienstly24</span>
 </div>
+{{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
+@stack('cspScripts')
 </body>
 </html>
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["4c26e6bc6a"] = function (event) { window.print(); };
+</script>
+@endPushOnce

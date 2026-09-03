@@ -94,7 +94,7 @@
     <form method="GET" action="{{ route('admin.provisions') }}" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin:0;">
         <div class="flt-group">
             <label class="flt-lbl">Status</label>
-            <select name="status" class="flt-sel" onchange="this.form.submit()">
+            <select name="status" class="flt-sel" data-h-change="d017698d7c">
                 <option value="">Alle</option>
                 @foreach(\App\Models\Provision::STATUSES as $key => $label)
                 <option value="{{ $key }}" {{ request('status') === $key ? 'selected' : '' }}>{{ $label }}</option>
@@ -103,7 +103,7 @@
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Empfänger</label>
-            <select name="empfaenger" class="flt-sel" onchange="this.form.submit()">
+            <select name="empfaenger" class="flt-sel" data-h-change="d017698d7c">
                 <option value="">Alle</option>
                 <optgroup label="Mitarbeiter">
                     @foreach($employees as $e)
@@ -119,7 +119,7 @@
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Art</label>
-            <select name="typ" class="flt-sel" onchange="this.form.submit()">
+            <select name="typ" class="flt-sel" data-h-change="d017698d7c">
                 <option value="">Alle</option>
                 @foreach(\App\Models\Provision::TYPES as $key => $label)
                 <option value="{{ $key }}" {{ request('typ') === $key ? 'selected' : '' }}>{{ $label }}</option>
@@ -128,7 +128,7 @@
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Sparte</label>
-            <select name="sparte" class="flt-sel" onchange="this.form.submit()">
+            <select name="sparte" class="flt-sel" data-h-change="d017698d7c">
                 <option value="">Alle</option>
                 @foreach(\App\Models\Contract::TYPES as $key => $cfg)
                 <option value="{{ $key }}" {{ request('sparte') === $key ? 'selected' : '' }}>{{ $cfg['label'] }}</option>
@@ -137,7 +137,7 @@
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Gesellschaft</label>
-            <select name="gesellschaft" class="flt-sel" onchange="this.form.submit()">
+            <select name="gesellschaft" class="flt-sel" data-h-change="d017698d7c">
                 <option value="">Alle</option>
                 @foreach($insurers as $ins)
                 <option value="{{ $ins }}" {{ request('gesellschaft') === $ins ? 'selected' : '' }}>{{ $ins }}</option>
@@ -150,11 +150,11 @@
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Monat</label>
-            <input type="month" name="monat" value="{{ request('monat') }}" onchange="this.form.submit()" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+            <input type="month" name="monat" value="{{ request('monat') }}" data-h-change="d017698d7c" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Jahr</label>
-            <select name="jahr" class="flt-sel" onchange="this.form.submit()" style="min-width:90px;">
+            <select name="jahr" class="flt-sel" data-h-change="d017698d7c" style="min-width:90px;">
                 <option value="">Alle</option>
                 @for($y = now()->year; $y >= now()->year - 5; $y--)
                 <option value="{{ $y }}" {{ request('jahr') == $y ? 'selected' : '' }}>{{ $y }}</option>
@@ -219,7 +219,7 @@
                 </form>
                 @endif
                 @if(in_array($p->status, ['offen', 'freigegeben'], true))
-                <form method="POST" action="{{ route('admin.provisions.status', $p->id) }}" style="display:inline;margin:0;" onsubmit="return confirm('Buchung über {{ number_format((float) $p->amount, 2, ',', '.') }} EUR als ausgezahlt markieren?');">
+                <form method="POST" action="{{ route('admin.provisions.status', $p->id) }}" style="display:inline;margin:0;" data-confirm="Buchung über {{ number_format((float) $p->amount, 2, ',', '.') }} EUR als ausgezahlt markieren?">
                     @csrf
                     <input type="hidden" name="status" value="ausgezahlt">
                     <button type="submit" class="btn btn-gold btn-sm">Auszahlen</button>
@@ -249,3 +249,14 @@
 <div style="margin-top:16px;">{{ $provisions->links() }}</div>
 @include('admin.partials.provision_styles')
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["d017698d7c"] = function (event) { this.form.submit() };
+</script>
+@endPushOnce

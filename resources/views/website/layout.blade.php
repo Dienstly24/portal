@@ -23,7 +23,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>document.documentElement.className='js';</script>
+<script @cspNonce>document.documentElement.className='js';</script>
 <title>@yield('title', 'Dienstly24 – Versicherung, Kfz-Zulassung & Energie | Beratung DE & AR')</title>
 <meta name="description" content="@yield('description', $isAr
     ? 'Dienstly24 من هامبورغ: استشارة مستقلة عن شركات التأمين حول التأمين وتسجيل السيارات والكهرباء والغاز – مجاناً وبالعربية والألمانية.'
@@ -151,5 +151,7 @@
 @include('website.partials.whatsapp')
 @include('website.partials.assistant')
 <script src="/website-assets/site.js?v={{ @filemtime(public_path('website-assets/site.js')) ?: 1 }}" defer></script>
+{{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
+@stack('cspScripts')
 </body>
 </html>

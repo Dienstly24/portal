@@ -162,5 +162,7 @@ label{display:block;font-size:13.5px;margin-bottom:7px;color:#dde0e5;}
          freigegeben (challenges.cloudflare.com). Kein weiterer Fremdhost. --}}
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 @endif
+{{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
+@stack('cspScripts')
 </body>
 </html>

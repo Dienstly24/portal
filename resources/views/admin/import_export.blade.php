@@ -54,16 +54,16 @@
         {{-- Tastaturbedienbar (Audit A11Y-2) --}}
         <div role="button" tabindex="0" aria-label="CSV-Datei auswaehlen oder hierher ziehen"
             style="border:2px dashed var(--line);border-radius:10px;padding:32px;text-align:center;margin-bottom:16px;cursor:pointer;"
-            onclick="document.getElementById('csv-input').click()"
-            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('csv-input').click();}"
-            ondragover="event.preventDefault();this.style.borderColor='var(--gold)'"
-            ondragleave="this.style.borderColor='var(--line)'"
-            ondrop="event.preventDefault();this.style.borderColor='var(--line)';document.getElementById('csv-input').files=event.dataTransfer.files;updateFileName(event.dataTransfer.files[0].name)">
+            data-h-click="2e6d9c68c0"
+            data-h-keydown="4877e9ba56"
+            data-h-dragover="a2c81a3999"
+            data-h-dragleave="37bc2be278"
+            data-h-drop="7a7860bdd0">
             <div style="font-size:32px;margin-bottom:8px;" aria-hidden="true">📂</div>
             <div style="font-weight:600;font-size:14px;" id="file-name-display">CSV-Datei auswählen oder hierher ziehen</div>
             <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">Maximal 10 MB</div>
         </div>
-        <input type="file" name="csv_file" id="csv-input" accept=".csv,.txt" style="display:none;" onchange="updateFileName(this.files[0]?.name)">
+        <input type="file" name="csv_file" id="csv-input" accept=".csv,.txt" style="display:none;" data-h-change="e4f9ad9b31">
 
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
             <div style="font-size:13px;color:var(--ink-soft);">
@@ -118,9 +118,25 @@
 
 </div>
 
-<script>
+<script @cspNonce>
 function updateFileName(name) {
     if(name) document.getElementById('file-name-display').textContent = '✓ ' + name;
 }
 </script>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["2e6d9c68c0"] = function (event) { document.getElementById('csv-input').click() };
+window.__h["4877e9ba56"] = function (event) { if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('csv-input').click();} };
+window.__h["a2c81a3999"] = function (event) { event.preventDefault();this.style.borderColor='var(--gold)' };
+window.__h["37bc2be278"] = function (event) { this.style.borderColor='var(--line)' };
+window.__h["7a7860bdd0"] = function (event) { event.preventDefault();this.style.borderColor='var(--line)';document.getElementById('csv-input').files=event.dataTransfer.files;updateFileName(event.dataTransfer.files[0].name) };
+window.__h["e4f9ad9b31"] = function (event) { updateFileName(this.files[0]?.name) };
+</script>
+@endPushOnce

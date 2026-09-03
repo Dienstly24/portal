@@ -1,3 +1,17 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Das hidden-Attribut muss auch gegen eine Klasse mit eigenem display
+ * gewinnen (Audit SEC-4).
+ *
+ * Der Standard-Browserstil `[hidden]{display:none}` hat dieselbe
+ * Spezifitaet wie ein Element-Selektor - eine Klassenregel wie
+ * `.bulk-bar{display:flex}` schlaegt ihn und das Element bleibt
+ * sichtbar. Genau das passierte der Sammelauswahl der Ticketliste,
+ * nachdem Alpine (x-cloak/x-show) durch `hidden` ersetzt wurde; die
+ * fruehere Regel `[x-cloak]{display:none !important}` hatte denselben
+ * Zweck.
+ */
+[hidden] { display: none !important; }

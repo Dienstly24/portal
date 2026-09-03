@@ -17,7 +17,7 @@
 
 <div class="field">
     <label style="font-weight:700;font-size:15px;">Sparte *</label>
-    <select name="type" id="sparte" required onchange="contractToggleSections()"
+    <select name="type" id="sparte" required data-h-change="98ff44e737"
         style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
         <option value="">Bitte auswählen</option>
         {{-- Privat zuerst, gewerbliche Sparten (Betriebs-/Frachtfuehrer-
@@ -145,7 +145,7 @@
          Live-Hinweis, was der gewaehlte Status ausloest. Quelle:
          Contract::STATUS_OPTIONS - dieselbe Liste validiert der Controller. --}}
     <div class="field"><label>Status *</label>
-        <select name="status" id="contract-status" required onchange="contractStatusHint()" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+        <select name="status" id="contract-status" required data-h-change="62df777e04" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
             <optgroup label="Aktueller Bestand">
                 @foreach(\App\Models\Contract::STATUS_OPTIONS as $sk => $so)
                 @if($so['group'] === \App\Models\Contract::GROUP_ACTIVE)
@@ -174,7 +174,7 @@
         <div style="display:flex;gap:8px;">
             <input type="date" id="contract-start" name="start_date" value="{{ $startVal }}" style="flex:1;min-width:0;">
             {{-- Ein Klick statt Kalender: setzt das heutige Datum --}}
-            <button type="button" class="btn btn-ghost" style="padding:8px 12px;font-size:12.5px;flex:none;" onclick="contractSetToday()">📅 Heute</button>
+            <button type="button" class="btn btn-ghost" style="padding:8px 12px;font-size:12.5px;flex:none;" data-h-click="a13d150e57">📅 Heute</button>
         </div>
     </div>
     <div class="field"><label>Ablauf</label>
@@ -206,7 +206,7 @@
         <span style="font-size:12px;color:var(--ink-soft);">Ablauf berechnen:</span>
         @foreach(['plus12' => 'Laufzeit 12 Monate', 'plus24' => 'Laufzeit 24 Monate', 'year_end' => 'Ende des Kalenderjahres (31.12.)', 'manual' => 'Manuell'] as $mk => $ml)
         <label class="end-mode-chip" style="position:relative;display:inline-flex;">
-            <input type="radio" name="end_mode" value="{{ $mk }}" {{ $endMode === $mk ? 'checked' : '' }} onchange="contractEndSync()" style="position:absolute;inset:0;opacity:0;cursor:pointer;margin:0;">
+            <input type="radio" name="end_mode" value="{{ $mk }}" {{ $endMode === $mk ? 'checked' : '' }} data-h-change="50599e74f4" style="position:absolute;inset:0;opacity:0;cursor:pointer;margin:0;">
             <span style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:1.5px solid var(--line);border-radius:999px;font-size:12px;font-weight:600;background:var(--surface);cursor:pointer;user-select:none;">{{ $ml }}</span>
         </label>
         @endforeach
@@ -382,7 +382,7 @@
     </div>
 </div>
 
-<script>
+<script @cspNonce>
 function contractToggleSections() {
     const type = document.getElementById('sparte').value;
     // Strom und Gas sind getrennte Sparten, teilen sich aber das Energie-Formular.
@@ -531,3 +531,17 @@ document.addEventListener('DOMContentLoaded', function () {
     contractStatusHint();
 });
 </script>
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["98ff44e737"] = function (event) { contractToggleSections() };
+window.__h["62df777e04"] = function (event) { contractStatusHint() };
+window.__h["a13d150e57"] = function (event) { contractSetToday() };
+window.__h["50599e74f4"] = function (event) { contractEndSync() };
+</script>
+@endPushOnce

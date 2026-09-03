@@ -100,7 +100,7 @@
         </div>
     </div>
     <div class="field"><label>Kundentyp *</label>
-        <select name="customer_type" onchange="document.getElementById('firma-fields').style.display = this.value === 'firma' ? 'block' : 'none';" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+        <select name="customer_type" data-h-change="f76832bcf4" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
             <option value="privat">👤 Privatkunde</option>
             <option value="firma">🏢 Gewerbe / Firma</option>
         </select>
@@ -154,3 +154,14 @@
 </form>
 @include('admin.partials.phone_hints')
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["f76832bcf4"] = function (event) { document.getElementById('firma-fields').style.display = this.value === 'firma' ? 'block' : 'none'; };
+</script>
+@endPushOnce

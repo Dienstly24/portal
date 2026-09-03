@@ -357,9 +357,80 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   gestartet werden).
 - **CSP**: `fonts.bunny.net` ist raus - die Schriften liegen laengst lokal.
   Ein Fremdhost, der nicht mehr gebraucht wird, gehoert nicht in die
-  Freigabe. `unsafe-inline`/`unsafe-eval` bleiben vorerst (grosse
-  Blade-Flaeche mit Inline-Styles und `onclick`; `unsafe-eval` haengt an
-  Alpine.js).
+  Freigabe. `unsafe-inline`/`unsafe-eval` im `script-src` sind seit
+  Audit SEC-4 (03.09.2026) EBENFALLS RAUS - siehe eigenen Abschnitt.
+
+## Sicherheits-Haertung SEC-1 bis SEC-5 (03.09.2026)
+
+Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
+`docs/SICHERHEIT_NETZWERK_ORIGIN.md`. Die Kurzfassung:
+
+- **Registrierung ist ZWEISTUFIG** (SEC-1). `POST /register` legt nur
+  eine Vormerkung an (`pending_registrations`): KEIN User, KEINE
+  Kundenakte, **KEINE Kundennummer**, keine Sitzung. Erst der Klick auf
+  den Bestaetigungslink erzeugt das Konto. Vorher konnte ein Bot in
+  Serie echte Kundenakten anlegen und den Jahres-Nummernkreis belegen.
+  Bewusst NICHT ueber `MustVerifyEmail` geloest: dann existierte das
+  Konto schon vor der Bestaetigung, die Nummer waere weiterhin
+  verbraucht, und alle EINGELADENEN Bestandskunden waeren schlagartig
+  "unbestaetigt" gewesen.
+  **Cloudflare Turnstile** (`TurnstileVerifier`) wird SERVERSEITIG
+  geprueft; bei Ausfall wird ABGELEHNT, nie durchgewunken - ein
+  Bot-Schutz, der bei Netzproblemen durchlaesst, laesst sich durch
+  Provozieren eines Ausfalls abschalten. Token nur als sha256-Hash,
+  24 h gueltig, einmal nutzbar. "Erneut senden" ist ueber einen ZAEHLER
+  je Vormerkung gedeckelt (`MAX_SENDS`), nicht nur ueber Zeit - ein
+  Zeit-Throttle gibt nach Ablauf wieder Luft.
+  `registrierungen:aufraeumen` (03:40) loescht abgelaufene Vormerkungen
+  (Datenminimierung UND Freigabe der blockierten Adresse).
+  **Betreiber:** `TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET_KEY` in die
+  Server-`.env`, sonst lehnt die Registrierung in Produktion ab; und
+  Turnstile in die Datenschutzerklaerung aufnehmen.
+- **Proxy-Kette** (SEC-2): `trustProxies` steht nicht mehr auf `'*'`,
+  sondern auf einer expliziten Liste (`config/trustedproxy.php`:
+  Cloudflare-Ranges + Loopback, per `TRUSTED_PROXIES` ueberschreibbar).
+  Ein am Origin vorbei gesetzter `X-Forwarded-For` wird damit ignoriert -
+  kein frischer Rate-Limit-Eimer und keine erfundene IP in ActivityLog
+  und in den DSGVO-Einwilligungsnachweisen. Benannte Limiter
+  (`registrierung`, `anmeldung`, `passwort-reset`) zaehlen je IP UND je
+  Adresse. **Die NETZWERKseite ist damit NICHT erledigt** - ob der
+  Origin direkt erreichbar ist, steht nicht im Repository; Pruef- und
+  Firewall-Schritte samt Ergebnistabelle im Netzwerk-Dokument.
+- **Abhaengigkeiten** (SEC-3): guzzle 7.13.2->7.15.5, psr7
+  2.12.3->2.13.1, commonmark 2.8.2->2.10.0. `composer audit` 16 -> 0,
+  `npm audit` 0. CI hat einen eigenen Job `audit`, der Deploy haengt an
+  `needs: [test, audit]`; Dependabot fuer composer/npm/actions.
+- **CSP** (SEC-4): `script-src` traegt jetzt einen **Nonce** statt
+  `'unsafe-inline'` und kein `'unsafe-eval'` mehr, dazu
+  `script-src-attr 'none'`.
+  Dafuer wurden ALLE ~310 Inline-Handler (`onclick=…`) entfernt und in
+  `@pushOnce('cspScripts')`-Bloecke verlegt (`data-h-<ereignis>` +
+  `resources/js/ui.js`), 142 eingebettete `<script>` bekamen `@cspNonce`,
+  und **Alpine.js ist raus** (es war der einzige Grund fuer
+  `'unsafe-eval'`; genutzt an nur zwei Stellen, dazu drei tote
+  Breeze-Komponenten). JS-Bundle 45,3 kB -> 4,4 kB.
+  Wiederkehrende Muster als data-Attribute: `data-confirm`,
+  `data-row-nav`, `data-toggle`/`data-show`/`data-hide`,
+  `data-fill-target`, `data-menu*`, `data-bulk*`.
+  **Zwei Fallen, beide als Test festgehalten:** (1) `ui.js` wird als
+  Modul geladen und laeuft damit SPAETER als die Registrierungsbloecke -
+  jeder Block beginnt deshalb mit `window.__h = window.__h || {};`.
+  (2) `[hidden]` verliert gegen eine Klasse mit eigenem `display`
+  (`.bulk-bar{display:flex}`), deshalb `[hidden]{display:none!important}`
+  in `app.css` - dieselbe Aufgabe hatte frueher `[x-cloak]`.
+  **`style-src 'unsafe-inline'` bleibt bewusst** (rund 4.800
+  `style="…"`-Attribute; ein Attribut kann keinen Nonce tragen, und aus
+  einem Inline-Style laesst sich kein Code ausfuehren). `CSP_REPORT_ONLY`
+  schaltet fuer eine Umstellung auf "nur melden".
+- **Einstellungen** (SEC-5): `UpdateSettingsRequest` gibt jeder
+  Einstellung Typ, Laenge und Wertemenge; geschrieben wird nur
+  Validiertes. `legal_external_base` fliesst in `redirect()->away()` und
+  ist deshalb eng gefasst (nur https, keine Zugangsdaten/Parameter, Host
+  aus `config/website.php`) - **dieselbe Pruefung greift beim LESEN**,
+  damit ein Altbestand nicht doch noch in einen Redirect geraet.
+- Tests: `tests/Feature/Security/` (RegistrationHardening, ProxySpoofing,
+  ClientIpIntegrity, ContentSecurityPolicy, SettingsValidation,
+  DependencyAudit).
 
 ## Zeitzone: gespeichert UTC, GEZEIGT deutsche Ortszeit (21.08.2026)
 
@@ -1953,6 +2024,26 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
   Empfaenger (interner Prozess). Tests: `ProvisionManagementTest`.
 
 ## Offene Themen / wartet auf den Betreiber
+
+- **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig, Stand 03.09.2026):
+  1. `TURNSTILE_SITE_KEY` und `TURNSTILE_SECRET_KEY` in die Server-`.env`
+     (Cloudflare Dashboard -> Turnstile -> Widget anlegen). **Ohne diese
+     Werte lehnt die Registrierung in Produktion JEDE Anmeldung ab** -
+     bewusst so, damit kein ungeschuetzter Zustand entsteht, den niemand
+     bemerkt.
+  2. Turnstile in die Datenschutzerklaerung aufnehmen (Empfaenger
+     Cloudflare, Zweck Schutz vor missbraeuchlicher Anmeldung,
+     Art. 6 Abs. 1 lit. f). Cloudflare ist als Edge-Proxy ohnehin
+     Empfaenger jeder Besucher-IP - genannt werden muss es trotzdem.
+  3. **Netzwerk (SEC-2, offen):** pruefen, ob der Origin direkt per IP
+     erreichbar ist, und ihn ggf. per Firewall auf die Cloudflare-Ranges
+     einschraenken. Schritt fuer Schritt inkl. auszufuellender
+     Ergebnistabelle: `docs/SICHERHEIT_NETZWERK_ORIGIN.md`. Der
+     Code-Teil (keine IP-Faelschung mehr) ist erledigt und getestet -
+     die Firewall betrifft WAF-/DDoS-Umgehung.
+  4. `scripts/pruefe-cloudflare-ips.sh` gelegentlich laufen lassen (laeuft
+     auch als nicht blockierender CI-Job): meldet, wenn Cloudflare seine
+     Adressbereiche geaendert hat.
 
 - **OCR auf dem VPS ist aktiv** (Stand 18.07.2026): `tesseract-ocr`,
   `tesseract-ocr-deu`, `tesseract-ocr-ara`, `poppler-utils` sind installiert,

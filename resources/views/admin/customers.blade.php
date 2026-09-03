@@ -77,7 +77,7 @@ $typeConfig = [
         @if(in_array(auth()->user()->role, ['admin','manager']))
         <div class="flt-group">
             <label class="flt-lbl">Betreuer</label>
-            <select name="betreuer" class="flt-sel" onchange="this.form.submit()">
+            <select name="betreuer" class="flt-sel" data-h-change="9033f96958">
                 <option value="">Alle</option>
                 <option value="ohne" {{ request('betreuer') === 'ohne' ? 'selected' : '' }}>— ohne Betreuer —</option>
                 @foreach($employees as $e)
@@ -88,7 +88,7 @@ $typeConfig = [
         @endif
         <div class="flt-group">
             <label class="flt-lbl">Sparte (aktiv)</label>
-            <select name="sparte" class="flt-sel" onchange="this.form.submit()">
+            <select name="sparte" class="flt-sel" data-h-change="9033f96958">
                 <option value="">Alle Sparten</option>
                 @foreach($sparten as $key => $cfg)
                 <option value="{{ $key }}" {{ request('sparte') === $key ? 'selected' : '' }}>{{ $cfg['icon'] }} {{ $cfg['label'] }}</option>
@@ -97,7 +97,7 @@ $typeConfig = [
         </div>
         <div class="flt-group">
             <label class="flt-lbl">E-Mail</label>
-            <select name="email" class="flt-sel" onchange="this.form.submit()">
+            <select name="email" class="flt-sel" data-h-change="9033f96958">
                 <option value="">Alle</option>
                 <option value="mit" {{ request('email')==='mit' ? 'selected' : '' }}>Mit E-Mail</option>
                 <option value="ohne" {{ request('email')==='ohne' ? 'selected' : '' }}>Ohne E-Mail</option>
@@ -105,7 +105,7 @@ $typeConfig = [
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Portal-Status</label>
-            <select name="portal" class="flt-sel" onchange="this.form.submit()">
+            <select name="portal" class="flt-sel" data-h-change="9033f96958">
                 <option value="">Alle</option>
                 @foreach(['kein_account'=>'Kein Portal-Account','passwort_nicht_gesetzt'=>'Passwort nicht gesetzt','einladung_gesendet'=>'Einladung gesendet','aktiviert'=>'Aktiviert - kein Login','erster_login'=>'Aktiv - Login erfolgt','deaktiviert'=>'Deaktiviert'] as $k => $lbl)
                 <option value="{{ $k }}" {{ request('portal')===$k ? 'selected' : '' }}>{{ $lbl }}</option>
@@ -114,7 +114,7 @@ $typeConfig = [
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Vertrag laeuft ab in</label>
-            <select name="ablauf" class="flt-sel" onchange="this.form.submit()">
+            <select name="ablauf" class="flt-sel" data-h-change="9033f96958">
                 <option value="">Egal</option>
                 @foreach(['30'=>'30 Tagen','60'=>'60 Tagen','90'=>'90 Tagen','180'=>'180 Tagen'] as $k => $lbl)
                 <option value="{{ $k }}" {{ request('ablauf')===$k ? 'selected' : '' }}>{{ $lbl }}</option>
@@ -123,7 +123,7 @@ $typeConfig = [
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Letzter Kontakt</label>
-            <select name="kontakt" class="flt-sel" onchange="this.form.submit()">
+            <select name="kontakt" class="flt-sel" data-h-change="9033f96958">
                 <option value="">Egal</option>
                 <option value="nie" {{ request('kontakt')==='nie' ? 'selected' : '' }}>Nie kontaktiert</option>
                 @foreach(['30'=>'vor >30 Tagen','90'=>'vor >90 Tagen','180'=>'vor >180 Tagen','365'=>'vor >1 Jahr'] as $k => $lbl)
@@ -133,7 +133,7 @@ $typeConfig = [
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Sortierung</label>
-            <select name="sort" class="flt-sel" onchange="this.form.submit()">
+            <select name="sort" class="flt-sel" data-h-change="9033f96958">
                 @foreach(['neueste'=>'Neueste zuerst','aelteste'=>'Aelteste zuerst','name'=>'Name A-Z','name_desc'=>'Name Z-A','kontakt'=>'Laengster Kontakt'] as $k => $lbl)
                 <option value="{{ $k }}" {{ request('sort','neueste')===$k ? 'selected' : '' }}>{{ $lbl }}</option>
                 @endforeach
@@ -175,7 +175,7 @@ $typeConfig = [
      JS in bulkDeleteForm. --}}
 <form method="POST" action="{{ route('admin.customers.bulk-assign') }}" id="bulkForm">@csrf</form>
 @if(auth()->user()->role === 'admin')
-<form method="POST" action="{{ route('admin.customers.bulk-delete') }}" id="bulkDeleteForm" onsubmit="return confirmBulkDelete(this);">@csrf</form>
+<form method="POST" action="{{ route('admin.customers.bulk-delete') }}" id="bulkDeleteForm" data-h-submit="1e43528f66">@csrf</form>
 @endif
 
 <div id="bulkBar" style="display:none;position:sticky;top:0;z-index:10;background:#131A17;color:#fff;border-radius:10px;padding:12px 20px;margin-bottom:12px;align-items:center;gap:14px;flex-wrap:wrap;">
@@ -200,7 +200,7 @@ $typeConfig = [
 </div>
 
 @if(auth()->user()->role === 'admin')
-<script>
+<script @cspNonce>
 // Überträgt die aktuell angehakten Zeilen-Checkboxen in das Lösch-Formular und
 // verlangt eine bewusste Bestätigung mit Anzahl, bevor endgültig gelöscht wird.
 function confirmBulkDelete(form) {
@@ -308,15 +308,16 @@ function confirmBulkDelete(form) {
             </td>
             {{-- Aktionen: 3-Punkte-Menü pro Kunde (Alpine). Zelle ist .noNav,
                  damit ein Klick hier NICHT die Zeilennavigation auslöst. --}}
-            <td class="noNav" style="text-align:right;position:relative;" x-data="{open:false}">
-                <button type="button" @click="open=!open" aria-haspopup="true" :aria-expanded="open" title="Aktionen"
+            <td class="noNav" data-menu style="text-align:right;position:relative;">
+                <button type="button" data-menu-trigger aria-haspopup="true" aria-expanded="false" title="Aktionen"
                     style="background:none;border:none;cursor:pointer;font-size:18px;line-height:1;color:var(--ink-soft);padding:4px 10px;border-radius:6px;letter-spacing:1px;">•••</button>
-                <div x-show="open" x-cloak @click.outside="open=false" @keydown.escape.window="open=false"
+                <div data-menu-panel hidden
                     style="position:absolute;right:8px;top:100%;z-index:50;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);min-width:230px;padding:6px;">
                     <a href="{{ route('admin.customer.merge', $c->id) }}" class="rowmenu-item">🔀 {{ $c->user?->name }}: Dublette bereinigen</a>
                     @if(auth()->user()->role === 'admin')
                     <form method="POST" action="{{ route('admin.customers.delete', $c->id) }}" style="margin:0;"
-                        onsubmit="return confirm('⚠️ Kunde {{ addslashes($c->user?->name) }} ENDGÜLTIG löschen?\n\nAlle Verträge, Tickets, Dokumente, E-Mails und der Portal-Zugang werden unwiderruflich entfernt.') && confirm('Wirklich sicher? Diese Aktion kann NICHT rückgängig gemacht werden.');">
+                        data-confirm="⚠️ Kunde {{ $c->user?->name }} ENDGÜLTIG löschen?&#10;&#10;Alle Verträge, Tickets, Dokumente, E-Mails und der Portal-Zugang werden unwiderruflich entfernt."
+                        data-confirm-2="Wirklich sicher? Diese Aktion kann NICHT rückgängig gemacht werden.">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="rowmenu-item" style="background:none;border:none;cursor:pointer;color:#A32D2D;">🗑 Löschen</button>
@@ -355,7 +356,7 @@ function confirmBulkDelete(form) {
 @endif
 
 @if(in_array(auth()->user()->role, ['admin','manager']))
-<script>
+<script @cspNonce>
 (function () {
     var bar = document.getElementById('bulkBar');
     var count = document.getElementById('bulkCount');
@@ -388,7 +389,7 @@ function confirmBulkDelete(form) {
 .az-chip:hover { background:#E5E1D6; }
 .az-chip.az-active { background:#17A65B; color:#fff; }
 .az-chip.az-active:hover { background:#128a4b; }
-[x-cloak] { display: none !important; }
+
 .rowmenu-item { display:block; width:100%; text-align:left; padding:9px 12px; border-radius:7px; font-size:13.5px; color:var(--ink); text-decoration:none; box-sizing:border-box; }
 .rowmenu-item:hover { background:#F4F7F5; }
 /* Betreuer-Zuweisung direkt in der Zeile (Popover). */
@@ -408,7 +409,7 @@ function confirmBulkDelete(form) {
 .btr-opt input { width:16px; height:16px; accent-color:#17A65B; cursor:pointer; }
 .btr-search { padding:6px 9px; border:1px solid var(--line); border-radius:8px; font-size:13px; }
 </style>
-<script>
+<script @cspNonce>
 // Betreuer-Popover: daneben klicken schliesst; Suchfeld filtert die Liste.
 document.addEventListener('click', function (e) {
     document.querySelectorAll('details.pop[open]').forEach(function (d) {
@@ -425,7 +426,7 @@ document.querySelectorAll('.btr-search').forEach(function (input) {
     });
 });
 </script>
-<script id="rowLinkScript">
+<script id="rowLinkScript" @cspNonce>
 document.querySelectorAll('tr.rowLink').forEach(function (row) {
     row.addEventListener('click', function (e) {
         if (e.target.closest('.noNav') || e.target.closest('input') || e.target.closest('a') || e.target.closest('button')) return;
@@ -434,3 +435,15 @@ document.querySelectorAll('tr.rowLink').forEach(function (row) {
 });
 </script>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["9033f96958"] = function (event) { this.form.submit() };
+window.__h["1e43528f66"] = function (event) { return confirmBulkDelete(this); };
+</script>
+@endPushOnce

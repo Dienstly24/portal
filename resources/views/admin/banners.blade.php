@@ -45,7 +45,7 @@
         </div>
         <div style="display:flex;gap:10px;">
             <button type="submit" class="btn btn-primary">Banner erstellen</button>
-            <button type="button" class="btn btn-ghost" onclick="previewCreate()">👁 Vorschau</button>
+            <button type="button" class="btn btn-ghost" data-h-click="a2801959eb">👁 Vorschau</button>
         </div>
     </form>
 </div>
@@ -99,13 +99,16 @@
 
         {{-- Aktionen --}}
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;border-top:1px solid var(--line);padding-top:12px;">
-            <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('edit-{{ $b->id }}').style.display = document.getElementById('edit-{{ $b->id }}').style.display === 'none' ? 'block' : 'none'">✏️ Bearbeiten</button>
-            <button type="button" class="btn btn-ghost btn-sm" onclick="previewBanner('{{ asset('storage/' . $b->media_path) }}', '{{ $b->media_type }}', '{{ addslashes($b->title) }}')">👁 Vorschau</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-h-click="a9764c3a69" data-a0="edit-{{ $b->id }}').style.display = document.getElementById('edit-{{ $b->id }}').style.display === 'none' ? 'block' : 'none'">✏️ Bearbeiten</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-h-click="banner-vorschau"
+                data-src="{{ asset('storage/' . $b->media_path) }}"
+                data-typ="{{ $b->media_type }}"
+                data-titel="{{ $b->title }}">👁 Vorschau</button>
             @php $socialKlicks = $b->socialPost?->totalClicks() ?? 0; @endphp
             <a href="{{ route('admin.banners.social', $b->id) }}" class="btn btn-ghost btn-sm">📣 Social-Media{{ $b->socialPost && $b->socialPost->channels->isNotEmpty() ? ' (' . number_format($socialKlicks, 0, ',', '.') . ' ' . ($socialKlicks === 1 ? 'Klick' : 'Klicks') . ')' : '' }}</a>
             <form method="POST" action="{{ route('admin.banners.toggle', $b->id) }}">@csrf<button type="submit" class="btn btn-ghost btn-sm">{{ $b->is_active ? '⏸ Deaktivieren' : '▶ Aktivieren' }}</button></form>
-            <form method="POST" action="{{ route('admin.banners.reset_stats', $b->id) }}" onsubmit="return confirm('Statistiken dieses Banners wirklich auf null setzen?');">@csrf<button type="submit" class="btn btn-ghost btn-sm">🔄 Statistik zurücksetzen</button></form>
-            <form method="POST" action="{{ route('admin.banners.delete', $b->id) }}" onsubmit="return confirm('Banner {{ addslashes($b->title) }} endgültig löschen?');">@csrf<button type="submit" class="btn btn-sm" style="background:#F9E3E3;color:#A32D2D;border:1px solid #F0A0A0;">🗑 Löschen</button></form>
+            <form method="POST" action="{{ route('admin.banners.reset_stats', $b->id) }}" data-h-submit="eaebaf6d18">@csrf<button type="submit" class="btn btn-ghost btn-sm">🔄 Statistik zurücksetzen</button></form>
+            <form method="POST" action="{{ route('admin.banners.delete', $b->id) }}" data-confirm="Banner {{ $b->title }} endgültig löschen?">@csrf<button type="submit" class="btn btn-sm" style="background:#F9E3E3;color:#A32D2D;border:1px solid #F0A0A0;">🗑 Löschen</button></form>
         </div>
 
         {{-- Bearbeiten-Formular (aufklappbar) --}}
@@ -140,17 +143,17 @@
 </div>
 
 {{-- Vorschau-Modal: zeigt das Medium in voller Breite wie im Kundenportal --}}
-<div id="previewModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:400;align-items:center;justify-content:center;padding:24px;" onclick="this.style.display='none'">
-    <div style="background:#fff;border-radius:14px;max-width:900px;width:100%;overflow:hidden;" onclick="event.stopPropagation()">
+<div id="previewModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:400;align-items:center;justify-content:center;padding:24px;" data-h-click="e02337344f">
+    <div style="background:#fff;border-radius:14px;max-width:900px;width:100%;overflow:hidden;" data-h-click="d7f56cf72a">
         <div style="padding:12px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);">
             <strong style="font-size:14px;">Vorschau – so erscheint der Banner im Kundenportal</strong>
-            <button onclick="document.getElementById('previewModal').style.display='none'" style="border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+            <button data-h-click="fa18a7c479" style="border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         </div>
         <div id="previewBody" style="position:relative;background:#0e1f1b;"></div>
     </div>
 </div>
 
-<script>
+<script @cspNonce>
 function previewBanner(src, type, title) {
     const body = document.getElementById('previewBody');
     const media = type === 'video'
@@ -170,3 +173,36 @@ function previewCreate() {
 }
 </script>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["a2801959eb"] = function (event) { previewCreate() };
+window.__h["eaebaf6d18"] = function (event) { return confirm('Statistiken dieses Banners wirklich auf null setzen?'); };
+window.__h["e02337344f"] = function (event) { this.style.display='none' };
+window.__h["d7f56cf72a"] = function (event) { event.stopPropagation() };
+window.__h["fa18a7c479"] = function (event) { document.getElementById('previewModal').style.display='none' };
+</script>
+@endPushOnce
+
+{{-- Ereignis-Handler mit veraenderlichem Wert (Audit SEC-4):
+     der Wert steht in data-a0, der Code ist fuer alle Zeilen
+     derselbe. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["a9764c3a69"] = function (event) { document.getElementById(this.dataset.a0) };
+</script>
+@endPushOnce
+
+{{-- Banner-Vorschau: Quelle, Typ und Titel stehen als Datenwerte am Knopf (Audit SEC-4) --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["banner-vorschau"] = function (event) { previewBanner(this.dataset.src, this.dataset.typ, this.dataset.titel) };
+</script>
+@endPushOnce

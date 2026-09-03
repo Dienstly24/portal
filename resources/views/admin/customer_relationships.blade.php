@@ -41,7 +41,7 @@
             @endforeach
             <a href="{{ route('admin.customer.merge', $rel->customerA->id) }}?duplicate={{ $rel->customerB->id }}" class="btn btn-ghost" style="padding:7px 14px;">Doch zusammenführen</a>
             <form method="POST" action="{{ route('admin.customers.relationships.delete', $rel->id) }}" style="margin:0;"
-                  onsubmit="return confirm('Beziehung entfernen? Das Paar kann danach wieder als mögliche Dublette erscheinen.');">
+                  data-h-submit="7d45402697">
                 @csrf @method('DELETE')
                 <button type="submit" class="btn btn-ghost" style="padding:7px 14px;">Beziehung entfernen</button>
             </form>
@@ -75,3 +75,14 @@
 @endforeach
 @endif
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["7d45402697"] = function (event) { return confirm('Beziehung entfernen? Das Paar kann danach wieder als mögliche Dublette erscheinen.'); };
+</script>
+@endPushOnce

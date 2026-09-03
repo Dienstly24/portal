@@ -89,7 +89,7 @@ class PortalAuthArabicTest extends TestCase
         $customer = Customer::where('user_id', $user->id)->first();
         $this->assertNotNull($customer, 'Die Bestaetigung muss eine Kundenakte anlegen.');
         $this->assertSame('website', $customer->source);
-        $this->assertSame('1992-05-10', $customer->birth_date->format('Y-m-d'));
+        $this->assertStringStartsWith('1992-05-10', (string) $customer->birth_date);
         $this->assertMatchesRegularExpression('/^\d{7}$/', $customer->customer_number); // JJ+5-stellig
     }
 

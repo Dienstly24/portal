@@ -21,5 +21,7 @@
 </td></tr>
 </table>
 </td></tr></table>
+{{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
+@stack('cspScripts')
 </body>
 </html>

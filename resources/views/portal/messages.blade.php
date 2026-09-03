@@ -65,7 +65,7 @@
         <button type="submit" class="d24c-send" aria-label="{{ __('Senden') }}"><span class="snd-ico">➤</span></button>
     </form>
 </div>
-<script>
+<script @cspNonce>
 document.addEventListener('DOMContentLoaded', function () {
     const list = document.getElementById('chat-list');
     const scroller = document.getElementById('chat-scroll');

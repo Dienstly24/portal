@@ -101,7 +101,7 @@
     @endforelse
 </div>
 
-<script>
+<script @cspNonce>
 // Kunden-Autocomplete über die BESTEHENDE Suche (employees.customer-search)
 document.querySelectorAll('.assign-form').forEach(form => {
     const search = form.querySelector('.assign-search');

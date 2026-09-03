@@ -45,5 +45,7 @@
   © {{ date('Y') }} Dienstly24 ·
   <a href="/impressum">Impressum</a><a href="/datenschutz">Datenschutz</a><a href="/agb">AGB</a><a href="/widerruf">Widerruf</a><a href="/erstinformation">Erstinformation</a><a href="/cookie-richtlinie">Cookie-Richtlinie</a><a href="/bildnachweise">Bildnachweise</a>
 </footer>
+{{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
+@stack('cspScripts')
 </body>
 </html>

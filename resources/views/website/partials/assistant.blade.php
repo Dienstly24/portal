@@ -76,7 +76,7 @@
 @media (max-width:640px){#d24-ai{bottom:76px;inset-inline-end:16px;}}
 </style>
 
-<script>
+<script @cspNonce>
 (function () {
   var wurzel = document.getElementById('d24-ai');
   var knopf = document.getElementById('d24-ai-open');

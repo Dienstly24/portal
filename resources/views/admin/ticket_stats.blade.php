@@ -133,7 +133,7 @@
 
 <a href="{{ route('admin.tickets') }}" class="btn btn-ghost">← Zur Ticketliste</a>
 
-<script>
+<script @cspNonce>
 (function () {
     // Farben: validierte Palette (Slot 1 Blau + Slot 2 Aqua; Ordinal-Rampen Blau)
     const C_CREATED = '#2a78d6';

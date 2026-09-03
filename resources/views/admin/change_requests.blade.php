@@ -150,7 +150,7 @@ $fmt = fn($v) => $valueLabels[$v] ?? $v;
                  direkt in die Unterhaltung ("ab wann gilt das?"). --}}
             <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
                 <a href="{{ route('admin.customer_chat', ['kunde' => $r->customer_id]) }}" class="btn btn-ghost" style="font-size:12px;padding:6px 12px;">💬 Chat öffnen</a>
-                <button type="button" onclick="document.getElementById('ask-{{ $r->id }}').style.display = document.getElementById('ask-{{ $r->id }}').style.display === 'none' ? 'block' : 'none';" class="btn btn-ghost" style="font-size:12px;padding:6px 12px;">❓ Rückfrage</button>
+                <button type="button" data-toggle="ask-{{ $r->id }}" class="btn btn-ghost" style="font-size:12px;padding:6px 12px;">❓ Rückfrage</button>
             </div>
 
             <form method="POST" action="{{ route('admin.change_requests.ask', $r->id) }}" id="ask-{{ $r->id }}" style="display:none;margin-bottom:14px;">
@@ -161,7 +161,7 @@ $fmt = fn($v) => $valueLabels[$v] ?? $v;
                         'Nachweis anfordern' => 'Guten Tag, für Ihre Änderung (' . $r->typeLabel() . ') benötigen wir noch einen Nachweis – Ausweis (Vorder- und Rückseite), Meldebescheinigung oder Kontonachweis. Bitte laden Sie ihn im Portal hoch.',
                         'Besseres Foto' => 'Guten Tag, Ihr Nachweis ist leider nicht gut lesbar. Bitte senden Sie uns ein schärferes Foto oder ein PDF, auf dem alle Angaben deutlich zu erkennen sind.',
                     ] as $label => $text)
-                    <button type="button" onclick="document.getElementById('ask-body-{{ $r->id }}').value = @js($text);" class="btn btn-ghost" style="font-size:11px;padding:4px 9px;">{{ $label }}</button>
+                    <button type="button" data-fill-target="ask-body-{{ $r->id }}" data-fill-value="{{ $text }}" class="btn btn-ghost" style="font-size:11px;padding:4px 9px;">{{ $label }}</button>
                     @endforeach
                 </div>
                 <textarea name="body" id="ask-body-{{ $r->id }}" required maxlength="2000" placeholder="Frage an den Kunden …" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-height:70px;font-family:inherit;resize:vertical;"></textarea>
@@ -179,8 +179,8 @@ $fmt = fn($v) => $valueLabels[$v] ?? $v;
                 <div style="font-size:12px;color:#A32D2D;margin-bottom:8px;">⚠️ {{ $r->proof_status === 'missing' ? 'Es liegt kein Nachweis vor.' : 'Der Nachweis passt nicht zu den beantragten Angaben.' }} Bitte vor einer Freigabe klären.</div>
                 @endif
                 <div style="display:flex;gap:8px;">
-                    <button type="submit" name="action" value="approve" class="btn btn-primary" style="flex:1;background:#17A65B;" onclick="return confirm('Anfrage genehmigen? Die Kundendaten werden sofort aktualisiert.');">✓ Genehmigen</button>
-                    <button type="submit" name="action" value="reject" class="btn btn-ghost" style="flex:1;color:#A32D2D;border-color:#A32D2D;" onclick="return confirm('Anfrage ablehnen?');">✗ Ablehnen</button>
+                    <button type="submit" name="action" value="approve" class="btn btn-primary" style="flex:1;background:#17A65B;" data-h-click="e8ffba69ab">✓ Genehmigen</button>
+                    <button type="submit" name="action" value="reject" class="btn btn-ghost" style="flex:1;color:#A32D2D;border-color:#A32D2D;" data-h-click="73df0077f6">✗ Ablehnen</button>
                 </div>
             </form>
             @endif
@@ -193,3 +193,15 @@ $fmt = fn($v) => $valueLabels[$v] ?? $v;
 
 {{ $requests->links() }}
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["e8ffba69ab"] = function (event) { return confirm('Anfrage genehmigen? Die Kundendaten werden sofort aktualisiert.'); };
+window.__h["73df0077f6"] = function (event) { return confirm('Anfrage ablehnen?'); };
+</script>
+@endPushOnce

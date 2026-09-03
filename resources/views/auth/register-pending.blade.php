@@ -79,5 +79,7 @@ body{font-family:'Inter',Arial,sans-serif;min-height:100vh;color:#fff;display:fl
     <p class="login-line">{{ __('Bereits bestätigt?') }} <a href="{{ route('login') }}">{{ __('Zum Login') }}</a></p>
 </div>
 </div>
+{{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
+@stack('cspScripts')
 </body>
 </html>

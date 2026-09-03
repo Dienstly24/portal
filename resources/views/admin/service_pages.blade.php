@@ -48,7 +48,7 @@
                         @csrf
                         <button type="submit" class="btn btn-ghost" style="padding:6px 12px;">{{ $page->is_active ? 'Verbergen' : 'Anzeigen' }}</button>
                     </form>
-                    <form method="POST" action="{{ route('admin.service_pages.delete', $page) }}" style="display:inline;" onsubmit="return confirm('Diese Leistungsseite wirklich loeschen?');">
+                    <form method="POST" action="{{ route('admin.service_pages.delete', $page) }}" style="display:inline;" data-h-submit="56335763cb">
                         @csrf @method('DELETE')
                         <button type="submit" class="btn btn-ghost" style="padding:6px 12px;color:#A32D2D;">Loeschen</button>
                     </form>
@@ -61,3 +61,14 @@
     </table>
 </div>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["56335763cb"] = function (event) { return confirm('Diese Leistungsseite wirklich loeschen?'); };
+</script>
+@endPushOnce

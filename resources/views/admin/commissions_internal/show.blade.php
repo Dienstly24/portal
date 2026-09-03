@@ -73,7 +73,7 @@
             </div>
         </div>
         <form method="POST" action="{{ route('admin.commissions_internal.unlink', $commission->id) }}" style="margin-top:12px;"
-              onsubmit="return confirm('Zuordnung wirklich lösen?');">
+              data-h-submit="82c8889ff5">
             @csrf
             <button type="submit" class="btn">Zuordnung lösen</button>
         </form>
@@ -211,7 +211,7 @@
 </div>
 
 @if(!$commission->contract)
-<script>
+<script @cspNonce>
 // Sofort-Suche nach dem Vertrag - derselbe Weg wie im Aufgaben- und
 // Vertragsformular. Treffer werden per textContent gebaut, NIE als
 // HTML-String: Kundennamen sind Fremddaten.
@@ -255,3 +255,14 @@
 </script>
 @endif
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["82c8889ff5"] = function (event) { return confirm('Zuordnung wirklich lösen?'); };
+</script>
+@endPushOnce

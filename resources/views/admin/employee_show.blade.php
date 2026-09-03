@@ -76,7 +76,7 @@ $typeConfig = [
 <div class="card" style="margin-bottom:16px;">
     <div class="card-title" style="margin-bottom:6px;">Kunden zuweisen</div>
     <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;">Suche nach Name, Nummer, Telefon, Anschrift, Kennzeichen, Zaehlernummer ... – mehrere auswaehlen und gebuendelt zuweisen.</div>
-    <script type="application/json" id="assignedIdsData">{!! $assignedIds->toJson() !!}</script>
+    <script type="application/json" id="assignedIdsData" @cspNonce>{!! $assignedIds->toJson() !!}</script>
     <input type="text" id="assignSearch" autocomplete="off" placeholder="Kunden suchen (mind. 2 Zeichen) ..."
         style="width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:10px;font-size:14px;margin-bottom:8px;">
     <div id="assignResultsBar" style="display:none;align-items:center;gap:14px;margin-bottom:8px;font-size:12.5px;">
@@ -84,7 +84,7 @@ $typeConfig = [
     </div>
     <div id="assignResults" style="display:none;border:1px solid var(--line);border-radius:10px;background:#fff;max-height:280px;overflow-y:auto;margin-bottom:12px;"></div>
 
-    <form method="POST" action="{{ route('admin.employees.assign_customers', $employee->id) }}" id="assignForm" onsubmit="return prepareAssign();">
+    <form method="POST" action="{{ route('admin.employees.assign_customers', $employee->id) }}" id="assignForm" data-h-submit="60c8ed1dfe">
         @csrf
         <div id="assignChipsWrap" style="display:none;margin-bottom:12px;">
             <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:6px;">Ausgewaehlt: <strong id="assignSelCount">0</strong> Kunde(n)</div>
@@ -141,7 +141,7 @@ $typeConfig = [
             </td>
             <td style="text-align:right;">
                 <form method="POST" action="{{ route('admin.employees.unassign_customer', [$employee->id, $c->id]) }}" style="margin:0;"
-                    onsubmit="return confirm('{{ addslashes($c->user?->name) }} aus dem Portfolio von {{ addslashes($employee->name) }} entfernen?');">
+                    data-confirm="{{ $c->user?->name }} aus dem Portfolio von {{ $employee->name }} entfernen?">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="btn btn-ghost btn-sm" style="color:#A32D2D;border-color:#F0D5D5;">✕ Entfernen</button>
@@ -176,7 +176,7 @@ $typeConfig = [
     @endif
 </div>
 
-<script>
+<script @cspNonce>
 (function () {
     var assignedSet = new Set(JSON.parse(document.getElementById('assignedIdsData').textContent).map(String));
     var selected = {};                 // id -> {id,name,number}
@@ -287,3 +287,14 @@ $typeConfig = [
 })();
 </script>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["60c8ed1dfe"] = function (event) { return prepareAssign(); };
+</script>
+@endPushOnce

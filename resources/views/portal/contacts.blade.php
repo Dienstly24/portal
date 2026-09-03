@@ -5,7 +5,7 @@
         <div class="page-title">{{ __('📞 Kontaktinformationen') }}</div>
         <div class="page-sub" style="margin-bottom:0;">{{ __('Mehrere E-Mail-Adressen und Telefonnummern verwalten – Änderungen werden geprüft.') }}</div>
     </div>
-    <button onclick="document.getElementById('add-contact-modal').style.display='flex'" class="btn btn-gold">{{ __('+ Kontakt hinzufügen') }}</button>
+    <button data-h-click="53f97f99eb" class="btn btn-gold">{{ __('+ Kontakt hinzufügen') }}</button>
 </div>
 
 @php
@@ -31,7 +31,7 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
             </div>
             <div style="display:flex;align-items:center;gap:8px;">
                 @if(in_array($c->id, $pendingChangeIds))<span class="badge badge-pending">{{ __('In Prüfung') }}</span>@else<span class="badge badge-active">{{ __('Aktiv') }}</span>@endif
-                @php $contactPayload = $c->only(['id','type','label','value']); @endphp<button onclick='openContactChange(@json($contactPayload))' class="btn btn-ghost" style="font-size:12px;padding:6px 10px;">✏️</button>
+                @php $contactPayload = $c->only(['id','type','label','value']); @endphp<button data-h-click="kontakt-aendern" data-payload="{{ json_encode($contactPayload) }}" class="btn btn-ghost" style="font-size:12px;padding:6px 10px;">✏️</button>
             </div>
         </div>
         @endforeach
@@ -65,7 +65,7 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
             </div>
             <div style="display:flex;align-items:center;gap:8px;">
                 @if(in_array($c->id, $pendingChangeIds))<span class="badge badge-pending">{{ __('In Prüfung') }}</span>@else<span class="badge badge-active">{{ __('Aktiv') }}</span>@endif
-                @php $contactPayload = $c->only(['id','type','label','value']); @endphp<button onclick='openContactChange(@json($contactPayload))' class="btn btn-ghost" style="font-size:12px;padding:6px 10px;">✏️</button>
+                @php $contactPayload = $c->only(['id','type','label','value']); @endphp<button data-h-click="kontakt-aendern" data-payload="{{ json_encode($contactPayload) }}" class="btn btn-ghost" style="font-size:12px;padding:6px 10px;">✏️</button>
             </div>
         </div>
         @endforeach
@@ -83,7 +83,7 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
 
 <div id="add-contact-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:440px;position:relative;">
-        <button onclick="document.getElementById('add-contact-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="410942009b" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:6px;">{{ __('Kontakt hinzufügen') }}</div>
         <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">{{ __('Wird nach Prüfung durch unser Team übernommen.') }}</p>
         <form method="POST" action="{{ route('portal.contacts.store') }}">
@@ -111,7 +111,7 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
 
 <div id="change-contact-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:440px;position:relative;">
-        <button onclick="document.getElementById('change-contact-modal').style.display='none'" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="15a92afff0" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:6px;">{{ __('Kontaktänderung beantragen') }}</div>
         <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">{{ __('Die Änderung wird erst nach Prüfung wirksam.') }}</p>
         <form method="POST" id="change-contact-form" action="">
@@ -129,7 +129,7 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
     </div>
 </div>
 
-<script>
+<script @cspNonce>
 function openContactChange(c) {
     document.getElementById('change-contact-form').action = '{{ url('portal/contacts') }}/' + c.id + '/change';
     document.getElementById('cc-label').value = c.label || 'privat';
@@ -138,3 +138,17 @@ function openContactChange(c) {
 }
 </script>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["53f97f99eb"] = function (event) { document.getElementById('add-contact-modal').style.display='flex' };
+window.__h["kontakt-aendern"] = function (event) { openContactChange(JSON.parse(this.dataset.payload)) };
+window.__h["410942009b"] = function (event) { document.getElementById('add-contact-modal').style.display='none' };
+window.__h["15a92afff0"] = function (event) { document.getElementById('change-contact-modal').style.display='none' };
+</script>
+@endPushOnce

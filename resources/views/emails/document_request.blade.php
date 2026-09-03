@@ -44,5 +44,7 @@
 <p style="font-size:15px;color:#333;">{{ $ar ? 'مع أطيب التحيات،' : 'Mit freundlichen Grüßen' }}<br>{{ $ar ? 'فريق Dienstly24' : 'Ihr Dienstly24 Team' }}</p>
 </td></tr>
 </table></td></tr></table>
+{{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
+@stack('cspScripts')
 </body>
 </html>

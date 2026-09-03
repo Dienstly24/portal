@@ -12,7 +12,7 @@
 @endphp
 <div class="nav-group {{ $collapsed ? 'collapsed' : '' }}" data-group="{{ $group->key }}" @if($active) data-has-active="1" @endif>
     <button type="button" class="nav-group-header" aria-expanded="{{ $collapsed ? 'false' : 'true' }}"
-            aria-controls="nav-body-{{ $group->key }}" onclick="toggleNavGroup(this)">
+            aria-controls="nav-body-{{ $group->key }}" data-h-click="7a267c02e4">
         <span class="nav-group-title">{{ $group->label }}</span>
         {{-- Summe NUR im eingeklappten Zustand: zugeklappt darf keine offene
              Aufgabe unsichtbar werden. --}}
@@ -27,3 +27,14 @@
         @endforeach
     </div>
 </div>
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["7a267c02e4"] = function (event) { toggleNavGroup(this) };
+</script>
+@endPushOnce

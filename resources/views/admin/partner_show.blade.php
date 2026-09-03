@@ -10,7 +10,7 @@
                 <span class="badge {{ $partner->is_active ? 'badge-active' : 'badge-pending' }}">{{ $partner->is_active ? 'Aktiv' : 'Inaktiv' }}</span>
             </div>
         </div>
-        <button onclick="document.getElementById('edit-partner-modal').style.display='flex'" class="btn btn-ghost">Bearbeiten</button>
+        <button data-h-click="2b1eadbece" class="btn btn-ghost">Bearbeiten</button>
     </div>
 </div>
 
@@ -77,10 +77,22 @@
             @csrf @method('PUT')
             @include('admin._partner_fields', ['partner' => $partner])
             <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
-                <button type="button" class="btn btn-ghost" onclick="document.getElementById('edit-partner-modal').style.display='none'">Abbrechen</button>
+                <button type="button" class="btn btn-ghost" data-h-click="fa5507edfd">Abbrechen</button>
                 <button type="submit" class="btn btn-gold">Speichern</button>
             </div>
         </form>
     </div>
 </div>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["2b1eadbece"] = function (event) { document.getElementById('edit-partner-modal').style.display='flex' };
+window.__h["fa5507edfd"] = function (event) { document.getElementById('edit-partner-modal').style.display='none' };
+</script>
+@endPushOnce

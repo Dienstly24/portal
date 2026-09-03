@@ -116,7 +116,7 @@ $sb = $statusBadge[$message->match_status] ?? ['#EEF0F3', '#555', $message->matc
     </div>
 </div>
 
-<script>
+<script @cspNonce>
 document.querySelectorAll('.assign-form').forEach(form => {
     const search = form.querySelector('.assign-search');
     const results = form.querySelector('.assign-results');

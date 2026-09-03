@@ -87,7 +87,7 @@
             <div style="font-size:12.5px;color:var(--ink-soft);">Entfernt den Vertrag samt Spartendetails. Zugeordnete Dokumente bleiben in der Kundenakte erhalten.</div>
         </div>
         <form method="POST" action="{{ route('admin.contract.destroy', $contract->id) }}"
-            onsubmit="return confirm('Vertrag {{ $contract->insurer }} wirklich löschen?');" style="margin:0;">
+            data-confirm="Vertrag {{ $contract->insurer }} wirklich löschen?" style="margin:0;">
             @csrf @method('DELETE')
             <button type="submit" class="btn btn-ghost" style="color:#A32D2D;border-color:#A32D2D;">🗑 Vertrag löschen</button>
         </form>

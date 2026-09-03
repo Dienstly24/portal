@@ -5,7 +5,7 @@
         <div class="page-title">{{ __('Dokumente') }}</div>
         <div class="page-sub" style="margin-bottom:0;">{{ __('Alle Ihre Dokumente und Unterlagen. Sie können hier auch eigene Dokumente hochladen.') }}</div>
     </div>
-    <button onclick="smartScan.open()" class="btn btn-gold">+ {{ __('Dokument hinzufügen') }}</button>
+    <button data-h-click="d464efca56" class="btn btn-gold">+ {{ __('Dokument hinzufügen') }}</button>
 </div>
 
 @if(session('success'))<div style="background:#D9F4E6;color:#17A65B;padding:10px 16px;border-radius:8px;margin:16px 0;">{{ session('success') }}</div>@endif
@@ -153,25 +153,25 @@
 
 <div id="smart-upload-modal" class="d24-modal">
     <div class="d24-modal-box">
-        <button type="button" onclick="smartScan.close()" style="position:absolute;top:16px;inset-inline-end:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button type="button" data-h-click="17c6417e1e" style="position:absolute;top:16px;inset-inline-end:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
 
         {{-- Schritt 1: Quelle waehlen --}}
         <div data-scan-step="choose">
             <div style="font-size:18px;font-weight:700;margin-bottom:6px;">{{ __('Dokument hinzufügen') }}</div>
             <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">{{ __('Fotografieren Sie mehrere Seiten nacheinander oder wählen Sie Dateien aus. Unser System erkennt den Dokumenttyp automatisch.') }}</p>
-            <button type="button" class="scan-option" onclick="smartScan.startCamera()">
+            <button type="button" class="scan-option" data-h-click="377e3a7038">
                 <span class="so-ico">📷</span>
                 <span>{{ __('Foto aufnehmen') }}<span class="so-sub">{{ __('Mehrere Seiten nacheinander fotografieren') }}</span></span>
             </button>
-            <button type="button" class="scan-option" onclick="document.getElementById('scan-images-input').click()">
+            <button type="button" class="scan-option" data-h-click="27e9847c97">
                 <span class="so-ico">🖼️</span>
                 <span>{{ __('Bilder auswählen') }}<span class="so-sub">{{ __('Vorhandene Fotos aus der Galerie') }}</span></span>
             </button>
-            <button type="button" class="scan-option" onclick="document.getElementById('scan-pdf-input').click()">
+            <button type="button" class="scan-option" data-h-click="f82c48ca4e">
                 <span class="so-ico">📄</span>
                 <span>{{ __('PDF hochladen') }}<span class="so-sub">{{ __('Fertige PDF-Datei (max. 10 MB)') }}</span></span>
             </button>
-            <button type="button" class="scan-option" onclick="document.getElementById('classic-file-input').click()">
+            <button type="button" class="scan-option" data-h-click="074d3dcfd5">
                 <span class="so-ico">📎</span>
                 <span>{{ __('Andere Datei') }}<span class="so-sub">{{ __('Word, Excel oder andere Datei (max. 10 MB)') }}</span></span>
             </button>
@@ -183,9 +183,9 @@
             <div style="font-size:16px;font-weight:700;margin-bottom:10px;">📷 <span id="scan-camera-title">{{ __('Seite fotografieren') }}</span></div>
             <video id="scan-video" autoplay playsinline muted></video>
             <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;">
-                <button type="button" class="btn btn-ghost" onclick="smartScan.stopCamera(true)">{{ __('Abbrechen') }}</button>
-                <button type="button" class="btn btn-gold" style="font-size:15px;padding:10px 26px;" onclick="smartScan.capture()">⚪ {{ __('Aufnehmen') }}</button>
-                <button type="button" class="btn btn-primary" onclick="smartScan.stopCamera(false)">{{ __('Fertig') }}</button>
+                <button type="button" class="btn btn-ghost" data-h-click="f76fc1525b">{{ __('Abbrechen') }}</button>
+                <button type="button" class="btn btn-gold" style="font-size:15px;padding:10px 26px;" data-h-click="1a64713c76">⚪ {{ __('Aufnehmen') }}</button>
+                <button type="button" class="btn btn-primary" data-h-click="31c7d32856">{{ __('Fertig') }}</button>
             </div>
             <p style="font-size:12px;color:var(--ink-soft);text-align:center;margin-top:8px;">{{ __('Tipp: Dokument flach hinlegen und den Ausschnitt füllen.') }}</p>
         </div>
@@ -195,10 +195,10 @@
             <div style="font-size:16px;font-weight:700;" id="scan-pages-title">{{ __('Seiten aufgenommen') }}</div>
             <div class="scan-pages" id="scan-pages-grid"></div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
-                <button type="button" class="btn btn-ghost" style="font-size:12.5px;padding:7px 12px;" onclick="smartScan.startCamera()">📷 {{ __('Seite fotografieren') }}</button>
-                <button type="button" class="btn btn-ghost" style="font-size:12.5px;padding:7px 12px;" onclick="document.getElementById('scan-images-input').click()">🖼️ {{ __('Bilder hinzufügen') }}</button>
+                <button type="button" class="btn btn-ghost" style="font-size:12.5px;padding:7px 12px;" data-h-click="377e3a7038">📷 {{ __('Seite fotografieren') }}</button>
+                <button type="button" class="btn btn-ghost" style="font-size:12.5px;padding:7px 12px;" data-h-click="27e9847c97">🖼️ {{ __('Bilder hinzufügen') }}</button>
             </div>
-            <button type="button" class="btn btn-gold" style="width:100%;font-size:15px;" onclick="smartScan.upload()">⬆ {{ __('Dokument hochladen') }}</button>
+            <button type="button" class="btn btn-gold" style="width:100%;font-size:15px;" data-h-click="1009e84d11">⬆ {{ __('Dokument hochladen') }}</button>
         </div>
 
         {{-- Schritt 4: Upload + Analyse --}}
@@ -210,7 +210,7 @@
                 <div id="scan-progress-bar" style="height:100%;width:0;background:var(--gold);transition:width .2s;"></div>
             </div>
             <div id="scan-result" style="display:none;text-align:start;margin:14px 0 0;border:1px solid var(--line);border-radius:12px;padding:14px 16px;"></div>
-            <button type="button" class="btn btn-primary" style="display:none;margin-top:16px;" id="scan-done-btn" onclick="window.location.reload()">{{ __('Fertig') }}</button>
+            <button type="button" class="btn btn-primary" style="display:none;margin-top:16px;" id="scan-done-btn" data-h-click="e68df2cc53">{{ __('Fertig') }}</button>
         </div>
 
         <input type="file" id="scan-images-input" accept="image/*" multiple style="display:none;">
@@ -219,7 +219,7 @@
     </div>
 </div>
 
-<script>
+<script @cspNonce>
 window.smartScan = (function() {
     var pages = [];          // {blob, url}
     var pdfFile = null;
@@ -585,10 +585,31 @@ window.smartScan = (function() {
     @csrf
     <input type="file" id="classic-file-input" name="document" accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,.gif,.doc,.docx,.xls,.xlsx">
 </form>
-<script>
+<script @cspNonce>
     // Auto-Submit, sobald der Kunde eine Datei gewaehlt hat.
     document.getElementById('classic-file-input').addEventListener('change', function() {
         if (this.files && this.files.length) document.getElementById('classic-upload-form').submit();
     });
 </script>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["d464efca56"] = function (event) { smartScan.open() };
+window.__h["17c6417e1e"] = function (event) { smartScan.close() };
+window.__h["377e3a7038"] = function (event) { smartScan.startCamera() };
+window.__h["27e9847c97"] = function (event) { document.getElementById('scan-images-input').click() };
+window.__h["f82c48ca4e"] = function (event) { document.getElementById('scan-pdf-input').click() };
+window.__h["074d3dcfd5"] = function (event) { document.getElementById('classic-file-input').click() };
+window.__h["f76fc1525b"] = function (event) { smartScan.stopCamera(true) };
+window.__h["1a64713c76"] = function (event) { smartScan.capture() };
+window.__h["31c7d32856"] = function (event) { smartScan.stopCamera(false) };
+window.__h["1009e84d11"] = function (event) { smartScan.upload() };
+window.__h["e68df2cc53"] = function (event) { window.location.reload() };
+</script>
+@endPushOnce

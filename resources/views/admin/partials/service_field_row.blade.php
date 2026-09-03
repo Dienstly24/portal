@@ -29,5 +29,16 @@
         <div class="field" style="margin-bottom:8px;"><label>Auswahl-Optionen (AR, mit Komma)</label>
             <input type="text" name="field_options_ar[]" dir="rtl" value="{{ $options_ar ?? '' }}"></div>
     </div>
-    <button type="button" class="btn btn-ghost" style="padding:5px 12px;color:#A32D2D;" onclick="removeFieldRow(this)">Entfernen</button>
+    <button type="button" class="btn btn-ghost" style="padding:5px 12px;color:#A32D2D;" data-h-click="2ba3aced87">Entfernen</button>
 </div>
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["2ba3aced87"] = function (event) { removeFieldRow(this) };
+</script>
+@endPushOnce

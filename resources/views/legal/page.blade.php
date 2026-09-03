@@ -123,5 +123,7 @@ a{color:#185FA5;}
     <div class="foot-copy">Copyright © {{ $company['name'] }} {{ date('Y') }}</div>
 </div>
 @include('partials.cookie_consent')
+{{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
+@stack('cspScripts')
 </body>
 </html>

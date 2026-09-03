@@ -63,5 +63,7 @@
     <a href="{{ route('legal', 'datenschutz') }}">{{ __('Datenschutzerklärung') }}</a>
     <span>© {{ date('Y') }} Dienstly24</span>
 </div>
+{{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
+@stack('cspScripts')
 </body>
 </html>

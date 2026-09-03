@@ -50,8 +50,8 @@
             <input type="date" name="statement_date" value="{{ $c->statement_date?->format('Y-m-d') ?? now()->format('Y-m-d') }}" required style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;">
         </div>
         <div style="display:flex;gap:8px;margin-left:auto;">
-            <button type="submit" class="btn btn-gold btn-sm" onclick="return confirm('Diese Provision jetzt in Lexoffice verbuchen? Die Buchung wird an ein externes System uebertragen.')">Buchen (Lexoffice)</button>
-            <button type="submit" form="reject-{{ $c->id }}" class="btn btn-ghost btn-sm" onclick="return confirm('Diese Provision wirklich ablehnen?')">Ablehnen</button>
+            <button type="submit" class="btn btn-gold btn-sm" data-h-click="7ede9fa4ef">Buchen (Lexoffice)</button>
+            <button type="submit" form="reject-{{ $c->id }}" class="btn btn-ghost btn-sm" data-h-click="6ad15fbff3">Ablehnen</button>
         </div>
     </form>
     <form id="reject-{{ $c->id }}" method="POST" action="{{ route('admin.commissions.reject', $c->id) }}">@csrf</form>
@@ -88,3 +88,15 @@
     </table>
 </div>
 @endsection
+
+{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
+     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
+     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
+     data-h-<ereignis> in resources/js/ui.js. --}}
+@pushOnce('cspScripts')
+<script @cspNonce>
+window.__h = window.__h || {};
+window.__h["7ede9fa4ef"] = function (event) { return confirm('Diese Provision jetzt in Lexoffice verbuchen? Die Buchung wird an ein externes System uebertragen.') };
+window.__h["6ad15fbff3"] = function (event) { return confirm('Diese Provision wirklich ablehnen?') };
+</script>
+@endPushOnce

@@ -26,7 +26,7 @@
     : 'Dienstly24 – Versicherung, Kfz-Zulassung & Energie | Beratung DE & AR')
 
 @section('head-extra')
-<script type="application/ld+json">
+<script type="application/ld+json" @cspNonce>
 {!! json_encode([
     '@context' => 'https://schema.org',
     '@type' => 'InsuranceAgency',
@@ -56,7 +56,7 @@
     ],
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}
 </script>
-<script type="application/ld+json">
+<script type="application/ld+json" @cspNonce>
 {!! json_encode([
     '@context' => 'https://schema.org',
     '@type' => 'FAQPage',

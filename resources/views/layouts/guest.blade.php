@@ -36,5 +36,11 @@
             </div>
         </div>
         @include('partials.cookie_consent')
-    </body>
+    
+{{-- Ereignis-Verdrahtung der Seite (Audit SEC-4). Die Bloecke landen
+     hier am Ende des Body, damit sie auch aus Partials heraus (etwa
+     einer Tabellenzeile) gueltiges HTML ergeben - ein <script @cspNonce> mitten
+     in einer <table> wuerde der Browser herausloesen. --}}
+@stack('cspScripts')
+</body>
 </html>
