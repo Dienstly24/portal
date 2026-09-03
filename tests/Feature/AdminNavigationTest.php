@@ -34,7 +34,7 @@ class AdminNavigationTest extends TestCase
     }
 
     /** @return array<string,NavGroup> */
-    private function groups(User $user): array
+    private function navGroups(User $user): array
     {
         $out = [];
         foreach ($this->nav($user)->groups() as $g) {
@@ -48,7 +48,7 @@ class AdminNavigationTest extends TestCase
 
     public function test_die_taegliche_arbeit_steht_oben_und_offen(): void
     {
-        $groups = $this->groups(User::factory()->create(['role' => 'admin']));
+        $groups = $this->navGroups(User::factory()->create(['role' => 'admin']));
 
         $this->assertSame(
             ['postfach', 'mein-tag', 'kunden', 'dokumente', 'vertrieb', 'marketing', 'administration'],
@@ -66,7 +66,7 @@ class AdminNavigationTest extends TestCase
 
     public function test_technik_und_konfiguration_liegen_ausschliesslich_in_der_administration(): void
     {
-        $groups = $this->groups(User::factory()->create(['role' => 'admin']));
+        $groups = $this->navGroups(User::factory()->create(['role' => 'admin']));
         $adminLabels = array_map(fn ($i) => $i->label, $groups['administration']->items);
 
         foreach (['Systemzustand', 'Fehler', 'Aktivitätslog', 'Einstellungen'] as $label) {
@@ -83,7 +83,7 @@ class AdminNavigationTest extends TestCase
 
     public function test_die_drei_provisions_bereiche_sind_ein_punkt(): void
     {
-        $groups = $this->groups(User::factory()->create(['role' => 'admin']));
+        $groups = $this->navGroups(User::factory()->create(['role' => 'admin']));
         $labels = array_map(fn ($i) => $i->label, $groups['vertrieb']->items);
 
         $this->assertSame(['Provisionen'], array_values(array_filter(
@@ -125,7 +125,7 @@ class AdminNavigationTest extends TestCase
     {
         Announcement::create(['title' => 'Info', 'body' => 'Text', 'expires_at' => null]);
 
-        $groups = $this->groups(User::factory()->create(['role' => 'admin']));
+        $groups = $this->navGroups(User::factory()->create(['role' => 'admin']));
         foreach ($groups['marketing']->items as $item) {
             if ($item->key === 'ankuendigungen') {
                 $this->assertFalse($item->hasBadge(),
@@ -142,7 +142,7 @@ class AdminNavigationTest extends TestCase
         $user = User::factory()->create(['role' => 'admin']);
         $this->task($user, today(), 'Heute');
 
-        $groups = $this->groups($user);
+        $groups = $this->navGroups($user);
         $this->assertSame(1, $groups['mein-tag']->badgeSum());
     }
 
@@ -150,7 +150,7 @@ class AdminNavigationTest extends TestCase
 
     public function test_mitarbeiter_sehen_keine_verwaltung(): void
     {
-        $groups = $this->groups(User::factory()->create(['role' => 'employee']));
+        $groups = $this->navGroups(User::factory()->create(['role' => 'employee']));
 
         $this->assertArrayNotHasKey('administration', $groups);
         $this->assertArrayHasKey('postfach', $groups);
@@ -219,7 +219,7 @@ class AdminNavigationTest extends TestCase
 
     private function badge(User $user, string $group, string $item): int
     {
-        foreach ($this->groups($user)[$group]->items as $navItem) {
+        foreach ($this->navGroups($user)[$group]->items as $navItem) {
             if ($navItem->key === $item) {
                 return $navItem->badge;
             }
