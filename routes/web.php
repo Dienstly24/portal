@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\ActivityReportController;
+use App\Http\Controllers\Admin\ContractController as AdminContractController;
+use App\Http\Controllers\Admin\CustomerDocumentController as AdminCustomerDocumentController;
+use App\Http\Controllers\Admin\DuplicateController as AdminDuplicateController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminCustomerChatController;
 use App\Http\Controllers\AiAssistantController;
@@ -259,23 +262,23 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         ->name('customers.betreuer')->middleware('role:admin,manager');
     // Dubletten-Pruefung: MUSS vor /customers/{id} stehen, sonst wuerde
     // "duplicates" als Kunden-ID interpretiert.
-    Route::get('/customers/duplicates', [AdminController::class, 'duplicates'])->name('customers.duplicates');
+    Route::get('/customers/duplicates', [AdminDuplicateController::class, 'duplicates'])->name('customers.duplicates');
     // Sammel-Zusammenfuehrung: nur admin/manager (Massenaktion, entfernt
     // leere Duplikat-Akten - analog zur Loesch-Beschraenkung).
-    Route::post('/customers/duplicates/merge', [AdminController::class, 'duplicatesMerge'])
+    Route::post('/customers/duplicates/merge', [AdminDuplicateController::class, 'duplicatesMerge'])
         ->name('customers.duplicates.merge')->middleware('role:admin,manager');
     // Ein-Klick: alle "sicheren" Treffer (Score >= 40 %) automatisch vereinen.
-    Route::post('/customers/duplicates/merge-all', [AdminController::class, 'duplicatesMergeAll'])
+    Route::post('/customers/duplicates/merge-all', [AdminDuplicateController::class, 'duplicatesMergeAll'])
         ->name('customers.duplicates.merge_all')->middleware('role:admin,manager');
     // "Kein Duplikat" -> Paar als Beziehung markieren (Verwandte Kunden).
-    Route::post('/customers/duplicates/dismiss', [AdminController::class, 'dismissDuplicate'])
+    Route::post('/customers/duplicates/dismiss', [AdminDuplicateController::class, 'dismissDuplicate'])
         ->name('customers.duplicates.dismiss');
-    Route::post('/customers/duplicates/dismiss-bulk', [AdminController::class, 'dismissBulk'])
+    Route::post('/customers/duplicates/dismiss-bulk', [AdminDuplicateController::class, 'dismissBulk'])
         ->name('customers.duplicates.dismiss_bulk');
     // Verwandte Kunden (Beziehungen). GET vor /customers/{id} registrieren.
-    Route::get('/customers/relationships', [AdminController::class, 'relationships'])->name('customers.relationships');
-    Route::post('/customers/relationships/{id}/type', [AdminController::class, 'relationshipSetType'])->name('customers.relationships.type');
-    Route::delete('/customers/relationships/{id}', [AdminController::class, 'relationshipDelete'])->name('customers.relationships.delete');
+    Route::get('/customers/relationships', [AdminDuplicateController::class, 'relationships'])->name('customers.relationships');
+    Route::post('/customers/relationships/{id}/type', [AdminDuplicateController::class, 'relationshipSetType'])->name('customers.relationships.type');
+    Route::delete('/customers/relationships/{id}', [AdminDuplicateController::class, 'relationshipDelete'])->name('customers.relationships.delete');
     Route::put('/customers/notes/{id}/done', [AdminController::class, 'noteMarkDone'])->name('customer.note.done');
     Route::get('/customers/{id}', [AdminController::class, 'customerShow'])->name('customer');
     Route::get('/customers/{id}/edit', [AdminController::class, 'customerEdit'])->name('customer.edit');
@@ -294,12 +297,12 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // Kundenzusammenfuehrung loescht den Duplikat-Datensatz + Login endgueltig
     // -> wie die anderen Loeschpfade NUR admin (DSGVO/Sicherheitsregel:
     // Mitarbeiter/Manager/Support duerfen nicht loeschen).
-    Route::get('/customers/{id}/merge', [AdminController::class, 'mergeForm'])->name('customer.merge')->middleware('role:admin');
-    Route::post('/customers/{id}/merge', [AdminController::class, 'mergeCustomers'])->name('customer.merge.do')->middleware('role:admin');
-    Route::get('/attachments/{id}/download', [AdminController::class, 'downloadAttachment'])->name('attachment.download');
+    Route::get('/customers/{id}/merge', [AdminDuplicateController::class, 'mergeForm'])->name('customer.merge')->middleware('role:admin');
+    Route::post('/customers/{id}/merge', [AdminDuplicateController::class, 'mergeCustomers'])->name('customer.merge.do')->middleware('role:admin');
+    Route::get('/attachments/{id}/download', [AdminCustomerDocumentController::class, 'downloadAttachment'])->name('attachment.download');
     Route::get('/customers/{id}/timeline', [AdminController::class, 'customerTimeline'])->name('customer.timeline');
     Route::post('/customers/{id}/notes', [AdminController::class, 'storeNote'])->name('customer.note.store');
-    Route::post('/customers/{id}/documents', [AdminController::class, 'storeDocument'])->name('customer.document.store');
+    Route::post('/customers/{id}/documents', [AdminCustomerDocumentController::class, 'storeDocument'])->name('customer.document.store');
     Route::post('/customers/{id}/family', [AdminController::class, 'storeFamily'])->name('customer.family.store');
     // Familien- und Kundenbeziehungen: verknuepft ausschliesslich BESTEHENDE
     // Kundenakten (es entsteht nie ein neuer Kunde, es wird nie einer geloescht).
@@ -324,19 +327,19 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::post('/familie/uebergaenge/{relation}/vorbereiten', [CustomerFamilyRelationController::class, 'prepareTransition'])->name('family.prepare_transition');
 
     // Verträge
-    Route::get('/contracts', [AdminController::class, 'contracts'])->name('contracts');
-    Route::get('/contracts/new', [AdminController::class, 'contractNew'])->name('contract.new');
+    Route::get('/contracts', [AdminContractController::class, 'contracts'])->name('contracts');
+    Route::get('/contracts/new', [AdminContractController::class, 'contractNew'])->name('contract.new');
 
-    Route::get('/contracts/create/{customerId}', [AdminController::class, 'contractCreate'])->name('contract.create');
-    Route::get('/contracts/{id}/edit', [AdminController::class, 'contractEdit'])->name('contract.edit');
-    Route::put('/contracts/{id}', [AdminController::class, 'contractUpdate'])->name('contract.update');
-    Route::delete('/contracts/{id}', [AdminController::class, 'contractDestroy'])->name('contract.destroy');
-    Route::post('/contracts/{customerId}', [AdminController::class, 'contractStore'])->name('contract.store');
+    Route::get('/contracts/create/{customerId}', [AdminContractController::class, 'contractCreate'])->name('contract.create');
+    Route::get('/contracts/{id}/edit', [AdminContractController::class, 'contractEdit'])->name('contract.edit');
+    Route::put('/contracts/{id}', [AdminContractController::class, 'contractUpdate'])->name('contract.update');
+    Route::delete('/contracts/{id}', [AdminContractController::class, 'contractDestroy'])->name('contract.destroy');
+    Route::post('/contracts/{customerId}', [AdminContractController::class, 'contractStore'])->name('contract.store');
     // Energie: Zaehlerstand von Hand erfassen; Loeschen einer fehlerhaften
     // Ablesung bleibt admin/manager vorbehalten (Historie ist Datenbestand).
-    Route::post('/contracts/{id}/zaehlerstand', [AdminController::class, 'contractMeterReadingStore'])
+    Route::post('/contracts/{id}/zaehlerstand', [AdminContractController::class, 'contractMeterReadingStore'])
         ->name('contract.meter_reading.store');
-    Route::delete('/contracts/{id}/zaehlerstand/{readingId}', [AdminController::class, 'contractMeterReadingDestroy'])
+    Route::delete('/contracts/{id}/zaehlerstand/{readingId}', [AdminContractController::class, 'contractMeterReadingDestroy'])
         ->middleware('role:admin,manager')->name('contract.meter_reading.destroy');
 
     // Tickets (Workflow: Status, Zuweisung, Eigenschaften, Notizen, Antwort)
@@ -429,16 +432,16 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // (nur admin/manager, der Rohtext ist das ganze Dokument).
     Route::get('/documents/{id}/erkannter-text', [SmartDocumentUploadController::class, 'ocrText'])
         ->middleware('throttle:120,10')->name('documents.ocr_text');
-    Route::get('/documents/{id}/download', [AdminController::class, 'documentDownload'])->name('documents.download');
-    Route::post('/documents/{id}/replace', [AdminController::class, 'documentReplace'])->name('documents.replace');
+    Route::get('/documents/{id}/download', [AdminCustomerDocumentController::class, 'documentDownload'])->name('documents.download');
+    Route::post('/documents/{id}/replace', [AdminCustomerDocumentController::class, 'documentReplace'])->name('documents.replace');
     // Direkter Dokument-Link (GET /admin/documents/{id}): eine eigene
     // Detailseite gibt es bewusst nicht. Solche Aufrufe entstehen z.B. ueber
     // den Browser-Verlauf (die Formular-Action des Bearbeiten-/Loeschen-
     // Dialogs landet dort als Adresse) oder alte Lesezeichen und liefen
     // bisher ins 404. Stattdessen zum richtigen Ort weiterleiten.
-    Route::get('/documents/{id}', [AdminController::class, 'documentShow'])->name('documents.show');
-    Route::put('/documents/{id}', [AdminController::class, 'documentUpdate'])->name('documents.update');
-    Route::delete('/documents/{id}', [AdminController::class, 'documentDestroy'])->name('documents.destroy');
+    Route::get('/documents/{id}', [AdminCustomerDocumentController::class, 'documentShow'])->name('documents.show');
+    Route::put('/documents/{id}', [AdminCustomerDocumentController::class, 'documentUpdate'])->name('documents.update');
+    Route::delete('/documents/{id}', [AdminCustomerDocumentController::class, 'documentDestroy'])->name('documents.destroy');
     // Banner: Marketing-Verwaltung nur für Admin/Manager (Sicherheits-Fix:
     // war zuvor ohne Rollen-Einschränkung für alle Staff-Rollen erreichbar).
     Route::middleware('role:admin,manager')->group(function () {
