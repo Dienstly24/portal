@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -21,21 +22,21 @@ class VehicleClaim extends Model
 
     public const TYPES = [
         'haftpflicht' => 'Haftpflicht',
-        'teilkasko'   => 'Teilkasko',
-        'vollkasko'   => 'Vollkasko',
-        'sonstige'    => 'Sonstige',
+        'teilkasko' => 'Teilkasko',
+        'vollkasko' => 'Vollkasko',
+        'sonstige' => 'Sonstige',
     ];
 
     public const STATUSES = [
-        'offen'          => 'Offen',
+        'offen' => 'Offen',
         'in_bearbeitung' => 'In Bearbeitung',
-        'reguliert'      => 'Reguliert',
-        'abgelehnt'      => 'Abgelehnt',
+        'reguliert' => 'Reguliert',
+        'abgelehnt' => 'Abgelehnt',
     ];
 
     protected static function boot() {
         parent::boot();
-        static::creating(fn($m) => $m->id = $m->id ?: (string) Str::uuid());
+        static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
     public function vehicleDetail() { return $this->belongsTo(ContractVehicleDetail::class, 'contract_vehicle_detail_id'); }

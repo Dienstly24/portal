@@ -84,13 +84,13 @@ class TurnstileVerifier
                 ], fn ($v) => $v !== null && $v !== ''));
         } catch (\Throwable $e) {
             // Siehe Klassenkommentar: Ausfall = Ablehnung.
-            Log::warning('Turnstile nicht erreichbar: ' . $e->getMessage());
+            Log::warning('Turnstile nicht erreichbar: '.$e->getMessage());
 
             return false;
         }
 
         if (! $response->successful()) {
-            Log::warning('Turnstile antwortete mit HTTP ' . $response->status());
+            Log::warning('Turnstile antwortete mit HTTP '.$response->status());
 
             return false;
         }

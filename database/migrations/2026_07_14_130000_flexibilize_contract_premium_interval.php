@@ -1,6 +1,8 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -19,7 +21,7 @@ return new class extends Migration {
 
     public function down(): void {
         // Werte, die das alte Enum nicht kennt, vor dem Zurueckwandeln kappen.
-        \Illuminate\Support\Facades\DB::table('contracts')
+        DB::table('contracts')
             ->where('premium_interval', 'semiannual')
             ->update(['premium_interval' => 'monthly']);
         Schema::table('contracts', function (Blueprint $table) {

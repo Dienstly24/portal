@@ -1,4 +1,5 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -12,11 +13,11 @@ use Illuminate\Support\Facades\Schema;
  */
 return new class extends Migration {
     public function up(): void {
-        if (!Schema::hasTable('family_members')) {
+        if (! Schema::hasTable('family_members')) {
             return;
         }
         if (DB::table('family_members')->count() > 0) {
-            \Log::warning('family_members enthält Daten und wurde NICHT entfernt - bitte manuell prüfen.');
+            Log::warning('family_members enthält Daten und wurde NICHT entfernt - bitte manuell prüfen.');
             return;
         }
         Schema::dropIfExists('family_members');

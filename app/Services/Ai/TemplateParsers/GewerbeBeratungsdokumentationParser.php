@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
@@ -27,9 +28,9 @@ class GewerbeBeratungsdokumentationParser implements DocumentTemplateParser
     public function parse(string $text): ?array
     {
         $upper = mb_strtoupper($text);
-        if (!str_contains($upper, 'BERATUNGSDOKUMENTATION')
-            || !str_contains($upper, 'VORGANGSNUMMER')
-            || !str_contains($upper, 'VORSCHLAG FÜR')) {
+        if (! str_contains($upper, 'BERATUNGSDOKUMENTATION')
+            || ! str_contains($upper, 'VORGANGSNUMMER')
+            || ! str_contains($upper, 'VORSCHLAG FÜR')) {
             return null;
         }
 
@@ -44,20 +45,20 @@ class GewerbeBeratungsdokumentationParser implements DocumentTemplateParser
 
         $who = ($person['company_name'] ?? '') !== ''
             ? $person['company_name']
-            : trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+            : trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
 
         return [
             'type' => 'beratungsprotokoll',
             'confidence' => 72,
             'summary' => 'Beratungsdokumentation (Gewerbe)'
-                . (isset($versicherung['tariff']) ? ' - ' . $versicherung['tariff'] : '')
-                . (isset($versicherung['insurer']) ? ' - ' . $versicherung['insurer'] : '')
-                . ($who !== '' ? ' - ' . $who : '')
-                . $this->contractExtras($text)
-                . ' - Felder gratis aus der Dokumentation gelesen (ohne KI).',
+                .(isset($versicherung['tariff']) ? ' - '.$versicherung['tariff'] : '')
+                .(isset($versicherung['insurer']) ? ' - '.$versicherung['insurer'] : '')
+                .($who !== '' ? ' - '.$who : '')
+                .$this->contractExtras($text)
+                .' - Felder gratis aus der Dokumentation gelesen (ohne KI).',
             'title' => 'Beratungsdokumentation'
-                . (isset($versicherung['tariff']) ? ' ' . $versicherung['tariff'] : '')
-                . ($who !== '' ? ' - ' . $who : ''),
+                .(isset($versicherung['tariff']) ? ' '.$versicherung['tariff'] : '')
+                .($who !== '' ? ' - '.$who : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $versicherung,
@@ -115,7 +116,7 @@ class GewerbeBeratungsdokumentationParser implements DocumentTemplateParser
                 continue;
             }
             // Personenname (2-4 Grosswoerter, keine Firma).
-            if (!isset($raw['first_name'])
+            if (! isset($raw['first_name'])
                 && preg_match('/^[A-ZÄÖÜ][\p{L}\-]+(?:\s+[A-ZÄÖÜ][\p{L}\-]+){1,3}$/u', $left)) {
                 $parts = preg_split('/\s+/', $left) ?: [];
                 $raw['first_name'] = array_shift($parts);
@@ -150,7 +151,7 @@ class GewerbeBeratungsdokumentationParser implements DocumentTemplateParser
 
         // Versicherungsbeginn (aus den Risikoangaben).
         if (preg_match('/Gewünschter Versicherungsbeginn\s+(\d{2})\.(\d{2})\.(\d{4})/u', $text, $m)) {
-            $raw['start_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['start_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
 
         // Beitrag: Jahrespraemie bevorzugt, sonst "Praemie gemaess Zahlweise".
@@ -174,13 +175,13 @@ class GewerbeBeratungsdokumentationParser implements DocumentTemplateParser
     {
         $out = '';
         if (preg_match('/Versicherungssumme:\s+([^\r\n]+)/u', $text, $m)) {
-            $out .= ' Versicherungssumme: ' . trim($m[1]) . '.';
+            $out .= ' Versicherungssumme: '.trim($m[1]).'.';
         }
         if (preg_match('/Selbstbehalt:\s+([^\r\n]+)/u', $text, $m)) {
-            $out .= ' Selbstbehalt: ' . trim($m[1]) . '.';
+            $out .= ' Selbstbehalt: '.trim($m[1]).'.';
         }
         if (preg_match('/Betriebsart\s+([^\r\n.]+)/u', $text, $m)) {
-            $out .= ' Betrieb: ' . trim($m[1]) . '.';
+            $out .= ' Betrieb: '.trim($m[1]).'.';
         }
         return $out;
     }
@@ -194,16 +195,16 @@ class GewerbeBeratungsdokumentationParser implements DocumentTemplateParser
             // Die Verkehrshaftungsversicherung des Frachtfuehrers heisst in den
             // Unterlagen mal "Frachtfuehrerhaftpflicht", mal "Verkehrshaftung".
             str_contains($n, 'frachtführer') || str_contains($n, 'frachtfuehrer')
-                || str_contains($n, 'verkehrshaftung')                         => 'frachtfuehrerhaftpflicht',
-            str_contains($n, 'betriebshaftpflicht')                            => 'betriebshaftpflicht',
-            str_contains($n, 'rechtsschutz')                                   => 'rechtsschutz',
-            str_contains($n, 'unfall')                                         => 'unfall',
+                || str_contains($n, 'verkehrshaftung') => 'frachtfuehrerhaftpflicht',
+            str_contains($n, 'betriebshaftpflicht') => 'betriebshaftpflicht',
+            str_contains($n, 'rechtsschutz') => 'rechtsschutz',
+            str_contains($n, 'unfall') => 'unfall',
             str_contains($n, 'inhalt') || str_contains($n, 'geschäft')
                 || str_contains($n, 'gebäude') || str_contains($n, 'gebaeude')
-                || str_contains($n, 'sach')                                    => 'sach',
-            str_contains($n, 'leben') || str_contains($n, 'rente')             => 'leben',
+                || str_contains($n, 'sach') => 'sach',
+            str_contains($n, 'leben') || str_contains($n, 'rente') => 'leben',
             // Frachtfuehrer-/Verkehrshaftung, Betriebs-/Berufshaftpflicht etc.
-            default                                                            => 'haftpflicht',
+            default => 'haftpflicht',
         };
     }
 
@@ -218,11 +219,11 @@ class GewerbeBeratungsdokumentationParser implements DocumentTemplateParser
     private function interval(string $german): ?string
     {
         return match (mb_strtolower(trim($german))) {
-            'monatlich'        => 'monthly',
-            'vierteljährlich'  => 'quarterly',
-            'halbjährlich'     => 'semiannual',
-            'jährlich'         => 'yearly',
-            default            => null,
+            'monatlich' => 'monthly',
+            'vierteljährlich' => 'quarterly',
+            'halbjährlich' => 'semiannual',
+            'jährlich' => 'yearly',
+            default => null,
         };
     }
 }

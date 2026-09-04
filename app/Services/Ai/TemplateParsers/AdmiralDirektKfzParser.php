@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Services\Ai\Concerns\ReadsDocumentPages;
@@ -40,8 +41,8 @@ class AdmiralDirektKfzParser implements DocumentTemplateParser
         if ($this->looksLikeComparisonProtocol($text)) {
             return null;
         }
-        if (!str_contains($upper, 'ADMIRALDIREKT')
-            || (!str_contains($upper, 'BEITRAGSRECHNUNG') && !str_contains($upper, 'BEITRAGSINFORMATION'))) {
+        if (! str_contains($upper, 'ADMIRALDIREKT')
+            || (! str_contains($upper, 'BEITRAGSRECHNUNG') && ! str_contains($upper, 'BEITRAGSINFORMATION'))) {
             return null;
         }
 
@@ -60,22 +61,22 @@ class AdmiralDirektKfzParser implements DocumentTemplateParser
             return null;
         }
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $plate = $vehicle['license_plate'] ?? null;
 
         return [
             'type' => 'kfz_vertrag',
             'confidence' => 76,
             'summary' => 'AdmiralDirekt Kfz-Beitragsrechnung (Kfz-Vertrag)'
-                . ($name !== '' ? ' - ' . $name : '')
-                . ($plate !== null ? ' - ' . $plate : '')
-                . (isset($insurance['contract_number']) ? ' - Vertrag ' . $insurance['contract_number'] : '')
-                . (isset($vehicle['sf_liability_class']) ? ' - SF ' . $vehicle['sf_liability_class'] . ' (Haftpflicht)' : '')
-                . (isset($vehicle['has_teilkasko']) || isset($vehicle['has_vollkasko'])
-                    ? ' - Deckung: ' . $this->coverageSummary($vehicle) : '')
-                . (isset($insurance['premium_amount']) ? ' - Jahresbeitrag ' . number_format($insurance['premium_amount'], 2, ',', '.') . ' EUR' : '')
-                . ' - Felder gratis aus dem Schreiben gelesen (ohne KI).',
-            'title' => 'AdmiralDirekt Kfz-Versicherung' . ($name !== '' ? ' ' . $name : ''),
+                .($name !== '' ? ' - '.$name : '')
+                .($plate !== null ? ' - '.$plate : '')
+                .(isset($insurance['contract_number']) ? ' - Vertrag '.$insurance['contract_number'] : '')
+                .(isset($vehicle['sf_liability_class']) ? ' - SF '.$vehicle['sf_liability_class'].' (Haftpflicht)' : '')
+                .(isset($vehicle['has_teilkasko']) || isset($vehicle['has_vollkasko'])
+                    ? ' - Deckung: '.$this->coverageSummary($vehicle) : '')
+                .(isset($insurance['premium_amount']) ? ' - Jahresbeitrag '.number_format($insurance['premium_amount'], 2, ',', '.').' EUR' : '')
+                .' - Felder gratis aus dem Schreiben gelesen (ohne KI).',
+            'title' => 'AdmiralDirekt Kfz-Versicherung'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -101,7 +102,7 @@ class AdmiralDirektKfzParser implements DocumentTemplateParser
         $raw = [];
         foreach ($this->lines as $i => $line) {
             $cols = $this->columns($line);
-            if ($cols === [] || !preg_match('/^(Herrn|Herr|Frau)$/u', $cols[0])) {
+            if ($cols === [] || ! preg_match('/^(Herrn|Herr|Frau)$/u', $cols[0])) {
                 continue;
             }
             $raw['gender'] = mb_strtolower($cols[0]) === 'frau' ? 'female' : 'male';
@@ -196,13 +197,13 @@ class AdmiralDirektKfzParser implements DocumentTemplateParser
 
         // Tarifbezeichnung ("Basis Tarif").
         if (preg_match('/([A-Za-zÄÖÜäöüß]+)\s+Tarif\s+mit:/u', $flat, $m)) {
-            $raw['tariff'] = trim($m[1]) . ' Tarif';
+            $raw['tariff'] = trim($m[1]).' Tarif';
         }
 
         // Abrechnungszeitraum: "Zeitraum 13.08.2026 bis 12.08.2027".
         if (preg_match('/Zeitraum\s+(\d{2})\.(\d{2})\.(\d{4})\s+bis\s+(\d{2})\.(\d{2})\.(\d{4})/u', $flat, $m)) {
-            $raw['start_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
-            $raw['end_date'] = $m[6] . '-' . $m[5] . '-' . $m[4];
+            $raw['start_date'] = $m[3].'-'.$m[2].'-'.$m[1];
+            $raw['end_date'] = $m[6].'-'.$m[5].'-'.$m[4];
         }
 
         // Jahresbeitrag (Gesamtbeitrag inkl. Versicherungssteuer). Eindeutiger
@@ -226,11 +227,11 @@ class AdmiralDirektKfzParser implements DocumentTemplateParser
     private function coverageSummary(array $kfz): string
     {
         $parts = ['Haftpflicht'];
-        if (!empty($kfz['has_teilkasko'])) {
-            $parts[] = 'Teilkasko' . (isset($kfz['teilkasko_deductible']) ? ' (' . $kfz['teilkasko_deductible'] . ' EUR SB)' : '');
+        if (! empty($kfz['has_teilkasko'])) {
+            $parts[] = 'Teilkasko'.(isset($kfz['teilkasko_deductible']) ? ' ('.$kfz['teilkasko_deductible'].' EUR SB)' : '');
         }
-        if (!empty($kfz['has_vollkasko'])) {
-            $parts[] = 'Vollkasko' . (isset($kfz['vollkasko_deductible']) ? ' (' . $kfz['vollkasko_deductible'] . ' EUR SB)' : '');
+        if (! empty($kfz['has_vollkasko'])) {
+            $parts[] = 'Vollkasko'.(isset($kfz['vollkasko_deductible']) ? ' ('.$kfz['vollkasko_deductible'].' EUR SB)' : '');
         }
         return implode(', ', $parts);
     }

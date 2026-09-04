@@ -68,7 +68,7 @@ return [
     ],
 
     'inquiry' => [
-        'support_email' => env('INQUIRY_SUPPORT_EMAIL'),'token' => env('INQUIRY_TOKEN')],
+        'support_email' => env('INQUIRY_SUPPORT_EMAIL'), 'token' => env('INQUIRY_TOKEN')],
 
     /*
     | Cloudflare Turnstile: Bot-Schutz der Selbst-Registrierung (Audit SEC-1).

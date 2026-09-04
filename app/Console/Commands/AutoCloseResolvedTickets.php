@@ -4,7 +4,10 @@ namespace App\Console\Commands;
 
 use App\Console\Concerns\ProcessesRecordsSafely;
 use App\Models\Ticket;
+use App\Services\Notifications\NotificationService;
+use App\Support\Facades\Notify;
 use Illuminate\Console\Command;
+use Illuminate\Support\Str;
 
 /**
  * Schliesst geloeste Tickets automatisch, wenn der Kunde nach Ablauf der
@@ -32,24 +35,24 @@ class AutoCloseResolvedTickets extends Command
         // uebrigen geloesten Vorgaenge geschlossen werden.
         $verarbeitet = $this->verarbeiteEinzeln($tickets, function (Ticket $ticket) use ($days) {
             if ($this->option('dry-run')) {
-                $this->line('Wuerde schliessen: ' . $ticket->ticket_number . ' – ' . $ticket->subject);
+                $this->line('Wuerde schliessen: '.$ticket->ticket_number.' – '.$ticket->subject);
 
                 return;
             }
             $ticket->transitionTo('closed', null, 'auto_closed');
             // Portal-Glocke: Kunde weiss, dass der Vorgang abgeschlossen ist
             if ($ticket->customer?->user_id) {
-                \App\Support\Facades\Notify::push($ticket->customer->user_id, [
-                    'type' => \App\Services\Notifications\NotificationService::TYPE_TICKET,
+                Notify::push($ticket->customer->user_id, [
+                    'type' => NotificationService::TYPE_TICKET,
                     'title' => 'Anfrage geschlossen',
-                    'body' => 'Ihre gelöste Anfrage „' . \Illuminate\Support\Str::limit($ticket->subject, 60) . '" wurde nach ' . $days . ' Tagen ohne Rückmeldung automatisch geschlossen.',
+                    'body' => 'Ihre gelöste Anfrage „'.Str::limit($ticket->subject, 60).'" wurde nach '.$days.' Tagen ohne Rückmeldung automatisch geschlossen.',
                     'link' => route('portal.tickets.show', $ticket->id),
-                    'dedup_key' => 'ticket-autoclosed-' . $ticket->id,
+                    'dedup_key' => 'ticket-autoclosed-'.$ticket->id,
                 ]);
             }
         }, 'Vorgang');
 
-        $this->info($verarbeitet . ' geloeste Tickets verarbeitet.');
+        $this->info($verarbeitet.' geloeste Tickets verarbeitet.');
 
         return $this->ergebnisMitUebersprungenen(self::SUCCESS);
     }

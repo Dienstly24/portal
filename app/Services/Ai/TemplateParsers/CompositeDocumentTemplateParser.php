@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Services\Ai\Contracts\DocumentTemplateParser;
@@ -30,7 +31,7 @@ class CompositeDocumentTemplateParser implements DocumentTemplateParser
             try {
                 $result = $parser->parse($text);
             } catch (\Throwable $e) {
-                Log::warning('Vorlagen-Parser ' . $parser::class . ' fehlgeschlagen: ' . $e->getMessage());
+                Log::warning('Vorlagen-Parser '.$parser::class.' fehlgeschlagen: '.$e->getMessage());
                 continue;
             }
             if ($result !== null) {

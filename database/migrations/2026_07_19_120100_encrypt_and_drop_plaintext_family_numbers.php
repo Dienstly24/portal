@@ -1,5 +1,7 @@
 <?php
+
 use App\Models\CustomerFamily;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -23,20 +25,20 @@ return new class extends Migration {
             $targetEmpty = function ($member, string $col): bool {
                 try {
                     return empty($member->{$col});
-                } catch (\Illuminate\Contracts\Encryption\DecryptException) {
+                } catch (DecryptException) {
                     return false;
                 }
             };
             foreach (CustomerFamily::all() as $member) {
                 $dirty = false;
                 if (Schema::hasColumn('customer_family', 'krankenversicherung_nr')
-                    && !empty($member->getRawOriginal('krankenversicherung_nr'))
+                    && ! empty($member->getRawOriginal('krankenversicherung_nr'))
                     && $targetEmpty($member, 'health_insurance_number')) {
                     $member->health_insurance_number = $member->getRawOriginal('krankenversicherung_nr');
                     $dirty = true;
                 }
                 if (Schema::hasColumn('customer_family', 'steuer_nr')
-                    && !empty($member->getRawOriginal('steuer_nr'))
+                    && ! empty($member->getRawOriginal('steuer_nr'))
                     && $targetEmpty($member, 'tax_id')) {
                     $member->tax_id = $member->getRawOriginal('steuer_nr');
                     $dirty = true;

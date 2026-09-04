@@ -20,8 +20,7 @@ use Illuminate\Support\Str;
  * Trennung wuerde die Einspeisung eines Zweirichtungszaehlers den
  * Bezugsverbrauch verfaelschen.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('meter_readings', function (Blueprint $table) {

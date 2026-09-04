@@ -30,7 +30,7 @@ class ApplyFamilyTransitions extends Command
 
     protected $signature = 'familie:uebergaenge-anwenden';
 
-    protected $description = 'Abhaengige Familienmitglieder ab ' . Customer::DEPENDENT_AGE . ' Jahren auf "eigenstaendiger Kunde" umstellen (Beziehung bleibt, Vertraege unveraendert)';
+    protected $description = 'Abhaengige Familienmitglieder ab '.Customer::DEPENDENT_AGE.' Jahren auf "eigenstaendiger Kunde" umstellen (Beziehung bleibt, Vertraege unveraendert)';
 
     public function handle(FamilyRelationService $service): int
     {
@@ -46,12 +46,12 @@ class ApplyFamilyTransitions extends Command
             $faellig,
             function (CustomerFamilyRelation $relation) use ($service) {
                 $service->applyTransition($relation);
-                $this->line('  ' . ($relation->relatedCustomer?->user?->name ?? '—') . ' ist jetzt eigenstaendiger Kunde (Beziehung bleibt bestehen).');
+                $this->line('  '.($relation->relatedCustomer?->user?->name ?? '—').' ist jetzt eigenstaendiger Kunde (Beziehung bleibt bestehen).');
             },
             'Familienbeziehung'
         );
 
-        $this->info($erledigt . ' Familienmitglied(er) auf "eigenstaendiger Kunde" umgestellt. Vertraege wurden NICHT veraendert.');
+        $this->info($erledigt.' Familienmitglied(er) auf "eigenstaendiger Kunde" umgestellt. Vertraege wurden NICHT veraendert.');
 
         return $this->ergebnisMitUebersprungenen();
     }

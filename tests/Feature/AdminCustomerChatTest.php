@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\Customer;
 use App\Models\CustomerMessage;
+use App\Models\CustomerMessageAttachment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 /**
@@ -21,7 +23,7 @@ class AdminCustomerChatTest extends TestCase
         $user = User::factory()->create(['role' => 'customer', 'email' => $email, 'name' => $name]);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => '26' . str_pad((string) $user->id, 5, '0', STR_PAD_LEFT),
+            'customer_number' => '26'.str_pad((string) $user->id, 5, '0', STR_PAD_LEFT),
             'preferred_lang' => 'de',
         ]);
     }
@@ -103,7 +105,7 @@ class AdminCustomerChatTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.customer_chat', ['kunde' => (string) $customer->id]))
             ->assertOk()
-            ->assertSee('data-mid="' . $reply->id . '"', false);
+            ->assertSee('data-mid="'.$reply->id.'"', false);
 
         $this->assertNotNull($reply->fresh()->read_at);
     }
@@ -113,11 +115,11 @@ class AdminCustomerChatTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin']);
         $customer = $this->makeCustomer();
         $reply = $this->customerReply($customer, 'Mit Foto');
-        $attachment = \App\Models\CustomerMessageAttachment::create([
+        $attachment = CustomerMessageAttachment::create([
             'message_id' => $reply->id,
             'uploaded_by' => $customer->user_id,
             'file_name' => 'schaden.jpg',
-            'file_path' => 'customers/' . $customer->id . '/messages/schaden.jpg',
+            'file_path' => 'customers/'.$customer->id.'/messages/schaden.jpg',
             'disk' => 'local',
         ]);
 
@@ -125,7 +127,7 @@ class AdminCustomerChatTest extends TestCase
             ->get(route('admin.customer_chat', ['kunde' => (string) $customer->id]))
             ->assertOk()
             ->assertSee('docpv-quicklook', false)
-            ->assertSee('data-preview-url="' . route('admin.messages.attachment.view', $attachment->id) . '"', false)
+            ->assertSee('data-preview-url="'.route('admin.messages.attachment.view', $attachment->id).'"', false)
             ->assertSee('data-preview-kind="image"', false);
     }
 
@@ -155,7 +157,7 @@ class AdminCustomerChatTest extends TestCase
         $reply = $this->customerReply($customer);
 
         $this->actingAs($admin)
-            ->getJson(route('admin.customer_chat.feed', $customer->id) . '?mark_read=1')
+            ->getJson(route('admin.customer_chat.feed', $customer->id).'?mark_read=1')
             ->assertOk()
             ->assertJsonPath('unread', 0);
 
@@ -164,7 +166,7 @@ class AdminCustomerChatTest extends TestCase
 
     public function test_staff_json_versand_liefert_nachricht_und_benachrichtigt_kunden(): void
     {
-        \Illuminate\Support\Facades\Mail::fake();
+        Mail::fake();
         $admin = User::factory()->create(['role' => 'admin']);
         $customer = $this->makeCustomer();
 

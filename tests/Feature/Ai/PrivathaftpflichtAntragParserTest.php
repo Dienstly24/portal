@@ -69,7 +69,7 @@ class PrivathaftpflichtAntragParserTest extends TestCase
 
     public function test_parses_privathaftpflicht_application(): void
     {
-        $r = (new PrivathaftpflichtAntragParser())->parse($this->antragText());
+        $r = (new PrivathaftpflichtAntragParser)->parse($this->antragText());
 
         $this->assertNotNull($r);
         $this->assertSame('versicherungsvertrag', $r['type']);
@@ -107,13 +107,13 @@ class PrivathaftpflichtAntragParserTest extends TestCase
 
     public function test_ignores_unrelated_documents(): void
     {
-        $this->assertNull((new PrivathaftpflichtAntragParser())->parse('Irgendein anderes Dokument'));
+        $this->assertNull((new PrivathaftpflichtAntragParser)->parse('Irgendein anderes Dokument'));
         // CHECK24-Protokoll hat einen eigenen Parser.
-        $this->assertNull((new PrivathaftpflichtAntragParser())->parse(
+        $this->assertNull((new PrivathaftpflichtAntragParser)->parse(
             "Beratungsprotokoll CHECK24\nPrivathaftpflicht Antrag"
         ));
         // Reines Info-Blatt ohne Antrag/Angebot.
-        $this->assertNull((new PrivathaftpflichtAntragParser())->parse(
+        $this->assertNull((new PrivathaftpflichtAntragParser)->parse(
             'Privathaftpflichtversicherung - allgemeine Kundeninformation'
         ));
     }

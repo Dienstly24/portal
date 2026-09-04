@@ -1,13 +1,17 @@
 <?php
+
 namespace App\Http\Controllers;
 
+use App\Jobs\PublishSocialChannelJob;
 use App\Models\Banner;
 use App\Models\BannerSocialChannel;
 use App\Models\BannerSocialPost;
-use App\Jobs\PublishSocialChannelJob;
+use App\Models\Task;
+use App\Services\Social\MetaInsightsService;
 use App\Services\Social\MetaPublisher;
 use App\Services\Social\SocialFormatGenerator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -47,7 +51,7 @@ class BannerSocialController extends Controller
             // Social-Besucher ohne Login wertlos (Login-Wand).
             'target_url' => 'nullable|url:https|max:500',
             'platforms' => 'nullable|array',
-            'platforms.*' => 'in:' . implode(',', array_keys(BannerSocialPost::PLATFORMS)),
+            'platforms.*' => 'in:'.implode(',', array_keys(BannerSocialPost::PLATFORMS)),
             'create_task' => 'nullable|boolean',
             'auto_publish' => 'nullable|boolean',
             'scheduled_for' => 'nullable|date|required_if:auto_publish,1',
@@ -59,14 +63,14 @@ class BannerSocialController extends Controller
         ]);
 
         $post = BannerSocialPost::firstOrNew(['banner_id' => $banner->id]);
-        if (!$post->exists) {
+        if (! $post->exists) {
             $post->created_by = auth()->id();
         }
         // Der Betreiber gibt DEUTSCHE Uhrzeit ein; app.timezone ist UTC.
         // Deshalb als Europe/Berlin interpretieren und in UTC speichern -
         // sonst postet der Planer 1-2 Stunden spaeter als gedacht.
-        $scheduledFor = $request->boolean('auto_publish') && !empty($data['scheduled_for'])
-            ? \Illuminate\Support\Carbon::parse($data['scheduled_for'], BannerSocialPost::OPERATOR_TZ)->utc()
+        $scheduledFor = $request->boolean('auto_publish') && ! empty($data['scheduled_for'])
+            ? Carbon::parse($data['scheduled_for'], BannerSocialPost::OPERATOR_TZ)->utc()
             : null;
         if ($scheduledFor && $scheduledFor->lte(now())) {
             // Nach der Zeitzonen-Umrechnung pruefen (after:now auf dem
@@ -118,11 +122,11 @@ class BannerSocialController extends Controller
             $due = $banner->start_date && $banner->start_date->isFuture()
                 ? $banner->start_date
                 : now();
-            \App\Models\Task::create([
+            Task::create([
                 'assigned_to' => auth()->id(),
                 'created_by' => auth()->id(),
-                'title' => 'Social-Media-Post veröffentlichen: ' . $banner->title,
-                'description' => 'Bildformate, Texte und Tracking-Links: ' . route('admin.banners.social', $banner->id),
+                'title' => 'Social-Media-Post veröffentlichen: '.$banner->title,
+                'description' => 'Bildformate, Texte und Tracking-Links: '.route('admin.banners.social', $banner->id),
                 'type' => 'follow_up',
                 'status' => 'open',
                 'priority' => 'medium',
@@ -138,7 +142,7 @@ class BannerSocialController extends Controller
         }
         if ($geschuetzt->isNotEmpty()) {
             $labels = $geschuetzt->map(fn ($ch) => $ch->platformInfo()['label'])->implode(', ');
-            $msg .= ' Hinweis: ' . $labels . ' wurde bereits veröffentlicht und bleibt samt Tracking-Link erhalten.';
+            $msg .= ' Hinweis: '.$labels.' wurde bereits veröffentlicht und bleibt samt Tracking-Link erhalten.';
         }
 
         // Bewusst explizit statt back(): der Referer kann (z. B. nach einem
@@ -168,7 +172,7 @@ class BannerSocialController extends Controller
 
         // Bereits (manuell) als veroeffentlicht markiert -> kein API-Post,
         // sonst laege der Beitrag doppelt auf der Plattform.
-        if ($channel->published_at && !$channel->external_post_id) {
+        if ($channel->published_at && ! $channel->external_post_id) {
             return redirect()->route('admin.banners.social', $banner->id)
                 ->withErrors(['publish' => 'Bereits als veröffentlicht markiert - erst zurücksetzen, dann per API posten.']);
         }
@@ -188,8 +192,8 @@ class BannerSocialController extends Controller
         // Die Pruefungen oben lesen nur; zwischen Lesen und Posten passt ein
         // zweiter Klick oder der geplante Lauf. Ein UPDATE mit Bedingung
         // laesst genau einen Beanspruchenden durch (Audit CONC-3).
-        $frei = now()->subMinutes(\App\Models\BannerSocialChannel::PUBLISH_STALE_MINUTES);
-        $beansprucht = \App\Models\BannerSocialChannel::whereKey($channel->id)
+        $frei = now()->subMinutes(BannerSocialChannel::PUBLISH_STALE_MINUTES);
+        $beansprucht = BannerSocialChannel::whereKey($channel->id)
             ->whereNull('external_post_id')
             ->whereNull('published_at')
             ->where(fn ($q) => $q->whereNull('publish_started_at')->orWhere('publish_started_at', '<', $frei))
@@ -209,14 +213,14 @@ class BannerSocialController extends Controller
 
         return redirect()->route('admin.banners.social', $banner->id)
             ->with('success', $channel->platformInfo()['label']
-                . ': Veröffentlichung gestartet. Sie bekommen eine Benachrichtigung, sobald der Beitrag online ist.');
+                .': Veröffentlichung gestartet. Sie bekommen eine Benachrichtigung, sobald der Beitrag online ist.');
     }
 
     /** Kennzahlen (Likes/Kommentare/Reichweite) sofort von Meta holen. */
     public function refreshInsights(Banner $banner)
     {
         $post = $banner->socialPost()->with('channels')->firstOrFail();
-        $service = app(\App\Services\Social\MetaInsightsService::class);
+        $service = app(MetaInsightsService::class);
 
         $ok = 0;
         $fehler = null;
@@ -241,7 +245,7 @@ class BannerSocialController extends Controller
         }
 
         return redirect()->route('admin.banners.social', $banner->id)
-            ->with('success', 'Kennzahlen von Meta aktualisiert (' . $ok . ' ' . ($ok === 1 ? 'Beitrag' : 'Beiträge') . ').');
+            ->with('success', 'Kennzahlen von Meta aktualisiert ('.$ok.' '.($ok === 1 ? 'Beitrag' : 'Beiträge').').');
     }
 
     /** Veroeffentlichung je Plattform protokollieren bzw. zuruecknehmen. */
@@ -266,7 +270,7 @@ class BannerSocialController extends Controller
         $channel->update(['published_at' => now(), 'published_by' => auth()->id()]);
 
         return redirect()->route('admin.banners.social', $banner->id)
-            ->with('success', $channel->platformInfo()['label'] . ' als veröffentlicht markiert.');
+            ->with('success', $channel->platformInfo()['label'].' als veröffentlicht markiert.');
     }
 
     /** Download-Paket: alle Bildformate + Beitragstexte + Tracking-Links. */
@@ -279,17 +283,17 @@ class BannerSocialController extends Controller
         $disk = Storage::disk('public');
 
         $tmp = tempnam(sys_get_temp_dir(), 'social');
-        $zip = new \ZipArchive();
+        $zip = new \ZipArchive;
         $zip->open($tmp, \ZipArchive::OVERWRITE);
 
         foreach ($formats as $key => $path) {
-            $zip->addFromString('bild-' . $key . '.jpg', $disk->get($path));
+            $zip->addFromString('bild-'.$key.'.jpg', $disk->get($path));
         }
         // Video/GIF: Original beilegen (Plattformen schneiden selbst zu;
         // beim GIF bleibt so die Animation erhalten).
         $ext = strtolower(pathinfo($banner->media_path, PATHINFO_EXTENSION));
         if (($banner->media_type === 'video' || $ext === 'gif') && $disk->exists($banner->media_path)) {
-            $zip->addFromString('original.' . $ext, $disk->get($banner->media_path));
+            $zip->addFromString('original.'.$ext, $disk->get($banner->media_path));
         }
         if ($post?->caption_de) {
             $zip->addFromString('text-deutsch.txt', $post->caption_de);
@@ -299,15 +303,15 @@ class BannerSocialController extends Controller
         }
         $lines = [];
         foreach (($post?->channels ?? collect()) as $ch) {
-            $lines[] = $ch->platformInfo()['label'] . ': ' . $ch->shortUrl();
+            $lines[] = $ch->platformInfo()['label'].': '.$ch->shortUrl();
         }
         if ($lines) {
-            $zip->addFromString('tracking-links.txt', implode(PHP_EOL, $lines) . PHP_EOL);
+            $zip->addFromString('tracking-links.txt', implode(PHP_EOL, $lines).PHP_EOL);
         }
         $zip->close();
 
         return response()
-            ->download($tmp, 'social-banner-' . $banner->id . '.zip', ['Content-Type' => 'application/zip'])
+            ->download($tmp, 'social-banner-'.$banner->id.'.zip', ['Content-Type' => 'application/zip'])
             ->deleteFileAfterSend(true);
     }
 }

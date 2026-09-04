@@ -143,12 +143,12 @@ class DisplayTimezoneTest extends TestCase
                 if (str_contains($zeile, 'lokal()')) {
                     continue;
                 }
-                $treffer[] = str_replace(base_path() . '/', '', $datei) . ':' . ($nr + 1);
+                $treffer[] = str_replace(base_path().'/', '', $datei).':'.($nr + 1);
             }
         }
 
         $this->assertSame([], $treffer,
-            "Diese Stellen zeigen eine Uhrzeit ohne ->lokal() (also in UTC):\n" . implode("\n", $treffer));
+            "Diese Stellen zeigen eine Uhrzeit ohne ->lokal() (also in UTC):\n".implode("\n", $treffer));
     }
 
     /**
@@ -168,12 +168,12 @@ class DisplayTimezoneTest extends TestCase
                 if (str_contains($zeile, 'lokal()')) {
                     continue;
                 }
-                $treffer[] = str_replace(base_path() . '/', '', $datei) . ':' . ($nr + 1);
+                $treffer[] = str_replace(base_path().'/', '', $datei).':'.($nr + 1);
             }
         }
 
         $this->assertSame([], $treffer,
-            "Zeitpunkt-Spalten ohne ->lokal():\n" . implode("\n", $treffer));
+            "Zeitpunkt-Spalten ohne ->lokal():\n".implode("\n", $treffer));
     }
 
     /** @return list<string> */

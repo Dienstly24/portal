@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -88,6 +89,6 @@ class MeterReading extends Model
     public static function formatValue(float $value, string $unit = 'kWh'): string
     {
         $decimals = fmod($value, 1.0) === 0.0 ? 0 : 1;
-        return number_format($value, $decimals, ',', '.') . ' ' . $unit;
+        return number_format($value, $decimals, ',', '.').' '.$unit;
     }
 }

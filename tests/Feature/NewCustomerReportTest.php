@@ -30,11 +30,11 @@ class NewCustomerReportTest extends TestCase
     private function customer(array $userAttrs = [], array $customerAttrs = []): Customer
     {
         $user = User::factory()->create(array_merge([
-            'role' => 'customer', 'name' => 'Max Mustermann', 'email' => 'kunde-' . uniqid() . '@kunde.de',
+            'role' => 'customer', 'name' => 'Max Mustermann', 'email' => 'kunde-'.uniqid().'@kunde.de',
         ], $userAttrs));
 
         return Customer::create(array_merge([
-            'user_id' => $user->id, 'customer_number' => 'K-' . uniqid(),
+            'user_id' => $user->id, 'customer_number' => 'K-'.uniqid(),
         ], $customerAttrs));
     }
 
@@ -88,7 +88,7 @@ class NewCustomerReportTest extends TestCase
         $this->customer(['name' => 'Ohne Werber Kunde']);
 
         $response = $this->actingAs($this->admin)
-            ->get(route('admin.reports.neukunden', ['werber' => 'u:' . $werber->id]));
+            ->get(route('admin.reports.neukunden', ['werber' => 'u:'.$werber->id]));
 
         $response->assertOk()->assertSee('Von Willi')->assertDontSee('Ohne Werber Kunde');
     }
@@ -114,7 +114,7 @@ class NewCustomerReportTest extends TestCase
         $customer = $this->customer([], ['acquired_by_partner_id' => $partner->id]);
 
         $response = $this->actingAs($this->admin)
-            ->post(route('admin.reports.neukunden.werber', $customer->id), ['werber' => 'u:' . $werber->id]);
+            ->post(route('admin.reports.neukunden.werber', $customer->id), ['werber' => 'u:'.$werber->id]);
 
         $response->assertRedirect();
         $customer->refresh();
@@ -130,7 +130,7 @@ class NewCustomerReportTest extends TestCase
         $customer = $this->customer([], ['acquired_by' => $werber->id]);
 
         $this->actingAs($this->admin)
-            ->post(route('admin.reports.neukunden.werber', $customer->id), ['werber' => 'p:' . $partner->id])
+            ->post(route('admin.reports.neukunden.werber', $customer->id), ['werber' => 'p:'.$partner->id])
             ->assertRedirect();
 
         $customer->refresh();
@@ -146,7 +146,7 @@ class NewCustomerReportTest extends TestCase
         // Rollen-Middleware leitet Nicht-Verwaltung zum Dashboard um -
         // entscheidend ist: der Werber wird NICHT gesetzt.
         $this->actingAs($employee)
-            ->post(route('admin.reports.neukunden.werber', $customer->id), ['werber' => 'u:' . $employee->id])
+            ->post(route('admin.reports.neukunden.werber', $customer->id), ['werber' => 'u:'.$employee->id])
             ->assertRedirect(route('admin.dashboard'));
 
         $this->assertNull($customer->fresh()->acquired_by);
@@ -191,7 +191,7 @@ class NewCustomerReportTest extends TestCase
         ]);
 
         $response->assertRedirect();
-        $customer = Customer::whereHas('user', fn($q) => $q->where('name', 'Neu Angelegt'))->first();
+        $customer = Customer::whereHas('user', fn ($q) => $q->where('name', 'Neu Angelegt'))->first();
         $this->assertNotNull($customer);
         $this->assertSame($this->admin->id, $customer->created_by);
         $this->assertSame('manual', $customer->source);
@@ -202,10 +202,10 @@ class NewCustomerReportTest extends TestCase
         $werber = $this->employee();
 
         $this->actingAs($this->admin)->post(route('admin.customers.store'), [
-            'first_name' => 'Mit', 'last_name' => 'Werber', 'werber' => 'u:' . $werber->id,
+            'first_name' => 'Mit', 'last_name' => 'Werber', 'werber' => 'u:'.$werber->id,
         ])->assertRedirect();
 
-        $customer = Customer::whereHas('user', fn($q) => $q->where('name', 'Mit Werber'))->first();
+        $customer = Customer::whereHas('user', fn ($q) => $q->where('name', 'Mit Werber'))->first();
         $this->assertSame($werber->id, $customer->acquired_by);
     }
 
@@ -216,7 +216,7 @@ class NewCustomerReportTest extends TestCase
         $werber = $this->employee(['name' => 'Willi Werber']);
 
         $this->actingAs($this->admin)->post(route('admin.provisions.store'), [
-            'empfaenger' => 'u:' . $werber->id,
+            'empfaenger' => 'u:'.$werber->id,
             'amount' => '125.50',
             'note' => 'Neukunden Juli',
         ])->assertRedirect();
@@ -285,7 +285,7 @@ class NewCustomerReportTest extends TestCase
         $partner = Partner::create(['name' => 'Fonds Finanz']);
 
         $this->actingAs($this->admin)->post(route('admin.provisions.store'), [
-            'empfaenger' => 'p:' . $partner->id,
+            'empfaenger' => 'p:'.$partner->id,
             'amount' => '80',
         ])->assertRedirect();
 
@@ -302,7 +302,7 @@ class NewCustomerReportTest extends TestCase
         $this->actingAs($employee)->get(route('admin.provisions'))
             ->assertRedirect(route('admin.dashboard'));
         $this->actingAs($employee)->post(route('admin.provisions.store'), [
-            'empfaenger' => 'u:' . $employee->id, 'amount' => '10',
+            'empfaenger' => 'u:'.$employee->id, 'amount' => '10',
         ])->assertRedirect(route('admin.dashboard'));
 
         $this->assertSame(0, Provision::count());

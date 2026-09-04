@@ -37,8 +37,8 @@ use Illuminate\Support\Str;
 class ImportEnergyContracts extends Command
 {
     protected $signature = 'energie:import {file : Pfad zur CSV-Datei} '
-        . '{--dry-run : Nur simulieren, nichts speichern} '
-        . '{--limit=0 : Max. Anzahl Zeilen (0 = alle)}';
+        .'{--dry-run : Nur simulieren, nichts speichern} '
+        .'{--limit=0 : Max. Anzahl Zeilen (0 = alle)}';
 
     protected $description = 'Importiert Strom-/Gas-Auftraege aus dem CSV-Export als Kunden + Energievertraege';
 
@@ -53,7 +53,7 @@ class ImportEnergyContracts extends Command
         CustomerAutoCreationService $creator,
     ): int {
         $path = (string) $this->argument('file');
-        if (!is_file($path) || !is_readable($path)) {
+        if (! is_file($path) || ! is_readable($path)) {
             $this->error("Datei nicht gefunden oder nicht lesbar: $path");
             return self::FAILURE;
         }
@@ -68,7 +68,7 @@ class ImportEnergyContracts extends Command
         }
 
         $this->info($dryRun ? '=== Import-SIMULATION (dry-run) ===' : '=== Energie-Import gestartet ===');
-        $this->line('Zeilen in Datei: ' . count($rows));
+        $this->line('Zeilen in Datei: '.count($rows));
 
         $customersNew = 0;
         $contractsNew = 0;
@@ -94,7 +94,7 @@ class ImportEnergyContracts extends Command
                 }
 
                 // Bereits importiert? (idempotent, auch bei erneutem Lauf)
-                if (!$dryRun && $this->contractExists($contractData['order_number'])) {
+                if (! $dryRun && $this->contractExists($contractData['order_number'])) {
                     $contractsSkipped++;
                     continue;
                 }
@@ -129,8 +129,8 @@ class ImportEnergyContracts extends Command
                 }
             } catch (\Throwable $e) {
                 $errors++;
-                \Log::warning('Energie-Import Fehler: ' . $e->getMessage(), ['zeile' => $row]);
-                $this->line('  x Fehler: ' . $e->getMessage());
+                \Log::warning('Energie-Import Fehler: '.$e->getMessage(), ['zeile' => $row]);
+                $this->line('  x Fehler: '.$e->getMessage());
             }
         }
 
@@ -197,15 +197,15 @@ class ImportEnergyContracts extends Command
         $addr = $this->parseAddress(trim($r[7]));
 
         return [
-            'full_name'  => $name,
-            'gender'     => $gender,
+            'full_name' => $name,
+            'gender' => $gender,
             'birth_date' => $this->parseDate($r[8]),
-            'phone'      => $this->cleanPhone($r[9]),
-            'address'    => trim($r[7]) !== '' ? trim($r[7]) : null,
-            'street'     => $addr['street'],
+            'phone' => $this->cleanPhone($r[9]),
+            'address' => trim($r[7]) !== '' ? trim($r[7]) : null,
+            'street' => $addr['street'],
             'house_number' => $addr['house_number'],
-            'zip'        => $addr['zip'],
-            'city'       => $addr['city'],
+            'zip' => $addr['zip'],
+            'city' => $addr['city'],
         ];
     }
 
@@ -232,20 +232,20 @@ class ImportEnergyContracts extends Command
         $consumptionNt = preg_replace('/[^0-9]/', '', $r[12] ?? '');
 
         return [
-            'order_number'  => trim($r[1]),
-            'type'          => $type,
-            'status'        => $this->mapStatus($r[4]),
-            'status_code'   => trim($r[4]),
-            'insurer'       => $insurer,
-            'tariff'        => $tariff,
-            'meter_number'  => trim($r[10]) !== '' ? trim($r[10]) : null,
-            'consumption'   => $consumption !== '' ? (int) $consumption : null,
+            'order_number' => trim($r[1]),
+            'type' => $type,
+            'status' => $this->mapStatus($r[4]),
+            'status_code' => trim($r[4]),
+            'insurer' => $insurer,
+            'tariff' => $tariff,
+            'meter_number' => trim($r[10]) !== '' ? trim($r[10]) : null,
+            'consumption' => $consumption !== '' ? (int) $consumption : null,
             'consumption_nt' => $consumptionNt !== '' ? (int) $consumptionNt : 0,
-            'start_date'    => $this->parseDate($r[3]),
+            'start_date' => $this->parseDate($r[3]),
             'cancellation_date' => $this->parseDate($r[18]),
-            'vap_date'      => $this->parseDate($r[15]),
-            'rl'            => trim($r[16] ?? ''),
-            'rl_date'       => $this->parseDate($r[17] ?? ''),
+            'vap_date' => $this->parseDate($r[15]),
+            'rl' => trim($r[16] ?? ''),
+            'rl_date' => $this->parseDate($r[17] ?? ''),
             'reactivation_date' => $this->parseDate($r[19] ?? ''),
         ];
     }
@@ -298,7 +298,7 @@ class ImportEnergyContracts extends Command
         }
 
         // Geschlecht ist im Auto-Creator (noch) nicht vorgesehen -> nachtragen.
-        if (!empty($data['gender']) && empty($customer->gender)) {
+        if (! empty($data['gender']) && empty($customer->gender)) {
             $customer->forceFill(['gender' => $data['gender']])->save();
         }
 
@@ -312,28 +312,28 @@ class ImportEnergyContracts extends Command
         $notes = $this->buildNotes($c);
 
         $contract = Contract::create([
-            'id'                => (string) Str::uuid(),
-            'customer_id'       => $customer->id,
-            'contract_number'   => $this->uniqueContractNumber($c['order_number']),
-            'type'              => $c['type'],
-            'insurer'           => $c['insurer'],
-            'status'            => $c['status'],
-            'start_date'        => $c['start_date'],
+            'id' => (string) Str::uuid(),
+            'customer_id' => $customer->id,
+            'contract_number' => $this->uniqueContractNumber($c['order_number']),
+            'type' => $c['type'],
+            'insurer' => $c['insurer'],
+            'status' => $c['status'],
+            'start_date' => $c['start_date'],
             'cancellation_date' => $c['cancellation_date'],
-            'notes'             => $notes,
-            'added_by'          => 'Energie-Import',
+            'notes' => $notes,
+            'added_by' => 'Energie-Import',
         ]);
 
         ContractEnergyDetail::create([
-            'contract_id'     => $contract->id,
-            'tariff'          => $c['tariff'] ?: null,
+            'contract_id' => $contract->id,
+            'tariff' => $c['tariff'] ?: null,
             'consumption_kwh' => $c['consumption'],
-            'meter_number'    => $c['meter_number'],
+            'meter_number' => $c['meter_number'],
         ]);
 
         $contract->externalReferences()->create([
-            'type'   => self::REF_TYPE,
-            'value'  => $c['order_number'],
+            'type' => self::REF_TYPE,
+            'value' => $c['order_number'],
             'source' => 'import',
         ]);
     }
@@ -353,31 +353,31 @@ class ImportEnergyContracts extends Command
      */
     private function uniqueContractNumber(string $orderNumber): string
     {
-        if (!Contract::where('contract_number', $orderNumber)->exists()) {
+        if (! Contract::where('contract_number', $orderNumber)->exists()) {
             return $orderNumber;
         }
         $suffix = 2;
-        while (Contract::where('contract_number', $orderNumber . '-' . $suffix)->exists()) {
+        while (Contract::where('contract_number', $orderNumber.'-'.$suffix)->exists()) {
             $suffix++;
         }
-        return $orderNumber . '-' . $suffix;
+        return $orderNumber.'-'.$suffix;
     }
 
     /** Kompakte, deutsche Vertragsnotiz aus den nicht-strukturierten Feldern. */
     private function buildNotes(array $c): string
     {
-        $parts = ['Import Energie-Auftrag ' . $c['order_number'] . ' (Status ' . $c['status_code'] . ')'];
+        $parts = ['Import Energie-Auftrag '.$c['order_number'].' (Status '.$c['status_code'].')'];
         if ($c['vap_date']) {
-            $parts[] = 'VAP-Datum ' . $c['vap_date'];
+            $parts[] = 'VAP-Datum '.$c['vap_date'];
         }
         if (($c['rl'] ?? '') !== '' && $c['rl'] !== '-') {
-            $parts[] = 'RL ' . $c['rl'] . ($c['rl_date'] ? ' (' . $c['rl_date'] . ')' : '');
+            $parts[] = 'RL '.$c['rl'].($c['rl_date'] ? ' ('.$c['rl_date'].')' : '');
         }
         if ($c['reactivation_date']) {
-            $parts[] = 'Wiederanschaltung ' . $c['reactivation_date'];
+            $parts[] = 'Wiederanschaltung '.$c['reactivation_date'];
         }
         if (($c['consumption_nt'] ?? 0) > 0) {
-            $parts[] = 'Verbrauch NT ' . $c['consumption_nt'] . ' kWh';
+            $parts[] = 'Verbrauch NT '.$c['consumption_nt'].' kWh';
         }
         return implode(' | ', $parts);
     }
@@ -389,7 +389,7 @@ class ImportEnergyContracts extends Command
         $name = strtr($name, ['ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue', 'ß' => 'ss']);
         $name = preg_replace('/\s+/', ' ', $name) ?? $name;
         $addr = mb_strtolower(preg_replace('/[^a-z0-9]+/i', '', $data['address'] ?? '') ?? '');
-        return $name . '|' . ($data['birth_date'] ?? '') . '|' . $addr;
+        return $name.'|'.($data['birth_date'] ?? '').'|'.$addr;
     }
 
     /** "Strasse Hausnummer, PLZ Ort" in strukturierte Teile zerlegen. */
@@ -444,7 +444,7 @@ class ImportEnergyContracts extends Command
             $month = (int) $m[2];
             $year = (int) $m[3];
             // Nur echte, kalendarisch gueltige Datumswerte uebernehmen.
-            if (!checkdate($month, $day, $year)) {
+            if (! checkdate($month, $day, $year)) {
                 return null;
             }
             return sprintf('%04d-%02d-%02d', $year, $month, $day);

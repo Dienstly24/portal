@@ -2,18 +2,30 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\AnalyzeDocumentJob;
 use App\Mail\CustomerWelcomeMail;
 use App\Models\AiDecision;
 use App\Models\Contract;
+use App\Models\ContractVehicleDetail;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\User;
+use App\Services\Ai\ClaudeDocumentAiProvider;
+use App\Services\Ai\Contracts\DocumentAiProviderInterface;
+use App\Services\Ai\DocumentAnalyzer;
+use App\Services\Ai\NullDocumentAiProvider;
+use App\Services\CustomerDeletionService;
+use App\Services\DocumentIntake\DocumentIntakeService;
 use App\Services\Ocr\TextExtractorInterface;
+use App\Services\Pdf\ImagesToPdfService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -29,7 +41,7 @@ class SmartDocumentUploadTest extends TestCase
         $user = User::factory()->create(array_merge(['role' => 'customer'], $userAttributes));
         return Customer::create(array_merge([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5((string) $user->id), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5((string) $user->id), 0, 8)),
         ], $customerAttributes));
     }
 
@@ -209,12 +221,12 @@ class SmartDocumentUploadTest extends TestCase
     {
         Storage::fake('local');
         $owner = $this->makeCustomer();
-        Storage::disk('local')->put('customers/' . $owner->id . '/documents/scan.pdf', '%PDF-1.4');
+        Storage::disk('local')->put('customers/'.$owner->id.'/documents/scan.pdf', '%PDF-1.4');
         $doc = Document::create([
             'customer_id' => $owner->id,
             'category' => 'other',
             'file_name' => 'scan.pdf',
-            'file_path' => 'customers/' . $owner->id . '/documents/scan.pdf',
+            'file_path' => 'customers/'.$owner->id.'/documents/scan.pdf',
             'disk' => 'local',
             'ai_status' => 'pending',
         ]);
@@ -267,7 +279,7 @@ class SmartDocumentUploadTest extends TestCase
         // Fehlt die GD-Erweiterung auf dem Server, muss ein einzelnes Bild
         // trotzdem hochladbar sein (direkt gespeichert, nicht als PDF gebuendelt).
         Storage::fake('local');
-        $this->app->instance(\App\Services\Pdf\ImagesToPdfService::class, new class extends \App\Services\Pdf\ImagesToPdfService {
+        $this->app->instance(ImagesToPdfService::class, new class extends ImagesToPdfService {
             public function canBuild(): bool { return false; }
             public function build(array $imageBinaries): string { throw new \RuntimeException('GD fehlt - darf hier nicht aufgerufen werden.'); }
         });
@@ -310,7 +322,7 @@ class SmartDocumentUploadTest extends TestCase
         $doc = Document::findOrFail($response->json('ids.0'));
 
         $this->assertSame((string) $customer->id, (string) $doc->customer_id);
-        $this->assertStringStartsWith('customers/' . $customer->id . '/documents/', $doc->file_path);
+        $this->assertStringStartsWith('customers/'.$customer->id.'/documents/', $doc->file_path);
         Storage::disk('local')->assertExists($doc->file_path);
         $this->assertDatabaseHas('internal_notifications', [
             'title' => 'Dokument automatisch zugeordnet: Gesundheitskarte',
@@ -431,7 +443,7 @@ class SmartDocumentUploadTest extends TestCase
         $doc->refresh();
         $this->assertSame((string) $customer->id, (string) $doc->customer_id);
         $this->assertSame('customer', $doc->visibility);
-        $this->assertStringStartsWith('customers/' . $customer->id . '/documents/', $doc->file_path);
+        $this->assertStringStartsWith('customers/'.$customer->id.'/documents/', $doc->file_path);
         Storage::disk('local')->assertExists($doc->file_path);
         Storage::disk('local')->assertMissing('documents/eingang/scan.pdf');
 
@@ -1194,7 +1206,7 @@ class SmartDocumentUploadTest extends TestCase
             'ai_extracted' => ['bank' => ['iban' => 'DE89370400440532013000']],
         ]);
 
-        $raw = (string) \Illuminate\Support\Facades\DB::table('documents')->where('id', $doc->id)->value('ai_extracted');
+        $raw = (string) DB::table('documents')->where('id', $doc->id)->value('ai_extracted');
         $this->assertStringNotContainsString('DE89370400440532013000', $raw);
         $this->assertSame('DE89370400440532013000', $doc->fresh()->ai_extracted['bank']['iban']);
     }
@@ -1203,12 +1215,12 @@ class SmartDocumentUploadTest extends TestCase
     {
         Storage::fake('local');
         $customer = $this->makeCustomer();
-        Storage::disk('local')->put('customers/' . $customer->id . '/documents/scan.pdf', '%PDF-1.4');
+        Storage::disk('local')->put('customers/'.$customer->id.'/documents/scan.pdf', '%PDF-1.4');
         $doc = Document::create([
             'customer_id' => $customer->id,
             'category' => 'other',
             'file_name' => 'scan.pdf',
-            'file_path' => 'customers/' . $customer->id . '/documents/scan.pdf',
+            'file_path' => 'customers/'.$customer->id.'/documents/scan.pdf',
             'disk' => 'local',
             'ai_status' => 'failed',
             'ai_error' => 'KI-Dienst antwortete mit HTTP 500',
@@ -1270,7 +1282,7 @@ class SmartDocumentUploadTest extends TestCase
             'status' => 'suggested',
         ]);
 
-        $raw = (string) \Illuminate\Support\Facades\DB::table('ai_decisions')->where('document_id', $doc->id)->value('output');
+        $raw = (string) DB::table('ai_decisions')->where('document_id', $doc->id)->value('output');
         $this->assertStringNotContainsString('Max Mustermann', $raw);
         $this->assertStringNotContainsString('2600001', $raw);
     }
@@ -1279,12 +1291,12 @@ class SmartDocumentUploadTest extends TestCase
     {
         Storage::fake('local');
         $customer = $this->makeCustomer();
-        Storage::disk('local')->put('customers/' . $customer->id . '/documents/scan.pdf', '%PDF-1.4');
+        Storage::disk('local')->put('customers/'.$customer->id.'/documents/scan.pdf', '%PDF-1.4');
         $doc = Document::create([
             'customer_id' => $customer->id,
             'category' => 'other',
             'file_name' => 'scan.pdf',
-            'file_path' => 'customers/' . $customer->id . '/documents/scan.pdf',
+            'file_path' => 'customers/'.$customer->id.'/documents/scan.pdf',
             'disk' => 'local',
         ]);
         $decision = AiDecision::create([
@@ -1295,7 +1307,7 @@ class SmartDocumentUploadTest extends TestCase
             'status' => 'suggested',
         ]);
 
-        app(\App\Services\CustomerDeletionService::class)->delete($customer);
+        app(CustomerDeletionService::class)->delete($customer);
 
         $decision->refresh();
         $this->assertNull($decision->document_id); // nullOnDelete greift nach der Kaskade
@@ -1325,10 +1337,10 @@ class SmartDocumentUploadTest extends TestCase
         ]);
 
         $customer = $this->makeCustomer();
-        Storage::disk('local')->put('customers/' . $customer->id . '/documents/mine.pdf', '%PDF-1.4');
+        Storage::disk('local')->put('customers/'.$customer->id.'/documents/mine.pdf', '%PDF-1.4');
         $assigned = Document::create([
             'customer_id' => $customer->id, 'category' => 'other', 'file_name' => 'mine.pdf',
-            'file_path' => 'customers/' . $customer->id . '/documents/mine.pdf', 'disk' => 'local',
+            'file_path' => 'customers/'.$customer->id.'/documents/mine.pdf', 'disk' => 'local',
         ]);
         $assigned->forceFill(['created_at' => now()->subDays(120)])->save();
 
@@ -1411,14 +1423,14 @@ class SmartDocumentUploadTest extends TestCase
         $employee->assignedCustomers()->attach((string) $visible->id);
 
         $this->actingAs($employee)
-            ->getJson(route('admin.documents.customer_search') . '?q=Kunde')
+            ->getJson(route('admin.documents.customer_search').'?q=Kunde')
             ->assertOk()
             ->assertJsonFragment(['name' => 'Sichtbar Kunde'])
             ->assertJsonMissing(['name' => 'Versteckt Kunde']);
 
         // LIKE-Wildcards werden escaped, kein Server-Fehler bei Sonderzeichen.
         $this->actingAs($employee)
-            ->getJson(route('admin.documents.customer_search') . '?q=' . urlencode('%_\\'))
+            ->getJson(route('admin.documents.customer_search').'?q='.urlencode('%_\\'))
             ->assertOk();
     }
 
@@ -1544,7 +1556,7 @@ class SmartDocumentUploadTest extends TestCase
         ]);
 
         $this->actingAs($this->makeAdmin())
-            ->postJson(route('admin.documents.assign', $doc->id), ['customer_id' => (string) \Illuminate\Support\Str::uuid()])
+            ->postJson(route('admin.documents.assign', $doc->id), ['customer_id' => (string) Str::uuid()])
             ->assertStatus(404)
             ->assertJsonStructure(['message']);
     }
@@ -1554,10 +1566,10 @@ class SmartDocumentUploadTest extends TestCase
         Storage::fake('local');
         $customerA = $this->makeCustomer();
         $customerB = $this->makeCustomer();
-        Storage::disk('local')->put('customers/' . $customerA->id . '/documents/scan.pdf', '%PDF-1.4');
+        Storage::disk('local')->put('customers/'.$customerA->id.'/documents/scan.pdf', '%PDF-1.4');
         $doc = Document::create([
             'customer_id' => $customerA->id, 'category' => 'other', 'file_name' => 'scan.pdf',
-            'file_path' => 'customers/' . $customerA->id . '/documents/scan.pdf', 'disk' => 'local',
+            'file_path' => 'customers/'.$customerA->id.'/documents/scan.pdf', 'disk' => 'local',
         ]);
         $admin = $this->makeAdmin();
 
@@ -1576,10 +1588,10 @@ class SmartDocumentUploadTest extends TestCase
     {
         Storage::fake('local');
         $customer = $this->makeCustomer();
-        Storage::disk('local')->put('customers/' . $customer->id . '/documents/scan.pdf', '%PDF-1.4');
+        Storage::disk('local')->put('customers/'.$customer->id.'/documents/scan.pdf', '%PDF-1.4');
         $doc = Document::create([
             'customer_id' => $customer->id, 'category' => 'other', 'file_name' => 'scan.pdf',
-            'file_path' => 'customers/' . $customer->id . '/documents/scan.pdf', 'disk' => 'local',
+            'file_path' => 'customers/'.$customer->id.'/documents/scan.pdf', 'disk' => 'local',
         ]);
 
         $this->actingAs($this->makeAdmin())
@@ -1640,9 +1652,9 @@ class SmartDocumentUploadTest extends TestCase
             'file_path' => 'documents/eingang/scan.pdf', 'disk' => 'local', 'ai_status' => 'processing',
         ]);
 
-        (new \App\Jobs\AnalyzeDocumentJob($doc->id))->handle(
-            app(\App\Services\Ai\DocumentAnalyzer::class),
-            app(\App\Services\DocumentIntake\DocumentIntakeService::class),
+        (new AnalyzeDocumentJob($doc->id))->handle(
+            app(DocumentAnalyzer::class),
+            app(DocumentIntakeService::class),
         );
 
         Http::assertNothingSent();
@@ -1669,7 +1681,7 @@ class SmartDocumentUploadTest extends TestCase
         $contract = Contract::create([
             'customer_id' => $customer->id, 'contract_number' => null, 'type' => 'kfz', 'insurer' => 'HUK24', 'status' => 'active',
         ]);
-        \App\Models\ContractVehicleDetail::create(['contract_id' => $contract->id, 'license_plate' => 'WÜ-AB 123']);
+        ContractVehicleDetail::create(['contract_id' => $contract->id, 'license_plate' => 'WÜ-AB 123']);
 
         $doc = Document::create([
             'customer_id' => $customer->id, 'category' => 'contract', 'file_name' => 'v.pdf',
@@ -1677,7 +1689,7 @@ class SmartDocumentUploadTest extends TestCase
             'ai_extracted' => ['kfz' => ['license_plate' => 'WÜ AB123']], // andere Schreibweise, gleiches Kennzeichen
         ]);
 
-        $linked = app(\App\Services\DocumentIntake\DocumentIntakeService::class)->linkMatchingContract($doc, $customer);
+        $linked = app(DocumentIntakeService::class)->linkMatchingContract($doc, $customer);
 
         $this->assertNotNull($linked);
         $this->assertSame((string) $contract->id, (string) $linked->id);
@@ -1690,7 +1702,7 @@ class SmartDocumentUploadTest extends TestCase
         $contract = Contract::create([
             'customer_id' => $customer->id, 'contract_number' => null, 'type' => 'kfz', 'insurer' => 'HUK24', 'status' => 'active',
         ]);
-        \App\Models\ContractVehicleDetail::create([
+        ContractVehicleDetail::create([
             'contract_id' => $contract->id, 'license_plate' => 'UN-AB 123',
         ]);
 
@@ -1708,7 +1720,7 @@ class SmartDocumentUploadTest extends TestCase
             ]],
         ]);
 
-        $linked = app(\App\Services\DocumentIntake\DocumentIntakeService::class)->linkMatchingContract($doc, $customer);
+        $linked = app(DocumentIntakeService::class)->linkMatchingContract($doc, $customer);
         $this->assertNotNull($linked);
         $this->assertSame((string) $contract->id, (string) $linked->id);
 
@@ -1895,7 +1907,7 @@ class SmartDocumentUploadTest extends TestCase
 
     private function inboxPdf(?int $uploadedBy = null, array $attrs = []): Document
     {
-        $path = 'documents/eingang/' . uniqid() . '.pdf';
+        $path = 'documents/eingang/'.uniqid().'.pdf';
         Storage::disk('local')->put($path, '%PDF-1.4 fake');
         return Document::create(array_merge([
             'customer_id' => null,
@@ -1979,19 +1991,19 @@ class SmartDocumentUploadTest extends TestCase
         Http::fake(['api.anthropic.com/*' => Http::response('error', 500)]);
         $admin = $this->makeAdmin();
 
-        $path = 'documents/eingang/' . uniqid() . '.pdf';
+        $path = 'documents/eingang/'.uniqid().'.pdf';
         Storage::disk('local')->put($path, '%PDF-1.4 fake');
         $doc = Document::create([
             'customer_id' => null, 'category' => 'other', 'file_name' => 'kaputt.pdf',
             'file_path' => $path, 'disk' => 'local', 'ai_status' => 'pending', 'uploaded_by' => $admin->id,
         ]);
 
-        \App\Jobs\AnalyzeDocumentJob::dispatch($doc->id);
+        AnalyzeDocumentJob::dispatch($doc->id);
 
         $this->assertSame('failed', $doc->fresh()->ai_status);
         $this->assertDatabaseHas('internal_notifications', [
             'user_id' => $admin->id,
-            'dedup_key' => 'doc-failed-' . $doc->id,
+            'dedup_key' => 'doc-failed-'.$doc->id,
         ]);
     }
 
@@ -2002,8 +2014,8 @@ class SmartDocumentUploadTest extends TestCase
         $doc = $this->inboxPdf($admin->id);
 
         $this->actingAs($admin)
-            ->getJson(route('admin.documents.customer_suggestions', $doc->id) . '?' . http_build_query([
-                'ids' => array_map(fn ($i) => \Illuminate\Support\Str::uuid()->toString(), range(1, 11)),
+            ->getJson(route('admin.documents.customer_suggestions', $doc->id).'?'.http_build_query([
+                'ids' => array_map(fn ($i) => Str::uuid()->toString(), range(1, 11)),
             ]))
             ->assertStatus(422);
     }
@@ -2024,7 +2036,7 @@ class SmartDocumentUploadTest extends TestCase
             'customer_id' => null, 'category' => 'other', 'file_name' => 'mandat.pdf',
             'file_path' => 'documents/eingang/mandat.pdf', 'disk' => 'local', 'ai_status' => 'pending',
         ]);
-        \App\Jobs\AnalyzeDocumentJob::dispatch($doc->id);
+        AnalyzeDocumentJob::dispatch($doc->id);
         $this->assertSame('COBADEFFXXX', $doc->fresh()->ai_extracted['bank']['bic']);
 
         $admin = $this->makeAdmin();
@@ -2042,30 +2054,30 @@ class SmartDocumentUploadTest extends TestCase
     public function test_ai_document_provider_can_be_disabled_and_defaults_safely(): void
     {
         $resolve = function () {
-            $this->app->forgetInstance(\App\Services\Ai\Contracts\DocumentAiProviderInterface::class);
-            return $this->app->make(\App\Services\Ai\Contracts\DocumentAiProviderInterface::class);
+            $this->app->forgetInstance(DocumentAiProviderInterface::class);
+            return $this->app->make(DocumentAiProviderInterface::class);
         };
 
         // Ausdruecklich abgeschaltet -> Null-Provider (nur kostenlose Stufe).
         config(['services.ai_document_provider' => 'none']);
-        $this->assertInstanceOf(\App\Services\Ai\NullDocumentAiProvider::class, $resolve());
+        $this->assertInstanceOf(NullDocumentAiProvider::class, $resolve());
 
         // LEER darf NICHT abschalten - das ist der Standard (Claude). Sonst
         // legt ein leeres AI_DOCUMENT_PROVIDER in Produktion die Analyse still
         // (Regressionsschutz - genau dieser Fall wurde behoben).
         config(['services.ai_document_provider' => '']);
-        $this->assertInstanceOf(\App\Services\Ai\ClaudeDocumentAiProvider::class, $resolve());
+        $this->assertInstanceOf(ClaudeDocumentAiProvider::class, $resolve());
 
         // Unbekannter Wert -> sicherer Rueckfall auf Claude (kein Absturz).
         config(['services.ai_document_provider' => 'tippfehler']);
-        $this->assertInstanceOf(\App\Services\Ai\ClaudeDocumentAiProvider::class, $resolve());
+        $this->assertInstanceOf(ClaudeDocumentAiProvider::class, $resolve());
     }
 
     public function test_queue_health_command_runs(): void
     {
-        $exit = \Illuminate\Support\Facades\Artisan::call('queue:health');
+        $exit = Artisan::call('queue:health');
         $this->assertContains($exit, [0, 1]);
-        $this->assertStringContainsString('Analyse-Status', \Illuminate\Support\Facades\Artisan::output());
+        $this->assertStringContainsString('Analyse-Status', Artisan::output());
     }
 
     /* ---------------------------------------------------------------

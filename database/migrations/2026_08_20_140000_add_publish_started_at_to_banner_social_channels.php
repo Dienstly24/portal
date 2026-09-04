@@ -17,8 +17,7 @@ use Illuminate\Support\Facades\Schema;
  * Der Versand laeuft deshalb jetzt als Job. Dieses Feld ist die Klammer
  * darum: gesetzt = ein Versuch ist unterwegs, niemand sonst darf starten.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('banner_social_channels', function (Blueprint $table) {

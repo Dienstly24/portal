@@ -1,13 +1,19 @@
 <?php
 
+use App\Jobs\SendCampaignJob;
 use App\Mail\BirthdayMail;
 use App\Mail\CustomerPortalReminderMail;
+use App\Models\Customer;
+use App\Models\CustomerFamily;
+use App\Models\Task;
+use App\Models\User;
+use App\Services\ContractSwitchReminderService;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schedule;
 
-if (!function_exists('dienstly_mailable')) {
+if (! function_exists('dienstly_mailable')) {
     function dienstly_mailable(?string $email): bool {
-        return $email && !str_contains($email, '@dienstly24.internal');
+        return $email && ! str_contains($email, '@dienstly24.internal');
     }
 }
 
@@ -91,28 +97,28 @@ Schedule::call(function () {
     // codierte "1" existiert nicht zwingend (geloescht/nie diese ID), was einen
     // FK-Fehler warf und die betroffenen Kinder wegen des Ein-Tages-Fensters
     // dauerhaft uebersprang (Audit SCHED-1). Ohne Staff-Konto: nichts tun.
-    $ownerId = \App\Models\User::whereIn('role', ['admin', 'manager'])
+    $ownerId = User::whereIn('role', ['admin', 'manager'])
         ->where('is_active', '!=', false)->orderBy('id')->value('id');
     if ($ownerId === null) {
         return;
     }
     $target = now()->addMonths(4)->subYears(15)->toDateString();
-    $kids = \App\Models\CustomerFamily::with('customer.user')
+    $kids = CustomerFamily::with('customer.user')
         ->where('relation', 'Kind')->whereDate('birth_date', $target)->get();
     foreach ($kids as $kid) {
         try {
-            $title = '🎂 ' . $kid->name . ' wird in 4 Monaten 15 Jahre alt';
+            $title = '🎂 '.$kid->name.' wird in 4 Monaten 15 Jahre alt';
             // Idempotent: bei einem zweiten Lauf am selben Tag (manuell/zweiter
             // Cron) keine doppelte Aufgabe.
-            $exists = \App\Models\Task::where('customer_id', $kid->customer_id)
+            $exists = Task::where('customer_id', $kid->customer_id)
                 ->where('type', 'reminder')->where('title', $title)
                 ->whereDate('created_at', now()->toDateString())->exists();
             if ($exists) {
                 continue;
             }
-            \App\Models\Task::forceCreate([
+            Task::forceCreate([
                 'title' => $title,
-                'description' => 'Kunde: ' . ($kid->customer?->user?->name ?? '—') . ' (' . ($kid->customer?->customer_number ?? '—') . '). Beratungstermin zu Versicherungsoptionen ab 15 vereinbaren.',
+                'description' => 'Kunde: '.($kid->customer?->user?->name ?? '—').' ('.($kid->customer?->customer_number ?? '—').'). Beratungstermin zu Versicherungsoptionen ab 15 vereinbaren.',
                 'type' => 'reminder',
                 'status' => 'open',
                 'priority' => 'medium',
@@ -121,8 +127,8 @@ Schedule::call(function () {
                 'assigned_to' => $ownerId,
                 'customer_id' => $kid->customer_id,
             ]);
-        } catch (\Throwable $e) {
-            \Log::warning('Kind-wird-15-Aufgabe uebersprungen (' . $kid->id . '): ' . $e->getMessage());
+        } catch (Throwable $e) {
+            Log::warning('Kind-wird-15-Aufgabe uebersprungen ('.$kid->id.'): '.$e->getMessage());
         }
     }
 })->name('kind-wird-15-aufgabe')->dailyAt('07:30');
@@ -130,24 +136,24 @@ Schedule::call(function () {
 // 08:00 — Geburtstags-E-Mails
 Schedule::call(function () {
     $today = now();
-    $customers = \App\Models\Customer::with('user')
+    $customers = Customer::with('user')
         ->whereNotNull('birth_date')
         ->whereMonth('birth_date', $today->month)->whereDay('birth_date', $today->day)->get();
     foreach ($customers as $c) {
-        if (!dienstly_mailable($c->user?->email)) continue;
+        if (! dienstly_mailable($c->user?->email)) continue;
         try {
             Mail::to($c->user->email)->send(new BirthdayMail($c->user->name, $c->user->name, true, $c->preferred_lang ?? 'de'));
-        } catch (\Throwable $e) { \Log::warning('Birthday mail failed: ' . $e->getMessage()); }
+        } catch (Throwable $e) { Log::warning('Birthday mail failed: '.$e->getMessage()); }
     }
-    $family = \App\Models\CustomerFamily::with('customer.user')
+    $family = CustomerFamily::with('customer.user')
         ->whereNotNull('birth_date')
         ->whereMonth('birth_date', $today->month)->whereDay('birth_date', $today->day)->get();
     foreach ($family as $f) {
         $email = $f->customer?->user?->email;
-        if (!dienstly_mailable($email)) continue;
+        if (! dienstly_mailable($email)) continue;
         try {
             Mail::to($email)->send(new BirthdayMail($f->customer->user->name, $f->name, false, $f->customer->preferred_lang ?? 'de'));
-        } catch (\Throwable $e) { \Log::warning('Birthday mail failed: ' . $e->getMessage()); }
+        } catch (Throwable $e) { Log::warning('Birthday mail failed: '.$e->getMessage()); }
     }
 })->name('geburtstags-mails')->dailyAt('08:00');
 
@@ -156,8 +162,8 @@ Schedule::call(function () {
 // Doppelversand-Schutz liegen zentral im Service - derselbe Code wie hinter
 // dem Button im E-Mail-Marketing.
 Schedule::call(function () {
-    $sent = app(\App\Services\ContractSwitchReminderService::class)->run();
-    if ($sent > 0) \Log::info("Wechsel-Erinnerungen: {$sent} Mails versendet.");
+    $sent = app(ContractSwitchReminderService::class)->run();
+    if ($sent > 0) Log::info("Wechsel-Erinnerungen: {$sent} Mails versendet.");
 })->name('wechsel-erinnerungen')->dailyAt('08:30');
 
 // 08:40 — E-Scooter-Erneuerung: aktive E-Scooter-Vertraege Anfang Februar an
@@ -173,7 +179,7 @@ Schedule::command('escooter:renewal-reminders')->dailyAt('08:40');
 Schedule::command('schutzbrief:renewal-reminders')->dailyAt('08:45');
 
 // Alle 5 Minuten — geplante E-Mail-Kampagnen anstoßen (Paket B1)
-Schedule::call(fn() => \App\Jobs\SendCampaignJob::dispatchDueScheduled())
+Schedule::call(fn () => SendCampaignJob::dispatchDueScheduled())
     ->name('kampagnen-versand')->everyFiveMinutes();
 
 // 09:00 — Portal-Erinnerung nach 3 Tagen ohne Login
@@ -181,17 +187,17 @@ Schedule::call(function () {
     // Nur Kunden erinnern, die sich auch WIRKLICH einloggen können:
     // ohne nutzbares Passwort (portal_password_set_at) wäre die
     // "Bitte einloggen"-Mail eine Sackgasse (Kundenproblem-Fix).
-    $users = \App\Models\User::where('role', 'customer')
+    $users = User::where('role', 'customer')
         ->whereNull('last_login_at')->whereNull('portal_reminder_sent_at')
         ->whereNotNull('portal_password_set_at')
         ->where('created_at', '<=', now()->subDays(3))->get();
     foreach ($users as $u) {
-        if (!dienstly_mailable($u->email)) continue;
-        $lang = \App\Models\Customer::where('user_id', $u->id)->value('preferred_lang') ?? 'de';
+        if (! dienstly_mailable($u->email)) continue;
+        $lang = Customer::where('user_id', $u->id)->value('preferred_lang') ?? 'de';
         try {
             Mail::to($u->email)->send(new CustomerPortalReminderMail($u->name, $lang));
             $u->forceFill(['portal_reminder_sent_at' => now()])->save();
-        } catch (\Throwable $e) { \Log::warning('Portal reminder failed: ' . $e->getMessage()); }
+        } catch (Throwable $e) { Log::warning('Portal reminder failed: '.$e->getMessage()); }
     }
 })->name('portal-erinnerung')->dailyAt('09:00');
 

@@ -1,12 +1,16 @@
 <?php
+
 namespace App\Http\Controllers;
+
 use App\Http\Controllers\Concerns\ScopesCustomerAccess;
-use App\Models\User;
+use App\Jobs\ImportCustomersJob;
+use App\Models\ActivityLog;
 use App\Models\Customer;
+use App\Services\Import\CustomerCsvImporter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-use League\Csv\Writer;
 use League\Csv\EscapeFormula;
+use League\Csv\Writer;
 
 class ImportExportController extends Controller
 {
@@ -32,16 +36,16 @@ class ImportExportController extends Controller
      * Datensaetze neu angelegt, welche als Duplikat uebersprungen und
      * welche ohne E-Mail bzw. fehlerhaft sind - und bestaetigt erst dann.
      */
-    public function import(Request $request, \App\Services\Import\CustomerCsvImporter $importer) {
+    public function import(Request $request, CustomerCsvImporter $importer) {
         $request->validate(['csv_file' => 'required|file|mimes:csv,txt|max:10240']);
 
         // Datei fuer den Bestaetigungsschritt zwischenspeichern (Token-Name).
         $token = (string) Str::uuid();
         $dir = storage_path('app/private/imports');
-        if (!is_dir($dir)) {
+        if (! is_dir($dir)) {
             mkdir($dir, 0755, true);
         }
-        $stored = $dir . '/' . $token . '.csv';
+        $stored = $dir.'/'.$token.'.csv';
         copy($request->file('csv_file')->getPathname(), $stored);
 
         $preview = $importer->analyze($stored);
@@ -64,11 +68,11 @@ class ImportExportController extends Controller
         $token = (string) $request->input('token');
 
         // Nur gueltige UUID-Tokens zulassen (kein Pfad-Traversal).
-        if (!preg_match('/^[0-9a-f\\-]{36}$/', $token)) {
+        if (! preg_match('/^[0-9a-f\\-]{36}$/', $token)) {
             abort(400);
         }
-        $path = storage_path('app/private/imports/' . $token . '.csv');
-        if (!is_file($path)) {
+        $path = storage_path('app/private/imports/'.$token.'.csv');
+        if (! is_file($path)) {
             return redirect()->route('admin.import_export')->with('import_result', [
                 'imported' => 0,
                 'skipped' => 0,
@@ -77,7 +81,7 @@ class ImportExportController extends Controller
             ]);
         }
 
-        \App\Jobs\ImportCustomersJob::dispatch($path, auth()->id());
+        ImportCustomersJob::dispatch($path, auth()->id());
 
         return redirect()->route('admin.import_export')->with('import_result', [
             'queued' => true,
@@ -103,22 +107,22 @@ class ImportExportController extends Controller
         // nicht davon abhaengen, dass der Download sauber endet.
         // Voll-Export personenbezogener Daten (inkl. IBAN) protokollieren
         // (Audit INT-8) - hochsensibler Vorgang, gehoert in den Audit-Trail.
-        \App\Models\ActivityLog::record('customers_exported', 'customer', null, [
+        ActivityLog::record('customers_exported', 'customer', null, [
             'count' => $basis()->count(),
         ]);
 
-        $dateiname = 'kunden_' . date('Y-m-d') . '.csv';
+        $dateiname = 'kunden_'.date('Y-m-d').'.csv';
 
         return response()->streamDownload(function () use ($basis) {
             $csv = Writer::createFromStream(fopen('php://output', 'w'));
             // Schutz vor CSV-/Formel-Injection (Audit INT-1): kunden-kontrollierte
             // Felder mit fuehrendem = + - @ werden neutralisiert, sonst fuehren sie
             // beim Oeffnen in Excel/LibreOffice (DDE) Formeln aus.
-            $csv->addFormatter(new EscapeFormula());
+            $csv->addFormatter(new EscapeFormula);
             $csv->insertOne([
-                'Kundennummer','Vorname','Nachname','E-Mail','Telefon','Mobil',
-                'Adresse','IBAN','Geburtsdatum','Familienstand','Sprache',
-                'Firmenname','Rechtsform','Kundentyp','Erstellt am'
+                'Kundennummer', 'Vorname', 'Nachname', 'E-Mail', 'Telefon', 'Mobil',
+                'Adresse', 'IBAN', 'Geburtsdatum', 'Familienstand', 'Sprache',
+                'Firmenname', 'Rechtsform', 'Kundentyp', 'Erstellt am',
             ]);
 
             // chunkById statt get(): es liegen nie mehr als 500 Kunden
@@ -152,18 +156,18 @@ class ImportExportController extends Controller
     }
     public function template() {
         $csv = Writer::createFromString('');
-        $csv->addFormatter(new EscapeFormula());
+        $csv->addFormatter(new EscapeFormula);
         $csv->insertOne([
-            'Vorname','Nachname','E-Mail','Telefon','Mobil',
-            'Straße','Nr','PLZ','Ort','Land',
-            'IBAN','Geburtsdatum','Familienstand','Sprache',
-            'Firma','Rechtsform'
+            'Vorname', 'Nachname', 'E-Mail', 'Telefon', 'Mobil',
+            'Straße', 'Nr', 'PLZ', 'Ort', 'Land',
+            'IBAN', 'Geburtsdatum', 'Familienstand', 'Sprache',
+            'Firma', 'Rechtsform',
         ]);
         $csv->insertOne([
-            'Max','Mustermann','max@beispiel.de','+49 40 123456','+49 176 123456',
-            'Musterstraße','12','20095','Hamburg','Deutschland',
-            'DE89370400440532013000','01.01.1990','ledig','de',
-            '','GmbH'
+            'Max', 'Mustermann', 'max@beispiel.de', '+49 40 123456', '+49 176 123456',
+            'Musterstraße', '12', '20095', 'Hamburg', 'Deutschland',
+            'DE89370400440532013000', '01.01.1990', 'ledig', 'de',
+            '', 'GmbH',
         ]);
 
         return response((string) $csv)

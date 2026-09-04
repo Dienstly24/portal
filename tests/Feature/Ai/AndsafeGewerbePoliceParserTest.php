@@ -98,7 +98,7 @@ class AndsafeGewerbePoliceParserTest extends TestCase
 
     public function test_reads_betriebshaftpflicht_police(): void
     {
-        $r = (new AndsafeGewerbePoliceParser())->parse($this->scheinText());
+        $r = (new AndsafeGewerbePoliceParser)->parse($this->scheinText());
 
         $this->assertNotNull($r);
         $this->assertSame('versicherungspolice', $r['type']);
@@ -146,7 +146,7 @@ class AndsafeGewerbePoliceParserTest extends TestCase
     {
         // Ohne Kunden-E-Mail bleibt das Feld leer - info@andsafe.de wird NIE
         // uebernommen, ebenso wenig die Anschrift der Gesellschaft.
-        $r = (new AndsafeGewerbePoliceParser())->parse($this->scheinText([
+        $r = (new AndsafeGewerbePoliceParser)->parse($this->scheinText([
             'Kontakt-E-Mail-Adresse                    karim.muster@example.com' => '',
         ]));
 
@@ -158,11 +158,9 @@ class AndsafeGewerbePoliceParserTest extends TestCase
 
     public function test_yearly_payment_uses_the_yearly_amount(): void
     {
-        $r = (new AndsafeGewerbePoliceParser())->parse($this->scheinText([
-            'Vereinbarte Zahlungsweise                 Monatlich' =>
-            'Vereinbarte Zahlungsweise                 Jährlich',
-            'Gesamtforderung                           28,57 €' =>
-            'Gesamtforderung                           342,86 €',
+        $r = (new AndsafeGewerbePoliceParser)->parse($this->scheinText([
+            'Vereinbarte Zahlungsweise                 Monatlich' => 'Vereinbarte Zahlungsweise                 Jährlich',
+            'Gesamtforderung                           28,57 €' => 'Gesamtforderung                           342,86 €',
         ]));
 
         $this->assertSame(342.86, $r['data']['versicherung']['premium_amount']);
@@ -172,9 +170,8 @@ class AndsafeGewerbePoliceParserTest extends TestCase
     public function test_unknown_product_leaves_sparte_empty(): void
     {
         // Lieber leer als falsch zugeordnet - der Mitarbeiter waehlt.
-        $r = (new AndsafeGewerbePoliceParser())->parse($this->scheinText([
-            'Versicherung                              andsafe Betriebshaftpflichtversicherung' =>
-            'Versicherung                              andsafe Spezialdeckung Neu',
+        $r = (new AndsafeGewerbePoliceParser)->parse($this->scheinText([
+            'Versicherung                              andsafe Betriebshaftpflichtversicherung' => 'Versicherung                              andsafe Spezialdeckung Neu',
         ]));
 
         $this->assertNotNull($r);
@@ -184,7 +181,7 @@ class AndsafeGewerbePoliceParserTest extends TestCase
 
     public function test_ignores_unrelated_documents(): void
     {
-        $parser = new AndsafeGewerbePoliceParser();
+        $parser = new AndsafeGewerbePoliceParser;
 
         $this->assertNull($parser->parse('Irgendein anderes Dokument'));
         // Interlloyd-Schein (eigener Parser) traegt kein "andsafe".

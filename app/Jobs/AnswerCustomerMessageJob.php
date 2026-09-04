@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Jobs;
 
 use App\Models\CustomerMessage;
@@ -37,7 +38,7 @@ class AnswerCustomerMessageJob implements ShouldQueue
     public function handle(CustomerAssistantService $assistant): void
     {
         $message = CustomerMessage::with('customer')->find($this->messageId);
-        if (!$message) {
+        if (! $message) {
             return;
         }
 

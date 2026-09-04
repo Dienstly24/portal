@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Console\Commands;
 
 use App\Models\Document;
@@ -36,7 +37,7 @@ class BackfillDocumentHashes extends Command
                         $missing++;
                         continue;
                     }
-                    if (!$dry) {
+                    if (! $dry) {
                         // Nur die Hash-Spalte schreiben (kein Model-Event, keine
                         // rueckwirkende Duplikat-Markierung, keine verschluesselten
                         // Felder erneut speichern).
@@ -46,7 +47,7 @@ class BackfillDocumentHashes extends Command
                 }
             });
 
-        $this->info(($dry ? '[DRY-RUN] ' : '') . "Hashes gesetzt: {$done}, Datei fehlte: {$missing}");
+        $this->info(($dry ? '[DRY-RUN] ' : '')."Hashes gesetzt: {$done}, Datei fehlte: {$missing}");
         return self::SUCCESS;
     }
 }

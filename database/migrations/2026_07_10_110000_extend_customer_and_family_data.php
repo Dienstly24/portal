@@ -1,4 +1,5 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Crypt;
@@ -67,13 +68,13 @@ return new class extends Migration {
 
     public function down(): void {
         Schema::table('customers', function (Blueprint $table) {
-            $table->dropColumn(['birth_place','address_street','address_house_number','address_house_suffix','address_zip','address_city']);
+            $table->dropColumn(['birth_place', 'address_street', 'address_house_number', 'address_house_suffix', 'address_zip', 'address_city']);
         });
         Schema::table('customer_family', function (Blueprint $table) {
-            $table->dropColumn(['gender','pension_insurance_number','tax_id','birth_place']);
+            $table->dropColumn(['gender', 'pension_insurance_number', 'tax_id', 'birth_place']);
         });
         Schema::table('customer_addresses', function (Blueprint $table) {
-            $table->dropColumn(['house_number','house_number_suffix']);
+            $table->dropColumn(['house_number', 'house_number_suffix']);
         });
         // Verschlüsselte Payloads werden bewusst nicht zurückgewandelt.
     }

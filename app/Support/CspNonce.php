@@ -34,7 +34,7 @@ class CspNonce
     /** Fertiges Attribut fuer Blade: <script @cspNonce> */
     public static function attribute(): string
     {
-        return 'nonce="' . e(self::get()) . '"';
+        return 'nonce="'.e(self::get()).'"';
     }
 
     /**

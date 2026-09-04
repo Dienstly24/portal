@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Support;
 
 /**
@@ -26,47 +27,47 @@ class XlsxWriter
     public static function create(string $sheetName, array $rows): string
     {
         $path = tempnam(sys_get_temp_dir(), 'xlsx');
-        $zip = new \ZipArchive();
+        $zip = new \ZipArchive;
         $zip->open($path, \ZipArchive::OVERWRITE);
 
         $zip->addFromString('[Content_Types].xml',
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-            . '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
-            . '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
-            . '<Default Extension="xml" ContentType="application/xml"/>'
-            . '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
-            . '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
-            . '</Types>');
+            .'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+            .'<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+            .'<Default Extension="xml" ContentType="application/xml"/>'
+            .'<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+            .'<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+            .'</Types>');
 
         $zip->addFromString('_rels/.rels',
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-            . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-            . '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
-            . '</Relationships>');
+            .'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            .'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+            .'</Relationships>');
 
         $zip->addFromString('xl/workbook.xml',
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-            . '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-            . '<sheets><sheet name="' . self::xml(mb_substr($sheetName, 0, 31)) . '" sheetId="1" r:id="rId1"/></sheets>'
-            . '</workbook>');
+            .'<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+            .'<sheets><sheet name="'.self::xml(mb_substr($sheetName, 0, 31)).'" sheetId="1" r:id="rId1"/></sheets>'
+            .'</workbook>');
 
         $zip->addFromString('xl/_rels/workbook.xml.rels',
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-            . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-            . '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
-            . '</Relationships>');
+            .'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            .'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+            .'</Relationships>');
 
         $sheet = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-            . '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>';
+            .'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>';
         foreach (array_values($rows) as $r => $cells) {
-            $sheet .= '<row r="' . ($r + 1) . '">';
+            $sheet .= '<row r="'.($r + 1).'">';
             foreach (array_values($cells) as $c => $value) {
-                $ref = self::columnLetter($c) . ($r + 1);
+                $ref = self::columnLetter($c).($r + 1);
                 if (is_int($value) || is_float($value)) {
-                    $sheet .= '<c r="' . $ref . '"><v>' . $value . '</v></c>';
+                    $sheet .= '<c r="'.$ref.'"><v>'.$value.'</v></c>';
                 } else {
-                    $sheet .= '<c r="' . $ref . '" t="inlineStr"><is><t xml:space="preserve">'
-                        . self::xml((string) $value) . '</t></is></c>';
+                    $sheet .= '<c r="'.$ref.'" t="inlineStr"><is><t xml:space="preserve">'
+                        .self::xml((string) $value).'</t></is></c>';
                 }
             }
             $sheet .= '</row>';
@@ -91,7 +92,7 @@ class XlsxWriter
     {
         $letter = '';
         while ($index >= 0) {
-            $letter = chr(65 + ($index % 26)) . $letter;
+            $letter = chr(65 + ($index % 26)).$letter;
             $index = intdiv($index, 26) - 1;
         }
         return $letter;

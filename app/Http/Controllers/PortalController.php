@@ -1,10 +1,38 @@
 <?php
+
 namespace App\Http\Controllers;
-use Illuminate\Http\Request;
-use App\Models\Customer;
+
+use App\Jobs\AnalyzeDocumentJob;
+use App\Models\ActivityLog;
+use App\Models\Banner;
+use App\Models\BannerUserView;
 use App\Models\Contract;
+use App\Models\Customer;
+use App\Models\CustomerChangeRequest;
+use App\Models\CustomerConsent;
+use App\Models\CustomerMessage;
+use App\Models\Document;
+use App\Models\DocumentRequest;
+use App\Models\InternalNotification;
+use App\Models\MeterReading;
 use App\Models\Ticket;
+use App\Models\TicketAttachment;
 use App\Models\TicketMessage;
+use App\Models\User;
+use App\Services\Ai\DocumentAnalyzer;
+use App\Services\ChangeRequest\ChangeProofPolicy;
+use App\Services\ChangeRequestService;
+use App\Services\Energy\MeterReadingService;
+use App\Services\Mailbox\CustomerMailboxImportService;
+use App\Services\Notifications\NotificationService;
+use App\Services\TicketNotifier;
+use App\Support\Facades\Notify;
+use App\Support\PasswordPolicy;
+use App\Support\SessionPasswordHash;
+use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class PortalController extends Controller
@@ -12,7 +40,7 @@ class PortalController extends Controller
     private function getCustomer() {
         return Customer::firstOrCreate(
             ['user_id' => auth()->id()],
-            ['customer_number' => 'C-' . strtoupper(Str::random(8))]
+            ['customer_number' => 'C-'.strtoupper(Str::random(8))]
         );
     }
 
@@ -24,14 +52,14 @@ class PortalController extends Controller
             // Beraterwelt (Contract::currentlyActive) - gekuendigte und
             // abgelaufene Vertraege zaehlen nicht mit.
             'contractsCount' => Contract::where('customer_id', $customer->id)->currentlyActive()->count(),
-            'openTickets' => Ticket::where('customer_id', $customer->id)->whereIn('status',['open','in_progress'])->count(),
-            'pendingApprovals' => \App\Models\CustomerChangeRequest::where('customer_id', $customer->id)->where('status','pending')->count(),
+            'openTickets' => Ticket::where('customer_id', $customer->id)->whereIn('status', ['open', 'in_progress'])->count(),
+            'pendingApprovals' => CustomerChangeRequest::where('customer_id', $customer->id)->where('status', 'pending')->count(),
             'contracts' => Contract::where('customer_id', $customer->id)->latest()->take(3)->get(),
             'tickets' => Ticket::where('customer_id', $customer->id)->latest()->take(3)->get(),
             'completeness' => $customer->completeness(),
             'banners' => $this->bannersFor(auth()->id()),
             // Badge auf der Kontakt-Hero-Karte (Chat starten)
-            'unreadMessages' => \App\Models\CustomerMessage::where('customer_id', $customer->id)
+            'unreadMessages' => CustomerMessage::where('customer_id', $customer->id)
                 ->fromStaff()->unread()->count(),
         ]);
     }
@@ -43,11 +71,11 @@ class PortalController extends Controller
      */
     private function bannersFor(string $userId)
     {
-        $dismissed = \App\Models\BannerUserView::where('user_id', $userId)
+        $dismissed = BannerUserView::where('user_id', $userId)
             ->where('dismissed_until', '>', now())
             ->pluck('banner_id');
 
-        $banners = \App\Models\Banner::current()
+        $banners = Banner::current()
             ->whereNotIn('id', $dismissed)
             ->get();
 
@@ -61,12 +89,12 @@ class PortalController extends Controller
     /** Banner-Klick mit hinterlegtem Ziel: zählen, dann weiterleiten. */
     public function bannerClick($id) {
         $this->getCustomer();
-        $banner = \App\Models\Banner::current()->findOrFail($id);
+        $banner = Banner::current()->findOrFail($id);
         $banner->recordClick(auth()->id());
 
         $url = $banner->link_url;
         // Interner Pfad oder externe URL – alles andere fällt aufs Dashboard zurück.
-        if (!$url) {
+        if (! $url) {
             return redirect()->route('portal.dashboard');
         }
         // Defense-in-depth gegen protokoll-relative //fremdhost-Redirects
@@ -75,16 +103,16 @@ class PortalController extends Controller
         if (preg_match('#^https?://#i', $url)) {
             return redirect()->away($url);
         }
-        return redirect()->to('/' . ltrim($url, '/'));
+        return redirect()->to('/'.ltrim($url, '/'));
     }
 
     /** Banner schließen: für die konfigurierte Dauer nicht mehr anzeigen. */
     public function bannerDismiss($id) {
         $this->getCustomer();
-        $banner = \App\Models\Banner::findOrFail($id);
+        $banner = Banner::findOrFail($id);
         $days = max(1, (int) ($banner->dismiss_days ?? 7));
 
-        \App\Models\BannerUserView::updateOrCreate(
+        BannerUserView::updateOrCreate(
             ['banner_id' => $banner->id, 'user_id' => auth()->id()],
             ['dismissed_until' => now()->addDays($days)]
         );
@@ -97,7 +125,7 @@ class PortalController extends Controller
         return view('portal.contracts', [
             'contracts' => Contract::where('customer_id', $customer->id)
                 ->with(['vehicleDetail', 'energyDetail', 'internetDetail'])
-                ->latest()->get()
+                ->latest()->get(),
         ]);
     }
 
@@ -112,7 +140,7 @@ class PortalController extends Controller
         // verschluesselt, daher kein DB-Filter - Auswahl in PHP).
         $pendingChange = $customer->changeRequests()
             ->where('type', 'contract')->where('status', 'pending')->latest()->get()
-            ->first(fn($r) => ($r->new_data['id'] ?? null) === $contract->id);
+            ->first(fn ($r) => ($r->new_data['id'] ?? null) === $contract->id);
 
         // Zaehlerfotos, aus denen noch KEINE Ablesung entstanden ist: entweder
         // laeuft die Auswertung noch oder der Stand war nicht lesbar. Beides
@@ -121,7 +149,7 @@ class PortalController extends Controller
         $openMeterPhotos = collect();
         if ($contract->isEnergy() && $contract->energyDetail) {
             $used = $contract->energyDetail->meterReadings->pluck('document_id')->filter()->all();
-            $openMeterPhotos = \App\Models\Document::where('contract_id', $contract->id)
+            $openMeterPhotos = Document::where('contract_id', $contract->id)
                 ->where('file_name', 'like', 'Zaehlerfoto%')
                 ->whereNotIn('id', $used ?: ['-'])
                 ->where('created_at', '>=', now()->subDays(30))
@@ -178,7 +206,7 @@ class PortalController extends Controller
      * Stand automatisch nach - erkannt wird der Vertrag ueber die
      * Zaehlernummer auf dem Foto.
      */
-    public function contractMeterStore(Request $request, $id, \App\Services\Energy\MeterReadingService $meterReadings) {
+    public function contractMeterStore(Request $request, $id, MeterReadingService $meterReadings) {
         $customer = $this->getCustomer();
         $contract = Contract::where('customer_id', $customer->id)
             ->whereIn('type', Contract::ENERGY_TYPES)->with('energyDetail')
@@ -189,17 +217,17 @@ class PortalController extends Controller
         $data = $request->validate([
             'reading' => 'nullable|numeric|min:0|max:99999999',
             'reading_date' => 'nullable|date|before_or_equal:today',
-            'register' => 'nullable|in:' . implode(',', array_keys(\App\Models\MeterReading::REGISTERS)),
+            'register' => 'nullable|in:'.implode(',', array_keys(MeterReading::REGISTERS)),
             'photo' => 'nullable|file|mimes:jpg,jpeg,png,webp,heic,heif,pdf|max:10240',
         ]);
 
-        if (!isset($data['reading']) && !$request->hasFile('photo')) {
+        if (! isset($data['reading']) && ! $request->hasFile('photo')) {
             return back()->withErrors([
                 'reading' => __('Bitte geben Sie den Zählerstand ein oder laden Sie ein Foto des Zählers hoch.'),
             ])->withInput();
         }
 
-        $register = $data['register'] ?? \App\Models\MeterReading::REGISTER_DEFAULT;
+        $register = $data['register'] ?? MeterReading::REGISTER_DEFAULT;
         $readingDate = $data['reading_date'] ?? now()->toDateString();
 
         // Ein Zaehler laeuft nicht rueckwaerts - Tippfehler frueh abfangen.
@@ -238,15 +266,15 @@ class PortalController extends Controller
      * Zaehlerfoto als Dokument des Kunden ablegen und zur Analyse anstossen.
      * Das Foto ist der Beleg zur Ablesung und bleibt in der Kundenakte.
      */
-    private function storeMeterPhoto(\Illuminate\Http\UploadedFile $file, Customer $customer, Contract $contract): \App\Models\Document {
-        $path = $file->store('customers/' . $customer->id . '/documents', 'local');
+    private function storeMeterPhoto(UploadedFile $file, Customer $customer, Contract $contract): Document {
+        $path = $file->store('customers/'.$customer->id.'/documents', 'local');
 
-        $document = \App\Models\Document::create([
+        $document = Document::create([
             'id' => Str::uuid(),
             'customer_id' => $customer->id,
             'contract_id' => $contract->id,
             'category' => 'other',
-            'file_name' => 'Zaehlerfoto ' . now()->format('d.m.Y') . '.' . $file->getClientOriginalExtension(),
+            'file_name' => 'Zaehlerfoto '.now()->format('d.m.Y').'.'.$file->getClientOriginalExtension(),
             'file_path' => $path,
             'disk' => 'local',
             'visibility' => 'customer',
@@ -255,20 +283,20 @@ class PortalController extends Controller
             'ai_status' => 'pending',
         ]);
 
-        \App\Jobs\AnalyzeDocumentJob::dispatch((string) $document->id);
+        AnalyzeDocumentJob::dispatch((string) $document->id);
 
-        \App\Support\Facades\Notify::pushMany(
-            \App\Models\User::whereIn('role', ['admin','manager','support'])->where('is_active', true)->pluck('id'),
+        Notify::pushMany(
+            User::whereIn('role', ['admin', 'manager', 'support'])->where('is_active', true)->pluck('id'),
             [
-                'type' => \App\Services\Notifications\NotificationService::TYPE_DOCUMENT,
+                'type' => NotificationService::TYPE_DOCUMENT,
                 'title' => 'Neues Zählerfoto',
-                'body' => ($customer->user?->name ?? 'Ein Kunde') . ' hat ein Zählerfoto hochgeladen.',
+                'body' => ($customer->user?->name ?? 'Ein Kunde').' hat ein Zählerfoto hochgeladen.',
                 'link' => route('admin.contract.edit', $contract->id),
-                'dedup_key' => 'meter-photo-' . $document->id,
+                'dedup_key' => 'meter-photo-'.$document->id,
             ]
         );
 
-        \App\Models\ActivityLog::create([
+        ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => 'meter_photo_uploaded_by_customer',
             'entity_type' => 'document',
@@ -290,22 +318,22 @@ class PortalController extends Controller
      * Nur fuer analysierbare Typen (PDF/Bild) und nur, wenn die Analyse
      * konfiguriert ist - doc/xlsx/heic bleiben wie bisher ohne Analyse.
      */
-    private function dispatchAnalysis(\App\Models\Document $document, \Illuminate\Http\UploadedFile $file): void {
+    private function dispatchAnalysis(Document $document, UploadedFile $file): void {
         $ext = strtolower($file->getClientOriginalExtension());
-        if (!in_array($ext, ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'gif'], true)) {
+        if (! in_array($ext, ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'gif'], true)) {
             return;
         }
-        if (!app(\App\Services\Ai\DocumentAnalyzer::class)->isEnabled()) {
+        if (! app(DocumentAnalyzer::class)->isEnabled()) {
             return;
         }
         $document->update(['ai_status' => 'pending']);
-        \App\Jobs\AnalyzeDocumentJob::dispatch((string) $document->id);
+        AnalyzeDocumentJob::dispatch((string) $document->id);
     }
 
     public function tickets() {
         $customer = $this->getCustomer();
         return view('portal.tickets', [
-            'tickets' => Ticket::where('customer_id', $customer->id)->latest()->get()
+            'tickets' => Ticket::where('customer_id', $customer->id)->latest()->get(),
         ]);
     }
 
@@ -317,7 +345,7 @@ class PortalController extends Controller
         $request->validate([
             // in:-Regel gegen das MySQL-Enum - ohne sie wirft ein
             // manipulierter POST einen 500er statt Validierungsfehler
-            'type' => 'required|in:' . implode(',', array_keys(Ticket::TYPES)),
+            'type' => 'required|in:'.implode(',', array_keys(Ticket::TYPES)),
             'subject' => 'required|max:255',
             'description' => 'required',
             'priority' => 'required|in:niedrig,mittel,hoch',
@@ -339,8 +367,8 @@ class PortalController extends Controller
                 // Punkt 5: sicher auf privater Disk speichern - Kunden-Uploads
                 // (Versichertenkarten, Unfallfotos) duerfen NIE oeffentlich
                 // unter /storage/... erreichbar sein.
-                $path = $file->store('tickets/' . $ticket->id, 'local');
-                \App\Models\TicketAttachment::create([
+                $path = $file->store('tickets/'.$ticket->id, 'local');
+                TicketAttachment::create([
                     'id' => Str::uuid(),
                     'ticket_id' => $ticket->id,
                     'uploaded_by' => auth()->id(),
@@ -351,8 +379,8 @@ class PortalController extends Controller
             }
         }
         // Team ueber die neue Anfrage informieren (Glocke).
-        \App\Services\TicketNotifier::notifyNewTicket($ticket);
-        return redirect()->route('portal.tickets')->with('success', __('Anfrage erfolgreich eingereicht.') . ' (' . $ticket->ticket_number . ')');
+        TicketNotifier::notifyNewTicket($ticket);
+        return redirect()->route('portal.tickets')->with('success', __('Anfrage erfolgreich eingereicht.').' ('.$ticket->ticket_number.')');
     }
 
     public function ticketsShow($id) {
@@ -364,14 +392,14 @@ class PortalController extends Controller
 
     public function downloadAttachment($id) {
         $customer = $this->getCustomer();
-        $a = \App\Models\TicketAttachment::findOrFail($id);
+        $a = TicketAttachment::findOrFail($id);
         $ticket = Ticket::where('id', $a->ticket_id)->where('customer_id', $customer->id)->firstOrFail();
         if (($a->disk ?? 'public') === 'local') {
-            return \Illuminate\Support\Facades\Storage::disk('local')->download($a->file_path, $a->file_name);
+            return Storage::disk('local')->download($a->file_path, $a->file_name);
         }
         // 404 statt 500, wenn die Datei fehlt (z. B. manuell geloescht)
-        abort_unless(is_file(storage_path('app/public/' . $a->file_path)), 404);
-        return response()->download(storage_path('app/public/' . $a->file_path), $a->file_name);
+        abort_unless(is_file(storage_path('app/public/'.$a->file_path)), 404);
+        return response()->download(storage_path('app/public/'.$a->file_path), $a->file_name);
     }
 
     public function ticketsReply(Request $request, $id) {
@@ -396,12 +424,12 @@ class PortalController extends Controller
         ]);
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
-                \App\Models\TicketAttachment::create([
+                TicketAttachment::create([
                     'id' => (string) Str::uuid(),
                     'ticket_id' => $ticket->id,
                     'uploaded_by' => auth()->id(),
                     'file_name' => $file->getClientOriginalName(),
-                    'file_path' => $file->store('tickets/' . $ticket->id, 'local'),
+                    'file_path' => $file->store('tickets/'.$ticket->id, 'local'),
                     'disk' => 'local',
                 ]);
             }
@@ -413,7 +441,7 @@ class PortalController extends Controller
             $ticket->transitionTo('open', auth()->id());
         }
         $ticket->touch();
-        \App\Services\TicketNotifier::notifyCustomerReply($ticket);
+        TicketNotifier::notifyCustomerReply($ticket);
         return back()->with('success', 'Nachricht gesendet.');
     }
 
@@ -423,8 +451,8 @@ class PortalController extends Controller
         $ticket = Ticket::where('id', $id)->where('customer_id', $customer->id)->firstOrFail();
         if ($ticket->status !== 'closed') {
             $ticket->transitionTo('closed', auth()->id(), 'closed_by_customer');
-            \App\Services\TicketNotifier::notifyTeam($ticket, '✅ Anfrage vom Kunden geschlossen',
-                ($ticket->ticket_number ? $ticket->ticket_number . ' – ' : '') . \Illuminate\Support\Str::limit($ticket->subject, 70));
+            TicketNotifier::notifyTeam($ticket, '✅ Anfrage vom Kunden geschlossen',
+                ($ticket->ticket_number ? $ticket->ticket_number.' – ' : '').Str::limit($ticket->subject, 70));
         }
         return back()->with('success', __('Vielen Dank! Die Anfrage wurde geschlossen.'));
     }
@@ -437,13 +465,13 @@ class PortalController extends Controller
         ]);
         $customer = $this->getCustomer();
         $ticket = Ticket::where('id', $id)->where('customer_id', $customer->id)->firstOrFail();
-        if (!$ticket->isFinished() || $ticket->rating !== null) {
+        if (! $ticket->isFinished() || $ticket->rating !== null) {
             return back();
         }
         $ticket->update(['rating' => (int) $request->rating, 'rating_comment' => $request->rating_comment]);
-        $ticket->logEvent('rated', $request->rating . '/5' . ($request->rating_comment ? ' – ' . \Illuminate\Support\Str::limit($request->rating_comment, 120) : ''));
-        \App\Services\TicketNotifier::notifyTeam($ticket, '⭐ Neue Ticket-Bewertung',
-            ($ticket->ticket_number ? $ticket->ticket_number . ' – ' : '') . $request->rating . '/5 Sternen');
+        $ticket->logEvent('rated', $request->rating.'/5'.($request->rating_comment ? ' – '.Str::limit($request->rating_comment, 120) : ''));
+        TicketNotifier::notifyTeam($ticket, '⭐ Neue Ticket-Bewertung',
+            ($ticket->ticket_number ? $ticket->ticket_number.' – ' : '').$request->rating.'/5 Sternen');
         return back()->with('success', __('Vielen Dank für Ihre Bewertung!'));
     }
 
@@ -454,10 +482,10 @@ class PortalController extends Controller
      */
     public function documentDownload($id) {
         $customer = $this->getCustomer();
-        $doc = \App\Models\Document::where('customer_id', $customer->id)
+        $doc = Document::where('customer_id', $customer->id)
             ->customerVisible() // interne Dokumente sind für Kunden unsichtbar (404)
             ->where('id', $id)->firstOrFail();
-        \App\Models\ActivityLog::create([
+        ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => 'document_viewed',
             'entity_type' => 'document',
@@ -465,8 +493,8 @@ class PortalController extends Controller
             'meta' => json_encode(['file' => $doc->file_name], JSON_UNESCAPED_UNICODE),
         ]);
         $disk = $doc->disk ?: 'public';
-        abort_unless(\Illuminate\Support\Facades\Storage::disk($disk)->exists($doc->file_path), 404);
-        return \Illuminate\Support\Facades\Storage::disk($disk)->download($doc->file_path, $doc->file_name);
+        abort_unless(Storage::disk($disk)->exists($doc->file_path), 404);
+        return Storage::disk($disk)->download($doc->file_path, $doc->file_name);
     }
 
     /**
@@ -476,10 +504,10 @@ class PortalController extends Controller
      */
     public function documentView($id) {
         $customer = $this->getCustomer();
-        $doc = \App\Models\Document::where('customer_id', $customer->id)
+        $doc = Document::where('customer_id', $customer->id)
             ->customerVisible()
             ->where('id', $id)->firstOrFail();
-        \App\Models\ActivityLog::create([
+        ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => 'document_viewed',
             'entity_type' => 'document',
@@ -487,11 +515,11 @@ class PortalController extends Controller
             'meta' => json_encode(['file' => $doc->file_name], JSON_UNESCAPED_UNICODE),
         ]);
         $disk = $doc->disk ?: 'public';
-        abort_unless(\Illuminate\Support\Facades\Storage::disk($disk)->exists($doc->file_path), 404);
+        abort_unless(Storage::disk($disk)->exists($doc->file_path), 404);
         // Content-Disposition: inline -> Browser zeigt die Datei an, statt sie
         // herunterzuladen. Nur fuer den Kunden selbst zugaenglich. nosniff wie
         // beim Nachrichten-Anhang (Audit FLOW-4, Konsistenz-Haertung).
-        return \Illuminate\Support\Facades\Storage::disk($disk)
+        return Storage::disk($disk)
             ->response($doc->file_path, $doc->file_name, ['X-Content-Type-Options' => 'nosniff']);
     }
 
@@ -502,10 +530,10 @@ class PortalController extends Controller
      * Change-Request-Zeilen sind hier strukturell unerreichbar.
      */
     public function notifications() {
-        $items = \App\Models\InternalNotification::where('user_id', auth()->id())
+        $items = InternalNotification::where('user_id', auth()->id())
             ->whereNotNull('title')
             ->latest()->take(15)->get()
-            ->map(fn($n) => [
+            ->map(fn ($n) => [
                 'id' => $n->id,
                 'title' => $n->title,
                 'body' => $n->body,
@@ -516,13 +544,13 @@ class PortalController extends Controller
             ]);
 
         return response()->json([
-            'unread' => \App\Models\InternalNotification::where('user_id', auth()->id())->whereNotNull('title')->whereNull('read_at')->count(),
+            'unread' => InternalNotification::where('user_id', auth()->id())->whereNotNull('title')->whereNull('read_at')->count(),
             'items' => $items,
         ]);
     }
 
     public function notificationRead($id) {
-        $n = \App\Models\InternalNotification::where('user_id', auth()->id())->whereNotNull('title')->findOrFail($id);
+        $n = InternalNotification::where('user_id', auth()->id())->whereNotNull('title')->findOrFail($id);
         $n->update(['read_at' => $n->read_at ?? now()]);
         return response()->json(['ok' => true]);
     }
@@ -535,37 +563,37 @@ class PortalController extends Controller
      */
     public function bannerInterest($id) {
         $customer = $this->getCustomer();
-        $banner = \App\Models\Banner::current()->findOrFail($id);
+        $banner = Banner::current()->findOrFail($id);
         $banner->recordClick(auth()->id());
 
-        $subject = 'Interesse: ' . $banner->title;
+        $subject = 'Interesse: '.$banner->title;
         $ticket = Ticket::where('customer_id', $customer->id)
             ->where('subject', $subject)
             ->whereIn('status', ['open', 'in_progress', 'waiting'])
             ->first();
 
-        if (!$ticket) {
+        if (! $ticket) {
             $ticket = Ticket::create([
                 'customer_id' => $customer->id,
                 'type' => 'other',
                 'status' => 'open',
                 'subject' => $subject,
-                'description' => 'Der Kunde interessiert sich für das Angebot „' . $banner->title . '" (Banner #' . $banner->id . ').',
+                'description' => 'Der Kunde interessiert sich für das Angebot „'.$banner->title.'" (Banner #'.$banner->id.').',
             ]);
         }
 
         return redirect()->route('portal.tickets.show', $ticket->id)
-            ->with('success', 'Ihre Anfrage zum Angebot „' . $banner->title . '" wurde erstellt. Unser Team meldet sich bei Ihnen.');
+            ->with('success', 'Ihre Anfrage zum Angebot „'.$banner->title.'" wurde erstellt. Unser Team meldet sich bei Ihnen.');
     }
 
     public function documents() {
         $customer = $this->getCustomer();
         return view('portal.documents', [
-            'documents' => \App\Models\Document::where('customer_id', $customer->id)->customerVisible()->with('contract')->latest()->get(),
+            'documents' => Document::where('customer_id', $customer->id)->customerVisible()->with('contract')->latest()->get(),
             // Eigene Vertraege zur Zuordnung eines Uploads (Kfz, Rechtsschutz, ...).
             'contracts' => Contract::where('customer_id', $customer->id)->latest()->get(),
             // Angeforderte Dokumente: offene/abgelehnte zuerst, dann in Prüfung, dann erledigt.
-            'documentRequests' => \App\Models\DocumentRequest::with('contract')
+            'documentRequests' => DocumentRequest::with('contract')
                 ->where('customer_id', $customer->id)
                 ->orderByRaw("case status when 'rejected' then 0 when 'open' then 1 when 'uploaded' then 2 else 3 end")
                 ->latest()->get(),
@@ -580,7 +608,7 @@ class PortalController extends Controller
      */
     public function documentRequestUpload(Request $request, $id) {
         $customer = $this->getCustomer();
-        $documentRequest = \App\Models\DocumentRequest::where('customer_id', $customer->id)->findOrFail($id);
+        $documentRequest = DocumentRequest::where('customer_id', $customer->id)->findOrFail($id);
         abort_unless($documentRequest->acceptsUpload(), 422);
 
         $request->validate([
@@ -590,7 +618,7 @@ class PortalController extends Controller
         $file = $request->file('document');
         $path = $file->store("customers/{$customer->id}/documents", 'local');
 
-        $doc = \App\Models\Document::create([
+        $doc = Document::create([
             'customer_id' => $customer->id,
             'category' => 'other',
             'file_name' => $file->getClientOriginalName(),
@@ -611,7 +639,7 @@ class PortalController extends Controller
         // Vertrag verknuepfen) - der Kunde ist bereits zugeordnet.
         $this->dispatchAnalysis($doc, $file);
 
-        \App\Models\ActivityLog::create([
+        ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => 'document_request_uploaded',
             'entity_type' => 'document_request',
@@ -622,14 +650,14 @@ class PortalController extends Controller
         // Zuständige Betreuer benachrichtigen; ohne Zuweisung admins/manager.
         $recipients = $customer->betreuer()->get();
         if ($recipients->isEmpty()) {
-            $recipients = \App\Models\User::whereIn('role', ['admin', 'manager'])->where('is_active', true)->get();
+            $recipients = User::whereIn('role', ['admin', 'manager'])->where('is_active', true)->get();
         }
-        \App\Support\Facades\Notify::pushMany($recipients->pluck('id'), [
-            'type' => \App\Services\Notifications\NotificationService::TYPE_DOCUMENT,
-            'title' => 'Dokument hochgeladen: ' . $documentRequest->title,
-            'body' => ($customer->user?->name ?? 'Kunde') . ' hat ein angefordertes Dokument hochgeladen.',
+        Notify::pushMany($recipients->pluck('id'), [
+            'type' => NotificationService::TYPE_DOCUMENT,
+            'title' => 'Dokument hochgeladen: '.$documentRequest->title,
+            'body' => ($customer->user?->name ?? 'Kunde').' hat ein angefordertes Dokument hochgeladen.',
             'link' => route('admin.document_requests'),
-            'dedup_key' => 'doc-request-' . $documentRequest->id,
+            'dedup_key' => 'doc-request-'.$documentRequest->id,
         ]);
 
         return back()->with('success', 'Vielen Dank! Ihr Dokument wurde übermittelt und wird nun geprüft.');
@@ -655,16 +683,16 @@ class PortalController extends Controller
 
         // Zuordnung nur zulassen, wenn der Vertrag wirklich dem Kunden gehoert.
         $contractId = null;
-        if (!empty($data['contract_id'])) {
+        if (! empty($data['contract_id'])) {
             $contractId = Contract::where('customer_id', $customer->id)
                 ->where('id', $data['contract_id'])->value('id');
         }
 
         $file = $request->file('document');
-        $path = $file->store('customers/' . $customer->id . '/documents', 'local');
+        $path = $file->store('customers/'.$customer->id.'/documents', 'local');
 
-        $doc = \App\Models\Document::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+        $doc = Document::create([
+            'id' => Str::uuid(),
             'customer_id' => $customer->id,
             'contract_id' => $contractId,
             'category' => $data['category'] ?? 'other',
@@ -681,18 +709,18 @@ class PortalController extends Controller
         $this->dispatchAnalysis($doc, $file);
 
         // Benachrichtigung an Staff (Notification Center)
-        \App\Support\Facades\Notify::pushMany(
-            \App\Models\User::whereIn('role', ['admin','manager','support'])->where('is_active', true)->pluck('id'),
+        Notify::pushMany(
+            User::whereIn('role', ['admin', 'manager', 'support'])->where('is_active', true)->pluck('id'),
             [
-                'type' => \App\Services\Notifications\NotificationService::TYPE_DOCUMENT,
+                'type' => NotificationService::TYPE_DOCUMENT,
                 'title' => 'Neues Kundendokument',
-                'body' => ($customer->user?->name ?? 'Ein Kunde') . ' hat „' . $doc->file_name . '" hochgeladen.',
-                'link' => route('admin.customer', $customer->id) . '#tab-uebersicht',
-                'dedup_key' => 'doc-upload-' . $doc->id,
+                'body' => ($customer->user?->name ?? 'Ein Kunde').' hat „'.$doc->file_name.'" hochgeladen.',
+                'link' => route('admin.customer', $customer->id).'#tab-uebersicht',
+                'dedup_key' => 'doc-upload-'.$doc->id,
             ]
         );
 
-        \App\Models\ActivityLog::create([
+        ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => 'document_uploaded_by_customer',
             'entity_type' => 'document',
@@ -707,7 +735,7 @@ class PortalController extends Controller
         $customer = $this->getCustomer();
         return view('portal.profile', [
             'customer' => $customer,
-            'pending' => \App\Models\CustomerChangeRequest::where('customer_id', $customer->id)->where('status','pending')->count(),
+            'pending' => CustomerChangeRequest::where('customer_id', $customer->id)->where('status', 'pending')->count(),
         ]);
     }
 
@@ -721,7 +749,7 @@ class PortalController extends Controller
      * getrennte Einwilligung und - bei aktiver Zustimmung - die persoenliche
      * Import-Adresse samt Weiterleitungs-Anleitung.
      */
-    public function emailConnection(\App\Services\Mailbox\CustomerMailboxImportService $import) {
+    public function emailConnection(CustomerMailboxImportService $import) {
         $customer = $this->getCustomer();
         $consent = $customer->activeEmailConsent();
 
@@ -747,23 +775,23 @@ class PortalController extends Controller
                 ->with('success', __('Ihre E-Mail-Verbindung ist bereits aktiv.'));
         }
 
-        \App\Models\CustomerConsent::create([
+        CustomerConsent::create([
             'customer_id' => $customer->id,
-            'type' => \App\Models\CustomerConsent::TYPE_EMAIL_PROCESSING,
+            'type' => CustomerConsent::TYPE_EMAIL_PROCESSING,
             'granted_at' => now(),
-            'consent_text_version' => \App\Models\CustomerConsent::EMAIL_TEXT_VERSION,
+            'consent_text_version' => CustomerConsent::EMAIL_TEXT_VERSION,
             'ip_address' => $request->ip(),
             'user_agent' => substr((string) $request->userAgent(), 0, 512),
             'source' => 'portal_settings',
-            'import_token' => \App\Models\CustomerConsent::newImportToken(),
+            'import_token' => CustomerConsent::newImportToken(),
         ]);
 
-        \App\Models\ActivityLog::create([
+        ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => 'email_consent_granted',
             'entity_type' => 'customer',
             'entity_id' => $customer->id,
-            'meta' => json_encode(['version' => \App\Models\CustomerConsent::EMAIL_TEXT_VERSION], JSON_UNESCAPED_UNICODE),
+            'meta' => json_encode(['version' => CustomerConsent::EMAIL_TEXT_VERSION], JSON_UNESCAPED_UNICODE),
         ]);
 
         return redirect()->route('portal.email_connection')
@@ -778,7 +806,7 @@ class PortalController extends Controller
         if ($consent) {
             $consent->forceFill(['revoked_at' => now()])->save();
 
-            \App\Models\ActivityLog::create([
+            ActivityLog::create([
                 'user_id' => auth()->id(),
                 'action' => 'email_consent_revoked',
                 'entity_type' => 'customer',
@@ -806,7 +834,7 @@ class PortalController extends Controller
             // ueber den Aenderungsantrag (Vier-Augen-Prinzip) gepflegt.
             'first_name' => 'sometimes|required|string|max:100',
             'last_name' => 'sometimes|required|string|max:100',
-            'email' => ['sometimes', 'required', 'email', 'max:255', 'unique:users,email,' . $user->id],
+            'email' => ['sometimes', 'required', 'email', 'max:255', 'unique:users,email,'.$user->id],
             'birth_date' => 'sometimes|required|date',
             'birth_place' => 'sometimes|required|string|max:255',
             'nationality' => 'sometimes|required|string|max:100',
@@ -835,7 +863,7 @@ class PortalController extends Controller
             'bank_proof' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
         ]);
 
-        $service = app(\App\Services\ChangeRequestService::class);
+        $service = app(ChangeRequestService::class);
         $created = 0;
 
         // Persönliche Daten + strukturierte Adresse + Kundendaten:
@@ -882,13 +910,13 @@ class PortalController extends Controller
         $bankChange = $request->filled('iban') && $data['iban'] !== $customer->iban;
         $sensitiveProfile = array_intersect(
             array_keys($profileNew),
-            \App\Services\ChangeRequest\ChangeProofPolicy::SENSITIVE_PROFILE_FIELDS
+            ChangeProofPolicy::SENSITIVE_PROFILE_FIELDS
         ) !== [];
 
-        if ($sensitiveProfile && !$request->hasFile('proof')) {
+        if ($sensitiveProfile && ! $request->hasFile('proof')) {
             return back()->withInput()->with('error', __('Für Änderungen an Name, Geburtsdatum oder Anschrift benötigen wir einen Nachweis (Ausweis oder Meldebescheinigung). Bitte laden Sie ihn im Abschnitt „Nachweis“ hoch.'));
         }
-        if ($bankChange && !$request->hasFile('bank_proof')) {
+        if ($bankChange && ! $request->hasFile('bank_proof')) {
             return back()->withInput()->with('error', __('Für eine neue Bankverbindung benötigen wir einen Kontonachweis (Foto der Bankkarte oder Kontoauszug mit sichtbarer IBAN).'));
         }
 
@@ -905,7 +933,7 @@ class PortalController extends Controller
         if ($profileNew) {
             $service->submit(
                 $customer, 'profile', $profileOld, $profileNew,
-                'Profiländerung beantragt: ' . implode(', ', array_keys($profileNew)),
+                'Profiländerung beantragt: '.implode(', ', array_keys($profileNew)),
                 requestedBy: null,
                 proofFiles: $sensitiveProfile ? $identityProofs : [],
                 effectiveFrom: $data['effective_from'] ?? null,
@@ -918,7 +946,7 @@ class PortalController extends Controller
             $service->submit(
                 $customer,
                 'bank',
-                ['iban' => $customer->iban ? '••••' . substr($customer->iban, -4) : null, 'account_holder' => $customer->account_holder],
+                ['iban' => $customer->iban ? '••••'.substr($customer->iban, -4) : null, 'account_holder' => $customer->account_holder],
                 ['iban' => $data['iban'], 'account_holder' => ($data['account_holder'] ?? null) ?: ($customer->account_holder ?? auth()->user()->name)],
                 'Neue Bankverbindung beantragt',
                 requestedBy: null,
@@ -929,7 +957,7 @@ class PortalController extends Controller
         }
 
         return back()->with('success', $created > 0
-            ? 'Ihre Änderung' . ($created > 1 ? 'en wurden' : ' wurde') . ' zur Prüfung eingereicht. Jede Änderung wird einzeln bearbeitet.'
+            ? 'Ihre Änderung'.($created > 1 ? 'en wurden' : ' wurde').' zur Prüfung eingereicht. Jede Änderung wird einzeln bearbeitet.'
             : 'Keine Änderungen erkannt.');
     }
 
@@ -949,7 +977,7 @@ class PortalController extends Controller
         // hier 'min:8', waehrend Registrierung und Reset laengst mehr
         // verlangten. Der Kunde bekam dann im Portal ein Passwort
         // akzeptiert, das der Reset-Weg abgelehnt haette.
-        $rules = ['password' => ['required', 'confirmed', \App\Support\PasswordPolicy::customer()]];
+        $rules = ['password' => ['required', 'confirmed', PasswordPolicy::customer()]];
         if ($hasUsablePassword) {
             $rules['current_password'] = ['required', 'current_password'];
         }
@@ -963,10 +991,10 @@ class PortalController extends Controller
 
         // Andere offene Sitzungen dieses Kontos beenden (z. B. ein Geraet,
         // auf dem noch das bekannte Startpasswort benutzt wurde).
-        \Illuminate\Support\Facades\Auth::logoutOtherDevices($request->password);
-        \App\Support\SessionPasswordHash::refresh($request);
+        Auth::logoutOtherDevices($request->password);
+        SessionPasswordHash::refresh($request);
 
-        \App\Models\ActivityLog::create([
+        ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => 'portal_password_changed',
             'entity_type' => 'user',

@@ -41,7 +41,7 @@ class CommissionWorkflowTest extends TestCase
 
         return EmailMessage::create(array_merge([
             'email_account_id' => $account->id,
-            'message_uid' => 'INBOX:' . uniqid(),
+            'message_uid' => 'INBOX:'.uniqid(),
             'from_address' => 'provision@fondsfinanz.de',
             'from_name' => 'Fonds Finanz Provisionsabrechnung',
             'subject' => 'Ihre Provisionsgutschrift',

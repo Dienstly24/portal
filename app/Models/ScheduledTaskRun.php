@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 /**
  * Ein Eintrag je geplanter Aufgabe: wann lief sie zuletzt, wie lange, mit
@@ -38,10 +39,10 @@ class ScheduledTaskRun extends Model
         $summary = trim($summary);
 
         if (preg_match('/artisan[\'"]?\s+(.+)$/', $summary, $m) === 1) {
-            return 'command:' . trim($m[1], " '\"");
+            return 'command:'.trim($m[1], " '\"");
         }
 
-        return 'closure:' . mb_substr($summary, 0, 150);
+        return 'closure:'.mb_substr($summary, 0, 150);
     }
 
     /** Sprechender Name fuer die Anzeige. */
@@ -51,11 +52,11 @@ class ScheduledTaskRun extends Model
             return substr($this->task_key, strlen('command:'));
         }
 
-        return 'Closure (' . substr($this->task_key, strlen('closure:')) . ')';
+        return 'Closure ('.substr($this->task_key, strlen('closure:')).')';
     }
 
     /** Letzter Lauf - erfolgreich oder nicht. */
-    public function lastRunAt(): ?\Illuminate\Support\Carbon
+    public function lastRunAt(): ?Carbon
     {
         return $this->last_finished_at ?? $this->last_started_at;
     }

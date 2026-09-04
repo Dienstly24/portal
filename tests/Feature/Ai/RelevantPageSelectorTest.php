@@ -23,14 +23,14 @@ class RelevantPageSelectorTest extends TestCase
         ]]);
 
         $text = $this->pagesText([
-            "Seite1 Vorlaeufiges Beratungsprotokoll",
-            "Seite2 Kundendaten",
-            "Seite3 Vergleichsergebnis IRRELEVANT",
-            "Seite4 Fahrzeugdaten",
-            "Seite5 Rechtstext IRRELEVANT",
+            'Seite1 Vorlaeufiges Beratungsprotokoll',
+            'Seite2 Kundendaten',
+            'Seite3 Vergleichsergebnis IRRELEVANT',
+            'Seite4 Fahrzeugdaten',
+            'Seite5 Rechtstext IRRELEVANT',
         ]);
 
-        $result = (new RelevantPageSelector())->reduce($text);
+        $result = (new RelevantPageSelector)->reduce($text);
 
         $this->assertStringContainsString('Seite1', $result);
         $this->assertStringContainsString('Seite2', $result);
@@ -47,7 +47,7 @@ class RelevantPageSelectorTest extends TestCase
 
         $text = $this->pagesText(['Seite1 Irgendein Vertrag', 'Seite2 mehr Text']);
 
-        $this->assertSame($text, (new RelevantPageSelector())->reduce($text));
+        $this->assertSame($text, (new RelevantPageSelector)->reduce($text));
     }
 
     public function test_marker_in_the_legal_text_of_a_later_page_does_not_match(): void
@@ -65,13 +65,13 @@ class RelevantPageSelectorTest extends TestCase
             'Seite3 Datenschutz: Daten aus Beratungsprotokollen',
         ]);
 
-        $this->assertSame($text, (new RelevantPageSelector())->reduce($text));
+        $this->assertSame($text, (new RelevantPageSelector)->reduce($text));
     }
 
     public function test_single_page_text_is_untouched(): void
     {
         $text = 'BERATUNGSPROTOKOLL aber nur eine Seite ohne Form-Feed';
-        $this->assertSame($text, (new RelevantPageSelector())->reduce($text));
+        $this->assertSame($text, (new RelevantPageSelector)->reduce($text));
     }
 
     public function test_missing_pages_do_not_break_and_keep_full_text_if_nothing_kept(): void
@@ -83,6 +83,6 @@ class RelevantPageSelectorTest extends TestCase
         $text = $this->pagesText(['Seite1 BERATUNGSPROTOKOLL', 'Seite2']);
 
         // Gewuenschte Seiten existieren nicht -> voller Text statt leer.
-        $this->assertSame($text, (new RelevantPageSelector())->reduce($text));
+        $this->assertSame($text, (new RelevantPageSelector)->reduce($text));
     }
 }

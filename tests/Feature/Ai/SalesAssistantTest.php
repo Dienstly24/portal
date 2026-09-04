@@ -17,16 +17,21 @@ use App\Services\Ai\Assistant\EmployeeAssistantService;
 use App\Services\Ai\Assistant\Sales\AcceptanceDetector;
 use App\Services\Ai\Assistant\Sales\ConversationContext;
 use App\Services\Ai\Assistant\Sales\ConversationState;
-use App\Services\Ai\Assistant\Sales\InternalVerificationService;
 use App\Services\Ai\Assistant\Sales\IntentClassifier;
+use App\Services\Ai\Assistant\Sales\InternalVerificationService;
 use App\Services\Ai\Assistant\Sales\RequirementProfile;
 use App\Services\Ai\Assistant\Sales\SlotExtractor;
 use App\Services\Ai\Assistant\Tools\AssistantToolContext;
 use App\Services\Ai\Assistant\Tools\AssistantToolRegistry;
+use App\Services\Ai\Assistant\Website\LeadContext;
 use App\Services\Ai\Assistant\Website\LeadService;
+use App\Services\Ai\Assistant\Website\LeadToolRegistry;
+use App\Services\Ai\Assistant\Website\Tools\SaveLeadInformationTool;
+use App\Services\Ai\Assistant\Website\Tools\SearchPublicKnowledgeTool;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -68,13 +73,13 @@ class SalesAssistantTest extends TestCase
     {
         $user = User::factory()->create([
             'role' => 'customer',
-            'email' => 'kunde' . uniqid() . '@example.de',
+            'email' => 'kunde'.uniqid().'@example.de',
             'name' => 'Abdulwahab Ibrahim',
         ]);
 
         return Customer::create(array_merge([
             'user_id' => $user->id,
-            'customer_number' => '26' . str_pad((string) $user->id, 5, '0', STR_PAD_LEFT),
+            'customer_number' => '26'.str_pad((string) $user->id, 5, '0', STR_PAD_LEFT),
             'preferred_lang' => 'de',
         ], $attributes));
     }
@@ -158,7 +163,7 @@ class SalesAssistantTest extends TestCase
         foreach (ConversationState::all() as $state) {
             $this->assertTrue(
                 ConversationState::allows($state, ConversationState::HUMAN_REQUIRED),
-                'Uebergabe muss aus ' . $state . ' moeglich sein.'
+                'Uebergabe muss aus '.$state.' moeglich sein.'
             );
         }
     }
@@ -167,10 +172,10 @@ class SalesAssistantTest extends TestCase
 
     public function test_iban_und_geburtsdatum_werden_vor_dem_modell_herausgeloest(): void
     {
-        $extractor = new SlotExtractor();
+        $extractor = new SlotExtractor;
         $ergebnis = $extractor->extract(
             'Meine IBAN ist DE02120300000000202051, geboren bin ich am 12.05.1990, '
-            . 'E-Mail max@example.de'
+            .'E-Mail max@example.de'
         );
 
         $this->assertSame('DE02120300000000202051', $ergebnis['found']['iban']);
@@ -187,7 +192,7 @@ class SalesAssistantTest extends TestCase
     public function test_kaputte_iban_wird_nicht_uebernommen(): void
     {
         // Eine Ziffer verdreht -> Pruefziffer stimmt nicht mehr.
-        $ergebnis = (new SlotExtractor())->extract('IBAN DE02120300000000202052');
+        $ergebnis = (new SlotExtractor)->extract('IBAN DE02120300000000202052');
 
         $this->assertArrayNotHasKey('iban', $ergebnis['found']);
         $this->assertStringContainsString('DE02120300000000202052', $ergebnis['text']);
@@ -195,7 +200,7 @@ class SalesAssistantTest extends TestCase
 
     public function test_wunschtermin_wird_nicht_als_geburtsdatum_gelesen(): void
     {
-        $ergebnis = (new SlotExtractor())->extract('Der Anschluss soll am 01.09.2026 starten.');
+        $ergebnis = (new SlotExtractor)->extract('Der Anschluss soll am 01.09.2026 starten.');
 
         $this->assertArrayNotHasKey('birthdate', $ergebnis['found']);
     }
@@ -212,7 +217,7 @@ class SalesAssistantTest extends TestCase
         Http::assertSent(function ($request) {
             $inhalt = json_encode($request->data(), JSON_UNESCAPED_UNICODE);
 
-            return !str_contains((string) $inhalt, 'DE02120300000000202051');
+            return ! str_contains((string) $inhalt, 'DE02120300000000202051');
         });
 
         // Gespeichert ist sie trotzdem - nur eben serverseitig.
@@ -336,7 +341,7 @@ class SalesAssistantTest extends TestCase
 
     public function test_zustimmung_wird_auch_ohne_das_wort_ja_erkannt(): void
     {
-        $detector = new AcceptanceDetector();
+        $detector = new AcceptanceDetector;
 
         foreach (['Passt so.', 'Das nehme ich', 'einverstanden', 'خلاص نكمل', 'sounds good'] as $satz) {
             $this->assertTrue($detector->check($satz, ['A'])['accepted'], $satz);
@@ -345,7 +350,7 @@ class SalesAssistantTest extends TestCase
 
     public function test_absage_wird_nie_als_zustimmung_gelesen(): void
     {
-        $detector = new AcceptanceDetector();
+        $detector = new AcceptanceDetector;
 
         foreach (['Nein, doch nicht', 'Das ist mir zu teuer', 'ich moechte es mir ueberlegen'] as $satz) {
             $ergebnis = $detector->check($satz, ['A']);
@@ -364,7 +369,7 @@ class SalesAssistantTest extends TestCase
             AiOffer::create([
                 'conversation_id' => $conversation->id,
                 'label' => $label,
-                'product' => 'Tarif ' . $label,
+                'product' => 'Tarif '.$label,
             ]);
         }
 
@@ -562,7 +567,7 @@ class SalesAssistantTest extends TestCase
 
     public function test_website_assistent_hat_keinen_zugriff_auf_kundendaten(): void
     {
-        $werkzeuge = app(\App\Services\Ai\Assistant\Website\LeadToolRegistry::class)->names();
+        $werkzeuge = app(LeadToolRegistry::class)->names();
 
         $this->assertSame(['searchKnowledge', 'saveLeadInformation', 'requestHumanContact'], $werkzeuge);
 
@@ -586,10 +591,10 @@ class SalesAssistantTest extends TestCase
             'active' => true,
         ]);
 
-        $lead = app(LeadService::class)->forSession((string) \Illuminate\Support\Str::uuid());
-        $ergebnis = app(\App\Services\Ai\Assistant\Website\Tools\SearchPublicKnowledgeTool::class)
+        $lead = app(LeadService::class)->forSession((string) Str::uuid());
+        $ergebnis = app(SearchPublicKnowledgeTool::class)
             ->run(['suchbegriff' => 'Eskalation Unterlagen Internet'],
-                new \App\Services\Ai\Assistant\Website\LeadContext($lead, 'de'));
+                new LeadContext($lead, 'de'));
 
         $titel = array_column($ergebnis['eintraege'], 'titel');
         $this->assertContains('Benoetigte Unterlagen Internet', $titel);
@@ -598,10 +603,10 @@ class SalesAssistantTest extends TestCase
 
     public function test_website_assistent_erfasst_keine_sensiblen_angaben(): void
     {
-        $lead = app(LeadService::class)->forSession((string) \Illuminate\Support\Str::uuid());
-        $context = new \App\Services\Ai\Assistant\Website\LeadContext($lead, 'de');
+        $lead = app(LeadService::class)->forSession((string) Str::uuid());
+        $context = new LeadContext($lead, 'de');
 
-        app(\App\Services\Ai\Assistant\Website\Tools\SaveLeadInformationTool::class)->run([
+        app(SaveLeadInformationTool::class)->run([
             'angaben' => ['name' => 'Max Muster', 'iban' => 'DE02120300000000202051', 'birthdate' => '12.05.1990'],
         ], $context);
 
@@ -613,7 +618,7 @@ class SalesAssistantTest extends TestCase
 
     public function test_lead_wird_mit_vorgang_an_das_team_uebergeben(): void
     {
-        $lead = app(LeadService::class)->forSession((string) \Illuminate\Support\Str::uuid(), 'Ich brauche neues Internet');
+        $lead = app(LeadService::class)->forSession((string) Str::uuid(), 'Ich brauche neues Internet');
         $lead->remember(['installation_address' => 'Musterweg 5', 'situation' => 'Umzug']);
         $lead->forceFill(['contact' => ['name' => 'Max Muster', 'email' => 'max@example.de']])->save();
 
@@ -655,7 +660,7 @@ class SalesAssistantTest extends TestCase
 
     public function test_anliegen_wird_grob_erkannt(): void
     {
-        $classifier = new IntentClassifier();
+        $classifier = new IntentClassifier;
 
         $this->assertSame(RequirementProfile::INTENT_NEW_INTERNET, $classifier->classify('Ich brauche einen neuen Internetanschluss.'));
         $this->assertSame(RequirementProfile::INTENT_CONTRACT_CHANGE, $classifier->classify('Ich moechte meinen Vertrag wechseln.'));
@@ -750,8 +755,8 @@ class SalesAssistantTest extends TestCase
                 'customer_id' => $customer->id,
                 'sender_id' => $staff->id,
                 'body' => 'Guten Tag, vielen Dank für Ihre Nachricht. '
-                    . 'Wir haben Ihren Vorgang geprüft und melden uns mit dem Ergebnis. '
-                    . 'Können Sie uns noch die Vertragsnummer nennen?',
+                    .'Wir haben Ihren Vorgang geprüft und melden uns mit dem Ergebnis. '
+                    .'Können Sie uns noch die Vertragsnummer nennen?',
                 'from_staff' => true,
             ]);
         }

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Support;
 
 /**
@@ -77,7 +78,7 @@ class CommissionKind
                     // Kurzkuerzel ("ap", "bp") nur als ganzes Wort - sonst
                     // trifft "ap" in "Kapitalanlage".
                     $hit = mb_strlen($needle) <= 3
-                        ? preg_match('/(^|\s)' . preg_quote($needle, '/') . '(\s|$)/u', $key) === 1
+                        ? preg_match('/(^|\s)'.preg_quote($needle, '/').'(\s|$)/u', $key) === 1
                         : str_contains($key, $needle);
                     if ($hit) {
                         return $kind;

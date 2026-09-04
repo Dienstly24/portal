@@ -1,12 +1,16 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Events\InternalMessageCreated;
+use App\Mail\InternalMentionMail;
 use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\InternalMessage;
 use App\Models\SystemSetting;
 use App\Models\User;
+use App\Services\Notifications\NotificationService;
+use App\Support\Facades\Notify;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 
@@ -118,24 +122,24 @@ class InternalMessageController extends Controller
                 $users = $users->merge(
                     User::whereIn('role', $staffRoles)
                         ->where('is_active', true)
-                        ->where('name', 'like', $name . '%')
+                        ->where('name', 'like', $name.'%')
                         ->get()
                 );
             }
         }
 
         return $users->unique('id')
-            ->reject(fn($u) => $u->id === auth()->id() || !$u->isStaff())
+            ->reject(fn ($u) => $u->id === auth()->id() || ! $u->isStaff())
             ->values();
     }
 
     private function notifyMentioned(InternalMessage $message, $users): void
     {
         foreach ($users as $user) {
-            \App\Support\Facades\Notify::push($user->id, [
-                'type' => \App\Services\Notifications\NotificationService::TYPE_MENTION,
+            Notify::push($user->id, [
+                'type' => NotificationService::TYPE_MENTION,
                 'message_id' => $message->id,
-                'dedup_key' => 'mention-' . $message->id,
+                'dedup_key' => 'mention-'.$message->id,
             ]);
 
             // Optionale E-Mail-Benachrichtigung (Einstellung, Standard: aus).
@@ -144,11 +148,11 @@ class InternalMessageController extends Controller
             if (SystemSetting::get('mention_email_enabled', '0') === '1'
                 && $user->isStaff()
                 && $user->email
-                && !str_contains($user->email, '@dienstly24.internal')) {
+                && ! str_contains($user->email, '@dienstly24.internal')) {
                 try {
-                    Mail::to($user->email)->send(new \App\Mail\InternalMentionMail($message, $user));
+                    Mail::to($user->email)->send(new InternalMentionMail($message, $user));
                 } catch (\Throwable $e) {
-                    \Log::warning('Mention mail failed: ' . $e->getMessage());
+                    \Log::warning('Mention mail failed: '.$e->getMessage());
                 }
             }
         }

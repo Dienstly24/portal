@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ScopesCustomerAccess;
@@ -6,6 +7,7 @@ use App\Models\Customer;
 use App\Models\MessageTemplate;
 use App\Models\Task;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -37,7 +39,7 @@ class TaskController extends Controller
         $vids = $this->visibleCustomerIds();
         $seesAll = in_array($user->role, ['admin', 'manager'], true);
 
-        $query = Task::with(['assignedTo','customer.user','createdBy','emailMessage']);
+        $query = Task::with(['assignedTo', 'customer.user', 'createdBy', 'emailMessage']);
 
         // Tabs: Meine + Kunden zeigen OFFENE Vorgaenge, Erledigtes hat den
         // eigenen Tab. Kunden-Aufgaben nur im eigenen Portfolio-Scope
@@ -47,10 +49,10 @@ class TaskController extends Controller
             $query->where('assigned_to', $user->id)->open();
         } elseif ($tab === 'customer') {
             $query->whereNotNull('customer_id')->open()
-                ->when($vids !== null, fn($qq) => $qq->whereIn('customer_id', $vids));
+                ->when($vids !== null, fn ($qq) => $qq->whereIn('customer_id', $vids));
         } elseif ($tab === 'done') {
             $query->where('status', 'done')
-                ->when(!$seesAll, fn($qq) => $qq->where(fn($w) => $w
+                ->when(! $seesAll, fn ($qq) => $qq->where(fn ($w) => $w
                     ->where('assigned_to', $user->id)->orWhere('created_by', $user->id)));
         }
 
@@ -58,16 +60,16 @@ class TaskController extends Controller
         if ($type) $query->where('type', $type);
         if ($due === 'today') $query->whereDate('due_date', today());
         elseif ($due === 'overdue') $query->whereDate('due_date', '<', today())->open();
-        elseif (in_array($due, ['7','14','30'], true)) $query->whereDate('due_date', '<=', today()->addDays((int) $due));
+        elseif (in_array($due, ['7', '14', '30'], true)) $query->whereDate('due_date', '<=', today()->addDays((int) $due));
         if ($request->filled('customer')) $query->where('customer_id', $request->get('customer'));
 
         if ($q !== '') {
-            $like = '%' . addcslashes($q, '%_\\') . '%';
+            $like = '%'.addcslashes($q, '%_\\').'%';
             $query->where(function ($w) use ($like) {
                 $w->where('title', 'like', $like)
-                  ->orWhere('description', 'like', $like)
-                  ->orWhereHas('customer', fn($c) => $c->where('customer_number', 'like', $like))
-                  ->orWhereHas('customer.user', fn($u) => $u->where('name', 'like', $like));
+                    ->orWhere('description', 'like', $like)
+                    ->orWhereHas('customer', fn ($c) => $c->where('customer_number', 'like', $like))
+                    ->orWhereHas('customer.user', fn ($u) => $u->where('name', 'like', $like));
             });
         }
 
@@ -85,7 +87,7 @@ class TaskController extends Controller
         $counts = [
             'mine' => Task::where('assigned_to', $user->id)->open()->count(),
             'customer' => Task::whereNotNull('customer_id')->open()
-                ->when($vids !== null, fn($qq) => $qq->whereIn('customer_id', $vids))->count(),
+                ->when($vids !== null, fn ($qq) => $qq->whereIn('customer_id', $vids))->count(),
             'overdue' => Task::where('assigned_to', $user->id)->open()
                 ->whereDate('due_date', '<', today())->count(),
         ];
@@ -107,10 +109,10 @@ class TaskController extends Controller
             'tasks' => $tasks,
             'tab' => $tab,
             'counts' => $counts,
-            'staff' => User::whereIn('role', ['admin','manager','support','employee'])
-                ->where('is_active', true)->orderBy('name')->get(['id','name']),
+            'staff' => User::whereIn('role', ['admin', 'manager', 'support', 'employee'])
+                ->where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'templates' => MessageTemplate::where('category', 'kunde')
-                ->orderBy('sort')->orderBy('name')->get(['id','name','subject','body']),
+                ->orderBy('sort')->orderBy('name')->get(['id', 'name', 'subject', 'body']),
             'placeholders' => MessageTemplate::PLACEHOLDERS,
             'preselected' => $preselected,
             'filterCustomer' => $filterCustomer,
@@ -128,13 +130,13 @@ class TaskController extends Controller
         $ids = $this->visibleCustomerIds();
 
         $base = Customer::with(['user', 'betreuer'])
-            ->when($ids !== null, fn($query) => $query->whereIn('customers.id', $ids));
+            ->when($ids !== null, fn ($query) => $query->whereIn('customers.id', $ids));
         $customers = $q === ''
             ? $base->latest()->take(8)->get()
             : $base->search($q)->take(8)->get();
 
         return response()->json([
-            'customers' => $customers->map(fn(Customer $c) => $this->customerPayload($c))->values(),
+            'customers' => $customers->map(fn (Customer $c) => $this->customerPayload($c))->values(),
         ]);
     }
 
@@ -157,8 +159,8 @@ class TaskController extends Controller
         $msg = 'Aufgabe erstellt.';
         if (($auto['auto_email_status'] ?? null) === 'pending') {
             $msg .= ' Die E-Mail an den Kunden wird am '
-                . \Carbon\Carbon::parse($auto['auto_email_send_on'])->format('d.m.Y')
-                . ' automatisch gesendet.';
+                .Carbon::parse($auto['auto_email_send_on'])->format('d.m.Y')
+                .' automatisch gesendet.';
         }
         return back()->with('success', $msg);
     }
@@ -187,11 +189,11 @@ class TaskController extends Controller
             $base = $task->due_date && $task->due_date->gt(today()) ? $task->due_date : today();
             $task->due_date = $base->copy()->addDays((int) $request->postpone_days);
             $task->save();
-            return back()->with('success', 'Aufgabe verschoben auf ' . $task->due_date->format('d.m.Y') . '.');
+            return back()->with('success', 'Aufgabe verschoben auf '.$task->due_date->format('d.m.Y').'.');
         }
 
         // 2) Schnell-Statuswechsel (Dropdown in der Liste) - unveraendertes Verhalten.
-        if (!$request->boolean('edit')) {
+        if (! $request->boolean('edit')) {
             $request->validate(['status' => 'required|in:open,in_progress,done']);
             $task->update(['status' => $request->status]);
             return back()->with('success', 'Status aktualisiert.');
@@ -230,11 +232,11 @@ class TaskController extends Controller
             'priority' => ['nullable', Rule::in(array_keys(Task::PRIORITIES))],
             'due_date' => 'nullable|date',
             'assigned_to' => ['required', Rule::exists('users', 'id')
-                ->where(fn($q) => $q->whereIn('role', ['admin','manager','support','employee']))],
+                ->where(fn ($q) => $q->whereIn('role', ['admin', 'manager', 'support', 'employee']))],
             'customer_id' => 'nullable|uuid|exists:customers,id',
         ], [], ['title' => 'Titel', 'assigned_to' => 'Zuweisung', 'due_date' => 'Fälligkeitsdatum']);
 
-        if (!empty($data['customer_id'])) {
+        if (! empty($data['customer_id'])) {
             abort_unless(auth()->user()->canAccessCustomer($data['customer_id']), 403);
         }
         return $data;
@@ -258,7 +260,7 @@ class TaskController extends Controller
             return [];
         }
 
-        if (!$request->boolean('auto_email')) {
+        if (! $request->boolean('auto_email')) {
             return [
                 'auto_email_status' => null, 'auto_email_subject' => null,
                 'auto_email_body' => null, 'auto_email_send_on' => null,
@@ -282,7 +284,7 @@ class TaskController extends Controller
         ]);
 
         $customer = Customer::with('user')->findOrFail($data['customer_id']);
-        if (!$customer->user?->hasRealEmail()) {
+        if (! $customer->user?->hasRealEmail()) {
             throw ValidationException::withMessages([
                 'auto_email' => 'Der Kunde hat keine echte E-Mail-Adresse - automatischer Versand nicht möglich.',
             ]);
@@ -307,7 +309,7 @@ class TaskController extends Controller
             'email' => $c->user?->hasRealEmail() ? $c->user->email : null,
             'betreuer' => $c->relationLoaded('betreuer') ? $c->betreuer->pluck('name')->implode(', ') : '',
             'last_contact' => $c->last_contact
-                ? \Carbon\Carbon::parse($c->last_contact)->format('d.m.Y') : null,
+                ? Carbon::parse($c->last_contact)->format('d.m.Y') : null,
         ];
     }
 }

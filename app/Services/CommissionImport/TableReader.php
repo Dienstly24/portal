@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\CommissionImport;
 
 /**
@@ -15,9 +16,9 @@ namespace App\Services\CommissionImport;
 class TableReader
 {
     public function __construct(
-        private CsvTableReader $csv = new CsvTableReader(),
-        private XlsxTableReader $xlsx = new XlsxTableReader(),
-        private XlsTableReader $xls = new XlsTableReader(),
+        private CsvTableReader $csv = new CsvTableReader,
+        private XlsxTableReader $xlsx = new XlsxTableReader,
+        private XlsTableReader $xls = new XlsTableReader,
     ) {
     }
 

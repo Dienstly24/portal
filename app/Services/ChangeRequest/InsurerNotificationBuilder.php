@@ -1,10 +1,12 @@
 <?php
+
 namespace App\Services\ChangeRequest;
 
 use App\Models\ChangeNotification;
 use App\Models\Contract;
 use App\Models\CustomerChangeRequest;
 use App\Models\SystemSetting;
+use Carbon\Carbon;
 use Illuminate\Support\Str;
 
 /**
@@ -33,20 +35,20 @@ class InsurerNotificationBuilder
      */
     public function prepare(CustomerChangeRequest $request): int
     {
-        if (!$this->isRelevant($request)) {
+        if (! $this->isRelevant($request)) {
             return 0;
         }
 
         $customer = $request->customer;
-        if (!$customer) {
+        if (! $customer) {
             return 0;
         }
 
         $contracts = Contract::where('customer_id', $customer->id)
             ->whereIn('status', self::RELEVANT_STATUS)
             ->get()
-            ->filter(fn(Contract $c) => trim((string) $c->insurer) !== '')
-            ->groupBy(fn(Contract $c) => Str::lower(trim((string) $c->insurer)));
+            ->filter(fn (Contract $c) => trim((string) $c->insurer) !== '')
+            ->groupBy(fn (Contract $c) => Str::lower(trim((string) $c->insurer)));
 
         $created = 0;
         foreach ($contracts as $group) {
@@ -92,9 +94,9 @@ class InsurerNotificationBuilder
     private function subject(CustomerChangeRequest $request, string $numbers): string
     {
         $name = $request->customer?->user?->name ?: 'Kunde';
-        $subject = $this->changeTitle($request) . ' – ' . $name;
+        $subject = $this->changeTitle($request).' – '.$name;
         if ($numbers !== '') {
-            $subject .= ', Vertrag ' . Str::limit($numbers, 60, '');
+            $subject .= ', Vertrag '.Str::limit($numbers, 60, '');
         }
         return Str::limit($subject, 190, '');
     }
@@ -120,30 +122,30 @@ class InsurerNotificationBuilder
         $name = $customer?->user?->name ?: '—';
         $company = SystemSetting::get('company_name', 'Dienstly24');
         $effective = $request->effective_from
-            ? \Carbon\Carbon::parse($request->effective_from)->format('d.m.Y')
+            ? Carbon::parse($request->effective_from)->format('d.m.Y')
             : null;
 
         $lines = [];
         $lines[] = 'Sehr geehrte Damen und Herren,';
         $lines[] = '';
         $lines[] = 'unser gemeinsamer Kunde hat uns eine Änderung seiner Daten mitgeteilt. '
-            . 'Bitte berücksichtigen Sie diese Änderung für die unten genannten Verträge.';
+            .'Bitte berücksichtigen Sie diese Änderung für die unten genannten Verträge.';
         $lines[] = '';
-        $lines[] = 'Kunde: ' . $name
-            . ($customer?->birth_date ? ', geboren am ' . \Carbon\Carbon::parse($customer->birth_date)->format('d.m.Y') : '');
+        $lines[] = 'Kunde: '.$name
+            .($customer?->birth_date ? ', geboren am '.Carbon::parse($customer->birth_date)->format('d.m.Y') : '');
         if ($customer?->customer_number) {
-            $lines[] = 'Unsere Kundennummer: ' . $customer->customer_number;
+            $lines[] = 'Unsere Kundennummer: '.$customer->customer_number;
         }
-        $lines[] = 'Gesellschaft: ' . $insurer;
+        $lines[] = 'Gesellschaft: '.$insurer;
         if ($numbers !== '') {
-            $lines[] = 'Vertragsnummer(n): ' . $numbers;
+            $lines[] = 'Vertragsnummer(n): '.$numbers;
         }
         $lines[] = '';
-        $lines[] = $this->changeTitle($request) . ':';
+        $lines[] = $this->changeTitle($request).':';
         foreach ($this->changeLines($request) as $line) {
             $lines[] = $line;
         }
-        $lines[] = 'Gültig ab: ' . ($effective ?: 'siehe beigefügter Nachweis');
+        $lines[] = 'Gültig ab: '.($effective ?: 'siehe beigefügter Nachweis');
         $lines[] = '';
         $lines[] = 'Einen Nachweis fügen wir dieser Nachricht bei.';
         $lines[] = '';
@@ -163,44 +165,44 @@ class InsurerNotificationBuilder
         $lines = [];
 
         if ($request->type === 'bank') {
-            if (!empty($old['iban'])) {
-                $lines[] = 'Bisherige IBAN: ' . $old['iban'];
+            if (! empty($old['iban'])) {
+                $lines[] = 'Bisherige IBAN: '.$old['iban'];
             }
-            if (!empty($new['iban'])) {
-                $lines[] = 'Neue IBAN: ' . $this->formatIban((string) $new['iban']);
+            if (! empty($new['iban'])) {
+                $lines[] = 'Neue IBAN: '.$this->formatIban((string) $new['iban']);
             }
-            if (!empty($new['account_holder'])) {
-                $lines[] = 'Kontoinhaber: ' . $new['account_holder'];
+            if (! empty($new['account_holder'])) {
+                $lines[] = 'Kontoinhaber: '.$new['account_holder'];
             }
             return $lines;
         }
 
         if ($request->type === 'address') {
-            if (!empty($old['street']) || !empty($old['city'])) {
-                $lines[] = 'Bisherige Anschrift: ' . trim(($old['street'] ?? '') . ', ' . ($old['zip'] ?? '') . ' ' . ($old['city'] ?? ''), ' ,');
+            if (! empty($old['street']) || ! empty($old['city'])) {
+                $lines[] = 'Bisherige Anschrift: '.trim(($old['street'] ?? '').', '.($old['zip'] ?? '').' '.($old['city'] ?? ''), ' ,');
             }
-            $lines[] = 'Neue Anschrift: ' . trim(($new['street'] ?? '') . ', ' . ($new['zip'] ?? '') . ' ' . ($new['city'] ?? ''), ' ,');
+            $lines[] = 'Neue Anschrift: '.trim(($new['street'] ?? '').', '.($new['zip'] ?? '').' '.($new['city'] ?? ''), ' ,');
             return $lines;
         }
 
         // Profil: Name und/oder strukturierte Adresse
-        $newName = trim(($new['first_name'] ?? '') . ' ' . ($new['last_name'] ?? ''));
-        $oldName = trim(($old['first_name'] ?? '') . ' ' . ($old['last_name'] ?? ''));
+        $newName = trim(($new['first_name'] ?? '').' '.($new['last_name'] ?? ''));
+        $oldName = trim(($old['first_name'] ?? '').' '.($old['last_name'] ?? ''));
         if ($newName !== '') {
             if ($oldName !== '') {
-                $lines[] = 'Bisheriger Name: ' . $oldName;
+                $lines[] = 'Bisheriger Name: '.$oldName;
             }
-            $lines[] = 'Neuer Name: ' . $newName;
+            $lines[] = 'Neuer Name: '.$newName;
         }
-        $street = trim(($new['address_street'] ?? '') . ' ' . ($new['address_house_number'] ?? '') . ($new['address_house_suffix'] ?? ''));
-        $city = trim(($new['address_zip'] ?? '') . ' ' . ($new['address_city'] ?? ''));
+        $street = trim(($new['address_street'] ?? '').' '.($new['address_house_number'] ?? '').($new['address_house_suffix'] ?? ''));
+        $city = trim(($new['address_zip'] ?? '').' '.($new['address_city'] ?? ''));
         if ($street !== '' || $city !== '') {
-            $oldStreet = trim(($old['address_street'] ?? '') . ' ' . ($old['address_house_number'] ?? ''));
-            $oldCity = trim(($old['address_zip'] ?? '') . ' ' . ($old['address_city'] ?? ''));
+            $oldStreet = trim(($old['address_street'] ?? '').' '.($old['address_house_number'] ?? ''));
+            $oldCity = trim(($old['address_zip'] ?? '').' '.($old['address_city'] ?? ''));
             if ($oldStreet !== '' || $oldCity !== '') {
-                $lines[] = 'Bisherige Anschrift: ' . trim($oldStreet . ', ' . $oldCity, ' ,');
+                $lines[] = 'Bisherige Anschrift: '.trim($oldStreet.', '.$oldCity, ' ,');
             }
-            $lines[] = 'Neue Anschrift: ' . trim($street . ', ' . $city, ' ,');
+            $lines[] = 'Neue Anschrift: '.trim($street.', '.$city, ' ,');
         }
 
         return $lines;

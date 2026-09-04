@@ -26,7 +26,7 @@ class DuplicateDetectionHttpTest extends TestCase
         $user = User::factory()->create(['role' => 'customer', 'name' => $name, 'email' => $email]);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5($email), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5($email), 0, 8)),
             'birth_date' => $birth,
         ]);
     }
@@ -64,7 +64,7 @@ class DuplicateDetectionHttpTest extends TestCase
         Contract::create(['customer_id' => $duplicate->id, 'type' => 'kfz', 'insurer' => 'HUK', 'status' => 'active']);
 
         $response = $this->actingAs($this->admin())
-            ->get(route('admin.customer.merge', $primary->id) . '?duplicate=' . $duplicate->id);
+            ->get(route('admin.customer.merge', $primary->id).'?duplicate='.$duplicate->id);
 
         $response->assertOk();
         $response->assertSee('Möglicher Treffer erkannt');

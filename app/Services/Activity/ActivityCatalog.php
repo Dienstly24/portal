@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Activity;
 
 use App\Models\SystemSetting;

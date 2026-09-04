@@ -16,7 +16,7 @@ class KkhBeitrittserklaerungParserTest extends TestCase
     /** OCR-aehnlicher Text der KKH-Beitrittserklaerung (synthetisch). */
     private function kkhText(): string
     {
-        return <<<TXT
+        return <<<'TXT'
         Beitrittserklärung
         Allgemeine Angaben zum Mitglied
         Mustermann Max Ali . R
@@ -51,7 +51,7 @@ class KkhBeitrittserklaerungParserTest extends TestCase
 
     public function test_parses_kkh_beitrittserklaerung(): void
     {
-        $result = (new KkhBeitrittserklaerungParser())->parse($this->kkhText());
+        $result = (new KkhBeitrittserklaerungParser)->parse($this->kkhText());
 
         $this->assertNotNull($result);
         $this->assertSame('beitrittserklaerung', $result['type']);
@@ -86,11 +86,11 @@ class KkhBeitrittserklaerungParserTest extends TestCase
         // Bei niedriger OCR-Aufloesung haengt die rechte Formularspalte an der
         // Namenszeile - nur die fuehrenden Namens-Tokens duerfen genommen werden.
         $text = "Beitrittserklärung\nKrankenversicherungsnummer\n"
-            . "Alhamadeh Nouraddin Verwandschaftsverhältnis zum Arbeitgeber ja\n"
-            . "Nachname Vorname\n"
-            . "KKH Kaufmännische Krankenkasse - 30125 Hannover";
+            ."Alhamadeh Nouraddin Verwandschaftsverhältnis zum Arbeitgeber ja\n"
+            ."Nachname Vorname\n"
+            .'KKH Kaufmännische Krankenkasse - 30125 Hannover';
 
-        $result = (new KkhBeitrittserklaerungParser())->parse($text);
+        $result = (new KkhBeitrittserklaerungParser)->parse($text);
 
         $this->assertNotNull($result);
         $this->assertSame('Alhamadeh', $result['data']['person']['last_name']);
@@ -99,12 +99,12 @@ class KkhBeitrittserklaerungParserTest extends TestCase
 
     public function test_returns_null_for_non_kkh_document(): void
     {
-        $this->assertNull((new KkhBeitrittserklaerungParser())->parse(
-            "Irgendein anderes Dokument ohne die passenden Stichworte."
+        $this->assertNull((new KkhBeitrittserklaerungParser)->parse(
+            'Irgendein anderes Dokument ohne die passenden Stichworte.'
         ));
         // CHECK24-Protokoll ist NICHT die KKH-Beitrittserklaerung.
-        $this->assertNull((new KkhBeitrittserklaerungParser())->parse(
-            "BERATUNGSPROTOKOLL KFZ CHECK24 HSN/TSN: 1234/ABC"
+        $this->assertNull((new KkhBeitrittserklaerungParser)->parse(
+            'BERATUNGSPROTOKOLL KFZ CHECK24 HSN/TSN: 1234/ABC'
         ));
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Models\Contract;
@@ -60,8 +61,8 @@ class WgvKfzPoliceParser implements DocumentTemplateParser
         if (preg_match('/ANTRAG\s+KRAFTFAHRTVERSICHERUNG/u', $upper)) {
             return null;
         }
-        if (!str_contains($upper, 'WGV')
-            || (!str_contains($upper, 'KRAFTFAHRTVERSICHERUNG') && !str_contains($upper, 'KFZ-VERSICHERUNG'))) {
+        if (! str_contains($upper, 'WGV')
+            || (! str_contains($upper, 'KRAFTFAHRTVERSICHERUNG') && ! str_contains($upper, 'KFZ-VERSICHERUNG'))) {
             return null;
         }
 
@@ -77,27 +78,27 @@ class WgvKfzPoliceParser implements DocumentTemplateParser
             return null;
         }
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $kundennummer = $this->labelValue('Mitglieds-/Kundennummer') ?? $this->labelValue('Kundennummer');
 
         return [
             'type' => 'kfz_vertrag',
             'confidence' => 78,
             'summary' => 'WGV Kfz-Versicherungsschein'
-                . ($name !== '' ? ' - ' . $name : '')
-                . (isset($vehicle['license_plate']) ? ' - ' . $vehicle['license_plate'] : '')
-                . (isset($insurance['contract_number']) ? ' - Schein ' . $insurance['contract_number'] : '')
-                . ($kundennummer !== null ? ' - Kundennr. ' . $kundennummer : '')
-                . (isset($vehicle['sf_liability_class']) ? ' - SF ' . $vehicle['sf_liability_class'] : '')
-                . ' - Deckung: ' . $this->coverageSummary($vehicle)
-                . (isset($insurance['premium_amount'])
-                    ? ' - Beitrag ' . number_format($insurance['premium_amount'], 2, ',', '.') . ' EUR'
-                        . ($insurance['premium_interval'] === 'monthly' ? '/Monat' : '')
+                .($name !== '' ? ' - '.$name : '')
+                .(isset($vehicle['license_plate']) ? ' - '.$vehicle['license_plate'] : '')
+                .(isset($insurance['contract_number']) ? ' - Schein '.$insurance['contract_number'] : '')
+                .($kundennummer !== null ? ' - Kundennr. '.$kundennummer : '')
+                .(isset($vehicle['sf_liability_class']) ? ' - SF '.$vehicle['sf_liability_class'] : '')
+                .' - Deckung: '.$this->coverageSummary($vehicle)
+                .(isset($insurance['premium_amount'])
+                    ? ' - Beitrag '.number_format($insurance['premium_amount'], 2, ',', '.').' EUR'
+                        .($insurance['premium_interval'] === 'monthly' ? '/Monat' : '')
                     : '')
-                . (isset($vehicle['initial_mileage'])
-                    ? ' - Kilometerstand ' . number_format($vehicle['initial_mileage'], 0, ',', '.') . ' km' : '')
-                . ' - Felder gratis aus dem Versicherungsschein gelesen (ohne KI).',
-            'title' => 'WGV Kfz-Versicherung' . ($name !== '' ? ' ' . $name : ''),
+                .(isset($vehicle['initial_mileage'])
+                    ? ' - Kilometerstand '.number_format($vehicle['initial_mileage'], 0, ',', '.').' km' : '')
+                .' - Felder gratis aus dem Versicherungsschein gelesen (ohne KI).',
+            'title' => 'WGV Kfz-Versicherung'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -123,7 +124,7 @@ class WgvKfzPoliceParser implements DocumentTemplateParser
         $raw = [];
 
         foreach ($this->lines as $i => $line) {
-            if (!preg_match('/^\s*(Herrn|Herr|Frau)\s*$/u', trim($line), $g)) {
+            if (! preg_match('/^\s*(Herrn|Herr|Frau)\s*$/u', trim($line), $g)) {
                 continue;
             }
             $block = [];
@@ -155,7 +156,7 @@ class WgvKfzPoliceParser implements DocumentTemplateParser
         // Geburtsdatum steht bei den Beitragsmerkmalen.
         $birth = $this->labelValue('Geburtsdatum des Versicherungsnehmers');
         if ($birth !== null && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $birth, $m)) {
-            $raw['birth_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['birth_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
         // Berufsgruppe ("Angestellte (m/w/d)") als Beruf - so steht es im Schein.
         $beruf = $this->labelValue('Berufsgruppe');
@@ -189,7 +190,7 @@ class WgvKfzPoliceParser implements DocumentTemplateParser
         }
         // Hersteller: der Schein nennt die HSN-Gruppe ("FIAT (I) INKL. ALFA,
         // LANCIA,") - uebernommen wird nur die Marke davor.
-        if (($v = $this->labelValue('Hersteller')) !== null && !str_contains($v, '/')) {
+        if (($v = $this->labelValue('Hersteller')) !== null && ! str_contains($v, '/')) {
             $marke = trim((string) preg_split('/[(,]/u', $v)[0]);
             if (preg_match('/^\p{L}[\p{L} .\-]{1,40}$/u', $marke)) {
                 $raw['manufacturer'] = $marke;
@@ -199,10 +200,10 @@ class WgvKfzPoliceParser implements DocumentTemplateParser
             $raw['power_kw'] = (int) str_replace('.', '', $m[1]);
         }
         if (($v = $this->labelValue('Erstzulassung')) !== null && preg_match('/^(\d{2})\.(\d{2})\.(\d{4})/', trim($v), $m)) {
-            $raw['first_registration'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['first_registration'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
         if (($v = $this->labelValue('Erstzulassung auf VN')) !== null && preg_match('/^(\d{2})\.(\d{2})\.(\d{4})/', trim($v), $m)) {
-            $raw['acquisition_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['acquisition_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
         // "Herst.Nr./Typ Nr.   4136 / 668".
         foreach (['Herst.Nr./Typ Nr.', 'Herst.-Nr./Typ-Nr.', 'Hersteller-/Typ-Nummer'] as $label) {
@@ -265,11 +266,11 @@ class WgvKfzPoliceParser implements DocumentTemplateParser
 
         if (($v = $this->labelValue('Versicherungsbeginn')) !== null
             && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $v, $m)) {
-            $raw['start_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['start_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
         if (($v = $this->labelValue('Versicherungsablauf')) !== null
             && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $v, $m)) {
-            $raw['end_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['end_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
 
         // Beitrag: der WIEDERKEHRENDE Folgebeitrag ist das, was der Kunde
@@ -291,7 +292,7 @@ class WgvKfzPoliceParser implements DocumentTemplateParser
     private function premium(): array
     {
         foreach ($this->lines as $i => $line) {
-            if (!preg_match('/^\s*Folgebeitrag\b/u', $line)) {
+            if (! preg_match('/^\s*Folgebeitrag\b/u', $line)) {
                 continue;
             }
             foreach ([$line, $this->lines[$i + 1] ?? ''] as $cand) {
@@ -302,7 +303,7 @@ class WgvKfzPoliceParser implements DocumentTemplateParser
             break;
         }
         foreach ($this->lines as $i => $line) {
-            if (!preg_match('/Jahresbeitrag für Vertrag/u', $line)) {
+            if (! preg_match('/Jahresbeitrag für Vertrag/u', $line)) {
                 continue;
             }
             foreach ([$line, $this->lines[$i - 1] ?? '', $this->lines[$i + 1] ?? ''] as $cand) {
@@ -322,10 +323,10 @@ class WgvKfzPoliceParser implements DocumentTemplateParser
         $text = $this->text();
 
         return match (true) {
-            (bool) preg_match('/\bmonatlich\b/iu', $text)                      => 'monthly',
-            (bool) preg_match('/viertelj[äa]hrlich/iu', $text)                 => 'quarterly',
-            (bool) preg_match('/halbj[äa]hrlich/iu', $text)                    => 'semiannual',
-            default                                                            => 'yearly',
+            (bool) preg_match('/\bmonatlich\b/iu', $text) => 'monthly',
+            (bool) preg_match('/viertelj[äa]hrlich/iu', $text) => 'quarterly',
+            (bool) preg_match('/halbj[äa]hrlich/iu', $text) => 'semiannual',
+            default => 'yearly',
         };
     }
 
@@ -336,11 +337,11 @@ class WgvKfzPoliceParser implements DocumentTemplateParser
 
         return match (true) {
             str_contains($v, 'personenkraftwagen') || str_contains($v, 'pkw') => 'pkw',
-            str_contains($v, 'krad') || str_contains($v, 'motorrad')          => 'motorrad',
-            str_contains($v, 'lkw') || str_contains($v, 'lastkraft')          => 'lkw',
-            str_contains($v, 'anhänger') || str_contains($v, 'anhaenger')     => 'anhaenger',
-            str_contains($v, 'wohnmobil')                                     => 'wohnmobil',
-            default                                                           => null,
+            str_contains($v, 'krad') || str_contains($v, 'motorrad') => 'motorrad',
+            str_contains($v, 'lkw') || str_contains($v, 'lastkraft') => 'lkw',
+            str_contains($v, 'anhänger') || str_contains($v, 'anhaenger') => 'anhaenger',
+            str_contains($v, 'wohnmobil') => 'wohnmobil',
+            default => null,
         };
     }
 
@@ -348,9 +349,9 @@ class WgvKfzPoliceParser implements DocumentTemplateParser
     private function coverageSummary(array $kfz): string
     {
         $parts = ['Haftpflicht'];
-        if (!empty($kfz['has_vollkasko'])) {
+        if (! empty($kfz['has_vollkasko'])) {
             $parts[] = 'Vollkasko';
-        } elseif (!empty($kfz['has_teilkasko'])) {
+        } elseif (! empty($kfz['has_teilkasko'])) {
             $parts[] = 'Teilkasko';
         } elseif (isset($kfz['has_teilkasko'])) {
             $parts[] = 'keine Kasko';
@@ -369,7 +370,7 @@ class WgvKfzPoliceParser implements DocumentTemplateParser
     {
         $from = null;
         foreach ($this->lines as $i => $line) {
-            if ($from === null && preg_match('/^\s*' . preg_quote($heading, '/') . '\s*:?\s*$/u', $line)) {
+            if ($from === null && preg_match('/^\s*'.preg_quote($heading, '/').'\s*:?\s*$/u', $line)) {
                 $from = $i;
                 continue;
             }
@@ -392,9 +393,9 @@ class WgvKfzPoliceParser implements DocumentTemplateParser
      */
     private function labelValue(string $label): ?string
     {
-        $re = '/^\s*' . preg_quote($label, '/') . '\s*:?/u';
+        $re = '/^\s*'.preg_quote($label, '/').'\s*:?/u';
         foreach ($this->lines as $i => $line) {
-            if (!preg_match($re, $line, $m)) {
+            if (! preg_match($re, $line, $m)) {
                 continue;
             }
             $rest = trim(mb_substr($line, mb_strlen($m[0])));

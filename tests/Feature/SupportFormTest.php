@@ -43,7 +43,7 @@ class SupportFormTest extends TestCase
         $customer = $this->makeCustomer();
         $token = SupportFormController::tokenFor($customer);
 
-        $this->get('/hilfe?t=' . urlencode($token))->assertOk()
+        $this->get('/hilfe?t='.urlencode($token))->assertOk()
             ->assertSee('2600042')
             ->assertSee('Ihrem Konto zugeordnet')
             ->assertDontSee('name="email"', false); // keine manuelle Eingabe nötig

@@ -1,8 +1,11 @@
 <?php
+
 namespace App\Services;
 
 use App\Models\ActivityLog;
+use App\Models\AiDecision;
 use App\Models\Customer;
+use App\Models\EmailMessage;
 use App\Services\Mailbox\EmailAttachmentService;
 use Illuminate\Support\Facades\Storage;
 
@@ -47,7 +50,7 @@ class CustomerDeletionService
         if ($documentIds->isNotEmpty()) {
             // Ueber die Modelle iterieren (nicht per Mass-Update), damit der
             // encrypted:array-Cast beim Schreiben tatsaechlich greift.
-            \App\Models\AiDecision::whereIn('document_id', $documentIds)->get()->each(
+            AiDecision::whereIn('document_id', $documentIds)->get()->each(
                 fn ($decision) => $decision->update(['output' => ['redacted_on_customer_deletion' => true]])
             );
         }
@@ -57,13 +60,13 @@ class CustomerDeletionService
             try {
                 Storage::disk($doc->disk ?: 'public')->delete($doc->file_path);
             } catch (\Throwable $e) {
-                \Log::warning('Dokumentdatei bei Kundenlöschung nicht entfernbar: ' . $doc->file_path);
+                \Log::warning('Dokumentdatei bei Kundenlöschung nicht entfernbar: '.$doc->file_path);
             }
         }
-        Storage::disk('local')->deleteDirectory('customers/' . $customer->id);
+        Storage::disk('local')->deleteDirectory('customers/'.$customer->id);
 
         // E-Mail-Volltexte + Anhangdateien des Kunden
-        foreach (\App\Models\EmailMessage::where('customer_id', $customer->id)->get() as $mail) {
+        foreach (EmailMessage::where('customer_id', $customer->id)->get() as $mail) {
             $this->attachments->deleteFiles($mail);
             $mail->delete();
         }

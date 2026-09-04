@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Ticket;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * DSGVO-Loeschfrist fuer Website-Anfragen (Arbeitsauftrag P0-1):
@@ -46,11 +47,11 @@ class PurgeWebsiteLeads extends Command
                     try {
                         // Erst die physische Datei, dann die Zeile - TicketAttachment
                         // hat keinen deleting-Hook, sonst bleibt die Datei verwaist.
-                        \Illuminate\Support\Facades\Storage::disk($attachment->disk ?? 'public')
+                        Storage::disk($attachment->disk ?? 'public')
                             ->delete($attachment->file_path);
                         $attachment->delete();
                     } catch (\Throwable $e) {
-                        \Log::warning('Website-Lead-Purge: Anhang nicht loeschbar: ' . $e->getMessage());
+                        \Log::warning('Website-Lead-Purge: Anhang nicht loeschbar: '.$e->getMessage());
                     }
                 }
                 $ticket->messages()->delete();

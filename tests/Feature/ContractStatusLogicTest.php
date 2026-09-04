@@ -33,7 +33,7 @@ class ContractStatusLogicTest extends TestCase
         $user = User::factory()->create(['role' => 'customer']);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5($suffix . $user->id), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5($suffix.$user->id), 0, 8)),
         ]);
     }
 
@@ -83,7 +83,7 @@ class ContractStatusLogicTest extends TestCase
         $erwartetAktiv = [];
         foreach ($faelle as $name => [$attrs, $aktiv]) {
             $c = $this->contract($customer, $attrs);
-            $this->assertSame($aktiv, $c->isCurrentlyActive(), 'isCurrentlyActive falsch bei: ' . $name);
+            $this->assertSame($aktiv, $c->isCurrentlyActive(), 'isCurrentlyActive falsch bei: '.$name);
             if ($aktiv) {
                 $erwartetAktiv[] = $c->id;
             }
@@ -444,8 +444,8 @@ class ContractStatusLogicTest extends TestCase
             ->assertOk()
             ->assertSee('2 aktive Verträge')
             ->assertSee('gekündigt und läuft noch bis zum Ablauf')
-            ->assertSee('Gekündigt zum ' . $wechsel->format('d.m.Y'))
-            ->assertSee('Aktiv ab ' . $wechsel->format('d.m.Y'));
+            ->assertSee('Gekündigt zum '.$wechsel->format('d.m.Y'))
+            ->assertSee('Aktiv ab '.$wechsel->format('d.m.Y'));
     }
 
     /**

@@ -279,15 +279,15 @@ class CustomerFamilyRelationTest extends TestCase
 
         $admin = $this->admin();
 
-        $this->actingAs($admin)->getJson(route('admin.customer.family.search', $vater->id) . '?q=2600610')
+        $this->actingAs($admin)->getJson(route('admin.customer.family.search', $vater->id).'?q=2600610')
             ->assertOk()->assertJsonPath('customers.0.number', '2600610');
 
-        $this->actingAs($admin)->getJson(route('admin.customer.family.search', $vater->id) . '?q=12.03.2012')
+        $this->actingAs($admin)->getJson(route('admin.customer.family.search', $vater->id).'?q=12.03.2012')
             ->assertOk()->assertJsonPath('customers.0.id', (string) $kind->id);
 
         // Bereits verknuepfte Kunden und der Kunde selbst tauchen nicht auf.
         $this->service()->link($vater, $kind, 'tochter');
-        $this->actingAs($admin)->getJson(route('admin.customer.family.search', $vater->id) . '?q=Ebraheem')
+        $this->actingAs($admin)->getJson(route('admin.customer.family.search', $vater->id).'?q=Ebraheem')
             ->assertOk()->assertJsonCount(0, 'customers');
     }
 

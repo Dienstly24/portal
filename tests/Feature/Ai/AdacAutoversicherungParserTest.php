@@ -35,7 +35,7 @@ class AdacAutoversicherungParserTest extends TestCase
 
     public function test_parses_all_key_fields(): void
     {
-        $r = (new AdacAutoversicherungParser())->parse($this->letterText());
+        $r = (new AdacAutoversicherungParser)->parse($this->letterText());
 
         $this->assertNotNull($r);
         $this->assertSame('kfz_vertrag', $r['type']);
@@ -67,9 +67,9 @@ class AdacAutoversicherungParserTest extends TestCase
         // Das CHECK24-Protokoll nennt die ADAC nur als moeglichen Versicherer -
         // es darf NICHT von diesem Parser vereinnahmt werden.
         $protocol = "Vorlaeufiges Beratungsprotokoll zur Kfz-Versicherung - CHECK24\n"
-            . "Weiteres Fahrzeug\nVersicherer: ADAC Autoversicherung AG\nSchadenfreiheitsklasse";
-        $this->assertNull((new AdacAutoversicherungParser())->parse($protocol));
+            ."Weiteres Fahrzeug\nVersicherer: ADAC Autoversicherung AG\nSchadenfreiheitsklasse";
+        $this->assertNull((new AdacAutoversicherungParser)->parse($protocol));
 
-        $this->assertNull((new AdacAutoversicherungParser())->parse('Irgendein anderes Dokument'));
+        $this->assertNull((new AdacAutoversicherungParser)->parse('Irgendein anderes Dokument'));
     }
 }

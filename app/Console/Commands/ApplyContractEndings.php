@@ -53,14 +53,14 @@ class ApplyContractEndings extends Command
                 // fuehrt den Vertrag ab diesem Tag ohnehin als beendet - hier
                 // wird nur der gespeicherte Status nachgezogen.
                 $ende = $contract->effectiveCancellationDate();
-                if (!$ende || $ende->greaterThan($today)) {
+                if (! $ende || $ende->greaterThan($today)) {
                     continue;
                 }
                 $this->setStatus($recorder, $contract, 'cancelled');
                 $gekuendigt++;
             } catch (\Throwable $e) {
                 $fehler++;
-                \Log::warning('contracts:apply-endings: Vertrag ' . $contract->id . ' uebersprungen: ' . $e->getMessage());
+                \Log::warning('contracts:apply-endings: Vertrag '.$contract->id.' uebersprungen: '.$e->getMessage());
             }
         }
 
@@ -75,12 +75,12 @@ class ApplyContractEndings extends Command
                 $abgelaufen++;
             } catch (\Throwable $e) {
                 $fehler++;
-                \Log::warning('contracts:apply-endings: E-Scooter ' . $contract->id . ' uebersprungen: ' . $e->getMessage());
+                \Log::warning('contracts:apply-endings: E-Scooter '.$contract->id.' uebersprungen: '.$e->getMessage());
             }
         }
 
-        $this->info('Umgestellt: ' . $gekuendigt . ' gekuendigt, ' . $abgelaufen . ' abgelaufen (E-Scooter).'
-            . ($fehler > 0 ? ' ' . $fehler . ' uebersprungen (siehe Log).' : ''));
+        $this->info('Umgestellt: '.$gekuendigt.' gekuendigt, '.$abgelaufen.' abgelaufen (E-Scooter).'
+            .($fehler > 0 ? ' '.$fehler.' uebersprungen (siehe Log).' : ''));
         return self::SUCCESS;
     }
 

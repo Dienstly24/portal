@@ -1,12 +1,28 @@
 <?php
+
 namespace App\Services\DocumentIntake;
 
 use App\Models\ActivityLog;
 use App\Models\Contract;
+use App\Models\ContractEnergyDetail;
+use App\Models\ContractHistory;
+use App\Models\ContractInternetDetail;
 use App\Models\ContractVehicleDetail;
 use App\Models\Customer;
+use App\Models\CustomerRelationship;
 use App\Models\Document;
+use App\Models\User;
+use App\Services\ContractHistoryService;
+use App\Services\ContractSwitchService;
+use App\Services\Energy\MeterReadingService;
 use App\Services\Matching\CustomerMatchingService;
+use App\Services\Matching\MatchResult;
+use App\Services\Notifications\NotificationService;
+use App\Services\VehicleOverlapGuard;
+use App\Support\Facades\Notify;
+use App\Support\GermanPhone;
+use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -48,28 +64,28 @@ class DocumentIntakeService
                 $customer = Customer::with('user')->find($document->customer_id);
                 if ($customer) {
                     $recipients = $customer->betreuer()->get();
-                    $link = route('admin.customer', $customer->id) . '#tab-dokumente';
+                    $link = route('admin.customer', $customer->id).'#tab-dokumente';
                 }
             } elseif ($document->uploaded_by) {
-                $uploader = \App\Models\User::find($document->uploaded_by);
+                $uploader = User::find($document->uploaded_by);
                 if ($uploader && $uploader->isStaff() && $uploader->is_active) {
                     $recipients = collect([$uploader]);
                 }
             }
 
             if ($recipients->isEmpty()) {
-                $recipients = \App\Models\User::whereIn('role', ['admin', 'manager'])
+                $recipients = User::whereIn('role', ['admin', 'manager'])
                     ->where('is_active', true)->get();
             }
 
-            \App\Support\Facades\Notify::pushMany($recipients->pluck('id'), [
-                'type' => \App\Services\Notifications\NotificationService::TYPE_DOCUMENT,
+            Notify::pushMany($recipients->pluck('id'), [
+                'type' => NotificationService::TYPE_DOCUMENT,
                 'title' => 'Dokument-Analyse fehlgeschlagen',
-                'body' => 'Die KI-Analyse von „' . $document->file_name . '" ist fehlgeschlagen. '
-                    . 'Bitte im Dokumenten-Eingang erneut versuchen oder das Dokument manuell zuordnen.',
+                'body' => 'Die KI-Analyse von „'.$document->file_name.'" ist fehlgeschlagen. '
+                    .'Bitte im Dokumenten-Eingang erneut versuchen oder das Dokument manuell zuordnen.',
                 'link' => $link,
                 // Genau EIN Hinweis je Dokument (Retry/Scheduler doppeln nicht).
-                'dedup_key' => 'doc-failed-' . $document->id,
+                'dedup_key' => 'doc-failed-'.$document->id,
             ]);
         } catch (\Throwable $e) {
             report($e);
@@ -83,7 +99,7 @@ class DocumentIntakeService
         return array_filter([
             'first_name' => $person['first_name'] ?? null,
             'last_name' => $person['last_name'] ?? null,
-            'full_name' => trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? '')) ?: null,
+            'full_name' => trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? '')) ?: null,
             // Firmenname (Gewerbekunde) - wird bei der Neuanlage uebernommen.
             'company_name' => $person['company_name'] ?? null,
             'birth_date' => $person['birth_date'] ?? null,
@@ -131,7 +147,7 @@ class DocumentIntakeService
         $seen = [];
         $out = [];
         foreach ($all as $p) {
-            $key = $this->normalizeName(trim(($p['first_name'] ?? '') . ' ' . ($p['last_name'] ?? '')));
+            $key = $this->normalizeName(trim(($p['first_name'] ?? '').' '.($p['last_name'] ?? '')));
             if ($key === '' || isset($seen[$key])) {
                 continue;
             }
@@ -199,10 +215,10 @@ class DocumentIntakeService
                     continue;
                 }
 
-                [$x, $y] = \App\Models\CustomerRelationship::pairKey((string) $a->id, (string) $b->id);
-                \App\Models\CustomerRelationship::updateOrCreate(
+                [$x, $y] = CustomerRelationship::pairKey((string) $a->id, (string) $b->id);
+                CustomerRelationship::updateOrCreate(
                     ['customer_a_id' => $x, 'customer_b_id' => $y],
-                    ['type' => 'family', 'note' => $note . ' (gleicher Familienname)', 'created_by' => $byUserId]
+                    ['type' => 'family', 'note' => $note.' (gleicher Familienname)', 'created_by' => $byUserId]
                 );
                 $count++;
             }
@@ -241,7 +257,7 @@ class DocumentIntakeService
             $source = $group === 'person' ? $personFirst : $docs;
             foreach ($source as $doc) {
                 $values = ($doc->ai_extracted[$group] ?? []);
-                if (!is_array($values)) {
+                if (! is_array($values)) {
                     continue;
                 }
                 foreach ($values as $field => $value) {
@@ -278,13 +294,13 @@ class DocumentIntakeService
      *
      * @return array<string,string>
      */
-    private function nameConflicts(\Illuminate\Support\Collection $docs): array
+    private function nameConflicts(Collection $docs): array
     {
         $idName = null;
         $licenseName = null;
         foreach ($docs as $doc) {
             $person = $doc->ai_extracted['person'] ?? [];
-            $name = $this->normalizeName(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+            $name = $this->normalizeName(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
             if ($name === '') {
                 continue;
             }
@@ -321,7 +337,7 @@ class DocumentIntakeService
         }
 
         $result = $this->matcher->match($criteria);
-        if (!$result->hasMatch() || $result->score < 40) {
+        if (! $result->hasMatch() || $result->score < 40) {
             return null; // zu schwach, gar nicht erst anzeigen
         }
 
@@ -348,7 +364,7 @@ class DocumentIntakeService
             return null;
         }
 
-        $located = app(\App\Services\Energy\MeterReadingService::class)->locate($number);
+        $located = app(MeterReadingService::class)->locate($number);
         if ($located === null) {
             return null;
         }
@@ -413,7 +429,7 @@ class DocumentIntakeService
             'customer_number' => $s['customer']->customer_number,
             'email' => $s['customer']->user?->email,
             'score' => $s['score'],
-            'tier' => (new \App\Services\Matching\MatchResult($s['customer'], $s['score']))->tier(),
+            'tier' => (new MatchResult($s['customer'], $s['score']))->tier(),
             'reasons' => array_values(array_unique($s['reasons'])),
         ], array_slice($suggestions, 0, $limit));
     }
@@ -455,7 +471,7 @@ class DocumentIntakeService
                 })->limit(3)->get();
             foreach ($treffer as $contract) {
                 if ($contract->customer) {
-                    $hits[] = [$contract->customer, 'Referenznummer ' . $referenz . ' gehoert zu einem Vertrag dieses Kunden'];
+                    $hits[] = [$contract->customer, 'Referenznummer '.$referenz.' gehoert zu einem Vertrag dieses Kunden'];
                 }
             }
         }
@@ -466,7 +482,7 @@ class DocumentIntakeService
                 continue;
             }
             foreach (Customer::with('user')->search($value)->limit(3)->get() as $customer) {
-                $hits[] = [$customer, $label . ' ' . $value . ' ist bei diesem Kunden erfasst'];
+                $hits[] = [$customer, $label.' '.$value.' ist bei diesem Kunden erfasst'];
             }
         }
 
@@ -500,7 +516,7 @@ class DocumentIntakeService
             $column = $label === 'FIN' ? 'vin' : 'license_plate';
             $needle = $this->longestDigitRun($normalized);
             $details = ContractVehicleDetail::query()
-                ->when($needle !== null, fn ($q) => $q->where($column, 'like', '%' . $needle . '%'))
+                ->when($needle !== null, fn ($q) => $q->where($column, 'like', '%'.$needle.'%'))
                 ->whereNotNull($column)
                 ->with('contract.customer.user')
                 ->limit(50)->get();
@@ -511,7 +527,7 @@ class DocumentIntakeService
                     : ContractVehicleDetail::normalizePlate($detail->license_plate);
                 $customer = $detail->contract?->customer;
                 if ($value === $normalized && $customer) {
-                    $hits[] = [$customer, $label . ' ' . ($detail->{$column}) . ' ist bei diesem Kunden erfasst'];
+                    $hits[] = [$customer, $label.' '.($detail->{$column}).' ist bei diesem Kunden erfasst'];
                 }
             }
         }
@@ -541,7 +557,7 @@ class DocumentIntakeService
     private function collectSuggestion(array &$found, Customer $customer, int $score, array $reasons): void
     {
         $key = (string) $customer->id;
-        if (!isset($found[$key])) {
+        if (! isset($found[$key])) {
             $found[$key] = ['customer' => $customer, 'score' => $score, 'reasons' => $reasons];
             return;
         }
@@ -556,7 +572,7 @@ class DocumentIntakeService
      *
      * @return list<string>
      */
-    private function suggestionReasons(\App\Services\Matching\MatchResult $result): array
+    private function suggestionReasons(MatchResult $result): array
     {
         $parts = array_filter($result->breakdown, fn ($b) => ($b['points'] ?? 0) > 0);
         uasort($parts, fn ($a, $b) => $b['points'] <=> $a['points']);
@@ -582,7 +598,7 @@ class DocumentIntakeService
         $claimed = Document::whereKey($document->id)
             ->whereNull('customer_id')
             ->update(['customer_id' => $customer->id]);
-        if (!$claimed) {
+        if (! $claimed) {
             $document->refresh();
             // Idempotent: derselbe Kunde ist ok, ein anderer nicht.
             return (string) $document->customer_id === (string) $customer->id;
@@ -590,10 +606,10 @@ class DocumentIntakeService
         $document->customer_id = $customer->id;
 
         $disk = $document->disk ?: 'local';
-        $target = 'customers/' . $customer->id . '/documents/' . basename($document->file_path);
+        $target = 'customers/'.$customer->id.'/documents/'.basename($document->file_path);
         if ($document->file_path !== $target && Storage::disk($disk)->exists($document->file_path)) {
             if (Storage::disk($disk)->exists($target)) {
-                $target = 'customers/' . $customer->id . '/documents/' . uniqid() . '_' . basename($document->file_path);
+                $target = 'customers/'.$customer->id.'/documents/'.uniqid().'_'.basename($document->file_path);
             }
             Storage::disk($disk)->move($document->file_path, $target);
             $document->file_path = $target;
@@ -617,14 +633,14 @@ class DocumentIntakeService
             // Betreuer informieren, dass die KI ein Dokument zugeordnet hat.
             $recipients = $customer->betreuer()->get();
             if ($recipients->isEmpty()) {
-                $recipients = \App\Models\User::whereIn('role', ['admin', 'manager'])->where('is_active', true)->get();
+                $recipients = User::whereIn('role', ['admin', 'manager'])->where('is_active', true)->get();
             }
-            \App\Support\Facades\Notify::pushMany($recipients->pluck('id'), [
-                'type' => \App\Services\Notifications\NotificationService::TYPE_DOCUMENT,
-                'title' => 'Dokument automatisch zugeordnet: ' . ($document->aiTypeLabel() ?? $document->file_name),
-                'body' => 'Die KI-Analyse hat ein Dokument dem Kunden ' . ($customer->user?->name ?? $customer->customer_number) . ' zugeordnet.',
-                'link' => route('admin.customer', $customer->id) . '#tab-dokumente',
-                'dedup_key' => 'doc-auto-' . $document->id,
+            Notify::pushMany($recipients->pluck('id'), [
+                'type' => NotificationService::TYPE_DOCUMENT,
+                'title' => 'Dokument automatisch zugeordnet: '.($document->aiTypeLabel() ?? $document->file_name),
+                'body' => 'Die KI-Analyse hat ein Dokument dem Kunden '.($customer->user?->name ?? $customer->customer_number).' zugeordnet.',
+                'link' => route('admin.customer', $customer->id).'#tab-dokumente',
+                'dedup_key' => 'doc-auto-'.$document->id,
             ]);
         }
 
@@ -685,7 +701,7 @@ class DocumentIntakeService
     public function linkMeldebestaetigungHousehold(Document $document, Customer $child, ?int $byUserId): array
     {
         $person = $document->ai_extracted['person'] ?? [];
-        if (!is_array($person)) {
+        if (! is_array($person)) {
             return [];
         }
 
@@ -694,7 +710,7 @@ class DocumentIntakeService
         $houseNo = $person['house_number'] ?? null;
         $zip = $person['zip'] ?? null;
         $lastName = $person['last_name'] ?? null;
-        if (!is_string($birth) || !is_string($street) || !is_string($zip) || !is_string($lastName)) {
+        if (! is_string($birth) || ! is_string($street) || ! is_string($zip) || ! is_string($lastName)) {
             return [];
         }
 
@@ -743,14 +759,14 @@ class DocumentIntakeService
                 continue;
             }
 
-            [$a, $b] = \App\Models\CustomerRelationship::pairKey((string) $child->id, (string) $adult->id);
-            \App\Models\CustomerRelationship::updateOrCreate(
+            [$a, $b] = CustomerRelationship::pairKey((string) $child->id, (string) $adult->id);
+            CustomerRelationship::updateOrCreate(
                 ['customer_a_id' => $a, 'customer_b_id' => $b],
                 [
                     'type' => 'family',
-                    'note' => 'Aus Meldebestätigung: gleicher Haushalt (' . $street
-                        . ($houseNo !== null && $houseNo !== '' ? ' ' . $houseNo : '')
-                        . ', ' . $zip . ') und Familienname - Kind',
+                    'note' => 'Aus Meldebestätigung: gleicher Haushalt ('.$street
+                        .($houseNo !== null && $houseNo !== '' ? ' '.$houseNo : '')
+                        .', '.$zip.') und Familienname - Kind',
                     'created_by' => $byUserId,
                 ]
             );
@@ -790,28 +806,28 @@ class DocumentIntakeService
             return '';
         }
 
-        return mb_substr($n, 0, 1) . preg_replace('/[aeiouy]/', '', mb_substr($n, 1));
+        return mb_substr($n, 0, 1).preg_replace('/[aeiouy]/', '', mb_substr($n, 1));
     }
 
     public function linkBirthCertificateParents(Document $document, Customer $child, ?int $byUserId): array
     {
         $personen = $document->ai_extracted['personen'] ?? [];
-        if (!is_array($personen) || $personen === []) {
+        if (! is_array($personen) || $personen === []) {
             return [];
         }
 
         $linked = [];
         foreach ($personen as $parent) {
-            if (!is_array($parent)) {
+            if (! is_array($parent)) {
                 continue;
             }
             $relation = $parent['relation'] ?? null;
-            if (!in_array($relation, ['mutter', 'vater'], true)) {
+            if (! in_array($relation, ['mutter', 'vater'], true)) {
                 continue;
             }
             $first = $parent['first_name'] ?? null;
             $last = $parent['last_name'] ?? null;
-            $full = trim(($first ?? '') . ' ' . ($last ?? ''));
+            $full = trim(($first ?? '').' '.($last ?? ''));
             if ($full === '') {
                 continue;
             }
@@ -829,7 +845,7 @@ class DocumentIntakeService
             $target = $this->normalizeName($full);
             $candidates = Customer::with('user')
                 ->where('id', '!=', $child->id)
-                ->whereHas('user', fn ($u) => $u->where('name', 'like', '%' . $lastToken . '%'))
+                ->whereHas('user', fn ($u) => $u->where('name', 'like', '%'.$lastToken.'%'))
                 ->limit(50)
                 ->get()
                 ->filter(fn ($c) => $this->normalizeName((string) ($c->user?->name ?? '')) === $target)
@@ -842,12 +858,12 @@ class DocumentIntakeService
                 continue;
             }
 
-            [$a, $b] = \App\Models\CustomerRelationship::pairKey((string) $child->id, (string) $parentCustomer->id);
-            \App\Models\CustomerRelationship::updateOrCreate(
+            [$a, $b] = CustomerRelationship::pairKey((string) $child->id, (string) $parentCustomer->id);
+            CustomerRelationship::updateOrCreate(
                 ['customer_a_id' => $a, 'customer_b_id' => $b],
                 [
                     'type' => 'family',
-                    'note' => 'Aus Geburtsurkunde: ' . ($relation === 'mutter' ? 'Mutter' : 'Vater') . ' des Kindes',
+                    'note' => 'Aus Geburtsurkunde: '.($relation === 'mutter' ? 'Mutter' : 'Vater').' des Kindes',
                     'created_by' => $byUserId,
                 ]
             );
@@ -917,10 +933,10 @@ class DocumentIntakeService
             if (strcasecmp((string) $customer->email2, $email) === 0) {
                 return;
             }
-            $takenByOther = \App\Models\User::where('email', $email)
+            $takenByOther = User::where('email', $email)
                 ->when($customer->user_id, fn ($q) => $q->where('id', '!=', $customer->user_id))
                 ->exists();
-            if ($user !== null && !$user->hasRealEmail() && !$takenByOther) {
+            if ($user !== null && ! $user->hasRealEmail() && ! $takenByOther) {
                 // Haupt-Login-Adresse setzen -> aktiviert den Portal-Zugang.
                 $userEmail = $email;
             } elseif (blank($customer->email2)) {
@@ -938,7 +954,7 @@ class DocumentIntakeService
                 // CHECK24-Beratungsprotokoll).
                 'phone' => (function () use ($set, $person): void {
                     $phone = $person['phone'] ?? null;
-                    if ($phone !== null && \App\Support\GermanPhone::isMobile($phone)) {
+                    if ($phone !== null && GermanPhone::isMobile($phone)) {
                         $set('mobile', $phone);
                     } else {
                         $set('phone', $phone);
@@ -1090,7 +1106,7 @@ class DocumentIntakeService
         $endDate = $ins['end_date'] ?? null;
         if ($type === 'schutzbrief' && $startDate === null) {
             $startDate = ($document->created_at ?? now())->toDateString();
-            $endDate = $endDate ?? \Carbon\Carbon::parse($startDate)->addYear()->toDateString();
+            $endDate = $endDate ?? Carbon::parse($startDate)->addYear()->toDateString();
         }
 
         // Versorgerwechsel ohne genanntes Beginndatum (z.B. LichtBlick-Auftrag,
@@ -1154,7 +1170,7 @@ class DocumentIntakeService
                 // Zusatzleistungen (z.B. Werkstattbindung/Schutzbrief) aus dem
                 // Beratungsprotokoll - Schluessel bereits gegen den Katalog
                 // validiert (ValidatesExtractedFields::validatedVehicle).
-                'extras' => !empty($kfz['extras']) ? $kfz['extras'] : null,
+                'extras' => ! empty($kfz['extras']) ? $kfz['extras'] : null,
                 // Vorversicherung (bisheriger Kfz-Versicherer beim Wechsel).
                 'previous_insurer' => $ins['previous_insurer'] ?? null,
                 'previous_contract_number' => $ins['previous_contract_number'] ?? null,
@@ -1183,7 +1199,7 @@ class DocumentIntakeService
         // Energie-Vertrag (Strom/Gas): Zaehler-/Tarifdaten aus dem Auftrag
         // bzw. Zaehlerfoto in die Energie-Detailtabelle uebernehmen.
         if (in_array($type, Contract::ENERGY_TYPES, true) && $energie !== []) {
-            \App\Models\ContractEnergyDetail::create(array_filter([
+            ContractEnergyDetail::create(array_filter([
                 'contract_id' => $contract->id,
                 'meter_number' => $energie['meter_number'] ?? null,
                 'malo_id' => $energie['malo_id'] ?? null,
@@ -1210,7 +1226,7 @@ class DocumentIntakeService
         // und Mindestlaufzeit aus dem Auftrag in die Internet-Detailtabelle.
         $internet = $data['internet'] ?? [];
         if ($type === 'internet' && $internet !== []) {
-            \App\Models\ContractInternetDetail::create(array_filter([
+            ContractInternetDetail::create(array_filter([
                 'contract_id' => $contract->id,
                 'tariff' => $internet['tariff'] ?? null,
                 'speed' => $internet['speed'] ?? null,
@@ -1233,7 +1249,7 @@ class DocumentIntakeService
         $document->save();
 
         // Vertragsverlauf starten (Betreiber-Vorgabe: fuer alle Sparten).
-        app(\App\Services\ContractHistoryService::class)->record([
+        app(ContractHistoryService::class)->record([
             'customer_id' => (string) $customer->id,
             'contract_id' => (string) $contract->id,
             'branch' => $type,
@@ -1274,7 +1290,7 @@ class DocumentIntakeService
         // (Portal-Upload aus der Vertragsansicht) erfasst wird.
         if ($document->ai_type === 'zaehlerfoto') {
             try {
-                app(\App\Services\Energy\MeterReadingService::class)->recordFromDocument($document, $customer);
+                app(MeterReadingService::class)->recordFromDocument($document, $customer);
             } catch (\Throwable $e) {
                 report($e); // darf die Zuordnung nie blockieren
             }
@@ -1302,7 +1318,7 @@ class DocumentIntakeService
             // Kundenvertrags automatisch nach.
             $istZulassung = in_array($document->ai_type, ['fahrzeugschein', 'fahrzeugbrief'], true)
                 && in_array($contract->type, ['kfz', 'escooter'], true)
-                && !empty($data['kfz']);
+                && ! empty($data['kfz']);
             // Vertragsbestaetigung/Police zu einem noch offenen ANTRAG: die
             // endgueltigen Angaben (Vertragsnummer, Kundennummer, MaLo-ID,
             // Beginn, Abschlag) werden in den vorhandenen Vertrag uebernommen
@@ -1313,7 +1329,7 @@ class DocumentIntakeService
             // nachtragen (leere Felder), damit das Foto nicht nur "irgendwo"
             // in der Akte liegt.
             $istZaehlerfoto = $document->ai_type === 'zaehlerfoto'
-                && $contract->isEnergy() && !empty($data['energie']);
+                && $contract->isEnergy() && ! empty($data['energie']);
 
             if ($istZulassung || $istBestaetigung || $istZaehlerfoto) {
                 $this->updateContractFromExtraction($contract, $document, $customer, null, $data);
@@ -1343,7 +1359,7 @@ class DocumentIntakeService
         $energie = $data['energie'] ?? [];
 
         // 1. Vertragsnummer
-        if (!blank($ins['contract_number'] ?? null)) {
+        if (! blank($ins['contract_number'] ?? null)) {
             $byNumber = Contract::where('customer_id', $customer->id)
                 ->where('contract_number', $ins['contract_number'])->first();
             if ($byNumber) {
@@ -1399,8 +1415,8 @@ class DocumentIntakeService
         // Kundennummer beim Versorger. Verglichen wird NORMALISIERT (in PHP),
         // weil dieselbe Zaehlernummer je Quelle anders geschrieben ist:
         // auf dem Zaehler "1 LOG00 9228 3078", im Auftrag "1LOG0092283078".
-        $malo = \App\Models\ContractEnergyDetail::normalizeMalo($energie['malo_id'] ?? null);
-        $meter = \App\Models\ContractEnergyDetail::normalizeMeter($energie['meter_number'] ?? null);
+        $malo = ContractEnergyDetail::normalizeMalo($energie['malo_id'] ?? null);
+        $meter = ContractEnergyDetail::normalizeMeter($energie['meter_number'] ?? null);
         // Die Kundennummer gilt nur BEIM SELBEN Versorger - sie ist nicht
         // global eindeutig, deshalb zusaetzlich der Versicherer-/Versorger-
         // Abgleich (fehlt die Angabe im Dokument, bleibt es beim Bestand).
@@ -1429,8 +1445,8 @@ class DocumentIntakeService
                     // (ebenfalls versorger-gebunden) und bleibt unberuehrt.
                     $sameInsurer = $this->insurersLookAlike($energyContract->insurer, $ins['insurer'] ?? null);
                     $hit = match ($merkmal) {
-                        'malo' => $malo !== null && $malo === \App\Models\ContractEnergyDetail::normalizeMalo($en->malo_id) && $sameInsurer,
-                        'meter' => $meter !== null && $meter === \App\Models\ContractEnergyDetail::normalizeMeter($en->meter_number) && $sameInsurer,
+                        'malo' => $malo !== null && $malo === ContractEnergyDetail::normalizeMalo($en->malo_id) && $sameInsurer,
+                        'meter' => $meter !== null && $meter === ContractEnergyDetail::normalizeMeter($en->meter_number) && $sameInsurer,
                         default => $energyCustomerNumber !== ''
                             && strcasecmp(trim((string) $en->customer_number), $energyCustomerNumber) === 0
                             && $sameInsurer,
@@ -1489,7 +1505,7 @@ class DocumentIntakeService
 
         $ins = $data['versicherung'] ?? [];
         $type = $ins['sparte'] ?? null;
-        if ($type === null || !isset(Contract::TYPES[$type])) {
+        if ($type === null || ! isset(Contract::TYPES[$type])) {
             return null;
         }
         // Strom und Gas sind getrennte Sparten und duerfen sich nie
@@ -1508,7 +1524,7 @@ class DocumentIntakeService
             ->with(['energyDetail', 'vehicleDetail'])
             ->get()
             ->filter(fn (Contract $c) => $this->insurersLookAlike($c->insurer, $ins['insurer'] ?? null)
-                && !$this->identityContradicts($c, $data))
+                && ! $this->identityContradicts($c, $data))
             ->values();
 
         if ($candidates->count() === 1) {
@@ -1578,7 +1594,7 @@ class DocumentIntakeService
 
         $ins = $data['versicherung'] ?? [];
         $type = $ins['sparte'] ?? null;
-        if ($type === null || !isset(Contract::TYPES[$type])) {
+        if ($type === null || ! isset(Contract::TYPES[$type])) {
             return null;
         }
         // Ohne genannte Gesellschaft waere die Zuordnung geraten - der
@@ -1597,7 +1613,7 @@ class DocumentIntakeService
         $nurReferenz = $this->bringsOnlyProcessReference($data);
         // Weder Referenz-Dokument noch Sachdaten-Dokument ohne Referenz:
         // dann stehen sich zwei eigenstaendige Antraege gegenueber.
-        if (!$nurReferenz && $referenz !== '') {
+        if (! $nurReferenz && $referenz !== '') {
             return null;
         }
 
@@ -1611,7 +1627,7 @@ class DocumentIntakeService
             ->get()
             ->filter(function (Contract $c) use ($data, $ins, $nurReferenz) {
                 if (blank($c->insurer)
-                    || !$this->insurersLookAlike($c->insurer, $ins['insurer'] ?? null)
+                    || ! $this->insurersLookAlike($c->insurer, $ins['insurer'] ?? null)
                     || $this->identityContradicts($c, $data)) {
                     return false;
                 }
@@ -1651,7 +1667,7 @@ class DocumentIntakeService
         }
 
         foreach (['contract_number', 'start_date', 'end_date', 'premium_amount'] as $feld) {
-            if (!blank($ins[$feld] ?? null)) {
+            if (! blank($ins[$feld] ?? null)) {
                 return false;
             }
         }
@@ -1700,7 +1716,7 @@ class DocumentIntakeService
         // Bestaetigung ist also KEIN Widerspruch, sondern genau die erwartete
         // endgueltige Nummer. Bei einem bereits bestaetigten Vertrag zaehlt sie
         // dagegen als hartes Merkmal.
-        if (!$contract->isApplication()
+        if (! $contract->isApplication()
             && $differs($contract->contract_number, $ins['contract_number'] ?? null)) {
             return true;
         }
@@ -1708,14 +1724,14 @@ class DocumentIntakeService
         $en = $contract->energyDetail;
         if ($en) {
             if ($differs(
-                \App\Models\ContractEnergyDetail::normalizeMalo($en->malo_id),
-                \App\Models\ContractEnergyDetail::normalizeMalo($energie['malo_id'] ?? null)
+                ContractEnergyDetail::normalizeMalo($en->malo_id),
+                ContractEnergyDetail::normalizeMalo($energie['malo_id'] ?? null)
             )) {
                 return true;
             }
             if ($differs(
-                \App\Models\ContractEnergyDetail::normalizeMeter($en->meter_number),
-                \App\Models\ContractEnergyDetail::normalizeMeter($energie['meter_number'] ?? null)
+                ContractEnergyDetail::normalizeMeter($en->meter_number),
+                ContractEnergyDetail::normalizeMeter($energie['meter_number'] ?? null)
             )) {
                 return true;
             }
@@ -1818,16 +1834,16 @@ class DocumentIntakeService
         if (empty($neu->start_date)) {
             return;
         }
-        $conflict = app(\App\Services\VehicleOverlapGuard::class)->findConflict($neu, [
+        $conflict = app(VehicleOverlapGuard::class)->findConflict($neu, [
             'vin' => $kfz['vin'] ?? null,
             'license_plate' => $kfz['license_plate'] ?? null,
             'hsn' => $kfz['hsn'] ?? null,
             'tsn' => $kfz['tsn'] ?? null,
         ], (string) $neu->id);
-        if (!$conflict || Contract::insurersLookAlike($conflict->insurer, $neu->insurer)) {
+        if (! $conflict || Contract::insurersLookAlike($conflict->insurer, $neu->insurer)) {
             return;
         }
-        app(\App\Services\ContractSwitchService::class)->recordCancellationForSwitch(
+        app(ContractSwitchService::class)->recordCancellationForSwitch(
             $conflict,
             \Illuminate\Support\Carbon::parse($neu->start_date),
             'document',
@@ -1881,14 +1897,14 @@ class DocumentIntakeService
         // Version History nachvollziehbar. Immer nur, wenn die Nummer nicht
         // schon an einem anderen Vertrag haengt (unique).
         $newNumber = $ins['contract_number'] ?? null;
-        if ((blank($contract->contract_number) || $bestaetigt) && !blank($newNumber)
-            && !Contract::where('contract_number', $newNumber)->where('id', '!=', $contract->id)->exists()) {
+        if ((blank($contract->contract_number) || $bestaetigt) && ! blank($newNumber)
+            && ! Contract::where('contract_number', $newNumber)->where('id', '!=', $contract->id)->exists()) {
             $contractProposed['contract_number'] = $newNumber;
         }
         // Referenz-/Vorgangsnummer: nur ERGAENZEN, nie ueberschreiben - sie
         // gehoert zum urspruenglichen Vorgang und bleibt die Bruecke zu
         // spaeterer Post.
-        if (blank($contract->reference_number) && !blank($ins['reference_number'] ?? null)) {
+        if (blank($contract->reference_number) && ! blank($ins['reference_number'] ?? null)) {
             $contractProposed['reference_number'] = $ins['reference_number'];
         }
         $changed = $recorder->apply($contract, $contract, $contractProposed, $this->contractRevisionSpec(), $ctx);
@@ -1924,7 +1940,7 @@ class DocumentIntakeService
             // Zusatzleistungen ERGAENZEN (nie entfernen): so geht z.B. ein
             // bereits erfasster Schutzbrief nicht verloren, wenn ihn ein
             // spaeteres Dokument nicht erneut auffuehrt.
-            if (!empty($kfz['extras'])) {
+            if (! empty($kfz['extras'])) {
                 $vehProposed['extras'] = array_values(array_unique(
                     array_merge($veh->extras ?? [], $kfz['extras'])
                 ));
@@ -1943,7 +1959,7 @@ class DocumentIntakeService
         // ---- Energie-Detaildaten (Strom / Gas) ----------------------------
         if (in_array($contract->type, Contract::ENERGY_TYPES, true) && $energie !== []) {
             $en = $contract->energyDetail
-                ?: \App\Models\ContractEnergyDetail::create(['contract_id' => $contract->id]);
+                ?: ContractEnergyDetail::create(['contract_id' => $contract->id]);
 
             $enProposed = [
                 'tariff' => $energie['tariff'] ?? null,
@@ -1974,7 +1990,7 @@ class DocumentIntakeService
         $internet = $data['internet'] ?? [];
         if ($contract->type === 'internet' && $internet !== []) {
             $net = $contract->internetDetail
-                ?: \App\Models\ContractInternetDetail::create(['contract_id' => $contract->id]);
+                ?: ContractInternetDetail::create(['contract_id' => $contract->id]);
 
             $netProposed = [
                 'tariff' => $internet['tariff'] ?? null,
@@ -1994,14 +2010,14 @@ class DocumentIntakeService
             // has_router nur ergaenzen, wenn im Dokument gesetzt (true) - ein
             // fehlender Router-Block soll ein bereits erfasstes "mit Router"
             // nicht auf false zuruecksetzen.
-            if (!empty($internet['has_router'])) {
+            if (! empty($internet['has_router'])) {
                 $netProposed['has_router'] = true;
             }
             $changed = array_merge($changed, $recorder->apply($contract, $net, $netProposed, $this->internetRevisionSpec(), $ctx));
         }
 
         // Dokument mit dem (aktualisierten) Vertrag verknuepfen.
-        if (!$document->contract_id) {
+        if (! $document->contract_id) {
             $document->contract_id = $contract->id;
             $document->save();
         }
@@ -2044,25 +2060,25 @@ class DocumentIntakeService
             // Eintrag den jetzt bestaetigten Beginn, falls er beim Auftrag noch
             // offen war ("schnellstmoeglich").
             if (filled($contract->start_date)) {
-                \App\Models\ContractHistory::where('contract_id', $contract->id)
+                ContractHistory::where('contract_id', $contract->id)
                     ->whereNull('effective_from')
                     ->update(['effective_from' => $contract->start_date]);
             }
 
             $recipients = $customer->betreuer()->get();
             if ($recipients->isEmpty()) {
-                $recipients = \App\Models\User::whereIn('role', ['admin', 'manager'])->where('is_active', true)->get();
+                $recipients = User::whereIn('role', ['admin', 'manager'])->where('is_active', true)->get();
             }
             $name = $customer->user?->name ?? $customer->customer_number;
-            \App\Support\Facades\Notify::pushMany($recipients->pluck('id'), [
-                'type' => \App\Services\Notifications\NotificationService::TYPE_DOCUMENT,
-                'title' => 'Vertragsbestätigung übernommen: ' . $contract->typeLabel()
-                    . ($contract->insurer ? ' (' . $contract->insurer . ')' : ''),
-                'body' => 'Der Auftrag von ' . $name . ' wurde durch die Vertragsbestätigung ergänzt'
-                    . ($contract->contract_number ? ' - Vertragsnummer ' . $contract->contract_number : '')
-                    . '. Ergänzte/aktualisierte Angaben: ' . count(array_diff($changed, ['stage'])) . '.',
+            Notify::pushMany($recipients->pluck('id'), [
+                'type' => NotificationService::TYPE_DOCUMENT,
+                'title' => 'Vertragsbestätigung übernommen: '.$contract->typeLabel()
+                    .($contract->insurer ? ' ('.$contract->insurer.')' : ''),
+                'body' => 'Der Auftrag von '.$name.' wurde durch die Vertragsbestätigung ergänzt'
+                    .($contract->contract_number ? ' - Vertragsnummer '.$contract->contract_number : '')
+                    .'. Ergänzte/aktualisierte Angaben: '.count(array_diff($changed, ['stage'])).'.',
                 'link' => route('admin.contract.edit', $contract->id),
-                'dedup_key' => 'contract-confirmed-' . $contract->id . '-' . $document->id,
+                'dedup_key' => 'contract-confirmed-'.$contract->id.'-'.$document->id,
             ]);
         } catch (\Throwable $e) {
             report($e);
@@ -2156,13 +2172,13 @@ class DocumentIntakeService
 
     public function fmtEuro($v): string
     {
-        return number_format((float) $v, 2, ',', '.') . ' €';
+        return number_format((float) $v, 2, ',', '.').' €';
     }
 
     public function fmtDate($v): string
     {
         try {
-            return \Carbon\Carbon::parse($v)->format('d.m.Y');
+            return Carbon::parse($v)->format('d.m.Y');
         } catch (\Throwable) {
             return (string) $v;
         }
@@ -2181,12 +2197,12 @@ class DocumentIntakeService
 
     public function fmtCent($v): string
     {
-        return rtrim(rtrim(number_format((float) $v, 3, ',', '.'), '0'), ',') . ' ct/kWh';
+        return rtrim(rtrim(number_format((float) $v, 3, ',', '.'), '0'), ',').' ct/kWh';
     }
 
     public function fmtEuroMonth($v): string
     {
-        return number_format((float) $v, 2, ',', '.') . ' €/Monat';
+        return number_format((float) $v, 2, ',', '.').' €/Monat';
     }
 
     public function fmtDeductible($v): string
@@ -2196,12 +2212,12 @@ class DocumentIntakeService
 
     public function fmtKm($v): string
     {
-        return number_format((int) $v, 0, ',', '.') . ' km';
+        return number_format((int) $v, 0, ',', '.').' km';
     }
 
     public function fmtKwh($v): string
     {
-        return number_format((int) $v, 0, ',', '.') . ' kWh';
+        return number_format((int) $v, 0, ',', '.').' kWh';
     }
 
     public function fmtExtras($v): string

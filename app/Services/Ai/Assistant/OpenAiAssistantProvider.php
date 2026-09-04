@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant;
 
 use App\Services\Ai\Assistant\Contracts\AssistantProviderInterface;
@@ -44,7 +45,7 @@ class OpenAiAssistantProvider implements AssistantProviderInterface
 
     public function turn(string $instructions, array $history, array $tools, int $maxOutputTokens = 700): AssistantTurn
     {
-        if (!$this->isEnabled()) {
+        if (! $this->isEnabled()) {
             throw new \RuntimeException('KI-Assistent ist nicht konfiguriert (OPENAI_API_KEY fehlt).');
         }
 
@@ -64,7 +65,7 @@ class OpenAiAssistantProvider implements AssistantProviderInterface
                 'type' => 'function',
                 'name' => $t['name'],
                 'description' => $t['description'] ?? '',
-                'parameters' => $t['parameters'] ?? ['type' => 'object', 'properties' => new \stdClass()],
+                'parameters' => $t['parameters'] ?? ['type' => 'object', 'properties' => new \stdClass],
             ], $tools);
             $payload['tool_choice'] = 'auto';
         }
@@ -81,13 +82,13 @@ class OpenAiAssistantProvider implements AssistantProviderInterface
                 ->post($this->endpoint(), $payload);
         } catch (\Throwable $e) {
             // Netzfehler/Timeout: bewusst OHNE Anbieter-Details nach aussen.
-            throw new \RuntimeException('KI-Dienst nicht erreichbar: ' . $e->getMessage());
+            throw new \RuntimeException('KI-Dienst nicht erreichbar: '.$e->getMessage());
         }
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             throw new \RuntimeException(
-                'KI-Dienst antwortete mit HTTP ' . $response->status()
-                . ' (' . substr((string) $response->json('error.message', ''), 0, 200) . ')'
+                'KI-Dienst antwortete mit HTTP '.$response->status()
+                .' ('.substr((string) $response->json('error.message', ''), 0, 200).')'
             );
         }
 
@@ -98,7 +99,7 @@ class OpenAiAssistantProvider implements AssistantProviderInterface
     {
         $base = rtrim((string) config('services.openai.base_url', 'https://api.openai.com/v1'), '/');
 
-        return $base . '/responses';
+        return $base.'/responses';
     }
 
     /**

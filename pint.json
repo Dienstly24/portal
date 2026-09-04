@@ -1,0 +1,17 @@
+{
+    "preset": "laravel",
+    "rules": {
+        "braces_position": false,
+        "single_line_empty_body": false,
+        "statement_indentation": false,
+        "class_attributes_separation": false,
+        "blank_line_before_statement": false,
+        "control_structure_braces": false,
+        "control_structure_continuation_position": false,
+        "curly_braces_position": false,
+        "phpdoc_align": false,
+        "phpdoc_separation": false,
+        "no_extra_blank_lines": false,
+        "php_unit_method_casing": false
+    }
+}

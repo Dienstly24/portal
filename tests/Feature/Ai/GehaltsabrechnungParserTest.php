@@ -38,14 +38,14 @@ class GehaltsabrechnungParserTest extends TestCase
 
     public function test_parses_employee_health_bank_and_income(): void
     {
-        $r = (new GehaltsabrechnungParser())->parse($this->payslipText());
+        $r = (new GehaltsabrechnungParser)->parse($this->payslipText());
 
         $this->assertNotNull($r);
         $this->assertSame('gehaltsabrechnung', $r['type']);
 
         $p = $r['data']['person'];
         // Voller Name (fuer die Zuordnung), Geburtsdatum, Anschrift.
-        $this->assertSame('Tariq Mohammed Abbas Al Mansoer', trim(($p['first_name'] ?? '') . ' ' . ($p['last_name'] ?? '')));
+        $this->assertSame('Tariq Mohammed Abbas Al Mansoer', trim(($p['first_name'] ?? '').' '.($p['last_name'] ?? '')));
         $this->assertSame('1993-11-15', $p['birth_date']);
         $this->assertSame('Schleswiger Chaussee', $p['street']);
         $this->assertSame('72', $p['house_number']);
@@ -70,6 +70,6 @@ class GehaltsabrechnungParserTest extends TestCase
 
     public function test_ignores_unrelated_documents(): void
     {
-        $this->assertNull((new GehaltsabrechnungParser())->parse('Irgendein anderes Dokument'));
+        $this->assertNull((new GehaltsabrechnungParser)->parse('Irgendein anderes Dokument'));
     }
 }

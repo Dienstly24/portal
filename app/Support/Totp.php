@@ -80,9 +80,9 @@ class Totp
      */
     public static function provisioningUri(string $secret, string $account, string $issuer): string
     {
-        $label = rawurlencode($issuer) . ':' . rawurlencode($account);
+        $label = rawurlencode($issuer).':'.rawurlencode($account);
 
-        return 'otpauth://totp/' . $label . '?' . http_build_query([
+        return 'otpauth://totp/'.$label.'?'.http_build_query([
             'secret' => $secret,
             'issuer' => $issuer,
         ], '', '&', PHP_QUERY_RFC3986);

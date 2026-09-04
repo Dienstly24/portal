@@ -31,7 +31,7 @@ class EmailPrivacyTest extends TestCase
     {
         return EmailMessage::create(array_merge([
             'email_account_id' => $this->account()->id,
-            'message_uid' => 'INBOX:' . uniqid(),
+            'message_uid' => 'INBOX:'.uniqid(),
             'from_address' => 'wer@example.com',
             'subject' => 'Test',
             'body_text' => 'Inhalt',

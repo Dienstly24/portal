@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Mail\RegistrationVerificationMail;
 use App\Models\Customer;
+use App\Models\CustomerConsent;
 use App\Models\PendingRegistration;
 use App\Models\User;
 use App\Services\CustomerNumberGenerator;
@@ -87,7 +88,7 @@ class RegisteredUserController extends Controller
             // Eindeutig gegen BEIDE Tabellen: ein bestehendes Konto und
             // eine laufende Vormerkung blockieren die Adresse gleichermassen.
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255',
-                'unique:' . User::class],
+                'unique:'.User::class],
             'birth_date' => ['nullable', 'date', 'before_or_equal:today'],
             'password' => ['required', 'confirmed', PasswordPolicy::customer()],
             'agb' => ['accepted'],
@@ -213,15 +214,15 @@ class RegisteredUserController extends Controller
                 // Die Einwilligung wird mit der IP des BESTAETIGENDEN
                 // Aufrufs erfasst - das ist der Zeitpunkt, zu dem die
                 // Person nachweislich Zugriff auf das Postfach hatte.
-                \App\Models\CustomerConsent::create([
+                CustomerConsent::create([
                     'customer_id' => $customer->id,
-                    'type' => \App\Models\CustomerConsent::TYPE_EMAIL_PROCESSING,
+                    'type' => CustomerConsent::TYPE_EMAIL_PROCESSING,
                     'granted_at' => now(),
-                    'consent_text_version' => \App\Models\CustomerConsent::EMAIL_TEXT_VERSION,
+                    'consent_text_version' => CustomerConsent::EMAIL_TEXT_VERSION,
                     'ip_address' => $request->ip(),
                     'user_agent' => substr((string) $request->userAgent(), 0, 512),
                     'source' => 'portal_registration',
-                    'import_token' => \App\Models\CustomerConsent::newImportToken(),
+                    'import_token' => CustomerConsent::newImportToken(),
                 ]);
             }
 
@@ -297,7 +298,7 @@ class RegisteredUserController extends Controller
             // Der Versand darf die Vormerkung nicht mitreissen: sonst
             // steht die Adresse blockiert da, ohne dass je eine Mail
             // ankam. Der Nutzer kann "erneut senden" ausloesen.
-            Log::error('Bestaetigungsmail zur Registrierung fehlgeschlagen: ' . $e->getMessage());
+            Log::error('Bestaetigungsmail zur Registrierung fehlgeschlagen: '.$e->getMessage());
         }
     }
 }

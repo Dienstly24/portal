@@ -2,18 +2,22 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\VerifyChangeRequestProofJob;
+use App\Mail\DirectEmailMail;
 use App\Models\ChangeNotification;
-use App\Models\ChangeRequestDocument;
 use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\CustomerChangeRequest;
 use App\Models\CustomerMessage;
 use App\Models\SystemSetting;
 use App\Models\User;
+use App\Services\ChangeRequest\ChangeProofPolicy;
 use App\Services\ChangeRequest\ChangeProofVerifier;
-use App\Services\ChangeRequestService;
+use App\Services\Ocr\PdfTextLayerExtractor;
+use App\Services\Ocr\TextExtractorInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -94,7 +98,7 @@ class ChangeRequestVerificationTest extends TestCase
         // Nachweise liegen auf der privaten Disk im Kundenverzeichnis
         $document = $request->documents()->where('kind', 'bank_proof')->firstOrFail();
         $this->assertSame('local', $document->disk);
-        $this->assertStringStartsWith('customers/' . $customer->id . '/nachweise', $document->file_path);
+        $this->assertStringStartsWith('customers/'.$customer->id.'/nachweise', $document->file_path);
         Storage::disk('local')->assertExists($document->file_path);
     }
 
@@ -121,16 +125,16 @@ class ChangeRequestVerificationTest extends TestCase
     /** Der Verifier arbeitet auf dem Dokumenttext - hier direkt eingespeist. */
     private function verifyWithText(CustomerChangeRequest $request, string $text): array
     {
-        $extractor = new class($text) implements \App\Services\Ocr\TextExtractorInterface {
+        $extractor = new class($text) implements TextExtractorInterface {
             public function __construct(private string $text) {}
             public function isAvailable(): bool { return true; }
             public function extract(string $binary, string $mime): string { return $this->text; }
         };
-        $pdfText = new class extends \App\Services\Ocr\PdfTextLayerExtractor {
+        $pdfText = new class extends PdfTextLayerExtractor {
             public function isAvailable(): bool { return false; }
         };
 
-        $verifier = new ChangeProofVerifier($extractor, $pdfText, app(\App\Services\ChangeRequest\ChangeProofPolicy::class));
+        $verifier = new ChangeProofVerifier($extractor, $pdfText, app(ChangeProofPolicy::class));
         return $verifier->verify($request->fresh());
     }
 
@@ -218,7 +222,7 @@ class ChangeRequestVerificationTest extends TestCase
 
     public function test_verified_address_is_approved_automatically_but_bank_is_not(): void
     {
-        $policy = app(\App\Services\ChangeRequest\ChangeProofPolicy::class);
+        $policy = app(ChangeProofPolicy::class);
         $this->assertSame('address', $policy->autoApproveMode(), 'Standard: Adresse automatisch, Bank manuell.');
 
         $customer = $this->makeCustomer();
@@ -230,11 +234,11 @@ class ChangeRequestVerificationTest extends TestCase
         ]);
         $address = CustomerChangeRequest::where('type', 'address')->firstOrFail();
         $this->verifyWithText($address, "Mohammad Alshaikh\nMusterstr. 12\n20095 Hamburg\n");
-        app(\App\Jobs\VerifyChangeRequestProofJob::class, ['changeRequestId' => (string) $address->id]);
+        app(VerifyChangeRequestProofJob::class, ['changeRequestId' => (string) $address->id]);
 
         // Bank: geprueft, aber Geldfluss -> bleibt beim Vier-Augen-Prinzip
         $bank = $this->bankRequest($customer);
-        $this->verifyWithText($bank, "Kontoinhaber Mohammad Alshaikh IBAN DE89370400440532013000");
+        $this->verifyWithText($bank, 'Kontoinhaber Mohammad Alshaikh IBAN DE89370400440532013000');
         $this->assertFalse($policy->autoApproveAllowed($bank->fresh()));
         $this->assertTrue($policy->autoApproveAllowed($address->fresh()));
     }
@@ -251,7 +255,7 @@ class ChangeRequestVerificationTest extends TestCase
         $request = CustomerChangeRequest::where('type', 'address')->firstOrFail();
         $this->verifyWithText($request, "Mohammad Alshaikh\nMusterstr. 12\n20095 Hamburg\n");
 
-        $this->assertFalse(app(\App\Services\ChangeRequest\ChangeProofPolicy::class)->autoApproveAllowed($request->fresh()));
+        $this->assertFalse(app(ChangeProofPolicy::class)->autoApproveAllowed($request->fresh()));
     }
 
     // ------------------------------------------------------------------
@@ -289,7 +293,7 @@ class ChangeRequestVerificationTest extends TestCase
 
     public function test_notification_can_be_sent_with_proof_attached(): void
     {
-        \Illuminate\Support\Facades\Mail::fake();
+        Mail::fake();
         $customer = $this->makeCustomer();
         Contract::create(['customer_id' => $customer->id, 'type' => 'kfz', 'insurer' => 'HUK', 'status' => 'active', 'contract_number' => 'KFZ-9']);
 
@@ -309,7 +313,7 @@ class ChangeRequestVerificationTest extends TestCase
         $this->assertSame('sent', $notification->status);
         $this->assertSame('service@huk.de', $notification->recipient);
         $this->assertSame($admin->id, $notification->sent_by);
-        \Illuminate\Support\Facades\Mail::assertQueued(\App\Mail\DirectEmailMail::class);
+        Mail::assertQueued(DirectEmailMail::class);
 
         // Versand steht in der Kundenakte
         $this->assertDatabaseHas('customer_timeline', [
@@ -320,7 +324,7 @@ class ChangeRequestVerificationTest extends TestCase
 
     public function test_sent_notification_cannot_be_sent_twice(): void
     {
-        \Illuminate\Support\Facades\Mail::fake();
+        Mail::fake();
         $customer = $this->makeCustomer();
         Contract::create(['customer_id' => $customer->id, 'type' => 'kfz', 'insurer' => 'HUK', 'status' => 'active', 'contract_number' => 'KFZ-8']);
         $request = $this->bankRequest($customer);
@@ -334,7 +338,7 @@ class ChangeRequestVerificationTest extends TestCase
         $this->actingAs($admin)->post(route('admin.change_notifications.send', $notification->id), $payload)
             ->assertSessionHas('error');
 
-        \Illuminate\Support\Facades\Mail::assertQueuedCount(1);
+        Mail::assertQueuedCount(1);
     }
 
     public function test_notification_can_be_marked_as_handled_by_post(): void

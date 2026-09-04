@@ -15,8 +15,7 @@ use Illuminate\Support\Facades\Schema;
  * Fehlt ein Sparten-Satz, greift als Fallback der globale Satz am
  * Mitarbeiter/Partner (users.provision_fixed/-percent bzw. partners.*).
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('provision_rates', function (Blueprint $table) {

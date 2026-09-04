@@ -1,5 +1,7 @@
 <?php
+
 namespace App\Http\Controllers;
+
 use App\Http\Controllers\Concerns\ScopesCustomerAccess;
 
 use App\Mail\DirectEmailMail;
@@ -9,8 +11,10 @@ use App\Models\CustomerTimeline;
 use App\Models\MessageTemplate;
 use App\Models\Ticket;
 use App\Services\EmailDraftService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 /**
  * Smart-E-Mail-Composer der Beraterwelt: Kundensuche mit Sofort-Vorschlaegen
@@ -65,10 +69,10 @@ class ComposeEmailController extends Controller
         $this->authorizeCompose();
         $q = trim((string) $request->query('q', ''));
         $ids = $this->visibleCustomerIds();
-        $favoriteIds = auth()->user()->favoriteCustomers()->pluck('customers.id')->map(fn($id) => (string) $id);
+        $favoriteIds = auth()->user()->favoriteCustomers()->pluck('customers.id')->map(fn ($id) => (string) $id);
 
         $base = Customer::with(['user', 'betreuer'])
-            ->when($ids !== null, fn($query) => $query->whereIn('customers.id', $ids));
+            ->when($ids !== null, fn ($query) => $query->whereIn('customers.id', $ids));
 
         if ($q === '') {
             $favorites = (clone $base)->whereIn('customers.id', $favoriteIds)->get();
@@ -81,7 +85,7 @@ class ComposeEmailController extends Controller
         }
 
         return response()->json([
-            'customers' => $customers->map(fn(Customer $c) => [
+            'customers' => $customers->map(fn (Customer $c) => [
                 'id' => (string) $c->id,
                 'name' => $c->user?->name ?? '—',
                 'email' => $c->user?->hasRealEmail() ? $c->user->email : null,
@@ -89,7 +93,7 @@ class ComposeEmailController extends Controller
                 'number' => $c->customer_number,
                 'lang' => strtoupper((string) $c->preferred_lang ?: 'DE'),
                 'last_contact' => $c->last_contact
-                    ? \Carbon\Carbon::parse($c->last_contact)->format('d.m.Y') : null,
+                    ? Carbon::parse($c->last_contact)->format('d.m.Y') : null,
                 'betreuer' => $c->betreuer->pluck('name')->implode(', '),
                 'favorite' => $favoriteIds->contains((string) $c->id),
             ])->values(),
@@ -131,14 +135,14 @@ class ComposeEmailController extends Controller
             $history->push([
                 'icon' => $m->from_staff ? '📨' : '💬',
                 'text' => ($m->from_staff ? 'Nachricht gesendet: ' : 'Kunde schrieb: ')
-                    . \Illuminate\Support\Str::limit(trim($m->body), 55),
+                    .Str::limit(trim($m->body), 55),
                 'at' => $m->created_at,
             ]);
         }
         foreach (Ticket::where('customer_id', $customerId)->latest()->take(4)->get() as $t) {
             $history->push([
                 'icon' => '🎫',
-                'text' => $t->subject . ' (' . ($t->status === 'closed' ? 'geschlossen' : 'offen') . ')',
+                'text' => $t->subject.' ('.($t->status === 'closed' ? 'geschlossen' : 'offen').')',
                 'at' => $t->created_at,
             ]);
         }
@@ -156,14 +160,14 @@ class ComposeEmailController extends Controller
             'phone' => $customer->phone ?: $customer->mobile,
             'betreuer' => $customer->betreuer->pluck('name')->implode(', '),
             'last_contact' => $customer->last_contact
-                ? \Carbon\Carbon::parse($customer->last_contact)->format('d.m.Y') : null,
+                ? Carbon::parse($customer->last_contact)->format('d.m.Y') : null,
             'favorite' => auth()->user()->favoriteCustomers()->where('customers.id', $customerId)->exists(),
             'salutations' => [
-                'formell' => $customer->salutationLine() . ',',
-                'locker' => $vorname !== '' ? 'Hallo ' . $vorname . ',' : 'Hallo,',
+                'formell' => $customer->salutationLine().',',
+                'locker' => $vorname !== '' ? 'Hallo '.$vorname.',' : 'Hallo,',
             ],
             'history' => $history->sortByDesc('at')->take(6)->values()
-                ->map(fn($h) => ['icon' => $h['icon'], 'text' => $h['text'], 'date' => $h['at']->format('d.m.Y')]),
+                ->map(fn ($h) => ['icon' => $h['icon'], 'text' => $h['text'], 'date' => $h['at']->format('d.m.Y')]),
         ]);
     }
 
@@ -178,9 +182,9 @@ class ComposeEmailController extends Controller
         $request->validate([
             'goal' => 'required|string|max:1000',
             'customer_id' => 'nullable|string',
-            'category' => 'nullable|in:' . implode(',', array_keys(MessageTemplate::CATEGORIES)),
+            'category' => 'nullable|in:'.implode(',', array_keys(MessageTemplate::CATEGORIES)),
         ]);
-        if (!$draftService->isAvailable()) {
+        if (! $draftService->isAvailable()) {
             return response()->json(['message' => 'Kein KI-Anbieter konfiguriert (ANTHROPIC_API_KEY fehlt).'], 422);
         }
 
@@ -190,8 +194,8 @@ class ComposeEmailController extends Controller
             abort_unless(auth()->user()->canAccessCustomer($request->customer_id), 403);
             $customer = Customer::with('user')->findOrFail($request->customer_id);
             $history = CustomerMessage::where('customer_id', $customer->id)->latest()->take(4)->get()
-                ->map(fn($m) => $m->created_at->lokal()->format('d.m.Y') . ' '
-                    . ($m->from_staff ? 'Wir' : 'Kunde') . ': ' . \Illuminate\Support\Str::limit(trim($m->body), 90))
+                ->map(fn ($m) => $m->created_at->lokal()->format('d.m.Y').' '
+                    .($m->from_staff ? 'Wir' : 'Kunde').': '.Str::limit(trim($m->body), 90))
                 ->all();
         }
 
@@ -204,7 +208,7 @@ class ComposeEmailController extends Controller
                 $history,
             );
         } catch (\Throwable $e) {
-            \Log::warning('KI-Entwurf fehlgeschlagen: ' . $e->getMessage());
+            \Log::warning('KI-Entwurf fehlgeschlagen: '.$e->getMessage());
             return response()->json(['message' => 'KI-Entwurf derzeit nicht verfügbar. Bitte später erneut versuchen.'], 502);
         }
 
@@ -247,8 +251,8 @@ class ComposeEmailController extends Controller
                 senderName: (string) auth()->user()->name,
             ));
         } catch (\Throwable $e) {
-            \Log::warning('Direkt-E-Mail fehlgeschlagen: ' . $e->getMessage());
-            return back()->withInput()->with('error', 'E-Mail konnte nicht gesendet werden: ' . $e->getMessage());
+            \Log::warning('Direkt-E-Mail fehlgeschlagen: '.$e->getMessage());
+            return back()->withInput()->with('error', 'E-Mail konnte nicht gesendet werden: '.$e->getMessage());
         }
 
         // Nachvollziehbarkeit: Versand in der Kundenakte protokollieren.
@@ -257,14 +261,14 @@ class ComposeEmailController extends Controller
                 'customer_id' => $customer->id,
                 'user_id' => auth()->id(),
                 'type' => 'email',
-                'title' => 'E-Mail gesendet: ' . $request->subject,
-                'description' => 'An ' . $request->to
-                    . ($files !== [] ? ' · ' . count($files) . ' Anhang/Anhänge' : ''),
+                'title' => 'E-Mail gesendet: '.$request->subject,
+                'description' => 'An '.$request->to
+                    .($files !== [] ? ' · '.count($files).' Anhang/Anhänge' : ''),
             ]);
             $customer->update(['last_contact' => now()->toDateString()]);
         }
 
-        return redirect(route('admin.email.compose') . ($customer ? '?customer_id=' . $customer->id : ''))
-            ->with('success', 'E-Mail an ' . $request->to . ' gesendet.');
+        return redirect(route('admin.email.compose').($customer ? '?customer_id='.$customer->id : ''))
+            ->with('success', 'E-Mail an '.$request->to.' gesendet.');
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Models\Contract;
@@ -61,19 +62,19 @@ class KontaktSepaDatenParser implements DocumentTemplateParser
         $bank = $this->parseBank($person);
         $insurance = $this->parseInsurance();
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $sparte = $insurance['sparte'] ?? null;
 
         return [
             'type' => 'kontaktdaten',
             'confidence' => 74,
             'summary' => 'Kunden- & SEPA-Daten (Antragsportal)'
-                . ($name !== '' ? ' - ' . $name : '')
-                . ($sparte !== null
-                    ? ' - zur Sparte ' . (Contract::TYPES[$sparte]['label'] ?? $sparte) : '')
-                . ($bank !== [] ? ' - Bankverbindung des Versicherungsnehmers' : ' - ohne Bankuebernahme')
-                . ' - Felder gratis gelesen (ohne KI).',
-            'title' => 'Kunden- & SEPA-Daten' . ($name !== '' ? ' ' . $name : ''),
+                .($name !== '' ? ' - '.$name : '')
+                .($sparte !== null
+                    ? ' - zur Sparte '.(Contract::TYPES[$sparte]['label'] ?? $sparte) : '')
+                .($bank !== [] ? ' - Bankverbindung des Versicherungsnehmers' : ' - ohne Bankuebernahme')
+                .' - Felder gratis gelesen (ohne KI).',
+            'title' => 'Kunden- & SEPA-Daten'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -112,7 +113,7 @@ class KontaktSepaDatenParser implements DocumentTemplateParser
         // (sonst Einzelunternehmer: der "Unternehmensname" ist die Person).
         $firma = $this->labelValue('Unternehmensname & Rechtsform') ?? $this->labelValue('Unternehmensname');
         if ($firma !== null) {
-            $full = trim(($raw['first_name'] ?? '') . ' ' . ($raw['last_name'] ?? ''));
+            $full = trim(($raw['first_name'] ?? '').' '.($raw['last_name'] ?? ''));
             if ($full === '' || $this->normalize($firma) !== $this->normalize($full)) {
                 $raw['company_name'] = trim($firma);
                 // Ohne Ansprechpartner traegt die Firma den Datensatz.
@@ -157,11 +158,11 @@ class KontaktSepaDatenParser implements DocumentTemplateParser
     {
         $inhaber = $this->labelValue('Kontoinhaber');
         $inhaberName = $this->labelValue('Name des Kontoinhabers');
-        $full = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $full = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
 
         $gehoertKunde = ($inhaber !== null && preg_match('/Versicherungsnehmer/iu', $inhaber))
             || ($inhaberName !== null && $full !== '' && $this->normalize($inhaberName) === $this->normalize($full));
-        if (!$gehoertKunde) {
+        if (! $gehoertKunde) {
             return [];
         }
 
@@ -197,9 +198,9 @@ class KontaktSepaDatenParser implements DocumentTemplateParser
         $sparte = match (true) {
             str_contains($text, 'frachtführerhaftpflicht'),
             str_contains($text, 'frachtfuehrerhaftpflicht'),
-            str_contains($text, 'verkehrshaftung')            => 'frachtfuehrerhaftpflicht',
-            str_contains($text, 'betriebshaftpflicht')        => 'betriebshaftpflicht',
-            default                                           => null,
+            str_contains($text, 'verkehrshaftung') => 'frachtfuehrerhaftpflicht',
+            str_contains($text, 'betriebshaftpflicht') => 'betriebshaftpflicht',
+            default => null,
         };
 
         return $sparte === null ? [] : $this->validatedInsurance(['sparte' => $sparte]);
@@ -218,7 +219,7 @@ class KontaktSepaDatenParser implements DocumentTemplateParser
      */
     private function labelValue(string $label): ?string
     {
-        $re = '/^\s*' . preg_quote($label, '/') . '\s*:\s*(\S.*?)\s*$/u';
+        $re = '/^\s*'.preg_quote($label, '/').'\s*:\s*(\S.*?)\s*$/u';
         foreach ($this->lines as $line) {
             if (preg_match($re, $line, $m)) {
                 $val = trim($m[1]);

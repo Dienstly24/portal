@@ -1,8 +1,19 @@
 <?php
+
 namespace App\Http\Controllers;
 
+use App\Models\AiAssistantLog;
+use App\Models\AiConversation;
 use App\Models\Customer;
 use App\Models\CustomerMessage;
+use App\Models\MessageTemplate;
+use App\Models\Ticket;
+use App\Services\Ai\Assistant\AssistantSettings;
+use App\Services\Ai\Assistant\ConversationResumeService;
+use App\Services\Ai\Assistant\DocumentStatusReader;
+use App\Services\Ai\Assistant\EmployeeAssistantService;
+use App\Services\CustomerConversationService;
+use App\Services\TicketNotifier;
 use Illuminate\Http\Request;
 
 /**
@@ -53,12 +64,12 @@ class AdminCustomerChatController extends Controller
             CustomerMessage::where('customer_id', $active->id)
                 ->fromCustomer()->unread()
                 ->update(['read_at' => now()]);
-            $service = new \App\Services\CustomerConversationService();
+            $service = new CustomerConversationService;
             $includeEmails = in_array($user->role, ['admin', 'manager', 'support'], true);
             $timeline = $service->timeline($active, includeEmails: $includeEmails);
             $timelineVersion = $service->version($active, includeEmails: $includeEmails);
             // Schnellaktion Ticket-Status: das juengste noch offene Ticket.
-            $activeTicket = \App\Models\Ticket::where('customer_id', $active->id)
+            $activeTicket = Ticket::where('customer_id', $active->id)
                 ->whereNotIn('status', ['resolved', 'closed'])
                 ->latest()->first();
             // Vorbefuellung fuer "Vorgang aus Unterhaltung": letzte
@@ -70,21 +81,21 @@ class AdminCustomerChatController extends Controller
             // KI-Panel (Spezifikation Abschnitt 27): Zustand, letzte Aktion,
             // Uebergabegrund und die Dokumentenlage - damit der Mitarbeiter
             // den Fall ohne Lesen des ganzen Chats uebernehmen kann.
-            $aiConversation = \App\Models\AiConversation::forCustomer($active->id);
-            $aiSettings = app(\App\Services\Ai\Assistant\AssistantSettings::class);
-            $aiDocuments = app(\App\Services\Ai\Assistant\DocumentStatusReader::class)->overview($active);
-            $aiLastLog = \App\Models\AiAssistantLog::where('customer_id', $active->id)
+            $aiConversation = AiConversation::forCustomer($active->id);
+            $aiSettings = app(AssistantSettings::class);
+            $aiDocuments = app(DocumentStatusReader::class)->overview($active);
+            $aiLastLog = AiAssistantLog::where('customer_id', $active->id)
                 ->latest()->first();
             // Vorgangsstand des Verkaufsassistenten (Abschnitte 13/15/16):
             // Anliegen, Zustand, bekannte und fehlende Angaben, Angebot,
             // Pruefstand, naechster Schritt und eine etwaige Stoerung.
-            $aiBriefing = app(\App\Services\Ai\Assistant\EmployeeAssistantService::class)
+            $aiBriefing = app(EmployeeAssistantService::class)
                 ->briefing($active, $aiConversation);
             // Wiederaufnahme (Betreiber-Vorgabe 20.08.2026): das Panel sagt
             // ausdruecklich, WANN die KI wieder einspringt - "KI aus" ohne
             // Zeitangabe war die eigentliche Ursache der Meldung, dass ein
             // Kunde nach einer Uebergabe nie wieder eine Antwort bekam.
-            $aiResume = app(\App\Services\Ai\Assistant\ConversationResumeService::class);
+            $aiResume = app(ConversationResumeService::class);
         }
 
         return view('admin.customer_chat', [
@@ -101,7 +112,7 @@ class AdminCustomerChatController extends Controller
             'aiBriefing' => $aiBriefing ?? null,
             'aiResume' => $aiResume ?? null,
             'ticketPrefill' => $ticketPrefill ?? '',
-            'templates' => \App\Models\MessageTemplate::where('category', 'kunde')
+            'templates' => MessageTemplate::where('category', 'kunde')
                 ->orderBy('sort')->orderBy('name')->get(['id', 'name']),
         ]);
     }
@@ -132,7 +143,7 @@ class AdminCustomerChatController extends Controller
             // Nicht-Chat-Kanaele (Tickets, E-Mails, Dokumente, Notizen):
             // aendert sich die Version, blendet die Seite einen
             // Aktualisieren-Hinweis ein (Chat selbst ist bereits live).
-            'timeline_version' => (new \App\Services\CustomerConversationService())->version(
+            'timeline_version' => (new CustomerConversationService)->version(
                 $customer,
                 includeEmails: in_array(auth()->user()->role, ['admin', 'manager', 'support'], true),
             ),
@@ -152,11 +163,11 @@ class AdminCustomerChatController extends Controller
     {
         abort_unless(auth()->user()->canAccessCustomer($customerId), 403);
         $user = auth()->user();
-        abort_if($user->role === 'employee' && !$user->can_manage_tickets, 403,
+        abort_if($user->role === 'employee' && ! $user->can_manage_tickets, 403,
             'Keine Berechtigung, Tickets zu bearbeiten.');
 
         $data = $request->validate([
-            'type' => 'required|in:' . implode(',', array_keys(\App\Models\Ticket::TYPES)),
+            'type' => 'required|in:'.implode(',', array_keys(Ticket::TYPES)),
             'priority' => 'required|in:niedrig,mittel,hoch,dringend',
             'subject' => 'required|string|max:255',
             'description' => 'required|string|max:5000',
@@ -164,7 +175,7 @@ class AdminCustomerChatController extends Controller
         ]);
         $customer = Customer::findOrFail($customerId);
 
-        $ticket = \App\Models\Ticket::create([
+        $ticket = Ticket::create([
             'customer_id' => $customer->id,
             'type' => $data['type'],
             'priority' => $data['priority'],
@@ -175,12 +186,12 @@ class AdminCustomerChatController extends Controller
             'source' => 'kundenkommunikation',
         ]);
         if ($request->boolean('assign_me')) {
-            $ticket->logEvent('assigned', 'an ' . $user->name);
+            $ticket->logEvent('assigned', 'an '.$user->name);
         }
-        \App\Services\TicketNotifier::notifyNewTicket($ticket);
+        TicketNotifier::notifyNewTicket($ticket);
 
         return redirect()
             ->route('admin.customer_chat', ['kunde' => $customer->id])
-            ->with('success', 'Vorgang ' . $ticket->ticket_number . ' aus der Unterhaltung eröffnet.');
+            ->with('success', 'Vorgang '.$ticket->ticket_number.' aus der Unterhaltung eröffnet.');
     }
 }

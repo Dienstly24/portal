@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Activity;
 
 use App\Models\ActivityLog;
@@ -34,7 +35,7 @@ class ActivityTracker
     /** Loest der Auth-Login aus: neue Arbeitssitzung beginnen. */
     public function handleLogin(?User $user, Request $request): void
     {
-        if (!$user || !$this->isTracked($user)) {
+        if (! $user || ! $this->isTracked($user)) {
             return;
         }
         $now = now();
@@ -61,7 +62,7 @@ class ActivityTracker
     /** Loest der Auth-Logout aus: Sitzung beenden. */
     public function handleLogout(?User $user, Request $request): void
     {
-        if (!$user || !$this->isTracked($user)) {
+        if (! $user || ! $this->isTracked($user)) {
             return;
         }
         $now = now();
@@ -80,7 +81,7 @@ class ActivityTracker
     public function trackRequest(Request $request, Response $response): void
     {
         $user = $request->user();
-        if (!$user instanceof User || !$this->isTracked($user)) {
+        if (! $user instanceof User || ! $this->isTracked($user)) {
             return;
         }
 
@@ -113,7 +114,7 @@ class ActivityTracker
         $status = $response->getStatusCode();
         $failed = $status >= 400 || ($isWrite && $this->validationFailed($request));
 
-        $productive = !$failed && $this->catalog->isProductive($action);
+        $productive = ! $failed && $this->catalog->isProductive($action);
         $points = $productive ? $this->catalog->pointsFor($action) : 0;
 
         // Aktivzeit-Gutschrift: Luecke seit letzter produktiver Aktion
@@ -202,7 +203,7 @@ class ActivityTracker
         $stale = WorkSession::open()
             ->where(function ($q) use ($cutoff) {
                 $q->where('last_seen_at', '<', $cutoff)
-                  ->orWhere(fn($q2) => $q2->whereNull('last_seen_at')->where('login_at', '<', $cutoff));
+                    ->orWhere(fn ($q2) => $q2->whereNull('last_seen_at')->where('login_at', '<', $cutoff));
             })
             ->get();
 
@@ -236,9 +237,9 @@ class ActivityTracker
             'entity_id' => $entityId,
             'meta' => array_filter([
                 'params' => $params ?: null,
-            ] + $extraMeta, fn($v) => $v !== null),
+            ] + $extraMeta, fn ($v) => $v !== null),
             'route' => $request->route()?->getName(),
-            'url_path' => Str::limit('/' . ltrim($request->path(), '/'), 490, ''),
+            'url_path' => Str::limit('/'.ltrim($request->path(), '/'), 490, ''),
             'method' => strtoupper($request->method()),
             'ip' => $request->ip(),
             'user_agent' => Str::limit((string) $request->userAgent(), 250, ''),
@@ -255,7 +256,7 @@ class ActivityTracker
     protected function extractEntity(Request $request): array
     {
         $route = $request->route();
-        if (!$route) {
+        if (! $route) {
             return [null, null, []];
         }
 
@@ -279,7 +280,7 @@ class ActivityTracker
     /** Wurden in DIESEM Request Validierungsfehler geflasht? */
     protected function validationFailed(Request $request): bool
     {
-        if (!$request->hasSession()) {
+        if (! $request->hasSession()) {
             return false;
         }
         $newFlash = $request->session()->get('_flash.new', []);

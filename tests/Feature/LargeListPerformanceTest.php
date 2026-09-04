@@ -2,11 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\ActivityLog;
 use App\Models\Contract;
 use App\Models\Customer;
-use App\Models\User;
 use App\Models\EmailAccount;
 use App\Models\EmailMessage;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -42,12 +43,12 @@ class LargeListPerformanceTest extends TestCase
         $user = User::factory()->create([
             'role' => 'customer',
             'name' => $name,
-            'email' => 'kunde-' . substr(md5($name . uniqid()), 0, 12) . '@example.test',
+            'email' => 'kunde-'.substr(md5($name.uniqid()), 0, 12).'@example.test',
         ]);
 
         return Customer::create(array_merge([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5($name . uniqid()), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5($name.uniqid()), 0, 8)),
         ], $attrs));
     }
 
@@ -68,7 +69,7 @@ class LargeListPerformanceTest extends TestCase
     {
         $kunde = $this->kunde('Max Muster');
         for ($i = 0; $i < 55; $i++) {
-            $this->vertrag($kunde, ['contract_number' => 'V-' . $i]);
+            $this->vertrag($kunde, ['contract_number' => 'V-'.$i]);
         }
 
         $antwort = $this->actingAs($this->admin())->get(route('admin.contracts'));
@@ -317,7 +318,7 @@ class LargeListPerformanceTest extends TestCase
 
         $this->actingAs($this->admin())->get(route('admin.export'))->assertOk();
 
-        $eintrag = \App\Models\ActivityLog::where('action', 'customers_exported')->latest('created_at')->firstOrFail();
+        $eintrag = ActivityLog::where('action', 'customers_exported')->latest('created_at')->firstOrFail();
         $this->assertSame(2, $eintrag->metaArray()['count']);
     }
 
@@ -348,11 +349,11 @@ class LargeListPerformanceTest extends TestCase
         for ($i = 0; $i < 105; $i++) {
             EmailMessage::create([
                 'email_account_id' => $konto->id,
-                'message_uid' => 'uid-' . $i,
+                'message_uid' => 'uid-'.$i,
                 'customer_id' => $kunde->id,
                 'match_status' => 'suggested',
-                'subject' => 'Testmail ' . $i,
-                'from_address' => 'kunde' . $i . '@example.com',
+                'subject' => 'Testmail '.$i,
+                'from_address' => 'kunde'.$i.'@example.com',
                 'received_at' => now()->subMinutes(200 - $i),
             ]);
         }

@@ -12,8 +12,7 @@ use Illuminate\Support\Facades\Schema;
  * das ist die reine E-Mail-Quelle, aus der Tickets/Tasks erst
  * abgeleitet werden.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('email_messages', function (Blueprint $table) {

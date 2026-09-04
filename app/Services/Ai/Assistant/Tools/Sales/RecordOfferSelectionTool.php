@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Tools\Sales;
 
 use App\Models\AiConversationEvent;
@@ -33,10 +34,10 @@ class RecordOfferSelectionTool implements AssistantTool
     public function description(): string
     {
         return 'Halte fest, dass der Kunde einem Angebot zugestimmt hat. Nutze das, '
-            . 'sobald die Zustimmung aus dem Zusammenhang klar ist - auch bei '
-            . 'Formulierungen wie "passt so", "das nehme ich", "einverstanden". '
-            . 'Bei Unklarheit frage lieber nach, statt zu raten. Die Kennung ist die '
-            . 'Angebots-Kennung aus getOffers (z.B. "A").';
+            .'sobald die Zustimmung aus dem Zusammenhang klar ist - auch bei '
+            .'Formulierungen wie "passt so", "das nehme ich", "einverstanden". '
+            .'Bei Unklarheit frage lieber nach, statt zu raten. Die Kennung ist die '
+            .'Angebots-Kennung aus getOffers (z.B. "A").';
     }
 
     public function parameters(): array
@@ -67,10 +68,10 @@ class RecordOfferSelectionTool implements AssistantTool
             ->whereRaw('UPPER(label) = ?', [mb_strtoupper($kennung)])
             ->first();
 
-        if (!$angebot) {
+        if (! $angebot) {
             return [
                 'fehler' => 'Kein Angebot mit dieser Kennung. Nenne dem Kunden die '
-                    . 'vorhandenen Angebote erneut und frage nach.',
+                    .'vorhandenen Angebote erneut und frage nach.',
             ];
         }
 
@@ -99,8 +100,8 @@ class RecordOfferSelectionTool implements AssistantTool
             'angebot' => $angebot->label,
             'zustand' => $conversation->state,
             'hinweis' => 'Bestaetige dem Kunden die Auswahl und erklaere, dass ein '
-                . 'Mitarbeiter den Abschluss vornimmt. Frage danach die noch fehlenden '
-                . 'Vertragsangaben ab (getConversationState).',
+                .'Mitarbeiter den Abschluss vornimmt. Frage danach die noch fehlenden '
+                .'Vertragsangaben ab (getConversationState).',
         ];
     }
 }

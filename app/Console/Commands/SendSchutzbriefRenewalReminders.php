@@ -1,7 +1,9 @@
 <?php
+
 namespace App\Console\Commands;
 
 use App\Services\SchutzbriefRenewalReminderService;
+use Carbon\Carbon;
 use Illuminate\Console\Command;
 
 /**
@@ -27,18 +29,18 @@ class SendSchutzbriefRenewalReminders extends Command
                 return self::SUCCESS;
             }
             foreach ($due as [$contract, $anchor]) {
-                $this->line('- ' . ($contract->customer?->customer_number ?? '?')
-                    . ' (' . ($contract->insurer ?? 'ohne Anbieter')
-                    . ($contract->contract_number ? ', Nr. ' . $contract->contract_number : '')
-                    . ') -> Verlaengerung ' . $anchor
-                    . ', letzte Kuendigung ' . $service->lastCancellationDate(\Carbon\Carbon::parse($anchor))->toDateString());
+                $this->line('- '.($contract->customer?->customer_number ?? '?')
+                    .' ('.($contract->insurer ?? 'ohne Anbieter')
+                    .($contract->contract_number ? ', Nr. '.$contract->contract_number : '')
+                    .') -> Verlaengerung '.$anchor
+                    .', letzte Kuendigung '.$service->lastCancellationDate(Carbon::parse($anchor))->toDateString());
             }
-            $this->info(count($due) . ' Schutzbrief-Erinnerung(en) faellig (dry-run).');
+            $this->info(count($due).' Schutzbrief-Erinnerung(en) faellig (dry-run).');
             return self::SUCCESS;
         }
 
         $sent = $service->run();
-        $this->info($sent . ' Schutzbrief-Erinnerung(en) versendet.');
+        $this->info($sent.' Schutzbrief-Erinnerung(en) versendet.');
         return self::SUCCESS;
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
@@ -52,7 +53,7 @@ class ReisepassMrzParser implements DocumentTemplateParser
 
         // Zeile 2: Passnummer, Staatsangehoerigkeit, Geburtsdatum, Geschlecht,
         // Ablauf - am genormten Muster verankert (robust gegen Rand-Rauschen).
-        if (!preg_match('/([A-Z0-9<]{9})(\d)([A-Z]{3})(\d{6})(\d)([MFX<])(\d{6})/', $line2, $m)) {
+        if (! preg_match('/([A-Z0-9<]{9})(\d)([A-Z]{3})(\d{6})(\d)([MFX<])(\d{6})/', $line2, $m)) {
             return null;
         }
         $passNo = rtrim($m[1], '<');
@@ -85,10 +86,10 @@ class ReisepassMrzParser implements DocumentTemplateParser
             }
         }
         // Ersatz aus den sichtbaren Beschriftungen, falls die MRZ-Namen fehlen.
-        if (!isset($raw['last_name']) && ($s = $this->vizLabel('Surname')) !== null) {
+        if (! isset($raw['last_name']) && ($s = $this->vizLabel('Surname')) !== null) {
             $raw['last_name'] = $this->titleCase($s);
         }
-        if (!isset($raw['first_name']) && ($g = $this->vizLabel('Name')) !== null) {
+        if (! isset($raw['first_name']) && ($g = $this->vizLabel('Name')) !== null) {
             $raw['first_name'] = $this->titleCase($g);
         }
 
@@ -99,16 +100,16 @@ class ReisepassMrzParser implements DocumentTemplateParser
             return null;
         }
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         return [
             'type' => 'reisepass',
             'confidence' => 78,
             'summary' => 'Reisepass (maschinenlesbare Zone gelesen)'
-                . ($name !== '' ? ' - ' . $name : '')
-                . (isset($person['nationality']) ? ' - ' . $person['nationality'] : '')
-                . ($expiry !== null ? ' - gueltig bis ' . $this->displayDate($expiry) : '')
-                . ' - Felder gratis aus der MRZ gelesen (ohne KI).',
-            'title' => 'Reisepass' . ($name !== '' ? ' ' . $name : ''),
+                .($name !== '' ? ' - '.$name : '')
+                .(isset($person['nationality']) ? ' - '.$person['nationality'] : '')
+                .($expiry !== null ? ' - gueltig bis '.$this->displayDate($expiry) : '')
+                .' - Felder gratis aus der MRZ gelesen (ohne KI).',
+            'title' => 'Reisepass'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => [],
@@ -159,14 +160,14 @@ class ReisepassMrzParser implements DocumentTemplateParser
     /** MRZ-Datum "YYMMDD" -> "JJJJ-MM-TT". $expiry steuert die Jahrhundertwahl. */
     private function mrzDate(string $yymmdd, bool $expiry): ?string
     {
-        if (!preg_match('/^(\d{2})(\d{2})(\d{2})$/', $yymmdd, $m)) {
+        if (! preg_match('/^(\d{2})(\d{2})(\d{2})$/', $yymmdd, $m)) {
             return null;
         }
         $yy = (int) $m[1];
         // Ablauf liegt in der Zukunft -> 20YY. Geburtsdatum: Pivot bei 30
         // (00-30 -> 20YY, 31-99 -> 19YY) - deterministisch, ohne "heute".
         $year = $expiry ? 2000 + $yy : ($yy <= 30 ? 2000 + $yy : 1900 + $yy);
-        if (!checkdate((int) $m[2], (int) $m[3], $year)) {
+        if (! checkdate((int) $m[2], (int) $m[3], $year)) {
             return null;
         }
         return sprintf('%04d-%02d-%02d', $year, (int) $m[2], (int) $m[3]);
@@ -189,7 +190,7 @@ class ReisepassMrzParser implements DocumentTemplateParser
     private function vizLabel(string $label): ?string
     {
         foreach ($this->lines as $line) {
-            if (preg_match('/\b' . preg_quote($label, '/') . '\b\s*:?\s+([A-ZÄÖÜ][A-Za-zÄÖÜäöüß\- ]{1,40})/u', $line, $m)) {
+            if (preg_match('/\b'.preg_quote($label, '/').'\b\s*:?\s+([A-ZÄÖÜ][A-Za-zÄÖÜäöüß\- ]{1,40})/u', $line, $m)) {
                 $val = trim($m[1]);
                 if (mb_strtoupper($val) === $val || preg_match('/^\p{Lu}/u', $val)) {
                     return $val;
@@ -201,6 +202,6 @@ class ReisepassMrzParser implements DocumentTemplateParser
 
     private function displayDate(string $iso): string
     {
-        return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $iso, $m) ? $m[3] . '.' . $m[2] . '.' . $m[1] : $iso;
+        return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $iso, $m) ? $m[3].'.'.$m[2].'.'.$m[1] : $iso;
     }
 }

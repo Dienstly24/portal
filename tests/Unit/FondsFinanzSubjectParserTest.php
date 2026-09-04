@@ -13,7 +13,7 @@ class FondsFinanzSubjectParserTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->parser = new FondsFinanzSubjectParser();
+        $this->parser = new FondsFinanzSubjectParser;
     }
 
     public function test_extracts_plain_full_name(): void

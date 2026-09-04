@@ -1,6 +1,8 @@
 <?php
+
 namespace App\Models;
 
+use App\Services\ChangeRequest\ChangeProofPolicy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -88,7 +90,7 @@ class CustomerChangeRequest extends Model
 
     /** Nachweispflichtig? (Bank, Adresse, Name/Anschrift im Profil) */
     public function requiresProof(): bool {
-        return app(\App\Services\ChangeRequest\ChangeProofPolicy::class)
+        return app(ChangeProofPolicy::class)
             ->requiresProof($this->type, $this->new_data ?? []);
     }
 

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Provisionsmanagement;
 
 use App\Models\Contract;
@@ -8,6 +9,7 @@ use App\Support\CommissionKind;
 use App\Support\CommissionStatus;
 use App\Support\ContractCommissionStatus as Zustand;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 /**
  * Berechnet den PROVISIONS-ZUSTAND eines Vertrags aus seinen Buchungen und
@@ -96,7 +98,7 @@ class CommissionStatusEngine
             fn ($q) => $q->whereIn('id', $contractIds),
             fn ($q) => $q->where(function ($w) {
                 $w->whereNotNull('pool')
-                  ->orWhereIn('id', ContractCommission::query()->whereNotNull('contract_id')->select('contract_id'));
+                    ->orWhereIn('id', ContractCommission::query()->whereNotNull('contract_id')->select('contract_id'));
             })
         );
 
@@ -145,7 +147,7 @@ class CommissionStatusEngine
      * gewinnt, und die teuersten Faelle stehen oben: eine unklare Buchung
      * oder ein Storno soll nie hinter einem "erhalten" verschwinden.
      *
-     * @param \Illuminate\Support\Collection<int,ContractCommission> $list
+     * @param Collection<int,ContractCommission> $list
      */
     private function determine(Contract $contract, $list, ?Carbon $expected, ?Carbon $check): string
     {

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\CommissionImport;
 
 use League\Csv\Reader;
@@ -40,7 +41,7 @@ class CsvTableReader
         $csv->setDelimiter($delimiter);
         $csv->setHeaderOffset(null);
 
-        $records = iterator_to_array((new Statement())->process($csv), false);
+        $records = iterator_to_array((new Statement)->process($csv), false);
         // Vollstaendig leere Zeilen fliegen raus - Exporte enden gern mit
         // einer davon, und als "fehlerhafter Datensatz" waere sie ein
         // Fehlalarm in der Zusammenfassung.
@@ -151,10 +152,10 @@ class CsvTableReader
         for ($i = 0; $i < $len; $i++) {
             $char = $line[$i];
             if ($char === '"') {
-                $inQuotes = !$inQuotes;
+                $inQuotes = ! $inQuotes;
                 continue;
             }
-            if (!$inQuotes && $char === $needle) {
+            if (! $inQuotes && $char === $needle) {
                 $count++;
             }
         }

@@ -1,4 +1,5 @@
 <?php
+
 namespace Tests\Feature;
 
 use App\Mail\SupportInquiryMail;
@@ -21,7 +22,7 @@ class ImprovementRoundTest extends TestCase
     private function makeCustomer(?string $email = null): Customer
     {
         $user = User::factory()->create(['role' => 'customer'] + ($email ? ['email' => $email] : []));
-        return Customer::create(['user_id' => $user->id, 'customer_number' => 'C-' . strtoupper(substr(md5((string)$user->id),0,6))]);
+        return Customer::create(['user_id' => $user->id, 'customer_number' => 'C-'.strtoupper(substr(md5((string) $user->id), 0, 6))]);
     }
 
     // Punkt 1: "Zuletzt geöffnete Kunden" zeigt nur, was der Mitarbeiter selbst
@@ -49,7 +50,8 @@ class ImprovementRoundTest extends TestCase
     // Akten - die Liste ist bewusst pro Nutzer, nicht global.
     public function test_admin_dashboard_shows_only_own_opened_customers(): void
     {
-        $a = $this->makeCustomer(); $b = $this->makeCustomer();
+        $a = $this->makeCustomer();
+        $b = $this->makeCustomer();
         $admin = User::factory()->create(['role' => 'admin']);
 
         $this->actingAs($admin)->get(route('admin.customer', $a->id))->assertOk();
@@ -62,7 +64,8 @@ class ImprovementRoundTest extends TestCase
     // steht oben, erneutes Oeffnen holt einen Kunden wieder nach vorne).
     public function test_opening_customer_updates_recent_order(): void
     {
-        $a = $this->makeCustomer(); $b = $this->makeCustomer();
+        $a = $this->makeCustomer();
+        $b = $this->makeCustomer();
         $admin = User::factory()->create(['role' => 'admin']);
 
         $this->actingAs($admin)->get(route('admin.customer', $a->id))->assertOk();
@@ -135,7 +138,7 @@ class ImprovementRoundTest extends TestCase
         $ticket = Ticket::first();
         $this->assertSame('Interesse: Stromwechsel Juli 2026', $ticket->subject);
         $this->assertStringContainsString('interessiert sich für das Angebot', $ticket->description);
-        $this->assertStringContainsString('Banner #' . $banner->id, $ticket->description);
+        $this->assertStringContainsString('Banner #'.$banner->id, $ticket->description);
 
         // zweiter Klick -> gleiche offene Anfrage, kein Duplikat
         $this->actingAs($customer->user)->get(route('portal.banner.interest', $banner->id));
@@ -206,6 +209,6 @@ class ImprovementRoundTest extends TestCase
         });
 
         // Ticket wurde dem Bestandskunden zugeordnet
-        $this->assertSame((string)$customer->id, (string)Ticket::first()->customer_id);
+        $this->assertSame((string) $customer->id, (string) Ticket::first()->customer_id);
     }
 }

@@ -21,8 +21,7 @@ use Illuminate\Support\Facades\Schema;
  * Idempotent (Schema::hasIndex) und auf SQLite wie MySQL lauffaehig; es werden
  * nur Indexe angelegt/entfernt, keine Spalten oder Daten veraendert.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Anzulegende Indexe: Tabelle => [Indexname => [Spalten]].
      *
@@ -140,7 +139,7 @@ return new class extends Migration
     public function up(): void
     {
         foreach (self::INDEXES as $table => $indexes) {
-            if (!Schema::hasTable($table)) {
+            if (! Schema::hasTable($table)) {
                 continue;
             }
             foreach ($indexes as $name => $columns) {
@@ -150,7 +149,7 @@ return new class extends Migration
                 // Fehlende Spalte (aelterer Bestand) darf die Migration nicht
                 // scheitern lassen - dann entsteht der Index einfach nicht.
                 foreach ($columns as $column) {
-                    if (!Schema::hasColumn($table, $column)) {
+                    if (! Schema::hasColumn($table, $column)) {
                         continue 2;
                     }
                 }
@@ -168,14 +167,14 @@ return new class extends Migration
     public function down(): void
     {
         foreach (self::REDUNDANT as $name => [$table, $columns]) {
-            if (!Schema::hasTable($table) || Schema::hasIndex($table, $name)) {
+            if (! Schema::hasTable($table) || Schema::hasIndex($table, $name)) {
                 continue;
             }
             Schema::table($table, fn (Blueprint $t) => $t->index($columns, $name));
         }
 
         foreach (self::INDEXES as $table => $indexes) {
-            if (!Schema::hasTable($table)) {
+            if (! Schema::hasTable($table)) {
                 continue;
             }
             foreach (array_keys($indexes) as $name) {

@@ -35,7 +35,7 @@ class EscooterRenewalReminderTest extends TestCase
         $user = User::factory()->create(['role' => 'customer', 'email' => $email]);
         $customer = Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5((string) $user->id), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5((string) $user->id), 0, 8)),
         ]);
         $contract = Contract::create([
             'customer_id' => $customer->id, 'type' => 'escooter', 'insurer' => 'die Bayerische',
@@ -58,7 +58,7 @@ class EscooterRenewalReminderTest extends TestCase
         $sent = app(EscooterRenewalReminderService::class)->run();
 
         $this->assertSame(1, $sent);
-        Mail::assertQueued(EscooterRenewalMail::class, fn($m) => $m->hasTo('kunde@example.com'));
+        Mail::assertQueued(EscooterRenewalMail::class, fn ($m) => $m->hasTo('kunde@example.com'));
         $this->assertDatabaseHas('contract_switch_reminders', [
             'contract_id' => $contract->id, 'stage' => 'renewal', 'anchor' => '2027-02-28 00:00:00',
         ]);

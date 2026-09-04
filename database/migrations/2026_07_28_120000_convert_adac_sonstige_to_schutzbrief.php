@@ -29,8 +29,8 @@ return new class extends Migration {
     private const LABEL_ALT = 'Sonstige';
     private const LABEL_NEU = 'Schutzbrief / Mobilclub';
     private const STUFEN = [
-        'basis'   => 'Basis-Mitgliedschaft',
-        'plus'    => 'Plus-Mitgliedschaft',
+        'basis' => 'Basis-Mitgliedschaft',
+        'plus' => 'Plus-Mitgliedschaft',
         'premium' => 'Premium-Mitgliedschaft',
     ];
 
@@ -47,8 +47,8 @@ return new class extends Migration {
         $now = now();
 
         foreach ($rows as $row) {
-            $haystack = mb_strtolower(trim(($row->insurer ?? '') . ' ' . ($row->type_other ?? '')));
-            if (!$this->isSchutzbrief($haystack)) {
+            $haystack = mb_strtolower(trim(($row->insurer ?? '').' '.($row->type_other ?? '')));
+            if (! $this->isSchutzbrief($haystack)) {
                 continue;
             }
 
@@ -83,7 +83,7 @@ return new class extends Migration {
             $entries = [
                 $revision('type', 'Sparte', self::LABEL_ALT, self::LABEL_NEU),
             ];
-            if (!blank($row->type_other)) {
+            if (! blank($row->type_other)) {
                 $entries[] = $revision('type_other', 'Sonstige-Bezeichnung', $row->type_other, null);
             }
             if ($stufe !== null && $row->subtype === null) {

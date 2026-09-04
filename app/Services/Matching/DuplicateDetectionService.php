@@ -1,8 +1,10 @@
 <?php
+
 namespace App\Services\Matching;
 
 use App\Models\Customer;
 use App\Models\CustomerRelationship;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
@@ -118,9 +120,9 @@ class DuplicateDetectionService
         usort($pairs, fn ($a, $b) => $b['score'] <=> $a['score']);
 
         return [
-            'pairs'   => $pairs,
+            'pairs' => $pairs,
             'scanned' => $customers->count(),
-            'capped'  => $capped || $bucketCapped,
+            'capped' => $capped || $bucketCapped,
         ];
     }
 
@@ -181,7 +183,7 @@ class DuplicateDetectionService
         $query->where(function ($q) use ($customer, $lastName) {
             $matched = false;
             if ($lastName !== '') {
-                $q->orWhereHas('user', fn ($u) => $u->where('name', 'like', '%' . $lastName . '%'));
+                $q->orWhereHas('user', fn ($u) => $u->where('name', 'like', '%'.$lastName.'%'));
                 $matched = true;
             }
             if ($customer->user?->email) {
@@ -201,7 +203,7 @@ class DuplicateDetectionService
                 $q->orWhere('address_zip', $customer->address_zip);
                 $matched = true;
             }
-            if (!$matched) {
+            if (! $matched) {
                 $q->whereRaw('1 = 0');
             }
         });
@@ -211,7 +213,7 @@ class DuplicateDetectionService
         // die Kundenakte eine verwandte Person aussagekraeftig kennzeichnen kann.
         $relTypes = CustomerRelationship::query()
             ->get(['customer_a_id', 'customer_b_id', 'type'])
-            ->mapWithKeys(fn ($r) => [$r->customer_a_id . '|' . $r->customer_b_id => $r->type])
+            ->mapWithKeys(fn ($r) => [$r->customer_a_id.'|'.$r->customer_b_id => $r->type])
             ->all();
 
         $out = [];
@@ -221,12 +223,12 @@ class DuplicateDetectionService
                 continue;
             }
             [$ka, $kb] = CustomerRelationship::pairKey((string) $customer->id, (string) $cand->id);
-            $relKey = $ka . '|' . $kb;
+            $relKey = $ka.'|'.$kb;
             $out[] = [
-                'customer'          => $cand,
-                'signals'           => $signals,
-                'score'             => $this->confidence($customer, $cand, $signals),
-                'dismissed'         => array_key_exists($relKey, $relTypes),
+                'customer' => $cand,
+                'signals' => $signals,
+                'score' => $this->confidence($customer, $cand, $signals),
+                'dismissed' => array_key_exists($relKey, $relTypes),
                 'relationship_type' => $relTypes[$relKey] ?? null,
             ];
         }
@@ -238,7 +240,7 @@ class DuplicateDetectionService
     /**
      * Baut die Blocking-Bloecke ueber alle relevanten Merkmale auf.
      *
-     * @param \Illuminate\Support\Collection<int, Customer> $customers
+     * @param Collection<int, Customer> $customers
      * @return array<string, array<int, int>> Schluessel -> Kundenindizes
      */
     private function buildBuckets($customers): array
@@ -257,14 +259,14 @@ class DuplicateDetectionService
             // (Telefon/E-Mail/Anschrift/IBAN/Vertrag) gebildet wurde.
             $nameKey = $this->nameKey($customer->user?->name);
             if ($nameKey !== '') {
-                $add('n:' . $nameKey, $idx);
+                $add('n:'.$nameKey, $idx);
             }
 
             // Telefon + Mobil.
             foreach ([$customer->phone, $customer->mobile] as $phone) {
                 $p = $this->phoneKey($phone);
                 if ($p !== '') {
-                    $add('p:' . $p, $idx);
+                    $add('p:'.$p, $idx);
                 }
             }
 
@@ -272,14 +274,14 @@ class DuplicateDetectionService
             foreach ([$customer->user?->email, $customer->email2] as $email) {
                 $e = $this->emailKey($email);
                 if ($e !== '') {
-                    $add('e:' . $e, $idx);
+                    $add('e:'.$e, $idx);
                 }
             }
 
             // Anschrift (normalisierter Haushalts-Schluessel).
             $addr = $customer->householdKey();
             if ($addr !== '') {
-                $add('a:' . $addr, $idx);
+                $add('a:'.$addr, $idx);
             }
 
             // Bankverbindung: dieselbe IBAN ist ein sehr starkes Identitaets-
@@ -287,7 +289,7 @@ class DuplicateDetectionService
             foreach ([$customer->iban, $customer->iban2] as $iban) {
                 $k = $this->ibanKey($iban);
                 if ($k !== '') {
-                    $add('i:' . $k, $idx);
+                    $add('i:'.$k, $idx);
                 }
             }
 
@@ -295,7 +297,7 @@ class DuplicateDetectionService
             foreach ($customer->contracts as $contract) {
                 $c = $this->contractKey($contract->contract_number);
                 if ($c !== '') {
-                    $add('c:' . $c, $idx);
+                    $add('c:'.$c, $idx);
                 }
             }
         }
@@ -306,7 +308,7 @@ class DuplicateDetectionService
     /**
      * Fuegt ein Kandidatenpaar hinzu (dedupliziert, mit ermittelten Signalen).
      *
-     * @param \Illuminate\Support\Collection<int, Customer> $customers
+     * @param Collection<int, Customer> $customers
      * @param array<string, bool> $pairIndex
      * @param array<int, array<string, mixed>> $pairs
      * @param array<string, bool> $dismissed  Als "kein Duplikat" markierte Paare (a|b).
@@ -326,7 +328,7 @@ class DuplicateDetectionService
 
         // Bereits als "Verwandte Kunden" (kein Duplikat) markiert -> ueberspringen.
         [$ka, $kb] = CustomerRelationship::pairKey((string) $a->id, (string) $b->id);
-        if (isset($dismissed[$ka . '|' . $kb])) {
+        if (isset($dismissed[$ka.'|'.$kb])) {
             $pairIndex[$key] = true;
             return;
         }
@@ -347,11 +349,11 @@ class DuplicateDetectionService
 
         $score = $this->confidence($a, $b, $signals);
         $pairs[] = [
-            'primary'   => $primary,
+            'primary' => $primary,
             'duplicate' => $duplicate,
-            'score'     => $score,
-            'tier'      => $score >= 80 ? 'auto' : ($score >= 50 ? 'confirm' : 'manual'),
-            'signals'   => array_values($signals),
+            'score' => $score,
+            'tier' => $score >= 80 ? 'auto' : ($score >= 50 ? 'confirm' : 'manual'),
+            'signals' => array_values($signals),
         ];
     }
 
@@ -391,7 +393,7 @@ class DuplicateDetectionService
         if ($this->sharedContract($a, $b)) {
             $signals[] = 'Gleiche Vertragsnummer';
         }
-        if (!empty($a->birth_date) && (string) $a->birth_date === (string) $b->birth_date) {
+        if (! empty($a->birth_date) && (string) $a->birth_date === (string) $b->birth_date) {
             $signals[] = 'Gleiches Geburtsdatum';
         }
 
@@ -426,7 +428,7 @@ class DuplicateDetectionService
     public function hasIdentityConflict(Customer $a, Customer $b): bool
     {
         // Verschiedene, jeweils gesetzte Geburtsdaten -> verschiedene Personen.
-        if (!empty($a->birth_date) && !empty($b->birth_date)
+        if (! empty($a->birth_date) && ! empty($b->birth_date)
             && (string) $a->birth_date !== (string) $b->birth_date) {
             return true;
         }

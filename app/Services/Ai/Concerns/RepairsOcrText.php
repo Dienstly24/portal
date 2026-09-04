@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Concerns;
 
 /**
@@ -54,7 +55,7 @@ trait RepairsOcrText
             if (mb_strlen($kompakt) < 22) {
                 continue;
             }
-            $iban = 'DE' . strtr(mb_substr($kompakt, 2, 20), self::OCR_ZIFFERN);
+            $iban = 'DE'.strtr(mb_substr($kompakt, 2, 20), self::OCR_ZIFFERN);
             if (preg_match('/^DE\d{20}$/', $iban) && $this->ibanChecksumValid($iban)) {
                 return $iban;
             }
@@ -70,14 +71,14 @@ trait RepairsOcrText
      */
     protected function ibanChecksumValid(string $iban): bool
     {
-        $umgestellt = mb_substr($iban, 4) . mb_substr($iban, 0, 4);
+        $umgestellt = mb_substr($iban, 4).mb_substr($iban, 0, 4);
         $zahl = '';
         foreach (str_split($umgestellt) as $zeichen) {
             $zahl .= ctype_alpha($zeichen) ? (string) (ord(strtoupper($zeichen)) - 55) : $zeichen;
         }
         $rest = 0;
         foreach (str_split($zahl, 7) as $block) {
-            $rest = (int) ((string) $rest . $block) % 97;
+            $rest = (int) ((string) $rest.$block) % 97;
         }
 
         return $rest === 1;
@@ -111,7 +112,7 @@ trait RepairsOcrText
         }
         if (preg_match('/([a-z0-9._%+\-]+)@([a-z0-9.\-]*?)[ .]?(com|de|net|org|eu|info)\b/i', $text, $m)
             && $m[2] !== '') {
-            return mb_strtolower($m[1] . '@' . rtrim($m[2], '.') . '.' . $m[3]);
+            return mb_strtolower($m[1].'@'.rtrim($m[2], '.').'.'.$m[3]);
         }
 
         return null;

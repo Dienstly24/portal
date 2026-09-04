@@ -82,7 +82,7 @@ class CustomerEmailImportTest extends TestCase
     private function message(string $importAddress, string $from, array $attachments = []): MailboxMessageData
     {
         return new MailboxMessageData(
-            uid: 'INBOX:' . uniqid(),
+            uid: 'INBOX:'.uniqid(),
             fromAddress: $from,
             fromName: 'Absender',
             toAddress: 'max@gmail.com', // Weiterleitung: To bleibt Kundenadresse
@@ -100,7 +100,7 @@ class CustomerEmailImportTest extends TestCase
         [$customer, $consent] = $this->customerWithConsent();
 
         // Aktive Einwilligung: Import-Adresse sichtbar.
-        $address = 'import+' . $consent->import_token . '@dienstly24.de';
+        $address = 'import+'.$consent->import_token.'@dienstly24.de';
         $this->actingAs($customer->user)->get(route('portal.email_connection'))
             ->assertOk()->assertSee($address);
 
@@ -154,7 +154,7 @@ class CustomerEmailImportTest extends TestCase
     {
         [$customer, $consent] = $this->customerWithConsent();
         $account = $this->importAccount();
-        $address = 'import+' . $consent->import_token . '@dienstly24.de';
+        $address = 'import+'.$consent->import_token.'@dienstly24.de';
 
         $data = $this->message($address, 'service@allianz.de', [
             ['filename' => 'police.pdf', 'mime' => 'application/pdf', 'content' => '%PDF-1.4 police'],
@@ -178,7 +178,7 @@ class CustomerEmailImportTest extends TestCase
         [$customer, $consent] = $this->customerWithConsent();
         $consent->forceFill(['revoked_at' => now()])->save(); // widerrufen
         $account = $this->importAccount();
-        $address = 'import+' . $consent->import_token . '@dienstly24.de';
+        $address = 'import+'.$consent->import_token.'@dienstly24.de';
 
         $data = $this->message($address, 'service@allianz.de');
         $stored = $this->serviceWithQueue([$data])->syncAccount($account);
@@ -192,7 +192,7 @@ class CustomerEmailImportTest extends TestCase
     {
         [$customer, $consent] = $this->customerWithConsent();
         $account = $this->importAccount();
-        $address = 'import+' . $consent->import_token . '@dienstly24.de';
+        $address = 'import+'.$consent->import_token.'@dienstly24.de';
 
         // Gueltiges Token, aber privater Absender -> nicht vertragsbezogen.
         $data = $this->message($address, 'freund@gmail.com');

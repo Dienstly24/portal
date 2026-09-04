@@ -98,11 +98,11 @@ class AdminFamilyDisplayTest extends TestCase
             ->getContent();
 
         // Knopf verweist per form-Attribut auf das ausgelagerte Formular
-        $this->assertStringContainsString('form="family-delete-' . $spouse->id . '"', $html);
-        $this->assertStringContainsString('id="family-delete-' . $spouse->id . '"', $html);
+        $this->assertStringContainsString('form="family-delete-'.$spouse->id.'"', $html);
+        $this->assertStringContainsString('id="family-delete-'.$spouse->id.'"', $html);
 
         // Im Bearbeiten-Formular selbst steht kein weiteres <form>
-        $start = strpos($html, 'action="' . route('admin.customer.update', $customer->id) . '"');
+        $start = strpos($html, 'action="'.route('admin.customer.update', $customer->id).'"');
         $this->assertNotFalse($start);
         $end = strpos($html, '</form>', $start);
         $this->assertNotFalse($end);

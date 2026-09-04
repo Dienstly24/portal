@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Vermittler;
 
 use App\Models\Contract;
@@ -75,7 +76,7 @@ class VermittlerAbrechnungImporter
             $seenIds[$vermittlerId] = true;
 
             $date = VermittlerCsvReader::date($row['datum'] ?? null);
-            if ($date && (!$maxDate || $date->greaterThan($maxDate))) {
+            if ($date && (! $maxDate || $date->greaterThan($maxDate))) {
                 $maxDate = $date->copy();
             }
             $refDisplay = VermittlerReference::display($row['reference_number'] ?? null);
@@ -157,7 +158,7 @@ class VermittlerAbrechnungImporter
             'import_id' => $import->id,
             'contract_id' => $contract?->id,
             'customer_id' => $contract?->customer_id,
-            'contract_label' => $contract ? mb_substr(trim($contract->insurer . ' · ' . ($contract->contract_number ?: $contract->typeLabel())), 0, 190) : $settlement->contract_label,
+            'contract_label' => $contract ? mb_substr(trim($contract->insurer.' · '.($contract->contract_number ?: $contract->typeLabel())), 0, 190) : $settlement->contract_label,
             'customer_label' => $contract ? mb_substr((string) ($contract->customer?->user?->name ?? ''), 0, 190) ?: $settlement->customer_label : $settlement->customer_label,
             'match_result' => $this->durableResult($match['result']),
             'import_result' => $match['result'],
@@ -196,7 +197,7 @@ class VermittlerAbrechnungImporter
         $status = VermittlerStatusMap::forCode($statusCode);
         // Unbekannter Status-Code: der Datensatz wird gespeichert, aber der
         // Vertrag bekommt keinen erfundenen Zustand.
-        $statusUnknown = !VermittlerStatusMap::isKnown($statusCode);
+        $statusUnknown = ! VermittlerStatusMap::isKnown($statusCode);
         // Widerspruch in der Datei selbst: ein Stornogrund an einem nicht
         // stornierten Datensatz. Ein Vertrag wird NUR storniert, wenn die
         // Abrechnung ihn auch als storniert ausweist.
@@ -212,7 +213,7 @@ class VermittlerAbrechnungImporter
                 return [
                     'contract' => $viaId,
                     'result' => 'review',
-                    'note' => 'Referenz-Nr. weicht ab: Vertrag "' . $viaId->reference_number . '" / Abrechnung "' . $refDisplay . '"',
+                    'note' => 'Referenz-Nr. weicht ab: Vertrag "'.$viaId->reference_number.'" / Abrechnung "'.$refDisplay.'"',
                     'status' => Contract::VERMITTLER_PRUEFUNG,
                 ];
             }
@@ -221,7 +222,7 @@ class VermittlerAbrechnungImporter
                 $note = VermittlerStatusMap::codeLabel($statusCode);
             } elseif ($stornoConflict) {
                 $result = 'review';
-                $note = 'Stornogrund trotz Status "' . VermittlerStatusMap::codeLabel($statusCode) . '"';
+                $note = 'Stornogrund trotz Status "'.VermittlerStatusMap::codeLabel($statusCode).'"';
             }
 
             return [
@@ -236,18 +237,18 @@ class VermittlerAbrechnungImporter
             return [
                 'contract' => null,
                 'result' => 'review',
-                'note' => 'Doppelte Referenz-Nr.: ' . count($viaRef) . ' Verträge tragen "' . $refDisplay . '"',
+                'note' => 'Doppelte Referenz-Nr.: '.count($viaRef).' Verträge tragen "'.$refDisplay.'"',
                 'status' => null,
             ];
         }
 
         if (count($viaRef) === 1) {
             $contract = $viaRef[0];
-            if (filled($contract->vermittler_id) && !VermittlerReference::same($contract->vermittler_id, $vermittlerId)) {
+            if (filled($contract->vermittler_id) && ! VermittlerReference::same($contract->vermittler_id, $vermittlerId)) {
                 return [
                     'contract' => $contract,
                     'result' => 'review',
-                    'note' => 'Vertrag trägt bereits die Vermittler-ID "' . $contract->vermittler_id . '"',
+                    'note' => 'Vertrag trägt bereits die Vermittler-ID "'.$contract->vermittler_id.'"',
                     'status' => Contract::VERMITTLER_PRUEFUNG,
                 ];
             }
@@ -257,7 +258,7 @@ class VermittlerAbrechnungImporter
                     'result' => 'review',
                     'note' => $statusUnknown
                         ? VermittlerStatusMap::codeLabel($statusCode)
-                        : 'Stornogrund trotz Status "' . VermittlerStatusMap::codeLabel($statusCode) . '"',
+                        : 'Stornogrund trotz Status "'.VermittlerStatusMap::codeLabel($statusCode).'"',
                     'status' => Contract::VERMITTLER_PRUEFUNG,
                 ];
             }
@@ -286,14 +287,14 @@ class VermittlerAbrechnungImporter
 
         if (blank($contract->vermittler_id) && $match['result'] !== 'review') {
             $update['vermittler_id'] = $settlement->vermittler_id;
-            $events[] = ['id_linked', 'Vermittler-ID ' . $settlement->vermittler_id . ' zugeordnet'];
+            $events[] = ['id_linked', 'Vermittler-ID '.$settlement->vermittler_id.' zugeordnet'];
         }
 
         // Leere Referenz-Nr. ERGAENZEN (nie ueberschreiben): die Abrechnung
         // liefert sie manchmal nach, wenn sie bei der Anlage fehlte.
         if (blank($contract->reference_number) && filled($settlement->reference_number)) {
             $update['reference_number'] = $settlement->reference_number;
-            $events[] = ['reference_stored', 'Referenz-Nr. ' . $settlement->reference_number . ' aus der Abrechnung ergänzt'];
+            $events[] = ['reference_stored', 'Referenz-Nr. '.$settlement->reference_number.' aus der Abrechnung ergänzt'];
         }
 
         $newStatus = $match['status'];
@@ -301,7 +302,7 @@ class VermittlerAbrechnungImporter
             $update['vermittler_status'] = $newStatus;
             $update['vermittler_matched_at'] = now();
             $events[] = ['status_changed', Contract::VERMITTLER_STATUSES[$newStatus]['label']
-                . ($settlement->storno_reason ? ' – ' . $settlement->storno_reason : '')];
+                .($settlement->storno_reason ? ' – '.$settlement->storno_reason : '')];
         } elseif ($newStatus !== null && blank($contract->vermittler_matched_at)) {
             $update['vermittler_matched_at'] = now();
         }
@@ -361,7 +362,7 @@ class VermittlerAbrechnungImporter
             ->chunkById(200, function ($contracts) use (&$marked, $import, $shapes, $userId) {
                 foreach ($contracts as $contract) {
                     $key = $contract->referenceKey();
-                    if ($key === null || !ctype_digit($key) || !in_array(strlen($key), $shapes, true)) {
+                    if ($key === null || ! ctype_digit($key) || ! in_array(strlen($key), $shapes, true)) {
                         continue;
                     }
                     $marked++;
@@ -376,7 +377,7 @@ class VermittlerAbrechnungImporter
                     VermittlerMatchEvent::record('not_found', [
                         'contract_id' => $contract->id,
                         'reference_number' => $contract->reference_number,
-                        'detail' => 'In der Abrechnung "' . mb_substr($import->filename, 0, 120) . '" nicht enthalten',
+                        'detail' => 'In der Abrechnung "'.mb_substr($import->filename, 0, 120).'" nicht enthalten',
                         'import_id' => $import->id,
                         'user_id' => $userId,
                     ]);

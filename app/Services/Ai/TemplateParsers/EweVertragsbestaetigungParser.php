@@ -1,6 +1,8 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
+use App\Models\Contract;
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
 use App\Services\Ai\Contracts\DocumentTemplateParser;
 
@@ -29,8 +31,8 @@ class EweVertragsbestaetigungParser implements DocumentTemplateParser
         $upper = mb_strtoupper($text);
         // "EWE" nur als eigenstaendiges Wort - "jEWEils" u.ae. enthalten die
         // Buchstabenfolge und wuerden sonst fremde Dokumente vereinnahmen.
-        if (!preg_match('/\bEWE\b/u', $upper)
-            || (!str_contains($upper, 'VERTRAGSBESTÄTIGUNG') && !str_contains($upper, 'VERTRAGSBESTAETIGUNG'))) {
+        if (! preg_match('/\bEWE\b/u', $upper)
+            || (! str_contains($upper, 'VERTRAGSBESTÄTIGUNG') && ! str_contains($upper, 'VERTRAGSBESTAETIGUNG'))) {
             return null;
         }
 
@@ -46,7 +48,7 @@ class EweVertragsbestaetigungParser implements DocumentTemplateParser
             // hochgeladenen Auftrag desselben Kunden vervollstaendigen
             // (Vertragsnummer, Kundennummer, MaLo-ID, Lieferbeginn, Abschlag)
             // statt einen zweiten Vertrag anzulegen.
-            'document_stage' => \App\Models\Contract::STAGE_VERTRAG,
+            'document_stage' => Contract::STAGE_VERTRAG,
         ];
         if (($nr = $this->labelValue('Ihre Vertragsnummer')) !== null && preg_match('/\d{6,}/', $nr, $m)) {
             $insRaw['contract_number'] = $m[0];
@@ -59,13 +61,13 @@ class EweVertragsbestaetigungParser implements DocumentTemplateParser
         }
         foreach ($prodCols as $c) {
             if (preg_match('/^(\d{2})\.(\d{2})\.(\d{4})$/', trim($c), $m)) {
-                $insRaw['start_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+                $insRaw['start_date'] = $m[3].'-'.$m[2].'-'.$m[1];
                 break;
             }
         }
         // Ende der Erstlaufzeit.
         if (preg_match('/Erstlaufzeit endet am\s+(\d{2})\.(\d{2})\.(\d{4})/u', $this->text(), $m)) {
-            $insRaw['end_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $insRaw['end_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
         // Monatliche Zahlung (Abschlag) = LETZTE Betragsspalte der Datenzeile
         // "Nettobetrag | MwSt-% | MwSt-Betrag | Monatliche Zahlung".
@@ -111,19 +113,19 @@ class EweVertragsbestaetigungParser implements DocumentTemplateParser
             return null;
         }
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $sparteLabel = $sparte === 'gas' ? 'Gas' : 'Strom';
         return [
             'type' => 'energieauftrag',
             'confidence' => 76,
-            'summary' => 'EWE ' . $sparteLabel . '-Vertragsbestaetigung'
-                . ($name !== '' ? ' - ' . $name : '')
-                . (isset($insurance['contract_number']) ? ' - Vertrag ' . $insurance['contract_number'] : '')
-                . (isset($enRaw['customer_number']) ? ' - Kundennr. ' . $enRaw['customer_number'] : '')
-                . (isset($insurance['tariff']) ? ' - ' . $insurance['tariff'] : '')
-                . (isset($insurance['premium_amount']) ? ' - Abschlag ' . number_format($insurance['premium_amount'], 2, ',', '.') . ' EUR/Monat' : '')
-                . ' - Felder gratis aus der Bestaetigung gelesen (ohne KI).',
-            'title' => 'EWE ' . $sparteLabel . '-Vertrag' . ($name !== '' ? ' ' . $name : ''),
+            'summary' => 'EWE '.$sparteLabel.'-Vertragsbestaetigung'
+                .($name !== '' ? ' - '.$name : '')
+                .(isset($insurance['contract_number']) ? ' - Vertrag '.$insurance['contract_number'] : '')
+                .(isset($enRaw['customer_number']) ? ' - Kundennr. '.$enRaw['customer_number'] : '')
+                .(isset($insurance['tariff']) ? ' - '.$insurance['tariff'] : '')
+                .(isset($insurance['premium_amount']) ? ' - Abschlag '.number_format($insurance['premium_amount'], 2, ',', '.').' EUR/Monat' : '')
+                .' - Felder gratis aus der Bestaetigung gelesen (ohne KI).',
+            'title' => 'EWE '.$sparteLabel.'-Vertrag'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -182,11 +184,11 @@ class EweVertragsbestaetigungParser implements DocumentTemplateParser
         }
         $birth = $this->labelValue('Geburtsdatum');
         if ($birth !== null && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $birth, $m)) {
-            $raw['birth_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['birth_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
         // Adresse: "Adresse:  <Strasse Hausnr>" + Folgezeile "<PLZ Ort>".
         foreach ($this->lines as $i => $line) {
-            if (!preg_match('/(?:^|\s)Adresse:\s{2,}(\S.*?)(?:\s{2,}|$)/u', $line, $m)) {
+            if (! preg_match('/(?:^|\s)Adresse:\s{2,}(\S.*?)(?:\s{2,}|$)/u', $line, $m)) {
                 continue;
             }
             $street = trim($m[1]);
@@ -235,7 +237,7 @@ class EweVertragsbestaetigungParser implements DocumentTemplateParser
             }
             $frag = trim(mb_substr($line, $pos + mb_strlen('E-Mail:')));
             $frag = (string) preg_replace('/\s.*$/u', '', $frag); // nur das erste Token
-            if ($frag === '' || !str_contains($frag, '@')) {
+            if ($frag === '' || ! str_contains($frag, '@')) {
                 return null;
             }
             // Vollstaendige TLD schon da? -> fertig.
@@ -271,7 +273,7 @@ class EweVertragsbestaetigungParser implements DocumentTemplateParser
     /** Wert hinter "Label:" bis zur naechsten Spalte (2+ Leerzeichen) / Zeilenende. */
     private function labelValue(string $label): ?string
     {
-        $pattern = '/(?:^|\s)' . preg_quote($label, '/') . ':\s{1,}([^\r\n]+?)(?:\s{2,}|$)/mu';
+        $pattern = '/(?:^|\s)'.preg_quote($label, '/').':\s{1,}([^\r\n]+?)(?:\s{2,}|$)/mu';
         return preg_match($pattern, $this->text(), $m) ? trim($m[1]) : null;
     }
 

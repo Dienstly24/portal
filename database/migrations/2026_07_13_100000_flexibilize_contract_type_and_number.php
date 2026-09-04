@@ -1,4 +1,5 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -37,7 +38,7 @@ return new class extends Migration {
         DB::table('contracts')->where('contract_number', '')->update(['contract_number' => null]);
 
         // 3: Freitext-Sparte
-        if (!Schema::hasColumn('contracts', 'type_other')) {
+        if (! Schema::hasColumn('contracts', 'type_other')) {
             Schema::table('contracts', function (Blueprint $table) {
                 $table->string('type_other', 120)->nullable()->after('subtype');
             });

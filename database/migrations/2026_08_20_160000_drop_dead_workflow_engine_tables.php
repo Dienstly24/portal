@@ -20,8 +20,7 @@ use Illuminate\Support\Facades\Schema;
  * EmailWorkflowService (E-Mail-Eingang), CommissionWorkflowService,
  * EmailClassificationService und SystemUserResolver.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         // Reihenfolge: erst die abhaengigen Tabellen, dann die Elterntabellen.

@@ -31,12 +31,12 @@ class CustomerMergeDataPreservationTest extends TestCase
         $user = User::factory()->create([
             'role' => 'customer',
             'name' => $name,
-            'email' => 'import-' . fake()->uuid() . '@dienstly24.internal',
+            'email' => 'import-'.fake()->uuid().'@dienstly24.internal',
             'email_verified_at' => null,
         ]);
         return Customer::create(array_merge([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5($user->email . microtime()), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5($user->email.microtime()), 0, 8)),
         ], $attrs));
     }
 
@@ -54,7 +54,7 @@ class CustomerMergeDataPreservationTest extends TestCase
         ]);
         return Customer::create(array_merge([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5($email . microtime()), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5($email.microtime()), 0, 8)),
         ], $attrs));
     }
 
@@ -63,7 +63,7 @@ class CustomerMergeDataPreservationTest extends TestCase
         $user = User::factory()->create(['role' => 'customer', 'name' => $name, 'email' => $email]);
         return Customer::create(array_merge([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5($email . microtime()), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5($email.microtime()), 0, 8)),
         ], $attrs));
     }
 

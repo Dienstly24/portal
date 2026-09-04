@@ -1,7 +1,9 @@
 <?php
+
 namespace App\Services\Vermittler;
 
 use App\Models\Contract;
+use App\Models\Customer;
 use App\Models\VermittlerSettlement;
 use Illuminate\Support\Facades\DB;
 
@@ -91,7 +93,7 @@ class VermittlerReportService
             $isStorno = VermittlerStatusMap::forCode($row->status_code) === Contract::VERMITTLER_STORNIERT;
             $result[$row->customer_id]['anzahl'] += (int) $row->anzahl;
             $result[$row->customer_id][$isStorno ? 'storniert' : 'bestaetigt'] += (int) $row->anzahl;
-            if (!$isStorno) {
+            if (! $isStorno) {
                 $result[$row->customer_id]['provision'] += (float) $row->provision;
             }
         }
@@ -99,7 +101,7 @@ class VermittlerReportService
         usort($result, fn ($a, $b) => $b['provision'] <=> $a['provision']);
         $result = array_slice($result, 0, $limit);
 
-        $customers = \App\Models\Customer::with('user')
+        $customers = Customer::with('user')
             ->whereIn('id', array_column($result, 'customer_id'))->get()->keyBy('id');
         foreach ($result as &$entry) {
             $entry['customer'] = $customers[$entry['customer_id']] ?? null;

@@ -47,7 +47,7 @@ class ArbeitsvertragParserTest extends TestCase
 
     public function test_parses_employer_and_employee(): void
     {
-        $r = (new ArbeitsvertragParser())->parse($this->contractOcr());
+        $r = (new ArbeitsvertragParser)->parse($this->contractOcr());
 
         $this->assertNotNull($r);
         $this->assertSame('arbeitsvertrag', $r['type']);
@@ -77,7 +77,7 @@ class ArbeitsvertragParserTest extends TestCase
     public function test_frau_maps_female_gender(): void
     {
         $ocr = str_replace('Herrn Al Ali Mohammad', 'Frau Maria Muster', $this->contractOcr());
-        $r = (new ArbeitsvertragParser())->parse($ocr);
+        $r = (new ArbeitsvertragParser)->parse($ocr);
 
         $this->assertNotNull($r);
         $this->assertSame('Muster', $r['data']['person']['last_name']);
@@ -87,16 +87,16 @@ class ArbeitsvertragParserTest extends TestCase
 
     public function test_ignores_unrelated_documents(): void
     {
-        $this->assertNull((new ArbeitsvertragParser())->parse('Irgendein anderes Dokument'));
+        $this->assertNull((new ArbeitsvertragParser)->parse('Irgendein anderes Dokument'));
         // Nur die Erwaehnung "Arbeitsvertrag" ohne Partei-Marker reicht nicht.
-        $this->assertNull((new ArbeitsvertragParser())->parse("Anlage zum Arbeitsvertrag\nSonstiges"));
+        $this->assertNull((new ArbeitsvertragParser)->parse("Anlage zum Arbeitsvertrag\nSonstiges"));
     }
 
     public function test_without_employer_and_employee_left_to_ai(): void
     {
         // Vertragskopf unlesbar (weder Arbeitgeber-Firma noch Arbeitnehmer-
         // Name gefunden) -> null, die normale Analyse (Heuristik/KI) laeuft.
-        $r = (new ArbeitsvertragParser())->parse(implode("\n", [
+        $r = (new ArbeitsvertragParser)->parse(implode("\n", [
             'Arbeitsvertrag',
             'zwischen dem Arbeitgeber und dem Arbeitnehmer',
             'Paragraf 3 Taetigkeit ...',
@@ -110,7 +110,7 @@ class ArbeitsvertragParserTest extends TestCase
         $this->assertArrayHasKey('arbeitsvertrag', Document::AI_TYPES);
 
         // Auch der kostenlose OCR-Heuristik-Fallback erkennt den Typ.
-        $r = (new HeuristicDocumentClassifier())->classify("ARBEITSVERTRAG\nZwischen ...");
+        $r = (new HeuristicDocumentClassifier)->classify("ARBEITSVERTRAG\nZwischen ...");
         $this->assertNotNull($r);
         $this->assertSame('arbeitsvertrag', $r['type']);
     }

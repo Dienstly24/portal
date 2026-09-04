@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Tools;
 
 use App\Models\ActivityLog;
@@ -38,10 +39,10 @@ class RequestDocumentTool implements AssistantTool
     public function description(): string
     {
         return 'Fordert ein bestimmtes Dokument beim angemeldeten Kunden an (z.B. '
-            . 'Meldebescheinigung, Personalausweis, Kontonachweis). Dadurch erscheint im '
-            . 'Kundenportal der passende Upload-Bereich. Nutze das nur, wenn das Dokument '
-            . 'fuer den Vorgang wirklich benoetigt wird und noch nicht angefordert ist '
-            . '(pruefe zuerst getMissingDocuments).';
+            .'Meldebescheinigung, Personalausweis, Kontonachweis). Dadurch erscheint im '
+            .'Kundenportal der passende Upload-Bereich. Nutze das nur, wenn das Dokument '
+            .'fuer den Vorgang wirklich benoetigt wird und noch nicht angefordert ist '
+            .'(pruefe zuerst getMissingDocuments).';
     }
 
     public function parameters(): array
@@ -73,12 +74,12 @@ class RequestDocumentTool implements AssistantTool
 
     public function run(array $arguments, AssistantToolContext $context): array
     {
-        if (!$this->settings->autoDocumentRequest()) {
+        if (! $this->settings->autoDocumentRequest()) {
             return [
                 'angefordert' => false,
                 'hinweis' => 'Die automatische Dokumentenanforderung ist abgeschaltet. Bitte den '
-                    . 'Kunden, das Dokument im Portal hochzuladen, und uebergib mit '
-                    . 'escalateToTeam an das Team.',
+                    .'Kunden, das Dokument im Portal hochzuladen, und uebergib mit '
+                    .'escalateToTeam an das Team.',
             ];
         }
 
@@ -95,7 +96,7 @@ class RequestDocumentTool implements AssistantTool
                 'bereits_angefordert' => $existing->title,
                 'status' => $existing->statusLabel(),
                 'hinweis' => 'Dieses Dokument ist bereits angefordert. Verweise den Kunden auf den '
-                    . 'vorhandenen Upload-Bereich statt es erneut anzufordern.',
+                    .'vorhandenen Upload-Bereich statt es erneut anzufordern.',
             ];
         }
 
@@ -109,7 +110,7 @@ class RequestDocumentTool implements AssistantTool
                 ->where('ticket_number', $ticketNumber)
                 ->first();
             if ($ticket) {
-                $note = trim($note . ' (Vorgang ' . $ticket->ticket_number . ')');
+                $note = trim($note.' (Vorgang '.$ticket->ticket_number.')');
             }
         }
 
@@ -145,7 +146,7 @@ class RequestDocumentTool implements AssistantTool
             'angefordert' => true,
             'dokument' => $documentRequest->title,
             'hinweis' => 'Der Upload-Bereich ist im Kundenportal unter "Dokumente" sichtbar. '
-                . 'Bitte den Kunden, das Dokument dort hochzuladen.',
+                .'Bitte den Kunden, das Dokument dort hochzuladen.',
         ];
     }
 }

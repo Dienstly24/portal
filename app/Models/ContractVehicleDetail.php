@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Carbon\Carbon;
@@ -75,16 +76,16 @@ class ContractVehicleDetail extends Model
 
     /** Fahrzeugtypen (Ein-Klick-Buttons im Formular). */
     public const VEHICLE_TYPES = [
-        'pkw'         => ['label' => 'PKW',         'icon' => '🚗'],
-        'wohnmobil'   => ['label' => 'Wohnmobil',   'icon' => '🚐'],
+        'pkw' => ['label' => 'PKW',         'icon' => '🚗'],
+        'wohnmobil' => ['label' => 'Wohnmobil',   'icon' => '🚐'],
         'transporter' => ['label' => 'Transporter', 'icon' => '🚚'],
-        'lkw'         => ['label' => 'LKW',         'icon' => '🚛'],
-        'anhaenger'   => ['label' => 'Anhänger',    'icon' => '🛞'],
-        'wohnwagen'   => ['label' => 'Wohnwagen',   'icon' => '🏕️'],
-        'taxi'        => ['label' => 'Taxi',        'icon' => '🚕'],
-        'mietwagen'   => ['label' => 'Mietwagen',   'icon' => '🔑'],
-        'escooter'    => ['label' => 'E-Scooter',   'icon' => '🛴'],
-        'sonstige'    => ['label' => 'Sonstige',    'icon' => '📋'],
+        'lkw' => ['label' => 'LKW',         'icon' => '🚛'],
+        'anhaenger' => ['label' => 'Anhänger',    'icon' => '🛞'],
+        'wohnwagen' => ['label' => 'Wohnwagen',   'icon' => '🏕️'],
+        'taxi' => ['label' => 'Taxi',        'icon' => '🚕'],
+        'mietwagen' => ['label' => 'Mietwagen',   'icon' => '🔑'],
+        'escooter' => ['label' => 'E-Scooter',   'icon' => '🛴'],
+        'sonstige' => ['label' => 'Sonstige',    'icon' => '📋'],
     ];
 
     public const CONDITIONS = ['neuwagen' => 'Neuwagen', 'gebrauchtwagen' => 'Gebrauchtwagen'];
@@ -107,42 +108,42 @@ class ContractVehicleDetail extends Model
      * (Anruf "Panne auf der Autobahn").
      */
     public const EXTRAS = [
-        'schutzbrief'             => 'Schutzbrief',
-        'fahrerschutz'            => 'Fahrerschutz',
-        'rabattschutz'            => 'Rabattschutz',
-        'verkehrsrechtsschutz'    => 'Verkehrs-Rechtsschutz',
-        'insassenunfall'          => 'Insassenunfallversicherung',
-        'auslandsschadenschutz'   => 'Auslandsschadenschutz',
-        'gap_deckung'             => 'GAP-Deckung',
-        'werkstattbindung'        => 'Werkstattbindung',
-        'neupreisentschaedigung'  => 'Neupreisentschädigung',
+        'schutzbrief' => 'Schutzbrief',
+        'fahrerschutz' => 'Fahrerschutz',
+        'rabattschutz' => 'Rabattschutz',
+        'verkehrsrechtsschutz' => 'Verkehrs-Rechtsschutz',
+        'insassenunfall' => 'Insassenunfallversicherung',
+        'auslandsschadenschutz' => 'Auslandsschadenschutz',
+        'gap_deckung' => 'GAP-Deckung',
+        'werkstattbindung' => 'Werkstattbindung',
+        'neupreisentschaedigung' => 'Neupreisentschädigung',
         'kaufpreisentschaedigung' => 'Kaufpreisentschädigung',
-        'grobe_fahrlaessigkeit'   => 'Schutz bei grober Fahrlässigkeit',
-        'tierbiss_folgeschaeden'  => 'Tierbiss inkl. Folgeschäden',
-        'marderbiss'              => 'Marderbiss',
-        'glasversicherung'        => 'Glasversicherung',
-        'elementarschaeden'       => 'Elementarschäden',
+        'grobe_fahrlaessigkeit' => 'Schutz bei grober Fahrlässigkeit',
+        'tierbiss_folgeschaeden' => 'Tierbiss inkl. Folgeschäden',
+        'marderbiss' => 'Marderbiss',
+        'glasversicherung' => 'Glasversicherung',
+        'elementarschaeden' => 'Elementarschäden',
         'erweiterte_wildschaeden' => 'Erweiterte Wildschäden',
-        'freie_werkstattwahl'     => 'Freie Werkstattwahl',
-        'schluesselverlust'       => 'Schutz bei Schlüsselverlust',
-        'mobilitaetsgarantie'     => 'Mobilitätsgarantie',
-        'sonderausstattung'       => 'Schutz für Sonderausstattung',
-        'eauto_akku'              => 'E-Auto Akkuversicherung',
-        'wallbox'                 => 'Wallbox Versicherung',
-        'ladekabel'               => 'Ladekabel Versicherung',
-        'leasingbaustein'         => 'Leasingbaustein',
-        'premiumschutz'           => 'Premiumschutz',
+        'freie_werkstattwahl' => 'Freie Werkstattwahl',
+        'schluesselverlust' => 'Schutz bei Schlüsselverlust',
+        'mobilitaetsgarantie' => 'Mobilitätsgarantie',
+        'sonderausstattung' => 'Schutz für Sonderausstattung',
+        'eauto_akku' => 'E-Auto Akkuversicherung',
+        'wallbox' => 'Wallbox Versicherung',
+        'ladekabel' => 'Ladekabel Versicherung',
+        'leasingbaustein' => 'Leasingbaustein',
+        'premiumschutz' => 'Premiumschutz',
     ];
 
     /** Fahrerkreis. "weitere_fahrer" oeffnet die strukturierte Fahrerliste. */
     public const DRIVER_GROUPS = [
         'versicherungsnehmer' => 'Versicherungsnehmer',
-        'fahrzeughalter'      => 'Fahrzeughalter',
-        'ehepartner'          => 'Ehepartner',
-        'lebenspartner'       => 'Lebenspartner',
-        'kinder'              => 'Kinder',
-        'zweitfahrer'         => 'Zweitfahrer',
-        'weitere_fahrer'      => 'Weitere Fahrer',
+        'fahrzeughalter' => 'Fahrzeughalter',
+        'ehepartner' => 'Ehepartner',
+        'lebenspartner' => 'Lebenspartner',
+        'kinder' => 'Kinder',
+        'zweitfahrer' => 'Zweitfahrer',
+        'weitere_fahrer' => 'Weitere Fahrer',
     ];
 
     public const HOLDER_TYPES = [
@@ -152,9 +153,9 @@ class ContractVehicleDetail extends Model
 
     public const OWNERSHIP_TYPES = [
         'versicherungsnehmer' => 'Versicherungsnehmer',
-        'fahrzeughalter'      => 'Fahrzeughalter',
-        'leasing'             => 'Leasing',
-        'finanzierung'        => 'Finanzierung',
+        'fahrzeughalter' => 'Fahrzeughalter',
+        'leasing' => 'Leasing',
+        'finanzierung' => 'Finanzierung',
     ];
 
     /** Vereinbarte Jahresfahrleistung (km) - Ein-Klick-Buttons. */
@@ -162,19 +163,19 @@ class ContractVehicleDetail extends Model
 
     /** Art der SF-Einstufung. Sondereinstufungen sind NICHT uebertragbar. */
     public const SF_TYPES = [
-        'tatsaechlich'      => 'Tatsächliche SF-Klasse',
-        'sondereinstufung'  => 'Sondereinstufung',
+        'tatsaechlich' => 'Tatsächliche SF-Klasse',
+        'sondereinstufung' => 'Sondereinstufung',
     ];
 
     public const SF_SPECIAL_REASONS = [
-        'zweitwagen'        => 'Zweitwagenregelung',
-        'drittwagen'        => 'Drittwagenregelung',
-        'fuehrerschein_3'   => 'Führerschein länger als 3 Jahre',
-        'fuehrerschein_5'   => 'Führerschein länger als 5 Jahre',
-        'sonderaktion'      => 'Sonderaktion des Versicherers',
-        'familie'           => 'Übernahme innerhalb der Familie',
-        'firmenfahrzeug'    => 'Firmenfahrzeug',
-        'sonstige'          => 'Sonstige',
+        'zweitwagen' => 'Zweitwagenregelung',
+        'drittwagen' => 'Drittwagenregelung',
+        'fuehrerschein_3' => 'Führerschein länger als 3 Jahre',
+        'fuehrerschein_5' => 'Führerschein länger als 5 Jahre',
+        'sonderaktion' => 'Sonderaktion des Versicherers',
+        'familie' => 'Übernahme innerhalb der Familie',
+        'firmenfahrzeug' => 'Firmenfahrzeug',
+        'sonstige' => 'Sonstige',
     ];
 
     /** Waehlbare SF-Klassen: M, S, 0, 1/2 und SF 1-50. */
@@ -185,18 +186,18 @@ class ContractVehicleDetail extends Model
     /** Anzeige einer SF-Klasse ("4" -> "SF 4", "M" -> "Klasse M"). */
     public static function sfLabel(?string $class): ?string {
         if ($class === null || $class === '') return null;
-        return in_array($class, ['M', 'S'], true) ? 'Klasse ' . $class : 'SF ' . $class;
+        return in_array($class, ['M', 'S'], true) ? 'Klasse '.$class : 'SF '.$class;
     }
 
     /** Anzeige einer Selbstbeteiligung (0 -> "ohne SB"). */
     public static function deductibleLabel(?int $value): string {
         if ($value === null) return '—';
-        return $value === 0 ? 'ohne SB' : number_format($value, 0, ',', '.') . ' € SB';
+        return $value === 0 ? 'ohne SB' : number_format($value, 0, ',', '.').' € SB';
     }
 
     protected static function boot() {
         parent::boot();
-        static::creating(fn($m) => $m->id = $m->id ?: (string) Str::uuid());
+        static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
     public function contract() { return $this->belongsTo(Contract::class); }
@@ -207,7 +208,7 @@ class ContractVehicleDetail extends Model
     // ---- Anzeige-Helper ----------------------------------------------------
 
     public function vehicleTypeLabel(): ?string {
-        if (!$this->vehicle_type) return null;
+        if (! $this->vehicle_type) return null;
         return self::VEHICLE_TYPES[$this->vehicle_type]['label'] ?? $this->vehicle_type;
     }
 
@@ -239,10 +240,10 @@ class ContractVehicleDetail extends Model
     public function coverageLabel(): string {
         $parts = ['Haftpflicht'];
         if ($this->has_teilkasko) {
-            $parts[] = 'Teilkasko (' . self::deductibleLabel($this->teilkasko_deductible !== null ? (int) $this->teilkasko_deductible : null) . ')';
+            $parts[] = 'Teilkasko ('.self::deductibleLabel($this->teilkasko_deductible !== null ? (int) $this->teilkasko_deductible : null).')';
         }
         if ($this->has_vollkasko) {
-            $parts[] = 'Vollkasko (' . self::deductibleLabel($this->vollkasko_deductible !== null ? (int) $this->vollkasko_deductible : null) . ')';
+            $parts[] = 'Vollkasko ('.self::deductibleLabel($this->vollkasko_deductible !== null ? (int) $this->vollkasko_deductible : null).')';
         }
         return implode(' · ', $parts);
     }
@@ -255,7 +256,7 @@ class ContractVehicleDetail extends Model
     public function sfTransferable(string $branch): ?bool {
         $type = $branch === 'vollkasko' ? $this->sf_comprehensive_type : $this->sf_liability_type;
         $class = $branch === 'vollkasko' ? $this->sf_comprehensive_class : $this->sf_liability_class;
-        if (!$class) return null;
+        if (! $class) return null;
         return $type !== 'sondereinstufung';
     }
 
@@ -271,14 +272,14 @@ class ContractVehicleDetail extends Model
      * Aussage moeglich ist, sonst u.a. 'exceeded' fuer den Mitarbeiter-Hinweis.
      */
     public function mileageStatus(): ?array {
-        if (!$this->annual_mileage) return null;
+        if (! $this->annual_mileage) return null;
         $readings = $this->mileageReadings->sortBy('reading_date')->values();
         $latest = $readings->last();
-        if (!$latest) return null;
+        if (! $latest) return null;
 
         $baseMileage = $this->initial_mileage;
         $baseDate = $this->contract?->start_date ? Carbon::parse($this->contract->start_date) : null;
-        if ($baseMileage === null || !$baseDate) {
+        if ($baseMileage === null || ! $baseDate) {
             if ($readings->count() < 2) return null;
             $first = $readings->first();
             $baseMileage = $first->mileage;
@@ -291,12 +292,12 @@ class ContractVehicleDetail extends Model
 
         $projected = (int) round($driven / $days * 365);
         return [
-            'driven'    => $driven,
-            'days'      => $days,
+            'driven' => $driven,
+            'days' => $days,
             'projected' => $projected,
-            'allowed'   => (int) $this->annual_mileage,
-            'exceeded'  => $projected > (int) $this->annual_mileage,
-            'latest'    => $latest,
+            'allowed' => (int) $this->annual_mileage,
+            'exceeded' => $projected > (int) $this->annual_mileage,
+            'latest' => $latest,
         ];
     }
 }

@@ -24,8 +24,8 @@ class Check24KfzProtocolParserTest extends TestCase
             '  Fahrzeug                                 Versicherungsnehmer',
             '  HSN/TSN: 1234/ABC                        Geschlecht: maennlich',
             '  Halter: Versicherungsnehmer              Wohnort: 12345 Berlin',
-            '  Versicherungsbeginn: 01.08.2026          Deckung: ' . $deckung,
-            '  Jährliche Fahrleistung: 10.000 km        Selbstbeteiligung: ' . $sb,
+            '  Versicherungsbeginn: 01.08.2026          Deckung: '.$deckung,
+            '  Jährliche Fahrleistung: 10.000 km        Selbstbeteiligung: '.$sb,
             '  Zahlweise: monatlich',
             'waehlte der Versicherungsnehmer selbstständig folgenden Tarif:',
             '',
@@ -37,7 +37,7 @@ class Check24KfzProtocolParserTest extends TestCase
 
     public function test_parses_all_key_fields(): void
     {
-        $r = (new Check24KfzProtocolParser())->parse($this->protocolText());
+        $r = (new Check24KfzProtocolParser)->parse($this->protocolText());
 
         $this->assertNotNull($r);
         $this->assertSame('beratungsprotokoll', $r['type']);
@@ -74,7 +74,7 @@ class Check24KfzProtocolParserTest extends TestCase
         // "Mittelstr. 21 b" (Leerzeichen vor dem Zusatzbuchstaben) wurde bisher
         // NICHT getrennt - die Nummer blieb in der Strasse, die Hausnummer leer.
         $text = str_replace('Teststr. 12', 'Mittelstr. 21 b', $this->protocolText());
-        $p = (new Check24KfzProtocolParser())->parse($text)['data']['person'];
+        $p = (new Check24KfzProtocolParser)->parse($text)['data']['person'];
 
         $this->assertSame('Mittelstr.', $p['street']);
         $this->assertSame('21 b', $p['house_number']);
@@ -89,7 +89,7 @@ class Check24KfzProtocolParserTest extends TestCase
             "  Referenz 0123456789012 (Vorgang)\n  Geboren am 01.02.1990    12345 Berlin    015112345678",
             $this->protocolText()
         );
-        $p = (new Check24KfzProtocolParser())->parse($text)['data']['person'];
+        $p = (new Check24KfzProtocolParser)->parse($text)['data']['person'];
         $this->assertSame('015112345678', $p['phone']);
     }
 
@@ -97,10 +97,10 @@ class Check24KfzProtocolParserTest extends TestCase
     {
         // Zweitwagen-Sondereinstufung: Klasse + Typ + Grund; "Angegebene:
         // keine" -> keine echte (uebertragbare) Klasse.
-        $text = $this->protocolText() . "\n"
-            . "Angegebene SF-Klasse Haftpflicht            keine\n"
-            . "Tatsächliche SF-Klasse Haftpflicht          SF 2 (Zweitwagen-Sondereinstufung)";
-        $k = (new Check24KfzProtocolParser())->parse($text)['data']['kfz'];
+        $text = $this->protocolText()."\n"
+            ."Angegebene SF-Klasse Haftpflicht            keine\n"
+            .'Tatsächliche SF-Klasse Haftpflicht          SF 2 (Zweitwagen-Sondereinstufung)';
+        $k = (new Check24KfzProtocolParser)->parse($text)['data']['kfz'];
         $this->assertSame('2', $k['sf_liability_class']);
         $this->assertSame('sondereinstufung', $k['sf_liability_type']);
         $this->assertSame('zweitwagen', $k['sf_liability_special_reason']);
@@ -112,10 +112,10 @@ class Check24KfzProtocolParserTest extends TestCase
         // Betreiber-Fall: der Kunde hat ECHT SF 4 (angegeben), der neue
         // Versicherer gewaehrt SF 5 als Sondereinstufung (nicht uebertragbar).
         // Beides muss getrennt landen - bisher manuell auseinanderzuhalten.
-        $text = $this->protocolText() . "\n"
-            . "Angegebene SF-Klasse Haftpflicht            SF 4\n"
-            . "Tatsächliche SF-Klasse Haftpflicht          SF 5 (Sondereinstufung)";
-        $r = (new Check24KfzProtocolParser())->parse($text);
+        $text = $this->protocolText()."\n"
+            ."Angegebene SF-Klasse Haftpflicht            SF 4\n"
+            .'Tatsächliche SF-Klasse Haftpflicht          SF 5 (Sondereinstufung)';
+        $r = (new Check24KfzProtocolParser)->parse($text);
         $k = $r['data']['kfz'];
 
         $this->assertSame('5', $k['sf_liability_class']);
@@ -127,10 +127,10 @@ class Check24KfzProtocolParserTest extends TestCase
 
     public function test_sf_without_sondereinstufung_is_tatsaechlich(): void
     {
-        $text = $this->protocolText() . "\n"
-            . "Angegebene SF-Klasse Haftpflicht            SF 6\n"
-            . "Tatsächliche SF-Klasse Haftpflicht          SF 6";
-        $k = (new Check24KfzProtocolParser())->parse($text)['data']['kfz'];
+        $text = $this->protocolText()."\n"
+            ."Angegebene SF-Klasse Haftpflicht            SF 6\n"
+            .'Tatsächliche SF-Klasse Haftpflicht          SF 6';
+        $k = (new Check24KfzProtocolParser)->parse($text)['data']['kfz'];
         $this->assertSame('6', $k['sf_liability_class']);
         $this->assertSame('tatsaechlich', $k['sf_liability_type']);
         $this->assertArrayNotHasKey('sf_liability_real_class', $k);
@@ -139,9 +139,9 @@ class Check24KfzProtocolParserTest extends TestCase
     public function test_vorversicherung_is_cut_at_next_single_space_label(): void
     {
         // Manche Layouts trennen die naechste Spalte nur mit EINEM Leerzeichen.
-        $text = $this->protocolText() . "\n"
-            . "nehmer und 1 weitere Fahrer)            Vorversicherung: Verti Versicherung AG Zahlweise: jährlich";
-        $v = (new Check24KfzProtocolParser())->parse($text)['data']['versicherung'];
+        $text = $this->protocolText()."\n"
+            .'nehmer und 1 weitere Fahrer)            Vorversicherung: Verti Versicherung AG Zahlweise: jährlich';
+        $v = (new Check24KfzProtocolParser)->parse($text)['data']['versicherung'];
         $this->assertSame('Verti Versicherung AG', $v['previous_insurer']);
     }
 
@@ -149,10 +149,10 @@ class Check24KfzProtocolParserTest extends TestCase
     {
         // Wechsel-Kontext: Vorversicherer (wo der Kunde herkommt) + Vertrags-
         // ablauf - beides musste der Betrieb bisher von Hand nachtragen.
-        $text = $this->protocolText() . "\n"
-            . "Hauptnutzer: Versicherungsnehmer,         Vorversicherung: HUK-Coburg\n"
-            . "Ablauf der Versicherung                     29.06.2027 (automatische Verlängerung um 12 Monate)";
-        $r = (new Check24KfzProtocolParser())->parse($text);
+        $text = $this->protocolText()."\n"
+            ."Hauptnutzer: Versicherungsnehmer,         Vorversicherung: HUK-Coburg\n"
+            .'Ablauf der Versicherung                     29.06.2027 (automatische Verlängerung um 12 Monate)';
+        $r = (new Check24KfzProtocolParser)->parse($text);
         $v = $r['data']['versicherung'];
 
         $this->assertSame('HUK-Coburg', $v['previous_insurer']);
@@ -163,7 +163,7 @@ class Check24KfzProtocolParserTest extends TestCase
 
     public function test_haftpflicht_only_has_no_kasko(): void
     {
-        $r = (new Check24KfzProtocolParser())->parse($this->protocolText('nur Haftpflicht', '0 €'));
+        $r = (new Check24KfzProtocolParser)->parse($this->protocolText('nur Haftpflicht', '0 €'));
 
         $this->assertFalse($r['data']['kfz']['has_teilkasko']);
         $this->assertFalse($r['data']['kfz']['has_vollkasko']);
@@ -209,7 +209,7 @@ class Check24KfzProtocolParserTest extends TestCase
     {
         // Der Versicherer ist NICHT nur das erste Wort ("DA"), sondern
         // "DA Direkt"; der Rest ist der Tarifname.
-        $v = (new Check24KfzProtocolParser())->parse($this->daDirektProtocol())['data']['versicherung'];
+        $v = (new Check24KfzProtocolParser)->parse($this->daDirektProtocol())['data']['versicherung'];
         $this->assertSame('DA Direkt', $v['insurer']);
         $this->assertSame('Komfort Smart mit Werkstattbindung', $v['tariff']);
         // Monatsbeitrag zum gewaehlten Tarif aus der Vergleichstabelle.
@@ -221,7 +221,7 @@ class Check24KfzProtocolParserTest extends TestCase
     {
         // "mit Vollkasko" + "500 € VK, 150 € TK": Teilkasko (150) UND Vollkasko
         // (500) gehoeren in den Vertrag - nicht nur eine der beiden.
-        $k = (new Check24KfzProtocolParser())->parse($this->daDirektProtocol())['data']['kfz'];
+        $k = (new Check24KfzProtocolParser)->parse($this->daDirektProtocol())['data']['kfz'];
         $this->assertTrue($k['has_vollkasko']);
         $this->assertTrue($k['has_teilkasko']);
         $this->assertSame(500, $k['vollkasko_deductible']);
@@ -230,7 +230,7 @@ class Check24KfzProtocolParserTest extends TestCase
 
     public function test_werkstattbindung_is_read_as_extra(): void
     {
-        $k = (new Check24KfzProtocolParser())->parse($this->daDirektProtocol())['data']['kfz'];
+        $k = (new Check24KfzProtocolParser)->parse($this->daDirektProtocol())['data']['kfz'];
         $this->assertContains('werkstattbindung', $k['extras']);
         // "gewünscht: nein" -> Schutzbrief/Fahrerschutz NICHT aufnehmen.
         $this->assertNotContains('schutzbrief', $k['extras']);
@@ -239,7 +239,7 @@ class Check24KfzProtocolParserTest extends TestCase
 
     public function test_vorversicherung_details_are_read(): void
     {
-        $v = (new Check24KfzProtocolParser())->parse($this->daDirektProtocol())['data']['versicherung'];
+        $v = (new Check24KfzProtocolParser)->parse($this->daDirektProtocol())['data']['versicherung'];
         $this->assertSame('Generali', $v['previous_insurer']);
         $this->assertSame('länger als 3 Jahre', $v['previous_insurance_since']);
         // "Kündigung durch Vorversicherer: nein" -> false (muss erhalten bleiben).
@@ -254,7 +254,7 @@ class Check24KfzProtocolParserTest extends TestCase
             ['Schutzbrief gewünscht: ja', 'Fahrerschutz gewünscht: ja'],
             $this->daDirektProtocol()
         );
-        $k = (new Check24KfzProtocolParser())->parse($text)['data']['kfz'];
+        $k = (new Check24KfzProtocolParser)->parse($text)['data']['kfz'];
         $this->assertContains('schutzbrief', $k['extras']);
         $this->assertContains('fahrerschutz', $k['extras']);
         $this->assertContains('werkstattbindung', $k['extras']);
@@ -262,9 +262,9 @@ class Check24KfzProtocolParserTest extends TestCase
 
     public function test_non_check24_document_is_not_matched(): void
     {
-        $this->assertNull((new Check24KfzProtocolParser())->parse('Irgendein anderes Dokument ohne die Marker.'));
+        $this->assertNull((new Check24KfzProtocolParser)->parse('Irgendein anderes Dokument ohne die Marker.'));
         // Auch ein Nicht-Kfz-Beratungsprotokoll ohne CHECK24 nicht anfassen.
-        $this->assertNull((new Check24KfzProtocolParser())->parse('Beratungsprotokoll zur Krankenversicherung'));
+        $this->assertNull((new Check24KfzProtocolParser)->parse('Beratungsprotokoll zur Krankenversicherung'));
     }
 
     /**
@@ -296,7 +296,7 @@ class Check24KfzProtocolParserTest extends TestCase
             'Gesamtbeitrag (inkl. Versicherungssteuer)   138,60 € monatlich',
         ]);
 
-        $r = (new Check24KfzProtocolParser())->parse($text);
+        $r = (new Check24KfzProtocolParser)->parse($text);
 
         $this->assertNotNull($r);
         $v = $r['data']['versicherung'];
@@ -327,7 +327,7 @@ class Check24KfzProtocolParserTest extends TestCase
             'Gesamtbeitrag (inkl. Versicherungssteuer)   150,00 € monatlich',
         ]);
 
-        $r = (new Check24KfzProtocolParser())->parse($text);
+        $r = (new Check24KfzProtocolParser)->parse($text);
 
         $this->assertNotNull($r);
         $this->assertSame('HUK24', $r['data']['versicherung']['insurer']);

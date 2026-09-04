@@ -1,13 +1,51 @@
 <?php
+
 namespace App\Http\Controllers;
+
 use App\Http\Controllers\Concerns\ScopesCustomerAccess;
-use App\Models\User;
-use App\Models\Customer;
+use App\Models\ActivityLog;
 use App\Models\Contract;
+use App\Models\ContractEnergyDetail;
+use App\Models\ContractInternetDetail;
+use App\Models\ContractVehicleDetail;
+use App\Models\Customer;
+use App\Models\CustomerChangeRequest;
+use App\Models\CustomerFamily;
+use App\Models\CustomerMessage;
+use App\Models\CustomerNote;
+use App\Models\CustomerRelationship;
+use App\Models\CustomerVehicle;
+use App\Models\CustomerView;
+use App\Models\Document;
+use App\Models\InternalMessage;
+use App\Models\MeterReading;
+use App\Models\Partner;
 use App\Models\Ticket;
+use App\Models\TicketAttachment;
+use App\Models\User;
+use App\Models\VehicleClaim;
+use App\Services\CommissionImport\CommissionAuditLogger;
+use App\Services\ContractSwitchService;
+use App\Services\CustomerConversationService;
+use App\Services\CustomerDeletionService;
+use App\Services\CustomerNumberGenerator;
+use App\Services\Energy\MeterReadingService;
+use App\Services\Family\FamilyRelationService;
+use App\Services\Matching\CustomerMatchingService;
+use App\Services\Matching\CustomerMergeService;
+use App\Services\Matching\DuplicateDetectionService;
+use App\Services\Portal\PortalAccessService;
+use App\Services\VehicleOverlapGuard;
+use App\Services\Vermittler\VermittlerLinkService;
+use App\Support\GermanPhone;
+use App\Support\PasswordPolicy;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
 {
@@ -22,7 +60,7 @@ class AdminController extends Controller
     /** 403, wenn der eingeloggte Mitarbeiter diesen Kunden nicht sehen darf. (Audit M1) */
     private function authorizeCustomerAccess($customerId): void {
         $ids = $this->visibleCustomerIds();
-        if ($ids !== null && !in_array((string) $customerId, array_map('strval', $ids), true)) {
+        if ($ids !== null && ! in_array((string) $customerId, array_map('strval', $ids), true)) {
             abort(403, 'Kein Zugriff auf diesen Kunden.');
         }
     }
@@ -32,7 +70,7 @@ class AdminController extends Controller
      * duerfen von Mitarbeitern bearbeitet werden; sobald ein Kunde
      * zugeordnet ist, gilt der normale Portfolio-Check.
      */
-    private function authorizeDocumentAccess(\App\Models\Document $doc): void {
+    private function authorizeDocumentAccess(Document $doc): void {
         if ($doc->customer_id !== null) {
             $this->authorizeCustomerAccess($doc->customer_id);
             return;
@@ -41,20 +79,20 @@ class AdminController extends Controller
         // duerfen nur die selbst hochgeladenen sehen - spiegelt
         // SmartDocumentUploadController::authorizeDocument. (Audit SEC-2/IDOR)
         $user = auth()->user();
-        if (!$user?->canSeeAllCustomers() && (int) $doc->uploaded_by !== (int) $user?->id) {
+        if (! $user?->canSeeAllCustomers() && (int) $doc->uploaded_by !== (int) $user?->id) {
             abort(403, 'Kein Zugriff auf dieses Dokument.');
         }
     }
 
     /** 403, wenn das Ticket zu einem nicht sichtbaren Kunden gehört. (Audit M1) */
-    private function authorizeTicketAccess(\App\Models\Ticket $ticket): void {
+    private function authorizeTicketAccess(Ticket $ticket): void {
         if ($ticket->customer_id !== null) {
             $this->authorizeCustomerAccess($ticket->customer_id);
             return;
         }
         // Gast-Anfragen (Leads): nur admin/manager/support - gleiche Regel
         // wie die Anfragen-Liste (betrifft z. B. Anhang-Downloads).
-        if (!in_array(auth()->user()?->role, ['admin', 'manager', 'support'], true)) {
+        if (! in_array(auth()->user()?->role, ['admin', 'manager', 'support'], true)) {
             abort(403, 'Kein Zugriff auf Gast-Anfragen.');
         }
     }
@@ -66,13 +104,13 @@ class AdminController extends Controller
             // AKTIVE Vertraege = Contract::currentlyActive() (eine Quelle):
             // gekuendigte, abgelaufene und beendete Vertraege zaehlen nie mit,
             // auch wenn der gespeicherte Status noch auf "active" steht.
-            'activeContracts' => Contract::currentlyActive()->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->count(),
+            'activeContracts' => Contract::currentlyActive()->when($ids !== null, fn ($q) => $q->whereIn('customer_id', $ids))->count(),
             // Gleiche Definition wie der Karten-Link (status=aktiv, nur Kundentickets),
             // damit die Zahl der Liste nach dem Klick entspricht.
-            'openTickets' => Ticket::customerOnly()->active()->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->count(),
-            'pendingApprovals' => \App\Models\CustomerChangeRequest::where('status','pending')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->count(),
-            'recentTickets' => Ticket::with('customer.user')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->latest()->take(5)->get(),
-            'recentApprovals' => \App\Models\CustomerChangeRequest::with('customer.user')->where('status','pending')->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->latest()->take(5)->get(),
+            'openTickets' => Ticket::customerOnly()->active()->when($ids !== null, fn ($q) => $q->whereIn('customer_id', $ids))->count(),
+            'pendingApprovals' => CustomerChangeRequest::where('status', 'pending')->when($ids !== null, fn ($q) => $q->whereIn('customer_id', $ids))->count(),
+            'recentTickets' => Ticket::with('customer.user')->when($ids !== null, fn ($q) => $q->whereIn('customer_id', $ids))->latest()->take(5)->get(),
+            'recentApprovals' => CustomerChangeRequest::with('customer.user')->where('status', 'pending')->when($ids !== null, fn ($q) => $q->whereIn('customer_id', $ids))->latest()->take(5)->get(),
             // Zuletzt GEOEFFNETE Kunden: pro Mitarbeiter aus customer_views,
             // nach eigenem Aufruf-Zeitstempel sortiert (nicht mehr nach Anlage-
             // datum). Zusaetzlich aufs Portfolio gescopt, damit ein alter View
@@ -81,18 +119,18 @@ class AdminController extends Controller
                 ->select('customers.*')
                 ->join('customer_views', 'customer_views.customer_id', '=', 'customers.id')
                 ->where('customer_views.user_id', auth()->id())
-                ->when($ids !== null, fn($q) => $q->whereIn('customers.id', $ids))
+                ->when($ids !== null, fn ($q) => $q->whereIn('customers.id', $ids))
                 // Zaehler auf der Kundenkarte: AKTIVE Vertraege (gleiche
                 // Definition wie ueberall), nicht alle je erfassten.
                 ->with('user')
-                ->withCount(['contracts as active_contracts_count' => fn($q) => $q->currentlyActive()])
+                ->withCount(['contracts as active_contracts_count' => fn ($q) => $q->currentlyActive()])
                 ->orderByDesc('customer_views.viewed_at')
                 ->take(8)->get(),
         ]);
     }
 
-    public function customers(Request $request, \App\Services\Matching\DuplicateDetectionService $detection) {
-        $employees = \App\Models\User::whereIn('role', ['employee', 'manager', 'support'])->orderBy('name')->get();
+    public function customers(Request $request, DuplicateDetectionService $detection) {
+        $employees = User::whereIn('role', ['employee', 'manager', 'support'])->orderBy('name')->get();
         // Hinweis-Badge: Anzahl offener Dubletten-Verdachtsfaelle (kurz gecacht).
         $dupCount = $detection->countCached($this->visibleCustomerIds());
         // Aktive Verträge mitladen (nur benötigte Spalten) für die Vertrags-Icons
@@ -102,7 +140,7 @@ class AdminController extends Controller
         $query = $this->scopeCustomers(Customer::with([
             'user',
             'betreuer',
-            'contracts' => fn($q) => $q->currentlyActive()
+            'contracts' => fn ($q) => $q->currentlyActive()
                 ->select('id', 'customer_id', 'type', 'status', 'start_date', 'end_date', 'cancellation_date'),
         ]));
         // Filter (E-Mail, Sparte, Portal-Status, Vertrags-Ablauf, letzter Kontakt,
@@ -118,22 +156,22 @@ class AdminController extends Controller
         // Vertrag laeuft bald ab, wer wurde lange nicht kontaktiert" auf einen Blick
         // und dienen zugleich als klickbare Schnellfilter.
         $counts = [
-            'total'      => $this->scopeCustomers(Customer::query())->count(),
-            'strom'      => $this->countBySparte('strom'),
-            'gas'        => $this->countBySparte('gas'),
-            'kfz'        => $this->countBySparte('kfz'),
+            'total' => $this->scopeCustomers(Customer::query())->count(),
+            'strom' => $this->countBySparte('strom'),
+            'gas' => $this->countBySparte('gas'),
+            'kfz' => $this->countBySparte('kfz'),
             'ohne_email' => $this->scopeCustomers(Customer::query())
-                                ->whereDoesntHave('user', fn($u) => $this->scopeRealEmail($u))->count(),
-            'ablauf'     => $this->scopeCustomers(Customer::query())
-                                ->whereHas('contracts', fn($q) => $q->currentlyActive()
-                                    ->whereNotNull('end_date')
-                                    ->whereBetween('end_date', [today(), today()->addDays(60)]))->count(),
-            'kontakt'    => $this->scopeCustomers(Customer::query())
-                                ->where(fn($q) => $q->whereNull('last_contact')
-                                    ->orWhere('last_contact', '<', today()->subDays(180)))->count(),
+                ->whereDoesntHave('user', fn ($u) => $this->scopeRealEmail($u))->count(),
+            'ablauf' => $this->scopeCustomers(Customer::query())
+                ->whereHas('contracts', fn ($q) => $q->currentlyActive()
+                    ->whereNotNull('end_date')
+                    ->whereBetween('end_date', [today(), today()->addDays(60)]))->count(),
+            'kontakt' => $this->scopeCustomers(Customer::query())
+                ->where(fn ($q) => $q->whereNull('last_contact')
+                    ->orWhere('last_contact', '<', today()->subDays(180)))->count(),
         ];
 
-        $sparten = \App\Models\Contract::TYPES;
+        $sparten = Contract::TYPES;
 
         return view('admin.customers', compact('customers', 'employees', 'dupCount', 'counts', 'sparten'));
     }
@@ -141,7 +179,7 @@ class AdminController extends Controller
     /** Zaehlt Kunden mit mind. einem AKTIVEN Vertrag der Sparte (portfolio-gescoped). */
     private function countBySparte(string $type): int {
         return $this->scopeCustomers(Customer::query())
-            ->whereHas('contracts', fn($q) => $q->currentlyActive()->where('type', $type))
+            ->whereHas('contracts', fn ($q) => $q->currentlyActive()->where('type', $type))
             ->count();
     }
 
@@ -169,19 +207,19 @@ class AdminController extends Controller
             if ($request->betreuer === 'ohne') {
                 $query->whereDoesntHave('betreuer');
             } else {
-                $query->whereHas('betreuer', fn($q) => $q->where('users.id', $request->betreuer));
+                $query->whereHas('betreuer', fn ($q) => $q->where('users.id', $request->betreuer));
             }
         }
         // E-Mail vorhanden / fehlt (echte Adresse, kein Import-Platzhalter).
         if ($request->email === 'mit') {
-            $query->whereHas('user', fn($u) => $this->scopeRealEmail($u));
+            $query->whereHas('user', fn ($u) => $this->scopeRealEmail($u));
         } elseif ($request->email === 'ohne') {
-            $query->whereDoesntHave('user', fn($u) => $this->scopeRealEmail($u));
+            $query->whereDoesntHave('user', fn ($u) => $this->scopeRealEmail($u));
         }
         // Sparte: mind. ein aktiver Vertrag dieses Typs (gleiche Definition wie
         // die Sparten-Kennzahl und die Vertrags-Icons der Liste).
         if ($request->filled('sparte')) {
-            $query->whereHas('contracts', fn($q) => $q->currentlyActive()->where('type', $request->sparte));
+            $query->whereHas('contracts', fn ($q) => $q->currentlyActive()->where('type', $request->sparte));
         }
         // Alphabet-Index: Kundenname (users.name) beginnt mit dem gewaehlten
         // Buchstaben. "XYZ" fasst die seltenen Anfangsbuchstaben X/Y/Z zusammen.
@@ -193,7 +231,7 @@ class AdminController extends Controller
                 $query->whereHas('user', function ($u) use ($letters) {
                     $u->where(function ($w) use ($letters) {
                         foreach ($letters as $l) {
-                            $w->orWhere('name', 'like', $l . '%');
+                            $w->orWhere('name', 'like', $l.'%');
                         }
                     });
                 });
@@ -206,7 +244,7 @@ class AdminController extends Controller
         // Vertrag laeuft demnaechst ab: aktiver Vertrag mit end_date im Fenster.
         if ($request->filled('ablauf')) {
             $days = max(1, (int) $request->ablauf);
-            $query->whereHas('contracts', fn($q) => $q->currentlyActive()
+            $query->whereHas('contracts', fn ($q) => $q->currentlyActive()
                 ->whereNotNull('end_date')
                 ->whereBetween('end_date', [today(), today()->addDays($days)]));
         }
@@ -216,7 +254,7 @@ class AdminController extends Controller
                 $query->whereNull('last_contact');
             } else {
                 $days = max(1, (int) $request->kontakt);
-                $query->where(fn($q) => $q->whereNull('last_contact')
+                $query->where(fn ($q) => $q->whereNull('last_contact')
                     ->orWhere('last_contact', '<', today()->subDays($days)));
             }
         }
@@ -247,11 +285,11 @@ class AdminController extends Controller
      */
     private function applyPortalStatusFilter($query, string $key): void {
         if ($key === 'kein_account') {
-            $query->whereDoesntHave('user', fn($u) => $this->scopeRealEmail($u));
+            $query->whereDoesntHave('user', fn ($u) => $this->scopeRealEmail($u));
             return;
         }
         // "Nicht deaktiviert" = is_active true oder (Alt-Datensatz) NULL.
-        $notDeactivated = fn($u) => $u->where(fn($w) => $w->whereNull('is_active')->orWhere('is_active', true));
+        $notDeactivated = fn ($u) => $u->where(fn ($w) => $w->whereNull('is_active')->orWhere('is_active', true));
         $query->whereHas('user', function ($u) use ($key, $notDeactivated) {
             $this->scopeRealEmail($u);
             switch ($key) {
@@ -284,11 +322,11 @@ class AdminController extends Controller
             case 'name':
                 // Kundenname liegt am User – Join nur zum Sortieren, customers.* behalten.
                 $query->join('users', 'users.id', '=', 'customers.user_id')
-                      ->orderBy('users.name')->select('customers.*');
+                    ->orderBy('users.name')->select('customers.*');
                 break;
             case 'name_desc':
                 $query->join('users', 'users.id', '=', 'customers.user_id')
-                      ->orderByDesc('users.name')->select('customers.*');
+                    ->orderByDesc('users.name')->select('customers.*');
                 break;
             case 'aelteste':
                 $query->oldest();
@@ -308,34 +346,34 @@ class AdminController extends Controller
         // aktualisiert den Zeitstempel, damit das Dashboard die reale Reihenfolge
         // zeigt (nur Staff - Kunden erreichen diese Route nicht).
         if (auth()->user()?->isStaff()) {
-            \App\Models\CustomerView::updateOrCreate(
+            CustomerView::updateOrCreate(
                 ['user_id' => auth()->id(), 'customer_id' => $id],
                 ['viewed_at' => now()]
             );
         }
-        $customer = Customer::with(['user','contracts.vehicleDetail.claims','contracts.vehicleDetail.mileageReadings','contracts.energyDetail.meterReadings','contracts.internetDetail','contracts.switchReminders','tickets','documents','family','changeRequests.reviewer'])->findOrFail($id);
+        $customer = Customer::with(['user', 'contracts.vehicleDetail.claims', 'contracts.vehicleDetail.mileageReadings', 'contracts.energyDetail.meterReadings', 'contracts.internetDetail', 'contracts.switchReminders', 'tickets', 'documents', 'family', 'changeRequests.reviewer'])->findOrFail($id);
         // Interner Chat & Notizen (nur Staff - Zugriff bereits oben geprüft)
-        $internalChat = \App\Models\InternalMessage::chat()->where('customer_id', $id)->with('sender')->orderBy('created_at')->get();
-        $internalNotes = \App\Models\InternalMessage::note()->where('customer_id', $id)->with('sender')->latest()->get();
+        $internalChat = InternalMessage::chat()->where('customer_id', $id)->with('sender')->orderBy('created_at')->get();
+        $internalNotes = InternalMessage::note()->where('customer_id', $id)->with('sender')->latest()->get();
         // Direktnachrichten (Portal-Chat): Kundenantworten gelten mit dem
         // Oeffnen der Akte als vom Team gelesen.
-        $customerMessages = \App\Models\CustomerMessage::where('customer_id', $id)
+        $customerMessages = CustomerMessage::where('customer_id', $id)
             ->with(['sender', 'attachments'])->orderBy('created_at')->get();
-        \App\Models\CustomerMessage::where('customer_id', $id)->fromCustomer()->unread()->update(['read_at' => now()]);
+        CustomerMessage::where('customer_id', $id)->fromCustomer()->unread()->update(['read_at' => now()]);
         // "Verwandte Kunden": andere Akten mit gemeinsamen Merkmalen (Telefon,
         // Anschrift, E-Mail, IBAN ...) - Beziehungshinweis in der Kundenakte.
-        $relations = app(\App\Services\Matching\DuplicateDetectionService::class)
+        $relations = app(DuplicateDetectionService::class)
             ->relationsFor($customer, $this->visibleCustomerIds(), 12);
         // Omnichannel: komplette Kommunikation (alle Kanaele) als Timeline
         // im Tab "Kommunikation" (gleiches Partial wie die Kundenkommunikation).
-        $conversationTimeline = (new \App\Services\CustomerConversationService())->timeline(
+        $conversationTimeline = (new CustomerConversationService)->timeline(
             $customer,
             includeEmails: in_array(auth()->user()->role, ['admin', 'manager', 'support'], true),
         );
         // Familienstruktur: verknuepfte KUNDENAKTEN (Ehepartner, Kinder,
         // Eltern) mit Rolle, Alter und Abhaengigkeit. Bewusst getrennt von
         // $customer->family - dort stehen Personen OHNE eigene Akte.
-        $familie = app(\App\Services\Family\FamilyRelationService::class)->overview($customer);
+        $familie = app(FamilyRelationService::class)->overview($customer);
 
         return view('admin.customer_show', compact('customer', 'internalChat', 'internalNotes', 'customerMessages', 'relations', 'conversationTimeline', 'familie'));
     }
@@ -448,21 +486,21 @@ class AdminController extends Controller
         // Fehler. Ueberschneidung ohne Beginn laesst sich nicht verketten.
         $switchNote = '';
         if ($conflict = $this->findVehicleConflict($request, (string) $customerId)) {
-            $guard = app(\App\Services\VehicleOverlapGuard::class);
-            $istWechsel = !Contract::insurersLookAlike($conflict->insurer, $request->insurer);
-            if (!$istWechsel) {
+            $guard = app(VehicleOverlapGuard::class);
+            $istWechsel = ! Contract::insurersLookAlike($conflict->insurer, $request->insurer);
+            if (! $istWechsel) {
                 return back()->withErrors(['vehicle_overlap' => $guard->conflictMessage($conflict)])->withInput();
             }
-            if (!$request->filled('start_date')) {
-                return back()->withErrors(['vehicle_overlap' => 'Versicherer-Wechsel erkannt: Bitte den Beginn des neuen Vertrags angeben – der Altvertrag (' . $conflict->insurer . ') wird dann automatisch zu diesem Tag gekündigt.'])->withInput();
+            if (! $request->filled('start_date')) {
+                return back()->withErrors(['vehicle_overlap' => 'Versicherer-Wechsel erkannt: Bitte den Beginn des neuen Vertrags angeben – der Altvertrag ('.$conflict->insurer.') wird dann automatisch zu diesem Tag gekündigt.'])->withInput();
             }
-            app(\App\Services\ContractSwitchService::class)->recordCancellationForSwitch(
+            app(ContractSwitchService::class)->recordCancellationForSwitch(
                 $conflict, \Illuminate\Support\Carbon::parse($request->start_date), 'system', auth()->id());
             if ($rest = $this->findVehicleConflict($request, (string) $customerId)) {
                 return back()->withErrors(['vehicle_overlap' => $guard->conflictMessage($rest)])->withInput();
             }
             $ende = $conflict->fresh()->effectiveCancellationDate();
-            $switchNote = ' Wechsel erkannt: ' . $conflict->insurer . ' wurde automatisch gekündigt zum ' . ($ende ? $ende->format('d.m.Y') : '—') . '.';
+            $switchNote = ' Wechsel erkannt: '.$conflict->insurer.' wurde automatisch gekündigt zum '.($ende ? $ende->format('d.m.Y') : '—').'.';
         }
 
         $contract = Contract::create([
@@ -493,15 +531,15 @@ class AdminController extends Controller
         // Bei der Neuanlage erfasste Vermittler-Kennungen gehen sofort in die
         // Historie - und eine bereits importierte, bisher unzugeordnete
         // Abrechnungszeile findet damit ihren Vertrag.
-        app(\App\Services\Vermittler\VermittlerLinkService::class)
+        app(VermittlerLinkService::class)
             ->recordContractEdit($contract, ['reference_number' => null, 'vermittler_id' => null], auth()->id());
 
         return redirect()->route('admin.customer', $customerId)
-            ->with('success', 'Vertrag erfolgreich hinzugefügt.' . $switchNote);
+            ->with('success', 'Vertrag erfolgreich hinzugefügt.'.$switchNote);
     }
 
     public function contractEdit($id) {
-        $contract = Contract::with(['vehicleDetail.claims','vehicleDetail.mileageReadings','vehicleDetail.sfHistory','energyDetail.meterReadings','internetDetail','customer.user','revisions.changedBy'])->findOrFail($id);
+        $contract = Contract::with(['vehicleDetail.claims', 'vehicleDetail.mileageReadings', 'vehicleDetail.sfHistory', 'energyDetail.meterReadings', 'internetDetail', 'customer.user', 'revisions.changedBy'])->findOrFail($id);
         $this->authorizeCustomerAccess($contract->customer_id);
         return view('admin.contract_edit', compact('contract'));
     }
@@ -511,33 +549,33 @@ class AdminController extends Controller
      * Meldung des Kunden). Jede Ablesung ist eine eigene Zeile - der Verlauf
      * bleibt vollstaendig erhalten und ergibt die Verbrauchshistorie.
      */
-    public function contractMeterReadingStore(Request $request, $id, \App\Services\Energy\MeterReadingService $meterReadings) {
+    public function contractMeterReadingStore(Request $request, $id, MeterReadingService $meterReadings) {
         $contract = Contract::with('energyDetail')->findOrFail($id);
         $this->authorizeCustomerAccess($contract->customer_id);
         $detail = $contract->energyDetail;
-        if (!$detail) {
+        if (! $detail) {
             return back()->withErrors(['reading' => 'Für diesen Vertrag sind keine Energie-Daten hinterlegt.']);
         }
 
         $data = $request->validate([
             'reading' => 'required|numeric|min:0|max:99999999',
             'reading_date' => 'nullable|date|before_or_equal:today',
-            'register' => 'nullable|in:' . implode(',', array_keys(\App\Models\MeterReading::REGISTERS)),
+            'register' => 'nullable|in:'.implode(',', array_keys(MeterReading::REGISTERS)),
         ]);
 
         $entry = $meterReadings->record($detail, (float) $data['reading'], [
-            'register' => $data['register'] ?? \App\Models\MeterReading::REGISTER_DEFAULT,
+            'register' => $data['register'] ?? MeterReading::REGISTER_DEFAULT,
             'reading_date' => $data['reading_date'] ?? now()->toDateString(),
             'source' => 'staff',
             'created_by' => auth()->user()->name,
         ]);
 
-        if (!$entry) {
+        if (! $entry) {
             return back()->withErrors(['reading' => 'Der Zählerstand konnte nicht gespeichert werden.']);
         }
 
-        return back()->with('success', 'Zählerstand erfasst: ' . $entry->formatted()
-            . ' (' . $entry->reading_date->format('d.m.Y') . ').');
+        return back()->with('success', 'Zählerstand erfasst: '.$entry->formatted()
+            .' ('.$entry->reading_date->format('d.m.Y').').');
     }
 
     /**
@@ -551,13 +589,13 @@ class AdminController extends Controller
         $detail = $contract->energyDetail;
         abort_unless($detail, 404);
 
-        $reading = \App\Models\MeterReading::where('contract_energy_detail_id', $detail->id)
+        $reading = MeterReading::where('contract_energy_detail_id', $detail->id)
             ->where('id', $readingId)->firstOrFail();
         $register = $reading->register;
         $reading->delete();
 
-        if ($register === \App\Models\MeterReading::REGISTER_DEFAULT) {
-            $newest = \App\Models\MeterReading::where('contract_energy_detail_id', $detail->id)
+        if ($register === MeterReading::REGISTER_DEFAULT) {
+            $newest = MeterReading::where('contract_energy_detail_id', $detail->id)
                 ->where('register', $register)
                 ->orderByDesc('reading_date')->orderByDesc('created_at')->first();
             $detail->meter_reading = $newest
@@ -566,7 +604,7 @@ class AdminController extends Controller
             $detail->save();
         }
 
-        \App\Models\ActivityLog::create([
+        ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => 'meter_reading_deleted',
             'entity_type' => 'contract',
@@ -616,7 +654,7 @@ class AdminController extends Controller
         ]);
 
         $this->syncContractDetails($contract, $request);
-        app(\App\Services\Vermittler\VermittlerLinkService::class)
+        app(VermittlerLinkService::class)
             ->recordContractEdit($contract, $vermittlerBefore, auth()->id());
 
         // Die INTERNE Vertragsnummer ist der Schluessel der Provisionsabrechnung.
@@ -624,7 +662,7 @@ class AdminController extends Controller
         // sonst laesst sich spaeter nicht mehr erklaeren, warum eine
         // Abrechnung ploetzlich einen anderen Vertrag trifft.
         if (($vermittlerBefore['internal_contract_number'] ?? null) !== $contract->internal_contract_number) {
-            app(\App\Services\CommissionImport\CommissionAuditLogger::class)->log('vertragsnummer_geaendert', null, [
+            app(CommissionAuditLogger::class)->log('vertragsnummer_geaendert', null, [
                 'contract_id' => $contract->id,
                 'internal_contract_number' => $contract->internal_contract_number,
                 'field' => 'internal_contract_number',
@@ -643,9 +681,9 @@ class AdminController extends Controller
 
         // Dokumente bleiben in der Kundenakte erhalten - nur die
         // Vertragszuordnung wird geloest (keine FK-Cascade auf documents).
-        \App\Models\Document::where('contract_id', $contract->id)->update(['contract_id' => null]);
+        Document::where('contract_id', $contract->id)->update(['contract_id' => null]);
 
-        \App\Models\ActivityLog::create([
+        ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => 'contract_deleted',
             'entity_type' => 'contract',
@@ -680,28 +718,28 @@ class AdminController extends Controller
             'end_date' => $request->end_date,
             'cancellation_date' => $request->cancellation_date,
         ]);
-        return app(\App\Services\VehicleOverlapGuard::class)
+        return app(VehicleOverlapGuard::class)
             ->findConflict($candidate, (array) $request->input('vehicle', []), $ignoreId);
     }
 
     /** Fehlermeldung fuer contractUpdate (nur blockieren, nie automatisieren). */
     private function vehicleOverlapError(Request $request, string $customerId, ?string $ignoreId = null): ?string {
         $conflict = $this->findVehicleConflict($request, $customerId, $ignoreId);
-        return $conflict ? app(\App\Services\VehicleOverlapGuard::class)->conflictMessage($conflict) : null;
+        return $conflict ? app(VehicleOverlapGuard::class)->conflictMessage($conflict) : null;
     }
 
     /** Gemeinsame Validierung fuer Anlegen und Bearbeiten von Vertraegen. */
     private function validateContract(Request $request, ?string $ignoreId = null): array {
         return $request->validate([
-            'type' => 'required|in:' . implode(',', Contract::typeKeys()),
+            'type' => 'required|in:'.implode(',', Contract::typeKeys()),
             // Freitext-Sparte nur bei "Sonstige" - dann aber verpflichtend.
             'type_other' => 'nullable|string|max:120|required_if:type,andere',
             // Untergruppe je Sparte: GKV/PKV (Wechsel-Erinnerung, §175 SGB V)
             // bzw. Art der Krankenzusatz (ambulant/Zahn/Ausland).
-            'subtype' => 'nullable|in:' . implode(',', Contract::subtypeKeys()),
+            'subtype' => 'nullable|in:'.implode(',', Contract::subtypeKeys()),
             'insurer' => 'required|string|max:255',
             // Echte Versicherungsnummer, optional, aber eindeutig.
-            'contract_number' => ['nullable', 'string', 'max:255', \Illuminate\Validation\Rule::unique('contracts', 'contract_number')->ignore($ignoreId)],
+            'contract_number' => ['nullable', 'string', 'max:255', Rule::unique('contracts', 'contract_number')->ignore($ignoreId)],
             // Referenz-/Vorgangsnummer der Antragsstrecke (Portal/Vermittler).
             // Bewusst NICHT unique: ein Vorgang kann zwei Vertraege tragen
             // (z.B. Buendel Strom + Gas).
@@ -710,22 +748,22 @@ class AdminController extends Controller
             // Vermittler-ID (die `Id` aus der Abrechnungsdatei). Eindeutig:
             // ein Abrechnungs-Datensatz gehoert zu genau einem Vertrag -
             // zwei Vertraege mit derselben ID waeren ein Zuordnungsfehler.
-            'vermittler_id' => ['nullable', 'string', 'max:60', \Illuminate\Validation\Rule::unique('contracts', 'vermittler_id')->ignore($ignoreId)],
+            'vermittler_id' => ['nullable', 'string', 'max:60', Rule::unique('contracts', 'vermittler_id')->ignore($ignoreId)],
             // Status-Whitelist aus derselben Quelle wie die Auswahl im Formular
             // (Contract::STATUS_OPTIONS) - kein zweiter, driftender Wertevorrat.
-            'status' => 'required|in:' . implode(',', Contract::statusKeys()),
+            'status' => 'required|in:'.implode(',', Contract::statusKeys()),
             // Vertragsstufe: 'antrag' (Auftrag liegt vor, Bestaetigung fehlt)
             // oder 'vertrag' (Police/Bestaetigung liegt vor). Steuert, ob ein
             // spaeter hochgeladenes Bestaetigungs-Dokument diesen Vertrag
             // ergaenzt statt ein Duplikat anzulegen.
-            'stage' => 'nullable|in:' . implode(',', array_keys(Contract::STAGE_LABELS)),
+            'stage' => 'nullable|in:'.implode(',', array_keys(Contract::STAGE_LABELS)),
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'cancellation_date' => 'nullable|date',
             'notes' => 'nullable|string',
             // Beitrag + Zahlweise (was zahlt der Kunde, in welchem Rhythmus).
             'premium_amount' => 'nullable|numeric|min:0|max:9999999.99',
-            'premium_interval' => 'nullable|in:' . implode(',', Contract::premiumIntervalKeys()),
+            'premium_interval' => 'nullable|in:'.implode(',', Contract::premiumIntervalKeys()),
             'energy.payment_amount' => 'nullable|numeric|min:0',
             'energy.payment_interval' => 'nullable|in:monatlich,vierteljaehrlich,halbjaehrlich,jaehrlich',
             // Energie: MaLo-ID hat 11 Ziffern und ist NICHT die Zählernummer
@@ -759,7 +797,7 @@ class AdminController extends Controller
             'escooter.vin' => 'nullable|string|max:30',
             'escooter.has_teilkasko' => 'nullable|boolean',
             // ---- KFZ (Redesign 17.07.2026): alle Kataloge kommen aus dem Model ----
-            'vehicle.vehicle_type' => 'nullable|in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::VEHICLE_TYPES)),
+            'vehicle.vehicle_type' => 'nullable|in:'.implode(',', array_keys(ContractVehicleDetail::VEHICLE_TYPES)),
             'vehicle.license_plate' => 'nullable|string|max:20',
             'vehicle.manufacturer' => 'nullable|string|max:255',
             'vehicle.model' => 'nullable|string|max:255',
@@ -768,34 +806,34 @@ class AdminController extends Controller
             'vehicle.tsn' => ['nullable', 'regex:/^[A-Za-z0-9]{1,10}$/'],
             'vehicle.first_registration' => 'nullable|date',
             'vehicle.acquisition_date' => 'nullable|date',
-            'vehicle.vehicle_condition' => 'nullable|in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::CONDITIONS)),
+            'vehicle.vehicle_condition' => 'nullable|in:'.implode(',', array_keys(ContractVehicleDetail::CONDITIONS)),
             'vehicle.power_kw' => 'nullable|integer|min:1|max:2000',
-            'vehicle.fuel_type' => 'nullable|in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::FUEL_TYPES)),
-            'vehicle.transmission' => 'nullable|in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::TRANSMISSIONS)),
+            'vehicle.fuel_type' => 'nullable|in:'.implode(',', array_keys(ContractVehicleDetail::FUEL_TYPES)),
+            'vehicle.transmission' => 'nullable|in:'.implode(',', array_keys(ContractVehicleDetail::TRANSMISSIONS)),
             'vehicle.color' => 'nullable|string|max:40',
             // Deckung: Haftpflicht ist immer enthalten; Vollkasko setzt Teilkasko voraus (wird im Sync erzwungen).
             'vehicle.has_teilkasko' => 'nullable|boolean',
-            'vehicle.teilkasko_deductible' => 'nullable|integer|in:' . implode(',', \App\Models\ContractVehicleDetail::TK_DEDUCTIBLES),
+            'vehicle.teilkasko_deductible' => 'nullable|integer|in:'.implode(',', ContractVehicleDetail::TK_DEDUCTIBLES),
             'vehicle.has_vollkasko' => 'nullable|boolean',
-            'vehicle.vollkasko_deductible' => 'nullable|integer|in:' . implode(',', \App\Models\ContractVehicleDetail::VK_DEDUCTIBLES),
+            'vehicle.vollkasko_deductible' => 'nullable|integer|in:'.implode(',', ContractVehicleDetail::VK_DEDUCTIBLES),
             'vehicle.extras' => 'nullable|array',
-            'vehicle.extras.*' => 'in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::EXTRAS)),
+            'vehicle.extras.*' => 'in:'.implode(',', array_keys(ContractVehicleDetail::EXTRAS)),
             'vehicle.driver_groups' => 'nullable|array',
-            'vehicle.driver_groups.*' => 'in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::DRIVER_GROUPS)),
+            'vehicle.driver_groups.*' => 'in:'.implode(',', array_keys(ContractVehicleDetail::DRIVER_GROUPS)),
             'vehicle.additional_drivers' => 'nullable|array',
             'vehicle.additional_drivers.*.name' => 'nullable|string|max:120',
             'vehicle.additional_drivers.*.birth_date' => 'nullable|date',
             'vehicle.additional_drivers.*.license_date' => 'nullable|date',
-            'vehicle.holder_type' => 'nullable|in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::HOLDER_TYPES)),
+            'vehicle.holder_type' => 'nullable|in:'.implode(',', array_keys(ContractVehicleDetail::HOLDER_TYPES)),
             'vehicle.holder_name' => 'nullable|string|max:255',
-            'vehicle.ownership_type' => 'nullable|in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::OWNERSHIP_TYPES)),
+            'vehicle.ownership_type' => 'nullable|in:'.implode(',', array_keys(ContractVehicleDetail::OWNERSHIP_TYPES)),
             // Nutzung / Kilometer
             'vehicle.initial_mileage' => 'nullable|integer|min:0|max:5000000',
             'vehicle.current_mileage' => 'nullable|integer|min:0|max:5000000',
             'vehicle.current_mileage_date' => 'nullable|date',
             // Buttons decken die Standardwerte ab; "custom" schaltet das
             // Freifeld fuer Sonderfaelle (8.000, 18.500, 22.500 km ...) frei.
-            'vehicle.annual_mileage' => 'nullable|in:custom,' . implode(',', \App\Models\ContractVehicleDetail::ANNUAL_MILEAGE_OPTIONS),
+            'vehicle.annual_mileage' => 'nullable|in:custom,'.implode(',', ContractVehicleDetail::ANNUAL_MILEAGE_OPTIONS),
             'vehicle.annual_mileage_custom' => 'nullable|integer|min:1000|max:150000|required_if:vehicle.annual_mileage,custom',
 
             // Vorversicherung (bisheriger Kfz-Versicherer beim Wechsel).
@@ -804,22 +842,22 @@ class AdminController extends Controller
             'vehicle.previous_insurance_since' => 'nullable|string|max:60',
             'vehicle.previous_insurance_terminated_by_insurer' => 'nullable|in:0,1',
             // SF-Einstufung (Haftpflicht / Vollkasko getrennt)
-            'vehicle.sf_liability_class' => 'nullable|in:' . implode(',', \App\Models\ContractVehicleDetail::sfClassKeys()),
+            'vehicle.sf_liability_class' => 'nullable|in:'.implode(',', ContractVehicleDetail::sfClassKeys()),
             'vehicle.sf_liability_valid_from' => 'nullable|date',
-            'vehicle.sf_liability_type' => 'nullable|in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::SF_TYPES)),
-            'vehicle.sf_liability_special_reason' => 'nullable|in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::SF_SPECIAL_REASONS)),
-            'vehicle.sf_liability_real_class' => 'nullable|in:' . implode(',', \App\Models\ContractVehicleDetail::sfClassKeys()),
-            'vehicle.sf_comprehensive_class' => 'nullable|in:' . implode(',', \App\Models\ContractVehicleDetail::sfClassKeys()),
+            'vehicle.sf_liability_type' => 'nullable|in:'.implode(',', array_keys(ContractVehicleDetail::SF_TYPES)),
+            'vehicle.sf_liability_special_reason' => 'nullable|in:'.implode(',', array_keys(ContractVehicleDetail::SF_SPECIAL_REASONS)),
+            'vehicle.sf_liability_real_class' => 'nullable|in:'.implode(',', ContractVehicleDetail::sfClassKeys()),
+            'vehicle.sf_comprehensive_class' => 'nullable|in:'.implode(',', ContractVehicleDetail::sfClassKeys()),
             'vehicle.sf_comprehensive_valid_from' => 'nullable|date',
-            'vehicle.sf_comprehensive_type' => 'nullable|in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::SF_TYPES)),
-            'vehicle.sf_comprehensive_special_reason' => 'nullable|in:' . implode(',', array_keys(\App\Models\ContractVehicleDetail::SF_SPECIAL_REASONS)),
-            'vehicle.sf_comprehensive_real_class' => 'nullable|in:' . implode(',', \App\Models\ContractVehicleDetail::sfClassKeys()),
+            'vehicle.sf_comprehensive_type' => 'nullable|in:'.implode(',', array_keys(ContractVehicleDetail::SF_TYPES)),
+            'vehicle.sf_comprehensive_special_reason' => 'nullable|in:'.implode(',', array_keys(ContractVehicleDetail::SF_SPECIAL_REASONS)),
+            'vehicle.sf_comprehensive_real_class' => 'nullable|in:'.implode(',', ContractVehicleDetail::sfClassKeys()),
             // Schaeden (strukturierte Zeilen, eigene Tabelle)
             'vehicle.claim_rows' => 'nullable|array',
             'vehicle.claim_rows.*.claim_date' => 'nullable|date',
-            'vehicle.claim_rows.*.claim_type' => 'nullable|in:' . implode(',', array_keys(\App\Models\VehicleClaim::TYPES)),
+            'vehicle.claim_rows.*.claim_type' => 'nullable|in:'.implode(',', array_keys(VehicleClaim::TYPES)),
             'vehicle.claim_rows.*.damage_amount' => 'nullable|numeric|min:0|max:99999999',
-            'vehicle.claim_rows.*.status' => 'nullable|in:' . implode(',', array_keys(\App\Models\VehicleClaim::STATUSES)),
+            'vehicle.claim_rows.*.status' => 'nullable|in:'.implode(',', array_keys(VehicleClaim::STATUSES)),
             'vehicle.claim_rows.*.insurer' => 'nullable|string|max:255',
             'vehicle.claim_rows.*.notes' => 'nullable|string|max:2000',
         ], [
@@ -835,8 +873,8 @@ class AdminController extends Controller
         // KFZ und E-Scooter teilen sich die Fahrzeugtabelle - beide behalten
         // ihr vehicleDetail (sonst wuerde ein Speichern das automatisch aus dem
         // Dokument angelegte E-Scooter-Detail loeschen).
-        if (!in_array($contract->type, ['kfz', 'escooter'], true)) { $contract->vehicleDetail()->delete(); }
-        if (!$contract->isEnergy())         { $contract->energyDetail()->delete(); }
+        if (! in_array($contract->type, ['kfz', 'escooter'], true)) { $contract->vehicleDetail()->delete(); }
+        if (! $contract->isEnergy())         { $contract->energyDetail()->delete(); }
         if ($contract->type !== 'internet') { $contract->internetDetail()->delete(); }
 
         if ($contract->type === 'kfz') {
@@ -844,21 +882,21 @@ class AdminController extends Controller
         } elseif ($contract->type === 'escooter') {
             $this->syncEscooterDetail($contract, $request->input('escooter', []));
         } elseif ($contract->isEnergy()) {
-            \App\Models\ContractEnergyDetail::updateOrCreate(
+            ContractEnergyDetail::updateOrCreate(
                 ['contract_id' => $contract->id],
                 collect($request->input('energy', []))
-                    ->only(['tariff','consumption_kwh','meter_number','customer_number','malo_id','meter_reading','grid_operator','metering_operator','payment_amount','payment_interval','working_price','base_price','previous_provider','previous_customer_number'])
-                    ->map(fn($val) => $val === '' ? null : $val)
+                    ->only(['tariff', 'consumption_kwh', 'meter_number', 'customer_number', 'malo_id', 'meter_reading', 'grid_operator', 'metering_operator', 'payment_amount', 'payment_interval', 'working_price', 'base_price', 'previous_provider', 'previous_customer_number'])
+                    ->map(fn ($val) => $val === '' ? null : $val)
                     ->all()
             );
         } elseif ($contract->type === 'internet') {
             // has_router ist eine Checkbox - fehlt im Request, wenn nicht gesetzt.
             $internet = collect($request->input('internet', []))
-                ->only(['tariff','speed','upload_speed','price_initial','price_initial_months','price_regular','router_name','router_price','bonus_amount','voucher_amount','setup_fee','shipping_fee','min_duration_months'])
-                ->map(fn($val) => $val === '' ? null : $val)
+                ->only(['tariff', 'speed', 'upload_speed', 'price_initial', 'price_initial_months', 'price_regular', 'router_name', 'router_price', 'bonus_amount', 'voucher_amount', 'setup_fee', 'shipping_fee', 'min_duration_months'])
+                ->map(fn ($val) => $val === '' ? null : $val)
                 ->all();
             $internet['has_router'] = $request->boolean('internet.has_router');
-            \App\Models\ContractInternetDetail::updateOrCreate(
+            ContractInternetDetail::updateOrCreate(
                 ['contract_id' => $contract->id],
                 $internet
             );
@@ -872,20 +910,20 @@ class AdminController extends Controller
      * SF-Verlauf fort statt ihn zu ueberschreiben.
      */
     private function syncVehicleDetail(Contract $contract, array $v): void {
-        $blank = fn($key) => isset($v[$key]) && $v[$key] !== '' ? $v[$key] : null;
+        $blank = fn ($key) => isset($v[$key]) && $v[$key] !== '' ? $v[$key] : null;
 
         // Deckung: Haftpflicht ist Pflicht (immer enthalten). Vollkasko ohne
         // Teilkasko ist fachlich unmoeglich -> wird hier hart abgeraeumt.
-        $hasTk = !empty($v['has_teilkasko']);
-        $hasVk = $hasTk && !empty($v['has_vollkasko']);
+        $hasTk = ! empty($v['has_teilkasko']);
+        $hasVk = $hasTk && ! empty($v['has_vollkasko']);
 
         // Kataloge serverseitig filtern (Whitelist, Reihenfolge des Katalogs).
-        $extras = array_values(array_intersect(array_keys(\App\Models\ContractVehicleDetail::EXTRAS), (array) ($v['extras'] ?? [])));
-        $driverGroups = array_values(array_intersect(array_keys(\App\Models\ContractVehicleDetail::DRIVER_GROUPS), (array) ($v['driver_groups'] ?? [])));
+        $extras = array_values(array_intersect(array_keys(ContractVehicleDetail::EXTRAS), (array) ($v['extras'] ?? [])));
+        $driverGroups = array_values(array_intersect(array_keys(ContractVehicleDetail::DRIVER_GROUPS), (array) ($v['driver_groups'] ?? [])));
         $additionalDrivers = in_array('weitere_fahrer', $driverGroups, true)
             ? collect($v['additional_drivers'] ?? [])
-                ->filter(fn($drv) => !empty($drv['name']))
-                ->map(fn($drv) => [
+                ->filter(fn ($drv) => ! empty($drv['name']))
+                ->map(fn ($drv) => [
                     'name' => trim((string) $drv['name']),
                     'birth_date' => $drv['birth_date'] ?? null,
                     'license_date' => $drv['license_date'] ?? null,
@@ -894,15 +932,15 @@ class AdminController extends Controller
 
         // SF: Art faellt auf "tatsaechlich" zurueck; Sondereinstufungs-Felder
         // (Grund + tatsaechliche Klasse) nur bei Sondereinstufung speichern.
-        $sf = function (string $prefix) use ($v, $blank) {
-            $class = $blank($prefix . '_class');
-            $type = $class ? ($blank($prefix . '_type') ?: 'tatsaechlich') : null;
+        $sf = function (string $prefix) use ($blank) {
+            $class = $blank($prefix.'_class');
+            $type = $class ? ($blank($prefix.'_type') ?: 'tatsaechlich') : null;
             return [
-                $prefix . '_class' => $class,
-                $prefix . '_valid_from' => $class ? $blank($prefix . '_valid_from') : null,
-                $prefix . '_type' => $type,
-                $prefix . '_special_reason' => $type === 'sondereinstufung' ? $blank($prefix . '_special_reason') : null,
-                $prefix . '_real_class' => $type === 'sondereinstufung' ? $blank($prefix . '_real_class') : null,
+                $prefix.'_class' => $class,
+                $prefix.'_valid_from' => $class ? $blank($prefix.'_valid_from') : null,
+                $prefix.'_type' => $type,
+                $prefix.'_special_reason' => $type === 'sondereinstufung' ? $blank($prefix.'_special_reason') : null,
+                $prefix.'_real_class' => $type === 'sondereinstufung' ? $blank($prefix.'_real_class') : null,
             ];
         };
         $sfLiability = $sf('sf_liability');
@@ -912,7 +950,7 @@ class AdminController extends Controller
             'sf_comprehensive_real_class' => null,
         ];
 
-        $detail = \App\Models\ContractVehicleDetail::updateOrCreate(
+        $detail = ContractVehicleDetail::updateOrCreate(
             ['contract_id' => $contract->id],
             array_merge([
                 'vehicle_type' => $blank('vehicle_type'),
@@ -955,10 +993,10 @@ class AdminController extends Controller
         // (das Formular zeigt immer alle Schaeden inkl. Loeschen-Knopf).
         $detail->claims()->delete();
         foreach ((array) ($v['claim_rows'] ?? []) as $row) {
-            if (!is_array($row)) continue;
+            if (! is_array($row)) continue;
             $hasContent = collect(['claim_date', 'claim_type', 'damage_amount', 'insurer', 'notes'])
-                ->contains(fn($key) => isset($row[$key]) && $row[$key] !== '');
-            if (!$hasContent) continue;
+                ->contains(fn ($key) => isset($row[$key]) && $row[$key] !== '');
+            if (! $hasContent) continue;
             $detail->claims()->create([
                 'claim_date' => $row['claim_date'] ?? null,
                 'claim_type' => ($row['claim_type'] ?? '') !== '' ? $row['claim_type'] : null,
@@ -975,7 +1013,7 @@ class AdminController extends Controller
             $mileage = (int) $v['current_mileage'];
             $date = $blank('current_mileage_date') ?: now()->toDateString();
             $latest = $detail->mileageReadings()->first();
-            if (!$latest || (int) $latest->mileage !== $mileage || $latest->reading_date->toDateString() !== $date) {
+            if (! $latest || (int) $latest->mileage !== $mileage || $latest->reading_date->toDateString() !== $date) {
                 $detail->mileageReadings()->create([
                     'mileage' => $mileage,
                     'reading_date' => $date,
@@ -998,9 +1036,9 @@ class AdminController extends Controller
      * Fahrzeugtabelle wie KFZ (Fahrzeugtyp = escooter).
      */
     private function syncEscooterDetail(Contract $contract, array $v): void {
-        $blank = fn($key) => isset($v[$key]) && $v[$key] !== '' ? $v[$key] : null;
+        $blank = fn ($key) => isset($v[$key]) && $v[$key] !== '' ? $v[$key] : null;
 
-        \App\Models\ContractVehicleDetail::updateOrCreate(
+        ContractVehicleDetail::updateOrCreate(
             ['contract_id' => $contract->id],
             [
                 'vehicle_type' => 'escooter',
@@ -1008,7 +1046,7 @@ class AdminController extends Controller
                 'manufacturer' => $blank('manufacturer'),
                 'model' => $blank('model'),
                 'vin' => $blank('vin') ? strtoupper($v['vin']) : null,
-                'has_teilkasko' => !empty($v['has_teilkasko']),
+                'has_teilkasko' => ! empty($v['has_teilkasko']),
                 'teilkasko_deductible' => null,
                 'has_vollkasko' => false,
                 'vollkasko_deductible' => null,
@@ -1021,10 +1059,10 @@ class AdminController extends Controller
      * (gueltig bis = Vortag der neuen Einstufung) und legt einen neuen an.
      * Gleiche Klasse mit korrigiertem Datum aktualisiert nur das gueltig-ab.
      */
-    private function syncSfHistory(\App\Models\ContractVehicleDetail $detail, string $branch, ?string $class, ?string $validFrom): void {
+    private function syncSfHistory(ContractVehicleDetail $detail, string $branch, ?string $class, ?string $validFrom): void {
         $open = $detail->sfHistory()->where('branch', $branch)->whereNull('valid_until')->orderByDesc('created_at')->first();
 
-        if (!$class) {
+        if (! $class) {
             if ($open) $open->update(['valid_until' => now()->toDateString()]);
             return;
         }
@@ -1035,7 +1073,7 @@ class AdminController extends Controller
         }
         if ($open) {
             $open->update(['valid_until' => $validFrom
-                ? \Carbon\Carbon::parse($validFrom)->subDay()->toDateString()
+                ? Carbon::parse($validFrom)->subDay()->toDateString()
                 : now()->toDateString()]);
         }
         $detail->sfHistory()->create(['branch' => $branch, 'sf_class' => $class, 'valid_from' => $validFrom, 'valid_until' => null]);
@@ -1066,12 +1104,12 @@ class AdminController extends Controller
     {
         return [
             'mobile' => ['nullable', 'string', 'max:40', function ($attr, $value, $fail) {
-                if ($value && \App\Support\GermanPhone::isLandline($value)) {
+                if ($value && GermanPhone::isLandline($value)) {
                     $fail('Das sieht nach einer Festnetznummer aus – bitte ins Feld „Telefon" eintragen.');
                 }
             }],
             'phone' => ['nullable', 'string', 'max:40', function ($attr, $value, $fail) {
-                if ($value && \App\Support\GermanPhone::isMobile($value)) {
+                if ($value && GermanPhone::isMobile($value)) {
                     $fail('Das sieht nach einer Mobilnummer aus – bitte ins Feld „Mobil" eintragen.');
                 }
             }],
@@ -1089,13 +1127,13 @@ class AdminController extends Controller
             // Flow (Geburtsdatum TT.MM.JJJJ bzw. Einladungs-Link). Regel aus
             // der EINEN Quelle - vorher galt hier 'min:8', waehrend Portal
             // und Reset laengst mehr verlangten.
-            'password' => ['nullable', \App\Support\PasswordPolicy::customer()],
+            'password' => ['nullable', PasswordPolicy::customer()],
             // Bankverbindung darf schon bei der Neuanlage erfasst werden.
             'iban' => 'nullable|string|max:40',
             'account_holder' => 'nullable|string|max:120',
             'bic' => 'nullable|string|max:20',
         ] + $this->phoneFieldRules());
-        $fullName = $request->first_name . ' ' . $request->last_name;
+        $fullName = $request->first_name.' '.$request->last_name;
         $address = $this->buildAddress($request);
         $addressColumns = $this->addressColumns($request);
 
@@ -1110,12 +1148,12 @@ class AdminController extends Controller
             'email' => $request->email ?: null,
             // Platzhalter - das nutzbare Passwort setzt gleich der
             // PortalAccessService (manuell/Geburtsdatum/Set-Link).
-            'password' => bcrypt(\Illuminate\Support\Str::random(40)),
+            'password' => bcrypt(Str::random(40)),
             'role' => 'customer',
         ]);
         $customer = Customer::create([
             'user_id' => $user->id,
-            'customer_number' => app(\App\Services\CustomerNumberGenerator::class)->generate(),
+            'customer_number' => app(CustomerNumberGenerator::class)->generate(),
             // Herkunft + Werber fuer den Neukunden-Bericht (created_by setzt
             // das Customer-Modell automatisch auf den angemeldeten Mitarbeiter).
             'source' => 'manual',
@@ -1131,7 +1169,7 @@ class AdminController extends Controller
             'address_zip' => $addressColumns['address_zip'],
             'address_city' => $addressColumns['address_city'],
             'birth_date' => $request->birth_date,
-            'gender' => in_array($request->gender, ['male','female','diverse'], true) ? $request->gender : null,
+            'gender' => in_array($request->gender, ['male', 'female', 'diverse'], true) ? $request->gender : null,
             'marital_status' => $request->marital_status ?: null,
             // Bankverbindung (verschluesselt at rest) direkt bei der Anlage.
             'iban' => $request->iban ?: null,
@@ -1160,10 +1198,10 @@ class AdminController extends Controller
                         'must_change_password' => true,
                     ])->save();
                     session()->flash('warning', 'Passwort gesetzt. Aus Sicherheitsgruenden wird es NICHT per E-Mail verschickt - '
-                        . 'bitte teilen Sie es dem Kunden persoenlich mit. Beim ersten Login muss er ein eigenes Passwort festlegen. '
-                        . 'Alternativ koennen Sie in der Kundenakte eine Einladung senden.');
+                        .'bitte teilen Sie es dem Kunden persoenlich mit. Beim ersten Login muss er ein eigenes Passwort festlegen. '
+                        .'Alternativ koennen Sie in der Kundenakte eine Einladung senden.');
                 } else {
-                    $mode = app(\App\Services\Portal\PortalAccessService::class)->sendInvitation($customer, auth()->id());
+                    $mode = app(PortalAccessService::class)->sendInvitation($customer, auth()->id());
                     if ($mode === 'setlink') {
                         // Ohne Geburtsdatum gibt es KEIN Startpasswort - nur einen
                         // zeitlich begrenzten Link. Ohne Hinweis wirkt die Einladung
@@ -1173,21 +1211,21 @@ class AdminController extends Controller
                     }
                 }
             } catch (\Throwable $e) {
-                \Log::warning('Welcome mail failed: ' . $e->getMessage());
+                \Log::warning('Welcome mail failed: '.$e->getMessage());
                 // Seit dem synchronen Versand landen Fehler HIER statt
                 // still in failed_jobs - dem Mitarbeiter anzeigen, sonst
                 // wartet der Kunde vergeblich auf seine Zugangsdaten.
                 session()->flash('error', 'Die Willkommens-Mail konnte NICHT versendet werden. Bitte in der Kundenakte "Einladung erneut senden" nutzen.');
             }
         }
-        return redirect()->route("admin.customer", $customer->id)->with("success", "Kunde erfolgreich erstellt.");
+        return redirect()->route('admin.customer', $customer->id)->with('success', 'Kunde erfolgreich erstellt.');
     }
 
     public function customerEdit($id) {
         $this->authorizeCustomerAccess($id);
         $customer = Customer::with('user')->findOrFail($id);
         $addr = $this->splitAddress($customer->address);
-        $partners = \App\Models\Partner::active()->orderBy('name')->get(['id', 'name']);
+        $partners = Partner::active()->orderBy('name')->get(['id', 'name']);
         return view('admin.customer_edit', compact('customer', 'addr', 'partners'));
     }
 
@@ -1199,9 +1237,9 @@ class AdminController extends Controller
         $request->validate([
             'first_name' => 'required',
             'last_name' => 'required',
-            'email' => 'nullable|email|unique:users,email,' . $user->id,
-            'portal_email' => 'nullable|email|unique:users,email,' . $user->id,
-            'new_password' => ['nullable', \App\Support\PasswordPolicy::customer()],
+            'email' => 'nullable|email|unique:users,email,'.$user->id,
+            'portal_email' => 'nullable|email|unique:users,email,'.$user->id,
+            'new_password' => ['nullable', PasswordPolicy::customer()],
             'health_insurance_type' => 'nullable|in:gesetzlich,privat',
             'gender' => 'nullable|in:male,female,diverse',
             'bic' => 'nullable|string|max:20',
@@ -1214,7 +1252,7 @@ class AdminController extends Controller
         ] + $this->phoneFieldRules());
 
         // Sensible Kundenakte-Felder: Änderungen auditieren (nur Feldnamen ins Log)
-        $sensitive = ['health_insurance_number','health_insurance_company','health_insurance_type','pension_insurance_number','tax_id'];
+        $sensitive = ['health_insurance_number', 'health_insurance_company', 'health_insurance_type', 'pension_insurance_number', 'tax_id'];
         $changedSensitive = [];
         foreach ($sensitive as $sf) {
             if ($request->has($sf) && (string) $request->input($sf) !== (string) $customer->$sf) {
@@ -1222,7 +1260,7 @@ class AdminController extends Controller
             }
         }
         if ($changedSensitive) {
-            \App\Models\ActivityLog::create([
+            ActivityLog::create([
                 'user_id' => auth()->id(),
                 'action' => 'sensitive_data_updated',
                 'entity_type' => 'customer',
@@ -1250,7 +1288,7 @@ class AdminController extends Controller
             'bic' => $request->bic ?: null,
             'birth_date' => $request->birth_date ?: null,
             'marital_status' => $request->marital_status,
-            'gender' => in_array($request->gender, ['male','female','diverse'], true) ? $request->gender : null,
+            'gender' => in_array($request->gender, ['male', 'female', 'diverse'], true) ? $request->gender : null,
             'preferred_lang' => $request->preferred_lang,
             'nationality' => $request->nationality,
             'birth_place' => $request->birth_place,
@@ -1260,7 +1298,7 @@ class AdminController extends Controller
             'customer_type' => $request->customer_type,
             'company_name' => $request->company_name,
             'company_type' => $request->company_type,
-            'health_insurance_type' => in_array($request->health_insurance_type, ['gesetzlich','privat'], true) ? $request->health_insurance_type : null,
+            'health_insurance_type' => in_array($request->health_insurance_type, ['gesetzlich', 'privat'], true) ? $request->health_insurance_type : null,
             'health_insurance_company' => $request->health_insurance_company ?: null,
             'health_insurance_number' => $request->health_insurance_number ?: null,
             'pension_insurance_number' => $request->pension_insurance_number ?: null,
@@ -1286,7 +1324,7 @@ class AdminController extends Controller
         $customer->update(array_intersect_key($data, array_flip($columns)));
 
         // User-Daten: Name, E-Mail, optional neues Passwort
-        $userData = ['name' => trim(($request->first_name ?? '') . ' ' . ($request->last_name ?? '')) ?: ($request->name ?? $user->name)];
+        $userData = ['name' => trim(($request->first_name ?? '').' '.($request->last_name ?? '')) ?: ($request->name ?? $user->name)];
         // E-Mail: eingetragene echte Adresse uebernehmen; ist das Feld leer,
         // bleibt/wird die E-Mail LEER (NULL) - kein Dummy. So laesst sich auch
         // eine alte Platzhalter-Adresse durch Leeren sauber entfernen.
@@ -1319,7 +1357,7 @@ class AdminController extends Controller
         // wird (analog zur Neuanlage in storeCustomer). So muss der Mitarbeiter die
         // Einladung nicht mehr separat ausloesen – sie geht direkt an den Kunden.
         $invited = false;
-        if (!$hadRealEmail && $user->hasRealEmail()) {
+        if (! $hadRealEmail && $user->hasRealEmail()) {
             try {
                 $customer->setRelation('user', $user);
                 if ($request->filled('new_password')) {
@@ -1327,20 +1365,20 @@ class AdminController extends Controller
                     // system-vergeben (Pflichtwechsel beim ersten Login) und
                     // wird NICHT per E-Mail verschickt - siehe storeCustomer.
                     session()->flash('warning', 'Passwort gesetzt. Aus Sicherheitsgruenden wird es NICHT per E-Mail verschickt - '
-                        . 'bitte teilen Sie es dem Kunden persoenlich mit. Beim ersten Login muss er ein eigenes Passwort festlegen.');
+                        .'bitte teilen Sie es dem Kunden persoenlich mit. Beim ersten Login muss er ein eigenes Passwort festlegen.');
                 } elseif ($user->invitation_sent_at === null
                     && $user->portal_password_set_at === null
                     && $user->first_login_at === null) {
                     // Noch kein Portal-Zugang angestossen -> Standard-Einladung
                     // (Startpasswort = Geburtsdatum bzw. Passwort-Setzen-Link).
-                    $mode = app(\App\Services\Portal\PortalAccessService::class)->sendInvitation($customer, auth()->id());
+                    $mode = app(PortalAccessService::class)->sendInvitation($customer, auth()->id());
                     if ($mode === 'setlink') {
                         session()->flash('warning', 'Kein Geburtsdatum hinterlegt: Die Einladung enthaelt statt des Startpassworts nur einen zeitlich begrenzten Passwort-Link. Bitte Geburtsdatum ergaenzen und die Einladung erneut senden.');
                     }
                     $invited = true;
                 }
             } catch (\Throwable $e) {
-                \Log::warning('Auto-Einladung nach E-Mail-Nachtrag fehlgeschlagen: ' . $e->getMessage());
+                \Log::warning('Auto-Einladung nach E-Mail-Nachtrag fehlgeschlagen: '.$e->getMessage());
                 session()->flash('error', 'Die Portal-Einladung konnte NICHT versendet werden. Bitte in der Kundenakte "Einladung erneut senden" nutzen.');
             }
         }
@@ -1354,16 +1392,16 @@ class AdminController extends Controller
                 'family_kv_start.*' => 'nullable|date',
             ]);
             foreach ($request->family_name as $i => $fname) {
-                if (!trim((string) $fname)) continue;
+                if (! trim((string) $fname)) continue;
                 $fgender = $request->family_geschlecht[$i] ?? null;
-                \App\Models\CustomerFamily::create([
+                CustomerFamily::create([
                     'customer_id' => $customer->id,
                     'name' => trim($fname),
                     'relation' => $request->family_relation[$i] ?? 'Kind',
                     'birth_date' => ($request->family_birth[$i] ?? null) ?: null,
                     // Geschlecht (male|female) - wurde bislang aus dem Formular
                     // nicht uebernommen und ging verloren.
-                    'gender' => in_array($fgender, array_keys(\App\Models\CustomerFamily::GENDERS), true) ? $fgender : null,
+                    'gender' => in_array($fgender, array_keys(CustomerFamily::GENDERS), true) ? $fgender : null,
                     // KV-Daten je Person (Spec Teil 3 / Final Polish Punkt 1)
                     'health_insurance_company' => ($request->family_kv_company[$i] ?? null) ?: null,
                     'health_insurance_number' => ($request->family_kv_nr[$i] ?? null) ?: null,
@@ -1377,16 +1415,16 @@ class AdminController extends Controller
         }
 
         $msg = $invited
-            ? 'Kundendaten aktualisiert. Einladung zum Portal wurde an ' . $user->email . ' gesendet.'
+            ? 'Kundendaten aktualisiert. Einladung zum Portal wurde an '.$user->email.' gesendet.'
             : 'Kundendaten aktualisiert.';
         return redirect()->route('admin.customer', $id)->with('success', $msg);
     }
 
     private function buildAddress(Request $request): ?string {
-        $line1 = trim(($request->street ?? '') . ' ' . ($request->street_nr ?? ''));
-        $line2 = trim(($request->plz ?? '') . ' ' . ($request->city ?? ''));
+        $line1 = trim(($request->street ?? '').' '.($request->street_nr ?? ''));
+        $line2 = trim(($request->plz ?? '').' '.($request->city ?? ''));
         $line3 = trim($request->country ?? '');
-        $parts = array_filter([$line1, $line2, $line3], fn($p) => $p !== '');
+        $parts = array_filter([$line1, $line2, $line3], fn ($p) => $p !== '');
         return $parts ? implode(', ', $parts) : null;
     }
 
@@ -1397,16 +1435,16 @@ class AdminController extends Controller
      */
     private function addressColumns(Request $request): array {
         return [
-            'address_street'       => $request->street ?: null,
+            'address_street' => $request->street ?: null,
             'address_house_number' => $request->street_nr ?: null,
-            'address_zip'          => $request->plz ?: null,
-            'address_city'         => $request->city ?: null,
+            'address_zip' => $request->plz ?: null,
+            'address_city' => $request->city ?: null,
         ];
     }
 
     private function splitAddress(?string $address): array {
         $parts = ['street' => '', 'street_nr' => '', 'plz' => '', 'city' => '', 'country' => ''];
-        if (!$address) return $parts;
+        if (! $address) return $parts;
 
         $segments = array_map('trim', explode(',', $address));
 
@@ -1438,7 +1476,7 @@ class AdminController extends Controller
     public function storeNote(Request $request, $id) {
         $this->authorizeCustomerAccess($id);
         $request->validate(['note' => 'required']);
-        \App\Models\CustomerNote::create([
+        CustomerNote::create([
             'customer_id' => $id,
             'created_by' => auth()->id(),
             'note' => $request->note,
@@ -1450,9 +1488,9 @@ class AdminController extends Controller
     }
 
     public function noteMarkDone($id) {
-        $note = \App\Models\CustomerNote::findOrFail($id);
+        $note = CustomerNote::findOrFail($id);
         $this->authorizeCustomerAccess($note->customer_id);
-        $note->update(['is_done' => !$note->is_done]);
+        $note->update(['is_done' => ! $note->is_done]);
         return back()->with('success', 'Status aktualisiert.');
     }
 
@@ -1469,15 +1507,15 @@ class AdminController extends Controller
 
         // Vertragszuordnung nur zulassen, wenn der Vertrag zu DIESEM Kunden gehört.
         $contractId = $request->filled('contract_id')
-            ? \App\Models\Contract::where('id', $request->contract_id)->where('customer_id', $id)->value('id')
+            ? Contract::where('id', $request->contract_id)->where('customer_id', $id)->value('id')
             : null;
 
         $created = [];
         foreach ($request->file('documents') as $file) {
             // Neue Uploads landen grundsätzlich im privaten Storage.
             $path = $file->store("customers/$id/documents", 'local');
-            $doc = \App\Models\Document::create([
-                'id' => \Illuminate\Support\Str::uuid(),
+            $doc = Document::create([
+                'id' => Str::uuid(),
                 'customer_id' => $id,
                 'contract_id' => $contractId,
                 'category' => $request->category ?? 'other',
@@ -1492,7 +1530,7 @@ class AdminController extends Controller
             ]);
             $created[] = $doc;
 
-            \App\Models\ActivityLog::create([
+            ActivityLog::create([
                 'user_id' => auth()->id(),
                 'action' => 'document_uploaded',
                 'entity_type' => 'document',
@@ -1504,7 +1542,7 @@ class AdminController extends Controller
         if ($request->expectsJson()) {
             return response()->json(['ok' => true, 'count' => count($created)]);
         }
-        return back()->with('success', count($created) . ' Dokument(e) hochgeladen.');
+        return back()->with('success', count($created).' Dokument(e) hochgeladen.');
     }
 
     public function storeFamily(Request $request, $id) {
@@ -1514,7 +1552,7 @@ class AdminController extends Controller
             'health_insurance_status' => 'nullable|in:mitglied,familienversichert',
             'health_insurance_start' => 'nullable|date',
         ]);
-        \App\Models\CustomerFamily::create([
+        CustomerFamily::create([
             'customer_id' => $id,
             'name' => $request->name,
             'relation' => $request->relation ?? 'Kind',
@@ -1530,7 +1568,7 @@ class AdminController extends Controller
     public function storeVehicle(Request $request, $id) {
         $this->authorizeCustomerAccess($id);
         $request->validate(['brand' => 'required']);
-        \App\Models\CustomerVehicle::create([
+        CustomerVehicle::create([
             'customer_id' => $id,
             'brand' => $request->brand,
             'model' => $request->model,
@@ -1542,7 +1580,7 @@ class AdminController extends Controller
     }
 
     public function destroyFamily($id) {
-        $f = \App\Models\CustomerFamily::findOrFail($id);
+        $f = CustomerFamily::findOrFail($id);
         $this->authorizeCustomerAccess($f->customer_id);
         $customerId = $f->customer_id;
         $f->delete();
@@ -1552,15 +1590,15 @@ class AdminController extends Controller
     /** Sicherer Dokument-Download (Admin) - nur mit Zugriff auf den Kunden. */
     /** Datei eines bestehenden Dokuments austauschen - setzt updated_by. (Punkt 3) */
     public function documentReplace(Request $request, $id) {
-        $doc = \App\Models\Document::findOrFail($id);
+        $doc = Document::findOrFail($id);
         $this->authorizeDocumentAccess($doc);
         $request->validate(['document' => 'required|file|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:10240']);
 
         $file = $request->file('document');
-        $newPath = $file->store('customers/' . $doc->customer_id . '/documents', 'local');
+        $newPath = $file->store('customers/'.$doc->customer_id.'/documents', 'local');
 
         // Alte Datei entfernen (best effort), dann DB aktualisieren
-        try { \Illuminate\Support\Facades\Storage::disk($doc->disk ?: 'public')->delete($doc->file_path); } catch (\Throwable $e) {}
+        try { Storage::disk($doc->disk ?: 'public')->delete($doc->file_path); } catch (\Throwable $e) {}
 
         $doc->update([
             'file_name' => $file->getClientOriginalName(),
@@ -1570,7 +1608,7 @@ class AdminController extends Controller
             'updated_by' => auth()->id(),
         ]);
 
-        \App\Models\ActivityLog::create([
+        ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => 'document_replaced',
             'entity_type' => 'document',
@@ -1586,7 +1624,7 @@ class AdminController extends Controller
      * (intern/Kunde), Priorität und Anzeigename. Datei-Inhalt bleibt unberührt.
      */
     public function documentUpdate(Request $request, $id) {
-        $doc = \App\Models\Document::findOrFail($id);
+        $doc = Document::findOrFail($id);
         $this->authorizeDocumentAccess($doc);
         $request->validate([
             'category' => 'nullable|in:contract,police,invoice,identity,claim,other',
@@ -1598,7 +1636,7 @@ class AdminController extends Controller
 
         // Vertrag muss zum selben Kunden gehören (Fremdzuordnung verhindern).
         $contractId = $request->filled('contract_id')
-            ? \App\Models\Contract::where('id', $request->contract_id)->where('customer_id', $doc->customer_id)->value('id')
+            ? Contract::where('id', $request->contract_id)->where('customer_id', $doc->customer_id)->value('id')
             : null;
 
         $doc->update([
@@ -1610,7 +1648,7 @@ class AdminController extends Controller
             'updated_by' => auth()->id(),
         ]);
 
-        \App\Models\ActivityLog::create([
+        ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => 'document_updated',
             'entity_type' => 'document',
@@ -1623,14 +1661,14 @@ class AdminController extends Controller
 
     /** Dokument löschen (Datei + Datensatz). Nur mit Zugriff auf den Kunden. */
     public function documentDestroy($id) {
-        $doc = \App\Models\Document::findOrFail($id);
+        $doc = Document::findOrFail($id);
         $this->authorizeDocumentAccess($doc);
 
         try {
-            \Illuminate\Support\Facades\Storage::disk($doc->disk ?: 'public')->delete($doc->file_path);
+            Storage::disk($doc->disk ?: 'public')->delete($doc->file_path);
         } catch (\Throwable $e) { /* Datei evtl. schon weg - Datensatz trotzdem entfernen */ }
 
-        \App\Models\ActivityLog::create([
+        ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => 'document_deleted',
             'entity_type' => 'document',
@@ -1652,22 +1690,22 @@ class AdminController extends Controller
      * tatsaechlich liegt (Kundenakte bzw. Dokumenten-Eingang).
      */
     public function documentShow($id) {
-        $doc = \App\Models\Document::find($id);
-        if (!$doc) {
+        $doc = Document::find($id);
+        if (! $doc) {
             return redirect()->route('admin.documents.inbox')
                 ->with('warning', 'Dokument nicht gefunden - es wurde geloescht oder der Link ist veraltet.');
         }
         $this->authorizeDocumentAccess($doc);
         if ($doc->customer_id !== null) {
-            return redirect()->to(route('admin.customer', $doc->customer_id) . '#tab-dokumente');
+            return redirect()->to(route('admin.customer', $doc->customer_id).'#tab-dokumente');
         }
         return redirect()->route('admin.documents.inbox');
     }
 
-    public function documentDownload(\Illuminate\Http\Request $request, $id) {
-        $doc = \App\Models\Document::findOrFail($id);
+    public function documentDownload(Request $request, $id) {
+        $doc = Document::findOrFail($id);
         $this->authorizeDocumentAccess($doc);
-        \App\Models\ActivityLog::create([
+        ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => 'document_viewed',
             'entity_type' => 'document',
@@ -1675,24 +1713,24 @@ class AdminController extends Controller
             'meta' => json_encode(['file' => $doc->file_name], JSON_UNESCAPED_UNICODE),
         ]);
         $disk = $doc->disk ?: 'public';
-        abort_unless(\Illuminate\Support\Facades\Storage::disk($disk)->exists($doc->file_path), 404);
+        abort_unless(Storage::disk($disk)->exists($doc->file_path), 404);
         // ?view=1 -> im Browser anzeigen (Vorschau, z.B. "Anzeigen"-Button im
         // Dokumenten-Eingang); sonst herunterladen.
         return $request->boolean('view')
-            ? \Illuminate\Support\Facades\Storage::disk($disk)->response($doc->file_path, $doc->file_name)
-            : \Illuminate\Support\Facades\Storage::disk($disk)->download($doc->file_path, $doc->file_name);
+            ? Storage::disk($disk)->response($doc->file_path, $doc->file_name)
+            : Storage::disk($disk)->download($doc->file_path, $doc->file_name);
     }
 
     public function downloadAttachment($id) {
-        $a = \App\Models\TicketAttachment::findOrFail($id);
+        $a = TicketAttachment::findOrFail($id);
         $ticket = Ticket::findOrFail($a->ticket_id);
         $this->authorizeTicketAccess($ticket);
         if (($a->disk ?? 'public') === 'local') {
-            return \Illuminate\Support\Facades\Storage::disk('local')->download($a->file_path, $a->file_name);
+            return Storage::disk('local')->download($a->file_path, $a->file_name);
         }
         // 404 statt 500, wenn die Datei fehlt (z. B. manuell geloescht)
-        abort_unless(is_file(storage_path('app/public/' . $a->file_path)), 404);
-        return response()->download(storage_path('app/public/' . $a->file_path), $a->file_name);
+        abort_unless(is_file(storage_path('app/public/'.$a->file_path)), 404);
+        return response()->download(storage_path('app/public/'.$a->file_path), $a->file_name);
     }
 
     /**
@@ -1712,9 +1750,9 @@ class AdminController extends Controller
         'Gleiches Geburtsdatum' => 'birthdate',
     ];
 
-    public function duplicates(\App\Services\Matching\DuplicateDetectionService $detection) {
+    public function duplicates(DuplicateDetectionService $detection) {
         $result = $detection->scan($this->visibleCustomerIds());
-        $autoMin = \App\Services\Matching\DuplicateDetectionService::AUTO_MERGE_MIN_SCORE;
+        $autoMin = DuplicateDetectionService::AUTO_MERGE_MIN_SCORE;
 
         // Jedes Paar mit Filterkategorien versehen + Kategorie-Zaehler fuer die
         // Schnellfilter-Buttons (Namen / Adressen / E-Mails / Telefon / IBAN ...).
@@ -1738,17 +1776,17 @@ class AdminController extends Controller
         // tatsaechlichen Aktion entspricht.
         $strongCount = count(array_filter(
             $pairs,
-            fn ($p) => $p['score'] >= $autoMin && !$detection->hasIdentityConflict($p['primary'], $p['duplicate'])
+            fn ($p) => $p['score'] >= $autoMin && ! $detection->hasIdentityConflict($p['primary'], $p['duplicate'])
         ));
 
         return view('admin.customer_duplicates', [
-            'pairs'       => $pairs,
-            'scanned'     => $result['scanned'],
-            'capped'      => $result['capped'],
-            'autoMin'     => $autoMin,
+            'pairs' => $pairs,
+            'scanned' => $result['scanned'],
+            'capped' => $result['capped'],
+            'autoMin' => $autoMin,
             'strongCount' => $strongCount,
-            'catCounts'   => $counts,
-            'relationCount' => \App\Models\CustomerRelationship::count(),
+            'catCounts' => $counts,
+            'relationCount' => CustomerRelationship::count(),
         ]);
     }
 
@@ -1761,28 +1799,28 @@ class AdminController extends Controller
         $data = $request->validate([
             'customer_a' => 'required|string',
             'customer_b' => 'required|string|different:customer_a',
-            'note'       => 'nullable|string|max:255',
-            'type'       => 'nullable|in:' . implode(',', \App\Models\CustomerRelationship::TYPES),
+            'note' => 'nullable|string|max:255',
+            'type' => 'nullable|in:'.implode(',', CustomerRelationship::TYPES),
         ]);
         $this->authorizeCustomerAccess($data['customer_a']);
         $this->authorizeCustomerAccess($data['customer_b']);
-        \App\Models\Customer::findOrFail($data['customer_a']);
-        \App\Models\Customer::findOrFail($data['customer_b']);
+        Customer::findOrFail($data['customer_a']);
+        Customer::findOrFail($data['customer_b']);
 
         $type = $data['type'] ?? 'not_duplicate';
-        [$a, $b] = \App\Models\CustomerRelationship::pairKey($data['customer_a'], $data['customer_b']);
+        [$a, $b] = CustomerRelationship::pairKey($data['customer_a'], $data['customer_b']);
         // updateOrCreate: ein bereits als "verwandt" markiertes Paar kann so
         // nachtraeglich praeziser als Ehepaar/Familie gekennzeichnet werden.
-        \App\Models\CustomerRelationship::updateOrCreate(
+        CustomerRelationship::updateOrCreate(
             ['customer_a_id' => $a, 'customer_b_id' => $b],
             ['type' => $type, 'note' => $data['note'] ?? null, 'created_by' => auth()->id()]
         );
-        app(\App\Services\Matching\DuplicateDetectionService::class)->forgetCount();
+        app(DuplicateDetectionService::class)->forgetCount();
 
-        $label = \App\Models\CustomerRelationship::typeLabel($type);
+        $label = CustomerRelationship::typeLabel($type);
         $msg = $type === 'not_duplicate'
             ? 'Als „kein Duplikat" markiert – das Paar erscheint jetzt unter „Verwandte Kunden".'
-            : 'Als „' . $label . '" verknüpft – beide Kunden bleiben mit allen Verträgen erhalten und erscheinen unter „Verwandte Kunden".';
+            : 'Als „'.$label.'" verknüpft – beide Kunden bleiben mit allen Verträgen erhalten und erscheinen unter „Verwandte Kunden".';
 
         return back()->with('success', $msg);
     }
@@ -1794,9 +1832,9 @@ class AdminController extends Controller
      */
     public function dismissBulk(Request $request) {
         $data = $request->validate([
-            'pairs'   => 'required|array|min:1|max:500',
+            'pairs' => 'required|array|min:1|max:500',
             'pairs.*' => 'string',
-            'type'    => 'nullable|in:' . implode(',', \App\Models\CustomerRelationship::TYPES),
+            'type' => 'nullable|in:'.implode(',', CustomerRelationship::TYPES),
         ]);
         $type = $data['type'] ?? 'not_duplicate';
         [$edges, $ids] = $this->pairsToEdges($data['pairs']);
@@ -1806,15 +1844,15 @@ class AdminController extends Controller
         foreach ($ids as $id) {
             $this->authorizeCustomerAccess($id);
         }
-        $existing = \App\Models\Customer::whereIn('id', $ids)->pluck('id')->map(fn ($i) => (string) $i)->all();
+        $existing = Customer::whereIn('id', $ids)->pluck('id')->map(fn ($i) => (string) $i)->all();
 
         $marked = 0;
         foreach ($edges as [$a, $b]) {
-            if (!in_array($a, $existing, true) || !in_array($b, $existing, true)) {
+            if (! in_array($a, $existing, true) || ! in_array($b, $existing, true)) {
                 continue;
             }
-            [$x, $y] = \App\Models\CustomerRelationship::pairKey($a, $b);
-            $rel = \App\Models\CustomerRelationship::updateOrCreate(
+            [$x, $y] = CustomerRelationship::pairKey($a, $b);
+            $rel = CustomerRelationship::updateOrCreate(
                 ['customer_a_id' => $x, 'customer_b_id' => $y],
                 ['type' => $type, 'created_by' => auth()->id()]
             );
@@ -1822,12 +1860,12 @@ class AdminController extends Controller
                 $marked++;
             }
         }
-        app(\App\Services\Matching\DuplicateDetectionService::class)->forgetCount();
+        app(DuplicateDetectionService::class)->forgetCount();
 
-        $label = \App\Models\CustomerRelationship::typeLabel($type);
+        $label = CustomerRelationship::typeLabel($type);
         $msg = $type === 'not_duplicate'
-            ? $marked . ' Paar(e) als „kein Duplikat" markiert – jetzt unter „Verwandte Kunden".'
-            : $marked . ' Paar(e) als „' . $label . '" verknüpft – beide Kunden bleiben erhalten, jetzt unter „Verwandte Kunden".';
+            ? $marked.' Paar(e) als „kein Duplikat" markiert – jetzt unter „Verwandte Kunden".'
+            : $marked.' Paar(e) als „'.$label.'" verknüpft – beide Kunden bleiben erhalten, jetzt unter „Verwandte Kunden".';
 
         return redirect()->route('admin.customers.duplicates')->with('success', $msg);
     }
@@ -1836,9 +1874,9 @@ class AdminController extends Controller
      * "Verwandte Kunden": alle als Beziehung markierten Paare (kein Duplikat).
      * Nur Paare, deren BEIDE Kunden im Portfolio des Mitarbeiters liegen.
      */
-    public function relationships(\App\Services\Matching\DuplicateDetectionService $detection) {
+    public function relationships(DuplicateDetectionService $detection) {
         $ids = $this->visibleCustomerIds();
-        $query = \App\Models\CustomerRelationship::with(['customerA.user', 'customerB.user', 'customerA.contracts:id,customer_id,contract_number', 'customerB.contracts:id,customer_id,contract_number'])
+        $query = CustomerRelationship::with(['customerA.user', 'customerB.user', 'customerA.contracts:id,customer_id,contract_number', 'customerB.contracts:id,customer_id,contract_number'])
             ->latest();
         if ($ids !== null) {
             $query->whereIn('customer_a_id', $ids)->whereIn('customer_b_id', $ids);
@@ -1855,11 +1893,11 @@ class AdminController extends Controller
 
     /** Beziehung entfernen -> Paar kann wieder als moegliche Dublette erscheinen. */
     public function relationshipDelete($id) {
-        $rel = \App\Models\CustomerRelationship::findOrFail($id);
+        $rel = CustomerRelationship::findOrFail($id);
         $this->authorizeCustomerAccess($rel->customer_a_id);
         $this->authorizeCustomerAccess($rel->customer_b_id);
         $rel->delete();
-        app(\App\Services\Matching\DuplicateDetectionService::class)->forgetCount();
+        app(DuplicateDetectionService::class)->forgetCount();
 
         return back()->with('success', 'Beziehung entfernt – das Paar kann wieder als mögliche Dublette erscheinen.');
     }
@@ -1870,14 +1908,14 @@ class AdminController extends Controller
      */
     public function relationshipSetType(Request $request, $id) {
         $data = $request->validate([
-            'type' => 'required|in:' . implode(',', \App\Models\CustomerRelationship::TYPES),
+            'type' => 'required|in:'.implode(',', CustomerRelationship::TYPES),
         ]);
-        $rel = \App\Models\CustomerRelationship::findOrFail($id);
+        $rel = CustomerRelationship::findOrFail($id);
         $this->authorizeCustomerAccess($rel->customer_a_id);
         $this->authorizeCustomerAccess($rel->customer_b_id);
         $rel->update(['type' => $data['type']]);
 
-        return back()->with('success', 'Beziehung als „' . \App\Models\CustomerRelationship::typeLabel($data['type']) . '" gekennzeichnet.');
+        return back()->with('success', 'Beziehung als „'.CustomerRelationship::typeLabel($data['type']).'" gekennzeichnet.');
     }
 
     /** Deckel gegen versehentliche Massen-Merges pro manueller Aktion. */
@@ -1892,9 +1930,9 @@ class AdminController extends Controller
      * ueber eine Union-Find-Gruppierung zu EINEM Cluster zusammengefasst und
      * in den jeweils aeltesten Datensatz vereint.
      */
-    public function duplicatesMerge(Request $request, \App\Services\Matching\CustomerMergeService $merge) {
+    public function duplicatesMerge(Request $request, CustomerMergeService $merge) {
         $data = $request->validate([
-            'pairs'   => 'required|array|min:1|max:500',
+            'pairs' => 'required|array|min:1|max:500',
             'pairs.*' => 'string',
         ]);
 
@@ -1909,7 +1947,7 @@ class AdminController extends Controller
         $clusters = $this->clusterPairs($edges, $ids);
         $toRemove = array_sum(array_map(fn ($c) => max(0, count($c) - 1), $clusters));
         if ($toRemove > self::MANUAL_MERGE_CAP) {
-            return back()->with('error', 'Zu viele auf einmal: höchstens ' . self::MANUAL_MERGE_CAP . ' Zusammenführungen pro Aktion. Bitte Auswahl verkleinern oder „Alle sicheren zusammenführen" nutzen.');
+            return back()->with('error', 'Zu viele auf einmal: höchstens '.self::MANUAL_MERGE_CAP.' Zusammenführungen pro Aktion. Bitte Auswahl verkleinern oder „Alle sicheren zusammenführen" nutzen.');
         }
 
         $res = $this->mergeClusters($clusters, $merge);
@@ -1923,8 +1961,8 @@ class AdminController extends Controller
      * vorbehalten. Aus Zeitgruenden pro Lauf gedeckelt - der Hinweis fordert
      * bei Bedarf zum erneuten Klick auf, bis alles bereinigt ist.
      */
-    public function duplicatesMergeAll(\App\Services\Matching\DuplicateDetectionService $detection, \App\Services\Matching\CustomerMergeService $merge) {
-        $min = \App\Services\Matching\DuplicateDetectionService::AUTO_MERGE_MIN_SCORE;
+    public function duplicatesMergeAll(DuplicateDetectionService $detection, CustomerMergeService $merge) {
+        $min = DuplicateDetectionService::AUTO_MERGE_MIN_SCORE;
 
         // Frischer Scan (nie auf veraltete Seiten-Daten verlassen).
         $result = $detection->scan($this->visibleCustomerIds());
@@ -1935,13 +1973,13 @@ class AdminController extends Controller
         // bleiben der manuellen Einzelpruefung vorbehalten.
         $strong = array_values(array_filter(
             $result['pairs'],
-            fn ($p) => $p['score'] >= $min && !$detection->hasIdentityConflict($p['primary'], $p['duplicate'])
+            fn ($p) => $p['score'] >= $min && ! $detection->hasIdentityConflict($p['primary'], $p['duplicate'])
         ));
 
         if ($strong === []) {
             return redirect()->route('admin.customers.duplicates')
                 ->with('success', "Keine sicheren Treffer (>= {$min} %) zum automatischen Zusammenführen gefunden. "
-                    . 'Verdachtsfaelle mit abweichendem Geburtsdatum/Namen bitte einzeln pruefen.');
+                    .'Verdachtsfaelle mit abweichendem Geburtsdatum/Namen bitte einzeln pruefen.');
         }
 
         $edges = [];
@@ -2042,9 +2080,9 @@ class AdminController extends Controller
      * uebersprungen statt abzubrechen.
      * @return array{merged: int, skipped: int}
      */
-    private function mergeClusters(array $clusters, \App\Services\Matching\CustomerMergeService $merge): array {
+    private function mergeClusters(array $clusters, CustomerMergeService $merge): array {
         $allIds = array_merge([], ...array_map('array_values', $clusters));
-        $customers = \App\Models\Customer::with('user')->whereIn('id', $allIds)->get()->keyBy('id');
+        $customers = Customer::with('user')->whereIn('id', $allIds)->get()->keyBy('id');
 
         $merged = 0;
         $skipped = 0;
@@ -2056,9 +2094,9 @@ class AdminController extends Controller
             usort($present, fn ($x, $y) => $customers[$x]->created_at <=> $customers[$y]->created_at);
             $primaryId = array_shift($present);
             foreach ($present as $dupId) {
-                $primary = \App\Models\Customer::with('user')->find($primaryId);
-                $dup = \App\Models\Customer::with('user')->find($dupId);
-                if (!$primary || !$dup || (string) $primary->id === (string) $dup->id) {
+                $primary = Customer::with('user')->find($primaryId);
+                $dup = Customer::with('user')->find($dupId);
+                if (! $primary || ! $dup || (string) $primary->id === (string) $dup->id) {
                     $skipped++;
                     continue;
                 }
@@ -2081,9 +2119,9 @@ class AdminController extends Controller
         return $message;
     }
 
-    public function mergeForm($id, \App\Services\Matching\CustomerMergeService $merge, \App\Services\Matching\CustomerMatchingService $matcher) {
+    public function mergeForm($id, CustomerMergeService $merge, CustomerMatchingService $matcher) {
         $this->authorizeCustomerAccess($id);
-        $customer = \App\Models\Customer::with(['user', 'addresses'])->findOrFail($id);
+        $customer = Customer::with(['user', 'addresses'])->findOrFail($id);
         // Die Auswahlliste laedt NICHT mehr den gesamten Kundenbestand in ein
         // <select>: das Formular sucht ueber admin.customers.search. Der
         // Vorschlag unten wird weiterhin serverseitig ermittelt - genau der
@@ -2097,12 +2135,12 @@ class AdminController extends Controller
         $preview = [];
         if ($dupId = request('duplicate')) {
             // Nur innerhalb des eigenen Portfolios und nie der Kunde selbst.
-            $suggested = $this->scopeCustomers(\App\Models\Customer::with('user')->where('id', '!=', $id))
+            $suggested = $this->scopeCustomers(Customer::with('user')->where('id', '!=', $id))
                 ->where('customers.id', $dupId)->first();
         } else {
             $match = $matcher->matchExisting($customer);
-            if ($match->hasMatch() && $match->score >= \App\Services\Matching\DuplicateDetectionService::DEFAULT_THRESHOLD) {
-                $suggested = $this->scopeCustomers(\App\Models\Customer::with('user')->where('id', '!=', $id))
+            if ($match->hasMatch() && $match->score >= DuplicateDetectionService::DEFAULT_THRESHOLD) {
+                $suggested = $this->scopeCustomers(Customer::with('user')->where('id', '!=', $id))
                     ->where('customers.id', (string) $match->customer->id)->first();
             }
         }
@@ -2113,12 +2151,12 @@ class AdminController extends Controller
         return view('admin.customer_merge', compact('customer', 'suggested', 'preview'));
     }
 
-    public function mergeCustomers(Request $request, $id, \App\Services\Matching\CustomerMergeService $merge) {
+    public function mergeCustomers(Request $request, $id, CustomerMergeService $merge) {
         $this->authorizeCustomerAccess($id);
         $request->validate(['duplicate_id' => 'required|different:id']);
         $this->authorizeCustomerAccess($request->duplicate_id);
-        $primary = \App\Models\Customer::with('user')->findOrFail($id);
-        $dup = \App\Models\Customer::with('user')->findOrFail($request->duplicate_id);
+        $primary = Customer::with('user')->findOrFail($id);
+        $dup = Customer::with('user')->findOrFail($request->duplicate_id);
         if ((string) $primary->id === (string) $dup->id) return back()->with('success', 'Gleicher Kunde gewählt.');
 
         $moved = $merge->merge($primary, $dup, auth()->id());
@@ -2134,19 +2172,19 @@ class AdminController extends Controller
             'employee_id' => 'required|exists:users,id',
             'reason' => 'required|string|max:500',
         ]);
-        $employee = \App\Models\User::whereIn('role', ['employee', 'manager', 'support'])->findOrFail($request->employee_id);
+        $employee = User::whereIn('role', ['employee', 'manager', 'support'])->findOrFail($request->employee_id);
         $count = 0;
-        \Illuminate\Support\Facades\DB::transaction(function () use ($request, $employee, &$count) {
+        DB::transaction(function () use ($request, $employee, &$count) {
             foreach ($request->customer_ids as $cid) {
                 $customer = Customer::find($cid);
-                if (!$customer) continue;
+                if (! $customer) continue;
                 $previous = $customer->betreuer()->pluck('users.name')->implode(', ');
                 if ($request->boolean('replace_existing')) {
                     $customer->betreuer()->sync([$employee->id]);
                 } else {
                     $customer->betreuer()->syncWithoutDetaching([$employee->id]);
                 }
-                \App\Models\ActivityLog::create([
+                ActivityLog::create([
                     'user_id' => auth()->id(),
                     'action' => 'customer_reassigned',
                     'entity_type' => 'customer',
@@ -2162,7 +2200,7 @@ class AdminController extends Controller
                 $count++;
             }
         });
-        return back()->with('success', $count . ' Kunden wurden ' . $employee->name . ' zugewiesen.');
+        return back()->with('success', $count.' Kunden wurden '.$employee->name.' zugewiesen.');
     }
 
     /**
@@ -2182,18 +2220,18 @@ class AdminController extends Controller
         $customer = Customer::with(['user', 'betreuer'])->findOrFail($id);
 
         // Auswahlbare Mitarbeiter = exakt die Liste im Popover.
-        $selectable = \App\Models\User::whereIn('role', ['employee', 'manager', 'support'])
-            ->pluck('id')->map(fn($i) => (int) $i)->all();
-        $chosen = \App\Models\User::whereIn('id', $request->input('betreuer', []))
-            ->whereIn('id', $selectable)->pluck('id')->map(fn($i) => (int) $i)->all();
-        $keep = $customer->betreuer->pluck('id')->map(fn($i) => (int) $i)
-            ->reject(fn($i) => in_array($i, $selectable, true))->all();
+        $selectable = User::whereIn('role', ['employee', 'manager', 'support'])
+            ->pluck('id')->map(fn ($i) => (int) $i)->all();
+        $chosen = User::whereIn('id', $request->input('betreuer', []))
+            ->whereIn('id', $selectable)->pluck('id')->map(fn ($i) => (int) $i)->all();
+        $keep = $customer->betreuer->pluck('id')->map(fn ($i) => (int) $i)
+            ->reject(fn ($i) => in_array($i, $selectable, true))->all();
 
         $previous = $customer->betreuer->pluck('name')->implode(', ');
         $customer->betreuer()->sync(array_values(array_unique(array_merge($chosen, $keep))));
 
-        $names = \App\Models\User::whereIn('id', $chosen)->orderBy('name')->pluck('name')->implode(', ');
-        \App\Models\ActivityLog::record('customer_reassigned', 'customer', $customer->id, [
+        $names = User::whereIn('id', $chosen)->orderBy('name')->pluck('name')->implode(', ');
+        ActivityLog::record('customer_reassigned', 'customer', $customer->id, [
             'customer' => $customer->user?->name,
             'from' => $previous !== '' ? $previous : 'niemand',
             'to' => $names !== '' ? $names : 'niemand',
@@ -2202,14 +2240,14 @@ class AdminController extends Controller
         ]);
 
         return back()->with('success', $names !== ''
-            ? 'Betreuer gesetzt: ' . $names . '.'
+            ? 'Betreuer gesetzt: '.$names.'.'
             : 'Betreuer entfernt - der Kunde ist jetzt offen.');
     }
 
     public function destroyCustomer($id) {
         $this->authorizeCustomerAccess($id);
-        $customer = \App\Models\Customer::findOrFail($id);
-        app(\App\Services\CustomerDeletionService::class)->delete($customer, auth()->id());
+        $customer = Customer::findOrFail($id);
+        app(CustomerDeletionService::class)->delete($customer, auth()->id());
         return redirect()->route('admin.customers')->with('success', 'Kunde gelöscht.');
     }
 
@@ -2217,7 +2255,7 @@ class AdminController extends Controller
      * Mehrere Kunden auf einmal löschen (nur admin, Routen-Middleware).
      * Nutzt exakt dieselbe DSGVO-Löschlogik wie die Einzellöschung.
      */
-    public function bulkDestroyCustomers(\Illuminate\Http\Request $request) {
+    public function bulkDestroyCustomers(Request $request) {
         // Auswahl kommt aus dem Formular als EIN kommagetrenntes Feld (erlaubt
         // sehr große Löschmengen ohne max_input_vars-Limit); direkte API-/Test-
         // Aufrufe dürfen weiterhin ein Array senden.
@@ -2237,66 +2275,66 @@ class AdminController extends Controller
             'customer_ids.max' => 'Es können höchstens 30 Kunden auf einmal gelöscht werden.',
         ]);
 
-        $service = app(\App\Services\CustomerDeletionService::class);
+        $service = app(CustomerDeletionService::class);
         $deleted = 0;
-        foreach (\App\Models\Customer::with('user')->whereIn('id', $data['customer_ids'])->get() as $customer) {
+        foreach (Customer::with('user')->whereIn('id', $data['customer_ids'])->get() as $customer) {
             $service->delete($customer, auth()->id());
             $deleted++;
         }
 
         return redirect()->route('admin.customers')
-            ->with('success', $deleted . ' Kunde(n) endgültig gelöscht.');
+            ->with('success', $deleted.' Kunde(n) endgültig gelöscht.');
     }
 
     public function customerTimeline($id) {
         $this->authorizeCustomerAccess($id);
-        $customer = \App\Models\Customer::with(['user','timeline.user'])->findOrFail($id);
+        $customer = Customer::with(['user', 'timeline.user'])->findOrFail($id);
         return view('admin.customer_timeline', compact('customer'));
     }
 
-    public function globalSearch(\Illuminate\Http\Request $request) {
+    public function globalSearch(Request $request) {
         $q = $request->get('q', '');
         if (strlen($q) < 2) return response()->json([]);
         $vids = $this->visibleCustomerIds();
-        $customers = \App\Models\Customer::with('user')
-            ->when($vids !== null, fn($qq) => $qq->whereIn('customers.id', $vids))
+        $customers = Customer::with('user')
+            ->when($vids !== null, fn ($qq) => $qq->whereIn('customers.id', $vids))
             ->search($q)
-            ->limit(5)->get()->map(fn($c) => [
+            ->limit(5)->get()->map(fn ($c) => [
                 'type' => 'customer',
                 'icon' => '👤',
                 'title' => $c->user?->name,
                 'sub' => $c->customer_number,
                 'url' => route('admin.customer', $c->id),
             ]);
-        $contracts = \App\Models\Contract::with('customer.user')
-            ->when($vids !== null, fn($qq) => $qq->whereIn('customer_id', $vids))
-            ->where(function($query) use ($q) {
-                $query->where('contract_number','like',"%$q%")
-                      ->orWhere('reference_number','like',"%$q%")
-                      ->orWhere('internal_contract_number','like',"%$q%")
+        $contracts = Contract::with('customer.user')
+            ->when($vids !== null, fn ($qq) => $qq->whereIn('customer_id', $vids))
+            ->where(function ($query) use ($q) {
+                $query->where('contract_number', 'like', "%$q%")
+                    ->orWhere('reference_number', 'like', "%$q%")
+                    ->orWhere('internal_contract_number', 'like', "%$q%")
                       // Vermittler-ID aus der Abrechnung: oft die einzige
                       // Nummer, die bei einer Rueckfrage vorliegt.
-                      ->orWhere('vermittler_id','like',"%$q%")
-                      ->orWhere('insurer','like',"%$q%");
+                    ->orWhere('vermittler_id', 'like', "%$q%")
+                    ->orWhere('insurer', 'like', "%$q%");
             })
-            ->limit(3)->get()->map(fn($c) => [
+            ->limit(3)->get()->map(fn ($c) => [
                 'type' => 'contract',
                 'icon' => '📄',
                 'title' => $c->insurer,
                 'sub' => $c->contract_number,
                 'url' => route('admin.customer', $c->customer_id),
             ]);
-        $tickets = \App\Models\Ticket::with('customer.user')
-            ->when($vids !== null, fn($qq) => $qq->whereIn('customer_id', $vids))
-            ->where(function($query) use ($q) {
-                $query->where('subject','like',"%$q%")
-                      ->orWhere('ticket_number','like',"%$q%");
+        $tickets = Ticket::with('customer.user')
+            ->when($vids !== null, fn ($qq) => $qq->whereIn('customer_id', $vids))
+            ->where(function ($query) use ($q) {
+                $query->where('subject', 'like', "%$q%")
+                    ->orWhere('ticket_number', 'like', "%$q%");
             })
-            ->limit(3)->get()->map(fn($t) => [
+            ->limit(3)->get()->map(fn ($t) => [
                 'type' => 'ticket',
                 'icon' => '💬',
                 'title' => $t->subject,
-                'sub' => trim(($t->ticket_number ? $t->ticket_number . ' · ' : '') . ($t->customer?->user?->name ?? '')),
+                'sub' => trim(($t->ticket_number ? $t->ticket_number.' · ' : '').($t->customer?->user?->name ?? '')),
                 'url' => route('admin.ticket', $t->id),
             ]);
         return response()->json(array_merge(

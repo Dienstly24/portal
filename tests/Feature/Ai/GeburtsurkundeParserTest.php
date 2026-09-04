@@ -41,7 +41,7 @@ class GeburtsurkundeParserTest extends TestCase
 
     public function test_parses_child_and_parents(): void
     {
-        $r = (new GeburtsurkundeParser())->parse($this->urkundeOcr());
+        $r = (new GeburtsurkundeParser)->parse($this->urkundeOcr());
 
         $this->assertNotNull($r);
         $this->assertSame('geburtsurkunde', $r['type']);
@@ -73,6 +73,6 @@ class GeburtsurkundeParserTest extends TestCase
 
     public function test_ignores_unrelated_documents(): void
     {
-        $this->assertNull((new GeburtsurkundeParser())->parse('Irgendein anderes Dokument'));
+        $this->assertNull((new GeburtsurkundeParser)->parse('Irgendein anderes Dokument'));
     }
 }

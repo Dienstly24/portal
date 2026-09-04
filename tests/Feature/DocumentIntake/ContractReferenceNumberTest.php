@@ -28,7 +28,7 @@ class ContractReferenceNumberTest extends TestCase
 
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(Str::random(6)),
+            'customer_number' => 'C-'.strtoupper(Str::random(6)),
         ]);
     }
 
@@ -37,8 +37,8 @@ class ContractReferenceNumberTest extends TestCase
         return Document::create([
             'customer_id' => null,
             'category' => 'contract',
-            'file_name' => 'dok_' . Str::random(4) . '.pdf',
-            'file_path' => 'documents/eingang/' . Str::random(8) . '.pdf',
+            'file_name' => 'dok_'.Str::random(4).'.pdf',
+            'file_path' => 'documents/eingang/'.Str::random(8).'.pdf',
             'disk' => 'local',
             'ai_status' => 'done',
             'ai_type' => $type,

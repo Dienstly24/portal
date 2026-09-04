@@ -1,10 +1,12 @@
 <?php
+
 namespace App\Mail;
 
 use App\Models\Customer;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -42,7 +44,7 @@ class DirectEmailMail extends Mailable implements ShouldQueue
     public function attachments(): array
     {
         return array_map(
-            fn($f) => \Illuminate\Mail\Mailables\Attachment::fromData(fn() => $f['data'], $f['name'])
+            fn ($f) => Attachment::fromData(fn () => $f['data'], $f['name'])
                 ->withMime($f['mime']),
             $this->fileAttachments
         );

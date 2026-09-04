@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\CommissionImport;
 
 /**
@@ -35,7 +36,7 @@ class OleCompoundFile
 
     public function __construct(string $data)
     {
-        if (!str_starts_with($data, self::SIGNATURE)) {
+        if (! str_starts_with($data, self::SIGNATURE)) {
             throw new \RuntimeException('Die Datei ist keine gültige .xls-Datei (falsche Signatur).');
         }
         $this->data = $data;
@@ -70,8 +71,8 @@ class OleCompoundFile
 
     public function stream(string $name): string
     {
-        if (!isset($this->entries[$name])) {
-            throw new \RuntimeException('Der Datenstrom "' . $name . '" fehlt in der Datei.');
+        if (! isset($this->entries[$name])) {
+            throw new \RuntimeException('Der Datenstrom "'.$name.'" fehlt in der Datei.');
         }
         $entry = $this->entries[$name];
         return $entry['mini']

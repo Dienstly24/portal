@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\ActivityLog;
 use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\CustomerNote;
@@ -38,9 +39,9 @@ class CustomerBulkDeleteTest extends TestCase
     private function customerWithRelations(string $email): Customer
     {
         $user = User::factory()->create(['role' => 'customer', 'email' => $email]);
-        $customer = Customer::create(['user_id' => $user->id, 'customer_number' => 'K-' . uniqid()]);
+        $customer = Customer::create(['user_id' => $user->id, 'customer_number' => 'K-'.uniqid()]);
 
-        Contract::create(['customer_id' => $customer->id, 'contract_number' => 'V-' . uniqid(), 'type' => 'kfz', 'insurer' => 'A', 'status' => 'active']);
+        Contract::create(['customer_id' => $customer->id, 'contract_number' => 'V-'.uniqid(), 'type' => 'kfz', 'insurer' => 'A', 'status' => 'active']);
         Ticket::forceCreate(['id' => (string) Str::uuid(), 'customer_id' => $customer->id, 'type' => 'other', 'status' => 'open', 'priority' => 'mittel', 'subject' => 'T', 'description' => 'x']);
         CustomerNote::create(['customer_id' => $customer->id, 'created_by' => $this->admin->id, 'note' => 'N']);
         Task::forceCreate(['id' => (string) Str::uuid(), 'assigned_to' => $this->admin->id, 'created_by' => $this->admin->id, 'customer_id' => $customer->id, 'title' => 'A', 'type' => 'email', 'status' => 'open', 'priority' => 'medium']);
@@ -52,7 +53,7 @@ class CustomerBulkDeleteTest extends TestCase
             ['email_address' => 'info@dienstly24.de'],
             ['name' => 'I', 'provider' => 'imap', 'folders' => ['INBOX'], 'is_active' => true]
         );
-        $mail = EmailMessage::create(['email_account_id' => $account->id, 'message_uid' => 'INBOX:' . uniqid(), 'from_address' => $email, 'subject' => 'M', 'match_status' => 'confirmed', 'customer_id' => $customer->id, 'processed_at' => now()]);
+        $mail = EmailMessage::create(['email_account_id' => $account->id, 'message_uid' => 'INBOX:'.uniqid(), 'from_address' => $email, 'subject' => 'M', 'match_status' => 'confirmed', 'customer_id' => $customer->id, 'processed_at' => now()]);
         app(EmailAttachmentService::class)->storeFiles($mail, [['filename' => 'a.pdf', 'mime' => 'application/pdf', 'content' => 'x']]);
 
         return $customer;
@@ -89,7 +90,7 @@ class CustomerBulkDeleteTest extends TestCase
         $this->assertDatabaseHas('contracts', ['customer_id' => $keep->id]);
 
         // Löschung ist im Aktivitätslog nachvollziehbar
-        $this->assertSame(2, \App\Models\ActivityLog::where('action', 'customer_deleted')->count());
+        $this->assertSame(2, ActivityLog::where('action', 'customer_deleted')->count());
     }
 
     public function test_single_delete_still_works_for_admin(): void
@@ -151,7 +152,7 @@ class CustomerBulkDeleteTest extends TestCase
     public function test_bulk_delete_rejects_more_than_30_at_once(): void
     {
         // 31 gültige UUIDs -> muss am Limit scheitern, nichts wird gelöscht.
-        $ids = collect(range(1, 31))->map(fn () => (string) \Illuminate\Support\Str::uuid())->all();
+        $ids = collect(range(1, 31))->map(fn () => (string) Str::uuid())->all();
 
         $this->actingAs($this->admin)->post(route('admin.customers.bulk-delete'), [
             'customer_ids' => $ids,
@@ -165,7 +166,7 @@ class CustomerBulkDeleteTest extends TestCase
         $this->actingAs($this->admin)->post(route('admin.customers.bulk-delete'), [
             'customer_ids' => $customers->pluck('id')->map(fn ($id) => (string) $id)->all(),
         ])->assertRedirect(route('admin.customers'))
-          ->assertSessionHas('success', '30 Kunde(n) endgültig gelöscht.');
+            ->assertSessionHas('success', '30 Kunde(n) endgültig gelöscht.');
 
         $this->assertSame(0, Customer::count());
     }
@@ -290,9 +291,9 @@ class CustomerBulkDeleteTest extends TestCase
 
         // So sendet das Formular jetzt: ein einziges kommagetrenntes Feld
         $this->actingAs($this->admin)->post(route('admin.customers.bulk-delete'), [
-            'customer_ids' => $c1->id . ',' . $c2->id,
+            'customer_ids' => $c1->id.','.$c2->id,
         ])->assertRedirect(route('admin.customers'))
-          ->assertSessionHas('success', '2 Kunde(n) endgültig gelöscht.');
+            ->assertSessionHas('success', '2 Kunde(n) endgültig gelöscht.');
 
         $this->assertDatabaseMissing('customers', ['id' => $c1->id]);
         $this->assertDatabaseMissing('customers', ['id' => $c2->id]);

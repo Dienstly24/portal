@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant;
 
 use App\Models\Customer;
@@ -36,7 +37,7 @@ class DocumentStatusReader
             'status' => $r->statusLabel(),
             'frist' => $r->deadline?->format('d.m.Y'),
             'vertrag' => $r->contract
-                ? trim($r->contract->typeLabel() . ' ' . ($r->contract->insurer ?? ''))
+                ? trim($r->contract->typeLabel().' '.($r->contract->insurer ?? ''))
                 : null,
             'grund_ablehnung' => $r->status === 'rejected' ? $r->rejection_note : null,
             'eingegangen' => $r->uploaded_at?->lokal()->format('d.m.Y'),

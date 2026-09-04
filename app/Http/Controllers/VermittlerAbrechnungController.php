@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
@@ -6,6 +7,8 @@ use App\Models\Contract;
 use App\Models\Document;
 use App\Models\VermittlerImport;
 use App\Models\VermittlerSettlement;
+use App\Services\CommissionImport\CommissionSourceProfile;
+use App\Services\CommissionImport\TableReader;
 use App\Services\Vermittler\VermittlerAbrechnungImporter;
 use App\Services\Vermittler\VermittlerLinkService;
 use App\Services\Vermittler\VermittlerListeReader;
@@ -45,10 +48,10 @@ class VermittlerAbrechnungController extends Controller
         // Datei zwischenspeichern: der Import liest sie mehrfach (Hash +
         // Inhalt) und ein temporaerer Upload ist danach nicht mehr da.
         $dir = storage_path('app/private/vermittler-imports');
-        if (!is_dir($dir)) {
+        if (! is_dir($dir)) {
             mkdir($dir, 0755, true);
         }
-        $stored = $dir . '/' . Str::uuid() . '.csv';
+        $stored = $dir.'/'.Str::uuid().'.csv';
         copy($request->file('csv_file')->getPathname(), $stored);
 
         try {
@@ -69,7 +72,7 @@ class VermittlerAbrechnungController extends Controller
             $hinweis = $this->wrongImporterHint($stored);
             @unlink($stored);
 
-            return back()->with('error', 'Die Datei konnte nicht gelesen werden: ' . $e->getMessage() . $hinweis);
+            return back()->with('error', 'Die Datei konnte nicht gelesen werden: '.$e->getMessage().$hinweis);
         }
 
         // Die Originaldatei wird bewusst NICHT dauerhaft aufbewahrt - die
@@ -85,7 +88,7 @@ class VermittlerAbrechnungController extends Controller
         ]);
 
         return redirect()->route('admin.vermittler.show', $import->id)
-            ->with('success', 'Import abgeschlossen: ' . $import->rows_total . ' Datensätze gelesen.');
+            ->with('success', 'Import abgeschlossen: '.$import->rows_total.' Datensätze gelesen.');
     }
 
     /**
@@ -115,13 +118,13 @@ class VermittlerAbrechnungController extends Controller
                 auth()->id(),
             );
         } catch (\Throwable $e) {
-            return back()->with('error', 'Die Vorgangsliste konnte nicht gelesen werden: ' . $e->getMessage());
+            return back()->with('error', 'Die Vorgangsliste konnte nicht gelesen werden: '.$e->getMessage());
         }
 
         if ($import->rows_total === 0) {
             $import->delete();
             return back()->with('error', 'In der Datei wurde kein einziger Vorgang erkannt. '
-                . 'Erwartet wird die Liste mit Spalten Datum / Produkt / ID / Status und der Referenznummer je Vorgang.');
+                .'Erwartet wird die Liste mit Spalten Datum / Produkt / ID / Status und der Referenznummer je Vorgang.');
         }
 
         ActivityLog::record('vermittler_vorgangsliste_import', 'vermittler_import', $import->id, [
@@ -131,8 +134,8 @@ class VermittlerAbrechnungController extends Controller
         ]);
 
         return redirect()->route('admin.vermittler.show', $import->id)
-            ->with('success', 'Vorgangsliste gelesen: ' . $import->rows_total . ' Vorgänge, '
-                . $import->rows_new_link . ' neu mit einem Vertrag verknüpft.');
+            ->with('success', 'Vorgangsliste gelesen: '.$import->rows_total.' Vorgänge, '
+                .$import->rows_new_link.' neu mit einem Vertrag verknüpft.');
     }
 
     /**
@@ -157,7 +160,7 @@ class VermittlerAbrechnungController extends Controller
         }
 
         $disk = Storage::disk($document->disk ?: 'local');
-        if (!$disk->exists($document->file_path)) {
+        if (! $disk->exists($document->file_path)) {
             return back()->with('error', 'Die Datei ist nicht mehr vorhanden.');
         }
 
@@ -165,8 +168,8 @@ class VermittlerAbrechnungController extends Controller
             $parsed = $reader->rowsFromBinary($disk->get($document->file_path), '', (string) $document->file_name);
             if ($parsed['rows'] === []) {
                 return back()->with('error', 'In dieser Datei wurde kein einziger Vorgang erkannt. '
-                    . 'Erwartet wird die Liste mit Datum, Produkt, ID und Status sowie der Referenznummer je Vorgang – '
-                    . 'am zuverlässigsten als CSV-Export aus dem Vermittler-Portal.');
+                    .'Erwartet wird die Liste mit Datum, Produkt, ID und Status sowie der Referenznummer je Vorgang – '
+                    .'am zuverlässigsten als CSV-Export aus dem Vermittler-Portal.');
             }
             $import = $importer->importRows(
                 $parsed['rows'],
@@ -176,7 +179,7 @@ class VermittlerAbrechnungController extends Controller
                 auth()->id(),
             );
         } catch (\Throwable $e) {
-            return back()->with('error', 'Die Vorgangsliste konnte nicht gelesen werden: ' . $e->getMessage());
+            return back()->with('error', 'Die Vorgangsliste konnte nicht gelesen werden: '.$e->getMessage());
         }
 
         // Das Dokument bleibt erhalten (nie automatisch loeschen), verlaesst
@@ -191,8 +194,8 @@ class VermittlerAbrechnungController extends Controller
         ]);
 
         return redirect()->route('admin.vermittler.show', $import->id)
-            ->with('success', 'Vorgangsliste gelesen: ' . $import->rows_total . ' Vorgänge, '
-                . $import->rows_new_link . ' neu mit einem Vertrag verknüpft.');
+            ->with('success', 'Vorgangsliste gelesen: '.$import->rows_total.' Vorgänge, '
+                .$import->rows_new_link.' neu mit einem Vertrag verknüpft.');
     }
 
     /** Ergebnis eines Laufs: Zusammenfassung + Zeilen. */
@@ -248,7 +251,7 @@ class VermittlerAbrechnungController extends Controller
             ->limit(8)->get()
             ->map(fn ($c) => [
                 'id' => $c->id,
-                'label' => trim($c->insurer . ' · ' . $c->typeLabel()),
+                'label' => trim($c->insurer.' · '.$c->typeLabel()),
                 'customer' => $c->customer?->user?->name,
                 'reference' => $c->reference_number,
                 'vermittler_id' => $c->vermittler_id,
@@ -277,7 +280,7 @@ class VermittlerAbrechnungController extends Controller
             'reference_number' => $contract->reference_number,
         ]);
 
-        return back()->with('success', 'Datensatz ' . $settlement->vermittler_id . ' wurde dem Vertrag zugeordnet.');
+        return back()->with('success', 'Datensatz '.$settlement->vermittler_id.' wurde dem Vertrag zugeordnet.');
     }
 
     /** Auswertung: Produkte, Kunden und die Bestaetigungsquote des Vermittlers. */
@@ -302,24 +305,24 @@ class VermittlerAbrechnungController extends Controller
     private function wrongImporterHint(string $path): string
     {
         try {
-            $table = app(\App\Services\CommissionImport\TableReader::class)->read($path);
-            $provider = \App\Services\CommissionImport\CommissionSourceProfile::detect($table->header);
+            $table = app(TableReader::class)->read($path);
+            $provider = CommissionSourceProfile::detect($table->header);
         } catch (\Throwable) {
             return '';
         }
 
-        if (\App\Services\CommissionImport\CommissionSourceProfile::belongsToVermittlerImport($provider)) {
+        if (CommissionSourceProfile::belongsToVermittlerImport($provider)) {
             return ''; // gehoert hierher - dann ist wirklich die Datei kaputt
         }
 
         $quelle = $provider !== null
-            ? 'Erkannt wurde: ' . \App\Services\CommissionImport\CommissionSourceProfile::label($provider) . '. '
+            ? 'Erkannt wurde: '.CommissionSourceProfile::label($provider).'. '
             : 'Die Spalten passen zu keiner hier bekannten Vermittler-Abrechnung. ';
 
-        return ' ' . $quelle
-            . 'Diese Seite liest ausschließlich die Abrechnung von TARIFCHECK24. '
-            . 'Dateien aus anderen Quellen (Maklerpool, Energie-Vertriebsportal, weitere Portale) '
-            . 'liest „Interne Provisionen“ – dort werden die Spalten erkannt und lassen sich vor dem '
-            . 'Import zuordnen: ' . route('admin.commissions_internal.import');
+        return ' '.$quelle
+            .'Diese Seite liest ausschließlich die Abrechnung von TARIFCHECK24. '
+            .'Dateien aus anderen Quellen (Maklerpool, Energie-Vertriebsportal, weitere Portale) '
+            .'liest „Interne Provisionen“ – dort werden die Spalten erkannt und lassen sich vor dem '
+            .'Import zuordnen: '.route('admin.commissions_internal.import');
     }
 }

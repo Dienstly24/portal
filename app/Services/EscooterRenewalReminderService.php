@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services;
 
 use App\Mail\EscooterRenewalMail;
@@ -7,6 +8,7 @@ use App\Models\ContractSwitchReminder;
 use App\Models\EmailLog;
 use App\Support\EscooterInsurance;
 use Carbon\Carbon;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -60,7 +62,7 @@ class EscooterRenewalReminderService
         $contracts = Contract::with(['customer.user', 'vehicleDetail', 'switchReminders'])
             ->where('type', 'escooter')
             ->currentlyActive()
-            ->when($visibleCustomerIds !== null, fn($q) => $q->whereIn('customer_id', $visibleCustomerIds))
+            ->when($visibleCustomerIds !== null, fn ($q) => $q->whereIn('customer_id', $visibleCustomerIds))
             ->get();
 
         foreach ($contracts as $contract) {
@@ -79,7 +81,7 @@ class EscooterRenewalReminderService
 
             $anchor = $seasonEnd->toDateString();
             $already = $contract->switchReminders
-                ->first(fn($r) => $r->stage === self::STAGE && $r->anchor->toDateString() === $anchor);
+                ->first(fn ($r) => $r->stage === self::STAGE && $r->anchor->toDateString() === $anchor);
             if ($already !== null) continue;
 
             $due[] = [$contract, $anchor];
@@ -93,7 +95,7 @@ class EscooterRenewalReminderService
         $customer = $contract->customer;
         // Transaktionale Mail: nur eine echte, nicht interne Adresse noetig
         // (kein Marketing-Consent).
-        if (!$customer?->user?->hasRealEmail()) return false;
+        if (! $customer?->user?->hasRealEmail()) return false;
 
         try {
             // Erst protokollieren: Der Unique-Index faengt parallele Laeufe ab,
@@ -104,7 +106,7 @@ class EscooterRenewalReminderService
                 'anchor' => $anchor,
                 'sent_at' => now(),
             ]);
-        } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+        } catch (UniqueConstraintViolationException) {
             return false;
         }
 
@@ -118,7 +120,7 @@ class EscooterRenewalReminderService
             // Protokoll zuruecknehmen, damit der naechste Lauf es erneut versucht.
             $reminder->delete();
             $status = 'failed';
-            Log::warning("E-Scooter-Erneuerung {$contract->id} an {$customer->user->email} fehlgeschlagen: " . $e->getMessage());
+            Log::warning("E-Scooter-Erneuerung {$contract->id} an {$customer->user->email} fehlgeschlagen: ".$e->getMessage());
         }
 
         EmailLog::create([

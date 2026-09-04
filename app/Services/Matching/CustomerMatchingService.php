@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Matching;
 
 use App\Models\Customer;
@@ -63,13 +64,13 @@ class CustomerMatchingService
             : $customer->addresses()->first();
 
         return [
-            'full_name'  => $customer->user?->name,
-            'email'      => $customer->user?->email,
+            'full_name' => $customer->user?->name,
+            'email' => $customer->user?->email,
             'birth_date' => $customer->birth_date ? (string) $customer->birth_date : null,
-            'phone'      => $customer->phone ?: $customer->mobile,
-            'street'     => $customer->address_street ?: ($firstAddress->street ?? null),
-            'zip'        => $customer->address_zip ?: ($firstAddress->zip ?? null),
-            'city'       => $customer->address_city ?: ($firstAddress->city ?? null),
+            'phone' => $customer->phone ?: $customer->mobile,
+            'street' => $customer->address_street ?: ($firstAddress->street ?? null),
+            'zip' => $customer->address_zip ?: ($firstAddress->zip ?? null),
+            'city' => $customer->address_city ?: ($firstAddress->city ?? null),
         ];
     }
 
@@ -138,24 +139,24 @@ class CustomerMatchingService
         $query->where(function ($q) use ($criteria, $broad) {
             $any = false;
 
-            if (!empty($criteria['birth_date'])) {
+            if (! empty($criteria['birth_date'])) {
                 $q->orWhere('birth_date', $criteria['birth_date']);
                 $any = true;
             }
-            if (!empty($criteria['email'])) {
+            if (! empty($criteria['email'])) {
                 $q->orWhereHas('user', fn ($u) => $u->where('email', $criteria['email']))
                     ->orWhere('email2', $criteria['email']);
                 $any = true;
             }
-            $name = $criteria['full_name'] ?? trim(($criteria['first_name'] ?? '') . ' ' . ($criteria['last_name'] ?? ''));
+            $name = $criteria['full_name'] ?? trim(($criteria['first_name'] ?? '').' '.($criteria['last_name'] ?? ''));
             if (trim($name) !== '') {
                 $lastNamePart = $criteria['last_name'] ?? Str::afterLast($name, ' ');
                 if ($lastNamePart !== '') {
-                    $q->orWhereHas('user', fn ($u) => $u->where('name', 'like', '%' . $this->escapeLike($lastNamePart) . '%'));
+                    $q->orWhereHas('user', fn ($u) => $u->where('name', 'like', '%'.$this->escapeLike($lastNamePart).'%'));
                     $any = true;
                 }
             }
-            if (!empty($criteria['phone'])) {
+            if (! empty($criteria['phone'])) {
                 $q->orWhere('phone', $criteria['phone']);
                 $any = true;
             }
@@ -165,7 +166,7 @@ class CustomerMatchingService
             }
 
             // Keine Kriterien angegeben: leerer Pool statt Volltabellen-Match.
-            if (!$any) {
+            if (! $any) {
                 $q->whereRaw('1 = 0');
             }
         });
@@ -186,20 +187,20 @@ class CustomerMatchingService
         $any = false;
 
         $tokens = preg_split('/\s+/', trim($name), -1, PREG_SPLIT_NO_EMPTY) ?: [];
-        if (!empty($criteria['company_name'])) {
+        if (! empty($criteria['company_name'])) {
             $tokens[] = (string) $criteria['company_name'];
         }
         foreach (array_unique($tokens) as $token) {
             if (mb_strlen($token) < 3) {
                 continue;
             }
-            $like = '%' . $this->escapeLike($token) . '%';
+            $like = '%'.$this->escapeLike($token).'%';
             $q->orWhereHas('user', fn ($u) => $u->where('name', 'like', $like));
             $q->orWhere('company_name', 'like', $like);
             $any = true;
         }
 
-        if (!empty($criteria['zip'])) {
+        if (! empty($criteria['zip'])) {
             $zip = trim((string) $criteria['zip']);
             $q->orWhere('address_zip', $zip);
             $q->orWhereHas('addresses', fn ($a) => $a->where('zip', $zip));
@@ -222,7 +223,7 @@ class CustomerMatchingService
         $total = 0;
 
         // Geburtsdatum exakt (40)
-        if (!empty($criteria['birth_date']) && $customer->birth_date) {
+        if (! empty($criteria['birth_date']) && $customer->birth_date) {
             $match = (string) $customer->birth_date === (string) $criteria['birth_date'];
             $breakdown['birth_date'] = ['points' => $match ? self::WEIGHT_BIRTH_DATE : 0, 'max' => self::WEIGHT_BIRTH_DATE, 'reason' => $match ? 'Geburtsdatum stimmt exakt überein' : 'Geburtsdatum weicht ab'];
             $total += $breakdown['birth_date']['points'];
@@ -230,7 +231,7 @@ class CustomerMatchingService
 
         // Name fuzzy (30)
         $candidateName = (string) ($customer->user?->name ?? '');
-        $inputName = trim($criteria['full_name'] ?? (($criteria['first_name'] ?? '') . ' ' . ($criteria['last_name'] ?? '')));
+        $inputName = trim($criteria['full_name'] ?? (($criteria['first_name'] ?? '').' '.($criteria['last_name'] ?? '')));
         if ($candidateName !== '' && $inputName !== '') {
             $similarity = $this->nameSimilarity($candidateName, $inputName);
             $points = (int) round(self::WEIGHT_NAME * $similarity);
@@ -239,7 +240,7 @@ class CustomerMatchingService
         }
 
         // E-Mail exakt (20)
-        if (!empty($criteria['email'])) {
+        if (! empty($criteria['email'])) {
             $match = $this->normalizeEmail($customer->user?->email) === $this->normalizeEmail($criteria['email'])
                 || $this->normalizeEmail($customer->email2) === $this->normalizeEmail($criteria['email']);
             $breakdown['email'] = ['points' => $match ? self::WEIGHT_EMAIL : 0, 'max' => self::WEIGHT_EMAIL, 'reason' => $match ? 'E-Mail-Adresse stimmt überein' : 'E-Mail-Adresse weicht ab'];
@@ -247,7 +248,7 @@ class CustomerMatchingService
         }
 
         // Adresse fuzzy: PLZ + Straße (10)
-        if (!empty($criteria['zip']) || !empty($criteria['street'])) {
+        if (! empty($criteria['zip']) || ! empty($criteria['street'])) {
             $addressScore = $this->addressSimilarity($customer, $criteria);
             $points = (int) round(self::WEIGHT_ADDRESS * $addressScore);
             $breakdown['address'] = ['points' => $points, 'max' => self::WEIGHT_ADDRESS, 'reason' => sprintf('Adressähnlichkeit %d%%', round($addressScore * 100))];
@@ -255,7 +256,7 @@ class CustomerMatchingService
         }
 
         // Bonus: Telefon (5)
-        if (!empty($criteria['phone']) && $customer->phone) {
+        if (! empty($criteria['phone']) && $customer->phone) {
             $match = $this->normalizePhone($customer->phone) === $this->normalizePhone($criteria['phone']);
             if ($match) {
                 $breakdown['phone_bonus'] = ['points' => self::WEIGHT_PHONE_BONUS, 'max' => self::WEIGHT_PHONE_BONUS, 'reason' => 'Telefonnummer stimmt überein (Bonus)'];
@@ -278,9 +279,9 @@ class CustomerMatchingService
         // Anschrift 0 Adresspunkte (Audit-Fund: Matching/Vorschlaege verloren
         // bis zu 10 von 100 Punkten).
         if ($customer->address_street || $customer->address_zip) {
-            $zipMatch = !empty($criteria['zip']) && $customer->address_zip
+            $zipMatch = ! empty($criteria['zip']) && $customer->address_zip
                 && trim($customer->address_zip) === trim($criteria['zip']);
-            $streetSim = !empty($criteria['street']) && $customer->address_street
+            $streetSim = ! empty($criteria['street']) && $customer->address_street
                 ? $this->textSimilarity($customer->address_street, $criteria['street'])
                 : 0.0;
             $best = max($best, ($zipMatch ? 0.5 : 0.0) + ($streetSim * 0.5));
@@ -289,13 +290,13 @@ class CustomerMatchingService
         // Fallback auf das einzelne Freitext-Adressfeld, falls keine strukturierten Adressen vorliegen.
         if ($addresses->isEmpty() && $customer->address) {
             $candidateStreet = $customer->address;
-            $inputStreet = trim(($criteria['street'] ?? '') . ' ' . ($criteria['zip'] ?? '') . ' ' . ($criteria['city'] ?? ''));
+            $inputStreet = trim(($criteria['street'] ?? '').' '.($criteria['zip'] ?? '').' '.($criteria['city'] ?? ''));
             return max($best, $inputStreet !== '' ? $this->textSimilarity($candidateStreet, $inputStreet) : 0.0);
         }
 
         foreach ($addresses as $addr) {
-            $zipMatch = !empty($criteria['zip']) && $addr->zip && trim($addr->zip) === trim($criteria['zip']);
-            $streetSim = !empty($criteria['street']) && $addr->street ? $this->textSimilarity($addr->street, $criteria['street']) : 0.0;
+            $zipMatch = ! empty($criteria['zip']) && $addr->zip && trim($addr->zip) === trim($criteria['zip']);
+            $streetSim = ! empty($criteria['street']) && $addr->street ? $this->textSimilarity($addr->street, $criteria['street']) : 0.0;
             $score = ($zipMatch ? 0.5 : 0.0) + ($streetSim * 0.5);
             $best = max($best, $score);
         }

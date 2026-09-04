@@ -4,8 +4,15 @@ namespace Tests\Feature;
 
 use App\Models\ErrorEvent;
 use App\Models\User;
+use App\Services\SystemHealthService;
 use App\Support\ErrorRecorder;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Session\TokenMismatchException;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Tests\TestCase;
 
 /**
@@ -47,15 +54,15 @@ class ErrorVisibilityTest extends TestCase
     public function test_normales_nutzerverhalten_wird_nicht_als_fehler_gezaehlt(): void
     {
         $harmlos = [
-            new \Symfony\Component\HttpKernel\Exception\NotFoundHttpException('nicht da'),
-            new \Illuminate\Auth\AuthenticationException(),
-            new \Illuminate\Session\TokenMismatchException(),
-            new \Illuminate\Database\Eloquent\ModelNotFoundException(),
-            new \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException('verboten'),
+            new NotFoundHttpException('nicht da'),
+            new AuthenticationException,
+            new TokenMismatchException,
+            new ModelNotFoundException,
+            new AccessDeniedHttpException('verboten'),
         ];
 
         foreach ($harmlos as $e) {
-            $this->assertFalse(ErrorRecorder::shouldRecord($e), $e::class . ' sollte kein Defekt sein.');
+            $this->assertFalse(ErrorRecorder::shouldRecord($e), $e::class.' sollte kein Defekt sein.');
             ErrorRecorder::record($e);
         }
 
@@ -67,15 +74,15 @@ class ErrorVisibilityTest extends TestCase
         // Generische HttpException statt einer Unterklasse: die Regel haengt
         // am STATUS (>= 500), nicht an einer bestimmten Klasse.
         $this->assertTrue(ErrorRecorder::shouldRecord(
-            new \Symfony\Component\HttpKernel\Exception\HttpException(503, 'Wartung')
+            new HttpException(503, 'Wartung')
         ));
         $this->assertTrue(ErrorRecorder::shouldRecord(
-            new \Symfony\Component\HttpKernel\Exception\HttpException(500, 'Serverfehler')
+            new HttpException(500, 'Serverfehler')
         ));
         // Und die Gegenprobe: alles unter 500 ist eine Antwort an den
         // Nutzer, kein Systemfehler.
         $this->assertFalse(ErrorRecorder::shouldRecord(
-            new \Symfony\Component\HttpKernel\Exception\HttpException(429, 'Zu viele Anfragen')
+            new HttpException(429, 'Zu viele Anfragen')
         ));
     }
 
@@ -184,18 +191,18 @@ class ErrorVisibilityTest extends TestCase
     {
         ErrorRecorder::record(new \RuntimeException('Frischer Defekt'));
 
-        $abschnitt = app(\App\Services\SystemHealthService::class)->errors();
+        $abschnitt = app(SystemHealthService::class)->errors();
 
-        $this->assertSame(\App\Services\SystemHealthService::FAIL, $abschnitt['status']);
+        $this->assertSame(SystemHealthService::FAIL, $abschnitt['status']);
         $eintrag = collect($abschnitt['items'])->firstWhere('label', 'Neue Fehler (24 h)');
         $this->assertSame('1', $eintrag['value']);
     }
 
     public function test_ohne_fehler_ist_der_abschnitt_gruen(): void
     {
-        $abschnitt = app(\App\Services\SystemHealthService::class)->errors();
+        $abschnitt = app(SystemHealthService::class)->errors();
 
-        $this->assertSame(\App\Services\SystemHealthService::OK, $abschnitt['status']);
+        $this->assertSame(SystemHealthService::OK, $abschnitt['status']);
     }
 
     // ------------------------------------------------------- Aufraeumen

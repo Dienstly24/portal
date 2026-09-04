@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Sales\Offers;
 
 use App\Models\AiConversation;
@@ -28,13 +29,13 @@ class ManualOfferSource implements OfferSourceInterface
 
     public function offersFor(?AiConversation $conversation, ?AiLead $lead = null): Collection
     {
-        if (!$conversation && !$lead) {
+        if (! $conversation && ! $lead) {
             return collect();
         }
 
         return AiOffer::query()
             ->when($conversation, fn ($q) => $q->where('conversation_id', $conversation->id))
-            ->when(!$conversation && $lead, fn ($q) => $q->where('lead_id', $lead->id))
+            ->when(! $conversation && $lead, fn ($q) => $q->where('lead_id', $lead->id))
             ->orderBy('label')
             ->get();
     }

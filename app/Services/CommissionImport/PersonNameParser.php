@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\CommissionImport;
 
 /**
@@ -78,7 +79,7 @@ class PersonNameParser
         // Namen - dann wird nichts gedreht.
         if (str_contains($value, ',')) {
             [$last, $first] = array_pad(array_map('trim', explode(',', $value, 2)), 2, '');
-            $value = $first !== '' ? $first . ' ' . $last : $last;
+            $value = $first !== '' ? $first.' '.$last : $last;
         }
 
         return [

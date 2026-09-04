@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Models\Contract;
@@ -51,10 +52,10 @@ class DeckungsauftragParser implements DocumentTemplateParser
         $this->text = (string) preg_replace('/\x{00ad}\s*/u', '', $text);
         $upper = mb_strtoupper($this->text);
 
-        if (!str_contains($upper, 'DECKUNGSAUFTRAG')
-            || !str_contains($upper, 'VORGANGSNUMMER')
-            || (!str_contains($upper, 'DATEN DES VERSICHERUNGSNEHMERS')
-                && !str_contains($upper, 'DECKUNGSAUFTRAG FÜR'))) {
+        if (! str_contains($upper, 'DECKUNGSAUFTRAG')
+            || ! str_contains($upper, 'VORGANGSNUMMER')
+            || (! str_contains($upper, 'DATEN DES VERSICHERUNGSNEHMERS')
+                && ! str_contains($upper, 'DECKUNGSAUFTRAG FÜR'))) {
             return null;
         }
 
@@ -69,22 +70,22 @@ class DeckungsauftragParser implements DocumentTemplateParser
 
         $who = ($person['company_name'] ?? '') !== ''
             ? $person['company_name']
-            : trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+            : trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $sparte = $versicherung['sparte'] ?? null;
 
         return [
             'type' => 'versicherungsvertrag',
             'confidence' => 76,
             'summary' => 'Deckungsauftrag (Gewerbe)'
-                . ($sparte !== null ? ' - ' . (Contract::TYPES[$sparte]['label'] ?? $sparte) : '')
-                . (isset($versicherung['insurer']) ? ' - ' . $versicherung['insurer'] : '')
-                . ($who !== '' ? ' - ' . $who : '')
-                . $this->extras()
-                . ($bank !== [] ? ' Bankverbindung des Versicherungsnehmers uebernommen.' : ' Ohne Bankuebernahme.')
-                . ' Felder gratis aus dem Deckungsauftrag gelesen (ohne KI).',
+                .($sparte !== null ? ' - '.(Contract::TYPES[$sparte]['label'] ?? $sparte) : '')
+                .(isset($versicherung['insurer']) ? ' - '.$versicherung['insurer'] : '')
+                .($who !== '' ? ' - '.$who : '')
+                .$this->extras()
+                .($bank !== [] ? ' Bankverbindung des Versicherungsnehmers uebernommen.' : ' Ohne Bankuebernahme.')
+                .' Felder gratis aus dem Deckungsauftrag gelesen (ohne KI).',
             'title' => 'Deckungsauftrag'
-                . ($sparte !== null ? ' ' . (Contract::TYPES[$sparte]['label'] ?? $sparte) : '')
-                . ($who !== '' ? ' - ' . $who : ''),
+                .($sparte !== null ? ' '.(Contract::TYPES[$sparte]['label'] ?? $sparte) : '')
+                .($who !== '' ? ' - '.$who : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $versicherung,
@@ -125,15 +126,15 @@ class DeckungsauftragParser implements DocumentTemplateParser
         $firma = $this->labelValue('Firmenname');
         $rechtsform = $this->labelValue('Rechtsform');
         if ($firma !== null) {
-            $full = trim(($raw['first_name'] ?? '') . ' ' . ($raw['last_name'] ?? ''));
+            $full = trim(($raw['first_name'] ?? '').' '.($raw['last_name'] ?? ''));
             if ($full === '' || $this->normalize($firma) !== $this->normalize($full)) {
                 $company = trim($firma);
                 // Rechtsform (GmbH, UG ...) anhaengen, wenn sie nicht schon
                 // im Namen steht - beides steht so im Dokument.
                 if ($rechtsform !== null
-                    && !preg_match('/einzelunt/i', $rechtsform)
+                    && ! preg_match('/einzelunt/i', $rechtsform)
                     && mb_stripos($company, trim($rechtsform)) === false) {
-                    $company .= ' ' . trim($rechtsform);
+                    $company .= ' '.trim($rechtsform);
                 }
                 $raw['company_name'] = $company;
             }
@@ -141,7 +142,7 @@ class DeckungsauftragParser implements DocumentTemplateParser
 
         if (($v = $this->labelValue('E-Mail-Adresse')) !== null
             && preg_match('/^[\w.+\-]+@[\w.\-]+\.\w{2,}$/u', trim($v))
-            && !$this->isBrokerMail($v)) {
+            && ! $this->isBrokerMail($v)) {
             $raw['email'] = mb_strtolower(trim($v));
         }
 
@@ -149,12 +150,12 @@ class DeckungsauftragParser implements DocumentTemplateParser
         // zum naechsten Label am Zeilenanfang. Gelesen werden nur klar
         // erkennbare Strassen-/PLZ-Zeilen (Firmen-/Namenszeilen fallen durch).
         foreach ($this->blockValues('Anschrift') as $line) {
-            if (!isset($raw['zip']) && preg_match('/^(\d{5})\s+(\p{L}.*)$/u', $line, $m)) {
+            if (! isset($raw['zip']) && preg_match('/^(\d{5})\s+(\p{L}.*)$/u', $line, $m)) {
                 $raw['zip'] = $m[1];
                 $raw['city'] = trim($m[2]);
                 continue;
             }
-            if (!isset($raw['street'])
+            if (! isset($raw['street'])
                 && preg_match('/^(.*\p{L}\.?)\s+(\d+\s*[a-zA-Z]?)$/u', $line, $m)
                 && preg_match('/\p{L}{3,}/u', $m[1])) {
                 $raw['street'] = trim($m[1]);
@@ -232,12 +233,12 @@ class DeckungsauftragParser implements DocumentTemplateParser
         if ($inhaber === null) {
             return [];
         }
-        $full = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $full = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $firma = (string) ($person['company_name'] ?? '');
 
         $gehoertKunde = ($full !== '' && $this->normalize($inhaber) === $this->normalize($full))
             || ($firma !== '' && $this->normalize($inhaber) === $this->normalize($firma));
-        if (!$gehoertKunde) {
+        if (! $gehoertKunde) {
             return [];
         }
 
@@ -264,38 +265,38 @@ class DeckungsauftragParser implements DocumentTemplateParser
     {
         $out = '.';
         if (($nr = $this->vorgangsnummer()) !== null) {
-            $out .= ' Vorgangsnummer ' . $nr . ' (keine Vertragsnummer - die bringt erst die Police).';
+            $out .= ' Vorgangsnummer '.$nr.' (keine Vertragsnummer - die bringt erst die Police).';
         }
         if (($v = $this->labelValue('Versicherungssumme')) !== null) {
-            $out .= ' Versicherungssumme: ' . $v . '.';
+            $out .= ' Versicherungssumme: '.$v.'.';
         }
         if (($v = $this->labelValue('Selbstbehalt')) !== null) {
-            $out .= ' Selbstbehalt: ' . $v . '.';
+            $out .= ' Selbstbehalt: '.$v.'.';
         }
         if (($v = $this->labelValue('Gewerbe')) !== null) {
-            $out .= ' Gewerbe: ' . $v . '.';
+            $out .= ' Gewerbe: '.$v.'.';
         }
         if (($v = $this->labelValue('Vertragslaufzeit')) !== null) {
-            $out .= ' Vertragslaufzeit: ' . $v . '.';
+            $out .= ' Vertragslaufzeit: '.$v.'.';
         }
         $kennzeichen = $this->labelValue('Kennzeichen 1') ?? $this->labelValue('Kennzeichen');
         if ($kennzeichen !== null) {
             $art = $this->labelValue('Fahrzeugart');
             $gewicht = $this->labelValue('Zulässiges Gesamtgewicht 1')
                 ?? $this->labelValue('Zulässiges Gesamtgewicht (in t)');
-            $out .= ' Fahrzeug: ' . $kennzeichen
-                . ($art !== null || $gewicht !== null
-                    ? ' (' . implode(', ', array_filter([$art, $gewicht])) . ')' : '')
-                . '.';
+            $out .= ' Fahrzeug: '.$kennzeichen
+                .($art !== null || $gewicht !== null
+                    ? ' ('.implode(', ', array_filter([$art, $gewicht])).')' : '')
+                .'.';
         }
         if (($v = $this->labelValue('RV Nummer')) !== null) {
-            $out .= ' Rahmenvertrag ' . $v . '.';
+            $out .= ' Rahmenvertrag '.$v.'.';
         }
         // Nur wenn der Beginn aus den Risikoangaben stammt, ist der
         // ISO-Zeitraum eine ZUSATZ-Info (sonst ist er bereits Beginn/Ende).
         if (($pair = $this->berechnungszeitraum()) !== null && $this->risikoBeginn() !== null) {
             $out .= ' Berechnungszeitraum laut Beitragsberechnung: '
-                . $pair[0] . ' bis ' . $pair[1] . '.';
+                .$pair[0].' bis '.$pair[1].'.';
         }
         return $out;
     }
@@ -320,7 +321,7 @@ class DeckungsauftragParser implements DocumentTemplateParser
     {
         foreach ($this->labelValues('Gewünschter Versicherungsbeginn') as $v) {
             if (preg_match('/^(\d{2})\.(\d{2})\.(\d{4})$/', trim($v), $m)) {
-                return $m[3] . '-' . $m[2] . '-' . $m[1];
+                return $m[3].'-'.$m[2].'-'.$m[1];
             }
         }
         return null;
@@ -344,25 +345,25 @@ class DeckungsauftragParser implements DocumentTemplateParser
         $n = mb_strtolower($name);
         return match (true) {
             str_contains($n, 'frachtführer') || str_contains($n, 'frachtfuehrer')
-                || str_contains($n, 'verkehrshaftung')                         => 'frachtfuehrerhaftpflicht',
-            str_contains($n, 'betriebshaftpflicht')                            => 'betriebshaftpflicht',
-            str_contains($n, 'rechtsschutz')                                   => 'rechtsschutz',
-            str_contains($n, 'unfall')                                         => 'unfall',
+                || str_contains($n, 'verkehrshaftung') => 'frachtfuehrerhaftpflicht',
+            str_contains($n, 'betriebshaftpflicht') => 'betriebshaftpflicht',
+            str_contains($n, 'rechtsschutz') => 'rechtsschutz',
+            str_contains($n, 'unfall') => 'unfall',
             str_contains($n, 'inhalt') || str_contains($n, 'geschäft')
                 || str_contains($n, 'gebäude') || str_contains($n, 'gebaeude')
-                || str_contains($n, 'sach')                                    => 'sach',
-            default                                                            => 'haftpflicht',
+                || str_contains($n, 'sach') => 'sach',
+            default => 'haftpflicht',
         };
     }
 
     private function interval(string $german): ?string
     {
         return match (mb_strtolower(trim($german))) {
-            'monatlich'        => 'monthly',
-            'vierteljährlich'  => 'quarterly',
-            'halbjährlich'     => 'semiannual',
-            'jährlich'         => 'yearly',
-            default            => null,
+            'monatlich' => 'monthly',
+            'vierteljährlich' => 'quarterly',
+            'halbjährlich' => 'semiannual',
+            'jährlich' => 'yearly',
+            default => null,
         };
     }
 
@@ -393,8 +394,8 @@ class DeckungsauftragParser implements DocumentTemplateParser
      */
     private function labelValues(string $label): array
     {
-        $re = '/^' . preg_quote($label, '/') . '\s{2,}(\S[^\n]*?)\s*$/mu';
-        if (!preg_match_all($re, $this->text, $all)) {
+        $re = '/^'.preg_quote($label, '/').'\s{2,}(\S[^\n]*?)\s*$/mu';
+        if (! preg_match_all($re, $this->text, $all)) {
             return [];
         }
         return array_values(array_filter(array_map('trim', $all[1]), fn ($v) => $v !== ''));
@@ -411,12 +412,12 @@ class DeckungsauftragParser implements DocumentTemplateParser
         $lines = preg_split('/\R/', $this->text) ?: [];
         $out = [];
         foreach ($lines as $i => $line) {
-            if (!preg_match('/^' . preg_quote($label, '/') . '\s{2,}(\S.*)$/u', $line, $m)) {
+            if (! preg_match('/^'.preg_quote($label, '/').'\s{2,}(\S.*)$/u', $line, $m)) {
                 continue;
             }
             $out[] = trim($m[1]);
             for ($j = $i + 1, $n = count($lines); $j < $n; $j++) {
-                if (!preg_match('/^\s{6,}(\S.*)$/u', $lines[$j], $f)) {
+                if (! preg_match('/^\s{6,}(\S.*)$/u', $lines[$j], $f)) {
                     break;
                 }
                 $out[] = trim($f[1]);

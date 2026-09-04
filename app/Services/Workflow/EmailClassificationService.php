@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Workflow;
 
 use App\Models\EmailMessage;
@@ -25,7 +26,7 @@ class EmailClassificationService
 
     public function classify(EmailMessage $message): string
     {
-        $haystack = mb_strtolower(($message->subject ?? '') . ' ' . ($message->body_text ?? ''));
+        $haystack = mb_strtolower(($message->subject ?? '').' '.($message->body_text ?? ''));
 
         $domain = $this->domain($message->from_address);
         if (str_contains($domain, 'fondsfinanz')) {

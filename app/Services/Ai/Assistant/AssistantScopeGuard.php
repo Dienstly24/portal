@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant;
 
 /**
@@ -128,7 +129,7 @@ class AssistantScopeGuard
         }
 
         // 3) Klar ausserhalb - aber nur ohne jedes Geschaeftswort.
-        if (!$hasBusiness && $this->hits($text, self::OUT_OF_SCOPE)) {
+        if (! $hasBusiness && $this->hits($text, self::OUT_OF_SCOPE)) {
             return ['verdict' => self::VERDICT_OUT_OF_SCOPE, 'hint' => $this->firstHit($text, self::OUT_OF_SCOPE)];
         }
 
@@ -143,7 +144,7 @@ class AssistantScopeGuard
     {
         $text = mb_strtolower(trim($message));
 
-        return $text . ' ' . str_replace(
+        return $text.' '.str_replace(
             ['ä', 'ö', 'ü', 'ß'],
             ['ae', 'oe', 'ue', 'ss'],
             $text

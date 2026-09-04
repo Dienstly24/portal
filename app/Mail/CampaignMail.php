@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
@@ -38,7 +39,7 @@ class CampaignMail extends Mailable
     {
         $custom = [];
         if ($this->unsubscribeUrl) {
-            $custom['List-Unsubscribe'] = '<' . $this->unsubscribeUrl . '>';
+            $custom['List-Unsubscribe'] = '<'.$this->unsubscribeUrl.'>';
             $custom['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click';
         }
         return new Headers(text: $custom);

@@ -12,8 +12,7 @@ use Illuminate\Support\Facades\Schema;
  * (duplicate_of). Der Eingang warnt dann prominent, und die (kostenpflichtige)
  * KI-Analyse wird uebersprungen (das vorhandene Ergebnis wird uebernommen).
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('documents', function (Blueprint $table) {

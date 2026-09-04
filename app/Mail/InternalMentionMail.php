@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Mail;
 
 use App\Models\InternalMessage;
@@ -27,7 +28,7 @@ class InternalMentionMail extends Mailable implements ShouldQueue
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Sie wurden intern erwähnt – ' . config('app.name', 'Dienstly24'));
+        return new Envelope(subject: 'Sie wurden intern erwähnt – '.config('app.name', 'Dienstly24'));
     }
 
     public function content(): Content

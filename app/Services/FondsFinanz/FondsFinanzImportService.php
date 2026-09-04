@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\FondsFinanz;
 
 use App\Models\ActivityLog;
@@ -49,7 +50,7 @@ class FondsFinanzImportService
     {
         $data = $this->parseMessage($message);
 
-        if (!$data->hasCustomer()) {
+        if (! $data->hasCustomer()) {
             // Weder Vertragsnummer noch Kunde erkennbar (z. B. reine
             // Verwaltungs-/Serviceanfrage "Bitte bestätigen Sie Ihre
             // Angaben"): eine EINZELNE, mit Kontext versehene Aufgabe -
@@ -57,7 +58,7 @@ class FondsFinanzImportService
             $this->finish($message, 'unmatched', null, 0);
             $this->createTask(
                 $message, null,
-                'Fonds-Finanz-Mail bearbeiten: ' . ($message->subject ?: '(kein Betreff)'),
+                'Fonds-Finanz-Mail bearbeiten: '.($message->subject ?: '(kein Betreff)'),
                 3, 'medium', $data
             );
             return;
@@ -235,7 +236,7 @@ class FondsFinanzImportService
     {
         $data = $this->parser->parse((string) $message->body_text);
 
-        if (!$data->isImportable()) {
+        if (! $data->isImportable()) {
             $pdfText = $this->attachmentAnalysis->textFromPdfAttachments($message);
             if ($pdfText !== '') {
                 $data = $data->mergeMissing($this->parser->parse($pdfText));
@@ -250,7 +251,7 @@ class FondsFinanzImportService
     {
         $data = $this->parseMessage($message);
 
-        if (!$data->hasContract()) {
+        if (! $data->hasContract()) {
             // Kein Vertrag im Text - trotzdem Zuordnung + Dokumentuebernahme
             // fuer den (durch den Mitarbeiter bestaetigten) Kunden.
             $this->finish($message, 'confirmed', $customer, $message->match_score);
@@ -443,24 +444,24 @@ class FondsFinanzImportService
     /** Aussagekraeftige Beschreibung: was steht drin, was ist zu tun. */
     private function taskDescription(EmailMessage $message, ?FondsFinanzData $data): string
     {
-        $parts = ['Ausgelöst durch Fonds-Finanz-Mail "' . ($message->subject ?: '(kein Betreff)') . '" von ' . $message->from_address . '.'];
+        $parts = ['Ausgelöst durch Fonds-Finanz-Mail "'.($message->subject ?: '(kein Betreff)').'" von '.$message->from_address.'.'];
 
         if ($data !== null) {
             $facts = array_filter([
-                $data->customerName ? 'Kunde: ' . $data->customerName : null,
-                $data->line ? 'Sparte: ' . $data->line : null,
-                $data->company ? 'Gesellschaft: ' . $data->company : null,
-                $data->contractNumber ? 'Vertragsnummer: ' . $data->contractNumber : null,
-                $data->fondsFinanzNumber ? 'Vorgang/Nr.: ' . $data->fondsFinanzNumber : null,
+                $data->customerName ? 'Kunde: '.$data->customerName : null,
+                $data->line ? 'Sparte: '.$data->line : null,
+                $data->company ? 'Gesellschaft: '.$data->company : null,
+                $data->contractNumber ? 'Vertragsnummer: '.$data->contractNumber : null,
+                $data->fondsFinanzNumber ? 'Vorgang/Nr.: '.$data->fondsFinanzNumber : null,
             ]);
-            if (!empty($facts)) {
-                $parts[] = 'Erkannt: ' . implode(' · ', $facts) . '.';
+            if (! empty($facts)) {
+                $parts[] = 'Erkannt: '.implode(' · ', $facts).'.';
             }
         }
 
         $attCount = count($message->attachments_meta ?? []);
         if ($attCount > 0) {
-            $parts[] = $attCount . ' Anhang/Anhänge.';
+            $parts[] = $attCount.' Anhang/Anhänge.';
         }
 
         return implode(' ', $parts);

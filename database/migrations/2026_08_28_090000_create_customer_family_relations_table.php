@@ -28,8 +28,7 @@ use Illuminate\Support\Facades\Schema;
  * Familienrolle sind getrennte Wahrheiten (eine 16-jaehrige Tochter ist
  * eigenstaendige Kundin UND bleibt Tochter).
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('customer_family_relations', function (Blueprint $table) {

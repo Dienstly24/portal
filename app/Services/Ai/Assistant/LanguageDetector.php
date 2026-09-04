@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant;
 
 /**
@@ -40,7 +41,7 @@ class LanguageDetector
 
         // Wortvergleich mit Randleerzeichen, damit " ist " nicht in
         // "Leistung" trifft.
-        $padded = ' ' . mb_strtolower($text) . ' ';
+        $padded = ' '.mb_strtolower($text).' ';
         $german = $this->count($padded, self::GERMAN);
         $english = $this->count($padded, self::ENGLISH);
 

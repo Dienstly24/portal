@@ -9,6 +9,7 @@ use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -57,7 +58,7 @@ class DatabaseIndexTest extends TestCase
         ];
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('erwarteteIndexe')]
+    #[DataProvider('erwarteteIndexe')]
     public function test_erwarteter_index_existiert(string $table, string $index): void
     {
         $this->assertTrue(

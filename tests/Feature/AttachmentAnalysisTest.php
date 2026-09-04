@@ -2,14 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\Commission;
 use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\EmailAccount;
 use App\Models\EmailMessage;
-use App\Models\ExternalReference;
 use App\Models\Partner;
-use App\Models\Commission;
 use App\Models\User;
 use App\Services\Mailbox\AttachmentAnalysisService;
 use App\Services\Mailbox\EmailAttachmentService;
@@ -58,11 +57,11 @@ class AttachmentAnalysisTest extends TestCase
         $streamBody = rtrim($streamBody);
 
         $objects = [
-            1 => "<< /Type /Catalog /Pages 2 0 R >>",
-            2 => "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-            3 => "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
-            4 => "<< /Length " . strlen($streamBody) . " >>\nstream\n$streamBody\nendstream",
-            5 => "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+            1 => '<< /Type /Catalog /Pages 2 0 R >>',
+            2 => '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+            3 => '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+            4 => '<< /Length '.strlen($streamBody)." >>\nstream\n$streamBody\nendstream",
+            5 => '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
         ];
 
         $pdf = "%PDF-1.4\n";
@@ -72,11 +71,11 @@ class AttachmentAnalysisTest extends TestCase
             $pdf .= "$num 0 obj\n$body\nendobj\n";
         }
         $xrefPos = strlen($pdf);
-        $pdf .= "xref\n0 " . (count($objects) + 1) . "\n0000000000 65535 f \n";
+        $pdf .= "xref\n0 ".(count($objects) + 1)."\n0000000000 65535 f \n";
         foreach ($offsets as $offset) {
             $pdf .= sprintf("%010d 00000 n \n", $offset);
         }
-        $pdf .= "trailer\n<< /Size " . (count($objects) + 1) . " /Root 1 0 R >>\nstartxref\n$xrefPos\n%%EOF";
+        $pdf .= "trailer\n<< /Size ".(count($objects) + 1)." /Root 1 0 R >>\nstartxref\n$xrefPos\n%%EOF";
 
         return $pdf;
     }

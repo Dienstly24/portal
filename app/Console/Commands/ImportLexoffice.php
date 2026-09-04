@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\SystemSetting;
 use App\Services\CustomerCreation\CustomerAutoCreationService;
 use App\Services\CustomerCreation\DuplicateCustomerException;
 use App\Services\Lexoffice\LexofficeContactMapper;
@@ -34,8 +35,8 @@ class ImportLexoffice extends Command
         CustomerMatchingService $matcher,
         CustomerAutoCreationService $creator,
     ): int {
-        $apiKey = \App\Models\SystemSetting::get('lexoffice_api_key') ?: config('services.lexoffice.key');
-        if (!$apiKey) {
+        $apiKey = SystemSetting::get('lexoffice_api_key') ?: config('services.lexoffice.key');
+        if (! $apiKey) {
             $this->error('Kein Lexoffice-API-Key hinterlegt (Einstellungen oder services.lexoffice.key).');
             return self::FAILURE;
         }
@@ -57,12 +58,12 @@ class ImportLexoffice extends Command
 
         while ($page < $totalPages) {
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $apiKey,
+                'Authorization' => 'Bearer '.$apiKey,
                 'Accept' => 'application/json',
             ])->get("$baseUrl/contacts", ['page' => $page, 'size' => 100]);
 
-            if (!$response->successful()) {
-                $this->error('API-Fehler: HTTP ' . $response->status());
+            if (! $response->successful()) {
+                $this->error('API-Fehler: HTTP '.$response->status());
                 return self::FAILURE;
             }
 
@@ -70,7 +71,7 @@ class ImportLexoffice extends Command
             $totalPages = $body['totalPages'] ?? 1;
             $contacts = $body['content'] ?? [];
 
-            $this->line('Seite ' . ($page + 1) . "/$totalPages (" . count($contacts) . ' Kontakte)');
+            $this->line('Seite '.($page + 1)."/$totalPages (".count($contacts).' Kontakte)');
 
             foreach ($contacts as $contact) {
                 if ($limit > 0 && $processed >= $limit) {
@@ -95,8 +96,8 @@ class ImportLexoffice extends Command
                 if ($dryRun) {
                     $created++;
                     $this->line("  + NEU (Simulation): {$data['full_name']}"
-                        . ($data['birth_date'] ? " · geb. {$data['birth_date']}" : '')
-                        . ($data['email'] ? " · {$data['email']}" : ' · (keine E-Mail)'));
+                        .($data['birth_date'] ? " · geb. {$data['birth_date']}" : '')
+                        .($data['email'] ? " · {$data['email']}" : ' · (keine E-Mail)'));
                     continue;
                 }
 
@@ -110,7 +111,7 @@ class ImportLexoffice extends Command
                     $duplicates++;
                 } catch (\Throwable $e) {
                     $errors++;
-                    \Log::warning('Lexoffice-Import Fehler: ' . $e->getMessage());
+                    \Log::warning('Lexoffice-Import Fehler: '.$e->getMessage());
                 }
 
                 usleep(50000); // API schonen

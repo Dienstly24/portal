@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Social;
 
 use App\Models\BannerSocialChannel;
@@ -47,8 +48,8 @@ class MetaPublisher
         }
 
         return match ($platform) {
-            'facebook' => !empty($cfg['page_id']),
-            'instagram' => !empty($cfg['ig_user_id']),
+            'facebook' => ! empty($cfg['page_id']),
+            'instagram' => ! empty($cfg['ig_user_id']),
             default => false,
         };
     }
@@ -71,21 +72,21 @@ class MetaPublisher
      */
     public function preflight(BannerSocialChannel $channel): ?string
     {
-        if (!in_array($channel->platform, self::AUTO_PLATFORMS, true)) {
+        if (! in_array($channel->platform, self::AUTO_PLATFORMS, true)) {
             return 'Diese Plattform unterstützt kein API-Posten (nur manuell).';
         }
-        if (!self::configuredFor($channel->platform)) {
+        if (! self::configuredFor($channel->platform)) {
             return 'Meta-API nicht verbunden - einmalig auf dem Server php artisan meta:einrichten ausführen (Anleitung: docs/ANLEITUNG_META_API_AR.md).';
         }
 
         $post = $channel->post()->with('banner')->first();
         $banner = $post?->banner;
-        if (!$banner) {
+        if (! $banner) {
             return 'Zugehöriger Banner nicht gefunden.';
         }
 
         if ($channel->platform === 'instagram') {
-            if (!$this->publicImageUrl($banner)) {
+            if (! $this->publicImageUrl($banner)) {
                 return self::IG_OHNE_BILD;
             }
             if (mb_strlen($this->composeCaption($post, $channel)) > self::IG_CAPTION_MAX) {
@@ -141,7 +142,7 @@ class MetaPublisher
     {
         $path = SocialFormatGenerator::path($banner, 'quadrat');
 
-        return Storage::disk('public')->exists($path) ? asset('storage/' . $path) : null;
+        return Storage::disk('public')->exists($path) ? asset('storage/'.$path) : null;
     }
 
     /** @return array{0:string,1:?string} [external_post_id, external_url] */
@@ -153,13 +154,13 @@ class MetaPublisher
         $pageToken = $this->graph->pageToken();
 
         if ($imageUrl) {
-            $resp = $this->graph->post($pageId . '/photos', [
+            $resp = $this->graph->post($pageId.'/photos', [
                 'url' => $imageUrl,
                 'message' => $caption,
             ], $pageToken);
         } else {
             // Video-Banner ohne Bildformate: Link-Beitrag (Text + Kurzlink).
-            $resp = $this->graph->post($pageId . '/feed', [
+            $resp = $this->graph->post($pageId.'/feed', [
                 'message' => $caption,
                 'link' => $fallbackLink,
             ], $pageToken);
@@ -170,14 +171,14 @@ class MetaPublisher
             throw new \RuntimeException('Meta-API: Antwort ohne Beitrags-ID.');
         }
 
-        return [$externalId, 'https://www.facebook.com/' . $externalId];
+        return [$externalId, 'https://www.facebook.com/'.$externalId];
     }
 
     /** @return array{0:string,1:?string} [external_post_id, external_url] */
     private function publishInstagram(string $caption, ?string $imageUrl): array
     {
         // Letzte Absicherung - preflight() hat beides bereits geprueft.
-        if (!$imageUrl) {
+        if (! $imageUrl) {
             throw new \RuntimeException(self::IG_OHNE_BILD);
         }
         if (mb_strlen($caption) > self::IG_CAPTION_MAX) {
@@ -187,7 +188,7 @@ class MetaPublisher
 
         $igUserId = config('services.meta.ig_user_id');
 
-        $container = $this->call('post', $igUserId . '/media', [
+        $container = $this->call('post', $igUserId.'/media', [
             'image_url' => $imageUrl,
             'caption' => $caption,
         ]);
@@ -210,7 +211,7 @@ class MetaPublisher
             sleep(2); // IN_PROGRESS -> kurz warten
         }
 
-        $published = $this->call('post', $igUserId . '/media_publish', [
+        $published = $this->call('post', $igUserId.'/media_publish', [
             'creation_id' => $creationId,
         ]);
         $mediaId = (string) ($published['id'] ?? '');

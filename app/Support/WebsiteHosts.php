@@ -42,14 +42,14 @@ class WebsiteHosts
      */
     public static function url(string $path = '/'): string
     {
-        $path = '/' . ltrim($path, '/');
-        return 'https://' . self::canonical() . ($path === '/' ? '/' : $path);
+        $path = '/'.ltrim($path, '/');
+        return 'https://'.self::canonical().($path === '/' ? '/' : $path);
     }
 
     /** Arabische Variante eines Pfads: '/' -> '/ar', '/x' -> '/ar/x'. */
     public static function arPath(string $path): string
     {
-        $path = '/' . ltrim($path, '/');
-        return $path === '/' ? '/ar' : '/ar' . $path;
+        $path = '/'.ltrim($path, '/');
+        return $path === '/' ? '/ar' : '/ar'.$path;
     }
 }

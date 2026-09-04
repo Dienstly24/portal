@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Contracts;
 
 use App\Services\Ai\Support\AiRequest;

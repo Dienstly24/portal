@@ -58,7 +58,7 @@ class ServicePage extends Model
         if (str_starts_with($path, '/storage/')) {
             return $path;
         }
-        return '/storage/' . ltrim($path, '/');
+        return '/storage/'.ltrim($path, '/');
     }
 
     public function scopeActive(Builder $q): Builder
@@ -76,9 +76,9 @@ class ServicePage extends Model
     {
         $locale = app()->getLocale();
         if ($locale === 'ar') {
-            return $this->{$field . '_ar'} ?: $this->{$field . '_de'};
+            return $this->{$field.'_ar'} ?: $this->{$field.'_de'};
         }
-        return $this->{$field . '_de'};
+        return $this->{$field.'_de'};
     }
 
     /**
@@ -97,18 +97,22 @@ class ServicePage extends Model
         foreach (preg_split('/\r\n|\r|\n/', $raw) as $line) {
             $t = trim($line);
             if ($t === '') {
-                if ($inList) { $html .= '</ul>'; $inList = false; }
+                if ($inList) { $html .= '</ul>';
+                $inList = false; }
                 continue;
             }
             if (str_starts_with($t, '## ')) {
-                if ($inList) { $html .= '</ul>'; $inList = false; }
-                $html .= '<h3>' . e(substr($t, 3)) . '</h3>';
+                if ($inList) { $html .= '</ul>';
+                $inList = false; }
+                $html .= '<h3>'.e(substr($t, 3)).'</h3>';
             } elseif (str_starts_with($t, '- ')) {
-                if (!$inList) { $html .= '<ul>'; $inList = true; }
-                $html .= '<li>' . e(substr($t, 2)) . '</li>';
+                if (! $inList) { $html .= '<ul>';
+                $inList = true; }
+                $html .= '<li>'.e(substr($t, 2)).'</li>';
             } else {
-                if ($inList) { $html .= '</ul>'; $inList = false; }
-                $html .= '<p>' . e($t) . '</p>';
+                if ($inList) { $html .= '</ul>';
+                $inList = false; }
+                $html .= '<p>'.e($t).'</p>';
             }
         }
         if ($inList) { $html .= '</ul>'; }

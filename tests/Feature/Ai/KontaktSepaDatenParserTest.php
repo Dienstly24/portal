@@ -27,8 +27,8 @@ class KontaktSepaDatenParserTest extends TestCase
             '',
             'Für Frachtführerhaftpflicht ist Lastschrift als Zahlungsweise ausgewählt.',
             '',
-            'Kontoinhaber:                           ' . $kontoinhaber,
-            'Name des Kontoinhabers:                 ' . $inhaberName,
+            'Kontoinhaber:                           '.$kontoinhaber,
+            'Name des Kontoinhabers:                 '.$inhaberName,
             'IBAN:                                   DE08300209005390827311',
             'BIC:                                    CMCIDEDDXXX',
             'Bank:                                   TARGOBANK',
@@ -37,7 +37,7 @@ class KontaktSepaDatenParserTest extends TestCase
 
     public function test_reads_contact_and_sepa_data(): void
     {
-        $r = (new KontaktSepaDatenParser())->parse($this->seiteText());
+        $r = (new KontaktSepaDatenParser)->parse($this->seiteText());
 
         $this->assertNotNull($r);
         $this->assertSame('kontaktdaten', $r['type']);
@@ -69,7 +69,7 @@ class KontaktSepaDatenParserTest extends TestCase
     public function test_foreign_account_holder_is_not_taken(): void
     {
         // Kontoinhaber ist ein Dritter -> keine Bankdaten in der Kundenakte.
-        $r = (new KontaktSepaDatenParser())->parse(
+        $r = (new KontaktSepaDatenParser)->parse(
             $this->seiteText('Abweichender Kontoinhaber', 'Max Fremd')
         );
 
@@ -90,7 +90,7 @@ class KontaktSepaDatenParserTest extends TestCase
             $this->seiteText()
         );
 
-        $r = (new KontaktSepaDatenParser())->parse($text);
+        $r = (new KontaktSepaDatenParser)->parse($text);
 
         $this->assertSame('Muster Transporte GmbH', $r['data']['person']['company_name']);
         $this->assertSame('Saleh', $r['data']['person']['first_name']);
@@ -98,7 +98,7 @@ class KontaktSepaDatenParserTest extends TestCase
 
     public function test_ignores_unrelated_documents(): void
     {
-        $parser = new KontaktSepaDatenParser();
+        $parser = new KontaktSepaDatenParser;
 
         $this->assertNull($parser->parse('Irgendein anderes Dokument'));
         // Der NAFI-Kfz-Antrag traegt IBAN + Beschriftungen, aber NICHT die

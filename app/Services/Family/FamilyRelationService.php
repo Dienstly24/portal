@@ -53,8 +53,8 @@ class FamilyRelationService
         if ((string) $customer->id === (string) $related->id) {
             throw new \InvalidArgumentException('Ein Kunde kann nicht mit sich selbst verknuepft werden.');
         }
-        if (!array_key_exists($role, CustomerFamilyRelation::ROLES)) {
-            throw new \InvalidArgumentException('Unbekannte Familienrolle: ' . $role);
+        if (! array_key_exists($role, CustomerFamilyRelation::ROLES)) {
+            throw new \InvalidArgumentException('Unbekannte Familienrolle: '.$role);
         }
 
         $forward = DB::transaction(function () use ($customer, $related, $role, $byUserId, $note) {
@@ -92,15 +92,15 @@ class FamilyRelationService
         $this->note(
             $customer,
             'Familie verknüpft',
-            ($related->user?->name ?: 'Kunde') . ' (' . ($related->customer_number ?: '—') . ') als '
-                . CustomerFamilyRelation::roleLabel($role) . ' verknüpft.',
+            ($related->user?->name ?: 'Kunde').' ('.($related->customer_number ?: '—').') als '
+                .CustomerFamilyRelation::roleLabel($role).' verknüpft.',
             $byUserId
         );
         $this->note(
             $related,
             'Familie verknüpft',
-            'Mit ' . ($customer->user?->name ?: 'Kunde') . ' (' . ($customer->customer_number ?: '—') . ') als '
-                . CustomerFamilyRelation::roleLabel(CustomerFamilyRelation::inverseRole($role, $customer->gender)) . ' verknüpft.',
+            'Mit '.($customer->user?->name ?: 'Kunde').' ('.($customer->customer_number ?: '—').') als '
+                .CustomerFamilyRelation::roleLabel(CustomerFamilyRelation::inverseRole($role, $customer->gender)).' verknüpft.',
             $byUserId
         );
 
@@ -134,11 +134,11 @@ class FamilyRelationService
 
         if ($customer) {
             $this->note($customer, 'Familienverknüpfung entfernt',
-                'Verknüpfung mit ' . ($related?->user?->name ?: 'Kunde') . ' aufgehoben. Beide Kundenakten bleiben unverändert bestehen.', $byUserId);
+                'Verknüpfung mit '.($related?->user?->name ?: 'Kunde').' aufgehoben. Beide Kundenakten bleiben unverändert bestehen.', $byUserId);
         }
         if ($related) {
             $this->note($related, 'Familienverknüpfung entfernt',
-                'Verknüpfung mit ' . ($customer?->user?->name ?: 'Kunde') . ' aufgehoben. Beide Kundenakten bleiben unverändert bestehen.', $byUserId);
+                'Verknüpfung mit '.($customer?->user?->name ?: 'Kunde').' aufgehoben. Beide Kundenakten bleiben unverändert bestehen.', $byUserId);
         }
 
         ActivityLog::record('family_relation_unlinked', 'customer', (string) $relation->customer_id, [
@@ -287,9 +287,9 @@ class FamilyRelationService
                 $kind,
                 'Eigenständiger Kunde (15. Geburtstag)',
                 'Das 15. Lebensjahr ist erreicht: Status „abhängiges Familienmitglied" → „eigenständiger Kunde". '
-                    . 'Die Familienbeziehung zu ' . ($bezug?->user?->name ?: 'der Bezugsperson') . ' bleibt bestehen ('
-                    . CustomerFamilyRelation::roleLabel($relation->relationship_type) . '). '
-                    . 'Verträge wurden NICHT verändert – bitte eigene Verträge/Vorgänge prüfen.',
+                    .'Die Familienbeziehung zu '.($bezug?->user?->name ?: 'der Bezugsperson').' bleibt bestehen ('
+                    .CustomerFamilyRelation::roleLabel($relation->relationship_type).'). '
+                    .'Verträge wurden NICHT verändert – bitte eigene Verträge/Vorgänge prüfen.',
                 $byUserId
             );
             $this->notifyBetreuer($kind, $relation);
@@ -324,7 +324,7 @@ class FamilyRelationService
      */
     private function shouldBeDependent(string $role, Customer $related): bool
     {
-        if (!in_array($role, CustomerFamilyRelation::CHILD_ROLES, true)) {
+        if (! in_array($role, CustomerFamilyRelation::CHILD_ROLES, true)) {
             return false;
         }
         $age = $related->age();
@@ -366,7 +366,7 @@ class FamilyRelationService
                 'description' => $description,
             ]);
         } catch (\Throwable $e) {
-            Log::warning('Familien-Timeline-Eintrag fehlgeschlagen: ' . $e->getMessage());
+            Log::warning('Familien-Timeline-Eintrag fehlgeschlagen: '.$e->getMessage());
         }
     }
 
@@ -376,19 +376,19 @@ class FamilyRelationService
         try {
             foreach ($kind->betreuer as $user) {
                 InternalNotification::updateOrCreate(
-                    ['dedup_key' => 'family-transition-' . $relation->id],
+                    ['dedup_key' => 'family-transition-'.$relation->id],
                     [
                         'user_id' => $user->id,
                         'type' => 'family_transition',
                         'title' => 'Familienmitglied ist 15 geworden',
                         'body' => ($kind->user?->name ?: 'Ein Familienmitglied')
-                            . ' gilt jetzt als eigenständiger Kunde. Verträge wurden nicht verändert – bitte prüfen.',
+                            .' gilt jetzt als eigenständiger Kunde. Verträge wurden nicht verändert – bitte prüfen.',
                         'link' => route('admin.customer', $kind->id),
                     ]
                 );
             }
         } catch (\Throwable $e) {
-            Log::warning('Glocke zum Familien-Uebergang fehlgeschlagen: ' . $e->getMessage());
+            Log::warning('Glocke zum Familien-Uebergang fehlgeschlagen: '.$e->getMessage());
         }
     }
 

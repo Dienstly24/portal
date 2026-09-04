@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use App\Services\Ai\Assistant\Sales\ConversationState;
@@ -122,7 +123,7 @@ class AiConversation extends Model
      */
     public function canAutoReply(): bool
     {
-        return $this->ai_active && !$this->handover_required;
+        return $this->ai_active && ! $this->handover_required;
     }
 
     public function reasonLabel(): ?string
@@ -195,7 +196,7 @@ class AiConversation extends Model
      */
     public function postponeResume(int $quietHours = 24): self
     {
-        if (!$this->auto_resume) {
+        if (! $this->auto_resume) {
             return $this;
         }
 
@@ -213,7 +214,7 @@ class AiConversation extends Model
     public function mayAutoResume(): bool
     {
         return $this->auto_resume
-            && !in_array((string) $this->handover_reason, self::NO_AUTO_RESUME_REASONS, true);
+            && ! in_array((string) $this->handover_reason, self::NO_AUTO_RESUME_REASONS, true);
     }
 
     /**
@@ -281,7 +282,7 @@ class AiConversation extends Model
      */
     public function moveTo(string $state, ?string $step = null): bool
     {
-        if (!ConversationState::allows($this->state, $state)) {
+        if (! ConversationState::allows($this->state, $state)) {
             return false;
         }
 

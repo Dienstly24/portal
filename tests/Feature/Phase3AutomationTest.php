@@ -12,11 +12,11 @@ use App\Models\InternalNotification;
 use App\Models\Task;
 use App\Models\Ticket;
 use App\Models\User;
-use App\Services\Ai\AiEmailClassifier;
 use App\Services\Workflow\EmailWorkflowService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -38,7 +38,7 @@ class Phase3AutomationTest extends TestCase
     private function customer(string $name = 'Erika Musterfrau'): Customer
     {
         $user = User::factory()->create(['name' => $name, 'role' => 'customer']);
-        return Customer::create(['user_id' => $user->id, 'customer_number' => 'K-' . uniqid()]);
+        return Customer::create(['user_id' => $user->id, 'customer_number' => 'K-'.uniqid()]);
     }
 
     private function message(array $overrides = []): EmailMessage
@@ -50,7 +50,7 @@ class Phase3AutomationTest extends TestCase
 
         return EmailMessage::create(array_merge([
             'email_account_id' => $account->id,
-            'message_uid' => 'INBOX:' . uniqid(),
+            'message_uid' => 'INBOX:'.uniqid(),
             'from_address' => 'wer@example.com',
             'from_name' => 'Wer Auchimmer',
             'subject' => 'Ohne Schlüsselwörter',
@@ -223,7 +223,7 @@ class Phase3AutomationTest extends TestCase
     {
         $customer = $this->customer();
         $ticket = Ticket::forceCreate([
-            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'id' => (string) Str::uuid(),
             'customer_id' => null, 'source' => 'email', 'type' => 'other',
             'status' => 'open', 'priority' => 'mittel',
             'subject' => 'Frühere Anfrage', 'description' => 'x',

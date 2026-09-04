@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai;
 
 use App\Services\Ai\Contracts\DocumentAiProviderInterface;

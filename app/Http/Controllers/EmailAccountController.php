@@ -1,9 +1,11 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\EmailAccount;
 use App\Services\Mailbox\MailboxProviderFactory;
+use App\Services\Mailbox\OAuthTokenService;
 use Illuminate\Http\Request;
 
 /**
@@ -85,16 +87,16 @@ class EmailAccountController extends Controller
     public function toggleActive(string $id)
     {
         $account = EmailAccount::findOrFail($id);
-        $account->update(['is_active' => !$account->is_active]);
+        $account->update(['is_active' => ! $account->is_active]);
         return back()->with('success', $account->is_active ? 'Postfach aktiviert.' : 'Postfach deaktiviert.');
     }
 
     /** Verbindungstest vor dem Speichern / aus der Übersicht heraus. */
     /** OAuth-Consent starten (Phase 2): leitet zu Google/Microsoft weiter. */
-    public function oauthRedirect(string $id, \App\Services\Mailbox\OAuthTokenService $tokens)
+    public function oauthRedirect(string $id, OAuthTokenService $tokens)
     {
         $account = EmailAccount::findOrFail($id);
-        if (!$account->isOAuth()) {
+        if (! $account->isOAuth()) {
             return back()->with('error', 'Dieses Postfach nutzt kein OAuth.');
         }
 
@@ -106,11 +108,11 @@ class EmailAccountController extends Controller
     }
 
     /** OAuth-Callback: Code gegen Tokens tauschen und Postfach verbinden. */
-    public function oauthCallback(Request $request, \App\Services\Mailbox\OAuthTokenService $tokens)
+    public function oauthCallback(Request $request, OAuthTokenService $tokens)
     {
         if ($request->filled('error')) {
             return redirect()->route('admin.email_accounts.index')
-                ->with('error', 'Verbindung abgelehnt: ' . $request->get('error_description', $request->get('error')));
+                ->with('error', 'Verbindung abgelehnt: '.$request->get('error_description', $request->get('error')));
         }
 
         $request->validate(['code' => 'required|string', 'state' => 'required|string']);
@@ -119,10 +121,10 @@ class EmailAccountController extends Controller
             $account = $tokens->handleCallback($request->get('code'), $request->get('state'));
         } catch (\Throwable $e) {
             return redirect()->route('admin.email_accounts.index')
-                ->with('error', 'OAuth-Verbindung fehlgeschlagen: ' . $e->getMessage());
+                ->with('error', 'OAuth-Verbindung fehlgeschlagen: '.$e->getMessage());
         }
 
-        \App\Models\ActivityLog::create([
+        ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => 'email_account_oauth_connected',
             'entity_type' => 'email_account',
@@ -131,7 +133,7 @@ class EmailAccountController extends Controller
         ]);
 
         return redirect()->route('admin.email_accounts.index')
-            ->with('success', $account->email_address . ' erfolgreich verbunden.');
+            ->with('success', $account->email_address.' erfolgreich verbunden.');
     }
 
     public function testConnection(string $id, MailboxProviderFactory $factory)
@@ -144,7 +146,7 @@ class EmailAccountController extends Controller
             return back()->with('success', 'Verbindung erfolgreich getestet.');
         } catch (\Throwable $e) {
             $account->update(['last_error' => $e->getMessage()]);
-            return back()->with('error', 'Verbindung fehlgeschlagen: ' . $e->getMessage());
+            return back()->with('error', 'Verbindung fehlgeschlagen: '.$e->getMessage());
         }
     }
 
@@ -153,7 +155,7 @@ class EmailAccountController extends Controller
         return $request->validate([
             'name' => 'required|string|max:255',
             'email_address' => 'required|email|max:255',
-            'provider' => 'required|in:' . implode(',', array_keys(EmailAccount::PROVIDERS)),
+            'provider' => 'required|in:'.implode(',', array_keys(EmailAccount::PROVIDERS)),
             'imap_host' => 'nullable|string|max:255',
             'imap_port' => 'nullable|integer|min:1|max:65535',
             'imap_encryption' => 'nullable|in:ssl,tls,none',
@@ -161,7 +163,7 @@ class EmailAccountController extends Controller
             'smtp_port' => 'nullable|integer|min:1|max:65535',
             'smtp_encryption' => 'nullable|in:ssl,tls,none',
             'username' => 'nullable|string|max:255',
-            'password' => ($requirePassword ? 'nullable' : 'nullable') . '|string|max:1024',
+            'password' => ($requirePassword ? 'nullable' : 'nullable').'|string|max:1024',
             'folders' => 'nullable|string|max:1000',
             'is_active' => 'nullable|boolean',
             'is_customer_import' => 'nullable|boolean',

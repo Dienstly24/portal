@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Ai;
 
+use App\Models\Contract;
 use App\Services\Ai\TemplateParsers\GewerbeBeratungsdokumentationParser;
 use Tests\TestCase;
 
@@ -17,7 +18,7 @@ class GewerbeBeratungsdokumentationParserTest extends TestCase
     /** Baut eine Zeile mit linker + rechter Spalte (grosser Abstand). */
     private function twoCol(string $left, string $right): string
     {
-        return str_pad($left, 44) . $right;
+        return str_pad($left, 44).$right;
     }
 
     private function dokuText(string $sparte = 'Frachtführerhaftpflicht'): string
@@ -50,7 +51,7 @@ class GewerbeBeratungsdokumentationParserTest extends TestCase
 
     public function test_reads_contract_from_recommendation_block(): void
     {
-        $r = (new GewerbeBeratungsdokumentationParser())->parse($this->dokuText());
+        $r = (new GewerbeBeratungsdokumentationParser)->parse($this->dokuText());
 
         $this->assertNotNull($r);
         $this->assertSame('beratungsprotokoll', $r['type']);
@@ -72,7 +73,7 @@ class GewerbeBeratungsdokumentationParserTest extends TestCase
      */
     public function test_maps_commercial_liability_to_its_own_sparte(): void
     {
-        $parser = new GewerbeBeratungsdokumentationParser();
+        $parser = new GewerbeBeratungsdokumentationParser;
 
         $betrieb = $parser->parse($this->dokuText('Betriebshaftpflicht'));
         $this->assertSame('betriebshaftpflicht', $betrieb['data']['versicherung']['sparte']);
@@ -84,16 +85,16 @@ class GewerbeBeratungsdokumentationParserTest extends TestCase
 
         // Beide sind als gewerblich gekennzeichnet und gueltige Sparten.
         foreach (['betriebshaftpflicht', 'frachtfuehrerhaftpflicht'] as $key) {
-            $this->assertContains($key, \App\Models\Contract::typeKeys());
-            $this->assertContains($key, \App\Models\Contract::commercialTypeKeys());
+            $this->assertContains($key, Contract::typeKeys());
+            $this->assertContains($key, Contract::commercialTypeKeys());
         }
         // Die private Haftpflicht bleibt privat.
-        $this->assertNotContains('haftpflicht', \App\Models\Contract::commercialTypeKeys());
+        $this->assertNotContains('haftpflicht', Contract::commercialTypeKeys());
     }
 
     public function test_reads_customer_from_left_column_not_broker(): void
     {
-        $p = (new GewerbeBeratungsdokumentationParser())->parse($this->dokuText())['data']['person'];
+        $p = (new GewerbeBeratungsdokumentationParser)->parse($this->dokuText())['data']['person'];
 
         // Kunde aus "Vorschlag fuer" (links), NICHT der Makler "Max Makler".
         $this->assertSame('Ahmed', $p['first_name']);
@@ -108,10 +109,10 @@ class GewerbeBeratungsdokumentationParserTest extends TestCase
 
     public function test_non_matching_document_is_ignored(): void
     {
-        $this->assertNull((new GewerbeBeratungsdokumentationParser())->parse('Irgendein Dokument.'));
+        $this->assertNull((new GewerbeBeratungsdokumentationParser)->parse('Irgendein Dokument.'));
         // CHECK24-Kfz-Protokoll (anderes Format) nicht anfassen.
-        $this->assertNull((new GewerbeBeratungsdokumentationParser())->parse(
-            "Vorlaeufiges Beratungsprotokoll zur Kfz-Versicherung CHECK24"
+        $this->assertNull((new GewerbeBeratungsdokumentationParser)->parse(
+            'Vorlaeufiges Beratungsprotokoll zur Kfz-Versicherung CHECK24'
         ));
     }
 }

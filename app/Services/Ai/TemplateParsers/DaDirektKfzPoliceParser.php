@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Services\Ai\Concerns\ReadsDocumentPages;
@@ -39,9 +40,9 @@ class DaDirektKfzPoliceParser implements DocumentTemplateParser
         if ($this->looksLikeComparisonProtocol($text)) {
             return null;
         }
-        if (!str_contains($upper, 'DA DIREKT')
-            || !str_contains($upper, 'VERSICHERUNGSSCHEIN')
-            || (!str_contains($upper, 'KRAFTFAHRTVERSICHERUNG') && !str_contains($upper, 'KFZ-VERSICHERUNG'))) {
+        if (! str_contains($upper, 'DA DIREKT')
+            || ! str_contains($upper, 'VERSICHERUNGSSCHEIN')
+            || (! str_contains($upper, 'KRAFTFAHRTVERSICHERUNG') && ! str_contains($upper, 'KFZ-VERSICHERUNG'))) {
             return null;
         }
 
@@ -57,22 +58,22 @@ class DaDirektKfzPoliceParser implements DocumentTemplateParser
             return null;
         }
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $plate = $vehicle['license_plate'] ?? null;
 
         return [
             'type' => 'kfz_vertrag',
             'confidence' => 78,
             'summary' => 'DA-Direkt Kfz-Versicherungsschein (Kfz-Vertrag)'
-                . ($name !== '' ? ' - ' . $name : '')
-                . ($plate !== null ? ' - ' . $plate : '')
-                . (isset($insurance['contract_number']) ? ' - Vertrag ' . $insurance['contract_number'] : '')
-                . (isset($vehicle['sf_liability_class']) ? ' - SF ' . $vehicle['sf_liability_class'] . ' (Haftpflicht)' : '')
-                . (isset($insurance['tariff']) ? ' - ' . $insurance['tariff'] : '')
-                . (isset($vehicle['has_teilkasko']) || isset($vehicle['has_vollkasko'])
-                    ? ' - Deckung: ' . $this->coverageSummary($vehicle) : '')
-                . ' - Felder gratis aus dem Versicherungsschein gelesen (ohne KI).',
-            'title' => 'DA Direkt Kfz-Versicherung' . ($name !== '' ? ' ' . $name : ''),
+                .($name !== '' ? ' - '.$name : '')
+                .($plate !== null ? ' - '.$plate : '')
+                .(isset($insurance['contract_number']) ? ' - Vertrag '.$insurance['contract_number'] : '')
+                .(isset($vehicle['sf_liability_class']) ? ' - SF '.$vehicle['sf_liability_class'].' (Haftpflicht)' : '')
+                .(isset($insurance['tariff']) ? ' - '.$insurance['tariff'] : '')
+                .(isset($vehicle['has_teilkasko']) || isset($vehicle['has_vollkasko'])
+                    ? ' - Deckung: '.$this->coverageSummary($vehicle) : '')
+                .' - Felder gratis aus dem Versicherungsschein gelesen (ohne KI).',
+            'title' => 'DA Direkt Kfz-Versicherung'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -96,7 +97,7 @@ class DaDirektKfzPoliceParser implements DocumentTemplateParser
     {
         $raw = [];
         foreach ($lines as $i => $line) {
-            if (!preg_match('/^\s*(Herrn|Herr|Frau)\s*$/u', trim($line), $anrede)) {
+            if (! preg_match('/^\s*(Herrn|Herr|Frau)\s*$/u', trim($line), $anrede)) {
                 continue;
             }
             // Folgezeilen (nicht-leer) einsammeln: Name, Strasse, PLZ Ort.
@@ -128,7 +129,7 @@ class DaDirektKfzPoliceParser implements DocumentTemplateParser
 
         // Geburtsdatum des Versicherungsnehmers (Tarifmerkmal "Geburtsdatum VN").
         if (preg_match('/Geburtsdatum\s+VN\s*:?\s*(\d{2})\.(\d{2})\.(\d{4})/u', $text, $m)) {
-            $raw['birth_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['birth_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
 
         return $this->validatedPerson(array_filter($raw, fn ($v) => $v !== null && $v !== ''));
@@ -157,7 +158,7 @@ class DaDirektKfzPoliceParser implements DocumentTemplateParser
         }
         // Erstzulassung.
         if (preg_match('/Erstzulassung:\s+(\d{2})\.(\d{2})\.(\d{4})/u', $text, $m)) {
-            $raw['first_registration'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['first_registration'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
         // Jaehrliche Fahrleistung (Tarifmerkmal).
         if (preg_match('/Jahreskilometerleistung[^:]*:\s+([\d.]+)/u', $text, $m)) {
@@ -233,7 +234,7 @@ class DaDirektKfzPoliceParser implements DocumentTemplateParser
 
         // Versicherungsbeginn.
         if (preg_match('/Versicherungsbeginn:\s+(\d{2})\.(\d{2})\.(\d{4})/u', $text, $m)) {
-            $raw['start_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['start_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
 
         // Gesamtbeitrag gemaess Zahlungsweise (NICHT die Teilbeitraege der
@@ -256,11 +257,11 @@ class DaDirektKfzPoliceParser implements DocumentTemplateParser
     private function coverageSummary(array $kfz): string
     {
         $parts = ['Haftpflicht'];
-        if (!empty($kfz['has_teilkasko'])) {
-            $parts[] = 'Teilkasko' . (isset($kfz['teilkasko_deductible']) ? ' (' . $kfz['teilkasko_deductible'] . ' EUR SB)' : '');
+        if (! empty($kfz['has_teilkasko'])) {
+            $parts[] = 'Teilkasko'.(isset($kfz['teilkasko_deductible']) ? ' ('.$kfz['teilkasko_deductible'].' EUR SB)' : '');
         }
-        if (!empty($kfz['has_vollkasko'])) {
-            $parts[] = 'Vollkasko' . (isset($kfz['vollkasko_deductible']) ? ' (' . $kfz['vollkasko_deductible'] . ' EUR SB)' : '');
+        if (! empty($kfz['has_vollkasko'])) {
+            $parts[] = 'Vollkasko'.(isset($kfz['vollkasko_deductible']) ? ' ('.$kfz['vollkasko_deductible'].' EUR SB)' : '');
         }
         return implode(', ', $parts);
     }

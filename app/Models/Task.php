@@ -1,5 +1,7 @@
 <?php
+
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -12,19 +14,20 @@ use Illuminate\Support\Str;
  * (tasks:send-auto-emails); wird die Aufgabe vorher erledigt, wird der
  * Versand automatisch uebersprungen (Model-Hook -> Status 'skipped').
  */
-class Task extends Model {
+class Task extends Model
+{
     protected $keyType = 'string';
     public $incrementing = false;
 
     /** Gueltige Aufgabentypen inkl. Anzeige-Label und Icon (eine Quelle fuer Formulare/Listen). */
     public const TYPES = [
-        'call'      => ['label' => 'Anruf',         'icon' => '📞'],
-        'email'     => ['label' => 'E-Mail',        'icon' => '✉️'],
-        'meeting'   => ['label' => 'Termin',        'icon' => '📅'],
-        'document'  => ['label' => 'Dokument',      'icon' => '📄'],
+        'call' => ['label' => 'Anruf',         'icon' => '📞'],
+        'email' => ['label' => 'E-Mail',        'icon' => '✉️'],
+        'meeting' => ['label' => 'Termin',        'icon' => '📅'],
+        'document' => ['label' => 'Dokument',      'icon' => '📄'],
         'follow_up' => ['label' => 'Wiedervorlage', 'icon' => '🔄'],
-        'reminder'  => ['label' => 'Erinnerung',    'icon' => '⏰'],
-        'other'     => ['label' => 'Sonstige',      'icon' => '📌'],
+        'reminder' => ['label' => 'Erinnerung',    'icon' => '⏰'],
+        'other' => ['label' => 'Sonstige',      'icon' => '📌'],
     ];
 
     public const PRIORITIES = ['high' => 'Hoch', 'medium' => 'Mittel', 'low' => 'Niedrig'];
@@ -32,10 +35,10 @@ class Task extends Model {
     public const STATUSES = ['open' => 'Offen', 'in_progress' => 'In Bearbeitung', 'done' => 'Erledigt'];
 
     protected $fillable = [
-        'assigned_to','created_by','customer_id','email_message_id','contract_id',
-        'title','description','type','status','priority','due_date','completed_at',
-        'auto_email_status','auto_email_subject','auto_email_body',
-        'auto_email_send_on','auto_email_sent_at','auto_email_error',
+        'assigned_to', 'created_by', 'customer_id', 'email_message_id', 'contract_id',
+        'title', 'description', 'type', 'status', 'priority', 'due_date', 'completed_at',
+        'auto_email_status', 'auto_email_subject', 'auto_email_body',
+        'auto_email_send_on', 'auto_email_sent_at', 'auto_email_error',
     ];
 
     protected $casts = [
@@ -47,7 +50,7 @@ class Task extends Model {
 
     protected static function boot() {
         parent::boot();
-        static::creating(fn($m) => $m->id = $m->id ?: (string) Str::uuid());
+        static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
         // Erledigt-Zeitpunkt automatisch fuehren + geplanten E-Mail-Versand
         // einer erledigten Aufgabe stoppen (der Kunde hat reagiert - die
         // "Nachfassen"-Mail waere jetzt falsch). Gilt fuer ALLE Wege

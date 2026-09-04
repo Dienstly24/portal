@@ -1,7 +1,9 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Tools;
 
 use App\Models\Contract;
+use Carbon\Carbon;
 
 /**
  * Vertraege des angemeldeten Kunden (Spezifikation Abschnitt 6).
@@ -22,9 +24,9 @@ class GetCustomerContractsTool implements AssistantTool
     public function description(): string
     {
         return 'Alle Vertraege des angemeldeten Kunden mit Sparte, Gesellschaft, '
-            . 'Vertragsnummer, Status (aktiv/beendet/in Bearbeitung), Beitrag und Laufzeit. '
-            . 'Nutze das fuer Fragen wie "welche Vertraege habe ich", "was zahle ich", '
-            . '"laeuft mein Vertrag noch". Optional nur aktive Vertraege abfragen.';
+            .'Vertragsnummer, Status (aktiv/beendet/in Bearbeitung), Beitrag und Laufzeit. '
+            .'Nutze das fuer Fragen wie "welche Vertraege habe ich", "was zahle ich", '
+            .'"laeuft mein Vertrag noch". Optional nur aktive Vertraege abfragen.';
     }
 
     public function parameters(): array
@@ -81,7 +83,7 @@ class GetCustomerContractsTool implements AssistantTool
                     'beginn' => $this->date($c->start_date),
                     'ende' => $this->date($c->end_date),
                     'beitrag' => $c->hasPremium()
-                        ? number_format((float) $c->premium_amount, 2, ',', '.') . ' EUR ' . $c->premiumIntervalLabel()
+                        ? number_format((float) $c->premium_amount, 2, ',', '.').' EUR '.$c->premiumIntervalLabel()
                         : null,
                     'kennzeichen' => $c->vehicleDetail?->license_plate,
                 ], fn ($v) => $v !== null && $v !== '');
@@ -96,12 +98,12 @@ class GetCustomerContractsTool implements AssistantTool
      */
     private function date($value): ?string
     {
-        if (!$value) {
+        if (! $value) {
             return null;
         }
 
         try {
-            return \Carbon\Carbon::parse($value)->format('d.m.Y');
+            return Carbon::parse($value)->format('d.m.Y');
         } catch (\Throwable) {
             return null;
         }

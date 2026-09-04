@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\EmailAccount;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Crypt;
 use Tests\TestCase;
 
 class EmailAccountManagementTest extends TestCase
@@ -135,7 +136,7 @@ class EmailAccountManagementTest extends TestCase
         ]);
 
         // Verschluesselter State, aber die Nonce passt zu keiner Session.
-        $forgedState = \Illuminate\Support\Facades\Crypt::encryptString($account->id . '|fremde-nonce');
+        $forgedState = Crypt::encryptString($account->id.'|fremde-nonce');
 
         $this->actingAs($admin)
             ->get(route('admin.email_accounts.oauth_callback', ['code' => 'irrelevant', 'state' => $forgedState]))

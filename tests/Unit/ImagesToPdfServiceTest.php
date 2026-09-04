@@ -29,7 +29,7 @@ class ImagesToPdfServiceTest extends TestCase
 
     public function test_builds_multipage_pdf_from_jpegs(): void
     {
-        $pdf = (new ImagesToPdfService())->build([
+        $pdf = (new ImagesToPdfService)->build([
             $this->makeJpeg(400, 600),
             $this->makeJpeg(600, 400),
             $this->makeJpeg(300, 300),
@@ -45,7 +45,7 @@ class ImagesToPdfServiceTest extends TestCase
 
     public function test_converts_png_pages_to_jpeg(): void
     {
-        $pdf = (new ImagesToPdfService())->build([$this->makePng(200, 260)]);
+        $pdf = (new ImagesToPdfService)->build([$this->makePng(200, 260)]);
 
         $this->assertStringStartsWith('%PDF-1.4', $pdf);
         $this->assertStringContainsString('/Count 1', $pdf);
@@ -55,7 +55,7 @@ class ImagesToPdfServiceTest extends TestCase
     public function test_rejects_unreadable_page(): void
     {
         $this->expectException(\RuntimeException::class);
-        (new ImagesToPdfService())->build(['kein-bild']);
+        (new ImagesToPdfService)->build(['kein-bild']);
     }
 
     /** Minimalen EXIF-APP1-Block mit einem Orientation-Tag in ein JPEG einfuegen. */
@@ -69,27 +69,27 @@ class ImagesToPdfServiceTest extends TestCase
         imagedestroy($img);
 
         // Minimaler TIFF-Header (Intel/Little-Endian) mit einem IFD-Eintrag: Orientation (Tag 0x0112, SHORT).
-        $tiff = "II" . pack('v', 42) . pack('V', 8);
+        $tiff = 'II'.pack('v', 42).pack('V', 8);
         $tiff .= pack('v', 1);
-        $tiff .= pack('v', 0x0112) . pack('v', 3) . pack('V', 1) . pack('v', $orientation) . pack('v', 0);
+        $tiff .= pack('v', 0x0112).pack('v', 3).pack('V', 1).pack('v', $orientation).pack('v', 0);
         $tiff .= pack('V', 0);
 
-        $exif = "Exif\0\0" . $tiff;
-        $app1 = "\xFF\xE1" . pack('n', strlen($exif) + 2) . $exif;
+        $exif = "Exif\0\0".$tiff;
+        $app1 = "\xFF\xE1".pack('n', strlen($exif) + 2).$exif;
 
-        return substr($jpeg, 0, 2) . $app1 . substr($jpeg, 2);
+        return substr($jpeg, 0, 2).$app1.substr($jpeg, 2);
     }
 
     public function test_corrects_jpeg_exif_orientation(): void
     {
-        if (!function_exists('exif_read_data')) {
+        if (! function_exists('exif_read_data')) {
             $this->markTestSkipped('exif-Erweiterung nicht installiert.');
         }
 
         // 100x200 (Hochformat), Orientation=6 = "90 Grad im Uhrzeigersinn drehen"
         // -> nach der Korrektur ist das eingebettete Bild 200x100 (Querformat).
         $jpeg = $this->makeJpegWithOrientation(100, 200, 6);
-        $pdf = (new ImagesToPdfService())->build([$jpeg]);
+        $pdf = (new ImagesToPdfService)->build([$jpeg]);
 
         $this->assertStringStartsWith('%PDF-1.4', $pdf);
         $this->assertMatchesRegularExpression('/\/Width 200 \/Height 100/', $pdf);
@@ -98,7 +98,7 @@ class ImagesToPdfServiceTest extends TestCase
     public function test_leaves_jpeg_without_orientation_tag_unchanged_dimensions(): void
     {
         $jpeg = $this->makeJpeg(100, 200);
-        $pdf = (new ImagesToPdfService())->build([$jpeg]);
+        $pdf = (new ImagesToPdfService)->build([$jpeg]);
 
         $this->assertMatchesRegularExpression('/\/Width 100 \/Height 200/', $pdf);
     }

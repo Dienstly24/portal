@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Support\Totp;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -17,7 +18,7 @@ class TotpTest extends TestCase
         return Totp::base32Encode('12345678901234567890');
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('rfcVectors')]
+    #[DataProvider('rfcVectors')]
     public function test_matches_rfc_6238_vectors(int $time, string $expected): void
     {
         $this->assertSame($expected, Totp::code($this->rfcSecret(), $time, 8));
@@ -26,12 +27,12 @@ class TotpTest extends TestCase
     public static function rfcVectors(): array
     {
         return [
-            'T=59'           => [59, '94287082'],
-            'T=1111111109'   => [1111111109, '07081804'],
-            'T=1111111111'   => [1111111111, '14050471'],
-            'T=1234567890'   => [1234567890, '89005924'],
-            'T=2000000000'   => [2000000000, '69279037'],
-            'T=20000000000'  => [20000000000, '65353130'],
+            'T=59' => [59, '94287082'],
+            'T=1111111109' => [1111111109, '07081804'],
+            'T=1111111111' => [1111111111, '14050471'],
+            'T=1234567890' => [1234567890, '89005924'],
+            'T=2000000000' => [2000000000, '69279037'],
+            'T=20000000000' => [20000000000, '65353130'],
         ];
     }
 

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Mailbox;
 
 use App\Models\EmailAccount;
@@ -32,7 +33,7 @@ class OAuthTokenService
 
     public function isConnected(EmailAccount $account): bool
     {
-        return !empty(($account->credentials ?? [])['refresh_token']);
+        return ! empty(($account->credentials ?? [])['refresh_token']);
     }
 
     /** Consent-URL für den "Verbinden"-Button im Admin. */
@@ -45,11 +46,11 @@ class OAuthTokenService
         // Der verschluesselte State schuetzt zusaetzlich vor Manipulation.
         $nonce = Str::random(40);
         session(['email_oauth_state' => ['account' => (string) $account->id, 'nonce' => $nonce]]);
-        $state = Crypt::encryptString($account->id . '|' . $nonce);
+        $state = Crypt::encryptString($account->id.'|'.$nonce);
         $redirect = route('admin.email_accounts.oauth_callback');
 
         if ($account->provider === 'gmail_oauth') {
-            return self::GOOGLE_AUTH . '?' . http_build_query([
+            return self::GOOGLE_AUTH.'?'.http_build_query([
                 'client_id' => config('services.google.client_id'),
                 'redirect_uri' => $redirect,
                 'response_type' => 'code',
@@ -61,7 +62,7 @@ class OAuthTokenService
             ]);
         }
 
-        return $this->msEndpoint('authorize') . '?' . http_build_query([
+        return $this->msEndpoint('authorize').'?'.http_build_query([
             'client_id' => config('services.microsoft.client_id'),
             'redirect_uri' => $redirect,
             'response_type' => 'code',
@@ -97,8 +98,8 @@ class OAuthTokenService
             'redirect_uri' => route('admin.email_accounts.oauth_callback'),
         ]));
 
-        if (!$response->successful() || empty($response->json('access_token'))) {
-            throw new \RuntimeException('OAuth-Token-Tausch fehlgeschlagen: ' . mb_substr($response->body(), 0, 200));
+        if (! $response->successful() || empty($response->json('access_token'))) {
+            throw new \RuntimeException('OAuth-Token-Tausch fehlgeschlagen: '.mb_substr($response->body(), 0, 200));
         }
 
         $credentials = $account->credentials ?? [];
@@ -121,12 +122,12 @@ class OAuthTokenService
         if (empty($credentials['refresh_token'])) {
             throw new \RuntimeException(
                 (EmailAccount::PROVIDERS[$account->provider] ?? $account->provider)
-                . ': Postfach ist noch nicht verbunden - bitte im Admin "Verbinden" ausführen.'
+                .': Postfach ist noch nicht verbunden - bitte im Admin "Verbinden" ausführen.'
             );
         }
 
         $expiresAt = (int) ($credentials['expires_at'] ?? 0);
-        if (!empty($credentials['access_token']) && $expiresAt > now()->addMinute()->timestamp) {
+        if (! empty($credentials['access_token']) && $expiresAt > now()->addMinute()->timestamp) {
             return $credentials['access_token'];
         }
 
@@ -135,10 +136,10 @@ class OAuthTokenService
             'refresh_token' => $credentials['refresh_token'],
         ]));
 
-        if (!$response->successful() || empty($response->json('access_token'))) {
+        if (! $response->successful() || empty($response->json('access_token'))) {
             // Sichtbar machen statt still abreißen (Prüfbericht-Risiko OAuth-Widerruf).
-            $account->update(['last_error' => 'OAuth-Refresh fehlgeschlagen: ' . mb_substr($response->body(), 0, 150)]);
-            throw new \RuntimeException('OAuth-Refresh fehlgeschlagen für ' . $account->email_address);
+            $account->update(['last_error' => 'OAuth-Refresh fehlgeschlagen: '.mb_substr($response->body(), 0, 150)]);
+            throw new \RuntimeException('OAuth-Refresh fehlgeschlagen für '.$account->email_address);
         }
 
         $credentials['access_token'] = $response->json('access_token');
@@ -167,15 +168,15 @@ class OAuthTokenService
 
     private function msEndpoint(string $type): string
     {
-        return 'https://login.microsoftonline.com/' . config('services.microsoft.tenant', 'common') . '/oauth2/v2.0/' . $type;
+        return 'https://login.microsoftonline.com/'.config('services.microsoft.tenant', 'common').'/oauth2/v2.0/'.$type;
     }
 
     private function assertConfigured(EmailAccount $account): void
     {
-        if (!$this->isConfigured($account)) {
+        if (! $this->isConfigured($account)) {
             throw new \RuntimeException(
                 (EmailAccount::PROVIDERS[$account->provider] ?? $account->provider)
-                . ': OAuth-App ist nicht konfiguriert (GOOGLE_CLIENT_ID/MICROSOFT_CLIENT_ID in der Umgebung setzen).'
+                .': OAuth-App ist nicht konfiguriert (GOOGLE_CLIENT_ID/MICROSOFT_CLIENT_ID in der Umgebung setzen).'
             );
         }
     }

@@ -25,7 +25,7 @@ class DocumentShowRedirectTest extends TestCase
         $user = User::factory()->create(['role' => 'customer']);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5((string) $user->id), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5((string) $user->id), 0, 8)),
         ]);
     }
 
@@ -50,8 +50,8 @@ class DocumentShowRedirectTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin']);
 
         $this->actingAs($admin)
-            ->get('/admin/documents/' . $doc->id)
-            ->assertRedirect(route('admin.customer', $customer->id) . '#tab-dokumente');
+            ->get('/admin/documents/'.$doc->id)
+            ->assertRedirect(route('admin.customer', $customer->id).'#tab-dokumente');
     }
 
     public function test_unassigned_inbox_document_link_redirects_to_inbox(): void
@@ -60,7 +60,7 @@ class DocumentShowRedirectTest extends TestCase
         $doc = $this->makeDocument(null, $admin->id);
 
         $this->actingAs($admin)
-            ->get('/admin/documents/' . $doc->id)
+            ->get('/admin/documents/'.$doc->id)
             ->assertRedirect(route('admin.documents.inbox'));
     }
 
@@ -81,7 +81,7 @@ class DocumentShowRedirectTest extends TestCase
         $employee = User::factory()->create(['role' => 'employee', 'can_see_all_customers' => false]);
 
         $this->actingAs($employee)
-            ->get('/admin/documents/' . $doc->id)
+            ->get('/admin/documents/'.$doc->id)
             ->assertForbidden();
     }
 
@@ -94,11 +94,11 @@ class DocumentShowRedirectTest extends TestCase
         // Spiegelt authorizeDocumentAccess: Inbox-Dokumente sieht ein
         // portfolio-begrenzter Mitarbeiter nur, wenn er sie selbst hochlud.
         $this->actingAs($employee)
-            ->get('/admin/documents/' . $doc->id)
+            ->get('/admin/documents/'.$doc->id)
             ->assertForbidden();
 
         $this->actingAs($admin)
-            ->get('/admin/documents/' . $doc->id)
+            ->get('/admin/documents/'.$doc->id)
             ->assertRedirect(route('admin.documents.inbox'));
     }
 
@@ -107,7 +107,7 @@ class DocumentShowRedirectTest extends TestCase
         $customer = $this->makeCustomer();
         $doc = $this->makeDocument($customer);
 
-        $this->get('/admin/documents/' . $doc->id)->assertRedirect(route('login'));
+        $this->get('/admin/documents/'.$doc->id)->assertRedirect(route('login'));
     }
 
     public function test_fixed_segment_routes_still_match_before_the_id_wildcard(): void

@@ -10,8 +10,7 @@ use Illuminate\Support\Facades\Schema;
  * 7-Tage-Erinnerungen nach einer konfigurierbaren Anzahl Versuche zu stoppen
  * (Schutz der Absender-Reputation - vgl. bekanntes Spam-Thema bei Outlook).
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {

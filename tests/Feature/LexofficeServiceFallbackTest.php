@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use App\Services\LexofficeService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
@@ -44,7 +45,7 @@ class LexofficeServiceFallbackTest extends TestCase
     {
         Http::fake(['*' => Http::response(['message' => 'unauthorized'], 401)]);
 
-        $admin = \App\Models\User::factory()->create(['role' => 'admin']);
+        $admin = User::factory()->create(['role' => 'admin']);
         $response = $this->actingAs($admin)->get('/admin/lexoffice/contacts');
 
         $response->assertOk();
@@ -89,7 +90,7 @@ class LexofficeServiceFallbackTest extends TestCase
     {
         Http::fake(fn () => throw new ConnectionException('Connection refused'));
 
-        $admin = \App\Models\User::factory()->create(['role' => 'admin']);
+        $admin = User::factory()->create(['role' => 'admin']);
         $response = $this->actingAs($admin)->get('/admin/lexoffice/contacts');
 
         $response->assertOk();
@@ -99,7 +100,7 @@ class LexofficeServiceFallbackTest extends TestCase
     {
         Http::fake(fn () => throw new ConnectionException('Connection refused'));
 
-        $admin = \App\Models\User::factory()->create(['role' => 'admin']);
+        $admin = User::factory()->create(['role' => 'admin']);
         $response = $this->actingAs($admin)->get('/admin/lexoffice/invoices');
 
         $response->assertOk();

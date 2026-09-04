@@ -19,7 +19,7 @@ class EnergyContractImportTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->csvPath = tempnam(sys_get_temp_dir(), 'energie') . '.csv';
+        $this->csvPath = tempnam(sys_get_temp_dir(), 'energie').'.csv';
     }
 
     protected function tearDown(): void
@@ -32,12 +32,12 @@ class EnergyContractImportTest extends TestCase
     private function writeCsv(array $dataRows): void
     {
         $header = 'VP-Name;Auftr.-Nr.;"Ihre Auftr.-Nr.";Anlagedatum;Auftr.-Status;'
-            . 'Auftr.-Statustext;Kunden;Anschrift;Geburtsdatum;Telefonnummer;'
-            . 'Zaehlernummer;Verbrauch;"Verbrauch NT";Tarif/Produkt;VAP;VAP-Datum;'
-            . 'RL;RL-Datum;Stornodatum;Wiederanschaltungsdatum;"VP Nummer";"UVP Nummer"';
+            .'Auftr.-Statustext;Kunden;Anschrift;Geburtsdatum;Telefonnummer;'
+            .'Zaehlernummer;Verbrauch;"Verbrauch NT";Tarif/Produkt;VAP;VAP-Datum;'
+            .'RL;RL-Datum;Stornodatum;Wiederanschaltungsdatum;"VP Nummer";"UVP Nummer"';
 
         $lines = array_merge([$header], $dataRows);
-        $utf8 = implode("\r\n", $lines) . "\r\n";
+        $utf8 = implode("\r\n", $lines)."\r\n";
         // Export ist Windows-1252 kodiert -> genau so ablegen, damit der
         // Dekodierpfad des Kommandos real getestet wird.
         file_put_contents($this->csvPath, mb_convert_encoding($utf8, 'Windows-1252', 'UTF-8'));
@@ -71,7 +71,7 @@ class EnergyContractImportTest extends TestCase
             '0',
         ];
         // Werte mit Leerzeichen/Sonderzeichen in Anfuehrungszeichen setzen.
-        return implode(';', array_map(fn ($c) => '"' . str_replace('"', '""', (string) $c) . '"', $cells));
+        return implode(';', array_map(fn ($c) => '"'.str_replace('"', '""', (string) $c).'"', $cells));
     }
 
     public function test_imports_customer_and_energy_contract(): void

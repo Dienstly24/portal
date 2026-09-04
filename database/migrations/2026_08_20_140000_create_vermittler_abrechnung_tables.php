@@ -17,8 +17,7 @@ use Illuminate\Support\Facades\Schema;
  * Referenz-Nr./Vermittler-ID). Genau das ist der Zweck: belegen zu koennen,
  * dass ein Vertrag bei uns existierte und wie der Vermittler ihn behandelt hat.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         // Ein Import-Lauf (eine hochgeladene CSV-Datei des Vermittlers).

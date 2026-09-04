@@ -2,6 +2,9 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\ActivityLog;
+use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -48,13 +51,13 @@ class LoginRequest extends FormRequest
         $password = (string) $this->input('password');
         $remember = $this->boolean('remember');
 
-        $user = \App\Models\User::where('email', $email)->first();
+        $user = User::where('email', $email)->first();
         // is_active === NULL gilt ueberall sonst als AKTIV (Alt-/Importkonten,
         // vgl. EnsureUserRole/MagicLoginController/AdminController). Ohne den
         // isset-Guard sperrte gerade das Passwort-Login solche Konten aus,
         // waehrend Admin-UI und Magic-Login sie als aktiv fuehren (Audit
         // AUTH-1). Nur ein AUSDRUECKLICH auf false gesetztes Konto ist gesperrt.
-        if ($user && isset($user->is_active) && !$user->is_active) {
+        if ($user && isset($user->is_active) && ! $user->is_active) {
             RateLimiter::hit($this->throttleKey());
             throw ValidationException::withMessages([
                 'email' => 'Dieses Konto wurde deaktiviert. Bitte wenden Sie sich an die Verwaltung.',
@@ -86,7 +89,7 @@ class LoginRequest extends FormRequest
 
         // Fehlgeschlagenen Login-Versuch protokollieren (Audit INT-8) - ohne
         // Passwort, mit IP fuer Forensik/Brute-Force-Erkennung.
-        \App\Models\ActivityLog::record('login_failed', 'user', $user?->id, [
+        ActivityLog::record('login_failed', 'user', $user?->id, [
             'email' => $email,
             'ip' => $this->ip(),
         ], $user?->id);
@@ -101,14 +104,14 @@ class LoginRequest extends FormRequest
      * eingegebene Passwort - unabhaengig von der Schreibweise - dem
      * Geburtsdatum des Kunden entspricht; sonst null.
      */
-    private function canonicalBirthdatePassword(\App\Models\User $user, string $entered): ?string
+    private function canonicalBirthdatePassword(User $user, string $entered): ?string
     {
         $birthDate = $user->customer?->birth_date;
-        if (!$birthDate) {
+        if (! $birthDate) {
             return null;
         }
         try {
-            $birth = \Carbon\Carbon::parse($birthDate);
+            $birth = Carbon::parse($birthDate);
         } catch (\Throwable) {
             return null;
         }
@@ -125,7 +128,7 @@ class LoginRequest extends FormRequest
         $target = $birth->format('Y-m-d');
         foreach (['d.m.Y', 'j.n.Y', 'd-m-Y', 'j-n-Y', 'd/m/Y', 'j/n/Y', 'd.m.y', 'dmY', 'Y-m-d'] as $format) {
             try {
-                $parsed = \Carbon\Carbon::createFromFormat('!' . $format, $entered);
+                $parsed = Carbon::createFromFormat('!'.$format, $entered);
             } catch (\Throwable) {
                 continue;
             }

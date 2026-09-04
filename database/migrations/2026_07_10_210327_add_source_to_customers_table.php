@@ -10,12 +10,11 @@ use Illuminate\Support\Facades\Schema;
  * Bestehende Kunden bleiben NULL (unbekannte/historische Herkunft) -
  * kein rückwirkendes Raten.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('customers', function (Blueprint $table) {
-            if (!Schema::hasColumn('customers', 'source')) {
+            if (! Schema::hasColumn('customers', 'source')) {
                 $table->string('source')->nullable()->after('customer_number');
             }
         });

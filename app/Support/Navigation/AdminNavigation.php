@@ -64,7 +64,7 @@ final class AdminNavigation
             $this->administration(),
         ];
 
-        return array_values(array_filter($groups, fn (NavGroup $g) => !$g->isEmpty()));
+        return array_values(array_filter($groups, fn (NavGroup $g) => ! $g->isEmpty()));
     }
 
     /**
@@ -185,7 +185,7 @@ final class AdminNavigation
      */
     private function administration(): NavGroup
     {
-        if (!$this->isManagement()) {
+        if (! $this->isManagement()) {
             return new NavGroup('administration', 'Administration', [], openByDefault: false);
         }
 

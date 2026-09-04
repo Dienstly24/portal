@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Sales;
 
 /**
@@ -78,6 +79,6 @@ class IntentClassifier
     {
         $text = mb_strtolower(trim($message));
 
-        return $text . ' ' . str_replace(['ä', 'ö', 'ü', 'ß'], ['ae', 'oe', 'ue', 'ss'], $text);
+        return $text.' '.str_replace(['ä', 'ö', 'ü', 'ß'], ['ae', 'oe', 'ue', 'ss'], $text);
     }
 }

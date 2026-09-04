@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Support;
 
 /**
@@ -20,7 +21,7 @@ class GermanPhone
         $s = preg_replace('/^0049/', '0', $s);
         // "49176..." (ohne +, mit Laendercode) ebenfalls normalisieren.
         if (preg_match('/^49\d{9,}$/', $s)) {
-            $s = '0' . substr($s, 2);
+            $s = '0'.substr($s, 2);
         }
         return $s;
     }

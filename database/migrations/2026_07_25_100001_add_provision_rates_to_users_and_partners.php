@@ -12,8 +12,7 @@ use Illuminate\Support\Facades\Schema;
  * Die Saetze dienen als VORSCHLAG im Neukunden-Bericht; der tatsaechliche
  * Betrag wird beim Erfassen der Provision bestaetigt/ueberschrieben (HITL).
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {

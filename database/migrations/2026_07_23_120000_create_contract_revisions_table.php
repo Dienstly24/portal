@@ -15,8 +15,7 @@ use Illuminate\Support\Facades\Schema;
  * So bleibt genau EIN Vertrag je Fahrzeug (Single Source of Truth) sichtbar,
  * mit vollstaendigem Verlauf statt mehrerer Vertraege fuer dasselbe Auto.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('contract_revisions', function (Blueprint $table) {

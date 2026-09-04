@@ -26,7 +26,7 @@ class EnergyContractExtractionTest extends TestCase
     private function customer(): Customer
     {
         $user = User::factory()->create(['role' => 'customer']);
-        return Customer::create(['user_id' => $user->id, 'customer_number' => 'C-' . strtoupper(Str::random(6))]);
+        return Customer::create(['user_id' => $user->id, 'customer_number' => 'C-'.strtoupper(Str::random(6))]);
     }
 
     public function test_energy_contract_gets_detail_from_auftrag(): void
@@ -135,7 +135,7 @@ class EnergyContractExtractionTest extends TestCase
             ]),
         ]);
 
-        $result = (new ClaudeDocumentAiProvider())->analyze('BYTES', 'application/pdf', '', false);
+        $result = (new ClaudeDocumentAiProvider)->analyze('BYTES', 'application/pdf', '', false);
 
         $energie = $result['data']['energie'];
         $this->assertSame('1EMH0012345678', $energie['meter_number']);

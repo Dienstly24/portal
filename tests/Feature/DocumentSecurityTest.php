@@ -20,19 +20,19 @@ class DocumentSecurityTest extends TestCase
         $user = User::factory()->create(['role' => 'customer']);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5((string) $user->id), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5((string) $user->id), 0, 8)),
         ]);
     }
 
     private function makePrivateDocument(Customer $customer): Document
     {
         Storage::fake('local');
-        Storage::disk('local')->put('contract_documents/' . $customer->id . '/police.pdf', '%PDF-1.4 test');
+        Storage::disk('local')->put('contract_documents/'.$customer->id.'/police.pdf', '%PDF-1.4 test');
         return Document::create([
             'customer_id' => $customer->id,
             'category' => 'contract',
             'file_name' => 'police.pdf',
-            'file_path' => 'contract_documents/' . $customer->id . '/police.pdf',
+            'file_path' => 'contract_documents/'.$customer->id.'/police.pdf',
             'disk' => 'local',
         ]);
     }
@@ -96,7 +96,7 @@ class DocumentSecurityTest extends TestCase
         // ?view=1: inline im Browser-Tab anzeigen (kein attachment) - damit
         // der Mitarbeiter jedes Dokument (auch ein fehlgeschlagenes) ansehen
         // kann, ohne es herunterzuladen.
-        $response = $this->actingAs($admin)->get(route('admin.documents.download', $doc->id) . '?view=1');
+        $response = $this->actingAs($admin)->get(route('admin.documents.download', $doc->id).'?view=1');
         $response->assertOk();
         $this->assertStringContainsString('inline', (string) $response->headers->get('Content-Disposition'));
     }
@@ -107,12 +107,12 @@ class DocumentSecurityTest extends TestCase
         $doc = $this->makePrivateDocument($customer); // police.pdf -> ansehbar
         $admin = User::factory()->create(['role' => 'admin']);
 
-        $viewUrl = route('admin.documents.download', $doc->id) . '?view=1';
+        $viewUrl = route('admin.documents.download', $doc->id).'?view=1';
         $this->actingAs($admin)->get(route('admin.customer', $customer->id))
             ->assertOk()
             // Anzeigen-Button mit Schnellvorschau/Modal-Attributen (ohne Download)
             ->assertSee('data-preview-open', false)
-            ->assertSee('data-preview-url="' . e($viewUrl) . '"', false)
+            ->assertSee('data-preview-url="'.e($viewUrl).'"', false)
             ->assertSee('data-preview-kind="pdf"', false);
     }
 
@@ -120,22 +120,22 @@ class DocumentSecurityTest extends TestCase
     {
         $customer = $this->makeCustomer();
         Storage::fake('local');
-        Storage::disk('local')->put('customers/' . $customer->id . '/antrag.docx', 'x');
+        Storage::disk('local')->put('customers/'.$customer->id.'/antrag.docx', 'x');
         $doc = Document::create([
             'customer_id' => $customer->id,
             'category' => 'other',
             'file_name' => 'antrag.docx',
-            'file_path' => 'customers/' . $customer->id . '/antrag.docx',
+            'file_path' => 'customers/'.$customer->id.'/antrag.docx',
             'disk' => 'local',
         ]);
         $admin = User::factory()->create(['role' => 'admin']);
 
         // Word-Datei ist nicht inline ansehbar -> kein Anzeigen-Button (kein
         // data-preview-url) fuer diese Zeile; der Download-Button bleibt.
-        $viewUrl = route('admin.documents.download', $doc->id) . '?view=1';
+        $viewUrl = route('admin.documents.download', $doc->id).'?view=1';
         $this->actingAs($admin)->get(route('admin.customer', $customer->id))
             ->assertOk()
-            ->assertDontSee('data-preview-url="' . e($viewUrl) . '"', false)
+            ->assertDontSee('data-preview-url="'.e($viewUrl).'"', false)
             ->assertSee(route('admin.documents.download', $doc->id), false);
     }
 
@@ -190,12 +190,12 @@ class DocumentSecurityTest extends TestCase
     {
         $customer = $this->makeCustomer();
         Storage::fake('local');
-        Storage::disk('local')->put('customers/' . $customer->id . '/internal.pdf', 'x');
+        Storage::disk('local')->put('customers/'.$customer->id.'/internal.pdf', 'x');
         $doc = Document::create([
             'customer_id' => $customer->id,
             'category' => 'other',
             'file_name' => 'intern.pdf',
-            'file_path' => 'customers/' . $customer->id . '/internal.pdf',
+            'file_path' => 'customers/'.$customer->id.'/internal.pdf',
             'disk' => 'local',
             'visibility' => 'internal',
         ]);

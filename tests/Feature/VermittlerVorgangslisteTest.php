@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Contract;
-use App\Models\Document;
 use App\Models\Customer;
+use App\Models\Document;
 use App\Models\User;
 use App\Models\VermittlerSettlement;
 use App\Services\Ai\TemplateParsers\VermittlerVorgangslisteHinweisParser;
@@ -14,6 +14,7 @@ use App\Services\Vermittler\VermittlerVorgangslisteParser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -44,7 +45,7 @@ class VermittlerVorgangslisteTest extends TestCase
         $user = User::factory()->create(['role' => 'customer', 'name' => $name]);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5($name . $user->id), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5($name.$user->id), 0, 8)),
         ]);
     }
 
@@ -65,7 +66,7 @@ class VermittlerVorgangslisteTest extends TestCase
      */
     private function screenshotText(): string
     {
-        return <<<TXT
+        return <<<'TXT'
         Datum        Produkt                       ID         Status
         20.08.2026   Rechtsschutzversicherung      9782530    offen
         20.08.2026   Kfz-Versicherung Abschluss    9783872    offen
@@ -128,9 +129,9 @@ class VermittlerVorgangslisteTest extends TestCase
     public function test_column_wise_ocr_output_is_reported_as_ambiguous(): void
     {
         $text = "9783872 offen\n9783674 offen\n9783710 offen\n"
-            . "Referenznummer: 1477-6741-9200-53\n"
-            . "Referenznummer: 1447-5771-4260-46\n"
-            . "Referenznummer: 1447-9735-6260-53\n";
+            ."Referenznummer: 1477-6741-9200-53\n"
+            ."Referenznummer: 1447-5771-4260-46\n"
+            ."Referenznummer: 1447-9735-6260-53\n";
 
         $parsed = app(VermittlerVorgangslisteParser::class)->parse($text);
 
@@ -143,7 +144,7 @@ class VermittlerVorgangslisteTest extends TestCase
         $contract = $this->contract($this->customer(), ['reference_number' => '1477-6741-9200-53']);
 
         $import = $this->importText("9783872 offen\n9783674 offen\n"
-            . "Referenznummer: 1477-6741-9200-53\nReferenznummer: 1447-5771-4260-46\n");
+            ."Referenznummer: 1477-6741-9200-53\nReferenznummer: 1447-5771-4260-46\n");
 
         $this->assertNull($contract->refresh()->vermittler_id, 'Bei unsicherer Erkennung wird nichts verknuepft.');
         $this->assertSame(0, $import->rows_new_link);
@@ -180,9 +181,9 @@ class VermittlerVorgangslisteTest extends TestCase
         $this->importText($this->screenshotText());
 
         // Spaetere Abrechnungsdatei: nur Id, Status 4 (abgerechnet), 75 EUR.
-        $path = tempnam(sys_get_temp_dir(), 'vm') . '.csv';
+        $path = tempnam(sys_get_temp_dir(), 'vm').'.csv';
         file_put_contents($path, "\"Datum\";\"Produkt\";\"Id\";\"Status\";\"Provision\"\n"
-            . "\"2026-11-20 00:00:00\";\"Kfz-Versicherung Abschluss\";\"9783872\";\"4\";\"75\"\n");
+            ."\"2026-11-20 00:00:00\";\"Kfz-Versicherung Abschluss\";\"9783872\";\"4\";\"75\"\n");
 
         $import = app(VermittlerAbrechnungImporter::class)->import($path, 'abrechnung.csv', null, false);
 
@@ -293,7 +294,7 @@ class VermittlerVorgangslisteTest extends TestCase
     public function test_a_normal_customer_document_is_not_treated_as_a_list(): void
     {
         $text = "Vielen Dank, Ihr Antrag ist bei uns eingegangen.\n"
-            . "Referenznummer: 1477-6741-9200-53\nVersicherungsbeginn: Tag der Zulassung\n";
+            ."Referenznummer: 1477-6741-9200-53\nVersicherungsbeginn: Tag der Zulassung\n";
 
         $this->assertNull(app(VermittlerVorgangslisteHinweisParser::class)->parse($text));
     }
@@ -308,8 +309,8 @@ class VermittlerVorgangslisteTest extends TestCase
         $contract = $this->contract($this->customer(), ['reference_number' => '1477-6741-9200-53']);
 
         $csv = "Datum;Produkt;ID;Status;Referenznummer\n"
-            . "20.08.2026;Kfz-Versicherung Abschluss;9783872;offen;1477-6741-9200-53\n";
-        $path = tempnam(sys_get_temp_dir(), 'vl') . '.csv';
+            ."20.08.2026;Kfz-Versicherung Abschluss;9783872;offen;1477-6741-9200-53\n";
+        $path = tempnam(sys_get_temp_dir(), 'vl').'.csv';
         file_put_contents($path, $csv);
 
         $response = $this->actingAs($admin)->post('/admin/vermittler-abrechnung/vorgangsliste', [
@@ -323,7 +324,7 @@ class VermittlerVorgangslisteTest extends TestCase
     public function test_file_without_any_vorgang_is_refused_with_a_clear_message(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
-        $path = tempnam(sys_get_temp_dir(), 'vl') . '.csv';
+        $path = tempnam(sys_get_temp_dir(), 'vl').'.csv';
         file_put_contents($path, "nur irgendein Text ohne Vorgaenge\n");
 
         $this->actingAs($admin)->post('/admin/vermittler-abrechnung/vorgangsliste', [
@@ -343,12 +344,12 @@ class VermittlerVorgangslisteTest extends TestCase
     private function inboxDocument(string $inhalt, string $name = 'vorgaenge.csv'): Document
     {
         Storage::fake('local');
-        Storage::disk('local')->put('inbox/' . $name, $inhalt);
+        Storage::disk('local')->put('inbox/'.$name, $inhalt);
 
         return Document::create([
-            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'id' => (string) Str::uuid(),
             'file_name' => $name,
-            'file_path' => 'inbox/' . $name,
+            'file_path' => 'inbox/'.$name,
             'disk' => 'local',
             'category' => 'sonstiges',
             'ai_status' => 'done',
@@ -363,11 +364,11 @@ class VermittlerVorgangslisteTest extends TestCase
 
         $document = $this->inboxDocument(
             "Datum;Produkt;ID;Status;Referenznummer\n"
-            . "20.08.2026;Kfz-Versicherung Abschluss;9783872;offen;1477-6741-9200-53\n"
+            ."20.08.2026;Kfz-Versicherung Abschluss;9783872;offen;1477-6741-9200-53\n"
         );
 
         $this->actingAs($admin)
-            ->post('/admin/vermittler-abrechnung/dokument/' . $document->id . '/einlesen')
+            ->post('/admin/vermittler-abrechnung/dokument/'.$document->id.'/einlesen')
             ->assertRedirect();
 
         $this->assertSame('9783872', $contract->refresh()->vermittler_id);
@@ -382,12 +383,12 @@ class VermittlerVorgangslisteTest extends TestCase
 
         $document = $this->inboxDocument(
             "Datum;Produkt;ID;Status;Referenznummer\n"
-            . "20.08.2026;Kfz-Versicherung Abschluss;9783872;offen;1477-6741-9200-53\n"
+            ."20.08.2026;Kfz-Versicherung Abschluss;9783872;offen;1477-6741-9200-53\n"
         );
 
         $this->assertTrue(Document::inbox()->whereNull('vermittler_import_id')->where('id', $document->id)->exists());
 
-        $this->actingAs($admin)->post('/admin/vermittler-abrechnung/dokument/' . $document->id . '/einlesen');
+        $this->actingAs($admin)->post('/admin/vermittler-abrechnung/dokument/'.$document->id.'/einlesen');
 
         $this->assertDatabaseHas('documents', ['id' => $document->id]);
         $this->assertFalse(Document::inbox()->whereNull('vermittler_import_id')->where('id', $document->id)->exists());
@@ -403,11 +404,11 @@ class VermittlerVorgangslisteTest extends TestCase
         $this->contract($this->customer(), ['reference_number' => '1477-6741-9200-53']);
         $document = $this->inboxDocument(
             "Datum;Produkt;ID;Status;Referenznummer\n"
-            . "20.08.2026;Kfz-Versicherung Abschluss;9783872;offen;1477-6741-9200-53\n"
+            ."20.08.2026;Kfz-Versicherung Abschluss;9783872;offen;1477-6741-9200-53\n"
         );
 
-        $this->actingAs($admin)->post('/admin/vermittler-abrechnung/dokument/' . $document->id . '/einlesen');
-        $this->actingAs($admin)->post('/admin/vermittler-abrechnung/dokument/' . $document->id . '/einlesen');
+        $this->actingAs($admin)->post('/admin/vermittler-abrechnung/dokument/'.$document->id.'/einlesen');
+        $this->actingAs($admin)->post('/admin/vermittler-abrechnung/dokument/'.$document->id.'/einlesen');
 
         $this->assertDatabaseCount('vermittler_imports', 1);
         $this->assertSame(1, VermittlerSettlement::count());
@@ -420,7 +421,7 @@ class VermittlerVorgangslisteTest extends TestCase
         $document = $this->inboxDocument("nur irgendein Text\n", 'irgendwas.csv');
 
         $this->actingAs($admin)
-            ->post('/admin/vermittler-abrechnung/dokument/' . $document->id . '/einlesen')
+            ->post('/admin/vermittler-abrechnung/dokument/'.$document->id.'/einlesen')
             ->assertSessionHas('error');
 
         $this->assertNull($document->refresh()->vermittler_import_id);
@@ -436,7 +437,7 @@ class VermittlerVorgangslisteTest extends TestCase
         $document->update(['customer_id' => $customer->id]);
 
         $this->actingAs($admin)
-            ->post('/admin/vermittler-abrechnung/dokument/' . $document->id . '/einlesen')
+            ->post('/admin/vermittler-abrechnung/dokument/'.$document->id.'/einlesen')
             ->assertSessionHas('error');
 
         $this->assertDatabaseCount('vermittler_imports', 0);
@@ -445,7 +446,7 @@ class VermittlerVorgangslisteTest extends TestCase
     public function test_only_admin_and_manager_may_import_a_list(): void
     {
         $employee = User::factory()->create(['role' => 'employee']);
-        $path = tempnam(sys_get_temp_dir(), 'vl') . '.csv';
+        $path = tempnam(sys_get_temp_dir(), 'vl').'.csv';
         file_put_contents($path, "Datum;Produkt;ID;Status\n20.08.2026;Kfz;9783872;offen\n");
 
         $this->actingAs($employee)->post('/admin/vermittler-abrechnung/vorgangsliste', [

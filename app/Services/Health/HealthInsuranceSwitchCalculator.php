@@ -1,8 +1,9 @@
 <?php
+
 namespace App\Services\Health;
 
-use Carbon\CarbonInterface;
 use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 
 /**
  * Berechnet, ab wann eine neue Krankenkasse gilt (Krankenkassenwechsel).
@@ -50,8 +51,7 @@ class HealthInsuranceSwitchCalculator
 
         return match ($reason) {
             self::REASON_NEW_JOB => ($jobStart !== null ? CarbonImmutable::instance($jobStart) : $submitted)->startOfDay(),
-            self::REASON_REGULAR, self::REASON_SONDER =>
-                $submitted->addMonthsNoOverflow(self::REGULAR_MONTHS)->startOfMonth(),
+            self::REASON_REGULAR, self::REASON_SONDER => $submitted->addMonthsNoOverflow(self::REGULAR_MONTHS)->startOfMonth(),
             default => throw new \InvalidArgumentException("Unbekannter Wechsel-Grund: {$reason}"),
         };
     }

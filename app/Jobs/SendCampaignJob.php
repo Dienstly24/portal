@@ -1,12 +1,16 @@
 <?php
+
 namespace App\Jobs;
 
 use App\Mail\CampaignMail;
 use App\Models\Customer;
 use App\Models\EmailCampaign;
 use App\Models\EmailLog;
+use App\Services\Notifications\NotificationService;
+use App\Support\Facades\Notify;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
@@ -74,7 +78,7 @@ class SendCampaignJob implements ShouldQueue
     public function handle(): void
     {
         $campaign = EmailCampaign::find($this->campaignId);
-        if (!$campaign || !in_array($campaign->status, ['sending', 'scheduled'], true)) return;
+        if (! $campaign || ! in_array($campaign->status, ['sending', 'scheduled'], true)) return;
 
         $campaign->update(['status' => 'sending']);
 
@@ -86,7 +90,7 @@ class SendCampaignJob implements ShouldQueue
 
         while (true) {
             $batch = $this->recipients($campaign)
-                ->when($skipped !== [], fn($q) => $q->whereNotIn('customers.id', $skipped))
+                ->when($skipped !== [], fn ($q) => $q->whereNotIn('customers.id', $skipped))
                 ->orderBy('customers.id')
                 ->limit(self::BATCH_SIZE)
                 ->get();
@@ -94,7 +98,7 @@ class SendCampaignJob implements ShouldQueue
             if ($batch->isEmpty()) break;
 
             foreach ($batch as $customer) {
-                if (!$customer->isMarketingReachable()) {
+                if (! $customer->isMarketingReachable()) {
                     // Platzhalter-Adresse (import-...@dienstly24.internal)
                     // oder zwischenzeitlich abgemeldet.
                     $skipped[] = $customer->id;
@@ -122,7 +126,7 @@ class SendCampaignJob implements ShouldQueue
                         'type' => 'campaign',
                         'status' => 'sent',
                     ]);
-                } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+                } catch (UniqueConstraintViolationException $e) {
                     $skipped[] = $customer->id;
                     continue;
                 }
@@ -137,7 +141,7 @@ class SendCampaignJob implements ShouldQueue
                     ));
                 } catch (\Throwable $e) {
                     $log->update(['status' => 'failed']);
-                    Log::warning("Kampagne {$campaign->id}: Versand an {$email} fehlgeschlagen: " . $e->getMessage());
+                    Log::warning("Kampagne {$campaign->id}: Versand an {$email} fehlgeschlagen: ".$e->getMessage());
                 }
             }
 
@@ -172,21 +176,21 @@ class SendCampaignJob implements ShouldQueue
     public function failed(\Throwable $e): void
     {
         $campaign = EmailCampaign::find($this->campaignId);
-        if (!$campaign) return;
+        if (! $campaign) return;
 
         $sent = $this->sentCount($campaign);
         $campaign->update(['status' => 'failed', 'sent_count' => $sent]);
 
-        Log::error("Kampagne {$campaign->id}: Versand abgebrochen nach {$sent} Empfaengern: " . $e->getMessage());
+        Log::error("Kampagne {$campaign->id}: Versand abgebrochen nach {$sent} Empfaengern: ".$e->getMessage());
 
         if ($campaign->created_by) {
-            \App\Support\Facades\Notify::push($campaign->created_by, [
-                'type' => \App\Services\Notifications\NotificationService::TYPE_SYSTEM,
+            Notify::push($campaign->created_by, [
+                'type' => NotificationService::TYPE_SYSTEM,
                 'title' => 'Kampagnen-Versand abgebrochen',
-                'body' => 'Die Kampagne "' . $campaign->subject . '" konnte nicht vollstaendig versendet werden. '
-                    . $sent . ' Empfaenger wurden bereits angeschrieben. Ein erneuter Versand ueberspringt diese.',
+                'body' => 'Die Kampagne "'.$campaign->subject.'" konnte nicht vollstaendig versendet werden. '
+                    .$sent.' Empfaenger wurden bereits angeschrieben. Ein erneuter Versand ueberspringt diese.',
                 'link' => route('admin.email_marketing'),
-                'dedup_key' => 'campaign-failed-' . $campaign->id,
+                'dedup_key' => 'campaign-failed-'.$campaign->id,
             ]);
         }
     }
@@ -208,12 +212,12 @@ class SendCampaignJob implements ShouldQueue
     private function recipients(EmailCampaign $campaign)
     {
         $creator = $campaign->createdBy;
-        if (!$creator) {
+        if (! $creator) {
             // Kein (mehr) aufloesbarer Ersteller (Konto geloescht -> created_by
             // genullt): das Portfolio ist unbekannt. Dann NICHT an alle Kunden
             // senden (Portfolio-Scope-Schutz, Audit MKT-1) - leere Liste.
             $ids = [];
-        } elseif (!$creator->canSeeAllCustomers()) {
+        } elseif (! $creator->canSeeAllCustomers()) {
             $ids = $creator->assignedCustomers()->pluck('customers.id')->toArray();
         } else {
             $ids = null; // see-all -> keine Einschraenkung
@@ -221,11 +225,11 @@ class SendCampaignJob implements ShouldQueue
 
         $base = Customer::with('user')
             ->marketingReachable()
-            ->whereNotExists(fn($q) => $q->select(DB::raw(1))
+            ->whereNotExists(fn ($q) => $q->select(DB::raw(1))
                 ->from('email_logs')
                 ->whereColumn('email_logs.user_id', 'customers.user_id')
                 ->where('email_logs.campaign_id', $campaign->id))
-            ->when($ids !== null, fn($q) => $q->whereIn('customers.id', $ids));
+            ->when($ids !== null, fn ($q) => $q->whereIn('customers.id', $ids));
 
         return match (true) {
             $campaign->target === 'all' => $base,
@@ -233,7 +237,7 @@ class SendCampaignJob implements ShouldQueue
             // Sparten-Kampagne: nur Kunden mit einem AKTIVEN Vertrag dieser
             // Sparte (Contract::currentlyActive) - wer gekuendigt hat, ist kein
             // Bestandskunde dieser Sparte mehr.
-            default => $base->whereHas('contracts', fn($q) => $q->where('type', $campaign->target)->currentlyActive()),
+            default => $base->whereHas('contracts', fn ($q) => $q->where('type', $campaign->target)->currentlyActive()),
         };
     }
 

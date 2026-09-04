@@ -60,7 +60,7 @@ class ErrorEvent extends Model
     public function shortFile(): string
     {
         $file = (string) $this->file;
-        $base = base_path() . DIRECTORY_SEPARATOR;
+        $base = base_path().DIRECTORY_SEPARATOR;
 
         return str_starts_with($file, $base) ? substr($file, strlen($base)) : $file;
     }

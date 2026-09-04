@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Tools;
 
 use App\Models\CustomerChangeRequest;
@@ -24,14 +25,14 @@ class GetOpenTicketsTool implements AssistantTool
     public function description(): string
     {
         return 'Offene Vorgaenge und Tickets des angemeldeten Kunden (Nummer, Thema, Art, '
-            . 'Status, erstellt am) sowie offene Aenderungsantraege. Nutze das IMMER, bevor '
-            . 'du einen neuen Vorgang anlegst - ein bestehender Vorgang zum selben Thema '
-            . 'wird weiterverwendet, nie dupliziert.';
+            .'Status, erstellt am) sowie offene Aenderungsantraege. Nutze das IMMER, bevor '
+            .'du einen neuen Vorgang anlegst - ein bestehender Vorgang zum selben Thema '
+            .'wird weiterverwendet, nie dupliziert.';
     }
 
     public function parameters(): array
     {
-        return ['type' => 'object', 'properties' => new \stdClass(), 'required' => []];
+        return ['type' => 'object', 'properties' => new \stdClass, 'required' => []];
     }
 
     public function isWriting(): bool

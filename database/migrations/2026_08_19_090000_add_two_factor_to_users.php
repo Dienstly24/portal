@@ -23,8 +23,7 @@ use Illuminate\Support\Facades\Schema;
  *   Einrichtung als nicht abgeschlossen; sonst sperrt sich jemand aus,
  *   der den QR-Code zwar angezeigt, aber nie gescannt hat.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {

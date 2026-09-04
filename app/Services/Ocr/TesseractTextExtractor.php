@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ocr;
 
 use Illuminate\Support\Facades\Log;
@@ -29,7 +30,7 @@ class TesseractTextExtractor implements TextExtractorInterface
 
     public function isAvailable(): bool
     {
-        if (!config('services.ocr.enabled')) {
+        if (! config('services.ocr.enabled')) {
             return false;
         }
         return $this->binaryWorks($this->tesseractBinary(), ['--version']);
@@ -37,12 +38,12 @@ class TesseractTextExtractor implements TextExtractorInterface
 
     public function extract(string $binary, string $mime): string
     {
-        if (!$this->isAvailable()) {
+        if (! $this->isAvailable()) {
             return '';
         }
 
-        $dir = sys_get_temp_dir() . '/dienstly_ocr_' . bin2hex(random_bytes(8));
-        if (!@mkdir($dir, 0700, true) && !is_dir($dir)) {
+        $dir = sys_get_temp_dir().'/dienstly_ocr_'.bin2hex(random_bytes(8));
+        if (! @mkdir($dir, 0700, true) && ! is_dir($dir)) {
             return '';
         }
 
@@ -67,14 +68,14 @@ class TesseractTextExtractor implements TextExtractorInterface
             $pages = [];
             foreach ($images as $image) {
                 if (microtime(true) >= $deadline) {
-                    Log::warning('OCR-Zeitbudget erschoepft - Teilergebnis nach ' . count($pages) . ' Seiten.');
+                    Log::warning('OCR-Zeitbudget erschoepft - Teilergebnis nach '.count($pages).' Seiten.');
                     break;
                 }
                 $pages[] = trim($this->ocrImage($image));
             }
             return trim(implode("\f", $pages), " \t\n\r\0\x0B\f");
         } catch (\Throwable $e) {
-            Log::warning('OCR-Extraktion fehlgeschlagen: ' . $e->getMessage());
+            Log::warning('OCR-Extraktion fehlgeschlagen: '.$e->getMessage());
             return '';
         } finally {
             $this->cleanup($dir);
@@ -84,11 +85,11 @@ class TesseractTextExtractor implements TextExtractorInterface
     /** @return list<string> Pfade der rasterisierten Seiten (leer, wenn poppler-utils fehlt). */
     private function rasterizePdf(string $binary, string $dir): array
     {
-        if (!$this->binaryWorks($this->pdftoppmBinary(), ['-v'])) {
+        if (! $this->binaryWorks($this->pdftoppmBinary(), ['-v'])) {
             return [];
         }
 
-        $pdfPath = $dir . '/source.pdf';
+        $pdfPath = $dir.'/source.pdf';
         file_put_contents($pdfPath, $binary);
 
         // Niedrigere DPI (Default 150 statt 200) reicht fuer OCR voellig aus,
@@ -97,17 +98,17 @@ class TesseractTextExtractor implements TextExtractorInterface
         // die ersten Seiten genuegen - so bleibt der Lauf im Zeitbudget.
         $dpi = (string) max(72, (int) config('services.ocr.dpi', 150));
         $maxPages = (string) max(1, (int) config('services.ocr.max_pages', 10));
-        $prefix = $dir . '/page';
+        $prefix = $dir.'/page';
         $process = new Process([
             $this->pdftoppmBinary(), '-png', '-r', $dpi, '-f', '1', '-l', $maxPages, $pdfPath, $prefix,
         ]);
         $process->setTimeout(60);
         $process->run();
-        if (!$process->isSuccessful()) {
+        if (! $process->isSuccessful()) {
             return [];
         }
 
-        $files = glob($prefix . '*.png') ?: [];
+        $files = glob($prefix.'*.png') ?: [];
         sort($files, SORT_NATURAL);
         return $files;
     }
@@ -119,7 +120,7 @@ class TesseractTextExtractor implements TextExtractorInterface
         if ($ext === null) {
             return [];
         }
-        $path = $dir . '/input.' . $ext;
+        $path = $dir.'/input.'.$ext;
         file_put_contents($path, $binary);
 
         return [$this->upscaleIfSmall($path, $dir)];
@@ -140,13 +141,13 @@ class TesseractTextExtractor implements TextExtractorInterface
     private function upscaleIfSmall(string $path, string $dir): string
     {
         $grenze = max(0, (int) config('services.ocr.upscale_below_px', 2600));
-        if ($grenze === 0 || !extension_loaded('gd')) {
+        if ($grenze === 0 || ! extension_loaded('gd')) {
             return $path;
         }
 
         try {
             $info = @getimagesize($path);
-            if (!is_array($info) || ($info[0] ?? 0) < 1 || ($info[1] ?? 0) < 1) {
+            if (! is_array($info) || ($info[0] ?? 0) < 1 || ($info[1] ?? 0) < 1) {
                 return $path;
             }
             [$breite, $hoehe] = $info;
@@ -164,14 +165,14 @@ class TesseractTextExtractor implements TextExtractorInterface
                 return $path;
             }
             $ok = imagecopyresampled($ziel, $quelle, 0, 0, 0, 0, $breite * 2, $hoehe * 2, $breite, $hoehe);
-            $gross = $dir . '/input-2x.png';
+            $gross = $dir.'/input-2x.png';
             $ok = $ok && imagepng($ziel, $gross);
             imagedestroy($quelle);
             imagedestroy($ziel);
 
             return ($ok && is_file($gross)) ? $gross : $path;
         } catch (\Throwable $e) {
-            Log::warning('OCR: Vergroessern des Bildes fehlgeschlagen: ' . $e->getMessage());
+            Log::warning('OCR: Vergroessern des Bildes fehlgeschlagen: '.$e->getMessage());
             return $path;
         }
     }
@@ -192,8 +193,8 @@ class TesseractTextExtractor implements TextExtractorInterface
         // war '' und alles eskalierte still zum bezahlten KI-Vision. Jetzt
         // wird der Grund protokolliert (mit `ocr:check` gezielt pruefbar).
         Log::warning('OCR (tesseract) Seite fehlgeschlagen (Sprachen '
-            . config('services.ocr.languages', 'deu+eng') . '): '
-            . trim($process->getErrorOutput()));
+            .config('services.ocr.languages', 'deu+eng').'): '
+            .trim($process->getErrorOutput()));
         return '';
     }
 
@@ -207,8 +208,8 @@ class TesseractTextExtractor implements TextExtractorInterface
     private function binaryWorks(string $binary, array $args): bool
     {
         static $cache = [];
-        $key = $binary . ' ' . implode(' ', $args);
-        if (!empty($cache[$key])) {
+        $key = $binary.' '.implode(' ', $args);
+        if (! empty($cache[$key])) {
             return true;
         }
         try {
@@ -236,7 +237,7 @@ class TesseractTextExtractor implements TextExtractorInterface
 
     private function cleanup(string $dir): void
     {
-        foreach (glob($dir . '/*') ?: [] as $file) {
+        foreach (glob($dir.'/*') ?: [] as $file) {
             @unlink($file);
         }
         @rmdir($dir);

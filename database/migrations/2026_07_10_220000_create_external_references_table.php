@@ -11,8 +11,7 @@ use Illuminate\Support\Facades\Schema;
  * Spalten pro Anbieter, erweiterbar ohne erneute Schemaänderung
  * (z. B. Affiliate-Codes später nur als neuer type-Wert).
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         // Falls ein früherer, an dieser Migration abgebrochener Deploy die

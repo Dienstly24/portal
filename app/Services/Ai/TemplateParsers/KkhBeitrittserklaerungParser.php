@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
@@ -32,10 +33,10 @@ class KkhBeitrittserklaerungParser implements DocumentTemplateParser
     {
         $upper = mb_strtoupper($text);
         // Nur zustaendig fuer die KKH-Beitrittserklaerung.
-        if (!str_contains($upper, 'BEITRITTSERKL') || !str_contains($upper, 'KKH')) {
+        if (! str_contains($upper, 'BEITRITTSERKL') || ! str_contains($upper, 'KKH')) {
             return null;
         }
-        if (!str_contains($upper, 'KRANKENVERSICHERUNGSNUMMER') && !str_contains($upper, 'MITGLIEDSCHAFTSBEGINN')) {
+        if (! str_contains($upper, 'KRANKENVERSICHERUNGSNUMMER') && ! str_contains($upper, 'MITGLIEDSCHAFTSBEGINN')) {
             return null;
         }
 
@@ -50,15 +51,15 @@ class KkhBeitrittserklaerungParser implements DocumentTemplateParser
             return null;
         }
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         return [
             'type' => 'beitrittserklaerung',
             'confidence' => 70,
             'summary' => 'KKH-Beitrittserklaerung (gesetzliche Krankenversicherung)'
-                . ($name !== '' ? ' - ' . $name : '')
-                . ' - Felder gratis aus dem Formular gelesen (ohne KI).'
-                . (isset($health['previous_insurer']) ? ' Zuvor versichert bei ' . $health['previous_insurer'] . '.' : ''),
-            'title' => 'Beitrittserklaerung KKH' . ($name !== '' ? ' ' . $name : ''),
+                .($name !== '' ? ' - '.$name : '')
+                .' - Felder gratis aus dem Formular gelesen (ohne KI).'
+                .(isset($health['previous_insurer']) ? ' Zuvor versichert bei '.$health['previous_insurer'].'.' : ''),
+            'title' => 'Beitrittserklaerung KKH'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $versicherung,
@@ -269,7 +270,7 @@ class KkhBeitrittserklaerungParser implements DocumentTemplateParser
             $name = [];
             foreach (preg_split('/\s+/', $line) ?: [] as $token) {
                 $isName = preg_match('/^[A-ZÄÖÜ][\p{L}\-]{1,15}$/u', $token) === 1
-                    && !$this->isFormWord($token);
+                    && ! $this->isFormWord($token);
                 if ($isName) {
                     $name[] = $token;
                     if (count($name) >= 3) break;
@@ -316,7 +317,7 @@ class KkhBeitrittserklaerungParser implements DocumentTemplateParser
     private function germanDate(?string $value): ?string
     {
         if ($value !== null && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $value, $m)) {
-            return $m[3] . '-' . $m[2] . '-' . $m[1];
+            return $m[3].'-'.$m[2].'-'.$m[1];
         }
         return null;
     }

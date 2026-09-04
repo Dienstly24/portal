@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Commission;
 
 use App\Models\ActivityLog;
@@ -87,8 +88,8 @@ class CommissionWorkflowService
         $this->finish($message);
         $this->createTask($message, sprintf(
             'Provisionsgutschrift prüfen und buchen: %s%s (%s)',
-            $statement['credit_note_number'] ? 'Nr. ' . $statement['credit_note_number'] : 'ohne Nummer',
-            $statement['amount'] !== null ? ', ' . number_format($statement['amount'], 2, ',', '.') . ' €' : '',
+            $statement['credit_note_number'] ? 'Nr. '.$statement['credit_note_number'] : 'ohne Nummer',
+            $statement['amount'] !== null ? ', '.number_format($statement['amount'], 2, ',', '.').' €' : '',
             $partner->name
         ));
     }
@@ -110,7 +111,7 @@ class CommissionWorkflowService
             'created_by' => $this->systemUser->resolveId(),
             'customer_id' => null,
             'title' => $title,
-            'description' => 'Ausgelöst durch E-Mail "' . ($message->subject ?: '(kein Betreff)') . '" von ' . $message->from_address,
+            'description' => 'Ausgelöst durch E-Mail "'.($message->subject ?: '(kein Betreff)').'" von '.$message->from_address,
             'type' => 'email',
             'status' => 'open',
             'priority' => 'medium',

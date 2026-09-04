@@ -7,6 +7,7 @@ use App\Models\Document;
 use App\Models\EmailAccount;
 use App\Models\EmailMessage;
 use App\Models\User;
+use App\Services\Mailbox\EmailAttachmentService;
 use App\Services\Mailbox\MailboxMessageData;
 use App\Services\Mailbox\MailboxProviderFactory;
 use App\Services\Mailbox\MailboxProviderInterface;
@@ -68,7 +69,7 @@ class MailboxSyncServiceTest extends TestCase
             }
         };
 
-        return new MailboxSyncService($factory, app(EmailWorkflowService::class), app(\App\Services\Mailbox\EmailAttachmentService::class));
+        return new MailboxSyncService($factory, app(EmailWorkflowService::class), app(EmailAttachmentService::class));
     }
 
     public function test_sync_stores_new_message_and_marks_account_synced(): void
@@ -197,7 +198,7 @@ class MailboxSyncServiceTest extends TestCase
             }
         };
 
-        $service = new MailboxSyncService($factory, app(EmailWorkflowService::class), app(\App\Services\Mailbox\EmailAttachmentService::class));
+        $service = new MailboxSyncService($factory, app(EmailWorkflowService::class), app(EmailAttachmentService::class));
         $stored = $service->syncAccount($account);
 
         $this->assertSame(0, $stored);

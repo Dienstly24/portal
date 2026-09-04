@@ -1,8 +1,10 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
 use App\Services\Ai\Contracts\DocumentTemplateParser;
+use App\Support\GermanPhone;
 
 /**
  * Gratis-Parser fuer die Formulare der BIG direkt gesund (gesetzliche
@@ -41,7 +43,7 @@ class BigGesundParser implements DocumentTemplateParser
 
         $upper = mb_strtoupper($text);
         // Nur BIG-direkt-gesund-Formulare (Wortmarke oder Domain im Dokument).
-        if (!str_contains($upper, 'BIG DIREKT GESUND') && !str_contains($upper, 'BIG-DIREKT.DE')) {
+        if (! str_contains($upper, 'BIG DIREKT GESUND') && ! str_contains($upper, 'BIG-DIREKT.DE')) {
             return null;
         }
 
@@ -81,7 +83,7 @@ class BigGesundParser implements DocumentTemplateParser
 
         $birth = $this->labelValue('Geburtsdatum');
         if ($birth !== null && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $birth, $m)) {
-            $person['birth_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $person['birth_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
         $person['birth_place'] = $this->labelValue('Geburtsort');
 
@@ -137,15 +139,15 @@ class BigGesundParser implements DocumentTemplateParser
             'insurer' => self::INSURER,
         ]);
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         return [
             'type' => 'beitrittserklaerung',
             'confidence' => 72,
             'summary' => 'BIG-direkt-gesund-Mitgliedsantrag (gesetzliche Krankenversicherung)'
-                . ($name !== '' ? ' - ' . $name : '')
-                . ' - Felder gratis aus dem Formular gelesen (ohne KI).'
-                . (isset($health['previous_insurer']) ? ' Zuvor versichert bei ' . $health['previous_insurer'] . '.' : ''),
-            'title' => 'Mitgliedsantrag BIG direkt gesund' . ($name !== '' ? ' ' . $name : ''),
+                .($name !== '' ? ' - '.$name : '')
+                .' - Felder gratis aus dem Formular gelesen (ohne KI).'
+                .(isset($health['previous_insurer']) ? ' Zuvor versichert bei '.$health['previous_insurer'].'.' : ''),
+            'title' => 'Mitgliedsantrag BIG direkt gesund'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -226,16 +228,16 @@ class BigGesundParser implements DocumentTemplateParser
             }
         }
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         return [
             'type' => 'beitrittserklaerung',
             'confidence' => 68,
             'summary' => 'BIG-direkt-gesund Antrag Plusbonus (Zusatzversicherung/Bonus)'
-                . ($name !== '' ? ' - ' . $name : '')
-                . (isset($bank['iban']) ? ' - Bankverbindung erfasst' : '')
-                . ($police !== null ? ' - Police ' . $police . ' EUR/Jahr' : '')
-                . ' - Felder gratis aus dem Formular gelesen (ohne KI).',
-            'title' => 'Antrag Plusbonus BIG direkt gesund' . ($name !== '' ? ' ' . $name : ''),
+                .($name !== '' ? ' - '.$name : '')
+                .(isset($bank['iban']) ? ' - Bankverbindung erfasst' : '')
+                .($police !== null ? ' - Police '.$police.' EUR/Jahr' : '')
+                .' - Felder gratis aus dem Formular gelesen (ohne KI).',
+            'title' => 'Antrag Plusbonus BIG direkt gesund'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $this->validatedInsurance([
@@ -262,7 +264,7 @@ class BigGesundParser implements DocumentTemplateParser
     private function fillAddress(array &$person): void
     {
         foreach ($this->lines as $i => $line) {
-            if (!preg_match('/^\s*Adresse\s{2,}(\S.*?)\s*$/u', $line, $m)) {
+            if (! preg_match('/^\s*Adresse\s{2,}(\S.*?)\s*$/u', $line, $m)) {
                 continue;
             }
             $street = trim($m[1]);
@@ -292,7 +294,7 @@ class BigGesundParser implements DocumentTemplateParser
     {
         if (preg_match_all('/\b(0\d{9,14})\b/', $this->text(), $mm)) {
             foreach ($mm[1] as $candidate) {
-                if (\App\Support\GermanPhone::isMobile($candidate) || \App\Support\GermanPhone::isLandline($candidate)) {
+                if (GermanPhone::isMobile($candidate) || GermanPhone::isLandline($candidate)) {
                     return $candidate;
                 }
             }
@@ -306,7 +308,7 @@ class BigGesundParser implements DocumentTemplateParser
     private function labelValue(string $label): ?string
     {
         foreach ($this->lines as $line) {
-            if (preg_match('/^\s*' . preg_quote($label, '/') . '\s{2,}(\S.*?)\s*$/u', $line, $m)) {
+            if (preg_match('/^\s*'.preg_quote($label, '/').'\s{2,}(\S.*?)\s*$/u', $line, $m)) {
                 return trim($m[1]);
             }
         }
@@ -324,7 +326,7 @@ class BigGesundParser implements DocumentTemplateParser
                     break;
                 }
             }
-            if (!$hit) {
+            if (! $hit) {
                 continue;
             }
             for ($j = $i - 1; $j >= 0; $j--) {

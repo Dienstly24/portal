@@ -1,5 +1,8 @@
 <?php
+
 namespace App\Models;
+
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -17,21 +20,21 @@ class MessageTemplate extends Model
 
     /** Unterstuetzte Platzhalter (Anzeige in der Verwaltung + Composer). */
     public const PLACEHOLDERS = [
-        'anrede'        => 'Korrekte Briefanrede (z. B. "Sehr geehrter Herr Meyer")',
-        'name'          => 'Voller Name des Kunden',
-        'vorname'       => 'Vorname des Kunden',
-        'nachname'      => 'Nachname des Kunden',
-        'kundennummer'  => 'Kundennummer',
-        'geburtsdatum'  => 'Geburtsdatum (TT.MM.JJJJ)',
-        'berater'       => 'Name des angemeldeten Mitarbeiters',
-        'datum'         => 'Heutiges Datum (TT.MM.JJJJ)',
+        'anrede' => 'Korrekte Briefanrede (z. B. "Sehr geehrter Herr Meyer")',
+        'name' => 'Voller Name des Kunden',
+        'vorname' => 'Vorname des Kunden',
+        'nachname' => 'Nachname des Kunden',
+        'kundennummer' => 'Kundennummer',
+        'geburtsdatum' => 'Geburtsdatum (TT.MM.JJJJ)',
+        'berater' => 'Name des angemeldeten Mitarbeiters',
+        'datum' => 'Heutiges Datum (TT.MM.JJJJ)',
     ];
 
     protected $fillable = ['name', 'category', 'subject', 'body', 'lang', 'sort', 'created_by'];
 
     protected static function boot() {
         parent::boot();
-        static::creating(fn($m) => $m->id = $m->id ?: (string) Str::uuid());
+        static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
     public function creator() { return $this->belongsTo(User::class, 'created_by'); }
@@ -57,7 +60,7 @@ class MessageTemplate extends Model
                 'nachname' => count($parts) > 1 ? end($parts) : '',
                 'kundennummer' => (string) $customer->customer_number,
                 'geburtsdatum' => $customer->birth_date
-                    ? \Carbon\Carbon::parse($customer->birth_date)->format('d.m.Y') : '',
+                    ? Carbon::parse($customer->birth_date)->format('d.m.Y') : '',
             ];
         }
         return preg_replace_callback('/\{\{\s*([a-z]+)\s*\}\}/i', function ($m) use ($values) {
@@ -109,7 +112,7 @@ class MessageTemplate extends Model
 
         $created = 0;
         foreach ($defaults as $tpl) {
-            if (!self::where('name', $tpl['name'])->where('category', $tpl['category'])->exists()) {
+            if (! self::where('name', $tpl['name'])->where('category', $tpl['category'])->exists()) {
                 self::create($tpl + ['lang' => 'de', 'created_by' => $createdBy]);
                 $created++;
             }

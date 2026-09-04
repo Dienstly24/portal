@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Sales;
 
 /**
@@ -54,8 +55,8 @@ class AcceptanceDetector
         foreach ($offerLabels as $kandidat) {
             // "Angebot B" / "Option B" / "B nehme ich" - aber nie ein
             // zufaelliges Wort, das den Buchstaben enthaelt.
-            if (preg_match('/\b(?:angebot|option|offer|variante|عرض)\s*' . preg_quote(mb_strtolower($kandidat), '/') . '\b/u', $text)
-                || preg_match('/\b' . preg_quote(mb_strtolower($kandidat), '/') . '\b/u', $text)) {
+            if (preg_match('/\b(?:angebot|option|offer|variante|عرض)\s*'.preg_quote(mb_strtolower($kandidat), '/').'\b/u', $text)
+                || preg_match('/\b'.preg_quote(mb_strtolower($kandidat), '/').'\b/u', $text)) {
                 $label = $kandidat;
                 break;
             }
@@ -75,7 +76,7 @@ class AcceptanceDetector
     private function hits(string $text, array $needles): bool
     {
         foreach ($needles as $needle) {
-            if (preg_match('/(?:^|[^\p{L}])' . preg_quote($needle, '/') . '(?:[^\p{L}]|$)/u', $text)) {
+            if (preg_match('/(?:^|[^\p{L}])'.preg_quote($needle, '/').'(?:[^\p{L}]|$)/u', $text)) {
                 return true;
             }
         }
@@ -87,6 +88,6 @@ class AcceptanceDetector
     {
         $text = mb_strtolower(trim($message));
 
-        return $text . ' ' . str_replace(['ä', 'ö', 'ü', 'ß'], ['ae', 'oe', 'ue', 'ss'], $text);
+        return $text.' '.str_replace(['ä', 'ö', 'ü', 'ß'], ['ae', 'oe', 'ue', 'ss'], $text);
     }
 }

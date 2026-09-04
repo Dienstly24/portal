@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\SupportInquiryMail;
+use App\Mail\WebsiteInquiryConfirmationMail;
 use App\Models\Customer;
 use App\Models\Ticket;
-use App\Support\WebsiteHosts;
+use App\Services\SpamFilter;
+use App\Services\TicketNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -50,7 +53,7 @@ class WebsiteController extends Controller
     {
         abort_unless(array_key_exists($page, self::LEGAL_PAGES), 404);
 
-        return view('website.legal.' . str_replace('-', '_', $page), [
+        return view('website.legal.'.str_replace('-', '_', $page), [
             'pageTitle' => self::LEGAL_PAGES[$page],
             'pageSlug' => $page,
         ]);
@@ -86,8 +89,8 @@ class WebsiteController extends Controller
         ]);
 
         // Inhaltsbasierte Spam-Erkennung: still verwerfen, Erfolg vortaeuschen.
-        if ($spam = \App\Services\SpamFilter::reason([$data['name'], $data['kontakt'], $data['nachricht'] ?? null])) {
-            \Log::info('Website-Kontakt (Formular) als Spam verworfen: ' . $spam);
+        if ($spam = SpamFilter::reason([$data['name'], $data['kontakt'], $data['nachricht'] ?? null])) {
+            \Log::info('Website-Kontakt (Formular) als Spam verworfen: '.$spam);
             return redirect()->route($thanksRoute);
         }
 
@@ -117,10 +120,10 @@ class WebsiteController extends Controller
             'type' => WebsiteContactController::LEISTUNGEN[$data['leistung']],
             'priority' => 'mittel',
             'status' => 'open',
-            'subject' => 'Website-Anfrage: ' . $data['leistung'],
+            'subject' => 'Website-Anfrage: '.$data['leistung'],
             'description' => $nachricht !== ''
                 ? $nachricht
-                : 'Keine Nachricht angegeben - Kontaktwunsch zu: ' . $data['leistung'],
+                : 'Keine Nachricht angegeben - Kontaktwunsch zu: '.$data['leistung'],
             'guest_name' => $data['name'],
             'guest_email' => $email,
             'guest_phone' => $email ? null : $kontakt,
@@ -129,24 +132,24 @@ class WebsiteController extends Controller
             'consent_text' => $consentText,
         ]);
 
-        \App\Services\TicketNotifier::notifyNewTicket($ticket);
+        TicketNotifier::notifyNewTicket($ticket);
 
         // Support-Mail ans Team (wie bei allen Website-Anfragen).
         $supportEmail = config('services.inquiry.support_email') ?: config('mail.from.address');
         if ($supportEmail) {
             try {
-                Mail::to($supportEmail)->send(new \App\Mail\SupportInquiryMail($ticket, $customer?->customer_number));
+                Mail::to($supportEmail)->send(new SupportInquiryMail($ticket, $customer?->customer_number));
             } catch (\Throwable $e) {
-                \Log::warning('Website-Kontakt Support-Mail fehlgeschlagen: ' . $e->getMessage());
+                \Log::warning('Website-Kontakt Support-Mail fehlgeschlagen: '.$e->getMessage());
             }
         }
 
         // Eingangsbestaetigung an den Absender (nur bei gueltiger E-Mail).
         if ($email) {
             try {
-                Mail::to($email)->send(new \App\Mail\WebsiteInquiryConfirmationMail($ticket, $lang));
+                Mail::to($email)->send(new WebsiteInquiryConfirmationMail($ticket, $lang));
             } catch (\Throwable $e) {
-                \Log::warning('Website-Kontakt Bestaetigungs-Mail fehlgeschlagen: ' . $e->getMessage());
+                \Log::warning('Website-Kontakt Bestaetigungs-Mail fehlgeschlagen: '.$e->getMessage());
             }
         }
 

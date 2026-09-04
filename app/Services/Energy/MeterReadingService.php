@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Energy;
 
 use App\Models\Contract;
@@ -60,7 +61,7 @@ class MeterReadingService
         $detail = $this->preferredDetail($candidates, $readingDate);
         $contract = $detail->contract;
         $customer = $contract?->customer;
-        if (!$contract || !$customer) {
+        if (! $contract || ! $customer) {
             return null;
         }
 
@@ -95,11 +96,11 @@ class MeterReadingService
         // passiert danach exakt in PHP.
         $tail = mb_substr($normalized, -self::MIN_PARTIAL_LENGTH);
         return ContractEnergyDetail::whereNotNull('meter_number_normalized')
-            ->where('meter_number_normalized', 'like', '%' . $tail . '%')
+            ->where('meter_number_normalized', 'like', '%'.$tail.'%')
             ->with('contract.customer')->get()
             ->filter(function ($detail) use ($normalized) {
                 $stored = (string) $detail->meter_number_normalized;
-                if (mb_strlen($stored) < self::MIN_PARTIAL_LENGTH || !$detail->contract || !$detail->contract->customer) {
+                if (mb_strlen($stored) < self::MIN_PARTIAL_LENGTH || ! $detail->contract || ! $detail->contract->customer) {
                     return false;
                 }
                 return str_ends_with($normalized, $stored) || str_ends_with($stored, $normalized);
@@ -120,10 +121,10 @@ class MeterReadingService
         }
 
         $register = $options['register'] ?? MeterReading::REGISTER_DEFAULT;
-        if (!isset(MeterReading::REGISTERS[$register])) {
+        if (! isset(MeterReading::REGISTERS[$register])) {
             $register = MeterReading::REGISTER_DEFAULT;
         }
-        $readingDate = !empty($options['reading_date'])
+        $readingDate = ! empty($options['reading_date'])
             ? Carbon::parse($options['reading_date'])->toDateString()
             : now()->toDateString();
 
@@ -147,9 +148,9 @@ class MeterReadingService
 
         $note = $options['note'] ?? null;
         if ($goesBackwards) {
-            $hint = 'Niedriger als der vorherige Stand (' . MeterReading::formatValue((float) $previous->reading, $previous->unit ?: 'kWh')
-                . ') - bitte pruefen (Zaehlerwechsel?).';
-            $note = $note ? $note . ' ' . $hint : $hint;
+            $hint = 'Niedriger als der vorherige Stand ('.MeterReading::formatValue((float) $previous->reading, $previous->unit ?: 'kWh')
+                .') - bitte pruefen (Zaehlerwechsel?).';
+            $note = $note ? $note.' '.$hint : $hint;
         }
 
         $entry = MeterReading::create([
@@ -170,7 +171,7 @@ class MeterReadingService
 
         // Bestandsfeld "aktueller Zaehlerstand" mitfuehren, solange der neue
         // Stand tatsaechlich der juengste des Bezugszaehlwerks ist.
-        if (!$goesBackwards && $register === MeterReading::REGISTER_DEFAULT) {
+        if (! $goesBackwards && $register === MeterReading::REGISTER_DEFAULT) {
             $newest = MeterReading::where('contract_energy_detail_id', $detail->id)
                 ->where('register', $register)
                 ->orderByDesc('reading_date')->orderByDesc('created_at')->first();
@@ -195,12 +196,12 @@ class MeterReadingService
     {
         $energie = ($document->ai_extracted ?? [])['energie'] ?? [];
         $reading = $energie['meter_reading'] ?? null;
-        if (!is_numeric($reading)) {
+        if (! is_numeric($reading)) {
             return null;
         }
 
         $detail = $this->detailForDocument($document, $customer, $energie);
-        if (!$detail) {
+        if (! $detail) {
             return null;
         }
 
@@ -282,7 +283,7 @@ class MeterReadingService
             $contract = $detail->contract;
             $start = $contract?->start_date ? Carbon::parse($contract->start_date) : null;
             $end = $contract?->effectiveCancellationDate() ?? ($contract?->end_date ? Carbon::parse($contract->end_date) : null);
-            if ($start && $start->lte($date) && (!$end || Carbon::parse($end)->gte($date))) {
+            if ($start && $start->lte($date) && (! $end || Carbon::parse($end)->gte($date))) {
                 return $detail;
             }
         }

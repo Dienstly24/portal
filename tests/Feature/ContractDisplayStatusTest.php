@@ -25,7 +25,7 @@ class ContractDisplayStatusTest extends TestCase
         $user = User::factory()->create(['role' => 'customer']);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5((string) $user->id), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5((string) $user->id), 0, 8)),
         ]);
     }
 
@@ -60,7 +60,7 @@ class ContractDisplayStatusTest extends TestCase
         ])->displayStatus();
 
         $this->assertSame('cancelled_upcoming', $st['key']);
-        $this->assertSame('Gekündigt zum ' . $ablauf->format('d.m.Y'), $st['label']);
+        $this->assertSame('Gekündigt zum '.$ablauf->format('d.m.Y'), $st['label']);
         $this->assertSame('pending', $st['badge']);
         $this->assertSame($ablauf->format('d.m.Y'), $st['params']['date']);
     }
@@ -77,7 +77,7 @@ class ContractDisplayStatusTest extends TestCase
         ])->displayStatus();
 
         $this->assertSame('cancelled_upcoming', $st['key']);
-        $this->assertSame('Gekündigt zum ' . $ablauf->format('d.m.Y'), $st['label']);
+        $this->assertSame('Gekündigt zum '.$ablauf->format('d.m.Y'), $st['label']);
     }
 
     // Andere Sparten identisch: wirksam zum Ablauf.
@@ -90,7 +90,7 @@ class ContractDisplayStatusTest extends TestCase
             'cancellation_date' => now()->toDateString(),
         ])->displayStatus();
 
-        $this->assertSame('Gekündigt zum ' . $ablauf->format('d.m.Y'), $st['label']);
+        $this->assertSame('Gekündigt zum '.$ablauf->format('d.m.Y'), $st['label']);
         $this->assertSame('pending', $st['badge']);
     }
 
@@ -105,7 +105,7 @@ class ContractDisplayStatusTest extends TestCase
         ])->displayStatus();
 
         $this->assertSame('cancelled_upcoming', $st['key']);
-        $this->assertSame('Gekündigt zum ' . $cancelAt->format('d.m.Y'), $st['label']);
+        $this->assertSame('Gekündigt zum '.$cancelAt->format('d.m.Y'), $st['label']);
         $this->assertSame('pending', $st['badge']);
     }
 
@@ -119,7 +119,7 @@ class ContractDisplayStatusTest extends TestCase
 
         $this->assertSame('cancelled', $st['key']);
         $this->assertSame('rejected', $st['badge']);
-        $this->assertSame('Gekündigt zum ' . now()->subMonths(2)->format('d.m.Y'), $st['label']);
+        $this->assertSame('Gekündigt zum '.now()->subMonths(2)->format('d.m.Y'), $st['label']);
     }
 
     // Beginn in der Zukunft: "Aktiv ab <Datum>" (blau) statt schlicht "Aktiv".
@@ -128,7 +128,7 @@ class ContractDisplayStatusTest extends TestCase
         $start = now()->addMonths(2);
         $st = $this->contract(['start_date' => $start->toDateString()])->displayStatus();
         $this->assertSame('active_upcoming', $st['key']);
-        $this->assertSame('Aktiv ab ' . $start->format('d.m.Y'), $st['label']);
+        $this->assertSame('Aktiv ab '.$start->format('d.m.Y'), $st['label']);
         $this->assertSame('open', $st['badge']);
     }
 
@@ -181,8 +181,8 @@ class ContractDisplayStatusTest extends TestCase
 
         $this->actingAs($admin)->get(route('admin.customer', $customer->id))
             ->assertOk()
-            ->assertSee('Gekündigt zum ' . $ablauf->format('d.m.Y'))
-            ->assertSee('Aktiv ab ' . $ablauf->format('d.m.Y'));
+            ->assertSee('Gekündigt zum '.$ablauf->format('d.m.Y'))
+            ->assertSee('Aktiv ab '.$ablauf->format('d.m.Y'));
     }
 
     // Kundenportal (Vertragsliste) zeigt das wirksame Ende ebenfalls.
@@ -199,6 +199,6 @@ class ContractDisplayStatusTest extends TestCase
 
         $this->actingAs($customer->user)->get(route('portal.contracts'))
             ->assertOk()
-            ->assertSee('Gekündigt zum ' . $ablauf->format('d.m.Y'));
+            ->assertSee('Gekündigt zum '.$ablauf->format('d.m.Y'));
     }
 }

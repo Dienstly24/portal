@@ -26,8 +26,7 @@ use Illuminate\Support\Facades\Schema;
  * vom System vergebene Geburtsdatum ist (portal_password_set_at gesetzt,
  * aber noch NIE eingeloggt), wird der Wechsel dagegen vorgemerkt.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {

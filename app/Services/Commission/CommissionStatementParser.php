@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Commission;
 
 /**
@@ -23,7 +24,7 @@ class CommissionStatementParser
         $fields = ['credit_note_number' => null, 'amount' => null, 'date' => null];
 
         foreach (preg_split('/\r\n|\r|\n/', $text) ?: [] as $rawLine) {
-            if (!preg_match('/^\s*([^:]{2,40}?)\s*:\s*(.+?)\s*$/u', $rawLine, $m)) {
+            if (! preg_match('/^\s*([^:]{2,40}?)\s*:\s*(.+?)\s*$/u', $rawLine, $m)) {
                 continue;
             }
             $label = mb_strtolower(trim($m[1], " \t.*-"));

@@ -1,10 +1,17 @@
 <?php
+
 namespace App\Models;
+
+use App\Services\Provision\ContractProvisionService;
+use App\Services\Vermittler\VermittlerReference;
+use App\Support\ContractCommissionStatus;
+use App\Support\EscooterInsurance;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
-class Contract extends Model {
+class Contract extends Model
+{
     protected $keyType = 'string';
     public $incrementing = false;
 
@@ -17,7 +24,7 @@ class Contract extends Model {
      * Storno weiterhin bei Loeschung und manueller Stornierung im Formular.
      */
     public bool $endsWithoutStorno = false;
-    protected $fillable = ['customer_id','contract_number','internal_contract_number','commission_import_id','reference_number','vermittler_id','vermittler_status','vermittler_matched_at','vermittler_last_import_id','vermittler_last_imported_at','pool','type','type_other','subtype','insurer','status','stage','start_date','application_date','signing_date','end_date','pdf_path','notes','cancellation_date','premium_amount','premium_interval'];
+    protected $fillable = ['customer_id', 'contract_number', 'internal_contract_number', 'commission_import_id', 'reference_number', 'vermittler_id', 'vermittler_status', 'vermittler_matched_at', 'vermittler_last_import_id', 'vermittler_last_imported_at', 'pool', 'type', 'type_other', 'subtype', 'insurer', 'status', 'stage', 'start_date', 'application_date', 'signing_date', 'end_date', 'pdf_path', 'notes', 'cancellation_date', 'premium_amount', 'premium_interval'];
 
     protected $casts = [
         'premium_amount' => 'decimal:2',
@@ -39,14 +46,14 @@ class Contract extends Model {
      * eine Zeile ergaenzen (premium_interval ist ein String, keine Migration).
      */
     public const PREMIUM_INTERVALS = [
-        'monthly'    => ['label' => 'Monatlich',       'per_year' => 12],
-        'quarterly'  => ['label' => 'Vierteljährlich', 'per_year' => 4],
+        'monthly' => ['label' => 'Monatlich',       'per_year' => 12],
+        'quarterly' => ['label' => 'Vierteljährlich', 'per_year' => 4],
         'semiannual' => ['label' => 'Halbjährlich',    'per_year' => 2],
-        'yearly'     => ['label' => 'Jährlich',        'per_year' => 1],
+        'yearly' => ['label' => 'Jährlich',        'per_year' => 1],
         // Einmalzahlung (z.B. E-Scooter-Saisonbeitrag): faellt nur EINMAL an,
         // daher per_year = 0 -> geht nicht in die auf den Monat/das Jahr
         // normierte Beitrags-Statistik ein (kein laufender Beitrag).
-        'einmalig'   => ['label' => 'Einmalig',        'per_year' => 0],
+        'einmalig' => ['label' => 'Einmalig',        'per_year' => 0],
     ];
 
     /** Gueltige Zahlweise-Schluessel (Validierungs-Whitelist). */
@@ -77,14 +84,14 @@ class Contract extends Model {
 
     /** Auf den Monat normierter Beitrag - Basis fuer Summen/Statistik. */
     public function monthlyPremium(): float {
-        if (!$this->hasPremium()) return 0.0;
+        if (! $this->hasPremium()) return 0.0;
         $perYear = self::PREMIUM_INTERVALS[$this->premium_interval]['per_year'] ?? 12;
         return round((float) $this->premium_amount * $perYear / 12, 2);
     }
 
     /** Auf das Jahr hochgerechneter Beitrag. */
     public function yearlyPremium(): float {
-        if (!$this->hasPremium()) return 0.0;
+        if (! $this->hasPremium()) return 0.0;
         $perYear = self::PREMIUM_INTERVALS[$this->premium_interval]['per_year'] ?? 12;
         return round((float) $this->premium_amount * $perYear, 2);
     }
@@ -96,15 +103,15 @@ class Contract extends Model {
      * hier eine Zeile ergaenzen, keine Migration noetig (type ist string).
      */
     public const TYPES = [
-        'kfz'                 => ['label' => 'KFZ',                  'icon' => '🚗', 'color' => '#185FA5', 'bg' => '#E6F1FB'],
+        'kfz' => ['label' => 'KFZ',                  'icon' => '🚗', 'color' => '#185FA5', 'bg' => '#E6F1FB'],
         // Schutzbrief / Mobilclub-Mitgliedschaft (Betreiber-Vorgabe 28.07.2026):
         // eigene Sparte statt "Sonstige", weil viele Kunden eine ADAC-
         // Mitgliedschaft haben. Die Stufe (Basis/Plus/Premium) ist ein subtype.
-        'schutzbrief'         => ['label' => 'Schutzbrief / Mobilclub', 'icon' => '🆘', 'color' => '#92400E', 'bg' => '#FEF3C7'],
+        'schutzbrief' => ['label' => 'Schutzbrief / Mobilclub', 'icon' => '🆘', 'color' => '#92400E', 'bg' => '#FEF3C7'],
         'krankenversicherung' => ['label' => 'Krankenversicherung', 'icon' => '🏥', 'color' => '#3B7A57', 'bg' => '#E4F0E7'],
-        'krankenzusatz'       => ['label' => 'Krankenzusatz',       'icon' => '🩺', 'color' => '#2F8F6B', 'bg' => '#DEF1E8'],
-        'leben'               => ['label' => 'Leben',               'icon' => '❤️', 'color' => '#993556', 'bg' => '#FBEAF0'],
-        'haftpflicht'         => ['label' => 'Haftpflicht',         'icon' => '🛡️', 'color' => '#6D28D9', 'bg' => '#F0E6FB'],
+        'krankenzusatz' => ['label' => 'Krankenzusatz',       'icon' => '🩺', 'color' => '#2F8F6B', 'bg' => '#DEF1E8'],
+        'leben' => ['label' => 'Leben',               'icon' => '❤️', 'color' => '#993556', 'bg' => '#FBEAF0'],
+        'haftpflicht' => ['label' => 'Haftpflicht',         'icon' => '🛡️', 'color' => '#6D28D9', 'bg' => '#F0E6FB'],
         // GEWERBLICHE Sparten (Betreiber-Vorgabe 30.07.2026): eigene Zeilen
         // statt der privaten Sammel-Sparte "Haftpflicht". Betriebs- und
         // Frachtfuehrerhaftpflicht versichern den BETRIEB, nicht die Person -
@@ -112,17 +119,17 @@ class Contract extends Model {
         // 'gewerblich' gruppiert sie in den Formularen.
         'betriebshaftpflicht' => ['label' => 'Betriebshaftpflicht', 'icon' => '🏭', 'color' => '#5B21B6', 'bg' => '#EDE9FE', 'gewerblich' => true],
         'frachtfuehrerhaftpflicht' => ['label' => 'Frachtführerhaftpflicht', 'icon' => '🚚', 'color' => '#1F4E79', 'bg' => '#E4EDF6', 'gewerblich' => true],
-        'hausrat'             => ['label' => 'Hausrat',             'icon' => '🏠', 'color' => '#3B7A57', 'bg' => '#E4F0E7'],
-        'rechtsschutz'        => ['label' => 'Rechtsschutz',        'icon' => '⚖️', 'color' => '#92400E', 'bg' => '#FEF3C7'],
-        'unfall'              => ['label' => 'Unfall',              'icon' => '🚑', 'color' => '#A32D2D', 'bg' => '#F9E3E3'],
-        'sach'                => ['label' => 'Sach',                'icon' => '📦', 'color' => '#5F5E5A', 'bg' => '#EEF0F3'],
-        'escooter'            => ['label' => 'E-Scooter',           'icon' => '🛴', 'color' => '#185FA5', 'bg' => '#E6F1FB'],
-        'internet'            => ['label' => 'Internet & Mobilfunk','icon' => '📶', 'color' => '#6D28D9', 'bg' => '#EDE9FE'],
+        'hausrat' => ['label' => 'Hausrat',             'icon' => '🏠', 'color' => '#3B7A57', 'bg' => '#E4F0E7'],
+        'rechtsschutz' => ['label' => 'Rechtsschutz',        'icon' => '⚖️', 'color' => '#92400E', 'bg' => '#FEF3C7'],
+        'unfall' => ['label' => 'Unfall',              'icon' => '🚑', 'color' => '#A32D2D', 'bg' => '#F9E3E3'],
+        'sach' => ['label' => 'Sach',                'icon' => '📦', 'color' => '#5F5E5A', 'bg' => '#EEF0F3'],
+        'escooter' => ['label' => 'E-Scooter',           'icon' => '🛴', 'color' => '#185FA5', 'bg' => '#E6F1FB'],
+        'internet' => ['label' => 'Internet & Mobilfunk', 'icon' => '📶', 'color' => '#6D28D9', 'bg' => '#EDE9FE'],
         // Strom und Gas sind getrennte Sparten (Betreiber-Vorgabe 14.07.2026):
         // je eigene Zeile, beide nutzen die Energie-Detailtabelle.
-        'strom'               => ['label' => 'Strom',               'icon' => '⚡', 'color' => '#92400E', 'bg' => '#FEF3C7'],
-        'gas'                 => ['label' => 'Gas',                 'icon' => '🔥', 'color' => '#B45309', 'bg' => '#FEF0E7'],
-        'andere'              => ['label' => 'Sonstige',            'icon' => '📋', 'color' => '#5F5E5A', 'bg' => '#EEF0F3'],
+        'strom' => ['label' => 'Strom',               'icon' => '⚡', 'color' => '#92400E', 'bg' => '#FEF3C7'],
+        'gas' => ['label' => 'Gas',                 'icon' => '🔥', 'color' => '#B45309', 'bg' => '#FEF0E7'],
+        'andere' => ['label' => 'Sonstige',            'icon' => '📋', 'color' => '#5F5E5A', 'bg' => '#EEF0F3'],
     ];
 
     /**
@@ -150,12 +157,12 @@ class Contract extends Model {
 
     /** Gewerbliche Sparten (versichern den Betrieb, nicht die Privatperson). */
     public static function commercialTypeKeys(): array {
-        return array_keys(array_filter(self::TYPES, fn ($cfg) => !empty($cfg['gewerblich'])));
+        return array_keys(array_filter(self::TYPES, fn ($cfg) => ! empty($cfg['gewerblich'])));
     }
 
     /** Ist dies ein gewerblicher Vertrag? */
     public function isCommercial(): bool {
-        return !empty(self::TYPES[$this->type]['gewerblich']);
+        return ! empty(self::TYPES[$this->type]['gewerblich']);
     }
 
     /**
@@ -171,13 +178,13 @@ class Contract extends Model {
             'pkv' => 'Privat (PKV)',
         ],
         'krankenzusatz' => [
-            'ambulant'        => 'Ambulante Zusatzversicherung',
-            'zahnzusatz'      => 'Zahnzusatzversicherung',
+            'ambulant' => 'Ambulante Zusatzversicherung',
+            'zahnzusatz' => 'Zahnzusatzversicherung',
             'auslandskranken' => 'Auslandskrankenversicherung',
         ],
         'schutzbrief' => [
-            'basis'   => 'Basis-Mitgliedschaft',
-            'plus'    => 'Plus-Mitgliedschaft',
+            'basis' => 'Basis-Mitgliedschaft',
+            'plus' => 'Plus-Mitgliedschaft',
             'premium' => 'Premium-Mitgliedschaft',
         ],
     ];
@@ -215,7 +222,7 @@ class Contract extends Model {
      * bevorzugt, damit z.B. "ADAC Schutzbrief" statt nur "Sonstige" erscheint.
      */
     public function typeLabel(): string {
-        if ($this->type === 'andere' && !empty($this->type_other)) {
+        if ($this->type === 'andere' && ! empty($this->type_other)) {
             return $this->type_other;
         }
         return self::TYPES[$this->type]['label']
@@ -242,7 +249,7 @@ class Contract extends Model {
     public const STAGE_VERTRAG = 'vertrag';
 
     public const STAGE_LABELS = [
-        self::STAGE_ANTRAG  => 'Antrag – wartet auf Vertragsbestätigung',
+        self::STAGE_ANTRAG => 'Antrag – wartet auf Vertragsbestätigung',
         self::STAGE_VERTRAG => 'Vertrag bestätigt',
     ];
 
@@ -267,10 +274,10 @@ class Contract extends Model {
 
     /** Roh-Status -> deutsches Label (eine Quelle fuer alle Listen). */
     public const STATUS_LABELS = [
-        self::STATUS_ACTIVE    => 'Aktiv',
-        self::STATUS_PENDING   => 'In Bearbeitung',
+        self::STATUS_ACTIVE => 'Aktiv',
+        self::STATUS_PENDING => 'In Bearbeitung',
         self::STATUS_CANCELLED => 'Gekündigt',
-        self::STATUS_EXPIRED   => 'Abgelaufen',
+        self::STATUS_EXPIRED => 'Abgelaufen',
     ];
 
     /**
@@ -303,7 +310,7 @@ class Contract extends Model {
 
     /** Anzeige-Namen der Bestandsgruppen (Filter, Tabs, Ueberschriften). */
     public const GROUP_LABELS = [
-        self::GROUP_ACTIVE  => 'Aktiver Bestand',
+        self::GROUP_ACTIVE => 'Aktiver Bestand',
         self::GROUP_PENDING => 'In Bearbeitung',
         self::GROUP_HISTORY => 'Beendet / Historie',
     ];
@@ -319,22 +326,22 @@ class Contract extends Model {
         self::STATUS_ACTIVE => [
             'label' => 'Aktiv – laufender Vertrag',
             'group' => self::GROUP_ACTIVE,
-            'hint'  => 'Zaehlt zum aktiven Bestand und erscheint in der Vertragsstruktur.',
+            'hint' => 'Zaehlt zum aktiven Bestand und erscheint in der Vertragsstruktur.',
         ],
         self::STATUS_PENDING => [
             'label' => 'In Bearbeitung – noch nicht aktiv',
             'group' => self::GROUP_PENDING,
-            'hint'  => 'Angebot/Antrag in Arbeit: zaehlt NICHT zum aktiven Bestand.',
+            'hint' => 'Angebot/Antrag in Arbeit: zaehlt NICHT zum aktiven Bestand.',
         ],
         self::STATUS_CANCELLED => [
             'label' => 'Inaktiv / Gekündigt',
             'group' => self::GROUP_HISTORY,
-            'hint'  => 'Beendet durch Kuendigung: nur noch in der Historie sichtbar.',
+            'hint' => 'Beendet durch Kuendigung: nur noch in der Historie sichtbar.',
         ],
         self::STATUS_EXPIRED => [
             'label' => 'Beendet / Abgelaufen',
             'group' => self::GROUP_HISTORY,
-            'hint'  => 'Laufzeit beendet: nur noch in der Historie sichtbar.',
+            'hint' => 'Laufzeit beendet: nur noch in der Historie sichtbar.',
         ],
     ];
 
@@ -377,7 +384,7 @@ class Contract extends Model {
      * die aktuelle Kundenbeziehung dieser Sparte.
      */
     public function isCurrentlyActive(): bool {
-        return in_array($this->status, self::ACTIVE_STATUSES, true) && !$this->hasCoverageEnded();
+        return in_array($this->status, self::ACTIVE_STATUSES, true) && ! $this->hasCoverageEnded();
     }
 
     /** Historie: gekuendigt/abgelaufen/beendet - nie Teil der Struktur. */
@@ -476,7 +483,7 @@ class Contract extends Model {
         }
 
         foreach (preg_split('/\s+/', $term, -1, PREG_SPLIT_NO_EMPTY) ?: [$term] as $token) {
-            $like = '%' . addcslashes($token, '%_\\') . '%';
+            $like = '%'.addcslashes($token, '%_\\').'%';
             $query->where(function ($w) use ($like) {
                 $w->where('insurer', 'like', $like)
                     ->orWhere('contract_number', 'like', $like)
@@ -503,10 +510,10 @@ class Contract extends Model {
     /** Eine Bestandsgruppe als Query-Filter (GROUP_*); alles andere = kein Filter. */
     public function scopeStatusGroup($query, ?string $group) {
         return match ($group) {
-            self::GROUP_ACTIVE  => $query->currentlyActive(),
+            self::GROUP_ACTIVE => $query->currentlyActive(),
             self::GROUP_PENDING => $query->inProgress(),
             self::GROUP_HISTORY => $query->historic(),
-            default             => $query,
+            default => $query,
         };
     }
 
@@ -527,7 +534,7 @@ class Contract extends Model {
         }
         $submitted = Carbon::parse($this->cancellation_date)->startOfDay();
         $end = $this->end_date ? Carbon::parse($this->end_date)->startOfDay() : null;
-        if (!$end) {
+        if (! $end) {
             return $submitted;
         }
         return $end->greaterThanOrEqualTo($submitted) ? $end : $submitted;
@@ -576,7 +583,7 @@ class Contract extends Model {
             'versicherung', 'versicherungs', 'versicherungen', 'versicherungsverein',
             'autoversicherung', 'krankenversicherung', 'lebensversicherung',
             'sachversicherung', 'direktversicherung', 'allgemeine', 'deutschland'];
-        $words = array_filter(explode(' ', $n), fn ($w) => $w !== '' && !in_array($w, $stop, true));
+        $words = array_filter(explode(' ', $n), fn ($w) => $w !== '' && ! in_array($w, $stop, true));
         return implode(' ', $words);
     }
 
@@ -644,11 +651,11 @@ class Contract extends Model {
             $date = $ende->format('d.m.Y');
             $upcoming = $ende->greaterThan($today);
             return $with([
-                'key'       => $upcoming ? 'cancelled_upcoming' : 'cancelled',
-                'badge'     => $upcoming ? 'pending' : 'rejected',
-                'label'     => 'Gekündigt zum ' . $date,
+                'key' => $upcoming ? 'cancelled_upcoming' : 'cancelled',
+                'badge' => $upcoming ? 'pending' : 'rejected',
+                'label' => 'Gekündigt zum '.$date,
                 'label_key' => 'Gekündigt zum :date',
-                'params'    => ['date' => $date],
+                'params' => ['date' => $date],
             ]);
         }
 
@@ -661,11 +668,11 @@ class Contract extends Model {
             $ende = $this->coverageEndsAt();
             $date = $ende?->format('d.m.Y');
             return $with([
-                'key'       => 'expired',
-                'badge'     => 'closed',
-                'label'     => $date ? 'Abgelaufen am ' . $date : 'Abgelaufen',
+                'key' => 'expired',
+                'badge' => 'closed',
+                'label' => $date ? 'Abgelaufen am '.$date : 'Abgelaufen',
                 'label_key' => $date ? 'Abgelaufen am :date' : 'Abgelaufen',
-                'params'    => $date ? ['date' => $date] : [],
+                'params' => $date ? ['date' => $date] : [],
             ]);
         }
 
@@ -673,11 +680,11 @@ class Contract extends Model {
         if ($this->status === 'active' && $start && $start->greaterThan($today)) {
             $date = $start->format('d.m.Y');
             return $with([
-                'key'       => 'active_upcoming',
-                'badge'     => 'open',
-                'label'     => 'Aktiv ab ' . $date,
+                'key' => 'active_upcoming',
+                'badge' => 'open',
+                'label' => 'Aktiv ab '.$date,
                 'label_key' => 'Aktiv ab :date',
-                'params'    => ['date' => $date],
+                'params' => ['date' => $date],
             ]);
         }
 
@@ -688,7 +695,7 @@ class Contract extends Model {
 
     protected static function boot() {
         parent::boot();
-        static::creating(fn($m) => $m->id = $m->id ?: (string) Str::uuid());
+        static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
 
         // E-Scooter: feste Fachregeln zentral erzwingen - egal woher der Vertrag
         // kommt (Formular, Dokumenten-Eingang, Import). Der Vertrag endet immer
@@ -697,8 +704,8 @@ class Contract extends Model {
         // des Beginns korrekt und muss nirgends von Hand nachgezogen werden.
         static::saving(function ($m) {
             if ($m->type === 'escooter') {
-                if (!empty($m->start_date)) {
-                    $m->end_date = \App\Support\EscooterInsurance::seasonEndDate($m->start_date);
+                if (! empty($m->start_date)) {
+                    $m->end_date = EscooterInsurance::seasonEndDate($m->start_date);
                 }
                 if (empty($m->premium_interval)) {
                     $m->premium_interval = 'einmalig';
@@ -710,19 +717,19 @@ class Contract extends Model {
         // buchen - zentral am Modell, damit ALLE Anlagewege greifen (Formular,
         // Dokumenten-Eingang, Imports, CLI). Kuendigung/Loeschung erzeugt eine
         // negative Gegenbuchung statt einer Loeschung (Finanzhistorie).
-        static::created(fn ($m) => app(\App\Services\Provision\ContractProvisionService::class)
+        static::created(fn ($m) => app(ContractProvisionService::class)
             ->createForContract($m));
         static::updated(function ($m) {
             // endsWithoutStorno: natuerliches Vertragsende (Wechsel/Tages-Job)
             // laesst die einmalige Verkaufs-Provision unangetastet.
-            if ($m->wasChanged('status') && $m->status === 'cancelled' && !$m->endsWithoutStorno) {
-                app(\App\Services\Provision\ContractProvisionService::class)
+            if ($m->wasChanged('status') && $m->status === 'cancelled' && ! $m->endsWithoutStorno) {
+                app(ContractProvisionService::class)
                     ->createStornoForContract($m, 'Vertrag gekuendigt/storniert');
             }
         });
         // deleting (nicht deleted): die Provisionen referenzieren den Vertrag
         // hier noch - nach dem Loeschen setzt die DB contract_id auf null.
-        static::deleting(fn ($m) => app(\App\Services\Provision\ContractProvisionService::class)
+        static::deleting(fn ($m) => app(ContractProvisionService::class)
             ->createStornoForContract($m, 'Vertrag geloescht'));
     }
     public function vehicleDetail() { return $this->hasOne(ContractVehicleDetail::class); }
@@ -757,14 +764,14 @@ class Contract extends Model {
 
     /** Abrechnungsstatus mit deutschem Label und Anzeige-Merkmalen. */
     public const VERMITTLER_STATUSES = [
-        self::VERMITTLER_NEU            => ['label' => 'Neu',                        'icon' => '·',  'badge' => 'closed'],
-        self::VERMITTLER_REFERENZ       => ['label' => 'Referenz hinterlegt',        'icon' => '📌', 'badge' => 'open'],
-        self::VERMITTLER_ID_ZUGEORDNET  => ['label' => 'ID zugeordnet',              'icon' => '🔗', 'badge' => 'open'],
-        self::VERMITTLER_IN_ABRECHNUNG  => ['label' => 'In Abrechnung gefunden',     'icon' => '✓',  'badge' => 'active'],
-        self::VERMITTLER_ABGERECHNET    => ['label' => 'Bestätigt / Abgerechnet',    'icon' => '✅', 'badge' => 'active'],
-        self::VERMITTLER_STORNIERT      => ['label' => 'Storniert',                  'icon' => '⛔', 'badge' => 'danger'],
-        self::VERMITTLER_NICHT_GEFUNDEN => ['label' => 'Nicht in Abrechnung gefunden','icon' => '❓', 'badge' => 'pending'],
-        self::VERMITTLER_PRUEFUNG       => ['label' => 'Prüfung erforderlich',       'icon' => '⚠',  'badge' => 'danger'],
+        self::VERMITTLER_NEU => ['label' => 'Neu',                        'icon' => '·',  'badge' => 'closed'],
+        self::VERMITTLER_REFERENZ => ['label' => 'Referenz hinterlegt',        'icon' => '📌', 'badge' => 'open'],
+        self::VERMITTLER_ID_ZUGEORDNET => ['label' => 'ID zugeordnet',              'icon' => '🔗', 'badge' => 'open'],
+        self::VERMITTLER_IN_ABRECHNUNG => ['label' => 'In Abrechnung gefunden',     'icon' => '✓',  'badge' => 'active'],
+        self::VERMITTLER_ABGERECHNET => ['label' => 'Bestätigt / Abgerechnet',    'icon' => '✅', 'badge' => 'active'],
+        self::VERMITTLER_STORNIERT => ['label' => 'Storniert',                  'icon' => '⛔', 'badge' => 'danger'],
+        self::VERMITTLER_NICHT_GEFUNDEN => ['label' => 'Nicht in Abrechnung gefunden', 'icon' => '❓', 'badge' => 'pending'],
+        self::VERMITTLER_PRUEFUNG => ['label' => 'Prüfung erforderlich',       'icon' => '⚠',  'badge' => 'danger'],
     ];
 
     /**
@@ -842,12 +849,12 @@ class Contract extends Model {
     /** Klartext des Provisions-Zustands (eine Quelle fuer alle Ansichten). */
     public function commissionStatusLabel(): string
     {
-        return \App\Support\ContractCommissionStatus::label($this->commission_status);
+        return ContractCommissionStatus::label($this->commission_status);
     }
 
     public function commissionStatusBadge(): string
     {
-        return \App\Support\ContractCommissionStatus::badge($this->commission_status);
+        return ContractCommissionStatus::badge($this->commission_status);
     }
 
     public function vermittlerSettlements()
@@ -865,6 +872,6 @@ class Contract extends Model {
     /** Vergleichsschluessel der Referenz-Nr. (nur fuer die Zuordnung). */
     public function referenceKey(): ?string
     {
-        return \App\Services\Vermittler\VermittlerReference::key($this->reference_number);
+        return VermittlerReference::key($this->reference_number);
     }
 }

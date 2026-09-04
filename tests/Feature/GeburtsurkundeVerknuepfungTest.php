@@ -8,6 +8,7 @@ use App\Models\Document;
 use App\Models\User;
 use App\Services\DocumentIntake\DocumentIntakeService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -25,17 +26,17 @@ class GeburtsurkundeVerknuepfungTest extends TestCase
         $user = User::factory()->create(['role' => 'customer', 'name' => $name]);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5((string) $user->id), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5((string) $user->id), 0, 8)),
         ]);
     }
 
     private function birthCertificate(Customer $child): Document
     {
         return Document::create([
-            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'id' => (string) Str::uuid(),
             'customer_id' => $child->id,
             'file_name' => 'geburtsurkunde.pdf',
-            'file_path' => 'customers/' . $child->id . '/documents/geburtsurkunde.pdf',
+            'file_path' => 'customers/'.$child->id.'/documents/geburtsurkunde.pdf',
             'disk' => 'local',
             'category' => 'identity',
             'ai_status' => 'done',

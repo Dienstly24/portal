@@ -1,18 +1,22 @@
 <?php
+
 namespace App\Services;
+
+use App\Models\SystemSetting;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
-class LexofficeService {
+class LexofficeService
+{
     private string $apiKey;
     private string $baseUrl = 'https://api.lexware.io/v1';
 
     public function __construct() {
         // env() liefert nach 'php artisan config:cache' null - stattdessen
         // Einstellung aus der DB mit Fallback auf die Config. (Audit M6)
-        $this->apiKey = (string) (\App\Models\SystemSetting::get('lexoffice_api_key')
+        $this->apiKey = (string) (SystemSetting::get('lexoffice_api_key')
             ?: config('services.lexoffice.key', ''));
     }
 
@@ -57,7 +61,7 @@ class LexofficeService {
         try {
             return $call();
         } catch (\Throwable $e) {
-            Log::warning('Lexoffice-Verbindung fehlgeschlagen: ' . $e->getMessage());
+            Log::warning('Lexoffice-Verbindung fehlgeschlagen: '.$e->getMessage());
             return null;
         }
     }
@@ -68,7 +72,7 @@ class LexofficeService {
      * gerade auf dem Geld-Pfad (Provisions-/Rechnungsbuchung).
      */
     private function logFailure(string $operation, $response): void {
-        Log::warning('Lexoffice-Aufruf fehlgeschlagen: ' . $operation, [
+        Log::warning('Lexoffice-Aufruf fehlgeschlagen: '.$operation, [
             'status' => is_object($response) && method_exists($response, 'status') ? $response->status() : null,
             'body' => is_object($response) && method_exists($response, 'json') ? $response->json('message', $response->body()) : null,
         ]);
@@ -76,58 +80,60 @@ class LexofficeService {
 
     // ===== Profile =====
     public function getProfile(): array {
-        $r = $this->attempt(fn() => $this->http()->get("$this->baseUrl/profile"));
+        $r = $this->attempt(fn () => $this->http()->get("$this->baseUrl/profile"));
         return $r && $r->successful() ? $r->json() : [];
     }
 
     // ===== Contacts =====
     public function getContacts(int $page = 0, int $size = 25, string $search = ''): array {
         $params = ['page' => $page, 'size' => $size];
-        if($search) $params['name'] = $search;
-        $r = $this->attempt(fn() => $this->http()->get("$this->baseUrl/contacts", $params));
-        return $r && $r->successful() ? $r->json() : ['content'=>[],'totalElements'=>0,'totalPages'=>0];
+        if ($search) $params['name'] = $search;
+        $r = $this->attempt(fn () => $this->http()->get("$this->baseUrl/contacts", $params));
+        return $r && $r->successful() ? $r->json() : ['content' => [], 'totalElements' => 0, 'totalPages' => 0];
     }
 
     public function getContact(string $id): ?array {
-        $r = $this->attempt(fn() => $this->http()->get("$this->baseUrl/contacts/$id"));
+        $r = $this->attempt(fn () => $this->http()->get("$this->baseUrl/contacts/$id"));
         return $r && $r->successful() ? $r->json() : null;
     }
 
     public function createContact(array $data): ?array {
-        $r = $this->attempt(fn() => $this->http()->post("$this->baseUrl/contacts", $data));
+        $r = $this->attempt(fn () => $this->http()->post("$this->baseUrl/contacts", $data));
         return $r && $r->successful() ? $r->json() : null;
     }
 
     // ===== Invoices =====
     public function getInvoices(int $page = 0, int $size = 25, string $contactId = ''): array {
         $params = ['page' => $page, 'size' => $size, 'voucherStatus' => 'any'];
-        if($contactId) $params['contactId'] = $contactId;
-        $r = $this->attempt(fn() => $this->http()->get("$this->baseUrl/invoices", $params));
-        return $r && $r->successful() ? $r->json() : ['content'=>[],'totalElements'=>0];
+        if ($contactId) $params['contactId'] = $contactId;
+        $r = $this->attempt(fn () => $this->http()->get("$this->baseUrl/invoices", $params));
+        return $r && $r->successful() ? $r->json() : ['content' => [], 'totalElements' => 0];
     }
 
     public function getInvoice(string $id): ?array {
-        $r = $this->attempt(fn() => $this->http()->get("$this->baseUrl/invoices/$id"));
-        if($r && $r->successful()) return $r->json();
-        if($r) $this->logFailure("getInvoice($id)", $r);
+        $r = $this->attempt(fn () => $this->http()->get("$this->baseUrl/invoices/$id"));
+        if ($r && $r->successful()) return $r->json();
+        if ($r) $this->logFailure("getInvoice($id)", $r);
         return null;
     }
 
     public function createInvoice(array $data, bool $finalize = false): ?array {
-        $url = "$this->baseUrl/invoices" . ($finalize ? '?finalize=true' : '');
-        $r = $this->attempt(fn() => $this->http()->post($url, $data));
-        if($r && $r->successful()) return $r->json();
-        if($r) $this->logFailure('createInvoice', $r);
+        $url = "$this->baseUrl/invoices".($finalize ? '?finalize=true' : '');
+        $r = $this->attempt(fn () => $this->http()->post($url, $data));
+        if ($r && $r->successful()) return $r->json();
+        if ($r) $this->logFailure('createInvoice', $r);
         return null;
     }
 
     public function renderInvoicePdf(string $id): ?string {
-        $r = $this->attempt(fn() => $this->baseHttp()->post("$this->baseUrl/invoices/$id/document"));
-        if(!$r || !$r->successful()) { if($r) $this->logFailure("renderInvoicePdf.document($id)", $r); return null; }
+        $r = $this->attempt(fn () => $this->baseHttp()->post("$this->baseUrl/invoices/$id/document"));
+        if (! $r || ! $r->successful()) { if ($r) $this->logFailure("renderInvoicePdf.document($id)", $r);
+        return null; }
         $fileId = $r->json()['documentFileId'] ?? null;
-        if(!$fileId) return null;
-        $pdf = $this->attempt(fn() => $this->baseHttp()->get("$this->baseUrl/files/$fileId"));
-        if(!$pdf || !$pdf->successful()) { if($pdf) $this->logFailure("renderInvoicePdf.file($fileId)", $pdf); return null; }
+        if (! $fileId) return null;
+        $pdf = $this->attempt(fn () => $this->baseHttp()->get("$this->baseUrl/files/$fileId"));
+        if (! $pdf || ! $pdf->successful()) { if ($pdf) $this->logFailure("renderInvoicePdf.file($fileId)", $pdf);
+        return null; }
         return $pdf->body();
     }
 
@@ -148,29 +154,29 @@ class LexofficeService {
      */
     public function sendInvoice(string $id, string $email): bool {
         $pdf = $this->renderInvoicePdf($id);
-        if(!$pdf) return false;
+        if (! $pdf) return false;
         try {
             Mail::raw('Im Anhang finden Sie Ihre Rechnung.', function ($m) use ($email, $id, $pdf) {
                 $m->to($email)
-                  ->subject('Ihre Rechnung')
-                  ->attachData($pdf, "rechnung-$id.pdf", ['mime' => 'application/pdf']);
+                    ->subject('Ihre Rechnung')
+                    ->attachData($pdf, "rechnung-$id.pdf", ['mime' => 'application/pdf']);
             });
             return true;
         } catch (\Throwable $e) {
-            Log::warning('Lexoffice-Rechnungsversand fehlgeschlagen: ' . $e->getMessage(), ['invoice' => $id]);
+            Log::warning('Lexoffice-Rechnungsversand fehlgeschlagen: '.$e->getMessage(), ['invoice' => $id]);
             return false;
         }
     }
 
     // ===== Vouchers (Belege/Expenses) =====
     public function getVouchers(int $page = 0): array {
-        $r = $this->attempt(fn() => $this->http()->get("$this->baseUrl/voucherlist", [
+        $r = $this->attempt(fn () => $this->http()->get("$this->baseUrl/voucherlist", [
             'voucherType' => 'purchaseinvoice,creditnote',
             'voucherStatus' => 'any',
             'page' => $page,
             'size' => 25,
         ]));
-        return $r && $r->successful() ? $r->json() : ['content'=>[],'totalElements'=>0];
+        return $r && $r->successful() ? $r->json() : ['content' => [], 'totalElements' => 0];
     }
 
     /**
@@ -179,47 +185,47 @@ class LexofficeService {
      * CommissionController aufgerufen - nie automatisch (HITL Abschnitt 13).
      */
     public function createVoucher(array $data): ?array {
-        $r = $this->attempt(fn() => $this->http()->post("$this->baseUrl/vouchers", $data));
-        if($r && $r->successful()) return $r->json();
-        if($r) $this->logFailure('createVoucher', $r);
+        $r = $this->attempt(fn () => $this->http()->post("$this->baseUrl/vouchers", $data));
+        if ($r && $r->successful()) return $r->json();
+        if ($r) $this->logFailure('createVoucher', $r);
         return null;
     }
 
     public function uploadVoucher(string $filePath, string $fileName): ?string {
         // Guard gegen fehlende/unlesbare Datei (Audit ARCH-3) - frueher warf
         // file_get_contents() eine Warning und lieferte false in den Upload.
-        if(!is_file($filePath) || !is_readable($filePath)) {
+        if (! is_file($filePath) || ! is_readable($filePath)) {
             Log::warning('Lexoffice uploadVoucher: Datei nicht lesbar', ['path' => $filePath]);
             return null;
         }
-        $r = $this->attempt(fn() => $this->baseHttp()
+        $r = $this->attempt(fn () => $this->baseHttp()
             ->attach('file', file_get_contents($filePath), $fileName)
             ->post("$this->baseUrl/files", ['type' => 'voucher']));
-        if($r && $r->successful()) return $r->json()['id'] ?? null;
-        if($r) $this->logFailure('uploadVoucher', $r);
+        if ($r && $r->successful()) return $r->json()['id'] ?? null;
+        if ($r) $this->logFailure('uploadVoucher', $r);
         return null;
     }
 
     // ===== Financial Overview =====
     public function getFinancialSummary(): array {
         // Offene Rechnungen holen
-        $openInvoices = $this->attempt(fn() => $this->http()->get("$this->baseUrl/invoices", [
-            'voucherStatus' => 'open', 'size' => 100
+        $openInvoices = $this->attempt(fn () => $this->http()->get("$this->baseUrl/invoices", [
+            'voucherStatus' => 'open', 'size' => 100,
         ]));
-        $overdueInvoices = $this->attempt(fn() => $this->http()->get("$this->baseUrl/invoices", [
-            'voucherStatus' => 'overdue', 'size' => 100
+        $overdueInvoices = $this->attempt(fn () => $this->http()->get("$this->baseUrl/invoices", [
+            'voucherStatus' => 'overdue', 'size' => 100,
         ]));
-        $paidInvoices = $this->attempt(fn() => $this->http()->get("$this->baseUrl/invoices", [
-            'voucherStatus' => 'paid', 'size' => 100
+        $paidInvoices = $this->attempt(fn () => $this->http()->get("$this->baseUrl/invoices", [
+            'voucherStatus' => 'paid', 'size' => 100,
         ]));
 
         $openData = $openInvoices && $openInvoices->successful() ? $openInvoices->json() : [];
         $overdueData = $overdueInvoices && $overdueInvoices->successful() ? $overdueInvoices->json() : [];
         $paidData = $paidInvoices && $paidInvoices->successful() ? $paidInvoices->json() : [];
 
-        $calcTotal = function($data) {
+        $calcTotal = function ($data) {
             $total = 0;
-            foreach($data['content'] ?? [] as $inv) {
+            foreach ($data['content'] ?? [] as $inv) {
                 $total += $inv['totalPrice']['totalGrossAmount'] ?? 0;
             }
             return $total;

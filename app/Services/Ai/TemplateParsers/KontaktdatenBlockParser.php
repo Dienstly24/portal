@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Services\Ai\Concerns\RepairsOcrText;
@@ -107,16 +108,16 @@ class KontaktdatenBlockParser implements DocumentTemplateParser
         // genauer hinschauen soll.
         $vollstaendig = $email !== null && $iban !== null && $zipCity !== null;
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         return [
             'type' => 'kontaktdaten',
             'confidence' => $vollstaendig ? 70 : 58,
-            'summary' => 'Kontaktdaten' . ($name !== '' ? ' - ' . $name : '')
-                . (isset($person['birth_date']) ? ' - geb. ' . $this->displayDate($person['birth_date']) : '')
-                . ($secondDate !== null ? ' - weiteres Datum ' . $secondDate . ' (z.B. Aufenthaltstitel/Bescheinigung)' : '')
-                . ' (' . implode(', ', $this->gelesenFelder($person, $iban)) . ' gratis gelesen).'
-                . ($iban === null ? ' Keine gueltige IBAN erkannt - bitte pruefen.' : ''),
-            'title' => 'Kontaktdaten' . ($name !== '' ? ' ' . $name : ''),
+            'summary' => 'Kontaktdaten'.($name !== '' ? ' - '.$name : '')
+                .(isset($person['birth_date']) ? ' - geb. '.$this->displayDate($person['birth_date']) : '')
+                .($secondDate !== null ? ' - weiteres Datum '.$secondDate.' (z.B. Aufenthaltstitel/Bescheinigung)' : '')
+                .' ('.implode(', ', $this->gelesenFelder($person, $iban)).' gratis gelesen).'
+                .($iban === null ? ' Keine gueltige IBAN erkannt - bitte pruefen.' : ''),
+            'title' => 'Kontaktdaten'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'bank' => $iban === null ? [] : $this->validatedBank(['iban' => $iban]),
@@ -213,7 +214,7 @@ class KontaktdatenBlockParser implements DocumentTemplateParser
         ));
 
         // 2-5 Grosswoerter (Buchstaben + Bindestrich), nichts anderes.
-        if (!preg_match('/^([A-ZÄÖÜ][\p{L}\-]+)((?:\s+[A-ZÄÖÜ][\p{L}\-]+){1,4})$/u', $line, $m)) {
+        if (! preg_match('/^([A-ZÄÖÜ][\p{L}\-]+)((?:\s+[A-ZÄÖÜ][\p{L}\-]+){1,4})$/u', $line, $m)) {
             return [null, null, null];
         }
         $first = trim($m[1]);
@@ -225,13 +226,13 @@ class KontaktdatenBlockParser implements DocumentTemplateParser
     private function firstBirthDate(string $text): ?string
     {
         if (preg_match('/\b(\d{2})\.(\d{2})\.(\d{4})\b/', $text, $m)) {
-            return $m[3] . '-' . $m[2] . '-' . $m[1];
+            return $m[3].'-'.$m[2].'-'.$m[1];
         }
         if (preg_match('/\b(\d{2})\.(\d{2})\.(\d{2})\b/', $text, $m)) {
             $yy = (int) $m[3];
             // 00-30 -> 20xx, sonst 19xx (Geburtsjahr-Pivot).
             $year = $yy <= 30 ? 2000 + $yy : 1900 + $yy;
-            return $year . '-' . $m[2] . '-' . $m[1];
+            return $year.'-'.$m[2].'-'.$m[1];
         }
         return null;
     }
@@ -245,7 +246,7 @@ class KontaktdatenBlockParser implements DocumentTemplateParser
      */
     private function secondDateBesideBirth(string $text): ?string
     {
-        if (!preg_match('#\b\d{2}\.\d{2}\.(?:\d{4}|\d{2})\s*[/\-&]\s*(\d{2})\.(\d{2})\.(\d{4}|\d{2})\b#u', $text, $m)) {
+        if (! preg_match('#\b\d{2}\.\d{2}\.(?:\d{4}|\d{2})\s*[/\-&]\s*(\d{2})\.(\d{2})\.(\d{4}|\d{2})\b#u', $text, $m)) {
             return null;
         }
         $yy = $m[3];
@@ -258,7 +259,7 @@ class KontaktdatenBlockParser implements DocumentTemplateParser
     /** ISO-Datum ("1975-08-04") -> Anzeige "04.08.1975". */
     private function displayDate(string $iso): string
     {
-        return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $iso, $m) ? $m[3] . '.' . $m[2] . '.' . $m[1] : $iso;
+        return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $iso, $m) ? $m[3].'.'.$m[2].'.'.$m[1] : $iso;
     }
 
     /**

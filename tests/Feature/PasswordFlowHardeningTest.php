@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\Auth\PasswordSetupController;
 use App\Mail\CustomerWelcomeMail;
 use App\Mail\PasswordResetMail;
 use App\Models\Customer;
@@ -12,7 +13,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
-use App\Http\Controllers\Auth\PasswordSetupController;
 use Tests\TestCase;
 
 /**
@@ -43,7 +43,7 @@ class PasswordFlowHardeningTest extends TestCase
         ], $userAttrs));
 
         return Customer::create(array_merge([
-            'user_id' => $user->id, 'customer_number' => 'K-' . uniqid(), 'birth_date' => '1985-03-15',
+            'user_id' => $user->id, 'customer_number' => 'K-'.uniqid(), 'birth_date' => '1985-03-15',
         ], $customerAttrs));
     }
 
@@ -244,10 +244,10 @@ class PasswordFlowHardeningTest extends TestCase
         $url = PasswordSetupController::invitationUrl($customer->user);
 
         $teile = parse_url($url);
-        $pfadMitQuery = ($teile['path'] ?? '/') . (isset($teile['query']) ? '?' . $teile['query'] : '');
+        $pfadMitQuery = ($teile['path'] ?? '/').(isset($teile['query']) ? '?'.$teile['query'] : '');
 
         // Aufruf unter einem ANDEREN Host - Signatur muss halten.
-        $this->get('https://portal.dienstly24.de' . $pfadMitQuery)->assertOk();
+        $this->get('https://portal.dienstly24.de'.$pfadMitQuery)->assertOk();
     }
 
     /** Manipulierte Konto-ID macht den Link ungueltig. */
@@ -256,10 +256,10 @@ class PasswordFlowHardeningTest extends TestCase
         $customer = $this->customer([], ['birth_date' => null]);
         $url = PasswordSetupController::invitationUrl($customer->user);
 
-        $fremd = \App\Models\User::factory()->create(['role' => 'customer']);
+        $fremd = User::factory()->create(['role' => 'customer']);
         $manipuliert = preg_replace(
             '#/zugang/passwort-festlegen/\d+#',
-            '/zugang/passwort-festlegen/' . $fremd->id,
+            '/zugang/passwort-festlegen/'.$fremd->id,
             $url
         );
 

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Vermittler;
 
 /**
@@ -85,7 +86,7 @@ class VermittlerVorgangslisteParser
                 // Referenz-Nr. vor dem ersten Vorgang: die Reihenfolge stimmt
                 // nicht - nie an den naechsten Vorgang "weiterreichen".
                 $ambiguous = true;
-                $notes[] = 'Referenz-Nr. "' . $reference . '" steht vor jedem Vorgang.';
+                $notes[] = 'Referenz-Nr. "'.$reference.'" steht vor jedem Vorgang.';
                 continue;
             }
 
@@ -95,9 +96,9 @@ class VermittlerVorgangslisteParser
                 // wurde nicht zeilenweise gelesen. Ab hier ist JEDE Zuordnung
                 // dieser Datei ein Ratespiel.
                 $ambiguous = true;
-                $notes[] = 'Vorgang ' . $rows[$current]['vermittler_id']
-                    . ' bekaeme zwei Referenz-Nummern ("' . $rows[$current]['reference_number']
-                    . '" und "' . $reference . '").';
+                $notes[] = 'Vorgang '.$rows[$current]['vermittler_id']
+                    .' bekaeme zwei Referenz-Nummern ("'.$rows[$current]['reference_number']
+                    .'" und "'.$reference.'").';
                 continue;
             }
 
@@ -132,7 +133,7 @@ class VermittlerVorgangslisteParser
 
     private function reference(string $line): ?string
     {
-        if (!preg_match(self::REFERENCE_LABEL, $line, $m)) {
+        if (! preg_match(self::REFERENCE_LABEL, $line, $m)) {
             return null;
         }
         $value = VermittlerReference::display(preg_replace('/\s+/u', '', $m[1]) ?? '');
@@ -149,7 +150,7 @@ class VermittlerVorgangslisteParser
         // Gruppierte Nummern (1477-6741-...) sind nie eine Vorgangs-Id.
         $clean = preg_replace('/\b\d{2,}(?:[-\/]\d{2,}){2,}\b/u', ' ', $clean) ?? $clean;
 
-        if (!preg_match_all('/(?<![\d.,\-\/])(\d{6,10})(?![\d.,\-\/])/u', $clean, $m)) {
+        if (! preg_match_all('/(?<![\d.,\-\/])(\d{6,10})(?![\d.,\-\/])/u', $clean, $m)) {
             return null;
         }
         // Genau EINE Zahl darf die Id sein. Mehrere allein stehende Zahlen in
@@ -160,12 +161,12 @@ class VermittlerVorgangslisteParser
     private function produkt(string $line): ?string
     {
         // Produktname = der zusammenhaengende Buchstabenteil der Zeile.
-        if (!preg_match('/([A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß\-\. ]{4,60})/u', $line, $m)) {
+        if (! preg_match('/([A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß\-\. ]{4,60})/u', $line, $m)) {
             return null;
         }
         $value = trim($m[1]);
         foreach (['offen', 'Datum', 'Produkt', 'Status'] as $noise) {
-            $value = trim(preg_replace('/\b' . preg_quote($noise, '/') . '\b/iu', '', $value) ?? $value);
+            $value = trim(preg_replace('/\b'.preg_quote($noise, '/').'\b/iu', '', $value) ?? $value);
         }
         return $value !== '' ? mb_substr($value, 0, 190) : null;
     }
@@ -176,7 +177,7 @@ class VermittlerVorgangslisteParser
             return sprintf('%04d-%02d-%02d', $m[3], $m[2], $m[1]);
         }
         if (preg_match('/\b(\d{4})-(\d{2})-(\d{2})\b/u', $line, $m)) {
-            return $m[1] . '-' . $m[2] . '-' . $m[3];
+            return $m[1].'-'.$m[2].'-'.$m[3];
         }
         return null;
     }
@@ -184,7 +185,7 @@ class VermittlerVorgangslisteParser
     private function status(string $line): ?string
     {
         foreach (VermittlerStatusMap::TEXT_STATUSES as $text => $_) {
-            if (preg_match('/\b' . preg_quote($text, '/') . '\b/iu', $line)) {
+            if (preg_match('/\b'.preg_quote($text, '/').'\b/iu', $line)) {
                 return $text;
             }
         }

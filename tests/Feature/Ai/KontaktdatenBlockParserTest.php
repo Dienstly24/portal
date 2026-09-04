@@ -23,7 +23,7 @@ class KontaktdatenBlockParserTest extends TestCase
             'DE53 7425 0000 0041 2922 10',
         ]);
 
-        $r = (new KontaktdatenBlockParser())->parse($text);
+        $r = (new KontaktdatenBlockParser)->parse($text);
         $this->assertNotNull($r);
         $this->assertSame('kontaktdaten', $r['type']);
 
@@ -44,9 +44,9 @@ class KontaktdatenBlockParserTest extends TestCase
     {
         // Ein echtes (langes) Dokument mit E-Mail + IBAN im Fuss darf NICHT als
         // Kontaktblock gelesen werden.
-        $long = "Rechnung Nr. 4711\n" . str_repeat("Zeile mit Text zur Laenge des Dokuments.\n", 20)
-            . "12345 Musterstadt\nkontakt@firma.de\nDE53 7425 0000 0041 2922 10";
-        $this->assertNull((new KontaktdatenBlockParser())->parse($long));
+        $long = "Rechnung Nr. 4711\n".str_repeat("Zeile mit Text zur Laenge des Dokuments.\n", 20)
+            ."12345 Musterstadt\nkontakt@firma.de\nDE53 7425 0000 0041 2922 10";
+        $this->assertNull((new KontaktdatenBlockParser)->parse($long));
     }
 
     public function test_reads_hyphenated_name_and_two_dates(): void
@@ -61,7 +61,7 @@ class KontaktdatenBlockParserTest extends TestCase
             'Salamalwattar20@gmail.com',
             'DE82 2305 2750 0081 4355 63',
         ]);
-        $r = (new KontaktdatenBlockParser())->parse($text);
+        $r = (new KontaktdatenBlockParser)->parse($text);
         $p = $r['data']['person'];
 
         $this->assertSame('Salam', $p['first_name']);
@@ -88,7 +88,7 @@ class KontaktdatenBlockParserTest extends TestCase
             'alalialsharaa.ibrahim@gmail.com',
             'DE44 1001 0010 0461 1063 8',
         ]);
-        $p = (new KontaktdatenBlockParser())->parse($text)['data']['person'];
+        $p = (new KontaktdatenBlockParser)->parse($text)['data']['person'];
 
         $this->assertSame('Ibrahim', $p['first_name']);
         $this->assertSame('Al-Ali Al-Sharaa', $p['last_name']);
@@ -111,7 +111,7 @@ class KontaktdatenBlockParserTest extends TestCase
             'layla@example.com',
             'DE89 3704 0044 0532 0130 00',
         ]);
-        $p = (new KontaktdatenBlockParser())->parse($text)['data']['person'];
+        $p = (new KontaktdatenBlockParser)->parse($text)['data']['person'];
         $this->assertSame('Layla', $p['first_name']);
         $this->assertSame('Al-Hassan', $p['last_name']);
         $this->assertSame('female', $p['gender']);
@@ -131,7 +131,7 @@ class KontaktdatenBlockParserTest extends TestCase
             'refat.re75@hotmail.com',
             'DE55 2856 2297 0035 5267 00',
         ]);
-        $r = (new KontaktdatenBlockParser())->parse($text);
+        $r = (new KontaktdatenBlockParser)->parse($text);
         $p = $r['data']['person'];
 
         $this->assertSame('Refat', $p['first_name']);
@@ -159,7 +159,7 @@ class KontaktdatenBlockParserTest extends TestCase
             'hayasande475@gmail.com',
             'DE97 6735 2565 0001 5899 28',
         ]);
-        $r = (new KontaktdatenBlockParser())->parse($text);
+        $r = (new KontaktdatenBlockParser)->parse($text);
 
         $this->assertNotNull($r);
         $p = $r['data']['person'];
@@ -195,7 +195,7 @@ class KontaktdatenBlockParserTest extends TestCase
             'DE89 3704 0044 0532 0130 00',
         ]);
 
-        $r = (new KontaktdatenBlockParser())->parse($text);
+        $r = (new KontaktdatenBlockParser)->parse($text);
         $this->assertNotNull($r);
         $p = $r['data']['person'];
 
@@ -226,7 +226,7 @@ class KontaktdatenBlockParserTest extends TestCase
             'DE89 37O4 OO44 O532 O13O OO',
         ]);
 
-        $r = (new KontaktdatenBlockParser())->parse($text);
+        $r = (new KontaktdatenBlockParser)->parse($text);
         $this->assertNotNull($r);
         $this->assertSame('nabil.karimi@example.com', $r['data']['person']['email']);
         // IBAN wird nur uebernommen, weil die Pruefziffer nach der Reparatur stimmt.
@@ -248,7 +248,7 @@ class KontaktdatenBlockParserTest extends TestCase
             'DEB9 3704 0044 0532 0130 00',
         ]);
 
-        $r = (new KontaktdatenBlockParser())->parse($text);
+        $r = (new KontaktdatenBlockParser)->parse($text);
         $this->assertNotNull($r);
         $this->assertSame('nabil.karimi@example.com', $r['data']['person']['email']);
         $this->assertSame('DE89370400440532013000', $r['data']['bank']['iban']);
@@ -268,7 +268,7 @@ class KontaktdatenBlockParserTest extends TestCase
             'DE89 3704 0044 0532 0130 01',
         ]);
 
-        $r = (new KontaktdatenBlockParser())->parse($text);
+        $r = (new KontaktdatenBlockParser)->parse($text);
         $this->assertNotNull($r);
         $this->assertSame([], $r['data']['bank']);
         $this->assertStringContainsString('Keine gueltige IBAN', $r['summary']);
@@ -285,7 +285,7 @@ class KontaktdatenBlockParserTest extends TestCase
             'nabil.karimi@example.com',
         ]);
 
-        $p = (new KontaktdatenBlockParser())->parse($text)['data']['person'];
+        $p = (new KontaktdatenBlockParser)->parse($text)['data']['person'];
         $this->assertSame('01791234567', $p['phone']);
     }
 
@@ -294,7 +294,7 @@ class KontaktdatenBlockParserTest extends TestCase
         // Nur Anschrift + Telefon (Briefkopf) reicht NICHT - ohne E-Mail oder
         // IBAN ist das kein Kontaktzettel des Kunden.
         $text = "Muster Handel\nHauptstr. 5\n12345 Berlin\n030123456789";
-        $this->assertNull((new KontaktdatenBlockParser())->parse($text));
+        $this->assertNull((new KontaktdatenBlockParser)->parse($text));
     }
 
     public function test_short_document_is_not_a_contact_block(): void
@@ -308,7 +308,7 @@ class KontaktdatenBlockParserTest extends TestCase
             'max@example.com',
             'DE89 3704 0044 0532 0130 00',
         ]);
-        $this->assertNull((new KontaktdatenBlockParser())->parse($text));
+        $this->assertNull((new KontaktdatenBlockParser)->parse($text));
     }
 
     public function test_requires_two_signals_with_one_personal(): void
@@ -316,12 +316,12 @@ class KontaktdatenBlockParserTest extends TestCase
         // E-Mail + PLZ/Ort genuegen jetzt (frueher war die IBAN Pflicht - EIN
         // von der OCR verlesenes Zeichen liess den ganzen Block durchfallen).
         $ohneIban = "Max Mustermann 01.01.1990\nTeststr. 1\n12345 Berlin\nmax@example.com";
-        $this->assertNotNull((new KontaktdatenBlockParser())->parse($ohneIban));
+        $this->assertNotNull((new KontaktdatenBlockParser)->parse($ohneIban));
 
         // Nur ein persoenliches Signal ohne zweites Signal reicht nicht.
         $nurEmail = "Max Mustermann\nmax@example.com";
-        $this->assertNull((new KontaktdatenBlockParser())->parse($nurEmail));
+        $this->assertNull((new KontaktdatenBlockParser)->parse($nurEmail));
 
-        $this->assertNull((new KontaktdatenBlockParser())->parse('Nur irgendein kurzer Text'));
+        $this->assertNull((new KontaktdatenBlockParser)->parse('Nur irgendein kurzer Text'));
     }
 }

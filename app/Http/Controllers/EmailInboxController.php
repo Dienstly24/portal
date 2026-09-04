@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
@@ -8,10 +9,13 @@ use App\Models\Customer;
 use App\Models\CustomerChangeRequest;
 use App\Models\DocumentRequest;
 use App\Models\EmailMessage;
+use App\Models\Task;
 use App\Models\Ticket;
 use App\Services\FondsFinanz\FondsFinanzImportService;
 use App\Services\Mailbox\EmailAttachmentService;
+use App\Services\Workflow\EmailWorkflowService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Zentrale Arbeitsliste für die E-Mail-Verarbeitung (Architekturplan
@@ -39,7 +43,7 @@ class EmailInboxController extends Controller
         $user = auth()->user();
         $vorschlaege = EmailMessage::with(['customer.user', 'account'])
             ->where('match_status', 'suggested')
-            ->when(!$user->canSeeAllCustomers(), fn ($q) => $q->whereIn('customer_id', $user->visibleCustomerIdsWithSubstitution()));
+            ->when(! $user->canSeeAllCustomers(), fn ($q) => $q->whereIn('customer_id', $user->visibleCustomerIdsWithSubstitution()));
 
         // Gedeckelt: arbeitet niemand den Eingang ab, stapeln sich die
         // Vorschlaege - und die Seite wuerde mit dem Stapel wachsen, bis sie
@@ -78,7 +82,7 @@ class EmailInboxController extends Controller
             abort_unless(auth()->user()->canAccessCustomer($message->customer_id), 403);
         }
 
-        $tasks = \App\Models\Task::where('email_message_id', $message->id)
+        $tasks = Task::where('email_message_id', $message->id)
             ->with('assignedTo')->latest()->get();
 
         return view('admin.email_message', compact('message', 'tasks'));
@@ -94,9 +98,9 @@ class EmailInboxController extends Controller
 
         $entry = ($message->attachments_meta ?? [])[$index] ?? null;
         abort_if($entry === null, 404);
-        abort_unless(\Illuminate\Support\Facades\Storage::disk('local')->exists($entry['path']), 404);
+        abort_unless(Storage::disk('local')->exists($entry['path']), 404);
 
-        return \Illuminate\Support\Facades\Storage::disk('local')->download($entry['path'], $entry['filename']);
+        return Storage::disk('local')->download($entry['path'], $entry['filename']);
     }
 
     /** Vorgeschlagene Zuordnung bestätigen (Ein-Klick, Abschnitt 13). */
@@ -157,7 +161,7 @@ class EmailInboxController extends Controller
     }
 
     /** KI-Kategorievorschlag übernehmen (Phase 3, Freigabe-Gateway). */
-    public function aiAccept($decisionId, \App\Services\Workflow\EmailWorkflowService $workflow)
+    public function aiAccept($decisionId, EmailWorkflowService $workflow)
     {
         $decision = AiDecision::with('emailMessage')->findOrFail($decisionId);
         if ($decision->status !== 'suggested' || $decision->emailMessage === null) {

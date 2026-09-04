@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Provisionsmanagement;
 
 use App\Models\CommissionImport;
@@ -8,7 +9,6 @@ use App\Support\CommissionKind;
 use App\Support\CommissionStatus;
 use App\Support\ContractCommissionStatus as Zustand;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Die Zahlen des Provisionsmanagements (Dashboard §21, Auswertungen §22).
@@ -41,8 +41,8 @@ class CommissionAnalytics
     {
         $row = ContractCommission::query()
             ->when($pool, fn ($q) => $q->where('pool', $pool))
-            ->when($from, fn ($q) => $q->whereRaw(self::DATE . ' >= ?', [$from->toDateString()]))
-            ->when($to, fn ($q) => $q->whereRaw(self::DATE . ' <= ?', [$to->toDateString()]))
+            ->when($from, fn ($q) => $q->whereRaw(self::DATE.' >= ?', [$from->toDateString()]))
+            ->when($to, fn ($q) => $q->whereRaw(self::DATE.' <= ?', [$to->toDateString()]))
             ->selectRaw('COUNT(*) as anzahl')
             ->selectRaw('COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) as brutto')
             ->selectRaw('COALESCE(SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END),0) as negativ')
@@ -128,8 +128,8 @@ class CommissionAnalytics
 
         $rows = ContractCommission::query()
             ->when($pool, fn ($q) => $q->where('pool', $pool))
-            ->whereRaw(self::DATE . ' >= ?', [$from->toDateString()])
-            ->selectRaw("substr(" . self::DATE . ", 1, 7) as monat")
+            ->whereRaw(self::DATE.' >= ?', [$from->toDateString()])
+            ->selectRaw('substr('.self::DATE.', 1, 7) as monat')
             ->selectRaw('COUNT(*) as anzahl')
             ->selectRaw('COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) as brutto')
             ->selectRaw('COALESCE(SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END),0) as storno')
@@ -159,9 +159,9 @@ class CommissionAnalytics
         }
 
         $rows = ContractCommission::query()
-            ->when($from, fn ($q) => $q->whereRaw(self::DATE . ' >= ?', [$from->toDateString()]))
-            ->when($to, fn ($q) => $q->whereRaw(self::DATE . ' <= ?', [$to->toDateString()]))
-            ->selectRaw($column . ' as schluessel')
+            ->when($from, fn ($q) => $q->whereRaw(self::DATE.' >= ?', [$from->toDateString()]))
+            ->when($to, fn ($q) => $q->whereRaw(self::DATE.' <= ?', [$to->toDateString()]))
+            ->selectRaw($column.' as schluessel')
             ->selectRaw('COUNT(*) as anzahl')
             ->selectRaw('COALESCE(SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END),0) as storno')
             ->selectRaw('COALESCE(SUM(amount),0) as netto')
@@ -250,7 +250,7 @@ class CommissionAnalytics
     private function customerByMonth(string $customerId): array
     {
         return ContractCommission::where('customer_id', $customerId)
-            ->selectRaw("substr(" . self::DATE . ", 1, 7) as monat")
+            ->selectRaw('substr('.self::DATE.', 1, 7) as monat')
             ->selectRaw('COALESCE(SUM(amount),0) as netto')
             ->groupBy('monat')->orderBy('monat')->get()
             ->map(fn ($r) => ['monat' => (string) $r->monat, 'netto' => round((float) $r->netto, 2)])
@@ -260,7 +260,7 @@ class CommissionAnalytics
     private function customerGrouped(string $customerId, string $column): array
     {
         return ContractCommission::where('customer_id', $customerId)
-            ->selectRaw($column . ' as schluessel')
+            ->selectRaw($column.' as schluessel')
             ->selectRaw('COALESCE(SUM(amount),0) as netto')
             ->groupBy('schluessel')->orderByDesc('netto')->get()
             ->map(fn ($r) => [
@@ -286,7 +286,7 @@ class CommissionAnalytics
             ->whereNotNull('pool')
             ->when($pool, fn ($q) => $q->where('pool', $pool))
             ->whereRaw('COALESCE(signing_date, application_date, start_date, DATE(created_at)) >= ?', [$from->toDateString()])
-            ->selectRaw("substr(COALESCE(signing_date, application_date, start_date, DATE(created_at)), 1, 7) as monat")
+            ->selectRaw('substr(COALESCE(signing_date, application_date, start_date, DATE(created_at)), 1, 7) as monat')
             ->selectRaw('COUNT(*) as abgeschlossen')
             ->selectRaw('SUM(CASE WHEN commission_status IN (?, ?, ?) THEN 1 ELSE 0 END) as verguetet', $verguetet)
             ->selectRaw('SUM(CASE WHEN commission_status IN (?, ?) THEN 1 ELSE 0 END) as in_frist', [Zustand::NEU, Zustand::ERWARTET])

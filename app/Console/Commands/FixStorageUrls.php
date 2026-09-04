@@ -40,7 +40,7 @@ class FixStorageUrls extends Command
                 continue;
             }
             $fixed++;
-            $this->line(($write ? 'Repariert' : 'Wuerde reparieren') . ': ' . $page->slug . ': "' . $old . '" -> "' . $new . '"');
+            $this->line(($write ? 'Repariert' : 'Wuerde reparieren').': '.$page->slug.': "'.$old.'" -> "'.$new.'"');
             if ($write) {
                 $page->forceFill(['image_path' => $new])->save();
             }

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Sales;
 
 /**
@@ -111,7 +112,7 @@ final class ConversationState
     /** Ist der Uebergang erlaubt? Uebergabe an den Menschen immer. */
     public static function allows(?string $from, string $to): bool
     {
-        if (!self::exists($to)) {
+        if (! self::exists($to)) {
             return false;
         }
         $from = self::exists($from) ? $from : self::NEW;

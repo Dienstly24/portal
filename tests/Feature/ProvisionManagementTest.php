@@ -35,11 +35,11 @@ class ProvisionManagementTest extends TestCase
     private function customer(array $userAttrs = [], array $customerAttrs = []): Customer
     {
         $user = User::factory()->create(array_merge([
-            'role' => 'customer', 'name' => 'Max Mustermann', 'email' => 'kunde-' . uniqid() . '@kunde.de',
+            'role' => 'customer', 'name' => 'Max Mustermann', 'email' => 'kunde-'.uniqid().'@kunde.de',
         ], $userAttrs));
 
         return Customer::create(array_merge([
-            'user_id' => $user->id, 'customer_number' => 'K-' . uniqid(),
+            'user_id' => $user->id, 'customer_number' => 'K-'.uniqid(),
         ], $customerAttrs));
     }
 
@@ -65,7 +65,7 @@ class ProvisionManagementTest extends TestCase
     {
         return Contract::create(array_merge([
             'customer_id' => $customer->id, 'type' => 'kfz', 'insurer' => 'HUK Coburg',
-            'status' => 'active', 'contract_number' => 'V-' . uniqid(),
+            'status' => 'active', 'contract_number' => 'V-'.uniqid(),
             'premium_amount' => 50, 'premium_interval' => 'monthly', // 600 EUR/Jahr
         ], $attrs));
     }
@@ -186,7 +186,7 @@ class ProvisionManagementTest extends TestCase
         $this->assertSame(0, Provision::count());
 
         $this->actingAs($this->admin)
-            ->post(route('admin.reports.neukunden.werber', $customer->id), ['werber' => 'u:' . $werber->id])
+            ->post(route('admin.reports.neukunden.werber', $customer->id), ['werber' => 'u:'.$werber->id])
             ->assertRedirect();
 
         $provision = Provision::first();
@@ -347,19 +347,19 @@ class ProvisionManagementTest extends TestCase
 
         // Bonus positiv.
         $this->actingAs($this->admin)->post(route('admin.provisions.store'), [
-            'empfaenger' => 'u:' . $werber->id, 'art' => 'bonus',
+            'empfaenger' => 'u:'.$werber->id, 'art' => 'bonus',
             'amount' => '25', 'note' => 'Kampagne Juli',
         ])->assertRedirect();
 
         // Abzug wird negativ gebucht (Eingabe positiv).
         $this->actingAs($this->admin)->post(route('admin.provisions.store'), [
-            'empfaenger' => 'u:' . $werber->id, 'art' => 'abzug',
+            'empfaenger' => 'u:'.$werber->id, 'art' => 'abzug',
             'amount' => '10', 'note' => 'Fehlbuchung Juni',
         ])->assertRedirect();
 
         // Ohne Grund kein Abzug (Pflichtfeld).
         $this->actingAs($this->admin)->post(route('admin.provisions.store'), [
-            'empfaenger' => 'u:' . $werber->id, 'art' => 'abzug', 'amount' => '5',
+            'empfaenger' => 'u:'.$werber->id, 'art' => 'abzug', 'amount' => '5',
         ])->assertSessionHasErrors('note');
 
         $this->assertSame(2, Provision::count());
@@ -393,7 +393,7 @@ class ProvisionManagementTest extends TestCase
 
         // Alle Schreibwege ebenso.
         $this->actingAs($employee)->post(route('admin.provisions.store'), [
-            'empfaenger' => 'u:' . $employee->id, 'amount' => '10',
+            'empfaenger' => 'u:'.$employee->id, 'amount' => '10',
         ])->assertRedirect($dashboard);
         $this->actingAs($employee)->post(route('admin.provisions.status', $provision->id), [
             'status' => 'ausgezahlt',
@@ -402,7 +402,7 @@ class ProvisionManagementTest extends TestCase
             'amount' => '999', 'grund' => 'x',
         ])->assertRedirect($dashboard);
         $this->actingAs($employee)->post(route('admin.provisions.rates.save'), [
-            'empfaenger' => 'u:' . $employee->id, 'global_fixed' => '99',
+            'empfaenger' => 'u:'.$employee->id, 'global_fixed' => '99',
         ])->assertRedirect($dashboard);
 
         $this->assertSame(1, Provision::count());
@@ -496,7 +496,7 @@ class ProvisionManagementTest extends TestCase
         $werber = $this->employee(['name' => 'Satz Traeger']);
 
         $this->actingAs($this->admin)->post(route('admin.provisions.rates.save'), [
-            'empfaenger' => 'u:' . $werber->id,
+            'empfaenger' => 'u:'.$werber->id,
             'global_fixed' => '20',
             'saetze' => [
                 'kfz' => ['fixed' => '50', 'percent' => '10'],
@@ -514,7 +514,7 @@ class ProvisionManagementTest extends TestCase
 
         // Beide Felder leeren -> Satz wird geloescht.
         $this->actingAs($this->admin)->post(route('admin.provisions.rates.save'), [
-            'empfaenger' => 'u:' . $werber->id,
+            'empfaenger' => 'u:'.$werber->id,
             'saetze' => ['kfz' => ['fixed' => '', 'percent' => '']],
         ])->assertRedirect();
 

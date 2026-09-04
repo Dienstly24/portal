@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Tools;
 
 /**
@@ -20,14 +21,14 @@ class GetCustomerProfileTool implements AssistantTool
     public function description(): string
     {
         return 'Stammdaten des angemeldeten Kunden (Name, Kundennummer, Anschrift, '
-            . 'Kontaktdaten, Sprache). Nutze das, um den Kunden korrekt anzusprechen '
-            . 'oder eine Frage zu seinen hinterlegten Daten zu beantworten. '
-            . 'Bankdaten und Ausweisdaten sind hier absichtlich NICHT enthalten.';
+            .'Kontaktdaten, Sprache). Nutze das, um den Kunden korrekt anzusprechen '
+            .'oder eine Frage zu seinen hinterlegten Daten zu beantworten. '
+            .'Bankdaten und Ausweisdaten sind hier absichtlich NICHT enthalten.';
     }
 
     public function parameters(): array
     {
-        return ['type' => 'object', 'properties' => new \stdClass(), 'required' => []];
+        return ['type' => 'object', 'properties' => new \stdClass, 'required' => []];
     }
 
     public function isWriting(): bool
@@ -45,7 +46,7 @@ class GetCustomerProfileTool implements AssistantTool
                 ?: trim(($customer->company_name ?? '')) ?: null,
             'anschrift' => $customer->fullAddress() ?: null,
             'telefon' => $customer->phone ?: $customer->mobile ?: null,
-            'email' => $customer->user?->email && !str_contains($customer->user->email, '@dienstly24.internal')
+            'email' => $customer->user?->email && ! str_contains($customer->user->email, '@dienstly24.internal')
                 ? $customer->user->email
                 : null,
             'geburtsdatum_hinterlegt' => $customer->birth_date !== null,

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
@@ -61,9 +62,9 @@ class GesundheitskarteParser implements DocumentTemplateParser
         $primary = $cards[0];
         $weitere = array_slice($cards, 1);
 
-        $name = trim(($primary['person']['first_name'] ?? '') . ' ' . ($primary['person']['last_name'] ?? ''));
+        $name = trim(($primary['person']['first_name'] ?? '').' '.($primary['person']['last_name'] ?? ''));
         $namen = array_values(array_filter(array_map(
-            fn ($c) => trim(($c['person']['first_name'] ?? '') . ' ' . ($c['person']['last_name'] ?? '')),
+            fn ($c) => trim(($c['person']['first_name'] ?? '').' '.($c['person']['last_name'] ?? '')),
             $cards
         )));
 
@@ -71,16 +72,16 @@ class GesundheitskarteParser implements DocumentTemplateParser
             'type' => 'gesundheitskarte',
             'confidence' => 70,
             'summary' => count($cards) > 1
-                ? 'Gesundheitskarten: ' . count($cards) . ' Personen erkannt - ' . implode(', ', $namen)
-                    . ' - Felder gratis gelesen (ohne KI).'
+                ? 'Gesundheitskarten: '.count($cards).' Personen erkannt - '.implode(', ', $namen)
+                    .' - Felder gratis gelesen (ohne KI).'
                 : 'Gesundheitskarte (Krankenversicherungskarte)'
-                    . ($name !== '' ? ' - ' . $name : '')
-                    . (isset($primary['gesundheit']['health_insurance_number'])
-                        ? ' - Vers.-Nr. ' . $primary['gesundheit']['health_insurance_number'] : '')
-                    . ' - Felder gratis gelesen (ohne KI).',
+                    .($name !== '' ? ' - '.$name : '')
+                    .(isset($primary['gesundheit']['health_insurance_number'])
+                        ? ' - Vers.-Nr. '.$primary['gesundheit']['health_insurance_number'] : '')
+                    .' - Felder gratis gelesen (ohne KI).',
             'title' => count($cards) > 1
-                ? 'Gesundheitskarten (' . count($cards) . ' Personen)'
-                : 'Gesundheitskarte' . ($name !== '' ? ' ' . $name : ''),
+                ? 'Gesundheitskarten ('.count($cards).' Personen)'
+                : 'Gesundheitskarte'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $primary['person'],
                 'gesundheit' => $primary['gesundheit'],
@@ -144,7 +145,7 @@ class GesundheitskarteParser implements DocumentTemplateParser
 
         // Versichertennummer: 1 Buchstabe + 9 Ziffern. Die Institutionsnummer
         // der Kasse (nur Ziffern) faellt durch dieses Muster.
-        if (!preg_match('/\b([A-Z]\d{9})\b/', $text, $m)) {
+        if (! preg_match('/\b([A-Z]\d{9})\b/', $text, $m)) {
             return null;
         }
         $health = ['health_insurance_number' => $m[1], 'health_insurance_type' => 'gesetzlich'];
@@ -174,7 +175,7 @@ class GesundheitskarteParser implements DocumentTemplateParser
         if (($raw['last_name'] ?? null) === null && ($raw['first_name'] ?? null) === null) {
             foreach ($lines as $line) {
                 $line = trim($line);
-                if (!preg_match('/^\p{Lu}[\p{L}\-\']+(?:\s+\p{Lu}[\p{L}\-\']+)+$/u', $line)
+                if (! preg_match('/^\p{Lu}[\p{L}\-\']+(?:\s+\p{Lu}[\p{L}\-\']+)+$/u', $line)
                     || preg_match('/\b(BKK|AOK|IKK|KKH|Krankenkasse|Kasse|Service|Gesundheitskarte|Bundesamt|Sicherheit|Informationstechnik)\b/iu', $line)) {
                     continue;
                 }
@@ -188,7 +189,7 @@ class GesundheitskarteParser implements DocumentTemplateParser
         // Geburtsdatum (Feld 5): TT/MM/JJJJ oder TT.MM.JJJJ. Nur aus der
         // Feldzeile - ein Datum im Fliesstext (Ablaufdatum) zaehlt nicht.
         if ($birth !== null && preg_match('#\b(\d{2})[./](\d{2})[./](\d{4})\b#', $birth, $b)) {
-            $raw['birth_date'] = $b[3] . '-' . $b[2] . '-' . $b[1];
+            $raw['birth_date'] = $b[3].'-'.$b[2].'-'.$b[1];
         }
 
         $person = $this->validatedPerson(array_filter($raw, fn ($v) => $v !== null && $v !== ''));
@@ -215,7 +216,7 @@ class GesundheitskarteParser implements DocumentTemplateParser
             if ($key === null) {
                 continue;
             }
-            if (!isset($byNumber[$key])) {
+            if (! isset($byNumber[$key])) {
                 $byNumber[$key] = $card;
                 continue;
             }
@@ -231,7 +232,7 @@ class GesundheitskarteParser implements DocumentTemplateParser
     private function valueBelow(array $lines, string $pattern): ?string
     {
         foreach ($lines as $i => $line) {
-            if (!preg_match($pattern, $line)) {
+            if (! preg_match($pattern, $line)) {
                 continue;
             }
             // Steht der Wert in derselben Zeile HINTER der Beschriftung
@@ -269,7 +270,7 @@ class GesundheitskarteParser implements DocumentTemplateParser
         }
 
         return implode(' ', array_map(
-            fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)) . mb_strtolower(mb_substr($w, 1)),
+            fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)).mb_strtolower(mb_substr($w, 1)),
             preg_split('/\s+/', $value) ?: []
         ));
     }

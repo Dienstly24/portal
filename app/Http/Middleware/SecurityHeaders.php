@@ -2,8 +2,10 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\CspNonce;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Vite;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -25,8 +27,8 @@ class SecurityHeaders
         // Ohne das Zuruecksetzen truege in einem langlebigen Prozess
         // (Tests, Octane) jede weitere Antwort den Nonce der ersten - ein
         // wiederverwendeter Nonce ist kein Schutz mehr.
-        \App\Support\CspNonce::reset();
-        \Illuminate\Support\Facades\Vite::useCspNonce(\App\Support\CspNonce::get());
+        CspNonce::reset();
+        Vite::useCspNonce(CspNonce::get());
 
         $response = $next($request);
 
@@ -83,7 +85,7 @@ class SecurityHeaders
      */
     public function policy(): string
     {
-        $nonce = "'nonce-" . \App\Support\CspNonce::get() . "'";
+        $nonce = "'nonce-".CspNonce::get()."'";
 
         // Turnstile (Bot-Schutz der Registrierung, Audit SEC-1) ist der
         // EINZIGE fremde Skript-Host. Er steht hier ausdruecklich und
@@ -98,7 +100,7 @@ class SecurityHeaders
             "frame-ancestors 'self'",
             "form-action 'self'",
             // Turnstile rendert sein Widget in einem iframe.
-            "frame-src 'self' " . $turnstile,
+            "frame-src 'self' ".$turnstile,
             // blob: ist noetig, damit die Seite selbst erzeugte Bilder
             // anzeigen und verarbeiten kann: der Dokumenten-Scanner im
             // Kundenportal (Seiten-Vorschau + Verkleinern aufs JPEG),
@@ -127,13 +129,13 @@ class SecurityHeaders
             // docs/SICHERHEIT_SEC_1_BIS_5.md.
             "style-src 'self' 'unsafe-inline'",
             // Kein 'unsafe-inline', kein 'unsafe-eval'.
-            "script-src 'self' " . $nonce . ' ' . $turnstile,
+            "script-src 'self' ".$nonce.' '.$turnstile,
             // Attribut-Handler (onclick="...") sind damit ausgeschlossen
             // und bleiben es auch: sie koennen keinen Nonce tragen.
             "script-src-attr 'none'",
             "connect-src 'self'",
             config('security.csp_report_uri')
-                ? 'report-uri ' . config('security.csp_report_uri')
+                ? 'report-uri '.config('security.csp_report_uri')
                 : null,
         ]));
     }

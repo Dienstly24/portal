@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Tools;
 
 use App\Models\AiConversation;
@@ -25,11 +26,11 @@ class EscalateToTeamTool implements AssistantTool
     public function description(): string
     {
         return 'Uebergibt die Anfrage an das zustaendige Dienstly24-Team. Nutze das IMMER, '
-            . 'wenn du unsicher bist, eine Information NICHT in den Kundendaten oder der '
-            . 'Wissensbasis steht, die Frage rechtlich oder vertraglich verbindlich ist '
-            . '(Kuendigung, Genehmigung, Geld, Deckungsfragen), der Kunde sich beschwert, '
-            . 'einen Mitarbeiter verlangt oder die Daten widersprüchlich sind. Raten ist '
-            . 'nie erlaubt - Uebergeben ist immer richtig.';
+            .'wenn du unsicher bist, eine Information NICHT in den Kundendaten oder der '
+            .'Wissensbasis steht, die Frage rechtlich oder vertraglich verbindlich ist '
+            .'(Kuendigung, Genehmigung, Geld, Deckungsfragen), der Kunde sich beschwert, '
+            .'einen Mitarbeiter verlangt oder die Daten widersprüchlich sind. Raten ist '
+            .'nie erlaubt - Uebergeben ist immer richtig.';
     }
 
     public function parameters(): array
@@ -47,13 +48,13 @@ class EscalateToTeamTool implements AssistantTool
                         AiConversation::REASON_OUT_OF_SCOPE,
                     ],
                     'description' => 'uncertain = unsicher/Information fehlt, sensitive = rechtlich/'
-                        . 'vertraglich verbindlich, complaint = Beschwerde, customer_request = Kunde '
-                        . 'will einen Mitarbeiter, out_of_scope = ausserhalb des Kundenservice.',
+                        .'vertraglich verbindlich, complaint = Beschwerde, customer_request = Kunde '
+                        .'will einen Mitarbeiter, out_of_scope = ausserhalb des Kundenservice.',
                 ],
                 'zusammenfassung' => [
                     'type' => 'string',
                     'description' => 'Ein bis drei Saetze fuer den Mitarbeiter: worum es geht und was '
-                        . 'unklar ist. Nur Angaben des Kunden bzw. aus den Tools - nichts erfinden.',
+                        .'unklar ist. Nur Angaben des Kunden bzw. aus den Tools - nichts erfinden.',
                 ],
             ],
             'required' => ['grund', 'zusammenfassung'],
@@ -77,7 +78,7 @@ class EscalateToTeamTool implements AssistantTool
             AiConversation::REASON_CUSTOMER_REQUEST,
             AiConversation::REASON_OUT_OF_SCOPE,
         ];
-        if (!in_array($reason, $allowed, true)) {
+        if (! in_array($reason, $allowed, true)) {
             $reason = AiConversation::REASON_UNCERTAIN;
         }
 
@@ -89,8 +90,8 @@ class EscalateToTeamTool implements AssistantTool
             'uebergeben' => true,
             'grund' => $reason,
             'hinweis' => 'Die Anfrage ist an das Team uebergeben. Teile dem Kunden freundlich mit, '
-                . 'dass das zustaendige Team seine Anfrage prueft und sich bei ihm meldet. '
-                . 'Gib KEINE eigene Einschaetzung zur Sachfrage ab.',
+                .'dass das zustaendige Team seine Anfrage prueft und sich bei ihm meldet. '
+                .'Gib KEINE eigene Einschaetzung zur Sachfrage ab.',
         ];
     }
 }

@@ -7,9 +7,10 @@ use App\Models\Customer;
 use App\Models\CustomerChangeRequest;
 use App\Models\CustomerFamily;
 use App\Models\InternalMessage;
-use App\Models\InternalNotification;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class SelfServiceTest extends TestCase
@@ -20,7 +21,7 @@ class SelfServiceTest extends TestCase
     {
         parent::setUp();
         // Nachweise landen auf der privaten Disk - im Test gefaked.
-        \Illuminate\Support\Facades\Storage::fake('local');
+        Storage::fake('local');
     }
 
     private function makeCustomer(): Customer
@@ -29,7 +30,7 @@ class SelfServiceTest extends TestCase
 
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5((string) $user->id), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5((string) $user->id), 0, 8)),
             'iban' => 'DE00ALTALTALTALTALT00',
         ]);
     }
@@ -60,7 +61,7 @@ class SelfServiceTest extends TestCase
         $customer = $this->makeCustomer();
 
         $this->actingAs($customer->user)->post(route('portal.bank.store'), [
-            'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
+            'bank_proof' => UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
             'iban' => 'DE89370400440532013000',
             'account_holder' => 'Max Mustermann',
         ])->assertSessionHas('success');
@@ -78,7 +79,7 @@ class SelfServiceTest extends TestCase
         $customer = $this->makeCustomer();
 
         $this->actingAs($customer->user)->post(route('portal.bank.store'), [
-            'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
+            'bank_proof' => UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
             'iban' => 'DE89370400440532013000',
             'account_holder' => 'Max Mustermann',
         ]);
@@ -112,10 +113,10 @@ class SelfServiceTest extends TestCase
         // Ausnahme: portal.family.delete ist KEINE direkte Löschung, sondern
         // erzeugt nur einen Change Request (Löschung erst nach Admin-Freigabe).
         $portalRoutes = collect(app('router')->getRoutes()->getRoutesByName())
-            ->keys()->filter(fn($n) => str_starts_with($n, 'portal.'))
-            ->reject(fn($n) => $n === 'portal.family.delete');
+            ->keys()->filter(fn ($n) => str_starts_with($n, 'portal.'))
+            ->reject(fn ($n) => $n === 'portal.family.delete');
         $this->assertTrue(
-            $portalRoutes->filter(fn($n) => str_contains($n, 'delete') || str_contains($n, 'destroy'))->isEmpty(),
+            $portalRoutes->filter(fn ($n) => str_contains($n, 'delete') || str_contains($n, 'destroy'))->isEmpty(),
             'Das Portal darf keine direkten Lösch-Routen anbieten.'
         );
     }
@@ -125,7 +126,7 @@ class SelfServiceTest extends TestCase
     {
         $customer = $this->makeCustomer();
         $this->actingAs($customer->user)->post(route('portal.bank.store'), [
-            'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
+            'bank_proof' => UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
             'iban' => 'DE89370400440532013000', 'account_holder' => 'Max',
         ]);
 
@@ -151,7 +152,7 @@ class SelfServiceTest extends TestCase
     {
         $customer = $this->makeCustomer();
         $this->actingAs($customer->user)->post(route('portal.bank.store'), [
-            'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
+            'bank_proof' => UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
             'iban' => 'DE89370400440532013000', 'account_holder' => 'Max Mustermann',
         ]);
         $request = CustomerChangeRequest::first();
@@ -201,7 +202,7 @@ class SelfServiceTest extends TestCase
     {
         $customer = $this->makeCustomer();
         $this->actingAs($customer->user)->post(route('portal.bank.store'), [
-            'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
+            'bank_proof' => UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
             'iban' => 'DE89370400440532013000', 'account_holder' => 'Max',
         ]);
 
@@ -237,7 +238,7 @@ class SelfServiceTest extends TestCase
     {
         $victim = $this->makeCustomer();
         $this->actingAs($victim->user)->post(route('portal.bank.store'), [
-            'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
+            'bank_proof' => UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
             'iban' => 'DE89370400440532013000', 'account_holder' => 'Opfer',
         ]);
         $request = CustomerChangeRequest::first();
@@ -258,7 +259,7 @@ class SelfServiceTest extends TestCase
     {
         $customer = $this->makeCustomer();
         $this->actingAs($customer->user)->post(route('portal.bank.store'), [
-            'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
+            'bank_proof' => UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
             'iban' => 'DE89370400440532013000', 'account_holder' => 'Max',
         ]);
         $request = CustomerChangeRequest::first();
@@ -279,7 +280,7 @@ class SelfServiceTest extends TestCase
 
         $customer = $this->makeCustomer();
         $this->actingAs($customer->user)->post(route('portal.bank.store'), [
-            'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
+            'bank_proof' => UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
             'iban' => 'DE89370400440532013000', 'account_holder' => 'Max',
         ]);
 
@@ -294,7 +295,7 @@ class SelfServiceTest extends TestCase
     {
         $customer = $this->makeCustomer();
         $this->actingAs($customer->user)->post(route('portal.bank.store'), [
-            'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
+            'bank_proof' => UploadedFile::fake()->create('kontonachweis.pdf', 60, 'application/pdf'),
             'iban' => 'DE89370400440532013000', 'account_holder' => 'Max',
         ]);
         $request = CustomerChangeRequest::first();
@@ -363,7 +364,7 @@ class SelfServiceTest extends TestCase
 
     public function test_customer_can_assign_uploaded_document_to_own_contract(): void
     {
-        \Illuminate\Support\Facades\Storage::fake('local');
+        Storage::fake('local');
         $customer = $this->makeCustomer();
         $contract = Contract::create([
             'customer_id' => $customer->id,
@@ -373,7 +374,7 @@ class SelfServiceTest extends TestCase
         $this->actingAs($customer->user)->post(route('portal.documents.upload'), [
             'category' => 'contract',
             'contract_id' => $contract->id,
-            'document' => \Illuminate\Http\UploadedFile::fake()->create('vertrag.pdf', 200, 'application/pdf'),
+            'document' => UploadedFile::fake()->create('vertrag.pdf', 200, 'application/pdf'),
         ])->assertSessionHas('success');
 
         $this->assertDatabaseHas('documents', [
@@ -385,7 +386,7 @@ class SelfServiceTest extends TestCase
 
     public function test_document_cannot_be_assigned_to_foreign_contract(): void
     {
-        \Illuminate\Support\Facades\Storage::fake('local');
+        Storage::fake('local');
         $owner = $this->makeCustomer();
         $foreign = Contract::create([
             'customer_id' => $owner->id,
@@ -396,7 +397,7 @@ class SelfServiceTest extends TestCase
         $this->actingAs($customer->user)->post(route('portal.documents.upload'), [
             'category' => 'other',
             'contract_id' => $foreign->id,
-            'document' => \Illuminate\Http\UploadedFile::fake()->create('foto.jpg', 100, 'image/jpeg'),
+            'document' => UploadedFile::fake()->create('foto.jpg', 100, 'image/jpeg'),
         ])->assertSessionHas('success');
 
         // Datei wurde hochgeladen, aber NICHT dem fremden Vertrag zugeordnet

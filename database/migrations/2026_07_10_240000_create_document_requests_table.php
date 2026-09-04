@@ -11,8 +11,7 @@ use Illuminate\Support\Facades\Schema;
  * direkt dazu hoch. KEIN zweites Dokumentenarchiv - der Upload landet
  * als normales Document, die Anfrage referenziert es nur.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('document_requests', function (Blueprint $table) {

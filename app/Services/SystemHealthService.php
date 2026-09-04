@@ -2,15 +2,19 @@
 
 namespace App\Services;
 
+use App\Http\Middleware\EnsureTwoFactor;
 use App\Models\ActivityLog;
 use App\Models\AiKnowledgeEntry;
 use App\Models\Document;
 use App\Models\ErrorEvent;
 use App\Models\ScheduledTaskRun;
 use App\Models\User;
+use App\Services\Ai\Assistant\AssistantSettings;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Schema;
 use Symfony\Component\Process\Process;
 
@@ -148,8 +152,8 @@ class SystemHealthService
             'status' => $workerAlive ? self::OK : self::FAIL,
             'hint' => $workerAlive
                 ? ($waiting === 0 ? 'Leere Warteschlange - ein toter Worker faellt erst mit dem naechsten Job auf.' : null)
-                : 'Aeltester Job wartet seit ' . $oldest->diffForHumans(now(), true)
-                    . '. Worker starten (supervisor/systemd) - siehe docs/DEPLOYMENT.md.',
+                : 'Aeltester Job wartet seit '.$oldest->diffForHumans(now(), true)
+                    .'. Worker starten (supervisor/systemd) - siehe docs/DEPLOYMENT.md.',
         ];
         if (! $workerAlive) {
             $status = self::FAIL;
@@ -162,7 +166,7 @@ class SystemHealthService
 
         $items[] = [
             'label' => 'Dokumente in Analyse-Warteschlange',
-            'value' => $pending . ($stale > 0 ? ' (' . $stale . ' seit ueber 30 Min)' : ''),
+            'value' => $pending.($stale > 0 ? ' ('.$stale.' seit ueber 30 Min)' : ''),
             'status' => $stale >= max(1, (int) config('services.ocr.pending_backlog_alert', 10))
                 ? self::WARN : self::OK,
             'hint' => $stale > 0 ? 'Sicherheitsnetz: php artisan documents:analyze-pending' : null,
@@ -174,7 +178,7 @@ class SystemHealthService
         return [
             'title' => 'Warteschlange',
             'status' => $status,
-            'summary' => $failed . ' fehlgeschlagen, ' . $waiting . ' wartend.',
+            'summary' => $failed.' fehlgeschlagen, '.$waiting.' wartend.',
             'items' => $items,
         ];
     }
@@ -217,14 +221,14 @@ class SystemHealthService
                 $neverRan++;
             } elseif ($lastRun->lt(now()->subMinutes($this->expectedIntervalMinutes($event) + self::SCHEDULE_GRACE_MINUTES))) {
                 $itemStatus = self::FAIL;
-                $note = 'Ueberfaellig - letzter Lauf ' . $lastRun->diffForHumans() . '.';
+                $note = 'Ueberfaellig - letzter Lauf '.$lastRun->diffForHumans().'.';
                 $overdue++;
             }
 
             if ($run && $run->last_failed_at !== null
                 && ($run->last_success_at === null || $run->last_failed_at->gte($run->last_success_at))) {
                 $itemStatus = self::FAIL;
-                $note = 'Letzter Lauf fehlgeschlagen: ' . ($run->last_error ?: 'Exitcode ' . $run->exit_code);
+                $note = 'Letzter Lauf fehlgeschlagen: '.($run->last_error ?: 'Exitcode '.$run->exit_code);
                 $failing++;
             }
 
@@ -258,7 +262,7 @@ class SystemHealthService
         return [
             'title' => 'Geplante Aufgaben',
             'status' => $status,
-            'summary' => count($tasks) . ' definiert, ' . $overdue . ' ueberfaellig, ' . $failing . ' fehlerhaft.',
+            'summary' => count($tasks).' definiert, '.$overdue.' ueberfaellig, '.$failing.' fehlerhaft.',
             'last_any_run' => $lastAny ? Carbon::createFromTimestamp($lastAny) : null,
             'tasks' => $tasks,
             'items' => [],
@@ -279,7 +283,7 @@ class SystemHealthService
     private function scheduledEvents(): array
     {
         try {
-            app(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+            app(Kernel::class)->bootstrap();
 
             return app(Schedule::class)->events();
         } catch (\Throwable $e) {
@@ -339,12 +343,12 @@ class SystemHealthService
         $items[] = [
             'label' => 'OCR / PDF-Textebene',
             'value' => $ocrEnabled
-                ? ('aktiv (' . (string) config('services.ocr.languages', 'deu+eng') . ')')
+                ? ('aktiv ('.(string) config('services.ocr.languages', 'deu+eng').')')
                 : 'abgeschaltet',
             'status' => $ocrEnabled ? ($binaries['ok'] ? self::OK : self::FAIL) : self::WARN,
             'hint' => $ocrEnabled
-                ? ($binaries['ok'] ? null : 'Fehlende Programme: ' . implode(', ', $binaries['missing'])
-                    . ' - pruefen mit: php artisan ocr:check')
+                ? ($binaries['ok'] ? null : 'Fehlende Programme: '.implode(', ', $binaries['missing'])
+                    .' - pruefen mit: php artisan ocr:check')
                 : 'OCR_ENABLED=false - jede Analyse geht direkt an die kostenpflichtige KI.',
         ];
 
@@ -367,7 +371,7 @@ class SystemHealthService
         $items[] = [
             'label' => 'Meta (Facebook / Instagram)',
             'value' => $metaToken
-                ? ('Token gesetzt' . ($metaPage ? ', Seite verknuepft' : ', Seite fehlt'))
+                ? ('Token gesetzt'.($metaPage ? ', Seite verknuepft' : ', Seite fehlt'))
                 : 'nicht eingerichtet',
             'status' => $metaToken ? ($metaPage ? self::OK : self::WARN) : self::INFO,
             'hint' => $metaToken
@@ -410,7 +414,7 @@ class SystemHealthService
     private function assistantItem(): array
     {
         try {
-            $settings = app(\App\Services\Ai\Assistant\AssistantSettings::class);
+            $settings = app(AssistantSettings::class);
             $enabled = $settings->enabled();
             $autoReply = $settings->autoReply();
         } catch (\Throwable $e) {
@@ -436,8 +440,8 @@ class SystemHealthService
 
         return [
             'label' => 'KI-Kundenassistent',
-            'value' => 'aktiv' . ($autoReply ? ', antwortet automatisch' : ', nur manuell')
-                . ' - ' . $active . ' freigegebene Wissenseintraege',
+            'value' => 'aktiv'.($autoReply ? ', antwortet automatisch' : ', nur manuell')
+                .' - '.$active.' freigegebene Wissenseintraege',
             'status' => $active === 0 ? self::WARN : self::OK,
             'hint' => $active === 0
                 ? 'Wissensbasis leer - der Assistent uebergibt fast alles ans Team. Start: php artisan ki:wissensbasis-vorschlag --schreiben'
@@ -463,7 +467,7 @@ class SystemHealthService
             'Warteschlange' => (string) config('queue.default'),
         ];
         $wert = implode(', ', array_map(
-            fn ($name, $treiber) => $name . ': ' . $treiber,
+            fn ($name, $treiber) => $name.': '.$treiber,
             array_keys($treiber),
             $treiber
         ));
@@ -475,26 +479,26 @@ class SystemHealthService
                 'value' => $wert,
                 'status' => self::INFO,
                 'hint' => 'Datenbank ist ein tragfaehiger Standard. Redis entlastet sie spuerbar - '
-                    . 'Umstellung: docs/ANLEITUNG_REDIS_AR.md',
+                    .'Umstellung: docs/ANLEITUNG_REDIS_AR.md',
             ];
         }
 
         // Echter PING - nur so ist bewiesen, dass die Umstellung wirkt.
         try {
-            \Illuminate\Support\Facades\Redis::connection()->ping();
+            Redis::connection()->ping();
 
             return [
                 'label' => 'Sitzungen / Cache / Warteschlange',
-                'value' => $wert . ' - Redis erreichbar',
+                'value' => $wert.' - Redis erreichbar',
                 'status' => self::OK,
             ];
         } catch (\Throwable $e) {
             return [
                 'label' => 'Sitzungen / Cache / Warteschlange',
-                'value' => $wert . ' - Redis NICHT erreichbar',
+                'value' => $wert.' - Redis NICHT erreichbar',
                 'status' => self::FAIL,
                 'hint' => 'Redis ist eingestellt, antwortet aber nicht. Auf dem Server pruefen: '
-                    . 'systemctl status redis-server und redis-cli ping (erwartet: PONG).',
+                    .'systemctl status redis-server und redis-cli ping (erwartet: PONG).',
             ];
         }
     }
@@ -514,7 +518,7 @@ class SystemHealthService
                 // pdftotext/tesseract geben die Version teils auf STDERR und
                 // mit Nicht-Null aus - entscheidend ist, dass das Programm
                 // ueberhaupt gefunden wurde.
-                $output = $process->getOutput() . $process->getErrorOutput();
+                $output = $process->getOutput().$process->getErrorOutput();
                 if (trim($output) === '') {
                     $missing[] = $name;
                 }
@@ -556,7 +560,7 @@ class SystemHealthService
             'status' => $failedTwoFactor > 20 ? self::WARN : self::OK,
             'hint' => $failedTwoFactor > 20
                 ? 'Haeufigste Ursache ist eine abweichende Server-Uhr. Auf dem Server pruefen: timedatectl status. '
-                    . 'Konto entsperren: php artisan 2fa:zuruecksetzen <email>'
+                    .'Konto entsperren: php artisan 2fa:zuruecksetzen <email>'
                 : null,
         ];
 
@@ -569,14 +573,14 @@ class SystemHealthService
 
         $items[] = [
             'label' => '2FA eingerichtet',
-            'value' => $confirmed . ' von ' . $total . ' pflichtigen Konten',
+            'value' => $confirmed.' von '.$total.' pflichtigen Konten',
             'status' => ($total > 0 && $confirmed < $total) ? self::WARN : self::OK,
             'hint' => ($total > 0 && $confirmed < $total)
                 ? 'Offene Konten richten den zweiten Faktor beim naechsten Login selbst ein - niemand wird ausgesperrt.'
                 : null,
         ];
 
-        $twoFactorRequired = \App\Http\Middleware\EnsureTwoFactor::enabled();
+        $twoFactorRequired = EnsureTwoFactor::enabled();
         $items[] = [
             'label' => 'Zwei-Faktor-Pflicht',
             'value' => $twoFactorRequired ? 'aktiv' : 'abgeschaltet',
@@ -597,7 +601,7 @@ class SystemHealthService
         return [
             'title' => 'Anmeldung & Sicherheit',
             'status' => $this->worstOf(array_column($items, 'status')),
-            'summary' => $failedLogins . ' fehlgeschlagene Anmeldungen, ' . $failedTwoFactor . ' fehlgeschlagene 2FA-Eingaben (24 h).',
+            'summary' => $failedLogins.' fehlgeschlagene Anmeldungen, '.$failedTwoFactor.' fehlgeschlagene 2FA-Eingaben (24 h).',
             'items' => $items,
         ];
     }
@@ -641,17 +645,17 @@ class SystemHealthService
         if ($haeufigster) {
             $items[] = [
                 'label' => 'Haeufigster offener Fehler',
-                'value' => $haeufigster->shortClass() . ' (' . $haeufigster->occurrences . '×)',
+                'value' => $haeufigster->shortClass().' ('.$haeufigster->occurrences.'×)',
                 'status' => self::INFO,
-                'hint' => $haeufigster->shortFile() . ':' . $haeufigster->line
-                    . ($haeufigster->route ? ' · ' . $haeufigster->route : ''),
+                'hint' => $haeufigster->shortFile().':'.$haeufigster->line
+                    .($haeufigster->route ? ' · '.$haeufigster->route : ''),
             ];
         }
 
         return [
             'title' => 'Fehler',
             'status' => $this->worstOf(array_column($items, 'status')),
-            'summary' => $offen24h . ' in den letzten 24 Stunden, ' . $offen7t . ' offen in 7 Tagen.',
+            'summary' => $offen24h.' in den letzten 24 Stunden, '.$offen7t.' offen in 7 Tagen.',
             'items' => $items,
         ];
     }

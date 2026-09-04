@@ -1,4 +1,5 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +22,7 @@ use Illuminate\Support\Facades\Schema;
  */
 return new class extends Migration {
     public function up(): void {
-        if (!Schema::hasTable('email_logs')) return;
+        if (! Schema::hasTable('email_logs')) return;
 
         // Altbestand aus der Zeit des Doppelversands bereinigen: je
         // Kampagne und Empfaenger bleibt der AELTESTE Eintrag stehen
@@ -52,7 +53,7 @@ return new class extends Migration {
     }
 
     public function down(): void {
-        if (!Schema::hasTable('email_logs')) return;
+        if (! Schema::hasTable('email_logs')) return;
         Schema::table('email_logs', function (Blueprint $table) {
             $table->dropUnique('email_logs_campaign_recipient_unique');
         });

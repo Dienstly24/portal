@@ -1,7 +1,11 @@
 <?php
+
 namespace App\Services\Ai\Concerns;
 
 use App\Models\Contract;
+use App\Models\ContractVehicleDetail;
+use App\Models\MeterReading;
+use App\Services\Ai\KrankenkasseType;
 
 /**
  * Harte Validierung extrahierter Dokumentfelder - unabhaengig davon, ob
@@ -14,7 +18,7 @@ trait ValidatesExtractedFields
 {
     private function validatedPerson(mixed $in): array
     {
-        if (!is_array($in)) return [];
+        if (! is_array($in)) return [];
         $gender = $in['gender'] ?? null;
         $marital = $in['marital_status'] ?? null;
         [$street, $houseNumber] = $this->splitStreetAndHouseNumber(
@@ -73,7 +77,7 @@ trait ValidatesExtractedFields
      */
     private function splitStreetAndHouseNumber(mixed $street, mixed $houseNumber): array
     {
-        if (!is_string($street)) {
+        if (! is_string($street)) {
             return [$street, $houseNumber];
         }
         $trimmed = trim($street);
@@ -83,7 +87,7 @@ trait ValidatesExtractedFields
 
         // Hausnummer am Ende: "23", "21 b", "21b", "12-14", "12/1".
         $pattern = '/^(.*\p{L}.*?)[\s,]+(\d{1,4}\s?[a-zA-Z]?(?:\s*[-\/]\s*\d{1,4}\s?[a-zA-Z]?)?)$/u';
-        if (!preg_match($pattern, $trimmed, $m)) {
+        if (! preg_match($pattern, $trimmed, $m)) {
             return [$street, $houseNumber];
         }
         $streetPart = rtrim(trim($m[1]), ',');
@@ -117,10 +121,10 @@ trait ValidatesExtractedFields
      */
     private function validatedPersons(mixed $in): array
     {
-        if (!is_array($in)) return [];
+        if (! is_array($in)) return [];
         $out = [];
         foreach (array_slice(array_values($in), 0, 10) as $entry) {
-            if (!is_array($entry)) continue;
+            if (! is_array($entry)) continue;
             $person = $this->validatedPerson($entry);
             $gender = $entry['gender'] ?? null;
             if (in_array($gender, ['male', 'female'], true)) {
@@ -151,9 +155,9 @@ trait ValidatesExtractedFields
      */
     private function validatedEnergy(mixed $in): array
     {
-        if (!is_array($in)) return [];
+        if (! is_array($in)) return [];
         $malo = $this->cleanString($in['malo_id'] ?? null, 20);
-        if ($malo !== null && !preg_match('/^\d{11}$/', $malo)) {
+        if ($malo !== null && ! preg_match('/^\d{11}$/', $malo)) {
             $malo = null;
         }
         $reading = $in['meter_reading'] ?? null;
@@ -161,11 +165,11 @@ trait ValidatesExtractedFields
         // Zaehlwerk (OBIS) nur aus dem bekannten Katalog - ein Zweirichtungs-
         // zaehler zaehlt Bezug UND Einspeisung, die nie vermischt werden duerfen.
         $register = $this->cleanString($in['meter_register'] ?? null, 10);
-        if ($register !== null && !isset(\App\Models\MeterReading::REGISTERS[$register])) {
+        if ($register !== null && ! isset(MeterReading::REGISTERS[$register])) {
             $register = null;
         }
         $unit = $this->cleanString($in['meter_unit'] ?? null, 10);
-        if ($unit !== null && !in_array($unit, ['kWh', 'm³'], true)) {
+        if ($unit !== null && ! in_array($unit, ['kWh', 'm³'], true)) {
             $unit = null;
         }
         // Tarifpreise: Arbeitspreis in ct/kWh, Grundpreis in EUR/Monat -
@@ -202,7 +206,7 @@ trait ValidatesExtractedFields
      */
     private function validatedInternet(mixed $in): array
     {
-        if (!is_array($in)) return [];
+        if (! is_array($in)) return [];
         $euro = fn ($v) => (is_numeric($v) && $v >= 0 && $v < 100000) ? round((float) $v, 2) : null;
         $months = $in['price_initial_months'] ?? null;
         $minDuration = $in['min_duration_months'] ?? null;
@@ -236,7 +240,7 @@ trait ValidatesExtractedFields
 
     private function validatedInsurance(mixed $in): array
     {
-        if (!is_array($in)) return [];
+        if (! is_array($in)) return [];
         $sparte = $in['sparte'] ?? null;
         $sparte = (is_string($sparte) && isset(Contract::TYPES[$sparte])) ? $sparte : null;
         // Untergruppe (z.B. Mitgliedschafts-Stufe basis/plus/premium beim
@@ -296,10 +300,10 @@ trait ValidatesExtractedFields
 
     private function validatedVehicle(mixed $in): array
     {
-        if (!is_array($in)) return [];
+        if (! is_array($in)) return [];
         $plate = $this->cleanString($in['license_plate'] ?? null, 15);
         $vin = $this->cleanString($in['vin'] ?? null, 20);
-        if ($vin !== null && !preg_match('/^[A-HJ-NPR-Z0-9]{11,17}$/i', $vin)) {
+        if ($vin !== null && ! preg_match('/^[A-HJ-NPR-Z0-9]{11,17}$/i', $vin)) {
             $vin = null; // FIN-Format unplausibel -> lieber weglassen als falsch speichern
         }
         // Wahrheitswerte (Deckung) nur uebernehmen, wenn eindeutig bool-artig.
@@ -311,7 +315,7 @@ trait ValidatesExtractedFields
         };
         // Selbstbeteiligung/Fahrleistung nur in plausiblen Grenzen.
         $intInRange = function ($v, int $min, int $max): ?int {
-            if (!is_numeric($v)) return null;
+            if (! is_numeric($v)) return null;
             $n = (int) round((float) $v);
             return ($n >= $min && $n <= $max) ? $n : null;
         };
@@ -323,7 +327,7 @@ trait ValidatesExtractedFields
         $extras = null;
         if (is_array($in['extras'] ?? null)) {
             $extras = array_values(array_intersect(
-                array_keys(\App\Models\ContractVehicleDetail::EXTRAS),
+                array_keys(ContractVehicleDetail::EXTRAS),
                 $in['extras']
             ));
             $extras = $extras !== [] ? $extras : null;
@@ -333,7 +337,7 @@ trait ValidatesExtractedFields
             'license_plate' => $plate !== null ? mb_strtoupper($plate) : null,
             'vin' => $vin !== null ? strtoupper($vin) : null,
             // Fahrzeugart nur aus der bekannten Werteliste (PKW, LKW ...).
-            'vehicle_type' => isset(\App\Models\ContractVehicleDetail::VEHICLE_TYPES[$in['vehicle_type'] ?? null])
+            'vehicle_type' => isset(ContractVehicleDetail::VEHICLE_TYPES[$in['vehicle_type'] ?? null])
                 ? $in['vehicle_type'] : null,
             'hsn' => $this->cleanString($in['hsn'] ?? null, 6),
             'tsn' => $this->cleanString($in['tsn'] ?? null, 5),
@@ -358,9 +362,9 @@ trait ValidatesExtractedFields
             // Art der Einstufung: tatsaechlich vs. Sondereinstufung (nicht
             // uebertragbar) + echte (uebertragbare) Klasse + Grund - nur aus
             // den bekannten Wertelisten.
-            'sf_liability_type' => in_array($in['sf_liability_type'] ?? null, array_keys(\App\Models\ContractVehicleDetail::SF_TYPES), true)
+            'sf_liability_type' => in_array($in['sf_liability_type'] ?? null, array_keys(ContractVehicleDetail::SF_TYPES), true)
                 ? $in['sf_liability_type'] : null,
-            'sf_liability_special_reason' => in_array($in['sf_liability_special_reason'] ?? null, array_keys(\App\Models\ContractVehicleDetail::SF_SPECIAL_REASONS), true)
+            'sf_liability_special_reason' => in_array($in['sf_liability_special_reason'] ?? null, array_keys(ContractVehicleDetail::SF_SPECIAL_REASONS), true)
                 ? $in['sf_liability_special_reason'] : null,
             'sf_liability_real_class' => $this->cleanSfClass($in['sf_liability_real_class'] ?? null),
             // Zusaetzliche, klar abgrenzbare Tarif-/Fahrzeugfakten (z.B. aus
@@ -378,14 +382,14 @@ trait ValidatesExtractedFields
 
     private function validatedHealth(mixed $in): array
     {
-        if (!is_array($in)) return [];
+        if (! is_array($in)) return [];
         $company = $this->cleanString($in['health_insurance_company'] ?? null, 120);
         $type = $in['health_insurance_type'] ?? null;
         $type = in_array($type, ['gesetzlich', 'privat'], true) ? $type : null;
         // Fehlt der Typ, aber der Kassenname ist eindeutig -> automatisch
         // ableiten (GKV -> gesetzlich, PKV -> privat). Sonst leer lassen.
         if ($type === null && $company !== null) {
-            $type = \App\Services\Ai\KrankenkasseType::resolve($company);
+            $type = KrankenkasseType::resolve($company);
         }
         return array_filter([
             'health_insurance_company' => $company,
@@ -402,11 +406,11 @@ trait ValidatesExtractedFields
 
     private function validatedBank(mixed $in): array
     {
-        if (!is_array($in)) return [];
+        if (! is_array($in)) return [];
         $iban = $in['iban'] ?? null;
         if (is_string($iban)) {
             $iban = strtoupper((string) preg_replace('/\s+/', '', $iban));
-            if (!preg_match('/^[A-Z]{2}[0-9]{2}[A-Z0-9]{10,30}$/', $iban)) {
+            if (! preg_match('/^[A-Z]{2}[0-9]{2}[A-Z0-9]{10,30}$/', $iban)) {
                 $iban = null;
             }
         } else {
@@ -421,14 +425,14 @@ trait ValidatesExtractedFields
 
     private function cleanString(mixed $value, int $max): ?string
     {
-        if (!is_string($value)) return null;
+        if (! is_string($value)) return null;
         $value = trim($value);
         return $value === '' ? null : mb_substr($value, 0, $max);
     }
 
     private function cleanDate(mixed $value): ?string
     {
-        if (!is_string($value) || !preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', trim($value), $m)) {
+        if (! is_string($value) || ! preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', trim($value), $m)) {
             return null;
         }
         return checkdate((int) $m[2], (int) $m[3], (int) $m[1]) ? trim($value) : null;
@@ -436,14 +440,14 @@ trait ValidatesExtractedFields
 
     private function cleanZip(mixed $value): ?string
     {
-        if (!is_string($value)) return null;
+        if (! is_string($value)) return null;
         $value = trim($value);
         return preg_match('/^\d{4,5}$/', $value) ? $value : null;
     }
 
     private function cleanEmail(mixed $value): ?string
     {
-        if (!is_string($value)) return null;
+        if (! is_string($value)) return null;
         $value = trim($value);
         return filter_var($value, FILTER_VALIDATE_EMAIL) ? mb_substr($value, 0, 190) : null;
     }
@@ -459,38 +463,38 @@ trait ValidatesExtractedFields
      */
     private function cleanFuelType(mixed $value): ?string
     {
-        if (!is_string($value)) {
+        if (! is_string($value)) {
             return null;
         }
         $v = mb_strtolower(trim($value));
         if ($v === '') {
             return null;
         }
-        if (isset(\App\Models\ContractVehicleDetail::FUEL_TYPES[$v])) {
+        if (isset(ContractVehicleDetail::FUEL_TYPES[$v])) {
             return $v;
         }
 
         return match (true) {
-            str_contains($v, 'plug')                              => 'plugin_hybrid',
-            str_contains($v, 'hybrid')                            => 'hybrid',
-            str_contains($v, 'diesel')                            => 'diesel',
+            str_contains($v, 'plug') => 'plugin_hybrid',
+            str_contains($v, 'hybrid') => 'hybrid',
+            str_contains($v, 'diesel') => 'diesel',
             str_contains($v, 'benzin'), str_contains($v, 'super') => 'benzin',
             str_contains($v, 'elektro'), str_contains($v, 'strom') => 'elektro',
-            str_contains($v, 'autogas'), str_contains($v, 'lpg')  => 'autogas',
-            str_contains($v, 'erdgas'), str_contains($v, 'cng')   => 'erdgas',
-            str_contains($v, 'wasserstoff')                       => 'wasserstoff',
-            default                                               => null,
+            str_contains($v, 'autogas'), str_contains($v, 'lpg') => 'autogas',
+            str_contains($v, 'erdgas'), str_contains($v, 'cng') => 'erdgas',
+            str_contains($v, 'wasserstoff') => 'wasserstoff',
+            default => null,
         };
     }
 
     private function cleanSfClass(mixed $value): ?string
     {
-        if (!is_string($value)) return null;
+        if (! is_string($value)) return null;
         $s = trim($value);
         if ($s === '') return null;
         if (preg_match('/(?:SF|Klasse)?\s*(\d{1,2}\/\d|\d{1,2}|[MS])\b/i', $s, $m)) {
             $key = strtoupper($m[1]);
-            return in_array($key, \App\Models\ContractVehicleDetail::sfClassKeys(), true) ? $key : null;
+            return in_array($key, ContractVehicleDetail::sfClassKeys(), true) ? $key : null;
         }
         return null;
     }

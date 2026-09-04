@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Mailbox;
 
 use App\Models\Customer;
@@ -54,7 +55,7 @@ class CustomerMailboxImportService
 
         foreach ($this->allowedDomains() as $allowed) {
             // Exakte Domain oder Subdomain (z. B. mail.allianz.de zu allianz.de).
-            if ($domain === $allowed || str_ends_with($domain, '.' . $allowed)) {
+            if ($domain === $allowed || str_ends_with($domain, '.'.$allowed)) {
                 return true;
             }
         }
@@ -84,7 +85,7 @@ class CustomerMailboxImportService
         $prefix = preg_quote(config('mailbox.import_local_part', 'import'), '/');
         $haystack = mb_strtolower($this->recipientHaystack($data));
 
-        if (preg_match('/' . $prefix . '\+([a-z0-9]{8,64})@/', $haystack, $m)) {
+        if (preg_match('/'.$prefix.'\+([a-z0-9]{8,64})@/', $haystack, $m)) {
             return $m[1];
         }
 

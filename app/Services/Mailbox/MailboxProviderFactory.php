@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Mailbox;
 
 use App\Models\EmailAccount;
@@ -10,7 +11,7 @@ class MailboxProviderFactory
         return match ($account->provider) {
             'gmail_oauth' => new GmailApiMailboxProvider(app(OAuthTokenService::class)),
             'microsoft_oauth' => new GraphApiMailboxProvider(app(OAuthTokenService::class)),
-            default => new ImapMailboxProvider(), // imap | hostinger_imap
+            default => new ImapMailboxProvider, // imap | hostinger_imap
         };
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Policies;
 
 use App\Models\InternalMessage;
@@ -31,7 +32,7 @@ class InternalMessagePolicy
 
     public function delete(User $user, InternalMessage $message): bool
     {
-        if (!$user->canAccessCustomer($message->customer_id)) {
+        if (! $user->canAccessCustomer($message->customer_id)) {
             return false;
         }
         return $user->id === $message->sender_id

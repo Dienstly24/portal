@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Tools;
 
 use Illuminate\Support\Facades\Log;
@@ -48,7 +49,7 @@ class AssistantToolRegistry
     {
         $schemas = [];
         foreach ($this->tools as $tool) {
-            if (!$allowWriting && $tool->isWriting()) {
+            if (! $allowWriting && $tool->isWriting()) {
                 continue;
             }
             $schemas[] = [
@@ -73,7 +74,7 @@ class AssistantToolRegistry
      */
     public function execute(string $name, array $arguments, AssistantToolContext $context): array
     {
-        if (!$this->has($name)) {
+        if (! $this->has($name)) {
             Log::warning('KI-Assistent: unbekannte Funktion abgewiesen', ['tool' => $name]);
 
             return [

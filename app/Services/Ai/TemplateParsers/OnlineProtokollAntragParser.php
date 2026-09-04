@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Models\Contract;
@@ -48,8 +49,8 @@ class OnlineProtokollAntragParser implements DocumentTemplateParser
         if ($this->looksLikeComparisonProtocol($this->text)) {
             return null;
         }
-        if (!str_contains($upper, 'ANTRAG')
-            || !str_contains($upper, 'GEWÄHLTER TARIF')
+        if (! str_contains($upper, 'ANTRAG')
+            || ! str_contains($upper, 'GEWÄHLTER TARIF')
             || $this->labelValue('Anbieter') === null) {
             return null;
         }
@@ -63,21 +64,21 @@ class OnlineProtokollAntragParser implements DocumentTemplateParser
         }
         $bank = $this->parseBank($person);
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $sparte = $insurance['sparte'] ?? null;
 
         return [
             'type' => 'versicherungsvertrag',
             'confidence' => 75,
             'summary' => 'Versicherungs-Antrag (Online-Protokoll)'
-                . ($sparte !== null ? ' - ' . (Contract::TYPES[$sparte]['label'] ?? $sparte) : '')
-                . ' - ' . $insurance['insurer']
-                . ($name !== '' ? ' - ' . $name : '')
-                . $this->extras()
-                . ($bank !== [] ? ' Bankverbindung des Antragstellers uebernommen.' : ' Ohne Bankuebernahme.')
-                . ' Felder gratis aus dem Antrag gelesen (ohne KI).',
-            'title' => 'Antrag ' . ($sparte !== null ? (Contract::TYPES[$sparte]['label'] ?? $sparte) : 'Versicherung')
-                . ($name !== '' ? ' - ' . $name : ''),
+                .($sparte !== null ? ' - '.(Contract::TYPES[$sparte]['label'] ?? $sparte) : '')
+                .' - '.$insurance['insurer']
+                .($name !== '' ? ' - '.$name : '')
+                .$this->extras()
+                .($bank !== [] ? ' Bankverbindung des Antragstellers uebernommen.' : ' Ohne Bankuebernahme.')
+                .' Felder gratis aus dem Antrag gelesen (ohne KI).',
+            'title' => 'Antrag '.($sparte !== null ? (Contract::TYPES[$sparte]['label'] ?? $sparte) : 'Versicherung')
+                .($name !== '' ? ' - '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -125,12 +126,12 @@ class OnlineProtokollAntragParser implements DocumentTemplateParser
         }
         if (($v = $this->labelValue('E-Mail-Adresse')) !== null
             && preg_match('/^[\w.+\-]+@[\w.\-]+\.\w{2,}$/u', trim($v))
-            && !$this->isBrokerMail($v)) {
+            && ! $this->isBrokerMail($v)) {
             $raw['email'] = mb_strtolower(trim($v));
         }
         if (($v = $this->labelValue('Geburtsdatum')) !== null
             && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $v, $m)) {
-            $raw['birth_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['birth_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
         if (($v = $this->labelValue('Staatsangehörigkeit')) !== null) {
             $raw['nationality'] = $v;
@@ -170,7 +171,7 @@ class OnlineProtokollAntragParser implements DocumentTemplateParser
         // "schnellstmoeglich" - das ist KEIN Datum und wird nie geraten).
         foreach ($this->labelValues('Gewünschter Versicherungsbeginn') as $v) {
             if (preg_match('/^(\d{2})\.(\d{2})\.(\d{4})/', trim($v), $m)) {
-                $raw['start_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+                $raw['start_date'] = $m[3].'-'.$m[2].'-'.$m[1];
                 break;
             }
         }
@@ -222,7 +223,7 @@ class OnlineProtokollAntragParser implements DocumentTemplateParser
             }
         }
         if ($raw !== []) {
-            $full = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+            $full = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
             if ($full !== '') {
                 $raw['account_holder'] = $full;
             }
@@ -238,40 +239,40 @@ class OnlineProtokollAntragParser implements DocumentTemplateParser
         // Protokoll-/Antragsnummer neben der Unterschriftszeile - KEINE
         // Vertragsnummer (die bringt erst die Police).
         if (preg_match('/\((\d{6,}-[A-Z0-9]+\/\d+\/\d+)\)/u', $this->text, $m)) {
-            $out .= ' Antrags-/Protokoll-Nr. ' . $m[1] . ' (keine Vertragsnummer - die bringt erst die Police).';
+            $out .= ' Antrags-/Protokoll-Nr. '.$m[1].' (keine Vertragsnummer - die bringt erst die Police).';
         }
         if (($v = $this->labelValue('Jahresbeitrag inkl. Steuer')) !== null) {
-            $out .= ' Jahresbeitrag inkl. Steuer: ' . $v . '.';
+            $out .= ' Jahresbeitrag inkl. Steuer: '.$v.'.';
         }
         if (($v = $this->labelValue('Laufzeit')) !== null) {
-            $out .= ' Laufzeit: ' . $v . '.';
+            $out .= ' Laufzeit: '.$v.'.';
         }
         if (($v = $this->labelValue('Risiko')) !== null) {
-            $out .= ' Risiko: ' . $v . '.';
+            $out .= ' Risiko: '.$v.'.';
         }
         if (($v = $this->labelValue('Versicherungssumme')) !== null) {
-            $out .= ' Versicherungssumme: ' . $v . '.';
+            $out .= ' Versicherungssumme: '.$v.'.';
         }
         if (($v = $this->labelValue('Selbstbeteiligung')) !== null) {
-            $out .= ' Selbstbeteiligung: ' . $v . '.';
+            $out .= ' Selbstbeteiligung: '.$v.'.';
         }
         // Deckungs-Bausteine: auf einen Blick, ob der Schutz UMFASSEND oder
         // nur ein einzelner Baustein ist (Betreiber-Hinweis 09.08.2026).
         [$ja, $nein] = $this->bausteine();
         if ($ja !== [] || $nein !== []) {
-            $out .= ' Gewuenschte Bausteine (' . count($ja) . ' von ' . (count($ja) + count($nein)) . '): '
-                . ($ja !== [] ? implode(', ', $ja) : 'keine')
-                . ($nein !== [] ? ' - NICHT gewuenscht: ' . implode(', ', $nein) : '')
-                . '.';
+            $out .= ' Gewuenschte Bausteine ('.count($ja).' von '.(count($ja) + count($nein)).'): '
+                .($ja !== [] ? implode(', ', $ja) : 'keine')
+                .($nein !== [] ? ' - NICHT gewuenscht: '.implode(', ', $nein) : '')
+                .'.';
         }
         $zusatz = [];
         foreach (['Spezial Straf RS', 'Erw. Internet-Schutz', 'Singlerabatt'] as $label) {
             if (($v = $this->labelValue($label)) !== null && preg_match('/^(ja|nein)$/iu', trim($v))) {
-                $zusatz[] = $label . ' ' . mb_strtolower(trim($v));
+                $zusatz[] = $label.' '.mb_strtolower(trim($v));
             }
         }
         if ($zusatz !== []) {
-            $out .= ' Laut Antragsdaten: ' . implode(', ', $zusatz) . '.';
+            $out .= ' Laut Antragsdaten: '.implode(', ', $zusatz).'.';
         }
         return $out;
     }
@@ -305,7 +306,7 @@ class OnlineProtokollAntragParser implements DocumentTemplateParser
             if ($line === '') {
                 continue;
             }
-            if (!preg_match('/^(\S.*?)\s{2,}(Ja|Nein|ja|nein)$/u', $line, $m)) {
+            if (! preg_match('/^(\S.*?)\s{2,}(Ja|Nein|ja|nein)$/u', $line, $m)) {
                 break;
             }
             if (mb_strtolower($m[2]) === 'ja') {
@@ -323,12 +324,12 @@ class OnlineProtokollAntragParser implements DocumentTemplateParser
     {
         $t = mb_strtolower($titel);
         return match (true) {
-            str_contains($t, 'rechtsschutz')                                   => 'rechtsschutz',
-            str_contains($t, 'hausrat')                                        => 'hausrat',
+            str_contains($t, 'rechtsschutz') => 'rechtsschutz',
+            str_contains($t, 'hausrat') => 'hausrat',
             str_contains($t, 'privathaftpflicht') || str_contains($t, 'haftpflicht') => 'haftpflicht',
-            str_contains($t, 'unfall')                                         => 'unfall',
+            str_contains($t, 'unfall') => 'unfall',
             str_contains($t, 'wohngebäude') || str_contains($t, 'wohngebaeude') => 'sach',
-            default                                                            => null,
+            default => null,
         };
     }
 
@@ -347,11 +348,11 @@ class OnlineProtokollAntragParser implements DocumentTemplateParser
     private function interval(string $german): ?string
     {
         return match (mb_strtolower(trim($german))) {
-            'monatlich'        => 'monthly',
-            'vierteljährlich'  => 'quarterly',
-            'halbjährlich'     => 'semiannual',
-            'jährlich'         => 'yearly',
-            default            => null,
+            'monatlich' => 'monthly',
+            'vierteljährlich' => 'quarterly',
+            'halbjährlich' => 'semiannual',
+            'jährlich' => 'yearly',
+            default => null,
         };
     }
 
@@ -376,8 +377,8 @@ class OnlineProtokollAntragParser implements DocumentTemplateParser
      */
     private function labelValues(string $label): array
     {
-        $re = '/^\s*' . preg_quote($label, '/') . '\s{2,}(\S[^\n]*?)\s*$/mu';
-        if (!preg_match_all($re, $this->text, $all)) {
+        $re = '/^\s*'.preg_quote($label, '/').'\s{2,}(\S[^\n]*?)\s*$/mu';
+        if (! preg_match_all($re, $this->text, $all)) {
             return [];
         }
         return array_values(array_filter(array_map('trim', $all[1]), fn ($v) => $v !== ''));

@@ -15,8 +15,7 @@ use Illuminate\Support\Facades\Schema;
  * wandert sie nach dem Einlesen in einen eigenen, ruhigen Abschnitt und
  * bleibt trotzdem auffindbar (die Datei wird NIE automatisch geloescht).
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('documents', function (Blueprint $table) {

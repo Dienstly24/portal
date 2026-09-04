@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\SystemSetting;
 use App\Services\TwoFactorService;
 use Closure;
 use Illuminate\Http\Request;
@@ -79,7 +80,7 @@ class EnsureTwoFactor
      */
     public static function enabled(): bool
     {
-        return (string) \App\Models\SystemSetting::get('two_factor_required', self::defaultSetting()) === '1';
+        return (string) SystemSetting::get('two_factor_required', self::defaultSetting()) === '1';
     }
 
     /** Voreinstellung: im Betrieb AN, in Tests AUS (siehe enabled()). */

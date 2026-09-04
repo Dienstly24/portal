@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\WebsiteController;
 use App\Models\ServicePage;
 use App\Support\WebsiteHosts;
 use Illuminate\Http\Request;
@@ -35,13 +34,13 @@ class SeoController extends Controller
                 'Disallow: /portal',
                 'Disallow: /partner',
                 '',
-                'Sitemap: ' . WebsiteHosts::url('/sitemap.xml'),
+                'Sitemap: '.WebsiteHosts::url('/sitemap.xml'),
             ];
         } else {
             $lines = ['User-agent: *', 'Disallow: /'];
         }
 
-        return response(implode("\n", $lines) . "\n", 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
+        return response(implode("\n", $lines)."\n", 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
     }
 
     public function sitemap()
@@ -79,29 +78,29 @@ class SeoController extends Controller
         $newest = $pages->max('updated_at');
         $add('/leistungen', $newest?->format('Y-m-d'));
         foreach ($pages as $page) {
-            $add('/leistungen/' . $page->slug, $page->updated_at?->format('Y-m-d'));
+            $add('/leistungen/'.$page->slug, $page->updated_at?->format('Y-m-d'));
         }
 
         // Rechtsseiten (nur Deutsch).
         foreach (array_keys(WebsiteController::LEGAL_PAGES) as $slug) {
-            $view = resource_path('views/website/legal/' . str_replace('-', '_', $slug) . '.blade.php');
+            $view = resource_path('views/website/legal/'.str_replace('-', '_', $slug).'.blade.php');
             $mtime = @filemtime($view) ?: null;
-            $add('/' . $slug, $mtime ? date('Y-m-d', $mtime) : null, withAr: false);
+            $add('/'.$slug, $mtime ? date('Y-m-d', $mtime) : null, withAr: false);
         }
 
-        $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n"
-            . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">' . "\n";
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n"
+            .'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">'."\n";
         foreach ($urls as $u) {
-            $xml .= "  <url>\n    <loc>" . e($u['loc']) . "</loc>\n";
+            $xml .= "  <url>\n    <loc>".e($u['loc'])."</loc>\n";
             foreach ($u['alternates'] as $lang => $href) {
-                $xml .= '    <xhtml:link rel="alternate" hreflang="' . $lang . '" href="' . e($href) . "\"/>\n";
+                $xml .= '    <xhtml:link rel="alternate" hreflang="'.$lang.'" href="'.e($href)."\"/>\n";
             }
             if ($u['lastmod']) {
-                $xml .= '    <lastmod>' . $u['lastmod'] . "</lastmod>\n";
+                $xml .= '    <lastmod>'.$u['lastmod']."</lastmod>\n";
             }
             $xml .= "  </url>\n";
         }
-        $xml .= '</urlset>' . "\n";
+        $xml .= '</urlset>'."\n";
 
         return response($xml, 200, ['Content-Type' => 'application/xml; charset=UTF-8']);
     }

@@ -1,7 +1,9 @@
 <?php
+
 namespace App\Services\Mailbox;
 
 use Illuminate\Support\Facades\Storage;
+use Smalot\PdfParser\Document;
 use Smalot\PdfParser\Parser;
 
 /**
@@ -18,16 +20,16 @@ class PdfTextExtractor
 
     public function extractFromStorage(string $disk, string $path): ?string
     {
-        if (!Storage::disk($disk)->exists($path)) {
+        if (! Storage::disk($disk)->exists($path)) {
             return null;
         }
 
         try {
-            $document = (new Parser())->parseFile(Storage::disk($disk)->path($path));
+            $document = (new Parser)->parseFile(Storage::disk($disk)->path($path));
             $text = trim($this->textWithLines($document) ?? $document->getText());
             return $text === '' ? null : mb_substr($text, 0, self::MAX_CHARS);
         } catch (\Throwable $e) {
-            \Log::info('PDF-Textextraktion fehlgeschlagen: ' . $path . ' (' . $e->getMessage() . ')');
+            \Log::info('PDF-Textextraktion fehlgeschlagen: '.$path.' ('.$e->getMessage().')');
             return null;
         }
     }
@@ -39,14 +41,14 @@ class PdfTextExtractor
      * gleicher Y-Position bilden eine Zeile (links-nach-rechts),
      * absteigendes Y = neue Zeile.
      */
-    private function textWithLines(\Smalot\PdfParser\Document $document): ?string
+    private function textWithLines(Document $document): ?string
     {
         $lines = [];
 
         foreach ($document->getPages() as $pageIndex => $page) {
             foreach ($page->getDataTm() as $item) {
                 [$tm, $text] = [$item[0] ?? null, $item[1] ?? ''];
-                if (!is_array($tm) || $text === '') {
+                if (! is_array($tm) || $text === '') {
                     continue;
                 }
                 $x = (float) ($tm[4] ?? 0);

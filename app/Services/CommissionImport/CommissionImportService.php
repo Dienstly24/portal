@@ -1,16 +1,19 @@
 <?php
+
 namespace App\Services\CommissionImport;
 
 use App\Models\CommissionImport;
 use App\Models\CommissionImportRow;
 use App\Models\Contract;
 use App\Models\ContractCommission;
+use App\Models\Customer;
 use App\Services\Provisionsmanagement\CommissionStatusEngine;
 use App\Services\Provisionsmanagement\PoolRegistry;
 use App\Services\Provisionsmanagement\ReferenceLinkService;
 use App\Services\Vermittler\VermittlerReference;
 use App\Support\CommissionKind;
 use App\Support\CommissionStatus;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -115,7 +118,7 @@ class CommissionImportService
         $this->audit->log('datei_hochgeladen', null, [
             'import_id' => $import->id,
             'source_file' => $import->filename,
-            'new_value' => $import->rows_total . ' Zeilen, Format ' . strtoupper($import->format),
+            'new_value' => $import->rows_total.' Zeilen, Format '.strtoupper($import->format),
         ]);
 
         return $import->fresh();
@@ -131,7 +134,7 @@ class CommissionImportService
      */
     public function remap(CommissionImport $import, array $columnMap, ?string $mode = null): CommissionImport
     {
-        if (!$import->isDraft()) {
+        if (! $import->isDraft()) {
             throw new \RuntimeException('Ein bereits übernommener Import kann nicht neu zugeordnet werden.');
         }
         $map = $this->cleanMap($columnMap);
@@ -176,7 +179,7 @@ class CommissionImportService
      */
     public function confirm(CommissionImport $import, ?int $userId = null, bool $buildContracts = false): CommissionImport
     {
-        if (!$import->isDraft()) {
+        if (! $import->isDraft()) {
             throw new \RuntimeException('Dieser Import wurde bereits übernommen.');
         }
 
@@ -202,7 +205,7 @@ class CommissionImportService
 
                 foreach ($rows as $row) {
                     $unmatched = $row->result === CommissionImportRow::NICHT_ZUGEORDNET;
-                    if (!$row->willApply() && !$unmatched) {
+                    if (! $row->willApply() && ! $unmatched) {
                         continue;
                     }
 
@@ -224,7 +227,7 @@ class CommissionImportService
                                 'customer_id' => $again['contract']->customer_id,
                                 'match_reason' => $again['reason'],
                                 'message' => 'Zugeordnet zu einem Vertrag, den dieser Lauf bereits angelegt hat ('
-                                    . $again['reason'] . ').',
+                                    .$again['reason'].').',
                             ])->save();
                             $unmatched = false;
                         }
@@ -252,7 +255,7 @@ class CommissionImportService
                         }
                     }
 
-                    if (!$isAbrechnung) {
+                    if (! $isAbrechnung) {
                         continue; // Auftragsliste bucht nie eine Provision
                     }
 
@@ -298,9 +301,9 @@ class CommissionImportService
             'import_id' => $import->id,
             'source_file' => $import->filename,
             'new_value' => $isAbrechnung
-                ? $created . ' neu, ' . $updated . ' aktualisiert, ' . $keptUnlinked . ' ohne Vertrag aufbewahrt, '
-                    . $contractsCreated . ' Verträge und ' . $customersCreated . ' Kunden angelegt'
-                : $contractsCreated . ' Verträge und ' . $customersCreated . ' Kunden angelegt',
+                ? $created.' neu, '.$updated.' aktualisiert, '.$keptUnlinked.' ohne Vertrag aufbewahrt, '
+                    .$contractsCreated.' Verträge und '.$customersCreated.' Kunden angelegt'
+                : $contractsCreated.' Verträge und '.$customersCreated.' Kunden angelegt',
         ]);
 
         return $import->fresh();
@@ -308,7 +311,7 @@ class CommissionImportService
 
     public function discard(CommissionImport $import): CommissionImport
     {
-        if (!$import->isDraft()) {
+        if (! $import->isDraft()) {
             throw new \RuntimeException('Nur ein Entwurf kann verworfen werden.');
         }
         $import->update(['status' => CommissionImport::VERWORFEN]);
@@ -329,7 +332,7 @@ class CommissionImportService
     {
         $clean = [];
         foreach ($map as $field => $index) {
-            if (!in_array($field, ColumnMap::keys(), true) || $index === null || $index === '') {
+            if (! in_array($field, ColumnMap::keys(), true) || $index === null || $index === '') {
                 continue;
             }
             $clean[$field] = (int) $index;
@@ -367,7 +370,7 @@ class CommissionImportService
             if ($link['contract'] !== null) {
                 return [
                     'contract' => $link['contract'],
-                    'reason' => 'Pool-Id ↔ Referenz-Nr. ' . $link['reference'],
+                    'reason' => 'Pool-Id ↔ Referenz-Nr. '.$link['reference'],
                     'note' => null,
                 ];
             }
@@ -427,7 +430,7 @@ class CommissionImportService
             // also unberuehrt.
             $base = $this->dedupeKey($mapped);
             $occurrence = ($seen[$base] = ($seen[$base] ?? 0) + 1);
-            $dedupe = $occurrence === 1 ? $base : hash('sha256', $base . '#' . $occurrence);
+            $dedupe = $occurrence === 1 ? $base : hash('sha256', $base.'#'.$occurrence);
             $record['dedupe_key'] = $dedupe;
 
             $existing[$dedupe] ??= $isAbrechnung
@@ -437,7 +440,7 @@ class CommissionImportService
 
             if ($known !== null && $known->row_hash === $this->rowHash($mapped)) {
                 $record['result'] = CommissionImportRow::DUPLIKAT;
-                $record['message'] = 'Bereits importiert – unverändert (' . ($known->created_at?->format('d.m.Y') ?? '') . ').';
+                $record['message'] = 'Bereits importiert – unverändert ('.($known->created_at?->format('d.m.Y') ?? '').').';
                 $record['contract_id'] = $known->contract_id;
                 $counters['duplikat']++;
                 CommissionImportRow::create($record);
@@ -459,11 +462,11 @@ class CommissionImportService
                 // ohne Vertrag aufbewahrt, und ein Vertrag kann daraus
                 // entstehen.
                 $record['message'] = mb_substr(
-                    ($conflict ?? ($match['note'] ?? 'Kein Vertrag gefunden.')) . ' '
-                    . ($buildable
+                    ($conflict ?? ($match['note'] ?? 'Kein Vertrag gefunden.')).' '
+                    .($buildable
                         ? 'Vertrag und Kunde können daraus angelegt werden.'
                         : 'Für eine Neuanlage fehlt ein verwertbarer Kundenname.')
-                    . ($isAbrechnung ? ' Die Provision wird in jedem Fall aufbewahrt.' : ''),
+                    .($isAbrechnung ? ' Die Provision wird in jedem Fall aufbewahrt.' : ''),
                     0,
                     500
                 );
@@ -478,11 +481,11 @@ class CommissionImportService
             $record['contract_id'] = $contract->id;
             $record['match_reason'] = $match['reason'];
 
-            if (!$isAbrechnung) {
+            if (! $isAbrechnung) {
                 // Auftragsliste: der Vertrag ist bereits da, es gibt nichts
                 // anzulegen und keine Provision zu buchen.
                 $record['result'] = CommissionImportRow::DUPLIKAT;
-                $record['message'] = 'Vertrag bereits erfasst (' . $match['reason'] . ') – nichts anzulegen.';
+                $record['message'] = 'Vertrag bereits erfasst ('.$match['reason'].') – nichts anzulegen.';
                 $counters['duplikat']++;
                 CommissionImportRow::create($record);
                 continue;
@@ -490,8 +493,8 @@ class CommissionImportService
 
             if ($known === null) {
                 $record['result'] = CommissionImportRow::NEU;
-                $record['message'] = 'Wird angelegt und ' . ($contract->contract_number ?: $contract->internal_contract_number ?: 'dem Vertrag')
-                    . ' zugeordnet (' . $match['reason'] . ').';
+                $record['message'] = 'Wird angelegt und '.($contract->contract_number ?: $contract->internal_contract_number ?: 'dem Vertrag')
+                    .' zugeordnet ('.$match['reason'].').';
                 $counters['neu']++;
             } else {
                 $record['result'] = CommissionImportRow::AKTUALISIERT;
@@ -536,7 +539,7 @@ class CommissionImportService
             // konnte nicht erkannt werden" von "Spalte war leer" zu
             // unterscheiden. Ohne diese Unterscheidung meldet der Import
             // leere Spalten als Fehler.
-            $out['_raw_' . $field] = $value;
+            $out['_raw_'.$field] = $value;
         }
         return $out;
     }
@@ -561,10 +564,10 @@ class CommissionImportService
             $rawAmount = trim((string) ($mapped['_raw_amount'] ?? ''));
             $errors[] = $rawAmount === ''
                 ? 'Provisionsbetrag fehlt.'
-                : 'Provisionsbetrag ist ungültig: „' . $rawAmount . '“.';
+                : 'Provisionsbetrag ist ungültig: „'.$rawAmount.'“.';
         }
         if ($mode === ColumnMap::MODE_AUFTRAGSLISTE
-            && !$this->builder->isBuildable($mapped)) {
+            && ! $this->builder->isBuildable($mapped)) {
             $errors[] = 'Ohne Kundennamen kann aus dieser Zeile keine Kundenakte entstehen.';
         }
 
@@ -575,13 +578,13 @@ class CommissionImportService
             'customer_birth_date' => 'Geburtsdatum',
             'contract_start' => 'Vertragsbeginn',
         ] as $field => $label) {
-            $raw = trim((string) ($mapped['_raw_' . $field] ?? ''));
+            $raw = trim((string) ($mapped['_raw_'.$field] ?? ''));
             // Ein PLATZHALTER ("00.00.0000") ist kein kaputtes Datum, sondern
             // die Art der Quelle, "nicht angegeben" zu schreiben. Ihn als
             // Fehler zu werten haette die ganze Zeile verworfen - samt Name,
             // Anschrift und Vertrag, die vollstaendig da sind.
-            if ($raw !== '' && ($mapped[$field] ?? null) === null && !ValueParser::isEmptyDatePlaceholder($raw)) {
-                $errors[] = $label . ' konnte nicht erkannt werden: „' . $raw . '“.';
+            if ($raw !== '' && ($mapped[$field] ?? null) === null && ! ValueParser::isEmptyDatePlaceholder($raw)) {
+                $errors[] = $label.' konnte nicht erkannt werden: „'.$raw.'“.';
             }
         }
 
@@ -592,7 +595,7 @@ class CommissionImportService
                 break;
             }
         }
-        if (!$hasKey) {
+        if (! $hasKey) {
             $errors[] = 'Die Zeile enthält keine verwertbare Kennung (Interne Vertragsnummer, Referenz-Nr., Id, Auftr.-Nr., Zählernummer oder MaLo-ID).';
         }
 
@@ -616,7 +619,7 @@ class CommissionImportService
         foreach (ColumnMap::KEY_FIELDS as $field) {
             $key = VermittlerReference::key(is_string($mapped[$field] ?? null) ? $mapped[$field] : null);
             if ($key !== null) {
-                $identity = $field . ':' . $key;
+                $identity = $field.':'.$key;
                 break;
             }
         }
@@ -695,13 +698,13 @@ class CommissionImportService
             'external_id' => VermittlerReference::display($mapped['external_id'] ?? null),
             'contract_id' => $contract?->id,
             'customer_id' => $contract?->customer_id,
-            'contract_label' => $contract ? trim($contract->typeLabel() . ' · ' . ($contract->contract_number ?: $contract->reference_number ?: '')) : null,
+            'contract_label' => $contract ? trim($contract->typeLabel().' · '.($contract->contract_number ?: $contract->reference_number ?: '')) : null,
             // Der Name aus der Datei steht in der Schreibweise der Quelle
             // ("VN RANKO, MOHAMAD ADNAN"). Fuer die Anzeige wird er lesbar
             // gemacht - fuer die ZUORDNUNG bleibt er weiterhin unbenutzt.
             'customer_label' => ValueParser::text(
                 $contract?->customer?->user?->name
-                ?? (new PersonNameParser())->parse(is_string($mapped['customer_name'] ?? null) ? $mapped['customer_name'] : null)['name']
+                ?? (new PersonNameParser)->parse(is_string($mapped['customer_name'] ?? null) ? $mapped['customer_name'] : null)['name']
             ),
             'match_status' => $contract ? ContractCommission::MATCH_ZUGEORDNET : ContractCommission::MATCH_OFFEN,
             'match_reason' => $row->match_reason,
@@ -754,7 +757,7 @@ class CommissionImportService
             $this->knownCommissions[$row->dedupe_key] = $commission;
             $this->audit->log('provision_angelegt', $commission, [
                 'import_id' => $import->id,
-                'new_value' => $commission->amountLabel() . ' · ' . CommissionStatus::label($status),
+                'new_value' => $commission->amountLabel().' · '.CommissionStatus::label($status),
             ]);
             $outcome = 'neu';
         } else {
@@ -820,7 +823,7 @@ class CommissionImportService
      * behoben wurde: erst alles Machbare erledigen, DANN ehrlich melden.
      *
      * @param array<string,mixed> $mapped
-     * @return array{contract:?\App\Models\Contract,customer:?\App\Models\Customer,created_contract:bool,created_customer:bool,note:string}
+     * @return array{contract:?Contract,customer:?Customer,created_contract:bool,created_customer:bool,note:string}
      */
     private function buildSafely(array $mapped, CommissionImport $import, ?int $userId): array
     {
@@ -831,7 +834,7 @@ class CommissionImportService
             return [
                 'contract' => null, 'customer' => null,
                 'created_contract' => false, 'created_customer' => false,
-                'note' => 'Vertrag konnte nicht angelegt werden: ' . mb_substr($e->getMessage(), 0, 200),
+                'note' => 'Vertrag konnte nicht angelegt werden: '.mb_substr($e->getMessage(), 0, 200),
             ];
         }
     }
@@ -859,7 +862,7 @@ class CommissionImportService
     {
         return array_map(
             fn ($v) => is_array($v) && isset($v['__date'])
-                ? \Illuminate\Support\Carbon::createFromFormat('Y-m-d', $v['__date'])->startOfDay()
+                ? Carbon::createFromFormat('Y-m-d', $v['__date'])->startOfDay()
                 : $v,
             $mapped
         );

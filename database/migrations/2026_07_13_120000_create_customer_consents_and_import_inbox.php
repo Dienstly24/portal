@@ -16,8 +16,7 @@ use Illuminate\Support\Facades\Schema;
  *   import+<token>@... schicken. Nur solche Konten laufen durch die
  *   einwilligungs- und whitelist-gepruefte Import-Pipeline.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('customer_consents', function (Blueprint $table) {

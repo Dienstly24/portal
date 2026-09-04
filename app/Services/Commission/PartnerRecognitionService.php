@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Commission;
 
 use App\Models\Partner;

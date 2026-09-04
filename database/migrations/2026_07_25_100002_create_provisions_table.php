@@ -12,8 +12,7 @@ use Illuminate\Support\Facades\Schema;
  * (user_id ODER partner_id). Betraege werden manuell bestaetigt (HITL),
  * Status: offen -> ausgezahlt (oder storniert; Historie bleibt erhalten).
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('provisions', function (Blueprint $table) {

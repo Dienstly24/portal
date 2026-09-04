@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Vermittler;
 
 use App\Models\Contract;
@@ -25,10 +26,10 @@ class VermittlerLinkService
     public function linkManually(VermittlerSettlement $settlement, Contract $contract, ?int $userId = null): void
     {
         if (filled($contract->vermittler_id)
-            && !VermittlerReference::same($contract->vermittler_id, $settlement->vermittler_id)) {
+            && ! VermittlerReference::same($contract->vermittler_id, $settlement->vermittler_id)) {
             throw new \RuntimeException(
-                'Der Vertrag trägt bereits die Vermittler-ID "' . $contract->vermittler_id
-                . '". Bitte zuerst klären, welche Zuordnung stimmt.'
+                'Der Vertrag trägt bereits die Vermittler-ID "'.$contract->vermittler_id
+                .'". Bitte zuerst klären, welche Zuordnung stimmt.'
             );
         }
 
@@ -45,7 +46,7 @@ class VermittlerLinkService
         $settlement->update([
             'contract_id' => $contract->id,
             'customer_id' => $contract->customer_id,
-            'contract_label' => mb_substr(trim($contract->insurer . ' · ' . ($contract->contract_number ?: $contract->typeLabel())), 0, 190),
+            'contract_label' => mb_substr(trim($contract->insurer.' · '.($contract->contract_number ?: $contract->typeLabel())), 0, 190),
             'customer_label' => mb_substr((string) ($contract->customer?->user?->name ?? ''), 0, 190) ?: null,
             'match_result' => 'matched',
             'import_result' => 'matched',
@@ -56,8 +57,8 @@ class VermittlerLinkService
             'contract_id' => $contract->id,
             'reference_number' => $contract->reference_number,
             'vermittler_id' => $settlement->vermittler_id,
-            'detail' => 'Vermittler-ID ' . $settlement->vermittler_id . ' manuell zugeordnet · '
-                . Contract::VERMITTLER_STATUSES[$status]['label'],
+            'detail' => 'Vermittler-ID '.$settlement->vermittler_id.' manuell zugeordnet · '
+                .Contract::VERMITTLER_STATUSES[$status]['label'],
             'import_id' => $settlement->import_id,
             'user_id' => $userId,
         ]);
@@ -80,17 +81,17 @@ class VermittlerLinkService
         $events = [];
         if ($refAfter !== $refBefore) {
             $events[] = $refBefore === null
-                ? ['reference_stored', 'Referenz-Nr. ' . $refAfter . ' hinterlegt']
+                ? ['reference_stored', 'Referenz-Nr. '.$refAfter.' hinterlegt']
                 : ($refAfter === null
-                    ? ['reference_changed', 'Referenz-Nr. ' . $refBefore . ' entfernt']
-                    : ['reference_changed', 'Referenz-Nr. ' . $refBefore . ' → ' . $refAfter]);
+                    ? ['reference_changed', 'Referenz-Nr. '.$refBefore.' entfernt']
+                    : ['reference_changed', 'Referenz-Nr. '.$refBefore.' → '.$refAfter]);
         }
         if ($idAfter !== $idBefore) {
             $events[] = $idBefore === null
-                ? ['id_linked', 'Vermittler-ID ' . $idAfter . ' zugeordnet']
+                ? ['id_linked', 'Vermittler-ID '.$idAfter.' zugeordnet']
                 : ($idAfter === null
-                    ? ['id_unlinked', 'Vermittler-ID ' . $idBefore . ' entfernt']
-                    : ['id_changed', 'Vermittler-ID ' . $idBefore . ' → ' . $idAfter]);
+                    ? ['id_unlinked', 'Vermittler-ID '.$idBefore.' entfernt']
+                    : ['id_changed', 'Vermittler-ID '.$idBefore.' → '.$idAfter]);
         }
 
         if ($events === []) {

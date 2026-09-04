@@ -1,5 +1,8 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Website;
+
+use Illuminate\Support\Facades\Log;
 
 /**
  * Whitelist des Website-Assistenten (Abschnitt 19).
@@ -48,14 +51,14 @@ class LeadToolRegistry
      */
     public function execute(string $name, array $arguments, LeadContext $context): array
     {
-        if (!$this->has($name)) {
+        if (! $this->has($name)) {
             return ['fehler' => 'Unbekannte Funktion.'];
         }
 
         try {
             return $this->tools[$name]->run($arguments, $context);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('Website-Assistent: Werkzeug fehlgeschlagen', [
+            Log::warning('Website-Assistent: Werkzeug fehlgeschlagen', [
                 'werkzeug' => $name,
                 'fehler' => $e->getMessage(),
             ]);

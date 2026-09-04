@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -27,10 +28,10 @@ class CustomerRelationship extends Model
     public static function typeLabel(?string $type): string
     {
         return match ($type) {
-            'spouse'    => 'Ehepaar',
-            'family'    => 'Familie',
+            'spouse' => 'Ehepaar',
+            'family' => 'Familie',
             'household' => 'Haushalt',
-            default     => 'Verwandt',
+            default => 'Verwandt',
         };
     }
 
@@ -38,10 +39,10 @@ class CustomerRelationship extends Model
     public static function typeEmoji(?string $type): string
     {
         return match ($type) {
-            'spouse'    => '💍',
-            'family'    => '👪',
+            'spouse' => '💍',
+            'family' => '👪',
             'household' => '🏠',
-            default     => '🔗',
+            default => '🔗',
         };
     }
 
@@ -72,7 +73,7 @@ class CustomerRelationship extends Model
     {
         return static::query()
             ->get(['customer_a_id', 'customer_b_id'])
-            ->mapWithKeys(fn ($r) => [$r->customer_a_id . '|' . $r->customer_b_id => true])
+            ->mapWithKeys(fn ($r) => [$r->customer_a_id.'|'.$r->customer_b_id => true])
             ->all();
     }
 }

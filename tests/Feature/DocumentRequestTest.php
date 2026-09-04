@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Mail\DocumentRequestMail;
+use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\DocumentRequest;
@@ -67,7 +68,7 @@ class DocumentRequestTest extends TestCase
     {
         $otherUser = User::factory()->create(['role' => 'customer']);
         $other = Customer::create(['user_id' => $otherUser->id, 'customer_number' => 'K-1002']);
-        $foreignContract = \App\Models\Contract::create([
+        $foreignContract = Contract::create([
             'customer_id' => $other->id, 'contract_number' => 'C-1', 'type' => 'andere', 'insurer' => 'X', 'status' => 'active',
         ]);
 

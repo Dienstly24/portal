@@ -77,7 +77,7 @@ class PasswordResetLinkController extends Controller
         if (str_contains(mb_strtolower($identifier), '@dienstly24.internal')) {
             return back()->withInput($request->only('identifier'))->withErrors([
                 'identifier' => 'Für dieses Konto ist kein E-Mail-Versand möglich. '
-                    . 'Bitte wenden Sie sich an uns, damit wir Ihre Zugangsdaten einrichten.',
+                    .'Bitte wenden Sie sich an uns, damit wir Ihre Zugangsdaten einrichten.',
             ]);
         }
 
@@ -88,14 +88,14 @@ class PasswordResetLinkController extends Controller
             try {
                 $status = Password::sendResetLink(['email' => $email]);
                 if ($status !== Password::RESET_LINK_SENT && $status !== Password::RESET_THROTTLED) {
-                    Log::info('Passwort-Reset ohne Versand, Status: ' . $status);
+                    Log::info('Passwort-Reset ohne Versand, Status: '.$status);
                 }
             } catch (\Throwable $e) {
                 // Versandfehler wird protokolliert, aber nicht nach aussen
                 // unterschieden - sonst waere er wieder ein Enumerations-
                 // Signal. Der Kunde findet auf der Ergebnisseite den Weg
                 // ueber die Hilfe.
-                Log::error('Passwort-Reset-Versand fehlgeschlagen: ' . $e->getMessage());
+                Log::error('Passwort-Reset-Versand fehlgeschlagen: '.$e->getMessage());
             }
         }
 

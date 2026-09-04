@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\CommissionImport;
 
 /**
@@ -55,7 +56,7 @@ class XlsxTableReader
                     }
                 }
                 if ($sheet === null) {
-                    throw new \RuntimeException('Das Tabellenblatt "' . $sheetName . '" wurde in der Datei nicht gefunden.');
+                    throw new \RuntimeException('Das Tabellenblatt "'.$sheetName.'" wurde in der Datei nicht gefunden.');
                 }
             }
             $sheet ??= $sheets[0];
@@ -66,7 +67,7 @@ class XlsxTableReader
 
             $rows = array_values(array_filter($rows, fn ($r) => trim(implode('', $r)) !== ''));
             if ($rows === []) {
-                throw new \RuntimeException('Das Tabellenblatt "' . $sheet['name'] . '" enthält keine Zeilen.');
+                throw new \RuntimeException('Das Tabellenblatt "'.$sheet['name'].'" enthält keine Zeilen.');
             }
             $header = array_map(fn ($v) => trim((string) $v), (array) array_shift($rows));
 
@@ -85,10 +86,10 @@ class XlsxTableReader
 
     private function open(string $path): \ZipArchive
     {
-        if (!class_exists(\ZipArchive::class)) {
+        if (! class_exists(\ZipArchive::class)) {
             throw new \RuntimeException('Excel-Dateien können nicht gelesen werden: die PHP-Erweiterung "zip" fehlt auf dem Server. Bitte die Datei als CSV speichern.');
         }
-        $zip = new \ZipArchive();
+        $zip = new \ZipArchive;
         if ($zip->open($path) !== true) {
             throw new \RuntimeException('Die Datei konnte nicht geöffnet werden. Ist es wirklich eine .xlsx-Datei?');
         }
@@ -136,8 +137,8 @@ class XlsxTableReader
         foreach ($this->parse($raw)->Relationship ?? [] as $rel) {
             $target = (string) $rel['Target'];
             $target = ltrim($target, '/');
-            if (!str_starts_with($target, 'xl/')) {
-                $target = 'xl/' . $target;
+            if (! str_starts_with($target, 'xl/')) {
+                $target = 'xl/'.$target;
             }
             $map[(string) $rel['Id']] = $target;
         }
@@ -226,8 +227,8 @@ class XlsxTableReader
             throw new \RuntimeException('Das Tabellenblatt konnte nicht gelesen werden.');
         }
 
-        $reader = new \XMLReader();
-        if (!$reader->XML($raw, 'UTF-8', LIBXML_NONET)) {
+        $reader = new \XMLReader;
+        if (! $reader->XML($raw, 'UTF-8', LIBXML_NONET)) {
             throw new \RuntimeException('Das Tabellenblatt ist beschädigt.');
         }
 
@@ -323,7 +324,7 @@ class XlsxTableReader
             return (string) $serial;
         }
         $timestamp = (int) round(($serial - 25569) * 86400);
-        $date = (new \DateTimeImmutable('@' . $timestamp))->setTimezone(new \DateTimeZone('UTC'));
+        $date = (new \DateTimeImmutable('@'.$timestamp))->setTimezone(new \DateTimeZone('UTC'));
         // Uhrzeitanteil nur zeigen, wenn es einen gibt (Provisionsdatum ist
         // in aller Regel ein reines Datum).
         return fmod($serial, 1.0) === 0.0 ? $date->format('d.m.Y') : $date->format('d.m.Y H:i:s');
@@ -332,7 +333,7 @@ class XlsxTableReader
     /** Spaltenindex aus einer Zellreferenz: "A1" => 0, "AB7" => 27. */
     public static function columnIndex(string $ref): ?int
     {
-        if (!preg_match('/^([A-Z]+)/', strtoupper($ref), $m)) {
+        if (! preg_match('/^([A-Z]+)/', strtoupper($ref), $m)) {
             return null;
         }
         $index = 0;

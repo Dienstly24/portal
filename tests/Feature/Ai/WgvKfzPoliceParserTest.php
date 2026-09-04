@@ -89,12 +89,12 @@ class WgvKfzPoliceParserTest extends TestCase
             'DE78 XXX X XX XX X XXX XX86 39 eingezogen.',
         ]));
 
-        return $seite1 . "\f" . $seite2;
+        return $seite1."\f".$seite2;
     }
 
     public function test_reads_contract_person_and_vehicle(): void
     {
-        $r = (new WgvKfzPoliceParser())->parse($this->scheinText());
+        $r = (new WgvKfzPoliceParser)->parse($this->scheinText());
 
         $this->assertNotNull($r);
         $this->assertSame('kfz_vertrag', $r['type']);
@@ -144,13 +144,13 @@ class WgvKfzPoliceParserTest extends TestCase
     {
         // Der Schein deckt NUR Haftpflicht; "Kaskoversicherung" steht lediglich
         // im Rechtstext der Beitragsseite und darf nicht als Deckung zaehlen.
-        $r = (new WgvKfzPoliceParser())->parse($this->scheinText());
+        $r = (new WgvKfzPoliceParser)->parse($this->scheinText());
         $this->assertFalse($r['data']['kfz']['has_teilkasko']);
         $this->assertFalse($r['data']['kfz']['has_vollkasko']);
         $this->assertStringContainsString('keine Kasko', $r['summary']);
 
         // Mit echter Vollkasko im Versicherungsumfang wird sie erkannt.
-        $mitKasko = (new WgvKfzPoliceParser())->parse(
+        $mitKasko = (new WgvKfzPoliceParser)->parse(
             $this->scheinText('Fahrzeugvollversicherung (Vollkasko) mit 500 EUR Selbstbeteiligung')
         );
         $this->assertTrue($mitKasko['data']['kfz']['has_vollkasko']);
@@ -159,7 +159,7 @@ class WgvKfzPoliceParserTest extends TestCase
 
     public function test_no_bank_data_is_taken(): void
     {
-        $r = (new WgvKfzPoliceParser())->parse($this->scheinText());
+        $r = (new WgvKfzPoliceParser)->parse($this->scheinText());
 
         // Die Kunden-IBAN ist maskiert, die vollstaendige IBAN im Fussbereich
         // gehoert der WGV - beides bleibt draussen.
@@ -169,7 +169,7 @@ class WgvKfzPoliceParserTest extends TestCase
 
     public function test_ignores_unrelated_documents(): void
     {
-        $parser = new WgvKfzPoliceParser();
+        $parser = new WgvKfzPoliceParser;
 
         $this->assertNull($parser->parse('Irgendein anderes Dokument'));
         // WGV genannt, aber keine Kfz-Unterlage.

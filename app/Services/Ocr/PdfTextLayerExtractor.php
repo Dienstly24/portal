@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ocr;
 
 use Illuminate\Support\Facades\Log;
@@ -27,7 +28,7 @@ class PdfTextLayerExtractor
 
     public function isAvailable(): bool
     {
-        if (!config('services.ocr.text_layer', true)) {
+        if (! config('services.ocr.text_layer', true)) {
             return false;
         }
         return $this->binaryWorks();
@@ -60,16 +61,16 @@ class PdfTextLayerExtractor
      */
     public function extractRaw(string $binary): string
     {
-        if (!$this->isAvailable()) {
+        if (! $this->isAvailable()) {
             return '';
         }
 
-        $dir = sys_get_temp_dir() . '/dienstly_pdftext_' . bin2hex(random_bytes(8));
-        if (!@mkdir($dir, 0700, true) && !is_dir($dir)) {
+        $dir = sys_get_temp_dir().'/dienstly_pdftext_'.bin2hex(random_bytes(8));
+        if (! @mkdir($dir, 0700, true) && ! is_dir($dir)) {
             return '';
         }
 
-        $pdfPath = $dir . '/source.pdf';
+        $pdfPath = $dir.'/source.pdf';
 
         try {
             file_put_contents($pdfPath, $binary);
@@ -84,7 +85,7 @@ class PdfTextLayerExtractor
             $process->setTimeout(30);
             $process->run();
 
-            if (!$process->isSuccessful()) {
+            if (! $process->isSuccessful()) {
                 return '';
             }
 
@@ -95,7 +96,7 @@ class PdfTextLayerExtractor
 
             return $text;
         } catch (\Throwable $e) {
-            Log::warning('PDF-Textebene-Extraktion fehlgeschlagen: ' . $e->getMessage());
+            Log::warning('PDF-Textebene-Extraktion fehlgeschlagen: '.$e->getMessage());
             return '';
         } finally {
             @unlink($pdfPath);

@@ -1,13 +1,17 @@
 <?php
+
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
-class Document extends Model {
+class Document extends Model
+{
     protected $keyType = 'string';
     public $incrementing = false;
-    protected $fillable = ['customer_id','contract_id','intake_batch','category','file_name','file_path','disk','visibility','color','uploaded_by','updated_by','file_size','content_hash','duplicate_of',
-        'ai_status','ai_type','ai_confidence','ai_source','ai_summary','ai_extracted','ai_error','ai_processed_at','page_count','vermittler_import_id'];
+    protected $fillable = ['customer_id', 'contract_id', 'intake_batch', 'category', 'file_name', 'file_path', 'disk', 'visibility', 'color', 'uploaded_by', 'updated_by', 'file_size', 'content_hash', 'duplicate_of',
+        'ai_status', 'ai_type', 'ai_confidence', 'ai_source', 'ai_summary', 'ai_extracted', 'ai_error', 'ai_processed_at', 'page_count', 'vermittler_import_id'];
 
     public const CATEGORIES = ['contract' => 'Verträge', 'police' => 'Policen', 'invoice' => 'Rechnungen', 'identity' => 'Identität', 'claim' => 'Schaden', 'other' => 'Sonstige'];
 
@@ -17,37 +21,37 @@ class Document extends Model {
      * label = Anzeige, category = Zuordnung zur bestehenden Kategorie.
      */
     public const AI_TYPES = [
-        'kfz_vertrag'          => ['label' => 'KFZ-Vertrag',          'category' => 'contract'],
-        'escooter_vertrag'     => ['label' => 'E-Scooter-Versicherung', 'category' => 'contract'],
+        'kfz_vertrag' => ['label' => 'KFZ-Vertrag',          'category' => 'contract'],
+        'escooter_vertrag' => ['label' => 'E-Scooter-Versicherung', 'category' => 'contract'],
         'versicherungsvertrag' => ['label' => 'Versicherungsvertrag', 'category' => 'contract'],
-        'versicherungspolice'  => ['label' => 'Versicherungspolice',  'category' => 'police'],
-        'beratungsprotokoll'   => ['label' => 'Beratungsprotokoll',   'category' => 'contract'],
-        'beitrittserklaerung'  => ['label' => 'Beitrittserklaerung (Kranken)', 'category' => 'contract'],
+        'versicherungspolice' => ['label' => 'Versicherungspolice',  'category' => 'police'],
+        'beratungsprotokoll' => ['label' => 'Beratungsprotokoll',   'category' => 'contract'],
+        'beitrittserklaerung' => ['label' => 'Beitrittserklaerung (Kranken)', 'category' => 'contract'],
         'familienversicherung' => ['label' => 'Familienversicherung (Kranken)', 'category' => 'contract'],
-        'fahrzeugschein'       => ['label' => 'Fahrzeugschein',       'category' => 'other'],
-        'fahrzeugbrief'        => ['label' => 'Fahrzeugbrief',        'category' => 'other'],
-        'gesundheitskarte'     => ['label' => 'Gesundheitskarte',     'category' => 'identity'],
-        'geburtsurkunde'       => ['label' => 'Geburtsurkunde',       'category' => 'identity'],
-        'familienbescheinigung'=> ['label' => 'Familienbescheinigung','category' => 'identity'],
-        'gehaltsabrechnung'    => ['label' => 'Gehaltsabrechnung',    'category' => 'other'],
-        'arbeitsvertrag'       => ['label' => 'Arbeitsvertrag',       'category' => 'other'],
-        'personalausweis'      => ['label' => 'Personalausweis',      'category' => 'identity'],
-        'aufenthaltstitel'     => ['label' => 'Aufenthaltstitel',     'category' => 'identity'],
-        'reisepass'            => ['label' => 'Reisepass',            'category' => 'identity'],
-        'meldebescheinigung'   => ['label' => 'Meldebescheinigung',   'category' => 'identity'],
-        'fuehrerschein'        => ['label' => 'Führerschein',         'category' => 'identity'],
-        'rechnung'             => ['label' => 'Rechnung',             'category' => 'invoice'],
-        'energieauftrag'       => ['label' => 'Energie-Auftrag',      'category' => 'contract'],
-        'internetvertrag'      => ['label' => 'Internet-/DSL-Auftrag', 'category' => 'contract'],
-        'zaehlerfoto'          => ['label' => 'Zaehlerfoto',          'category' => 'other'],
-        'sepa_mandat'          => ['label' => 'SEPA-Mandat',          'category' => 'other'],
-        'kontaktdaten'         => ['label' => 'Kontaktdaten',         'category' => 'identity'],
-        'schadenmeldung'       => ['label' => 'Schadenmeldung',       'category' => 'claim'],
+        'fahrzeugschein' => ['label' => 'Fahrzeugschein',       'category' => 'other'],
+        'fahrzeugbrief' => ['label' => 'Fahrzeugbrief',        'category' => 'other'],
+        'gesundheitskarte' => ['label' => 'Gesundheitskarte',     'category' => 'identity'],
+        'geburtsurkunde' => ['label' => 'Geburtsurkunde',       'category' => 'identity'],
+        'familienbescheinigung' => ['label' => 'Familienbescheinigung', 'category' => 'identity'],
+        'gehaltsabrechnung' => ['label' => 'Gehaltsabrechnung',    'category' => 'other'],
+        'arbeitsvertrag' => ['label' => 'Arbeitsvertrag',       'category' => 'other'],
+        'personalausweis' => ['label' => 'Personalausweis',      'category' => 'identity'],
+        'aufenthaltstitel' => ['label' => 'Aufenthaltstitel',     'category' => 'identity'],
+        'reisepass' => ['label' => 'Reisepass',            'category' => 'identity'],
+        'meldebescheinigung' => ['label' => 'Meldebescheinigung',   'category' => 'identity'],
+        'fuehrerschein' => ['label' => 'Führerschein',         'category' => 'identity'],
+        'rechnung' => ['label' => 'Rechnung',             'category' => 'invoice'],
+        'energieauftrag' => ['label' => 'Energie-Auftrag',      'category' => 'contract'],
+        'internetvertrag' => ['label' => 'Internet-/DSL-Auftrag', 'category' => 'contract'],
+        'zaehlerfoto' => ['label' => 'Zaehlerfoto',          'category' => 'other'],
+        'sepa_mandat' => ['label' => 'SEPA-Mandat',          'category' => 'other'],
+        'kontaktdaten' => ['label' => 'Kontaktdaten',         'category' => 'identity'],
+        'schadenmeldung' => ['label' => 'Schadenmeldung',       'category' => 'claim'],
         // Liste MEHRERER Vorgaenge des Vermittlers - kein Kundendokument:
         // sie gehoert zu keinem einzelnen Kunden und wird unter
         // Vermittler-Abrechnung eingelesen, nicht hier zugeordnet.
         'vermittler_vorgangsliste' => ['label' => 'Vermittler-Vorgangsliste', 'category' => 'other'],
-        'sonstiges'            => ['label' => 'Sonstiges Dokument',   'category' => 'other'],
+        'sonstiges' => ['label' => 'Sonstiges Dokument',   'category' => 'other'],
     ];
 
     /**
@@ -111,7 +115,7 @@ class Document extends Model {
             return $explicit;
         }
 
-        $hasNumber = !blank($ins['contract_number'] ?? null);
+        $hasNumber = ! blank($ins['contract_number'] ?? null);
 
         if (in_array($aiType, self::CONFIRMATION_AI_TYPES, true)) {
             return Contract::STAGE_VERTRAG;
@@ -177,12 +181,12 @@ class Document extends Model {
     /** SHA-256 des gespeicherten Dateiinhalts (streamend) oder null. */
     public static function hashStoredFile(string $disk, string $path): ?string {
         try {
-            $storage = \Illuminate\Support\Facades\Storage::disk($disk);
-            if (!$storage->exists($path)) {
+            $storage = Storage::disk($disk);
+            if (! $storage->exists($path)) {
                 return null;
             }
             $stream = $storage->readStream($path);
-            if (!is_resource($stream)) {
+            if (! is_resource($stream)) {
                 return null;
             }
             $ctx = hash_init('sha256');

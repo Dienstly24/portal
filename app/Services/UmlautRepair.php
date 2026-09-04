@@ -129,7 +129,7 @@ class UmlautRepair
             }
             // Gross-/Kleinschreibung des ersten Buchstabens erhalten.
             if (mb_strtoupper(mb_substr($word, 0, 1)) === mb_substr($word, 0, 1)) {
-                return mb_strtoupper(mb_substr($fixed, 0, 1)) . mb_substr($fixed, 1);
+                return mb_strtoupper(mb_substr($fixed, 0, 1)).mb_substr($fixed, 1);
             }
             return $fixed;
         }, $text);

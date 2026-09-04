@@ -51,7 +51,7 @@ class BayerischeEscooterParserTest extends TestCase
 
     public function test_parses_all_key_fields(): void
     {
-        $r = (new BayerischeEscooterParser())->parse($this->confirmationText());
+        $r = (new BayerischeEscooterParser)->parse($this->confirmationText());
 
         $this->assertNotNull($r);
         $this->assertSame('escooter_vertrag', $r['type']);
@@ -95,7 +95,7 @@ class BayerischeEscooterParserTest extends TestCase
             $this->confirmationText()
         );
 
-        $r = (new BayerischeEscooterParser())->parse($text);
+        $r = (new BayerischeEscooterParser)->parse($text);
         $this->assertNotNull($r);
         $this->assertSame('Teilkasko', $r['data']['versicherung']['tariff']);
         $this->assertTrue($r['data']['kfz']['has_teilkasko']);
@@ -103,11 +103,11 @@ class BayerischeEscooterParserTest extends TestCase
 
     public function test_ignores_unrelated_documents(): void
     {
-        $this->assertNull((new BayerischeEscooterParser())->parse('Irgendein anderes Dokument ohne Bezug.'));
+        $this->assertNull((new BayerischeEscooterParser)->parse('Irgendein anderes Dokument ohne Bezug.'));
 
         // Ein KFZ-Schreiben, das E-Scooter nur beilaeufig erwaehnt, aber keine
         // der festen E-Scooter-Felder traegt, darf NICHT vereinnahmt werden.
         $kfz = "ADAC Autoversicherung AG\nKfz-Versicherung\nWir bieten auch eine E-Scooter Police an.\nKennzeichen: M-AB 123";
-        $this->assertNull((new BayerischeEscooterParser())->parse($kfz));
+        $this->assertNull((new BayerischeEscooterParser)->parse($kfz));
     }
 }

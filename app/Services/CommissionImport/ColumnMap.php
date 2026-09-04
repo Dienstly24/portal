@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\CommissionImport;
 
 /**
@@ -316,7 +317,7 @@ class ColumnMap
         $used = [];
         foreach (self::FIELDS as $field => $definition) {
             foreach ($normalized as $index => $key) {
-                if (isset($used[$index]) || !in_array($key, $definition['aliases'], true)) {
+                if (isset($used[$index]) || ! in_array($key, $definition['aliases'], true)) {
                     continue;
                 }
                 $map[$field] = $index;
@@ -368,25 +369,25 @@ class ColumnMap
         $errors = [];
         $map = array_filter($map, fn ($v) => $v !== null && $v !== '');
 
-        if ($mode === self::MODE_ABRECHNUNG && !isset($map['amount'])) {
+        if ($mode === self::MODE_ABRECHNUNG && ! isset($map['amount'])) {
             $errors[] = 'Die Spalte für den Provisionsbetrag ist nicht zugeordnet. Ohne Betrag lässt sich keine Provision anlegen – '
-                . 'enthält die Datei gar keine Beträge, bitte die Betriebsart auf "Auftrags-/Kundenliste" stellen.';
+                .'enthält die Datei gar keine Beträge, bitte die Betriebsart auf "Auftrags-/Kundenliste" stellen.';
         }
-        if ($mode === self::MODE_AUFTRAGSLISTE && !isset($map['customer_name'])) {
+        if ($mode === self::MODE_AUFTRAGSLISTE && ! isset($map['customer_name'])) {
             $errors[] = 'Für eine Auftrags-/Kundenliste muss die Spalte mit dem Kundennamen zugeordnet sein – '
-                . 'sie ist das Einzige, woraus eine Kundenakte entstehen kann.';
+                .'sie ist das Einzige, woraus eine Kundenakte entstehen kann.';
         }
         if (array_intersect_key($map, array_flip(self::KEY_FIELDS)) === []) {
             $errors[] = 'Es ist keine Kennung zugeordnet. Mindestens eine von: '
-                . implode(', ', array_map(fn ($f) => self::label($f), self::KEY_FIELDS))
-                . ' wird gebraucht, um die Zeile einem Vertrag zuzuordnen.';
+                .implode(', ', array_map(fn ($f) => self::label($f), self::KEY_FIELDS))
+                .' wird gebraucht, um die Zeile einem Vertrag zuzuordnen.';
         }
 
         $duplicates = array_diff_assoc($map, array_unique($map));
         if ($duplicates !== []) {
             $errors[] = 'Dieselbe Spalte ist mehreren Feldern zugeordnet: '
-                . implode(', ', array_map(fn ($f) => self::label($f), array_keys($duplicates)))
-                . '. Bitte je Feld eine eigene Spalte wählen.';
+                .implode(', ', array_map(fn ($f) => self::label($f), array_keys($duplicates)))
+                .'. Bitte je Feld eine eigene Spalte wählen.';
         }
         return $errors;
     }

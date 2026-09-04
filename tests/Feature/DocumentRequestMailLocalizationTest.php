@@ -25,7 +25,7 @@ class DocumentRequestMailLocalizationTest extends TestCase
         ]);
         $customer = Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'K-' . uniqid(),
+            'customer_number' => 'K-'.uniqid(),
             'preferred_lang' => $lang,
         ]);
 

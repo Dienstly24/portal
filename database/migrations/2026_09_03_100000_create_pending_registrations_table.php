@@ -23,8 +23,7 @@ use Illuminate\Support\Facades\Schema;
  * Bestandskunden - die sich nie selbst registriert haben - waeren
  * schlagartig "unbestaetigt" gewesen.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('pending_registrations', function (Blueprint $table) {

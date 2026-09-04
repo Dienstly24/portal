@@ -1,6 +1,8 @@
 <?php
+
 namespace App\Models;
 
+use App\Services\Vermittler\VermittlerStatusMap;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -83,7 +85,7 @@ class VermittlerSettlement extends Model
     /** Abrechnungsstatus, den dieser Datensatz fuer den Vertrag bedeutet. */
     public function contractStatus(): string
     {
-        return \App\Services\Vermittler\VermittlerStatusMap::forCode($this->status_code);
+        return VermittlerStatusMap::forCode($this->status_code);
     }
 
     /** Ist dieser Datensatz storniert? */

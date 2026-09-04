@@ -1,4 +1,5 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -32,10 +33,10 @@ return new class extends Migration {
 
     public function down(): void {
         Schema::table('customers', function (Blueprint $table) {
-            $table->dropColumn(['salutation','health_insurance_number','health_insurance_company','health_insurance_type','pension_insurance_number','tax_id']);
+            $table->dropColumn(['salutation', 'health_insurance_number', 'health_insurance_company', 'health_insurance_type', 'pension_insurance_number', 'tax_id']);
         });
         Schema::table('customer_family', function (Blueprint $table) {
-            $table->dropColumn(['health_insurance_status','health_insurance_company','health_insurance_number','health_insurance_start']);
+            $table->dropColumn(['health_insurance_status', 'health_insurance_company', 'health_insurance_number', 'health_insurance_start']);
         });
     }
 };

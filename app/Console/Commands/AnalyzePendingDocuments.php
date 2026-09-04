@@ -1,10 +1,16 @@
 <?php
+
 namespace App\Console\Commands;
 
 use App\Console\Concerns\ProcessesRecordsSafely;
 use App\Jobs\AnalyzeDocumentJob;
 use App\Models\Document;
+use App\Models\User;
+use App\Services\DocumentIntake\DocumentIntakeService;
+use App\Services\Notifications\NotificationService;
+use App\Support\Facades\Notify;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Sicherheitsnetz fuer die Dokument-Analyse: stoesst haengengebliebene
@@ -39,7 +45,7 @@ class AnalyzePendingDocuments extends Command
         // schneller auf als die frueheren 45 Min.
         $stuck = Document::where('ai_status', 'processing')
             ->where('updated_at', '<', now()->subMinutes(20))->get();
-        $intake = app(\App\Services\DocumentIntake\DocumentIntakeService::class);
+        $intake = app(DocumentIntakeService::class);
         $abgebrochen = $this->verarbeiteEinzeln($stuck, function (Document $document) use ($intake) {
             $document->update([
                 'ai_status' => 'failed',
@@ -66,14 +72,14 @@ class AnalyzePendingDocuments extends Command
             $backlog = Document::where('ai_status', 'pending')
                 ->where('created_at', '<', now()->subMinutes(30))->count();
             if ($backlog >= $threshold) {
-                $admins = \App\Models\User::whereIn('role', ['admin', 'manager'])
+                $admins = User::whereIn('role', ['admin', 'manager'])
                     ->where('is_active', true)->pluck('id');
-                \App\Support\Facades\Notify::pushMany($admins, [
-                    'type' => \App\Services\Notifications\NotificationService::TYPE_DOCUMENT,
+                Notify::pushMany($admins, [
+                    'type' => NotificationService::TYPE_DOCUMENT,
                     'title' => 'Analyse-Rueckstau: Queue-Worker pruefen',
-                    'body' => $backlog . ' Dokumente warten seit ueber 30 Minuten auf ihre Analyse. '
-                        . 'Vermutlich laeuft der Queue-Worker (php artisan queue:work) nicht. '
-                        . 'Diagnose: php artisan queue:health',
+                    'body' => $backlog.' Dokumente warten seit ueber 30 Minuten auf ihre Analyse. '
+                        .'Vermutlich laeuft der Queue-Worker (php artisan queue:work) nicht. '
+                        .'Diagnose: php artisan queue:health',
                     'link' => route('admin.documents.inbox'),
                     // Ein Hinweis, der sich auffrischt statt zu spammen.
                     'dedup_key' => 'analyze-backlog',
@@ -82,8 +88,8 @@ class AnalyzePendingDocuments extends Command
             }
         }
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Rueckstau-Alarm fehlgeschlagen: ' . $e->getMessage(), ['exception' => $e]);
-            $this->warn('Rueckstau-Alarm konnte nicht gesendet werden: ' . $e->getMessage());
+            Log::error('Rueckstau-Alarm fehlgeschlagen: '.$e->getMessage(), ['exception' => $e]);
+            $this->warn('Rueckstau-Alarm konnte nicht gesendet werden: '.$e->getMessage());
         }
 
         $this->info(sprintf('%d erneut angestossen, %d als fehlgeschlagen markiert.', $wiederAngestossen, $abgebrochen));

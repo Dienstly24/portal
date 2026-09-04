@@ -7,7 +7,6 @@ use App\Models\CustomerMessage;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 /**
@@ -23,7 +22,7 @@ class ConversationTicketTest extends TestCase
         $user = User::factory()->create(['role' => 'customer', 'name' => $name]);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => '26' . str_pad((string) $user->id, 5, '0', STR_PAD_LEFT),
+            'customer_number' => '26'.str_pad((string) $user->id, 5, '0', STR_PAD_LEFT),
             'preferred_lang' => 'de',
         ]);
     }
@@ -132,7 +131,7 @@ class ConversationTicketTest extends TestCase
             ->get(route('admin.customer_chat', ['kunde' => (string) $customer->id]))
             ->assertOk()
             ->assertSee('kx-cockpit', false)
-            ->assertSee('#' . $ticket->ticket_number)
+            ->assertSee('#'.$ticket->ticket_number)
             ->assertSee('In Bearbeitung')
             ->assertSee('Wasserschaden Kueche');
     }

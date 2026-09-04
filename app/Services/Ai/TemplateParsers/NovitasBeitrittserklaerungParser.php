@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
@@ -39,13 +40,13 @@ class NovitasBeitrittserklaerungParser implements DocumentTemplateParser
     // Byte-stabile Mojibake-Beschriftungen (defektes Formular-Font) mit ihrer
     // deutschen Bedeutung. Jeweils zusaetzlich das Klartext-Label als
     // Alternative (falls dieselbe Zeilenlage doch mit intakter Textebene kaeme).
-    private const A_NAME     = ['K-53', 'Vorname'];                // "Name"/"Vorname"
-    private const A_BIRTH    = ['32G:?>;-?G5', 'Geburtsdatum'];    // "Geburtsdatum"
-    private const A_STREET   = ['E?:-', 'Stra'];                   // "Strasse, Hausnummer"
-    private const A_KK       = ['L:-7<37<->>3', 'Krankenkasse'];   // "Krankenkasse"
+    private const A_NAME = ['K-53', 'Vorname'];                // "Name"/"Vorname"
+    private const A_BIRTH = ['32G:?>;-?G5', 'Geburtsdatum'];    // "Geburtsdatum"
+    private const A_STREET = ['E?:-', 'Stra'];                   // "Strasse, Hausnummer"
+    private const A_KK = ['L:-7<37<->>3', 'Krankenkasse'];   // "Krankenkasse"
     private const A_WEIBLICH = ['B3/26/01', 'weiblich'];
     private const A_MAENNLICH = ['776/01', 'nnlich'];              // m(ae)nnlich
-    private const A_DIVERS    = [';/A3:>', 'divers'];
+    private const A_DIVERS = [';/A3:>', 'divers'];
     private const A_UNBESTIMMT = ['G723>?/55?', 'unbestimmt'];
 
     private const MARITAL = ['verheiratet', 'ledig', 'geschieden', 'verwitwet'];
@@ -64,7 +65,7 @@ class NovitasBeitrittserklaerungParser implements DocumentTemplateParser
         // faellt lieber sauber auf die normale Analyse (Heuristik/KI) zurueck,
         // statt Stammdaten zu erfinden. Der Novitas-Anker grenzt zugleich sicher
         // gegen andere Krankenkassen-Formulare (z.B. KKH) ab.
-        if (!str_contains($text, self::MOJIBAKE_NOVITAS) || !str_contains($text, self::MOJIBAKE_BIRTH)) {
+        if (! str_contains($text, self::MOJIBAKE_NOVITAS) || ! str_contains($text, self::MOJIBAKE_BIRTH)) {
             return null;
         }
 
@@ -82,15 +83,15 @@ class NovitasBeitrittserklaerungParser implements DocumentTemplateParser
             return null;
         }
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         return [
             'type' => 'beitrittserklaerung',
             'confidence' => 70,
             'summary' => 'Novitas-BKK-Beitrittserklaerung (gesetzliche Krankenversicherung)'
-                . ($name !== '' ? ' - ' . $name : '')
-                . ' - Felder gratis aus dem Formular gelesen (ohne KI).'
-                . (isset($health['previous_insurer']) ? ' Zuvor versichert bei ' . $health['previous_insurer'] . '.' : ''),
-            'title' => 'Beitrittserklaerung Novitas BKK' . ($name !== '' ? ' ' . $name : ''),
+                .($name !== '' ? ' - '.$name : '')
+                .' - Felder gratis aus dem Formular gelesen (ohne KI).'
+                .(isset($health['previous_insurer']) ? ' Zuvor versichert bei '.$health['previous_insurer'].'.' : ''),
+            'title' => 'Beitrittserklaerung Novitas BKK'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $versicherung,
@@ -127,14 +128,14 @@ class NovitasBeitrittserklaerungParser implements DocumentTemplateParser
         $birthLine = $this->valueAbove(self::A_BIRTH);
         if ($birthLine !== null) {
             if (preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $birthLine, $m)) {
-                $raw['birth_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+                $raw['birth_date'] = $m[3].'-'.$m[2].'-'.$m[1];
             }
             $rest = trim((string) preg_replace('/^.*?\d{2}\.\d{2}\.\d{4}\s*/u', '', $birthLine));
             // Familienstand am Zeilenende abspalten.
             foreach (self::MARITAL as $status) {
                 if (stripos($rest, $status) !== false) {
                     $raw['marital_status'] = $status;
-                    $rest = trim((string) preg_replace('/' . $status . '.*$/i', '', $rest));
+                    $rest = trim((string) preg_replace('/'.$status.'.*$/i', '', $rest));
                     break;
                 }
             }
@@ -215,7 +216,7 @@ class NovitasBeitrittserklaerungParser implements DocumentTemplateParser
         // Mitgliedsbeginn ("JA, ICH MOECHTE ZUM ...") = Versicherungsbeginn =
         // das erste Datum im Formular.
         if (preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $this->text(), $m)) {
-            $raw['start_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['start_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
 
         return $this->validatedInsurance(array_filter($raw, fn ($v) => $v !== null && $v !== ''));

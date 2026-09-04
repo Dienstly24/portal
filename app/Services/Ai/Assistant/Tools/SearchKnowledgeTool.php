@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Tools;
 
 use App\Models\AiKnowledgeEntry;
@@ -27,11 +28,11 @@ class SearchKnowledgeTool implements AssistantTool
     public function description(): string
     {
         return 'Suche in der internen, freigegebenen Wissensbasis von Dienstly24 '
-            . '(Abläufe, haeufige Fragen, benoetigte Unterlagen, Produkte, '
-            . 'Voraussetzungen). Nutze das IMMER, bevor du eine allgemeine Frage zu '
-            . 'Dienstly24-Leistungen oder Abläufen beantwortest. Kein Treffer bedeutet: '
-            . 'du darfst die Frage NICHT aus eigenem Wissen beantworten, sondern musst '
-            . 'escalateToTeam nutzen.';
+            .'(Abläufe, haeufige Fragen, benoetigte Unterlagen, Produkte, '
+            .'Voraussetzungen). Nutze das IMMER, bevor du eine allgemeine Frage zu '
+            .'Dienstly24-Leistungen oder Abläufen beantwortest. Kein Treffer bedeutet: '
+            .'du darfst die Frage NICHT aus eigenem Wissen beantworten, sondern musst '
+            .'escalateToTeam nutzen.';
     }
 
     public function parameters(): array
@@ -42,7 +43,7 @@ class SearchKnowledgeTool implements AssistantTool
                 'suchbegriff' => [
                     'type' => 'string',
                     'description' => 'Thema der Kundenfrage in Stichworten, z.B. '
-                        . '"Unterlagen Adressaenderung" oder "Kuendigungsfrist Kfz".',
+                        .'"Unterlagen Adressaenderung" oder "Kuendigungsfrist Kfz".',
                 ],
             ],
             'required' => ['suchbegriff'],
@@ -79,7 +80,7 @@ class SearchKnowledgeTool implements AssistantTool
             ])->values()->all(),
             'hinweis' => $entries->isEmpty()
                 ? 'Kein Eintrag gefunden. Beantworte die Frage NICHT aus eigenem Wissen - '
-                    . 'nutze escalateToTeam mit dem Grund "uncertain".'
+                    .'nutze escalateToTeam mit dem Grund "uncertain".'
                 : null,
         ];
     }

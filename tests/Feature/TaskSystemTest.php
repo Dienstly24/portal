@@ -244,7 +244,7 @@ class TaskSystemTest extends TestCase
         ]);
         $this->assertDatabaseHas('internal_notifications', [
             'user_id' => $admin->id,
-            'dedup_key' => 'task-auto-email-' . $task->id,
+            'dedup_key' => 'task-auto-email-'.$task->id,
         ]);
 
         // Idempotenz: zweiter Lauf sendet nicht erneut
@@ -341,7 +341,7 @@ class TaskSystemTest extends TestCase
         $this->artisan('tasks:remind')->assertSuccessful();
 
         $note = InternalNotification::where('user_id', $employee->id)
-            ->where('dedup_key', 'tasks-due-' . $employee->id)->first();
+            ->where('dedup_key', 'tasks-due-'.$employee->id)->first();
         $this->assertNotNull($note);
         $this->assertSame('Aufgaben: 1 heute fällig · 1 überfällig', $note->title);
 

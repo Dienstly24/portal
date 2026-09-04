@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\FondsFinanz;
 
 /**
@@ -28,7 +29,7 @@ class FondsFinanzParser
         $fields = [];
 
         foreach (preg_split('/\r\n|\r|\n/', $text) ?: [] as $rawLine) {
-            if (!preg_match('/^\s*([^:]{2,40}?)\s*:\s*(.+?)\s*$/u', $rawLine, $m)) {
+            if (! preg_match('/^\s*([^:]{2,40}?)\s*:\s*(.+?)\s*$/u', $rawLine, $m)) {
                 continue;
             }
             $label = mb_strtolower(trim($m[1], " \t.*-"));
@@ -38,7 +39,7 @@ class FondsFinanzParser
             }
 
             foreach (self::LABELS as $field => $variants) {
-                if (!isset($fields[$field]) && in_array($label, $variants, true)) {
+                if (! isset($fields[$field]) && in_array($label, $variants, true)) {
                     $fields[$field] = $value;
                     break;
                 }

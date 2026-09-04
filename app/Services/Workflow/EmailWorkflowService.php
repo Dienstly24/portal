@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Workflow;
 
 use App\Models\Customer;
@@ -11,6 +12,7 @@ use App\Services\CustomerCreation\CustomerAutoCreationService;
 use App\Services\CustomerCreation\DuplicateCustomerException;
 use App\Services\FondsFinanz\FondsFinanzImportService;
 use App\Services\Matching\CustomerMatchingService;
+use App\Services\TicketNotifier;
 use Illuminate\Support\Str;
 
 /**
@@ -77,7 +79,7 @@ class EmailWorkflowService
             // Vorschlag: Kunde wird gespeichert, aber erst durch Mitarbeiter bestätigt (Abschnitt 13).
             $customer = $match->customer;
             $matchStatus = 'suggested';
-        } elseif (!$match->hasMatch() && $this->isEligibleForAutoCreation($category, $message)) {
+        } elseif (! $match->hasMatch() && $this->isEligibleForAutoCreation($category, $message)) {
             try {
                 $customer = $this->autoCreator->createFromUnmatched($criteria, 'email_import');
                 $matchStatus = 'confirmed';
@@ -217,7 +219,7 @@ class EmailWorkflowService
 
     private function isEligibleForAutoCreation(string $category, EmailMessage $message): bool
     {
-        if (!in_array($category, self::AUTO_CREATE_CATEGORIES, true)) {
+        if (! in_array($category, self::AUTO_CREATE_CATEGORIES, true)) {
             return false;
         }
         // Braucht mindestens einen erkennbaren Namen - reine "unbekannt@..."-Absender nie automatisch anlegen.
@@ -244,7 +246,7 @@ class EmailWorkflowService
             'status' => 'open',
             'priority' => 'mittel',
             'source' => 'email',
-            'subject' => $message->subject ?: ('E-Mail-Anfrage von ' . ($message->from_name ?: $message->from_address)),
+            'subject' => $message->subject ?: ('E-Mail-Anfrage von '.($message->from_name ?: $message->from_address)),
             'description' => $message->body_text ?: strip_tags((string) $message->body_html),
             'guest_name' => $customer ? null : $message->from_name,
             'guest_email' => $customer ? null : $message->from_address,
@@ -252,7 +254,7 @@ class EmailWorkflowService
 
         // Team-Glocke wie bei allen anderen Ticket-Quellen - E-Mail-Tickets
         // entstanden bisher lautlos.
-        \App\Services\TicketNotifier::notifyNewTicket($ticket);
+        TicketNotifier::notifyNewTicket($ticket);
     }
 
     private function createTask(EmailMessage $message, ?Customer $customer, string $title, int $dueInDays, string $priority): void
@@ -260,9 +262,9 @@ class EmailWorkflowService
         $assignedTo = $customer?->betreuer()->first()?->id ?? $this->systemUserId();
 
         $facts = array_filter([
-            'Kategorie: ' . $message->categoryLabel(),
-            $customer ? 'Kunde: ' . ($customer->user?->name ?? $customer->customer_number) : null,
-            ($n = count($message->attachments_meta ?? [])) > 0 ? $n . ' Anhang/Anhänge' : null,
+            'Kategorie: '.$message->categoryLabel(),
+            $customer ? 'Kunde: '.($customer->user?->name ?? $customer->customer_number) : null,
+            ($n = count($message->attachments_meta ?? [])) > 0 ? $n.' Anhang/Anhänge' : null,
         ]);
 
         Task::forceCreate([
@@ -272,7 +274,7 @@ class EmailWorkflowService
             'customer_id' => $customer?->id,
             'email_message_id' => $message->id,
             'title' => $title,
-            'description' => 'Ausgelöst durch E-Mail "' . ($message->subject ?: '(kein Betreff)') . '" von ' . $message->from_address . '. ' . implode(' · ', $facts) . '.',
+            'description' => 'Ausgelöst durch E-Mail "'.($message->subject ?: '(kein Betreff)').'" von '.$message->from_address.'. '.implode(' · ', $facts).'.',
             'type' => 'email',
             'status' => 'open',
             'priority' => $priority,

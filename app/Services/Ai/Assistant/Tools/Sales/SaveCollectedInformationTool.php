@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Tools\Sales;
 
 use App\Services\Ai\Assistant\Sales\ConversationContext;
@@ -37,11 +38,11 @@ class SaveCollectedInformationTool implements AssistantTool
     public function description(): string
     {
         return 'Speichere Angaben, die der Kunde im Gespraech genannt hat, damit sie '
-            . 'nicht erneut erfragt werden. Erlaubt sind nur nicht-sensible Angaben, '
-            . 'z.B. installation_address, situation, current_provider, current_tariff, '
-            . 'contract_end, desired_speed, desired_start, change_reason, full_name, '
-            . 'billing_address. Bankverbindung, Geburtsdatum, E-Mail und Telefonnummer '
-            . 'erfasst das System selbst - sende sie NICHT.';
+            .'nicht erneut erfragt werden. Erlaubt sind nur nicht-sensible Angaben, '
+            .'z.B. installation_address, situation, current_provider, current_tariff, '
+            .'contract_end, desired_speed, desired_start, change_reason, full_name, '
+            .'billing_address. Bankverbindung, Geburtsdatum, E-Mail und Telefonnummer '
+            .'erfasst das System selbst - sende sie NICHT.';
     }
 
     public function parameters(): array
@@ -67,7 +68,7 @@ class SaveCollectedInformationTool implements AssistantTool
     public function run(array $arguments, AssistantToolContext $context): array
     {
         $angaben = $arguments['angaben'] ?? [];
-        if (!is_array($angaben) || $angaben === []) {
+        if (! is_array($angaben) || $angaben === []) {
             return ['fehler' => 'Keine Angaben uebergeben.'];
         }
 
@@ -82,11 +83,11 @@ class SaveCollectedInformationTool implements AssistantTool
                 $abgelehnt[$key] = 'wird vom System erfasst';
                 continue;
             }
-            if (!RequirementProfile::knows($conversation->intent, $key)) {
+            if (! RequirementProfile::knows($conversation->intent, $key)) {
                 $abgelehnt[$key] = 'gehoert nicht zu diesem Anliegen';
                 continue;
             }
-            if (!is_scalar($wert) || trim((string) $wert) === '') {
+            if (! is_scalar($wert) || trim((string) $wert) === '') {
                 $abgelehnt[$key] = 'leerer Wert';
                 continue;
             }

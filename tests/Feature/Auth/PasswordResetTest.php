@@ -43,7 +43,7 @@ class PasswordResetTest extends TestCase
         Mail::assertSent(PasswordResetMail::class, function (PasswordResetMail $mail) {
             // Token aus der Reset-URL der Mail extrahieren
             $token = basename(parse_url($mail->resetUrl, PHP_URL_PATH));
-            $this->get('/reset-password/' . $token)->assertStatus(200);
+            $this->get('/reset-password/'.$token)->assertStatus(200);
             return true;
         });
     }

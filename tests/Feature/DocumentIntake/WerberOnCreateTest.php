@@ -22,7 +22,7 @@ class WerberOnCreateTest extends TestCase
     private function inboxDoc(array $extracted, ?int $uploadedBy = null): Document
     {
         Storage::fake('local');
-        $path = 'documents/eingang/' . uniqid() . '.pdf';
+        $path = 'documents/eingang/'.uniqid().'.pdf';
         Storage::disk('local')->put($path, '%PDF-1.4');
         return Document::create([
             'customer_id' => null,
@@ -44,7 +44,7 @@ class WerberOnCreateTest extends TestCase
         $doc = $this->inboxDoc(['person' => ['first_name' => 'Ahmed', 'last_name' => 'Nassar']]);
 
         $response = $this->actingAs($admin)->postJson(route('admin.documents.create_customer', $doc->id), [
-            'werber' => 'u:' . $werber->id,
+            'werber' => 'u:'.$werber->id,
         ]);
 
         $response->assertOk()->assertJson(['ok' => true]);
@@ -63,7 +63,7 @@ class WerberOnCreateTest extends TestCase
 
         $response = $this->actingAs($admin)->postJson(route('admin.documents.create_customer_batch'), [
             'document_ids' => [$doc->id],
-            'werber' => 'p:' . $partner->id,
+            'werber' => 'p:'.$partner->id,
         ]);
 
         $response->assertOk()->assertJson(['ok' => true]);
@@ -81,7 +81,7 @@ class WerberOnCreateTest extends TestCase
         );
 
         $response = $this->actingAs($employee)->postJson(route('admin.documents.create_customer', $doc->id), [
-            'werber' => 'u:' . $employee->id,
+            'werber' => 'u:'.$employee->id,
         ]);
 
         $response->assertOk();

@@ -27,7 +27,7 @@ class ContractEndingsCommandTest extends TestCase
         $user = User::factory()->create(['role' => 'customer']);
         return Customer::create(array_merge([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5((string) $user->id), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5((string) $user->id), 0, 8)),
         ], $attrs));
     }
 

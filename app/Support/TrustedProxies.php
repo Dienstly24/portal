@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use Illuminate\Container\Container;
+
 /**
  * Loest die Liste der vertrauenswuerdigen Proxys auf (Audit SEC-2).
  *
@@ -68,10 +70,10 @@ class TrustedProxies
      */
     private static function setting(string $key, mixed $default): mixed
     {
-        $app = \Illuminate\Container\Container::getInstance();
+        $app = Container::getInstance();
 
         if ($app !== null && $app->bound('config')) {
-            return $app->make('config')->get('trustedproxy.' . $key, $default);
+            return $app->make('config')->get('trustedproxy.'.$key, $default);
         }
 
         return self::fromFile()[$key] ?? $default;
@@ -87,7 +89,7 @@ class TrustedProxies
             return self::$file;
         }
 
-        $path = dirname(__DIR__, 2) . '/config/trustedproxy.php';
+        $path = dirname(__DIR__, 2).'/config/trustedproxy.php';
         $config = is_file($path) ? require $path : [];
 
         return self::$file = is_array($config) ? $config : [];

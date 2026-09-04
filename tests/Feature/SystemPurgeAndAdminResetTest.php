@@ -7,7 +7,6 @@ use App\Models\User;
 use App\Services\CustomerDeletionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class SystemPurgeAndAdminResetTest extends TestCase
@@ -17,7 +16,7 @@ class SystemPurgeAndAdminResetTest extends TestCase
     private function makeCustomer(string $email, string $role = 'customer'): Customer
     {
         $user = User::factory()->create(['role' => $role, 'email' => $email]);
-        return Customer::create(['user_id' => $user->id, 'customer_number' => 'K-' . uniqid()]);
+        return Customer::create(['user_id' => $user->id, 'customer_number' => 'K-'.uniqid()]);
     }
 
     public function test_deletion_never_removes_staff_account_linked_to_a_customer(): void

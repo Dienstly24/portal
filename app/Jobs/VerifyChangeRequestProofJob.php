@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Jobs;
 
 use App\Models\CustomerChangeRequest;
@@ -6,6 +7,8 @@ use App\Models\User;
 use App\Services\ChangeRequest\ChangeProofPolicy;
 use App\Services\ChangeRequest\ChangeProofVerifier;
 use App\Services\ChangeRequestService;
+use App\Services\Notifications\NotificationService;
+use App\Support\Facades\Notify;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -45,14 +48,14 @@ class VerifyChangeRequestProofJob implements ShouldQueue
         ChangeRequestService $service,
     ): void {
         $request = CustomerChangeRequest::with(['customer.user', 'documents'])->find($this->changeRequestId);
-        if (!$request || $request->status !== 'pending') {
+        if (! $request || $request->status !== 'pending') {
             return;
         }
 
         try {
             $result = $verifier->verify($request);
         } catch (\Throwable $e) {
-            Log::warning('Nachweispruefung fehlgeschlagen: ' . $e->getMessage());
+            Log::warning('Nachweispruefung fehlgeschlagen: '.$e->getMessage());
             $request->forceFill(['proof_status' => 'unreadable', 'proof_checked_at' => now()])->save();
             return;
         }
@@ -81,13 +84,13 @@ class VerifyChangeRequestProofJob implements ShouldQueue
         $state = CustomerChangeRequest::PROOF_STATES[$status] ?? CustomerChangeRequest::PROOF_STATES['none'];
         $name = $request->customer?->user?->name ?: 'Kunde';
 
-        \App\Support\Facades\Notify::pushMany($recipients, [
-            'type' => \App\Services\Notifications\NotificationService::TYPE_CHANGE_REQUEST,
-            'title' => $state['icon'] . ' Nachweis geprüft: ' . $request->typeLabel(),
-            'body' => $name . ' – ' . $state['label'] . '. Bitte freigeben oder ablehnen.',
+        Notify::pushMany($recipients, [
+            'type' => NotificationService::TYPE_CHANGE_REQUEST,
+            'title' => $state['icon'].' Nachweis geprüft: '.$request->typeLabel(),
+            'body' => $name.' – '.$state['label'].'. Bitte freigeben oder ablehnen.',
             'link' => route('admin.change_requests'),
             'change_request_id' => $request->id,
-            'dedup_key' => 'change-request-proof-' . $request->id,
+            'dedup_key' => 'change-request-proof-'.$request->id,
         ]);
     }
 }

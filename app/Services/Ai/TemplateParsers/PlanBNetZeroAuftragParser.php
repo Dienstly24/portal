@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Models\Contract;
@@ -55,8 +56,8 @@ class PlanBNetZeroAuftragParser implements DocumentTemplateParser
         if ($this->looksLikeComparisonProtocol($text)) {
             return null;
         }
-        if (!str_contains($upper, 'PLAN-B NET ZERO')
-            || !preg_match('/AUFTRAG\s+(STROM|GAS)LIEFERUNG/u', $upper)) {
+        if (! str_contains($upper, 'PLAN-B NET ZERO')
+            || ! preg_match('/AUFTRAG\s+(STROM|GAS)LIEFERUNG/u', $upper)) {
             return null;
         }
 
@@ -73,22 +74,22 @@ class PlanBNetZeroAuftragParser implements DocumentTemplateParser
             return null;
         }
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $sparteLabel = ($insurance['sparte'] ?? 'strom') === 'gas' ? 'Gas' : 'Strom';
         $order = $this->orderNumber();
 
         return [
             'type' => 'energieauftrag',
             'confidence' => 76,
-            'summary' => 'PLAN-B ' . $sparteLabel . '-Auftrag (Versorgerwechsel)'
-                . ($name !== '' ? ' - ' . $name : '')
-                . (isset($energie['previous_provider']) ? ' - Wechsel von ' . $energie['previous_provider'] : '')
-                . (isset($energie['consumption_kwh'])
-                    ? ' - ' . number_format($energie['consumption_kwh'], 0, ',', '.') . ' kWh/Jahr' : '')
-                . ($order !== null ? ' - Auftragsnummer ' . $order : '')
-                . ' - Lieferbeginn: zum naechstmoeglichen Termin (kein Datum im Auftrag)'
-                . ' - Felder gratis aus dem Auftrag gelesen (ohne KI).',
-            'title' => 'PLAN-B ' . $sparteLabel . '-Auftrag' . ($name !== '' ? ' ' . $name : ''),
+            'summary' => 'PLAN-B '.$sparteLabel.'-Auftrag (Versorgerwechsel)'
+                .($name !== '' ? ' - '.$name : '')
+                .(isset($energie['previous_provider']) ? ' - Wechsel von '.$energie['previous_provider'] : '')
+                .(isset($energie['consumption_kwh'])
+                    ? ' - '.number_format($energie['consumption_kwh'], 0, ',', '.').' kWh/Jahr' : '')
+                .($order !== null ? ' - Auftragsnummer '.$order : '')
+                .' - Lieferbeginn: zum naechstmoeglichen Termin (kein Datum im Auftrag)'
+                .' - Felder gratis aus dem Auftrag gelesen (ohne KI).',
+            'title' => 'PLAN-B '.$sparteLabel.'-Auftrag'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -132,7 +133,7 @@ class PlanBNetZeroAuftragParser implements DocumentTemplateParser
 
         if (($v = $this->fieldValue('Geburtsdatum')) !== null
             && preg_match('/^(\d{2})\.(\d{2})\.(\d{4})$/', $v, $m)) {
-            $raw['birth_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['birth_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
         if (($v = $this->fieldValue('Telefon')) !== null) {
             $digits = (string) preg_replace('/[^\d]/', '', $v);
@@ -144,7 +145,7 @@ class PlanBNetZeroAuftragParser implements DocumentTemplateParser
         // Beschriftung im Briefkopf und wird dadurch nie erfasst.
         if (($v = $this->fieldValue('E-Mail')) !== null
             && preg_match('/^[\w.+\-]+@[\w.\-]+\.\w{2,}$/u', $v)
-            && !str_contains(mb_strtolower($v), 'planbnetzero')) {
+            && ! str_contains(mb_strtolower($v), 'planbnetzero')) {
             $raw['email'] = mb_strtolower($v);
         }
 
@@ -198,7 +199,7 @@ class PlanBNetZeroAuftragParser implements DocumentTemplateParser
         // Uebernommen werden die BRUTTO-Preise (so zahlt der Kunde).
         foreach ($this->lines as $line) {
             $cells = $this->cells($line);
-            if (count($cells) < 5 || !$this->looksLikeName($cells[0])) {
+            if (count($cells) < 5 || ! $this->looksLikeName($cells[0])) {
                 continue;
             }
             $nums = array_slice($cells, 1, 4);
@@ -237,7 +238,7 @@ class PlanBNetZeroAuftragParser implements DocumentTemplateParser
         // die 14-Tage-Regel gilt nur fuer Stadtwerke-Wechsel).
         if (($v = $this->fieldValue('Datum')) !== null
             && preg_match('/^(\d{2})\.(\d{2})\.(\d{4})$/', $v, $m)) {
-            $raw['start_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['start_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
 
         return $this->validatedInsurance(array_filter($raw, fn ($v) => $v !== null && $v !== ''));
@@ -255,7 +256,7 @@ class PlanBNetZeroAuftragParser implements DocumentTemplateParser
     private function parseBank(string $full, array $person): array
     {
         $last = $person['last_name'] ?? null;
-        if ($last === null || !preg_match('/SEPA-Lastschriftmandat(.*)$/su', $full, $block)) {
+        if ($last === null || ! preg_match('/SEPA-Lastschriftmandat(.*)$/su', $full, $block)) {
             return [];
         }
 
@@ -355,7 +356,7 @@ class PlanBNetZeroAuftragParser implements DocumentTemplateParser
     private function looksLikeName(string $value): bool
     {
         return (bool) preg_match('/\p{L}{2,}/u', $value)
-            && !preg_match('/^\d/', $value)
+            && ! preg_match('/^\d/', $value)
             && mb_strlen($value) <= 80;
     }
 }

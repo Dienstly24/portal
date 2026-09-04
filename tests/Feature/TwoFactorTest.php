@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\EnsureTwoFactor;
+use App\Models\Customer;
 use App\Models\SystemSetting;
 use App\Models\User;
 use App\Services\TwoFactorService;
@@ -234,7 +236,7 @@ class TwoFactorTest extends TestCase
     {
         $customer = User::factory()->create(['role' => 'customer', 'email' => 'kunde@example.de']);
         $customer->forceFill(['portal_password_set_at' => now(), 'password_changed_at' => now()])->save();
-        \App\Models\Customer::create([
+        Customer::create([
             'user_id' => $customer->id,
             'customer_number' => '2600999',
             'birth_date' => '1990-01-01',
@@ -264,9 +266,9 @@ class TwoFactorTest extends TestCase
      */
     public function test_testing_environment_defaults_to_off(): void
     {
-        \App\Models\SystemSetting::where('key', 'two_factor_required')->delete();
+        SystemSetting::where('key', 'two_factor_required')->delete();
 
-        $this->assertSame('0', \App\Http\Middleware\EnsureTwoFactor::defaultSetting());
-        $this->assertFalse(\App\Http\Middleware\EnsureTwoFactor::enabled());
+        $this->assertSame('0', EnsureTwoFactor::defaultSetting());
+        $this->assertFalse(EnsureTwoFactor::enabled());
     }
 }

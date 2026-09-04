@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
@@ -24,11 +25,11 @@ class BirthdayMail extends Mailable implements ShouldQueue
         if ($this->lang === 'ar') {
             return new Envelope(subject: $this->isSelf
                 ? 'عيد ميلاد سعيد! 🎉'
-                : 'عيد ميلاد سعيد لـ ' . $this->birthdayName . ' 🎉');
+                : 'عيد ميلاد سعيد لـ '.$this->birthdayName.' 🎉');
         }
         return new Envelope(subject: $this->isSelf
             ? 'Herzlichen Glückwunsch zum Geburtstag! 🎉'
-            : 'Alles Gute zum Geburtstag für ' . $this->birthdayName . ' 🎉');
+            : 'Alles Gute zum Geburtstag für '.$this->birthdayName.' 🎉');
     }
 
     public function content(): Content

@@ -1,8 +1,16 @@
 <?php
+
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\Banner;
+use App\Models\BannerDailyStat;
+use App\Models\BannerSocialPost;
+use App\Models\User;
+use App\Services\Social\MetaInsightsService;
+use App\Services\Social\SocialFormatGenerator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -20,7 +28,7 @@ class BannerController extends Controller
     public function index()
     {
         $banners = Banner::with('socialPost.channels')->orderBy('sort_order')->orderBy('id')->get();
-        $creators = \App\Models\User::whereIn('id', $banners->pluck('created_by')->merge($banners->pluck('updated_by'))->filter()->unique())
+        $creators = User::whereIn('id', $banners->pluck('created_by')->merge($banners->pluck('updated_by'))->filter()->unique())
             ->pluck('name', 'id');
 
         return view('admin.banners', compact('banners', 'creators'));
@@ -36,7 +44,7 @@ class BannerController extends Controller
         $banners = Banner::orderByDesc('total_impressions')->get();
 
         $from = now()->subDays(29)->toDateString();
-        $daily = \App\Models\BannerDailyStat::where('date', '>=', $from)
+        $daily = BannerDailyStat::where('date', '>=', $from)
             ->selectRaw('date, SUM(impressions) as impressions, SUM(clicks) as clicks')
             ->groupBy('date')->orderBy('date')->get()->keyBy('date');
 
@@ -55,7 +63,7 @@ class BannerController extends Controller
 
         // Social-Publishing: Klicks je Plattform ueber die Tracking-Kurzlinks
         // (getrennt von den Portal-Klicks - andere Zielgruppe, eigene Zahlen).
-        $socialPosts = \App\Models\BannerSocialPost::with(['channels.publisher', 'banner'])->get()
+        $socialPosts = BannerSocialPost::with(['channels.publisher', 'banner'])->get()
             ->filter(fn ($p) => $p->banner && $p->channels->isNotEmpty())
             ->sortByDesc(fn ($p) => $p->totalClicks())
             ->values();
@@ -63,7 +71,7 @@ class BannerController extends Controller
         return view('admin.banner_stats', [
             'socialPosts' => $socialPosts,
             // Seiten-Ueberblick von Meta (nur Cache-Lesen, kein API-Aufruf).
-            'metaPage' => \Illuminate\Support\Facades\Cache::get(\App\Services\Social\MetaInsightsService::PAGE_CACHE_KEY),
+            'metaPage' => Cache::get(MetaInsightsService::PAGE_CACHE_KEY),
             'banners' => $banners,
             'labels' => $labels,
             'impressions' => $impressions,
@@ -101,7 +109,7 @@ class BannerController extends Controller
         // Neues Medium -> die Social-Bildformate passen nicht mehr dazu und
         // werden sofort neu erzeugt (nur wenn ein Social-Post existiert).
         if ($request->hasFile('media') && $banner->socialPost()->exists()) {
-            app(\App\Services\Social\SocialFormatGenerator::class)->generate($banner);
+            app(SocialFormatGenerator::class)->generate($banner);
         }
 
         return back()->with('success', 'Banner aktualisiert – Änderungen sind sofort wirksam.');
@@ -109,7 +117,7 @@ class BannerController extends Controller
 
     public function toggle(Banner $banner)
     {
-        $banner->update(['is_active' => !$banner->is_active, 'is_draft' => false, 'updated_by' => auth()->id()]);
+        $banner->update(['is_active' => ! $banner->is_active, 'is_draft' => false, 'updated_by' => auth()->id()]);
         return back()->with('success', $banner->is_active ? 'Banner aktiviert.' : 'Banner deaktiviert.');
     }
 
@@ -140,7 +148,7 @@ class BannerController extends Controller
     public function resetStats(Banner $banner)
     {
         $banner->resetStats();
-        \App\Models\ActivityLog::create([
+        ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => 'banner_stats_reset',
             'entity_type' => 'banner',
@@ -168,12 +176,12 @@ class BannerController extends Controller
         if ($publishedChannels > 0) {
             return back()->with('error',
                 'Dieser Banner hat veroeffentlichte Social-Beitraege mit aktiven Tracking-Links. '
-                . 'Bitte deaktivieren statt loeschen - sonst gehen die Kurzlinks und Klickzahlen der Live-Beitraege verloren.');
+                .'Bitte deaktivieren statt loeschen - sonst gehen die Kurzlinks und Klickzahlen der Live-Beitraege verloren.');
         }
 
         try { Storage::disk('public')->delete($banner->media_path); } catch (\Throwable $e) {}
         // Social-Formate mit wegraeumen (DB-Zeilen fallen per FK-Kaskade).
-        app(\App\Services\Social\SocialFormatGenerator::class)->delete($banner);
+        app(SocialFormatGenerator::class)->delete($banner);
         $banner->delete();
         return back()->with('success', 'Banner gelöscht.');
     }
@@ -183,7 +191,7 @@ class BannerController extends Controller
         $data = $request->validate([
             'title' => 'required|string|max:150',
             // Beliebige Bildmaße; GIF und Videos zusätzlich erlaubt.
-            'media' => ($isCreate ? 'required' : 'nullable') . '|file|mimes:jpg,jpeg,png,webp,gif,mp4,webm|max:20480',
+            'media' => ($isCreate ? 'required' : 'nullable').'|file|mimes:jpg,jpeg,png,webp,gif,mp4,webm|max:20480',
             // Nur http(s)-URLs oder interne Pfade (fuehrendes / aber NICHT //)
             // zulassen - blockt javascript:/data: UND protokoll-relative
             // //fremdhost-Redirects (Audit SEC-7 + Re-Audit).
@@ -219,7 +227,7 @@ class BannerController extends Controller
         if (in_array($ext, ['jpg', 'jpeg', 'png']) && function_exists('imagewebp')) {
             $optimized = $this->toWebp($file->getPathname(), $ext);
             if ($optimized !== null) {
-                $name = 'banners/' . uniqid('banner_') . '.webp';
+                $name = 'banners/'.uniqid('banner_').'.webp';
                 Storage::disk('public')->put($name, $optimized);
                 $data['media_path'] = $name;
                 return 'image';
@@ -235,7 +243,7 @@ class BannerController extends Controller
     {
         try {
             $img = $ext === 'png' ? @imagecreatefrompng($path) : @imagecreatefromjpeg($path);
-            if (!$img) {
+            if (! $img) {
                 return null;
             }
 

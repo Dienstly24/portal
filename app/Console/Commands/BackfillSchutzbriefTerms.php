@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Console\Commands;
 
 use App\Models\Contract;
@@ -46,12 +47,12 @@ class BackfillSchutzbriefTerms extends Command
                 ? Carbon::parse($contract->end_date)->startOfDay()
                 : $start->copy()->addYear();
 
-            $this->line('- ' . ($contract->customer?->customer_number ?? '?')
-                . ' (' . ($contract->insurer ?? 'ohne Anbieter') . ')'
-                . ' Beginn ' . $start->toDateString()
-                . ' / Verlaengerung ' . $end->toDateString());
+            $this->line('- '.($contract->customer?->customer_number ?? '?')
+                .' ('.($contract->insurer ?? 'ohne Anbieter').')'
+                .' Beginn '.$start->toDateString()
+                .' / Verlaengerung '.$end->toDateString());
 
-            if (!$dry) {
+            if (! $dry) {
                 // Nur leere Felder fuellen - Bestand nie ueberschreiben.
                 if ($contract->start_date === null) {
                     $contract->start_date = $start->toDateString();
@@ -64,7 +65,7 @@ class BackfillSchutzbriefTerms extends Command
             $updated++;
         }
 
-        $this->info($updated . ' Schutzbrief-Vertrag/-Vertraege ' . ($dry ? 'faellig (dry-run)' : 'ergaenzt') . '.');
+        $this->info($updated.' Schutzbrief-Vertrag/-Vertraege '.($dry ? 'faellig (dry-run)' : 'ergaenzt').'.');
         return self::SUCCESS;
     }
 }

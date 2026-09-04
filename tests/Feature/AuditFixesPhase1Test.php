@@ -40,7 +40,7 @@ class AuditFixesPhase1Test extends TestCase
     private function customer(string $name = 'Erika Musterfrau', ?string $birthDate = '1985-03-15', string $email = 'erika@kunde.de'): Customer
     {
         $user = User::factory()->create(['name' => $name, 'role' => 'customer', 'email' => $email]);
-        return Customer::create(['user_id' => $user->id, 'customer_number' => 'K-' . uniqid(), 'birth_date' => $birthDate]);
+        return Customer::create(['user_id' => $user->id, 'customer_number' => 'K-'.uniqid(), 'birth_date' => $birthDate]);
     }
 
     private function account(): EmailAccount
@@ -72,7 +72,7 @@ class AuditFixesPhase1Test extends TestCase
     {
         // E-Mail 20 + Name 30 + Geburtsdatum 40 = 90 -> suggested (70-90)
         return new MailboxMessageData(
-            uid: 'INBOX:' . uniqid(),
+            uid: 'INBOX:'.uniqid(),
             fromAddress: 'erika@kunde.de',
             fromName: 'Erika Musterfrau',
             toAddress: 'info@dienstly24.de',
@@ -271,7 +271,7 @@ class AuditFixesPhase1Test extends TestCase
         $mail = new MailboxMessageData(
             uid: 'INBOX:t1b', fromAddress: 'service@versicherer-xy.de', fromName: 'Versicherer XY',
             toAddress: 'info@dienstly24.de', subject: 'Unterlagen',
-            bodyText: "Kunde: Ganz Anderer Name", bodyHtml: null, receivedAt: now(),
+            bodyText: 'Kunde: Ganz Anderer Name', bodyHtml: null, receivedAt: now(),
         );
         $this->sync([$mail])->syncAccount($this->account());
 

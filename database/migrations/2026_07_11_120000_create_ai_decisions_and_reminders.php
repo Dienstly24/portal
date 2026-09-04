@@ -12,8 +12,7 @@ use Illuminate\Support\Facades\Schema;
  * Modellausgabe landet hier als 'suggested' und wird erst durch eine
  * Mitarbeiter-Entscheidung wirksam - nie direkt.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('ai_decisions', function (Blueprint $table) {

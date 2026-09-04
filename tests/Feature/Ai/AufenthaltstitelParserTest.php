@@ -38,7 +38,7 @@ class AufenthaltstitelParserTest extends TestCase
 
     public function test_parses_single_residence_permit(): void
     {
-        $r = (new AufenthaltstitelParser())->parse($this->singleCardOcr());
+        $r = (new AufenthaltstitelParser)->parse($this->singleCardOcr());
 
         $this->assertNotNull($r);
         $this->assertSame('aufenthaltstitel', $r['type']);
@@ -64,7 +64,7 @@ class AufenthaltstitelParserTest extends TestCase
             ['MAHMOOD', 'Baraka Daham Mahmood', 'F          IRQ', '30 11 1992'],
             $this->singleCardOcr()
         );
-        $r = (new AufenthaltstitelParser())->parse($ocr);
+        $r = (new AufenthaltstitelParser)->parse($ocr);
 
         $this->assertNotNull($r);
         $this->assertSame('Mahmood', $r['data']['person']['last_name']);
@@ -76,12 +76,12 @@ class AufenthaltstitelParserTest extends TestCase
     public function test_multi_card_family_photo_is_left_to_ai(): void
     {
         // Zwei Karten im selben OCR-Text -> null (KI-Vision buendelt die Familie).
-        $twoCards = $this->singleCardOcr() . "\n" . str_replace(
+        $twoCards = $this->singleCardOcr()."\n".str_replace(
             ['MUSTAFA', 'Mustafa', '28 03 1987'],
             ['MAHMOOD', 'Baraka', '30 11 1992'],
             $this->singleCardOcr()
         );
-        $this->assertNull((new AufenthaltstitelParser())->parse($twoCards));
+        $this->assertNull((new AufenthaltstitelParser)->parse($twoCards));
     }
 
     /**
@@ -113,7 +113,7 @@ class AufenthaltstitelParserTest extends TestCase
 
     public function test_parses_back_side_via_mrz(): void
     {
-        $r = (new AufenthaltstitelParser())->parse($this->backSideOcr());
+        $r = (new AufenthaltstitelParser)->parse($this->backSideOcr());
 
         $this->assertNotNull($r);
         $this->assertSame('aufenthaltstitel', $r['type']);
@@ -155,7 +155,7 @@ class AufenthaltstitelParserTest extends TestCase
             ],
             $this->backSideOcr()
         );
-        $r = (new AufenthaltstitelParser())->parse($ocr);
+        $r = (new AufenthaltstitelParser)->parse($ocr);
 
         $this->assertNotNull($r);
         $this->assertSame('Deir Ezzor', $r['data']['person']['birth_place']);
@@ -175,7 +175,7 @@ class AufenthaltstitelParserTest extends TestCase
             ],
             $this->backSideOcr()
         );
-        $r = (new AufenthaltstitelParser())->parse($ocr);
+        $r = (new AufenthaltstitelParser)->parse($ocr);
 
         $this->assertNotNull($r);
         $this->assertSame('Deir Ezzor', $r['data']['person']['birth_place']);
@@ -185,7 +185,7 @@ class AufenthaltstitelParserTest extends TestCase
     {
         // Nur Anmerkungs-Text, kein Ort -> Feld bleibt leer statt falsch.
         $ocr = str_replace('DEIR EZZOR', '', $this->backSideOcr());
-        $r = (new AufenthaltstitelParser())->parse($ocr);
+        $r = (new AufenthaltstitelParser)->parse($ocr);
 
         $this->assertNotNull($r);
         $this->assertArrayNotHasKey('birth_place', $r['data']['person']);
@@ -196,7 +196,7 @@ class AufenthaltstitelParserTest extends TestCase
         // Geburtsdatum-Pruefziffer kaputt (OCR-Zahlendreher) -> das Datum
         // wird verworfen, die uebrigen Felder bleiben.
         $ocr = str_replace('0503235M', '0503234M', $this->backSideOcr());
-        $r = (new AufenthaltstitelParser())->parse($ocr);
+        $r = (new AufenthaltstitelParser)->parse($ocr);
 
         $this->assertNotNull($r);
         $this->assertArrayNotHasKey('birth_date', $r['data']['person']);
@@ -206,19 +206,19 @@ class AufenthaltstitelParserTest extends TestCase
     public function test_two_back_sides_are_left_to_ai(): void
     {
         // Zwei Karten-Rueckseiten in einem Foto -> null (KI ordnet zu).
-        $two = $this->backSideOcr() . "\n" . str_replace(
+        $two = $this->backSideOcr()."\n".str_replace(
             ['ALALI<<MOHAMMAD', '0503235M'],
             ['MAHMOOD<<BARAKA', '9211305F'],
             $this->backSideOcr()
         );
-        $this->assertNull((new AufenthaltstitelParser())->parse($two));
+        $this->assertNull((new AufenthaltstitelParser)->parse($two));
     }
 
     public function test_ignores_unrelated_documents(): void
     {
-        $this->assertNull((new AufenthaltstitelParser())->parse('Irgendein anderes Dokument'));
+        $this->assertNull((new AufenthaltstitelParser)->parse('Irgendein anderes Dokument'));
         // Personalausweis ist ein eigener Typ, nicht dieser Parser.
-        $this->assertNull((new AufenthaltstitelParser())->parse("BUNDESREPUBLIK DEUTSCHLAND\nPERSONALAUSWEIS\nMuster"));
+        $this->assertNull((new AufenthaltstitelParser)->parse("BUNDESREPUBLIK DEUTSCHLAND\nPERSONALAUSWEIS\nMuster"));
     }
 
     public function test_type_is_registered_and_heuristic_classifies_it(): void
@@ -228,7 +228,7 @@ class AufenthaltstitelParserTest extends TestCase
         $this->assertSame('identity', Document::AI_TYPES['aufenthaltstitel']['category']);
 
         // Auch der kostenlose OCR-Heuristik-Fallback erkennt den Typ.
-        $r = (new HeuristicDocumentClassifier())->classify("D AUFENTHALTSTITEL\nAUFENTHALTSERLAUBNIS\n25 ABS.3");
+        $r = (new HeuristicDocumentClassifier)->classify("D AUFENTHALTSTITEL\nAUFENTHALTSERLAUBNIS\n25 ABS.3");
         $this->assertNotNull($r);
         $this->assertSame('aufenthaltstitel', $r['type']);
     }

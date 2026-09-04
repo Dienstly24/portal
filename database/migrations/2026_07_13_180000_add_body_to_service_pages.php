@@ -10,8 +10,7 @@ use Illuminate\Support\Facades\Schema;
  * Aufzählungspunkt, Leerzeile = neuer Absatz. Über die Adminoberflaeche
  * pflegbar.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('service_pages', function (Blueprint $table) {

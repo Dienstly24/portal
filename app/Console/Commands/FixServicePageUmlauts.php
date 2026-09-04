@@ -83,12 +83,12 @@ class FixServicePageUmlauts extends Command
                 continue;
             }
             $changedPages++;
-            $this->line(($write ? 'Repariert' : 'Wuerde reparieren') . ': ' . $page->slug);
+            $this->line(($write ? 'Repariert' : 'Wuerde reparieren').': '.$page->slug);
             foreach ($changes as $field => [$old, $new]) {
                 if ($field !== 'faq' && $field !== 'fields') {
-                    $this->line('  - ' . $field . ': "' . mb_substr((string) $old, 0, 70) . '" -> "' . mb_substr((string) $new, 0, 70) . '"');
+                    $this->line('  - '.$field.': "'.mb_substr((string) $old, 0, 70).'" -> "'.mb_substr((string) $new, 0, 70).'"');
                 } else {
-                    $this->line('  - ' . $field . ' (JSON) repariert');
+                    $this->line('  - '.$field.' (JSON) repariert');
                 }
             }
 
@@ -102,7 +102,7 @@ class FixServicePageUmlauts extends Command
         } elseif (! $write) {
             $this->warn('Vorschau - nichts gespeichert. Mit --write anwenden.');
         } else {
-            $this->info($changedPages . ' Seite(n) repariert.');
+            $this->info($changedPages.' Seite(n) repariert.');
         }
 
         return self::SUCCESS;

@@ -15,8 +15,7 @@ use Illuminate\Support\Facades\Schema;
  * Von Hand angelegte Eintraege bleiben ohne Quelle (null) - sie gehoeren
  * dem Menschen und werden von keinem Befehl angefasst.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('ai_knowledge_entries', function (Blueprint $table) {

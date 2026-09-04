@@ -1,9 +1,11 @@
 <?php
+
 namespace App\Services\CommissionImport;
 
 use App\Models\Contract;
 use App\Models\ContractCommission;
 use App\Services\Vermittler\VermittlerReference;
+use Illuminate\Support\Collection;
 
 /**
  * Rechnung -> Vertrag -> Provision (Vorbereitung, Betreiber-Auftrag
@@ -43,7 +45,7 @@ class InvoiceCommissionMatcher
             'order_number' => '(?:auftrags?[-\s]?nr\.?|auftragsnummer)',
         ];
         foreach ($labelled as $field => $label) {
-            if (preg_match_all('/' . $label . '\s*[:.]?\s*([A-Za-z0-9][A-Za-z0-9\-\/]{4,40})/iu', $text, $matches)) {
+            if (preg_match_all('/'.$label.'\s*[:.]?\s*([A-Za-z0-9][A-Za-z0-9\-\/]{4,40})/iu', $text, $matches)) {
                 foreach ($matches[1] as $value) {
                     $found[$field][] = trim($value, '-/');
                 }
@@ -65,13 +67,13 @@ class InvoiceCommissionMatcher
      * Vorschlag zu einer Kennung: Vertrag, Kunde und die Provisionen, die
      * noch auf Geld warten.
      *
-     * @return array{contract:?Contract,commissions:\Illuminate\Support\Collection<int,ContractCommission>,note:?string}
+     * @return array{contract:?Contract,commissions:Collection<int,ContractCommission>,note:?string}
      */
     public function lookup(string $identifier): array
     {
         $key = VermittlerReference::key($identifier);
         if ($key === null) {
-            return ['contract' => null, 'commissions' => collect(), 'note' => 'Die Kennung ist zu kurz für eine Suche (mindestens ' . VermittlerReference::MIN_LENGTH . ' Zeichen).'];
+            return ['contract' => null, 'commissions' => collect(), 'note' => 'Die Kennung ist zu kurz für eine Suche (mindestens '.VermittlerReference::MIN_LENGTH.' Zeichen).'];
         }
 
         $matcher = app(CommissionMatcher::class);

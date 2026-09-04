@@ -1,6 +1,10 @@
 <?php
+
 namespace App\Models;
 
+use App\Services\CommissionImport\ColumnMap;
+use App\Services\CommissionImport\CommissionSourceProfile;
+use App\Services\Provisionsmanagement\PoolRegistry;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -51,30 +55,30 @@ class CommissionImport extends Model
     /** Aus welchem Pool stammt diese Datei? (Klartext, nie nur der Schluessel) */
     public function poolLabel(): string
     {
-        return app(\App\Services\Provisionsmanagement\PoolRegistry::class)->label($this->pool);
+        return app(PoolRegistry::class)->label($this->pool);
     }
 
     /** Ist die Datei eine Abrechnung (mit Betraegen) oder eine Auftragsliste? */
     public function isAbrechnung(): bool
     {
-        return $this->mode !== \App\Services\CommissionImport\ColumnMap::MODE_AUFTRAGSLISTE;
+        return $this->mode !== ColumnMap::MODE_AUFTRAGSLISTE;
     }
 
     /** Klartext der erkannten Quelle ("Maklerpool-Abrechnung"). */
     public function providerLabel(): string
     {
-        return \App\Services\CommissionImport\CommissionSourceProfile::label($this->provider);
+        return CommissionSourceProfile::label($this->provider);
     }
 
     public function providerHint(): ?string
     {
-        return \App\Services\CommissionImport\CommissionSourceProfile::hint($this->provider);
+        return CommissionSourceProfile::hint($this->provider);
     }
 
     public function modeLabel(): string
     {
-        return \App\Services\CommissionImport\ColumnMap::MODES[$this->mode]
-            ?? \App\Services\CommissionImport\ColumnMap::MODES[\App\Services\CommissionImport\ColumnMap::MODE_ABRECHNUNG];
+        return ColumnMap::MODES[$this->mode]
+            ?? ColumnMap::MODES[ColumnMap::MODE_ABRECHNUNG];
     }
 
     /** Anzahl der Zeilen, die uebernommen wuerden (neu + aktualisiert). */

@@ -15,8 +15,7 @@ use Illuminate\Support\Facades\Schema;
  * Partner-Portal-Zugriff (Datenfreigabe). Werber-Attribution fuer die
  * Provision darf KEINE Datensicht eroeffnen (DSGVO).
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('customers', function (Blueprint $table) {

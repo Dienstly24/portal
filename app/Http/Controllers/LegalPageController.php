@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Admin\UpdateSettingsRequest;
 use App\Models\SystemSetting;
+use App\Support\WebsiteHosts;
 
 /**
  * Öffentliche Rechts-/Infoseiten: Impressum, AGB, Datenschutzerklärung,
@@ -49,7 +50,7 @@ class LegalPageController extends Controller
         // IMMER lokal - nie extern umleiten, sonst entsteht mit einer auf
         // die eigene Domain zeigenden "Rechtsseiten-Quelle" eine
         // Redirect-Schleife (seit dem Merge IST diese App die Website).
-        if (\App\Support\WebsiteHosts::isWebsiteRequest(request())) {
+        if (WebsiteHosts::isWebsiteRequest(request())) {
             if ($page === 'kontakt') {
                 return redirect('/#kontakt');
             }
@@ -79,7 +80,7 @@ class LegalPageController extends Controller
                 $suffix = '';
             }
 
-            return redirect()->away($base . '/' . $page . $suffix);
+            return redirect()->away($base.'/'.$page.$suffix);
         }
 
         return view('legal.page', [

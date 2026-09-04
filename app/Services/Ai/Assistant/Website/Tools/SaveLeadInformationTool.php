@@ -1,10 +1,10 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Website\Tools;
 
 use App\Models\AiConversationEvent;
 use App\Services\Ai\Assistant\Sales\ConversationJournal;
 use App\Services\Ai\Assistant\Sales\ConversationState;
-use App\Services\Ai\Assistant\Sales\RequirementProfile;
 use App\Services\Ai\Assistant\Website\LeadContext;
 use App\Services\Ai\Assistant\Website\LeadTool;
 
@@ -44,9 +44,9 @@ class SaveLeadInformationTool implements LeadTool
     public function description(): string
     {
         return 'Speichere, was der Interessent genannt hat: name, email, phone, '
-            . 'installation_address, situation, current_provider, desired_speed, '
-            . 'desired_start, service, note. Frage NIE nach Bankverbindung, '
-            . 'Geburtsdatum oder Ausweisdaten - das erhebt spaeter ein Mitarbeiter.';
+            .'installation_address, situation, current_provider, desired_speed, '
+            .'desired_start, service, note. Frage NIE nach Bankverbindung, '
+            .'Geburtsdatum oder Ausweisdaten - das erhebt spaeter ein Mitarbeiter.';
     }
 
     public function parameters(): array
@@ -67,7 +67,7 @@ class SaveLeadInformationTool implements LeadTool
     public function run(array $arguments, LeadContext $context): array
     {
         $angaben = $arguments['angaben'] ?? [];
-        if (!is_array($angaben) || $angaben === []) {
+        if (! is_array($angaben) || $angaben === []) {
             return ['fehler' => 'Keine Angaben uebergeben.'];
         }
 
@@ -77,7 +77,7 @@ class SaveLeadInformationTool implements LeadTool
 
         foreach ($angaben as $key => $wert) {
             $key = (string) $key;
-            if (!isset(self::ALLOWED[$key]) || !is_scalar($wert) || trim((string) $wert) === '') {
+            if (! isset(self::ALLOWED[$key]) || ! is_scalar($wert) || trim((string) $wert) === '') {
                 continue;
             }
 
@@ -92,7 +92,7 @@ class SaveLeadInformationTool implements LeadTool
         }
 
         if ($uebernommen === []) {
-            return ['fehler' => 'Keine gueltigen Angaben. Erlaubt: ' . implode(', ', array_keys(self::ALLOWED))];
+            return ['fehler' => 'Keine gueltigen Angaben. Erlaubt: '.implode(', ', array_keys(self::ALLOWED))];
         }
 
         $lead->remember($uebernommen);

@@ -12,8 +12,7 @@ use Illuminate\Support\Facades\Schema;
  * fuer Mitarbeiter erkennbar sein) und ist rein informativ - keine
  * Constraint auf andere Tabellen/Spalten.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('documents', function (Blueprint $table) {

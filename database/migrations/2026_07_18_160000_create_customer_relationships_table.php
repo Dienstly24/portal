@@ -14,8 +14,7 @@ use Illuminate\Support\Facades\Schema;
  * customer_b_id), damit es genau einmal existiert - unabhaengig davon, von
  * welcher Seite es markiert wurde.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('customer_relationships', function (Blueprint $table) {

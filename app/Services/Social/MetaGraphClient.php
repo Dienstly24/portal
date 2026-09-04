@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Social;
 
 use Illuminate\Support\Facades\Cache;
@@ -54,7 +55,7 @@ class MetaGraphClient
 
         $pageId = (string) config('services.meta.page_id');
 
-        return (string) Cache::remember('meta_page_token_' . $pageId, now()->addHours(12), function () use ($pageId) {
+        return (string) Cache::remember('meta_page_token_'.$pageId, now()->addHours(12), function () use ($pageId) {
             $resp = $this->get($pageId, ['fields' => 'access_token']);
             $token = (string) ($resp['access_token'] ?? '');
             if ($token === '') {
@@ -68,7 +69,7 @@ class MetaGraphClient
     private function request(string $method, string $path, array $params, ?string $token): array
     {
         $url = 'https://graph.facebook.com/'
-            . config('services.meta.graph_version', 'v23.0') . '/' . ltrim($path, '/');
+            .config('services.meta.graph_version', 'v23.0').'/'.ltrim($path, '/');
         $client = Http::timeout(25)->withToken($token ?? (string) config('services.meta.token'));
 
         try {
@@ -78,13 +79,13 @@ class MetaGraphClient
                 default => $client->asForm()->post($url, $params),
             };
         } catch (\Throwable $e) {
-            throw new \RuntimeException('Meta-API nicht erreichbar: ' . $e->getMessage());
+            throw new \RuntimeException('Meta-API nicht erreichbar: '.$e->getMessage());
         }
 
         $json = $resp->json() ?? [];
         if ($resp->failed() || isset($json['error'])) {
-            $msg = $json['error']['message'] ?? ('HTTP ' . $resp->status());
-            throw new \RuntimeException('Meta-API: ' . $msg);
+            $msg = $json['error']['message'] ?? ('HTTP '.$resp->status());
+            throw new \RuntimeException('Meta-API: '.$msg);
         }
 
         return $json;

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Console\Commands;
 
 use App\Models\ActivityLog;
@@ -32,7 +33,7 @@ class SendPortalInvitations extends Command
 
     public function handle(PortalAccessService $portal): int
     {
-        if (!$this->option('dry-run') && !SystemSetting::get('portal_invite_auto_enabled')) {
+        if (! $this->option('dry-run') && ! SystemSetting::get('portal_invite_auto_enabled')) {
             $this->warn('portal_invite_auto_enabled ist AUS - Batch uebersprungen. Zum Aktivieren: SystemSetting::set(\'portal_invite_auto_enabled\', \'1\').');
             return self::SUCCESS;
         }
@@ -79,7 +80,7 @@ class SendPortalInvitations extends Command
         $ohneGeburtsdatum = 0; // 'setlink'-Versand: kein Startpasswort moeglich
         foreach ($candidates as $user) {
             $customer = $user->customer;
-            if ($customer === null || !$user->hasRealEmail()) {
+            if ($customer === null || ! $user->hasRealEmail()) {
                 $skipped++;
                 continue;
             }
@@ -95,7 +96,7 @@ class SendPortalInvitations extends Command
                 }
             } catch (\Throwable $e) {
                 $skipped++;
-                Log::warning('Portal-Einladung fehlgeschlagen (' . $user->email . '): ' . $e->getMessage());
+                Log::warning('Portal-Einladung fehlgeschlagen ('.$user->email.'): '.$e->getMessage());
             }
         }
 
@@ -109,7 +110,7 @@ class SendPortalInvitations extends Command
             ]);
         }
 
-        $this->info("$sent Einladung(en) versendet, $skipped uebersprungen (Budget $cap, heute gesamt " . ($sentToday + $sent) . ').');
+        $this->info("$sent Einladung(en) versendet, $skipped uebersprungen (Budget $cap, heute gesamt ".($sentToday + $sent).').');
         if ($ohneGeburtsdatum > 0) {
             $this->warn("$ohneGeburtsdatum davon OHNE Geburtsdatum (nur Passwort-Link statt Startpasswort) - Geburtsdaten ergaenzen, damit die Startpasswort-Regel greift.");
         }

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Mail\RegistrationVerificationMail;
 use App\Models\Customer;
 use App\Models\PendingRegistration;
 use App\Models\User;
@@ -45,7 +46,7 @@ class RegistrationTest extends TestCase
             'first_name' => 'Test',
         ]);
 
-        Mail::assertSent(\App\Mail\RegistrationVerificationMail::class);
+        Mail::assertSent(RegistrationVerificationMail::class);
     }
 
     /** Schritt 2 legt Konto, Kundenakte UND Kundennummer an. */
@@ -181,7 +182,7 @@ class RegistrationTest extends TestCase
         Mail::fake();
         $this->post('/register', $this->gueltigeAngaben());
 
-        Mail::assertSent(\App\Mail\RegistrationVerificationMail::class, function ($mail) use (&$token) {
+        Mail::assertSent(RegistrationVerificationMail::class, function ($mail) use (&$token) {
             if (preg_match('#/register/bestaetigen/([A-Za-z0-9]+)#', $mail->verifyUrl, $m)) {
                 $token = $m[1];
             }

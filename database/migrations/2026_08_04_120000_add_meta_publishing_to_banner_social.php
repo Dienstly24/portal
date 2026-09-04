@@ -14,8 +14,7 @@ use Illuminate\Support\Facades\Schema;
  *   (nie-doppelt-posten-Schutz); danach ist Erneut-Versuchen eine bewusste
  *   Mitarbeiter-Aktion.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('banner_social_posts', function (Blueprint $table) {

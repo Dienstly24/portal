@@ -1,4 +1,5 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -55,10 +56,10 @@ return new class extends Migration {
 
         // Geschlecht (Punkt 3) + Kontoinhaber für Bankänderungen (Punkt 6)
         Schema::table('customers', function (Blueprint $table) {
-            if (!Schema::hasColumn('customers', 'gender')) {
+            if (! Schema::hasColumn('customers', 'gender')) {
                 $table->string('gender', 10)->nullable(); // male|female|diverse
             }
-            if (!Schema::hasColumn('customers', 'account_holder')) {
+            if (! Schema::hasColumn('customers', 'account_holder')) {
                 $table->string('account_holder')->nullable();
             }
         });

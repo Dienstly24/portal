@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai;
 
 /**
@@ -35,7 +36,7 @@ class KrankenkasseType
             return null;
         }
         // Mit Rand-Leerzeichen, damit kurze Marker nur als ganzes Wort greifen.
-        $c = ' ' . mb_strtolower(trim($company)) . ' ';
+        $c = ' '.mb_strtolower(trim($company)).' ';
 
         // GKV zuerst: viele Betriebskrankenkassen tragen einen Firmennamen, der
         // auch privat vorkommt (z.B. "... BKK") - "bkk" gewinnt dann korrekt.

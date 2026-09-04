@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Security;
 
+use App\Http\Middleware\SecurityHeaders;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -88,7 +89,7 @@ class ContentSecurityPolicyTest extends TestCase
         $this->assertNotEmpty($kopf, 'Kein Nonce im Header.');
 
         $this->assertStringContainsString(
-            'nonce="' . $kopf[1] . '"',
+            'nonce="'.$kopf[1].'"',
             $response->getContent(),
             'Der Nonce im HTML weicht vom Header ab - dann blockiert der Browser jedes eingebettete Skript.'
         );
@@ -137,8 +138,8 @@ class ContentSecurityPolicyTest extends TestCase
         );
 
         $attribut = '/\son(click|change|input|submit|load|error|focus|blur|keyup|keydown|keypress'
-            . '|mouseover|mouseout|mouseenter|mouseleave|dblclick|contextmenu|paste|drop'
-            . '|dragover|dragleave|dragenter|toggle|wheel|scroll|reset|select|search)\s*=\s*["\']/i';
+            .'|mouseover|mouseout|mouseenter|mouseleave|dblclick|contextmenu|paste|drop'
+            .'|dragover|dragleave|dragenter|toggle|wheel|scroll|reset|select|search)\s*=\s*["\']/i';
 
         foreach ($iterator as $file) {
             if (! $file->isFile() || ! str_ends_with($file->getFilename(), '.blade.php')) {
@@ -151,13 +152,13 @@ class ContentSecurityPolicyTest extends TestCase
             $inhalt = preg_replace('/\{\{--.*?--\}\}/s', '', $inhalt);
 
             if (preg_match($attribut, $inhalt)) {
-                $treffer[] = str_replace(resource_path('views') . '/', '', $file->getPathname());
+                $treffer[] = str_replace(resource_path('views').'/', '', $file->getPathname());
             }
         }
 
         $this->assertSame([], $treffer,
             'Diese Vorlagen benutzen wieder Inline-Handler (die CSP blockiert sie): '
-            . implode(', ', $treffer));
+            .implode(', ', $treffer));
     }
 
     /** Jedes eingebettete Skript traegt einen Nonce. */
@@ -181,7 +182,7 @@ class ContentSecurityPolicyTest extends TestCase
                     continue;   // externes Skript, braucht keinen Nonce
                 }
                 if (! str_contains($attribute, '@cspNonce') && ! str_contains($attribute, 'nonce=')) {
-                    $treffer[] = str_replace(resource_path('views') . '/', '', $file->getPathname());
+                    $treffer[] = str_replace(resource_path('views').'/', '', $file->getPathname());
                     break;
                 }
             }
@@ -189,7 +190,7 @@ class ContentSecurityPolicyTest extends TestCase
 
         $this->assertSame([], $treffer,
             'Diese Vorlagen haben ein eingebettetes Skript ohne @cspNonce - es wuerde nicht ausgefuehrt: '
-            . implode(', ', $treffer));
+            .implode(', ', $treffer));
     }
 
     /**
@@ -208,7 +209,7 @@ class ContentSecurityPolicyTest extends TestCase
             '/\[hidden\]\s*\{[^}]*display:\s*none\s*!important/i',
             $css,
             'Die Regel [hidden]{display:none !important} fehlt - Elemente mit '
-            . 'eigener display-Klasse liessen sich dann nicht mehr verbergen.'
+            .'eigener display-Klasse liessen sich dann nicht mehr verbergen.'
         );
     }
 
@@ -225,7 +226,7 @@ class ContentSecurityPolicyTest extends TestCase
 
     private function policy(): string
     {
-        return app(\App\Http\Middleware\SecurityHeaders::class)->policy();
+        return app(SecurityHeaders::class)->policy();
     }
 
     private function scriptSrc(): string

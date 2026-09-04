@@ -48,7 +48,7 @@ class MeldebestaetigungParserTest extends TestCase
 
     public function test_parses_registration_confirmation(): void
     {
-        $r = (new MeldebestaetigungParser())->parse($this->letterText());
+        $r = (new MeldebestaetigungParser)->parse($this->letterText());
 
         $this->assertNotNull($r);
         $this->assertSame('meldebescheinigung', $r['type']);
@@ -86,7 +86,7 @@ class MeldebestaetigungParserTest extends TestCase
             'Geburtsdatum:         14.07.1994',
         ]);
 
-        $r = (new MeldebestaetigungParser())->parse($text);
+        $r = (new MeldebestaetigungParser)->parse($text);
 
         $this->assertNotNull($r);
         $this->assertSame('Jana Maria', $r['data']['person']['first_name']);
@@ -98,7 +98,7 @@ class MeldebestaetigungParserTest extends TestCase
         $this->assertArrayHasKey('meldebescheinigung', Document::AI_TYPES);
         $this->assertSame('identity', Document::AI_TYPES['meldebescheinigung']['category']);
 
-        $r = (new HeuristicDocumentClassifier())->classify("Stadt Rendsburg\nMeldebestaetigung\nFamilienname: Muster");
+        $r = (new HeuristicDocumentClassifier)->classify("Stadt Rendsburg\nMeldebestaetigung\nFamilienname: Muster");
         $this->assertNotNull($r);
         $this->assertSame('meldebescheinigung', $r['type']);
     }
@@ -117,7 +117,7 @@ class MeldebestaetigungParserTest extends TestCase
             'Im Biegel 13',
             '71522 Backnang',
             'Stadt Backnang, Am Rathaus 1, 71522 Backnang',
-            $vorname . ' ' . $nachname,
+            $vorname.' '.$nachname,
             'Gartenstraße 105',
             '71522 Backnang',
             'Sachbearbeitung: Lydia Klass',
@@ -125,9 +125,9 @@ class MeldebestaetigungParserTest extends TestCase
             'E-Mail: l.klass@backnang.de',
             'Datum: 04.08.2026',
             'M e l d e b e s t ä t i g u n g (gemäß § 24 Abs. 2 BMG)',
-            'Familienname          ' . $nachname,
-            'Vorname(n)            ' . $vorname,
-            'Geburtsdatum          ' . $geburt,
+            'Familienname          '.$nachname,
+            'Vorname(n)            '.$vorname,
+            'Geburtsdatum          '.$geburt,
             'Angemeldete Wohnung',
             'Wohnungsstatus        alleinige Wohnung',
             'Einzugsdatum          01.08.2026',
@@ -140,7 +140,7 @@ class MeldebestaetigungParserTest extends TestCase
 
     public function test_parses_column_layout_with_spaced_heading(): void
     {
-        $r = (new MeldebestaetigungParser())->parse($this->backnangText());
+        $r = (new MeldebestaetigungParser)->parse($this->backnangText());
 
         $this->assertNotNull($r);
         $p = $r['data']['person'];
@@ -193,7 +193,7 @@ class MeldebestaetigungParserTest extends TestCase
             'Backnang, 04.08.2026',
         ]);
 
-        $r = (new MeldebestaetigungParser())->parse($text);
+        $r = (new MeldebestaetigungParser)->parse($text);
 
         $this->assertNotNull($r);
         $p = $r['data']['person'];
@@ -241,7 +241,7 @@ class MeldebestaetigungParserTest extends TestCase
             '71522 Backnang',
         ]);
 
-        $r = (new MeldebestaetigungParser())->parse($text);
+        $r = (new MeldebestaetigungParser)->parse($text);
 
         $this->assertNotNull($r);
         $p = $r['data']['person'];
@@ -274,7 +274,7 @@ class MeldebestaetigungParserTest extends TestCase
             'Geburtsdatum 10.02.1999',
         ]);
 
-        $r = (new MeldebestaetigungParser())->parse($text);
+        $r = (new MeldebestaetigungParser)->parse($text);
 
         $this->assertNotNull($r);
         $this->assertSame('Muster', $r['data']['person']['last_name']);
@@ -298,7 +298,7 @@ class MeldebestaetigungParserTest extends TestCase
             '71522 Backnang',
         ]);
 
-        $r = (new MeldebestaetigungParser())->parse($text);
+        $r = (new MeldebestaetigungParser)->parse($text);
 
         $this->assertNotNull($r);
         $this->assertSame('Najm', $r['data']['person']['last_name']);
@@ -318,7 +318,7 @@ class MeldebestaetigungParserTest extends TestCase
             'Geburtsdatum 13.12.2024',
         ]);
 
-        $r = (new MeldebestaetigungParser())->parse($text);
+        $r = (new MeldebestaetigungParser)->parse($text);
 
         $this->assertNotNull($r);
         $this->assertSame('Najm', $r['data']['person']['last_name']);
@@ -330,10 +330,10 @@ class MeldebestaetigungParserTest extends TestCase
     {
         // Kind (2024 geboren, Schreiben von 2026) -> Hinweis fuer den
         // Mitarbeiter; die Haushalts-Verknuepfung haengt daran.
-        $kind = (new MeldebestaetigungParser())->parse($this->backnangText());
+        $kind = (new MeldebestaetigungParser)->parse($this->backnangText());
         $this->assertStringContainsString('MINDERJAEHRIG', $kind['summary']);
 
-        $erwachsen = (new MeldebestaetigungParser())->parse(
+        $erwachsen = (new MeldebestaetigungParser)->parse(
             $this->backnangText('Mohamad', 'Najim', '10.02.1999')
         );
         $this->assertStringNotContainsString('MINDERJAEHRIG', $erwachsen['summary']);
@@ -342,6 +342,6 @@ class MeldebestaetigungParserTest extends TestCase
 
     public function test_ignores_unrelated_documents(): void
     {
-        $this->assertNull((new MeldebestaetigungParser())->parse('Irgendein anderes Dokument'));
+        $this->assertNull((new MeldebestaetigungParser)->parse('Irgendein anderes Dokument'));
     }
 }

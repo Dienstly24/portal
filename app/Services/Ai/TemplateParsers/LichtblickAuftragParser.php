@@ -1,6 +1,8 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
+use App\Models\Contract;
 use App\Services\Ai\Concerns\ReadsDocumentPages;
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
 use App\Services\Ai\Contracts\DocumentTemplateParser;
@@ -65,7 +67,7 @@ class LichtblickAuftragParser implements DocumentTemplateParser
             return null;
         }
         // Nur der LichtBlick-Auftrag selbst (nicht eine spaetere Rechnung o.ae.).
-        if (!str_contains($upper, 'LICHTBLICK') || !str_contains($upper, 'AUFTRAG')) {
+        if (! str_contains($upper, 'LICHTBLICK') || ! str_contains($upper, 'AUFTRAG')) {
             return null;
         }
 
@@ -82,24 +84,24 @@ class LichtblickAuftragParser implements DocumentTemplateParser
             return null;
         }
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $sparteLabel = ($insurance['sparte'] ?? 'strom') === 'gas' ? 'Gas' : 'Strom';
         return [
             'type' => 'energieauftrag',
             'confidence' => 76,
-            'summary' => 'LichtBlick ' . $sparteLabel . '-Auftrag (Versorgerwechsel)'
-                . ($name !== '' ? ' - ' . $name : '')
-                . (($order = $this->orderNumber()) !== null ? ' - Auftragsnummer ' . $order : '')
-                . (isset($energie['previous_provider']) ? ' - Wechsel von ' . $energie['previous_provider'] : '')
-                . (isset($energie['consumption_kwh']) ? ' - ' . number_format($energie['consumption_kwh'], 0, ',', '.') . ' kWh/Jahr' : '')
-                . (isset($insurance['start_date'])
-                    ? ' - Lieferbeginn ' . $this->displayDate($insurance['start_date'])
+            'summary' => 'LichtBlick '.$sparteLabel.'-Auftrag (Versorgerwechsel)'
+                .($name !== '' ? ' - '.$name : '')
+                .(($order = $this->orderNumber()) !== null ? ' - Auftragsnummer '.$order : '')
+                .(isset($energie['previous_provider']) ? ' - Wechsel von '.$energie['previous_provider'] : '')
+                .(isset($energie['consumption_kwh']) ? ' - '.number_format($energie['consumption_kwh'], 0, ',', '.').' kWh/Jahr' : '')
+                .(isset($insurance['start_date'])
+                    ? ' - Lieferbeginn '.$this->displayDate($insurance['start_date'])
                     : (isset($insurance['expected_start_within_days'])
-                        ? ' - Lieferbeginn nicht angegeben: voraussichtlich binnen ~' . $insurance['expected_start_within_days']
-                            . ' Tagen (Kuendigungsfrist Stadtwerke 14 Tage + Bearbeitung)'
+                        ? ' - Lieferbeginn nicht angegeben: voraussichtlich binnen ~'.$insurance['expected_start_within_days']
+                            .' Tagen (Kuendigungsfrist Stadtwerke 14 Tage + Bearbeitung)'
                         : ''))
-                . ' - Felder gratis aus dem Auftrag gelesen (ohne KI).',
-            'title' => 'LichtBlick ' . $sparteLabel . '-Auftrag' . ($name !== '' ? ' ' . $name : ''),
+                .' - Felder gratis aus dem Auftrag gelesen (ohne KI).',
+            'title' => 'LichtBlick '.$sparteLabel.'-Auftrag'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -149,7 +151,7 @@ class LichtblickAuftragParser implements DocumentTemplateParser
             if (preg_match('/\b(\d{2})(\d{2})(\d{2})\b/', $vornameLine, $m)) {
                 $yy = (int) $m[3];
                 $raw['birth_date'] = ($yy <= 30 ? 2000 + $yy : 1900 + $yy)
-                    . '-' . $m[2] . '-' . $m[1];
+                    .'-'.$m[2].'-'.$m[1];
             }
             $first = trim((string) preg_replace('/\s*\b\d{6}\b.*$/u', '', $this->columns($vornameLine)[0] ?? ''));
             $raw['first_name'] = $first !== '' ? $first : null;
@@ -210,9 +212,9 @@ class LichtblickAuftragParser implements DocumentTemplateParser
                 $nums = $mm[1];
             }
             foreach ($nums as $n) {
-                if (preg_match('/^\d{11}$/', $n) && !isset($raw['malo_id'])) {
+                if (preg_match('/^\d{11}$/', $n) && ! isset($raw['malo_id'])) {
                     $raw['malo_id'] = $n; // MaLo-ID ist immer 11-stellig
-                } elseif (!isset($raw['meter_number'])) {
+                } elseif (! isset($raw['meter_number'])) {
                     $raw['meter_number'] = $n;
                 }
             }
@@ -229,7 +231,7 @@ class LichtblickAuftragParser implements DocumentTemplateParser
             $prev = trim($this->columns($prevLine)[0] ?? '');
             if (preg_match('/\p{L}{3,}/u', $prev) && mb_strlen($prev) <= 100
                 && mb_stripos($prev, 'LichtBlick') === false
-                && !preg_match('/\.\s*$/u', $prev)) {
+                && ! preg_match('/\.\s*$/u', $prev)) {
                 $raw['previous_provider'] = $prev;
             }
         }
@@ -270,7 +272,7 @@ class LichtblickAuftragParser implements DocumentTemplateParser
 
         // Tarif aus der Kopfzeile ("LichtBlick ÖkoStrom" / "LichtBlick ÖkoGas").
         if (preg_match('/LichtBlick\s+(Öko\p{L}+)/u', $this->text(), $m)) {
-            $raw['tariff'] = 'LichtBlick ' . $m[1];
+            $raw['tariff'] = 'LichtBlick '.$m[1];
         }
 
         return $this->validatedEnergy(array_filter($raw, fn ($v) => $v !== null && $v !== ''));
@@ -289,7 +291,7 @@ class LichtblickAuftragParser implements DocumentTemplateParser
             'insurer' => 'LichtBlick',
             'sparte' => str_contains($upper, 'ÖKOGAS') || str_contains($upper, 'OEKOGAS') ? 'gas' : 'strom',
             // Auftrag = Angebot des Kunden, noch keine Bestaetigung.
-            'document_stage' => \App\Models\Contract::STAGE_ANTRAG,
+            'document_stage' => Contract::STAGE_ANTRAG,
             'tariff' => $energie['tariff'] ?? null,
         ];
 
@@ -313,7 +315,7 @@ class LichtblickAuftragParser implements DocumentTemplateParser
             }
             foreach ([$line, $this->lines[$i - 1] ?? '', $this->lines[$i + 1] ?? ''] as $cand) {
                 if (preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $cand, $m)) {
-                    $start = $m[3] . '-' . $m[2] . '-' . $m[1];
+                    $start = $m[3].'-'.$m[2].'-'.$m[1];
                     break 2;
                 }
             }
@@ -414,7 +416,7 @@ class LichtblickAuftragParser implements DocumentTemplateParser
     private function rawValueAbove(string $label): ?string
     {
         foreach ($this->lines as $i => $line) {
-            if ($this->leadingSpaces($line) >= 40 || !str_starts_with(trim($line), $label)) {
+            if ($this->leadingSpaces($line) >= 40 || ! str_starts_with(trim($line), $label)) {
                 continue;
             }
             for ($j = $i - 1; $j >= 0; $j--) {
@@ -437,7 +439,7 @@ class LichtblickAuftragParser implements DocumentTemplateParser
     private function rawValuesAbove(string $label, int $count): ?string
     {
         foreach ($this->lines as $i => $line) {
-            if ($this->leadingSpaces($line) >= 40 || !str_starts_with(trim($line), $label)) {
+            if ($this->leadingSpaces($line) >= 40 || ! str_starts_with(trim($line), $label)) {
                 continue;
             }
             $vals = [];
@@ -516,7 +518,7 @@ class LichtblickAuftragParser implements DocumentTemplateParser
 
     private function displayDate(string $iso): string
     {
-        return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $iso, $m) ? $m[3] . '.' . $m[2] . '.' . $m[1] : $iso;
+        return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $iso, $m) ? $m[3].'.'.$m[2].'.'.$m[1] : $iso;
     }
 
     private function text(): string

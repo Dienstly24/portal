@@ -1,7 +1,9 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+
 return new class extends Migration {
     public function up(): void {
         Schema::create('tarifrechner_links', function (Blueprint $table) {
@@ -18,7 +20,7 @@ return new class extends Migration {
             $table->foreignId('created_by')->constrained('users')->onDelete('cascade');
             $table->string('title');
             $table->text('body');
-            $table->enum('priority', ['normal','important','urgent'])->default('normal');
+            $table->enum('priority', ['normal', 'important', 'urgent'])->default('normal');
             $table->timestamp('expires_at')->nullable();
             $table->timestamps();
         });

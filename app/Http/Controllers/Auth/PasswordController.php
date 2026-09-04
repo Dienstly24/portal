@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Support\PasswordPolicy;
+use App\Support\SessionPasswordHash;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,7 +18,7 @@ class PasswordController extends Controller
     {
         $validated = $request->validateWithBag('updatePassword', [
             'current_password' => ['required', 'current_password'],
-            'password' => ['required', \App\Support\PasswordPolicy::for($request->user()), 'confirmed'],
+            'password' => ['required', PasswordPolicy::for($request->user()), 'confirmed'],
         ]);
 
         $request->user()->setPassword($validated['password']);
@@ -26,7 +28,7 @@ class PasswordController extends Controller
         // nur den Schluessel umbenennen. Wirkt ueber die
         // AuthenticateSession-Middleware in der Web-Gruppe.
         Auth::logoutOtherDevices($validated['password']);
-        \App\Support\SessionPasswordHash::refresh($request);
+        SessionPasswordHash::refresh($request);
 
         return back()->with('status', 'password-updated');
     }

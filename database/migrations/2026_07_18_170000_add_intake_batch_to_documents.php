@@ -11,8 +11,7 @@ use Illuminate\Support\Facades\Schema;
  * Eingang gruppiert sie dann als EINEN Vorgang und bietet "Neuen Kunden aus
  * allen anlegen" (zusammengefuehrte Extraktion) an.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('documents', function (Blueprint $table) {

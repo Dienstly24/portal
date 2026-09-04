@@ -16,8 +16,7 @@ use Illuminate\Support\Facades\Schema;
  * damit der Ciphertext hineinpasst. Auf frischen Installationen (Spalte bereits
  * TEXT) ist dies ein harmloser No-Op.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('documents', function (Blueprint $table) {

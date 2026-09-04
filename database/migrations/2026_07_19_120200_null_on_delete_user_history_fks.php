@@ -1,4 +1,5 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -27,15 +28,15 @@ return new class extends Migration {
     public function up(): void {
         $isSqlite = DB::getDriverName() === 'sqlite';
         foreach ($this->map as $table => $columns) {
-            if (!Schema::hasTable($table)) continue;
+            if (! Schema::hasTable($table)) continue;
             foreach ($columns as $col) {
-                if (!Schema::hasColumn($table, $col)) continue;
+                if (! Schema::hasColumn($table, $col)) continue;
 
-                if (!$isSqlite) {
+                if (! $isSqlite) {
                     Schema::table($table, fn (Blueprint $t) => $t->dropForeign([$col]));
                 }
                 Schema::table($table, fn (Blueprint $t) => $t->unsignedBigInteger($col)->nullable()->change());
-                if (!$isSqlite) {
+                if (! $isSqlite) {
                     Schema::table($table, fn (Blueprint $t) => $t->foreign($col)->references('id')->on('users')->nullOnDelete());
                 }
             }

@@ -2,10 +2,11 @@
 
 namespace App\Services;
 
+use App\Mail\CustomerMessageMail;
 use App\Models\CustomerMessage;
 use App\Models\User;
-use App\Support\Facades\Notify;
 use App\Services\Notifications\NotificationService;
+use App\Support\Facades\Notify;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
@@ -23,7 +24,7 @@ class CustomerMessageNotifier
     {
         $message->loadMissing('customer.user');
         $customer = $message->customer;
-        if (!$customer) {
+        if (! $customer) {
             return;
         }
 
@@ -32,18 +33,18 @@ class CustomerMessageNotifier
                 'type' => NotificationService::TYPE_MESSAGE,
                 'title' => '💬 Neue Nachricht',
                 'body' => 'Ihr Berater hat Ihnen eine Nachricht geschickt: „'
-                    . Str::limit(trim($message->body), 60) . '"',
+                    .Str::limit(trim($message->body), 60).'"',
                 'link' => route('portal.messages'),
-                'dedup_key' => 'cust-msg-' . $customer->id,
+                'dedup_key' => 'cust-msg-'.$customer->id,
             ]);
         }
 
         $email = $customer->user?->email;
-        if ($emailMode !== 'none' && $email && !str_contains($email, '@dienstly24.internal')) {
+        if ($emailMode !== 'none' && $email && ! str_contains($email, '@dienstly24.internal')) {
             try {
-                Mail::to($email)->send(new \App\Mail\CustomerMessageMail($message, $emailMode));
+                Mail::to($email)->send(new CustomerMessageMail($message, $emailMode));
             } catch (\Throwable $e) {
-                \Log::warning('Kundennachricht-Mail fehlgeschlagen: ' . $e->getMessage());
+                \Log::warning('Kundennachricht-Mail fehlgeschlagen: '.$e->getMessage());
             }
         }
     }
@@ -52,7 +53,7 @@ class CustomerMessageNotifier
     {
         $message->loadMissing('customer.user');
         $customer = $message->customer;
-        if (!$customer) {
+        if (! $customer) {
             return;
         }
 
@@ -61,14 +62,14 @@ class CustomerMessageNotifier
             ->merge(User::whereIn('role', ['admin', 'manager'])->pluck('id'))
             ->unique()->values();
 
-        $link = route('admin.customer', $customer->id) . '#tab-nachrichten';
+        $link = route('admin.customer', $customer->id).'#tab-nachrichten';
         Notify::pushMany($recipients, [
             'type' => NotificationService::TYPE_MESSAGE,
             'title' => '💬 Neue Kundennachricht',
-            'body' => $name . ' (Nr. ' . $customer->customer_number . '): „'
-                . Str::limit(trim($message->body), 60) . '"',
+            'body' => $name.' (Nr. '.$customer->customer_number.'): „'
+                .Str::limit(trim($message->body), 60).'"',
             'link' => $link,
-            'dedup_key' => 'cust-reply-' . $customer->id,
+            'dedup_key' => 'cust-reply-'.$customer->id,
         ]);
     }
 }

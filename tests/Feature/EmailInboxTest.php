@@ -6,7 +6,9 @@ use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\EmailAccount;
 use App\Models\EmailMessage;
+use App\Models\Task;
 use App\Models\User;
+use App\Services\Workflow\EmailWorkflowService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -25,7 +27,7 @@ class EmailInboxTest extends TestCase
     private function customer(string $name = 'Max Mustermann'): Customer
     {
         $user = User::factory()->create(['name' => $name, 'role' => 'customer']);
-        return Customer::create(['user_id' => $user->id, 'customer_number' => 'K-' . uniqid()]);
+        return Customer::create(['user_id' => $user->id, 'customer_number' => 'K-'.uniqid()]);
     }
 
     private function message(array $overrides = []): EmailMessage
@@ -37,7 +39,7 @@ class EmailInboxTest extends TestCase
 
         return EmailMessage::create(array_merge([
             'email_account_id' => $account->id,
-            'message_uid' => 'INBOX:' . uniqid(),
+            'message_uid' => 'INBOX:'.uniqid(),
             'from_address' => 'kunde@example.com',
             'from_name' => 'Max Mustermann',
             'subject' => 'Frage zu meinem Vertrag',
@@ -192,9 +194,9 @@ class EmailInboxTest extends TestCase
             'match_status' => 'unmatched',
         ]);
 
-        app(\App\Services\Workflow\EmailWorkflowService::class)->process($message);
+        app(EmailWorkflowService::class)->process($message);
 
-        $task = \App\Models\Task::where('email_message_id', $message->id)->first();
+        $task = Task::where('email_message_id', $message->id)->first();
         $this->assertNotNull($task);
 
         $this->actingAs($this->admin)->get(route('admin.tasks', ['tab' => 'customer']))

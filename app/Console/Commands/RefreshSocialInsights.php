@@ -32,17 +32,17 @@ class RefreshSocialInsights extends Command
                 $insights->refreshChannel($channel);
                 $ok++;
             } catch (\Throwable $e) {
-                $this->warn($channel->platform . ' #' . $channel->id . ': ' . $e->getMessage());
+                $this->warn($channel->platform.' #'.$channel->id.': '.$e->getMessage());
             }
         }
 
         try {
             $insights->refreshPageOverview();
         } catch (\Throwable $e) {
-            $this->warn('Seiten-Ueberblick: ' . $e->getMessage());
+            $this->warn('Seiten-Ueberblick: '.$e->getMessage());
         }
 
-        $this->info('Kennzahlen aktualisiert: ' . $ok . '/' . $channels->count() . ' Beitraege.');
+        $this->info('Kennzahlen aktualisiert: '.$ok.'/'.$channels->count().' Beitraege.');
 
         return self::SUCCESS;
     }

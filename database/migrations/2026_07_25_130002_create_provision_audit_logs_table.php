@@ -12,8 +12,7 @@ use Illuminate\Support\Facades\Schema;
  * Anlage/Gegenbuchung). Eintraege werden nie veraendert oder geloescht
  * (vollstaendige Finanzhistorie).
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('provision_audit_logs', function (Blueprint $table) {

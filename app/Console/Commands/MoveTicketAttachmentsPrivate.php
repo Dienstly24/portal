@@ -23,7 +23,7 @@ class MoveTicketAttachmentsPrivate extends Command
 
         $moved = $missing = 0;
         foreach ($query->get() as $att) {
-            if (!Storage::disk('public')->exists($att->file_path)) {
+            if (! Storage::disk('public')->exists($att->file_path)) {
                 $this->warn("Fehlt auf public Disk, übersprungen: {$att->file_path} ({$att->id})");
                 $missing++;
                 continue;
@@ -41,7 +41,7 @@ class MoveTicketAttachmentsPrivate extends Command
             $moved++;
         }
 
-        $this->info(($this->option('dry-run') ? '[DRY-RUN] ' : '') . "Verschoben: {$moved}, fehlend: {$missing}");
+        $this->info(($this->option('dry-run') ? '[DRY-RUN] ' : '')."Verschoben: {$moved}, fehlend: {$missing}");
         return self::SUCCESS;
     }
 }

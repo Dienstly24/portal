@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\CustomerFamily;
 use App\Models\User;

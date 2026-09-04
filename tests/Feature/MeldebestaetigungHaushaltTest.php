@@ -33,7 +33,7 @@ class MeldebestaetigungHaushaltTest extends TestCase
 
         return Customer::create(array_merge([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5((string) $user->id), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5((string) $user->id), 0, 8)),
             'birth_date' => $birth,
             'address_street' => 'Gartenstraße',
             'address_house_number' => '105',
@@ -48,7 +48,7 @@ class MeldebestaetigungHaushaltTest extends TestCase
             'id' => (string) Str::uuid(),
             'customer_id' => $customer->id,
             'file_name' => 'meldebestaetigung.pdf',
-            'file_path' => 'customers/' . $customer->id . '/documents/melde.pdf',
+            'file_path' => 'customers/'.$customer->id.'/documents/melde.pdf',
             'disk' => 'local',
             'category' => 'identity',
             'ai_status' => 'done',
@@ -82,7 +82,7 @@ class MeldebestaetigungHaushaltTest extends TestCase
         foreach ([$vater, $mutter] as $adult) {
             [$a, $b] = CustomerRelationship::pairKey((string) $kind->id, (string) $adult->id);
             $rel = CustomerRelationship::where('customer_a_id', $a)->where('customer_b_id', $b)->first();
-            $this->assertNotNull($rel, 'Beziehung zu ' . $adult->user->name . ' fehlt');
+            $this->assertNotNull($rel, 'Beziehung zu '.$adult->user->name.' fehlt');
             $this->assertSame('family', $rel->type);
             // Die Begruendung nennt die Belege, behauptet aber keine Elternrolle.
             $this->assertStringContainsString('Meldebestätigung', $rel->note);

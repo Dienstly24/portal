@@ -1,12 +1,15 @@
 <?php
+
 namespace Tests\Feature;
 
 use App\Models\Customer;
 use App\Models\Document;
+use App\Models\Task;
 use App\Models\User;
 use App\Services\LexofficeService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -28,7 +31,7 @@ class AuditE2EFixesTest extends TestCase
         $user = User::factory()->create(['role' => 'customer', 'name' => $name]);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5((string) $user->id), 0, 6)),
+            'customer_number' => 'C-'.strtoupper(substr(md5((string) $user->id), 0, 6)),
         ]);
     }
 
@@ -150,9 +153,9 @@ class AuditE2EFixesTest extends TestCase
     // DB-2: Die Klartext-PII-Spalten auf customer_family sind entfernt.
     public function test_plaintext_family_number_columns_removed(): void
     {
-        $this->assertFalse(\Illuminate\Support\Facades\Schema::hasColumn('customer_family', 'krankenversicherung_nr'));
-        $this->assertFalse(\Illuminate\Support\Facades\Schema::hasColumn('customer_family', 'steuer_nr'));
-        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumn('customer_family', 'tax_id'));
+        $this->assertFalse(Schema::hasColumn('customer_family', 'krankenversicherung_nr'));
+        $this->assertFalse(Schema::hasColumn('customer_family', 'steuer_nr'));
+        $this->assertTrue(Schema::hasColumn('customer_family', 'tax_id'));
     }
 
     // DB-4: Loeschen eines Mitarbeiters vernichtet keine Aufgaben-Historie.
@@ -161,7 +164,7 @@ class AuditE2EFixesTest extends TestCase
         $admin = $this->admin();
         $employee = User::factory()->create(['role' => 'employee']);
 
-        $task = \App\Models\Task::create([
+        $task = Task::create([
             'assigned_to' => $employee->id,
             'created_by' => $employee->id,
             'title' => 'Rueckruf Kunde',

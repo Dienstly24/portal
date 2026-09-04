@@ -38,7 +38,7 @@ class BannerManagementTest extends TestCase
     private function makePortalCustomer(string $email = 'kunde@k.de'): Customer
     {
         $user = User::factory()->create(['role' => 'customer', 'email' => $email]);
-        return Customer::create(['user_id' => $user->id, 'customer_number' => 'C-' . strtoupper(substr(md5($email), 0, 8))]);
+        return Customer::create(['user_id' => $user->id, 'customer_number' => 'C-'.strtoupper(substr(md5($email), 0, 8))]);
     }
 
     // ---------------- Status ----------------
@@ -187,7 +187,7 @@ class BannerManagementTest extends TestCase
 
     public function test_jpg_upload_is_converted_to_webp(): void
     {
-        if (!function_exists('imagewebp')) {
+        if (! function_exists('imagewebp')) {
             $this->markTestSkipped('GD/WebP nicht verfügbar.');
         }
 
@@ -237,7 +237,8 @@ class BannerManagementTest extends TestCase
         $low = $this->makeBanner(['title' => 'Low-Banner']);
 
         // Top: 4 Impressions, 2 Klicks (CTR 50 %) – Low: 4 Impressions, 0 Klicks
-        foreach (range(1, 4) as $i) { $top->recordImpression('u' . $i); $low->recordImpression('u' . $i); }
+        foreach (range(1, 4) as $i) { $top->recordImpression('u'.$i);
+        $low->recordImpression('u'.$i); }
         $top->recordClick();
         $top->recordClick();
 

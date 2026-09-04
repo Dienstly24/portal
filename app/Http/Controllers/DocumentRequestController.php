@@ -1,11 +1,11 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Mail\DocumentRequestMail;
 use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\DocumentRequest;
-use App\Models\InternalNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 
@@ -39,7 +39,7 @@ class DocumentRequestController extends Controller
             'contract_id' => 'nullable|uuid',
         ]);
 
-        if (!empty($data['contract_id'])) {
+        if (! empty($data['contract_id'])) {
             // Vertrag muss zum Kunden gehören - keine Fremdzuordnung.
             abort_unless($customer->contracts()->where('id', $data['contract_id'])->exists(), 422);
         }

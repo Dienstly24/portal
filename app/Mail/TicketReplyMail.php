@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Mail;
 
 use App\Models\Ticket;
@@ -23,8 +24,8 @@ class TicketReplyMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(subject: $this->lang === 'ar'
-            ? 'رد جديد على طلبك: ' . $this->ticket->subject
-            : 'Neue Antwort auf Ihre Anfrage: ' . $this->ticket->subject);
+            ? 'رد جديد على طلبك: '.$this->ticket->subject
+            : 'Neue Antwort auf Ihre Anfrage: '.$this->ticket->subject);
     }
 
     public function content(): Content

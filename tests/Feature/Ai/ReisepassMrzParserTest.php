@@ -30,7 +30,7 @@ class ReisepassMrzParserTest extends TestCase
 
     public function test_decodes_mrz_of_syrian_passport(): void
     {
-        $r = (new ReisepassMrzParser())->parse($this->passportOcr());
+        $r = (new ReisepassMrzParser)->parse($this->passportOcr());
 
         $this->assertNotNull($r);
         $this->assertSame('reisepass', $r['type']);
@@ -54,7 +54,7 @@ class ReisepassMrzParserTest extends TestCase
             'PNSYRKUTAISHKKSAFAKKKKKKKKKKKKKKKKKKKKKKKKKK',
             $this->passportOcr()
         );
-        $r = (new ReisepassMrzParser())->parse($ocr);
+        $r = (new ReisepassMrzParser)->parse($ocr);
 
         $this->assertNotNull($r);
         // Datenzeile (Zeile 2) liefert weiterhin Passnummer/Geburtsdatum/Sex.
@@ -67,7 +67,7 @@ class ReisepassMrzParserTest extends TestCase
 
     public function test_ignores_documents_without_mrz(): void
     {
-        $this->assertNull((new ReisepassMrzParser())->parse('Irgendein anderes Dokument ohne MRZ'));
-        $this->assertNull((new ReisepassMrzParser())->parse("Reisepass\nName Muster\nkeine maschinenlesbare Zone"));
+        $this->assertNull((new ReisepassMrzParser)->parse('Irgendein anderes Dokument ohne MRZ'));
+        $this->assertNull((new ReisepassMrzParser)->parse("Reisepass\nName Muster\nkeine maschinenlesbare Zone"));
     }
 }

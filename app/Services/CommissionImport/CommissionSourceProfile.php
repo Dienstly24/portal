@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\CommissionImport;
 
 /**
@@ -33,7 +34,7 @@ class CommissionSourceProfile
         'tarifcheck24' => [
             'label' => 'TARIFCHECK24 (Vergleichsportal)',
             'hint' => 'Abrechnung des Vergleichsportals – Kennung ist die Spalte „Id“. '
-                . 'Diese Datei enthält keinen Kundennamen, daher entstehen daraus keine Verträge.',
+                .'Diese Datei enthält keinen Kundennamen, daher entstehen daraus keine Verträge.',
             'signature' => ['id', 'provision', 'status'],
             'mode' => ColumnMap::MODE_ABRECHNUNG,
             // Fuer diese Quelle gibt es zusaetzlich den spezialisierten
@@ -50,7 +51,7 @@ class CommissionSourceProfile
         'energie_vertriebsportal' => [
             'label' => 'Energie-Vertriebsportal (Auftragsliste)',
             'hint' => 'Auftragsliste ohne Beträge – Kennung ist die „Auftr.-Nr.“. '
-                . 'Daraus entstehen Kunden und Verträge, nie eine Provision.',
+                .'Daraus entstehen Kunden und Verträge, nie eine Provision.',
             'signature' => ['auftrnr', 'kunden', 'anschrift'],
             'mode' => ColumnMap::MODE_AUFTRAGSLISTE,
             'importer' => 'intern',
@@ -87,7 +88,7 @@ class CommissionSourceProfile
                 continue;
             }
             foreach ($profile['signature'] as $needed) {
-                if (!isset($columns[$needed])) {
+                if (! isset($columns[$needed])) {
                     continue 2;
                 }
             }

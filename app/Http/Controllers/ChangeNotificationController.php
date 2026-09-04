@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Mail\DirectEmailMail;
@@ -71,7 +72,7 @@ class ChangeNotificationController extends Controller
         if ($request->boolean('attach_proof')) {
             foreach ($notification->changeRequest->documents as $document) {
                 $disk = Storage::disk($document->disk ?: 'local');
-                if (!$disk->exists($document->file_path)) {
+                if (! $disk->exists($document->file_path)) {
                     continue;
                 }
                 $attachments[] = [
@@ -91,8 +92,8 @@ class ChangeNotificationController extends Controller
                 senderName: (string) auth()->user()->name,
             ));
         } catch (\Throwable $e) {
-            \Log::warning('Mitteilung an Gesellschaft fehlgeschlagen: ' . $e->getMessage());
-            return back()->with('error', 'E-Mail konnte nicht gesendet werden: ' . $e->getMessage());
+            \Log::warning('Mitteilung an Gesellschaft fehlgeschlagen: '.$e->getMessage());
+            return back()->with('error', 'E-Mail konnte nicht gesendet werden: '.$e->getMessage());
         }
 
         $notification->update([
@@ -110,12 +111,12 @@ class ChangeNotificationController extends Controller
             'customer_id' => $notification->customer_id,
             'user_id' => auth()->id(),
             'type' => 'email',
-            'title' => 'Gesellschaft informiert: ' . $notification->insurer,
-            'description' => $data['subject'] . ' · An ' . $data['recipient']
-                . ($attachments !== [] ? ' · ' . count($attachments) . ' Nachweis/Nachweise angehängt' : ''),
+            'title' => 'Gesellschaft informiert: '.$notification->insurer,
+            'description' => $data['subject'].' · An '.$data['recipient']
+                .($attachments !== [] ? ' · '.count($attachments).' Nachweis/Nachweise angehängt' : ''),
         ]);
 
-        return back()->with('success', 'Mitteilung an ' . $notification->insurer . ' gesendet.');
+        return back()->with('success', 'Mitteilung an '.$notification->insurer.' gesendet.');
     }
 
     /**
@@ -148,9 +149,9 @@ class ChangeNotificationController extends Controller
                 'customer_id' => $notification->customer_id,
                 'user_id' => auth()->id(),
                 'type' => 'note',
-                'title' => 'Gesellschaft informiert: ' . $notification->insurer,
-                'description' => 'Weg: ' . (ChangeNotification::CHANNEL_LABELS[$data['channel']] ?? $data['channel'])
-                    . ($data['note'] ?? '' ? ' · ' . $data['note'] : ''),
+                'title' => 'Gesellschaft informiert: '.$notification->insurer,
+                'description' => 'Weg: '.(ChangeNotification::CHANNEL_LABELS[$data['channel']] ?? $data['channel'])
+                    .($data['note'] ?? '' ? ' · '.$data['note'] : ''),
             ]);
         }
 

@@ -59,7 +59,7 @@ class EweVertragsbestaetigungParserTest extends TestCase
 
     public function test_parses_ewe_electricity_confirmation(): void
     {
-        $r = (new EweVertragsbestaetigungParser())->parse($this->confirmationText());
+        $r = (new EweVertragsbestaetigungParser)->parse($this->confirmationText());
 
         $this->assertNotNull($r);
         $this->assertSame('energieauftrag', $r['type']);
@@ -106,8 +106,8 @@ class EweVertragsbestaetigungParserTest extends TestCase
 
     public function test_ignores_unrelated_documents(): void
     {
-        $this->assertNull((new EweVertragsbestaetigungParser())->parse('Irgendein anderes Dokument'));
+        $this->assertNull((new EweVertragsbestaetigungParser)->parse('Irgendein anderes Dokument'));
         // EWE erwaehnt, aber keine Vertragsbestaetigung.
-        $this->assertNull((new EweVertragsbestaetigungParser())->parse('EWE Newsletter zum Thema Energie sparen'));
+        $this->assertNull((new EweVertragsbestaetigungParser)->parse('EWE Newsletter zum Thema Energie sparen'));
     }
 }

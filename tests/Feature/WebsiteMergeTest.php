@@ -7,8 +7,10 @@ use App\Mail\WebsiteInquiryConfirmationMail;
 use App\Models\ServicePage;
 use App\Models\Ticket;
 use App\Services\UmlautRepair;
+use Database\Seeders\ServicePageSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -76,7 +78,7 @@ class WebsiteMergeTest extends TestCase
      */
     public function test_marketing_paths_move_to_canonical_host_only_after_cutover(): void
     {
-        $this->seed(\Database\Seeders\ServicePageSeeder::class);
+        $this->seed(ServicePageSeeder::class);
 
         // Vor dem Umzug (Standard): Portal-Host liefert weiter aus.
         $this->get('https://portal.dienstly24.de/leistungen/kfz-versicherung')->assertOk();
@@ -228,14 +230,14 @@ class WebsiteMergeTest extends TestCase
     public function test_purge_command_deletes_only_old_unconverted_website_leads(): void
     {
         $old = Ticket::forceCreate([
-            'id' => \Illuminate\Support\Str::uuid(), 'source' => 'website', 'type' => 'offer',
+            'id' => Str::uuid(), 'source' => 'website', 'type' => 'offer',
             'priority' => 'mittel', 'status' => 'open', 'subject' => 'Alt',
             'description' => 'x', 'guest_name' => 'Alt',
         ]);
         Ticket::where('id', $old->id)->update(['created_at' => now()->subMonths(7)]);
 
         $fresh = Ticket::forceCreate([
-            'id' => \Illuminate\Support\Str::uuid(), 'source' => 'website', 'type' => 'offer',
+            'id' => Str::uuid(), 'source' => 'website', 'type' => 'offer',
             'priority' => 'mittel', 'status' => 'open', 'subject' => 'Neu',
             'description' => 'x', 'guest_name' => 'Neu',
         ]);
@@ -249,7 +251,7 @@ class WebsiteMergeTest extends TestCase
     public function test_purge_hard_deletes_lead_leaving_no_soft_deleted_pii(): void
     {
         $old = Ticket::forceCreate([
-            'id' => \Illuminate\Support\Str::uuid(), 'source' => 'website', 'type' => 'offer',
+            'id' => Str::uuid(), 'source' => 'website', 'type' => 'offer',
             'priority' => 'mittel', 'status' => 'open', 'subject' => 'Alt',
             'description' => 'Vertrauliche Nachricht', 'guest_name' => 'Alt Gast',
             'guest_email' => 'alt@example.com', 'consent_ip' => '203.0.113.9',
@@ -284,7 +286,7 @@ class WebsiteMergeTest extends TestCase
 
     public function test_sitemap_lists_pages_with_hreflang(): void
     {
-        $this->seed(\Database\Seeders\ServicePageSeeder::class);
+        $this->seed(ServicePageSeeder::class);
 
         $this->get('https://www.dienstly24.de/sitemap.xml')
             ->assertOk()
@@ -302,7 +304,7 @@ class WebsiteMergeTest extends TestCase
 
     public function test_service_page_has_hreflang_and_whatsapp(): void
     {
-        $this->seed(\Database\Seeders\ServicePageSeeder::class);
+        $this->seed(ServicePageSeeder::class);
 
         $this->get('https://www.dienstly24.de/leistungen/kfz-versicherung')
             ->assertOk()
@@ -342,7 +344,7 @@ class WebsiteMergeTest extends TestCase
 
     public function test_seeded_service_pages_have_proper_umlauts(): void
     {
-        $this->seed(\Database\Seeders\ServicePageSeeder::class);
+        $this->seed(ServicePageSeeder::class);
 
         $kfz = ServicePage::where('slug', 'kfz-versicherung')->first();
         $this->assertStringContainsString('verständlich erklärt', $kfz->subtitle_de);

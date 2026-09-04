@@ -41,17 +41,17 @@ class WebsiteAssistantController extends Controller
             'nachricht' => 'required|string|max:2000',
         ]);
 
-        if (!$settings->enabled()) {
+        if (! $settings->enabled()) {
             return response()->json([
                 'ok' => false,
                 'antwort' => __('Der Assistent steht gerade nicht zur Verfügung. '
-                    . 'Bitte nutzen Sie das Kontaktformular – wir melden uns zeitnah.'),
+                    .'Bitte nutzen Sie das Kontaktformular – wir melden uns zeitnah.'),
             ], 200);
         }
 
         // Kennung ausschliesslich aus der Server-Sitzung.
         $key = $request->session()->get(self::SESSION_KEY);
-        if (!$key || !Str::isUuid($key)) {
+        if (! $key || ! Str::isUuid($key)) {
             $key = (string) Str::uuid();
             $request->session()->put(self::SESSION_KEY, $key);
         }

@@ -35,7 +35,7 @@ class MetaSetupCommandTest extends TestCase
     private function fakeGraph(array $pages, array $adAccounts = [['id' => 'act_777', 'name' => 'Dienstly24 Werbekonto', 'currency' => 'EUR']]): void
     {
         // Jede Seite liefert (wie die echte API) ihr PAGE Access Token mit.
-        $pages = array_map(fn ($p) => $p + ['access_token' => 'PTOK-' . $p['id']], $pages);
+        $pages = array_map(fn ($p) => $p + ['access_token' => 'PTOK-'.$p['id']], $pages);
         Http::fake(function ($request) use ($pages, $adAccounts) {
             if (str_contains($request->url(), '/me/accounts')) {
                 return Http::response(['data' => $pages]);

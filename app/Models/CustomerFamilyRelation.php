@@ -41,15 +41,15 @@ class CustomerFamilyRelation extends Model
      * Kundin UND bleibt Tochter.
      */
     public const ROLES = [
-        'ehepartner'  => 'Ehepartner/in',
-        'vater'       => 'Vater',
-        'mutter'      => 'Mutter',
-        'elternteil'  => 'Elternteil',
-        'sohn'        => 'Sohn',
-        'tochter'     => 'Tochter',
-        'kind'        => 'Kind',
+        'ehepartner' => 'Ehepartner/in',
+        'vater' => 'Vater',
+        'mutter' => 'Mutter',
+        'elternteil' => 'Elternteil',
+        'sohn' => 'Sohn',
+        'tochter' => 'Tochter',
+        'kind' => 'Kind',
         'geschwister' => 'Geschwister',
-        'sonstiges'   => 'Sonstiges Familienmitglied',
+        'sonstiges' => 'Sonstiges Familienmitglied',
     ];
 
     /** Rollen, die im Formular direkt waehlbar sind (Betreiber-Vorgabe). */
@@ -154,7 +154,7 @@ class CustomerFamilyRelation extends Model
      */
     public function dependentNow(): bool
     {
-        if (!$this->is_dependent || !$this->isCurrent()) {
+        if (! $this->is_dependent || ! $this->isCurrent()) {
             return false;
         }
         $age = $this->relatedCustomer?->age();

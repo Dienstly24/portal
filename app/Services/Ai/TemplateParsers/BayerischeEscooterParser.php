@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
@@ -37,7 +38,7 @@ class BayerischeEscooterParser implements DocumentTemplateParser
         $text = (string) preg_replace('/\x{00ad}\s*/u', '', $text);
         $upper = mb_strtoupper($text);
 
-        if (!$this->looksLikeEscooterConfirmation($upper)) {
+        if (! $this->looksLikeEscooterConfirmation($upper)) {
             return null;
         }
 
@@ -57,17 +58,17 @@ class BayerischeEscooterParser implements DocumentTemplateParser
             return null;
         }
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $plate = $vehicle['license_plate'] ?? null;
 
         return [
             'type' => 'escooter_vertrag',
             'confidence' => 78,
-            'summary' => 'E-Scooter-Versicherung' . (($insurance['insurer'] ?? null) ? ' (' . $insurance['insurer'] . ')' : '')
-                . ($name !== '' ? ' - ' . $name : '')
-                . ($plate !== null ? ' - ' . $plate : '')
-                . ' - Felder gratis aus dem Dokument gelesen (ohne KI).',
-            'title' => trim('E-Scooter-Versicherung ' . $name),
+            'summary' => 'E-Scooter-Versicherung'.(($insurance['insurer'] ?? null) ? ' ('.$insurance['insurer'].')' : '')
+                .($name !== '' ? ' - '.$name : '')
+                .($plate !== null ? ' - '.$plate : '')
+                .' - Felder gratis aus dem Dokument gelesen (ohne KI).',
+            'title' => trim('E-Scooter-Versicherung '.$name),
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -84,7 +85,7 @@ class BayerischeEscooterParser implements DocumentTemplateParser
     private function looksLikeEscooterConfirmation(string $upper): bool
     {
         $hasScooter = str_contains($upper, 'E-SCOOTER') || str_contains($upper, 'ESCOOTER');
-        if (!$hasScooter) {
+        if (! $hasScooter) {
             return false;
         }
         $signals = 0;
@@ -118,7 +119,7 @@ class BayerischeEscooterParser implements DocumentTemplateParser
         // ("611 MDS"), gesucht im Fenster hinter "Kennzeichen".
         $plateWindow = $this->windowAfter($text, 'Kennzeichen', 120);
         if ($plateWindow !== null && preg_match('/(\d{3})\s*([A-Za-zÄÖÜ]{3})/u', $plateWindow, $m)) {
-            $raw['license_plate'] = mb_strtoupper($m[1] . $m[2]);
+            $raw['license_plate'] = mb_strtoupper($m[1].$m[2]);
         }
 
         // Hersteller/Modellbezeichnung -> als Fahrzeugbezeichnung (Hersteller).
@@ -248,7 +249,7 @@ class BayerischeEscooterParser implements DocumentTemplateParser
             if (preg_match('/^(Herrn?|Frau)\b\s*(.*)$/u', $val, $m)) {
                 $raw['gender'] = mb_strtolower($m[1]) === 'frau' ? 'female' : 'male';
                 $rest = trim($m[2]);
-                if ($rest !== '' && !isset($raw['last_name']) && $this->looksLikeName($rest)) {
+                if ($rest !== '' && ! isset($raw['last_name']) && $this->looksLikeName($rest)) {
                     $this->assignName($raw, $rest);
                 }
                 continue;
@@ -260,7 +261,7 @@ class BayerischeEscooterParser implements DocumentTemplateParser
                 continue;
             }
             // Strasse + Hausnummer (enthaelt eine Ziffer).
-            if (preg_match('/\d/', $val) && !isset($raw['street'])) {
+            if (preg_match('/\d/', $val) && ! isset($raw['street'])) {
                 if (preg_match('/^(.*\D)\s*(\d+\s*[a-zA-Z]?)\s*$/u', $val, $s)) {
                     $raw['street'] = trim($s[1]);
                     $raw['house_number'] = trim((string) preg_replace('/\s+/', ' ', $s[2]));
@@ -270,7 +271,7 @@ class BayerischeEscooterParser implements DocumentTemplateParser
                 continue;
             }
             // Name (nur Buchstaben, mindestens zwei Woerter).
-            if (!isset($raw['last_name']) && $this->looksLikeName($val)) {
+            if (! isset($raw['last_name']) && $this->looksLikeName($val)) {
                 $this->assignName($raw, $val);
             }
         }
@@ -308,7 +309,7 @@ class BayerischeEscooterParser implements DocumentTemplateParser
         if ($holder !== null && $this->looksLikeName($holder)) {
             $raw['account_holder'] = $holder;
         } elseif (($person['first_name'] ?? null) || ($person['last_name'] ?? null)) {
-            $raw['account_holder'] = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+            $raw['account_holder'] = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         }
 
         return $this->validatedBank(array_filter($raw, fn ($v) => $v !== null && $v !== ''));
@@ -372,8 +373,8 @@ class BayerischeEscooterParser implements DocumentTemplateParser
     /** Erstes deutsches Datum (TT.MM.JJJJ) hinter einer Beschriftung -> ISO. */
     private function dateAfter(string $text, string $needle): ?string
     {
-        if (preg_match('/' . preg_quote($needle, '/') . '.*?(\d{2})\.(\d{2})\.(\d{4})/su', $text, $m)) {
-            $iso = $m[3] . '-' . $m[2] . '-' . $m[1];
+        if (preg_match('/'.preg_quote($needle, '/').'.*?(\d{2})\.(\d{2})\.(\d{4})/su', $text, $m)) {
+            $iso = $m[3].'-'.$m[2].'-'.$m[1];
             return checkdate((int) $m[2], (int) $m[1], (int) $m[3]) ? $iso : null;
         }
         return null;
@@ -382,7 +383,7 @@ class BayerischeEscooterParser implements DocumentTemplateParser
     /** Erster Geldbetrag (1.234,56) hinter einer Beschriftung als float. */
     private function amountAfter(string $text, string $needle): ?float
     {
-        if (preg_match('/' . preg_quote($needle, '/') . '.*?(\d{1,3}(?:\.\d{3})*,\d{2})/su', $text, $m)) {
+        if (preg_match('/'.preg_quote($needle, '/').'.*?(\d{1,3}(?:\.\d{3})*,\d{2})/su', $text, $m)) {
             return (float) str_replace(['.', ','], ['', '.'], $m[1]);
         }
         return null;

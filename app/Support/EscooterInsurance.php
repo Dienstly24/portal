@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Support;
 
 use Carbon\CarbonImmutable;

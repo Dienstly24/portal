@@ -16,9 +16,9 @@ class EnergieAuftragParserTest extends TestCase
     /** Baut eine Zeile: linke Spalte (Wert/Label) + optional rechte AGB-Spalte. */
     private function row(string $left, string $right = '', int $leftIndent = 10): string
     {
-        $line = str_repeat(' ', $leftIndent) . $left;
+        $line = str_repeat(' ', $leftIndent).$left;
         if ($right !== '') {
-            $line = str_pad($line, 60) . $right;
+            $line = str_pad($line, 60).$right;
         }
         return $line;
     }
@@ -53,7 +53,7 @@ class EnergieAuftragParserTest extends TestCase
             $this->row('3.1 Lieferung', '', 4),
             $this->row('123-4567890', 'nem bisherigen Lieferanten zu kündigen und die'),
             // Reine rechte AGB-Zeile (grosse Einrueckung) zwischen Wert und Label:
-            str_repeat(' ', 60) . 'lichen Verträge mit dem zuständigen Netzbetreiber',
+            str_repeat(' ', 60).'lichen Verträge mit dem zuständigen Netzbetreiber',
             $this->row('Zählernummer bei Lieferanschrift', 'schließen. Die EWE VERTRIEB GmbH ist berechtigt', 8),
             $this->row('3500', ''),
             $this->row('Letzter Jahresverbrauch in kWh', '', 8),
@@ -69,7 +69,7 @@ class EnergieAuftragParserTest extends TestCase
 
     public function test_recognizes_and_extracts_energy_order(): void
     {
-        $r = (new EnergieAuftragParser())->parse($this->auftragText());
+        $r = (new EnergieAuftragParser)->parse($this->auftragText());
 
         $this->assertNotNull($r);
         $this->assertSame('energieauftrag', $r['type']);
@@ -98,7 +98,7 @@ class EnergieAuftragParserTest extends TestCase
 
     public function test_extracts_person_bank_and_company(): void
     {
-        $r = (new EnergieAuftragParser())->parse($this->auftragText());
+        $r = (new EnergieAuftragParser)->parse($this->auftragText());
         $p = $r['data']['person'];
 
         $this->assertSame('Max', $p['first_name']);
@@ -118,8 +118,8 @@ class EnergieAuftragParserTest extends TestCase
 
     public function test_non_energy_document_is_not_matched(): void
     {
-        $this->assertNull((new EnergieAuftragParser())->parse('Irgendein anderes Dokument.'));
+        $this->assertNull((new EnergieAuftragParser)->parse('Irgendein anderes Dokument.'));
         // DSL-Auftrag (Anbieter/Mindestlaufzeit, aber kein Grundpreis/Arbeitspreis).
-        $this->assertNull((new EnergieAuftragParser())->parse("EWE Anbieter Mindestlaufzeit 24 Monate DSL"));
+        $this->assertNull((new EnergieAuftragParser)->parse('EWE Anbieter Mindestlaufzeit 24 Monate DSL'));
     }
 }

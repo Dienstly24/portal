@@ -170,7 +170,7 @@ class ActivityReportTest extends TestCase
         $employee = User::factory()->create(['role' => 'employee', 'name' => 'Erika Beispiel']);
         $admin = User::factory()->create(['role' => 'admin']);
 
-        $response = $this->actingAs($admin)->get(route('admin.activity.export') . '?zeitraum=monat');
+        $response = $this->actingAs($admin)->get(route('admin.activity.export').'?zeitraum=monat');
 
         $response->assertOk();
         $this->assertStringContainsString('text/csv', $response->headers->get('Content-Type'));
@@ -183,7 +183,7 @@ class ActivityReportTest extends TestCase
         User::factory()->create(['role' => 'employee', 'name' => '=SUM(A1:A9)']);
         $admin = User::factory()->create(['role' => 'admin']);
 
-        $response = $this->actingAs($admin)->get(route('admin.activity.export') . '?zeitraum=monat');
+        $response = $this->actingAs($admin)->get(route('admin.activity.export').'?zeitraum=monat');
 
         $response->assertOk();
         // League\Csv\EscapeFormula neutralisiert Formelzellen mit Tab-Prefix
@@ -204,7 +204,7 @@ class ActivityReportTest extends TestCase
         ]);
 
         $response = $this->actingAs($admin)
-            ->get(route('admin.activity.user_export', $employee->id) . '?zeitraum=heute');
+            ->get(route('admin.activity.user_export', $employee->id).'?zeitraum=heute');
 
         $response->assertOk();
         $this->assertStringContainsString('text/csv', $response->headers->get('Content-Type'));

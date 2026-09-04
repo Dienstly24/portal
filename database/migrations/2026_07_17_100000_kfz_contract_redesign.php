@@ -1,4 +1,5 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -120,9 +121,9 @@ return new class extends Migration {
             }
 
             // "SF 12" -> "12"; Jahr -> gueltig ab 01.01.
-            $norm = fn($v) => $v === null ? null : (preg_replace('/^\s*SF\s*/i', '', trim((string) $v)) ?: null);
+            $norm = fn ($v) => $v === null ? null : (preg_replace('/^\s*SF\s*/i', '', trim((string) $v)) ?: null);
             foreach ([['sf_liability_class', 'sf_liability_year', 'sf_liability_valid_from', 'haftpflicht'],
-                      ['sf_comprehensive_class', 'sf_comprehensive_year', 'sf_comprehensive_valid_from', 'vollkasko']] as [$classCol, $yearCol, $fromCol, $branch]) {
+                ['sf_comprehensive_class', 'sf_comprehensive_year', 'sf_comprehensive_valid_from', 'vollkasko']] as [$classCol, $yearCol, $fromCol, $branch]) {
                 $class = $norm($row->{$classCol});
                 if ($class !== ($row->{$classCol} ?? null)) $update[$classCol] = $class;
                 $from = $row->{$yearCol} ? sprintf('%04d-01-01', (int) $row->{$yearCol}) : null;
@@ -146,7 +147,7 @@ return new class extends Migration {
             // Alt-Schaeden [{month, year, type}] -> eigene Tabelle.
             foreach (json_decode((string) $row->claims, true) ?: [] as $claim) {
                 $year = (int) ($claim['year'] ?? 0);
-                if (!$year) continue;
+                if (! $year) continue;
                 $month = min(12, max(1, (int) ($claim['month'] ?? 1)));
                 DB::table('vehicle_claims')->insert([
                     'id' => (string) Str::uuid(),

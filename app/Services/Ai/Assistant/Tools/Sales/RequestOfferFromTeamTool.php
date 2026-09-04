@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Tools\Sales;
 
 use App\Models\AiConversationEvent;
@@ -37,14 +38,14 @@ class RequestOfferFromTeamTool implements AssistantTool
     public function description(): string
     {
         return 'Fordere ein Angebot beim Team an, wenn alle noetigen Angaben vorliegen '
-            . 'und noch kein Angebot hinterlegt ist. Sage dem Kunden anschliessend, '
-            . 'dass ein Mitarbeiter das passende Angebot heraussucht und er es hier im '
-            . 'Chat erhaelt. Nenne KEINE Preise oder Tarife.';
+            .'und noch kein Angebot hinterlegt ist. Sage dem Kunden anschliessend, '
+            .'dass ein Mitarbeiter das passende Angebot heraussucht und er es hier im '
+            .'Chat erhaelt. Nenne KEINE Preise oder Tarife.';
     }
 
     public function parameters(): array
     {
-        return ['type' => 'object', 'properties' => new \stdClass(), 'required' => []];
+        return ['type' => 'object', 'properties' => new \stdClass, 'required' => []];
     }
 
     public function isWriting(): bool
@@ -83,7 +84,7 @@ class RequestOfferFromTeamTool implements AssistantTool
             'angefordert' => true,
             'zustand' => $conversation->state,
             'hinweis' => 'Ein Mitarbeiter waehlt das Angebot aus. Nenne dem Kunden '
-                . 'keine Preise und keine Tarife.',
+                .'keine Preise und keine Tarife.',
         ];
     }
 }

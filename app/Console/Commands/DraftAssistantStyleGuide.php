@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 use App\Models\AiKnowledgeEntry;
 use App\Models\CustomerMessage;
 use Illuminate\Console\Command;
-use Illuminate\Support\Str;
 
 /**
  * Gespraechsleitfaden aus echten Mitarbeiter-Antworten VORSCHLAGEN
@@ -46,7 +45,7 @@ class DraftAssistantStyleGuide extends Command
             ->values();
 
         if ($nachrichten->count() < 20) {
-            $this->warn('Zu wenige Mitarbeiter-Antworten im Zeitraum (' . $nachrichten->count() . ').');
+            $this->warn('Zu wenige Mitarbeiter-Antworten im Zeitraum ('.$nachrichten->count().').');
             $this->line('Ein Leitfaden aus einer Handvoll Nachrichten waere geraten, nicht beobachtet.');
 
             return self::FAILURE;
@@ -63,12 +62,12 @@ class DraftAssistantStyleGuide extends Command
         $abschluss = $this->anteil($nachrichten, '/(freundlichen grüßen|freundlichen gruessen|beste grüße|melden sie sich|gerne helfen wir)/iu');
         $rueckfrage = $this->anteil($nachrichten, '/\?/');
 
-        $this->info('Ausgewertet: ' . $nachrichten->count() . ' Mitarbeiter-Antworten der letzten ' . $tage . ' Tage.');
-        $this->line('  Typische Laenge: ' . $median . ' Zeichen, etwa ' . $saetze . ' Saetze');
-        $this->line('  Sie-Ansprache:   ' . $sieForm . ' %');
-        $this->line('  Mit Begruessung: ' . $begruessung . ' %');
-        $this->line('  Mit Abschluss:   ' . $abschluss . ' %');
-        $this->line('  Mit Rueckfrage:  ' . $rueckfrage . ' %');
+        $this->info('Ausgewertet: '.$nachrichten->count().' Mitarbeiter-Antworten der letzten '.$tage.' Tage.');
+        $this->line('  Typische Laenge: '.$median.' Zeichen, etwa '.$saetze.' Saetze');
+        $this->line('  Sie-Ansprache:   '.$sieForm.' %');
+        $this->line('  Mit Begruessung: '.$begruessung.' %');
+        $this->line('  Mit Abschluss:   '.$abschluss.' %');
+        $this->line('  Mit Rueckfrage:  '.$rueckfrage.' %');
 
         $inhalt = $this->guide($median, $saetze, $sieForm, $begruessung, $abschluss, $rueckfrage, $nachrichten->count(), $tage);
 
@@ -77,7 +76,7 @@ class DraftAssistantStyleGuide extends Command
         $this->line($inhalt);
         $this->line('--- Ende ---');
 
-        if (!$this->option('schreiben')) {
+        if (! $this->option('schreiben')) {
             $this->newLine();
             $this->line('Nur angezeigt. Zum Anlegen (INAKTIV, zur Freigabe):');
             $this->line('  php artisan ki:leitfaden-entwurf --schreiben');
@@ -86,7 +85,7 @@ class DraftAssistantStyleGuide extends Command
         }
 
         $eintrag = AiKnowledgeEntry::create([
-            'title' => 'Gesprächsleitfaden (Entwurf vom ' . now()->format('d.m.Y') . ')',
+            'title' => 'Gesprächsleitfaden (Entwurf vom '.now()->format('d.m.Y').')',
             'category' => 'leitfaden',
             'content' => $inhalt,
             'keywords' => 'Gesprächsleitfaden Stil Ablauf Antwort',
@@ -95,7 +94,7 @@ class DraftAssistantStyleGuide extends Command
         ]);
 
         $this->newLine();
-        $this->info('Entwurf angelegt (inaktiv): ' . $eintrag->title);
+        $this->info('Entwurf angelegt (inaktiv): '.$eintrag->title);
         $this->line('Freigeben unter /admin/ki-wissensbasis - erst dann nutzt der Assistent ihn.');
 
         return self::SUCCESS;
@@ -115,10 +114,10 @@ class DraftAssistantStyleGuide extends Command
         $laenge = $median < 250 ? 'kurz' : ($median < 600 ? 'mittellang' : 'ausfuehrlich');
 
         return implode("\n", array_filter([
-            'Beobachteter Antwortstil des Teams (' . $anzahl . ' Antworten der letzten ' . $tage . ' Tage).',
+            'Beobachteter Antwortstil des Teams ('.$anzahl.' Antworten der letzten '.$tage.' Tage).',
             'Vor der Nutzung pruefen und anpassen - dies ist eine Messung, keine Vorgabe.',
             '',
-            'Laenge: ' . $laenge . ', typisch etwa ' . $median . ' Zeichen bzw. ' . $saetze . ' Saetze.',
+            'Laenge: '.$laenge.', typisch etwa '.$median.' Zeichen bzw. '.$saetze.' Saetze.',
             $sie >= 70 ? 'Ansprache: durchgehend "Sie".' : null,
             $begruessung >= 50 ? 'Beginn: mit Begruessung ("Guten Tag ...").' : 'Beginn: meist direkt zur Sache, ohne lange Begruessung.',
             $abschluss >= 50 ? 'Abschluss: mit Gruss bzw. Angebot weiterer Hilfe.' : null,

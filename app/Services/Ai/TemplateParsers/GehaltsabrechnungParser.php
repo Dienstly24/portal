@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
@@ -29,8 +30,8 @@ class GehaltsabrechnungParser implements DocumentTemplateParser
     {
         $text = (string) preg_replace('/\x{00ad}\s*/u', '', $text);
         $upper = mb_strtoupper($text);
-        if (!str_contains($upper, 'ENTGELTABRECHNUNG') && !str_contains($upper, 'GEHALTSABRECHNUNG')
-            && !str_contains($upper, 'LOHNABRECHNUNG') && !str_contains($upper, 'ENTGELTBESCHEINIGUNG')) {
+        if (! str_contains($upper, 'ENTGELTABRECHNUNG') && ! str_contains($upper, 'GEHALTSABRECHNUNG')
+            && ! str_contains($upper, 'LOHNABRECHNUNG') && ! str_contains($upper, 'ENTGELTBESCHEINIGUNG')) {
             return null;
         }
 
@@ -44,7 +45,7 @@ class GehaltsabrechnungParser implements DocumentTemplateParser
         // Krankenkasse (rechte Merkmalsspalte).
         $health = [];
         $kk = $this->labelValue('Krankenkasse');
-        if ($kk !== null && mb_strlen($kk) >= 2 && !preg_match('/beitrag/i', $kk)) {
+        if ($kk !== null && mb_strlen($kk) >= 2 && ! preg_match('/beitrag/i', $kk)) {
             $health['health_insurance_company'] = $kk;
             $health['health_insurance_type'] = 'gesetzlich';
         }
@@ -54,7 +55,7 @@ class GehaltsabrechnungParser implements DocumentTemplateParser
         $bank = [];
         if (preg_match('/IBAN\s+(DE\d{2}(?:\s?\d){18})\b/u', $this->text(), $m)) {
             $bank['iban'] = strtoupper((string) preg_replace('/\s+/', '', $m[1]));
-            $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+            $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
             if ($name !== '') {
                 $bank['account_holder'] = $name;
             }
@@ -66,19 +67,19 @@ class GehaltsabrechnungParser implements DocumentTemplateParser
         $netto = $this->amountAfter('Gesamtnetto');
         $month = $this->periodLabel();
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         return [
             'type' => 'gehaltsabrechnung',
             'confidence' => 72,
             'summary' => 'Entgeltabrechnung'
-                . ($month !== null ? ' ' . $month : '')
-                . ($name !== '' ? ' - ' . $name : '')
-                . ($employer !== null ? ' - Arbeitgeber ' . $employer : '')
-                . ($brutto !== null ? ' - Brutto ' . number_format($brutto, 2, ',', '.') . ' EUR' : '')
-                . ($netto !== null ? ' / Netto ' . number_format($netto, 2, ',', '.') . ' EUR' : '')
-                . (isset($health['health_insurance_company']) ? ' - Krankenkasse ' . $health['health_insurance_company'] : '')
-                . ' - Felder gratis aus der Abrechnung gelesen (ohne KI).',
-            'title' => 'Entgeltabrechnung' . ($name !== '' ? ' ' . $name : ''),
+                .($month !== null ? ' '.$month : '')
+                .($name !== '' ? ' - '.$name : '')
+                .($employer !== null ? ' - Arbeitgeber '.$employer : '')
+                .($brutto !== null ? ' - Brutto '.number_format($brutto, 2, ',', '.').' EUR' : '')
+                .($netto !== null ? ' / Netto '.number_format($netto, 2, ',', '.').' EUR' : '')
+                .(isset($health['health_insurance_company']) ? ' - Krankenkasse '.$health['health_insurance_company'] : '')
+                .' - Felder gratis aus der Abrechnung gelesen (ohne KI).',
+            'title' => 'Entgeltabrechnung'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => [],
@@ -97,7 +98,7 @@ class GehaltsabrechnungParser implements DocumentTemplateParser
         $raw = [];
         foreach ($this->lines as $i => $line) {
             $cols = $this->columns($line);
-            if ($cols === [] || !preg_match('/^(Herrn|Herr|Frau)$/u', $cols[0])) {
+            if ($cols === [] || ! preg_match('/^(Herrn|Herr|Frau)$/u', $cols[0])) {
                 continue;
             }
             $raw['gender'] = mb_strtolower($cols[0]) === 'frau' ? 'female' : 'male';
@@ -129,7 +130,7 @@ class GehaltsabrechnungParser implements DocumentTemplateParser
         // Geburtsdatum aus der rechten Merkmalsspalte.
         $birth = $this->labelValue('Geburtsdatum');
         if ($birth !== null && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $birth, $m)) {
-            $raw['birth_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['birth_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
 
         return $this->validatedPerson(array_filter($raw, fn ($v) => $v !== null && $v !== ''));
@@ -150,7 +151,7 @@ class GehaltsabrechnungParser implements DocumentTemplateParser
     /** Betrag nach einem Label ("Gesamtbrutto ... 2.512,00") - der erste Wert. */
     private function amountAfter(string $label): ?float
     {
-        if (preg_match('/' . preg_quote($label, '/') . '\s+([\d.]+,\d{2})/u', $this->text(), $m)) {
+        if (preg_match('/'.preg_quote($label, '/').'\s+([\d.]+,\d{2})/u', $this->text(), $m)) {
             return (float) str_replace(['.', ','], ['', '.'], $m[1]);
         }
         return null;
@@ -160,7 +161,7 @@ class GehaltsabrechnungParser implements DocumentTemplateParser
     private function periodLabel(): ?string
     {
         if (preg_match('/\b(Januar|Februar|März|Maerz|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember)\s+(\d{4})\b/u', $this->text(), $m)) {
-            return $m[1] . ' ' . $m[2];
+            return $m[1].' '.$m[2];
         }
         return null;
     }
@@ -168,7 +169,7 @@ class GehaltsabrechnungParser implements DocumentTemplateParser
     /** Wert nach "Label" bis zur naechsten Spalte/Zeilenende (rechte Merkmalsspalte). */
     private function labelValue(string $label): ?string
     {
-        $pattern = '/(?<![\p{L}\-])' . preg_quote($label, '/') . '\s{2,}(\S.*?)(?:\s{2,}|$)/mu';
+        $pattern = '/(?<![\p{L}\-])'.preg_quote($label, '/').'\s{2,}(\S.*?)(?:\s{2,}|$)/mu';
         return preg_match($pattern, $this->text(), $m) ? trim($m[1]) : null;
     }
 

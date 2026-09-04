@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Console\Concerns\ProcessesRecordsSafely;
+use App\Models\ActivityLog;
 use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\DocumentRequest;
@@ -35,7 +36,7 @@ class BatchResilienceTest extends TestCase
 
         return Customer::create(array_merge([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5((string) $user->id . uniqid()), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5((string) $user->id.uniqid()), 0, 8)),
         ], $attrs));
     }
 
@@ -45,7 +46,7 @@ class BatchResilienceTest extends TestCase
     {
         Log::spy();
 
-        $befehl = new TestBatchBefehl();
+        $befehl = new TestBatchBefehl;
         $code = $befehl->lauf([1, 2, 3, 4], fehlerBei: 2);
 
         // Alles ausser dem kaputten Datensatz wurde erledigt ...
@@ -57,7 +58,7 @@ class BatchResilienceTest extends TestCase
 
     public function test_ohne_fehler_bleibt_der_erfolgscode_erhalten(): void
     {
-        $befehl = new TestBatchBefehl();
+        $befehl = new TestBatchBefehl;
 
         $this->assertSame(0, $befehl->lauf([1, 2, 3]));
         $this->assertSame([1, 2, 3], $befehl->verarbeitet);
@@ -67,7 +68,7 @@ class BatchResilienceTest extends TestCase
     {
         Log::spy();
 
-        $befehl = new TestBatchBefehl();
+        $befehl = new TestBatchBefehl;
         // Zwei kaputte Datensaetze - beide werden uebersprungen, keiner
         // beendet den Lauf.
         $code = $befehl->lauf([1, 2, 3, 4], fehlerBei: 2, auchFehlerBei: 4);
@@ -92,7 +93,7 @@ class BatchResilienceTest extends TestCase
         // Der mittlere Vertrag scheitert beim Speichern - so wie es im Betrieb
         // durch einen kaputten Bezug oder eine Constraint passieren kann.
         $kaputt = $vertraege[1]->id;
-        Event::listen('eloquent.updating: ' . Contract::class, function (Contract $c) use ($kaputt) {
+        Event::listen('eloquent.updating: '.Contract::class, function (Contract $c) use ($kaputt) {
             if ($c->id === $kaputt) {
                 throw new \RuntimeException('Vertrag kaputt');
             }
@@ -136,7 +137,7 @@ class BatchResilienceTest extends TestCase
 
         $this->artisan('health:apply-due-switches')->assertSuccessful();
 
-        $eintrag = \App\Models\ActivityLog::where('action', 'health_switch_applied')->firstOrFail();
+        $eintrag = ActivityLog::where('action', 'health_switch_applied')->firstOrFail();
         // metaArray() faengt zwar doppelte Kodierung ab - gespeichert werden
         // soll sie trotzdem nie.
         $this->assertIsArray($eintrag->meta);
@@ -149,9 +150,9 @@ class BatchResilienceTest extends TestCase
     {
         $tickets = collect(range(1, 3))->map(fn ($i) => Ticket::create([
             'customer_id' => $this->kunde()->id,
-            'ticket_number' => 'T-2600' . $i,
+            'ticket_number' => 'T-2600'.$i,
             'type' => 'other',
-            'subject' => 'Testvorgang ' . $i,
+            'subject' => 'Testvorgang '.$i,
             'description' => 'Testbeschreibung',
             'status' => 'resolved',
             'resolved_at' => now()->subDays(10),
@@ -185,13 +186,13 @@ class BatchResilienceTest extends TestCase
     {
         $anfragen = collect(range(1, 3))->map(fn ($i) => DocumentRequest::create([
             'customer_id' => $this->kunde()->id,
-            'title' => 'Nachweis ' . $i,
+            'title' => 'Nachweis '.$i,
             'status' => 'open',
             'deadline' => today()->addDay()->toDateString(),
         ]));
 
         $kaputt = $anfragen[1]->id;
-        Event::listen('eloquent.updating: ' . DocumentRequest::class, function (DocumentRequest $r) use ($kaputt) {
+        Event::listen('eloquent.updating: '.DocumentRequest::class, function (DocumentRequest $r) use ($kaputt) {
             if ($r->id === $kaputt) {
                 throw new \RuntimeException('Anfrage kaputt');
             }

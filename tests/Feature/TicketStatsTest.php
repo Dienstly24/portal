@@ -24,7 +24,7 @@ class TicketStatsTest extends TestCase
 
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => '26001' . str_pad((string) $n, 2, '0', STR_PAD_LEFT),
+            'customer_number' => '26001'.str_pad((string) $n, 2, '0', STR_PAD_LEFT),
             'first_name' => 'Kunde',
             'last_name' => (string) $n,
         ]);
@@ -126,11 +126,11 @@ class TicketStatsTest extends TestCase
 
         $this->actingAs($admin)->get(route('admin.tickets.stats', ['zeitraum' => 'heute']))
             ->assertOk()
-            ->assertViewHas('kpis', fn($kpis) => $kpis['neu'] === 1);
+            ->assertViewHas('kpis', fn ($kpis) => $kpis['neu'] === 1);
 
         $this->actingAs($admin)->get(route('admin.tickets.stats', ['zeitraum' => '7']))
             ->assertOk()
-            ->assertViewHas('kpis', fn($kpis) => $kpis['neu'] === 2);
+            ->assertViewHas('kpis', fn ($kpis) => $kpis['neu'] === 2);
     }
 
     public function test_stats_lists_top_customers_and_employees(): void
@@ -146,7 +146,7 @@ class TicketStatsTest extends TestCase
         $response = $this->actingAs($admin)->get(route('admin.tickets.stats'))->assertOk();
         $response->assertSee('Willi Worker');
         $response->assertSee($customer->customer_number);
-        $response->assertViewHas('byEmployee', fn($rows) => $rows->count() === 1
+        $response->assertViewHas('byEmployee', fn ($rows) => $rows->count() === 1
             && $rows[0]['total'] === 2 && $rows[0]['erledigt'] === 1 && $rows[0]['rating'] === 4.0);
     }
 

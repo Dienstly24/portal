@@ -21,8 +21,7 @@ use Illuminate\Support\Facades\Schema;
  * Auftragsliste als "fehlerhaft" abzulehnen oder bei der Abrechnung den
  * fehlenden Betrag durchgehen zu lassen.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('commission_imports', function (Blueprint $table) {

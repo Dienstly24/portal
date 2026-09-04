@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\DocumentIntake;
 
 use App\Models\Contract;
@@ -33,7 +34,7 @@ class ContractRevisionRecorder
         $changed = [];
 
         foreach ($proposed as $field => $newRaw) {
-            if (!isset($spec[$field])) {
+            if (! isset($spec[$field])) {
                 continue; // nur bekannte, mit Label versehene Felder protokollieren
             }
             // Leerer neuer Wert -> nie ueberschreiben (kein Datenverlust).

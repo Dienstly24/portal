@@ -28,7 +28,7 @@ class MagicLoginController extends Controller
         if (
             $account === null
             || $account->role !== 'customer'
-            || (isset($account->is_active) && !$account->is_active)
+            || (isset($account->is_active) && ! $account->is_active)
         ) {
             abort(403, 'Dieser Anmeldelink ist nicht gültig.');
         }

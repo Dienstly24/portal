@@ -4,7 +4,9 @@ namespace App\Console\Commands;
 
 use App\Models\Document;
 use Illuminate\Console\Command;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Diagnose des Queue-Betriebs (INT-10). Bisher fiel ein toter Queue-Worker
@@ -29,11 +31,11 @@ class QueueHealth extends Command
 
         // 1) Fehlgeschlagene Jobs (nur, wenn die Tabelle existiert).
         $failed = 0;
-        if (\Illuminate\Support\Facades\Schema::hasTable('failed_jobs')) {
+        if (Schema::hasTable('failed_jobs')) {
             $failed = (int) DB::table('failed_jobs')->count();
         }
         if ($failed > 0) {
-            $this->error('✗ ' . $failed . ' fehlgeschlagene Job(s) in failed_jobs. Erneut versuchen: php artisan queue:retry all');
+            $this->error('✗ '.$failed.' fehlgeschlagene Job(s) in failed_jobs. Erneut versuchen: php artisan queue:retry all');
             $healthy = false;
         } else {
             $this->info('✓ Keine fehlgeschlagenen Jobs.');
@@ -44,7 +46,7 @@ class QueueHealth extends Command
         $processing = Document::where('ai_status', 'processing')->count();
         $oldestPending = Document::where('ai_status', 'pending')->min('created_at');
 
-        $this->line('Analyse-Status: ' . $pending . ' pending, ' . $processing . ' processing.');
+        $this->line('Analyse-Status: '.$pending.' pending, '.$processing.' processing.');
 
         $threshold = max(1, (int) config('services.ocr.pending_backlog_alert', 10));
         $staleBacklog = Document::where('ai_status', 'pending')
@@ -52,9 +54,9 @@ class QueueHealth extends Command
 
         if ($staleBacklog >= $threshold) {
             $wartet = $oldestPending
-                ? \Illuminate\Support\Carbon::parse($oldestPending)->diffForHumans(now(), true)
+                ? Carbon::parse($oldestPending)->diffForHumans(now(), true)
                 : 'unbekannt';
-            $this->error('✗ Rueckstau: ' . $staleBacklog . ' Dokument(e) warten seit >30 Min (aeltestes seit ' . $wartet . ').');
+            $this->error('✗ Rueckstau: '.$staleBacklog.' Dokument(e) warten seit >30 Min (aeltestes seit '.$wartet.').');
             $this->error('  Vermutlich laeuft der Queue-Worker nicht: php artisan queue:work (siehe docs/DEPLOYMENT.md).');
             $healthy = false;
         } else {

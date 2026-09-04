@@ -12,6 +12,7 @@ use App\Models\EmailCampaign;
 use App\Models\EmailLog;
 use App\Models\User;
 use App\Services\ContractSwitchReminderService;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
@@ -38,7 +39,7 @@ class EmailMarketingImprovementsTest extends TestCase
         $user = User::factory()->create(['role' => 'customer']);
         return Customer::create(array_merge([
             'user_id' => $user->id,
-            'customer_number' => 'K-' . uniqid(),
+            'customer_number' => 'K-'.uniqid(),
         ], $overrides));
     }
 
@@ -46,7 +47,7 @@ class EmailMarketingImprovementsTest extends TestCase
     {
         return Contract::create(array_merge([
             'customer_id' => $customer->id,
-            'contract_number' => 'V-' . uniqid(),
+            'contract_number' => 'V-'.uniqid(),
             'type' => 'internet',
             'insurer' => 'Telekom',
             'status' => 'active',
@@ -60,14 +61,14 @@ class EmailMarketingImprovementsTest extends TestCase
         $customer = $this->customer();
         $token = $customer->unsubscribeToken();
 
-        $this->get('/abmelden/' . $token)->assertOk()->assertSee('erfolgreich abgemeldet');
+        $this->get('/abmelden/'.$token)->assertOk()->assertSee('erfolgreich abgemeldet');
 
         $customer->refresh();
         $this->assertFalse($customer->marketing_consent);
         $this->assertNotNull($customer->unsubscribed_at);
         $firstStamp = $customer->unsubscribed_at;
 
-        $this->get('/abmelden/' . $token)->assertOk();
+        $this->get('/abmelden/'.$token)->assertOk();
         $this->assertEquals($firstStamp, $customer->fresh()->unsubscribed_at);
 
         $this->get('/abmelden/gibt-es-nicht')->assertNotFound();
@@ -80,7 +81,7 @@ class EmailMarketingImprovementsTest extends TestCase
         $customer = $this->customer();
         $token = $customer->unsubscribeToken();
 
-        $this->post('/abmelden/' . $token)->assertOk();
+        $this->post('/abmelden/'.$token)->assertOk();
 
         $customer->refresh();
         $this->assertFalse($customer->marketing_consent);
@@ -189,7 +190,7 @@ class EmailMarketingImprovementsTest extends TestCase
         ];
         EmailLog::create($attrs);
 
-        $this->expectException(\Illuminate\Database\UniqueConstraintViolationException::class);
+        $this->expectException(UniqueConstraintViolationException::class);
         EmailLog::create($attrs);
     }
 
@@ -224,7 +225,7 @@ class EmailMarketingImprovementsTest extends TestCase
         $this->assertEquals('failed', $campaign->fresh()->status);
         $this->assertDatabaseHas('internal_notifications', [
             'user_id' => $this->admin->id,
-            'dedup_key' => 'campaign-failed-' . $campaign->id,
+            'dedup_key' => 'campaign-failed-'.$campaign->id,
         ]);
     }
 
@@ -310,7 +311,7 @@ class EmailMarketingImprovementsTest extends TestCase
             'subject' => 'Probe', 'body' => 'Inhalt',
         ])->assertSessionHas('success');
 
-        Mail::assertSent(CampaignMail::class, fn($m) => $m->hasTo($this->admin->email));
+        Mail::assertSent(CampaignMail::class, fn ($m) => $m->hasTo($this->admin->email));
         $this->assertEquals(0, EmailCampaign::count());
         $this->assertEquals(0, EmailLog::count());
     }
@@ -345,7 +346,7 @@ class EmailMarketingImprovementsTest extends TestCase
         $sent = app(ContractSwitchReminderService::class)->run();
 
         $this->assertEquals(1, $sent);
-        Mail::assertQueued(ContractSwitchMail::class, fn($m) => $m->stage === 'first');
+        Mail::assertQueued(ContractSwitchMail::class, fn ($m) => $m->stage === 'first');
         $this->assertDatabaseHas('contract_switch_reminders', ['contract_id' => $contract->id, 'stage' => 'first']);
         $this->assertDatabaseHas('email_logs', ['type' => 'contract_switch', 'status' => 'sent']);
 
@@ -373,7 +374,7 @@ class EmailMarketingImprovementsTest extends TestCase
 
         ContractSwitchReminder::query()->update(['sent_at' => now()->subDays(15)]);
         $this->assertEquals(1, app(ContractSwitchReminderService::class)->run());
-        Mail::assertQueued(ContractSwitchMail::class, fn($m) => $m->stage === 'followup');
+        Mail::assertQueued(ContractSwitchMail::class, fn ($m) => $m->stage === 'followup');
         $this->assertEquals(2, $contract->switchReminders()->count());
     }
 

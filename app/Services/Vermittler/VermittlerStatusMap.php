@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Vermittler;
 
 use App\Models\Contract;
@@ -101,6 +102,6 @@ class VermittlerStatusMap
     public static function codeLabel(?string $code): string
     {
         $code = trim((string) $code);
-        return self::CODE_LABELS[$code] ?? ('Unbekannter Status "' . $code . '"');
+        return self::CODE_LABELS[$code] ?? ('Unbekannter Status "'.$code.'"');
     }
 }

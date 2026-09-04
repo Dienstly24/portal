@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Activity;
 
 use App\Models\ActivityLog;
@@ -64,7 +65,7 @@ class ActivityReportService
         });
 
         // Ranking nach Punkten; bei Gleichstand entscheidet aktive Zeit.
-        $rows = $rows->sortByDesc(fn($r) => [$r->points, $r->active_seconds])->values();
+        $rows = $rows->sortByDesc(fn ($r) => [$r->points, $r->active_seconds])->values();
         $rows->each(function ($row, $i) {
             $row->rank = $i + 1;
         });
@@ -115,7 +116,7 @@ class ActivityReportService
     {
         return WorkSession::where('user_id', $user->id)
             ->where('login_at', '<=', $to)
-            ->where(fn($q) => $q->whereNull('logout_at')->orWhere('logout_at', '>=', $from))
+            ->where(fn ($q) => $q->whereNull('logout_at')->orWhere('logout_at', '>=', $from))
             ->orderByDesc('login_at')
             ->get();
     }
@@ -129,7 +130,7 @@ class ActivityReportService
             ->groupBy('action')
             ->orderByDesc('c')
             ->get()
-            ->map(fn($row) => (object) [
+            ->map(fn ($row) => (object) [
                 'action' => $row->action,
                 'label' => $this->catalog->labelFor($row->action),
                 'category' => $this->catalog->categoryFor($row->action),
@@ -160,7 +161,7 @@ class ActivityReportService
     {
         $sessions = WorkSession::whereIn('user_id', $userIds)
             ->where('login_at', '<=', $to)
-            ->where(fn($q) => $q->whereNull('logout_at')->orWhere('logout_at', '>=', $from))
+            ->where(fn ($q) => $q->whereNull('logout_at')->orWhere('logout_at', '>=', $from))
             ->get();
 
         $result = [];

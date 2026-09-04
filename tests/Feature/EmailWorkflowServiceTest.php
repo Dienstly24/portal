@@ -41,7 +41,7 @@ class EmailWorkflowServiceTest extends TestCase
     {
         return EmailMessage::create(array_merge([
             'email_account_id' => $account->id,
-            'message_uid' => 'INBOX:' . uniqid(),
+            'message_uid' => 'INBOX:'.uniqid(),
             'from_address' => 'unbekannt@example.com',
             'from_name' => 'Unbekannt Sender',
             'subject' => 'Testmail',

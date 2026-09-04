@@ -61,7 +61,7 @@ class EuropaGoKfzParserTest extends TestCase
 
     public function test_parses_all_key_fields(): void
     {
-        $r = (new EuropaGoKfzParser())->parse($this->letterText());
+        $r = (new EuropaGoKfzParser)->parse($this->letterText());
 
         $this->assertNotNull($r);
         $this->assertSame('kfz_vertrag', $r['type']);
@@ -103,9 +103,9 @@ class EuropaGoKfzParserTest extends TestCase
     public function test_ignores_check24_protocol_and_unrelated_documents(): void
     {
         $protocol = "Vorlaeufiges Beratungsprotokoll zur Kfz-Versicherung - CHECK24\n"
-            . "Gewaehlter Tarif: EUROPA-go Basis";
-        $this->assertNull((new EuropaGoKfzParser())->parse($protocol));
+            .'Gewaehlter Tarif: EUROPA-go Basis';
+        $this->assertNull((new EuropaGoKfzParser)->parse($protocol));
 
-        $this->assertNull((new EuropaGoKfzParser())->parse('Irgendein anderes Dokument'));
+        $this->assertNull((new EuropaGoKfzParser)->parse('Irgendein anderes Dokument'));
     }
 }

@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Support\BrandAssets;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -33,7 +34,7 @@ class BrandAssetsTest extends TestCase
         imagefill($img, 0, 0, imagecolorallocatealpha($img, 0, 0, 0, 127));
         // Ein deckender Balken, damit das Bild nicht voellig leer ist.
         imagefilledrectangle($img, 0, (int) ($h / 3), $w - 1, (int) ($h / 3 * 2), imagecolorallocate($img, 255, 255, 255));
-        $path = tempnam(sys_get_temp_dir(), 'logo') . '.png';
+        $path = tempnam(sys_get_temp_dir(), 'logo').'.png';
         imagepng($img, $path);
         imagedestroy($img);
 
@@ -77,19 +78,19 @@ class BrandAssetsTest extends TestCase
         // ab sofort dasselbe hochgeladene Logo.
         $this->get('https://www.dienstly24.de/')
             ->assertOk()
-            ->assertSee('/storage/media/' . $asset->id, false)
+            ->assertSee('/storage/media/'.$asset->id, false)
             ->assertDontSee('src="/images/logo-white.png"', false);
 
         // Auch die Rechtsseiten der Website (eigenes Layout) ziehen nach.
         $this->get('https://www.dienstly24.de/impressum')
             ->assertOk()
-            ->assertSee('/storage/media/' . $asset->id, false);
+            ->assertSee('/storage/media/'.$asset->id, false);
 
         // Und der oeffentliche Login-Screen (als Gast geprueft).
         auth()->logout();
         $this->get('/login')
             ->assertOk()
-            ->assertSee('/storage/media/' . $asset->id, false);
+            ->assertSee('/storage/media/'.$asset->id, false);
     }
 
     public function test_logo_keeps_transparency_no_white_box(): void
@@ -125,7 +126,7 @@ class BrandAssetsTest extends TestCase
 
         $this->get('https://www.dienstly24.de/')
             ->assertOk()
-            ->assertSee('sizes="32x32" href="/storage/media/' . $asset->id, false);
+            ->assertSee('sizes="32x32" href="/storage/media/'.$asset->id, false);
     }
 
     public function test_assigning_brand_slot_later_rebuilds_the_sizes(): void
@@ -163,7 +164,7 @@ class BrandAssetsTest extends TestCase
         Storage::fake('public');
         Storage::fake('local');
         config(['cache.default' => 'file']);
-        \Illuminate\Support\Facades\Cache::store('file')->clear();
+        Cache::store('file')->clear();
 
         $asset = $this->uploadToSlot('logo-hell');
 
@@ -172,14 +173,14 @@ class BrandAssetsTest extends TestCase
         // ... der zweite liest ihn zurueck (hier brach es vorher).
         $this->get('https://www.dienstly24.de/')
             ->assertOk()
-            ->assertSee('/storage/media/' . $asset->id, false);
+            ->assertSee('/storage/media/'.$asset->id, false);
 
         $this->assertInstanceOf(MediaAsset::class, MediaAsset::forSlot('logo-hell'));
         $this->assertSame($asset->id, MediaAsset::forSlot('logo-hell')->id);
         // Casts muessen nach dem Cache-Roundtrip weiter greifen.
         $this->assertIsArray(MediaAsset::forSlot('logo-hell')->variants);
 
-        \Illuminate\Support\Facades\Cache::store('file')->clear();
+        Cache::store('file')->clear();
     }
 
     /**

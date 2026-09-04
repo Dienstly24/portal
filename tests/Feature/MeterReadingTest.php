@@ -29,17 +29,17 @@ class MeterReadingTest extends TestCase
 
     /** Text, wie ihn OCR von einem echten Zaehlerdisplay liefert. */
     private const FOTO_TEXT = "180 004680 kWh\n"
-        . "Identifikationsnummer\n"
-        . "1 LOG00 9228 3078\n"
-        . "Schltg. 4000k\n"
-        . "Nr. 92283078   Baujahr 2024\n"
-        . "Zweirichtungszähler\n"
-        . "R,=10.000 Imp/kWh";
+        ."Identifikationsnummer\n"
+        ."1 LOG00 9228 3078\n"
+        ."Schltg. 4000k\n"
+        ."Nr. 92283078   Baujahr 2024\n"
+        ."Zweirichtungszähler\n"
+        .'R,=10.000 Imp/kWh';
 
     private function customer(string $name = 'Zaehler Kunde'): Customer
     {
         $user = User::factory()->create(['role' => 'customer', 'name' => $name]);
-        return Customer::create(['user_id' => $user->id, 'customer_number' => 'C-' . strtoupper(Str::random(6))]);
+        return Customer::create(['user_id' => $user->id, 'customer_number' => 'C-'.strtoupper(Str::random(6))]);
     }
 
     private function energyContract(Customer $customer, string $meterNumber, array $overrides = []): Contract
@@ -66,7 +66,7 @@ class MeterReadingTest extends TestCase
 
     public function test_zaehlerfoto_wird_ohne_ki_erkannt(): void
     {
-        $result = (new HeuristicDocumentClassifier())->classify(self::FOTO_TEXT);
+        $result = (new HeuristicDocumentClassifier)->classify(self::FOTO_TEXT);
 
         $this->assertSame('zaehlerfoto', $result['type']);
         $this->assertSame('1LOG0092283078', $result['data']['energie']['meter_number']);
@@ -78,10 +78,10 @@ class MeterReadingTest extends TestCase
     {
         // "R=10.000 Imp/kWh" steht auf jedem Typenschild - das ist die
         // Impulskonstante, kein Zaehlerstand.
-        $found = (new MeterPhotoReader())->read("R=10.000 Imp/kWh\nBaujahr 2024");
+        $found = (new MeterPhotoReader)->read("R=10.000 Imp/kWh\nBaujahr 2024");
 
         $this->assertNull($found['meter_reading']);
-        $this->assertFalse((new MeterPhotoReader())->looksLikeMeterPhoto("R=10.000 Imp/kWh\nBaujahr 2024"));
+        $this->assertFalse((new MeterPhotoReader)->looksLikeMeterPhoto("R=10.000 Imp/kWh\nBaujahr 2024"));
     }
 
     public function test_lange_rechnung_ist_kein_zaehlerfoto(): void
@@ -89,9 +89,9 @@ class MeterReadingTest extends TestCase
         // Eine Energierechnung nennt ebenfalls Zaehlernummer und Stand -
         // sie darf aber nie als Zaehlerfoto durchgehen.
         $text = "RECHNUNG\nZählernummer 1LOG0092283078\nZählerstand 4680 kWh\n"
-            . str_repeat("Position Betrag 12,50 EUR\n", 90);
+            .str_repeat("Position Betrag 12,50 EUR\n", 90);
 
-        $this->assertSame('rechnung', (new HeuristicDocumentClassifier())->classify($text)['type']);
+        $this->assertSame('rechnung', (new HeuristicDocumentClassifier)->classify($text)['type']);
     }
 
     // ---- Zuordnung ueber die Zaehlernummer ------------------------------

@@ -17,7 +17,7 @@ trait ScopesCustomerAccess
     protected function visibleCustomerIds(): ?array
     {
         $user = auth()->user();
-        if (!$user || $user->canSeeAllCustomers()) {
+        if (! $user || $user->canSeeAllCustomers()) {
             return null;
         }
         return $user->visibleCustomerIdsWithSubstitution();

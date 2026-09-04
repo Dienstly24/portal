@@ -2,6 +2,9 @@
 
 namespace Tests\Feature\Ai;
 
+use App\Services\Ai\TemplateParsers\EnergieAuftragParser;
+use App\Services\Ai\TemplateParsers\EweVertragsbestaetigungParser;
+use App\Services\Ai\TemplateParsers\LichtblickAuftragParser;
 use App\Services\Ai\TemplateParsers\PlanBNetZeroAuftragParser;
 use Tests\TestCase;
 
@@ -16,8 +19,8 @@ class PlanBNetZeroAuftragParserTest extends TestCase
     /** Zeile mit bis zu zwei Beschriftung/Wert-Paaren. */
     private function row(string $l1, string $v1, string $l2 = '', string $v2 = ''): string
     {
-        $line = '  ' . str_pad($l1, 40) . str_pad($v1, 45);
-        return $l2 === '' ? rtrim($line) : rtrim($line . str_pad($l2, 45) . $v2);
+        $line = '  '.str_pad($l1, 40).str_pad($v1, 45);
+        return $l2 === '' ? rtrim($line) : rtrim($line.str_pad($l2, 45).$v2);
     }
 
     private function auftragText(string $vorversorger = 'LichtBlick SE', string $lieferdatum = ''): string
@@ -74,7 +77,7 @@ class PlanBNetZeroAuftragParserTest extends TestCase
             '  SEPA-Lastschriftmandat',
             '  Zahlungsempfänger: PLAN-B NET ZERO ENERGY GmbH, Mühlheimer Tor - Dieselstr. 2',
             '  IBAN                                              DE62100100100653725116',
-            '  Kontoinhaber                                      ' . $kontoinhaber,
+            '  Kontoinhaber                                      '.$kontoinhaber,
         ]);
     }
 
@@ -84,14 +87,14 @@ class PlanBNetZeroAuftragParserTest extends TestCase
             $this->auftragText(),
             $this->sepaSeite($kontoinhaber),
             "PLAN-B NET ZERO ENERGY GmbH – Allgemeine Geschäftsbedingungen (AGB)\n"
-                . 'Der Vertrag verlängert sich jeweils um ein Jahr.',
+                .'Der Vertrag verlängert sich jeweils um ein Jahr.',
             "Datenschutzhinweise\nDaten aus Beratungsprotokollen werden verarbeitet.",
         ]);
     }
 
     public function test_reads_the_whole_order_form(): void
     {
-        $r = (new PlanBNetZeroAuftragParser())->parse($this->vollesDokument());
+        $r = (new PlanBNetZeroAuftragParser)->parse($this->vollesDokument());
 
         $this->assertNotNull($r);
         $this->assertSame('energieauftrag', $r['type']);
@@ -130,7 +133,7 @@ class PlanBNetZeroAuftragParserTest extends TestCase
 
     public function test_order_number_is_not_used_as_contract_number(): void
     {
-        $r = (new PlanBNetZeroAuftragParser())->parse($this->vollesDokument());
+        $r = (new PlanBNetZeroAuftragParser)->parse($this->vollesDokument());
 
         // Ein Auftrag hat noch KEINE Vertragsnummer (Betreiber-Vorgabe
         // 02.08.2026). Die Auftragsnummer steht nur in der Zusammenfassung.
@@ -140,12 +143,12 @@ class PlanBNetZeroAuftragParserTest extends TestCase
 
     public function test_iban_only_when_account_holder_is_the_applicant(): void
     {
-        $mine = (new PlanBNetZeroAuftragParser())->parse($this->vollesDokument());
+        $mine = (new PlanBNetZeroAuftragParser)->parse($this->vollesDokument());
         $this->assertSame('DE62100100100653725116', $mine['data']['bank']['iban']);
         $this->assertSame('Joumana El Karout', $mine['data']['bank']['account_holder']);
 
         // Fremder Kontoinhaber -> KEINE IBAN in der Kundenakte.
-        $fremd = (new PlanBNetZeroAuftragParser())->parse($this->vollesDokument('Max Fremd'));
+        $fremd = (new PlanBNetZeroAuftragParser)->parse($this->vollesDokument('Max Fremd'));
         $this->assertSame([], $fremd['data']['bank']);
     }
 
@@ -154,7 +157,7 @@ class PlanBNetZeroAuftragParserTest extends TestCase
         // Der Kunde hat "zum naechstmoeglichen Termin" gewaehlt: kein Datum im
         // Auftrag. Es wird auch keines geschaetzt - die 14-Tage-Regel gilt nur
         // fuer Stadtwerke-Wechsel, hier ist der Vorversorger ein anderer.
-        $r = (new PlanBNetZeroAuftragParser())->parse($this->vollesDokument());
+        $r = (new PlanBNetZeroAuftragParser)->parse($this->vollesDokument());
 
         $this->assertArrayNotHasKey('start_date', $r['data']['versicherung']);
         $this->assertArrayNotHasKey('expected_start_within_days', $r['data']['versicherung']);
@@ -164,14 +167,14 @@ class PlanBNetZeroAuftragParserTest extends TestCase
     {
         $text = $this->auftragText(lieferdatum: '01.10.2026');
 
-        $r = (new PlanBNetZeroAuftragParser())->parse($text);
+        $r = (new PlanBNetZeroAuftragParser)->parse($text);
 
         $this->assertSame('2026-10-01', $r['data']['versicherung']['start_date']);
     }
 
     public function test_ignores_unrelated_documents(): void
     {
-        $parser = new PlanBNetZeroAuftragParser();
+        $parser = new PlanBNetZeroAuftragParser;
 
         $this->assertNull($parser->parse('Irgendein anderes Dokument'));
         // PLAN-B erwaehnt, aber kein Auftrag (z.B. eine Jahresrechnung).
@@ -185,8 +188,8 @@ class PlanBNetZeroAuftragParserTest extends TestCase
         // duerfen ihn deshalb vereinnahmen.
         $text = $this->vollesDokument();
 
-        $this->assertNull((new \App\Services\Ai\TemplateParsers\LichtblickAuftragParser())->parse($text));
-        $this->assertNull((new \App\Services\Ai\TemplateParsers\EnergieAuftragParser())->parse($text));
-        $this->assertNull((new \App\Services\Ai\TemplateParsers\EweVertragsbestaetigungParser())->parse($text));
+        $this->assertNull((new LichtblickAuftragParser)->parse($text));
+        $this->assertNull((new EnergieAuftragParser)->parse($text));
+        $this->assertNull((new EweVertragsbestaetigungParser)->parse($text));
     }
 }

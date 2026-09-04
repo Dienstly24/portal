@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -20,7 +21,7 @@ class VehicleMileageReading extends Model
 
     protected static function boot() {
         parent::boot();
-        static::creating(fn($m) => $m->id = $m->id ?: (string) Str::uuid());
+        static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
     public function vehicleDetail() { return $this->belongsTo(ContractVehicleDetail::class, 'contract_vehicle_detail_id'); }

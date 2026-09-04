@@ -1,7 +1,9 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+
 return new class extends Migration {
     public function up(): void {
         Schema::table('contracts', function (Blueprint $table) {
@@ -18,7 +20,7 @@ return new class extends Migration {
             $table->foreign('customer_id')->references('id')->on('customers')->onDelete('cascade');
             $table->foreignId('created_by')->constrained('users')->onDelete('cascade');
             $table->text('note');
-            $table->enum('type', ['note','task'])->default('note');
+            $table->enum('type', ['note', 'task'])->default('note');
             $table->date('due_date')->nullable();
             $table->boolean('is_done')->default(false);
             $table->timestamps();
@@ -26,7 +28,7 @@ return new class extends Migration {
     }
     public function down(): void {
         Schema::dropIfExists('customer_notes');
-        Schema::table('contracts', function($t) { $t->dropColumn(['added_by','contract_color']); });
-        Schema::table('documents', function($t) { $t->dropColumn(['color','contract_id']); });
+        Schema::table('contracts', function ($t) { $t->dropColumn(['added_by', 'contract_color']); });
+        Schema::table('documents', function ($t) { $t->dropColumn(['color', 'contract_id']); });
     }
 };

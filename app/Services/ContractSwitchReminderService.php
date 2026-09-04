@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services;
 
 use App\Mail\ContractSwitchMail;
@@ -6,6 +7,7 @@ use App\Models\Contract;
 use App\Models\ContractSwitchReminder;
 use App\Models\EmailLog;
 use Carbon\Carbon;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -34,12 +36,12 @@ class ContractSwitchReminderService
 {
     /** Fenster-Offsets vor end_date je Sparte. */
     private const END_DATE_RULES = [
-        'internet'  => ['first' => '6 months', 'followup' => '3 months'],
+        'internet' => ['first' => '6 months', 'followup' => '3 months'],
         // Strom und Gas sind getrennte Sparten, gleiche Wechsel-Fenster.
-        'strom'     => ['first' => '6 months', 'followup' => '3 months'],
-        'gas'       => ['first' => '6 months', 'followup' => '3 months'],
+        'strom' => ['first' => '6 months', 'followup' => '3 months'],
+        'gas' => ['first' => '6 months', 'followup' => '3 months'],
         'strom_gas' => ['first' => '6 months', 'followup' => '3 months'], // Alt-Daten
-        'kfz'       => ['first' => '2 months', 'followup' => '6 weeks'],
+        'kfz' => ['first' => '2 months', 'followup' => '6 weeks'],
     ];
 
     /** Mindestabstand zwischen 1. und 2. Erinnerung (spät erfasste Verträge). */
@@ -80,7 +82,7 @@ class ContractSwitchReminderService
             ->currentlyActive()
             ->whereNull('cancellation_date')
             ->whereNotNull('end_date')
-            ->when($visibleCustomerIds !== null, fn($q) => $q->whereIn('customer_id', $visibleCustomerIds))
+            ->when($visibleCustomerIds !== null, fn ($q) => $q->whereIn('customer_id', $visibleCustomerIds))
             ->get();
 
         foreach ($contracts as $contract) {
@@ -97,8 +99,8 @@ class ContractSwitchReminderService
 
             if ($today->lt($firstStart) || $today->gt($deadline)) continue;
 
-            $first = $contract->switchReminders->first(fn($r) => $r->stage === 'first' && $r->anchor->toDateString() === $anchor);
-            $followup = $contract->switchReminders->first(fn($r) => $r->stage === 'followup' && $r->anchor->toDateString() === $anchor);
+            $first = $contract->switchReminders->first(fn ($r) => $r->stage === 'first' && $r->anchor->toDateString() === $anchor);
+            $followup = $contract->switchReminders->first(fn ($r) => $r->stage === 'followup' && $r->anchor->toDateString() === $anchor);
 
             if ($first === null) {
                 $due[] = [$contract, 'first', $anchor];
@@ -118,7 +120,7 @@ class ContractSwitchReminderService
             ->where('subtype', 'gkv')
             ->currentlyActive()
             ->whereNotNull('start_date')
-            ->when($visibleCustomerIds !== null, fn($q) => $q->whereIn('customer_id', $visibleCustomerIds))
+            ->when($visibleCustomerIds !== null, fn ($q) => $q->whereIn('customer_id', $visibleCustomerIds))
             ->get();
 
         foreach ($gkv as $contract) {
@@ -126,8 +128,8 @@ class ContractSwitchReminderService
             if ($today->lt($eligible)) continue;
             $anchor = $eligible->toDateString();
 
-            $first = $contract->switchReminders->first(fn($r) => $r->stage === 'first' && $r->anchor->toDateString() === $anchor);
-            $followup = $contract->switchReminders->first(fn($r) => $r->stage === 'followup' && $r->anchor->toDateString() === $anchor);
+            $first = $contract->switchReminders->first(fn ($r) => $r->stage === 'first' && $r->anchor->toDateString() === $anchor);
+            $followup = $contract->switchReminders->first(fn ($r) => $r->stage === 'followup' && $r->anchor->toDateString() === $anchor);
 
             if ($first === null) {
                 $due[] = [$contract, 'first', $anchor];
@@ -157,7 +159,7 @@ class ContractSwitchReminderService
     private function send(Contract $contract, string $stage, string $anchor): bool
     {
         $customer = $contract->customer;
-        if (!$customer?->isMarketingReachable()) return false;
+        if (! $customer?->isMarketingReachable()) return false;
 
         try {
             // Erst protokollieren: Der Unique-Index fängt parallele Läufe
@@ -168,7 +170,7 @@ class ContractSwitchReminderService
                 'anchor' => $anchor,
                 'sent_at' => now(),
             ]);
-        } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+        } catch (UniqueConstraintViolationException) {
             return false;
         }
 
@@ -183,7 +185,7 @@ class ContractSwitchReminderService
             // Protokoll zurücknehmen, damit der nächste Lauf es erneut versucht.
             $reminder->delete();
             $status = 'failed';
-            Log::warning("Wechsel-Erinnerung {$contract->id} ({$stage}) an {$customer->user->email} fehlgeschlagen: " . $e->getMessage());
+            Log::warning("Wechsel-Erinnerung {$contract->id} ({$stage}) an {$customer->user->email} fehlgeschlagen: ".$e->getMessage());
         }
 
         EmailLog::create([

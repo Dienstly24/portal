@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Support\QrCode;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -29,7 +30,7 @@ class QrCodeTest extends TestCase
         ));
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('goldenSamples')]
+    #[DataProvider('goldenSamples')]
     public function test_matrix_stays_byte_for_byte_stable(string $text, int $size, string $sha1): void
     {
         $matrix = QrCode::matrix($text);

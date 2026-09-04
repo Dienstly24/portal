@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Mailbox;
 
 use App\Models\EmailMessage;
@@ -33,7 +34,7 @@ class AttachmentAnalysisService
     {
         $texts = [];
         foreach ($message->attachments_meta ?? [] as $entry) {
-            if (!str_contains(mb_strtolower($entry['mime'] ?? ''), 'pdf')) {
+            if (! str_contains(mb_strtolower($entry['mime'] ?? ''), 'pdf')) {
                 continue;
             }
             $text = $this->pdf->extractFromStorage('local', $entry['path']);
@@ -51,7 +52,7 @@ class AttachmentAnalysisService
      */
     public function categorize(string $filename, ?string $text = null): string
     {
-        $haystack = mb_strtolower($filename . ' ' . mb_substr((string) $text, 0, 2000));
+        $haystack = mb_strtolower($filename.' '.mb_substr((string) $text, 0, 2000));
 
         foreach (self::CATEGORY_KEYWORDS as $category => $keywords) {
             foreach ($keywords as $keyword) {

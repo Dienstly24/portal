@@ -7,6 +7,7 @@ use App\Models\Banner;
 use App\Models\BannerSocialChannel;
 use App\Models\BannerSocialPost;
 use App\Models\User;
+use App\Services\LexofficeService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -47,7 +48,7 @@ class ExternalServiceTimeoutTest extends TestCase
         return BannerSocialChannel::create(array_merge([
             'banner_social_post_id' => $post->id,
             'platform' => 'facebook',
-            'short_code' => 'fb' . uniqid(),
+            'short_code' => 'fb'.uniqid(),
         ], $attrs));
     }
 
@@ -69,7 +70,7 @@ class ExternalServiceTimeoutTest extends TestCase
         Http::fake(fn () => Http::response('', 500));
 
         // Der Aufrufer bekommt einen leeren Fallback, keine Ausnahme.
-        $ergebnis = app(\App\Services\LexofficeService::class)->renderInvoicePdf('irgendeine-id');
+        $ergebnis = app(LexofficeService::class)->renderInvoicePdf('irgendeine-id');
 
         $this->assertNull($ergebnis);
     }

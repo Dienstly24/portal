@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use App\Services\Ai\Assistant\Sales\ConversationState;
@@ -123,6 +124,6 @@ class AiLead extends Model
 
         return trim((string) ($kontakt['name'] ?? ''))
             ?: trim((string) ($kontakt['email'] ?? ''))
-            ?: 'Interessent (' . $this->source . ')';
+            ?: 'Interessent ('.$this->source.')';
     }
 }

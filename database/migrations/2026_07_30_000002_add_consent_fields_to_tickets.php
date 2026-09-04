@@ -8,8 +8,7 @@ use Illuminate\Support\Facades\Schema;
  * DSGVO-Nachweis fuer Website-Anfragen: Zeitpunkt, IP und der exakte
  * Einwilligungstext, dem der Absender zugestimmt hat (Arbeitsauftrag P0-1).
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('tickets', function (Blueprint $table) {

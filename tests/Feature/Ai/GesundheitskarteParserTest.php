@@ -28,7 +28,7 @@ class GesundheitskarteParserTest extends TestCase
 
     public function test_parses_ehic_card(): void
     {
-        $r = (new GesundheitskarteParser())->parse(
+        $r = (new GesundheitskarteParser)->parse(
             $this->card('ALALI', 'Mohammad', '23/03/2005', 'F883686827', '109303301 - IKK SW', '80276001340003435015')
         );
         $this->assertNotNull($r);
@@ -53,7 +53,7 @@ class GesundheitskarteParserTest extends TestCase
 
     public function test_parses_second_ehic_card(): void
     {
-        $r = (new GesundheitskarteParser())->parse(
+        $r = (new GesundheitskarteParser)->parse(
             $this->card('KARAOGLAN', 'Güner', '08/08/1977', 'U905252417', '109938503 - BAHN-BKK', '80276001920001978734')
         );
         $p = $r['data']['person'];
@@ -65,6 +65,6 @@ class GesundheitskarteParserTest extends TestCase
 
     public function test_ignores_non_card_documents(): void
     {
-        $this->assertNull((new GesundheitskarteParser())->parse('Irgendein anderes Dokument'));
+        $this->assertNull((new GesundheitskarteParser)->parse('Irgendein anderes Dokument'));
     }
 }

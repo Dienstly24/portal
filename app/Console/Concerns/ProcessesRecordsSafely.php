@@ -2,6 +2,7 @@
 
 namespace App\Console\Concerns;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -49,14 +50,14 @@ trait ProcessesRecordsSafely
                 $erfolgreich++;
             } catch (\Throwable $e) {
                 $kennung = $this->kennungVon($record);
-                $this->uebersprungeneDatensaetze[] = $label . ' ' . $kennung . ': ' . $e->getMessage();
+                $this->uebersprungeneDatensaetze[] = $label.' '.$kennung.': '.$e->getMessage();
 
                 // Ins Log, damit der Fall nachvollziehbar bleibt - die
                 // Befehlsausgabe sieht sich im Cron-Betrieb niemand an.
-                Log::error('Uebersprungen in ' . static::class . ' (' . $label . ' ' . $kennung . '): '
-                    . $e->getMessage(), ['exception' => $e]);
+                Log::error('Uebersprungen in '.static::class.' ('.$label.' '.$kennung.'): '
+                    .$e->getMessage(), ['exception' => $e]);
 
-                $this->meldung('  uebersprungen: ' . $label . ' ' . $kennung . ' - ' . $e->getMessage());
+                $this->meldung('  uebersprungen: '.$label.' '.$kennung.' - '.$e->getMessage());
             }
         }
 
@@ -74,14 +75,14 @@ trait ProcessesRecordsSafely
         }
 
         $anzahl = count($this->uebersprungeneDatensaetze);
-        $this->meldung($anzahl . ' Datensatz/Datensaetze uebersprungen - der Lauf ist unvollstaendig:');
+        $this->meldung($anzahl.' Datensatz/Datensaetze uebersprungen - der Lauf ist unvollstaendig:');
         // Bewusst gedeckelt: bei einem grossflaechigen Ausfall soll die
         // Ausgabe nicht das Log fluten. Vollstaendig steht alles im Log.
         foreach (array_slice($this->uebersprungeneDatensaetze, 0, 10) as $zeile) {
-            $this->meldung('  - ' . $zeile);
+            $this->meldung('  - '.$zeile);
         }
         if ($anzahl > 10) {
-            $this->meldung('  ... und ' . ($anzahl - 10) . ' weitere (siehe Log).');
+            $this->meldung('  ... und '.($anzahl - 10).' weitere (siehe Log).');
         }
 
         return 1;
@@ -101,19 +102,19 @@ trait ProcessesRecordsSafely
     private function meldung(string $text): void
     {
         if (isset($this->output)) {
-            $this->output->writeln('<comment>' . $text . '</comment>');
+            $this->output->writeln('<comment>'.$text.'</comment>');
         }
     }
 
     /** Sprechende Kennung eines Datensatzes fuer Protokoll und Ausgabe. */
     private function kennungVon(mixed $record): string
     {
-        if ($record instanceof \Illuminate\Database\Eloquent\Model) {
-            return '#' . $record->getKey();
+        if ($record instanceof Model) {
+            return '#'.$record->getKey();
         }
 
         if (is_scalar($record)) {
-            return '#' . $record;
+            return '#'.$record;
         }
 
         return '(unbenannt)';
