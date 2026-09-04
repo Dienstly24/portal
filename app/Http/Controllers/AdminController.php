@@ -293,12 +293,12 @@ class AdminController extends Controller
         }
         $customer = Customer::with(['user', 'contracts.vehicleDetail.claims', 'contracts.vehicleDetail.mileageReadings', 'contracts.energyDetail.meterReadings', 'contracts.internetDetail', 'contracts.switchReminders', 'tickets', 'documents', 'family', 'changeRequests.reviewer'])->findOrFail($id);
         // Interner Chat & Notizen (nur Staff - Zugriff bereits oben geprüft)
-        $internalChat = InternalMessage::chat()->where('customer_id', $id)->with('sender')->orderBy('created_at')->get();
+        $internalChat = InternalMessage::chat()->where('customer_id', $id)->with('sender')->orderBy('created_at')->orderBy('id')->get();
         $internalNotes = InternalMessage::note()->where('customer_id', $id)->with('sender')->latest()->get();
         // Direktnachrichten (Portal-Chat): Kundenantworten gelten mit dem
         // Oeffnen der Akte als vom Team gelesen.
         $customerMessages = CustomerMessage::where('customer_id', $id)
-            ->with(['sender', 'attachments'])->orderBy('created_at')->get();
+            ->with(['sender', 'attachments'])->orderBy('created_at')->orderBy('id')->get();
         CustomerMessage::where('customer_id', $id)->fromCustomer()->unread()->update(['read_at' => now()]);
         // "Verwandte Kunden": andere Akten mit gemeinsamen Merkmalen (Telefon,
         // Anschrift, E-Mail, IBAN ...) - Beziehungshinweis in der Kundenakte.

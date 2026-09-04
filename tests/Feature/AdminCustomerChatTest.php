@@ -135,7 +135,12 @@ class AdminCustomerChatTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $customer = $this->makeCustomer();
-        $this->customerReply($customer, 'Kundenfrage');
+        // Frage und Antwort ausdruecklich auseinanderziehen: created_at ist
+        // nur sekundengenau, und der Test prueft eine REIHENFOLGE. Ohne
+        // eigene Zeitstempel haetten beide denselben Wert und die Datenbank
+        // duerfte sie frei ordnen (MySQL tat das auch).
+        $this->customerReply($customer, 'Kundenfrage')
+            ->forceFill(['created_at' => now()->subMinute()])->save();
         CustomerMessage::create([
             'customer_id' => $customer->id, 'sender_id' => $admin->id,
             'body' => 'Antwort vom Team', 'from_staff' => true,

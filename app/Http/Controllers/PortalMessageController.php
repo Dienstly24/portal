@@ -34,7 +34,7 @@ class PortalMessageController extends Controller
         $customer = $this->getCustomer();
         $messages = CustomerMessage::where('customer_id', $customer->id)
             ->with(['sender', 'attachments'])
-            ->orderBy('created_at')
+            ->orderBy('created_at')->orderBy('id')
             ->get();
 
         // Beraternachrichten gelten mit dem Oeffnen der Seite als gelesen.
@@ -77,7 +77,7 @@ class PortalMessageController extends Controller
 
         $messages = CustomerMessage::where('customer_id', $customer->id)
             ->with(['sender', 'attachments'])
-            ->orderBy('created_at')
+            ->orderBy('created_at')->orderBy('id')
             ->get();
 
         return response()->json([

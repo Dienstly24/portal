@@ -134,7 +134,12 @@ class AdminCustomerChatController extends Controller
 
         $messages = CustomerMessage::where('customer_id', $customer->id)
             ->with(['sender', 'attachments', 'customer.user'])
-            ->orderBy('created_at')
+            // Zweites Sortierkriterium, weil created_at nur sekundengenau ist:
+            // eine Kundennachricht und die unmittelbare Antwort (Team oder
+            // KI-Assistent) tragen regelmaessig denselben Zeitstempel. Ohne
+            // Tiebreaker entscheidet die Datenbank frei, und der Verlauf
+            // kann bei jedem Aufruf anders herum stehen.
+            ->orderBy('created_at')->orderBy('id')
             ->get();
 
         return response()->json([
