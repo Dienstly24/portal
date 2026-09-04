@@ -102,7 +102,7 @@ class WebsiteController extends Controller
 
         $customer = $email
             ? Customer::whereHas('user', fn ($q) => $q->where('email', $email))
-                ->orWhere('email', $email)->first()
+                ->orWhere('email2', $email)->first()
             : null;
 
         $nachricht = trim((string) ($data['nachricht'] ?? ''));

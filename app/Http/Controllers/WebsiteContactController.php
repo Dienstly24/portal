@@ -112,7 +112,7 @@ class WebsiteContactController extends Controller
         // Bestandskunden ueber die E-Mail-Adresse zuordnen.
         $customer = $email
             ? Customer::whereHas('user', fn ($q) => $q->where('email', $email))
-                ->orWhere('email', $email)->first()
+                ->orWhere('email2', $email)->first()
             : null;
 
         $nachricht = trim((string) ($data['nachricht'] ?? ''));

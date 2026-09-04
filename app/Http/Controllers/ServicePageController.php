@@ -86,7 +86,7 @@ class ServicePageController extends Controller
         $customer = null;
         if (! empty($data['email'])) {
             $customer = Customer::whereHas('user', fn ($q) => $q->where('email', $data['email']))
-                ->orWhere('email', $data['email'])->first();
+                ->orWhere('email2', $data['email'])->first();
         }
 
         $leistung = $page->title_de;

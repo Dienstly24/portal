@@ -292,18 +292,17 @@ jobs:
   # ---------------------------------------------------------------------
   deploy:
     name: Deploy auf Produktionsserver
-    # Der Deploy haengt an: gruenen Tests (SQLite), sauberem Codeformat und
-    # keiner neuen PHPStan-Meldung (ARCH-4), sowie keinen bekannten
-    # Schwachstellen in den Abhaengigkeiten (Audit SEC-3).
+    # Der Deploy haengt an ALLEN Gates: gruenen Tests auf SQLite UND auf der
+    # Produktionsdatenbank MySQL, sauberem Codeformat und keiner neuen
+    # PHPStan-Meldung (ARCH-4), sowie keinen bekannten Schwachstellen in den
+    # Abhaengigkeiten (Audit SEC-3).
     #
-    # test-mysql laeuft mit, ist hier aber BEWUSST noch nicht eingetragen:
-    # die Suite ist bisher nie gegen MySQL gelaufen, und ein Gate, dessen
-    # erster Lauf ungeprueft ist, wuerde im Zweifel einen dringenden Fix
-    # blockieren. Der Job meldet trotzdem ehrlich rot oder gruen.
-    # SOBALD er einmal gruen war, gehoert er in diese Liste - dann ist die
-    # Produktionsdatenbank ein echtes Gate:
-    #   needs: [test, test-mysql, qualitaet, audit]
-    needs: [test, qualitaet, audit]
+    # test-mysql ist seit dem 04.09.2026 ein echtes Gate. Sein erster Lauf
+    # hat sich sofort bezahlt gemacht: er fand zwei Fehler, die auf SQLite
+    # unsichtbar waren und ausgerechnet in Produktion zuschlagen - eine
+    # Abfrage auf eine nicht existierende Spalte und eine zu kurze
+    # Textspalte, wegen der die Schutzbrief-Erinnerung nie verschickt wurde.
+    needs: [test, test-mysql, qualitaet, audit]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: production

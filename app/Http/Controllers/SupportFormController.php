@@ -119,7 +119,7 @@ class SupportFormController extends Controller
         // nicht (sonst könnten Fremde per E-Mail-Raten Kundenkonten erkennen).
         if (! $customer) {
             $customer = Customer::whereHas('user', fn ($q) => $q->where('email', $data['email']))
-                ->orWhere('email', $data['email'])->first();
+                ->orWhere('email2', $data['email'])->first();
         }
 
         $leistung = self::LEISTUNGEN[$data['leistung']];
