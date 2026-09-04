@@ -83,6 +83,10 @@ class SendPortalInvitations extends Command
                 $skipped++;
                 continue;
             }
+            // ARCH-7: der User ist hier bereits geladen - die Rueckrelation
+            // zeigt auf genau ihn. Ohne diese Zeile holt der Versand ihn je
+            // Kunde erneut aus der Datenbank (N+1).
+            $customer->setRelation('user', $user);
             try {
                 $mode = $portal->sendInvitation($customer);
                 $sent++;

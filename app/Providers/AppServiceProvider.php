@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use Illuminate\Database\Eloquent\Model;
 use App\Services\Activity\ActivityCatalog;
 use App\Services\Activity\ActivityTracker;
 use App\Services\Ai\ClaudeDocumentAiProvider;
@@ -244,6 +245,40 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->registerRateLimiters();
+
+        /*
+        | ARCH-7: strenge Eloquent-Regeln - aber NUR ausserhalb der Produktion.
+        |
+        | preventLazyLoading meldet eine Relation, die erst in der Schleife
+        | nachgeladen wird (N+1). Das ist genau der Fehler, den man im Alltag
+        | nicht sieht: die Seite funktioniert, sie wird nur mit jedem
+        | Datensatz langsamer. In der Entwicklung soll sie deshalb LAUT
+        | scheitern.
+        |
+        | In Produktion bewusst AUS: ein vergessenes with() wuerde dort sonst
+        | aus einer langsamen Seite eine kaputte machen - der Nutzer saehe
+        | einen 500er statt einer Liste. Eine Warnung ist dort das richtige
+        | Mittel, kein Abbruch.
+        |
+        | BEWUSST NICHT eingeschaltet: preventSilentlyDiscardingAttributes.
+        | Es klingt verwandt, ist aber eine andere Baustelle - der Bestand
+        | uebergibt an rund 35 Stellen bewusst Felder an create()/fill(), die
+        | nicht in $fillable stehen (etwa 'id' und 'added_by' beim Vertrag)
+        | und sich darauf verlassen, dass sie verworfen werden. Das
+        | einzuschalten hiesse, die Mass-Assignment-Freigaben des ganzen
+        | Projekts anzufassen - eine Sicherheitsentscheidung, die nicht
+        | nebenbei in einer Index-/Aufraeum-Aenderung fallen darf.
+        */
+        Model::preventLazyLoading(! $this->app->isProduction());
+
+        if ($this->app->isProduction()) {
+            Model::handleLazyLoadingViolationUsing(function ($model, $relation) {
+                \Illuminate\Support\Facades\Log::warning('Lazy Loading (N+1) in Produktion', [
+                    'model' => $model::class,
+                    'relation' => $relation,
+                ]);
+            });
+        }
 
         /*
         | Content-Security-Policy (Audit SEC-4).

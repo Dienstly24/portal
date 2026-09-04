@@ -1520,6 +1520,12 @@ class DocumentIntakeService
 
         // Mehrere offene Antraege bei derselben Gesellschaft: nur mit einem
         // klaren Indiz zuordnen (sonst lieber ein eigener Vertrag).
+        // ARCH-7: die Detailtabellen EINMAL fuer alle Kandidaten laden. Der
+        // Filter unten greift je Vertrag auf Energie-, Internet- und
+        // Fahrzeugdetails zu - ohne diese Zeile sind das drei Abfragen je
+        // Kandidat (N+1).
+        $candidates->loadMissing(['energyDetail', 'internetDetail', 'vehicleDetail']);
+
         $confirmed = $candidates->filter(fn (Contract $c) => $this->sharesDistinctiveDetail($c, $data))->values();
 
         return $confirmed->count() === 1 ? $confirmed->first() : null;

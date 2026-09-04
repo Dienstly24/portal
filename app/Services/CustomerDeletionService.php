@@ -28,6 +28,12 @@ class CustomerDeletionService
 
     public function delete(Customer $customer, ?int $actorId = null): void
     {
+        // ARCH-7: die Relation ausdruecklich sicherstellen. Beim Bulk-Loeschen
+        // laeuft delete() in einer Schleife - ohne diese Zeile holt jeder
+        // Durchlauf seinen User einzeln nach (N+1), und mit strengem Eloquent
+        // scheitert der Aufruf sogar.
+        $customer->loadMissing('user');
+
         $user = $customer->user;
         $customerNumber = $customer->customer_number;
         $documentIds = $customer->documents()->pluck('id');

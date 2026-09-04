@@ -2239,7 +2239,7 @@ class AdminController extends Controller
 
         $service = app(\App\Services\CustomerDeletionService::class);
         $deleted = 0;
-        foreach (\App\Models\Customer::whereIn('id', $data['customer_ids'])->get() as $customer) {
+        foreach (\App\Models\Customer::with('user')->whereIn('id', $data['customer_ids'])->get() as $customer) {
             $service->delete($customer, auth()->id());
             $deleted++;
         }
