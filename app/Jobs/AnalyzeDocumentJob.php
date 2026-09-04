@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Jobs;
 
 use App\Models\AiDecision;
@@ -49,15 +50,15 @@ class AnalyzeDocumentJob implements ShouldQueue
         $claimed = Document::whereKey($this->documentId)
             ->where('ai_status', 'pending')
             ->update(['ai_status' => 'processing']);
-        if (!$claimed) {
+        if (! $claimed) {
             return;
         }
 
         $document = Document::find($this->documentId);
-        if (!$document) {
+        if (! $document) {
             return;
         }
-        if (!$analyzer->isEnabled()) {
+        if (! $analyzer->isEnabled()) {
             $document->update(['ai_status' => 'none']);
             return;
         }
@@ -69,7 +70,7 @@ class AnalyzeDocumentJob implements ShouldQueue
             // Sync-Betrieb (Tests, QUEUE_CONNECTION=sync) sofort als
             // Fehler markieren statt die HTTP-Antwort zu zerstoeren.
             $isSync = $this->job === null || $this->job->getConnectionName() === 'sync';
-            if (!$isSync && $this->attempts() < $this->tries) {
+            if (! $isSync && $this->attempts() < $this->tries) {
                 $document->update(['ai_status' => 'pending']);
                 $this->release($this->backoff);
                 return;
@@ -89,7 +90,7 @@ class AnalyzeDocumentJob implements ShouldQueue
         // sonst ein ungueltiges ai_type schreiben und beim Kategorie-Zugriff
         // (AI_TYPES[$type]['category']) sogar den Job werfen. Unbekannt ->
         // 'sonstiges', der Mitarbeiter korrigiert den Typ, die Felder bleiben.
-        if (!isset(\App\Models\Document::AI_TYPES[$result['type'] ?? ''])) {
+        if (! isset(Document::AI_TYPES[$result['type'] ?? ''])) {
             $result['type'] = 'sonstiges';
         }
 
@@ -103,7 +104,7 @@ class AnalyzeDocumentJob implements ShouldQueue
         $match = null;
         try {
             $extracted = $result['data'];
-            if (!$document->customer_id) {
+            if (! $document->customer_id) {
                 // Zaehlerfoto: die Zaehlernummer ist das einzige und zugleich
                 // haerteste Identitaetsmerkmal auf einem Zaehler - sie fuehrt
                 // direkt zum Energievertrag und damit zum Kunden. Erst wenn
@@ -132,7 +133,7 @@ class AnalyzeDocumentJob implements ShouldQueue
 
             // Scans bekommen den erkannten Titel als sprechenden Dateinamen.
             if ($result['title'] && str_starts_with($document->file_name, 'Scan ')) {
-                $updates['file_name'] = $this->safeFileName($result['title']) . '.pdf';
+                $updates['file_name'] = $this->safeFileName($result['title']).'.pdf';
             }
 
             $document->update($updates);
@@ -140,7 +141,7 @@ class AnalyzeDocumentJob implements ShouldQueue
             // Nachverarbeitung des erfolgreichen Analyse-Ergebnisses
             // fehlgeschlagen -> sauber als 'failed' markieren statt in
             // 'processing' zu verharren.
-            $this->markFailed($document, 'Nachverarbeitung fehlgeschlagen: ' . $e->getMessage());
+            $this->markFailed($document, 'Nachverarbeitung fehlgeschlagen: '.$e->getMessage());
             return;
         }
 
@@ -176,7 +177,7 @@ class AnalyzeDocumentJob implements ShouldQueue
                     $intake->linkMatchingContract($document, $customer);
                 }
             } elseif ($match && $match['tier'] === 'auto'
-                && !in_array($result['type'] ?? null, \App\Models\Document::NEW_BUSINESS_TYPES, true)) {
+                && ! in_array($result['type'] ?? null, Document::NEW_BUSINESS_TYPES, true)) {
                 // Reine Ablage-Dokumente (Ausweis, SEPA, Gesundheitskarte ...)
                 // duerfen bei eindeutigem Treffer automatisch zugeordnet werden.
                 // NEUES Geschaeft (Beratungsprotokoll, Vertrag, Auftrag) NICHT:
@@ -189,7 +190,7 @@ class AnalyzeDocumentJob implements ShouldQueue
                 }
             }
         } catch (\Throwable $e) {
-            Log::warning('Dokument-Nachverarbeitung (Protokoll/Zuordnung) fehlgeschlagen (' . $document->id . '): ' . $e->getMessage());
+            Log::warning('Dokument-Nachverarbeitung (Protokoll/Zuordnung) fehlgeschlagen ('.$document->id.'): '.$e->getMessage());
         }
     }
 
@@ -203,7 +204,7 @@ class AnalyzeDocumentJob implements ShouldQueue
 
     private function markFailed(Document $document, string $message): void
     {
-        Log::warning('Dokument-Analyse fehlgeschlagen (' . $document->id . '): ' . $message);
+        Log::warning('Dokument-Analyse fehlgeschlagen ('.$document->id.'): '.$message);
         // Direktes Query-Update statt $document->update(): schlug zuvor das
         // Speichern des Analyse-Ergebnisses fehl, traegt das Modell noch
         // "dirty" verschluesselte Felder (ai_extracted/ai_summary), die ueber
@@ -219,7 +220,7 @@ class AnalyzeDocumentJob implements ShouldQueue
         try {
             app(DocumentIntakeService::class)->notifyAnalysisFailed($document);
         } catch (\Throwable $e) {
-            Log::warning('Fehler-Benachrichtigung fehlgeschlagen (' . $document->id . '): ' . $e->getMessage());
+            Log::warning('Fehler-Benachrichtigung fehlgeschlagen ('.$document->id.'): '.$e->getMessage());
         }
     }
 

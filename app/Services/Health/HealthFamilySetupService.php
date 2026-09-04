@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Health;
 
 use App\Models\ActivityLog;
@@ -41,8 +42,8 @@ class HealthFamilySetupService
     public function setup(Customer $customer, array $persons, array $options): array
     {
         $reason = $options['switch_reason'];
-        if (!$this->calculator->isValidReason($reason)) {
-            throw new \InvalidArgumentException('Unbekannter Wechsel-Grund: ' . $reason);
+        if (! $this->calculator->isValidReason($reason)) {
+            throw new \InvalidArgumentException('Unbekannter Wechsel-Grund: '.$reason);
         }
 
         $submitted = CarbonImmutable::parse($options['submitted_at'] ?? now()->toDateString());
@@ -109,7 +110,7 @@ class HealthFamilySetupService
                 ? $member['status'] : 'familienversichert';
             CustomerFamily::create([
                 'customer_id' => $customer->id,
-                'name' => trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? '')),
+                'name' => trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? '')),
                 'relation' => $member['relation'] ?? 'Familienmitglied',
                 'birth_date' => $person['birth_date'] ?? null,
                 'gender' => $person['gender'] ?? null,

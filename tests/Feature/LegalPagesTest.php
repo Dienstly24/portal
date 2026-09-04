@@ -2,7 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Mail\CustomerWelcomeMail;
+use App\Models\Customer;
 use App\Models\SystemSetting;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -16,8 +19,8 @@ class LegalPagesTest extends TestCase
     {
         // Website liefert statische Dateien mit .html-Endung aus.
         foreach (['impressum', 'agb', 'datenschutz', 'cookie-richtlinie', 'kontakt'] as $slug) {
-            $this->get('/' . $slug)
-                ->assertRedirect('https://dienstly24.de/' . $slug . '.html');
+            $this->get('/'.$slug)
+                ->assertRedirect('https://dienstly24.de/'.$slug.'.html');
         }
     }
 
@@ -43,7 +46,7 @@ class LegalPagesTest extends TestCase
         SystemSetting::set('legal_external_base', '');
 
         foreach (['impressum', 'agb', 'datenschutz', 'cookie-richtlinie', 'kontakt'] as $slug) {
-            $this->get('/' . $slug)->assertOk();
+            $this->get('/'.$slug)->assertOk();
         }
     }
 
@@ -91,10 +94,10 @@ class LegalPagesTest extends TestCase
 
     public function test_welcome_mail_links_to_legal_routes(): void
     {
-        $user = \App\Models\User::factory()->create(['role' => 'customer', 'email' => 'legal@k.de']);
-        $customer = \App\Models\Customer::create(['user_id' => $user->id, 'customer_number' => 'K-LEGAL', 'birth_date' => '1990-01-01']);
+        $user = User::factory()->create(['role' => 'customer', 'email' => 'legal@k.de']);
+        $customer = Customer::create(['user_id' => $user->id, 'customer_number' => 'K-LEGAL', 'birth_date' => '1990-01-01']);
 
-        $html = (new \App\Mail\CustomerWelcomeMail($customer, 'birthdate'))->render();
+        $html = (new CustomerWelcomeMail($customer, 'birthdate'))->render();
 
         // Kundenlinks zeigen auf die Portal-Domain (nie admin/localhost).
         $this->assertStringContainsString('portal.dienstly24.de/impressum', $html);

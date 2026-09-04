@@ -45,7 +45,7 @@ class ActivityReportController extends Controller
         $chart = [
             'labels' => $rows->pluck('user.name')->values(),
             'points' => $rows->pluck('points')->values(),
-            'active_hours' => $rows->map(fn($r) => round($r->active_seconds / 3600, 2))->values(),
+            'active_hours' => $rows->map(fn ($r) => round($r->active_seconds / 3600, 2))->values(),
         ];
 
         return view('admin.activity.index', [
@@ -98,7 +98,7 @@ class ActivityReportController extends Controller
         $csv = Writer::createFromString();
         $csv->setDelimiter(';');
         // Schutz vor Formel-Injektion in Excel/LibreOffice (Namen sind Nutzereingaben)
-        $csv->addFormatter(new EscapeFormula());
+        $csv->addFormatter(new EscapeFormula);
         $csv->insertOne([
             'Mitarbeiter', 'Rolle', 'Anmeldezeit (hh:mm)', 'Aktive Zeit (hh:mm)',
             'Leerlauf (hh:mm)', 'Aktionen', 'Angelegt', 'Bearbeitet', 'Uploads',
@@ -120,11 +120,11 @@ class ActivityReportController extends Controller
             ]);
         }
 
-        $filename = 'aktivitaet_' . $from->format('Y-m-d') . '_' . $to->format('Y-m-d') . '.csv';
+        $filename = 'aktivitaet_'.$from->format('Y-m-d').'_'.$to->format('Y-m-d').'.csv';
 
         return response($csv->toString(), 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }
 
@@ -137,8 +137,8 @@ class ActivityReportController extends Controller
 
         $csv = Writer::createFromString();
         $csv->setDelimiter(';');
-        $csv->addFormatter(new EscapeFormula());
-        $csv->insertOne(['Mitarbeiter', $employee->name, 'Zeitraum', $from->format('d.m.Y') . ' - ' . $to->format('d.m.Y')]);
+        $csv->addFormatter(new EscapeFormula);
+        $csv->insertOne(['Mitarbeiter', $employee->name, 'Zeitraum', $from->format('d.m.Y').' - '.$to->format('d.m.Y')]);
         $csv->insertOne([
             'Datum', 'Anmeldezeit (hh:mm)', 'Aktive Zeit (hh:mm)', 'Leerlauf (hh:mm)',
             'Produktive Aktionen', 'Ereignisse gesamt', 'Punkte',
@@ -155,11 +155,11 @@ class ActivityReportController extends Controller
             ]);
         }
 
-        $filename = 'aktivitaet_mitarbeiter_' . $employee->id . '_' . $from->format('Y-m-d') . '_' . $to->format('Y-m-d') . '.csv';
+        $filename = 'aktivitaet_mitarbeiter_'.$employee->id.'_'.$from->format('Y-m-d').'_'.$to->format('Y-m-d').'.csv';
 
         return response($csv->toString(), 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }
 
@@ -168,8 +168,8 @@ class ActivityReportController extends Controller
     {
         // Nur produktive Aktionen sind bepunktbar; nach Kategorie gruppiert.
         $actions = collect($this->catalog->actions())
-            ->filter(fn($def) => !empty($def['productive']))
-            ->map(fn($def, $key) => (object) [
+            ->filter(fn ($def) => ! empty($def['productive']))
+            ->map(fn ($def, $key) => (object) [
                 'key' => $key,
                 'label' => $def['label'],
                 'category' => $def['category'],
@@ -199,13 +199,13 @@ class ActivityReportController extends Controller
 
         // Nur bekannte, produktive Aktionen uebernehmen (kein Freitext).
         $known = collect($this->catalog->actions())
-            ->filter(fn($def) => !empty($def['productive']))
+            ->filter(fn ($def) => ! empty($def['productive']))
             ->keys()
             ->all();
         $points = collect($data['points'] ?? [])
             ->only($known)
-            ->filter(fn($v) => $v !== null)
-            ->map(fn($v) => (int) $v)
+            ->filter(fn ($v) => $v !== null)
+            ->map(fn ($v) => (int) $v)
             ->all();
         SystemSetting::set('activity_points', json_encode($points));
 

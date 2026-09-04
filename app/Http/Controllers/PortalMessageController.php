@@ -1,11 +1,18 @@
 <?php
+
 namespace App\Http\Controllers;
 
+use App\Jobs\AnswerCustomerMessageJob;
+use App\Models\AiConversation;
 use App\Models\Customer;
 use App\Models\CustomerMessage;
 use App\Models\CustomerMessageAttachment;
+use App\Services\Ai\Assistant\AssistantSettings;
+use App\Services\Ai\Assistant\ConversationResumeService;
 use App\Services\CustomerMessageNotifier;
+use App\Support\UploadRules;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -18,7 +25,7 @@ class PortalMessageController extends Controller
     {
         return Customer::firstOrCreate(
             ['user_id' => auth()->id()],
-            ['customer_number' => 'C-' . strtoupper(Str::random(8))]
+            ['customer_number' => 'C-'.strtoupper(Str::random(8))]
         );
     }
 
@@ -27,7 +34,7 @@ class PortalMessageController extends Controller
         $customer = $this->getCustomer();
         $messages = CustomerMessage::where('customer_id', $customer->id)
             ->with(['sender', 'attachments'])
-            ->orderBy('created_at')
+            ->orderBy('created_at')->orderBy('id')
             ->get();
 
         // Beraternachrichten gelten mit dem Oeffnen der Seite als gelesen.
@@ -40,14 +47,14 @@ class PortalMessageController extends Controller
         // Antworten an, kein Mitarbeiter hat uebernommen).
         // Es gibt hoechstens EINEN Steuerstand je Kunde (unique); fehlt er,
         // hat der Assistent noch nie geantwortet und ist damit aktiv.
-        $settings = app(\App\Services\Ai\Assistant\AssistantSettings::class);
-        $conversation = \App\Models\AiConversation::where('customer_id', $customer->id)->first();
+        $settings = app(AssistantSettings::class);
+        $conversation = AiConversation::where('customer_id', $customer->id)->first();
         // Auch eine faellige Wiederaufnahme zaehlt als "KI zustaendig"
         // (Betreiber-Vorgabe 20.08.2026): die Kennzeichnung soll dem
         // naechsten Schritt entsprechen, nicht dem Stand von gestern.
         $aiActive = $settings->enabled()
             && $settings->autoReply()
-            && app(\App\Services\Ai\Assistant\ConversationResumeService::class)
+            && app(ConversationResumeService::class)
                 ->isAiOnDuty($customer, $conversation);
 
         return view('portal.messages', compact('customer', 'messages', 'aiActive'));
@@ -70,7 +77,7 @@ class PortalMessageController extends Controller
 
         $messages = CustomerMessage::where('customer_id', $customer->id)
             ->with(['sender', 'attachments'])
-            ->orderBy('created_at')
+            ->orderBy('created_at')->orderBy('id')
             ->get();
 
         return response()->json([
@@ -84,7 +91,7 @@ class PortalMessageController extends Controller
         $request->validate([
             'body' => 'required|string|max:5000',
             'attachments' => 'nullable|array|max:5',
-            'attachments.*' => 'file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+            'attachments.*' => UploadRules::each(UploadRules::ATTACHMENT_MIMES),
         ]);
         $customer = $this->getCustomer();
 
@@ -103,8 +110,8 @@ class PortalMessageController extends Controller
         // selbst). Der Dienst prueft alle Schalter und Grenzen selbst - hier
         // wird nur angestossen. Das Team wurde oben bereits benachrichtigt,
         // also aendert die KI nichts am bisherigen Ablauf.
-        if (app(\App\Services\Ai\Assistant\AssistantSettings::class)->enabled()) {
-            \App\Jobs\AnswerCustomerMessageJob::dispatch($message->id);
+        if (app(AssistantSettings::class)->enabled()) {
+            AnswerCustomerMessageJob::dispatch($message->id);
         }
 
         // Chat-UI sendet per fetch() und rendert die Blase selbst.
@@ -121,7 +128,7 @@ class PortalMessageController extends Controller
     public function downloadAttachment($id)
     {
         $attachment = $this->findOwnAttachment($id);
-        $disk = \Illuminate\Support\Facades\Storage::disk($attachment->disk ?: 'local');
+        $disk = Storage::disk($attachment->disk ?: 'local');
         abort_unless($disk->exists($attachment->file_path), 404);
         return $disk->download($attachment->file_path, $attachment->file_name);
     }
@@ -134,7 +141,7 @@ class PortalMessageController extends Controller
     {
         $attachment = $this->findOwnAttachment($id);
         abort_unless($attachment->isViewable(), 404);
-        $disk = \Illuminate\Support\Facades\Storage::disk($attachment->disk ?: 'local');
+        $disk = Storage::disk($attachment->disk ?: 'local');
         abort_unless($disk->exists($attachment->file_path), 404);
         return $disk->response($attachment->file_path, $attachment->file_name, [
             'Content-Type' => $attachment->mimeType(),

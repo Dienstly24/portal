@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\ChangeRequestDocument;
@@ -39,13 +40,13 @@ class ChangeRequestReviewController extends Controller
             ? $request->query('status') : 'pending';
 
         $query = CustomerChangeRequest::with(['customer.user', 'requester', 'reviewer', 'documents'])
-            ->withCount(['notifications', 'notifications as open_notifications' => fn($q) => $q->where('status', 'pending')])
+            ->withCount(['notifications', 'notifications as open_notifications' => fn ($q) => $q->where('status', 'pending')])
             ->where('status', $status)
             ->orderBy('created_at', $status === 'pending' ? 'asc' : 'desc');
 
         // Gleiche Portfolio-Sichtbarkeit wie überall im Admin-Bereich
         $user = auth()->user();
-        if (!$user->canSeeAllCustomers()) {
+        if (! $user->canSeeAllCustomers()) {
             $query->whereIn('customer_id', $user->visibleCustomerIdsWithSubstitution());
         }
 
@@ -64,7 +65,7 @@ class ChangeRequestReviewController extends Controller
     {
         $q = CustomerChangeRequest::where('status', $status);
         $user = auth()->user();
-        if (!$user->canSeeAllCustomers()) {
+        if (! $user->canSeeAllCustomers()) {
             $q->whereIn('customer_id', $user->visibleCustomerIdsWithSubstitution());
         }
         return $q->count();
@@ -77,7 +78,7 @@ class ChangeRequestReviewController extends Controller
         $this->authorize('review', $changeRequest);
 
         $path = $changeRequest->new_data['document_path'] ?? null;
-        abort_if(!$path, 404);
+        abort_if(! $path, 404);
         $disk = $changeRequest->new_data['document_disk'] ?? 'public';
         abort_unless(Storage::disk($disk)->exists($path), 404);
         return Storage::disk($disk)->download(
@@ -99,7 +100,7 @@ class ChangeRequestReviewController extends Controller
         $disk = Storage::disk($document->disk ?: 'local');
         abort_unless($disk->exists($document->file_path), 404);
 
-        if ($request->boolean('download') || !$document->isViewable()) {
+        if ($request->boolean('download') || ! $document->isViewable()) {
             return $disk->download($document->file_path, $document->file_name);
         }
 
@@ -118,14 +119,14 @@ class ChangeRequestReviewController extends Controller
         if ($changeRequest->documents()->count() === 0) {
             return back()->with('error', 'Zu dieser Anfrage liegt kein Nachweis vor.');
         }
-        if (!$verifier->isAvailable()) {
+        if (! $verifier->isAvailable()) {
             return back()->with('error', 'Automatische Prüfung nicht verfügbar (OCR ist auf dem Server nicht aktiviert).');
         }
 
         $result = $verifier->verify($changeRequest);
         $state = CustomerChangeRequest::PROOF_STATES[$result['status']] ?? [];
 
-        return back()->with('success', 'Nachweis erneut geprüft: ' . ($state['label'] ?? $result['status']));
+        return back()->with('success', 'Nachweis erneut geprüft: '.($state['label'] ?? $result['status']));
     }
 
     /**
@@ -141,7 +142,7 @@ class ChangeRequestReviewController extends Controller
 
         $data = $request->validate([
             'body' => 'required|string|max:2000',
-            'email_mode' => 'nullable|in:' . implode(',', CustomerMessage::EMAIL_MODES),
+            'email_mode' => 'nullable|in:'.implode(',', CustomerMessage::EMAIL_MODES),
         ]);
 
         // Standard "hint": der Kunde bekommt nur den Hinweis auf eine neue
@@ -176,7 +177,7 @@ class ChangeRequestReviewController extends Controller
             ? $service->approve($changeRequest, auth()->user(), $data['notes'] ?? null)
             : $service->reject($changeRequest, auth()->user(), $data['notes'] ?? null);
 
-        if (!$result['ok']) {
+        if (! $result['ok']) {
             return back()->with('error', $result['error']);
         }
 
@@ -188,7 +189,7 @@ class ChangeRequestReviewController extends Controller
             return redirect()
                 ->route('admin.change_requests.notifications', $changeRequest->id)
                 ->with('success', 'Anfrage genehmigt – die Kundendaten wurden aktualisiert. '
-                    . $result['notifications'] . ' Mitteilung(en) an Gesellschaften wurden vorbereitet.');
+                    .$result['notifications'].' Mitteilung(en) an Gesellschaften wurden vorbereitet.');
         }
 
         return back()->with('success', 'Anfrage genehmigt – die Kundendaten wurden aktualisiert.');

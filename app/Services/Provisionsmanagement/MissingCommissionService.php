@@ -1,8 +1,10 @@
 <?php
+
 namespace App\Services\Provisionsmanagement;
 
 use App\Models\CommissionFollowup;
 use App\Models\Contract;
+use App\Models\Customer;
 use App\Services\CommissionImport\CommissionAuditLogger;
 use App\Support\ContractCommissionStatus as Zustand;
 use Illuminate\Support\Carbon;
@@ -45,19 +47,19 @@ class MissingCommissionService
                 fn ($q) => $q->whereIn('commission_status', Zustand::OFFENE_FAELLE)
             )
             ->when(($filter['pool'] ?? null), fn ($q, $p) => $q->where('pool', $p))
-            ->when(($filter['produkt'] ?? null), fn ($q, $p) => $q->where('insurer', 'like', '%' . $this->escape($p) . '%'))
+            ->when(($filter['produkt'] ?? null), fn ($q, $p) => $q->where('insurer', 'like', '%'.$this->escape($p).'%'))
             ->when(($filter['monat'] ?? null), function ($q, $monat) {
                 // Monat des Abschlusses (YYYY-MM) - dieselbe Datumsleiter
                 // wie in der Statusberechnung, damit Liste und Zustand
                 // dieselbe Zeitrechnung benutzen.
-                $q->whereRaw("substr(COALESCE(signing_date, application_date, start_date, DATE(created_at)), 1, 7) = ?", [$monat]);
+                $q->whereRaw('substr(COALESCE(signing_date, application_date, start_date, DATE(created_at)), 1, 7) = ?', [$monat]);
             })
             ->when(($filter['kunde'] ?? null), function ($q, $suche) {
-                $q->whereIn('customer_id', \App\Models\Customer::search($suche)->select('id'));
+                $q->whereIn('customer_id', Customer::search($suche)->select('id'));
             })
             ->when(($filter['mitarbeiter'] ?? null), fn ($q, $id) => $q->whereIn(
                 'customer_id',
-                \App\Models\Customer::where('acquired_by', $id)->select('id')
+                Customer::where('acquired_by', $id)->select('id')
             ))
             ->orderBy('commission_check_date');
     }

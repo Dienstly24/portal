@@ -50,8 +50,8 @@ class PublishScheduledSocialPosts extends Command
         $ok = 0;
         $failed = 0;
         foreach ($due as $channel) {
-            if (!MetaPublisher::configuredFor($channel->platform)) {
-                $this->line($channel->platform . ': Meta-API nicht konfiguriert - uebersprungen.');
+            if (! MetaPublisher::configuredFor($channel->platform)) {
+                $this->line($channel->platform.': Meta-API nicht konfiguriert - uebersprungen.');
                 continue;
             }
 
@@ -79,14 +79,14 @@ class PublishScheduledSocialPosts extends Command
             try {
                 $publisher->publish($channel, null);
                 $ok++;
-                $this->info($label . ': veroeffentlicht (' . ($banner?->title ?? '?') . ').');
+                $this->info($label.': veroeffentlicht ('.($banner?->title ?? '?').').');
                 if ($empfaenger) {
                     Notify::push($empfaenger, [
                         'type' => NotificationService::TYPE_SYSTEM,
                         'title' => 'Social-Media: automatisch veroeffentlicht',
-                        'body' => $label . ' - "' . ($banner?->title ?? '') . '"',
+                        'body' => $label.' - "'.($banner?->title ?? '').'"',
                         'link' => $link,
-                        'dedup_key' => 'social-auto-ok-' . $channel->id,
+                        'dedup_key' => 'social-auto-ok-'.$channel->id,
                     ]);
                 }
             } catch (\Throwable $e) {
@@ -97,20 +97,20 @@ class PublishScheduledSocialPosts extends Command
                     'publish_error' => $e->getMessage(),
                     'publish_started_at' => null,
                 ])->save();
-                $this->error($label . ': ' . $e->getMessage());
+                $this->error($label.': '.$e->getMessage());
                 if ($empfaenger) {
                     Notify::push($empfaenger, [
                         'type' => NotificationService::TYPE_SYSTEM,
                         'title' => 'Social-Media: Veroeffentlichung fehlgeschlagen',
-                        'body' => $label . ' - "' . ($banner?->title ?? '') . '": ' . $e->getMessage(),
+                        'body' => $label.' - "'.($banner?->title ?? '').'": '.$e->getMessage(),
                         'link' => $link,
-                        'dedup_key' => 'social-auto-fail-' . $channel->id,
+                        'dedup_key' => 'social-auto-fail-'.$channel->id,
                     ]);
                 }
             }
         }
 
-        $this->info('Fertig: ' . $ok . ' veroeffentlicht, ' . $failed . ' fehlgeschlagen, ' . $due->count() . ' faellig.');
+        $this->info('Fertig: '.$ok.' veroeffentlicht, '.$failed.' fehlgeschlagen, '.$due->count().' faellig.');
 
         return self::SUCCESS;
     }

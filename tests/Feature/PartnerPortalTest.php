@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\Partner;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -27,7 +28,7 @@ class PartnerPortalTest extends TestCase
         return Customer::create([
             'user_id' => $u->id,
             'partner_id' => $partner?->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5($email), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5($email), 0, 8)),
         ]);
     }
 
@@ -103,7 +104,7 @@ class PartnerPortalTest extends TestCase
         $partner = $this->makePartner('logo@firma.de');
 
         $this->actingAs($partner->user)->post(route('partner.profile.update'), [
-            'logo' => \Illuminate\Http\UploadedFile::fake()->image('logo.png', 200, 80),
+            'logo' => UploadedFile::fake()->image('logo.png', 200, 80),
         ])->assertRedirect();
 
         $partner->refresh();

@@ -3,13 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\Contract;
-use App\Models\ContractVehicleDetail;
 use App\Models\Customer;
 use App\Models\CustomerChangeRequest;
 use App\Models\Document;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -32,7 +32,7 @@ class ContractManagementTest extends TestCase
         $user = User::factory()->create(['role' => 'customer']);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5((string) $user->id), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5((string) $user->id), 0, 8)),
         ]);
     }
 
@@ -116,8 +116,8 @@ class ContractManagementTest extends TestCase
     {
         $customer = $this->makeCustomer();
         $expected = [
-            'basis'   => 'Basis-Mitgliedschaft',
-            'plus'    => 'Plus-Mitgliedschaft',
+            'basis' => 'Basis-Mitgliedschaft',
+            'plus' => 'Plus-Mitgliedschaft',
             'premium' => 'Premium-Mitgliedschaft',
         ];
 
@@ -366,7 +366,7 @@ class ContractManagementTest extends TestCase
             'iban' => 'DE89370400440532013000', 'account_holder' => 'Max Mustermann',
         ])->assertSessionHas('success');
 
-        $customer = Customer::whereHas('user', fn($q) => $q->where('email', 'max.neu@example.test'))->firstOrFail();
+        $customer = Customer::whereHas('user', fn ($q) => $q->where('email', 'max.neu@example.test'))->firstOrFail();
         $this->assertSame('DE89370400440532013000', $customer->iban);
         $this->assertSame('Max Mustermann', $customer->account_holder);
         // In der DB liegt der Wert verschlüsselt, nicht im Klartext.
@@ -378,7 +378,7 @@ class ContractManagementTest extends TestCase
     {
         $customer = $this->makeCustomer();
         // Klartext direkt in die Spalte schreiben (wie Alt-Bestand vor der Verschlüsselung).
-        \Illuminate\Support\Facades\DB::table('customers')->where('id', $customer->id)->update(['iban' => 'DE00PLAINTEXT']);
+        DB::table('customers')->where('id', $customer->id)->update(['iban' => 'DE00PLAINTEXT']);
 
         $reloaded = Customer::find($customer->id);
         $this->assertSame('DE00PLAINTEXT', $reloaded->iban); // kein DecryptException

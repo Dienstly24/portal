@@ -9,6 +9,7 @@ use App\Services\Mailbox\GraphApiMailboxProvider;
 use App\Services\Mailbox\MailboxProviderFactory;
 use App\Services\Mailbox\OAuthTokenService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -30,7 +31,7 @@ class OAuthMailboxTest extends TestCase
     private function account(string $provider, array $credentials = []): EmailAccount
     {
         return EmailAccount::create([
-            'name' => 'OAuth Test', 'email_address' => uniqid() . '@dienstly24.de',
+            'name' => 'OAuth Test', 'email_address' => uniqid().'@dienstly24.de',
             'provider' => $provider, 'credentials' => $credentials,
             'folders' => ['INBOX'], 'is_active' => true,
         ]);
@@ -38,7 +39,7 @@ class OAuthMailboxTest extends TestCase
 
     public function test_factory_routes_oauth_providers(): void
     {
-        $factory = new MailboxProviderFactory();
+        $factory = new MailboxProviderFactory;
         $this->assertInstanceOf(GmailApiMailboxProvider::class, $factory->make($this->account('gmail_oauth')));
         $this->assertInstanceOf(GraphApiMailboxProvider::class, $factory->make($this->account('microsoft_oauth')));
     }
@@ -212,7 +213,7 @@ class OAuthMailboxTest extends TestCase
         // Die State-Nonce (CSRF-Schutz) muss in der Sitzung liegen, die den
         // Callback traegt - so, wie sie authorizationUrl() beim "Verbinden" ablegt.
         $nonce = 'route-nonce';
-        $state = \Illuminate\Support\Facades\Crypt::encryptString($account->id . '|' . $nonce);
+        $state = Crypt::encryptString($account->id.'|'.$nonce);
 
         $this->withSession(['email_oauth_state' => ['account' => (string) $account->id, 'nonce' => $nonce]])
             ->actingAs($admin)

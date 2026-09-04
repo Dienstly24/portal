@@ -1,11 +1,12 @@
 <?php
+
 namespace App\Http\Controllers;
+
 use App\Http\Controllers\Concerns\ScopesCustomerAccess;
 use App\Models\Appointment;
-use App\Models\Customer;
 use App\Models\CustomerTimeline;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class AppointmentController extends Controller
 {
@@ -13,19 +14,19 @@ class AppointmentController extends Controller
 
     public function index() {
         $visible = $this->visibleCustomerIds();
-        $appointments = Appointment::with(['customer.user','assignedTo'])
+        $appointments = Appointment::with(['customer.user', 'assignedTo'])
             ->where('starts_at', '>=', now()->startOfDay())
             ->orderBy('starts_at')
-            ->when($visible !== null, fn($q) => $q->whereIn('customer_id', $visible))->get();
+            ->when($visible !== null, fn ($q) => $q->whereIn('customer_id', $visible))->get();
         // Portfolio-Scope auch auf die Vergangenheitsliste (Audit SEC-P2):
         // sonst sieht ein Mitarbeiter Titel/Zeiten/Kundennamen fremder Termine.
-        $past = Appointment::with(['customer.user','assignedTo'])
+        $past = Appointment::with(['customer.user', 'assignedTo'])
             ->where('starts_at', '<', now()->startOfDay())
-            ->when($visible !== null, fn($q) => $q->whereIn('customer_id', $visible))
+            ->when($visible !== null, fn ($q) => $q->whereIn('customer_id', $visible))
             ->orderByDesc('starts_at')
             ->take(20)
             ->get();
-        return view('admin.appointments', compact('appointments','past'));
+        return view('admin.appointments', compact('appointments', 'past'));
     }
 
     public function store(Request $request) {
@@ -52,8 +53,8 @@ class AppointmentController extends Controller
             'customer_id' => $request->customer_id,
             'user_id' => auth()->id(),
             'type' => 'appointment',
-            'title' => 'Termin erstellt: ' . $request->title,
-            'description' => 'Am ' . \Carbon\Carbon::parse($request->starts_at)->format('d.m.Y H:i'),
+            'title' => 'Termin erstellt: '.$request->title,
+            'description' => 'Am '.Carbon::parse($request->starts_at)->format('d.m.Y H:i'),
         ]);
         return back()->with('success', 'Termin erstellt.');
     }

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Social;
 
 use App\Models\BannerSocialChannel;
@@ -26,7 +27,7 @@ class MetaInsightsService
     /** Kennzahlen EINES veroeffentlichten Kanals holen und speichern. */
     public function refreshChannel(BannerSocialChannel $channel): void
     {
-        if (!$channel->external_post_id || !MetaPublisher::configuredFor($channel->platform)) {
+        if (! $channel->external_post_id || ! MetaPublisher::configuredFor($channel->platform)) {
             return;
         }
 
@@ -43,7 +44,7 @@ class MetaInsightsService
     /** Seiten-Ueberblick holen und cachen (fuer das Statistik-Dashboard). */
     public function refreshPageOverview(): void
     {
-        if (!MetaPublisher::configuredFor('facebook')) {
+        if (! MetaPublisher::configuredFor('facebook')) {
             return;
         }
         $pageId = (string) config('services.meta.page_id');
@@ -53,7 +54,7 @@ class MetaInsightsService
 
         $views = 0;
         try {
-            $resp = $this->graph->get($pageId . '/insights', [
+            $resp = $this->graph->get($pageId.'/insights', [
                 'metric' => 'page_views_total',
                 'period' => 'days_28',
             ], $this->graph->pageToken());
@@ -83,7 +84,7 @@ class MetaInsightsService
 
         $reach = 0;
         try {
-            $resp = $this->graph->get($postId . '/insights', ['metric' => 'post_impressions_unique'], $pageToken);
+            $resp = $this->graph->get($postId.'/insights', ['metric' => 'post_impressions_unique'], $pageToken);
             $reach = (int) ($resp['data'][0]['values'][0]['value'] ?? 0);
         } catch (\Throwable $e) {
         }
@@ -103,7 +104,7 @@ class MetaInsightsService
 
         $reach = 0;
         try {
-            $resp = $this->graph->get($mediaId . '/insights', ['metric' => 'reach']);
+            $resp = $this->graph->get($mediaId.'/insights', ['metric' => 'reach']);
             $reach = (int) ($resp['data'][0]['values'][0]['value'] ?? 0);
         } catch (\Throwable $e) {
         }

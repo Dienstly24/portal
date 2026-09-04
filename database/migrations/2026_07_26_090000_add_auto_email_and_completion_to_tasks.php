@@ -23,8 +23,7 @@ use Illuminate\Support\Facades\Schema;
  *
  * Alles additiv/nullable - bestehende Aufgaben bleiben unveraendert gueltig.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('tasks', function (Blueprint $table) {

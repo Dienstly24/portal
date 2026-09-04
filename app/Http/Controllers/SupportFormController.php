@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\Ticket;
+use App\Services\SpamFilter;
+use App\Services\TicketNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
@@ -49,7 +51,7 @@ class SupportFormController extends Controller
 
     private function customerFromToken(?string $token): ?Customer
     {
-        if (!$token) {
+        if (! $token) {
             return null;
         }
         try {
@@ -57,7 +59,7 @@ class SupportFormController extends Controller
         } catch (\Throwable) {
             return null;
         }
-        if (!is_array($data) || ($data['exp'] ?? 0) < now()->timestamp) {
+        if (! is_array($data) || ($data['exp'] ?? 0) < now()->timestamp) {
             return null;
         }
 
@@ -90,16 +92,16 @@ class SupportFormController extends Controller
         // "Vertrauenswürdig" identifiziert = per Token aus der Willkommens-Mail
         // oder eingeloggt. Nur dann darf die Antwortseite Kundenbezug zeigen.
         $trusted = $this->customerFromToken($request->input('t'));
-        if (!$trusted && $request->user() && $request->user()->role === 'customer') {
+        if (! $trusted && $request->user() && $request->user()->role === 'customer') {
             $trusted = $request->user()->customer;
         }
         $customer = $trusted;
 
         $rules = [
-            'leistung' => 'required|in:' . implode(',', array_keys(self::LEISTUNGEN)),
+            'leistung' => 'required|in:'.implode(',', array_keys(self::LEISTUNGEN)),
             'message' => 'required|string|max:5000',
         ];
-        if (!$customer) {
+        if (! $customer) {
             $rules['name'] = 'required|string|max:150';
             $rules['email'] = 'required|email|max:190';
         }
@@ -107,17 +109,17 @@ class SupportFormController extends Controller
 
         // Inhaltsbasierte Spam-Erkennung: erkannte Bot-Werbung still verwerfen
         // (kein Ticket) und - wie beim Honeypot - die Dankeseite anzeigen.
-        if ($spam = \App\Services\SpamFilter::reason([$data['name'] ?? null, $data['message']])) {
-            \Log::info('Hilfe-Anfrage als Spam verworfen: ' . $spam);
+        if ($spam = SpamFilter::reason([$data['name'] ?? null, $data['message']])) {
+            \Log::info('Hilfe-Anfrage als Spam verworfen: '.$spam);
             return view('support.thanks', ['ticketRef' => null, 'customer' => $trusted]);
         }
 
         // Gast-Anfrage: per E-Mail trotzdem der Kundenakte zuordnen, wenn
         // möglich - aber NUR intern. Die Antwortseite verrät die Zuordnung
         // nicht (sonst könnten Fremde per E-Mail-Raten Kundenkonten erkennen).
-        if (!$customer) {
+        if (! $customer) {
             $customer = Customer::whereHas('user', fn ($q) => $q->where('email', $data['email']))
-                ->orWhere('email', $data['email'])->first();
+                ->orWhere('email2', $data['email'])->first();
         }
 
         $leistung = self::LEISTUNGEN[$data['leistung']];
@@ -127,7 +129,7 @@ class SupportFormController extends Controller
             'customer_id' => $customer?->id,
             'type' => $leistung['type'],
             'priority' => 'mittel',
-            'subject' => 'Hilfe-Anfrage: ' . $leistung['label'],
+            'subject' => 'Hilfe-Anfrage: '.$leistung['label'],
             'description' => $data['message'],
             'status' => 'open',
             'source' => 'hilfe-formular',
@@ -148,7 +150,7 @@ class SupportFormController extends Controller
         ]);
 
         // Team ueber die neue Anfrage informieren (Glocke).
-        \App\Services\TicketNotifier::notifyNewTicket($ticket);
+        TicketNotifier::notifyNewTicket($ticket);
 
         return view('support.thanks', [
             // Einheitliche Vorgangsnummer (T-...) statt UUID-Fragment -

@@ -3,6 +3,8 @@
 namespace App\Jobs;
 
 use App\Services\Import\CustomerCsvImporter;
+use App\Services\Notifications\NotificationService;
+use App\Support\Facades\Notify;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -38,7 +40,7 @@ class ImportCustomersJob implements ShouldQueue
 
     public function handle(CustomerCsvImporter $importer): void
     {
-        if (!is_file($this->path)) {
+        if (! is_file($this->path)) {
             Log::warning('ImportCustomersJob: Datei nicht gefunden', ['path' => $this->path]);
 
             return;
@@ -53,7 +55,7 @@ class ImportCustomersJob implements ShouldQueue
 
         if ($this->actorId) {
             $body = "{$result['imported']} Kunden importiert, {$result['skipped']} uebersprungen.";
-            if (!empty($result['errors'])) {
+            if (! empty($result['errors'])) {
                 // Nur wenige, gekuerzte Hinweise einbetten und Platz fuer den
                 // "weitere"-Zaehler reservieren: die Notification-Spalte ist
                 // string(500), ein Import mit vielen Warnungen (z.B. hunderte
@@ -63,18 +65,18 @@ class ImportCustomersJob implements ShouldQueue
                     fn ($e) => mb_substr((string) $e, 0, 80),
                     array_slice($result['errors'], 0, 3)
                 );
-                $body .= ' Hinweise: ' . implode(' | ', $shown);
+                $body .= ' Hinweise: '.implode(' | ', $shown);
                 $more = count($result['errors']) - count($shown);
                 if ($more > 0) {
-                    $body .= ' | ... und ' . $more . ' weitere.';
+                    $body .= ' | ... und '.$more.' weitere.';
                 }
             }
 
-            \App\Support\Facades\Notify::push($this->actorId, [
-                'type'  => \App\Services\Notifications\NotificationService::TYPE_IMPORT,
+            Notify::push($this->actorId, [
+                'type' => NotificationService::TYPE_IMPORT,
                 'title' => 'Kunden-Import abgeschlossen',
-                'body'  => $body,
-                'link'  => route('admin.import_export'),
+                'body' => $body,
+                'link' => route('admin.import_export'),
             ]);
         }
     }
@@ -107,18 +109,18 @@ class ImportCustomersJob implements ShouldQueue
         }
 
         try {
-            \App\Support\Facades\Notify::push($this->actorId, [
-                'type'  => \App\Services\Notifications\NotificationService::TYPE_IMPORT,
+            Notify::push($this->actorId, [
+                'type' => NotificationService::TYPE_IMPORT,
                 'title' => 'Kunden-Import FEHLGESCHLAGEN',
-                'body'  => 'Der Import wurde abgebrochen und ist NICHT vollstaendig durchgelaufen. '
-                    . 'Moeglicherweise wurde ein Teil der Kunden bereits angelegt - bitte pruefen Sie '
-                    . 'die Kundenliste, bevor Sie die Datei erneut hochladen. Grund: '
-                    . mb_substr((string) ($e?->getMessage() ?? 'unbekannt'), 0, 200),
-                'link'  => route('admin.import_export'),
-                'dedup_key' => 'import_failed:' . md5($this->path),
+                'body' => 'Der Import wurde abgebrochen und ist NICHT vollstaendig durchgelaufen. '
+                    .'Moeglicherweise wurde ein Teil der Kunden bereits angelegt - bitte pruefen Sie '
+                    .'die Kundenliste, bevor Sie die Datei erneut hochladen. Grund: '
+                    .mb_substr((string) ($e?->getMessage() ?? 'unbekannt'), 0, 200),
+                'link' => route('admin.import_export'),
+                'dedup_key' => 'import_failed:'.md5($this->path),
             ]);
         } catch (\Throwable $inner) {
-            Log::warning('Hinweis zum fehlgeschlagenen Import konnte nicht zugestellt werden: ' . $inner->getMessage());
+            Log::warning('Hinweis zum fehlgeschlagenen Import konnte nicht zugestellt werden: '.$inner->getMessage());
         }
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai;
 
 /**
@@ -43,7 +44,7 @@ class RelevantPageSelector
             }
 
             foreach ($markers as $marker) {
-                if ($marker === '' || !str_contains($upper, mb_strtoupper((string) $marker))) {
+                if ($marker === '' || ! str_contains($upper, mb_strtoupper((string) $marker))) {
                     continue;
                 }
 

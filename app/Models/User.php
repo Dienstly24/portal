@@ -1,13 +1,19 @@
 <?php
+
 namespace App\Models;
+
+use App\Mail\PasswordResetMail;
+use App\Services\Matching\DuplicateDetectionService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Mail;
 
-class User extends Authenticatable {
+class User extends Authenticatable
+{
     use HasFactory, Notifiable;
-    protected $fillable = ['name','email','password','role','access_level','can_see_all_customers','can_manage_contracts','can_manage_tickets','can_approve_changes','can_send_emails','can_import_export','can_manage_commissions','provision_fixed','provision_percent'];
-    protected $hidden = ['password','remember_token'];
+    protected $fillable = ['name', 'email', 'password', 'role', 'access_level', 'can_see_all_customers', 'can_manage_contracts', 'can_manage_tickets', 'can_approve_changes', 'can_send_emails', 'can_import_export', 'can_manage_commissions', 'provision_fixed', 'provision_percent'];
+    protected $hidden = ['password', 'remember_token'];
     protected $casts = [
         'email_verified_at' => 'datetime',
         'last_login_at' => 'datetime',
@@ -44,7 +50,7 @@ class User extends Authenticatable {
                 return;
             }
             if (array_intersect(array_keys($user->getChanges()), ['name', 'email']) !== []) {
-                app(\App\Services\Matching\DuplicateDetectionService::class)->forgetCount();
+                app(DuplicateDetectionService::class)->forgetCount();
             }
         });
     }
@@ -53,7 +59,7 @@ class User extends Authenticatable {
 
     /** Echte, erreichbare E-Mail (Import-Platzhalter zählen nicht). */
     public function hasRealEmail(): bool {
-        return $this->email && !str_contains($this->email, '@dienstly24.internal');
+        return $this->email && ! str_contains($this->email, '@dienstly24.internal');
     }
 
     /**
@@ -62,8 +68,8 @@ class User extends Authenticatable {
      * werden im Controller abgefangen (kein 500 mehr beim Kunden).
      */
     public function sendPasswordResetNotification($token): void {
-        \Illuminate\Support\Facades\Mail::to($this->email)
-            ->send(new \App\Mail\PasswordResetMail($this, $token));
+        Mail::to($this->email)
+            ->send(new PasswordResetMail($this, $token));
     }
     public function assignedCustomers() { return $this->belongsToMany(Customer::class, 'employee_customers'); }
 
@@ -83,7 +89,7 @@ class User extends Authenticatable {
     /** Eigene Kunden + Kunden von Kollegen, die man aktuell vertritt */
     public function visibleCustomerIdsWithSubstitution(): array {
         $ids = $this->assignedCustomers()->pluck('customers.id')->toArray();
-        $absentIds = \App\Models\Substitution::active()
+        $absentIds = Substitution::active()
             ->where('substitute_user_id', $this->id)
             ->pluck('absent_user_id');
         foreach ($absentIds as $absentId) {
@@ -105,7 +111,7 @@ class User extends Authenticatable {
      * Zuweisung inkl. aktiver Vertretungen. (Basis für Policies)
      */
     public function canAccessCustomer($customerId): bool {
-        if (!$this->isStaff()) return false;
+        if (! $this->isStaff()) return false;
         if ($this->canSeeAllCustomers()) return true;
         return in_array((string) $customerId, array_map('strval', $this->visibleCustomerIdsWithSubstitution()), true);
     }

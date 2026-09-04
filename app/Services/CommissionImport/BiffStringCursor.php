@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\CommissionImport;
 
 /**
@@ -105,7 +106,7 @@ class BiffStringCursor
     private function atEnd(): bool
     {
         $this->normalize();
-        return !isset($this->segments[$this->segment]);
+        return ! isset($this->segments[$this->segment]);
     }
 
     private function take(int $bytes): ?string

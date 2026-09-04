@@ -1,24 +1,24 @@
 <?php
+
 namespace App\Services\Ai\Assistant;
 
 use App\Models\AiAssistantLog;
 use App\Models\AiConversation;
+use App\Models\AiConversationEvent;
 use App\Models\CustomerMessage;
+use App\Models\User;
 use App\Services\Ai\Assistant\Contracts\AssistantProviderInterface;
+use App\Services\Ai\Assistant\Sales\AcceptanceDetector;
+use App\Services\Ai\Assistant\Sales\ConversationJournal;
+use App\Services\Ai\Assistant\Sales\ConversationState;
+use App\Services\Ai\Assistant\Sales\IntentClassifier;
+use App\Services\Ai\Assistant\Sales\SlotExtractor;
 use App\Services\Ai\Assistant\Tools\AssistantToolContext;
 use App\Services\Ai\Assistant\Tools\AssistantToolRegistry;
 use App\Services\CustomerMessageNotifier;
 use App\Services\Notifications\NotificationService;
 use App\Support\Facades\Notify;
 use Illuminate\Support\Facades\Cache;
-use App\Models\AiConversationEvent;
-use App\Services\Ai\Assistant\Sales\AcceptanceDetector;
-use App\Services\Ai\Assistant\Sales\ConversationContext;
-use App\Services\Ai\Assistant\Sales\ConversationJournal;
-use App\Services\Ai\Assistant\Sales\ConversationState;
-use App\Services\Ai\Assistant\Sales\IntentClassifier;
-use App\Services\Ai\Assistant\Sales\RequirementProfile;
-use App\Services\Ai\Assistant\Sales\SlotExtractor;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -76,7 +76,7 @@ class CustomerAssistantService
         }
 
         $customer = $message->customer;
-        if (!$customer) {
+        if (! $customer) {
             return null;
         }
 
@@ -94,7 +94,7 @@ class CustomerAssistantService
         $started = microtime(true);
 
         // --- Stufe 1: Schalter des Betreibers -------------------------------
-        if (!$this->settings->enabled() || !$this->settings->autoReply()) {
+        if (! $this->settings->enabled() || ! $this->settings->autoReply()) {
             $this->log($conversation, $message, AiAssistantLog::OUTCOME_SKIPPED, [
                 'grund' => 'Assistent oder automatische Antworten abgeschaltet',
             ]);
@@ -110,7 +110,7 @@ class CustomerAssistantService
         // automatische Antwort. Kostet nichts, entscheidet kein Modell.
         $this->resume->resumeIfDue($customer, $conversation);
 
-        if (!$conversation->canAutoReply()) {
+        if (! $conversation->canAutoReply()) {
             $this->log($conversation, $message, AiAssistantLog::OUTCOME_SKIPPED, [
                 'grund' => $conversation->handover_required
                     ? 'Uebergabe offen - Mitarbeiter ist zustaendig'
@@ -154,7 +154,7 @@ class CustomerAssistantService
         // --- Stufe 4c: erste Einschaetzung des Anliegens --------------------
         // Nur, wenn noch keine vorliegt. Damit hat der Mitarbeiter selbst
         // dann eine Kategorie, wenn das Modell gleich darauf ausfaellt.
-        if (!$conversation->intent) {
+        if (! $conversation->intent) {
             $vermutet = $this->intents->classify((string) $message->body);
             $conversation->forceFill([
                 'intent' => $vermutet,
@@ -163,7 +163,7 @@ class CustomerAssistantService
         }
 
         // --- Stufe 5: Dialog mit dem Modell ---------------------------------
-        if (!$this->provider->isEnabled()) {
+        if (! $this->provider->isEnabled()) {
             return $this->fallback($message, $conversation, $language, $started, 'Kein KI-Anbieter konfiguriert');
         }
 
@@ -195,7 +195,7 @@ class CustomerAssistantService
         if ($text === '') {
             // Das Modell hat nichts Verwertbares geliefert - lieber die
             // ehrliche Uebergabe als eine leere Blase.
-            if (!$handedOver) {
+            if (! $handedOver) {
                 $this->handover->handOver(
                     $customer,
                     $conversation,
@@ -278,7 +278,7 @@ class CustomerAssistantService
                 $text = $turn->text;
             }
 
-            if (!$turn->wantsTools()) {
+            if (! $turn->wantsTools()) {
                 return ['text' => $text, 'tools' => $usedTools, 'rounds' => $round, 'usage' => $usage];
             }
 
@@ -430,7 +430,7 @@ class CustomerAssistantService
      */
     private function detectAcceptance(CustomerMessage $message, AiConversation $conversation): void
     {
-        if (!in_array($conversation->state, [
+        if (! in_array($conversation->state, [
             ConversationState::OFFER_PRESENTED,
             ConversationState::WAITING_FOR_CUSTOMER_DECISION,
         ], true)) {
@@ -446,7 +446,7 @@ class CustomerAssistantService
             (string) $message->body,
             $angebote->pluck('label')->all()
         );
-        if (!$ergebnis['accepted']) {
+        if (! $ergebnis['accepted']) {
             return;
         }
 
@@ -456,7 +456,7 @@ class CustomerAssistantService
             ? $angebote->first(fn ($a) => mb_strtoupper($a->label) === mb_strtoupper($ergebnis['label']))
             : ($angebote->count() === 1 ? $angebote->first() : null);
 
-        if (!$gewaehlt) {
+        if (! $gewaehlt) {
             return;
         }
 
@@ -509,7 +509,7 @@ class CustomerAssistantService
             (string) $message->body,
             // Der erkannte Auslöser hilft dem Mitarbeiter beim Einordnen;
             // die Kundennachricht selbst steht sowieso im Chat.
-            $verdict['hint'] ? 'Erkannt an: "' . $verdict['hint'] . '"' : null,
+            $verdict['hint'] ? 'Erkannt an: "'.$verdict['hint'].'"' : null,
         );
 
         $reply = $this->reply($message, AssistantReplies::pick($texts, $language));
@@ -555,11 +555,11 @@ class CustomerAssistantService
         // Zusaetzliche technische Glocke an die Verwaltung: eine Stoerung
         // muss sichtbar werden, nicht nur der Einzelfall.
         Notify::pushMany(
-            \App\Models\User::whereIn('role', ['admin', 'manager'])->pluck('id'),
+            User::whereIn('role', ['admin', 'manager'])->pluck('id'),
             [
                 'type' => NotificationService::TYPE_SYSTEM,
                 'title' => '⚠️ KI-Service nicht verfügbar',
-                'body' => 'Der KI-Kundenassistent konnte nicht antworten: ' . Str::limit($error, 160),
+                'body' => 'Der KI-Kundenassistent konnte nicht antworten: '.Str::limit($error, 160),
                 'link' => route('admin.settings'),
                 // Eine Stoerung = eine Glocke, nicht je Kundennachricht.
                 'dedup_key' => 'ai-assistant-down',
@@ -583,19 +583,19 @@ class CustomerAssistantService
     {
         $maxPerCase = $this->settings->maxRepliesPerCase();
         if ($maxPerCase > 0 && $conversation->auto_reply_count >= $maxPerCase) {
-            return 'Grenze automatischer Antworten je Vorgang erreicht (' . $maxPerCase . ').';
+            return 'Grenze automatischer Antworten je Vorgang erreicht ('.$maxPerCase.').';
         }
 
         $perHour = max(1, (int) config('services.ai_assistant.rate_per_hour', 20));
-        $key = 'ai-assistant:' . $conversation->customer_id;
+        $key = 'ai-assistant:'.$conversation->customer_id;
         if (RateLimiter::tooManyAttempts($key, $perHour)) {
-            return 'Zu viele Anfragen dieses Kunden in kurzer Zeit (' . $perHour . '/Stunde).';
+            return 'Zu viele Anfragen dieses Kunden in kurzer Zeit ('.$perHour.'/Stunde).';
         }
         RateLimiter::hit($key, 3600);
 
         $dailyLimit = (int) config('services.ai_assistant.daily_reply_limit', 500);
         if ($dailyLimit > 0 && (int) Cache::get($this->dailyKey(), 0) >= $dailyLimit) {
-            return 'Tagesgrenze der KI-Antworten erreicht (' . $dailyLimit . ').';
+            return 'Tagesgrenze der KI-Antworten erreicht ('.$dailyLimit.').';
         }
 
         return null;
@@ -612,7 +612,7 @@ class CustomerAssistantService
 
     private function dailyKey(): string
     {
-        return 'ai-assistant:replies:' . now()->format('Y-m-d');
+        return 'ai-assistant:replies:'.now()->format('Y-m-d');
     }
 
     /**
@@ -701,7 +701,7 @@ class CustomerAssistantService
         } catch (\Throwable $e) {
             // Ein fehlgeschlagenes Protokoll darf die Kundenantwort nie
             // verhindern (gleiche Haltung wie im NotificationService).
-            Log::warning('KI-Assistent: Protokoll konnte nicht geschrieben werden: ' . $e->getMessage());
+            Log::warning('KI-Assistent: Protokoll konnte nicht geschrieben werden: '.$e->getMessage());
         }
     }
 }

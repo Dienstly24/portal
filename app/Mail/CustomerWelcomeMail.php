@@ -1,6 +1,8 @@
 <?php
+
 namespace App\Mail;
 
+use App\Http\Controllers\SupportFormController;
 use App\Models\Customer;
 use App\Models\SystemSetting;
 use Illuminate\Mail\Mailable;
@@ -68,15 +70,15 @@ class CustomerWelcomeMail extends Mailable
                     'magic.login', now()->addDays(90), ['user' => $customer->user->id]
                 );
             }
-            $this->supportUrl = route('support.form', ['t' => \App\Http\Controllers\SupportFormController::tokenFor($customer)]);
+            $this->supportUrl = route('support.form', ['t' => SupportFormController::tokenFor($customer)]);
             // Der Set-Link wird im PortalAccessService per route() gebaut
             // und traegt dort den Host der AUSLOESENDEN Anfrage (meist
             // admin.dienstly24.de). Hier auf die Portal-Domain umschreiben.
             if ($this->setPasswordUrl !== null) {
                 $teile = parse_url($this->setPasswordUrl);
                 $this->setPasswordUrl = $this->portalBase
-                    . ($teile['path'] ?? '/')
-                    . (isset($teile['query']) ? '?' . $teile['query'] : '');
+                    .($teile['path'] ?? '/')
+                    .(isset($teile['query']) ? '?'.$teile['query'] : '');
             }
         } finally {
             // Urspruenglichen Root UND Schema wiederherstellen (fuer die

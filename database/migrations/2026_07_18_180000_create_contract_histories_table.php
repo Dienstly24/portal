@@ -14,8 +14,7 @@ use Illuminate\Support\Facades\Schema;
  * Bewusst schlanke, abfragbare Spalten (kein PII-Schwerpunkt: Sparte, Anbieter,
  * Zeitraum, Grund).
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('contract_histories', function (Blueprint $table) {

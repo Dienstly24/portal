@@ -26,12 +26,12 @@ class PurgeMediaTrash extends Command
             ->get();
 
         if ($assets->isEmpty()) {
-            $this->info('Keine Bilder aelter als ' . $days . ' Tage im Papierkorb.');
+            $this->info('Keine Bilder aelter als '.$days.' Tage im Papierkorb.');
             return self::SUCCESS;
         }
 
         if ($this->option('dry-run')) {
-            $this->info('Wuerde ' . $assets->count() . ' Bild(er) endgueltig loeschen.');
+            $this->info('Wuerde '.$assets->count().' Bild(er) endgueltig loeschen.');
             return self::SUCCESS;
         }
 
@@ -44,7 +44,7 @@ class PurgeMediaTrash extends Command
             $asset->forceDelete();
         }
 
-        $this->info($assets->count() . ' Bild(er) endgueltig geloescht.');
+        $this->info($assets->count().' Bild(er) endgueltig geloescht.');
         return self::SUCCESS;
     }
 }

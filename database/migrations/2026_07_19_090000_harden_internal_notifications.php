@@ -1,4 +1,5 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -20,10 +21,10 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void {
         Schema::table('internal_notifications', function (Blueprint $table) {
-            if (!Schema::hasColumn('internal_notifications', 'type')) {
+            if (! Schema::hasColumn('internal_notifications', 'type')) {
                 $table->string('type', 40)->nullable()->after('user_id');
             }
-            if (!Schema::hasColumn('internal_notifications', 'dedup_key')) {
+            if (! Schema::hasColumn('internal_notifications', 'dedup_key')) {
                 $table->string('dedup_key')->nullable()->after('link');
             }
         });

@@ -24,8 +24,7 @@ use Illuminate\Support\Facades\Schema;
  * Fremdschluesseln oder frueheren Migrationen) duerfen die Migration
  * nicht abbrechen.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     /** @var array<string, array<string, array<int, string>>> Tabelle => Indexname => Spalten */
     private const INDEXES = [
         'users' => [
@@ -70,7 +69,7 @@ return new class extends Migration
                     Schema::table($table, function (Blueprint $blueprint) use ($name, $columns) {
                         $blueprint->index($columns, $name);
                     });
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     // Index existiert bereits (z.B. aus einem Fremdschluessel).
                 }
             }
@@ -89,7 +88,7 @@ return new class extends Migration
                     Schema::table($table, function (Blueprint $blueprint) use ($name) {
                         $blueprint->dropIndex($name);
                     });
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     // War nie angelegt - nichts zu tun.
                 }
             }

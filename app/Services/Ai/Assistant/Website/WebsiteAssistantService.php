@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Website;
 
 use App\Models\AiLead;
@@ -46,7 +47,7 @@ class WebsiteAssistantService
         $language = $this->languageDetector->detect($message, null);
         $message = Str::limit(trim($message), (int) config('services.ai_assistant.max_message_chars', 4000), '');
 
-        if (!$this->settings->enabled()) {
+        if (! $this->settings->enabled()) {
             return $this->handOver($lead, 'frage', $language, AssistantReplies::FALLBACK);
         }
 
@@ -60,7 +61,7 @@ class WebsiteAssistantService
             return $this->handOver($lead, 'mitarbeiter_gewuenscht', $language, AssistantReplies::HANDOVER);
         }
 
-        if (!$this->provider->isEnabled()) {
+        if (! $this->provider->isEnabled()) {
             return $this->handOver($lead, 'frage', $language, AssistantReplies::FALLBACK);
         }
 
@@ -97,13 +98,13 @@ class WebsiteAssistantService
 
         for ($round = 0; $round < $maxRounds; $round++) {
             $turn = $this->provider->turn(
-                (new WebsitePrompt())->build($lead, $language),
+                (new WebsitePrompt)->build($lead, $language),
                 $history,
                 $schemas,
                 (int) config('services.ai_assistant.max_output_tokens', 700),
             );
 
-            if (!$turn->wantsTools()) {
+            if (! $turn->wantsTools()) {
                 return $turn->text;
             }
 

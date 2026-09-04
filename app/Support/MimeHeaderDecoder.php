@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Support;
 
 /**
@@ -20,7 +21,7 @@ class MimeHeaderDecoder
             return null;
         }
         // Kein encoded-word enthalten -> unveraendert lassen (haeufigster Fall).
-        if (!str_contains($value, '=?')) {
+        if (! str_contains($value, '=?')) {
             return $value;
         }
 

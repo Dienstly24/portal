@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Commission;
-use App\Models\Customer;
 use App\Models\Partner;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;

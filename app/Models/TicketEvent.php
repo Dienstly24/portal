@@ -1,10 +1,13 @@
 <?php
+
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 /** Verlaufseintrag eines Tickets (Statuswechsel, Zuweisungen, Antworten, ...). */
-class TicketEvent extends Model {
+class TicketEvent extends Model
+{
     protected $keyType = 'string';
     public $incrementing = false;
     protected $guarded = [];
@@ -29,7 +32,7 @@ class TicketEvent extends Model {
 
     protected static function boot() {
         parent::boot();
-        static::creating(fn($m) => $m->id = $m->id ?: Str::uuid());
+        static::creating(fn ($m) => $m->id = $m->id ?: Str::uuid());
     }
 
     public function ticket() { return $this->belongsTo(Ticket::class); }

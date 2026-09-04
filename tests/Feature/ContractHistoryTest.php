@@ -23,7 +23,7 @@ class ContractHistoryTest extends TestCase
     private function customer(): Customer
     {
         $user = User::factory()->create(['role' => 'customer']);
-        return Customer::create(['user_id' => $user->id, 'customer_number' => 'C-' . strtoupper(Str::random(6))]);
+        return Customer::create(['user_id' => $user->id, 'customer_number' => 'C-'.strtoupper(Str::random(6))]);
     }
 
     public function test_recording_a_switch_closes_the_previous_period(): void

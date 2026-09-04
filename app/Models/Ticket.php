@@ -1,18 +1,22 @@
 <?php
+
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Str;
 
-class Ticket extends Model {
+class Ticket extends Model
+{
     use SoftDeletes;
 
     protected $keyType = 'string';
     public $incrementing = false;
-    protected $fillable = ['ticket_number','customer_id','assigned_to','type','status','subject','description',
-        'priority','source','guest_name','guest_email','guest_phone',
-        'consent_given_at','consent_ip','consent_text',
-        'first_response_at','resolved_at','closed_at','closed_by','due_at','reopened_count','rating','rating_comment'];
+    protected $fillable = ['ticket_number', 'customer_id', 'assigned_to', 'type', 'status', 'subject', 'description',
+        'priority', 'source', 'guest_name', 'guest_email', 'guest_phone',
+        'consent_given_at', 'consent_ip', 'consent_text',
+        'first_response_at', 'resolved_at', 'closed_at', 'closed_by', 'due_at', 'reopened_count', 'rating', 'rating_comment'];
     protected $casts = [
         'first_response_at' => 'datetime',
         'resolved_at' => 'datetime',
@@ -58,7 +62,7 @@ class Ticket extends Model {
             $m->due_at = $m->due_at ?: now()->addHours(static::slaHours($m->priority ?? 'mittel'));
         });
         static::created(function ($m) {
-            $m->logEvent('created', 'Quelle: ' . ($m->source ?? 'portal'));
+            $m->logEvent('created', 'Quelle: '.($m->source ?? 'portal'));
         });
     }
 
@@ -68,15 +72,15 @@ class Ticket extends Model {
      * vergeben werden (Unique-Index gilt auch fuer soft-deleted Zeilen).
      */
     public static function nextTicketNumber(): string {
-        $prefix = 'T-' . now()->format('y');
-        $max = static::withTrashed()->where('ticket_number', 'like', $prefix . '%')
+        $prefix = 'T-'.now()->format('y');
+        $max = static::withTrashed()->where('ticket_number', 'like', $prefix.'%')
             ->pluck('ticket_number')
-            ->filter(fn ($n) => preg_match('/^' . preg_quote($prefix, '/') . '\d{5}$/', (string) $n))
+            ->filter(fn ($n) => preg_match('/^'.preg_quote($prefix, '/').'\d{5}$/', (string) $n))
             ->map(fn ($n) => (int) substr($n, strlen($prefix)))
             ->max() ?? 0;
         do {
             $max++;
-            $number = $prefix . str_pad((string) $max, 5, '0', STR_PAD_LEFT);
+            $number = $prefix.str_pad((string) $max, 5, '0', STR_PAD_LEFT);
         } while (static::withTrashed()->where('ticket_number', $number)->exists());
         return $number;
     }
@@ -102,7 +106,7 @@ class Ticket extends Model {
     public function typeLabel(): string { return self::TYPES[$this->type] ?? ucfirst(str_replace('_', ' ', (string) $this->type)); }
     public function priorityLabel(): string {
         $p = self::PRIORITIES[$this->priority] ?? self::PRIORITIES['mittel'];
-        return $p['icon'] . ' ' . $p['label'];
+        return $p['icon'].' '.$p['label'];
     }
 
     /**
@@ -130,7 +134,7 @@ class Ticket extends Model {
     public function isOverdue(): bool {
         return $this->due_at
             && $this->first_response_at === null
-            && !$this->isFinished()
+            && ! $this->isFinished()
             && $this->due_at->isPast();
     }
 
@@ -154,12 +158,13 @@ class Ticket extends Model {
      */
     public function transitionTo(string $status, ?int $userId = null, ?string $eventOverride = null): bool {
         $old = $this->status;
-        if ($old === $status || !isset(self::STATUSES[$status])) return false;
+        if ($old === $status || ! isset(self::STATUSES[$status])) return false;
 
-        $reopening = $this->isFinished() && !in_array($status, ['resolved', 'closed'], true);
+        $reopening = $this->isFinished() && ! in_array($status, ['resolved', 'closed'], true);
         $data = ['status' => $status];
         if ($status === 'resolved') { $data['resolved_at'] = now(); }
-        if ($status === 'closed') { $data['closed_at'] = now(); $data['closed_by'] = $userId ?? auth()->id(); }
+        if ($status === 'closed') { $data['closed_at'] = now();
+        $data['closed_by'] = $userId ?? auth()->id(); }
         // Beim Verlassen von "geschlossen" (auch closed -> resolved) duerfen
         // keine Abschlussdaten stehen bleiben - sonst zeigt die Akte
         // "Geloest" UND "Geschlossen am ..." gleichzeitig.
@@ -176,7 +181,7 @@ class Ticket extends Model {
         $this->update($data);
         $this->logEvent(
             $eventOverride ?? ($reopening ? 'reopened' : 'status_changed'),
-            (self::STATUSES[$old] ?? $old) . ' → ' . self::STATUSES[$status],
+            (self::STATUSES[$old] ?? $old).' → '.self::STATUSES[$status],
             $userId
         );
         return true;
@@ -189,8 +194,8 @@ class Ticket extends Model {
     public function save(array $options = []) {
         try {
             return parent::save($options);
-        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
-            if (!$this->exists && $this->ticket_number) {
+        } catch (UniqueConstraintViolationException $e) {
+            if (! $this->exists && $this->ticket_number) {
                 $this->ticket_number = static::nextTicketNumber();
                 return parent::save($options);
             }

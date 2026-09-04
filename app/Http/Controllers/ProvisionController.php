@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
@@ -10,6 +11,7 @@ use App\Models\ProvisionAuditLog;
 use App\Models\ProvisionRate;
 use App\Models\User;
 use App\Support\XlsxWriter;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use League\Csv\EscapeFormula;
 use League\Csv\Writer;
@@ -78,21 +80,21 @@ class ProvisionController extends Controller
             $query->where('insurer', $request->gesellschaft);
         }
         if ($request->filled('kunde')) {
-            $like = '%' . addcslashes(trim($request->kunde), '%_\\') . '%';
+            $like = '%'.addcslashes(trim($request->kunde), '%_\\').'%';
             $query->whereHas('customer', fn ($c) => $c->where('customer_number', 'like', $like)
                 ->orWhereHas('user', fn ($u) => $u->where('name', 'like', $like)));
         }
         if ($request->filled('monat')) {
             try {
-                $m = \Carbon\Carbon::createFromFormat('Y-m', $request->monat)->startOfMonth();
+                $m = Carbon::createFromFormat('Y-m', $request->monat)->startOfMonth();
                 $query->whereBetween('created_at', [$m->copy()->startOfMonth(), $m->copy()->endOfMonth()]);
             } catch (\Throwable) {
                 // Ungueltiger Monat -> Filter ignorieren.
             }
         } elseif ($request->filled('jahr') && preg_match('/^\d{4}$/', $request->jahr)) {
             $query->whereBetween('created_at', [
-                \Carbon\Carbon::create((int) $request->jahr, 1, 1)->startOfDay(),
-                \Carbon\Carbon::create((int) $request->jahr, 12, 31)->endOfDay(),
+                Carbon::create((int) $request->jahr, 1, 1)->startOfDay(),
+                Carbon::create((int) $request->jahr, 12, 31)->endOfDay(),
             ]);
         }
     }
@@ -115,7 +117,7 @@ class ProvisionController extends Controller
             'art' => 'nullable|in:manuell,bonus,abzug',
             'note' => 'nullable|string|max:500|required_if:art,bonus|required_if:art,abzug',
             'kunde_id' => 'nullable|uuid',
-            'sparte' => 'nullable|in:' . implode(',', Contract::typeKeys()),
+            'sparte' => 'nullable|in:'.implode(',', Contract::typeKeys()),
             'period_from' => 'nullable|date',
             'period_to' => 'nullable|date|after_or_equal:period_from',
         ], [
@@ -165,7 +167,7 @@ class ProvisionController extends Controller
         ]);
 
         return back()->with('success',
-            Provision::TYPES[$art] . ' ueber ' . number_format(abs($amount), 2, ',', '.') . ' EUR fuer ' . $recipient->name . ' erfasst.');
+            Provision::TYPES[$art].' ueber '.number_format(abs($amount), 2, ',', '.').' EUR fuer '.$recipient->name.' erfasst.');
     }
 
     /**
@@ -189,8 +191,8 @@ class ProvisionController extends Controller
             'ausgezahlt' => ['offen'],
             'storniert' => ['offen'],
         ];
-        if (!in_array($new, $allowed[$old] ?? [], true)) {
-            return back()->with('error', 'Statuswechsel von "' . $provision->statusLabel() . '" nach "' . (Provision::STATUSES[$new] ?? $new) . '" ist nicht moeglich.');
+        if (! in_array($new, $allowed[$old] ?? [], true)) {
+            return back()->with('error', 'Statuswechsel von "'.$provision->statusLabel().'" nach "'.(Provision::STATUSES[$new] ?? $new).'" ist nicht moeglich.');
         }
 
         $update = ['status' => $new];
@@ -219,7 +221,7 @@ class ProvisionController extends Controller
             'status' => $new,
         ]);
 
-        return back()->with('success', 'Provision: ' . $provision->statusLabel() . '.');
+        return back()->with('success', 'Provision: '.$provision->statusLabel().'.');
     }
 
     /**
@@ -235,7 +237,7 @@ class ProvisionController extends Controller
             'grund.required' => 'Bitte einen Grund fuer die Anpassung angeben.',
         ]);
 
-        if (!$provision->isAmountAdjustable()) {
+        if (! $provision->isAmountAdjustable()) {
             return back()->with('error', 'Ausgezahlte oder stornierte Buchungen koennen nicht mehr angepasst werden.');
         }
 
@@ -254,7 +256,7 @@ class ProvisionController extends Controller
         ]);
 
         return back()->with('success', 'Betrag angepasst: '
-            . number_format($old, 2, ',', '.') . ' EUR -> ' . number_format($new, 2, ',', '.') . ' EUR.');
+            .number_format($old, 2, ',', '.').' EUR -> '.number_format($new, 2, ',', '.').' EUR.');
     }
 
     // ---------------------------------------------------------------
@@ -321,7 +323,7 @@ class ProvisionController extends Controller
         $saved = 0;
         $deleted = 0;
         foreach ((array) $request->input('saetze', []) as $type => $values) {
-            if (!array_key_exists($type, Contract::TYPES)) {
+            if (! array_key_exists($type, Contract::TYPES)) {
                 continue;
             }
             $fixed = ($values['fixed'] ?? '') !== '' ? round((float) $values['fixed'], 2) : null;
@@ -345,13 +347,13 @@ class ProvisionController extends Controller
         ActivityLog::record('provision_rates_updated',
             array_key_first($fk) === 'user_id' ? 'user' : 'partner',
             $recipient->id, [
-            'empfaenger' => $recipient->name,
-            'sparten_saetze' => $saved,
-            'geloescht' => $deleted,
-        ]);
+                'empfaenger' => $recipient->name,
+                'sparten_saetze' => $saved,
+                'geloescht' => $deleted,
+            ]);
 
         return redirect()->route('admin.provisions.rates', ['empfaenger' => $e])
-            ->with('success', 'Provisions-Saetze fuer ' . $recipient->name . ' gespeichert.');
+            ->with('success', 'Provisions-Saetze fuer '.$recipient->name.' gespeichert.');
     }
 
     // ---------------------------------------------------------------
@@ -379,8 +381,8 @@ class ProvisionController extends Controller
         [$from, $to, $month] = $this->resolvePeriod($request);
         $rows = $this->buildReport($from, $to);
         $format = $request->get('format', 'xlsx');
-        $periodLabel = $from->format('d.m.Y') . ' - ' . $to->format('d.m.Y');
-        $filename = 'provisionsbericht_' . $from->format('Y-m-d') . '_' . $to->format('Y-m-d');
+        $periodLabel = $from->format('d.m.Y').' - '.$to->format('d.m.Y');
+        $filename = 'provisionsbericht_'.$from->format('Y-m-d').'_'.$to->format('Y-m-d');
 
         ActivityLog::record('provision_report_exported', null, null, [
             'zeitraum' => $periodLabel, 'format' => $format,
@@ -403,7 +405,7 @@ class ProvisionController extends Controller
             $r['kind'] === 'partner' ? 'Partner' : 'Mitarbeiter',
             $r['kunden'],
             $r['vertraege'],
-            collect($r['sparten'])->map(fn ($n, $t) => ($t !== '' ? (Contract::TYPES[$t]['label'] ?? $t) : 'Ohne') . ' x' . $n)->implode(', '),
+            collect($r['sparten'])->map(fn ($n, $t) => ($t !== '' ? (Contract::TYPES[$t]['label'] ?? $t) : 'Ohne').' x'.$n)->implode(', '),
             (float) number_format($r['provision'], 2, '.', ''),
             (float) number_format($r['abzuege'], 2, '.', ''),
             (float) number_format($r['netto'], 2, '.', ''),
@@ -411,25 +413,25 @@ class ProvisionController extends Controller
 
         if ($format === 'xlsx' && XlsxWriter::available()) {
             $content = XlsxWriter::create('Provisionsbericht', array_merge(
-                [['Provisionsbericht ' . $periodLabel], [''], $header],
+                [['Provisionsbericht '.$periodLabel], [''], $header],
                 $data,
             ));
             return response($content, 200, [
                 'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'Content-Disposition' => 'attachment; filename="' . $filename . '.xlsx"',
+                'Content-Disposition' => 'attachment; filename="'.$filename.'.xlsx"',
             ]);
         }
 
         // CSV-Fallback (Excel-kompatibel: BOM + Semikolon, Formel-Schutz).
         $csv = Writer::createFromString('');
         $csv->setDelimiter(';');
-        $csv->addFormatter(new EscapeFormula());
+        $csv->addFormatter(new EscapeFormula);
         $csv->insertOne($header);
         $csv->insertAll($data);
 
-        return response("\u{FEFF}" . $csv->toString(), 200, [
+        return response("\u{FEFF}".$csv->toString(), 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '.csv"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'.csv"',
         ]);
     }
 
@@ -438,7 +440,7 @@ class ProvisionController extends Controller
      * Vertraege (inkl. Sparten-Aufschluesselung) und Provisionssummen
      * (Provision/Abzuege/Netto; stornierte Buchungen zaehlen nicht).
      */
-    private function buildReport(\Carbon\Carbon $from, \Carbon\Carbon $to) {
+    private function buildReport(Carbon $from, Carbon $to) {
         $rows = [];
         $row = function (string $key, string $label, string $kind) use (&$rows) {
             return $rows[$key] ??= [
@@ -454,7 +456,7 @@ class ProvisionController extends Controller
             ->with(['acquirer', 'acquirerPartner'])->get();
         foreach ($customers as $c) {
             $key = $c->acquirerKey();
-            if (!$key) continue;
+            if (! $key) continue;
             $r = $row($key, $c->acquirerLabel() ?? 'Unbekannt', str_starts_with($key, 'u:') ? 'mitarbeiter' : 'partner');
             $r['kunden']++;
             $rows[$key] = $r;
@@ -471,7 +473,7 @@ class ProvisionController extends Controller
             $contracts->pluck('p')->filter()->unique(),
         );
         foreach ($contracts as $c) {
-            $key = $c->u ? 'u:' . $c->u : 'p:' . $c->p;
+            $key = $c->u ? 'u:'.$c->u : 'p:'.$c->p;
             $r = $row($key, $labels[$key] ?? 'Unbekannt', $c->u ? 'mitarbeiter' : 'partner');
             $r['vertraege']++;
             $r['sparten'][$c->sparte ?? ''] = ($r['sparten'][$c->sparte ?? ''] ?? 0) + 1;
@@ -483,7 +485,7 @@ class ProvisionController extends Controller
             ->where('status', '!=', 'storniert')
             ->with(['user', 'partner'])->get();
         foreach ($provisions as $p) {
-            $key = $p->user_id ? 'u:' . $p->user_id : 'p:' . $p->partner_id;
+            $key = $p->user_id ? 'u:'.$p->user_id : 'p:'.$p->partner_id;
             $r = $row($key, $p->recipientName(), $p->user_id ? 'mitarbeiter' : 'partner');
             $amount = (float) $p->amount;
             if ($amount >= 0) {
@@ -502,10 +504,10 @@ class ProvisionController extends Controller
     private function recipientLabels($userIds, $partnerIds): array {
         $labels = [];
         foreach (User::whereIn('id', $userIds)->get() as $u) {
-            $labels['u:' . $u->id] = $u->name;
+            $labels['u:'.$u->id] = $u->name;
         }
         foreach (Partner::whereIn('id', $partnerIds)->get() as $p) {
-            $labels['p:' . $p->id] = $p->name;
+            $labels['p:'.$p->id] = $p->name;
         }
         return $labels;
     }
@@ -513,12 +515,12 @@ class ProvisionController extends Controller
     /** Zeitraum: ?monat=YYYY-MM (Standard aktueller Monat) oder ?from/?to. */
     private function resolvePeriod(Request $request): array {
         if ($request->filled('from') || $request->filled('to')) {
-            $from = \Carbon\Carbon::parse($request->get('from', now()->startOfMonth()))->startOfDay();
-            $to = \Carbon\Carbon::parse($request->get('to', now()))->endOfDay();
+            $from = Carbon::parse($request->get('from', now()->startOfMonth()))->startOfDay();
+            $to = Carbon::parse($request->get('to', now()))->endOfDay();
             return [$from, $to, null];
         }
         try {
-            $month = \Carbon\Carbon::createFromFormat('Y-m', $request->get('monat', now()->format('Y-m')))->startOfMonth();
+            $month = Carbon::createFromFormat('Y-m', $request->get('monat', now()->format('Y-m')))->startOfMonth();
         } catch (\Throwable) {
             $month = now()->startOfMonth();
         }
@@ -562,14 +564,14 @@ class ProvisionController extends Controller
             ];
         };
         foreach ($contracts as $c) {
-            if (!$c->u && !$c->p) continue;
-            $key = $c->u ? 'u:' . $c->u : 'p:' . $c->p;
+            if (! $c->u && ! $c->p) continue;
+            $key = $c->u ? 'u:'.$c->u : 'p:'.$c->p;
             $r = $entry($key, $c->u ? 'mitarbeiter' : 'partner');
             $r['vertraege']++;
             $byRecipient[$key] = $r;
         }
         foreach ($provisions as $p) {
-            $key = $p->user_id ? 'u:' . $p->user_id : 'p:' . $p->partner_id;
+            $key = $p->user_id ? 'u:'.$p->user_id : 'p:'.$p->partner_id;
             $r = $entry($key, $p->user_id ? 'mitarbeiter' : 'partner');
             $r['netto'] = round($r['netto'] + (float) $p->amount, 2);
             $byRecipient[$key] = $r;

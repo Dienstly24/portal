@@ -1,10 +1,13 @@
 <?php
+
 namespace App\Console\Commands;
 
 use App\Console\Concerns\ProcessesRecordsSafely;
 use App\Mail\DocumentRequestMail;
 use App\Models\DocumentRequest;
 use App\Models\User;
+use App\Services\Notifications\NotificationService;
+use App\Support\Facades\Notify;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
 
@@ -48,7 +51,7 @@ class RemindDocumentRequests extends Command
         $versendet = 0;
         $this->verarbeiteEinzeln($due, function (DocumentRequest $request) use (&$versendet) {
             $email = $request->customer?->user?->email;
-            if ($email && !str_contains($email, '@dienstly24.internal')) {
+            if ($email && ! str_contains($email, '@dienstly24.internal')) {
                 Mail::to($email)->send(new DocumentRequestMail($request));
                 $versendet++;
             }
@@ -78,12 +81,12 @@ class RemindDocumentRequests extends Command
             if ($recipients->isEmpty()) {
                 $recipients = User::whereIn('role', ['admin', 'manager'])->where('is_active', true)->get();
             }
-            \App\Support\Facades\Notify::pushMany($recipients->pluck('id'), [
-                'type' => \App\Services\Notifications\NotificationService::TYPE_DOCUMENT,
-                'title' => 'Dokumentenanfrage überfällig: ' . $request->title,
-                'body' => ($request->customer?->user?->name ?? 'Kunde') . ' hat die Frist ' . $request->deadline->format('d.m.Y') . ' überschritten.',
+            Notify::pushMany($recipients->pluck('id'), [
+                'type' => NotificationService::TYPE_DOCUMENT,
+                'title' => 'Dokumentenanfrage überfällig: '.$request->title,
+                'body' => ($request->customer?->user?->name ?? 'Kunde').' hat die Frist '.$request->deadline->format('d.m.Y').' überschritten.',
                 'link' => route('admin.document_requests'),
-                'dedup_key' => 'doc-overdue-' . $request->id,
+                'dedup_key' => 'doc-overdue-'.$request->id,
             ]);
             $request->forceFill(['overdue_notified_at' => now()])->save();
         }, 'Dokumentenanfrage');

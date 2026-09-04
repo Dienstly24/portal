@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Console\Commands;
 
 use App\Models\Document;
@@ -19,13 +20,13 @@ class MoveDocumentsPrivate extends Command
     public function handle(): int
     {
         $query = Document::where('disk', 'public');
-        if (!$this->option('all')) {
+        if (! $this->option('all')) {
             $query->where('category', 'contract');
         }
 
         $moved = $missing = 0;
         foreach ($query->get() as $doc) {
-            if (!Storage::disk('public')->exists($doc->file_path)) {
+            if (! Storage::disk('public')->exists($doc->file_path)) {
                 $this->warn("Fehlt auf public Disk, übersprungen: {$doc->file_path} (#{$doc->id})");
                 $missing++;
                 continue;
@@ -43,7 +44,7 @@ class MoveDocumentsPrivate extends Command
             $moved++;
         }
 
-        $this->info(($this->option('dry-run') ? '[DRY-RUN] ' : '') . "Verschoben: {$moved}, fehlend: {$missing}");
+        $this->info(($this->option('dry-run') ? '[DRY-RUN] ' : '')."Verschoben: {$moved}, fehlend: {$missing}");
         return self::SUCCESS;
     }
 }

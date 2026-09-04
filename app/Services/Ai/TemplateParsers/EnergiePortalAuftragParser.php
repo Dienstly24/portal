@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Models\Contract;
@@ -111,7 +112,7 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
 
     public function parse(string $text): ?array
     {
-        $this->felder = new FieldRecognition();
+        $this->felder = new FieldRecognition;
         $this->text = (string) preg_replace('/\x{00ad}\s*/u', '', $text);
         $upper = mb_strtoupper($this->text);
 
@@ -119,9 +120,9 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
         // eine der Portal-Ueberschriften. Die PDF-Auftraege der Versorger
         // (EWE, LichtBlick, PLAN-B) haben eigene Parser und tragen diese
         // Kombination nicht.
-        if (!str_contains($upper, 'AUFTRAGSNUMMER')
-            || (!str_contains($upper, 'TARIFÜBERSICHT')
-                && !str_contains($upper, 'BELIEFERUNGSANSCHRIFT'))) {
+        if (! str_contains($upper, 'AUFTRAGSNUMMER')
+            || (! str_contains($upper, 'TARIFÜBERSICHT')
+                && ! str_contains($upper, 'BELIEFERUNGSANSCHRIFT'))) {
             return null;
         }
 
@@ -135,22 +136,22 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
         $bank = $this->parseBank($person);
         $insurance = $this->parseContract($energie);
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $art = ($insurance['sparte'] ?? 'strom') === 'gas' ? 'Gas' : 'Strom';
 
         return [
             'type' => 'energieauftrag',
             'confidence' => 72,
-            'summary' => $art . '-Auftrag (Vertriebsportal)'
-                . (isset($insurance['insurer']) ? ' - ' . $insurance['insurer'] : '')
-                . (isset($energie['tariff']) ? ' (' . $energie['tariff'] . ')' : '')
-                . ($name !== '' ? ' - ' . $name : '')
-                . $this->extras($energie, $insurance)
-                . ($bank !== [] ? ' Bankverbindung des Kunden uebernommen.' : ' Ohne Bankuebernahme.')
-                . ($this->bankHinweis !== null ? ' HINWEIS: ' . $this->bankHinweis . '.' : '')
-                . ' Felder gratis aus der Auftragsuebersicht gelesen (ohne KI).',
-            'title' => ($insurance['insurer'] ?? 'Energie') . ' ' . $art . '-Auftrag'
-                . ($name !== '' ? ' ' . $name : ''),
+            'summary' => $art.'-Auftrag (Vertriebsportal)'
+                .(isset($insurance['insurer']) ? ' - '.$insurance['insurer'] : '')
+                .(isset($energie['tariff']) ? ' ('.$energie['tariff'].')' : '')
+                .($name !== '' ? ' - '.$name : '')
+                .$this->extras($energie, $insurance)
+                .($bank !== [] ? ' Bankverbindung des Kunden uebernommen.' : ' Ohne Bankuebernahme.')
+                .($this->bankHinweis !== null ? ' HINWEIS: '.$this->bankHinweis.'.' : '')
+                .' Felder gratis aus der Auftragsuebersicht gelesen (ohne KI).',
+            'title' => ($insurance['insurer'] ?? 'Energie').' '.$art.'-Auftrag'
+                .($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -204,14 +205,14 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
             $end = min(count($this->lines), $start + 7);
             for ($j = $start + 1; $j < $end; $j++) {
                 foreach ($this->cells($this->lines[$j]) as $cell) {
-                    if (!isset($found['street'])
+                    if (! isset($found['street'])
                         && preg_match('/(\p{Lu}[\p{L}.\-\']*(?:\s+\p{L}[\p{L}.\-\']*){0,3})\s+(\d{1,4}\s*[a-zA-Z]?)(?![\p{L}\d])/u', $cell, $s)
                         && $this->looksLikeStreet($s[1])) {
                         $found['street'] = trim($s[1]);
                         $found['house_number'] = trim((string) preg_replace('/\s+/', ' ', $s[2]));
                         continue;
                     }
-                    if (!isset($found['zip'])
+                    if (! isset($found['zip'])
                         && preg_match('/(?<!\d)(\d{5})\s+(\p{Lu}[\p{L}.\-]+(?:[ \-]\p{Lu}?[\p{L}.\-]+){0,2})/u', $cell, $z)) {
                         $found['zip'] = $z[1];
                         $found['city'] = trim($z[2]);
@@ -234,7 +235,7 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
         foreach (['geboren am', 'Geburtsdatum', 'Geburtstag'] as $label) {
             if (($v = $this->labelValue($label)) !== null
                 && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $v, $m)) {
-                $raw['birth_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+                $raw['birth_date'] = $m[3].'-'.$m[2].'-'.$m[1];
                 break;
             }
         }
@@ -287,7 +288,7 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
      */
     private function parseBank(array $person): array
     {
-        $voll = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $voll = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         if ($voll === '' || ($person['last_name'] ?? '') === '') {
             return [];
         }
@@ -316,7 +317,7 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
                 break;
             }
         }
-        if (!$gehoertKunde) {
+        if (! $gehoertKunde) {
             return [];
         }
 
@@ -346,8 +347,8 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
                 $iban = $gelesen;
                 $status = [FieldRecognition::SICHER, null];
             } else {
-                $this->bankHinweis = 'IBAN (' . $gelesen . ') und die separat gedruckte Konto-/BLZ-Angabe ('
-                    . $gerechnet . ') widersprechen sich - keine Bankverbindung uebernommen, bitte manuell pruefen';
+                $this->bankHinweis = 'IBAN ('.$gelesen.') und die separat gedruckte Konto-/BLZ-Angabe ('
+                    .$gerechnet.') widersprechen sich - keine Bankverbindung uebernommen, bitte manuell pruefen';
                 $status = [FieldRecognition::WIDERSPRUCH, $this->bankHinweis];
             }
         } elseif ($gelesen !== null) {
@@ -368,7 +369,7 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
                 $this->bankHinweis = 'IBAN war im Bild nicht sauber lesbar und wurde aus Kontonummer + BLZ berechnet - bitte pruefen';
             } else {
                 $this->bankHinweis = 'abgedruckte IBAN und die Konto-/BLZ-Angabe passen nicht zusammen'
-                    . ' - keine Bankverbindung uebernommen, bitte manuell pruefen';
+                    .' - keine Bankverbindung uebernommen, bitte manuell pruefen';
                 $status = [FieldRecognition::WIDERSPRUCH, $this->bankHinweis];
             }
         } elseif ($gedruckt !== null) {
@@ -425,7 +426,7 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
         // Anbieters als Kontakt in der Kundenakte.
         foreach ($this->lines as $line) {
             $kandidat = $this->ocrEmail($line);
-            if ($kandidat !== null && !$this->istFremdadresse($kandidat)) {
+            if ($kandidat !== null && ! $this->istFremdadresse($kandidat)) {
                 return [$kandidat, 'ohne Beschriftung im Dokument gefunden - bitte pruefen, ob sie dem Kunden gehoert'];
             }
         }
@@ -548,15 +549,15 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
         if (strlen($blz) < 8 || $konto === '' || strlen($konto) > 10) {
             return null;
         }
-        $bban = substr($blz, 0, 8) . str_pad($konto, 10, '0', STR_PAD_LEFT);
+        $bban = substr($blz, 0, 8).str_pad($konto, 10, '0', STR_PAD_LEFT);
 
         // Pruefziffer: 98 - (BBAN + "DE00" als Zahl) mod 97.
-        $zahl = $bban . '131400';
+        $zahl = $bban.'131400';
         $rest = 0;
         foreach (str_split($zahl, 7) as $block) {
-            $rest = (int) ((string) $rest . $block) % 97;
+            $rest = (int) ((string) $rest.$block) % 97;
         }
-        $iban = 'DE' . str_pad((string) (98 - $rest), 2, '0', STR_PAD_LEFT) . $bban;
+        $iban = 'DE'.str_pad((string) (98 - $rest), 2, '0', STR_PAD_LEFT).$bban;
 
         return $this->ibanChecksumValid($iban) ? $iban : null;
     }
@@ -632,7 +633,7 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
         $auftrag = trim((string) ($this->labelValue('Auftragsnummer') ?? $this->kopfzeile()['nummer'] ?? ''));
         foreach (['Kundennummer', 'Vertragskontonummer'] as $label) {
             $v = trim((string) $this->labelValue($label));
-            if ($v === '' || !preg_match('/^[\w\-\/]{4,40}$/u', $v)) {
+            if ($v === '' || ! preg_match('/^[\w\-\/]{4,40}$/u', $v)) {
                 continue;
             }
             // Nie die Auftragsnummer und nie die Nummer des Vorversorgers
@@ -662,7 +663,7 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
     private function grundpreis(): array
     {
         $v = $this->labelValue('Grundpreis');
-        if ($v === null || !preg_match('/([\d.]+,\d{2})/', $v, $m)) {
+        if ($v === null || ! preg_match('/([\d.]+,\d{2})/', $v, $m)) {
             return [null, null];
         }
         $betrag = (float) str_replace(['.', ','], ['', '.'], $m[1]);
@@ -693,9 +694,9 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
         $typ = mb_strtolower((string) ($this->labelValue('Tariftyp') ?? ''));
         $produkt = mb_strtolower((string) ($raw['tariff'] ?? ''));
         $raw['sparte'] = match (true) {
-            str_contains($typ, 'gas'), str_contains($produkt, 'gas')     => 'gas',
+            str_contains($typ, 'gas'), str_contains($produkt, 'gas') => 'gas',
             str_contains($typ, 'strom'), str_contains($produkt, 'strom') => 'strom',
-            default                                                      => 'strom',
+            default => 'strom',
         };
 
         // LIEFERBEGINN - NUR als echtes Datum ("schnellstmoeglich" ist keins).
@@ -708,18 +709,18 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
         // nur die Wechsel-Beschriftung und der Vertrag blieb ohne Beginn.
         $this->einzug = false;
         foreach (['gew. Lieferbeginn', 'gew. Lieferdatum', 'Beginn der Belieferung',
-                  'Belieferungsbeginn', 'Lieferbeginn', 'Lieferdatum',
-                  'Neueinzug zum', 'Neueinzug', 'Einzug zum', 'Einzugsdatum',
-                  'Vertragsbeginn'] as $label) {
+            'Belieferungsbeginn', 'Lieferbeginn', 'Lieferdatum',
+            'Neueinzug zum', 'Neueinzug', 'Einzug zum', 'Einzugsdatum',
+            'Vertragsbeginn'] as $label) {
             $v = $this->labelValue($label);
-            if ($v === null || !preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $v, $m)) {
+            if ($v === null || ! preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $v, $m)) {
                 continue;
             }
-            $raw['start_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['start_date'] = $m[3].'-'.$m[2].'-'.$m[1];
             $this->einzug = str_contains(mb_strtolower($label), 'einzug');
             break;
         }
-        if (!isset($raw['start_date'])
+        if (! isset($raw['start_date'])
             && preg_match('/stadtwerke/iu', (string) ($energie['previous_provider'] ?? ''))) {
             // Stadtwerke-Wechsel: 14 Tage Kuendigungsfrist + Bearbeitung.
             $raw['expected_start_within_days'] = self::EXPECTED_START_DAYS;
@@ -745,32 +746,32 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
         $out = '.';
         $nummer = $this->labelValue('Auftragsnummer') ?? $this->kopfzeile()['nummer'];
         if ($nummer !== null && preg_match('/^[\w\-]{4,30}$/u', trim($nummer))) {
-            $out .= ' Auftragsnummer ' . trim($nummer) . ' (keine Vertragsnummer - die bringt erst die Vertragsbestaetigung).';
+            $out .= ' Auftragsnummer '.trim($nummer).' (keine Vertragsnummer - die bringt erst die Vertragsbestaetigung).';
         }
         if (isset($energie['malo_id'])) {
-            $out .= ' MaLo-ID ' . $energie['malo_id'] . '.';
+            $out .= ' MaLo-ID '.$energie['malo_id'].'.';
         }
         if (isset($energie['meter_number'])) {
-            $out .= ' Zaehlernummer ' . $energie['meter_number'] . '.';
+            $out .= ' Zaehlernummer '.$energie['meter_number'].'.';
         }
         if (isset($energie['previous_provider'])) {
-            $out .= ' Wechsel von ' . $energie['previous_provider']
-                . (isset($energie['previous_customer_number']) ? ' (Kd.-Nr. ' . $energie['previous_customer_number'] . ')' : '')
-                . '.';
+            $out .= ' Wechsel von '.$energie['previous_provider']
+                .(isset($energie['previous_customer_number']) ? ' (Kd.-Nr. '.$energie['previous_customer_number'].')' : '')
+                .'.';
         }
         if (isset($energie['consumption_kwh'])) {
-            $out .= ' Vorjahresverbrauch ' . number_format($energie['consumption_kwh'], 0, ',', '.') . ' kWh/Jahr.';
+            $out .= ' Vorjahresverbrauch '.number_format($energie['consumption_kwh'], 0, ',', '.').' kWh/Jahr.';
         }
         if (isset($energie['working_price'])) {
-            $out .= ' Arbeitspreis ' . number_format($energie['working_price'], 2, ',', '.') . ' ct/kWh.';
+            $out .= ' Arbeitspreis '.number_format($energie['working_price'], 2, ',', '.').' ct/kWh.';
         }
         [$monat, $original] = $this->grundpreis();
         if ($monat !== null && $original !== null) {
-            $out .= ' Grundpreis ' . $original
-                . (preg_match('/Jahr/iu', $original)
-                    ? ' = ' . number_format($monat, 2, ',', '.') . ' EUR/Monat (fuer die Kundenakte umgerechnet)'
+            $out .= ' Grundpreis '.$original
+                .(preg_match('/Jahr/iu', $original)
+                    ? ' = '.number_format($monat, 2, ',', '.').' EUR/Monat (fuer die Kundenakte umgerechnet)'
                     : '')
-                . '.';
+                .'.';
         }
         foreach ([
             'Vertragslaufzeit' => '/(\d+)\s+Monate?\s+Vertragslaufzeit/u',
@@ -778,36 +779,36 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
             'Kündigungsfrist' => '/(\d+)\s+Monate?\s+Kündigungsfrist/u',
         ] as $label => $re) {
             if (preg_match($re, $this->text, $m)) {
-                $out .= ' ' . $label . ': ' . $m[1] . ' Monat' . ((int) $m[1] === 1 ? '' : 'e') . '.';
+                $out .= ' '.$label.': '.$m[1].' Monat'.((int) $m[1] === 1 ? '' : 'e').'.';
             }
         }
         if (($v = $this->labelValue('Status')) !== null) {
-            $out .= ' Portal-Status: ' . $v . '.';
+            $out .= ' Portal-Status: '.$v.'.';
         }
         if (($v = $this->labelValue('Unterschriftsdatum')) !== null) {
-            $out .= ' Unterschrieben am ' . $v . '.';
+            $out .= ' Unterschrieben am '.$v.'.';
         }
         if (($v = $this->labelValue('Abnehmer')) !== null) {
-            $out .= ' Abnehmer: ' . $v . '.';
+            $out .= ' Abnehmer: '.$v.'.';
         }
         if (($v = $this->labelValue('Zahlung')) !== null) {
-            $out .= ' Zahlung: ' . $v . '.';
+            $out .= ' Zahlung: '.$v.'.';
         }
         if ($this->einzug && isset($insurance['start_date'])) {
             $out .= ' Neueinzug (Neuanschluss, kein Anbieterwechsel) zum '
-                . date('d.m.Y', strtotime($insurance['start_date'])) . '.';
+                .date('d.m.Y', strtotime($insurance['start_date'])).'.';
         }
         if (($v = $this->labelValue('Auftragseingang') ?? $this->labelValue('Auftragsdatum')
             ?? $this->labelValue('Eingangsdatum')) !== null) {
-            $out .= ' Auftragseingang: ' . $v . '.';
+            $out .= ' Auftragseingang: '.$v.'.';
         }
         if (isset($energie['customer_number'])) {
-            $out .= ' Kundennummer beim Anbieter: ' . $energie['customer_number'] . '.';
+            $out .= ' Kundennummer beim Anbieter: '.$energie['customer_number'].'.';
         }
         if (isset($insurance['expected_start_within_days'])) {
             $out .= ' Lieferbeginn nicht angegeben: voraussichtlich binnen ~'
-                . $insurance['expected_start_within_days']
-                . ' Tagen (Kuendigungsfrist Stadtwerke 14 Tage + Bearbeitung).';
+                .$insurance['expected_start_within_days']
+                .' Tagen (Kuendigungsfrist Stadtwerke 14 Tage + Bearbeitung).';
         }
         return $out;
     }
@@ -836,7 +837,7 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
             $pos = mb_stripos($line, 'Kontoinhaber');
             $line = $pos === false ? '' : mb_substr($line, $pos + mb_strlen('Kontoinhaber'));
         }
-        if (!preg_match_all($this->nameRegex(), $line, $all, PREG_SET_ORDER)) {
+        if (! preg_match_all($this->nameRegex(), $line, $all, PREG_SET_ORDER)) {
             return [];
         }
         return array_map(fn (array $m) => trim($m[2]), $all);
@@ -868,7 +869,7 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
     {
         $d = (string) preg_replace('/[^\d+]/', '', $value);
         if (preg_match('/^(?:\+|00)49(\d+)$/', $d, $m)) {
-            $d = '0' . ltrim($m[1], '0');
+            $d = '0'.ltrim($m[1], '0');
         }
         return preg_match('/^0\d{8,14}$/', $d) ? $d : null;
     }
@@ -881,9 +882,9 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
      */
     private function labelValue(string $label): ?string
     {
-        $re = '/(?<![\p{L}\d])' . preg_quote($label, '/') . '(?![\p{L}\d])\s*:?\s*(.*)$/u';
+        $re = '/(?<![\p{L}\d])'.preg_quote($label, '/').'(?![\p{L}\d])\s*:?\s*(.*)$/u';
         foreach ($this->lines as $i => $line) {
-            if (!preg_match($re, $line, $m)) {
+            if (! preg_match($re, $line, $m)) {
                 continue;
             }
             $wert = $this->cutAtNextLabel(trim($m[1]), $label);
@@ -920,7 +921,7 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
             if ($label === $current) {
                 continue;
             }
-            if (preg_match('/(?<![\p{L}\d])' . preg_quote($label, '/') . '(?![\p{L}\d])/u', $value, $m, PREG_OFFSET_CAPTURE)) {
+            if (preg_match('/(?<![\p{L}\d])'.preg_quote($label, '/').'(?![\p{L}\d])/u', $value, $m, PREG_OFFSET_CAPTURE)) {
                 $pos = mb_strlen(substr($value, 0, $m[0][1]));
                 $ende = $ende === null ? $pos : min($ende, $pos);
             }
@@ -940,7 +941,7 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
     {
         foreach (self::KNOWN_LABELS as $label) {
             $line = (string) preg_replace(
-                '/(?<![\p{L}\d])' . preg_quote($label, '/') . '(?![\p{L}\d])\s*:?/u',
+                '/(?<![\p{L}\d])'.preg_quote($label, '/').'(?![\p{L}\d])\s*:?/u',
                 '  ',
                 $line
             );

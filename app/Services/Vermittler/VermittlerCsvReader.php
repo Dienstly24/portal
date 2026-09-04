@@ -1,6 +1,8 @@
 <?php
+
 namespace App\Services\Vermittler;
 
+use Illuminate\Support\Carbon;
 use League\Csv\Reader;
 use League\Csv\Statement;
 
@@ -50,7 +52,7 @@ class VermittlerCsvReader
     {
         // Der Vermittler liefert teils Latin-1. Ohne Umwandlung wuerden
         // Umlaute in Stornogruenden als Fragezeichen gespeichert.
-        if (!mb_check_encoding($raw, 'UTF-8')) {
+        if (! mb_check_encoding($raw, 'UTF-8')) {
             $raw = (string) mb_convert_encoding($raw, 'UTF-8', 'Windows-1252');
         }
         $raw = preg_replace('/^\xEF\xBB\xBF/', '', $raw) ?? $raw;
@@ -59,13 +61,13 @@ class VermittlerCsvReader
         $csv->setDelimiter($this->detectDelimiter($raw));
         $csv->setHeaderOffset(null);
 
-        $records = iterator_to_array((new Statement())->process($csv), false);
+        $records = iterator_to_array((new Statement)->process($csv), false);
         if ($records === []) {
             throw new \RuntimeException('Die Datei enthält keine Zeilen.');
         }
 
         $map = $this->mapHeader((array) array_shift($records));
-        if (!isset($map['vermittler_id'])) {
+        if (! isset($map['vermittler_id'])) {
             throw new \RuntimeException('Die Spalte "Id" fehlt in der Datei. Ohne sie lässt sich kein Datensatz zuordnen.');
         }
 
@@ -106,7 +108,7 @@ class VermittlerCsvReader
     }
 
     /** Datum aus der Datei - unlesbares Datum bleibt null (nie geraten). */
-    public static function date(?string $value): ?\Illuminate\Support\Carbon
+    public static function date(?string $value): ?Carbon
     {
         $value = trim((string) $value);
         if ($value === '') {
@@ -114,7 +116,7 @@ class VermittlerCsvReader
         }
         foreach (['Y-m-d H:i:s', 'Y-m-d', 'd.m.Y H:i:s', 'd.m.Y', 'd/m/Y'] as $format) {
             try {
-                $parsed = \Illuminate\Support\Carbon::createFromFormat($format, $value);
+                $parsed = Carbon::createFromFormat($format, $value);
                 if ($parsed !== false) {
                     return $parsed->startOfDay();
                 }
@@ -141,7 +143,7 @@ class VermittlerCsvReader
                 continue;
             }
             foreach (self::COLUMNS as $key => $aliases) {
-                if (!isset($map[$key]) && in_array($norm, $aliases, true)) {
+                if (! isset($map[$key]) && in_array($norm, $aliases, true)) {
                     $map[$key] = $index;
                     break;
                 }

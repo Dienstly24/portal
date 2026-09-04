@@ -39,7 +39,7 @@ class ProcessMediaAssetJob implements ShouldQueue
                 'processing_status' => 'failed',
                 'processing_error' => mb_substr($e->getMessage(), 0, 1000),
             ])->save();
-            \Log::warning('Medien-Verarbeitung fehlgeschlagen (Asset ' . $this->asset->id . '): ' . $e->getMessage());
+            \Log::warning('Medien-Verarbeitung fehlgeschlagen (Asset '.$this->asset->id.'): '.$e->getMessage());
         }
     }
 }

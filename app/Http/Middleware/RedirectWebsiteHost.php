@@ -20,7 +20,7 @@ class RedirectWebsiteHost
     {
         if (WebsiteHosts::needsRedirect($request)) {
             return redirect()->to(
-                'https://' . WebsiteHosts::canonical() . $request->getRequestUri(),
+                'https://'.WebsiteHosts::canonical().$request->getRequestUri(),
                 301
             );
         }
@@ -28,7 +28,7 @@ class RedirectWebsiteHost
         if (! $request->secure()
             && strtolower($request->getHost()) === strtolower(WebsiteHosts::canonical())) {
             return redirect()->to(
-                'https://' . WebsiteHosts::canonical() . $request->getRequestUri(),
+                'https://'.WebsiteHosts::canonical().$request->getRequestUri(),
                 301
             );
         }
@@ -46,7 +46,7 @@ class RedirectWebsiteHost
             && $request->isMethod('GET')
             && $request->is(...(array) config('website.marketing_paths'))) {
             return redirect()->to(
-                'https://' . WebsiteHosts::canonical() . $request->getRequestUri(),
+                'https://'.WebsiteHosts::canonical().$request->getRequestUri(),
                 301
             );
         }

@@ -18,7 +18,7 @@ class CompositeDocumentTemplateParserTest extends TestCase
     /** Zeile "Beschriftung:" links, Wert rechtsbuendig (wie pdftotext -layout). */
     private function row(string $label, string $value): string
     {
-        return ' ' . str_pad($label . ':', 60) . str_pad($value, 60, ' ', STR_PAD_LEFT);
+        return ' '.str_pad($label.':', 60).str_pad($value, 60, ' ', STR_PAD_LEFT);
     }
 
     /**

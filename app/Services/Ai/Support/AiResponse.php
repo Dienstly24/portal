@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Support;
 
 /**
@@ -26,7 +27,7 @@ final class AiResponse
      */
     public function json(): ?array
     {
-        if (!preg_match('/\{.*\}/s', $this->text, $m)) {
+        if (! preg_match('/\{.*\}/s', $this->text, $m)) {
             return null;
         }
         $decoded = json_decode($m[0], true);

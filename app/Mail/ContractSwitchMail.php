@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Mail;
 
 use App\Models\Contract;
@@ -49,7 +50,7 @@ class ContractSwitchMail extends Mailable implements ShouldQueue
         $map = $this->lang === 'ar' ? $ar : $de;
         $subject = $map[$this->contract->type] ?? ($this->lang === 'ar' ? 'عرض توفير على عقدك' : 'Sparpotenzial bei Ihrem Vertrag');
         if ($this->stage === 'followup') {
-            $subject = ($this->lang === 'ar' ? 'تذكير: ' : 'Erinnerung: ') . $subject;
+            $subject = ($this->lang === 'ar' ? 'تذكير: ' : 'Erinnerung: ').$subject;
         }
         return new Envelope(subject: $subject);
     }

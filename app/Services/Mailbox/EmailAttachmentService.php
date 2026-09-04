@@ -1,6 +1,8 @@
 <?php
+
 namespace App\Services\Mailbox;
 
+use App\Models\Contract;
 use App\Models\Document;
 use App\Models\EmailMessage;
 use Illuminate\Support\Facades\Storage;
@@ -36,7 +38,7 @@ class EmailAttachmentService
 
         $meta = [];
         foreach ($attachments as $attachment) {
-            $path = 'email_attachments/' . $message->id . '/' . Str::random(8) . '_' . $this->sanitizeFilename($attachment['filename']);
+            $path = 'email_attachments/'.$message->id.'/'.Str::random(8).'_'.$this->sanitizeFilename($attachment['filename']);
             Storage::disk(self::DISK)->put($path, $attachment['content']);
             $meta[] = [
                 'filename' => $attachment['filename'],
@@ -65,10 +67,10 @@ class EmailAttachmentService
         $changed = false;
 
         foreach ($meta as $i => $entry) {
-            if (!empty($entry['document_id'])) {
+            if (! empty($entry['document_id'])) {
                 continue;
             }
-            if (!Storage::disk(self::DISK)->exists($entry['path'])) {
+            if (! Storage::disk(self::DISK)->exists($entry['path'])) {
                 continue; // Datei bereits bereinigt - nichts zu übernehmen
             }
 
@@ -102,10 +104,10 @@ class EmailAttachmentService
      * Dokumente dieser Mail zusätzlich einem Vertrag zuordnen -
      * genutzt vom Fonds-Finanz-Import nach Vertragsanlage/-update.
      */
-    public function linkDocumentsToContract(EmailMessage $message, \App\Models\Contract $contract): void
+    public function linkDocumentsToContract(EmailMessage $message, Contract $contract): void
     {
         foreach ($message->attachments_meta ?? [] as $entry) {
-            if (!empty($entry['document_id'])) {
+            if (! empty($entry['document_id'])) {
                 Document::where('id', $entry['document_id'])
                     ->whereNull('contract_id')
                     ->update(['contract_id' => $contract->id]);
@@ -120,7 +122,7 @@ class EmailAttachmentService
      */
     public function deleteFiles(EmailMessage $message): void
     {
-        Storage::disk(self::DISK)->deleteDirectory('email_attachments/' . $message->id);
+        Storage::disk(self::DISK)->deleteDirectory('email_attachments/'.$message->id);
     }
 
     private function sanitizeFilename(string $name): string

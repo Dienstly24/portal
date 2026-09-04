@@ -45,13 +45,13 @@ class AssistantResumeTest extends TestCase
     {
         $user = User::factory()->create([
             'role' => 'customer',
-            'email' => 'kunde' . uniqid() . '@example.de',
+            'email' => 'kunde'.uniqid().'@example.de',
             'name' => 'Naem Alawad',
         ]);
 
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => '26' . str_pad((string) $user->id, 5, '0', STR_PAD_LEFT),
+            'customer_number' => '26'.str_pad((string) $user->id, 5, '0', STR_PAD_LEFT),
             'preferred_lang' => 'de',
         ]);
     }

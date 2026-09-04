@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Models\Contract;
@@ -65,7 +66,7 @@ class GruenweltLieferbestaetigungParser implements DocumentTemplateParser
         $istGruenwelt = str_contains($upper, 'GRÜNWELT') || str_contains($upper, 'GRUENWELT');
         $istBestaetigung = str_contains($upper, 'LIEFERBESTÄTIGUNG')
             || str_contains($upper, 'LIEFERBESTAETIGUNG');
-        if (!$istGruenwelt || !$istBestaetigung) {
+        if (! $istGruenwelt || ! $istBestaetigung) {
             return null;
         }
 
@@ -81,24 +82,24 @@ class GruenweltLieferbestaetigungParser implements DocumentTemplateParser
         }
 
         $person = $this->parsePerson($text);
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $sparteLabel = ($insurance['sparte'] ?? 'strom') === 'gas' ? 'Gas' : 'Strom';
 
         return [
             'type' => 'energieauftrag',
             'confidence' => 78,
-            'summary' => 'Gruenwelt ' . $sparteLabel . '-Lieferbestaetigung'
-                . ($name !== '' ? ' - ' . $name : '')
-                . ' - Vertragskonto ' . $insurance['contract_number']
-                . (isset($insurance['reference_number']) ? ' - Bestellnr. ' . $insurance['reference_number'] : '')
-                . (isset($energie['tariff']) ? ' - ' . $energie['tariff'] : '')
-                . (isset($insurance['start_date']) ? ' - Lieferbeginn ' . $this->displayDate($insurance['start_date']) : '')
-                . (isset($insurance['premium_amount'])
-                    ? ' - Abschlag ' . number_format($insurance['premium_amount'], 2, ',', '.') . ' EUR/Monat brutto' : '')
-                . $this->zusatzHinweise($text)
-                . ' Bankdaten wurden bewusst nicht uebernommen (Kunden-IBAN im Schreiben maskiert).'
-                . ' Felder gratis aus der Textebene gelesen (ohne KI).',
-            'title' => 'Gruenwelt Lieferbestaetigung' . ($name !== '' ? ' ' . $name : ''),
+            'summary' => 'Gruenwelt '.$sparteLabel.'-Lieferbestaetigung'
+                .($name !== '' ? ' - '.$name : '')
+                .' - Vertragskonto '.$insurance['contract_number']
+                .(isset($insurance['reference_number']) ? ' - Bestellnr. '.$insurance['reference_number'] : '')
+                .(isset($energie['tariff']) ? ' - '.$energie['tariff'] : '')
+                .(isset($insurance['start_date']) ? ' - Lieferbeginn '.$this->displayDate($insurance['start_date']) : '')
+                .(isset($insurance['premium_amount'])
+                    ? ' - Abschlag '.number_format($insurance['premium_amount'], 2, ',', '.').' EUR/Monat brutto' : '')
+                .$this->zusatzHinweise($text)
+                .' Bankdaten wurden bewusst nicht uebernommen (Kunden-IBAN im Schreiben maskiert).'
+                .' Felder gratis aus der Textebene gelesen (ohne KI).',
+            'title' => 'Gruenwelt Lieferbestaetigung'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -132,10 +133,10 @@ class GruenweltLieferbestaetigungParser implements DocumentTemplateParser
 
         foreach ($this->lines as $i => $line) {
             $spalte = $this->columnOfFirstCell($line);
-            if ($spalte === null || !preg_match('/^(Herrn?|Frau|Firma)$/u', $this->cellAt($line, $spalte), $a)) {
+            if ($spalte === null || ! preg_match('/^(Herrn?|Frau|Firma)$/u', $this->cellAt($line, $spalte), $a)) {
                 continue;
             }
-            if (!isset($raw['gender']) && $a[1] !== 'Firma') {
+            if (! isset($raw['gender']) && $a[1] !== 'Firma') {
                 $raw['gender'] = mb_strtolower($a[1]) === 'frau' ? 'female' : 'male';
             }
 
@@ -218,9 +219,9 @@ class GruenweltLieferbestaetigungParser implements DocumentTemplateParser
 
         if (($v = $this->rowValue('Lieferbeginn')) !== null
             && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $v, $m)) {
-            $raw['start_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['start_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         } elseif (preg_match('/Stromlieferung ab dem\s+(\d{2})\.(\d{2})\.(\d{4})/iu', $text, $m)) {
-            $raw['start_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['start_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
 
         if (($tarif = $this->rowValue('Tarif')) !== null && preg_match('/\p{L}{3,}/u', $tarif)) {
@@ -289,25 +290,25 @@ class GruenweltLieferbestaetigungParser implements DocumentTemplateParser
     {
         $teile = [];
         if (($v = $this->rowValue('Vertragslaufzeit ab Lieferbeginn')) !== null) {
-            $teile[] = 'Laufzeit ' . $v . ' ab Lieferbeginn';
+            $teile[] = 'Laufzeit '.$v.' ab Lieferbeginn';
         }
         if (($v = $this->rowValue('Kündigungsfrist zum Laufzeitende')) !== null) {
-            $teile[] = 'Kuendigungsfrist ' . $v;
+            $teile[] = 'Kuendigungsfrist '.$v;
         }
         if (($v = $this->rowValue('Verlängerung jeweils um')) !== null) {
-            $teile[] = 'Verlaengerung um ' . $v;
+            $teile[] = 'Verlaengerung um '.$v;
         }
         if (($v = $this->rowValue('Eingeschränkte Preisgarantie ab Lieferbeginn')) !== null) {
-            $teile[] = 'eingeschraenkte Preisgarantie ' . $v;
+            $teile[] = 'eingeschraenkte Preisgarantie '.$v;
         }
         if (($jahr = $this->grundpreisProJahr($text)) !== null) {
-            $teile[] = 'Grundpreis ' . number_format($jahr, 2, ',', '.') . ' EUR/Jahr brutto';
+            $teile[] = 'Grundpreis '.number_format($jahr, 2, ',', '.').' EUR/Jahr brutto';
         }
         if (preg_match('/Messstellenbetreiber\s+([\p{L}][\p{L}. \-&]{2,60}?(?:GmbH|AG|KG|SE|GmbH & Co\. KG))/u', $text, $m)) {
-            $teile[] = 'Messstellenbetreiber ' . trim($m[1]);
+            $teile[] = 'Messstellenbetreiber '.trim($m[1]);
         }
 
-        return $teile === [] ? '' : ' - ' . implode(', ', $teile) . '.';
+        return $teile === [] ? '' : ' - '.implode(', ', $teile).'.';
     }
 
     /** Die absendende Gesellschaft aus dem Briefkopf. */
@@ -331,7 +332,7 @@ class GruenweltLieferbestaetigungParser implements DocumentTemplateParser
      */
     private function rowValue(string $label): ?string
     {
-        $re = '/^\s*' . preg_quote($label, '/') . '\s{2,}(\S.*?)\s*$/u';
+        $re = '/^\s*'.preg_quote($label, '/').'\s{2,}(\S.*?)\s*$/u';
         foreach ($this->lines as $line) {
             if (preg_match($re, $line, $m) && trim($m[1]) !== '') {
                 return trim($m[1]);
@@ -369,6 +370,6 @@ class GruenweltLieferbestaetigungParser implements DocumentTemplateParser
 
     private function displayDate(string $iso): string
     {
-        return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $iso, $m) ? $m[3] . '.' . $m[2] . '.' . $m[1] : $iso;
+        return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $iso, $m) ? $m[3].'.'.$m[2].'.'.$m[1] : $iso;
     }
 }

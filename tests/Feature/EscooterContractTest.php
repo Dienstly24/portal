@@ -6,6 +6,7 @@ use App\Models\Contract;
 use App\Models\ContractVehicleDetail;
 use App\Models\Customer;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -28,7 +29,7 @@ class EscooterContractTest extends TestCase
         $user = User::factory()->create(['role' => 'customer']);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5((string) $user->id), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5((string) $user->id), 0, 8)),
         ]);
     }
 
@@ -62,7 +63,7 @@ class EscooterContractTest extends TestCase
 
         $contract = Contract::where('customer_id', $customer->id)->where('type', 'escooter')->firstOrFail();
         // Fachregel: Ablauf immer Ende Februar der Saison, egal was gesendet wurde.
-        $this->assertSame('2027-02-28', \Carbon\Carbon::parse($contract->end_date)->format('Y-m-d'));
+        $this->assertSame('2027-02-28', Carbon::parse($contract->end_date)->format('Y-m-d'));
         $this->assertSame('einmalig', $contract->premium_interval);
 
         $veh = $contract->vehicleDetail;

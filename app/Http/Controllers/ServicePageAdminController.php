@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ServicePage;
+use App\Services\UmlautRepair;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -37,7 +38,7 @@ class ServicePageAdminController extends Controller
         ServicePage::create($data);
 
         return redirect()->route('admin.service_pages')
-            ->with('status', 'Leistungsseite angelegt.' . $this->umlautWarning($data));
+            ->with('status', 'Leistungsseite angelegt.'.$this->umlautWarning($data));
     }
 
     public function edit(ServicePage $servicePage)
@@ -59,7 +60,7 @@ class ServicePageAdminController extends Controller
         $servicePage->update($data);
 
         return redirect()->route('admin.service_pages')
-            ->with('status', 'Leistungsseite gespeichert.' . $this->umlautWarning($data));
+            ->with('status', 'Leistungsseite gespeichert.'.$this->umlautWarning($data));
     }
 
     /**
@@ -77,20 +78,20 @@ class ServicePageAdminController extends Controller
         $texts[] = json_encode($data['faq'] ?? [], JSON_UNESCAPED_UNICODE);
         $texts[] = json_encode($data['fields'] ?? [], JSON_UNESCAPED_UNICODE);
 
-        $hits = \App\Services\UmlautRepair::findSuspicious(implode("\n", $texts));
+        $hits = UmlautRepair::findSuspicious(implode("\n", $texts));
         if ($hits === []) {
             return '';
         }
         return ' ⚠ Hinweis: Moeglicherweise fehlende Umlaute in: '
-            . implode(', ', array_slice($hits, 0, 8))
-            . (count($hits) > 8 ? ' …' : '')
-            . ' — Reparatur: php artisan service-pages:fix-umlauts --write';
+            .implode(', ', array_slice($hits, 0, 8))
+            .(count($hits) > 8 ? ' …' : '')
+            .' — Reparatur: php artisan service-pages:fix-umlauts --write';
     }
 
     public function toggle(ServicePage $servicePage)
     {
         $servicePage->update([
-            'is_active' => !$servicePage->is_active,
+            'is_active' => ! $servicePage->is_active,
             'updated_by' => auth()->id(),
         ]);
         return back()->with('status', 'Sichtbarkeit geaendert.');
@@ -161,7 +162,7 @@ class ServicePageAdminController extends Controller
             $fields[] = [
                 'label_de' => $l,
                 'label_ar' => trim((string) ($labelAr[$i] ?? '')),
-                'type' => in_array($t, \App\Models\ServicePage::FIELD_TYPES, true) ? $t : 'text',
+                'type' => in_array($t, ServicePage::FIELD_TYPES, true) ? $t : 'text',
                 'options_de' => trim((string) ($optDe[$i] ?? '')),
                 'options_ar' => trim((string) ($optAr[$i] ?? '')),
                 'required' => (string) ($req[$i] ?? '0') === '1',

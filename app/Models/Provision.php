@@ -1,7 +1,9 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -23,10 +25,10 @@ class Provision extends Model
     public $incrementing = false;
 
     public const STATUSES = [
-        'offen'       => 'Offen',
+        'offen' => 'Offen',
         'freigegeben' => 'Freigegeben',
-        'ausgezahlt'  => 'Ausgezahlt',
-        'storniert'   => 'Storniert',
+        'ausgezahlt' => 'Ausgezahlt',
+        'storniert' => 'Storniert',
     ];
 
     /**
@@ -38,10 +40,10 @@ class Provision extends Model
      */
     public const TYPES = [
         'neuvertrag' => 'Neuvertrag',
-        'storno'     => 'Storno-Abzug',
-        'bonus'      => 'Bonus',
-        'abzug'      => 'Abzug',
-        'manuell'    => 'Manuell',
+        'storno' => 'Storno-Abzug',
+        'bonus' => 'Bonus',
+        'abzug' => 'Abzug',
+        'manuell' => 'Manuell',
     ];
 
     protected $fillable = [
@@ -65,8 +67,11 @@ class Provision extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function user() { return $this->belongsTo(User::class); }
-    public function partner() { return $this->belongsTo(Partner::class); }
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo { return $this->belongsTo(User::class); }
+
+    /** @return BelongsTo<Partner, $this> */
+    public function partner(): BelongsTo { return $this->belongsTo(Partner::class); }
     public function customer() { return $this->belongsTo(Customer::class); }
     public function contract() { return $this->belongsTo(Contract::class); }
     public function creator() { return $this->belongsTo(User::class, 'created_by'); }
@@ -103,7 +108,7 @@ class Provision extends Model
     /** Sparten-Label des zugehoerigen Produkts (z.B. "KFZ"), sonst null. */
     public function contractTypeLabel(): ?string
     {
-        if (!$this->contract_type) return null;
+        if (! $this->contract_type) return null;
         return Contract::TYPES[$this->contract_type]['label']
             ?? Contract::LEGACY_TYPES[$this->contract_type]['label']
             ?? $this->contract_type;

@@ -39,11 +39,11 @@ class BannerSocialPublishingTest extends TestCase
         imagepng($img);
         $png = ob_get_clean();
         imagedestroy($img);
-        Storage::disk('public')->put('banners/test-' . $w . 'x' . $h . '.png', $png);
+        Storage::disk('public')->put('banners/test-'.$w.'x'.$h.'.png', $png);
 
         return Banner::create(array_merge([
             'title' => 'Sommer-Aktion Strom',
-            'media_path' => 'banners/test-' . $w . 'x' . $h . '.png',
+            'media_path' => 'banners/test-'.$w.'x'.$h.'.png',
             'media_type' => 'image',
             'is_active' => true,
             'sort_order' => 0,
@@ -99,7 +99,7 @@ class BannerSocialPublishingTest extends TestCase
         foreach (SocialFormatGenerator::FORMATS as $format => [$w, $h]) {
             $file = Storage::disk('public')->path(SocialFormatGenerator::path($banner, $format));
             [$iw, $ih] = getimagesize($file);
-            $this->assertSame([$w, $h], [$iw, $ih], 'Format ' . $format);
+            $this->assertSame([$w, $h], [$iw, $ih], 'Format '.$format);
         }
     }
 
@@ -212,15 +212,15 @@ class BannerSocialPublishingTest extends TestCase
         $ch = BannerSocialPost::where('banner_id', $banner->id)->first()
             ->channels()->where('platform', 'instagram')->first();
 
-        $response = $this->get('/s/' . $ch->short_code);
+        $response = $this->get('/s/'.$ch->short_code);
         $response->assertRedirect();
         $ziel = $response->headers->get('Location');
         $this->assertStringStartsWith('https://www.dienstly24.de/leistungen/strom?', $ziel);
         $this->assertStringContainsString('utm_source=instagram', $ziel);
         $this->assertStringContainsString('utm_medium=social', $ziel);
-        $this->assertStringContainsString('utm_campaign=banner-' . $banner->id, $ziel);
+        $this->assertStringContainsString('utm_campaign=banner-'.$banner->id, $ziel);
 
-        $this->get('/s/' . $ch->short_code);
+        $this->get('/s/'.$ch->short_code);
         $ch->refresh();
         $this->assertSame(2, $ch->clicks);
         $this->assertNotNull($ch->last_click_at);
@@ -232,7 +232,7 @@ class BannerSocialPublishingTest extends TestCase
         $this->savePost($banner, ['target_url' => 'https://www.dienstly24.de/#kontakt', 'platforms' => ['facebook']]);
         $ch = BannerSocialChannel::first();
 
-        $ziel = $this->get('/s/' . $ch->short_code)->headers->get('Location');
+        $ziel = $this->get('/s/'.$ch->short_code)->headers->get('Location');
         $this->assertMatchesRegularExpression('#^https://www\.dienstly24\.de/\?utm_source=facebook.*\#kontakt$#', $ziel);
     }
 
@@ -243,8 +243,8 @@ class BannerSocialPublishingTest extends TestCase
         $ch = BannerSocialChannel::first();
 
         // Portal-interner Banner-Link ist hinter dem Login -> Startseite.
-        $ziel = $this->get('/s/' . $ch->short_code)->headers->get('Location');
-        $this->assertStringStartsWith(url('/') . '?utm_source=facebook', $ziel);
+        $ziel = $this->get('/s/'.$ch->short_code)->headers->get('Location');
+        $this->assertStringStartsWith(url('/').'?utm_source=facebook', $ziel);
     }
 
     public function test_kurzlink_funktioniert_auch_fuer_beendete_banner(): void
@@ -256,7 +256,7 @@ class BannerSocialPublishingTest extends TestCase
         $this->savePost($banner, ['platforms' => ['tiktok']]);
         $ch = BannerSocialChannel::first();
 
-        $this->get('/s/' . $ch->short_code)->assertRedirect();
+        $this->get('/s/'.$ch->short_code)->assertRedirect();
         $this->assertSame(1, $ch->fresh()->clicks);
     }
 
@@ -285,7 +285,7 @@ class BannerSocialPublishingTest extends TestCase
 
     public function test_zip_paket_enthaelt_formate_texte_und_links(): void
     {
-        if (!class_exists(\ZipArchive::class)) {
+        if (! class_exists(\ZipArchive::class)) {
             $this->markTestSkipped('ZipArchive nicht verfuegbar.');
         }
         $banner = $this->makeImageBanner();
@@ -295,7 +295,7 @@ class BannerSocialPublishingTest extends TestCase
         $response->assertOk();
         $this->assertSame('application/zip', $response->headers->get('Content-Type'));
 
-        $zip = new \ZipArchive();
+        $zip = new \ZipArchive;
         $zip->open($response->getFile()->getPathname());
         $namen = [];
         for ($i = 0; $i < $zip->numFiles; $i++) {
@@ -346,7 +346,7 @@ class BannerSocialPublishingTest extends TestCase
         $this->assertSame(1, (int) BannerSocialChannel::find($fb->id)->clicks);
 
         // Der Live-Kurzlink funktioniert weiterhin (kein 404).
-        $this->get('/s/' . $code)->assertRedirect();
+        $this->get('/s/'.$code)->assertRedirect();
     }
 
     public function test_mitarbeiter_hat_keinen_zugriff(): void

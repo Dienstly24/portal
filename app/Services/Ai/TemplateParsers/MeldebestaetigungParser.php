@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
@@ -42,7 +43,7 @@ class MeldebestaetigungParser implements DocumentTemplateParser
         // jeden Zwischenraum suchen - sonst bleibt genau das Dokument
         // unerkannt, dessen Titel am deutlichsten dasteht.
         $compact = (string) preg_replace('/\s+/u', '', $upper);
-        if (!str_contains($compact, 'MELDEBEST') && !str_contains($compact, 'MELDEBESCH')) {
+        if (! str_contains($compact, 'MELDEBEST') && ! str_contains($compact, 'MELDEBESCH')) {
             return null;
         }
 
@@ -58,7 +59,7 @@ class MeldebestaetigungParser implements DocumentTemplateParser
             ?? $this->labelValue('Gebräuchlicher Vorname');
         $birth = $this->labelValue('Geburtsdatum');
         if ($birth !== null && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $birth, $m)) {
-            $raw['birth_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['birth_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
 
         // Geschlecht aus der Anrede im Kopf ("Frau"/"Herr").
@@ -83,7 +84,7 @@ class MeldebestaetigungParser implements DocumentTemplateParser
             return null;
         }
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $regDate = $this->labelValue('Anmeldedatum');
         $moveIn = $this->labelValue('Einzugsdatum');
         $status = $this->labelValue('Wohnungsstatus');
@@ -96,17 +97,17 @@ class MeldebestaetigungParser implements DocumentTemplateParser
             'type' => 'meldebescheinigung',
             'confidence' => 74,
             'summary' => 'Meldebestaetigung (Buergerbuero/Einwohnermeldeamt)'
-                . ($name !== '' ? ' - ' . $name : '')
-                . ($minor ? ' - MINDERJAEHRIG (Kind)' : '')
-                . (isset($person['street'])
-                    ? ' - neue Anschrift: ' . $person['street'] . ' ' . ($person['house_number'] ?? '')
+                .($name !== '' ? ' - '.$name : '')
+                .($minor ? ' - MINDERJAEHRIG (Kind)' : '')
+                .(isset($person['street'])
+                    ? ' - neue Anschrift: '.$person['street'].' '.($person['house_number'] ?? '')
                     : '')
-                . (isset($person['zip']) ? ', ' . $person['zip'] . ' ' . ($person['city'] ?? '') : '')
-                . ($moveIn !== null ? ' - eingezogen ' . $moveIn : '')
-                . ($regDate !== null ? ' - angemeldet ' . $regDate : '')
-                . ($status !== null ? ' - ' . $status : '')
-                . ' - Felder gratis aus dem Schreiben gelesen (ohne KI).',
-            'title' => 'Meldebestaetigung' . ($name !== '' ? ' ' . $name : ''),
+                .(isset($person['zip']) ? ', '.$person['zip'].' '.($person['city'] ?? '') : '')
+                .($moveIn !== null ? ' - eingezogen '.$moveIn : '')
+                .($regDate !== null ? ' - angemeldet '.$regDate : '')
+                .($status !== null ? ' - '.$status : '')
+                .' - Felder gratis aus dem Schreiben gelesen (ohne KI).',
+            'title' => 'Meldebestaetigung'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => [],
@@ -130,7 +131,7 @@ class MeldebestaetigungParser implements DocumentTemplateParser
         // Stichtag ist das Datum des Schreibens, sonst heute.
         $issued = null;
         if (preg_match('/Datum\s*:?\s*(\d{2})\.(\d{2})\.(\d{4})/u', implode("\n", $this->lines), $m)) {
-            $issued = @\DateTimeImmutable::createFromFormat('!d.m.Y', $m[1] . '.' . $m[2] . '.' . $m[3]);
+            $issued = @\DateTimeImmutable::createFromFormat('!d.m.Y', $m[1].'.'.$m[2].'.'.$m[3]);
         }
         $ref = $issued ?: new \DateTimeImmutable('today');
 
@@ -189,10 +190,10 @@ class MeldebestaetigungParser implements DocumentTemplateParser
         if ($first === '' || $last === '') {
             return; // ohne vollen Namen kein sicherer Anker
         }
-        $namen = [mb_strtolower($first . ' ' . $last), mb_strtolower($last . ' ' . $first)];
+        $namen = [mb_strtolower($first.' '.$last), mb_strtolower($last.' '.$first)];
 
         foreach ($this->lines as $i => $line) {
-            if (!in_array(mb_strtolower($this->leftCell($line)), $namen, true)) {
+            if (! in_array(mb_strtolower($this->leftCell($line)), $namen, true)) {
                 continue;
             }
             $streetIdx = null;
@@ -205,7 +206,7 @@ class MeldebestaetigungParser implements DocumentTemplateParser
                 if ($streetIdx === null
                     && preg_match('/^(.*\D)\s+(\d+(?:\s*[a-zA-Z])?)$/u', $cand, $s)
                     && preg_match('/\p{L}{3,}/u', $s[1])
-                    && !preg_match('/(?<!\d)\d{5}\s/u', $cand)) {
+                    && ! preg_match('/(?<!\d)\d{5}\s/u', $cand)) {
                     $raw['street'] = trim($s[1]);
                     $raw['house_number'] = trim((string) preg_replace('/\s+/', ' ', $s[2]));
                     $streetIdx = $j;
@@ -268,9 +269,9 @@ class MeldebestaetigungParser implements DocumentTemplateParser
         // "Vornamen: Jana" und laesst ein "n:" in den Vornamen laufen (Audit
         // PARSER-1). Der Klammer-Zusatz "Vorname(n)" bleibt erlaubt, weil "("
         // kein Buchstabe ist.
-        return '/^\s*' . preg_quote($label, '/')
-            . '(?![\p{L}])'
-            . '\s*(?:[\(\[\{][^\)\]\}\n]{0,12}[\)\]\}]?)?\s*:?/u';
+        return '/^\s*'.preg_quote($label, '/')
+            .'(?![\p{L}])'
+            .'\s*(?:[\(\[\{][^\)\]\}\n]{0,12}[\)\]\}]?)?\s*:?/u';
     }
 
     /**
@@ -282,7 +283,7 @@ class MeldebestaetigungParser implements DocumentTemplateParser
     {
         $re = $this->labelRegex($label);
         foreach ($this->lines as $i => $line) {
-            if (!preg_match($re, $line, $m)) {
+            if (! preg_match($re, $line, $m)) {
                 continue;
             }
             $rest = trim(mb_substr($line, mb_strlen($m[0])));

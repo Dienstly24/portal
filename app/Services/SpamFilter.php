@@ -86,10 +86,10 @@ class SpamFilter
         $links = preg_match_all('#https?://|www\.#i', $text);
         if ($links >= 4) {
             $score += 4;
-            $hits[] = $links . ' Links';
+            $hits[] = $links.' Links';
         } elseif ($links >= 2) {
             $score += 2;
-            $hits[] = $links . ' Links';
+            $hits[] = $links.' Links';
         }
 
         // 3) Kaputter Zeichensatz / Mojibake (UTF-8 als Latin-1 fehlgedeutet,
@@ -100,14 +100,14 @@ class SpamFilter
         $mojibake = preg_match_all('/[ÃÂ][\x80-\xBF]|[ØÙ][\x80-\xBF]|â€|ï¿½|�/u', $text);
         if ($mojibake >= 15) {
             $score += 4;
-            $hits[] = 'Mojibake(' . $mojibake . ')';
+            $hits[] = 'Mojibake('.$mojibake.')';
         }
 
         if ($score < self::THRESHOLD) {
             return null;
         }
 
-        return 'score=' . $score . ' [' . implode(', ', $hits) . ']';
+        return 'score='.$score.' ['.implode(', ', $hits).']';
     }
 
     /**

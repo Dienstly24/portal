@@ -67,7 +67,7 @@ class ExtraBasicAuth
     private function challenge(string $realm): Response
     {
         return response('Zugriff geschuetzt - Anmeldung erforderlich.', 401, [
-            'WWW-Authenticate' => 'Basic realm="' . $realm . '", charset="UTF-8"',
+            'WWW-Authenticate' => 'Basic realm="'.$realm.'", charset="UTF-8"',
         ]);
     }
 }

@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -28,7 +29,7 @@ class DocumentMergeTest extends TestCase
     private function inboxDoc(string $type, array $extracted, string $name = 'x.pdf'): Document
     {
         Storage::fake('local');
-        $path = 'documents/eingang/' . uniqid() . '.pdf';
+        $path = 'documents/eingang/'.uniqid().'.pdf';
         Storage::disk('local')->put($path, '%PDF-1.4');
         return Document::create([
             'customer_id' => null,
@@ -134,7 +135,7 @@ class DocumentMergeTest extends TestCase
     public function test_inbox_groups_batch_documents_as_one_vorgang(): void
     {
         Storage::fake('local');
-        $batch = (string) \Illuminate\Support\Str::uuid();
+        $batch = (string) Str::uuid();
         foreach ([['personalausweis', 'ausweis.pdf'], ['kfz_vertrag', 'protokoll.pdf']] as [$type, $name]) {
             $this->inboxDoc($type, ['person' => ['first_name' => 'Ahmed', 'last_name' => 'Nassar']], $name)
                 ->update(['intake_batch' => $batch]);
@@ -150,7 +151,7 @@ class DocumentMergeTest extends TestCase
     public function test_inbox_batch_with_name_conflict_shows_warning_instead_of_button(): void
     {
         Storage::fake('local');
-        $batch = (string) \Illuminate\Support\Str::uuid();
+        $batch = (string) Str::uuid();
         $this->inboxDoc('personalausweis', ['person' => ['first_name' => 'Ahmed', 'last_name' => 'Nassar']])
             ->update(['intake_batch' => $batch]);
         $this->inboxDoc('fuehrerschein', ['person' => ['first_name' => 'Ahmad', 'last_name' => 'Nasser']])

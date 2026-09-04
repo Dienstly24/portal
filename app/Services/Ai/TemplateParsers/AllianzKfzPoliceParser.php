@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Services\Ai\Concerns\ReadsDocumentPages;
@@ -42,9 +43,9 @@ class AllianzKfzPoliceParser implements DocumentTemplateParser
         if ($this->looksLikeComparisonProtocol($text)) {
             return null;
         }
-        if (!str_contains($upper, 'ALLIANZ')
-            || !str_contains($upper, 'VERSICHERUNGSSCHEIN')
-            || !str_contains($upper, 'KFZ-VERSICHERUNG')) {
+        if (! str_contains($upper, 'ALLIANZ')
+            || ! str_contains($upper, 'VERSICHERUNGSSCHEIN')
+            || ! str_contains($upper, 'KFZ-VERSICHERUNG')) {
             return null;
         }
 
@@ -60,22 +61,22 @@ class AllianzKfzPoliceParser implements DocumentTemplateParser
             return null;
         }
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $plate = $vehicle['license_plate'] ?? null;
 
         return [
             'type' => 'kfz_vertrag',
             'confidence' => 78,
             'summary' => 'Allianz Kfz-Versicherungsschein (Kfz-Vertrag)'
-                . ($name !== '' ? ' - ' . $name : '')
-                . ($plate !== null ? ' - ' . $plate : '')
-                . (isset($insurance['contract_number']) ? ' - Vertrag ' . $insurance['contract_number'] : '')
-                . (isset($vehicle['sf_liability_class']) ? ' - SF ' . $vehicle['sf_liability_class'] . ' (Haftpflicht)' : '')
-                . (isset($vehicle['has_teilkasko']) || isset($vehicle['has_vollkasko'])
-                    ? ' - Deckung: ' . $this->coverageSummary($vehicle) : '')
-                . (in_array('schutzbrief', $vehicle['extras'] ?? [], true) ? ' - mit Schutzbrief' : '')
-                . ' - Felder gratis aus dem Versicherungsschein gelesen (ohne KI).',
-            'title' => 'Allianz Kfz-Versicherung' . ($name !== '' ? ' ' . $name : ''),
+                .($name !== '' ? ' - '.$name : '')
+                .($plate !== null ? ' - '.$plate : '')
+                .(isset($insurance['contract_number']) ? ' - Vertrag '.$insurance['contract_number'] : '')
+                .(isset($vehicle['sf_liability_class']) ? ' - SF '.$vehicle['sf_liability_class'].' (Haftpflicht)' : '')
+                .(isset($vehicle['has_teilkasko']) || isset($vehicle['has_vollkasko'])
+                    ? ' - Deckung: '.$this->coverageSummary($vehicle) : '')
+                .(in_array('schutzbrief', $vehicle['extras'] ?? [], true) ? ' - mit Schutzbrief' : '')
+                .' - Felder gratis aus dem Versicherungsschein gelesen (ohne KI).',
+            'title' => 'Allianz Kfz-Versicherung'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -99,7 +100,7 @@ class AllianzKfzPoliceParser implements DocumentTemplateParser
     {
         $raw = [];
         foreach ($this->lines as $i => $line) {
-            if (!preg_match('/^\s*Versicherungsnehmer(:in)?\s*$/u', trim($line))) {
+            if (! preg_match('/^\s*Versicherungsnehmer(:in)?\s*$/u', trim($line))) {
                 continue;
             }
             $block = [];
@@ -147,7 +148,7 @@ class AllianzKfzPoliceParser implements DocumentTemplateParser
             // Beitragsrechnung; die Fahrzeug-Identitaet vergleicht ohnehin
             // normalisiert).
             $raw['license_plate'] = preg_match('/^([A-ZÄÖÜ]{1,3})[ \-]([A-ZÄÖÜ]{1,2})\s?(\d{1,4}[EH]?)$/u', trim($v), $p)
-                ? $p[1] . '-' . $p[2] . ' ' . $p[3]
+                ? $p[1].'-'.$p[2].' '.$p[3]
                 : $v;
         }
         if (($v = $this->labelValue('Hersteller')) !== null) {
@@ -227,10 +228,10 @@ class AllianzKfzPoliceParser implements DocumentTemplateParser
             $raw['contract_number'] = $m[1];
         }
         if (preg_match('/Versicherungsbeginn:\s+(\d{2})\.(\d{2})\.(\d{4})/u', $text, $m)) {
-            $raw['start_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['start_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
         if (preg_match('/Versicherungsablauf:\s+(\d{2})\.(\d{2})\.(\d{4})/u', $text, $m)) {
-            $raw['end_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['end_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
 
         // Gesamtbeitrag (= Beitrag gemaess Zahlungsperiode, hier vierteljaehrlich)
@@ -261,11 +262,11 @@ class AllianzKfzPoliceParser implements DocumentTemplateParser
         $v = mb_strtolower($value);
         return match (true) {
             str_contains($v, 'pkw') || str_contains($v, 'personenkraftwagen') => 'pkw',
-            str_contains($v, 'lkw') || str_contains($v, 'lastkraft')          => 'lkw',
-            str_contains($v, 'transporter')                                   => 'transporter',
-            str_contains($v, 'anhänger') || str_contains($v, 'anhaenger')     => 'anhaenger',
-            str_contains($v, 'wohnmobil')                                     => 'wohnmobil',
-            default                                                           => null,
+            str_contains($v, 'lkw') || str_contains($v, 'lastkraft') => 'lkw',
+            str_contains($v, 'transporter') => 'transporter',
+            str_contains($v, 'anhänger') || str_contains($v, 'anhaenger') => 'anhaenger',
+            str_contains($v, 'wohnmobil') => 'wohnmobil',
+            default => null,
         };
     }
 
@@ -285,10 +286,10 @@ class AllianzKfzPoliceParser implements DocumentTemplateParser
     private function coverageSummary(array $kfz): string
     {
         $parts = ['Haftpflicht'];
-        if (!empty($kfz['has_teilkasko'])) {
+        if (! empty($kfz['has_teilkasko'])) {
             $parts[] = 'Teilkasko';
         }
-        if (!empty($kfz['has_vollkasko'])) {
+        if (! empty($kfz['has_vollkasko'])) {
             $parts[] = 'Vollkasko';
         }
         if (empty($kfz['has_teilkasko']) && empty($kfz['has_vollkasko'])) {
@@ -304,7 +305,7 @@ class AllianzKfzPoliceParser implements DocumentTemplateParser
     private function labelValue(string $label): ?string
     {
         foreach ($this->lines as $line) {
-            if (preg_match('/^\s*' . preg_quote($label, '/') . '\s*:?\s{2,}([^\n]+?)\s*$/u', $line, $m)) {
+            if (preg_match('/^\s*'.preg_quote($label, '/').'\s*:?\s{2,}([^\n]+?)\s*$/u', $line, $m)) {
                 return trim($m[1]);
             }
         }

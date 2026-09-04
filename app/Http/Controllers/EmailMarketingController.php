@@ -1,13 +1,17 @@
 <?php
+
 namespace App\Http\Controllers;
+
 use App\Http\Controllers\Concerns\ScopesCustomerAccess;
 use App\Jobs\SendCampaignJob;
 use App\Mail\CampaignMail;
+use App\Models\BannerSocialPost;
 use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\EmailCampaign;
 use App\Services\ContractSwitchReminderService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail;
 
 class EmailMarketingController extends Controller
@@ -17,17 +21,17 @@ class EmailMarketingController extends Controller
     public function index(ContractSwitchReminderService $reminders) {
         $ids = $this->visibleCustomerIds();
         $campaigns = EmailCampaign::with('createdBy')->withCount([
-                'logs as failed_count' => fn($q) => $q->where('status', 'failed'),
-            ])
-            ->when($ids !== null, fn($q) => $q->where('created_by', auth()->id()))
+            'logs as failed_count' => fn ($q) => $q->where('status', 'failed'),
+        ])
+            ->when($ids !== null, fn ($q) => $q->where('created_by', auth()->id()))
             ->latest()->get();
         $totalCustomers = $ids === null ? Customer::count() : count($ids);
         $reachableCustomers = Customer::marketingReachable()
-            ->when($ids !== null, fn($q) => $q->whereIn('customers.id', $ids))->count();
+            ->when($ids !== null, fn ($q) => $q->whereIn('customers.id', $ids))->count();
         $dueReminders = count($reminders->due($ids));
         // ?draft={id}: Entwurf/geplante Kampagne ins Formular laden
         $draft = request('draft')
-            ? $campaigns->first(fn($c) => $c->id === request('draft') && in_array($c->status, ['draft', 'scheduled'], true))
+            ? $campaigns->first(fn ($c) => $c->id === request('draft') && in_array($c->status, ['draft', 'scheduled'], true))
             : null;
         return view('admin.email_marketing', compact('campaigns', 'totalCustomers', 'reachableCustomers', 'dueReminders', 'draft'));
     }
@@ -41,7 +45,7 @@ class EmailMarketingController extends Controller
         $data = $request->validate([
             'subject' => 'required|string|max:255',
             'body' => 'required|string',
-            'target' => 'required|in:' . implode(',', EmailCampaign::TARGETS),
+            'target' => 'required|in:'.implode(',', EmailCampaign::TARGETS),
             'action' => 'nullable|in:send,draft,schedule',
             // after:now bewusst NICHT hier - der Eingabewert ist deutsche
             // Ortszeit und wird erst nach der UTC-Umrechnung gegen jetzt geprueft.
@@ -55,9 +59,9 @@ class EmailMarketingController extends Controller
         // spaet - genau der Fehler, den die Social-Posts ueber OPERATOR_TZ schon
         // loesen (Audit MKT-2). Vergangenheit erst nach der Umrechnung ablehnen.
         $scheduledFor = null;
-        if ($action === 'schedule' && !empty($data['scheduled_for'])) {
-            $scheduledFor = \Illuminate\Support\Carbon::parse(
-                $data['scheduled_for'], \App\Models\BannerSocialPost::OPERATOR_TZ
+        if ($action === 'schedule' && ! empty($data['scheduled_for'])) {
+            $scheduledFor = Carbon::parse(
+                $data['scheduled_for'], BannerSocialPost::OPERATOR_TZ
             )->utc();
             if ($scheduledFor->isPast()) {
                 return back()->withInput()->withErrors([
@@ -67,10 +71,10 @@ class EmailMarketingController extends Controller
         }
 
         $campaign = null;
-        if (!empty($data['draft_id'])) {
+        if (! empty($data['draft_id'])) {
             $campaign = EmailCampaign::where('id', $data['draft_id'])
                 ->whereIn('status', ['draft', 'scheduled'])
-                ->when($this->visibleCustomerIds() !== null, fn($q) => $q->where('created_by', auth()->id()))
+                ->when($this->visibleCustomerIds() !== null, fn ($q) => $q->where('created_by', auth()->id()))
                 ->first();
         }
 
@@ -95,8 +99,8 @@ class EmailMarketingController extends Controller
         return back()->with('success', $action === 'draft'
             ? 'Entwurf gespeichert.'
             // Zur Anzeige zurueck in deutsche Ortszeit rechnen (gespeichert ist UTC).
-            : 'Kampagne geplant für ' . $campaign->scheduled_for
-                ->timezone(\App\Models\BannerSocialPost::OPERATOR_TZ)->format('d.m.Y H:i') . ' Uhr.');
+            : 'Kampagne geplant für '.$campaign->scheduled_for
+                ->timezone(BannerSocialPost::OPERATOR_TZ)->format('d.m.Y H:i').' Uhr.');
     }
 
     /**
@@ -130,9 +134,9 @@ class EmailMarketingController extends Controller
     public function testSend(Request $request) {
         $data = $request->validate(['subject' => 'required|string|max:255', 'body' => 'required|string']);
         Mail::to(auth()->user()->email)->send(new CampaignMail(
-            '[TEST] ' . $data['subject'], $data['body'], auth()->user()->name, '#',
+            '[TEST] '.$data['subject'], $data['body'], auth()->user()->name, '#',
         ));
-        return back()->with('success', 'Test-E-Mail an ' . auth()->user()->email . ' gesendet.');
+        return back()->with('success', 'Test-E-Mail an '.auth()->user()->email.' gesendet.');
     }
 
     /**
@@ -147,14 +151,14 @@ class EmailMarketingController extends Controller
     /** Kunde hat auf eine Wechsel-Erinnerung reagiert -> Follow-up stoppen. */
     public function markSwitchResponded(string $contractId, ContractSwitchReminderService $reminders) {
         $ids = $this->visibleCustomerIds();
-        $contract = Contract::when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids))->findOrFail($contractId);
+        $contract = Contract::when($ids !== null, fn ($q) => $q->whereIn('customer_id', $ids))->findOrFail($contractId);
         $reminders->markResponded($contract);
         return back()->with('success', 'Als „Kunde hat reagiert" markiert – keine weitere Erinnerung für diese Periode.');
     }
 
     private function ownCampaign(string $id, array $statuses): EmailCampaign {
         return EmailCampaign::where('id', $id)->whereIn('status', $statuses)
-            ->when($this->visibleCustomerIds() !== null, fn($q) => $q->where('created_by', auth()->id()))
+            ->when($this->visibleCustomerIds() !== null, fn ($q) => $q->where('created_by', auth()->id()))
             ->firstOrFail();
     }
 }

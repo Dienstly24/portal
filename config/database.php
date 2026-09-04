@@ -21,6 +21,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | SQLite in Produktion zulassen (ARCH-2)
+    |--------------------------------------------------------------------------
+    |
+    | Normalerweise verweigert App\Support\ProductionDatabaseGuard den Start,
+    | wenn APP_ENV=production auf SQLite trifft - siehe dort, warum. Dieser
+    | Schalter ist der Notausstieg fuer den Ausnahmefall, dass SQLite in
+    | Produktion wirklich gewollt ist.
+    |
+    | Der Wert steht bewusst HIER und nicht als env() im Guard selbst: mit
+    | gecachter Konfiguration (config:cache, in Produktion der Normalfall)
+    | liefert env() null - der Notausstieg haette dort also ausgerechnet
+    | dann nicht funktioniert, wo er gebraucht wird.
+    |
+    */
+
+    'allow_sqlite_in_production' => env('ALLOW_SQLITE_IN_PRODUCTION', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Database Connections
     |--------------------------------------------------------------------------
     |

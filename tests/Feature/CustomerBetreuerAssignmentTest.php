@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -24,10 +23,10 @@ class CustomerBetreuerAssignmentTest extends TestCase
     private function customer(string $name = 'Nour Abuzayda'): Customer
     {
         $user = User::factory()->create([
-            'role' => 'customer', 'name' => $name, 'email' => 'kunde-' . uniqid() . '@kunde.de',
+            'role' => 'customer', 'name' => $name, 'email' => 'kunde-'.uniqid().'@kunde.de',
         ]);
 
-        return Customer::create(['user_id' => $user->id, 'customer_number' => 'K-' . uniqid()]);
+        return Customer::create(['user_id' => $user->id, 'customer_number' => 'K-'.uniqid()]);
     }
 
     public function test_admin_weist_betreuer_direkt_aus_der_liste_zu(): void

@@ -10,12 +10,11 @@ use Illuminate\Support\Facades\Schema;
  * Spalte verworfen. Wie IBAN/Kontoinhaber verschluesselt at rest, daher als
  * TEXT (der Chiffretext ist laenger als die 8-11 Klartext-Zeichen).
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('customers', function (Blueprint $table) {
-            if (!Schema::hasColumn('customers', 'bic')) {
+            if (! Schema::hasColumn('customers', 'bic')) {
                 $table->text('bic')->nullable()->after('account_holder');
             }
         });

@@ -19,7 +19,7 @@ class ServicePageSeeder extends Seeder
             $page['sort_order'] = $i * 10;
             $existing = ServicePage::where('slug', $page['slug'])->first();
 
-            if (!$existing) {
+            if (! $existing) {
                 // Neue Standardseite anlegen.
                 ServicePage::create($page);
                 continue;
@@ -29,11 +29,11 @@ class ServicePageSeeder extends Seeder
             // Admin gepflegte Inhalte bei jedem Deploy erhalten bleiben.
             $updates = [];
             foreach (['body_de', 'body_ar', 'meta_description_de', 'meta_description_ar', 'providers'] as $col) {
-                if (blank($existing->{$col}) && !empty($page[$col] ?? null)) {
+                if (blank($existing->{$col}) && ! empty($page[$col] ?? null)) {
                     $updates[$col] = $page[$col];
                 }
             }
-            if (empty($existing->fields) && !empty($page['fields'])) {
+            if (empty($existing->fields) && ! empty($page['fields'])) {
                 $updates['fields'] = $page['fields'];
             }
             if ($updates) {
@@ -54,12 +54,12 @@ class ServicePageSeeder extends Seeder
                 'subtitle_de' => 'Haftpflicht, Teilkasko und Vollkasko verständlich erklärt',
                 'subtitle_ar' => 'شرح واضح للمسؤولية والتأمين الجزئي والشامل',
                 'intro_de' => 'Die Kfz-Versicherung schützt Sie vor den finanziellen Folgen eines '
-                    . 'Verkehrsunfalls. Die Kfz-Haftpflicht ist in Deutschland gesetzlich '
-                    . 'vorgeschrieben und deckt Schäden, die Sie anderen zufügen. Teil- und '
-                    . 'Vollkasko sind freiwillig und schützen zusätzlich Ihr eigenes Fahrzeug.',
+                    .'Verkehrsunfalls. Die Kfz-Haftpflicht ist in Deutschland gesetzlich '
+                    .'vorgeschrieben und deckt Schäden, die Sie anderen zufügen. Teil- und '
+                    .'Vollkasko sind freiwillig und schützen zusätzlich Ihr eigenes Fahrzeug.',
                 'intro_ar' => 'تأمين السيارة بيحميك من التبعات المالية لحادث سير. تأمين المسؤولية '
-                    . '(Haftpflicht) إلزامي قانونياً بألمانيا وبيغطي الأضرار يلي بتسببها للغير. '
-                    . 'أما التأمين الجزئي (Teilkasko) والشامل (Vollkasko) فاختياريان وبيحميان سيارتك.',
+                    .'(Haftpflicht) إلزامي قانونياً بألمانيا وبيغطي الأضرار يلي بتسببها للغير. '
+                    .'أما التأمين الجزئي (Teilkasko) والشامل (Vollkasko) فاختياريان وبيحميان سيارتك.',
                 'highlights_de' => "Gesetzlich vorgeschriebene Haftpflicht\nTeilkasko z. B. bei Diebstahl, Glasbruch, Wildunfall\nVollkasko auch bei selbst verschuldeten Schäden\nWir vergleichen die Tarife und erklären die Unterschiede",
                 'highlights_ar' => "تأمين المسؤولية الإلزامي\nالتأمين الجزئي مثلاً للسرقة وكسر الزجاج وحوادث الحيوانات\nالتأمين الشامل حتى للأضرار بخطئك\nمنقارنلك التعرفات ومنشرحلك الفروقات",
                 'meta_description_de' => 'Kfz-Versicherung verständlich erklärt: Haftpflicht, Teil- und Vollkasko im Vergleich. Anbieterunabhängige Beratung auf Deutsch und Arabisch – kostenlos anfragen.',
@@ -95,12 +95,12 @@ class ServicePageSeeder extends Seeder
                 'subtitle_de' => 'Gesetzlich oder privat - wir beraten zur passenden Lösung',
                 'subtitle_ar' => 'حكومي أو خاص - منساعدك تختار الأنسب',
                 'intro_de' => 'In Deutschland besteht eine Krankenversicherungspflicht. Sie können '
-                    . 'sich gesetzlich (GKV) oder unter bestimmten Voraussetzungen privat (PKV) '
-                    . 'versichern. Welche Variante zu Ihnen passt, haengt von Beruf, Einkommen und '
-                    . 'persönlicher Situation ab - wir erklären Ihnen die Optionen.',
+                    .'sich gesetzlich (GKV) oder unter bestimmten Voraussetzungen privat (PKV) '
+                    .'versichern. Welche Variante zu Ihnen passt, haengt von Beruf, Einkommen und '
+                    .'persönlicher Situation ab - wir erklären Ihnen die Optionen.',
                 'intro_ar' => 'بألمانيا التأمين الصحي إلزامي. فيك تتأمّن حكومي (GKV) أو - ضمن شروط - '
-                    . 'خاص (PKV). أي خيار بيناسبك بيعتمد على المهنة والدخل ووضعك الشخصي - ومنشرحلك '
-                    . 'الخيارات بوضوح.',
+                    .'خاص (PKV). أي خيار بيناسبك بيعتمد على المهنة والدخل ووضعك الشخصي - ومنشرحلك '
+                    .'الخيارات بوضوح.',
                 'highlights_de' => "Gesetzliche und private Krankenversicherung\nBeratung passend zu Beruf und Einkommen\nUnterstuetzung beim Wechsel und bei Antraegen\nVerstaendlich auf Deutsch und Arabisch",
                 'highlights_ar' => "التأمين الحكومي والخاص\nاستشارة حسب المهنة والدخل\nمساعدة بالتبديل وتقديم الطلبات\nشرح واضح بالعربي والألماني",
                 'providers' => "Techniker Krankenkasse\nBARMER\nDAK-Gesundheit\nAOK\nKKH\nhkk\nHEK\nIKK classic\nKNAPPSCHAFT\nBIG direkt gesund\nSBK\npronova BKK",
@@ -126,10 +126,10 @@ class ServicePageSeeder extends Seeder
                 'subtitle_de' => 'Höhere Erstattung bei Zahnersatz und Behandlungen',
                 'subtitle_ar' => 'تغطية أعلى لتركيبات وعلاجات الأسنان',
                 'intro_de' => 'Die gesetzliche Krankenversicherung übernimmt bei Zahnersatz oft nur '
-                    . 'einen Teil der Kosten. Eine Zahnzusatzversicherung erhoeht die Erstattung '
-                    . 'z. B. bei Kronen, Implantaten oder professioneller Zahnreinigung.',
+                    .'einen Teil der Kosten. Eine Zahnzusatzversicherung erhoeht die Erstattung '
+                    .'z. B. bei Kronen, Implantaten oder professioneller Zahnreinigung.',
                 'intro_ar' => 'التأمين الحكومي غالباً بيغطي جزء بس من تكاليف تركيبات الأسنان. تأمين '
-                    . 'الأسنان الإضافي بيرفع نسبة التغطية مثلاً للتيجان والزرعات وتنظيف الأسنان.',
+                    .'الأسنان الإضافي بيرفع نسبة التغطية مثلاً للتيجان والزرعات وتنظيف الأسنان.',
                 'highlights_de' => "Höhere Erstattung bei Zahnersatz\nLeistungen für Kronen, Implantate, Inlays\nOft auch professionelle Zahnreinigung\nWir zeigen, welcher Tarif sich lohnt",
                 'highlights_ar' => "تغطية أعلى للتركيبات\nتغطية للتيجان والزرعات والحشوات\nغالباً تنظيف احترافي للأسنان\nمنوريك أي تعرفة بتستاهل",
                 'meta_description_de' => 'Zahnzusatzversicherung: höhere Erstattung bei Zahnersatz, Implantaten und Zahnreinigung. Anbieterunabhängige Beratung auf Deutsch und Arabisch.',
@@ -147,10 +147,10 @@ class ServicePageSeeder extends Seeder
                 'subtitle_de' => 'An-, Um- und Abmeldung ohne Warteschlange',
                 'subtitle_ar' => 'تسجيل وتحويل وإلغاء بدون طوابير',
                 'intro_de' => 'Wir übernehmen die komplette Zulassung Ihres Fahrzeugs bei der '
-                    . 'Zulassungsstelle - Anmeldung, Ummeldung oder Abmeldung. Sie sparen sich den '
-                    . 'Behördengang und die Wartezeit.',
+                    .'Zulassungsstelle - Anmeldung, Ummeldung oder Abmeldung. Sie sparen sich den '
+                    .'Behördengang und die Wartezeit.',
                 'intro_ar' => 'مننجزلك تسجيل سيارتك كامل بدائرة المرور - تسجيل جديد أو تحويل أو إلغاء. '
-                    . 'بتوفّر عليك زيارة الدائرة ووقت الانتظار.',
+                    .'بتوفّر عليك زيارة الدائرة ووقت الانتظار.',
                 'highlights_de' => "Anmeldung, Ummeldung, Abmeldung\nKein Behördengang, keine Warteschlange\nAuch mit Wunschkennzeichen möglich\nSchnelle und sichere Abwicklung",
                 'highlights_ar' => "تسجيل، تحويل، إلغاء\nبدون زيارة الدائرة وبدون طوابير\nممكن كمان لوحة برقم خاص\nإنجاز سريع وآمن",
                 'meta_description_de' => 'Kfz-Zulassungsservice: An-, Um- und Abmeldung ohne Behördengang und Warteschlange – schnell, sicher und auf Wunsch mit Wunschkennzeichen.',
@@ -179,10 +179,10 @@ class ServicePageSeeder extends Seeder
                 'subtitle_de' => 'Neue Kennzeichen versiegelt nach Hause geliefert',
                 'subtitle_ar' => 'لوحات جديدة مختومة بتوصل لبيتك',
                 'intro_de' => 'Sie bestellen Ihre neuen Kennzeichen bequem online, wir liefern sie '
-                    . 'versiegelt direkt zu Ihnen nach Hause - schnell, sicher und günstig. Auf '
-                    . 'Wunsch auch mit Wunschkennzeichen.',
+                    .'versiegelt direkt zu Ihnen nach Hause - schnell, sicher und günstig. Auf '
+                    .'Wunsch auch mit Wunschkennzeichen.',
                 'intro_ar' => 'بتطلب لوحاتك الجديدة أونلاين، ومنوصّلها مختومة لعندك عالبيت - بسرعة '
-                    . 'وأمان وسعر مناسب. وإذا بدك برقم خاص كمان.',
+                    .'وأمان وسعر مناسب. وإذا بدك برقم خاص كمان.',
                 'highlights_de' => "Bestellung bequem von zu Hause\nVersiegelte Lieferung nach Hause\nAuch Wunschkennzeichen möglich\nSchnell, sicher und günstig",
                 'highlights_ar' => "طلب مريح من البيت\nتوصيل مختوم لعنوانك\nممكن رقم خاص\nسريع وآمن وبسعر منافس",
                 'meta_description_de' => 'Kfz-Kennzeichen per Post: neue Nummernschilder versiegelt nach Hause geliefert – bequem, schnell und günstig, auch mit Wunschkennzeichen.',
@@ -200,12 +200,12 @@ class ServicePageSeeder extends Seeder
                 'subtitle_de' => 'Tarif prüfen und beim Anbieterwechsel sparen',
                 'subtitle_ar' => 'فحص التعرفة وتوفير عند تبديل المزوّد',
                 'intro_de' => 'Die Energiepreise ändern sich ständig. Wir prüfen Ihren aktuellen '
-                    . 'Tarif und zeigen Ihnen, wie viel Sie durch einen Anbieterwechsel sparen '
-                    . 'können. Die Kündigung und Anmeldung übernehmen wir - Ihre Versorgung '
-                    . 'laeuft ohne Unterbrechung weiter.',
+                    .'Tarif und zeigen Ihnen, wie viel Sie durch einen Anbieterwechsel sparen '
+                    .'können. Die Kündigung und Anmeldung übernehmen wir - Ihre Versorgung '
+                    .'laeuft ohne Unterbrechung weiter.',
                 'intro_ar' => 'أسعار الطاقة عم تتغير باستمرار. منراجع تعرفتك الحالية ومنوريك قديش '
-                    . 'فيك توفّر إذا بدّلت المزوّد. مننتكفّل بإلغاء العقد القديم وتسجيل الجديد، '
-                    . 'والتزويد ما بينقطع.',
+                    .'فيك توفّر إذا بدّلت المزوّد. مننتكفّل بإلغاء العقد القديم وتسجيل الجديد، '
+                    .'والتزويد ما بينقطع.',
                 'highlights_de' => "Kostenloser Tarif-Check\nWechselservice komplett aus einer Hand\nVersorgung ohne Unterbrechung\nZugang zu Tarifen vieler Anbieter",
                 'highlights_ar' => "فحص مجاني للتعرفة\nخدمة تبديل كاملة من عنا\nتزويد بدون انقطاع\nوصول لعروض مزوّدين كتار",
                 'providers' => "E.ON\nEnBW\nVattenfall\nLichtBlick\nYello\nNaturstrom\ngrüner strom\nEWE\nStadtwerke",

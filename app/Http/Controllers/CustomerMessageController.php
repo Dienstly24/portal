@@ -1,11 +1,14 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use App\Models\CustomerMessage;
 use App\Models\CustomerMessageAttachment;
 use App\Services\CustomerMessageNotifier;
+use App\Support\UploadRules;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Direktnachrichten aus der Beraterwelt an den Kunden (Portal-Chat).
@@ -18,9 +21,9 @@ class CustomerMessageController extends Controller
         abort_unless(auth()->user()->canAccessCustomer($customerId), 403);
         $request->validate([
             'body' => 'required|string|max:5000',
-            'email_mode' => 'required|in:' . implode(',', CustomerMessage::EMAIL_MODES),
+            'email_mode' => 'required|in:'.implode(',', CustomerMessage::EMAIL_MODES),
             'attachments' => 'nullable|array|max:5',
-            'attachments.*' => 'file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+            'attachments.*' => UploadRules::each(UploadRules::ATTACHMENT_MIMES),
         ]);
         $customer = Customer::with('user')->findOrFail($customerId);
 
@@ -43,14 +46,14 @@ class CustomerMessageController extends Controller
             ]);
         }
 
-        return redirect(route('admin.customer', $customer->id) . '#tab-nachrichten')
+        return redirect(route('admin.customer', $customer->id).'#tab-nachrichten')
             ->with('success', 'Nachricht an den Kunden gesendet.');
     }
 
     public function downloadAttachment($id)
     {
         $attachment = $this->findAccessibleAttachment($id);
-        $disk = \Illuminate\Support\Facades\Storage::disk($attachment->disk ?: 'local');
+        $disk = Storage::disk($attachment->disk ?: 'local');
         abort_unless($disk->exists($attachment->file_path), 404);
         return $disk->download($attachment->file_path, $attachment->file_name);
     }
@@ -60,7 +63,7 @@ class CustomerMessageController extends Controller
     {
         $attachment = $this->findAccessibleAttachment($id);
         abort_unless($attachment->isViewable(), 404);
-        $disk = \Illuminate\Support\Facades\Storage::disk($attachment->disk ?: 'local');
+        $disk = Storage::disk($attachment->disk ?: 'local');
         abort_unless($disk->exists($attachment->file_path), 404);
         return $disk->response($attachment->file_path, $attachment->file_name, [
             'Content-Type' => $attachment->mimeType(),
@@ -81,7 +84,7 @@ class CustomerMessageController extends Controller
      */
     public static function storeAttachments(Request $request, CustomerMessage $message): void
     {
-        if (!$request->hasFile('attachments')) {
+        if (! $request->hasFile('attachments')) {
             return;
         }
         foreach ($request->file('attachments') as $file) {
@@ -89,7 +92,7 @@ class CustomerMessageController extends Controller
                 'message_id' => $message->id,
                 'uploaded_by' => auth()->id(),
                 'file_name' => $file->getClientOriginalName(),
-                'file_path' => $file->store('customers/' . $message->customer_id . '/messages', 'local'),
+                'file_path' => $file->store('customers/'.$message->customer_id.'/messages', 'local'),
                 'disk' => 'local',
             ]);
         }

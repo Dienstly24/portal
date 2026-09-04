@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Vermittler;
 
 use App\Models\Contract;
@@ -82,7 +83,7 @@ class VermittlerContractIndex
         }
 
         $refKey = $contract->referenceKey();
-        if ($refKey !== null && !in_array($contract->id, $this->byReference[$refKey] ?? [], true)) {
+        if ($refKey !== null && ! in_array($contract->id, $this->byReference[$refKey] ?? [], true)) {
             $this->byReference[$refKey][] = $contract->id;
         }
     }

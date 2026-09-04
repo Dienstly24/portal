@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Provisionsmanagement;
 
 use App\Models\CommissionReferenceLink;
@@ -80,8 +81,8 @@ class ReferenceLinkService
             return [
                 'contract' => null,
                 'reference' => null,
-                'note' => 'Zur Pool-Id „' . $externalId . '“ sind ' . $links->count()
-                    . ' verschiedene Referenz-Nummern gespeichert. Es wurde bewusst nichts zugeordnet.',
+                'note' => 'Zur Pool-Id „'.$externalId.'“ sind '.$links->count()
+                    .' verschiedene Referenz-Nummern gespeichert. Es wurde bewusst nichts zugeordnet.',
             ];
         }
 

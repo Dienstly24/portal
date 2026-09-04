@@ -9,6 +9,7 @@ use App\Models\CustomerFamily;
 use App\Models\Document;
 use App\Models\User;
 use App\Services\Health\FamilyBundleService;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -30,7 +31,7 @@ class HealthFamilySwitchTest extends TestCase
     private function inboxDoc(string $type, array $extracted, string $name = 'x.pdf'): Document
     {
         Storage::fake('local');
-        $path = 'documents/eingang/' . uniqid() . '.pdf';
+        $path = 'documents/eingang/'.uniqid().'.pdf';
         Storage::disk('local')->put($path, '%PDF-1.4');
         return Document::create([
             'customer_id' => null, 'category' => 'other', 'file_name' => $name,
@@ -61,7 +62,7 @@ class HealthFamilySwitchTest extends TestCase
     public function test_detects_family_persons_and_suggests_haupt(): void
     {
         [$cards, $ausweis] = $this->familyBundle();
-        $service = new FamilyBundleService();
+        $service = new FamilyBundleService;
 
         $persons = $service->detectPersons([$cards, $ausweis]);
 
@@ -73,7 +74,7 @@ class HealthFamilySwitchTest extends TestCase
     public function test_full_family_switch_flow_regular_wechsel(): void
     {
         [$cards, $ausweis] = $this->familyBundle();
-        $service = new FamilyBundleService();
+        $service = new FamilyBundleService;
         $persons = $service->detectPersons([$cards, $ausweis]);
         $hauptIndex = $service->suggestHauptIndex($persons);
         $members = [];
@@ -121,11 +122,18 @@ class HealthFamilySwitchTest extends TestCase
         $this->assertSame($expectedEffective, $contract->start_date);
 
         // Verlauf: AOK endet am Vortag, TK beginnt am Stichtag.
-        $entries = ContractHistory::where('customer_id', $customer->id)->orderBy('created_at')->get();
+        // Sortiert nach effective_from, nicht nach created_at: beide Zeilen
+        // entstehen im SELBEN Request und haben damit denselben Zeitstempel.
+        // Welche davon zuerst kommt, entscheidet die Datenbank dann frei -
+        // SQLite und MySQL antworten unterschiedlich. effective_from ist
+        // ohnehin die richtige Reihenfolge fuer einen Verlauf: der
+        // Bestandseintrag (ohne Beginn) steht vor dem neuen ab Stichtag.
+        $entries = ContractHistory::where('customer_id', $customer->id)
+            ->orderBy('effective_from')->get();
         $this->assertCount(2, $entries);
         $this->assertSame('AOK', $entries[0]->provider);
         $this->assertSame(
-            \Carbon\CarbonImmutable::parse($expectedEffective)->subDay()->toDateString(),
+            CarbonImmutable::parse($expectedEffective)->subDay()->toDateString(),
             $entries[0]->effective_until?->toDateString(),
         );
         $this->assertSame('TK', $entries[1]->provider);

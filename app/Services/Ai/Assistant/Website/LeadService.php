@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Website;
 
 use App\Models\AiConversationEvent;
@@ -71,7 +72,7 @@ class LeadService
         if ($ticket) {
             $ticket->messages()->create([
                 'sender_id' => null,
-                'body' => "Ergänzung durch den Website-Assistenten:\n" . $zusammenfassung,
+                'body' => "Ergänzung durch den Website-Assistenten:\n".$zusammenfassung,
                 'is_internal' => true,
             ]);
         } else {
@@ -81,7 +82,7 @@ class LeadService
                 'customer_id' => $lead->customer_id,
                 'type' => $reason === 'beschwerde' ? 'complaint' : 'other',
                 'status' => 'open',
-                'subject' => 'Website-Interessent: ' . $lead->intentLabel(),
+                'subject' => 'Website-Interessent: '.$lead->intentLabel(),
                 'description' => $zusammenfassung,
                 'priority' => $reason === 'angebot' ? 'hoch' : 'mittel',
                 'source' => 'website',
@@ -100,10 +101,10 @@ class LeadService
             [
                 'type' => NotificationService::TYPE_MESSAGE,
                 'title' => '🌐 Neuer Interessent von der Website',
-                'body' => $lead->displayName() . ' – ' . $lead->intentLabel()
-                    . ($ticket ? ' · Vorgang ' . $ticket->ticket_number : ''),
+                'body' => $lead->displayName().' – '.$lead->intentLabel()
+                    .($ticket ? ' · Vorgang '.$ticket->ticket_number : ''),
                 'link' => route('admin.leads.index'),
-                'dedup_key' => 'ai-lead-' . $lead->id,
+                'dedup_key' => 'ai-lead-'.$lead->id,
             ]
         );
 
@@ -118,8 +119,8 @@ class LeadService
     public function summary(AiLead $lead, string $reason, string $aiNote = ''): string
     {
         $zeilen = [
-            'Anliegen: ' . $lead->intentLabel(),
-            'Grund der Übergabe: ' . match ($reason) {
+            'Anliegen: '.$lead->intentLabel(),
+            'Grund der Übergabe: '.match ($reason) {
                 'angebot' => 'Angaben für ein Angebot liegen vor',
                 'mitarbeiter_gewuenscht' => 'Interessent wünscht einen Mitarbeiter',
                 'beschwerde' => 'Beschwerde',
@@ -128,20 +129,20 @@ class LeadService
         ];
 
         foreach ($lead->contactData() as $key => $wert) {
-            $zeilen[] = ucfirst($key) . ': ' . Str::limit((string) $wert, 120);
+            $zeilen[] = ucfirst($key).': '.Str::limit((string) $wert, 120);
         }
         foreach ($lead->collectedData() as $key => $wert) {
             if (in_array($key, ['name', 'email', 'phone'], true)) {
                 continue;
             }
-            $zeilen[] = $this->fieldLabel($key) . ': ' . Str::limit((string) $wert, 150);
+            $zeilen[] = $this->fieldLabel($key).': '.Str::limit((string) $wert, 150);
         }
 
         if (trim($aiNote) !== '') {
-            $zeilen[] = 'KI-Notiz: ' . Str::limit(trim($aiNote), 300);
+            $zeilen[] = 'KI-Notiz: '.Str::limit(trim($aiNote), 300);
         }
 
-        $zeilen[] = 'Nächster Schritt: ' . ($lead->next_action ?: 'Interessent kontaktieren');
+        $zeilen[] = 'Nächster Schritt: '.($lead->next_action ?: 'Interessent kontaktieren');
 
         return implode("\n", $zeilen);
     }

@@ -12,8 +12,7 @@ use Illuminate\Support\Facades\Schema;
  * keine verschluesselten Strings aufnehmen (auf MySQL schlaegt das mit
  * "Invalid JSON text" fehl), daher zuerst auf text umstellen.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('ai_decisions', function (Blueprint $table) {

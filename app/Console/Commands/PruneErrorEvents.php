@@ -26,7 +26,7 @@ class PruneErrorEvents extends Command
             ->where('last_seen_at', '<', $grenze)
             ->delete();
 
-        $this->info($geloescht . ' erledigte Fehlereintraege aelter als ' . $tage . ' Tage geloescht.');
+        $this->info($geloescht.' erledigte Fehlereintraege aelter als '.$tage.' Tage geloescht.');
 
         return self::SUCCESS;
     }

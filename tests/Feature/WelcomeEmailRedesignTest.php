@@ -18,7 +18,7 @@ class WelcomeEmailRedesignTest extends TestCase
         $user = User::factory()->create(array_merge(['role' => 'customer', 'name' => 'Ahmad Albhre', 'email' => 'ahmad@kunde.de'], $userAttrs));
         return Customer::create(array_merge([
             'user_id' => $user->id,
-            'customer_number' => 'K-' . uniqid(),
+            'customer_number' => 'K-'.uniqid(),
             'birth_date' => '1990-01-01',
         ], $custAttrs));
     }
@@ -97,7 +97,7 @@ class WelcomeEmailRedesignTest extends TestCase
         $customer = $this->customer();
         $url = $this->magicUrl($customer->user);
 
-        $this->get($url . 'tampered')->assertForbidden();
+        $this->get($url.'tampered')->assertForbidden();
         $this->assertGuest();
     }
 

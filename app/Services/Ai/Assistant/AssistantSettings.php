@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant;
 
 use App\Models\SystemSetting;

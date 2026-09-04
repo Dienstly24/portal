@@ -25,7 +25,7 @@ class InternetContractExtractionTest extends TestCase
         $user = User::factory()->create(['role' => 'customer']);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(Str::random(6)),
+            'customer_number' => 'C-'.strtoupper(Str::random(6)),
         ]);
     }
 

@@ -18,7 +18,7 @@ class CustomerMatchingServiceTest extends TestCase
         $user = User::factory()->create(['role' => 'customer', 'name' => $name, 'email' => $email]);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5($email), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5($email), 0, 8)),
             'birth_date' => $birthDate,
             'phone' => $phone,
         ]);
@@ -29,7 +29,7 @@ class CustomerMatchingServiceTest extends TestCase
         // Geburtsdatum (40) + Name exakt (30) + E-Mail (20) + Telefon-Bonus (5) = 95 > 90
         $this->makeCustomer('Anna Beispiel', 'anna@example.com', '1990-05-04', '030123456');
 
-        $result = (new CustomerMatchingService())->match([
+        $result = (new CustomerMatchingService)->match([
             'full_name' => 'Anna Beispiel',
             'birth_date' => '1990-05-04',
             'email' => 'anna@example.com',
@@ -46,7 +46,7 @@ class CustomerMatchingServiceTest extends TestCase
         // Geburtsdatum (40) + Name exakt (30) = 70 -> Bestätigungsstufe, nicht automatisch
         $this->makeCustomer('Max Mustermann', 'max@example.com', '1980-01-01');
 
-        $result = (new CustomerMatchingService())->match([
+        $result = (new CustomerMatchingService)->match([
             'full_name' => 'Max Mustermann',
             'birth_date' => '1980-01-01',
         ]);
@@ -73,7 +73,7 @@ class CustomerMatchingServiceTest extends TestCase
         ]);
         $this->assertCount(0, $customer->addresses); // keine strukturierte Adress-Zeile
 
-        $result = (new CustomerMatchingService())->match([
+        $result = (new CustomerMatchingService)->match([
             'full_name' => 'Lea Beispiel',
             'birth_date' => '1988-07-07',
             'street' => 'Mühlenstraße 26a',
@@ -89,7 +89,7 @@ class CustomerMatchingServiceTest extends TestCase
     {
         $this->makeCustomer('Peter Beispiel', 'peter@example.com', '1975-03-03');
 
-        $result = (new CustomerMatchingService())->match([
+        $result = (new CustomerMatchingService)->match([
             'full_name' => 'Völlig Unbekannt',
             'email' => 'unbekannt@nirgendwo.invalid',
         ]);
@@ -101,7 +101,7 @@ class CustomerMatchingServiceTest extends TestCase
     {
         $this->makeCustomer('Irrelevant Person', 'irrelevant@example.com');
 
-        $result = (new CustomerMatchingService())->match([]);
+        $result = (new CustomerMatchingService)->match([]);
 
         $this->assertFalse($result->hasMatch());
         $this->assertSame(0, $result->score);
@@ -112,7 +112,7 @@ class CustomerMatchingServiceTest extends TestCase
         $this->makeCustomer('Julia Schmidt', 'julia1@example.com', '1985-06-15');
         $target = $this->makeCustomer('Julia Schmidt', 'julia2@example.com', '1992-11-20');
 
-        $result = (new CustomerMatchingService())->match([
+        $result = (new CustomerMatchingService)->match([
             'full_name' => 'Julia Schmidt',
             'birth_date' => '1992-11-20',
         ]);
@@ -133,7 +133,7 @@ class CustomerMatchingServiceTest extends TestCase
             'country' => 'Deutschland',
         ]);
 
-        $result = (new CustomerMatchingService())->match([
+        $result = (new CustomerMatchingService)->match([
             'full_name' => 'Klaus Weber',
             'street' => 'Musterstrasse 12',
             'zip' => '12345',

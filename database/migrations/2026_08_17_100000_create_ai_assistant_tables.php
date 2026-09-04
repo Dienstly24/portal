@@ -21,8 +21,7 @@ use Illuminate\Support\Facades\Schema;
  * 3) ai_knowledge_entries  freigegebene Wissensbasis (Abschnitt 19); was
  *                       hier nicht steht, darf die KI nicht behaupten.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('ai_conversations', function (Blueprint $table) {

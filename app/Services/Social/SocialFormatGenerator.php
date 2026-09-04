@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Social;
 
 use App\Models\Banner;
@@ -24,8 +25,8 @@ class SocialFormatGenerator
     /** format => [Breite, Hoehe, Label fuer die Oberflaeche] */
     public const FORMATS = [
         'quadrat' => [1080, 1080, 'Feed-Post (1:1)'],
-        'story'   => [1080, 1920, 'Story / Reel (9:16)'],
-        'quer'    => [1200, 630, 'Link-Vorschau (1200x630)'],
+        'story' => [1080, 1920, 'Story / Reel (9:16)'],
+        'quer' => [1200, 630, 'Link-Vorschau (1200x630)'],
     ];
 
     /** Dunkler Markenhintergrund fuer eingepasste Motive (Gruen-Graphit). */
@@ -38,7 +39,7 @@ class SocialFormatGenerator
             return [];
         }
         $src = $this->loadSource($banner->media_path);
-        if (!$src) {
+        if (! $src) {
             return [];
         }
 
@@ -65,7 +66,7 @@ class SocialFormatGenerator
     public function delete(Banner $banner): void
     {
         try {
-            Storage::disk('public')->deleteDirectory('banners/social/' . $banner->id);
+            Storage::disk('public')->deleteDirectory('banners/social/'.$banner->id);
         } catch (\Throwable $e) {
         }
     }
@@ -73,7 +74,7 @@ class SocialFormatGenerator
     /** Fester, vorhersagbarer Ablageort je Format. */
     public static function path(Banner $banner, string $format): string
     {
-        return 'banners/social/' . $banner->id . '/' . $format . '.jpg';
+        return 'banners/social/'.$banner->id.'/'.$format.'.jpg';
     }
 
     /** Bereits vorhandene Formate (format => Pfad) ohne Neuberechnung. */
@@ -94,7 +95,7 @@ class SocialFormatGenerator
     private function loadSource(string $relPath)
     {
         $disk = Storage::disk('public');
-        if (!$disk->exists($relPath)) {
+        if (! $disk->exists($relPath)) {
             return null;
         }
         $file = $disk->path($relPath);

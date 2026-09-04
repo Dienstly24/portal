@@ -1,5 +1,7 @@
 <?php
+
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -8,13 +10,14 @@ use Illuminate\Support\Str;
  * wurde aber nie beschrieben - Verbesserungsplan Paket A3).
  * type: campaign | contract_switch | ...
  */
-class EmailLog extends Model {
+class EmailLog extends Model
+{
     protected $keyType = 'string';
     public $incrementing = false;
-    protected $fillable = ['campaign_id','user_id','email','subject','type','status'];
+    protected $fillable = ['campaign_id', 'user_id', 'email', 'subject', 'type', 'status'];
     protected static function boot() {
         parent::boot();
-        static::creating(fn($m) => $m->id = (string) Str::uuid());
+        static::creating(fn ($m) => $m->id = (string) Str::uuid());
     }
     public function campaign() { return $this->belongsTo(EmailCampaign::class, 'campaign_id'); }
     public function user() { return $this->belongsTo(User::class); }

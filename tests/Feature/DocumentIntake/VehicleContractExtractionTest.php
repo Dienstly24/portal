@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\DocumentIntake;
 
-use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\User;
@@ -28,7 +27,7 @@ class VehicleContractExtractionTest extends TestCase
         $user = User::factory()->create(['role' => 'customer']);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(Str::random(6)),
+            'customer_number' => 'C-'.strtoupper(Str::random(6)),
         ]);
     }
 
@@ -87,7 +86,7 @@ class VehicleContractExtractionTest extends TestCase
             ]),
         ]);
 
-        $result = (new ClaudeDocumentAiProvider())->analyze('BYTES', 'application/pdf', '', false);
+        $result = (new ClaudeDocumentAiProvider)->analyze('BYTES', 'application/pdf', '', false);
 
         $kfz = $result['data']['kfz'];
         $this->assertTrue($kfz['has_teilkasko']);
@@ -118,7 +117,7 @@ class VehicleContractExtractionTest extends TestCase
             ]),
         ]);
 
-        $result = (new ClaudeDocumentAiProvider())->analyze('BYTES', 'application/pdf', '', false);
+        $result = (new ClaudeDocumentAiProvider)->analyze('BYTES', 'application/pdf', '', false);
         $v = $result['data']['versicherung'];
 
         $this->assertArrayNotHasKey('contract_number', $v);

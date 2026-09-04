@@ -16,7 +16,7 @@ class NafiKfzAntragParserTest extends TestCase
     /** Zeile "Beschriftung:" links, Wert rechtsbuendig. */
     private function row(string $label, string $value): string
     {
-        return ' ' . str_pad($label . ':', 60) . str_pad($value, 60, ' ', STR_PAD_LEFT);
+        return ' '.str_pad($label.':', 60).str_pad($value, 60, ' ', STR_PAD_LEFT);
     }
 
     private function antragText(string $kasko = 'Ohne Kasko', string $zahler = 'Der Versicherungsnehmer'): string
@@ -93,7 +93,7 @@ class NafiKfzAntragParserTest extends TestCase
 
     public function test_reads_person_contract_vehicle_and_bank(): void
     {
-        $r = (new NafiKfzAntragParser())->parse($this->antragText());
+        $r = (new NafiKfzAntragParser)->parse($this->antragText());
 
         $this->assertNotNull($r);
         $this->assertSame('kfz_vertrag', $r['type']);
@@ -145,7 +145,7 @@ class NafiKfzAntragParserTest extends TestCase
 
     public function test_application_has_no_contract_number(): void
     {
-        $r = (new NafiKfzAntragParser())->parse($this->antragText());
+        $r = (new NafiKfzAntragParser)->parse($this->antragText());
 
         // Ein Antrag hat keine Vertragsnummer; NAFI-Vorgangs-ID und eVB sind
         // keine - sie stehen nur in der Zusammenfassung.
@@ -157,15 +157,15 @@ class NafiKfzAntragParserTest extends TestCase
 
     public function test_coverage_comes_from_the_kasko_field(): void
     {
-        $ohne = (new NafiKfzAntragParser())->parse($this->antragText());
+        $ohne = (new NafiKfzAntragParser)->parse($this->antragText());
         $this->assertFalse($ohne['data']['kfz']['has_teilkasko']);
         $this->assertFalse($ohne['data']['kfz']['has_vollkasko']);
 
-        $voll = (new NafiKfzAntragParser())->parse($this->antragText('Vollkasko mit 500 EUR SB'));
+        $voll = (new NafiKfzAntragParser)->parse($this->antragText('Vollkasko mit 500 EUR SB'));
         $this->assertTrue($voll['data']['kfz']['has_vollkasko']);
         $this->assertTrue($voll['data']['kfz']['has_teilkasko']);
 
-        $teil = (new NafiKfzAntragParser())->parse($this->antragText('Teilkasko mit 150 EUR SB'));
+        $teil = (new NafiKfzAntragParser)->parse($this->antragText('Teilkasko mit 150 EUR SB'));
         $this->assertTrue($teil['data']['kfz']['has_teilkasko']);
         $this->assertFalse($teil['data']['kfz']['has_vollkasko']);
     }
@@ -173,7 +173,7 @@ class NafiKfzAntragParserTest extends TestCase
     public function test_foreign_account_is_not_taken(): void
     {
         // Zahlt ein Dritter, gehoert sein Konto NICHT in die Kundenakte.
-        $r = (new NafiKfzAntragParser())->parse($this->antragText(zahler: 'Eine andere Person'));
+        $r = (new NafiKfzAntragParser)->parse($this->antragText(zahler: 'Eine andere Person'));
 
         $this->assertSame([], $r['data']['bank']);
         // Der Rest wird trotzdem gelesen.
@@ -182,7 +182,7 @@ class NafiKfzAntragParserTest extends TestCase
 
     public function test_ignores_unrelated_documents(): void
     {
-        $parser = new NafiKfzAntragParser();
+        $parser = new NafiKfzAntragParser;
 
         $this->assertNull($parser->parse('Irgendein anderes Dokument'));
         $this->assertNull($parser->parse("Antrag Kraftfahrtversicherung\nohne jedes Fahrzeug"));

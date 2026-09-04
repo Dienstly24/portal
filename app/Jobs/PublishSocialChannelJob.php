@@ -69,7 +69,7 @@ class PublishSocialChannelJob implements ShouldQueue
                 'publish_error' => mb_substr($e->getMessage(), 0, 1000),
             ])->save();
 
-            Log::warning('Social-Sofortversand fehlgeschlagen (Kanal ' . $channel->id . '): ' . $e->getMessage());
+            Log::warning('Social-Sofortversand fehlgeschlagen (Kanal '.$channel->id.'): '.$e->getMessage());
             $this->melde($channel, false, $e->getMessage());
         }
     }
@@ -92,16 +92,16 @@ class PublishSocialChannelJob implements ShouldQueue
             Notify::push((int) $empfaenger, [
                 'type' => NotificationService::TYPE_SYSTEM,
                 'title' => $erfolg
-                    ? 'Social-Media: ' . $label . ' veröffentlicht'
-                    : 'Social-Media: ' . $label . ' fehlgeschlagen',
-                'body' => ($banner?->title ? $banner->title . ' – ' : '')
-                    . ($erfolg ? 'Der Beitrag ist online.' : mb_substr((string) $fehler, 0, 200)),
+                    ? 'Social-Media: '.$label.' veröffentlicht'
+                    : 'Social-Media: '.$label.' fehlgeschlagen',
+                'body' => ($banner?->title ? $banner->title.' – ' : '')
+                    .($erfolg ? 'Der Beitrag ist online.' : mb_substr((string) $fehler, 0, 200)),
                 'link' => $banner ? route('admin.banners.social', $banner->id) : null,
-                'dedup_key' => 'social-publish-' . $channel->id,
+                'dedup_key' => 'social-publish-'.$channel->id,
             ]);
         } catch (\Throwable $e) {
             // Die Glocke darf den Versand nie nachtraeglich scheitern lassen.
-            Log::warning('Social-Glocke fehlgeschlagen: ' . $e->getMessage());
+            Log::warning('Social-Glocke fehlgeschlagen: '.$e->getMessage());
         }
     }
 
@@ -116,7 +116,7 @@ class PublishSocialChannelJob implements ShouldQueue
                 ->whereNull('external_post_id')
                 ->update([
                     'publish_started_at' => null,
-                    'publish_error' => mb_substr('Abgebrochen: ' . $e->getMessage(), 0, 1000),
+                    'publish_error' => mb_substr('Abgebrochen: '.$e->getMessage(), 0, 1000),
                 ]);
         } catch (\Throwable $ignored) {
         }

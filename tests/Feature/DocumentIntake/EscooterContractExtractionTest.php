@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\Document;
 use App\Models\User;
 use App\Services\DocumentIntake\DocumentIntakeService;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -26,7 +27,7 @@ class EscooterContractExtractionTest extends TestCase
         $user = User::factory()->create(['role' => 'customer']);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(Str::random(6)),
+            'customer_number' => 'C-'.strtoupper(Str::random(6)),
         ]);
     }
 
@@ -87,7 +88,7 @@ class EscooterContractExtractionTest extends TestCase
         $customer = $this->customer();
         $contract = app(DocumentIntakeService::class)->createContractFromExtraction($this->document(), $customer, null);
 
-        $this->assertSame('2027-02-28', \Carbon\Carbon::parse($contract->end_date)->format('Y-m-d'));
+        $this->assertSame('2027-02-28', Carbon::parse($contract->end_date)->format('Y-m-d'));
     }
 
     public function test_end_date_follows_a_changed_start_date(): void
@@ -98,6 +99,6 @@ class EscooterContractExtractionTest extends TestCase
         $contract = app(DocumentIntakeService::class)->createContractFromExtraction($this->document(), $customer, null);
 
         $contract->update(['start_date' => '2027-03-10']);
-        $this->assertSame('2028-02-29', \Carbon\Carbon::parse($contract->fresh()->end_date)->format('Y-m-d'));
+        $this->assertSame('2028-02-29', Carbon::parse($contract->fresh()->end_date)->format('Y-m-d'));
     }
 }

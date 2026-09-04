@@ -2,12 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Mail\CustomerPortalReminderMail;
 use App\Mail\CustomerWelcomeMail;
 use App\Mail\PasswordResetMail;
 use App\Models\Customer;
 use App\Models\User;
 use App\Services\Portal\PortalAccessService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
@@ -38,7 +41,7 @@ class PortalAccountManagementTest extends TestCase
         ], $userAttrs));
 
         return Customer::create(array_merge([
-            'user_id' => $user->id, 'customer_number' => 'K-' . uniqid(), 'birth_date' => '1985-03-15',
+            'user_id' => $user->id, 'customer_number' => 'K-'.uniqid(), 'birth_date' => '1985-03-15',
         ], $customerAttrs));
     }
 
@@ -117,7 +120,7 @@ class PortalAccountManagementTest extends TestCase
                 && str_contains($html, 'portal.dienstly24.de')
                 && str_contains($html, 'erika@kunde.de')
                 && str_contains($html, 'Passwort vergessen')
-                && !str_contains($html, '15.03.1985'); // das echte Datum steht NIE in der Mail
+                && ! str_contains($html, '15.03.1985'); // das echte Datum steht NIE in der Mail
         });
     }
 
@@ -496,12 +499,12 @@ class PortalAccountManagementTest extends TestCase
         // routes/console.php sind deutsche ORTSZEIT (app.schedule_timezone),
         // die Anwendung rechnet aber in UTC - deshalb wird hier der
         // Zeitpunkt angesteuert, zu dem die Uhr in Deutschland 09:00 zeigt.
-        $this->travelTo(\Illuminate\Support\Carbon::now('Europe/Berlin')->setTime(9, 0));
-        \Illuminate\Support\Facades\Artisan::call('schedule:run');
+        $this->travelTo(Carbon::now('Europe/Berlin')->setTime(9, 0));
+        Artisan::call('schedule:run');
 
         // Ohne nutzbares Passwort: KEINE "Bitte einloggen"-Mail (Sackgasse)
-        Mail::assertNotQueued(\App\Mail\CustomerPortalReminderMail::class, fn ($m) => $m->hasTo('ohne-pw@kunde.de'));
+        Mail::assertNotQueued(CustomerPortalReminderMail::class, fn ($m) => $m->hasTo('ohne-pw@kunde.de'));
         // Mit nutzbarem Passwort: Reminder geht raus
-        Mail::assertQueued(\App\Mail\CustomerPortalReminderMail::class, fn ($m) => $m->hasTo('mit-pw@kunde.de'));
+        Mail::assertQueued(CustomerPortalReminderMail::class, fn ($m) => $m->hasTo('mit-pw@kunde.de'));
     }
 }

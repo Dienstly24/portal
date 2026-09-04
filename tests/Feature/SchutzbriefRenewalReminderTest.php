@@ -6,7 +6,9 @@ use App\Mail\SchutzbriefRenewalMail;
 use App\Models\Contract;
 use App\Models\ContractSwitchReminder;
 use App\Models\Customer;
+use App\Models\Document;
 use App\Models\User;
+use App\Services\DocumentIntake\DocumentIntakeService;
 use App\Services\SchutzbriefRenewalReminderService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -37,7 +39,7 @@ class SchutzbriefRenewalReminderTest extends TestCase
         $user = User::factory()->create(['role' => 'customer', 'email' => $email]);
         $customer = Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5((string) $user->id), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5((string) $user->id), 0, 8)),
         ]);
         return Contract::create([
             'customer_id' => $customer->id, 'type' => 'schutzbrief', 'subtype' => 'basis',
@@ -142,9 +144,9 @@ class SchutzbriefRenewalReminderTest extends TestCase
         $user = User::factory()->create(['role' => 'customer']);
         $customer = Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5((string) $user->id), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5((string) $user->id), 0, 8)),
         ]);
-        $doc = \App\Models\Document::create([
+        $doc = Document::create([
             'customer_id' => $customer->id, 'category' => 'contract', 'file_name' => 'adac.png',
             'file_path' => 'adac.png', 'disk' => 'local', 'ai_type' => 'versicherungsvertrag',
             'ai_extracted' => ['versicherung' => [
@@ -153,7 +155,7 @@ class SchutzbriefRenewalReminderTest extends TestCase
             ]],
         ]);
 
-        $contract = app(\App\Services\DocumentIntake\DocumentIntakeService::class)
+        $contract = app(DocumentIntakeService::class)
             ->createContractFromExtraction($doc, $customer, null);
 
         $this->assertNotNull($contract);

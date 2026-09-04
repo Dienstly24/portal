@@ -37,8 +37,8 @@ class DraftKnowledgeBaseEntries extends Command
     public function handle(): int
     {
         $sprache = strtolower(trim((string) $this->option('sprache')));
-        if (!in_array($sprache, ['alle', 'de', 'ar'], true)) {
-            $this->error('Unbekannte Sprache: ' . $sprache . ' (erlaubt: de, ar, alle)');
+        if (! in_array($sprache, ['alle', 'de', 'ar'], true)) {
+            $this->error('Unbekannte Sprache: '.$sprache.' (erlaubt: de, ar, alle)');
 
             return self::FAILURE;
         }
@@ -47,7 +47,7 @@ class DraftKnowledgeBaseEntries extends Command
         if ($seiten->isEmpty()) {
             $this->warn('Keine aktiven Leistungsseiten vorhanden.');
             $this->line('Der Befehl uebertraegt vorhandene Texte - ohne Leistungsseiten gibt es nichts zu uebertragen.');
-            $this->line("Leistungsseiten pflegen: /admin/service-pages");
+            $this->line('Leistungsseiten pflegen: /admin/service-pages');
 
             return self::FAILURE;
         }
@@ -74,12 +74,12 @@ class DraftKnowledgeBaseEntries extends Command
             ->all();
         $neu = array_values(array_filter(
             $kandidaten,
-            fn ($k) => !in_array($k['source_key'], $vorhanden, true)
+            fn ($k) => ! in_array($k['source_key'], $vorhanden, true)
         ));
 
-        $this->info('Geprueft: ' . $seiten->count() . ' Leistungsseiten, ' . count($kandidaten) . ' uebertragbare Texte.');
-        $this->line('  Bereits in der Wissensbasis: ' . count($vorhanden));
-        $this->line('  Neu:                         ' . count($neu));
+        $this->info('Geprueft: '.$seiten->count().' Leistungsseiten, '.count($kandidaten).' uebertragbare Texte.');
+        $this->line('  Bereits in der Wissensbasis: '.count($vorhanden));
+        $this->line('  Neu:                         '.count($neu));
 
         if ($neu === []) {
             $this->newLine();
@@ -99,7 +99,7 @@ class DraftKnowledgeBaseEntries extends Command
             ], $neu)
         );
 
-        if (!$this->option('schreiben')) {
+        if (! $this->option('schreiben')) {
             $this->newLine();
             $this->line('Nur angezeigt, nichts gespeichert. Zum Anlegen (INAKTIV, zur Freigabe):');
             $this->line('  php artisan ki:wissensbasis-vorschlag --schreiben');
@@ -112,7 +112,7 @@ class DraftKnowledgeBaseEntries extends Command
         }
 
         $this->newLine();
-        $this->info(count($neu) . ' Entwuerfe angelegt - alle INAKTIV.');
+        $this->info(count($neu).' Entwuerfe angelegt - alle INAKTIV.');
         $this->line('Freigeben unter /admin/ki-wissensbasis (Filter "Nur Entwürfe", Sammelfreigabe).');
         $this->line('Vorher lesen: der Assistent gibt diese Texte sinngemaess an Kunden weiter.');
 
@@ -129,14 +129,14 @@ class DraftKnowledgeBaseEntries extends Command
         $kandidaten = [];
 
         foreach (['de', 'ar'] as $lang) {
-            $titel = trim((string) $seite->{'title_' . $lang});
-            $einleitung = trim((string) $seite->{'intro_' . $lang});
+            $titel = trim((string) $seite->{'title_'.$lang});
+            $einleitung = trim((string) $seite->{'intro_'.$lang});
             if ($titel === '' || $einleitung === '') {
                 continue;
             }
 
             $kandidaten[] = [
-                'source_key' => 'servicepage:' . $seite->slug . ':produkt:' . $lang,
+                'source_key' => 'servicepage:'.$seite->slug.':produkt:'.$lang,
                 'title' => Str::limit($this->produktTitel($titel, $lang), 250, ''),
                 'category' => 'produkt',
                 'language' => $lang,
@@ -147,21 +147,21 @@ class DraftKnowledgeBaseEntries extends Command
 
         foreach ((array) ($seite->faq ?? []) as $index => $eintrag) {
             foreach (['de', 'ar'] as $lang) {
-                $frage = trim((string) ($eintrag['q_' . $lang] ?? ''));
-                $antwort = trim((string) ($eintrag['a_' . $lang] ?? ''));
+                $frage = trim((string) ($eintrag['q_'.$lang] ?? ''));
+                $antwort = trim((string) ($eintrag['a_'.$lang] ?? ''));
                 if ($frage === '' || $antwort === '') {
                     continue;
                 }
 
                 $kandidaten[] = [
-                    'source_key' => 'servicepage:' . $seite->slug . ':faq:' . $index . ':' . $lang,
+                    'source_key' => 'servicepage:'.$seite->slug.':faq:'.$index.':'.$lang,
                     'title' => Str::limit($frage, 250, ''),
                     'category' => 'faq',
                     'language' => $lang,
                     // Die Antwort woertlich, davor die Leistung als Bezug -
                     // ohne ihn steht "Die Beratung ist kostenlos" ohne Thema
                     // in der Wissensbasis und passt scheinbar ueberall.
-                    'content' => $this->bezug($seite, $lang) . "\n\n" . $antwort,
+                    'content' => $this->bezug($seite, $lang)."\n\n".$antwort,
                     'keywords' => $this->stichwoerter($seite, $frage),
                 ];
             }
@@ -172,14 +172,14 @@ class DraftKnowledgeBaseEntries extends Command
 
     private function produktTitel(string $titel, string $lang): string
     {
-        return $lang === 'ar' ? 'الخدمة: ' . $titel : 'Leistung: ' . $titel;
+        return $lang === 'ar' ? 'الخدمة: '.$titel : 'Leistung: '.$titel;
     }
 
     private function bezug(ServicePage $seite, string $lang): string
     {
-        $titel = trim((string) ($seite->{'title_' . $lang} ?: $seite->title_de));
+        $titel = trim((string) ($seite->{'title_'.$lang} ?: $seite->title_de));
 
-        return $lang === 'ar' ? 'يخص: ' . $titel : 'Betrifft: ' . $titel;
+        return $lang === 'ar' ? 'يخص: '.$titel : 'Betrifft: '.$titel;
     }
 
     /**
@@ -190,20 +190,20 @@ class DraftKnowledgeBaseEntries extends Command
      */
     private function produktInhalt(ServicePage $seite, string $lang): string
     {
-        $teile = [trim((string) $seite->{'intro_' . $lang})];
+        $teile = [trim((string) $seite->{'intro_'.$lang})];
 
-        $punkte = $this->zeilen((string) $seite->{'highlights_' . $lang});
+        $punkte = $this->zeilen((string) $seite->{'highlights_'.$lang});
         if ($punkte !== []) {
-            $teile[] = ($lang === 'ar' ? 'ما بنقدّمه:' : 'Das bieten wir:') . "\n"
-                . implode("\n", array_map(fn ($p) => '- ' . $p, $punkte));
+            $teile[] = ($lang === 'ar' ? 'ما بنقدّمه:' : 'Das bieten wir:')."\n"
+                .implode("\n", array_map(fn ($p) => '- '.$p, $punkte));
         }
 
         // Die Anbieterliste ist sprachneutral (Eigennamen) und steht nur
         // einmal auf der Seite - sie gilt fuer beide Sprachfassungen.
         $anbieter = $this->zeilen((string) $seite->providers);
         if ($anbieter !== []) {
-            $teile[] = ($lang === 'ar' ? 'شركات منتعامل معها:' : 'Anbieter, mit denen wir arbeiten:') . ' '
-                . implode(', ', $anbieter);
+            $teile[] = ($lang === 'ar' ? 'شركات منتعامل معها:' : 'Anbieter, mit denen wir arbeiten:').' '
+                .implode(', ', $anbieter);
         }
 
         return Str::limit(implode("\n\n", $teile), 7900, '');

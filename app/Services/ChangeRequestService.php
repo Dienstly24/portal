@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services;
 
 use App\Jobs\VerifyChangeRequestProofJob;
@@ -14,8 +15,11 @@ use App\Models\Document;
 use App\Models\User;
 use App\Services\ChangeRequest\ChangeProofPolicy;
 use App\Services\ChangeRequest\InsurerNotificationBuilder;
+use App\Services\Notifications\NotificationService;
+use App\Support\Facades\Notify;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Zentrale Stelle für Kundenänderungen: Einreichen (inkl. Nachweis),
@@ -67,10 +71,10 @@ class ChangeRequestService
 
         $recipients = User::whereIn('role', ['admin', 'manager', 'support'])
             ->where('is_active', true)->pluck('id');
-        \App\Support\Facades\Notify::pushMany($recipients, [
-            'type' => \App\Services\Notifications\NotificationService::TYPE_CHANGE_REQUEST,
+        Notify::pushMany($recipients, [
+            'type' => NotificationService::TYPE_CHANGE_REQUEST,
             'change_request_id' => $changeRequest->id,
-            'dedup_key' => 'change-request-' . $changeRequest->id,
+            'dedup_key' => 'change-request-'.$changeRequest->id,
         ]);
 
         ActivityLog::create([
@@ -100,14 +104,14 @@ class ChangeRequestService
     {
         $stored = 0;
         foreach ($proofFiles as $kind => $file) {
-            if (!$file instanceof UploadedFile) {
+            if (! $file instanceof UploadedFile) {
                 continue;
             }
             ChangeRequestDocument::create([
                 'change_request_id' => $request->id,
                 'kind' => array_key_exists($kind, ChangeRequestDocument::KINDS) ? $kind : 'other',
                 'file_name' => $file->getClientOriginalName(),
-                'file_path' => $file->store('customers/' . $customer->id . '/nachweise', 'local'),
+                'file_path' => $file->store('customers/'.$customer->id.'/nachweise', 'local'),
                 'disk' => 'local',
                 'mime' => $file->getClientMimeType() ?: null,
                 'size' => $file->getSize() ?: null,
@@ -207,17 +211,17 @@ class ChangeRequestService
     public function notifyCustomer(CustomerChangeRequest $request, string $action, ?string $notes): void
     {
         $userId = $request->customer?->user_id;
-        if (!$userId) {
+        if (! $userId) {
             return;
         }
         $approved = $action === 'approve';
-        \App\Support\Facades\Notify::push($userId, [
-            'type' => \App\Services\Notifications\NotificationService::TYPE_CHANGE_REQUEST,
-            'title' => 'Änderungsanfrage ' . ($approved ? 'genehmigt' : 'abgelehnt'),
-            'body' => 'Ihre Änderung (' . $request->typeLabel() . ') wurde '
-                . ($approved ? 'genehmigt und übernommen.' : 'abgelehnt.' . ($notes ? ' Grund: ' . \Illuminate\Support\Str::limit($notes, 120) : '')),
+        Notify::push($userId, [
+            'type' => NotificationService::TYPE_CHANGE_REQUEST,
+            'title' => 'Änderungsanfrage '.($approved ? 'genehmigt' : 'abgelehnt'),
+            'body' => 'Ihre Änderung ('.$request->typeLabel().') wurde '
+                .($approved ? 'genehmigt und übernommen.' : 'abgelehnt.'.($notes ? ' Grund: '.Str::limit($notes, 120) : '')),
             'link' => route('portal.change_requests'),
-            'dedup_key' => 'change-request-decision-' . $request->id,
+            'dedup_key' => 'change-request-decision-'.$request->id,
         ]);
     }
 
@@ -236,18 +240,18 @@ class ChangeRequestService
         }
 
         $name = $request->customer?->user?->name ?: 'Kunde';
-        \App\Support\Facades\Notify::pushMany($recipients, [
-            'type' => \App\Services\Notifications\NotificationService::TYPE_CHANGE_REQUEST,
-            'title' => ($auto ? '✅ Automatisch übernommen: ' : '✅ Übernommen: ') . $request->typeLabel(),
-            'body' => $name . ' – Daten aktualisiert.'
-                . ($notifications > 0
-                    ? ' ' . $notifications . ' Mitteilung(en) an Gesellschaften liegen zum Versand bereit.'
+        Notify::pushMany($recipients, [
+            'type' => NotificationService::TYPE_CHANGE_REQUEST,
+            'title' => ($auto ? '✅ Automatisch übernommen: ' : '✅ Übernommen: ').$request->typeLabel(),
+            'body' => $name.' – Daten aktualisiert.'
+                .($notifications > 0
+                    ? ' '.$notifications.' Mitteilung(en) an Gesellschaften liegen zum Versand bereit.'
                     : ''),
             'link' => $notifications > 0
                 ? route('admin.change_requests.notifications', $request->id)
                 : route('admin.change_requests', ['status' => 'approved']),
             'change_request_id' => $request->id,
-            'dedup_key' => 'change-request-applied-' . $request->id,
+            'dedup_key' => 'change-request-applied-'.$request->id,
         ]);
     }
 
@@ -263,7 +267,7 @@ class ChangeRequestService
             'bank' => $this->applyBank($customer, $data),
             'contract' => $this->applyContract($customer, $data),
             'profile' => $this->applyProfile($customer, $data),
-            default => throw new \InvalidArgumentException('Unbekannter Change-Request-Typ: ' . $request->type),
+            default => throw new \InvalidArgumentException('Unbekannter Change-Request-Typ: '.$request->type),
         };
     }
 
@@ -271,7 +275,7 @@ class ChangeRequestService
     {
         // Genehmigte LÖSCHUNG eines Familienmitglieds (Vier-Augen-Prinzip:
         // der Kunde beantragt, ein Mitarbeiter prüft und gibt frei).
-        if (!empty($data['delete']) && !empty($data['id'])) {
+        if (! empty($data['delete']) && ! empty($data['id'])) {
             CustomerFamily::where('customer_id', $customer->id)
                 ->where('id', $data['id'])
                 ->firstOrFail()
@@ -288,13 +292,13 @@ class ChangeRequestService
             'health_insurance_number' => $data['health_insurance_number'] ?? null,
             'pension_insurance_number' => $data['pension_insurance_number'] ?? null,
             'tax_id' => $data['tax_id'] ?? null,
-        ], fn($v) => $v !== null);
+        ], fn ($v) => $v !== null);
 
-        if (!empty($data['id'])) {
+        if (! empty($data['id'])) {
             CustomerFamily::where('customer_id', $customer->id)
                 ->where('id', $data['id'])
                 ->firstOrFail()
-                ->update(array_filter($fields, fn($v) => $v !== null));
+                ->update(array_filter($fields, fn ($v) => $v !== null));
         } else {
             CustomerFamily::create(['customer_id' => $customer->id] + $fields);
         }
@@ -310,7 +314,7 @@ class ChangeRequestService
             'country' => $data['country'] ?? 'Deutschland',
         ];
 
-        if (!empty($data['id'])) {
+        if (! empty($data['id'])) {
             CustomerAddress::where('customer_id', $customer->id)
                 ->where('id', $data['id'])
                 ->firstOrFail()
@@ -328,7 +332,7 @@ class ChangeRequestService
             'value' => $data['value'] ?? '',
         ];
 
-        if (!empty($data['id'])) {
+        if (! empty($data['id'])) {
             CustomerContact::where('customer_id', $customer->id)
                 ->where('id', $data['id'])
                 ->firstOrFail()
@@ -352,12 +356,12 @@ class ChangeRequestService
         // Anpassung ueber das Portal, ein Mitarbeiter prueft und gibt frei
         // (Vier-Augen-Prinzip). Nur eine strikte Feld-Whitelist wird
         // uebernommen - status und customer_id bleiben unberuehrt.
-        if (!empty($data['id'])) {
+        if (! empty($data['id'])) {
             $contract = Contract::where('customer_id', $customer->id)
                 ->where('id', $data['id'])->firstOrFail();
 
             $update = [];
-            if (!empty($data['insurer'])) {
+            if (! empty($data['insurer'])) {
                 $update['insurer'] = $data['insurer'];
             }
             if (isset($data['type']) && in_array($data['type'], Contract::typeKeys(), true)) {
@@ -389,13 +393,13 @@ class ChangeRequestService
             'insurer' => $data['insurer'] ?? '',
             // NULL statt Leerstring: mehrere gemeldete Verträge ohne Nummer
             // würden sich am Unique-Index sonst gegenseitig blockieren.
-            'contract_number' => !empty($data['contract_number']) ? $data['contract_number'] : null,
+            'contract_number' => ! empty($data['contract_number']) ? $data['contract_number'] : null,
             // Gemeldete Verträge starten als 'pending' (In Bearbeitung),
             // damit das Team die Übernahme abschließen kann.
             'status' => 'pending',
         ]);
 
-        if (!empty($data['document_path'])) {
+        if (! empty($data['document_path'])) {
             Document::create([
                 'customer_id' => $customer->id,
                 'category' => 'contract',
@@ -414,7 +418,7 @@ class ChangeRequestService
             'birth_place', 'address_street', 'address_house_number', 'address_house_suffix', 'address_zip', 'address_city',
             'health_insurance_number', 'pension_insurance_number', 'tax_id'];
         $update = array_intersect_key($data, array_flip($allowed));
-        if (isset($update['gender']) && !array_key_exists($update['gender'], Customer::GENDERS)) {
+        if (isset($update['gender']) && ! array_key_exists($update['gender'], Customer::GENDERS)) {
             unset($update['gender']);
         }
         if ($update) {
@@ -427,15 +431,15 @@ class ChangeRequestService
         if ($user) {
             $userUpdate = [];
             if (array_key_exists('first_name', $data) || array_key_exists('last_name', $data)) {
-                $full = trim(trim((string) ($data['first_name'] ?? '')) . ' ' . trim((string) ($data['last_name'] ?? '')));
+                $full = trim(trim((string) ($data['first_name'] ?? '')).' '.trim((string) ($data['last_name'] ?? '')));
                 if ($full !== '') {
                     $userUpdate['name'] = $full;
                 }
             }
             // E-Mail nur uebernehmen, wenn gueltig und noch frei (Login bleibt
             // eindeutig; zwischen Antrag und Freigabe koennte sie belegt sein).
-            if (!empty($data['email']) && filter_var($data['email'], FILTER_VALIDATE_EMAIL)
-                && !\App\Models\User::where('email', $data['email'])->where('id', '!=', $user->id)->exists()) {
+            if (! empty($data['email']) && filter_var($data['email'], FILTER_VALIDATE_EMAIL)
+                && ! User::where('email', $data['email'])->where('id', '!=', $user->id)->exists()) {
                 $userUpdate['email'] = $data['email'];
             }
             if ($userUpdate) {

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Matching;
 
 use App\Models\ActivityLog;
@@ -108,7 +109,7 @@ class CustomerMergeService
             $duplicate->delete();
             if ($loserUser
                 && (int) $loserUser->id !== (int) $primary->user_id
-                && !Customer::where('user_id', $loserUser->id)->exists()) {
+                && ! Customer::where('user_id', $loserUser->id)->exists()) {
                 $loserUser->delete();
             }
 
@@ -116,29 +117,29 @@ class CustomerMergeService
 
             // 7) Protokoll: Audit-Log + Kunden-Timeline (nachvollziehbar).
             ActivityLog::create([
-                'user_id'     => $actorId,
-                'action'      => 'customers_merged',
+                'user_id' => $actorId,
+                'action' => 'customers_merged',
                 'entity_type' => 'customer',
-                'entity_id'   => $primary->id,
-                'meta'        => json_encode([
-                    'merged_from'        => $dupName,
+                'entity_id' => $primary->id,
+                'meta' => json_encode([
+                    'merged_from' => $dupName,
                     'merged_from_number' => $dupNumber,
-                    'into'               => $primary->user?->name,
-                    'into_number'        => $primary->customer_number,
+                    'into' => $primary->user?->name,
+                    'into_number' => $primary->customer_number,
                     // Nachvollziehbar, welcher Portal-Zugang ueberlebt hat.
-                    'portal_account'     => (int) $primary->user_id === (int) $userIdBefore ? 'hauptkunde' : 'duplikat',
-                    'moved'              => $moved,
+                    'portal_account' => (int) $primary->user_id === (int) $userIdBefore ? 'hauptkunde' : 'duplikat',
+                    'moved' => $moved,
                 ], JSON_UNESCAPED_UNICODE),
             ]);
 
             if (Schema::hasTable('customer_timeline')) {
                 CustomerTimeline::create([
                     'customer_id' => $primary->id,
-                    'user_id'     => $actorId,
-                    'type'        => 'merge',
-                    'title'       => 'Kunde zusammengefuehrt',
-                    'description' => 'Duplikat "' . ($dupName ?? 'Unbekannt') . '" (Kundennummer ' . ($dupNumber ?? '-') . ') wurde in diese Akte uebernommen.',
-                    'meta'        => ['moved' => $moved],
+                    'user_id' => $actorId,
+                    'type' => 'merge',
+                    'title' => 'Kunde zusammengefuehrt',
+                    'description' => 'Duplikat "'.($dupName ?? 'Unbekannt').'" (Kundennummer '.($dupNumber ?? '-').') wurde in diese Akte uebernommen.',
+                    'meta' => ['moved' => $moved],
                 ]);
             }
 
@@ -212,7 +213,7 @@ class CustomerMergeService
             $primary->setRelation('user', $dupUser);
             // Der Inhaber des uebernommenen Accounts hat seine Sprache im
             // Portal selbst gewaehlt - sie gilt fuer die vereinte Akte weiter.
-            if (!empty($duplicate->preferred_lang) && $duplicate->preferred_lang !== $primary->preferred_lang) {
+            if (! empty($duplicate->preferred_lang) && $duplicate->preferred_lang !== $primary->preferred_lang) {
                 $primary->preferred_lang = $duplicate->preferred_lang;
             }
             $loser = $primaryUser;
@@ -262,7 +263,7 @@ class CustomerMergeService
         if ($user->email_verified_at !== null) {
             $score += 2;
         }
-        if (isset($user->is_active) && !$user->is_active) {
+        if (isset($user->is_active) && ! $user->is_active) {
             $score -= 50;
         }
         return $score;
@@ -283,7 +284,7 @@ class CustomerMergeService
      */
     private function mergeRelationships(Customer $primary, Customer $duplicate): int
     {
-        if (!Schema::hasTable('customer_relationships')) {
+        if (! Schema::hasTable('customer_relationships')) {
             return 0;
         }
 
@@ -414,7 +415,7 @@ class CustomerMergeService
     /** Betreuer-Zuordnungen umhaengen, danach doppelte (user_id) entfernen. */
     private function mergePivot(Customer $primary, Customer $duplicate): int
     {
-        if (!Schema::hasTable(self::PIVOT_TABLE)) {
+        if (! Schema::hasTable(self::PIVOT_TABLE)) {
             return 0;
         }
 
@@ -440,7 +441,7 @@ class CustomerMergeService
     /** Externe Kennungen umhaengen; bereits vorhandene (type+value) nicht doppeln. */
     private function mergeExternalReferences(Customer $primary, Customer $duplicate): int
     {
-        if (!Schema::hasTable('external_references')) {
+        if (! Schema::hasTable('external_references')) {
             return 0;
         }
 
@@ -448,14 +449,14 @@ class CustomerMergeService
             ->where('referenceable_type', Customer::class)
             ->where('referenceable_id', $primary->id)
             ->get(['type', 'value'])
-            ->map(fn ($r) => $r->type . '|' . $r->value)->all();
+            ->map(fn ($r) => $r->type.'|'.$r->value)->all();
 
         $moved = 0;
         $dupRefs = DB::table('external_references')
             ->where('referenceable_type', Customer::class)
             ->where('referenceable_id', $duplicate->id)->get();
         foreach ($dupRefs as $ref) {
-            if (in_array($ref->type . '|' . $ref->value, $primaryKeys, true)) {
+            if (in_array($ref->type.'|'.$ref->value, $primaryKeys, true)) {
                 DB::table('external_references')->where('id', $ref->id)->delete();
                 continue;
             }
@@ -479,14 +480,14 @@ class CustomerMergeService
             'pension_insurance_number', 'tax_id',
         ];
         foreach ($fields as $f) {
-            if (empty($primary->$f) && !empty($duplicate->$f)) {
+            if (empty($primary->$f) && ! empty($duplicate->$f)) {
                 $primary->$f = $duplicate->$f;
             }
         }
 
         // DSGVO: Eine Marketing-Abmeldung wirkt fort. Hat sich das Duplikat
         // abgemeldet, darf die vereinte Akte nicht wieder anschreibbar werden.
-        if ($duplicate->unsubscribed_at && !$primary->unsubscribed_at) {
+        if ($duplicate->unsubscribed_at && ! $primary->unsubscribed_at) {
             $primary->unsubscribed_at = $duplicate->unsubscribed_at;
             $primary->marketing_consent = false;
         }
@@ -494,7 +495,7 @@ class CustomerMergeService
         // "Letzter Kontakt" ist ein Zuletzt-Fakt - der neuere Stand gewinnt
         // (sonst meldet die Wiedervorlage einen laengst kontaktierten Kunden).
         if ($duplicate->last_contact
-            && (!$primary->last_contact || $duplicate->last_contact > $primary->last_contact)) {
+            && (! $primary->last_contact || $duplicate->last_contact > $primary->last_contact)) {
             $primary->last_contact = $duplicate->last_contact;
         }
     }

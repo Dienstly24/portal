@@ -43,7 +43,7 @@ class NovitasBeitrittserklaerungParserTest extends TestCase
 
     public function test_parses_all_person_and_health_fields(): void
     {
-        $result = (new NovitasBeitrittserklaerungParser())->parse($this->novitasText());
+        $result = (new NovitasBeitrittserklaerungParser)->parse($this->novitasText());
 
         $this->assertNotNull($result, 'Novitas-Formular muss erkannt werden');
         $this->assertSame('beitrittserklaerung', $result['type']);
@@ -78,7 +78,7 @@ class NovitasBeitrittserklaerungParserTest extends TestCase
             '/>?  B3/26/01 X                    5 776/01',
             $this->novitasText()
         );
-        $result = (new NovitasBeitrittserklaerungParser())->parse($text);
+        $result = (new NovitasBeitrittserklaerungParser)->parse($text);
         $this->assertSame('male', $result['data']['person']['gender']);
     }
 
@@ -86,10 +86,10 @@ class NovitasBeitrittserklaerungParserTest extends TestCase
     {
         // KKH-Beitrittserklaerung (anderer Anbieter) darf NICHT hier landen.
         $kkh = "Beitrittserklärung\nKKH Kaufmännische Krankenkasse\n"
-            . "Nachname Vorname\nMustermann Max\nKrankenversicherungsnummer\nA123456789";
-        $this->assertNull((new NovitasBeitrittserklaerungParser())->parse($kkh));
+            ."Nachname Vorname\nMustermann Max\nKrankenversicherungsnummer\nA123456789";
+        $this->assertNull((new NovitasBeitrittserklaerungParser)->parse($kkh));
 
         // Beliebiger Fremdtext.
-        $this->assertNull((new NovitasBeitrittserklaerungParser())->parse('Irgendein anderes Dokument'));
+        $this->assertNull((new NovitasBeitrittserklaerungParser)->parse('Irgendein anderes Dokument'));
     }
 }

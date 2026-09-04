@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
@@ -60,7 +61,7 @@ class Banner extends Model
         if ($this->is_draft) {
             return ['key' => 'draft', 'label' => 'Entwurf', 'color' => '#5F5E5A', 'bg' => '#F1EFE8'];
         }
-        if (!$this->is_active) {
+        if (! $this->is_active) {
             return ['key' => 'disabled', 'label' => 'Deaktiviert', 'color' => '#A32D2D', 'bg' => '#F9E3E3'];
         }
         if ($this->start_date && $this->start_date->gt($today)) {

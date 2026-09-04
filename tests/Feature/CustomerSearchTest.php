@@ -34,11 +34,11 @@ class CustomerSearchTest extends TestCase
     private function customer(array $userAttrs = [], array $customerAttrs = []): Customer
     {
         $user = User::factory()->create(array_merge([
-            'role' => 'customer', 'name' => 'Max Mustermann', 'email' => 'kunde-' . uniqid() . '@kunde.de',
+            'role' => 'customer', 'name' => 'Max Mustermann', 'email' => 'kunde-'.uniqid().'@kunde.de',
         ], $userAttrs));
 
         return Customer::create(array_merge([
-            'user_id' => $user->id, 'customer_number' => 'K-' . uniqid(),
+            'user_id' => $user->id, 'customer_number' => 'K-'.uniqid(),
         ], $customerAttrs));
     }
 
@@ -98,7 +98,7 @@ class CustomerSearchTest extends TestCase
     {
         $hit = $this->customer(['name' => 'Auto Kunde']);
         $contract = Contract::create([
-            'customer_id' => $hit->id, 'type' => 'kfz', 'insurer' => 'HUK', 'status' => 'active', 'contract_number' => 'V-' . uniqid(),
+            'customer_id' => $hit->id, 'type' => 'kfz', 'insurer' => 'HUK', 'status' => 'active', 'contract_number' => 'V-'.uniqid(),
         ]);
         ContractVehicleDetail::create([
             'contract_id' => $contract->id, 'license_plate' => 'RD-AB 123', 'vin' => 'WVWZZZ1JZXW000001',
@@ -113,7 +113,7 @@ class CustomerSearchTest extends TestCase
     {
         $hit = $this->customer(['name' => 'Strom Kunde']);
         $contract = Contract::create([
-            'customer_id' => $hit->id, 'type' => 'strom', 'insurer' => 'Stadtwerke', 'status' => 'active', 'contract_number' => 'V-' . uniqid(),
+            'customer_id' => $hit->id, 'type' => 'strom', 'insurer' => 'Stadtwerke', 'status' => 'active', 'contract_number' => 'V-'.uniqid(),
         ]);
         ContractEnergyDetail::create([
             'contract_id' => $contract->id, 'meter_number' => '1ISK0001234567', 'malo_id' => '50012345678',
@@ -178,7 +178,7 @@ class CustomerSearchTest extends TestCase
     {
         $hit = $this->customer(['name' => 'Kennzeichen Kunde']);
         $contract = Contract::create([
-            'customer_id' => $hit->id, 'type' => 'kfz', 'insurer' => 'HUK', 'status' => 'active', 'contract_number' => 'V-' . uniqid(),
+            'customer_id' => $hit->id, 'type' => 'kfz', 'insurer' => 'HUK', 'status' => 'active', 'contract_number' => 'V-'.uniqid(),
         ]);
         ContractVehicleDetail::create(['contract_id' => $contract->id, 'license_plate' => 'RD-ZZ 999']);
         $this->customer(['name' => 'Anderer Kunde']);

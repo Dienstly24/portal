@@ -1,8 +1,10 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Sales\Offers;
 
 use App\Models\AiConversation;
 use App\Models\AiLead;
+use App\Models\AiOffer;
 use Illuminate\Support\Collection;
 
 /**
@@ -33,7 +35,7 @@ interface OfferSourceInterface
      * Angebote fuer dieses Gespraech beschaffen. Phase 1 gibt schlicht
      * zurueck, was bereits hinterlegt ist.
      *
-     * @return Collection<int,\App\Models\AiOffer>
+     * @return Collection<int,AiOffer>
      */
     public function offersFor(?AiConversation $conversation, ?AiLead $lead = null): Collection;
 }

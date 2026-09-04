@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services;
 
 use App\Models\Customer;
@@ -73,13 +74,13 @@ class CustomerConversationService
         $tickets = Ticket::where('customer_id', $customer->id)
             ->with(['messages.sender', 'events.user'])->get();
         foreach ($tickets as $ticket) {
-            $tag = '🎫 Ticket #' . $ticket->ticket_number;
+            $tag = '🎫 Ticket #'.$ticket->ticket_number;
             $url = route('admin.ticket', $ticket->id);
             $items->push(array_merge($this->base('event', 'card', $ticket->created_at), [
                 'icon' => '🆕',
                 'tag' => $tag,
-                'title' => 'Ticket erstellt: ' . $ticket->subject,
-                'body' => trim(($ticket->typeLabel() ?? '') . ' · Quelle ' . ($ticket->source ?? 'portal')),
+                'title' => 'Ticket erstellt: '.$ticket->subject,
+                'body' => trim(($ticket->typeLabel() ?? '').' · Quelle '.($ticket->source ?? 'portal')),
                 'url' => $url,
             ]));
             foreach ($ticket->messages as $tm) {
@@ -88,7 +89,7 @@ class CustomerConversationService
                     $items->push(array_merge($this->base('note', 'internal', $tm->created_at), [
                         'icon' => '🔒',
                         'tag' => $tag,
-                        'title' => 'Interne Ticket-Notiz von ' . ($tm->sender?->name ?? 'Team'),
+                        'title' => 'Interne Ticket-Notiz von '.($tm->sender?->name ?? 'Team'),
                         'body' => $tm->body,
                         'url' => $url,
                     ]));
@@ -111,7 +112,7 @@ class CustomerConversationService
                 $items->push(array_merge($this->base('event', 'card', $ev->created_at), [
                     'icon' => $icon,
                     'tag' => $tag,
-                    'title' => $label . ($ev->user ? ' · ' . $ev->user->name : ''),
+                    'title' => $label.($ev->user ? ' · '.$ev->user->name : ''),
                     'body' => $ev->details,
                     'url' => $url,
                 ]));
@@ -126,7 +127,7 @@ class CustomerConversationService
                         'icon' => '✉️',
                         'tag' => 'E-Mail',
                         'title' => $mail->subject ?: '(ohne Betreff)',
-                        'body' => 'von ' . ($mail->from_name ?: $mail->from_address),
+                        'body' => 'von '.($mail->from_name ?: $mail->from_address),
                         'url' => route('admin.email_inbox.show', $mail->id),
                     ]));
                 });
@@ -140,9 +141,9 @@ class CustomerConversationService
                     $items->push(array_merge($this->base('document', 'card', $doc->created_at), [
                         'icon' => '📄',
                         'tag' => 'Dokument',
-                        'title' => 'Dokument hochgeladen: ' . $doc->file_name,
+                        'title' => 'Dokument hochgeladen: '.$doc->file_name,
                         'body' => $doc->category,
-                        'url' => route('admin.customer', $doc->customer_id) . '#tab-dokumente',
+                        'url' => route('admin.customer', $doc->customer_id).'#tab-dokumente',
                     ]));
                 });
         }
@@ -153,9 +154,9 @@ class CustomerConversationService
                 $items->push(array_merge($this->base('note', 'internal', $note->created_at), [
                     'icon' => '🔒',
                     'tag' => 'Notiz',
-                    'title' => 'Interne Notiz von ' . ($note->createdBy?->name ?? 'Team'),
+                    'title' => 'Interne Notiz von '.($note->createdBy?->name ?? 'Team'),
                     'body' => $note->note,
-                    'url' => route('admin.customer', $note->customer_id) . '#tab-intern',
+                    'url' => route('admin.customer', $note->customer_id).'#tab-intern',
                 ]));
             });
         InternalMessage::where('customer_id', $customer->id)->note()->with('sender')->get()
@@ -163,9 +164,9 @@ class CustomerConversationService
                 $items->push(array_merge($this->base('note', 'internal', $msg->created_at), [
                     'icon' => '🔒',
                     'tag' => 'Notiz',
-                    'title' => 'Interne Notiz von ' . ($msg->sender?->name ?? 'Team'),
+                    'title' => 'Interne Notiz von '.($msg->sender?->name ?? 'Team'),
                     'body' => $msg->message,
-                    'url' => route('admin.customer', $msg->customer_id) . '#tab-intern',
+                    'url' => route('admin.customer', $msg->customer_id).'#tab-intern',
                 ]));
             });
 

@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\PasswordPolicy;
+use App\Support\SessionPasswordHash;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -39,7 +39,7 @@ class NewPasswordController extends Controller
         $request->validate([
             'token' => ['required'],
             'email' => ['required', 'email'],
-            'password' => ['required', 'confirmed', \App\Support\PasswordPolicy::for($target)],
+            'password' => ['required', 'confirmed', PasswordPolicy::for($target)],
         ]);
 
         // Here we will attempt to reset the user's password. If it is successful we
@@ -61,7 +61,7 @@ class NewPasswordController extends Controller
         // Wer den Link benutzt, waehrend er per Magic-Login schon angemeldet
         // ist, darf danach nicht durch AuthenticateSession rausfliegen.
         if ($status == Password::PASSWORD_RESET) {
-            \App\Support\SessionPasswordHash::refresh($request);
+            SessionPasswordHash::refresh($request);
         }
 
         // Deutsche Meldungen statt englischer Framework-Texte.

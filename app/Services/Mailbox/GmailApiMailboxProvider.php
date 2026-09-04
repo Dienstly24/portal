@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Mailbox;
 
 use App\Models\EmailAccount;
@@ -21,9 +22,9 @@ class GmailApiMailboxProvider implements MailboxProviderInterface
     public function testConnection(EmailAccount $account): bool
     {
         $token = $this->tokens->accessToken($account);
-        $response = Http::withToken($token)->get(self::BASE . '/profile');
-        if (!$response->successful()) {
-            throw new \RuntimeException('Gmail-Verbindung fehlgeschlagen: ' . mb_substr($response->body(), 0, 150));
+        $response = Http::withToken($token)->get(self::BASE.'/profile');
+        if (! $response->successful()) {
+            throw new \RuntimeException('Gmail-Verbindung fehlgeschlagen: '.mb_substr($response->body(), 0, 150));
         }
         return true;
     }
@@ -35,18 +36,18 @@ class GmailApiMailboxProvider implements MailboxProviderInterface
             ? $account->last_synced_at->copy()->subHour()
             : now()->subDays(7);
 
-        $list = Http::withToken($token)->get(self::BASE . '/messages', [
-            'q' => 'in:inbox after:' . $since->timestamp,
+        $list = Http::withToken($token)->get(self::BASE.'/messages', [
+            'q' => 'in:inbox after:'.$since->timestamp,
             'maxResults' => $limit,
         ]);
-        if (!$list->successful()) {
-            throw new \RuntimeException('Gmail-Abruf fehlgeschlagen: ' . mb_substr($list->body(), 0, 150));
+        if (! $list->successful()) {
+            throw new \RuntimeException('Gmail-Abruf fehlgeschlagen: '.mb_substr($list->body(), 0, 150));
         }
 
         $results = [];
         foreach ($list->json('messages', []) as $ref) {
-            $detail = Http::withToken($token)->get(self::BASE . '/messages/' . $ref['id'], ['format' => 'full']);
-            if (!$detail->successful()) {
+            $detail = Http::withToken($token)->get(self::BASE.'/messages/'.$ref['id'], ['format' => 'full']);
+            if (! $detail->successful()) {
                 continue; // einzelne defekte Mail überspringen statt Sync abbrechen
             }
             $results[] = $this->toMessageData($detail->json(), $token);
@@ -68,7 +69,7 @@ class GmailApiMailboxProvider implements MailboxProviderInterface
         $this->walkParts($payload['payload'] ?? [], $payload['id'], $token, $bodyText, $bodyHtml, $attachments);
 
         return new MailboxMessageData(
-            uid: 'GMAIL:' . $payload['id'],
+            uid: 'GMAIL:'.$payload['id'],
             fromAddress: $fromAddress,
             fromName: $fromName,
             toAddress: $this->parseAddress($headers->get('to', ''))[1],
@@ -88,9 +89,9 @@ class GmailApiMailboxProvider implements MailboxProviderInterface
         $filename = $part['filename'] ?? '';
         $body = $part['body'] ?? [];
 
-        if ($filename !== '' && !empty($body['attachmentId'])) {
+        if ($filename !== '' && ! empty($body['attachmentId'])) {
             $data = Http::withToken($token)
-                ->get(self::BASE . "/messages/$messageId/attachments/" . $body['attachmentId']);
+                ->get(self::BASE."/messages/$messageId/attachments/".$body['attachmentId']);
             if ($data->successful() && $data->json('data')) {
                 $attachments[] = [
                     'filename' => $filename,
@@ -98,9 +99,9 @@ class GmailApiMailboxProvider implements MailboxProviderInterface
                     'content' => $this->decode($data->json('data')),
                 ];
             }
-        } elseif ($mime === 'text/plain' && $text === null && !empty($body['data'])) {
+        } elseif ($mime === 'text/plain' && $text === null && ! empty($body['data'])) {
             $text = $this->decode($body['data']);
-        } elseif ($mime === 'text/html' && $html === null && !empty($body['data'])) {
+        } elseif ($mime === 'text/html' && $html === null && ! empty($body['data'])) {
             $html = $this->decode($body['data']);
         }
 

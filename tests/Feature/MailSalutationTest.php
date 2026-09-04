@@ -21,7 +21,7 @@ class MailSalutationTest extends TestCase
         $user = User::factory()->create(['name' => $name, 'role' => 'customer']);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5($name), 0, 6)),
+            'customer_number' => 'C-'.strtoupper(substr(md5($name), 0, 6)),
             'gender' => $gender,
             'company_name' => $company,
         ]);

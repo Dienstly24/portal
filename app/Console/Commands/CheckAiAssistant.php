@@ -45,7 +45,7 @@ class CheckAiAssistant extends Command
     {
         $this->line('');
         $this->line('=== KI-Kundenassistent: Selbstdiagnose ===');
-        $this->line('Zeitpunkt: ' . now()->format('d.m.Y H:i') . '   Umgebung: ' . app()->environment());
+        $this->line('Zeitpunkt: '.now()->format('d.m.Y H:i').'   Umgebung: '.app()->environment());
 
         $this->pruefeSchalter($settings);
         $provider = $this->pruefeAnbieter();
@@ -86,10 +86,10 @@ class CheckAiAssistant extends Command
 
         $max = $settings->maxRepliesPerCase();
         $this->line('   Weitere Schalter: Dokumentenanforderung '
-            . $this->anAus($settings->autoDocumentRequest())
-            . ', Vorgang anlegen ' . $this->anAus($settings->autoTicket())
-            . ', Uebergabe ' . $this->anAus($settings->autoHandover())
-            . ', max. Antworten je Vorgang ' . ($max === 0 ? 'unbegrenzt' : $max) . '.');
+            .$this->anAus($settings->autoDocumentRequest())
+            .', Vorgang anlegen '.$this->anAus($settings->autoTicket())
+            .', Uebergabe '.$this->anAus($settings->autoHandover())
+            .', max. Antworten je Vorgang '.($max === 0 ? 'unbegrenzt' : $max).'.');
     }
 
     // ---------------------------------------------------------------- 2
@@ -100,8 +100,8 @@ class CheckAiAssistant extends Command
         $gewaehlt = trim((string) config('services.ai_assistant_provider'));
         $provider = app(AssistantProviderInterface::class);
 
-        $this->line('   AI_ASSISTANT_PROVIDER: ' . ($gewaehlt === '' ? '(leer -> Standard claude)' : $gewaehlt));
-        $this->line('   Aktive Klasse:         ' . $provider::class);
+        $this->line('   AI_ASSISTANT_PROVIDER: '.($gewaehlt === '' ? '(leer -> Standard claude)' : $gewaehlt));
+        $this->line('   Aktive Klasse:         '.$provider::class);
 
         if ($provider instanceof NullAssistantProvider) {
             $this->fehler('Anbieter ist bewusst abgeschaltet (AI_ASSISTANT_PROVIDER=none).');
@@ -119,7 +119,7 @@ class CheckAiAssistant extends Command
                 : 'ANTHROPIC_API_KEY in die Server-.env eintragen (derselbe Schluessel wie fuer die Dokumentanalyse).';
         }
 
-        $this->line('   Modell:   ' . $provider->model());
+        $this->line('   Modell:   '.$provider->model());
         if ($provider->name() === 'claude') {
             // Endpunkt zeigen: die Basis-URL war schon einmal die Ursache
             // dafuer, dass jeder Aufruf ins Leere lief.
@@ -127,7 +127,7 @@ class CheckAiAssistant extends Command
             if (str_ends_with($basis, '/v1')) {
                 $basis = substr($basis, 0, -3);
             }
-            $this->line('   Endpunkt: ' . rtrim($basis, '/') . '/v1/messages');
+            $this->line('   Endpunkt: '.rtrim($basis, '/').'/v1/messages');
         }
 
         return $provider;
@@ -140,18 +140,18 @@ class CheckAiAssistant extends Command
 
         $fehlend = [];
         foreach (['ai_conversations', 'ai_assistant_logs', 'ai_knowledge_entries'] as $tabelle) {
-            if (!Schema::hasTable($tabelle)) {
+            if (! Schema::hasTable($tabelle)) {
                 $fehlend[] = $tabelle;
             }
         }
-        if (!Schema::hasColumn('customer_messages', 'ai_generated')) {
+        if (! Schema::hasColumn('customer_messages', 'ai_generated')) {
             $fehlend[] = 'customer_messages.ai_generated';
         }
 
         if ($fehlend === []) {
             $this->ok('Alle Tabellen und Spalten sind vorhanden.');
         } else {
-            $this->fehler('Fehlt: ' . implode(', ', $fehlend));
+            $this->fehler('Fehlt: '.implode(', ', $fehlend));
             $this->blocker[] = 'Migrationen nachziehen: php artisan migrate --force';
         }
     }
@@ -162,7 +162,7 @@ class CheckAiAssistant extends Command
         $this->abschnitt('4) Warteschlange (die Antwort ist ein Job)');
 
         $verbindung = (string) config('queue.default');
-        $this->line('   QUEUE_CONNECTION: ' . $verbindung);
+        $this->line('   QUEUE_CONNECTION: '.$verbindung);
 
         if ($verbindung === 'sync') {
             $this->ok('Antworten laufen direkt im Request - kein Worker noetig.');
@@ -170,7 +170,7 @@ class CheckAiAssistant extends Command
             return;
         }
 
-        if ($verbindung !== 'database' || !Schema::hasTable('jobs')) {
+        if ($verbindung !== 'database' || ! Schema::hasTable('jobs')) {
             $this->line('   Rueckstau kann bei dieser Verbindung nicht gelesen werden.');
             $this->hinweise[] = 'Sicherstellen, dass ein Queue-Worker laeuft (sonst antwortet die KI nie).';
 
@@ -179,7 +179,7 @@ class CheckAiAssistant extends Command
 
         $offen = (int) DB::table('jobs')->count();
         $alt = DB::table('jobs')->where('available_at', '<', now()->subMinutes(5)->timestamp)->count();
-        $this->line('   Offene Jobs: ' . $offen . ' (davon aelter als 5 Minuten: ' . $alt . ')');
+        $this->line('   Offene Jobs: '.$offen.' (davon aelter als 5 Minuten: '.$alt.')');
 
         if ($alt > 0) {
             $this->fehler('Jobs bleiben liegen - der Queue-Worker laeuft vermutlich nicht.');
@@ -193,7 +193,7 @@ class CheckAiAssistant extends Command
                 ->where('payload', 'like', '%AnswerCustomerMessageJob%')
                 ->count();
             if ($gescheitert > 0) {
-                $this->fehler($gescheitert . ' fehlgeschlagene KI-Antwort-Job(s) in failed_jobs.');
+                $this->fehler($gescheitert.' fehlgeschlagene KI-Antwort-Job(s) in failed_jobs.');
                 $this->hinweise[] = 'Fehlertext ansehen: php artisan queue:failed';
             }
         }
@@ -208,7 +208,7 @@ class CheckAiAssistant extends Command
     {
         $this->abschnitt('5) Werkzeuge und Wissensbasis');
 
-        $this->ok(count($registry->names()) . ' freigegebene Werkzeuge: ' . implode(', ', $registry->names()));
+        $this->ok(count($registry->names()).' freigegebene Werkzeuge: '.implode(', ', $registry->names()));
 
         $eintraege = Schema::hasTable('ai_knowledge_entries')
             ? AiKnowledgeEntry::where('active', true)->count()
@@ -219,9 +219,9 @@ class CheckAiAssistant extends Command
             : 0;
 
         if ($eintraege > 0) {
-            $this->ok($eintraege . ' aktive Wissenseintraege.');
+            $this->ok($eintraege.' aktive Wissenseintraege.');
             if ($entwuerfe > 0) {
-                $this->line('   Zusaetzlich ' . $entwuerfe . ' Entwuerfe (inaktiv) - der Assistent nutzt sie nicht.');
+                $this->line('   Zusaetzlich '.$entwuerfe.' Entwuerfe (inaktiv) - der Assistent nutzt sie nicht.');
                 $this->line('   Durchsehen und freigeben: /admin/ki-wissensbasis (Filter "Nur Entwürfe").');
             }
         } else {
@@ -230,7 +230,7 @@ class CheckAiAssistant extends Command
             $this->line('   nichts behaupten, was nicht belegt ist, und uebergibt fast jede allgemeine');
             $this->line('   Frage an das Team. Fragen zur eigenen Akte beantwortet er trotzdem.');
             if ($entwuerfe > 0) {
-                $this->line('   ' . $entwuerfe . ' Entwuerfe liegen bereit, aber KEINER ist freigegeben.');
+                $this->line('   '.$entwuerfe.' Entwuerfe liegen bereit, aber KEINER ist freigegeben.');
                 $this->line('   Durchsehen und freigeben: /admin/ki-wissensbasis (Filter "Nur Entwürfe").');
             }
             $this->line('   Schnellster Start: php artisan ki:wissensbasis-vorschlag --schreiben');
@@ -245,7 +245,7 @@ class CheckAiAssistant extends Command
     {
         $this->abschnitt('6) Was ist zuletzt passiert (letzte 7 Tage)');
 
-        if (!Schema::hasTable('ai_assistant_logs')) {
+        if (! Schema::hasTable('ai_assistant_logs')) {
             $this->line('   Kein Protokoll vorhanden (Tabelle fehlt).');
 
             return;
@@ -263,14 +263,14 @@ class CheckAiAssistant extends Command
                 ->select('outcome', DB::raw('count(*) as anzahl'))
                 ->groupBy('outcome')
                 ->pluck('anzahl', 'outcome') as $ergebnis => $anzahl) {
-                $this->line('   ' . str_pad((string) $anzahl, 5, ' ', STR_PAD_LEFT) . 'x  '
-                    . (AiAssistantLog::OUTCOME_LABELS[$ergebnis] ?? $ergebnis));
+                $this->line('   '.str_pad((string) $anzahl, 5, ' ', STR_PAD_LEFT).'x  '
+                    .(AiAssistantLog::OUTCOME_LABELS[$ergebnis] ?? $ergebnis));
             }
 
             $fallback = AiAssistantLog::where('created_at', '>=', $seit)
                 ->where('outcome', AiAssistantLog::OUTCOME_FALLBACK)->count();
             if ($fallback > 0) {
-                $this->fehler($fallback . ' Runde(n) endeten im Fallback - der KI-Dienst war nicht erreichbar.');
+                $this->fehler($fallback.' Runde(n) endeten im Fallback - der KI-Dienst war nicht erreichbar.');
                 $this->hinweise[] = 'Genaue Ursache zeigt: php artisan ki:pruefen --live';
             }
         }
@@ -281,7 +281,7 @@ class CheckAiAssistant extends Command
             ->where('created_at', '>=', $seit)
             ->whereNotIn('id', AiAssistantLog::whereNotNull('customer_message_id')->pluck('customer_message_id'))
             ->count();
-        $this->line('   Kundennachrichten ohne KI-Runde: ' . $ohne);
+        $this->line('   Kundennachrichten ohne KI-Runde: '.$ohne);
     }
 
     // ---------------------------------------------------------------- 7
@@ -289,7 +289,7 @@ class CheckAiAssistant extends Command
     {
         $this->abschnitt('7) Echter Testaufruf');
 
-        if ($provider instanceof NullAssistantProvider || !$provider->isEnabled()) {
+        if ($provider instanceof NullAssistantProvider || ! $provider->isEnabled()) {
             $this->fehler('Uebersprungen - kein einsatzbereiter Anbieter (siehe Abschnitt 2).');
 
             return;
@@ -304,22 +304,22 @@ class CheckAiAssistant extends Command
                 50,
             );
         } catch (\Throwable $e) {
-            $this->fehler('Aufruf fehlgeschlagen: ' . $e->getMessage());
+            $this->fehler('Aufruf fehlgeschlagen: '.$e->getMessage());
             $this->blocker[] = 'Fehlertext oben pruefen: 401 = falscher Schluessel, 404 = Modell nicht'
-                . ' freigegeben oder falscher Endpunkt, Zeitueberschreitung = Netzwerk/Firewall.';
+                .' freigegeben oder falscher Endpunkt, Zeitueberschreitung = Netzwerk/Firewall.';
 
             return;
         }
 
         $dauer = (int) round((microtime(true) - $start) * 1000);
-        $this->ok('Der KI-Dienst hat geantwortet (' . $dauer . ' ms).');
-        $this->line('   Modell: ' . $turn->model);
+        $this->ok('Der KI-Dienst hat geantwortet ('.$dauer.' ms).');
+        $this->line('   Modell: '.$turn->model);
         // Ein leerer Text ist hier KEIN Fehler: entscheidend ist, dass der
         // Dienst ueberhaupt erreichbar war und das Modell freigegeben ist.
-        $this->line('   Antworttext: ' . ($turn->text === ''
+        $this->line('   Antworttext: '.($turn->text === ''
             ? '(leer - fuer den Verbindungstest ohne Bedeutung)'
-            : '"' . mb_substr($turn->text, 0, 60) . '"'));
-        $this->line('   Tokens: ' . ($turn->inputTokens ?? '?') . ' ein / ' . ($turn->outputTokens ?? '?') . ' aus');
+            : '"'.mb_substr($turn->text, 0, 60).'"'));
+        $this->line('   Tokens: '.($turn->inputTokens ?? '?').' ein / '.($turn->outputTokens ?? '?').' aus');
     }
 
     // ---------------------------------------------------------------- Ende
@@ -331,7 +331,7 @@ class CheckAiAssistant extends Command
         if ($this->blocker === []) {
             $this->info('Kette vollstaendig - der Assistent kann arbeiten.');
             foreach ($this->hinweise as $hinweis) {
-                $this->line('  Hinweis: ' . $hinweis);
+                $this->line('  Hinweis: '.$hinweis);
             }
 
             return self::SUCCESS;
@@ -339,10 +339,10 @@ class CheckAiAssistant extends Command
 
         $this->error('Der Assistent kann so NICHT antworten. Naechste Schritte in dieser Reihenfolge:');
         foreach ($this->blocker as $i => $schritt) {
-            $this->line('  ' . ($i + 1) . '. ' . $schritt);
+            $this->line('  '.($i + 1).'. '.$schritt);
         }
         foreach ($this->hinweise as $hinweis) {
-            $this->line('  Hinweis: ' . $hinweis);
+            $this->line('  Hinweis: '.$hinweis);
         }
 
         return self::FAILURE;
@@ -356,17 +356,17 @@ class CheckAiAssistant extends Command
 
     private function ok(string $text): void
     {
-        $this->info('   OK   ' . $text);
+        $this->info('   OK   '.$text);
     }
 
     private function warnung(string $text): void
     {
-        $this->warn('   !    ' . $text);
+        $this->warn('   !    '.$text);
     }
 
     private function fehler(string $text): void
     {
-        $this->error('   FEHL ' . $text);
+        $this->error('   FEHL '.$text);
     }
 
     private function anAus(bool $wert): string

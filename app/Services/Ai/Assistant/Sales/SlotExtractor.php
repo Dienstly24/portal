@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Sales;
 
 /**
@@ -35,7 +36,7 @@ class SlotExtractor
         // --- IBAN: nur mit gueltiger Pruefziffer (Mod 97) ----------------
         $text = $this->replace($text, '/\b([A-Z]{2}\d{2}(?:[ ]?[A-Za-z0-9]{4}){2,7}[ ]?[A-Za-z0-9]{0,4})\b/', function ($treffer) use (&$found) {
             $iban = strtoupper(preg_replace('/\s+/', '', $treffer));
-            if (!$this->ibanValid($iban)) {
+            if (! $this->ibanValid($iban)) {
                 return null;
             }
             $found['iban'] = $iban;
@@ -95,21 +96,21 @@ class SlotExtractor
             return false;
         }
 
-        $umgestellt = substr($iban, 4) . substr($iban, 0, 4);
+        $umgestellt = substr($iban, 4).substr($iban, 0, 4);
         $ziffern = '';
         foreach (str_split($umgestellt) as $zeichen) {
             $ziffern .= ctype_alpha($zeichen)
                 ? (string) (ord(strtoupper($zeichen)) - 55)
                 : $zeichen;
         }
-        if (!ctype_digit($ziffern)) {
+        if (! ctype_digit($ziffern)) {
             return false;
         }
 
         // Stueckweise rechnen - die Zahl ist fuer int zu gross.
         $rest = 0;
         foreach (str_split($ziffern, 7) as $block) {
-            $rest = (int) (($rest . $block) % 97);
+            $rest = (int) (($rest.$block) % 97);
         }
 
         return $rest === 1;
@@ -119,7 +120,7 @@ class SlotExtractor
     private function normalizeDate(string $roh): ?string
     {
         $teile = preg_split('/[.\/-]/', $roh);
-        if (!$teile || count($teile) !== 3) {
+        if (! $teile || count($teile) !== 3) {
             return null;
         }
 
@@ -127,7 +128,7 @@ class SlotExtractor
         if ($jahr < 100) {
             $jahr += $jahr > 30 ? 1900 : 2000;
         }
-        if (!checkdate($monat, $tag, $jahr)) {
+        if (! checkdate($monat, $tag, $jahr)) {
             return null;
         }
         if ($jahr < 1900 || $jahr > (int) date('Y')) {

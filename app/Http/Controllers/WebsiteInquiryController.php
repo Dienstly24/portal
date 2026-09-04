@@ -1,8 +1,14 @@
 <?php
+
 namespace App\Http\Controllers;
 
+use App\Mail\SupportInquiryMail;
+use App\Models\Customer;
 use App\Models\Ticket;
+use App\Services\SpamFilter;
+use App\Services\TicketNotifier;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class WebsiteInquiryController extends Controller
@@ -13,9 +19,9 @@ class WebsiteInquiryController extends Controller
         // Fail closed: without a configured token, header (null) === config (null)
         // previously passed the check and let anyone create tickets. (Audit C5)
         $token = config('services.inquiry.token');
-        if (!is_string($token) || $token === ''
-            || !is_string($request->header('X-Inquiry-Token'))
-            || !hash_equals($token, $request->header('X-Inquiry-Token'))) {
+        if (! is_string($token) || $token === ''
+            || ! is_string($request->header('X-Inquiry-Token'))
+            || ! hash_equals($token, $request->header('X-Inquiry-Token'))) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
         $data = $request->validate([
@@ -29,13 +35,13 @@ class WebsiteInquiryController extends Controller
         // Inhaltsbasierte Spam-Erkennung: Bot-Werbung (Gluecksspiel etc.)
         // still verwerfen und "success" melden, damit Bots keine Rueckmeldung
         // zum Umgehen erhalten - Token/Throttle allein reichen nicht.
-        if ($spam = \App\Services\SpamFilter::reason([$data['name'], $data['subject'] ?? null, $data['message']])) {
-            \Log::info('Website-Anfrage als Spam verworfen: ' . $spam);
+        if ($spam = SpamFilter::reason([$data['name'], $data['subject'] ?? null, $data['message']])) {
+            \Log::info('Website-Anfrage als Spam verworfen: '.$spam);
             return response()->json(['success' => true]);
         }
 
         // Punkt 7: Bestandskunden über die E-Mail-Adresse zuordnen
-        $customer = \App\Models\Customer::whereHas('user', fn($q) => $q->where('email', $data['email']))->first();
+        $customer = Customer::whereHas('user', fn ($q) => $q->where('email', $data['email']))->first();
 
         $ticket = Ticket::forceCreate([
             'id' => Str::uuid(),
@@ -44,7 +50,7 @@ class WebsiteInquiryController extends Controller
             'type' => 'other',
             'priority' => 'mittel',
             'status' => 'open',
-            'subject' => ($data['subject'] ?? null) ?: ('Website-Anfrage von ' . $data['name']),
+            'subject' => ($data['subject'] ?? null) ?: ('Website-Anfrage von '.$data['name']),
             'description' => $data['message'],
             'guest_name' => $data['name'],
             'guest_email' => $data['email'],
@@ -52,15 +58,15 @@ class WebsiteInquiryController extends Controller
         ]);
         // Team-Glocke wie bei Portal-/Hilfe-Formular-Tickets - Website-Leads
         // duerfen nicht lautlos in der Anfragen-Liste liegen bleiben.
-        \App\Services\TicketNotifier::notifyNewTicket($ticket);
+        TicketNotifier::notifyNewTicket($ticket);
 
         // Punkt 7: Support-Mail mit Kundenname, -nummer, E-Mail, Betreff, Zeit
         $supportEmail = config('services.inquiry.support_email') ?: config('mail.from.address');
         if ($supportEmail) {
             try {
-                \Illuminate\Support\Facades\Mail::to($supportEmail)
-                    ->send(new \App\Mail\SupportInquiryMail($ticket, $customer?->customer_number));
-            } catch (\Throwable $e) { \Log::warning('Support inquiry mail failed: ' . $e->getMessage()); }
+                Mail::to($supportEmail)
+                    ->send(new SupportInquiryMail($ticket, $customer?->customer_number));
+            } catch (\Throwable $e) { \Log::warning('Support inquiry mail failed: '.$e->getMessage()); }
         }
 
         return response()->json(['success' => true]);
@@ -80,7 +86,7 @@ class WebsiteInquiryController extends Controller
             'phone' => 'nullable|max:50',
             'subject' => 'required|max:255',
             'message' => 'required',
-            'priority' => 'nullable|in:' . implode(',', array_keys(Ticket::PRIORITIES)),
+            'priority' => 'nullable|in:'.implode(',', array_keys(Ticket::PRIORITIES)),
         ]);
         Ticket::forceCreate([
             'id' => Str::uuid(),

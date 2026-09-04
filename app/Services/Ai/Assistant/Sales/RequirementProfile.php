@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Sales;
 
 /**
@@ -87,7 +88,7 @@ final class RequirementProfile
     public static function fields(?string $intent): array
     {
         $bedarf = self::FIELDS[$intent] ?? [];
-        if (!in_array($intent, self::SALES_INTENTS, true)) {
+        if (! in_array($intent, self::SALES_INTENTS, true)) {
             return $bedarf;
         }
 

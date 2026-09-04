@@ -2,13 +2,17 @@
 
 namespace Tests\Feature;
 
-use App\Models\CustomerChangeRequest;
+use App\Mail\TicketReplyMail;
+use App\Models\Contract;
+use App\Models\ContractEnergyDetail;
 use App\Models\Customer;
+use App\Models\CustomerChangeRequest;
 use App\Models\Document;
-use App\Models\InternalNotification;
+use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -25,7 +29,7 @@ class PortalReviewTest extends TestCase
     private function makeCustomer(): Customer
     {
         $user = User::factory()->create(['role' => 'customer']);
-        return Customer::create(['user_id' => $user->id, 'customer_number' => 'C-' . strtoupper(substr(md5((string)$user->id),0,6))]);
+        return Customer::create(['user_id' => $user->id, 'customer_number' => 'C-'.strtoupper(substr(md5((string) $user->id), 0, 6))]);
     }
 
     // Punkt 2: Familienmitglied mit Geschlecht + Detailfeldern
@@ -55,7 +59,7 @@ class PortalReviewTest extends TestCase
         $this->actingAs($customer->user)->post(route('portal.profile.update'), [
             'address_street' => 'Musterstraße', 'address_house_number' => '20', 'address_house_suffix' => 'a',
             'address_zip' => '20095', 'address_city' => 'Hamburg', 'birth_place' => 'Bremen', 'tax_id' => '99887766554',
-            'proof' => \Illuminate\Http\UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf'),
+            'proof' => UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf'),
         ])->assertSessionHas('success');
 
         $cr = CustomerChangeRequest::where('type', 'profile')->first();
@@ -120,11 +124,11 @@ class PortalReviewTest extends TestCase
         // Bank + Profil in einem Submit -> zwei getrennte Requests
         $this->actingAs($customer->user)->post(route('portal.profile.update'), [
             'iban' => 'DE89370400440532013000', 'address_city' => 'Köln',
-            'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf'), 'proof' => \Illuminate\Http\UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf'),
+            'bank_proof' => UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf'), 'proof' => UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf'),
         ]);
         // Weitere Änderung, obwohl die erste noch pending ist -> nicht blockiert
         $this->actingAs($customer->user)->post(route('portal.profile.update'), [
-            'iban' => 'DE12500105170648489890', 'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf'),
+            'iban' => 'DE12500105170648489890', 'bank_proof' => UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf'),
         ])->assertSessionHas('success');
 
         $this->assertSame(2, CustomerChangeRequest::where('type', 'bank')->count());
@@ -145,7 +149,7 @@ class PortalReviewTest extends TestCase
         ])->assertSessionHas('success');
 
         $doc = Document::first();
-        $this->assertSame((string)$customer->id, (string)$doc->customer_id);
+        $this->assertSame((string) $customer->id, (string) $doc->customer_id);
         $this->assertSame('local', $doc->disk);
         $this->assertSame('customer', $doc->visibility);
         Storage::disk('local')->assertExists($doc->file_path);
@@ -221,7 +225,7 @@ class PortalReviewTest extends TestCase
     {
         $customer = $this->makeCustomer();
         $this->actingAs($customer->user)->post(route('portal.profile.update'), [
-            'iban' => 'DE89370400440532013000', 'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf'),
+            'iban' => 'DE89370400440532013000', 'bank_proof' => UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf'),
         ]);
         $cr = CustomerChangeRequest::first();
 
@@ -241,9 +245,9 @@ class PortalReviewTest extends TestCase
     // Punkt 10: Admin-Antwort erzeugt Portal-Notification, Mail ohne Details
     public function test_admin_ticket_reply_notifies_customer_without_details(): void
     {
-        \Illuminate\Support\Facades\Mail::fake();
+        Mail::fake();
         $customer = $this->makeCustomer();
-        $ticket = \App\Models\Ticket::create([
+        $ticket = Ticket::create([
             'customer_id' => $customer->id, 'type' => 'other', 'status' => 'open',
             'subject' => 'Meine Frage', 'description' => 'Text',
         ]);
@@ -257,10 +261,10 @@ class PortalReviewTest extends TestCase
             'user_id' => $customer->user_id, 'title' => 'Neue Nachricht',
         ]);
 
-        \Illuminate\Support\Facades\Mail::assertQueued(\App\Mail\TicketReplyMail::class, function ($mail) {
+        Mail::assertQueued(TicketReplyMail::class, function ($mail) {
             $html = $mail->render();
             return str_contains($html, 'Sie haben eine neue Nachricht im Kundenportal')
-                && !str_contains($html, 'GEHEIME-ANTWORT-DETAILS');
+                && ! str_contains($html, 'GEHEIME-ANTWORT-DETAILS');
         });
     }
 
@@ -268,12 +272,12 @@ class PortalReviewTest extends TestCase
     public function test_contract_detail_page_shows_extended_fields(): void
     {
         $customer = $this->makeCustomer();
-        $contract = \App\Models\Contract::create([
+        $contract = Contract::create([
             'customer_id' => $customer->id, 'type' => 'strom_gas', 'insurer' => 'Stadtwerke',
             'status' => 'active', 'contract_number' => 'S-1', 'end_date' => now()->addYear(),
             'cancellation_date' => now()->addMonths(9),
         ]);
-        \App\Models\ContractEnergyDetail::create([
+        ContractEnergyDetail::create([
             'contract_id' => $contract->id, 'meter_number' => 'Z-999', 'malo_id' => '12345678901',
             'payment_amount' => 89.50, 'payment_interval' => 'monatlich',
         ]);
@@ -294,7 +298,7 @@ class PortalReviewTest extends TestCase
     public function test_customer_cannot_view_foreign_contract_detail(): void
     {
         $owner = $this->makeCustomer();
-        $contract = \App\Models\Contract::create([
+        $contract = Contract::create([
             'customer_id' => $owner->id, 'type' => 'kfz', 'insurer' => 'HUK', 'status' => 'active', 'contract_number' => 'K-9',
         ]);
         $attacker = $this->makeCustomer();

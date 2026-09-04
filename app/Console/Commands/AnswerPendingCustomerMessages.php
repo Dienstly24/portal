@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Console\Commands;
 
 use App\Console\Concerns\ProcessesRecordsSafely;
@@ -32,7 +33,7 @@ class AnswerPendingCustomerMessages extends Command
 
     public function handle(AssistantSettings $settings): int
     {
-        if (!$settings->enabled() || !$settings->autoReply()) {
+        if (! $settings->enabled() || ! $settings->autoReply()) {
             $this->info('KI-Assistent ist abgeschaltet - nichts zu tun.');
 
             return self::SUCCESS;
@@ -64,7 +65,7 @@ class AnswerPendingCustomerMessages extends Command
             AnswerCustomerMessageJob::dispatch($message->id);
         }, 'Kundennachricht');
 
-        $this->info($dispatched . ' Kundennachricht(en) geprueft und ggf. erneut an den KI-Assistenten gegeben.');
+        $this->info($dispatched.' Kundennachricht(en) geprueft und ggf. erneut an den KI-Assistenten gegeben.');
 
         return $this->ergebnisMitUebersprungenen(self::SUCCESS);
     }

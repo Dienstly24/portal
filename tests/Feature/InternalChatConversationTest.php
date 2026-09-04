@@ -2,8 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\Customer;
 use App\Models\InternalConversation;
-use App\Models\InternalConversationMessage;
+use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -116,11 +117,11 @@ class InternalChatConversationTest extends TestCase
     {
         $admin = $this->staff('admin');
         $customerUser = User::factory()->create(['role' => 'customer']);
-        $customer = \App\Models\Customer::create([
+        $customer = Customer::create([
             'user_id' => $customerUser->id,
             'customer_number' => 'C-TCK1',
         ]);
-        $ticket = \App\Models\Ticket::create([
+        $ticket = Ticket::create([
             'customer_id' => $customer->id, 'type' => 'other', 'status' => 'open',
             'subject' => 'Frage', 'description' => 'Test',
         ]);

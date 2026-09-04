@@ -1,11 +1,11 @@
 <?php
+
 namespace App\Services\Ai\Assistant;
 
 use App\Models\AiConversation;
 use App\Models\Customer;
 use App\Services\Ai\Assistant\Sales\ConversationContext;
 use App\Services\Ai\Assistant\Sales\ConversationState;
-use App\Services\Ai\Assistant\Sales\RequirementProfile;
 
 /**
  * Der System-Prompt des Kundenassistenten - die Regeln, die IMMER Vorrang
@@ -109,14 +109,14 @@ PROMPT;
      */
     private function salesPart(Customer $customer, ?AiConversation $conversation): string
     {
-        if (!$conversation) {
+        if (! $conversation) {
             return '';
         }
 
         $stand = (new ConversationContext($conversation, $customer))->forPrompt();
         $wartet = ConversationState::waitsForStaff($conversation->state)
             ? "\nDER VORGANG WARTET AUF EINEN MITARBEITER. Sage dem Kunden freundlich,\n"
-                . "dass sich ein Mitarbeiter meldet, und frage nichts Neues ab.\n"
+                ."dass sich ein Mitarbeiter meldet, und frage nichts Neues ab.\n"
             : '';
 
         return <<<TEIL

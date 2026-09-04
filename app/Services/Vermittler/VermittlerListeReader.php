@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Vermittler;
 
 use App\Services\Ocr\PdfTextLayerExtractor;
@@ -116,10 +117,10 @@ class VermittlerListeReader
             }
         }
 
-        if (!$this->ocr->isAvailable()) {
+        if (! $this->ocr->isAvailable()) {
             throw new \RuntimeException(
                 'Für Bilder und gescannte PDF wird die Texterkennung (OCR) benötigt, sie ist auf diesem Server aber nicht aktiv. '
-                . 'Bitte die Liste als CSV exportieren – das ist ohnehin der genauere Weg.'
+                .'Bitte die Liste als CSV exportieren – das ist ohnehin der genauere Weg.'
             );
         }
 

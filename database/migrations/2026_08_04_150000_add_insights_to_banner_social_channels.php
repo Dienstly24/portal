@@ -10,8 +10,7 @@ use Illuminate\Support\Facades\Schema;
  * Meta-API (social:refresh-insights), damit der Betreiber Meta nicht
  * oeffnen muss.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('banner_social_channels', function (Blueprint $table) {

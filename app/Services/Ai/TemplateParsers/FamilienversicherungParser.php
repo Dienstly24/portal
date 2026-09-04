@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
@@ -28,9 +29,9 @@ class FamilienversicherungParser implements DocumentTemplateParser
     {
         $upper = mb_strtoupper($text);
         // Fragebogen zur Familienversicherung (Mitglied + Angehoerige).
-        if (!str_contains($upper, 'FAMILIENVERSICHERUNG')
-            || !str_contains($upper, 'NAME DES MITGLIEDS')
-            || !str_contains($upper, 'EHEGATTE')) {
+        if (! str_contains($upper, 'FAMILIENVERSICHERUNG')
+            || ! str_contains($upper, 'NAME DES MITGLIEDS')
+            || ! str_contains($upper, 'EHEGATTE')) {
             return null;
         }
 
@@ -44,14 +45,14 @@ class FamilienversicherungParser implements DocumentTemplateParser
             return null;
         }
 
-        $memberName = trim(($member['first_name'] ?? '') . ' ' . ($member['last_name'] ?? ''));
+        $memberName = trim(($member['first_name'] ?? '').' '.($member['last_name'] ?? ''));
         return [
             'type' => 'familienversicherung',
             'confidence' => 70,
             'summary' => 'Familienversicherung (gesetzliche Krankenversicherung)'
-                . ($memberName !== '' ? ' - Mitglied ' . $memberName : '')
-                . ' + ' . count($personen) . ' Angehoerige - gratis aus dem Formular gelesen (ohne KI).',
-            'title' => 'Familienversicherung' . ($memberName !== '' ? ' ' . $memberName : ''),
+                .($memberName !== '' ? ' - Mitglied '.$memberName : '')
+                .' + '.count($personen).' Angehoerige - gratis aus dem Formular gelesen (ohne KI).',
+            'title' => 'Familienversicherung'.($memberName !== '' ? ' '.$memberName : ''),
             'data' => [
                 'person' => $member,
                 'personen' => $personen,
@@ -136,7 +137,7 @@ class FamilienversicherungParser implements DocumentTemplateParser
     private function columnValues(string $label): array
     {
         foreach ($this->lines as $line) {
-            if (!preg_match('/^' . preg_quote($label, '/') . '\s{2,}(.+)$/u', $line, $m)) {
+            if (! preg_match('/^'.preg_quote($label, '/').'\s{2,}(.+)$/u', $line, $m)) {
                 continue;
             }
             $cells = preg_split('/\s{2,}/', trim($m[1])) ?: [];
@@ -199,7 +200,7 @@ class FamilienversicherungParser implements DocumentTemplateParser
     private function germanDate(?string $value): ?string
     {
         if ($value !== null && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $value, $m)) {
-            return $m[3] . '-' . $m[2] . '-' . $m[1];
+            return $m[3].'-'.$m[2].'-'.$m[1];
         }
         return null;
     }

@@ -18,8 +18,7 @@ use Illuminate\Support\Facades\Schema;
  * Quellen-Tabelle: eine neue Quelle darf entstehen, ohne dass jemand vorher
  * einen Stammdatensatz anlegt. Unbekannte Quellen bleiben schlicht leer.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('commission_imports', function (Blueprint $table) {

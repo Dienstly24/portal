@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -75,7 +76,7 @@ class AiKnowledgeEntry extends Model
         if (str_starts_with($key, 'servicepage:')) {
             $slug = explode(':', $key)[1] ?? '';
 
-            return 'Leistungsseite ' . $slug;
+            return 'Leistungsseite '.$slug;
         }
 
         return $key;

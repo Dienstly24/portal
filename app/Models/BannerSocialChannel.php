@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -58,7 +59,7 @@ class BannerSocialChannel extends Model
     /** Absoluter Kurzlink fuer den Beitrag dieser Plattform. */
     public function shortUrl(): string
     {
-        return url('/s/' . $this->short_code);
+        return url('/s/'.$this->short_code);
     }
 
     /** Klick von der Plattform zaehlen (oeffentlicher Redirect). */
@@ -73,7 +74,7 @@ class BannerSocialChannel extends Model
     {
         $prefix = BannerSocialPost::PLATFORMS[$platform]['prefix'] ?? 'sm';
         do {
-            $code = $prefix . '-' . Str::lower(Str::random(6));
+            $code = $prefix.'-'.Str::lower(Str::random(6));
         } while (self::where('short_code', $code)->exists());
 
         return $code;

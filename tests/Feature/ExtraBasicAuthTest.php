@@ -17,7 +17,7 @@ class ExtraBasicAuthTest extends TestCase
 
     private function basic(string $cred): array
     {
-        return ['Authorization' => 'Basic ' . base64_encode($cred)];
+        return ['Authorization' => 'Basic '.base64_encode($cred)];
     }
 
     public function test_admin_requires_second_layer_when_configured(): void

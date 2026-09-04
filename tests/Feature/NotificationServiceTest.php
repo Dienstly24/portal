@@ -123,12 +123,12 @@ class NotificationServiceTest extends TestCase
         $b = $this->user();
 
         Notify::pushMany([$a->id, $b->id], fn ($id) => [
-            'title' => 'Hallo ' . $id,
-            'dedup_key' => 'greet-' . $id,
+            'title' => 'Hallo '.$id,
+            'dedup_key' => 'greet-'.$id,
         ]);
 
-        $this->assertDatabaseHas('internal_notifications', ['user_id' => $a->id, 'title' => 'Hallo ' . $a->id]);
-        $this->assertDatabaseHas('internal_notifications', ['user_id' => $b->id, 'title' => 'Hallo ' . $b->id]);
+        $this->assertDatabaseHas('internal_notifications', ['user_id' => $a->id, 'title' => 'Hallo '.$a->id]);
+        $this->assertDatabaseHas('internal_notifications', ['user_id' => $b->id, 'title' => 'Hallo '.$b->id]);
     }
 
     public function test_unknown_attributes_are_ignored(): void

@@ -1,8 +1,11 @@
 <?php
+
 namespace App\Console\Commands;
 
+use App\Models\ActivityLog;
 use App\Models\EmailMessage;
 use App\Models\SystemSetting;
+use App\Services\Mailbox\EmailAttachmentService;
 use Illuminate\Console\Command;
 
 /**
@@ -38,7 +41,7 @@ class PruneUnmatchedEmails extends Command
 
         // Audit-Fix H3/H1-Folge: auch die physischen Anhang-Dateien
         // entfernen, nicht nur die DB-Zeilen.
-        $attachmentService = app(\App\Services\Mailbox\EmailAttachmentService::class);
+        $attachmentService = app(EmailAttachmentService::class);
         $deleted = 0;
         foreach ($query->cursor() as $message) {
             $attachmentService->deleteFiles($message);
@@ -47,7 +50,7 @@ class PruneUnmatchedEmails extends Command
         }
 
         if ($deleted > 0) {
-            \App\Models\ActivityLog::create([
+            ActivityLog::create([
                 'user_id' => null,
                 'action' => 'emails_pruned',
                 'entity_type' => 'email_message',

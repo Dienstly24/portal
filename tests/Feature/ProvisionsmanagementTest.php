@@ -2,15 +2,14 @@
 
 namespace Tests\Feature;
 
-use App\Models\CommissionFollowup;
 use App\Models\CommissionPool;
-use App\Models\CommissionReferenceLink;
 use App\Models\Contract;
 use App\Models\ContractCommission;
 use App\Models\Customer;
 use App\Models\User;
 use App\Services\CommissionImport\CommissionImportService;
 use App\Services\Provisionsmanagement\CommissionStatusEngine;
+use App\Services\Provisionsmanagement\ReferenceLinkService;
 use App\Support\CommissionKind;
 use App\Support\ContractCommissionStatus as Zustand;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -51,7 +50,7 @@ class ProvisionsmanagementTest extends TestCase
         $user = User::factory()->create(['role' => 'customer', 'name' => $name]);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5($name . $user->id), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5($name.$user->id), 0, 8)),
         ]);
     }
 
@@ -77,7 +76,7 @@ class ProvisionsmanagementTest extends TestCase
         if (! is_dir($dir)) {
             mkdir($dir, 0755, true);
         }
-        $path = $dir . '/' . uniqid() . '-' . $name;
+        $path = $dir.'/'.uniqid().'-'.$name;
         file_put_contents($path, $content);
         return $path;
     }
@@ -90,7 +89,7 @@ class ProvisionsmanagementTest extends TestCase
      */
     private function check24Csv(array $rows, bool $mitReferenz = true): string
     {
-        $header = 'Datum;Produkt;Id;Status;Provision;Stornogrund' . ($mitReferenz ? ';Referenz-Nr.' : '');
+        $header = 'Datum;Produkt;Id;Status;Provision;Stornogrund'.($mitReferenz ? ';Referenz-Nr.' : '');
         $lines = [$header];
         foreach ($rows as $row) {
             $zeile = [
@@ -106,7 +105,7 @@ class ProvisionsmanagementTest extends TestCase
             }
             $lines[] = implode(';', $zeile);
         }
-        return implode("\n", $lines) . "\n";
+        return implode("\n", $lines)."\n";
     }
 
     private function importiere(string $csv, bool $anlegen = false, string $pool = 'check24'): void
@@ -165,7 +164,7 @@ class ProvisionsmanagementTest extends TestCase
     public function test_3_provision_fuer_unbekannten_kunden_legt_kunde_vertrag_und_provision_an(): void
     {
         $csv = "Datum;Produkt;Id;Status;Provision;Kunde;Anschrift\n"
-            . "15.06.2026;Hausratversicherung;555111;bestaetigt;90,00;Nadine Neu;Musterweg 3, 12345 Musterstadt\n";
+            ."15.06.2026;Hausratversicherung;555111;bestaetigt;90,00;Nadine Neu;Musterweg 3, 12345 Musterstadt\n";
 
         $this->importiere($csv, true);
 
@@ -203,7 +202,7 @@ class ProvisionsmanagementTest extends TestCase
         $this->importiere($this->check24Csv([
             ['betrag' => '3,07', 'produkt' => 'AP'],
             ['betrag' => '-3,66', 'produkt' => 'APStorno', 'status' => 'storniert',
-             'stornogrund' => 'Widerruf', 'datum' => '20.01.2027'],
+                'stornogrund' => 'Widerruf', 'datum' => '20.01.2027'],
         ]));
 
         $this->assertSame(2, ContractCommission::count(), 'Beide Buchungen bleiben erhalten.');
@@ -551,7 +550,7 @@ class ProvisionsmanagementTest extends TestCase
     public function test_kennungspaar_bleibt_bei_widerspruch_ohne_zuordnung(): void
     {
         $contract = $this->contract($this->customer(), ['reference_number' => 'REF-A1234']);
-        $links = app(\App\Services\Provisionsmanagement\ReferenceLinkService::class);
+        $links = app(ReferenceLinkService::class);
 
         $links->remember('check24', 'REF-A1234', '900001', $contract);
         // Dieselbe Id, andere Referenz: das ist ein Widerspruch im Bestand.

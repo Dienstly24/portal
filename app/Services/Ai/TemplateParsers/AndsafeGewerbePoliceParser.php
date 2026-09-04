@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Models\Contract;
@@ -57,9 +58,9 @@ class AndsafeGewerbePoliceParser implements DocumentTemplateParser
         if ($this->looksLikeComparisonProtocol($this->text)) {
             return null;
         }
-        if (!str_contains($upper, 'ANDSAFE')
-            || !str_contains($upper, 'VERSICHERUNGSSCHEIN')
-            || !str_contains($upper, 'VERTRAGSNUMMER')) {
+        if (! str_contains($upper, 'ANDSAFE')
+            || ! str_contains($upper, 'VERSICHERUNGSSCHEIN')
+            || ! str_contains($upper, 'VERTRAGSNUMMER')) {
             return null;
         }
 
@@ -71,21 +72,21 @@ class AndsafeGewerbePoliceParser implements DocumentTemplateParser
         }
         $person = $this->parsePerson();
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $sparte = $insurance['sparte'] ?? null;
 
         return [
             'type' => 'versicherungspolice',
             'confidence' => 78,
             'summary' => 'andsafe Versicherungsschein'
-                . ($sparte !== null ? ' - ' . (Contract::TYPES[$sparte]['label'] ?? $sparte) : '')
-                . ($name !== '' ? ' - ' . $name : '')
-                . ' - Vertrag ' . $insurance['contract_number']
-                . $this->extras()
-                . ' Keine Bankuebernahme (Kunden-IBAN ist maskiert).'
-                . ' Felder gratis aus dem Versicherungsschein gelesen (ohne KI).',
-            'title' => 'andsafe ' . ($insurance['tariff'] ?? 'Versicherungsschein')
-                . ($name !== '' ? ' - ' . $name : ''),
+                .($sparte !== null ? ' - '.(Contract::TYPES[$sparte]['label'] ?? $sparte) : '')
+                .($name !== '' ? ' - '.$name : '')
+                .' - Vertrag '.$insurance['contract_number']
+                .$this->extras()
+                .' Keine Bankuebernahme (Kunden-IBAN ist maskiert).'
+                .' Felder gratis aus dem Versicherungsschein gelesen (ohne KI).',
+            'title' => 'andsafe '.($insurance['tariff'] ?? 'Versicherungsschein')
+                .($name !== '' ? ' - '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -109,19 +110,19 @@ class AndsafeGewerbePoliceParser implements DocumentTemplateParser
         $block = $this->blockValues('Versicherungsnehmer:in')
             ?: $this->blockValues('Versicherungsnehmer');
         foreach ($block as $zeile) {
-            if (!isset($raw['zip']) && preg_match('/^(\d{5})\s+(\p{L}[\p{L}.\- ]*)$/u', $zeile, $z)) {
+            if (! isset($raw['zip']) && preg_match('/^(\d{5})\s+(\p{L}[\p{L}.\- ]*)$/u', $zeile, $z)) {
                 $raw['zip'] = $z[1];
                 $raw['city'] = trim($z[2]);
                 continue;
             }
-            if (!isset($raw['street'])
+            if (! isset($raw['street'])
                 && preg_match('/^(\p{L}[\p{L}.\-\' ]*\p{L}\.?)\s+(\d+\s*[a-zA-Z]?)$/u', $zeile, $s)) {
                 $raw['street'] = trim($s[1]);
                 $raw['house_number'] = trim((string) preg_replace('/\s+/', ' ', $s[2]));
                 continue;
             }
             // Personenname (letztes Wort = Nachname) bzw. Firmenname.
-            if (!isset($raw['last_name']) && !isset($raw['company_name'])) {
+            if (! isset($raw['last_name']) && ! isset($raw['company_name'])) {
                 if ($this->looksLikeCompany($zeile)) {
                     $raw['company_name'] = $zeile;
                 } elseif (preg_match('/^\p{Lu}[\p{L}\-\']+(?:\s+\p{Lu}[\p{L}\-\']+){1,3}$/u', $zeile)) {
@@ -134,7 +135,7 @@ class AndsafeGewerbePoliceParser implements DocumentTemplateParser
 
         if (($v = $this->labelValue('Kontakt-E-Mail-Adresse') ?? $this->labelValue('E-Mail-Adresse')) !== null
             && preg_match('/[\w.+\-]+@[\w.\-]+\.\w{2,}/u', $v, $m)
-            && !$this->isInsurerMail($m[0])) {
+            && ! $this->isInsurerMail($m[0])) {
             $raw['email'] = mb_strtolower($m[0]);
         }
 
@@ -164,11 +165,11 @@ class AndsafeGewerbePoliceParser implements DocumentTemplateParser
 
         if (($v = $this->labelValue('Versicherungsbeginn')) !== null
             && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $v, $m)) {
-            $raw['start_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['start_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
         if (($v = $this->labelValue('Versicherungsablauf')) !== null
             && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $v, $m)) {
-            $raw['end_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['end_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
 
         // Beitrag: der WIEDERKEHRENDE Brutto-Betrag der Beitragsrechnung
@@ -200,21 +201,21 @@ class AndsafeGewerbePoliceParser implements DocumentTemplateParser
             'Versicherungssumme' => 'Versicherungssumme',
         ] as $label => $titel) {
             if (($v = $this->labelText($label)) !== null) {
-                $out .= ' ' . $titel . ': ' . rtrim($v, '.') . '.';
+                $out .= ' '.$titel.': '.rtrim($v, '.').'.';
             }
         }
         if (($v = $this->labelText('Selbstbeteiligung je Schadenfall')) !== null) {
-            $out .= ' Selbstbeteiligung: ' . rtrim($v, '.') . '.';
+            $out .= ' Selbstbeteiligung: '.rtrim($v, '.').'.';
         }
         // Optionale Bausteine stehen als eigene Ueberschrift im Dokument.
         if (preg_match('/Optionale Einschlüsse\s*\R+\s*\R*\s*(\p{Lu}[^\r\n]{3,60}?)\s{2,}/u', $this->text, $m)) {
-            $out .= ' Optionaler Einschluss: ' . trim($m[1]) . '.';
+            $out .= ' Optionaler Einschluss: '.trim($m[1]).'.';
         }
         if (($v = $this->labelValue('Jahresbeitrag')) !== null) {
-            $out .= ' Jahresbeitrag (brutto): ' . $v . '.';
+            $out .= ' Jahresbeitrag (brutto): '.$v.'.';
         }
         if (($v = $this->labelValue('Antragsdatum')) !== null) {
-            $out .= ' Antrag vom ' . $v . '.';
+            $out .= ' Antrag vom '.$v.'.';
         }
         return $out;
     }
@@ -226,11 +227,11 @@ class AndsafeGewerbePoliceParser implements DocumentTemplateParser
         return match (true) {
             str_contains($p, 'betriebshaftpflicht'), str_contains($p, 'berufshaftpflicht') => 'betriebshaftpflicht',
             str_contains($p, 'verkehrshaftung'), str_contains($p, 'frachtführer'),
-            str_contains($p, 'frachtfuehrer')                                              => 'frachtfuehrerhaftpflicht',
-            str_contains($p, 'privathaftpflicht')                                          => 'haftpflicht',
-            str_contains($p, 'rechtsschutz')                                               => 'rechtsschutz',
+            str_contains($p, 'frachtfuehrer') => 'frachtfuehrerhaftpflicht',
+            str_contains($p, 'privathaftpflicht') => 'haftpflicht',
+            str_contains($p, 'rechtsschutz') => 'rechtsschutz',
             str_contains($p, 'inhalt'), str_contains($p, 'geschäft'), str_contains($p, 'sach') => 'sach',
-            default                                                                        => null,
+            default => null,
         };
     }
 
@@ -245,11 +246,11 @@ class AndsafeGewerbePoliceParser implements DocumentTemplateParser
     private function interval(string $german): ?string
     {
         return match (mb_strtolower(trim($german))) {
-            'monatlich'        => 'monthly',
-            'vierteljährlich'  => 'quarterly',
-            'halbjährlich'     => 'semiannual',
-            'jährlich'         => 'yearly',
-            default            => null,
+            'monatlich' => 'monthly',
+            'vierteljährlich' => 'quarterly',
+            'halbjährlich' => 'semiannual',
+            'jährlich' => 'yearly',
+            default => null,
         };
     }
 
@@ -274,10 +275,10 @@ class AndsafeGewerbePoliceParser implements DocumentTemplateParser
         $text = '';
         foreach ($zeilen as $zeile) {
             if (str_ends_with($text, '-')) {
-                $text = mb_substr($text, 0, -1) . $zeile; // Silbentrennung aufheben
+                $text = mb_substr($text, 0, -1).$zeile; // Silbentrennung aufheben
                 continue;
             }
-            $text = $text === '' ? $zeile : $text . ' ' . $zeile;
+            $text = $text === '' ? $zeile : $text.' '.$zeile;
         }
         return trim((string) preg_replace('/\s+/', ' ', $text));
     }
@@ -285,7 +286,7 @@ class AndsafeGewerbePoliceParser implements DocumentTemplateParser
     /** Wert hinter der Beschriftung (Spaltenlayout: mindestens zwei Leerzeichen). */
     private function labelValue(string $label): ?string
     {
-        $re = '/^' . preg_quote($label, '/') . '\s{2,}(\S[^\n]*?)\s*$/mu';
+        $re = '/^'.preg_quote($label, '/').'\s{2,}(\S[^\n]*?)\s*$/mu';
         return preg_match($re, $this->text, $m) ? trim($m[1]) : null;
     }
 
@@ -300,13 +301,13 @@ class AndsafeGewerbePoliceParser implements DocumentTemplateParser
     {
         $out = [];
         foreach ($this->lines as $i => $line) {
-            if (!preg_match('/^' . preg_quote($label, '/') . '\s{2,}(\S.*)$/u', $line, $m)) {
+            if (! preg_match('/^'.preg_quote($label, '/').'\s{2,}(\S.*)$/u', $line, $m)) {
                 continue;
             }
             $out[] = trim($m[1]);
             $spalte = mb_strlen($line) - mb_strlen(ltrim($m[1])) - (mb_strlen($line) - mb_strlen(rtrim($line)));
             for ($j = $i + 1, $n = count($this->lines); $j < $n; $j++) {
-                if (trim($this->lines[$j]) === '' || !preg_match('/^\s{6,}(\S.*)$/u', $this->lines[$j], $f)) {
+                if (trim($this->lines[$j]) === '' || ! preg_match('/^\s{6,}(\S.*)$/u', $this->lines[$j], $f)) {
                     break;
                 }
                 $out[] = trim($f[1]);

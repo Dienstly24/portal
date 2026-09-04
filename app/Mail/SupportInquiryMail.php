@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Mail;
 
 use App\Models\Ticket;
@@ -29,11 +30,11 @@ class SupportInquiryMail extends Mailable implements ShouldQueue
     {
         $name = $this->ticket->guest_name ?: 'Webseite';
         return new Envelope(
-            from: new Address(config('mail.from.address'), $name . ' (Webseite)'),
+            from: new Address(config('mail.from.address'), $name.' (Webseite)'),
             replyTo: $this->ticket->guest_email ? [new Address($this->ticket->guest_email, $name)] : [],
-            subject: 'Neue Anfrage: ' . $this->ticket->subject
-                . ' – ' . $name
-                . ($this->customerNumber ? ' (' . $this->customerNumber . ')' : ''),
+            subject: 'Neue Anfrage: '.$this->ticket->subject
+                .' – '.$name
+                .($this->customerNumber ? ' ('.$this->customerNumber.')' : ''),
         );
     }
 

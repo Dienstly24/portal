@@ -1,10 +1,23 @@
 <?php
+
 namespace App\Http\Controllers;
-use App\Models\User;
-use App\Models\Customer;
-use App\Models\ActivityLog;
+
+use App\Http\Controllers\Auth\PasswordSetupController;
 use App\Mail\EmployeeWelcomeMail;
+use App\Models\ActivityLog;
+use App\Models\Announcement;
+use App\Models\Appointment;
+use App\Models\Customer;
+use App\Models\CustomerNote;
+use App\Models\EmailCampaign;
+use App\Models\EmailLog;
+use App\Models\Substitution;
+use App\Models\Task;
+use App\Models\TicketMessage;
+use App\Models\User;
+use App\Services\TwoFactorService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
@@ -54,16 +67,16 @@ class EmployeeController extends Controller
 
         // بناء قائمة الصلاحيات للإيميل
         $permLabels = [];
-        if($request->has('can_manage_contracts')) $permLabels[] = '📄 Verträge verwalten';
-        if($request->has('can_manage_tickets')) $permLabels[] = '💬 Tickets bearbeiten';
-        if($request->has('can_approve_changes')) $permLabels[] = '✅ Änderungen genehmigen';
-        if($request->has('can_send_emails')) $permLabels[] = '📧 E-Mails senden';
-        if($request->has('can_import_export')) $permLabels[] = '📤 Import / Export';
-        if($request->has('can_manage_commissions')) $permLabels[] = '💶 Provisionen verwalten';
-        if($request->has('can_see_all_customers')) $permLabels[] = '👥 Zugriff auf alle Kunden';
+        if ($request->has('can_manage_contracts')) $permLabels[] = '📄 Verträge verwalten';
+        if ($request->has('can_manage_tickets')) $permLabels[] = '💬 Tickets bearbeiten';
+        if ($request->has('can_approve_changes')) $permLabels[] = '✅ Änderungen genehmigen';
+        if ($request->has('can_send_emails')) $permLabels[] = '📧 E-Mails senden';
+        if ($request->has('can_import_export')) $permLabels[] = '📤 Import / Export';
+        if ($request->has('can_manage_commissions')) $permLabels[] = '💶 Provisionen verwalten';
+        if ($request->has('can_see_all_customers')) $permLabels[] = '👥 Zugriff auf alle Kunden';
 
         // Einladung mit Passwort-Setzen-Link (kein Klartext-Passwort).
-        $setPasswordUrl = \App\Http\Controllers\Auth\PasswordSetupController::invitationUrl($employee);
+        $setPasswordUrl = PasswordSetupController::invitationUrl($employee);
         $mailSent = true;
         try {
             Mail::to($employee->email)->send(new EmployeeWelcomeMail(
@@ -71,11 +84,11 @@ class EmployeeController extends Controller
                 $employee->email,
                 $setPasswordUrl,
                 $permLabels,
-                \App\Http\Controllers\Auth\PasswordSetupController::INVITATION_DAYS,
+                PasswordSetupController::INVITATION_DAYS,
             ));
-        } catch(\Throwable $e) {
+        } catch (\Throwable $e) {
             $mailSent = false;
-            \Log::warning("Welcome-Mail fehlgeschlagen: ".$e->getMessage());
+            \Log::warning('Welcome-Mail fehlgeschlagen: '.$e->getMessage());
         }
 
         // تسجيل النشاط
@@ -93,14 +106,14 @@ class EmployeeController extends Controller
             return redirect()->route('admin.employees')->with(
                 'warning',
                 'Mitarbeiter erstellt, aber die Einladungs-E-Mail konnte NICHT versendet werden. '
-                . 'Bitte die Einladung erneut senden, sobald der Mailversand wieder laeuft.'
+                .'Bitte die Einladung erneut senden, sobald der Mailversand wieder laeuft.'
             );
         }
 
         return redirect()->route('admin.employees')->with(
             'success',
             'Mitarbeiter erstellt. Er hat eine Einladung erhalten und legt sein Passwort selbst fest '
-            . '(Link ' . \App\Http\Controllers\Auth\PasswordSetupController::INVITATION_DAYS . ' Tage gueltig).'
+            .'(Link '.PasswordSetupController::INVITATION_DAYS.' Tage gueltig).'
         );
     }
 
@@ -110,7 +123,7 @@ class EmployeeController extends Controller
             abort(403, 'Kein Zugriff auf Administrator-Konten.');
         }
         $assignedIds = $employee->assignedCustomers()->pluck('customers.id')->toArray();
-        return view('admin.employee_edit', compact('employee','assignedIds'));
+        return view('admin.employee_edit', compact('employee', 'assignedIds'));
     }
 
     /**
@@ -128,7 +141,7 @@ class EmployeeController extends Controller
         // Icons mitladen). Die Freitext-Suche nutzt denselben Scope wie der
         // Kundenbereich (alle Felder) - hier nur auf das Portfolio begrenzt.
         $query = $employee->assignedCustomers()
-            ->with(['user', 'contracts' => fn($q) => $q->currentlyActive()
+            ->with(['user', 'contracts' => fn ($q) => $q->currentlyActive()
                 ->select('id', 'customer_id', 'type', 'status', 'start_date', 'end_date', 'cancellation_date')]);
         if ($request->filled('q')) {
             $query->search((string) $request->q);
@@ -137,7 +150,7 @@ class EmployeeController extends Controller
         $customers = $query->orderByDesc('employee_customers.created_at')->paginate(25)->withQueryString();
         // IDs aller zugewiesenen Kunden - damit die smarte Suche bereits
         // zugewiesene Treffer markiert (kein doppeltes Zuweisen).
-        $assignedIds = $employee->assignedCustomers()->pluck('customers.id')->map(fn($v) => (string) $v)->values();
+        $assignedIds = $employee->assignedCustomers()->pluck('customers.id')->map(fn ($v) => (string) $v)->values();
 
         return view('admin.employee_show', compact('employee', 'customers', 'assignedCount', 'assignedIds'));
     }
@@ -156,7 +169,7 @@ class EmployeeController extends Controller
             'customer_ids.*' => 'string',
         ]);
         // Nur echte, existierende Kunden zuweisen (keine ungueltigen IDs).
-        $ids = Customer::whereIn('id', $data['customer_ids'])->pluck('id')->map(fn($v) => (string) $v)->all();
+        $ids = Customer::whereIn('id', $data['customer_ids'])->pluck('id')->map(fn ($v) => (string) $v)->all();
         if ($ids === []) {
             return back()->with('error', 'Keine gueltigen Kunden ausgewaehlt.');
         }
@@ -174,7 +187,7 @@ class EmployeeController extends Controller
             ], JSON_UNESCAPED_UNICODE),
         ]);
 
-        return back()->with('success', count($ids) . ' Kunde(n) ' . $employee->name . ' zugewiesen.');
+        return back()->with('success', count($ids).' Kunde(n) '.$employee->name.' zugewiesen.');
     }
 
     /** Einen einzelnen Kunden aus dem Portfolio des Mitarbeiters entfernen. */
@@ -213,7 +226,7 @@ class EmployeeController extends Controller
             'provision_fixed' => 'nullable|numeric|min:0|max:99999.99',
             'provision_percent' => 'nullable|numeric|min:0|max:100',
         ]);
-        \Illuminate\Support\Facades\DB::transaction(function () use ($request, $employee) {
+        DB::transaction(function () use ($request, $employee) {
             $employee->update([
                 'name' => $request->name,
                 'role' => in_array($request->role, ['employee', 'manager']) ? $request->role : $employee->role,
@@ -224,7 +237,7 @@ class EmployeeController extends Controller
                 'can_approve_changes' => $request->has('can_approve_changes'),
                 'can_send_emails' => $request->has('can_send_emails'),
                 'can_import_export' => $request->has('can_import_export'),
-            'can_manage_commissions' => $request->has('can_manage_commissions'),
+                'can_manage_commissions' => $request->has('can_manage_commissions'),
                 'provision_fixed' => $request->filled('provision_fixed') ? round((float) $request->provision_fixed, 2) : null,
                 'provision_percent' => $request->filled('provision_percent') ? round((float) $request->provision_percent, 2) : null,
             ]);
@@ -258,22 +271,22 @@ class EmployeeController extends Controller
         // Referenz-Nullung + Loeschung atomar (Audit-Re-Audit): sonst koennte
         // ein Abbruch dazwischen genullte Referenzen bei noch existierendem
         // User hinterlassen.
-        \Illuminate\Support\Facades\DB::transaction(function () use ($employee) {
+        DB::transaction(function () use ($employee) {
             // Ticket-Antworten des Mitarbeiters bleiben in den Kundengespraechen
             // erhalten (sender wird geleert, Views zeigen "Dienstly24 Team") -
             // vorher loeschte der DB-Cascade die komplette Historie mit.
-            \App\Models\TicketMessage::where('sender_id', $employee->id)->update(['sender_id' => null]);
+            TicketMessage::where('sender_id', $employee->id)->update(['sender_id' => null]);
 
             // Betriebs-/Audit-Historie erhalten (Audit DB-4): Autor-/Zustaendig-
             // Referenzen leeren, bevor der User geloescht wird. Wirkt auf jedem
             // Treiber (auch SQLite, wo die FK weiterhin CASCADE ist).
             foreach ([
-                [\App\Models\Task::class, ['assigned_to', 'created_by']],
-                [\App\Models\Appointment::class, ['assigned_to']],
-                [\App\Models\Announcement::class, ['created_by']],
-                [\App\Models\CustomerNote::class, ['created_by']],
-                [\App\Models\EmailCampaign::class, ['created_by']],
-                [\App\Models\EmailLog::class, ['user_id']],
+                [Task::class, ['assigned_to', 'created_by']],
+                [Appointment::class, ['assigned_to']],
+                [Announcement::class, ['created_by']],
+                [CustomerNote::class, ['created_by']],
+                [EmailCampaign::class, ['created_by']],
+                [EmailLog::class, ['user_id']],
             ] as [$model, $cols]) {
                 foreach ($cols as $col) {
                     $model::where($col, $employee->id)->update([$col => null]);
@@ -304,7 +317,7 @@ class EmployeeController extends Controller
         $customers = Customer::with('user')
             ->search($q)
             ->limit(15)->get()
-            ->map(fn($c) => [
+            ->map(fn ($c) => [
                 'id' => $c->id,
                 'name' => $c->user?->name,
                 'number' => $c->customer_number,
@@ -323,7 +336,7 @@ class EmployeeController extends Controller
         // Button war wirkungslos, das Konto behielt vollen Zugriff und
         // Log/Meldung behaupteten das Gegenteil (Audit DATA-P0). forceFill
         // wie bei den uebrigen System-Spalten (vgl. PortalAccessService).
-        $employee->forceFill(['is_active' => !$employee->is_active])->save();
+        $employee->forceFill(['is_active' => ! $employee->is_active])->save();
         ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => $employee->is_active ? 'employee_activated' : 'employee_deactivated',
@@ -331,7 +344,7 @@ class EmployeeController extends Controller
             'entity_id' => $employee->id,
             'meta' => json_encode(['name' => $employee->name]),
         ]);
-        return back()->with('success', 'Mitarbeiter ' . ($employee->is_active ? 'aktiviert' : 'deaktiviert') . '.');
+        return back()->with('success', 'Mitarbeiter '.($employee->is_active ? 'aktiviert' : 'deaktiviert').'.');
     }
 
     public function transferPortfolio(Request $request) {
@@ -346,7 +359,7 @@ class EmployeeController extends Controller
         if (empty($customerIds)) {
             return back()->with('success', 'Keine Kunden zum Uebertragen vorhanden.');
         }
-        \Illuminate\Support\Facades\DB::transaction(function () use ($from, $to, $customerIds, $request) {
+        DB::transaction(function () use ($from, $to, $customerIds, $request) {
             foreach ($customerIds as $cid) {
                 $to->assignedCustomers()->syncWithoutDetaching([$cid]);
             }
@@ -364,7 +377,7 @@ class EmployeeController extends Controller
                 ], JSON_UNESCAPED_UNICODE),
             ]);
         });
-        return back()->with('success', count($customerIds) . ' Kunden von ' . $from->name . ' an ' . $to->name . ' uebertragen.');
+        return back()->with('success', count($customerIds).' Kunden von '.$from->name.' an '.$to->name.' uebertragen.');
     }
 
     /**
@@ -387,7 +400,7 @@ class EmployeeController extends Controller
             return back()->with('error', 'Fuer dieses Konto ist keine echte E-Mail-Adresse hinterlegt.');
         }
 
-        $setPasswordUrl = \App\Http\Controllers\Auth\PasswordSetupController::invitationUrl($employee);
+        $setPasswordUrl = PasswordSetupController::invitationUrl($employee);
 
         try {
             Mail::to($employee->email)->send(new EmployeeWelcomeMail(
@@ -395,10 +408,10 @@ class EmployeeController extends Controller
                 $employee->email,
                 $setPasswordUrl,
                 [],
-                \App\Http\Controllers\Auth\PasswordSetupController::INVITATION_DAYS,
+                PasswordSetupController::INVITATION_DAYS,
             ));
         } catch (\Throwable $e) {
-            \Log::warning('Einladung erneut senden fehlgeschlagen: ' . $e->getMessage());
+            \Log::warning('Einladung erneut senden fehlgeschlagen: '.$e->getMessage());
             return back()->with('error', 'Die E-Mail konnte nicht versendet werden. Bitte spaeter erneut versuchen.');
         }
 
@@ -426,7 +439,7 @@ class EmployeeController extends Controller
      * Beim naechsten Login richtet der Mitarbeiter sie neu ein; das
      * Zuruecksetzen steht im Aktivitaetsprotokoll.
      */
-    public function resetTwoFactor($id, \App\Services\TwoFactorService $twoFactor) {
+    public function resetTwoFactor($id, TwoFactorService $twoFactor) {
         $employee = User::findOrFail($id);
 
         if (! $employee->requiresTwoFactor()) {
@@ -439,7 +452,7 @@ class EmployeeController extends Controller
         $twoFactor->disable($employee, auth()->id(), 'two_factor_reset_by_admin');
 
         return back()->with('success', 'Zwei-Faktor-Anmeldung zurueckgesetzt. '
-            . $employee->name . ' richtet sie beim naechsten Login neu ein.');
+            .$employee->name.' richtet sie beim naechsten Login neu ein.');
     }
 
     public function storeSubstitution(Request $request) {
@@ -450,7 +463,7 @@ class EmployeeController extends Controller
             'to_date' => 'required|date|after_or_equal:from_date',
             'reason' => 'nullable|string|max:255',
         ]);
-        $sub = \App\Models\Substitution::create([
+        $sub = Substitution::create([
             'absent_user_id' => $request->absent_user_id,
             'substitute_user_id' => $request->substitute_user_id,
             'from_date' => $request->from_date,
@@ -474,7 +487,7 @@ class EmployeeController extends Controller
     }
 
     public function destroySubstitution($id) {
-        $sub = \App\Models\Substitution::findOrFail($id);
+        $sub = Substitution::findOrFail($id);
         ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => 'substitution_ended',
@@ -489,7 +502,7 @@ class EmployeeController extends Controller
     public function teamPage() {
         $employees = User::whereIn('role', ['manager', 'support', 'employee'])
             ->withCount('assignedCustomers')->orderBy('name')->get();
-        $substitutions = \App\Models\Substitution::with(['absentUser', 'substituteUser'])
+        $substitutions = Substitution::with(['absentUser', 'substituteUser'])
             ->whereDate('to_date', '>=', now()->subDays(7))->latest()->get();
         return view('admin.team_verwaltung', compact('employees', 'substitutions'));
     }

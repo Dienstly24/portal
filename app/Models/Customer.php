@@ -1,22 +1,32 @@
 <?php
+
 namespace App\Models;
+
+use App\Casts\SafeEncrypted;
+use App\Services\CustomerNumberGenerator;
+use App\Services\Matching\DuplicateDetectionService;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
-class Customer extends Model {
+
+class Customer extends Model
+{
     protected $keyType = 'string';
     public $incrementing = false;
     public const SOURCES = ['manual', 'website', 'email_import', 'fonds_finanz', 'import', 'lexoffice'];
 
     protected $fillable = [
-        'user_id','partner_id','customer_number','source','commission_import_id','created_by','acquired_by','acquired_by_partner_id',
-        'birth_date','address','address2',
-        'iban','iban2','marital_status','phone','mobile','preferred_lang',
-        'company_name','company_type','customer_type','email2',
-        'nationality','occupation','employer_name','employer_address','last_contact','gender','account_holder','bic',
-        'marketing_consent','unsubscribed_at','unsubscribe_token',
-        'health_insurance_number','health_insurance_company','health_insurance_type',
-        'pension_insurance_number','tax_id','birth_place',
-        'address_street','address_house_number','address_house_suffix','address_zip','address_city'
+        'user_id', 'partner_id', 'customer_number', 'source', 'commission_import_id', 'created_by', 'acquired_by', 'acquired_by_partner_id',
+        'birth_date', 'address', 'address2',
+        'iban', 'iban2', 'marital_status', 'phone', 'mobile', 'preferred_lang',
+        'company_name', 'company_type', 'customer_type', 'email2',
+        'nationality', 'occupation', 'employer_name', 'employer_address', 'last_contact', 'gender', 'account_holder', 'bic',
+        'marketing_consent', 'unsubscribed_at', 'unsubscribe_token',
+        'health_insurance_number', 'health_insurance_company', 'health_insurance_type',
+        'pension_insurance_number', 'tax_id', 'birth_place',
+        'address_street', 'address_house_number', 'address_house_suffix', 'address_zip', 'address_city',
     ];
 
     /**
@@ -30,13 +40,13 @@ class Customer extends Model {
             'unsubscribed_at' => 'datetime',
             // SafeEncrypted: verschluesselt at rest (DSGVO), aber robust gegen
             // Alt-Klartext-Bestaende (sonst HTTP 500 beim Oeffnen/Speichern).
-            'health_insurance_number' => \App\Casts\SafeEncrypted::class,
-            'pension_insurance_number' => \App\Casts\SafeEncrypted::class,
-            'tax_id' => \App\Casts\SafeEncrypted::class,
+            'health_insurance_number' => SafeEncrypted::class,
+            'pension_insurance_number' => SafeEncrypted::class,
+            'tax_id' => SafeEncrypted::class,
             // Bankdaten verschlüsselt at rest (DSGVO). Anzeige bleibt maskiert.
-            'iban' => \App\Casts\SafeEncrypted::class,
-            'iban2' => \App\Casts\SafeEncrypted::class,
-            'bic' => \App\Casts\SafeEncrypted::class,
+            'iban' => SafeEncrypted::class,
+            'iban2' => SafeEncrypted::class,
+            'bic' => SafeEncrypted::class,
         ];
     }
 
@@ -49,11 +59,11 @@ class Customer extends Model {
     public function fullAddress(): string
     {
         $street = trim(
-            ($this->address_street ?? '') . ' ' . ($this->address_house_number ?? '')
-            . ($this->address_house_suffix ? ' ' . $this->address_house_suffix : '')
+            ($this->address_street ?? '').' '.($this->address_house_number ?? '')
+            .($this->address_house_suffix ? ' '.$this->address_house_suffix : '')
         );
-        $city = trim(($this->address_zip ?? '') . ' ' . ($this->address_city ?? ''));
-        $parts = array_values(array_filter([$street, $city], fn($p) => $p !== ''));
+        $city = trim(($this->address_zip ?? '').' '.($this->address_city ?? ''));
+        $parts = array_values(array_filter([$street, $city], fn ($p) => $p !== ''));
 
         return $parts !== [] ? implode(', ', $parts) : trim($this->address ?? '');
     }
@@ -65,7 +75,7 @@ class Customer extends Model {
      */
     public function householdKey(): string
     {
-        return \Illuminate\Support\Str::of($this->fullAddress())
+        return Str::of($this->fullAddress())
             ->lower()->replaceMatches('/[^a-z0-9]+/', '')->value();
     }
 
@@ -77,18 +87,18 @@ class Customer extends Model {
     public function completeness(): array
     {
         $checks = [
-            ['ok' => !empty($this->health_insurance_company), 'label' => 'Krankenkasse fehlt', 'route' => 'portal.profile'],
+            ['ok' => ! empty($this->health_insurance_company), 'label' => 'Krankenkasse fehlt', 'route' => 'portal.profile'],
             ['ok' => $this->family()->exists(), 'label' => 'Familienmitglieder fehlen', 'route' => 'portal.family'],
-            ['ok' => !empty($this->iban), 'label' => 'Bankverbindung fehlt', 'route' => 'portal.bank'],
+            ['ok' => ! empty($this->iban), 'label' => 'Bankverbindung fehlt', 'route' => 'portal.bank'],
             ['ok' => $this->contracts()->whereHas('vehicleDetail')->exists(), 'label' => 'Fahrzeugdaten fehlen', 'route' => 'portal.contracts'],
-            ['ok' => $this->contracts()->whereIn('type', \App\Models\Contract::ENERGY_TYPES)->exists(), 'label' => 'Energievertrag fehlt', 'route' => 'portal.contracts'],
+            ['ok' => $this->contracts()->whereIn('type', Contract::ENERGY_TYPES)->exists(), 'label' => 'Energievertrag fehlt', 'route' => 'portal.contracts'],
             ['ok' => $this->contracts()->where('type', 'internet')->exists(), 'label' => 'Internetvertrag fehlt', 'route' => 'portal.contracts'],
         ];
 
-        $done = count(array_filter($checks, fn($c) => $c['ok']));
+        $done = count(array_filter($checks, fn ($c) => $c['ok']));
         $percent = (int) round($done / count($checks) * 100);
 
-        $missing = array_values(array_filter($checks, fn($c) => !$c['ok']));
+        $missing = array_values(array_filter($checks, fn ($c) => ! $c['ok']));
         // Steuer-ID als optionaler Hinweis (zählt nicht in die Prozent)
         if (empty($this->tax_id)) {
             $missing[] = ['ok' => false, 'label' => 'Steuer-ID optional', 'route' => 'portal.profile', 'optional' => true];
@@ -106,10 +116,10 @@ class Customer extends Model {
     {
         $user = $this->user;
 
-        if ($user === null || !$user->hasRealEmail()) {
+        if ($user === null || ! $user->hasRealEmail()) {
             return ['key' => 'kein_account', 'label' => 'Kein Portal-Account', 'color' => '#A32D2D', 'bg' => '#F9E3E3'];
         }
-        if (isset($user->is_active) && !$user->is_active) {
+        if (isset($user->is_active) && ! $user->is_active) {
             return ['key' => 'deaktiviert', 'label' => 'Portal deaktiviert', 'color' => '#5F5E5A', 'bg' => '#EDEBE6'];
         }
         if ($user->first_login_at !== null) {
@@ -134,13 +144,13 @@ class Customer extends Model {
      */
     public function salutationLine(?string $fallbackName = null): string {
         $name = $this->user?->name ?: ($fallbackName ?? '');
-        if (!empty($this->company_name)) {
+        if (! empty($this->company_name)) {
             return 'Sehr geehrte Damen und Herren';
         }
         return match ($this->gender) {
-            'male' => 'Sehr geehrter Herr ' . $this->lastNameOr($name),
-            'female' => 'Sehr geehrte Frau ' . $this->lastNameOr($name),
-            default => trim($name) !== '' ? 'Guten Tag ' . $name : 'Sehr geehrte Damen und Herren',
+            'male' => 'Sehr geehrter Herr '.$this->lastNameOr($name),
+            'female' => 'Sehr geehrte Frau '.$this->lastNameOr($name),
+            default => trim($name) !== '' ? 'Guten Tag '.$name : 'Sehr geehrte Damen und Herren',
         };
     }
 
@@ -192,7 +202,7 @@ class Customer extends Model {
         $tokens = preg_split('/\s+/', $term, -1, PREG_SPLIT_NO_EMPTY) ?: [$term];
         foreach ($tokens as $token) {
             // %/_ maskieren, damit Nutzereingaben keine LIKE-Platzhalter werden.
-            $like = '%' . addcslashes($token, '%_\\') . '%';
+            $like = '%'.addcslashes($token, '%_\\').'%';
             // Ein Suchwort, das ein DATUM ist (12.03.2012 / 2012-03-12), trifft
             // zusaetzlich das Geburtsdatum - die Familienzuordnung sucht
             // bestehende Kunden ausdruecklich auch darueber.
@@ -200,40 +210,40 @@ class Customer extends Model {
             $query->where(function ($w) use ($like, $birthDate) {
                 // Direkte Kundenfelder (inkl. strukturierte Anschrift + PLZ/Ort).
                 $w->where('customer_number', 'like', $like)
-                  ->orWhere('phone', 'like', $like)
-                  ->orWhere('mobile', 'like', $like)
-                  ->orWhere('email2', 'like', $like)
-                  ->orWhere('company_name', 'like', $like)
-                  ->orWhere('address', 'like', $like)
-                  ->orWhere('address2', 'like', $like)
-                  ->orWhere('address_street', 'like', $like)
-                  ->orWhere('address_house_number', 'like', $like)
-                  ->orWhere('address_zip', 'like', $like)
-                  ->orWhere('address_city', 'like', $like)
+                    ->orWhere('phone', 'like', $like)
+                    ->orWhere('mobile', 'like', $like)
+                    ->orWhere('email2', 'like', $like)
+                    ->orWhere('company_name', 'like', $like)
+                    ->orWhere('address', 'like', $like)
+                    ->orWhere('address2', 'like', $like)
+                    ->orWhere('address_street', 'like', $like)
+                    ->orWhere('address_house_number', 'like', $like)
+                    ->orWhere('address_zip', 'like', $like)
+                    ->orWhere('address_city', 'like', $like)
                   // Name + Login-E-Mail liegen am User.
-                  ->orWhereHas('user', fn($u) => $u->where('name', 'like', $like)
-                      ->orWhere('email', 'like', $like))
+                    ->orWhereHas('user', fn ($u) => $u->where('name', 'like', $like)
+                        ->orWhere('email', 'like', $like))
                   // Vertragsnummer, Versicherer/Anbieter, freie Sparte.
-                  ->orWhereHas('contracts', fn($c) => $c->where('contract_number', 'like', $like)
-                      ->orWhere('insurer', 'like', $like)
-                      ->orWhere('type_other', 'like', $like))
+                    ->orWhereHas('contracts', fn ($c) => $c->where('contract_number', 'like', $like)
+                        ->orWhere('insurer', 'like', $like)
+                        ->orWhere('type_other', 'like', $like))
                   // Fahrzeug am Vertrag: Kennzeichen, FIN, HSN/TSN, Marke/Modell.
-                  ->orWhereHas('contracts.vehicleDetail', fn($v) => $v->where('license_plate', 'like', $like)
-                      ->orWhere('vin', 'like', $like)
-                      ->orWhere('hsn', 'like', $like)
-                      ->orWhere('tsn', 'like', $like)
-                      ->orWhere('manufacturer', 'like', $like)
-                      ->orWhere('model', 'like', $like))
+                    ->orWhereHas('contracts.vehicleDetail', fn ($v) => $v->where('license_plate', 'like', $like)
+                        ->orWhere('vin', 'like', $like)
+                        ->orWhere('hsn', 'like', $like)
+                        ->orWhere('tsn', 'like', $like)
+                        ->orWhere('manufacturer', 'like', $like)
+                        ->orWhere('model', 'like', $like))
                   // Energie am Vertrag: Zaehlernummer (Strom/Gas), MaLo-ID,
                   // Kundennummer beim Energieanbieter.
-                  ->orWhereHas('contracts.energyDetail', fn($e) => $e->where('meter_number', 'like', $like)
-                      ->orWhere('malo_id', 'like', $like)
-                      ->orWhere('customer_number', 'like', $like))
+                    ->orWhereHas('contracts.energyDetail', fn ($e) => $e->where('meter_number', 'like', $like)
+                        ->orWhere('malo_id', 'like', $like)
+                        ->orWhere('customer_number', 'like', $like))
                   // Separat gepflegte Kunden-Stammfahrzeuge.
-                  ->orWhereHas('vehicles', fn($cv) => $cv->where('license_plate', 'like', $like)
-                      ->orWhere('vin', 'like', $like)
-                      ->orWhere('brand', 'like', $like)
-                      ->orWhere('model', 'like', $like));
+                    ->orWhereHas('vehicles', fn ($cv) => $cv->where('license_plate', 'like', $like)
+                        ->orWhere('vin', 'like', $like)
+                        ->orWhere('brand', 'like', $like)
+                        ->orWhere('model', 'like', $like));
                 // Bewusst ganz am Ende der ODER-Kette: als erste Bedingung
                 // wuerde das folgende where() zu einem UND und die uebrigen
                 // Felder waeren nicht mehr durchsuchbar.
@@ -255,7 +265,7 @@ class Customer extends Model {
     {
         $token = trim($token);
         foreach (['d.m.Y', 'Y-m-d'] as $format) {
-            $date = \DateTime::createFromFormat('!' . $format, $token);
+            $date = \DateTime::createFromFormat('!'.$format, $token);
             if ($date !== false && $date->format($format) === $token) {
                 return $date->format('Y-m-d');
             }
@@ -307,8 +317,8 @@ class Customer extends Model {
         // bis zu 5 Minuten stehen - der Verdachtsfall war "erledigt", der Badge
         // aber noch da. Jetzt greift die Invalidierung an EINER Stelle fuer ALLE
         // Pfade (UI, Import-Job, CLI-Purge, Merge).
-        static::created(fn() => static::forgetDuplicateBadge());
-        static::deleted(fn() => static::forgetDuplicateBadge());
+        static::created(fn () => static::forgetDuplicateBadge());
+        static::deleted(fn () => static::forgetDuplicateBadge());
         static::updated(function ($customer) {
             if (array_intersect(array_keys($customer->getChanges()), self::DUPLICATE_SIGNAL_FIELDS) !== []) {
                 static::forgetDuplicateBadge();
@@ -329,10 +339,10 @@ class Customer extends Model {
     {
         try {
             return parent::save($options);
-        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
-            if (!$this->exists && $this->customer_number
+        } catch (UniqueConstraintViolationException $e) {
+            if (! $this->exists && $this->customer_number
                 && str_contains($e->getMessage(), 'customer_number')) {
-                $this->customer_number = app(\App\Services\CustomerNumberGenerator::class)->generate();
+                $this->customer_number = app(CustomerNumberGenerator::class)->generate();
                 return parent::save($options);
             }
             throw $e;
@@ -346,7 +356,7 @@ class Customer extends Model {
      */
     private static function forgetDuplicateBadge(): void
     {
-        app(\App\Services\Matching\DuplicateDetectionService::class)->forgetCount();
+        app(DuplicateDetectionService::class)->forgetCount();
     }
     public function user() { return $this->belongsTo(User::class); }
     public function betreuer() { return $this->belongsToMany(User::class, 'employee_customers', 'customer_id', 'user_id'); }
@@ -386,8 +396,8 @@ class Customer extends Model {
      */
     public function acquirerKey(): ?string
     {
-        if ($this->acquired_by) return 'u:' . $this->acquired_by;
-        if ($this->acquired_by_partner_id) return 'p:' . $this->acquired_by_partner_id;
+        if ($this->acquired_by) return 'u:'.$this->acquired_by;
+        if ($this->acquired_by_partner_id) return 'p:'.$this->acquired_by_partner_id;
         return null;
     }
 
@@ -434,7 +444,7 @@ class Customer extends Model {
             return null;
         }
 
-        return \Illuminate\Support\Carbon::parse($this->birth_date)->age;
+        return Carbon::parse($this->birth_date)->age;
     }
 
     /**
@@ -451,9 +461,9 @@ class Customer extends Model {
      * abhaengig ist. Reihenfolge = Anlage-Reihenfolge; die erste gilt als
      * Haupt-Bezugsperson.
      *
-     * @return \Illuminate\Support\Collection<int, Customer>
+     * @return Collection<int, Customer>
      */
-    public function familyGuardians(): \Illuminate\Support\Collection
+    public function familyGuardians(): Collection
     {
         return $this->dependencyRelations()
             ->with(['customer.user'])
@@ -493,7 +503,7 @@ class Customer extends Model {
         if ($guardian = $this->familyGuardian()) {
             return [
                 'key' => 'familienmitglied',
-                'label' => 'Familienmitglied / Kind – abhängig von ' . ($guardian->user?->name ?: 'Hauptkunde'),
+                'label' => 'Familienmitglied / Kind – abhängig von '.($guardian->user?->name ?: 'Hauptkunde'),
                 'short' => 'Familienmitglied',
                 'color' => '#92400E', 'bg' => '#FEF3C7',
                 'guardian' => $guardian,
@@ -518,10 +528,10 @@ class Customer extends Model {
     {
         return trim((string) match ($field) {
             'address' => $this->fullAddress(),
-            'email'   => $this->user?->hasRealEmail() ? $this->user->email : ($this->email2 ?? ''),
-            'phone'   => $this->phone ?? '',
-            'mobile'  => $this->mobile ?? '',
-            default   => '',
+            'email' => $this->user?->hasRealEmail() ? $this->user->email : ($this->email2 ?? ''),
+            'phone' => $this->phone ?? '',
+            'mobile' => $this->mobile ?? '',
+            default => '',
         });
     }
 

@@ -9,8 +9,7 @@ use Illuminate\Support\Facades\Schema;
  * Arbeitsvertrag gelesen (Dokumenten-Eingang) oder von Hand gepflegt.
  * Ergaenzt das bestehende Feld `occupation` (Beruf).
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('customers', function (Blueprint $table) {

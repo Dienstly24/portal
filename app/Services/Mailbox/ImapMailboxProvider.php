@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Mailbox;
 
 use App\Models\EmailAccount;
@@ -39,7 +40,7 @@ class ImapMailboxProvider implements MailboxProviderInterface
 
         foreach ($account->watchedFolders() as $folderPath) {
             $folder = $client->getFolder($folderPath);
-            if (!$folder) {
+            if (! $folder) {
                 continue;
             }
 
@@ -69,14 +70,13 @@ class ImapMailboxProvider implements MailboxProviderInterface
             'authentication' => null,
         ];
 
-        return (new ClientManager())->make($config);
+        return (new ClientManager)->make($config);
     }
 
     private function toMessageData(Message $message, string $folderPath): MailboxMessageData
     {
         $from = $message->getFrom()->first();
         /** @var Address|null $from */
-
         $attachments = [];
         foreach ($message->getAttachments() as $attachment) {
             $attachments[] = [
@@ -94,7 +94,7 @@ class ImapMailboxProvider implements MailboxProviderInterface
         }
 
         return new MailboxMessageData(
-            uid: $folderPath . ':' . $message->getUid(),
+            uid: $folderPath.':'.$message->getUid(),
             fromAddress: $from?->mail ?? 'unbekannt@unbekannt.invalid',
             fromName: MimeHeaderDecoder::decode($from?->personal ?: null),
             toAddress: $message->getTo()->first()?->mail,

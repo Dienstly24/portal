@@ -15,6 +15,7 @@
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
+        "larastan/larastan": "^3.11",
         "laravel/breeze": "^2.4",
         "laravel/pail": "^1.2.5",
         "laravel/pao": "^1.0.6",
@@ -69,6 +70,18 @@
         ],
         "pre-package-uninstall": [
             "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
+        ],
+        "lint": [
+            "@php vendor/bin/pint --test"
+        ],
+        "lint:fix": [
+            "@php vendor/bin/pint"
+        ],
+        "stan": [
+            "@php vendor/bin/phpstan analyse --memory-limit=2G"
+        ],
+        "stan:baseline": [
+            "@php vendor/bin/phpstan analyse --memory-limit=2G --generate-baseline=phpstan-baseline.neon"
         ]
     },
     "extra": {

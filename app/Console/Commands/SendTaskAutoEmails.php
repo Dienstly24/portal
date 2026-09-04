@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Console\Commands;
 
 use App\Mail\DirectEmailMail;
@@ -53,7 +54,7 @@ class SendTaskAutoEmails extends Command
         }
 
         $customer = $task->customer;
-        if (!$customer || !$customer->user?->hasRealEmail()) {
+        if (! $customer || ! $customer->user?->hasRealEmail()) {
             $task->forceFill([
                 'auto_email_status' => 'failed',
                 'auto_email_error' => 'Keine echte Kunden-E-Mail-Adresse vorhanden.',
@@ -74,7 +75,7 @@ class SendTaskAutoEmails extends Command
                 senderName: (string) ($sender?->name ?? ''),
             ));
         } catch (\Throwable $e) {
-            \Log::warning('Aufgaben-E-Mail fehlgeschlagen (Task ' . $task->id . '): ' . $e->getMessage());
+            \Log::warning('Aufgaben-E-Mail fehlgeschlagen (Task '.$task->id.'): '.$e->getMessage());
             // Voruebergehende Fehler (SMTP weg) beim naechsten Lauf erneut
             // versuchen; nach 3 Tagen endgueltig als fehlgeschlagen markieren,
             // damit nicht endlos weiterprobiert wird.
@@ -98,18 +99,18 @@ class SendTaskAutoEmails extends Command
             'customer_id' => $customer->id,
             'user_id' => $sender?->id,
             'type' => 'email',
-            'title' => 'Automatische E-Mail gesendet: ' . $subject,
-            'description' => 'Geplant über Aufgabe "' . $task->title . '" · an ' . $customer->user->email,
+            'title' => 'Automatische E-Mail gesendet: '.$subject,
+            'description' => 'Geplant über Aufgabe "'.$task->title.'" · an '.$customer->user->email,
         ]);
         $customer->update(['last_contact' => now()->toDateString()]);
 
         if ($task->assigned_to) {
             Notify::push((int) $task->assigned_to, [
                 'type' => NotificationService::TYPE_MESSAGE,
-                'title' => 'Automatische E-Mail an ' . ($customer->user?->name ?? 'Kunde') . ' gesendet',
-                'body' => '„' . $subject . '" – Aufgabe: ' . $task->title,
-                'link' => route('admin.tasks') . '#task-' . $task->id,
-                'dedup_key' => 'task-auto-email-' . $task->id,
+                'title' => 'Automatische E-Mail an '.($customer->user?->name ?? 'Kunde').' gesendet',
+                'body' => '„'.$subject.'" – Aufgabe: '.$task->title,
+                'link' => route('admin.tasks').'#task-'.$task->id,
+                'dedup_key' => 'task-auto-email-'.$task->id,
             ]);
         }
 

@@ -3,6 +3,8 @@
 namespace Tests\Unit\Ocr;
 
 use App\Services\Ocr\TesseractTextExtractor;
+use App\Services\Pdf\ImagesToPdfService;
+use Symfony\Component\Process\Process;
 use Tests\TestCase;
 
 /**
@@ -32,40 +34,40 @@ class TesseractTextExtractorTest extends TestCase
     public function test_disabled_by_default_even_if_binary_exists(): void
     {
         config(['services.ocr.enabled' => false]);
-        $this->assertFalse((new TesseractTextExtractor())->isAvailable());
+        $this->assertFalse((new TesseractTextExtractor)->isAvailable());
     }
 
     public function test_unavailable_with_nonexistent_binary_path(): void
     {
         config(['services.ocr.enabled' => true, 'services.ocr.tesseract_binary' => '/no/such/tesseract-binary']);
-        $this->assertFalse((new TesseractTextExtractor())->isAvailable());
+        $this->assertFalse((new TesseractTextExtractor)->isAvailable());
     }
 
     public function test_extract_returns_empty_string_when_disabled(): void
     {
         config(['services.ocr.enabled' => false]);
-        $text = (new TesseractTextExtractor())->extract($this->makeTextImage('TEST'), 'image/jpeg');
+        $text = (new TesseractTextExtractor)->extract($this->makeTextImage('TEST'), 'image/jpeg');
         $this->assertSame('', $text);
     }
 
     public function test_extract_returns_empty_string_for_unreadable_input_instead_of_throwing(): void
     {
         config(['services.ocr.enabled' => true]);
-        if (!$this->tesseractInstalledForRealCheck()) {
+        if (! $this->tesseractInstalledForRealCheck()) {
             $this->markTestSkipped('tesseract-Binary auf diesem System nicht installiert.');
         }
-        $text = (new TesseractTextExtractor())->extract('kein-bild', 'image/jpeg');
+        $text = (new TesseractTextExtractor)->extract('kein-bild', 'image/jpeg');
         $this->assertSame('', $text);
     }
 
     public function test_real_tesseract_reads_image_text(): void
     {
         config(['services.ocr.enabled' => true]);
-        if (!$this->tesseractInstalledForRealCheck()) {
+        if (! $this->tesseractInstalledForRealCheck()) {
             $this->markTestSkipped('tesseract-Binary auf diesem System nicht installiert.');
         }
 
-        $extractor = new TesseractTextExtractor();
+        $extractor = new TesseractTextExtractor;
         $this->assertTrue($extractor->isAvailable());
 
         $text = $extractor->extract($this->makeTextImage('RECHNUNG'), 'image/jpeg');
@@ -84,17 +86,17 @@ class TesseractTextExtractorTest extends TestCase
         // Geprueft wird die Vorstufe direkt (ohne Tesseract), damit der Test
         // ueberall deterministisch laeuft: kleine Bilder werden verdoppelt,
         // grosse bleiben unveraendert, Abschalten wird respektiert.
-        $dir = sys_get_temp_dir() . '/dienstly_upscale_test_' . bin2hex(random_bytes(4));
+        $dir = sys_get_temp_dir().'/dienstly_upscale_test_'.bin2hex(random_bytes(4));
         mkdir($dir, 0700, true);
 
         try {
-            $klein = $dir . '/klein.png';
+            $klein = $dir.'/klein.png';
             $img = imagecreatetruecolor(400, 200);
             imagefill($img, 0, 0, imagecolorallocate($img, 255, 255, 255));
             imagepng($img, $klein);
             imagedestroy($img);
 
-            $extractor = new TesseractTextExtractor();
+            $extractor = new TesseractTextExtractor;
             $aufruf = function (string $pfad) use ($extractor, $dir): string {
                 $method = new \ReflectionMethod($extractor, 'upscaleIfSmall');
                 $method->setAccessible(true);
@@ -115,7 +117,7 @@ class TesseractTextExtractorTest extends TestCase
             config(['services.ocr.upscale_below_px' => 300]);
             $this->assertSame($klein, $aufruf($klein));
         } finally {
-            array_map('unlink', glob($dir . '/*') ?: []);
+            array_map('unlink', glob($dir.'/*') ?: []);
             @rmdir($dir);
         }
     }
@@ -123,12 +125,12 @@ class TesseractTextExtractorTest extends TestCase
     public function test_real_tesseract_reads_pdf_via_pdftoppm(): void
     {
         config(['services.ocr.enabled' => true]);
-        if (!$this->tesseractInstalledForRealCheck() || !$this->pdftoppmInstalledForRealCheck()) {
+        if (! $this->tesseractInstalledForRealCheck() || ! $this->pdftoppmInstalledForRealCheck()) {
             $this->markTestSkipped('tesseract/pdftoppm-Binary auf diesem System nicht installiert.');
         }
 
-        $pdf = (new \App\Services\Pdf\ImagesToPdfService())->build([$this->makeTextImage('RECHNUNG')]);
-        $text = (new TesseractTextExtractor())->extract($pdf, 'application/pdf');
+        $pdf = (new ImagesToPdfService)->build([$this->makeTextImage('RECHNUNG')]);
+        $text = (new TesseractTextExtractor)->extract($pdf, 'application/pdf');
         $this->assertStringContainsStringIgnoringCase('RECHNUNG', $text);
     }
 
@@ -139,7 +141,7 @@ class TesseractTextExtractorTest extends TestCase
             'services.ocr.languages' => 'eng',
             'services.ocr.max_pages' => 1,
         ]);
-        if (!$this->tesseractInstalledForRealCheck() || !$this->pdftoppmInstalledForRealCheck()) {
+        if (! $this->tesseractInstalledForRealCheck() || ! $this->pdftoppmInstalledForRealCheck()) {
             $this->markTestSkipped('tesseract/pdftoppm-Binary auf diesem System nicht installiert.');
         }
 
@@ -148,9 +150,9 @@ class TesseractTextExtractorTest extends TestCase
         foreach (['ALPHAONE', 'BRAVOTWO', 'CHARLIETHREE'] as $marker) {
             $pages[] = $this->makeTextImage($marker);
         }
-        $pdf = (new \App\Services\Pdf\ImagesToPdfService())->build($pages);
+        $pdf = (new ImagesToPdfService)->build($pages);
 
-        $text = (new TesseractTextExtractor())->extract($pdf, 'application/pdf');
+        $text = (new TesseractTextExtractor)->extract($pdf, 'application/pdf');
 
         // Nur die erste Seite wird OCR-verarbeitet (max_pages=1) -> Marker der
         // dritten Seite darf NICHT auftauchen. Schuetzt vor Zeit-/Timeout-
@@ -165,16 +167,16 @@ class TesseractTextExtractorTest extends TestCase
             'services.ocr.enabled' => true,
             'services.ocr.languages' => 'eng',
         ]);
-        if (!$this->tesseractInstalledForRealCheck() || !$this->pdftoppmInstalledForRealCheck()) {
+        if (! $this->tesseractInstalledForRealCheck() || ! $this->pdftoppmInstalledForRealCheck()) {
             $this->markTestSkipped('tesseract/pdftoppm-Binary auf diesem System nicht installiert.');
         }
 
-        $pdf = (new \App\Services\Pdf\ImagesToPdfService())->build([
+        $pdf = (new ImagesToPdfService)->build([
             $this->makeTextImage('ALPHAONE'),
             $this->makeTextImage('BRAVOTWO'),
         ]);
 
-        $text = (new TesseractTextExtractor())->extract($pdf, 'application/pdf');
+        $text = (new TesseractTextExtractor)->extract($pdf, 'application/pdf');
 
         // Seiten sind wie bei pdftotext mit Form-Feed getrennt - nur so gilt
         // die Regel "Auftrag = nur die Formularseite" (ReadsDocumentPages)
@@ -199,7 +201,7 @@ class TesseractTextExtractorTest extends TestCase
     private function binaryUsable(string $binary, array $args): bool
     {
         try {
-            $process = new \Symfony\Component\Process\Process([$binary, ...$args]);
+            $process = new Process([$binary, ...$args]);
             $process->setTimeout(5);
             $process->run();
             return $process->isSuccessful();

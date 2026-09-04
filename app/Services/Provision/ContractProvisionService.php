@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Provision;
 
 use App\Models\ActivityLog;
@@ -41,17 +42,17 @@ class ContractProvisionService
     {
         // Nur produktive Vertraege verguenten - ein bereits gekuendigt oder
         // abgelaufen angelegter Datensatz (Altbestand-Erfassung) loest nichts aus.
-        if (!in_array($contract->status, ['active', 'pending'], true)) {
+        if (! in_array($contract->status, ['active', 'pending'], true)) {
             return null;
         }
 
         $customer = $contract->customer;
-        if (!$customer) {
+        if (! $customer) {
             return null;
         }
 
         [$werberUser, $werberPartner] = $this->resolveWerber($customer);
-        if (!$werberUser && !$werberPartner) {
+        if (! $werberUser && ! $werberPartner) {
             return null;
         }
 
@@ -100,7 +101,7 @@ class ContractProvisionService
                 $provision, 'created', 'amount', null,
                 number_format($amount, 2, '.', ''),
                 'Automatische Anlage bei Vertragsanlage'
-                . ($rate['source'] === 'sparte' ? ' (Sparten-Satz)' : ' (globaler Satz)'),
+                .($rate['source'] === 'sparte' ? ' (Sparten-Satz)' : ' (globaler Satz)'),
             );
             ActivityLog::record('provision_auto_created', 'provision', $provision->id, [
                 'empfaenger' => $provision->recipientName(),
@@ -158,7 +159,7 @@ class ContractProvisionService
                 'related_provision_id' => $original->id,
                 'amount' => round(-1 * (float) $original->amount, 2),
                 'status' => 'offen',
-                'note' => $this->buildNote('Automatische Gegenbuchung: ' . $reason, $contract),
+                'note' => $this->buildNote('Automatische Gegenbuchung: '.$reason, $contract),
                 'created_by' => auth()->check() && auth()->user()->isStaff() ? auth()->id() : null,
             ]);
 
@@ -200,8 +201,8 @@ class ContractProvisionService
         $parts = array_filter([
             $contract->typeLabel(),
             $contract->insurer,
-            $contract->contract_number ? 'Nr. ' . $contract->contract_number : null,
+            $contract->contract_number ? 'Nr. '.$contract->contract_number : null,
         ]);
-        return mb_substr($prefix . ' - ' . implode(', ', $parts), 0, 500);
+        return mb_substr($prefix.' - '.implode(', ', $parts), 0, 500);
     }
 }

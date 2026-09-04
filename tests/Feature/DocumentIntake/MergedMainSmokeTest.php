@@ -58,7 +58,7 @@ class MergedMainSmokeTest extends TestCase
 
         // 1) Upload in den Eingang (kein Kunde).
         $upload = $this->actingAs($admin)->postJson(route('admin.documents.smart_upload'), [
-            'files' => [UploadedFile::fake()->createWithContent('vertrag.pdf', '%PDF-1.4 '.str_repeat('x',200))],
+            'files' => [UploadedFile::fake()->createWithContent('vertrag.pdf', '%PDF-1.4 '.str_repeat('x', 200))],
         ])->assertOk();
         $doc = Document::findOrFail($upload->json('ids.0'));
 

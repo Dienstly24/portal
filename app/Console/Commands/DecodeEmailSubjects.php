@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Console\Commands;
 
 use App\Models\EmailMessage;
@@ -34,7 +35,7 @@ class DecodeEmailSubjects extends Command
             $count++;
             $this->line(sprintf('  %s -> %s', $message->subject, $newSubject));
 
-            if (!$this->option('dry-run')) {
+            if (! $this->option('dry-run')) {
                 $message->forceFill([
                     'subject' => $newSubject,
                     'from_name' => $newFromName,

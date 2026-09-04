@@ -7,14 +7,17 @@ use App\Models\CommissionImport;
 use App\Models\CommissionImportRow;
 use App\Models\Contract;
 use App\Models\ContractCommission;
+use App\Models\ContractEnergyDetail;
 use App\Models\Customer;
 use App\Models\User;
-use App\Services\CommissionImport\CommissionImportService;
 use App\Services\CommissionImport\ColumnMap;
 use App\Services\CommissionImport\ColumnMap as Cols;
+use App\Services\CommissionImport\CommissionImportService;
 use App\Services\CommissionImport\CommissionSourceProfile;
 use App\Services\CommissionImport\CsvTableReader;
+use App\Services\CommissionImport\InvoiceCommissionMatcher;
 use App\Services\CommissionImport\PersonNameParser;
+use App\Services\CommissionImport\TableReader;
 use App\Services\CommissionImport\ValueParser;
 use App\Services\CommissionImport\XlsxTableReader;
 use App\Support\CommissionStatus;
@@ -56,7 +59,7 @@ class ContractCommissionImportTest extends TestCase
         $user = User::factory()->create(['role' => 'customer', 'name' => $name]);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5($name . $user->id), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5($name.$user->id), 0, 8)),
         ]);
     }
 
@@ -74,10 +77,10 @@ class ContractCommissionImportTest extends TestCase
     private function file(string $content, string $name = 'abrechnung.csv'): string
     {
         $dir = storage_path('framework/testing/commission');
-        if (!is_dir($dir)) {
+        if (! is_dir($dir)) {
             mkdir($dir, 0755, true);
         }
-        $path = $dir . '/' . uniqid() . '-' . $name;
+        $path = $dir.'/'.uniqid().'-'.$name;
         file_put_contents($path, $content);
         return $path;
     }
@@ -86,7 +89,7 @@ class ContractCommissionImportTest extends TestCase
     private function poolCsv(array $rows): string
     {
         $header = 'Abrechnungsnummer;Abrechnungsdatum;Vertragsnummer extern;Vertragsnummer intern;'
-            . 'Kunde;Produktname;Gesellschaft;Sparte;Provisionsbetrag;Provisionsart;Kontoinhaber';
+            .'Kunde;Produktname;Gesellschaft;Sparte;Provisionsbetrag;Provisionsart;Kontoinhaber';
         $lines = [$header];
         foreach ($rows as $row) {
             $lines[] = implode(';', [
@@ -103,7 +106,7 @@ class ContractCommissionImportTest extends TestCase
                 $row['empfaenger'] ?? 'Ahmad Albhre',
             ]);
         }
-        return "\xEF\xBB\xBF" . implode("\r\n", $lines) . "\r\n";
+        return "\xEF\xBB\xBF".implode("\r\n", $lines)."\r\n";
     }
 
     private function service(): CommissionImportService
@@ -116,7 +119,7 @@ class ContractCommissionImportTest extends TestCase
     public function test_csv_mit_bom_und_semikolon_wird_erkannt(): void
     {
         $path = $this->file($this->poolCsv([[]]));
-        $table = app(\App\Services\CommissionImport\TableReader::class)->read($path);
+        $table = app(TableReader::class)->read($path);
 
         $this->assertSame('csv', $table->format);
         $this->assertSame(';', $table->delimiter);
@@ -130,10 +133,10 @@ class ContractCommissionImportTest extends TestCase
     public function test_latin1_datei_behaelt_ihre_umlaute(): void
     {
         $utf8 = "VP-Name;Auftr.-Nr.;Kunden;Tarif/Produkt;Provision\n"
-            . "Herr Müller;1672525;Frau Schröder;RheinEnergie AG - Fair Ökostrom 24;25,00\n";
+            ."Herr Müller;1672525;Frau Schröder;RheinEnergie AG - Fair Ökostrom 24;25,00\n";
         $path = $this->file((string) mb_convert_encoding($utf8, 'Windows-1252', 'UTF-8'), 'order.csv');
 
-        $table = (new CsvTableReader())->read($path);
+        $table = (new CsvTableReader)->read($path);
 
         $this->assertStringContainsString('ISO-8859-1', (string) $table->encoding);
         $this->assertSame('Frau Schröder', $table->rows[0][2]);
@@ -145,17 +148,17 @@ class ContractCommissionImportTest extends TestCase
         // Genau der Fall aus der echten Datei: die Adresse enthaelt ein
         // Komma, das Trennzeichen ist aber das Semikolon.
         $csv = "Auftr.-Nr.;Kunden;Anschrift;Provision\n"
-            . "1672525;\"Herr Muster\";\"Alte Kieler Landstr. 141, 24768 Rendsburg\";25,00\n"
-            . "1672519;\"Frau Muster\";\"Ostlandstr. 40, 24768 Rendsburg\";25,00\n";
+            ."1672525;\"Herr Muster\";\"Alte Kieler Landstr. 141, 24768 Rendsburg\";25,00\n"
+            ."1672519;\"Frau Muster\";\"Ostlandstr. 40, 24768 Rendsburg\";25,00\n";
 
-        $this->assertSame(';', (new CsvTableReader())->detectDelimiter($csv));
+        $this->assertSame(';', (new CsvTableReader)->detectDelimiter($csv));
     }
 
     public function test_tabulator_getrennte_datei_wird_erkannt(): void
     {
         $csv = "Interne Vertragsnummer\tProvision\tProvisionsdatum\n"
-            . "V19613073\t100,00\t15.08.2026\n";
-        $table = (new CsvTableReader())->readString($csv);
+            ."V19613073\t100,00\t15.08.2026\n";
+        $table = (new CsvTableReader)->readString($csv);
 
         $this->assertSame("\t", $table->delimiter);
         $this->assertSame(['Interne Vertragsnummer', 'Provision', 'Provisionsdatum'], $table->header);
@@ -167,7 +170,7 @@ class ContractCommissionImportTest extends TestCase
         // genau so kommen Dateien aus Fremdsystemen regelmaessig an.
         $path = $this->file($this->buildXlsx(), 'abrechnung.csv');
 
-        $reader = app(\App\Services\CommissionImport\TableReader::class);
+        $reader = app(TableReader::class);
         $this->assertSame('xlsx', $reader->detectFormat($path));
 
         $table = $reader->read($path);
@@ -183,7 +186,7 @@ class ContractCommissionImportTest extends TestCase
     public function test_excel_mit_mehreren_blaettern_nennt_alle_und_liest_das_gewaehlte(): void
     {
         $path = $this->file($this->buildXlsx(twoSheets: true), 'mappe.xlsx');
-        $reader = new XlsxTableReader();
+        $reader = new XlsxTableReader;
 
         $this->assertSame(['Deckblatt', 'Abrechnung'], $reader->sheetNames($path));
 
@@ -203,7 +206,7 @@ class ContractCommissionImportTest extends TestCase
         // geprueft wird und nicht gegen unsere Annahme darueber.
         $path = $this->file($this->buildXls(), 'abrechnung.xls');
 
-        $reader = app(\App\Services\CommissionImport\TableReader::class);
+        $reader = app(TableReader::class);
         $this->assertSame('xls', $reader->detectFormat($path));
 
         $table = $reader->read($path);
@@ -359,7 +362,7 @@ class ContractCommissionImportTest extends TestCase
         // Dieselbe Position, jetzt mit Stornogrund/Status - der Betrag bleibt
         // gleich, deshalb derselbe natuerliche Schluessel.
         $csv = "Abrechnungsnummer;Abrechnungsdatum;Vertragsnummer intern;Provisionsbetrag;Provisionsart;Status\n"
-            . "5335200-26;2026-08-25 11:18:55;V19613073;4,10;Abschlussprovision;bezahlt\n";
+            ."5335200-26;2026-08-25 11:18:55;V19613073;4,10;Abschlussprovision;bezahlt\n";
         $second = $this->service()->analyze($this->file($csv), 'lauf2.csv');
 
         $this->assertSame(1, $second->rows_updated);
@@ -457,8 +460,8 @@ class ContractCommissionImportTest extends TestCase
     {
         $this->contract($this->customer(), ['internal_contract_number' => 'V19613073']);
         $csv = "Vertragsnummer intern;Provisionsbetrag;Provisionsdatum\n"
-            . "V19613073;keine Angabe;15.08.2026\n"
-            . "V19613073;100,00;irgendwann\n";
+            ."V19613073;keine Angabe;15.08.2026\n"
+            ."V19613073;100,00;irgendwann\n";
 
         $import = $this->service()->analyze($this->file($csv), 'abrechnung.csv');
 
@@ -501,7 +504,7 @@ class ContractCommissionImportTest extends TestCase
     {
         $contract = $this->contract($this->customer(), ['reference_number' => '1477-6741-9200-53']);
         $csv = "Referenz-Nr.;Vertragsnummer intern;Provisionsbetrag\n"
-            . "1477-6741-9200-53;V19613073;100,00\n";
+            ."1477-6741-9200-53;V19613073;100,00\n";
 
         $this->service()->confirm($this->service()->analyze($this->file($csv), 'abrechnung.csv'));
 
@@ -574,7 +577,7 @@ class ContractCommissionImportTest extends TestCase
         // Dieselbe Position, in der Datei noch "offen" - der Betrieb weiss es
         // besser als die Datei.
         $older = "Vertragsnummer intern;Provisionsbetrag;Provisionsdatum;Status;Bemerkung\n"
-            . "V19613073;100,00;15.08.2026;offen;alte Datei\n";
+            ."V19613073;100,00;15.08.2026;offen;alte Datei\n";
         $this->service()->confirm($this->service()->analyze($this->file($older), 'lauf0.csv'));
 
         $this->assertSame(CommissionStatus::BEZAHLT, ContractCommission::sole()->status);
@@ -693,7 +696,7 @@ class ContractCommissionImportTest extends TestCase
     private function energieCsv(array $rows): string
     {
         $header = 'Abrechnungsnummer;Abrechnungsdatum;Zählernummer;MaLo-ID;Kunde;'
-            . 'Produktname;Gesellschaft;Provisionsbetrag;Provisionsart';
+            .'Produktname;Gesellschaft;Provisionsbetrag;Provisionsart';
         $lines = [$header];
         foreach ($rows as $row) {
             $lines[] = implode(';', [
@@ -708,7 +711,7 @@ class ContractCommissionImportTest extends TestCase
                 $row['art'] ?? 'Abschlussprovision',
             ]);
         }
-        return implode("\r\n", $lines) . "\r\n";
+        return implode("\r\n", $lines)."\r\n";
     }
 
     private function energieVertrag(Customer $customer, array $energie = [], array $vertrag = []): Contract
@@ -719,7 +722,7 @@ class ContractCommissionImportTest extends TestCase
             'stage' => Contract::STAGE_ANTRAG,
             'reference_number' => '1687519',
         ], $vertrag));
-        \App\Models\ContractEnergyDetail::create(array_merge([
+        ContractEnergyDetail::create(array_merge([
             'contract_id' => $contract->id,
             'meter_number' => '1EBZ0103716819',
             'tariff' => 'PBNZE NEO P0',
@@ -736,7 +739,7 @@ class ContractCommissionImportTest extends TestCase
         $import = $this->service()->analyze($this->file($this->energieCsv([[]]), 'energie.csv'), 'energie.csv');
         $this->service()->confirm($import);
 
-        $commission = \App\Models\ContractCommission::first();
+        $commission = ContractCommission::first();
         $this->assertNotNull($commission);
         // Die Zaehlernummer steht in der Datei mit Leerzeichen, in der Akte
         // ohne - verglichen wird deshalb normalisiert.
@@ -757,7 +760,7 @@ class ContractCommissionImportTest extends TestCase
         $this->service()->confirm($import);
 
         $this->assertSame((string) $contract->id,
-            (string) \App\Models\ContractCommission::first()?->contract_id);
+            (string) ContractCommission::first()?->contract_id);
     }
 
     public function test_zaehlernummer_an_zwei_vertraegen_ordnet_nichts_zu(): void
@@ -772,13 +775,13 @@ class ContractCommissionImportTest extends TestCase
         $import = $this->service()->analyze($this->file($this->energieCsv([[]]), 'energie.csv'), 'energie.csv');
         $this->service()->confirm($import);
 
-        $commission = \App\Models\ContractCommission::first();
+        $commission = ContractCommission::first();
         $this->assertNotNull($commission, 'Die Zeile muss trotzdem erfasst werden - nichts geht verloren.');
         $this->assertNull($commission->contract_id);
         // Der Grund steht in der Pruefliste - er nennt das Problem, statt
         // nur "nicht zugeordnet" zu melden.
         $this->assertStringContainsString('trifft 2 Verträge',
-            (string) \App\Models\CommissionImportRow::first()?->message);
+            (string) CommissionImportRow::first()?->message);
     }
 
     public function test_vertragsnummer_schlaegt_die_zaehlernummer(): void
@@ -792,16 +795,16 @@ class ContractCommissionImportTest extends TestCase
         $this->energieVertrag($customer, [], ['type' => 'gas', 'reference_number' => 'REF-GAS-2']);
 
         $header = 'Abrechnungsnummer;Abrechnungsdatum;Vertragsnummer intern;Zählernummer;'
-            . 'Kunde;Provisionsbetrag;Provisionsart';
-        $csv = $header . "\r\n" . implode(';', [
+            .'Kunde;Provisionsbetrag;Provisionsart';
+        $csv = $header."\r\n".implode(';', [
             '77002', '2026-11-02', 'V19613073', '1EBZ0103716819',
             'Hammadi, Imane', '85,00', 'Abschlussprovision',
-        ]) . "\r\n";
+        ])."\r\n";
 
         $import = $this->service()->analyze($this->file($csv, 'energie.csv'), 'energie.csv');
         $this->service()->confirm($import);
 
-        $commission = \App\Models\ContractCommission::first();
+        $commission = ContractCommission::first();
         $this->assertSame((string) $richtig->id, (string) $commission->contract_id);
         $this->assertSame('Interne Vertragsnummer', $commission->match_reason);
     }
@@ -816,7 +819,7 @@ class ContractCommissionImportTest extends TestCase
             'vermittler_id' => '9753224',
             'contract_number' => 'POL-1',
         ]);
-        \App\Models\ContractEnergyDetail::create([
+        ContractEnergyDetail::create([
             'contract_id' => $contract->id,
             'meter_number' => '1EBZ0103716819',
             'tariff' => 'PBNZE NEO P0',
@@ -955,7 +958,7 @@ class ContractCommissionImportTest extends TestCase
         $contract = $this->contract($this->customer('Erika Muster'), ['internal_contract_number' => 'V19613073']);
         $this->service()->confirm($this->service()->analyze($this->file($this->poolCsv([[]])), 'abrechnung.csv'));
 
-        $result = app(\App\Services\CommissionImport\InvoiceCommissionMatcher::class)->lookup('V19613073');
+        $result = app(InvoiceCommissionMatcher::class)->lookup('V19613073');
 
         $this->assertSame($contract->id, $result['contract']?->id);
         $this->assertCount(1, $result['commissions']);
@@ -963,7 +966,7 @@ class ContractCommissionImportTest extends TestCase
 
     public function test_kennungen_werden_aus_einem_rechnungstext_gelesen(): void
     {
-        $found = app(\App\Services\CommissionImport\InvoiceCommissionMatcher::class)->extract(
+        $found = app(InvoiceCommissionMatcher::class)->extract(
             "Rechnung 2026-0815\nInterne Vertragsnummer: V19613073\nReferenz-Nr.: 1477-6741-9200-53\nBetrag 850,00 EUR"
         );
 
@@ -1057,7 +1060,7 @@ class ContractCommissionImportTest extends TestCase
         // kamen nur 689 an). Die Datei ist bewusst größer als ein Chunk.
         $rows = [];
         for ($i = 1; $i <= 450; $i++) {
-            $rows[] = ['intern' => 'V' . str_pad((string) $i, 8, '0', STR_PAD_LEFT), 'betrag' => '10,00'];
+            $rows[] = ['intern' => 'V'.str_pad((string) $i, 8, '0', STR_PAD_LEFT), 'betrag' => '10,00'];
         }
         $import = $this->service()->analyze($this->file($this->poolCsv($rows)), 'gross.csv');
         $this->assertSame(450, $import->rows_total);
@@ -1075,7 +1078,7 @@ class ContractCommissionImportTest extends TestCase
         // "00.00.0000". Das als kaputtes Datum zu werten hätte die ganze
         // Zeile verworfen - samt Name, Anschrift und Vertrag.
         $csv = "Vertragsnummer intern;Kunde;Provisionsbetrag;Geburtsdatum\n"
-            . "V19613073;VN Muster, Max;100,00;00.00.0000\n";
+            ."V19613073;VN Muster, Max;100,00;00.00.0000\n";
         $import = $this->service()->analyze($this->file($csv), 'abrechnung.csv');
 
         $this->assertSame(0, $import->rows_invalid);
@@ -1201,7 +1204,7 @@ class ContractCommissionImportTest extends TestCase
     private function orderCsv(array $rows): string
     {
         $header = 'VP-Name;Auftr.-Nr.;Anlagedatum;Auftr.-Statustext;Kunden;Anschrift;Geburtsdatum;'
-            . 'Telefonnummer;Zählernummer;Verbrauch;Tarif/Produkt';
+            .'Telefonnummer;Zählernummer;Verbrauch;Tarif/Produkt';
         $lines = [$header];
         foreach ($rows as $row) {
             $lines[] = implode(';', [
@@ -1218,7 +1221,7 @@ class ContractCommissionImportTest extends TestCase
                 $row['produkt'] ?? 'RheinEnergie AG - Fair Ökostrom 24',
             ]);
         }
-        return implode("\n", $lines) . "\n";
+        return implode("\n", $lines)."\n";
     }
 
     public function test_auftragsliste_ohne_betragsspalte_ist_kein_fehler(): void
@@ -1296,7 +1299,7 @@ class ContractCommissionImportTest extends TestCase
 
     public function test_namen_der_fremdsysteme_werden_lesbar(): void
     {
-        $parser = new PersonNameParser();
+        $parser = new PersonNameParser;
 
         $this->assertSame('Mohamad Adnan Ranko', $parser->parse('VN RANKO, MOHAMAD ADNAN')['name']);
         $this->assertSame('Sven Kaergel', $parser->parse('VN Kaergel, Sven')['name']);
@@ -1380,7 +1383,7 @@ class ContractCommissionImportTest extends TestCase
         // andere".
         $this->contract($this->customer(), ['internal_contract_number' => 'V77777777']);
         $csv = "Interne Vertragsnummer;Kunde;Provision;Provisionsdatum\n"
-            . "V77777777;VN Neu, Anna;250,00;15.08.2026\n";
+            ."V77777777;VN Neu, Anna;250,00;15.08.2026\n";
 
         $import = $this->service()->analyze($this->file($csv), 'fremder-pool.csv');
 
@@ -1434,7 +1437,7 @@ class ContractCommissionImportTest extends TestCase
         $upload = UploadedFile::fake()->createWithContent(
             'tc24.csv',
             "Datum;Produkt;Id;Status;Provision;Tracking-Id;Stornogrund;Referenz-Nr.\n"
-            . "2026-08-25 00:00:00;Kfz-Versicherung Abschluss;9787196;1;75;;;1437-7875-9260-98\n"
+            ."2026-08-25 00:00:00;Kfz-Versicherung Abschluss;9787196;1;75;;;1437-7875-9260-98\n"
         );
 
         $this->actingAs($this->admin())
@@ -1464,47 +1467,47 @@ class ContractCommissionImportTest extends TestCase
      */
     private function buildXlsx(bool $twoSheets = false): string
     {
-        $path = tempnam(sys_get_temp_dir(), 'xlsx') . '.xlsx';
-        $zip = new \ZipArchive();
+        $path = tempnam(sys_get_temp_dir(), 'xlsx').'.xlsx';
+        $zip = new \ZipArchive;
         $zip->open($path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
 
         $zip->addFromString('[Content_Types].xml',
             '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
-            . '<Default Extension="xml" ContentType="application/xml"/>'
-            . '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
-            . '</Types>');
+            .'<Default Extension="xml" ContentType="application/xml"/>'
+            .'<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+            .'</Types>');
 
         $sheets = $twoSheets
             ? '<sheet name="Deckblatt" sheetId="1" r:id="rId1"/><sheet name="Abrechnung" sheetId="2" r:id="rId2"/>'
             : '<sheet name="Abrechnung" sheetId="1" r:id="rId1"/>';
         $zip->addFromString('xl/workbook.xml',
             '<?xml version="1.0"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
-            . 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-            . '<sheets>' . $sheets . '</sheets></workbook>');
+            .'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+            .'<sheets>'.$sheets.'</sheets></workbook>');
 
         $rels = '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>';
         if ($twoSheets) {
             $rels .= '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>';
         }
         $zip->addFromString('xl/_rels/workbook.xml.rels',
-            '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' . $rels . '</Relationships>');
+            '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'.$rels.'</Relationships>');
 
         $strings = ['Interne Vertragsnummer', 'Provision', 'Provisionsdatum', 'V19613073', 'Deckblatt – bitte Blatt wechseln'];
-        $si = implode('', array_map(fn ($s) => '<si><t>' . htmlspecialchars($s, ENT_XML1) . '</t></si>', $strings));
+        $si = implode('', array_map(fn ($s) => '<si><t>'.htmlspecialchars($s, ENT_XML1).'</t></si>', $strings));
         $zip->addFromString('xl/sharedStrings.xml',
             '<?xml version="1.0"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="'
-            . count($strings) . '" uniqueCount="' . count($strings) . '">' . $si . '</sst>');
+            .count($strings).'" uniqueCount="'.count($strings).'">'.$si.'</sst>');
 
         // Format 14 (Datum) auf Stilindex 1 - so schreibt Excel es auch.
         $zip->addFromString('xl/styles.xml',
             '<?xml version="1.0"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-            . '<cellXfs count="2"><xf numFmtId="0"/><xf numFmtId="14"/></cellXfs></styleSheet>');
+            .'<cellXfs count="2"><xf numFmtId="0"/><xf numFmtId="14"/></cellXfs></styleSheet>');
 
         $data = '<sheetData>'
-            . '<row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c><c r="C1" t="s"><v>2</v></c></row>'
-            . '<row r="2"><c r="A2" t="s"><v>3</v></c><c r="B2"><v>850</v></c><c r="C2" s="1"><v>46249</v></c></row>'
-            . '</sheetData>';
-        $sheetXml = fn ($body) => '<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' . $body . '</worksheet>';
+            .'<row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c><c r="C1" t="s"><v>2</v></c></row>'
+            .'<row r="2"><c r="A2" t="s"><v>3</v></c><c r="B2"><v>850</v></c><c r="C2" s="1"><v>46249</v></c></row>'
+            .'</sheetData>';
+        $sheetXml = fn ($body) => '<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'.$body.'</worksheet>';
 
         if ($twoSheets) {
             $zip->addFromString('xl/worksheets/sheet1.xml', $sheetXml('<sheetData><row r="1"><c r="A1" t="s"><v>4</v></c></row></sheetData>'));
@@ -1526,39 +1529,39 @@ class ContractCommissionImportTest extends TestCase
      */
     private function buildXls(): string
     {
-        $record = fn (int $id, string $data) => pack('vv', $id, strlen($data)) . $data;
-        $shortString = fn (string $text) => chr(strlen($text)) . "\x00" . $text;
+        $record = fn (int $id, string $data) => pack('vv', $id, strlen($data)).$data;
+        $shortString = fn (string $text) => chr(strlen($text))."\x00".$text;
 
         // --- Globalteil ------------------------------------------------
         $strings = ['Interne Vertragsnummer', 'Provision', 'Provisionsdatum', 'V19613073'];
         $sst = pack('VV', count($strings), count($strings));
         foreach ($strings as $text) {
-            $sst .= pack('v', strlen($text)) . "\x00" . $text; // 8-Bit-Zeichen
+            $sst .= pack('v', strlen($text))."\x00".$text; // 8-Bit-Zeichen
         }
 
-        $globals = $record(0x0809, pack('vv', 0x0600, 0x0005) . str_repeat("\x00", 12));
-        $globals .= $record(0x00E0, pack('vvv', 0, 0, 0) . str_repeat("\x00", 14));  // XF 0: Zahl
-        $globals .= $record(0x00E0, pack('vvv', 0, 14, 0) . str_repeat("\x00", 14)); // XF 1: Datum
+        $globals = $record(0x0809, pack('vv', 0x0600, 0x0005).str_repeat("\x00", 12));
+        $globals .= $record(0x00E0, pack('vvv', 0, 0, 0).str_repeat("\x00", 14));  // XF 0: Zahl
+        $globals .= $record(0x00E0, pack('vvv', 0, 14, 0).str_repeat("\x00", 14)); // XF 1: Datum
         $globals .= $record(0x00FC, $sst);
 
         // Die Position des Blattes steht IM Globalteil - sie haengt also von
         // dessen eigener Laenge ab und wird deshalb hier berechnet.
-        $boundSheetBody = fn (int $position) => pack('V', $position) . "\x00\x00" . $shortString('Abrechnung');
+        $boundSheetBody = fn (int $position) => pack('V', $position)."\x00\x00".$shortString('Abrechnung');
         $placeholder = $record(0x0085, $boundSheetBody(0));
         $globalsLength = strlen($globals) + strlen($placeholder) + 4; // + EOF-Satz
-        $globals = substr($globals, 0, strlen($globals)) . $record(0x0085, $boundSheetBody($globalsLength)) . $record(0x000A, '');
+        $globals = substr($globals, 0, strlen($globals)).$record(0x0085, $boundSheetBody($globalsLength)).$record(0x000A, '');
 
         // --- Blatt ------------------------------------------------------
-        $sheet = $record(0x0809, pack('vv', 0x0600, 0x0010) . str_repeat("\x00", 12));
+        $sheet = $record(0x0809, pack('vv', 0x0600, 0x0010).str_repeat("\x00", 12));
         foreach ([0 => 0, 1 => 1, 2 => 2] as $column => $index) {
             $sheet .= $record(0x00FD, pack('vvvV', 0, $column, 0, $index)); // LABELSST
         }
         $sheet .= $record(0x00FD, pack('vvvV', 1, 0, 0, 3));                 // V19613073
-        $sheet .= $record(0x0203, pack('vvv', 1, 1, 0) . pack('e', 850.0));  // NUMBER
-        $sheet .= $record(0x0203, pack('vvv', 1, 2, 1) . pack('e', 46249.0));// NUMBER im Datumsformat
+        $sheet .= $record(0x0203, pack('vvv', 1, 1, 0).pack('e', 850.0));  // NUMBER
+        $sheet .= $record(0x0203, pack('vvv', 1, 2, 1).pack('e', 46249.0)); // NUMBER im Datumsformat
         $sheet .= $record(0x000A, '');
 
-        $workbook = $globals . $sheet;
+        $workbook = $globals.$sheet;
         // Auf mehr als die Mini-Stream-Grenze auffuellen, damit der Strom in
         // normalen Sektoren liegt. Nullbytes nach dem EOF-Satz stoeren nicht -
         // der Leser haelt am EOF an.
@@ -1592,7 +1595,7 @@ class ContractCommissionImportTest extends TestCase
             $utf16 = (string) mb_convert_encoding($name, 'UTF-16LE', 'UTF-8');
             $data = str_pad($utf16, 64, "\x00");
             $data .= pack('v', strlen($utf16) + 2);   // Laenge inkl. Abschluss
-            $data .= chr($type) . chr(1);             // Typ, Farbe
+            $data .= chr($type).chr(1);             // Typ, Farbe
             $data .= pack('VVV', 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF); // Geschwister/Kind
             $data = str_pad($data, 0x74, "\x00");
             $data .= pack('V', $start);
@@ -1601,10 +1604,10 @@ class ContractCommissionImportTest extends TestCase
         };
 
         $directory = $entry('Root Entry', 5, 0xFFFFFFFE, 0)
-            . $entry($streamName, 2, 2, strlen($stream)) // Daten beginnen in Sektor 2
-            . str_repeat("\x00", 256);
+            .$entry($streamName, 2, 2, strlen($stream)) // Daten beginnen in Sektor 2
+            .str_repeat("\x00", 256);
 
-        $header = "\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1" . str_repeat("\x00", 16);
+        $header = "\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1".str_repeat("\x00", 16);
         $header .= pack('vv', 0x003E, 0x0003);     // Version
         $header .= pack('v', 0xFFFE);              // Bytereihenfolge
         $header .= pack('vv', 9, 6);               // Sektorgroesse 512 / Mini 64
@@ -1620,6 +1623,6 @@ class ContractCommissionImportTest extends TestCase
         $header .= pack('V', 0);                   // DIFAT[0] = Sektor 0
         $header = str_pad($header, $sectorSize, "\xFF");
 
-        return $header . $fatSector . $directory . $stream;
+        return $header.$fatSector.$directory.$stream;
     }
 }

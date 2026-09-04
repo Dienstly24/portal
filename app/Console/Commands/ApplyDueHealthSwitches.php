@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Console\Commands;
 
 use App\Console\Concerns\ProcessesRecordsSafely;
@@ -38,7 +39,7 @@ class ApplyDueHealthSwitches extends Command
         // ab dem Stichtag ist das schlicht falsch, und niemand sieht es.
         $erledigt = $this->verarbeiteEinzeln($due, function (Contract $contract) {
             if ($this->option('dry-run')) {
-                $this->line('- ' . ($contract->customer?->customer_number ?? '?') . ' -> ' . $contract->insurer . ' (ab ' . $contract->start_date . ')');
+                $this->line('- '.($contract->customer?->customer_number ?? '?').' -> '.$contract->insurer.' (ab '.$contract->start_date.')');
 
                 return;
             }
@@ -55,7 +56,7 @@ class ApplyDueHealthSwitches extends Command
             ]);
         }, 'Vertrag');
 
-        $this->info($erledigt . ' Krankenkassenwechsel ' . ($this->option('dry-run') ? 'faellig (dry-run).' : 'aktiviert.'));
+        $this->info($erledigt.' Krankenkassenwechsel '.($this->option('dry-run') ? 'faellig (dry-run).' : 'aktiviert.'));
 
         return $this->ergebnisMitUebersprungenen(self::SUCCESS);
     }

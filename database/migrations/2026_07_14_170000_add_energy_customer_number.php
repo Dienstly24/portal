@@ -15,7 +15,7 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('contract_energy_details', function (Blueprint $table) {
-            if (!Schema::hasColumn('contract_energy_details', 'customer_number')) {
+            if (! Schema::hasColumn('contract_energy_details', 'customer_number')) {
                 $table->string('customer_number', 60)->nullable()->after('meter_number');
             }
         });

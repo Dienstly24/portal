@@ -1,10 +1,12 @@
 <?php
+
 namespace App\Services\ChangeRequest;
 
 use App\Models\ChangeRequestDocument;
 use App\Models\CustomerChangeRequest;
 use App\Services\Ocr\PdfTextLayerExtractor;
 use App\Services\Ocr\TextExtractorInterface;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -81,7 +83,7 @@ class ChangeProofVerifier
             foreach ($checks as $check) {
                 $hit = $this->matches($check, $text);
                 $perDocument[$check['key']] = $hit['passed'];
-                if ($hit['passed'] && !isset($found[$check['key']])) {
+                if ($hit['passed'] && ! isset($found[$check['key']])) {
                     $found[$check['key']] = ['kind' => $document->kind, 'tolerant' => $hit['tolerant']];
                 }
             }
@@ -105,12 +107,12 @@ class ChangeProofVerifier
             ];
         }
 
-        $requiredChecks = array_filter($result, fn($c) => $c['required']);
-        $requiredPassed = array_filter($requiredChecks, fn($c) => $c['passed']);
+        $requiredChecks = array_filter($result, fn ($c) => $c['required']);
+        $requiredPassed = array_filter($requiredChecks, fn ($c) => $c['passed']);
 
         $status = match (true) {
             $readable === 0 => 'unreadable',
-            $requiredChecks === [] => (array_filter($result, fn($c) => $c['passed']) !== [] ? 'verified' : 'mismatch'),
+            $requiredChecks === [] => (array_filter($result, fn ($c) => $c['passed']) !== [] ? 'verified' : 'mismatch'),
             count($requiredPassed) === count($requiredChecks) => 'verified',
             $requiredPassed !== [] => 'partial',
             default => 'mismatch',
@@ -147,12 +149,12 @@ class ChangeProofVerifier
     {
         try {
             $disk = Storage::disk($document->disk ?: 'local');
-            if (!$disk->exists($document->file_path)) {
+            if (! $disk->exists($document->file_path)) {
                 return '';
             }
             $binary = $disk->get($document->file_path);
         } catch (\Throwable $e) {
-            Log::warning('Nachweis nicht lesbar: ' . $e->getMessage());
+            Log::warning('Nachweis nicht lesbar: '.$e->getMessage());
             return '';
         }
 
@@ -221,7 +223,7 @@ class ChangeProofVerifier
         $squashedHaystack = $this->squash($text);
         $parts = array_values(array_filter(
             preg_split('/\s+/', $this->normalize($name)) ?: [],
-            fn($p) => mb_strlen($p) >= 3
+            fn ($p) => mb_strlen($p) >= 3
         ));
         if ($parts === []) {
             return false;
@@ -254,7 +256,7 @@ class ChangeProofVerifier
         if (mb_strlen($namePart) < 3) {
             return str_contains($haystack, $normalized);
         }
-        if (!str_contains($haystack, $namePart)) {
+        if (! str_contains($haystack, $namePart)) {
             return false;
         }
         if ($number === []) {
@@ -263,18 +265,18 @@ class ChangeProofVerifier
         // Hausnummer muss in der Naehe des Strassennamens stehen (gleiche Zeile).
         $number = trim(str_replace(' ', '', $number[0]));
         foreach (preg_split('/\R/', $haystack) ?: [] as $line) {
-            if (str_contains($line, $namePart) && preg_match('/\b' . preg_quote($number, '/') . '\b/', str_replace(' ', '', $line))) {
+            if (str_contains($line, $namePart) && preg_match('/\b'.preg_quote($number, '/').'\b/', str_replace(' ', '', $line))) {
                 return true;
             }
         }
-        return str_contains(str_replace(' ', '', $haystack), $namePart . $number);
+        return str_contains(str_replace(' ', '', $haystack), $namePart.$number);
     }
 
     /** Geburtsdatum in den ueblichen Schreibweisen (01.02.1990 / 1990-02-01 / 01021990). */
     private function matchDate(string $date, string $text): bool
     {
         try {
-            $carbon = \Carbon\Carbon::parse($date);
+            $carbon = Carbon::parse($date);
         } catch (\Throwable) {
             return false;
         }

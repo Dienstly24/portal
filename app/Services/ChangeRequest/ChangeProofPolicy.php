@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\ChangeRequest;
 
 use App\Models\CustomerChangeRequest;
@@ -91,23 +92,23 @@ class ChangeProofPolicy
         $checks = [];
 
         if ($request->type === 'bank') {
-            if (!empty($data['iban'])) {
+            if (! empty($data['iban'])) {
                 $checks[] = ['key' => 'iban', 'label' => 'IBAN', 'value' => (string) $data['iban'], 'mode' => 'iban', 'required' => true];
             }
-            if (!empty($data['account_holder'])) {
+            if (! empty($data['account_holder'])) {
                 $checks[] = ['key' => 'account_holder', 'label' => 'Kontoinhaber', 'value' => (string) $data['account_holder'], 'mode' => 'name', 'required' => false];
             }
             return $checks;
         }
 
         if ($request->type === 'address') {
-            if (!empty($data['zip'])) {
+            if (! empty($data['zip'])) {
                 $checks[] = ['key' => 'zip', 'label' => 'PLZ', 'value' => (string) $data['zip'], 'mode' => 'text', 'required' => true];
             }
-            if (!empty($data['city'])) {
+            if (! empty($data['city'])) {
                 $checks[] = ['key' => 'city', 'label' => 'Ort', 'value' => (string) $data['city'], 'mode' => 'text', 'required' => true];
             }
-            if (!empty($data['street'])) {
+            if (! empty($data['street'])) {
                 $checks[] = ['key' => 'street', 'label' => 'Straße', 'value' => (string) $data['street'], 'mode' => 'street', 'required' => true];
             }
             $checks[] = $this->nameCheck($request);
@@ -115,22 +116,22 @@ class ChangeProofPolicy
         }
 
         if ($request->type === 'profile') {
-            if (!empty($data['address_zip'])) {
+            if (! empty($data['address_zip'])) {
                 $checks[] = ['key' => 'address_zip', 'label' => 'PLZ', 'value' => (string) $data['address_zip'], 'mode' => 'text', 'required' => true];
             }
-            if (!empty($data['address_city'])) {
+            if (! empty($data['address_city'])) {
                 $checks[] = ['key' => 'address_city', 'label' => 'Ort', 'value' => (string) $data['address_city'], 'mode' => 'text', 'required' => true];
             }
-            if (!empty($data['address_street'])) {
+            if (! empty($data['address_street'])) {
                 $checks[] = ['key' => 'address_street', 'label' => 'Straße', 'value' => (string) $data['address_street'], 'mode' => 'street', 'required' => true];
             }
-            $name = trim(($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? ''));
+            $name = trim(($data['first_name'] ?? '').' '.($data['last_name'] ?? ''));
             if ($name !== '') {
                 $checks[] = ['key' => 'name', 'label' => 'Name', 'value' => $name, 'mode' => 'name', 'required' => true];
             } else {
                 $checks[] = $this->nameCheck($request);
             }
-            if (!empty($data['birth_date'])) {
+            if (! empty($data['birth_date'])) {
                 $checks[] = ['key' => 'birth_date', 'label' => 'Geburtsdatum', 'value' => (string) $data['birth_date'], 'mode' => 'date', 'required' => false];
             }
             return array_values(array_filter($checks));
@@ -166,7 +167,7 @@ class ChangeProofPolicy
             return false;
         }
         // Ohne echte Pflichtprüfung (nichts Nachweisbares) nie automatisch.
-        $required = array_filter($request->proofChecks(), fn($c) => !empty($c['required']));
+        $required = array_filter($request->proofChecks(), fn ($c) => ! empty($c['required']));
         if ($required === []) {
             return false;
         }

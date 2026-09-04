@@ -17,8 +17,7 @@ use Illuminate\Support\Facades\Schema;
  * Lauf-Archiv: die Seite beantwortet "laeuft es noch?", nicht "was lief am
  * 3. Maerz?" - dafuer gibt es die Logs. So bleibt die Tabelle klein.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('scheduled_task_runs', function (Blueprint $table) {

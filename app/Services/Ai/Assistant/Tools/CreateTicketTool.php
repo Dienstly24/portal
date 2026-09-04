@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Tools;
 
 use App\Models\Ticket;
@@ -35,11 +36,11 @@ class CreateTicketTool implements AssistantTool
     public function description(): string
     {
         return 'Legt einen Vorgang (Ticket) fuer das Dienstly24-Team an, z.B. bei '
-            . 'Vertragsaenderung, Schadenmeldung, Kuendigungswunsch oder einer Bitte um '
-            . 'Rueckruf. Rufe VORHER getOpenTickets auf: existiert ein offener Vorgang zum '
-            . 'selben Thema, wird dieser weiterverwendet und KEIN neuer erstellt. Der '
-            . 'Vorgang ist nur ein Arbeitsauftrag an das Team - du entscheidest oder '
-            . 'genehmigst damit nichts.';
+            .'Vertragsaenderung, Schadenmeldung, Kuendigungswunsch oder einer Bitte um '
+            .'Rueckruf. Rufe VORHER getOpenTickets auf: existiert ein offener Vorgang zum '
+            .'selben Thema, wird dieser weiterverwendet und KEIN neuer erstellt. Der '
+            .'Vorgang ist nur ein Arbeitsauftrag an das Team - du entscheidest oder '
+            .'genehmigst damit nichts.';
     }
 
     public function parameters(): array
@@ -54,7 +55,7 @@ class CreateTicketTool implements AssistantTool
                 'beschreibung' => [
                     'type' => 'string',
                     'description' => 'Worum es geht, in eigenen Worten zusammengefasst - nur Angaben '
-                        . 'des Kunden, nichts hinzugedichtet.',
+                        .'des Kunden, nichts hinzugedichtet.',
                 ],
                 'art' => [
                     'type' => 'string',
@@ -73,11 +74,11 @@ class CreateTicketTool implements AssistantTool
 
     public function run(array $arguments, AssistantToolContext $context): array
     {
-        if (!$this->settings->autoTicket()) {
+        if (! $this->settings->autoTicket()) {
             return [
                 'erstellt' => false,
                 'hinweis' => 'Die automatische Vorgangserstellung ist abgeschaltet. Uebergib die '
-                    . 'Anfrage mit escalateToTeam an das Team.',
+                    .'Anfrage mit escalateToTeam an das Team.',
             ];
         }
 
@@ -90,7 +91,7 @@ class CreateTicketTool implements AssistantTool
         // Art gegen die Whitelist des Systems pruefen - nie ungeprueft
         // uebernehmen, was das Modell liefert.
         $type = (string) ($arguments['art'] ?? 'other');
-        if (!array_key_exists($type, Ticket::TYPES)) {
+        if (! array_key_exists($type, Ticket::TYPES)) {
             $type = 'other';
         }
 
@@ -100,7 +101,7 @@ class CreateTicketTool implements AssistantTool
         if ($existing) {
             $existing->messages()->create([
                 'sender_id' => null,
-                'body' => "Ergaenzung durch den KI-Assistenten:\n" . $description,
+                'body' => "Ergaenzung durch den KI-Assistenten:\n".$description,
                 'is_internal' => true,
             ]);
             $existing->logEvent('note_added', 'KI-Assistent: Kundenanliegen dem bestehenden Vorgang zugeordnet.');
@@ -114,7 +115,7 @@ class CreateTicketTool implements AssistantTool
                 'vorhandener_vorgang' => $existing->ticket_number,
                 'status' => $existing->portalStatusLabel(),
                 'hinweis' => 'Es gibt bereits einen offenen Vorgang zu diesem Thema. Er wurde '
-                    . 'ergaenzt. Nenne dem Kunden diese Vorgangsnummer statt einer neuen.',
+                    .'ergaenzt. Nenne dem Kunden diese Vorgangsnummer statt einer neuen.',
             ];
         }
 

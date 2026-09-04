@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\User;
+use App\Services\CustomerDeletionService;
 use App\Services\Matching\DuplicateDetectionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -18,7 +19,7 @@ class DuplicateDetectionServiceTest extends TestCase
         $user = User::factory()->create(['role' => 'customer', 'name' => $name, 'email' => $email]);
         return Customer::create(array_merge([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5($email . microtime()), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5($email.microtime()), 0, 8)),
         ], $attrs));
     }
 
@@ -147,7 +148,7 @@ class DuplicateDetectionServiceTest extends TestCase
         $detection = app(DuplicateDetectionService::class);
         $this->assertSame(1, $detection->countCached(), 'Verdachtsfall muss zunaechst gezaehlt werden');
 
-        app(\App\Services\CustomerDeletionService::class)->delete($dup, null);
+        app(CustomerDeletionService::class)->delete($dup, null);
 
         $this->assertSame(0, $detection->countCached(), 'Nach dem Loeschen muss der Badge sofort auf 0 stehen');
     }

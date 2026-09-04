@@ -57,7 +57,7 @@ class DialogFrachtfuehrerPoliceParserTest extends TestCase
 
     public function test_reads_frachtfuehrer_police(): void
     {
-        $r = (new DialogFrachtfuehrerPoliceParser())->parse($this->scheinText());
+        $r = (new DialogFrachtfuehrerPoliceParser)->parse($this->scheinText());
 
         $this->assertNotNull($r);
         $this->assertSame('versicherungspolice', $r['type']);
@@ -96,7 +96,7 @@ class DialogFrachtfuehrerPoliceParserTest extends TestCase
 
     public function test_ignores_unrelated_documents(): void
     {
-        $parser = new DialogFrachtfuehrerPoliceParser();
+        $parser = new DialogFrachtfuehrerPoliceParser;
 
         $this->assertNull($parser->parse('Irgendein anderes Dokument'));
         // Der Fonds-Finanz-Deckungsauftrag zur selben Sparte hat seinen

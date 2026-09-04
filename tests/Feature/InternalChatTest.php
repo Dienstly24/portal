@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\InternalMessage;
 use App\Models\InternalNotification;
@@ -22,7 +21,7 @@ class InternalChatTest extends TestCase
 
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5((string) $user->id), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5((string) $user->id), 0, 8)),
         ]);
     }
 
@@ -83,7 +82,7 @@ class InternalChatTest extends TestCase
 
         foreach (['admin', 'manager'] as $role) {
             $this->actingAs($this->staff($role))
-                ->post(route('admin.internal.store', $customer->id), ['message' => 'Test ' . $role, 'type' => 'chat'])
+                ->post(route('admin.internal.store', $customer->id), ['message' => 'Test '.$role, 'type' => 'chat'])
                 ->assertSessionHas('success');
         }
 

@@ -4,11 +4,13 @@ namespace Tests\Feature;
 
 use App\Models\Customer;
 use App\Models\CustomerMessage;
+use App\Models\MessageTemplate;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Ai\Contracts\AiProviderInterface;
 use App\Services\Ai\Support\AiResponse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 /**
@@ -164,7 +166,7 @@ class SmartComposeTest extends TestCase
     public function test_composer_seite_rendert_mit_smart_elementen(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
-        \App\Models\MessageTemplate::create(['name' => 'Angebot nachfassen', 'category' => 'kunde', 'body' => 'X']);
+        MessageTemplate::create(['name' => 'Angebot nachfassen', 'category' => 'kunde', 'body' => 'X']);
 
         $this->actingAs($admin)->get(route('admin.email.compose'))
             ->assertOk()
@@ -175,7 +177,7 @@ class SmartComposeTest extends TestCase
 
     public function test_versand_aktualisiert_letzten_kontakt(): void
     {
-        \Illuminate\Support\Facades\Mail::fake();
+        Mail::fake();
         $admin = User::factory()->create(['role' => 'admin']);
         $customer = $this->makeCustomer('Max Müller', 'max@example.de', '2600170');
 

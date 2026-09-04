@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\ImportCustomersJob;
 use App\Models\Customer;
 use App\Models\CustomerChangeRequest;
 use App\Models\CustomerFamily;
@@ -21,7 +22,7 @@ class SmartNumberingAndImportTest extends TestCase
         $user = User::factory()->create(['role' => 'customer', 'email' => $email]);
         return Customer::create(array_merge([
             'user_id' => $user->id,
-            'customer_number' => $attrs['customer_number'] ?? 'C-' . strtoupper(substr(md5($email), 0, 8)),
+            'customer_number' => $attrs['customer_number'] ?? 'C-'.strtoupper(substr(md5($email), 0, 8)),
         ], $attrs));
     }
 
@@ -35,11 +36,11 @@ class SmartNumberingAndImportTest extends TestCase
         $yy = now()->format('y');
 
         $first = $gen->generate();
-        $this->assertSame($yy . '00001', $first);
+        $this->assertSame($yy.'00001', $first);
 
         // Nummer "verbrauchen" und nächste prüfen
         $this->makeCustomer('n1@k.de', ['customer_number' => $first]);
-        $this->assertSame($yy . '00002', $gen->generate());
+        $this->assertSame($yy.'00002', $gen->generate());
     }
 
     public function test_sequence_ignores_legacy_and_import_numbers(): void
@@ -49,9 +50,9 @@ class SmartNumberingAndImportTest extends TestCase
 
         $this->makeCustomer('legacy@k.de', ['customer_number' => 'C-ABCD1234']);
         $this->makeCustomer('import@k.de', ['customer_number' => '251234']); // Import, andere Länge
-        $this->makeCustomer('seq@k.de', ['customer_number' => $yy . '00007']);
+        $this->makeCustomer('seq@k.de', ['customer_number' => $yy.'00007']);
 
-        $this->assertSame($yy . '00008', $gen->generate());
+        $this->assertSame($yy.'00008', $gen->generate());
     }
 
     public function test_import_number_keeps_original_with_25_prefix(): void
@@ -234,7 +235,7 @@ class SmartNumberingAndImportTest extends TestCase
 
     public function test_confirm_dispatches_background_job(): void
     {
-        \Illuminate\Support\Facades\Bus::fake();
+        Bus::fake();
 
         $admin = User::factory()->create(['role' => 'admin']);
         $file = UploadedFile::fake()->createWithContent('kunden.csv', implode("\n", [
@@ -249,7 +250,7 @@ class SmartNumberingAndImportTest extends TestCase
             ->assertRedirect(route('admin.import_export'));
 
         // Import laeuft im Hintergrund, nicht synchron im Web-Request.
-        Bus::assertDispatched(\App\Jobs\ImportCustomersJob::class);
+        Bus::assertDispatched(ImportCustomersJob::class);
     }
 
     public function test_import_notifies_user_when_finished(): void

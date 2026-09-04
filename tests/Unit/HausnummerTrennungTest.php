@@ -21,7 +21,7 @@ class HausnummerTrennungTest extends TestCase
     /** Auszug aus einem echten Protokoll (Kopfblock, 3-Spalten-Layout). */
     private function protokoll(): string
     {
-        return <<<TXT
+        return <<<'TXT'
         Vorläufiges Beratungsprotokoll zur Kfz-Versicherung
 
         Vermittler
@@ -45,7 +45,7 @@ class HausnummerTrennungTest extends TestCase
 
     public function test_vorlagen_parser_liest_hausnummer_aus_dem_kopfblock(): void
     {
-        $result = (new Check24KfzProtocolParser())->parse($this->protokoll());
+        $result = (new Check24KfzProtocolParser)->parse($this->protokoll());
 
         $this->assertNotNull($result);
         $person = $result['data']['person'];
@@ -60,7 +60,7 @@ class HausnummerTrennungTest extends TestCase
      */
     public function test_versicherer_cosmos_direkt_wird_nicht_am_leerzeichen_zerschnitten(): void
     {
-        $result = (new Check24KfzProtocolParser())->parse($this->protokoll());
+        $result = (new Check24KfzProtocolParser)->parse($this->protokoll());
 
         $this->assertSame('Cosmos Direkt', $result['data']['versicherung']['insurer']);
         $this->assertSame('Basis mit Werkstattbindung', $result['data']['versicherung']['tariff']);

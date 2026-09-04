@@ -16,8 +16,7 @@ use Illuminate\Support\Facades\Schema;
  * Backfill: Wer schon eingeloggt war, hatte zwangsläufig ein nutzbares
  * Passwort - last_login_at wird als bestmögliche Näherung übernommen.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {

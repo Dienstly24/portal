@@ -30,7 +30,7 @@ class MergeAlternativeEmailTest extends TestCase
 
         return Customer::create(array_merge([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(Str::random(6)),
+            'customer_number' => 'C-'.strtoupper(Str::random(6)),
             'birth_date' => '1990-01-01',
         ], $custAttr));
     }

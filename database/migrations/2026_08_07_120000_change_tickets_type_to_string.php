@@ -14,8 +14,7 @@ use Illuminate\Support\Facades\Schema;
  * nicht doppelt und unflexibel absichern. Rein additiv, bestehende Werte
  * bleiben gueltig (die bisherigen Enum-Werte sind eine Teilmenge des Strings).
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('tickets', function (Blueprint $table) {

@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Mail\RegistrationVerificationMail;
 use App\Models\Customer;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class PortalAuthArabicTest extends TestCase
@@ -48,7 +50,7 @@ class PortalAuthArabicTest extends TestCase
      */
     public function test_registration_creates_full_customer_with_year_number(): void
     {
-        \Illuminate\Support\Facades\Mail::fake();
+        Mail::fake();
 
         $response = $this->post('/register', [
             'first_name' => 'Omar',
@@ -67,8 +69,8 @@ class PortalAuthArabicTest extends TestCase
 
         // Schritt 2: der Link aus der Bestaetigungsmail.
         $token = null;
-        \Illuminate\Support\Facades\Mail::assertSent(
-            \App\Mail\RegistrationVerificationMail::class,
+        Mail::assertSent(
+            RegistrationVerificationMail::class,
             function ($mail) use (&$token) {
                 if (preg_match('#/register/bestaetigen/([A-Za-z0-9]+)#', $mail->verifyUrl, $m)) {
                     $token = $m[1];
@@ -123,7 +125,7 @@ class PortalAuthArabicTest extends TestCase
         $user = User::factory()->create(['role' => 'customer']);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . uniqid(),
+            'customer_number' => 'C-'.uniqid(),
             'preferred_lang' => $lang,
         ]);
     }

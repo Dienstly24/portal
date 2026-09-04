@@ -11,8 +11,7 @@ use Illuminate\Support\Facades\DB;
  * mehr im Klartext in der DB (DSGVO). Bereits verschlüsselte Werte werden
  * übersprungen (idempotent).
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         foreach (['iban', 'iban2'] as $column) {

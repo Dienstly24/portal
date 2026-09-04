@@ -40,7 +40,7 @@ class ServicePageTest extends TestCase
     {
         $page = $this->makePage(['image_path' => 'service-pages/testbild.png']);
 
-        $res = $this->get('/leistungen/' . $page->slug);
+        $res = $this->get('/leistungen/'.$page->slug);
         $res->assertOk();
         $res->assertSee('<img class="hero-bild"', false);
         $res->assertSee('service-pages/testbild.png');
@@ -50,7 +50,7 @@ class ServicePageTest extends TestCase
     {
         $page = $this->makePage();
 
-        $res = $this->get('/leistungen/' . $page->slug);
+        $res = $this->get('/leistungen/'.$page->slug);
         $res->assertOk();
         $res->assertDontSee('<img class="hero-bild"', false);
         $res->assertSee('class="badge"', false);

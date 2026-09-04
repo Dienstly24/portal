@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\CustomerCreation;
 
 use App\Models\ActivityLog;
@@ -6,6 +7,7 @@ use App\Models\Customer;
 use App\Models\User;
 use App\Services\CustomerNumberGenerator;
 use App\Services\Matching\CustomerMatchingService;
+use App\Support\GermanPhone;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -35,7 +37,7 @@ class CustomerAutoCreationService
      */
     public function createFromUnmatched(array $data, string $source, ?int $createdBy = null): Customer
     {
-        if (!in_array($source, Customer::SOURCES, true)) {
+        if (! in_array($source, Customer::SOURCES, true)) {
             throw new \InvalidArgumentException("Unbekannte Kundenquelle: $source");
         }
 
@@ -46,7 +48,7 @@ class CustomerAutoCreationService
         }
 
         return DB::transaction(function () use ($data, $source, $createdBy) {
-            $name = trim($data['full_name'] ?? trim(($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? '')));
+            $name = trim($data['full_name'] ?? trim(($data['first_name'] ?? '').' '.($data['last_name'] ?? '')));
             $name = $name !== '' ? $name : 'Unbekannter Kunde';
 
             // Keine Platzhalter-/Dummy-E-Mail mehr: fehlt die echte Adresse,
@@ -63,7 +65,7 @@ class CustomerAutoCreationService
 
             // Zusammengesetzte Alt-Adresse (Kompatibilität) aus strukturierten Feldern.
             $address = $data['address'] ?? trim(
-                trim(($data['street'] ?? '') . ', ' . ($data['zip'] ?? '') . ' ' . ($data['city'] ?? '')),
+                trim(($data['street'] ?? '').', '.($data['zip'] ?? '').' '.($data['city'] ?? '')),
                 ', '
             );
 
@@ -71,39 +73,39 @@ class CustomerAutoCreationService
             // ins Festnetz-Feld "Telefon" (z.B. die Handynummer aus dem
             // CHECK24-Beratungsprotokoll).
             $phone = $data['phone'] ?? null;
-            $isMobile = $phone !== null && \App\Support\GermanPhone::isMobile($phone);
+            $isMobile = $phone !== null && GermanPhone::isMobile($phone);
 
             // Nur gesetzte Felder übernehmen – so bleibt der Aufruf aus der
             // E-Mail-/Fonds-Pipeline (nur Basisdaten) unverändert, während der
             // Lexoffice-Import zusätzlich strukturierte Felder mitliefern kann.
             $attributes = array_filter([
-                'birth_date'            => $data['birth_date'] ?? null,
-                'phone'                 => $isMobile ? null : $phone,
-                'mobile'                => $isMobile ? $phone : null,
-                'email2'                => $data['email2'] ?? null,
-                'gender'                => $data['gender'] ?? null,
-                'address'               => $address !== '' ? $address : null,
-                'address_street'        => $data['street'] ?? null,
-                'address_house_number'  => $data['house_number'] ?? null,
-                'address_zip'           => $data['zip'] ?? null,
-                'address_city'          => $data['city'] ?? null,
-                'company_name'          => $data['company_name'] ?? null,
-                'company_type'          => $data['company_type'] ?? null,
-                'customer_type'         => $data['customer_type'] ?? null,
-                'iban'                  => $data['iban'] ?? null,
-                'birth_place'           => $data['birth_place'] ?? null,
+                'birth_date' => $data['birth_date'] ?? null,
+                'phone' => $isMobile ? null : $phone,
+                'mobile' => $isMobile ? $phone : null,
+                'email2' => $data['email2'] ?? null,
+                'gender' => $data['gender'] ?? null,
+                'address' => $address !== '' ? $address : null,
+                'address_street' => $data['street'] ?? null,
+                'address_house_number' => $data['house_number'] ?? null,
+                'address_zip' => $data['zip'] ?? null,
+                'address_city' => $data['city'] ?? null,
+                'company_name' => $data['company_name'] ?? null,
+                'company_type' => $data['company_type'] ?? null,
+                'customer_type' => $data['customer_type'] ?? null,
+                'iban' => $data['iban'] ?? null,
+                'birth_place' => $data['birth_place'] ?? null,
             ], fn ($v) => $v !== null && $v !== '');
 
             // Importierte Kunden behalten ihre Quellnummer mit Jahrespräfix
             // ("25" + Originalnummer); Neuanlagen bekommen JJ+laufende Nummer.
-            $number = !empty($data['import_number'])
+            $number = ! empty($data['import_number'])
                 ? $this->numberGenerator->generateForImport((string) $data['import_number'])
                 : $this->numberGenerator->generate();
 
             $customer = Customer::create(array_merge([
-                'user_id'         => $user->id,
+                'user_id' => $user->id,
                 'customer_number' => $number,
-                'source'          => $source,
+                'source' => $source,
             ], $attributes));
 
             // Externe Kennungen (z. B. Lexoffice-Kundennummer) an ihren
@@ -113,8 +115,8 @@ class CustomerAutoCreationService
                     continue;
                 }
                 $customer->externalReferences()->create([
-                    'type'   => $ref['type'],
-                    'value'  => (string) $ref['value'],
+                    'type' => $ref['type'],
+                    'value' => (string) $ref['value'],
                     'source' => $ref['source'] ?? $source,
                 ]);
             }

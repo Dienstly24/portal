@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\CommissionImport;
 
 use App\Models\Contract;
@@ -104,7 +105,7 @@ class CommissionMatcher
             ->select(['id', 'contract_id', 'meter_number', 'malo_id'])
             ->where(function ($q) {
                 $q->orWhere(fn ($w) => $w->whereNotNull('meter_number')->where('meter_number', '!=', ''))
-                  ->orWhere(fn ($w) => $w->whereNotNull('malo_id')->where('malo_id', '!=', ''));
+                    ->orWhere(fn ($w) => $w->whereNotNull('malo_id')->where('malo_id', '!=', ''));
             })
             ->chunkById(500, function ($chunk) {
                 foreach ($chunk as $detail) {
@@ -113,7 +114,7 @@ class CommissionMatcher
                         if ($key === null || $detail->contract_id === null) {
                             continue;
                         }
-                        if (!in_array($detail->contract_id, $this->energyIndex[$feld][$key] ?? [], true)) {
+                        if (! in_array($detail->contract_id, $this->energyIndex[$feld][$key] ?? [], true)) {
                             $this->energyIndex[$feld][$key][] = $detail->contract_id;
                         }
                     }
@@ -129,7 +130,7 @@ class CommissionMatcher
             if ($key === null) {
                 continue;
             }
-            if (!in_array($contract->id, $this->index[$column][$key] ?? [], true)) {
+            if (! in_array($contract->id, $this->index[$column][$key] ?? [], true)) {
                 $this->index[$column][$key][] = $contract->id;
             }
         }
@@ -152,7 +153,7 @@ class CommissionMatcher
             if ($key === null) {
                 continue;
             }
-            $tried[] = self::REASON[$field] . ' „' . $value . '“';
+            $tried[] = self::REASON[$field].' „'.$value.'“';
 
             $ids = [];
             foreach ($columns as $column) {
@@ -173,8 +174,8 @@ class CommissionMatcher
                 return [
                     'contract' => null,
                     'reason' => null,
-                    'note' => self::REASON[$field] . ' „' . $value . '“ trifft ' . count($ids)
-                        . ' Verträge. Es wurde bewusst nichts zugeordnet.',
+                    'note' => self::REASON[$field].' „'.$value.'“ trifft '.count($ids)
+                        .' Verträge. Es wurde bewusst nichts zugeordnet.',
                 ];
             }
             return [
@@ -196,7 +197,7 @@ class CommissionMatcher
             if ($key === null || strlen($key) < VermittlerReference::MIN_LENGTH) {
                 continue;
             }
-            $tried[] = self::REASON[$field] . ' „' . $value . '“';
+            $tried[] = self::REASON[$field].' „'.$value.'“';
 
             $ids = $this->energyIndex[$field][$key] ?? [];
             if ($ids === []) {
@@ -206,9 +207,9 @@ class CommissionMatcher
                 return [
                     'contract' => null,
                     'reason' => null,
-                    'note' => self::REASON[$field] . ' „' . $value . '“ trifft ' . count($ids)
-                        . ' Verträge (an einer Lieferstelle können Strom und Gas hängen).'
-                        . ' Es wurde bewusst nichts zugeordnet.',
+                    'note' => self::REASON[$field].' „'.$value.'“ trifft '.count($ids)
+                        .' Verträge (an einer Lieferstelle können Strom und Gas hängen).'
+                        .' Es wurde bewusst nichts zugeordnet.',
                 ];
             }
             $contract = $this->contracts[$ids[0]] ?? Contract::with('customer.user')->find($ids[0]);
@@ -225,7 +226,7 @@ class CommissionMatcher
             'reason' => null,
             'note' => $tried === []
                 ? 'Die Zeile enthält keine verwertbare Kennung (zu kurz oder leer).'
-                : 'Kein Vertrag gefunden zu: ' . implode(', ', $tried) . '.',
+                : 'Kein Vertrag gefunden zu: '.implode(', ', $tried).'.',
         ];
     }
 
@@ -282,12 +283,12 @@ class CommissionMatcher
         ];
         foreach ($checks as $field => [$column, $label]) {
             $value = $mapped[$field] ?? null;
-            if (!is_string($value) || VermittlerReference::key($value) === null || blank($contract->{$column})) {
+            if (! is_string($value) || VermittlerReference::key($value) === null || blank($contract->{$column})) {
                 continue;
             }
-            if (!VermittlerReference::same($value, $contract->{$column})) {
-                return $label . ' der Datei („' . $value . '“) weicht vom Vertrag ab („'
-                    . $contract->{$column} . '“).';
+            if (! VermittlerReference::same($value, $contract->{$column})) {
+                return $label.' der Datei („'.$value.'“) weicht vom Vertrag ab („'
+                    .$contract->{$column}.'“).';
             }
         }
         return null;

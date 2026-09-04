@@ -63,7 +63,7 @@ class DaDirektKfzPoliceParserTest extends TestCase
 
     public function test_parses_all_key_fields(): void
     {
-        $r = (new DaDirektKfzPoliceParser())->parse($this->policeText());
+        $r = (new DaDirektKfzPoliceParser)->parse($this->policeText());
 
         $this->assertNotNull($r);
         $this->assertSame('kfz_vertrag', $r['type']);
@@ -113,12 +113,12 @@ class DaDirektKfzPoliceParserTest extends TestCase
         // Das CHECK24-Protokoll nennt DA Direkt nur als moeglichen Tarif -
         // es darf NICHT von diesem Police-Parser vereinnahmt werden.
         $protocol = "Vorlaeufiges Beratungsprotokoll zur Kfz-Versicherung - CHECK24\n"
-            . "Gewaehlter Tarif: DA Direkt Komfort Smart\nVersicherungsschein folgt";
-        $this->assertNull((new DaDirektKfzPoliceParser())->parse($protocol));
+            ."Gewaehlter Tarif: DA Direkt Komfort Smart\nVersicherungsschein folgt";
+        $this->assertNull((new DaDirektKfzPoliceParser)->parse($protocol));
 
         // Fremder Versicherer / anderes Dokument.
-        $this->assertNull((new DaDirektKfzPoliceParser())->parse('Irgendein anderes Dokument'));
-        $this->assertNull((new DaDirektKfzPoliceParser())->parse(
+        $this->assertNull((new DaDirektKfzPoliceParser)->parse('Irgendein anderes Dokument'));
+        $this->assertNull((new DaDirektKfzPoliceParser)->parse(
             "ADAC Autoversicherung AG\nVersicherungsschein Kraftfahrtversicherung"
         ));
     }

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
@@ -53,7 +54,7 @@ class GeburtsurkundeParser implements DocumentTemplateParser
         // Ort, Tag der Geburt (im Kopf, vor "Kind").
         if (preg_match('/Ort,\s*Tag der Geburt\s+([A-ZÄÖÜ][\p{L}.\- ]+?),?\s+(\d{2})\.(\d{2})\.(\d{4})/u', $this->text(), $m)) {
             $child['birth_place'] = trim($m[1]);
-            $child['birth_date'] = $m[4] . '-' . $m[3] . '-' . $m[2];
+            $child['birth_date'] = $m[4].'-'.$m[3].'-'.$m[2];
         }
         $person = $this->validatedPerson(array_filter($child, fn ($v) => $v !== null && $v !== ''));
 
@@ -79,20 +80,20 @@ class GeburtsurkundeParser implements DocumentTemplateParser
             return null;
         }
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $elternNamen = array_map(
-            fn ($p) => trim(($p['first_name'] ?? '') . ' ' . ($p['last_name'] ?? '')),
+            fn ($p) => trim(($p['first_name'] ?? '').' '.($p['last_name'] ?? '')),
             $personen
         );
         return [
             'type' => 'geburtsurkunde',
             'confidence' => 72,
             'summary' => 'Geburtsurkunde'
-                . ($name !== '' ? ' - Kind ' . $name : '')
-                . (isset($person['birth_date']) ? ' (geb. ' . $this->displayDate($person['birth_date']) . ')' : '')
-                . ($elternNamen !== [] ? ' - Eltern: ' . implode(', ', array_filter($elternNamen)) : '')
-                . ' - Felder gratis aus der Urkunde gelesen (ohne KI).',
-            'title' => 'Geburtsurkunde' . ($name !== '' ? ' ' . $name : ''),
+                .($name !== '' ? ' - Kind '.$name : '')
+                .(isset($person['birth_date']) ? ' (geb. '.$this->displayDate($person['birth_date']).')' : '')
+                .($elternNamen !== [] ? ' - Eltern: '.implode(', ', array_filter($elternNamen)) : '')
+                .' - Felder gratis aus der Urkunde gelesen (ohne KI).',
+            'title' => 'Geburtsurkunde'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => [],
@@ -130,7 +131,7 @@ class GeburtsurkundeParser implements DocumentTemplateParser
     private function labelIn(string $label, int $from, int $to): ?string
     {
         for ($i = max(0, $from); $i < min($to, count($this->lines)); $i++) {
-            if (preg_match('/^\s*' . preg_quote($label, '/') . '(?:\(n\))?\s*:?\s{2,}(\S.*?)\s*$/u', $this->lines[$i], $m)) {
+            if (preg_match('/^\s*'.preg_quote($label, '/').'(?:\(n\))?\s*:?\s{2,}(\S.*?)\s*$/u', $this->lines[$i], $m)) {
                 return trim($m[1]);
             }
         }
@@ -160,7 +161,7 @@ class GeburtsurkundeParser implements DocumentTemplateParser
 
     private function displayDate(string $iso): string
     {
-        return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $iso, $m) ? $m[3] . '.' . $m[2] . '.' . $m[1] : $iso;
+        return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $iso, $m) ? $m[3].'.'.$m[2].'.'.$m[1] : $iso;
     }
 
     private function text(): string

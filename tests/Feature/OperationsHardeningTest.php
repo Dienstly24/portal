@@ -3,9 +3,11 @@
 namespace Tests\Feature;
 
 use App\Jobs\ImportCustomersJob;
+use App\Models\InternalNotification;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -32,12 +34,12 @@ class OperationsHardeningTest extends TestCase
     public function test_failed_import_notifies_the_person_who_started_it(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
-        $path = storage_path('app/test-import-' . uniqid() . '.csv');
+        $path = storage_path('app/test-import-'.uniqid().'.csv');
         file_put_contents($path, "kopf\n");
 
         (new ImportCustomersJob($path, $admin->id))->failed(new \RuntimeException('CSV kaputt'));
 
-        $hinweis = \App\Models\InternalNotification::where('user_id', $admin->id)->latest('id')->first();
+        $hinweis = InternalNotification::where('user_id', $admin->id)->latest('id')->first();
         $this->assertNotNull($hinweis, 'Ein fehlgeschlagener Import darf nicht stumm bleiben.');
         $this->assertStringContainsString('FEHLGESCHLAGEN', (string) $hinweis->title);
 
@@ -62,7 +64,7 @@ class OperationsHardeningTest extends TestCase
 
     // ---------- Indizes ----------
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('hotPaths')]
+    #[DataProvider('hotPaths')]
     public function test_hot_columns_are_indexed(string $table, string $column): void
     {
         $this->assertTrue(Schema::hasTable($table), "Tabelle {$table} fehlt.");
@@ -113,7 +115,7 @@ class OperationsHardeningTest extends TestCase
             // Eine einzige, NAMENTLICH benannte Ausnahme (Audit SEC-1):
             // das Turnstile-Widget im Registrierungsformular. Begruendung
             // und Grenzen stehen in self::ERLAUBTE_FREMDRESSOURCEN.
-            $relativ = str_replace(resource_path('views') . '/', '', $file->getPathname());
+            $relativ = str_replace(resource_path('views').'/', '', $file->getPathname());
             $inhalt = $this->ausnahmenEntfernen($relativ, $inhalt);
 
             foreach ($muster as $regex) {
@@ -124,7 +126,7 @@ class OperationsHardeningTest extends TestCase
             }
         }
 
-        $this->assertSame([], $treffer, 'Diese Vorlagen laden fremde Ressourcen: ' . implode(', ', $treffer));
+        $this->assertSame([], $treffer, 'Diese Vorlagen laden fremde Ressourcen: '.implode(', ', $treffer));
     }
 
     /**
@@ -167,7 +169,7 @@ class OperationsHardeningTest extends TestCase
                 $erlaubt,
                 $inhalt,
                 "Die eingetragene Ausnahme fuer {$relativ} steht nicht mehr in der Datei. "
-                . 'Bitte den Eintrag entfernen, statt eine tote Ausnahme stehen zu lassen.'
+                .'Bitte den Eintrag entfernen, statt eine tote Ausnahme stehen zu lassen.'
             );
 
             $inhalt = str_replace($erlaubt, '', $inhalt);

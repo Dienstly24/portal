@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai;
 
 use App\Models\Document;
@@ -63,7 +64,7 @@ class HeuristicDocumentClassifier
 
         // Zaehlerfoto: Nummer und Stand liest die kostenlose Stufe selbst -
         // ein Foto hat kaum Text, die KI wuerde hier nur Geld kosten.
-        $energie = $type === 'zaehlerfoto' ? (new MeterPhotoReader())->read($text) : [];
+        $energie = $type === 'zaehlerfoto' ? (new MeterPhotoReader)->read($text) : [];
 
         $raw = [
             'person' => ['email' => $this->findEmail($text)],
@@ -79,7 +80,7 @@ class HeuristicDocumentClassifier
         return [
             'type' => $type,
             'confidence' => $type === 'sonstiges' ? 20 : 40,
-            'summary' => 'Ohne KI per OCR erkannt - bitte pruefen: ' . $snippet,
+            'summary' => 'Ohne KI per OCR erkannt - bitte pruefen: '.$snippet,
             'title' => null,
             'data' => [
                 'person' => $this->validatedPerson($raw['person']),
@@ -106,7 +107,7 @@ class HeuristicDocumentClassifier
         // Erst wenn KEIN Stichwort greift, das Zaehlerfoto pruefen: eine
         // Energierechnung nennt auch Zaehlernummer und Stand, ist aber eine
         // Rechnung - der Stichwort-Katalog behaelt daher den Vortritt.
-        if ((new MeterPhotoReader())->looksLikeMeterPhoto($text)) {
+        if ((new MeterPhotoReader)->looksLikeMeterPhoto($text)) {
             return 'zaehlerfoto';
         }
 

@@ -1,7 +1,13 @@
 <?php
+
 namespace App\Http\Controllers;
+
+use App\Http\Middleware\EnsureTwoFactor;
 use App\Http\Requests\Admin\UpdateSettingsRequest;
 use App\Models\SystemSetting;
+use App\Services\Ai\Assistant\AssistantSettings;
+use App\Services\Ai\Assistant\Contracts\AssistantProviderInterface;
+use App\Services\ChangeRequest\ChangeProofPolicy;
 
 class SettingsController extends Controller
 {
@@ -16,11 +22,11 @@ class SettingsController extends Controller
             'contract_reminder_days' => SystemSetting::get('contract_reminder_days', '30,14,7'),
             'welcome_email_enabled' => SystemSetting::get('welcome_email_enabled', '1'),
             // Automatische Freigabe von Kundenaenderungen mit geprueftem Nachweis
-            'change_request_auto_approve' => app(\App\Services\ChangeRequest\ChangeProofPolicy::class)->autoApproveMode(),
+            'change_request_auto_approve' => app(ChangeProofPolicy::class)->autoApproveMode(),
             'lexoffice_api_key' => SystemSetting::get('lexoffice_api_key', config('services.lexoffice.key', '')),
             // Rechtliches (öffentliche Portal-Seiten /impressum, /agb, …)
-            'legal_external_base' => SystemSetting::get('legal_external_base', \App\Http\Controllers\LegalPageController::DEFAULT_EXTERNAL_BASE),
-            'legal_external_suffix' => SystemSetting::get('legal_external_suffix', \App\Http\Controllers\LegalPageController::DEFAULT_EXTERNAL_SUFFIX),
+            'legal_external_base' => SystemSetting::get('legal_external_base', LegalPageController::DEFAULT_EXTERNAL_BASE),
+            'legal_external_suffix' => SystemSetting::get('legal_external_suffix', LegalPageController::DEFAULT_EXTERNAL_SUFFIX),
             'legal_impressum' => SystemSetting::get('legal_impressum', ''),
             'legal_agb' => SystemSetting::get('legal_agb', ''),
             'legal_datenschutz' => SystemSetting::get('legal_datenschutz', ''),
@@ -28,16 +34,16 @@ class SettingsController extends Controller
             // Sicherheit: Zwei-Faktor-Pflicht fuer Personal. Voreinstellung
             // AN - eine Schutzschicht, die man erst einschalten muss, ist
             // in der Praxis meistens aus.
-            'two_factor_required' => SystemSetting::get('two_factor_required', \App\Http\Middleware\EnsureTwoFactor::defaultSetting()),
+            'two_factor_required' => SystemSetting::get('two_factor_required', EnsureTwoFactor::defaultSetting()),
         ];
 
         // KI-Kundenassistent (Spezifikation Abschnitt 30): Betriebsschalter
         // liegen als SystemSetting, damit der Betreiber ohne Deploy
         // eingreifen kann - inklusive Notbremse.
-        $assistant = app(\App\Services\Ai\Assistant\AssistantSettings::class);
+        $assistant = app(AssistantSettings::class);
         $settings = array_merge($settings, $assistant->all());
 
-        $assistantProvider = app(\App\Services\Ai\Assistant\Contracts\AssistantProviderInterface::class);
+        $assistantProvider = app(AssistantProviderInterface::class);
 
         return view('admin.settings', [
             'settings' => $settings,
@@ -57,11 +63,11 @@ class SettingsController extends Controller
         // Ab hier gilt nur noch, was UpdateSettingsRequest geprueft hat.
         $validated = $request->validated();
         $fields = [
-            'company_name','company_email','company_phone','company_address',
-            'portal_url','admin_url','contract_reminder_days',
-            'welcome_email_enabled','lexoffice_api_key','change_request_auto_approve',
-            'legal_external_base','legal_external_suffix',
-            'legal_impressum','legal_agb','legal_datenschutz','legal_cookies'
+            'company_name', 'company_email', 'company_phone', 'company_address',
+            'portal_url', 'admin_url', 'contract_reminder_days',
+            'welcome_email_enabled', 'lexoffice_api_key', 'change_request_auto_approve',
+            'legal_external_base', 'legal_external_suffix',
+            'legal_impressum', 'legal_agb', 'legal_datenschutz', 'legal_cookies',
         ];
         foreach ($fields as $field) {
             // array_key_exists statt $request->has(): geschrieben wird nur,
@@ -84,7 +90,7 @@ class SettingsController extends Controller
         // ausschalten. Nur bei einem abgeschickten Assistenten-Formular
         // (Marker-Feld), damit ein anderes Formular sie nicht zuruecksetzt.
         if ($request->has('ai_assistant_form')) {
-            foreach (\App\Services\Ai\Assistant\AssistantSettings::DEFAULTS as $key => $default) {
+            foreach (AssistantSettings::DEFAULTS as $key => $default) {
                 if ($key === 'ai_assistant_max_replies_per_case') {
                     // Zahl: 0 = unbegrenzt, hart begrenzt gegen Tippfehler.
                     $value = (int) ($validated[$key] ?? $default);

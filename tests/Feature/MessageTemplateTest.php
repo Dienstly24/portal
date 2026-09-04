@@ -63,7 +63,7 @@ class MessageTemplateTest extends TestCase
         $this->actingAs($employee)->get(route('admin.templates.list'))
             ->assertOk()->assertJsonFragment(['name' => 'T']);
         $this->actingAs($employee)->get(route('admin.templates.render', $template->id))
-            ->assertOk()->assertJsonFragment(['body' => 'Hallo ' . $employee->name]);
+            ->assertOk()->assertJsonFragment(['body' => 'Hallo '.$employee->name]);
     }
 
     public function test_rendering_ersetzt_kundenplatzhalter(): void
@@ -77,7 +77,7 @@ class MessageTemplateTest extends TestCase
         ]);
 
         $response = $this->actingAs($admin)
-            ->get(route('admin.templates.render', $template->id) . '?customer_id=' . $customer->id)
+            ->get(route('admin.templates.render', $template->id).'?customer_id='.$customer->id)
             ->assertOk()->json();
 
         $this->assertSame('Kunde 2600007', $response['subject']);
@@ -94,7 +94,7 @@ class MessageTemplateTest extends TestCase
         $template = MessageTemplate::create(['name' => 'T', 'category' => 'kunde', 'body' => '{{name}}']);
 
         $this->actingAs($employee)
-            ->get(route('admin.templates.render', $template->id) . '?customer_id=' . $customer->id)
+            ->get(route('admin.templates.render', $template->id).'?customer_id='.$customer->id)
             ->assertForbidden();
     }
 

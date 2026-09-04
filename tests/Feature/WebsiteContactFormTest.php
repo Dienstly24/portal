@@ -154,7 +154,7 @@ class WebsiteContactFormTest extends TestCase
     {
         $this->postJson('/api/website-contact', $this->payload([
             'nachricht' => 'True Fortune casino stands out as a trusted online gambling destination. '
-                . 'Big-money jackpots! https://spam.example https://spam2.example',
+                .'Big-money jackpots! https://spam.example https://spam2.example',
         ]))
             ->assertOk()
             ->assertJson(['success' => true]);

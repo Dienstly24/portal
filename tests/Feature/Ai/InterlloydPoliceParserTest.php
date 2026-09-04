@@ -49,7 +49,7 @@ class InterlloydPoliceParserTest extends TestCase
 
     public function test_reads_bhv_police(): void
     {
-        $r = (new InterlloydPoliceParser())->parse($this->scheinText());
+        $r = (new InterlloydPoliceParser)->parse($this->scheinText());
 
         $this->assertNotNull($r);
         $this->assertSame('versicherungspolice', $r['type']);
@@ -89,7 +89,7 @@ class InterlloydPoliceParserTest extends TestCase
 
     public function test_ignores_unrelated_documents(): void
     {
-        $parser = new InterlloydPoliceParser();
+        $parser = new InterlloydPoliceParser;
 
         $this->assertNull($parser->parse('Irgendein anderes Dokument'));
         // Ohne Vertragsnummer lieber die normale Analyse.

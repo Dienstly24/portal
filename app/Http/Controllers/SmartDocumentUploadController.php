@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Jobs\AnalyzeDocumentJob;
@@ -11,11 +12,25 @@ use App\Services\Ai\DocumentAnalyzer;
 use App\Services\CustomerCreation\CustomerAutoCreationService;
 use App\Services\CustomerCreation\DuplicateCustomerException;
 use App\Services\DocumentIntake\DocumentIntakeService;
+use App\Services\Energy\MeterReadingService;
+use App\Services\Health\FamilyBundleService;
+use App\Services\Health\HealthFamilySetupService;
+use App\Services\Notifications\NotificationService;
+use App\Services\Ocr\PdfTextLayerExtractor;
+use App\Services\Ocr\TesseractTextExtractor;
 use App\Services\Pdf\ImagesToPdfService;
 use App\Services\Portal\PortalAccessService;
+use App\Support\Facades\Notify;
+use App\Support\UploadRules;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Smart Document Upload: Mehrseiten-Scanner im Kundenportal und
@@ -67,7 +82,7 @@ class SmartDocumentUploadController extends Controller
         try {
             $document = $this->storeAsDocument(
                 $request,
-                directory: 'customers/' . $customer->id . '/documents',
+                directory: 'customers/'.$customer->id.'/documents',
                 customerId: (string) $customer->id,
                 contractId: $contractId,
                 visibility: 'customer',
@@ -76,14 +91,14 @@ class SmartDocumentUploadController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        \App\Support\Facades\Notify::pushMany(
+        Notify::pushMany(
             User::whereIn('role', ['admin', 'manager', 'support'])->where('is_active', true)->pluck('id'),
             [
-                'type' => \App\Services\Notifications\NotificationService::TYPE_DOCUMENT,
+                'type' => NotificationService::TYPE_DOCUMENT,
                 'title' => 'Neues Kundendokument (Scan)',
-                'body' => ($customer->user?->name ?? 'Ein Kunde') . ' hat „' . $document->file_name . '" hochgeladen.',
-                'link' => route('admin.customer', $customer->id) . '#tab-dokumente',
-                'dedup_key' => 'doc-scan-' . $document->id,
+                'body' => ($customer->user?->name ?? 'Ein Kunde').' hat „'.$document->file_name.'" hochgeladen.',
+                'link' => route('admin.customer', $customer->id).'#tab-dokumente',
+                'dedup_key' => 'doc-scan-'.$document->id,
             ]
         );
 
@@ -126,7 +141,7 @@ class SmartDocumentUploadController extends Controller
 
         $recent = Document::whereNotNull('customer_id')
             ->where('ai_status', '!=', 'none')
-            ->when(!$user->canSeeAllCustomers(), fn ($q) => $q->whereIn('customer_id', $user->visibleCustomerIdsWithSubstitution()))
+            ->when(! $user->canSeeAllCustomers(), fn ($q) => $q->whereIn('customer_id', $user->visibleCustomerIdsWithSubstitution()))
             ->with(['customer.user', 'contract'])
             ->latest()->limit(30)->get();
 
@@ -140,11 +155,11 @@ class SmartDocumentUploadController extends Controller
             // die keine ist. Sie stehen weiter unten in ihrem eigenen
             // Abschnitt (und werden nie automatisch geloescht).
             ->whereNull('vermittler_import_id')
-            ->when(!$user->canSeeAllCustomers(), fn ($q) => $q->where('uploaded_by', $user->id))
+            ->when(! $user->canSeeAllCustomers(), fn ($q) => $q->where('uploaded_by', $user->id))
             ->latest()->get();
 
         $vorgangslisten = Document::whereNotNull('vermittler_import_id')
-            ->when(!$user->canSeeAllCustomers(), fn ($q) => $q->where('uploaded_by', $user->id))
+            ->when(! $user->canSeeAllCustomers(), fn ($q) => $q->where('uploaded_by', $user->id))
             ->with(['uploader', 'vermittlerImport'])
             ->latest()->limit(10)->get();
 
@@ -191,7 +206,7 @@ class SmartDocumentUploadController extends Controller
     {
         $this->validateJson($request, [
             'files' => 'required|array|min:1|max:20',
-            'files.*' => 'file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+            'files.*' => UploadRules::each(UploadRules::ATTACHMENT_MIMES),
             'customer_id' => 'nullable|uuid',
             'visibility' => 'nullable|in:customer,internal',
             // 1 = Bilder zu EINEM mehrseitigen Dokument buendeln (Standard),
@@ -202,14 +217,14 @@ class SmartDocumentUploadController extends Controller
         $customer = null;
         if ($request->filled('customer_id')) {
             $customer = Customer::find($request->customer_id);
-            if (!$customer) {
+            if (! $customer) {
                 return response()->json(['message' => 'Dieser Kunde existiert nicht (mehr).'], 404);
             }
             abort_unless(auth()->user()->canAccessCustomer($customer->id), 403);
         }
 
         $directory = $customer
-            ? 'customers/' . $customer->id . '/documents'
+            ? 'customers/'.$customer->id.'/documents'
             : 'documents/eingang';
         // Ohne bewusste Wahl bleibt ein Smart-Upload intern, bis ein
         // Mitarbeiter ihn freigibt (DSGVO-schonender Standard).
@@ -233,7 +248,7 @@ class SmartDocumentUploadController extends Controller
         foreach ($request->file('files') as $file) {
             $mime = (string) $finfo->file($file->getRealPath());
             $isPdf = $mime === 'application/pdf'
-                || (!str_starts_with($mime, 'image/') && strtolower($file->getClientOriginalExtension()) === 'pdf');
+                || (! str_starts_with($mime, 'image/') && strtolower($file->getClientOriginalExtension()) === 'pdf');
             if ($isPdf) {
                 $pdfs[] = $file;
             } else {
@@ -268,7 +283,7 @@ class SmartDocumentUploadController extends Controller
         // (neuen) Kunden -> gemeinsame Hochlade-Kennung, damit der Eingang sie
         // als einen Vorgang gruppiert ("Neuen Kunden aus allen anlegen").
         if ($customer === null && count($created) > 1) {
-            $batch = (string) \Illuminate\Support\Str::uuid();
+            $batch = (string) Str::uuid();
             Document::whereIn('id', array_map(fn ($d) => $d->id, $created))->update(['intake_batch' => $batch]);
             foreach ($created as $document) {
                 $document->intake_batch = $batch;
@@ -310,7 +325,7 @@ class SmartDocumentUploadController extends Controller
      */
     private function duplicateInfo(Document $document): ?array
     {
-        if (!$document->duplicate_of) {
+        if (! $document->duplicate_of) {
             return null;
         }
         $original = Document::with('customer.user')->find($document->duplicate_of);
@@ -358,7 +373,7 @@ class SmartDocumentUploadController extends Controller
         ]);
 
         $customer = Customer::find($request->customer_id);
-        if (!$customer) {
+        if (! $customer) {
             return response()->json(['message' => 'Dieser Kunde existiert nicht (mehr).'], 404);
         }
         abort_unless(auth()->user()->canAccessCustomer($customer->id), 403);
@@ -367,7 +382,7 @@ class SmartDocumentUploadController extends Controller
             return response()->json(['message' => 'Dokument ist bereits einem anderen Kunden zugeordnet.'], 422);
         }
 
-        if (!$document->customer_id && !$this->intake->assignToCustomer($document, $customer, auth()->id())) {
+        if (! $document->customer_id && ! $this->intake->assignToCustomer($document, $customer, auth()->id())) {
             // Zwei Mitarbeiter gleichzeitig: der andere hat gewonnen.
             return response()->json(['message' => 'Dokument wurde soeben einem anderen Kunden zugeordnet.'], 422);
         }
@@ -386,7 +401,7 @@ class SmartDocumentUploadController extends Controller
             // linkMatchingContract-Zweig; Erfassung ist idempotent).
             if ($document->ai_type === 'zaehlerfoto') {
                 try {
-                    app(\App\Services\Energy\MeterReadingService::class)->recordFromDocument($document, $customer);
+                    app(MeterReadingService::class)->recordFromDocument($document, $customer);
                 } catch (\Throwable $e) {
                     report($e);
                 }
@@ -405,7 +420,7 @@ class SmartDocumentUploadController extends Controller
         return response()->json([
             'ok' => true,
             'customer_id' => $customer->id,
-            'customer_url' => route('admin.customer', $customer->id) . '#tab-dokumente',
+            'customer_url' => route('admin.customer', $customer->id).'#tab-dokumente',
             'customer_name' => $customer->user?->name ?? $customer->customer_number,
             'customer_number' => $customer->customer_number,
             'applied_fields' => $applied,
@@ -447,7 +462,7 @@ class SmartDocumentUploadController extends Controller
         $extracted = $this->applyManualName($request, $extracted);
 
         $person = $extracted['person'] ?? [];
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         if ($name === '') {
             return response()->json(['message' => 'Bitte den Namen des Kunden eintragen (Vorname und/oder Nachname).'], 422);
         }
@@ -456,7 +471,7 @@ class SmartDocumentUploadController extends Controller
         // Bereits vergebene E-Mail nicht als Login-Adresse verwenden (unique
         // auf users.email); der neue Kunde bekommt dann eine Platzhalter-
         // Adresse, die extrahierte E-Mail kann als email2 uebernommen werden.
-        if (!empty($criteria['email']) && User::where('email', $criteria['email'])->exists()) {
+        if (! empty($criteria['email']) && User::where('email', $criteria['email'])->exists()) {
             unset($criteria['email']);
         }
 
@@ -468,8 +483,8 @@ class SmartDocumentUploadController extends Controller
             );
         } catch (DuplicateCustomerException $e) {
             return response()->json([
-                'message' => 'Es existiert bereits ein aehnlicher Kunde (' . ($e->matchResult->customer?->user?->name ?? '?') . ', '
-                    . $e->matchResult->score . ' Punkte). Bitte stattdessen zuordnen.',
+                'message' => 'Es existiert bereits ein aehnlicher Kunde ('.($e->matchResult->customer?->user?->name ?? '?').', '
+                    .$e->matchResult->score.' Punkte). Bitte stattdessen zuordnen.',
             ], 422);
         }
 
@@ -541,7 +556,7 @@ class SmartDocumentUploadController extends Controller
         $skipped = [];
         $customers = [];
         foreach ($people as $person) {
-            $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+            $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
             if ($name === '') {
                 continue;
             }
@@ -561,7 +576,7 @@ class SmartDocumentUploadController extends Controller
             } catch (DuplicateCustomerException $e) {
                 $skipped[] = [
                     'name' => $name,
-                    'reason' => 'bereits vorhanden (' . ($e->matchResult->customer?->user?->name ?? '?') . ')',
+                    'reason' => 'bereits vorhanden ('.($e->matchResult->customer?->user?->name ?? '?').')',
                     'customer_id' => $e->matchResult->customer?->id,
                 ];
                 if ($e->matchResult->customer !== null) {
@@ -648,12 +663,12 @@ class SmartDocumentUploadController extends Controller
         foreach ($documents as $document) {
             $this->authorizeDocument($document);
             if ($document->customer_id) {
-                return response()->json(['message' => 'Bereits zugeordnet: ' . $document->file_name], 422);
+                return response()->json(['message' => 'Bereits zugeordnet: '.$document->file_name], 422);
             }
         }
 
         $merged = $this->intake->mergeExtractions($documents);
-        if (!empty($merged['_conflicts'])) {
+        if (! empty($merged['_conflicts'])) {
             return response()->json([
                 'message' => implode(' ', $merged['_conflicts']),
                 'conflicts' => $merged['_conflicts'],
@@ -666,7 +681,7 @@ class SmartDocumentUploadController extends Controller
         $familyInput = $request->input('family');
         $familyPersons = [];
         if ($familyInput !== null) {
-            $familyPersons = app(\App\Services\Health\FamilyBundleService::class)->detectPersons($documents);
+            $familyPersons = app(FamilyBundleService::class)->detectPersons($documents);
             $haupt = $familyPersons[(int) $familyInput['haupt_index']] ?? null;
             if ($haupt === null) {
                 return response()->json(['message' => 'Hauptversicherte Person nicht gefunden - bitte neu auswaehlen.'], 422);
@@ -684,13 +699,13 @@ class SmartDocumentUploadController extends Controller
         $merged = $this->applyManualName($request, $merged);
 
         $person = $merged['person'] ?? [];
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         if ($name === '') {
             return response()->json(['message' => 'Bitte den Namen des Kunden eintragen (Vorname und/oder Nachname).'], 422);
         }
 
         $criteria = $this->intake->matchCriteria($merged);
-        if (!empty($criteria['email']) && User::where('email', $criteria['email'])->exists()) {
+        if (! empty($criteria['email']) && User::where('email', $criteria['email'])->exists()) {
             unset($criteria['email']);
         }
 
@@ -698,8 +713,8 @@ class SmartDocumentUploadController extends Controller
             $customer = app(CustomerAutoCreationService::class)->createFromUnmatched($criteria, 'manual', auth()->id());
         } catch (DuplicateCustomerException $e) {
             return response()->json([
-                'message' => 'Es existiert bereits ein aehnlicher Kunde (' . ($e->matchResult->customer?->user?->name ?? '?') . ', '
-                    . $e->matchResult->score . ' Punkte). Bitte stattdessen zuordnen.',
+                'message' => 'Es existiert bereits ein aehnlicher Kunde ('.($e->matchResult->customer?->user?->name ?? '?').', '
+                    .$e->matchResult->score.' Punkte). Bitte stattdessen zuordnen.',
             ], 422);
         }
 
@@ -726,7 +741,7 @@ class SmartDocumentUploadController extends Controller
         // Krankenkassen-Fall einrichten (Familie, Wechseldatum, Verlauf).
         $health = null;
         if ($familyInput !== null) {
-            $health = app(\App\Services\Health\HealthFamilySetupService::class)->setup($customer, $familyPersons, [
+            $health = app(HealthFamilySetupService::class)->setup($customer, $familyPersons, [
                 'haupt_index' => (int) $familyInput['haupt_index'],
                 'members' => $familyInput['members'] ?? [],
                 'switch_reason' => $familyInput['switch_reason'],
@@ -783,7 +798,7 @@ class SmartDocumentUploadController extends Controller
             $this->authorizeDocument($document);
         }
 
-        $deleted = \Illuminate\Support\Facades\DB::transaction(function () use ($documents) {
+        $deleted = DB::transaction(function () use ($documents) {
             $count = 0;
             foreach ($documents as $document) {
                 ActivityLog::create([
@@ -849,7 +864,7 @@ class SmartDocumentUploadController extends Controller
         foreach ($documents as $document) {
             $this->authorizeDocument($document);
             if ($document->customer_id) {
-                return response()->json(['message' => 'Bereits zugeordnet: ' . $document->file_name], 422);
+                return response()->json(['message' => 'Bereits zugeordnet: '.$document->file_name], 422);
             }
         }
 
@@ -862,12 +877,12 @@ class SmartDocumentUploadController extends Controller
      * fuer automatisch gruppierte Vorgaenge (inbox) als auch fuer manuelle
      * Mehrfachauswahl (batchPreview) genutzt - eine einzige Wahrheit.
      *
-     * @param  \Illuminate\Support\Collection<int,Document>  $group
+     * @param  Collection<int,Document>  $group
      * @return array<string,mixed>
      */
     private function buildBatchMeta($group): array
     {
-        $familyService = app(\App\Services\Health\FamilyBundleService::class);
+        $familyService = app(FamilyBundleService::class);
         $merged = $this->intake->mergeExtractions($group);
         $conflicts = $merged['_conflicts'] ?? [];
         unset($merged['_conflicts']);
@@ -881,8 +896,8 @@ class SmartDocumentUploadController extends Controller
             'file_names' => $group->pluck('file_name')->values()->all(),
             'merged' => $merged,
             'conflicts' => array_values($conflicts),
-            'ready' => $group->every(fn ($d) => !$d->aiInProgress()),
-            'has_name' => trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? '')) !== '',
+            'ready' => $group->every(fn ($d) => ! $d->aiInProgress()),
+            'has_name' => trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? '')) !== '',
             'persons' => $persons,
             'haupt_suggest' => count($persons) >= 2 ? $familyService->suggestHauptIndex($persons) : 0,
             'has_health_cards' => $group->contains(fn ($d) => $d->ai_type === 'gesundheitskarte'),
@@ -909,7 +924,7 @@ class SmartDocumentUploadController extends Controller
         // Zaehlernummer ...), damit ein Dokument dem richtigen Kunden mit jeder
         // vorliegenden Information zugeordnet werden kann.
         $customers = Customer::with('user')
-            ->when(!$user->canSeeAllCustomers(), fn ($query) => $query->whereIn('customers.id', $user->visibleCustomerIdsWithSubstitution()))
+            ->when(! $user->canSeeAllCustomers(), fn ($query) => $query->whereIn('customers.id', $user->visibleCustomerIdsWithSubstitution()))
             ->search($q)
             ->limit(15)->get()
             ->map(fn ($c) => [
@@ -989,18 +1004,18 @@ class SmartDocumentUploadController extends Controller
      * Nur admin/manager: der Rohtext enthaelt das GANZE Dokument und damit
      * mehr als die geprueften Felder.
      */
-    public function ocrText(string $id, \App\Services\Ocr\PdfTextLayerExtractor $pdfText, \App\Services\Ocr\TesseractTextExtractor $ocr)
+    public function ocrText(string $id, PdfTextLayerExtractor $pdfText, TesseractTextExtractor $ocr)
     {
         $document = Document::findOrFail($id);
         $this->authorizeDocument($document);
-        if (!in_array(auth()->user()?->role, ['admin', 'manager'], true)) {
+        if (! in_array(auth()->user()?->role, ['admin', 'manager'], true)) {
             return response()->json([
                 'message' => 'Der erkannte Rohtext ist der Verwaltung vorbehalten (er enthaelt das ganze Dokument).',
             ], 403);
         }
 
         $disk = Storage::disk($document->disk ?: 'local');
-        if (!$disk->exists($document->file_path)) {
+        if (! $disk->exists($document->file_path)) {
             return response()->json(['message' => 'Die Datei ist nicht mehr vorhanden.'], 404);
         }
 
@@ -1049,7 +1064,7 @@ class SmartDocumentUploadController extends Controller
         $document = Document::findOrFail($id);
         $this->authorizeDocument($document);
 
-        if (!$this->analyzer->isEnabled()) {
+        if (! $this->analyzer->isEnabled()) {
             return response()->json(['message' => 'Analyse ist nicht konfiguriert (kein KI-Anbieter und keine OCR-Stufe aktiv).'], 422);
         }
         if ($document->aiInProgress()) {
@@ -1072,23 +1087,23 @@ class SmartDocumentUploadController extends Controller
         //    Verwaltungs-Account nicht versehentlich hunderte Aufrufe erzeugt.
         //    Das grosszuegige Routen-Throttle (300/10min) schuetzt davor nicht.
         if ($forceAi) {
-            if (!in_array(auth()->user()->role, ['admin', 'manager'], true)) {
+            if (! in_array(auth()->user()->role, ['admin', 'manager'], true)) {
                 return response()->json([
                     'message' => 'Die kostenpflichtige KI-Analyse darf nur die Verwaltung (Admin/Manager) ausloesen. '
-                        . 'Die kostenlose Neuanalyse steht dir weiter zur Verfuegung.',
+                        .'Die kostenlose Neuanalyse steht dir weiter zur Verfuegung.',
                 ], 403);
             }
             $limit = max(1, (int) config('services.ocr.force_ai_daily_limit', 40));
-            $executed = \Illuminate\Support\Facades\RateLimiter::attempt(
-                'force-ai-doc:' . auth()->id(),
+            $executed = RateLimiter::attempt(
+                'force-ai-doc:'.auth()->id(),
                 $limit,
                 fn () => true,
                 86400,
             );
-            if (!$executed) {
+            if (! $executed) {
                 return response()->json([
-                    'message' => 'Tageslimit fuer die kostenpflichtige KI-Analyse erreicht (' . $limit
-                        . '/Tag). Bitte morgen erneut oder die kostenlose Neuanalyse nutzen.',
+                    'message' => 'Tageslimit fuer die kostenpflichtige KI-Analyse erreicht ('.$limit
+                        .'/Tag). Bitte morgen erneut oder die kostenlose Neuanalyse nutzen.',
                 ], 429);
             }
         }
@@ -1107,7 +1122,7 @@ class SmartDocumentUploadController extends Controller
     {
         return Customer::firstOrCreate(
             ['user_id' => auth()->id()],
-            ['customer_number' => 'C-' . strtoupper(Str::random(8))]
+            ['customer_number' => 'C-'.strtoupper(Str::random(8))]
         );
     }
 
@@ -1142,7 +1157,7 @@ class SmartDocumentUploadController extends Controller
      */
     private function applyWerber(Request $request, Customer $customer): void
     {
-        if (!$request->filled('werber') || !in_array(auth()->user()->role, ['admin', 'manager'])) {
+        if (! $request->filled('werber') || ! in_array(auth()->user()->role, ['admin', 'manager'])) {
             return;
         }
         $values = Customer::resolveWerberKey($request->input('werber'));
@@ -1162,12 +1177,12 @@ class SmartDocumentUploadController extends Controller
     {
         $user = auth()->user();
         if ($document->customer_id) {
-            if (!$user->canAccessCustomer($document->customer_id)) {
+            if (! $user->canAccessCustomer($document->customer_id)) {
                 abort(403, 'Kein Zugriff auf diesen Kunden.');
             }
             return;
         }
-        if (!$user->canSeeAllCustomers() && (int) $document->uploaded_by !== (int) $user->id) {
+        if (! $user->canSeeAllCustomers() && (int) $document->uploaded_by !== (int) $user->id) {
             abort(403, 'Kein Zugriff auf dieses Dokument.');
         }
     }
@@ -1211,18 +1226,18 @@ class SmartDocumentUploadController extends Controller
         // gespeichert und analysiert werden (OCR/Vision lesen Bilder ohnehin).
         // So funktioniert der Upload einzelner Foto-/Screenshot-Dateien auch
         // ohne GD; nur das Buendeln mehrerer Seiten braucht sie weiterhin.
-        if (count($imageBinaries) === 1 && !$this->pdfBuilder->canBuild()) {
+        if (count($imageBinaries) === 1 && ! $this->pdfBuilder->canBuild()) {
             return $this->createRawImageDocument($imageBinaries[0], $directory, $customerId, $visibility, $contractId);
         }
 
         $pdfBytes = $this->pdfBuilder->build($imageBinaries);
-        $path = $directory . '/' . Str::uuid() . '.pdf';
+        $path = $directory.'/'.Str::uuid().'.pdf';
         Storage::disk('local')->put($path, $pdfBytes);
 
         return $this->createDocument(
             customerId: $customerId,
             contractId: $contractId,
-            fileName: 'Scan ' . now()->format('d.m.Y H.i') . '.pdf',
+            fileName: 'Scan '.now()->format('d.m.Y H.i').'.pdf',
             path: $path,
             size: strlen($pdfBytes),
             pageCount: count($imageBinaries),
@@ -1244,13 +1259,13 @@ class SmartDocumentUploadController extends Controller
             'image/gif' => 'gif',
             default => 'jpg',
         };
-        $path = $directory . '/' . Str::uuid() . '.' . $ext;
+        $path = $directory.'/'.Str::uuid().'.'.$ext;
         Storage::disk('local')->put($path, $binary);
 
         return $this->createDocument(
             customerId: $customerId,
             contractId: $contractId,
-            fileName: 'Bild ' . now()->format('d.m.Y H.i') . '.' . $ext,
+            fileName: 'Bild '.now()->format('d.m.Y H.i').'.'.$ext,
             path: $path,
             size: strlen($binary),
             pageCount: 1,
@@ -1258,7 +1273,7 @@ class SmartDocumentUploadController extends Controller
         );
     }
 
-    private function createPdfDocument(\Illuminate\Http\UploadedFile $file, string $directory, ?string $customerId, string $visibility, ?string $contractId = null): Document
+    private function createPdfDocument(UploadedFile $file, string $directory, ?string $customerId, string $visibility, ?string $contractId = null): Document
     {
         $path = $file->store($directory, 'local');
 
@@ -1266,7 +1281,7 @@ class SmartDocumentUploadController extends Controller
         // Inhalt korrekt behandeln (Client-Namen sind nicht verlaesslich).
         $fileName = $file->getClientOriginalName();
         if (strtolower(pathinfo($fileName, PATHINFO_EXTENSION)) !== 'pdf') {
-            $fileName = (pathinfo($fileName, PATHINFO_FILENAME) ?: 'Dokument') . '.pdf';
+            $fileName = (pathinfo($fileName, PATHINFO_FILENAME) ?: 'Dokument').'.pdf';
         }
 
         return $this->createDocument(
@@ -1285,7 +1300,7 @@ class SmartDocumentUploadController extends Controller
      * Speicher (alle Seiten werden fuer den PDF-Bau im RAM gehalten) und
      * haelt das Ergebnis unter dem Analyse-Limit von 20 MB.
      *
-     * @param list<\Illuminate\Http\UploadedFile> $files
+     * @param list<UploadedFile> $files
      */
     private function guardTotalImageSize(array $files): void
     {
@@ -1304,7 +1319,7 @@ class SmartDocumentUploadController extends Controller
     {
         try {
             return $request->validate($rules);
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             $this->failJson((string) $e->validator->errors()->first());
         }
     }
@@ -1312,7 +1327,7 @@ class SmartDocumentUploadController extends Controller
     /** Bricht mit einer JSON-422-Antwort ab (fuer die XHR-Frontends). */
     private function failJson(string $message): never
     {
-        throw new \Illuminate\Http\Exceptions\HttpResponseException(
+        throw new HttpResponseException(
             response()->json(['message' => $message], 422)
         );
     }

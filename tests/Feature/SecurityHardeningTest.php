@@ -17,7 +17,7 @@ class SecurityHardeningTest extends TestCase
         $user = User::factory()->create(['role' => 'customer']);
         $customer = Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'K-' . uniqid(),
+            'customer_number' => 'K-'.uniqid(),
             'iban' => 'DE89370400440532013000',
         ]);
 
@@ -44,7 +44,7 @@ class SecurityHardeningTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'admin']);
         User::factory()->count(30)->create(['role' => 'customer'])->each(function ($u) {
-            Customer::create(['user_id' => $u->id, 'customer_number' => 'K-' . uniqid()]);
+            Customer::create(['user_id' => $u->id, 'customer_number' => 'K-'.uniqid()]);
         });
 
         $response = $this->actingAs($admin)->get(route('admin.customers'));

@@ -1,8 +1,13 @@
 <?php
+
 namespace App\Models;
 
+use App\Services\CommissionImport\CommissionSourceProfile;
+use App\Services\Provisionsmanagement\PoolRegistry;
+use App\Support\CommissionKind;
 use App\Support\CommissionStatus;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 /**
@@ -81,13 +86,13 @@ class ContractCommission extends Model
     /** Klartext der Quelle, aus der diese Provision stammt. */
     public function providerLabel(): string
     {
-        return \App\Services\CommissionImport\CommissionSourceProfile::label($this->provider);
+        return CommissionSourceProfile::label($this->provider);
     }
 
     /** Der Pool, aus dem diese Provision stammt (Klartext). */
     public function poolLabel(): string
     {
-        return app(\App\Services\Provisionsmanagement\PoolRegistry::class)->label($this->pool);
+        return app(PoolRegistry::class)->label($this->pool);
     }
 
     /**
@@ -97,11 +102,11 @@ class ContractCommission extends Model
      */
     public function kindLabel(): string
     {
-        return \App\Support\CommissionKind::label($this->commission_kind);
+        return CommissionKind::label($this->commission_kind);
     }
 
     /** Das Datum, nach dem ausgewertet wird (dieselbe Leiter wie im Bericht). */
-    public function effectiveDate(): ?\Illuminate\Support\Carbon
+    public function effectiveDate(): ?Carbon
     {
         return $this->commission_date ?? $this->booking_date
             ?? ($this->created_at ? $this->created_at->copy()->startOfDay() : null);
@@ -128,7 +133,7 @@ class ContractCommission extends Model
             return '—';
         }
         $symbol = $this->currency === 'EUR' ? '€' : (string) $this->currency;
-        return number_format((float) $this->amount, 2, ',', '.') . ' ' . $symbol;
+        return number_format((float) $this->amount, 2, ',', '.').' '.$symbol;
     }
 
     /** Noch offener Restbetrag (Teilzahlungen). */

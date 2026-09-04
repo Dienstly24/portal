@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Services\Ai\Concerns\ReadsDocumentPages;
@@ -41,9 +42,9 @@ class EuropaGoKfzParser implements DocumentTemplateParser
         if ($this->looksLikeComparisonProtocol($text)) {
             return null;
         }
-        if (!str_contains($upper, 'EUROPA-GO')
-            || !preg_match('/TARIF[ÄA]NDERUNG/u', $upper)
-            || (!str_contains($upper, 'KFZ') && !str_contains($upper, 'KRAFTFAHRT'))) {
+        if (! str_contains($upper, 'EUROPA-GO')
+            || ! preg_match('/TARIF[ÄA]NDERUNG/u', $upper)
+            || (! str_contains($upper, 'KFZ') && ! str_contains($upper, 'KRAFTFAHRT'))) {
             return null;
         }
 
@@ -57,24 +58,24 @@ class EuropaGoKfzParser implements DocumentTemplateParser
             return null;
         }
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $plate = $vehicle['license_plate'] ?? null;
 
         return [
             'type' => 'kfz_vertrag',
             'confidence' => 76,
             'summary' => 'EUROPA-go Kfz-Tarifaenderung (Kfz-Vertrag)'
-                . ($name !== '' ? ' - ' . $name : '')
-                . ($plate !== null ? ' - ' . $plate : '')
-                . (isset($insurance['contract_number']) ? ' - Vertrag ' . $insurance['contract_number'] : '')
-                . (isset($vehicle['sf_liability_class']) ? ' - SF ' . $vehicle['sf_liability_class'] . ' (Haftpflicht)' : '')
-                . (isset($vehicle['has_teilkasko']) || isset($vehicle['has_vollkasko'])
-                    ? ' - Deckung: ' . $this->coverageSummary($vehicle) : '')
-                . (isset($insurance['premium_amount'])
-                    ? ' - Monatsbeitrag ' . number_format($insurance['premium_amount'], 2, ',', '.') . ' EUR' : '')
-                . ($this->effectiveDate($text) !== null ? ' - Tarifaenderung ab ' . $this->effectiveDate($text) : '')
-                . ' - Felder gratis aus dem Schreiben gelesen (ohne KI).',
-            'title' => 'EUROPA-go Kfz-Versicherung' . ($name !== '' ? ' ' . $name : ''),
+                .($name !== '' ? ' - '.$name : '')
+                .($plate !== null ? ' - '.$plate : '')
+                .(isset($insurance['contract_number']) ? ' - Vertrag '.$insurance['contract_number'] : '')
+                .(isset($vehicle['sf_liability_class']) ? ' - SF '.$vehicle['sf_liability_class'].' (Haftpflicht)' : '')
+                .(isset($vehicle['has_teilkasko']) || isset($vehicle['has_vollkasko'])
+                    ? ' - Deckung: '.$this->coverageSummary($vehicle) : '')
+                .(isset($insurance['premium_amount'])
+                    ? ' - Monatsbeitrag '.number_format($insurance['premium_amount'], 2, ',', '.').' EUR' : '')
+                .($this->effectiveDate($text) !== null ? ' - Tarifaenderung ab '.$this->effectiveDate($text) : '')
+                .' - Felder gratis aus dem Schreiben gelesen (ohne KI).',
+            'title' => 'EUROPA-go Kfz-Versicherung'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -100,7 +101,7 @@ class EuropaGoKfzParser implements DocumentTemplateParser
         $raw = [];
         foreach ($this->lines as $i => $line) {
             $cols = $this->columns($line);
-            if ($cols === [] || !preg_match('/^(Herrn|Herr|Frau)$/u', $cols[0])) {
+            if ($cols === [] || ! preg_match('/^(Herrn|Herr|Frau)$/u', $cols[0])) {
                 continue;
             }
             $raw['gender'] = mb_strtolower($cols[0]) === 'frau' ? 'female' : 'male';
@@ -145,7 +146,7 @@ class EuropaGoKfzParser implements DocumentTemplateParser
         $fullName = trim((string) preg_replace('/\s+/', ' ', $fullName));
         if (preg_match('/Sehr geehrte[rs]?\s+(?:Herr|Frau)\s+([\p{L}][\p{L}\s\-]+?)\s*[,\r\n]/u', $text, $m)) {
             $surname = trim($m[1]);
-            if ($surname !== '' && mb_stripos($fullName . ' ', $surname . ' ') !== false
+            if ($surname !== '' && mb_stripos($fullName.' ', $surname.' ') !== false
                 && str_ends_with($fullName, $surname)) {
                 $first = trim(mb_substr($fullName, 0, mb_strlen($fullName) - mb_strlen($surname)));
                 return [$first !== '' ? $first : null, $surname];
@@ -215,7 +216,7 @@ class EuropaGoKfzParser implements DocumentTemplateParser
 
         // Gueltig-ab-Datum der Tarifaenderung.
         if (($eff = $this->effectiveDate($text)) !== null && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $eff, $m)) {
-            $raw['start_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['start_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
 
         // Monatlicher Gesamtbeitrag - der ERSTE (= zum naechsten Aenderungsdatum
@@ -246,10 +247,10 @@ class EuropaGoKfzParser implements DocumentTemplateParser
     private function coverageSummary(array $kfz): string
     {
         $parts = ['Haftpflicht'];
-        if (!empty($kfz['has_teilkasko'])) {
+        if (! empty($kfz['has_teilkasko'])) {
             $parts[] = 'Teilkasko';
         }
-        if (!empty($kfz['has_vollkasko'])) {
+        if (! empty($kfz['has_vollkasko'])) {
             $parts[] = 'Vollkasko';
         }
         if (empty($kfz['has_teilkasko']) && empty($kfz['has_vollkasko'])) {
@@ -276,7 +277,7 @@ class EuropaGoKfzParser implements DocumentTemplateParser
      */
     private function labelValue(string $label): ?string
     {
-        $pattern = '/' . preg_quote($label, '/') . '\s*:\s+([^\n]+?)(?:\s{2,}|$)/mu';
+        $pattern = '/'.preg_quote($label, '/').'\s*:\s+([^\n]+?)(?:\s{2,}|$)/mu';
         return preg_match($pattern, implode("\n", $this->lines), $m) ? trim($m[1]) : null;
     }
 

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\FondsFinanz;
 
 /**
@@ -33,7 +34,7 @@ class FondsFinanzSubjectParser
     {
         $subject = trim((string) $subject);
         if ($subject === '') {
-            return new FondsFinanzData();
+            return new FondsFinanzData;
         }
 
         return new FondsFinanzData(
@@ -46,7 +47,7 @@ class FondsFinanzSubjectParser
     /** Kunde aus "zum Kunden <...>" / "fuer Kunde <...>" / "Kunde: <...>". */
     private function customerName(string $subject): ?string
     {
-        if (!preg_match('/(?:zum kunden|zu kunde|fuer kunde|für kunde|kunde|kundin)[:\s]+(.+)$/iu', $subject, $m)) {
+        if (! preg_match('/(?:zum kunden|zu kunde|fuer kunde|für kunde|kunde|kundin)[:\s]+(.+)$/iu', $subject, $m)) {
             return null;
         }
 
@@ -67,7 +68,7 @@ class FondsFinanzSubjectParser
 
         // "Nachname, Vorname" -> "Vorname Nachname"; Firmen-/Volltext-Namen bleiben unveraendert.
         if (count($parts) === 2) {
-            return trim($parts[1] . ' ' . $parts[0]);
+            return trim($parts[1].' '.$parts[0]);
         }
 
         return trim(implode(' ', $parts));
@@ -75,7 +76,7 @@ class FondsFinanzSubjectParser
 
     private function line(string $subject): ?string
     {
-        if (!preg_match('/(?:zum kunden|zu kunde|fuer kunde|für kunde|kunde|kundin)[:\s]+(.+)$/iu', $subject, $m)) {
+        if (! preg_match('/(?:zum kunden|zu kunde|fuer kunde|für kunde|kunde|kundin)[:\s]+(.+)$/iu', $subject, $m)) {
             return null;
         }
         $parts = array_values(array_filter(array_map('trim', explode(',', trim($m[1]))), fn ($p) => $p !== ''));

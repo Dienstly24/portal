@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Sales;
 
 use App\Models\AiConversation;
@@ -43,7 +44,7 @@ class InternalVerificationService
         $angaben = $conversation->collectedData();
         $checks = [];
 
-        if (!$customer) {
+        if (! $customer) {
             // Ohne Akte gibt es nichts zu vergleichen (Interessent von der
             // Website). Das ist kein Misserfolg, sondern "noch offen" -
             // der Mitarbeiter prueft die Identitaet beim Abschluss.
@@ -129,7 +130,7 @@ class InternalVerificationService
     {
         $wert = trim($wert);
         if (preg_match('/^(\d{4})-(\d{2})-(\d{2})/', $wert, $m)) {
-            return $m[1] . '-' . $m[2] . '-' . $m[3];
+            return $m[1].'-'.$m[2].'-'.$m[3];
         }
         if (preg_match('/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/', $wert, $m)) {
             return sprintf('%04d-%02d-%02d', (int) $m[3], (int) $m[2], (int) $m[1]);

@@ -12,8 +12,7 @@ use Illuminate\Support\Facades\Schema;
  * (Architekturplan Abschnitt 9: Task <-> Contract-Bindung fehlte bisher).
  * Additiv, nullable - bestehende Aufgaben bleiben unveraendert gueltig.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('tasks', function (Blueprint $table) {

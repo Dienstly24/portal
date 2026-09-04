@@ -65,7 +65,7 @@ class EnergiePortalAuftragParserTest extends TestCase
 
     public function test_reads_portal_order_overview(): void
     {
-        $r = (new EnergiePortalAuftragParser())->parse($this->screenshotText());
+        $r = (new EnergiePortalAuftragParser)->parse($this->screenshotText());
 
         $this->assertNotNull($r);
         $this->assertSame('energieauftrag', $r['type']);
@@ -157,7 +157,7 @@ class EnergiePortalAuftragParserTest extends TestCase
             'Zahlung erfolgt per Bankeinzug',
         ]);
 
-        $r = (new EnergiePortalAuftragParser())->parse($text);
+        $r = (new EnergiePortalAuftragParser)->parse($text);
 
         $this->assertNotNull($r);
         $p = $r['data']['person'];
@@ -218,7 +218,7 @@ class EnergiePortalAuftragParserTest extends TestCase
             'Vorversorger           Stadtwerke Muster GmbH',
         ]);
 
-        $r = (new EnergiePortalAuftragParser())->parse($text);
+        $r = (new EnergiePortalAuftragParser)->parse($text);
 
         $this->assertNotNull($r);
         $this->assertSame('Musterallee', $r['data']['person']['street']);
@@ -254,7 +254,7 @@ class EnergiePortalAuftragParserTest extends TestCase
             'Vorversorger Stadtwerke Muster GmbH',
         ]);
 
-        $r = (new EnergiePortalAuftragParser())->parse($text);
+        $r = (new EnergiePortalAuftragParser)->parse($text);
 
         $this->assertNotNull($r);
         // Sauberer Produktname aus der Kopfzeile statt "Fair ö 24".
@@ -272,7 +272,7 @@ class EnergiePortalAuftragParserTest extends TestCase
         // sauber daneben. Eine deutsche IBAN besteht genau aus diesen beiden
         // Feldern, also wird sie NACHGERECHNET statt verworfen - das ist der
         // Unterschied zwischen "nicht lesbar" und "nicht vorhanden".
-        $r = (new EnergiePortalAuftragParser())->parse($this->screenshotText([
+        $r = (new EnergiePortalAuftragParser)->parse($this->screenshotText([
             'IBAN: DE82214500000105653802' => 'IBAN: DE83214500000105653802',
         ]));
 
@@ -287,7 +287,7 @@ class EnergiePortalAuftragParserTest extends TestCase
     {
         // Ohne zweite Quelle bleibt es beim alten, strengen Verhalten: eine
         // IBAN ohne gueltige Pruefziffer kommt NIE in die Kundenakte.
-        $r = (new EnergiePortalAuftragParser())->parse($this->screenshotText([
+        $r = (new EnergiePortalAuftragParser)->parse($this->screenshotText([
             'IBAN: DE82214500000105653802' => 'IBAN: DE82214500000105653803',
             'Konto: 0105653802' => '',
             'BLZ: 21450000 (Sparkasse Muster)' => '',
@@ -306,7 +306,7 @@ class EnergiePortalAuftragParserTest extends TestCase
         // wurde die IBAN uebernommen und ein Hinweis angehaengt - einen
         // Hinweis ueberliest man. Jetzt wird NICHTS uebernommen und das Feld
         // steht als "widersprüchliche Angaben" im Review.
-        $r = (new EnergiePortalAuftragParser())->parse($this->screenshotText([
+        $r = (new EnergiePortalAuftragParser)->parse($this->screenshotText([
             'BLZ: 21450000 (Sparkasse Muster)' => 'BLZ: 20050550 (Sparkasse Muster)',
         ]));
 
@@ -317,9 +317,8 @@ class EnergiePortalAuftragParserTest extends TestCase
 
     public function test_foreign_account_holder_is_not_taken(): void
     {
-        $r = (new EnergiePortalAuftragParser())->parse($this->screenshotText([
-            'Tarifübersicht                  Herr Karim Muster                        Herr Karim Muster' =>
-            'Tarifübersicht                  Herr Karim Muster                        Frau Erika Fremd',
+        $r = (new EnergiePortalAuftragParser)->parse($this->screenshotText([
+            'Tarifübersicht                  Herr Karim Muster                        Herr Karim Muster' => 'Tarifübersicht                  Herr Karim Muster                        Frau Erika Fremd',
         ]));
 
         $this->assertNotNull($r);
@@ -331,7 +330,7 @@ class EnergiePortalAuftragParserTest extends TestCase
 
     public function test_real_delivery_date_wins_over_estimate(): void
     {
-        $r = (new EnergiePortalAuftragParser())->parse($this->screenshotText([
+        $r = (new EnergiePortalAuftragParser)->parse($this->screenshotText([
             'gew. Lieferdatum       schnellstmöglich' => 'gew. Lieferdatum       01.10.2026',
         ]));
 
@@ -341,7 +340,7 @@ class EnergiePortalAuftragParserTest extends TestCase
 
     public function test_ignores_unrelated_documents(): void
     {
-        $parser = new EnergiePortalAuftragParser();
+        $parser = new EnergiePortalAuftragParser;
 
         $this->assertNull($parser->parse('Irgendein anderes Dokument'));
         // Der LichtBlick-PDF-Auftrag hat seinen eigenen Parser und traegt
@@ -404,7 +403,7 @@ class EnergiePortalAuftragParserTest extends TestCase
 
     public function test_neueinzug_liefert_den_vertragsbeginn(): void
     {
-        $r = (new EnergiePortalAuftragParser())->parse($this->neueinzugText());
+        $r = (new EnergiePortalAuftragParser)->parse($this->neueinzugText());
 
         $this->assertNotNull($r);
         // Der Beginn stand im Dokument - nur unter einer anderen Beschriftung.
@@ -430,12 +429,12 @@ class EnergiePortalAuftragParserTest extends TestCase
     public function test_lieferbeginn_wird_unter_mehreren_beschriftungen_gefunden(): void
     {
         foreach (['Lieferbeginn      ', 'Belieferungsbeginn', 'Vertragsbeginn    ',
-                  'Einzugsdatum      ', 'Einzug zum        '] as $label) {
-            $r = (new EnergiePortalAuftragParser())->parse(
+            'Einzugsdatum      ', 'Einzug zum        '] as $label) {
+            $r = (new EnergiePortalAuftragParser)->parse(
                 $this->neueinzugText(['Neueinzug zum ' => $label])
             );
             $this->assertSame('2026-09-01', $r['data']['versicherung']['start_date'] ?? null,
-                'Beschriftung "' . trim($label) . '" wurde nicht gelesen.');
+                'Beschriftung "'.trim($label).'" wurde nicht gelesen.');
         }
     }
 
@@ -446,11 +445,11 @@ class EnergiePortalAuftragParserTest extends TestCase
     public function test_verlesenes_at_zeichen_verhindert_die_email_nicht_mehr(): void
     {
         foreach (['©', '®', '@®', '(at)'] as $verlesen) {
-            $r = (new EnergiePortalAuftragParser())->parse($this->neueinzugText([
-                'amira.beispiel@example.com' => 'amira.beispiel' . $verlesen . 'example.com',
+            $r = (new EnergiePortalAuftragParser)->parse($this->neueinzugText([
+                'amira.beispiel@example.com' => 'amira.beispiel'.$verlesen.'example.com',
             ]));
             $this->assertSame('amira.beispiel@example.com', $r['data']['person']['email'] ?? null,
-                'Schreibweise "' . $verlesen . '" wurde nicht repariert.');
+                'Schreibweise "'.$verlesen.'" wurde nicht repariert.');
             // Repariert heisst NICHT "sicher" - der Mitarbeiter soll hinsehen.
             $this->assertSame('pruefen', $r['data']['feldstatus']['person.email']['status']);
         }
@@ -459,7 +458,7 @@ class EnergiePortalAuftragParserTest extends TestCase
     /** Jedes Feld traegt seinen Zustand - der Mitarbeiter prueft nur die unsicheren. */
     public function test_feldstatus_benennt_gelesene_und_fehlende_angaben(): void
     {
-        $r = (new EnergiePortalAuftragParser())->parse($this->neueinzugText([
+        $r = (new EnergiePortalAuftragParser)->parse($this->neueinzugText([
             'Tel: +49 015563 045916' => '                      ',
         ]));
 
@@ -483,11 +482,11 @@ class EnergiePortalAuftragParserTest extends TestCase
     public function test_email_wird_auch_ohne_lesbare_beschriftung_gefunden(): void
     {
         foreach (['Maii:', 'Mall:', 'MaiI:', ''] as $verlesen) {
-            $r = (new EnergiePortalAuftragParser())->parse($this->neueinzugText([
-                'Mail: amira.beispiel@example.com' => $verlesen . ' amira.beispiel@example.com',
+            $r = (new EnergiePortalAuftragParser)->parse($this->neueinzugText([
+                'Mail: amira.beispiel@example.com' => $verlesen.' amira.beispiel@example.com',
             ]));
             $this->assertSame('amira.beispiel@example.com', $r['data']['person']['email'] ?? null,
-                'Beschriftung "' . $verlesen . '" liess die Adresse verschwinden.');
+                'Beschriftung "'.$verlesen.'" liess die Adresse verschwinden.');
             // Ohne Beschriftung ist die Adresse plausibel, nicht belegt.
             $this->assertSame('pruefen', $r['data']['feldstatus']['person.email']['status']);
         }
@@ -497,11 +496,11 @@ class EnergiePortalAuftragParserTest extends TestCase
     public function test_email_wird_auch_bei_zwei_lesefehlern_gefunden(): void
     {
         foreach (['©', '®', '€', '°'] as $statt) {
-            $r = (new EnergiePortalAuftragParser())->parse($this->neueinzugText([
-                'Mail: amira.beispiel@example.com' => 'Maii: amira.beispiel' . $statt . 'example.com',
+            $r = (new EnergiePortalAuftragParser)->parse($this->neueinzugText([
+                'Mail: amira.beispiel@example.com' => 'Maii: amira.beispiel'.$statt.'example.com',
             ]));
             $this->assertSame('amira.beispiel@example.com', $r['data']['person']['email'] ?? null,
-                '"' . $statt . '" statt "@" liess die Adresse verschwinden.');
+                '"'.$statt.'" statt "@" liess die Adresse verschwinden.');
         }
     }
 
@@ -515,15 +514,15 @@ class EnergiePortalAuftragParserTest extends TestCase
         foreach ([
             'service@fremdanbieter.de',      // Sammelpostfach
             'info@fremdanbieter.de',         // Sammelpostfach
-            'kundenservice@fremdanbieter.de',// Sammelpostfach
+            'kundenservice@fremdanbieter.de', // Sammelpostfach
             'abrechnung@nullenergie.de',     // Domain = der Anbieter dieses Auftrags
             'berater@dienstly24.de',         // unser eigenes Haus
         ] as $fremd) {
-            $r = (new EnergiePortalAuftragParser())->parse($this->neueinzugText([
+            $r = (new EnergiePortalAuftragParser)->parse($this->neueinzugText([
                 'Mail: amira.beispiel@example.com' => $fremd,
             ]));
             $this->assertArrayNotHasKey('email', $r['data']['person'],
-                '"' . $fremd . '" wurde faelschlich als Kundenadresse uebernommen.');
+                '"'.$fremd.'" wurde faelschlich als Kundenadresse uebernommen.');
             $this->assertSame('fehlt', $r['data']['feldstatus']['person.email']['status']);
         }
     }
@@ -531,7 +530,7 @@ class EnergiePortalAuftragParserTest extends TestCase
     /** Steht die Adresse beschriftet da, gilt sie als belegt - nicht als Fund. */
     public function test_beschriftete_adresse_bleibt_sicher(): void
     {
-        $r = (new EnergiePortalAuftragParser())->parse($this->neueinzugText());
+        $r = (new EnergiePortalAuftragParser)->parse($this->neueinzugText());
 
         $this->assertSame('amira.beispiel@example.com', $r['data']['person']['email']);
         $this->assertSame('sicher', $r['data']['feldstatus']['person.email']['status']);

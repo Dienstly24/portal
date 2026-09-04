@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Console\Commands;
 
 use App\Models\ActivityLog;
@@ -41,7 +42,7 @@ class PruneUnassignedDocuments extends Command
             try {
                 Storage::disk($document->disk ?: 'local')->delete($document->file_path);
             } catch (\Throwable $e) {
-                \Log::warning('Eingangs-Dokumentdatei nicht entfernbar: ' . $document->file_path);
+                \Log::warning('Eingangs-Dokumentdatei nicht entfernbar: '.$document->file_path);
             }
             // Anders als bei einer Kundenloeschung gibt es hier keinen
             // Kunden-Bezug, der einen Audit-Trail rechtfertigt - das

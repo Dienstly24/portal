@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Tools\Sales;
 
 use App\Services\Ai\Assistant\Sales\ConversationContext;
@@ -26,14 +27,14 @@ class GetConversationStateTool implements AssistantTool
     public function description(): string
     {
         return 'Aktueller Stand des Vorgangs: Anliegen, Zustand, bereits bekannte '
-            . 'Angaben, noch fehlende Angaben und vorliegende Angebote. Nutze das zu '
-            . 'Beginn, wenn du unsicher bist, was schon besprochen wurde - und frage '
-            . 'niemals nach etwas, das hier als bekannt ausgewiesen ist.';
+            .'Angaben, noch fehlende Angaben und vorliegende Angebote. Nutze das zu '
+            .'Beginn, wenn du unsicher bist, was schon besprochen wurde - und frage '
+            .'niemals nach etwas, das hier als bekannt ausgewiesen ist.';
     }
 
     public function parameters(): array
     {
-        return ['type' => 'object', 'properties' => new \stdClass(), 'required' => []];
+        return ['type' => 'object', 'properties' => new \stdClass, 'required' => []];
     }
 
     public function isWriting(): bool
@@ -50,7 +51,7 @@ class GetConversationStateTool implements AssistantTool
         $bekanntAusgabe = [];
         foreach (RequirementProfile::fields($conversation->intent) as $feld) {
             $key = $feld['key'];
-            if (!isset($bekannt[$key]) || trim((string) $bekannt[$key]) === '') {
+            if (! isset($bekannt[$key]) || trim((string) $bekannt[$key]) === '') {
                 continue;
             }
             $bekanntAusgabe[$feld['label']] = RequirementProfile::isSensitive($key)

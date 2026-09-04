@@ -2,10 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\SupportInquiryMail;
+use App\Mail\WebsiteInquiryConfirmationMail;
 use App\Models\Customer;
 use App\Models\ServicePage;
 use App\Models\Ticket;
+use App\Services\SpamFilter;
+use App\Services\TicketNotifier;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 /**
@@ -56,8 +61,8 @@ class ServicePageController extends Controller
 
         // Inhaltsbasierte Spam-Erkennung: erkannte Bot-Werbung still verwerfen
         // (kein Ticket, keine Mail) und - wie beim Honeypot - Erfolg vortaeuschen.
-        if ($spam = \App\Services\SpamFilter::reason([$data['name'], $data['message'] ?? null])) {
-            \Log::info('Leistungs-Anfrage als Spam verworfen: ' . $spam);
+        if ($spam = SpamFilter::reason([$data['name'], $data['message'] ?? null])) {
+            \Log::info('Leistungs-Anfrage als Spam verworfen: '.$spam);
             return redirect()->route('services.show', $page->slug)->with('sent', true);
         }
 
@@ -73,23 +78,23 @@ class ServicePageController extends Controller
                 ]);
             }
             if ($value !== '') {
-                $extraLines[] = $field['label'] . ': ' . $value;
+                $extraLines[] = $field['label'].': '.$value;
             }
         }
 
         // Bestandskunden ueber die E-Mail zuordnen (nur wenn E-Mail vorhanden).
         $customer = null;
-        if (!empty($data['email'])) {
+        if (! empty($data['email'])) {
             $customer = Customer::whereHas('user', fn ($q) => $q->where('email', $data['email']))
-                ->orWhere('email', $data['email'])->first();
+                ->orWhere('email2', $data['email'])->first();
         }
 
         $leistung = $page->title_de;
         $description = ($data['message'] ?? '') !== ''
             ? $data['message']
-            : ('Anfrage zur Leistung "' . $leistung . '" ueber die Website.');
+            : ('Anfrage zur Leistung "'.$leistung.'" ueber die Website.');
         if ($extraLines) {
-            $description .= "\n\n--- Angaben ---\n" . implode("\n", $extraLines);
+            $description .= "\n\n--- Angaben ---\n".implode("\n", $extraLines);
         }
 
         // DSGVO-Einwilligungsprotokoll wie beim Kontaktformular: das Formular
@@ -107,7 +112,7 @@ class ServicePageController extends Controller
             'type' => 'offer',
             'priority' => 'mittel',
             'status' => 'open',
-            'subject' => 'Anfrage ' . $leistung . ' von ' . $data['name'],
+            'subject' => 'Anfrage '.$leistung.' von '.$data['name'],
             'description' => $description,
             'guest_name' => $data['name'],
             'guest_email' => $customer ? null : ($data['email'] ?? null),
@@ -117,27 +122,27 @@ class ServicePageController extends Controller
             'consent_text' => $consentText,
         ]);
 
-        \App\Services\TicketNotifier::notifyNewTicket($ticket);
+        TicketNotifier::notifyNewTicket($ticket);
 
         $supportEmail = config('services.inquiry.support_email') ?: config('mail.from.address');
         if ($supportEmail) {
             try {
-                \Illuminate\Support\Facades\Mail::to($supportEmail)
-                    ->send(new \App\Mail\SupportInquiryMail($ticket, $customer?->customer_number));
+                Mail::to($supportEmail)
+                    ->send(new SupportInquiryMail($ticket, $customer?->customer_number));
             } catch (\Throwable $e) {
-                \Log::warning('Service-Anfrage-Mail fehlgeschlagen: ' . $e->getMessage());
+                \Log::warning('Service-Anfrage-Mail fehlgeschlagen: '.$e->getMessage());
             }
         }
 
         // Eingangsbestaetigung an den Interessenten - wie beim Kontaktformular
         // (bisher bekam ein Leistungs-Anfragender keine Rueckmeldung, Audit
         // FLOW-2). Nur bei gueltiger E-Mail und in der gezeigten Sprache.
-        if (!empty($data['email'])) {
+        if (! empty($data['email'])) {
             try {
-                \Illuminate\Support\Facades\Mail::to($data['email'])
-                    ->send(new \App\Mail\WebsiteInquiryConfirmationMail($ticket, app()->getLocale() === 'ar' ? 'ar' : 'de'));
+                Mail::to($data['email'])
+                    ->send(new WebsiteInquiryConfirmationMail($ticket, app()->getLocale() === 'ar' ? 'ar' : 'de'));
             } catch (\Throwable $e) {
-                \Log::warning('Service-Anfrage Bestaetigungs-Mail fehlgeschlagen: ' . $e->getMessage());
+                \Log::warning('Service-Anfrage Bestaetigungs-Mail fehlgeschlagen: '.$e->getMessage());
             }
         }
 

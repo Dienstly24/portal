@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -21,9 +22,9 @@ class BannerSocialPost extends Model
 
     /** Unterstuetzte Plattformen (eine Quelle fuer Formulare/Anzeige/Codes). */
     public const PLATFORMS = [
-        'facebook'  => ['label' => 'Facebook',  'icon' => '📘', 'prefix' => 'fb'],
+        'facebook' => ['label' => 'Facebook',  'icon' => '📘', 'prefix' => 'fb'],
         'instagram' => ['label' => 'Instagram', 'icon' => '📸', 'prefix' => 'ig'],
-        'tiktok'    => ['label' => 'TikTok',    'icon' => '🎵', 'prefix' => 'tt'],
+        'tiktok' => ['label' => 'TikTok',    'icon' => '🎵', 'prefix' => 'tt'],
     ];
 
     protected $fillable = [

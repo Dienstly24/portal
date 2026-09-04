@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Models\Contract;
@@ -46,8 +47,8 @@ class NafiKfzAntragParser implements DocumentTemplateParser
         if ($this->looksLikeComparisonProtocol($text)) {
             return null;
         }
-        if (!preg_match('/ANTRAG\s+KRAFTFAHRTVERSICHERUNG/u', $upper)
-            && !(str_contains($upper, 'NAFI') && str_contains($upper, 'KFZ-ANTRAG'))) {
+        if (! preg_match('/ANTRAG\s+KRAFTFAHRTVERSICHERUNG/u', $upper)
+            && ! (str_contains($upper, 'NAFI') && str_contains($upper, 'KFZ-ANTRAG'))) {
             return null;
         }
 
@@ -64,27 +65,27 @@ class NafiKfzAntragParser implements DocumentTemplateParser
             return null;
         }
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $evb = $this->labelValue('eVB - Nummer') ?? $this->labelValue('eVB-Nummer');
 
         return [
             'type' => 'kfz_vertrag',
             'confidence' => 78,
             'summary' => 'Kfz-Antrag (NAFI)'
-                . (isset($insurance['insurer']) ? ' - ' . $insurance['insurer'] : '')
-                . ($name !== '' ? ' - ' . $name : '')
-                . (isset($vehicle['license_plate']) ? ' - ' . $vehicle['license_plate'] : '')
-                . (isset($insurance['tariff']) ? ' - ' . $insurance['tariff'] : '')
-                . (isset($vehicle['sf_liability_class']) ? ' - SF ' . $vehicle['sf_liability_class'] : '')
-                . ' - Deckung: ' . $this->coverageSummary($vehicle)
-                . (isset($insurance['premium_amount'])
-                    ? ' - Beitrag ' . number_format($insurance['premium_amount'], 2, ',', '.') . ' EUR'
-                        . ' ' . $this->intervalLabel($insurance['premium_interval'] ?? null)
+                .(isset($insurance['insurer']) ? ' - '.$insurance['insurer'] : '')
+                .($name !== '' ? ' - '.$name : '')
+                .(isset($vehicle['license_plate']) ? ' - '.$vehicle['license_plate'] : '')
+                .(isset($insurance['tariff']) ? ' - '.$insurance['tariff'] : '')
+                .(isset($vehicle['sf_liability_class']) ? ' - SF '.$vehicle['sf_liability_class'] : '')
+                .' - Deckung: '.$this->coverageSummary($vehicle)
+                .(isset($insurance['premium_amount'])
+                    ? ' - Beitrag '.number_format($insurance['premium_amount'], 2, ',', '.').' EUR'
+                        .' '.$this->intervalLabel($insurance['premium_interval'] ?? null)
                     : '')
-                . ($evb !== null ? ' - eVB ' . preg_replace('/\s.*$/', '', $evb) : '')
-                . ' - noch kein Versicherungsschein (Antrag)'
-                . ' - Felder gratis aus dem Antrag gelesen (ohne KI).',
-            'title' => 'Kfz-Antrag' . ($name !== '' ? ' ' . $name : ''),
+                .($evb !== null ? ' - eVB '.preg_replace('/\s.*$/', '', $evb) : '')
+                .' - noch kein Versicherungsschein (Antrag)'
+                .' - Felder gratis aus dem Antrag gelesen (ohne KI).',
+            'title' => 'Kfz-Antrag'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -119,7 +120,7 @@ class NafiKfzAntragParser implements DocumentTemplateParser
                 $raw['last_name'] = $parts[0];
             }
         }
-        if (($v = $this->labelValue('Anrede')) !== null && !isset($raw['gender'])) {
+        if (($v = $this->labelValue('Anrede')) !== null && ! isset($raw['gender'])) {
             $raw['gender'] = mb_strtolower(trim($v)) === 'frau' ? 'female' : 'male';
         }
 
@@ -138,7 +139,7 @@ class NafiKfzAntragParser implements DocumentTemplateParser
         }
         if (($v = $this->labelValue('Geburtsdatum')) !== null
             && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $v, $m)) {
-            $raw['birth_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['birth_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
         if (($v = $this->labelValue('Familienstand')) !== null) {
             $raw['marital_status'] = $this->mapMaritalStatus($v);
@@ -194,11 +195,11 @@ class NafiKfzAntragParser implements DocumentTemplateParser
         }
         if (($v = $this->labelValue('Datum der Erstzulassung')) !== null
             && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $v, $m)) {
-            $raw['first_registration'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['first_registration'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
         if (($v = $this->labelValue('Zulassung auf den Fahrzeughalter')) !== null
             && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $v, $m)) {
-            $raw['acquisition_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['acquisition_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
         if (($v = $this->labelValue('Fahrzeughalter')) !== null
             && preg_match('/Versicherungsnehmer/iu', $v)) {
@@ -262,25 +263,25 @@ class NafiKfzAntragParser implements DocumentTemplateParser
         }
         $beginn = $this->labelValue('Gewünschter Versicherungsbeginn') ?? $this->labelValue('Versicherungsbeginn');
         if ($beginn !== null && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $beginn, $m)) {
-            $raw['start_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['start_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
         // "Vertragsablauf (naechste Hauptfaelligkeit): 01.01.2027"
         if (($v = $this->labelValue('Vertragsablauf')) !== null
             && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $v, $m)) {
-            $raw['end_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['end_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
 
         // Beitrag: "Zu zahlender Gesamtbeitrag (vierteljaehrlich): 296,00 EUR"
         // - der Gesamtbeitrag, nicht die einzelne Sparte.
         foreach ($this->lines as $line) {
-            if (!preg_match('/^\s*Zu zahlender Gesamtbeitrag\s*(?:\(([^)]*)\))?\s*:\s*.*?([\d.]+,\d{2})\s*EUR/u', $line, $m)) {
+            if (! preg_match('/^\s*Zu zahlender Gesamtbeitrag\s*(?:\(([^)]*)\))?\s*:\s*.*?([\d.]+,\d{2})\s*EUR/u', $line, $m)) {
                 continue;
             }
             $raw['premium_amount'] = (float) str_replace(['.', ','], ['', '.'], $m[2]);
             $raw['premium_interval'] = $this->mapInterval($m[1] ?? '') ?? $this->paymentInterval();
             break;
         }
-        if (!isset($raw['premium_amount'])
+        if (! isset($raw['premium_amount'])
             && preg_match('/Ihr Beitrag[^:]*:\s*([\d.]+,\d{2})\s*EUR/u', $this->text(), $m)) {
             $raw['premium_amount'] = (float) str_replace(['.', ','], ['', '.'], $m[1]);
             $raw['premium_interval'] = $this->paymentInterval();
@@ -299,7 +300,7 @@ class NafiKfzAntragParser implements DocumentTemplateParser
     private function parseBank(): array
     {
         $zahler = $this->labelValue('Zahlungspflichtige Person');
-        if ($zahler === null || !preg_match('/Versicherungsnehmer/iu', $zahler)) {
+        if ($zahler === null || ! preg_match('/Versicherungsnehmer/iu', $zahler)) {
             return [];
         }
 
@@ -336,23 +337,23 @@ class NafiKfzAntragParser implements DocumentTemplateParser
         $v = mb_strtolower(trim($german));
 
         return match (true) {
-            $v === ''                          => null,
-            str_contains($v, 'monatlich')      => 'monthly',
-            str_contains($v, 'viertelj')       => 'quarterly',
-            str_contains($v, 'halbj')          => 'semiannual',
+            $v === '' => null,
+            str_contains($v, 'monatlich') => 'monthly',
+            str_contains($v, 'viertelj') => 'quarterly',
+            str_contains($v, 'halbj') => 'semiannual',
             str_contains($v, 'jährlich'), str_contains($v, 'jaehrlich') => 'yearly',
-            default                            => null,
+            default => null,
         };
     }
 
     private function intervalLabel(?string $interval): string
     {
         return match ($interval) {
-            'monthly'    => 'monatlich',
-            'quarterly'  => 'vierteljaehrlich',
+            'monthly' => 'monatlich',
+            'quarterly' => 'vierteljaehrlich',
             'semiannual' => 'halbjaehrlich',
-            'yearly'     => 'jaehrlich',
-            default      => '',
+            'yearly' => 'jaehrlich',
+            default => '',
         };
     }
 
@@ -361,11 +362,11 @@ class NafiKfzAntragParser implements DocumentTemplateParser
         $v = mb_strtolower(trim($value));
 
         return match (true) {
-            str_contains($v, 'verheiratet')  => 'verheiratet',
-            str_contains($v, 'ledig')        => 'ledig',
-            str_contains($v, 'geschieden')   => 'geschieden',
-            str_contains($v, 'verwitwet')    => 'verwitwet',
-            default                          => null,
+            str_contains($v, 'verheiratet') => 'verheiratet',
+            str_contains($v, 'ledig') => 'ledig',
+            str_contains($v, 'geschieden') => 'geschieden',
+            str_contains($v, 'verwitwet') => 'verwitwet',
+            default => null,
         };
     }
 
@@ -375,13 +376,13 @@ class NafiKfzAntragParser implements DocumentTemplateParser
 
         return match (true) {
             str_contains($v, 'lkw') || str_contains($v, 'lastkraft') => 'lkw',
-            str_contains($v, 'transporter')                          => 'transporter',
-            str_contains($v, 'wohnmobil')                            => 'wohnmobil',
-            str_contains($v, 'wohnwagen')                            => 'wohnwagen',
+            str_contains($v, 'transporter') => 'transporter',
+            str_contains($v, 'wohnmobil') => 'wohnmobil',
+            str_contains($v, 'wohnwagen') => 'wohnwagen',
             str_contains($v, 'anhänger'), str_contains($v, 'anhaenger') => 'anhaenger',
-            str_contains($v, 'taxi')                                 => 'taxi',
+            str_contains($v, 'taxi') => 'taxi',
             str_contains($v, 'pkw') || str_contains($v, 'personenkraftwagen') => 'pkw',
-            default                                                  => null,
+            default => null,
         };
     }
 
@@ -389,9 +390,9 @@ class NafiKfzAntragParser implements DocumentTemplateParser
     private function coverageSummary(array $kfz): string
     {
         $parts = ['Haftpflicht'];
-        if (!empty($kfz['has_vollkasko'])) {
+        if (! empty($kfz['has_vollkasko'])) {
             $parts[] = 'Vollkasko';
-        } elseif (!empty($kfz['has_teilkasko'])) {
+        } elseif (! empty($kfz['has_teilkasko'])) {
             $parts[] = 'Teilkasko';
         } elseif (isset($kfz['has_teilkasko'])) {
             $parts[] = 'keine Kasko';
@@ -410,7 +411,7 @@ class NafiKfzAntragParser implements DocumentTemplateParser
      */
     private function labelValue(string $label): ?string
     {
-        $re = '/^\s*' . preg_quote($label, '/') . '\s*(?:\([^)]*\))?\s*:\s*(\S.*?)\s*$/u';
+        $re = '/^\s*'.preg_quote($label, '/').'\s*(?:\([^)]*\))?\s*:\s*(\S.*?)\s*$/u';
         foreach ($this->lines as $line) {
             if (preg_match($re, $line, $m)) {
                 $val = trim($m[1]);

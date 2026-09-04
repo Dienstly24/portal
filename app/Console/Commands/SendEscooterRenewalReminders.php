@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Console\Commands;
 
 use App\Services\EscooterRenewalReminderService;
@@ -26,15 +27,15 @@ class SendEscooterRenewalReminders extends Command
                 return self::SUCCESS;
             }
             foreach ($due as [$contract, $anchor]) {
-                $this->line('- ' . ($contract->customer?->customer_number ?? '?')
-                    . ' (' . ($contract->vehicleDetail?->license_plate ?? 'ohne Kennzeichen') . ') -> Saison-Ende ' . $anchor);
+                $this->line('- '.($contract->customer?->customer_number ?? '?')
+                    .' ('.($contract->vehicleDetail?->license_plate ?? 'ohne Kennzeichen').') -> Saison-Ende '.$anchor);
             }
-            $this->info(count($due) . ' E-Scooter-Erinnerung(en) faellig (dry-run).');
+            $this->info(count($due).' E-Scooter-Erinnerung(en) faellig (dry-run).');
             return self::SUCCESS;
         }
 
         $sent = $service->run();
-        $this->info($sent . ' E-Scooter-Erinnerung(en) versendet.');
+        $this->info($sent.' E-Scooter-Erinnerung(en) versendet.');
         return self::SUCCESS;
     }
 }

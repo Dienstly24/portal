@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
@@ -42,7 +43,7 @@ class PortalAccessController extends Controller
     public function toggle($id)
     {
         return $this->run($id, function (Customer $c) {
-            $active = !($c->user?->is_active ?? true);
+            $active = ! ($c->user?->is_active ?? true);
             $this->portal->setActive($c, $active, auth()->id());
             return ['success', 'Portal-Status wurde geändert.'];
         });
@@ -63,11 +64,11 @@ class PortalAccessController extends Controller
         if ($mode === 'setlink') {
             $stunden = (int) round(((int) config('auth.passwords.users.expire', 60)) / 60);
             return ['warning', $successMessage
-                . ' ABER: Es ist KEIN Geburtsdatum hinterlegt - die E-Mail enthaelt statt des Startpassworts'
-                . ' nur einen ' . $stunden . ' Stunden gueltigen Link zum Passwort-Setzen.'
-                . ' Bitte das Geburtsdatum ergaenzen (Bearbeiten) und die Einladung danach erneut senden.'];
+                .' ABER: Es ist KEIN Geburtsdatum hinterlegt - die E-Mail enthaelt statt des Startpassworts'
+                .' nur einen '.$stunden.' Stunden gueltigen Link zum Passwort-Setzen.'
+                .' Bitte das Geburtsdatum ergaenzen (Bearbeiten) und die Einladung danach erneut senden.'];
         }
-        return ['success', $successMessage . ' Startpasswort ist das Geburtsdatum (TT.MM.JJJJ).'];
+        return ['success', $successMessage.' Startpasswort ist das Geburtsdatum (TT.MM.JJJJ).'];
     }
 
     private function run(string $id, \Closure $action)
@@ -80,7 +81,7 @@ class PortalAccessController extends Controller
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         } catch (\Throwable $e) {
-            \Log::error('Portal-Aktion fehlgeschlagen: ' . $e->getMessage());
+            \Log::error('Portal-Aktion fehlgeschlagen: '.$e->getMessage());
             return back()->with('error', 'Die Aktion konnte nicht ausgeführt werden (E-Mail-Versand fehlgeschlagen?). Bitte erneut versuchen.');
         }
 

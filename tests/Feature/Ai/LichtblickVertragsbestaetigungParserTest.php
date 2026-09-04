@@ -82,7 +82,7 @@ class LichtblickVertragsbestaetigungParserTest extends TestCase
 
     public function test_reads_confirmation_letter(): void
     {
-        $r = (new LichtblickVertragsbestaetigungParser())->parse($this->bestaetigungText());
+        $r = (new LichtblickVertragsbestaetigungParser)->parse($this->bestaetigungText());
 
         $this->assertNotNull($r);
         $this->assertSame('energieauftrag', $r['type']);
@@ -120,7 +120,7 @@ class LichtblickVertragsbestaetigungParserTest extends TestCase
 
     public function test_reads_payment_plan_letter(): void
     {
-        $r = (new LichtblickVertragsbestaetigungParser())->parse($this->abschlagsuebersichtText());
+        $r = (new LichtblickVertragsbestaetigungParser)->parse($this->abschlagsuebersichtText());
 
         $this->assertNotNull($r);
         $v = $r['data']['versicherung'];
@@ -145,10 +145,10 @@ class LichtblickVertragsbestaetigungParserTest extends TestCase
         // ihn in Ruhe (eigener Parser); umgekehrt vereinnahmt der
         // Auftrags-Parser die Bestaetigungsschreiben nicht.
         $auftrag = "Auftrag\nLichtBlick ÖkoStrom\nZählernummer\n42811442";
-        $this->assertNull((new LichtblickVertragsbestaetigungParser())->parse($auftrag));
+        $this->assertNull((new LichtblickVertragsbestaetigungParser)->parse($auftrag));
 
-        $this->assertNull((new LichtblickAuftragParser())->parse($this->bestaetigungText()));
-        $this->assertNull((new LichtblickAuftragParser())->parse($this->abschlagsuebersichtText()));
+        $this->assertNull((new LichtblickAuftragParser)->parse($this->bestaetigungText()));
+        $this->assertNull((new LichtblickAuftragParser)->parse($this->abschlagsuebersichtText()));
     }
 
     /**
@@ -174,16 +174,16 @@ class LichtblickVertragsbestaetigungParserTest extends TestCase
         ]);
         // Folgeseite (AGB/Rechtstext) mit den Bestaetigungs-Beschriftungen:
         $agb = "Allgemeine Geschäftsbedingungen\nBei Rueckfragen halten Sie Ihre "
-            . "Vertragsnummer: 1234567 und Ihre Kundennummer: 20097 bereit.";
+            .'Vertragsnummer: 1234567 und Ihre Kundennummer: 20097 bereit.';
         $this->assertGreaterThan(200, mb_strlen($seite1));
 
-        $result = (new LichtblickVertragsbestaetigungParser())->parse($seite1 . "\f" . $agb);
+        $result = (new LichtblickVertragsbestaetigungParser)->parse($seite1."\f".$agb);
         $this->assertNull($result, 'Der Auftrag darf nicht ueber AGB-Labels als Bestaetigung gelesen werden.');
     }
 
     public function test_ignores_unrelated_documents(): void
     {
-        $parser = new LichtblickVertragsbestaetigungParser();
+        $parser = new LichtblickVertragsbestaetigungParser;
         $this->assertNull($parser->parse('Irgendein anderes Dokument'));
         // EWE-Bestaetigung (eigener Parser) hat andere Kopf-Beschriftungen.
         $this->assertNull($parser->parse("EWE VERTRIEB GmbH\nVertragsbestätigung\nVertragskonto: 123"));

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Customer;
 use App\Models\CustomerMessage;
 use App\Models\CustomerNote;
+use App\Models\EmailAccount;
 use App\Models\EmailMessage;
 use App\Models\Ticket;
 use App\Models\TicketMessage;
@@ -26,7 +27,7 @@ class CustomerConversationTimelineTest extends TestCase
         $user = User::factory()->create(['role' => 'customer', 'name' => 'Max Meyer']);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => '26' . str_pad((string) $user->id, 5, '0', STR_PAD_LEFT),
+            'customer_number' => '26'.str_pad((string) $user->id, 5, '0', STR_PAD_LEFT),
             'preferred_lang' => 'de',
         ]);
     }
@@ -40,7 +41,8 @@ class CustomerConversationTimelineTest extends TestCase
             'customer_id' => $customer->id, 'sender_id' => $customer->user_id,
             'body' => 'Chat-Nachricht', 'from_staff' => false,
         ]);
-        $chat->created_at = now()->subHours(3); $chat->save();
+        $chat->created_at = now()->subHours(3);
+        $chat->save();
 
         $ticket = Ticket::create([
             'customer_id' => $customer->id, 'type' => 'damage', 'status' => 'open',
@@ -51,7 +53,7 @@ class CustomerConversationTimelineTest extends TestCase
         $ticket->logEvent('status_changed', 'Offen -> In Bearbeitung', $admin->id);
         CustomerNote::create(['customer_id' => $customer->id, 'created_by' => $admin->id, 'note' => 'Wichtige interne Notiz', 'type' => 'note']);
 
-        $timeline = (new CustomerConversationService())->timeline($customer);
+        $timeline = (new CustomerConversationService)->timeline($customer);
 
         $kinds = $timeline->pluck('kind');
         $this->assertTrue($kinds->contains('chat'));
@@ -80,7 +82,7 @@ class CustomerConversationTimelineTest extends TestCase
     public function test_emails_nur_fuer_rollen_mit_posteingang(): void
     {
         $customer = $this->makeCustomer();
-        $account = \App\Models\EmailAccount::create(['name' => 'Support', 'email_address' => 'support@dienstly24.de', 'provider' => 'imap']);
+        $account = EmailAccount::create(['name' => 'Support', 'email_address' => 'support@dienstly24.de', 'provider' => 'imap']);
         EmailMessage::create([
             'email_account_id' => $account->id, 'message_uid' => 'u1',
             'from_address' => 'kunde@example.de', 'subject' => 'Frage zur Police',
@@ -88,7 +90,7 @@ class CustomerConversationTimelineTest extends TestCase
             'received_at' => now(),
         ]);
 
-        $service = new CustomerConversationService();
+        $service = new CustomerConversationService;
         $this->assertTrue($service->timeline($customer, includeEmails: true)->pluck('kind')->contains('email'));
         $this->assertFalse($service->timeline($customer, includeEmails: false)->pluck('kind')->contains('email'));
     }
@@ -113,7 +115,7 @@ class CustomerConversationTimelineTest extends TestCase
             ->assertSee('data-kind="note"', false)
             // Kanal-Filter + Schnellaktionen
             ->assertSee('kx-filters', false)
-            ->assertSee('🎫 #' . $ticket->ticket_number)
+            ->assertSee('🎫 #'.$ticket->ticket_number)
             ->assertSee(route('admin.ticket.status', $ticket->id), false)
             ->assertSee(route('admin.customer.note.store', $customer->id), false);
     }

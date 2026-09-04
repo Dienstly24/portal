@@ -43,7 +43,7 @@ class AntragBestaetigungParserTest extends TestCase
 
     public function test_reads_reference_and_evb(): void
     {
-        $r = (new AntragBestaetigungParser())->parse($this->seiteText());
+        $r = (new AntragBestaetigungParser)->parse($this->seiteText());
 
         $this->assertNotNull($r);
         $this->assertSame('versicherungsvertrag', $r['type']);
@@ -71,7 +71,7 @@ class AntragBestaetigungParserTest extends TestCase
 
     public function test_real_start_date_is_taken(): void
     {
-        $r = (new AntragBestaetigungParser())->parse($this->seiteText([
+        $r = (new AntragBestaetigungParser)->parse($this->seiteText([
             'Versicherungsbeginn: Tag der Zulassung' => 'Versicherungsbeginn: 01.09.2026',
         ]));
 
@@ -80,7 +80,7 @@ class AntragBestaetigungParserTest extends TestCase
 
     public function test_ignores_unrelated_documents(): void
     {
-        $parser = new AntragBestaetigungParser();
+        $parser = new AntragBestaetigungParser;
 
         $this->assertNull($parser->parse('Irgendein anderes Dokument'));
         // Eine Police hat eine Vertragsnummer, aber keine Antrags-Bestaetigung.

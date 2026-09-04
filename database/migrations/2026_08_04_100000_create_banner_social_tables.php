@@ -11,8 +11,7 @@ use Illuminate\Support\Facades\Schema;
  * Plattform (Facebook/Instagram/TikTok) einen Kanal mit eigenem
  * Tracking-Kurzlink (/s/{code}) und Veroeffentlichungs-Protokoll.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('banner_social_posts', function (Blueprint $table) {

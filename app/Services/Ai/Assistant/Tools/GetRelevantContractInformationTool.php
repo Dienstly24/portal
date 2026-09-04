@@ -1,7 +1,9 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Tools;
 
 use App\Models\Contract;
+use Carbon\Carbon;
 
 /**
  * Details EINES Vertrags des angemeldeten Kunden (Spezifikation
@@ -23,10 +25,10 @@ class GetRelevantContractInformationTool implements AssistantTool
     public function description(): string
     {
         return 'Erfasste Details EINES Vertrags des angemeldeten Kunden (Sparte, '
-            . 'Gesellschaft, Vertragsnummer, Status, Beitrag, Laufzeit, Kuendigung, '
-            . 'Fahrzeug- bzw. Energie-Angaben). Auswahl per Vertragsnummer ODER Sparte. '
-            . 'Enthaelt NUR gespeicherte Felder - Versicherungsbedingungen und Deckungs'
-            . 'fragen stehen hier nicht. Fehlt eine Angabe, nutze escalateToTeam statt zu raten.';
+            .'Gesellschaft, Vertragsnummer, Status, Beitrag, Laufzeit, Kuendigung, '
+            .'Fahrzeug- bzw. Energie-Angaben). Auswahl per Vertragsnummer ODER Sparte. '
+            .'Enthaelt NUR gespeicherte Felder - Versicherungsbedingungen und Deckungs'
+            .'fragen stehen hier nicht. Fehlt eine Angabe, nutze escalateToTeam statt zu raten.';
     }
 
     public function parameters(): array
@@ -71,7 +73,7 @@ class GetRelevantContractInformationTool implements AssistantTool
             return [
                 'gefunden' => false,
                 'hinweis' => 'Kein passender Vertrag dieses Kunden. Nutze getCustomerContracts, '
-                    . 'um die vorhandenen Vertraege zu sehen.',
+                    .'um die vorhandenen Vertraege zu sehen.',
             ];
         }
 
@@ -101,7 +103,7 @@ class GetRelevantContractInformationTool implements AssistantTool
             'kuendigung_eingereicht' => $this->date($c->cancellation_date),
             'wirksames_ende' => $c->effectiveCancellationDate()?->format('d.m.Y'),
             'beitrag' => $c->hasPremium()
-                ? number_format((float) $c->premium_amount, 2, ',', '.') . ' EUR ' . $c->premiumIntervalLabel()
+                ? number_format((float) $c->premium_amount, 2, ',', '.').' EUR '.$c->premiumIntervalLabel()
                 : null,
         ];
 
@@ -139,12 +141,12 @@ class GetRelevantContractInformationTool implements AssistantTool
 
     private function date($value): ?string
     {
-        if (!$value) {
+        if (! $value) {
             return null;
         }
 
         try {
-            return \Carbon\Carbon::parse($value)->format('d.m.Y');
+            return Carbon::parse($value)->format('d.m.Y');
         } catch (\Throwable) {
             return null;
         }

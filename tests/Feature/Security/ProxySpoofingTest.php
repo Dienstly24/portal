@@ -4,7 +4,9 @@ namespace Tests\Feature\Security;
 
 use App\Support\TrustedProxies;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 /**
@@ -86,11 +88,11 @@ class ProxySpoofingTest extends TestCase
         $status = [];
         for ($i = 0; $i < 9; $i++) {
             $status[] = $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.66'])
-                ->withHeaders(['X-Forwarded-For' => '10.0.0.' . $i])
+                ->withHeaders(['X-Forwarded-For' => '10.0.0.'.$i])
                 ->post('/register', [
                     'first_name' => 'Bot',
                     'last_name' => 'Netz',
-                    'email' => 'bot' . $i . '@example.com',
+                    'email' => 'bot'.$i.'@example.com',
                     'password' => 'test-passwort-2026',
                     'password_confirmation' => 'test-passwort-2026',
                     'agb' => '1',
@@ -107,9 +109,9 @@ class ProxySpoofingTest extends TestCase
         $status = [];
         for ($i = 0; $i < 25; $i++) {
             $status[] = $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.77'])
-                ->withHeaders(['X-Forwarded-For' => '10.1.0.' . $i])
+                ->withHeaders(['X-Forwarded-For' => '10.1.0.'.$i])
                 ->post('/login', [
-                    'email' => 'niemand' . $i . '@example.com',
+                    'email' => 'niemand'.$i.'@example.com',
                     'password' => 'falsches-passwort',
                 ])->getStatusCode();
         }
@@ -126,8 +128,8 @@ class ProxySpoofingTest extends TestCase
         $status = [];
         for ($i = 0; $i < 12; $i++) {
             $status[] = $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.88'])
-                ->withHeaders(['X-Forwarded-For' => '10.2.0.' . $i])
-                ->post('/forgot-password', ['email' => 'opfer' . $i . '@example.com'])
+                ->withHeaders(['X-Forwarded-For' => '10.2.0.'.$i])
+                ->post('/forgot-password', ['email' => 'opfer'.$i.'@example.com'])
                 ->getStatusCode();
         }
 
@@ -143,8 +145,8 @@ class ProxySpoofingTest extends TestCase
      */
     private function ipHinterHeader(string $absender, string $behauptet): string
     {
-        \Illuminate\Support\Facades\Route::middleware('web')
-            ->get('/_test/ip', fn (\Illuminate\Http\Request $r) => $r->ip());
+        Route::middleware('web')
+            ->get('/_test/ip', fn (Request $r) => $r->ip());
 
         return $this->withServerVariables(['REMOTE_ADDR' => $absender])
             ->withHeaders(['X-Forwarded-For' => $behauptet])

@@ -2,7 +2,9 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 /**
  * PROVISIONSMANAGEMENT (Betreiber-Auftrag 02.09.2026): aus dem einen
@@ -29,8 +31,7 @@ use Illuminate\Support\Facades\Schema;
  *     Provision (Pool kontaktiert, in Klaerung, erledigt). Ohne ihn ist
  *     "Provision fehlt" eine Feststellung, die niemand weiterverfolgt.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         // ---------------------------------------------------------------
@@ -140,8 +141,8 @@ return new class extends Migration
             ['sonstiger', 'Sonstiger Pool', null, 3, 6],
         ];
         foreach ($rows as [$key, $name, $profile, $expected, $check]) {
-            \Illuminate\Support\Facades\DB::table('commission_pools')->insert([
-                'id' => (string) \Illuminate\Support\Str::uuid(),
+            DB::table('commission_pools')->insert([
+                'id' => (string) Str::uuid(),
                 'key' => $key,
                 'name' => $name,
                 'source_profile' => $profile,

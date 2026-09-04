@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     public function up(): void {
-        if (!Schema::hasColumn('customer_family', 'geschlecht')) {
+        if (! Schema::hasColumn('customer_family', 'geschlecht')) {
             Schema::table('customer_family', function (Blueprint $table) {
                 $table->string('geschlecht', 1)->nullable()->after('relation');
             });

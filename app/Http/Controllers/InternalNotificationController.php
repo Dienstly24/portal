@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\InternalConversationParticipant;
@@ -53,8 +54,8 @@ class InternalNotificationController extends Controller
                     return [
                         'id' => $n->id,
                         'icon' => '🔄',
-                        'title' => 'Kundenänderung: ' . $n->changeRequest->typeLabel(),
-                        'preview' => ($n->changeRequest->customer?->user?->name ?? 'Kunde') . ' wartet auf Prüfung.',
+                        'title' => 'Kundenänderung: '.$n->changeRequest->typeLabel(),
+                        'preview' => ($n->changeRequest->customer?->user?->name ?? 'Kunde').' wartet auf Prüfung.',
                         'time' => $n->created_at->lokal()->format('d.m.Y H:i'),
                         'read' => $n->read_at !== null,
                         'url' => route('admin.change_requests'),
@@ -64,12 +65,12 @@ class InternalNotificationController extends Controller
                 return [
                     'id' => $n->id,
                     'icon' => '💬',
-                    'title' => ($n->message->sender?->name ?? 'Unbekannt') . ' hat Sie erwähnt',
-                    'preview' => ($n->message->customer?->user?->name ? $n->message->customer->user->name . ': ' : '') . Str::limit($n->message->message, 80),
+                    'title' => ($n->message->sender?->name ?? 'Unbekannt').' hat Sie erwähnt',
+                    'preview' => ($n->message->customer?->user?->name ? $n->message->customer->user->name.': ' : '').Str::limit($n->message->message, 80),
                     'time' => $n->created_at->lokal()->format('d.m.Y H:i'),
                     'read' => $n->read_at !== null,
                     'url' => route('admin.customer', $n->message->customer_id)
-                        . ($n->message->type === 'note' ? '#tab-notizen' : '#tab-intern'),
+                        .($n->message->type === 'note' ? '#tab-notizen' : '#tab-intern'),
                     'sort' => $n->created_at,
                 ];
             });
@@ -82,16 +83,16 @@ class InternalNotificationController extends Controller
             ->where('user_id', $user->id)
             ->whereHas('conversation', function ($q) {
                 $q->whereColumn('internal_conversations.last_message_at', '>', 'internal_conversation_participants.last_read_at')
-                  ->orWhereNull('internal_conversation_participants.last_read_at');
+                    ->orWhereNull('internal_conversation_participants.last_read_at');
             })
             ->get()
-            ->filter(fn($p) => $p->conversation && $p->conversation->last_message_at)
+            ->filter(fn ($p) => $p->conversation && $p->conversation->last_message_at)
             ->map(function ($p) {
                 $last = $p->conversation->latestMessage;
                 return [
-                    'id' => 'conv-' . $p->conversation->id,
+                    'id' => 'conv-'.$p->conversation->id,
                     'icon' => '🗨️',
-                    'title' => 'Interner Chat: ' . $p->conversation->subject,
+                    'title' => 'Interner Chat: '.$p->conversation->subject,
                     'preview' => Str::limit($last?->body ?? 'Neue Nachrichten', 80),
                     'time' => $p->conversation->last_message_at->lokal()->format('d.m.Y H:i'),
                     'read' => false,
@@ -103,7 +104,7 @@ class InternalNotificationController extends Controller
         $items = $stored->concat($unreadConversations)
             ->sortByDesc('sort')
             ->take(20)
-            ->map(fn($i) => collect($i)->except('sort'))
+            ->map(fn ($i) => collect($i)->except('sort'))
             ->values();
 
         // Badge-Zahl MUSS zur sichtbaren Liste passen (Audit NOTIF-1): fuer
@@ -111,12 +112,12 @@ class InternalNotificationController extends Controller
         // auch angezeigt werden - Systemmeldungen (mit Titel) ODER Meldungen zu
         // einem noch sichtbaren Kunden. Verwaltung (see-all) zaehlt alles.
         $unreadQuery = InternalNotification::where('user_id', $user->id)->unread();
-        if (!$user->canSeeAllCustomers()) {
+        if (! $user->canSeeAllCustomers()) {
             $visible = $user->visibleCustomerIdsWithSubstitution();
             $unreadQuery->where(function ($q) use ($visible) {
                 $q->whereNotNull('title')
-                    ->orWhereHas('message', fn($m) => $m->whereIn('customer_id', $visible))
-                    ->orWhereHas('changeRequest', fn($c) => $c->whereIn('customer_id', $visible));
+                    ->orWhereHas('message', fn ($m) => $m->whereIn('customer_id', $visible))
+                    ->orWhereHas('changeRequest', fn ($c) => $c->whereIn('customer_id', $visible));
             });
         }
         $unread = $unreadQuery->count() + $unreadConversations->count();

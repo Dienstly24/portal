@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Website;
 
 use App\Models\AiLead;
@@ -18,7 +19,7 @@ class WebsitePrompt
     {
         $bekannt = [];
         foreach ($lead->collectedData() as $key => $wert) {
-            $bekannt[] = '- ' . $key . ': ' . $wert;
+            $bekannt[] = '- '.$key.': '.$wert;
         }
         $stand = $bekannt === [] ? '- (noch nichts)' : implode("\n", $bekannt);
 

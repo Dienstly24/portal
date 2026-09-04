@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Pdf;
 
 /**
@@ -81,7 +82,7 @@ class ImagesToPdfService
      */
     private function correctOrientation(string $binary): string
     {
-        if (!function_exists('exif_read_data')) {
+        if (! function_exists('exif_read_data')) {
             return $binary;
         }
 
@@ -104,13 +105,22 @@ class ImagesToPdfService
         }
 
         switch ($orientation) {
-            case 2: imageflip($img, IMG_FLIP_HORIZONTAL); break;
-            case 3: $img = imagerotate($img, 180, 0); break;
-            case 4: imageflip($img, IMG_FLIP_VERTICAL); break;
-            case 5: imageflip($img, IMG_FLIP_VERTICAL); $img = imagerotate($img, -90, 0); break;
-            case 6: $img = imagerotate($img, -90, 0); break;
-            case 7: imageflip($img, IMG_FLIP_HORIZONTAL); $img = imagerotate($img, -90, 0); break;
-            case 8: $img = imagerotate($img, 90, 0); break;
+            case 2: imageflip($img, IMG_FLIP_HORIZONTAL);
+            break;
+            case 3: $img = imagerotate($img, 180, 0);
+            break;
+            case 4: imageflip($img, IMG_FLIP_VERTICAL);
+            break;
+            case 5: imageflip($img, IMG_FLIP_VERTICAL);
+            $img = imagerotate($img, -90, 0);
+            break;
+            case 6: $img = imagerotate($img, -90, 0);
+            break;
+            case 7: imageflip($img, IMG_FLIP_HORIZONTAL);
+            $img = imagerotate($img, -90, 0);
+            break;
+            case 8: $img = imagerotate($img, 90, 0);
+            break;
         }
 
         ob_start();
@@ -132,7 +142,7 @@ class ImagesToPdfService
 
     private function convertToJpeg(string $binary, int $pageNo): string
     {
-        if (!function_exists('imagecreatefromstring')) {
+        if (! function_exists('imagecreatefromstring')) {
             throw new \RuntimeException('GD-Erweiterung fehlt - Bildkonvertierung nicht moeglich.');
         }
         $img = @imagecreatefromstring($binary);
@@ -168,16 +178,16 @@ class ImagesToPdfService
         // (Page, Bild-XObject, Content-Stream) in fester Reihenfolge.
         $kids = [];
         foreach (array_keys($pages) as $i) {
-            $kids[] = (3 + $i * 3) . ' 0 R';
+            $kids[] = (3 + $i * 3).' 0 R';
         }
 
         $writeObject = function (int $num, string $body) use (&$pdf, &$offsets): void {
             $offsets[$num] = strlen($pdf);
-            $pdf .= $num . " 0 obj\n" . $body . "\nendobj\n";
+            $pdf .= $num." 0 obj\n".$body."\nendobj\n";
         };
 
         $writeObject(1, '<< /Type /Catalog /Pages 2 0 R >>');
-        $writeObject(2, '<< /Type /Pages /Kids [' . implode(' ', $kids) . '] /Count ' . count($pages) . ' >>');
+        $writeObject(2, '<< /Type /Pages /Kids ['.implode(' ', $kids).'] /Count '.count($pages).' >>');
 
         foreach (array_values($pages) as $i => $page) {
             $pageObj = 3 + $i * 3;
@@ -197,7 +207,7 @@ class ImagesToPdfService
 
             $writeObject($pageObj, sprintf(
                 '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %.2F %.2F] '
-                . '/Resources << /XObject << /Im%d %d 0 R >> /ProcSet [/PDF /ImageC] >> /Contents %d 0 R >>',
+                .'/Resources << /XObject << /Im%d %d 0 R >> /ProcSet [/PDF /ImageC] >> /Contents %d 0 R >>',
                 $pageW, $pageH, $i, $imageObj, $contentObj
             ));
 
@@ -207,12 +217,12 @@ class ImagesToPdfService
                 default => '/ColorSpace /DeviceRGB',
             };
             $writeObject($imageObj, sprintf(
-                "<< /Type /XObject /Subtype /Image /Width %d /Height %d %s "
-                . "/BitsPerComponent 8 /Filter /DCTDecode /Length %d >>\nstream\n%s\nendstream",
+                '<< /Type /XObject /Subtype /Image /Width %d /Height %d %s '
+                ."/BitsPerComponent 8 /Filter /DCTDecode /Length %d >>\nstream\n%s\nendstream",
                 $page['width'], $page['height'], $colorSpace, strlen($page['jpeg']), $page['jpeg']
             ));
 
-            $content = sprintf("q %.2F 0 0 %.2F 0 0 cm /Im%d Do Q", $pageW, $pageH, $i);
+            $content = sprintf('q %.2F 0 0 %.2F 0 0 cm /Im%d Do Q', $pageW, $pageH, $i);
             $writeObject($contentObj, sprintf(
                 "<< /Length %d >>\nstream\n%s\nendstream",
                 strlen($content), $content
@@ -221,13 +231,13 @@ class ImagesToPdfService
 
         $objectCount = 2 + count($pages) * 3;
         $xrefOffset = strlen($pdf);
-        $pdf .= 'xref' . "\n" . '0 ' . ($objectCount + 1) . "\n";
+        $pdf .= 'xref'."\n".'0 '.($objectCount + 1)."\n";
         $pdf .= "0000000000 65535 f \n";
         for ($num = 1; $num <= $objectCount; $num++) {
             $pdf .= sprintf("%010d 00000 n \n", $offsets[$num]);
         }
-        $pdf .= "trailer\n<< /Size " . ($objectCount + 1) . " /Root 1 0 R >>\n";
-        $pdf .= "startxref\n" . $xrefOffset . "\n%%EOF\n";
+        $pdf .= "trailer\n<< /Size ".($objectCount + 1)." /Root 1 0 R >>\n";
+        $pdf .= "startxref\n".$xrefOffset."\n%%EOF\n";
 
         return $pdf;
     }

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Energy;
 
 /**
@@ -81,7 +82,7 @@ class MeterPhotoReader
     private function findMeterNumber(string $normalized): ?string
     {
         $labelPattern = '/(?:ZAHLERNUMMER|ZAEHLERNUMMER|ZAHLER\s?-?\s?NR\.?|ZAEHLER\s?-?\s?NR\.?|'
-            . 'IDENTIFIKATIONSNUMMER|GERATENUMMER|GERAETENUMMER)\s*[:.\-]?\s*([0-9A-Z][0-9A-Z \-]{5,40})/';
+            .'IDENTIFIKATIONSNUMMER|GERATENUMMER|GERAETENUMMER)\s*[:.\-]?\s*([0-9A-Z][0-9A-Z \-]{5,40})/';
         foreach ($this->lines($normalized) as $line) {
             if (preg_match($labelPattern, $line, $m)) {
                 $candidate = $this->cleanNumber($m[1]);
@@ -126,7 +127,7 @@ class MeterPhotoReader
             // Einheit nur als eigenstaendiges Wort: "Imp/kWh" (Zaehlerkonstante
             // auf dem Typenschild) darf nie als Zaehlerstand durchgehen.
             $pattern = '/(?<![\d.,A-Z\/])(\d[\d ]*(?:\.\d{3})*(?:[.,]\d{1,3})?)\s*(KWH|M3|M³)(?![A-Z0-9])/';
-            if (!preg_match($pattern, $line, $m, PREG_OFFSET_CAPTURE)) {
+            if (! preg_match($pattern, $line, $m, PREG_OFFSET_CAPTURE)) {
                 continue;
             }
 
@@ -138,7 +139,7 @@ class MeterPhotoReader
 
             // Alles vor dem eigentlichen Zahlenwert kann die OBIS-Kennzahl
             // tragen (z.B. "1.8.0" oder - ohne Punkte gelesen - "180").
-            $prefix = mb_substr($line, 0, (int) $m[1][1]) . ' ' . implode(' ', $tokens);
+            $prefix = mb_substr($line, 0, (int) $m[1][1]).' '.implode(' ', $tokens);
             $found[] = [
                 'value' => $value,
                 'register' => $this->detectRegister($prefix),
@@ -163,11 +164,11 @@ class MeterPhotoReader
     private function detectRegister(string $prefix): string
     {
         if (preg_match('/\b([12])\s*[.,]\s*8\s*[.,]\s*([0-2])\b/', $prefix, $m)) {
-            return $m[1] . '.8.' . $m[2];
+            return $m[1].'.8.'.$m[2];
         }
         // Displays zeigen die Kennzahl oft ohne Trennzeichen ("180").
         if (preg_match('/(?<!\d)([12])8([0-2])(?!\d)/', $prefix, $m)) {
-            return $m[1] . '.8.' . $m[2];
+            return $m[1].'.8.'.$m[2];
         }
         return '1.8.0';
     }
@@ -180,7 +181,7 @@ class MeterPhotoReader
     private function parseValue(string $token): ?float
     {
         $token = trim($token);
-        if ($token === '' || !preg_match('/^\d[\d.,]*$/', $token)) {
+        if ($token === '' || ! preg_match('/^\d[\d.,]*$/', $token)) {
             return null;
         }
 
@@ -197,7 +198,7 @@ class MeterPhotoReader
             } else {
                 $whole = (string) preg_replace('/[.,]/', '', substr($token, 0, $decimalPos));
                 $fraction = substr($token, $decimalPos + 1);
-                $value = (float) ($whole . '.' . $fraction);
+                $value = (float) ($whole.'.'.$fraction);
             }
         }
 

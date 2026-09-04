@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
+use App\Models\SystemSetting;
 use App\Services\TwoFactorService;
 use App\Support\QrCode;
 use App\Support\Totp;
@@ -138,10 +139,10 @@ class TwoFactorController extends Controller
         // Eigene Bremse: der Code hat nur eine Million Moeglichkeiten und
         // steht bei jedem Versuch wieder zur Verfuegung. Ohne Begrenzung
         // waere er in Minuten durchprobiert.
-        $key = '2fa:' . $user->id . '|' . $request->ip();
+        $key = '2fa:'.$user->id.'|'.$request->ip();
         if (RateLimiter::tooManyAttempts($key, 5)) {
             throw ValidationException::withMessages([
-                'code' => 'Zu viele Fehlversuche. Bitte warten Sie ' . RateLimiter::availableIn($key) . ' Sekunden.',
+                'code' => 'Zu viele Fehlversuche. Bitte warten Sie '.RateLimiter::availableIn($key).' Sekunden.',
             ]);
         }
 
@@ -168,7 +169,7 @@ class TwoFactorController extends Controller
 
     private function issuer(): string
     {
-        return (string) (\App\Models\SystemSetting::get('company_name') ?: config('app.name', 'Dienstly24'));
+        return (string) (SystemSetting::get('company_name') ?: config('app.name', 'Dienstly24'));
     }
 
     private function homeFor(Request $request): string

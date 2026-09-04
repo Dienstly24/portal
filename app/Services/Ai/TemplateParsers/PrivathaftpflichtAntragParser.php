@@ -1,6 +1,8 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
+use App\Models\Contract;
 use App\Services\Ai\Concerns\ReadsDocumentPages;
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
 use App\Services\Ai\Contracts\DocumentTemplateParser;
@@ -43,8 +45,8 @@ class PrivathaftpflichtAntragParser implements DocumentTemplateParser
         }
         // Nur Privathaftpflicht-Antraege/-Angebote (nicht die fertige Police
         // eines Kfz-Vertrags o.ae.).
-        if (!str_contains($upper, 'PRIVATHAFTPFLICHT')
-            || (!str_contains($upper, 'ANTRAG') && !str_contains($upper, 'ANGEBOT'))) {
+        if (! str_contains($upper, 'PRIVATHAFTPFLICHT')
+            || (! str_contains($upper, 'ANTRAG') && ! str_contains($upper, 'ANGEBOT'))) {
             return null;
         }
 
@@ -59,22 +61,22 @@ class PrivathaftpflichtAntragParser implements DocumentTemplateParser
             return null;
         }
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $sum = $this->coverageSum($text);
         return [
             'type' => 'versicherungsvertrag',
             'confidence' => 76,
             'summary' => 'Privathaftpflicht-Antrag'
-                . (isset($insurance['insurer']) ? ' (' . $insurance['insurer'] . ')' : '')
-                . ($name !== '' ? ' - ' . $name : '')
-                . (isset($insurance['tariff']) ? ' - ' . $insurance['tariff'] : '')
-                . ($sum !== null ? ' - Versicherungssumme ' . $sum : '')
-                . (isset($insurance['premium_amount'])
-                    ? ' - Beitrag ' . number_format($insurance['premium_amount'], 2, ',', '.') . ' EUR'
-                        . ($insurance['premium_interval'] === 'monthly' ? '/Monat' : '')
+                .(isset($insurance['insurer']) ? ' ('.$insurance['insurer'].')' : '')
+                .($name !== '' ? ' - '.$name : '')
+                .(isset($insurance['tariff']) ? ' - '.$insurance['tariff'] : '')
+                .($sum !== null ? ' - Versicherungssumme '.$sum : '')
+                .(isset($insurance['premium_amount'])
+                    ? ' - Beitrag '.number_format($insurance['premium_amount'], 2, ',', '.').' EUR'
+                        .($insurance['premium_interval'] === 'monthly' ? '/Monat' : '')
                     : '')
-                . ' - Felder gratis aus dem Antrag gelesen (ohne KI).',
-            'title' => 'Privathaftpflicht' . ($name !== '' ? ' ' . $name : ''),
+                .' - Felder gratis aus dem Antrag gelesen (ohne KI).',
+            'title' => 'Privathaftpflicht'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -100,7 +102,7 @@ class PrivathaftpflichtAntragParser implements DocumentTemplateParser
 
         // Geburtsdatum (steht in der rechten Spalte der Anrede-Zeile).
         if (preg_match('/Geburtsdatum:\s*(\d{2})\.(\d{2})\.(\d{4})/u', $this->text(), $m)) {
-            $raw['birth_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['birth_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
         // E-Mail.
         if (preg_match('/E-Mail:\s*([\w.+\-]+@[\w.\-]+\.\w{2,})/u', $this->text(), $m)) {
@@ -164,7 +166,7 @@ class PrivathaftpflichtAntragParser implements DocumentTemplateParser
         // Antrag/Angebot - noch keine Police: Stufe 'antrag'. Der spaeter
         // zugestellte Versicherungsschein ergaenzt denselben Vertrag
         // (Versicherungsscheinnummer, endgueltiger Beginn, Beitrag).
-        $raw = ['sparte' => 'haftpflicht', 'document_stage' => \App\Models\Contract::STAGE_ANTRAG];
+        $raw = ['sparte' => 'haftpflicht', 'document_stage' => Contract::STAGE_ANTRAG];
 
         // Versicherer ("AXA Versicherung AG").
         if (preg_match('/\b([A-ZÄÖÜ][\wÄÖÜäöüß.\-]*(?:\s+[A-ZÄÖÜ][\wÄÖÜäöüß.\-]*){0,3}\s+Versicherung(?:s)?\s+AG)\b/u', $text, $m)) {
@@ -179,11 +181,11 @@ class PrivathaftpflichtAntragParser implements DocumentTemplateParser
 
         // Beginn: aus der Vertrags-/Laufzeitenzeile "Privathaftpflicht  <Datum>".
         if (preg_match('/^\s*Privathaftpflicht\s+(\d{2})\.(\d{2})\.(\d{4})\s*$/mu', $text, $m)) {
-            $raw['start_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['start_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
         // Ablauf ("Versicherungsablauf: 28.07.2027") - Verlaengerungs-Stichtag.
         if (preg_match('/Versicherungsablauf:?\s*(\d{2})\.(\d{2})\.(\d{4})/u', $text, $m)) {
-            $raw['end_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['end_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
 
         // Zahlweise ("Zahlweise  monatlich").
@@ -230,7 +232,7 @@ class PrivathaftpflichtAntragParser implements DocumentTemplateParser
     private function coverageSum(string $text): ?string
     {
         if (preg_match('/([\d.]{5,})\s*EUR\s+Versicherungssumme/u', $text, $m)) {
-            return $m[1] . ' EUR';
+            return $m[1].' EUR';
         }
         return null;
     }
@@ -246,7 +248,7 @@ class PrivathaftpflichtAntragParser implements DocumentTemplateParser
     private function normalizeStreet(string $s): string
     {
         $s = trim((string) preg_replace('/\s+/', ' ', $s));
-        return $s === '' ? $s : mb_strtoupper(mb_substr($s, 0, 1)) . mb_substr($s, 1);
+        return $s === '' ? $s : mb_strtoupper(mb_substr($s, 0, 1)).mb_substr($s, 1);
     }
 
     private function interval(string $german): ?string

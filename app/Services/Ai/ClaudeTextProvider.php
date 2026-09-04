@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai;
 
 use App\Services\Ai\Contracts\AiProviderInterface;
@@ -32,7 +33,7 @@ class ClaudeTextProvider implements AiProviderInterface
 
     public function complete(AiRequest $request): AiResponse
     {
-        if (!$this->isEnabled()) {
+        if (! $this->isEnabled()) {
             throw new \RuntimeException('KI-Anbieter (Claude) ist nicht konfiguriert (ANTHROPIC_API_KEY fehlt).');
         }
 
@@ -54,8 +55,8 @@ class ClaudeTextProvider implements AiProviderInterface
             ]],
         ]);
 
-        if (!$response->successful()) {
-            throw new \RuntimeException('KI-Dienst (Claude) antwortete mit HTTP ' . $response->status());
+        if (! $response->successful()) {
+            throw new \RuntimeException('KI-Dienst (Claude) antwortete mit HTTP '.$response->status());
         }
 
         return new AiResponse(

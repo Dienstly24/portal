@@ -103,7 +103,7 @@ class DeckungsauftragParserTest extends TestCase
 
     public function test_reads_deckungsauftrag(): void
     {
-        $r = (new DeckungsauftragParser())->parse($this->dokument());
+        $r = (new DeckungsauftragParser)->parse($this->dokument());
 
         $this->assertNotNull($r);
         $this->assertSame('versicherungsvertrag', $r['type']);
@@ -154,7 +154,7 @@ class DeckungsauftragParserTest extends TestCase
     {
         // Ohne VN-E-Mail bleibt die E-Mail leer - die Vermittler-Adresse
         // (sach@fondsfinanz.de) wird NIE uebernommen.
-        $r = (new DeckungsauftragParser())->parse($this->dokument([
+        $r = (new DeckungsauftragParser)->parse($this->dokument([
             'E-Mail-Adresse                                          karim.muster@example.com' => '',
         ]));
 
@@ -166,11 +166,9 @@ class DeckungsauftragParserTest extends TestCase
 
     public function test_real_company_name_is_taken_with_rechtsform(): void
     {
-        $r = (new DeckungsauftragParser())->parse($this->dokument([
-            'Firmenname                                              Karim Muster' =>
-            'Firmenname                                              Muster Transporte',
-            'Rechtsform                                              Einzelunternehmen' =>
-            'Rechtsform                                              GmbH',
+        $r = (new DeckungsauftragParser)->parse($this->dokument([
+            'Firmenname                                              Karim Muster' => 'Firmenname                                              Muster Transporte',
+            'Rechtsform                                              Einzelunternehmen' => 'Rechtsform                                              GmbH',
         ]));
 
         $this->assertSame('Muster Transporte GmbH', $r['data']['person']['company_name']);
@@ -179,9 +177,8 @@ class DeckungsauftragParserTest extends TestCase
 
     public function test_foreign_account_holder_is_not_taken(): void
     {
-        $r = (new DeckungsauftragParser())->parse($this->dokument([
-            'Name des Kontoinhabers                                  Karim Muster' =>
-            'Name des Kontoinhabers                                  Max Fremd',
+        $r = (new DeckungsauftragParser)->parse($this->dokument([
+            'Name des Kontoinhabers                                  Karim Muster' => 'Name des Kontoinhabers                                  Max Fremd',
         ]));
 
         $this->assertNotNull($r);
@@ -193,7 +190,7 @@ class DeckungsauftragParserTest extends TestCase
     {
         // Nennen die Risikoangaben KEIN Datum, gilt der Zeitraum der
         // Beitragsberechnung als Beginn/Ende.
-        $r = (new DeckungsauftragParser())->parse($this->dokument([
+        $r = (new DeckungsauftragParser)->parse($this->dokument([
             'Gewünschter Versicherungsbeginn                                     11.08.2026' => '',
         ]));
 
@@ -204,7 +201,7 @@ class DeckungsauftragParserTest extends TestCase
 
     public function test_ignores_unrelated_documents(): void
     {
-        $parser = new DeckungsauftragParser();
+        $parser = new DeckungsauftragParser;
 
         $this->assertNull($parser->parse('Irgendein anderes Dokument'));
         // Die Beratungsdokumentation (Schwesterdokument) hat ihren eigenen

@@ -11,8 +11,7 @@ use Illuminate\Support\Facades\Schema;
  * - customers.partner_id -> ordnet einen Kunden einem Partner zu (dessen
  *   Portal ihn dann – strikt gescoped – sehen darf)
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('partners', function (Blueprint $table) {

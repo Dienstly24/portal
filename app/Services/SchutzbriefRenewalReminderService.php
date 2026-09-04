@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services;
 
 use App\Mail\SchutzbriefRenewalMail;
@@ -6,6 +7,7 @@ use App\Models\Contract;
 use App\Models\ContractSwitchReminder;
 use App\Models\EmailLog;
 use Carbon\Carbon;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -140,7 +142,7 @@ class SchutzbriefRenewalReminderService
     private function send(Contract $contract, string $anchor): bool
     {
         $customer = $contract->customer;
-        if (!$customer?->user?->hasRealEmail()) {
+        if (! $customer?->user?->hasRealEmail()) {
             return false;
         }
 
@@ -153,7 +155,7 @@ class SchutzbriefRenewalReminderService
                 'anchor' => $anchor,
                 'sent_at' => now(),
             ]);
-        } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+        } catch (UniqueConstraintViolationException) {
             return false;
         }
 
@@ -170,7 +172,7 @@ class SchutzbriefRenewalReminderService
             // Protokoll zuruecknehmen, damit der naechste Lauf es erneut versucht.
             $reminder->delete();
             $status = 'failed';
-            Log::warning("Schutzbrief-Verlaengerung {$contract->id} an {$customer->user->email} fehlgeschlagen: " . $e->getMessage());
+            Log::warning("Schutzbrief-Verlaengerung {$contract->id} an {$customer->user->email} fehlgeschlagen: ".$e->getMessage());
         }
 
         EmailLog::create([

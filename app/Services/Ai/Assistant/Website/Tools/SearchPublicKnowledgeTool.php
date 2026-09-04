@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Website\Tools;
 
 use App\Models\AiKnowledgeGap;
@@ -28,10 +29,10 @@ class SearchPublicKnowledgeTool implements LeadTool
     public function description(): string
     {
         return 'Suche in den oeffentlichen Informationen von Dienstly24 (Leistungen, '
-            . 'haeufige Fragen, benoetigte Unterlagen). Nutze das IMMER, bevor du eine '
-            . 'allgemeine Frage beantwortest. Kein Treffer bedeutet: du darfst die '
-            . 'Frage NICHT aus eigenem Wissen beantworten, sondern nutzt '
-            . 'requestHumanContact.';
+            .'haeufige Fragen, benoetigte Unterlagen). Nutze das IMMER, bevor du eine '
+            .'allgemeine Frage beantwortest. Kein Treffer bedeutet: du darfst die '
+            .'Frage NICHT aus eigenem Wissen beantworten, sondern nutzt '
+            .'requestHumanContact.';
     }
 
     public function parameters(): array

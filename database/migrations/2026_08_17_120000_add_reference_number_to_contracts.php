@@ -20,8 +20,7 @@ use Illuminate\Support\Facades\Schema;
  * harter Unique-Index wuerde das Speichern blockieren. Der Index dient der
  * schnellen Suche.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('contracts', function (Blueprint $table) {

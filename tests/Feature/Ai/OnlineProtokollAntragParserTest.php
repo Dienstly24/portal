@@ -116,7 +116,7 @@ class OnlineProtokollAntragParserTest extends TestCase
 
     public function test_reads_rechtsschutz_antrag(): void
     {
-        $r = (new OnlineProtokollAntragParser())->parse($this->antragText());
+        $r = (new OnlineProtokollAntragParser)->parse($this->antragText());
 
         $this->assertNotNull($r);
         $this->assertSame('versicherungsvertrag', $r['type']);
@@ -168,9 +168,8 @@ class OnlineProtokollAntragParserTest extends TestCase
 
     public function test_foreign_account_holder_blocks_bank(): void
     {
-        $r = (new OnlineProtokollAntragParser())->parse($this->antragText([
-            '                                                        Abweichender Kontoinhaber' =>
-            '                                                        Abweichender Kontoinhaber: Max Fremd',
+        $r = (new OnlineProtokollAntragParser)->parse($this->antragText([
+            '                                                        Abweichender Kontoinhaber' => '                                                        Abweichender Kontoinhaber: Max Fremd',
         ]));
 
         $this->assertNotNull($r);
@@ -182,7 +181,7 @@ class OnlineProtokollAntragParserTest extends TestCase
     {
         // Ohne Kunden-E-Mail bleibt das Feld leer - die Vermittler-Adresse
         // (post@makler-bund.de) wird NIE uebernommen.
-        $r = (new OnlineProtokollAntragParser())->parse($this->antragText([
+        $r = (new OnlineProtokollAntragParser)->parse($this->antragText([
             '                                  E-Mail-Adresse     karim.muster@example.com' => '',
         ]));
 
@@ -192,7 +191,7 @@ class OnlineProtokollAntragParserTest extends TestCase
 
     public function test_ignores_unrelated_documents(): void
     {
-        $parser = new OnlineProtokollAntragParser();
+        $parser = new OnlineProtokollAntragParser;
 
         $this->assertNull($parser->parse('Irgendein anderes Dokument'));
         // Der NAFI-Kfz-Antrag hat einen eigenen Parser und keinen

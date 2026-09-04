@@ -16,8 +16,8 @@ class SparkasseDirektKfzParserTest extends TestCase
     /** Zeile "Label<Abstand>Wert" wie im Original. */
     private function row(string $label, string $value, string $hint = ''): string
     {
-        $line = str_pad($label, 56) . $value;
-        return $hint === '' ? $line : str_pad($line, 110) . $hint;
+        $line = str_pad($label, 56).$value;
+        return $hint === '' ? $line : str_pad($line, 110).$hint;
     }
 
     private function angebotText(): string
@@ -40,18 +40,18 @@ class SparkasseDirektKfzParserTest extends TestCase
             'Tarifumstellung',
             '',
             $this->row('Antragsteller', 'Herr'),
-            str_pad('', 56) . 'Erik Musterfahrer',
-            str_pad('', 56) . 'Musterstr. 2 b',
-            str_pad('', 56) . '63546 Hammersbach',
+            str_pad('', 56).'Erik Musterfahrer',
+            str_pad('', 56).'Musterstr. 2 b',
+            str_pad('', 56).'63546 Hammersbach',
             $this->row('Geburtsdatum', '23.07.1992'),
             $this->row('Telefon', '0176/80559524'),
             $this->row('E-Mail', 'erik.musterfahrer@example.com'),
             $this->row('Tarifgruppe', 'Sonstiges'),
             '',
             $this->row('Fahrzeughalter', 'Herrn'),
-            str_pad('', 56) . 'Erik Musterfahrer',
-            str_pad('', 56) . 'Musterstr. 2 b',
-            str_pad('', 56) . '63546 Hammersbach',
+            str_pad('', 56).'Erik Musterfahrer',
+            str_pad('', 56).'Musterstr. 2 b',
+            str_pad('', 56).'63546 Hammersbach',
             '',
             'Tarifumstellung',
             $this->row('Versicherungsbeginn', '19.09.2026, 00:00 Uhr'),
@@ -102,7 +102,7 @@ class SparkasseDirektKfzParserTest extends TestCase
 
     public function test_reads_applicant_vehicle_and_contract(): void
     {
-        $r = (new SparkasseDirektKfzParser())->parse($this->angebotText());
+        $r = (new SparkasseDirektKfzParser)->parse($this->angebotText());
 
         $this->assertNotNull($r);
         $this->assertSame('kfz_vertrag', $r['type']);
@@ -156,7 +156,7 @@ class SparkasseDirektKfzParserTest extends TestCase
 
     public function test_recommendation_is_not_added_to_the_premium(): void
     {
-        $r = (new SparkasseDirektKfzParser())->parse($this->angebotText());
+        $r = (new SparkasseDirektKfzParser)->parse($this->angebotText());
 
         // "FahrerSchutzPlus 14,88 EUR" ist eine Empfehlung, kein gewaehlter
         // Baustein: weder im Beitrag noch als Zusatzleistung.
@@ -166,7 +166,7 @@ class SparkasseDirektKfzParserTest extends TestCase
 
     public function test_month_only_dates_are_reported_but_not_stored(): void
     {
-        $r = (new SparkasseDirektKfzParser())->parse($this->angebotText());
+        $r = (new SparkasseDirektKfzParser)->parse($this->angebotText());
 
         // "01.2004" nennt keinen Tag - ein Datum daraus waere erfunden.
         $this->assertArrayNotHasKey('first_registration', $r['data']['kfz']);
@@ -183,13 +183,13 @@ class SparkasseDirektKfzParserTest extends TestCase
      */
     public function test_own_consultation_section_does_not_block_the_parser(): void
     {
-        $text = $this->angebotText() . "\f" . implode("\n", [
+        $text = $this->angebotText()."\f".implode("\n", [
             'Ihre Kfz-Versicherung',
             'Beratungsprotokoll',
             'Datum der Beratung                 31.07.2026, 10:30 Uhr',
         ]);
 
-        $r = (new SparkasseDirektKfzParser())->parse($text);
+        $r = (new SparkasseDirektKfzParser)->parse($text);
 
         $this->assertNotNull($r);
         $this->assertSame('30003380161-4', $r['data']['versicherung']['contract_number']);
@@ -197,14 +197,14 @@ class SparkasseDirektKfzParserTest extends TestCase
 
     public function test_ignores_foreign_documents(): void
     {
-        $parser = new SparkasseDirektKfzParser();
+        $parser = new SparkasseDirektKfzParser;
 
         $this->assertNull($parser->parse('Irgendein anderes Dokument'));
         // Fremdes CHECK24-Vergleichsangebot, das die Sparkassen
         // DirektVersicherung nur als Tarif nennt.
         $this->assertNull($parser->parse(
             "Vorlaeufiges Beratungsprotokoll zur Kfz-Versicherung - CHECK24\n"
-            . 'Gewaehlter Tarif: Sparkassen DirektVersicherung AutoBasis'
+            .'Gewaehlter Tarif: Sparkassen DirektVersicherung AutoBasis'
         ));
         // Andere Sparte derselben Gesellschaft.
         $this->assertNull($parser->parse("Sparkassen DirektVersicherung AG\nUnfallversicherung"));
@@ -219,8 +219,8 @@ class SparkasseDirektKfzParserTest extends TestCase
     public function test_nafi_antrag_is_left_to_its_own_parser(): void
     {
         $text = "Antrag Kraftfahrtversicherung\n"
-            . "Versicherer / Risikoträger: Sparkassen DirektVersicherung\n"
-            . "KFZ-VERSICHERUNG\nAmtliches Kennzeichen: RD-AS 1212";
-        $this->assertNull((new SparkasseDirektKfzParser())->parse($text));
+            ."Versicherer / Risikoträger: Sparkassen DirektVersicherung\n"
+            ."KFZ-VERSICHERUNG\nAmtliches Kennzeichen: RD-AS 1212";
+        $this->assertNull((new SparkasseDirektKfzParser)->parse($text));
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Mail;
 
 use App\Models\DocumentRequest;
@@ -33,8 +34,8 @@ class DocumentRequestMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         $subject = $this->lang === 'ar'
-            ? 'مستند مطلوب: ' . $this->documentRequest->title
-            : 'Dokument benötigt: ' . $this->documentRequest->title;
+            ? 'مستند مطلوب: '.$this->documentRequest->title
+            : 'Dokument benötigt: '.$this->documentRequest->title;
 
         return new Envelope(subject: $subject);
     }

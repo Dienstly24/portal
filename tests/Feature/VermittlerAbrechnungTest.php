@@ -39,7 +39,7 @@ class VermittlerAbrechnungTest extends TestCase
         $user = User::factory()->create(['role' => 'customer', 'name' => $name]);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5($name . $user->id), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5($name.$user->id), 0, 8)),
         ]);
     }
 
@@ -67,7 +67,7 @@ class VermittlerAbrechnungTest extends TestCase
     private function csv(array $rows, bool $withReference = true): string
     {
         $header = '"Datum";"Produkt";"Id";"Status";"Provision";"Tracking-Id";"Stornogrund"'
-            . ($withReference ? ';"Referenz-Nr."' : '');
+            .($withReference ? ';"Referenz-Nr."' : '');
         $lines = [$header];
         foreach ($rows as $row) {
             $cells = [
@@ -82,11 +82,11 @@ class VermittlerAbrechnungTest extends TestCase
             if ($withReference) {
                 $cells[] = $row['referenz'] ?? '';
             }
-            $lines[] = '"' . implode('";"', $cells) . '"';
+            $lines[] = '"'.implode('";"', $cells).'"';
         }
 
-        $path = tempnam(sys_get_temp_dir(), 'vm') . '.csv';
-        file_put_contents($path, implode("\n", $lines) . "\n");
+        $path = tempnam(sys_get_temp_dir(), 'vm').'.csv';
+        file_put_contents($path, implode("\n", $lines)."\n");
         return $path;
     }
 
@@ -390,7 +390,7 @@ class VermittlerAbrechnungTest extends TestCase
 
     public function test_file_without_id_column_is_rejected_with_a_clear_message(): void
     {
-        $path = tempnam(sys_get_temp_dir(), 'vm') . '.csv';
+        $path = tempnam(sys_get_temp_dir(), 'vm').'.csv';
         file_put_contents($path, "\"Datum\";\"Produkt\";\"Provision\"\n\"2026-08-18\";\"Kfz\";\"75\"\n");
 
         $this->expectExceptionMessageMatches('/Id/');
@@ -422,7 +422,7 @@ class VermittlerAbrechnungTest extends TestCase
     public function test_real_export_file_is_read_completely(): void
     {
         $path = base_path('tests/Fixtures/vermittler_export.csv');
-        if (!is_file($path)) {
+        if (! is_file($path)) {
             $this->markTestSkipped('Beispieldatei nicht vorhanden.');
         }
 
@@ -515,7 +515,7 @@ class VermittlerAbrechnungTest extends TestCase
         $this->actingAs($admin)->get('/admin/vermittler-abrechnung/bericht')
             ->assertOk()->assertSee('Bestätigungsquote');
         // Die Box in der Vertragsakte zeigt beide Kennungen.
-        $this->actingAs($admin)->get('/admin/contracts/' . $contract->id . '/edit')
+        $this->actingAs($admin)->get('/admin/contracts/'.$contract->id.'/edit')
             ->assertOk()->assertSee('Vermittler / Abrechnung')->assertSee('9001');
     }
 
@@ -535,7 +535,7 @@ class VermittlerAbrechnungTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin']);
         $contract = $this->contract($this->customer());
 
-        $this->actingAs($admin)->put('/admin/contracts/' . $contract->id, [
+        $this->actingAs($admin)->put('/admin/contracts/'.$contract->id, [
             'type' => 'kfz',
             'insurer' => 'AdmiralDirekt',
             'status' => 'active',
@@ -558,7 +558,7 @@ class VermittlerAbrechnungTest extends TestCase
         $this->contract($customer, ['vermittler_id' => '9753224']);
         $second = $this->contract($customer, ['type' => 'hausrat']);
 
-        $this->actingAs($admin)->put('/admin/contracts/' . $second->id, [
+        $this->actingAs($admin)->put('/admin/contracts/'.$second->id, [
             'type' => 'hausrat',
             'insurer' => 'AdmiralDirekt',
             'status' => 'active',

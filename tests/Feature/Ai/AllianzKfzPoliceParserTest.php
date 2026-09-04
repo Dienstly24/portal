@@ -74,7 +74,7 @@ class AllianzKfzPoliceParserTest extends TestCase
 
     public function test_parses_all_key_fields(): void
     {
-        $r = (new AllianzKfzPoliceParser())->parse($this->policeText());
+        $r = (new AllianzKfzPoliceParser)->parse($this->policeText());
 
         $this->assertNotNull($r);
         $this->assertSame('kfz_vertrag', $r['type']);
@@ -168,7 +168,7 @@ class AllianzKfzPoliceParserTest extends TestCase
             'Allianz Versicherungs-Aktiengesellschaft',
         ]);
 
-        $r = (new AllianzKfzPoliceParser())->parse($text);
+        $r = (new AllianzKfzPoliceParser)->parse($text);
 
         $this->assertNotNull($r);
         $p = $r['data']['person'];
@@ -201,9 +201,9 @@ class AllianzKfzPoliceParserTest extends TestCase
         // es ein Dokument zum fremden Vergleichsangebot - im Kleingedruckten
         // einer Folgeseite darf es die Police nicht unlesbar machen.
         $text = $this->policeText()
-            . "\f" . "Datenschutzhinweise\nWir verarbeiten Daten aus Beratungsprotokollen.";
+            ."\f"."Datenschutzhinweise\nWir verarbeiten Daten aus Beratungsprotokollen.";
 
-        $r = (new AllianzKfzPoliceParser())->parse($text);
+        $r = (new AllianzKfzPoliceParser)->parse($text);
 
         $this->assertNotNull($r);
         $this->assertSame('AS-9708926939', $r['data']['versicherung']['contract_number']);
@@ -212,8 +212,8 @@ class AllianzKfzPoliceParserTest extends TestCase
     public function test_ignores_check24_protocol_and_unrelated_documents(): void
     {
         $protocol = "Vorlaeufiges Beratungsprotokoll zur Kfz-Versicherung - CHECK24\n"
-            . "Gewaehlter Tarif: Allianz Direct Komfort";
-        $this->assertNull((new AllianzKfzPoliceParser())->parse($protocol));
+            .'Gewaehlter Tarif: Allianz Direct Komfort';
+        $this->assertNull((new AllianzKfzPoliceParser)->parse($protocol));
 
         // Auch mehrseitig: ein Protokoll nennt sich auf Seite 1 selbst so -
         // das genuegt, um es von allen Vertrags-Parsern fernzuhalten, selbst
@@ -224,12 +224,12 @@ class AllianzKfzPoliceParserTest extends TestCase
             'Ihr Wunsch: Haftpflicht mit Teilkasko, Selbstbeteiligung 150 EUR',
             'Gewaehlter Tarif: Allianz Direct Komfort - Jahresbeitrag 512,40 EUR',
             'Dieses Protokoll dokumentiert Ihre Angaben und unsere Empfehlung.',
-        ]) . "\f" . 'Seite 2 Versicherungsschein Kfz-Versicherung Allianz';
-        $this->assertNull((new AllianzKfzPoliceParser())->parse($mehrseitig));
+        ])."\f".'Seite 2 Versicherungsschein Kfz-Versicherung Allianz';
+        $this->assertNull((new AllianzKfzPoliceParser)->parse($mehrseitig));
 
-        $this->assertNull((new AllianzKfzPoliceParser())->parse('Irgendein anderes Dokument'));
+        $this->assertNull((new AllianzKfzPoliceParser)->parse('Irgendein anderes Dokument'));
         // DA-Direkt-Police darf NICHT von diesem Parser vereinnahmt werden.
-        $this->assertNull((new AllianzKfzPoliceParser())->parse(
+        $this->assertNull((new AllianzKfzPoliceParser)->parse(
             "DA Direkt\nVersicherungsschein Nr. VSE/302.544.159/09\nKraftfahrtversicherung"
         ));
     }

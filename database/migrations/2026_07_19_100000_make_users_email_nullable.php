@@ -11,8 +11,7 @@ use Illuminate\Support\Facades\Schema;
  * echte E-Mail noch nachgetragen werden muss. Der eindeutige Index bleibt -
  * mehrere NULL-Werte sind darin zulaessig (MySQL/SQLite).
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {

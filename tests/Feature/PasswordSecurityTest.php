@@ -72,7 +72,7 @@ class PasswordSecurityTest extends TestCase
             $html = $mail->render();
 
             // Der Link muss drin sein ...
-            $this->assertStringContainsString('/zugang/passwort-festlegen/' . $employee->id, $html);
+            $this->assertStringContainsString('/zugang/passwort-festlegen/'.$employee->id, $html);
             // ... und ausdruecklich KEIN Passwort.
             $this->assertStringNotContainsString('Passwort:</strong> ', $html);
 

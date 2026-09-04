@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Console\Commands;
 
 use App\Console\Concerns\ProcessesRecordsSafely;
@@ -35,20 +36,20 @@ class RemindDueTasks extends Command
         // fuehren, dass das halbe Team seine Wiedervorlagen nicht sieht.
         $notified = $this->verarbeiteEinzeln($byAssignee->keys(), function ($userId) use ($byAssignee) {
             $tasks = $byAssignee[$userId];
-            $todayDue = $tasks->filter(fn(Task $t) => $t->due_date->isToday())->count();
-            $overdue = $tasks->filter(fn(Task $t) => $t->due_date->lt(today()))->count();
+            $todayDue = $tasks->filter(fn (Task $t) => $t->due_date->isToday())->count();
+            $overdue = $tasks->filter(fn (Task $t) => $t->due_date->lt(today()))->count();
 
             $parts = [];
-            if ($todayDue > 0) $parts[] = $todayDue . ' heute fällig';
-            if ($overdue > 0) $parts[] = $overdue . ' überfällig';
+            if ($todayDue > 0) $parts[] = $todayDue.' heute fällig';
+            if ($overdue > 0) $parts[] = $overdue.' überfällig';
             if ($parts === []) return;
 
             Notify::push((int) $userId, [
                 'type' => NotificationService::TYPE_SYSTEM,
-                'title' => 'Aufgaben: ' . implode(' · ', $parts),
+                'title' => 'Aufgaben: '.implode(' · ', $parts),
                 'body' => $tasks->take(3)->pluck('title')->implode(' · '),
                 'link' => route('admin.tasks', ['tab' => 'mine', 'due' => $overdue > 0 ? 'overdue' : 'today']),
-                'dedup_key' => 'tasks-due-' . $userId,
+                'dedup_key' => 'tasks-due-'.$userId,
             ]);
         }, 'Mitarbeiter');
 

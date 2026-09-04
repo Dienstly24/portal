@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Ai;
 
+use App\Services\Ai\TemplateParsers\EnergieAuftragParser;
+use App\Services\Ai\TemplateParsers\EweVertragsbestaetigungParser;
 use App\Services\Ai\TemplateParsers\LichtblickAuftragParser;
 use Tests\TestCase;
 
@@ -63,7 +65,7 @@ class LichtblickAuftragParserTest extends TestCase
             $lieferbeginn,
             '',
             '               4 Ich möchte LichtBlick ÖkoStrom in meiner/m jetzigen Wohnung/Haus beziehen.',
-            '                ' . $versorger,
+            '                '.$versorger,
             '               Derzeitiger Stromversorger',
             '               200111411                                             64,24                                  €',
             '               Kundennummer beim derzeitigen Stromversorger          Abschlag im Monat',
@@ -90,7 +92,7 @@ class LichtblickAuftragParserTest extends TestCase
             $this->auftragText(),
             "Allgemeine Geschaeftsbedingungen\nDer Vertrag verlängert sich jeweils um ein Jahr.",
             "Datenschutzhinweise\nWir verarbeiten Ihre Daten aus der Vertragsanbahnung (z.B. aus\n"
-                . "Beratungsprotokollen), soweit dies erforderlich ist.",
+                .'Beratungsprotokollen), soweit dies erforderlich ist.',
         ]);
     }
 
@@ -100,7 +102,7 @@ class LichtblickAuftragParserTest extends TestCase
         // verwertbare Analyse-Antwort", weil das Wort "Beratungsprotokollen"
         // im Datenschutzhinweis auf Seite 12 stand. Gelesen wird jetzt nur
         // noch Seite 1, das Formular selbst.
-        $r = (new LichtblickAuftragParser())->parse($this->mehrseitigerAuftrag());
+        $r = (new LichtblickAuftragParser)->parse($this->mehrseitigerAuftrag());
 
         $this->assertNotNull($r);
         $this->assertSame('Altahan', $r['data']['person']['last_name']);
@@ -115,7 +117,7 @@ class LichtblickAuftragParserTest extends TestCase
 
     public function test_parses_switch_order_with_expected_start(): void
     {
-        $r = (new LichtblickAuftragParser())->parse($this->auftragText());
+        $r = (new LichtblickAuftragParser)->parse($this->auftragText());
 
         $this->assertNotNull($r);
         $this->assertSame('energieauftrag', $r['type']);
@@ -174,13 +176,13 @@ class LichtblickAuftragParserTest extends TestCase
     public function test_iban_dropped_when_account_holder_differs_from_applicant(): void
     {
         $text = str_replace(
-            "                                                                                                                IBAN",
+            '                                                                                                                IBAN',
             "               Kontoinhaber: Bau Fremd GmbH\n"
-            . "                                                                                                                IBAN",
+            .'                                                                                                                IBAN',
             $this->auftragText()
         );
 
-        $r = (new LichtblickAuftragParser())->parse($text);
+        $r = (new LichtblickAuftragParser)->parse($text);
 
         $this->assertNotNull($r);
         $this->assertArrayNotHasKey('iban', $r['data']['bank']);
@@ -189,20 +191,20 @@ class LichtblickAuftragParserTest extends TestCase
     public function test_iban_kept_when_account_holder_matches_applicant(): void
     {
         $text = str_replace(
-            "                                                                                                                IBAN",
+            '                                                                                                                IBAN',
             "               Kontoinhaber: Mashhour Altahan\n"
-            . "                                                                                                                IBAN",
+            .'                                                                                                                IBAN',
             $this->auftragText()
         );
 
-        $r = (new LichtblickAuftragParser())->parse($text);
+        $r = (new LichtblickAuftragParser)->parse($text);
 
         $this->assertSame('DE58214500000105742795', $r['data']['bank']['iban']);
     }
 
     public function test_explicit_delivery_date_wins_over_estimate(): void
     {
-        $r = (new LichtblickAuftragParser())->parse($this->auftragText(mitLieferbeginn: true));
+        $r = (new LichtblickAuftragParser)->parse($this->auftragText(mitLieferbeginn: true));
 
         $this->assertNotNull($r);
         $v = $r['data']['versicherung'];
@@ -217,7 +219,7 @@ class LichtblickAuftragParserTest extends TestCase
         // ÖkoStrom in meiner/m jetzigen Wohnung/Haus beziehen." Die wurde
         // faelschlich als bisheriger Versorger uebernommen. Ein leeres Feld
         // bleibt jetzt leer; alle uebrigen Felder kommen weiterhin an.
-        $r = (new LichtblickAuftragParser())->parse($this->auftragText(versorger: ''));
+        $r = (new LichtblickAuftragParser)->parse($this->auftragText(versorger: ''));
 
         $this->assertNotNull($r);
         $this->assertArrayNotHasKey('previous_provider', $r['data']['energie']);
@@ -235,7 +237,7 @@ class LichtblickAuftragParserTest extends TestCase
     {
         // Anderer Vorversorger (kein Stadtwerk) -> die 14-Tage-Regel gilt nicht,
         // es wird KEIN Beginn geschaetzt.
-        $r = (new LichtblickAuftragParser())->parse($this->auftragText(versorger: 'E.ON Energie Deutschland GmbH'));
+        $r = (new LichtblickAuftragParser)->parse($this->auftragText(versorger: 'E.ON Energie Deutschland GmbH'));
 
         $this->assertNotNull($r);
         $this->assertArrayNotHasKey('expected_start_within_days', $r['data']['versicherung']);
@@ -248,7 +250,7 @@ class LichtblickAuftragParserTest extends TestCase
         // 13,35 = 64,25) -> vermutlich der ALTE Abschlag des Vorversorgers,
         // er darf nicht in den neuen Vertrag.
         $text = str_replace('64,24', '95,00', $this->auftragText());
-        $r = (new LichtblickAuftragParser())->parse($text);
+        $r = (new LichtblickAuftragParser)->parse($text);
 
         $this->assertNotNull($r);
         $this->assertArrayNotHasKey('premium_amount', $r['data']['versicherung']);
@@ -256,9 +258,9 @@ class LichtblickAuftragParserTest extends TestCase
 
     public function test_ignores_unrelated_documents(): void
     {
-        $this->assertNull((new LichtblickAuftragParser())->parse('Irgendein anderes Dokument'));
+        $this->assertNull((new LichtblickAuftragParser)->parse('Irgendein anderes Dokument'));
         // LichtBlick erwaehnt, aber kein Auftrag.
-        $this->assertNull((new LichtblickAuftragParser())->parse("LichtBlick SE\nJahresrechnung Strom"));
+        $this->assertNull((new LichtblickAuftragParser)->parse("LichtBlick SE\nJahresrechnung Strom"));
     }
 
     /**
@@ -318,13 +320,13 @@ class LichtblickAuftragParserTest extends TestCase
         ]);
 
         return $seite1
-            . "\fWiderrufsbelehrung\nDer Vertrag verlängert sich jeweils um ein weiteres Jahr."
-            . "\fDatenschutzhinweise\nWir verarbeiten Daten aus der Vertragsanbahnung (z. B. aus Beratungsprotokollen).";
+            ."\fWiderrufsbelehrung\nDer Vertrag verlängert sich jeweils um ein weiteres Jahr."
+            ."\fDatenschutzhinweise\nWir verarbeiten Daten aus der Vertragsanbahnung (z. B. aus Beratungsprotokollen).";
     }
 
     public function test_reads_scanned_order_from_ocr_text(): void
     {
-        $r = (new LichtblickAuftragParser())->parse($this->gescannterUmzugsAuftrag());
+        $r = (new LichtblickAuftragParser)->parse($this->gescannterUmzugsAuftrag());
 
         $this->assertNotNull($r);
 
@@ -370,12 +372,12 @@ class LichtblickAuftragParserTest extends TestCase
         // LichtBlick-Auftrag als "Strom-Auftrag - EWE" vereinnahmen. Seit dem
         // Wort-Grenzen-Abgleich (\bEWE\b) greifen beide EWE-Parser hier nicht.
         $text = $this->auftragText();
-        $this->assertNull((new \App\Services\Ai\TemplateParsers\EnergieAuftragParser())->parse($text));
-        $this->assertNull((new \App\Services\Ai\TemplateParsers\EweVertragsbestaetigungParser())->parse($text));
+        $this->assertNull((new EnergieAuftragParser)->parse($text));
+        $this->assertNull((new EweVertragsbestaetigungParser)->parse($text));
 
         // Auch mit den Rechtstext-Seiten des echten Dokuments.
         $voll = $this->mehrseitigerAuftrag();
-        $this->assertNull((new \App\Services\Ai\TemplateParsers\EnergieAuftragParser())->parse($voll));
-        $this->assertNull((new \App\Services\Ai\TemplateParsers\EweVertragsbestaetigungParser())->parse($voll));
+        $this->assertNull((new EnergieAuftragParser)->parse($voll));
+        $this->assertNull((new EweVertragsbestaetigungParser)->parse($voll));
     }
 }

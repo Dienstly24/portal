@@ -11,8 +11,7 @@ use Illuminate\Support\Facades\DB;
  * Datensaetze angefasst, deren strukturierte Felder noch komplett leer sind;
  * bereits gepflegte Adressen bleiben unangetastet.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         DB::table('customers')
@@ -32,10 +31,10 @@ return new class extends Migration
                         continue;
                     }
                     DB::table('customers')->where('id', $row->id)->update([
-                        'address_street'       => $parts['street'] ?: null,
+                        'address_street' => $parts['street'] ?: null,
                         'address_house_number' => $parts['house_number'] ?: null,
-                        'address_zip'          => $parts['zip'] ?: null,
-                        'address_city'         => $parts['city'] ?: null,
+                        'address_zip' => $parts['zip'] ?: null,
+                        'address_city' => $parts['city'] ?: null,
                     ]);
                 }
             });
@@ -54,7 +53,7 @@ return new class extends Migration
     private function splitAddress(?string $address): array
     {
         $parts = ['street' => '', 'house_number' => '', 'zip' => '', 'city' => ''];
-        if (!$address) {
+        if (! $address) {
             return $parts;
         }
 

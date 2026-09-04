@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Provision;
 
 use App\Models\Partner;

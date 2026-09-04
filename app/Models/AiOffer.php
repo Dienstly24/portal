@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -66,12 +67,12 @@ class AiOffer extends Model
             $this->product,
             $this->speed,
             $this->price !== null
-                ? number_format((float) $this->price, 2, ',', '.') . ' EUR/' . ($this->price_period ?: 'Monat')
+                ? number_format((float) $this->price, 2, ',', '.').' EUR/'.($this->price_period ?: 'Monat')
                 : null,
-            $this->duration_months ? $this->duration_months . ' Monate Laufzeit' : null,
+            $this->duration_months ? $this->duration_months.' Monate Laufzeit' : null,
         ]);
 
-        return 'Angebot ' . $this->label . ': ' . implode(', ', $teile)
-            . ($this->terms ? ' - ' . $this->terms : '');
+        return 'Angebot '.$this->label.': '.implode(', ', $teile)
+            .($this->terms ? ' - '.$this->terms : '');
     }
 }

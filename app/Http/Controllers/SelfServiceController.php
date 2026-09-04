@@ -1,7 +1,7 @@
 <?php
+
 namespace App\Http\Controllers;
 
-use App\Models\ActivityLog;
 use App\Models\ChangeRequestDocument;
 use App\Models\Contract;
 use App\Models\Customer;
@@ -9,9 +9,10 @@ use App\Models\CustomerAddress;
 use App\Models\CustomerChangeRequest;
 use App\Models\CustomerContact;
 use App\Models\CustomerFamily;
-use App\Models\InternalNotification;
-use App\Models\User;
+use App\Services\ChangeRequestService;
+use App\Support\UploadRules;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 
 /**
@@ -31,13 +32,13 @@ use Illuminate\Support\Str;
 class SelfServiceController extends Controller
 {
     /** Zulässige Nachweis-Dateien (wie beim Dokumenten-Upload). */
-    private const PROOF_RULES = ['file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'];
+    private const PROOF_RULES = ['file', 'mimes:'.UploadRules::PROOF_MIMES, 'max:'.UploadRules::MAX_KB];
 
     private function getCustomer(): Customer
     {
         return Customer::firstOrCreate(
             ['user_id' => auth()->id()],
-            ['customer_number' => 'C-' . strtoupper(Str::random(8))]
+            ['customer_number' => 'C-'.strtoupper(Str::random(8))]
         );
     }
 
@@ -45,7 +46,7 @@ class SelfServiceController extends Controller
      * Hochgeladene Nachweise als "Art => Datei" einsammeln. Die Art
      * bestimmt, wie der Nachweis in der Review-Liste beschriftet wird.
      *
-     * @return array<string, \Illuminate\Http\UploadedFile>
+     * @return array<string, UploadedFile>
      */
     private function collectProofs(Request $request): array
     {
@@ -93,7 +94,7 @@ class SelfServiceController extends Controller
             'tax_id' => 'nullable|string|max:20',
         ]);
 
-        $this->createRequest('family', null, $data, 'Neues Familienmitglied beantragt: ' . $data['name']);
+        $this->createRequest('family', null, $data, 'Neues Familienmitglied beantragt: '.$data['name']);
 
         return back()->with('success', 'Ihr Familienmitglied wurde zur Prüfung eingereicht.');
     }
@@ -118,7 +119,7 @@ class SelfServiceController extends Controller
             'family',
             ['id' => $member->id, 'name' => $member->name, 'relation' => $member->relation, 'birth_date' => $member->birth_date],
             ['id' => $member->id] + $data,
-            'Änderung Familienmitglied beantragt: ' . $member->name
+            'Änderung Familienmitglied beantragt: '.$member->name
         );
 
         return back()->with('success', 'Ihre Änderung wurde zur Prüfung eingereicht.');
@@ -138,7 +139,7 @@ class SelfServiceController extends Controller
             'family',
             ['id' => $member->id, 'name' => $member->name, 'relation' => $member->relation, 'birth_date' => $member->birth_date],
             ['id' => $member->id, 'delete' => true, 'name' => $member->name],
-            'Löschung Familienmitglied beantragt: ' . $member->name
+            'Löschung Familienmitglied beantragt: '.$member->name
         );
 
         return back()->with('success', 'Ihr Löschantrag wurde zur Prüfung eingereicht. Das Familienmitglied wird nach Freigabe entfernt.');
@@ -165,7 +166,7 @@ class SelfServiceController extends Controller
             'address',
             null,
             $data,
-            'Neue Adresse beantragt (' . (CustomerAddress::TYPES[$data['type']] ?? $data['type']) . ')',
+            'Neue Adresse beantragt ('.(CustomerAddress::TYPES[$data['type']] ?? $data['type']).')',
             $this->collectProofs($request),
             $request->input('effective_from'),
         );
@@ -235,7 +236,7 @@ class SelfServiceController extends Controller
     {
         $data = $this->validateContact($request);
         $label = $data['type'] === 'email' ? 'E-Mail-Adresse' : 'Telefonnummer';
-        $this->createRequest($data['type'], null, ['label' => $data['label'], 'value' => $data['value']], 'Neue ' . $label . ' beantragt');
+        $this->createRequest($data['type'], null, ['label' => $data['label'], 'value' => $data['value']], 'Neue '.$label.' beantragt');
         return back()->with('success', 'Ihre Kontaktinformation wurde zur Prüfung eingereicht.');
     }
 
@@ -263,7 +264,7 @@ class SelfServiceController extends Controller
                 ? 'required|email|max:255'
                 : ['required', 'string', 'max:30', 'regex:/^[0-9+\/\s()-]{6,}$/'],
         ];
-        if (!$forcedType) {
+        if (! $forcedType) {
             $rules['type'] = 'required|in:email,phone';
         }
         $data = $request->validate($rules);
@@ -309,7 +310,7 @@ class SelfServiceController extends Controller
         $this->createRequest(
             'bank',
             [
-                'iban' => $customer->iban ? '••••' . substr($customer->iban, -4) : null,
+                'iban' => $customer->iban ? '••••'.substr($customer->iban, -4) : null,
                 'account_holder' => $customer->account_holder,
             ],
             ['iban' => $data['iban'], 'account_holder' => $data['account_holder']],
@@ -346,12 +347,12 @@ class SelfServiceController extends Controller
             $file = $request->file('document');
             // Private Disk (storage/app/private) - niemals per URL erreichbar,
             // Zugriff nur über die autorisierten Download-Controller.
-            $payload['document_path'] = $file->store('contract_documents/' . $customer->id, 'local');
+            $payload['document_path'] = $file->store('contract_documents/'.$customer->id, 'local');
             $payload['document_disk'] = 'local';
             $payload['document_name'] = $file->getClientOriginalName();
         }
 
-        $this->createRequest('contract', null, $payload, 'Neuer Vertrag gemeldet: ' . $data['insurer']);
+        $this->createRequest('contract', null, $payload, 'Neuer Vertrag gemeldet: '.$data['insurer']);
 
         return back()->with('success', 'Ihr Vertrag wurde gemeldet und wird von uns geprüft.');
     }
@@ -368,7 +369,7 @@ class SelfServiceController extends Controller
         $contract = Contract::where('customer_id', $customer->id)->where('id', $id)->firstOrFail();
 
         $data = $request->validate([
-            'type' => 'required|in:' . implode(',', Contract::typeKeys()),
+            'type' => 'required|in:'.implode(',', Contract::typeKeys()),
             'insurer' => 'required|string|max:255',
             'contract_number' => 'nullable|string|max:100',
             'start_date' => 'nullable|date',
@@ -390,7 +391,7 @@ class SelfServiceController extends Controller
                 'notes' => $contract->notes,
             ],
             ['id' => $contract->id] + $data,
-            'Vertragsänderung beantragt: ' . $contract->insurer
+            'Vertragsänderung beantragt: '.$contract->insurer
         );
 
         return back()->with('success', 'Ihre Vertragsänderung wurde zur Prüfung eingereicht. Sie wird erst nach Freigabe durch unser Team wirksam.');
@@ -420,7 +421,7 @@ class SelfServiceController extends Controller
         array $proofFiles = [],
         ?string $effectiveFrom = null,
     ): CustomerChangeRequest {
-        return app(\App\Services\ChangeRequestService::class)->submit(
+        return app(ChangeRequestService::class)->submit(
             $this->getCustomer(), $type, $oldData, $newData, $auditText,
             requestedBy: null, proofFiles: $proofFiles, effectiveFrom: $effectiveFrom,
         );

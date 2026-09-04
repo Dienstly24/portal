@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\CommissionImport;
 
 use Illuminate\Support\Carbon;
@@ -30,7 +31,7 @@ class ValueParser
 
         $negative = str_contains($value, '-') || preg_match('/^\(.*\)$/', $value) === 1;
         $clean = preg_replace('/[^0-9,.]/', '', $value) ?? '';
-        if ($clean === '' || !preg_match('/[0-9]/', $clean)) {
+        if ($clean === '' || ! preg_match('/[0-9]/', $clean)) {
             return null;
         }
 
@@ -59,7 +60,7 @@ class ValueParser
             }
         }
 
-        if (!is_numeric($clean)) {
+        if (! is_numeric($clean)) {
             return null;
         }
         $number = round((float) $clean, 2);
@@ -174,19 +175,19 @@ class ValueParser
             return $empty;
         }
 
-        if (!preg_match('/(?:^|[,\s])(\d{5})\s+(.+)$/u', $raw, $m, PREG_OFFSET_CAPTURE)) {
+        if (! preg_match('/(?:^|[,\s])(\d{5})\s+(.+)$/u', $raw, $m, PREG_OFFSET_CAPTURE)) {
             return array_merge($empty, ['raw' => mb_substr($raw, 0, 190)]);
         }
 
         $zip = $m[1][0];
-        $city = trim($m[2][0], " ,");
-        $before = trim(mb_strcut($raw, 0, $m[1][1]), " ,");
+        $city = trim($m[2][0], ' ,');
+        $before = trim(mb_strcut($raw, 0, $m[1][1]), ' ,');
 
         // Hausnummer = letzte Zahl (mit moeglichem Buchstaben) der Strasse.
         $street = $before;
         $houseNumber = null;
         if (preg_match('/^(.*?)[\s,]+(\d+\s*[a-zA-Z]?(?:\s*[-\/]\s*\d+\s*[a-zA-Z]?)?)$/u', $before, $h)) {
-            $street = trim($h[1], " ,");
+            $street = trim($h[1], ' ,');
             $houseNumber = trim($h[2]);
         }
 

@@ -2023,6 +2023,84 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Saetze, Berichte oder Statistiken; KEINE Benachrichtigungen an
   Empfaenger (interner Prozess). Tests: `ProvisionManagementTest`.
 
+## Architektur-Aufraeumen ARCH-1 bis ARCH-8 (04.09.2026)
+
+- **Indexe nach Messung, nicht nach Gefuehl** (ARCH-1): Die Liste stammt aus
+  einer Auszaehlung der WHERE-/JOIN-/ORDER-BY-Bedingungen im Code.
+  Wichtigster Fund: `customers.user_id` war voellig unindiziert, obwohl es
+  mit rund 30 Fundstellen die haeufigste Bedingung im Projekt ist; ebenso
+  hatten mehrere hasMany-Relationen gar keinen Index auf ihrer
+  Fremdschluesselspalte (`customer_vehicles`, `customer_timeline`,
+  `customer_notes`, `appointments`, `contract_commissions` ...) - jeder
+  Zugriff war ein Full Table Scan. BEWUSST NICHT indiziert: die
+  LIKE-'%wort%'-Felder aus `Customer::scopeSearch` - ein fuehrender
+  Platzhalter kann keinen B-Baum nutzen, ein Index dort taeuscht Wirkung nur
+  vor. Die GLEICHHEITS-Bedingungen derselben Spalten aus
+  `DuplicateDetectionService` (email2, phone, mobile, address_zip)
+  profitieren dagegen sehr wohl. Sechs ueberfluessige Einzelspalten-Indexe
+  entfernt (Spalte ist bereits fuehrende Spalte eines Composite).
+  Tests: `DatabaseIndexTest`.
+- **SQLite startet in Produktion nicht mehr** (ARCH-2):
+  `App\Support\ProductionDatabaseGuard`. Grund: `config/database.php`
+  faellt ohne `DB_CONNECTION` STILL auf sqlite zurueck - das Portal startet
+  dann klaglos gegen eine leere Datei, und der Betrieb sieht ein
+  funktionierendes Portal ohne einen einzigen Kunden. Lokale Entwicklung und
+  die Testsuite laufen bewusst weiter auf SQLite. Notausstieg
+  `ALLOW_SQLITE_IN_PRODUCTION` - gelesen ueber `config()`, NICHT `env()`
+  (mit gecachter Konfiguration liefert env() null, der Notausstieg haette
+  ausgerechnet in Produktion nicht funktioniert). REDIS bleibt eine
+  EMPFEHLUNG mit funktionierendem database-Fallback und wird nicht als
+  erledigt dargestellt - getan ist der Umzug erst, wenn auf dem VPS ein
+  Redis laeuft (`docs/ANLEITUNG_REDIS_AR.md`). Tests:
+  `ProductionDatabaseGuardTest`.
+- **Provisionen: eine Leseschicht, drei Fachbereiche** (ARCH-3):
+  `CommissionReadService` liest `provisions` (AUSGANG),
+  `contract_commissions` und `vermittler_settlements` (EINGANG) ueber EINE
+  Schnittstelle - ohne die Tabellen zu verschmelzen. Eingang und Ausgang
+  werden NIE zu einer Zahl addiert. Neu beantwortbar: alle Buchungen zu
+  EINEM Vertrag. Die beiden Protokolltabellen wurden geprueft und bewusst
+  NICHT zusammengelegt. Details:
+  `docs/ARCHITEKTUR_PROVISIONEN_LESESCHICHT.md`, Tests:
+  `CommissionReadServiceTest`.
+- **Pint + PHPStan/Larastan in CI** (ARCH-4): `pint.json` baut auf dem
+  laravel-Preset auf und schaltet die Regeln ab, die gegen den kompakten
+  Stil dieses Projekts arbeiten; `php_unit_method_casing` ist aus, weil die
+  Regel eine Methode einer ANONYMEN Klasse umbenannt hat, die eine
+  Schnittstelle implementiert (Ergebnis war ein PHP-Fatal, kein
+  fehlgeschlagener Test). PHPStan laeuft auf **Stufe 5** gegen
+  `phpstan-baseline.neon` (917 Alt-Meldungen eingefroren, jede NEUE macht CI
+  rot). Die Baseline ist ein Uebergang, kein Dauerzustand. Lokal:
+  `composer lint`, `composer stan`.
+- **AdminController aufgeteilt** (ARCH-5): 2347 -> 1012 Zeilen. Neu unter
+  `App\Http\Controllers\Admin`: `ContractController`,
+  `CustomerDocumentController`, `DuplicateController`. Rein mechanisch -
+  die vollstaendige Routentabelle (442 Routen mit URI, Name, Middleware)
+  ist vor und nach dem Umbau zeichengleich. Die vier Zugriffspruefungen
+  liegen jetzt im Trait `ScopesCustomerAccess` statt als private Kopien.
+  Tests: `AdminControllerSplitTest`.
+- **FormRequests fuer Uploads** (ARCH-6): `App\Support\UploadRules` ist die
+  EINE Quelle fuer Groessengrenze und Dateitypen (standen in acht
+  Controllern). Drei FormRequests fuer die Kundenakte-Dokumente. BEWUSST
+  NICHT verschoben: die Berechtigungspruefungen (sie haengen am Kunden bzw.
+  Dokument aus dem Pfad) und `validateContract` (Fachlogik, keine
+  Formatpruefung). Tests: `UploadValidationTest`.
+- **Lazy-Loading-Erkennung** (ARCH-7): `Model::preventLazyLoading` ist
+  ausserhalb der Produktion scharf; in Produktion nur eine Log-Warnung -
+  ein vergessenes `with()` soll dort keine kaputte Seite erzeugen.
+  Drei echte N+1 behoben (`CustomerDeletionService` beim Bulk-Loeschen,
+  `SendPortalInvitations`, `DocumentIntakeService`). BEWUSST NICHT
+  eingeschaltet: `preventSilentlyDiscardingAttributes` - der Bestand
+  uebergibt an rund 35 Stellen Felder an `create()`, die nicht in
+  `$fillable` stehen; das umzustellen waere eine Mass-Assignment-
+  Sicherheitsentscheidung, keine Aufraeumaktion.
+- **Parser-Strategie** (ARCH-8): die 41 Vorlagen-Parser bleiben - sie sind
+  der Grund, warum die Analyse "kostenlos zuerst" funktioniert. Geregelt
+  ist das WACHSTUM: fuenf Bedingungen fuer einen eigenen Parser, sonst
+  laeuft das Dokument ueber Textebene/OCR -> Heuristik -> KI.
+  `ParserPolicyTest` macht die Regel pruefbar (gemeinsame Feldpruefung,
+  Registrierung, Testabdeckung). Details:
+  `docs/ARCHITEKTUR_PARSER_STRATEGIE.md`.
+
 ## Offene Themen / wartet auf den Betreiber
 
 - **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026

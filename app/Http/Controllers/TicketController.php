@@ -1,13 +1,22 @@
 <?php
-namespace App\Http\Controllers;
-use App\Http\Controllers\Concerns\ScopesCustomerAccess;
 
+namespace App\Http\Controllers;
+
+use App\Http\Controllers\Concerns\ScopesCustomerAccess;
+use App\Mail\GuestTicketReplyMail;
+
+use App\Mail\TicketReplyMail;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
 use App\Models\TicketMessage;
 use App\Models\User;
+use App\Services\Notifications\NotificationService;
 use App\Services\TicketNotifier;
+use App\Support\Facades\Notify;
+use App\Support\UploadRules;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -34,7 +43,7 @@ class TicketController extends Controller
 
     /** 403, wenn das Ticket zu einem nicht sichtbaren Kunden gehoert. (Audit M1) */
     private function authorizeTicketAccess(Ticket $ticket): void {
-        if (!$this->canAccessTicket($ticket)) {
+        if (! $this->canAccessTicket($ticket)) {
             abort(403, $ticket->customer_id === null
                 ? 'Kein Zugriff auf Gast-Anfragen.'
                 : 'Kein Zugriff auf diesen Kunden.');
@@ -48,7 +57,7 @@ class TicketController extends Controller
      */
     private function authorizeTicketDelete(bool $force = false): void {
         $role = auth()->user()?->role;
-        if ($force ? $role !== 'admin' : !in_array($role, ['admin', 'manager'], true)) {
+        if ($force ? $role !== 'admin' : ! in_array($role, ['admin', 'manager'], true)) {
             abort(403, 'Keine Berechtigung, Tickets zu loeschen.');
         }
     }
@@ -60,7 +69,7 @@ class TicketController extends Controller
      */
     private function authorizeTicketManage(): void {
         $user = auth()->user();
-        if ($user && $user->role === 'employee' && !$user->can_manage_tickets) {
+        if ($user && $user->role === 'employee' && ! $user->can_manage_tickets) {
             abort(403, 'Keine Berechtigung, Tickets zu bearbeiten.');
         }
     }
@@ -70,14 +79,14 @@ class TicketController extends Controller
         $isDeleteRole = in_array(auth()->user()->role, ['admin', 'manager'], true);
         // Papierkorb-Ansicht: nur fuer Rollen, die auch loeschen duerfen
         $trashView = $request->status === 'papierkorb';
-        if ($trashView && !$isDeleteRole) {
+        if ($trashView && ! $isDeleteRole) {
             abort(403, 'Kein Zugriff auf den Papierkorb.');
         }
 
         // Alle Anfragen MIT Kundenakte - unabhaengig von der Quelle (Portal,
         // Hilfe-Formular, ...), damit keine Anfrage unsichtbar bleibt.
         $base = Ticket::whereNotNull('customer_id')
-            ->when($ids !== null, fn($q) => $q->whereIn('customer_id', $ids));
+            ->when($ids !== null, fn ($q) => $q->whereIn('customer_id', $ids));
 
         // Kennzahlen fuer Karten + Status-Tabs (vor den Filtern gezaehlt)
         $stats = [
@@ -119,9 +128,9 @@ class TicketController extends Controller
         if ($q = trim((string) $request->q)) {
             $query->where(function ($w) use ($q) {
                 $w->where('subject', 'like', "%{$q}%")
-                  ->orWhere('ticket_number', 'like', "%{$q}%")
-                  ->orWhereHas('customer.user', fn($u) => $u->where('name', 'like', "%{$q}%"))
-                  ->orWhereHas('customer', fn($c) => $c->where('customer_number', 'like', "%{$q}%"));
+                    ->orWhere('ticket_number', 'like', "%{$q}%")
+                    ->orWhereHas('customer.user', fn ($u) => $u->where('name', 'like', "%{$q}%"))
+                    ->orWhereHas('customer', fn ($c) => $c->where('customer_number', 'like', "%{$q}%"));
             });
         }
 
@@ -156,7 +165,7 @@ class TicketController extends Controller
 
         // Kohorte: alle Tickets, die im Zeitraum ERSTELLT wurden (inkl. Gaeste)
         $cohort = Ticket::with('customer.user')->where('created_at', '>=', $from)->get();
-        $finished = $cohort->filter(fn($t) => $t->isFinished());
+        $finished = $cohort->filter(fn ($t) => $t->isFinished());
         $ratings = $cohort->whereNotNull('rating');
 
         $kpis = [
@@ -167,9 +176,9 @@ class TicketController extends Controller
             'offen' => $cohort->where('status', 'open')->count(),
             // Durchschnittliche Reaktions-/Loesungszeit in Stunden (nur Kohorte)
             'avg_first_response_h' => ($withResponse = $cohort->whereNotNull('first_response_at'))->count()
-                ? round($withResponse->avg(fn($t) => $t->created_at->diffInMinutes($t->first_response_at)) / 60, 1) : null,
+                ? round($withResponse->avg(fn ($t) => $t->created_at->diffInMinutes($t->first_response_at)) / 60, 1) : null,
             'avg_resolution_h' => $finished->whereNotNull('resolved_at')->count()
-                ? round($finished->whereNotNull('resolved_at')->avg(fn($t) => $t->created_at->diffInMinutes($t->resolved_at)) / 60, 1) : null,
+                ? round($finished->whereNotNull('resolved_at')->avg(fn ($t) => $t->created_at->diffInMinutes($t->resolved_at)) / 60, 1) : null,
             'avg_rating' => $ratings->count() ? round($ratings->avg('rating'), 1) : null,
             'rating_count' => $ratings->count(),
             // Momentaufnahme unabhaengig vom Zeitraum: aktuell ueberfaellig
@@ -196,7 +205,7 @@ class TicketController extends Controller
         // Erledigt-Kurve zaehlt ALLE im Zeitraum abgeschlossenen Tickets
         // (auch aeltere), damit die Team-Leistung sichtbar ist.
         Ticket::whereIn('status', ['resolved', 'closed'])
-            ->where(fn($q) => $q->where('resolved_at', '>=', $from)->orWhere('closed_at', '>=', $from))
+            ->where(fn ($q) => $q->where('resolved_at', '>=', $from)->orWhere('closed_at', '>=', $from))
             ->get()
             ->each(function ($t) use (&$finishedPerDay, $from) {
                 $done = $t->closed_at ?? $t->resolved_at;
@@ -208,11 +217,11 @@ class TicketController extends Controller
 
         // Verteilungen innerhalb der Kohorte
         $byStatus = collect(Ticket::STATUSES)
-            ->map(fn($label, $key) => ['label' => $label, 'n' => $cohort->where('status', $key)->count()])->values();
+            ->map(fn ($label, $key) => ['label' => $label, 'n' => $cohort->where('status', $key)->count()])->values();
         $byPriority = collect(Ticket::PRIORITIES)
-            ->map(fn($p, $key) => ['label' => $p['label'], 'n' => $cohort->where('priority', $key)->count()])->values();
+            ->map(fn ($p, $key) => ['label' => $p['label'], 'n' => $cohort->where('priority', $key)->count()])->values();
         $byType = collect(Ticket::TYPES)
-            ->map(fn($label, $key) => ['label' => $label, 'n' => $cohort->where('type', $key)->count()])
+            ->map(fn ($label, $key) => ['label' => $label, 'n' => $cohort->where('type', $key)->count()])
             ->values()->sortByDesc('n')->values();
 
         // Mitarbeiter-Auswertung (zugewiesene Tickets der Kohorte);
@@ -224,14 +233,14 @@ class TicketController extends Controller
                 return [
                     'name' => $staffNames[$userId] ?? '—',
                     'total' => $tickets->count(),
-                    'erledigt' => $tickets->filter(fn($t) => $t->isFinished())->count(),
+                    'erledigt' => $tickets->filter(fn ($t) => $t->isFinished())->count(),
                     'rating' => $rated->count() ? round($rated->avg('rating'), 1) : null,
                 ];
             })->sortByDesc('total')->values();
 
         // Kunden mit den meisten Anfragen im Zeitraum
         $topCustomers = $cohort->whereNotNull('customer_id')->groupBy('customer_id')
-            ->map(fn($tickets, $customerId) => [
+            ->map(fn ($tickets, $customerId) => [
                 'id' => $customerId,
                 'name' => $tickets->first()->customer?->user?->name ?? 'Kunde',
                 'number' => $tickets->first()->customer?->customer_number,
@@ -259,7 +268,7 @@ class TicketController extends Controller
         $ticket = Ticket::withTrashed()
             ->with(['customer.user', 'assignedTo', 'closedBy', 'messages.sender', 'events.user', 'attachments'])
             ->findOrFail($id);
-        if ($ticket->trashed() && !in_array(auth()->user()->role, ['admin', 'manager'], true)) {
+        if ($ticket->trashed() && ! in_array(auth()->user()->role, ['admin', 'manager'], true)) {
             abort(404);
         }
         $this->authorizeTicketAccess($ticket);
@@ -275,23 +284,23 @@ class TicketController extends Controller
 
     /** Statuswechsel ueber die Schnellaktionen der Detailseite. */
     public function status(Request $request, $id) {
-        $request->validate(['status' => 'required|in:' . implode(',', array_keys(Ticket::STATUSES))]);
+        $request->validate(['status' => 'required|in:'.implode(',', array_keys(Ticket::STATUSES))]);
         $ticket = Ticket::findOrFail($id);
         $this->authorizeTicketAccess($ticket);
         $this->authorizeTicketManage();
 
         // "In Bearbeitung uebernehmen": unzugewiesenes Ticket gehoert danach dem Bearbeiter
-        if ($request->status === 'in_progress' && !$ticket->assigned_to) {
+        if ($request->status === 'in_progress' && ! $ticket->assigned_to) {
             $ticket->update(['assigned_to' => auth()->id()]);
-            $ticket->logEvent('assigned', 'an ' . auth()->user()->name);
+            $ticket->logEvent('assigned', 'an '.auth()->user()->name);
         }
-        $reopened = $ticket->isFinished() && !in_array($request->status, ['resolved', 'closed'], true);
+        $reopened = $ticket->isFinished() && ! in_array($request->status, ['resolved', 'closed'], true);
         // Nur bei einem ECHTEN Wechsel benachrichtigen - ein Doppel-Submit
         // darf keine zweite Kunden-Glocke erzeugen.
         if ($ticket->transitionTo($request->status, auth()->id())) {
             TicketNotifier::notifyCustomerStatus($ticket, $reopened);
         }
-        return back()->with('success', 'Status aktualisiert: ' . $ticket->statusLabel());
+        return back()->with('success', 'Status aktualisiert: '.$ticket->statusLabel());
     }
 
     /**
@@ -305,7 +314,7 @@ class TicketController extends Controller
         $ticket->logEvent('deleted');
         $ticket->delete();
         return redirect()->route('admin.tickets')
-            ->with('success', 'Ticket ' . $ticket->ticket_number . ' in den Papierkorb verschoben.');
+            ->with('success', 'Ticket '.$ticket->ticket_number.' in den Papierkorb verschoben.');
     }
 
     /** Ticket aus dem Papierkorb wiederherstellen (admin/manager). */
@@ -315,7 +324,7 @@ class TicketController extends Controller
         $this->authorizeTicketAccess($ticket);
         $ticket->restore();
         $ticket->logEvent('restored');
-        return back()->with('success', 'Ticket ' . $ticket->ticket_number . ' wiederhergestellt.');
+        return back()->with('success', 'Ticket '.$ticket->ticket_number.' wiederhergestellt.');
     }
 
     /**
@@ -329,8 +338,8 @@ class TicketController extends Controller
         $this->authorizeTicketAccess($ticket);
         foreach ($ticket->attachments as $a) {
             try {
-                \Illuminate\Support\Facades\Storage::disk($a->disk ?? 'public')->delete($a->file_path);
-            } catch (\Throwable $e) { \Log::warning('Ticket attachment cleanup failed: ' . $e->getMessage()); }
+                Storage::disk($a->disk ?? 'public')->delete($a->file_path);
+            } catch (\Throwable $e) { \Log::warning('Ticket attachment cleanup failed: '.$e->getMessage()); }
         }
         // ticket_events/ticket_attachments haben keinen FK-Cascade -> explizit aufraeumen
         $ticket->attachments()->delete();
@@ -338,7 +347,7 @@ class TicketController extends Controller
         $ticket->messages()->delete();
         $ticket->forceDelete();
         return redirect()->route('admin.tickets', ['status' => 'papierkorb'])
-            ->with('success', 'Ticket ' . $ticket->ticket_number . ' endgueltig geloescht.');
+            ->with('success', 'Ticket '.$ticket->ticket_number.' endgueltig geloescht.');
     }
 
     /**
@@ -358,17 +367,17 @@ class TicketController extends Controller
             'ids' => 'required|array|min:1|max:30',
             'ids.*' => 'string',
             'action' => 'required|in:status,assign,priority,delete',
-            'status' => 'nullable|required_if:action,status|in:' . implode(',', array_keys(Ticket::STATUSES)),
-            'priority' => 'nullable|required_if:action,priority|in:' . implode(',', array_keys(Ticket::PRIORITIES)),
+            'status' => 'nullable|required_if:action,status|in:'.implode(',', array_keys(Ticket::STATUSES)),
+            'priority' => 'nullable|required_if:action,priority|in:'.implode(',', array_keys(Ticket::PRIORITIES)),
             'assigned_to' => 'nullable|required_if:action,assign|string',
         ]);
 
         // Zuweisungsziel einmal vorab pruefen (nicht je Ticket)
         $assignee = null;
-        if ($request->action === 'assign' && !in_array($request->assigned_to, ['none'], true)) {
+        if ($request->action === 'assign' && ! in_array($request->assigned_to, ['none'], true)) {
             $assigneeId = $request->assigned_to === 'me' ? auth()->id() : $request->assigned_to;
             $assignee = User::find($assigneeId);
-            if (!$assignee || !$assignee->isStaff() || !$assignee->is_active) {
+            if (! $assignee || ! $assignee->isStaff() || ! $assignee->is_active) {
                 return back()->with('error', 'Tickets koennen nur aktiven Mitarbeitern zugewiesen werden.');
             }
         }
@@ -377,10 +386,11 @@ class TicketController extends Controller
         $done = 0;
         $skipped = count($request->ids) - $tickets->count();
         foreach ($tickets as $ticket) {
-            if (!$this->canAccessTicket($ticket)) { $skipped++; continue; }
+            if (! $this->canAccessTicket($ticket)) { $skipped++;
+            continue; }
             switch ($request->action) {
                 case 'status':
-                    $reopened = $ticket->isFinished() && !in_array($request->status, ['resolved', 'closed'], true);
+                    $reopened = $ticket->isFinished() && ! in_array($request->status, ['resolved', 'closed'], true);
                     if ($ticket->transitionTo($request->status, auth()->id())) {
                         TicketNotifier::notifyCustomerStatus($ticket, $reopened);
                     }
@@ -390,7 +400,7 @@ class TicketController extends Controller
                     if ((string) $newId !== (string) $ticket->assigned_to) {
                         $ticket->update(['assigned_to' => $newId]);
                         if ($assignee) {
-                            $ticket->logEvent('assigned', 'an ' . $assignee->name);
+                            $ticket->logEvent('assigned', 'an '.$assignee->name);
                             TicketNotifier::notifyAssigned($ticket, $assignee);
                         } else {
                             $ticket->logEvent('unassigned');
@@ -405,7 +415,7 @@ class TicketController extends Controller
                             // SLA-Faelligkeit haengt an der Prioritaet -> neu berechnen
                             'due_at' => $ticket->created_at->copy()->addHours(Ticket::slaHours($request->priority)),
                         ]);
-                        $ticket->logEvent('priority_changed', $old . ' → ' . $ticket->priorityLabel());
+                        $ticket->logEvent('priority_changed', $old.' → '.$ticket->priorityLabel());
                     }
                     break;
                 case 'delete':
@@ -417,14 +427,14 @@ class TicketController extends Controller
         }
 
         $msg = match ($request->action) {
-            'status' => $done . ' Ticket(s) auf „' . Ticket::STATUSES[$request->status] . '" gesetzt.',
+            'status' => $done.' Ticket(s) auf „'.Ticket::STATUSES[$request->status].'" gesetzt.',
             'assign' => $assignee
-                ? $done . ' Ticket(s) an ' . $assignee->name . ' zugewiesen.'
-                : 'Zuweisung bei ' . $done . ' Ticket(s) entfernt.',
-            'priority' => 'Prioritaet bei ' . $done . ' Ticket(s) auf „' . Ticket::PRIORITIES[$request->priority]['label'] . '" gesetzt.',
-            'delete' => $done . ' Ticket(s) in den Papierkorb verschoben.',
+                ? $done.' Ticket(s) an '.$assignee->name.' zugewiesen.'
+                : 'Zuweisung bei '.$done.' Ticket(s) entfernt.',
+            'priority' => 'Prioritaet bei '.$done.' Ticket(s) auf „'.Ticket::PRIORITIES[$request->priority]['label'].'" gesetzt.',
+            'delete' => $done.' Ticket(s) in den Papierkorb verschoben.',
         };
-        if ($skipped > 0) { $msg .= ' ' . $skipped . ' ohne Berechtigung uebersprungen.'; }
+        if ($skipped > 0) { $msg .= ' '.$skipped.' ohne Berechtigung uebersprungen.'; }
         return back()->with('success', $msg);
     }
 
@@ -432,8 +442,8 @@ class TicketController extends Controller
     public function updateMeta(Request $request, $id) {
         $request->validate([
             'assigned_to' => 'sometimes|nullable|exists:users,id',
-            'priority' => 'sometimes|in:' . implode(',', array_keys(Ticket::PRIORITIES)),
-            'type' => 'sometimes|in:' . implode(',', array_keys(Ticket::TYPES)),
+            'priority' => 'sometimes|in:'.implode(',', array_keys(Ticket::PRIORITIES)),
+            'type' => 'sometimes|in:'.implode(',', array_keys(Ticket::TYPES)),
         ]);
         $ticket = Ticket::findOrFail($id);
         $this->authorizeTicketAccess($ticket);
@@ -441,14 +451,14 @@ class TicketController extends Controller
 
         if ($request->has('assigned_to')) {
             $newId = $request->assigned_to ?: null;
-            if ($newId && (!($assigneeCheck = User::find($newId))->isStaff() || !$assigneeCheck->is_active)) {
+            if ($newId && (! ($assigneeCheck = User::find($newId))->isStaff() || ! $assigneeCheck->is_active)) {
                 return back()->with('error', 'Tickets koennen nur aktiven Mitarbeitern zugewiesen werden.');
             }
             if ((string) $newId !== (string) $ticket->assigned_to) {
                 $ticket->update(['assigned_to' => $newId]);
                 if ($newId) {
                     $assignee = User::find($newId);
-                    $ticket->logEvent('assigned', 'an ' . $assignee->name);
+                    $ticket->logEvent('assigned', 'an '.$assignee->name);
                     TicketNotifier::notifyAssigned($ticket, $assignee);
                 } else {
                     $ticket->logEvent('unassigned');
@@ -462,12 +472,12 @@ class TicketController extends Controller
                 // SLA-Faelligkeit haengt an der Prioritaet -> neu berechnen
                 'due_at' => $ticket->created_at->copy()->addHours(Ticket::slaHours($request->priority)),
             ]);
-            $ticket->logEvent('priority_changed', $old . ' → ' . $ticket->priorityLabel());
+            $ticket->logEvent('priority_changed', $old.' → '.$ticket->priorityLabel());
         }
         if ($request->filled('type') && $request->type !== $ticket->type) {
             $old = $ticket->typeLabel();
             $ticket->update(['type' => $request->type]);
-            $ticket->logEvent('type_changed', $old . ' → ' . $ticket->typeLabel());
+            $ticket->logEvent('type_changed', $old.' → '.$ticket->typeLabel());
         }
         return back()->with('success', 'Ticket aktualisiert.');
     }
@@ -493,9 +503,9 @@ class TicketController extends Controller
     public function reply(Request $request, $id) {
         $request->validate([
             'body' => 'required',
-            'status' => 'required|in:' . implode(',', array_keys(Ticket::STATUSES)),
+            'status' => 'required|in:'.implode(',', array_keys(Ticket::STATUSES)),
             'attachments' => 'nullable|array|max:5',
-            'attachments.*' => 'file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+            'attachments.*' => UploadRules::each(UploadRules::ATTACHMENT_MIMES),
         ]);
         $ticket = Ticket::findOrFail($id);
         $this->authorizeTicketAccess($ticket);
@@ -519,7 +529,7 @@ class TicketController extends Controller
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
                 // Punkt 5: sicher auf privater Disk speichern
-                $path = $file->store('tickets/' . $ticket->id, 'local');
+                $path = $file->store('tickets/'.$ticket->id, 'local');
                 TicketAttachment::create([
                     'id' => Str::uuid(),
                     'ticket_id' => $ticket->id,
@@ -532,7 +542,7 @@ class TicketController extends Controller
         }
 
         // SLA: Zeitpunkt der ersten Team-Antwort festhalten
-        if (!$ticket->first_response_at) {
+        if (! $ticket->first_response_at) {
             $ticket->update(['first_response_at' => now()]);
         }
         $ticket->logEvent('staff_reply');
@@ -543,26 +553,26 @@ class TicketController extends Controller
         if ($ticket->customer) {
             // Portal-Glocke: "Neue Nachricht" fuer den Kunden (Review Punkt 10)
             if ($ticket->customer->user_id) {
-                \App\Support\Facades\Notify::push($ticket->customer->user_id, [
-                    'type' => \App\Services\Notifications\NotificationService::TYPE_TICKET,
+                Notify::push($ticket->customer->user_id, [
+                    'type' => NotificationService::TYPE_TICKET,
                     'title' => 'Neue Nachricht',
-                    'body' => 'Unser Team hat auf Ihre Anfrage „' . Str::limit($ticket->subject, 60) . '" geantwortet.',
+                    'body' => 'Unser Team hat auf Ihre Anfrage „'.Str::limit($ticket->subject, 60).'" geantwortet.',
                     'link' => route('portal.tickets.show', $ticket->id),
-                    'dedup_key' => 'ticket-staff-reply-' . $ticket->id,
+                    'dedup_key' => 'ticket-staff-reply-'.$ticket->id,
                 ]);
             }
             $email = $ticket->customer->user?->email;
-            if ($email && !str_contains($email, '@dienstly24.internal')) {
+            if ($email && ! str_contains($email, '@dienstly24.internal')) {
                 try {
                     // Mail enthaelt bewusst KEINE Nachrichtendetails (Punkt 10)
-                    \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\TicketReplyMail($ticket, $request->body));
-                } catch (\Throwable $e) { \Log::warning('Ticket reply mail failed: ' . $e->getMessage()); }
+                    Mail::to($email)->send(new TicketReplyMail($ticket, $request->body));
+                } catch (\Throwable $e) { \Log::warning('Ticket reply mail failed: '.$e->getMessage()); }
             }
         } elseif ($ticket->guest_email) {
             // Gaeste haben keinen Portalzugang -> Antwort direkt per E-Mail
             try {
-                \Illuminate\Support\Facades\Mail::to($ticket->guest_email)->send(new \App\Mail\GuestTicketReplyMail($ticket, $request->body));
-            } catch (\Throwable $e) { \Log::warning('Guest ticket reply mail failed: ' . $e->getMessage()); }
+                Mail::to($ticket->guest_email)->send(new GuestTicketReplyMail($ticket, $request->body));
+            } catch (\Throwable $e) { \Log::warning('Guest ticket reply mail failed: '.$e->getMessage()); }
         }
         return back()->with('success', 'Antwort gesendet.');
     }

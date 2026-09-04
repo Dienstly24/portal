@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -48,7 +49,7 @@ class CommissionPool extends Model
     /** Fristen als Klartext - dieselbe Formulierung in Liste und Detail. */
     public function deadlineLabel(): string
     {
-        return 'Erwartet nach ' . $this->expected_months . ' Monaten, Prüffrist '
-            . $this->check_months . ' Monate';
+        return 'Erwartet nach '.$this->expected_months.' Monaten, Prüffrist '
+            .$this->check_months.' Monate';
     }
 }

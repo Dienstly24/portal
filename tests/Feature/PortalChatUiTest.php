@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Customer;
 use App\Models\CustomerMessage;
+use App\Models\CustomerMessageAttachment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -21,7 +22,7 @@ class PortalChatUiTest extends TestCase
         $user = User::factory()->create(['role' => 'customer', 'email' => $email, 'name' => 'Max Meyer']);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => '26' . str_pad((string) $user->id, 5, '0', STR_PAD_LEFT),
+            'customer_number' => '26'.str_pad((string) $user->id, 5, '0', STR_PAD_LEFT),
             'preferred_lang' => 'de',
         ]);
     }
@@ -67,7 +68,7 @@ class PortalChatUiTest extends TestCase
         $message = $this->staffMessage($customer);
 
         $this->actingAs($customer->user)
-            ->getJson(route('portal.messages.feed') . '?mark_read=1')
+            ->getJson(route('portal.messages.feed').'?mark_read=1')
             ->assertOk()
             ->assertJsonPath('unread', 0);
 
@@ -123,7 +124,7 @@ class PortalChatUiTest extends TestCase
 
         $response->assertOk()
             ->assertSee('chatpage', false)
-            ->assertSee('data-mid="' . $message->id . '"', false)
+            ->assertSee('data-mid="'.$message->id.'"', false)
             ->assertSee('Willkommen im Chat')
             ->assertSee(__('Ihr Dienstly24 Team'))
             ->assertSee(__('Anfrage stellen'));
@@ -133,18 +134,18 @@ class PortalChatUiTest extends TestCase
     {
         $customer = $this->makeCustomer();
         $message = $this->staffMessage($customer, 'Mit Anhang');
-        $attachment = \App\Models\CustomerMessageAttachment::create([
+        $attachment = CustomerMessageAttachment::create([
             'message_id' => $message->id,
             'uploaded_by' => $message->sender_id,
             'file_name' => 'police.pdf',
-            'file_path' => 'customers/' . $customer->id . '/messages/police.pdf',
+            'file_path' => 'customers/'.$customer->id.'/messages/police.pdf',
             'disk' => 'local',
         ]);
 
         $this->actingAs($customer->user)->get(route('portal.messages'))
             ->assertOk()
             ->assertSee('docpv-quicklook', false)
-            ->assertSee('data-preview-url="' . route('portal.messages.attachment.view', $attachment->id) . '"', false)
+            ->assertSee('data-preview-url="'.route('portal.messages.attachment.view', $attachment->id).'"', false)
             ->assertSee('data-preview-kind="pdf"', false);
     }
 

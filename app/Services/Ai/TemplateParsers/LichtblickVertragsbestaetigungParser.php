@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Models\Contract;
@@ -52,9 +53,9 @@ class LichtblickVertragsbestaetigungParser implements DocumentTemplateParser
         // einer Folgeseite auf, darf es die Bestaetigung nicht vortaeuschen.
         // Die WERTE liest der Parser weiterhin aus dem vollen Text.
         $head = $this->firstPage($text);
-        if (!str_contains(mb_strtoupper($head), 'LICHTBLICK')
-            || !preg_match('/Kundennummer:\s*\d{5,12}/iu', $head)
-            || !preg_match('/Vertragsnummer:\s*\d{5,15}/iu', $head)) {
+        if (! str_contains(mb_strtoupper($head), 'LICHTBLICK')
+            || ! preg_match('/Kundennummer:\s*\d{5,12}/iu', $head)
+            || ! preg_match('/Vertragsnummer:\s*\d{5,15}/iu', $head)) {
             return null;
         }
 
@@ -69,7 +70,7 @@ class LichtblickVertragsbestaetigungParser implements DocumentTemplateParser
             return null;
         }
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $sparteLabel = ($insurance['sparte'] ?? 'strom') === 'gas' ? 'Gas' : 'Strom';
         $isBestaetigung = mb_stripos($text, 'bestätigen wir Ihren Vertrag') !== false
             || mb_stripos($text, 'bestaetigen wir Ihren Vertrag') !== false;
@@ -77,18 +78,18 @@ class LichtblickVertragsbestaetigungParser implements DocumentTemplateParser
         return [
             'type' => 'energieauftrag',
             'confidence' => 78,
-            'summary' => 'LichtBlick ' . $sparteLabel
-                . ($isBestaetigung ? '-Vertragsbestaetigung' : '-Abschlagsuebersicht')
-                . ($name !== '' ? ' - ' . $name : '')
-                . ' - Vertrag ' . $insurance['contract_number']
-                . (isset($energie['customer_number']) ? ' - Kundennr. ' . $energie['customer_number'] : '')
-                . (isset($energie['tariff']) ? ' - ' . $energie['tariff'] : '')
-                . (isset($insurance['start_date']) ? ' - Lieferbeginn ' . $this->displayDate($insurance['start_date']) : '')
-                . (isset($insurance['premium_amount'])
-                    ? ' - Abschlag ' . number_format($insurance['premium_amount'], 2, ',', '.') . ' EUR/Monat' : '')
-                . ' - Felder gratis aus dem Schreiben gelesen (ohne KI).',
-            'title' => 'LichtBlick ' . ($isBestaetigung ? 'Vertragsbestaetigung' : 'Abschlagsuebersicht')
-                . ($name !== '' ? ' ' . $name : ''),
+            'summary' => 'LichtBlick '.$sparteLabel
+                .($isBestaetigung ? '-Vertragsbestaetigung' : '-Abschlagsuebersicht')
+                .($name !== '' ? ' - '.$name : '')
+                .' - Vertrag '.$insurance['contract_number']
+                .(isset($energie['customer_number']) ? ' - Kundennr. '.$energie['customer_number'] : '')
+                .(isset($energie['tariff']) ? ' - '.$energie['tariff'] : '')
+                .(isset($insurance['start_date']) ? ' - Lieferbeginn '.$this->displayDate($insurance['start_date']) : '')
+                .(isset($insurance['premium_amount'])
+                    ? ' - Abschlag '.number_format($insurance['premium_amount'], 2, ',', '.').' EUR/Monat' : '')
+                .' - Felder gratis aus dem Schreiben gelesen (ohne KI).',
+            'title' => 'LichtBlick '.($isBestaetigung ? 'Vertragsbestaetigung' : 'Abschlagsuebersicht')
+                .($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -133,7 +134,7 @@ class LichtblickVertragsbestaetigungParser implements DocumentTemplateParser
             $prev = trim($this->lines[$i - 1] ?? '');
             $anchored = ($name !== null && $prev !== '' && mb_stripos($prev, $name) !== false)
                 || mb_stripos($prev, 'Lieferstelle') !== false;
-            if (!$anchored) {
+            if (! $anchored) {
                 continue;
             }
             if (preg_match('/^\s*(.{2,60}?\p{L}\.?)\s+(\d+\s*[a-zA-Z]?)\s*$/u', $line, $s)
@@ -201,7 +202,7 @@ class LichtblickVertragsbestaetigungParser implements DocumentTemplateParser
         // Lieferbeginn: "Ab dem 15.08.2026 werden Sie ... versorgt" bzw.
         // "gültig ab dem 15.08.2026".
         if (preg_match('/\bab dem\s*(\d{2})\.(\d{2})\.(\d{4})/iu', $text, $m)) {
-            $raw['start_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['start_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
 
         // Monatlicher BRUTTO-Abschlag: "Ihr kuenftiger monatlicher Abschlag
@@ -214,7 +215,7 @@ class LichtblickVertragsbestaetigungParser implements DocumentTemplateParser
             foreach ($this->lines as $line) {
                 // Nur die TABELLENZEILE ("Abschlagszahlung 54,62 € ... 65,00 €")
                 // - nicht der Fliesstext "Uebersicht Ihrer Abschlagszahlungen".
-                if (!preg_match('/^\s*Abschlagszahlung\b/u', $line)) {
+                if (! preg_match('/^\s*Abschlagszahlung\b/u', $line)) {
                     continue;
                 }
                 if (preg_match_all('/(\d{1,4}(?:\.\d{3})*,\d{2})\s*€/u', $line, $mm) && $mm[1] !== []) {
@@ -233,6 +234,6 @@ class LichtblickVertragsbestaetigungParser implements DocumentTemplateParser
 
     private function displayDate(string $iso): string
     {
-        return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $iso, $m) ? $m[3] . '.' . $m[2] . '.' . $m[1] : $iso;
+        return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $iso, $m) ? $m[3].'.'.$m[2].'.'.$m[1] : $iso;
     }
 }

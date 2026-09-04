@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant;
 
 use App\Services\Ai\Assistant\Contracts\AssistantProviderInterface;
@@ -57,7 +58,7 @@ class ClaudeAssistantProvider implements AssistantProviderInterface
 
     public function turn(string $instructions, array $history, array $tools, int $maxOutputTokens = 700): AssistantTurn
     {
-        if (!$this->isEnabled()) {
+        if (! $this->isEnabled()) {
             throw new \RuntimeException('KI-Assistent ist nicht konfiguriert (ANTHROPIC_API_KEY fehlt).');
         }
 
@@ -80,7 +81,7 @@ class ClaudeAssistantProvider implements AssistantProviderInterface
             $payload['tools'] = array_map(fn ($t) => [
                 'name' => $t['name'],
                 'description' => $t['description'] ?? '',
-                'input_schema' => $t['parameters'] ?? ['type' => 'object', 'properties' => new \stdClass()],
+                'input_schema' => $t['parameters'] ?? ['type' => 'object', 'properties' => new \stdClass],
             ], $tools);
         }
 
@@ -93,13 +94,13 @@ class ClaudeAssistantProvider implements AssistantProviderInterface
                 ->connectTimeout((int) config('services.anthropic.assistant_connect_timeout', 10))
                 ->post($this->endpoint(), $payload);
         } catch (\Throwable $e) {
-            throw new \RuntimeException('KI-Dienst nicht erreichbar: ' . $e->getMessage());
+            throw new \RuntimeException('KI-Dienst nicht erreichbar: '.$e->getMessage());
         }
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             throw new \RuntimeException(
-                'KI-Dienst antwortete mit HTTP ' . $response->status()
-                . ' (' . substr((string) $response->json('error.message', ''), 0, 200) . ')'
+                'KI-Dienst antwortete mit HTTP '.$response->status()
+                .' ('.substr((string) $response->json('error.message', ''), 0, 200).')'
             );
         }
 
@@ -126,7 +127,7 @@ class ClaudeAssistantProvider implements AssistantProviderInterface
             $base = substr($base, 0, -3);
         }
 
-        return rtrim($base, '/') . '/v1/messages';
+        return rtrim($base, '/').'/v1/messages';
     }
 
     /**
@@ -175,7 +176,7 @@ class ClaudeAssistantProvider implements AssistantProviderInterface
                         'id' => (string) $item['call_id'],
                         'name' => (string) $item['name'],
                         // Anthropic erwartet ein Objekt, keinen JSON-String.
-                        'input' => is_array($arguments) && $arguments !== [] ? $arguments : new \stdClass(),
+                        'input' => is_array($arguments) && $arguments !== [] ? $arguments : new \stdClass,
                     ];
                     break;
 

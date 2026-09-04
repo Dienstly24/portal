@@ -102,8 +102,8 @@ class MediaLibraryTest extends TestCase
     public function test_svg_scripts_are_stripped(): void
     {
         $dirty = '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script>'
-            . '<rect width="10" height="10" onclick="alert(2)"/>'
-            . '<a href="javascript:alert(3)"><circle r="5"/></a></svg>';
+            .'<rect width="10" height="10" onclick="alert(2)"/>'
+            .'<a href="javascript:alert(3)"><circle r="5"/></a></svg>';
 
         $clean = SvgSanitizer::sanitize($dirty);
 
@@ -122,9 +122,9 @@ class MediaLibraryTest extends TestCase
     public function test_svg_smil_animation_elements_are_stripped(): void
     {
         $dirty = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">'
-            . '<a><set attributeName="href" to="javascript:alert(1)"/><circle r="5"/></a>'
-            . '<rect width="10" height="10"><animate attributeName="onload" to="alert(2)"/></rect>'
-            . '<animatetransform attributeName="transform" to="scale(2)"/></svg>';
+            .'<a><set attributeName="href" to="javascript:alert(1)"/><circle r="5"/></a>'
+            .'<rect width="10" height="10"><animate attributeName="onload" to="alert(2)"/></rect>'
+            .'<animatetransform attributeName="transform" to="scale(2)"/></svg>';
 
         $clean = SvgSanitizer::sanitize($dirty);
 

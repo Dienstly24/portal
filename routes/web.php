@@ -1,64 +1,113 @@
 <?php
 
+use App\Http\Controllers\ActivityReportController;
+use App\Http\Controllers\Admin\ContractController as AdminContractController;
+use App\Http\Controllers\Admin\CustomerDocumentController as AdminCustomerDocumentController;
+use App\Http\Controllers\Admin\DuplicateController as AdminDuplicateController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AdminCustomerChatController;
+use App\Http\Controllers\AiAssistantController;
 use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\Auth\MagicLoginController;
+use App\Http\Controllers\BannerController;
+use App\Http\Controllers\BannerSocialController;
+use App\Http\Controllers\ChangeNotificationController;
+use App\Http\Controllers\ChangeRequestReviewController;
+use App\Http\Controllers\CommissionController;
+use App\Http\Controllers\ComposeEmailController;
+use App\Http\Controllers\ContractCommissionController;
+use App\Http\Controllers\CustomerFamilyRelationController;
+use App\Http\Controllers\CustomerMessageController;
+use App\Http\Controllers\DocumentRequestController;
+use App\Http\Controllers\EmailAccountController;
+use App\Http\Controllers\EmailInboxController;
 use App\Http\Controllers\EmailMarketingController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\ErrorEventController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ImportExportController;
+use App\Http\Controllers\InternalChatController;
+use App\Http\Controllers\InternalMessageController;
+use App\Http\Controllers\InternalNotificationController;
+use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\LexofficeController;
+use App\Http\Controllers\MediaLibraryController;
+use App\Http\Controllers\MessageTemplateController;
+use App\Http\Controllers\MetaAdsController;
+use App\Http\Controllers\PartnerController;
+use App\Http\Controllers\PartnerPortalController;
+use App\Http\Controllers\PortalAccessController;
 use App\Http\Controllers\PortalController;
+use App\Http\Controllers\PortalMessageController;
+use App\Http\Controllers\ProvisionController;
+use App\Http\Controllers\ProvisionsmanagementController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SelfServiceController;
+use App\Http\Controllers\SeoController;
+use App\Http\Controllers\ServicePageAdminController;
+use App\Http\Controllers\ServicePageController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\SmartDocumentUploadController;
+use App\Http\Controllers\SocialLinkController;
+use App\Http\Controllers\SupportFormController;
+use App\Http\Controllers\SystemHealthController;
 use App\Http\Controllers\TarifrechnerController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TicketController;
+use App\Http\Controllers\UnsubscribeController;
+use App\Http\Controllers\VermittlerAbrechnungController;
+use App\Http\Controllers\WebsiteAssistantController;
+use App\Http\Controllers\WebsiteContactController;
+use App\Http\Controllers\WebsiteController;
+use App\Http\Controllers\WebsiteInquiryController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', \App\Http\Controllers\HomeController::class)->name('home');
+Route::get('/', HomeController::class)->name('home');
 
 // ===================== Marketing-Website (www.dienstly24.de) =====================
 // Serverseitig gerenderte Website (Merge 30.07.2026). '/' zeigt auf den
 // Website-Hosts die Startseite (HomeController), auf portal./admin. weiter
 // das Login-Verhalten. /website = Vorschau der Startseite auf jedem Host.
-Route::get('/website', [\App\Http\Controllers\WebsiteController::class, 'home'])->name('website.home');
-Route::post('/kontakt', [\App\Http\Controllers\WebsiteController::class, 'submitContact'])
+Route::get('/website', [WebsiteController::class, 'home'])->name('website.home');
+Route::post('/kontakt', [WebsiteController::class, 'submitContact'])
     ->middleware('throttle:8,1')
     ->name('website.contact.submit');
-Route::get('/kontakt/danke', [\App\Http\Controllers\WebsiteController::class, 'thanks'])->name('website.thanks');
+Route::get('/kontakt/danke', [WebsiteController::class, 'thanks'])->name('website.thanks');
 
 // SEO: dynamische robots.txt (hostabhaengig) + Sitemap aus echten Inhalten.
-Route::get('/robots.txt', [\App\Http\Controllers\SeoController::class, 'robots'])->name('seo.robots');
-Route::get('/sitemap.xml', [\App\Http\Controllers\SeoController::class, 'sitemap'])->name('seo.sitemap');
+Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
+Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap');
 
 // Alt-URLs der statischen Website (Google-Index/Backlinks): .html -> sauber.
 Route::get('/index.html', fn () => redirect('/', 301));
-Route::get('/{page}.html', fn (string $page) => redirect('/' . $page, 301))
-    ->whereIn('page', array_keys(\App\Http\Controllers\WebsiteController::LEGAL_PAGES));
+Route::get('/{page}.html', fn (string $page) => redirect('/'.$page, 301))
+    ->whereIn('page', array_keys(WebsiteController::LEGAL_PAGES));
 
 // Arabische Sprachversion: ECHTE URLs unter /ar (hreflang in den Views).
 Route::prefix('ar')->name('ar.')->middleware('forceLocale:ar')->group(function () {
-    Route::get('/', [\App\Http\Controllers\WebsiteController::class, 'home'])->name('website.home');
-    Route::get('/kontakt/danke', [\App\Http\Controllers\WebsiteController::class, 'thanks'])->name('website.thanks');
-    Route::get('/leistungen', [\App\Http\Controllers\ServicePageController::class, 'index'])->name('services.index');
-    Route::get('/leistungen/{slug}', [\App\Http\Controllers\ServicePageController::class, 'show'])->name('services.show');
-    Route::get('/{page}', [\App\Http\Controllers\LegalPageController::class, 'show'])
-        ->whereIn('page', array_merge(array_keys(\App\Http\Controllers\WebsiteController::LEGAL_PAGES), ['kontakt']))
+    Route::get('/', [WebsiteController::class, 'home'])->name('website.home');
+    Route::get('/kontakt/danke', [WebsiteController::class, 'thanks'])->name('website.thanks');
+    Route::get('/leistungen', [ServicePageController::class, 'index'])->name('services.index');
+    Route::get('/leistungen/{slug}', [ServicePageController::class, 'show'])->name('services.show');
+    Route::get('/{page}', [LegalPageController::class, 'show'])
+        ->whereIn('page', array_merge(array_keys(WebsiteController::LEGAL_PAGES), ['kontakt']))
         ->name('legal');
 });
 // ================================================================================
 
 // Öffentliche Leistungsseiten (Definition + Kurzinfos + FAQ je Leistung).
 // Das Anfrageformular erzeugt ein Ticket im System (source=website).
-Route::get('/leistungen', [\App\Http\Controllers\ServicePageController::class, 'index'])->name('services.index');
-Route::get('/leistungen/{slug}', [\App\Http\Controllers\ServicePageController::class, 'show'])->name('services.show');
-Route::post('/leistungen/{slug}/anfrage', [\App\Http\Controllers\ServicePageController::class, 'submit'])
+Route::get('/leistungen', [ServicePageController::class, 'index'])->name('services.index');
+Route::get('/leistungen/{slug}', [ServicePageController::class, 'show'])->name('services.show');
+Route::post('/leistungen/{slug}/anfrage', [ServicePageController::class, 'submit'])
     ->middleware('throttle:8,1')
     ->name('services.submit');
 
 // Öffentliche Rechts-/Infoseiten (Impressum, AGB, Datenschutzerklärung,
 // Cookie-Richtlinie, Kontakt, Widerruf, Erstinformation, Bildnachweise) –
 // IMMER erreichbar. Auf den Website-Hosts rendern sie die Website-Versionen.
-Route::get('/{page}', [\App\Http\Controllers\LegalPageController::class, 'show'])
-    ->whereIn('page', array_merge(array_keys(\App\Http\Controllers\WebsiteController::LEGAL_PAGES), ['kontakt']))
+Route::get('/{page}', [LegalPageController::class, 'show'])
+    ->whereIn('page', array_merge(array_keys(WebsiteController::LEGAL_PAGES), ['kontakt']))
     ->name('legal');
 
 // Sprachumschalter (de/ar): für Gäste per Session, für eingeloggte Kunden
@@ -75,32 +124,32 @@ Route::get('/sprache/{locale}', function (string $locale) {
 
 // Social-Media-Kurzlinks (/s/{code}): oeffentlich, zaehlt den Klick je
 // Plattform (Banner-Social-Publishing) und leitet zum Klick-Ziel weiter.
-Route::get('/s/{code}', [\App\Http\Controllers\SocialLinkController::class, 'redirect'])
+Route::get('/s/{code}', [SocialLinkController::class, 'redirect'])
     ->middleware('throttle:120,1')->name('social.redirect');
 
 // Abmeldung von Marketing-Mails (UWG §7 / DSGVO): öffentlich, ohne Login,
 // Token pro Kunde. Ratenbegrenzt gegen Token-Raten.
-Route::get('/abmelden/{token}', [\App\Http\Controllers\UnsubscribeController::class, 'handle'])
+Route::get('/abmelden/{token}', [UnsubscribeController::class, 'handle'])
     ->middleware('throttle:30,1')
     ->name('unsubscribe');
 // Ein-Klick-Abmeldung (RFC 8058): der native "Abmelden"-Button von
 // Gmail/Yahoo/Apple sendet einen POST an die List-Unsubscribe-URL. CSRF-
 // Ausnahme in bootstrap/app.php (kein Session-Kontext bei diesem Server-POST).
-Route::post('/abmelden/{token}', [\App\Http\Controllers\UnsubscribeController::class, 'oneClick'])
+Route::post('/abmelden/{token}', [UnsubscribeController::class, 'oneClick'])
     ->middleware('throttle:30,1')
     ->name('unsubscribe.oneclick');
 
 // Magischer Erst-Login aus der Willkommens-Mail: signiert (90 Tage),
 // nur Kunden-Accounts, ratenbegrenzt. Details im MagicLoginController.
-Route::get('/magic-login/{user}', \App\Http\Controllers\Auth\MagicLoginController::class)
+Route::get('/magic-login/{user}', MagicLoginController::class)
     ->middleware(['signed', 'throttle:10,1'])
     ->name('magic.login');
 
 // Hilfe-/Kontaktformular: oeffentlich; der Button in der Willkommens-Mail
 // bringt ein verschluesseltes Kunden-Token mit -> Formular ist vorbefuellt
 // und die Anfrage wird automatisch als Ticket der Kundenakte zugeordnet.
-Route::get('/hilfe', [\App\Http\Controllers\SupportFormController::class, 'show'])->name('support.form');
-Route::post('/hilfe', [\App\Http\Controllers\SupportFormController::class, 'submit'])
+Route::get('/hilfe', [SupportFormController::class, 'show'])->name('support.form');
+Route::post('/hilfe', [SupportFormController::class, 'submit'])
     ->middleware('throttle:8,1')
     ->name('support.submit');
 
@@ -123,20 +172,20 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     Route::get('/documents', [PortalController::class, 'documents'])->name('documents');
     Route::post('/documents', [PortalController::class, 'documentUpload'])->middleware('throttle:20,10')->name('documents.upload');
     // Smart Document Upload: Mehrseiten-Scanner (Fotos/Bilder/PDF) + KI-Analyse
-    Route::post('/documents/scan', [\App\Http\Controllers\SmartDocumentUploadController::class, 'portalStore'])
+    Route::post('/documents/scan', [SmartDocumentUploadController::class, 'portalStore'])
         ->middleware('throttle:20,10')->name('documents.scan');
-    Route::get('/documents/{id}/analyse-status', [\App\Http\Controllers\SmartDocumentUploadController::class, 'portalStatus'])
+    Route::get('/documents/{id}/analyse-status', [SmartDocumentUploadController::class, 'portalStatus'])
         ->middleware('throttle:120,1')->name('documents.analyse_status');
     Route::post('/document-requests/{id}/upload', [PortalController::class, 'documentRequestUpload'])->middleware('throttle:20,10')->name('document_requests.upload');
     Route::get('/notifications', [PortalController::class, 'notifications'])->name('notifications');
     Route::post('/notifications/{id}/read', [PortalController::class, 'notificationRead'])->name('notifications.read');
     // Direktnachrichten Berater <-> Kunde (Portal-Chat mit Anhaengen)
-    Route::get('/nachrichten', [\App\Http\Controllers\PortalMessageController::class, 'index'])->name('messages');
-    Route::get('/nachrichten/feed', [\App\Http\Controllers\PortalMessageController::class, 'feed'])
+    Route::get('/nachrichten', [PortalMessageController::class, 'index'])->name('messages');
+    Route::get('/nachrichten/feed', [PortalMessageController::class, 'feed'])
         ->middleware('throttle:120,1')->name('messages.feed');
-    Route::post('/nachrichten', [\App\Http\Controllers\PortalMessageController::class, 'store'])->name('messages.store');
-    Route::get('/nachrichten/anhang/{id}', [\App\Http\Controllers\PortalMessageController::class, 'downloadAttachment'])->name('messages.attachment');
-    Route::get('/nachrichten/anhang/{id}/ansehen', [\App\Http\Controllers\PortalMessageController::class, 'viewAttachment'])->name('messages.attachment.view');
+    Route::post('/nachrichten', [PortalMessageController::class, 'store'])->name('messages.store');
+    Route::get('/nachrichten/anhang/{id}', [PortalMessageController::class, 'downloadAttachment'])->name('messages.attachment');
+    Route::get('/nachrichten/anhang/{id}/ansehen', [PortalMessageController::class, 'viewAttachment'])->name('messages.attachment.view');
     Route::get('/banner/{id}/interesse', [PortalController::class, 'bannerInterest'])->name('banner.interest');
     Route::get('/banner/{id}/klick', [PortalController::class, 'bannerClick'])->name('banner.click');
     Route::post('/banner/{id}/schliessen', [PortalController::class, 'bannerDismiss'])->name('banner.dismiss');
@@ -147,20 +196,20 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     Route::post('/email-connection/revoke', [PortalController::class, 'emailConnectionRevoke'])->name('email_connection.revoke');
 
     // Self-Service (jede Aktion erzeugt nur einen Change Request)
-    Route::get('/family', [\App\Http\Controllers\SelfServiceController::class, 'family'])->name('family');
-    Route::post('/family', [\App\Http\Controllers\SelfServiceController::class, 'familyStore'])->name('family.store');
-    Route::post('/family/{id}/change', [\App\Http\Controllers\SelfServiceController::class, 'familyChange'])->name('family.change');
-    Route::post('/family/{id}/delete', [\App\Http\Controllers\SelfServiceController::class, 'familyDelete'])->name('family.delete');
-    Route::get('/addresses', [\App\Http\Controllers\SelfServiceController::class, 'addresses'])->name('addresses');
-    Route::post('/addresses', [\App\Http\Controllers\SelfServiceController::class, 'addressStore'])->name('addresses.store');
-    Route::post('/addresses/{id}/change', [\App\Http\Controllers\SelfServiceController::class, 'addressChange'])->name('addresses.change');
-    Route::get('/contacts', [\App\Http\Controllers\SelfServiceController::class, 'contacts'])->name('contacts');
-    Route::post('/contacts', [\App\Http\Controllers\SelfServiceController::class, 'contactStore'])->name('contacts.store');
-    Route::post('/contacts/{id}/change', [\App\Http\Controllers\SelfServiceController::class, 'contactChange'])->name('contacts.change');
-    Route::get('/bank', [\App\Http\Controllers\SelfServiceController::class, 'bank'])->name('bank');
-    Route::post('/bank', [\App\Http\Controllers\SelfServiceController::class, 'bankStore'])->name('bank.store');
-    Route::post('/contracts/report', [\App\Http\Controllers\SelfServiceController::class, 'contractReport'])->name('contracts.report');
-    Route::post('/contracts/{id}/change', [\App\Http\Controllers\SelfServiceController::class, 'contractChange'])->name('contracts.change');
+    Route::get('/family', [SelfServiceController::class, 'family'])->name('family');
+    Route::post('/family', [SelfServiceController::class, 'familyStore'])->name('family.store');
+    Route::post('/family/{id}/change', [SelfServiceController::class, 'familyChange'])->name('family.change');
+    Route::post('/family/{id}/delete', [SelfServiceController::class, 'familyDelete'])->name('family.delete');
+    Route::get('/addresses', [SelfServiceController::class, 'addresses'])->name('addresses');
+    Route::post('/addresses', [SelfServiceController::class, 'addressStore'])->name('addresses.store');
+    Route::post('/addresses/{id}/change', [SelfServiceController::class, 'addressChange'])->name('addresses.change');
+    Route::get('/contacts', [SelfServiceController::class, 'contacts'])->name('contacts');
+    Route::post('/contacts', [SelfServiceController::class, 'contactStore'])->name('contacts.store');
+    Route::post('/contacts/{id}/change', [SelfServiceController::class, 'contactChange'])->name('contacts.change');
+    Route::get('/bank', [SelfServiceController::class, 'bank'])->name('bank');
+    Route::post('/bank', [SelfServiceController::class, 'bankStore'])->name('bank.store');
+    Route::post('/contracts/report', [SelfServiceController::class, 'contractReport'])->name('contracts.report');
+    Route::post('/contracts/{id}/change', [SelfServiceController::class, 'contractChange'])->name('contracts.change');
     Route::get('/contracts/{id}', [PortalController::class, 'contractShow'])->name('contracts.show');
     // KFZ: Kunde meldet den aktuellen Kilometerstand (Historie bleibt erhalten)
     Route::post('/contracts/{id}/kilometerstand', [PortalController::class, 'contractMileageStore'])
@@ -168,7 +217,7 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
     // Energie: Kunde meldet den Zaehlerstand (Wert und/oder Zaehlerfoto)
     Route::post('/contracts/{id}/zaehlerstand', [PortalController::class, 'contractMeterStore'])
         ->middleware('throttle:10,1')->name('contracts.meter');
-    Route::get('/change-requests', [\App\Http\Controllers\SelfServiceController::class, 'changeRequests'])->name('change_requests');
+    Route::get('/change-requests', [SelfServiceController::class, 'changeRequests'])->name('change_requests');
     Route::get('/documents/{id}/download', [PortalController::class, 'documentDownload'])->name('documents.download');
     Route::get('/documents/{id}/view', [PortalController::class, 'documentView'])->name('documents.view');
     Route::post('/profile', [PortalController::class, 'profileUpdate'])->name('profile.update');
@@ -181,12 +230,12 @@ Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')-
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'role:partner'])->prefix('partner')->name('partner.')->group(function () {
-    Route::get('/', [\App\Http\Controllers\PartnerPortalController::class, 'dashboard'])->name('dashboard');
-    Route::get('/kunden', [\App\Http\Controllers\PartnerPortalController::class, 'customers'])->name('customers');
-    Route::get('/kunden/{id}', [\App\Http\Controllers\PartnerPortalController::class, 'customerShow'])->name('customer');
-    Route::get('/provisionen', [\App\Http\Controllers\PartnerPortalController::class, 'commissions'])->name('commissions');
-    Route::get('/profil', [\App\Http\Controllers\PartnerPortalController::class, 'profile'])->name('profile');
-    Route::post('/profil', [\App\Http\Controllers\PartnerPortalController::class, 'profileUpdate'])->name('profile.update');
+    Route::get('/', [PartnerPortalController::class, 'dashboard'])->name('dashboard');
+    Route::get('/kunden', [PartnerPortalController::class, 'customers'])->name('customers');
+    Route::get('/kunden/{id}', [PartnerPortalController::class, 'customerShow'])->name('customer');
+    Route::get('/provisionen', [PartnerPortalController::class, 'commissions'])->name('commissions');
+    Route::get('/profil', [PartnerPortalController::class, 'profile'])->name('profile');
+    Route::post('/profil', [PartnerPortalController::class, 'profileUpdate'])->name('profile.update');
 });
 
 require __DIR__.'/auth.php';
@@ -213,23 +262,23 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         ->name('customers.betreuer')->middleware('role:admin,manager');
     // Dubletten-Pruefung: MUSS vor /customers/{id} stehen, sonst wuerde
     // "duplicates" als Kunden-ID interpretiert.
-    Route::get('/customers/duplicates', [AdminController::class, 'duplicates'])->name('customers.duplicates');
+    Route::get('/customers/duplicates', [AdminDuplicateController::class, 'duplicates'])->name('customers.duplicates');
     // Sammel-Zusammenfuehrung: nur admin/manager (Massenaktion, entfernt
     // leere Duplikat-Akten - analog zur Loesch-Beschraenkung).
-    Route::post('/customers/duplicates/merge', [AdminController::class, 'duplicatesMerge'])
+    Route::post('/customers/duplicates/merge', [AdminDuplicateController::class, 'duplicatesMerge'])
         ->name('customers.duplicates.merge')->middleware('role:admin,manager');
     // Ein-Klick: alle "sicheren" Treffer (Score >= 40 %) automatisch vereinen.
-    Route::post('/customers/duplicates/merge-all', [AdminController::class, 'duplicatesMergeAll'])
+    Route::post('/customers/duplicates/merge-all', [AdminDuplicateController::class, 'duplicatesMergeAll'])
         ->name('customers.duplicates.merge_all')->middleware('role:admin,manager');
     // "Kein Duplikat" -> Paar als Beziehung markieren (Verwandte Kunden).
-    Route::post('/customers/duplicates/dismiss', [AdminController::class, 'dismissDuplicate'])
+    Route::post('/customers/duplicates/dismiss', [AdminDuplicateController::class, 'dismissDuplicate'])
         ->name('customers.duplicates.dismiss');
-    Route::post('/customers/duplicates/dismiss-bulk', [AdminController::class, 'dismissBulk'])
+    Route::post('/customers/duplicates/dismiss-bulk', [AdminDuplicateController::class, 'dismissBulk'])
         ->name('customers.duplicates.dismiss_bulk');
     // Verwandte Kunden (Beziehungen). GET vor /customers/{id} registrieren.
-    Route::get('/customers/relationships', [AdminController::class, 'relationships'])->name('customers.relationships');
-    Route::post('/customers/relationships/{id}/type', [AdminController::class, 'relationshipSetType'])->name('customers.relationships.type');
-    Route::delete('/customers/relationships/{id}', [AdminController::class, 'relationshipDelete'])->name('customers.relationships.delete');
+    Route::get('/customers/relationships', [AdminDuplicateController::class, 'relationships'])->name('customers.relationships');
+    Route::post('/customers/relationships/{id}/type', [AdminDuplicateController::class, 'relationshipSetType'])->name('customers.relationships.type');
+    Route::delete('/customers/relationships/{id}', [AdminDuplicateController::class, 'relationshipDelete'])->name('customers.relationships.delete');
     Route::put('/customers/notes/{id}/done', [AdminController::class, 'noteMarkDone'])->name('customer.note.done');
     Route::get('/customers/{id}', [AdminController::class, 'customerShow'])->name('customer');
     Route::get('/customers/{id}/edit', [AdminController::class, 'customerEdit'])->name('customer.edit');
@@ -240,27 +289,27 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
 
     // Portal-Zugang-Controls in der Kundenakte (nur admin)
     Route::middleware('role:admin')->group(function () {
-        Route::post('/customers/{id}/portal/invite', [\App\Http\Controllers\PortalAccessController::class, 'invite'])->name('customer.portal.invite');
-        Route::post('/customers/{id}/portal/reset-link', [\App\Http\Controllers\PortalAccessController::class, 'sendResetLink'])->name('customer.portal.reset_link');
-        Route::post('/customers/{id}/portal/reset', [\App\Http\Controllers\PortalAccessController::class, 'reset'])->name('customer.portal.reset');
-        Route::post('/customers/{id}/portal/toggle', [\App\Http\Controllers\PortalAccessController::class, 'toggle'])->name('customer.portal.toggle');
+        Route::post('/customers/{id}/portal/invite', [PortalAccessController::class, 'invite'])->name('customer.portal.invite');
+        Route::post('/customers/{id}/portal/reset-link', [PortalAccessController::class, 'sendResetLink'])->name('customer.portal.reset_link');
+        Route::post('/customers/{id}/portal/reset', [PortalAccessController::class, 'reset'])->name('customer.portal.reset');
+        Route::post('/customers/{id}/portal/toggle', [PortalAccessController::class, 'toggle'])->name('customer.portal.toggle');
     });
     // Kundenzusammenfuehrung loescht den Duplikat-Datensatz + Login endgueltig
     // -> wie die anderen Loeschpfade NUR admin (DSGVO/Sicherheitsregel:
     // Mitarbeiter/Manager/Support duerfen nicht loeschen).
-    Route::get('/customers/{id}/merge', [AdminController::class, 'mergeForm'])->name('customer.merge')->middleware('role:admin');
-    Route::post('/customers/{id}/merge', [AdminController::class, 'mergeCustomers'])->name('customer.merge.do')->middleware('role:admin');
-    Route::get('/attachments/{id}/download', [AdminController::class, 'downloadAttachment'])->name('attachment.download');
+    Route::get('/customers/{id}/merge', [AdminDuplicateController::class, 'mergeForm'])->name('customer.merge')->middleware('role:admin');
+    Route::post('/customers/{id}/merge', [AdminDuplicateController::class, 'mergeCustomers'])->name('customer.merge.do')->middleware('role:admin');
+    Route::get('/attachments/{id}/download', [AdminCustomerDocumentController::class, 'downloadAttachment'])->name('attachment.download');
     Route::get('/customers/{id}/timeline', [AdminController::class, 'customerTimeline'])->name('customer.timeline');
     Route::post('/customers/{id}/notes', [AdminController::class, 'storeNote'])->name('customer.note.store');
-    Route::post('/customers/{id}/documents', [AdminController::class, 'storeDocument'])->name('customer.document.store');
+    Route::post('/customers/{id}/documents', [AdminCustomerDocumentController::class, 'storeDocument'])->name('customer.document.store');
     Route::post('/customers/{id}/family', [AdminController::class, 'storeFamily'])->name('customer.family.store');
     // Familien- und Kundenbeziehungen: verknuepft ausschliesslich BESTEHENDE
     // Kundenakten (es entsteht nie ein neuer Kunde, es wird nie einer geloescht).
-    Route::get('/customers/{id}/familie/kunden-suche', [\App\Http\Controllers\CustomerFamilyRelationController::class, 'search'])->name('customer.family.search');
-    Route::post('/customers/{id}/familie/verknuepfen', [\App\Http\Controllers\CustomerFamilyRelationController::class, 'link'])->name('customer.family.link');
-    Route::post('/customers/{id}/familie/{relation}/rolle', [\App\Http\Controllers\CustomerFamilyRelationController::class, 'updateRole'])->name('customer.family.role');
-    Route::delete('/customers/{id}/familie/{relation}', [\App\Http\Controllers\CustomerFamilyRelationController::class, 'unlink'])->name('customer.family.unlink');
+    Route::get('/customers/{id}/familie/kunden-suche', [CustomerFamilyRelationController::class, 'search'])->name('customer.family.search');
+    Route::post('/customers/{id}/familie/verknuepfen', [CustomerFamilyRelationController::class, 'link'])->name('customer.family.link');
+    Route::post('/customers/{id}/familie/{relation}/rolle', [CustomerFamilyRelationController::class, 'updateRole'])->name('customer.family.role');
+    Route::delete('/customers/{id}/familie/{relation}', [CustomerFamilyRelationController::class, 'unlink'])->name('customer.family.unlink');
     // Loeschen als DELETE (nicht GET): zustandsaendernde Aktion gehoert hinter
     // CSRF-Schutz; ein GET waere per Link-Prefetch/Scanner ungewollt ausloesbar.
     Route::delete('/customers/family/{id}', [AdminController::class, 'destroyFamily'])->name('customer.family.delete');
@@ -274,222 +323,222 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // "Kinder werden 15": Familienmitglieder mit bevorstehender
     // Verselbststaendigung. Bewusst NICHT unter /customers/... - dort wuerde
     // die Route-Reihenfolge sie als Kunden-ID missdeuten.
-    Route::get('/familie/uebergaenge', [\App\Http\Controllers\CustomerFamilyRelationController::class, 'transitions'])->name('family.transitions');
-    Route::post('/familie/uebergaenge/{relation}/vorbereiten', [\App\Http\Controllers\CustomerFamilyRelationController::class, 'prepareTransition'])->name('family.prepare_transition');
+    Route::get('/familie/uebergaenge', [CustomerFamilyRelationController::class, 'transitions'])->name('family.transitions');
+    Route::post('/familie/uebergaenge/{relation}/vorbereiten', [CustomerFamilyRelationController::class, 'prepareTransition'])->name('family.prepare_transition');
 
     // Verträge
-    Route::get('/contracts', [AdminController::class, 'contracts'])->name('contracts');
-    Route::get('/contracts/new', [AdminController::class, 'contractNew'])->name('contract.new');
+    Route::get('/contracts', [AdminContractController::class, 'contracts'])->name('contracts');
+    Route::get('/contracts/new', [AdminContractController::class, 'contractNew'])->name('contract.new');
 
-    Route::get('/contracts/create/{customerId}', [AdminController::class, 'contractCreate'])->name('contract.create');
-    Route::get('/contracts/{id}/edit', [AdminController::class, 'contractEdit'])->name('contract.edit');
-    Route::put('/contracts/{id}', [AdminController::class, 'contractUpdate'])->name('contract.update');
-    Route::delete('/contracts/{id}', [AdminController::class, 'contractDestroy'])->name('contract.destroy');
-    Route::post('/contracts/{customerId}', [AdminController::class, 'contractStore'])->name('contract.store');
+    Route::get('/contracts/create/{customerId}', [AdminContractController::class, 'contractCreate'])->name('contract.create');
+    Route::get('/contracts/{id}/edit', [AdminContractController::class, 'contractEdit'])->name('contract.edit');
+    Route::put('/contracts/{id}', [AdminContractController::class, 'contractUpdate'])->name('contract.update');
+    Route::delete('/contracts/{id}', [AdminContractController::class, 'contractDestroy'])->name('contract.destroy');
+    Route::post('/contracts/{customerId}', [AdminContractController::class, 'contractStore'])->name('contract.store');
     // Energie: Zaehlerstand von Hand erfassen; Loeschen einer fehlerhaften
     // Ablesung bleibt admin/manager vorbehalten (Historie ist Datenbestand).
-    Route::post('/contracts/{id}/zaehlerstand', [AdminController::class, 'contractMeterReadingStore'])
+    Route::post('/contracts/{id}/zaehlerstand', [AdminContractController::class, 'contractMeterReadingStore'])
         ->name('contract.meter_reading.store');
-    Route::delete('/contracts/{id}/zaehlerstand/{readingId}', [AdminController::class, 'contractMeterReadingDestroy'])
+    Route::delete('/contracts/{id}/zaehlerstand/{readingId}', [AdminContractController::class, 'contractMeterReadingDestroy'])
         ->middleware('role:admin,manager')->name('contract.meter_reading.destroy');
 
     // Tickets (Workflow: Status, Zuweisung, Eigenschaften, Notizen, Antwort)
-    Route::get('/tickets', [\App\Http\Controllers\TicketController::class, 'index'])->name('tickets');
+    Route::get('/tickets', [TicketController::class, 'index'])->name('tickets');
     // Statistik VOR /tickets/{id} registrieren (sonst faengt {id} die URL ab)
-    Route::get('/tickets/statistik', [\App\Http\Controllers\TicketController::class, 'stats'])->name('tickets.stats')->middleware('role:admin,manager');
+    Route::get('/tickets/statistik', [TicketController::class, 'stats'])->name('tickets.stats')->middleware('role:admin,manager');
     // Bulk-Aktionen der Liste (Status/Zuweisung/Prioritaet/Papierkorb, max. 30)
-    Route::post('/tickets/bulk', [\App\Http\Controllers\TicketController::class, 'bulk'])->name('tickets.bulk');
-    Route::get('/tickets/{id}', [\App\Http\Controllers\TicketController::class, 'show'])->name('ticket');
-    Route::post('/tickets/{id}/reply', [\App\Http\Controllers\TicketController::class, 'reply'])->name('ticket.reply');
-    Route::post('/tickets/{id}/status', [\App\Http\Controllers\TicketController::class, 'status'])->name('ticket.status');
-    Route::post('/tickets/{id}/update', [\App\Http\Controllers\TicketController::class, 'updateMeta'])->name('ticket.update');
-    Route::post('/tickets/{id}/note', [\App\Http\Controllers\TicketController::class, 'note'])->name('ticket.note');
+    Route::post('/tickets/bulk', [TicketController::class, 'bulk'])->name('tickets.bulk');
+    Route::get('/tickets/{id}', [TicketController::class, 'show'])->name('ticket');
+    Route::post('/tickets/{id}/reply', [TicketController::class, 'reply'])->name('ticket.reply');
+    Route::post('/tickets/{id}/status', [TicketController::class, 'status'])->name('ticket.status');
+    Route::post('/tickets/{id}/update', [TicketController::class, 'updateMeta'])->name('ticket.update');
+    Route::post('/tickets/{id}/note', [TicketController::class, 'note'])->name('ticket.note');
     // Loeschen = Papierkorb (Soft Delete, admin/manager); endgueltig NUR admin
     // und nur aus dem Papierkorb (zweistufiger Schutz). Mitarbeiter/Support
     // loeschen NIE - analog zur Kundenloeschung.
-    Route::delete('/tickets/{id}', [\App\Http\Controllers\TicketController::class, 'destroy'])->name('ticket.delete')->middleware('role:admin,manager');
-    Route::post('/tickets/{id}/restore', [\App\Http\Controllers\TicketController::class, 'restore'])->name('ticket.restore')->middleware('role:admin,manager');
-    Route::delete('/tickets/{id}/force', [\App\Http\Controllers\TicketController::class, 'forceDelete'])->name('ticket.forcedelete')->middleware('role:admin');
+    Route::delete('/tickets/{id}', [TicketController::class, 'destroy'])->name('ticket.delete')->middleware('role:admin,manager');
+    Route::post('/tickets/{id}/restore', [TicketController::class, 'restore'])->name('ticket.restore')->middleware('role:admin,manager');
+    Route::delete('/tickets/{id}/force', [TicketController::class, 'forceDelete'])->name('ticket.forcedelete')->middleware('role:admin');
 
     // Anfragen (Website + E-Mail info@): Leads mit Kontaktdaten sind sensibel -
     // wie der E-Mail-Posteingang nur admin/manager/support (das Nav-Item war
     // bereits so eingeschraenkt, die Routen bisher aber nicht).
     Route::middleware('role:admin,manager,support')->group(function () {
         Route::get('/inquiries', [AdminController::class, 'inquiries'])->name('inquiries');
-        Route::get('/inquiries/create', [\App\Http\Controllers\WebsiteInquiryController::class, 'createManual'])->name('inquiries.create');
-        Route::post('/inquiries', [\App\Http\Controllers\WebsiteInquiryController::class, 'storeManual'])->name('inquiries.store');
+        Route::get('/inquiries/create', [WebsiteInquiryController::class, 'createManual'])->name('inquiries.create');
+        Route::post('/inquiries', [WebsiteInquiryController::class, 'storeManual'])->name('inquiries.store');
     });
 
     // Genehmigungen
 
     // Kundenänderungen (Self-Service Genehmigungsworkflow)
-    Route::get('/change-requests', [\App\Http\Controllers\ChangeRequestReviewController::class, 'index'])->name('change_requests');
-    Route::post('/change-requests/{id}/action', [\App\Http\Controllers\ChangeRequestReviewController::class, 'action'])->name('change_requests.action');
-    Route::get('/change-requests/{id}/document', [\App\Http\Controllers\ChangeRequestReviewController::class, 'document'])->name('change_requests.document');
+    Route::get('/change-requests', [ChangeRequestReviewController::class, 'index'])->name('change_requests');
+    Route::post('/change-requests/{id}/action', [ChangeRequestReviewController::class, 'action'])->name('change_requests.action');
+    Route::get('/change-requests/{id}/document', [ChangeRequestReviewController::class, 'document'])->name('change_requests.document');
     // Nachweis (Ausweis/Meldebescheinigung/Kontonachweis) + automatische Pruefung
-    Route::get('/change-requests/nachweis/{id}', [\App\Http\Controllers\ChangeRequestReviewController::class, 'proof'])->name('change_requests.proof');
-    Route::post('/change-requests/{id}/nachweis-pruefen', [\App\Http\Controllers\ChangeRequestReviewController::class, 'recheck'])->name('change_requests.recheck');
+    Route::get('/change-requests/nachweis/{id}', [ChangeRequestReviewController::class, 'proof'])->name('change_requests.proof');
+    Route::post('/change-requests/{id}/nachweis-pruefen', [ChangeRequestReviewController::class, 'recheck'])->name('change_requests.recheck');
     // Rueckfrage an den Kunden (fuehrt direkt in die Unterhaltung)
-    Route::post('/change-requests/{id}/rueckfrage', [\App\Http\Controllers\ChangeRequestReviewController::class, 'ask'])->name('change_requests.ask');
+    Route::post('/change-requests/{id}/rueckfrage', [ChangeRequestReviewController::class, 'ask'])->name('change_requests.ask');
     // Mitteilungen an die Gesellschaften (nach der Freigabe vorbereitet)
-    Route::get('/change-requests/{id}/mitteilungen', [\App\Http\Controllers\ChangeNotificationController::class, 'index'])->name('change_requests.notifications');
-    Route::post('/mitteilungen/{id}', [\App\Http\Controllers\ChangeNotificationController::class, 'update'])->name('change_notifications.update');
-    Route::post('/mitteilungen/{id}/senden', [\App\Http\Controllers\ChangeNotificationController::class, 'send'])->name('change_notifications.send');
-    Route::post('/mitteilungen/{id}/erledigt', [\App\Http\Controllers\ChangeNotificationController::class, 'skip'])->name('change_notifications.skip');
+    Route::get('/change-requests/{id}/mitteilungen', [ChangeNotificationController::class, 'index'])->name('change_requests.notifications');
+    Route::post('/mitteilungen/{id}', [ChangeNotificationController::class, 'update'])->name('change_notifications.update');
+    Route::post('/mitteilungen/{id}/senden', [ChangeNotificationController::class, 'send'])->name('change_notifications.send');
+    Route::post('/mitteilungen/{id}/erledigt', [ChangeNotificationController::class, 'skip'])->name('change_notifications.skip');
     // Smart Document Upload (CRM): Dokumenten-Eingang, Drag&Drop-Analyse, Zuordnung
-    Route::get('/dokumenten-eingang', [\App\Http\Controllers\SmartDocumentUploadController::class, 'inbox'])->name('documents.inbox');
+    Route::get('/dokumenten-eingang', [SmartDocumentUploadController::class, 'inbox'])->name('documents.inbox');
     // Rate-Limits bewusst grosszuegig (10-fach ggue. Ausgangswert): der
     // Mitarbeiter arbeitet den Dokumenten-Eingang zuegig im Stapel ab (Kunde
     // anlegen/zuordnen im Sekundentakt). Enge Limits loesten faelschlich
     // HTTP 429 ("Zu viele Anfragen") aus. Das Throttle bleibt als Missbrauchs-
     // Bremse erhalten, behindert aber den normalen Stapelbetrieb nicht mehr.
-    Route::post('/documents/smart-upload', [\App\Http\Controllers\SmartDocumentUploadController::class, 'adminStore'])
+    Route::post('/documents/smart-upload', [SmartDocumentUploadController::class, 'adminStore'])
         ->middleware('throttle:300,10')->name('documents.smart_upload');
-    Route::get('/documents/customer-search', [\App\Http\Controllers\SmartDocumentUploadController::class, 'customerSearch'])
+    Route::get('/documents/customer-search', [SmartDocumentUploadController::class, 'customerSearch'])
         ->middleware('throttle:600,1')->name('documents.customer_search');
     // Vorschlaege beim Oeffnen des Zuordnungs-Dialogs (keine eigene Eingabe
     // noetig) - gleiches grosszuegiges Limit wie die manuelle Kundensuche.
-    Route::get('/documents/{id}/kunden-vorschlaege', [\App\Http\Controllers\SmartDocumentUploadController::class, 'customerSuggestions'])
+    Route::get('/documents/{id}/kunden-vorschlaege', [SmartDocumentUploadController::class, 'customerSuggestions'])
         ->middleware('throttle:600,1')->name('documents.customer_suggestions');
-    Route::get('/documents/{id}/analyse-status', [\App\Http\Controllers\SmartDocumentUploadController::class, 'adminStatus'])
+    Route::get('/documents/{id}/analyse-status', [SmartDocumentUploadController::class, 'adminStatus'])
         ->middleware('throttle:2400,1')->name('documents.analyse_status');
-    Route::post('/documents/{id}/assign', [\App\Http\Controllers\SmartDocumentUploadController::class, 'assign'])
+    Route::post('/documents/{id}/assign', [SmartDocumentUploadController::class, 'assign'])
         ->middleware('throttle:300,10')->name('documents.assign');
-    Route::post('/documents/{id}/create-customer', [\App\Http\Controllers\SmartDocumentUploadController::class, 'createCustomer'])
+    Route::post('/documents/{id}/create-customer', [SmartDocumentUploadController::class, 'createCustomer'])
         ->middleware('throttle:300,10')->name('documents.create_customer');
     // Mehrere Personen auf EINER Aufnahme (z.B. die Gesundheitskarten einer
     // Familie) - je Person ein Kunde.
-    Route::post('/documents/{id}/create-customers-from-persons', [\App\Http\Controllers\SmartDocumentUploadController::class, 'createCustomersFromPersons'])
+    Route::post('/documents/{id}/create-customers-from-persons', [SmartDocumentUploadController::class, 'createCustomersFromPersons'])
         ->middleware('throttle:300,10')->name('documents.create_customers_persons');
     // Mehrere Eingangs-Dokumente (Ausweis + Bankkarte + Fuehrerschein +
     // Protokoll) zu EINEM neuen Kunden zusammenfuehren.
-    Route::post('/documents/create-customer-batch', [\App\Http\Controllers\SmartDocumentUploadController::class, 'createCustomerFromDocuments'])
+    Route::post('/documents/create-customer-batch', [SmartDocumentUploadController::class, 'createCustomerFromDocuments'])
         ->middleware('throttle:300,10')->name('documents.create_customer_batch');
     // Vorschau fuer eine manuelle Mehrfachauswahl (beliebige Dokumente zu EINEM
     // Kunden buendeln) - dieselbe Zusammenfuehrung wie ein Vorgang.
-    Route::post('/documents/batch-preview', [\App\Http\Controllers\SmartDocumentUploadController::class, 'batchPreview'])
+    Route::post('/documents/batch-preview', [SmartDocumentUploadController::class, 'batchPreview'])
         ->middleware('throttle:1200,1')->name('documents.batch_preview');
     // Mehrere Eingangs-Dokumente auf einmal loeschen (Select-All / Bulk-Delete).
     // Hinweis: Das Throttle begrenzt nur die Request-Frequenz. Der Controller
     // loescht bewusst NUR unzugeordnete Eingangs-Dokumente (max. 100/Request,
     // in einer Transaktion) - zugeordnete Kundendokumente bleiben unberuehrt.
-    Route::post('/documents/bulk-delete', [\App\Http\Controllers\SmartDocumentUploadController::class, 'bulkDelete'])
+    Route::post('/documents/bulk-delete', [SmartDocumentUploadController::class, 'bulkDelete'])
         ->middleware('throttle:300,10')->name('documents.bulk_delete');
-    Route::post('/documents/{id}/reanalyze', [\App\Http\Controllers\SmartDocumentUploadController::class, 'reanalyze'])
+    Route::post('/documents/{id}/reanalyze', [SmartDocumentUploadController::class, 'reanalyze'])
         ->middleware('throttle:300,10')->name('documents.reanalyze');
     // Diagnose: der TATSAECHLICH erkannte Text. Er steht VOR der Route
     // '/documents/{id}', damit der feste Pfad nicht als Dokument-ID gilt.
     // Kostenlos, ohne KI, wird nicht gespeichert - Rechtepruefung im Controller
     // (nur admin/manager, der Rohtext ist das ganze Dokument).
-    Route::get('/documents/{id}/erkannter-text', [\App\Http\Controllers\SmartDocumentUploadController::class, 'ocrText'])
+    Route::get('/documents/{id}/erkannter-text', [SmartDocumentUploadController::class, 'ocrText'])
         ->middleware('throttle:120,10')->name('documents.ocr_text');
-    Route::get('/documents/{id}/download', [AdminController::class, 'documentDownload'])->name('documents.download');
-    Route::post('/documents/{id}/replace', [AdminController::class, 'documentReplace'])->name('documents.replace');
+    Route::get('/documents/{id}/download', [AdminCustomerDocumentController::class, 'documentDownload'])->name('documents.download');
+    Route::post('/documents/{id}/replace', [AdminCustomerDocumentController::class, 'documentReplace'])->name('documents.replace');
     // Direkter Dokument-Link (GET /admin/documents/{id}): eine eigene
     // Detailseite gibt es bewusst nicht. Solche Aufrufe entstehen z.B. ueber
     // den Browser-Verlauf (die Formular-Action des Bearbeiten-/Loeschen-
     // Dialogs landet dort als Adresse) oder alte Lesezeichen und liefen
     // bisher ins 404. Stattdessen zum richtigen Ort weiterleiten.
-    Route::get('/documents/{id}', [AdminController::class, 'documentShow'])->name('documents.show');
-    Route::put('/documents/{id}', [AdminController::class, 'documentUpdate'])->name('documents.update');
-    Route::delete('/documents/{id}', [AdminController::class, 'documentDestroy'])->name('documents.destroy');
+    Route::get('/documents/{id}', [AdminCustomerDocumentController::class, 'documentShow'])->name('documents.show');
+    Route::put('/documents/{id}', [AdminCustomerDocumentController::class, 'documentUpdate'])->name('documents.update');
+    Route::delete('/documents/{id}', [AdminCustomerDocumentController::class, 'documentDestroy'])->name('documents.destroy');
     // Banner: Marketing-Verwaltung nur für Admin/Manager (Sicherheits-Fix:
     // war zuvor ohne Rollen-Einschränkung für alle Staff-Rollen erreichbar).
     Route::middleware('role:admin,manager')->group(function () {
-        Route::get('/banners', [\App\Http\Controllers\BannerController::class, 'index'])->name('banners');
-        Route::get('/banners/statistik', [\App\Http\Controllers\BannerController::class, 'stats'])->name('banners.stats');
-        Route::post('/banners', [\App\Http\Controllers\BannerController::class, 'store'])->name('banners.store');
-        Route::post('/banners/{banner}', [\App\Http\Controllers\BannerController::class, 'update'])->name('banners.update');
-        Route::post('/banners/{banner}/toggle', [\App\Http\Controllers\BannerController::class, 'toggle'])->name('banners.toggle');
-        Route::post('/banners/{banner}/move', [\App\Http\Controllers\BannerController::class, 'move'])->name('banners.move');
-        Route::post('/banners/{banner}/reset-stats', [\App\Http\Controllers\BannerController::class, 'resetStats'])->name('banners.reset_stats');
-        Route::post('/banners/{banner}/delete', [\App\Http\Controllers\BannerController::class, 'destroy'])->name('banners.delete');
+        Route::get('/banners', [BannerController::class, 'index'])->name('banners');
+        Route::get('/banners/statistik', [BannerController::class, 'stats'])->name('banners.stats');
+        Route::post('/banners', [BannerController::class, 'store'])->name('banners.store');
+        Route::post('/banners/{banner}', [BannerController::class, 'update'])->name('banners.update');
+        Route::post('/banners/{banner}/toggle', [BannerController::class, 'toggle'])->name('banners.toggle');
+        Route::post('/banners/{banner}/move', [BannerController::class, 'move'])->name('banners.move');
+        Route::post('/banners/{banner}/reset-stats', [BannerController::class, 'resetStats'])->name('banners.reset_stats');
+        Route::post('/banners/{banner}/delete', [BannerController::class, 'destroy'])->name('banners.delete');
 
         // Social-Publishing je Banner: Bildformate fuer Facebook/Instagram/
         // TikTok, Beitragstexte DE/AR, Tracking-Kurzlinks, Veroeffentlichungs-
         // Protokoll und Download-Paket.
-        Route::get('/banners/{banner}/social', [\App\Http\Controllers\BannerSocialController::class, 'show'])->name('banners.social');
-        Route::post('/banners/{banner}/social', [\App\Http\Controllers\BannerSocialController::class, 'save'])->name('banners.social.save');
-        Route::post('/banners/{banner}/social/{platform}/veroeffentlicht', [\App\Http\Controllers\BannerSocialController::class, 'markPublished'])->name('banners.social.published');
-        Route::post('/banners/{banner}/social/{platform}/api-post', [\App\Http\Controllers\BannerSocialController::class, 'publishNow'])->name('banners.social.publish_now');
-        Route::post('/banners/{banner}/social/zahlen', [\App\Http\Controllers\BannerSocialController::class, 'refreshInsights'])->name('banners.social.refresh_insights');
-        Route::get('/banners/{banner}/social/paket', [\App\Http\Controllers\BannerSocialController::class, 'downloadZip'])->name('banners.social.zip');
+        Route::get('/banners/{banner}/social', [BannerSocialController::class, 'show'])->name('banners.social');
+        Route::post('/banners/{banner}/social', [BannerSocialController::class, 'save'])->name('banners.social.save');
+        Route::post('/banners/{banner}/social/{platform}/veroeffentlicht', [BannerSocialController::class, 'markPublished'])->name('banners.social.published');
+        Route::post('/banners/{banner}/social/{platform}/api-post', [BannerSocialController::class, 'publishNow'])->name('banners.social.publish_now');
+        Route::post('/banners/{banner}/social/zahlen', [BannerSocialController::class, 'refreshInsights'])->name('banners.social.refresh_insights');
+        Route::get('/banners/{banner}/social/paket', [BannerSocialController::class, 'downloadZip'])->name('banners.social.zip');
 
         // Werbeanzeigen-Steuerung (Meta Marketing API): Uebersicht,
         // Start/Pause, Budget, Loeschen, "Banner bewerben" - alles aus dem
         // System, ohne Meta zu oeffnen.
-        Route::get('/werbung', [\App\Http\Controllers\MetaAdsController::class, 'index'])->name('werbung');
-        Route::get('/werbung/neu/{banner}', [\App\Http\Controllers\MetaAdsController::class, 'create'])->name('werbung.neu');
-        Route::post('/werbung/neu/{banner}', [\App\Http\Controllers\MetaAdsController::class, 'store'])->name('werbung.store');
-        Route::post('/werbung/{campaignId}/status', [\App\Http\Controllers\MetaAdsController::class, 'status'])->whereNumber('campaignId')->name('werbung.status');
-        Route::post('/werbung/{campaignId}/budget', [\App\Http\Controllers\MetaAdsController::class, 'budget'])->whereNumber('campaignId')->name('werbung.budget');
-        Route::post('/werbung/{campaignId}/delete', [\App\Http\Controllers\MetaAdsController::class, 'destroy'])->whereNumber('campaignId')->name('werbung.delete');
+        Route::get('/werbung', [MetaAdsController::class, 'index'])->name('werbung');
+        Route::get('/werbung/neu/{banner}', [MetaAdsController::class, 'create'])->name('werbung.neu');
+        Route::post('/werbung/neu/{banner}', [MetaAdsController::class, 'store'])->name('werbung.store');
+        Route::post('/werbung/{campaignId}/status', [MetaAdsController::class, 'status'])->whereNumber('campaignId')->name('werbung.status');
+        Route::post('/werbung/{campaignId}/budget', [MetaAdsController::class, 'budget'])->whereNumber('campaignId')->name('werbung.budget');
+        Route::post('/werbung/{campaignId}/delete', [MetaAdsController::class, 'destroy'])->whereNumber('campaignId')->name('werbung.delete');
         // Schutzgrenze (max. Tagesbudget): bewusst NUR Admin - eine Rolle
         // ueber denen, die Anzeigen anlegen/steuern duerfen.
-        Route::post('/werbung/schutzgrenze', [\App\Http\Controllers\MetaAdsController::class, 'updateCap'])
+        Route::post('/werbung/schutzgrenze', [MetaAdsController::class, 'updateCap'])
             ->middleware('role:admin')->name('werbung.cap');
 
         // Leistungsseiten (oeffentliche /leistungen/*): Inhalte pflegbar durch
         // admin/manager - Texte DE/AR, Kurzinfos, FAQ, Bild, Reihenfolge.
-        Route::get('/service-pages', [\App\Http\Controllers\ServicePageAdminController::class, 'index'])->name('service_pages');
-        Route::get('/service-pages/create', [\App\Http\Controllers\ServicePageAdminController::class, 'create'])->name('service_pages.create');
-        Route::post('/service-pages', [\App\Http\Controllers\ServicePageAdminController::class, 'store'])->name('service_pages.store');
-        Route::get('/service-pages/{servicePage}/edit', [\App\Http\Controllers\ServicePageAdminController::class, 'edit'])->name('service_pages.edit');
-        Route::put('/service-pages/{servicePage}', [\App\Http\Controllers\ServicePageAdminController::class, 'update'])->name('service_pages.update');
-        Route::post('/service-pages/{servicePage}/toggle', [\App\Http\Controllers\ServicePageAdminController::class, 'toggle'])->name('service_pages.toggle');
-        Route::delete('/service-pages/{servicePage}', [\App\Http\Controllers\ServicePageAdminController::class, 'destroy'])->name('service_pages.delete');
+        Route::get('/service-pages', [ServicePageAdminController::class, 'index'])->name('service_pages');
+        Route::get('/service-pages/create', [ServicePageAdminController::class, 'create'])->name('service_pages.create');
+        Route::post('/service-pages', [ServicePageAdminController::class, 'store'])->name('service_pages.store');
+        Route::get('/service-pages/{servicePage}/edit', [ServicePageAdminController::class, 'edit'])->name('service_pages.edit');
+        Route::put('/service-pages/{servicePage}', [ServicePageAdminController::class, 'update'])->name('service_pages.update');
+        Route::post('/service-pages/{servicePage}/toggle', [ServicePageAdminController::class, 'toggle'])->name('service_pages.toggle');
+        Route::delete('/service-pages/{servicePage}', [ServicePageAdminController::class, 'destroy'])->name('service_pages.delete');
     });
 
     // Medienverwaltung der Website (P1-1): Bilder hochladen, Slot waehlen,
     // Alt-Texte pflegen - sofort live, ohne FTP/Code. Hochladen/Ersetzen/
     // Bearbeiten fuer alle Staff-Rollen ("Redakteur"); Loeschen/
     // Wiederherstellen nur admin/manager.
-    Route::get('/medien', [\App\Http\Controllers\MediaLibraryController::class, 'index'])->name('media');
-    Route::post('/medien', [\App\Http\Controllers\MediaLibraryController::class, 'store'])->name('media.store');
-    Route::put('/medien/{asset}', [\App\Http\Controllers\MediaLibraryController::class, 'update'])->name('media.update');
-    Route::post('/medien/{asset}/ersetzen', [\App\Http\Controllers\MediaLibraryController::class, 'replace'])->name('media.replace');
-    Route::delete('/medien/{asset}', [\App\Http\Controllers\MediaLibraryController::class, 'destroy'])
+    Route::get('/medien', [MediaLibraryController::class, 'index'])->name('media');
+    Route::post('/medien', [MediaLibraryController::class, 'store'])->name('media.store');
+    Route::put('/medien/{asset}', [MediaLibraryController::class, 'update'])->name('media.update');
+    Route::post('/medien/{asset}/ersetzen', [MediaLibraryController::class, 'replace'])->name('media.replace');
+    Route::delete('/medien/{asset}', [MediaLibraryController::class, 'destroy'])
         ->name('media.delete')->middleware('role:admin,manager');
-    Route::post('/medien/{id}/wiederherstellen', [\App\Http\Controllers\MediaLibraryController::class, 'restore'])
+    Route::post('/medien/{id}/wiederherstellen', [MediaLibraryController::class, 'restore'])
         ->name('media.restore')->middleware('role:admin,manager');
 
     // E-Mail-Posteingang: Zuordnungen bestätigen/zuweisen (Priorität 8).
     // DSGVO/Zugriff (Plan 3.3): Mailinhalte unbekannter Absender sind
     // sensibel - nur admin/manager/support, nicht jeder Mitarbeiter.
     Route::middleware('role:admin,manager,support')->group(function () {
-        Route::get('/email-inbox', [\App\Http\Controllers\EmailInboxController::class, 'index'])->name('email_inbox');
-        Route::get('/email-inbox/{id}', [\App\Http\Controllers\EmailInboxController::class, 'show'])->name('email_inbox.show');
-        Route::get('/email-inbox/{id}/attachment/{index}', [\App\Http\Controllers\EmailInboxController::class, 'downloadAttachment'])->name('email_inbox.attachment');
-        Route::post('/email-inbox/{id}/confirm', [\App\Http\Controllers\EmailInboxController::class, 'confirm'])->name('email_inbox.confirm');
-        Route::post('/email-inbox/{id}/reject', [\App\Http\Controllers\EmailInboxController::class, 'reject'])->name('email_inbox.reject');
-        Route::post('/email-inbox/{id}/assign', [\App\Http\Controllers\EmailInboxController::class, 'assign'])->name('email_inbox.assign');
+        Route::get('/email-inbox', [EmailInboxController::class, 'index'])->name('email_inbox');
+        Route::get('/email-inbox/{id}', [EmailInboxController::class, 'show'])->name('email_inbox.show');
+        Route::get('/email-inbox/{id}/attachment/{index}', [EmailInboxController::class, 'downloadAttachment'])->name('email_inbox.attachment');
+        Route::post('/email-inbox/{id}/confirm', [EmailInboxController::class, 'confirm'])->name('email_inbox.confirm');
+        Route::post('/email-inbox/{id}/reject', [EmailInboxController::class, 'reject'])->name('email_inbox.reject');
+        Route::post('/email-inbox/{id}/assign', [EmailInboxController::class, 'assign'])->name('email_inbox.assign');
         // KI-Vorschläge (Phase 3): Übernahme/Verwerfen ist die Freigabestufe
-        Route::post('/email-inbox/ai/{decisionId}/accept', [\App\Http\Controllers\EmailInboxController::class, 'aiAccept'])->name('email_inbox.ai_accept');
-        Route::post('/email-inbox/ai/{decisionId}/reject', [\App\Http\Controllers\EmailInboxController::class, 'aiReject'])->name('email_inbox.ai_reject');
+        Route::post('/email-inbox/ai/{decisionId}/accept', [EmailInboxController::class, 'aiAccept'])->name('email_inbox.ai_accept');
+        Route::post('/email-inbox/ai/{decisionId}/reject', [EmailInboxController::class, 'aiReject'])->name('email_inbox.ai_reject');
     });
 
     // Dokumentenanfragen an Kunden (Priorität 7)
-    Route::get('/document-requests', [\App\Http\Controllers\DocumentRequestController::class, 'index'])->name('document_requests');
-    Route::post('/customers/{customerId}/document-requests', [\App\Http\Controllers\DocumentRequestController::class, 'store'])->name('document_requests.store');
-    Route::post('/document-requests/{id}/approve', [\App\Http\Controllers\DocumentRequestController::class, 'approve'])->name('document_requests.approve');
-    Route::post('/document-requests/{id}/reject', [\App\Http\Controllers\DocumentRequestController::class, 'reject'])->name('document_requests.reject');
+    Route::get('/document-requests', [DocumentRequestController::class, 'index'])->name('document_requests');
+    Route::post('/customers/{customerId}/document-requests', [DocumentRequestController::class, 'store'])->name('document_requests.store');
+    Route::post('/document-requests/{id}/approve', [DocumentRequestController::class, 'approve'])->name('document_requests.approve');
+    Route::post('/document-requests/{id}/reject', [DocumentRequestController::class, 'reject'])->name('document_requests.reject');
 
     // Eigenständiger interner Mitarbeiter-Chat (Spec Teil 8)
-    Route::get('/chat', [\App\Http\Controllers\InternalChatController::class, 'index'])->name('chat.index');
-    Route::post('/chat', [\App\Http\Controllers\InternalChatController::class, 'store'])->name('chat.store');
-    Route::get('/chat/{id}', [\App\Http\Controllers\InternalChatController::class, 'show'])->name('chat.show');
-    Route::post('/chat/{id}/reply', [\App\Http\Controllers\InternalChatController::class, 'reply'])->name('chat.reply');
+    Route::get('/chat', [InternalChatController::class, 'index'])->name('chat.index');
+    Route::post('/chat', [InternalChatController::class, 'store'])->name('chat.store');
+    Route::get('/chat/{id}', [InternalChatController::class, 'show'])->name('chat.show');
+    Route::post('/chat/{id}/reply', [InternalChatController::class, 'reply'])->name('chat.reply');
 
     // Direktnachrichten an Kunden (Portal-Chat), Vorlagen & E-Mail-Composer
-    Route::post('/customers/{id}/messages', [\App\Http\Controllers\CustomerMessageController::class, 'store'])->name('customer.messages.store');
-    Route::get('/messages/attachments/{id}/download', [\App\Http\Controllers\CustomerMessageController::class, 'downloadAttachment'])->name('messages.attachment');
-    Route::get('/messages/attachments/{id}/view', [\App\Http\Controllers\CustomerMessageController::class, 'viewAttachment'])->name('messages.attachment.view');
+    Route::post('/customers/{id}/messages', [CustomerMessageController::class, 'store'])->name('customer.messages.store');
+    Route::get('/messages/attachments/{id}/download', [CustomerMessageController::class, 'downloadAttachment'])->name('messages.attachment');
+    Route::get('/messages/attachments/{id}/view', [CustomerMessageController::class, 'viewAttachment'])->name('messages.attachment.view');
     // Zentraler Kunden-Chat: alle Portal-Unterhaltungen an einem Ort
-    Route::get('/kundenchat', [\App\Http\Controllers\AdminCustomerChatController::class, 'index'])->name('customer_chat');
-    Route::get('/kundenchat/{id}/feed', [\App\Http\Controllers\AdminCustomerChatController::class, 'feed'])
+    Route::get('/kundenchat', [AdminCustomerChatController::class, 'index'])->name('customer_chat');
+    Route::get('/kundenchat/{id}/feed', [AdminCustomerChatController::class, 'feed'])
         ->middleware('throttle:120,1')->name('customer_chat.feed');
     // Vorgang direkt aus der Unterhaltung eroeffnen (Anfrage -> Ticket)
-    Route::post('/kundenchat/{id}/ticket', [\App\Http\Controllers\AdminCustomerChatController::class, 'createTicket'])
+    Route::post('/kundenchat/{id}/ticket', [AdminCustomerChatController::class, 'createTicket'])
         ->name('customer_chat.ticket');
 
     /*
@@ -497,11 +546,11 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     | Alle Staff-Rollen duerfen uebernehmen bzw. die KI schalten - aber nur
     | fuer Kunden im eigenen Portfolio (Pruefung im Controller).
     */
-    Route::post('/ki-assistent/{id}/uebernehmen', [\App\Http\Controllers\AiAssistantController::class, 'takeOver'])
+    Route::post('/ki-assistent/{id}/uebernehmen', [AiAssistantController::class, 'takeOver'])
         ->name('ai_assistant.take_over');
-    Route::post('/ki-assistent/{id}/deaktivieren', [\App\Http\Controllers\AiAssistantController::class, 'deactivate'])
+    Route::post('/ki-assistent/{id}/deaktivieren', [AiAssistantController::class, 'deactivate'])
         ->name('ai_assistant.deactivate');
-    Route::post('/ki-assistent/{id}/aktivieren', [\App\Http\Controllers\AiAssistantController::class, 'reactivate'])
+    Route::post('/ki-assistent/{id}/aktivieren', [AiAssistantController::class, 'reactivate'])
         ->name('ai_assistant.reactivate');
 
     /*
@@ -509,17 +558,17 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     | Antwortvorschlag holen, nach einer Stoerung erneut versuchen. Alle
     | Staff-Rollen, aber nur fuer Kunden im eigenen Portfolio (Controller).
     */
-    Route::post('/ki-assistent/{id}/angebot', [\App\Http\Controllers\AiAssistantController::class, 'storeOffer'])
+    Route::post('/ki-assistent/{id}/angebot', [AiAssistantController::class, 'storeOffer'])
         ->name('ai_assistant.offer.store');
-    Route::delete('/ki-assistent/{id}/angebot/{offer}', [\App\Http\Controllers\AiAssistantController::class, 'destroyOffer'])
+    Route::delete('/ki-assistent/{id}/angebot/{offer}', [AiAssistantController::class, 'destroyOffer'])
         ->name('ai_assistant.offer.destroy');
-    Route::get('/ki-assistent/{id}/antwortvorschlag', [\App\Http\Controllers\AiAssistantController::class, 'suggestReply'])
+    Route::get('/ki-assistent/{id}/antwortvorschlag', [AiAssistantController::class, 'suggestReply'])
         ->name('ai_assistant.suggest');
-    Route::post('/ki-assistent/{id}/erneut-versuchen', [\App\Http\Controllers\AiAssistantController::class, 'retry'])
+    Route::post('/ki-assistent/{id}/erneut-versuchen', [AiAssistantController::class, 'retry'])
         ->name('ai_assistant.retry');
 
     // Interessenten aus dem Website-Assistenten.
-    Route::get('/interessenten', [\App\Http\Controllers\AiAssistantController::class, 'leads'])
+    Route::get('/interessenten', [AiAssistantController::class, 'leads'])
         ->name('leads.index');
 
     /*
@@ -527,53 +576,53 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     | Kunden - deshalb nur Verwaltung (admin/manager).
     */
     Route::middleware('role:admin,manager')->group(function () {
-        Route::get('/ki-wissensbasis', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeIndex'])
+        Route::get('/ki-wissensbasis', [AiAssistantController::class, 'knowledgeIndex'])
             ->name('ai_knowledge');
-        Route::post('/ki-wissensbasis', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeStore'])
+        Route::post('/ki-wissensbasis', [AiAssistantController::class, 'knowledgeStore'])
             ->name('ai_knowledge.store');
-        Route::post('/ki-wissensbasis/import', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeImport'])
+        Route::post('/ki-wissensbasis/import', [AiAssistantController::class, 'knowledgeImport'])
             ->name('ai_knowledge.import');
         // Wissensluecken: wonach der Assistent vergeblich gesucht hat.
-        Route::get('/ki-wissensluecken', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeGaps'])
+        Route::get('/ki-wissensluecken', [AiAssistantController::class, 'knowledgeGaps'])
             ->name('ai_knowledge_gaps');
-        Route::post('/ki-wissensluecken/{id}/antwort', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeGapAnswer'])
+        Route::post('/ki-wissensluecken/{id}/antwort', [AiAssistantController::class, 'knowledgeGapAnswer'])
             ->name('ai_knowledge_gaps.answer');
-        Route::post('/ki-wissensluecken/{id}/status', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeGapStatus'])
+        Route::post('/ki-wissensluecken/{id}/status', [AiAssistantController::class, 'knowledgeGapStatus'])
             ->name('ai_knowledge_gaps.status');
-        Route::post('/ki-wissensbasis/sammelaktion', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeBulk'])
+        Route::post('/ki-wissensbasis/sammelaktion', [AiAssistantController::class, 'knowledgeBulk'])
             ->name('ai_knowledge.bulk');
-        Route::put('/ki-wissensbasis/{id}', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeUpdate'])
+        Route::put('/ki-wissensbasis/{id}', [AiAssistantController::class, 'knowledgeUpdate'])
             ->name('ai_knowledge.update');
-        Route::delete('/ki-wissensbasis/{id}', [\App\Http\Controllers\AiAssistantController::class, 'knowledgeDestroy'])
+        Route::delete('/ki-wissensbasis/{id}', [AiAssistantController::class, 'knowledgeDestroy'])
             ->name('ai_knowledge.destroy');
     });
-    Route::get('/vorlagen', [\App\Http\Controllers\MessageTemplateController::class, 'index'])->name('templates');
-    Route::get('/vorlagen/liste', [\App\Http\Controllers\MessageTemplateController::class, 'list'])->name('templates.list');
-    Route::get('/vorlagen/{id}/render', [\App\Http\Controllers\MessageTemplateController::class, 'render'])->name('templates.render');
+    Route::get('/vorlagen', [MessageTemplateController::class, 'index'])->name('templates');
+    Route::get('/vorlagen/liste', [MessageTemplateController::class, 'list'])->name('templates.list');
+    Route::get('/vorlagen/{id}/render', [MessageTemplateController::class, 'render'])->name('templates.render');
     // Vorlagen-Pflege nur Verwaltung; Nutzung (Liste/Rendern) alle Staff-Rollen
     Route::middleware('role:admin,manager')->group(function () {
-        Route::post('/vorlagen', [\App\Http\Controllers\MessageTemplateController::class, 'store'])->name('templates.store');
-        Route::post('/vorlagen/standard', [\App\Http\Controllers\MessageTemplateController::class, 'seedDefaults'])->name('templates.seed');
-        Route::put('/vorlagen/{id}', [\App\Http\Controllers\MessageTemplateController::class, 'update'])->name('templates.update');
-        Route::delete('/vorlagen/{id}', [\App\Http\Controllers\MessageTemplateController::class, 'destroy'])->name('templates.destroy');
+        Route::post('/vorlagen', [MessageTemplateController::class, 'store'])->name('templates.store');
+        Route::post('/vorlagen/standard', [MessageTemplateController::class, 'seedDefaults'])->name('templates.seed');
+        Route::put('/vorlagen/{id}', [MessageTemplateController::class, 'update'])->name('templates.update');
+        Route::delete('/vorlagen/{id}', [MessageTemplateController::class, 'destroy'])->name('templates.destroy');
     });
-    Route::get('/email/verfassen', [\App\Http\Controllers\ComposeEmailController::class, 'create'])->name('email.compose');
-    Route::post('/email/verfassen', [\App\Http\Controllers\ComposeEmailController::class, 'send'])->name('email.compose.send');
+    Route::get('/email/verfassen', [ComposeEmailController::class, 'create'])->name('email.compose');
+    Route::post('/email/verfassen', [ComposeEmailController::class, 'send'])->name('email.compose.send');
     // Smart-Composer: Kundensuche, Kundenkarte/Verlauf, Favoriten, KI-Entwurf
-    Route::get('/email/kunden-suche', [\App\Http\Controllers\ComposeEmailController::class, 'customerSearch'])
+    Route::get('/email/kunden-suche', [ComposeEmailController::class, 'customerSearch'])
         ->middleware('throttle:120,1')->name('email.customer_search');
-    Route::get('/email/kunden-kontext/{id}', [\App\Http\Controllers\ComposeEmailController::class, 'customerContext'])
+    Route::get('/email/kunden-kontext/{id}', [ComposeEmailController::class, 'customerContext'])
         ->middleware('throttle:120,1')->name('email.customer_context');
-    Route::post('/email/favorit/{id}', [\App\Http\Controllers\ComposeEmailController::class, 'toggleFavorite'])->name('email.favorite');
-    Route::post('/email/ki-entwurf', [\App\Http\Controllers\ComposeEmailController::class, 'aiDraft'])
+    Route::post('/email/favorit/{id}', [ComposeEmailController::class, 'toggleFavorite'])->name('email.favorite');
+    Route::post('/email/ki-entwurf', [ComposeEmailController::class, 'aiDraft'])
         ->middleware('throttle:15,10')->name('email.ai_draft');
 
     // Interner Chat & Notizen (nur Mitarbeiter - keine Portal-Routen!)
-    Route::post('/customers/{id}/internal-messages', [\App\Http\Controllers\InternalMessageController::class, 'store'])->name('internal.store');
-    Route::delete('/internal-messages/{id}', [\App\Http\Controllers\InternalMessageController::class, 'destroy'])->name('internal.destroy');
-    Route::get('/notifications', [\App\Http\Controllers\InternalNotificationController::class, 'index'])->name('notifications');
-    Route::post('/notifications/{id}/read', [\App\Http\Controllers\InternalNotificationController::class, 'markRead'])->name('notifications.read');
-    Route::post('/notifications/read-all', [\App\Http\Controllers\InternalNotificationController::class, 'markAllRead'])->name('notifications.read_all');
+    Route::post('/customers/{id}/internal-messages', [InternalMessageController::class, 'store'])->name('internal.store');
+    Route::delete('/internal-messages/{id}', [InternalMessageController::class, 'destroy'])->name('internal.destroy');
+    Route::get('/notifications', [InternalNotificationController::class, 'index'])->name('notifications');
+    Route::post('/notifications/{id}/read', [InternalNotificationController::class, 'markRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [InternalNotificationController::class, 'markAllRead'])->name('notifications.read_all');
 
     // Aufgaben (inkl. Sofort-Kundensuche fuer das Aufgaben-Formular)
     Route::get('/tasks', [TaskController::class, 'index'])->name('tasks');
@@ -652,56 +701,56 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // (admin/manager); Einstellungen (Punkte/Schwellwerte) nur admin.
     // Mitarbeiter haben keinerlei Einblick in Erfassung oder Berechnung.
     Route::prefix('aktivitaet')->name('activity.')->middleware('role:admin,manager')->group(function () {
-        Route::get('/', [\App\Http\Controllers\ActivityReportController::class, 'index'])->name('index');
-        Route::get('/export', [\App\Http\Controllers\ActivityReportController::class, 'export'])->name('export');
-        Route::get('/einstellungen', [\App\Http\Controllers\ActivityReportController::class, 'settings'])->name('settings')->middleware('role:admin');
-        Route::put('/einstellungen', [\App\Http\Controllers\ActivityReportController::class, 'settingsUpdate'])->name('settings.update')->middleware('role:admin');
-        Route::get('/{id}/export', [\App\Http\Controllers\ActivityReportController::class, 'exportEmployee'])->whereNumber('id')->name('user_export');
-        Route::get('/{id}', [\App\Http\Controllers\ActivityReportController::class, 'show'])->whereNumber('id')->name('show');
+        Route::get('/', [ActivityReportController::class, 'index'])->name('index');
+        Route::get('/export', [ActivityReportController::class, 'export'])->name('export');
+        Route::get('/einstellungen', [ActivityReportController::class, 'settings'])->name('settings')->middleware('role:admin');
+        Route::put('/einstellungen', [ActivityReportController::class, 'settingsUpdate'])->name('settings.update')->middleware('role:admin');
+        Route::get('/{id}/export', [ActivityReportController::class, 'exportEmployee'])->whereNumber('id')->name('user_export');
+        Route::get('/{id}', [ActivityReportController::class, 'show'])->whereNumber('id')->name('show');
     });
 
     // Partner & Provisionen (Priorität 6)
     Route::middleware('role:admin,manager')->group(function () {
-        Route::get('/partners', [\App\Http\Controllers\PartnerController::class, 'index'])->name('partners');
-        Route::post('/partners', [\App\Http\Controllers\PartnerController::class, 'store'])->name('partners.store');
-        Route::get('/partners/{id}', [\App\Http\Controllers\PartnerController::class, 'show'])->name('partners.show');
-        Route::put('/partners/{id}', [\App\Http\Controllers\PartnerController::class, 'update'])->name('partners.update');
-        Route::get('/commissions', [\App\Http\Controllers\CommissionController::class, 'index'])->name('commissions');
-        Route::post('/commissions/{id}/book', [\App\Http\Controllers\CommissionController::class, 'book'])->name('commissions.book');
-        Route::post('/commissions/{id}/reject', [\App\Http\Controllers\CommissionController::class, 'reject'])->name('commissions.reject');
+        Route::get('/partners', [PartnerController::class, 'index'])->name('partners');
+        Route::post('/partners', [PartnerController::class, 'store'])->name('partners.store');
+        Route::get('/partners/{id}', [PartnerController::class, 'show'])->name('partners.show');
+        Route::put('/partners/{id}', [PartnerController::class, 'update'])->name('partners.update');
+        Route::get('/commissions', [CommissionController::class, 'index'])->name('commissions');
+        Route::post('/commissions/{id}/book', [CommissionController::class, 'book'])->name('commissions.book');
+        Route::post('/commissions/{id}/reject', [CommissionController::class, 'reject'])->name('commissions.reject');
         // Vermittler-Provisionen (Ausgang an Mitarbeiter/Partner) -
         // Provisions-Management: NUR admin/manager, Mitarbeiter/Partner haben
         // keinerlei Zugriff auf Betraege, Saetze, Berichte oder Statistiken.
-        Route::get('/provisionen', [\App\Http\Controllers\ProvisionController::class, 'index'])->name('provisions');
-        Route::post('/provisionen', [\App\Http\Controllers\ProvisionController::class, 'store'])->name('provisions.store');
-        Route::get('/provisionen/saetze', [\App\Http\Controllers\ProvisionController::class, 'rates'])->name('provisions.rates');
-        Route::post('/provisionen/saetze', [\App\Http\Controllers\ProvisionController::class, 'ratesSave'])->name('provisions.rates.save');
-        Route::get('/provisionen/bericht', [\App\Http\Controllers\ProvisionController::class, 'report'])->name('provisions.report');
-        Route::get('/provisionen/bericht/export', [\App\Http\Controllers\ProvisionController::class, 'reportExport'])->name('provisions.report.export');
-        Route::get('/provisionen/dashboard', [\App\Http\Controllers\ProvisionController::class, 'dashboard'])->name('provisions.dashboard');
-        Route::get('/provisionen/{id}', [\App\Http\Controllers\ProvisionController::class, 'show'])->whereUuid('id')->name('provisions.show');
-        Route::post('/provisionen/{id}/status', [\App\Http\Controllers\ProvisionController::class, 'updateStatus'])->name('provisions.status');
-        Route::post('/provisionen/{id}/betrag', [\App\Http\Controllers\ProvisionController::class, 'adjustAmount'])->name('provisions.amount');
+        Route::get('/provisionen', [ProvisionController::class, 'index'])->name('provisions');
+        Route::post('/provisionen', [ProvisionController::class, 'store'])->name('provisions.store');
+        Route::get('/provisionen/saetze', [ProvisionController::class, 'rates'])->name('provisions.rates');
+        Route::post('/provisionen/saetze', [ProvisionController::class, 'ratesSave'])->name('provisions.rates.save');
+        Route::get('/provisionen/bericht', [ProvisionController::class, 'report'])->name('provisions.report');
+        Route::get('/provisionen/bericht/export', [ProvisionController::class, 'reportExport'])->name('provisions.report.export');
+        Route::get('/provisionen/dashboard', [ProvisionController::class, 'dashboard'])->name('provisions.dashboard');
+        Route::get('/provisionen/{id}', [ProvisionController::class, 'show'])->whereUuid('id')->name('provisions.show');
+        Route::post('/provisionen/{id}/status', [ProvisionController::class, 'updateStatus'])->name('provisions.status');
+        Route::post('/provisionen/{id}/betrag', [ProvisionController::class, 'adjustAmount'])->name('provisions.amount');
 
         // Vermittler-Abrechnung: CSV des Vermittlers einlesen, Vertraege
         // zuordnen, Abweichungen pruefen (Betreiber-Auftrag 20.08.2026).
         // Gleiche Zugriffsregel wie das uebrige Provisions-Management -
         // hier stehen Provisionsbetraege.
         Route::prefix('vermittler-abrechnung')->name('vermittler.')->group(function () {
-            Route::get('/', [\App\Http\Controllers\VermittlerAbrechnungController::class, 'index'])->name('index');
-            Route::post('/import', [\App\Http\Controllers\VermittlerAbrechnungController::class, 'import'])->name('import');
+            Route::get('/', [VermittlerAbrechnungController::class, 'index'])->name('index');
+            Route::post('/import', [VermittlerAbrechnungController::class, 'import'])->name('import');
             // Vorgangsliste (offene Vorgaenge) als Screenshot/PDF/CSV: stellt
             // die Bruecke Referenz-Nr. -> Vermittler-ID her, bevor abgerechnet
             // wird.
-            Route::post('/vorgangsliste', [\App\Http\Controllers\VermittlerAbrechnungController::class, 'importVorgangsliste'])->name('vorgangsliste');
+            Route::post('/vorgangsliste', [VermittlerAbrechnungController::class, 'importVorgangsliste'])->name('vorgangsliste');
             // Dieselbe Verarbeitung direkt aus dem Dokumenten-Eingang heraus:
             // dort liegt die Datei bereits, dort arbeiten die Mitarbeiter.
-            Route::post('/dokument/{id}/einlesen', [\App\Http\Controllers\VermittlerAbrechnungController::class, 'importFromDocument'])->whereUuid('id')->name('from_document');
-            Route::get('/pruefung', [\App\Http\Controllers\VermittlerAbrechnungController::class, 'review'])->name('review');
-            Route::get('/bericht', [\App\Http\Controllers\VermittlerAbrechnungController::class, 'report'])->name('report');
-            Route::get('/vertrag-suche', [\App\Http\Controllers\VermittlerAbrechnungController::class, 'contractSearch'])->name('contract_search');
-            Route::post('/datensatz/{id}/zuordnen', [\App\Http\Controllers\VermittlerAbrechnungController::class, 'link'])->whereUuid('id')->name('link');
-            Route::get('/{id}', [\App\Http\Controllers\VermittlerAbrechnungController::class, 'show'])->whereUuid('id')->name('show');
+            Route::post('/dokument/{id}/einlesen', [VermittlerAbrechnungController::class, 'importFromDocument'])->whereUuid('id')->name('from_document');
+            Route::get('/pruefung', [VermittlerAbrechnungController::class, 'review'])->name('review');
+            Route::get('/bericht', [VermittlerAbrechnungController::class, 'report'])->name('report');
+            Route::get('/vertrag-suche', [VermittlerAbrechnungController::class, 'contractSearch'])->name('contract_search');
+            Route::post('/datensatz/{id}/zuordnen', [VermittlerAbrechnungController::class, 'link'])->whereUuid('id')->name('link');
+            Route::get('/{id}', [VermittlerAbrechnungController::class, 'show'])->whereUuid('id')->name('show');
         });
     });
 
@@ -715,7 +764,7 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // aufgerufener Pfad genauso abgewiesen wird wie ein Klick.
     Route::prefix('provisionsmanagement')->name('provisionsmanagement.')
         ->middleware('can:provisionen-verwalten')->group(function () {
-        $p = \App\Http\Controllers\ProvisionsmanagementController::class;
+        $p = ProvisionsmanagementController::class;
 
         Route::get('/', [$p, 'dashboard'])->name('dashboard');
         Route::get('/importe', [$p, 'imports'])->name('imports');
@@ -747,7 +796,7 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // waechst. Die Pruefung steht zusaetzlich im Controller.
     Route::prefix('interne-provisionen')->name('commissions_internal.')
         ->middleware('can:provisionen-verwalten')->group(function () {
-        $c = \App\Http\Controllers\ContractCommissionController::class;
+        $c = ContractCommissionController::class;
 
         Route::get('/', [$c, 'index'])->name('index');
         Route::get('/export', [$c, 'export'])->name('export');
@@ -789,15 +838,15 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // Systemzustand: laeuft im Hintergrund noch alles? (nur lesend)
     Route::middleware('role:admin,manager')->group(function () {
         // Fehlerliste: was geht im Betrieb wirklich kaputt.
-        Route::get('/fehler', [\App\Http\Controllers\ErrorEventController::class, 'index'])
+        Route::get('/fehler', [ErrorEventController::class, 'index'])
             ->name('errors');
-        Route::post('/fehler/{id}/erledigt', [\App\Http\Controllers\ErrorEventController::class, 'resolve'])
+        Route::post('/fehler/{id}/erledigt', [ErrorEventController::class, 'resolve'])
             ->name('errors.resolve');
-        Route::post('/fehler/{id}/wieder-oeffnen', [\App\Http\Controllers\ErrorEventController::class, 'reopen'])
+        Route::post('/fehler/{id}/wieder-oeffnen', [ErrorEventController::class, 'reopen'])
             ->name('errors.reopen');
-        Route::get('/systemzustand', [\App\Http\Controllers\SystemHealthController::class, 'index'])
+        Route::get('/systemzustand', [SystemHealthController::class, 'index'])
             ->name('system_health');
-        Route::get('/systemzustand.json', [\App\Http\Controllers\SystemHealthController::class, 'json'])
+        Route::get('/systemzustand.json', [SystemHealthController::class, 'json'])
             ->name('system_health.json');
     });
 
@@ -807,17 +856,17 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
 
     // E-Mail-Postfächer (Priorität 1 der KI-Systemerweiterung) - nur admin, Zugangsdaten sind sensibel
     Route::prefix('email-accounts')->name('email_accounts.')->middleware('role:admin')->group(function () {
-        Route::get('/', [\App\Http\Controllers\EmailAccountController::class, 'index'])->name('index');
-        Route::get('/create', [\App\Http\Controllers\EmailAccountController::class, 'create'])->name('create');
-        Route::post('/', [\App\Http\Controllers\EmailAccountController::class, 'store'])->name('store');
-        Route::get('/{id}/edit', [\App\Http\Controllers\EmailAccountController::class, 'edit'])->name('edit');
-        Route::put('/{id}', [\App\Http\Controllers\EmailAccountController::class, 'update'])->name('update');
-        Route::delete('/{id}', [\App\Http\Controllers\EmailAccountController::class, 'destroy'])->name('destroy');
-        Route::put('/{id}/toggle', [\App\Http\Controllers\EmailAccountController::class, 'toggleActive'])->name('toggle');
-        Route::post('/{id}/test', [\App\Http\Controllers\EmailAccountController::class, 'testConnection'])->name('test');
+        Route::get('/', [EmailAccountController::class, 'index'])->name('index');
+        Route::get('/create', [EmailAccountController::class, 'create'])->name('create');
+        Route::post('/', [EmailAccountController::class, 'store'])->name('store');
+        Route::get('/{id}/edit', [EmailAccountController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [EmailAccountController::class, 'update'])->name('update');
+        Route::delete('/{id}', [EmailAccountController::class, 'destroy'])->name('destroy');
+        Route::put('/{id}/toggle', [EmailAccountController::class, 'toggleActive'])->name('toggle');
+        Route::post('/{id}/test', [EmailAccountController::class, 'testConnection'])->name('test');
         // OAuth-Anbindung Gmail/M365 (Phase 2)
-        Route::get('/{id}/oauth', [\App\Http\Controllers\EmailAccountController::class, 'oauthRedirect'])->name('oauth');
-        Route::get('/oauth/callback', [\App\Http\Controllers\EmailAccountController::class, 'oauthCallback'])->name('oauth_callback');
+        Route::get('/{id}/oauth', [EmailAccountController::class, 'oauthRedirect'])->name('oauth');
+        Route::get('/oauth/callback', [EmailAccountController::class, 'oauthCallback'])->name('oauth_callback');
     });
     Route::get('/appointments', [AppointmentController::class, 'index'])->name('appointments');
     Route::post('/appointments', [AppointmentController::class, 'store'])->name('appointments.store');
@@ -825,29 +874,29 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
 });
 
 // استقبال استفسارات الموقع (WordPress) — محمي بـ Token
-Route::post('/api/website-inquiry', [\App\Http\Controllers\WebsiteInquiryController::class, 'store'])
+Route::post('/api/website-inquiry', [WebsiteInquiryController::class, 'store'])
     ->middleware('throttle:30,1')
     ->name('api.inquiry.store');
 
 // Kontaktformular der statischen Website (dienstly24.de). Schutzschichten
 // (JS-Token, Mindest-Ausfuellzeit, Einmal-Token, Honeypot, SpamFilter)
 // siehe WebsiteContactController.
-Route::get('/api/website-contact/token', [\App\Http\Controllers\WebsiteContactController::class, 'token'])
+Route::get('/api/website-contact/token', [WebsiteContactController::class, 'token'])
     ->middleware('throttle:30,1')
     ->name('api.contact.token');
-Route::post('/api/website-contact', [\App\Http\Controllers\WebsiteContactController::class, 'submit'])
+Route::post('/api/website-contact', [WebsiteContactController::class, 'submit'])
     ->middleware('throttle:10,1')
     ->name('api.contact.store');
 
 // Website-Assistent fuer nicht angemeldete Besucher (KI-Verkaufsassistent,
 // Spezifikation Abschnitt 19). Oeffentlich, deshalb gedrosselt; die
 // Zuordnung laeuft ueber die Server-Sitzung, nie ueber den Request.
-Route::get('/api/website-assistent/status', [\App\Http\Controllers\WebsiteAssistantController::class, 'status'])
+Route::get('/api/website-assistent/status', [WebsiteAssistantController::class, 'status'])
     ->middleware('throttle:60,1')
     ->name('api.assistant.status');
-Route::get('/api/website-assistent/verlauf', [\App\Http\Controllers\WebsiteAssistantController::class, 'history'])
+Route::get('/api/website-assistent/verlauf', [WebsiteAssistantController::class, 'history'])
     ->middleware('throttle:60,1')
     ->name('api.assistant.history');
-Route::post('/api/website-assistent', [\App\Http\Controllers\WebsiteAssistantController::class, 'send'])
+Route::post('/api/website-assistent', [WebsiteAssistantController::class, 'send'])
     ->middleware('throttle:20,1')
     ->name('api.assistant.send');

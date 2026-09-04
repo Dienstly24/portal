@@ -1,6 +1,8 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
+use App\Models\Contract;
 use App\Services\Ai\Concerns\ReadsDocumentPages;
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
 use App\Services\Ai\Contracts\DocumentTemplateParser;
@@ -39,9 +41,9 @@ class EnergieAuftragParser implements DocumentTemplateParser
         // nur als eigenstaendiges Wort - haeufige deutsche Woerter wie
         // "jEWEils" enthalten die Buchstabenfolge und liessen sonst fremde
         // Energie-Auftraege (z.B. LichtBlick) faelschlich als EWE erscheinen.
-        if (!preg_match('/\bEWE\b/u', $upper)
-            || !str_contains($upper, 'GRUNDPREIS')
-            || !str_contains($upper, 'ARBEITSPREIS')) {
+        if (! preg_match('/\bEWE\b/u', $upper)
+            || ! str_contains($upper, 'GRUNDPREIS')
+            || ! str_contains($upper, 'ARBEITSPREIS')) {
             return null;
         }
 
@@ -50,7 +52,7 @@ class EnergieAuftragParser implements DocumentTemplateParser
         // "Strom" und "Gas" beide vor).
         $header = preg_match('/Auftrag für[^\r\n]*/u', $text, $hm) ? mb_strtoupper($hm[0]) : $upper;
         $isGas = (str_contains($header, 'GAS') || str_contains($header, 'ERDGAS'))
-            && !str_contains($header, 'STROM') && !str_contains($header, 'GRÜNSTROM');
+            && ! str_contains($header, 'STROM') && ! str_contains($header, 'GRÜNSTROM');
         $sparte = $isGas ? 'gas' : 'strom';
 
         $person = $this->parsePerson($text);
@@ -65,22 +67,22 @@ class EnergieAuftragParser implements DocumentTemplateParser
 
         $who = trim(($person['company_name'] ?? '') !== ''
             ? $person['company_name']
-            : trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? '')));
+            : trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? '')));
         $art = $sparte === 'gas' ? 'Gas' : 'Strom';
 
         return [
             'type' => 'energieauftrag',
             'confidence' => 70,
-            'summary' => $art . '-Auftrag'
-                . (isset($versicherung['insurer']) ? ' - ' . $versicherung['insurer'] : '')
-                . (isset($energie['tariff']) ? ' (' . $energie['tariff'] . ')' : '')
-                . ($who !== '' ? ' - ' . $who : '')
-                . (isset($energie['previous_provider'])
-                    ? ' - Wechsel von ' . $energie['previous_provider']
-                        . (isset($energie['previous_customer_number']) ? ' (Kd.-Nr. ' . $energie['previous_customer_number'] . ')' : '')
+            'summary' => $art.'-Auftrag'
+                .(isset($versicherung['insurer']) ? ' - '.$versicherung['insurer'] : '')
+                .(isset($energie['tariff']) ? ' ('.$energie['tariff'].')' : '')
+                .($who !== '' ? ' - '.$who : '')
+                .(isset($energie['previous_provider'])
+                    ? ' - Wechsel von '.$energie['previous_provider']
+                        .(isset($energie['previous_customer_number']) ? ' (Kd.-Nr. '.$energie['previous_customer_number'].')' : '')
                     : '')
-                . ' - Felder gratis aus dem Auftrag gelesen (ohne KI).',
-            'title' => $art . '-Auftrag' . ($who !== '' ? ' ' . $who : ''),
+                .' - Felder gratis aus dem Auftrag gelesen (ohne KI).',
+            'title' => $art.'-Auftrag'.($who !== '' ? ' '.$who : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $versicherung,
@@ -150,11 +152,11 @@ class EnergieAuftragParser implements DocumentTemplateParser
         // Bewusst NICHT die Glaeubiger-Identifikationsnummer ("DE86ZZZ...",
         // enthaelt Buchstaben) und keine maskierte IBAN uebernehmen.
         if (preg_match('/\bDE\d{2}(?:[ ]?\d){18}\b/', $text, $m)
-            && !str_contains($m[0], '*')) {
+            && ! str_contains($m[0], '*')) {
             $raw['iban'] = strtoupper((string) preg_replace('/\s+/', '', $m[0]));
         }
         // Kontoinhaber = die natuerliche Person (falls erkannt).
-        $holder = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $holder = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         if ($holder !== '') {
             $raw['account_holder'] = $holder;
         }
@@ -216,7 +218,7 @@ class EnergieAuftragParser implements DocumentTemplateParser
         // Vertrag bleibt deshalb in der Stufe 'antrag' und wird spaeter von der
         // Bestaetigung (Vertrags-/Kundennummer, MaLo, Beginn, Abschlag)
         // ergaenzt - statt ein zweiter Vertrag zu entstehen.
-        $raw = ['sparte' => $sparte, 'document_stage' => \App\Models\Contract::STAGE_ANTRAG];
+        $raw = ['sparte' => $sparte, 'document_stage' => Contract::STAGE_ANTRAG];
 
         if (preg_match('/(EWE\s+VERTRIEB\s+GmbH)/u', $text, $m)) {
             $raw['insurer'] = 'EWE VERTRIEB GmbH';
@@ -248,7 +250,7 @@ class EnergieAuftragParser implements DocumentTemplateParser
         $lines = preg_split('/\R/', $text) ?: [];
         foreach ($lines as $i => $line) {
             if ($i > 0 && $this->leadingSpaces($line) < 40
-                && preg_match('/^' . $labelRegex . '/u', ltrim($line))) {
+                && preg_match('/^'.$labelRegex.'/u', ltrim($line))) {
                 for ($j = $i - 1; $j >= 0; $j--) {
                     if (trim($lines[$j]) === '') {
                         continue;
@@ -281,7 +283,7 @@ class EnergieAuftragParser implements DocumentTemplateParser
         // Anker: das SPEZIFISCHE Kontoinhaber-Label ("der/die Kontoinhabende –
         // falls abweichend ..."), NICHT der gleichlautende SEPA-Satz. Direkt
         // davor steht der Name "Nachname, Vorname".
-        if (!preg_match('/der\/die Kontoinhabende\s*[–\-]\s*falls abweichend/u', $text, $am, PREG_OFFSET_CAPTURE)) {
+        if (! preg_match('/der\/die Kontoinhabende\s*[–\-]\s*falls abweichend/u', $text, $am, PREG_OFFSET_CAPTURE)) {
             return [null, null];
         }
         $before = substr($text, 0, $am[0][1]);
@@ -328,7 +330,7 @@ class EnergieAuftragParser implements DocumentTemplateParser
     private function germanDate(?string $value): ?string
     {
         if ($value !== null && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $value, $m)) {
-            return $m[3] . '-' . $m[2] . '-' . $m[1];
+            return $m[3].'-'.$m[2].'-'.$m[1];
         }
         return null;
     }

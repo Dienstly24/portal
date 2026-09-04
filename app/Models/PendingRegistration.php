@@ -97,6 +97,6 @@ class PendingRegistration extends Model
 
     public function fullName(): string
     {
-        return trim($this->first_name . ' ' . $this->last_name);
+        return trim($this->first_name.' '.$this->last_name);
     }
 }

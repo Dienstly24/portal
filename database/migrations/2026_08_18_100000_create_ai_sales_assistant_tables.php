@@ -18,8 +18,7 @@ use Illuminate\Support\Facades\Schema;
  * 3) ai_offers     Angebote je Gespraech, vom Mitarbeiter hinterlegt (5/7).
  * 4) ai_conversation_events  Auditlog getrennt vom Chattext (23).
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('ai_leads', function (Blueprint $table) {

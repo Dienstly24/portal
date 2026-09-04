@@ -29,7 +29,7 @@ class SvgSanitizer
             return null;
         }
 
-        $dom = new \DOMDocument();
+        $dom = new \DOMDocument;
         $prev = libxml_use_internal_errors(true);
         $ok = $dom->loadXML($svg, LIBXML_NONET | LIBXML_NOBLANKS);
         libxml_clear_errors();

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Models\Contract;
@@ -45,7 +46,7 @@ class InterlloydPoliceParser implements DocumentTemplateParser
         if ($this->looksLikeComparisonProtocol($this->text)) {
             return null;
         }
-        if (!str_contains($upper, 'INTERLLOYD') || !str_contains($upper, 'VERSICHERUNGSSCHEIN')) {
+        if (! str_contains($upper, 'INTERLLOYD') || ! str_contains($upper, 'VERSICHERUNGSSCHEIN')) {
             return null;
         }
 
@@ -57,7 +58,7 @@ class InterlloydPoliceParser implements DocumentTemplateParser
         }
         $person = $this->parsePerson();
 
-        $who = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $who = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         if ($who === '') {
             $who = (string) ($person['company_name'] ?? '');
         }
@@ -67,14 +68,14 @@ class InterlloydPoliceParser implements DocumentTemplateParser
             'type' => 'versicherungspolice',
             'confidence' => 78,
             'summary' => 'Interlloyd Versicherungsschein'
-                . (isset($insurance['tariff']) ? ' - ' . $insurance['tariff'] : '')
-                . ($sparte !== null ? ' (' . (Contract::TYPES[$sparte]['label'] ?? $sparte) . ')' : '')
-                . ($who !== '' ? ' - ' . $who : '')
-                . ' - Vertrag ' . $insurance['contract_number']
-                . $this->extras()
-                . ' Felder gratis aus dem Versicherungsschein gelesen (ohne KI).',
-            'title' => 'Interlloyd ' . ($insurance['tariff'] ?? 'Versicherungsschein')
-                . ($who !== '' ? ' - ' . $who : ''),
+                .(isset($insurance['tariff']) ? ' - '.$insurance['tariff'] : '')
+                .($sparte !== null ? ' ('.(Contract::TYPES[$sparte]['label'] ?? $sparte).')' : '')
+                .($who !== '' ? ' - '.$who : '')
+                .' - Vertrag '.$insurance['contract_number']
+                .$this->extras()
+                .' Felder gratis aus dem Versicherungsschein gelesen (ohne KI).',
+            'title' => 'Interlloyd '.($insurance['tariff'] ?? 'Versicherungsschein')
+                .($who !== '' ? ' - '.$who : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -114,20 +115,20 @@ class InterlloydPoliceParser implements DocumentTemplateParser
                     $raw['city'] = trim($z[2]);
                     break; // PLZ+Ort schliessen den Block ab
                 }
-                if (!isset($raw['street'])
+                if (! isset($raw['street'])
                     && preg_match('/^(.*\p{L}\.?)\s+(\d+\s*[a-zA-Z]?)$/u', $left, $s)
                     && preg_match('/\p{L}{3,}/u', $s[1])
-                    && !$this->looksLikeCompany($left)) {
+                    && ! $this->looksLikeCompany($left)) {
                     $raw['street'] = trim($s[1]);
                     $raw['house_number'] = trim((string) preg_replace('/\s+/', ' ', $s[2]));
                     continue;
                 }
-                if (!isset($raw['company_name']) && $this->looksLikeCompany($left)) {
+                if (! isset($raw['company_name']) && $this->looksLikeCompany($left)) {
                     $raw['company_name'] = $left;
                     continue;
                 }
                 // Personenname (2-4 Grosswoerter): letztes Wort = Nachname.
-                if (!isset($raw['last_name'])
+                if (! isset($raw['last_name'])
                     && preg_match('/^[A-ZÄÖÜ][\p{L}\-]+(?:\s+[A-ZÄÖÜ][\p{L}\-]+){1,3}$/u', $left)) {
                     $parts = preg_split('/\s+/', $left) ?: [];
                     $raw['last_name'] = array_pop($parts);
@@ -199,19 +200,19 @@ class InterlloydPoliceParser implements DocumentTemplateParser
     {
         $out = '.';
         if (preg_match('/Kunden-Nr\.\s*:?\s*(\d{6,12})\b/u', $this->text, $m)) {
-            $out .= ' Kunden-Nr. beim Versicherer: ' . $m[1] . '.';
+            $out .= ' Kunden-Nr. beim Versicherer: '.$m[1].'.';
         }
         if (preg_match('/Jahresprämie mit Vers\.-Steuer\s*:\s*([\d.]+,\d{2})/u', $this->text, $m)) {
-            $out .= ' Jahrespraemie mit Steuer: ' . $m[1] . ' EUR.';
+            $out .= ' Jahrespraemie mit Steuer: '.$m[1].' EUR.';
         }
         if (preg_match('/Betriebsart:\s*([^\r\n]+)/u', $this->text, $m)) {
-            $out .= ' Betriebsart: ' . trim($m[1]) . '.';
+            $out .= ' Betriebsart: '.trim($m[1]).'.';
         }
         if (preg_match('/Risikoort:\s*([^\r\n]+)/u', $this->text, $m)) {
-            $out .= ' Risikoort: ' . trim($m[1]) . '.';
+            $out .= ' Risikoort: '.trim($m[1]).'.';
         }
         if (preg_match('/pauschal Pers-,\s*Sach-,\s*Vermögens\s+([\d.]+)\s+EUR/u', $this->text, $m)) {
-            $out .= ' Deckungssumme pauschal ' . $m[1] . ' EUR.';
+            $out .= ' Deckungssumme pauschal '.$m[1].' EUR.';
         }
         return $out;
     }
@@ -225,9 +226,9 @@ class InterlloydPoliceParser implements DocumentTemplateParser
             str_contains($p, 'verkehrshaftung')
                 || str_contains($p, 'frachtführer') || str_contains($p, 'frachtfuehrer') => 'frachtfuehrerhaftpflicht',
             str_contains($p, 'phv') || str_contains($p, 'privathaftpflicht') => 'haftpflicht',
-            str_contains($p, 'hausrat')                                      => 'hausrat',
-            str_contains($p, 'unfall')                                       => 'unfall',
-            default                                                          => null,
+            str_contains($p, 'hausrat') => 'hausrat',
+            str_contains($p, 'unfall') => 'unfall',
+            default => null,
         };
     }
 
@@ -242,11 +243,11 @@ class InterlloydPoliceParser implements DocumentTemplateParser
     private function interval(string $german): ?string
     {
         return match (mb_strtolower(trim($german))) {
-            'monatlich'        => 'monthly',
-            'vierteljährlich'  => 'quarterly',
-            'halbjährlich'     => 'semiannual',
-            'jährlich'         => 'yearly',
-            default            => null,
+            'monatlich' => 'monthly',
+            'vierteljährlich' => 'quarterly',
+            'halbjährlich' => 'semiannual',
+            'jährlich' => 'yearly',
+            default => null,
         };
     }
 

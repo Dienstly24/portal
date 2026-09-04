@@ -54,41 +54,41 @@ class CustomerCsvImporter
         $lastName = $col(['last_name', 'Nachname']);
         $company = $col(['company', 'Firma', 'Firmenname']);
         // Name aus Vor-/Nachname; sonst Kontakt-/Name-Spalte; sonst Firma.
-        $name = trim(($firstName ?? '') . ' ' . ($lastName ?? ''))
+        $name = trim(($firstName ?? '').' '.($lastName ?? ''))
             ?: $col(['name', 'Name', 'Kontakt'])
             ?: $company;
-        if (!$name) {
+        if (! $name) {
             return null; // ohne Namen kein sinnvoller Datensatz
         }
 
         $email = $col(['email', 'E-Mail', 'e-mail', 'E-Mail 1', 'EMail 1', 'Email 1']);
-        if ($email && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        if ($email && ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $email = null; // ungueltige Adresse ignorieren, Kunde trotzdem anlegen
         }
 
         $email2 = $col(['email2', 'E-Mail 2', 'EMail 2', 'Email 2']);
-        if ($email2 && !filter_var($email2, FILTER_VALIDATE_EMAIL)) {
+        if ($email2 && ! filter_var($email2, FILTER_VALIDATE_EMAIL)) {
             $email2 = null;
         }
 
         $originalNumber = $col(['customer_number', 'Kundennummer', 'kundennummer', 'Kundennr']);
 
         $data = array_filter([
-            'full_name'     => $name,
-            'first_name'    => $firstName,
-            'last_name'     => $lastName,
-            'email'         => $email,
-            'email2'        => $email2,
-            'phone'         => $col(['phone', 'Telefon', 'Telefon 1', 'mobile', 'Mobil', 'Telefon 2']),
-            'birth_date'    => $this->parseDate($col(['birth_date', 'Geburtsdatum'])),
-            'street'        => $col(['street', 'Straße', 'Strasse', 'Straße 1', 'Strasse 1']),
-            'house_number'  => $col(['street_nr', 'Hausnummer']),
-            'zip'           => $col(['plz', 'PLZ', 'PLZ 1']),
-            'city'          => $col(['city', 'Ort', 'Stadt', 'Ort 1']),
-            'iban'          => $col(['iban', 'IBAN']),
-            'gender'        => $this->genderFromAnrede($col(['Anrede', 'gender', 'Geschlecht'])),
-            'company_name'  => $company,
-            'company_type'  => $col(['company_type', 'Rechtsform']),
+            'full_name' => $name,
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'email' => $email,
+            'email2' => $email2,
+            'phone' => $col(['phone', 'Telefon', 'Telefon 1', 'mobile', 'Mobil', 'Telefon 2']),
+            'birth_date' => $this->parseDate($col(['birth_date', 'Geburtsdatum'])),
+            'street' => $col(['street', 'Straße', 'Strasse', 'Straße 1', 'Strasse 1']),
+            'house_number' => $col(['street_nr', 'Hausnummer']),
+            'zip' => $col(['plz', 'PLZ', 'PLZ 1']),
+            'city' => $col(['city', 'Ort', 'Stadt', 'Ort 1']),
+            'iban' => $col(['iban', 'IBAN']),
+            'gender' => $this->genderFromAnrede($col(['Anrede', 'gender', 'Geschlecht'])),
+            'company_name' => $company,
+            'company_type' => $col(['company_type', 'Rechtsform']),
             'customer_type' => $company ? 'firma' : 'privat',
             'import_number' => $originalNumber,
         ], fn ($v) => $v !== null && $v !== '');
@@ -142,7 +142,7 @@ class CustomerCsvImporter
                     $duplicates[] = [
                         'name' => $data['full_name'],
                         'email' => $email,
-                        'reason' => 'Bereits im System' . ($match->customer?->customer_number ? ' (Nr. ' . $match->customer->customer_number . ')' : ''),
+                        'reason' => 'Bereits im System'.($match->customer?->customer_number ? ' (Nr. '.$match->customer->customer_number.')' : ''),
                     ];
                     continue;
                 }
@@ -156,25 +156,25 @@ class CustomerCsvImporter
                 $new[] = [
                     'name' => $data['full_name'],
                     'email' => $email,
-                    'number' => !empty($data['import_number']) ? '25' . preg_replace('/[^A-Za-z0-9]/', '', (string) $data['import_number']) : '(neu)',
+                    'number' => ! empty($data['import_number']) ? '25'.preg_replace('/[^A-Za-z0-9]/', '', (string) $data['import_number']) : '(neu)',
                     'city' => $data['city'] ?? null,
                     'has_email' => (bool) $email,
                 ];
             } catch (\Exception $e) {
-                $errors[] = 'Zeile ' . ($i + 2) . ': ' . $e->getMessage();
+                $errors[] = 'Zeile '.($i + 2).': '.$e->getMessage();
             }
         }
 
         return [
-            'total'         => count($new) + count($duplicates) + $skipped + count($errors),
-            'new_count'     => count($new),
-            'dup_count'     => count($duplicates),
-            'skipped'       => $skipped,
-            'no_email'      => $noEmail,
-            'error_count'   => count($errors),
-            'new'           => $new,
-            'duplicates'    => $duplicates,
-            'errors'        => $errors,
+            'total' => count($new) + count($duplicates) + $skipped + count($errors),
+            'new_count' => count($new),
+            'dup_count' => count($duplicates),
+            'skipped' => $skipped,
+            'no_email' => $noEmail,
+            'error_count' => count($errors),
+            'new' => $new,
+            'duplicates' => $duplicates,
+            'errors' => $errors,
         ];
     }
 
@@ -205,7 +205,7 @@ class CustomerCsvImporter
             } catch (DuplicateCustomerException $e) {
                 $duplicates++;
             } catch (\Exception $e) {
-                $errors[] = 'Zeile ' . ($i + 2) . ': ' . $e->getMessage();
+                $errors[] = 'Zeile '.($i + 2).': '.$e->getMessage();
             }
         }
 
@@ -233,9 +233,9 @@ class CustomerCsvImporter
     {
         $firstLine = strtok($content, "\r\n") ?: '';
         $counts = [
-            ';'  => substr_count($firstLine, ';'),
+            ';' => substr_count($firstLine, ';'),
             "\t" => substr_count($firstLine, "\t"),
-            ','  => substr_count($firstLine, ','),
+            ',' => substr_count($firstLine, ','),
         ];
         arsort($counts);
         $best = array_key_first($counts);
@@ -263,7 +263,7 @@ class CustomerCsvImporter
     /** Datum aus verschiedenen gaengigen Formaten nach Y-m-d normalisieren. */
     private function parseDate($date): ?string
     {
-        if (!$date) {
+        if (! $date) {
             return null;
         }
         foreach (['d.m.Y', 'Y-m-d', 'd/m/Y', 'm/d/Y'] as $format) {

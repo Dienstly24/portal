@@ -7,6 +7,7 @@ use App\Models\Document;
 use App\Models\User;
 use App\Services\CustomerCreation\CustomerAutoCreationService;
 use App\Services\CustomerCreation\DuplicateCustomerException;
+use App\Services\CustomerNumberGenerator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -99,7 +100,7 @@ class CustomerAutoCreationServiceTest extends TestCase
 
     public function test_number_generator_produces_unique_numbers(): void
     {
-        $generator = app(\App\Services\CustomerNumberGenerator::class);
+        $generator = app(CustomerNumberGenerator::class);
 
         // Jahresbasierte Sequenz: jede vergebene (persistierte) Nummer
         // erhöht den Zähler; Format JJ + 5-stellig (z. B. 2600001).
@@ -107,8 +108,8 @@ class CustomerAutoCreationServiceTest extends TestCase
         foreach (range(1, 20) as $i) {
             $n = $generator->generate();
             $numbers[] = $n;
-            $u = \App\Models\User::factory()->create(['role' => 'customer']);
-            \App\Models\Customer::create(['user_id' => $u->id, 'customer_number' => $n]);
+            $u = User::factory()->create(['role' => 'customer']);
+            Customer::create(['user_id' => $u->id, 'customer_number' => $n]);
         }
 
         $this->assertCount(20, array_unique($numbers));

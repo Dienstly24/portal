@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Jobs\ProcessMediaAssetJob;
 use App\Models\MediaAsset;
+use App\Services\Media\ImageVariantGenerator;
 use App\Services\Media\SvgSanitizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -90,7 +91,7 @@ class MediaLibraryController extends Controller
     {
         $request->validate([
             'files' => 'required|array|min:1|max:10',
-            'files.*' => 'required|file|max:' . (int) config('website.media.max_upload_kb'),
+            'files.*' => 'required|file|max:'.(int) config('website.media.max_upload_kb'),
             // Alt-Texte sind PFLICHT (P1-1d): ohne geht Speichern nicht.
             'alt_de' => 'required|string|max:500',
             'alt_ar' => 'required|string|max:500',
@@ -117,7 +118,7 @@ class MediaLibraryController extends Controller
                 $mime = 'image/svg+xml';
             }
             if (! array_key_exists($mime, self::ALLOWED_MIMES)) {
-                return back()->withErrors(['files' => 'Dateityp nicht erlaubt (' . $mime . '). Erlaubt: JPG, PNG, WebP, SVG.'])->withInput();
+                return back()->withErrors(['files' => 'Dateityp nicht erlaubt ('.$mime.'). Erlaubt: JPG, PNG, WebP, SVG.'])->withInput();
             }
 
             $content = (string) file_get_contents($file->getRealPath());
@@ -143,7 +144,7 @@ class MediaLibraryController extends Controller
 
             // Original PRIVAT archivieren (nie oeffentlich ausgeliefert).
             $ext = self::ALLOWED_MIMES[$mime];
-            $originalPath = 'media-originals/' . $asset->id . '/original.' . $ext;
+            $originalPath = 'media-originals/'.$asset->id.'/original.'.$ext;
             Storage::disk('local')->put($originalPath, $content);
             $asset->forceFill(['original_path' => $originalPath])->save();
 
@@ -160,7 +161,7 @@ class MediaLibraryController extends Controller
         }
 
         return redirect()->route('admin.media')
-            ->with('success', $created . ' Bild(er) hochgeladen' . ($request->filled('slot') ? ' und dem Slot zugewiesen - sofort live.' : '.'));
+            ->with('success', $created.' Bild(er) hochgeladen'.($request->filled('slot') ? ' und dem Slot zugewiesen - sofort live.' : '.'));
     }
 
     public function update(Request $request, MediaAsset $asset)
@@ -199,11 +200,11 @@ class MediaLibraryController extends Controller
             // beim Wechsel in einen solchen Slot neu erzeugen, sonst haette
             // ein spaeter zugewiesenes Favicon keine 32px-Variante.
             if ($newSlot && $this->needsRebuild($asset, $newSlot)) {
-                app(\App\Services\Media\ImageVariantGenerator::class)->deleteVariants($asset);
+                app(ImageVariantGenerator::class)->deleteVariants($asset);
                 ProcessMediaAssetJob::dispatchSync($asset, $newSlot);
                 $asset->refresh();
                 if ($asset->processing_status !== 'ready') {
-                    return back()->withErrors(['slot' => 'Bild konnte fuer diesen Slot nicht aufbereitet werden: ' . $asset->processing_error]);
+                    return back()->withErrors(['slot' => 'Bild konnte fuer diesen Slot nicht aufbereitet werden: '.$asset->processing_error]);
                 }
             }
             $newSlot ? $this->assignSlot($asset, $newSlot) : $asset->forceFill(['slot' => null])->save();
@@ -220,7 +221,7 @@ class MediaLibraryController extends Controller
     public function replace(Request $request, MediaAsset $asset)
     {
         $request->validate([
-            'file' => 'required|file|max:' . (int) config('website.media.max_upload_kb'),
+            'file' => 'required|file|max:'.(int) config('website.media.max_upload_kb'),
         ]);
 
         // Marken-Bilder (Logo/Favicon) darf nur die Verwaltung austauschen.
@@ -234,7 +235,7 @@ class MediaLibraryController extends Controller
             $mime = 'image/svg+xml';
         }
         if (! array_key_exists($mime, self::ALLOWED_MIMES)) {
-            return back()->withErrors(['file' => 'Dateityp nicht erlaubt (' . $mime . '). Erlaubt: JPG, PNG, WebP, SVG.']);
+            return back()->withErrors(['file' => 'Dateityp nicht erlaubt ('.$mime.'). Erlaubt: JPG, PNG, WebP, SVG.']);
         }
 
         $content = (string) file_get_contents($file->getRealPath());
@@ -259,7 +260,7 @@ class MediaLibraryController extends Controller
         ]);
 
         $ext = self::ALLOWED_MIMES[$mime];
-        $originalPath = 'media-originals/' . $new->id . '/original.' . $ext;
+        $originalPath = 'media-originals/'.$new->id.'/original.'.$ext;
         Storage::disk('local')->put($originalPath, $content);
         $new->forceFill(['original_path' => $originalPath])->save();
 
@@ -270,7 +271,7 @@ class MediaLibraryController extends Controller
             $this->assignSlot($new, $slot); // archiviert das alte automatisch
         }
 
-        return redirect()->route('admin.media')->with('success', 'Bild ersetzt' . ($slot ? ' - der Slot zeigt sofort das neue Bild.' : '.'));
+        return redirect()->route('admin.media')->with('success', 'Bild ersetzt'.($slot ? ' - der Slot zeigt sofort das neue Bild.' : '.'));
     }
 
     /** Papierkorb (nur admin/manager): 30 Tage wiederherstellbar. */
@@ -283,7 +284,7 @@ class MediaLibraryController extends Controller
 
         return redirect()->route('admin.media')->with('success',
             'Bild in den Papierkorb gelegt (30 Tage wiederherstellbar).'
-            . ($wasSlot ? ' Achtung: Der Slot "' . $wasSlot . '" ist jetzt leer - die Website zeigt dort den eingebauten Fallback.' : ''));
+            .($wasSlot ? ' Achtung: Der Slot "'.$wasSlot.'" ist jetzt leer - die Website zeigt dort den eingebauten Fallback.' : ''));
     }
 
     public function restore(int $id)
@@ -301,7 +302,7 @@ class MediaLibraryController extends Controller
      */
     private function needsRebuild(MediaAsset $asset, string $slot): bool
     {
-        $conf = (array) config('website.slots.' . $slot, []);
+        $conf = (array) config('website.slots.'.$slot, []);
         if (! isset($conf['widths']) && ! isset($conf['formats'])) {
             return false;
         }

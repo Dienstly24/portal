@@ -1,10 +1,13 @@
 <?php
+
 namespace App\Services\Ai;
 
 use App\Models\Document;
 use App\Services\Ai\Contracts\DocumentAiProviderInterface;
+use App\Services\Ai\Contracts\DocumentTemplateParser;
 use App\Services\Ocr\PdfTextLayerExtractor;
 use App\Services\Ocr\TextExtractorInterface;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -47,7 +50,7 @@ class DocumentAnalyzer
         private readonly TextExtractorInterface $ocr,
         private readonly PdfTextLayerExtractor $pdfText,
         private readonly RelevantPageSelector $pageSelector,
-        private readonly \App\Services\Ai\Contracts\DocumentTemplateParser $templateParser,
+        private readonly DocumentTemplateParser $templateParser,
     ) {
     }
 
@@ -94,7 +97,7 @@ class DocumentAnalyzer
         // Ergebnis bekommen, nicht die Kopie eines veralteten Fehlversuchs
         // von vor der Verbesserung.
         // Nur ohne bewusste KI-Erzwingung (forceAi) und Neu-Analyse (fresh).
-        $reuse = (!$forceAi && !$fresh)
+        $reuse = (! $forceAi && ! $fresh)
             ? fn () => $this->reuseFromDuplicate($document)
             : fn () => null;
 
@@ -196,7 +199,7 @@ class DocumentAnalyzer
             $freeText = $this->pageSelector->reduce($freeText);
         }
 
-        $ocrResult = $freeText !== '' ? (new HeuristicDocumentClassifier())->classify($freeText) : null;
+        $ocrResult = $freeText !== '' ? (new HeuristicDocumentClassifier)->classify($freeText) : null;
 
         // Reicht das kostenlose Ergebnis, KI gar nicht erst bemuehen.
         if ($ocrResult !== null && $this->ocrResultSufficient($ocrResult, $freeText)) {
@@ -256,13 +259,13 @@ class DocumentAnalyzer
     {
         $template = [...$parsed, 'source' => 'template'];
 
-        if (!in_array($parsed['type'] ?? '', self::CONTRACT_CORE_TYPES, true)) {
+        if (! in_array($parsed['type'] ?? '', self::CONTRACT_CORE_TYPES, true)) {
             return $template;
         }
         if ($this->hasContractCore($parsed)) {
             return $template;
         }
-        if (!$this->provider->isEnabled()) {
+        if (! $this->provider->isEnabled()) {
             return $template;
         }
 
@@ -280,12 +283,12 @@ class DocumentAnalyzer
         // kodierten PDF-Textebene. OCR-Text eines Scans/Fotos ist dafuer zu
         // fehleranfaellig - dort Vision (beste Qualitaet bei Scans), wie auf
         // dem normalen Eskalationsweg auch.
-        $preferText = $fromTextLayer && $text !== '' && !$this->pdfText->isLikelyGarbled($text);
+        $preferText = $fromTextLayer && $text !== '' && ! $this->pdfText->isLikelyGarbled($text);
         try {
             $ai = $this->runProvider($binary, $mime, $preferText ? $text : '', $preferText);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning(
-                'KI-Eskalation nach Vorlagen-Treffer ohne Versicherer fehlgeschlagen: ' . $e->getMessage()
+            Log::warning(
+                'KI-Eskalation nach Vorlagen-Treffer ohne Versicherer fehlgeschlagen: '.$e->getMessage()
             );
             return $template;
         }
@@ -302,7 +305,7 @@ class DocumentAnalyzer
     private function hasContractCore(array $result): bool
     {
         $ins = $result['data']['versicherung'] ?? [];
-        return !blank($ins['insurer'] ?? null) || !blank($ins['contract_number'] ?? null);
+        return ! blank($ins['insurer'] ?? null) || ! blank($ins['contract_number'] ?? null);
     }
 
     /**
@@ -315,7 +318,7 @@ class DocumentAnalyzer
      */
     private function reuseFromDuplicate(Document $document): ?array
     {
-        if (!$document->duplicate_of) {
+        if (! $document->duplicate_of) {
             return null;
         }
         $twin = Document::whereKey($document->duplicate_of)
@@ -388,7 +391,7 @@ class DocumentAnalyzer
     private function readFile(Document $document): array
     {
         $disk = $document->disk ?: 'public';
-        if (!Storage::disk($disk)->exists($document->file_path)) {
+        if (! Storage::disk($disk)->exists($document->file_path)) {
             throw new \RuntimeException('Datei nicht gefunden.');
         }
 
@@ -401,13 +404,13 @@ class DocumentAnalyzer
         // nicht verlaesslich); liefert der Inhalt keinen bekannten Typ,
         // faellt die Erkennung auf die Endung des Anzeigenamens zurueck.
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($binary) ?: '';
-        if ($mime !== 'application/pdf' && !in_array($mime, self::IMAGE_MEDIA_TYPES, true)) {
+        if ($mime !== 'application/pdf' && ! in_array($mime, self::IMAGE_MEDIA_TYPES, true)) {
             $ext = strtolower(pathinfo($document->file_name, PATHINFO_EXTENSION));
             $mime = $ext === 'pdf' ? 'application/pdf' : (self::IMAGE_MEDIA_TYPES[$ext] ?? '');
         }
 
-        if ($mime !== 'application/pdf' && !in_array($mime, self::IMAGE_MEDIA_TYPES, true)) {
-            throw new \RuntimeException('Dateityp wird von der Analyse nicht unterstuetzt (' . ($mime ?: 'unbekannt') . ').');
+        if ($mime !== 'application/pdf' && ! in_array($mime, self::IMAGE_MEDIA_TYPES, true)) {
+            throw new \RuntimeException('Dateityp wird von der Analyse nicht unterstuetzt ('.($mime ?: 'unbekannt').').');
         }
 
         return [$binary, $mime];

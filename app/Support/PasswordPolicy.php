@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\User;
 use Illuminate\Validation\Rules\Password;
 
 /**
@@ -45,7 +46,7 @@ class PasswordPolicy
     private const PRIVILEGED_ROLES = ['admin', 'manager', 'support', 'employee', 'partner'];
 
     /** Regel fuer einen konkreten Nutzer (Rolle entscheidet ueber die Laenge). */
-    public static function for(?\App\Models\User $user): Password
+    public static function for(?User $user): Password
     {
         return self::rule(self::minimumFor($user?->role));
     }

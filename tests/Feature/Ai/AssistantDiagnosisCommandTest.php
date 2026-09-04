@@ -5,6 +5,7 @@ namespace Tests\Feature\Ai;
 use App\Models\AiAssistantLog;
 use App\Models\SystemSetting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -85,8 +86,8 @@ class AssistantDiagnosisCommandTest extends TestCase
         // Bewusst ueber Artisan::call: der ganze Fehlertext steht in EINER
         // Zeile, und expectsOutputToContain verbraucht je Erwartung eine
         // eigene Zeile.
-        $code = \Illuminate\Support\Facades\Artisan::call('ki:pruefen', ['--live' => true]);
-        $ausgabe = \Illuminate\Support\Facades\Artisan::output();
+        $code = Artisan::call('ki:pruefen', ['--live' => true]);
+        $ausgabe = Artisan::output();
 
         $this->assertSame(1, $code);
         $this->assertStringContainsString('Aufruf fehlgeschlagen', $ausgabe);
@@ -122,7 +123,7 @@ class AssistantDiagnosisCommandTest extends TestCase
 
         $this->artisan('ki:pruefen')->assertExitCode(0);
 
-        $ausgabe = \Illuminate\Support\Facades\Artisan::output();
+        $ausgabe = Artisan::output();
         $this->assertStringNotContainsString('streng-geheim', $ausgabe);
         $this->assertStringNotContainsString('123456', $ausgabe);
     }

@@ -25,7 +25,7 @@ class PartnerAssignmentRestrictionTest extends TestCase
 
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-PA-' . $user->id,
+            'customer_number' => 'C-PA-'.$user->id,
             'partner_id' => $partnerId,
         ]);
     }

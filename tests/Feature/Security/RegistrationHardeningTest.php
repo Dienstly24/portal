@@ -2,10 +2,11 @@
 
 namespace Tests\Feature\Security;
 
+use App\Mail\RegistrationVerificationMail;
 use App\Models\Customer;
 use App\Models\PendingRegistration;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
@@ -108,7 +109,7 @@ class RegistrationHardeningTest extends TestCase
         $this->ohneBremse();
         for ($i = 0; $i < 10; $i++) {
             $this->post('/register', $this->angaben([
-                'email' => 'bot' . $i . '@example.com',
+                'email' => 'bot'.$i.'@example.com',
             ]));
         }
 
@@ -122,7 +123,7 @@ class RegistrationHardeningTest extends TestCase
         // Er bekommt die ERSTE Nummer des Jahres - die Bots haben nichts
         // verbraucht.
         $nummer = Customer::first()->customer_number;
-        $this->assertSame(now()->format('y') . '00001', $nummer);
+        $this->assertSame(now()->format('y').'00001', $nummer);
     }
 
     /** Ohne Bestaetigung entsteht keine endgueltige Kundenakte. */
@@ -268,7 +269,7 @@ class RegistrationHardeningTest extends TestCase
         $status = [];
         for ($i = 0; $i < 9; $i++) {
             $status[] = $this->post('/register', $this->angaben([
-                'email' => 'nutzer' . $i . '@example.com',
+                'email' => 'nutzer'.$i.'@example.com',
             ]))->getStatusCode();
         }
 
@@ -285,7 +286,7 @@ class RegistrationHardeningTest extends TestCase
         $status = [];
         for ($i = 0; $i < 6; $i++) {
             $status[] = $this->withServerVariables([
-                'REMOTE_ADDR' => '203.0.113.' . (10 + $i),
+                'REMOTE_ADDR' => '203.0.113.'.(10 + $i),
             ])->post('/register', $this->angaben())->getStatusCode();
         }
 
@@ -321,7 +322,7 @@ class RegistrationHardeningTest extends TestCase
     private function ohneBremse(): self
     {
         return $this->withoutMiddleware(
-            \Illuminate\Routing\Middleware\ThrottleRequests::class
+            ThrottleRequests::class
         );
     }
 
@@ -350,7 +351,7 @@ class RegistrationHardeningTest extends TestCase
         Mail::fake();
         $this->post('/register', $this->angaben(['email' => $email]));
 
-        Mail::assertSent(\App\Mail\RegistrationVerificationMail::class, function ($mail) use (&$token) {
+        Mail::assertSent(RegistrationVerificationMail::class, function ($mail) use (&$token) {
             if (preg_match('#/register/bestaetigen/([A-Za-z0-9]+)#', $mail->verifyUrl, $m)) {
                 $token = $m[1];
             }

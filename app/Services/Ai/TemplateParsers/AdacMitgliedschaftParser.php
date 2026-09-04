@@ -1,6 +1,8 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
+use App\Models\Contract;
 use App\Services\Ai\Concerns\ReadsDocumentPages;
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
 use App\Services\Ai\Contracts\DocumentTemplateParser;
@@ -45,7 +47,7 @@ class AdacMitgliedschaftParser implements DocumentTemplateParser
         if ($this->looksLikeComparisonProtocol($text) || str_contains($upper, 'AUTOVERSICHERUNG')) {
             return null;
         }
-        if (!str_contains($upper, 'ADAC') || !str_contains($upper, 'MITGLIED')) {
+        if (! str_contains($upper, 'ADAC') || ! str_contains($upper, 'MITGLIED')) {
             return null;
         }
 
@@ -96,20 +98,20 @@ class AdacMitgliedschaftParser implements DocumentTemplateParser
             'premium_interval' => $amount !== null ? 'yearly' : null,
         ], fn ($v) => $v !== null && $v !== ''));
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $tierLabel = $subtype !== null
-            ? (\App\Models\Contract::SUBTYPES['schutzbrief'][$subtype] ?? $subtype)
+            ? (Contract::SUBTYPES['schutzbrief'][$subtype] ?? $subtype)
             : null;
         return [
             'type' => 'versicherungsvertrag',
             'confidence' => 74,
             'summary' => 'ADAC-Mitgliedschaft'
-                . ($tierLabel !== null ? ' (' . $tierLabel . ')' : '')
-                . ($name !== '' ? ' - ' . $name : '')
-                . ' - Mitgliedsnummer ' . $memberNo
-                . ($amount !== null ? ' - Jahresbeitrag ' . number_format($amount, 2, ',', '.') . ' EUR' : '')
-                . ' - Felder gratis gelesen (ohne KI).',
-            'title' => 'ADAC Mitgliedschaft' . ($name !== '' ? ' ' . $name : ''),
+                .($tierLabel !== null ? ' ('.$tierLabel.')' : '')
+                .($name !== '' ? ' - '.$name : '')
+                .' - Mitgliedsnummer '.$memberNo
+                .($amount !== null ? ' - Jahresbeitrag '.number_format($amount, 2, ',', '.').' EUR' : '')
+                .' - Felder gratis gelesen (ohne KI).',
+            'title' => 'ADAC Mitgliedschaft'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -151,7 +153,7 @@ class AdacMitgliedschaftParser implements DocumentTemplateParser
     private function labelValue(string $label): ?string
     {
         foreach ($this->lines as $line) {
-            if (preg_match('/^\s*' . preg_quote($label, '/') . '\s*:?\s{1,}(\S.*?)\s*$/u', $line, $m)) {
+            if (preg_match('/^\s*'.preg_quote($label, '/').'\s*:?\s{1,}(\S.*?)\s*$/u', $line, $m)) {
                 return trim($m[1]);
             }
         }

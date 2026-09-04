@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
@@ -46,14 +47,14 @@ class MessageTemplateController extends Controller
     {
         $created = MessageTemplate::seedDefaults(auth()->id());
         return redirect()->route('admin.templates')->with('success',
-            $created > 0 ? $created . ' Standard-Vorlagen angelegt.' : 'Alle Standard-Vorlagen sind bereits vorhanden.');
+            $created > 0 ? $created.' Standard-Vorlagen angelegt.' : 'Alle Standard-Vorlagen sind bereits vorhanden.');
     }
 
     /** JSON-Liste fuer die Composer-Dropdowns (alle Staff-Rollen). */
     public function list(Request $request)
     {
         $templates = MessageTemplate::query()
-            ->when($request->filled('category'), fn($q) => $q->where('category', $request->category))
+            ->when($request->filled('category'), fn ($q) => $q->where('category', $request->category))
             ->orderBy('sort')->orderBy('name')
             ->get(['id', 'name', 'category', 'subject']);
         return response()->json(['templates' => $templates]);
@@ -81,7 +82,7 @@ class MessageTemplateController extends Controller
     {
         return $request->validate([
             'name' => 'required|string|max:120',
-            'category' => 'required|in:' . implode(',', array_keys(MessageTemplate::CATEGORIES)),
+            'category' => 'required|in:'.implode(',', array_keys(MessageTemplate::CATEGORIES)),
             'subject' => 'nullable|string|max:200',
             'body' => 'required|string|max:10000',
             'sort' => 'nullable|integer|min:0|max:9999',

@@ -16,7 +16,7 @@ class HealthInsuranceSwitchCalculatorTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->calc = new HealthInsuranceSwitchCalculator();
+        $this->calc = new HealthInsuranceSwitchCalculator;
     }
 
     public function test_regular_wechsel_is_first_of_month_three_months_later(): void

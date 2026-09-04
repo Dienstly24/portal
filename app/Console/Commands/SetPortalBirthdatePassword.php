@@ -27,7 +27,7 @@ class SetPortalBirthdatePassword extends Command
         $email = $this->argument('email');
         $allMissing = (bool) $this->option('all-missing');
 
-        if (!$email && !$allMissing) {
+        if (! $email && ! $allMissing) {
             $this->error('Bitte eine E-Mail angeben oder --all-missing verwenden.');
             return self::FAILURE;
         }

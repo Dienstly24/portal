@@ -113,7 +113,7 @@ class MediaAsset extends Model
      */
     public static function publicUrl(string $path): string
     {
-        return '/storage/' . ltrim($path, '/');
+        return '/storage/'.ltrim($path, '/');
     }
 
     /**
@@ -161,7 +161,7 @@ class MediaAsset extends Model
     public function srcset(string $format): string
     {
         return implode(', ', array_map(
-            fn ($v) => self::publicUrl($v['path']) . ' ' . $v['width'] . 'w',
+            fn ($v) => self::publicUrl($v['path']).' '.$v['width'].'w',
             $this->variantsOf($format)
         ));
     }

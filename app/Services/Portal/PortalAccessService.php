@@ -1,9 +1,12 @@
 <?php
+
 namespace App\Services\Portal;
 
+use App\Http\Controllers\Auth\PasswordSetupController;
 use App\Mail\CustomerWelcomeMail;
 use App\Models\ActivityLog;
 use App\Models\Customer;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
@@ -23,7 +26,7 @@ class PortalAccessService
     public function initialPasswordFor(Customer $customer): ?string
     {
         return $customer->birth_date
-            ? \Carbon\Carbon::parse($customer->birth_date)->format('d.m.Y')
+            ? Carbon::parse($customer->birth_date)->format('d.m.Y')
             : null;
     }
 
@@ -52,7 +55,7 @@ class PortalAccessService
     public function sendInvitation(Customer $customer, ?int $actorId = null): string
     {
         $user = $customer->user;
-        if ($user === null || !$user->hasRealEmail()) {
+        if ($user === null || ! $user->hasRealEmail()) {
             throw new \RuntimeException('Kunde hat keine echte E-Mail-Adresse – bitte zuerst eine Login-E-Mail hinterlegen.');
         }
 
@@ -61,7 +64,7 @@ class PortalAccessService
         $hasUsablePassword = $user->portal_password_set_at !== null;
 
         if ($initialPassword !== null) {
-            if (!$hasUsablePassword) {
+            if (! $hasUsablePassword) {
                 $user->forceFill([
                     'password' => bcrypt($initialPassword),
                     'portal_password_set_at' => now(),
@@ -79,7 +82,7 @@ class PortalAccessService
         } else {
             // Kein Geburtsdatum: zufälliges (unbekanntes) Passwort + Link
             // zum Selbst-Setzen.
-            if (!$hasUsablePassword) {
+            if (! $hasUsablePassword) {
                 $user->forceFill(['password' => bcrypt(Str::random(40))])->save();
             }
             // SIGNIERTER Link statt Reset-Broker-Token: der Broker ist seit
@@ -88,7 +91,7 @@ class PortalAccessService
             // oft erst Tage spaeter. Der signierte Link haelt 14 Tage,
             // haengt am APP_KEY und laesst das Passwort unangetastet, bis
             // der Kunde selbst eines setzt.
-            $setPasswordUrl = \App\Http\Controllers\Auth\PasswordSetupController::invitationUrl($user);
+            $setPasswordUrl = PasswordSetupController::invitationUrl($user);
             $mode = 'setlink';
         }
 
@@ -128,10 +131,10 @@ class PortalAccessService
     public function autoInvite(Customer $customer, ?int $actorId = null): bool
     {
         $user = $customer->user;
-        if ($user === null || !$user->hasRealEmail()) {
+        if ($user === null || ! $user->hasRealEmail()) {
             return false; // keine erreichbare Adresse -> stiller Ueberspring
         }
-        if (isset($user->is_active) && !$user->is_active) {
+        if (isset($user->is_active) && ! $user->is_active) {
             return false; // Portal bewusst deaktiviert
         }
         // Zugang laeuft bereits (Login/Passwort) oder Einladung schon versandt
@@ -146,7 +149,7 @@ class PortalAccessService
             $this->sendInvitation($customer, $actorId);
             return true;
         } catch (\Throwable $e) {
-            \Log::warning('Automatische Portal-Einladung fehlgeschlagen (' . $user->email . '): ' . $e->getMessage());
+            \Log::warning('Automatische Portal-Einladung fehlgeschlagen ('.$user->email.'): '.$e->getMessage());
             return false;
         }
     }
@@ -155,7 +158,7 @@ class PortalAccessService
     public function sendResetLink(Customer $customer, ?int $actorId = null): void
     {
         $user = $customer->user;
-        if ($user === null || !$user->hasRealEmail()) {
+        if ($user === null || ! $user->hasRealEmail()) {
             throw new \RuntimeException('Kunde hat keine echte E-Mail-Adresse – Reset-Link nicht möglich.');
         }
 
@@ -180,7 +183,7 @@ class PortalAccessService
     public function resetPortal(Customer $customer, ?int $actorId = null): string
     {
         $user = $customer->user;
-        if ($user === null || !$user->hasRealEmail()) {
+        if ($user === null || ! $user->hasRealEmail()) {
             throw new \RuntimeException('Kunde hat keine echte E-Mail-Adresse – Zurücksetzen nicht möglich.');
         }
 

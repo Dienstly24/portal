@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\CommissionImport;
 
 use App\Models\CommissionImport;
@@ -53,7 +54,7 @@ class CommissionContractBuilder
         private CustomerMatchingService $matcher,
         private CustomerAutoCreationService $creator,
         private CommissionAuditLogger $audit,
-        private PersonNameParser $names = new PersonNameParser(),
+        private PersonNameParser $names = new PersonNameParser,
     ) {
     }
 
@@ -140,8 +141,8 @@ class CommissionContractBuilder
         $exact = $this->byExactName($parsed['name']);
         if ($exact === 'ambiguous') {
             return $nothing(
-                'Mehrere Kundenakten heißen „' . $parsed['name'] . '“. '
-                . 'Es wurde bewusst nichts angelegt – bitte von Hand zuordnen.'
+                'Mehrere Kundenakten heißen „'.$parsed['name'].'“. '
+                .'Es wurde bewusst nichts angelegt – bitte von Hand zuordnen.'
             );
         }
         $customer = $exact;
@@ -165,9 +166,9 @@ class CommissionContractBuilder
                 $candidate = $e->matchResult->customer;
                 return $nothing(
                     'Es gibt bereits eine ähnliche Kundenakte ('
-                    . ($candidate?->user?->name ?? $candidate?->customer_number ?? 'unbekannt')
-                    . ', Übereinstimmung ' . $e->matchResult->score . '%). '
-                    . 'Es wurde bewusst nichts angelegt – bitte von Hand zuordnen.'
+                    .($candidate?->user?->name ?? $candidate?->customer_number ?? 'unbekannt')
+                    .', Übereinstimmung '.$e->matchResult->score.'%). '
+                    .'Es wurde bewusst nichts angelegt – bitte von Hand zuordnen.'
                 );
             }
             $createdCustomer = true;
@@ -177,7 +178,7 @@ class CommissionContractBuilder
                 $this->audit->log('kunde_angelegt', null, [
                     'import_id' => $import->id,
                     'source_file' => $import->filename,
-                    'new_value' => $parsed['name'] . ' (' . $customer->customer_number . ')',
+                    'new_value' => $parsed['name'].' ('.$customer->customer_number.')',
                 ]);
             }
         }
@@ -224,7 +225,7 @@ class CommissionContractBuilder
             'internal_contract_number' => $contract->internal_contract_number,
             'import_id' => $import->id,
             'source_file' => $import->filename,
-            'new_value' => trim($contract->typeLabel() . ' · ' . $contract->insurer . ' · ' . $parsed['name']),
+            'new_value' => trim($contract->typeLabel().' · '.$contract->insurer.' · '.$parsed['name']),
         ]);
 
         return [
@@ -234,8 +235,8 @@ class CommissionContractBuilder
             'created_customer' => $createdCustomer,
             'note' => $createdCustomer
                 ? 'Kunde und Vertrag neu angelegt (Status „In Bearbeitung“ – bitte prüfen).'
-                : 'Vertrag beim vorhandenen Kunden ' . ($customer->user?->name ?? $customer->customer_number)
-                    . ' angelegt (Status „In Bearbeitung“ – bitte prüfen).',
+                : 'Vertrag beim vorhandenen Kunden '.($customer->user?->name ?? $customer->customer_number)
+                    .' angelegt (Status „In Bearbeitung“ – bitte prüfen).',
         ];
     }
 
@@ -346,7 +347,7 @@ class CommissionContractBuilder
     private function type(array $mapped): string
     {
         $haystack = mb_strtolower(trim(
-            (string) ($mapped['product_name'] ?? '') . ' ' . (string) ($mapped['sparte'] ?? '')
+            (string) ($mapped['product_name'] ?? '').' '.(string) ($mapped['sparte'] ?? '')
         ));
         if ($haystack === '') {
             return 'andere';
@@ -369,7 +370,7 @@ class CommissionContractBuilder
     private function note(array $mapped, CommissionImport $import): string
     {
         $lines = [
-            'Automatisch aus der Datei "' . $import->filename . '" angelegt (' . now()->format('d.m.Y') . ').',
+            'Automatisch aus der Datei "'.$import->filename.'" angelegt ('.now()->format('d.m.Y').').',
             'Die Angaben stammen aus einer fremden Abrechnung und sind NICHT geprüft.',
         ];
         foreach ([
@@ -380,7 +381,7 @@ class CommissionContractBuilder
             'Verbrauch' => $mapped['consumption'] ?? null,
         ] as $label => $value) {
             if (filled($value)) {
-                $lines[] = $label . ': ' . $value;
+                $lines[] = $label.': '.$value;
             }
         }
         return implode("\n", $lines);

@@ -7,6 +7,9 @@ use App\Services\Ai\ClaudeDocumentAiProvider;
 use App\Services\Ai\Contracts\DocumentAiProviderInterface;
 use App\Services\Ai\DocumentAnalyzer;
 use App\Services\Ai\RelevantPageSelector;
+use App\Services\Ai\TemplateParsers\Check24KfzProtocolParser;
+use App\Services\Ai\TemplateParsers\CompositeDocumentTemplateParser;
+use App\Services\Ai\TemplateParsers\KkhBeitrittserklaerungParser;
 use App\Services\Ocr\PdfTextLayerExtractor;
 use App\Services\Ocr\TextExtractorInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -90,10 +93,10 @@ class DocumentCostOptimizationTest extends TestCase
         // Bekanntes Formular MIT gelesenem Versicherer -> Gratis-Parser
         // greift vollstaendig, KEIN KI-Aufruf.
         $text = "Vorlaeufiges Beratungsprotokoll zur Kfz-Versicherung - CHECK24\n"
-            . "HSN/TSN: 1234/ABC\nHalter: Versicherungsnehmer\nVersicherungsbeginn: 01.08.2026\n"
-            . "waehlte der Versicherungsnehmer selbstständig folgenden Tarif:\n\nHUK24 Classic\n";
+            ."HSN/TSN: 1234/ABC\nHalter: Versicherungsnehmer\nVersicherungsbeginn: 01.08.2026\n"
+            ."waehlte der Versicherungsnehmer selbstständig folgenden Tarif:\n\nHUK24 Classic\n";
         $provider = $this->recordingProvider($this->aiPayload());
-        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector(), new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser());
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector, new Check24KfzProtocolParser);
 
         $result = $analyzer->analyze($this->pdfDocument());
 
@@ -113,7 +116,7 @@ class DocumentCostOptimizationTest extends TestCase
     private function insurerlessProtocolText(): string
     {
         return "Vorlaeufiges Beratungsprotokoll zur Kfz-Versicherung - CHECK24\n"
-            . "HSN/TSN: 1234/ABC\nHalter: Versicherungsnehmer\nVersicherungsbeginn: 01.08.2026\n";
+            ."HSN/TSN: 1234/ABC\nHalter: Versicherungsnehmer\nVersicherungsbeginn: 01.08.2026\n";
     }
 
     public function test_template_hit_without_insurer_escalates_to_ai(): void
@@ -121,7 +124,7 @@ class DocumentCostOptimizationTest extends TestCase
         $payload = $this->aiPayload();
         $payload['data'] = ['versicherung' => ['insurer' => 'WGV']];
         $provider = $this->recordingProvider($payload);
-        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($this->insurerlessProtocolText()), new RelevantPageSelector(), new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser());
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($this->insurerlessProtocolText()), new RelevantPageSelector, new Check24KfzProtocolParser);
 
         $result = $analyzer->analyze($this->pdfDocument());
 
@@ -136,7 +139,7 @@ class DocumentCostOptimizationTest extends TestCase
         // Die KI antwortet mit gueltigem, aber LEEREM JSON (kein Versicherer,
         // keine Vertragsnummer) - das praezise Vorlagen-Ergebnis bleibt.
         $provider = $this->recordingProvider($this->aiPayload('sonstiges'));
-        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($this->insurerlessProtocolText()), new RelevantPageSelector(), new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser());
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($this->insurerlessProtocolText()), new RelevantPageSelector, new Check24KfzProtocolParser);
 
         $result = $analyzer->analyze($this->pdfDocument());
 
@@ -168,7 +171,7 @@ class DocumentCostOptimizationTest extends TestCase
         $this->assertSame((string) $twin->id, (string) $copy->duplicate_of);
 
         $provider = $this->recordingProvider($this->aiPayload());
-        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($this->insurerlessProtocolText()), new RelevantPageSelector(), new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser());
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($this->insurerlessProtocolText()), new RelevantPageSelector, new Check24KfzProtocolParser);
 
         $result = $analyzer->analyze($copy);
 
@@ -187,8 +190,8 @@ class DocumentCostOptimizationTest extends TestCase
             $provider,
             $this->fakeOcr(true, $this->insurerlessProtocolText()),
             $this->fakePdfText('', true),
-            new RelevantPageSelector(),
-            new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser(),
+            new RelevantPageSelector,
+            new Check24KfzProtocolParser,
         );
 
         $analyzer->analyze($this->pdfDocument());
@@ -206,7 +209,7 @@ class DocumentCostOptimizationTest extends TestCase
         $payload = $this->aiPayload('versicherungspolice');
         $payload['data'] = ['versicherung' => ['insurer' => 'Beispiel Versicherung', 'contract_number' => 'VS-1']];
         $provider = $this->recordingProvider($payload);
-        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector(), new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser());
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector, new Check24KfzProtocolParser);
 
         $result = $analyzer->analyze($this->pdfDocument());
 
@@ -221,19 +224,19 @@ class DocumentCostOptimizationTest extends TestCase
         $stub = 'Seite 1 von 2 - www.beispiel.de - Servicenummer 0800 1234567';
         $this->assertLessThan(200, mb_strlen($stub));
         $kkh = "Beitrittserklärung\nMustermann Max\nNachname Vorname\n"
-            . "01.02.1990 Aleppo Männlich\nGeburtsdatum Geburtsort Geschlecht\n"
-            . "B123456789\nRentenbezieher\nKrankenversicherungsnummer\n"
-            . "01.09.2026 x\nMitgliedschaftsbeginn Zum Zeitpunkt\n"
-            . "KKH Kaufmännische Krankenkasse - 30125 Hannover";
+            ."01.02.1990 Aleppo Männlich\nGeburtsdatum Geburtsort Geschlecht\n"
+            ."B123456789\nRentenbezieher\nKrankenversicherungsnummer\n"
+            ."01.09.2026 x\nMitgliedschaftsbeginn Zum Zeitpunkt\n"
+            .'KKH Kaufmännische Krankenkasse - 30125 Hannover';
 
         $provider = $this->recordingProvider($this->aiPayload());
         $analyzer = new DocumentAnalyzer(
             $provider,
             $this->fakeOcr(true, $kkh),
             $this->fakePdfText($stub, true),
-            new RelevantPageSelector(),
-            new \App\Services\Ai\TemplateParsers\CompositeDocumentTemplateParser([
-                new \App\Services\Ai\TemplateParsers\KkhBeitrittserklaerungParser(),
+            new RelevantPageSelector,
+            new CompositeDocumentTemplateParser([
+                new KkhBeitrittserklaerungParser,
             ]),
         );
 
@@ -247,9 +250,9 @@ class DocumentCostOptimizationTest extends TestCase
     public function test_template_hit_is_kept_when_escalation_fails(): void
     {
         $text = "Vorlaeufiges Beratungsprotokoll zur Kfz-Versicherung - CHECK24\n"
-            . "HSN/TSN: 1234/ABC\nHalter: Versicherungsnehmer\nVersicherungsbeginn: 01.08.2026\n";
+            ."HSN/TSN: 1234/ABC\nHalter: Versicherungsnehmer\nVersicherungsbeginn: 01.08.2026\n";
         $provider = $this->recordingProvider(null); // KI antwortet unbrauchbar
-        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector(), new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser());
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector, new Check24KfzProtocolParser);
 
         $result = $analyzer->analyze($this->pdfDocument());
 
@@ -264,20 +267,20 @@ class DocumentCostOptimizationTest extends TestCase
         // nichts, OCR liefert den Formulartext -> der Vorlagen-Parser greift
         // auf dem OCR-Text und die (teure, wackelige) Bild-KI wird gespart.
         $kkh = "Beitrittserklärung\nMustermann Max\nNachname Vorname\n"
-            . "01.02.1990 Aleppo Männlich\nGeburtsdatum Geburtsort Geschlecht\n"
-            . "B123456789\nRentenbezieher\nKrankenversicherungsnummer\n"
-            . "01.09.2026 x\nMitgliedschaftsbeginn Zum Zeitpunkt\n"
-            . "KKH Kaufmännische Krankenkasse - 30125 Hannover";
+            ."01.02.1990 Aleppo Männlich\nGeburtsdatum Geburtsort Geschlecht\n"
+            ."B123456789\nRentenbezieher\nKrankenversicherungsnummer\n"
+            ."01.09.2026 x\nMitgliedschaftsbeginn Zum Zeitpunkt\n"
+            .'KKH Kaufmännische Krankenkasse - 30125 Hannover';
 
         $provider = $this->recordingProvider($this->aiPayload());
         $analyzer = new DocumentAnalyzer(
             $provider,
             $this->fakeOcr(true, $kkh),   // OCR verfuegbar + liefert den Text
             $this->fakePdfText('', true), // keine Textebene (Bild-PDF)
-            new RelevantPageSelector(),
-            new \App\Services\Ai\TemplateParsers\CompositeDocumentTemplateParser([
-                new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser(),
-                new \App\Services\Ai\TemplateParsers\KkhBeitrittserklaerungParser(),
+            new RelevantPageSelector,
+            new CompositeDocumentTemplateParser([
+                new Check24KfzProtocolParser,
+                new KkhBeitrittserklaerungParser,
             ]),
         );
 
@@ -294,11 +297,11 @@ class DocumentCostOptimizationTest extends TestCase
         // Text WAERE heuristisch verwertbar (SEPA + IBAN), ist aber zu lang
         // fuer die einfache Heuristik -> Eskalation, nicht Akzeptanz.
         $text = "SEPA-LASTSCHRIFTMANDAT\nIBAN DE89370400440532013000\n"
-            . str_repeat("Blindtext zur Laenge dieser Seite. ", 120);
+            .str_repeat('Blindtext zur Laenge dieser Seite. ', 120);
         $this->assertGreaterThan(2500, mb_strlen($text));
 
         $provider = $this->recordingProvider($this->aiPayload());
-        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector(), new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser());
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector, new Check24KfzProtocolParser);
 
         $result = $analyzer->analyze($this->pdfDocument());
 
@@ -313,7 +316,7 @@ class DocumentCostOptimizationTest extends TestCase
         $text = "SEPA-LASTSCHRIFTMANDAT\nIBAN DE89370400440532013000\nKontoinhaber Max Mustermann";
 
         $provider = $this->recordingProvider($this->aiPayload());
-        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector(), new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser());
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector, new Check24KfzProtocolParser);
 
         $result = $analyzer->analyze($this->pdfDocument());
 
@@ -335,7 +338,7 @@ class DocumentCostOptimizationTest extends TestCase
         $this->assertLessThan(2500, mb_strlen($text));
 
         $provider = $this->recordingProvider($this->aiPayload('beratungsprotokoll'));
-        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector(), new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser());
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(), $this->fakePdfText($text), new RelevantPageSelector, new Check24KfzProtocolParser);
 
         $result = $analyzer->analyze($this->pdfDocument());
 
@@ -347,7 +350,7 @@ class DocumentCostOptimizationTest extends TestCase
     {
         // Keine Textebene (Scan) und kein OCR -> KI mit Bild/PDF (preferText false).
         $provider = $this->recordingProvider($this->aiPayload('gesundheitskarte'));
-        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(available: false), $this->fakePdfText(''), new RelevantPageSelector(), new \App\Services\Ai\TemplateParsers\Check24KfzProtocolParser());
+        $analyzer = new DocumentAnalyzer($provider, $this->fakeOcr(available: false), $this->fakePdfText(''), new RelevantPageSelector, new Check24KfzProtocolParser);
 
         $result = $analyzer->analyze($this->pdfDocument());
 
@@ -365,7 +368,7 @@ class DocumentCostOptimizationTest extends TestCase
             ]),
         ]);
 
-        (new ClaudeDocumentAiProvider())->analyze('PDF-BYTES', 'application/pdf', 'Sauberer Text mit IBAN DE89370400440532013000', true);
+        (new ClaudeDocumentAiProvider)->analyze('PDF-BYTES', 'application/pdf', 'Sauberer Text mit IBAN DE89370400440532013000', true);
 
         Http::assertSent(function ($request) {
             $content = $request->data()['messages'][0]['content'];
@@ -387,7 +390,7 @@ class DocumentCostOptimizationTest extends TestCase
             ]),
         ]);
 
-        (new ClaudeDocumentAiProvider())->analyze('PDF-BYTES', 'application/pdf', 'egal', false);
+        (new ClaudeDocumentAiProvider)->analyze('PDF-BYTES', 'application/pdf', 'egal', false);
 
         Http::assertSent(function ($request) {
             $content = $request->data()['messages'][0]['content'];
@@ -406,8 +409,8 @@ class DocumentCostOptimizationTest extends TestCase
         // in Tests aus ist); ohne poppler auf dem Runner wird uebersprungen.
         config(['services.ocr.text_layer' => true]);
 
-        $extractor = new PdfTextLayerExtractor();
-        if (!$extractor->isAvailable()) {
+        $extractor = new PdfTextLayerExtractor;
+        if (! $extractor->isAvailable()) {
             $this->markTestSkipped('pdftotext (poppler-utils) auf diesem Runner nicht verfuegbar.');
         }
 
@@ -431,7 +434,7 @@ class DocumentCostOptimizationTest extends TestCase
             ]),
         ]);
 
-        (new ClaudeDocumentAiProvider())->analyze('BYTES', 'application/pdf', 'Ein langer Dokumenttext', true);
+        (new ClaudeDocumentAiProvider)->analyze('BYTES', 'application/pdf', 'Ein langer Dokumenttext', true);
 
         Http::assertSent(fn ($request) => (int) ($request->data()['max_tokens'] ?? 0) >= 4096);
     }
@@ -447,7 +450,7 @@ class DocumentCostOptimizationTest extends TestCase
             ]),
         ]);
 
-        $this->assertNull((new ClaudeDocumentAiProvider())->analyze('BYTES', 'application/pdf', 'text', true));
+        $this->assertNull((new ClaudeDocumentAiProvider)->analyze('BYTES', 'application/pdf', 'text', true));
     }
 
     public function test_unknown_type_falls_back_to_sonstiges_without_losing_data(): void
@@ -466,7 +469,7 @@ class DocumentCostOptimizationTest extends TestCase
             ]),
         ]);
 
-        $result = (new ClaudeDocumentAiProvider())->analyze('BYTES', 'application/pdf', 'text', true);
+        $result = (new ClaudeDocumentAiProvider)->analyze('BYTES', 'application/pdf', 'text', true);
 
         $this->assertNotNull($result);
         $this->assertSame('sonstiges', $result['type']);
@@ -476,7 +479,7 @@ class DocumentCostOptimizationTest extends TestCase
 
     public function test_detects_garbled_text_layer(): void
     {
-        $extractor = new PdfTextLayerExtractor();
+        $extractor = new PdfTextLayerExtractor;
 
         // Echte deutsche Textebene (Auszug aus einem Energie-Auftrag).
         $ok = str_repeat('Auftrag fuer Gas der EWE VERTRIEB GmbH, Name und Datum, Betrag in Euro pro Monat, Vertragsnummer und Kundennummer. ', 6);

@@ -38,7 +38,7 @@ class FondsFinanzImportTest extends TestCase
     {
         return EmailMessage::create(array_merge([
             'email_account_id' => $this->account()->id,
-            'message_uid' => 'INBOX:' . uniqid(),
+            'message_uid' => 'INBOX:'.uniqid(),
             'from_address' => 'service@fondsfinanz.de',
             'from_name' => 'Fonds Finanz Maklerservice GmbH',
             'subject' => 'Neue Vertragsinformation',
@@ -61,7 +61,7 @@ class FondsFinanzImportTest extends TestCase
 
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'K-' . uniqid(),
+            'customer_number' => 'K-'.uniqid(),
             'birth_date' => $birthDate,
         ]);
     }

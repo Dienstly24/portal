@@ -1,4 +1,5 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -22,18 +23,18 @@ return new class extends Migration {
         });
 
         Schema::table('tickets', function (Blueprint $table) {
-            if (!Schema::hasColumn('tickets', 'ticket_number')) $table->string('ticket_number', 20)->nullable()->unique()->after('id');
-            if (!Schema::hasColumn('tickets', 'first_response_at')) $table->timestamp('first_response_at')->nullable();
-            if (!Schema::hasColumn('tickets', 'resolved_at')) $table->timestamp('resolved_at')->nullable();
-            if (!Schema::hasColumn('tickets', 'closed_at')) $table->timestamp('closed_at')->nullable();
-            if (!Schema::hasColumn('tickets', 'closed_by')) $table->unsignedBigInteger('closed_by')->nullable();
-            if (!Schema::hasColumn('tickets', 'due_at')) $table->timestamp('due_at')->nullable();
-            if (!Schema::hasColumn('tickets', 'reopened_count')) $table->unsignedSmallInteger('reopened_count')->default(0);
-            if (!Schema::hasColumn('tickets', 'rating')) $table->unsignedTinyInteger('rating')->nullable();
-            if (!Schema::hasColumn('tickets', 'rating_comment')) $table->text('rating_comment')->nullable();
+            if (! Schema::hasColumn('tickets', 'ticket_number')) $table->string('ticket_number', 20)->nullable()->unique()->after('id');
+            if (! Schema::hasColumn('tickets', 'first_response_at')) $table->timestamp('first_response_at')->nullable();
+            if (! Schema::hasColumn('tickets', 'resolved_at')) $table->timestamp('resolved_at')->nullable();
+            if (! Schema::hasColumn('tickets', 'closed_at')) $table->timestamp('closed_at')->nullable();
+            if (! Schema::hasColumn('tickets', 'closed_by')) $table->unsignedBigInteger('closed_by')->nullable();
+            if (! Schema::hasColumn('tickets', 'due_at')) $table->timestamp('due_at')->nullable();
+            if (! Schema::hasColumn('tickets', 'reopened_count')) $table->unsignedSmallInteger('reopened_count')->default(0);
+            if (! Schema::hasColumn('tickets', 'rating')) $table->unsignedTinyInteger('rating')->nullable();
+            if (! Schema::hasColumn('tickets', 'rating_comment')) $table->text('rating_comment')->nullable();
         });
 
-        if (!Schema::hasTable('ticket_events')) {
+        if (! Schema::hasTable('ticket_events')) {
             Schema::create('ticket_events', function (Blueprint $table) {
                 $table->uuid('id')->primary();
                 $table->uuid('ticket_id')->index();
@@ -52,10 +53,10 @@ return new class extends Migration {
         foreach (DB::table('tickets')->whereNull('ticket_number')->orderBy('created_at')->get(['id', 'created_at', 'status', 'priority']) as $t) {
             $yy = date('y', strtotime($t->created_at ?? 'now'));
             $counters[$yy] = ($counters[$yy] ?? 0) + 1;
-            $update = ['ticket_number' => 'T-' . $yy . str_pad((string) $counters[$yy], 5, '0', STR_PAD_LEFT)];
+            $update = ['ticket_number' => 'T-'.$yy.str_pad((string) $counters[$yy], 5, '0', STR_PAD_LEFT)];
             if (in_array($t->status, ['open', 'in_progress'], true)) {
                 $hours = $slaHours[$t->priority] ?? 72;
-                $update['due_at'] = date('Y-m-d H:i:s', strtotime(($t->created_at ?? 'now') . " +{$hours} hours"));
+                $update['due_at'] = date('Y-m-d H:i:s', strtotime(($t->created_at ?? 'now')." +{$hours} hours"));
             }
             DB::table('tickets')->where('id', $t->id)->update($update);
         }

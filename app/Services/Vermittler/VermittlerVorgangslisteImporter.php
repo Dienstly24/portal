@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Vermittler;
 
 use App\Models\Contract;
@@ -130,15 +131,15 @@ class VermittlerVorgangslisteImporter
         // Abrechnung eines fremden Kunden an diesen Vertrag.
         if ($ambiguous) {
             return [$viaId, 'review', 'Zuordnung der Referenz-Nummern nicht eindeutig lesbar. '
-                . ($notes[0] ?? '') . ' Bitte die Liste als CSV exportieren oder von Hand zuordnen.'];
+                .($notes[0] ?? '').' Bitte die Liste als CSV exportieren oder von Hand zuordnen.'];
         }
 
         if ($viaId !== null) {
             if ($reference !== null
                 && $viaId->referenceKey() !== null
-                && !VermittlerReference::same($viaId->reference_number, $reference)) {
-                return [$viaId, 'review', 'Referenz-Nr. weicht ab: Vertrag "' . $viaId->reference_number
-                    . '" / Liste "' . $reference . '"'];
+                && ! VermittlerReference::same($viaId->reference_number, $reference)) {
+                return [$viaId, 'review', 'Referenz-Nr. weicht ab: Vertrag "'.$viaId->reference_number
+                    .'" / Liste "'.$reference.'"'];
             }
             return [$viaId, 'matched', null];
         }
@@ -150,21 +151,21 @@ class VermittlerVorgangslisteImporter
         }
 
         if (count($viaRef) > 1) {
-            return [null, 'review', 'Doppelte Referenz-Nr.: ' . count($viaRef)
-                . ' Verträge tragen "' . $reference . '"'];
+            return [null, 'review', 'Doppelte Referenz-Nr.: '.count($viaRef)
+                .' Verträge tragen "'.$reference.'"'];
         }
 
         if (count($viaRef) === 1) {
             $contract = $viaRef[0];
             if (filled($contract->vermittler_id)
-                && !VermittlerReference::same($contract->vermittler_id, $vermittlerId)) {
+                && ! VermittlerReference::same($contract->vermittler_id, $vermittlerId)) {
                 return [$contract, 'review', 'Vertrag trägt bereits die Vermittler-ID "'
-                    . $contract->vermittler_id . '"'];
+                    .$contract->vermittler_id.'"'];
             }
             return [$contract, 'linked', null];
         }
 
-        return [null, 'unmatched', 'Referenz-Nr. "' . $reference . '" ist bei keinem Vertrag erfasst'];
+        return [null, 'unmatched', 'Referenz-Nr. "'.$reference.'" ist bei keinem Vertrag erfasst'];
     }
 
     /**
@@ -206,7 +207,7 @@ class VermittlerVorgangslisteImporter
         if ($contract !== null && $result !== 'review') {
             $data['contract_id'] = $contract->id;
             $data['customer_id'] = $contract->customer_id;
-            $data['contract_label'] = mb_substr(trim($contract->insurer . ' · ' . ($contract->contract_number ?: $contract->typeLabel())), 0, 190);
+            $data['contract_label'] = mb_substr(trim($contract->insurer.' · '.($contract->contract_number ?: $contract->typeLabel())), 0, 190);
             $data['customer_label'] = mb_substr((string) ($contract->customer?->user?->name ?? ''), 0, 190) ?: null;
             $data['match_result'] = 'matched';
         } elseif (blank($settlement->match_result) || $settlement->match_result === 'unmatched') {
@@ -230,15 +231,15 @@ class VermittlerVorgangslisteImporter
         if (blank($contract->vermittler_id)) {
             $update['vermittler_id'] = $settlement->vermittler_id;
             $update['vermittler_matched_at'] = now();
-            $events[] = ['id_linked', 'Vermittler-ID ' . $settlement->vermittler_id
-                . ' aus der Vorgangsliste zugeordnet'];
+            $events[] = ['id_linked', 'Vermittler-ID '.$settlement->vermittler_id
+                .' aus der Vorgangsliste zugeordnet'];
         }
 
         // Leere Referenz-Nr. ergaenzen (Ergaenzen ist kein Ueberschreiben).
         if (blank($contract->reference_number) && filled($settlement->reference_number)) {
             $update['reference_number'] = $settlement->reference_number;
-            $events[] = ['reference_stored', 'Referenz-Nr. ' . $settlement->reference_number
-                . ' aus der Vorgangsliste ergänzt'];
+            $events[] = ['reference_stored', 'Referenz-Nr. '.$settlement->reference_number
+                .' aus der Vorgangsliste ergänzt'];
         }
 
         $new = VermittlerStatusMap::forText($row['status'] ?? null) ?? Contract::VERMITTLER_ID_ZUGEORDNET;

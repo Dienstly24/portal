@@ -30,11 +30,11 @@ class CustomerListFilterTest extends TestCase
     private function customer(array $userAttrs = [], array $customerAttrs = []): Customer
     {
         $user = User::factory()->create(array_merge([
-            'role' => 'customer', 'name' => 'Max Mustermann', 'email' => 'kunde-' . uniqid() . '@kunde.de',
+            'role' => 'customer', 'name' => 'Max Mustermann', 'email' => 'kunde-'.uniqid().'@kunde.de',
         ], $userAttrs));
 
         return Customer::create(array_merge([
-            'user_id' => $user->id, 'customer_number' => 'K-' . uniqid(), 'birth_date' => '1985-03-15',
+            'user_id' => $user->id, 'customer_number' => 'K-'.uniqid(), 'birth_date' => '1985-03-15',
         ], $customerAttrs));
     }
 
@@ -42,7 +42,7 @@ class CustomerListFilterTest extends TestCase
     {
         return Contract::create(array_merge([
             'customer_id' => $customer->id, 'type' => 'kfz', 'insurer' => 'HUK',
-            'status' => 'active', 'contract_number' => 'V-' . uniqid(),
+            'status' => 'active', 'contract_number' => 'V-'.uniqid(),
         ], $attrs));
     }
 
@@ -95,9 +95,9 @@ class CustomerListFilterTest extends TestCase
 
     public function test_kontakt_filter_finds_long_uncontacted_and_never_contacted(): void
     {
-        $nie   = $this->customer(['name' => 'Nie Kontakt'], ['last_contact' => null]);
-        $alt   = $this->customer(['name' => 'Alt Kontakt'], ['last_contact' => now()->subDays(200)->toDateString()]);
-        $neu   = $this->customer(['name' => 'Neu Kontakt'], ['last_contact' => now()->subDays(5)->toDateString()]);
+        $nie = $this->customer(['name' => 'Nie Kontakt'], ['last_contact' => null]);
+        $alt = $this->customer(['name' => 'Alt Kontakt'], ['last_contact' => now()->subDays(200)->toDateString()]);
+        $neu = $this->customer(['name' => 'Neu Kontakt'], ['last_contact' => now()->subDays(5)->toDateString()]);
 
         $res = $this->actingAs($this->admin)->get(route('admin.customers', ['kontakt' => '180']));
         $res->assertSee('Nie Kontakt')->assertSee('Alt Kontakt')->assertDontSee('Neu Kontakt');

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Customer;
 use App\Models\ExternalReference;
 use App\Models\SystemSetting;
+use App\Models\User;
 use App\Services\Lexoffice\LexofficeContactMapper;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -17,7 +18,7 @@ class LexofficeImportTest extends TestCase
     private function contact(array $overrides = []): array
     {
         return array_replace_recursive([
-            'id' => 'lx-' . uniqid(),
+            'id' => 'lx-'.uniqid(),
             'roles' => ['customer' => ['number' => 10001]],
             'person' => ['firstName' => 'Max', 'lastName' => 'Mustermann'],
             'emailAddresses' => ['office' => ['max@office.de']],
@@ -99,7 +100,7 @@ class LexofficeImportTest extends TestCase
         SystemSetting::set('lexoffice_api_key', 'test-key');
 
         // Bereits vorhandener Kunde mit gleichem Geburtsdatum + Namen
-        $user = \App\Models\User::factory()->create(['role' => 'customer', 'name' => 'Max Mustermann', 'email' => 'max@office.de']);
+        $user = User::factory()->create(['role' => 'customer', 'name' => 'Max Mustermann', 'email' => 'max@office.de']);
         Customer::create(['user_id' => $user->id, 'customer_number' => 'C-EXISTING', 'birth_date' => '1985-02-15']);
 
         Http::fake([

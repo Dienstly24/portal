@@ -2,24 +2,118 @@
 
 namespace App\Providers;
 
+use App\Models\ScheduledTaskRun;
+use App\Models\User;
 use App\Services\Activity\ActivityCatalog;
 use App\Services\Activity\ActivityTracker;
+use App\Services\Ai\Assistant\ClaudeAssistantProvider;
+use App\Services\Ai\Assistant\Contracts\AssistantProviderInterface;
+use App\Services\Ai\Assistant\NullAssistantProvider;
+use App\Services\Ai\Assistant\OpenAiAssistantProvider;
+use App\Services\Ai\Assistant\Sales\Offers\ManualOfferSource;
+use App\Services\Ai\Assistant\Sales\Offers\OfferSourceInterface;
+use App\Services\Ai\Assistant\Tools\AssistantToolRegistry;
+use App\Services\Ai\Assistant\Tools\CreateTicketTool;
+use App\Services\Ai\Assistant\Tools\EscalateToTeamTool;
+use App\Services\Ai\Assistant\Tools\GetCustomerContractsTool;
+use App\Services\Ai\Assistant\Tools\GetCustomerProfileTool;
+use App\Services\Ai\Assistant\Tools\GetDocumentStatusTool;
+use App\Services\Ai\Assistant\Tools\GetMissingDocumentsTool;
+use App\Services\Ai\Assistant\Tools\GetOpenTicketsTool;
+use App\Services\Ai\Assistant\Tools\GetProcessStatusTool;
+use App\Services\Ai\Assistant\Tools\GetRelevantContractInformationTool;
+use App\Services\Ai\Assistant\Tools\GetRequiredDocumentsTool;
+use App\Services\Ai\Assistant\Tools\RequestDocumentTool;
+use App\Services\Ai\Assistant\Tools\Sales\GetConversationStateTool;
+use App\Services\Ai\Assistant\Tools\Sales\GetOffersTool;
+use App\Services\Ai\Assistant\Tools\Sales\RecordOfferSelectionTool;
+use App\Services\Ai\Assistant\Tools\Sales\RequestOfferFromTeamTool;
+use App\Services\Ai\Assistant\Tools\Sales\SaveCollectedInformationTool;
+use App\Services\Ai\Assistant\Tools\Sales\SetConversationIntentTool;
+use App\Services\Ai\Assistant\Tools\Sales\SubmitContractDataTool;
+use App\Services\Ai\Assistant\Tools\SearchKnowledgeTool;
+use App\Services\Ai\Assistant\Website\LeadToolRegistry;
+use App\Services\Ai\Assistant\Website\Tools\RequestHumanContactTool;
+use App\Services\Ai\Assistant\Website\Tools\SaveLeadInformationTool;
+use App\Services\Ai\Assistant\Website\Tools\SearchPublicKnowledgeTool;
 use App\Services\Ai\ClaudeDocumentAiProvider;
 use App\Services\Ai\ClaudeTextProvider;
 use App\Services\Ai\Contracts\AiProviderInterface;
 use App\Services\Ai\Contracts\DocumentAiProviderInterface;
+use App\Services\Ai\Contracts\DocumentTemplateParser;
+use App\Services\Ai\NullDocumentAiProvider;
+use App\Services\Ai\TemplateParsers\AdacAutoversicherungParser;
+use App\Services\Ai\TemplateParsers\AdacMitgliedschaftParser;
+use App\Services\Ai\TemplateParsers\AdmiralDirektKfzParser;
+use App\Services\Ai\TemplateParsers\AllianzKfzPoliceParser;
+use App\Services\Ai\TemplateParsers\AndsafeGewerbePoliceParser;
+use App\Services\Ai\TemplateParsers\AntragBestaetigungParser;
+use App\Services\Ai\TemplateParsers\ArbeitsvertragParser;
+use App\Services\Ai\TemplateParsers\AufenthaltstitelParser;
+use App\Services\Ai\TemplateParsers\BayerischeEscooterParser;
+use App\Services\Ai\TemplateParsers\BigGesundParser;
+use App\Services\Ai\TemplateParsers\Check24KfzProtocolParser;
+use App\Services\Ai\TemplateParsers\CompositeDocumentTemplateParser;
+use App\Services\Ai\TemplateParsers\DaDirektKfzPoliceParser;
+use App\Services\Ai\TemplateParsers\DeckungsauftragParser;
+use App\Services\Ai\TemplateParsers\DialogFrachtfuehrerPoliceParser;
+use App\Services\Ai\TemplateParsers\DslAuftragParser;
+use App\Services\Ai\TemplateParsers\EnergieAuftragParser;
+use App\Services\Ai\TemplateParsers\EnergiePortalAuftragParser;
+use App\Services\Ai\TemplateParsers\ErsatzbescheinigungParser;
+use App\Services\Ai\TemplateParsers\EuropaGoKfzParser;
+use App\Services\Ai\TemplateParsers\EweVertragsbestaetigungParser;
+use App\Services\Ai\TemplateParsers\FamilienversicherungParser;
+use App\Services\Ai\TemplateParsers\GeburtsurkundeParser;
+use App\Services\Ai\TemplateParsers\GehaltsabrechnungParser;
+use App\Services\Ai\TemplateParsers\GesundheitskarteParser;
+use App\Services\Ai\TemplateParsers\GewerbeBeratungsdokumentationParser;
+use App\Services\Ai\TemplateParsers\GruenweltLieferbestaetigungParser;
+use App\Services\Ai\TemplateParsers\InterlloydPoliceParser;
+use App\Services\Ai\TemplateParsers\KkhBeitrittserklaerungParser;
+use App\Services\Ai\TemplateParsers\KontaktdatenBlockParser;
+use App\Services\Ai\TemplateParsers\KontaktSepaDatenParser;
+use App\Services\Ai\TemplateParsers\LichtblickAuftragParser;
+use App\Services\Ai\TemplateParsers\LichtblickVertragsbestaetigungParser;
+use App\Services\Ai\TemplateParsers\MeldebestaetigungParser;
+use App\Services\Ai\TemplateParsers\NafiKfzAntragParser;
+use App\Services\Ai\TemplateParsers\NovitasBeitrittserklaerungParser;
+use App\Services\Ai\TemplateParsers\OnlineProtokollAntragParser;
+use App\Services\Ai\TemplateParsers\PlanBNetZeroAuftragParser;
+use App\Services\Ai\TemplateParsers\PrivathaftpflichtAntragParser;
+use App\Services\Ai\TemplateParsers\ReisepassMrzParser;
+use App\Services\Ai\TemplateParsers\SparkasseDirektKfzParser;
+use App\Services\Ai\TemplateParsers\VermittlerVorgangslisteHinweisParser;
+use App\Services\Ai\TemplateParsers\WgvKfzPoliceParser;
+use App\Services\Commission\CommissionReadService;
+use App\Services\Commission\Sources\ContractCommissionSource;
+use App\Services\Commission\Sources\ProvisionSource;
+use App\Services\Commission\Sources\VermittlerSettlementSource;
+use App\Services\Notifications\NotificationService;
 use App\Services\Ocr\TesseractTextExtractor;
 use App\Services\Ocr\TextExtractorInterface;
+use App\Support\LocalTime;
+use App\Support\PasswordPolicy;
+use App\Support\ProductionDatabaseGuard;
+use App\Support\SessionPasswordHash;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Events\ScheduledTaskFailed;
 use Illuminate\Console\Events\ScheduledTaskFinished;
 use Illuminate\Console\Events\ScheduledTaskStarting;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -32,9 +126,22 @@ class AppServiceProvider extends ServiceProvider
         // aus den Einstellungen gelesen werden.
         $this->app->singleton(ActivityCatalog::class);
 
+        /*
+        | ARCH-3: EIN Leseweg fuer alle Provisionsquellen.
+        |
+        | Die Reihenfolge der Quellen ist die Reihenfolge in Berichten. Die
+        | drei Fachbereiche bleiben getrennt - zusammengefasst wird nur das
+        | LESEN, siehe CommissionReadService.
+        */
+        $this->app->singleton(CommissionReadService::class, fn ($app) => new CommissionReadService(
+            $app->make(ContractCommissionSource::class),
+            $app->make(VermittlerSettlementSource::class),
+            $app->make(ProvisionSource::class),
+        ));
+
         // Zentraler Notification-Dienst (Glocke): eine Stelle fuer Kuerzen,
         // Duplikat-Vermeidung und Kategorisierung. Facade: App\Support\Facades\Notify.
-        $this->app->singleton(\App\Services\Notifications\NotificationService::class);
+        $this->app->singleton(NotificationService::class);
 
         // OCR-Basisebene des Smart Document Upload - austauschbar, falls
         // spaeter ein anderer OCR-Dienst als Tesseract eingesetzt wird.
@@ -46,71 +153,71 @@ class AppServiceProvider extends ServiceProvider
         // aufnehmen. Trifft kein Template zu -> null, dann laeuft die normale
         // Analyse (Heuristik/KI).
         $this->app->bind(
-            \App\Services\Ai\Contracts\DocumentTemplateParser::class,
-            fn ($app) => new \App\Services\Ai\TemplateParsers\CompositeDocumentTemplateParser([
+            DocumentTemplateParser::class,
+            fn ($app) => new CompositeDocumentTemplateParser([
                 // ZUERST: die Vorgangsliste des Vermittlers ist kein
                 // Kundendokument. Wird sie frueh erkannt, kostet sie keinen
                 // KI-Aufruf und der Eingang nennt den richtigen Weg.
-                $app->make(\App\Services\Ai\TemplateParsers\VermittlerVorgangslisteHinweisParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\Check24KfzProtocolParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\AdacAutoversicherungParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\AdacMitgliedschaftParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\DaDirektKfzPoliceParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\AllianzKfzPoliceParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\AdmiralDirektKfzParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\EuropaGoKfzParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\SparkasseDirektKfzParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\WgvKfzPoliceParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\NafiKfzAntragParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\BayerischeEscooterParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\KkhBeitrittserklaerungParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\NovitasBeitrittserklaerungParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\BigGesundParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\FamilienversicherungParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\ErsatzbescheinigungParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\GesundheitskarteParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\GehaltsabrechnungParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\ArbeitsvertragParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\GeburtsurkundeParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\ReisepassMrzParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\MeldebestaetigungParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\AufenthaltstitelParser::class),
+                $app->make(VermittlerVorgangslisteHinweisParser::class),
+                $app->make(Check24KfzProtocolParser::class),
+                $app->make(AdacAutoversicherungParser::class),
+                $app->make(AdacMitgliedschaftParser::class),
+                $app->make(DaDirektKfzPoliceParser::class),
+                $app->make(AllianzKfzPoliceParser::class),
+                $app->make(AdmiralDirektKfzParser::class),
+                $app->make(EuropaGoKfzParser::class),
+                $app->make(SparkasseDirektKfzParser::class),
+                $app->make(WgvKfzPoliceParser::class),
+                $app->make(NafiKfzAntragParser::class),
+                $app->make(BayerischeEscooterParser::class),
+                $app->make(KkhBeitrittserklaerungParser::class),
+                $app->make(NovitasBeitrittserklaerungParser::class),
+                $app->make(BigGesundParser::class),
+                $app->make(FamilienversicherungParser::class),
+                $app->make(ErsatzbescheinigungParser::class),
+                $app->make(GesundheitskarteParser::class),
+                $app->make(GehaltsabrechnungParser::class),
+                $app->make(ArbeitsvertragParser::class),
+                $app->make(GeburtsurkundeParser::class),
+                $app->make(ReisepassMrzParser::class),
+                $app->make(MeldebestaetigungParser::class),
+                $app->make(AufenthaltstitelParser::class),
                 // Energie-Parser (Strom/Gas) VOR dem DSL-Parser: ein echter
                 // Energie-Auftrag wird von seinem spezifischen Parser erkannt;
                 // der breitere DSL-Parser kommt erst danach zum Zug (frueher
                 // beanspruchte er Energie-Auftraege faelschlich als Internet).
-                $app->make(\App\Services\Ai\TemplateParsers\EweVertragsbestaetigungParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\LichtblickVertragsbestaetigungParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\GruenweltLieferbestaetigungParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\LichtblickAuftragParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\PlanBNetZeroAuftragParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\EnergieAuftragParser::class),
+                $app->make(EweVertragsbestaetigungParser::class),
+                $app->make(LichtblickVertragsbestaetigungParser::class),
+                $app->make(GruenweltLieferbestaetigungParser::class),
+                $app->make(LichtblickAuftragParser::class),
+                $app->make(PlanBNetZeroAuftragParser::class),
+                $app->make(EnergieAuftragParser::class),
                 // Auftrags-Uebersicht aus dem Vertriebsportal (Screenshot) -
                 // nach den PDF-Auftraegen der Versorger, vor dem DSL-Parser.
-                $app->make(\App\Services\Ai\TemplateParsers\EnergiePortalAuftragParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\DslAuftragParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\PrivathaftpflichtAntragParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\OnlineProtokollAntragParser::class),
+                $app->make(EnergiePortalAuftragParser::class),
+                $app->make(DslAuftragParser::class),
+                $app->make(PrivathaftpflichtAntragParser::class),
+                $app->make(OnlineProtokollAntragParser::class),
                 // Deckungsauftrag VOR der Beratungsdokumentation: beide sind
                 // Fonds-Finanz-Schwesterdokumente (Vorgangsnummer). Kommt ein
                 // BUENDEL-PDF mit beiden Teilen, gewinnt so der Teil mit den
                 // VERTRAGSDATEN (Versicherer/Praemie, Stufe antrag) - die reine
                 // Beratungsdoku ohne "Deckungsauftrag"-Wort bleibt unberuehrt
                 // (der Deckungsauftrag-Parser weicht ihr nachweislich aus).
-                $app->make(\App\Services\Ai\TemplateParsers\DeckungsauftragParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\GewerbeBeratungsdokumentationParser::class),
+                $app->make(DeckungsauftragParser::class),
+                $app->make(GewerbeBeratungsdokumentationParser::class),
                 // Abschluss-Seite einer Online-Antragsstrecke (Screenshot):
                 // Referenz-/eVB-Nummer, noch keine Vertragsnummer.
-                $app->make(\App\Services\Ai\TemplateParsers\AntragBestaetigungParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\AndsafeGewerbePoliceParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\InterlloydPoliceParser::class),
-                $app->make(\App\Services\Ai\TemplateParsers\DialogFrachtfuehrerPoliceParser::class),
+                $app->make(AntragBestaetigungParser::class),
+                $app->make(AndsafeGewerbePoliceParser::class),
+                $app->make(InterlloydPoliceParser::class),
+                $app->make(DialogFrachtfuehrerPoliceParser::class),
                 // Kontakt-/SEPA-Ansicht eines Antragsportals (beschriftete
                 // Felder) - VOR dem generischen Kontaktdaten-Block.
-                $app->make(\App\Services\Ai\TemplateParsers\KontaktSepaDatenParser::class),
+                $app->make(KontaktSepaDatenParser::class),
                 // Zuletzt: kompakter Kontaktdaten-Block (nur wenn kein echtes
                 // Dokument passt - er triggert auf E-Mail+IBAN+PLZ in kurzem Text).
-                $app->make(\App\Services\Ai\TemplateParsers\KontaktdatenBlockParser::class),
+                $app->make(KontaktdatenBlockParser::class),
             ]),
         );
 
@@ -131,13 +238,13 @@ class AppServiceProvider extends ServiceProvider
             return match ($provider) {
                 'claude' => $app->make(ClaudeDocumentAiProvider::class),
                 // Ausdruecklich abgeschaltet: nur die kostenlose Basisebene.
-                'none', 'off', 'disabled' => $app->make(\App\Services\Ai\NullDocumentAiProvider::class),
+                'none', 'off', 'disabled' => $app->make(NullDocumentAiProvider::class),
                 // Unbekannter Wert: nicht still verschlucken - warnen und auf
                 // den Standard (Claude) zurueckfallen (Verhalten wie zuvor).
                 default => tap($app->make(ClaudeDocumentAiProvider::class), function () use ($provider) {
-                    \Illuminate\Support\Facades\Log::warning(
-                        'Unbekannter AI_DOCUMENT_PROVIDER "' . $provider . '" - faellt auf Claude zurueck '
-                        . '(gueltig: claude, none).'
+                    Log::warning(
+                        'Unbekannter AI_DOCUMENT_PROVIDER "'.$provider.'" - faellt auf Claude zurueck '
+                        .'(gueltig: claude, none).'
                     );
                 }),
             };
@@ -158,20 +265,20 @@ class AppServiceProvider extends ServiceProvider
         // 'none' schaltet ihn hart ab; ein leerer Wert bedeutet STANDARD,
         // nicht "aus" - gleiche Lehre wie beim Dokument-Anbieter oben.
         $this->app->bind(
-            \App\Services\Ai\Assistant\Contracts\AssistantProviderInterface::class,
+            AssistantProviderInterface::class,
             function ($app) {
                 $provider = strtolower(trim((string) config('services.ai_assistant_provider', 'claude')));
                 if ($provider === '') {
                     $provider = 'claude';
                 }
                 return match ($provider) {
-                    'claude', 'anthropic' => $app->make(\App\Services\Ai\Assistant\ClaudeAssistantProvider::class),
-                    'openai' => $app->make(\App\Services\Ai\Assistant\OpenAiAssistantProvider::class),
-                    'none', 'off', 'disabled' => $app->make(\App\Services\Ai\Assistant\NullAssistantProvider::class),
-                    default => tap($app->make(\App\Services\Ai\Assistant\ClaudeAssistantProvider::class), function () use ($provider) {
-                        \Illuminate\Support\Facades\Log::warning(
-                            'Unbekannter AI_ASSISTANT_PROVIDER "' . $provider . '" - faellt auf Claude zurueck '
-                            . '(gueltig: claude, openai, none).'
+                    'claude', 'anthropic' => $app->make(ClaudeAssistantProvider::class),
+                    'openai' => $app->make(OpenAiAssistantProvider::class),
+                    'none', 'off', 'disabled' => $app->make(NullAssistantProvider::class),
+                    default => tap($app->make(ClaudeAssistantProvider::class), function () use ($provider) {
+                        Log::warning(
+                            'Unbekannter AI_ASSISTANT_PROVIDER "'.$provider.'" - faellt auf Claude zurueck '
+                            .'(gueltig: claude, openai, none).'
                         );
                     }),
                 };
@@ -185,33 +292,33 @@ class AppServiceProvider extends ServiceProvider
         // Zahlungen. Neue Faehigkeit = hier eine Zeile, nach Freigabe des
         // Betreibers.
         $this->app->singleton(
-            \App\Services\Ai\Assistant\Tools\AssistantToolRegistry::class,
-            fn ($app) => new \App\Services\Ai\Assistant\Tools\AssistantToolRegistry([
+            AssistantToolRegistry::class,
+            fn ($app) => new AssistantToolRegistry([
                 // Lesend (immer erlaubt)
-                $app->make(\App\Services\Ai\Assistant\Tools\GetCustomerProfileTool::class),
-                $app->make(\App\Services\Ai\Assistant\Tools\GetCustomerContractsTool::class),
-                $app->make(\App\Services\Ai\Assistant\Tools\GetRelevantContractInformationTool::class),
-                $app->make(\App\Services\Ai\Assistant\Tools\GetOpenTicketsTool::class),
-                $app->make(\App\Services\Ai\Assistant\Tools\GetProcessStatusTool::class),
-                $app->make(\App\Services\Ai\Assistant\Tools\GetRequiredDocumentsTool::class),
-                $app->make(\App\Services\Ai\Assistant\Tools\GetMissingDocumentsTool::class),
-                $app->make(\App\Services\Ai\Assistant\Tools\GetDocumentStatusTool::class),
-                $app->make(\App\Services\Ai\Assistant\Tools\SearchKnowledgeTool::class),
+                $app->make(GetCustomerProfileTool::class),
+                $app->make(GetCustomerContractsTool::class),
+                $app->make(GetRelevantContractInformationTool::class),
+                $app->make(GetOpenTicketsTool::class),
+                $app->make(GetProcessStatusTool::class),
+                $app->make(GetRequiredDocumentsTool::class),
+                $app->make(GetMissingDocumentsTool::class),
+                $app->make(GetDocumentStatusTool::class),
+                $app->make(SearchKnowledgeTool::class),
                 // Schreibend (jedes prueft zusaetzlich seinen Schalter)
-                $app->make(\App\Services\Ai\Assistant\Tools\CreateTicketTool::class),
-                $app->make(\App\Services\Ai\Assistant\Tools\RequestDocumentTool::class),
-                $app->make(\App\Services\Ai\Assistant\Tools\EscalateToTeamTool::class),
+                $app->make(CreateTicketTool::class),
+                $app->make(RequestDocumentTool::class),
+                $app->make(EscalateToTeamTool::class),
                 // Verkaufsassistent (Betreiber-Auftrag 18.08.2026):
                 // Gespraechsfuehrung, Angebote, Vertragsdaten. Bewusst
                 // dieselbe Whitelist - es gibt keinen zweiten Weg, auf
                 // Daten zuzugreifen.
-                $app->make(\App\Services\Ai\Assistant\Tools\Sales\GetConversationStateTool::class),
-                $app->make(\App\Services\Ai\Assistant\Tools\Sales\GetOffersTool::class),
-                $app->make(\App\Services\Ai\Assistant\Tools\Sales\SetConversationIntentTool::class),
-                $app->make(\App\Services\Ai\Assistant\Tools\Sales\SaveCollectedInformationTool::class),
-                $app->make(\App\Services\Ai\Assistant\Tools\Sales\RequestOfferFromTeamTool::class),
-                $app->make(\App\Services\Ai\Assistant\Tools\Sales\RecordOfferSelectionTool::class),
-                $app->make(\App\Services\Ai\Assistant\Tools\Sales\SubmitContractDataTool::class),
+                $app->make(GetConversationStateTool::class),
+                $app->make(GetOffersTool::class),
+                $app->make(SetConversationIntentTool::class),
+                $app->make(SaveCollectedInformationTool::class),
+                $app->make(RequestOfferFromTeamTool::class),
+                $app->make(RecordOfferSelectionTool::class),
+                $app->make(SubmitContractDataTool::class),
             ])
         );
 
@@ -220,11 +327,11 @@ class AppServiceProvider extends ServiceProvider
         // keinerlei Zugriff auf Kundendaten - es gibt technisch kein
         // Werkzeug dafuer.
         $this->app->singleton(
-            \App\Services\Ai\Assistant\Website\LeadToolRegistry::class,
-            fn ($app) => new \App\Services\Ai\Assistant\Website\LeadToolRegistry([
-                $app->make(\App\Services\Ai\Assistant\Website\Tools\SearchPublicKnowledgeTool::class),
-                $app->make(\App\Services\Ai\Assistant\Website\Tools\SaveLeadInformationTool::class),
-                $app->make(\App\Services\Ai\Assistant\Website\Tools\RequestHumanContactTool::class),
+            LeadToolRegistry::class,
+            fn ($app) => new LeadToolRegistry([
+                $app->make(SearchPublicKnowledgeTool::class),
+                $app->make(SaveLeadInformationTool::class),
+                $app->make(RequestHumanContactTool::class),
             ])
         );
 
@@ -232,8 +339,8 @@ class AppServiceProvider extends ServiceProvider
         // Phase 2 tauscht HIER die Implementierung - sonst aendert sich
         // nichts (Spezifikation Abschnitte 6 und 25).
         $this->app->bind(
-            \App\Services\Ai\Assistant\Sales\Offers\OfferSourceInterface::class,
-            \App\Services\Ai\Assistant\Sales\Offers\ManualOfferSource::class
+            OfferSourceInterface::class,
+            ManualOfferSource::class
         );
 
     }
@@ -243,7 +350,48 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // ARCH-2: SQLite darf in Produktion nicht benutzt werden - sonst
+        // laeuft das Portal bei einer fehlenden .env still gegen eine leere
+        // Datei. Geprueft wird am ersten Verbindungsaufbau, nicht hier beim
+        // Booten: ohne .env gilt APP_ENV=production, und `composer install`
+        // fuehrt package:discover aus, lange bevor es eine .env gibt.
+        ProductionDatabaseGuard::registrieren($this->app);
+
         $this->registerRateLimiters();
+
+        /*
+        | ARCH-7: strenge Eloquent-Regeln - aber NUR ausserhalb der Produktion.
+        |
+        | preventLazyLoading meldet eine Relation, die erst in der Schleife
+        | nachgeladen wird (N+1). Das ist genau der Fehler, den man im Alltag
+        | nicht sieht: die Seite funktioniert, sie wird nur mit jedem
+        | Datensatz langsamer. In der Entwicklung soll sie deshalb LAUT
+        | scheitern.
+        |
+        | In Produktion bewusst AUS: ein vergessenes with() wuerde dort sonst
+        | aus einer langsamen Seite eine kaputte machen - der Nutzer saehe
+        | einen 500er statt einer Liste. Eine Warnung ist dort das richtige
+        | Mittel, kein Abbruch.
+        |
+        | BEWUSST NICHT eingeschaltet: preventSilentlyDiscardingAttributes.
+        | Es klingt verwandt, ist aber eine andere Baustelle - der Bestand
+        | uebergibt an rund 35 Stellen bewusst Felder an create()/fill(), die
+        | nicht in $fillable stehen (etwa 'id' und 'added_by' beim Vertrag)
+        | und sich darauf verlassen, dass sie verworfen werden. Das
+        | einzuschalten hiesse, die Mass-Assignment-Freigaben des ganzen
+        | Projekts anzufassen - eine Sicherheitsentscheidung, die nicht
+        | nebenbei in einer Index-/Aufraeum-Aenderung fallen darf.
+        */
+        Model::preventLazyLoading(! $this->app->isProduction());
+
+        if ($this->app->isProduction()) {
+            Model::handleLazyLoadingViolationUsing(function ($model, $relation) {
+                Log::warning('Lazy Loading (N+1) in Produktion', [
+                    'model' => $model::class,
+                    'relation' => $relation,
+                ]);
+            });
+        }
 
         /*
         | Content-Security-Policy (Audit SEC-4).
@@ -257,7 +405,7 @@ class AppServiceProvider extends ServiceProvider
         | SecurityHeaders je Anfrage - hier waere er einmalig fuer den
         | ganzen Prozess und passte ab der zweiten Antwort nicht mehr.
         */
-        \Illuminate\Support\Facades\Blade::directive(
+        Blade::directive(
             'cspNonce',
             fn () => "<?php echo \App\Support\CspNonce::attribute(); ?>"
         );
@@ -273,13 +421,13 @@ class AppServiceProvider extends ServiceProvider
         // Kriterium: eine Rolle waechst mit der Zeit um Aufgaben, ein Recht
         // wird einzeln vergeben. Die Regel steht hier an EINER Stelle und
         // wird von Routen, Controllern und Views gemeinsam benutzt.
-        \Illuminate\Support\Facades\Gate::define(
+        Gate::define(
             'provisionen-verwalten',
             fn ($user) => $user->role === 'admin' || (bool) ($user->can_manage_commissions ?? false)
         );
 
-        \Illuminate\Validation\Rules\Password::defaults(
-            fn () => \App\Support\PasswordPolicy::for(auth()->user())
+        Password::defaults(
+            fn () => PasswordPolicy::for(auth()->user())
         );
 
         // Fail-fast, falls Produktion versehentlich auf SQLite laeuft (Audit DB-6):
@@ -292,7 +440,7 @@ class AppServiceProvider extends ServiceProvider
             && config('database.default') !== 'mysql') {
             throw new \RuntimeException(
                 'Ungueltige DB-Konfiguration: In Produktion muss DB_CONNECTION=mysql gesetzt sein '
-                . '(aktuell: ' . config('database.default') . ').'
+                .'(aktuell: '.config('database.default').').'
             );
         }
 
@@ -313,13 +461,13 @@ class AppServiceProvider extends ServiceProvider
             // ohne erkennbaren Grund. Deshalb hier, an EINER Stelle fuer
             // alle Anmeldewege.
             try {
-                \App\Support\SessionPasswordHash::refresh(request());
+                SessionPasswordHash::refresh(request());
             } catch (\Throwable $e) {
                 report($e);
             }
 
             try {
-                if ($event->user instanceof \App\Models\User) {
+                if ($event->user instanceof User) {
                     app(ActivityTracker::class)->handleLogin($event->user, request());
                 }
             } catch (\Throwable $e) {
@@ -329,7 +477,7 @@ class AppServiceProvider extends ServiceProvider
 
         Event::listen(Logout::class, function (Logout $event): void {
             try {
-                if ($event->user instanceof \App\Models\User) {
+                if ($event->user instanceof User) {
                     app(ActivityTracker::class)->handleLogout($event->user, request());
                 }
             } catch (\Throwable $e) {
@@ -354,7 +502,7 @@ class AppServiceProvider extends ServiceProvider
         // nicht umbinden. Carbon muss $this aber auf die Zeit-Instanz
         // setzen koennen, sonst zeigt das Makro auf das falsche Objekt.
         $lokal = function () {
-            return \App\Support\LocalTime::for($this);
+            return LocalTime::for($this);
         };
         Carbon::macro('lokal', $lokal);
         CarbonImmutable::macro('lokal', $lokal);
@@ -394,7 +542,7 @@ class AppServiceProvider extends ServiceProvider
             // dauerhaft eine laengst behobene Meldung.
             $werte += $erfolg
                 ? ['last_success_at' => now(), 'last_error' => null]
-                : ['last_failed_at' => now(), 'last_error' => 'Exitcode ' . $exitCode];
+                : ['last_failed_at' => now(), 'last_error' => 'Exitcode '.$exitCode];
 
             $this->schreibeAufgabenlauf($event->task, $werte, zaehleLauf: true, zaehleFehler: ! $erfolg);
         });
@@ -417,8 +565,8 @@ class AppServiceProvider extends ServiceProvider
                 return;
             }
 
-            $key = \App\Models\ScheduledTaskRun::keyFor($task->getSummaryForDisplay());
-            $lauf = \App\Models\ScheduledTaskRun::firstOrNew(['task_key' => $key]);
+            $key = ScheduledTaskRun::keyFor($task->getSummaryForDisplay());
+            $lauf = ScheduledTaskRun::firstOrNew(['task_key' => $key]);
             $lauf->fill($werte);
 
             if ($zaehleLauf) {
@@ -457,37 +605,37 @@ class AppServiceProvider extends ServiceProvider
     private function registerRateLimiters(): void
     {
         // Registrierung und "Bestaetigung erneut senden".
-        \Illuminate\Support\Facades\RateLimiter::for('registrierung', function ($request) {
+        RateLimiter::for('registrierung', function ($request) {
             return [
-                \Illuminate\Cache\RateLimiting\Limit::perMinutes(10, 5)
-                    ->by('reg-ip:' . $request->ip()),
+                Limit::perMinutes(10, 5)
+                    ->by('reg-ip:'.$request->ip()),
                 // Je Adresse deutlich enger: eine echte Person registriert
                 // sich einmal, nicht fuenfmal in zehn Minuten.
-                \Illuminate\Cache\RateLimiting\Limit::perMinutes(60, 3)
-                    ->by('reg-mail:' . self::mailKey($request->input('email'))),
+                Limit::perMinutes(60, 3)
+                    ->by('reg-mail:'.self::mailKey($request->input('email'))),
             ];
         });
 
         // Anmeldung. Zusaetzlich zum feineren email+IP-Limiter in
         // LoginRequest, der die Fehlversuche EINES Kontos zaehlt.
-        \Illuminate\Support\Facades\RateLimiter::for('anmeldung', function ($request) {
+        RateLimiter::for('anmeldung', function ($request) {
             return [
-                \Illuminate\Cache\RateLimiting\Limit::perMinute(20)
-                    ->by('login-ip:' . $request->ip()),
-                \Illuminate\Cache\RateLimiting\Limit::perMinutes(15, 10)
-                    ->by('login-mail:' . self::mailKey($request->input('email'))),
+                Limit::perMinute(20)
+                    ->by('login-ip:'.$request->ip()),
+                Limit::perMinutes(15, 10)
+                    ->by('login-mail:'.self::mailKey($request->input('email'))),
             ];
         });
 
         // Passwort vergessen. Der Adress-Eimer ist hier der wichtigere:
         // ohne ihn laesst sich ein fremdes Postfach mit Reset-Mails
         // fluten, solange der Angreifer nur genug IPs hat.
-        \Illuminate\Support\Facades\RateLimiter::for('passwort-reset', function ($request) {
+        RateLimiter::for('passwort-reset', function ($request) {
             return [
-                \Illuminate\Cache\RateLimiting\Limit::perMinutes(10, 6)
-                    ->by('reset-ip:' . $request->ip()),
-                \Illuminate\Cache\RateLimiting\Limit::perMinutes(60, 4)
-                    ->by('reset-kennung:' . self::mailKey(
+                Limit::perMinutes(10, 6)
+                    ->by('reset-ip:'.$request->ip()),
+                Limit::perMinutes(60, 4)
+                    ->by('reset-kennung:'.self::mailKey(
                         $request->input('email') ?? $request->input('kennung')
                     )),
             ];
@@ -501,7 +649,7 @@ class AppServiceProvider extends ServiceProvider
      */
     private static function mailKey(mixed $value): string
     {
-        $value = \Illuminate\Support\Str::lower(trim((string) $value));
+        $value = Str::lower(trim((string) $value));
 
         return $value === '' ? 'leer' : sha1($value);
     }

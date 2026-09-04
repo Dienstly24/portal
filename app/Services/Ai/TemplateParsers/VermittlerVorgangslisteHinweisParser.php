@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Services\Ai\Contracts\DocumentTemplateParser;
@@ -27,7 +28,7 @@ class VermittlerVorgangslisteHinweisParser implements DocumentTemplateParser
 
     public function parse(string $text): ?array
     {
-        if (!$this->liste->looksLikeVorgangsliste($text)) {
+        if (! $this->liste->looksLikeVorgangsliste($text)) {
             return null;
         }
 
@@ -38,14 +39,14 @@ class VermittlerVorgangslisteHinweisParser implements DocumentTemplateParser
         return [
             'type' => 'vermittler_vorgangsliste',
             'confidence' => 80,
-            'summary' => 'Vorgangsliste des Vermittlers mit ' . $anzahl . ' Vorgaengen'
-                . ($mitReferenz > 0 ? ' (' . $mitReferenz . ' davon mit Referenznummer)' : '')
-                . '. Das ist KEIN Kundendokument: die Liste enthaelt Vorgaenge mehrerer Kunden und laesst sich '
-                . 'deshalb keinem einzelnen Kunden zuordnen. Sie gehoert unter '
-                . '"Vermittler-Abrechnung -> Vorgangsliste einlesen" - dort stellt sie die Verbindung '
-                . 'Referenz-Nr. -> Vermittler-ID fuer jeden einzelnen Vertrag her. '
-                . 'Gratis erkannt (ohne KI).',
-            'title' => 'Vermittler-Vorgangsliste (' . $anzahl . ' Vorgaenge)',
+            'summary' => 'Vorgangsliste des Vermittlers mit '.$anzahl.' Vorgaengen'
+                .($mitReferenz > 0 ? ' ('.$mitReferenz.' davon mit Referenznummer)' : '')
+                .'. Das ist KEIN Kundendokument: die Liste enthaelt Vorgaenge mehrerer Kunden und laesst sich '
+                .'deshalb keinem einzelnen Kunden zuordnen. Sie gehoert unter '
+                .'"Vermittler-Abrechnung -> Vorgangsliste einlesen" - dort stellt sie die Verbindung '
+                .'Referenz-Nr. -> Vermittler-ID fuer jeden einzelnen Vertrag her. '
+                .'Gratis erkannt (ohne KI).',
+            'title' => 'Vermittler-Vorgangsliste ('.$anzahl.' Vorgaenge)',
             'data' => [
                 'person' => [],
                 'versicherung' => [],

@@ -98,7 +98,7 @@ class SettingsValidationTest extends TestCase
     public function test_excessively_long_value_is_rejected(): void
     {
         $this->alsAdmin()->put(route('admin.settings.update'), [
-            'legal_external_base' => 'https://dienstly24.de/' . str_repeat('a', 5000),
+            'legal_external_base' => 'https://dienstly24.de/'.str_repeat('a', 5000),
         ])->assertSessionHasErrors('legal_external_base');
     }
 
@@ -128,7 +128,6 @@ class SettingsValidationTest extends TestCase
     /**
      * Ein Altbestand aus der Zeit VOR der Validierung (oder ein per CLI
      * gesetzter Wert) darf nicht doch noch in einen Redirect geraten.
-     *
      */
     #[DataProvider('unzulaessigeQuellen')]
     public function test_stored_invalid_value_never_reaches_a_redirect(string $wert, string $warum): void

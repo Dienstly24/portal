@@ -39,7 +39,7 @@ class TwoFactorService
     /** Sitzungsschluessel fuer "zweiter Faktor in dieser Sitzung erbracht". */
     public static function sessionKey(User $user): string
     {
-        return '2fa_ok:' . $user->id;
+        return '2fa_ok:'.$user->id;
     }
 
     /**
@@ -107,7 +107,7 @@ class TwoFactorService
         $hashed = [];
         for ($i = 0; $i < self::RECOVERY_CODE_COUNT; $i++) {
             // Gut lesbar/vorlesbar: zwei Bloecke, keine mehrdeutigen Zeichen.
-            $code = strtoupper(Str::random(5) . '-' . Str::random(5));
+            $code = strtoupper(Str::random(5).'-'.Str::random(5));
             $code = str_replace(['0', 'O', '1', 'I', 'L'], ['2', '3', '4', '5', '6'], $code);
             $plain[] = $code;
             $hashed[] = Hash::make($code);

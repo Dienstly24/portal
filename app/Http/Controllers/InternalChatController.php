@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
@@ -20,7 +21,7 @@ class InternalChatController extends Controller
 
     public function index()
     {
-        $conversations = InternalConversation::whereHas('participants', fn($q) => $q->where('user_id', auth()->id()))
+        $conversations = InternalConversation::whereHas('participants', fn ($q) => $q->where('user_id', auth()->id()))
             ->with(['creator', 'participants.user'])
             ->orderByDesc('last_message_at')
             ->orderByDesc('created_at')
@@ -44,7 +45,7 @@ class InternalChatController extends Controller
 
         return view('admin.internal_chat.show', [
             'conversation' => $conversation,
-            'conversations' => InternalConversation::whereHas('participants', fn($q) => $q->where('user_id', auth()->id()))
+            'conversations' => InternalConversation::whereHas('participants', fn ($q) => $q->where('user_id', auth()->id()))
                 ->orderByDesc('last_message_at')->orderByDesc('created_at')->get(),
         ]);
     }
@@ -62,7 +63,7 @@ class InternalChatController extends Controller
         // Teilnehmer bestimmen: explizit gewählte + optional ganzes Team.
         // HART auf Staff gefiltert - Kunden können nie Teilnehmer werden.
         $participantIds = collect($data['participants']);
-        if (!empty($data['team'])) {
+        if (! empty($data['team'])) {
             $teamQuery = User::where('is_active', true);
             $data['team'] === 'all'
                 ? $teamQuery->whereIn('role', self::STAFF_ROLES)

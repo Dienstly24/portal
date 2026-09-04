@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Support;
 
 /** Sekunden menschenlesbar formatieren (fuer Berichte/Exporte). */
@@ -11,9 +12,9 @@ class Duration
         $hours = intdiv($seconds, 3600);
         $minutes = intdiv($seconds % 3600, 60);
         if ($hours > 0) {
-            return $hours . ' Std. ' . $minutes . ' Min.';
+            return $hours.' Std. '.$minutes.' Min.';
         }
-        return $minutes . ' Min.';
+        return $minutes.' Min.';
     }
 
     /** z. B. 9330 -> "02:35" (fuer CSV-Export). */

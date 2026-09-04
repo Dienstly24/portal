@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Mail;
 
 use App\Models\Contract;
@@ -41,8 +42,8 @@ class SchutzbriefRenewalMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         $subject = $this->lang === 'ar'
-            ? 'عقد المساعدة على الطريق (Schutzbrief): يتجدد تلقائياً في ' . $this->renewalDate->format('d.m.Y')
-            : 'Ihr Schutzbrief verlaengert sich am ' . $this->renewalDate->format('d.m.Y') . ' um ein Jahr';
+            ? 'عقد المساعدة على الطريق (Schutzbrief): يتجدد تلقائياً في '.$this->renewalDate->format('d.m.Y')
+            : 'Ihr Schutzbrief verlaengert sich am '.$this->renewalDate->format('d.m.Y').' um ein Jahr';
         return new Envelope(subject: $subject);
     }
 

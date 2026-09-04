@@ -44,7 +44,7 @@ class VehicleOverlapGuard
         $plate = ContractVehicleDetail::normalizePlate($vehicle['license_plate'] ?? null);
         $hsn = trim((string) ($vehicle['hsn'] ?? ''));
         $tsn = mb_strtoupper(trim((string) ($vehicle['tsn'] ?? '')));
-        if (!$vin && !$plate && ($hsn === '' || $tsn === '')) {
+        if (! $vin && ! $plate && ($hsn === '' || $tsn === '')) {
             return null; // ohne Fahrzeug-Identitaet keine Pruefung moeglich
         }
 
@@ -58,10 +58,10 @@ class VehicleOverlapGuard
             ->get();
 
         foreach ($siblings as $other) {
-            if (!$other->vehicleDetail) {
+            if (! $other->vehicleDetail) {
                 continue;
             }
-            if (!$this->sameVehicle($vin, $plate, $hsn, $tsn, $other->vehicleDetail)) {
+            if (! $this->sameVehicle($vin, $plate, $hsn, $tsn, $other->vehicleDetail)) {
                 continue;
             }
             $otherStart = $other->start_date ? Carbon::parse($other->start_date)->startOfDay() : null;
@@ -77,19 +77,19 @@ class VehicleOverlapGuard
     public function conflictMessage(Contract $conflict): string
     {
         $veh = $conflict->vehicleDetail;
-        $fahrzeug = $veh?->license_plate ?: ($veh?->vin ? 'FIN ' . $veh->vin : 'dieses Fahrzeug');
-        $nummer = $conflict->contract_number ? ' (' . $conflict->contract_number . ')' : '';
+        $fahrzeug = $veh?->license_plate ?: ($veh?->vin ? 'FIN '.$veh->vin : 'dieses Fahrzeug');
+        $nummer = $conflict->contract_number ? ' ('.$conflict->contract_number.')' : '';
         $ende = $conflict->coverageEndsAt();
 
         if ($ende) {
-            return 'Doppelversicherung verhindert: Für ' . $fahrzeug . ' besteht bereits der Vertrag '
-                . $conflict->insurer . $nummer . ' mit Schutz bis ' . $ende->format('d.m.Y')
-                . '. Ein weiterer Vertrag für dieses Fahrzeug darf frühestens ab diesem Tag beginnen.';
+            return 'Doppelversicherung verhindert: Für '.$fahrzeug.' besteht bereits der Vertrag '
+                .$conflict->insurer.$nummer.' mit Schutz bis '.$ende->format('d.m.Y')
+                .'. Ein weiterer Vertrag für dieses Fahrzeug darf frühestens ab diesem Tag beginnen.';
         }
 
-        return 'Doppelversicherung verhindert: Für ' . $fahrzeug . ' läuft bereits der Vertrag '
-            . $conflict->insurer . $nummer . ' ohne erfasstes Ende. Beim Versicherer-Wechsel zuerst dort die '
-            . 'Kündigung erfassen (Kündigungsdatum + Ablauf), danach den neuen Vertrag ab dem Ablauftag anlegen.';
+        return 'Doppelversicherung verhindert: Für '.$fahrzeug.' läuft bereits der Vertrag '
+            .$conflict->insurer.$nummer.' ohne erfasstes Ende. Beim Versicherer-Wechsel zuerst dort die '
+            .'Kündigung erfassen (Kündigungsdatum + Ablauf), danach den neuen Vertrag ab dem Ablauftag anlegen.';
     }
 
     /** Identitaets-Vergleich, konservativ: im Zweifel NICHT dasselbe Fahrzeug. */
@@ -108,7 +108,7 @@ class VehicleOverlapGuard
         }
 
         // HSN/TSN nur, wenn keine Seite ein staerkeres Merkmal hat.
-        if (!$vin && !$plate && !$otherVin && !$otherPlate && $hsn !== '' && $tsn !== '') {
+        if (! $vin && ! $plate && ! $otherVin && ! $otherPlate && $hsn !== '' && $tsn !== '') {
             return $hsn === trim((string) $veh->hsn)
                 && $tsn === mb_strtoupper(trim((string) $veh->tsn));
         }

@@ -15,8 +15,7 @@ use Illuminate\Support\Facades\Schema;
  * (SQLSTATE[22032]). Reine, unverschluesselte Definitions-/Config-Arrays
  * (Schritt-Liste, Feld-Listen, Step-Config) duerfen `json` sein.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         // 1) Wissensdatenbank: pro (branch, service_key, version) die

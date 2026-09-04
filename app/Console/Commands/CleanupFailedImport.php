@@ -52,7 +52,7 @@ class CleanupFailedImport extends Command
             $this->line("  - {$c->customer_number}  {$c->user?->name}  <{$c->user?->email}>");
         });
         if ($total > 10) {
-            $this->line('  … und ' . ($total - 10) . ' weitere.');
+            $this->line('  … und '.($total - 10).' weitere.');
         }
 
         if (! $this->option('force')) {

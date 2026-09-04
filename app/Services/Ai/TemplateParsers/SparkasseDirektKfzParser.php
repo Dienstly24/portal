@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Models\Contract;
@@ -59,8 +60,8 @@ class SparkasseDirektKfzParser implements DocumentTemplateParser
         }
         // Nur die Unterlagen der Sparkassen DirektVersicherung zur
         // Kfz-Versicherung (Angebot/Antrag).
-        if (!str_contains($upper, 'SPARKASSEN DIREKTVERSICHERUNG')
-            || !str_contains($upper, 'KFZ-VERSICHERUNG')) {
+        if (! str_contains($upper, 'SPARKASSEN DIREKTVERSICHERUNG')
+            || ! str_contains($upper, 'KFZ-VERSICHERUNG')) {
             return null;
         }
 
@@ -76,26 +77,26 @@ class SparkasseDirektKfzParser implements DocumentTemplateParser
             return null;
         }
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
 
         return [
             'type' => 'kfz_vertrag',
             'confidence' => 76,
             'summary' => 'Sparkassen DirektVersicherung - Kfz-Angebot/Antrag'
-                . ($this->labelValue('Antrag auf Kfz-Versicherung') !== null || $this->hasLine('Tarifumstellung')
+                .($this->labelValue('Antrag auf Kfz-Versicherung') !== null || $this->hasLine('Tarifumstellung')
                     ? ' (Tarifumstellung)' : '')
-                . ($name !== '' ? ' - ' . $name : '')
-                . (isset($vehicle['license_plate']) ? ' - ' . $vehicle['license_plate'] : '')
-                . (isset($insurance['contract_number']) ? ' - Vertrag ' . $insurance['contract_number'] : '')
-                . (isset($vehicle['sf_liability_class']) ? ' - SF ' . $vehicle['sf_liability_class'] : '')
-                . ' - Deckung: ' . $this->coverageSummary($vehicle)
-                . (isset($insurance['premium_amount'])
-                    ? ' - Beitrag ' . number_format($insurance['premium_amount'], 2, ',', '.') . ' EUR'
-                        . ($insurance['premium_interval'] === 'semiannual' ? ' halbjaehrlich' : '')
+                .($name !== '' ? ' - '.$name : '')
+                .(isset($vehicle['license_plate']) ? ' - '.$vehicle['license_plate'] : '')
+                .(isset($insurance['contract_number']) ? ' - Vertrag '.$insurance['contract_number'] : '')
+                .(isset($vehicle['sf_liability_class']) ? ' - SF '.$vehicle['sf_liability_class'] : '')
+                .' - Deckung: '.$this->coverageSummary($vehicle)
+                .(isset($insurance['premium_amount'])
+                    ? ' - Beitrag '.number_format($insurance['premium_amount'], 2, ',', '.').' EUR'
+                        .($insurance['premium_interval'] === 'semiannual' ? ' halbjaehrlich' : '')
                     : '')
-                . $this->manualHints()
-                . ' - Felder gratis aus dem Angebot gelesen (ohne KI).',
-            'title' => 'Sparkassen DirektVersicherung Kfz' . ($name !== '' ? ' ' . $name : ''),
+                .$this->manualHints()
+                .' - Felder gratis aus dem Angebot gelesen (ohne KI).',
+            'title' => 'Sparkassen DirektVersicherung Kfz'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -124,21 +125,21 @@ class SparkasseDirektKfzParser implements DocumentTemplateParser
                 $raw['gender'] = mb_strtolower($m[1]) === 'frau' ? 'female' : 'male';
                 continue;
             }
-            if (!isset($raw['last_name'])
+            if (! isset($raw['last_name'])
                 && preg_match('/^[A-ZÄÖÜ][\p{L}\-]+(?:\s+[A-ZÄÖÜ][\p{L}\-]+)+$/u', $value)) {
                 $parts = preg_split('/\s+/', $value) ?: [];
                 $raw['last_name'] = array_pop($parts);
                 $raw['first_name'] = implode(' ', $parts) ?: null;
                 continue;
             }
-            if (!isset($raw['zip']) && preg_match('/^(\d{5})\s+(.+)$/u', $value, $m)) {
+            if (! isset($raw['zip']) && preg_match('/^(\d{5})\s+(.+)$/u', $value, $m)) {
                 $raw['zip'] = $m[1];
                 $raw['city'] = trim($m[2]);
                 continue;
             }
             // Strasse + Hausnummer ("Friedhofstr. 2 b" - der Strassenname darf
             // auf einen Punkt enden).
-            if (!isset($raw['street'])
+            if (! isset($raw['street'])
                 && preg_match('/^(.*\p{L}\.?)\s+(\d+\s*[a-zA-Z]?)$/u', $value, $m)
                 && preg_match('/\p{L}{3,}/u', $m[1])) {
                 $raw['street'] = trim($m[1]);
@@ -148,7 +149,7 @@ class SparkasseDirektKfzParser implements DocumentTemplateParser
 
         if (($v = $this->labelValue('Geburtsdatum')) !== null
             && preg_match('/^(\d{2})\.(\d{2})\.(\d{4})$/', trim($v), $m)) {
-            $raw['birth_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['birth_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
         if (($v = $this->labelValue('Telefon')) !== null) {
             $digits = (string) preg_replace('/[^\d]/', '', $v);
@@ -161,7 +162,7 @@ class SparkasseDirektKfzParser implements DocumentTemplateParser
         // Briefkopf und gehoeren NICHT zum Kunden.
         if (($v = $this->labelValue('E-Mail')) !== null
             && preg_match('/[\w.+\-]+@[\w.\-]+\.\w{2,}/u', $v, $m)
-            && !str_contains(mb_strtolower($m[0]), 'sparkassen-direkt.de')) {
+            && ! str_contains(mb_strtolower($m[0]), 'sparkassen-direkt.de')) {
             $raw['email'] = mb_strtolower($m[0]);
         }
 
@@ -176,7 +177,7 @@ class SparkasseDirektKfzParser implements DocumentTemplateParser
         if (($v = $this->labelValue('Amtliches Kennzeichen')) !== null) {
             $raw['license_plate'] = $v;
         }
-        if (($v = $this->labelValueFirstColumn('Hersteller')) !== null && !str_contains($v, '/')) {
+        if (($v = $this->labelValueFirstColumn('Hersteller')) !== null && ! str_contains($v, '/')) {
             $raw['manufacturer'] = $v;
         }
         // "Hersteller-/Typ-Nummer   0710 / 916" (Felder 2.1 und 2.2 der
@@ -285,14 +286,14 @@ class SparkasseDirektKfzParser implements DocumentTemplateParser
         // Beginn ("19.09.2026, 00:00 Uhr").
         if (($v = $this->labelValue('Versicherungsbeginn')) !== null
             && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $v, $m)) {
-            $raw['start_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['start_date'] = $m[3].'-'.$m[2].'-'.$m[1];
             // Ablauf steht als Regel statt als Datum ("Versicherungsbeginn plus
             // ein Jahr") - das ist eine Angabe des Dokuments, kein Schaetzwert.
             $ablauf = $this->labelValue('Versicherungsablauf');
             if ($ablauf !== null && preg_match('/plus ein Jahr/ui', $ablauf)) {
-                $raw['end_date'] = date('Y-m-d', strtotime($raw['start_date'] . ' +1 year'));
+                $raw['end_date'] = date('Y-m-d', strtotime($raw['start_date'].' +1 year'));
             } elseif ($ablauf !== null && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $ablauf, $m2)) {
-                $raw['end_date'] = $m2[3] . '-' . $m2[2] . '-' . $m2[1];
+                $raw['end_date'] = $m2[3].'-'.$m2[2].'-'.$m2[1];
             }
         }
 
@@ -313,11 +314,11 @@ class SparkasseDirektKfzParser implements DocumentTemplateParser
         $v = mb_strtolower((string) $this->labelValue('Zahlweise'));
         return match (true) {
             $v === '' => null,
-            str_contains($v, 'monat')                                     => 'monthly',
-            str_contains($v, '1/4') || str_contains($v, 'viertel')        => 'quarterly',
-            str_contains($v, '1/2') || str_contains($v, 'halb')           => 'semiannual',
-            str_contains($v, 'jähr') || str_contains($v, 'jaehr')         => 'yearly',
-            default                                                       => null,
+            str_contains($v, 'monat') => 'monthly',
+            str_contains($v, '1/4') || str_contains($v, 'viertel') => 'quarterly',
+            str_contains($v, '1/2') || str_contains($v, 'halb') => 'semiannual',
+            str_contains($v, 'jähr') || str_contains($v, 'jaehr') => 'yearly',
+            default => null,
         };
     }
 
@@ -331,7 +332,7 @@ class SparkasseDirektKfzParser implements DocumentTemplateParser
         foreach (['Erstzulassung' => 'Erstzulassung', 'Erwerb des Fahrzeugs' => 'Erwerb'] as $label => $text) {
             $v = $this->labelValueFirstColumn($label);
             if ($v !== null && preg_match('/^\d{2}\.\d{4}$/', $v)) {
-                $out .= ' - ' . $text . ' ' . $v;
+                $out .= ' - '.$text.' '.$v;
             }
         }
         if (($v = $this->labelValueFirstColumn('Zweitwagen')) !== null && preg_match('/^ja$/iu', $v)) {
@@ -344,9 +345,9 @@ class SparkasseDirektKfzParser implements DocumentTemplateParser
     private function coverageSummary(array $kfz): string
     {
         $parts = ['Haftpflicht'];
-        if (!empty($kfz['has_vollkasko'])) {
+        if (! empty($kfz['has_vollkasko'])) {
             $parts[] = 'Vollkasko';
-        } elseif (!empty($kfz['has_teilkasko'])) {
+        } elseif (! empty($kfz['has_teilkasko'])) {
             $parts[] = 'Teilkasko';
         } else {
             $parts[] = 'keine Kasko';
@@ -375,7 +376,7 @@ class SparkasseDirektKfzParser implements DocumentTemplateParser
     private function labelValue(string $label): ?string
     {
         foreach ($this->lines as $line) {
-            if (preg_match('/^\s*' . preg_quote($label, '/') . '\s{2,}([^\n]+?)\s*$/u', $line, $m)) {
+            if (preg_match('/^\s*'.preg_quote($label, '/').'\s{2,}([^\n]+?)\s*$/u', $line, $m)) {
                 $value = trim($m[1]);
                 if ($value !== '') {
                     return $value;
@@ -411,7 +412,7 @@ class SparkasseDirektKfzParser implements DocumentTemplateParser
     private function valueBlock(string $label, int $max): array
     {
         foreach ($this->lines as $i => $line) {
-            if (!preg_match('/^(\s*)' . preg_quote($label, '/') . '\s{2,}([^\n]+?)\s*$/u', $line, $m)) {
+            if (! preg_match('/^(\s*)'.preg_quote($label, '/').'\s{2,}([^\n]+?)\s*$/u', $line, $m)) {
                 continue;
             }
             $column = mb_strpos($line, trim($m[2]));

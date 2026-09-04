@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant;
 
 use App\Models\AiConversation;
@@ -71,7 +72,7 @@ class EmployeeAssistantService
             'wartet_auf_mitarbeiter' => ConversationState::waitsForStaff($conversation->state),
             'bekannt' => $bekannt,
             'fehlend' => array_map(fn ($f) => $f['label'], $sicht->missing($stufe)),
-            'fortschritt' => $fortschritt['erledigt'] . '/' . $fortschritt['gesamt'],
+            'fortschritt' => $fortschritt['erledigt'].'/'.$fortschritt['gesamt'],
             'angebot' => $angebot?->summary(),
             'kunde_hat_zugestimmt' => $angebot?->isSelected() ?? false,
             'pruefung' => $conversation->verification_status,
@@ -102,7 +103,7 @@ class EmployeeAssistantService
      */
     public function suggestReply(Customer $customer, AiConversation $conversation): array
     {
-        if (!$this->provider->isEnabled()) {
+        if (! $this->provider->isEnabled()) {
             return ['vorschlag' => null, 'fehler' => 'Kein KI-Anbieter konfiguriert.'];
         }
 
@@ -112,18 +113,18 @@ class EmployeeAssistantService
             ->get()
             ->sortBy('created_at');
 
-        $letzteKundenfrage = $letzte->last(fn ($m) => !$m->from_staff);
-        if (!$letzteKundenfrage) {
+        $letzteKundenfrage = $letzte->last(fn ($m) => ! $m->from_staff);
+        if (! $letzteKundenfrage) {
             return ['vorschlag' => null, 'fehler' => 'Es liegt keine Kundennachricht vor.'];
         }
 
         $briefing = $this->briefing($customer, $conversation);
         $leitfaden = $this->knowledge->search('Gesprächsleitfaden Stil Ablauf', null, 3)
-            ->map(fn ($e) => '- ' . $e->title . ': ' . Str::limit($e->content, 400))
+            ->map(fn ($e) => '- '.$e->title.': '.Str::limit($e->content, 400))
             ->implode("\n");
 
         $verlauf = $letzte->map(fn ($m) => ($m->from_staff ? 'Team: ' : 'Kunde: ')
-            . Str::limit(trim((string) $m->body), 400))->implode("\n");
+            .Str::limit(trim((string) $m->body), 400))->implode("\n");
 
         $stand = json_encode([
             'anliegen' => $briefing['anliegen'],

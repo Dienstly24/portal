@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\SupportFormController;
 use App\Models\Customer;
 use App\Models\InternalNotification;
 use App\Models\Ticket;
@@ -32,7 +33,7 @@ class TicketHardeningTest extends TestCase
 
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => '26002' . str_pad((string) $n, 2, '0', STR_PAD_LEFT),
+            'customer_number' => '26002'.str_pad((string) $n, 2, '0', STR_PAD_LEFT),
             'first_name' => 'Kunde',
             'last_name' => (string) $n,
         ]);
@@ -91,12 +92,12 @@ class TicketHardeningTest extends TestCase
         Storage::fake('public');
         Storage::fake('local');
         $ticket = $this->makeTicket($this->makeCustomer());
-        Storage::disk('public')->put('tickets/' . $ticket->id . '/alt.pdf', 'INHALT');
+        Storage::disk('public')->put('tickets/'.$ticket->id.'/alt.pdf', 'INHALT');
         $att = TicketAttachment::create([
             'id' => (string) Str::uuid(),
             'ticket_id' => $ticket->id,
             'file_name' => 'alt.pdf',
-            'file_path' => 'tickets/' . $ticket->id . '/alt.pdf',
+            'file_path' => 'tickets/'.$ticket->id.'/alt.pdf',
             'disk' => 'public',
         ]);
 
@@ -139,7 +140,7 @@ class TicketHardeningTest extends TestCase
             'id' => (string) Str::uuid(),
             'ticket_id' => $ticket->id,
             'file_name' => 'lead.pdf',
-            'file_path' => 'tickets/' . $ticket->id . '/lead.pdf',
+            'file_path' => 'tickets/'.$ticket->id.'/lead.pdf',
             'disk' => 'local',
         ]);
 
@@ -315,7 +316,7 @@ class TicketHardeningTest extends TestCase
         $customer = $this->makeCustomer();
 
         $response = $this->post('/hilfe', [
-            't' => \App\Http\Controllers\SupportFormController::tokenFor($customer),
+            't' => SupportFormController::tokenFor($customer),
             'leistung' => 'login',
             'message' => 'Frage zum Login.',
         ])->assertOk();

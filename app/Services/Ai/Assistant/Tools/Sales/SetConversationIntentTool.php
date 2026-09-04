@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Tools\Sales;
 
 use App\Models\AiConversationEvent;
@@ -33,10 +34,10 @@ class SetConversationIntentTool implements AssistantTool
     public function description(): string
     {
         return 'Halte fest, worum es dem Kunden geht, sobald du es sicher weisst. '
-            . 'Erlaubte Werte: NEW_INTERNET (neuer Anschluss), CONTRACT_CHANGE '
-            . '(Wechsel/neuer Vertrag beim bestehenden Anschluss), UPGRADE (schnellerer '
-            . 'Tarif), GENERAL_QUESTION, TECHNICAL_SUPPORT, HUMAN_REQUIRED. '
-            . 'Rufe das EINMAL je Anliegen auf - nicht bei jeder Nachricht erneut.';
+            .'Erlaubte Werte: NEW_INTERNET (neuer Anschluss), CONTRACT_CHANGE '
+            .'(Wechsel/neuer Vertrag beim bestehenden Anschluss), UPGRADE (schnellerer '
+            .'Tarif), GENERAL_QUESTION, TECHNICAL_SUPPORT, HUMAN_REQUIRED. '
+            .'Rufe das EINMAL je Anliegen auf - nicht bei jeder Nachricht erneut.';
     }
 
     public function parameters(): array
@@ -62,9 +63,9 @@ class SetConversationIntentTool implements AssistantTool
     public function run(array $arguments, AssistantToolContext $context): array
     {
         $intent = (string) ($arguments['intent'] ?? '');
-        if (!isset(RequirementProfile::INTENT_LABELS[$intent])) {
+        if (! isset(RequirementProfile::INTENT_LABELS[$intent])) {
             return ['fehler' => 'Unbekanntes Anliegen. Erlaubt: '
-                . implode(', ', array_keys(RequirementProfile::INTENT_LABELS))];
+                .implode(', ', array_keys(RequirementProfile::INTENT_LABELS))];
         }
 
         $conversation = $context->conversation;

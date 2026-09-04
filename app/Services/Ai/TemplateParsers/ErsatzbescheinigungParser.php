@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
@@ -27,7 +28,7 @@ class ErsatzbescheinigungParser implements DocumentTemplateParser
     public function parse(string $text): ?array
     {
         $upper = mb_strtoupper($text);
-        if (!str_contains($upper, 'ERSATZBESCHEINIGUNG') || !str_contains($upper, 'GESUNDHEITSKARTE')) {
+        if (! str_contains($upper, 'ERSATZBESCHEINIGUNG') || ! str_contains($upper, 'GESUNDHEITSKARTE')) {
             return null;
         }
 
@@ -41,16 +42,16 @@ class ErsatzbescheinigungParser implements DocumentTemplateParser
             return null;
         }
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         return [
             'type' => 'gesundheitskarte',
             'confidence' => 72,
             'summary' => 'Ersatzbescheinigung fuer die Gesundheitskarte'
-                . ($name !== '' ? ' - ' . $name : '')
-                . (isset($health['health_insurance_company']) ? ' - ' . $health['health_insurance_company'] : '')
-                . (isset($health['health_insurance_number']) ? ' (Vers.-Nr. ' . $health['health_insurance_number'] . ')' : '')
-                . ' - gratis gelesen (ohne KI).',
-            'title' => 'Ersatzbescheinigung Gesundheitskarte' . ($name !== '' ? ' ' . $name : ''),
+                .($name !== '' ? ' - '.$name : '')
+                .(isset($health['health_insurance_company']) ? ' - '.$health['health_insurance_company'] : '')
+                .(isset($health['health_insurance_number']) ? ' (Vers.-Nr. '.$health['health_insurance_number'].')' : '')
+                .' - gratis gelesen (ohne KI).',
+            'title' => 'Ersatzbescheinigung Gesundheitskarte'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'gesundheit' => $health,
@@ -77,21 +78,21 @@ class ErsatzbescheinigungParser implements DocumentTemplateParser
         }
         // Geburtsdatum steht in derselben Wertzeile (rechte Spalte).
         if ($nameLine !== null && preg_match('/(\d{2})[.\/](\d{2})[.\/](\d{4})/', $nameLine, $m)) {
-            $raw['birth_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['birth_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
 
         // Anschrift aus dem Empfaengerblock (nach "Herr"/"Frau").
         foreach ($this->lines as $i => $line) {
-            if (!preg_match('/^\s*(Herr|Herrn|Frau)\b/u', $line)) {
+            if (! preg_match('/^\s*(Herr|Herrn|Frau)\b/u', $line)) {
                 continue;
             }
             for ($j = $i; $j < min($i + 6, count($this->lines)); $j++) {
                 $l = trim($this->lines[$j]);
-                if (!isset($raw['street']) && preg_match('/^([A-ZÄÖÜ][\p{L}.\- ]*(?:str|weg|platz|allee|ring|gasse|damm)[\p{L}.]*)\s+(\d+[a-zA-Z]?(?:\/\d+)?)/iu', $l, $s)) {
+                if (! isset($raw['street']) && preg_match('/^([A-ZÄÖÜ][\p{L}.\- ]*(?:str|weg|platz|allee|ring|gasse|damm)[\p{L}.]*)\s+(\d+[a-zA-Z]?(?:\/\d+)?)/iu', $l, $s)) {
                     $raw['street'] = trim($s[1]);
                     $raw['house_number'] = $s[2];
                 }
-                if (!isset($raw['zip']) && preg_match('/\b(\d{5})\s+([A-ZÄÖÜ][\p{L}\-]+)\b/u', $l, $z) && $z[1] !== '47050' && $z[1] !== '47051') {
+                if (! isset($raw['zip']) && preg_match('/\b(\d{5})\s+([A-ZÄÖÜ][\p{L}\-]+)\b/u', $l, $z) && $z[1] !== '47050' && $z[1] !== '47051') {
                     $raw['zip'] = $z[1];
                     $raw['city'] = $z[2];
                 }
@@ -134,7 +135,7 @@ class ErsatzbescheinigungParser implements DocumentTemplateParser
         // Beginn der Mitgliedschaft = Versicherungsbeginn.
         $begin = $this->valueBelow('Beginn der Mitgliedschaft');
         if ($begin !== null && preg_match('/(\d{2})[.\/](\d{2})[.\/](\d{4})/', $begin, $m)) {
-            $raw['start_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['start_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
 
         return $this->validatedInsurance(array_filter($raw, fn ($v) => $v !== null && $v !== ''));

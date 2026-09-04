@@ -9,8 +9,7 @@ use Illuminate\Support\Facades\Schema;
  * zu genau einem "Slot" (fester Platz auf der Website). Hochladen + Slot
  * waehlen + Alt-Text pflegen ersetzt FTP und Code-Aenderungen komplett.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('media_assets', function (Blueprint $table) {

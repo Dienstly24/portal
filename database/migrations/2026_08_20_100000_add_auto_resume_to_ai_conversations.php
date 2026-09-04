@@ -19,8 +19,7 @@ use Illuminate\Support\Facades\Schema;
  *  resume_not_before Ruhefrist; jede Mitarbeiter-Nachricht schiebt sie vor
  *  resume_ticket_id  der Vorgang, dessen Abschluss die KI freigibt
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('ai_conversations', function (Blueprint $table) {

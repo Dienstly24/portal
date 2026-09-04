@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Mailbox;
 
 use Illuminate\Support\Carbon;

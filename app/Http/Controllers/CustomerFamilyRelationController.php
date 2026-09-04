@@ -8,6 +8,7 @@ use App\Models\CustomerFamilyRelation;
 use App\Models\Task;
 use App\Services\Family\FamilyRelationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 /**
  * Familien- und Kundenbeziehungen im Kundenprofil (Betreiber-Vorgabe
@@ -28,7 +29,7 @@ class CustomerFamilyRelationController extends Controller
     private function authorizeCustomerAccess($customerId): void
     {
         $ids = $this->visibleCustomerIds();
-        if ($ids !== null && !in_array((string) $customerId, array_map('strval', $ids), true)) {
+        if ($ids !== null && ! in_array((string) $customerId, array_map('strval', $ids), true)) {
             abort(403, 'Kein Zugriff auf diesen Kunden.');
         }
     }
@@ -74,7 +75,7 @@ class CustomerFamilyRelationController extends Controller
                     // nirgends als solcher ausgegeben.
                     'email' => $c->user?->hasRealEmail() ? $c->user->email : null,
                     'phone' => $c->mobile ?: $c->phone,
-                    'birth_date' => $c->birth_date ? \Illuminate\Support\Carbon::parse($c->birth_date)->format('d.m.Y') : null,
+                    'birth_date' => $c->birth_date ? Carbon::parse($c->birth_date)->format('d.m.Y') : null,
                     'age' => $c->age(),
                     'address' => $c->fullAddress() ?: null,
                     'status' => $status['short'],
@@ -95,7 +96,7 @@ class CustomerFamilyRelationController extends Controller
 
         $data = $request->validate([
             'related_customer_id' => 'required|uuid|exists:customers,id',
-            'relationship_type' => 'required|in:' . implode(',', array_keys(CustomerFamilyRelation::ROLES)),
+            'relationship_type' => 'required|in:'.implode(',', array_keys(CustomerFamilyRelation::ROLES)),
             'note' => 'nullable|string|max:255',
         ], [], [
             'related_customer_id' => 'Kunde',
@@ -116,11 +117,11 @@ class CustomerFamilyRelationController extends Controller
         $relation = $this->service->link($customer, $related, $data['relationship_type'], auth()->id(), $data['note'] ?? null);
 
         $hinweis = $relation->is_dependent
-            ? ' Als abhängiges Familienmitglied geführt (unter ' . Customer::DEPENDENT_AGE . ' Jahren) – die Kundenakte bleibt vollständig erhalten.'
+            ? ' Als abhängiges Familienmitglied geführt (unter '.Customer::DEPENDENT_AGE.' Jahren) – die Kundenakte bleibt vollständig erhalten.'
             : '';
 
-        return back()->with('success', ($related->user?->name ?: 'Kunde') . ' wurde als '
-            . CustomerFamilyRelation::roleLabel($data['relationship_type']) . ' verknüpft.' . $hinweis);
+        return back()->with('success', ($related->user?->name ?: 'Kunde').' wurde als '
+            .CustomerFamilyRelation::roleLabel($data['relationship_type']).' verknüpft.'.$hinweis);
     }
 
     /** Rolle einer bestehenden Verknuepfung aendern (beide Richtungen). */
@@ -129,7 +130,7 @@ class CustomerFamilyRelationController extends Controller
         $this->authorizeCustomerAccess($customerId);
 
         $data = $request->validate([
-            'relationship_type' => 'required|in:' . implode(',', array_keys(CustomerFamilyRelation::ROLES)),
+            'relationship_type' => 'required|in:'.implode(',', array_keys(CustomerFamilyRelation::ROLES)),
         ]);
 
         $relation = CustomerFamilyRelation::where('customer_id', $customerId)->findOrFail($relationId);
@@ -143,7 +144,7 @@ class CustomerFamilyRelationController extends Controller
             $relation->note
         );
 
-        return back()->with('success', 'Beziehung auf „' . CustomerFamilyRelation::roleLabel($data['relationship_type']) . '" geändert.');
+        return back()->with('success', 'Beziehung auf „'.CustomerFamilyRelation::roleLabel($data['relationship_type']).'" geändert.');
     }
 
     /** Verknuepfung loesen. Beide Kundenakten bleiben vollstaendig bestehen. */
@@ -158,7 +159,7 @@ class CustomerFamilyRelationController extends Controller
         $name = $relation->relatedCustomer?->user?->name ?: 'Kunde';
         $this->service->unlink($relation, auth()->id());
 
-        return back()->with('success', 'Verknüpfung mit ' . $name . ' aufgehoben. Die Kundenakte bleibt unverändert bestehen.');
+        return back()->with('success', 'Verknüpfung mit '.$name.' aufgehoben. Die Kundenakte bleibt unverändert bestehen.');
     }
 
     /**
@@ -201,11 +202,11 @@ class CustomerFamilyRelationController extends Controller
         $relation->forceFill(['transition_prepared_at' => now()])->save();
 
         Task::forceCreate([
-            'title' => 'Übergang vorbereiten: ' . ($kind?->user?->name ?: 'Familienmitglied') . ' wird 15',
-            'description' => 'Familienmitglied von ' . ($relation->customer?->user?->name ?: '—') . '. '
-                . '15. Geburtstag: ' . ($stichtag ? $stichtag->format('d.m.Y') : 'unbekannt') . '. '
-                . 'Zu prüfen: eigene Verträge/Vorgänge, eigene Kontaktdaten (bisher von der Bezugsperson übernommen), '
-                . 'Portal-Zugang. Es wird nichts automatisch geändert.',
+            'title' => 'Übergang vorbereiten: '.($kind?->user?->name ?: 'Familienmitglied').' wird 15',
+            'description' => 'Familienmitglied von '.($relation->customer?->user?->name ?: '—').'. '
+                .'15. Geburtstag: '.($stichtag ? $stichtag->format('d.m.Y') : 'unbekannt').'. '
+                .'Zu prüfen: eigene Verträge/Vorgänge, eigene Kontaktdaten (bisher von der Bezugsperson übernommen), '
+                .'Portal-Zugang. Es wird nichts automatisch geändert.',
             'type' => 'reminder',
             'status' => 'open',
             'priority' => 'medium',
@@ -216,6 +217,6 @@ class CustomerFamilyRelationController extends Controller
         ]);
 
         return back()->with('success', 'Übergang vorgemerkt: eine Wiedervorlage wurde angelegt. '
-            . 'Verträge wurden bewusst NICHT verändert – das bleibt eine bewusste Entscheidung.');
+            .'Verträge wurden bewusst NICHT verändert – das bleibt eine bewusste Entscheidung.');
     }
 }

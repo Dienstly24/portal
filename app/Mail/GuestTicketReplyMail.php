@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Mail;
 
 use App\Models\Ticket;
@@ -25,8 +26,8 @@ class GuestTicketReplyMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(subject: 'Antwort auf Ihre Anfrage'
-            . ($this->ticket->ticket_number ? ' [' . $this->ticket->ticket_number . ']' : '')
-            . ': ' . $this->ticket->subject);
+            .($this->ticket->ticket_number ? ' ['.$this->ticket->ticket_number.']' : '')
+            .': '.$this->ticket->subject);
     }
 
     public function content(): Content

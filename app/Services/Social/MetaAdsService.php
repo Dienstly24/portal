@@ -1,7 +1,10 @@
 <?php
+
 namespace App\Services\Social;
 
 use App\Models\Banner;
+use App\Models\SystemSetting;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -32,7 +35,7 @@ class MetaAdsService
     {
         $cfg = config('services.meta', []);
 
-        return !empty($cfg['token']) && !empty($cfg['ad_account_id']) && !empty($cfg['page_id']);
+        return ! empty($cfg['token']) && ! empty($cfg['ad_account_id']) && ! empty($cfg['page_id']);
     }
 
     /** Absolute Obergrenze fuer die Schutzgrenze selbst (Tippfehler-Schutz). */
@@ -45,7 +48,7 @@ class MetaAdsService
      */
     public static function maxDailyBudgetEur(): int
     {
-        $stored = \App\Models\SystemSetting::get('meta_ads_max_daily_budget');
+        $stored = SystemSetting::get('meta_ads_max_daily_budget');
         $eur = is_numeric($stored) && (int) $stored >= 1
             ? (int) $stored
             : (int) config('services.meta.ads_max_daily_budget', 100);
@@ -57,7 +60,7 @@ class MetaAdsService
     {
         $id = (string) config('services.meta.ad_account_id');
 
-        return str_starts_with($id, 'act_') ? $id : 'act_' . $id;
+        return str_starts_with($id, 'act_') ? $id : 'act_'.$id;
     }
 
     /**
@@ -66,7 +69,7 @@ class MetaAdsService
      */
     public function listCampaigns(): array
     {
-        $campaigns = $this->graph->get($this->account() . '/campaigns', [
+        $campaigns = $this->graph->get($this->account().'/campaigns', [
             'fields' => 'id,name,status,effective_status,daily_budget,stop_time,created_time,objective',
             'limit' => 50,
         ])['data'] ?? [];
@@ -74,7 +77,7 @@ class MetaAdsService
         // Leistungswerte gesamt (seit Start) je Kampagne dazu mischen.
         $insights = [];
         try {
-            $rows = $this->graph->get($this->account() . '/insights', [
+            $rows = $this->graph->get($this->account().'/insights', [
                 'level' => 'campaign',
                 'fields' => 'campaign_id,spend,impressions,clicks,cpc',
                 'date_preset' => 'maximum',
@@ -110,7 +113,7 @@ class MetaAdsService
     /** Starten oder pausieren. */
     public function setStatus(string $campaignId, string $status): void
     {
-        if (!in_array($status, ['ACTIVE', 'PAUSED'], true)) {
+        if (! in_array($status, ['ACTIVE', 'PAUSED'], true)) {
             throw new \RuntimeException('Ungültiger Status.');
         }
         $this->graph->post($campaignId, ['status' => $status]);
@@ -140,13 +143,13 @@ class MetaAdsService
     {
         $channel = $banner->socialPost?->channelFor('facebook');
         $storyId = $channel?->external_post_id;
-        if (!$storyId) {
+        if (! $storyId) {
             throw new \RuntimeException('Dieser Banner hat noch keinen per API veröffentlichten Facebook-Beitrag - zuerst posten, dann bewerben.');
         }
         $this->assertBudget($opts['daily_budget_eur']);
 
         $klicks = ($opts['objective'] ?? 'klicks') === 'klicks';
-        $name = 'Banner: ' . mb_substr($banner->title, 0, 60);
+        $name = 'Banner: '.mb_substr($banner->title, 0, 60);
 
         // 1) Kampagne (CBO: Budget liegt an der Kampagne), PAUSIERT.
         // special_ad_categories: Versicherung/Energie fallen in der EU nicht
@@ -154,7 +157,7 @@ class MetaAdsService
         // Bei Kampagnen-Budget (CBO) gehoert die bid_strategy an die
         // KAMPAGNE - ein Adset mit eigener bid_strategy lehnt die
         // Marketing API dann ab (Pre-Merge-Review).
-        $campaignId = (string) $this->graph->post($this->account() . '/campaigns', [
+        $campaignId = (string) $this->graph->post($this->account().'/campaigns', [
             'name' => $name,
             'objective' => $klicks ? 'OUTCOME_TRAFFIC' : 'OUTCOME_AWARENESS',
             'status' => 'PAUSED',
@@ -183,17 +186,17 @@ class MetaAdsService
                 'status' => 'PAUSED',
                 'start_time' => now()->toIso8601String(),
             ];
-            if (!empty($opts['end_date'])) {
-                $adsetParams['end_time'] = \Illuminate\Support\Carbon::parse($opts['end_date'])->endOfDay()->toIso8601String();
+            if (! empty($opts['end_date'])) {
+                $adsetParams['end_time'] = Carbon::parse($opts['end_date'])->endOfDay()->toIso8601String();
             }
-            $adsetId = (string) $this->graph->post($this->account() . '/adsets', $adsetParams)['id'];
+            $adsetId = (string) $this->graph->post($this->account().'/adsets', $adsetParams)['id'];
 
-            $creativeId = (string) $this->graph->post($this->account() . '/adcreatives', [
+            $creativeId = (string) $this->graph->post($this->account().'/adcreatives', [
                 'name' => $name,
                 'object_story_id' => $storyId,
             ])['id'];
 
-            $this->graph->post($this->account() . '/ads', [
+            $this->graph->post($this->account().'/ads', [
                 'name' => $name,
                 'adset_id' => $adsetId,
                 'creative' => json_encode(['creative_id' => $creativeId]),
@@ -217,7 +220,7 @@ class MetaAdsService
     {
         $max = self::maxDailyBudgetEur();
         if ($eur < 1 || $eur > $max) {
-            throw new \RuntimeException('Tagesbudget muss zwischen 1 und ' . $max . ' EUR liegen - die Schutzgrenze ändert der Admin unten auf der Seite Werbeanzeigen.');
+            throw new \RuntimeException('Tagesbudget muss zwischen 1 und '.$max.' EUR liegen - die Schutzgrenze ändert der Admin unten auf der Seite Werbeanzeigen.');
         }
     }
 
@@ -236,7 +239,7 @@ class MetaAdsService
             return null;
         }
 
-        return Cache::remember('meta_adlocale_' . $language, now()->addWeek(), function () use ($query) {
+        return Cache::remember('meta_adlocale_'.$language, now()->addWeek(), function () use ($query) {
             try {
                 $data = $this->graph->get('search', ['type' => 'adlocale', 'q' => $query])['data'] ?? [];
                 $key = $data[0]['key'] ?? null;

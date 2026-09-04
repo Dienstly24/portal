@@ -33,7 +33,7 @@ class ImageVariantGenerator
 
         if ($asset->isSvg()) {
             $svg = file_get_contents($original);
-            $path = $this->variantDir($asset) . '/' . $this->stem($asset) . '.svg';
+            $path = $this->variantDir($asset).'/'.$this->stem($asset).'.svg';
             Storage::disk('public')->put($path, $svg);
             $asset->forceFill([
                 'variants' => [['format' => 'svg', 'width' => $asset->width, 'height' => $asset->height, 'path' => $path, 'bytes' => strlen($svg)]],
@@ -57,7 +57,7 @@ class ImageVariantGenerator
             $dim = @getimagesizefromstring($bytes);
             if ($dim !== false && ($dim[0] * $dim[1]) > self::MAX_PIXELS) {
                 throw new \RuntimeException('Bild ist zu gross (max. '
-                    . (self::MAX_PIXELS / 1_000_000) . ' Megapixel).');
+                    .(self::MAX_PIXELS / 1_000_000).' Megapixel).');
             }
             $img = @imagecreatefromstring($bytes);
             if ($img === false) {
@@ -72,7 +72,7 @@ class ImageVariantGenerator
 
             // Slot-spezifische Vorgaben (Marken-Slots brauchen kleinere
             // Groessen und PNG statt JPG) - sonst die Standardwerte.
-            $slotConf = (array) config('website.slots.' . (string) ($intendedSlot ?? $asset->slot), []);
+            $slotConf = (array) config('website.slots.'.(string) ($intendedSlot ?? $asset->slot), []);
 
             // Zielbreiten: nie hochskalieren; sehr kleine Originale bekommen
             // genau eine Variante in Originalbreite.
@@ -95,7 +95,7 @@ class ImageVariantGenerator
             foreach ($widths as $targetW) {
                 $scaled = $targetW === $srcW ? $img : imagescale($img, $targetW, -1, IMG_BICUBIC);
                 if ($scaled === false) {
-                    throw new \RuntimeException('Skalierung auf ' . $targetW . 'px fehlgeschlagen.');
+                    throw new \RuntimeException('Skalierung auf '.$targetW.'px fehlgeschlagen.');
                 }
                 imagealphablending($scaled, false);
                 imagesavealpha($scaled, true);
@@ -106,7 +106,7 @@ class ImageVariantGenerator
                     if ($blob === null) {
                         continue; // Format nicht verfuegbar (z. B. AVIF ohne libavif)
                     }
-                    $path = $this->variantDir($asset) . '/' . $this->stem($asset) . '-' . $targetW . '.' . $format;
+                    $path = $this->variantDir($asset).'/'.$this->stem($asset).'-'.$targetW.'.'.$format;
                     Storage::disk('public')->put($path, $blob);
                     $variants[] = ['format' => $format, 'width' => $targetW, 'height' => $targetH, 'path' => $path, 'bytes' => strlen($blob)];
                 }
@@ -140,14 +140,14 @@ class ImageVariantGenerator
 
     private function variantDir(MediaAsset $asset): string
     {
-        return 'media/' . $asset->id;
+        return 'media/'.$asset->id;
     }
 
     /** ASCII-Dateistamm aus dem Titel (keine Umlaute/arabischen Zeichen im Pfad). */
     private function stem(MediaAsset $asset): string
     {
         $slug = Str::slug(pathinfo($asset->title ?: $asset->original_name, PATHINFO_FILENAME));
-        return $slug !== '' ? $slug : 'bild-' . $asset->id;
+        return $slug !== '' ? $slug : 'bild-'.$asset->id;
     }
 
     /**

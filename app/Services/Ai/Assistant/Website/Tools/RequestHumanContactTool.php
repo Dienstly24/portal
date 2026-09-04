@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Website\Tools;
 
 use App\Models\AiConversationEvent;
@@ -32,10 +33,10 @@ class RequestHumanContactTool implements LeadTool
     public function description(): string
     {
         return 'Melde den Interessenten an das Team, wenn er einen Mitarbeiter '
-            . 'wuenscht, wenn du seine Frage nicht aus der Wissensbasis beantworten '
-            . 'kannst oder wenn die noetigen Angaben fuer ein Angebot vorliegen. '
-            . 'Sage ihm anschliessend, dass sich ein Mitarbeiter meldet - nenne KEINE '
-            . 'Preise, Tarife oder Termine.';
+            .'wuenscht, wenn du seine Frage nicht aus der Wissensbasis beantworten '
+            .'kannst oder wenn die noetigen Angaben fuer ein Angebot vorliegen. '
+            .'Sage ihm anschliessend, dass sich ein Mitarbeiter meldet - nenne KEINE '
+            .'Preise, Tarife oder Termine.';
     }
 
     public function parameters(): array
@@ -51,7 +52,7 @@ class RequestHumanContactTool implements LeadTool
                 'zusammenfassung' => [
                     'type' => 'string',
                     'description' => 'Ein bis drei Saetze fuer den Mitarbeiter, nur aus '
-                        . 'Angaben des Interessenten - nichts erfinden.',
+                        .'Angaben des Interessenten - nichts erfinden.',
                 ],
             ],
             'required' => ['grund'],

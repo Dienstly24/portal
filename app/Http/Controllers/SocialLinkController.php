@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\BannerSocialChannel;
@@ -20,7 +21,7 @@ class SocialLinkController extends Controller
         $channel->recordClick();
 
         $target = $channel->post?->target_url;
-        if (!$target) {
+        if (! $target) {
             // Fallback: absolutes Banner-Ziel; Portal-interne Pfade sind fuer
             // Social-Besucher hinter der Login-Wand -> stattdessen Startseite.
             $bannerUrl = $channel->post?->banner?->link_url;
@@ -47,9 +48,9 @@ class SocialLinkController extends Controller
         $query = http_build_query([
             'utm_source' => $channel->platform,
             'utm_medium' => 'social',
-            'utm_campaign' => 'banner-' . ($channel->post?->banner_id ?? 0),
+            'utm_campaign' => 'banner-'.($channel->post?->banner_id ?? 0),
         ]);
 
-        return $base . $sep . $query . ($fragment !== null ? '#' . $fragment : '');
+        return $base.$sep.$query.($fragment !== null ? '#'.$fragment : '');
     }
 }

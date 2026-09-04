@@ -1,8 +1,10 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\Banner;
+use App\Models\SystemSetting;
 use App\Services\Social\MetaAdsService;
 use App\Services\Social\MetaInsightsService;
 use Illuminate\Http\Request;
@@ -43,11 +45,11 @@ class MetaAdsController extends Controller
     public function create(Banner $banner)
     {
         $fbChannel = $banner->socialPost?->channelFor('facebook');
-        if (!MetaAdsService::configured()) {
+        if (! MetaAdsService::configured()) {
             return redirect()->route('admin.werbung')
                 ->withErrors(['ads' => 'Meta-API/Werbekonto nicht verbunden - einmalig auf dem Server php artisan meta:einrichten ausführen.']);
         }
-        if (!$fbChannel?->external_post_id) {
+        if (! $fbChannel?->external_post_id) {
             return redirect()->route('admin.banners.social', $banner->id)
                 ->withErrors(['publish' => 'Zuerst den Facebook-Beitrag per API veröffentlichen - der wird dann beworben.']);
         }
@@ -62,7 +64,7 @@ class MetaAdsController extends Controller
     {
         $data = $request->validate([
             'objective' => 'required|in:klicks,reichweite',
-            'daily_budget_eur' => 'required|numeric|min:1|max:' . MetaAdsService::maxDailyBudgetEur(),
+            'daily_budget_eur' => 'required|numeric|min:1|max:'.MetaAdsService::maxDailyBudgetEur(),
             'age_min' => 'required|integer|min:18|max:65',
             'age_max' => 'required|integer|min:18|max:65|gte:age_min',
             'language' => 'required|in:alle,de,ar',
@@ -102,7 +104,7 @@ class MetaAdsController extends Controller
         } catch (\Throwable $e) {
             return back()->withErrors(['ads' => $e->getMessage()]);
         }
-        $this->log('meta_ad_' . ($action === 'start' ? 'started' : 'paused'), $campaignId, []);
+        $this->log('meta_ad_'.($action === 'start' ? 'started' : 'paused'), $campaignId, []);
 
         return back()->with('success', $action === 'start' ? 'Anzeige gestartet.' : 'Anzeige pausiert.');
     }
@@ -111,7 +113,7 @@ class MetaAdsController extends Controller
     public function budget(Request $request, string $campaignId, MetaAdsService $ads)
     {
         $eur = (float) $request->validate([
-            'daily_budget_eur' => 'required|numeric|min:1|max:' . MetaAdsService::maxDailyBudgetEur(),
+            'daily_budget_eur' => 'required|numeric|min:1|max:'.MetaAdsService::maxDailyBudgetEur(),
         ], $this->germanMoneyMessages())['daily_budget_eur'];
 
         try {
@@ -121,7 +123,7 @@ class MetaAdsController extends Controller
         }
         $this->log('meta_ad_budget_changed', $campaignId, ['budget_eur' => $eur]);
 
-        return back()->with('success', 'Tagesbudget auf ' . number_format($eur, 2, ',', '.') . ' EUR geändert.');
+        return back()->with('success', 'Tagesbudget auf '.number_format($eur, 2, ',', '.').' EUR geändert.');
     }
 
     /**
@@ -132,20 +134,20 @@ class MetaAdsController extends Controller
     public function updateCap(Request $request)
     {
         $eur = (int) $request->validate([
-            'max_daily_budget_eur' => 'required|integer|min:1|max:' . MetaAdsService::CAP_CEILING_EUR,
+            'max_daily_budget_eur' => 'required|integer|min:1|max:'.MetaAdsService::CAP_CEILING_EUR,
         ], [
             'max_daily_budget_eur.required' => 'Bitte eine Schutzgrenze in EUR angeben.',
             'max_daily_budget_eur.integer' => 'Die Schutzgrenze muss eine ganze Zahl in EUR sein.',
             'max_daily_budget_eur.min' => 'Die Schutzgrenze muss mindestens 1 EUR betragen.',
-            'max_daily_budget_eur.max' => 'Die Schutzgrenze darf höchstens ' . MetaAdsService::CAP_CEILING_EUR . ' EUR betragen.',
+            'max_daily_budget_eur.max' => 'Die Schutzgrenze darf höchstens '.MetaAdsService::CAP_CEILING_EUR.' EUR betragen.',
         ])['max_daily_budget_eur'];
 
         $alt = MetaAdsService::maxDailyBudgetEur();
-        \App\Models\SystemSetting::set('meta_ads_max_daily_budget', (string) $eur);
+        SystemSetting::set('meta_ads_max_daily_budget', (string) $eur);
         $this->log('meta_ads_cap_changed', 'schutzgrenze', ['alt_eur' => $alt, 'neu_eur' => $eur]);
 
         return redirect()->route('admin.werbung')
-            ->with('success', 'Schutzgrenze auf ' . $eur . ' EUR pro Tag geändert.');
+            ->with('success', 'Schutzgrenze auf '.$eur.' EUR pro Tag geändert.');
     }
 
     public function destroy(string $campaignId, MetaAdsService $ads)
@@ -169,7 +171,7 @@ class MetaAdsController extends Controller
             'daily_budget_eur.required' => 'Bitte ein Tagesbudget in EUR angeben.',
             'daily_budget_eur.numeric' => 'Das Tagesbudget muss eine Zahl in EUR sein.',
             'daily_budget_eur.min' => 'Das Tagesbudget muss mindestens 1 EUR betragen.',
-            'daily_budget_eur.max' => 'Das Tagesbudget darf höchstens ' . $max . ' EUR betragen (Schutzgrenze - änderbar durch den Admin unten auf der Seite Werbeanzeigen).',
+            'daily_budget_eur.max' => 'Das Tagesbudget darf höchstens '.$max.' EUR betragen (Schutzgrenze - änderbar durch den Admin unten auf der Seite Werbeanzeigen).',
             'age_min.*' => 'Bitte ein Alter zwischen 18 und 65 wählen.',
             'age_max.*' => 'Bitte ein Alter zwischen 18 und 65 wählen ("bis" nicht kleiner als "von").',
             'end_date.after' => 'Das Enddatum muss in der Zukunft liegen.',

@@ -24,10 +24,10 @@ class OcrCheck extends Command
     public function handle(): int
     {
         $this->line('Konfiguration:');
-        $this->line('  OCR_ENABLED     = ' . var_export((bool) config('services.ocr.enabled'), true));
-        $this->line('  OCR_TEXT_LAYER  = ' . var_export((bool) config('services.ocr.text_layer'), true));
+        $this->line('  OCR_ENABLED     = '.var_export((bool) config('services.ocr.enabled'), true));
+        $this->line('  OCR_TEXT_LAYER  = '.var_export((bool) config('services.ocr.text_layer'), true));
         $languages = (string) config('services.ocr.languages', 'deu+eng');
-        $this->line('  OCR_LANGUAGES   = ' . $languages);
+        $this->line('  OCR_LANGUAGES   = '.$languages);
         $this->newLine();
 
         $ok = true;
@@ -43,7 +43,7 @@ class OcrCheck extends Command
 
         // Textebene reicht allein fuer digitale PDFs; ohne sie und ohne
         // tesseract laeuft gar keine kostenlose Stufe.
-        if (!$textLayerOk && !$tessOk) {
+        if (! $textLayerOk && ! $tessOk) {
             $ok = false;
         }
 
@@ -51,16 +51,16 @@ class OcrCheck extends Command
         if ($tessOk) {
             $installed = $this->installedLanguages($tesseract);
             $this->newLine();
-            $this->line('Installierte OCR-Sprachen: ' . ($installed === [] ? '(keine gefunden)' : implode(', ', $installed)));
+            $this->line('Installierte OCR-Sprachen: '.($installed === [] ? '(keine gefunden)' : implode(', ', $installed)));
             foreach (array_filter(explode('+', $languages)) as $lang) {
                 $lang = trim($lang);
                 if ($lang === '') {
                     continue;
                 }
                 if (in_array($lang, $installed, true)) {
-                    $this->info('  ✓ Sprache "' . $lang . '" installiert');
+                    $this->info('  ✓ Sprache "'.$lang.'" installiert');
                 } else {
-                    $this->error('  ✗ Sprache "' . $lang . '" FEHLT - bitte tesseract-ocr-' . $lang . ' installieren');
+                    $this->error('  ✗ Sprache "'.$lang.'" FEHLT - bitte tesseract-ocr-'.$lang.' installieren');
                     $ok = false;
                 }
             }
@@ -82,7 +82,7 @@ class OcrCheck extends Command
             $process = new Process([$binary, ...$args]);
             $process->setTimeout(10);
             $process->run();
-            $out = trim($process->getOutput() . ' ' . $process->getErrorOutput());
+            $out = trim($process->getOutput().' '.$process->getErrorOutput());
             $lower = mb_strtolower($out);
             // Fehlendes Binary sicher erkennen: Exitcode 127 bzw. eine
             // "not found"/"no such file"-Meldung - sonst wuerde der
@@ -93,15 +93,15 @@ class OcrCheck extends Command
             // Vorhanden: sauberer Lauf ODER eine erkennbare Versionsangabe
             // (manche Tools wie pdftotext -v schreiben sie nach STDERR und
             // liefern dabei einen Nicht-Null-Exitcode).
-            $found = !$notFound && ($process->isSuccessful() || preg_match('/\d+\.\d+/', $out) === 1);
+            $found = ! $notFound && ($process->isSuccessful() || preg_match('/\d+\.\d+/', $out) === 1);
             if ($found) {
-                $this->info('  ✓ ' . $label . ' vorhanden');
+                $this->info('  ✓ '.$label.' vorhanden');
                 return true;
             }
-            $this->error('  ✗ ' . $label . ' NICHT gefunden (' . $binary . ')');
+            $this->error('  ✗ '.$label.' NICHT gefunden ('.$binary.')');
             return false;
         } catch (\Throwable $e) {
-            $this->error('  ✗ ' . $label . ' NICHT gefunden (' . $binary . '): ' . $e->getMessage());
+            $this->error('  ✗ '.$label.' NICHT gefunden ('.$binary.'): '.$e->getMessage());
             return false;
         }
     }
@@ -113,7 +113,7 @@ class OcrCheck extends Command
             $process = new Process([$tesseract, '--list-langs']);
             $process->setTimeout(10);
             $process->run();
-            $lines = preg_split('/\R/', trim($process->getOutput() . "\n" . $process->getErrorOutput())) ?: [];
+            $lines = preg_split('/\R/', trim($process->getOutput()."\n".$process->getErrorOutput())) ?: [];
             $langs = [];
             foreach ($lines as $line) {
                 $line = trim($line);

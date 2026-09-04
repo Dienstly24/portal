@@ -3,8 +3,17 @@
 namespace App\Support;
 
 use App\Models\ErrorEvent;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
+use Illuminate\Session\TokenMismatchException;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\Routing\Exception\RouteNotFoundException;
 use Throwable;
 
 /**
@@ -38,15 +47,15 @@ class ErrorRecorder
      * als Defekt gezaehlt werden.
      */
     private const IGNORED = [
-        \Illuminate\Auth\AuthenticationException::class,
-        \Illuminate\Auth\Access\AuthorizationException::class,
-        \Illuminate\Validation\ValidationException::class,
-        \Illuminate\Session\TokenMismatchException::class,
-        \Illuminate\Database\Eloquent\ModelNotFoundException::class,
-        \Illuminate\Http\Exceptions\ThrottleRequestsException::class,
-        \Symfony\Component\HttpKernel\Exception\NotFoundHttpException::class,
-        \Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException::class,
-        \Symfony\Component\Routing\Exception\RouteNotFoundException::class,
+        AuthenticationException::class,
+        AuthorizationException::class,
+        ValidationException::class,
+        TokenMismatchException::class,
+        ModelNotFoundException::class,
+        ThrottleRequestsException::class,
+        NotFoundHttpException::class,
+        MethodNotAllowedHttpException::class,
+        RouteNotFoundException::class,
     ];
 
     public static function record(Throwable $e): void
@@ -62,7 +71,7 @@ class ErrorRecorder
                 return;
             }
 
-            $fingerprint = sha1($e::class . '|' . $e->getFile() . '|' . $e->getLine());
+            $fingerprint = sha1($e::class.'|'.$e->getFile().'|'.$e->getLine());
 
             $eintrag = ErrorEvent::firstOrNew(['fingerprint' => $fingerprint]);
             $vorhanden = $eintrag->exists;
@@ -129,6 +138,6 @@ class ErrorRecorder
             return mb_substr($name, 0, 191);
         }
 
-        return mb_substr('/' . ltrim($request->path(), '/'), 0, 191);
+        return mb_substr('/'.ltrim($request->path(), '/'), 0, 191);
     }
 }

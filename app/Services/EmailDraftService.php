@@ -51,24 +51,24 @@ Antworte AUSSCHLIESSLICH mit einem JSON-Objekt:
 PROMPT;
 
         $lines = [
-            'Absender (Mitarbeiter): ' . $sender->name,
-            'Empfaengertyp: ' . ($category === 'gesellschaft' ? 'Versicherungsgesellschaft/Anbieter' : 'Kunde'),
+            'Absender (Mitarbeiter): '.$sender->name,
+            'Empfaengertyp: '.($category === 'gesellschaft' ? 'Versicherungsgesellschaft/Anbieter' : 'Kunde'),
         ];
         if ($customer) {
-            $lines[] = 'Kunde: ' . ($customer->user?->name ?? 'unbekannt')
-                . ' (Nr. ' . $customer->customer_number . ')';
-            $lines[] = 'Korrekte Anrede: ' . $customer->salutationLine();
+            $lines[] = 'Kunde: '.($customer->user?->name ?? 'unbekannt')
+                .' (Nr. '.$customer->customer_number.')';
+            $lines[] = 'Korrekte Anrede: '.$customer->salutationLine();
             if ($customer->company_name) {
-                $lines[] = 'Firma: ' . $customer->company_name;
+                $lines[] = 'Firma: '.$customer->company_name;
             }
         }
         if ($history !== []) {
             $lines[] = 'Letzte Interaktionen (nur Kontext):';
             foreach (array_slice($history, 0, 6) as $h) {
-                $lines[] = '- ' . $h;
+                $lines[] = '- '.$h;
             }
         }
-        $lines[] = 'Anliegen der E-Mail: ' . trim($goal);
+        $lines[] = 'Anliegen der E-Mail: '.trim($goal);
 
         $response = $this->ai->complete(AiRequest::text($system, implode("\n", $lines), 1500));
         $json = $response->json();

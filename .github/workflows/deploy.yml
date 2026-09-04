@@ -67,6 +67,138 @@ jobs:
         run: php artisan test
 
   # ---------------------------------------------------------------------
+  # 1a) MySQL-Integrationslauf (ARCH-2). Produktion laeuft auf MySQL - eine
+  #     Pipeline, die ausschliesslich SQLite testet, prueft eine andere
+  #     Datenbank als die, auf der der Betrieb stattfindet. Genau dort
+  #     liegen die Unterschiede, die spaet auffallen: strikte Modi,
+  #     Spaltenlaengen, Index-Grenzen (MySQL: 3072 Byte je Index),
+  #     Sortier-/Vergleichsregeln und das Verhalten von ONLY_FULL_GROUP_BY.
+  #     Der schnelle SQLite-Lauf oben bleibt das Haupt-Gate; dieser Job
+  #     stellt sicher, dass die Produktionsdatenbank ebenfalls abgedeckt ist.
+  # ---------------------------------------------------------------------
+  test-mysql:
+    name: Tests gegen MySQL (Produktionsdatenbank)
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: portal_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PHP 8.3 einrichten
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_mysql, mysqli, bcmath, intl, gd, zip
+          coverage: none
+
+      - name: Composer-Cache
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Abhängigkeiten installieren
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: .env vorbereiten
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Node einrichten & Assets bauen
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build
+
+      # Erst die Migrationen: laufen sie auf MySQL nicht durch, ist die
+      # Ursache eine andere als ein fehlgeschlagener Test - und dann soll
+      # im Log auch genau das stehen.
+      - name: Migrationen gegen MySQL prüfen
+        run: php artisan migrate:fresh --force
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: portal_test
+          DB_USERNAME: root
+          DB_PASSWORD: root
+
+      - name: Volle Testsuite gegen MySQL
+        run: php artisan test
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: portal_test
+          DB_USERNAME: root
+          DB_PASSWORD: root
+
+  # ---------------------------------------------------------------------
+  # 1d) Code-Qualitaet (ARCH-4): einheitliche Formatierung und statische
+  #     Analyse. Eigener Job, damit im Actions-Ueberblick sofort sichtbar
+  #     ist, WORAN es lag - ein Schritt innerhalb von "Tests" laesst nur
+  #     "Tests rot" stehen, und dann sucht man an der falschen Stelle.
+  # ---------------------------------------------------------------------
+  qualitaet:
+    name: Codeformat und statische Analyse
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PHP 8.3 einrichten
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_sqlite, sqlite3, bcmath, intl, gd, zip
+          coverage: none
+
+      - name: Composer-Cache
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Abhängigkeiten installieren
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      # Formatierung: --test aendert nichts, es meldet nur. Der Job wird rot,
+      # sobald eine Datei nicht der Regel in pint.json entspricht.
+      # Lokal reparieren: composer lint:fix
+      - name: Pint (Formatierung prüfen)
+        run: composer lint
+
+      - name: .env vorbereiten (PHPStan liest die Konfiguration)
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      # PHPStan laeuft auf Stufe 5 gegen phpstan-baseline.neon: der
+      # Altbestand (922 Meldungen) ist eingefroren, JEDE NEUE Meldung macht
+      # den Job rot. Die Baseline ist ein Uebergang - wer eine Datei
+      # anfasst, streicht ihre Eintraege am besten gleich mit.
+      # Lokal: composer stan
+      - name: PHPStan / Larastan (Stufe 5, gegen Baseline)
+        run: composer stan
+
+  # ---------------------------------------------------------------------
   # 1b) Sicherheits-Gate: bekannte Schwachstellen in Abhaengigkeiten
   #     (Audit SEC-3). Eigener Job, damit im Actions-Ueberblick sofort
   #     sichtbar ist, WORAN es lag - ein Schritt innerhalb von "Tests"
@@ -160,9 +292,17 @@ jobs:
   # ---------------------------------------------------------------------
   deploy:
     name: Deploy auf Produktionsserver
-    # Der Deploy haengt an BEIDEN Gates: gruene Tests UND keine bekannten
-    # Schwachstellen in den Abhaengigkeiten (Audit SEC-3).
-    needs: [test, audit]
+    # Der Deploy haengt an ALLEN Gates: gruenen Tests auf SQLite UND auf der
+    # Produktionsdatenbank MySQL, sauberem Codeformat und keiner neuen
+    # PHPStan-Meldung (ARCH-4), sowie keinen bekannten Schwachstellen in den
+    # Abhaengigkeiten (Audit SEC-3).
+    #
+    # test-mysql ist seit dem 04.09.2026 ein echtes Gate. Sein erster Lauf
+    # hat sich sofort bezahlt gemacht: er fand zwei Fehler, die auf SQLite
+    # unsichtbar waren und ausgerechnet in Produktion zuschlagen - eine
+    # Abfrage auf eine nicht existierende Spalte und eine zu kurze
+    # Textspalte, wegen der die Schutzbrief-Erinnerung nie verschickt wurde.
+    needs: [test, test-mysql, qualitaet, audit]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: production

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Models\Contract;
@@ -38,17 +39,17 @@ class AntragBestaetigungParser implements DocumentTemplateParser
      * @var array<string,string>
      */
     private const INSURERS = [
-        'admiraldirekt'        => 'AdmiralDirekt',
-        'huk24'                => 'HUK24',
-        'huk-coburg'           => 'HUK-COBURG',
-        'da direkt'            => 'DA Direkt',
-        'da-direkt'            => 'DA Direkt',
-        'verti'                => 'Verti',
-        'wgv'                  => 'WGV',
-        'allianz'              => 'Allianz',
-        'europa'               => 'EUROPA',
-        'sparkassen direkt'    => 'Sparkassen DirektVersicherung',
-        'adac'                 => 'ADAC',
+        'admiraldirekt' => 'AdmiralDirekt',
+        'huk24' => 'HUK24',
+        'huk-coburg' => 'HUK-COBURG',
+        'da direkt' => 'DA Direkt',
+        'da-direkt' => 'DA Direkt',
+        'verti' => 'Verti',
+        'wgv' => 'WGV',
+        'allianz' => 'Allianz',
+        'europa' => 'EUROPA',
+        'sparkassen direkt' => 'Sparkassen DirektVersicherung',
+        'adac' => 'ADAC',
     ];
 
     private string $text = '';
@@ -61,10 +62,10 @@ class AntragBestaetigungParser implements DocumentTemplateParser
         // Abschluss-Seite einer Antragsstrecke: Dankes-/Eingangssatz UND eine
         // Referenznummer. Ein Versicherungsschein traegt diese Kombination
         // nicht (er hat eine Vertragsnummer und keinen "Antrag eingegangen").
-        if (!str_contains($upper, 'REFERENZNUMMER')
-            || (!str_contains($upper, 'ANTRAG IST BEI UNS EINGEGANGEN')
-                && !str_contains($upper, 'ANTRAG WURDE AN')
-                && !str_contains($upper, 'VERSICHERUNG BEANTRAGT'))) {
+        if (! str_contains($upper, 'REFERENZNUMMER')
+            || (! str_contains($upper, 'ANTRAG IST BEI UNS EINGEGANGEN')
+                && ! str_contains($upper, 'ANTRAG WURDE AN')
+                && ! str_contains($upper, 'VERSICHERUNG BEANTRAGT'))) {
             return null;
         }
 
@@ -81,16 +82,16 @@ class AntragBestaetigungParser implements DocumentTemplateParser
             'type' => 'versicherungsvertrag',
             'confidence' => 72,
             'summary' => 'Antrags-Bestaetigung (Online-Antragsstrecke)'
-                . (isset($insurance['insurer']) ? ' - ' . $insurance['insurer'] : '')
-                . ' - Referenznummer ' . $referenz
-                . ' (keine Vertragsnummer - die bringt erst der Versicherungsschein).'
-                . ($evb !== null ? ' eVB-Nummer ' . $evb . ' (fuer die Zulassung, keine Vertragsnummer).' : '')
-                . ($this->beginnText() !== null ? ' Versicherungsbeginn laut Seite: ' . $this->beginnText() . '.' : '')
-                . (isset($insurance['start_date']) ? '' : ' Kein Beginndatum genannt - wird nicht geraten.')
-                . ' Felder gratis aus der Bestaetigungsseite gelesen (ohne KI).',
+                .(isset($insurance['insurer']) ? ' - '.$insurance['insurer'] : '')
+                .' - Referenznummer '.$referenz
+                .' (keine Vertragsnummer - die bringt erst der Versicherungsschein).'
+                .($evb !== null ? ' eVB-Nummer '.$evb.' (fuer die Zulassung, keine Vertragsnummer).' : '')
+                .($this->beginnText() !== null ? ' Versicherungsbeginn laut Seite: '.$this->beginnText().'.' : '')
+                .(isset($insurance['start_date']) ? '' : ' Kein Beginndatum genannt - wird nicht geraten.')
+                .' Felder gratis aus der Bestaetigungsseite gelesen (ohne KI).',
             'title' => 'Antrags-Bestaetigung'
-                . (isset($insurance['insurer']) ? ' ' . $insurance['insurer'] : '')
-                . ' - Ref. ' . $referenz,
+                .(isset($insurance['insurer']) ? ' '.$insurance['insurer'] : '')
+                .' - Ref. '.$referenz,
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -111,7 +112,7 @@ class AntragBestaetigungParser implements DocumentTemplateParser
         if (preg_match('/Bestätigung an\s+(\S+@\S+?)\s+gesendet/u', $this->text, $m)
             || preg_match('/\b([\w.+\-]+@[\w.\-]+\.\w{2,})\b/u', $this->text, $m)) {
             $mail = rtrim($m[1], '.,;');
-            if (!preg_match('/@(admiraldirekt|huk|verti|allianz|check24|adac)\./iu', $mail)) {
+            if (! preg_match('/@(admiraldirekt|huk|verti|allianz|check24|adac)\./iu', $mail)) {
                 $raw['email'] = mb_strtolower($mail);
             }
         }
@@ -141,7 +142,7 @@ class AntragBestaetigungParser implements DocumentTemplateParser
         // Beginn NUR als echtes Datum - "Tag der Zulassung" ist keins.
         $beginn = $this->beginnText();
         if ($beginn !== null && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $beginn, $m)) {
-            $raw['start_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['start_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
 
         // Sparte nur, wenn die Seite sie eindeutig nennt (eVB/Zulassung =
@@ -178,7 +179,7 @@ class AntragBestaetigungParser implements DocumentTemplateParser
      */
     private function evbNummer(): ?string
     {
-        if (!preg_match('/\beVB\b/u', $this->text)) {
+        if (! preg_match('/\beVB\b/u', $this->text)) {
             return null;
         }
         if (preg_match('/eVB[- ]?Nummer\s*:?\s*([A-Z0-9]{7})\b/u', $this->text, $m)) {

@@ -33,7 +33,7 @@ class TicketTrashAndBulkTest extends TestCase
 
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => '26005' . str_pad((string) $n, 2, '0', STR_PAD_LEFT),
+            'customer_number' => '26005'.str_pad((string) $n, 2, '0', STR_PAD_LEFT),
             'first_name' => 'Kunde',
             'last_name' => (string) $n,
         ]);
@@ -57,7 +57,7 @@ class TicketTrashAndBulkTest extends TestCase
         return User::factory()->create(array_merge([
             'role' => $role,
             'email' => "staff{$n}@trash.de",
-            'name' => ucfirst($role) . " {$n}",
+            'name' => ucfirst($role)." {$n}",
         ], $attrs));
     }
 
@@ -208,10 +208,10 @@ class TicketTrashAndBulkTest extends TestCase
             'id' => Str::uuid(), 'ticket_id' => $ticket->id,
             'sender_id' => $this->makeStaff('support')->id, 'body' => 'Antwort', 'is_internal' => false,
         ]);
-        Storage::disk('local')->put('tickets/' . $ticket->id . '/datei.pdf', 'PDF');
+        Storage::disk('local')->put('tickets/'.$ticket->id.'/datei.pdf', 'PDF');
         TicketAttachment::create([
             'id' => Str::uuid(), 'ticket_id' => $ticket->id, 'uploaded_by' => null,
-            'file_name' => 'datei.pdf', 'file_path' => 'tickets/' . $ticket->id . '/datei.pdf', 'disk' => 'local',
+            'file_name' => 'datei.pdf', 'file_path' => 'tickets/'.$ticket->id.'/datei.pdf', 'disk' => 'local',
         ]);
         $ticket->delete();
 
@@ -223,7 +223,7 @@ class TicketTrashAndBulkTest extends TestCase
         $this->assertSame(0, TicketMessage::where('ticket_id', $ticket->id)->count());
         $this->assertSame(0, TicketEvent::where('ticket_id', $ticket->id)->count());
         $this->assertSame(0, TicketAttachment::where('ticket_id', $ticket->id)->count());
-        Storage::disk('local')->assertMissing('tickets/' . $ticket->id . '/datei.pdf');
+        Storage::disk('local')->assertMissing('tickets/'.$ticket->id.'/datei.pdf');
     }
 
     public function test_ticket_numbers_of_trashed_tickets_are_not_reused(): void

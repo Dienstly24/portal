@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\DocumentIntake;
 
-use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\User;
@@ -27,7 +26,7 @@ class HealthContractExtractionTest extends TestCase
         $user = User::factory()->create(['role' => 'customer', 'email' => 'kunde@example.com']);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(Str::random(6)),
+            'customer_number' => 'C-'.strtoupper(Str::random(6)),
             // erreichbar, damit die Erinnerung ausgeloest werden koennte
             'email_consent_at' => now(),
         ]);

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Tools;
 
 use App\Models\Ticket;
@@ -22,8 +23,8 @@ class GetProcessStatusTool implements AssistantTool
     public function description(): string
     {
         return 'Status eines einzelnen Vorgangs/Tickets des angemeldeten Kunden anhand der '
-            . 'Vorgangsnummer (Format T-JJ#####), inklusive letzter Rueckmeldung des Teams. '
-            . 'Nutze das, wenn der Kunde nach dem Stand eines bestimmten Vorgangs fragt.';
+            .'Vorgangsnummer (Format T-JJ#####), inklusive letzter Rueckmeldung des Teams. '
+            .'Nutze das, wenn der Kunde nach dem Stand eines bestimmten Vorgangs fragt.';
     }
 
     public function parameters(): array
@@ -58,11 +59,11 @@ class GetProcessStatusTool implements AssistantTool
             ->with(['messages' => fn ($q) => $q->where('is_internal', false)->latest()->limit(1)])
             ->first();
 
-        if (!$ticket) {
+        if (! $ticket) {
             return [
                 'gefunden' => false,
                 'hinweis' => 'Zu dieser Nummer gibt es keinen Vorgang dieses Kunden. '
-                    . 'Frage nach der richtigen Nummer oder nutze getOpenTickets.',
+                    .'Frage nach der richtigen Nummer oder nutze getOpenTickets.',
             ];
         }
 

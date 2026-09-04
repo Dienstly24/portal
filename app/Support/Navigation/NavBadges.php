@@ -67,7 +67,7 @@ final class NavBadges
             'team_chat' => InternalConversationParticipant::where('user_id', $this->user->id)
                 ->whereHas('conversation', function ($q) {
                     $q->whereColumn('internal_conversations.last_message_at', '>', 'internal_conversation_participants.last_read_at')
-                      ->orWhereNull('internal_conversation_participants.last_read_at');
+                        ->orWhereNull('internal_conversation_participants.last_read_at');
                 })->count(),
 
             // Nur HEUTE faellig oder ueberfaellig - eine Aufgabe fuer naechsten
@@ -84,7 +84,7 @@ final class NavBadges
             // Eingeschraenkte Mitarbeiter sehen im Eingang nur eigene Uploads -
             // die Zahl muss zu dem passen, was die Seite dann zeigt.
             'document_inbox' => Document::inbox()
-                ->when(!$this->user->canSeeAllCustomers(), fn ($q) => $q->where('uploaded_by', $this->user->id))->count(),
+                ->when(! $this->user->canSeeAllCustomers(), fn ($q) => $q->where('uploaded_by', $this->user->id))->count(),
 
             'document_requests' => DocumentRequest::awaitingReview()->count(),
 
@@ -97,7 +97,7 @@ final class NavBadges
 
     private function ids(): ?array
     {
-        if (!$this->visibleIdsResolved) {
+        if (! $this->visibleIdsResolved) {
             $this->visibleIds = $this->user->canSeeAllCustomers()
                 ? null : $this->user->visibleCustomerIdsWithSubstitution();
             $this->visibleIdsResolved = true;

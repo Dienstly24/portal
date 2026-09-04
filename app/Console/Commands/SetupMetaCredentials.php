@@ -82,11 +82,11 @@ class SetupMetaCredentials extends Command
         $adAccountName = null;
         $adAccounts = $this->graphGet('me/adaccounts', ['fields' => 'id,name,currency', 'limit' => 25], $token);
         $adData = $adAccounts['data'] ?? [];
-        if (!empty($adData)) {
+        if (! empty($adData)) {
             if (count($adData) === 1) {
                 $konto = $adData[0];
             } else {
-                $namen = array_map(fn ($a) => $a['name'] . ' (' . $a['id'] . ')', $adData);
+                $namen = array_map(fn ($a) => $a['name'].' ('.$a['id'].')', $adData);
                 $auswahl = $this->choice('Mehrere Werbekonten gefunden - welches soll das System nutzen?', $namen);
                 $konto = $adData[array_search($auswahl, $namen, true)];
             }
@@ -97,18 +97,18 @@ class SetupMetaCredentials extends Command
             // Betraege bedeuten, deshalb deutlich warnen.
             $waehrung = strtoupper((string) ($konto['currency'] ?? 'EUR'));
             if ($waehrung !== 'EUR') {
-                $this->warn('ACHTUNG: Das Werbekonto rechnet in ' . $waehrung . ', das System beschriftet Budgets als EUR - Betraege gelten dann in ' . $waehrung . '.');
+                $this->warn('ACHTUNG: Das Werbekonto rechnet in '.$waehrung.', das System beschriftet Budgets als EUR - Betraege gelten dann in '.$waehrung.'.');
             }
         }
 
         $this->newLine();
         $this->info('Gefunden:');
-        $this->line('  Facebook-Seite: ' . $page['name'] . ' (ID ' . $page['id'] . ')');
+        $this->line('  Facebook-Seite: '.$page['name'].' (ID '.$page['id'].')');
         $this->line($ig
-            ? '  Instagram:      @' . ($ig['username'] ?? '?') . ' (ID ' . $ig['id'] . ')'
+            ? '  Instagram:      @'.($ig['username'] ?? '?').' (ID '.$ig['id'].')'
             : '  Instagram:      KEIN Business-Konto mit der Seite verknuepft - es wird nur Facebook eingerichtet.');
         $this->line($adAccountName
-            ? '  Werbekonto:     ' . $adAccountName . ' (' . $adAccountId . ')'
+            ? '  Werbekonto:     '.$adAccountName.' ('.$adAccountId.')'
             : '  Werbekonto:     KEINES zugewiesen - Anzeigen-Steuerung bleibt aus (im Business Manager dem Systembenutzer das Werbekonto zuweisen, dann neu ausfuehren).');
 
         $pageToken = (string) ($page['access_token'] ?? '');
@@ -129,7 +129,7 @@ class SetupMetaCredentials extends Command
         ]);
 
         // Frische Werte sofort wirksam machen (Deploy cached spaeter neu).
-        if (!app()->runningUnitTests()) {
+        if (! app()->runningUnitTests()) {
             $this->callSilent('config:clear');
         }
 
@@ -154,7 +154,7 @@ class SetupMetaCredentials extends Command
         if ($page === null) {
             return self::FAILURE;
         }
-        $this->info('Facebook-Seite: ' . ($page['name'] ?? '?') . ' - Verbindung OK.');
+        $this->info('Facebook-Seite: '.($page['name'] ?? '?').' - Verbindung OK.');
 
         // Posten braucht das SEITEN-Token - explizit mittesten, sonst
         // meldet der Check OK, obwohl jeder Facebook-Post scheitern wuerde.
@@ -170,22 +170,22 @@ class SetupMetaCredentials extends Command
         }
         $this->info('Seiten-Token: vorhanden - Posten auf die Seite moeglich.');
 
-        if (!empty($cfg['ig_user_id'])) {
+        if (! empty($cfg['ig_user_id'])) {
             $ig = $this->graphGet((string) $cfg['ig_user_id'], ['fields' => 'username'], (string) $cfg['token']);
             if ($ig === null) {
                 return self::FAILURE;
             }
-            $this->info('Instagram: @' . ($ig['username'] ?? '?') . ' - Verbindung OK.');
+            $this->info('Instagram: @'.($ig['username'] ?? '?').' - Verbindung OK.');
         } else {
             $this->warn('Instagram ist nicht konfiguriert (nur Facebook aktiv).');
         }
 
-        if (!empty($cfg['ad_account_id'])) {
+        if (! empty($cfg['ad_account_id'])) {
             $konto = $this->graphGet((string) $cfg['ad_account_id'], ['fields' => 'name'], (string) $cfg['token']);
             if ($konto === null) {
                 return self::FAILURE;
             }
-            $this->info('Werbekonto: ' . ($konto['name'] ?? '?') . ' - Verbindung OK.');
+            $this->info('Werbekonto: '.($konto['name'] ?? '?').' - Verbindung OK.');
         } else {
             $this->warn('Werbekonto ist nicht konfiguriert (Anzeigen-Steuerung aus).');
         }
@@ -197,14 +197,14 @@ class SetupMetaCredentials extends Command
     private function graphGet(string $path, array $params, string $token): ?array
     {
         $url = 'https://graph.facebook.com/'
-            . config('services.meta.graph_version', 'v23.0') . '/' . ltrim($path, '/');
+            .config('services.meta.graph_version', 'v23.0').'/'.ltrim($path, '/');
 
         try {
             // Token als Bearer-Header, nie in der URL - Verbindungsfehler
             // enthalten sonst das Token im Meldungstext.
             $resp = Http::timeout(20)->withToken($token)->get($url, $params);
         } catch (\Throwable $e) {
-            $this->error('Meta ist nicht erreichbar: ' . $e->getMessage());
+            $this->error('Meta ist nicht erreichbar: '.$e->getMessage());
 
             return null;
         }
@@ -212,8 +212,8 @@ class SetupMetaCredentials extends Command
         $json = $resp->json() ?? [];
         if ($resp->failed() || isset($json['error'])) {
             $code = $json['error']['code'] ?? 0;
-            $msg = $json['error']['message'] ?? ('HTTP ' . $resp->status());
-            $this->error('Meta meldet einen Fehler: ' . $msg);
+            $msg = $json['error']['message'] ?? ('HTTP '.$resp->status());
+            $this->error('Meta meldet einen Fehler: '.$msg);
             $this->line(match (true) {
                 $code === 190 => 'Das Token ist ungueltig oder abgelaufen -> im Business Manager neu generieren (Anleitung Schritt 2, "Laeuft nie ab" waehlen).',
                 $code === 200 || str_contains($msg, 'permission') => 'Dem Token fehlen Berechtigungen -> beim Generieren ALLE Berechtigungen aus der Anleitung (Schritt 2) anhaken.',

@@ -39,7 +39,7 @@ class SpamFilterTest extends TestCase
         $this->assertFalse(SpamFilter::isSpam([
             'Max Mustermann',
             'Guten Tag, ich interessiere mich fuer eine Kfz-Versicherung und '
-            . 'bitte um ein Angebot. Vielen Dank.',
+            .'bitte um ein Angebot. Vielen Dank.',
         ]));
     }
 

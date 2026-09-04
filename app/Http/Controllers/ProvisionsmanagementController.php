@@ -1,23 +1,28 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\CommissionAuditLog;
+use App\Models\CommissionFollowup;
 use App\Models\CommissionImport;
 use App\Models\CommissionPool;
 use App\Models\CommissionReferenceLink;
 use App\Models\Contract;
 use App\Models\ContractCommission;
+use App\Models\Customer;
+use App\Models\User;
+use App\Services\CommissionImport\CommissionAuditLogger;
 use App\Services\Provisionsmanagement\CommissionAnalytics;
 use App\Services\Provisionsmanagement\CommissionStatusEngine;
 use App\Services\Provisionsmanagement\MissingCommissionService;
 use App\Services\Provisionsmanagement\PoolRegistry;
 use App\Services\Provisionsmanagement\ReferenceLinkService;
-use App\Support\CommissionKind;
 use App\Support\CommissionStatus;
 use App\Support\ContractCommissionStatus as Zustand;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 /**
  * PROVISIONSMANAGEMENT (Betreiber-Auftrag 02.09.2026) - der Ueberbau ueber
@@ -162,7 +167,7 @@ class ProvisionsmanagementController extends Controller implements HasMiddleware
             'filters' => $filter,
             'poolListe' => $this->pools->all(),
             'monate' => $this->missing,
-            'mitarbeiter' => \App\Models\User::whereIn('role', ['admin', 'manager', 'support', 'employee'])
+            'mitarbeiter' => User::whereIn('role', ['admin', 'manager', 'support', 'employee'])
                 ->orderBy('name')->get(['id', 'name']),
         ]);
     }
@@ -172,7 +177,7 @@ class ProvisionsmanagementController extends Controller implements HasMiddleware
     {
         $contract = Contract::findOrFail($id);
         $daten = $request->validate([
-            'status' => 'required|in:' . implode(',', array_keys(\App\Models\CommissionFollowup::STATUSES)),
+            'status' => 'required|in:'.implode(',', array_keys(CommissionFollowup::STATUSES)),
             'contacted_on' => 'nullable|date',
             'contact_person' => 'nullable|string|max:190',
             'response' => 'nullable|string|max:2000',
@@ -255,7 +260,7 @@ class ProvisionsmanagementController extends Controller implements HasMiddleware
     /** Wirtschaftlichkeit EINES Kunden - ausschliesslich hier sichtbar. */
     public function customer(string $id)
     {
-        $customer = \App\Models\Customer::with('user')->findOrFail($id);
+        $customer = Customer::with('user')->findOrFail($id);
 
         return view('admin.provisionsmanagement.customer', [
             'customer' => $customer,
@@ -285,11 +290,11 @@ class ProvisionsmanagementController extends Controller implements HasMiddleware
             ->when($request->filled('kunde'), fn ($q) => $q->where('customer_id', $request->string('kunde')))
             ->when($request->filled('vertrag'), fn ($q) => $q->where('contract_id', $request->string('vertrag')));
 
-        $dateiname = 'provisionen-' . now()->format('Y-m-d-His') . '.csv';
+        $dateiname = 'provisionen-'.now()->format('Y-m-d-His').'.csv';
 
         // Der Protokolleintrag entsteht VOR dem Streamen: er darf nicht
         // davon abhaengen, dass der Download sauber zu Ende laeuft.
-        app(\App\Services\CommissionImport\CommissionAuditLogger::class)
+        app(CommissionAuditLogger::class)
             ->log('export', null, ['new_value' => $dateiname]);
 
         return response()->streamDownload(function () use ($query) {
@@ -333,7 +338,7 @@ class ProvisionsmanagementController extends Controller implements HasMiddleware
     public function poolStore(Request $request)
     {
         $daten = $this->validatePool($request);
-        $daten['key'] = \Illuminate\Support\Str::slug($request->string('key')->toString() ?: $daten['name'], '_');
+        $daten['key'] = Str::slug($request->string('key')->toString() ?: $daten['name'], '_');
 
         if (CommissionPool::where('key', $daten['key'])->exists()) {
             return back()->with('error', 'Diesen Pool-Schlüssel gibt es bereits.');
@@ -341,10 +346,10 @@ class ProvisionsmanagementController extends Controller implements HasMiddleware
 
         CommissionPool::create($daten);
         $this->pools->forget();
-        app(\App\Services\CommissionImport\CommissionAuditLogger::class)
+        app(CommissionAuditLogger::class)
             ->log('pool_angelegt', null, ['new_value' => $daten['name']]);
 
-        return back()->with('success', 'Pool „' . $daten['name'] . '“ angelegt.');
+        return back()->with('success', 'Pool „'.$daten['name'].'“ angelegt.');
     }
 
     public function poolUpdate(Request $request, string $id)
@@ -354,7 +359,7 @@ class ProvisionsmanagementController extends Controller implements HasMiddleware
         $pool->update($this->validatePool($request));
         $this->pools->forget();
 
-        app(\App\Services\CommissionImport\CommissionAuditLogger::class)->log('pool_geaendert', null, [
+        app(CommissionAuditLogger::class)->log('pool_geaendert', null, [
             'field' => 'fristen',
             'old_value' => $vorher,
             'new_value' => $pool->fresh()->deadlineLabel(),

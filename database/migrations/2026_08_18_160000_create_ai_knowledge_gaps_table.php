@@ -18,8 +18,7 @@ use Illuminate\Support\Facades\Schema;
  * Kein Kundenbezug, keine Nachricht, keine Akte - die Luecke ist eine
  * Aussage ueber UNSERE Wissensbasis, nicht ueber einen Kunden.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('ai_knowledge_gaps', function (Blueprint $table) {

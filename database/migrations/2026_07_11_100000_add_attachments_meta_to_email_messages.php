@@ -11,8 +11,7 @@ use Illuminate\Support\Facades\Schema;
  * Zusätzlich Index auf match_status (Audit M7) - Posteingang, Badge
  * und Prune filtern genau darauf.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('email_messages', function (Blueprint $table) {

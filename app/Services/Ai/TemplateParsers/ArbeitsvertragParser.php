@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
@@ -43,13 +44,13 @@ class ArbeitsvertragParser implements DocumentTemplateParser
         $text = (string) preg_replace('/\x{00ad}\s*/u', '', $text);
         $upper = mb_strtoupper($text);
 
-        if (!str_contains($upper, 'ARBEITSVERTRAG') && !str_contains($upper, 'ANSTELLUNGSVERTRAG')
-            && !str_contains($upper, 'DIENSTVERTRAG')) {
+        if (! str_contains($upper, 'ARBEITSVERTRAG') && ! str_contains($upper, 'ANSTELLUNGSVERTRAG')
+            && ! str_contains($upper, 'DIENSTVERTRAG')) {
             return null;
         }
         // Ohne die typischen Partei-Marker ist es kein Vertragskopf (z.B. nur
         // eine Erwaehnung "Arbeitsvertrag" in einem anderen Dokument).
-        if (!str_contains($upper, 'ARBEITNEHMER') && !str_contains($upper, 'ARBEITGEBER')) {
+        if (! str_contains($upper, 'ARBEITNEHMER') && ! str_contains($upper, 'ARBEITGEBER')) {
             return null;
         }
 
@@ -62,7 +63,7 @@ class ArbeitsvertragParser implements DocumentTemplateParser
 
         // Arbeitnehmer = Hauptperson ("Herrn Al Ali Mohammad" + Anschrift).
         foreach ($employee as $line) {
-            if (!isset($raw['last_name']) && preg_match('/^(Herrn?|Frau)\s+(\p{Lu}[\p{L}\-\'\x{2019} ]{2,60})$/u', $line, $m)) {
+            if (! isset($raw['last_name']) && preg_match('/^(Herrn?|Frau)\s+(\p{Lu}[\p{L}\-\'\x{2019} ]{2,60})$/u', $line, $m)) {
                 $raw['gender'] = mb_strtolower($m[1]) === 'frau' ? 'female' : 'male';
                 $parts = preg_split('/\s+/', trim($m[2])) ?: [];
                 if (count($parts) >= 2) {
@@ -75,7 +76,7 @@ class ArbeitsvertragParser implements DocumentTemplateParser
                 // Nur fehlende Teile ergaenzen (eine zweite Adresszeile darf
                 // z.B. die schon gelesene Strasse nicht ueberschreiben).
                 foreach ($addr as $k => $v) {
-                    if ($v !== null && $v !== '' && !isset($raw[$k])) {
+                    if ($v !== null && $v !== '' && ! isset($raw[$k])) {
                         $raw[$k] = $v;
                     }
                 }
@@ -98,13 +99,13 @@ class ArbeitsvertragParser implements DocumentTemplateParser
                 continue;
             }
             if ($employerName === null && preg_match(self::LEGAL_FORM, $line)
-                && !preg_match('/^\(?im\s+Folgenden/iu', $line)) {
+                && ! preg_match('/^\(?im\s+Folgenden/iu', $line)) {
                 $employerName = trim($line, " \t,;");
             }
             if ($employerAddress === null && ($addr = $this->addressParts($line)) !== null) {
                 $employerAddress = trim(
-                    $addr['street'] . ' ' . ($addr['house_number'] ?? '')
-                ) . ', ' . trim(($addr['zip'] ?? '') . ' ' . ($addr['city'] ?? ''));
+                    $addr['street'].' '.($addr['house_number'] ?? '')
+                ).', '.trim(($addr['zip'] ?? '').' '.($addr['city'] ?? ''));
                 $employerAddress = trim($employerAddress, ', ');
             }
         }
@@ -113,7 +114,7 @@ class ArbeitsvertragParser implements DocumentTemplateParser
         if ($employerName === null) {
             foreach ($employer as $line) {
                 if ($this->addressParts($line) === null
-                    && !preg_match('/^\(?im\s+Folgenden|^vertreten\s+durch|^zwischen$|^und$/iu', $line)
+                    && ! preg_match('/^\(?im\s+Folgenden|^vertreten\s+durch|^zwischen$|^und$/iu', $line)
                     && preg_match('/^\p{Lu}[\p{L}0-9 .,&\-]{2,80}$/u', $line)) {
                     $employerName = trim($line, " \t,;");
                     break;
@@ -140,20 +141,20 @@ class ArbeitsvertragParser implements DocumentTemplateParser
             return null;
         }
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         return [
             'type' => 'arbeitsvertrag',
             'confidence' => 66,
             'summary' => 'Arbeitsvertrag'
-                . ($name !== '' ? ' - ' . $name : '')
-                . (isset($person['occupation']) ? ' - als ' . $person['occupation'] : '')
-                . (isset($person['employer_name'])
-                    ? ' - Arbeitgeber ' . $person['employer_name']
-                        . (isset($person['employer_address']) ? ' (' . $person['employer_address'] . ')' : '')
+                .($name !== '' ? ' - '.$name : '')
+                .(isset($person['occupation']) ? ' - als '.$person['occupation'] : '')
+                .(isset($person['employer_name'])
+                    ? ' - Arbeitgeber '.$person['employer_name']
+                        .(isset($person['employer_address']) ? ' ('.$person['employer_address'].')' : '')
                     : '')
-                . ($start !== null ? ' - Beginn ' . $this->displayDate($start) : '')
-                . ' - Felder gratis aus dem Vertrag gelesen (ohne KI).',
-            'title' => 'Arbeitsvertrag' . ($name !== '' ? ' ' . $name : ''),
+                .($start !== null ? ' - Beginn '.$this->displayDate($start) : '')
+                .' - Felder gratis aus dem Vertrag gelesen (ohne KI).',
+            'title' => 'Arbeitsvertrag'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => [],
@@ -238,6 +239,6 @@ class ArbeitsvertragParser implements DocumentTemplateParser
 
     private function displayDate(string $iso): string
     {
-        return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $iso, $m) ? $m[3] . '.' . $m[2] . '.' . $m[1] : $iso;
+        return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $iso, $m) ? $m[3].'.'.$m[2].'.'.$m[1] : $iso;
     }
 }

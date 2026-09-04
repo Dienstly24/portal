@@ -3,7 +3,6 @@
 namespace App\Services\Lexoffice;
 
 use Carbon\Carbon;
-use Illuminate\Support\Str;
 
 /**
  * Wandelt einen rohen Lexoffice-/Lexware-Kontakt (API-Array) in das
@@ -25,12 +24,12 @@ class LexofficeContactMapper
      */
     public function map(array $c): ?array
     {
-        $isCompany = !empty($c['company']['name']);
+        $isCompany = ! empty($c['company']['name']);
         $firstName = $c['person']['firstName'] ?? '';
         $lastName = $c['person']['lastName'] ?? '';
         $name = $isCompany
             ? $c['company']['name']
-            : trim($firstName . ' ' . $lastName);
+            : trim($firstName.' '.$lastName);
 
         if (trim((string) $name) === '') {
             return null; // ohne Namen kein sinnvoller Datensatz
@@ -39,15 +38,15 @@ class LexofficeContactMapper
         $note = (string) ($c['note'] ?? '');
 
         $data = [
-            'full_name'     => $name,
-            'first_name'    => $firstName ?: null,
-            'last_name'     => $lastName ?: null,
-            'email'         => $this->firstEmail($c),
-            'phone'         => $this->firstPhone($c),
+            'full_name' => $name,
+            'first_name' => $firstName ?: null,
+            'last_name' => $lastName ?: null,
+            'email' => $this->firstEmail($c),
+            'phone' => $this->firstPhone($c),
             'customer_type' => $isCompany ? 'firma' : 'privat',
-            'company_name'  => $isCompany ? $name : null,
-            'birth_date'    => $this->birthDateFromNote($note),
-            'iban'          => $this->ibanFromNote($note),
+            'company_name' => $isCompany ? $name : null,
+            'birth_date' => $this->birthDateFromNote($note),
+            'iban' => $this->ibanFromNote($note),
         ];
 
         // Anschrift strukturiert übernehmen.
@@ -68,7 +67,7 @@ class LexofficeContactMapper
             // Quellnummer bleibt Teil der internen Nummer: "25" + Original.
             $data['import_number'] = (string) $lexNumber;
         }
-        if (!empty($c['id'])) {
+        if (! empty($c['id'])) {
             $refs[] = ['type' => 'lexoffice_id', 'value' => $c['id'], 'source' => 'lexoffice'];
         }
         $data['external_references'] = $refs;

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Support;
 
 /**
@@ -21,14 +22,14 @@ class EnvFileWriter
         $content = is_file($this->path) ? (string) file_get_contents($this->path) : '';
 
         foreach ($values as $key => $value) {
-            $line = $key . '=' . $value;
-            $pattern = '/^' . preg_quote($key, '/') . '=.*$/m';
+            $line = $key.'='.$value;
+            $pattern = '/^'.preg_quote($key, '/').'=.*$/m';
             if (preg_match($pattern, $content)) {
                 // Callback: der Ersatz wird woertlich uebernommen (Token
                 // koennte sonst als $1/\\-Referenz fehlinterpretiert werden).
                 $content = (string) preg_replace_callback($pattern, fn () => $line, $content);
             } else {
-                $content = rtrim($content, "\n") . "\n" . $line . "\n";
+                $content = rtrim($content, "\n")."\n".$line."\n";
             }
         }
 

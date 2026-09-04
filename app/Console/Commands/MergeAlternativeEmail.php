@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Console\Commands;
 
 use App\Models\ActivityLog;
@@ -46,15 +47,15 @@ class MergeAlternativeEmail extends Command
         $budget = max(0, $cap - $sentToday);
 
         $stats = [
-            'scanned'    => 0, // Kunden mit gefuelltem email2
-            'migrated'   => 0, // email2 -> Login-E-Mail verschoben
-            'invited'    => 0, // Willkommens-Mail heute verschickt
-            'deferred'   => 0, // verschoben, Einladung wegen Budget vertagt
-            'duplicate'  => 0, // email2 == Login-E-Mail -> nur bereinigt
-            'conflict'   => 0, // andere echte Login-E-Mail vorhanden -> nicht angetastet
-            'taken'      => 0, // email2 schon bei anderem Nutzer als Login vergeben
-            'invalid'    => 0, // email2 keine gueltige Adresse
-            'no_user'    => 0, // kein Benutzer-Datensatz
+            'scanned' => 0, // Kunden mit gefuelltem email2
+            'migrated' => 0, // email2 -> Login-E-Mail verschoben
+            'invited' => 0, // Willkommens-Mail heute verschickt
+            'deferred' => 0, // verschoben, Einladung wegen Budget vertagt
+            'duplicate' => 0, // email2 == Login-E-Mail -> nur bereinigt
+            'conflict' => 0, // andere echte Login-E-Mail vorhanden -> nicht angetastet
+            'taken' => 0, // email2 schon bei anderem Nutzer als Login vergeben
+            'invalid' => 0, // email2 keine gueltige Adresse
+            'no_user' => 0, // kein Benutzer-Datensatz
             'send_error' => 0, // verschoben, aber Einladung fehlgeschlagen
         ];
 
@@ -73,7 +74,7 @@ class MergeAlternativeEmail extends Command
             }
             $stats['scanned']++;
 
-            if (!filter_var($email2, FILTER_VALIDATE_EMAIL)) {
+            if (! filter_var($email2, FILTER_VALIDATE_EMAIL)) {
                 $stats['invalid']++;
                 $this->line("  [ungueltig]  {$customer->customer_number}: '{$email2}'");
                 continue;
@@ -91,7 +92,7 @@ class MergeAlternativeEmail extends Command
                 if (mb_strtolower($user->email) === mb_strtolower($email2)) {
                     // Alternativ dupliziert nur die Login-E-Mail -> Feld leeren.
                     $stats['duplicate']++;
-                    if (!$dryRun) {
+                    if (! $dryRun) {
                         $customer->forceFill(['email2' => null])->save();
                     }
                     $this->line("  [duplikat]   {$customer->customer_number}: {$email2} (email2 geleert)");
@@ -133,11 +134,11 @@ class MergeAlternativeEmail extends Command
             $stats['migrated']++;
 
             ActivityLog::create([
-                'user_id'     => null,
-                'action'      => 'alternative_email_promoted',
+                'user_id' => null,
+                'action' => 'alternative_email_promoted',
                 'entity_type' => 'customer',
-                'entity_id'   => $customer->id,
-                'meta'        => json_encode(['email' => $email2], JSON_UNESCAPED_UNICODE),
+                'entity_id' => $customer->id,
+                'meta' => json_encode(['email' => $email2], JSON_UNESCAPED_UNICODE),
             ]);
 
             // Einladung nur im Tages-Budget verschicken.
@@ -149,7 +150,7 @@ class MergeAlternativeEmail extends Command
                     $this->line("  [OK]         {$customer->customer_number}: {$email2} -> Login + Einladung gesendet");
                 } catch (\Throwable $e) {
                     $stats['send_error']++;
-                    Log::warning('Einladung nach Alternativ-Merge fehlgeschlagen (' . $email2 . '): ' . $e->getMessage());
+                    Log::warning('Einladung nach Alternativ-Merge fehlgeschlagen ('.$email2.'): '.$e->getMessage());
                     $this->line("  [OK/Mail-Fehler] {$customer->customer_number}: {$email2} -> Login (Einladung fehlgeschlagen)");
                 }
             } else {
@@ -158,13 +159,13 @@ class MergeAlternativeEmail extends Command
             }
         }
 
-        if (!$dryRun && $stats['migrated'] > 0) {
+        if (! $dryRun && $stats['migrated'] > 0) {
             ActivityLog::create([
-                'user_id'     => null,
-                'action'      => 'alternative_email_merge_batch',
+                'user_id' => null,
+                'action' => 'alternative_email_merge_batch',
                 'entity_type' => 'customer',
-                'entity_id'   => null,
-                'meta'        => json_encode($stats, JSON_UNESCAPED_UNICODE),
+                'entity_id' => null,
+                'meta' => json_encode($stats, JSON_UNESCAPED_UNICODE),
             ]);
         }
 

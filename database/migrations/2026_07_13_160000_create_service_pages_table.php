@@ -10,8 +10,7 @@ use Illuminate\Support\Facades\Schema;
  * vollstaendig ueber die Adminoberflaeche pflegbar. Das Anfrageformular auf
  * jeder Seite erzeugt ein Ticket im System.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('service_pages', function (Blueprint $table) {

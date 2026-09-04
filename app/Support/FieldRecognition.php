@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Support;
 
 /**
@@ -66,7 +67,7 @@ class FieldRecognition
 
     public function set(string $feld, string $status, ?string $hinweis = null): void
     {
-        if (!isset(self::RANG[$status])) {
+        if (! isset(self::RANG[$status])) {
             return;
         }
         // Ein schlechterer Zustand ueberschreibt einen besseren, nie umgekehrt:
@@ -112,12 +113,12 @@ class FieldRecognition
     {
         foreach ($werte as $feld => $wert) {
             if ($wert !== null && $wert !== '' && $wert !== []) {
-                $this->sicher($gruppe . '.' . $feld);
+                $this->sicher($gruppe.'.'.$feld);
             }
         }
         foreach ($erwartet as $feld) {
             if (($werte[$feld] ?? null) === null || $werte[$feld] === '') {
-                $this->fehlt($gruppe . '.' . $feld);
+                $this->fehlt($gruppe.'.'.$feld);
             }
         }
     }
@@ -146,7 +147,7 @@ class FieldRecognition
         $out = null;
         foreach ($schluessel as $key) {
             $status = $felder[$key]['status'] ?? null;
-            if ($status === null || !isset(self::RANG[$status])) {
+            if ($status === null || ! isset(self::RANG[$status])) {
                 continue;
             }
             if ($out === null || self::RANG[$status] > self::RANG[$out]) {

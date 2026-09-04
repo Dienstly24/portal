@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\CommissionAuditLog;
@@ -8,10 +9,15 @@ use App\Models\ContractCommission;
 use App\Services\CommissionImport\ColumnMap;
 use App\Services\CommissionImport\CommissionAuditLogger;
 use App\Services\CommissionImport\CommissionImportService;
+use App\Services\CommissionImport\CommissionSourceProfile;
 use App\Services\CommissionImport\InvoiceCommissionMatcher;
 use App\Services\CommissionImport\TableReader;
+use App\Services\CommissionImport\ValueParser;
+use App\Services\Provisionsmanagement\PoolRegistry;
+use App\Services\Vermittler\VermittlerReference;
 use App\Support\CommissionStatus;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Str;
@@ -42,7 +48,7 @@ class ContractCommissionController extends Controller implements HasMiddleware
 
         $search = trim((string) $request->query('q', ''));
         if ($search !== '') {
-            $like = '%' . addcslashes($search, '%_\\') . '%';
+            $like = '%'.addcslashes($search, '%_\\').'%';
             $query->where(function ($w) use ($like) {
                 foreach (['internal_contract_number', 'external_contract_number', 'reference_number',
                     'vermittler_id', 'order_number', 'external_id', 'customer_label', 'recipient_name',
@@ -64,7 +70,7 @@ class ContractCommissionController extends Controller implements HasMiddleware
                 : $query->where('provider', $request->query('quelle'));
         }
         if ($request->filled('empfaenger')) {
-            $query->where('recipient_name', 'like', '%' . addcslashes((string) $request->query('empfaenger'), '%_\\') . '%');
+            $query->where('recipient_name', 'like', '%'.addcslashes((string) $request->query('empfaenger'), '%_\\').'%');
         }
         if ($request->filled('kunde')) {
             $query->where('customer_id', $request->query('kunde'));
@@ -105,7 +111,7 @@ class ContractCommissionController extends Controller implements HasMiddleware
             'totals' => $totals,
             'statuses' => CommissionStatus::ALL,
             'filters' => $request->only(['q', 'status', 'quelle', 'empfaenger', 'kunde', 'vertrag', 'zuordnung', 'von', 'bis', 'import', 'pool']),
-            'providers' => \App\Services\CommissionImport\CommissionSourceProfile::PROFILES,
+            'providers' => CommissionSourceProfile::PROFILES,
             'unmatchedCount' => ContractCommission::unmatched()->count(),
             'draftCount' => CommissionImport::where('status', CommissionImport::ENTWURF)->count(),
         ]);
@@ -132,7 +138,7 @@ class ContractCommissionController extends Controller implements HasMiddleware
             'extensions' => TableReader::EXTENSIONS,
             // §6: Die Quelle wird VOR dem Lesen gewaehlt - sie entscheidet
             // ueber die Fristen, gegen die spaeter gemessen wird.
-            'pools' => app(\App\Services\Provisionsmanagement\PoolRegistry::class)->active(),
+            'pools' => app(PoolRegistry::class)->active(),
         ]);
     }
 
@@ -153,7 +159,7 @@ class ContractCommissionController extends Controller implements HasMiddleware
             // genau daran scheiterte der Upload bisher. Geprueft wird deshalb
             // die ENDUNG, und das echte Format erkennt der Leser danach an
             // den ersten Bytes der Datei.
-            'datei' => 'required|file|max:20480|extensions:' . implode(',', TableReader::EXTENSIONS),
+            'datei' => 'required|file|max:20480|extensions:'.implode(',', TableReader::EXTENSIONS),
         ], [
             'datei.extensions' => 'Es werden CSV- und Excel-Dateien unterstützt (.csv, .txt, .xlsx, .xlsm, .xls).',
             'datei.max' => 'Die Datei ist größer als 20 MB. Bitte in mehrere Dateien aufteilen.',
@@ -178,7 +184,7 @@ class ContractCommissionController extends Controller implements HasMiddleware
                 $request->input('pool') ?: null,
             );
         } catch (\Throwable $e) {
-            return back()->with('error', 'Die Datei konnte nicht gelesen werden: ' . $e->getMessage())->withInput();
+            return back()->with('error', 'Die Datei konnte nicht gelesen werden: '.$e->getMessage())->withInput();
         } finally {
             @unlink($stored);
         }
@@ -245,22 +251,22 @@ class ContractCommissionController extends Controller implements HasMiddleware
 
         $parts = [];
         if ($import->isAbrechnung()) {
-            $parts[] = $import->rows_new . ' neu';
-            $parts[] = $import->rows_updated . ' aktualisiert';
+            $parts[] = $import->rows_new.' neu';
+            $parts[] = $import->rows_updated.' aktualisiert';
             if ($import->rows_unlinked_kept > 0) {
-                $parts[] = $import->rows_unlinked_kept . ' ohne Vertrag aufbewahrt';
+                $parts[] = $import->rows_unlinked_kept.' ohne Vertrag aufbewahrt';
             }
         }
         if ($import->contracts_created > 0) {
-            $parts[] = $import->contracts_created . ' Verträge angelegt';
+            $parts[] = $import->contracts_created.' Verträge angelegt';
         }
         if ($import->customers_created > 0) {
-            $parts[] = $import->customers_created . ' Kunden angelegt';
+            $parts[] = $import->customers_created.' Kunden angelegt';
         }
 
         return redirect()->route('admin.commissions_internal.preview', $import->id)->with(
             'success',
-            'Import übernommen: ' . ($parts === [] ? 'nichts zu übernehmen.' : implode(', ', $parts) . '.')
+            'Import übernommen: '.($parts === [] ? 'nichts zu übernehmen.' : implode(', ', $parts).'.')
         );
     }
 
@@ -283,7 +289,7 @@ class ContractCommissionController extends Controller implements HasMiddleware
     public function errorExport(string $id)
     {
         $import = CommissionImport::findOrFail($id);
-        $filename = 'fehler-' . Str::slug(pathinfo($import->filename, PATHINFO_FILENAME)) . '.csv';
+        $filename = 'fehler-'.Str::slug(pathinfo($import->filename, PATHINFO_FILENAME)).'.csv';
 
         app(CommissionAuditLogger::class)->log('export', null, [
             'import_id' => $import->id,
@@ -315,23 +321,23 @@ class ContractCommissionController extends Controller implements HasMiddleware
     {
         $commission = ContractCommission::findOrFail($id);
         $data = $request->validate([
-            'status' => 'required|in:' . implode(',', CommissionStatus::keys()),
+            'status' => 'required|in:'.implode(',', CommissionStatus::keys()),
             'grund' => 'nullable|string|max:255',
         ]);
 
         $old = $commission->status;
         if ($old === $data['status']) {
-            return back()->with('success', 'Der Status war bereits „' . CommissionStatus::label($old) . '“.');
+            return back()->with('success', 'Der Status war bereits „'.CommissionStatus::label($old).'“.');
         }
 
         $commission->update(['status' => $data['status'], 'updated_by' => auth()->id()]);
         $audit->log('status_geaendert', $commission, [
             'field' => 'status',
             'old_value' => CommissionStatus::label($old),
-            'new_value' => CommissionStatus::label($data['status']) . (($data['grund'] ?? null) ? ' – ' . $data['grund'] : ''),
+            'new_value' => CommissionStatus::label($data['status']).(($data['grund'] ?? null) ? ' – '.$data['grund'] : ''),
         ]);
 
-        return back()->with('success', 'Status geändert auf „' . CommissionStatus::label($data['status']) . '“.');
+        return back()->with('success', 'Status geändert auf „'.CommissionStatus::label($data['status']).'“.');
     }
 
     /**
@@ -347,7 +353,7 @@ class ContractCommissionController extends Controller implements HasMiddleware
         // Ablehnung mit „muss eine Zahl sein" bei einem korrekt getippten
         // Betrag ist die Art von Huerde, an der niemand den Fehler bei sich
         // sucht.
-        $request->merge(['betrag' => \App\Services\CommissionImport\ValueParser::amount((string) $request->input('betrag'))]);
+        $request->merge(['betrag' => ValueParser::amount((string) $request->input('betrag'))]);
 
         $data = $request->validate([
             'betrag' => 'required|numeric|min:0',
@@ -373,7 +379,7 @@ class ContractCommissionController extends Controller implements HasMiddleware
             'paid_amount', 'payment_date', 'status', 'invoice_number',
         ]);
 
-        return back()->with('success', 'Zahlung erfasst: ' . number_format($paid, 2, ',', '.') . ' € – Status „' . CommissionStatus::label($status) . '“.');
+        return back()->with('success', 'Zahlung erfasst: '.number_format($paid, 2, ',', '.').' € – Status „'.CommissionStatus::label($status).'“.');
     }
 
     /** Interne Notiz und Kennungen pflegen. */
@@ -390,7 +396,7 @@ class ContractCommissionController extends Controller implements HasMiddleware
         $before = $commission->getOriginal();
         $commission->update([
             'internal_contract_number' => ($data['internal_contract_number'] ?? null) ?: null,
-            'internal_key' => \App\Services\Vermittler\VermittlerReference::key($data['internal_contract_number'] ?? null),
+            'internal_key' => VermittlerReference::key($data['internal_contract_number'] ?? null),
             'recipient_name' => ($data['recipient_name'] ?? null) ?: null,
             'due_date' => ($data['due_date'] ?? null) ?: null,
             'notes' => ($data['notes'] ?? null) ?: null,
@@ -419,7 +425,7 @@ class ContractCommissionController extends Controller implements HasMiddleware
         $commission->update([
             'contract_id' => $contract->id,
             'customer_id' => $contract->customer_id,
-            'contract_label' => trim($contract->typeLabel() . ' · ' . ($contract->contract_number ?: $contract->reference_number ?: '')),
+            'contract_label' => trim($contract->typeLabel().' · '.($contract->contract_number ?: $contract->reference_number ?: '')),
             'customer_label' => $contract->customer?->user?->name,
             'match_status' => ContractCommission::MATCH_MANUELL,
             'match_reason' => 'Von Hand zugeordnet',
@@ -427,7 +433,7 @@ class ContractCommissionController extends Controller implements HasMiddleware
         ]);
         $audit->changes('vertrag_zugeordnet', $commission, $before, $commission->getAttributes(), ['contract_id']);
 
-        return back()->with('success', 'Provision dem Vertrag ' . ($contract->contract_number ?: $contract->id) . ' zugeordnet.');
+        return back()->with('success', 'Provision dem Vertrag '.($contract->contract_number ?: $contract->id).' zugeordnet.');
     }
 
     public function unlink(string $id, CommissionAuditLogger $audit)
@@ -460,7 +466,7 @@ class ContractCommissionController extends Controller implements HasMiddleware
 
         return response()->json($contracts->map(fn ($c) => [
             'id' => $c->id,
-            'label' => trim($c->typeIcon() . ' ' . $c->typeLabel() . ' · ' . ($c->insurer ?: '—')),
+            'label' => trim($c->typeIcon().' '.$c->typeLabel().' · '.($c->insurer ?: '—')),
             'number' => $c->contract_number ?: ($c->internal_contract_number ?: $c->reference_number ?: '—'),
             'customer' => $c->customer?->user?->name ?? '—',
         ])->all());
@@ -491,7 +497,7 @@ class ContractCommissionController extends Controller implements HasMiddleware
     public function linkInvoice(Request $request, string $id, CommissionAuditLogger $audit)
     {
         $commission = ContractCommission::findOrFail($id);
-        $request->merge(['invoice_amount' => \App\Services\CommissionImport\ValueParser::amount((string) $request->input('invoice_amount'))]);
+        $request->merge(['invoice_amount' => ValueParser::amount((string) $request->input('invoice_amount'))]);
         $data = $request->validate([
             'invoice_number' => 'required|string|max:60',
             'invoice_date' => 'nullable|date',
@@ -510,7 +516,7 @@ class ContractCommissionController extends Controller implements HasMiddleware
             'invoice_number', 'invoice_date', 'invoice_amount',
         ]);
 
-        return back()->with('success', 'Rechnung ' . $data['invoice_number'] . ' verknüpft. Die Zahlung ist damit noch nicht bestätigt.');
+        return back()->with('success', 'Rechnung '.$data['invoice_number'].' verknüpft. Die Zahlung ist damit noch nicht bestätigt.');
     }
 
     public function unlinkInvoice(string $id, CommissionAuditLogger $audit)
@@ -537,7 +543,7 @@ class ContractCommissionController extends Controller implements HasMiddleware
             $query->where('action', $request->query('aktion'));
         }
         if ($request->filled('q')) {
-            $like = '%' . addcslashes((string) $request->query('q'), '%_\\') . '%';
+            $like = '%'.addcslashes((string) $request->query('q'), '%_\\').'%';
             $query->where(function ($w) use ($like) {
                 $w->where('internal_contract_number', 'like', $like)
                     ->orWhere('source_file', 'like', $like)
@@ -574,7 +580,7 @@ class ContractCommissionController extends Controller implements HasMiddleware
         // Der Protokolleintrag entsteht VOR dem Streamen: er darf nicht davon
         // abhaengen, dass der Download sauber zu Ende geht (gleiche Regel wie
         // beim Kunden-Export).
-        $audit->log('export', null, ['new_value' => 'Provisionsliste ' . now()->format('d.m.Y H:i')]);
+        $audit->log('export', null, ['new_value' => 'Provisionsliste '.now()->format('d.m.Y H:i')]);
 
         return response()->streamDownload(function () use ($query) {
             $out = fopen('php://output', 'w');
@@ -600,19 +606,19 @@ class ContractCommissionController extends Controller implements HasMiddleware
                 }
             });
             fclose($out);
-        }, 'provisionen-' . now()->format('Y-m-d') . '.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        }, 'provisionen-'.now()->format('Y-m-d').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     // ---------------------------------------------------------------- Helfer
 
     /** Upload zwischenspeichern - der Leser braucht einen echten Pfad. */
-    private function stash(\Illuminate\Http\UploadedFile $file): string
+    private function stash(UploadedFile $file): string
     {
         $dir = storage_path('app/private/provisions-imports');
-        if (!is_dir($dir)) {
+        if (! is_dir($dir)) {
             mkdir($dir, 0755, true);
         }
-        $path = $dir . '/' . Str::uuid();
+        $path = $dir.'/'.Str::uuid();
         copy($file->getPathname(), $path);
         return $path;
     }

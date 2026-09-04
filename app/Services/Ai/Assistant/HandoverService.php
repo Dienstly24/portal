@@ -1,10 +1,13 @@
 <?php
+
 namespace App\Services\Ai\Assistant;
 
 use App\Models\AiConversation;
 use App\Models\Customer;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\Ai\Assistant\Sales\ConversationContext;
+use App\Services\Ai\Assistant\Sales\RequirementProfile;
 use App\Services\Notifications\NotificationService;
 use App\Services\Workflow\SystemUserResolver;
 use App\Support\Facades\Notify;
@@ -73,7 +76,7 @@ class HandoverService
     public function requestOffer(
         Customer $customer,
         AiConversation $conversation,
-        \App\Services\Ai\Assistant\Sales\ConversationContext $context,
+        ConversationContext $context,
     ): ?Ticket {
         $summary = $this->offerSummary($customer, $conversation, $context);
 
@@ -97,11 +100,11 @@ class HandoverService
         Notify::pushMany($recipients, [
             'type' => NotificationService::TYPE_MESSAGE,
             'title' => '💡 Angebot gesucht: Kunde wartet',
-            'body' => $name . ' (Nr. ' . $customer->customer_number . ') – '
-                . \App\Services\Ai\Assistant\Sales\RequirementProfile::intentLabel($conversation->intent)
-                . ($ticket ? ' · Vorgang ' . $ticket->ticket_number : ''),
-            'link' => route('admin.customer_chat') . '?kunde=' . $customer->id,
-            'dedup_key' => 'ai-offer-' . $customer->id,
+            'body' => $name.' (Nr. '.$customer->customer_number.') – '
+                .RequirementProfile::intentLabel($conversation->intent)
+                .($ticket ? ' · Vorgang '.$ticket->ticket_number : ''),
+            'link' => route('admin.customer_chat').'?kunde='.$customer->id,
+            'dedup_key' => 'ai-offer-'.$customer->id,
         ]);
 
         return $ticket;
@@ -114,21 +117,21 @@ class HandoverService
     public function offerSummary(
         Customer $customer,
         AiConversation $conversation,
-        \App\Services\Ai\Assistant\Sales\ConversationContext $context,
+        ConversationContext $context,
     ): string {
-        $lines = ['Anliegen: ' . \App\Services\Ai\Assistant\Sales\RequirementProfile::intentLabel($conversation->intent)];
+        $lines = ['Anliegen: '.RequirementProfile::intentLabel($conversation->intent)];
 
         $bekannt = $context->known();
-        foreach (\App\Services\Ai\Assistant\Sales\RequirementProfile::fieldsForStage($conversation->intent, 'bedarf') as $feld) {
+        foreach (RequirementProfile::fieldsForStage($conversation->intent, 'bedarf') as $feld) {
             $wert = $bekannt[$feld['key']] ?? null;
             if ($wert === null || trim((string) $wert) === '') {
                 continue;
             }
-            $lines[] = $feld['label'] . ': ' . Str::limit((string) $wert, 120);
+            $lines[] = $feld['label'].': '.Str::limit((string) $wert, 120);
         }
 
         $fortschritt = $context->progress('bedarf');
-        $lines[] = 'Erfasst: ' . $fortschritt['erledigt'] . '/' . $fortschritt['gesamt'] . ' Pflichtangaben';
+        $lines[] = 'Erfasst: '.$fortschritt['erledigt'].'/'.$fortschritt['gesamt'].' Pflichtangaben';
         $lines[] = 'Nächster Schritt: Angebot auswählen und im Kundenchat hinterlegen.';
 
         return implode("\n", $lines);
@@ -147,7 +150,7 @@ class HandoverService
         if ($existing) {
             $existing->messages()->create([
                 'sender_id' => null,
-                'body' => "Aktualisierter Bedarf des KI-Assistenten:\n" . $summary,
+                'body' => "Aktualisierter Bedarf des KI-Assistenten:\n".$summary,
                 'is_internal' => true,
             ]);
 
@@ -158,7 +161,7 @@ class HandoverService
             'customer_id' => $customer->id,
             'type' => 'other',
             'status' => 'open',
-            'subject' => 'Angebot gesucht: ' . \App\Services\Ai\Assistant\Sales\RequirementProfile::intentLabel($conversation->intent),
+            'subject' => 'Angebot gesucht: '.RequirementProfile::intentLabel($conversation->intent),
             'description' => $summary,
             'priority' => 'hoch',
             'source' => 'ai_assistant',
@@ -183,21 +186,21 @@ class HandoverService
         ?string $aiNote = null,
     ): string {
         $lines = [];
-        $lines[] = 'Grund der Übergabe: ' . (AiConversation::REASON_LABELS[$reason] ?? $reason);
+        $lines[] = 'Grund der Übergabe: '.(AiConversation::REASON_LABELS[$reason] ?? $reason);
 
         if ($aiNote !== null && trim($aiNote) !== '') {
-            $lines[] = 'KI-Einschätzung: ' . Str::limit(trim($aiNote), 300);
+            $lines[] = 'KI-Einschätzung: '.Str::limit(trim($aiNote), 300);
         }
 
         $overview = $this->documents->overview($customer);
         if ($overview['fehlt'] !== []) {
-            $lines[] = 'Noch benötigt: ' . implode(', ', array_map(
+            $lines[] = 'Noch benötigt: '.implode(', ', array_map(
                 fn ($d) => (string) ($d['titel'] ?? '?'),
                 $overview['fehlt']
             ));
         }
         if ($overview['in_pruefung'] !== []) {
-            $lines[] = 'In Prüfung: ' . implode(', ', array_map(
+            $lines[] = 'In Prüfung: '.implode(', ', array_map(
                 fn ($d) => (string) ($d['titel'] ?? '?'),
                 $overview['in_pruefung']
             ));
@@ -205,11 +208,11 @@ class HandoverService
 
         $openTickets = Ticket::where('customer_id', $customer->id)->active()->count();
         if ($openTickets > 0) {
-            $lines[] = 'Offene Vorgänge: ' . $openTickets;
+            $lines[] = 'Offene Vorgänge: '.$openTickets;
         }
 
         if (trim($lastQuestion) !== '') {
-            $lines[] = 'Letzte Kundenfrage: "' . Str::limit(trim($lastQuestion), 200) . '"';
+            $lines[] = 'Letzte Kundenfrage: "'.Str::limit(trim($lastQuestion), 200).'"';
         }
 
         return implode("\n", $lines);
@@ -236,10 +239,10 @@ class HandoverService
             // eine Notiz, damit der Verlauf sichtbar bleibt.
             $existing->messages()->create([
                 'sender_id' => null,
-                'body' => "Weitere Übergabe durch den KI-Assistenten:\n" . $summary,
+                'body' => "Weitere Übergabe durch den KI-Assistenten:\n".$summary,
                 'is_internal' => true,
             ]);
-            $existing->logEvent('note_added', 'KI-Assistent: erneute Übergabe (' . $reason . ')');
+            $existing->logEvent('note_added', 'KI-Assistent: erneute Übergabe ('.$reason.')');
 
             return $existing;
         }
@@ -250,7 +253,7 @@ class HandoverService
             'customer_id' => $customer->id,
             'type' => $this->ticketTypeFor($reason),
             'status' => 'open',
-            'subject' => 'KI-Übergabe: ' . Str::limit(
+            'subject' => 'KI-Übergabe: '.Str::limit(
                 trim($lastQuestion) !== '' ? trim($lastQuestion) : (AiConversation::REASON_LABELS[$reason] ?? $reason),
                 120
             ),
@@ -325,13 +328,13 @@ class HandoverService
         Notify::pushMany($recipients, [
             'type' => NotificationService::TYPE_MESSAGE,
             'title' => '🤖 KI-Übergabe: Mitarbeiter erforderlich',
-            'body' => $name . ' (Nr. ' . $customer->customer_number . ') – '
-                . (AiConversation::REASON_LABELS[$reason] ?? $reason)
-                . ($ticket ? ' · Vorgang ' . $ticket->ticket_number : ''),
+            'body' => $name.' (Nr. '.$customer->customer_number.') – '
+                .(AiConversation::REASON_LABELS[$reason] ?? $reason)
+                .($ticket ? ' · Vorgang '.$ticket->ticket_number : ''),
             // Direkt in die Unterhaltung springen (Abschnitt 13).
-            'link' => route('admin.customer_chat') . '?kunde=' . $customer->id,
+            'link' => route('admin.customer_chat').'?kunde='.$customer->id,
             // Eine offene Uebergabe je Kunde buendelt sich zu EINER Glocke.
-            'dedup_key' => 'ai-handover-' . $customer->id,
+            'dedup_key' => 'ai-handover-'.$customer->id,
         ]);
     }
 }

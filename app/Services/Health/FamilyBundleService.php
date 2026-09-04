@@ -1,5 +1,8 @@
 <?php
+
 namespace App\Services\Health;
+
+use App\Models\Document;
 
 /**
  * Erkennt in den Analyse-Ergebnissen eines Dokument-Vorgangs (Buendel aus
@@ -19,7 +22,7 @@ namespace App\Services\Health;
 class FamilyBundleService
 {
     /**
-     * @param iterable<\App\Models\Document> $documents
+     * @param iterable<Document> $documents
      * @return list<array<string,mixed>> Personen mit first_name, last_name,
      *         birth_date?, gender?, health_insurance_number?, company?
      */
@@ -29,16 +32,16 @@ class FamilyBundleService
 
         foreach ($documents as $doc) {
             $data = $doc->ai_extracted ?? [];
-            if (!is_array($data)) {
+            if (! is_array($data)) {
                 continue;
             }
             $company = $data['gesundheit']['health_insurance_company'] ?? null;
 
             $candidates = [];
-            if (!empty($data['person']) && is_array($data['person'])) {
+            if (! empty($data['person']) && is_array($data['person'])) {
                 $main = $data['person'];
                 // KV-Nummer der Hauptperson steckt in data.gesundheit.
-                if (!empty($data['gesundheit']['health_insurance_number'])) {
+                if (! empty($data['gesundheit']['health_insurance_number'])) {
                     $main['health_insurance_number'] = $data['gesundheit']['health_insurance_number'];
                 }
                 $candidates[] = $main;
@@ -104,7 +107,7 @@ class FamilyBundleService
 
     private function nameKey(array $person): string
     {
-        $name = mb_strtolower(trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? '')));
+        $name = mb_strtolower(trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? '')));
         $name = preg_replace('/[^a-zäöüß ]/u', '', $name) ?? $name;
         return trim((string) preg_replace('/\s+/', ' ', $name));
     }

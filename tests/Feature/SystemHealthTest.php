@@ -3,9 +3,17 @@
 namespace Tests\Feature;
 
 use App\Models\ActivityLog;
+use App\Models\AiActionLog;
 use App\Models\ScheduledTaskRun;
 use App\Models\User;
+use App\Models\WorkflowDefinition;
+use App\Models\WorkflowRun;
 use App\Services\SystemHealthService;
+use App\Services\Workflow\EmailWorkflowService;
+use App\Services\Workflow\SystemUserResolver;
+use Illuminate\Console\Events\ScheduledTaskFinished;
+use Illuminate\Console\Events\ScheduledTaskStarting;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -87,7 +95,7 @@ class SystemHealthTest extends TestCase
 
     public function test_ueberfaellige_aufgabe_wird_rot(): void
     {
-        $ereignisse = app(\Illuminate\Console\Scheduling\Schedule::class)->events();
+        $ereignisse = app(Schedule::class)->events();
         $key = ScheduledTaskRun::keyFor($ereignisse[0]->getSummaryForDisplay());
 
         // Jede Aufgabe hier laeuft mindestens taeglich - drei Tage Stille
@@ -111,7 +119,7 @@ class SystemHealthTest extends TestCase
 
     public function test_fehlgeschlagene_aufgabe_wird_mit_grund_gemeldet(): void
     {
-        $ereignisse = app(\Illuminate\Console\Scheduling\Schedule::class)->events();
+        $ereignisse = app(Schedule::class)->events();
         $key = ScheduledTaskRun::keyFor($ereignisse[0]->getSummaryForDisplay());
 
         ScheduledTaskRun::create([
@@ -134,11 +142,11 @@ class SystemHealthTest extends TestCase
 
     public function test_planer_ereignis_schreibt_den_lauf_mit(): void
     {
-        $ereignis = app(\Illuminate\Console\Scheduling\Schedule::class)->events()[0];
+        $ereignis = app(Schedule::class)->events()[0];
         $ereignis->exitCode = 0;
 
-        event(new \Illuminate\Console\Events\ScheduledTaskStarting($ereignis));
-        event(new \Illuminate\Console\Events\ScheduledTaskFinished($ereignis, 1.5));
+        event(new ScheduledTaskStarting($ereignis));
+        event(new ScheduledTaskFinished($ereignis, 1.5));
 
         $lauf = ScheduledTaskRun::where('task_key', ScheduledTaskRun::keyFor($ereignis->getSummaryForDisplay()))->first();
 
@@ -151,7 +159,7 @@ class SystemHealthTest extends TestCase
 
     public function test_ein_erfolgreicher_lauf_loescht_den_alten_fehler(): void
     {
-        $ereignis = app(\Illuminate\Console\Scheduling\Schedule::class)->events()[0];
+        $ereignis = app(Schedule::class)->events()[0];
         $key = ScheduledTaskRun::keyFor($ereignis->getSummaryForDisplay());
 
         ScheduledTaskRun::create([
@@ -162,7 +170,7 @@ class SystemHealthTest extends TestCase
         ]);
 
         $ereignis->exitCode = 0;
-        event(new \Illuminate\Console\Events\ScheduledTaskFinished($ereignis, 0.2));
+        event(new ScheduledTaskFinished($ereignis, 0.2));
 
         $lauf = ScheduledTaskRun::where('task_key', $key)->first();
         $this->assertNull($lauf->last_error);
@@ -302,15 +310,15 @@ class SystemHealthTest extends TestCase
     public function test_die_tote_workflow_engine_existiert_nicht_mehr(): void
     {
         foreach ([
-            \App\Models\WorkflowRun::class,
-            \App\Models\WorkflowDefinition::class,
-            \App\Models\AiActionLog::class,
+            WorkflowRun::class,
+            WorkflowDefinition::class,
+            AiActionLog::class,
         ] as $klasse) {
-            $this->assertFalse(class_exists($klasse), $klasse . ' sollte entfernt sein.');
+            $this->assertFalse(class_exists($klasse), $klasse.' sollte entfernt sein.');
         }
 
         foreach (['workflow_definitions', 'workflow_runs', 'workflow_step_runs', 'ai_action_logs'] as $tabelle) {
-            $this->assertFalse(Schema::hasTable($tabelle), $tabelle . ' sollte entfernt sein.');
+            $this->assertFalse(Schema::hasTable($tabelle), $tabelle.' sollte entfernt sein.');
         }
     }
 
@@ -318,7 +326,7 @@ class SystemHealthTest extends TestCase
     {
         // Nur aehnlich benannt - beide sind in Betrieb und duerfen nicht
         // dem Aufraeumen zum Opfer fallen.
-        $this->assertTrue(class_exists(\App\Services\Workflow\EmailWorkflowService::class));
-        $this->assertTrue(class_exists(\App\Services\Workflow\SystemUserResolver::class));
+        $this->assertTrue(class_exists(EmailWorkflowService::class));
+        $this->assertTrue(class_exists(SystemUserResolver::class));
     }
 }

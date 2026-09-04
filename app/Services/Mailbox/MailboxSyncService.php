@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Mailbox;
 
 use App\Models\EmailAccount;
@@ -40,7 +41,7 @@ class MailboxSyncService
                 // Ein Fehler in EINEM Postfach darf die anderen nicht blockieren
                 // (Audit MAILBOX-1). Protokollieren, Fehler am Konto vermerken,
                 // mit dem naechsten Postfach weitermachen.
-                \Log::warning('Mailbox-Sync fehlgeschlagen (' . $account->email_address . '): ' . $e->getMessage());
+                \Log::warning('Mailbox-Sync fehlgeschlagen ('.$account->email_address.'): '.$e->getMessage());
                 $account->update(['last_error' => mb_substr($e->getMessage(), 0, 200)]);
                 $results[$account->email_address] = 0;
             }
@@ -89,7 +90,7 @@ class MailboxSyncService
             // too long", oder ein Verarbeitungsfehler) den Cursor fest und der
             // Sync wiederholt sie alle 2 Minuten endlos (Audit MAILBOX-1 /
             // INT-4: aller GESEHENEN Mails).
-            if ($data->receivedAt && (!$maxReceived || $data->receivedAt->gt($maxReceived))) {
+            if ($data->receivedAt && (! $maxReceived || $data->receivedAt->gt($maxReceived))) {
                 $maxReceived = $data->receivedAt->copy();
             }
 
@@ -101,7 +102,7 @@ class MailboxSyncService
                 $importCustomer = null;
                 if ($account->is_customer_import) {
                     $importCustomer = $this->importService()->resolveConsentingCustomer($data);
-                    if ($importCustomer === null || !$this->importService()->isAllowedSender($data->fromAddress)) {
+                    if ($importCustomer === null || ! $this->importService()->isAllowedSender($data->fromAddress)) {
                         continue;
                     }
                 }
@@ -121,7 +122,7 @@ class MailboxSyncService
                     ]
                 );
 
-                if (!$message->wasRecentlyCreated) {
+                if (! $message->wasRecentlyCreated) {
                     continue; // bereits bekannt (Unique-Constraint email_account_id+message_uid) - kein Duplikat verarbeiten
                 }
 
@@ -146,11 +147,11 @@ class MailboxSyncService
                 // Eine problematische Mail darf nie den ganzen Postfach-Lauf
                 // stoppen (Audit MAILBOX-1): protokollieren, ueberspringen. Die
                 // Marke ist oben bereits vorgerueckt -> kein endloses Erneut-Holen.
-                \Log::warning('Mailbox-Sync: Nachricht uebersprungen (' . $data->uid . '): ' . $e->getMessage());
+                \Log::warning('Mailbox-Sync: Nachricht uebersprungen ('.$data->uid.'): '.$e->getMessage());
             }
         }
 
-            if ($maxReceived && (!$overallMax || $maxReceived->gt($overallMax))) {
+            if ($maxReceived && (! $overallMax || $maxReceived->gt($overallMax))) {
                 $overallMax = $maxReceived;
             }
 
@@ -158,10 +159,10 @@ class MailboxSyncService
             // Nur weiterpaginieren, wenn ein voller Batch kam UND der Cursor
             // echt vorwaerts wandert (sonst Endlosschleife). Andernfalls Abbruch:
             // $drained = true, falls der Batch < Limit war (Postfach leer).
-            if ($full && $maxReceived && (!$account->last_synced_at || $maxReceived->gt($account->last_synced_at))) {
+            if ($full && $maxReceived && (! $account->last_synced_at || $maxReceived->gt($account->last_synced_at))) {
                 $account->last_synced_at = $maxReceived; // In-Memory-Cursor vorruecken
             } else {
-                $drained = !$full;
+                $drained = ! $full;
                 break;
             }
         } while ($rounds < self::MAX_SYNC_ROUNDS);

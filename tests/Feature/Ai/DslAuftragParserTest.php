@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Ai;
 
+use App\Models\Contract;
 use App\Services\Ai\TemplateParsers\DslAuftragParser;
 use Tests\TestCase;
 
@@ -95,7 +96,7 @@ class DslAuftragParserTest extends TestCase
 
     public function test_parses_dsl_auftrag(): void
     {
-        $r = (new DslAuftragParser())->parse($this->auftragText());
+        $r = (new DslAuftragParser)->parse($this->auftragText());
         $this->assertNotNull($r);
         $this->assertSame('internetvertrag', $r['type']);
 
@@ -143,7 +144,7 @@ class DslAuftragParserTest extends TestCase
 
     public function test_parses_vodafone_kabel_auftrag_vollstaendig(): void
     {
-        $r = (new DslAuftragParser())->parse($this->kabelAuftragText());
+        $r = (new DslAuftragParser)->parse($this->kabelAuftragText());
         $this->assertNotNull($r);
         $this->assertSame('internetvertrag', $r['type']);
 
@@ -164,7 +165,7 @@ class DslAuftragParserTest extends TestCase
         // "Ihr Tarif" darf den Tarif-Ausdruck nicht verwirren).
         $this->assertSame('Vodafone Kabel Deutschland', $v['insurer']);
         $this->assertSame('Young GigaZuhause 300 Kabel', $v['tariff']);
-        $this->assertSame(\App\Models\Contract::STAGE_ANTRAG, $v['document_stage']);
+        $this->assertSame(Contract::STAGE_ANTRAG, $v['document_stage']);
         $this->assertSame(28.31, $v['premium_amount']);
         $this->assertSame('monthly', $v['premium_interval']);
         // Kein Auftragsnummern-Feld auf der Uebersicht, "schnellstmoeglich"
@@ -294,7 +295,7 @@ class DslAuftragParserTest extends TestCase
 
     public function test_parses_spalten_ocr_eines_screenshots_vollstaendig(): void
     {
-        $r = (new DslAuftragParser())->parse($this->kabelAuftragSpaltenOcrText());
+        $r = (new DslAuftragParser)->parse($this->kabelAuftragSpaltenOcrText());
         $this->assertNotNull($r);
 
         $p = $r['data']['person'];
@@ -351,14 +352,14 @@ class DslAuftragParserTest extends TestCase
             'Grafenstr. 19',
             '24768 Rendsburg',
         ]);
-        $this->assertNull((new DslAuftragParser())->parse($text));
+        $this->assertNull((new DslAuftragParser)->parse($text));
     }
 
     public function test_ignores_non_dsl_documents(): void
     {
-        $this->assertNull((new DslAuftragParser())->parse('Irgendein Dokument ohne Tarif und Anbieter.'));
+        $this->assertNull((new DslAuftragParser)->parse('Irgendein Dokument ohne Tarif und Anbieter.'));
         // Eine Kfz-Police (Anbieter, aber kein Internet-Marker) nicht anfassen.
-        $this->assertNull((new DslAuftragParser())->parse("Anbieter: ADAC\nMindestlaufzeit 12 Monate\nKfz-Haftpflicht"));
+        $this->assertNull((new DslAuftragParser)->parse("Anbieter: ADAC\nMindestlaufzeit 12 Monate\nKfz-Haftpflicht"));
     }
 
     /**
@@ -384,7 +385,7 @@ class DslAuftragParserTest extends TestCase
         ]);
 
         $this->assertNull(
-            (new DslAuftragParser())->parse($stromAuftrag),
+            (new DslAuftragParser)->parse($stromAuftrag),
             'Ein Strom-/Gas-Auftrag darf nicht als DSL-/Internet-Vertrag gelesen werden.'
         );
     }
@@ -398,6 +399,6 @@ class DslAuftragParserTest extends TestCase
     {
         $seite1 = "Stromliefervertrag der Stadtwerke\nKunde: Max Mustermann\nMarktlokation 51238973456\nJahresverbrauch 3500 kWh";
         $agb = "Allgemeine Geschäftsbedingungen\nMindestlaufzeit und Anbieterwechsel: ... Der Netzanschluss ...";
-        $this->assertNull((new DslAuftragParser())->parse($seite1 . "\f" . $agb));
+        $this->assertNull((new DslAuftragParser)->parse($seite1."\f".$agb));
     }
 }

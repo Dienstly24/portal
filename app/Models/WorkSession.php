@@ -1,6 +1,8 @@
 <?php
+
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -8,7 +10,8 @@ use Illuminate\Database\Eloquent\Model;
  * Aktive Arbeitszeit wird serverseitig vom ActivityTracker
  * gutgeschrieben; Leerlauf = Sitzungsdauer - aktive Zeit.
  */
-class WorkSession extends Model {
+class WorkSession extends Model
+{
     protected $fillable = [
         'user_id', 'login_at', 'last_seen_at', 'last_productive_at',
         'logout_at', 'active_seconds', 'ended_by', 'ip', 'user_agent',
@@ -27,7 +30,7 @@ class WorkSession extends Model {
     public function scopeOpen($query) { return $query->whereNull('logout_at'); }
 
     /** Sitzungsende fuer Berechnungen: Logout, sonst letzter Request. */
-    public function effectiveEnd(): \Carbon\Carbon {
+    public function effectiveEnd(): Carbon {
         return $this->logout_at ?? $this->last_seen_at ?? $this->login_at;
     }
 

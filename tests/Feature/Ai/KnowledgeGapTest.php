@@ -40,12 +40,12 @@ class KnowledgeGapTest extends TestCase
     {
         $user = User::factory()->create([
             'role' => 'customer',
-            'email' => 'kunde' . uniqid() . '@example.de',
+            'email' => 'kunde'.uniqid().'@example.de',
             'name' => 'Abdulwahab Ibrahim',
         ]);
         $kunde = Customer::create([
             'user_id' => $user->id,
-            'customer_number' => '26' . str_pad((string) $user->id, 5, '0', STR_PAD_LEFT),
+            'customer_number' => '26'.str_pad((string) $user->id, 5, '0', STR_PAD_LEFT),
             'preferred_lang' => 'de',
         ]);
 
@@ -205,8 +205,8 @@ class KnowledgeGapTest extends TestCase
 
         $this->actingAs($admin)->post(route('admin.ai_knowledge.import'), [
             'text' => "F: Habt ihr Stromangebote?\nA: Ja, wir vergleichen Strom- und Gastarife.\nAuch Gas gehoert dazu.\n\n"
-                . "F: Was kostet die Beratung?\nA: Die Beratung ist kostenlos.\n\n"
-                . "س: عندكم عروض كهرباء؟\nج: نعم، منقارنلك التعرفات.",
+                ."F: Was kostet die Beratung?\nA: Die Beratung ist kostenlos.\n\n"
+                ."س: عندكم عروض كهرباء؟\nج: نعم، منقارنلك التعرفات.",
             'category' => 'faq',
             'language' => 'de',
             'active' => 1,
@@ -238,7 +238,7 @@ class KnowledgeGapTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin']);
 
         $this->actingAs($admin)->post(route('admin.ai_knowledge.import'), [
-            'text' => "Irgendein Fliesstext ohne Frage- und Antwortmarken.",
+            'text' => 'Irgendein Fliesstext ohne Frage- und Antwortmarken.',
             'category' => 'faq',
         ])->assertSessionHasErrors('text');
 

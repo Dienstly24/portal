@@ -57,7 +57,7 @@ class GesundheitskartenFamilieTest extends TestCase
 
     public function test_parser_reads_every_card_on_the_photo(): void
     {
-        $r = (new GesundheitskarteParser())->parse($this->kartenText());
+        $r = (new GesundheitskarteParser)->parse($this->kartenText());
 
         $this->assertNotNull($r);
         $this->assertSame('gesundheitskarte', $r['type']);
@@ -103,7 +103,7 @@ class GesundheitskartenFamilieTest extends TestCase
             'X999246731',
         ]);
 
-        $r = (new GesundheitskarteParser())->parse($text);
+        $r = (new GesundheitskarteParser)->parse($text);
 
         $this->assertNotNull($r);
         $this->assertSame('Abdullah', $r['data']['person']['first_name']);
@@ -118,14 +118,14 @@ class GesundheitskartenFamilieTest extends TestCase
 
     private function kartenDokument(): Document
     {
-        $r = (new GesundheitskarteParser())->parse($this->kartenText());
+        $r = (new GesundheitskarteParser)->parse($this->kartenText());
 
         return Document::create([
             'id' => (string) Str::uuid(),
             'customer_id' => null,
             'category' => 'identity',
             'file_name' => 'gesundheitskarten.jpg',
-            'file_path' => 'documents/eingang/' . Str::random(8) . '.jpg',
+            'file_path' => 'documents/eingang/'.Str::random(8).'.jpg',
             'disk' => 'local',
             'ai_status' => 'done',
             'ai_type' => 'gesundheitskarte',
@@ -195,7 +195,7 @@ class GesundheitskartenFamilieTest extends TestCase
             'customer_id' => null,
             'category' => 'identity',
             'file_name' => 'eine_karte.jpg',
-            'file_path' => 'documents/eingang/' . Str::random(8) . '.jpg',
+            'file_path' => 'documents/eingang/'.Str::random(8).'.jpg',
             'disk' => 'local',
             'ai_status' => 'done',
             'ai_type' => 'gesundheitskarte',

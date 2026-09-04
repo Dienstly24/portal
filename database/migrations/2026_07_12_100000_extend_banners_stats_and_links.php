@@ -12,8 +12,7 @@ use Illuminate\Support\Facades\Schema;
  * - Audit: wer hat erstellt/zuletzt geändert
  * - banner_user_views: eindeutige Betrachter je Banner + "geschlossen bis"
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('banners', function (Blueprint $table) {

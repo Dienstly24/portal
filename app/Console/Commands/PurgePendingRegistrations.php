@@ -37,7 +37,7 @@ class PurgePendingRegistrations extends Command
 
         PendingRegistration::where('expires_at', '<', $cutoff)->delete();
 
-        $this->info($count . ' abgelaufene Vormerkung(en) geloescht.');
+        $this->info($count.' abgelaufene Vormerkung(en) geloescht.');
 
         return self::SUCCESS;
     }

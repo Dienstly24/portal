@@ -34,7 +34,7 @@ class ErsatzbescheinigungParserTest extends TestCase
 
     public function test_parses_ersatzbescheinigung(): void
     {
-        $r = (new ErsatzbescheinigungParser())->parse($this->letter());
+        $r = (new ErsatzbescheinigungParser)->parse($this->letter());
         $this->assertNotNull($r);
         $this->assertSame('gesundheitskarte', $r['type']);
 
@@ -57,6 +57,6 @@ class ErsatzbescheinigungParserTest extends TestCase
 
     public function test_ignores_non_ersatzbescheinigung(): void
     {
-        $this->assertNull((new ErsatzbescheinigungParser())->parse('Beitrittserklärung zur Krankenversicherung'));
+        $this->assertNull((new ErsatzbescheinigungParser)->parse('Beitrittserklärung zur Krankenversicherung'));
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services;
 
 use App\Models\Customer;
@@ -31,15 +32,15 @@ class CustomerNumberGenerator
         // Höchste bereits vergebene Sequenz dieses Jahres bestimmen.
         // Nur exakt passende Nummern (JJ + 5 Ziffern) zählen – Alt-Nummern
         // (C-…) und Import-Nummern anderer Länge stören nicht.
-        $max = Customer::where('customer_number', 'like', $prefix . '%')
+        $max = Customer::where('customer_number', 'like', $prefix.'%')
             ->pluck('customer_number')
-            ->filter(fn ($n) => preg_match('/^' . $prefix . '\d{5}$/', $n))
+            ->filter(fn ($n) => preg_match('/^'.$prefix.'\d{5}$/', $n))
             ->map(fn ($n) => (int) substr($n, 2))
             ->max() ?? 0;
 
         do {
             $max++;
-            $number = $prefix . str_pad((string) $max, 5, '0', STR_PAD_LEFT);
+            $number = $prefix.str_pad((string) $max, 5, '0', STR_PAD_LEFT);
         } while (Customer::where('customer_number', $number)->exists());
 
         return $number;
@@ -58,16 +59,16 @@ class CustomerNumberGenerator
             return $this->generate();
         }
 
-        $number = self::IMPORT_PREFIX . $clean;
+        $number = self::IMPORT_PREFIX.$clean;
 
         if (Customer::where('customer_number', $number)->exists()) {
             // Gleiche Quellnummer doppelt (sollte der Duplikatsschutz vorher
             // fangen) – eindeutig machen statt fehlschlagen.
             $suffix = 2;
-            while (Customer::where('customer_number', $number . '-' . $suffix)->exists()) {
+            while (Customer::where('customer_number', $number.'-'.$suffix)->exists()) {
                 $suffix++;
             }
-            return $number . '-' . $suffix;
+            return $number.'-'.$suffix;
         }
 
         return $number;

@@ -30,7 +30,7 @@ class TicketSystemTest extends TestCase
 
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => '26000' . str_pad((string) ++self::$customerSeq, 2, '0', STR_PAD_LEFT),
+            'customer_number' => '26000'.str_pad((string) ++self::$customerSeq, 2, '0', STR_PAD_LEFT),
             'first_name' => 'Timo',
             'last_name' => 'Test',
         ]);

@@ -41,7 +41,7 @@ class SessionPasswordHash
         }
 
         $request->session()->put(
-            'password_hash_' . Auth::getDefaultDriver(),
+            'password_hash_'.Auth::getDefaultDriver(),
             $user->getAuthPassword(),
         );
     }

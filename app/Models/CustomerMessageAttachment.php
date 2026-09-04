@@ -1,5 +1,7 @@
 <?php
+
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -12,7 +14,7 @@ class CustomerMessageAttachment extends Model
 
     protected static function boot() {
         parent::boot();
-        static::creating(fn($m) => $m->id = $m->id ?: (string) Str::uuid());
+        static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
     public function message() { return $this->belongsTo(CustomerMessage::class, 'message_id'); }

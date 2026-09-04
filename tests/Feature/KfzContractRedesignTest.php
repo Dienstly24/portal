@@ -7,7 +7,6 @@ use App\Models\ContractVehicleDetail;
 use App\Models\Customer;
 use App\Models\User;
 use App\Models\VehicleMileageReading;
-use App\Models\VehicleSfEntry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -32,7 +31,7 @@ class KfzContractRedesignTest extends TestCase
         $user = User::factory()->create(['role' => 'customer']);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5((string) $user->id), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5((string) $user->id), 0, 8)),
         ]);
     }
 

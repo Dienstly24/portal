@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
@@ -74,8 +75,8 @@ class AufenthaltstitelParser implements DocumentTemplateParser
 
         // Nur der Aufenthaltstitel (eAT). Personalausweis/Reisepass bewusst
         // ausgeschlossen (eigene Typen).
-        if (!str_contains($upper, 'AUFENTHALTSTITEL') && !str_contains($upper, 'AUFENTHALTSERLAUBNIS')
-            && !str_contains($upper, 'RESIDENCE PERMIT')) {
+        if (! str_contains($upper, 'AUFENTHALTSTITEL') && ! str_contains($upper, 'AUFENTHALTSERLAUBNIS')
+            && ! str_contains($upper, 'RESIDENCE PERMIT')) {
             return null;
         }
 
@@ -97,17 +98,17 @@ class AufenthaltstitelParser implements DocumentTemplateParser
             return null;
         }
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $expiry = $this->expiryDate();
         return [
             'type' => 'aufenthaltstitel',
             'confidence' => 68,
             'summary' => 'Aufenthaltstitel (Aufenthaltserlaubnis)'
-                . ($name !== '' ? ' - ' . $name : '')
-                . (isset($person['nationality']) ? ' - Staatsangehoerigkeit ' . $person['nationality'] : '')
-                . ($expiry !== null ? ' - gueltig bis ' . $expiry : '')
-                . ' - Felder gratis aus der Karte gelesen (ohne KI).',
-            'title' => 'Aufenthaltstitel' . ($name !== '' ? ' ' . $name : ''),
+                .($name !== '' ? ' - '.$name : '')
+                .(isset($person['nationality']) ? ' - Staatsangehoerigkeit '.$person['nationality'] : '')
+                .($expiry !== null ? ' - gueltig bis '.$expiry : '')
+                .' - Felder gratis aus der Karte gelesen (ohne KI).',
+            'title' => 'Aufenthaltstitel'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => [],
@@ -159,10 +160,10 @@ class AufenthaltstitelParser implements DocumentTemplateParser
             return null; // Ohne belastbaren Namen der normalen Analyse/KI ueberlassen.
         }
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $address = trim(
-            (($person['street'] ?? '') !== '' ? trim(($person['street'] ?? '') . ' ' . ($person['house_number'] ?? '')) . ', ' : '')
-            . trim(($person['zip'] ?? '') . ' ' . ($person['city'] ?? ''))
+            (($person['street'] ?? '') !== '' ? trim(($person['street'] ?? '').' '.($person['house_number'] ?? '')).', ' : '')
+            .trim(($person['zip'] ?? '').' '.($person['city'] ?? ''))
         );
         $address = trim($address, ', ');
 
@@ -170,12 +171,12 @@ class AufenthaltstitelParser implements DocumentTemplateParser
             'type' => 'aufenthaltstitel',
             'confidence' => 76,
             'summary' => 'Aufenthaltstitel (Rueckseite, maschinenlesbare Zone gelesen)'
-                . ($name !== '' ? ' - ' . $name : '')
-                . (isset($person['nationality']) ? ' - Staatsangehoerigkeit ' . $person['nationality'] : '')
-                . ($expiry !== null ? ' - gueltig bis ' . $expiry : '')
-                . ($address !== '' ? ' - Anschrift ' . $address : '')
-                . ' - Felder gratis aus der Karte gelesen (ohne KI).',
-            'title' => 'Aufenthaltstitel' . ($name !== '' ? ' ' . $name : ''),
+                .($name !== '' ? ' - '.$name : '')
+                .(isset($person['nationality']) ? ' - Staatsangehoerigkeit '.$person['nationality'] : '')
+                .($expiry !== null ? ' - gueltig bis '.$expiry : '')
+                .($address !== '' ? ' - Anschrift '.$address : '')
+                .' - Felder gratis aus der Karte gelesen (ohne KI).',
+            'title' => 'Aufenthaltstitel'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => [],
@@ -257,7 +258,7 @@ class AufenthaltstitelParser implements DocumentTemplateParser
 
         // Zeile 3 (danach): NACHNAME<<VORNAMEN ("<" als Fueller).
         foreach ($lines as $j => $line) {
-            if ($j <= $dataIdx || !str_contains($line, '<<') || !preg_match('/^[A-Z<]+$/', $line)) {
+            if ($j <= $dataIdx || ! str_contains($line, '<<') || ! preg_match('/^[A-Z<]+$/', $line)) {
                 continue;
             }
             $parts = preg_split('/<</', $line, 2) ?: [];
@@ -313,14 +314,14 @@ class AufenthaltstitelParser implements DocumentTemplateParser
     /** MRZ-Datum "YYMMDD" -> "JJJJ-MM-TT". $expiry steuert die Jahrhundertwahl. */
     private function mrzDate(string $yymmdd, bool $expiry): ?string
     {
-        if (!preg_match('/^(\d{2})(\d{2})(\d{2})$/', $yymmdd, $m)) {
+        if (! preg_match('/^(\d{2})(\d{2})(\d{2})$/', $yymmdd, $m)) {
             return null;
         }
         $yy = (int) $m[1];
         // Ablauf liegt in der Zukunft -> 20YY. Geburtsdatum: Pivot bei 30
         // (00-30 -> 20YY, 31-99 -> 19YY) - deterministisch, ohne "heute".
         $year = $expiry ? 2000 + $yy : ($yy <= 30 ? 2000 + $yy : 1900 + $yy);
-        if (!checkdate((int) $m[2], (int) $m[3], $year)) {
+        if (! checkdate((int) $m[2], (int) $m[3], $year)) {
             return null;
         }
         return sprintf('%04d-%02d-%02d', $year, (int) $m[2], (int) $m[3]);
@@ -339,7 +340,7 @@ class AufenthaltstitelParser implements DocumentTemplateParser
         if ($iso === null) {
             return null;
         }
-        return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $iso, $m) ? $m[3] . '.' . $m[2] . '.' . $m[1] : $iso;
+        return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $iso, $m) ? $m[3].'.'.$m[2].'.'.$m[1] : $iso;
     }
 
     /**
@@ -362,10 +363,10 @@ class AufenthaltstitelParser implements DocumentTemplateParser
             // Nur die eigene Spalte betrachten (vor einer 2+-Leerzeichen-Luecke).
             foreach (preg_split('/\s{2,}/', $value) ?: [] as $col) {
                 $col = trim($col);
-                if (!isset($out['zip']) && preg_match('/^(\d{5})\s+(\p{Lu}[\p{L}.\-]*(?:\s\p{L}[\p{L}.\-]+)*)$/u', $col, $m)) {
+                if (! isset($out['zip']) && preg_match('/^(\d{5})\s+(\p{Lu}[\p{L}.\-]*(?:\s\p{L}[\p{L}.\-]+)*)$/u', $col, $m)) {
                     $out['zip'] = $m[1];
                     $out['city'] = $m[2];
-                } elseif (!isset($out['street']) && preg_match('/^(\p{Lu}[\p{L}.\-]*(?:\s\p{L}[\p{L}.\-]+)*)\s+(\d{1,4}(?:\s?[a-zA-Z])?)$/u', $col, $m)) {
+                } elseif (! isset($out['street']) && preg_match('/^(\p{Lu}[\p{L}.\-]*(?:\s\p{L}[\p{L}.\-]+)*)\s+(\d{1,4}(?:\s?[a-zA-Z])?)$/u', $col, $m)) {
                     $out['street'] = $m[1];
                     $out['house_number'] = trim($m[2]);
                 }
@@ -448,7 +449,7 @@ class AufenthaltstitelParser implements DocumentTemplateParser
         );
         $candidate = trim((string) preg_replace('/\s+/', ' ', $candidate));
 
-        if (!preg_match('/^\p{Lu}[\p{Lu} \-\.]{1,40}$/u', $candidate)) {
+        if (! preg_match('/^\p{Lu}[\p{Lu} \-\.]{1,40}$/u', $candidate)) {
             return null;
         }
         // Beschriftungen und Merkmalswerte der Karte sind kein Ortsname.
@@ -488,7 +489,7 @@ class AufenthaltstitelParser implements DocumentTemplateParser
             if (preg_match('/\b([MFWX])\b\s+([A-Z]{3})\b\s+(\d{2})[ .](\d{2})[ .](\d{4})/', $line, $m)) {
                 $raw['gender'] = $this->gender($m[1]);
                 $raw['nationality'] = $this->nationality($m[2]);
-                $raw['birth_date'] = $m[5] . '-' . $m[4] . '-' . $m[3];
+                $raw['birth_date'] = $m[5].'-'.$m[4].'-'.$m[3];
                 return;
             }
         }
@@ -500,12 +501,12 @@ class AufenthaltstitelParser implements DocumentTemplateParser
         if ($birthIdx !== null) {
             foreach ($this->nextNonEmpty($birthIdx, 3) as $v) {
                 if (preg_match('/(\d{2})[ .](\d{2})[ .](\d{4})/', $v, $m)) {
-                    $raw['birth_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+                    $raw['birth_date'] = $m[3].'-'.$m[2].'-'.$m[1];
                     break;
                 }
             }
         }
-        if (!isset($raw['gender'])) {
+        if (! isset($raw['gender'])) {
             $sexIdx = $this->lineIndex('/GESCHLECHT|\bSEX\b/i');
             if ($sexIdx !== null) {
                 foreach ($this->nextNonEmpty($sexIdx, 2) as $v) {
@@ -525,7 +526,7 @@ class AufenthaltstitelParser implements DocumentTemplateParser
         if ($idx !== null) {
             foreach ($this->nextNonEmpty($idx, 3) as $v) {
                 if (preg_match('/(\d{2})[ .](\d{2})[ .](\d{4})/', $v, $m)) {
-                    return $m[1] . '.' . $m[2] . '.' . $m[3];
+                    return $m[1].'.'.$m[2].'.'.$m[3];
                 }
             }
         }

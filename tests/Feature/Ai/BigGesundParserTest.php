@@ -73,7 +73,7 @@ class BigGesundParserTest extends TestCase
 
     public function test_parses_mitgliedsantrag_key_fields(): void
     {
-        $r = (new BigGesundParser())->parse($this->mitgliedsantragText());
+        $r = (new BigGesundParser)->parse($this->mitgliedsantragText());
 
         $this->assertNotNull($r);
         $this->assertSame('beitrittserklaerung', $r['type']);
@@ -107,7 +107,7 @@ class BigGesundParserTest extends TestCase
 
     public function test_parses_plusbonus_bank_and_name(): void
     {
-        $r = (new BigGesundParser())->parse($this->plusbonusText());
+        $r = (new BigGesundParser)->parse($this->plusbonusText());
 
         $this->assertNotNull($r);
         $this->assertSame('beitrittserklaerung', $r['type']);
@@ -129,8 +129,8 @@ class BigGesundParserTest extends TestCase
 
     public function test_ignores_unrelated_documents(): void
     {
-        $this->assertNull((new BigGesundParser())->parse('Irgendein anderes Dokument'));
+        $this->assertNull((new BigGesundParser)->parse('Irgendein anderes Dokument'));
         // BIG-Dokument ohne erkennbaren Formulartyp -> null (normale Analyse).
-        $this->assertNull((new BigGesundParser())->parse('BIG direkt gesund - Newsletter'));
+        $this->assertNull((new BigGesundParser)->parse('BIG direkt gesund - Newsletter'));
     }
 }

@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Security;
 
+use App\Mail\RegistrationVerificationMail;
+use App\Models\ActivityLog;
 use App\Models\CustomerConsent;
 use App\Models\PendingRegistration;
 use App\Models\User;
@@ -47,7 +49,7 @@ class ClientIpIntegrityTest extends TestCase
                 'email_consent' => '1',
             ]);
 
-        Mail::assertSent(\App\Mail\RegistrationVerificationMail::class, function ($mail) use (&$token) {
+        Mail::assertSent(RegistrationVerificationMail::class, function ($mail) use (&$token) {
             if (preg_match('#/register/bestaetigen/([A-Za-z0-9]+)#', $mail->verifyUrl, $m)) {
                 $token = $m[1];
             }
@@ -105,7 +107,7 @@ class ClientIpIntegrityTest extends TestCase
                 'password' => 'test-passwort-2026',
             ]);
 
-        $eintraege = \App\Models\ActivityLog::all()
+        $eintraege = ActivityLog::all()
             ->map(fn ($e) => $e->metaArray()['ip'] ?? null)
             ->filter()
             ->values();

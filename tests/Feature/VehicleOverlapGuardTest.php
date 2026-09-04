@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Contract;
+use App\Models\ContractRevision;
 use App\Models\ContractVehicleDetail;
 use App\Models\Customer;
 use App\Models\User;
@@ -32,7 +33,7 @@ class VehicleOverlapGuardTest extends TestCase
         $user = User::factory()->create(['role' => 'customer']);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5((string) $user->id), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5((string) $user->id), 0, 8)),
         ]);
     }
 
@@ -96,9 +97,9 @@ class VehicleOverlapGuardTest extends TestCase
         $alt->refresh();
         $this->assertSame(now()->toDateString(), (string) $alt->cancellation_date);
         $this->assertSame($wechseltag->toDateString(), (string) $alt->end_date);
-        $this->assertSame('Gekündigt zum ' . $wechseltag->format('d.m.Y'), $alt->displayStatus()['label']);
+        $this->assertSame('Gekündigt zum '.$wechseltag->format('d.m.Y'), $alt->displayStatus()['label']);
         $this->assertTrue(
-            \App\Models\ContractRevision::where('contract_id', $alt->id)
+            ContractRevision::where('contract_id', $alt->id)
                 ->where('field', 'end_date')->where('source', 'system')->exists()
         );
     }

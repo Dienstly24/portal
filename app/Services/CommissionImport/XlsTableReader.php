@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\CommissionImport;
 
 /**
@@ -61,7 +62,7 @@ class XlsTableReader
                 }
             }
             if ($sheet === null) {
-                throw new \RuntimeException('Das Tabellenblatt "' . $sheetName . '" wurde in der Datei nicht gefunden.');
+                throw new \RuntimeException('Das Tabellenblatt "'.$sheetName.'" wurde in der Datei nicht gefunden.');
             }
         }
         $sheet ??= $sheets[0];
@@ -71,7 +72,7 @@ class XlsTableReader
 
         $rows = array_values(array_filter($rows, fn ($r) => trim(implode('', $r)) !== ''));
         if ($rows === []) {
-            throw new \RuntimeException('Das Tabellenblatt "' . $sheet['name'] . '" enthält keine Zeilen.');
+            throw new \RuntimeException('Das Tabellenblatt "'.$sheet['name'].'" enthält keine Zeilen.');
         }
         $header = array_map(fn ($v) => trim((string) $v), (array) array_shift($rows));
 
@@ -241,7 +242,7 @@ class XlsTableReader
                 $started = true;
                 continue;
             }
-            if (!$started) {
+            if (! $started) {
                 continue;
             }
             if ($record['id'] === self::EOF_REC) {
@@ -375,7 +376,7 @@ class XlsTableReader
             }
             $result = (float) $value;
         } else {
-            $result = unpack('e', "\x00\x00\x00\x00" . pack('V', $raw & 0xFFFFFFFC))[1] ?? 0.0;
+            $result = unpack('e', "\x00\x00\x00\x00".pack('V', $raw & 0xFFFFFFFC))[1] ?? 0.0;
         }
         return $isPercent ? $result / 100 : $result;
     }
@@ -452,7 +453,7 @@ class XlsTableReader
         }
         $offset = $base1904 ? 24107 : 25569;
         $timestamp = (int) round(($serial - $offset) * 86400);
-        $date = (new \DateTimeImmutable('@' . $timestamp))->setTimezone(new \DateTimeZone('UTC'));
+        $date = (new \DateTimeImmutable('@'.$timestamp))->setTimezone(new \DateTimeZone('UTC'));
         return fmod($serial, 1.0) === 0.0 ? $date->format('d.m.Y') : $date->format('d.m.Y H:i:s');
     }
 }

@@ -11,8 +11,7 @@ use Illuminate\Support\Facades\Schema;
  * der Vertrags-Dokumente gefiltert. Ohne Index wird das mit wachsender
  * Dokumentzahl zum Full-Table-Scan - hier nachgeruestet.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('documents', function (Blueprint $table) {

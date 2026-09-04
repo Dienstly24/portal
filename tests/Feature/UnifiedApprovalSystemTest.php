@@ -2,10 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Models\ApprovalRequest;
 use App\Models\Customer;
 use App\Models\CustomerChangeRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -19,7 +23,7 @@ class UnifiedApprovalSystemTest extends TestCase
     {
         parent::setUp();
         // Nachweise fuer sensible Aenderungen landen auf der privaten Disk.
-        \Illuminate\Support\Facades\Storage::fake('local');
+        Storage::fake('local');
     }
 
     private function makeCustomer(): Customer
@@ -27,7 +31,7 @@ class UnifiedApprovalSystemTest extends TestCase
         $user = User::factory()->create(['role' => 'customer']);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5((string) $user->id), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5((string) $user->id), 0, 8)),
             'phone' => '040 111111',
         ]);
     }
@@ -35,12 +39,12 @@ class UnifiedApprovalSystemTest extends TestCase
     public function test_no_active_code_uses_approval_request_anymore(): void
     {
         // Das alte Model existiert nicht mehr ...
-        $this->assertFalse(class_exists(\App\Models\ApprovalRequest::class), 'ApprovalRequest model must be removed.');
+        $this->assertFalse(class_exists(ApprovalRequest::class), 'ApprovalRequest model must be removed.');
         // ... die alten Routen ebenso wenig ...
         $this->assertFalse(app('router')->has('admin.approvals'));
         $this->assertFalse(app('router')->has('admin.approval.action'));
         // ... und die alte Tabelle wurde nach der Datenübernahme entfernt.
-        $this->assertFalse(\Illuminate\Support\Facades\Schema::hasTable('approval_requests'));
+        $this->assertFalse(Schema::hasTable('approval_requests'));
     }
 
     public function test_every_change_domain_creates_a_customer_change_request(): void
@@ -49,9 +53,9 @@ class UnifiedApprovalSystemTest extends TestCase
         $u = $customer->user;
 
         $this->actingAs($u)->post(route('portal.profile.update'), ['phone' => '040 222222']);
-        $this->actingAs($u)->post(route('portal.profile.update'), ['iban' => 'DE89370400440532013000', 'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf')]);
+        $this->actingAs($u)->post(route('portal.profile.update'), ['iban' => 'DE89370400440532013000', 'bank_proof' => UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf')]);
         $this->actingAs($u)->post(route('portal.family.store'), ['name' => 'Kind A', 'relation' => 'kind']);
-        $this->actingAs($u)->post(route('portal.addresses.store'), ['type' => 'billing', 'street' => 'Weg 1', 'zip' => '20095', 'city' => 'Hamburg', 'proof' => \Illuminate\Http\UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf')]);
+        $this->actingAs($u)->post(route('portal.addresses.store'), ['type' => 'billing', 'street' => 'Weg 1', 'zip' => '20095', 'city' => 'Hamburg', 'proof' => UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf')]);
         $this->actingAs($u)->post(route('portal.contacts.store'), ['type' => 'email', 'label' => 'geschaeftlich', 'value' => 'work@example.com']);
         $this->actingAs($u)->post(route('portal.contacts.store'), ['type' => 'phone', 'label' => 'privat', 'value' => '+49 170 123456']);
         $this->actingAs($u)->post(route('portal.contracts.report'), ['type' => 'hausrat', 'insurer' => 'Allianz']);
@@ -72,9 +76,9 @@ class UnifiedApprovalSystemTest extends TestCase
         $u = $customer->user;
         $admin = User::factory()->create(['role' => 'admin']);
 
-        $this->actingAs($u)->post(route('portal.profile.update'), ['phone' => '040 333333', 'iban' => 'DE89370400440532013000', 'bank_proof' => \Illuminate\Http\UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf')]);
+        $this->actingAs($u)->post(route('portal.profile.update'), ['phone' => '040 333333', 'iban' => 'DE89370400440532013000', 'bank_proof' => UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf')]);
         $this->actingAs($u)->post(route('portal.family.store'), ['name' => 'Kind B', 'relation' => 'kind']);
-        $this->actingAs($u)->post(route('portal.addresses.store'), ['type' => 'postal', 'street' => 'Postweg 2', 'zip' => '20095', 'city' => 'Hamburg', 'proof' => \Illuminate\Http\UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf')]);
+        $this->actingAs($u)->post(route('portal.addresses.store'), ['type' => 'postal', 'street' => 'Postweg 2', 'zip' => '20095', 'city' => 'Hamburg', 'proof' => UploadedFile::fake()->create('nachweis.pdf', 60, 'application/pdf')]);
         $this->actingAs($u)->post(route('portal.contacts.store'), ['type' => 'email', 'label' => 'privat', 'value' => 'neu@example.com']);
         $this->actingAs($u)->post(route('portal.contracts.report'), ['type' => 'kfz', 'insurer' => 'HUK']);
 

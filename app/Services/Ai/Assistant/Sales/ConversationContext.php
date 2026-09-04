@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Sales;
 
 use App\Models\AiConversation;
@@ -36,7 +37,7 @@ class ConversationContext
         $fehlend = [];
 
         foreach (RequirementProfile::fieldsForStage($this->conversation->intent, $stage) as $feld) {
-            if (!($feld['required'] ?? false)) {
+            if (! ($feld['required'] ?? false)) {
                 continue;
             }
             $wert = $bekannt[$feld['key']] ?? null;
@@ -89,22 +90,22 @@ class ConversationContext
             $key = $feld['key'];
             $vorhanden = isset($bekannt[$key]) && trim((string) $bekannt[$key]) !== '';
 
-            if (!$vorhanden) {
+            if (! $vorhanden) {
                 continue;
             }
-            $zeilen[] = '- ' . $feld['label'] . ': '
-                . (RequirementProfile::isSensitive($key) ? 'liegt vor' : (string) $bekannt[$key]);
+            $zeilen[] = '- '.$feld['label'].': '
+                .(RequirementProfile::isSensitive($key) ? 'liegt vor' : (string) $bekannt[$key]);
         }
 
-        $offen = array_map(fn ($f) => '- ' . $f['label'], $this->missing($this->stage()));
+        $offen = array_map(fn ($f) => '- '.$f['label'], $this->missing($this->stage()));
 
         $text = "GESPRAECHSSTAND\n";
-        $text .= 'Anliegen: ' . RequirementProfile::intentLabel($this->conversation->intent) . "\n";
-        $text .= 'Zustand: ' . ConversationState::label($this->conversation->state) . "\n";
+        $text .= 'Anliegen: '.RequirementProfile::intentLabel($this->conversation->intent)."\n";
+        $text .= 'Zustand: '.ConversationState::label($this->conversation->state)."\n";
         $text .= "Bereits bekannt (NICHT noch einmal fragen):\n"
-            . ($zeilen === [] ? "- (nichts)\n" : implode("\n", $zeilen) . "\n");
+            .($zeilen === [] ? "- (nichts)\n" : implode("\n", $zeilen)."\n");
         $text .= "Noch offen (danach fragen, hoechstens zwei Angaben je Nachricht):\n"
-            . ($offen === [] ? "- (nichts)\n" : implode("\n", $offen) . "\n");
+            .($offen === [] ? "- (nichts)\n" : implode("\n", $offen)."\n");
 
         return $text;
     }
@@ -112,13 +113,13 @@ class ConversationContext
     /** Angaben, die schon in der Kundenakte stehen. */
     private function fromCustomer(): array
     {
-        if (!$this->customer) {
+        if (! $this->customer) {
             return [];
         }
 
         $adresse = trim(implode(' ', array_filter([
-            trim(($this->customer->address_street ?? '') . ' ' . ($this->customer->address_house_number ?? '')),
-            trim(($this->customer->address_zip ?? '') . ' ' . ($this->customer->address_city ?? '')),
+            trim(($this->customer->address_street ?? '').' '.($this->customer->address_house_number ?? '')),
+            trim(($this->customer->address_zip ?? '').' '.($this->customer->address_city ?? '')),
         ])));
 
         $name = $this->customer->loadMissing('user')->user?->name;

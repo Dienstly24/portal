@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
@@ -47,7 +48,7 @@ class CommissionController extends Controller
             'totalTaxAmount' => 0,
             'taxType' => 'gross',
             'useCollectiveContact' => true,
-            'remark' => 'Provisionsgutschrift ' . $commission->partner->name,
+            'remark' => 'Provisionsgutschrift '.$commission->partner->name,
             'voucherItems' => [[
                 'amount' => (float) $data['amount'],
                 'taxAmount' => 0,

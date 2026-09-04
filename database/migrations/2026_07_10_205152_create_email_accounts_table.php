@@ -10,8 +10,7 @@ use Illuminate\Support\Facades\Schema;
  * werden über einen encrypted-Cast im Model verschlüsselt (siehe
  * App\Models\EmailAccount) - niemals im Klartext, niemals in .env.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('email_accounts', function (Blueprint $table) {

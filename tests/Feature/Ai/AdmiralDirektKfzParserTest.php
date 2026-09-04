@@ -56,7 +56,7 @@ class AdmiralDirektKfzParserTest extends TestCase
 
     public function test_parses_all_key_fields(): void
     {
-        $r = (new AdmiralDirektKfzParser())->parse($this->letterText());
+        $r = (new AdmiralDirektKfzParser)->parse($this->letterText());
 
         $this->assertNotNull($r);
         $this->assertSame('kfz_vertrag', $r['type']);
@@ -96,9 +96,9 @@ class AdmiralDirektKfzParserTest extends TestCase
     public function test_ignores_check24_protocol_and_unrelated_documents(): void
     {
         $protocol = "Vorlaeufiges Beratungsprotokoll zur Kfz-Versicherung - CHECK24\n"
-            . "Gewaehlter Tarif: AdmiralDirekt Basis";
-        $this->assertNull((new AdmiralDirektKfzParser())->parse($protocol));
+            .'Gewaehlter Tarif: AdmiralDirekt Basis';
+        $this->assertNull((new AdmiralDirektKfzParser)->parse($protocol));
 
-        $this->assertNull((new AdmiralDirektKfzParser())->parse('Irgendein anderes Dokument'));
+        $this->assertNull((new AdmiralDirektKfzParser)->parse('Irgendein anderes Dokument'));
     }
 }

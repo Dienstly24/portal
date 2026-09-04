@@ -23,8 +23,7 @@ use Illuminate\Support\Facades\Schema;
  * schreibt Provisionen. Ohne diese Trennung gaebe es keine ehrliche Vorschau -
  * man saehe erst nach dem Schreiben, was passiert ist.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         // Die INTERNE Vertragsnummer des Fremdsystems (z.B. Maklerpool

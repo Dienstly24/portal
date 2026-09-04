@@ -37,13 +37,13 @@ class EmployeeCustomerManagementTest extends TestCase
     private function customer(array $userAttrs = [], array $customerAttrs = []): Customer
     {
         $user = User::factory()->create(array_merge([
-            'role' => 'customer', 'name' => 'Max Mustermann', 'email' => 'kunde-' . uniqid() . '@kunde.de',
+            'role' => 'customer', 'name' => 'Max Mustermann', 'email' => 'kunde-'.uniqid().'@kunde.de',
         ], $userAttrs));
 
         // fresh() -> id kommt als String aus der DB (nicht als UUID-Objekt),
         // damit attach()/Vergleiche mit den Pivot-IDs sauber matchen.
         return Customer::create(array_merge([
-            'user_id' => $user->id, 'customer_number' => 'K-' . uniqid(),
+            'user_id' => $user->id, 'customer_number' => 'K-'.uniqid(),
         ], $customerAttrs))->fresh();
     }
 
@@ -79,7 +79,7 @@ class EmployeeCustomerManagementTest extends TestCase
         $emp = $this->employee();
         $a = $this->customer(['name' => 'Kennzeichen Kunde']);
         $contract = Contract::create([
-            'customer_id' => $a->id, 'type' => 'kfz', 'insurer' => 'HUK', 'status' => 'active', 'contract_number' => 'V-' . uniqid(),
+            'customer_id' => $a->id, 'type' => 'kfz', 'insurer' => 'HUK', 'status' => 'active', 'contract_number' => 'V-'.uniqid(),
         ]);
         ContractVehicleDetail::create(['contract_id' => $contract->id, 'license_plate' => 'RD-XX 777']);
         $b = $this->customer(['name' => 'Anderer Kunde']);

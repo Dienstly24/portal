@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\User;
+use App\Support\PasswordPolicy;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 
@@ -27,7 +28,7 @@ class SetAdminPassword extends Command
         // Gleiche Mindestlaenge wie in der Oberflaeche (PasswordPolicy) -
         // ein CLI-Hintertuerchen mit schwaecherer Regel macht die Regel
         // wertlos. Ein Admin-Konto sieht alle Kundendaten.
-        $minimum = \App\Support\PasswordPolicy::MIN_STAFF;
+        $minimum = PasswordPolicy::MIN_STAFF;
         if (mb_strlen($password) < $minimum) {
             $this->error("Passwort muss mindestens {$minimum} Zeichen lang sein.");
             return self::FAILURE;

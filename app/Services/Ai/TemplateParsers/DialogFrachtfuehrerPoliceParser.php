@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Models\Contract;
@@ -44,9 +45,9 @@ class DialogFrachtfuehrerPoliceParser implements DocumentTemplateParser
         if ($this->looksLikeComparisonProtocol($this->text)) {
             return null;
         }
-        if (!str_contains($upper, 'DIALOG VERSICHERUNG')
-            || (!str_contains($upper, 'VERKEHRSHAFTUNGSSCHUTZ')
-                && !str_contains($upper, 'FRACHTFÜHRERHAFTUNGSVERSICHERUNG'))) {
+        if (! str_contains($upper, 'DIALOG VERSICHERUNG')
+            || (! str_contains($upper, 'VERKEHRSHAFTUNGSSCHUTZ')
+                && ! str_contains($upper, 'FRACHTFÜHRERHAFTUNGSVERSICHERUNG'))) {
             return null;
         }
 
@@ -58,7 +59,7 @@ class DialogFrachtfuehrerPoliceParser implements DocumentTemplateParser
         }
         $person = $this->parsePerson();
 
-        $who = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $who = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         if ($who === '') {
             $who = (string) ($person['company_name'] ?? '');
         }
@@ -67,11 +68,11 @@ class DialogFrachtfuehrerPoliceParser implements DocumentTemplateParser
             'type' => 'versicherungspolice',
             'confidence' => 78,
             'summary' => 'Dialog Versicherungsschein - Frachtfuehrerhaftpflicht (Verkehrshaftungsschutz)'
-                . ($who !== '' ? ' - ' . $who : '')
-                . ' - Vertrag ' . $insurance['contract_number']
-                . $this->extras()
-                . ' Felder gratis aus dem Versicherungsschein gelesen (ohne KI).',
-            'title' => 'Dialog Frachtfuehrerhaftpflicht' . ($who !== '' ? ' - ' . $who : ''),
+                .($who !== '' ? ' - '.$who : '')
+                .' - Vertrag '.$insurance['contract_number']
+                .$this->extras()
+                .' Felder gratis aus dem Versicherungsschein gelesen (ohne KI).',
+            'title' => 'Dialog Frachtfuehrerhaftpflicht'.($who !== '' ? ' - '.$who : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -94,7 +95,7 @@ class DialogFrachtfuehrerPoliceParser implements DocumentTemplateParser
         // Versicherung (Ansprechpartner, Telefon, E-Mail) - nur linke Zellen.
         foreach ($this->lines as $i => $line) {
             $anker = $this->leftCell($line);
-            if (!preg_match('/^(Firma|Herrn?|Frau)$/u', $anker, $a)) {
+            if (! preg_match('/^(Firma|Herrn?|Frau)$/u', $anker, $a)) {
                 continue;
             }
             if ($a[1] !== 'Firma') {
@@ -111,7 +112,7 @@ class DialogFrachtfuehrerPoliceParser implements DocumentTemplateParser
                     $raw['city'] = trim($z[2]);
                     break;
                 }
-                if (!isset($raw['street'])
+                if (! isset($raw['street'])
                     && preg_match('/^(.*\p{L}\.?)\s+(\d+\s*[a-zA-Z]?)$/u', $left, $s)
                     && preg_match('/\p{L}{3,}/u', $s[1])) {
                     $raw['street'] = trim($s[1]);
@@ -119,7 +120,7 @@ class DialogFrachtfuehrerPoliceParser implements DocumentTemplateParser
                     continue;
                 }
                 // Mehrwortiger Name = Person (letztes Wort Nachname) ...
-                if (!isset($raw['last_name'])
+                if (! isset($raw['last_name'])
                     && preg_match('/^[A-ZÄÖÜ][\p{L}\-]+(?:\s+[A-ZÄÖÜ][\p{L}\-]+){1,3}$/u', $left)) {
                     $parts = preg_split('/\s+/', $left) ?: [];
                     $raw['last_name'] = array_pop($parts);
@@ -127,7 +128,7 @@ class DialogFrachtfuehrerPoliceParser implements DocumentTemplateParser
                     continue;
                 }
                 // ... EIN Wort direkt unter "Firma" = der Firmenname.
-                if (!isset($raw['company_name']) && $anker === 'Firma'
+                if (! isset($raw['company_name']) && $anker === 'Firma'
                     && preg_match('/^[\p{L}\d&.\- ]{2,60}$/u', $left)) {
                     $raw['company_name'] = $left;
                 }
@@ -136,10 +137,10 @@ class DialogFrachtfuehrerPoliceParser implements DocumentTemplateParser
         }
 
         // Absicherung: "Versicherungsnehmer: RANKO" bestaetigt den Firmennamen.
-        if (!isset($raw['company_name'])
+        if (! isset($raw['company_name'])
             && preg_match('/Versicherungsnehmer:\s*(\S[^\r\n]*?)\s*$/mu', $this->text, $m)) {
             $vn = trim($m[1]);
-            $full = trim(($raw['first_name'] ?? '') . ' ' . ($raw['last_name'] ?? ''));
+            $full = trim(($raw['first_name'] ?? '').' '.($raw['last_name'] ?? ''));
             if ($vn !== '' && mb_strtolower($vn) !== mb_strtolower($full)) {
                 $raw['company_name'] = $vn;
             }
@@ -187,7 +188,7 @@ class DialogFrachtfuehrerPoliceParser implements DocumentTemplateParser
     {
         $out = '.';
         if (preg_match('/Selbstbehalt[\s\S]{0,200}?beträgt:\s*([\d.]+)\s*EUR/u', $this->text, $m)) {
-            $out .= ' Selbstbehalt ' . $m[1] . ' EUR.';
+            $out .= ' Selbstbehalt '.$m[1].' EUR.';
         }
         if (preg_match('/vierteljährlich im Voraus/u', $this->text)) {
             $out .= ' Zahlbar vierteljaehrlich im Voraus.';
@@ -202,14 +203,14 @@ class DialogFrachtfuehrerPoliceParser implements DocumentTemplateParser
             if (preg_match('/Zulässiges Gewicht:\s*(\S[^\r\n]*?)\s*$/mu', $this->text, $g)) {
                 $details[] = trim($g[1]);
             }
-            $out .= ' Versichertes Fahrzeug: ' . $fahrzeug
-                . ($details !== [] ? ' (' . implode(', ', $details) . ')' : '') . '.';
+            $out .= ' Versichertes Fahrzeug: '.$fahrzeug
+                .($details !== [] ? ' ('.implode(', ', $details).')' : '').'.';
         }
         // Spaltenlayout: "Ausfertigungsgrund:" und der Wert ("Neuantrag")
         // stehen in getrennten Zeilen der rechten Spalte.
         if (str_contains($this->text, 'Ausfertigungsgrund')
             && preg_match('/\b(Neuantrag|Ersatzausfertigung|Nachtrag)\b/u', $this->text, $m)) {
-            $out .= ' Ausfertigungsgrund: ' . $m[1] . '.';
+            $out .= ' Ausfertigungsgrund: '.$m[1].'.';
         }
         return $out;
     }

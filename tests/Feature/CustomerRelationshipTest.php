@@ -27,7 +27,7 @@ class CustomerRelationshipTest extends TestCase
         $user = User::factory()->create(['role' => 'customer', 'name' => $name, 'email' => $email]);
         return Customer::create(array_merge([
             'user_id' => $user->id,
-            'customer_number' => 'C-' . strtoupper(substr(md5($email . microtime()), 0, 8)),
+            'customer_number' => 'C-'.strtoupper(substr(md5($email.microtime()), 0, 8)),
         ], $attrs));
     }
 
@@ -120,7 +120,7 @@ class CustomerRelationshipTest extends TestCase
         $this->actingAs($this->admin())->post(route('admin.customers.duplicates.dismiss'), [
             'customer_a' => (string) $a->id,
             'customer_b' => (string) $b->id,
-            'type'       => 'spouse',
+            'type' => 'spouse',
         ])->assertRedirect();
 
         // Beziehung als Ehepaar gespeichert ...

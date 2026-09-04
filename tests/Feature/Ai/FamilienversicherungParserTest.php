@@ -32,7 +32,7 @@ class FamilienversicherungParserTest extends TestCase
 
     public function test_parses_member_and_relatives(): void
     {
-        $result = (new FamilienversicherungParser())->parse($this->famText());
+        $result = (new FamilienversicherungParser)->parse($this->famText());
 
         $this->assertNotNull($result);
         $this->assertSame('familienversicherung', $result['type']);
@@ -58,7 +58,7 @@ class FamilienversicherungParserTest extends TestCase
     {
         // Der bestehende Kranken-Familien-Workflow (detectPersons) muss Mitglied
         // + Angehoerige sehen -> Haupt-Frage + familienversichert.
-        $data = (new FamilienversicherungParser())->parse($this->famText())['data'];
+        $data = (new FamilienversicherungParser)->parse($this->famText())['data'];
         $doc = new Document(['ai_extracted' => $data]);
 
         $persons = app(FamilyBundleService::class)->detectPersons([$doc]);
@@ -72,9 +72,9 @@ class FamilienversicherungParserTest extends TestCase
 
     public function test_returns_null_for_non_family_document(): void
     {
-        $this->assertNull((new FamilienversicherungParser())->parse(
-            "Beitrittserklärung KKH Krankenversicherungsnummer A004167047"
+        $this->assertNull((new FamilienversicherungParser)->parse(
+            'Beitrittserklärung KKH Krankenversicherungsnummer A004167047'
         ));
-        $this->assertNull((new FamilienversicherungParser())->parse("Irgendein Text"));
+        $this->assertNull((new FamilienversicherungParser)->parse('Irgendein Text'));
     }
 }

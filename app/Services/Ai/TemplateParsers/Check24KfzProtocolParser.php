@@ -1,8 +1,10 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Services\Ai\Concerns\ValidatesExtractedFields;
 use App\Services\Ai\Contracts\DocumentTemplateParser;
+use App\Support\GermanPhone;
 
 /**
  * Gratis-Parser fuer das CHECK24-Beratungsprotokoll zur Kfz-Versicherung.
@@ -46,8 +48,8 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
     {
         // Nur zustaendig fuer das CHECK24-Kfz-Beratungsprotokoll.
         $upper = mb_strtoupper($text);
-        if (!str_contains($upper, 'BERATUNGSPROTOKOLL') || !str_contains($upper, 'KFZ')
-            || !str_contains($upper, 'CHECK24')) {
+        if (! str_contains($upper, 'BERATUNGSPROTOKOLL') || ! str_contains($upper, 'KFZ')
+            || ! str_contains($upper, 'CHECK24')) {
             return null;
         }
 
@@ -68,30 +70,30 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
             // Pruefung (der Kunde wird i.d.R. neu angelegt).
             'confidence' => 75,
             'summary' => 'CHECK24-Beratungsprotokoll Kfz - Felder gratis aus der Textebene gelesen (ohne KI).'
-                . (isset($versicherung['insurer'])
-                    ? ' Gewaehlt: ' . $versicherung['insurer']
-                        . (isset($versicherung['tariff']) ? ' ' . $versicherung['tariff'] : '') . '.'
+                .(isset($versicherung['insurer'])
+                    ? ' Gewaehlt: '.$versicherung['insurer']
+                        .(isset($versicherung['tariff']) ? ' '.$versicherung['tariff'] : '').'.'
                     : '')
-                . (in_array('werkstattbindung', $kfz['extras'] ?? [], true) ? ' Mit Werkstattbindung.' : '')
-                . (isset($kfz['has_teilkasko']) || isset($kfz['has_vollkasko'])
-                    ? ' Deckung: ' . $this->coverageSummary($kfz) . '.'
+                .(in_array('werkstattbindung', $kfz['extras'] ?? [], true) ? ' Mit Werkstattbindung.' : '')
+                .(isset($kfz['has_teilkasko']) || isset($kfz['has_vollkasko'])
+                    ? ' Deckung: '.$this->coverageSummary($kfz).'.'
                     : '')
-                . (isset($versicherung['previous_insurer'])
-                    ? ' Vorversicherung: ' . $versicherung['previous_insurer']
-                        . (isset($versicherung['previous_insurance_since']) ? ' (' . $versicherung['previous_insurance_since'] . ')' : '') . '.'
+                .(isset($versicherung['previous_insurer'])
+                    ? ' Vorversicherung: '.$versicherung['previous_insurer']
+                        .(isset($versicherung['previous_insurance_since']) ? ' ('.$versicherung['previous_insurance_since'].')' : '').'.'
                     : '')
-                . (isset($kfz['sf_liability_class'])
-                    ? ' SF-Klasse Haftpflicht: SF ' . $kfz['sf_liability_class']
-                        . (($kfz['sf_liability_type'] ?? null) === 'sondereinstufung'
+                .(isset($kfz['sf_liability_class'])
+                    ? ' SF-Klasse Haftpflicht: SF '.$kfz['sf_liability_class']
+                        .(($kfz['sf_liability_type'] ?? null) === 'sondereinstufung'
                             ? ' (Sondereinstufung, nicht uebertragbar'
-                                . (isset($kfz['sf_liability_real_class']) ? '; echte Klasse SF ' . $kfz['sf_liability_real_class'] : '')
-                                . ')'
+                                .(isset($kfz['sf_liability_real_class']) ? '; echte Klasse SF '.$kfz['sf_liability_real_class'] : '')
+                                .')'
                             : '')
-                        . '.'
+                        .'.'
                     : '')
-                . (isset($versicherung['end_date']) ? ' Ablauf der Versicherung: ' . $this->displayDate($versicherung['end_date']) . '.' : ''),
+                .(isset($versicherung['end_date']) ? ' Ablauf der Versicherung: '.$this->displayDate($versicherung['end_date']).'.' : ''),
             'title' => 'Beratungsprotokoll Kfz'
-                . (isset($versicherung['insurer']) ? ' ' . $versicherung['insurer'] : ''),
+                .(isset($versicherung['insurer']) ? ' '.$versicherung['insurer'] : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $versicherung,
@@ -185,7 +187,7 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
             $raw['teilkasko_deductible'] = (int) str_replace('.', '', $m[1]);
         }
         // Fallback: nur EIN Betrag ohne VK/TK-Kennung.
-        if (!isset($raw['vollkasko_deductible']) && !isset($raw['teilkasko_deductible'])
+        if (! isset($raw['vollkasko_deductible']) && ! isset($raw['teilkasko_deductible'])
             && $sb !== '' && preg_match('/([\d.]+)\s*€/u', $sb, $m)) {
             $deductible = (int) str_replace('.', '', $m[1]);
             if ($hasVoll) {
@@ -248,7 +250,7 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
             }
             // Beitrag zum gewaehlten Tarif aus der Vergleichstabelle lesen
             // (dieselbe Tarifzeile traegt dort den Monatsbeitrag).
-            if (preg_match('/' . preg_quote($tariffLine, '/') . '\s+([\d.]+,\d{2})\s*€/u', $text, $m)) {
+            if (preg_match('/'.preg_quote($tariffLine, '/').'\s+([\d.]+,\d{2})\s*€/u', $text, $m)) {
                 $raw['premium_amount'] = (float) str_replace(['.', ','], ['', '.'], $m[1]);
                 $raw['premium_interval'] = $this->interval((string) $this->label($text, 'Zahlweise')) ?? 'monthly';
             }
@@ -260,7 +262,7 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
         // -> Vertragsablauf (Spaltenlayout ohne Doppelpunkt). Bisher musste der
         // Betrieb dieses Datum bei einem Wechsel von Hand nachtragen.
         if (preg_match('/Ablauf der Versicherung\s+(\d{2})\.(\d{2})\.(\d{4})/u', $text, $m)) {
-            $raw['end_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['end_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
 
         // Gesamtbeitrag (inkl. Versicherungssteuer)  222,65 € vierteljährlich
@@ -311,11 +313,11 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
     private function coverageSummary(array $kfz): string
     {
         $parts = ['Haftpflicht'];
-        if (!empty($kfz['has_teilkasko'])) {
-            $parts[] = 'Teilkasko' . (isset($kfz['teilkasko_deductible']) ? ' (' . $kfz['teilkasko_deductible'] . ' EUR SB)' : '');
+        if (! empty($kfz['has_teilkasko'])) {
+            $parts[] = 'Teilkasko'.(isset($kfz['teilkasko_deductible']) ? ' ('.$kfz['teilkasko_deductible'].' EUR SB)' : '');
         }
-        if (!empty($kfz['has_vollkasko'])) {
-            $parts[] = 'Vollkasko' . (isset($kfz['vollkasko_deductible']) ? ' (' . $kfz['vollkasko_deductible'] . ' EUR SB)' : '');
+        if (! empty($kfz['has_vollkasko'])) {
+            $parts[] = 'Vollkasko'.(isset($kfz['vollkasko_deductible']) ? ' ('.$kfz['vollkasko_deductible'].' EUR SB)' : '');
         }
         return implode(', ', $parts);
     }
@@ -342,7 +344,7 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
         if (preg_match_all('/([^\r\n]+)\R+\s*Angaben ohne Gew[aä]hr/u', $text, $all) === 1) {
             $line = trim($all[1][0]);
             // Plausibel: kurzer Titel, keine Beschriftungszeile ("...:").
-            if ($line !== '' && mb_strlen($line) <= 90 && !str_ends_with($line, ':')) {
+            if ($line !== '' && mb_strlen($line) <= 90 && ! str_ends_with($line, ':')) {
                 return $line;
             }
         }
@@ -362,7 +364,7 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
         $line = trim($line);
         $best = null;
         foreach (self::KNOWN_INSURERS as $name) {
-            if (preg_match('/^' . preg_quote($name, '/') . '(?=\s|$)/iu', $line)
+            if (preg_match('/^'.preg_quote($name, '/').'(?=\s|$)/iu', $line)
                 && ($best === null || mb_strlen($name) > mb_strlen($best))) {
                 $best = $name;
             }
@@ -396,7 +398,7 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
         }
         // Schutzbrief / Fahrerschutz nur bei ausdruecklichem "gewuenscht: ja".
         foreach (['Schutzbrief' => 'schutzbrief', 'Fahrerschutz' => 'fahrerschutz'] as $labelText => $key) {
-            $val = $this->label($text, $labelText . ' gewünscht');
+            $val = $this->label($text, $labelText.' gewünscht');
             if ($val !== null && mb_strtolower(trim($val)) === 'ja') {
                 $extras[] = $key;
             }
@@ -413,13 +415,13 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
      */
     private function label(string $text, string $label): ?string
     {
-        $pattern = '/' . preg_quote($label, '/') . '\s*:\s*([^\n]+?)(?:\s{2,}|$)/um';
+        $pattern = '/'.preg_quote($label, '/').'\s*:\s*([^\n]+?)(?:\s{2,}|$)/um';
         return preg_match($pattern, $text, $m) ? trim($m[1]) : null;
     }
 
     private function afterWord(string $text, string $word): ?string
     {
-        return preg_match('/' . preg_quote($word, '/') . '\s+([^\s]+)/u', $text, $m) ? $m[1] : null;
+        return preg_match('/'.preg_quote($word, '/').'\s+([^\s]+)/u', $text, $m) ? $m[1] : null;
     }
 
     /** Erste E-Mail, die NICHT von CHECK24 stammt (= die des Kunden). */
@@ -442,7 +444,7 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
         // Telefon uebernommen.
         if (preg_match_all('/\b(0\d{9,14})\b/', $text, $mm)) {
             foreach ($mm[1] as $candidate) {
-                if (\App\Support\GermanPhone::isMobile($candidate) || \App\Support\GermanPhone::isLandline($candidate)) {
+                if (GermanPhone::isMobile($candidate) || GermanPhone::isLandline($candidate)) {
                     return $candidate;
                 }
             }
@@ -460,7 +462,7 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
                 $name = ($cols[0] ?? '');
                 $street = $cols[1] ?? null;
                 // Name muss wie ein Name aussehen (>= 2 Woerter, nur Buchstaben).
-                if (!preg_match('/^[A-Za-zÄÖÜäöüß\-]+(?:\s+[A-Za-zÄÖÜäöüß\-]+)+$/u', $name)) {
+                if (! preg_match('/^[A-Za-zÄÖÜäöüß\-]+(?:\s+[A-Za-zÄÖÜäöüß\-]+)+$/u', $name)) {
                     $name = null;
                 }
                 return [$name ?: null, $street];
@@ -472,7 +474,7 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
     private function germanDate(?string $value): ?string
     {
         if ($value !== null && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $value, $m)) {
-            return $m[3] . '-' . $m[2] . '-' . $m[1];
+            return $m[3].'-'.$m[2].'-'.$m[1];
         }
         return null;
     }
@@ -480,7 +482,7 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
     /** ISO-Datum ("2027-06-29") fuer die Anzeige nach "29.06.2027". */
     private function displayDate(string $iso): string
     {
-        return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $iso, $m) ? $m[3] . '.' . $m[2] . '.' . $m[1] : $iso;
+        return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $iso, $m) ? $m[3].'.'.$m[2].'.'.$m[1] : $iso;
     }
 
     /**
@@ -495,8 +497,7 @@ class Check24KfzProtocolParser implements DocumentTemplateParser
         return match (true) {
             str_contains($z, 'zweitwagen') => 'zweitwagen',
             str_contains($z, 'drittwagen') => 'drittwagen',
-            str_contains($z, 'führerschein') || str_contains($z, 'fuehrerschein') =>
-                str_contains($z, '5') ? 'fuehrerschein_5' : 'fuehrerschein_3',
+            str_contains($z, 'führerschein') || str_contains($z, 'fuehrerschein') => str_contains($z, '5') ? 'fuehrerschein_5' : 'fuehrerschein_3',
             str_contains($z, 'familie') => 'familie',
             str_contains($z, 'firmen') => 'firmenfahrzeug',
             str_contains($z, 'sonderaktion') => 'sonderaktion',

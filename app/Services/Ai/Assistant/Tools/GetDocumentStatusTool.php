@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Tools;
 
 use App\Models\Document;
@@ -28,15 +29,15 @@ class GetDocumentStatusTool implements AssistantTool
     public function description(): string
     {
         return 'Pruefe, welche Dokumente des angemeldeten Kunden EINGEGANGEN sind und in '
-            . 'welchem Pruefstand sie stehen. Nutze das, wenn der Kunde sagt, er habe '
-            . 'etwas hochgeladen, oder nach dem Stand eines Dokuments fragt. Ein '
-            . 'eingegangenes Dokument ist NICHT automatisch geprueft oder anerkannt - '
-            . 'sage nur, dass es eingegangen ist und geprueft wird.';
+            .'welchem Pruefstand sie stehen. Nutze das, wenn der Kunde sagt, er habe '
+            .'etwas hochgeladen, oder nach dem Stand eines Dokuments fragt. Ein '
+            .'eingegangenes Dokument ist NICHT automatisch geprueft oder anerkannt - '
+            .'sage nur, dass es eingegangen ist und geprueft wird.';
     }
 
     public function parameters(): array
     {
-        return ['type' => 'object', 'properties' => new \stdClass(), 'required' => []];
+        return ['type' => 'object', 'properties' => new \stdClass, 'required' => []];
     }
 
     public function isWriting(): bool

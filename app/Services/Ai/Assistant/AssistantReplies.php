@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant;
 
 /**
@@ -23,41 +24,41 @@ class AssistantReplies
     /** Anfrage liegt ausserhalb des Kundenservice-Bereichs. */
     public const OUT_OF_SCOPE = [
         'de' => 'Diese Anfrage liegt außerhalb unseres Kundenservice-Bereichs. Gerne kann unser '
-            . 'Team Ihre Anfrage persönlich bearbeiten – ich habe sie an unser zuständiges Team '
-            . 'weitergeleitet.',
+            .'Team Ihre Anfrage persönlich bearbeiten – ich habe sie an unser zuständiges Team '
+            .'weitergeleitet.',
         'en' => 'This request is outside our customer service scope. Our team will be happy to '
-            . 'help you personally – I have forwarded your request to the responsible team.',
+            .'help you personally – I have forwarded your request to the responsible team.',
         'ar' => 'هذا الطلب خارج نطاق خدمة العملاء لدينا. يسعد فريقنا بمساعدتك شخصياً – لقد أحلت '
-            . 'طلبك إلى الفريق المختص.',
+            .'طلبك إلى الفريق المختص.',
     ];
 
     /** Uebergabe an das Team (Unsicherheit, sensibler Fall, Kundenwunsch). */
     public const HANDOVER = [
         'de' => 'Diese Anfrage möchte ich sicherheitshalber von unserem zuständigen Team prüfen '
-            . 'lassen. Ich habe Ihre Anfrage weitergeleitet – unser Team meldet sich bei Ihnen.',
+            .'lassen. Ich habe Ihre Anfrage weitergeleitet – unser Team meldet sich bei Ihnen.',
         'en' => 'To be on the safe side, I would like our responsible team to review this request. '
-            . 'I have forwarded it – our team will get back to you.',
+            .'I have forwarded it – our team will get back to you.',
         'ar' => 'أفضل أن يقوم فريقنا المختص بمراجعة هذا الطلب للتأكد. لقد أحلت طلبك – وسيتواصل '
-            . 'معك فريقنا.',
+            .'معك فريقنا.',
     ];
 
     /** KI-Dienst nicht erreichbar (Abschnitt 31). */
     public const FALLBACK = [
         'de' => 'Unser automatischer Assistent ist momentan nicht verfügbar. Ihre Anfrage wurde '
-            . 'aufgenommen und wird von unserem Team bearbeitet.',
+            .'aufgenommen und wird von unserem Team bearbeitet.',
         'en' => 'Our automated assistant is currently unavailable. Your request has been recorded '
-            . 'and will be handled by our team.',
+            .'and will be handled by our team.',
         'ar' => 'مساعدنا الآلي غير متاح حالياً. تم تسجيل طلبك وسيتولى فريقنا معالجته.',
     ];
 
     /** Grenze automatischer Antworten erreicht (Abschnitt 30). */
     public const LIMIT = [
         'de' => 'Damit Ihr Anliegen richtig bearbeitet wird, übernimmt ab hier ein Mitarbeiter '
-            . 'unseres Teams. Ihre Anfrage liegt bereits vor – wir melden uns bei Ihnen.',
+            .'unseres Teams. Ihre Anfrage liegt bereits vor – wir melden uns bei Ihnen.',
         'en' => 'To make sure your request is handled properly, a member of our team will take '
-            . 'over from here. Your request has been recorded – we will get back to you.',
+            .'over from here. Your request has been recorded – we will get back to you.',
         'ar' => 'لضمان معالجة طلبك بشكل صحيح، سيتولى أحد موظفي فريقنا المتابعة من هنا. طلبك مسجل '
-            . 'لدينا – وسنتواصل معك.',
+            .'لدينا – وسنتواصل معك.',
     ];
 
     /**

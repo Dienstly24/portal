@@ -22,20 +22,20 @@ class BladeCompileTest extends TestCase
         $checked = 0;
 
         foreach (File::allFiles(resource_path('views')) as $file) {
-            if (!str_ends_with($file->getFilename(), '.blade.php')) {
+            if (! str_ends_with($file->getFilename(), '.blade.php')) {
                 continue;
             }
             $compiled = $compiler->compileString(File::get($file->getPathname()));
             try {
                 // TOKEN_PARSE wirft ParseError bei syntaktisch ungueltigem PHP
-                token_get_all('<?php ?>' . $compiled, TOKEN_PARSE);
+                token_get_all('<?php ?>'.$compiled, TOKEN_PARSE);
                 $checked++;
             } catch (\ParseError $e) {
-                $errors[] = $file->getRelativePathname() . ': ' . $e->getMessage();
+                $errors[] = $file->getRelativePathname().': '.$e->getMessage();
             }
         }
 
-        $this->assertSame([], $errors, "Blade-Views mit ungueltigem PHP:\n" . implode("\n", $errors));
+        $this->assertSame([], $errors, "Blade-Views mit ungueltigem PHP:\n".implode("\n", $errors));
         $this->assertGreaterThan(50, $checked, 'Es wurden verdaechtig wenige Views geprueft.');
     }
 }

@@ -86,7 +86,7 @@ class MetaSocialPublishingTest extends TestCase
             if (str_contains($url, '/M900')) {
                 return Http::response(['id' => 'M900', 'permalink' => 'https://www.instagram.com/p/abc123/']);
             }
-            return Http::response(['error' => ['message' => 'Unerwarteter Aufruf: ' . $url]], 400);
+            return Http::response(['error' => ['message' => 'Unerwarteter Aufruf: '.$url]], 400);
         });
     }
 
@@ -132,7 +132,7 @@ class MetaSocialPublishingTest extends TestCase
         $this->assertSame('M900', $ch->external_post_id);
         $this->assertSame('https://www.instagram.com/p/abc123/', $ch->external_url);
 
-        Http::assertSent(fn ($r) => str_contains($r->url(), '/IG1/media') && !str_contains($r->url(), 'media_publish'));
+        Http::assertSent(fn ($r) => str_contains($r->url(), '/IG1/media') && ! str_contains($r->url(), 'media_publish'));
         Http::assertSent(fn ($r) => str_contains($r->url(), '/IG1/media_publish') && ($r['creation_id'] ?? '') === 'C500');
     }
 
@@ -302,7 +302,7 @@ class MetaSocialPublishingTest extends TestCase
         $this->actingAs($this->admin)->post(route('admin.banners.social.save', $banner->id), [
             'caption_de' => 'x', 'platforms' => ['facebook'],
             'auto_publish' => 1,
-            'scheduled_for' => now(\App\Models\BannerSocialPost::OPERATOR_TZ)->subMinutes(30)->format('Y-m-d\TH:i'),
+            'scheduled_for' => now(BannerSocialPost::OPERATOR_TZ)->subMinutes(30)->format('Y-m-d\TH:i'),
         ])->assertSessionHasErrors('scheduled_for');
 
         $this->assertNull(BannerSocialPost::where('banner_id', $banner->id)->first()->scheduled_for);

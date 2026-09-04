@@ -4,8 +4,9 @@ namespace App\Services;
 
 use App\Models\Ticket;
 use App\Models\User;
-use App\Support\Facades\Notify;
 use App\Services\Notifications\NotificationService;
+use App\Support\Facades\Notify;
+use Illuminate\Support\Str;
 
 /**
  * Benachrichtigt das zuständige Team über eine neue Kundenanfrage (Ticket).
@@ -27,15 +28,15 @@ class TicketNotifier
         // Wer hat die Anfrage gestellt?
         if ($ticket->customer) {
             $wer = $ticket->customer->user?->name
-                ?: trim(($ticket->customer->first_name ?? '') . ' ' . ($ticket->customer->last_name ?? ''))
+                ?: trim(($ticket->customer->first_name ?? '').' '.($ticket->customer->last_name ?? ''))
                 ?: 'Kunde';
-            $wer .= ' (Nr. ' . $ticket->customer->customer_number . ')';
+            $wer .= ' (Nr. '.$ticket->customer->customer_number.')';
         } else {
             $wer = ($ticket->guest_name ?: 'Gast')
-                . ($ticket->guest_email ? ' <' . $ticket->guest_email . '>' : '');
+                .($ticket->guest_email ? ' <'.$ticket->guest_email.'>' : '');
         }
 
-        $body = $wer . ' – ' . \Illuminate\Support\Str::limit($ticket->subject, 70);
+        $body = $wer.' – '.Str::limit($ticket->subject, 70);
         $link = route('admin.ticket', $ticket->id);
 
         // Empfängerkreis bestimmen
@@ -52,7 +53,7 @@ class TicketNotifier
             'title' => '🎫 Neue Support-Anfrage',
             'body' => $body,
             'link' => $link,
-            'dedup_key' => 'ticket-new-' . $ticket->id,
+            'dedup_key' => 'ticket-new-'.$ticket->id,
         ]);
     }
 
@@ -67,10 +68,10 @@ class TicketNotifier
         Notify::push($assignee->id, [
             'type' => NotificationService::TYPE_TICKET,
             'title' => '🎫 Ticket zugewiesen',
-            'body' => ($ticket->ticket_number ? $ticket->ticket_number . ' – ' : '')
-                . \Illuminate\Support\Str::limit($ticket->subject, 70),
+            'body' => ($ticket->ticket_number ? $ticket->ticket_number.' – ' : '')
+                .Str::limit($ticket->subject, 70),
             'link' => route('admin.ticket', $ticket->id),
-            'dedup_key' => 'ticket-assigned-' . $ticket->id,
+            'dedup_key' => 'ticket-assigned-'.$ticket->id,
         ]);
     }
 
@@ -82,7 +83,7 @@ class TicketNotifier
     public static function notifyCustomerStatus(Ticket $ticket, bool $reopened = false): void
     {
         $ticket->loadMissing('customer.user');
-        if (!$ticket->customer?->user_id) {
+        if (! $ticket->customer?->user_id) {
             return;
         }
         $text = match ($ticket->status) {
@@ -96,15 +97,15 @@ class TicketNotifier
                 : 'Ihre Anfrage „:s" ist jetzt in Bearbeitung.',
             default => null,
         };
-        if (!$text) {
+        if (! $text) {
             return;
         }
         Notify::push($ticket->customer->user_id, [
             'type' => NotificationService::TYPE_TICKET,
             'title' => 'Status Ihrer Anfrage',
-            'body' => str_replace(':s', \Illuminate\Support\Str::limit($ticket->subject, 60), $text),
+            'body' => str_replace(':s', Str::limit($ticket->subject, 60), $text),
             'link' => route('portal.tickets.show', $ticket->id),
-            'dedup_key' => 'ticket-status-' . $ticket->id . '-' . $ticket->status,
+            'dedup_key' => 'ticket-status-'.$ticket->id.'-'.$ticket->status,
         ]);
     }
 
@@ -129,7 +130,7 @@ class TicketNotifier
             'title' => $title,
             'body' => $text,
             'link' => route('admin.ticket', $ticket->id),
-            'dedup_key' => 'ticket-team-' . $ticket->id . '-' . md5($title),
+            'dedup_key' => 'ticket-team-'.$ticket->id.'-'.md5($title),
         ]);
     }
 
@@ -139,12 +140,12 @@ class TicketNotifier
     public static function notifyCustomerReply(Ticket $ticket): void
     {
         $ticket->loadMissing('customer.user');
-        if (!$ticket->customer) {
+        if (! $ticket->customer) {
             return;
         }
 
         $name = $ticket->customer->user?->name ?: 'Kunde';
-        $body = $name . ' hat auf „' . \Illuminate\Support\Str::limit($ticket->subject, 60) . '" geantwortet.';
+        $body = $name.' hat auf „'.Str::limit($ticket->subject, 60).'" geantwortet.';
         $link = route('admin.ticket', $ticket->id);
 
         // Auch der zugewiesene Bearbeiter muss es erfahren - er ist nicht
@@ -162,7 +163,7 @@ class TicketNotifier
             'title' => '💬 Neue Ticket-Antwort',
             'body' => $body,
             'link' => $link,
-            'dedup_key' => 'ticket-reply-' . $ticket->id,
+            'dedup_key' => 'ticket-reply-'.$ticket->id,
         ]);
     }
 }

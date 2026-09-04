@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\TemplateParsers;
 
 use App\Services\Ai\Concerns\ReadsDocumentPages;
@@ -36,8 +37,8 @@ class AdacAutoversicherungParser implements DocumentTemplateParser
         if ($this->looksLikeComparisonProtocol($text)) {
             return null;
         }
-        if (!str_contains($upper, 'ADAC AUTOVERSICHERUNG')
-            || (!str_contains($upper, 'KFZ-VERSICHERUNG') && !str_contains($upper, 'SCHADENFREIHEITSKLASSE'))) {
+        if (! str_contains($upper, 'ADAC AUTOVERSICHERUNG')
+            || (! str_contains($upper, 'KFZ-VERSICHERUNG') && ! str_contains($upper, 'SCHADENFREIHEITSKLASSE'))) {
             return null;
         }
 
@@ -53,17 +54,17 @@ class AdacAutoversicherungParser implements DocumentTemplateParser
             return null;
         }
 
-        $name = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? ''));
+        $name = trim(($person['first_name'] ?? '').' '.($person['last_name'] ?? ''));
         $plate = $vehicle['license_plate'] ?? null;
         return [
             'type' => 'kfz_vertrag',
             'confidence' => 75,
             'summary' => 'ADAC-Autoversicherung (Kfz-Vertrag)'
-                . ($name !== '' ? ' - ' . $name : '')
-                . ($plate !== null ? ' - ' . $plate : '')
-                . (isset($vehicle['sf_liability_class']) ? ' - SF ' . $vehicle['sf_liability_class'] . ' (Haftpflicht)' : '')
-                . ' - Felder gratis aus dem Schreiben gelesen (ohne KI).',
-            'title' => 'ADAC Kfz-Versicherung' . ($name !== '' ? ' ' . $name : ''),
+                .($name !== '' ? ' - '.$name : '')
+                .($plate !== null ? ' - '.$plate : '')
+                .(isset($vehicle['sf_liability_class']) ? ' - SF '.$vehicle['sf_liability_class'].' (Haftpflicht)' : '')
+                .' - Felder gratis aus dem Schreiben gelesen (ohne KI).',
+            'title' => 'ADAC Kfz-Versicherung'.($name !== '' ? ' '.$name : ''),
             'data' => [
                 'person' => $person,
                 'versicherung' => $insurance,
@@ -84,7 +85,7 @@ class AdacAutoversicherungParser implements DocumentTemplateParser
     {
         $raw = [];
         foreach ($lines as $i => $line) {
-            if (!preg_match('/^\s*(Herrn|Herr|Frau)\s*$/u', trim($line))) {
+            if (! preg_match('/^\s*(Herrn|Herr|Frau)\s*$/u', trim($line))) {
                 continue;
             }
             // Folgezeilen (nicht-leer) einsammeln: Name, Strasse, PLZ Ort.
@@ -152,7 +153,7 @@ class AdacAutoversicherungParser implements DocumentTemplateParser
         }
         // Beginn/Gueltigkeit ("ab dem 01.06.2026").
         if (preg_match('/ab dem\s+(\d{2})\.(\d{2})\.(\d{4})/u', $text, $m)) {
-            $raw['start_date'] = $m[3] . '-' . $m[2] . '-' . $m[1];
+            $raw['start_date'] = $m[3].'-'.$m[2].'-'.$m[1];
         }
         // Gesamtbeitrag (Monatsbeitrag). Der Betrag steht NACH dem Klammer-
         // zusatz "(inkl. ... Versicherungsteuer ... 12,05 EUR)" - deshalb erst

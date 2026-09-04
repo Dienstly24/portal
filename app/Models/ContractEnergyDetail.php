@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Carbon\Carbon;
@@ -10,24 +11,24 @@ class ContractEnergyDetail extends Model
     protected $keyType = 'string';
     public $incrementing = false;
     protected $fillable = [
-        'contract_id','tariff','consumption_kwh','meter_number','malo_id',
-        'meter_reading','grid_operator','metering_operator','payment_amount','payment_interval',
+        'contract_id', 'tariff', 'consumption_kwh', 'meter_number', 'malo_id',
+        'meter_reading', 'grid_operator', 'metering_operator', 'payment_amount', 'payment_interval',
         // Kundennummer beim Energieanbieter (separat von der Vertragsnummer,
         // die am Vertrag selbst haengt) - Betreiber-Vorgabe fuer Energievertraege.
         'customer_number',
         // Vorversorger (bisheriger Lieferant beim Wechsel) + dessen Kundennummer.
-        'previous_provider','previous_customer_number',
+        'previous_provider', 'previous_customer_number',
         // Tarifpreise: Arbeitspreis (ct/kWh) und Grundpreis (EUR/Monat).
-        'working_price','base_price',
+        'working_price', 'base_price',
     ];
     protected $casts = [
         'working_price' => 'decimal:3',
-        'base_price'    => 'decimal:2',
-        'payment_amount'=> 'decimal:2',
+        'base_price' => 'decimal:2',
+        'payment_amount' => 'decimal:2',
     ];
     protected static function boot() {
         parent::boot();
-        static::creating(fn($m) => $m->id = $m->id ?: (string) Str::uuid());
+        static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
         // Die normalisierte Zaehlernummer ist die Grundlage der Zuordnung
         // "Zaehlerfoto -> Vertrag -> Kunde" und wird immer mitgefuehrt, egal
         // ueber welchen Weg (Formular, Import, Dokumenteneingang) die Nummer
@@ -117,7 +118,7 @@ class ContractEnergyDetail extends Model
     {
         $history = $this->consumptionHistory($register);
         $current = $history[0] ?? null;
-        if (!$current || $current['consumption'] === null || $current['days'] === null) {
+        if (! $current || $current['consumption'] === null || $current['days'] === null) {
             return null;
         }
 
@@ -125,7 +126,7 @@ class ContractEnergyDetail extends Model
             ->sortBy([['reading_date', 'asc'], ['created_at', 'asc']])->values();
         $latest = $current['reading'];
         $previous = $chronological[$chronological->count() - 2] ?? null;
-        if (!$previous) {
+        if (! $previous) {
             return null;
         }
 

@@ -7,6 +7,7 @@ use App\Models\Ticket;
 use App\Models\TicketAttachment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class PortalUxTest extends TestCase
@@ -16,7 +17,7 @@ class PortalUxTest extends TestCase
     private function makeCustomer(): Customer
     {
         $user = User::factory()->create(['role' => 'customer']);
-        return Customer::create(['user_id' => $user->id, 'customer_number' => 'C-' . strtoupper(substr(md5((string)$user->id),0,6))]);
+        return Customer::create(['user_id' => $user->id, 'customer_number' => 'C-'.strtoupper(substr(md5((string) $user->id), 0, 6))]);
     }
 
     // Punkt 13: Validierungsfehler werden dem Kunden angezeigt
@@ -35,7 +36,7 @@ class PortalUxTest extends TestCase
     public function test_all_portal_pages_load(): void
     {
         $customer = $this->makeCustomer();
-        foreach (['portal.dashboard','portal.contracts','portal.documents','portal.family','portal.profile','portal.contacts','portal.change_requests','portal.tickets'] as $route) {
+        foreach (['portal.dashboard', 'portal.contracts', 'portal.documents', 'portal.family', 'portal.profile', 'portal.contacts', 'portal.change_requests', 'portal.tickets'] as $route) {
             $this->actingAs($customer->user)->get(route($route))->assertOk();
         }
     }
@@ -45,7 +46,7 @@ class PortalUxTest extends TestCase
     {
         $owner = $this->makeCustomer();
         $ticket = Ticket::create(['customer_id' => $owner->id, 'type' => 'other', 'status' => 'open', 'subject' => 's', 'description' => 'd']);
-        $att = TicketAttachment::create(['id' => (string) \Illuminate\Support\Str::uuid(), 'ticket_id' => $ticket->id, 'file_name' => 'x.pdf', 'file_path' => 'x.pdf']);
+        $att = TicketAttachment::create(['id' => (string) Str::uuid(), 'ticket_id' => $ticket->id, 'file_name' => 'x.pdf', 'file_path' => 'x.pdf']);
 
         $attacker = $this->makeCustomer();
         $this->actingAs($attacker->user)->get(route('portal.attachment.download', $att->id))->assertNotFound();

@@ -82,7 +82,7 @@ TXT;
 
     public function test_reads_the_supply_confirmation(): void
     {
-        $r = (new GruenweltLieferbestaetigungParser())->parse($this->schreiben());
+        $r = (new GruenweltLieferbestaetigungParser)->parse($this->schreiben());
 
         $this->assertNotNull($r);
         $this->assertSame('energieauftrag', $r['type']);
@@ -125,7 +125,7 @@ TXT;
     {
         // Die Kunden-IBAN ist maskiert, die vollstaendige IBAN im Brieffuss
         // gehoert Gruenwelt selbst - beides darf nie in die Kundenakte.
-        $r = (new GruenweltLieferbestaetigungParser())->parse($this->schreiben());
+        $r = (new GruenweltLieferbestaetigungParser)->parse($this->schreiben());
 
         $this->assertSame([], $r['data']['bank']);
         $this->assertStringNotContainsString('DE41', json_encode($r));
@@ -134,7 +134,7 @@ TXT;
 
     public function test_summary_carries_the_fields_without_own_column(): void
     {
-        $r = (new GruenweltLieferbestaetigungParser())->parse($this->schreiben());
+        $r = (new GruenweltLieferbestaetigungParser)->parse($this->schreiben());
 
         $this->assertStringContainsString('Laufzeit 24 Monate', $r['summary']);
         $this->assertStringContainsString('Kuendigungsfrist 1 Monat', $r['summary']);
@@ -148,7 +148,7 @@ TXT;
 
     public function test_recognizes_the_gas_variant(): void
     {
-        $r = (new GruenweltLieferbestaetigungParser())->parse($this->schreiben('gas'));
+        $r = (new GruenweltLieferbestaetigungParser)->parse($this->schreiben('gas'));
 
         $this->assertNotNull($r);
         $this->assertSame('gas', $r['data']['versicherung']['sparte']);
@@ -160,8 +160,8 @@ TXT;
         // "Gruenwelt" allein genuegt nicht - eine Jahresabrechnung bestaetigt
         // keine Vertragsdaten und darf den Parser nicht ausloesen.
         $abrechnung = "Grünwelt Wärmestrom GmbH\nJahresabrechnung\nVertragskontonummer 121009876543\n";
-        $this->assertNull((new GruenweltLieferbestaetigungParser())->parse($abrechnung));
+        $this->assertNull((new GruenweltLieferbestaetigungParser)->parse($abrechnung));
 
-        $this->assertNull((new GruenweltLieferbestaetigungParser())->parse('Irgendein anderes Dokument'));
+        $this->assertNull((new GruenweltLieferbestaetigungParser)->parse('Irgendein anderes Dokument'));
     }
 }

@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Mail\CustomerMessageMail;
 use App\Models\Customer;
 use App\Models\CustomerMessage;
-use App\Models\InternalNotification;
+use App\Models\CustomerMessageAttachment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -26,7 +26,7 @@ class CustomerMessagingTest extends TestCase
         $user = User::factory()->create(['role' => 'customer', 'email' => $email, 'name' => 'Max Meyer']);
         return Customer::create([
             'user_id' => $user->id,
-            'customer_number' => '26' . str_pad((string) $user->id, 5, '0', STR_PAD_LEFT),
+            'customer_number' => '26'.str_pad((string) $user->id, 5, '0', STR_PAD_LEFT),
             'preferred_lang' => 'de',
         ]);
     }
@@ -122,10 +122,10 @@ class CustomerMessagingTest extends TestCase
             'attachments' => [UploadedFile::fake()->create('police.pdf', 100, 'application/pdf')],
         ])->assertRedirect();
 
-        $attachment = \App\Models\CustomerMessageAttachment::firstOrFail();
+        $attachment = CustomerMessageAttachment::firstOrFail();
         $this->assertSame('police.pdf', $attachment->file_name);
         $this->assertSame('local', $attachment->disk);
-        $this->assertStringStartsWith('customers/' . $customer->id . '/messages/', $attachment->file_path);
+        $this->assertStringStartsWith('customers/'.$customer->id.'/messages/', $attachment->file_path);
         Storage::disk('local')->assertExists($attachment->file_path);
     }
 
@@ -200,9 +200,9 @@ class CustomerMessagingTest extends TestCase
             'customer_id' => $customerA->id, 'sender_id' => $admin->id,
             'body' => 'Anhang fuer A', 'from_staff' => true,
         ]);
-        $attachment = \App\Models\CustomerMessageAttachment::create([
+        $attachment = CustomerMessageAttachment::create([
             'message_id' => $message->id, 'uploaded_by' => $admin->id,
-            'file_name' => 'geheim.pdf', 'file_path' => 'customers/' . $customerA->id . '/messages/geheim.pdf',
+            'file_name' => 'geheim.pdf', 'file_path' => 'customers/'.$customerA->id.'/messages/geheim.pdf',
             'disk' => 'local',
         ]);
 
@@ -220,9 +220,9 @@ class CustomerMessagingTest extends TestCase
             'customer_id' => $customer->id, 'sender_id' => $admin->id,
             'body' => 'x', 'from_staff' => true,
         ]);
-        $attachment = \App\Models\CustomerMessageAttachment::create([
+        $attachment = CustomerMessageAttachment::create([
             'message_id' => $message->id, 'uploaded_by' => $admin->id,
-            'file_name' => 'x.pdf', 'file_path' => 'customers/' . $customer->id . '/messages/x.pdf',
+            'file_name' => 'x.pdf', 'file_path' => 'customers/'.$customer->id.'/messages/x.pdf',
             'disk' => 'local',
         ]);
 
@@ -239,9 +239,9 @@ class CustomerMessagingTest extends TestCase
             'customer_id' => $customer->id, 'sender_id' => $admin->id,
             'body' => 'Bild fuer Sie', 'from_staff' => true,
         ]);
-        $path = 'customers/' . $customer->id . '/messages/beleg.pdf';
+        $path = 'customers/'.$customer->id.'/messages/beleg.pdf';
         Storage::disk('local')->put($path, '%PDF-1.4 fake');
-        $attachment = \App\Models\CustomerMessageAttachment::create([
+        $attachment = CustomerMessageAttachment::create([
             'message_id' => $message->id, 'uploaded_by' => $admin->id,
             'file_name' => 'beleg.pdf', 'file_path' => $path, 'disk' => 'local',
         ]);
@@ -265,9 +265,9 @@ class CustomerMessagingTest extends TestCase
             'customer_id' => $customerA->id, 'sender_id' => $admin->id,
             'body' => 'Anhang fuer A', 'from_staff' => true,
         ]);
-        $attachment = \App\Models\CustomerMessageAttachment::create([
+        $attachment = CustomerMessageAttachment::create([
             'message_id' => $message->id, 'uploaded_by' => $admin->id,
-            'file_name' => 'geheim.pdf', 'file_path' => 'customers/' . $customerA->id . '/messages/geheim.pdf',
+            'file_name' => 'geheim.pdf', 'file_path' => 'customers/'.$customerA->id.'/messages/geheim.pdf',
             'disk' => 'local',
         ]);
 

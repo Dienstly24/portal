@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Mailbox;
 
 use App\Models\EmailAccount;
@@ -21,9 +22,9 @@ class GraphApiMailboxProvider implements MailboxProviderInterface
     public function testConnection(EmailAccount $account): bool
     {
         $token = $this->tokens->accessToken($account);
-        $response = Http::withToken($token)->get(self::BASE . '/me');
-        if (!$response->successful()) {
-            throw new \RuntimeException('Microsoft-365-Verbindung fehlgeschlagen: ' . mb_substr($response->body(), 0, 150));
+        $response = Http::withToken($token)->get(self::BASE.'/me');
+        if (! $response->successful()) {
+            throw new \RuntimeException('Microsoft-365-Verbindung fehlgeschlagen: '.mb_substr($response->body(), 0, 150));
         }
         return true;
     }
@@ -35,24 +36,24 @@ class GraphApiMailboxProvider implements MailboxProviderInterface
             ? $account->last_synced_at->copy()->subHour()
             : now()->subDays(7))->toIso8601ZuluString();
 
-        $list = Http::withToken($token)->get(self::BASE . '/me/mailFolders/inbox/messages', [
+        $list = Http::withToken($token)->get(self::BASE.'/me/mailFolders/inbox/messages', [
             '$filter' => "receivedDateTime ge $since",
             '$top' => $limit,
             '$orderby' => 'receivedDateTime asc',
             '$select' => 'id,subject,from,toRecipients,receivedDateTime,body,bodyPreview,hasAttachments,internetMessageId',
         ]);
-        if (!$list->successful()) {
-            throw new \RuntimeException('Microsoft-365-Abruf fehlgeschlagen: ' . mb_substr($list->body(), 0, 150));
+        if (! $list->successful()) {
+            throw new \RuntimeException('Microsoft-365-Abruf fehlgeschlagen: '.mb_substr($list->body(), 0, 150));
         }
 
         $results = [];
         foreach ($list->json('value', []) as $message) {
             $attachments = [];
-            if (!empty($message['hasAttachments'])) {
+            if (! empty($message['hasAttachments'])) {
                 $attachmentResponse = Http::withToken($token)
-                    ->get(self::BASE . '/me/messages/' . $message['id'] . '/attachments');
+                    ->get(self::BASE.'/me/messages/'.$message['id'].'/attachments');
                 foreach ($attachmentResponse->json('value', []) as $attachment) {
-                    if (($attachment['@odata.type'] ?? '') === '#microsoft.graph.fileAttachment' && !empty($attachment['contentBytes'])) {
+                    if (($attachment['@odata.type'] ?? '') === '#microsoft.graph.fileAttachment' && ! empty($attachment['contentBytes'])) {
                         $attachments[] = [
                             'filename' => $attachment['name'] ?? 'anhang',
                             'mime' => $attachment['contentType'] ?? 'application/octet-stream',
@@ -64,7 +65,7 @@ class GraphApiMailboxProvider implements MailboxProviderInterface
 
             $isHtml = ($message['body']['contentType'] ?? '') === 'html';
             $results[] = new MailboxMessageData(
-                uid: 'GRAPH:' . $message['id'],
+                uid: 'GRAPH:'.$message['id'],
                 fromAddress: $message['from']['emailAddress']['address'] ?? '',
                 fromName: $message['from']['emailAddress']['name'] ?? null,
                 toAddress: $message['toRecipients'][0]['emailAddress']['address'] ?? null,

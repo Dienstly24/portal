@@ -21,8 +21,7 @@ use Illuminate\Support\Facades\Schema;
  * IP-Adresse - dort stuenden sonst Kundendaten in einer Tabelle, die
  * niemand als personenbezogen erwartet.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('error_events', function (Blueprint $table) {

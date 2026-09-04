@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\User;
 use App\Support\PasswordPolicy;
+use App\Support\SessionPasswordHash;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\URL;
 
 /**
@@ -149,7 +151,7 @@ class PasswordSetupController extends Controller
         // Das alte (system-vergebene) Passwort darf nicht einfach erneut
         // gesetzt werden - sonst waere der Zwangswechsel ein Klick ins
         // Leere und das Geburtsdatum bliebe das Passwort.
-        if (\Illuminate\Support\Facades\Hash::check($request->input('password'), $account->password)) {
+        if (Hash::check($request->input('password'), $account->password)) {
             return back()->withErrors([
                 'password' => __('Bitte wählen Sie ein NEUES Passwort - nicht das bisherige.'),
             ]);
@@ -161,7 +163,7 @@ class PasswordSetupController extends Controller
         // Startpasswort bereits von jemand anderem benutzt wurde) - und
         // die EIGENE Sitzung ausdruecklich am Leben halten.
         Auth::logoutOtherDevices($request->input('password'));
-        \App\Support\SessionPasswordHash::refresh($request);
+        SessionPasswordHash::refresh($request);
 
         ActivityLog::create([
             'user_id' => $account->id,

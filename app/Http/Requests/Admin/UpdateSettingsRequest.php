@@ -3,8 +3,8 @@
 namespace App\Http\Requests\Admin;
 
 use App\Http\Controllers\LegalPageController;
-use App\Services\ChangeRequest\ChangeProofPolicy;
 use App\Services\Ai\Assistant\AssistantSettings;
+use App\Services\ChangeRequest\ChangeProofPolicy;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -117,10 +117,10 @@ class UpdateSettingsRequest extends FormRequest
             'legal_external_suffix' => ['sometimes', 'nullable', 'string', 'max:20',
                 'regex:/^(\.[A-Za-z0-9]{1,10})?$/'],
 
-            'legal_impressum' => ['sometimes', 'nullable', 'string', 'max:' . self::MAX_LEGAL_TEXT],
-            'legal_agb' => ['sometimes', 'nullable', 'string', 'max:' . self::MAX_LEGAL_TEXT],
-            'legal_datenschutz' => ['sometimes', 'nullable', 'string', 'max:' . self::MAX_LEGAL_TEXT],
-            'legal_cookies' => ['sometimes', 'nullable', 'string', 'max:' . self::MAX_LEGAL_TEXT],
+            'legal_impressum' => ['sometimes', 'nullable', 'string', 'max:'.self::MAX_LEGAL_TEXT],
+            'legal_agb' => ['sometimes', 'nullable', 'string', 'max:'.self::MAX_LEGAL_TEXT],
+            'legal_datenschutz' => ['sometimes', 'nullable', 'string', 'max:'.self::MAX_LEGAL_TEXT],
+            'legal_cookies' => ['sometimes', 'nullable', 'string', 'max:'.self::MAX_LEGAL_TEXT],
 
             // Marker-Felder der Teilformulare (siehe Controller).
             'security_form' => ['sometimes'],
@@ -209,7 +209,7 @@ class UpdateSettingsRequest extends FormRequest
         $erlaubt = self::allowedLegalHosts();
         if (! in_array($host, $erlaubt, true)) {
             return 'Die Rechtsseiten-Quelle muss auf eine eigene Domain zeigen ('
-                . implode(', ', $erlaubt) . ').';
+                .implode(', ', $erlaubt).').';
         }
 
         // Pfad darf es geben (z. B. /recht), aber ohne Rueckwaertsschritte.

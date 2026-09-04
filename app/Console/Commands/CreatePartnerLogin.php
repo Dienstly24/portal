@@ -24,7 +24,7 @@ class CreatePartnerLogin extends Command
     public function handle(): int
     {
         $partner = Partner::find($this->argument('partner_id'));
-        if (!$partner) {
+        if (! $partner) {
             $this->error('Partner nicht gefunden.');
             return self::FAILURE;
         }

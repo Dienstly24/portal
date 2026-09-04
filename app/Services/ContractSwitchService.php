@@ -43,7 +43,7 @@ class ContractSwitchService
         }
 
         $end = $old->end_date ? Carbon::parse($old->end_date)->startOfDay() : null;
-        if (!$end || $end->greaterThan($switchDate)) {
+        if (! $end || $end->greaterThan($switchDate)) {
             $proposed['end_date'] = $switchDate->toDateString();
         }
 

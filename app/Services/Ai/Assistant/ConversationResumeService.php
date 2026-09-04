@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant;
 
 use App\Models\AiConversation;
@@ -6,6 +7,7 @@ use App\Models\AiConversationEvent;
 use App\Models\Customer;
 use App\Models\CustomerMessage;
 use App\Models\Ticket;
+use Illuminate\Support\Carbon;
 
 /**
  * Wiederaufnahme des Assistenten nach einer Uebernahme
@@ -52,7 +54,7 @@ class ConversationResumeService
             return true; // laeuft ohnehin
         }
 
-        if (!$this->settings->autoResume() || !$conversation->mayAutoResume()) {
+        if (! $this->settings->autoResume() || ! $conversation->mayAutoResume()) {
             return false;
         }
 
@@ -108,7 +110,7 @@ class ConversationResumeService
             // ein strikter Vergleich waere hier zufaellig falsch.
             $gehoertZumKunden = (string) $ticket?->customer_id === (string) $customer->id;
             if ($ticket && $gehoertZumKunden && $ticket->isFinished()) {
-                return 'Vorgang #' . $ticket->ticket_number . ' abgeschlossen';
+                return 'Vorgang #'.$ticket->ticket_number.' abgeschlossen';
             }
         }
 
@@ -136,17 +138,17 @@ class ConversationResumeService
             return null;
         }
 
-        return 'Ruhefrist von ' . $this->settings->resumeQuietHours() . ' Stunden ohne Mitarbeiter-Nachricht abgelaufen';
+        return 'Ruhefrist von '.$this->settings->resumeQuietHours().' Stunden ohne Mitarbeiter-Nachricht abgelaufen';
     }
 
     /** Zeitpunkt der letzten ECHTEN Mitarbeiter-Nachricht (nie einer KI-Antwort). */
-    private function lastStaffMessageAt(Customer $customer): ?\Illuminate\Support\Carbon
+    private function lastStaffMessageAt(Customer $customer): ?Carbon
     {
         $zeit = CustomerMessage::where('customer_id', $customer->id)
             ->fromStaff()
             ->where('ai_generated', false)
             ->max('created_at');
 
-        return $zeit ? \Illuminate\Support\Carbon::parse($zeit) : null;
+        return $zeit ? Carbon::parse($zeit) : null;
     }
 }

@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\SupportInquiryMail;
 use App\Models\Customer;
 use App\Models\Ticket;
+use App\Services\SpamFilter;
+use App\Services\TicketNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -68,7 +72,7 @@ class WebsiteContactController extends Controller
         }
 
         $meta = $this->tokenMeta($request->input('token'));
-        if (!$meta) {
+        if (! $meta) {
             return response()->json(['error' => 'token'], 422);
         }
         $age = now()->timestamp - (int) $meta['iat'];
@@ -80,7 +84,7 @@ class WebsiteContactController extends Controller
             return response()->json(['error' => 'token'], 422);
         }
         // Einmal-Token: Wiederverwendung (Replay/Massenversand) blocken.
-        if (!Cache::add('website-contact-token:' . $meta['n'], 1, self::MAX_AGE_SECONDS)) {
+        if (! Cache::add('website-contact-token:'.$meta['n'], 1, self::MAX_AGE_SECONDS)) {
             return response()->json(['error' => 'token'], 422);
         }
 
@@ -93,8 +97,8 @@ class WebsiteContactController extends Controller
 
         // Inhaltsbasierte Spam-Erkennung: erkannte Bot-Werbung still
         // verwerfen (kein Ticket, keine Mail), Antwort wie Erfolg.
-        if ($spam = \App\Services\SpamFilter::reason([$data['name'], $data['kontakt'], $data['nachricht'] ?? null])) {
-            \Log::info('Website-Kontakt als Spam verworfen: ' . $spam);
+        if ($spam = SpamFilter::reason([$data['name'], $data['kontakt'], $data['nachricht'] ?? null])) {
+            \Log::info('Website-Kontakt als Spam verworfen: '.$spam);
             return $this->fakeSuccess();
         }
 
@@ -108,7 +112,7 @@ class WebsiteContactController extends Controller
         // Bestandskunden ueber die E-Mail-Adresse zuordnen.
         $customer = $email
             ? Customer::whereHas('user', fn ($q) => $q->where('email', $email))
-                ->orWhere('email', $email)->first()
+                ->orWhere('email2', $email)->first()
             : null;
 
         $nachricht = trim((string) ($data['nachricht'] ?? ''));
@@ -120,27 +124,27 @@ class WebsiteContactController extends Controller
             'type' => self::LEISTUNGEN[$data['leistung']],
             'priority' => 'mittel',
             'status' => 'open',
-            'subject' => 'Website-Anfrage: ' . $data['leistung'],
+            'subject' => 'Website-Anfrage: '.$data['leistung'],
             'description' => $nachricht !== ''
                 ? $nachricht
-                : 'Keine Nachricht angegeben - Kontaktwunsch zu: ' . $data['leistung'],
+                : 'Keine Nachricht angegeben - Kontaktwunsch zu: '.$data['leistung'],
             'guest_name' => $data['name'],
             'guest_email' => $email,
             'guest_phone' => $email ? null : $kontakt,
         ]);
 
         // Team-Glocke wie bei allen oeffentlichen Formularen.
-        \App\Services\TicketNotifier::notifyNewTicket($ticket);
+        TicketNotifier::notifyNewTicket($ticket);
 
         // Support-Mail wie bei der Website-Lead-API - jetzt aber nur noch
         // fuer Anfragen, die alle Spam-Schichten passiert haben.
         $supportEmail = config('services.inquiry.support_email') ?: config('mail.from.address');
         if ($supportEmail) {
             try {
-                \Illuminate\Support\Facades\Mail::to($supportEmail)
-                    ->send(new \App\Mail\SupportInquiryMail($ticket, $customer?->customer_number));
+                Mail::to($supportEmail)
+                    ->send(new SupportInquiryMail($ticket, $customer?->customer_number));
             } catch (\Throwable $e) {
-                \Log::warning('Website-Kontakt Support-Mail fehlgeschlagen: ' . $e->getMessage());
+                \Log::warning('Website-Kontakt Support-Mail fehlgeschlagen: '.$e->getMessage());
             }
         }
 
@@ -150,7 +154,7 @@ class WebsiteContactController extends Controller
     /** Entschluesselt das Formular-Token; null bei fehlend/manipuliert. */
     private function tokenMeta(?string $token): ?array
     {
-        if (!is_string($token) || $token === '') {
+        if (! is_string($token) || $token === '') {
             return null;
         }
         try {

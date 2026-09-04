@@ -18,8 +18,7 @@ use Illuminate\Support\Facades\Schema;
  *                       NIE geloescht oder veraendert (Buchhaltung)
  * - approved_by/-at:    Freigabe (Status offen -> freigegeben -> ausgezahlt)
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('provisions', function (Blueprint $table) {

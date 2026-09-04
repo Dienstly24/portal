@@ -9,6 +9,7 @@ use App\Services\Ai\Contracts\DocumentAiProviderInterface;
 use App\Services\Ai\DocumentAnalyzer;
 use App\Services\Ai\RelevantPageSelector;
 use App\Services\Ai\TemplateParsers\Check24KfzProtocolParser;
+use App\Services\Ai\TemplateParsers\MeldebestaetigungParser;
 use App\Services\Ocr\PdfTextLayerExtractor;
 use App\Services\Ocr\TextExtractorInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -35,7 +36,7 @@ class DuplicateDetectionTest extends TestCase
     private function docWithContent(string $content, array $overrides = []): Document
     {
         Storage::fake('local');
-        $path = 'documents/eingang/' . Str::uuid() . '.pdf';
+        $path = 'documents/eingang/'.Str::uuid().'.pdf';
         Storage::disk('local')->put($path, $content);
 
         return Document::create(array_merge([
@@ -131,8 +132,8 @@ class DuplicateDetectionTest extends TestCase
             $provider,
             $this->fakeOcr(),
             $this->fakePdfText(''),
-            new RelevantPageSelector(),
-            new Check24KfzProtocolParser(),
+            new RelevantPageSelector,
+            new Check24KfzProtocolParser,
         );
 
         $result = $analyzer->analyze($duplicate->fresh());
@@ -168,13 +169,13 @@ class DuplicateDetectionTest extends TestCase
         };
         // Textebene liefert jetzt ein bekanntes Formular (verbesserter Parser).
         $text = "Vorlaeufiges Beratungsprotokoll zur Kfz-Versicherung - CHECK24\n"
-            . "HSN/TSN: 1234/ABC\nHalter: Versicherungsnehmer\nVersicherungsbeginn: 01.08.2026\n";
+            ."HSN/TSN: 1234/ABC\nHalter: Versicherungsnehmer\nVersicherungsbeginn: 01.08.2026\n";
         $analyzer = new DocumentAnalyzer(
             $provider,
             $this->fakeOcr(),
             $this->fakePdfText($text),
-            new RelevantPageSelector(),
-            new Check24KfzProtocolParser(),
+            new RelevantPageSelector,
+            new Check24KfzProtocolParser,
         );
 
         // Auch OHNE "Neu analysieren" gewinnt der Vorlagen-Parser.
@@ -216,14 +217,14 @@ class DuplicateDetectionTest extends TestCase
             public function analyze(string $binary, string $mime, string $ocrText, bool $preferText = false): ?array { return null; }
         };
         $ocrText = "M e l d e b e s t ä t i g u n g (gemäß § 24 Abs. 2 BMG)\n"
-            . "Familienname Muster\nVorname(n) Karim\nGeburtsdatum 10.02.1999\n"
-            . "Anschrift Musterweg 5\n71522 Backnang\n";
+            ."Familienname Muster\nVorname(n) Karim\nGeburtsdatum 10.02.1999\n"
+            ."Anschrift Musterweg 5\n71522 Backnang\n";
         $analyzer = new DocumentAnalyzer(
             $provider,
             $this->fakeOcr(available: true, text: $ocrText),
             $this->fakePdfText(''),
-            new RelevantPageSelector(),
-            new \App\Services\Ai\TemplateParsers\MeldebestaetigungParser(),
+            new RelevantPageSelector,
+            new MeldebestaetigungParser,
         );
 
         $result = $analyzer->analyze($duplicate->fresh());
@@ -257,8 +258,8 @@ class DuplicateDetectionTest extends TestCase
             $provider,
             $this->fakeOcr(),
             $this->fakePdfText(''),
-            new RelevantPageSelector(),
-            new Check24KfzProtocolParser(),
+            new RelevantPageSelector,
+            new Check24KfzProtocolParser,
         );
 
         $result = $analyzer->analyze($duplicate->fresh());

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Ai\Assistant\Tools\Sales;
 
 use App\Services\Ai\Assistant\Sales\ConversationContext;
@@ -38,14 +39,14 @@ class SubmitContractDataTool implements AssistantTool
     public function description(): string
     {
         return 'Reiche die erfassten Vertragsangaben zur internen Pruefung ein, sobald '
-            . 'alle Pflichtangaben vorliegen. Du bekommst NUR ein Gesamtergebnis - '
-            . 'nenne dem Kunden niemals Einzelheiten der Pruefung und bestaetige '
-            . 'niemals, ob eine seiner Angaben mit unseren Daten uebereinstimmt.';
+            .'alle Pflichtangaben vorliegen. Du bekommst NUR ein Gesamtergebnis - '
+            .'nenne dem Kunden niemals Einzelheiten der Pruefung und bestaetige '
+            .'niemals, ob eine seiner Angaben mit unseren Daten uebereinstimmt.';
     }
 
     public function parameters(): array
     {
-        return ['type' => 'object', 'properties' => new \stdClass(), 'required' => []];
+        return ['type' => 'object', 'properties' => new \stdClass, 'required' => []];
     }
 
     public function isWriting(): bool
@@ -95,8 +96,8 @@ class SubmitContractDataTool implements AssistantTool
             'ergebnis' => $ergebnis['status'],
             'zustand' => $conversation->fresh()->state,
             'hinweis' => 'Bestaetige dem Kunden nur den Eingang seiner Angaben und dass '
-                . 'ein Mitarbeiter den Abschluss uebernimmt. Nenne KEINE Einzelheiten '
-                . 'der Pruefung.',
+                .'ein Mitarbeiter den Abschluss uebernimmt. Nenne KEINE Einzelheiten '
+                .'der Pruefung.',
         ];
     }
 }

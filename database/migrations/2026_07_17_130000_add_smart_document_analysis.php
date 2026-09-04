@@ -16,8 +16,7 @@ use Illuminate\Support\Facades\Schema;
  * - ai_decisions bekommt document_id, damit Dokument-Analysen im selben
  *   Freigabe-Gateway protokolliert werden wie E-Mail-Klassifikationen.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('documents', function (Blueprint $table) {

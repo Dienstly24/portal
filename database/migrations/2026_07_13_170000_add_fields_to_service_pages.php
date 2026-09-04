@@ -10,8 +10,7 @@ use Illuminate\Support\Facades\Schema;
  * JSON, damit die Felder vollstaendig ueber die Adminoberflaeche pflegbar
  * sind. Die Antworten werden an die Ticketbeschreibung angehaengt.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('service_pages', function (Blueprint $table) {

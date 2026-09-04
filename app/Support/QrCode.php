@@ -27,15 +27,15 @@ class QrCode
 {
     /** Fehlerkorrektur-Stufe M: [Version => [Gesamt-Codewoerter, Daten-Codewoerter, ECC je Block, [[Bloecke, Daten je Block], ...]]] */
     private const VERSIONS = [
-        1  => [26, 16, 10, [[1, 16]]],   // bis 14 Zeichen
-        2  => [44, 28, 16, [[1, 28]]],   // bis 26 Zeichen
-        3  => [70, 44, 26, [[1, 44]]],   // bis 42 Zeichen
-        4  => [100, 64, 18, [[2, 32]]],   // bis 62 Zeichen
-        5  => [134, 86, 24, [[2, 43]]],   // bis 84 Zeichen
-        6  => [172, 108, 16, [[4, 27]]],   // bis 106 Zeichen
-        7  => [196, 124, 18, [[4, 31]]],   // bis 122 Zeichen
-        8  => [242, 154, 22, [[2, 38], [2, 39]]],   // bis 152 Zeichen
-        9  => [292, 182, 22, [[3, 36], [2, 37]]],   // bis 180 Zeichen
+        1 => [26, 16, 10, [[1, 16]]],   // bis 14 Zeichen
+        2 => [44, 28, 16, [[1, 28]]],   // bis 26 Zeichen
+        3 => [70, 44, 26, [[1, 44]]],   // bis 42 Zeichen
+        4 => [100, 64, 18, [[2, 32]]],   // bis 62 Zeichen
+        5 => [134, 86, 24, [[2, 43]]],   // bis 84 Zeichen
+        6 => [172, 108, 16, [[4, 27]]],   // bis 106 Zeichen
+        7 => [196, 124, 18, [[4, 31]]],   // bis 122 Zeichen
+        8 => [242, 154, 22, [[2, 38], [2, 39]]],   // bis 152 Zeichen
+        9 => [292, 182, 22, [[3, 36], [2, 37]]],   // bis 180 Zeichen
         10 => [346, 216, 26, [[4, 43], [1, 44]]],   // bis 213 Zeichen
         11 => [404, 254, 30, [[1, 50], [4, 51]]],   // bis 251 Zeichen
         12 => [466, 290, 22, [[6, 36], [2, 37]]],   // bis 287 Zeichen
@@ -51,15 +51,15 @@ class QrCode
 
     /** Mittelpunkte der Ausrichtungsmuster je Version. */
     private const ALIGNMENT = [
-        1  => [],
-        2  => [6, 18],
-        3  => [6, 22],
-        4  => [6, 26],
-        5  => [6, 30],
-        6  => [6, 34],
-        7  => [6, 22, 38],
-        8  => [6, 24, 42],
-        9  => [6, 26, 46],
+        1 => [],
+        2 => [6, 18],
+        3 => [6, 22],
+        4 => [6, 26],
+        5 => [6, 30],
+        6 => [6, 34],
+        7 => [6, 22, 38],
+        8 => [6, 24, 42],
+        9 => [6, 26, 46],
         10 => [6, 28, 50],
         11 => [6, 30, 54],
         12 => [6, 32, 58],
@@ -119,13 +119,13 @@ class QrCode
             }
         }
 
-        $label = $alt !== '' ? ' role="img" aria-label="' . htmlspecialchars($alt, ENT_QUOTES) . '"' : ' role="img" aria-label="QR-Code"';
+        $label = $alt !== '' ? ' role="img" aria-label="'.htmlspecialchars($alt, ENT_QUOTES).'"' : ' role="img" aria-label="QR-Code"';
 
-        return '<svg xmlns="http://www.w3.org/2000/svg" width="' . $size . '" height="' . $size . '"'
-            . ' viewBox="0 0 ' . $size . ' ' . $size . '" shape-rendering="crispEdges"' . $label . '>'
-            . '<rect width="' . $size . '" height="' . $size . '" fill="#ffffff"/>'
-            . '<path d="' . $path . '" fill="#000000"/>'
-            . '</svg>';
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="'.$size.'" height="'.$size.'"'
+            .' viewBox="0 0 '.$size.' '.$size.'" shape-rendering="crispEdges"'.$label.'>'
+            .'<rect width="'.$size.'" height="'.$size.'" fill="#ffffff"/>'
+            .'<path d="'.$path.'" fill="#000000"/>'
+            .'</svg>';
     }
 
     /**
