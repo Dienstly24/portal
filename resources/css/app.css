@@ -1,6 +1,14 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/*
+ * Tailwind 4: EIN Import statt der drei @tailwind-Direktiven aus v3.
+ *
+ * @config laedt bewusst die bestehende tailwind.config.js weiter, statt die
+ * Konfiguration nach CSS zu uebersetzen. Sie enthaelt nur zwei Dinge - die
+ * Schriftfamilie Figtree und das forms-Plugin - und beide funktionieren
+ * unveraendert. Damit bleibt diese Umstellung eine reine Build-Aenderung;
+ * das Aussehen haengt weiter an denselben Werten wie vorher.
+ */
+@import 'tailwindcss';
+@config '../../tailwind.config.js';
 
 /*
  * Das hidden-Attribut muss auch gegen eine Klasse mit eigenem display
