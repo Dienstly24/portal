@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Database\Events\ConnectionEstablished;
 use RuntimeException;
 
 /**
@@ -16,8 +17,21 @@ use RuntimeException;
  * schlimmsten Fall schreiben Mitarbeiter stundenlang in eine Datei, die
  * beim naechsten Deploy verschwindet.
  *
- * Ein lautes Scheitern beim Start ist hier die milde Variante: es trifft
- * niemanden ausser dem Deploy, und die Ursache steht in der Meldung.
+ * Ein lautes Scheitern ist hier die milde Variante: die Ursache steht in
+ * der Meldung, statt dass wochenlang niemand etwas merkt.
+ *
+ * WANN GEPRUEFT WIRD - und warum nicht beim Booten: die Pruefung haengt am
+ * ERSTEN ECHTEN DATENBANK-ZUGRIFF, nicht am Start der Anwendung. Beim
+ * Booten war sie zu frueh und hat einen ganz normalen Vorgang zerstoert:
+ * `composer install` fuehrt `artisan package:discover` aus, und das
+ * passiert BEVOR eine .env existiert. Ohne .env ist Laravels Vorgabe fuer
+ * APP_ENV aber "production" - die Pruefung schlug also bei jeder frischen
+ * Installation an, in CI wie auf dem Server, obwohl niemand eine Datenbank
+ * anfassen wollte.
+ *
+ * Am Verbindungsaufbau ist die Regel dagegen genau richtig gesetzt: wer
+ * keine Datenbank braucht (package:discover, config:cache, Assets bauen),
+ * merkt nichts; wer eine Anfrage bedient oder migriert, faellt sofort auf.
  *
  * SQLite bleibt ueberall sonst voll unterstuetzt - lokale Entwicklung und
  * die gesamte Testsuite laufen bewusst weiter darauf (schnell, ohne
@@ -40,9 +54,40 @@ class ProductionDatabaseGuard
      */
     private const AUSNAHME_CONFIG = 'database.allow_sqlite_in_production';
 
+    /**
+     * Haengt die Pruefung an den ersten Verbindungsaufbau. Aufruf beim
+     * Booten - geprueft wird aber erst, wenn wirklich eine Datenbank
+     * geoeffnet wird.
+     */
+    public static function registrieren(Application $app): void
+    {
+        if (! $app->isProduction()) {
+            return;
+        }
+
+        $app['events']->listen(
+            ConnectionEstablished::class,
+            static fn () => static::pruefen($app),
+        );
+    }
+
     public static function pruefen(Application $app): void
     {
         if (! $app->isProduction()) {
+            return;
+        }
+
+        // NOCH GAR NICHT EINGERICHTET: ohne .env ist Laravels Vorgabe fuer
+        // APP_ENV "production" - eine frische Arbeitskopie sieht also wie
+        // Produktion aus, ist aber keine. Genau dort laeuft `composer
+        // install` mit package:discover, und das darf nicht scheitern.
+        //
+        // Der Fall kostet hier auch nichts: fehlt die .env auf einem echten
+        // Server, gibt es keinen APP_KEY und JEDE Anfrage bricht sofort ab -
+        // das ist bereits laut. Der stille Fall, um den es dieser Pruefung
+        // geht, ist die VORHANDENE .env mit fehlendem oder auskommentiertem
+        // DB_CONNECTION - dann faellt Laravel unbemerkt auf SQLite zurueck.
+        if (! file_exists($app->environmentFilePath())) {
             return;
         }
 

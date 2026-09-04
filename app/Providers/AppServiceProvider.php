@@ -350,9 +350,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // ARCH-2: SQLite darf in Produktion nicht starten - sonst laeuft das
-        // Portal bei einer fehlenden .env still gegen eine leere Datei.
-        ProductionDatabaseGuard::pruefen($this->app);
+        // ARCH-2: SQLite darf in Produktion nicht benutzt werden - sonst
+        // laeuft das Portal bei einer fehlenden .env still gegen eine leere
+        // Datei. Geprueft wird am ersten Verbindungsaufbau, nicht hier beim
+        // Booten: ohne .env gilt APP_ENV=production, und `composer install`
+        // fuehrt package:discover aus, lange bevor es eine .env gibt.
+        ProductionDatabaseGuard::registrieren($this->app);
 
         $this->registerRateLimiters();
 

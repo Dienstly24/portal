@@ -66,6 +66,53 @@ class ProductionDatabaseGuardTest extends TestCase
         $this->assertTrue(true);
     }
 
+    /**
+     * REGRESSION (04.09.2026): die Pruefung hat die CI komplett lahmgelegt -
+     * alle vier Jobs scheiterten binnen Sekunden am `composer install`.
+     *
+     * Ursache: `composer install` fuehrt `artisan package:discover` aus, und
+     * das passiert BEVOR eine .env existiert. Ohne .env ist Laravels Vorgabe
+     * fuer APP_ENV aber "production" - eine frische Arbeitskopie sah damit
+     * wie Produktion aus. Die Pruefung schlug also bei jeder frischen
+     * Installation an, obwohl niemand eine Datenbank anfassen wollte.
+     *
+     * Der Fall kostet nichts: fehlt die .env auf einem echten Server, gibt
+     * es keinen APP_KEY und jede Anfrage bricht ohnehin sofort ab. Der
+     * STILLE Fall, um den es geht, ist die vorhandene .env mit fehlendem
+     * DB_CONNECTION - und den prueft der Test darunter weiterhin.
+     */
+    public function test_ohne_env_datei_greift_die_pruefung_nicht(): void
+    {
+        $this->app['env'] = 'production';
+        $this->app->useEnvironmentPath('/pfad/den/es/nicht/gibt');
+        config([
+            'database.default' => 'sqlite',
+            'database.connections.sqlite.driver' => 'sqlite',
+        ]);
+
+        ProductionDatabaseGuard::pruefen($this->app);
+
+        $this->assertTrue(true, 'Eine frische Installation ohne .env darf nicht scheitern.');
+    }
+
+    /**
+     * Die Gegenprobe dazu: mit VORHANDENER .env bleibt die Regel scharf -
+     * genau das ist der Fall, den sie abfangen soll.
+     */
+    public function test_mit_vorhandener_env_datei_bleibt_die_pruefung_scharf(): void
+    {
+        $this->app['env'] = 'production';
+        $this->app->useEnvironmentPath(base_path());
+        $this->app->loadEnvironmentFrom('.env.example');
+        config([
+            'database.default' => 'sqlite',
+            'database.connections.sqlite.driver' => 'sqlite',
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        ProductionDatabaseGuard::pruefen($this->app);
+    }
+
     public function test_der_notausstieg_laesst_sqlite_in_produktion_ausdruecklich_zu(): void
     {
         config(['database.allow_sqlite_in_production' => true]);
