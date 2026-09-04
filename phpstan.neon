@@ -1,0 +1,39 @@
+# ARCH-4: statische Analyse (PHPStan + Larastan).
+#
+# Stufe 5 ist der im Auftrag genannte Zielwert und steht hier auch so drin -
+# sie wurde NICHT gesenkt, um die Zahl der Meldungen kleiner aussehen zu
+# lassen. Der Bestand hat auf dieser Stufe 922 Meldungen; sie stehen in
+# phpstan-baseline.neon.
+#
+# Sinn der Baseline: ab sofort faellt jede NEUE Meldung in CI auf, waehrend
+# der Altbestand die Einfuehrung des Werkzeugs nicht blockiert. Sie ist ein
+# Uebergang, kein Dauerzustand - der Weg ist Baseline -> verkleinern ->
+# entfernen. Wer eine Datei anfasst, sollte ihre Eintraege gleich mit
+# aufraeumen und aus der Baseline streichen.
+#
+# Baseline neu erzeugen: composer stan:baseline
+# Analyse laufen lassen:  composer stan
+
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - phpstan-baseline.neon
+
+parameters:
+    level: 5
+
+    paths:
+        - app
+        - config
+        - database
+        - routes
+
+    # Migrationen sind Einwegskripte gegen ein Schema, das PHPStan nicht kennt;
+    # die Blueprint-Aufrufe erzeugen dort nur Rauschen ohne Erkenntnis.
+    excludePaths:
+        - database/migrations
+
+    # Larastan kann die Spalten eines Modells nicht kennen, solange sie nur in
+    # einer Migration stehen - dynamische Eigenschaften sind hier Normalfall,
+    # kein Fehler.
+    checkModelProperties: false
+

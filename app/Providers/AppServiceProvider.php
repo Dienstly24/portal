@@ -90,6 +90,7 @@ use App\Services\Ocr\TesseractTextExtractor;
 use App\Services\Ocr\TextExtractorInterface;
 use App\Support\LocalTime;
 use App\Support\PasswordPolicy;
+use App\Support\ProductionDatabaseGuard;
 use App\Support\SessionPasswordHash;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
@@ -332,6 +333,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // ARCH-2: SQLite darf in Produktion nicht starten - sonst laeuft das
+        // Portal bei einer fehlenden .env still gegen eine leere Datei.
+        ProductionDatabaseGuard::pruefen($this->app);
+
         $this->registerRateLimiters();
 
         /*
