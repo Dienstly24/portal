@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
     build: {
@@ -15,5 +16,9 @@ export default defineConfig({
             input: ['resources/css/app.css', 'resources/js/app.js'],
             refresh: true,
         }),
+        // Tailwind 4 laeuft ueber sein eigenes Vite-Plugin statt ueber
+        // PostCSS - der PostCSS-Weg braucht in v4 zusaetzlich
+        // @tailwindcss/postcss und ist der langsamere von beiden.
+        tailwindcss(),
     ],
 });
