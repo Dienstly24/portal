@@ -314,7 +314,13 @@ class MetaAdsManagementTest extends TestCase
             ->assertSessionHas('success');
 
         $ch = $banner->socialPost->channels()->first()->fresh();
-        $this->assertSame(['likes' => 10, 'comments' => 2, 'shares' => 3, 'reach' => 500], $ch->insights);
+        // assertEquals statt assertSame: `insights` liegt als JSON-Spalte in
+        // der Datenbank, und MySQL sortiert die Schluessel eines JSON-Objekts
+        // beim Speichern um (SQLite behaelt die Reihenfolge bei). assertSame
+        // vergleicht die Reihenfolge mit - der Test waere damit auf der
+        // Produktionsdatenbank rot, obwohl alle Werte stimmen.
+        // Auf die Reihenfolge darf sich ohnehin kein Code verlassen.
+        $this->assertEquals(['likes' => 10, 'comments' => 2, 'shares' => 3, 'reach' => 500], $ch->insights);
         $this->assertNotNull($ch->insights_refreshed_at);
 
         $this->actingAs($this->admin)->get(route('admin.banners.social', $banner->id))
