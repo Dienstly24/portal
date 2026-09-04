@@ -25,7 +25,7 @@ jobs:
     name: Tests & Build-Verifikation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: PHP 8.3 einrichten
         uses: shivammathur/setup-php@v2
@@ -35,7 +35,7 @@ jobs:
           coverage: none
 
       - name: Composer-Cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: vendor
           key: composer-${{ hashFiles('composer.lock') }}
@@ -50,7 +50,7 @@ jobs:
           php artisan key:generate
 
       - name: Node einrichten & Assets bauen (Build-Verifikation)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '20'
           cache: 'npm'
@@ -209,7 +209,7 @@ jobs:
     name: Sicherheitspruefung der Abhaengigkeiten
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: PHP 8.3 einrichten
         uses: shivammathur/setup-php@v2
@@ -233,7 +233,7 @@ jobs:
         run: composer audit
 
       - name: Node einrichten
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '20'
           cache: 'npm'
@@ -258,7 +258,7 @@ jobs:
     name: Cloudflare-Ranges abgleichen
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
@@ -308,7 +308,7 @@ jobs:
     environment: production
     steps:
       - name: Per SSH deployen
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}

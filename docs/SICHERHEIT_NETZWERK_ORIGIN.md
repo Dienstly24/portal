@@ -110,6 +110,9 @@ die folgende Aufgabe fuer DevOps/den Betreiber.
 
 ## Aufgabe fuer DevOps / den Betreiber
 
+> Dieselben Schritte auf Arabisch (Abschnitt 4):
+> `docs/ANLEITUNG_SICHERHEIT_AR.md`
+
 ### Schritt 1 - Feststellen, ob der Origin direkt erreichbar ist
 
 Auf einem beliebigen Rechner **ausserhalb** des VPS:

@@ -2103,7 +2103,10 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
 
 ## Offene Themen / wartet auf den Betreiber
 
-- **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig, Stand 03.09.2026):
+- **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026
+  auf dem Server, PR #292). **Arabische Schritt-fuer-Schritt-Anleitung
+  fuer den Betreiber: `docs/ANLEITUNG_SICHERHEIT_AR.md`** - dieselben
+  Punkte in der Sprache, in der der Betrieb kommuniziert:
   1. `TURNSTILE_SITE_KEY` und `TURNSTILE_SECRET_KEY` in die Server-`.env`
      (Cloudflare Dashboard -> Turnstile -> Widget anlegen). **Ohne diese
      Werte lehnt die Registrierung in Produktion JEDE Anmeldung ab** -
