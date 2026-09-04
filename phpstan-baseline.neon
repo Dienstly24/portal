@@ -1141,18 +1141,6 @@ parameters:
 			path: app/Http/Controllers/ProvisionController.php
 
 		-
-			message: '#^Relation ''partner'' is not found in App\\Models\\Provision model\.$#'
-			identifier: larastan.relationExistence
-			count: 2
-			path: app/Http/Controllers/ProvisionController.php
-
-		-
-			message: '#^Relation ''user'' is not found in App\\Models\\Provision model\.$#'
-			identifier: larastan.relationExistence
-			count: 2
-			path: app/Http/Controllers/ProvisionController.php
-
-		-
 			message: '#^Property App\\Http\\Controllers\\ProvisionsmanagementController\:\:\$links is never read, only written\.$#'
 			identifier: property.onlyWritten
 			count: 1

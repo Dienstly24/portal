@@ -85,6 +85,10 @@ use App\Services\Ai\TemplateParsers\ReisepassMrzParser;
 use App\Services\Ai\TemplateParsers\SparkasseDirektKfzParser;
 use App\Services\Ai\TemplateParsers\VermittlerVorgangslisteHinweisParser;
 use App\Services\Ai\TemplateParsers\WgvKfzPoliceParser;
+use App\Services\Commission\CommissionReadService;
+use App\Services\Commission\Sources\ContractCommissionSource;
+use App\Services\Commission\Sources\ProvisionSource;
+use App\Services\Commission\Sources\VermittlerSettlementSource;
 use App\Services\Notifications\NotificationService;
 use App\Services\Ocr\TesseractTextExtractor;
 use App\Services\Ocr\TextExtractorInterface;
@@ -121,6 +125,19 @@ class AppServiceProvider extends ServiceProvider
         // Singleton, damit Punkte-Overrides pro Request nur einmal
         // aus den Einstellungen gelesen werden.
         $this->app->singleton(ActivityCatalog::class);
+
+        /*
+        | ARCH-3: EIN Leseweg fuer alle Provisionsquellen.
+        |
+        | Die Reihenfolge der Quellen ist die Reihenfolge in Berichten. Die
+        | drei Fachbereiche bleiben getrennt - zusammengefasst wird nur das
+        | LESEN, siehe CommissionReadService.
+        */
+        $this->app->singleton(CommissionReadService::class, fn ($app) => new CommissionReadService(
+            $app->make(ContractCommissionSource::class),
+            $app->make(VermittlerSettlementSource::class),
+            $app->make(ProvisionSource::class),
+        ));
 
         // Zentraler Notification-Dienst (Glocke): eine Stelle fuer Kuerzen,
         // Duplikat-Vermeidung und Kategorisierung. Facade: App\Support\Facades\Notify.
