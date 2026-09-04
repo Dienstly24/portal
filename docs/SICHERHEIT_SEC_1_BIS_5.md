@@ -2,6 +2,10 @@
 
 Stand: 03.09.2026
 
+> **Fuer den Betreiber gibt es dieselben Schritte auf Arabisch:**
+> `docs/ANLEITUNG_SICHERHEIT_AR.md` - Turnstile einrichten,
+> Datenschutzerklaerung ergaenzen, Origin pruefen.
+
 Zusammenfassung der fuenf Audit-Punkte: was war der eigentliche Fehler,
 was wurde geaendert, wie ist es abgesichert - und was ausdruecklich
 offen bleibt.
