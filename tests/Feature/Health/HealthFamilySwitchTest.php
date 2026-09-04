@@ -122,7 +122,14 @@ class HealthFamilySwitchTest extends TestCase
         $this->assertSame($expectedEffective, $contract->start_date);
 
         // Verlauf: AOK endet am Vortag, TK beginnt am Stichtag.
-        $entries = ContractHistory::where('customer_id', $customer->id)->orderBy('created_at')->get();
+        // Sortiert nach effective_from, nicht nach created_at: beide Zeilen
+        // entstehen im SELBEN Request und haben damit denselben Zeitstempel.
+        // Welche davon zuerst kommt, entscheidet die Datenbank dann frei -
+        // SQLite und MySQL antworten unterschiedlich. effective_from ist
+        // ohnehin die richtige Reihenfolge fuer einen Verlauf: der
+        // Bestandseintrag (ohne Beginn) steht vor dem neuen ab Stichtag.
+        $entries = ContractHistory::where('customer_id', $customer->id)
+            ->orderBy('effective_from')->get();
         $this->assertCount(2, $entries);
         $this->assertSame('AOK', $entries[0]->provider);
         $this->assertSame(
