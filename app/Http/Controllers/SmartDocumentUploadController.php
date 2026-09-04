@@ -21,6 +21,7 @@ use App\Services\Ocr\TesseractTextExtractor;
 use App\Services\Pdf\ImagesToPdfService;
 use App\Services\Portal\PortalAccessService;
 use App\Support\Facades\Notify;
+use App\Support\UploadRules;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -205,7 +206,7 @@ class SmartDocumentUploadController extends Controller
     {
         $this->validateJson($request, [
             'files' => 'required|array|min:1|max:20',
-            'files.*' => 'file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+            'files.*' => UploadRules::each(UploadRules::ATTACHMENT_MIMES),
             'customer_id' => 'nullable|uuid',
             'visibility' => 'nullable|in:customer,internal',
             // 1 = Bilder zu EINEM mehrseitigen Dokument buendeln (Standard),

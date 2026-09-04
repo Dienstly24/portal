@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ScopesCustomerAccess;
-
 use App\Mail\GuestTicketReplyMail;
+
 use App\Mail\TicketReplyMail;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\Notifications\NotificationService;
 use App\Services\TicketNotifier;
 use App\Support\Facades\Notify;
+use App\Support\UploadRules;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
@@ -504,7 +505,7 @@ class TicketController extends Controller
             'body' => 'required',
             'status' => 'required|in:'.implode(',', array_keys(Ticket::STATUSES)),
             'attachments' => 'nullable|array|max:5',
-            'attachments.*' => 'file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+            'attachments.*' => UploadRules::each(UploadRules::ATTACHMENT_MIMES),
         ]);
         $ticket = Ticket::findOrFail($id);
         $this->authorizeTicketAccess($ticket);

@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Concerns\ScopesCustomerAccess;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ReplaceCustomerDocumentRequest;
+use App\Http\Requests\Admin\StoreCustomerDocumentRequest;
+use App\Http\Requests\Admin\UpdateCustomerDocumentRequest;
 use App\Models\ActivityLog;
 use App\Models\Contract;
 use App\Models\Document;
@@ -26,16 +29,10 @@ class CustomerDocumentController extends Controller
 {
     use ScopesCustomerAccess;
 
-    public function storeDocument(Request $request, $id) {
+    public function storeDocument(StoreCustomerDocumentRequest $request, $id) {
+        // Die Zugriffspruefung bleibt hier: sie haengt am Kunden aus dem Pfad
+        // und ist eine Berechtigungs-, keine Formatfrage (ARCH-6).
         $this->authorizeCustomerAccess($id);
-        $request->validate([
-            'documents' => 'required|array|min:1|max:20',
-            'documents.*' => 'file|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:10240',
-            'category' => 'nullable|in:contract,police,invoice,identity,claim,other',
-            'visibility' => 'nullable|in:customer,internal',
-            'color' => 'nullable|in:green,yellow,red',
-            'contract_id' => 'nullable|string',
-        ]);
 
         // Vertragszuordnung nur zulassen, wenn der Vertrag zu DIESEM Kunden gehört.
         $contractId = $request->filled('contract_id')
@@ -79,10 +76,9 @@ class CustomerDocumentController extends Controller
 
     /** Sicherer Dokument-Download (Admin) - nur mit Zugriff auf den Kunden. */
     /** Datei eines bestehenden Dokuments austauschen - setzt updated_by. (Punkt 3) */
-    public function documentReplace(Request $request, $id) {
+    public function documentReplace(ReplaceCustomerDocumentRequest $request, $id) {
         $doc = Document::findOrFail($id);
         $this->authorizeDocumentAccess($doc);
-        $request->validate(['document' => 'required|file|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:10240']);
 
         $file = $request->file('document');
         $newPath = $file->store('customers/'.$doc->customer_id.'/documents', 'local');
@@ -113,16 +109,9 @@ class CustomerDocumentController extends Controller
      * Dokument-Metadaten bearbeiten: Vertragszuordnung, Kategorie, Sichtbarkeit
      * (intern/Kunde), Priorität und Anzeigename. Datei-Inhalt bleibt unberührt.
      */
-    public function documentUpdate(Request $request, $id) {
+    public function documentUpdate(UpdateCustomerDocumentRequest $request, $id) {
         $doc = Document::findOrFail($id);
         $this->authorizeDocumentAccess($doc);
-        $request->validate([
-            'category' => 'nullable|in:contract,police,invoice,identity,claim,other',
-            'visibility' => 'nullable|in:customer,internal',
-            'color' => 'nullable|in:green,yellow,red',
-            'contract_id' => 'nullable|string',
-            'file_name' => 'nullable|string|max:255',
-        ]);
 
         // Vertrag muss zum selben Kunden gehören (Fremdzuordnung verhindern).
         $contractId = $request->filled('contract_id')

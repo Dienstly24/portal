@@ -10,6 +10,7 @@ use App\Models\CustomerMessageAttachment;
 use App\Services\Ai\Assistant\AssistantSettings;
 use App\Services\Ai\Assistant\ConversationResumeService;
 use App\Services\CustomerMessageNotifier;
+use App\Support\UploadRules;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -90,7 +91,7 @@ class PortalMessageController extends Controller
         $request->validate([
             'body' => 'required|string|max:5000',
             'attachments' => 'nullable|array|max:5',
-            'attachments.*' => 'file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+            'attachments.*' => UploadRules::each(UploadRules::ATTACHMENT_MIMES),
         ]);
         $customer = $this->getCustomer();
 

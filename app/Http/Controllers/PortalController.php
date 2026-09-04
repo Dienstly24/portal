@@ -29,6 +29,7 @@ use App\Services\TicketNotifier;
 use App\Support\Facades\Notify;
 use App\Support\PasswordPolicy;
 use App\Support\SessionPasswordHash;
+use App\Support\UploadRules;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
@@ -350,7 +351,7 @@ class PortalController extends Controller
             'description' => 'required',
             'priority' => 'required|in:niedrig,mittel,hoch',
             'attachments' => 'nullable|array|max:10',
-            'attachments.*' => 'file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+            'attachments.*' => UploadRules::each(UploadRules::ATTACHMENT_MIMES),
         ]);
         $customer = $this->getCustomer();
         $ticket = Ticket::create([
@@ -407,7 +408,7 @@ class PortalController extends Controller
         $request->validate([
             'body' => 'required',
             'attachments' => 'nullable|array|max:5',
-            'attachments.*' => 'file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+            'attachments.*' => UploadRules::each(UploadRules::ATTACHMENT_MIMES),
         ]);
         $customer = $this->getCustomer();
         $ticket = Ticket::where('id', $id)->where('customer_id', $customer->id)->firstOrFail();
@@ -857,10 +858,10 @@ class PortalController extends Controller
             // Nachweise fuer sensible Aenderungen (Name, Anschrift, Bank)
             // und "ab wann gilt die Aenderung" (Betreiber-Vorgabe 29.07.2026).
             'effective_from' => 'nullable|date|after_or_equal:-5 years',
-            'proof' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
-            'proof_back' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
+            'proof' => UploadRules::optional(UploadRules::PROOF_MIMES),
+            'proof_back' => UploadRules::optional(UploadRules::PROOF_MIMES),
             'proof_kind' => 'nullable|in:meldebescheinigung,id_front,other',
-            'bank_proof' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
+            'bank_proof' => UploadRules::optional(UploadRules::PROOF_MIMES),
         ]);
 
         $service = app(ChangeRequestService::class);

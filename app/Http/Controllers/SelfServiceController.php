@@ -10,6 +10,7 @@ use App\Models\CustomerChangeRequest;
 use App\Models\CustomerContact;
 use App\Models\CustomerFamily;
 use App\Services\ChangeRequestService;
+use App\Support\UploadRules;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
@@ -31,7 +32,7 @@ use Illuminate\Support\Str;
 class SelfServiceController extends Controller
 {
     /** Zulässige Nachweis-Dateien (wie beim Dokumenten-Upload). */
-    private const PROOF_RULES = ['file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'];
+    private const PROOF_RULES = ['file', 'mimes:'.UploadRules::PROOF_MIMES, 'max:'.UploadRules::MAX_KB];
 
     private function getCustomer(): Customer
     {

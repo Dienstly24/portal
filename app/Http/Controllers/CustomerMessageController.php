@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\CustomerMessage;
 use App\Models\CustomerMessageAttachment;
 use App\Services\CustomerMessageNotifier;
+use App\Support\UploadRules;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -22,7 +23,7 @@ class CustomerMessageController extends Controller
             'body' => 'required|string|max:5000',
             'email_mode' => 'required|in:'.implode(',', CustomerMessage::EMAIL_MODES),
             'attachments' => 'nullable|array|max:5',
-            'attachments.*' => 'file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+            'attachments.*' => UploadRules::each(UploadRules::ATTACHMENT_MIMES),
         ]);
         $customer = Customer::with('user')->findOrFail($customerId);
 
