@@ -22,8 +22,20 @@
 | ausgerechnet in die Datensaetze, die im Streitfall etwas belegen sollen.
 |
 | Deshalb: eine EXPLIZITE Liste. Standard sind die veroeffentlichten
-| Cloudflare-Ranges (Cloudflare ist der Edge-Proxy dieses Betriebs) plus
-| Loopback fuer den nginx auf derselben Maschine.
+| Cloudflare-Ranges plus Loopback fuer den nginx auf derselben Maschine.
+|
+| NACHTRAG 05.09.2026 - die Cloudflare-Annahme ist gemessen und WIDERLEGT:
+| die Antwort von www.dienstly24.de traegt "server: hcdn" und keinen
+| cf-ray-Header, der Edge ist also das CDN des Hosters. Die Liste bleibt
+| trotzdem stehen: sie ist zu KLEIN, nicht zu gross - eine zu kleine Liste
+| glaubt zu wenigen Absendern und ist damit nie unsicher. Falsch werden
+| kann nur die FACHLICHE Seite: reicht der Vorschalt-Dienst von einer
+| externen, nicht gelisteten Adresse weiter, sehen alle Besucher dieselbe
+| IP (ein gemeinsamer Rate-Limit-Eimer, CDN-Adresse im
+| Einwilligungsnachweis). Ob das der Fall ist, sagt
+|   php artisan netz:client-ip-pruefen
+| auf dem Server; die dort genannte Adresse gehoert dann in
+| TRUSTED_PROXIES. Adressbereiche eines CDN werden NIE geraten.
 |
 | Abweichende Infrastruktur wird ueber TRUSTED_PROXIES in der Server-.env
 | gesetzt (kommagetrennte IPs/CIDRs). Der Wert "*" ist weiterhin moeglich,

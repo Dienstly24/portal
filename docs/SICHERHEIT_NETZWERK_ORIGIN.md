@@ -1,6 +1,6 @@
 # SEC-2: Vertrauenswuerdige Proxys, echte Client-IP und der direkte Origin-Zugriff
 
-Stand: 03.09.2026
+Stand: 05.09.2026 (Messung auf dem Server nachgetragen)
 
 ## Worum es geht
 
@@ -52,6 +52,11 @@ im Streitfall etwas belegen soll.
 
 * Standard: veroeffentlichte **Cloudflare-Ranges** + **Loopback**
   (`127.0.0.1`, `::1`) fuer den nginx auf derselben Maschine.
+  **Achtung, seit der Messung vom 05.09.2026 ist der Cloudflare-Teil
+  dieser Standardliste vermutlich gegenstandslos** - siehe Abschnitt
+  "Messung vom 05.09.2026". Sicherheitlich ist das unschaedlich (eine zu
+  kleine Liste glaubt zu wenigen, nie zu vielen), fachlich kann es aber
+  bedeuten, dass alle Besucher in EINEM Rate-Limit-Eimer landen.
 * Ueberschreibbar per `TRUSTED_PROXIES` in der Server-`.env`
   (kommagetrennte IPs/CIDRs).
 * `'*'` bleibt moeglich, ist aber eine **bewusste, dokumentierte
@@ -108,6 +113,97 @@ Deshalb wird SEC-2 hier **ausdruecklich nicht** als "Netzwerk geprueft"
 abgehakt. Der Code-Teil ist erledigt und getestet; der Netzwerk-Teil ist
 die folgende Aufgabe fuer DevOps/den Betreiber.
 
+## Messung vom 05.09.2026 (auf dem Produktionsserver)
+
+Der Betreiber hat Schritt 1 auf dem VPS ausgefuehrt. Zwei Ergebnisse, beide
+belegt durch die Ausgabe der Befehle:
+
+```
+curl -sSI https://www.dienstly24.de | grep -iE 'server|cf-ray'
+  server: hcdn
+
+ufw status numbered
+  Status: inactive
+```
+
+### Befund 1: Cloudflare ist NICHT der Edge-Proxy
+
+Die Antwort traegt `server: hcdn` (das CDN des Hosters) und **keinen**
+`cf-ray`-Header. Eine Antwort ueber Cloudflare traegt immer beides
+(`server: cloudflare` + `cf-ray`). Damit ist die Annahme, die der
+Standardliste in `config/trustedproxy.php` zugrunde liegt, fuer diesen
+Aufbau **widerlegt**.
+
+Was das heisst - und was es NICHT heisst:
+
+* **Sicherheitlich unveraendert gut.** Die Liste ist zu klein, nicht zu
+  gross. Eine Anfrage von einem nicht gelisteten Absender wird mit ihrem
+  `X-Forwarded-For` weiterhin ignoriert. Das Abnahmekriterium von SEC-2
+  (kein frischer Rate-Limit-Eimer durch gefaelschte Header) bleibt
+  erfuellt.
+* **Fachlich moeglicherweise falsch.** Reicht der Vorschalt-Dienst die
+  Anfrage von einer externen Adresse an den Server weiter, steht diese
+  Adresse in `REMOTE_ADDR`, sie ist nicht gelistet, ihr Header wird
+  ignoriert - und dann sieht die Anwendung **bei jedem Besucher dieselbe
+  IP**. Folge: ein gemeinsamer Rate-Limit-Eimer fuer alle (die Bremsen
+  fuer Login, Reset und Registrierung greifen faktisch nicht mehr) und
+  die Adresse des CDN statt der des Kunden in ActivityLog und in den
+  DSGVO-Einwilligungsnachweisen.
+* Laeuft der Vorschalt-Dienst dagegen als nginx **auf derselben
+  Maschine**, ist `REMOTE_ADDR` gleich `127.0.0.1`, und das steht in der
+  Liste - dann ist alles korrekt.
+
+Welcher der beiden Faelle zutrifft, steht nicht im Repository. Er laesst
+sich aber **messen**, ohne zu raten (Schritt 1a unten).
+
+### Befund 2: Es gibt keine Host-Firewall
+
+`ufw` ist `inactive`. Der Origin ist also durch nichts auf dem Server
+eingeschraenkt; ob er von aussen direkt erreichbar ist, entscheidet allein
+das Netz des Hosters.
+
+Auch hier die ehrliche Einordnung: die **IP-Faelschung** (der eigentliche
+SEC-2-Befund) ist durch den Code geschlossen, unabhaengig von der
+Firewall. Offen bleibt die Umgehung von WAF/Bot-Schutz/DDoS-Abwehr des
+CDN - geringere Schwere, aber ein realer Punkt.
+
+### Noch offen
+
+* `portal.dienstly24.de` wurde **nicht** gemessen (der Test lief gegen
+  `www.`). Beide koennen ueber verschiedene Wege laufen.
+* Ob der Origin direkt per IP antwortet, ist ungeprueft.
+
+---
+
+## Schritt 1a - Was sieht die Anwendung tatsaechlich? (ein Befehl)
+
+Der Befehl liest nur die Datenbank (kein Netzzugriff, keine Aenderung) und
+wertet aus, welche IPs die Anwendung in den letzten Wochen aufgezeichnet
+hat. Auf dem Server:
+
+```bash
+cd /var/www/dienstly24/portal && php artisan netz:client-ip-pruefen
+```
+
+* **"Die Anwendung sieht die echte Client-IP"** - nichts zu tun.
+* **"Die Anwendung sieht NICHT die echte Client-IP"** - der Befehl nennt
+  die Adresse des Vorschalt-Dienstes. Diese Adresse in die Server-`.env`
+  eintragen und die Konfiguration neu einlesen:
+
+  ```bash
+  # In /var/www/dienstly24/portal/.env
+  TRUSTED_PROXIES=<die genannte Adresse>
+
+  php artisan config:clear
+  ```
+
+  Danach den Befehl in ein paar Tagen erneut laufen lassen - dann muessen
+  sich die Adressen verteilen.
+* **"Unklar"** - zu wenig Verkehr im Zeitraum, mit `--tage=90` wiederholen.
+
+Wichtig: in `TRUSTED_PROXIES` gehoert **nur**, was wirklich der eigene
+Vorschalt-Dienst ist. Wer dort steht, darf seine Client-IP frei behaupten.
+
 ## Aufgabe fuer DevOps / den Betreiber
 
 > Dieselben Schritte auf Arabisch (Abschnitt 4):
@@ -130,6 +226,12 @@ curl -sSI --resolve www.dienstly24.de:443:<ORIGIN-IP> https://www.dienstly24.de
 ```
 
 ### Schritt 2 - Direkten Zugriff schliessen (falls Schritt 1 ihn zeigt)
+
+> Die folgenden Regeln nennen Cloudflare, weil sie fuer diesen Aufbau
+> geschrieben wurden. Nach der Messung vom 05.09.2026 ist der Edge das
+> CDN des Hosters - dann gehoeren dort dessen Adressbereiche hinein
+> (beim Hoster zu erfragen), nicht die von Cloudflare. Adressbereiche
+> eines CDN NIE raten.
 
 Auf dem VPS, Ports 80/443 nur fuer Cloudflare oeffnen:
 
@@ -156,16 +258,23 @@ Admin-IP bzw. das bestehende Regelwerk beschraenkt.
 
 ### Schritt 3 - Ergebnis hier eintragen
 
-| Frage | Antwort | Geprueft am | Von |
-|---|---|---|---|
-| Ist Cloudflare der Edge-Proxy? | _offen_ | | |
-| Ist der Origin direkt per IP erreichbar? | _offen_ | | |
-| Firewall auf Cloudflare-Ranges eingeschraenkt? | _offen_ | | |
-| Authenticated Origin Pulls aktiv? | _offen_ | | |
-| `TRUSTED_PROXIES` in der Server-`.env` gesetzt? | _leer = Standardliste_ | | |
+| Frage | Antwort | Geprueft am | Von | Nachweis |
+|---|---|---|---|---|
+| Ist Cloudflare der Edge-Proxy? | **nein** - `server: hcdn`, kein `cf-ray` (Hoster-CDN) | 05.09.2026 | Betreiber | `curl -sSI https://www.dienstly24.de` |
+| Gilt das auch fuer `portal.dienstly24.de`? | _offen_ (nur `www.` gemessen) | | | |
+| Ist der Origin direkt per IP erreichbar? | _offen_ | | | |
+| Host-Firewall aktiv / auf den Edge eingeschraenkt? | **nein** - `ufw` ist `inactive` | 05.09.2026 | Betreiber | `ufw status numbered` |
+| Sieht die Anwendung die echte Client-IP? | _offen_ | | | `php artisan netz:client-ip-pruefen` |
+| Authenticated Origin Pulls aktiv? | entfaellt, solange Cloudflare nicht der Edge ist | 05.09.2026 | | |
+| `TRUSTED_PROXIES` in der Server-`.env` gesetzt? | _leer = Standardliste_ | | | |
 
-Solange Zeile 2 mit "ja" beantwortet ist und Zeile 3 mit "nein", bleibt
-SEC-2 auf Netzwerkseite offen - auch wenn der Code korrekt ist.
+Solange Zeile 3 mit "ja" beantwortet ist und Zeile 4 mit "nein", bleibt
+SEC-2 auf Netzwerkseite offen - auch wenn der Code korrekt ist. Die
+**IP-Faelschung** ist davon unabhaengig geschlossen; offen ist die
+Umgehung von WAF/Bot-Schutz/DDoS-Abwehr.
+
+Die naechste zu klaerende Zeile ist Zeile 5: sie entscheidet, ob
+`TRUSTED_PROXIES` gesetzt werden muss (Schritt 1a oben).
 
 ## Pflege der Cloudflare-Ranges
 

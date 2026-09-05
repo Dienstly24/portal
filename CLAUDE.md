@@ -2156,15 +2156,28 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
      Cloudflare, Zweck Schutz vor missbraeuchlicher Anmeldung,
      Art. 6 Abs. 1 lit. f). Cloudflare ist als Edge-Proxy ohnehin
      Empfaenger jeder Besucher-IP - genannt werden muss es trotzdem.
-  3. **Netzwerk (SEC-2, offen):** pruefen, ob der Origin direkt per IP
-     erreichbar ist, und ihn ggf. per Firewall auf die Cloudflare-Ranges
-     einschraenken. Schritt fuer Schritt inkl. auszufuellender
-     Ergebnistabelle: `docs/SICHERHEIT_NETZWERK_ORIGIN.md`. Der
-     Code-Teil (keine IP-Faelschung mehr) ist erledigt und getestet -
-     die Firewall betrifft WAF-/DDoS-Umgehung.
+  3. **Netzwerk (SEC-2): erste Messung liegt vor (05.09.2026), zwei
+     Punkte bleiben offen.** Gemessen auf dem Server: die Antwort von
+     `www.dienstly24.de` traegt `server: hcdn` und **keinen** `cf-ray` -
+     der Edge ist also das CDN des Hosters, **nicht Cloudflare**; und
+     `ufw` ist `inactive`, es gibt keine Host-Firewall. Einordnung: die
+     IP-Faelschung (der eigentliche Befund) ist durch den Code
+     geschlossen und davon unabhaengig; offen bleibt die Umgehung von
+     WAF-/Bot-/DDoS-Schutz. **Naechster Schritt, ein Befehl:**
+     `php artisan netz:client-ip-pruefen` auf dem Server - er sagt
+     anhand der aufgezeichneten IPs, ob die Anwendung die ECHTE
+     Client-IP sieht oder ob alle Besucher in EINEM Rate-Limit-Eimer
+     landen (dann gehoert die genannte Adresse in `TRUSTED_PROXIES`).
+     Ebenfalls offen: `portal.dienstly24.de` wurde nicht gemessen, und
+     ob der Origin direkt per IP antwortet. Ergebnistabelle und
+     Begruendung: `docs/SICHERHEIT_NETZWERK_ORIGIN.md`.
   4. `scripts/pruefe-cloudflare-ips.sh` gelegentlich laufen lassen (laeuft
      auch als nicht blockierender CI-Job): meldet, wenn Cloudflare seine
-     Adressbereiche geaendert hat.
+     Adressbereiche geaendert hat. Seit Punkt 3 mit Einschraenkung: die
+     Cloudflare-Ranges sind hier moeglicherweise gar nicht der richtige
+     Massstab - die Standardliste in `config/trustedproxy.php` bleibt
+     trotzdem stehen, weil eine zu KLEINE Vertrauensliste nie unsicher
+     ist (sie glaubt zu wenigen Absendern, nie zu vielen).
 
 - **OCR auf dem VPS ist aktiv** (Stand 18.07.2026): `tesseract-ocr`,
   `tesseract-ocr-deu`, `tesseract-ocr-ara`, `poppler-utils` sind installiert,
