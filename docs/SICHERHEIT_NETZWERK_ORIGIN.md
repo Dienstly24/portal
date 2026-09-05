@@ -204,6 +204,34 @@ cd /var/www/dienstly24/portal && php artisan netz:client-ip-pruefen
 Wichtig: in `TRUSTED_PROXIES` gehoert **nur**, was wirklich der eigene
 Vorschalt-Dienst ist. Wer dort steht, darf seine Client-IP frei behaupten.
 
+### Ergebnis dieser Messung (05.09.2026)
+
+Der Lauf auf dem Server ergab:
+
+* Aktivitaetsprotokoll: 7.456 Eintraege, **eine** Adresse (ein
+  Telekom-Anschluss), 2 Nutzer, nicht in der Vertrauensliste.
+* DSGVO-Einwilligungsnachweise: 4 Nachweise mit **2 verschiedenen** IPs.
+
+**Befund: die Anwendung sieht die echte Client-IP.** Der Beweis liegt in
+der Vielfalt, nicht in der Menge: waere ein nicht gelisteter
+Vorschalt-Dienst dazwischen, traege **jede** Zeile in beiden Tabellen
+dieselbe Adresse - zwei verschiedene IPs in den Einwilligungen kann es
+dann gar nicht geben. Die eine Adresse im Aktivitaetsprotokoll ist kein
+Gegenbeweis: dort stehen fast nur Mitarbeiter-Aufrufe, und die kommen aus
+demselben Buero.
+
+Damit ist auch die praktische Sorge aus Befund 1 ausgeraeumt: die
+Rate-Limit-Eimer trennen sich je Besucher, und in den
+Einwilligungsnachweisen steht die Adresse des Kunden. `TRUSTED_PROXIES`
+bleibt leer, die Standardliste im Code genuegt (Loopback deckt den
+nginx auf derselben Maschine ab).
+
+> Der Befehl selbst gab beim ersten Lauf noch "unklar" aus - er wertete nur
+> das Aktivitaetsprotokoll und verlangte dort mindestens drei Nutzer. Die
+> Aussage stand aber schon in den Einwilligungen. Die Regel ist deshalb
+> nachgezogen: Vielfalt in EINER der beiden Quellen genuegt; der
+> Loopback-Befund schlaegt weiterhin alles.
+
 ## Aufgabe fuer DevOps / den Betreiber
 
 > Dieselben Schritte auf Arabisch (Abschnitt 4):
@@ -264,7 +292,7 @@ Admin-IP bzw. das bestehende Regelwerk beschraenkt.
 | Gilt das auch fuer `portal.dienstly24.de`? | _offen_ (nur `www.` gemessen) | | | |
 | Ist der Origin direkt per IP erreichbar? | _offen_ | | | |
 | Host-Firewall aktiv / auf den Edge eingeschraenkt? | **nein** - `ufw` ist `inactive` | 05.09.2026 | Betreiber | `ufw status numbered` |
-| Sieht die Anwendung die echte Client-IP? | _offen_ | | | `php artisan netz:client-ip-pruefen` |
+| Sieht die Anwendung die echte Client-IP? | **ja** - die aufgezeichneten Adressen sind verschieden | 05.09.2026 | Betreiber | `php artisan netz:client-ip-pruefen` |
 | Authenticated Origin Pulls aktiv? | entfaellt, solange Cloudflare nicht der Edge ist | 05.09.2026 | | |
 | `TRUSTED_PROXIES` in der Server-`.env` gesetzt? | _leer = Standardliste_ | | | |
 
@@ -273,8 +301,8 @@ SEC-2 auf Netzwerkseite offen - auch wenn der Code korrekt ist. Die
 **IP-Faelschung** ist davon unabhaengig geschlossen; offen ist die
 Umgehung von WAF/Bot-Schutz/DDoS-Abwehr.
 
-Die naechste zu klaerende Zeile ist Zeile 5: sie entscheidet, ob
-`TRUSTED_PROXIES` gesetzt werden muss (Schritt 1a oben).
+Zeile 5 ist damit geklaert: `TRUSTED_PROXIES` muss NICHT gesetzt werden
+(Messung siehe unten). Offen bleiben Zeile 2 und 3.
 
 ## Pflege der Cloudflare-Ranges
 
