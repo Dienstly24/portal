@@ -46,6 +46,9 @@ class CheckClientIpChain extends Command
     /** Anteil, ab dem eine einzelne Adresse den Bestand dominiert. */
     private const VERDACHT_AB_ANTEIL = 0.8;
 
+    /** Der lokale Webserver kam selbst als Client-IP an - schlaegt alles andere. */
+    private bool $loopbackBefund = false;
+
     public function handle(): int
     {
         $tage = max(1, (int) $this->option('tage'));
@@ -57,8 +60,10 @@ class CheckClientIpChain extends Command
 
         $this->zeigeVertrauensliste();
 
-        $befund = $this->pruefeAktivitaetsprotokoll($seit, $top);
-        $this->pruefeEinwilligungen($seit);
+        $ausProtokoll = $this->pruefeAktivitaetsprotokoll($seit, $top);
+        $ausEinwilligungen = $this->pruefeEinwilligungen($seit);
+
+        $befund = $this->zusammenfuehren($ausProtokoll, $ausEinwilligungen);
 
         $this->newLine();
 
@@ -82,7 +87,11 @@ class CheckClientIpChain extends Command
             ),
             'ok' => $this->melde(
                 'Die Anwendung sieht die echte Client-IP.',
-                ['Die Adressen verteilen sich wie erwartet - kein Handlungsbedarf.'],
+                [
+                    'Die aufgezeichneten Adressen sind VERSCHIEDEN. Waere ein nicht',
+                    'gelisteter Vorschalt-Dienst dazwischen, traege JEDE Zeile dieselbe',
+                    'Adresse - genau das ist hier nicht der Fall. Kein Handlungsbedarf.',
+                ],
                 0
             ),
             default => $this->melde(
@@ -179,16 +188,53 @@ class CheckClientIpChain extends Command
             $this->warn('Vertrauensliste, sie kommt hier aber trotzdem an - der Webserver setzt also');
             $this->warn('offenbar keinen X-Forwarded-For-Header. Zu pruefen ist die vhost-Konfiguration.');
 
+            $this->loopbackBefund = true;
+
             return 'proxy';
         }
 
-        return $zeilen->count() > 1 ? 'ok' : 'unklar';
+        $verschiedene = (int) DB::table('activity_logs')
+            ->whereNotNull('ip')
+            ->where('created_at', '>=', $seit)
+            ->distinct()
+            ->count('ip');
+
+        return $verschiedene > 1 ? 'ok' : 'unklar';
     }
 
-    private function pruefeEinwilligungen(\DateTimeInterface $seit): void
+    /**
+     * Das Aktivitaetsprotokoll traegt fast nur MITARBEITER-Aufrufe, oft aus
+     * demselben Buero. Eine einzelne Adresse ist dort also normal und beweist
+     * fuer sich genommen nichts. Die Einwilligungsnachweise stammen dagegen von
+     * KUNDEN an verschiedenen Orten - stehen dort verschiedene Adressen, kann
+     * die Kette gar nicht zusammengefallen sein. Deshalb zaehlt hier das
+     * Vorhandensein von Vielfalt in EINER der beiden Quellen.
+     *
+     * Ausnahme ist der Loopback-Befund: kommt der lokale Webserver selbst als
+     * Client-IP an, ist das unabhaengig von jeder Vielfalt falsch.
+     */
+    private function zusammenfuehren(string $protokoll, string $einwilligungen): string
+    {
+        if ($this->loopbackBefund) {
+            return 'proxy';
+        }
+
+        if ($protokoll === 'ok' || $einwilligungen === 'ok') {
+            return 'ok';
+        }
+
+        if ($protokoll === 'proxy' || $einwilligungen === 'proxy') {
+            return 'proxy';
+        }
+
+        return 'unklar';
+    }
+
+    /** @return 'ok'|'proxy'|'unklar' */
+    private function pruefeEinwilligungen(\DateTimeInterface $seit): string
     {
         if (! Schema::hasTable('customer_consents')) {
-            return;
+            return 'unklar';
         }
 
         $gesamt = (int) DB::table('customer_consents')
@@ -197,7 +243,7 @@ class CheckClientIpChain extends Command
             ->count();
 
         if ($gesamt === 0) {
-            return;
+            return 'unklar';
         }
 
         $verschieden = (int) DB::table('customer_consents')
@@ -208,9 +254,17 @@ class CheckClientIpChain extends Command
 
         $this->info('DSGVO-Einwilligungsnachweise: '.$gesamt.' Nachweise, '.$verschieden.' verschiedene IPs');
 
-        if ($verschieden === 1 && $gesamt >= self::VERDACHT_AB_NUTZERN) {
-            $this->warn('  Alle Nachweise tragen dieselbe IP - als Beweismittel nach Art. 7 DSGVO wertlos.');
+        if ($verschieden > 1) {
+            return 'ok';
         }
+
+        if ($gesamt >= self::VERDACHT_AB_NUTZERN) {
+            $this->warn('  Alle Nachweise tragen dieselbe IP - als Beweismittel nach Art. 7 DSGVO wertlos.');
+
+            return 'proxy';
+        }
+
+        return 'unklar';
     }
 
     private function istVertraut(string $ip): bool

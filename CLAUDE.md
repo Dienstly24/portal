@@ -2163,11 +2163,15 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
      `ufw` ist `inactive`, es gibt keine Host-Firewall. Einordnung: die
      IP-Faelschung (der eigentliche Befund) ist durch den Code
      geschlossen und davon unabhaengig; offen bleibt die Umgehung von
-     WAF-/Bot-/DDoS-Schutz. **Naechster Schritt, ein Befehl:**
-     `php artisan netz:client-ip-pruefen` auf dem Server - er sagt
-     anhand der aufgezeichneten IPs, ob die Anwendung die ECHTE
-     Client-IP sieht oder ob alle Besucher in EINEM Rate-Limit-Eimer
-     landen (dann gehoert die genannte Adresse in `TRUSTED_PROXIES`).
+     WAF-/Bot-/DDoS-Schutz. **Gemessen und ERLEDIGT ist die Client-IP:**
+     `php artisan netz:client-ip-pruefen` ergab am 05.09.2026 vier
+     DSGVO-Einwilligungsnachweise mit ZWEI verschiedenen IPs - waere ein
+     nicht gelisteter Vorschalt-Dienst dazwischen, traege jede Zeile
+     dieselbe Adresse. Die Anwendung sieht also die echte Client-IP,
+     `TRUSTED_PROXIES` bleibt leer. (Die eine Adresse im
+     Aktivitaetsprotokoll ist kein Gegenbeweis - dort stehen fast nur
+     Mitarbeiter-Aufrufe aus demselben Buero; genau daran gab der Befehl
+     anfangs "unklar" aus, die Regel wertet jetzt beide Quellen.)
      Ebenfalls offen: `portal.dienstly24.de` wurde nicht gemessen, und
      ob der Origin direkt per IP antwortet. Ergebnistabelle und
      Begruendung: `docs/SICHERHEIT_NETZWERK_ORIGIN.md`.
