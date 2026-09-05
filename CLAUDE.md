@@ -2101,6 +2101,46 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Registrierung, Testabdeckung). Details:
   `docs/ARCHITEKTUR_PARSER_STRATEGIE.md`.
 
+## Tailwind 4 (05.09.2026, PR #300)
+
+- **Der reine Versionssprung baut nicht.** Tailwind 4 ist kein
+  PostCSS-Plugin mehr; `npm run build` scheiterte hart. Deshalb laeuft es
+  jetzt ueber `@tailwindcss/vite` (war bereits Abhaengigkeit, nur nie
+  eingebunden), `postcss.config.js` ist leer (auch autoprefixer ist weg -
+  v4 erzeugt die Vendor-Prefixe selbst), und `resources/css/app.css` hat
+  EIN `@import 'tailwindcss'` statt der drei `@tailwind`-Direktiven.
+- **`@config` laedt die bestehende `tailwind.config.js` weiter**, statt die
+  Konfiguration nach CSS zu uebersetzen. Sie enthaelt nur die Schriftfamilie
+  Figtree und das forms-Plugin - beide gelten unveraendert. Damit blieb die
+  Umstellung eine reine BUILD-Aenderung: die Anmeldeseite ist unter beiden
+  Builds mit Chromium gerendert und verglichen worden, identisch bis auf
+  rund zwei Pixel.
+- **Die SEC-4-Regel `[hidden]{display:none!important}` steht weiterhin im
+  Build** - v4 liefert sie sogar zusaetzlich selbst mit
+  (`[hidden]:where(:not([hidden="until-found"]))`). Ohne sie bliebe die
+  Sammelauswahl der Ticketliste dauerhaft sichtbar.
+- **DER NATIVE BINARY IST KEIN RISIKO - das ist geprueft, nicht vermutet.**
+  Tailwind 4 braucht `@tailwindcss/oxide`, also genau die Paketart, an der
+  der Produktions-Build am 23.07.2026 schon einmal scheiterte (deshalb
+  steht `cssMinify: false` in `vite.config.js`). Der Unterschied: damals
+  hatte lightningcss KEINEN Ausweg - fehlgeschlagene Installation hiess
+  fehlgeschlagener Build. `@tailwindcss/oxide` faellt dagegen im Loader
+  AUTOMATISCH auf `@tailwindcss/oxide-wasm32-wasi` zurueck
+  (`if (!nativeBinding || forceWasi)`), und dieses Paket steht im Lockfile.
+  Nachgestellt mit `NAPI_RS_FORCE_WASI=true npm run build`: der Build
+  laeuft durch und das erzeugte CSS ist ZEICHENGLEICH mit dem nativen
+  (md5 ec152ef2999bc6e8dfe722d8e5438737), nur langsamer (7,7 s statt
+  ~1,5 s lokal). Ein fehlender Binary kostet also Zeit, nicht das Ergebnis.
+  **Nicht "reparieren"**: wer den langsameren Build oder eine
+  oxide-Warnung fuer einen Defekt haelt und daran herumbaut, entfernt eine
+  funktionierende Rueckfallebene.
+- Abgesichert ist es ausserdem doppelt: CI fuehrt in zwei Jobs
+  `npm ci && npm run build` aus (die Lockfile-Installation wird also bei
+  JEDEM Push geprueft, nicht einmalig), und `scripts/deploy.sh` sichert
+  `public/build` vor dem Bauen und legt es bei einem Fehlschlag zurueck -
+  ein misslungener Build bricht den Deploy laut ab, er kann die Seite
+  nicht dunkel schalten.
+
 ## Offene Themen / wartet auf den Betreiber
 
 - **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026
