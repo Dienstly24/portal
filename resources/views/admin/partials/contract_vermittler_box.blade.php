@@ -11,26 +11,26 @@
 <div class="card" style="max-width:980px;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
         <div style="font-weight:700;font-size:14px;">🤝 Vermittler / Abrechnung</div>
-        <span class="badge badge-{{ $contract->vermittlerStatusBadge() }}" style="white-space:nowrap;">
+        <span class="badge badge-{{ $contract->vermittlerStatusBadge() }} nowrap">
             {{ $contract->vermittlerStatusIcon() }} {{ $contract->vermittlerStatusLabel() }}
         </span>
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;font-size:13px;">
         <div>
-            <div style="font-size:11.5px;color:var(--ink-soft);">Referenz-Nr.</div>
+            <div class="muted-2xs">Referenz-Nr.</div>
             <div style="font-weight:600;">{{ $contract->reference_number ?: '—' }}</div>
         </div>
         <div>
-            <div style="font-size:11.5px;color:var(--ink-soft);">Vermittler-ID</div>
+            <div class="muted-2xs">Vermittler-ID</div>
             <div style="font-weight:600;">{{ $contract->vermittler_id ?: '—' }}</div>
         </div>
         <div>
-            <div style="font-size:11.5px;color:var(--ink-soft);">Produkt (Abrechnung)</div>
+            <div class="muted-2xs">Produkt (Abrechnung)</div>
             <div style="font-weight:600;">{{ $vLast?->produkt ?: '—' }}</div>
         </div>
         <div>
-            <div style="font-size:11.5px;color:var(--ink-soft);">Provision</div>
+            <div class="muted-2xs">Provision</div>
             <div style="font-weight:600;">
                 @if($vLast && $vLast->provision !== null)
                     {{ number_format((float) $vLast->provision, 2, ',', '.') }} €
@@ -39,7 +39,7 @@
             </div>
         </div>
         <div>
-            <div style="font-size:11.5px;color:var(--ink-soft);">Letzter Abgleich</div>
+            <div class="muted-2xs">Letzter Abgleich</div>
             <div style="font-weight:600;">{{ $contract->vermittler_last_imported_at?->lokal()->format('d.m.Y') ?: '—' }}</div>
         </div>
     </div>
@@ -94,7 +94,7 @@
             <div style="font-weight:600;margin-bottom:6px;">Historie der Zuordnung</div>
             @foreach($vEvents as $event)
             <div style="border-left:2px solid var(--line);padding:4px 0 4px 10px;margin-bottom:4px;">
-                <span style="color:var(--ink-soft);">{{ $event->created_at?->lokal()->format('d.m.Y H:i') }}</span>
+                <span class="muted">{{ $event->created_at?->lokal()->format('d.m.Y H:i') }}</span>
                 · <b>{{ $event->actionLabel() }}</b>
                 @if($event->detail) · {{ $event->detail }} @endif
                 @if($event->user) · {{ $event->user->name }} @endif

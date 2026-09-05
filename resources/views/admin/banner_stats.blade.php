@@ -51,16 +51,16 @@
         <a href="{{ route('admin.banners') }}" class="card-link">Zur Verwaltung →</a>
     </div>
     <table>
-        <thead><tr><th>Banner</th><th>Status</th><th style="text-align:right;">Impressions</th><th style="text-align:right;">Kunden</th><th style="text-align:right;">Klicks</th><th style="text-align:right;">CTR</th><th>Zuletzt gezeigt</th></tr></thead>
+        <thead><tr><th>Banner</th><th>Status</th><th class="num">Impressions</th><th class="num">Kunden</th><th class="num">Klicks</th><th class="num">CTR</th><th>Zuletzt gezeigt</th></tr></thead>
         <tbody>
         @forelse($banners as $b)
         @php $st = $b->statusInfo(); $isBest = $best && $best->id === $b->id; @endphp
         <tr @if($isBest) style="background:#F6FBF4;" @endif>
             <td style="font-weight:600;">{{ $isBest ? '🏆 ' : '' }}{{ $b->title }}</td>
             <td><span style="background:{{ $st['bg'] }};color:{{ $st['color'] }};border-radius:12px;padding:2px 10px;font-size:11.5px;font-weight:600;">{{ $st['label'] }}</span></td>
-            <td style="text-align:right;">{{ number_format($b->total_impressions, 0, ',', '.') }}</td>
-            <td style="text-align:right;">{{ $b->uniqueViewers() }}</td>
-            <td style="text-align:right;">{{ number_format($b->total_clicks, 0, ',', '.') }}</td>
+            <td class="num">{{ number_format($b->total_impressions, 0, ',', '.') }}</td>
+            <td class="num">{{ $b->uniqueViewers() }}</td>
+            <td class="num">{{ number_format($b->total_clicks, 0, ',', '.') }}</td>
             <td style="text-align:right;font-weight:600;">{{ number_format($b->ctr(), 1, ',', '.') }} %</td>
             <td style="color:var(--ink-soft);font-size:12.5px;">{{ $b->last_shown_at?->lokal()->format('d.m.Y H:i') ?? '—' }}</td>
         </tr>
@@ -76,7 +76,7 @@
 <div class="card">
     <div class="card-header">
         <div class="card-title">📘 Meta-Seite: {{ $metaPage['name'] ?? '' }}</div>
-        <span style="font-size:12px;color:var(--ink-soft);">Stand: {{ \Illuminate\Support\Carbon::parse($metaPage['refreshed_at'])->lokal()->format('d.m.Y H:i') }}</span>
+        <span class="muted-xs">Stand: {{ \Illuminate\Support\Carbon::parse($metaPage['refreshed_at'])->lokal()->format('d.m.Y H:i') }}</span>
     </div>
     <div style="display:flex;gap:26px;flex-wrap:wrap;font-size:14px;">
         <span>👥 <strong>{{ number_format($metaPage['followers'] ?? 0, 0, ',', '.') }}</strong> Follower</span>
@@ -92,9 +92,9 @@
 @if($socialPosts->isNotEmpty())
 <div class="card">
     <div class="card-title">📣 Social-Media – Klicks über Tracking-Links</div>
-    <div style="overflow-x:auto;">
+    <div class="scroll-x">
     <table>
-        <thead><tr><th>Banner</th><th>Plattform</th><th style="text-align:right;">Klicks</th><th>Letzter Klick</th><th>Veröffentlicht</th></tr></thead>
+        <thead><tr><th>Banner</th><th>Plattform</th><th class="num">Klicks</th><th>Letzter Klick</th><th>Veröffentlicht</th></tr></thead>
         <tbody>
         @foreach($socialPosts as $sp)
             @foreach($sp->channels->sortBy('platform') as $ch)
@@ -103,12 +103,12 @@
                 <td style="font-weight:600;">
                     @if($loop->first)<a href="{{ route('admin.banners.social', $sp->banner_id) }}">{{ $sp->banner->title }}</a>@endif
                 </td>
-                <td style="white-space:nowrap;">{{ $info['icon'] }} {{ $info['label'] }}</td>
+                <td class="nowrap">{{ $info['icon'] }} {{ $info['label'] }}</td>
                 <td style="text-align:right;font-weight:600;">{{ number_format($ch->clicks, 0, ',', '.') }}</td>
                 <td style="color:var(--ink-soft);font-size:12.5px;">{{ $ch->last_click_at?->lokal()->format('d.m.Y H:i') ?? '—' }}</td>
                 <td style="font-size:12.5px;">
                     @if($ch->published_at)<span style="color:#3B7A57;font-weight:600;">✓ {{ $ch->published_at->lokal()->format('d.m.Y') }}</span>{{ $ch->publisher ? ' von ' . $ch->publisher->name : '' }}
-                    @else<span style="color:var(--ink-soft);">noch nicht</span>@endif
+                    @else<span class="muted">noch nicht</span>@endif
                 </td>
             </tr>
             @endforeach
@@ -155,7 +155,7 @@
     }
 
     lineChart('impressionsChart', @json($impressions), '#185FA5');
-    lineChart('clicksChart', @json($clicks), '#17A65B');
+    lineChart('clicksChart', @json($clicks), brandColor('emerald'));
 })();
 </script>
 @endsection

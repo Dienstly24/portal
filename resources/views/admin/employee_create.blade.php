@@ -18,7 +18,7 @@
         Mitarbeiter bekommt eine Einladung und legt sein Passwort selbst
         fest. So kennt es ausser ihm niemand - auch die Verwaltung nicht.
     --}}
-    <div style="background:#F6F3EA;border:1px solid #E0DCD0;border-left:3px solid #17A65B;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13.5px;color:#4A564E;line-height:1.6;">
+    <div style="background:#F6F3EA;border:1px solid #E0DCD0;border-left:3px solid var(--emerald);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13.5px;color:#4A564E;line-height:1.6;">
         <strong>&#128273; Passwort:</strong> Sie vergeben kein Passwort.
         Der Mitarbeiter erhaelt eine Einladung per E-Mail und legt sein
         eigenes Passwort fest (Link 14 Tage gueltig).
@@ -33,12 +33,12 @@
             <div data-h-click="3eadc9b4dd" id="lbl-full"
                 style="border:2px solid var(--line);border-radius:10px;padding:16px;cursor:pointer;background:#fff;transition:.15s;">
                 <div style="font-weight:700;margin-bottom:4px;">👥 Alle Kunden</div>
-                <div style="font-size:12px;color:var(--ink-soft);">Mitarbeiter sieht alle Kunden</div>
+                <div class="muted-xs">Mitarbeiter sieht alle Kunden</div>
             </div>
             <div data-h-click="bdf352c9c0" id="lbl-limited"
-                style="border:2px solid var(--gold);border-radius:10px;padding:16px;cursor:pointer;background:#D9F4E6;transition:.15s;">
+                style="border:2px solid var(--emerald);border-radius:10px;padding:16px;cursor:pointer;background:var(--emerald-soft);transition:.15s;">
                 <div style="font-weight:700;margin-bottom:4px;">🔒 Begrenzte Kunden</div>
-                <div style="font-size:12px;color:var(--ink-soft);">Nur zugewiesene Kunden</div>
+                <div class="muted-xs">Nur zugewiesene Kunden</div>
             </div>
         </div>
         {{-- Least-privilege-Default (Audit UX-14): "Begrenzte Kunden" ist
@@ -94,10 +94,10 @@ const permIds = ['can_manage_contracts','can_manage_tickets','can_approve_change
 function selectAccess(type) {
     const isLimited = type === 'limited';
     document.getElementById('access_level').value = type;
-    document.getElementById('lbl-full').style.borderColor = isLimited ? 'var(--line)' : 'var(--petrol)';
-    document.getElementById('lbl-full').style.background = isLimited ? '#fff' : '#D9F4E6';
-    document.getElementById('lbl-limited').style.borderColor = isLimited ? 'var(--petrol)' : 'var(--line)';
-    document.getElementById('lbl-limited').style.background = isLimited ? '#D9F4E6' : '#fff';
+    document.getElementById('lbl-full').style.borderColor = isLimited ? 'var(--line)' : 'var(--graphite)';
+    document.getElementById('lbl-full').style.background = isLimited ? '#fff' : 'var(--emerald-soft)';
+    document.getElementById('lbl-limited').style.borderColor = isLimited ? 'var(--graphite)' : 'var(--line)';
+    document.getElementById('lbl-limited').style.background = isLimited ? 'var(--emerald-soft)' : '#fff';
     const el = document.getElementById('can_see_all');
     if (isLimited) { el.removeAttribute('name'); }
     else { el.name = 'can_see_all_customers'; el.value = '1'; }
@@ -112,9 +112,9 @@ function togglePerm(id) {
 function updateCard(id, checked) {
     const card = document.getElementById('card-' + id);
     const check = document.getElementById('check-' + id);
-    card.style.borderColor = checked ? 'var(--petrol)' : 'var(--line)';
-    card.style.background = checked ? '#D9F4E6' : '#fff';
-    check.style.background = checked ? 'var(--petrol)' : '#ccc';
+    card.style.borderColor = checked ? 'var(--graphite)' : 'var(--line)';
+    card.style.background = checked ? 'var(--emerald-soft)' : '#fff';
+    check.style.background = checked ? 'var(--graphite)' : '#ccc';
     check.textContent = checked ? '✓' : '';
 }
 

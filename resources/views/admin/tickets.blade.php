@@ -6,7 +6,7 @@
 $typeConfig = [
     'damage'       => ['icon' => '💥', 'bg' => '#F9E3E3'],
     'change'       => ['icon' => '🔄', 'bg' => '#E6F1FB'],
-    'offer'        => ['icon' => '🏷️', 'bg' => '#D9F4E6'],
+    'offer'        => ['icon' => '🏷️', 'bg' => 'var(--emerald-soft)'],
     'data_update'  => ['icon' => '📝', 'bg' => '#EDE9FE'],
     'cancellation' => ['icon' => '🚪', 'bg' => '#F7E7D6'],
     'complaint'    => ['icon' => '⚠️', 'bg' => '#FEF3C7'],
@@ -18,7 +18,7 @@ $prioConfig = [
     'dringend' => ['label' => 'Dringend', 'bg' => '#F9E3E3', 'fg' => '#A32D2D'],
     'hoch'     => ['label' => 'Hoch',     'bg' => '#F7E7D6', 'fg' => '#B5651D'],
     'mittel'   => ['label' => 'Mittel',   'bg' => '#FAF0DA', 'fg' => '#8A6D1B'],
-    'niedrig'  => ['label' => 'Niedrig',  'bg' => '#D9F4E6', 'fg' => '#17A65B'],
+    'niedrig'  => ['label' => 'Niedrig',  'bg' => 'var(--emerald-soft)', 'fg' => 'var(--emerald)'],
 ];
 $me = auth()->user();
 // Bearbeiten: admin/manager/support immer, Mitarbeiter nur mit Recht.
@@ -212,14 +212,14 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
                     <div style="min-width:0;">
                         <div style="font-weight:500;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;">{{ $custName }}</div>
                         @if($t->customer?->customer_number)
-                        <div style="font-size:11.5px;color:var(--ink-soft);">Nr. {{ $t->customer->customer_number }}</div>
+                        <div class="muted-2xs">Nr. {{ $t->customer->customer_number }}</div>
                         @elseif(!$t->customer)
-                        <div style="font-size:11.5px;color:var(--ink-soft);">Gast-Anfrage</div>
+                        <div class="muted-2xs">Gast-Anfrage</div>
                         @endif
                     </div>
                 </div>
                 @else
-                <span style="color:var(--ink-soft);">—</span>
+                <span class="muted">—</span>
                 @endif
             </td>
             <td>
@@ -338,14 +338,14 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
 
 @if($tickets->hasPages())
 <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;">
-    <div style="font-size:13px;color:var(--ink-soft);">
+    <div class="muted-sm">
         {{ $tickets->firstItem() }}–{{ $tickets->lastItem() }} von {{ $tickets->total() }} Tickets
     </div>
     <div style="display:flex;gap:8px;align-items:center;">
         @if(!$tickets->onFirstPage())
             <a href="{{ $tickets->previousPageUrl() }}" class="btn btn-ghost btn-sm">← Zurück</a>
         @endif
-        <span style="font-size:13px;color:var(--ink-soft);">Seite {{ $tickets->currentPage() }} / {{ $tickets->lastPage() }}</span>
+        <span class="muted-sm">Seite {{ $tickets->currentPage() }} / {{ $tickets->lastPage() }}</span>
         @if($tickets->hasMorePages())
             <a href="{{ $tickets->nextPageUrl() }}" class="btn btn-ghost btn-sm">Weiter →</a>
         @endif
@@ -358,8 +358,8 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
 .tickets-table td{padding-top:12px;padding-bottom:12px;vertical-align:middle;}
 .ticket-row{transition:background .12s;}
 .ticket-row:hover td{background:#E6E9ED;}
-.ticket-avatar{width:32px;height:32px;flex:none;border-radius:50%;background:var(--petrol);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;letter-spacing:.3px;}
-.ticket-check{width:16px;height:16px;accent-color:#17A65B;cursor:pointer;}
+.ticket-avatar{width:32px;height:32px;flex:none;border-radius:50%;background:var(--graphite);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;letter-spacing:.3px;}
+.ticket-check{width:16px;height:16px;accent-color:var(--emerald);cursor:pointer;}
 .prio-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;}
 .prio-dot{width:7px;height:7px;border-radius:50%;flex:none;}
 .rowmenu-item{display:block;width:100%;text-align:left;padding:9px 12px;border-radius:7px;font-size:13.5px;color:var(--ink);text-decoration:none;box-sizing:border-box;background:none;border:none;cursor:pointer;font-family:inherit;}
@@ -369,9 +369,9 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
 .rowmenu-sep{height:1px;background:var(--line);margin:5px 4px;}
 .tab-trash{margin-left:auto;}
 /* Bulk-Leiste: schwebt unten in der Mitte, Graphit-Optik wie die Sidebar */
-.bulk-bar{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:120;display:flex;align-items:center;gap:10px;background:#131A17;color:#fff;padding:10px 14px;border-radius:14px;box-shadow:0 12px 34px rgba(0,0,0,.35);flex-wrap:wrap;max-width:min(94vw,900px);}
+.bulk-bar{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:120;display:flex;align-items:center;gap:10px;background:var(--graphite);color:#fff;padding:10px 14px;border-radius:14px;box-shadow:0 12px 34px rgba(0,0,0,.35);flex-wrap:wrap;max-width:min(94vw,900px);}
 .bulk-bar .bulk-count{font-size:13.5px;white-space:nowrap;padding:0 4px;}
-.bulk-bar select{background:#0F1512;color:#fff;border:1px solid #2a2d33;border-radius:8px;padding:7px 10px;font-size:13px;max-width:190px;}
+.bulk-bar select{background:var(--graphite-deep);color:#fff;border:1px solid #2a2d33;border-radius:8px;padding:7px 10px;font-size:13px;max-width:190px;}
 .bulk-bar .bulk-delete{background:#3a1518;color:#ff9b9b;border:1px solid #5a2226;border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;white-space:nowrap;}
 .bulk-bar .bulk-delete:hover{background:#4a1a1e;}
 .bulk-bar .bulk-clear{background:none;border:none;color:#9aa0a8;font-size:15px;cursor:pointer;padding:4px 6px;}

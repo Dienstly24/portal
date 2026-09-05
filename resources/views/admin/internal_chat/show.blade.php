@@ -11,9 +11,9 @@
     <div class="card">
         <a href="{{ route('admin.chat.index') }}" class="btn btn-ghost" style="width:100%;margin-bottom:14px;">← Alle Unterhaltungen</a>
         @foreach($conversations as $c)
-        <a href="{{ route('admin.chat.show', $c->id) }}" style="display:block;padding:12px;border:1px solid {{ $c->id === $conversation->id ? 'var(--petrol)' : 'var(--line)' }};border-radius:8px;margin-bottom:8px;text-decoration:none;color:var(--ink);{{ $c->id === $conversation->id ? 'background:var(--canvas);' : '' }}">
+        <a href="{{ route('admin.chat.show', $c->id) }}" style="display:block;padding:12px;border:1px solid {{ $c->id === $conversation->id ? 'var(--graphite)' : 'var(--line)' }};border-radius:8px;margin-bottom:8px;text-decoration:none;color:var(--ink);{{ $c->id === $conversation->id ? 'background:var(--canvas);' : '' }}">
             <div style="font-weight:600;font-size:14px;">{{ $c->subject }}</div>
-            <div style="font-size:12px;color:var(--ink-soft);">{{ optional($c->last_message_at)->diffForHumans() ?? $c->created_at->diffForHumans() }}</div>
+            <div class="muted-xs">{{ optional($c->last_message_at)->diffForHumans() ?? $c->created_at->diffForHumans() }}</div>
         </a>
         @endforeach
     </div>
@@ -23,10 +23,10 @@
             @foreach($conversation->messages->sortBy('created_at') as $m)
             @php $own = $m->sender_id === auth()->id(); @endphp
             <div style="display:flex;gap:10px;margin-bottom:14px;align-items:flex-end;{{ $own ? 'flex-direction:row-reverse;' : '' }}">
-                <div style="width:32px;height:32px;border-radius:50%;background:{{ $own ? 'var(--gold)' : 'var(--petrol)' }};color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:none;">{{ strtoupper(mb_substr($m->sender?->name ?? '??', 0, 2)) }}</div>
+                <div style="width:32px;height:32px;border-radius:50%;background:{{ $own ? 'var(--emerald)' : 'var(--graphite)' }};color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:none;">{{ strtoupper(mb_substr($m->sender?->name ?? '??', 0, 2)) }}</div>
                 <div style="max-width:75%;">
                     <div style="font-size:11px;color:var(--ink-soft);margin-bottom:3px;{{ $own ? 'text-align:right;' : '' }}">{{ $m->sender?->name ?? 'Gelöschter Nutzer' }} · {{ $m->created_at->lokal()->format('d.m.Y H:i') }}</div>
-                    <div style="padding:10px 14px;border-radius:12px;font-size:13.5px;line-height:1.55;{{ $own ? 'background:var(--petrol);color:#fff;border-bottom-right-radius:4px;' : 'background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px;' }}">{{ $m->body }}</div>
+                    <div style="padding:10px 14px;border-radius:12px;font-size:13.5px;line-height:1.55;{{ $own ? 'background:var(--graphite);color:#fff;border-bottom-right-radius:4px;' : 'background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px;' }}">{{ $m->body }}</div>
                 </div>
             </div>
             @endforeach

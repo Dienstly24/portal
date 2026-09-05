@@ -41,7 +41,7 @@
     </form>
     @php $exportParams = $month ? ['monat' => $month->format('Y-m')] : ['from' => $from->format('Y-m-d'), 'to' => $to->format('Y-m-d')]; @endphp
     <div style="display:flex;gap:8px;margin-left:auto;">
-        <a href="{{ route('admin.provisions.report.export', $exportParams + ['format' => 'xlsx']) }}" class="btn btn-gold btn-sm">📊 Excel</a>
+        <a href="{{ route('admin.provisions.report.export', $exportParams + ['format' => 'xlsx']) }}" class="btn btn-emerald btn-sm">📊 Excel</a>
         <a href="{{ route('admin.provisions.report.export', $exportParams + ['format' => 'csv']) }}" class="btn btn-ghost btn-sm">CSV</a>
         <a href="{{ route('admin.provisions.report.export', $exportParams + ['format' => 'pdf']) }}" target="_blank" class="btn btn-ghost btn-sm">🖨️ PDF / Drucken</a>
     </div>
@@ -82,7 +82,7 @@
 </div>
 
 {{-- Tabelle je Empfaenger --}}
-<div class="card" style="padding:0;overflow:hidden;">
+<div class="card card-flush">
     <table>
         <thead><tr style="background:#F8F9FA;">
             <th style="padding:12px 20px;">Empfänger</th>

@@ -35,17 +35,17 @@
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Aufgaben</span></div>
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
         <div class="page-title">Aufgaben</div>
-        <button data-h-click="e98173f7fb" class="btn btn-gold">+ Aufgabe erstellen</button>
+        <button data-h-click="e98173f7fb" class="btn btn-emerald">+ Aufgabe erstellen</button>
     </div>
 </div>
 
 <div style="display:flex;gap:0;border-bottom:2px solid var(--line);margin-bottom:20px;flex-wrap:wrap;">
     @foreach(['mine'=>'Meine Aufgaben','customer'=>'Kunden-Aufgaben','done'=>'Erledigte Aufgaben'] as $key=>$label)
     <a href="{{ route('admin.tasks', ['tab'=>$key]) }}"
-        style="padding:12px 20px;text-decoration:none;font-size:14px;font-weight:{{ $tab===$key?'700':'500' }};color:{{ $tab===$key?'var(--petrol)':'var(--ink-soft)' }};border-bottom:2px solid {{ $tab===$key?'var(--gold)':'transparent' }};margin-bottom:-2px;display:flex;align-items:center;gap:7px;">
+        style="padding:12px 20px;text-decoration:none;font-size:14px;font-weight:{{ $tab===$key?'700':'500' }};color:{{ $tab===$key?'var(--graphite)':'var(--ink-soft)' }};border-bottom:2px solid {{ $tab===$key?'var(--emerald)':'transparent' }};margin-bottom:-2px;display:flex;align-items:center;gap:7px;">
         {{ $label }}
         @if($key !== 'done' && ($counts[$key] ?? 0) > 0)
-        <span style="background:{{ $tab===$key?'var(--gold)':'#E5E1D5' }};color:{{ $tab===$key?'#fff':'var(--ink-soft)' }};border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;">{{ $counts[$key] }}</span>
+        <span style="background:{{ $tab===$key?'var(--emerald)':'#E5E1D5' }};color:{{ $tab===$key?'#fff':'var(--ink-soft)' }};border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;">{{ $counts[$key] }}</span>
         @endif
     </a>
     @endforeach
@@ -86,7 +86,7 @@
             <div style="display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;">
                 @foreach(['today'=>'Heute','overdue'=>'Überfällig','7'=>'7 Tage','14'=>'14 Tage',''=>'Alle'] as $val=>$lbl)
                 <button type="submit" name="due" value="{{ $val }}"
-                    style="padding:8px 13px;border:none;font-size:13px;cursor:pointer;background:{{ request('due','')===$val?'var(--petrol)':'#fff' }};color:{{ request('due','')===$val?'#fff':'var(--ink)' }};white-space:nowrap;">
+                    style="padding:8px 13px;border:none;font-size:13px;cursor:pointer;background:{{ request('due','')===$val?'var(--graphite)':'#fff' }};color:{{ request('due','')===$val?'#fff':'var(--ink)' }};white-space:nowrap;">
                     {{ $lbl }}
                 </button>
                 @endforeach
@@ -118,14 +118,14 @@
     <div style="font-size:34px;margin-bottom:10px;">✅</div>
     <div style="font-weight:600;color:var(--ink);margin-bottom:6px;">Keine Aufgaben gefunden</div>
     <div style="font-size:13px;margin-bottom:18px;">Lege eine Aufgabe oder Wiedervorlage an – z. B. „Kunde in 14 Tagen nachfassen".</div>
-    <button data-h-click="e98173f7fb" class="btn btn-gold">+ Aufgabe erstellen</button>
+    <button data-h-click="e98173f7fb" class="btn btn-emerald">+ Aufgabe erstellen</button>
 </div>
 @else
 <div style="display:flex;flex-direction:column;gap:10px;">
 @foreach($tasks as $t)
 @php
-$priorityColor = ['high'=>'#F9E3E3','medium'=>'#FEF3C7','low'=>'#D9F4E6'];
-$priorityText = ['high'=>'#A32D2D','medium'=>'#92400E','low'=>'#17A65B'];
+$priorityColor = ['high'=>'#F9E3E3','medium'=>'#FEF3C7','low'=>'var(--emerald-soft)'];
+$priorityText = ['high'=>'#A32D2D','medium'=>'#92400E','low'=>'var(--emerald)'];
 $overdue = $t->isOverdue();
 $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'icon'=>'📌'];
 @endphp
@@ -151,7 +151,7 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
                 @endif
                 @endif
                 @if($t->status === 'done' && $t->completed_at)
-                <span style="background:#D9F4E6;color:#0F7A43;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;">✓ Erledigt {{ $t->completed_at->lokal()->format('d.m.Y') }}</span>
+                <span style="background:var(--emerald-soft);color:#0F7A43;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;">✓ Erledigt {{ $t->completed_at->lokal()->format('d.m.Y') }}</span>
                 @endif
             </div>
             @if($t->description)<div style="font-size:13px;color:var(--ink-soft);margin-top:3px;overflow:hidden;text-overflow:ellipsis;">{{ \Illuminate\Support\Str::limit($t->description, 160) }}</div>@endif
@@ -164,12 +164,12 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
                 <span>von {{ $t->createdBy->name }}</span>
                 @endif
                 @if($t->email_message_id && in_array(auth()->user()->role, ['admin','manager','support']))
-                <a href="{{ route('admin.email_inbox.show', $t->email_message_id) }}" style="color:var(--petrol);font-weight:600;">✉️ E-Mail öffnen</a>
+                <a href="{{ route('admin.email_inbox.show', $t->email_message_id) }}" style="color:var(--graphite);font-weight:600;">✉️ E-Mail öffnen</a>
                 @endif
                 @if($t->auto_email_status === 'pending')
                 <span style="background:#F5EFDD;color:#8A7635;border-radius:999px;padding:2px 10px;font-weight:600;" title="Wird automatisch an den Kunden gesendet">⏱️ E-Mail geplant {{ $t->auto_email_send_on?->format('d.m.Y') }}</span>
                 @elseif($t->auto_email_status === 'sent')
-                <span style="background:#D9F4E6;color:#0F7A43;border-radius:999px;padding:2px 10px;font-weight:600;" title="{{ $t->auto_email_subject }}">✉️✓ E-Mail gesendet {{ $t->auto_email_sent_at?->lokal()->format('d.m.Y') }}</span>
+                <span style="background:var(--emerald-soft);color:#0F7A43;border-radius:999px;padding:2px 10px;font-weight:600;" title="{{ $t->auto_email_subject }}">✉️✓ E-Mail gesendet {{ $t->auto_email_sent_at?->lokal()->format('d.m.Y') }}</span>
                 @elseif($t->auto_email_status === 'failed')
                 <span style="background:#F9E3E3;color:#A32D2D;border-radius:999px;padding:2px 10px;font-weight:600;" title="{{ $t->auto_email_error }}">⚠️ E-Mail fehlgeschlagen</span>
                 @elseif($t->auto_email_status === 'skipped')
@@ -276,7 +276,7 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
                     <span style="font-size:14px;">👤</span>
                     <span style="flex:1;min-width:0;font-size:13.5px;">
                         <strong id="tk-picked-name"></strong>
-                        <span style="color:var(--ink-soft);" id="tk-picked-sub"></span>
+                        <span id="tk-picked-sub" class="muted"></span>
                     </span>
                     <button type="button" data-h-click="607c69ec0a" style="border:none;background:none;cursor:pointer;color:var(--ink-soft);font-size:15px;" title="Kunde entfernen">✕</button>
                 </div>
@@ -312,7 +312,7 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
                     <div class="field" style="margin-bottom:12px;"><label>Betreff *</label><input type="text" name="auto_email_subject" id="tf-ae-subject" maxlength="200" placeholder="z. B. Kurze Erinnerung: Ihre Unterlagen"></div>
                     <div class="field" style="margin-bottom:8px;"><label>E-Mail-Text *</label><textarea name="auto_email_body" id="tf-ae-body" style="min-height:130px;" placeholder="{{ $mustache('anrede') }},&#10;&#10;…"></textarea></div>
                     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-                        <span style="font-size:11.5px;color:var(--ink-soft);">Platzhalter:</span>
+                        <span class="muted-2xs">Platzhalter:</span>
                         @foreach($placeholders as $ph => $phLabel)
                         <button type="button" data-h-click="7b9cae84d2" data-a0="{{ $mustache($ph) }}" title="{{ $phLabel }}"
                             style="border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 9px;font-size:11.5px;cursor:pointer;color:var(--ink-soft);font-family:monospace;">{{ $mustache($ph) }}</button>
@@ -321,7 +321,7 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
                     <div style="font-size:11.5px;color:var(--ink-soft);margin-top:6px;">Platzhalter werden beim Versand automatisch mit den Kundendaten gefüllt.</div>
                 </div>
             </div>
-            <div id="tf-ae-sent" style="display:none;background:#D9F4E6;color:#0F7A43;border-radius:10px;padding:11px 14px;font-size:13px;margin-bottom:16px;"></div>
+            <div id="tf-ae-sent" style="display:none;background:var(--emerald-soft);color:#0F7A43;border-radius:10px;padding:11px 14px;font-size:13px;margin-bottom:16px;"></div>
             <div id="tf-ae-unavailable" style="display:none;background:var(--canvas);color:var(--ink-soft);border-radius:10px;padding:11px 14px;font-size:12.5px;margin-bottom:16px;">ℹ️ Automatische E-Mail nicht möglich: Der ausgewählte Kunde hat keine echte E-Mail-Adresse.</div>
             @endif
 
@@ -434,7 +434,7 @@ function pickDue(days, chip) {
     d.setDate(d.getDate() + days);
     el('tf-due').value = d.toISOString().slice(0, 10);
     document.querySelectorAll('.due-chip').forEach(c => { c.style.background = '#fff'; c.style.borderColor = 'var(--line)'; c.style.color = 'var(--ink)'; c.style.fontWeight = '400'; });
-    if (chip) { chip.style.background = 'var(--petrol)'; chip.style.borderColor = 'var(--petrol)'; chip.style.color = '#fff'; chip.style.fontWeight = '600'; }
+    if (chip) { chip.style.background = 'var(--graphite)'; chip.style.borderColor = 'var(--graphite)'; chip.style.color = '#fff'; chip.style.fontWeight = '600'; }
 }
 function clearDueChips() {
     document.querySelectorAll('.due-chip').forEach(c => { c.style.background = '#fff'; c.style.borderColor = 'var(--line)'; c.style.color = 'var(--ink)'; c.style.fontWeight = '400'; });

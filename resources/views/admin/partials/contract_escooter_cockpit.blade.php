@@ -12,7 +12,7 @@
     $eur = fn($v) => number_format((float) $v, 2, ',', '.') . ' €';
     $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
 @endphp
-<div class="card" style="max-width:980px;background:linear-gradient(135deg,#131A17,#0F1512);border-color:#0F1512;color:#fff;">
+<div class="card" style="max-width:980px;background:linear-gradient(135deg,var(--graphite),var(--graphite-deep));border-color:var(--graphite-deep);color:#fff;">
     <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
         <span style="font-size:34px;line-height:1;">🛴</span>
         <div style="min-width:200px;">
@@ -34,8 +34,8 @@
 
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">
         @php $chip = 'display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700;'; @endphp
-        <span style="{{ $chip }}background:#17A65B;color:#fff;">✓ Haftpflicht</span>
-        @if($veh?->has_teilkasko)<span style="{{ $chip }}background:#17A65B;color:#fff;">✓ Teilkasko</span>
+        <span style="{{ $chip }}background:var(--emerald);color:#fff;">✓ Haftpflicht</span>
+        @if($veh?->has_teilkasko)<span style="{{ $chip }}background:var(--emerald);color:#fff;">✓ Teilkasko</span>
         @else<span style="{{ $chip }}background:#2A2E36;color:#8A919E;">✗ Teilkasko</span>@endif
     </div>
 

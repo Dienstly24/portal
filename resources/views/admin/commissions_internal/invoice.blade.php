@@ -49,9 +49,9 @@
     @endif
 
     @if($result['commissions']->isEmpty())
-        <div style="font-size:13px;color:var(--ink-soft);">Zu dieser Kennung liegt keine Provision vor.</div>
+        <div class="muted-sm">Zu dieser Kennung liegt keine Provision vor.</div>
     @else
-    <div style="overflow-x:auto;">
+    <div class="scroll-x">
         <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
             <thead><tr style="text-align:left;color:var(--ink-soft);">
                 <th style="padding:8px;">Provisionsart</th><th style="padding:8px;text-align:right;">Erwartet</th>

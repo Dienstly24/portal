@@ -65,15 +65,15 @@
      entfernt. "Chat starten" oeffnet auf Desktop/Tablet direkt das
      schwebende Chat-Widget, auf Mobile die Nachrichten-Seite. --}}
 <style>
-.hero-contact{background:linear-gradient(135deg,var(--petrol),var(--petrol-dark));border-radius:14px;padding:22px;color:#fff;margin-bottom:24px;position:relative;overflow:hidden;}
+.hero-contact{background:linear-gradient(135deg,var(--graphite),var(--graphite-deep));border-radius:14px;padding:22px;color:#fff;margin-bottom:24px;position:relative;overflow:hidden;}
 .hero-contact::after{content:'';position:absolute;top:-50px;inset-inline-end:-50px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(23,166,91,.22),transparent 70%);pointer-events:none;}
-.hero-kicker{color:var(--akzent-hell);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;}
+.hero-kicker{color:var(--gold-soft);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;}
 .hero-title{font-size:19px;font-weight:700;margin:6px 0 4px;}
 .hero-text{color:rgba(255,255,255,.72);font-size:13px;margin-bottom:16px;}
 .hero-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;position:relative;}
 .hero-act{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:11px;padding:13px 12px;text-decoration:none;color:#fff;display:block;transition:.15s;}
 .hero-act:hover{background:rgba(23,166,91,.18);border-color:rgba(23,166,91,.55);transform:translateY(-2px);}
-.hero-act.hero-act-primary{background:linear-gradient(135deg,#19b463,#128a4b);border-color:transparent;}
+.hero-act.hero-act-primary{background:linear-gradient(135deg,var(--emerald-bright),var(--emerald-deep));border-color:transparent;}
 .hero-act .hero-ico{font-size:22px;line-height:1;display:block;}
 .hero-act .hero-lbl{font-weight:700;font-size:13.5px;margin-top:6px;display:flex;align-items:center;gap:7px;}
 .hero-act .hero-sub{font-size:11.5px;color:rgba(255,255,255,.62);margin-top:2px;display:block;line-height:1.45;}
@@ -117,7 +117,7 @@ document.getElementById('hero-chat').addEventListener('click', function (e) {
      kann jederzeit "Später" waehlen (lokal ausgeblendet) oder im Portal
      widerrufen. --}}
 @unless($customer->hasActiveEmailConsent())
-<div id="email-onboarding" class="card" style="border-inline-start:4px solid var(--green,#17A65B);display:none;">
+<div id="email-onboarding" class="card" style="border-inline-start:4px solid var(--emerald);display:none;">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
         <div>
             <div class="card-title" style="margin-bottom:4px;">📨 {{ __('E-Mail-Verbindung aktivieren') }}</div>
@@ -184,7 +184,7 @@ document.getElementById('hero-chat').addEventListener('click', function (e) {
             {{ $odr->title }}
             @if($odr->deadline)<span style="color:{{ $odr->deadline->isPast() ? '#A32D2D' : 'var(--ink-soft)' }};font-size:12.5px;"> · {{ __('Frist') }} {{ $odr->deadline->format('d.m.Y') }}</span>@endif
         </div>
-        <a href="{{ route('portal.documents') }}" class="btn btn-gold" style="padding:6px 14px;font-size:13px;flex:none;">{{ __('Hochladen') }}</a>
+        <a href="{{ route('portal.documents') }}" class="btn btn-emerald" style="padding:6px 14px;font-size:13px;flex:none;">{{ __('Hochladen') }}</a>
     </div>
     @endforeach
 </div>
@@ -194,10 +194,10 @@ document.getElementById('hero-chat').addEventListener('click', function (e) {
 <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
         <div class="card-title" style="margin-bottom:0;">📋 {{ __('Ihre Kundenakte') }}</div>
-        <span style="font-size:20px;font-weight:800;color:{{ $completeness['percent'] >= 80 ? '#17A65B' : ($completeness['percent'] >= 50 ? '#B5651D' : '#A32D2D') }};">{{ $completeness['percent'] }} %</span>
+        <span style="font-size:20px;font-weight:800;color:{{ $completeness['percent'] >= 80 ? 'var(--emerald)' : ($completeness['percent'] >= 50 ? '#B5651D' : '#A32D2D') }};">{{ $completeness['percent'] }} %</span>
     </div>
     <div style="height:10px;background:var(--canvas);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:6px;">
-        <div style="height:100%;width:{{ $completeness['percent'] }}%;background:{{ $completeness['percent'] >= 80 ? '#17A65B' : ($completeness['percent'] >= 50 ? '#D9A441' : '#E24B4A') }};transition:width .3s;"></div>
+        <div style="height:100%;width:{{ $completeness['percent'] }}%;background:{{ $completeness['percent'] >= 80 ? 'var(--emerald)' : ($completeness['percent'] >= 50 ? '#D9A441' : '#E24B4A') }};transition:width .3s;"></div>
     </div>
     <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;">{{ $completeness['percent'] }} % {{ __('vollständig') }}</div>
     @if(count($completeness['missing']))
@@ -205,12 +205,12 @@ document.getElementById('hero-chat').addEventListener('click', function (e) {
         @foreach($completeness['missing'] as $m)
         <a href="{{ route($m['route']) }}" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border:1px solid var(--line);border-radius:8px;text-decoration:none;color:var(--ink);font-size:13.5px;{{ !empty($m['optional']) ? 'opacity:.7;' : '' }}">
             <span>⚠ {{ __($m['label']) }}</span>
-            <span style="color:var(--petrol);font-size:12px;">{{ __('ergänzen') }} →</span>
+            <span style="color:var(--graphite);font-size:12px;">{{ __('ergänzen') }} →</span>
         </a>
         @endforeach
     </div>
     @else
-    <div style="font-size:13.5px;color:#17A65B;">✓ {{ __('Ihre Kundenakte ist vollständig.') }}</div>
+    <div style="font-size:13.5px;color:var(--emerald);">✓ {{ __('Ihre Kundenakte ist vollständig.') }}</div>
     @endif
 </div>
 <div class="card">
@@ -219,11 +219,11 @@ document.getElementById('hero-chat').addEventListener('click', function (e) {
     <a href="{{ route('portal.contracts.show', $c->id) }}" class="item-row row-link" title="{{ __('Vertrag öffnen') }}" style="color:inherit;text-decoration:none;">
         <div>
             <div style="font-weight:600;font-size:14px;">{{ $c->insurer }}</div>
-            <div style="font-size:13px;color:var(--ink-soft);">{{ $c->contract_number }} · {{ __($c->typeLabel()) }}</div>
+            <div class="muted-sm">{{ $c->contract_number }} · {{ __($c->typeLabel()) }}</div>
         </div>
         <span style="display:flex;gap:6px;align-items:center;">
             @php $st = $c->displayStatus(); @endphp
-            <span class="badge badge-{{ $st['badge'] }}" style="white-space:nowrap;">{{ __($st['label_key'], $st['params']) }}</span>
+            <span class="badge badge-{{ $st['badge'] }} nowrap">{{ __($st['label_key'], $st['params']) }}</span>
             <span style="color:var(--ink-soft);font-size:12px;">→</span>
         </span>
     </a>
@@ -237,7 +237,7 @@ document.getElementById('hero-chat').addEventListener('click', function (e) {
     <a href="{{ route('portal.tickets.show', $t->id) }}" class="item-row row-link" title="{{ __('Anfrage öffnen') }}" style="color:inherit;text-decoration:none;">
         <div>
             <div style="font-weight:600;font-size:14px;">{{ $t->subject }}</div>
-            <div style="font-size:13px;color:var(--ink-soft);">{{ $t->created_at->lokal()->format('d.m.Y') }}</div>
+            <div class="muted-sm">{{ $t->created_at->lokal()->format('d.m.Y') }}</div>
         </div>
         <span style="display:flex;gap:6px;align-items:center;">
             <span class="badge badge-{{ $t->status === 'open' ? 'open' : 'closed' }}">{{ __($t->status === 'open' ? 'Offen' : 'In Bearbeitung') }}</span>

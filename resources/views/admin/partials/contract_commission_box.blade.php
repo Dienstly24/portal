@@ -16,7 +16,7 @@
         ->whereIn('status', [\App\Support\CommissionStatus::OFFEN, \App\Support\CommissionStatus::FAELLIG, \App\Support\CommissionStatus::TEILWEISE])
         ->sum('amount');
 @endphp
-<div class="card" style="max-width:980px;border-left:3px solid #B8A16B;">
+<div class="card" style="max-width:980px;border-left:3px solid var(--gold);">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px;">
         <div style="font-weight:700;font-size:14px;">💶 Provisionen <span style="font-weight:500;color:var(--ink-soft);font-size:12px;">· intern</span></div>
         <a href="{{ route('admin.commissions_internal.index', ['vertrag' => $contract->id]) }}" style="font-size:12.5px;">alle anzeigen →</a>
@@ -28,19 +28,19 @@
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;font-size:13px;margin-bottom:14px;">
         <div>
-            <div style="font-size:11.5px;color:var(--ink-soft);">Interne Vertragsnummer</div>
+            <div class="muted-2xs">Interne Vertragsnummer</div>
             <div style="font-weight:600;">{{ $contract->internal_contract_number ?: '—' }}</div>
         </div>
         <div>
-            <div style="font-size:11.5px;color:var(--ink-soft);">Provision gesamt</div>
+            <div class="muted-2xs">Provision gesamt</div>
             <div style="font-weight:600;">{{ number_format($commissionTotal, 2, ',', '.') }} €</div>
         </div>
         <div>
-            <div style="font-size:11.5px;color:var(--ink-soft);">Davon offen</div>
+            <div class="muted-2xs">Davon offen</div>
             <div style="font-weight:600;color:{{ $commissionOpen > 0 ? '#B5651D' : 'inherit' }};">{{ number_format($commissionOpen, 2, ',', '.') }} €</div>
         </div>
         <div>
-            <div style="font-size:11.5px;color:var(--ink-soft);">Datensätze</div>
+            <div class="muted-2xs">Datensätze</div>
             <div style="font-weight:600;">{{ $commissions->count() }}</div>
         </div>
     </div>
@@ -54,7 +54,7 @@
             @endif
         </div>
     @else
-    <div style="overflow-x:auto;">
+    <div class="scroll-x">
         <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
             <thead><tr style="text-align:left;color:var(--ink-soft);">
                 <th style="padding:8px;">Art</th><th style="padding:8px;">Empfänger</th>

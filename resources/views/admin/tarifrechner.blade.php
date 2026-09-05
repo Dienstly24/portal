@@ -4,7 +4,7 @@
 /* ===== Vergleichsportale / Link-Center ===== */
 .vp-searchbar{position:relative;margin-bottom:22px;}
 .vp-searchbar input{width:100%;padding:14px 18px 14px 46px;border:1px solid var(--line);border-radius:12px;font-size:15px;background:var(--surface);color:var(--ink);transition:.15s;}
-.vp-searchbar input:focus{outline:2px solid var(--gold);outline-offset:1px;background:#fff;}
+.vp-searchbar input:focus{outline:2px solid var(--emerald);outline-offset:1px;background:#fff;}
 .vp-searchbar .vp-search-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:17px;color:var(--ink-soft);}
 .vp-searchbar .vp-search-clear{position:absolute;right:12px;top:50%;transform:translateY(-50%);border:none;background:none;cursor:pointer;font-size:16px;color:var(--ink-soft);display:none;}
 
@@ -12,7 +12,7 @@
 .vp-strip-title{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
 .vp-chips{display:flex;flex-wrap:wrap;gap:8px;}
 .vp-chip{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border:1px solid var(--line);border-radius:999px;background:var(--surface);text-decoration:none;color:var(--ink);font-size:13px;font-weight:600;transition:.15s;max-width:240px;}
-.vp-chip:hover{border-color:var(--gold);box-shadow:0 2px 8px rgba(0,0,0,.06);transform:translateY(-1px);}
+.vp-chip:hover{border-color:var(--emerald);box-shadow:0 2px 8px rgba(0,0,0,.06);transform:translateY(-1px);}
 .vp-chip .ico{font-size:14px;flex:none;}
 .vp-chip .txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
@@ -24,7 +24,7 @@
 .vp-card-title{font-weight:700;font-size:14.5px;line-height:1.2;}
 .vp-card-count{font-size:12px;color:var(--ink-soft);margin-top:2px;}
 .vp-card-add{margin-left:auto;border:none;background:none;cursor:pointer;color:var(--ink-soft);font-size:20px;line-height:1;padding:4px 6px;border-radius:8px;transition:.15s;}
-.vp-card-add:hover{background:var(--canvas);color:var(--gold);}
+.vp-card-add:hover{background:var(--canvas);color:var(--emerald);}
 
 .vp-links{list-style:none;padding:6px;margin:0;}
 .vp-link{display:flex;align-items:center;gap:4px;border-radius:9px;padding:2px 4px 2px 2px;transition:.12s;}
@@ -34,19 +34,19 @@ body.vp-searching .vp-link.vp-collapsed{display:flex;}
 .vp-drag{cursor:grab;color:var(--line);font-size:14px;padding:0 4px;user-select:none;flex:none;line-height:1;}
 .vp-link:hover .vp-drag{color:var(--ink-soft);}
 .vp-link.vp-dragging{opacity:.4;}
-.vp-link.vp-dropover{background:#D9F4E6;}
+.vp-link.vp-dropover{background:var(--emerald-soft);}
 .vp-link-main{flex:1;min-width:0;display:flex;flex-direction:column;padding:9px 8px;text-decoration:none;color:var(--ink);border-radius:8px;}
 .vp-link-title{font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:7px;}
-.vp-link-title .go{opacity:0;font-size:12px;color:var(--gold);transition:.12s;}
+.vp-link-title .go{opacity:0;font-size:12px;color:var(--emerald);transition:.12s;}
 .vp-link:hover .vp-link-title .go{opacity:1;}
 .vp-link-desc{font-size:11.5px;color:var(--ink-soft);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .vp-star{border:none;background:none;cursor:pointer;font-size:16px;color:var(--line);padding:4px;flex:none;line-height:1;transition:.12s;}
-.vp-star:hover{color:var(--akzent);}
-.vp-star.on{color:var(--akzent);}
+.vp-star:hover{color:var(--gold);}
+.vp-star.on{color:var(--gold);}
 .vp-del{border:none;background:none;cursor:pointer;color:var(--line);font-size:14px;padding:4px;flex:none;line-height:1;}
 .vp-link:hover .vp-del{color:var(--ink-soft);}
 .vp-del:hover{color:#A32D2D;}
-.vp-more{width:100%;border:none;background:none;cursor:pointer;color:var(--gold);font-size:12.5px;font-weight:600;padding:9px;text-align:center;border-top:1px solid var(--line);}
+.vp-more{width:100%;border:none;background:none;cursor:pointer;color:var(--emerald);font-size:12.5px;font-weight:600;padding:9px;text-align:center;border-top:1px solid var(--line);}
 .vp-more:hover{background:var(--canvas);}
 .vp-empty-cat{padding:14px 12px;color:var(--ink-soft);font-size:12.5px;}
 
@@ -64,7 +64,7 @@ body.vp-searching .vp-card.vp-hidden{display:none;}
             <div class="page-title">Vergleichsportale</div>
             <div class="page-sub">Link-Center — alle Portale &amp; Rechner mit einem Klick</div>
         </div>
-        <button data-h-click="b6bd22cb76" class="btn btn-gold">+ Link hinzufügen</button>
+        <button data-h-click="b6bd22cb76" class="btn btn-emerald">+ Link hinzufügen</button>
     </div>
 </div>
 
@@ -132,7 +132,7 @@ body.vp-searching .vp-card.vp-hidden{display:none;}
     <div style="font-size:38px;margin-bottom:12px;">🔗</div>
     <div style="font-weight:700;font-size:16px;margin-bottom:6px;">Noch keine Links</div>
     <div style="color:var(--ink-soft);font-size:14px;margin-bottom:18px;">Legen Sie die ersten Vergleichsportale und Rechner an.</div>
-    <button data-h-click="b6bd22cb76" class="btn btn-gold">+ Ersten Link hinzufügen</button>
+    <button data-h-click="b6bd22cb76" class="btn btn-emerald">+ Ersten Link hinzufügen</button>
 </div>
 @endif
 
@@ -145,7 +145,7 @@ body.vp-searching .vp-card.vp-hidden{display:none;}
 {{-- Modal: Link hinzufügen --}}
 <div id="add-link-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:480px;position:relative;">
-        <button data-h-click="bf00d05c23" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="bf00d05c23" class="modal-close">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:20px;">Neuen Link hinzufügen</div>
         <form method="POST" action="{{ route('admin.tarifrechner.store') }}">
             @csrf
@@ -161,7 +161,7 @@ body.vp-searching .vp-card.vp-hidden{display:none;}
             <div class="field"><label>Beschreibung</label><input type="text" name="description" placeholder="Optional"></div>
             <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
                 <button type="button" data-h-click="bf00d05c23" class="btn btn-ghost">Abbrechen</button>
-                <button type="submit" class="btn btn-gold">Hinzufügen</button>
+                <button type="submit" class="btn btn-emerald">Hinzufügen</button>
             </div>
         </form>
     </div>

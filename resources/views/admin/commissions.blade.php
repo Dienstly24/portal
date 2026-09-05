@@ -22,20 +22,20 @@
 <style>
 .rep-tab { padding:9px 18px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:13.5px; font-weight:600; color:var(--ink); text-decoration:none; }
 .rep-tab:hover { background:#F4F7F5; }
-.rep-tab-active { background:#131A17; color:#fff; border-color:#131A17; }
+.rep-tab-active { background:var(--graphite); color:#fff; border-color:var(--graphite); }
 </style>
 
-@if(session('success'))<div style="background:#D9F4E6;color:#17A65B;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
+@if(session('success'))<div style="background:var(--emerald-soft);color:var(--emerald);padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
 @if(session('error'))<div style="background:#FBE9E9;color:#B3261E;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('error') }}</div>@endif
 
 <div class="card" style="padding:0;overflow:hidden;margin-bottom:24px;">
-    <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">Zu prüfen ({{ $pending->count() }})</div>
+    <div class="card-head-bar">Zu prüfen ({{ $pending->count() }})</div>
     @forelse($pending as $c)
     <form method="POST" action="{{ route('admin.commissions.book', $c->id) }}" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;padding:16px 20px;border-bottom:1px solid var(--line);">
         @csrf
         <div style="min-width:180px;">
             <div style="font-weight:600;font-size:14px;"><a href="{{ route('admin.partners.show', $c->partner_id) }}">{{ $c->partner->name }}</a></div>
-            <div style="font-size:12px;color:var(--ink-soft);">erfasst {{ $c->created_at->lokal()->format('d.m.Y H:i') }}</div>
+            <div class="muted-xs">erfasst {{ $c->created_at->lokal()->format('d.m.Y H:i') }}</div>
         </div>
         <div>
             <label style="font-size:11px;color:var(--ink-soft);display:block;">Gutschrift-Nr.</label>
@@ -50,7 +50,7 @@
             <input type="date" name="statement_date" value="{{ $c->statement_date?->format('Y-m-d') ?? now()->format('Y-m-d') }}" required style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;">
         </div>
         <div style="display:flex;gap:8px;margin-left:auto;">
-            <button type="submit" class="btn btn-gold btn-sm" data-h-click="7ede9fa4ef">Buchen (Lexoffice)</button>
+            <button type="submit" class="btn btn-emerald btn-sm" data-h-click="7ede9fa4ef">Buchen (Lexoffice)</button>
             <button type="submit" form="reject-{{ $c->id }}" class="btn btn-ghost btn-sm" data-h-click="6ad15fbff3">Ablehnen</button>
         </div>
     </form>
@@ -60,8 +60,8 @@
     @endforelse
 </div>
 
-<div class="card" style="padding:0;overflow:hidden;">
-    <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">Zuletzt bearbeitet</div>
+<div class="card card-flush">
+    <div class="card-head-bar">Zuletzt bearbeitet</div>
     <table>
         <thead><tr style="background:#F8F9FA;">
             <th style="padding:10px 20px;">Partner</th>
@@ -78,8 +78,8 @@
             <td style="font-size:13px;">{{ $c->credit_note_number ?? '—' }}</td>
             <td style="font-size:13px;font-weight:600;">{{ $c->amount !== null ? number_format($c->amount, 2, ',', '.') . ' €' : '—' }}</td>
             <td><span class="badge {{ $c->status === 'booked' ? 'badge-active' : 'badge-danger' }}">{{ $c->statusLabel() }}</span></td>
-            <td style="font-size:13px;color:var(--ink-soft);">{{ $c->reviewer?->name ?? '—' }}</td>
-            <td style="font-size:13px;color:var(--ink-soft);">{{ $c->reviewed_at?->lokal()->format('d.m.Y H:i') ?? '—' }}</td>
+            <td class="muted-sm">{{ $c->reviewer?->name ?? '—' }}</td>
+            <td class="muted-sm">{{ $c->reviewed_at?->lokal()->format('d.m.Y H:i') ?? '—' }}</td>
         </tr>
         @empty
         <tr><td colspan="6" style="text-align:center;padding:28px;color:var(--ink-soft);">Noch keine bearbeiteten Gutschriften.</td></tr>

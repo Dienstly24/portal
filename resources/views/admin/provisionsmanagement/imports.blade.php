@@ -32,28 +32,28 @@
     <table class="table" style="font-size:13px;">
         <tr>
             <th>Datei</th><th>Pool / Quelle</th><th>Stand</th>
-            <th style="text-align:right;">Zeilen</th><th style="text-align:right;">Zugeordnet</th>
-            <th style="text-align:right;">Neue Verträge</th><th style="text-align:right;">Neue Kunden</th>
-            <th style="text-align:right;">Prüfung</th><th style="text-align:right;">Duplikate</th>
-            <th style="text-align:right;">Fehler</th><th>Wer / Wann</th><th></th>
+            <th class="num">Zeilen</th><th class="num">Zugeordnet</th>
+            <th class="num">Neue Verträge</th><th class="num">Neue Kunden</th>
+            <th class="num">Prüfung</th><th class="num">Duplikate</th>
+            <th class="num">Fehler</th><th>Wer / Wann</th><th></th>
         </tr>
         @forelse($imports as $import)
         <tr>
             <td><b>{{ $import->filename }}</b><div style="font-size:11px;color:var(--ink-soft);">{{ strtoupper($import->format) }}</div></td>
             <td>{{ $import->poolLabel() }}<div style="font-size:11px;color:var(--ink-soft);">{{ $import->providerLabel() }}</div></td>
             <td>{{ ucfirst($import->status) }}</td>
-            <td style="text-align:right;">{{ $import->rows_total }}</td>
-            <td style="text-align:right;">{{ $import->rows_total - $import->rows_unmatched }}</td>
-            <td style="text-align:right;">{{ $import->contracts_created }}</td>
-            <td style="text-align:right;">{{ $import->customers_created }}</td>
+            <td class="num">{{ $import->rows_total }}</td>
+            <td class="num">{{ $import->rows_total - $import->rows_unmatched }}</td>
+            <td class="num">{{ $import->contracts_created }}</td>
+            <td class="num">{{ $import->customers_created }}</td>
             <td style="text-align:right;color:{{ $import->rows_unmatched > 0 ? '#B5651D' : 'inherit' }};">{{ $import->rows_unmatched }}</td>
-            <td style="text-align:right;">{{ $import->rows_duplicate }}</td>
+            <td class="num">{{ $import->rows_duplicate }}</td>
             <td style="text-align:right;color:{{ $import->rows_invalid > 0 ? '#A32D2D' : 'inherit' }};">{{ $import->rows_invalid }}</td>
             <td style="font-size:11.5px;">{{ $import->importer?->name ?? 'System' }}<br>{{ $import->created_at?->lokal()->format('d.m.Y H:i') }}</td>
             <td><a href="{{ route('admin.commissions_internal.preview', $import->id) }}">öffnen →</a></td>
         </tr>
         @empty
-        <tr><td colspan="12" style="color:var(--ink-soft);">Noch kein Import.</td></tr>
+        <tr><td colspan="12" class="muted">Noch kein Import.</td></tr>
         @endforelse
     </table>
     <div style="margin-top:14px;">{{ $imports->links() }}</div>

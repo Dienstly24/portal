@@ -36,7 +36,7 @@
     <div class="card-title">✉️ {{ __('Ihre Rechte') }} &amp; {{ __('Kontakt') }}</div>
     <p style="font-size:14px;color:var(--ink);line-height:1.6;">
         {{ __('Für Fragen zum Datenschutz oder zur Ausübung Ihrer Rechte erreichen Sie uns unter') }}
-        <a href="mailto:info@dienstly24.de" style="color:var(--petrol);font-weight:600;">info@dienstly24.de</a>.
+        <a href="mailto:info@dienstly24.de" style="color:var(--graphite);font-weight:600;">info@dienstly24.de</a>.
         {{ __('Es gelten unsere allgemeinen Datenschutzhinweise.') }}
     </p>
 </div>

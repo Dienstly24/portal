@@ -1,0 +1,73 @@
+/*
+ * Farbschema "Smaragd & Gold" - die EINE Quelle der Markenfarben (UX-1).
+ *
+ * WARUM DIESE DATEI EXISTIERT
+ * Vorher stand derselbe Farbsatz in 14 Blade-Dateien noch einmal, und zwar
+ * unter SIEBEN verschiedenen Namen fuer dieselben zwei Farben. Der
+ * gefaehrlichste Fall: `--gold` trug in Beraterwelt, Kundenportal und
+ * Partnerportal das SMARAGDGRUEN #17A65B, in den Anmeldeseiten dagegen das
+ * echte Gold #B8A16B. Ein Entwickler, der "gold" liest und Gold meint,
+ * baut damit zwangslaeufig gruene Zierlinien - und umgekehrt. Genau davor
+ * warnt der Betreiber-Beschluss vom 22.07.2026: Gold ist AKZENT, Smaragd
+ * ist AKTION; wer beides unter einem Namen fuehrt, kann die Regel nicht
+ * einhalten.
+ *
+ * NAMEN SIND NICHT NEU ERFUNDEN. Sie stammen aus `public/website-assets/
+ * site.css`, wo dieselbe Marke bereits sauber benannt war (--emerald* /
+ * --gold*). Die Anwendung folgt jetzt der Website statt umgekehrt - eine
+ * neue Konvention haette eine achte ergeben.
+ *
+ * ABGRENZUNG
+ * - Markenfarben stehen hier und NUR hier.
+ * - Flaechen-, Text- und Linienfarben stehen ebenfalls hier (sie gehoeren
+ *   zum selben Beschluss: warme helle Flaechen, Gruen-Graphit dunkel).
+ * - Status-/Ampelfarben (Erfolg, Fehler, Warnung) sind bewusst EIGENE
+ *   Tokens: sie sind keine Markenfarben. Wuerde man Erfolg = Smaragd
+ *   setzen, aendert ein spaeterer Markenwechsel die Bedeutung von
+ *   "erfolgreich" mit - das ist keine Farbe, das ist eine Aussage.
+ * - Seiten OHNE Vite-Bundle (Fehlerseiten 404/500, die statische Website)
+ *   tragen ihre Tokens weiterhin selbst. Das ist Absicht: eine Fehlerseite
+ *   muss auch dann noch aussehen wie Dienstly24, wenn das Build-Manifest
+ *   fehlt - genau die Lage, in der ein 500er entsteht.
+ *
+ * KEIN ALIAS AUF DIE ALTEN NAMEN. Ein `--gold: var(--emerald)` als
+ * Uebergangshilfe haette genau den Fehler konserviert, den diese Datei
+ * beseitigt.
+ */
+:root {
+    /* --- Marke: Smaragd = Aktion (Buttons, Links, aktive Zustaende) --- */
+    --emerald: #17A65B;
+    --emerald-bright: #19B463;  /* heller Verlaufspol */
+    --emerald-deep: #128A4B;    /* dunkler Verlaufspol */
+    --emerald-mint: #3DDC8E;    /* Leuchtakzent auf dunklem Glas (Anmeldung) */
+    --emerald-soft: #D9F4E6;    /* Flaechenton, z.B. Hinweisboxen im Portal */
+    --emerald-ink: #0E6B3C;     /* Text auf hellem Smaragd-Grund */
+
+    /* --- Marke: Gold = AKZENT. Nie fuer Primaer-Buttons (Betreiber 22.07.) --- */
+    --gold: #B8A16B;
+    --gold-soft: #D1C18F;
+    --gold-line: rgba(184, 161, 107, .4);
+
+    /* --- Dunkle Flaechen: Gruen-Graphit, passend zum Logo-Metall --- */
+    --graphite: #131A17;
+    --graphite-deep: #0F1512;
+    --graphite-black: #0B1310;
+
+    /* --- Helle Flaechen: WARM. Kuehle Grautoene sind ausdruecklich raus. --- */
+    --canvas: #F1EEE5;
+    --canvas-warm: #F8F6F0;     /* Website-Canvas, heller als die Anwendung */
+    --surface: #FBFAF6;
+    --surface-soft: #F7F5EF;  /* leicht getoente Flaeche: Eingabefelder, Chips */
+    --line: #E0DCD0;
+    --ink: #16211C;
+    --ink-soft: #5F6B62;
+
+    /* --- Glas-Oberflaechen der Anmeldeseiten (auf dunklem Grund) --- */
+    --glass-line: rgba(255, 255, 255, .14);
+
+    /* --- Status: Bedeutung, nicht Marke. Siehe Kopfkommentar. --- */
+    --status-success: #17A65B;  /* faellt hier mit Smaragd zusammen, meint aber "geschafft" */
+    --status-danger: #E24B4A;
+    --status-warning: #C98A17;
+    --status-info: #2F6FB5;
+}

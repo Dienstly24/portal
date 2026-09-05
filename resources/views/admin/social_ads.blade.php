@@ -45,7 +45,7 @@
 <div class="card">
     <div class="card-header">
         <div class="card-title">Kampagnen</div>
-        <span style="font-size:12px;color:var(--ink-soft);">Neue Anzeige: Banner → Social-Media → „📢 Bewerben" · Tagesbudget max. {{ $maxBudget }} EUR (Schutzgrenze)</span>
+        <span class="muted-xs">Neue Anzeige: Banner → Social-Media → „📢 Bewerben" · Tagesbudget max. {{ $maxBudget }} EUR (Schutzgrenze)</span>
     </div>
     @if($apiError)
     <p style="font-size:13.5px;color:#A32D2D;">⚠ {{ $apiError }}</p>
@@ -53,9 +53,9 @@
     <p style="font-size:13.5px;color:var(--ink-soft);">Noch keine Kampagnen. Einen Banner per API posten und dann über „📢 Bewerben" die erste Anzeige erstellen – sie startet erst nach Ihrem Klick.</p>
     @else
     {{-- overflow-x: 8 Spalten inkl. Budget-Formular sind breiter als Handy/Tablet --}}
-    <div style="overflow-x:auto;">
+    <div class="scroll-x">
     <table>
-        <thead><tr><th>Kampagne</th><th>Status</th><th style="text-align:right;">Tagesbudget</th><th style="text-align:right;">Ausgegeben</th><th style="text-align:right;">Impressionen</th><th style="text-align:right;">Klicks</th><th style="text-align:right;">Ø Klickpreis</th><th>Aktionen</th></tr></thead>
+        <thead><tr><th>Kampagne</th><th>Status</th><th class="num">Tagesbudget</th><th class="num">Ausgegeben</th><th class="num">Impressionen</th><th class="num">Klicks</th><th class="num">Ø Klickpreis</th><th>Aktionen</th></tr></thead>
         <tbody>
         @foreach($campaigns as $c)
         @php
@@ -73,7 +73,7 @@
                 <div style="font-size:11.5px;color:var(--ink-soft);font-weight:400;">{{ $c['objective'] === 'OUTCOME_TRAFFIC' ? 'Ziel: Klicks' : 'Ziel: Reichweite' }}{{ $c['stop_time'] ? ' · endet ' . \Illuminate\Support\Carbon::parse($c['stop_time'])->format('d.m.Y') : '' }}</div>
             </td>
             <td><span style="background:{{ $statusLabel[2] }};color:{{ $statusLabel[1] }};border-radius:12px;padding:2px 10px;font-size:11.5px;font-weight:600;white-space:nowrap;">{{ $statusLabel[0] }}</span></td>
-            <td style="text-align:right;">
+            <td class="num">
                 <form method="POST" action="{{ route('admin.werbung.budget', $c['id']) }}" style="display:flex;gap:4px;justify-content:flex-end;align-items:center;">
                     @csrf
                     {{-- exakten Wert zeigen (nicht runden - sonst aendert Speichern still das Budget) --}}
@@ -82,9 +82,9 @@
                 </form>
             </td>
             <td style="text-align:right;font-weight:600;">{{ number_format($c['spend_eur'], 2, ',', '.') }} €</td>
-            <td style="text-align:right;">{{ number_format($c['impressions'], 0, ',', '.') }}</td>
+            <td class="num">{{ number_format($c['impressions'], 0, ',', '.') }}</td>
             <td style="text-align:right;font-weight:600;">{{ number_format($c['clicks'], 0, ',', '.') }}</td>
-            <td style="text-align:right;">{{ $c['cpc_eur'] !== null ? number_format($c['cpc_eur'], 2, ',', '.') . ' €' : '—' }}</td>
+            <td class="num">{{ $c['cpc_eur'] !== null ? number_format($c['cpc_eur'], 2, ',', '.') . ' €' : '—' }}</td>
             <td>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;">
                     {{-- Js::from statt addslashes: korrektes JS-Escaping, auch bei Zeilenumbruechen im Kampagnennamen --}}
@@ -121,7 +121,7 @@
             <button type="submit" class="btn btn-ghost btn-sm">💾 Grenze ändern</button>
         </form>
         @else
-        <span style="font-size:12px;color:var(--ink-soft);">Änderbar nur durch den Admin.</span>
+        <span class="muted-xs">Änderbar nur durch den Admin.</span>
         @endif
     </div>
 </div>

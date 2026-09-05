@@ -60,8 +60,8 @@
 
 <div class="grid-2" style="align-items:start;margin-bottom:24px;">
     {{-- Je Empfaenger --}}
-    <div class="card" style="padding:0;overflow:hidden;">
-        <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">Verträge &amp; Provision je Vermittler</div>
+    <div class="card card-flush">
+        <div class="card-head-bar">Verträge &amp; Provision je Vermittler</div>
         @php $maxNetto = max(0.01, (float) ($byRecipient->max('netto') ?? 0)); @endphp
         <table>
             <thead><tr style="background:#F8F9FA;">
@@ -88,8 +88,8 @@
     </div>
 
     {{-- Nach Sparte --}}
-    <div class="card" style="padding:0;overflow:hidden;">
-        <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">Verträge nach Sparte</div>
+    <div class="card card-flush">
+        <div class="card-head-bar">Verträge nach Sparte</div>
         @php $maxProd = max(1, (int) ($byProduct->max() ?? 1)); @endphp
         <div style="padding:14px 20px;">
             @forelse($byProduct as $type => $count)
@@ -108,8 +108,8 @@
 
 <div class="grid-2" style="align-items:start;">
     {{-- Monatsvergleich --}}
-    <div class="card" style="padding:0;overflow:hidden;">
-        <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">Monatsvergleich (6 Monate)</div>
+    <div class="card card-flush">
+        <div class="card-head-bar">Monatsvergleich (6 Monate)</div>
         @php
             $maxMV = max(1, collect($monthly)->max('vertraege'));
             $maxMN = max(0.01, collect($monthly)->max('netto'));
@@ -147,7 +147,7 @@
         @else
         <div style="display:flex;align-items:flex-end;gap:3px;height:120px;">
             @foreach($daily as $day => $count)
-            <div title="{{ \Carbon\Carbon::parse($day)->format('d.m.Y') }}: {{ $count }} Vertraege" style="flex:1;min-width:6px;background:linear-gradient(180deg,#19b463,#128a4b);border-radius:4px 4px 0 0;height:{{ max(8, round($count / $maxDay * 100)) }}%;"></div>
+            <div title="{{ \Carbon\Carbon::parse($day)->format('d.m.Y') }}: {{ $count }} Vertraege" style="flex:1;min-width:6px;background:linear-gradient(180deg,var(--emerald-bright),var(--emerald-deep));border-radius:4px 4px 0 0;height:{{ max(8, round($count / $maxDay * 100)) }}%;"></div>
             @endforeach
         </div>
         <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink-soft);margin-top:6px;">

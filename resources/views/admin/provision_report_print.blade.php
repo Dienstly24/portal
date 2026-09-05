@@ -6,6 +6,7 @@
 <meta charset="UTF-8">
 <title>Provisionsbericht {{ $from->format('d.m.Y') }} - {{ $to->format('d.m.Y') }}</title>
 <style>
+/* Druckansicht ohne Vite-Bundle - Markenfarben deshalb als Hex (UX-1). */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', Arial, sans-serif; color: #16211C; padding: 32px; font-size: 12px; }
     h1 { font-size: 20px; margin-bottom: 4px; }

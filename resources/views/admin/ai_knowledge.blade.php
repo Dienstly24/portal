@@ -18,7 +18,7 @@
     </div>
 </div>
 
-@if(session('success'))<div style="background:#D9F4E6;color:#17A65B;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
+@if(session('success'))<div style="background:var(--emerald-soft);color:var(--emerald);padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
 @if($errors->any())<div style="background:#FBE9E9;color:#B3261E;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ $errors->first() }}</div>@endif
 
 {{-- Mehrere Fragen auf einmal: bei 40 Fragen ist ein Formular je Eintrag
@@ -135,7 +135,7 @@ A: Die Beratung ist kostenlos und unverbindlich.">{{ old('text') }}</textarea>
 <form method="POST" action="{{ route('admin.ai_knowledge.bulk') }}" id="bulkForm"
       data-h-submit="dedb37970b">@csrf</form>
 
-<div class="card" style="padding:0;overflow:hidden;">
+<div class="card card-flush">
     <div style="padding:16px 20px;border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
         <span style="font-weight:700;">Einträge ({{ $entries->total() }})</span>
         @if($entries->count())

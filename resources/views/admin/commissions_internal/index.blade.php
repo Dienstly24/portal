@@ -24,19 +24,19 @@
      als die Liste darunter, stiftet mehr Verwirrung als Nutzen. --}}
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:20px;max-width:1200px;">
     <div class="card" style="padding:14px 16px;">
-        <div style="font-size:11.5px;color:var(--ink-soft);">Datensätze (gefiltert)</div>
+        <div class="muted-2xs">Datensätze (gefiltert)</div>
         <div style="font-size:22px;font-weight:700;">{{ number_format((int) ($totals->anzahl ?? 0), 0, ',', '.') }}</div>
     </div>
     <div class="card" style="padding:14px 16px;">
-        <div style="font-size:11.5px;color:var(--ink-soft);">Summe</div>
+        <div class="muted-2xs">Summe</div>
         <div style="font-size:22px;font-weight:700;">{{ number_format((float) ($totals->summe ?? 0), 2, ',', '.') }} €</div>
     </div>
     <div class="card" style="padding:14px 16px;">
-        <div style="font-size:11.5px;color:var(--ink-soft);">Davon noch offen</div>
+        <div class="muted-2xs">Davon noch offen</div>
         <div style="font-size:22px;font-weight:700;color:#B5651D;">{{ number_format((float) ($totals->offen ?? 0), 2, ',', '.') }} €</div>
     </div>
     <div class="card" style="padding:14px 16px;">
-        <div style="font-size:11.5px;color:var(--ink-soft);">Ohne Vertrag</div>
+        <div class="muted-2xs">Ohne Vertrag</div>
         <div style="font-size:22px;font-weight:700;color:{{ $unmatchedCount > 0 ? '#A32D2D' : 'inherit' }};">{{ $unmatchedCount }}</div>
         @if($unmatchedCount > 0)
         <a href="{{ route('admin.commissions_internal.index', ['zuordnung' => 'offen']) }}" style="font-size:11.5px;">anzeigen →</a>
@@ -99,15 +99,15 @@
     </form>
     <div style="margin-top:12px;font-size:12.5px;">
         <a href="{{ route('admin.commissions_internal.export', request()->query()) }}">⬇ Gefilterte Liste als CSV exportieren</a>
-        <span style="color:var(--ink-soft);"> – jeder Export wird protokolliert.</span>
+        <span class="muted"> – jeder Export wird protokolliert.</span>
     </div>
 </div>
 
 <div class="card" style="max-width:1200px;">
     @if($commissions->isEmpty())
-        <div style="font-size:13px;color:var(--ink-soft);">Keine Provisionen zu dieser Auswahl.</div>
+        <div class="muted-sm">Keine Provisionen zu dieser Auswahl.</div>
     @else
-    <div style="overflow-x:auto;">
+    <div class="scroll-x">
         <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
             <thead><tr style="text-align:left;color:var(--ink-soft);">
                 <th style="padding:8px;">Interne Vertragsnr.</th>

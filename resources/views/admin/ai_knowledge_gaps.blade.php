@@ -21,7 +21,7 @@
     </div>
 </div>
 
-@if(session('success'))<div style="background:#D9F4E6;color:#17A65B;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
+@if(session('success'))<div style="background:var(--emerald-soft);color:var(--emerald);padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
 @if($errors->any())<div style="background:#FBE9E9;color:#B3261E;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ $errors->first() }}</div>@endif
 
 <form method="GET" action="{{ route('admin.ai_knowledge_gaps') }}" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
@@ -41,8 +41,8 @@
     <a href="{{ route('admin.ai_knowledge') }}" class="btn">Zur Wissensbasis</a>
 </form>
 
-<div class="card" style="padding:0;overflow:hidden;">
-    <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">Themen ({{ $gaps->total() }})</div>
+<div class="card card-flush">
+    <div class="card-head-bar">Themen ({{ $gaps->total() }})</div>
     @forelse($gaps as $gap)
     <div style="padding:16px 20px;border-bottom:1px solid var(--line);">
         <div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin-bottom:10px;">

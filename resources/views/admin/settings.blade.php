@@ -28,12 +28,12 @@
 </div>
 <style>
 .hub-tile{display:flex;align-items:center;gap:10px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);text-decoration:none;font-size:13.5px;font-weight:600;transition:.15s;}
-.hub-tile:hover{border-color:var(--gold);box-shadow:0 4px 14px rgba(0,0,0,.08);transform:translateY(-1px);}
+.hub-tile:hover{border-color:var(--emerald);box-shadow:0 4px 14px rgba(0,0,0,.08);transform:translateY(-1px);}
 .hub-tile span{flex:1;}
 /* Schalter des KI-Assistenten: die globale input{width:100%}-Regel wuerde
    die Kaesten strecken und den Beschriftungstext aus der Karte schieben. */
 .ki-toggle{display:flex;gap:9px;align-items:flex-start;cursor:pointer;margin-bottom:11px;font-size:13.5px;line-height:1.45;}
-.ki-toggle input[type=checkbox]{width:17px;height:17px;flex:none;margin:1px 0 0;accent-color:#17A65B;}
+.ki-toggle input[type=checkbox]{width:17px;height:17px;flex:none;margin:1px 0 0;accent-color:var(--emerald);}
 .ki-toggle span{min-width:0;}
 </style>
 
@@ -186,7 +186,7 @@
     </div>
     <div style="background:#F7F5EF;border-radius:8px;padding:14px;font-size:13px;">
         <div style="font-weight:600;margin-bottom:8px;">SMTP Konfiguration</div>
-        <div style="color:var(--ink-soft);">Host: smtp.hostinger.com · Port: 587</div>
+        <div class="muted">Host: smtp.hostinger.com · Port: 587</div>
         <div style="color:var(--ink-soft);margin-top:4px;">Von: noreply@dienstly24.de</div>
     </div>
 </div>
@@ -197,14 +197,14 @@
         <label>lexoffice API Key</label>
         <input type="text" name="lexoffice_api_key" value="{{ $settings['lexoffice_api_key'] }}" placeholder="API Key eingeben">
         <div style="font-size:11px;color:var(--ink-soft);margin-top:4px;">
-            <a href="https://app.lexoffice.de/addons/public-api" target="_blank" style="color:var(--petrol);">API Key generieren →</a>
+            <a href="https://app.lexoffice.de/addons/public-api" target="_blank" style="color:var(--graphite);">API Key generieren →</a>
         </div>
     </div>
     {{-- Status aus dem echten Zustand ableiten (Audit UX-13) - frueher stand
          hier hartkodiert "1031 Kontakte importiert" (erfundene Statistik,
          verstoesst gegen CLAUDE.md). --}}
     @if(!empty($settings['lexoffice_api_key']))
-    <div style="background:#D9F4E6;border-radius:8px;padding:12px;font-size:13px;color:#128a4b;">
+    <div style="background:var(--emerald-soft);border-radius:8px;padding:12px;font-size:13px;color:var(--emerald-deep);">
         ✅ lexoffice API-Key hinterlegt
     </div>
     @else
@@ -227,11 +227,11 @@
     <div class="card-title" style="margin-bottom:8px;">📜 Rechtliches</div>
     <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;">
         Inhalte der öffentlichen Portal-Seiten
-        <a href="{{ url('/impressum') }}" target="_blank" style="color:var(--petrol);">/impressum</a> ·
-        <a href="{{ url('/agb') }}" target="_blank" style="color:var(--petrol);">/agb</a> ·
-        <a href="{{ url('/datenschutz') }}" target="_blank" style="color:var(--petrol);">/datenschutz</a> ·
-        <a href="{{ url('/cookie-richtlinie') }}" target="_blank" style="color:var(--petrol);">/cookie-richtlinie</a> ·
-        <a href="{{ url('/kontakt') }}" target="_blank" style="color:var(--petrol);">/kontakt</a>
+        <a href="{{ url('/impressum') }}" target="_blank" style="color:var(--graphite);">/impressum</a> ·
+        <a href="{{ url('/agb') }}" target="_blank" style="color:var(--graphite);">/agb</a> ·
+        <a href="{{ url('/datenschutz') }}" target="_blank" style="color:var(--graphite);">/datenschutz</a> ·
+        <a href="{{ url('/cookie-richtlinie') }}" target="_blank" style="color:var(--graphite);">/cookie-richtlinie</a> ·
+        <a href="{{ url('/kontakt') }}" target="_blank" style="color:var(--graphite);">/kontakt</a>
         leiten auf die offizielle Website weiter – eine Inhaltsquelle, keine doppelten Texte.
     </div>
     <div class="field"><label>Rechtsseiten-Quelle: Website-Basis-URL (leer lassen = Portal zeigt eigene Seiten aus den Texten unten)</label>

@@ -10,25 +10,25 @@
 
 @include('admin.partials.email_tabs', ['active' => 'posteingang'])
 
-@if(session('success'))<div style="background:#D9F4E6;color:#17A65B;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
+@if(session('success'))<div style="background:var(--emerald-soft);color:var(--emerald);padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
 @if(session('error'))<div style="background:#FBE9E9;color:#B3261E;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('error') }}</div>@endif
 
 {{-- Weitere Freigabe-Warteschlangen im Blick (Abschnitt 11: EIN Arbeitsvorrat) --}}
 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px;">
     <a href="{{ route('admin.commissions') }}" class="card" style="padding:16px 20px;text-decoration:none;display:flex;justify-content:space-between;align-items:center;">
-        <div><div style="font-size:13px;color:var(--ink-soft);">Provisionen zu prüfen</div><div style="font-size:22px;font-weight:700;">{{ $queues['commissions'] }}</div></div><div style="font-size:22px;">💶</div>
+        <div><div class="muted-sm">Provisionen zu prüfen</div><div style="font-size:22px;font-weight:700;">{{ $queues['commissions'] }}</div></div><div style="font-size:22px;">💶</div>
     </a>
     <a href="{{ route('admin.document_requests') }}" class="card" style="padding:16px 20px;text-decoration:none;display:flex;justify-content:space-between;align-items:center;">
-        <div><div style="font-size:13px;color:var(--ink-soft);">Dokument-Uploads zu prüfen</div><div style="font-size:22px;font-weight:700;">{{ $queues['document_requests'] }}</div></div><div style="font-size:22px;">📄</div>
+        <div><div class="muted-sm">Dokument-Uploads zu prüfen</div><div style="font-size:22px;font-weight:700;">{{ $queues['document_requests'] }}</div></div><div style="font-size:22px;">📄</div>
     </a>
     <a href="{{ route('admin.change_requests') }}" class="card" style="padding:16px 20px;text-decoration:none;display:flex;justify-content:space-between;align-items:center;">
-        <div><div style="font-size:13px;color:var(--ink-soft);">Kundenänderungen offen</div><div style="font-size:22px;font-weight:700;">{{ $queues['change_requests'] }}</div></div><div style="font-size:22px;">✏️</div>
+        <div><div class="muted-sm">Kundenänderungen offen</div><div style="font-size:22px;font-weight:700;">{{ $queues['change_requests'] }}</div></div><div style="font-size:22px;">✏️</div>
     </a>
 </div>
 
 {{-- Stufe 70-90%: Ein-Klick-Bestätigung (Architekturplan Abschnitt 13) --}}
 <div class="card" style="padding:0;overflow:hidden;margin-bottom:24px;">
-    <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">
+    <div class="card-head-bar">
         Zuordnung bestätigen ({{ $suggestedTotal }})
         @if($suggestedTotal > $suggested->count())
         {{-- Ehrlich sagen, dass die Liste gekuerzt ist - sonst haelt man den
@@ -48,11 +48,11 @@
             </div>
             <div style="font-size:13px;margin-top:6px;">
                 Vorschlag: <a href="{{ route('admin.customer', $m->customer_id) }}" style="font-weight:600;">{{ $m->customer?->user?->name }}</a>
-                <span style="color:var(--ink-soft);">({{ $m->customer?->customer_number }}, Übereinstimmung {{ $m->match_score }}%)</span>
+                <span class="muted">({{ $m->customer?->customer_number }}, Übereinstimmung {{ $m->match_score }}%)</span>
             </div>
         </div>
         <div style="display:flex;gap:8px;">
-            <form method="POST" action="{{ route('admin.email_inbox.confirm', $m->id) }}">@csrf<button type="submit" class="btn btn-gold btn-sm">✓ Bestätigen</button></form>
+            <form method="POST" action="{{ route('admin.email_inbox.confirm', $m->id) }}">@csrf<button type="submit" class="btn btn-emerald btn-sm">✓ Bestätigen</button></form>
             <form method="POST" action="{{ route('admin.email_inbox.reject', $m->id) }}">@csrf<button type="submit" class="btn btn-ghost btn-sm">✕ Anderer Kunde</button></form>
         </div>
     </div>
@@ -62,8 +62,8 @@
 </div>
 
 {{-- Nicht zugeordnete Mails: manuelle Zuweisung mit Kunden-Suche --}}
-<div class="card" style="padding:0;overflow:hidden;">
-    <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">Nicht zugeordnet ({{ $unmatched->count() }})</div>
+<div class="card card-flush">
+    <div class="card-head-bar">Nicht zugeordnet ({{ $unmatched->count() }})</div>
     @forelse($unmatched as $m)
     <div style="padding:16px 20px;border-bottom:1px solid var(--line);">
         <div style="display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:center;">
@@ -78,9 +78,9 @@
                 <div style="margin-top:8px;padding:8px 12px;background:#F5F0FA;border:1px solid #E2D5F0;border-radius:8px;font-size:12.5px;">
                     🤖 <strong>KI-Vorschlag:</strong> {{ \App\Models\EmailMessage::CATEGORIES[$ai->output['category']] ?? $ai->output['category'] }}
                     ({{ $ai->confidence }}% sicher)
-                    @if(!empty($ai->output['summary']))<span style="color:var(--ink-soft);"> – {{ $ai->output['summary'] }}</span>@endif
+                    @if(!empty($ai->output['summary']))<span class="muted"> – {{ $ai->output['summary'] }}</span>@endif
                     <span style="white-space:nowrap;margin-left:8px;">
-                        <form method="POST" action="{{ route('admin.email_inbox.ai_accept', $ai->id) }}" style="display:inline;">@csrf<button type="submit" class="btn btn-gold btn-sm" style="padding:3px 10px;font-size:11.5px;">Übernehmen</button></form>
+                        <form method="POST" action="{{ route('admin.email_inbox.ai_accept', $ai->id) }}" style="display:inline;">@csrf<button type="submit" class="btn btn-emerald btn-sm" style="padding:3px 10px;font-size:11.5px;">Übernehmen</button></form>
                         <form method="POST" action="{{ route('admin.email_inbox.ai_reject', $ai->id) }}" style="display:inline;">@csrf<button type="submit" class="btn btn-ghost btn-sm" style="padding:3px 10px;font-size:11.5px;">Verwerfen</button></form>
                     </span>
                 </div>
@@ -92,7 +92,7 @@
                 <input type="text" class="assign-search" placeholder="Kunde suchen (Name/Nr./Telefon)…" autocomplete="off"
                     style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;width:240px;font-size:13px;">
                 <div class="assign-results" style="display:none;position:absolute;top:40px;left:0;width:280px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:50;max-height:260px;overflow-y:auto;"></div>
-                <button type="submit" class="btn btn-gold btn-sm" disabled>Zuordnen</button>
+                <button type="submit" class="btn btn-emerald btn-sm" disabled>Zuordnen</button>
             </form>
         </div>
     </div>
@@ -125,7 +125,7 @@ document.querySelectorAll('.assign-form').forEach(form => {
                     items.forEach(c => {
                         const div = document.createElement('div');
                         div.style.cssText = 'padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--line);';
-                        div.innerHTML = '<strong>' + (c.name ?? '—') + '</strong> <span style="color:var(--ink-soft);">(' + (c.number ?? '') + ')</span>';
+                        div.innerHTML = '<strong>' + (c.name ?? '—') + '</strong> <span class="muted">(' + (c.number ?? '') + ')</span>';
                         div.onmouseover = () => div.style.background = '#F8F9FA';
                         div.onmouseout = () => div.style.background = '#fff';
                         div.onclick = () => {

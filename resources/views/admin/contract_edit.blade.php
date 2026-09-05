@@ -15,7 +15,7 @@
      Quelle wie Liste und Vertragsstruktur: Contract::displayStatus/statusGroup). --}}
 @php $editStatus = $contract->displayStatus(); @endphp
 <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
-    <span class="badge badge-{{ $editStatus['badge'] }}" style="white-space:nowrap;">{{ $editStatus['label'] }}</span>
+    <span class="badge badge-{{ $editStatus['badge'] }} nowrap">{{ $editStatus['label'] }}</span>
     <span style="font-size:12.5px;color:var(--ink-soft);">
         @if($editStatus['historic'])
         🗄 <strong>Beendet / Historie</strong> – dieser Vertrag zählt nicht zum aktiven Bestand und erscheint nicht in der Vertragsstruktur des Kunden.

@@ -19,7 +19,7 @@
     $meterMax = collect($meterHistory)->pluck('consumption')->filter()->max() ?: 0;
     $canManage = in_array(auth()->user()->role, ['admin', 'manager'], true);
 @endphp
-<div class="card" style="max-width:980px;background:linear-gradient(135deg,#131A17,#0F1512);border-color:#0F1512;color:#fff;">
+<div class="card" style="max-width:980px;background:linear-gradient(135deg,var(--graphite),var(--graphite-deep));border-color:var(--graphite-deep);color:#fff;">
     <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
         <span style="font-size:34px;line-height:1;">{{ $contract->typeIcon() }}</span>
         <div style="min-width:200px;">
@@ -48,7 +48,7 @@
 
     @if($meterStatus)
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:16px;">
-        @php $box = 'background:#0B1310;border:1px solid #1E2A24;border-radius:10px;padding:12px 14px;'; @endphp
+        @php $box = 'background:var(--graphite-black);border:1px solid #1E2A24;border-radius:10px;padding:12px 14px;'; @endphp
         <div style="{{ $box }}">
             <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#8A919E;font-weight:700;">Verbrauch</div>
             <div style="font-size:16px;font-weight:800;margin-top:4px;">{{ \App\Models\MeterReading::formatValue($meterStatus['consumption'], $meterUnit) }}</div>
@@ -84,7 +84,7 @@
 
     {{-- Ablese-Historie: je Eintrag der Verbrauch seit der vorherigen Ablesung --}}
     @if(count($meterHistory) > 0)
-    <div style="margin-top:16px;background:#0B1310;border:1px solid #1E2A24;border-radius:10px;padding:12px 14px;">
+    <div style="margin-top:16px;background:var(--graphite-black);border:1px solid #1E2A24;border-radius:10px;padding:12px 14px;">
         <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#8A919E;font-weight:700;margin-bottom:8px;">
             Verbrauchshistorie · {{ \App\Models\MeterReading::REGISTERS[\App\Models\MeterReading::REGISTER_DEFAULT] }}
         </div>
@@ -117,7 +117,7 @@
             @elseif($row['consumption'] !== null)
             <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
                 <div style="flex:1;height:6px;background:#1E2A24;border-radius:999px;overflow:hidden;">
-                    <div style="height:100%;width:{{ $meterMax > 0 ? max(3, round($row['consumption'] / $meterMax * 100)) : 0 }}%;background:linear-gradient(90deg,#19b463,#128a4b);"></div>
+                    <div style="height:100%;width:{{ $meterMax > 0 ? max(3, round($row['consumption'] / $meterMax * 100)) : 0 }}%;background:linear-gradient(90deg,var(--emerald-bright),var(--emerald-deep));"></div>
                 </div>
                 <span style="font-size:11.5px;color:#B9BFC9;white-space:nowrap;">
                     +{{ \App\Models\MeterReading::formatValue((float) $row['consumption'], $meterUnit) }}@if($row['days']) · {{ $row['days'] }} Tage @endif
@@ -136,7 +136,7 @@
 
     {{-- Einspeisung getrennt (Zweirichtungszaehler mit PV-Anlage) --}}
     @if($hasFeedIn && count($feedInHistory) > 0)
-    <div style="margin-top:12px;background:#0B1310;border:1px solid #1E2A24;border-radius:10px;padding:12px 14px;">
+    <div style="margin-top:12px;background:var(--graphite-black);border:1px solid #1E2A24;border-radius:10px;padding:12px 14px;">
         <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#8A919E;font-weight:700;margin-bottom:8px;">
             Einspeisung (2.8.0)
         </div>
@@ -158,22 +158,22 @@
         <div style="flex:1 1 150px;">
             <label style="display:block;font-size:11px;color:#8A919E;font-weight:700;margin-bottom:4px;">Zählerstand ({{ $meterUnit }})</label>
             <input type="number" name="reading" step="0.001" min="0" max="99999999" required placeholder="z. B. 4680"
-                   style="width:100%;padding:9px 10px;border:1px solid #1E2A24;border-radius:8px;font-size:14px;background:#0B1310;color:#fff;">
+                   style="width:100%;padding:9px 10px;border:1px solid #1E2A24;border-radius:8px;font-size:14px;background:var(--graphite-black);color:#fff;">
         </div>
         <div style="flex:0 1 150px;">
             <label style="display:block;font-size:11px;color:#8A919E;font-weight:700;margin-bottom:4px;">Abgelesen am</label>
             <input type="date" name="reading_date" max="{{ now()->format('Y-m-d') }}" value="{{ now()->format('Y-m-d') }}"
-                   style="width:100%;padding:9px 10px;border:1px solid #1E2A24;border-radius:8px;font-size:14px;background:#0B1310;color:#fff;">
+                   style="width:100%;padding:9px 10px;border:1px solid #1E2A24;border-radius:8px;font-size:14px;background:var(--graphite-black);color:#fff;">
         </div>
         <div style="flex:0 1 190px;">
             <label style="display:block;font-size:11px;color:#8A919E;font-weight:700;margin-bottom:4px;">Zählwerk</label>
-            <select name="register" style="width:100%;padding:9px 10px;border:1px solid #1E2A24;border-radius:8px;font-size:14px;background:#0B1310;color:#fff;">
+            <select name="register" style="width:100%;padding:9px 10px;border:1px solid #1E2A24;border-radius:8px;font-size:14px;background:var(--graphite-black);color:#fff;">
                 @foreach(\App\Models\MeterReading::REGISTERS as $key => $label)
                 <option value="{{ $key }}">{{ $key }} – {{ $label }}</option>
                 @endforeach
             </select>
         </div>
-        <button type="submit" class="btn btn-primary" style="white-space:nowrap;">Ablesung erfassen</button>
+        <button type="submit" class="btn btn-primary nowrap">Ablesung erfassen</button>
     </form>
 </div>
 @endif

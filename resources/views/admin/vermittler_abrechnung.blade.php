@@ -20,14 +20,14 @@
 {{-- Kennzahlen: was haben wir eingereicht, was kam zurueck? --}}
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;max-width:980px;">
     @foreach([
-        ['Eingereicht', $performance['eingereicht'], '#131A17'],
-        ['Abgerechnet', $performance['abgerechnet'], '#128a4b'],
+        ['Eingereicht', $performance['eingereicht'], 'var(--graphite)'],
+        ['Abgerechnet', $performance['abgerechnet'], 'var(--emerald-deep)'],
         ['Storniert', $performance['storniert'], '#A32D2D'],
         ['Nicht gefunden', $performance['nicht_gefunden'], '#B5651D'],
         ['Prüfung', $performance['pruefung'], '#A32D2D'],
     ] as [$label, $value, $color])
     <div class="card" style="padding:14px 16px;">
-        <div style="font-size:11.5px;color:var(--ink-soft);">{{ $label }}</div>
+        <div class="muted-2xs">{{ $label }}</div>
         <div style="font-size:22px;font-weight:700;color:{{ $color }};">{{ $value }}</div>
     </div>
     @endforeach
@@ -122,9 +122,9 @@
 <div class="card" style="max-width:980px;">
     <div style="font-weight:700;font-size:14px;margin-bottom:14px;">Bisherige Importe</div>
     @if($imports->isEmpty())
-        <div style="font-size:13px;color:var(--ink-soft);">Noch keine Abrechnung eingelesen.</div>
+        <div class="muted-sm">Noch keine Abrechnung eingelesen.</div>
     @else
-    <div style="overflow-x:auto;">
+    <div class="scroll-x">
         <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
             <thead><tr style="text-align:left;color:var(--ink-soft);">
                 <th style="padding:8px;">Datei</th><th style="padding:8px;">Datum</th>

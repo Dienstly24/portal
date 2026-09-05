@@ -52,18 +52,18 @@
         </div>
     </div>
     <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:12.5px;">
-        <span style="color:var(--ink-soft);">Geburtsdatum</span><span style="font-weight:600;text-align:right;">{{ $birth ?? '—' }}</span>
-        <span style="color:var(--ink-soft);">Geschlecht</span><span style="font-weight:600;text-align:right;">{{ $genderLabel ?? '—' }}</span>
-        <span style="color:var(--ink-soft);">Krankenkasse</span><span style="font-weight:600;text-align:right;">{{ $f->health_insurance_company ?? '—' }}</span>
-        <span style="color:var(--ink-soft);">KV-Nummer</span><span style="font-weight:600;font-family:monospace;text-align:right;word-break:break-all;">{{ $f->health_insurance_number ?? '—' }}</span>
+        <span class="muted">Geburtsdatum</span><span style="font-weight:600;text-align:right;">{{ $birth ?? '—' }}</span>
+        <span class="muted">Geschlecht</span><span style="font-weight:600;text-align:right;">{{ $genderLabel ?? '—' }}</span>
+        <span class="muted">Krankenkasse</span><span style="font-weight:600;text-align:right;">{{ $f->health_insurance_company ?? '—' }}</span>
+        <span class="muted">KV-Nummer</span><span style="font-weight:600;font-family:monospace;text-align:right;word-break:break-all;">{{ $f->health_insurance_number ?? '—' }}</span>
         @if($statusLabel)
-        <span style="color:var(--ink-soft);">KV-Status</span><span style="font-weight:600;text-align:right;">{{ $statusLabel }}</span>
+        <span class="muted">KV-Status</span><span style="font-weight:600;text-align:right;">{{ $statusLabel }}</span>
         @endif
         @if($kvStart)
-        <span style="color:var(--ink-soft);">Versichert seit</span><span style="font-weight:600;text-align:right;">{{ $kvStart }}</span>
+        <span class="muted">Versichert seit</span><span style="font-weight:600;text-align:right;">{{ $kvStart }}</span>
         @endif
         @if($f->tax_id)
-        <span style="color:var(--ink-soft);">Steuer-ID</span><span style="font-weight:600;font-family:monospace;text-align:right;word-break:break-all;">{{ $f->tax_id }}</span>
+        <span class="muted">Steuer-ID</span><span style="font-weight:600;font-family:monospace;text-align:right;word-break:break-all;">{{ $f->tax_id }}</span>
         @endif
     </div>
 </div>

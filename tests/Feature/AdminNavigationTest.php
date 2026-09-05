@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Support\Navigation\AdminNavigation;
 use App\Support\Navigation\NavGroup;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 /**
@@ -117,6 +118,12 @@ class AdminNavigationTest extends TestCase
             'Eine Aufgabe fuer naechsten Monat ist heute keine Handlung.');
 
         $this->task($user, now()->subDay(), 'Ueberfaellig');
+
+        // Die Badge-Zahlen werden seit UX-3 kurz zwischengespeichert
+        // (NavBadges::TTL_SEKUNDEN). Ohne dieses Leeren pruefte die zweite
+        // Zusicherung den Cache-Eintrag der ersten - also nicht mehr die
+        // Zaehlregel, um die es hier geht.
+        Cache::flush();
 
         $this->assertSame(1, $this->badge($user, 'mein-tag', 'aufgaben'));
     }

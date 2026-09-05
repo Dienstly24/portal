@@ -27,7 +27,7 @@ foreach($customer->documents as $d) {
 }
 $allEvents = $allEvents->sortByDesc('date');
 $typeIcons = ['contract'=>'📄','ticket'=>'💬','document'=>'📎','appointment'=>'📅','note'=>'📝','approval'=>'✅','default'=>'📌'];
-$typeColors = ['contract'=>'#185FA5','ticket'=>'#B5651D','document'=>'#17A65B','appointment'=>'#6D28D9','note'=>'#5F5E5A','default'=>'var(--petrol)'];
+$typeColors = ['contract'=>'#185FA5','ticket'=>'#B5651D','document'=>'var(--emerald)','appointment'=>'#6D28D9','note'=>'#5F5E5A','default'=>'var(--graphite)'];
 @endphp
 
 @forelse($allEvents as $event)

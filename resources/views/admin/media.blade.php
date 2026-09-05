@@ -66,8 +66,8 @@
         @foreach($slots as $key => $slot)
             <div style="border:1px solid var(--line,#e4e4e4);border-radius:10px;padding:10px 12px;font-size:12.5px;">
                 <b>{{ $slot['label'] }}</b><br>
-                <span style="color:var(--ink-soft);">{{ $slot['hint'] }}</span><br>
-                <span style="font-weight:600;color:{{ isset($slotUsage[$key]) ? 'var(--green,#128a4b)' : '#b3261e' }};">{{ isset($slotUsage[$key]) ? '✔ belegt' : '– leer (Website zeigt eingebauten Fallback)' }}</span>
+                <span class="muted">{{ $slot['hint'] }}</span><br>
+                <span style="font-weight:600;color:{{ isset($slotUsage[$key]) ? 'var(--emerald-deep)' : '#b3261e' }};">{{ isset($slotUsage[$key]) ? '✔ belegt' : '– leer (Website zeigt eingebauten Fallback)' }}</span>
             </div>
         @endforeach
     </div>
@@ -86,7 +86,7 @@
     </form>
 
     @if($assets->isEmpty())
-        <p style="color:var(--ink-soft);">Noch keine Bilder hochgeladen.</p>
+        <p class="muted">Noch keine Bilder hochgeladen.</p>
     @endif
 
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;">
@@ -103,14 +103,14 @@
                     @elseif($asset->processing_status === 'failed')
                         <span style="font-size:12px;color:#b3261e;padding:8px;text-align:center;">⚠ Verarbeitung fehlgeschlagen<br>{{ Str::limit($asset->processing_error, 60) }}</span>
                     @else
-                        <span style="font-size:12px;color:var(--ink-soft);">⏳ in Verarbeitung …</span>
+                        <span class="muted-xs">⏳ in Verarbeitung …</span>
                     @endif
                 </div>
                 <div style="padding:10px 12px;font-size:12.5px;">
                     <b title="{{ $asset->original_name }}">{{ Str::limit($asset->title, 34) }}</b><br>
-                    <span style="color:var(--ink-soft);">{{ $asset->width }}×{{ $asset->height }} · {{ $fmtBytes($asset->totalBytes()) }} · {{ $asset->created_at->lokal()->format('d.m.Y') }}</span><br>
+                    <span class="muted">{{ $asset->width }}×{{ $asset->height }} · {{ $fmtBytes($asset->totalBytes()) }} · {{ $asset->created_at->lokal()->format('d.m.Y') }}</span><br>
                     @if($asset->slot)
-                        <span style="display:inline-block;margin-top:4px;background:#e8f5ee;color:#128a4b;border-radius:99px;padding:2px 9px;font-weight:600;">📌 {{ $slots[$asset->slot]['label'] ?? $asset->slot }}</span>
+                        <span style="display:inline-block;margin-top:4px;background:#e8f5ee;color:var(--emerald-deep);border-radius:99px;padding:2px 9px;font-weight:600;">📌 {{ $slots[$asset->slot]['label'] ?? $asset->slot }}</span>
                     @endif
                     <details style="margin-top:8px;">
                         <summary style="cursor:pointer;font-weight:600;">Bearbeiten / Slot</summary>
@@ -163,7 +163,7 @@
         <tr style="text-align:start;color:var(--ink-soft);"><th style="text-align:start;padding:6px;">Titel</th><th style="text-align:start;padding:6px;">Gelöscht am</th><th style="text-align:start;padding:6px;">Endgültig weg am</th><th></th></tr>
         @foreach($trashed as $asset)
             <tr style="border-top:1px solid var(--line,#eee);">
-                <td style="padding:6px;">{{ $asset->title }} <span style="color:var(--ink-soft);">({{ $asset->original_name }})</span></td>
+                <td style="padding:6px;">{{ $asset->title }} <span class="muted">({{ $asset->original_name }})</span></td>
                 <td style="padding:6px;">{{ $asset->deleted_at->lokal()->format('d.m.Y H:i') }}</td>
                 <td style="padding:6px;">{{ $asset->deleted_at->addDays((int) config('website.media.trash_days'))->format('d.m.Y') }}</td>
                 <td style="padding:6px;text-align:end;">
@@ -193,7 +193,7 @@
     dz.addEventListener('click', function () { input.click(); });
     input.addEventListener('change', showFiles);
     ['dragover', 'dragenter'].forEach(function (ev) {
-        dz.addEventListener(ev, function (e) { e.preventDefault(); dz.style.borderColor = '#128a4b'; });
+        dz.addEventListener(ev, function (e) { e.preventDefault(); dz.style.borderColor = 'var(--emerald-deep)'; });
     });
     ['dragleave', 'drop'].forEach(function (ev) {
         dz.addEventListener(ev, function (e) { e.preventDefault(); dz.style.borderColor = ''; });

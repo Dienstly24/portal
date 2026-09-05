@@ -75,7 +75,7 @@
                     <span style="color:var(--ink-soft);font-size:12px;">{{ $sub->from_date->format('d.m.Y') }} &ndash; {{ $sub->to_date->format('d.m.Y') }}{{ $sub->reason ? ' - ' . $sub->reason : '' }}</span>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;">
-                    @if($isActive)<span style="background:#D9F4E6;color:#17A65B;border-radius:10px;padding:2px 10px;font-size:11px;">Aktiv</span>@endif
+                    @if($isActive)<span style="background:var(--emerald-soft);color:var(--emerald);border-radius:10px;padding:2px 10px;font-size:11px;">Aktiv</span>@endif
                     <form method="POST" action="{{ route('admin.team.substitution.destroy', $sub->id) }}" data-h-submit="1c3db3de95" style="margin:0;">
                         @csrf @method('DELETE')
                         <button type="submit" style="background:none;border:none;color:#A32D2D;cursor:pointer;font-size:13px;">&#10005;</button>

@@ -81,11 +81,19 @@ class AuditE2EFixesTest extends TestCase
     }
 
     // UX-4/UX-5: Die frueher undefinierten CSS-Klassen sind definiert.
+    //
+    // Seit UX-2 (05.09.2026) stehen die Bausteine in
+    // resources/css/components.css statt im <style>-Block des Layouts - im
+    // HTML der Seite kommen sie deshalb nicht mehr vor. Geprueft wird jetzt
+    // die QUELLE; die Aussage ist dieselbe: die Klassen existieren, und die
+    // Seite benutzt sie.
     public function test_broken_css_classes_are_defined(): void
     {
-        $res = $this->actingAs($this->admin())->get(route('admin.employees'))->assertOk();
-        $res->assertSee('.badge-danger', false);
-        $res->assertSee('.alert-warning', false);
+        $this->actingAs($this->admin())->get(route('admin.employees'))->assertOk();
+
+        $css = (string) file_get_contents(resource_path('css/components.css'));
+        $this->assertStringContainsString('.badge-danger', $css);
+        $this->assertStringContainsString('.alert-warning', $css);
     }
 
     // SEC-2: Nicht zugeordnetes Inbox-Dokument ist fuer fremde begrenzte

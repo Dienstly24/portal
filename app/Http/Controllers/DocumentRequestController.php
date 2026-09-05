@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ScopesCustomerAccess;
 use App\Mail\DocumentRequestMail;
 use App\Models\ActivityLog;
 use App\Models\Customer;
@@ -17,12 +18,25 @@ use Illuminate\Support\Facades\Mail;
  */
 class DocumentRequestController extends Controller
 {
+    use ScopesCustomerAccess;
+
     public function index()
     {
+        // PORTFOLIO-SCOPE (UX-3, gleiche Lehre wie Audit SEC-P2 bei den
+        // Terminen): die Seite ist fuer ALLE Staff-Rollen offen, listete aber
+        // die Anforderungen des GESAMTEN Hauses samt Kundennamen und
+        // Vertragsbezug. Ein Mitarbeiter mit begrenztem Portfolio sah damit
+        // hier Kunden, die ihm in jeder anderen Ansicht verborgen sind.
+        $visible = $this->visibleCustomerIds();
+
         $awaitingReview = DocumentRequest::with(['customer.user', 'contract', 'document'])
-            ->awaitingReview()->orderBy('uploaded_at')->get();
+            ->awaitingReview()
+            ->when($visible !== null, fn ($q) => $q->whereIn('customer_id', $visible))
+            ->orderBy('uploaded_at')->get();
         $open = DocumentRequest::with(['customer.user', 'contract'])
-            ->openForCustomer()->orderBy('deadline')->get();
+            ->openForCustomer()
+            ->when($visible !== null, fn ($q) => $q->whereIn('customer_id', $visible))
+            ->orderBy('deadline')->get();
 
         return view('admin.document_requests', compact('awaitingReview', 'open'));
     }

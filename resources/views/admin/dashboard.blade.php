@@ -69,7 +69,7 @@
     <div class="item-row row-link" data-row-nav="{{ route('admin.ticket', $t->id) }}" title="Antrag öffnen">
         <div>
             <div style="font-weight:600;font-size:14px;">{{ $t->subject }}</div>
-            <div style="font-size:12px;color:var(--ink-soft);">{{ $t->customer?->user?->name }} · {{ $t->created_at->lokal()->format('d.m.Y') }}</div>
+            <div class="muted-xs">{{ $t->customer?->user?->name }} · {{ $t->created_at->lokal()->format('d.m.Y') }}</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
             <span class="badge badge-{{ $t->status === 'open' ? 'open' : ($t->status === 'closed' ? 'closed' : 'pending') }}">{{ ['open'=>'Offen','in_progress'=>'In Bearbeitung','waiting'=>'Wartend','closed'=>'Geschlossen'][$t->status] ?? $t->status }}</span>
@@ -113,7 +113,7 @@ new Chart(ctx, {
                 {{ \App\Models\Contract::whereIn('type',['strom','gas','strom_gas'])->count() }},
                 {{ \App\Models\Contract::where('type','andere')->count() }}
             ],
-            backgroundColor: ['#0F3D3D','#C9963E','#17A65B','#185FA5','#B4B2A9'],
+            backgroundColor: ['#0F3D3D','#C9963E', brandColor('emerald'), '#185FA5','#B4B2A9'],
             borderWidth: 0,
         }]
     },

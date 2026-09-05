@@ -33,9 +33,9 @@
 
 <div class="card" style="max-width:1200px;">
     @if($entries->isEmpty())
-        <div style="font-size:13px;color:var(--ink-soft);">Keine Einträge zu dieser Auswahl.</div>
+        <div class="muted-sm">Keine Einträge zu dieser Auswahl.</div>
     @else
-    <div style="overflow-x:auto;">
+    <div class="scroll-x">
         <table style="width:100%;border-collapse:collapse;font-size:12px;">
             <thead><tr style="text-align:left;color:var(--ink-soft);">
                 <th style="padding:8px;">Wann</th><th style="padding:8px;">Wer</th><th style="padding:8px;">Vorgang</th>

@@ -9,11 +9,11 @@
     <div class="card">
         <div class="card-title">{{ __('Aktuelle Bankverbindung') }}</div>
         <div class="item-row">
-            <span style="font-size:13px;color:var(--ink-soft);">IBAN</span>
+            <span class="muted-sm">IBAN</span>
             <span style="font-size:14px;font-weight:600;font-family:monospace;">{{ $customer->iban ? '••••' . substr($customer->iban, -4) : '—' }}</span>
         </div>
         <div class="item-row">
-            <span style="font-size:13px;color:var(--ink-soft);">{{ __('Kontoinhaber') }}</span>
+            <span class="muted-sm">{{ __('Kontoinhaber') }}</span>
             <span style="font-size:14px;font-weight:600;">{{ $customer->account_holder ?? '—' }}</span>
         </div>
         @if($pendingBank)
@@ -41,7 +41,7 @@
                     <div class="field"><label style="font-size:12.5px;">{{ __('Ausweis Vorderseite (optional)') }}</label><input type="file" name="id_front" accept=".pdf,.jpg,.jpeg,.png,.webp"></div>
                     <div class="field"><label style="font-size:12.5px;">{{ __('Ausweis Rückseite (optional)') }}</label><input type="file" name="id_back" accept=".pdf,.jpg,.jpeg,.png,.webp"></div>
                 </div>
-                <p style="font-size:11.5px;color:var(--ink-soft);">{{ __('Erlaubt: PDF oder Foto (JPG, PNG, WEBP), max. 10 MB je Datei.') }}</p>
+                <p class="muted-2xs">{{ __('Erlaubt: PDF oder Foto (JPG, PNG, WEBP), max. 10 MB je Datei.') }}</p>
             </div>
 
             @error('iban')<div class="alert-error">{{ __('Bitte geben Sie eine gültige IBAN ein (ohne Leerzeichen).') }}</div>@enderror
@@ -59,7 +59,7 @@
     <div class="item-row">
         <div>
             <div style="font-size:14px;">{{ __('IBAN endend auf') }}<b>{{ substr($r->new_data['iban'] ?? '', -4) }}</b></div>
-            <div style="font-size:12px;color:var(--ink-soft);">{{ $r->created_at->lokal()->format('d.m.Y H:i') }} @if($r->notes) · {{ $r->notes }} @endif</div>
+            <div class="muted-xs">{{ $r->created_at->lokal()->format('d.m.Y H:i') }} @if($r->notes) · {{ $r->notes }} @endif</div>
         </div>
         <span class="badge {{ $r->status === 'approved' ? 'badge-active' : '' }}" style="{{ $r->status === 'rejected' ? 'background:#F9E3E3;color:#A32D2D;' : '' }}">{{ $r->status === 'approved' ? __('Genehmigt') : __('Abgelehnt') }}</span>
     </div>

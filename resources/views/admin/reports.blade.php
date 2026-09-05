@@ -17,7 +17,7 @@
 <style>
 .rep-tab { padding:9px 18px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:13.5px; font-weight:600; color:var(--ink); text-decoration:none; }
 .rep-tab:hover { background:#F4F7F5; }
-.rep-tab-active { background:#131A17; color:#fff; border-color:#131A17; }
+.rep-tab-active { background:var(--graphite); color:#fff; border-color:var(--graphite); }
 </style>
 
 <div class="card" style="margin-bottom:24px;">
@@ -119,11 +119,11 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
         <div style="background:#F7F5EF;border-radius:10px;padding:16px;text-align:center;">
             <div style="font-size:28px;font-weight:700;">{{ $tickets['total'] }}</div>
-            <div style="font-size:13px;color:var(--ink-soft);">Tickets gesamt</div>
+            <div class="muted-sm">Tickets gesamt</div>
         </div>
-        <div style="background:#D9F4E6;border-radius:10px;padding:16px;text-align:center;">
-            <div style="font-size:28px;font-weight:700;color:#17A65B;">{{ $tickets['closed'] }}</div>
-            <div style="font-size:13px;color:#17A65B;">Gelöst</div>
+        <div style="background:var(--emerald-soft);border-radius:10px;padding:16px;text-align:center;">
+            <div style="font-size:28px;font-weight:700;color:var(--emerald);">{{ $tickets['closed'] }}</div>
+            <div style="font-size:13px;color:var(--emerald);">Gelöst</div>
         </div>
         <div style="background:#E6F1FB;border-radius:10px;padding:16px;text-align:center;">
             <div style="font-size:28px;font-weight:700;color:#185FA5;">{{ $tickets['open'] }}</div>
@@ -145,7 +145,7 @@
     <span style="background:#F9E3E3;color:#A32D2D;font-size:12px;padding:3px 10px;border-radius:999px;margin-left:8px;font-weight:600;">{{ $warnings }} überfällig</span>
     @endif
 </div>
-<div class="card" style="padding:0;overflow:hidden;">
+<div class="card card-flush">
     <table>
         <thead><tr style="background:#F8F9FA;">
             <th style="padding:12px 20px;">Kunde</th>
@@ -198,7 +198,7 @@ new Chart(document.getElementById('contractTypeChart'), {
         labels: labels,
         datasets: [{
             data: data,
-            backgroundColor: ['#0F3D3D','#C9963E','#17A65B','#185FA5','#B4B2A9','#7F77DD','#D85A30'],
+            backgroundColor: ['#0F3D3D','#C9963E', brandColor('emerald'), '#185FA5','#B4B2A9','#7F77DD','#D85A30'],
             borderWidth: 0,
         }]
     },

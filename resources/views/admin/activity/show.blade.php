@@ -71,27 +71,27 @@
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;">
     {{-- Tagesübersicht --}}
-    <div class="card" style="padding:0;overflow:hidden;">
+    <div class="card card-flush">
         <div class="card-header" style="padding:16px 20px 0 20px;"><div class="card-title">📅 Tagesübersicht</div></div>
-        <div style="overflow-x:auto;">
+        <div class="scroll-x">
         <table>
             <thead><tr style="background:#F8F9FA;">
                 <th style="padding:12px 20px;">Datum</th>
-                <th style="text-align:right;">Anmeldezeit</th>
-                <th style="text-align:right;">Aktiv</th>
-                <th style="text-align:right;">Leerlauf</th>
-                <th style="text-align:right;">Aktionen</th>
-                <th style="text-align:right;">Punkte</th>
+                <th class="num">Anmeldezeit</th>
+                <th class="num">Aktiv</th>
+                <th class="num">Leerlauf</th>
+                <th class="num">Aktionen</th>
+                <th class="num">Punkte</th>
             </tr></thead>
             <tbody>
             @forelse($days as $day)
             <tr>
                 <td style="padding:13px 20px;font-weight:600;">{{ \Carbon\Carbon::parse($day->day)->format('d.m.Y') }}</td>
-                <td style="text-align:right;">{{ \App\Support\Duration::human($day->login_seconds) }}</td>
-                <td style="text-align:right;font-weight:600;color:#17A65B;">{{ \App\Support\Duration::human($day->active_seconds) }}</td>
+                <td class="num">{{ \App\Support\Duration::human($day->login_seconds) }}</td>
+                <td style="text-align:right;font-weight:600;color:var(--emerald);">{{ \App\Support\Duration::human($day->active_seconds) }}</td>
                 <td style="text-align:right;color:var(--ink-soft);">{{ \App\Support\Duration::human($day->idle_seconds) }}</td>
-                <td style="text-align:right;">{{ $day->productive_ops }}</td>
-                <td style="text-align:right;font-weight:700;">{{ $day->points }}</td>
+                <td class="num">{{ $day->productive_ops }}</td>
+                <td class="num-strong">{{ $day->points }}</td>
             </tr>
             @empty
             <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--ink-soft);">Keine Daten im Zeitraum.</td></tr>
@@ -102,20 +102,20 @@
     </div>
 
     {{-- Aktionen nach Typ --}}
-    <div class="card" style="padding:0;overflow:hidden;">
+    <div class="card card-flush">
         <div class="card-header" style="padding:16px 20px 0 20px;"><div class="card-title">🧾 Aktionen nach Typ</div></div>
         <div style="overflow-x:auto;max-height:420px;overflow-y:auto;">
         <table>
             <thead><tr style="background:#F8F9FA;">
                 <th style="padding:12px 20px;">Aktion</th>
-                <th style="text-align:right;">Anzahl</th>
-                <th style="text-align:right;">Punkte</th>
+                <th class="num">Anzahl</th>
+                <th class="num">Punkte</th>
             </tr></thead>
             <tbody>
             @forelse($actions as $a)
             <tr>
                 <td style="padding:11px 20px;">{{ $a->label }}</td>
-                <td style="text-align:right;">{{ number_format($a->count, 0, ',', '.') }}</td>
+                <td class="num">{{ number_format($a->count, 0, ',', '.') }}</td>
                 <td style="text-align:right;font-weight:600;">{{ number_format($a->points, 0, ',', '.') }}</td>
             </tr>
             @empty
@@ -130,14 +130,14 @@
 {{-- Sitzungen --}}
 <div class="card" style="padding:0;overflow:hidden;margin-bottom:24px;">
     <div class="card-header" style="padding:16px 20px 0 20px;"><div class="card-title">🖥 Arbeitssitzungen</div></div>
-    <div style="overflow-x:auto;">
+    <div class="scroll-x">
     <table>
         <thead><tr style="background:#F8F9FA;">
             <th style="padding:12px 20px;">Anmeldung</th>
             <th>Abmeldung</th>
             <th>Beendet durch</th>
-            <th style="text-align:right;">Dauer</th>
-            <th style="text-align:right;">Aktiv</th>
+            <th class="num">Dauer</th>
+            <th class="num">Aktiv</th>
             <th>IP</th>
             <th>Gerät</th>
         </tr></thead>
@@ -145,7 +145,7 @@
         @forelse($sessions as $s)
         <tr>
             <td style="padding:13px 20px;white-space:nowrap;">{{ $s->login_at->lokal()->format('d.m.Y H:i') }}</td>
-            <td style="white-space:nowrap;">{{ $s->logout_at?->lokal()->format('d.m.Y H:i') ?? '— aktiv —' }}</td>
+            <td class="nowrap">{{ $s->logout_at?->lokal()->format('d.m.Y H:i') ?? '— aktiv —' }}</td>
             <td>
                 @if($s->ended_by)
                 <span class="badge badge-closed">{{ $endedLabels[$s->ended_by] ?? $s->ended_by }}</span>
@@ -153,9 +153,9 @@
                 <span class="badge badge-active">Laufend</span>
                 @endif
             </td>
-            <td style="text-align:right;">{{ \App\Support\Duration::human($s->durationSeconds()) }}</td>
-            <td style="text-align:right;font-weight:600;color:#17A65B;">{{ \App\Support\Duration::human((int) $s->active_seconds) }}</td>
-            <td style="font-size:12px;color:var(--ink-soft);">{{ $s->ip }}</td>
+            <td class="num">{{ \App\Support\Duration::human($s->durationSeconds()) }}</td>
+            <td style="text-align:right;font-weight:600;color:var(--emerald);">{{ \App\Support\Duration::human((int) $s->active_seconds) }}</td>
+            <td class="muted-xs">{{ $s->ip }}</td>
             <td style="font-size:12px;color:var(--ink-soft);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ $s->user_agent }}">{{ $s->user_agent }}</td>
         </tr>
         @empty
@@ -167,17 +167,17 @@
 </div>
 
 {{-- Vollständiger Verlauf --}}
-<div class="card" style="padding:0;overflow:hidden;">
+<div class="card card-flush">
     <div class="card-header" style="padding:16px 20px 0 20px;"><div class="card-title">🕘 Vollständiger Aktivitätsverlauf</div></div>
-    <div style="overflow-x:auto;">
+    <div class="scroll-x">
     <table>
         <thead><tr style="background:#F8F9FA;">
             <th style="padding:12px 20px;">Zeitpunkt</th>
             <th>Aktion</th>
             <th>Seite</th>
             <th>Datensatz</th>
-            <th style="text-align:right;">Punkte</th>
-            <th style="text-align:right;">Aktivzeit</th>
+            <th class="num">Punkte</th>
+            <th class="num">Aktivzeit</th>
             <th>IP</th>
         </tr></thead>
         <tbody>
@@ -191,12 +191,12 @@
                 @endif
             </td>
             <td style="font-size:12px;color:var(--ink-soft);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ $log->url_path }}">{{ $log->route ?? $log->url_path }}</td>
-            <td style="font-size:12px;color:var(--ink-soft);">
+            <td class="muted-xs">
                 @if($log->entity_id){{ $log->entity_type }} #{{ $log->entity_id }}@endif
             </td>
             <td style="text-align:right;font-weight:600;">{{ $log->points > 0 ? $log->points : '' }}</td>
             <td style="text-align:right;font-size:12px;color:var(--ink-soft);">{{ $log->active_seconds > 0 ? gmdate($log->active_seconds >= 3600 ? 'G:i:s' : 'i:s', $log->active_seconds) : '' }}</td>
-            <td style="font-size:12px;color:var(--ink-soft);">{{ $log->ip }}</td>
+            <td class="muted-xs">{{ $log->ip }}</td>
         </tr>
         @empty
         <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--ink-soft);">Keine Aktivitäten im Zeitraum.</td></tr>

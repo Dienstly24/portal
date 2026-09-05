@@ -8,7 +8,7 @@
     <div class="item-row">
         <div>
             <div style="font-size:14px;font-weight:600;">{{ $r->typeLabel() }}</div>
-            <div style="font-size:12px;color:var(--ink-soft);">
+            <div class="muted-xs">
                 Eingereicht: {{ $r->created_at->lokal()->format('d.m.Y H:i') }}
                 @if($r->effective_from) · Gültig ab: {{ $r->effective_from->format('d.m.Y') }} @endif
                 @if($r->reviewed_at) · Bearbeitet: {{ $r->reviewed_at->lokal()->format('d.m.Y H:i') }} @endif

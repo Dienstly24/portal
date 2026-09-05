@@ -30,7 +30,7 @@
                     @if($doc->aiInProgress())
                         <span class="badge" style="background:#FEF3C7;color:#92400E;">⏳ Wird analysiert…</span>
                     @elseif($doc->ai_status === 'done')
-                        <span class="badge" style="background:#d9f4e6;color:#128a4b;">✓ {{ $doc->aiTypeLabel() ?? 'Erkannt' }}</span>
+                        <span class="badge" style="background:var(--emerald-soft);color:var(--emerald-deep);">✓ {{ $doc->aiTypeLabel() ?? 'Erkannt' }}</span>
                         @if($doc->ai_confidence !== null)<span class="badge" style="background:#EEF0F3;color:var(--ink-soft);">{{ $doc->ai_confidence }}% sicher</span>@endif
                         @if($doc->ai_source === 'ocr')<span class="badge" style="background:#FEF3C7;color:#92400E;" title="Ohne KI-Anbieter erkannt (Tesseract-OCR) - Ergebnis bitte besonders sorgfaeltig pruefen.">OCR, ohne KI</span>@endif
                         @if($doc->ai_source === 'template')<span class="badge" style="background:#E6F1FB;color:#185FA5;" title="Bekanntes Formular per fester Regel gelesen - gratis, ohne KI.">📄 Vorlage, gratis</span>@endif
@@ -71,10 +71,10 @@
                     👤 Möglicher Kunde erkannt (Übereinstimmung {{ $match['score'] }}%) – liegt außerhalb Ihres Portfolios. Bitte an Admin/Manager übergeben.
                 </div>
                 @elseif($match)
-                <div style="margin-top:10px;border:1px solid {{ $match['tier'] === 'auto' ? '#17A65B' : 'var(--line)' }};background:{{ $match['tier'] === 'auto' ? '#d9f4e6' : '#F7F5EF' }};border-radius:10px;padding:10px 12px;font-size:13px;">
+                <div style="margin-top:10px;border:1px solid {{ $match['tier'] === 'auto' ? 'var(--emerald)' : 'var(--line)' }};background:{{ $match['tier'] === 'auto' ? 'var(--emerald-soft)' : '#F7F5EF' }};border-radius:10px;padding:10px 12px;font-size:13px;">
                     👤 Kunde gefunden: <strong>{{ $match['name'] ?? '—' }}</strong>
                     ({{ $match['customer_number'] ?? '—' }}) · Übereinstimmung {{ $match['score'] }}%
-                    <button type="button" class="btn btn-gold btn-sm" style="margin-inline-start:10px;"
+                    <button type="button" class="btn btn-emerald btn-sm" style="margin-inline-start:10px;"
                         data-h-click="inbox-zuordnen-treffer" data-doc="{{ $doc->id }}"
                         data-kunde="{{ $match['customer_id'] }}"
                         data-label="{{ ($match['name'] ?? '') . ' (' . ($match['customer_number'] ?? '') . ')' }}">
@@ -131,11 +131,11 @@
             <button type="button" class="btn btn-primary btn-sm" data-h-click="inbox-zuordnen" data-doc="{{ $doc->id }}">Kunden zuordnen…</button>
             {{-- Immer moeglich: den Namen kann der Mitarbeiter im Modal auch
                  selbst eintragen, falls er nicht (sicher) gelesen wurde. --}}
-            <button type="button" class="btn btn-gold btn-sm" data-h-click="inbox-neu" data-doc="{{ $doc->id }}">Neuen Kunden erstellen</button>
+            <button type="button" class="btn btn-emerald btn-sm" data-h-click="inbox-neu" data-doc="{{ $doc->id }}">Neuen Kunden erstellen</button>
             @if($personCount > 1)
             {{-- Eine Aufnahme, mehrere Personen (z.B. die Gesundheitskarten
                  einer Familie): je Person ein Kunde, in einem Schritt. --}}
-            <button type="button" class="btn btn-gold btn-sm"
+            <button type="button" class="btn btn-emerald btn-sm"
                 data-h-click="inbox-personen" data-doc="{{ $doc->id }}" data-anzahl="{{ $personCount }}"
                 title="Fuer jede erkannte Person einen eigenen Kunden anlegen (bereits erfasste Personen werden uebersprungen)">
                 👪 {{ $personCount }} Kunden anlegen

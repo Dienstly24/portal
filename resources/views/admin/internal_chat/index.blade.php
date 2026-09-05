@@ -11,7 +11,7 @@
         @forelse($conversations as $c)
         <a href="{{ route('admin.chat.show', $c->id) }}" style="display:block;padding:12px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;text-decoration:none;color:var(--ink);">
             <div style="font-weight:600;font-size:14px;">{{ $c->subject }}</div>
-            <div style="font-size:12px;color:var(--ink-soft);">{{ $c->participants->count() }} Teilnehmer · {{ optional($c->last_message_at)->diffForHumans() ?? $c->created_at->diffForHumans() }}</div>
+            <div class="muted-xs">{{ $c->participants->count() }} Teilnehmer · {{ optional($c->last_message_at)->diffForHumans() ?? $c->created_at->diffForHumans() }}</div>
         </a>
         @empty
         <p style="color:var(--ink-soft);font-size:14px;">Noch keine Unterhaltungen.</p>

@@ -11,7 +11,7 @@
     </div>
 </div>
 
-<div class="card" style="padding:0;overflow:hidden;">
+<div class="card card-flush">
     <table>
         <thead><tr style="background:#F8F9FA;">
             <th style="padding:12px 20px;">Rechnungsnr.</th>
@@ -34,7 +34,7 @@
             <td style="padding:13px 20px;font-weight:700;">{{ $inv['voucherNumber'] ?? 'Entwurf' }}</td>
             <td style="font-size:14px;">{{ $name }}</td>
             <td style="font-weight:600;">{{ $total }}</td>
-            <td style="font-size:13px;color:var(--ink-soft);">{{ isset($inv['voucherDate']) ? \Carbon\Carbon::parse($inv['voucherDate'])->format('d.m.Y') : '—' }}</td>
+            <td class="muted-sm">{{ isset($inv['voucherDate']) ? \Carbon\Carbon::parse($inv['voucherDate'])->format('d.m.Y') : '—' }}</td>
             <td><span class="badge {{ $s[1] }}">{{ $s[0] }}</span></td>
             <td style="padding-right:20px;">
                 <div style="display:flex;gap:6px;align-items:center;">
@@ -63,7 +63,7 @@
     @if($page > 0)
     <a href="{{ route('admin.lexoffice.invoices', ['page'=>$page-1]) }}" class="btn btn-ghost btn-sm">← Zurück</a>
     @endif
-    <span style="font-size:13px;color:var(--ink-soft);">Seite {{ $page+1 }} / {{ max(1,$pages) }}</span>
+    <span class="muted-sm">Seite {{ $page+1 }} / {{ max(1,$pages) }}</span>
     @if($page < $pages-1)
     <a href="{{ route('admin.lexoffice.invoices', ['page'=>$page+1]) }}" class="btn btn-ghost btn-sm">Weiter →</a>
     @endif

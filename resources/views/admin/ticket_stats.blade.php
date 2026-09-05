@@ -95,14 +95,14 @@
     <div class="card">
         <div class="card-title">👥 Team-Leistung (zugewiesene Tickets)</div>
         <table>
-            <thead><tr><th>Mitarbeiter</th><th style="text-align:right;">Zugewiesen</th><th style="text-align:right;">Erledigt</th><th style="text-align:right;">Ø Bewertung</th></tr></thead>
+            <thead><tr><th>Mitarbeiter</th><th class="num">Zugewiesen</th><th class="num">Erledigt</th><th class="num">Ø Bewertung</th></tr></thead>
             <tbody>
             @forelse($byEmployee as $e)
             <tr>
                 <td style="font-weight:600;">{{ $e['name'] }}</td>
-                <td style="text-align:right;">{{ $e['total'] }}</td>
-                <td style="text-align:right;">{{ $e['erledigt'] }} <span style="color:var(--ink-soft);font-size:12px;">({{ $e['total'] > 0 ? number_format($e['erledigt'] / $e['total'] * 100, 0) : 0 }} %)</span></td>
-                <td style="text-align:right;">{{ $e['rating'] !== null ? '★ ' . number_format($e['rating'], 1, ',', '.') : '—' }}</td>
+                <td class="num">{{ $e['total'] }}</td>
+                <td class="num">{{ $e['erledigt'] }} <span style="color:var(--ink-soft);font-size:12px;">({{ $e['total'] > 0 ? number_format($e['erledigt'] / $e['total'] * 100, 0) : 0 }} %)</span></td>
+                <td class="num">{{ $e['rating'] !== null ? '★ ' . number_format($e['rating'], 1, ',', '.') : '—' }}</td>
             </tr>
             @empty
             <tr><td colspan="4" style="text-align:center;color:var(--ink-soft);padding:20px;">Keine zugewiesenen Tickets im Zeitraum.</td></tr>
@@ -114,14 +114,14 @@
     <div class="card">
         <div class="card-title">📬 Kunden mit den meisten Anfragen</div>
         <table>
-            <thead><tr><th>Kunde</th><th>Kundennr.</th><th style="text-align:right;">Anfragen</th><th></th></tr></thead>
+            <thead><tr><th>Kunde</th><th>Kundennr.</th><th class="num">Anfragen</th><th></th></tr></thead>
             <tbody>
             @forelse($topCustomers as $c)
             <tr>
                 <td style="font-weight:600;">{{ $c['name'] }}</td>
-                <td style="color:var(--ink-soft);">{{ $c['number'] }}</td>
-                <td style="text-align:right;">{{ $c['n'] }}</td>
-                <td style="text-align:right;"><a href="{{ route('admin.customer', $c['id']) }}" class="btn btn-ghost btn-sm">Akte öffnen</a></td>
+                <td class="muted">{{ $c['number'] }}</td>
+                <td class="num">{{ $c['n'] }}</td>
+                <td class="num"><a href="{{ route('admin.customer', $c['id']) }}" class="btn btn-ghost btn-sm">Akte öffnen</a></td>
             </tr>
             @empty
             <tr><td colspan="4" style="text-align:center;color:var(--ink-soft);padding:20px;">Keine Kundenanfragen im Zeitraum.</td></tr>
