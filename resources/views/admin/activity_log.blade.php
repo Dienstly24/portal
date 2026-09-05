@@ -23,7 +23,7 @@ $actionLabels = [
 ];
 @endphp
 
-<div class="card" style="padding:0;overflow:hidden;">
+<div class="card card-flush">
     <table>
         <thead><tr style="background:#F8F9FA;">
             <th style="padding:12px 20px;">Zeitpunkt</th>
@@ -63,17 +63,17 @@ $actionLabels = [
             </td>
             <td>
                 <div style="display:flex;align-items:center;gap:8px;">
-                    <div style="width:28px;height:28px;border-radius:50%;background:var(--petrol);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none;">
+                    <div style="width:28px;height:28px;border-radius:50%;background:var(--graphite);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none;">
                         {{ strtoupper(substr($log->user?->name ?? 'S', 0, 2)) }}
                     </div>
                     <span style="font-size:13px;font-weight:600;">{{ $log->user?->name ?? 'System' }}</span>
                 </div>
             </td>
             <td><span class="badge {{ $label[1] }}">{{ $label[0] }}</span></td>
-            <td style="font-size:13px;color:var(--ink-soft);">
+            <td class="muted-sm">
                 @if(isset($meta['name'])) {{ $meta['name'] }} @endif
                 @if(isset($meta['email'])) · {{ $meta['email'] }} @endif
-                @if($entityUrl) <a href="{{ $entityUrl }}" style="color:var(--gold);text-decoration:none;white-space:nowrap;">Öffnen →</a> @endif
+                @if($entityUrl) <a href="{{ $entityUrl }}" style="color:var(--emerald);text-decoration:none;white-space:nowrap;">Öffnen →</a> @endif
             </td>
         </tr>
         @empty

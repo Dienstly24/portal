@@ -32,6 +32,6 @@
     </div>
     <div class="field"><input type="file" name="proof" id="{{ $p }}proof" required accept=".pdf,.jpg,.jpeg,.png,.webp"></div>
     <div class="field"><label style="font-size:12.5px;">{{ __('Rückseite / zweites Dokument (optional)') }}</label><input type="file" name="proof_back" id="{{ $p }}proof_back" accept=".pdf,.jpg,.jpeg,.png,.webp"></div>
-    <p style="font-size:11.5px;color:var(--ink-soft);">{{ __('Erlaubt: PDF oder Foto (JPG, PNG, WEBP), max. 10 MB je Datei. Straße, PLZ und Ort müssen lesbar sein.') }}</p>
+    <p class="muted-2xs">{{ __('Erlaubt: PDF oder Foto (JPG, PNG, WEBP), max. 10 MB je Datei. Straße, PLZ und Ort müssen lesbar sein.') }}</p>
 </div>
 @error('proof')<div class="alert-error">{{ $message }}</div>@enderror

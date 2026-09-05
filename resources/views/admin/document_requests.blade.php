@@ -8,17 +8,17 @@
     </div>
 </div>
 
-@if(session('success'))<div style="background:#D9F4E6;color:#17A65B;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
+@if(session('success'))<div style="background:var(--emerald-soft);color:var(--emerald);padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
 @if(session('error'))<div style="background:#FBE9E9;color:#B3261E;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('error') }}</div>@endif
 
 <div class="card" style="padding:0;overflow:hidden;margin-bottom:24px;">
-    <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">Zu prüfen ({{ $awaitingReview->count() }})</div>
+    <div class="card-head-bar">Zu prüfen ({{ $awaitingReview->count() }})</div>
     @forelse($awaitingReview as $req)
     <div style="padding:16px 20px;border-bottom:1px solid var(--line);">
         <div style="display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:flex-start;">
             <div style="min-width:240px;">
                 <div style="font-weight:600;font-size:14px;">{{ $req->title }}</div>
-                <div style="font-size:13px;color:var(--ink-soft);">
+                <div class="muted-sm">
                     <a href="{{ route('admin.customer', $req->customer_id) }}">{{ $req->customer->user?->name ?? 'Kunde' }}</a>
                     @if($req->contract) · Vertrag {{ $req->contract->contract_number }} @endif
                     · hochgeladen {{ $req->uploaded_at?->lokal()->format('d.m.Y H:i') }}
@@ -32,7 +32,7 @@
             <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;">
                 <form method="POST" action="{{ route('admin.document_requests.approve', $req->id) }}">
                     @csrf
-                    <button type="submit" class="btn btn-gold btn-sm">Freigeben</button>
+                    <button type="submit" class="btn btn-emerald btn-sm">Freigeben</button>
                 </form>
                 <form method="POST" action="{{ route('admin.document_requests.reject', $req->id) }}" style="display:flex;gap:8px;">
                     @csrf
@@ -48,8 +48,8 @@
     @endforelse
 </div>
 
-<div class="card" style="padding:0;overflow:hidden;">
-    <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">Offen beim Kunden ({{ $open->count() }})</div>
+<div class="card card-flush">
+    <div class="card-head-bar">Offen beim Kunden ({{ $open->count() }})</div>
     <table>
         <thead><tr style="background:#F8F9FA;">
             <th style="padding:10px 20px;">Anfrage</th>

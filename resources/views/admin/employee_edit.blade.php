@@ -32,14 +32,14 @@
         <label style="font-size:13px;color:var(--ink-soft);font-weight:600;display:block;margin-bottom:10px;">Kundenzugriff</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
             <label data-h-click="fe8f1e7f34" id="lbl-full"
-                style="border:2px solid {{ $employee->can_see_all_customers ? 'var(--petrol)' : 'var(--line)' }};border-radius:10px;padding:16px;cursor:pointer;background:{{ $employee->can_see_all_customers ? '#D9F4E6' : '#fff' }};">
+                style="border:2px solid {{ $employee->can_see_all_customers ? 'var(--graphite)' : 'var(--line)' }};border-radius:10px;padding:16px;cursor:pointer;background:{{ $employee->can_see_all_customers ? 'var(--emerald-soft)' : '#fff' }};">
                 <div style="font-weight:700;margin-bottom:4px;">Alle Kunden</div>
-                <div style="font-size:12px;color:var(--ink-soft);">Mitarbeiter sieht alle Kunden</div>
+                <div class="muted-xs">Mitarbeiter sieht alle Kunden</div>
             </label>
             <label data-h-click="99f92ffd1f" id="lbl-limited"
-                style="border:2px solid {{ !$employee->can_see_all_customers ? 'var(--petrol)' : 'var(--line)' }};border-radius:10px;padding:16px;cursor:pointer;background:{{ !$employee->can_see_all_customers ? '#D9F4E6' : '#fff' }};">
+                style="border:2px solid {{ !$employee->can_see_all_customers ? 'var(--graphite)' : 'var(--line)' }};border-radius:10px;padding:16px;cursor:pointer;background:{{ !$employee->can_see_all_customers ? 'var(--emerald-soft)' : '#fff' }};">
                 <div style="font-weight:700;margin-bottom:4px;">Begrenzte Kunden</div>
-                <div style="font-size:12px;color:var(--ink-soft);">Nur zugewiesene Kunden</div>
+                <div class="muted-xs">Nur zugewiesene Kunden</div>
             </label>
         </div>
         <input type="hidden" name="access_level" id="access_level" value="{{ $employee->access_level }}">
@@ -83,8 +83,8 @@
         ids.forEach(function (id) {
             var c = selected[id];
             var chip = document.createElement('span');
-            chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:#D9F4E6;border:1px solid #17A65B;border-radius:20px;padding:5px 12px;font-size:12.5px;';
-            chip.innerHTML = '👤 ' + c.name + ' <span style="color:var(--ink-soft);">' + (c.number || '') + '</span>';
+            chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:var(--emerald-soft);border:1px solid var(--emerald);border-radius:20px;padding:5px 12px;font-size:12.5px;';
+            chip.innerHTML = '👤 ' + c.name + ' <span class="muted">' + (c.number || '') + '</span>';
             var x = document.createElement('a');
             x.textContent = '✕';
             x.style.cssText = 'cursor:pointer;color:#A32D2D;font-weight:700;';
@@ -113,7 +113,7 @@
                     list.forEach(function (c) {
                         var row = document.createElement('div');
                         row.style.cssText = 'padding:10px 14px;cursor:pointer;font-size:13.5px;border-bottom:1px solid var(--line);';
-                        row.innerHTML = '<strong>' + c.name + '</strong> · ' + (c.number || '') + ' <span style="color:var(--ink-soft);">' + (c.email || '') + '</span>' + (selected[c.id] ? ' ✅' : '');
+                        row.innerHTML = '<strong>' + c.name + '</strong> · ' + (c.number || '') + ' <span class="muted">' + (c.email || '') + '</span>' + (selected[c.id] ? ' ✅' : '');
                         row.onmouseover = function () { row.style.background = 'var(--canvas)'; };
                         row.onmouseout = function () { row.style.background = '#fff'; };
                         row.onclick = function () {
@@ -154,10 +154,10 @@
             ] as $perm)
             <div class="perm-card" id="card-{{ $perm[0] }}"
                 data-h-click="df369be7fe" data-a0="{{ $perm[0] }}"
-                style="border:2px solid {{ $employee->{$perm[0]} ? 'var(--petrol)' : 'var(--line)' }};border-radius:10px;padding:14px;cursor:pointer;background:{{ $employee->{$perm[0]} ? '#D9F4E6' : '#fff' }};transition:.15s;user-select:none;">
+                style="border:2px solid {{ $employee->{$perm[0]} ? 'var(--graphite)' : 'var(--line)' }};border-radius:10px;padding:14px;cursor:pointer;background:{{ $employee->{$perm[0]} ? 'var(--emerald-soft)' : '#fff' }};transition:.15s;user-select:none;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
                     <span style="font-size:24px;">{{ $perm[3] }}</span>
-                    <span id="check-{{ $perm[0] }}" style="width:24px;height:24px;border-radius:50%;background:{{ $employee->{$perm[0]} ? 'var(--petrol)' : '#ccc' }};color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">{{ $employee->{$perm[0]} ? '✓' : '' }}</span>
+                    <span id="check-{{ $perm[0] }}" style="width:24px;height:24px;border-radius:50%;background:{{ $employee->{$perm[0]} ? 'var(--graphite)' : '#ccc' }};color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">{{ $employee->{$perm[0]} ? '✓' : '' }}</span>
                 </div>
                 <div style="font-weight:700;font-size:13px;">{{ $perm[1] }}</div>
                 <div style="font-size:11px;color:var(--ink-soft);margin-top:2px;">{{ $perm[2] }}</div>
@@ -212,7 +212,7 @@
         </div>
         <form method="POST" action="{{ route('admin.employees.resend_invitation', $employee->id) }}" style="margin:0;">
             @csrf
-            <button type="submit" class="btn btn-ghost" style="white-space:nowrap;">&#9993; Einladung senden</button>
+            <button type="submit" class="btn btn-ghost nowrap">&#9993; Einladung senden</button>
         </form>
     </div>
     @if(auth()->user()->role === 'admin')
@@ -220,7 +220,7 @@
         <div style="font-size:13px;color:var(--ink-soft);line-height:1.5;">
             <strong>Zwei-Faktor-Anmeldung</strong>
             @if($employee->hasTwoFactor())
-                <span style="color:#17A65B;">&#10003; aktiv seit {{ $employee->two_factor_confirmed_at?->lokal()->format('d.m.Y') }}</span><br>
+                <span style="color:var(--emerald);">&#10003; aktiv seit {{ $employee->two_factor_confirmed_at?->lokal()->format('d.m.Y') }}</span><br>
                 Nur zuruecksetzen, wenn das Telefon verloren ist UND keine Ersatzcodes mehr vorliegen.
                 Der Mitarbeiter richtet sie beim naechsten Login neu ein.
             @else
@@ -245,7 +245,7 @@
         <div style="font-size:13px;color:var(--ink-soft);line-height:1.5;"><strong>{{ $employee->is_active ? 'Konto deaktivieren' : 'Konto aktivieren' }}</strong><br>{{ $employee->is_active ? 'Login wird gesperrt, alle Daten und Zuweisungen bleiben erhalten. Empfohlen statt Loeschen.' : 'Konto ist derzeit deaktiviert. Login wieder freigeben.' }}</div>
         <form method="POST" action="{{ route('admin.employees.toggle', $employee->id) }}" style="margin:0;">
             @csrf @method('PUT')
-            <button type="submit" class="btn btn-ghost" style="white-space:nowrap;{{ $employee->is_active ? 'color:#B5651D;border-color:#B5651D;' : 'color:#17A65B;border-color:#17A65B;' }}">{{ $employee->is_active ? '&#9208; Deaktivieren' : '&#9654; Aktivieren' }}</button>
+            <button type="submit" class="btn btn-ghost" style="white-space:nowrap;{{ $employee->is_active ? 'color:#B5651D;border-color:#B5651D;' : 'color:var(--emerald);border-color:var(--emerald);' }}">{{ $employee->is_active ? '&#9208; Deaktivieren' : '&#9654; Aktivieren' }}</button>
         </form>
     </div>
     @if(auth()->user()->role === 'admin')
@@ -265,9 +265,9 @@ function togglePerm(name) {
     var card = document.getElementById('card-' + name);
     var check = document.getElementById('check-' + name);
     cb.checked = !cb.checked;
-    card.style.borderColor = cb.checked ? 'var(--petrol)' : 'var(--line)';
-    card.style.background = cb.checked ? '#D9F4E6' : '#fff';
-    check.style.background = cb.checked ? 'var(--petrol)' : '#ccc';
+    card.style.borderColor = cb.checked ? 'var(--graphite)' : 'var(--line)';
+    card.style.background = cb.checked ? 'var(--emerald-soft)' : '#fff';
+    check.style.background = cb.checked ? 'var(--graphite)' : '#ccc';
     check.textContent = cb.checked ? '\u2713' : '';
 }
 function selectAllPerms(state) {
@@ -278,10 +278,10 @@ function selectAllPerms(state) {
 }
 function toggleLimited(limited) {
     document.getElementById('access_level').value = limited ? 'limited' : 'full';
-    document.getElementById('lbl-full').style.borderColor = limited ? 'var(--line)' : 'var(--petrol)';
-    document.getElementById('lbl-full').style.background = limited ? '#fff' : '#D9F4E6';
-    document.getElementById('lbl-limited').style.borderColor = limited ? 'var(--petrol)' : 'var(--line)';
-    document.getElementById('lbl-limited').style.background = limited ? '#D9F4E6' : '#fff';
+    document.getElementById('lbl-full').style.borderColor = limited ? 'var(--line)' : 'var(--graphite)';
+    document.getElementById('lbl-full').style.background = limited ? '#fff' : 'var(--emerald-soft)';
+    document.getElementById('lbl-limited').style.borderColor = limited ? 'var(--graphite)' : 'var(--line)';
+    document.getElementById('lbl-limited').style.background = limited ? 'var(--emerald-soft)' : '#fff';
     document.getElementById('assign-customers').style.display = limited ? 'block' : 'none';
     const el = document.getElementById('can_see_all');
     if (limited) { el.removeAttribute('name'); }

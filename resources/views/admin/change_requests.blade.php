@@ -52,7 +52,7 @@ $fmt = fn($v) => $valueLabels[$v] ?? $v;
                 @endif
             </div>
             <div style="font-size:13px;color:var(--ink-soft);margin-bottom:12px;">
-                Kunde: <a href="{{ route('admin.customer', $r->customer_id) }}" style="color:var(--petrol);font-weight:600;">{{ $r->customer?->user?->name ?? '—' }}</a>
+                Kunde: <a href="{{ route('admin.customer', $r->customer_id) }}" style="color:var(--graphite);font-weight:600;">{{ $r->customer?->user?->name ?? '—' }}</a>
                 · Eingereicht: {{ $r->created_at->lokal()->format('d.m.Y H:i') }}
                 @if($r->effective_from) · <b>Gültig ab: {{ $r->effective_from->format('d.m.Y') }}</b>
                 @elseif($r->requiresProof()) · <span style="color:#B5651D;">Gültig-ab fehlt</span> @endif
@@ -65,23 +65,23 @@ $fmt = fn($v) => $valueLabels[$v] ?? $v;
                     @if($r->old_data)
                         @foreach($r->old_data as $k => $v)
                             @if(($fieldLabels[$k] ?? '') !== null && !is_null($v) && $v !== '')
-                            <div style="font-size:13px;padding:2px 0;"><span style="color:var(--ink-soft);">{{ $fieldLabels[$k] ?? $k }}:</span> {{ $fmt($v) }}</div>
+                            <div style="font-size:13px;padding:2px 0;"><span class="muted">{{ $fieldLabels[$k] ?? $k }}:</span> {{ $fmt($v) }}</div>
                             @endif
                         @endforeach
                     @else
-                    <div style="font-size:13px;color:var(--ink-soft);">— Neuanlage —</div>
+                    <div class="muted-sm">— Neuanlage —</div>
                     @endif
                 </div>
                 <div style="background:#F0F7F3;border:1px solid #CDE7D8;border-radius:8px;padding:12px 14px;">
-                    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#17A65B;margin-bottom:8px;">Neu</div>
+                    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--emerald);margin-bottom:8px;">Neu</div>
                     @foreach($r->new_data as $k => $v)
                         @php $changed = !$r->old_data || ($r->old_data[$k] ?? null) != $v; @endphp
                         @if(($fieldLabels[$k] ?? '') !== null && !is_null($v) && $v !== '')
-                        <div style="font-size:13px;padding:2px 0;{{ $changed ? 'background:#FFF3D6;border-radius:4px;padding-left:6px;margin:1px -6px 1px 0;' : '' }}"><span style="color:var(--ink-soft);">{{ $fieldLabels[$k] ?? $k }}:</span> <b>{{ $fmt($v) }}</b>@if($changed)<span style="color:#B5651D;font-size:11px;"> · geändert</span>@endif</div>
+                        <div style="font-size:13px;padding:2px 0;{{ $changed ? 'background:#FFF3D6;border-radius:4px;padding-left:6px;margin:1px -6px 1px 0;' : '' }}"><span class="muted">{{ $fieldLabels[$k] ?? $k }}:</span> <b>{{ $fmt($v) }}</b>@if($changed)<span style="color:#B5651D;font-size:11px;"> · geändert</span>@endif</div>
                         @endif
                     @endforeach
                     @if(!empty($r->new_data['document_path']))
-                    <div style="font-size:13px;padding:4px 0;">📎 <a href="{{ route('admin.change_requests.document', $r->id) }}" style="color:var(--petrol);">{{ $r->new_data['document_name'] ?? 'Dokument öffnen' }}</a></div>
+                    <div style="font-size:13px;padding:4px 0;">📎 <a href="{{ route('admin.change_requests.document', $r->id) }}" style="color:var(--graphite);">{{ $r->new_data['document_name'] ?? 'Dokument öffnen' }}</a></div>
                     @endif
                 </div>
             </div>
@@ -103,11 +103,11 @@ $fmt = fn($v) => $valueLabels[$v] ?? $v;
                 @forelse($r->documents as $doc)
                 <div style="font-size:13px;padding:3px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                     <span>📄</span>
-                    <a href="{{ route('admin.change_requests.proof', $doc->id) }}" target="_blank" rel="noopener" style="color:var(--petrol);font-weight:600;">{{ $doc->kindLabel() }}</a>
+                    <a href="{{ route('admin.change_requests.proof', $doc->id) }}" target="_blank" rel="noopener" style="color:var(--graphite);font-weight:600;">{{ $doc->kindLabel() }}</a>
                     <span style="color:var(--ink-soft);font-size:12px;">{{ $doc->file_name }}</span>
-                    <a href="{{ route('admin.change_requests.proof', ['id' => $doc->id, 'download' => 1]) }}" style="font-size:11.5px;color:var(--ink-soft);">herunterladen</a>
+                    <a href="{{ route('admin.change_requests.proof', ['id' => $doc->id, 'download' => 1]) }}" class="muted-2xs">herunterladen</a>
                     @if($doc->check_status !== 'pending')
-                    <span style="font-size:11.5px;color:{{ $doc->check_status === 'match' ? '#17A65B' : ($doc->check_status === 'no_match' ? '#A32D2D' : '#5F6B62') }};">· {{ $doc->checkLabel() }}</span>
+                    <span style="font-size:11.5px;color:{{ $doc->check_status === 'match' ? 'var(--emerald)' : ($doc->check_status === 'no_match' ? '#A32D2D' : '#5F6B62') }};">· {{ $doc->checkLabel() }}</span>
                     @endif
                 </div>
                 @empty
@@ -117,7 +117,7 @@ $fmt = fn($v) => $valueLabels[$v] ?? $v;
                 @if($r->proofChecks())
                 <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">
                     @foreach($r->proofChecks() as $check)
-                    <span style="font-size:12px;padding:3px 9px;border-radius:20px;background:{{ $check['passed'] ? '#E8F5EE' : '#F9E3E3' }};color:{{ $check['passed'] ? '#17A65B' : '#A32D2D' }};">
+                    <span style="font-size:12px;padding:3px 9px;border-radius:20px;background:{{ $check['passed'] ? '#E8F5EE' : '#F9E3E3' }};color:{{ $check['passed'] ? 'var(--emerald)' : '#A32D2D' }};">
                         {{ $check['passed'] ? '✓' : '✗' }} {{ $check['label'] }}
                         @if(empty($check['required'])) <span style="opacity:.7;">(optional)</span> @endif
                         @if(!empty($check['tolerant'])) <span style="opacity:.7;">· OCR-Toleranz</span> @endif
@@ -137,7 +137,7 @@ $fmt = fn($v) => $valueLabels[$v] ?? $v;
 
             @if(($r->notifications_count ?? 0) > 0)
             <div style="margin-top:10px;">
-                <a href="{{ route('admin.change_requests.notifications', $r->id) }}" class="btn btn-gold" style="font-size:12.5px;padding:7px 14px;">
+                <a href="{{ route('admin.change_requests.notifications', $r->id) }}" class="btn btn-emerald" style="font-size:12.5px;padding:7px 14px;">
                     📨 Mitteilungen an Gesellschaften
                     @if($r->open_notifications > 0) ({{ $r->open_notifications }} offen) @else (alle erledigt) @endif
                 </a>
@@ -179,7 +179,7 @@ $fmt = fn($v) => $valueLabels[$v] ?? $v;
                 <div style="font-size:12px;color:#A32D2D;margin-bottom:8px;">⚠️ {{ $r->proof_status === 'missing' ? 'Es liegt kein Nachweis vor.' : 'Der Nachweis passt nicht zu den beantragten Angaben.' }} Bitte vor einer Freigabe klären.</div>
                 @endif
                 <div style="display:flex;gap:8px;">
-                    <button type="submit" name="action" value="approve" class="btn btn-primary" style="flex:1;background:#17A65B;" data-h-click="e8ffba69ab">✓ Genehmigen</button>
+                    <button type="submit" name="action" value="approve" class="btn btn-primary" style="flex:1;background:var(--emerald);" data-h-click="e8ffba69ab">✓ Genehmigen</button>
                     <button type="submit" name="action" value="reject" class="btn btn-ghost" style="flex:1;color:#A32D2D;border-color:#A32D2D;" data-h-click="73df0077f6">✗ Ablehnen</button>
                 </div>
             </form>

@@ -16,12 +16,12 @@
             @if($ticket->customer) · 👤 <a href="{{ route('admin.customer', $ticket->customer_id) }}" style="color:inherit;">{{ $ticket->customer?->user?->name }}</a> · Nr. {{ $ticket->customer->customer_number }}
             @else · 👤 {{ $ticket->guest_name ?? 'Gast' }}
             @endif
-            <span style="color:var(--ink-soft);">(via {{ $quelle }})</span>
+            <span class="muted">(via {{ $quelle }})</span>
             · {{ $ticket->created_at->lokal()->format('d.m.Y H:i') }}
             · {{ $ticket->priorityLabel() }}
         </div>
     </div>
-    <div style="text-align:right;">
+    <div class="num">
         <span class="badge badge-{{ $ticket->statusBadge() }}">{{ $ticket->statusLabel() }}</span>
         @if($ticket->isOverdue())<div style="font-size:12px;color:#A32D2D;font-weight:600;margin-top:6px;">⏰ Reaktionszeit überschritten (fällig {{ $ticket->due_at->lokal()->format('d.m.Y H:i') }})</div>@endif
     </div>
@@ -59,9 +59,9 @@
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
         @php
             $actions = match($ticket->status) {
-                'open' => [['in_progress','▶ In Bearbeitung übernehmen','btn-primary'],['waiting','⏸ Wartet auf Kunde','btn-ghost'],['resolved','✔ Als gelöst markieren','btn-gold'],['closed','✖ Schließen','btn-ghost']],
-                'in_progress' => [['waiting','⏸ Wartet auf Kunde','btn-ghost'],['resolved','✔ Als gelöst markieren','btn-gold'],['closed','✖ Schließen','btn-ghost']],
-                'waiting' => [['in_progress','▶ Wieder in Bearbeitung','btn-primary'],['resolved','✔ Als gelöst markieren','btn-gold'],['closed','✖ Schließen','btn-ghost']],
+                'open' => [['in_progress','▶ In Bearbeitung übernehmen','btn-primary'],['waiting','⏸ Wartet auf Kunde','btn-ghost'],['resolved','✔ Als gelöst markieren','btn-emerald'],['closed','✖ Schließen','btn-ghost']],
+                'in_progress' => [['waiting','⏸ Wartet auf Kunde','btn-ghost'],['resolved','✔ Als gelöst markieren','btn-emerald'],['closed','✖ Schließen','btn-ghost']],
+                'waiting' => [['in_progress','▶ Wieder in Bearbeitung','btn-primary'],['resolved','✔ Als gelöst markieren','btn-emerald'],['closed','✖ Schließen','btn-ghost']],
                 'resolved' => [['open','↩ Wieder öffnen','btn-ghost'],['closed','✖ Endgültig schließen','btn-primary']],
                 'closed' => [['open','↩ Wieder öffnen','btn-primary']],
                 default => [],
@@ -164,7 +164,7 @@
      aber fuer das Team unsichtbar. Beleg jetzt einsehbar. --}}
 <div class="card" style="background:#F0FDF4;">
     <div class="card-title">Einwilligungsnachweis (DSGVO)</div>
-    <p style="font-size:13px;color:var(--ink-soft);">
+    <p class="muted-sm">
         ✅ Zugestimmt am
         {{ \Illuminate\Support\Carbon::parse($ticket->consent_given_at)->lokal()->format('d.m.Y H:i') }}
         @if($ticket->consent_ip) · IP {{ $ticket->consent_ip }}@endif
@@ -229,7 +229,7 @@
                 </select>
             </div>
             <div class="field" style="display:flex;align-items:flex-end;padding-bottom:18px;">
-                <span style="font-size:12px;color:var(--ink-soft);">📨 Diese Antwort geht an den Kunden{{ !$ticket->customer && $ticket->guest_email ? ' per E-Mail (' . $ticket->guest_email . ')' : '' }}.</span>
+                <span class="muted-xs">📨 Diese Antwort geht an den Kunden{{ !$ticket->customer && $ticket->guest_email ? ' per E-Mail (' . $ticket->guest_email . ')' : '' }}.</span>
             </div>
         </div>
         <button type="submit" class="btn btn-primary">Senden</button>
@@ -270,7 +270,7 @@
         <span style="flex:none;">{{ $e->icon() }}</span>
         <div style="flex:1;">
             <strong>{{ $e->label() }}</strong>
-            @if($e->details)<span style="color:var(--ink-soft);"> – {{ $e->details }}</span>@endif
+            @if($e->details)<span class="muted"> – {{ $e->details }}</span>@endif
         </div>
         <span style="color:var(--ink-soft);white-space:nowrap;">{{ $e->user?->name ?? 'System' }} · {{ $e->created_at->lokal()->format('d.m.Y H:i') }}</span>
     </div>

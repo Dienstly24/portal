@@ -7,7 +7,7 @@
             <div class="page-title">Ankündigungen</div>
             <div class="page-sub">Interne Mitteilungen für Ihr Team</div>
         </div>
-        <button data-h-click="dc50ce1357" class="btn btn-gold">+ Neue Ankündigung</button>
+        <button data-h-click="dc50ce1357" class="btn btn-emerald">+ Neue Ankündigung</button>
     </div>
 </div>
 
@@ -33,7 +33,7 @@ $c = $colors[$a->priority];
                 <span style="background:{{ $c[0] }};color:{{ $c[1] }};font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600;">{{ ucfirst($a->priority) }}</span>
             </div>
             <p style="font-size:14px;color:var(--ink-soft);line-height:1.7;margin:0 0 10px;">{{ $a->body }}</p>
-            <div style="font-size:12px;color:var(--ink-soft);">
+            <div class="muted-xs">
                 {{ $a->createdBy?->name }} · {{ $a->created_at->lokal()->format('d.m.Y H:i') }}
                 @if($a->expires_at) · Läuft ab: {{ $a->expires_at->lokal()->format('d.m.Y') }} @endif
             </div>
@@ -51,7 +51,7 @@ $c = $colors[$a->priority];
 {{-- Modal --}}
 <div id="add-ann-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:520px;position:relative;">
-        <button data-h-click="8f89fd6f1d" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="8f89fd6f1d" class="modal-close">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:20px;">Neue Ankündigung</div>
         <form method="POST" action="{{ route('admin.announcements.store') }}">
             @csrf

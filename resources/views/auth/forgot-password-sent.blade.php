@@ -15,9 +15,9 @@
 .checks .ic{flex:none;font-size:14px;}
 .helpbox{margin-top:4px;padding:12px 14px;border:1px solid var(--gold-line);border-radius:11px;
     background:rgba(184,161,107,.08);font-size:12.5px;color:#c8ccd3;line-height:1.6;}
-.helpbox a{color:var(--gold-hell);font-weight:700;text-decoration:none;}
+.helpbox a{color:var(--gold-soft);font-weight:700;text-decoration:none;}
 .btn-ghost{display:block;text-align:center;margin-top:12px;padding:11px;border-radius:11px;
-    border:1px solid var(--line);color:#dde0e5;text-decoration:none;font-size:14px;}
+    border:1px solid var(--glass-line);color:#dde0e5;text-decoration:none;font-size:14px;}
 .btn-ghost:hover{background:rgba(255,255,255,.06);}
 </style>
 @include('partials.favicon')

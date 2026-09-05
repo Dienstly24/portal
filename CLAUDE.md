@@ -561,6 +561,20 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Anfragen werden Tickets (Quelle `website`) + Glocke + Support-Mail.
   Details/Inbetriebnahme: `docs/SPAM_SCHUTZ_WEBSITE_ANFRAGE.md`;
   Upload-Hinweise (inkl. `.htaccess`, zip loeschen): `website/LIESMICH.txt`.
+- **Partnerportal (LESEND, produktiv)** — `PartnerPortalController`,
+  `layouts/partner.blade.php`, Routen `role:partner` unter `/partner`:
+  Uebersicht, Meine Kunden, Kunde (nur Vertraege), Provisionen, Firmenprofil
+  (einzige schreibende Aktion: eigenes Logo). Jede Abfrage laeuft ueber die
+  Relation des EIGENEN Partners (`$partner->customers()` /
+  `->commissions()`), ein fremder Kunde ergibt 404 - kein Zugriff ueber die
+  ID. Ohne verknuepften Partnerdatensatz: 403. Zweiter Faktor gilt auch
+  hier (`User::requiresTwoFactor()` schliesst `partner` ein - ein Partner
+  sieht fremde personenbezogene Daten). Es gibt bewusst KEINEN Weg zu
+  `contract_commissions`, `vermittler_settlements` oder `provisions` - die
+  internen Provisionsstraenge sind strukturell unerreichbar. Der VOLLAUSBAU
+  (schreibende Kundenaktionen) ist weiterhin offen, siehe unten.
+  Bestandsaufnahme + Sicherheitspruefung:
+  `docs/PARTNERPORTAL_BESTANDSAUFNAHME.md`. Tests: `PartnerPortalTest`.
 - **Rechtsseiten** (`/impressum`, `/agb`, `/datenschutz`,
   `/cookie-richtlinie`, `/kontakt`): leiten standardmäßig auf die offizielle
   Website weiter (`LegalPageController`, Basis-URL unter Einstellungen →
@@ -892,6 +906,30 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Grautoene (`#DCDEE3`/`#ECEEF1`/`#CDD1D8`) mehr verwenden.
   E-Mail-Templates sind bewusst noch auf altem Stand (separates Thema,
   Outlook-Risiko).
+  **UX-1/UX-2 (05.09.2026) - die Farben stehen jetzt an EINER Stelle**:
+  `resources/css/brand.css` (Tokens) und `resources/css/components.css`
+  (Bausteine), beide ueber `app.css` gebuendelt. Vorher stand derselbe
+  Farbsatz in 14 Blade-Dateien unter SIEBEN Namen - am gefaehrlichsten
+  `--gold`, das in Beraterwelt/Portal/Partnerportal das SMARAGDGRUEN trug
+  und nur in den Anmeldeseiten wirklich Gold war (ebenso die Klasse
+  `.btn-gold`, 58-mal benutzt und immer gruen). Unter EINEM Namen laesst
+  sich die Regel "Gold ist Akzent, Smaragd ist Aktion" nicht einhalten.
+  Namen sind nicht neu erfunden, sondern aus `public/website-assets/
+  site.css` uebernommen (`--emerald*`, `--gold*`); dunkle Flaechen heissen
+  `--graphite*` statt des laut Hoheitsregel verbotenen `--petrol`.
+  **Status-/Ampelfarben sind bewusst KEINE Markenfarben** (`--status-*`) -
+  sonst aendert ein Markenwechsel die Bedeutung von "erfolgreich".
+  Ausnahmen mit Hex: Seiten OHNE Vite-Bundle (Fehlerseiten 404/500,
+  `legal/page`, Druckansicht, Cookie-Hinweis) - eine Fehlerseite muss auch
+  dann im Markendesign erscheinen, wenn das Build-Manifest fehlt; dazu
+  `theme-color`-Metas (ein Attribut kann kein `var()` aufloesen) und die
+  E-Mail-Vorlagen. Chart.js malt auf Canvas und kennt kein `var()` -
+  `public/js/brand.js` liefert dafuer `brandColor('emerald')` aus demselben
+  Token. Bausteine (.card/.btn/.badge/.field/...) waren DREIMAL definiert,
+  je Layout einmal; sie stehen jetzt einmal in `components.css`, ihre
+  bewusst abweichenden MASSE (Kundenportal = Telefon-Oberflaeche) als
+  Tokens im jeweiligen Layout - dadurch pixelgleich wie zuvor. Details:
+  `docs/DESIGN_SYSTEM_FARBEN_UND_BAUSTEINE.md`. Tests: `DesignSystemTest`.
 - **Logo-Assets** (alle aus `logo.png` per GD generiert, `public/images/`):
   `logo-white.png` (weisse Wortmarke, für dunkle Flächen: Login, Sidebars),
   `logo-transparent.png` (farbige Wortmarke, für helle Flächen),
@@ -2240,10 +2278,17 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   antwortet, ist technisch umgesetzt).
 - **Finale Logo-Dateien** kommen vom Betreiber (bevorzugt SVG, sonst PNG
   transparent ≥320px hoch; Light- und Dark-Variante; optional 512×512 Icon).
-- **Partner-Portal** (voller Ausbau) und **E-Mail-Einwilligung des Kunden
-  (Variante B)**: Konzepte in `docs/KONZEPT_PARTNER_GESCHAEFTSMODELL.md` und
+- **Partner-Portal: VOLLAUSBAU** (schreibende Kundenaktionen) und
+  **E-Mail-Einwilligung des Kunden (Variante B)**: Konzepte in
+  `docs/KONZEPT_PARTNER_GESCHAEFTSMODELL.md` und
   `docs/KONZEPT_EMAIL_EINWILLIGUNG_DSGVO.md` — warten auf Entscheidungen des
   Betreibers, noch nicht bauen.
+  **ACHTUNG (UX-4, 05.09.2026): das LESENDE Partnerportal ist laengst in
+  Betrieb** — Controller, Layout, fuenf Seiten, `role:partner`-Routen und
+  11 Tests. Es stand hier faelschlich als "noch nicht gebaut" und wurde
+  dadurch bei Reviews uebersehen, obwohl es fremden Firmen echte
+  Kundendaten zeigt. Siehe jetzt "Wichtige Bausteine" und die
+  Sicherheitspruefung in `docs/PARTNERPORTAL_BESTANDSAUFNAHME.md`.
 
 ## Weitere Doku
 

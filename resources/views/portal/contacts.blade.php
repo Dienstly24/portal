@@ -5,7 +5,7 @@
         <div class="page-title">{{ __('📞 Kontaktinformationen') }}</div>
         <div class="page-sub" style="margin-bottom:0;">{{ __('Mehrere E-Mail-Adressen und Telefonnummern verwalten – Änderungen werden geprüft.') }}</div>
     </div>
-    <button data-h-click="53f97f99eb" class="btn btn-gold">{{ __('+ Kontakt hinzufügen') }}</button>
+    <button data-h-click="53f97f99eb" class="btn btn-emerald">{{ __('+ Kontakt hinzufügen') }}</button>
 </div>
 
 @php
@@ -19,7 +19,7 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
         <div class="item-row">
             <div>
                 <div style="font-size:14px;font-weight:600;">{{ auth()->user()->email }}</div>
-                <div style="font-size:12px;color:var(--ink-soft);">{{ __('Login-E-Mail (nicht änderbar)') }}</div>
+                <div class="muted-xs">{{ __('Login-E-Mail (nicht änderbar)') }}</div>
             </div>
             <span class="badge badge-active">{{ __('Primär') }}</span>
         </div>
@@ -27,7 +27,7 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
         <div class="item-row">
             <div>
                 <div style="font-size:14px;font-weight:600;">{{ $c->value }}</div>
-                <div style="font-size:12px;color:var(--ink-soft);">{{ \App\Models\CustomerContact::LABELS[$c->label] ?? $c->label }}</div>
+                <div class="muted-xs">{{ \App\Models\CustomerContact::LABELS[$c->label] ?? $c->label }}</div>
             </div>
             <div style="display:flex;align-items:center;gap:8px;">
                 @if(in_array($c->id, $pendingChangeIds))<span class="badge badge-pending">{{ __('In Prüfung') }}</span>@else<span class="badge badge-active">{{ __('Aktiv') }}</span>@endif
@@ -39,7 +39,7 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
         <div class="item-row">
             <div>
                 <div style="font-size:14px;font-weight:600;">{{ $r->new_data['value'] ?? '' }}</div>
-                <div style="font-size:12px;color:var(--ink-soft);">{{ \App\Models\CustomerContact::LABELS[$r->new_data['label'] ?? ''] ?? '' }}</div>
+                <div class="muted-xs">{{ \App\Models\CustomerContact::LABELS[$r->new_data['label'] ?? ''] ?? '' }}</div>
             </div>
             <span class="badge badge-pending">{{ __('Prüfung ausstehend') }}</span>
         </div>
@@ -52,7 +52,7 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
         <div class="item-row">
             <div>
                 <div style="font-size:14px;font-weight:600;">{{ $customer->phone }}</div>
-                <div style="font-size:12px;color:var(--ink-soft);">{{ __('Stammnummer (Änderung über „Meine Daten")') }}</div>
+                <div class="muted-xs">{{ __('Stammnummer (Änderung über „Meine Daten")') }}</div>
             </div>
             <span class="badge badge-active">{{ __('Primär') }}</span>
         </div>
@@ -61,7 +61,7 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
         <div class="item-row">
             <div>
                 <div style="font-size:14px;font-weight:600;">{{ $c->value }}</div>
-                <div style="font-size:12px;color:var(--ink-soft);">{{ \App\Models\CustomerContact::LABELS[$c->label] ?? $c->label }}</div>
+                <div class="muted-xs">{{ \App\Models\CustomerContact::LABELS[$c->label] ?? $c->label }}</div>
             </div>
             <div style="display:flex;align-items:center;gap:8px;">
                 @if(in_array($c->id, $pendingChangeIds))<span class="badge badge-pending">{{ __('In Prüfung') }}</span>@else<span class="badge badge-active">{{ __('Aktiv') }}</span>@endif
@@ -73,7 +73,7 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
         <div class="item-row">
             <div>
                 <div style="font-size:14px;font-weight:600;">{{ $r->new_data['value'] ?? '' }}</div>
-                <div style="font-size:12px;color:var(--ink-soft);">{{ \App\Models\CustomerContact::LABELS[$r->new_data['label'] ?? ''] ?? '' }}</div>
+                <div class="muted-xs">{{ \App\Models\CustomerContact::LABELS[$r->new_data['label'] ?? ''] ?? '' }}</div>
             </div>
             <span class="badge badge-pending">{{ __('Prüfung ausstehend') }}</span>
         </div>
@@ -83,7 +83,7 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
 
 <div id="add-contact-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:440px;position:relative;">
-        <button data-h-click="410942009b" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="410942009b" class="modal-close">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:6px;">{{ __('Kontakt hinzufügen') }}</div>
         <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">{{ __('Wird nach Prüfung durch unser Team übernommen.') }}</p>
         <form method="POST" action="{{ route('portal.contacts.store') }}">
@@ -111,7 +111,7 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
 
 <div id="change-contact-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:440px;position:relative;">
-        <button data-h-click="15a92afff0" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="15a92afff0" class="modal-close">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:6px;">{{ __('Kontaktänderung beantragen') }}</div>
         <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">{{ __('Die Änderung wird erst nach Prüfung wirksam.') }}</p>
         <form method="POST" id="change-contact-form" action="">

@@ -2,7 +2,7 @@
 @section('content')
 <div class="toolbar">
     <div><div class="page-title">{{ __('Meine Verträge') }}</div><div class="page-sub">{{ __('Alle Ihre Verträge im Überblick.') }}</div></div>
-    <button data-h-click="3422f5c9da" class="btn btn-gold">+ {{ __('Neuen Vertrag melden') }}</button>
+    <button data-h-click="3422f5c9da" class="btn btn-emerald">+ {{ __('Neuen Vertrag melden') }}</button>
 </div>
 @php
 $typeIcons = [
@@ -77,7 +77,7 @@ $typeLabels = [
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;">
             <span style="font-size:34px;line-height:1;">{{ $c->typeIcon() }}</span>
             @php $st = $c->displayStatus(); @endphp
-            <span class="badge badge-{{ $st['badge'] }}" style="white-space:nowrap;">{{ __($st['label_key'], $st['params']) }}</span>
+            <span class="badge badge-{{ $st['badge'] }} nowrap">{{ __($st['label_key'], $st['params']) }}</span>
         </div>
         <div style="font-weight:700;font-size:15px;margin-bottom:2px;">{{ $c->insurer }}</div>
         <div style="font-size:12.5px;color:var(--ink-soft);">{{ __($c->typeLabel()) }}@if($c->contract_number) · {{ $c->contract_number }}@endif</div>
@@ -96,7 +96,7 @@ $typeLabels = [
 {{-- Modal: Neuen Vertrag melden (erzeugt nur einen Change Request) --}}
 <div id="report-contract-modal" class="d24-modal">
     <div class="d24-modal-box">
-        <button data-h-click="7467ced66a" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="7467ced66a" class="modal-close">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:6px;">{{ __('Neuen Vertrag melden') }}</div>
         <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">{{ __('Unser Team prüft Ihre Meldung und nimmt den Vertrag anschließend auf.') }}</p>
         <form method="POST" action="{{ route('portal.contracts.report') }}" enctype="multipart/form-data">

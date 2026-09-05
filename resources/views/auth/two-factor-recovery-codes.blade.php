@@ -12,14 +12,14 @@
 .codes{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin:6px 0 16px;}
 .codes span{background:rgba(0,0,0,.3);border:1px solid var(--gold-line);border-radius:9px;
     padding:10px;text-align:center;font-family:ui-monospace,Menlo,Consolas,monospace;
-    font-size:14.5px;letter-spacing:.06em;color:var(--gold-hell);direction:ltr;}
+    font-size:14.5px;letter-spacing:.06em;color:var(--gold-soft);direction:ltr;}
 .warn{background:rgba(184,161,107,.12);border:1px solid var(--gold-line);color:#e3dcc6;
     border-radius:9px;padding:11px 13px;font-size:12.8px;line-height:1.6;margin-bottom:14px;}
 .done{background:rgba(23,166,91,.15);border:1px solid rgba(23,166,91,.45);color:#5fe3a1;
     border-radius:9px;padding:10px 12px;font-size:13px;margin-bottom:14px;}
 .info{font-size:13px;color:#c8ccd3;line-height:1.6;margin-bottom:14px;}
 .btn-ghost{display:block;text-align:center;margin-top:10px;padding:11px;border-radius:11px;
-    border:1px solid var(--line);color:#dde0e5;text-decoration:none;font-size:14px;}
+    border:1px solid var(--glass-line);color:#dde0e5;text-decoration:none;font-size:14px;}
 .btn-ghost:hover{background:rgba(255,255,255,.06);}
 .codeinput input{text-align:center;font-size:20px;letter-spacing:.3em;font-family:ui-monospace,Menlo,monospace;direction:ltr;}
 @media print{.noprint{display:none!important;} body{background:#fff;color:#000;} .codes span{color:#000;border-color:#000;background:#fff;}}

@@ -10,23 +10,23 @@
 
     {{-- Zusammenfassung --}}
     <div class="grid-2" style="margin-bottom:16px;">
-        <div class="card" style="text-align:center;background:#D9F4E6;">
-            <div style="font-size:34px;font-weight:700;color:#17A65B;">{{ $preview['new_count'] }}</div>
-            <div style="font-size:14px;color:#17A65B;">werden neu angelegt</div>
+        <div class="card" style="text-align:center;background:var(--emerald-soft);">
+            <div style="font-size:34px;font-weight:700;color:var(--emerald);">{{ $preview['new_count'] }}</div>
+            <div style="font-size:14px;color:var(--emerald);">werden neu angelegt</div>
         </div>
         <div class="card" style="text-align:center;">
             <div style="display:flex;justify-content:space-around;">
                 <div>
                     <div style="font-size:24px;font-weight:700;color:var(--ink);">{{ $preview['dup_count'] }}</div>
-                    <div style="font-size:12px;color:var(--ink-soft);">Duplikate (uebersprungen)</div>
+                    <div class="muted-xs">Duplikate (uebersprungen)</div>
                 </div>
                 <div>
                     <div style="font-size:24px;font-weight:700;color:var(--ink);">{{ $preview['skipped'] }}</div>
-                    <div style="font-size:12px;color:var(--ink-soft);">ohne Name (uebersprungen)</div>
+                    <div class="muted-xs">ohne Name (uebersprungen)</div>
                 </div>
                 <div>
                     <div style="font-size:24px;font-weight:700;color:{{ $preview['error_count'] > 0 ? '#c0392b' : 'var(--ink)' }};">{{ $preview['error_count'] }}</div>
-                    <div style="font-size:12px;color:var(--ink-soft);">Fehler</div>
+                    <div class="muted-xs">Fehler</div>
                 </div>
             </div>
         </div>
@@ -42,9 +42,9 @@
     <div class="card" style="margin-bottom:16px;">
         <div class="card-header"><div class="card-title">✅ Neu anzulegen ({{ $preview['new_count'] }})</div></div>
         @if($preview['new_count'] === 0)
-            <div style="font-size:13px;color:var(--ink-soft);">Keine neuen Kunden in dieser Datei.</div>
+            <div class="muted-sm">Keine neuen Kunden in dieser Datei.</div>
         @else
-        <div style="overflow-x:auto;">
+        <div class="scroll-x">
             <table style="width:100%;border-collapse:collapse;font-size:13px;">
                 <thead><tr style="text-align:left;border-bottom:1px solid var(--line);">
                     <th style="padding:6px 8px;">Name</th><th style="padding:6px 8px;">E-Mail</th><th style="padding:6px 8px;">Nr.</th><th style="padding:6px 8px;">Ort</th>
@@ -73,7 +73,7 @@
     @if($preview['dup_count'] > 0)
     <div class="card" style="margin-bottom:16px;">
         <div class="card-header"><div class="card-title">↩ Duplikate — werden uebersprungen ({{ $preview['dup_count'] }})</div></div>
-        <div style="overflow-x:auto;">
+        <div class="scroll-x">
             <table style="width:100%;border-collapse:collapse;font-size:13px;">
                 <thead><tr style="text-align:left;border-bottom:1px solid var(--line);">
                     <th style="padding:6px 8px;">Name</th><th style="padding:6px 8px;">E-Mail</th><th style="padding:6px 8px;">Grund</th>
@@ -115,7 +115,7 @@
             <button type="submit" class="btn btn-primary">✅ {{ $preview['new_count'] }} Kunden jetzt importieren</button>
         </form>
         @else
-        <span style="font-size:13px;color:var(--ink-soft);">Nichts zu importieren.</span>
+        <span class="muted-sm">Nichts zu importieren.</span>
         @endif
     </div>
 

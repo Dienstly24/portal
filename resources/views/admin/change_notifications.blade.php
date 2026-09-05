@@ -9,7 +9,7 @@ $proof = $changeRequest->proofState();
     <div class="page-title">📨 Mitteilungen an Gesellschaften</div>
     <div class="page-sub">
         {{ $changeRequest->typeLabel() }} von
-        <a href="{{ route('admin.customer', $changeRequest->customer_id) }}" style="color:var(--petrol);font-weight:600;">{{ $customer?->user?->name ?? '—' }}</a>
+        <a href="{{ route('admin.customer', $changeRequest->customer_id) }}" style="color:var(--graphite);font-weight:600;">{{ $customer?->user?->name ?? '—' }}</a>
         @if($changeRequest->effective_from) · gültig ab {{ $changeRequest->effective_from->format('d.m.Y') }} @endif
         · Jede Gesellschaft bekommt einen fertigen Text; Sie prüfen, ergänzen die Adresse und senden.
     </div>
@@ -25,8 +25,8 @@ $proof = $changeRequest->proofState();
     <div class="card-title">📎 Nachweise des Kunden <span style="font-size:12px;font-weight:400;color:{{ $proof['color'] }};">{{ $proof['icon'] }} {{ $proof['label'] }}</span></div>
     @foreach($changeRequest->documents as $doc)
     <div style="font-size:13px;padding:3px 0;">
-        📄 <a href="{{ route('admin.change_requests.proof', $doc->id) }}" target="_blank" rel="noopener" style="color:var(--petrol);font-weight:600;">{{ $doc->kindLabel() }}</a>
-        <span style="color:var(--ink-soft);">{{ $doc->file_name }}</span>
+        📄 <a href="{{ route('admin.change_requests.proof', $doc->id) }}" target="_blank" rel="noopener" style="color:var(--graphite);font-weight:600;">{{ $doc->kindLabel() }}</a>
+        <span class="muted">{{ $doc->file_name }}</span>
     </div>
     @endforeach
     <p style="font-size:12px;color:var(--ink-soft);margin-top:8px;">Beim Versand können die Nachweise als Anhang mitgehen – prüfen Sie vorher, ob die Gesellschaft den Beleg wirklich benötigt (Datensparsamkeit).</p>

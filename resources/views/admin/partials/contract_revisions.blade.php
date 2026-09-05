@@ -31,7 +31,7 @@
                 <td style="padding:8px 10px;color:var(--ink-soft);white-space:nowrap;">{{ $rev->created_at->lokal()->format('d.m.Y H:i') }}</td>
                 <td style="padding:8px 10px;font-weight:600;">{{ $rev->label ?? $rev->field }}</td>
                 <td style="padding:8px 10px;color:#A32D2D;">{{ $rev->old_value ?? '—' }}</td>
-                <td style="padding:8px 10px;color:#17A65B;font-weight:600;">{{ $rev->new_value ?? '—' }}</td>
+                <td style="padding:8px 10px;color:var(--emerald);font-weight:600;">{{ $rev->new_value ?? '—' }}</td>
                 <td style="padding:8px 10px;color:var(--ink-soft);white-space:nowrap;">{{ $rev->sourceLabel() }}</td>
                 <td style="padding:8px 10px;color:var(--ink-soft);white-space:nowrap;">{{ $rev->actorName() }}</td>
             </tr>

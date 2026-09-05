@@ -11,7 +11,7 @@
 
 @if($ticket->status === 'resolved')
 {{-- Geloest: Kunde bestaetigt oder oeffnet mit einer Antwort wieder --}}
-<div class="card" style="background:#D9F4E6;border-color:#B7D9C2;">
+<div class="card" style="background:var(--emerald-soft);border-color:#B7D9C2;">
     <div class="card-title" style="margin-bottom:8px;">✅ {{ __('Unser Team hat Ihre Anfrage als gelöst markiert.') }}</div>
     <p style="font-size:13.5px;color:var(--ink-soft);margin-bottom:14px;">{{ __('Ist Ihr Anliegen erledigt? Dann können Sie die Anfrage schließen. Falls nicht, antworten Sie einfach unten – die Anfrage wird dann automatisch wieder geöffnet.') }}</p>
     <form method="POST" action="{{ route('portal.tickets.close', $ticket->id) }}">
@@ -45,7 +45,7 @@
         <div class="field">
             <textarea name="rating_comment" placeholder="{{ __('Kommentar (optional)') }}" style="min-height:60px;"></textarea>
         </div>
-        <button type="submit" class="btn btn-gold">{{ __('Bewertung absenden') }}</button>
+        <button type="submit" class="btn btn-emerald">{{ __('Bewertung absenden') }}</button>
     </form>
     <style>
         .rate-row .rate-star:hover, .rate-row .rate-star:hover ~ .rate-star,
@@ -66,7 +66,7 @@
     <div class="card-title">📎 {{ __('Anhänge') }} ({{ $attachments->count() }})</div>
     @foreach($attachments as $a)
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);">
-        <span style="font-size:13.5px;">{{ $a->file_name }}@if($a->uploaded_by !== auth()->id()) <span style="font-size:11px;background:#D9F4E6;color:#17A65B;padding:2px 8px;border-radius:4px;">{{ __('von Dienstly24') }}</span>@endif</span>
+        <span style="font-size:13.5px;">{{ $a->file_name }}@if($a->uploaded_by !== auth()->id()) <span style="font-size:11px;background:var(--emerald-soft);color:var(--emerald);padding:2px 8px;border-radius:4px;">{{ __('von Dienstly24') }}</span>@endif</span>
         <span style="display:flex;gap:8px;"><a href="{{ route('portal.attachment.download', $a->id) }}" class="btn btn-ghost btn-sm">⬇ {{ __('Herunterladen') }}</a></span>
     </div>
     @endforeach
@@ -75,7 +75,7 @@
 <div class="card">
     <div class="card-title">{{ __('Nachrichten') }}</div>
     @forelse($messages as $m)
-    <div style="margin-bottom:16px;padding:12px 16px;border-radius:8px;background:{{ $m->sender_id === auth()->id() ? 'var(--gold-soft)' : 'var(--canvas)' }};border:1px solid var(--line);">
+    <div style="margin-bottom:16px;padding:12px 16px;border-radius:8px;background:{{ $m->sender_id === auth()->id() ? 'var(--emerald-soft)' : 'var(--canvas)' }};border:1px solid var(--line);">
         <div style="font-size:12px;color:var(--ink-soft);margin-bottom:6px;">{{ $m->sender?->name ?? 'Dienstly24 Team' }} · {{ $m->created_at->lokal()->format('d.m.Y H:i') }}</div>
         <div style="font-size:14px;line-height:1.6;white-space:pre-line;">{{ $m->body }}</div>
     </div>

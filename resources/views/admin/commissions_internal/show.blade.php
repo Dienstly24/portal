@@ -41,7 +41,7 @@
             ['Quelle / Import-Datei', $commission->source_file],
         ] as [$label, $value])
         <div>
-            <div style="font-size:11.5px;color:var(--ink-soft);">{{ $label }}</div>
+            <div class="muted-2xs">{{ $label }}</div>
             <div style="font-weight:600;">{{ $value ?: '—' }}</div>
         </div>
         @endforeach
@@ -185,9 +185,9 @@
 <div class="card" style="max-width:1000px;">
     <div style="font-weight:700;font-size:14px;margin-bottom:12px;">Protokoll dieser Provision</div>
     @if($commission->auditLogs->isEmpty())
-        <div style="font-size:13px;color:var(--ink-soft);">Noch keine Einträge.</div>
+        <div class="muted-sm">Noch keine Einträge.</div>
     @else
-    <div style="overflow-x:auto;">
+    <div class="scroll-x">
         <table style="width:100%;border-collapse:collapse;font-size:12px;">
             <thead><tr style="text-align:left;color:var(--ink-soft);">
                 <th style="padding:8px;">Wann</th><th style="padding:8px;">Wer</th><th style="padding:8px;">Vorgang</th>

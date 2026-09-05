@@ -7,7 +7,7 @@
             <div class="page-title">Termine</div>
             <div class="page-sub">Kundentermine verwalten</div>
         </div>
-        <button data-h-click="d766695e1e" class="btn btn-gold">+ Neuer Termin</button>
+        <button data-h-click="d766695e1e" class="btn btn-emerald">+ Neuer Termin</button>
     </div>
 </div>
 
@@ -22,7 +22,7 @@
             </div>
             <div>
                 <div style="font-weight:600;font-size:14px;">{{ $a->title }}</div>
-                <div style="font-size:12px;color:var(--ink-soft);">
+                <div class="muted-xs">
                     @if($a->customer_id)<a href="{{ route('admin.customer', $a->customer_id) }}" style="color:inherit;">{{ $a->customer?->user?->name }}</a>@else{{ $a->customer?->user?->name }}@endif
                     · {{ $a->starts_at->lokal()->format('H:i') }} – {{ $a->ends_at->lokal()->format('H:i') }} · {{ $a->assignedTo?->name }}
                 </div>

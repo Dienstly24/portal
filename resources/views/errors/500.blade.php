@@ -9,6 +9,7 @@
 @include('partials.favicon')
 <link rel="stylesheet" href="/fonts/fonts-{{ $isAr ? 'ar' : 'de' }}.css">
 <style>
+/* Tokens bewusst doppelt - siehe 404.blade.php (kein Vite-Bundle). */
 :root{--emerald:#17A65B;--emerald-deep:#128A4B;--gold-soft:#D1C18F;--canvas:#F8F6F0;--card:#FFFFFF;--line:#E0DCD0;--ink:#16211C;--muted:#5F6B62;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--canvas);color:var(--ink);font-family:'Plus Jakarta Sans',system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;line-height:1.65;}

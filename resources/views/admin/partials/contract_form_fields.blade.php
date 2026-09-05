@@ -203,19 +203,19 @@
      Manuelles Tippen im Ablauf-Feld schaltet automatisch auf "Manuell". --}}
 <div class="field" style="margin-top:-6px;">
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-        <span style="font-size:12px;color:var(--ink-soft);">Ablauf berechnen:</span>
+        <span class="muted-xs">Ablauf berechnen:</span>
         @foreach(['plus12' => 'Laufzeit 12 Monate', 'plus24' => 'Laufzeit 24 Monate', 'year_end' => 'Ende des Kalenderjahres (31.12.)', 'manual' => 'Manuell'] as $mk => $ml)
         <label class="end-mode-chip" style="position:relative;display:inline-flex;">
             <input type="radio" name="end_mode" value="{{ $mk }}" {{ $endMode === $mk ? 'checked' : '' }} data-h-change="50599e74f4" style="position:absolute;inset:0;opacity:0;cursor:pointer;margin:0;">
             <span style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:1.5px solid var(--line);border-radius:999px;font-size:12px;font-weight:600;background:var(--surface);cursor:pointer;user-select:none;">{{ $ml }}</span>
         </label>
         @endforeach
-        <span id="end-mode-hint" style="font-size:11.5px;color:var(--ink-soft);"></span>
+        <span id="end-mode-hint" class="muted-2xs"></span>
     </div>
 </div>
 <style>
-.end-mode-chip input:checked + span{border-color:#17A65B;background:#E7F6EE;color:#0E7A41;box-shadow:inset 0 0 0 1px #17A65B;}
-.end-mode-chip input:focus-visible + span{outline:2px solid #17A65B;outline-offset:2px;}
+.end-mode-chip input:checked + span{border-color:var(--emerald);background:#E7F6EE;color:#0E7A41;box-shadow:inset 0 0 0 1px var(--emerald);}
+.end-mode-chip input:focus-visible + span{outline:2px solid var(--emerald);outline-offset:2px;}
 </style>
 <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;">
     <div class="field"><label>Kündigungsdatum <span style="font-weight:400;color:var(--ink-soft);">(eingereicht am)</span></label>

@@ -9,7 +9,7 @@
 @include('admin.partials.vermittler_tabs', ['active' => 'pruefung'])
 
 @if(session('success'))
-<div style="background:#D9F4E6;border:1px solid #9BD9BB;border-radius:10px;padding:14px 16px;margin-bottom:20px;max-width:1100px;font-size:13px;">{{ session('success') }}</div>
+<div style="background:var(--emerald-soft);border:1px solid #9BD9BB;border-radius:10px;padding:14px 16px;margin-bottom:20px;max-width:1100px;font-size:13px;">{{ session('success') }}</div>
 @endif
 @if(session('error'))
 <div style="background:#F9E3E3;border:1px solid #F0A0A0;border-radius:10px;padding:14px 16px;margin-bottom:20px;max-width:1100px;font-size:13px;color:#A32D2D;">{{ session('error') }}</div>
@@ -23,9 +23,9 @@
     </div>
 
     @if($settlements->isEmpty())
-        <div style="font-size:13px;color:var(--ink-soft);">✓ Keine offenen Datensätze.</div>
+        <div class="muted-sm">✓ Keine offenen Datensätze.</div>
     @else
-    <div style="overflow-x:auto;">
+    <div class="scroll-x">
         <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
             <thead><tr style="text-align:left;color:var(--ink-soft);">
                 <th style="padding:8px;">Id</th><th style="padding:8px;">Datum</th><th style="padding:8px;">Produkt</th>
@@ -74,9 +74,9 @@
     </div>
 
     @if($missing->isEmpty())
-        <div style="font-size:13px;color:var(--ink-soft);">✓ Alle erfassten Verträge sind abgeglichen.</div>
+        <div class="muted-sm">✓ Alle erfassten Verträge sind abgeglichen.</div>
     @else
-    <div style="overflow-x:auto;">
+    <div class="scroll-x">
         <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
             <thead><tr style="text-align:left;color:var(--ink-soft);">
                 <th style="padding:8px;">Kunde</th><th style="padding:8px;">Vertrag</th>

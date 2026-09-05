@@ -23,7 +23,7 @@
 @csrf @method('PUT')
 {{-- Tabs --}}
 <div style="display:flex;gap:0;border-bottom:2px solid var(--line);margin-bottom:24px;">
-    <button type="button" data-h-click="1256420201" id="tab-basis" style="padding:11px 18px;border:none;background:none;cursor:pointer;font-size:13.5px;font-weight:700;color:var(--petrol);border-bottom:2px solid var(--petrol);margin-bottom:-2px;">Basisdaten</button>
+    <button type="button" data-h-click="1256420201" id="tab-basis" style="padding:11px 18px;border:none;background:none;cursor:pointer;font-size:13.5px;font-weight:700;color:var(--graphite);border-bottom:2px solid var(--graphite);margin-bottom:-2px;">Basisdaten</button>
     <button type="button" data-h-click="07455f39cc" id="tab-familie" style="padding:11px 18px;border:none;background:none;cursor:pointer;font-size:13.5px;font-weight:500;color:var(--ink-soft);border-bottom:2px solid transparent;margin-bottom:-2px;">Familie</button>
     <button type="button" data-h-click="ff2fed20ee" id="tab-portal" style="padding:11px 18px;border:none;background:none;cursor:pointer;font-size:13.5px;font-weight:500;color:var(--ink-soft);border-bottom:2px solid transparent;margin-bottom:-2px;">Portal-Zugang</button>
 </div>
@@ -299,8 +299,8 @@ function showTab(tab) {
         document.getElementById('section-' + t).style.display = t === tab ? 'block' : 'none';
         const btn = document.getElementById('tab-' + t);
         btn.style.fontWeight = t === tab ? '700' : '500';
-        btn.style.color = t === tab ? 'var(--petrol)' : 'var(--ink-soft)';
-        btn.style.borderBottomColor = t === tab ? 'var(--petrol)' : 'transparent';
+        btn.style.color = t === tab ? 'var(--graphite)' : 'var(--ink-soft)';
+        btn.style.borderBottomColor = t === tab ? 'var(--graphite)' : 'transparent';
     });
     var f = document.getElementById('section-firma');
     if (f) { f.style.display = (tab === 'basis' && window.IS_FIRMA) ? 'block' : 'none'; }

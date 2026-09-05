@@ -8,62 +8,44 @@
 <title>Dienstly24 Portal</title>
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 <style>
-:root{--petrol:#131A17;--petrol-dark:#0F1512;--gold:#17A65B;--gold-soft:#d9f4e6;--akzent:#B8A16B;--akzent-hell:#D1C18F;--canvas:#F1EEE5;--surface:#FBFAF6;--line:#E0DCD0;--ink:#16211C;--ink-soft:#5F6B62;}
+/* Markenfarben: resources/css/brand.css (UX-1). */
+/* Bausteine: resources/css/components.css (UX-2). Das Kundenportal ist die
+   Oberflaeche fuer Telefone und arbeitet bewusst mit groesseren Flaechen
+   und Schriftgraden als die Beraterwelt - deshalb hier nur die MASSE, nicht
+   die Bausteine selbst. */
+:root{--page-title-size:22px;--page-title-mb:6px;--page-sub-mb:28px;--card-mb:16px;--card-title-mb:16px;--btn-pad:10px 18px;--btn-size:14px;--btn-gap:8px;--btn-transition:.2s;--badge-size:12px;--badge-pad:4px 10px;--badge-dot:none;--grid-gap:16px;--grid-3-mb:32px;--item-row-pad:12px 0;--alert-mb:20px;}
+.badge-closed{background:#EAECEF;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
-.sidebar{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--petrol);color:#fff;display:flex;flex-direction:column;padding:24px 18px;z-index:100;overflow-y:auto;}
+.sidebar{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--graphite);color:#fff;display:flex;flex-direction:column;padding:24px 18px;z-index:100;overflow-y:auto;}
 .brand{font-size:22px;font-weight:700;padding:0 6px 24px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:18px;}
-.brand span{color:var(--akzent-hell);}
+.brand span{color:var(--gold-soft);}
 .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:rgba(255,255,255,.75);font-size:14px;text-decoration:none;margin-bottom:2px;transition:.2s;}
 .nav-item:hover{background:rgba(255,255,255,.06);color:#fff;}
 .nav-item.active{background:rgba(255,255,255,.12);color:#fff;font-weight:600;position:relative;}
-.nav-item.active::before{content:'';position:absolute;inset-inline-start:0;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--akzent-hell);}
+.nav-item.active::before{content:'';position:absolute;inset-inline-start:0;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--gold-soft);}
 .main{margin-left:240px;padding:32px 40px;min-height:100vh;}
-.page-title{font-size:22px;font-weight:700;margin-bottom:6px;}
-.page-sub{color:var(--ink-soft);font-size:14px;margin-bottom:28px;}
-.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px;}
 .metric{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px;}
 .metric .label{font-size:13px;color:var(--ink-soft);margin-bottom:8px;}
 .metric .value{font-size:26px;font-weight:700;color:var(--ink);}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 24px;margin-bottom:16px;}
-.card-title{font-size:15px;font-weight:600;margin-bottom:16px;}
-.item-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);}
-.item-row:last-child{border-bottom:none;}
 /* Klickbare Listenzeilen: ganze Zeile fuehrt zum verknuepften Datensatz */
-.row-link{cursor:pointer;transition:background .12s;}
-.row-link:hover{background:var(--canvas);}
-.badge{font-size:12px;padding:4px 10px;border-radius:999px;font-weight:600;}
-.badge-active{background:#D9F4E6;color:#128a4b;}
-.badge-pending{background:#F7E7D6;color:#B5651D;}
-.badge-open{background:#E6F1FB;color:#185FA5;}
-.badge-closed{background:#EAECEF;color:#5F5E5A;}
-.badge-rejected{background:#F9E3E3;color:#A32D2D;}
-.badge-waiting{background:#EEE9F7;color:#6B4FA3;}
-.badge-approved{background:#D9F4E6;color:#128a4b;}
-.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-weight:600;text-decoration:none;transition:.2s;}
-.btn-primary{background:var(--petrol);color:#fff;}
-.btn-primary:hover{background:var(--petrol-dark);}
-.btn-gold{background:var(--gold);color:#ffffff;}
-.btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink);}
+.btn-primary:hover{background:var(--graphite-deep);}
 .sidebar-foot{margin-top:auto;padding-top:16px;border-top:1px solid rgba(255,255,255,.12);}
-.avatar{width:32px;height:32px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#ffffff;}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--emerald);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#ffffff;}
 .user-chip{display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(255,255,255,.85);}
 .logout{display:block;margin-top:10px;font-size:12px;color:rgba(255,255,255,.55);cursor:pointer;text-decoration:none;}
 .logout:hover{color:#fff;}
-.alert-success{background:#D9F4E6;color:#128a4b;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:14px;}
-.alert-error{background:#F9E3E3;color:#A32D2D;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:14px;}
 .notice{background:#F7E7D6;color:#B5651D;border-radius:10px;padding:12px 16px;font-size:13px;margin-bottom:20px;}
 form .field{margin-bottom:18px;}
 form label{display:block;font-size:13px;color:var(--ink-soft);margin-bottom:6px;}
 form input,form select,form textarea{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#F7F5EF;color:var(--ink);font-family:inherit;}
-form input:focus,form select:focus,form textarea:focus{outline:2px solid var(--gold);outline-offset:1px;background:#fff;}
+form input:focus,form select:focus,form textarea:focus{outline:2px solid var(--emerald);outline-offset:1px;background:#fff;}
 form textarea{min-height:90px;resize:vertical;}
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 .toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
 
 .metric-link{display:block;text-decoration:none;color:var(--ink);cursor:pointer;transition:transform .12s, box-shadow .12s;}
-.metric-link:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.08);border-color:var(--petrol);}
-.metric-cta{font-size:11.5px;color:var(--petrol);margin-top:6px;font-weight:600;}
+.metric-link:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.08);border-color:var(--graphite);}
+.metric-cta{font-size:11.5px;color:var(--graphite);margin-top:6px;font-weight:600;}
 
 /* Benachrichtigungs-Glocke */
 .bell-wrap{position:fixed;top:14px;right:18px;z-index:145;}
@@ -83,24 +65,24 @@ form textarea{min-height:90px;resize:vertical;}
 
 /* Chat-Seite: fuellt die Hoehe zwischen Kopf und Fussleisten */
 .chatpage{display:flex;flex-direction:column;height:calc(100dvh - 64px);min-height:420px;max-width:920px;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;}
-.chatpage-head{display:flex;align-items:center;gap:11px;padding:13px 16px;background:linear-gradient(135deg,var(--petrol),var(--petrol-dark));color:#fff;}
+.chatpage-head{display:flex;align-items:center;gap:11px;padding:13px 16px;background:linear-gradient(135deg,var(--graphite),var(--graphite-deep));color:#fff;}
 .chatpage-name{font-weight:700;font-size:15px;}
-.chatpage-status{font-size:11.5px;color:var(--akzent-hell);display:flex;align-items:center;gap:5px;}
+.chatpage-status{font-size:11.5px;color:var(--gold-soft);display:flex;align-items:center;gap:5px;}
 .chatpage-status::before{content:'';width:7px;height:7px;border-radius:50%;background:#2ecc71;}
 
 /* Schwebendes Chat-Widget (Desktop/Tablet) */
 .cw-wrap{position:fixed;bottom:22px;inset-inline-end:22px;z-index:160;display:flex;flex-direction:column;align-items:flex-end;gap:12px;}
 [dir=rtl] .cw-wrap{align-items:flex-start;}
-.cw-fab{position:relative;width:58px;height:58px;border-radius:50%;border:none;background:linear-gradient(135deg,#19b463,#128a4b);color:#fff;font-size:25px;cursor:pointer;box-shadow:0 8px 24px rgba(18,138,75,.45);display:flex;align-items:center;justify-content:center;transition:transform .15s;}
+.cw-fab{position:relative;width:58px;height:58px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--emerald-bright),var(--emerald-deep));color:#fff;font-size:25px;cursor:pointer;box-shadow:0 8px 24px rgba(18,138,75,.45);display:flex;align-items:center;justify-content:center;transition:transform .15s;}
 .cw-fab:hover{transform:scale(1.06);}
 .cw-badge{position:absolute;top:-2px;inset-inline-end:-2px;min-width:20px;height:20px;border-radius:999px;background:#E24B4A;color:#fff;border:2px solid var(--canvas);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 5px;}
 .cw-badge[hidden]{display:none;}
 .cw-panel{width:min(360px,calc(100vw - 44px));height:min(540px,calc(100dvh - 130px));background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.24);overflow:hidden;display:flex;flex-direction:column;}
 .cw-panel[hidden]{display:none;}
-.cw-head{display:flex;align-items:center;gap:10px;padding:11px 13px;background:linear-gradient(135deg,var(--petrol),var(--petrol-dark));color:#fff;}
+.cw-head{display:flex;align-items:center;gap:10px;padding:11px 13px;background:linear-gradient(135deg,var(--graphite),var(--graphite-deep));color:#fff;}
 .cw-head .d24c-av{width:34px;height:34px;font-size:11.5px;}
 .cw-name{font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.cw-status{font-size:10.5px;color:var(--akzent-hell);display:flex;align-items:center;gap:4px;}
+.cw-status{font-size:10.5px;color:var(--gold-soft);display:flex;align-items:center;gap:4px;}
 .cw-status::before{content:'';width:6px;height:6px;border-radius:50%;background:#2ecc71;}
 .cw-expand,.cw-close{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:none;border-radius:8px;background:transparent;color:rgba(255,255,255,.7);font-size:15px;cursor:pointer;text-decoration:none;flex:none;}
 .cw-expand:hover,.cw-close:hover{background:rgba(255,255,255,.1);color:#fff;}
@@ -108,7 +90,7 @@ form textarea{min-height:90px;resize:vertical;}
 
 /* ===== Responsive Navigation (Mobile-UX-Ausbau) ===================== */
 /* Topbar: nur auf Mobile sichtbar, ersetzt schwebende Buttons */
-.topbar{display:none;position:fixed;top:0;left:0;right:0;height:calc(56px + env(safe-area-inset-top));z-index:140;background:var(--petrol);color:#fff;align-items:center;gap:8px;padding:0 8px;padding-top:env(safe-area-inset-top);box-shadow:0 2px 12px rgba(0,0,0,.25);}
+.topbar{display:none;position:fixed;top:0;left:0;right:0;height:calc(56px + env(safe-area-inset-top));z-index:140;background:var(--graphite);color:#fff;align-items:center;gap:8px;padding:0 8px;padding-top:env(safe-area-inset-top);box-shadow:0 2px 12px rgba(0,0,0,.25);}
 .topbar-btn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border:none;background:transparent;color:#fff;font-size:21px;border-radius:10px;cursor:pointer;flex:none;}
 .topbar-btn:active{background:rgba(255,255,255,.12);}
 .topbar-logo{flex:1;display:flex;align-items:center;justify-content:center;}
@@ -120,19 +102,18 @@ form textarea{min-height:90px;resize:vertical;}
 .sidebar-close{display:none;position:absolute;top:14px;inset-inline-end:12px;width:40px;height:40px;border:none;border-radius:10px;background:rgba(255,255,255,.08);color:#fff;font-size:18px;cursor:pointer;}
 
 /* Bottom-Tab-Bar (App-Gefuehl auf Mobile) */
-.tabbar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:140;background:var(--petrol);border-top:1px solid rgba(255,255,255,.10);padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -4px 16px rgba(0,0,0,.22);}
+.tabbar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:140;background:var(--graphite);border-top:1px solid rgba(255,255,255,.10);padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -4px 16px rgba(0,0,0,.22);}
 .tabbar-inner{display:flex;align-items:stretch;}
 .tab-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:56px;padding:7px 2px 6px;text-decoration:none;color:rgba(255,255,255,.62);border:none;background:transparent;cursor:pointer;font-family:inherit;-webkit-tap-highlight-color:transparent;}
 .tab-item .tab-ico{font-size:20px;line-height:1;}
 .tab-item .tab-label{font-size:10.5px;font-weight:600;letter-spacing:.01em;}
 .tab-item.active{color:#fff;}
 .tab-item.active .tab-ico{transform:translateY(-1px);}
-.tab-item.active .tab-label{color:var(--gold);}
+.tab-item.active .tab-label{color:var(--emerald);}
 .tab-item:active{background:rgba(255,255,255,.07);}
 
 /* Tablet: kompaktere Abstaende, 2-spaltige Metriken */
 @media (max-width: 1024px) {
-    .grid-3{grid-template-columns:repeat(2,1fr);}
     .main{padding:26px 24px;}
 }
 /* Mobile: Drawer + Topbar + Tabbar */
@@ -144,14 +125,9 @@ form textarea{min-height:90px;resize:vertical;}
     .sidebar-close{display:inline-flex;align-items:center;justify-content:center;}
     .main{margin-left:0;padding:18px 14px;padding-top:calc(56px + 18px + env(safe-area-inset-top));padding-bottom:calc(76px + env(safe-area-inset-bottom));}
     .grid-2,.grid-3{grid-template-columns:1fr;}
-    .grid-3{gap:12px;}
     .toolbar{flex-direction:column;align-items:stretch;gap:12px;}
     .toolbar .btn{justify-content:center;}
-    .page-title{font-size:20px;}
-    .page-sub{margin-bottom:20px;}
-    .card{padding:16px;border-radius:14px;}
     .nav-item{padding:13px 12px;font-size:15px;border-radius:10px;}
-    .btn{min-height:44px;}
     /* 16px verhindert Auto-Zoom von iOS beim Fokussieren */
     form input,form select,form textarea{font-size:16px;}
     .d24-modal{padding:12px;align-items:flex-end;}
@@ -159,7 +135,7 @@ form textarea{min-height:90px;resize:vertical;}
     /* Glocke wandert optisch in die Topbar */
     .bell-wrap{top:calc(6px + env(safe-area-inset-top));right:8px;z-index:145;}
     .bell-btn{width:44px;height:44px;border:none;background:transparent;box-shadow:none;font-size:20px;border-radius:10px;}
-    .bell-dot{border-color:var(--petrol);top:8px;right:9px;}
+    .bell-dot{border-color:var(--graphite);top:8px;right:9px;}
     .bell-dd{position:fixed;top:calc(58px + env(safe-area-inset-top));right:8px;left:8px;width:auto;}
     [dir=rtl] .bell-wrap{right:auto;left:8px;}
     [dir=rtl] .bell-dd{left:8px;right:8px;}
@@ -254,7 +230,7 @@ form textarea{min-height:90px;resize:vertical;}
         <a href="{{ route('portal.dashboard') }}" class="tab-item {{ request()->routeIs('portal.dashboard') ? 'active' : '' }}"><span class="tab-ico">🏠</span><span class="tab-label">{{ __('Übersicht') }}</span></a>
         <a href="{{ route('portal.contracts') }}" class="tab-item {{ request()->routeIs('portal.contracts*') ? 'active' : '' }}"><span class="tab-ico">📑</span><span class="tab-label">{{ __('Verträge') }}</span></a>
         <a href="{{ route('portal.documents') }}" class="tab-item {{ request()->routeIs('portal.documents*') ? 'active' : '' }}"><span class="tab-ico">📄</span><span class="tab-label">{{ __('Dokumente') }}</span></a>
-        <a href="{{ route('portal.messages') }}" class="tab-item {{ request()->routeIs('portal.messages*') ? 'active' : '' }}" style="position:relative;"><span class="tab-ico">💬</span><span class="tab-label">{{ __('Nachrichten') }}</span>@if($unreadMsgs > 0)<span style="position:absolute;top:6px;inset-inline-end:22%;width:9px;height:9px;border-radius:50%;background:#E24B4A;border:2px solid var(--petrol);"></span>@endif</a>
+        <a href="{{ route('portal.messages') }}" class="tab-item {{ request()->routeIs('portal.messages*') ? 'active' : '' }}" style="position:relative;"><span class="tab-ico">💬</span><span class="tab-label">{{ __('Nachrichten') }}</span>@if($unreadMsgs > 0)<span style="position:absolute;top:6px;inset-inline-end:22%;width:9px;height:9px;border-radius:50%;background:#E24B4A;border:2px solid var(--graphite);"></span>@endif</a>
         <button type="button" class="tab-item" id="tab-more" aria-label="{{ __('Menü öffnen') }}"><span class="tab-ico">☰</span><span class="tab-label">{{ __('Mehr') }}</span></button>
     </div>
 </nav>

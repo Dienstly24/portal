@@ -2,14 +2,14 @@
 @section('content')
 <div class="toolbar">
     <div><div class="page-title">{{ __('Anfragen') }}</div><div class="page-sub">{{ __('Stellen Sie eine Anfrage oder verfolgen Sie den Status.') }}</div></div>
-    <a href="{{ route('portal.tickets.create') }}" class="btn btn-gold">+ {{ __('Neue Anfrage') }}</a>
+    <a href="{{ route('portal.tickets.create') }}" class="btn btn-emerald">+ {{ __('Neue Anfrage') }}</a>
 </div>
 <div class="card">
     @forelse($tickets as $t)
     <div class="item-row">
         <div>
             <div style="font-weight:600;font-size:14px;">{{ $t->subject }}</div>
-            <div style="font-size:13px;color:var(--ink-soft);">{{ $t->ticket_number }} · {{ $t->created_at->lokal()->format('d.m.Y') }} · {{ __($t->typeLabel()) }}</div>
+            <div class="muted-sm">{{ $t->ticket_number }} · {{ $t->created_at->lokal()->format('d.m.Y') }} · {{ __($t->typeLabel()) }}</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
             <span class="badge badge-{{ $t->statusBadge() }}">{{ __($t->portalStatusLabel()) }}</span>

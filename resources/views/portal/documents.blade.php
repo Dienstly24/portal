@@ -5,10 +5,10 @@
         <div class="page-title">{{ __('Dokumente') }}</div>
         <div class="page-sub" style="margin-bottom:0;">{{ __('Alle Ihre Dokumente und Unterlagen. Sie können hier auch eigene Dokumente hochladen.') }}</div>
     </div>
-    <button data-h-click="d464efca56" class="btn btn-gold">+ {{ __('Dokument hinzufügen') }}</button>
+    <button data-h-click="d464efca56" class="btn btn-emerald">+ {{ __('Dokument hinzufügen') }}</button>
 </div>
 
-@if(session('success'))<div style="background:#D9F4E6;color:#17A65B;padding:10px 16px;border-radius:8px;margin:16px 0;">{{ session('success') }}</div>@endif
+@if(session('success'))<div style="background:var(--emerald-soft);color:var(--emerald);padding:10px 16px;border-radius:8px;margin:16px 0;">{{ session('success') }}</div>@endif
 @if($errors->any())<div style="background:#FBE9E9;color:#B3261E;padding:10px 16px;border-radius:8px;margin:16px 0;">{{ $errors->first() }}</div>@endif
 
 {{-- Angeforderte Dokumente (Architekturplan Abschnitt 14: klare Statusanzeige) --}}
@@ -32,10 +32,10 @@
                     <div style="font-size:13px;color:#B3261E;margin-top:6px;">{{ __('Hinweis unseres Teams') }}: {{ $req->rejection_note }}</div>
                 @endif
             </div>
-            <div style="text-align:right;">
+            <div class="num">
                 @if($req->status === 'open')<span class="badge" style="background:#FEF3C7;color:#92400E;">{{ $req->statusLabel() }}</span>
                 @elseif($req->status === 'uploaded')<span class="badge" style="background:#E6F1FB;color:#185FA5;">{{ $req->statusLabel() }}</span>
-                @elseif($req->status === 'approved')<span class="badge" style="background:#D9F4E6;color:#17A65B;">{{ $req->statusLabel() }}</span>
+                @elseif($req->status === 'approved')<span class="badge" style="background:var(--emerald-soft);color:var(--emerald);">{{ $req->statusLabel() }}</span>
                 @else<span class="badge" style="background:#FBE9E9;color:#B3261E;">{{ $req->statusLabel() }}</span>@endif
             </div>
         </div>
@@ -43,7 +43,7 @@
         <form method="POST" action="{{ route('portal.document_requests.upload', $req->id) }}" enctype="multipart/form-data" style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap;">
             @csrf
             <input type="file" name="document" required accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,.gif,.doc,.docx" style="font-size:13px;">
-            <button type="submit" class="btn btn-gold" style="padding:7px 16px;font-size:13px;">{{ $req->status === 'rejected' ? __('Erneut hochladen') : __('Hochladen') }}</button>
+            <button type="submit" class="btn btn-emerald" style="padding:7px 16px;font-size:13px;">{{ $req->status === 'rejected' ? __('Erneut hochladen') : __('Hochladen') }}</button>
         </form>
         @elseif($req->status === 'uploaded')
         <div style="font-size:13px;color:var(--ink-soft);margin-top:8px;">{{ __('✓ Ihr Dokument ist eingegangen und wird von unserem Team geprüft.') }}</div>
@@ -68,7 +68,7 @@
 .doc-thumb{display:flex;align-items:center;justify-content:center;height:126px;background:#F7F5EF;position:relative;overflow:hidden;text-decoration:none;}
 .doc-thumb img{width:100%;height:100%;object-fit:cover;}
 .doc-thumb .doc-emoji{font-size:50px;line-height:1;}
-.doc-thumb .doc-ext{position:absolute;bottom:8px;right:8px;font-size:10px;font-weight:700;letter-spacing:.03em;background:#131A17;color:#fff;padding:2px 7px;border-radius:6px;text-transform:uppercase;}
+.doc-thumb .doc-ext{position:absolute;bottom:8px;right:8px;font-size:10px;font-weight:700;letter-spacing:.03em;background:var(--graphite);color:#fff;padding:2px 7px;border-radius:6px;text-transform:uppercase;}
 .doc-body{padding:11px 13px;display:flex;flex-direction:column;gap:7px;flex:1;}
 .doc-name{font-weight:600;font-size:13px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;}
 .doc-tags{display:flex;flex-wrap:wrap;gap:5px;font-size:11px;}
@@ -78,7 +78,7 @@
 .doc-actions{display:flex;border-top:1px solid var(--line);}
 .doc-actions a{flex:1;text-align:center;padding:10px 4px;font-size:12.5px;font-weight:600;text-decoration:none;color:var(--ink);}
 .doc-actions a:hover{background:#F7F5EF;}
-.doc-actions a.view{color:#128a4b;border-right:1px solid var(--line);}
+.doc-actions a.view{color:var(--emerald-deep);border-right:1px solid var(--line);}
 </style>
 
 @php
@@ -135,19 +135,19 @@
 <style>
 #smart-upload-modal .d24-modal-box{max-width:560px;}
 .scan-option{display:flex;align-items:center;gap:14px;width:100%;border:1px solid var(--line);background:#fff;border-radius:12px;padding:15px 16px;margin-bottom:10px;cursor:pointer;text-align:start;font-size:14.5px;font-weight:600;color:var(--ink);transition:border-color .15s, background .15s;}
-.scan-option:hover{border-color:var(--gold);background:var(--gold-soft);}
+.scan-option:hover{border-color:var(--emerald);background:var(--emerald-soft);}
 .scan-option .so-ico{font-size:26px;line-height:1;}
 .scan-option .so-sub{display:block;font-weight:500;font-size:12px;color:var(--ink-soft);margin-top:2px;}
 .scan-pages{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;margin:12px 0;}
 .scan-page{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#F7F5EF;}
 .scan-page img{width:100%;height:110px;object-fit:cover;display:block;}
-.scan-page .sp-no{position:absolute;top:6px;inset-inline-start:6px;background:#131A17;color:#fff;font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px;}
+.scan-page .sp-no{position:absolute;top:6px;inset-inline-start:6px;background:var(--graphite);color:#fff;font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px;}
 .scan-page .sp-del{position:absolute;top:4px;inset-inline-end:4px;background:rgba(179,38,30,.92);color:#fff;border:none;border-radius:8px;width:22px;height:22px;font-size:12px;cursor:pointer;line-height:1;}
 .scan-page .sp-tools{display:flex;border-top:1px solid var(--line);background:#fff;}
 .scan-page .sp-tools button{flex:1;border:none;background:none;padding:5px 0;font-size:12px;cursor:pointer;color:var(--ink-soft);}
 .scan-page .sp-tools button:hover{color:var(--ink);background:#F7F5EF;}
 #scan-video{width:100%;max-height:52vh;background:#000;border-radius:12px;object-fit:contain;}
-.scan-spinner{width:42px;height:42px;border:4px solid var(--line);border-top-color:var(--gold);border-radius:50%;animation:scanspin 0.9s linear infinite;margin:0 auto 14px;}
+.scan-spinner{width:42px;height:42px;border:4px solid var(--line);border-top-color:var(--emerald);border-radius:50%;animation:scanspin 0.9s linear infinite;margin:0 auto 14px;}
 @keyframes scanspin{to{transform:rotate(360deg);}}
 </style>
 
@@ -184,7 +184,7 @@
             <video id="scan-video" autoplay playsinline muted></video>
             <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;">
                 <button type="button" class="btn btn-ghost" data-h-click="f76fc1525b">{{ __('Abbrechen') }}</button>
-                <button type="button" class="btn btn-gold" style="font-size:15px;padding:10px 26px;" data-h-click="1a64713c76">⚪ {{ __('Aufnehmen') }}</button>
+                <button type="button" class="btn btn-emerald" style="font-size:15px;padding:10px 26px;" data-h-click="1a64713c76">⚪ {{ __('Aufnehmen') }}</button>
                 <button type="button" class="btn btn-primary" data-h-click="31c7d32856">{{ __('Fertig') }}</button>
             </div>
             <p style="font-size:12px;color:var(--ink-soft);text-align:center;margin-top:8px;">{{ __('Tipp: Dokument flach hinlegen und den Ausschnitt füllen.') }}</p>
@@ -198,7 +198,7 @@
                 <button type="button" class="btn btn-ghost" style="font-size:12.5px;padding:7px 12px;" data-h-click="377e3a7038">📷 {{ __('Seite fotografieren') }}</button>
                 <button type="button" class="btn btn-ghost" style="font-size:12.5px;padding:7px 12px;" data-h-click="27e9847c97">🖼️ {{ __('Bilder hinzufügen') }}</button>
             </div>
-            <button type="button" class="btn btn-gold" style="width:100%;font-size:15px;" data-h-click="1009e84d11">⬆ {{ __('Dokument hochladen') }}</button>
+            <button type="button" class="btn btn-emerald" style="width:100%;font-size:15px;" data-h-click="1009e84d11">⬆ {{ __('Dokument hochladen') }}</button>
         </div>
 
         {{-- Schritt 4: Upload + Analyse --}}
@@ -207,7 +207,7 @@
             <div style="font-size:15.5px;font-weight:700;" id="scan-status-title">{{ __('Dokument wird hochgeladen...') }}</div>
             <div style="font-size:13px;color:var(--ink-soft);margin-top:8px;" id="scan-status-sub"></div>
             <div id="scan-progress" style="height:8px;background:var(--surface);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:16px 24px 0;">
-                <div id="scan-progress-bar" style="height:100%;width:0;background:var(--gold);transition:width .2s;"></div>
+                <div id="scan-progress-bar" style="height:100%;width:0;background:var(--emerald);transition:width .2s;"></div>
             </div>
             <div id="scan-result" style="display:none;text-align:start;margin:14px 0 0;border:1px solid var(--line);border-radius:12px;padding:14px 16px;"></div>
             <button type="button" class="btn btn-primary" style="display:none;margin-top:16px;" id="scan-done-btn" data-h-click="e68df2cc53">{{ __('Fertig') }}</button>

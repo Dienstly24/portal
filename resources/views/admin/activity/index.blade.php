@@ -79,22 +79,22 @@
 @endif
 
 {{-- Ranking --}}
-<div class="card" style="padding:0;overflow:hidden;">
+<div class="card card-flush">
     <div class="card-header" style="padding:16px 20px 0 20px;"><div class="card-title">Mitarbeiter-Ranking nach Produktivität</div></div>
-    <div style="overflow-x:auto;">
+    <div class="scroll-x">
     <table>
         <thead><tr style="background:#F8F9FA;">
             <th style="padding:12px 20px;">Rang</th>
             <th>Mitarbeiter</th>
-            <th style="text-align:right;">Anmeldezeit</th>
-            <th style="text-align:right;">Aktive Zeit</th>
-            <th style="text-align:right;">Leerlauf</th>
-            <th style="text-align:right;">Aktionen</th>
-            <th style="text-align:right;">Angelegt</th>
-            <th style="text-align:right;">Bearbeitet</th>
-            <th style="text-align:right;">Uploads</th>
-            <th style="text-align:right;">Punkte</th>
-            <th style="text-align:right;">Punkte/Std.</th>
+            <th class="num">Anmeldezeit</th>
+            <th class="num">Aktive Zeit</th>
+            <th class="num">Leerlauf</th>
+            <th class="num">Aktionen</th>
+            <th class="num">Angelegt</th>
+            <th class="num">Bearbeitet</th>
+            <th class="num">Uploads</th>
+            <th class="num">Punkte</th>
+            <th class="num">Punkte/Std.</th>
             <th></th>
         </tr></thead>
         <tbody>
@@ -103,7 +103,7 @@
             <td style="padding:13px 20px;font-weight:700;">{{ $row->rank === 1 && $row->points > 0 ? '🏆' : $row->rank }}</td>
             <td>
                 <div style="display:flex;align-items:center;gap:8px;">
-                    <div style="width:28px;height:28px;border-radius:50%;background:var(--petrol);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none;">
+                    <div style="width:28px;height:28px;border-radius:50%;background:var(--graphite);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none;">
                         {{ strtoupper(substr($row->user->name, 0, 2)) }}
                     </div>
                     <div>
@@ -112,15 +112,15 @@
                     </div>
                 </div>
             </td>
-            <td style="text-align:right;">{{ \App\Support\Duration::human($row->login_seconds) }}</td>
-            <td style="text-align:right;font-weight:600;color:#17A65B;">{{ \App\Support\Duration::human($row->active_seconds) }}</td>
+            <td class="num">{{ \App\Support\Duration::human($row->login_seconds) }}</td>
+            <td style="text-align:right;font-weight:600;color:var(--emerald);">{{ \App\Support\Duration::human($row->active_seconds) }}</td>
             <td style="text-align:right;color:var(--ink-soft);">{{ \App\Support\Duration::human($row->idle_seconds) }}</td>
-            <td style="text-align:right;">{{ number_format($row->productive_ops, 0, ',', '.') }}</td>
-            <td style="text-align:right;">{{ number_format($row->creates, 0, ',', '.') }}</td>
-            <td style="text-align:right;">{{ number_format($row->updates, 0, ',', '.') }}</td>
-            <td style="text-align:right;">{{ number_format($row->uploads, 0, ',', '.') }}</td>
-            <td style="text-align:right;font-weight:700;">{{ number_format($row->points, 0, ',', '.') }}</td>
-            <td style="text-align:right;">{{ str_replace('.', ',', (string) $row->points_per_hour) }}</td>
+            <td class="num">{{ number_format($row->productive_ops, 0, ',', '.') }}</td>
+            <td class="num">{{ number_format($row->creates, 0, ',', '.') }}</td>
+            <td class="num">{{ number_format($row->updates, 0, ',', '.') }}</td>
+            <td class="num">{{ number_format($row->uploads, 0, ',', '.') }}</td>
+            <td class="num-strong">{{ number_format($row->points, 0, ',', '.') }}</td>
+            <td class="num">{{ str_replace('.', ',', (string) $row->points_per_hour) }}</td>
             <td style="text-align:right;padding-right:20px;">
                 <a href="{{ route('admin.activity.show', $row->user->id) }}?{{ $qs(['zeitraum' => $preset !== 'eigener' ? $preset : null, 'von' => $preset === 'eigener' ? $from->format('Y-m-d') : null, 'bis' => $preset === 'eigener' ? $to->format('Y-m-d') : null]) }}" class="btn btn-ghost btn-sm">Details</a>
             </td>
@@ -146,7 +146,7 @@
                 {
                     label: 'Punkte',
                     data: @json($chart['points']),
-                    backgroundColor: '#17A65B',
+                    backgroundColor: brandColor('emerald'),
                     borderRadius: 6,
                     yAxisID: 'y'
                 },

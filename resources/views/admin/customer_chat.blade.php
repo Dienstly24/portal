@@ -10,7 +10,7 @@
 .kchat-side-head{padding:14px 14px 10px;border-bottom:1px solid var(--line);}
 .kchat-title{font-size:15px;font-weight:700;margin-bottom:10px;}
 .kchat-search input{width:100%;padding:9px 13px;border:1px solid var(--line);border-radius:999px;font-size:13px;background:var(--canvas);color:var(--ink);}
-.kchat-search input:focus{outline:2px solid var(--gold);outline-offset:1px;background:#fff;}
+.kchat-search input:focus{outline:2px solid var(--emerald);outline-offset:1px;background:#fff;}
 .kchat-convs{overflow-y:auto;flex:1;}
 .kchat-group{font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em;padding:12px 14px 6px;}
 .kchat-conv{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);text-decoration:none;color:var(--ink);align-items:center;transition:background .12s;}
@@ -29,9 +29,9 @@
    bzw. umbrechbar) - der Chat selbst nicht. */
 .kchat-thread .d24c-scroll{min-height:180px;}
 .kchat-head,.kx-cockpit,.kx-bar,.kchat-opts,.d24c-comp,.d24c-files{flex:0 0 auto;}
-.kchat-head{display:flex;align-items:center;gap:11px;padding:11px 14px;background:linear-gradient(135deg,var(--petrol),var(--petrol-dark));color:#fff;}
+.kchat-head{display:flex;align-items:center;gap:11px;padding:11px 14px;background:linear-gradient(135deg,var(--graphite),var(--graphite-deep));color:#fff;}
 .kchat-head-name{font-weight:700;font-size:14.5px;}
-.kchat-head-sub{font-size:11.5px;color:var(--akzent-hell);}
+.kchat-head-sub{font-size:11.5px;color:var(--gold-soft);}
 .kchat-head-link{margin-left:auto;color:rgba(255,255,255,.75);font-size:12.5px;text-decoration:none;border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:5px 12px;flex:none;}
 .kchat-head-link:hover{background:rgba(255,255,255,.1);color:#fff;}
 .kchat-back{display:none;color:rgba(255,255,255,.8);font-size:19px;text-decoration:none;flex:none;width:34px;height:34px;border-radius:9px;align-items:center;justify-content:center;}
@@ -44,13 +44,13 @@
 .kx-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid var(--line);background:var(--surface);flex-wrap:wrap;}
 .kx-filters{display:flex;gap:6px;flex-wrap:wrap;}
 .kx-f{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 11px;font-size:12px;font-weight:600;color:var(--ink-soft);cursor:pointer;}
-.kx-f.active{background:var(--petrol);border-color:var(--petrol);color:#fff;}
+.kx-f.active{background:var(--graphite);border-color:var(--graphite);color:#fff;}
 .kx-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 .kx-status{display:inline-flex;gap:6px;align-items:center;font-size:12px;color:var(--ink-soft);margin:0;}
 .kx-status select{padding:5px 9px;border:1px solid var(--line);border-radius:999px;font-size:12px;background:#fff;}
 .kx-note-btn{border:1px solid #E7D9A8;background:#FBF6E4;border-radius:999px;padding:4px 11px;font-size:12px;font-weight:600;color:#8a7846;cursor:pointer;}
-.kx-ticket-btn{border:1px solid var(--petrol);background:var(--petrol);color:#fff;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer;}
-.kx-ticket-btn:hover{background:var(--petrol-dark);}
+.kx-ticket-btn{border:1px solid var(--graphite);background:var(--graphite);color:#fff;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer;}
+.kx-ticket-btn:hover{background:var(--graphite-deep);}
 /* Problem-Cockpit: aktiver Vorgang als Balken unter dem Kopf */
 /* KI-Panel der Unterhaltung (Spezifikation 27). Gold = Akzentfarbe des
    Farbschemas "Smaragd & Gold"; eine offene Uebergabe faellt bewusst
@@ -69,7 +69,7 @@
 .kx-ai-btns{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap;}
 .kx-ai-btns form{margin:0;}
 .kx-ai-btn{background:#fff;border:1px solid var(--line);border-radius:999px;padding:3px 11px;font-size:11.5px;cursor:pointer;color:var(--ink-soft);}
-.kx-ai-btn.primary{background:#17A65B;border-color:#128a4b;color:#fff;font-weight:700;}
+.kx-ai-btn.primary{background:var(--emerald);border-color:var(--emerald-deep);color:#fff;font-weight:700;}
 .kx-ai-reason{margin-top:4px;font-weight:600;color:#8a5b1f;}
 .kx-ai-sum{margin-top:4px;white-space:pre-line;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 9px;}
 .kx-ai-facts{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;}
@@ -89,7 +89,7 @@
 .kx-ai-offer{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:5px 0;border-top:1px solid var(--line);}
 .kx-ai-offer.chosen{color:#14603A;}
 .kx-ai-offerform{margin-top:6px;}
-.kx-ai-offerform summary{cursor:pointer;color:var(--brand);font-weight:600;}
+.kx-ai-offerform summary{cursor:pointer;color:var(--emerald);font-weight:600;}
 .kx-ai-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px 10px;margin:8px 0;}
 .kx-ai-grid label{display:flex;flex-direction:column;gap:2px;font-size:11.5px;color:var(--ink-soft);}
 .kx-ai-grid label.wide{grid-column:1/-1;}
@@ -98,7 +98,7 @@
 .kx-ai-more{margin-top:5px;}
 .kx-ai-more>summary{cursor:pointer;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;color:var(--ink-soft);list-style:none;}
 .kx-ai-more>summary::-webkit-details-marker{display:none;}
-.kx-ai-more>summary::before{content:'▸';color:var(--brand);font-weight:700;}
+.kx-ai-more>summary::before{content:'▸';color:var(--emerald);font-weight:700;}
 .kx-ai-more[open]>summary::before{content:'▾';}
 .kx-ai-more-t{font-weight:700;color:var(--ink);}
 .kx-ai-more-p{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -106,7 +106,7 @@
 .kx-cockpit{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:8px 14px;background:#F3F1E8;border-bottom:1px solid var(--line);text-decoration:none;color:var(--ink);font-size:12.5px;}
 .kx-cockpit:hover{background:#ECE9DC;}
 .kx-cockpit.overdue{background:#FBECEC;border-bottom-color:#E4B4B4;}
-.kx-cp-ticket{font-weight:800;color:var(--petrol);}
+.kx-cp-ticket{font-weight:800;color:var(--graphite);}
 .kx-cp-prio{font-weight:600;}
 .kx-cp-subject{color:var(--ink-soft);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .kx-cp-sla{margin-inline-start:auto;font-weight:700;color:var(--ink-soft);flex:none;}
@@ -115,11 +115,11 @@
 .kx-note[hidden]{display:none;}
 .kx-note textarea{flex:1;border:1px solid #E7D9A8;border-radius:9px;padding:8px 11px;font-size:13px;font-family:inherit;resize:vertical;background:#fff;}
 /* Timeline-Karten (kx-card/kx-tag/kx-internal) kommen aus chat_styles. */
-.kx-refresh{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:5;border:none;border-radius:999px;background:var(--petrol);color:#fff;font-size:12px;font-weight:600;padding:7px 14px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.25);}
+.kx-refresh{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:5;border:none;border-radius:999px;background:var(--graphite);color:#fff;font-size:12px;font-weight:600;padding:7px 14px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.25);}
 .kx-refresh[hidden]{display:none;}
 .kx-chanwahl{display:inline-flex;gap:0;border:1px solid var(--line);border-radius:999px;overflow:hidden;}
 .kx-chanwahl button{border:none;background:#fff;padding:5px 12px;font-size:12px;font-weight:600;color:var(--ink-soft);cursor:pointer;}
-.kx-chanwahl button.active{background:var(--petrol);color:#fff;}
+.kx-chanwahl button.active{background:var(--graphite);color:#fff;}
 @media (max-width: 900px) {
     .kchat{grid-template-columns:1fr;height:calc(100dvh - var(--header-h) - 40px);}
     .kchat.mode-thread .kchat-side{display:none;}
@@ -236,7 +236,7 @@
                     elseif (str_starts_with($waNummer, '0')) { $waNummer = '49' . substr($waNummer, 1); }
                 @endphp
                 @if($waNummer !== '')
-                <a class="kx-note-btn" style="background:#E9F8EF;border-color:#BFE8CE;color:#128a4b;text-decoration:none;" href="https://wa.me/{{ $waNummer }}" target="_blank" rel="noopener" title="Öffnet WhatsApp Business – nicht mit dem System verbunden">📱 WhatsApp</a>
+                <a class="kx-note-btn" style="background:#E9F8EF;border-color:#BFE8CE;color:var(--emerald-deep);text-decoration:none;" href="https://wa.me/{{ $waNummer }}" target="_blank" rel="noopener" title="Öffnet WhatsApp Business – nicht mit dem System verbunden">📱 WhatsApp</a>
                 @endif
                 @if(in_array(auth()->user()->role, ['admin','manager','support']) || auth()->user()->can_send_emails)
                 <a class="kx-note-btn" style="background:#fff;border-color:var(--line);color:var(--ink-soft);text-decoration:none;" href="{{ route('admin.email.compose', ['customer_id' => $active->id]) }}">✉️ E-Mail verfassen</a>
@@ -259,7 +259,7 @@
                 <textarea name="note" required rows="2" maxlength="5000" placeholder="Interne Notiz – nur für das Team sichtbar …"></textarea>
             </div>
             <input type="hidden" name="type" value="chat" disabled id="kx-note-type">
-            <button type="submit" class="btn btn-gold" style="padding:7px 16px;font-size:13px;">Speichern</button>
+            <button type="submit" class="btn btn-emerald" style="padding:7px 16px;font-size:13px;">Speichern</button>
         </form>
         <button type="button" id="kx-refresh" class="kx-refresh" hidden data-h-click="30398ee11c">⟳ Neue Ereignisse – Ansicht aktualisieren</button>
 
@@ -303,7 +303,7 @@
                 </label>
                 <div style="display:flex;gap:10px;justify-content:flex-end;">
                     <button type="button" data-h-click="b3689b9352" class="btn btn-ghost" style="padding:8px 16px;font-size:13px;">Abbrechen</button>
-                    <button type="submit" class="btn btn-gold" style="padding:8px 18px;font-size:13px;">Vorgang eröffnen</button>
+                    <button type="submit" class="btn btn-emerald" style="padding:8px 18px;font-size:13px;">Vorgang eröffnen</button>
                 </div>
             </form>
         </div>

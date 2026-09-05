@@ -8,7 +8,7 @@
 
 @include('admin.partials.provision_tabs', ['active' => 'liste'])
 
-@if(session('success'))<div style="background:#D9F4E6;color:#17A65B;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
+@if(session('success'))<div style="background:var(--emerald-soft);color:var(--emerald);padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
 @if(session('error'))<div style="background:#FBE9E9;color:#B3261E;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('error') }}</div>@endif
 
 {{-- Kennzahlen (folgen den aktiven Filtern) --}}
@@ -169,7 +169,7 @@
 </div>
 
 {{-- Liste --}}
-<div class="card" style="padding:0;overflow:hidden;">
+<div class="card card-flush">
     <table>
         <thead><tr style="background:#F8F9FA;">
             <th style="padding:12px 20px;">Empfänger</th>
@@ -193,7 +193,7 @@
                 @if($p->customer)
                 <a href="{{ route('admin.customer', $p->customer_id) }}" style="font-size:12.5px;">{{ $p->customer->user?->name ?? $p->customer->customer_number }}</a>
                 @endif
-                <div style="font-size:12px;color:var(--ink-soft);">
+                <div class="muted-xs">
                     @if($p->contract_type){{ $p->contractTypeLabel() }}@endif
                     @if($p->insurer) · {{ $p->insurer }}@endif
                 </div>
@@ -222,7 +222,7 @@
                 <form method="POST" action="{{ route('admin.provisions.status', $p->id) }}" style="display:inline;margin:0;" data-confirm="Buchung über {{ number_format((float) $p->amount, 2, ',', '.') }} EUR als ausgezahlt markieren?">
                     @csrf
                     <input type="hidden" name="status" value="ausgezahlt">
-                    <button type="submit" class="btn btn-gold btn-sm">Auszahlen</button>
+                    <button type="submit" class="btn btn-emerald btn-sm">Auszahlen</button>
                 </form>
                 <form method="POST" action="{{ route('admin.provisions.status', $p->id) }}" style="display:inline;margin:0;">
                     @csrf

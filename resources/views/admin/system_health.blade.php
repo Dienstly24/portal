@@ -3,8 +3,8 @@
 @php
     // Farben aus dem Markenschema "Smaragd & Gold" - Gold ist Akzent, nie Aktion.
     $ampel = [
-        'ok'   => ['#17A65B', 'rgba(23,166,91,.10)',  '✓', 'In Ordnung'],
-        'warn' => ['#B8A16B', 'rgba(184,161,107,.14)', '!', 'Beobachten'],
+        'ok'   => ['var(--emerald)', 'rgba(23,166,91,.10)',  '✓', 'In Ordnung'],
+        'warn' => ['var(--gold)', 'rgba(184,161,107,.14)', '!', 'Beobachten'],
         'fail' => ['#C0392B', 'rgba(192,57,43,.10)',  '✕', 'Handeln'],
         'info' => ['#5F6B62', 'rgba(95,107,98,.10)',  'i', 'Hinweis'],
     ];
@@ -146,7 +146,7 @@
 .sh-gesamt-titel{font-size:17px;font-weight:700;margin-bottom:2px;}
 .sh-meta{font-size:12px;color:var(--ink-soft);}
 .sh-btn{flex:none;padding:8px 14px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);text-decoration:none;font-size:12.5px;font-weight:600;}
-.sh-btn:hover{border-color:var(--gold);}
+.sh-btn:hover{border-color:var(--emerald);}
 .sh-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:18px;align-items:start;}
 .sh-karte{padding:18px;}
 .sh-kopf{display:flex;align-items:center;gap:9px;margin-bottom:4px;}

@@ -26,15 +26,15 @@
 <div class="card" style="max-width:1200px;">
     <div style="font-weight:700;font-size:14px;margin-bottom:12px;">Schritt 2 · Datei erkannt</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;font-size:13px;">
-        <div><div style="font-size:11.5px;color:var(--ink-soft);">Dateiname</div><div style="font-weight:600;">{{ $import->filename }}</div></div>
-        <div><div style="font-size:11.5px;color:var(--ink-soft);">Format</div><div style="font-weight:600;">{{ strtoupper($import->format) }}</div></div>
-        <div><div style="font-size:11.5px;color:var(--ink-soft);">Erkannte Quelle</div><div style="font-weight:600;">{{ $import->providerLabel() }}</div></div>
-        <div><div style="font-size:11.5px;color:var(--ink-soft);">Betriebsart</div><div style="font-weight:600;">{{ $import->modeLabel() }}</div></div>
-        <div><div style="font-size:11.5px;color:var(--ink-soft);">Zeilen (ohne Kopf)</div><div style="font-weight:600;">{{ $import->rows_total }}</div></div>
-        <div><div style="font-size:11.5px;color:var(--ink-soft);">Spalten</div><div style="font-weight:600;">{{ count((array) $import->header) }}</div></div>
-        <div><div style="font-size:11.5px;color:var(--ink-soft);">Trennzeichen</div><div style="font-weight:600;">{{ $import->delimiterLabel() }}</div></div>
-        <div><div style="font-size:11.5px;color:var(--ink-soft);">Kodierung</div><div style="font-weight:600;">{{ $import->encoding ?: '—' }}</div></div>
-        <div><div style="font-size:11.5px;color:var(--ink-soft);">Tabellenblatt</div><div style="font-weight:600;">{{ $import->sheet_name ?: '— (keine Excel-Datei)' }}</div></div>
+        <div><div class="muted-2xs">Dateiname</div><div style="font-weight:600;">{{ $import->filename }}</div></div>
+        <div><div class="muted-2xs">Format</div><div style="font-weight:600;">{{ strtoupper($import->format) }}</div></div>
+        <div><div class="muted-2xs">Erkannte Quelle</div><div style="font-weight:600;">{{ $import->providerLabel() }}</div></div>
+        <div><div class="muted-2xs">Betriebsart</div><div style="font-weight:600;">{{ $import->modeLabel() }}</div></div>
+        <div><div class="muted-2xs">Zeilen (ohne Kopf)</div><div style="font-weight:600;">{{ $import->rows_total }}</div></div>
+        <div><div class="muted-2xs">Spalten</div><div style="font-weight:600;">{{ count((array) $import->header) }}</div></div>
+        <div><div class="muted-2xs">Trennzeichen</div><div style="font-weight:600;">{{ $import->delimiterLabel() }}</div></div>
+        <div><div class="muted-2xs">Kodierung</div><div style="font-weight:600;">{{ $import->encoding ?: '—' }}</div></div>
+        <div><div class="muted-2xs">Tabellenblatt</div><div style="font-weight:600;">{{ $import->sheet_name ?: '— (keine Excel-Datei)' }}</div></div>
     </div>
 
     @if($import->providerHint())
@@ -53,7 +53,7 @@
     <div style="margin-top:14px;background:#FEF3C7;border:1px solid #E8C36A;border-radius:8px;padding:10px 12px;font-size:12.5px;">
         <b>Diese Datei hat mehrere Tabellenblätter:</b>
         @foreach((array) $import->sheet_names as $name)
-            <span style="display:inline-block;padding:2px 8px;border-radius:12px;background:{{ $name === $import->sheet_name ? '#131A17' : '#fff' }};color:{{ $name === $import->sheet_name ? '#fff' : 'inherit' }};border:1px solid var(--line);margin:2px;">{{ $name }}</span>
+            <span style="display:inline-block;padding:2px 8px;border-radius:12px;background:{{ $name === $import->sheet_name ? 'var(--graphite)' : '#fff' }};color:{{ $name === $import->sheet_name ? '#fff' : 'inherit' }};border:1px solid var(--line);margin:2px;">{{ $name }}</span>
         @endforeach
         <div style="margin-top:6px;color:var(--ink-soft);">
             Gelesen wurde <b>{{ $import->sheet_name }}</b>. Ist das nicht das richtige Blatt, die Datei bitte erneut hochladen
@@ -127,7 +127,7 @@
      darunter. --}}
 @php
     $summary = [
-        ['neu', 'neue Datensätze', $import->rows_new, '#128a4b'],
+        ['neu', 'neue Datensätze', $import->rows_new, 'var(--emerald-deep)'],
         ['aktualisiert', 'aktualisierte Datensätze', $import->rows_updated, '#1E6FA8'],
         ['duplikat', 'Duplikate (werden übersprungen)', $import->rows_duplicate, 'var(--ink-soft)'],
         ['nicht_zugeordnet', 'ohne passenden Vertrag', $import->rows_unmatched, '#B5651D'],
@@ -139,15 +139,15 @@
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;">
         @foreach($summary as [$key, $label, $value, $color])
         <a href="{{ route('admin.commissions_internal.preview', [$import->id, 'zeigen' => $key]) }}"
-           style="text-decoration:none;color:inherit;border:1px solid {{ $filter === $key ? '#131A17' : 'var(--line)' }};border-radius:10px;padding:12px 14px;display:block;">
+           style="text-decoration:none;color:inherit;border:1px solid {{ $filter === $key ? 'var(--graphite)' : 'var(--line)' }};border-radius:10px;padding:12px 14px;display:block;">
             <div style="font-size:22px;font-weight:700;color:{{ $color }};">{{ $value }}</div>
-            <div style="font-size:11.5px;color:var(--ink-soft);">{{ $label }}</div>
+            <div class="muted-2xs">{{ $label }}</div>
         </a>
         @endforeach
     </div>
 
     @if(!$import->isDraft() && ($import->contracts_created > 0 || $import->customers_created > 0 || $import->rows_unlinked_kept > 0))
-    <div style="margin-top:14px;background:#D9F4E6;border:1px solid #9BD9BB;border-radius:8px;padding:10px 12px;font-size:12.5px;">
+    <div style="margin-top:14px;background:var(--emerald-soft);border:1px solid #9BD9BB;border-radius:8px;padding:10px 12px;font-size:12.5px;">
         <b>Übernommen.</b>
         @if($import->contracts_created > 0)
         {{ $import->contracts_created }} Verträge
@@ -165,7 +165,7 @@
     @if($import->rows_unmatched + $import->rows_invalid > 0)
     <div style="margin-top:14px;font-size:12.5px;">
         <a href="{{ route('admin.commissions_internal.errors', $import->id) }}">⬇ Fehlerhafte und nicht zugeordnete Zeilen als CSV herunterladen</a>
-        <span style="color:var(--ink-soft);"> – korrigieren und erneut hochladen; bereits übernommene Zeilen entstehen dabei nicht doppelt.</span>
+        <span class="muted"> – korrigieren und erneut hochladen; bereits übernommene Zeilen entstehen dabei nicht doppelt.</span>
     </div>
     @endif
 
@@ -206,7 +206,7 @@
                     <i>gab</i> – nicht, dass er heute läuft. Bitte anschließend prüfen.
                     @if($import->rows_unmatched > $import->rows_buildable)
                     <br>
-                    <span style="color:var(--ink-soft);">
+                    <span class="muted">
                         Für die übrigen {{ $import->rows_unmatched - $import->rows_buildable }} Zeilen fehlt ein
                         verwertbarer Kundenname – daraus wird bewusst nichts angelegt.
                     </span>
@@ -242,9 +242,9 @@
     </div>
 
     @if($rows->isEmpty())
-        <div style="font-size:13px;color:var(--ink-soft);">Keine Zeilen zu dieser Auswahl.</div>
+        <div class="muted-sm">Keine Zeilen zu dieser Auswahl.</div>
     @else
-    <div style="overflow-x:auto;">
+    <div class="scroll-x">
         <table style="width:100%;border-collapse:collapse;font-size:12px;">
             <thead><tr style="text-align:left;color:var(--ink-soft);">
                 <th style="padding:8px;">Zeile</th><th style="padding:8px;">Ergebnis</th>
@@ -260,7 +260,7 @@
                 <td style="padding:8px;white-space:nowrap;"><span class="badge badge-{{ $row->resultBadge() }}">{{ $row->resultIcon() }} {{ $row->resultLabel() }}</span></td>
                 <td style="padding:8px;">
                     {{ $m['internal_contract_number'] ?? ($m['reference_number'] ?? ($m['vermittler_id'] ?? ($m['order_number'] ?? '—'))) }}
-                    @if(($m['customer_name'] ?? null))<div style="color:var(--ink-soft);">{{ $m['customer_name'] }}</div>@endif
+                    @if(($m['customer_name'] ?? null))<div class="muted">{{ $m['customer_name'] }}</div>@endif
                 </td>
                 <td style="padding:8px;white-space:nowrap;">
                     {{ isset($m['amount']) && $m['amount'] !== null ? number_format((float) $m['amount'], 2, ',', '.') . ' €' : '—' }}
@@ -269,8 +269,8 @@
                 <td style="padding:8px;">
                     @if($row->contract)
                         <a href="{{ route('admin.contract.edit', $row->contract->id) }}">{{ $row->contract->contract_number ?: $row->contract->internal_contract_number ?: 'Vertrag' }}</a>
-                        <div style="color:var(--ink-soft);">{{ $row->contract->customer?->user?->name }}</div>
-                        @if($row->match_reason)<div style="color:var(--ink-soft);">über {{ $row->match_reason }}</div>@endif
+                        <div class="muted">{{ $row->contract->customer?->user?->name }}</div>
+                        @if($row->match_reason)<div class="muted">über {{ $row->match_reason }}</div>@endif
                     @else — @endif
                 </td>
                 <td style="padding:8px;color:var(--ink-soft);">{{ $row->message }}</td>

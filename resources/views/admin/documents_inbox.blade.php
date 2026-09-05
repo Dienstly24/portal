@@ -34,7 +34,7 @@
         data-h-keydown="66dc0af444"
         style="border:2px dashed var(--line);border-radius:12px;padding:30px;text-align:center;cursor:pointer;transition:.15s;">
         <div style="font-size:34px;margin-bottom:6px;" aria-hidden="true">📥</div>
-        <div style="font-size:14px;color:var(--ink-soft);">Dateien hierher ziehen oder <span style="color:var(--gold);font-weight:600;">durchsuchen</span></div>
+        <div style="font-size:14px;color:var(--ink-soft);">Dateien hierher ziehen oder <span style="color:var(--emerald);font-weight:600;">durchsuchen</span></div>
         <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">PDF, JPG, PNG, WEBP · max. 10 MB pro Datei · mehrere Bilder werden zu EINEM Dokument gebündelt</div>
         <input type="file" id="inbox-files" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none;">
     </div>
@@ -44,7 +44,7 @@
     </label>
     <div id="inbox-upload-progress" style="display:none;margin-top:12px;">
         <div style="height:8px;background:var(--canvas);border:1px solid var(--line);border-radius:6px;overflow:hidden;">
-            <div id="inbox-upload-bar" style="height:100%;width:0;background:var(--gold);transition:width .2s;"></div>
+            <div id="inbox-upload-bar" style="height:100%;width:0;background:var(--emerald);transition:width .2s;"></div>
         </div>
         {{-- Fortschritt/Status wird Screenreadern angesagt (Audit A11Y-5) --}}
         <div id="inbox-upload-label" role="status" aria-live="polite" style="font-size:12px;color:var(--ink-soft);margin-top:5px;">0%</div>
@@ -78,7 +78,7 @@
                 @if($meta && !empty($meta['conflicts']))
                     <span class="badge" style="background:#FBE9E9;color:#B3261E;">⚠ {{ implode(' ', $meta['conflicts']) }}</span>
                 @elseif($meta && $meta['ready'] && $meta['has_name'])
-                    <button type="button" class="btn btn-gold btn-sm" data-h-click="stapel-oeffnen" data-batch="{{ $batchId }}">
+                    <button type="button" class="btn btn-emerald btn-sm" data-h-click="stapel-oeffnen" data-batch="{{ $batchId }}">
                         Neuen Kunden aus allen {{ $groupDocs->count() }} anlegen
                     </button>
                 @elseif($meta && !$meta['ready'])
@@ -105,9 +105,9 @@
      zu EINEM Kunden buendeln (z.B. getrennt hochgeladene Ausweis-Vorder- und
      -Rueckseite oder Ausweis + Antrag). Erscheint, sobald >= 1 Dokument per
      Checkbox markiert ist. --}}
-<div id="inbox-selection-bar" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:150;background:#0F1512;color:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.30);padding:11px 16px;align-items:center;gap:14px;flex-wrap:wrap;max-width:calc(100% - 32px);">
+<div id="inbox-selection-bar" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:150;background:var(--graphite-deep);color:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.30);padding:11px 16px;align-items:center;gap:14px;flex-wrap:wrap;max-width:calc(100% - 32px);">
     <span style="font-size:13.5px;"><strong id="inbox-selection-count">0</strong>&nbsp;Dokumente ausgewaehlt</span>
-    <button type="button" class="btn btn-gold btn-sm" id="inbox-selection-merge" data-h-click="30707c1762">🗂 Zu EINEM Kunden zusammenfuehren</button>
+    <button type="button" class="btn btn-emerald btn-sm" id="inbox-selection-merge" data-h-click="30707c1762">🗂 Zu EINEM Kunden zusammenfuehren</button>
     <button type="button" class="btn btn-ghost btn-sm" style="color:#fff;border-color:rgba(255,120,120,.55);" data-h-click="654337d4fb">🗑 Loeschen</button>
     <button type="button" class="btn btn-ghost btn-sm" style="color:#fff;border-color:rgba(255,255,255,.35);" data-h-click="e29850ed68">Aufheben</button>
 </div>
@@ -126,9 +126,9 @@
      Sie stehen hier statt unter "Nicht zugeordnet" - dort waeren sie eine
      Daueraufgabe, die keine ist. Geloescht wird nichts. --}}
 @if(isset($vorgangslisten) && $vorgangslisten->isNotEmpty())
-<div class="card" style="padding:0;overflow:hidden;">
-    <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">🤝 Eingelesene Vermittler-Vorgangslisten</div>
-    <div style="overflow-x:auto;">
+<div class="card card-flush">
+    <div class="card-head-bar">🤝 Eingelesene Vermittler-Vorgangslisten</div>
+    <div class="scroll-x">
     <table style="width:100%;border-collapse:collapse;font-size:13.5px;">
         <thead>
             <tr style="text-align:start;color:var(--ink-soft);font-size:12px;">
@@ -165,9 +165,9 @@
 @endif
 
 {{-- Zuletzt analysierte, bereits zugeordnete Dokumente --}}
-<div class="card" style="padding:0;overflow:hidden;">
-    <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">Zuletzt analysiert &amp; zugeordnet</div>
-    <div style="overflow-x:auto;">
+<div class="card card-flush">
+    <div class="card-head-bar">Zuletzt analysiert &amp; zugeordnet</div>
+    <div class="scroll-x">
     <table style="width:100%;border-collapse:collapse;font-size:13.5px;">
         <thead>
             <tr style="text-align:start;color:var(--ink-soft);font-size:12px;">
@@ -188,7 +188,7 @@
                 <td style="padding:10px 12px;">{{ $doc->aiTypeLabel() ?? '—' }}</td>
                 <td style="padding:10px 12px;">
                     @if($doc->aiInProgress())<span class="badge" style="background:#FEF3C7;color:#92400E;">⏳ läuft</span>
-                    @elseif($doc->ai_status === 'done')<span class="badge" style="background:#d9f4e6;color:#128a4b;">✓ analysiert</span>
+                    @elseif($doc->ai_status === 'done')<span class="badge" style="background:var(--emerald-soft);color:var(--emerald-deep);">✓ analysiert</span>
                     @elseif($doc->ai_status === 'failed')<span class="badge" style="background:#FBE9E9;color:#B3261E;">Fehler</span>
                     @endif
                 </td>
@@ -213,12 +213,12 @@
         <div style="padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:12px;">
             <div style="flex:1;min-width:0;">
                 <div style="font-weight:600;font-size:16px;">🔎 Erkannter Text (das, womit die Erkennung gearbeitet hat)</div>
-                <div id="ocr-text-source" style="font-size:12px;color:var(--muted);margin-top:3px;"></div>
+                <div id="ocr-text-source" style="font-size:12px;color:var(--ink-soft);margin-top:3px;"></div>
             </div>
             <button type="button" class="btn btn-ghost btn-sm" data-h-click="466c2de1a6">Kopieren</button>
             <button type="button" class="btn btn-ghost btn-sm" data-h-click="81bc6bbfae">Schließen</button>
         </div>
-        <div style="padding:10px 20px 0;font-size:12px;color:var(--muted);" id="ocr-text-note"></div>
+        <div style="padding:10px 20px 0;font-size:12px;color:var(--ink-soft);" id="ocr-text-note"></div>
         <pre id="ocr-text-body" style="margin:12px 20px 20px;padding:14px;background:var(--canvas);border:1px solid var(--line);border-radius:10px;overflow:auto;flex:1;white-space:pre;font-size:12.5px;line-height:1.55;"></pre>
     </div>
 </div>
@@ -257,7 +257,7 @@
                     style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
             </div>
             <div id="review-customer-results" style="margin-bottom:10px;"></div>
-            <div id="review-customer-chosen" style="display:none;background:#d9f4e6;border:1px solid #17A65B;border-radius:8px;padding:9px 12px;font-size:13.5px;margin-bottom:12px;"></div>
+            <div id="review-customer-chosen" style="display:none;background:var(--emerald-soft);border:1px solid var(--emerald);border-radius:8px;padding:9px 12px;font-size:13.5px;margin-bottom:12px;"></div>
         </div>
 
         {{-- Neuanlage-Hinweis (Modus: neuer Kunde) --}}
@@ -302,7 +302,7 @@
         </div>
 
         {{-- Krankenkassen-Fall (Familie + Wechsel), nur im Vorgang-Modus bei >= 2 Personen --}}
-        <div id="review-family-section" style="display:none;border:1.5px solid #17A65B;border-radius:10px;padding:12px;margin-bottom:12px;background:#F6FBF8;">
+        <div id="review-family-section" style="display:none;border:1.5px solid var(--emerald);border-radius:10px;padding:12px;margin-bottom:12px;background:#F6FBF8;">
             <label style="display:flex;gap:9px;align-items:flex-start;font-size:13.5px;cursor:pointer;font-weight:700;">
                 <input type="checkbox" id="family-enabled" style="margin-top:2px;">
                 <span>🏥 Krankenkassen-Fall einrichten (Familie + Wechsel)</span>
@@ -331,7 +331,7 @@
                         <input type="text" id="family-new-insurer" placeholder="z.B. TK" style="width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
                     </div>
                 </div>
-                <div id="family-effective-preview" style="font-size:12.5px;color:#17A65B;font-weight:600;"></div>
+                <div id="family-effective-preview" style="font-size:12.5px;color:var(--emerald);font-weight:600;"></div>
             </div>
         </div>
 
@@ -376,7 +376,7 @@
 
         <div style="display:flex;gap:10px;justify-content:flex-end;">
             <button type="button" class="btn btn-ghost" data-h-click="d10e859b20">Abbrechen</button>
-            <button type="button" class="btn btn-gold" id="review-submit" data-h-click="368883223d">Zuordnen &amp; übernehmen</button>
+            <button type="button" class="btn btn-emerald" id="review-submit" data-h-click="368883223d">Zuordnen &amp; übernehmen</button>
         </div>
         </div>{{-- /review-body --}}
 
@@ -388,7 +388,7 @@
             <div id="review-success-sub" style="font-size:13px;color:var(--ink-soft);margin-bottom:20px;"></div>
             <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
                 <button type="button" class="btn btn-ghost" data-h-click="ead9668286">Im Eingang bleiben</button>
-                <a id="review-success-link" href="#" class="btn btn-gold">Zur Kundenakte →</a>
+                <a id="review-success-link" href="#" class="btn btn-emerald">Zur Kundenakte →</a>
             </div>
         </div>
     </div>
@@ -463,7 +463,7 @@ window.docReview = (function() {
     // der Mitarbeiter musste daraufhin alles kontrollieren, also genau das,
     // was die Automatik ersparen soll.
     var STATUS_STYLE = {
-        sicher:      { text: '✓ sicher',            color: '#17A65B', bg: '#E8F7EF' },
+        sicher:      { text: '✓ sicher',            color: 'var(--emerald)', bg: '#E8F7EF' },
         pruefen:     { text: '⚠ bitte prüfen',      color: '#8A5A00', bg: '#FEF6E7' },
         widerspruch: { text: '⚠ widersprüchlich',   color: '#B42318', bg: '#FDECEA' },
         fehlt:       { text: '– nicht erkannt',     color: '#5F6B62', bg: '#F1EEE5' }
@@ -1015,7 +1015,7 @@ window.docReview = (function() {
     function suggestionRow(s, mode) {
         var clickable = mode === 'assign' || mode === 'create';
         var row = document.createElement(clickable ? 'button' : 'div');
-        row.style.cssText = 'display:block;width:100%;text-align:start;border:1px solid ' + (s.score > 90 ? '#17A65B' : 'var(--line)')
+        row.style.cssText = 'display:block;width:100%;text-align:start;border:1px solid ' + (s.score > 90 ? 'var(--emerald)' : 'var(--line)')
             + ';background:#fff;border-radius:8px;padding:9px 11px;font-size:13px;'
             + (clickable ? 'cursor:pointer;' : '');
         if (clickable) row.type = 'button';
@@ -1025,7 +1025,7 @@ window.docReview = (function() {
         var name = document.createElement('strong');
         name.textContent = (s.name || '—') + (s.customer_number ? ' · ' + s.customer_number : '');
         var score = document.createElement('span');
-        score.style.cssText = 'font-size:12px;color:' + (s.score > 90 ? '#128a4b' : 'var(--ink-soft)') + ';';
+        score.style.cssText = 'font-size:12px;color:' + (s.score > 90 ? 'var(--emerald-deep)' : 'var(--ink-soft)') + ';';
         score.textContent = 'Übereinstimmung ' + s.score + '%';
         head.appendChild(name); head.appendChild(score);
         row.appendChild(head);
@@ -1039,7 +1039,7 @@ window.docReview = (function() {
 
         if (clickable) {
             var hint = document.createElement('div');
-            hint.style.cssText = 'font-size:12px;color:#128a4b;font-weight:600;margin-top:5px;';
+            hint.style.cssText = 'font-size:12px;color:var(--emerald-deep);font-weight:600;margin-top:5px;';
             hint.textContent = 'Diesem Kunden zuordnen →';
             row.appendChild(hint);
             row.onclick = function() { pickSuggestion(s); };
@@ -1527,7 +1527,7 @@ window.docReview = (function() {
         var bar = document.getElementById('inbox-upload-bar');
         var label = document.getElementById('inbox-upload-label');
         wrap.style.display = '';
-        bar.style.background = 'var(--gold)';
+        bar.style.background = 'var(--emerald)';
 
         var xhr = new XMLHttpRequest();
         xhr.upload.addEventListener('progress', function(e) {
@@ -1574,7 +1574,7 @@ window.docReview = (function() {
     dz.addEventListener('click', function() { input.click(); });
     input.addEventListener('change', function() { uploadFiles(this.files); this.value = ''; });
     ['dragover', 'dragenter'].forEach(function(ev) {
-        dz.addEventListener(ev, function(e) { e.preventDefault(); dz.style.borderColor = 'var(--gold)'; dz.style.background = 'var(--surface)'; });
+        dz.addEventListener(ev, function(e) { e.preventDefault(); dz.style.borderColor = 'var(--emerald)'; dz.style.background = 'var(--surface)'; });
     });
     ['dragleave', 'drop'].forEach(function(ev) {
         dz.addEventListener(ev, function(e) { e.preventDefault(); dz.style.borderColor = 'var(--line)'; dz.style.background = 'transparent'; });

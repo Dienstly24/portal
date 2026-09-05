@@ -40,7 +40,7 @@
             style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--ink-soft);text-decoration:none;font-size:16px;">✕</a>
         @endif
     </form>
-    <a href="{{ route('admin.contract.new') }}" class="btn btn-primary" style="white-space:nowrap;">
+    <a href="{{ route('admin.contract.new') }}" class="btn btn-primary nowrap">
         <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
         Vertrag anlegen
     </a>
@@ -56,8 +56,8 @@
     <a href="{{ route('admin.contracts', array_filter(['gruppe' => $key, 'q' => $suche])) }}"
         style="padding:12px 20px;text-decoration:none;font-size:14px;margin-bottom:-2px;
                font-weight:{{ $aktiv ? '700' : '500' }};
-               color:{{ $aktiv ? 'var(--petrol)' : 'var(--ink-soft)' }};
-               border-bottom:2px solid {{ $aktiv ? 'var(--petrol)' : 'transparent' }};">
+               color:{{ $aktiv ? 'var(--graphite)' : 'var(--ink-soft)' }};
+               border-bottom:2px solid {{ $aktiv ? 'var(--graphite)' : 'transparent' }};">
         {{ $texte[0] }} ({{ $zaehler[$key] ?? 0 }})
     </a>
     @endforeach
@@ -70,7 +70,7 @@
     {{ $anzahl }} {{ $wort }}@if($suche !== '') <span style="font-weight:500;color:var(--ink-soft);">für „{{ $suche }}"</span>@endif
 </div>
 
-<div class="card" style="padding:0;overflow:hidden;">
+<div class="card card-flush">
     <table id="contracts-table">
         <thead>
             <tr style="background:#F8F9FA;">
@@ -96,16 +96,16 @@
             </td>
             <td style="padding:14px 8px;">
                 <div style="font-weight:700;font-size:14px;">{{ $c->typeLabel() }}</div>
-                <div style="font-size:12px;color:var(--ink-soft);">{{ $c->insurer }}</div>
+                <div class="muted-xs">{{ $c->insurer }}</div>
             </td>
             <td style="font-size:13px;">{{ $c->customer?->user?->name ?? '—' }}</td>
-            <td style="font-size:13px;color:var(--ink-soft);">
+            <td class="muted-sm">
                 @if($c->start_date)<div>{{ \Carbon\Carbon::parse($c->start_date)->format('d.m.Y') }}</div>@endif
                 @if($c->end_date)<div>{{ \Carbon\Carbon::parse($c->end_date)->format('d.m.Y') }}</div>@endif
             </td>
             @php $st = $c->displayStatus(); @endphp
             <td>
-                <span class="badge badge-{{ $st['badge'] }}" style="white-space:nowrap;">{{ $st['label'] }}</span>
+                <span class="badge badge-{{ $st['badge'] }} nowrap">{{ $st['label'] }}</span>
                 {{-- Klare Kennzeichnung: gehoert NICHT zum aktiven Bestand. --}}
                 @if($st['historic'])
                 <div style="margin-top:4px;"><span class="contract-histflag">🗄 Historie – nicht aktiv</span></div>
@@ -134,7 +134,7 @@
 {{-- Seitennavigation (an das App-Design angepasst, ohne Framework-Theme) --}}
 @if($contracts->hasPages())
 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 2px;flex-wrap:wrap;">
-    <div style="font-size:13px;color:var(--ink-soft);">
+    <div class="muted-sm">
         {{ $contracts->firstItem() }}–{{ $contracts->lastItem() }} von {{ $contracts->total() }} Verträgen
     </div>
     <div style="display:flex;gap:8px;align-items:center;">
@@ -143,7 +143,7 @@
         @else
             <a href="{{ $contracts->previousPageUrl() }}" class="btn btn-ghost btn-sm">← Zurück</a>
         @endif
-        <span style="font-size:13px;color:var(--ink-soft);">Seite {{ $contracts->currentPage() }} / {{ $contracts->lastPage() }}</span>
+        <span class="muted-sm">Seite {{ $contracts->currentPage() }} / {{ $contracts->lastPage() }}</span>
         @if($contracts->hasMorePages())
             <a href="{{ $contracts->nextPageUrl() }}" class="btn btn-ghost btn-sm">Weiter →</a>
         @else

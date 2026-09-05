@@ -17,7 +17,7 @@
 </div>
 
 @if(session('success'))
-<div style="background:#D9F4E6;color:#128a4b;border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:13.5px;">{{ session('success') }}</div>
+<div style="background:var(--emerald-soft);color:var(--emerald-deep);border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:13.5px;">{{ session('success') }}</div>
 @endif
 
 <div class="card" style="margin-bottom:18px;">
@@ -32,7 +32,7 @@
         </div>
         <button type="submit" class="btn btn-ghost">Anzeigen</button>
         @if(in_array(auth()->user()->role, ['admin','manager'], true))
-        <button type="submit" name="speichern" value="1" class="btn btn-gold">Als Standard speichern</button>
+        <button type="submit" name="speichern" value="1" class="btn btn-emerald">Als Standard speichern</button>
         <span style="font-size:12px;color:var(--ink-soft);padding-bottom:9px;">Gespeicherter Standard: {{ $gespeicherteVorlaufzeit }} Monate</span>
         @endif
     </form>
@@ -61,12 +61,12 @@
             <div style="font-size:12.5px;color:var(--ink-soft);margin-top:3px;">
                 {{ $kind->customer_number }} ·
                 {{ \App\Models\CustomerFamilyRelation::roleLabel($rel->relationship_type) }} von
-                <a href="{{ route('admin.customer', $rel->customer_id) }}" style="color:var(--ink-soft);">{{ $rel->customer?->user?->name ?? '—' }}</a>
+                <a href="{{ route('admin.customer', $rel->customer_id) }}" class="muted">{{ $rel->customer?->user?->name ?? '—' }}</a>
             </div>
             <div style="font-size:12.5px;margin-top:5px;">
                 <strong>15. Geburtstag: {{ $stichtag?->format('d.m.Y') ?? '—' }}</strong>
                 @if($restTage !== null)
-                <span style="color:var(--ink-soft);"> · noch {{ $restMonate > 0 ? $restMonate . ' Monate' : $restTage . ' Tage' }}</span>
+                <span class="muted"> · noch {{ $restMonate > 0 ? $restMonate . ' Monate' : $restTage . ' Tage' }}</span>
                 @endif
             </div>
             <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">
@@ -75,11 +75,11 @@
         </div>
         <div style="flex:none;">
             @if($rel->transition_prepared_at)
-            <span style="font-size:12px;background:#D9F4E6;color:#128a4b;border-radius:999px;padding:5px 12px;">✓ vorbereitet am {{ $rel->transition_prepared_at->lokal()->format('d.m.Y') }}</span>
+            <span style="font-size:12px;background:var(--emerald-soft);color:var(--emerald-deep);border-radius:999px;padding:5px 12px;">✓ vorbereitet am {{ $rel->transition_prepared_at->lokal()->format('d.m.Y') }}</span>
             @else
             <form method="POST" action="{{ route('admin.family.prepare_transition', $rel->id) }}">
                 @csrf
-                <button type="submit" class="btn btn-gold btn-sm">Als eigenständigen Kunden vorbereiten</button>
+                <button type="submit" class="btn btn-emerald btn-sm">Als eigenständigen Kunden vorbereiten</button>
             </form>
             @endif
         </div>

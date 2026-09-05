@@ -23,7 +23,7 @@
             <label>Neues Logo (PNG/JPG/WebP, max. 2 MB)</label>
             <input type="file" name="logo" accept="image/png,image/jpeg,image/webp" required>
         </div>
-        <button type="submit" class="btn">Logo speichern</button>
+        <button type="submit" class="btn btn-primary">Logo speichern</button>
     </form>
 </div>
 @endsection

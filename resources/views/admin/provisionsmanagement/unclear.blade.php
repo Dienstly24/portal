@@ -17,7 +17,7 @@
     </p>
     <table class="table" style="font-size:13px;">
         <tr><th>Datum</th><th>Pool / Datei</th><th>Kennungen</th><th>Kunde laut Datei</th>
-            <th style="text-align:right;">Betrag</th><th>Grund</th><th></th></tr>
+            <th class="num">Betrag</th><th>Grund</th><th></th></tr>
         @forelse($liste as $buchung)
         <tr>
             <td>{{ $buchung->commission_date?->format('d.m.Y') ?? '—' }}</td>
@@ -28,12 +28,12 @@
                 @endforeach
             </td>
             <td>{{ $buchung->customer_label ?: '—' }}</td>
-            <td style="text-align:right;font-weight:700;">{{ $buchung->amountLabel() }}</td>
-            <td style="font-size:11.5px;color:var(--ink-soft);">{{ $buchung->match_reason ?: ($buchung->status === \App\Support\CommissionStatus::UNKLAR ? 'Status der Quelle nicht eindeutig' : 'Kein Vertrag gefunden') }}</td>
+            <td class="num-strong">{{ $buchung->amountLabel() }}</td>
+            <td class="muted-2xs">{{ $buchung->match_reason ?: ($buchung->status === \App\Support\CommissionStatus::UNKLAR ? 'Status der Quelle nicht eindeutig' : 'Kein Vertrag gefunden') }}</td>
             <td><a href="{{ route('admin.commissions_internal.show', $buchung->id) }}">zuordnen →</a></td>
         </tr>
         @empty
-        <tr><td colspan="7" style="color:var(--ink-soft);">Nichts zu prüfen.</td></tr>
+        <tr><td colspan="7" class="muted">Nichts zu prüfen.</td></tr>
         @endforelse
     </table>
     <div style="margin-top:14px;">{{ $liste->links() }}</div>

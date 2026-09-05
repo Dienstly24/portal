@@ -6,7 +6,7 @@
     Beginn, Abschlag) und der Hinweis verschwindet.
 --}}
 @if($contract->isApplication())
-<span class="badge badge-pending" style="white-space:nowrap;"
+<span class="badge badge-pending nowrap"
       title="Aus einem Auftrag/Antrag angelegt. Sobald die Vertragsbestätigung (Police) hochgeladen wird, ergänzt das System automatisch Vertragsnummer und die endgültigen Angaben.">
     📝 Antrag – wartet auf Bestätigung
 </span>

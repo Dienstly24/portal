@@ -61,7 +61,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
             @endif
             <a href="{{ route('admin.tasks', ['customer_id' => $customer->id, 'neu' => 1]) }}" class="btn btn-ghost">✅ Aufgabe / Wiedervorlage</a>
             <a href="{{ route('admin.customer.edit', $customer->id) }}" class="btn btn-ghost">✏️ Bearbeiten</a>
-            <a href="{{ route('admin.contract.create', $customer->id) }}" class="btn btn-gold">+ Vertrag hinzufügen</a>
+            <a href="{{ route('admin.contract.create', $customer->id) }}" class="btn btn-emerald">+ Vertrag hinzufügen</a>
         </div>
     </div>
 </div>
@@ -102,7 +102,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
                 data-confirm="{{ $customer->birth_date
                     ? 'Einladung mit Startpasswort (Geburtsdatum TT.MM.JJJJ) an den Kunden senden?'
                     : 'ACHTUNG: Kein Geburtsdatum hinterlegt! Die Einladung enthaelt dann KEIN Startpasswort, nur einen zeitlich begrenzten Passwort-Link. Besser zuerst das Geburtsdatum ergaenzen (Bearbeiten). Trotzdem jetzt senden?' }}');">
-                @csrf<button type="submit" class="btn btn-gold btn-sm">📧 Einladung senden</button>
+                @csrf<button type="submit" class="btn btn-emerald btn-sm">📧 Einladung senden</button>
             </form>
             <form method="POST" action="{{ route('admin.customer.portal.reset_link', $customer->id) }}">
                 @csrf<button type="submit" class="btn btn-ghost btn-sm">🔑 Reset-Link senden</button>
@@ -125,10 +125,10 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
 .cust-tabs{display:flex;gap:4px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px;margin-bottom:20px;overflow-x:auto;}
 .cust-tab{flex:1;text-align:center;padding:10px 16px;border-radius:8px;font-size:13.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;white-space:nowrap;text-decoration:none;transition:.15s;border:none;background:none;}
 .cust-tab:hover{background:var(--canvas);color:var(--ink);}
-.cust-tab.active{background:var(--petrol);color:#fff;}
+.cust-tab.active{background:var(--graphite);color:#fff;}
 .chat-bubble{max-width:75%;padding:10px 14px;border-radius:12px;font-size:13.5px;line-height:1.55;}
 .chat-row{display:flex;gap:10px;margin-bottom:14px;align-items:flex-end;}
-.chat-avatar{width:32px;height:32px;border-radius:50%;background:var(--petrol);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:none;}
+.chat-avatar{width:32px;height:32px;border-radius:50%;background:var(--graphite);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:none;}
 </style>
 <div class="cust-tabs">
     <button type="button" class="cust-tab active" data-tab="tab-uebersicht" data-h-click="d2815a66b5">📄 Übersicht</button>
@@ -151,7 +151,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
     .vstruct-tile{transition:transform .15s ease;}
     .vstruct-tile:hover{transform:translateY(-3px);}
     .vstruct-tile:hover .vstruct-icon{box-shadow:0 5px 16px rgba(0,0,0,.14);}
-    .vstruct-tile:focus-visible{outline:2px solid var(--accent,#17A65B);outline-offset:3px;border-radius:12px;}
+    .vstruct-tile:focus-visible{outline:2px solid var(--emerald);outline-offset:3px;border-radius:12px;}
     /* Beendete Vertraege (Historie) sind auch beim Mischen mit aktiven
        Vertraegen sofort als "nicht mehr aktiv" erkennbar: ausgegraut,
        gedeckter Hintergrund, zusaetzlich das Textkennzeichen unten. */
@@ -247,7 +247,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
         <tr><td style="color:var(--ink-soft);padding:8px 0;border-top:1px solid var(--line);">Familienstand</td><td style="border-top:1px solid var(--line);">{{ $customer->marital_status ?? '—' }}</td></tr>
         <tr><td style="color:var(--ink-soft);padding:8px 0;border-top:1px solid var(--line);">Sprache</td><td style="border-top:1px solid var(--line);">{{ strtoupper($customer->preferred_lang) }}</td></tr>
         @if($customer->company_name)
-        <tr><td style="color:var(--ink-soft);padding:8px 0;border-top:1px solid var(--line);">Firma</td><td style="border-top:1px solid var(--line);">{{ $customer->company_name }} @if($customer->company_type)<span style="font-size:12px;color:var(--ink-soft);">({{ $customer->company_type }})</span>@endif</td></tr>
+        <tr><td style="color:var(--ink-soft);padding:8px 0;border-top:1px solid var(--line);">Firma</td><td style="border-top:1px solid var(--line);">{{ $customer->company_name }} @if($customer->company_type)<span class="muted-xs">({{ $customer->company_type }})</span>@endif</td></tr>
         @endif
     </table>
 </div>
@@ -281,7 +281,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
         <div style="font-size:22px;flex:none;">{{ $ficon }}</div>
         <div style="flex:1;min-width:0;">
             <div style="font-size:13.5px;font-weight:600;">{{ $f->name }}</div>
-            <div style="font-size:12px;color:var(--ink-soft);">{{ $fmeta }}</div>
+            <div class="muted-xs">{{ $fmeta }}</div>
         </div>
         @if($f->health_insurance_company)<span style="font-size:11.5px;background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:2px 7px;color:var(--ink-soft);flex:none;">{{ $f->health_insurance_company }}</span>@endif
     </div>
@@ -300,7 +300,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
             <div style="font-size:20px;flex:none;">{{ \App\Models\CustomerFamilyRelation::roleEmoji($famRel->relationship_type) }}</div>
             <div style="flex:1;min-width:0;">
                 <a href="{{ route('admin.customer', $famMitglied->id) }}" style="font-size:13.5px;font-weight:600;color:var(--ink);text-decoration:none;">{{ $famMitglied->user?->name ?? 'Kunde' }}</a>
-                <div style="font-size:12px;color:var(--ink-soft);">{{ \App\Models\CustomerFamilyRelation::roleLabel($famRel->relationship_type) }}@if($famAlter !== null) · {{ $famAlter }} J.@endif · {{ $famRel->dependentNow() ? 'Familienmitglied' : 'Eigenständiger Kunde' }}</div>
+                <div class="muted-xs">{{ \App\Models\CustomerFamilyRelation::roleLabel($famRel->relationship_type) }}@if($famAlter !== null) · {{ $famAlter }} J.@endif · {{ $famRel->dependentNow() ? 'Familienmitglied' : 'Eigenständiger Kunde' }}</div>
             </div>
         </div>
         @endforeach
@@ -318,14 +318,14 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
 <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
         <div class="card-title" style="margin-bottom:0;">🔗 Verwandte Kunden ({{ count($relations) }})</div>
-        <span style="font-size:11.5px;color:var(--ink-soft);">gemeinsame Merkmale</span>
+        <span class="muted-2xs">gemeinsame Merkmale</span>
     </div>
     @foreach($relations as $rel)
     @php $rc = $rel['customer']; @endphp
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;{{ !$loop->first ? 'border-top:1px solid var(--line);' : '' }}flex-wrap:wrap;">
         <div style="min-width:0;">
             <a href="{{ route('admin.customer', $rc->id) }}" style="font-size:13.5px;font-weight:600;color:var(--ink);text-decoration:none;">{{ $rc->user?->name ?? 'Unbekannt' }}</a>
-            <span style="font-size:12px;color:var(--ink-soft);"> · {{ $rc->customer_number }}</span>
+            <span class="muted-xs"> · {{ $rc->customer_number }}</span>
             @if($rel['dismissed'])
                 @php $rt = $rel['relationship_type'] ?? 'not_duplicate'; @endphp
                 <span style="font-size:11px;background:#EDE9FE;color:#5B21B6;border-radius:999px;padding:2px 8px;margin-left:6px;">{{ \App\Models\CustomerRelationship::typeEmoji($rt) }} {{ $rt === 'not_duplicate' ? 'verwandt' : \App\Models\CustomerRelationship::typeLabel($rt) }}</span>
@@ -350,11 +350,11 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
         <div class="card-title" style="margin-bottom:0;">🏥 Kranken-, Renten- & Steuerdaten</div>
         <span style="font-size:11.5px;background:#EAF2FB;color:#185FA5;border:1px solid #CFE2F5;padding:3px 10px;border-radius:999px;">🔐 Verschlüsselt gespeichert</span>
     </div>
-    <div class="item-row"><span style="font-size:13px;color:var(--ink-soft);">Versicherungsart</span><span style="font-size:13.5px;font-weight:600;">{{ ['gesetzlich'=>'Gesetzlich','privat'=>'Privat'][$customer->health_insurance_type] ?? '—' }}</span></div>
-    <div class="item-row"><span style="font-size:13px;color:var(--ink-soft);">Krankenkasse</span><span style="font-size:13.5px;font-weight:600;">{{ $customer->health_insurance_company ?? '—' }}</span></div>
-    <div class="item-row"><span style="font-size:13px;color:var(--ink-soft);">KV-Nummer</span><span style="font-size:13.5px;font-weight:600;font-family:monospace;">{{ $customer->health_insurance_number ?? '—' }}</span></div>
-    <div class="item-row"><span style="font-size:13px;color:var(--ink-soft);">Rentenversicherungsnr.</span><span style="font-size:13.5px;font-weight:600;font-family:monospace;">{{ $customer->pension_insurance_number ?? '—' }}</span></div>
-    <div class="item-row"><span style="font-size:13px;color:var(--ink-soft);">Steuer-ID</span><span style="font-size:13.5px;font-weight:600;font-family:monospace;">{{ $customer->tax_id ?? '—' }}</span></div>
+    <div class="item-row"><span class="muted-sm">Versicherungsart</span><span style="font-size:13.5px;font-weight:600;">{{ ['gesetzlich'=>'Gesetzlich','privat'=>'Privat'][$customer->health_insurance_type] ?? '—' }}</span></div>
+    <div class="item-row"><span class="muted-sm">Krankenkasse</span><span style="font-size:13.5px;font-weight:600;">{{ $customer->health_insurance_company ?? '—' }}</span></div>
+    <div class="item-row"><span class="muted-sm">KV-Nummer</span><span style="font-size:13.5px;font-weight:600;font-family:monospace;">{{ $customer->health_insurance_number ?? '—' }}</span></div>
+    <div class="item-row"><span class="muted-sm">Rentenversicherungsnr.</span><span style="font-size:13.5px;font-weight:600;font-family:monospace;">{{ $customer->pension_insurance_number ?? '—' }}</span></div>
+    <div class="item-row"><span class="muted-sm">Steuer-ID</span><span style="font-size:13.5px;font-weight:600;font-family:monospace;">{{ $customer->tax_id ?? '—' }}</span></div>
     <p style="font-size:11.5px;color:var(--ink-soft);margin-top:10px;">Bearbeitung über „Kunde bearbeiten" – jede Änderung wird auditiert.</p>
 </div>
 
@@ -402,7 +402,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
 <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:10px;">
         <div class="card-title" style="margin-bottom:0;">👨‍👩‍👦 Familienmitglieder ohne eigene Kundenakte ({{ $customer->family->count() }})</div>
-        <a href="{{ route('admin.customer.edit', $customer->id) }}#familie" class="btn btn-gold btn-sm">✏️ Familie bearbeiten</a>
+        <a href="{{ route('admin.customer.edit', $customer->id) }}#familie" class="btn btn-emerald btn-sm">✏️ Familie bearbeiten</a>
     </div>
     <p style="font-size:12px;color:var(--ink-soft);margin:0 0 18px;">Personen, die <strong>keinen eigenen Kundendatensatz</strong> haben – erfasst mit Geburtsdatum, Geschlecht, Krankenkasse, KV-Nummer und KV-Status. Familienmitglieder mit eigener Akte stehen oben unter „Verknüpfte Kunden".</p>
     @if($customer->family->count())
@@ -429,13 +429,13 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
         <div style="display:flex;gap:8px;">
             <button data-h-click="fc4994b3a7" class="btn btn-ghost btn-sm">📩 Dokument anfordern</button>
             <button data-h-click="3af726e69b" class="btn btn-primary btn-sm">⚡ Smart-Upload (KI)</button>
-            <button data-h-click="8cde53335d" class="btn btn-gold btn-sm">+ Hochladen</button>
+            <button data-h-click="8cde53335d" class="btn btn-emerald btn-sm">+ Hochladen</button>
         </div>
     </div>
     @php $docs = $customer->documents; @endphp
     @forelse($docs as $d)
     @php
-        $dotColor = ['red'=>'#E24B4A','yellow'=>'#F0A500','green'=>'#17A65B'][$d->color ?? 'green'];
+        $dotColor = ['red'=>'#E24B4A','yellow'=>'#F0A500','green'=>'var(--emerald)'][$d->color ?? 'green'];
         $docContract = $d->contract_id ? $customer->contracts->firstWhere('id', $d->contract_id) : null;
     @endphp
     <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);">
@@ -446,11 +446,11 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
                 <span>{{ \App\Models\Document::CATEGORIES[$d->category] ?? ucfirst($d->category) }}</span>
                 <span>· {{ $d->created_at->lokal()->format('d.m.Y') }}</span>
                 @if(($d->visibility ?? 'customer') === 'internal')<span style="background:#F7E7D6;color:#B5651D;padding:1px 6px;border-radius:4px;">🔒 intern</span>@else<span style="background:#EAF2FB;color:#185FA5;padding:1px 6px;border-radius:4px;">👤 Kunde</span>@endif
-                @if($docContract)<span style="background:#D9F4E6;color:#17A65B;padding:1px 6px;border-radius:4px;">{{ $docContract->typeIcon() }} {{ $docContract->insurer }}</span>@endif
+                @if($docContract)<span style="background:var(--emerald-soft);color:var(--emerald);padding:1px 6px;border-radius:4px;">{{ $docContract->typeIcon() }} {{ $docContract->insurer }}</span>@endif
                 @if($d->aiInProgress())<span style="background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:4px;">⏳ KI-Analyse läuft</span>
                 @elseif($d->ai_status === 'failed')<span style="background:#FBE9E9;color:#B3261E;padding:1px 6px;border-radius:4px;" title="{{ $d->ai_error }}">⚠ KI-Analyse fehlgeschlagen</span>
                     <button type="button" data-h-click="doc-neu-analyse" data-doc="{{ $d->id }}" style="border:none;background:none;color:#185FA5;cursor:pointer;font-size:12px;padding:0;">erneut analysieren</button>
-                @elseif($d->aiTypeLabel())<span style="background:#d9f4e6;color:#128a4b;padding:1px 6px;border-radius:4px;" title="{{ $d->ai_summary }}">⚡ {{ $d->aiTypeLabel() }}</span>@endif
+                @elseif($d->aiTypeLabel())<span style="background:var(--emerald-soft);color:var(--emerald-deep);padding:1px 6px;border-radius:4px;" title="{{ $d->ai_summary }}">⚡ {{ $d->aiTypeLabel() }}</span>@endif
                 @if($d->uploader)<span>· {{ $d->uploader->name }}</span>@endif
             </div>
         </div>
@@ -492,7 +492,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
     <a href="{{ $dr->document_id ? route('admin.documents.download', $dr->document_id) : route('admin.document_requests') }}" class="row-link" title="{{ $dr->document_id ? 'Hochgeladenes Dokument herunterladen' : 'Zur Anfragen-Übersicht' }}" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;color:inherit;text-decoration:none;">
         <div>
             <span style="font-weight:600;">{{ $dr->title }}</span>
-            @if($dr->deadline)<span style="color:var(--ink-soft);"> · Frist {{ $dr->deadline->format('d.m.Y') }}</span>@endif
+            @if($dr->deadline)<span class="muted"> · Frist {{ $dr->deadline->format('d.m.Y') }}</span>@endif
         </div>
         <span style="display:flex;gap:6px;align-items:center;">
             <span class="badge {{ $dr->status === 'approved' ? 'badge-active' : ($dr->status === 'rejected' ? 'badge-danger' : 'badge-pending') }}">{{ $dr->statusLabel() }}</span>
@@ -500,7 +500,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
         </span>
     </a>
     @empty
-    <p style="color:var(--ink-soft);font-size:13px;">Keine Dokumentenanfragen.</p>
+    <p class="muted-sm">Keine Dokumentenanfragen.</p>
     @endforelse
 </div>
 </div>
@@ -589,7 +589,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
                     <span style="width:32px;height:32px;border-radius:8px;background:{{ $cfg['bg'] }};display:flex;align-items:center;justify-content:center;font-size:16px;">{{ $c->typeIcon() }}</span>
                     <div>
                         <span style="font-weight:600;">{{ $c->typeLabel() }}</span>
-                        @if($c->subtypeLabel())<div style="font-size:11.5px;color:var(--ink-soft);">{{ $c->subtypeLabel() }}</div>@endif
+                        @if($c->subtypeLabel())<div class="muted-2xs">{{ $c->subtypeLabel() }}</div>@endif
                     </div>
                 </div>
             </td>
@@ -611,14 +611,14 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
             <td style="padding:12px;font-size:13px;white-space:nowrap;">
                 @if($c->hasPremium())
                     <div style="font-weight:600;">{{ $eur($c->premium_amount) }}</div>
-                    <div style="font-size:11.5px;color:var(--ink-soft);">{{ $c->premiumIntervalLabel() }}@if(!$c->isOneTime() && $c->premium_interval !== 'monthly') · {{ $eur($c->monthlyPremium()) }}/Mon.@endif</div>
+                    <div class="muted-2xs">{{ $c->premiumIntervalLabel() }}@if(!$c->isOneTime() && $c->premium_interval !== 'monthly') · {{ $eur($c->monthlyPremium()) }}/Mon.@endif</div>
                 @else
-                    <span style="color:var(--ink-soft);">—</span>
+                    <span class="muted">—</span>
                 @endif
             </td>
             <td style="padding:12px;">
                 @php $st = $c->displayStatus(); @endphp
-                <span class="badge badge-{{ $st['badge'] }}" style="white-space:nowrap;">{{ $st['label'] }}</span>
+                <span class="badge badge-{{ $st['badge'] }} nowrap">{{ $st['label'] }}</span>
                 {{-- Eindeutige Kennzeichnung: dieser Vertrag ist NICHT Teil der
                      aktuellen Vertragsstruktur (Betreiber-Vorgabe 17.08.2026). --}}
                 @if($st['historic'])
@@ -638,7 +638,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
                     <button type="submit" class="btn btn-ghost" style="padding:4px 8px;font-size:11px;" title="Wechsel-Erinnerung wurde beantwortet – keine Folge-Erinnerung senden">✋ Kunde hat reagiert</button>
                 </form>
                 @elseif($c->switchReminders->isNotEmpty())
-                <div style="margin-top:6px;font-size:11px;color:#17A65B;">✓ Erinnerung beantwortet</div>
+                <div style="margin-top:6px;font-size:11px;color:var(--emerald);">✓ Erinnerung beantwortet</div>
                 @endif
             </td>
             <td style="padding:12px;text-align:right;white-space:nowrap;">
@@ -727,7 +727,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
         <tr id="contract-type-empty" style="display:none;">
             <td colspan="8" style="text-align:center;padding:24px;color:var(--ink-soft);">
                 <div id="contract-type-empty-text" style="margin-bottom:10px;">Keine Verträge dieser Sparte.</div>
-                <a id="contract-type-empty-add" href="{{ route('admin.contract.create', $customer->id) }}" class="btn btn-gold btn-sm">+ Vertrag anlegen</a>
+                <a id="contract-type-empty-add" href="{{ route('admin.contract.create', $customer->id) }}" class="btn btn-emerald btn-sm">+ Vertrag anlegen</a>
             </td>
         </tr>
         </tbody>
@@ -771,7 +771,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
 <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
         <div class="card-title" style="margin-bottom:0;">🧭 Komplette Kommunikation – alle Kanäle</div>
-        <a href="{{ route('admin.customer_chat', ['kunde' => $customer->id]) }}" class="btn btn-gold" style="padding:7px 16px;font-size:13px;">💬 Antworten in der Kundenkommunikation →</a>
+        <a href="{{ route('admin.customer_chat', ['kunde' => $customer->id]) }}" class="btn btn-emerald" style="padding:7px 16px;font-size:13px;">💬 Antworten in der Kundenkommunikation →</a>
     </div>
     <div style="max-height:560px;overflow-y:auto;background:#EFEBDF;border:1px solid var(--line);border-radius:12px;" id="komm-scroll">
         <div class="d24c-list">
@@ -790,7 +790,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
         <div class="card-title">📨 Nachrichten an den Kunden</div>
         <span style="display:inline-flex;align-items:center;gap:10px;">
             <a href="{{ route('admin.customer_chat', ['kunde' => $customer->id]) }}" style="font-size:12px;color:var(--ink);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:4px 12px;">💬 Im Kunden-Chat öffnen →</a>
-            <span style="font-size:11.5px;background:#D9F4E6;color:#17A65B;border:1px solid #CBE3D2;padding:3px 10px;border-radius:999px;">👁 Für den Kunden im Portal sichtbar</span>
+            <span style="font-size:11.5px;background:var(--emerald-soft);color:var(--emerald);border:1px solid #CBE3D2;padding:3px 10px;border-radius:999px;">👁 Für den Kunden im Portal sichtbar</span>
         </span>
     </div>
     <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;">Der Kunde sieht diese Unterhaltung im Kundenportal unter „Nachrichten" und kann dort antworten – auch mit Anhängen (PDF/Bilder).</p>
@@ -801,12 +801,12 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
         @forelse($customerMessages as $msg)
         @php $staffSide = $msg->from_staff; @endphp
         <div class="chat-row" style="{{ $staffSide ? 'flex-direction:row-reverse;' : '' }}">
-            <div class="chat-avatar" style="{{ $staffSide ? 'background:var(--gold);' : '' }}">{{ strtoupper(mb_substr($msg->sender?->name ?? '??', 0, 2)) }}</div>
+            <div class="chat-avatar" style="{{ $staffSide ? 'background:var(--emerald);' : '' }}">{{ strtoupper(mb_substr($msg->sender?->name ?? '??', 0, 2)) }}</div>
             <div style="max-width:75%;">
                 <div style="font-size:11px;color:var(--ink-soft);margin-bottom:3px;{{ $staffSide ? 'text-align:right;' : '' }}">
                     {{ $msg->sender?->name ?? 'Gelöschter Nutzer' }} · {{ $msg->created_at->lokal()->format('d.m.Y H:i') }}
                 </div>
-                <div class="chat-bubble" style="{{ $staffSide ? 'background:var(--petrol);color:#fff;border-bottom-right-radius:4px;' : 'background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px;' }}">
+                <div class="chat-bubble" style="{{ $staffSide ? 'background:var(--graphite);color:#fff;border-bottom-right-radius:4px;' : 'background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px;' }}">
                     {!! nl2br(e($msg->body)) !!}
                 </div>
                 @if($msg->attachments->isNotEmpty())
@@ -845,7 +845,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
                 @endforeach
             </select>
             @if(in_array(auth()->user()->role, ['admin','manager']))
-            <a href="{{ route('admin.templates') }}" style="font-size:12px;color:var(--ink-soft);">Vorlagen verwalten →</a>
+            <a href="{{ route('admin.templates') }}" class="muted-xs">Vorlagen verwalten →</a>
             @endif
         </div>
         <textarea id="msg-body" name="body" required maxlength="5000" placeholder="Nachricht an den Kunden… (Vorlage wählen oder frei schreiben)" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;font-family:inherit;resize:vertical;min-height:84px;"></textarea>
@@ -853,7 +853,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
             <label style="font-size:12.5px;color:var(--ink-soft);display:inline-flex;align-items:center;gap:6px;margin:0;">
                 📎 <input type="file" name="attachments[]" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" style="width:auto;font-size:12px;padding:4px;background:none;border:none;">
             </label>
-            <span style="font-size:11.5px;color:var(--ink-soft);">max. 5 Dateien · PDF/JPG/PNG/WEBP · je 10 MB</span>
+            <span class="muted-2xs">max. 5 Dateien · PDF/JPG/PNG/WEBP · je 10 MB</span>
         </div>
         <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:12px;">
             <span style="font-size:12.5px;font-weight:600;">E-Mail an den Kunden:</span>
@@ -861,7 +861,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
             <label style="font-size:12.5px;display:inline-flex;align-items:center;gap:5px;margin:0;color:var(--ink);"><input type="radio" name="email_mode" value="full" style="width:auto;"> Kompletter Text per E-Mail</label>
             <label style="font-size:12.5px;display:inline-flex;align-items:center;gap:5px;margin:0;color:var(--ink);"><input type="radio" name="email_mode" value="none" style="width:auto;"> Keine E-Mail</label>
         </div>
-        <button type="submit" class="btn btn-gold" style="margin-top:12px;">📨 Nachricht senden</button>
+        <button type="submit" class="btn btn-emerald" style="margin-top:12px;">📨 Nachricht senden</button>
     </form>
 </div>
 <script @cspNonce>
@@ -892,12 +892,12 @@ function openMessagesTab() {
         @forelse($internalChat as $msg)
         @php $own = $msg->sender_id === auth()->id(); @endphp
         <div class="chat-row" style="{{ $own ? 'flex-direction:row-reverse;' : '' }}">
-            <div class="chat-avatar" style="{{ $own ? 'background:var(--gold);' : '' }}">{{ strtoupper(mb_substr($msg->sender?->name ?? '??', 0, 2)) }}</div>
+            <div class="chat-avatar" style="{{ $own ? 'background:var(--emerald);' : '' }}">{{ strtoupper(mb_substr($msg->sender?->name ?? '??', 0, 2)) }}</div>
             <div style="max-width:75%;">
                 <div style="font-size:11px;color:var(--ink-soft);margin-bottom:3px;{{ $own ? 'text-align:right;' : '' }}">
                     {{ $msg->sender?->name ?? 'Gelöschter Nutzer' }} · {{ $msg->created_at->lokal()->format('d.m.Y H:i') }}
                 </div>
-                <div class="chat-bubble" style="{{ $own ? 'background:var(--petrol);color:#fff;border-bottom-right-radius:4px;' : 'background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px;' }}">
+                <div class="chat-bubble" style="{{ $own ? 'background:var(--graphite);color:#fff;border-bottom-right-radius:4px;' : 'background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px;' }}">
                     {!! $msg->renderedMessage() !!}
                 </div>
                 @can('delete', $msg)
@@ -927,7 +927,7 @@ function openMessagesTab() {
 <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
         <div class="card-title">Notizen & Aufgaben</div>
-        <button data-h-click="ebfbbe8505" style="width:28px;height:28px;border-radius:50%;border:none;background:var(--petrol);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
+        <button data-h-click="ebfbbe8505" style="width:28px;height:28px;border-radius:50%;border:none;background:var(--graphite);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
     </div>
     @php $notes = \App\Models\CustomerNote::where('customer_id',$customer->id)->with('createdBy')->latest()->get(); @endphp
     @forelse($notes as $n)
@@ -943,7 +943,7 @@ function openMessagesTab() {
         @if($n->type === 'task')
         <form method="POST" action="{{ route('admin.customer.note.done', $n->id) }}">
             @csrf @method('PUT')
-            <button type="submit" style="border:none;background:none;cursor:pointer;font-size:14px;color:{{ $n->is_done ? '#17A65B' : 'var(--ink-soft)' }};">
+            <button type="submit" style="border:none;background:none;cursor:pointer;font-size:14px;color:{{ $n->is_done ? 'var(--emerald)' : 'var(--ink-soft)' }};">
                 {{ $n->is_done ? '✓' : '○' }}
             </button>
         </form>
@@ -961,7 +961,7 @@ function openMessagesTab() {
         <span style="font-size:11.5px;background:#FFF8E6;color:#B5651D;border:1px solid #F7E7D6;padding:3px 10px;border-radius:999px;">🔒 Nur intern</span>
     </div>
     @forelse($internalNotes as $note)
-    <div style="padding:10px 12px;border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:8px;margin-bottom:10px;background:#FDFDFB;">
+    <div style="padding:10px 12px;border:1px solid var(--line);border-left:3px solid var(--emerald);border-radius:8px;margin-bottom:10px;background:#FDFDFB;">
         <div style="font-size:13px;line-height:1.55;">{!! $note->renderedMessage() !!}</div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:5px;">
             <span style="font-size:11px;color:var(--ink-soft);">{{ $note->sender?->name ?? 'Gelöschter Nutzer' }} · {{ $note->created_at->lokal()->format('d.m.Y H:i') }}</span>
@@ -995,7 +995,7 @@ function openMessagesTab() {
     <div class="item-row">
         <div>
             <div style="font-size:14px;font-weight:600;">{{ $cr->typeLabel() }}</div>
-            <div style="font-size:12px;color:var(--ink-soft);">
+            <div class="muted-xs">
                 Eingereicht {{ $cr->created_at->lokal()->format('d.m.Y H:i') }}
                 @if($cr->reviewer) · {{ $cr->status === 'approved' ? 'genehmigt' : 'abgelehnt' }} von {{ $cr->reviewer->name }} am {{ $cr->reviewed_at?->lokal()->format('d.m.Y H:i') }}@endif
                 @if($cr->notes) · Notiz: {{ $cr->notes }}@endif
@@ -1021,7 +1021,7 @@ function openMessagesTab() {
 {{-- Add Note Modal --}}
 <div id="add-note-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:480px;position:relative;">
-        <button data-h-click="3581a2b096" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="3581a2b096" class="modal-close">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:20px;">Notiz / Aufgabe hinzufügen</div>
         <form method="POST" action="{{ route('admin.customer.note.store', $customer->id) }}">
             @csrf
@@ -1044,7 +1044,7 @@ function openMessagesTab() {
 {{-- Smart-Upload Modal (KI): Typ wird automatisch erkannt, Daten extrahiert --}}
 <div id="smart-doc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:520px;position:relative;">
-        <button data-h-click="18823f210f" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="18823f210f" class="modal-close">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:6px;">⚡ Smart-Upload (KI)</div>
         <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;">
             Dateien hochladen – die KI erkennt den Dokumenttyp, liest die Daten und ordnet passende Verträge automatisch zu.
@@ -1052,7 +1052,7 @@ function openMessagesTab() {
         </p>
         <div id="smart-dropzone" style="border:2px dashed var(--line);border-radius:10px;padding:26px;text-align:center;cursor:pointer;margin-bottom:14px;transition:.15s;">
             <div style="font-size:30px;margin-bottom:6px;">⚡</div>
-            <div style="font-size:13.5px;color:var(--ink-soft);">Dateien hierher ziehen oder <span style="color:var(--gold);font-weight:600;">durchsuchen</span></div>
+            <div style="font-size:13.5px;color:var(--ink-soft);">Dateien hierher ziehen oder <span style="color:var(--emerald);font-weight:600;">durchsuchen</span></div>
             <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">PDF, JPG, PNG, WEBP · max. 10 MB pro Datei</div>
             <input type="file" id="smart-doc-input" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none;">
         </div>
@@ -1069,7 +1069,7 @@ function openMessagesTab() {
         </div>
         <div id="smart-progress" style="display:none;margin-bottom:14px;">
             <div style="height:8px;background:var(--canvas);border:1px solid var(--line);border-radius:6px;overflow:hidden;">
-                <div id="smart-progress-bar" style="height:100%;width:0;background:var(--gold);transition:width .2s;"></div>
+                <div id="smart-progress-bar" style="height:100%;width:0;background:var(--emerald);transition:width .2s;"></div>
             </div>
             <div id="smart-progress-label" style="font-size:12px;color:var(--ink-soft);margin-top:5px;">0%</div>
         </div>
@@ -1120,7 +1120,7 @@ function smartReanalyze(docId, btn) {
     }
     dz.addEventListener('click', () => input.click());
     input.addEventListener('change', () => { files = Array.from(input.files); input.value = ''; render(); });
-    ['dragover','dragenter'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.style.borderColor = 'var(--gold)'; dz.style.background = 'var(--canvas)'; }));
+    ['dragover','dragenter'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.style.borderColor = 'var(--emerald)'; dz.style.background = 'var(--canvas)'; }));
     ['dragleave','drop'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.style.borderColor = 'var(--line)'; dz.style.background = 'transparent'; }));
     dz.addEventListener('drop', ev => { ev.preventDefault(); files = Array.from(ev.dataTransfer.files); render(); });
 
@@ -1152,7 +1152,7 @@ function smartReanalyze(docId, btn) {
             btn.disabled = false;
             if (xhr.status >= 200 && xhr.status < 300) {
                 label.textContent = '✓ Hochgeladen – KI-Analyse läuft im Hintergrund';
-                bar.style.background = '#17A65B';
+                bar.style.background = 'var(--emerald)';
                 setTimeout(() => { window.location.href = window.location.pathname + '#tab-dokumente'; window.location.reload(); }, 800);
             } else {
                 let msg = 'Fehler beim Upload.';
@@ -1177,14 +1177,14 @@ function smartReanalyze(docId, btn) {
 {{-- Add Document Modal --}}
 <div id="add-doc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:520px;position:relative;">
-        <button data-h-click="4d5e9a4c85" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="4d5e9a4c85" class="modal-close">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:20px;">Dokumente hochladen</div>
         <form method="POST" action="{{ route('admin.customer.document.store', $customer->id) }}" enctype="multipart/form-data" id="doc-upload-form">
             @csrf
             {{-- Drag & Drop Zone (Multi-Upload) --}}
             <div id="dropzone" style="border:2px dashed var(--line);border-radius:10px;padding:26px;text-align:center;cursor:pointer;margin-bottom:14px;transition:.15s;">
                 <div style="font-size:30px;margin-bottom:6px;">📎</div>
-                <div style="font-size:13.5px;color:var(--ink-soft);">Dateien hierher ziehen oder <span style="color:var(--petrol);font-weight:600;">durchsuchen</span></div>
+                <div style="font-size:13.5px;color:var(--ink-soft);">Dateien hierher ziehen oder <span style="color:var(--graphite);font-weight:600;">durchsuchen</span></div>
                 <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">PDF, JPG, PNG, DOC, XLS · max. 10 MB pro Datei · bis zu 20 Dateien</div>
                 <input type="file" name="documents[]" id="doc-input" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" style="display:none;">
             </div>
@@ -1225,7 +1225,7 @@ function smartReanalyze(docId, btn) {
             </div>
             <div id="upload-progress" style="display:none;margin-bottom:14px;">
                 <div style="height:8px;background:var(--canvas);border:1px solid var(--line);border-radius:6px;overflow:hidden;">
-                    <div id="upload-progress-bar" style="height:100%;width:0;background:var(--petrol);transition:width .2s;"></div>
+                    <div id="upload-progress-bar" style="height:100%;width:0;background:var(--graphite);transition:width .2s;"></div>
                 </div>
                 <div id="upload-progress-label" style="font-size:12px;color:var(--ink-soft);margin-top:5px;">0%</div>
             </div>
@@ -1256,7 +1256,7 @@ function smartReanalyze(docId, btn) {
     }
     dz.addEventListener('click', () => input.click());
     input.addEventListener('change', render);
-    ['dragover','dragenter'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.style.borderColor = 'var(--petrol)'; dz.style.background = 'var(--canvas)'; }));
+    ['dragover','dragenter'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.style.borderColor = 'var(--graphite)'; dz.style.background = 'var(--canvas)'; }));
     ['dragleave','drop'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.style.borderColor = 'var(--line)'; dz.style.background = 'transparent'; }));
     dz.addEventListener('drop', ev => { ev.preventDefault(); input.files = ev.dataTransfer.files; render(); });
 
@@ -1283,7 +1283,7 @@ function smartReanalyze(docId, btn) {
         xhr.addEventListener('load', function() {
             if (xhr.status >= 200 && xhr.status < 300) {
                 label.textContent = '✓ Erfolgreich hochgeladen';
-                bar.style.background = '#17A65B';
+                bar.style.background = 'var(--emerald)';
                 setTimeout(() => window.location.reload(), 600);
             } else {
                 let msg = 'Fehler beim Upload.';
@@ -1421,7 +1421,7 @@ document.addEventListener('DOMContentLoaded', () => {
 {{-- Modal: Dokument anfordern (Priorität 7) --}}
 <div id="request-doc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:440px;max-width:92vw;position:relative;">
-        <button data-h-click="d23d5db945" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="d23d5db945" class="modal-close">✕</button>
         <div style="font-size:17px;font-weight:700;margin-bottom:6px;">Dokument anfordern</div>
         <div style="font-size:13px;color:var(--ink-soft);margin-bottom:16px;">Der Kunde wird per E-Mail informiert und kann direkt im Portal hochladen.</div>
         <form method="POST" action="{{ route('admin.document_requests.store', $customer->id) }}">
@@ -1453,7 +1453,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
                 <button type="button" class="btn btn-ghost" data-h-click="d23d5db945">Abbrechen</button>
-                <button type="submit" class="btn btn-gold">Anfordern & Kunde informieren</button>
+                <button type="submit" class="btn btn-emerald">Anfordern & Kunde informieren</button>
             </div>
         </form>
     </div>
@@ -1462,7 +1462,7 @@ document.addEventListener('DOMContentLoaded', () => {
 {{-- Modal: Dokument bearbeiten (Vertragszuordnung, Kategorie, Sichtbarkeit, Priorität, Name) --}}
 <div id="doc-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:480px;position:relative;">
-        <button data-h-click="d8a6407304" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="d8a6407304" class="modal-close">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:20px;">Dokument bearbeiten</div>
         <form method="POST" id="doc-edit-form" action="">
             @csrf @method('PUT')

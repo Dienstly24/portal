@@ -51,7 +51,7 @@
     </div>
     <table class="table" style="font-size:13px;">
         <tr><th>Kunde</th><th>Vertrag</th><th>Pool</th><th>Produkt</th><th>Abschluss</th>
-            <th style="text-align:right;">Monate</th><th>Erwartet</th><th>Zustand</th><th>Bearbeitung</th><th></th></tr>
+            <th class="num">Monate</th><th>Erwartet</th><th>Zustand</th><th>Bearbeitung</th><th></th></tr>
         @forelse($liste as $vertrag)
         <tr>
             <td>{{ $vertrag->customer?->user?->name ?? '—' }}</td>
@@ -59,14 +59,14 @@
             <td>{{ $poolListe[$vertrag->pool]->name ?? '—' }}</td>
             <td>{{ $vertrag->insurer }}</td>
             <td>{{ optional($vertrag->signing_date ?? $vertrag->application_date ?? $vertrag->start_date)->format('d.m.Y') ?? $vertrag->created_at?->lokal()->format('d.m.Y') }}</td>
-            <td style="text-align:right;">{{ $monate->monthsSinceClosing($vertrag) ?? '—' }}</td>
+            <td class="num">{{ $monate->monthsSinceClosing($vertrag) ?? '—' }}</td>
             <td>{{ $vertrag->expected_commission_date?->format('d.m.Y') ?? '—' }}</td>
             <td><span class="badge badge-{{ $vertrag->commissionStatusBadge() }}">{{ $vertrag->commissionStatusLabel() }}</span></td>
             <td>{{ $vertrag->commissionFollowup?->statusLabel() ?? 'Offen' }}</td>
             <td><a href="{{ route('admin.provisionsmanagement.contract', $vertrag->id) }}">bearbeiten →</a></td>
         </tr>
         @empty
-        <tr><td colspan="10" style="color:var(--ink-soft);">Nichts offen – jede erwartete Provision ist da.</td></tr>
+        <tr><td colspan="10" class="muted">Nichts offen – jede erwartete Provision ist da.</td></tr>
         @endforelse
     </table>
     <div style="margin-top:14px;">{{ $liste->links() }}</div>

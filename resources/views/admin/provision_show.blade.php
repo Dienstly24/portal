@@ -9,7 +9,7 @@
     <div class="page-sub">Empfänger: {{ $provision->recipientName() }} · erfasst am {{ $provision->created_at->lokal()->format('d.m.Y H:i') }} von {{ $provision->creator?->name ?? 'System' }}</div>
 </div>
 
-@if(session('success'))<div style="background:#D9F4E6;color:#17A65B;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
+@if(session('success'))<div style="background:var(--emerald-soft);color:var(--emerald);padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
 @if(session('error'))<div style="background:#FBE9E9;color:#B3261E;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('error') }}</div>@endif
 
 <div class="grid-2" style="align-items:start;">
@@ -70,7 +70,7 @@
                 @if(in_array($provision->status, ['offen', 'freigegeben'], true))
                 <form method="POST" action="{{ route('admin.provisions.status', $provision->id) }}" style="margin:0;" data-h-submit="ca992b67d5">
                     @csrf<input type="hidden" name="status" value="ausgezahlt">
-                    <button type="submit" class="btn btn-gold btn-sm">Auszahlen</button>
+                    <button type="submit" class="btn btn-emerald btn-sm">Auszahlen</button>
                 </form>
                 <form method="POST" action="{{ route('admin.provisions.status', $provision->id) }}" style="margin:0;">
                     @csrf<input type="hidden" name="status" value="storniert">
@@ -105,8 +105,8 @@
     </div>
 
     {{-- Audit-Log --}}
-    <div class="card" style="padding:0;overflow:hidden;">
-        <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">Änderungsprotokoll (Audit-Log)</div>
+    <div class="card card-flush">
+        <div class="card-head-bar">Änderungsprotokoll (Audit-Log)</div>
         <table>
             <thead><tr style="background:#F8F9FA;">
                 <th style="padding:10px 16px;">Wann</th>

@@ -14,8 +14,8 @@
 {{-- Zusammenfassung: ein Import endet nie ohne klares Ergebnis. --}}
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px;max-width:1100px;">
     @foreach([
-        ['Gesamt', $import->rows_total, '#131A17', null],
-        ['Erfolgreich zugeordnet', $import->rows_matched + $import->rows_new_link, '#128a4b', null],
+        ['Gesamt', $import->rows_total, 'var(--graphite)', null],
+        ['Erfolgreich zugeordnet', $import->rows_matched + $import->rows_new_link, 'var(--emerald-deep)', null],
         ['Davon neu verknüpft', $import->rows_new_link, '#185FA5', 'linked'],
         ['ID nicht gefunden', $import->rows_unmatched, '#B5651D', 'unmatched'],
         ['Prüfung erforderlich', $import->rows_review, '#A32D2D', 'review'],
@@ -23,7 +23,7 @@
         ['Bereits importiert', $import->rows_unchanged, '#5F5E5A', 'unchanged'],
     ] as [$label, $value, $color, $link])
     <div class="card" style="padding:14px 16px;">
-        <div style="font-size:11.5px;color:var(--ink-soft);">{{ $label }}</div>
+        <div class="muted-2xs">{{ $label }}</div>
         <div style="font-size:22px;font-weight:700;color:{{ $color }};">
             @if($link && $value > 0)
                 <a href="{{ route('admin.vermittler.show', ['id' => $import->id, 'ergebnis' => $link]) }}" style="color:inherit;">{{ $value }}</a>
@@ -54,9 +54,9 @@
     </div>
 
     @if($rows->isEmpty())
-        <div style="font-size:13px;color:var(--ink-soft);">Keine Datensätze in dieser Auswahl.</div>
+        <div class="muted-sm">Keine Datensätze in dieser Auswahl.</div>
     @else
-    <div style="overflow-x:auto;">
+    <div class="scroll-x">
         <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
             <thead><tr style="text-align:left;color:var(--ink-soft);">
                 <th style="padding:8px;">Id</th><th style="padding:8px;">Produkt</th>
@@ -82,7 +82,7 @@
                         @else — @endif
                     </td>
                     <td style="padding:8px;">
-                        <span class="badge badge-{{ $row->resultBadge() }}" style="white-space:nowrap;">{{ $row->resultIcon() }} {{ $row->resultLabel() }}</span>
+                        <span class="badge badge-{{ $row->resultBadge() }} nowrap">{{ $row->resultIcon() }} {{ $row->resultLabel() }}</span>
                         @if($row->match_note)<div style="color:var(--ink-soft);font-size:11.5px;margin-top:4px;">{{ $row->match_note }}</div>@endif
                     </td>
                 </tr>

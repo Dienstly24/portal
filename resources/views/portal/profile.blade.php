@@ -3,7 +3,7 @@
 <div class="page-title">{{ __('Meine Daten') }}</div>
 <div class="page-sub">{{ __('Persönliche Daten, Adresse und Bankverbindung an einem Ort. Änderungen werden von unserem Team geprüft – Sie können mehrere Änderungen gleichzeitig einreichen.') }}</div>
 
-@if($pending > 0)<div class="notice">Sie haben aktuell {{ $pending }} Änderung(en) in Prüfung. <a href="{{ route('portal.change_requests') }}" style="color:var(--petrol);font-weight:600;">{{ __('Status ansehen →') }}</a></div>@endif
+@if($pending > 0)<div class="notice">Sie haben aktuell {{ $pending }} Änderung(en) in Prüfung. <a href="{{ route('portal.change_requests') }}" style="color:var(--graphite);font-weight:600;">{{ __('Status ansehen →') }}</a></div>@endif
 
 <form method="POST" action="{{ route('portal.profile.update') }}" enctype="multipart/form-data">
     @csrf
@@ -65,7 +65,7 @@
             <div class="field"><label>{{ __('Ort') }} *</label><input type="text" name="address_city" required value="{{ $customer?->address_city }}"></div>
         </div>
         @if($customer?->address && !$customer?->address_street)
-        <p style="font-size:12px;color:var(--ink-soft);">Bisher hinterlegt: {{ $customer->address }}</p>
+        <p class="muted-xs">Bisher hinterlegt: {{ $customer->address }}</p>
         @endif
     </div>
 
@@ -77,7 +77,7 @@
             <div class="field"><label>{{ __('Kontoinhaber') }}</label><input type="text" name="account_holder" value="{{ $customer?->account_holder }}"></div>
         </div>
         <div class="field"><label>{{ __('Kontonachweis') }} ({{ __('bei neuer IBAN erforderlich') }})</label><input type="file" name="bank_proof" accept=".pdf,.jpg,.jpeg,.png,.webp"></div>
-        <p style="font-size:12px;color:var(--ink-soft);">🔒 {{ __('Foto der Bankkarte oder Kontoauszug – IBAN und Name müssen lesbar sein. Bank- und Steuerdaten werden verschlüsselt gespeichert und erst nach Freigabe übernommen.') }}</p>
+        <p class="muted-xs">🔒 {{ __('Foto der Bankkarte oder Kontoauszug – IBAN und Name müssen lesbar sein. Bank- und Steuerdaten werden verschlüsselt gespeichert und erst nach Freigabe übernommen.') }}</p>
     </div>
 
     {{-- Nachweis fuer Name/Geburtsdatum/Anschrift: ohne Beleg nehmen wir
@@ -102,7 +102,7 @@
             <div class="field"><label>{{ __('Nachweis / Vorderseite') }}</label><input type="file" name="proof" accept=".pdf,.jpg,.jpeg,.png,.webp"></div>
             <div class="field"><label>{{ __('Rückseite (optional)') }}</label><input type="file" name="proof_back" accept=".pdf,.jpg,.jpeg,.png,.webp"></div>
         </div>
-        <p style="font-size:11.5px;color:var(--ink-soft);">{{ __('Erlaubt: PDF oder Foto (JPG, PNG, WEBP), max. 10 MB je Datei.') }}</p>
+        <p class="muted-2xs">{{ __('Erlaubt: PDF oder Foto (JPG, PNG, WEBP), max. 10 MB je Datei.') }}</p>
     </div>
 
     <button type="submit" class="btn btn-primary">{{ __('Änderungen einreichen') }}</button>

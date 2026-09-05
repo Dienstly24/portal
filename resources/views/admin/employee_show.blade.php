@@ -5,12 +5,12 @@
 $typeConfig = [
     'kfz'                 => ['icon'=>'🚗','label'=>'KFZ','bg'=>'#E6F1FB'],
     'schutzbrief'         => ['icon'=>'🆘','label'=>'Schutzbrief/Mobilclub','bg'=>'#FEF3C7'],
-    'krankenversicherung' => ['icon'=>'🏥','label'=>'Kranken','bg'=>'#D9F4E6'],
-    'kranken'             => ['icon'=>'🏥','label'=>'Kranken','bg'=>'#D9F4E6'],
+    'krankenversicherung' => ['icon'=>'🏥','label'=>'Kranken','bg'=>'var(--emerald-soft)'],
+    'kranken'             => ['icon'=>'🏥','label'=>'Kranken','bg'=>'var(--emerald-soft)'],
     'krankenzusatz'       => ['icon'=>'🩺','label'=>'Krankenzusatz','bg'=>'#DEF1E8'],
     'haftpflicht'         => ['icon'=>'🛡️','label'=>'Haftpflicht','bg'=>'#F0E6FB'],
     'rechtsschutz'        => ['icon'=>'⚖️','label'=>'Rechtsschutz','bg'=>'#FEF3C7'],
-    'hausrat'             => ['icon'=>'🏠','label'=>'Hausrat','bg'=>'#D9F4E6'],
+    'hausrat'             => ['icon'=>'🏠','label'=>'Hausrat','bg'=>'var(--emerald-soft)'],
     'escooter'            => ['icon'=>'🛴','label'=>'E-Scooter','bg'=>'#E6F1FB'],
     'leben'               => ['icon'=>'❤️','label'=>'Leben','bg'=>'#FBEAF0'],
     'unfall'              => ['icon'=>'🚑','label'=>'Unfall','bg'=>'#F9E3E3'],
@@ -28,7 +28,7 @@ $typeConfig = [
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.employees') }}">Mitarbeiter</a><span class="breadcrumb-sep">›</span><span>{{ $employee->name }}</span></div>
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
         <div style="display:flex;align-items:center;gap:12px;">
-            <div style="width:44px;height:44px;border-radius:50%;background:#131A17;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;">{{ strtoupper(substr($employee->name,0,2)) }}</div>
+            <div style="width:44px;height:44px;border-radius:50%;background:var(--graphite);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;">{{ strtoupper(substr($employee->name,0,2)) }}</div>
             <div>
                 <div class="page-title" style="margin:0;">{{ $employee->name }} @if(!$employee->is_active)<span class="badge badge-closed">Deaktiviert</span>@endif</div>
                 <div class="page-sub" style="margin:0;">{{ $employee->email }}</div>
@@ -52,13 +52,13 @@ $typeConfig = [
     <div style="flex:1;min-width:200px;">
         <div style="font-size:11.5px;color:var(--ink-soft);font-weight:600;margin-bottom:4px;">Berechtigungen</div>
         <div style="display:flex;flex-wrap:wrap;gap:4px;font-size:12px;">
-            @if($employee->can_manage_contracts)<span style="background:#D9F4E6;color:#17A65B;padding:2px 7px;border-radius:4px;">Verträge</span>@endif
+            @if($employee->can_manage_contracts)<span style="background:var(--emerald-soft);color:var(--emerald);padding:2px 7px;border-radius:4px;">Verträge</span>@endif
             @if($employee->can_manage_tickets)<span style="background:#E6F1FB;color:#185FA5;padding:2px 7px;border-radius:4px;">Tickets</span>@endif
             @if($employee->can_approve_changes)<span style="background:#FEF3C7;color:#92400E;padding:2px 7px;border-radius:4px;">Genehmigungen</span>@endif
             @if($employee->can_send_emails)<span style="background:#F0E6FB;color:#6D28D9;padding:2px 7px;border-radius:4px;">E-Mails</span>@endif
             @if($employee->can_import_export)<span style="background:#EEF0F3;color:#5F5E5A;padding:2px 7px;border-radius:4px;">Import/Export</span>@endif
             @if(!$employee->can_manage_contracts && !$employee->can_manage_tickets && !$employee->can_approve_changes && !$employee->can_send_emails && !$employee->can_import_export)
-            <span style="color:var(--ink-soft);">—</span>
+            <span class="muted">—</span>
             @endif
         </div>
     </div>
@@ -80,7 +80,7 @@ $typeConfig = [
     <input type="text" id="assignSearch" autocomplete="off" placeholder="Kunden suchen (mind. 2 Zeichen) ..."
         style="width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:10px;font-size:14px;margin-bottom:8px;">
     <div id="assignResultsBar" style="display:none;align-items:center;gap:14px;margin-bottom:8px;font-size:12.5px;">
-        <a id="assignSelectAll" style="cursor:pointer;color:#17A65B;font-weight:600;">☑ Alle Treffer auswaehlen</a>
+        <a id="assignSelectAll" style="cursor:pointer;color:var(--emerald);font-weight:600;">☑ Alle Treffer auswaehlen</a>
     </div>
     <div id="assignResults" style="display:none;border:1px solid var(--line);border-radius:10px;background:#fff;max-height:280px;overflow-y:auto;margin-bottom:12px;"></div>
 
@@ -118,7 +118,7 @@ $typeConfig = [
 
     <table>
         <thead><tr>
-            <th>Kunde</th><th>Adresse</th><th>Aktive Verträge</th><th style="text-align:right;">Aktion</th>
+            <th>Kunde</th><th>Adresse</th><th>Aktive Verträge</th><th class="num">Aktion</th>
         </tr></thead>
         <tbody>
         @forelse($customers as $c)
@@ -128,8 +128,8 @@ $typeConfig = [
                 <div style="color:var(--ink-soft);font-size:12px;margin-top:2px;">{{ $c->customer_number }}</div>
             </td>
             @php $addr = $c->fullAddress(); @endphp
-            <td style="color:var(--ink-soft);font-size:13px;">{{ $addr !== '' ? $addr : '—' }}</td>
-            <td style="white-space:nowrap;">
+            <td class="muted-sm">{{ $addr !== '' ? $addr : '—' }}</td>
+            <td class="nowrap">
                 @php $activeTypes = $c->contracts->filter(fn($v) => $v->isCurrentlyActive())->pluck('type')->unique(); @endphp
                 @forelse($activeTypes as $t)
                     @php $cfg = $typeConfig[$t] ?? $typeConfig['andere']; @endphp
@@ -139,7 +139,7 @@ $typeConfig = [
                     <span style="color:var(--ink-soft);font-size:12.5px;">—</span>
                 @endforelse
             </td>
-            <td style="text-align:right;">
+            <td class="num">
                 <form method="POST" action="{{ route('admin.employees.unassign_customer', [$employee->id, $c->id]) }}" style="margin:0;"
                     data-confirm="{{ $c->user?->name }} aus dem Portfolio von {{ $employee->name }} entfernen?">
                     @csrf
@@ -158,14 +158,14 @@ $typeConfig = [
 
     @if($customers->hasPages())
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;flex-wrap:wrap;">
-        <div style="font-size:13px;color:var(--ink-soft);">{{ $customers->firstItem() }}–{{ $customers->lastItem() }} von {{ $customers->total() }}</div>
+        <div class="muted-sm">{{ $customers->firstItem() }}–{{ $customers->lastItem() }} von {{ $customers->total() }}</div>
         <div style="display:flex;gap:8px;align-items:center;">
             @if($customers->onFirstPage())
                 <span class="btn btn-ghost btn-sm" style="opacity:.45;pointer-events:none;">← Zurück</span>
             @else
                 <a href="{{ $customers->previousPageUrl() }}" class="btn btn-ghost btn-sm">← Zurück</a>
             @endif
-            <span style="font-size:13px;color:var(--ink-soft);">Seite {{ $customers->currentPage() }} / {{ $customers->lastPage() }}</span>
+            <span class="muted-sm">Seite {{ $customers->currentPage() }} / {{ $customers->lastPage() }}</span>
             @if($customers->hasMorePages())
                 <a href="{{ $customers->nextPageUrl() }}" class="btn btn-ghost btn-sm">Weiter →</a>
             @else
@@ -201,7 +201,7 @@ $typeConfig = [
         ids.forEach(function (id) {
             var c = selected[id];
             var chip = document.createElement('span');
-            chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:#D9F4E6;border:1px solid #17A65B;border-radius:20px;padding:5px 12px;font-size:12.5px;';
+            chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:var(--emerald-soft);border:1px solid var(--emerald);border-radius:20px;padding:5px 12px;font-size:12.5px;';
             chip.textContent = '👤 ' + (c.name || '—') + ' ' + (c.number || '');
             var x = document.createElement('a');
             x.textContent = '✕';
@@ -220,15 +220,15 @@ $typeConfig = [
             var row = document.createElement('div');
             row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:13.5px;border-bottom:1px solid var(--line);';
             var already = assignedSet.has(id);
-            var meta = '<div><strong>' + (c.name || '—') + '</strong> <span style="color:var(--ink-soft);">' + (c.number || '') + '</span>'
-                + (c.address ? '<div style="font-size:12px;color:var(--ink-soft);">' + c.address + '</div>' : '') + '</div>';
+            var meta = '<div><strong>' + (c.name || '—') + '</strong> <span class="muted">' + (c.number || '') + '</span>'
+                + (c.address ? '<div class="muted-xs">' + c.address + '</div>' : '') + '</div>';
             if (already) {
                 row.innerHTML = '<span style="width:16px;"></span>' + meta
                     + '<span style="margin-left:auto;font-size:11.5px;background:#EEF0F3;color:#5F5E5A;border-radius:10px;padding:2px 9px;white-space:nowrap;">bereits zugewiesen</span>';
             } else {
                 var cb = document.createElement('input');
                 cb.type = 'checkbox';
-                cb.style.cssText = 'width:17px;height:17px;cursor:pointer;accent-color:#131A17;flex:none;';
+                cb.style.cssText = 'width:17px;height:17px;cursor:pointer;accent-color:var(--graphite);flex:none;';
                 cb.checked = !!selected[id];
                 cb.onchange = function () {
                     if (cb.checked) { selected[id] = { id: id, name: c.name, number: c.number }; }

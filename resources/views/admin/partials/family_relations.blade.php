@@ -25,7 +25,7 @@
 <div class="card" id="familie-verknuepfungen">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:10px;">
         <div class="card-title" style="margin-bottom:0;">👪 Familie &amp; Kinder – verknüpfte Kunden ({{ $gesamt }})</div>
-        <button type="button" class="btn btn-gold btn-sm" data-h-click="2b70a0c57e">Bestehenden Kunden hinzufügen</button>
+        <button type="button" class="btn btn-emerald btn-sm" data-h-click="2b70a0c57e">Bestehenden Kunden hinzufügen</button>
     </div>
     <p style="font-size:12px;color:var(--ink-soft);margin:0 0 16px;">
         Familienmitglieder mit <strong>eigener Kundenakte</strong>. Die Verknüpfung wird in beide Richtungen
@@ -106,7 +106,7 @@
                             @if($abhaengig)
                             <span style="font-size:11px;background:#FEF3C7;color:#92400E;border-radius:999px;padding:2px 9px;">Familienmitglied (abhängig)</span>
                             @else
-                            <span style="font-size:11px;background:#D9F4E6;color:#128a4b;border-radius:999px;padding:2px 9px;">Eigenständiger Kunde</span>
+                            <span style="font-size:11px;background:var(--emerald-soft);color:var(--emerald-deep);border-radius:999px;padding:2px 9px;">Eigenständiger Kunde</span>
                             @endif
                         </div>
                         @if($abhaengig && $stichtag)

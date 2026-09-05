@@ -39,7 +39,7 @@
 <div class="card" style="max-width:1250px;">
     <table class="table" style="font-size:13px;">
         <tr><th>Vertrag</th><th>Kunde</th><th>Pool</th><th>Abschluss</th><th>Erwartet</th><th>Prüffrist</th>
-            <th>Zustand</th><th style="text-align:right;">Buchungen</th><th style="text-align:right;">Netto</th><th></th></tr>
+            <th>Zustand</th><th class="num">Buchungen</th><th class="num">Netto</th><th></th></tr>
         @forelse($vertraege as $vertrag)
         <tr>
             <td>
@@ -52,12 +52,12 @@
             <td>{{ $vertrag->expected_commission_date?->format('d.m.Y') ?? '—' }}</td>
             <td>{{ $vertrag->commission_check_date?->format('d.m.Y') ?? '—' }}</td>
             <td><span class="badge badge-{{ $vertrag->commissionStatusBadge() }}">{{ $vertrag->commissionStatusLabel() }}</span></td>
-            <td style="text-align:right;">{{ $vertrag->commissions_count }}</td>
-            <td style="text-align:right;font-weight:700;">{{ number_format((float) ($vertrag->provision_netto ?? 0), 2, ',', '.') }} €</td>
+            <td class="num">{{ $vertrag->commissions_count }}</td>
+            <td class="num-strong">{{ number_format((float) ($vertrag->provision_netto ?? 0), 2, ',', '.') }} €</td>
             <td><a href="{{ route('admin.provisionsmanagement.contract', $vertrag->id) }}">öffnen →</a></td>
         </tr>
         @empty
-        <tr><td colspan="10" style="color:var(--ink-soft);">Kein Vertrag im Provisionsmanagement. Verträge kommen hier an, sobald sie einem Pool zugeordnet sind oder eine Provision tragen.</td></tr>
+        <tr><td colspan="10" class="muted">Kein Vertrag im Provisionsmanagement. Verträge kommen hier an, sobald sie einem Pool zugeordnet sind oder eine Provision tragen.</td></tr>
         @endforelse
     </table>
     <div style="margin-top:14px;">{{ $vertraege->links() }}</div>

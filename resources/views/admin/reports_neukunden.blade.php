@@ -82,7 +82,7 @@
 
 {{-- Wer hat wie viele gebracht --}}
 <div class="grid-2" style="margin-bottom:24px;align-items:start;">
-    <div class="card" style="padding:0;overflow:hidden;">
+    <div class="card card-flush">
         <div class="card-header" style="padding:16px 20px 10px;">
             <div class="card-title">Wer hat wie viele gebracht?</div>
         </div>
@@ -120,7 +120,7 @@
 
     @if($isManager)
     {{-- Provisions-Vorschau + Ein-Klick-Erfassung --}}
-    <div class="card" style="padding:0;overflow:hidden;">
+    <div class="card card-flush">
         <div class="card-header" style="padding:16px 20px 10px;display:flex;align-items:center;justify-content:space-between;">
             <div class="card-title">Provisionen für diesen Zeitraum</div>
             <a href="{{ route('admin.provisions') }}" class="btn btn-ghost btn-sm">Alle Provisionen →</a>
@@ -143,7 +143,7 @@
             <tr>
                 <td style="padding:10px 20px;">
                     <div style="font-weight:600;">{{ $row['label'] }}</div>
-                    <div style="font-size:12px;color:var(--ink-soft);">{{ $row['customers'] }} Kunden · {{ $row['contracts'] }} Verträge</div>
+                    <div class="muted-xs">{{ $row['customers'] }} Kunden · {{ $row['contracts'] }} Verträge</div>
                 </td>
                 <td style="font-size:12.5px;color:var(--ink-soft);white-space:nowrap;">
                     @if($row['has_rate'])
@@ -153,10 +153,10 @@
                         <span style="color:#B5651D;">Kein Satz hinterlegt</span>
                     @endif
                 </td>
-                <td style="white-space:nowrap;">
+                <td class="nowrap">
                     <b>{{ number_format($row['suggested'], 2, ',', '.') }} €</b>
                     @if($row['already'] > 0)
-                    <div style="font-size:11.5px;color:#17A65B;">✓ {{ number_format($row['already'], 2, ',', '.') }} € bereits gebucht</div>
+                    <div style="font-size:11.5px;color:var(--emerald);">✓ {{ number_format($row['already'], 2, ',', '.') }} € bereits gebucht</div>
                     @endif
                 </td>
                 <td style="padding-right:20px;">
@@ -271,11 +271,11 @@
         <tr class="row-link" data-row-nav="{{ route('admin.customer', $c->id) }}" title="Kundenakte öffnen">
             <td style="padding:14px 20px;vertical-align:top;">
                 <a href="{{ route('admin.customer', $c->id) }}" style="font-weight:700;color:inherit;">{{ $c->user?->name ?? '—' }}</a>
-                <div style="font-size:12px;color:var(--ink-soft);">Nr. {{ $c->customer_number }}</div>
+                <div class="muted-xs">Nr. {{ $c->customer_number }}</div>
             </td>
             <td style="vertical-align:top;white-space:nowrap;">
                 <div>{{ $c->created_at->lokal()->format('d.m.Y') }}</div>
-                <div style="font-size:12px;color:var(--ink-soft);">von {{ $c->creator?->name ?? 'System' }}</div>
+                <div class="muted-xs">von {{ $c->creator?->name ?? 'System' }}</div>
             </td>
             <td style="vertical-align:top;">
                 @if($isManager)
@@ -312,7 +312,7 @@
                 @if($c->acquirerLabel())
                 <span class="wb-badge {{ $c->acquired_by ? 'wb-mit' : 'wb-par' }}">{{ $c->acquired_by ? '👤' : '🤝' }} {{ $c->acquirerLabel() }}</span>
                 @else
-                <span style="color:var(--ink-soft);">—</span>
+                <span class="muted">—</span>
                 @endif
                 @endif
             </td>
@@ -375,17 +375,17 @@
 <style>
 .rep-tab { padding:9px 18px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:13.5px; font-weight:600; color:var(--ink); text-decoration:none; }
 .rep-tab:hover { background:#F4F7F5; }
-.rep-tab-active { background:#131A17; color:#fff; border-color:#131A17; }
+.rep-tab-active { background:var(--graphite); color:#fff; border-color:var(--graphite); }
 .flt-group { display:flex; flex-direction:column; gap:4px; }
 .flt-lbl { font-size:11.5px; color:var(--ink-soft); font-weight:600; }
 .flt-sel { padding:8px 12px; border:1px solid var(--line); border-radius:8px; font-size:13.5px; background:#fff; min-width:150px; }
 .wb-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:600; white-space:nowrap; }
-.wb-mit { background:#D9F4E6; color:#0E7A41; }
+.wb-mit { background:var(--emerald-soft); color:#0E7A41; }
 .wb-par { background:#F3EDDC; color:#8A7440; }
 .wb-vis { background:#E6F1FB; color:#185FA5; }
 .wb-none { background:#EEF0F3; color:var(--ink-soft); }
 .lb-bar { height:4px; background:#EEF0F3; border-radius:999px; margin-top:6px; overflow:hidden; }
-.lb-bar span { display:block; height:100%; background:linear-gradient(90deg,#19b463,#128a4b); border-radius:999px; }
+.lb-bar span { display:block; height:100%; background:linear-gradient(90deg,var(--emerald-bright),var(--emerald-deep)); border-radius:999px; }
 .pop { position:relative; display:inline-block; }
 .pop summary { list-style:none; cursor:pointer; }
 .pop summary::-webkit-details-marker { display:none; }
@@ -394,7 +394,7 @@
 .vt-row { display:flex; align-items:center; gap:8px; padding:4px 0; color:inherit; text-decoration:none; font-size:13px; }
 .vt-row:hover span:nth-child(2) { text-decoration:underline; }
 .vt-status { font-size:11px; font-weight:600; padding:2px 8px; border-radius:999px; }
-.vt-active { background:#D9F4E6; color:#0E7A41; }
+.vt-active { background:var(--emerald-soft); color:#0E7A41; }
 .vt-active_upcoming { background:#E6F1FB; color:#185FA5; }
 .vt-pending, .vt-cancelled_upcoming { background:#F7E7D6; color:#B5651D; }
 .vt-cancelled, .vt-expired { background:#F9E3E3; color:#A32D2D; }

@@ -81,13 +81,13 @@
 .kfz-chip{position:relative;display:inline-flex;}
 .kfz-chip input{position:absolute;inset:0;opacity:0;cursor:pointer;margin:0;}
 .kfz-chip span{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 14px;border:1.5px solid var(--line);border-radius:10px;font-size:13px;font-weight:600;background:var(--surface);color:var(--ink);cursor:pointer;transition:.12s;user-select:none;width:100%;text-align:center;}
-.kfz-chip input:checked + span{border-color:#17A65B;background:#E7F6EE;color:#0E7A41;box-shadow:inset 0 0 0 1px #17A65B;}
-.kfz-chip input:focus-visible + span{outline:2px solid #17A65B;outline-offset:2px;}
+.kfz-chip input:checked + span{border-color:var(--emerald);background:#E7F6EE;color:#0E7A41;box-shadow:inset 0 0 0 1px var(--emerald);}
+.kfz-chip input:focus-visible + span{outline:2px solid var(--emerald);outline-offset:2px;}
 .kfz-chip input:disabled + span{opacity:.4;cursor:not-allowed;}
 .kfz-chip.big span{padding:13px 16px;font-size:13.5px;}
 .kfz-chip-row{display:flex;flex-wrap:wrap;gap:8px;}
 .kfz-chip-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;}
-.kfz-fixed-chip{display:inline-flex;align-items:center;gap:7px;padding:13px 16px;border-radius:10px;font-size:13.5px;font-weight:700;background:#17A65B;color:#fff;}
+.kfz-fixed-chip{display:inline-flex;align-items:center;gap:7px;padding:13px 16px;border-radius:10px;font-size:13.5px;font-weight:700;background:var(--emerald);color:#fff;}
 .kfz-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px;}
 .kfz-sum-box{background:var(--canvas);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0;}
 .kfz-sum-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-weight:700;}
@@ -95,7 +95,7 @@
 .kfz-subline{font-size:12.5px;font-weight:700;color:var(--ink-soft);margin:14px 0 8px;text-transform:uppercase;letter-spacing:.04em;}
 .kfz-warn{background:#FDF2E3;border:1px solid #EBC894;color:#8A5A1B;border-radius:10px;padding:10px 12px;font-size:12.5px;margin-top:10px;}
 .kfz-row-btn{border:1px dashed var(--line);background:transparent;border-radius:10px;padding:9px 14px;font-size:12.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;width:100%;}
-.kfz-row-btn:hover{border-color:#17A65B;color:#0E7A41;}
+.kfz-row-btn:hover{border-color:var(--emerald);color:#0E7A41;}
 .kfz-item-row{display:grid;gap:8px;margin-bottom:8px;align-items:end;}
 .kfz-remove{border:none;background:#F9E3E3;color:#A32D2D;border-radius:8px;width:34px;height:38px;cursor:pointer;font-size:14px;flex:none;}
 .kfz-transfer{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;padding:6px 12px;border-radius:999px;}
@@ -272,7 +272,7 @@
         <div class="field"><label>Stand vom</label><input type="date" name="vehicle[current_mileage_date]" value="{{ $vd('current_mileage_date', $latestReading?->reading_date?->format('Y-m-d') ?? now()->format('Y-m-d')) }}" style="{{ $kfzInputStyle }}"></div>
     </div>
     @if($latestReading)
-    <div style="font-size:12px;color:var(--ink-soft);">Letzte Meldung: <b>{{ number_format($latestReading->mileage, 0, ',', '.') }} km</b> am {{ $latestReading->reading_date->format('d.m.Y') }} ({{ $latestReading->sourceLabel() }}@if($latestReading->created_by), {{ $latestReading->created_by }}@endif)</div>
+    <div class="muted-xs">Letzte Meldung: <b>{{ number_format($latestReading->mileage, 0, ',', '.') }} km</b> am {{ $latestReading->reading_date->format('d.m.Y') }} ({{ $latestReading->sourceLabel() }}@if($latestReading->created_by), {{ $latestReading->created_by }}@endif)</div>
     @endif
     <div class="kfz-subline">Jährliche Fahrleistung (vereinbart)</div>
     <div class="kfz-chip-row">
@@ -426,11 +426,11 @@ function kfzAddDriver(d) {
     row.className = 'kfz-item-row';
     row.style.gridTemplateColumns = '2fr 1fr 1fr 34px';
     row.innerHTML = `
-        <div><label style="font-size:11.5px;color:var(--ink-soft);">Name</label>
+        <div><label class="muted-2xs">Name</label>
             <input type="text" name="vehicle[additional_drivers][${i}][name]" maxlength="120" value="${kfzEsc(d.name)}" placeholder="Vor- und Nachname" style="${KFZ_INPUT}"></div>
-        <div><label style="font-size:11.5px;color:var(--ink-soft);">Geburtsdatum</label>
+        <div><label class="muted-2xs">Geburtsdatum</label>
             <input type="date" name="vehicle[additional_drivers][${i}][birth_date]" value="${kfzEsc(d.birth_date)}" style="${KFZ_INPUT}"></div>
-        <div><label style="font-size:11.5px;color:var(--ink-soft);">Führerschein seit</label>
+        <div><label class="muted-2xs">Führerschein seit</label>
             <input type="date" name="vehicle[additional_drivers][${i}][license_date]" value="${kfzEsc(d.license_date)}" style="${KFZ_INPUT}"></div>
         <button type="button" class="kfz-remove" title="Fahrer entfernen" data-h-click="kfz-entfernen">✕</button>`;
     document.getElementById('kfz-drivers').appendChild(row);
@@ -445,15 +445,15 @@ function kfzAddClaim(cl) {
     row.className = 'kfz-item-row';
     row.style.gridTemplateColumns = '130px 130px 110px 140px 1fr 34px';
     row.innerHTML = `
-        <div><label style="font-size:11.5px;color:var(--ink-soft);">Datum</label>
+        <div><label class="muted-2xs">Datum</label>
             <input type="date" name="vehicle[claim_rows][${i}][claim_date]" value="${kfzEsc(cl.claim_date)}" style="${KFZ_INPUT}"></div>
-        <div><label style="font-size:11.5px;color:var(--ink-soft);">Art</label>
+        <div><label class="muted-2xs">Art</label>
             <select name="vehicle[claim_rows][${i}][claim_type]" style="${KFZ_INPUT}">${opts(KFZ_CLAIM_TYPES, cl.claim_type, '—')}</select></div>
-        <div><label style="font-size:11.5px;color:var(--ink-soft);">Schaden (€)</label>
+        <div><label class="muted-2xs">Schaden (€)</label>
             <input type="number" step="0.01" min="0" name="vehicle[claim_rows][${i}][damage_amount]" value="${kfzEsc(cl.damage_amount)}" placeholder="0,00" style="${KFZ_INPUT}"></div>
-        <div><label style="font-size:11.5px;color:var(--ink-soft);">Status</label>
+        <div><label class="muted-2xs">Status</label>
             <select name="vehicle[claim_rows][${i}][status]" style="${KFZ_INPUT}">${opts(KFZ_CLAIM_STATUSES, cl.status, '—')}</select></div>
-        <div><label style="font-size:11.5px;color:var(--ink-soft);">Versicherer / Notiz</label>
+        <div><label class="muted-2xs">Versicherer / Notiz</label>
             <div style="display:flex;gap:6px;">
                 <input type="text" name="vehicle[claim_rows][${i}][insurer]" maxlength="255" value="${kfzEsc(cl.insurer)}" placeholder="Versicherer" style="${KFZ_INPUT}">
                 <input type="text" name="vehicle[claim_rows][${i}][notes]" maxlength="2000" value="${kfzEsc(cl.notes)}" placeholder="Notizen" style="${KFZ_INPUT}">

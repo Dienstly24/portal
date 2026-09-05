@@ -17,7 +17,7 @@
     <button type="submit" class="btn btn-primary">Suchen</button>
 </form>
 
-<div class="card" style="padding:0;overflow:hidden;">
+<div class="card card-flush">
     <table>
         <thead><tr style="background:#F8F9FA;">
             <th style="padding:12px 20px;">Name</th>
@@ -39,16 +39,16 @@
         <tr>
             <td style="padding:13px 20px;">
                 <div style="display:flex;align-items:center;gap:10px;">
-                    <div style="width:34px;height:34px;border-radius:50%;background:{{ isset($c['company']) ? '#FEF3C7' : 'var(--petrol)' }};color:{{ isset($c['company']) ? '#92400E' : '#fff' }};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex:none;">
+                    <div style="width:34px;height:34px;border-radius:50%;background:{{ isset($c['company']) ? '#FEF3C7' : 'var(--graphite)' }};color:{{ isset($c['company']) ? '#92400E' : '#fff' }};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex:none;">
                         {{ strtoupper(substr($name,0,2)) }}
                     </div>
                     <div style="font-weight:600;font-size:14px;">{{ $name }}</div>
                 </div>
             </td>
             <td><span class="badge {{ isset($c['company']) ? 'badge-pending' : 'badge-open' }}">{{ isset($c['company']) ? 'Firma' : 'Privat' }}</span></td>
-            <td style="font-size:13px;color:var(--ink-soft);">{{ $email ?? '—' }}</td>
-            <td style="font-size:13px;color:var(--ink-soft);">{{ $phone ?? '—' }}</td>
-            <td style="font-size:13px;color:var(--ink-soft);">{{ $city ?? '—' }}</td>
+            <td class="muted-sm">{{ $email ?? '—' }}</td>
+            <td class="muted-sm">{{ $phone ?? '—' }}</td>
+            <td class="muted-sm">{{ $city ?? '—' }}</td>
             <td style="padding-right:20px;">
                 @if($isImported)
                     <span class="badge badge-active">✓ Importiert</span>
@@ -59,7 +59,7 @@
                         <button type="submit" class="btn btn-ghost btn-sm">+ Importieren</button>
                     </form>
                 @else
-                    <span style="font-size:12px;color:var(--ink-soft);">Keine E-Mail</span>
+                    <span class="muted-xs">Keine E-Mail</span>
                 @endif
             </td>
         </tr>
@@ -75,7 +75,7 @@
     @if($page > 0)
     <a href="{{ route('admin.lexoffice.contacts', ['page'=>$page-1,'search'=>$search]) }}" class="btn btn-ghost btn-sm">← Zurück</a>
     @endif
-    <span style="font-size:13px;color:var(--ink-soft);">Seite {{ $page+1 }} / {{ $pages }}</span>
+    <span class="muted-sm">Seite {{ $page+1 }} / {{ $pages }}</span>
     @if($page < $pages-1)
     <a href="{{ route('admin.lexoffice.contacts', ['page'=>$page+1,'search'=>$search]) }}" class="btn btn-ghost btn-sm">Weiter →</a>
     @endif

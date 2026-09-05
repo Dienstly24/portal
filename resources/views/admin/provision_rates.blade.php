@@ -8,13 +8,13 @@
 
 @include('admin.partials.provision_tabs', ['active' => 'saetze'])
 
-@if(session('success'))<div style="background:#D9F4E6;color:#17A65B;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
+@if(session('success'))<div style="background:var(--emerald-soft);color:var(--emerald);padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
 @if(session('error'))<div style="background:#FBE9E9;color:#B3261E;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('error') }}</div>@endif
 
 <div class="grid-2" style="align-items:start;">
     {{-- Empfaenger-Uebersicht --}}
-    <div class="card" style="padding:0;overflow:hidden;">
-        <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">Empfänger wählen</div>
+    <div class="card card-flush">
+        <div class="card-head-bar">Empfänger wählen</div>
         <table>
             <thead><tr style="background:#F8F9FA;">
                 <th style="padding:10px 20px;">Name</th>
@@ -50,9 +50,9 @@
     </div>
 
     {{-- Saetze des gewaehlten Empfaengers --}}
-    <div class="card" style="padding:0;overflow:hidden;">
+    <div class="card card-flush">
         @if($selected)
-        <div style="padding:16px 20px;font-weight:700;border-bottom:1px solid var(--line);">
+        <div class="card-head-bar">
             Sätze für {{ $selected->name }}
             <div style="font-size:12px;font-weight:400;color:var(--ink-soft);margin-top:2px;">
                 Fester Betrag je Neuvertrag und/oder Prozent vom Jahresbeitrag. Beide Felder leer = kein Satz für die Sparte (dann greift der globale Satz).

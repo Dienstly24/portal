@@ -19,7 +19,7 @@
 .keybox{background:rgba(0,0,0,.3);border:1px solid var(--gold-line);border-radius:10px;
     padding:11px 13px;margin:4px 0 14px;text-align:center;}
 .keybox .k{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;letter-spacing:.09em;
-    color:var(--gold-hell);word-break:break-all;direction:ltr;display:block;}
+    color:var(--gold-soft);word-break:break-all;direction:ltr;display:block;}
 .keybox .lbl{font-size:11.5px;color:#9aa1ab;display:block;margin-bottom:5px;}
 .apps{font-size:12.5px;color:#9aa1ab;line-height:1.6;margin:-6px 0 16px;}
 .codeinput input{text-align:center;font-size:24px;letter-spacing:.35em;font-family:ui-monospace,Menlo,monospace;direction:ltr;}

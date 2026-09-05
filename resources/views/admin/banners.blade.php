@@ -70,7 +70,7 @@
                 <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
                     <strong style="font-size:15px;">{{ $b->title }}</strong>
                     <span style="background:{{ $st['bg'] }};color:{{ $st['color'] }};border-radius:12px;padding:2px 11px;font-size:11.5px;font-weight:600;">{{ $st['label'] }}</span>
-                    <span style="font-size:12px;color:var(--ink-soft);">{{ strtoupper($b->media_type) }} · Pos. {{ $idx + 1 }}</span>
+                    <span class="muted-xs">{{ strtoupper($b->media_type) }} · Pos. {{ $idx + 1 }}</span>
                 </div>
                 <div style="font-size:12.5px;color:var(--ink-soft);margin-top:5px;">
                     Zeitraum: {{ $b->start_date?->format('d.m.Y') ?? 'sofort' }} – {{ $b->end_date?->format('d.m.Y') ?? 'unbegrenzt' }}
@@ -83,7 +83,7 @@
                     <span>👤 <strong>{{ $b->uniqueViewers() }}</strong> Kunden</span>
                     <span>🖱 <strong>{{ number_format($b->total_clicks, 0, ',', '.') }}</strong> Klicks</span>
                     <span>📈 CTR <strong>{{ number_format($b->ctr(), 1, ',', '.') }} %</strong></span>
-                    <span style="color:var(--ink-soft);">Zuletzt gezeigt: {{ $b->last_shown_at?->lokal()->format('d.m.Y H:i') ?? '—' }}</span>
+                    <span class="muted">Zuletzt gezeigt: {{ $b->last_shown_at?->lokal()->format('d.m.Y H:i') ?? '—' }}</span>
                 </div>
                 <div style="font-size:11.5px;color:var(--ink-soft);margin-top:6px;">
                     Erstellt: {{ $b->created_at->lokal()->format('d.m.Y H:i') }}{{ $b->created_by && isset($creators[$b->created_by]) ? ' von ' . $creators[$b->created_by] : '' }}

@@ -17,7 +17,7 @@
         @foreach([
             '1. Hochladen', '2. Datei erkennen', '3. Spalten zuordnen', '4. Prüfen', '5. Bestätigen',
         ] as $i => $step)
-        <span style="padding:6px 10px;border-radius:20px;border:1px solid var(--line);{{ $i === 0 ? 'background:#131A17;color:#fff;border-color:#131A17;' : 'color:var(--ink-soft);' }}">{{ $step }}</span>
+        <span style="padding:6px 10px;border-radius:20px;border:1px solid var(--line);{{ $i === 0 ? 'background:var(--graphite);color:#fff;border-color:var(--graphite);' : 'color:var(--ink-soft);' }}">{{ $step }}</span>
         @endforeach
     </div>
     <div style="font-size:12.5px;color:var(--ink-soft);">
@@ -108,9 +108,9 @@
 <div class="card" style="max-width:1000px;">
     <div style="font-weight:700;font-size:14px;margin-bottom:12px;">Bisherige Importe</div>
     @if($imports->isEmpty())
-        <div style="font-size:13px;color:var(--ink-soft);">Noch keine Datei eingelesen.</div>
+        <div class="muted-sm">Noch keine Datei eingelesen.</div>
     @else
-    <div style="overflow-x:auto;">
+    <div class="scroll-x">
         <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
             <thead><tr style="text-align:left;color:var(--ink-soft);">
                 <th style="padding:8px;">Datei</th><th style="padding:8px;">Quelle</th><th style="padding:8px;">Format</th>
@@ -123,17 +123,17 @@
                 <td style="padding:8px;"><a href="{{ route('admin.commissions_internal.preview', $import->id) }}">{{ $import->filename }}</a></td>
                 <td style="padding:8px;">{{ $import->providerLabel() }}</td>
                 <td style="padding:8px;">
-                    {{ strtoupper($import->format) }}@if($import->sheet_name) <span style="color:var(--ink-soft);">· {{ $import->sheet_name }}</span>@endif
+                    {{ strtoupper($import->format) }}@if($import->sheet_name) <span class="muted">· {{ $import->sheet_name }}</span>@endif
                     @unless($import->isAbrechnung())<div style="color:var(--ink-soft);font-size:11.5px;">Auftragsliste</div>@endunless
                 </td>
                 <td style="padding:8px;">{{ $import->rows_total }}</td>
                 <td style="padding:8px;">
-                    <span style="color:#128a4b;">{{ $import->rows_new }} neu</span> ·
+                    <span style="color:var(--emerald-deep);">{{ $import->rows_new }} neu</span> ·
                     {{ $import->rows_updated }} akt. · {{ $import->rows_duplicate }} dupl. ·
                     <span style="color:#B5651D;">{{ $import->rows_unmatched }} ohne Vertrag</span> ·
                     <span style="color:#A32D2D;">{{ $import->rows_invalid }} fehlerhaft</span>
                     @if($import->contracts_created > 0)
-                    <div style="color:#128a4b;">
+                    <div style="color:var(--emerald-deep);">
                         + {{ $import->contracts_created }} Verträge
                         @if($import->customers_created > 0), {{ $import->customers_created }} Kunden @endif
                         angelegt

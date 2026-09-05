@@ -20,7 +20,7 @@
 .sc-star{border:none;background:none;cursor:pointer;font-size:15px;padding:2px 4px;flex:none;opacity:.85;}
 .sc-chip{font-size:11px;background:var(--canvas);border:1px solid var(--line);border-radius:999px;padding:2px 8px;color:var(--ink-soft);}
 .tpl-chip{font-size:12px;background:var(--canvas);border:1px solid var(--line);border-radius:999px;padding:4px 11px;cursor:pointer;transition:.15s;}
-.tpl-chip:hover,.tpl-chip.active{background:var(--petrol);color:#fff;border-color:var(--petrol);}
+.tpl-chip:hover,.tpl-chip.active{background:var(--graphite);color:#fff;border-color:var(--graphite);}
 .tpl-item{display:block;width:100%;text-align:left;padding:8px 10px;border-radius:8px;border:1px solid transparent;background:none;cursor:pointer;font-size:13px;font-family:inherit;}
 .tpl-item:hover{background:var(--canvas);border-color:var(--line);}
 .hist-row{display:flex;gap:8px;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--line);align-items:baseline;}
@@ -66,7 +66,7 @@
             <input type="file" name="attachments[]" id="f-attachments" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx">
         </div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-            <button type="submit" class="btn btn-gold">✉️ E-Mail senden</button>
+            <button type="submit" class="btn btn-emerald">✉️ E-Mail senden</button>
             <button type="button" class="btn btn-ghost" data-h-click="f95a91326e">👁️ Vorschau</button>
             @if($aiAvailable)
             <button type="button" class="btn btn-ghost" data-h-click="601cd06c70">✨ KI-Entwurf</button>
@@ -111,7 +111,7 @@
         <div style="display:flex;align-items:flex-start;gap:8px;">
             <div style="flex:1;">
                 <div style="font-weight:700;font-size:14px;" id="cc-name"></div>
-                <div style="font-size:12px;color:var(--ink-soft);" id="cc-sub"></div>
+                <div id="cc-sub" class="muted-xs"></div>
             </div>
             <button type="button" class="sc-star" id="cc-star" title="Als Favorit merken" data-h-click="7176e84622">☆</button>
             <button type="button" class="sc-star" title="Kundenbezug entfernen" data-h-click="0463a1f9f2">✕</button>
@@ -151,7 +151,7 @@
         <button data-h-click="21904e4644" style="position:absolute;top:12px;right:14px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;">An: <span id="pv-to"></span> · Betreff: <strong id="pv-subject"></strong> <span id="pv-att"></span></div>
         <div style="background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08);">
-            <div style="background:#131A17;padding:18px 24px;"><span style="color:#fff;font-size:18px;font-weight:bold;">Dienstly<span style="color:#17A65B;">24</span></span></div>
+            <div style="background:var(--graphite);padding:18px 24px;"><span style="color:#fff;font-size:18px;font-weight:bold;">Dienstly<span style="color:var(--emerald);">24</span></span></div>
             <div style="padding:24px;font-size:14px;color:#333;line-height:1.7;" id="pv-body"></div>
             <div style="background:#F7F5EF;padding:12px 24px;font-size:11.5px;color:#888;">Dienstly24 – Ihr Experte für Versicherungen &amp; Energie<br>Ihr Ansprechpartner: {{ auth()->user()->name }}</div>
         </div>

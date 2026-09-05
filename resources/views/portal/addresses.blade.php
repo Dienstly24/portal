@@ -5,7 +5,7 @@
         <div class="page-title">{{ __('🏠 Meine Adressen') }}</div>
         <div class="page-sub" style="margin-bottom:0;">{{ __('Adressen hinzufügen oder Änderungen beantragen – Änderungen werden geprüft.') }}</div>
     </div>
-    <button data-h-click="da03196f68" class="btn btn-gold">{{ __('+ Adresse hinzufügen') }}</button>
+    <button data-h-click="da03196f68" class="btn btn-emerald">{{ __('+ Adresse hinzufügen') }}</button>
 </div>
 
 @php
@@ -17,7 +17,7 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
 @if($customer->address)
 <div class="card">
     <div class="card-title">{{ __('Aktuelle Stammadresse') }}</div>
-    <p style="font-size:14px;">🏠 {{ $customer->address }} <span style="font-size:12px;color:var(--ink-soft);">{{ __('(im Profil hinterlegt – Änderung über „Meine Daten")') }}</span></p>
+    <p style="font-size:14px;">🏠 {{ $customer->address }} <span class="muted-xs">{{ __('(im Profil hinterlegt – Änderung über „Meine Daten")') }}</span></p>
 </div>
 @endif
 
@@ -61,7 +61,7 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
 
 <div id="add-address-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:460px;position:relative;max-height:88vh;overflow-y:auto;">
-        <button data-h-click="54cb0c1ef9" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="54cb0c1ef9" class="modal-close">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:6px;">{{ __('Adresse hinzufügen') }}</div>
         <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">{{ __('Wird nach Prüfung durch unser Team übernommen. Ein Nachweis der Anschrift ist erforderlich.') }}</p>
         <form method="POST" action="{{ route('portal.addresses.store') }}" enctype="multipart/form-data">
@@ -74,7 +74,7 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
 
 <div id="change-address-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:460px;position:relative;max-height:88vh;overflow-y:auto;">
-        <button data-h-click="acdc5aefa0" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="acdc5aefa0" class="modal-close">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:6px;">{{ __('Adressänderung beantragen') }}</div>
         <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">{{ __('Die Änderung wird erst nach Prüfung wirksam. Bitte laden Sie einen Nachweis der neuen Anschrift hoch.') }}</p>
         <form method="POST" id="change-address-form" action="" enctype="multipart/form-data">

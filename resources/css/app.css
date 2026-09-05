@@ -10,6 +10,12 @@
 @import 'tailwindcss';
 @config '../../tailwind.config.js';
 
+/* Markenfarben und Design-Tokens (UX-1) - siehe brand.css */
+@import './brand.css';
+
+/* Wiederkehrende Oberflaechen-Bausteine (UX-2) - siehe components.css */
+@import './components.css';
+
 /*
  * Das hidden-Attribut muss auch gegen eine Klasse mit eigenem display
  * gewinnen (Audit SEC-4).

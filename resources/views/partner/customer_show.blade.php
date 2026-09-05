@@ -14,7 +14,7 @@
         <tr>
             <td>{{ $v->type }}</td>
             <td>{{ $v->insurer ?? '—' }}</td>
-            <td style="color:var(--ink-soft);">{{ $v->contract_number ?? '—' }}</td>
+            <td class="muted">{{ $v->contract_number ?? '—' }}</td>
             <td>{{ $v->displayStatus()['label'] }}</td>
         </tr>
         @empty

@@ -16,6 +16,6 @@
 <style>
 .rep-tab{padding:9px 18px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:13.5px;font-weight:600;color:var(--ink);text-decoration:none;}
 .rep-tab:hover{background:#F4F7F5;}
-.rep-tab-active{background:#131A17;color:#fff;border-color:#131A17;}
+.rep-tab-active{background:var(--graphite);color:#fff;border-color:var(--graphite);}
 </style>
 @endonce

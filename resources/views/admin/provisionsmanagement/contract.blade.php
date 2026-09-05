@@ -18,7 +18,7 @@
             <tr><td>Referenz-Nr.</td><td>{{ $contract->reference_number ?: '—' }}</td></tr>
             <tr><td>Pool-Id (Vermittler-Id)</td><td>{{ $contract->vermittler_id ?: '—' }}</td></tr>
             <tr><td>Interne Vertragsnr.</td><td>{{ $contract->internal_contract_number ?: '—' }}</td></tr>
-            <tr><td>Abschluss</td><td>{{ $abschluss?->format('d.m.Y') ?? '—' }} @if($monate !== null)<span style="color:var(--ink-soft);">({{ $monate }} Monate her)</span>@endif</td></tr>
+            <tr><td>Abschluss</td><td>{{ $abschluss?->format('d.m.Y') ?? '—' }} @if($monate !== null)<span class="muted">({{ $monate }} Monate her)</span>@endif</td></tr>
             <tr><td>Provisionserwartung</td><td>{{ $contract->expected_commission_date?->format('d.m.Y') ?? '—' }}</td></tr>
             <tr><td>Prüffrist</td><td>{{ $contract->commission_check_date?->format('d.m.Y') ?? '—' }}</td></tr>
             <tr><td>Zustand</td><td><span class="badge badge-{{ $contract->commissionStatusBadge() }}">{{ $contract->commissionStatusLabel() }}</span></td></tr>
@@ -67,7 +67,7 @@
     <h3 style="margin-top:0;">Provisionshistorie <span style="font-weight:400;color:var(--ink-soft);">· Gesamt {{ $geld($netto) }}</span></h3>
     <table class="table" style="font-size:13px;">
         <tr><th>Datum</th><th>Art</th><th>Bezeichnung der Quelle</th><th>Pool / Datei</th>
-            <th style="text-align:right;">Betrag</th><th>Status</th><th></th></tr>
+            <th class="num">Betrag</th><th>Status</th><th></th></tr>
         @forelse($contract->commissions as $buchung)
         <tr>
             <td>{{ $buchung->commission_date?->format('d.m.Y') ?? $buchung->booking_date?->format('d.m.Y') ?? '—' }}</td>
@@ -79,7 +79,7 @@
             <td><a href="{{ route('admin.commissions_internal.show', $buchung->id) }}">öffnen →</a></td>
         </tr>
         @empty
-        <tr><td colspan="7" style="color:var(--ink-soft);">Noch keine Provision zu diesem Vertrag.</td></tr>
+        <tr><td colspan="7" class="muted">Noch keine Provision zu diesem Vertrag.</td></tr>
         @endforelse
     </table>
 </div>

@@ -10,7 +10,7 @@
 </div>
 
 @if(session('success'))
-<div style="background:#D9F4E6;border:1px solid #BFE6D2;border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:13.5px;color:#0E7A41;">
+<div style="background:var(--emerald-soft);border:1px solid #BFE6D2;border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:13.5px;color:#0E7A41;">
     {{ session('success') }}
 </div>
 @endif
@@ -19,15 +19,15 @@
     <a href="{{ route('admin.errors') }}"
         style="padding:12px 20px;text-decoration:none;font-size:14px;margin-bottom:-2px;
                font-weight:{{ $zeigeErledigte ? '500' : '700' }};
-               color:{{ $zeigeErledigte ? 'var(--ink-soft)' : 'var(--petrol)' }};
-               border-bottom:2px solid {{ $zeigeErledigte ? 'transparent' : 'var(--petrol)' }};">
+               color:{{ $zeigeErledigte ? 'var(--ink-soft)' : 'var(--graphite)' }};
+               border-bottom:2px solid {{ $zeigeErledigte ? 'transparent' : 'var(--graphite)' }};">
         Offen ({{ $zaehler['offen'] }})
     </a>
     <a href="{{ route('admin.errors', ['erledigt' => 1]) }}"
         style="padding:12px 20px;text-decoration:none;font-size:14px;margin-bottom:-2px;
                font-weight:{{ $zeigeErledigte ? '700' : '500' }};
-               color:{{ $zeigeErledigte ? 'var(--petrol)' : 'var(--ink-soft)' }};
-               border-bottom:2px solid {{ $zeigeErledigte ? 'var(--petrol)' : 'transparent' }};">
+               color:{{ $zeigeErledigte ? 'var(--graphite)' : 'var(--ink-soft)' }};
+               border-bottom:2px solid {{ $zeigeErledigte ? 'var(--graphite)' : 'transparent' }};">
         Erledigt ({{ $zaehler['erledigt'] }})
     </a>
 </div>
@@ -38,14 +38,14 @@
     Der vollständige Stacktrace steht weiterhin in <code>storage/logs/laravel.log</code>.
 </div>
 
-<div class="card" style="padding:0;overflow:hidden;">
+<div class="card card-flush">
     <table>
         <thead>
             <tr style="background:#F8F9FA;">
                 <th style="padding:12px 20px;">Fehler</th>
                 <th>Ort</th>
                 <th>Route</th>
-                <th style="text-align:right;">Anzahl</th>
+                <th class="num">Anzahl</th>
                 <th>Zuletzt</th>
                 <th></th>
             </tr>
@@ -62,7 +62,7 @@
             </td>
             <td style="font-size:12px;">
                 {{ $f->route ?? '—' }}
-                @if($f->method)<div style="color:var(--ink-soft);">{{ $f->method }}</div>@endif
+                @if($f->method)<div class="muted">{{ $f->method }}</div>@endif
             </td>
             <td style="text-align:right;font-weight:700;font-size:14px;">{{ $f->occurrences }}</td>
             <td style="font-size:12px;color:var(--ink-soft);white-space:nowrap;">
@@ -94,7 +94,7 @@
 
 @if($fehler->hasPages())
 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 2px;flex-wrap:wrap;">
-    <div style="font-size:13px;color:var(--ink-soft);">
+    <div class="muted-sm">
         {{ $fehler->firstItem() }}–{{ $fehler->lastItem() }} von {{ $fehler->total() }}
     </div>
     <div style="display:flex;gap:8px;align-items:center;">
@@ -103,7 +103,7 @@
         @else
             <a href="{{ $fehler->previousPageUrl() }}" class="btn btn-ghost btn-sm">← Zurück</a>
         @endif
-        <span style="font-size:13px;color:var(--ink-soft);">Seite {{ $fehler->currentPage() }} / {{ $fehler->lastPage() }}</span>
+        <span class="muted-sm">Seite {{ $fehler->currentPage() }} / {{ $fehler->lastPage() }}</span>
         @if($fehler->hasMorePages())
             <a href="{{ $fehler->nextPageUrl() }}" class="btn btn-ghost btn-sm">Weiter →</a>
         @else

@@ -23,11 +23,11 @@
 </div>
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:20px;max-width:1250px;">
-    <div class="card" style="padding:14px 16px;"><div style="font-size:11.5px;color:var(--ink-soft);">Buchungen</div><div style="font-size:22px;font-weight:700;">{{ $summen['anzahl'] }}</div></div>
-    <div class="card" style="padding:14px 16px;"><div style="font-size:11.5px;color:var(--ink-soft);">Brutto</div><div style="font-size:22px;font-weight:700;">{{ $geld($summen['brutto']) }}</div></div>
-    <div class="card" style="padding:14px 16px;"><div style="font-size:11.5px;color:var(--ink-soft);">Storno</div><div style="font-size:22px;font-weight:700;color:#A32D2D;">{{ $geld($summen['storno']) }}</div></div>
-    <div class="card" style="padding:14px 16px;"><div style="font-size:11.5px;color:var(--ink-soft);">Korrekturen</div><div style="font-size:22px;font-weight:700;">{{ $geld($summen['korrektur']) }}</div></div>
-    <div class="card" style="padding:14px 16px;"><div style="font-size:11.5px;color:var(--ink-soft);">Netto</div><div style="font-size:22px;font-weight:700;color:#1F7A4D;">{{ $geld($summen['netto']) }}</div></div>
+    <div class="card" style="padding:14px 16px;"><div class="muted-2xs">Buchungen</div><div style="font-size:22px;font-weight:700;">{{ $summen['anzahl'] }}</div></div>
+    <div class="card" style="padding:14px 16px;"><div class="muted-2xs">Brutto</div><div style="font-size:22px;font-weight:700;">{{ $geld($summen['brutto']) }}</div></div>
+    <div class="card" style="padding:14px 16px;"><div class="muted-2xs">Storno</div><div style="font-size:22px;font-weight:700;color:#A32D2D;">{{ $geld($summen['storno']) }}</div></div>
+    <div class="card" style="padding:14px 16px;"><div class="muted-2xs">Korrekturen</div><div style="font-size:22px;font-weight:700;">{{ $geld($summen['korrektur']) }}</div></div>
+    <div class="card" style="padding:14px 16px;"><div class="muted-2xs">Netto</div><div style="font-size:22px;font-weight:700;color:#1F7A4D;">{{ $geld($summen['netto']) }}</div></div>
 </div>
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:16px;max-width:1250px;">
@@ -35,12 +35,12 @@
     <div class="card">
         <h3 style="margin-top:0;">{{ $titel }}</h3>
         <table class="table" style="font-size:13px;">
-            <tr><th>{{ $titel }}</th><th style="text-align:right;">Buchungen</th><th style="text-align:right;">Netto</th></tr>
+            <tr><th>{{ $titel }}</th><th class="num">Buchungen</th><th class="num">Netto</th></tr>
             @forelse($daten as $zeile)
-            <tr><td>{{ $zeile['label'] }}</td><td style="text-align:right;">{{ $zeile['anzahl'] }}</td>
-                <td style="text-align:right;font-weight:700;">{{ $geld($zeile['netto']) }}</td></tr>
+            <tr><td>{{ $zeile['label'] }}</td><td class="num">{{ $zeile['anzahl'] }}</td>
+                <td class="num-strong">{{ $geld($zeile['netto']) }}</td></tr>
             @empty
-            <tr><td colspan="3" style="color:var(--ink-soft);">Keine Daten im Zeitraum.</td></tr>
+            <tr><td colspan="3" class="muted">Keine Daten im Zeitraum.</td></tr>
             @endforelse
         </table>
     </div>
@@ -50,14 +50,14 @@
 <div class="card" style="max-width:1250px;margin-top:16px;">
     <h3 style="margin-top:0;">Verlauf (12 Monate)</h3>
     <table class="table" style="font-size:13px;">
-        <tr><th>Monat</th><th style="text-align:right;">Buchungen</th><th style="text-align:right;">Brutto</th><th style="text-align:right;">Storno</th><th style="text-align:right;">Netto</th></tr>
+        <tr><th>Monat</th><th class="num">Buchungen</th><th class="num">Brutto</th><th class="num">Storno</th><th class="num">Netto</th></tr>
         @forelse($verlauf as $zeile)
-        <tr><td>{{ $zeile['monat'] }}</td><td style="text-align:right;">{{ $zeile['anzahl'] }}</td>
-            <td style="text-align:right;">{{ $geld($zeile['brutto']) }}</td>
+        <tr><td>{{ $zeile['monat'] }}</td><td class="num">{{ $zeile['anzahl'] }}</td>
+            <td class="num">{{ $geld($zeile['brutto']) }}</td>
             <td style="text-align:right;color:#A32D2D;">{{ $geld($zeile['storno']) }}</td>
-            <td style="text-align:right;font-weight:700;">{{ $geld($zeile['netto']) }}</td></tr>
+            <td class="num-strong">{{ $geld($zeile['netto']) }}</td></tr>
         @empty
-        <tr><td colspan="5" style="color:var(--ink-soft);">Noch keine Buchungen.</td></tr>
+        <tr><td colspan="5" class="muted">Noch keine Buchungen.</td></tr>
         @endforelse
     </table>
 </div>
@@ -67,33 +67,33 @@
         <h3 style="margin-top:0;">Wirtschaftlich stärkste Kunden</h3>
         <p style="font-size:12px;color:var(--ink-soft);margin-top:0;">Nur hier sichtbar – nie in der Kundenakte, nie im Portal.</p>
         <table class="table" style="font-size:13px;">
-            <tr><th>Kunde</th><th style="text-align:right;">Verträge</th><th style="text-align:right;">Netto</th><th style="text-align:right;">Ø/Vertrag</th><th style="text-align:right;">Storno</th></tr>
+            <tr><th>Kunde</th><th class="num">Verträge</th><th class="num">Netto</th><th class="num">Ø/Vertrag</th><th class="num">Storno</th></tr>
             @forelse($kundenTop as $zeile)
             <tr>
                 <td><a href="{{ route('admin.provisionsmanagement.customer', $zeile['customer_id']) }}">{{ $zeile['name'] }}</a></td>
-                <td style="text-align:right;">{{ $zeile['vertraege'] }}</td>
-                <td style="text-align:right;font-weight:700;">{{ $geld($zeile['netto']) }}</td>
-                <td style="text-align:right;">{{ $geld($zeile['schnitt']) }}</td>
-                <td style="text-align:right;">{{ $zeile['stornoquote'] }} %</td>
+                <td class="num">{{ $zeile['vertraege'] }}</td>
+                <td class="num-strong">{{ $geld($zeile['netto']) }}</td>
+                <td class="num">{{ $geld($zeile['schnitt']) }}</td>
+                <td class="num">{{ $zeile['stornoquote'] }} %</td>
             </tr>
             @empty
-            <tr><td colspan="5" style="color:var(--ink-soft);">Keine Daten.</td></tr>
+            <tr><td colspan="5" class="muted">Keine Daten.</td></tr>
             @endforelse
         </table>
     </div>
     <div class="card">
         <h3 style="margin-top:0;">Wirtschaftlich schwächste Kunden</h3>
         <table class="table" style="font-size:13px;">
-            <tr><th>Kunde</th><th style="text-align:right;">Verträge</th><th style="text-align:right;">Netto</th><th style="text-align:right;">Storno</th></tr>
+            <tr><th>Kunde</th><th class="num">Verträge</th><th class="num">Netto</th><th class="num">Storno</th></tr>
             @forelse($kundenFlop as $zeile)
             <tr>
                 <td><a href="{{ route('admin.provisionsmanagement.customer', $zeile['customer_id']) }}">{{ $zeile['name'] }}</a></td>
-                <td style="text-align:right;">{{ $zeile['vertraege'] }}</td>
-                <td style="text-align:right;font-weight:700;">{{ $geld($zeile['netto']) }}</td>
-                <td style="text-align:right;">{{ $zeile['stornoquote'] }} %</td>
+                <td class="num">{{ $zeile['vertraege'] }}</td>
+                <td class="num-strong">{{ $geld($zeile['netto']) }}</td>
+                <td class="num">{{ $zeile['stornoquote'] }} %</td>
             </tr>
             @empty
-            <tr><td colspan="4" style="color:var(--ink-soft);">Keine Daten.</td></tr>
+            <tr><td colspan="4" class="muted">Keine Daten.</td></tr>
             @endforelse
         </table>
     </div>
@@ -102,16 +102,16 @@
 <div class="card" style="max-width:1250px;margin-top:16px;">
     <h3 style="margin-top:0;">Abgeschlossen gegen vergütet</h3>
     <table class="table" style="font-size:13px;">
-        <tr><th>Monat</th><th style="text-align:right;">Abgeschlossen</th><th style="text-align:right;">Vergütet</th>
-            <th style="text-align:right;">In Frist</th><th style="text-align:right;">Überfällig</th><th style="text-align:right;">Fehlt</th></tr>
+        <tr><th>Monat</th><th class="num">Abgeschlossen</th><th class="num">Vergütet</th>
+            <th class="num">In Frist</th><th class="num">Überfällig</th><th class="num">Fehlt</th></tr>
         @forelse($abgleich as $zeile)
-        <tr><td>{{ $zeile['monat'] }}</td><td style="text-align:right;">{{ $zeile['abgeschlossen'] }}</td>
+        <tr><td>{{ $zeile['monat'] }}</td><td class="num">{{ $zeile['abgeschlossen'] }}</td>
             <td style="text-align:right;color:#1F7A4D;">{{ $zeile['verguetet'] }}</td>
-            <td style="text-align:right;">{{ $zeile['in_frist'] }}</td>
+            <td class="num">{{ $zeile['in_frist'] }}</td>
             <td style="text-align:right;color:#B5651D;">{{ $zeile['ueberfaellig'] }}</td>
             <td style="text-align:right;color:#A32D2D;">{{ $zeile['fehlt'] }}</td></tr>
         @empty
-        <tr><td colspan="6" style="color:var(--ink-soft);">Keine Verträge mit Pool-Zuordnung.</td></tr>
+        <tr><td colspan="6" class="muted">Keine Verträge mit Pool-Zuordnung.</td></tr>
         @endforelse
     </table>
 </div>

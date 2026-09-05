@@ -16,10 +16,10 @@
             <td style="color:var(--ink-soft);font-size:13px;white-space:nowrap;">{{ $t->ticket_number }}</td>
             <td style="font-weight:600;">{{ $t->subject }}</td>
             <td>{{ $t->guest_name ?? '—' }}</td>
-            <td style="color:var(--ink-soft);font-size:13px;">{{ $t->guest_email }}@if($t->guest_phone)<br>{{ $t->guest_phone }}@endif</td>
+            <td class="muted-sm">{{ $t->guest_email }}@if($t->guest_phone)<br>{{ $t->guest_phone }}@endif</td>
             <td>@switch($t->source)@case('website')🌐 Website @break@case('hilfe-formular')🆘 Hilfe @break@case('email')📧 E-Mail @break@default📨 {{ $t->source ?? '—' }}@endswitch</td>
             <td>{{ \App\Models\Ticket::PRIORITIES[$t->priority]['icon'] ?? '🟡' }}</td>
-            <td style="color:var(--ink-soft);">{{ $t->created_at->lokal()->format('d.m.Y') }}</td>
+            <td class="muted">{{ $t->created_at->lokal()->format('d.m.Y') }}</td>
             <td><span class="badge badge-{{ $t->statusBadge() }}">{{ $t->statusLabel() }}</span></td>
             <td><a href="{{ route('admin.ticket', $t->id) }}" class="btn btn-ghost btn-sm">Details</a></td>
         </tr>
@@ -31,14 +31,14 @@
 </div>
 @if($tickets->hasPages())
 <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;">
-    <div style="font-size:13px;color:var(--ink-soft);">
+    <div class="muted-sm">
         {{ $tickets->firstItem() }}–{{ $tickets->lastItem() }} von {{ $tickets->total() }} Anfragen
     </div>
     <div style="display:flex;gap:8px;align-items:center;">
         @if(!$tickets->onFirstPage())
             <a href="{{ $tickets->previousPageUrl() }}" class="btn btn-ghost btn-sm">← Zurück</a>
         @endif
-        <span style="font-size:13px;color:var(--ink-soft);">Seite {{ $tickets->currentPage() }} / {{ $tickets->lastPage() }}</span>
+        <span class="muted-sm">Seite {{ $tickets->currentPage() }} / {{ $tickets->lastPage() }}</span>
         @if($tickets->hasMorePages())
             <a href="{{ $tickets->nextPageUrl() }}" class="btn btn-ghost btn-sm">Weiter →</a>
         @endif

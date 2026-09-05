@@ -18,7 +18,7 @@
 .hint{font-size:12.5px;color:#9aa1ab;line-height:1.55;margin:-8px 0 16px;}
 .helpbox{margin-top:18px;padding:12px 14px;border:1px solid var(--gold-line);border-radius:11px;
     background:rgba(184,161,107,.08);font-size:12.5px;color:#c8ccd3;line-height:1.6;}
-.helpbox a{color:var(--gold-hell);font-weight:700;text-decoration:none;}
+.helpbox a{color:var(--gold-soft);font-weight:700;text-decoration:none;}
 </style>
 @include('partials.favicon')
 </head>

@@ -21,7 +21,7 @@
     </div>
 </div>
 
-@if(session('success'))<div style="background:#D9F4E6;color:#17A65B;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
+@if(session('success'))<div style="background:var(--emerald-soft);color:var(--emerald);padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
 
 <div class="card" style="margin-bottom:16px;">
     <form method="GET" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;">
@@ -44,7 +44,7 @@
             Noch keine Interessenten. Sobald ein Besucher den Assistenten auf der Website nutzt, erscheint er hier.
         </div>
     @else
-    <div style="overflow-x:auto;">
+    <div class="scroll-x">
         <table class="table">
             <thead>
                 <tr>
@@ -59,18 +59,18 @@
             <tbody>
             @foreach($leads as $lead)
                 <tr>
-                    <td style="white-space:nowrap;">{{ $lead->created_at->lokal()->format('d.m.Y H:i') }}</td>
+                    <td class="nowrap">{{ $lead->created_at->lokal()->format('d.m.Y H:i') }}</td>
                     <td>
                         <strong>{{ $lead->displayName() }}</strong>
                         @php $kontakt = $lead->contactData(); @endphp
-                        @if(!empty($kontakt['email']))<div style="font-size:12px;color:var(--ink-soft);">{{ $kontakt['email'] }}</div>@endif
-                        @if(!empty($kontakt['phone']))<div style="font-size:12px;color:var(--ink-soft);">{{ $kontakt['phone'] }}</div>@endif
+                        @if(!empty($kontakt['email']))<div class="muted-xs">{{ $kontakt['email'] }}</div>@endif
+                        @if(!empty($kontakt['phone']))<div class="muted-xs">{{ $kontakt['phone'] }}</div>@endif
                     </td>
                     <td>{{ $lead->intentLabel() }}</td>
                     <td style="font-size:12px;">
                         @foreach($lead->collectedData() as $key => $wert)
                             @continue(in_array($key, ['name','email','phone'], true))
-                            <div><span style="color:var(--ink-soft);">{{ $key }}:</span> {{ \Illuminate\Support\Str::limit($wert, 60) }}</div>
+                            <div><span class="muted">{{ $key }}:</span> {{ \Illuminate\Support\Str::limit($wert, 60) }}</div>
                         @endforeach
                     </td>
                     <td><span class="badge">{{ $lead->stateLabel() }}</span></td>

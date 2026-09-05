@@ -10,11 +10,11 @@
         @forelse($customers as $c)
         <tr>
             <td style="font-weight:600;">{{ $c->user?->name }}</td>
-            <td style="color:var(--ink-soft);">{{ $c->customer_number }}</td>
+            <td class="muted">{{ $c->customer_number }}</td>
             {{-- Nur AKTIVE Vertraege: die Beziehung ist bereits gescopt, der
                  Filter macht die Regel an der Anzeige noch einmal explizit. --}}
             <td>{{ $c->contracts->filter(fn($v) => $v->isCurrentlyActive())->count() }}</td>
-            <td style="text-align:right;"><a href="{{ route('partner.customer', $c->id) }}" class="btn btn-ghost btn-sm">Ansehen</a></td>
+            <td class="num"><a href="{{ route('partner.customer', $c->id) }}" class="btn btn-ghost btn-sm">Ansehen</a></td>
         </tr>
         @empty
         <tr><td colspan="4" style="text-align:center;color:var(--ink-soft);padding:24px;">Ihnen sind noch keine Kunden zugeordnet.</td></tr>

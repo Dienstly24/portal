@@ -45,7 +45,7 @@
             @endforeach
         </div>
         <div style="margin-top:10px;">
-            <a href="{{ route('admin.import.template') }}" style="color:var(--gold);font-size:13px;font-weight:600;">⬇ Vorlage herunterladen</a>
+            <a href="{{ route('admin.import.template') }}" style="color:var(--emerald);font-size:13px;font-weight:600;">⬇ Vorlage herunterladen</a>
         </div>
     </div>
 
@@ -66,7 +66,7 @@
         <input type="file" name="csv_file" id="csv-input" accept=".csv,.txt" style="display:none;" data-h-change="e4f9ad9b31">
 
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-            <div style="font-size:13px;color:var(--ink-soft);">
+            <div class="muted-sm">
                 Duplikate werden automatisch erkannt und übersprungen.
             </div>
             <button type="submit" class="btn btn-primary">
@@ -88,9 +88,9 @@
     </div>
 
     @php $total = \App\Models\Customer::count(); @endphp
-    <div style="background:#D9F4E6;border-radius:10px;padding:20px;text-align:center;margin-bottom:20px;">
-        <div style="font-size:36px;font-weight:700;color:#17A65B;">{{ $total }}</div>
-        <div style="font-size:14px;color:#17A65B;margin-top:4px;">Kunden im System</div>
+    <div style="background:var(--emerald-soft);border-radius:10px;padding:20px;text-align:center;margin-bottom:20px;">
+        <div style="font-size:36px;font-weight:700;color:var(--emerald);">{{ $total }}</div>
+        <div style="font-size:14px;color:var(--emerald);margin-top:4px;">Kunden im System</div>
     </div>
 
     <div style="font-size:13px;color:var(--ink-soft);margin-bottom:16px;">
@@ -134,7 +134,7 @@ function updateFileName(name) {
 window.__h = window.__h || {};
 window.__h["2e6d9c68c0"] = function (event) { document.getElementById('csv-input').click() };
 window.__h["4877e9ba56"] = function (event) { if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('csv-input').click();} };
-window.__h["a2c81a3999"] = function (event) { event.preventDefault();this.style.borderColor='var(--gold)' };
+window.__h["a2c81a3999"] = function (event) { event.preventDefault();this.style.borderColor='var(--emerald)' };
 window.__h["37bc2be278"] = function (event) { this.style.borderColor='var(--line)' };
 window.__h["7a7860bdd0"] = function (event) { event.preventDefault();this.style.borderColor='var(--line)';document.getElementById('csv-input').files=event.dataTransfer.files;updateFileName(event.dataTransfer.files[0].name) };
 window.__h["e4f9ad9b31"] = function (event) { updateFileName(this.files[0]?.name) };

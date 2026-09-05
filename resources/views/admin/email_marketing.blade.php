@@ -109,7 +109,7 @@
         Der tägliche Automatik-Lauf (08:30) und dieser Button senden nie doppelt.
     </p>
     @if($dueReminders > 0)
-    <div style="background:#D9F4E6;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#17A65B;">
+    <div style="background:var(--emerald-soft);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--emerald);">
         ✓ {{ $dueReminders }} Erinnerungen fällig — bereit zum Senden.
     </div>
     @else
@@ -119,7 +119,7 @@
     @endif
     <form method="POST" action="{{ route('admin.email_marketing.reminders') }}">
         @csrf
-        <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center;" @disabled($dueReminders === 0)>
+        <button type="submit" class="btn btn-emerald" style="width:100%;justify-content:center;" @disabled($dueReminders === 0)>
             ⏰ Erinnerungen jetzt senden
         </button>
     </form>
@@ -134,7 +134,7 @@
     <div class="item-row">
         <div>
             <div style="font-weight:600;font-size:14px;">{{ $c->subject }}</div>
-            <div style="font-size:12px;color:var(--ink-soft);">
+            <div class="muted-xs">
                 @if($c->status === 'scheduled' && $c->scheduled_for)
                     Geplant für {{ $c->scheduled_for->timezone(\App\Models\BannerSocialPost::OPERATOR_TZ)->lokal()->format('d.m.Y H:i') }} Uhr
                 @else
@@ -165,7 +165,7 @@
     <div class="item-row">
         <div>
             <div style="font-weight:600;font-size:14px;">{{ $c->subject }}</div>
-            <div style="font-size:12px;color:var(--ink-soft);">
+            <div class="muted-xs">
                 {{ $c->sent_at?->lokal()->format('d.m.Y H:i') }} · {{ $c->sent_count }} gesendet
                 @if($c->failed_count > 0)
                     · <span style="color:#A32D2D;">{{ $c->failed_count }} fehlgeschlagen</span>

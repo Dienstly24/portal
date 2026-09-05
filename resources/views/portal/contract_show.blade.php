@@ -31,20 +31,20 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
 {{-- Allgemeine Vertragsdaten --}}
 <div class="card">
     <div class="card-title">{{ __('Vertragsdaten') }}</div>
-    <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Vertragsnummer') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $contract->contract_number ?? '—' }}</span></div>
-    <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Vertragstyp') }}</span><span style="font-weight:600;font-size:13.5px;">{{ __($contract->typeLabel()) }}</span></div>
+    <div class="item-row"><span class="muted-sm">{{ __('Vertragsnummer') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $contract->contract_number ?? '—' }}</span></div>
+    <div class="item-row"><span class="muted-sm">{{ __('Vertragstyp') }}</span><span style="font-weight:600;font-size:13.5px;">{{ __($contract->typeLabel()) }}</span></div>
     {{-- Untergruppe (z.B. ADAC Basis-/Plus-/Premium-Mitgliedschaft, GKV/PKV) --}}
     @if($contract->subtypeLabel())
-    <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ $contract->type === 'schutzbrief' ? __('Mitgliedschaft') : __('Art') }}</span><span style="font-weight:600;font-size:13.5px;">{{ __($contract->subtypeLabel()) }}</span></div>
+    <div class="item-row"><span class="muted-sm">{{ $contract->type === 'schutzbrief' ? __('Mitgliedschaft') : __('Art') }}</span><span style="font-weight:600;font-size:13.5px;">{{ __($contract->subtypeLabel()) }}</span></div>
     @endif
-    <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Startdatum') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $d($contract->start_date) }}</span></div>
-    <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Enddatum') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $d($contract->end_date) }}</span></div>
-    <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Kündigungsdatum') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $d($contract->cancellation_date) }}</span></div>
+    <div class="item-row"><span class="muted-sm">{{ __('Startdatum') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $d($contract->start_date) }}</span></div>
+    <div class="item-row"><span class="muted-sm">{{ __('Enddatum') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $d($contract->end_date) }}</span></div>
+    <div class="item-row"><span class="muted-sm">{{ __('Kündigungsdatum') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $d($contract->cancellation_date) }}</span></div>
     @if($contract->hasPremium())
     @php $eur = fn($v) => number_format((float) $v, 2, ',', '.') . ' €'; @endphp
-    <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ $contract->isOneTime() ? __('Einmaliger Beitrag') : __('Beitrag') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $eur($contract->premium_amount) }}{{ $contract->isOneTime() ? '' : ' / ' . __(\App\Models\Contract::PREMIUM_INTERVALS[$contract->premium_interval]['label'] ?? 'Monatlich') }}</span></div>
+    <div class="item-row"><span class="muted-sm">{{ $contract->isOneTime() ? __('Einmaliger Beitrag') : __('Beitrag') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $eur($contract->premium_amount) }}{{ $contract->isOneTime() ? '' : ' / ' . __(\App\Models\Contract::PREMIUM_INTERVALS[$contract->premium_interval]['label'] ?? 'Monatlich') }}</span></div>
     @if(!$contract->isOneTime() && $contract->premium_interval !== 'monthly')
-    <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Beitrag pro Monat') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $eur($contract->monthlyPremium()) }}</span></div>
+    <div class="item-row"><span class="muted-sm">{{ __('Beitrag pro Monat') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $eur($contract->monthlyPremium()) }}</span></div>
     @endif
     @endif
 </div>
@@ -112,7 +112,7 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
                 <input type="number" name="mileage" required min="0" max="5000000" inputmode="numeric"
                     value="{{ old('mileage') }}" placeholder="{{ __('z. B.') }} 52300"
                     style="flex:1;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
-                <button type="submit" class="btn btn-primary" style="white-space:nowrap;">{{ __('Melden') }}</button>
+                <button type="submit" class="btn btn-primary nowrap">{{ __('Melden') }}</button>
             </div>
             @error('mileage')<div style="color:#A32D2D;font-size:12.5px;margin-top:6px;">{{ $message }}</div>@enderror
             <p style="font-size:12px;color:var(--ink-soft);margin-top:8px;">{{ __('Ihre Meldung wird direkt in Ihrer Vertragsakte gespeichert. Alle früheren Stände bleiben erhalten.') }}</p>
@@ -144,15 +144,15 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
 @if($e = $contract->energyDetail)
 <div class="card">
     <div class="card-title">{{ $contract->typeIcon() }} {{ __($contract->typeLabel()) }}</div>
-    @if($e->tariff)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Tarif') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $e->tariff }}</span></div>@endif
-    @if($e->customer_number)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Kundennummer') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $e->customer_number }}</span></div>@endif
-    <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Zählernummer') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $e->meter_number ?? '—' }}</span></div>
-    @if($e->malo_id)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">MaLo-ID</span><span style="font-weight:600;font-size:13.5px;">{{ $e->malo_id }}</span></div>@endif
-    @if($e->working_price !== null)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Arbeitspreis') }}</span><span style="font-weight:600;font-size:13.5px;">{{ rtrim(rtrim(number_format((float) $e->working_price, 3, ',', '.'), '0'), ',') }} ct/kWh</span></div>@endif
-    @if($e->base_price !== null)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Grundpreis') }}</span><span style="font-weight:600;font-size:13.5px;">{{ number_format((float) $e->base_price, 2, ',', '.') }} €/Monat</span></div>@endif
-    <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Abschlag') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $e->payment_amount ? number_format($e->payment_amount, 2, ',', '.') . ' €' : '—' }}</span></div>
-    <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Zahlungsintervall') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $intervalLabels[$e->payment_interval] ?? '—' }}</span></div>
-    @if($e->consumption_kwh)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Verbrauch') }}</span><span style="font-weight:600;font-size:13.5px;">{{ number_format($e->consumption_kwh, 0, ',', '.') }} kWh/Jahr</span></div>@endif
+    @if($e->tariff)<div class="item-row"><span class="muted-sm">{{ __('Tarif') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $e->tariff }}</span></div>@endif
+    @if($e->customer_number)<div class="item-row"><span class="muted-sm">{{ __('Kundennummer') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $e->customer_number }}</span></div>@endif
+    <div class="item-row"><span class="muted-sm">{{ __('Zählernummer') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $e->meter_number ?? '—' }}</span></div>
+    @if($e->malo_id)<div class="item-row"><span class="muted-sm">MaLo-ID</span><span style="font-weight:600;font-size:13.5px;">{{ $e->malo_id }}</span></div>@endif
+    @if($e->working_price !== null)<div class="item-row"><span class="muted-sm">{{ __('Arbeitspreis') }}</span><span style="font-weight:600;font-size:13.5px;">{{ rtrim(rtrim(number_format((float) $e->working_price, 3, ',', '.'), '0'), ',') }} ct/kWh</span></div>@endif
+    @if($e->base_price !== null)<div class="item-row"><span class="muted-sm">{{ __('Grundpreis') }}</span><span style="font-weight:600;font-size:13.5px;">{{ number_format((float) $e->base_price, 2, ',', '.') }} €/Monat</span></div>@endif
+    <div class="item-row"><span class="muted-sm">{{ __('Abschlag') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $e->payment_amount ? number_format($e->payment_amount, 2, ',', '.') . ' €' : '—' }}</span></div>
+    <div class="item-row"><span class="muted-sm">{{ __('Zahlungsintervall') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $intervalLabels[$e->payment_interval] ?? '—' }}</span></div>
+    @if($e->consumption_kwh)<div class="item-row"><span class="muted-sm">{{ __('Verbrauch') }}</span><span style="font-weight:600;font-size:13.5px;">{{ number_format($e->consumption_kwh, 0, ',', '.') }} kWh/Jahr</span></div>@endif
 </div>
 
 {{-- Zaehlerstand melden + Verbrauchshistorie (Betreiber-Vorgabe 29.07.2026).
@@ -381,7 +381,7 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
                 @elseif($row['consumption'] !== null)
                 <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
                     <div style="flex:1;height:8px;background:#E0DCD0;border-radius:999px;overflow:hidden;">
-                        <div style="height:100%;width:{{ $meterMax > 0 ? max(3, round($row['consumption'] / $meterMax * 100)) : 0 }}%;background:linear-gradient(90deg,#19b463,#128a4b);"></div>
+                        <div style="height:100%;width:{{ $meterMax > 0 ? max(3, round($row['consumption'] / $meterMax * 100)) : 0 }}%;background:linear-gradient(90deg,var(--emerald-bright),var(--emerald-deep));"></div>
                     </div>
                     <span style="font-size:12px;color:var(--ink-soft);white-space:nowrap;">
                         +{{ \App\Models\MeterReading::formatValue((float) $row['consumption'], $meterUnit) }}
@@ -403,17 +403,17 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
 @if($i = $contract->internetDetail)
 <div class="card">
     <div class="card-title">{{ __('📶 Internetvertrag') }}</div>
-    <div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Anbieter') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $contract->insurer }}</span></div>
-    @if($i->tariff)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Tarif') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $i->tariff }}</span></div>@endif
-    @if($i->speed)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Geschwindigkeit') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $i->speed }}{{ $i->upload_speed ? ' / ' . $i->upload_speed . ' Upload' : '' }}</span></div>@endif
-    @if($i->price_initial !== null)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Aktionspreis') }}</span><span style="font-weight:600;font-size:13.5px;">{{ number_format((float) $i->price_initial, 2, ',', '.') }} €/Monat{{ $i->price_initial_months ? ' (erste ' . $i->price_initial_months . ' Monate)' : '' }}</span></div>@endif
-    @if($i->price_regular !== null)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Preis danach') }}</span><span style="font-weight:600;font-size:13.5px;">{{ number_format((float) $i->price_regular, 2, ',', '.') }} €/Monat</span></div>@endif
-    @if($i->min_duration_months)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Mindestlaufzeit') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $i->min_duration_months }} {{ __('Monate') }}</span></div>@endif
-    @if($i->setup_fee !== null)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Bereitstellungsgebühr (einmalig)') }}</span><span style="font-weight:600;font-size:13.5px;">{{ number_format((float) $i->setup_fee, 2, ',', '.') }} €</span></div>@endif
-    @if($i->shipping_fee !== null)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Versandkosten (einmalig)') }}</span><span style="font-weight:600;font-size:13.5px;">{{ number_format((float) $i->shipping_fee, 2, ',', '.') }} €</span></div>@endif
-    @if($i->has_router)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">Router</span><span style="font-weight:600;font-size:13.5px;">{{ $i->router_name ?: 'inklusive' }}{{ $i->router_price !== null ? ((float) $i->router_price > 0 ? ' · ' . number_format((float) $i->router_price, 2, ',', '.') . ' €/Monat' : ' · inklusive') : '' }}</span></div>@endif
-    @if($i->bonus_amount !== null)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Bonus / Cashback') }}</span><span style="font-weight:600;font-size:13.5px;">{{ number_format((float) $i->bonus_amount, 2, ',', '.') }} €</span></div>@endif
-    @if($i->voucher_amount !== null)<div class="item-row"><span style="color:var(--ink-soft);font-size:13px;">{{ __('Gutschein') }}</span><span style="font-weight:600;font-size:13.5px;">{{ number_format((float) $i->voucher_amount, 2, ',', '.') }} €</span></div>@endif
+    <div class="item-row"><span class="muted-sm">{{ __('Anbieter') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $contract->insurer }}</span></div>
+    @if($i->tariff)<div class="item-row"><span class="muted-sm">{{ __('Tarif') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $i->tariff }}</span></div>@endif
+    @if($i->speed)<div class="item-row"><span class="muted-sm">{{ __('Geschwindigkeit') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $i->speed }}{{ $i->upload_speed ? ' / ' . $i->upload_speed . ' Upload' : '' }}</span></div>@endif
+    @if($i->price_initial !== null)<div class="item-row"><span class="muted-sm">{{ __('Aktionspreis') }}</span><span style="font-weight:600;font-size:13.5px;">{{ number_format((float) $i->price_initial, 2, ',', '.') }} €/Monat{{ $i->price_initial_months ? ' (erste ' . $i->price_initial_months . ' Monate)' : '' }}</span></div>@endif
+    @if($i->price_regular !== null)<div class="item-row"><span class="muted-sm">{{ __('Preis danach') }}</span><span style="font-weight:600;font-size:13.5px;">{{ number_format((float) $i->price_regular, 2, ',', '.') }} €/Monat</span></div>@endif
+    @if($i->min_duration_months)<div class="item-row"><span class="muted-sm">{{ __('Mindestlaufzeit') }}</span><span style="font-weight:600;font-size:13.5px;">{{ $i->min_duration_months }} {{ __('Monate') }}</span></div>@endif
+    @if($i->setup_fee !== null)<div class="item-row"><span class="muted-sm">{{ __('Bereitstellungsgebühr (einmalig)') }}</span><span style="font-weight:600;font-size:13.5px;">{{ number_format((float) $i->setup_fee, 2, ',', '.') }} €</span></div>@endif
+    @if($i->shipping_fee !== null)<div class="item-row"><span class="muted-sm">{{ __('Versandkosten (einmalig)') }}</span><span style="font-weight:600;font-size:13.5px;">{{ number_format((float) $i->shipping_fee, 2, ',', '.') }} €</span></div>@endif
+    @if($i->has_router)<div class="item-row"><span class="muted-sm">Router</span><span style="font-weight:600;font-size:13.5px;">{{ $i->router_name ?: 'inklusive' }}{{ $i->router_price !== null ? ((float) $i->router_price > 0 ? ' · ' . number_format((float) $i->router_price, 2, ',', '.') . ' €/Monat' : ' · inklusive') : '' }}</span></div>@endif
+    @if($i->bonus_amount !== null)<div class="item-row"><span class="muted-sm">{{ __('Bonus / Cashback') }}</span><span style="font-weight:600;font-size:13.5px;">{{ number_format((float) $i->bonus_amount, 2, ',', '.') }} €</span></div>@endif
+    @if($i->voucher_amount !== null)<div class="item-row"><span class="muted-sm">{{ __('Gutschein') }}</span><span style="font-weight:600;font-size:13.5px;">{{ number_format((float) $i->voucher_amount, 2, ',', '.') }} €</span></div>@endif
 </div>
 @endif
 

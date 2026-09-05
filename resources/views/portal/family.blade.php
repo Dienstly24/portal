@@ -5,7 +5,7 @@
         <div class="page-title">{{ __('👨‍👩‍👦 Meine Familie') }}</div>
         <div class="page-sub" style="margin-bottom:0;">{{ __('Familienmitglieder hinzufügen oder Änderungen beantragen – jede Angabe wird von unserem Team geprüft.') }}</div>
     </div>
-    <button data-h-click="af24f60d8a" class="btn btn-gold">+ {{ __('Familienmitglied hinzufügen') }}</button>
+    <button data-h-click="af24f60d8a" class="btn btn-emerald">+ {{ __('Familienmitglied hinzufügen') }}</button>
 </div>
 
 @php
@@ -71,7 +71,7 @@ $rejected = $requests->where('status','rejected');
     <div class="item-row">
         <div>
             <div style="font-size:14px;font-weight:600;">{{ $r->new_data['name'] ?? 'Familienmitglied' }}</div>
-            <div style="font-size:12px;color:var(--ink-soft);">{{ $r->created_at->lokal()->format('d.m.Y') }} @if($r->notes) · Grund: {{ $r->notes }} @endif</div>
+            <div class="muted-xs">{{ $r->created_at->lokal()->format('d.m.Y') }} @if($r->notes) · Grund: {{ $r->notes }} @endif</div>
         </div>
         <span class="badge" style="background:#F9E3E3;color:#A32D2D;">{{ __('Abgelehnt') }}</span>
     </div>
@@ -82,7 +82,7 @@ $rejected = $requests->where('status','rejected');
 {{-- Modal: Hinzufügen --}}
 <div id="add-family-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:440px;position:relative;">
-        <button data-h-click="5e8c29c2d3" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="5e8c29c2d3" class="modal-close">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:6px;">{{ __('Familienmitglied hinzufügen') }}</div>
         <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">{{ __('Die Angaben werden erst nach Prüfung durch unser Team übernommen.') }}</p>
         <form method="POST" action="{{ route('portal.family.store') }}">
@@ -121,7 +121,7 @@ $rejected = $requests->where('status','rejected');
 {{-- Modal: Änderung beantragen --}}
 <div id="change-family-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:440px;position:relative;">
-        <button data-h-click="521b43ae9a" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
+        <button data-h-click="521b43ae9a" class="modal-close">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:6px;">{{ __('Änderung beantragen') }}</div>
         <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">{{ __('Die Änderung wird erst nach Prüfung wirksam.') }}</p>
         <form method="POST" id="change-family-form" action="">

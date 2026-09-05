@@ -24,18 +24,18 @@
 @else
 @php $canBulk = in_array(auth()->user()->role, ['admin','manager']); @endphp
 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
-    <div style="font-size:13px;color:var(--ink-soft);">{{ count($pairs) }} Verdachtsfall(e) · {{ $scanned }} Kunden geprüft</div>
+    <div class="muted-sm">{{ count($pairs) }} Verdachtsfall(e) · {{ $scanned }} Kunden geprüft</div>
     @if($canBulk)
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
         @if($strongCount > 0)
         <form method="POST" action="{{ route('admin.customers.duplicates.merge_all') }}" style="margin:0;"
               data-confirm="Alle sicheren Treffer (>= {{ $autoMin }} % Übereinstimmung) automatisch zusammenführen?&#10;&#10;Nur eindeutige Dubletten (gleiche E-Mail, Telefon, IBAN, Vertragsnummer oder Name + Geburtsdatum). Schwächere Treffer (nur gleicher Name) bleiben zur manuellen Prüfung. Alle Daten bleiben erhalten.">
             @csrf
-            <button type="submit" class="btn btn-primary" style="background:#128a4b;">✓ Alle sicheren zusammenführen ({{ $strongCount }})</button>
+            <button type="submit" class="btn btn-primary" style="background:var(--emerald-deep);">✓ Alle sicheren zusammenführen ({{ $strongCount }})</button>
         </form>
         @endif
         <label style="font-size:13px;color:var(--ink);display:flex;align-items:center;gap:8px;cursor:pointer;">
-            <input type="checkbox" id="checkAllPairs" style="width:16px;height:16px;cursor:pointer;accent-color:#17A65B;"> Alle auswählen
+            <input type="checkbox" id="checkAllPairs" style="width:16px;height:16px;cursor:pointer;accent-color:var(--emerald);"> Alle auswählen
         </label>
     </div>
     @endif
@@ -55,8 +55,8 @@ $chipDefs = [
 @endphp
 <style>
 .catChip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 15px;font-size:12.5px;cursor:pointer;color:var(--ink);transition:.12s;white-space:nowrap;}
-.catChip:hover{border-color:#131A17;}
-.catChip.active{background:#131A17;color:#fff;border-color:#131A17;}
+.catChip:hover{border-color:var(--graphite);}
+.catChip.active{background:var(--graphite);color:#fff;border-color:var(--graphite);}
 .catChip.active .chipCount{color:rgba(255,255,255,.7);}
 .chipCount{color:var(--ink-soft);}
 </style>
@@ -70,7 +70,7 @@ $chipDefs = [
 </div>
 
 @if($canBulk)
-<div class="card" style="background:#EEF6F1;padding:11px 16px;margin-bottom:14px;font-size:12.5px;color:#131A17;line-height:1.5;">
+<div class="card" style="background:#EEF6F1;padding:11px 16px;margin-bottom:14px;font-size:12.5px;color:var(--graphite);line-height:1.5;">
     💡 <strong>Sichere Treffer (≥ {{ $autoMin }} %)</strong> – gleiche E-Mail, Telefon, IBAN, Vertragsnummer oder Name + Geburtsdatum – können mit einem Klick automatisch zusammengeführt werden. <strong>Schwächere Treffer (nur gleicher Name)</strong> bitte einzeln prüfen und per Auswahl zusammenführen.
 </div>
 @endif
@@ -82,7 +82,7 @@ $chipDefs = [
 <form method="POST" action="{{ route('admin.customers.duplicates.merge') }}" id="bulkMergeForm" data-h-submit="faa8ae9065">@csrf</form>
 <form method="POST" action="{{ route('admin.customers.duplicates.dismiss_bulk') }}" id="bulkDismissForm">@csrf<input type="hidden" name="type" id="bulkDismissType" value="not_duplicate"></form>
 
-<div id="mergeBar" style="display:none;position:sticky;top:0;z-index:10;background:#131A17;color:#fff;border-radius:10px;padding:12px 20px;margin-bottom:14px;align-items:center;gap:14px;flex-wrap:wrap;">
+<div id="mergeBar" style="display:none;position:sticky;top:0;z-index:10;background:var(--graphite);color:#fff;border-radius:10px;padding:12px 20px;margin-bottom:14px;align-items:center;gap:14px;flex-wrap:wrap;">
     <span style="font-size:13.5px;font-weight:600;"><span id="mergeCount">0</span> Paar(e) ausgewählt</span>
     <div style="margin-left:auto;display:flex;gap:10px;flex-wrap:wrap;">
         <button type="button" data-h-click="7d9525c2b0" class="btn btn-ghost" style="padding:8px 16px;font-size:13px;background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.25);" title="Ausgewählte als Ehepaar verknüpfen – beide Akten bleiben erhalten, nichts wird zusammengeführt">💍 Ehepaar</button>
@@ -103,11 +103,11 @@ $chipDefs = [
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap;gap:10px;">
         <div style="display:flex;align-items:center;gap:12px;">
             @if($canBulk)
-            <input type="checkbox" class="pairCheck" name="pairs[]" value="{{ $primary->id }}|{{ $duplicate->id }}" form="bulkMergeForm" style="width:17px;height:17px;cursor:pointer;accent-color:#17A65B;" title="Für Sammel-Zusammenführung auswählen">
+            <input type="checkbox" class="pairCheck" name="pairs[]" value="{{ $primary->id }}|{{ $duplicate->id }}" form="bulkMergeForm" style="width:17px;height:17px;cursor:pointer;accent-color:var(--emerald);" title="Für Sammel-Zusammenführung auswählen">
             @endif
             <span style="background:{{ $badgeColor }};color:#fff;border-radius:999px;padding:4px 12px;font-size:12.5px;font-weight:700;">{{ $score }}% · {{ $tierLabel }}</span>
             @if($score >= $autoMin)
-            <span style="background:#D9F4E6;color:#128a4b;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:600;">✓ sicher</span>
+            <span style="background:var(--emerald-soft);color:var(--emerald-deep);border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:600;">✓ sicher</span>
             @else
             <span style="background:#FEF3C7;color:#92400E;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:600;">manuell prüfen</span>
             @endif
@@ -135,7 +135,7 @@ $chipDefs = [
         </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
-        @foreach([['c'=>$primary,'label'=>'Hauptkunde (bleibt bestehen)','bg'=>'#D9F4E6'],['c'=>$duplicate,'label'=>'Duplikat (wird übernommen)','bg'=>'#FEF3C7']] as $col)
+        @foreach([['c'=>$primary,'label'=>'Hauptkunde (bleibt bestehen)','bg'=>'var(--emerald-soft)'],['c'=>$duplicate,'label'=>'Duplikat (wird übernommen)','bg'=>'#FEF3C7']] as $col)
         @php $c = $col['c']; @endphp
         <div style="padding:16px 20px;{{ $loop->first ? 'border-right:1px solid var(--line);' : '' }}">
             <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);margin-bottom:8px;">{{ $col['label'] }}</div>

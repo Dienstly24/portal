@@ -12,7 +12,7 @@
 @include('partials.auth_glass_styles')
 <style>
 .lead{font-size:14px;color:#c8ccd3;line-height:1.6;margin-bottom:16px;}
-.who{background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:10px;
+.who{background:rgba(0,0,0,.25);border:1px solid var(--glass-line);border-radius:10px;
     padding:9px 12px;font-size:13px;color:#dde0e5;margin-bottom:16px;}
 .who span{color:#9aa1ab;}
 .rules{list-style:none;margin:-6px 0 16px;padding:0;font-size:12.5px;color:#9aa1ab;line-height:1.6;}

@@ -37,7 +37,7 @@
         </div>
         <div style="margin-top:10px;display:flex;gap:10px;align-items:center;">
             <button class="btn btn-primary" type="submit">Speichern</button>
-            <span style="font-size:11.5px;color:var(--ink-soft);">Schlüssel: <code>{{ $pool->key }}</code> (unveränderlich – er steht an bereits importierten Provisionen)</span>
+            <span class="muted-2xs">Schlüssel: <code>{{ $pool->key }}</code> (unveränderlich – er steht an bereits importierten Provisionen)</span>
         </div>
     </form>
     @endforeach
@@ -77,7 +77,7 @@
             <td>{{ $eintrag->new_value ?: '—' }}</td>
         </tr>
         @empty
-        <tr><td colspan="6" style="color:var(--ink-soft);">Noch nichts protokolliert.</td></tr>
+        <tr><td colspan="6" class="muted">Noch nichts protokolliert.</td></tr>
         @endforelse
     </table>
 </div>
