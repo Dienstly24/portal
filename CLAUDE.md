@@ -412,12 +412,28 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Wiederkehrende Muster als data-Attribute: `data-confirm`,
   `data-row-nav`, `data-toggle`/`data-show`/`data-hide`,
   `data-fill-target`, `data-menu*`, `data-bulk*`.
-  **Zwei Fallen, beide als Test festgehalten:** (1) `ui.js` wird als
+  **Drei Fallen, alle als Test festgehalten:** (1) `ui.js` wird als
   Modul geladen und laeuft damit SPAETER als die Registrierungsbloecke -
   jeder Block beginnt deshalb mit `window.__h = window.__h || {};`.
   (2) `[hidden]` verliert gegen eine Klasse mit eigenem `display`
   (`.bulk-bar{display:flex}`), deshalb `[hidden]{display:none!important}`
   in `app.css` - dieselbe Aufgabe hatte frueher `[x-cloak]`.
+  (3) **`@push` NACH `@stack` derselben Datei faellt still weg**
+  (Betreiber-Meldung 06.09.2026 "die Suche im Dashboard ist tot"):
+  `@stack` gibt aus, was BIS DAHIN gestapelt wurde. Die Umstellung hatte
+  die Registrierungsbloecke in FUENF Vorlagen hinter die Stack-Zeile
+  gesetzt - in `layouts/admin.blade.php` (Kopfzeilen-Suche, Glocke,
+  "Alle gelesen" auf JEDER Seite der Beraterwelt), `auth/login`,
+  `auth/set-password`, `auth/two-factor-recovery-codes` und
+  `admin/provision_report_print`. Aus untergeordneten Views gepushte
+  Bloecke waren unbetroffen (sie werden vor dem Layout gerendert),
+  deshalb sah die Oberflaeche bis auf diese Elemente normal aus. Kein
+  Fehler, kein 500er, keine Konsolenmeldung - das Bedienelement tut
+  einfach nichts, und genau deshalb blieb es Tage unbemerkt. Die
+  Registrierung steht jetzt in allen fuenf Dateien VOR `@stack`; zwei
+  neue Tests halten es fest: der eine prueft im AUSGELIEFERTEN HTML,
+  dass jedes `data-h-…` seine `window.__h["…"]`-Registrierung
+  mitbekommt, der andere scannt alle Vorlagen auf `@push` nach `@stack`.
   **`style-src 'unsafe-inline'` bleibt bewusst** (rund 4.800
   `style="…"`-Attribute; ein Attribut kann keinen Nonce tragen, und aus
   einem Inline-Style laesst sich kein Code ausfuehren). `CSP_REPORT_ONLY`

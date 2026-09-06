@@ -222,6 +222,93 @@ class ContentSecurityPolicyTest extends TestCase
         $this->assertArrayNotHasKey('alpinejs', $package['devDependencies'] ?? []);
     }
 
+    /**
+     * Jedes verdrahtete Bedienelement bekommt seinen Handler MITGELIEFERT.
+     *
+     * Seit SEC-4 traegt ein Knopf nur noch data-h-<ereignis>="schluessel";
+     * die Funktion dahinter steht in einem @pushOnce('cspScripts')-Block,
+     * den @stack ausgibt. Faellt dieser Block aus dem HTML, ist das kein
+     * Fehler und keine leere Seite - das Element tut nur nichts mehr.
+     * Genau so waren die Kopfzeilen-Suche, die Glocke und die
+     * Passwort-Augen der Anmeldung wochenlang tot: die Bloecke standen in
+     * ihrer Vorlage NACH der Stack-Zeile, und @stack gibt nur aus, was bis
+     * dahin gestapelt wurde. Deshalb wird hier das AUSGELIEFERTE HTML
+     * geprueft, nicht die Vorlage.
+     */
+    public function test_every_wired_control_gets_its_handler_in_the_html(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        // Gast-Seite und Beraterwelt-Layout - die beiden Vorlagen, die
+        // ihre Handler selbst stapeln (untergeordnete Views werden vor dem
+        // Layout gerendert und sind von der Reihenfolge nicht betroffen).
+        $seiten = [
+            '/login' => null,
+            '/admin/tickets/statistik' => $admin,
+        ];
+
+        foreach ($seiten as $pfad => $als) {
+            $antwort = $als === null ? $this->get($pfad) : $this->actingAs($als)->get($pfad);
+            $antwort->assertOk();
+            $html = (string) $antwort->getContent();
+
+            preg_match_all('/data-h-[a-z]+="([^"]+)"/', $html, $benutzt);
+            $this->assertNotEmpty(
+                $benutzt[1],
+                "Auf $pfad steht kein einziges data-h-… - dann prueft dieser Test nichts mehr."
+            );
+
+            foreach (array_unique($benutzt[1]) as $schluessel) {
+                $this->assertStringContainsString(
+                    'window.__h["'.$schluessel.'"]',
+                    $html,
+                    "Auf $pfad traegt ein Bedienelement data-h-…=\"$schluessel\", die "
+                    .'Registrierung fehlt aber im ausgelieferten HTML - das Element tut nichts.'
+                );
+            }
+        }
+    }
+
+    /**
+     * Keine Vorlage stapelt in einen Stack, den sie schon ausgegeben hat.
+     *
+     * Der guenstige Waechter zum Test darueber: er sieht ALLE Vorlagen,
+     * auch die, die kein Test je aufruft. @stack gibt aus, was BIS DAHIN
+     * gestapelt wurde - ein @push danach verschwindet spurlos.
+     */
+    public function test_no_view_pushes_into_an_already_yielded_stack(): void
+    {
+        $treffer = [];
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator(resource_path('views'))
+        );
+
+        foreach ($iterator as $file) {
+            if (! $file->isFile() || ! str_ends_with($file->getFilename(), '.blade.php')) {
+                continue;
+            }
+
+            // Blade-Kommentare erklaeren genau diese Regel und enthalten
+            // dabei die Woerter @stack und @push - sie sind kein Verstoss.
+            $inhalt = preg_replace('/\{\{--.*?--\}\}/s', '', file_get_contents($file->getPathname()));
+
+            preg_match_all('/@stack\(\s*[\'"]([\w-]+)[\'"]\s*\)/', (string) $inhalt, $stacks, PREG_OFFSET_CAPTURE);
+
+            foreach ($stacks[1] as $i => $stack) {
+                $name = $stack[0];
+                $rest = substr((string) $inhalt, $stacks[0][$i][1] + strlen($stacks[0][$i][0]));
+
+                if (preg_match('/@(push|pushOnce|prepend)\(\s*[\'"]'.preg_quote($name, '/').'[\'"]/', $rest)) {
+                    $treffer[] = str_replace(resource_path('views').'/', '', $file->getPathname()).' ('.$name.')';
+                }
+            }
+        }
+
+        $this->assertSame([], $treffer,
+            'Diese Vorlagen stapeln NACH ihrer eigenen @stack-Zeile - der Block wird nie ausgegeben: '
+            .implode(', ', $treffer));
+    }
+
     // ------------------------------------------------------------------
 
     private function policy(): string
