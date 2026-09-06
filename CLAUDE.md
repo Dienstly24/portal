@@ -2280,6 +2280,80 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Markenfarbe, alles aus `brand.css`.
 - Tests: `ReportsDashboardTest` (Abnahmefaelle 1-11).
 
+## Omnichannel-Messaging Phase B (Betreiber-Auftrag 06.09.2026)
+
+Vollstaendig in `docs/OMNICHANNEL_ANALYSE_UND_ARCHITEKTUR.md`. Kurzfassung:
+
+- **Der Befund, um den es geht**: eine Kunden-Conversation existierte gar
+  nicht. `customer_messages` war ein FLACHER Strom je Kunde - ohne
+  `conversation_id`, Status oder Zustaendigen. "Die Unterhaltung" war eine
+  ABFRAGE, kein Datensatz; deshalb konnte ihr nichts anhaften und niemand
+  sie zuweisen, schliessen oder archivieren. `CustomerConversationService`
+  (Phase A) fuehrt die Kanaele zwar chronologisch zusammen, ist aber ein
+  Lese-Zusammenschluss OHNE Persistenz und laedt je Kunde alles in den
+  Speicher - fuer eine Inbox ueber ALLE Kunden strukturell ungeeignet.
+- **Neu**: `channels` (Faehigkeiten als DATEN, nicht als Bedingungen),
+  `channel_accounts` (Zugangsdaten `encrypted:array` + `$hidden`),
+  `conversations`, `conversation_assignments` (Historie),
+  `customer_channel_identities` und `channel_events` (Idempotenz).
+- **KEINE zweite Nachrichtentabelle**: `customer_messages` wird
+  erweitert. Eine zweite haette den Bestand kopiert - solange beide
+  existieren, hat jede Frage zwei Antworten, und KI-Assistent, Glocke,
+  Suche und Portal-Chat muessten gleichzeitig umgestellt werden.
+  `from_staff` und `direction` sind dieselbe Aussage in zwei Lesarten und
+  werden im Modell aneinander GEBUNDEN, damit sie nie auseinanderlaufen.
+- **BETREUER != ZUSTAENDIGKEIT** (der Kern des Auftrags): der Betreuer
+  gehoert zum KUNDEN (`employee_customers.is_primary`,
+  `Customer::betreuerPrimary()`), die Zustaendigkeit zur UNTERHALTUNG
+  (`conversations.assigned_employee_id`). Uebernimmt der Support einen
+  Vorgang, wechselt die Zustaendigkeit - der Betreuer bleibt. Die
+  automatische Zuweisung greift NUR bei fehlender Zustaendigkeit: bei
+  jeder Nachricht neu zuzuweisen wuerde eine bewusste Uebernahme bei der
+  naechsten Kundenantwort still rueckgaengig machen, und der Support
+  saehe seine Faelle verschwinden. `employee_customers` bleibt bewusst
+  N:M (Sichtbarkeit, Vertretung); OHNE Markierung gilt der AELTESTE
+  Eintrag - "kein Betreuer" waere fuer den Altbestand schlicht falsch.
+  Einzige Schreibstelle: `AssignmentService`, jede Aenderung mit
+  Historie; eine Zuweisung auf DENSELBEN Mitarbeiter erzeugt keinen
+  Eintrag (sonst gehen die echten Wechsel im Rauschen unter).
+- **NIE RATEN** (`CustomerResolver`): gespeicherte Kanal-Identitaet ->
+  Telefonnummer -> E-Mail, und jede Stufe nur bei GENAU EINEM Treffer.
+  Der NAME zaehlt nie. Wird niemand gefunden, entsteht die Unterhaltung
+  trotzdem ohne Akte - eine verworfene Nachricht bekaeme niemand zurueck.
+  Die Akte wird spaeter nur ERGAENZT, nie ueberschrieben.
+- **Die Architekturregel wird GEMESSEN**: im Kern
+  (`app/Services/Messaging/` ohne `Channels/`) und in `Conversation` darf
+  kein Kanalname vorkommen. `MessagingArchitectureTest` prueft das am
+  CODE, nicht an den Kommentaren (eine Erlaeuterung darf die Regel
+  benennen). Ohne Messung haelt so eine Absprache keine sechs Monate.
+- **ZWEI FEHLER, die erst die eigenen Tests zeigten**: (1)
+  `customer_messages.customer_id` war PFLICHTIG - damit waere ausgerechnet
+  die Nachricht einer unbekannten Nummer verworfen worden, also die, die
+  ein Mitarbeiter zuordnen soll. (2) Ein UNIQUE ueber (Konto, Ereignis)
+  hat ein LOCH: SQLite UND MySQL behandeln NULL als "immer verschieden",
+  ein Ereignis ohne Konto waere beliebig oft beanspruchbar gewesen -
+  Idempotenz-Schutz mit Loch genau dort, wo er gebraucht wird. Jetzt ein
+  zusammengesetzter `dedupe_key` als eigene, nicht-nullbare Spalte.
+- **Status geht nur VORWAERTS** (`advanceStatus`): Statusmeldungen der
+  Plattformen treffen regelmaessig in falscher Reihenfolge ein, eine
+  gelesene Nachricht darf nie wieder auf "zugestellt" zurueckfallen.
+  Ausnahme `failed` - ein Fehlschlag ist immer die juengere Wahrheit.
+- **Nachtrag** `messaging:unterhaltungen-nachtragen` (`--probelauf`):
+  idempotent, loescht nichts, ueberschreibt nichts; ein kaputter
+  Datensatz beendet nie den Lauf. Ein Nachtrag, den man nach einem
+  Abbruch nicht wiederholen darf, ist wertlos.
+- **Noch NICHT gebaut** (bewusst, Betreiber-Entscheidung 06.09.2026):
+  Webhook-Endpunkt, WhatsApp Cloud API (Phase 6), vereinheitlichte Inbox
+  (Phase 7), Haertung (Phase 8). Die zwei registrierten Adapter
+  (`portal`, `internal`) haben absichtlich KEINE externe API - sie
+  belegen, dass der Kern ohne Plattform auskommt, bevor der erste echte
+  Kanal dazukommt.
+- Inbetriebnahme: `php artisan migrate`, dann
+  `messaging:unterhaltungen-nachtragen --probelauf`, dann ohne Schalter.
+  Sichtbar aendert sich fuer Mitarbeiter und Kunden zunaechst NICHTS.
+- Tests: `OmnichannelFoundationTest`, `ConversationAssignmentTest`,
+  `MessagingArchitectureTest`, `ConversationBackfillTest`.
+
 ## Offene Themen / wartet auf den Betreiber
 
 - **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026

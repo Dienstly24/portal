@@ -1,10 +1,16 @@
 # Omnichannel-Messaging: Bestandsaufnahme, Architektur, Migrationsplan
 
-Stand 06.09.2026. Dieses Dokument ist **Phase 1 + Phase 2** des
-Betreiber-Auftrags ("Laravel Omnichannel Messaging System"): erst das
-bestehende System verstehen, dann den Umbau vorschlagen. **Es wurde noch
-keine Zeile Produktionscode geaendert** - das ist Absicht (Auftrag
-Abschnitt 47).
+Stand 06.09.2026. Dieses Dokument ist die Bestandsaufnahme und der
+Bauplan zum Betreiber-Auftrag "Laravel Omnichannel Messaging System".
+
+**Umsetzungsstand**: Phase 1 (Bestandsaufnahme), 2 (Architektur),
+3 (Datenbank + Nachtrag), 4 (Kanal-Abstraktion) und 5 (Betreuer und
+Zustaendigkeit) sind GEBAUT und getestet. Offen sind Phase 6 (WhatsApp
+Cloud API), 7 (vereinheitlichte Inbox) und 8 (Haertung).
+
+Der Betreiber hat am 06.09.2026 zwei Punkte entschieden: der Betreuer
+bleibt N:M mit einem primaeren Eintrag (Abschnitt 4.1), und die Phasen
+3-5 gehen dem WhatsApp-Anschluss voraus (Abschnitt 4.3).
 
 ---
 
@@ -284,3 +290,63 @@ selben Schritt.
   plus `ActivityLog`).
 - Portfolio-Scope gilt weiter: ein Mitarbeiter sieht in der Inbox nie
   mehr Kunden als in seiner Kundenliste.
+
+
+---
+
+## 7. Was in Phase 3-5 tatsaechlich gebaut wurde
+
+### Datenbank
+Zwei Migrationen. Die erste legt `channels`, `channel_accounts`,
+`customer_channel_identities`, `conversations`, `conversation_assignments`
+und `channel_events` an und traegt die beiden Kanaele des Bestands ein
+(`portal`, `internal`). Die zweite erweitert `customer_messages`,
+`customer_message_attachments` und `employee_customers` - **alle neuen
+Spalten nullable**, kein bestehender Pfad aendert sich.
+
+### Zwei Fehler, die erst die eigenen Tests gezeigt haben
+- **`customer_messages.customer_id` war pflichtig.** Damit waere
+  ausgerechnet die Nachricht einer unbekannten Nummer verworfen worden -
+  also genau die, die ein Mitarbeiter zuordnen soll. Sie ist jetzt
+  nullable; die Unterhaltung traegt die Nachricht, bis die Akte gefunden
+  ist.
+- **Ein UNIQUE ueber (Konto, Ereignis) hat ein Loch.** SQLite UND MySQL
+  behandeln NULL als "immer verschieden": ein Ereignis ohne zugeordnetes
+  Konto - der Fall VOR der Kontoerkennung - waere beliebig oft
+  beanspruchbar gewesen. Der Idempotenz-Schutz haette dort versagt, wo er
+  gebraucht wird. Jetzt ein zusammengesetzter `dedupe_key` als eigene,
+  nicht-nullbare Spalte.
+
+### Die Regel wird gemessen, nicht behauptet
+`MessagingArchitectureTest` prueft, dass im Kern
+(`app/Services/Messaging/`, ohne `Channels/`) und in `Conversation` kein
+Kanalname vorkommt - und zwar im CODE, nicht in den Kommentaren: eine
+Erlaeuterung darf und soll die Regel benennen. Die erste
+`if ($kanal === 'whatsapp')` im Kern kostet nichts und faellt niemandem
+auf; die zwanzigste macht einen neuen Kanal unbezahlbar.
+
+### Der Nachtrag
+`php artisan messaging:unterhaltungen-nachtragen` (`--probelauf` zeigt
+nur). Idempotent, loescht nichts, ueberschreibt nichts, und ein kaputter
+Datensatz beendet nie den Lauf. Er leitet ausserdem `direction`,
+`message_type` und `sender_type` aus `from_staff` ab - es entsteht keine
+neue Aussage, nur dieselbe in der neuen Schreibweise.
+
+### Tests
+`tests/Feature/Messaging/`: `OmnichannelFoundationTest` (14),
+`ConversationAssignmentTest` (10), `MessagingArchitectureTest` (6),
+`ConversationBackfillTest` (7).
+
+### Noch NICHT gebaut (bewusst)
+Kein Webhook-Endpunkt, kein WhatsApp-Adapter, keine neue Oberflaeche.
+Die beiden registrierten Adapter (`portal`, `internal`) haben bewusst
+keine externe API - sie belegen, dass der Kern ohne Plattform auskommt,
+BEVOR der erste echte Kanal dazukommt.
+
+### Fuer die Inbetriebnahme auf dem Server
+1. `php artisan migrate`
+2. `php artisan messaging:unterhaltungen-nachtragen --probelauf` (zeigt
+   die Zahlen, schreibt nichts)
+3. `php artisan messaging:unterhaltungen-nachtragen`
+Bis dahin aendert sich fuer Mitarbeiter und Kunden **nichts Sichtbares** -
+die neue Struktur laeuft neben dem Bestand mit.
