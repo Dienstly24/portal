@@ -45,6 +45,8 @@ body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
 .nav-group-badge{margin-left:0;display:none;padding:1px 6px;font-size:10px;}
 .nav-group.collapsed .nav-group-badge{display:inline-block;}
 .sidebar-nav{padding-bottom:8px;}
+/* Trennt den Arbeitsweg vom einen Weg in die Verwaltung (Umbau 06.09.2026) */
+.nav-sep{height:1px;margin:10px 20px;background:rgba(255,255,255,.1);}
 .sidebar-foot{margin-top:auto;padding:16px 20px;border-top:1px solid rgba(255,255,255,.1);}
 .user-row{display:flex;align-items:center;gap:10px;}
 .avatar-sm{width:34px;height:34px;border-radius:50%;background:var(--emerald);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#ffffff;flex:none;}

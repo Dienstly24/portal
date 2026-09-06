@@ -12,12 +12,14 @@ use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 /**
- * Seitenleiste der Beraterwelt (Umbau 03.09.2026).
+ * Seitenleiste der Beraterwelt (Umbau 03.09.2026, Umstellung 06.09.2026).
  *
  * Die Tests halten die Entscheidungen fest, die man einer fertigen
  * Navigation nicht mehr ansieht - und die beim naechsten neuen Bereich
  * sonst als Erstes wieder verloren gehen:
- *  - taegliche Arbeit oben und offen, Technik unten und zugeklappt,
+ *  - in der Seitenleiste steht NUR der taegliche Arbeitsweg; Vertrieb,
+ *    Marketing und Administration liegen als Untermenues in den
+ *    Einstellungen und bleiben von dort vollstaendig erreichbar,
  *  - ein Badge ist eine AUFFORDERUNG, keine Statistik,
  *  - kein Punkt fuehrt in ein 403,
  *  - kein zusammengelegter Bereich wird unerreichbar.
@@ -45,30 +47,109 @@ class AdminNavigationTest extends TestCase
         return $out;
     }
 
+    /** @return array<string,NavGroup> Die Untermenues der Einstellungen-Ansicht. */
+    private function settingsGroups(User $user): array
+    {
+        $out = [];
+        foreach ($this->nav($user)->settingsGroups() as $g) {
+            $out[$g->key] = $g;
+        }
+
+        return $out;
+    }
+
     // ------------------------------------------------ Struktur (Fall 1-4)
 
-    public function test_die_taegliche_arbeit_steht_oben_und_offen(): void
+    public function test_die_seitenleiste_traegt_nur_den_taeglichen_arbeitsweg(): void
     {
-        $groups = $this->navGroups(User::factory()->create(['role' => 'admin']));
+        $admin = User::factory()->create(['role' => 'admin']);
+        $groups = $this->navGroups($admin);
 
         $this->assertSame(
-            ['postfach', 'mein-tag', 'kunden', 'dokumente', 'vertrieb', 'marketing', 'administration'],
+            ['kunden', 'dokumente', 'postfach', 'mein-tag'],
             array_keys($groups),
-            'Die Reihenfolge IST die Information: erst der Arbeitstag, dann Steuerung, dann Technik.'
+            'Die Reihenfolge IST die Information (Betreiber-Vorgabe 06.09.2026).'
         );
 
-        foreach (['postfach', 'mein-tag', 'kunden', 'dokumente'] as $key) {
-            $this->assertTrue($groups[$key]->openByDefault, "Arbeitsbereich {$key} muss offen stehen.");
+        foreach ($groups as $key => $group) {
+            $this->assertTrue($group->openByDefault, "Arbeitsbereich {$key} muss offen stehen.");
         }
+
+        // Steuerung und Technik stehen NICHT mehr in der Seitenleiste.
         foreach (['vertrieb', 'marketing', 'administration'] as $key) {
-            $this->assertFalse($groups[$key]->openByDefault, "Bereich {$key} darf den Arbeitsweg nicht saeumen.");
+            $this->assertArrayNotHasKey($key, $groups);
+        }
+    }
+
+    public function test_die_punkte_stehen_innerhalb_ihrer_gruppe_in_der_vorgegebenen_reihenfolge(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $groups = $this->navGroups($admin);
+        $settings = $this->settingsGroups($admin);
+
+        $keys = fn (NavGroup $g) => array_map(fn ($i) => $i->key, $g->items);
+
+        $this->assertSame(['kunden', 'interessenten', 'vertraege', 'aenderungen'], $keys($groups['kunden']));
+        $this->assertSame(['eingang', 'anforderungen'], $keys($groups['dokumente']));
+        $this->assertSame(['kundenchat', 'tickets', 'anfragen', 'email', 'team'], $keys($groups['postfach']));
+        $this->assertSame(['aufgaben', 'termine'], $keys($groups['mein-tag']));
+
+        $this->assertSame(['provisionen', 'partner', 'vergleichsportale', 'berichte'], $keys($settings['vertrieb']));
+        $this->assertSame(
+            ['leistungsseiten', 'medien', 'werbung', 'banner', 'newsletter', 'ankuendigungen'],
+            $keys($settings['marketing'])
+        );
+        $this->assertSame(
+            ['mitarbeiter', 'zeiten', 'protokoll', 'ki-wissen', 'systemzustand', 'fehler', 'datenimport', 'einstellungen'],
+            $keys($settings['administration'])
+        );
+    }
+
+    public function test_steuerung_und_technik_liegen_als_untermenues_in_den_einstellungen(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $settings = $this->settingsGroups($admin);
+
+        $this->assertSame(['vertrieb', 'marketing', 'administration'], array_keys($settings));
+
+        // Der EINE Weg dorthin steht in der Seitenleiste.
+        $this->assertSame(route('admin.settings'), $this->nav($admin)->settings()->url);
+
+        // Und die Einstellungen-Ansicht zeigt jeden dieser Punkte wirklich an.
+        $antwort = $this->actingAs($admin)->get(route('admin.settings'))->assertOk();
+        foreach ($settings as $group) {
+            foreach ($group->items as $item) {
+                $antwort->assertSee($item->url, false);
+            }
+        }
+    }
+
+    public function test_wer_keine_einstellungen_darf_landet_nicht_in_einem_403(): void
+    {
+        foreach (['manager', 'support', 'employee'] as $rolle) {
+            $user = User::factory()->create(['role' => $rolle]);
+            $punkt = $this->nav($user)->settings();
+
+            $this->assertSame(route('admin.verwaltung'), $punkt->url,
+                "Rolle {$rolle} darf nicht auf die admin-only Einstellungen zeigen.");
+
+            $antwort = $this->actingAs($user)->get($punkt->url);
+            $this->assertNotSame(403, $antwort->getStatusCode());
+
+            // Auch hier ist jeder fuer die Rolle sichtbare Punkt erreichbar.
+            foreach ($this->nav($user)->settingsGroups() as $group) {
+                foreach ($group->items as $item) {
+                    $antwort->assertSee($item->url, false);
+                }
+            }
         }
     }
 
     public function test_technik_und_konfiguration_liegen_ausschliesslich_in_der_administration(): void
     {
-        $groups = $this->navGroups(User::factory()->create(['role' => 'admin']));
-        $adminLabels = array_map(fn ($i) => $i->label, $groups['administration']->items);
+        $user = User::factory()->create(['role' => 'admin']);
+        $groups = $this->navGroups($user);
+        $adminLabels = array_map(fn ($i) => $i->label, $this->settingsGroups($user)['administration']->items);
 
         foreach (['Systemzustand', 'Fehler', 'Aktivitätslog', 'Einstellungen'] as $label) {
             $this->assertContains($label, $adminLabels);
@@ -84,8 +165,8 @@ class AdminNavigationTest extends TestCase
 
     public function test_die_drei_provisions_bereiche_sind_ein_punkt(): void
     {
-        $groups = $this->navGroups(User::factory()->create(['role' => 'admin']));
-        $labels = array_map(fn ($i) => $i->label, $groups['vertrieb']->items);
+        $settings = $this->settingsGroups(User::factory()->create(['role' => 'admin']));
+        $labels = array_map(fn ($i) => $i->label, $settings['vertrieb']->items);
 
         $this->assertSame(['Provisionen'], array_values(array_filter(
             $labels,
@@ -96,7 +177,7 @@ class AdminNavigationTest extends TestCase
     public function test_die_gesamte_navigation_bleibt_uebersichtlich(): void
     {
         $nav = $this->nav(User::factory()->create(['role' => 'admin']));
-        $sichtbar = 1; // Dashboard
+        $sichtbar = 2; // Dashboard + Einstellungen
         foreach ($nav->groups() as $g) {
             $sichtbar += $g->openByDefault ? count($g->items) : 0;
         }
@@ -132,8 +213,8 @@ class AdminNavigationTest extends TestCase
     {
         Announcement::create(['title' => 'Info', 'body' => 'Text', 'expires_at' => null]);
 
-        $groups = $this->navGroups(User::factory()->create(['role' => 'admin']));
-        foreach ($groups['marketing']->items as $item) {
+        $settings = $this->settingsGroups(User::factory()->create(['role' => 'admin']));
+        foreach ($settings['marketing']->items as $item) {
             if ($item->key === 'ankuendigungen') {
                 $this->assertFalse($item->hasBadge(),
                     'Aktive Ankuendigungen sind eine Statistik, keine offene Aufgabe.');
@@ -157,10 +238,10 @@ class AdminNavigationTest extends TestCase
 
     public function test_mitarbeiter_sehen_keine_verwaltung(): void
     {
-        $groups = $this->navGroups(User::factory()->create(['role' => 'employee']));
+        $user = User::factory()->create(['role' => 'employee']);
 
-        $this->assertArrayNotHasKey('administration', $groups);
-        $this->assertArrayHasKey('postfach', $groups);
+        $this->assertArrayNotHasKey('administration', $this->settingsGroups($user));
+        $this->assertArrayHasKey('postfach', $this->navGroups($user));
     }
 
     public function test_kein_menuepunkt_fuehrt_in_ein_403(): void
@@ -169,8 +250,8 @@ class AdminNavigationTest extends TestCase
             $user = User::factory()->create(['role' => $rolle]);
             $nav = $this->nav($user);
 
-            $ziele = [$nav->home()->url];
-            foreach ($nav->groups() as $g) {
+            $ziele = [$nav->home()->url, $nav->settings()->url];
+            foreach (array_merge($nav->groups(), $nav->settingsGroups()) as $g) {
                 foreach ($g->items as $item) {
                     $ziele[] = $item->url;
                 }
