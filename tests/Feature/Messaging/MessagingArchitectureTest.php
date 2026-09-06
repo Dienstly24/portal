@@ -142,6 +142,33 @@ class MessagingArchitectureTest extends TestCase
     }
 
     /**
+     * Fall 6a: KEINE KI IM KANAL (Auftrag Abschnitte 79/100).
+     *
+     * Der Adapter spricht mit der Plattform - mehr nicht. Wandert die
+     * KI dort hinein, muss sie in jedem weiteren Kanal noch einmal
+     * stehen; beim vierten vergisst sie jemand, und der Ausfall sieht
+     * aus wie gar nichts. Sie haengt deshalb am Ereignis des Kerns
+     * (`TriggerAiAssistant`), und dieser Test haelt das fest.
+     */
+    public function test_kein_kanal_adapter_ruft_die_ki_auf(): void
+    {
+        $verbotene = ['assistant', 'openai', 'anthropic', 'claude', 'prompt', 'aiconversation'];
+        $treffer = [];
+
+        foreach (glob(base_path('app/Services/Messaging/Channels/*.php')) as $datei) {
+            $code = $this->codeOhneKommentare($datei);
+            foreach ($verbotene as $wort) {
+                if (str_contains($code, $wort)) {
+                    $treffer[] = basename($datei).' -> '.$wort;
+                }
+            }
+        }
+
+        $this->assertSame([], $treffer,
+            'KI gehoert ueber den Conversation Engine, nicht in den Kanal: '.implode(', ', $treffer));
+    }
+
+    /**
      * Fall 6: Ein Kanal OHNE eigene Webhook-Pruefung nimmt nichts
      * entgegen. Durchwinken waere die gefaehrlichere Vorgabe: eine
      * gefaelschte Nachricht landete sonst in einer Kundenakte.

@@ -19,7 +19,7 @@ class ChannelAccount extends Model
 {
     protected $fillable = [
         'channel_id', 'name', 'external_account_id', 'credentials',
-        'token_expires_at', 'settings', 'is_active',
+        'token_expires_at', 'settings', 'is_active', 'ai_mode',
     ];
 
     protected $casts = [

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Services\Ai\Assistant\AssistantSettings;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -112,7 +113,8 @@ class CustomerMessage extends Model
     }
 
     public function customer() { return $this->belongsTo(Customer::class); }
-    public function conversation() { return $this->belongsTo(Conversation::class, 'conversation_id'); }
+    /** @return BelongsTo<Conversation, $this> */
+    public function conversation(): BelongsTo { return $this->belongsTo(Conversation::class, 'conversation_id'); }
     public function sender() { return $this->belongsTo(User::class, 'sender_id'); }
     public function attachments() { return $this->hasMany(CustomerMessageAttachment::class, 'message_id'); }
 

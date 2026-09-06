@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Events\Messaging\InboundMessageReceived;
+use App\Listeners\Messaging\TriggerAiAssistant;
 use App\Models\ScheduledTaskRun;
 use App\Models\User;
 use App\Services\Activity\ActivityCatalog;
@@ -383,6 +385,18 @@ class AppServiceProvider extends ServiceProvider
         ProductionDatabaseGuard::registrieren($this->app);
 
         $this->registerRateLimiters();
+
+        /*
+        | OMNICHANNEL + KI: die KI haengt am EREIGNIS des Kerns, nicht am
+        | Kanal (Auftrag Abschnitte 79/80/93).
+        |
+        | Damit gilt sie fuer jeden Kanal - auch fuer jeden zukuenftigen -
+        | ohne eine Zeile im Adapter. Stuende der Anstoss weiter im
+        | Kanal-Weg, muesste ihn jeder neue Kanal wiederholen; beim
+        | vierten vergisst ihn jemand, und der Ausfall sieht aus wie gar
+        | nichts: der Kunde schreibt, und es passiert einfach nichts.
+        */
+        Event::listen(InboundMessageReceived::class, TriggerAiAssistant::class);
 
         /*
         | ARCH-7: strenge Eloquent-Regeln - aber NUR ausserhalb der Produktion.

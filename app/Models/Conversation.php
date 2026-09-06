@@ -44,7 +44,7 @@ class Conversation extends Model
     protected $fillable = [
         'customer_id', 'channel_id', 'channel_account_id',
         'external_conversation_id', 'external_user_id',
-        'assigned_employee_id', 'status', 'subject', 'last_message_at',
+        'assigned_employee_id', 'status', 'ai_mode', 'subject', 'last_message_at',
         'closed_at', 'archived_at', 'reopened_at', 'locked_by', 'locked_at',
     ];
 

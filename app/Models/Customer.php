@@ -21,7 +21,7 @@ class Customer extends Model
         'user_id', 'partner_id', 'customer_number', 'source', 'commission_import_id', 'created_by', 'acquired_by', 'acquired_by_partner_id',
         'birth_date', 'address', 'address2',
         'iban', 'iban2', 'marital_status', 'phone', 'mobile', 'preferred_lang',
-        'company_name', 'company_type', 'customer_type', 'email2',
+        'company_name', 'company_type', 'customer_type', 'email2', 'ai_mode',
         'nationality', 'occupation', 'employer_name', 'employer_address', 'last_contact', 'gender', 'account_holder', 'bic',
         'marketing_consent', 'unsubscribed_at', 'unsubscribe_token',
         'health_insurance_number', 'health_insurance_company', 'health_insurance_type',

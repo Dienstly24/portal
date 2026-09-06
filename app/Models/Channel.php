@@ -17,7 +17,7 @@ class Channel extends Model
     public const INTERNAL = 'internal';
     public const PORTAL = 'portal';
 
-    protected $fillable = ['key', 'name', 'driver', 'is_active', 'capabilities', 'sort'];
+    protected $fillable = ['key', 'name', 'driver', 'is_active', 'ai_mode', 'capabilities', 'sort'];
     protected $casts = ['is_active' => 'boolean', 'capabilities' => 'array'];
 
     public function accounts() { return $this->hasMany(ChannelAccount::class); }
