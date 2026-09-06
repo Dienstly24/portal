@@ -98,9 +98,14 @@ return new class extends Migration {
         });
 
         Schema::table('customer_messages', function (Blueprint $table) {
+            // ZUERST der Fremdschluessel, DANN seine Indexe: MySQL laesst
+            // keinen Fremdschluessel ohne tragenden Index stehen und
+            // bricht sonst mit Fehler 1553 ab. SQLite verzeiht es, weil es
+            // die Tabelle neu baut - deshalb faellt so etwas erst in
+            // Produktion auf.
+            $table->dropForeign(['conversation_id']);
             $table->dropUnique('customer_messages_external_unique');
             $table->dropIndex('customer_messages_conversation_idx');
-            $table->dropForeign(['conversation_id']);
             $table->uuid('customer_id')->nullable(false)->change();
             $table->dropColumn([
                 'conversation_id', 'direction', 'sender_type', 'external_message_id',

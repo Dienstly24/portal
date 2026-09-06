@@ -41,10 +41,22 @@ return new class extends Migration {
 
         // Das UNIQUE auf customer_id faellt - ein Kunde kann jetzt mehrere
         // Steuerstaende haben (einen je Unterhaltung, plus den alten
-        // kundenweiten als Vorgabe). Der Index bleibt als reiner Suchindex.
+        // kundenweiten als Vorgabe).
+        //
+        // DIE REIHENFOLGE IST PFLICHT, nicht Geschmack: `customer_id`
+        // traegt einen FREMDSCHLUESSEL, und MySQL verlangt fuer jeden
+        // Fremdschluessel einen tragenden Index. Faellt das UNIQUE, bevor
+        // der Ersatz steht, bricht die Migration mit Fehler 1553 ab
+        // ("Cannot drop index ... needed in a foreign key constraint").
+        // SQLite wuerde es klaglos schlucken, weil es die Tabelle
+        // komplett neu baut - genau die Sorte Unterschied, wegen der es
+        // den MySQL-Lauf in CI gibt. Deshalb: erst der Ersatz, dann der
+        // Wegfall.
+        Schema::table('ai_conversations', function (Blueprint $table) {
+            $table->index('customer_id', 'ai_conversations_customer_idx');
+        });
         Schema::table('ai_conversations', function (Blueprint $table) {
             $table->dropUnique('ai_conversations_customer_id_unique');
-            $table->index('customer_id', 'ai_conversations_customer_idx');
         });
 
         // KI-Betriebsart je Ebene (Abschnitt 63). NULL heisst ERBEN - nur
@@ -73,11 +85,18 @@ return new class extends Migration {
         Schema::table('channels', fn (Blueprint $t) => $t->dropColumn('ai_mode'));
 
         Schema::table('ai_conversations', function (Blueprint $table) {
-            $table->dropIndex('ai_conversations_customer_idx');
             $table->dropUnique('ai_conv_omni_unique');
             $table->dropForeign(['omnichannel_conversation_id']);
             $table->dropColumn('omnichannel_conversation_id');
+        });
+        // Spiegelbildlich zu up(): erst das UNIQUE wieder aufbauen, dann
+        // den Suchindex entfernen - der Fremdschluessel darf zu keinem
+        // Zeitpunkt ohne tragenden Index dastehen.
+        Schema::table('ai_conversations', function (Blueprint $table) {
             $table->unique('customer_id', 'ai_conversations_customer_id_unique');
+        });
+        Schema::table('ai_conversations', function (Blueprint $table) {
+            $table->dropIndex('ai_conversations_customer_idx');
         });
     }
 };
