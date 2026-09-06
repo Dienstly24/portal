@@ -63,7 +63,11 @@ class Bundesland
      * geteilt ist, entscheidet die dritte Stelle - diese Faelle stehen in
      * FEINZUORDNUNG und werden VOR dieser Tabelle geprueft.
      *
-     * @var array<string,string>
+     * PHP macht aus numerischen Schluesseln Integer ('50' -> 50, '01' bleibt
+     * '01') - der Typ muss das abbilden, sonst beschreibt der PHPDoc etwas
+     * anderes als der Wert.
+     *
+     * @var array<int|string,string>
      */
     private const LEITREGION = [
         '01' => 'SN', '02' => 'SN', '03' => 'BB', '04' => 'SN', '06' => 'ST',
@@ -94,7 +98,7 @@ class Bundesland
      * Faelle, in denen eine ganze Zehnergruppe eindeutig im Nachbarland
      * liegt. Alles Feinere waere ein PLZ-Verzeichnis, kein Kartenschluessel.
      *
-     * @var array<string,string>
+     * @var array<int|string,string>
      */
     private const FEINZUORDNUNG = [
         // 63x: Untermain - 630xx-636xx Hessen, 637xx-639xx Bayern (Aschaffenburg).
@@ -131,7 +135,18 @@ class Bundesland
             return self::FEINZUORDNUNG[$drei];
         }
 
-        return self::LEITREGION[substr($ziffern, 0, 2)] ?? self::UNBEKANNT;
+        return self::leitregion($ziffern) ?? self::UNBEKANNT;
+    }
+
+    /**
+     * Land der Leitregion (erste zwei Stellen) - oder null, wenn die Region
+     * nicht vergeben ist (04x und 05x gibt es nicht). Eigener Helfer, damit
+     * der Zugriff auf die Tabelle an EINER Stelle steht: `ausPlz()` und die
+     * Filter-Praefixe muessen dieselbe Antwort geben.
+     */
+    private static function leitregion(string $plz): ?string
+    {
+        return self::LEITREGION[substr($plz, 0, 2)] ?? null;
     }
 
     /** Anzeigename zu einem Kuerzel (auch fuer self::UNBEKANNT). */
@@ -172,8 +187,7 @@ class Bundesland
             'plus' => $text(array_keys(array_filter(self::FEINZUORDNUNG, fn ($k) => $k === $kuerzel))),
             'minus' => $text(array_keys(array_filter(
                 self::FEINZUORDNUNG,
-                fn ($k, $drei) => $k !== $kuerzel
-                    && (self::LEITREGION[substr((string) $drei, 0, 2)] ?? null) === $kuerzel,
+                fn ($k, $drei) => $k !== $kuerzel && self::leitregion((string) $drei) === $kuerzel,
                 ARRAY_FILTER_USE_BOTH
             ))),
         ];

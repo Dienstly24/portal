@@ -237,15 +237,18 @@ class DashboardAnalyticsService
 
         // Ein Durchgang ueber alle relevanten Vertraege statt 3 Abfragen je
         // Periode (bei 12 Perioden waeren das 72 Abfragen).
+        // toBase(): hier werden nur vier Eckdaten je Vertrag gebraucht. Als
+        // Modelle geladen, waeren es Tausende Objekte samt Casts - und die
+        // Aliase (`abschluss`) waeren dort ohnehin keine echten Eigenschaften.
         $zeilen = $this->vertragsbasis($f)
             ->selectRaw(self::ABSCHLUSS.' as abschluss')
-            ->addSelect(['contracts.end_date', 'contracts.cancellation_date', 'contracts.status', 'contracts.type'])
+            ->addSelect(['contracts.end_date', 'contracts.cancellation_date', 'contracts.status'])
             ->where(function ($w) use ($vorVon, $letzte) {
                 $w->whereRaw(self::ABSCHLUSS.' between ? and ?', [$vorVon->toDateString(), $letzte->toDateString()])
                     ->orWhereBetween('contracts.end_date', [$vorVon->toDateString(), $letzte->toDateString()])
                     ->orWhereBetween('contracts.cancellation_date', [$vorVon->toDateString(), $letzte->toDateString()]);
             })
-            ->get();
+            ->toBase()->get();
 
         $leer = fn () => array_fill(0, count($perioden), 0);
         $neu = $leer();
@@ -369,7 +372,7 @@ class DashboardAnalyticsService
         $vertraege = $this->vertragsbasis($f)
             ->whereRaw(self::ABSCHLUSS.' between ? and ?', [$f->von->toDateString(), $f->bis->toDateString()])
             ->selectRaw('substr(customers.address_zip, 1, 3) as plz3, count(*) as anzahl, '.$this->jahresbeitragSql().' as wert')
-            ->groupBy('plz3')->get();
+            ->groupBy('plz3')->toBase()->get();
 
         $verlaengerungen = $this->vertragsbasis($f)
             ->whereBetween('contracts.end_date', [$f->von->toDateString(), $f->bis->toDateString()])
@@ -378,50 +381,67 @@ class DashboardAnalyticsService
             ->selectRaw('substr(customers.address_zip, 1, 3) as plz3, count(*) as anzahl')
             ->groupBy('plz3')->pluck('anzahl', 'plz3');
 
-        $laender = [];
-        foreach (Bundesland::NAMEN as $kuerzel => $name) {
-            $laender[$kuerzel] = [
-                'kuerzel' => $kuerzel, 'name' => $name,
-                'kunden' => 0, 'neue_vertraege' => 0, 'verlaengerungen' => 0, 'wert' => 0.0,
-            ];
+        // ZUERST nur Zahlen summieren, DANN die Anzeigezeilen bauen. Vorher
+        // wuchs dieselbe Struktur ueber eine Closure mit &-Referenz - das
+        // vermischt Aufsummieren und Darstellen in einem Wert, den hinterher
+        // weder ein Leser noch ein Werkzeug sicher beschreiben kann.
+        $summen = [];
+        foreach ([...Bundesland::kuerzel(), Bundesland::UNBEKANNT] as $schluessel) {
+            $summen[$schluessel] = ['kunden' => 0, 'neue_vertraege' => 0, 'verlaengerungen' => 0, 'wert' => 0.0];
         }
-        $ohne = ['kunden' => 0, 'neue_vertraege' => 0, 'verlaengerungen' => 0, 'wert' => 0.0];
-
-        $zuweisen = function (?string $plz3, string $feld, $wert) use (&$laender, &$ohne) {
-            $land = Bundesland::ausPlz(((string) $plz3).'00');
-            if ($land === Bundesland::UNBEKANNT) {
-                $ohne[$feld] += $wert;
-
-                return;
-            }
-            $laender[$land][$feld] += $wert;
-        };
 
         foreach ($kunden as $plz3 => $anzahl) {
-            $zuweisen($plz3, 'kunden', (int) $anzahl);
+            $this->addieren($summen, $plz3, 'kunden', (int) $anzahl);
         }
         foreach ($vertraege as $zeile) {
-            $zuweisen($zeile->plz3, 'neue_vertraege', (int) $zeile->anzahl);
-            $zuweisen($zeile->plz3, 'wert', round((float) $zeile->wert, 2));
+            $this->addieren($summen, $zeile->plz3, 'neue_vertraege', (int) $zeile->anzahl);
+            $this->addieren($summen, $zeile->plz3, 'wert', round((float) $zeile->wert, 2));
         }
         foreach ($verlaengerungen as $plz3 => $anzahl) {
-            $zuweisen($plz3, 'verlaengerungen', (int) $anzahl);
+            $this->addieren($summen, $plz3, 'verlaengerungen', (int) $anzahl);
         }
 
-        $gesamtKunden = array_sum(array_column($laender, 'kunden')) + $ohne['kunden'];
-        foreach ($laender as $k => $l) {
-            $laender[$k]['anteil'] = $gesamtKunden > 0 ? round($l['kunden'] / $gesamtKunden * 100, 1) : 0.0;
+        $gesamtKunden = (int) array_sum(array_column($summen, 'kunden'));
+
+        $laender = [];
+        $top = [];
+        foreach (Bundesland::NAMEN as $kuerzel => $name) {
+            $zeile = $summen[$kuerzel] + [
+                'kuerzel' => $kuerzel,
+                'name' => $name,
+                'anteil' => $gesamtKunden > 0 ? round($summen[$kuerzel]['kunden'] / $gesamtKunden * 100, 1) : 0.0,
+            ];
+            $laender[$kuerzel] = $zeile;
+            if ($zeile['kunden'] > 0) {
+                $top[] = $zeile;
+            }
         }
 
-        $top = collect($laender)->sortByDesc('kunden')->filter(fn ($l) => $l['kunden'] > 0)->take(5)->values()->all();
+        // Die fuenf staerksten Laender - Laender ohne Kunden stehen bewusst
+        // nicht in der Rangliste (ein Rang ohne Kunden ist kein Rang).
+        usort($top, fn (array $a, array $b) => $b['kunden'] <=> $a['kunden']);
 
         return [
             'laender' => $laender,
-            'max' => max(1, (int) max(array_column($laender, 'kunden') ?: [0])),
-            'top' => $top,
-            'ohne_zuordnung' => $ohne['kunden'],
+            'max' => max(1, (int) max(array_column($summen, 'kunden'))),
+            'top' => array_slice($top, 0, 5),
+            'ohne_zuordnung' => $summen[Bundesland::UNBEKANNT]['kunden'],
             'gesamt' => $gesamtKunden,
         ];
+    }
+
+    /**
+     * Einen Wert dem Bundesland seiner Leitzahl zuschlagen. Was sich nicht
+     * zuordnen laesst, landet unter Bundesland::UNBEKANNT - nie anteilig auf
+     * die Laender verteilt: die Karte soll nicht vollstaendiger aussehen als
+     * der Datenbestand ist.
+     *
+     * @param  array<string,array<string,float|int>>  $summen
+     */
+    private function addieren(array &$summen, ?string $plz3, string $feld, float|int $wert): void
+    {
+        $land = Bundesland::ausPlz(((string) $plz3).'00');
+        $summen[$land][$feld] += $wert;
     }
 
     // =================================================================
@@ -560,7 +580,17 @@ class DashboardAnalyticsService
     // Bausteine der Abfragen
     // =================================================================
 
-    /** Vertragsabfrage mit allen aktiven Filtern (immer mit Kunden-Join). */
+    /**
+     * Vertragsabfrage mit allen aktiven Filtern (immer mit Kunden-Join).
+     *
+     * Der generische Typ ist Pflicht, nicht Zierde: ohne ihn ist der
+     * Rueckgabewert ein Builder ueber "irgendein Model", und weder die
+     * statische Analyse noch die Entwicklungsumgebung kennen dann
+     * `currentlyActive()` oder `statusGroup()` - also ausgerechnet die
+     * Scopes, die die Definition von "aktiv" tragen.
+     *
+     * @return Builder<Contract>
+     */
     private function vertragsbasis(AnalyticsFilters $f): Builder
     {
         $q = Contract::query()->join('customers', 'customers.id', '=', 'contracts.customer_id');
@@ -584,7 +614,11 @@ class DashboardAnalyticsService
         return $q;
     }
 
-    /** Kundenabfrage mit den Filtern, die auf Kunden anwendbar sind. */
+    /**
+     * Kundenabfrage mit den Filtern, die auf Kunden anwendbar sind.
+     *
+     * @return Builder<Customer>
+     */
     private function kundenbasis(AnalyticsFilters $f): Builder
     {
         $q = Customer::query();
@@ -601,15 +635,20 @@ class DashboardAnalyticsService
         // Sparte/Status schraenken Kunden ueber IHRE Vertraege ein - sonst
         // zaehlte die Karte bei "Sparte: KFZ" weiterhin alle Kunden und die
         // Zahlen der Seite widersprächen sich.
+        //
+        // Als Unterabfrage statt whereHas('contracts', ...): der Filter laeuft
+        // damit ueber denselben typisierten Vertrags-Builder wie alles andere
+        // auf dieser Seite, `statusGroup()` ist die bekannte Scope-Methode und
+        // nicht ein Aufruf auf "irgendeinem Model" im Inneren einer Closure.
         if ($f->sparte !== null || $f->vertragsstatus !== null) {
-            $q->whereHas('contracts', function ($c) use ($f) {
-                if ($f->sparte !== null) {
-                    $c->where('type', $f->sparte);
-                }
-                if ($f->vertragsstatus !== null) {
-                    $c->statusGroup($f->vertragsstatus);
-                }
-            });
+            $vertraege = Contract::query()->select('contracts.customer_id');
+            if ($f->sparte !== null) {
+                $vertraege->where('contracts.type', $f->sparte);
+            }
+            if ($f->vertragsstatus !== null) {
+                $vertraege->statusGroup($f->vertragsstatus);
+            }
+            $q->whereIn('customers.id', $vertraege);
         }
 
         return $q;
