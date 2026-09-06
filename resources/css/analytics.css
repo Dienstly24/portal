@@ -1,0 +1,185 @@
+/*
+ * BERICHTE & ANALYSEN - die Bausteine der Auswertungsseite
+ * (Betreiber-Auftrag 06.09.2026).
+ *
+ * ABGRENZUNG ZU components.css: dort stehen die Bausteine, die die GANZE
+ * Anwendung benutzt (.card, .btn, .badge). Hier steht nur, was es
+ * ausschliesslich auf der Auswertungsseite gibt - Kennzahlenkachel mit
+ * Trend, Filterleiste, Karte, Ranglisten. Sie in components.css zu legen
+ * hiesse, jede Seite der Anwendung mit Regeln zu laden, die genau eine
+ * Seite benutzt.
+ *
+ * KEIN HEX EINER MARKENFARBE. Alles kommt aus brand.css - auch die
+ * Trendfarben, die bewusst die STATUS-Tokens benutzen: "gestiegen" ist
+ * eine Aussage, keine Marke (siehe Kopfkommentar in brand.css).
+ *
+ * Gold bleibt AKZENT (Zierlinie der Kacheln, aktive Filterchips), nie eine
+ * Flaeche und nie ein Primaer-Button - Betreiber-Beschluss 22.07.2026.
+ */
+
+/* --- Kopfzeile der Seite mit Zeitraum-Umschalter ------------------- */
+.an-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 18px; }
+
+/* --- Filterleiste: kompakt und beim Scrollen sichtbar ---------------
+ * Sticky, weil jede Zahl der Seite an dieser Auswahl haengt: wer unten
+ * bei der Karte steht, muss sehen koennen, welcher Zeitraum gilt.
+ * ------------------------------------------------------------------ */
+.an-filter {
+    position: sticky; top: var(--header-h, 64px); z-index: 20;
+    background: var(--canvas);
+    border-bottom: 1px solid var(--line);
+    margin: 0 -32px 24px; padding: 12px 32px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.an-filter-label { font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-soft); }
+.an-seg { display: inline-flex; max-width: 100%; overflow-x: auto; background: var(--surface-soft); border: 1px solid var(--line); border-radius: 999px; padding: 2px; scrollbar-width: none; }
+.an-seg::-webkit-scrollbar { display: none; }
+.an-seg a {
+    padding: 6px 13px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+    color: var(--ink-soft); text-decoration: none; transition: .15s; white-space: nowrap;
+}
+.an-seg a:hover { color: var(--ink); }
+.an-seg a.on { background: var(--graphite); color: #fff; }
+.an-select {
+    padding: 7px 11px; border: 1px solid var(--line); border-radius: 8px; font-size: 12.5px;
+    background: var(--surface); color: var(--ink); font-family: inherit; max-width: 190px;
+}
+.an-select:focus { outline: 2px solid var(--emerald); outline-offset: 1px; }
+.an-date { padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 12.5px; background: var(--surface); color: var(--ink); font-family: inherit; }
+.an-chip {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--gold-line); font-size: 12px; color: var(--ink); text-decoration: none;
+}
+.an-chip strong { font-weight: 600; }
+.an-chip span { color: var(--ink-soft); font-weight: 700; }
+.an-chip:hover { border-color: var(--gold); }
+.an-reset { font-size: 12.5px; color: var(--ink-soft); text-decoration: none; border-bottom: 1px solid transparent; }
+.an-reset:hover { color: var(--ink); border-bottom-color: var(--ink-soft); }
+.an-spacer { flex: 1; }
+
+/* --- Kennzahlenkachel ----------------------------------------------
+ * Hierarchie ist Absicht: Label klein -> Zahl gross -> Vergleich klein.
+ * Wer die Seite fuenf Sekunden ansieht, soll die ZAHL sehen.
+ * ------------------------------------------------------------------ */
+.an-kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 24px; }
+.an-kpi {
+    position: relative; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; padding: 16px 18px 15px; overflow: hidden;
+}
+/* Zierlinie in Gold - der einzige Schmuck der Kachel. */
+.an-kpi::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--gold-line); }
+.an-kpi-warn::before { background: var(--status-warning); }
+.an-kpi-label { font-size: 12px; color: var(--ink-soft); font-weight: 600; margin-bottom: 10px; line-height: 1.3; }
+.an-kpi-wert { font-size: 30px; font-weight: 700; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.an-kpi-fuss { display: flex; align-items: center; gap: 6px; margin-top: 9px; font-size: 12px; color: var(--ink-soft); flex-wrap: wrap; }
+.an-trend { display: inline-flex; align-items: center; gap: 3px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.an-trend-auf { color: var(--status-success); }
+.an-trend-ab { color: var(--status-danger); }
+.an-trend-gleich, .an-trend-neu { color: var(--ink-soft); }
+.an-trend svg { width: 12px; height: 12px; }
+.an-kpi-hint { font-size: 11px; color: var(--ink-soft); margin-top: 7px; line-height: 1.45; opacity: .85; }
+
+/* --- Karten der Auswertung ----------------------------------------- */
+.an-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; margin-bottom: 20px; }
+.an-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+.an-card-title { font-size: 15px; font-weight: 700; }
+.an-card-sub { font-size: 12px; color: var(--ink-soft); margin-top: 3px; }
+.an-grid-haupt { display: grid; grid-template-columns: 1.9fr 1fr; gap: 20px; align-items: start; }
+.an-grid-karte { display: grid; grid-template-columns: 1.35fr 1fr; gap: 20px; align-items: start; }
+.an-grid-drei { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; align-items: start; }
+.an-chart-box { position: relative; height: 320px; }
+.an-chart-box-klein { position: relative; height: 210px; }
+
+/* --- Balkenliste (Sparten, Kundenstruktur) --------------------------
+ * Bewusst eine LISTE mit Balken statt eines Kuchendiagramms: die Zahl
+ * und ihr Anteil stehen ohne Hovern da - genau die Forderung "ohne
+ * Zeigen verstaendlich".
+ * ------------------------------------------------------------------ */
+.an-bars { display: flex; flex-direction: column; gap: 11px; }
+.an-bar-kopf { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 13px; margin-bottom: 5px; }
+.an-bar-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.an-bar-zahl { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.an-bar-zahl b { font-weight: 700; }
+.an-bar-zahl span { color: var(--ink-soft); font-size: 12px; margin-left: 5px; }
+.an-bar-spur { height: 8px; border-radius: 999px; background: var(--surface-soft); overflow: hidden; }
+.an-bar-fuellung { height: 100%; border-radius: 999px; }
+
+/* --- Statusliste ---------------------------------------------------- */
+.an-status-zeile { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.an-status-zeile:last-child { border-bottom: none; }
+.an-status-name { font-size: 13.5px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.an-status-punkt { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.an-punkt-gut { background: var(--status-success); }
+.an-punkt-warnung { background: var(--status-warning); }
+.an-punkt-info { background: var(--status-info); }
+.an-punkt-schlecht { background: var(--status-danger); }
+.an-punkt-neutral { background: var(--ink-soft); }
+.an-status-wert { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.an-status-hint { grid-column: 1 / -1; font-size: 11.5px; color: var(--ink-soft); }
+
+/* --- Deutschlandkarte ----------------------------------------------- */
+.de-karte { width: 100%; height: auto; max-height: 430px; display: block; }
+.de-land {
+    fill: var(--surface-soft); stroke: var(--surface); stroke-width: 1.4;
+    transition: fill .15s, stroke .15s; cursor: pointer; outline: none;
+}
+.de-land:hover, .de-land:focus-visible, .de-land.aktiv { stroke: var(--graphite); stroke-width: 2; }
+.de-land:focus-visible { stroke: var(--emerald); }
+.an-karte-legende { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--ink-soft); margin-top: 8px; }
+.an-karte-skala { height: 8px; flex: 1; max-width: 160px; border-radius: 999px; }
+.an-karte-quelle { font-size: 10.5px; color: var(--ink-soft); margin-top: 10px; line-height: 1.5; opacity: .8; }
+.an-karte-quelle a { color: inherit; }
+
+/* Tooltip der Karte - folgt dem Zeiger, deshalb absolut im Kartenfeld. */
+.an-karte-feld { position: relative; }
+.an-tip {
+    position: absolute; z-index: 5; pointer-events: none; min-width: 176px;
+    background: var(--graphite); color: #fff; border-radius: 10px; padding: 10px 12px;
+    font-size: 12px; line-height: 1.55; box-shadow: 0 8px 24px rgba(0, 0, 0, .22);
+    transform: translate(-50%, -100%); margin-top: -10px;
+}
+.an-tip-name { font-weight: 700; margin-bottom: 6px; font-size: 12.5px; }
+.an-tip-zeile { display: flex; justify-content: space-between; gap: 14px; color: rgba(255, 255, 255, .78); }
+.an-tip-zeile b { color: #fff; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* --- Rangliste "Top Regionen" --------------------------------------- */
+.an-rang { display: flex; align-items: center; gap: 11px; padding: 9px 0; border-bottom: 1px solid var(--line); text-decoration: none; color: inherit; }
+.an-rang:last-child { border-bottom: none; }
+.an-rang:hover .an-rang-name { color: var(--emerald); }
+.an-rang-nr { width: 20px; font-size: 12px; font-weight: 700; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.an-rang-mitte { flex: 1; min-width: 0; }
+.an-rang-name { font-size: 13.5px; font-weight: 600; }
+.an-rang-spur { height: 5px; border-radius: 999px; background: var(--surface-soft); margin-top: 5px; overflow: hidden; }
+.an-rang-fuellung { height: 100%; background: var(--emerald); border-radius: 999px; }
+.an-rang-wert { font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.an-rang-wert span { display: block; font-size: 11px; font-weight: 500; color: var(--ink-soft); text-align: right; }
+
+/* --- Insights -------------------------------------------------------- */
+.an-insights { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.an-insight { display: flex; gap: 10px; padding: 12px 14px; border-radius: 10px; background: var(--surface-soft); border: 1px solid var(--line); font-size: 13px; line-height: 1.55; }
+.an-insight-strich { width: 3px; border-radius: 999px; flex: none; }
+.an-strich-gut { background: var(--status-success); }
+.an-strich-warnung { background: var(--status-warning); }
+.an-strich-info { background: var(--status-info); }
+
+.an-leer { padding: 26px 0; text-align: center; color: var(--ink-soft); font-size: 13px; }
+
+/* --- Mitwachsen: desktop-first, aber auf dem Telefon benutzbar ------- */
+@media (max-width: 1400px) {
+    .an-kpis { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 1100px) {
+    .an-grid-haupt, .an-grid-karte { grid-template-columns: 1fr; }
+    .an-grid-drei { grid-template-columns: 1fr 1fr; }
+    .an-insights { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+    .an-kpis { grid-template-columns: repeat(2, 1fr); }
+    .an-grid-drei { grid-template-columns: 1fr; }
+    /* Nur die Leiste selbst scrollt - nie die ganze Seite (eine Seite,
+       die sich seitlich schieben laesst, fuehlt sich auf dem Telefon
+       kaputt an, auch wenn nichts fehlt). */
+    .an-filter { overflow-x: auto; }
+    .an-filter form { flex-wrap: nowrap; }
+    .an-kpi-wert { font-size: 26px; }
+}

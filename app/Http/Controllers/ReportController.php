@@ -11,6 +11,9 @@ use App\Models\Provision;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Provision\ContractProvisionService;
+use App\Services\Reporting\AnalyticsFilters;
+use App\Services\Reporting\DashboardAnalyticsService;
+use App\Support\Bundesland;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -18,50 +21,63 @@ class ReportController extends Controller
 {
     use ScopesCustomerAccess;
 
+    /**
+     * Auswertungs-Dashboard "Berichte & Analysen" (Betreiber-Auftrag
+     * 06.09.2026).
+     *
+     * DER CONTROLLER RECHNET NICHT MEHR. Vorher standen hier rund 20
+     * Einzelabfragen mit je eigener Auslegung von "aktiv", "neu" und
+     * "Zeitraum" - genau die Streuung, an der eine Kennzahlenseite
+     * unglaubwuerdig wird, sobald zwei Kacheln dasselbe verschieden
+     * zaehlen. Die Definitionen stehen jetzt einmal in
+     * App\Services\Reporting\DashboardAnalyticsService, die Auswahl
+     * einmal in AnalyticsFilters. Hier bleibt: Filter lesen, Dienst
+     * fragen, Sicht ausliefern.
+     *
+     * PORTFOLIO-SCOPE wie ueberall in der Beraterwelt: der Dienst bekommt
+     * die sichtbaren Kunden-IDs und schraenkt JEDE Abfrage darauf ein -
+     * ein Mitarbeiter sieht in der Auswertung nie mehr als in der
+     * Kundenliste.
+     */
     public function index(Request $request) {
-        $from = $request->get('from') ? Carbon::parse($request->get('from')) : now()->subDays(30);
-        $to = $request->get('to') ? Carbon::parse($request->get('to')) : now();
+        $f = AnalyticsFilters::ausRequest($request);
         $ids = $this->visibleCustomerIds();
-        $cf = function ($q) use ($ids) { return $ids === null ? $q : $q->whereIn('customer_id', $ids); };
 
-        // Vertraege des Zeitraums nach BESTANDSGRUPPE (Contract::statusGroup()
-        // als Query: currentlyActive/inProgress/historic). Frueher zaehlte hier
-        // der rohe Status - ein zum Ablauf gekuendigter Vertrag erschien dann
-        // als "aktiv", waehrend die Kundenakte ihn korrekt als beendet fuehrte.
-        $contracts = [
-            'active' => $cf(Contract::currentlyActive())->whereBetween('created_at', [$from, $to])->count(),
-            'pending' => $cf(Contract::inProgress())->whereBetween('created_at', [$from, $to])->count(),
-            'historic' => $cf(Contract::historic())->whereBetween('created_at', [$from, $to])->count(),
-            // Roh-Status weiterhin einzeln ausgewiesen (Aufteilung der Historie).
-            'cancelled' => $cf(Contract::where('status', 'cancelled'))->whereBetween('created_at', [$from, $to])->count(),
-            'expired' => $cf(Contract::where('status', 'expired'))->whereBetween('created_at', [$from, $to])->count(),
-            'total' => $cf(Contract::whereBetween('created_at', [$from, $to]))->count(),
-            'by_type' => $cf(Contract::whereBetween('created_at', [$from, $to]))->selectRaw('type, count(*) as count')->groupBy('type')->pluck('count', 'type'),
-            // Sparten-Verteilung des AKTIVEN Bestands (zeitraum-unabhaengig) -
-            // beantwortet "welche Sparten laufen aktuell", ohne Historie.
-            'active_by_type' => $cf(Contract::currentlyActive())->selectRaw('type, count(*) as count')->groupBy('type')->pluck('count', 'type'),
+        $daten = (new DashboardAnalyticsService($ids))->auswerten($f);
+
+        // Ziel je Bundesland fuer den Klick auf die Karte. Bewusst
+        // serverseitig gebaut: die Adressen bleiben damit dieselben wie
+        // in der Rangliste "Top Regionen" - ein zweiter, im Browser
+        // zusammengesetzter Link koennte davon abweichen.
+        $karteLinks = collect(Bundesland::kuerzel())
+            ->mapWithKeys(fn ($k) => [$k => route('admin.reports', $f->alsQuery(['bundesland' => $k]))])
+            ->all();
+
+        // Vorgaenge: bleiben im Bericht, sind aber keine Vertragskennzahl -
+        // deshalb eine eigene, kleine Karte statt einer weiteren KPI-Kachel.
+        $cf = fn ($q) => $ids === null ? $q : $q->whereIn('customer_id', $ids);
+        $ticketStatus = [
+            'open' => ['Offen', 'var(--status-info)'],
+            'in_progress' => ['In Bearbeitung', 'var(--status-warning)'],
+            'resolved' => ['Gelöst', 'var(--emerald)'],
+            'closed' => ['Geschlossen', 'var(--ink-soft)'],
         ];
-
+        $ticketZahlen = $cf(Ticket::whereBetween('created_at', [$f->von, $f->bis]))
+            ->selectRaw('status, count(*) as anzahl')->groupBy('status')->pluck('anzahl', 'status');
+        $ticketGesamt = (int) $ticketZahlen->sum();
         $tickets = [
-            'total' => $cf(Ticket::whereBetween('created_at', [$from, $to]))->count(),
-            'open' => $cf(Ticket::where('status', 'open'))->whereBetween('created_at', [$from, $to])->count(),
-            'closed' => $cf(Ticket::where('status', 'closed'))->whereBetween('created_at', [$from, $to])->count(),
-            'in_progress' => $cf(Ticket::where('status', 'in_progress'))->whereBetween('created_at', [$from, $to])->count(),
-            'by_type' => $cf(Ticket::whereBetween('created_at', [$from, $to]))->selectRaw('type, count(*) as count')->groupBy('type')->pluck('count', 'type'),
+            'gesamt' => $ticketGesamt,
+            'zeilen' => collect($ticketStatus)->map(fn ($cfg, $key) => [
+                'label' => $cfg[0],
+                'wert' => (int) ($ticketZahlen[$key] ?? 0),
+                'anteil' => $ticketGesamt > 0 ? round(((int) ($ticketZahlen[$key] ?? 0)) / $ticketGesamt * 100, 1) : 0.0,
+                'farbe' => $cfg[1],
+            ])->values()->all(),
         ];
 
-        $customers_stats = [
-            'total' => $ids === null ? Customer::count() : count($ids),
-            'new' => Customer::whereBetween('created_at', [$from, $to])->when($ids !== null, fn ($q) => $q->whereIn('customers.id', $ids))->count(),
-            'privat' => Customer::where('customer_type', 'privat')->when($ids !== null, fn ($q) => $q->whereIn('customers.id', $ids))->count(),
-            'firma' => Customer::where('customer_type', 'firma')->when($ids !== null, fn ($q) => $q->whereIn('customers.id', $ids))->count(),
-        ];
-
-        // Bald ablaufend / ueberfaellig: nur AKTIVE Vertraege - ein bereits
-        // gekuendigter Vertrag braucht keine Ablauf-Warnung mehr.
-        // Bewusst gedeckelt: bei grossem Bestand koennen in 30 Tagen sehr
-        // viele Vertraege auslaufen - die Berichtsseite soll dann nicht mit
-        // der Liste wachsen. Die Gesamtzahl steht daneben.
+        // Handlungsliste: bald ablaufende Vertraege. Bewusst gedeckelt -
+        // bei grossem Bestand soll die Seite nicht mit der Liste wachsen;
+        // die Gesamtzahl steht daneben (Lehre "Grosse Listen", 20.08.2026).
         $expiringBasis = $cf(Contract::with('customer.user'))
             ->whereNotNull('end_date')
             ->whereDate('end_date', '>=', now())
@@ -70,13 +86,13 @@ class ReportController extends Controller
         $expiringTotal = (clone $expiringBasis)->count();
         $expiring = $expiringBasis->orderBy('end_date')->limit(50)->get();
 
-        $warnings = $cf(Contract::with('customer.user'))
+        $warnings = $cf(Contract::query())
             ->whereNotNull('end_date')
             ->whereDate('end_date', '<', now())
             ->currentlyActive()
             ->count();
 
-        return view('admin.reports', compact('contracts', 'tickets', 'customers_stats', 'expiring', 'expiringTotal', 'warnings', 'from', 'to'));
+        return view('admin.reports', compact('f', 'daten', 'karteLinks', 'tickets', 'expiring', 'expiringTotal', 'warnings'));
     }
 
     /**

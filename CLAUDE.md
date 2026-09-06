@@ -2195,6 +2195,91 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   ein misslungener Build bricht den Deploy laut ab, er kann die Seite
   nicht dunkel schalten.
 
+## Berichte & Analysen: das Auswertungs-Dashboard (06.09.2026)
+
+- **Warum**: die Seite hiess "Berichte & Analysen", zeigte aber acht Kacheln
+  ohne Bezug zueinander, ein Kuchendiagramm und eine Tabelle - und konnte die
+  erste Frage des Betriebs ("wie viele Vertraege haben wir diesen Monat
+  gemacht, und ist das mehr als im letzten?") nicht beantworten. Ein Drittel
+  des ersten Bildschirms ging fuer eine Karte mit ZWEI Datumsfeldern drauf.
+- **DIE SEITE RECHNET NICHT MEHR SELBST.** Jede Zahl kommt aus
+  `App\Services\Reporting\DashboardAnalyticsService`, die Auswahl aus
+  `AnalyticsFilters`; der Controller liest Filter, fragt den Dienst, liefert
+  aus. Vorher standen rund 20 Einzelabfragen im Controller, jede mit eigener
+  Auslegung von "aktiv", "neu" und "Zeitraum" - genau die Streuung, an der
+  eine Kennzahlenseite unglaubwuerdig wird, sobald zwei Kacheln dasselbe
+  verschieden zaehlen. Das Ergebnis ist ein reines Array aus Skalaren und
+  Listen: heute Blade, morgen unveraendert JSON ueber eine API.
+- **VIER DEFINITIONEN, auf denen alles steht** (jede genau einmal im Code):
+  (1) **Abgeschlossen** = Unterschrift -> Antrag -> Beginn -> Anlage, dieselbe
+  Reihenfolge wie im Provisionsmanagement. NICHT das Anlagedatum: ein Vertrag
+  vom Maerz, der im September importiert wird, waere sonst ein
+  September-Abschluss, und jeder Altbestands-Import ein Rekordmonat.
+  (2) **Aktiv** = `Contract::currentlyActive()`, nie `status === 'active'`.
+  (3) **Verlaengert** = Ablauf IM ZEITRAUM und Vertrag laeuft weiter - der
+  Bestand fuehrt kein Feld dafuer (deutsche Vertraege verlaengern sich still),
+  also wird gezaehlt, was beobachtbar ist; die Kachel sagt das dazu.
+  (4) **Vertragswert** = Summe der JAHRESBEITRAEGE, Einmalbeitraege
+  (per_year 0) bewusst draussen. Es ist der Beitrag des KUNDEN, nicht unser
+  Ertrag - so steht es auch auf der Karte.
+- **`date(COALESCE(...))` ist kein Schmuck**: die Reihe mischt DATUMS-Spalten
+  mit der ZEITSTEMPEL-Spalte `created_at`. SQLite (Tests) vergleicht beides
+  als Zeichenkette, dort liegt `'2026-09-01'` VOR `'2026-09-01 00:00:00'` -
+  ein Abschluss am Monatsersten fiel aus seinem eigenen Monat. Auf beiden
+  Seiten aufs Datum normiert, sagen SQLite und MySQL dasselbe.
+- **KEIN ERFUNDENER TREND.** Fehlt die Vergleichsbasis (Vorzeitraum = 0),
+  gibt es keinen Prozentwert, sondern "neu": "+100 %" waere fuer einen
+  Vertrag dasselbe wie fuer tausend. Der Vergleichszeitraum ist IMMER die
+  unmittelbar davorliegende Spanne gleicher Laenge (bei frei gewaehltem
+  Zeitraum ist "Vorjahr gleicher Monat" nicht definierbar). Die Laenge wird
+  ABGERUNDET - `bis` traegt als Tagesende 23:59:59.999999, kaufmaennisch
+  gerundet begaenne der Vergleich einen Tag zu frueh.
+- **BUNDESLAND WIRD ABGELEITET, nicht gespeichert** (`App\Support\Bundesland`):
+  die Kundenakte fuehrt PLZ und Ort, weil genau das auf Ausweis und
+  Versicherungsschein steht. Ein neues Pflichtfeld haette den GESAMTEN
+  Bestand rueckwirkend leer gelassen und die Karte wertlos gemacht. Die
+  Zuordnung laeuft ueber die Leitregion (zwei Stellen), Leitregionen ueber
+  einer Landesgrenze ueber drei (Aschaffenburg, Neu-Ulm, Sonneberg ...).
+  Sie ist NAEHERUNGSWEISE, und das steht unter der Karte. Was sich nicht
+  zuordnen laesst, wird NIE geraten: es zaehlt als "ohne Zuordnung" und wird
+  mit Zahl ausgewiesen - eine still verteilte Restmenge liesse die Karte
+  vollstaendiger aussehen als den Datenbestand.
+  **FALLE**: PHP macht aus dem Array-Schluessel `'50'` still den INTEGER 50
+  (nur `'01'` behaelt wegen der fuehrenden Null seinen Typ). Als Zahl in ein
+  `whereIn` gegeben, verglichen SQLite und MySQL ihn mit dem TEXT-Ergebnis
+  von `substr()` - kein Kunde aus Koeln waere je in Nordrhein-Westfalen
+  gelandet, ohne dass irgendwo ein Fehler erschienen waere. `praefixe()`
+  castet deshalb ausdruecklich auf Zeichenketten.
+- **KARTE OHNE FREMDPAKET**: die 16 Umrisse liegen als INLINE-SVG in
+  `resources/views/admin/partials/analytics/germany_map.blade.php` (Quelle
+  `@svg-maps/germany`, CC BY 4.0 - die Nennung steht sichtbar unter der
+  Karte, im Quelltext allein erfuellt CC BY nicht). Kein externer Host
+  (Abmahnrisiko/CSP), keine Karten-Bibliothek im Sicherheitsupdate-Pfad einer
+  Anwendung mit Kundendaten. Ohne JavaScript bleibt die Karte hell - die
+  Rangliste "Top Regionen" daneben traegt dieselbe Aussage und ist die
+  eigentliche Quelle.
+- **FILTER SIND LINKS, kein Browser-Zustand** (Zeitraum, Sparte, Bundesland,
+  Kundentyp, Vertragsstatus + "Filter zuruecksetzen"): jeder Stand der
+  Auswertung ist damit teilbar, zurueck-tauglich und als Lesezeichen
+  speicherbar - dieselbe Lehre wie bei den grossen Listen (20.08.2026). Die
+  Leiste ist kompakt und STICKY: wer unten bei der Karte steht, muss sehen,
+  welcher Zeitraum gilt. Unbekannte Filterwerte werden VERWORFEN, nicht
+  durchgereicht. "Diesen Monat"/"Dieses Jahr" tragen den Zeitraum im Namen
+  und bleiben deshalb fest; die Sachfilter wirken trotzdem auf sie.
+- **BALKEN STATT KUCHEN** (`partials/analytics/bar_list.blade.php`): Zahl und
+  Anteil stehen ohne Hovern am Balken. Ein Kuchendiagramm verlangt fuer jede
+  Zahl eine Mausbewegung und macht ab fuenf Segmenten Groessenvergleiche
+  unmoeglich. Die Kacheln (`kpi_card.blade.php`) sind bewusst OHNE Symbol:
+  sechs Emoji sind kein Informationsgewinn, sondern sechs bunte Flecken.
+- **INSIGHTS SIND NACHZAEHLBAR**: jeder Satz stammt aus einer Zahl, die auf
+  derselben Seite steht. Ohne Datengrundlage entsteht KEIN Satz - ein leerer
+  Abschnitt ist ehrlicher als "keine Auffaelligkeiten".
+- Portfolio-Scope gilt auch hier: ein Mitarbeiter sieht in der Auswertung nie
+  mehr als in seiner Kundenliste. Neue Bausteine liegen in
+  `resources/css/analytics.css` (nur diese Seite laedt sie) - kein Hex einer
+  Markenfarbe, alles aus `brand.css`.
+- Tests: `ReportsDashboardTest` (Abnahmefaelle 1-11).
+
 ## Offene Themen / wartet auf den Betreiber
 
 - **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026
