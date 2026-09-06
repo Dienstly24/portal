@@ -312,15 +312,20 @@ function toggleNavGroup(btn) {
 {{-- Ereignis-Verdrahtung der Seite (Audit SEC-4). Die Bloecke landen
      hier am Ende des Body, damit sie auch aus Partials heraus (etwa
      einer Tabellenzeile) gueltiges HTML ergeben - ein <script @cspNonce> mitten
-     in einer <table> wuerde der Browser herausloesen. --}}
-@stack('cspScripts')
-</body>
-</html>
+     in einer <table> wuerde der Browser herausloesen.
 
-{{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
-     onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
-     tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
-     data-h-<ereignis> in resources/js/ui.js. --}}
+     Ereignis-Handler DIESER Vorlage (frueher onclick="…"-Attribute; ein
+     Attribut kann keinen CSP-Nonce tragen, dieses <script @cspNonce>
+     kann es). Verdrahtet wird ueber data-h-<ereignis> in
+     resources/js/ui.js.
+
+     WICHTIG - die Reihenfolge ist keine Geschmacksfrage: @stack gibt
+     aus, was BIS DAHIN gestapelt wurde. Ein @push, das erst NACH der
+     Stack-Zeile derselben Datei steht, faellt still unter den Tisch -
+     kein Fehler, keine leere Seite, nur ein Bedienelement, das nichts
+     mehr tut (so waren seit SEC-4 die Kopfzeilen-Suche und die Glocke
+     tot). Aus untergeordneten Views gepushte Bloecke sind unbetroffen:
+     die werden vor dem Layout gerendert. --}}
 @pushOnce('cspScripts')
 <script @cspNonce>
 window.__h = window.__h || {};
@@ -330,3 +335,7 @@ window.__h["93c2b711c3"] = function (event) { toggleNotifications() };
 window.__h["a5390eb93d"] = function (event) { markAllNotifsRead() };
 </script>
 @endPushOnce
+
+@stack('cspScripts')
+</body>
+</html>

@@ -91,17 +91,19 @@
     <span>© {{ date('Y') }} Dienstly24</span>
 </div>
 {{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
-@stack('cspScripts')
-</body>
-</html>
-
 {{-- Ereignis-Handler dieser Vorlage (Audit SEC-4): frueher
      onclick="…"-Attribute. Ein Attribut kann keinen CSP-Nonce
      tragen; dieses <script @cspNonce> kann es. Verdrahtet wird ueber
-     data-h-<ereignis> in resources/js/ui.js. --}}
+     data-h-<ereignis> in resources/js/ui.js.
+     Steht bewusst VOR @stack: die Stack-Zeile gibt nur aus, was bis
+     dahin gestapelt wurde - ein spaeteres @push waere still weg. --}}
 @pushOnce('cspScripts')
 <script @cspNonce>
 window.__h = window.__h || {};
 window.__h["4c26e6bc6a"] = function (event) { window.print(); };
 </script>
 @endPushOnce
+
+@stack('cspScripts')
+</body>
+</html>
