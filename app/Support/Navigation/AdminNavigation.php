@@ -14,13 +14,21 @@ use Illuminate\Support\Facades\Gate;
  * 31 flachen Punkten, in denen die taegliche Arbeit zwischen Verwaltung und
  * Technik verschwand.
  *
- * ORDNUNGSPRINZIP (in dieser Reihenfolge, sie IST die Information):
- *  1. Was ein Mitarbeiter jeden Tag tut, steht oben und offen:
- *     Postfach -> Mein Tag -> Kunden -> Dokumente.
- *  2. Was Steuerung ist, steht darunter und zugeklappt: Vertrieb, Marketing.
- *  3. Was Technik und Konfiguration ist, steht ganz unten und zugeklappt:
- *     Administration. Diese Punkte ruft man ein paar Mal im Monat auf - sie
- *     duerfen den Arbeitsweg nicht saeumen.
+ * ORDNUNGSPRINZIP (Betreiber-Vorgabe 06.09.2026, ersetzt die bisherige
+ * Reihenfolge; sie IST die Information):
+ *  1. In der SEITENLEISTE steht nur noch der taegliche Arbeitsweg, in genau
+ *     dieser Reihenfolge: Dashboard -> Kunden -> Dokumente -> Postfach ->
+ *     Mein Tag. Alle vier Gruppen stehen offen.
+ *  2. Steuerung und Technik - Vertrieb, Marketing, Administration - liegen
+ *     NICHT mehr in der Seitenleiste, sondern als eigene Untermenues in der
+ *     EINSTELLUNGEN-Ansicht (siehe settingsGroups()). Man ruft sie ein paar
+ *     Mal im Monat auf; sie duerfen den Arbeitsweg nicht saeumen.
+ *  3. Genau EIN Punkt fuehrt dorthin: settings() ganz unten in der
+ *     Seitenleiste.
+ *
+ * WICHTIG: verschoben wurde ausschliesslich die ANZEIGE. Kein Ziel-Link,
+ * kein Routenname, kein Aktiv-Muster und keine Rollenpruefung hat sich
+ * geaendert - die Punkte stehen nur an einer anderen Stelle.
  *
  * WAS KEIN EIGENER PUNKT MEHR IST (es wurde zur Registerkarte im Modul):
  *  - "Verfassen" ist eine Aktion im E-Mail-Postfach, kein Ort.
@@ -51,20 +59,72 @@ final class AdminNavigation
         return new NavItem('dashboard', 'Dashboard', route('admin.dashboard'), 'dashboard', ['admin.dashboard']);
     }
 
-    /** @return NavGroup[] Nur Gruppen, die fuer diesen Nutzer Punkte haben. */
+    /**
+     * Die Gruppen der SEITENLEISTE - ausschliesslich der taegliche
+     * Arbeitsweg, in der vom Betreiber vorgegebenen Reihenfolge.
+     *
+     * @return NavGroup[] Nur Gruppen, die fuer diesen Nutzer Punkte haben.
+     */
     public function groups(): array
     {
         $groups = [
-            $this->postfach(),
-            $this->meinTag(),
             $this->kunden(),
             $this->dokumente(),
+            $this->postfach(),
+            $this->meinTag(),
+        ];
+
+        return array_values(array_filter($groups, fn (NavGroup $g) => ! $g->isEmpty()));
+    }
+
+    /**
+     * Die Untermenues der EINSTELLUNGEN-Ansicht. Dieselben Punkte wie
+     * frueher in der Seitenleiste, mit denselben Zielen und denselben
+     * Rollenregeln - nur an einem anderen Ort.
+     *
+     * @return NavGroup[]
+     */
+    public function settingsGroups(): array
+    {
+        $groups = [
             $this->vertrieb(),
             $this->marketing(),
             $this->administration(),
         ];
 
         return array_values(array_filter($groups, fn (NavGroup $g) => ! $g->isEmpty()));
+    }
+
+    /**
+     * Der EINE Weg aus der Seitenleiste in die Verwaltung.
+     *
+     * Das Ziel haengt an der Rolle, weil `admin.settings` role:admin ist:
+     * ein Manager oder Mitarbeiter bekaeme dort 403 - und ein Punkt, der in
+     * ein 403 fuehrt, ist schlimmer als ein fehlender. Beide Ansichten
+     * zeigen dieselben Untermenues (settingsGroups()), die Einstellungen
+     * zusaetzlich das Formular.
+     *
+     * Die Aktiv-Muster decken alle verschobenen Bereiche ab - sonst waere
+     * der Punkt beim Arbeiten in einem von ihnen nicht markiert.
+     */
+    public function settings(): NavItem
+    {
+        $ziel = $this->user->role === 'admin' ? 'admin.settings' : 'admin.verwaltung';
+
+        $muster = ['admin.settings*', 'admin.verwaltung'];
+        foreach ($this->settingsGroups() as $group) {
+            foreach ($group->items as $item) {
+                $muster = array_merge($muster, $item->activePatterns);
+            }
+        }
+
+        return new NavItem(
+            key: 'einstellungen',
+            label: 'Einstellungen',
+            url: route($ziel),
+            icon: 'settings',
+            activePatterns: array_values(array_unique($muster)),
+        );
     }
 
     /**
@@ -119,7 +179,7 @@ final class AdminNavigation
     }
 
     /**
-     * Steuerung statt Tagesgeschaeft - deshalb zugeklappt.
+     * Steuerung statt Tagesgeschaeft - deshalb in den Einstellungen.
      * "Provisionen" ist EIN Punkt fuer alle Geldwege: das
      * Provisionsmanagement bringt Importe, Abrechnungen, Buchungen,
      * fehlende Provisionen, den TARIFCHECK24-Abgleich und die Auszahlungen
@@ -157,31 +217,39 @@ final class AdminNavigation
     }
 
     /**
-     * Alles, was nach aussen sichtbar ist. Website-Medien standen bisher
-     * einzeln zwischen den Arbeitsbereichen, Banner und Werbeanzeigen waren
-     * dagegen nur ueber die Einstellungen erreichbar - beides an derselben
-     * Stelle falsch.
+     * Alles, was nach aussen sichtbar ist - in einem Untermenue der
+     * Einstellungen. Website-Medien standen frueher einzeln zwischen den
+     * Arbeitsbereichen, Banner und Werbeanzeigen dagegen nur ueber die
+     * Einstellungen; jetzt stehen alle sechs an EINER Stelle.
      */
     private function marketing(): NavGroup
     {
-        $items = [
-            ['medien', 'Website-Medien', 'admin.media', 'image', ['admin.media*']],
-            ['newsletter', 'Newsletter', 'admin.email_marketing', 'mail', ['admin.email_marketing*']],
-            ['ankuendigungen', 'Ankündigungen', 'admin.announcements', 'megaphone', ['admin.announcements*']],
-        ];
+        // Reihenfolge nach Betreiber-Vorgabe: erst die eigene Website
+        // (Seiten, Bilder), dann die bezahlte Werbung, dann das, was
+        // direkt an Kunden hinausgeht.
+        $items = [];
 
         if ($this->isManagement()) {
-            $items[] = ['banner', 'Banner', 'admin.banners', 'image', ['admin.banners*']];
-            $items[] = ['werbung', 'Werbeanzeigen', 'admin.werbung', 'globe', ['admin.werbung*']];
             $items[] = ['leistungsseiten', 'Leistungsseiten', 'admin.service_pages', 'globe', ['admin.service_pages*']];
         }
+
+        $items[] = ['medien', 'Website-Medien', 'admin.media', 'image', ['admin.media*']];
+
+        if ($this->isManagement()) {
+            $items[] = ['werbung', 'Werbeanzeigen', 'admin.werbung', 'globe', ['admin.werbung*']];
+            $items[] = ['banner', 'Banner', 'admin.banners', 'image', ['admin.banners*']];
+        }
+
+        $items[] = ['newsletter', 'Newsletter', 'admin.email_marketing', 'mail', ['admin.email_marketing*']];
+        $items[] = ['ankuendigungen', 'Ankündigungen', 'admin.announcements', 'megaphone', ['admin.announcements*']];
 
         return new NavGroup('marketing', 'Marketing', $this->items($items), openByDefault: false);
     }
 
     /**
      * Technik und Konfiguration - der Bereich, der im Alltag NICHT im Weg
-     * stehen darf. Zugeklappt, ganz unten, und nur fuer die Verwaltung.
+     * stehen darf. Deshalb liegt er in den Einstellungen und nur fuer die
+     * Verwaltung.
      */
     private function administration(): NavGroup
     {

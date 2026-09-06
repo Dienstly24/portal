@@ -6,23 +6,22 @@
     <div class="page-sub">Systemkonfiguration und Integrationen</div>
 </div>
 
-{{-- Verwaltungs-Hub: Bereiche, die frueher einzeln in der Sidebar standen,
-     sind hier gebuendelt, damit die linke Navigation schlank bleibt. --}}
+@include('admin.partials.settings_nav')
+
+{{-- Werkzeuge, die in KEINEM der Untermenues oben stehen: sie haben nie in
+     der Seitenleiste gestanden und gehoeren zu keinem der drei Bereiche.
+     Leistungsseiten, Banner, Werbeanzeigen, Import/Export und die
+     KI-Wissensbasis lagen hier frueher doppelt - sie stehen jetzt oben in
+     ihrem Untermenue; die Ziele sind unveraendert dieselben. --}}
 <div class="card" style="max-width:900px;margin-bottom:20px;">
-    <div class="card-title" style="margin-bottom:6px;">🗂 Verwaltung &amp; Werkzeuge</div>
+    <div class="card-title" style="margin-bottom:6px;">🗂 Weitere Werkzeuge</div>
     <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;">
-        Selten genutzte Konfigurations- und Werkzeug-Bereiche – aus der Seitenleiste
-        hierher verschoben.
+        Selten genutzte Werkzeug-Bereiche ohne eigenen Platz in der Navigation.
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;">
-        <a href="{{ route('admin.service_pages') }}" class="hub-tile">🧩 <span>Leistungsseiten</span></a>
-        <a href="{{ route('admin.banners') }}" class="hub-tile">📢 <span>Banner</span></a>
-        <a href="{{ route('admin.werbung') }}" class="hub-tile">🎯 <span>Werbeanzeigen</span></a>
         <a href="{{ route('admin.templates') }}" class="hub-tile">📋 <span>Vorlagen</span></a>
-        <a href="{{ route('admin.import_export') }}" class="hub-tile">⬆️ <span>Import / Export</span></a>
         <a href="{{ route('admin.lexoffice.contacts') }}" class="hub-tile">🧮 <span>lexoffice-Kontakte</span></a>
         <a href="{{ route('admin.email_accounts.index') }}" class="hub-tile">📬 <span>E-Mail-Postfächer</span></a>
-        <a href="{{ route('admin.ai_knowledge') }}" class="hub-tile">📚 <span>KI-Wissensbasis</span></a>
         <a href="{{ route('admin.ai_knowledge_gaps') }}" class="hub-tile">❓ <span>Wissenslücken</span></a>
     </div>
 </div>

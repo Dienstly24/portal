@@ -11,6 +11,18 @@ use App\Services\ChangeRequest\ChangeProofPolicy;
 
 class SettingsController extends Controller
 {
+    /**
+     * Einstellungen-Ansicht OHNE Konfigurations-Formular.
+     *
+     * Sie traegt nur die Untermenues, die AdminNavigation ohnehin je Rolle
+     * baut - deshalb braucht sie keine Daten. `admin.settings` bleibt
+     * role:admin; ein Admin landet ueber die Seitenleiste weiterhin direkt
+     * dort, alle anderen hier.
+     */
+    public function hub() {
+        return view('admin.verwaltung');
+    }
+
     public function index() {
         $settings = [
             'company_name' => SystemSetting::get('company_name', 'Dienstly24'),

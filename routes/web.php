@@ -851,6 +851,11 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     });
 
     // Einstellungen & Termine
+    // Die Einstellungen-Ansicht fuer Rollen ohne role:admin: sie zeigt nur die
+    // Untermenues (Vertrieb/Marketing/Administration), nie das Formular. Ohne
+    // sie fuehrte der eine Verwaltungs-Punkt der Seitenleiste fuer Manager,
+    // Support und Mitarbeiter in ein 403.
+    Route::get('/verwaltung', [SettingsController::class, 'hub'])->name('verwaltung');
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings')->middleware('role:admin');
     Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update')->middleware('role:admin');
 
