@@ -1203,7 +1203,7 @@ parameters:
 		-
 			message: '#^Relation ''customer'' is not found in App\\Models\\Contract model\.$#'
 			identifier: larastan.relationExistence
-			count: 3
+			count: 2
 			path: app/Http/Controllers/ReportController.php
 
 		-

@@ -16,6 +16,9 @@
 /* Wiederkehrende Oberflaechen-Bausteine (UX-2) - siehe components.css */
 @import './components.css';
 
+/* Auswertungsseite "Berichte & Analysen" - nur dort benutzte Bausteine */
+@import './analytics.css';
+
 /*
  * Das hidden-Attribut muss auch gegen eine Klasse mit eigenem display
  * gewinnen (Audit SEC-4).
