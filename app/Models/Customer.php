@@ -359,7 +359,33 @@ class Customer extends Model
         app(DuplicateDetectionService::class)->forgetCount();
     }
     public function user() { return $this->belongsTo(User::class); }
-    public function betreuer() { return $this->belongsToMany(User::class, 'employee_customers', 'customer_id', 'user_id'); }
+    public function betreuer() { return $this->belongsToMany(User::class, 'employee_customers', 'customer_id', 'user_id')->withPivot('is_primary'); }
+
+    /**
+     * DER Betreuer im Sinne der automatischen Zuweisung - genau einer.
+     *
+     * `employee_customers` bleibt bewusst N:M (Sichtbarkeit, Vertretung);
+     * primaer ist davon genau ein Eintrag. Eine zweite Spalte am Kunden
+     * waere eine ZWEITE Wahrheit darueber, wer zustaendig ist - beide
+     * koennten auseinanderlaufen, und man saehe einer Zeile nicht an,
+     * welche gilt.
+     *
+     * Ohne markierten Primaereintrag gilt der AELTESTE Eintrag als
+     * Betreuer: der Bestand ist nicht markiert, und "kein Betreuer" waere
+     * dort schlicht falsch.
+     */
+    public function betreuerPrimary(): ?User
+    {
+        return $this->betreuer()
+            ->orderByDesc('employee_customers.is_primary')
+            ->orderBy('employee_customers.id')
+            ->first();
+    }
+
+    /** Kanal-Identitaeten dieses Kunden (WhatsApp-Nummer, Instagram-Konto ...). */
+    public function channelIdentities() { return $this->hasMany(CustomerChannelIdentity::class); }
+
+    public function conversations() { return $this->hasMany(Conversation::class); }
     public function contracts() { return $this->hasMany(Contract::class); }
     public function contractHistories() { return $this->hasMany(ContractHistory::class); }
     public function tickets() { return $this->hasMany(Ticket::class); }

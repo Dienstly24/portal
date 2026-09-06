@@ -10,7 +10,15 @@ class CustomerMessageAttachment extends Model
     protected $keyType = 'string';
     public $incrementing = false;
 
-    protected $fillable = ['message_id', 'uploaded_by', 'file_name', 'file_path', 'disk'];
+    protected $fillable = [
+        'message_id', 'uploaded_by', 'file_name', 'file_path', 'disk',
+        // Omnichannel: was der Kanal ueber die Datei MELDET. Bisher wurde
+        // der MIME-Typ aus der Dateiendung geraten - bei einer ueber eine
+        // Plattform-Kennung geholten Datei gibt es oft gar keine Endung.
+        'type', 'mime_type', 'file_size', 'external_media_id', 'metadata',
+    ];
+
+    protected $casts = ['metadata' => 'array'];
 
     protected static function boot() {
         parent::boot();
@@ -34,8 +42,15 @@ class CustomerMessageAttachment extends Model
         return $this->isImage() || $this->isPdf();
     }
 
-    /** Passender MIME-Typ aus der Dateiendung (kein mime_type in der DB gespeichert). */
+    /** Gemeldeter MIME-Typ, ersatzweise aus der Dateiendung abgeleitet. */
     public function mimeType(): string {
+        // Der gemeldete Typ schlaegt die Endung: was der Kanal sagt,
+        // WISSEN wir - die Endung ist nur ein Indiz und fehlt bei einer
+        // ueber eine Plattform-Kennung geholten Datei ganz.
+        if ($this->mime_type) {
+            return $this->mime_type;
+        }
+
         return match ($this->extension()) {
             'jpg', 'jpeg' => 'image/jpeg',
             'png' => 'image/png',

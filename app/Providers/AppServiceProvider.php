@@ -89,6 +89,9 @@ use App\Services\Commission\CommissionReadService;
 use App\Services\Commission\Sources\ContractCommissionSource;
 use App\Services\Commission\Sources\ProvisionSource;
 use App\Services\Commission\Sources\VermittlerSettlementSource;
+use App\Services\Messaging\Channels\ChannelManager;
+use App\Services\Messaging\Channels\InternalChatAdapter;
+use App\Services\Messaging\Channels\PortalAdapter;
 use App\Services\Notifications\NotificationService;
 use App\Services\Ocr\TesseractTextExtractor;
 use App\Services\Ocr\TextExtractorInterface;
@@ -138,6 +141,28 @@ class AppServiceProvider extends ServiceProvider
             $app->make(VermittlerSettlementSource::class),
             $app->make(ProvisionSource::class),
         ));
+
+        /*
+        | OMNICHANNEL: die Kanal-Registrierung.
+        |
+        | Das ist der EINE Ort, an dem ein Kanalschluessel auf seine
+        | Umsetzung trifft. Ein neuer Kanal (WhatsApp, Instagram,
+        | Telegram ...) kostet deshalb genau zwei Zeilen: eine
+        | Registrierung hier und einen Eintrag in `channels`. Weder
+        | Conversation noch Message noch Inbox noch Zuweisung werden
+        | dafuer angefasst - das ist der ganze Zweck der Abstraktion.
+        |
+        | Die beiden Kanaele unten haben bewusst keine externe API: sie
+        | belegen, dass der Kern ohne Plattform auskommt, BEVOR der erste
+        | echte Kanal dazukommt.
+        */
+        $this->app->singleton(ChannelManager::class, function () {
+            $manager = new ChannelManager;
+            $manager->register(new PortalAdapter);
+            $manager->register(new InternalChatAdapter);
+
+            return $manager;
+        });
 
         // Zentraler Notification-Dienst (Glocke): eine Stelle fuer Kuerzen,
         // Duplikat-Vermeidung und Kategorisierung. Facade: App\Support\Facades\Notify.
