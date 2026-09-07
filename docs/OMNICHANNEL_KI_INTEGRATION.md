@@ -226,11 +226,48 @@ Tests: `ChannelAdminTest` (12 Faelle).
 
 ## 8. Offen (naechste Stufen)
 
-- **Stufe 3b** (Abschnitte 81/95/101): KI-ANBIETER und Modell aus der
-  Oberflaeche, Zugangsdaten des Anbieters verschluesselt in der Datenbank
-  statt in der `.env`. Bewusst als eigener Schritt: das beruehrt den
-  laufenden Weg des Assistenten, und ein Schluessel, der aus zwei Quellen
-  kommen kann, braucht eine klare Rangfolge statt eines Zufalls.
+## 9. Umgesetzt (Stufe 3b: KI-Anbieter, 07.09.2026)
+
+`/admin/ki-anbieter` (`Admin\AiProviderController`), **nur admin** -
+hier liegt der teuerste Schluessel des Systems. Anbieter, Modell und
+Schluessel sind pflegbar, samt Verbindungstest.
+
+### Die Rangfolge - der eigentliche Kern dieses Schritts
+Schluessel und Anbieter koennen jetzt aus ZWEI Quellen kommen. Zwei
+Quellen ohne erklaerte Rangfolge sind eine Zufallsentscheidung, die
+niemand nachvollziehen kann, wenn es klemmt. `AiProviderSettings` haelt
+sie an einer Stelle fest:
+
+1. `AI_ASSISTANT_PROVIDER=none` ist die NOTBREMSE und schlaegt alles.
+   Ein Notaus, den eine Datenbankzeile aushebeln kann, ist keiner.
+2. Ein AKTIVER Zugang MIT Schluessel aus der Oberflaeche gewinnt.
+3. Sonst gilt unveraendert die `.env`.
+
+`explain()` gibt die geltende Quelle im Klartext aus - sie steht oben
+auf der Seite. Eine Rangfolge, die man nicht ablesen kann, hilft genau
+dann nicht, wenn man sie braucht.
+
+**Der Bestand aendert sich nicht**: solange kein Zugang gepflegt ist,
+laeuft alles wie bisher. Diese Aenderung schaltet von sich aus nichts um.
+
+### Weitere Regeln
+- Hoechstens EIN Zugang ist aktiv; das Umschalten laeuft als
+  Transaktion, damit es nie einen Moment mit zwei oder null aktiven gibt.
+- Ein neuer Zugang entsteht erst und wird DANN aktiviert - er schaltet
+  den laufenden Betrieb nie im selben Schritt um.
+- Ein Zugang ohne Schluessel oder ein inaktiver zaehlt nicht: er ist
+  nicht einsatzbereit, und "halb eingerichtet" darf nie den funktionie-
+  renden `.env`-Weg verdraengen.
+- "Entfernen" faellt auf die `.env` zurueck, nie in einen Ausfall.
+- Schluessel verschluesselt, `$hidden`, nie in der Oberflaeche, nie im
+  Protokoll; die Fremd-Fehlermeldung des Verbindungstests wird nicht
+  durchgereicht (sie kann den Schluessel enthalten).
+
+Tests: `AiProviderAdminTest` (15 Faelle). Die 104 bestehenden
+Assistenten-Tests laufen unveraendert durch.
+
+## 10. Offen
+
 - **Stufe 3c**: Geschaeftszeiten (64) und Textbausteine (65).
 - **Stufe 4 - WhatsApp Cloud API** (Abschnitt 30), abhaengig von der
   Coexistence-Freigabe durch Meta.

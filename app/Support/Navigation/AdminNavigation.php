@@ -272,6 +272,7 @@ final class AdminNavigation
         // Fehler (AdminNavigationTest haelt das fest).
         if ($this->user->role === 'admin') {
             $items[] = ['kanaele', 'Kanäle', 'admin.channels.index', 'chat', ['admin.channels.*']];
+            $items[] = ['ki-anbieter', 'KI-Anbieter', 'admin.ai_providers.index', 'brain', ['admin.ai_providers.*']];
             $items[] = ['einstellungen', 'Einstellungen', 'admin.settings', 'settings', ['admin.settings*']];
         }
 

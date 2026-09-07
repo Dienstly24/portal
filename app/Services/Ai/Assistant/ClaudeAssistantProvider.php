@@ -38,9 +38,21 @@ use Illuminate\Support\Facades\Http;
  */
 class ClaudeAssistantProvider implements AssistantProviderInterface
 {
+    public function __construct(private readonly AiProviderSettings $settings) {}
+
+    /**
+     * Schluessel: gepflegter Zugang aus der Oberflaeche vor `.env`
+     * (Rangfolge steht in AiProviderSettings). Ohne gepflegten Zugang
+     * bleibt es exakt beim bisherigen Verhalten.
+     */
+    private function apiKey(): ?string
+    {
+        return $this->settings->apiKey('claude', (string) config('services.anthropic.key'));
+    }
+
     public function isEnabled(): bool
     {
-        return trim((string) config('services.anthropic.key')) !== '';
+        return $this->apiKey() !== null;
     }
 
     public function name(): string
@@ -50,10 +62,10 @@ class ClaudeAssistantProvider implements AssistantProviderInterface
 
     public function model(): string
     {
-        return (string) config(
+        return $this->settings->model('claude', (string) config(
             'services.anthropic.assistant_model',
             config('services.anthropic.model', 'claude-opus-5')
-        );
+        ));
     }
 
     public function turn(string $instructions, array $history, array $tools, int $maxOutputTokens = 700): AssistantTurn
@@ -87,7 +99,7 @@ class ClaudeAssistantProvider implements AssistantProviderInterface
 
         try {
             $response = Http::withHeaders([
-                'x-api-key' => (string) config('services.anthropic.key'),
+                'x-api-key' => (string) $this->apiKey(),
                 'anthropic-version' => '2023-06-01',
             ])
                 ->timeout((int) config('services.anthropic.assistant_timeout', 45))

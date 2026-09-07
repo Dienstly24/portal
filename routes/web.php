@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ActivityReportController;
+use App\Http\Controllers\Admin\AiProviderController;
 use App\Http\Controllers\Admin\ChannelController;
 use App\Http\Controllers\Admin\ContractController as AdminContractController;
 use App\Http\Controllers\Admin\CustomerDocumentController as AdminCustomerDocumentController;
@@ -872,6 +873,17 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         Route::put('/konten/{id}', [$c, 'updateAccount'])->whereNumber('id')->name('accounts.update');
         Route::post('/konten/{id}/test', [$c, 'testAccount'])->whereNumber('id')->name('accounts.test');
         Route::post('/konten/{id}/trennen', [$c, 'disconnectAccount'])->whereNumber('id')->name('accounts.disconnect');
+    });
+
+    // KI-Anbieter (Auftrag Abschnitte 81/95/101) - nur admin: hier liegt
+    // der teuerste Schluessel des Systems.
+    Route::prefix('ki-anbieter')->name('ai_providers.')->middleware('role:admin')->group(function () {
+        $a = AiProviderController::class;
+        Route::get('/', [$a, 'index'])->name('index');
+        Route::post('/', [$a, 'store'])->name('store');
+        Route::put('/{id}', [$a, 'update'])->whereNumber('id')->name('update');
+        Route::delete('/{id}', [$a, 'destroy'])->whereNumber('id')->name('destroy');
+        Route::post('/{id}/test', [$a, 'test'])->whereNumber('id')->name('test');
     });
 
     // E-Mail-Postfächer (Priorität 1 der KI-Systemerweiterung) - nur admin, Zugangsdaten sind sensibel

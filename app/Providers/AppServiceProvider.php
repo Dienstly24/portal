@@ -8,6 +8,7 @@ use App\Models\ScheduledTaskRun;
 use App\Models\User;
 use App\Services\Activity\ActivityCatalog;
 use App\Services\Activity\ActivityTracker;
+use App\Services\Ai\Assistant\AiProviderSettings;
 use App\Services\Ai\Assistant\ClaudeAssistantProvider;
 use App\Services\Ai\Assistant\Contracts\AssistantProviderInterface;
 use App\Services\Ai\Assistant\NullAssistantProvider;
@@ -294,10 +295,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             AssistantProviderInterface::class,
             function ($app) {
-                $provider = strtolower(trim((string) config('services.ai_assistant_provider', 'claude')));
-                if ($provider === '') {
-                    $provider = 'claude';
-                }
+                // Die Anbieterwahl folgt derselben Rangfolge wie
+                // Schluessel und Modell: Notbremse (.env=none) vor
+                // gepflegtem Zugang vor .env-Bestand. Ohne gepflegten
+                // Zugang aendert sich nichts.
+                $provider = $app->make(AiProviderSettings::class)->provider();
                 return match ($provider) {
                     'claude', 'anthropic' => $app->make(ClaudeAssistantProvider::class),
                     'openai' => $app->make(OpenAiAssistantProvider::class),
