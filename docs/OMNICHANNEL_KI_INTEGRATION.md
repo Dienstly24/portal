@@ -266,9 +266,62 @@ laeuft alles wie bisher. Diese Aenderung schaltet von sich aus nichts um.
 Tests: `AiProviderAdminTest` (15 Faelle). Die 104 bestehenden
 Assistenten-Tests laufen unveraendert durch.
 
-## 10. Offen
+## 10. Umgesetzt (Stufe 3c: Geschaeftszeiten und Texte, 07.09.2026)
 
-- **Stufe 3c**: Geschaeftszeiten (64) und Textbausteine (65).
+Beides auf derselben Seite wie die Anbieter (`/admin/ki-anbieter`,
+Titel "KI-Assistent") - sie gehoeren fachlich zum Assistenten
+(Abschnitt 86).
+
+### Geschaeftszeiten (Abschnitt 64)
+`App\Support\BusinessHours`. Ausserhalb der Zeiten antwortet die KI
+nicht inhaltlich; der Kunde bekommt den hinterlegten
+Abwesenheitshinweis, und der Vorgang liegt am Morgen im Posteingang.
+
+**DIE ZEITZONEN-FALLE, an der so etwas fast immer scheitert**:
+gespeichert wird UTC, gemeint ist deutsche Ortszeit. Wer `now()` roh
+gegen "09:00" haelt, sperrt im Sommer zwei Stunden zu frueh auf und zu -
+und zwei Stunden Abweichung sehen plausibel aus, deshalb faellt es
+niemandem auf. Verglichen wird deshalb immer in
+`app.display_timezone`; zwei Tests pruefen ausdruecklich ueber die
+Sommer-/Winterzeit-Grenze hinweg.
+
+**Voreinstellung AUS.** Eine Regel, die sich selbst einschaltet, wuerde
+das Verhalten still veraendern - in Richtung "die KI antwortet nachts
+nicht mehr", also genau die Art Aenderung, die als Stoerung gemeldet
+wird.
+
+**Der Hinweis kommt hoechstens einmal je Unterhaltung und 12 Stunden.**
+Ohne diese Bremse bekaeme ein Kunde, der abends fuenf Nachrichten
+schreibt, fuenfmal denselben Baustein - das liest sich wie eine kaputte
+Maschine und ist schlimmer als gar keine Antwort. Er ist als
+`message_type = system` gekennzeichnet: er stammt aus einem Baustein,
+nicht vom Modell, und der Mitarbeiter soll das unterscheiden koennen.
+
+Ein Ende vor dem Anfang (20:00-02:00) gilt als Zeitraum ueber
+Mitternacht - ohne diesen Fall waere so ein Tag dauerhaft geschlossen,
+und niemand saehe warum. **Feiertage bewusst NICHT gebaut**: eine halbe
+Feiertagsliste ist schlechter als keine, weil sie an Ostern
+"geoeffnet" behauptet.
+
+### Textbausteine (Abschnitt 65)
+`AssistantTexts`: Begruessung, Abwesenheit, Wartehinweis, Uebergabe,
+ausserhalb des Bereichs, Dienst gestoert, Grenze erreicht.
+
+Die sorgfaeltig formulierten dreisprachigen Texte aus
+`AssistantReplies` bleiben die VORGABE - die Oberflaeche legt bei Bedarf
+eine eigene Fassung darueber. Ein leeres Feld heisst "wieder die
+Vorgabe": deshalb wird der leere Wert gespeichert und nicht der
+Vorgabetext hineinkopiert, sonst waere die Vorgabe ab dem ersten
+Speichern eingefroren und spaetere Verbesserungen kaemen nie an.
+
+**Dreisprachig bleibt Pflicht**: der Text folgt der ERKANNTEN Sprache
+der Kundennachricht. Wer nur Deutsch pflegt, bekommt fuer Arabisch
+weiter die Vorgabe - nie einen deutschen Text an einen arabisch
+schreibenden Kunden.
+
+Tests: `BusinessHoursAndTextsTest` (13 Faelle).
+
+## 11. Offen
 - **Stufe 4 - WhatsApp Cloud API** (Abschnitt 30), abhaengig von der
   Coexistence-Freigabe durch Meta.
 - Der Vorschlags-Modus (`ai_assist`) nutzt bereits

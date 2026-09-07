@@ -884,6 +884,8 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         Route::put('/{id}', [$a, 'update'])->whereNumber('id')->name('update');
         Route::delete('/{id}', [$a, 'destroy'])->whereNumber('id')->name('destroy');
         Route::post('/{id}/test', [$a, 'test'])->whereNumber('id')->name('test');
+        Route::put('/geschaeftszeiten', [$a, 'saveHours'])->name('hours');
+        Route::put('/textbausteine', [$a, 'saveTexts'])->name('texts');
     });
 
     // E-Mail-Postfächer (Priorität 1 der KI-Systemerweiterung) - nur admin, Zugangsdaten sind sensibel

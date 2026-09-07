@@ -100,7 +100,7 @@ class AdminNavigationTest extends TestCase
             $keys($settings['marketing'])
         );
         $this->assertSame(
-            ['mitarbeiter', 'zeiten', 'protokoll', 'ki-wissen', 'systemzustand', 'fehler', 'datenimport', 'kanaele', 'ki-anbieter', 'einstellungen'],
+            ['mitarbeiter', 'zeiten', 'protokoll', 'ki-wissen', 'systemzustand', 'fehler', 'datenimport', 'kanaele', 'ki-assistent', 'einstellungen'],
             $keys($settings['administration'])
         );
     }

@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\AiProviderAccount;
+use App\Models\SystemSetting;
 use App\Services\Ai\Assistant\AiProviderSettings;
+use App\Services\Ai\Assistant\AssistantTexts;
+use App\Support\BusinessHours;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -31,13 +34,67 @@ class AiProviderController extends Controller
         'openai' => 'OpenAI',
     ];
 
-    public function index(AiProviderSettings $settings)
+    public function index(AiProviderSettings $settings, BusinessHours $hours, AssistantTexts $texts)
     {
         return view('admin.ai_providers.index', [
             'accounts' => AiProviderAccount::orderByDesc('is_active')->orderBy('name')->get(),
             'providers' => self::PROVIDERS,
             'geltung' => $settings->explain(),
+            // Geschaeftszeiten (64) und Textbausteine (65) gehoeren fachlich
+            // zum Assistenten - deshalb dieselbe Seite (Abschnitt 86).
+            'hours' => $hours->schedule(),
+            'hoursEnforced' => $hours->enforced(),
+            'hoursOpenNow' => $hours->open(),
+            'days' => BusinessHours::DAYS,
+            'displayTimezone' => config('app.display_timezone', 'Europe/Berlin'),
+            'texts' => $texts->all(),
+            'textLabels' => AssistantTexts::LABELS,
+            'languages' => AssistantTexts::LANGUAGES,
         ]);
+    }
+
+    /** Geschaeftszeiten speichern (Abschnitt 64). */
+    public function saveHours(Request $request, BusinessHours $hours)
+    {
+        $request->validate([
+            'enforced' => ['nullable', 'boolean'],
+            'days' => ['nullable', 'array'],
+            'days.*.open' => ['nullable', 'boolean'],
+            'days.*.from' => ['nullable', 'string', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
+            'days.*.to' => ['nullable', 'string', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
+        ]);
+
+        $hours->save((array) $request->input('days', []));
+        SystemSetting::set(BusinessHours::ENABLED, $request->boolean('enforced') ? '1' : '0');
+
+        ActivityLog::record('ai_business_hours_changed', 'setting', null, [
+            'enforced' => $request->boolean('enforced'),
+        ]);
+
+        return back()->with('success', 'Geschäftszeiten gespeichert.');
+    }
+
+    /**
+     * Textbausteine speichern (Abschnitt 65). Ein leeres Feld heisst
+     * "wieder die Vorgabe" - deshalb wird es gespeichert und nicht
+     * uebersprungen.
+     */
+    public function saveTexts(Request $request, AssistantTexts $texts)
+    {
+        $request->validate([
+            'texts' => ['nullable', 'array'],
+            'texts.*.*' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        foreach ((array) $request->input('texts', []) as $key => $sprachen) {
+            foreach ((array) $sprachen as $sprache => $text) {
+                $texts->put((string) $key, (string) $sprache, (string) $text);
+            }
+        }
+
+        ActivityLog::record('ai_texts_changed', 'setting', null, []);
+
+        return back()->with('success', 'Textbausteine gespeichert.');
     }
 
     public function store(Request $request)
