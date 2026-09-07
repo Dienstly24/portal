@@ -58,6 +58,7 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\UnsubscribeController;
 use App\Http\Controllers\VermittlerAbrechnungController;
+use App\Http\Controllers\Webhooks\WhatsAppWebhookController;
 use App\Http\Controllers\WebsiteAssistantController;
 use App\Http\Controllers\WebsiteContactController;
 use App\Http\Controllers\WebsiteController;
@@ -77,6 +78,20 @@ Route::post('/kontakt', [WebsiteController::class, 'submitContact'])
 Route::get('/kontakt/danke', [WebsiteController::class, 'thanks'])->name('website.thanks');
 
 // SEO: dynamische robots.txt (hostabhaengig) + Sitemap aus echten Inhalten.
+/*
+| Webhook-Endpunkte der Kanaele.
+|
+| OEFFENTLICH und ohne CSRF - die Plattform ruft sie auf, nicht ein
+| Browser mit Sitzung. Die Echtheit kommt NICHT aus einer Anmeldung,
+| sondern aus der SIGNATUR (HMAC ueber den rohen Koerper), geprueft im
+| Adapter, BEVOR irgendetwas gespeichert wird.
+*/
+Route::prefix('webhooks')->name('webhooks.')->middleware('throttle:300,1')->group(function () {
+    $w = WhatsAppWebhookController::class;
+    Route::get('/whatsapp', [$w, 'verify'])->name('whatsapp.verify');
+    Route::post('/whatsapp', [$w, 'handle'])->name('whatsapp.handle');
+});
+
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap');
 

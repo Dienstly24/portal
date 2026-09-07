@@ -321,7 +321,82 @@ schreibenden Kunden.
 
 Tests: `BusinessHoursAndTextsTest` (13 Faelle).
 
-## 11. Offen
+## 11. Umgesetzt (Stufe 4: WhatsApp Cloud API, 07.09.2026)
+
+`WhatsAppAdapter` gegen die OFFIZIELLE Cloud API von Meta, ohne
+Zwischenanbieter. Der Kanal kostete genau das, was die Abstraktion
+versprochen hat: einen Adapter und EINE Zeile in `channels` - keine
+Aenderung an Unterhaltung, Nachricht, Zuweisung oder Posteingang.
+
+### Sicherheit ist der Kern
+Die Signatur (`X-Hub-Signature-256`, HMAC-SHA256 mit dem App-Secret) ist
+der EINZIGE Beleg, dass eine Zustellung von Meta kommt. Faellt sie, kann
+jeder Nachrichten in fremde Kundenakten schreiben.
+
+- Geprueft wird ueber den ROHEN Koerper. Deshalb nimmt
+  `verifyWebhook()` jetzt einen String statt des geparsten Arrays: eine
+  Signatur gilt fuer die gesendeten BYTES, und ein wieder kodiertes
+  Array unterscheidet sich schon in Reihenfolge oder Escaping. Die
+  Pruefung wuerde immer fehlschlagen - und der naheliegende "Fix" waere,
+  sie abzuschalten.
+- Verglichen wird mit `hash_equals`; ein normaler Vergleich verraet
+  ueber die Laufzeit, wie viele Zeichen stimmten.
+- OHNE hinterlegtes App-Secret wird ABGELEHNT, nie durchgewunken.
+- Geprueft wird VOR jedem Schreiben (Abschnitt 21).
+
+### Der Endpunkt ist duenn
+`/webhooks/whatsapp`: pruefen, Job werfen, 200. Meta wiederholt jede
+Zustellung, die nicht zuegig quittiert wird, und schaltet den Webhook
+bei anhaltenden Zeitueberschreitungen ab - wer hier Kundensuche, KI und
+Medien-Download abwartet, riskiert genau das. Auch eine unbrauchbare
+Nutzlast bekommt 200: ein Fehlercode wuerde endlose Wiederholungen
+derselben unbrauchbaren Zustellung ausloesen.
+
+### Mehrere Nummern
+Das Konto wird ueber die `phone_number_id` AUS DER NUTZLAST gefunden -
+so findet auch bei mehreren Geschaeftsnummern jede Zustellung ihr Konto
+(Abschnitt 73). Zugangsdaten je Konto, nicht aus der `.env`: deshalb
+wurde `MetaGraphClient` bewusst NICHT wiederverwendet, obwohl er
+denselben Graph-Host anspricht - er holt sein Token aus der
+Konfiguration, und damit waeren zwei Nummern mit getrennten Zugaengen
+unmoeglich.
+
+### Idempotenz doppelt
+Ereignis-Register (`msg:` bzw. `status:`-Schluessel) UND der eindeutige
+Index auf `(conversation_id, external_message_id)`. Ein Test schickt
+dieselbe Zustellung zweimal durch den ganzen Weg und erwartet EINE
+Nachricht.
+
+### Ausgehend
+`SendOutboundMessageJob` mit `tries = 1` - dieselbe harte Regel wie beim
+Social-Versand: ein zweiter Versuch koennte eine bereits zugestellte
+Nachricht ein zweites Mal beim Kunden abliefern. Der Schutz liegt am
+DATENSATZ (`external_message_id` gesetzt = nicht noch einmal), nicht an
+der Queue. Fremde Fehlermeldungen werden nie durchgereicht.
+
+Die externe Kennung aus der Antwort ist der wichtigste Rueckgabewert:
+nur mit ihr lassen sich spaetere Zustell- und Lesemeldungen zuordnen.
+
+### Inbetriebnahme (Betreiber)
+1. `/admin/kanaele` -> WhatsApp -> Konto anlegen mit `access_token`,
+   `phone_number_id`, `app_secret`, `verify_token`.
+2. Bei Meta die Webhook-URL `https://<domain>/webhooks/whatsapp`
+   eintragen, Bestaetigungs-Token = `verify_token`.
+3. "Verbindung testen", dann Konto und Kanal aktivieren.
+4. KI-Betriebsart je Kanal/Konto setzen (Voreinstellung: erben).
+
+Der Kanal entsteht INAKTIV - eine Anbindung schaltet sich nicht selbst
+live.
+
+**OFFEN und nicht im Repository entscheidbar**: ob Meta die
+**Coexistence** (WhatsApp Business App + Cloud API auf derselben
+Nummer) fuer genau dieses Konto freigibt. Die Architektur setzt sie
+NICHT voraus - `channel_accounts` traegt die Kennungen, der Kern kennt
+Coexistence gar nicht.
+
+Tests: `WhatsAppChannelTest` (15 Faelle).
+
+## 12. Offen
 - **Stufe 4 - WhatsApp Cloud API** (Abschnitt 30), abhaengig von der
   Coexistence-Freigabe durch Meta.
 - Der Vorschlags-Modus (`ai_assist`) nutzt bereits

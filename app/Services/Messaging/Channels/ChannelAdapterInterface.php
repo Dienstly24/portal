@@ -26,8 +26,14 @@ interface ChannelAdapterInterface
      * Pruefen, ob eine Webhook-Zustellung ECHT ist (Signatur, Token).
      * Wird aufgerufen, BEVOR irgendetwas gespeichert wird - eine
      * gefaelschte Nachricht darf nie in einer Kundenakte landen.
+     *
+     * Uebergeben wird der ROHE Koerper, nicht das geparste Array: eine
+     * Signatur gilt fuer die gesendeten BYTES. Ein wieder nach JSON
+     * kodiertes Array unterscheidet sich schon in der Reihenfolge oder
+     * im Escaping - die Pruefung wuerde dann immer fehlschlagen, und der
+     * naheliegende "Fix" waere, sie abzuschalten.
      */
-    public function verifyWebhook(array $payload, array $headers, ?ChannelAccount $account): bool;
+    public function verifyWebhook(string $rawBody, array $headers, ?ChannelAccount $account): bool;
 
     /**
      * Rohe Webhook-Nutzlast in normalisierte Nachrichten uebersetzen.

@@ -15,7 +15,7 @@ use App\Services\Messaging\Dto\ConnectionTest;
  */
 abstract class AbstractChannelAdapter implements ChannelAdapterInterface
 {
-    public function verifyWebhook(array $payload, array $headers, ?ChannelAccount $account): bool
+    public function verifyWebhook(string $rawBody, array $headers, ?ChannelAccount $account): bool
     {
         // Bewusst restriktiv: ein Kanal ohne eigene Pruefung nimmt keine
         // Webhooks entgegen. Durchwinken waere die gefaehrlichere Vorgabe.
