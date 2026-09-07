@@ -182,12 +182,57 @@ Unterhaltung entsteht trotzdem und liegt im Posteingang.
 (`CustomerAssistantTest`, `AssistantResumeTest`) laufen unveraendert
 durch - das ist der eigentliche Nachweis zu Abschnitt 103.
 
-## 7. Offen (naechste Stufen)
+## 7. Umgesetzt (Stufe 3a: Kanal-Verwaltung, 07.09.2026)
 
-- **Stufe 3 - Verwaltung im Admin** (Abschnitte 86/95-99/104): Kanal-
-  und Kanalkonten-Pflege, Zugangsdaten verschluesselt in der Datenbank
-  statt in der `.env`, Verbindungstest, Webhook-Status, Anbieter- und
-  Modellwahl, Geschaeftszeiten, Textbausteine.
-- **Stufe 4 - WhatsApp Cloud API.**
+`/admin/kanaele` (`Admin\ChannelController`), **nur admin** - hier
+liegen Zugangsdaten, dieselbe Haltung wie beim 2FA-Reset.
+
+Je Kanal: an/aus und KI-Betriebsart. Je Kanalkonto: Name, Kennung der
+Plattform, Zugangsdaten, KI-Betriebsart, an/aus, Verbindungstest und
+"Zugang trennen". Dazu die globale KI-Betriebsart. Damit kostet ein
+zweites Geschaeftskonto keine Codeaenderung mehr (Abschnitt 69).
+
+### Drei Regeln zu Geheimnissen (Abschnitt 96), alle als Test gesichert
+1. Ein Zugangswert verlaesst den Server NIE wieder - die Oberflaeche
+   zeigt ausschliesslich "gesetzt" oder "fehlt".
+2. **Ein LEER abgeschicktes Feld loescht nichts.** Sonst raeumt jedes
+   Speichern der KI-Betriebsart nebenbei das Token ab - ein Fehler, der
+   erst auffaellt, wenn die naechste Nachricht nicht mehr rausgeht. Zum
+   Loeschen gibt es den eigenen, benannten Weg "Zugang trennen".
+3. Protokolliert werden nur die SCHLUESSEL, nie die Werte. Auch eine
+   Fremd-Fehlermeldung wird nicht durchgereicht: sie kann ein Token
+   enthalten, deshalb steht der Grund im Log und nicht auf der Seite.
+
+### "Zugang trennen" loescht keine Unterhaltung
+Es raeumt Zugangsdaten weg und schaltet das Konto ab - Verlauf und
+Nachrichten bleiben vollstaendig. Der Verlauf gehoert dem Kunden und dem
+Betrieb, nicht der Anbindung; ein versehentlicher Klick darf keine
+Kundenhistorie kosten (Abschnitt 72).
+
+### Verbindungstest mit BENANNTEN Zustaenden
+`ConnectionTest`: verbunden / Zugangsdaten abgelehnt / abgelaufen / nicht
+eingerichtet / nicht erreichbar / zu viele Anfragen / kein Test moeglich.
+Ein blosses "Fehler" laesst den Betreiber raten, welche der sechs
+Handlungen faellig ist. Kanaele ohne externe Plattform melden ehrlich
+"kein Test moeglich" - ein stilles "verbunden" waere eine Behauptung.
+
+### Ein Fehler, den die Tests gefunden haben
+`$request->validate()` liefert nur ANWESENDE Schluessel zurueck. Ein
+weggelassenes optionales Feld fehlt im Ergebnis ganz - der direkte
+Zugriff darauf war ein 500er im Alltagsfall (Haken nicht gesetzt,
+Auswahlfeld leer). Jetzt durchgaengig `?? ''`.
+
+Tests: `ChannelAdminTest` (12 Faelle).
+
+## 8. Offen (naechste Stufen)
+
+- **Stufe 3b** (Abschnitte 81/95/101): KI-ANBIETER und Modell aus der
+  Oberflaeche, Zugangsdaten des Anbieters verschluesselt in der Datenbank
+  statt in der `.env`. Bewusst als eigener Schritt: das beruehrt den
+  laufenden Weg des Assistenten, und ein Schluessel, der aus zwei Quellen
+  kommen kann, braucht eine klare Rangfolge statt eines Zufalls.
+- **Stufe 3c**: Geschaeftszeiten (64) und Textbausteine (65).
+- **Stufe 4 - WhatsApp Cloud API** (Abschnitt 30), abhaengig von der
+  Coexistence-Freigabe durch Meta.
 - Der Vorschlags-Modus (`ai_assist`) nutzt bereits
   `EmployeeAssistantService`; was fehlt, ist der Knopf im Panel.

@@ -267,8 +267,11 @@ final class AdminNavigation
             ['datenimport', 'Import / Export', 'admin.import_export', 'inbox', ['admin.import_export*', 'admin.import*', 'admin.export*']],
         ];
 
-        // Die Einstellungen sind role:admin - ein Manager bekaeme dort 403.
+        // Kanaele und Einstellungen sind role:admin - ein Manager bekaeme
+        // dort 403, und ein Menuepunkt, der in ein 403 fuehrt, ist ein
+        // Fehler (AdminNavigationTest haelt das fest).
         if ($this->user->role === 'admin') {
+            $items[] = ['kanaele', 'Kanäle', 'admin.channels.index', 'chat', ['admin.channels.*']];
             $items[] = ['einstellungen', 'Einstellungen', 'admin.settings', 'settings', ['admin.settings*']];
         }
 

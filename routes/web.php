@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ActivityReportController;
+use App\Http\Controllers\Admin\ChannelController;
 use App\Http\Controllers\Admin\ContractController as AdminContractController;
 use App\Http\Controllers\Admin\CustomerDocumentController as AdminCustomerDocumentController;
 use App\Http\Controllers\Admin\DuplicateController as AdminDuplicateController;
@@ -858,6 +859,20 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/verwaltung', [SettingsController::class, 'hub'])->name('verwaltung');
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings')->middleware('role:admin');
     Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update')->middleware('role:admin');
+
+    // Kanal-Verwaltung (Omnichannel, Auftrag Abschnitte 68-72/98-99) - nur
+    // admin: hier liegen Zugangsdaten. Eine neue Anbindung oder ein zweites
+    // Geschaeftskonto soll damit keine Codeaenderung mehr kosten.
+    Route::prefix('kanaele')->name('channels.')->middleware('role:admin')->group(function () {
+        $c = ChannelController::class;
+        Route::get('/', [$c, 'index'])->name('index');
+        Route::put('/ki-betriebsart', [$c, 'updateGlobalAiMode'])->name('ai_mode');
+        Route::put('/{id}', [$c, 'updateChannel'])->whereNumber('id')->name('update');
+        Route::post('/{channelId}/konten', [$c, 'storeAccount'])->whereNumber('channelId')->name('accounts.store');
+        Route::put('/konten/{id}', [$c, 'updateAccount'])->whereNumber('id')->name('accounts.update');
+        Route::post('/konten/{id}/test', [$c, 'testAccount'])->whereNumber('id')->name('accounts.test');
+        Route::post('/konten/{id}/trennen', [$c, 'disconnectAccount'])->whereNumber('id')->name('accounts.disconnect');
+    });
 
     // E-Mail-Postfächer (Priorität 1 der KI-Systemerweiterung) - nur admin, Zugangsdaten sind sensibel
     Route::prefix('email-accounts')->name('email_accounts.')->middleware('role:admin')->group(function () {

@@ -3,6 +3,7 @@
 namespace App\Services\Messaging\Channels;
 
 use App\Models\ChannelAccount;
+use App\Services\Messaging\Dto\ConnectionTest;
 use App\Services\Messaging\Dto\InboundMessage;
 use App\Services\Messaging\Dto\OutboundMessage;
 use App\Services\Messaging\Dto\SendResult;
@@ -63,4 +64,14 @@ interface ChannelAdapterInterface
      * zurueck - "nicht noetig" ist kein Fehler.
      */
     public function refreshCredentials(ChannelAccount $account): bool;
+
+    /**
+     * Verbindung pruefen (Auftrag Abschnitte 70/97).
+     *
+     * Der Adapter uebersetzt die Antwort seiner Plattform in einen der
+     * BENANNTEN Zustaende - der Betreiber soll lesen koennen, WAS zu tun
+     * ist, statt aus einem rohen Fremdfehler zu raten. Und er gibt dabei
+     * nie ein Geheimnis aus, auch nicht teilweise.
+     */
+    public function testConnection(?ChannelAccount $account): ConnectionTest;
 }

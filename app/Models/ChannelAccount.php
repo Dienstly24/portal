@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Ein Konto innerhalb eines Kanals (eine WhatsApp-Nummer, eine
@@ -31,8 +33,10 @@ class ChannelAccount extends Model
 
     protected $hidden = ['credentials'];
 
-    public function channel() { return $this->belongsTo(Channel::class); }
-    public function conversations() { return $this->hasMany(Conversation::class); }
+    /** @return BelongsTo<Channel, $this> */
+    public function channel(): BelongsTo { return $this->belongsTo(Channel::class); }
+    /** @return HasMany<Conversation, $this> */
+    public function conversations(): HasMany { return $this->hasMany(Conversation::class); }
 
     public function scopeActive($q) { return $q->where('is_active', true); }
 

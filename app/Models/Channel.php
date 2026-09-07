@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Kanal-DEFINITION (whatsapp, instagram, portal, internal ...).
@@ -20,8 +21,10 @@ class Channel extends Model
     protected $fillable = ['key', 'name', 'driver', 'is_active', 'ai_mode', 'capabilities', 'sort'];
     protected $casts = ['is_active' => 'boolean', 'capabilities' => 'array'];
 
-    public function accounts() { return $this->hasMany(ChannelAccount::class); }
-    public function conversations() { return $this->hasMany(Conversation::class); }
+    /** @return HasMany<ChannelAccount, $this> */
+    public function accounts(): HasMany { return $this->hasMany(ChannelAccount::class); }
+    /** @return HasMany<Conversation, $this> */
+    public function conversations(): HasMany { return $this->hasMany(Conversation::class); }
 
     public function scopeActive($q) { return $q->where('is_active', true); }
 
