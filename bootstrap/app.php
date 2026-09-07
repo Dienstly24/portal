@@ -52,7 +52,12 @@ return Application::configure(basePath: dirname(__DIR__))
             | Request::HEADER_X_FORWARDED_PROTO);
         // abmelden/* (POST): RFC-8058-Ein-Klick-Abmeldung ist ein
         // Server-zu-Server-POST von Gmail/Yahoo ohne Session/CSRF-Token.
-        $middleware->validateCsrfTokens(except: ['api/website-inquiry', 'api/website-contact', 'abmelden/*']);
+        // Webhooks der Kanaele sind vom CSRF-Schutz ausgenommen: sie kommen
+        // von einer Plattform, nicht aus einem Browser mit Sitzung. Ihre
+        // Echtheit belegt die SIGNATUR, nicht ein Token aus dem Formular.
+        $middleware->validateCsrfTokens(except: [
+            'api/website-inquiry', 'api/website-contact', 'abmelden/*', 'webhooks/*',
+        ]);
         // Domain-Strategie der Website: Nicht-kanonische Hosts (ohne www,
         // .com, http) per 301 auf https://www.dienstly24.de umleiten.
         $middleware->prepend(RedirectWebsiteHost::class);

@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\ActivityReportController;
+use App\Http\Controllers\Admin\AiProviderController;
+use App\Http\Controllers\Admin\ChannelController;
 use App\Http\Controllers\Admin\ContractController as AdminContractController;
 use App\Http\Controllers\Admin\CustomerDocumentController as AdminCustomerDocumentController;
 use App\Http\Controllers\Admin\DuplicateController as AdminDuplicateController;
@@ -56,6 +58,7 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\UnsubscribeController;
 use App\Http\Controllers\VermittlerAbrechnungController;
+use App\Http\Controllers\Webhooks\WhatsAppWebhookController;
 use App\Http\Controllers\WebsiteAssistantController;
 use App\Http\Controllers\WebsiteContactController;
 use App\Http\Controllers\WebsiteController;
@@ -75,6 +78,20 @@ Route::post('/kontakt', [WebsiteController::class, 'submitContact'])
 Route::get('/kontakt/danke', [WebsiteController::class, 'thanks'])->name('website.thanks');
 
 // SEO: dynamische robots.txt (hostabhaengig) + Sitemap aus echten Inhalten.
+/*
+| Webhook-Endpunkte der Kanaele.
+|
+| OEFFENTLICH und ohne CSRF - die Plattform ruft sie auf, nicht ein
+| Browser mit Sitzung. Die Echtheit kommt NICHT aus einer Anmeldung,
+| sondern aus der SIGNATUR (HMAC ueber den rohen Koerper), geprueft im
+| Adapter, BEVOR irgendetwas gespeichert wird.
+*/
+Route::prefix('webhooks')->name('webhooks.')->middleware('throttle:300,1')->group(function () {
+    $w = WhatsAppWebhookController::class;
+    Route::get('/whatsapp', [$w, 'verify'])->name('whatsapp.verify');
+    Route::post('/whatsapp', [$w, 'handle'])->name('whatsapp.handle');
+});
+
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap');
 
@@ -858,6 +875,33 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/verwaltung', [SettingsController::class, 'hub'])->name('verwaltung');
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings')->middleware('role:admin');
     Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update')->middleware('role:admin');
+
+    // Kanal-Verwaltung (Omnichannel, Auftrag Abschnitte 68-72/98-99) - nur
+    // admin: hier liegen Zugangsdaten. Eine neue Anbindung oder ein zweites
+    // Geschaeftskonto soll damit keine Codeaenderung mehr kosten.
+    Route::prefix('kanaele')->name('channels.')->middleware('role:admin')->group(function () {
+        $c = ChannelController::class;
+        Route::get('/', [$c, 'index'])->name('index');
+        Route::put('/ki-betriebsart', [$c, 'updateGlobalAiMode'])->name('ai_mode');
+        Route::put('/{id}', [$c, 'updateChannel'])->whereNumber('id')->name('update');
+        Route::post('/{channelId}/konten', [$c, 'storeAccount'])->whereNumber('channelId')->name('accounts.store');
+        Route::put('/konten/{id}', [$c, 'updateAccount'])->whereNumber('id')->name('accounts.update');
+        Route::post('/konten/{id}/test', [$c, 'testAccount'])->whereNumber('id')->name('accounts.test');
+        Route::post('/konten/{id}/trennen', [$c, 'disconnectAccount'])->whereNumber('id')->name('accounts.disconnect');
+    });
+
+    // KI-Anbieter (Auftrag Abschnitte 81/95/101) - nur admin: hier liegt
+    // der teuerste Schluessel des Systems.
+    Route::prefix('ki-anbieter')->name('ai_providers.')->middleware('role:admin')->group(function () {
+        $a = AiProviderController::class;
+        Route::get('/', [$a, 'index'])->name('index');
+        Route::post('/', [$a, 'store'])->name('store');
+        Route::put('/{id}', [$a, 'update'])->whereNumber('id')->name('update');
+        Route::delete('/{id}', [$a, 'destroy'])->whereNumber('id')->name('destroy');
+        Route::post('/{id}/test', [$a, 'test'])->whereNumber('id')->name('test');
+        Route::put('/geschaeftszeiten', [$a, 'saveHours'])->name('hours');
+        Route::put('/textbausteine', [$a, 'saveTexts'])->name('texts');
+    });
 
     // E-Mail-Postfächer (Priorität 1 der KI-Systemerweiterung) - nur admin, Zugangsdaten sind sensibel
     Route::prefix('email-accounts')->name('email_accounts.')->middleware('role:admin')->group(function () {

@@ -179,7 +179,7 @@ class MessagingArchitectureTest extends TestCase
 
         foreach ([Channel::PORTAL, Channel::INTERNAL] as $schluessel) {
             $this->assertFalse(
-                $manager->driver($schluessel)->verifyWebhook([], [], null),
+                $manager->driver($schluessel)->verifyWebhook('', [], null),
                 "Kanal '{$schluessel}' darf ohne eigene Pruefung keine Webhooks annehmen."
             );
         }

@@ -3,6 +3,7 @@
 namespace App\Services\Messaging\Channels;
 
 use App\Models\ChannelAccount;
+use App\Services\Messaging\Dto\ConnectionTest;
 use App\Services\Messaging\Dto\InboundMessage;
 use App\Services\Messaging\Dto\OutboundMessage;
 use App\Services\Messaging\Dto\SendResult;
@@ -25,8 +26,14 @@ interface ChannelAdapterInterface
      * Pruefen, ob eine Webhook-Zustellung ECHT ist (Signatur, Token).
      * Wird aufgerufen, BEVOR irgendetwas gespeichert wird - eine
      * gefaelschte Nachricht darf nie in einer Kundenakte landen.
+     *
+     * Uebergeben wird der ROHE Koerper, nicht das geparste Array: eine
+     * Signatur gilt fuer die gesendeten BYTES. Ein wieder nach JSON
+     * kodiertes Array unterscheidet sich schon in der Reihenfolge oder
+     * im Escaping - die Pruefung wuerde dann immer fehlschlagen, und der
+     * naheliegende "Fix" waere, sie abzuschalten.
      */
-    public function verifyWebhook(array $payload, array $headers, ?ChannelAccount $account): bool;
+    public function verifyWebhook(string $rawBody, array $headers, ?ChannelAccount $account): bool;
 
     /**
      * Rohe Webhook-Nutzlast in normalisierte Nachrichten uebersetzen.
@@ -63,4 +70,14 @@ interface ChannelAdapterInterface
      * zurueck - "nicht noetig" ist kein Fehler.
      */
     public function refreshCredentials(ChannelAccount $account): bool;
+
+    /**
+     * Verbindung pruefen (Auftrag Abschnitte 70/97).
+     *
+     * Der Adapter uebersetzt die Antwort seiner Plattform in einen der
+     * BENANNTEN Zustaende - der Betreiber soll lesen koennen, WAS zu tun
+     * ist, statt aus einem rohen Fremdfehler zu raten. Und er gibt dabei
+     * nie ein Geheimnis aus, auch nicht teilweise.
+     */
+    public function testConnection(?ChannelAccount $account): ConnectionTest;
 }

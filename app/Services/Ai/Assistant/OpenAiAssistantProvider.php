@@ -28,9 +28,17 @@ use Illuminate\Support\Facades\Http;
  */
 class OpenAiAssistantProvider implements AssistantProviderInterface
 {
+    public function __construct(private readonly AiProviderSettings $settings) {}
+
+    /** Wie beim Claude-Weg: gepflegter Zugang vor `.env`. */
+    private function apiKey(): ?string
+    {
+        return $this->settings->apiKey('openai', (string) config('services.openai.key'));
+    }
+
     public function isEnabled(): bool
     {
-        return trim((string) config('services.openai.key')) !== '';
+        return $this->apiKey() !== null;
     }
 
     public function name(): string
@@ -40,7 +48,7 @@ class OpenAiAssistantProvider implements AssistantProviderInterface
 
     public function model(): string
     {
-        return (string) config('services.openai.model', 'gpt-5');
+        return $this->settings->model('openai', (string) config('services.openai.model', 'gpt-5'));
     }
 
     public function turn(string $instructions, array $history, array $tools, int $maxOutputTokens = 700): AssistantTurn
@@ -76,7 +84,7 @@ class OpenAiAssistantProvider implements AssistantProviderInterface
         }
 
         try {
-            $response = Http::withToken((string) config('services.openai.key'))
+            $response = Http::withToken((string) $this->apiKey())
                 ->timeout((int) config('services.openai.timeout', 45))
                 ->connectTimeout((int) config('services.openai.connect_timeout', 10))
                 ->post($this->endpoint(), $payload);

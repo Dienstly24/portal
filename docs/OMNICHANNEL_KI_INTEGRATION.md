@@ -182,12 +182,222 @@ Unterhaltung entsteht trotzdem und liegt im Posteingang.
 (`CustomerAssistantTest`, `AssistantResumeTest`) laufen unveraendert
 durch - das ist der eigentliche Nachweis zu Abschnitt 103.
 
-## 7. Offen (naechste Stufen)
+## 7. Umgesetzt (Stufe 3a: Kanal-Verwaltung, 07.09.2026)
 
-- **Stufe 3 - Verwaltung im Admin** (Abschnitte 86/95-99/104): Kanal-
-  und Kanalkonten-Pflege, Zugangsdaten verschluesselt in der Datenbank
-  statt in der `.env`, Verbindungstest, Webhook-Status, Anbieter- und
-  Modellwahl, Geschaeftszeiten, Textbausteine.
-- **Stufe 4 - WhatsApp Cloud API.**
+`/admin/kanaele` (`Admin\ChannelController`), **nur admin** - hier
+liegen Zugangsdaten, dieselbe Haltung wie beim 2FA-Reset.
+
+Je Kanal: an/aus und KI-Betriebsart. Je Kanalkonto: Name, Kennung der
+Plattform, Zugangsdaten, KI-Betriebsart, an/aus, Verbindungstest und
+"Zugang trennen". Dazu die globale KI-Betriebsart. Damit kostet ein
+zweites Geschaeftskonto keine Codeaenderung mehr (Abschnitt 69).
+
+### Drei Regeln zu Geheimnissen (Abschnitt 96), alle als Test gesichert
+1. Ein Zugangswert verlaesst den Server NIE wieder - die Oberflaeche
+   zeigt ausschliesslich "gesetzt" oder "fehlt".
+2. **Ein LEER abgeschicktes Feld loescht nichts.** Sonst raeumt jedes
+   Speichern der KI-Betriebsart nebenbei das Token ab - ein Fehler, der
+   erst auffaellt, wenn die naechste Nachricht nicht mehr rausgeht. Zum
+   Loeschen gibt es den eigenen, benannten Weg "Zugang trennen".
+3. Protokolliert werden nur die SCHLUESSEL, nie die Werte. Auch eine
+   Fremd-Fehlermeldung wird nicht durchgereicht: sie kann ein Token
+   enthalten, deshalb steht der Grund im Log und nicht auf der Seite.
+
+### "Zugang trennen" loescht keine Unterhaltung
+Es raeumt Zugangsdaten weg und schaltet das Konto ab - Verlauf und
+Nachrichten bleiben vollstaendig. Der Verlauf gehoert dem Kunden und dem
+Betrieb, nicht der Anbindung; ein versehentlicher Klick darf keine
+Kundenhistorie kosten (Abschnitt 72).
+
+### Verbindungstest mit BENANNTEN Zustaenden
+`ConnectionTest`: verbunden / Zugangsdaten abgelehnt / abgelaufen / nicht
+eingerichtet / nicht erreichbar / zu viele Anfragen / kein Test moeglich.
+Ein blosses "Fehler" laesst den Betreiber raten, welche der sechs
+Handlungen faellig ist. Kanaele ohne externe Plattform melden ehrlich
+"kein Test moeglich" - ein stilles "verbunden" waere eine Behauptung.
+
+### Ein Fehler, den die Tests gefunden haben
+`$request->validate()` liefert nur ANWESENDE Schluessel zurueck. Ein
+weggelassenes optionales Feld fehlt im Ergebnis ganz - der direkte
+Zugriff darauf war ein 500er im Alltagsfall (Haken nicht gesetzt,
+Auswahlfeld leer). Jetzt durchgaengig `?? ''`.
+
+Tests: `ChannelAdminTest` (12 Faelle).
+
+## 8. Offen (naechste Stufen)
+
+## 9. Umgesetzt (Stufe 3b: KI-Anbieter, 07.09.2026)
+
+`/admin/ki-anbieter` (`Admin\AiProviderController`), **nur admin** -
+hier liegt der teuerste Schluessel des Systems. Anbieter, Modell und
+Schluessel sind pflegbar, samt Verbindungstest.
+
+### Die Rangfolge - der eigentliche Kern dieses Schritts
+Schluessel und Anbieter koennen jetzt aus ZWEI Quellen kommen. Zwei
+Quellen ohne erklaerte Rangfolge sind eine Zufallsentscheidung, die
+niemand nachvollziehen kann, wenn es klemmt. `AiProviderSettings` haelt
+sie an einer Stelle fest:
+
+1. `AI_ASSISTANT_PROVIDER=none` ist die NOTBREMSE und schlaegt alles.
+   Ein Notaus, den eine Datenbankzeile aushebeln kann, ist keiner.
+2. Ein AKTIVER Zugang MIT Schluessel aus der Oberflaeche gewinnt.
+3. Sonst gilt unveraendert die `.env`.
+
+`explain()` gibt die geltende Quelle im Klartext aus - sie steht oben
+auf der Seite. Eine Rangfolge, die man nicht ablesen kann, hilft genau
+dann nicht, wenn man sie braucht.
+
+**Der Bestand aendert sich nicht**: solange kein Zugang gepflegt ist,
+laeuft alles wie bisher. Diese Aenderung schaltet von sich aus nichts um.
+
+### Weitere Regeln
+- Hoechstens EIN Zugang ist aktiv; das Umschalten laeuft als
+  Transaktion, damit es nie einen Moment mit zwei oder null aktiven gibt.
+- Ein neuer Zugang entsteht erst und wird DANN aktiviert - er schaltet
+  den laufenden Betrieb nie im selben Schritt um.
+- Ein Zugang ohne Schluessel oder ein inaktiver zaehlt nicht: er ist
+  nicht einsatzbereit, und "halb eingerichtet" darf nie den funktionie-
+  renden `.env`-Weg verdraengen.
+- "Entfernen" faellt auf die `.env` zurueck, nie in einen Ausfall.
+- Schluessel verschluesselt, `$hidden`, nie in der Oberflaeche, nie im
+  Protokoll; die Fremd-Fehlermeldung des Verbindungstests wird nicht
+  durchgereicht (sie kann den Schluessel enthalten).
+
+Tests: `AiProviderAdminTest` (15 Faelle). Die 104 bestehenden
+Assistenten-Tests laufen unveraendert durch.
+
+## 10. Umgesetzt (Stufe 3c: Geschaeftszeiten und Texte, 07.09.2026)
+
+Beides auf derselben Seite wie die Anbieter (`/admin/ki-anbieter`,
+Titel "KI-Assistent") - sie gehoeren fachlich zum Assistenten
+(Abschnitt 86).
+
+### Geschaeftszeiten (Abschnitt 64)
+`App\Support\BusinessHours`. Ausserhalb der Zeiten antwortet die KI
+nicht inhaltlich; der Kunde bekommt den hinterlegten
+Abwesenheitshinweis, und der Vorgang liegt am Morgen im Posteingang.
+
+**DIE ZEITZONEN-FALLE, an der so etwas fast immer scheitert**:
+gespeichert wird UTC, gemeint ist deutsche Ortszeit. Wer `now()` roh
+gegen "09:00" haelt, sperrt im Sommer zwei Stunden zu frueh auf und zu -
+und zwei Stunden Abweichung sehen plausibel aus, deshalb faellt es
+niemandem auf. Verglichen wird deshalb immer in
+`app.display_timezone`; zwei Tests pruefen ausdruecklich ueber die
+Sommer-/Winterzeit-Grenze hinweg.
+
+**Voreinstellung AUS.** Eine Regel, die sich selbst einschaltet, wuerde
+das Verhalten still veraendern - in Richtung "die KI antwortet nachts
+nicht mehr", also genau die Art Aenderung, die als Stoerung gemeldet
+wird.
+
+**Der Hinweis kommt hoechstens einmal je Unterhaltung und 12 Stunden.**
+Ohne diese Bremse bekaeme ein Kunde, der abends fuenf Nachrichten
+schreibt, fuenfmal denselben Baustein - das liest sich wie eine kaputte
+Maschine und ist schlimmer als gar keine Antwort. Er ist als
+`message_type = system` gekennzeichnet: er stammt aus einem Baustein,
+nicht vom Modell, und der Mitarbeiter soll das unterscheiden koennen.
+
+Ein Ende vor dem Anfang (20:00-02:00) gilt als Zeitraum ueber
+Mitternacht - ohne diesen Fall waere so ein Tag dauerhaft geschlossen,
+und niemand saehe warum. **Feiertage bewusst NICHT gebaut**: eine halbe
+Feiertagsliste ist schlechter als keine, weil sie an Ostern
+"geoeffnet" behauptet.
+
+### Textbausteine (Abschnitt 65)
+`AssistantTexts`: Begruessung, Abwesenheit, Wartehinweis, Uebergabe,
+ausserhalb des Bereichs, Dienst gestoert, Grenze erreicht.
+
+Die sorgfaeltig formulierten dreisprachigen Texte aus
+`AssistantReplies` bleiben die VORGABE - die Oberflaeche legt bei Bedarf
+eine eigene Fassung darueber. Ein leeres Feld heisst "wieder die
+Vorgabe": deshalb wird der leere Wert gespeichert und nicht der
+Vorgabetext hineinkopiert, sonst waere die Vorgabe ab dem ersten
+Speichern eingefroren und spaetere Verbesserungen kaemen nie an.
+
+**Dreisprachig bleibt Pflicht**: der Text folgt der ERKANNTEN Sprache
+der Kundennachricht. Wer nur Deutsch pflegt, bekommt fuer Arabisch
+weiter die Vorgabe - nie einen deutschen Text an einen arabisch
+schreibenden Kunden.
+
+Tests: `BusinessHoursAndTextsTest` (13 Faelle).
+
+## 11. Umgesetzt (Stufe 4: WhatsApp Cloud API, 07.09.2026)
+
+`WhatsAppAdapter` gegen die OFFIZIELLE Cloud API von Meta, ohne
+Zwischenanbieter. Der Kanal kostete genau das, was die Abstraktion
+versprochen hat: einen Adapter und EINE Zeile in `channels` - keine
+Aenderung an Unterhaltung, Nachricht, Zuweisung oder Posteingang.
+
+### Sicherheit ist der Kern
+Die Signatur (`X-Hub-Signature-256`, HMAC-SHA256 mit dem App-Secret) ist
+der EINZIGE Beleg, dass eine Zustellung von Meta kommt. Faellt sie, kann
+jeder Nachrichten in fremde Kundenakten schreiben.
+
+- Geprueft wird ueber den ROHEN Koerper. Deshalb nimmt
+  `verifyWebhook()` jetzt einen String statt des geparsten Arrays: eine
+  Signatur gilt fuer die gesendeten BYTES, und ein wieder kodiertes
+  Array unterscheidet sich schon in Reihenfolge oder Escaping. Die
+  Pruefung wuerde immer fehlschlagen - und der naheliegende "Fix" waere,
+  sie abzuschalten.
+- Verglichen wird mit `hash_equals`; ein normaler Vergleich verraet
+  ueber die Laufzeit, wie viele Zeichen stimmten.
+- OHNE hinterlegtes App-Secret wird ABGELEHNT, nie durchgewunken.
+- Geprueft wird VOR jedem Schreiben (Abschnitt 21).
+
+### Der Endpunkt ist duenn
+`/webhooks/whatsapp`: pruefen, Job werfen, 200. Meta wiederholt jede
+Zustellung, die nicht zuegig quittiert wird, und schaltet den Webhook
+bei anhaltenden Zeitueberschreitungen ab - wer hier Kundensuche, KI und
+Medien-Download abwartet, riskiert genau das. Auch eine unbrauchbare
+Nutzlast bekommt 200: ein Fehlercode wuerde endlose Wiederholungen
+derselben unbrauchbaren Zustellung ausloesen.
+
+### Mehrere Nummern
+Das Konto wird ueber die `phone_number_id` AUS DER NUTZLAST gefunden -
+so findet auch bei mehreren Geschaeftsnummern jede Zustellung ihr Konto
+(Abschnitt 73). Zugangsdaten je Konto, nicht aus der `.env`: deshalb
+wurde `MetaGraphClient` bewusst NICHT wiederverwendet, obwohl er
+denselben Graph-Host anspricht - er holt sein Token aus der
+Konfiguration, und damit waeren zwei Nummern mit getrennten Zugaengen
+unmoeglich.
+
+### Idempotenz doppelt
+Ereignis-Register (`msg:` bzw. `status:`-Schluessel) UND der eindeutige
+Index auf `(conversation_id, external_message_id)`. Ein Test schickt
+dieselbe Zustellung zweimal durch den ganzen Weg und erwartet EINE
+Nachricht.
+
+### Ausgehend
+`SendOutboundMessageJob` mit `tries = 1` - dieselbe harte Regel wie beim
+Social-Versand: ein zweiter Versuch koennte eine bereits zugestellte
+Nachricht ein zweites Mal beim Kunden abliefern. Der Schutz liegt am
+DATENSATZ (`external_message_id` gesetzt = nicht noch einmal), nicht an
+der Queue. Fremde Fehlermeldungen werden nie durchgereicht.
+
+Die externe Kennung aus der Antwort ist der wichtigste Rueckgabewert:
+nur mit ihr lassen sich spaetere Zustell- und Lesemeldungen zuordnen.
+
+### Inbetriebnahme (Betreiber)
+1. `/admin/kanaele` -> WhatsApp -> Konto anlegen mit `access_token`,
+   `phone_number_id`, `app_secret`, `verify_token`.
+2. Bei Meta die Webhook-URL `https://<domain>/webhooks/whatsapp`
+   eintragen, Bestaetigungs-Token = `verify_token`.
+3. "Verbindung testen", dann Konto und Kanal aktivieren.
+4. KI-Betriebsart je Kanal/Konto setzen (Voreinstellung: erben).
+
+Der Kanal entsteht INAKTIV - eine Anbindung schaltet sich nicht selbst
+live.
+
+**OFFEN und nicht im Repository entscheidbar**: ob Meta die
+**Coexistence** (WhatsApp Business App + Cloud API auf derselben
+Nummer) fuer genau dieses Konto freigibt. Die Architektur setzt sie
+NICHT voraus - `channel_accounts` traegt die Kennungen, der Kern kennt
+Coexistence gar nicht.
+
+Tests: `WhatsAppChannelTest` (15 Faelle).
+
+## 12. Offen
+- **Stufe 4 - WhatsApp Cloud API** (Abschnitt 30), abhaengig von der
+  Coexistence-Freigabe durch Meta.
 - Der Vorschlags-Modus (`ai_assist`) nutzt bereits
   `EmployeeAssistantService`; was fehlt, ist der Knopf im Panel.

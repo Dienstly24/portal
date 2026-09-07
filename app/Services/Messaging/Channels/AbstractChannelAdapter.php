@@ -3,6 +3,7 @@
 namespace App\Services\Messaging\Channels;
 
 use App\Models\ChannelAccount;
+use App\Services\Messaging\Dto\ConnectionTest;
 
 /**
  * Sinnvolle Vorgaben fuer alles, was ein Kanal NICHT kann.
@@ -14,7 +15,7 @@ use App\Models\ChannelAccount;
  */
 abstract class AbstractChannelAdapter implements ChannelAdapterInterface
 {
-    public function verifyWebhook(array $payload, array $headers, ?ChannelAccount $account): bool
+    public function verifyWebhook(string $rawBody, array $headers, ?ChannelAccount $account): bool
     {
         // Bewusst restriktiv: ein Kanal ohne eigene Pruefung nimmt keine
         // Webhooks entgegen. Durchwinken waere die gefaehrlichere Vorgabe.
@@ -44,5 +45,16 @@ abstract class AbstractChannelAdapter implements ChannelAdapterInterface
     public function refreshCredentials(ChannelAccount $account): bool
     {
         return false;
+    }
+
+    /**
+     * Kanaele ohne externe Plattform (Portal, interner Chat) haben
+     * nichts zu testen. Sie melden das ausdruecklich - "kein Test
+     * moeglich" ist eine Aussage, ein stilles "verbunden" waere eine
+     * Behauptung.
+     */
+    public function testConnection(?ChannelAccount $account): ConnectionTest
+    {
+        return ConnectionTest::make(ConnectionTest::NOT_SUPPORTED);
     }
 }
