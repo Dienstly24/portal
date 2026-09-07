@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Events\Messaging\InboundMessageReceived;
+use App\Listeners\Messaging\TriggerAiAssistant;
 use App\Models\ScheduledTaskRun;
 use App\Models\User;
 use App\Services\Activity\ActivityCatalog;
@@ -89,6 +91,9 @@ use App\Services\Commission\CommissionReadService;
 use App\Services\Commission\Sources\ContractCommissionSource;
 use App\Services\Commission\Sources\ProvisionSource;
 use App\Services\Commission\Sources\VermittlerSettlementSource;
+use App\Services\Messaging\Channels\ChannelManager;
+use App\Services\Messaging\Channels\InternalChatAdapter;
+use App\Services\Messaging\Channels\PortalAdapter;
 use App\Services\Notifications\NotificationService;
 use App\Services\Ocr\TesseractTextExtractor;
 use App\Services\Ocr\TextExtractorInterface;
@@ -138,6 +143,28 @@ class AppServiceProvider extends ServiceProvider
             $app->make(VermittlerSettlementSource::class),
             $app->make(ProvisionSource::class),
         ));
+
+        /*
+        | OMNICHANNEL: die Kanal-Registrierung.
+        |
+        | Das ist der EINE Ort, an dem ein Kanalschluessel auf seine
+        | Umsetzung trifft. Ein neuer Kanal (WhatsApp, Instagram,
+        | Telegram ...) kostet deshalb genau zwei Zeilen: eine
+        | Registrierung hier und einen Eintrag in `channels`. Weder
+        | Conversation noch Message noch Inbox noch Zuweisung werden
+        | dafuer angefasst - das ist der ganze Zweck der Abstraktion.
+        |
+        | Die beiden Kanaele unten haben bewusst keine externe API: sie
+        | belegen, dass der Kern ohne Plattform auskommt, BEVOR der erste
+        | echte Kanal dazukommt.
+        */
+        $this->app->singleton(ChannelManager::class, function () {
+            $manager = new ChannelManager;
+            $manager->register(new PortalAdapter);
+            $manager->register(new InternalChatAdapter);
+
+            return $manager;
+        });
 
         // Zentraler Notification-Dienst (Glocke): eine Stelle fuer Kuerzen,
         // Duplikat-Vermeidung und Kategorisierung. Facade: App\Support\Facades\Notify.
@@ -358,6 +385,18 @@ class AppServiceProvider extends ServiceProvider
         ProductionDatabaseGuard::registrieren($this->app);
 
         $this->registerRateLimiters();
+
+        /*
+        | OMNICHANNEL + KI: die KI haengt am EREIGNIS des Kerns, nicht am
+        | Kanal (Auftrag Abschnitte 79/80/93).
+        |
+        | Damit gilt sie fuer jeden Kanal - auch fuer jeden zukuenftigen -
+        | ohne eine Zeile im Adapter. Stuende der Anstoss weiter im
+        | Kanal-Weg, muesste ihn jeder neue Kanal wiederholen; beim
+        | vierten vergisst ihn jemand, und der Ausfall sieht aus wie gar
+        | nichts: der Kunde schreibt, und es passiert einfach nichts.
+        */
+        Event::listen(InboundMessageReceived::class, TriggerAiAssistant::class);
 
         /*
         | ARCH-7: strenge Eloquent-Regeln - aber NUR ausserhalb der Produktion.

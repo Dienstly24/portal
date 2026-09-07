@@ -51,7 +51,7 @@ class AiConversation extends Model
     public const STATUS_PAUSED = 'paused';
 
     protected $fillable = [
-        'customer_id', 'ai_active', 'handover_required', 'handover_reason', 'handover_at',
+        'customer_id', 'omnichannel_conversation_id', 'ai_active', 'handover_required', 'handover_reason', 'handover_at',
         'assigned_employee_id', 'last_ai_action', 'last_ai_response', 'summary',
         // Wiederaufnahme nach einer Uebernahme (Betreiber-Vorgabe 20.08.2026)
         'auto_resume', 'resume_not_before', 'resume_ticket_id', 'resumed_at',
@@ -107,13 +107,60 @@ class AiConversation extends Model
     }
 
     public function customer() { return $this->belongsTo(Customer::class); }
+    /** Die Unterhaltung im Omnichannel-Sinn - NICHT dieser Steuerstand. */
+    public function omnichannelConversation() { return $this->belongsTo(Conversation::class, 'omnichannel_conversation_id'); }
     public function employee() { return $this->belongsTo(User::class, 'assigned_employee_id'); }
     public function logs() { return $this->hasMany(AiAssistantLog::class, 'conversation_id')->latest(); }
 
     /** Steuerstand des Kunden holen/anlegen (Standard: KI aktiv). */
     public static function forCustomer(string $customerId): self
     {
-        return static::firstOrCreate(['customer_id' => $customerId]);
+        return static::firstOrCreate([
+            'customer_id' => $customerId,
+            'omnichannel_conversation_id' => null,
+        ]);
+    }
+
+    /**
+     * Steuerstand EINER Unterhaltung (Auftrag Abschnitt 55).
+     *
+     * WARUM je Unterhaltung und nicht mehr nur je Kunde: schreibt
+     * derselbe Kunde ueber zwei Kanaele, teilten sich beide Vorgaenge
+     * sonst einen Zustand - wer die KI im einen pausiert, schaltet sie im
+     * anderen mit ab, ohne es zu sehen. Auch die Kostengrenze zaehlte
+     * quer ueber Kanaele hinweg.
+     *
+     * Der kundenweite Steuerstand bleibt daneben bestehen und wirkt als
+     * VORGABE: ein neuer Vorgang uebernimmt beim Anlegen, was fuer den
+     * Kunden zuletzt galt (etwa ein dauerhaftes "KI aus"). Sonst haette
+     * eine bewusste Abschaltung mit der naechsten neuen Unterhaltung
+     * still ihre Wirkung verloren.
+     */
+    public static function forConversation(Conversation $conversation): self
+    {
+        $vorhanden = static::where('omnichannel_conversation_id', $conversation->id)->first();
+        if ($vorhanden) {
+            return $vorhanden;
+        }
+
+        $vorgabe = null;
+        if ($conversation->customer_id) {
+            $vorgabe = static::where('customer_id', $conversation->customer_id)
+                ->whereNull('omnichannel_conversation_id')->first();
+        }
+
+        // Nur die DAUERHAFTE Abschaltung wird vererbt (auto_resume = false
+        // ist der Knopf "KI deaktivieren"). Eine offene Uebergabe gehoert
+        // zum alten Vorgang, nicht zum neuen.
+        $dauerhaftAus = $vorgabe !== null && ! $vorgabe->auto_resume;
+
+        return static::create([
+            'customer_id' => $conversation->customer_id,
+            'omnichannel_conversation_id' => $conversation->id,
+            'channel' => $conversation->channel->key,
+            'ai_active' => ! $dauerhaftAus,
+            'auto_resume' => ! $dauerhaftAus,
+        ]);
     }
 
     /**

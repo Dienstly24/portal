@@ -58,6 +58,7 @@ class CustomerAssistantService
         private AcceptanceDetector $acceptance,
         private ConversationJournal $journal,
         private ConversationResumeService $resume,
+        private AiSettingsResolver $aiSettings,
     ) {
     }
 
@@ -89,14 +90,30 @@ class CustomerAssistantService
             return null;
         }
 
-        $conversation = AiConversation::forCustomer($customer->id);
+        // Steuerstand: je UNTERHALTUNG, sobald die Nachricht zu einer
+        // gehoert (Omnichannel), sonst wie bisher je Kunde. Ohne diese
+        // Unterscheidung teilten sich WhatsApp- und Instagram-Vorgang
+        // desselben Kunden einen Zustand - und eine Pause im einen
+        // schaltete die KI im anderen still mit ab.
+        $omnichannel = $message->conversation;
+        $conversation = $omnichannel
+            ? AiConversation::forConversation($omnichannel)
+            : AiConversation::forCustomer($customer->id);
         $language = $this->languageDetector->detect((string) $message->body, $customer->preferred_lang);
         $started = microtime(true);
 
         // --- Stufe 1: Schalter des Betreibers -------------------------------
-        if (! $this->settings->enabled() || ! $this->settings->autoReply()) {
+        // Die geltende Betriebsart kommt aus der HIERARCHIE (Auftrag
+        // Abschnitte 63/85): Unterhaltung -> Kunde -> Kanalkonto ->
+        // Kanal -> Global. Der Hauptschalter bleibt die Notbremse und
+        // steht ueber allem - ein Notaus, den eine Kundeneinstellung
+        // aushebeln kann, ist kein Notaus. Protokolliert wird die
+        // gefundene EBENE mit, sonst ist "die KI antwortet nicht" wieder
+        // die Meldung, bei der jede Ursache gleich aussieht.
+        $geltung = $this->aiSettings->explain($omnichannel, $customer);
+        if (! $this->aiSettings->mayAutoReply($omnichannel, $customer)) {
             $this->log($conversation, $message, AiAssistantLog::OUTCOME_SKIPPED, [
-                'grund' => 'Assistent oder automatische Antworten abgeschaltet',
+                'grund' => 'Betriebsart '.$geltung['mode'].' (gesetzt auf Ebene: '.$geltung['source'].')',
             ]);
 
             return null;

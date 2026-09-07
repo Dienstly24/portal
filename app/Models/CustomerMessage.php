@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Services\Ai\Assistant\AssistantSettings;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -18,8 +19,49 @@ class CustomerMessage extends Model
 
     public const EMAIL_MODES = ['none', 'hint', 'full'];
 
-    protected $fillable = ['customer_id', 'sender_id', 'body', 'from_staff', 'ai_generated', 'read_at', 'email_mode'];
-    protected $casts = ['from_staff' => 'boolean', 'ai_generated' => 'boolean', 'read_at' => 'datetime'];
+    protected $fillable = [
+        'customer_id', 'sender_id', 'body', 'from_staff', 'ai_generated', 'read_at', 'email_mode',
+        // Omnichannel (Phase B) - alle optional, damit jeder bestehende
+        // Schreibweg unveraendert weiterlaeuft.
+        'conversation_id', 'direction', 'sender_type', 'external_message_id',
+        'message_type', 'status', 'metadata', 'sent_at', 'delivered_at',
+        'failed_at', 'failure_reason',
+    ];
+
+    protected $casts = [
+        'from_staff' => 'boolean',
+        'ai_generated' => 'boolean',
+        'read_at' => 'datetime',
+        'metadata' => 'array',
+        'sent_at' => 'datetime',
+        'delivered_at' => 'datetime',
+        'failed_at' => 'datetime',
+    ];
+
+    public const DIRECTION_INCOMING = 'incoming';
+    public const DIRECTION_OUTGOING = 'outgoing';
+
+    public const SENDER_EMPLOYEE = 'employee';
+    public const SENDER_CUSTOMER = 'customer';
+    public const SENDER_SYSTEM = 'system';
+    public const SENDER_BOT = 'bot';
+
+    public const TYPE_TEXT = 'text';
+
+    /**
+     * Nachrichtenarten. Bewusst eine Liste und kein ENUM: eine neue Art
+     * (Reaktion, Umfrage, Standort ...) darf keine Migration kosten.
+     */
+    public const MESSAGE_TYPES = [
+        'text', 'image', 'video', 'audio', 'file', 'document',
+        'sticker', 'location', 'contact', 'system', 'unsupported',
+    ];
+
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_SENT = 'sent';
+    public const STATUS_DELIVERED = 'delivered';
+    public const STATUS_READ = 'read';
+    public const STATUS_FAILED = 'failed';
 
     /** Anzeigename des Assistenten - eine Quelle fuer Portal und Beraterwelt. */
     public const AI_SENDER_NAME = 'Dienstly24 Assistent';
@@ -38,7 +80,22 @@ class CustomerMessage extends Model
 
     protected static function boot() {
         parent::boot();
-        static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
+        static::creating(function ($m) {
+            $m->id = $m->id ?: (string) Str::uuid();
+            // `from_staff` (Altbestand) und `direction` (Omnichannel) sind
+            // dieselbe Aussage in zwei Lesarten. Sie werden hier
+            // aneinander gebunden, damit sie nie auseinanderlaufen -
+            // egal, welchen der beiden Wege der Aufrufer benutzt.
+            if ($m->direction === null) {
+                $m->direction = $m->from_staff ? self::DIRECTION_OUTGOING : self::DIRECTION_INCOMING;
+            } else {
+                $m->from_staff = $m->direction === self::DIRECTION_OUTGOING;
+            }
+            $m->message_type = $m->message_type ?: self::TYPE_TEXT;
+            $m->sender_type = $m->sender_type ?: ($m->from_staff
+                ? ($m->ai_generated ? self::SENDER_BOT : self::SENDER_EMPLOYEE)
+                : self::SENDER_CUSTOMER);
+        });
         // Schreibt ein MENSCH an den Kunden, faengt die Ruhefrist der
         // Wiederaufnahme neu an (Betreiber-Vorgabe 20.08.2026): solange am
         // Fall gearbeitet wird, faellt die KI niemandem ins Wort. Hier im
@@ -56,12 +113,49 @@ class CustomerMessage extends Model
     }
 
     public function customer() { return $this->belongsTo(Customer::class); }
+    /** @return BelongsTo<Conversation, $this> */
+    public function conversation(): BelongsTo { return $this->belongsTo(Conversation::class, 'conversation_id'); }
     public function sender() { return $this->belongsTo(User::class, 'sender_id'); }
     public function attachments() { return $this->hasMany(CustomerMessageAttachment::class, 'message_id'); }
 
     public function scopeFromStaff($q) { return $q->where('from_staff', true); }
     public function scopeFromCustomer($q) { return $q->where('from_staff', false); }
     public function scopeUnread($q) { return $q->whereNull('read_at'); }
+    public function scopeIncoming($q) { return $q->where('direction', self::DIRECTION_INCOMING); }
+    public function scopeOutgoing($q) { return $q->where('direction', self::DIRECTION_OUTGOING); }
+
+    /**
+     * Zustellstand fortschreiben. Ein Status geht nur VORWAERTS
+     * (pending -> sent -> delivered -> read): Statusmeldungen einer
+     * Plattform treffen regelmaessig in falscher Reihenfolge ein, und
+     * eine gelesene Nachricht darf nicht wieder auf "zugestellt"
+     * zurueckfallen. `failed` ist davon ausgenommen - ein Fehlschlag ist
+     * immer die juengere Wahrheit.
+     */
+    public function advanceStatus(string $status, ?string $reason = null): bool
+    {
+        $rang = [
+            self::STATUS_PENDING => 1, self::STATUS_SENT => 2,
+            self::STATUS_DELIVERED => 3, self::STATUS_READ => 4,
+        ];
+
+        if ($status !== self::STATUS_FAILED
+            && ($rang[$status] ?? 0) <= ($rang[$this->status] ?? 0)) {
+            return false;
+        }
+
+        $this->status = $status;
+        match ($status) {
+            self::STATUS_SENT => $this->sent_at = $this->sent_at ?: now(),
+            self::STATUS_DELIVERED => $this->delivered_at = $this->delivered_at ?: now(),
+            self::STATUS_READ => $this->read_at = $this->read_at ?: now(),
+            self::STATUS_FAILED => [$this->failed_at = now(), $this->failure_reason = $reason],
+            default => null,
+        };
+        $this->save();
+
+        return true;
+    }
 
     /**
      * Einheitliche Chat-Struktur fuer Portal-Seite, Portal-Widget und
