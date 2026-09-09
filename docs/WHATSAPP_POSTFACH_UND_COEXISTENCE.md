@@ -164,3 +164,69 @@ wenn man sieht, was im Postfach ankommt.
 
 Kein Schritt bei Meta, bevor Teil A steht und der Echo-Schutz gebaut und
 getestet ist.
+
+
+---
+
+# UMSETZUNG TEIL A (09.09.2026)
+
+Die drei Punkte, die der Betreiber vor jedem Schritt bei Meta sehen
+wollte, sind gebaut und geprueft.
+
+## 1. Ein Postfach, viele Kanaele
+
+`/admin/postfach` liest ausschliesslich `conversations` ueber
+`ConversationInbox`. Sicht (Alle / Ungelesen / Meine), Kanal-Filter,
+Betreuer, Zustaendigkeit, Zustand, Zeitraum, Konto und die Suche kommen
+aus DIESER einen Schicht - und die Zaehler ebenfalls, damit Liste und
+Zahl nicht auseinanderlaufen koennen.
+
+Tickets, Anfragen, E-Mail und Team-Chat bleiben unangetastet auf ihren
+Seiten. Sie sind keine Kanal-Unterhaltungen, und sie umzubauen war
+ausdruecklich nicht der Auftrag.
+
+## 2. Die Navigation kommt aus der Datenbank
+
+Der feste Punkt "Kundenchat" ist weg - nicht der Ort, nur seine
+Verdrahtung. Jeder aktive Kanal mit `supportsCustomers` erzeugt einen
+Punkt, der auf dieselbe Liste zeigt, vorgefiltert. "Kundenchat" ist
+seitdem der NAME des Portal-Kanals in der Datenbank. WhatsApp erscheint,
+sobald der Kanal aktiv ist; Instagram, Telegram und TikTok spaeter
+genauso, ohne dass jemand diese Datei anfasst.
+
+Ein Test misst, dass in Inbox, Filtern und Controller KEIN Kanalname im
+Code steht (Kommentare abgezogen) - dieselbe Messweise wie im Kern.
+
+## 3. Unbekannte Kontakte
+
+Der Befund aus Abschnitt 0 ist behoben. Eine Nachricht ohne Kundenakte
+steht als "Unbekannter Kontakt" mit ihrer Kennung in der Liste und ist
+fuer JEDEN Mitarbeiter sichtbar - sie gehoert niemandem, und unsichtbar
+fuer alle war der Fehler. Aus der Unterhaltung heraus laesst sie sich
+mit einer bestehenden Akte verknuepfen oder zu einer neuen machen; die
+Unterhaltung bleibt dabei DIESELBE, der Verlauf also erhalten. Dabei
+entsteht die Kanal-Identitaet - ab dann findet jede weitere Nachricht
+dieser Kennung den Kunden von selbst.
+
+## 4. Echo-Schutz
+
+Siehe Abschnitt 2, Punkt 8 - jetzt gebaut. Der Kern kennt dafuer EINE
+allgemeine Tatsache (`InboundMessage::fromBusiness`), keinen
+Plattform-Sonderfall; der Adapter erkennt den Fall am eigenen Feld der
+Coexistence UND daran, dass als Absender unsere eigene Nummer steht.
+
+## Was das fuer Meta bedeutet
+
+Nichts hat sich geaendert: es wurde **kein Schritt bei Meta getan**, die
+Nummer ist unberuehrt, der Kanal steht weiterhin auf inaktiv. Der
+Bericht in Abschnitt 3/4/5 gilt unveraendert. Teil B beginnt erst nach
+ausdruecklicher Freigabe - und der Abschnitt "Official Meta onboarding
+flow" wird davor gegen Metas aktuelle Dokumentation geprueft, statt aus
+dem Gedaechtnis geschrieben.
+
+## Tests
+
+`PostfachTest` (20), `CoexistenceEchoTest` (12), `WhatsAppEndToEndTest`
+(5) - dazu unveraendert `WhatsAppChannelTest`, `WhatsAppDeliveryTest`,
+`WhatsAppAbnahmeTest`, `AiChannelIntegrationTest`,
+`ConversationAssignmentTest`, `MessagingArchitectureTest`.
