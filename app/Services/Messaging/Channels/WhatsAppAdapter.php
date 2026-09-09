@@ -149,13 +149,32 @@ class WhatsAppAdapter extends AbstractChannelAdapter
 
                 $eintraege = [];
                 foreach (($value['messages'] ?? []) as $msg) {
-                    $eintraege[] = [$msg, $echoFeld];
+                    $eintraege[] = [$msg, $echoFeld, false];
                 }
                 foreach (($value['message_echoes'] ?? []) as $msg) {
-                    $eintraege[] = [$msg, true];
+                    $eintraege[] = [$msg, true, false];
                 }
 
-                foreach ($eintraege as [$msg, $istEcho]) {
+                // VERLAUF aus der WhatsApp Business App (Coexistence).
+                //
+                // Meta liefert ihn NACH dem Anbinden, in Abschnitten
+                // (`phase`, `chunk_order`, `progress`) und nach Faeden
+                // gruppiert (`threads[].id` = die Nummer des Kunden).
+                // Die Richtung steht nicht dabei - sie ergibt sich wie
+                // beim Echo daraus, WER Absender ist.
+                //
+                // Diese Nachrichten sind echt, aber sie sind nicht
+                // gerade passiert: sie werden als HISTORISCH markiert
+                // und loesen deshalb nichts aus.
+                foreach (($value['history'] ?? []) as $abschnitt) {
+                    foreach (($abschnitt['threads'] ?? []) as $faden) {
+                        foreach (($faden['messages'] ?? []) as $msg) {
+                            $eintraege[] = [$msg, false, true];
+                        }
+                    }
+                }
+
+                foreach ($eintraege as [$msg, $istEcho, $istHistorie]) {
                     $von = (string) ($msg['from'] ?? '');
                     if ($von === '') {
                         continue;
@@ -201,6 +220,7 @@ class WhatsAppAdapter extends AbstractChannelAdapter
                             ? Carbon::createFromTimestamp((int) $msg['timestamp'])
                             : null,
                         fromBusiness: $vonUns,
+                        historical: $istHistorie,
                     );
                 }
             }

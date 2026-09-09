@@ -58,6 +58,13 @@ class ProcessWhatsAppWebhookJob implements ShouldQueue
             $engine->handleInbound($inbound, $channel, $account);
         }
 
+        // VERLAUFS-ABSCHNITTE festhalten. Meta liefert den bisherigen
+        // Schriftwechsel in Teilen und meldet den Fortschritt mit; ohne
+        // diesen Vermerk waere spaeter nicht zu sagen, ob der Verlauf
+        // vollstaendig angekommen ist - und die Oberflaeche muesste
+        // behaupten, was sie nicht weiss.
+        $this->rememberHistoryProgress($account);
+
         // Zustell- und Lesemeldungen. Sie sind eigene Ereignisse und
         // brauchen einen eigenen Schluessel - sonst wuerde die
         // Statusmeldung zu einer Nachricht als deren Duplikat gelten.
@@ -72,6 +79,48 @@ class ProcessWhatsAppWebhookJob implements ShouldQueue
                 $status['status'],
                 $status['reason'] ?? null
             );
+        }
+    }
+
+    /**
+     * Was von Meta ueber den Verlauf gemeldet wurde, am Konto vermerken.
+     *
+     * Bewusst nur die METADATEN (Abschnitt, Reihenfolge, Fortschritt) -
+     * die Nachrichten selbst stehen in der Unterhaltung. Und bewusst
+     * ohne Anspruch auf Vollstaendigkeit: Meta liefert hoechstens die
+     * letzten 180 Tage und nur, wenn der Betrieb das Teilen bestaetigt
+     * hat. Was wir haben, ist ein AUSSCHNITT - und die Oberflaeche sagt
+     * das so.
+     */
+    private function rememberHistoryProgress(ChannelAccount $account): void
+    {
+        $abschnitte = [];
+        foreach (($this->payload['entry'] ?? []) as $entry) {
+            foreach (($entry['changes'] ?? []) as $change) {
+                foreach ((($change['value'] ?? [])['history'] ?? []) as $abschnitt) {
+                    $abschnitte[] = $abschnitt['metadata'] ?? [];
+                }
+            }
+        }
+
+        if ($abschnitte === []) {
+            return;
+        }
+
+        try {
+            $stand = $account->settings ?? [];
+            $verlauf = $stand['history'] ?? [];
+            $verlauf['last_chunk_at'] = now()->toIso8601String();
+            $verlauf['chunks'] = (int) ($verlauf['chunks'] ?? 0) + count($abschnitte);
+            $letzte = end($abschnitte) ?: [];
+            $verlauf['phase'] = $letzte['phase'] ?? ($verlauf['phase'] ?? null);
+            $verlauf['progress'] = $letzte['progress'] ?? ($verlauf['progress'] ?? null);
+            $stand['history'] = $verlauf;
+
+            $account->forceFill(['settings' => $stand])->save();
+        } catch (\Throwable) {
+            // Der Vermerk darf den Empfang nie scheitern lassen - die
+            // Nachrichten sind wichtiger als die Statistik darueber.
         }
     }
 }

@@ -376,3 +376,101 @@ hat, ist nie nur ein Namensstreit.
   Das System zeigt an, was es weiss - es behauptet es nicht.
 
 Tests: `WhatsAppOnboardingTest` (14 Faelle).
+
+
+---
+
+# TEIL B2 - DER VERLAUF AUS DER BUSINESS APP (09.09.2026)
+
+Betreiber-Vorgabe: der bisherige Schriftwechsel aus der WhatsApp
+Business App soll NICHT draussen bleiben. Ein Mitarbeiter braucht den
+Zusammenhang; ohne ihn beginnt jede Kundenbeziehung im Portal bei null.
+
+## Was Meta wirklich liefert - geprueft, nicht angenommen
+
+| Angabe | Stand |
+|---|---|
+| Webhook-Feld | `history` |
+| Umfang | **hoechstens die letzten 180 Tage** |
+| Zeitpunkt | einige Minuten NACH dem Onboarding, **einmalig** |
+| Bedingung | der Betrieb muss das Teilen **bestaetigen** (er kann ablehnen) |
+| Form | in ABSCHNITTEN (`phase`, `chunk_order`, `progress`), nach Faeden gruppiert (`threads[].id` = Nummer des Kunden) |
+| Kontakte | eigenes Feld `smb_app_state_sync` |
+
+**Das ist ausdruecklich KEIN vollstaendiger WhatsApp-Verlauf.** Er ist
+zeitlich begrenzt, an eine Zustimmung gebunden und kann teilweise
+ankommen. Die Oberflaeche behauptet deshalb nie Vollstaendigkeit: der
+Fortschritt (`chunks`, `phase`, `progress`, Zeitpunkt des letzten
+Abschnitts) wird am Konto vermerkt, damit "teilweise verfuegbar" eine
+belegbare Aussage ist und keine Vermutung.
+
+## Historisch ist nicht Live
+
+`customer_messages.source` (`live` / `historical`). Der Bestand ist
+`live` - ein neuer Weg muss sich ausdruecklich als historisch ausweisen.
+
+Ohne diese Unterscheidung waere jede nachgelieferte Kundennachricht ein
+frischer Eingang: **beim Anschalten der Anbindung bekaeme der Kunde eine
+Antwortlawine** - KI-Antworten auf Fragen von vor drei Monaten, dazu
+Glocken und Zuweisungen fuer erledigte Vorgaenge.
+
+Eine historische Nachricht ist deshalb:
+
+| | |
+|---|---|
+| sichtbar in der Unterhaltung | **ja** |
+| durchsuchbar (dieselbe Suche) | **ja** |
+| am richtigen Kunden und an der richtigen Unterhaltung | **ja** |
+| mit ihrer urspruenglichen externen Kennung | **ja** |
+| Zusammenhang fuer die KI | **ja** - sie steht an Kunde und Unterhaltung |
+| ungelesen | nein (`read_at` gesetzt) |
+| Ausloeser fuer die KI | **nein** |
+| Ausloeser fuer eine Glocke | nein |
+| Ausloeser fuer eine Zuweisung | **nein** |
+| Ausloeser fuer einen Versand | **nein** |
+| holt die Unterhaltung nach oben | nein |
+| oeffnet eine geschlossene Unterhaltung | nein |
+
+Der KERN kennt dafuer wieder nur eine allgemeine Tatsache
+(`InboundMessage::$historical`), keinen Plattform-Sonderfall: dass ein
+Kanal eine Vorgeschichte mitbringt, ist nichts WhatsApp-Eigenes.
+
+## Der echte Zeitpunkt, nicht der des Imports
+
+Historische Nachrichten bekommen den Zeitstempel, den sie hatten. Ohne
+ihn stuende der halbe Verlauf unter dem Datum der Anbindung, und die
+Reihenfolge im Verlauf waere Zufall. `last_message_at` der Unterhaltung
+wird von einer historischen Nachricht nur gesetzt, wenn es noch keinen
+Wert gibt - eine alte Nachricht darf keine Unterhaltung im Postfach nach
+oben holen.
+
+## Was der Mitarbeiter sieht
+
+```
+──── WhatsApp-Historie (vor der Anbindung) ────
+19.02.2025  Kunde:     Hallo, ich brauche eine Kfz-Police
+19.02.2025  Team:      Gerne, ich melde mich
+──── Mit Dienstly verbunden ────
+09.09.2026  Kunde:     Neue Frage ...
+[Antwort] [Anhang]
+```
+
+Ohne diese Trennung liest jemand eine Frage von vor drei Monaten wie
+eine von heute - und antwortet darauf.
+
+## Doppelte Zustellung
+
+Der Verlauf laeuft durch dieselben zwei Schutzschichten wie jede andere
+Zustellung: das Ereignis-Register (`msg:<externe Kennung>`) und der
+eindeutige Index auf (Unterhaltung, externe Kennung). Ein zweiter
+Verlaufs-Empfang erzeugt weder Kunden noch Unterhaltungen noch
+Nachrichten doppelt - als Test festgehalten.
+
+## Noch offen
+
+`smb_app_state_sync` (die Kontakte aus der Business App) wird noch nicht
+ausgewertet. Es ist abonnierbar, der Kern verarbeitet es nicht - und
+solange das so ist, steht es hier und nicht als erledigt in einer
+Tabelle.
+
+Tests: `WhatsAppHistoryImportTest` (14 Faelle).

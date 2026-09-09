@@ -75,6 +75,11 @@ class ConversationEngine
             // keine Zuweisung und keine KI-Antwort (siehe unten).
             $vonUns = $inbound->fromBusiness;
 
+            // NACHGELIEFERT heisst: speichern, aber nichts ausloesen.
+            // Die Nachricht ist echt und gehoert in den Verlauf; sie ist
+            // nur nicht JETZT passiert.
+            $historisch = $inbound->historical;
+
             $message = CustomerMessage::create([
                 'conversation_id' => $conversation->id,
                 'customer_id' => $customer?->id,
@@ -90,11 +95,22 @@ class ConversationEngine
                 'message_type' => $inbound->type,
                 'body' => (string) $inbound->text,
                 'status' => CustomerMessage::STATUS_DELIVERED,
+                'source' => $historisch
+                    ? CustomerMessage::SOURCE_HISTORICAL
+                    : CustomerMessage::SOURCE_LIVE,
                 'metadata' => $inbound->metadata ?: null,
                 'delivered_at' => now(),
-                // Ungelesen zaehlt nur, was auf eine Antwort wartet.
-                'read_at' => $vonUns ? now() : null,
+                // Ungelesen zaehlt nur, was auf eine Antwort wartet -
+                // eine Nachricht von vor drei Monaten also nie.
+                'read_at' => ($vonUns || $historisch) ? now() : null,
             ]);
+
+            // Der ECHTE Zeitpunkt, nicht der des Imports. Ohne ihn
+            // stuende der halbe Verlauf unter dem Datum des Tages, an
+            // dem angebunden wurde - und die Reihenfolge waere Zufall.
+            if ($historisch && $inbound->sentAt) {
+                $message->forceFill(['created_at' => $inbound->sentAt])->saveQuietly();
+            }
 
             foreach ($inbound->attachments as $anhang) {
                 $datensatz = CustomerMessageAttachment::create([
@@ -119,20 +135,31 @@ class ConversationEngine
                 }
             }
 
+            // Eine nachgelieferte Nachricht darf eine Unterhaltung NIE
+            // nach oben holen: sie ist alt. Sie setzt den Zeitpunkt nur,
+            // wenn es noch keinen gibt (die Unterhaltung entstand gerade
+            // aus dem Verlauf selbst).
+            $letzte = $historisch
+                ? ($conversation->last_message_at
+                    && $conversation->last_message_at->greaterThan($message->created_at)
+                        ? $conversation->last_message_at
+                        : $message->created_at)
+                : $message->created_at;
+
             $conversation->forceFill([
-                'last_message_at' => $message->created_at,
+                'last_message_at' => $letzte,
                 // Eine Kundenantwort holt eine geschlossene Unterhaltung
                 // zurueck: der Kunde schreibt weiter, also ist der Vorgang
                 // nicht erledigt. Ein ARCHIV bleibt dagegen Archiv - es ist
                 // eine bewusste Entscheidung eines Menschen.
-                'status' => ($conversation->archived_at || $vonUns)
+                'status' => ($conversation->archived_at || $vonUns || $historisch)
                     ? $conversation->status
                     : Conversation::STATUS_OPEN,
                 // Nur der KUNDE holt eine geschlossene Unterhaltung
                 // zurueck. Unsere eigene Nachricht ist oft genau das
                 // Schlusswort - sie darf den Vorgang nicht wieder
                 // aufmachen.
-                'reopened_at' => (! $vonUns && $conversation->status === Conversation::STATUS_CLOSED)
+                'reopened_at' => (! $vonUns && ! $historisch && $conversation->status === Conversation::STATUS_CLOSED)
                     ? now() : $conversation->reopened_at,
             ])->save();
 
@@ -142,7 +169,12 @@ class ConversationEngine
             // diese Grenze antwortet die KI auf uns selbst, die Antwort
             // erzeugt die naechste Meldung, und die Schleife laeuft
             // beim Kunden aus.
-            if (! $vonUns) {
+            // Weder eine Meldung ueber die eigene Antwort noch eine
+            // nachgelieferte Nachricht ist ein Ereignis. Bei der
+            // Historie ist das der Kern der Sache: sonst antwortet die
+            // KI beim Anbinden auf Monate alte Fragen, und der Kunde
+            // bekommt eine Lawine.
+            if (! $vonUns && ! $historisch) {
                 $this->assignments->autoAssign($conversation);
 
                 event(new InboundMessageReceived($conversation, $message));

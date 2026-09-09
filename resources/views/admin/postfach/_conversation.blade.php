@@ -115,9 +115,33 @@
 @endif
 
 {{-- Verlauf --}}
+@php
+    // Der Uebergang von der nachgelieferten Historie zum laufenden
+    // Betrieb. Ohne diese Trennung liest ein Mitarbeiter eine Frage von
+    // vor drei Monaten wie eine von heute - und antwortet darauf.
+    $ersteLive = $messages->firstWhere('source', \App\Models\CustomerMessage::SOURCE_LIVE);
+    $hatHistorie = $messages->contains('source', \App\Models\CustomerMessage::SOURCE_HISTORICAL);
+    $trennerGesetzt = false;
+@endphp
+
 <div style="max-height:50vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+  @if($hatHistorie)
+    <div style="text-align:center;font-size:11px;color:var(--muted);text-transform:uppercase;
+                letter-spacing:.05em;margin:4px 0">
+      ──── WhatsApp-Historie (vor der Anbindung) ────
+    </div>
+  @endif
+
   @foreach($messages as $m)
     @php $eigen = $m->from_staff; @endphp
+
+    @if($hatHistorie && ! $trennerGesetzt && $ersteLive && $m->id === $ersteLive->id)
+      @php $trennerGesetzt = true; @endphp
+      <div style="text-align:center;font-size:11px;color:var(--muted);text-transform:uppercase;
+                  letter-spacing:.05em;margin:8px 0;border-top:1px solid var(--line);padding-top:8px">
+        ──── Mit Dienstly verbunden ────
+      </div>
+    @endif
     <div style="align-self:{{ $eigen ? 'flex-end' : 'flex-start' }};max-width:80%">
       <div style="padding:8px 12px;border-radius:10px;font-size:13px;
                   background:{{ $eigen ? 'var(--emerald-soft, #e7f5ee)' : 'var(--surface-2)' }}">
@@ -137,6 +161,9 @@
           Kunde
         @endif
         · {{ $m->created_at?->lokal()?->format('d.m.Y H:i') }}
+        @if($m->isHistorical())
+          · <span title="Aus der WhatsApp Business App übernommen">Historie</span>
+        @endif
       </div>
     </div>
   @endforeach
