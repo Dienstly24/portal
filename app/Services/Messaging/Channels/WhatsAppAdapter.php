@@ -217,6 +217,13 @@ class WhatsAppAdapter extends AbstractChannelAdapter
         return $meldungen;
     }
 
+    /**
+     * Das KUNDENDIENST-FENSTER von WhatsApp: 24 Stunden ab der letzten
+     * Nachricht des Kunden. Danach laesst Meta nur noch genehmigte
+     * Vorlagen zu.
+     */
+    public const SERVICE_WINDOW_HOURS = 24;
+
     public function send(OutboundMessage $message, ?ChannelAccount $account): SendResult
     {
         $token = $account?->credential('access_token');
@@ -224,6 +231,20 @@ class WhatsAppAdapter extends AbstractChannelAdapter
 
         if (! $token || ! $phoneId) {
             return SendResult::failed('WhatsApp-Konto ist nicht vollstaendig eingerichtet.');
+        }
+
+        // VOR dem Aufruf pruefen, nicht danach. Meta lehnt eine freie
+        // Nachricht ausserhalb des Fensters mit einem Fehlercode ab, den
+        // niemand ohne Nachschlagen versteht ("131047"). Der Mitarbeiter
+        // soll lesen, WARUM es nicht ging und was jetzt gilt - und wir
+        // sparen den Aufruf.
+        if ($this->outsideServiceWindow($message->lastInboundAt)) {
+            return SendResult::failed(
+                'Ausserhalb des 24-Stunden-Fensters von WhatsApp: seit der letzten Kundennachricht '
+                .'ist zu viel Zeit vergangen. Freie Nachrichten sind jetzt nicht mehr zulaessig - '
+                .'zulaessig waere nur eine von Meta genehmigte Vorlage. Bitte den Kunden auf einem '
+                .'anderen Weg erreichen (E-Mail, Telefon) oder auf seine naechste Nachricht warten.'
+            );
         }
 
         $payload = [
@@ -349,6 +370,25 @@ class WhatsAppAdapter extends AbstractChannelAdapter
             429 => ConnectionTest::RATE_LIMITED,
             default => ConnectionTest::UNAVAILABLE,
         });
+    }
+
+    /**
+     * Liegt die letzte Kundennachricht zu lange zurueck?
+     *
+     * OHNE bekannte letzte Kundennachricht wird NICHT gesperrt: das ist
+     * der Fall "wir wissen es nicht" (frisch nachgetragene Unterhaltung,
+     * Erstkontakt von uns aus), und dort ist die ehrlichere Antwort der
+     * echte Fehler von Meta statt einer Sperre auf Verdacht.
+     */
+    private function outsideServiceWindow(?\DateTimeInterface $lastInboundAt): bool
+    {
+        if (! $lastInboundAt) {
+            return false;
+        }
+
+        return \Illuminate\Support\Carbon::instance(
+            \DateTimeImmutable::createFromInterface($lastInboundAt)
+        )->addHours(self::SERVICE_WINDOW_HOURS)->isPast();
     }
 
     /** Fremde Fehlercodes in eine einordnende Meldung uebersetzen. */

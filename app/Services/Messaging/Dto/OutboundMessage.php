@@ -17,5 +17,15 @@ final class OutboundMessage
         public readonly array $attachments = [],
         public readonly ?string $replyToExternalId = null,
         public readonly array $metadata = [],
+        /**
+         * Wann der Kunde zuletzt geschrieben hat - null, wenn nie.
+         *
+         * Der Kern reicht nur diese TATSACHE weiter. Ob daraus eine
+         * Einschraenkung folgt, entscheidet der Adapter: manche
+         * Plattformen erlauben freie Nachrichten nur in einem Fenster
+         * nach der letzten Kundennachricht. Diese Frist gehoert zur
+         * Plattform, nicht in den Kern.
+         */
+        public readonly ?\DateTimeInterface $lastInboundAt = null,
     ) {}
 }

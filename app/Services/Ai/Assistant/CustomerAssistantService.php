@@ -641,6 +641,14 @@ class CustomerAssistantService
     {
         $reply = CustomerMessage::create([
             'customer_id' => $message->customer_id,
+            // DIE ANTWORT GEHOERT IN DIESELBE UNTERHALTUNG. Ohne diese
+            // Zeile entstand sie als loser Eintrag am Kunden: im
+            // Portal-Chat sah man sie (er liest nach Kunde), aber der
+            // ausgehende Versand haengt an der Unterhaltung - eine
+            // KI-Antwort auf eine WhatsApp-Nachricht waere gespeichert
+            // worden und nie beim Kunden angekommen. Bei einer Nachricht
+            // ohne Unterhaltung (Altbestand) bleibt es wie bisher.
+            'conversation_id' => $message->conversation_id,
             // Kein sender_id: es war kein Mensch. Die Anzeige nennt den
             // Assistenten beim Namen, statt einen Kollegen zu behaupten.
             'sender_id' => null,

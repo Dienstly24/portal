@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 class CustomerMessageAttachment extends Model
@@ -25,8 +26,11 @@ class CustomerMessageAttachment extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function message() { return $this->belongsTo(CustomerMessage::class, 'message_id'); }
-    public function uploader() { return $this->belongsTo(User::class, 'uploaded_by'); }
+    /** @return BelongsTo<CustomerMessage, $this> */
+    public function message(): BelongsTo { return $this->belongsTo(CustomerMessage::class, 'message_id'); }
+
+    /** @return BelongsTo<User, $this> */
+    public function uploader(): BelongsTo { return $this->belongsTo(User::class, 'uploaded_by'); }
 
     /** Bild-Anhaenge koennen im Chat als Vorschau gerendert werden. */
     public function isImage(): bool {

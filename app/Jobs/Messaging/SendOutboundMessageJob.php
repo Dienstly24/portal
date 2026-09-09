@@ -63,7 +63,11 @@ class SendOutboundMessageJob implements ShouldQueue
         }
 
         $ergebnis = $manager->driver($conversation->channel->key)->send(
-            new OutboundMessage(recipientId: $empfaenger, text: (string) $message->body),
+            new OutboundMessage(
+                recipientId: $empfaenger,
+                text: (string) $message->body,
+                lastInboundAt: $conversation->lastInboundAt(),
+            ),
             $conversation->channelAccount
         );
 
