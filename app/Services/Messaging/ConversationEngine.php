@@ -5,6 +5,7 @@ namespace App\Services\Messaging;
 use App\Events\Messaging\ConversationCreated;
 use App\Events\Messaging\InboundMessageReceived;
 use App\Events\Messaging\MessageStatusChanged;
+use App\Jobs\Messaging\FetchInboundMediaJob;
 use App\Models\Channel;
 use App\Models\ChannelAccount;
 use App\Models\Conversation;
@@ -80,7 +81,7 @@ class ConversationEngine
             ]);
 
             foreach ($inbound->attachments as $anhang) {
-                CustomerMessageAttachment::create([
+                $datensatz = CustomerMessageAttachment::create([
                     'message_id' => $message->id,
                     // Datei kommt spaeter ueber den Adapter - der Anhang
                     // existiert als Datensatz aber sofort, sonst waere er
@@ -92,6 +93,14 @@ class ConversationEngine
                     'file_size' => $anhang->fileSize,
                     'external_media_id' => $anhang->externalMediaId,
                 ]);
+
+                // Die Datei kommt NACHTRAEGLICH: hinter der Kennung
+                // stehen zwei authentifizierte Abrufe, und der Webhook
+                // muss zuegig quittiert werden. Der Anhang ist deshalb
+                // sofort als Datensatz da, die Datei folgt.
+                if ($anhang->externalMediaId) {
+                    FetchInboundMediaJob::dispatch($datensatz->id);
+                }
             }
 
             $conversation->forceFill([

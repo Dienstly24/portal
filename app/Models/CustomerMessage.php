@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Jobs\Messaging\SendOutboundMessageJob;
 use App\Services\Ai\Assistant\AssistantSettings;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -96,6 +97,36 @@ class CustomerMessage extends Model
                 ? ($m->ai_generated ? self::SENDER_BOT : self::SENDER_EMPLOYEE)
                 : self::SENDER_CUSTOMER);
         });
+        // AUSGEHENDER VERSAND (Auftrag Abschnitt 80).
+        //
+        // Hier im Modell und nicht im Controller - dieselbe Begruendung
+        // wie bei der KI-Ruhefrist darunter: es gilt fuer JEDEN
+        // Schreibweg (Kundenchat, Kundenakte, KI-Antwort,
+        // Aufgaben-Automatik). Stuende der Anstoss in den Controllern,
+        // muesste ihn jeder neue Weg wiederholen, und der eine
+        // vergessene faellt als "die Nachricht ging nie raus" auf - beim
+        // Kunden, nicht bei uns.
+        //
+        // Die Bedingung `external_user_id` ist der Filter: Portal und
+        // interner Chat haben keine Gegenstelle ausserhalb und brauchen
+        // keinen Versand. Nur ein Kanal mit echter Gegenstelle loest aus.
+        static::created(function ($m) {
+            if (! $m->from_staff || ! $m->conversation_id || $m->external_message_id) {
+                return;
+            }
+
+            try {
+                $unterhaltung = $m->conversation()->first();
+                if ($unterhaltung?->external_user_id) {
+                    SendOutboundMessageJob::dispatch($m->id);
+                }
+            } catch (\Throwable) {
+                // Der Versand darf das Speichern der Nachricht nie
+                // scheitern lassen - sie steht dann im Verlauf und kann
+                // erneut angestossen werden.
+            }
+        });
+
         // Schreibt ein MENSCH an den Kunden, faengt die Ruhefrist der
         // Wiederaufnahme neu an (Betreiber-Vorgabe 20.08.2026): solange am
         // Fall gearbeitet wird, faellt die KI niemandem ins Wort. Hier im

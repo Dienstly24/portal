@@ -709,18 +709,6 @@ parameters:
 			path: app/Http/Controllers/CustomerFamilyRelationController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\CustomerMessageAttachment\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\CustomerMessageAttachment\>\:\:\$message\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/CustomerMessageController.php
-
-		-
-			message: '#^Relation ''message'' is not found in App\\Models\\CustomerMessageAttachment model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/CustomerMessageController.php
-
-		-
 			message: '#^Relation ''user'' is not found in App\\Models\\Customer model\.$#'
 			identifier: larastan.relationExistence
 			count: 1
@@ -1081,21 +1069,9 @@ parameters:
 			path: app/Http/Controllers/PortalController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\CustomerMessageAttachment\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\CustomerMessageAttachment\>\:\:\$message\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/PortalMessageController.php
-
-		-
 			message: '#^Relation ''attachments'' is not found in App\\Models\\CustomerMessage model\.$#'
 			identifier: larastan.relationExistence
 			count: 2
-			path: app/Http/Controllers/PortalMessageController.php
-
-		-
-			message: '#^Relation ''message'' is not found in App\\Models\\CustomerMessageAttachment model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
 			path: app/Http/Controllers/PortalMessageController.php
 
 		-

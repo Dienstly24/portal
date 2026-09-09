@@ -396,8 +396,70 @@ Coexistence gar nicht.
 
 Tests: `WhatsAppChannelTest` (15 Faelle).
 
+## 11b. Stufe 4b - der Weg ZURUECK zum Kunden
+
+Die Anbindung konnte EMPFANGEN, aber nicht antworten. Drei Luecken,
+die eine Antwort des Mitarbeiters still im System haengen liessen:
+
+### 1. Niemand stiess den Versand an
+`SendOutboundMessageJob` existierte, hatte aber KEINEN Aufrufer -
+`grep -rn "SendOutboundMessageJob"` fand nur die Klasse selbst. Eine
+Antwort auf eine WhatsApp-Nachricht wurde damit sauber gespeichert und
+erreichte den Kunden nie; es gab keine Fehlermeldung, weil nichts
+fehlschlug.
+
+Der Anstoss haengt jetzt als Model-Hook an `CustomerMessage::created` -
+dieselbe Stelle, an der das Projekt schon die Ruhefrist des
+KI-Assistenten fuehrt. Bewusst NICHT im Controller: es gibt mehrere
+Schreibwege (Beraterwelt-Chat, KI-Antwort, spaetere Inbox), und ein
+Hook je Weg ist genau die Sorte Kopie, die einzeln veraltet.
+
+GESENDET WIRD NUR, was einen externen Empfaenger hat: der Hook prueft
+`conversations.external_user_id`. Portal-Chat und interne Notiz haben
+keinen - fuer sie passiert weiterhin nichts. Eine Nachricht mit bereits
+gesetzter `external_message_id` wird nie erneut verschickt (sie kam von
+aussen oder ist schon draussen).
+
+### 2. Das 24-Stunden-Fenster von WhatsApp
+Meta nimmt freie Texte nur innerhalb von 24 Stunden nach der letzten
+KUNDEN-Nachricht an; danach antwortet die API mit Fehler 131047 - einer
+Nummer, die im Mitarbeiter-Alltag nichts aussagt. Der Adapter prueft die
+Frist deshalb SELBST, VOR dem Aufruf, und meldet im Klartext, warum die
+Nachricht nicht rausgeht und was zu tun ist.
+
+Die Regel steht im Adapter, nicht im Kern: sie ist eine Eigenheit von
+WhatsApp, kein Merkmal von Unterhaltungen (`MessagingArchitectureTest`
+wuerde sie im Kern auch gar nicht dulden). IST DER LETZTE EINGANG
+UNBEKANNT, wird NICHT blockiert - "wir wissen es nicht" ist kein
+Ablehnungsgrund, sonst waere die erste Antwort nach dem Nachtrag
+unmoeglich.
+
+Vorlagen-Nachrichten (der offizielle Weg ausserhalb des Fensters) sind
+bewusst noch nicht gebaut: sie muessen bei Meta einzeln genehmigt
+werden. Eine ehrliche Ablehnung ist besser als ein Versand, der beim
+Kunden nie ankommt.
+
+### 3. Anhaenge hatten keinen Inhalt
+Der Empfang legte je Anhang eine Zeile mit `external_media_id` an, aber
+mit LEEREM `file_path` - die Datei selbst wurde nie geholt. Das faellt
+erst auf, wenn jemand den Anhang oeffnen will.
+
+`FetchInboundMediaJob` holt sie nach dem Quittieren des Webhooks nach
+(der Endpunkt bleibt duenn). Regeln wie bei jedem Upload: Groessengrenze
+aus `UploadRules` (ARCH-6), private Disk unter
+`customers/{id}/messages`, `basename()` auf den FREMDEN Dateinamen (ein
+Name aus dem Netz darf nie ein Verzeichnis wechseln), Endung aus dem
+gemeldeten MIME-Typ statt aus dem Namen. Der Job ist wiederholbar: ein
+bereits gefuellter `file_path` beendet ihn sofort.
+
+Tests: `WhatsAppDeliveryTest` (13 Faelle).
+
 ## 12. Offen
-- **Stufe 4 - WhatsApp Cloud API** (Abschnitt 30), abhaengig von der
-  Coexistence-Freigabe durch Meta.
+- **Vereinheitlichte Inbox** (Abschnitt 24-27): Unterhaltungen ueber
+  ALLE Kunden in einer Liste. Ohne sie sieht ein Mitarbeiter eine
+  WhatsApp-Nachricht nur in der jeweiligen Kundenakte.
+- **Ausgehende ANHAENGE** und Vorlagen-Nachrichten (siehe 11b).
+- **Coexistence-Freigabe** durch Meta - nicht im Repository
+  entscheidbar.
 - Der Vorschlags-Modus (`ai_assist`) nutzt bereits
   `EmployeeAssistantService`; was fehlt, ist der Knopf im Panel.

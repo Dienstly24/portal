@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 /**
@@ -113,6 +114,25 @@ class Conversation extends Model
         }
 
         return $this->lockedBy;
+    }
+
+    /**
+     * Wann hat der Kunde zuletzt GESCHRIEBEN?
+     *
+     * Manche Plattformen erlauben freie Nachrichten nur innerhalb eines
+     * Zeitfensters nach der letzten Kundennachricht (WhatsApp: 24 h,
+     * danach nur genehmigte Vorlagen). Der Kern kennt diese Regel nicht -
+     * er liefert nur die TATSACHE, der Adapter zieht daraus seinen
+     * Schluss. So bleibt die Frist Plattformwissen und wandert nicht in
+     * die Unterhaltung.
+     */
+    public function lastInboundAt(): ?Carbon
+    {
+        $zeit = $this->messages()
+            ->where('direction', CustomerMessage::DIRECTION_INCOMING)
+            ->max('created_at');
+
+        return $zeit ? Carbon::parse($zeit) : null;
     }
 
     /** Markiert diese Unterhaltung als "wird gerade bearbeitet". */
