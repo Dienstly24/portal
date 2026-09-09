@@ -2,6 +2,7 @@
 
 namespace App\Services\Messaging\Channels\Onboarding;
 
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -39,9 +40,11 @@ class MetaOnboardingClient
      * wenige Minuten gueltig; ein abgefangener Code ohne Secret ist
      * wertlos, ein Secret im Browser dagegen ein Dauerschluessel.
      *
+     * @return array{token: string, expires_at: Carbon|null}
+     *
      * @throws OnboardingFailed
      */
-    public function exchangeCode(string $code): string
+    public function exchangeCode(string $code): array
     {
         $antwort = $this->http()->get($this->base().'/oauth/access_token', [
             'client_id' => (string) config('services.meta.app_id'),
@@ -59,7 +62,22 @@ class MetaOnboardingClient
             );
         }
 
-        return $token;
+        // DER ABLAUF GEHOERT ZUM TOKEN. Die gaengige Vorlage bei Meta
+        // vergibt einen Zugang mit 60 TAGEN Laufzeit. Wird der Ablauf
+        // nicht mitgespeichert, hoert WhatsApp nach zwei Monaten
+        // schlagartig auf zu arbeiten - ohne Fehlermeldung, die jemand
+        // mit einem Datum in Verbindung bringt. Genau die Sorte
+        // Stoerung, bei der jede Ursache gleich aussieht.
+        //
+        // `expires_in` sind Sekunden; fehlt der Wert, ist es ein
+        // Dauer-Token und `null` die richtige Aussage - nie ein
+        // geratenes Datum.
+        $sekunden = (int) $antwort->json('expires_in', 0);
+
+        return [
+            'token' => $token,
+            'expires_at' => $sekunden > 0 ? now()->addSeconds($sekunden) : null,
+        ];
     }
 
     /**

@@ -169,6 +169,17 @@
                             @if($account->connection_error)
                                 <div style="font-size:12px;color:#C0392B;">{{ $account->connection_error }}</div>
                             @endif
+                            @if($account->tokenExpired())
+                                <div style="font-size:12px;color:#C0392B;">
+                                    <strong>Zugang abgelaufen</strong> — die Nummer muss neu verbunden werden.
+                                </div>
+                            @elseif($account->tokenExpiresSoon())
+                                <div style="font-size:12px;color:#92400E;">
+                                    <strong>Zugang läuft bald ab</strong>
+                                    ({{ $account->token_expires_at->lokal()->format('d.m.Y') }})
+                                    — bitte rechtzeitig neu verbinden.
+                                </div>
+                            @endif
                             @if($account->connection_checked_at)
                                 <div style="font-size:11px;color:var(--text-muted);">
                                     geprüft {{ $account->connection_checked_at->lokal()->format('d.m.Y H:i') }}

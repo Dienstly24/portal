@@ -5,11 +5,13 @@ namespace App\Services;
 use App\Http\Middleware\EnsureTwoFactor;
 use App\Models\ActivityLog;
 use App\Models\AiKnowledgeEntry;
+use App\Models\ChannelAccount;
 use App\Models\Document;
 use App\Models\ErrorEvent;
 use App\Models\ScheduledTaskRun;
 use App\Models\User;
 use App\Services\Ai\Assistant\AssistantSettings;
+use App\Support\LocalTime;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Carbon;
@@ -352,6 +354,18 @@ class SystemHealthService
                 : 'OCR_ENABLED=false - jede Analyse geht direkt an die kostenpflichtige KI.',
         ];
 
+        // --- KANAL-ZUGAENGE (WhatsApp & Co.)
+        //
+        // WARUM HIER: die uebliche Vorlage bei Meta vergibt einen Zugang
+        // mit 60 TAGEN Laufzeit. Laeuft er ab, hoert der Kanal
+        // schlagartig auf zu arbeiten - ohne Fehlerseite, ohne
+        // Beschwerde, ohne dass jemand den Ausfall mit einem Datum in
+        // Verbindung bringt. Genau der Fall, fuer den es diese Seite
+        // gibt: etwas im Hintergrund faellt aus, und niemand merkt es.
+        foreach ($this->kanalZugaenge() as $eintrag) {
+            $items[] = $eintrag;
+        }
+
         // --- KI-Dokumentanalyse
         $anthropic = $this->configured(config('services.anthropic.key'));
         $items[] = [
@@ -411,6 +425,52 @@ class SystemHealthService
     }
 
     /** Zustand des KI-Kundenassistenten als eine Zeile. */
+    /**
+     * Ein Eintrag je aktivem Kanal-Konto mit hinterlegtem Ablauf.
+     *
+     * Konten OHNE Ablauf tauchen nicht auf: ein Dauer-Token ist kein
+     * Betriebsrisiko, und eine Zeile "alles in Ordnung" je Konto wuerde
+     * die Seite fuellen, ohne etwas zu sagen.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    private function kanalZugaenge(): array
+    {
+        $items = [];
+
+        try {
+            $konten = ChannelAccount::with('channel')
+                ->where('is_active', true)
+                ->whereNotNull('token_expires_at')
+                ->get();
+        } catch (\Throwable) {
+            // Frische Datenbank, Migration noch nicht gelaufen: die
+            // Seite darf daran nie scheitern.
+            return [];
+        }
+
+        foreach ($konten as $konto) {
+            if (! $konto->tokenExpired() && ! $konto->tokenExpiresSoon(21)) {
+                continue;
+            }
+
+            $abgelaufen = $konto->tokenExpired();
+            $items[] = [
+                'label' => 'Kanal-Zugang: '.($konto->channel->name ?? 'Kanal').' - '.$konto->name,
+                'value' => $abgelaufen
+                    ? 'abgelaufen am '.LocalTime::for($konto->token_expires_at)?->format('d.m.Y')
+                    : 'laeuft ab am '.LocalTime::for($konto->token_expires_at)?->format('d.m.Y'),
+                'status' => $abgelaufen ? self::FAIL : self::WARN,
+                'hint' => $abgelaufen
+                    ? 'Der Kanal empfaengt und sendet nicht mehr. Unter Einstellungen -> '
+                        .'Kanaele die Nummer neu verbinden.'
+                    : 'Rechtzeitig neu verbinden - danach laeuft der Zugang wieder.',
+            ];
+        }
+
+        return $items;
+    }
+
     private function assistantItem(): array
     {
         try {

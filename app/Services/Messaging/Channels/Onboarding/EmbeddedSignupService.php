@@ -84,7 +84,11 @@ class EmbeddedSignupService
         }
 
         // 1. Code gegen Token - auf dem SERVER, mit dem App-Secret.
-        $token = $this->client->exchangeCode($code);
+        //    Der ABLAUF kommt mit: die gaengige Vorlage bei Meta vergibt
+        //    60 Tage. Ohne diesen Wert stuende das Konto bis zum Tag des
+        //    Ausfalls auf "verbunden".
+        $zugang = $this->client->exchangeCode($code);
+        $token = $zugang['token'];
 
         // 2. Erst pruefen, dann speichern: ein Konto, dessen Zugang gar
         //    nicht traegt, waere ein "verbunden", das nichts kann.
@@ -100,15 +104,16 @@ class EmbeddedSignupService
         // Bestehende Zugangsdaten werden ERGAENZT, nicht ersetzt: ein
         // bereits gepflegtes App-Secret oder Bestaetigungs-Token darf
         // eine erneute Anbindung nicht loeschen.
-        $zugang = $konto->credentials ?? [];
-        $zugang['access_token'] = $token;
-        $zugang['phone_number_id'] = $phoneNumberId;
-        $zugang['app_secret'] = $this->appSecret();
-        $zugang['verify_token'] = $verifyToken;
+        $zugangsdaten = $konto->credentials ?? [];
+        $zugangsdaten['access_token'] = $token;
+        $zugangsdaten['phone_number_id'] = $phoneNumberId;
+        $zugangsdaten['app_secret'] = $this->appSecret();
+        $zugangsdaten['verify_token'] = $verifyToken;
 
         $konto->fill([
             'name' => $nummer['display_phone_number'] ?? ('WhatsApp '.$phoneNumberId),
-            'credentials' => $zugang,
+            'credentials' => $zugangsdaten,
+            'token_expires_at' => $zugang['expires_at'],
             'waba_id' => $wabaId,
             'connection_type' => $coexistence
                 ? ChannelConnection::TYPE_COEXISTENCE
