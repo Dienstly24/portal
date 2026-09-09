@@ -452,14 +452,48 @@ Name aus dem Netz darf nie ein Verzeichnis wechseln), Endung aus dem
 gemeldeten MIME-Typ statt aus dem Namen. Der Job ist wiederholbar: ein
 bereits gefuellter `file_path` beendet ihn sofort.
 
-Tests: `WhatsAppDeliveryTest` (13 Faelle).
+### 4. Die KI-Antwort erreichte den Kunden auf keinem echten Kanal
+Bei der Abnahme gefunden, nicht durch einen Fehlerbericht: der Assistent
+schrieb seine Antwort mit `customer_id`, aber OHNE `conversation_id`.
+Im Portal-Chat fiel das nie auf - er liest nach KUNDE. Der ausgehende
+Versand haengt dagegen an der UNTERHALTUNG. Eine KI-Antwort auf eine
+WhatsApp-Nachricht waere also sauber gespeichert worden, im
+Mitarbeiter-Verlauf sichtbar gewesen und beim Kunden nie angekommen -
+wieder ohne jede Fehlermeldung.
+
+Die Antwort gehoert in dieselbe Unterhaltung wie die Frage. Bei einer
+Nachricht ohne Unterhaltung (Altbestand) bleibt es unveraendert.
+
+Tests: `WhatsAppDeliveryTest` (13 Faelle), `WhatsAppAbnahmeTest`
+(16 Faelle - die Abnahme prueft nicht, ob ein Job angestossen wurde,
+sondern ob die Nachricht die Meta-API erreicht).
+
+## 11c. Was BEWUSST nicht gebaut ist
+
+Diese vier Punkte sind keine Restarbeiten, die man uebersehen hat -
+sie sind entschieden und stehen deshalb hier:
+
+- **Ausgehende Mediendateien.** Eingehend werden Dateien geholt und
+  privat gespeichert; der Weg nach draussen (Datei hochladen, Media-ID
+  beziehen, als Anhang senden) fehlt. Ein Mitarbeiter kann einem
+  WhatsApp-Kunden derzeit keine PDF schicken.
+- **Genehmigte Vorlagen-Nachrichten** ausserhalb des 24-Stunden-
+  Fensters. Jede Vorlage muss bei Meta einzeln eingereicht und
+  freigegeben werden; ohne Freigabe gibt es keinen Versand, nur eine
+  Ablehnung. Bis dahin ist die ehrliche Ablehnung im Adapter der
+  richtige Zustand.
+- **Vereinheitlichte Inbox** ueber alle Kunden (Abschnitt 24-27). Ohne
+  sie sieht ein Mitarbeiter eine WhatsApp-Nachricht nur in der
+  jeweiligen Kundenakte, nicht in einer Arbeitsliste.
+- **Coexistence-Onboarding** (WhatsApp Business App und Cloud API auf
+  DERSELBEN Nummer). **Dass die Cloud API funktioniert, ist KEIN Beleg
+  fuer Coexistence** - es sind zwei verschiedene Freigaben. Die
+  Architektur setzt Coexistence nicht voraus: `channel_accounts` traegt
+  die Kennungen, der Kern kennt den Begriff nicht. Ob Meta sie fuer
+  genau dieses Konto erteilt, ist im Repository nicht entscheidbar und
+  darf nirgends als erledigt dargestellt werden.
 
 ## 12. Offen
-- **Vereinheitlichte Inbox** (Abschnitt 24-27): Unterhaltungen ueber
-  ALLE Kunden in einer Liste. Ohne sie sieht ein Mitarbeiter eine
-  WhatsApp-Nachricht nur in der jeweiligen Kundenakte.
-- **Ausgehende ANHAENGE** und Vorlagen-Nachrichten (siehe 11b).
-- **Coexistence-Freigabe** durch Meta - nicht im Repository
-  entscheidbar.
+- Die vier Punkte aus Abschnitt 11c.
 - Der Vorschlags-Modus (`ai_assist`) nutzt bereits
   `EmployeeAssistantService`; was fehlt, ist der Knopf im Panel.
