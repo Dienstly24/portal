@@ -21,7 +21,7 @@ namespace App\Services\Pdf;
 final class PdfSyntax
 {
     /** Zeichen, die in PDF ein Token beenden. */
-    public const DELIMITERS = "()<>[]{}/%";
+    public const DELIMITERS = '()<>[]{}/%';
 
     public const WHITESPACE = "\x00\t\n\x0C\r ";
 

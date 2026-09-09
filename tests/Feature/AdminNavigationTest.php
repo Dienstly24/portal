@@ -90,7 +90,7 @@ class AdminNavigationTest extends TestCase
         $keys = fn (NavGroup $g) => array_map(fn ($i) => $i->key, $g->items);
 
         $this->assertSame(['kunden', 'interessenten', 'vertraege', 'aenderungen'], $keys($groups['kunden']));
-        $this->assertSame(['eingang', 'anforderungen'], $keys($groups['dokumente']));
+        $this->assertSame(['eingang', 'anforderungen', 'signaturen'], $keys($groups['dokumente']));
         $this->assertSame(['kundenchat', 'tickets', 'anfragen', 'email', 'team'], $keys($groups['postfach']));
         $this->assertSame(['aufgaben', 'termine'], $keys($groups['mein-tag']));
 
@@ -184,7 +184,14 @@ class AdminNavigationTest extends TestCase
 
         // Vorher: 31 Punkte, alle Gruppen offen. Was ohne Zutun sichtbar ist,
         // muss auf einen Blick erfassbar bleiben.
-        $this->assertLessThanOrEqual(15, $sichtbar);
+        //
+        // 16 statt 15 seit dem Signatur-Modul (Betreiber-Auftrag 09.09.2026):
+        // "Dokumente" hat einen dritten Punkt bekommen. Die Grenze wird hier
+        // bewusst um genau EINS angehoben und nicht aufgegeben - sie ist der
+        // Grund, warum die Seitenleiste nicht wieder auf 31 Punkte waechst.
+        // Wer den naechsten Punkt anlegt, muss erneut hier vorbei und
+        // begruenden, warum er in den taeglichen Arbeitsweg gehoert.
+        $this->assertLessThanOrEqual(16, $sichtbar);
     }
 
     // ------------------------------------------------- Badges (Fall 5-7)

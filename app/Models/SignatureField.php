@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Support\SignatureFieldType;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -43,12 +44,14 @@ class SignatureField extends Model
         });
     }
 
-    public function request()
+    /** @return BelongsTo<SignatureRequest, $this> */
+    public function request(): BelongsTo
     {
         return $this->belongsTo(SignatureRequest::class, 'signature_request_id');
     }
 
-    public function signer()
+    /** @return BelongsTo<SignatureSigner, $this> */
+    public function signer(): BelongsTo
     {
         return $this->belongsTo(SignatureSigner::class, 'signature_signer_id');
     }

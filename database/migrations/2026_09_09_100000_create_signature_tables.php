@@ -24,8 +24,7 @@ use Illuminate\Support\Facades\Schema;
  * keinen Kunden gibt, liegt es unter seiner Signaturanfrage - dort gehoert
  * es hin, denn ohne Akte gibt es keine Akte, in die es koennte.
  */
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('signature_requests', function (Blueprint $table) {

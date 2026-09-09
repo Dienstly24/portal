@@ -267,7 +267,9 @@ final class PdfStamper
         }
         $width = imagesx($image);
         $height = imagesy($image);
-        if ($width < 1 || $height < 1 || $width * $height > 4_000_000) {
+        // Dekompressionsbomben-Schutz wie im ImagesToPdfService: mehr
+        // Pixel wird gar nicht erst in einen Alphakanal umgeschrieben.
+        if ($width * $height > 4_000_000) {
             imagedestroy($image);
 
             return null;

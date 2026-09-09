@@ -4,8 +4,10 @@ namespace App\Services\Signature;
 
 use App\Models\SignatureRequest;
 use App\Services\Pdf\PdfDocument;
+use App\Services\Pdf\PdfException;
 use App\Services\Pdf\PdfStamp;
 use App\Services\Pdf\PdfStamper;
+use App\Support\LocalTime;
 use App\Support\SignatureFieldType;
 
 /**
@@ -31,7 +33,7 @@ class SignedPdfBuilder
     /**
      * @return array{pdf: string, hash: string}
      *
-     * @throws \App\Services\Pdf\PdfException
+     * @throws PdfException
      */
     public function build(SignatureRequest $request): array
     {
@@ -114,6 +116,10 @@ class SignedPdfBuilder
     /** @return list<array{title: string, lines: list<string>}> */
     private function protocolSections(SignatureRequest $request): array
     {
+        // Zeitpunkte in deutscher Ortszeit - gespeichert wird UTC
+        // (Betreiber-Vorgabe 21.08.2026). Hier bewusst ueber LocalTime und
+        // nicht ueber das Blade-Makro ->lokal(): das Protokoll entsteht in
+        // einem Dienst, nicht in einer Ansicht.
         $sections = [[
             'title' => 'Dokument',
             'lines' => array_values(array_filter([
@@ -121,9 +127,9 @@ class SignedPdfBuilder
                 'Original-Datei: '.$request->original_name,
                 'SHA-256 des Originals: '.$request->original_hash,
                 'Signaturanfrage: '.$request->id,
-                $request->reference ? 'Referenz: '.$request->reference : null,
-                'Erstellt: '.optional($request->created_at)->lokal()?->format('d.m.Y H:i').' Uhr',
-                'Versendet: '.(optional($request->sent_at)->lokal()?->format('d.m.Y H:i').' Uhr' ?: '-'),
+                $request->reference !== null ? 'Referenz: '.$request->reference : null,
+                'Erstellt: '.$this->zeit($request->created_at),
+                'Versendet: '.$this->zeit($request->sent_at),
             ])),
         ]];
 
@@ -133,10 +139,10 @@ class SignedPdfBuilder
                 'lines' => array_values(array_filter([
                     'E-Mail: '.$signer->email,
                     $signer->verified_at
-                        ? 'E-Mail bestaetigt: '.$signer->verified_at->lokal()->format('d.m.Y H:i').' Uhr'
+                        ? 'E-Mail bestaetigt: '.$this->zeit($signer->verified_at)
                         : 'E-Mail-Bestaetigung: nicht angefordert',
-                    $signer->viewed_at ? 'Dokument geoeffnet: '.$signer->viewed_at->lokal()->format('d.m.Y H:i').' Uhr' : null,
-                    $signer->signed_at ? 'Unterschrieben: '.$signer->signed_at->lokal()->format('d.m.Y H:i').' Uhr' : null,
+                    $signer->viewed_at ? 'Dokument geoeffnet: '.$this->zeit($signer->viewed_at) : null,
+                    $signer->signed_at ? 'Unterschrieben: '.$this->zeit($signer->signed_at) : null,
                     $signer->ip_address ? 'IP-Adresse: '.$signer->ip_address : null,
                     $signer->user_agent ? 'Geraet: '.mb_substr($signer->user_agent, 0, 90) : null,
                 ])),
@@ -159,5 +165,13 @@ class SignedPdfBuilder
         ];
 
         return $sections;
+    }
+
+    /** Ein Zeitpunkt in deutscher Ortszeit; "-", wenn es keinen gibt. */
+    private function zeit(mixed $wert): string
+    {
+        $zeit = LocalTime::for($wert);
+
+        return $zeit === null ? '-' : $zeit->format('d.m.Y H:i').' Uhr';
     }
 }

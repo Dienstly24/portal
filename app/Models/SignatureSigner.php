@@ -2,7 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 /**
@@ -12,6 +15,9 @@ use Illuminate\Support\Str;
  * In der Datenbank steht ausschliesslich der HASH des Zugangs. Wer die
  * Tabelle liest (Sicherung, Auswertung, Datenbank-Werkzeug), kann damit
  * keine Unterschriftsseite oeffnen.
+ *
+ * @property-read SignatureRequest|null $request
+ * @property-read Collection<int, SignatureField> $fields
  */
 class SignatureSigner extends Model
 {
@@ -77,12 +83,14 @@ class SignatureSigner extends Model
         });
     }
 
-    public function request()
+    /** @return BelongsTo<SignatureRequest, $this> */
+    public function request(): BelongsTo
     {
         return $this->belongsTo(SignatureRequest::class, 'signature_request_id');
     }
 
-    public function fields()
+    /** @return HasMany<SignatureField, $this> */
+    public function fields(): HasMany
     {
         return $this->hasMany(SignatureField::class, 'signature_signer_id')->orderBy('page')->orderBy('sort');
     }

@@ -169,12 +169,17 @@ final class AdminNavigation
         ]));
     }
 
-    /** Papier rein, Papier angefordert - zwei Seiten desselben Vorgangs. */
+    /**
+     * Papier rein, Papier angefordert, Papier zur Unterschrift - drei
+     * Seiten desselben Vorgangs. Die Signaturen stehen bewusst hier und
+     * nicht unter "Kunden": eine Signaturanfrage braucht keinen Kunden.
+     */
     private function dokumente(): NavGroup
     {
         return new NavGroup('dokumente', 'Dokumente', $this->items([
             ['eingang', 'Eingang', 'admin.documents.inbox', 'inbox', ['admin.documents.inbox'], 'document_inbox'],
             ['anforderungen', 'Anforderungen', 'admin.document_requests', 'contract', ['admin.document_requests*'], 'document_requests'],
+            ['signaturen', 'Signaturen', 'admin.signatures.index', 'contract', ['admin.signatures.*'], 'signatures'],
         ]));
     }
 

@@ -27,6 +27,12 @@ Schedule::command('emails:prune-unmatched')->dailyAt('03:30');
 // withoutOverlapping: ein manueller Lauf darf nicht mit dem geplanten kollidieren.
 Schedule::command('tickets:auto-close')->dailyAt('04:00')->withoutOverlapping();
 
+// 04:05 — Abgelaufene Signaturanfragen schliessen und deren Zugaenge
+// widerrufen. Die Anzeige wartet nicht darauf (die Frist wird bei jedem
+// Aufruf gerechnet) - der Lauf zieht den gespeicherten Zustand nach und
+// meldet dem Ersteller, dass sein Dokument unterschrieben werden sollte.
+Schedule::command('signaturen:ablaufen')->dailyAt('04:05')->withoutOverlapping();
+
 // 04:10 — DSGVO: unkonvertierte Website-Anfragen nach 6 Monaten loeschen (P0-1)
 Schedule::command('tickets:purge-website-leads')->dailyAt('04:10');
 

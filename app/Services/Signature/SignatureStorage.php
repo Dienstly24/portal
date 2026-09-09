@@ -56,9 +56,7 @@ class SignatureStorage
         if ($path === null || ! $this->disk()->exists($path)) {
             return null;
         }
-        $content = $this->disk()->get($path);
-
-        return $content === false ? null : $content;
+        return $this->disk()->get($path);
     }
 
     /** Alles zu einer Anfrage entfernen - nur beim Loeschen des Vorgangs. */

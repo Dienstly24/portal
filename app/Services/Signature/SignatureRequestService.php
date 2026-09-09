@@ -16,6 +16,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 /**
  * Der Lebenslauf einer Signaturanfrage: anlegen, vorbereiten, versenden,
@@ -58,7 +59,7 @@ class SignatureRequestService
             'status' => SignatureStatus::DRAFT,
             'customer_id' => $attributes['customer_id'] ?? null,
             'contract_id' => $attributes['contract_id'] ?? null,
-            'created_by' => $user?->id ?? auth()->id(),
+            'created_by' => $user->id ?? auth()->id(),
             'original_path' => 'wird-gesetzt',
             'original_name' => mb_substr($file->getClientOriginalName(), 0, 180),
             'original_hash' => hash('sha256', $binary),
@@ -73,7 +74,7 @@ class SignatureRequestService
             'expires_at' => $attributes['expires_at'] ?? null,
             'last_activity_at' => now(),
         ]);
-        $request->id = (string) \Illuminate\Support\Str::uuid();
+        $request->id = (string) Str::uuid();
         $request->original_path = $this->storage->originalPath($request);
         $request->save();
 
@@ -120,7 +121,7 @@ class SignatureRequestService
     {
         DB::transaction(function () use ($request, $signers) {
             $keep = [];
-            foreach (array_values($signers) as $position => $data) {
+            foreach ($signers as $position => $data) {
                 $signer = null;
                 if (! empty($data['id'])) {
                     $signer = $request->signers()->whereKey($data['id'])->first();
@@ -169,7 +170,7 @@ class SignatureRequestService
         DB::transaction(function () use ($request, $fields) {
             $signerIds = $request->signers()->pluck('id')->all();
             $keep = [];
-            foreach (array_values($fields) as $sort => $data) {
+            foreach ($fields as $sort => $data) {
                 $type = in_array($data['type'], SignatureFieldType::keys(), true) ? $data['type'] : SignatureFieldType::TEXT;
                 $signerId = $data['signer_id'] ?? null;
                 if ($signerId !== null && ! in_array($signerId, $signerIds, true)) {

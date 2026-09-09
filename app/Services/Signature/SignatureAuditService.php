@@ -38,12 +38,14 @@ class SignatureAuditService
                 'signature_signer_id' => $signer?->id,
                 'user_id' => $user?->id,
                 'event' => $event,
-                'actor' => $signer?->name ?? $user?->name,
+                // ?-> ist auf der linken Seite von ?? ueberfluessig: der
+                // Null-Zusammenfuehrungsoperator faengt den Fall bereits ab.
+                'actor' => $signer->name ?? $user->name ?? null,
                 'description' => $description === null ? null : mb_substr($description, 0, 500),
-                'ip' => $http?->ip(),
+                'ip' => $http->ip(),
                 // Der Browser-Kennstring gehoert zum Nachweis: er zeigt, mit
                 // welchem Geraet unterschrieben wurde.
-                'user_agent' => mb_substr((string) $http?->userAgent(), 0, 500) ?: null,
+                'user_agent' => mb_substr((string) $http->userAgent(), 0, 500) ?: null,
                 'meta' => $meta === [] ? null : $meta,
             ]);
         } catch (\Throwable $e) {

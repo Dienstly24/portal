@@ -8,7 +8,10 @@ use App\Models\CustomerTimeline;
 use App\Models\Document;
 use App\Models\SignatureRequest;
 use App\Services\CustomerCreation\CustomerAutoCreationService;
+use App\Services\CustomerCreation\DuplicateCustomerException;
 use App\Services\Matching\CustomerMatchingService;
+use App\Services\Matching\MatchResult;
+use App\Support\LocalTime;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -86,10 +89,10 @@ class SignatureDocumentService
         return DB::transaction(function () use ($request, $customer, $contract) {
             $request->forceFill([
                 'customer_id' => $customer->id,
-                'contract_id' => $contract?->id ?? $request->contract_id,
+                'contract_id' => $contract->id ?? $request->contract_id,
             ])->save();
 
-            $this->audit->record($request, 'customer_linked', description: $customer->customer_number.' / '.($customer->user?->name ?? ''));
+            $this->audit->record($request, 'customer_linked', description: $customer->customer_number.' / '.($customer->user->name ?? ''));
             if ($contract !== null) {
                 $this->audit->record($request, 'contract_linked', description: (string) $contract->contract_number);
             }
@@ -114,7 +117,7 @@ class SignatureDocumentService
      * er einen Kandidaten, wird nichts angelegt und der Mitarbeiter sieht
      * den Vorschlag.
      *
-     * @throws \App\Services\CustomerCreation\DuplicateCustomerException
+     * @throws DuplicateCustomerException
      */
     public function createCustomer(SignatureRequest $request, string $signerId): Customer
     {
@@ -154,7 +157,7 @@ class SignatureDocumentService
             if ($existing !== null) {
                 $existing->forceFill([
                     'customer_id' => $customer->id,
-                    'contract_id' => $contract?->id ?? $existing->contract_id,
+                    'contract_id' => $contract->id ?? $existing->contract_id,
                 ])->save();
 
                 return $existing;
@@ -172,7 +175,7 @@ class SignatureDocumentService
         $document = Document::create([
             'id' => (string) Str::uuid(),
             'customer_id' => $customer->id,
-            'contract_id' => $contract?->id ?? $request->contract_id,
+            'contract_id' => $contract->id ?? $request->contract_id,
             'category' => 'contract',
             'file_name' => $this->fileName($request),
             'file_path' => $path,
@@ -186,7 +189,7 @@ class SignatureDocumentService
             'ai_type' => 'sonstiges',
             'ai_source' => 'signatur',
             'ai_summary' => 'Elektronisch unterschrieben am '
-                .optional($request->completed_at)->lokal()?->format('d.m.Y H:i').' Uhr.',
+                .(LocalTime::for($request->completed_at)?->format('d.m.Y H:i') ?? '-').' Uhr.',
         ]);
 
         $request->forceFill(['completed_document_id' => $document->id])->save();
@@ -202,9 +205,9 @@ class SignatureDocumentService
     }
 
     /** Der staerkste Grund eines Treffers, im Klartext. */
-    private function reason(\App\Services\Matching\MatchResult $result): string
+    private function reason(MatchResult $result): string
     {
-        $parts = array_filter($result->breakdown, fn ($b) => ($b['points'] ?? 0) > 0);
+        $parts = array_filter($result->breakdown, fn ($b) => $b['points'] > 0);
         uasort($parts, fn ($a, $b) => $b['points'] <=> $a['points']);
         $first = reset($parts);
 

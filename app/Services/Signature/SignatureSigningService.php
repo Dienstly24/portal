@@ -222,7 +222,7 @@ class SignatureSigningService
 
         if ($request->isSequential()) {
             $next = $open->first();
-            if ($next !== null && $next->invited_at === null) {
+            if ($next->invited_at === null) {
                 $this->requests->invite($request, $next);
             }
         }
@@ -302,7 +302,13 @@ class SignatureSigningService
      */
     private function decodeSignature(string $dataUrl): ?string
     {
-        if (! preg_match('#^data:image/png;base64,([A-Za-z0-9+/=\s]{64,4000000})$#', $dataUrl, $m)) {
+        // Die Laenge wird VOR dem Ausdruck geprueft, nicht in ihm: ein
+        // {64,4000000} sprengt die Grenze des Regex-Motors (65535) und
+        // haette den ganzen Vorgang mit einem Fehler beendet.
+        if (strlen($dataUrl) > 6_000_000) {
+            return null;
+        }
+        if (! preg_match('#^data:image/png;base64,([A-Za-z0-9+/=\s]{64,})$#', $dataUrl, $m)) {
             return null;
         }
         $binary = base64_decode(preg_replace('/\s+/', '', $m[1]), true);
@@ -310,7 +316,7 @@ class SignatureSigningService
             return null;
         }
         $info = @getimagesizefromstring($binary);
-        if ($info === false || ($info['mime'] ?? '') !== 'image/png') {
+        if ($info === false || $info['mime'] !== 'image/png') {
             return null;
         }
         if ($info[0] < 8 || $info[1] < 8 || $info[0] > self::MAX_SIGNATURE_PX || $info[1] > self::MAX_SIGNATURE_PX) {

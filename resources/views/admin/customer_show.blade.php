@@ -502,6 +502,15 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
     @empty
     <p class="muted-sm">Keine Dokumentenanfragen.</p>
     @endforelse
+
+    {{-- Signaturen zu diesem Kunden (natives E-Signatur-Modul, 09.09.2026).
+         Eine Signaturanfrage BRAUCHT keinen Kunden - hier stehen die, die
+         ihm bereits zugeordnet sind. --}}
+    @include('admin.partials.signature_section', [
+        'signatures' => \App\Models\SignatureRequest::with('signers')
+            ->where('customer_id', $customer->id)->latest()->limit(8)->get(),
+        'neueSignaturUrl' => route('admin.signatures.create', ['kunde' => $customer->id]),
+    ])
 </div>
 </div>
 

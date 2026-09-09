@@ -3,7 +3,10 @@
 namespace App\Models;
 
 use App\Support\SignatureStatus;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 /**
@@ -12,6 +15,14 @@ use Illuminate\Support\Str;
  * Sie kann zu einem Kunden und zu einem Vertrag gehoeren, MUSS es aber
  * nicht. Alles, was hier haengt (Dokument, Unterzeichner, Felder,
  * Protokoll), funktioniert ohne Kundenakte.
+ *
+ * @property-read Collection<int, SignatureSigner> $signers
+ * @property-read Collection<int, SignatureField> $fields
+ * @property-read Collection<int, SignatureEvent> $events
+ * @property-read Customer|null $customer
+ * @property-read Contract|null $contract
+ * @property-read User|null $creator
+ * @property-read Document|null $completedDocument
  */
 class SignatureRequest extends Model
 {
@@ -48,37 +59,44 @@ class SignatureRequest extends Model
         });
     }
 
-    public function signers()
+    /** @return HasMany<SignatureSigner, $this> */
+    public function signers(): HasMany
     {
         return $this->hasMany(SignatureSigner::class)->orderBy('signing_order')->orderBy('created_at');
     }
 
-    public function fields()
+    /** @return HasMany<SignatureField, $this> */
+    public function fields(): HasMany
     {
         return $this->hasMany(SignatureField::class)->orderBy('page')->orderBy('sort');
     }
 
-    public function events()
+    /** @return HasMany<SignatureEvent, $this> */
+    public function events(): HasMany
     {
         return $this->hasMany(SignatureEvent::class)->latest('created_at');
     }
 
-    public function customer()
+    /** @return BelongsTo<Customer, $this> */
+    public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
-    public function contract()
+    /** @return BelongsTo<Contract, $this> */
+    public function contract(): BelongsTo
     {
         return $this->belongsTo(Contract::class);
     }
 
-    public function creator()
+    /** @return BelongsTo<User, $this> */
+    public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function completedDocument()
+    /** @return BelongsTo<Document, $this> */
+    public function completedDocument(): BelongsTo
     {
         return $this->belongsTo(Document::class, 'completed_document_id');
     }
