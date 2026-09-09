@@ -26,7 +26,7 @@ class CustomerMessage extends Model
         // Omnichannel (Phase B) - alle optional, damit jeder bestehende
         // Schreibweg unveraendert weiterlaeuft.
         'conversation_id', 'direction', 'sender_type', 'external_message_id',
-        'message_type', 'status', 'metadata', 'sent_at', 'delivered_at',
+        'message_type', 'source', 'status', 'metadata', 'sent_at', 'delivered_at',
         'failed_at', 'failure_reason',
     ];
 
@@ -49,6 +49,22 @@ class CustomerMessage extends Model
     public const SENDER_BOT = 'bot';
 
     public const TYPE_TEXT = 'text';
+
+    /**
+     * WOHER die Nachricht kommt - und damit, ob sie ein EREIGNIS ist.
+     *
+     * `live` = jetzt passiert: Ungelesen, Zuweisung, KI, Glocke.
+     * `historical` = nachgeliefert: sichtbar, durchsuchbar, Zusammenhang
+     * fuer die KI - aber nie ein Ausloeser. Sie ist vor Wochen passiert;
+     * sie jetzt zu beantworten waere fuer den Kunden nicht erklaerbar.
+     */
+    public const SOURCE_LIVE = 'live';
+    public const SOURCE_HISTORICAL = 'historical';
+
+    public const SOURCES = [
+        self::SOURCE_LIVE => 'Live',
+        self::SOURCE_HISTORICAL => 'Historie',
+    ];
 
     /**
      * Nachrichtenarten. Bewusst eine Liste und kein ENUM: eine neue Art
@@ -112,6 +128,15 @@ class CustomerMessage extends Model
         // interner Chat haben keine Gegenstelle ausserhalb und brauchen
         // keinen Versand. Nur ein Kanal mit echter Gegenstelle loest aus.
         static::created(function ($m) {
+            // HISTORIE GEHT NIE RAUS. Eine nachgelieferte eigene
+            // Nachricht wurde vor Wochen bereits gesendet - sie ein
+            // zweites Mal zuzustellen waere fuer den Kunden nicht
+            // erklaerbar. Die Bedingung steht VOR allen anderen, weil
+            // sie die folgenschwerste ist.
+            if ($m->source === self::SOURCE_HISTORICAL) {
+                return;
+            }
+
             if (! $m->from_staff || ! $m->conversation_id || $m->external_message_id) {
                 return;
             }
@@ -134,7 +159,7 @@ class CustomerMessage extends Model
         // Modell und nicht im Controller, damit es fuer JEDEN Schreibweg
         // gilt (Kundenchat, Kundenakte, Aufgaben-Automatik).
         static::created(function ($m) {
-            if (! $m->from_staff || $m->ai_generated) {
+            if (! $m->from_staff || $m->ai_generated || $m->source === self::SOURCE_HISTORICAL) {
                 return;
             }
             $steuerstand = AiConversation::where('customer_id', $m->customer_id)->first();
@@ -158,6 +183,14 @@ class CustomerMessage extends Model
     public function scopeFromCustomer($q) { return $q->where('from_staff', false); }
     public function scopeUnread($q) { return $q->whereNull('read_at'); }
     public function scopeIncoming($q) { return $q->where('direction', self::DIRECTION_INCOMING); }
+    public function scopeLive($q) { return $q->where('source', self::SOURCE_LIVE); }
+    public function scopeHistorical($q) { return $q->where('source', self::SOURCE_HISTORICAL); }
+
+    /** Nachgeliefert aus der Zeit VOR der Anbindung. */
+    public function isHistorical(): bool
+    {
+        return $this->source === self::SOURCE_HISTORICAL;
+    }
     public function scopeOutgoing($q) { return $q->where('direction', self::DIRECTION_OUTGOING); }
 
     /**

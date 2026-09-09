@@ -46,6 +46,20 @@ final class InboundMessage
          * Postfach zwei Bedienwege hat.
          */
         public readonly bool $fromBusiness = false,
+        /**
+         * Die Nachricht ist NACHGELIEFERT, nicht gerade passiert.
+         *
+         * Manche Plattformen uebergeben beim Anbinden den bisherigen
+         * Schriftwechsel. Er gehoert in die Unterhaltung - aber er ist
+         * kein Ereignis: sonst wird aus dem Anschalten der Anbindung
+         * eine Lawine aus Ungelesen-Zaehlern, Zuweisungen und
+         * KI-Antworten auf Fragen von vor Monaten.
+         *
+         * Wie `fromBusiness` bewusst allgemein benannt: das ist keine
+         * Eigenheit einer Plattform, sondern die Folge davon, dass ein
+         * Kanal eine Vorgeschichte mitbringt.
+         */
+        public readonly bool $historical = false,
     ) {}
 
     /**
