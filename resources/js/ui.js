@@ -258,6 +258,12 @@ const DELEGIERT = [
     'mouseover', 'mouseout', 'mouseenter', 'mouseleave', 'dblclick',
     'contextmenu', 'paste', 'drop', 'dragover', 'dragleave', 'dragenter',
     'wheel', 'reset', 'select', 'search', 'toggle',
+    // pointerdown deckt Maus UND Finger mit EINEM Ereignis ab (Felder im
+    // Signatur-Editor ziehen, auf dem Tablet wie am Bildschirm). Bewusst
+    // NUR der Beginn: pointermove waere ein Ereignis pro Mauszucken durch
+    // die Delegation am document - wer eine Geste verfolgt, haengt sich
+    // dafuer selbst und nur so lange wie noetig an.
+    'pointerdown',
 ];
 
 const CAPTURE = ['focus', 'blur', 'error', 'load'];

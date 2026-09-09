@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\ContractController as AdminContractController;
 use App\Http\Controllers\Admin\CustomerDocumentController as AdminCustomerDocumentController;
 use App\Http\Controllers\Admin\DuplicateController as AdminDuplicateController;
 use App\Http\Controllers\Admin\PostfachController;
+use App\Http\Controllers\Admin\SignatureController as AdminSignatureController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminCustomerChatController;
 use App\Http\Controllers\AiAssistantController;
@@ -50,6 +51,7 @@ use App\Http\Controllers\SeoController;
 use App\Http\Controllers\ServicePageAdminController;
 use App\Http\Controllers\ServicePageController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\SignatureSigningController;
 use App\Http\Controllers\SmartDocumentUploadController;
 use App\Http\Controllers\SocialLinkController;
 use App\Http\Controllers\SupportFormController;
@@ -162,6 +164,27 @@ Route::post('/abmelden/{token}', [UnsubscribeController::class, 'oneClick'])
 Route::get('/magic-login/{user}', MagicLoginController::class)
     ->middleware(['signed', 'throttle:10,1'])
     ->name('magic.login');
+
+// Elektronische Unterschrift (natives Signatur-Modul, 09.09.2026).
+// OEFFENTLICH und bewusst OHNE Konto: der Unterzeichner ist regelmaessig
+// niemand, der ein Portal-Konto hat oder haben soll. Der Schutz ist
+// deshalb das Token selbst - 40 Zeichen aus dem kryptografischen
+// Generator, in der Datenbank nur als SHA-256, widerrufbar, befristet.
+// In der URL steht NIE eine Datenbank-ID und nie eine Angabe zum
+// Dokument. Der Limiter zaehlt je IP UND je Token: ein Fremder soll
+// Tokens nicht durchprobieren koennen, ein echter Unterzeichner aber
+// auch nach mehreren Anlaeufen nicht ausgesperrt sein.
+Route::middleware('throttle:signatur')->group(function () {
+    Route::get('/unterschreiben/{token}', [SignatureSigningController::class, 'show'])->name('signature.show');
+    Route::post('/unterschreiben/{token}/code', [SignatureSigningController::class, 'requestCode'])->name('signature.code');
+    Route::post('/unterschreiben/{token}/bestaetigen', [SignatureSigningController::class, 'verify'])->name('signature.verify');
+    Route::get('/unterschreiben/{token}/seite/{page}', [SignatureSigningController::class, 'page'])
+        ->whereNumber('page')->name('signature.page');
+    Route::get('/unterschreiben/{token}/dokument', [SignatureSigningController::class, 'document'])->name('signature.document');
+    Route::post('/unterschreiben/{token}/unterschreiben', [SignatureSigningController::class, 'sign'])->name('signature.sign');
+    Route::post('/unterschreiben/{token}/ablehnen', [SignatureSigningController::class, 'decline'])->name('signature.decline');
+    Route::get('/unterschreiben/{token}/fertig', [SignatureSigningController::class, 'done'])->name('signature.done');
+});
 
 // Hilfe-/Kontaktformular: oeffentlich; der Button in der Willkommens-Mail
 // bringt ein verschluesseltes Kunden-Token mit -> Formular ist vorbefuellt
@@ -405,6 +428,31 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::post('/mitteilungen/{id}/erledigt', [ChangeNotificationController::class, 'skip'])->name('change_notifications.skip');
     // Smart Document Upload (CRM): Dokumenten-Eingang, Drag&Drop-Analyse, Zuordnung
     Route::get('/dokumenten-eingang', [SmartDocumentUploadController::class, 'inbox'])->name('documents.inbox');
+
+    // Signaturen: dritter Punkt unter "Dokumente" neben Eingang und
+    // Anforderungen. Eine Signaturanfrage ist ein eigenstaendiges
+    // Geschaeftsobjekt - sie braucht weder Kunde noch Vertrag, kann aber
+    // beides bekommen. Wer was darf, entscheidet die SignatureRequestPolicy
+    // (Portfolio bei Kundenvorgaengen, Urheberschaft bei eigenstaendigen).
+    Route::get('/signaturen', [AdminSignatureController::class, 'index'])->name('signatures.index');
+    Route::get('/signaturen/neu', [AdminSignatureController::class, 'create'])->name('signatures.create');
+    Route::post('/signaturen', [AdminSignatureController::class, 'store'])
+        ->middleware('throttle:60,10')->name('signatures.store');
+    Route::get('/signaturen/{id}', [AdminSignatureController::class, 'show'])->name('signatures.show');
+    Route::get('/signaturen/{id}/vorbereiten', [AdminSignatureController::class, 'prepare'])->name('signatures.prepare');
+    Route::post('/signaturen/{id}/vorbereiten', [AdminSignatureController::class, 'savePrepare'])
+        ->middleware('throttle:300,10')->name('signatures.prepare.save');
+    Route::get('/signaturen/{id}/seite/{page}', [AdminSignatureController::class, 'pageImage'])
+        ->whereNumber('page')->middleware('throttle:600,1')->name('signatures.page');
+    Route::post('/signaturen/{id}/senden', [AdminSignatureController::class, 'send'])
+        ->middleware('throttle:60,10')->name('signatures.send');
+    Route::post('/signaturen/{id}/erinnern', [AdminSignatureController::class, 'remind'])
+        ->middleware('throttle:60,10')->name('signatures.remind');
+    Route::post('/signaturen/{id}/abbrechen', [AdminSignatureController::class, 'cancel'])->name('signatures.cancel');
+    Route::post('/signaturen/{id}/zuordnen', [AdminSignatureController::class, 'assign'])->name('signatures.assign');
+    Route::get('/signaturen/{id}/protokoll', [AdminSignatureController::class, 'audit'])->name('signatures.audit');
+    Route::get('/signaturen/{id}/download/{which?}', [AdminSignatureController::class, 'download'])
+        ->whereIn('which', ['signed', 'original'])->name('signatures.download');
     // Rate-Limits bewusst grosszuegig (10-fach ggue. Ausgangswert): der
     // Mitarbeiter arbeitet den Dokumenten-Eingang zuegig im Stapel ab (Kunde
     // anlegen/zuordnen im Sekundentakt). Enge Limits loesten faelschlich

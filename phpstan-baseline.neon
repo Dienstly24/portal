@@ -1,18 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Access to an undefined property App\\Models\\Contract\:\:\$customer\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Console/Commands/ApplyDueHealthSwitches.php
-
-		-
-			message: '#^Relation ''customer'' is not found in App\\Models\\Contract model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Console/Commands/ApplyDueHealthSwitches.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>customer_number" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
@@ -29,12 +17,6 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Console/Commands/AutoCloseResolvedTickets.php
-
-		-
-			message: '#^Relation ''customer'' is not found in App\\Models\\Contract model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Console/Commands/BackfillSchutzbriefTerms.php
 
 		-
 			message: '#^Using nullsafe property access "\?\-\>customer_number" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
@@ -187,12 +169,6 @@ parameters:
 			path: app/Http/Controllers/Admin/ContractController.php
 
 		-
-			message: '#^Relation ''customer'' is not found in App\\Models\\Contract model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Admin/ContractController.php
-
-		-
 			message: '#^Relation ''energyDetail'' is not found in App\\Models\\Contract model\.$#'
 			identifier: larastan.relationExistence
 			count: 2
@@ -250,12 +226,6 @@ parameters:
 			message: '#^Relation ''contracts'' is not found in App\\Models\\Customer model\.$#'
 			identifier: larastan.relationExistence
 			count: 2
-			path: app/Http/Controllers/AdminController.php
-
-		-
-			message: '#^Relation ''customer'' is not found in App\\Models\\Contract model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
 			path: app/Http/Controllers/AdminController.php
 
 		-
@@ -481,12 +451,6 @@ parameters:
 			path: app/Http/Controllers/ContractCommissionController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Contract\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Contract\>\:\:\$customer\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/ContractCommissionController.php
-
-		-
 			message: '#^Relation ''commission'' is not found in App\\Models\\CommissionAuditLog model\.$#'
 			identifier: larastan.relationExistence
 			count: 1
@@ -496,12 +460,6 @@ parameters:
 			message: '#^Relation ''contract'' is not found in App\\Models\\ContractCommission model\.$#'
 			identifier: larastan.relationExistence
 			count: 3
-			path: app/Http/Controllers/ContractCommissionController.php
-
-		-
-			message: '#^Relation ''customer'' is not found in App\\Models\\Contract model\.$#'
-			identifier: larastan.relationExistence
-			count: 2
 			path: app/Http/Controllers/ContractCommissionController.php
 
 		-
@@ -889,12 +847,6 @@ parameters:
 			path: app/Http/Controllers/ProvisionsmanagementController.php
 
 		-
-			message: '#^Relation ''customer'' is not found in App\\Models\\Contract model\.$#'
-			identifier: larastan.relationExistence
-			count: 2
-			path: app/Http/Controllers/ProvisionsmanagementController.php
-
-		-
 			message: '#^Relation ''importer'' is not found in App\\Models\\CommissionImport model\.$#'
 			identifier: larastan.relationExistence
 			count: 3
@@ -928,12 +880,6 @@ parameters:
 			message: '#^Relation ''creator'' is not found in App\\Models\\Customer model\.$#'
 			identifier: larastan.relationExistence
 			count: 1
-			path: app/Http/Controllers/ReportController.php
-
-		-
-			message: '#^Relation ''customer'' is not found in App\\Models\\Contract model\.$#'
-			identifier: larastan.relationExistence
-			count: 2
 			path: app/Http/Controllers/ReportController.php
 
 		-
@@ -1105,21 +1051,9 @@ parameters:
 			path: app/Http/Controllers/TicketController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Contract\:\:\$customer\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/VermittlerAbrechnungController.php
-
-		-
 			message: '#^Relation ''contract'' is not found in App\\Models\\VermittlerSettlement model\.$#'
 			identifier: larastan.relationExistence
 			count: 1
-			path: app/Http/Controllers/VermittlerAbrechnungController.php
-
-		-
-			message: '#^Relation ''customer'' is not found in App\\Models\\Contract model\.$#'
-			identifier: larastan.relationExistence
-			count: 3
 			path: app/Http/Controllers/VermittlerAbrechnungController.php
 
 		-
@@ -1939,18 +1873,6 @@ parameters:
 			path: app/Services/CommissionImport/CommissionContractBuilder.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Contract\:\:\$customer\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/CommissionImport/CommissionImportService.php
-
-		-
-			message: '#^Relation ''customer'' is not found in App\\Models\\Contract model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Services/CommissionImport/CommissionImportService.php
-
-		-
 			message: '#^Strict comparison using \=\=\= between int and '''' will always evaluate to false\.$#'
 			identifier: identical.alwaysFalse
 			count: 1
@@ -1966,12 +1888,6 @@ parameters:
 			message: '#^PHPDoc tag @var for constant App\\Services\\CommissionImport\\CommissionMatcher\:\:ENERGY_LOOKUP with type array\<string, callable\-string\> is incompatible with value array\{meter_number\: ''normalizeMeter'', malo_id\: ''normalizeMalo''\}\.$#'
 			identifier: classConstant.phpDocType
 			count: 1
-			path: app/Services/CommissionImport/CommissionMatcher.php
-
-		-
-			message: '#^Relation ''customer'' is not found in App\\Models\\Contract model\.$#'
-			identifier: larastan.relationExistence
-			count: 2
 			path: app/Services/CommissionImport/CommissionMatcher.php
 
 		-
@@ -2005,21 +1921,9 @@ parameters:
 			path: app/Services/CommissionImport/XlsTableReader.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Contract\:\:\$customer\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/ContractSwitchReminderService.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\Contract\:\:\$switchReminders\.$#'
 			identifier: property.notFound
 			count: 4
-			path: app/Services/ContractSwitchReminderService.php
-
-		-
-			message: '#^Relation ''customer'' is not found in App\\Models\\Contract model\.$#'
-			identifier: larastan.relationExistence
-			count: 2
 			path: app/Services/ContractSwitchReminderService.php
 
 		-
@@ -2141,12 +2045,6 @@ parameters:
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Services/CustomerCreation/CustomerAutoCreationService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Contract\:\:\$customer\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/DocumentIntake/DocumentIntakeService.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Contract\:\:\$energyDetail\.$#'
@@ -2276,12 +2174,6 @@ parameters:
 
 		-
 			message: '#^Relation ''contract'' is not found in App\\Models\\ContractVehicleDetail model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Services/DocumentIntake/DocumentIntakeService.php
-
-		-
-			message: '#^Relation ''customer'' is not found in App\\Models\\Contract model\.$#'
 			identifier: larastan.relationExistence
 			count: 1
 			path: app/Services/DocumentIntake/DocumentIntakeService.php
@@ -2437,20 +2329,8 @@ parameters:
 			path: app/Services/Energy/MeterReadingService.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Contract\:\:\$customer\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/EscooterRenewalReminderService.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\Contract\:\:\$switchReminders\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Services/EscooterRenewalReminderService.php
-
-		-
-			message: '#^Relation ''customer'' is not found in App\\Models\\Contract model\.$#'
-			identifier: larastan.relationExistence
 			count: 1
 			path: app/Services/EscooterRenewalReminderService.php
 
@@ -2477,12 +2357,6 @@ parameters:
 			identifier: larastan.relationExistence
 			count: 2
 			path: app/Services/Family/FamilyRelationService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Contract\:\:\$customer\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/FondsFinanz/FondsFinanzImportService.php
 
 		-
 			message: '#^Using nullsafe property access "\?\-\>id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
@@ -2767,12 +2641,6 @@ parameters:
 			path: app/Services/Pdf/ImagesToPdfService.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Contract\:\:\$customer\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Provision/ContractProvisionService.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\Customer\:\:\$acquirer\.$#'
 			identifier: property.notFound
 			count: 1
@@ -2893,12 +2761,6 @@ parameters:
 			path: app/Services/Provisionsmanagement/MissingCommissionService.php
 
 		-
-			message: '#^Relation ''customer'' is not found in App\\Models\\Contract model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Services/Provisionsmanagement/MissingCommissionService.php
-
-		-
 			message: '#^Strict comparison using \=\=\= between string and null will always evaluate to false\.$#'
 			identifier: identical.alwaysFalse
 			count: 1
@@ -2923,26 +2785,8 @@ parameters:
 			path: app/Services/Provisionsmanagement/PoolRegistry.php
 
 		-
-			message: '#^Relation ''customer'' is not found in App\\Models\\Contract model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Services/Provisionsmanagement/ReferenceLinkService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Contract\:\:\$customer\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/SchutzbriefRenewalReminderService.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\Contract\:\:\$switchReminders\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Services/SchutzbriefRenewalReminderService.php
-
-		-
-			message: '#^Relation ''customer'' is not found in App\\Models\\Contract model\.$#'
-			identifier: larastan.relationExistence
 			count: 1
 			path: app/Services/SchutzbriefRenewalReminderService.php
 
@@ -3011,12 +2855,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Services/Vermittler/VermittlerAbrechnungImporter.php
-
-		-
-			message: '#^Relation ''customer'' is not found in App\\Models\\Contract model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Services/Vermittler/VermittlerContractIndex.php
 
 		-
 			message: '#^Strict comparison using \!\=\= between Illuminate\\Support\\Carbon\|null and false will always evaluate to true\.$#'

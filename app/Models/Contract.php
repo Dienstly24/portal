@@ -7,6 +7,7 @@ use App\Services\Vermittler\VermittlerReference;
 use App\Support\ContractCommissionStatus;
 use App\Support\EscooterInsurance;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
@@ -735,7 +736,8 @@ class Contract extends Model
     public function vehicleDetail() { return $this->hasOne(ContractVehicleDetail::class); }
     public function energyDetail() { return $this->hasOne(ContractEnergyDetail::class); }
     public function internetDetail() { return $this->hasOne(ContractInternetDetail::class); }
-    public function customer() { return $this->belongsTo(Customer::class); }
+    /** @return BelongsTo<Customer, $this> */
+    public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
     public function externalReferences() { return $this->morphMany(ExternalReference::class, 'referenceable'); }
     public function documents() { return $this->hasMany(Document::class); }
     public function switchReminders() { return $this->hasMany(ContractSwitchReminder::class); }
