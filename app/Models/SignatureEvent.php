@@ -1,0 +1,96 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
+
+/**
+ * Ein Eintrag im Signatur-Protokoll.
+ *
+ * NUR ANLEGEN. Es gibt bewusst kein updated_at, keinen Bearbeiten-Weg und
+ * keinen Loeschen-Knopf in der Oberflaeche: ein Protokoll, das der
+ * Protokollierte aendern kann, belegt nichts. Dieselbe Regel wie beim
+ * Provisions-Protokoll (`commission_audit_logs`).
+ */
+class SignatureEvent extends Model
+{
+    protected $keyType = 'string';
+
+    public $incrementing = false;
+
+    public const UPDATED_AT = null;
+
+    protected $fillable = [
+        'signature_request_id', 'signature_signer_id', 'user_id', 'event',
+        'actor', 'description', 'ip', 'user_agent', 'meta', 'created_at',
+    ];
+
+    protected $casts = [
+        'meta' => 'array',
+        'created_at' => 'datetime',
+    ];
+
+    /**
+     * Die Ereignisse, die das Modul kennt. Die Liste ist zugleich die
+     * Uebersetzung fuer die Anzeige - ein Ereignis ohne Klartext waere im
+     * Protokoll wertlos.
+     */
+    public const LABELS = [
+        'created' => 'Signaturanfrage erstellt',
+        'document_uploaded' => 'PDF hochgeladen',
+        'signer_added' => 'Unterzeichner hinzugefügt',
+        'signer_removed' => 'Unterzeichner entfernt',
+        'fields_saved' => 'Felder gespeichert',
+        'sent' => 'Einladung versendet',
+        'reminder_sent' => 'Erinnerung versendet',
+        'verification_requested' => 'Bestätigungscode angefordert',
+        'verification_failed' => 'Bestätigungscode falsch',
+        'verified' => 'E-Mail-Adresse bestätigt',
+        'opened' => 'Dokument geöffnet',
+        'document_viewed' => 'Dokument angesehen',
+        'signing_started' => 'Unterschrift begonnen',
+        'field_filled' => 'Feld ausgefüllt',
+        'signed' => 'Unterschrift abgeschlossen',
+        'declined' => 'Unterschrift abgelehnt',
+        'completed' => 'Signaturvorgang abgeschlossen',
+        'pdf_generated' => 'Unterschriebenes PDF erzeugt',
+        'downloaded' => 'Dokument heruntergeladen',
+        'customer_linked' => 'Kunde zugeordnet',
+        'contract_linked' => 'Vertrag zugeordnet',
+        'customer_created' => 'Kunde angelegt',
+        'cancelled' => 'Signaturanfrage abgebrochen',
+        'expired' => 'Signaturanfrage abgelaufen',
+        'token_revoked' => 'Zugang widerrufen',
+        'access_denied' => 'Zugriff abgelehnt',
+    ];
+
+    protected static function boot()
+    {
+        parent::boot();
+        static::creating(function ($model) {
+            $model->id ??= (string) Str::uuid();
+            $model->created_at ??= now();
+        });
+    }
+
+    public function request()
+    {
+        return $this->belongsTo(SignatureRequest::class, 'signature_request_id');
+    }
+
+    public function signer()
+    {
+        return $this->belongsTo(SignatureSigner::class, 'signature_signer_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function label(): string
+    {
+        return self::LABELS[$this->event] ?? $this->event;
+    }
+}

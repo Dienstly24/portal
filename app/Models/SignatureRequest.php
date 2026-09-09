@@ -1,0 +1,144 @@
+<?php
+
+namespace App\Models;
+
+use App\Support\SignatureStatus;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
+
+/**
+ * Eine Signaturanfrage - das eigenstaendige Geschaeftsobjekt des Moduls.
+ *
+ * Sie kann zu einem Kunden und zu einem Vertrag gehoeren, MUSS es aber
+ * nicht. Alles, was hier haengt (Dokument, Unterzeichner, Felder,
+ * Protokoll), funktioniert ohne Kundenakte.
+ */
+class SignatureRequest extends Model
+{
+    protected $keyType = 'string';
+
+    public $incrementing = false;
+
+    protected $fillable = [
+        'title', 'status', 'customer_id', 'contract_id', 'completed_document_id', 'created_by',
+        'original_path', 'original_name', 'original_hash', 'original_size', 'page_count',
+        'signed_path', 'signed_hash', 'signed_size',
+        'signing_order', 'require_email_verification', 'consent_text',
+        'document_type', 'reference', 'note',
+        'sent_at', 'completed_at', 'cancelled_at', 'cancel_reason', 'expires_at', 'last_activity_at',
+    ];
+
+    protected $casts = [
+        'require_email_verification' => 'boolean',
+        'page_count' => 'integer',
+        'original_size' => 'integer',
+        'signed_size' => 'integer',
+        'sent_at' => 'datetime',
+        'completed_at' => 'datetime',
+        'cancelled_at' => 'datetime',
+        'expires_at' => 'datetime',
+        'last_activity_at' => 'datetime',
+    ];
+
+    protected static function boot()
+    {
+        parent::boot();
+        static::creating(function ($model) {
+            $model->id ??= (string) Str::uuid();
+        });
+    }
+
+    public function signers()
+    {
+        return $this->hasMany(SignatureSigner::class)->orderBy('signing_order')->orderBy('created_at');
+    }
+
+    public function fields()
+    {
+        return $this->hasMany(SignatureField::class)->orderBy('page')->orderBy('sort');
+    }
+
+    public function events()
+    {
+        return $this->hasMany(SignatureEvent::class)->latest('created_at');
+    }
+
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class);
+    }
+
+    public function contract()
+    {
+        return $this->belongsTo(Contract::class);
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function completedDocument()
+    {
+        return $this->belongsTo(Document::class, 'completed_document_id');
+    }
+
+    public function statusLabel(): string
+    {
+        return SignatureStatus::label($this->status);
+    }
+
+    public function statusTone(): string
+    {
+        return SignatureStatus::tone((string) $this->status);
+    }
+
+    public function isDraft(): bool
+    {
+        return $this->status === SignatureStatus::DRAFT;
+    }
+
+    public function isOpen(): bool
+    {
+        return SignatureStatus::isOpen((string) $this->status);
+    }
+
+    public function isCompleted(): bool
+    {
+        return $this->status === SignatureStatus::COMPLETED;
+    }
+
+    /**
+     * Abgelaufen ist eine Frage der UHR, nicht des gespeicherten Status: der
+     * Nachtlauf zieht ihn nach, aber bis dahin darf niemand mehr
+     * unterschreiben. Genau dieselbe Lehre wie beim Vertragsstatus - die
+     * Anzeige darf nie auf einen Cron warten.
+     */
+    public function hasExpired(): bool
+    {
+        return $this->expires_at !== null && $this->expires_at->isPast();
+    }
+
+    /** Kann jetzt noch unterschrieben werden? */
+    public function acceptsSignatures(): bool
+    {
+        return $this->isOpen() && ! $this->hasExpired();
+    }
+
+    /** Der Unterzeichner, der laut Reihenfolge als naechster dran ist. */
+    public function currentSigner(): ?SignatureSigner
+    {
+        return $this->signers->firstWhere(fn (SignatureSigner $s) => $s->isPending());
+    }
+
+    public function isSequential(): bool
+    {
+        return $this->signing_order !== 'parallel';
+    }
+
+    /** Fortschritt "2 von 3". */
+    public function signedCount(): int
+    {
+        return $this->signers->filter(fn (SignatureSigner $s) => $s->hasSigned())->count();
+    }
+}
