@@ -2354,6 +2354,102 @@ Vollstaendig in `docs/OMNICHANNEL_ANALYSE_UND_ARCHITEKTUR.md`. Kurzfassung:
 - Tests: `OmnichannelFoundationTest`, `ConversationAssignmentTest`,
   `MessagingArchitectureTest`, `ConversationBackfillTest`.
 
+## E-Signatur: Dokumente zur Unterschrift (Betreiber-Auftrag 09.09.2026)
+
+Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
+`docs/ANLEITUNG_SIGNATUREN_AR.md`. Die Kurzfassung:
+
+- **Eine Signaturanfrage ist ein EIGENSTAENDIGES Geschaeftsobjekt.**
+  `signature_requests.customer_id` und `.contract_id` sind NULLBAR - und
+  das ist die eigentliche Anforderung, keine Bequemlichkeit: der Betrieb
+  schickt regelmaessig etwas zur Unterschrift, BEVOR es einen Kunden gibt
+  (Interessent, Vermittler, Zeuge, Arbeitgeber). Wer die Zuordnung zur
+  Bedingung des Versands macht, zwingt zur Kundenakte auf Vorrat - und
+  erzeugt genau die Karteileichen, die der `CustomerMergeService` spaeter
+  muehsam zusammenfuehrt. Zugeordnet wird NACH dem Unterschreiben, per
+  Klick, von einem Menschen: bestehender Kunde / neuer Kunde / Vertrag /
+  gar nicht. Eine uebereinstimmende E-MAIL ORDNET NIE VON SELBST ZU (eine
+  Adresse ist kein Identitaetsnachweis - Familien-/Firmenpostfach,
+  Namensvetter; ein unterschriebener Vertrag in der falschen Akte ist ein
+  Datenschutzvorfall). Das System schlaegt vor UND nennt den Grund -
+  dieselbe Haltung wie im Dokumenten-Eingang.
+- **Das unterschriebene PDF ist eine FORTSCHREIBUNG des Originals**
+  (`PdfStamper`, incremental update): die ersten N Bytes der fertigen
+  Datei sind byteweise das Original. Erst damit laesst sich BELEGEN, dass
+  am Vertragstext nichts geaendert wurde. Ein Neuaufbau (Seiten
+  rastern und neu zusammensetzen) waere einfacher gewesen und haette
+  Textebene, Struktur und genau diesen Nachweis gekostet. Test:
+  `PdfStamperTest::test_das_original_bleibt_byte_fuer_byte_erhalten`.
+  KEIN Fremdpaket (`PdfDocument`/`PdfStamper`/`PdfSyntax`, pur PHP) -
+  dieselbe Abwaegung wie beim XLSX-Leser: ein PDF-Framework nur zum Lesen
+  und Stempeln waere ein grosses Paket im Sicherheitsupdate-Pfad einer
+  Anwendung mit Kundendaten. `smalot/pdfparser` liest TEXT und kann weder
+  Objektnummern noch Seitengeometrie liefern, schreiben schon gar nicht.
+  DREI FALLEN, jede als Test festgehalten: (1) komprimierte Objekt-Stroeme
+  (`/Type /ObjStm`) - seit PDF 1.5 liegt der Seitenbaum dort, wer nur den
+  Klartext liest findet bei den meisten modernen PDFs keine Seite;
+  (2) Seitendrehung (`/Rotate`) - ohne Transformationsmatrix steht die
+  Unterschrift auf jedem quer gescannten Vertrag verdreht am Rand, und
+  zwar erst im fertigen Dokument, nie im Editor; (3) Umlaute - Helvetica
+  kennt kein UTF-8, ohne WinAnsi-Umsetzung steht Kauderwelsch im Vertrag.
+  Die Unterschrift wird als 1x1-Farbflaeche mit dem Alphakanal als
+  `/SMask` eingebettet: volle Aufloesung der Handschrift, drei Bytes
+  Farbe, und sie bleibt DURCHSCHEINEND - ein weiss hinterlegtes JPEG
+  waere ein weisser Kasten ueber dem Vertragstext.
+- **Geprueft wird beim HOCHLADEN, nicht beim Erzeugen**: ein
+  verschluesseltes oder defektes PDF wird sofort abgelehnt. Ein
+  Fehlschlag NACH dem Unterschreiben waere dem Unterzeichner nicht zu
+  erklaeren und der Vorgang nicht zu retten.
+- **Angezeigt werden SEITENBILDER, kein PDF-Betrachter**: die
+  Inhaltsrichtlinie erlaubt seit SEC-4 nur eigene Skripte, ein CDN faellt
+  damit aus, und 1,5 MB mitgeliefertes JavaScript waeren ausgerechnet auf
+  dem Telefon der schlechteste Ort. Gerendert wird mit `pdftoppm` -
+  poppler laeuft fuer die OCR ohnehin, es kommt KEINE neue Abhaengigkeit
+  dazu. EHRLICH BLEIBEN: der Unterzeichner sieht ein Bild, deshalb steht
+  auf der Seite immer auch der Weg zum echten PDF und im Protokoll der
+  SHA-256 der gerenderten Datei. Fehlt poppler, bleibt die Seite LEER
+  statt kaputt (die Groesse kennt der PDF-Leser auch ohne poppler).
+- **Zugang ohne Konto**: 40 Zeichen aus dem kryptografischen Generator,
+  in der Datenbank NUR als SHA-256 (bewusst nicht bcrypt - der Wert muss
+  nachschlagbar sein, und ein Token hat keine geringe Entropie),
+  befristet und widerrufbar. In der URL steht NIE eine Datenbank-ID und
+  nie eine Angabe zum Dokument; ein unbekanntes Token sieht aus wie ein
+  abgelaufenes. Dazu ein Einmalcode an die eingeladene Adresse - er
+  belegt Zugriff auf DAS POSTFACH, ein weitergeleiteter Link nicht.
+  DEM BROWSER WIRD NICHTS GEGLAUBT: welche Felder jemand ausfuellen darf,
+  entscheidet der Server aus der Zugehoerigkeit (Test schickt ein fremdes
+  Feld mit); eine leere Zeichenflaeche zaehlt nie als Unterschrift.
+- **Protokoll `signature_events` ist append-only** - kein `updated_at`,
+  kein Bearbeiten-Weg, kein Loeschen-Knopf: eine Spalte, die es nicht
+  gibt, kann auch nicht still gepflegt werden. Das Protokollieren darf
+  den Vorgang NIE scheitern lassen (wie beim `ErrorRecorder`). Die letzte
+  Seite des fertigen PDF traegt zusaetzlich ein Signaturprotokoll - damit
+  ist die Datei fuer sich allein aussagekraeftig.
+- **RECHTLICH**: einfache elektronische Signatur (eIDAS Art. 3 Nr. 10)
+  mit technischem Nachweis - KEINE qualifizierte, keine Pruefung durch
+  einen Vertrauensdienst. Genau so steht es auf der Protokollseite. Der
+  Zustimmungstext ueber dem Bestaetigen-Knopf ist je Anfrage aenderbar
+  und behauptet in der Voreinstellung NICHT die Gleichstellung mit einer
+  handschriftlichen Unterschrift. Welche Stufe ein Geschaeftsfall
+  braucht, ist eine Rechtsfrage (siehe "Offene Themen").
+- **Berechtigungen** (`SignatureRequestPolicy`), zwei Achsen: Kunden-
+  vorgaenge folgen dem Portfolio, eigenstaendige Vorgaenge gehoeren ihrem
+  Ersteller und der Leitung. Ohne den zweiten Teil waere die Nullbarkeit
+  von `customer_id` ein Loch in der Zugriffskontrolle statt einer
+  Erleichterung. Abgeschlossene Vorgaenge werden NIE geloescht. Alle
+  Dateien auf der PRIVATEN Platte, jeder Zugriff ueber einen Controller.
+- **Betrieb**: `signaturen:ablaufen` (taeglich 04:05) zieht den
+  gespeicherten Zustand nach und widerruft die Zugaenge - die ANZEIGE
+  wartet nicht darauf (die Frist wird bei jedem Aufruf gerechnet, Lehre
+  vom Vertragsstatus). Der Nav-Zaehler zaehlt NUR abgeschlossene
+  Vorgaenge OHNE Zuordnung - dort wartet Arbeit; laufende Anfragen warten
+  auf den KUNDEN, sie mitzuzaehlen machte aus dem Abzeichen eine Zahl,
+  die man nicht kleiner bekommt. Einladung, Erinnerung, Code und
+  Abschluss-Mail sind bewusst NICHT queued (sie sind der einzige Weg zum
+  Dokument); die Abschluss-Mail traegt das PDF im ANHANG, nicht als Link
+  - nach dem Abschluss ist der Zugang widerrufen.
+- Tests: `SignatureModuleTest` (26 Faelle, beide Szenarien), `PdfStamperTest`.
+
 ## Offene Themen / wartet auf den Betreiber
 
 - **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026
@@ -2451,6 +2547,18 @@ Vollstaendig in `docs/OMNICHANNEL_ANALYSE_UND_ARCHITEKTUR.md`. Kurzfassung:
   Aufbewahrungsoptionen der API, Ergaenzung von Datenschutzerklaerung und
   Verarbeitungsverzeichnis (Hinweis im Chat, dass zunaechst ein Assistent
   antwortet, ist technisch umgesetzt).
+- **E-Signatur: rechtliche Einordnung je Geschaeftsfall.** Das Modul ist
+  fertig und produktiv nutzbar; es erzeugt eine EINFACHE elektronische
+  Signatur mit technischem Nachweis und sagt das auf jeder Protokollseite
+  auch so. Vom Betreiber zu klaeren, BEVOR damit formbeduerftige
+  Dokumente unterschrieben werden: fuer welche Vorgaenge (Maklervollmacht,
+  Kuendigung, Antrag, Beratungsdokumentation) die einfache Signatur
+  genuegt und wo das Gesetz Schriftform verlangt (u.a. Sect. 126a BGB) -
+  Frage an Rechtsanwalt/Datenschutzbeauftragten. Ergebnis gehoert in den
+  Zustimmungstext, der je Anfrage aenderbar ist. Ausserdem: Aufnahme der
+  gespeicherten Nachweisdaten (IP, Geraet, Zeitpunkt) in das
+  Verarbeitungsverzeichnis.
+
 - **Finale Logo-Dateien** kommen vom Betreiber (bevorzugt SVG, sonst PNG
   transparent ≥320px hoch; Light- und Dark-Variante; optional 512×512 Icon).
 - **Partner-Portal: VOLLAUSBAU** (schreibende Kundenaktionen) und
