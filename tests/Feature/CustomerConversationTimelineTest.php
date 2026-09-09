@@ -214,7 +214,11 @@ class CustomerConversationTimelineTest extends TestCase
             ->assertOk()
             ->assertSee('data-group="postfach"', false)
             ->assertSee('Kundenchat')
-            ->assertSee(route('admin.customer_chat'), false)
+            // Der Punkt "Kundenchat" fuehrt jetzt in die vereinheitlichte
+            // Liste, vorgefiltert auf den Portal-Kanal - dieselben
+            // Unterhaltungen, nur nicht mehr in einer eigenen Seite je
+            // Kanal. Die alte Seite bleibt ueber ihre Adresse erreichbar.
+            ->assertSee(route('admin.postfach', ['kanal' => 'portal']), false)
             ->assertSee(route('admin.email_inbox'), false);
     }
 }

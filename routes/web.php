@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\ChannelController;
 use App\Http\Controllers\Admin\ContractController as AdminContractController;
 use App\Http\Controllers\Admin\CustomerDocumentController as AdminCustomerDocumentController;
 use App\Http\Controllers\Admin\DuplicateController as AdminDuplicateController;
+use App\Http\Controllers\Admin\PostfachController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminCustomerChatController;
 use App\Http\Controllers\AiAssistantController;
@@ -550,6 +551,21 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::post('/customers/{id}/messages', [CustomerMessageController::class, 'store'])->name('customer.messages.store');
     Route::get('/messages/attachments/{id}/download', [CustomerMessageController::class, 'downloadAttachment'])->name('messages.attachment');
     Route::get('/messages/attachments/{id}/view', [CustomerMessageController::class, 'viewAttachment'])->name('messages.attachment.view');
+    /*
+    | DAS vereinheitlichte Postfach: EINE Liste ueber ALLE Kanaele.
+    | Die Kanaele stehen in der Datenbank - hier steht kein Kanalname,
+    | und ein neuer Kanal kostet deshalb keine Route.
+    */
+    Route::get('/postfach', [PostfachController::class, 'index'])->name('postfach');
+    Route::prefix('postfach/{id}')->name('postfach.')->group(function () {
+        Route::post('/antwort', [PostfachController::class, 'reply'])->name('reply');
+        Route::post('/uebernehmen', [PostfachController::class, 'takeOver'])->name('take_over');
+        Route::post('/zuweisen', [PostfachController::class, 'reassign'])->name('reassign');
+        Route::post('/zustand', [PostfachController::class, 'status'])->name('status');
+        Route::post('/kunde-verknuepfen', [PostfachController::class, 'linkCustomer'])->name('link_customer');
+        Route::post('/kunde-anlegen', [PostfachController::class, 'createCustomer'])->name('create_customer');
+    });
+
     // Zentraler Kunden-Chat: alle Portal-Unterhaltungen an einem Ort
     Route::get('/kundenchat', [AdminCustomerChatController::class, 'index'])->name('customer_chat');
     Route::get('/kundenchat/{id}/feed', [AdminCustomerChatController::class, 'feed'])

@@ -2,6 +2,7 @@
 
 namespace App\Support\Navigation;
 
+use App\Models\Channel;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 
@@ -136,13 +137,61 @@ final class AdminNavigation
      */
     private function postfach(): NavGroup
     {
-        return new NavGroup('postfach', 'Postfach', $this->items([
-            ['kundenchat', 'Kundenchat', 'admin.customer_chat', 'chat', ['admin.customer_chat*'], 'customer_messages', NavBadges::TONE_URGENT],
+        // DIE KANAELE KOMMEN AUS DER DATENBANK (Auftrag 3/14).
+        //
+        // Vorher stand hier ein fester Punkt "Kundenchat" - die Liste
+        // EINES Kanals. Jeder weitere Kanal haette einen weiteren festen
+        // Punkt gekostet, und die Navigation hat ein Limit, das genau
+        // davor schuetzt.
+        //
+        // Jetzt fuehrt jeder Kanal auf DIESELBE Liste, nur vorgefiltert.
+        // "Kundenchat" ist damit kein Sonderfall mehr, sondern der Name,
+        // den der Portal-Kanal in der Datenbank traegt - und ein neuer
+        // Kanal erscheint hier, ohne dass jemand diese Datei anfasst.
+        $items = [];
+        foreach ($this->kanaele() as $kanal) {
+            $items[] = new NavItem(
+                key: $kanal->key === Channel::PORTAL ? 'kundenchat' : 'kanal-'.$kanal->key,
+                label: $kanal->name,
+                url: route('admin.postfach', ['kanal' => $kanal->key]),
+                icon: 'chat',
+                activePatterns: ['admin.postfach*'],
+                badge: $kanal->key === Channel::PORTAL ? $this->badges->get('customer_messages') : 0,
+                badgeTone: NavBadges::TONE_URGENT,
+            );
+        }
+
+        return new NavGroup('postfach', 'Postfach', array_merge($items, $this->items([
             ['tickets', 'Tickets', 'admin.tickets', 'ticket', ['admin.tickets*', 'admin.ticket.*'], 'tickets'],
             ['anfragen', 'Anfragen', 'admin.inquiries', 'megaphone', ['admin.inquiries*']],
             ['email', 'E-Mail', 'admin.email_inbox', 'mail', ['admin.email_inbox*', 'admin.email.*', 'admin.email_accounts.*', 'admin.templates*'], 'email_suggestions'],
             ['team', 'Team-Chat', 'admin.chat.index', 'team', ['admin.chat.*'], 'team_chat', NavBadges::TONE_URGENT],
-        ]));
+        ])));
+    }
+
+    /**
+     * Die Kunden-Kanaele, die im Postfach einen eigenen Punkt bekommen.
+     *
+     * `supportsCustomers` ist der Massstab, nicht eine Liste von Namen:
+     * der interne Chat hat keine Kunden und gehoert deshalb nicht in
+     * diese Reihe (er steht als "Team-Chat" auf seiner eigenen Seite). Faellt die Abfrage aus (frische Datenbank, Migration
+     * noch nicht gelaufen), bleibt die Navigation eben ohne Kanaele -
+     * sie darf nie die ganze Beraterwelt mitreissen.
+     *
+     * @return array<int,Channel>
+     */
+    private function kanaele(): array
+    {
+        try {
+            return Channel::active()
+                ->orderBy('sort')
+                ->get()
+                ->filter(fn ($k) => $k->supports('supportsCustomers'))
+                ->values()
+                ->all();
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     /** Der Arbeitstag: was heute zu tun ist und wann. */

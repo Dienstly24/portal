@@ -13,6 +13,8 @@ use App\Models\InternalConversationParticipant;
 use App\Models\Task;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\Messaging\Inbox\ConversationInbox;
+use App\Services\Messaging\Inbox\InboxFilters;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -97,6 +99,16 @@ final class NavBadges
             // Ein Kunde wartet auf eine Antwort.
             'customer_messages' => CustomerMessage::fromCustomer()->unread()
                 ->when($this->ids() !== null, fn ($q) => $q->whereIn('customer_id', $this->ids()))->count(),
+
+            // UNGELESENE Unterhaltungen im vereinheitlichten Postfach -
+            // ueber ALLE Kanaele, gezaehlt mit derselben Sichtbarkeits-
+            // grenze wie die Liste selbst. Deshalb ueber den Inbox-Dienst
+            // und nicht mit einer zweiten Abfrage: zwei Zaehlweisen
+            // laufen frueher oder spaeter auseinander, und dann glaubt
+            // niemand mehr der Zahl.
+            'conversations_unread' => app(ConversationInbox::class)
+                ->query($this->user, new InboxFilters(view: InboxFilters::VIEW_UNREAD))
+                ->count(),
 
             // NEUE, noch nicht uebernommene Kundentickets.
             'tickets' => Ticket::customerOnly()->where('status', 'open')

@@ -6,6 +6,7 @@ use App\Jobs\Messaging\SendOutboundMessageJob;
 use App\Services\Ai\Assistant\AssistantSettings;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 /**
@@ -143,11 +144,15 @@ class CustomerMessage extends Model
         });
     }
 
-    public function customer() { return $this->belongsTo(Customer::class); }
+    /** @return BelongsTo<Customer, $this> */
+    public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
     /** @return BelongsTo<Conversation, $this> */
     public function conversation(): BelongsTo { return $this->belongsTo(Conversation::class, 'conversation_id'); }
-    public function sender() { return $this->belongsTo(User::class, 'sender_id'); }
-    public function attachments() { return $this->hasMany(CustomerMessageAttachment::class, 'message_id'); }
+    /** @return BelongsTo<User, $this> */
+    public function sender(): BelongsTo { return $this->belongsTo(User::class, 'sender_id'); }
+
+    /** @return HasMany<CustomerMessageAttachment, $this> */
+    public function attachments(): HasMany { return $this->hasMany(CustomerMessageAttachment::class, 'message_id'); }
 
     public function scopeFromStaff($q) { return $q->where('from_staff', true); }
     public function scopeFromCustomer($q) { return $q->where('from_staff', false); }
