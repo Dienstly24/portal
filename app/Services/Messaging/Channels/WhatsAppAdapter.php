@@ -98,6 +98,19 @@ class WhatsAppAdapter extends AbstractChannelAdapter
         return null;
     }
 
+    /**
+     * Nur die Ziffern einer Rufnummer.
+     *
+     * Dieselbe Nummer steht in der Nutzlast in zwei Schreibweisen: die
+     * `wa_id` als reine Ziffernfolge, die eigene Nummer im Kopf mit
+     * Pluszeichen und Leerzeichen. Ein Zeichenvergleich waere deshalb
+     * IMMER ungleich - und der Echo-Schutz waere lautlos wirkungslos.
+     */
+    private function digits(string $nummer): string
+    {
+        return preg_replace('/\D+/', '', $nummer) ?? '';
+    }
+
     /** @return array<int,InboundMessage> */
     public function parseInbound(array $payload, ?ChannelAccount $account): array
     {
@@ -112,16 +125,55 @@ class WhatsAppAdapter extends AbstractChannelAdapter
                     $namen[(string) ($kontakt['wa_id'] ?? '')] = $kontakt['profile']['name'] ?? null;
                 }
 
+                // Die eigene Geschaeftsnummer dieses Kontos. Sie steht
+                // in der Nutzlast selbst - das ist verlaesslicher als
+                // ein gepflegter Wert, denn sie beschreibt genau die
+                // Nummer, ueber die DIESE Zustellung kam.
+                $eigeneNummer = $this->digits(
+                    (string) ($value['metadata']['display_phone_number'] ?? '')
+                );
+
+                // COEXISTENCE: Meta meldet Nachrichten, die jemand in der
+                // WhatsApp Business App getippt hat, in einem eigenen
+                // Feld. Sie sehen aus wie Kundennachrichten und sind das
+                // Gegenteil davon - siehe InboundMessage::$fromBusiness.
+                $eintraege = [];
                 foreach (($value['messages'] ?? []) as $msg) {
+                    $eintraege[] = [$msg, false];
+                }
+                foreach (($value['message_echoes'] ?? []) as $msg) {
+                    $eintraege[] = [$msg, true];
+                }
+
+                foreach ($eintraege as [$msg, $istEcho]) {
                     $von = (string) ($msg['from'] ?? '');
                     if ($von === '') {
+                        continue;
+                    }
+
+                    // Zweiter Weg, unabhaengig vom Feldnamen: steht als
+                    // Absender unsere EIGENE Nummer, kann es keine
+                    // Kundennachricht sein. Meta hat die Zustellung von
+                    // Echos ueber die Jahre mehrfach anders benannt; auf
+                    // EINEN Feldnamen zu bauen hiesse, die Schleife beim
+                    // naechsten Format wieder zu oeffnen.
+                    $vonUns = $istEcho
+                        || ($eigeneNummer !== '' && $this->digits($von) === $eigeneNummer);
+
+                    // Die Gegenstelle ist bei einem Echo der EMPFAENGER,
+                    // nicht der Absender - sonst liefe die eigene Antwort
+                    // in eine Unterhaltung mit uns selbst.
+                    $gegenstelle = $vonUns
+                        ? (string) ($msg['to'] ?? $msg['recipient_id'] ?? '')
+                        : $von;
+                    if ($gegenstelle === '') {
                         continue;
                     }
 
                     [$typ, $text, $anhaenge] = $this->readContent($msg);
 
                     $nachrichten[] = new InboundMessage(
-                        externalUserId: $von,
+                        externalUserId: $gegenstelle,
                         externalMessageId: (string) ($msg['id'] ?? ''),
                         // WhatsApp kennt keine Unterhaltungs-Kennung: die
                         // Unterhaltung ist durch Konto + Gegenstelle
@@ -130,14 +182,15 @@ class WhatsAppAdapter extends AbstractChannelAdapter
                         text: $text,
                         type: $typ,
                         attachments: $anhaenge,
-                        senderName: $namen[$von] ?? null,
+                        senderName: $vonUns ? null : ($namen[$von] ?? null),
                         // Die wa_id IST die Telefonnummer in
                         // internationaler Schreibweise - genau das, was
                         // der CustomerResolver zur Zuordnung braucht.
-                        senderPhone: $von,
+                        senderPhone: $gegenstelle,
                         sentAt: isset($msg['timestamp'])
                             ? Carbon::createFromTimestamp((int) $msg['timestamp'])
                             : null,
+                        fromBusiness: $vonUns,
                     );
                 }
             }

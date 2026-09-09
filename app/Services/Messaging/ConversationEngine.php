@@ -67,17 +67,33 @@ class ConversationEngine
                 }
             }
 
+            // Eine Meldung ueber unsere EIGENE Nachricht ist keine
+            // Kundenfrage. Sie wird gespeichert - der Verlauf soll
+            // vollstaendig sein, sonst fehlt im Postfach genau die
+            // Antwort, die der Kunde bekommen hat - aber als AUSGEHEND
+            // und bereits gelesen: sie erzeugt keinen Ungelesen-Stand,
+            // keine Zuweisung und keine KI-Antwort (siehe unten).
+            $vonUns = $inbound->fromBusiness;
+
             $message = CustomerMessage::create([
                 'conversation_id' => $conversation->id,
                 'customer_id' => $customer?->id,
-                'direction' => CustomerMessage::DIRECTION_INCOMING,
-                'sender_type' => CustomerMessage::SENDER_CUSTOMER,
+                'direction' => $vonUns
+                    ? CustomerMessage::DIRECTION_OUTGOING
+                    : CustomerMessage::DIRECTION_INCOMING,
+                // Getippt hat ein Mensch - nur eben nicht hier. Als
+                // `system` zu buchen waere falsch: es war kein Automat.
+                'sender_type' => $vonUns
+                    ? CustomerMessage::SENDER_EMPLOYEE
+                    : CustomerMessage::SENDER_CUSTOMER,
                 'external_message_id' => $inbound->externalMessageId,
                 'message_type' => $inbound->type,
                 'body' => (string) $inbound->text,
                 'status' => CustomerMessage::STATUS_DELIVERED,
                 'metadata' => $inbound->metadata ?: null,
                 'delivered_at' => now(),
+                // Ungelesen zaehlt nur, was auf eine Antwort wartet.
+                'read_at' => $vonUns ? now() : null,
             ]);
 
             foreach ($inbound->attachments as $anhang) {
@@ -109,16 +125,28 @@ class ConversationEngine
                 // zurueck: der Kunde schreibt weiter, also ist der Vorgang
                 // nicht erledigt. Ein ARCHIV bleibt dagegen Archiv - es ist
                 // eine bewusste Entscheidung eines Menschen.
-                'status' => $conversation->archived_at
+                'status' => ($conversation->archived_at || $vonUns)
                     ? $conversation->status
                     : Conversation::STATUS_OPEN,
-                'reopened_at' => $conversation->status === Conversation::STATUS_CLOSED
+                // Nur der KUNDE holt eine geschlossene Unterhaltung
+                // zurueck. Unsere eigene Nachricht ist oft genau das
+                // Schlusswort - sie darf den Vorgang nicht wieder
+                // aufmachen.
+                'reopened_at' => (! $vonUns && $conversation->status === Conversation::STATUS_CLOSED)
                     ? now() : $conversation->reopened_at,
             ])->save();
 
-            $this->assignments->autoAssign($conversation);
+            // Beides gilt nur fuer eine echte Kundennachricht: eine
+            // Meldung ueber die eigene Antwort darf weder die
+            // Zustaendigkeit verschieben noch die KI anstossen. Ohne
+            // diese Grenze antwortet die KI auf uns selbst, die Antwort
+            // erzeugt die naechste Meldung, und die Schleife laeuft
+            // beim Kunden aus.
+            if (! $vonUns) {
+                $this->assignments->autoAssign($conversation);
 
-            event(new InboundMessageReceived($conversation, $message));
+                event(new InboundMessageReceived($conversation, $message));
+            }
 
             return $message;
         });
