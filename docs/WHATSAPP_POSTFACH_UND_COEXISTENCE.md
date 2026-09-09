@@ -230,3 +230,149 @@ dem Gedaechtnis geschrieben.
 (5) - dazu unveraendert `WhatsAppChannelTest`, `WhatsAppDeliveryTest`,
 `WhatsAppAbnahmeTest`, `AiChannelIntegrationTest`,
 `ConversationAssignmentTest`, `MessagingArchitectureTest`.
+
+
+---
+
+# TEIL B - COEXISTENCE (09.09.2026)
+
+## Vorab: der Bericht nach Abschnitt 36
+
+Der Betreiber hat sich vor jedem Schritt bei Meta fuenf Angaben
+ausbedungen. Hier sind sie. **Bei Meta ist weiterhin nichts geschehen** -
+die Nummer ist unberuehrt, der Kanal steht auf inaktiv.
+
+### 1. Was im Code FERTIG ist
+
+| Baustein | Zustand |
+|---|---|
+| Echo-Schutz (`smb_message_echoes`) | fertig, 12 Tests |
+| `channel_accounts.connection_type` (`cloud_api` / `coexistence`) | fertig |
+| Verbindungszustand (nicht verbunden / ausstehend / verbunden / Authentifizierungsfehler / Webhook-Fehler / getrennt) | fertig |
+| Embedded Signup: Code -> Token AUF DEM SERVER | fertig |
+| Pruefung der Nummer mit dem erhaltenen Token | fertig |
+| Webhook-Abonnement auf dem WABA | fertig |
+| Anbindungsart von Hand richtigstellbar (Bestandsnummern) | fertig |
+| Anzeige in `/admin/kanaele` samt Fehlergrund und Pruefzeitpunkt | fertig |
+
+### 2. Was bei META einzurichten ist
+
+In der bestehenden App **Dienstly24** (kein Grund fuer eine zweite):
+
+| Schritt | Wo |
+|---|---|
+| Produkt "Facebook Login for Business" hinzufuegen | App -> Produkte |
+| Eine **Konfiguration** anlegen (ergibt die `config_id`) mit den Assets WhatsApp-Konto + Nummer | Login for Business -> Konfigurationen |
+| Berechtigungen `whatsapp_business_management`, `whatsapp_business_messaging`, `business_management` | dieselbe Konfiguration |
+| Gueltige OAuth-Redirect-URI und erlaubte Domains eintragen | Facebook Login -> Einstellungen |
+| Webhook-URL `https://<domain>/webhooks/whatsapp` + Bestaetigungs-Token | WhatsApp -> Konfiguration |
+| Webhook-Felder abonnieren: `messages`, **`smb_message_echoes`**, dazu `history` und `smb_app_state_sync` | WhatsApp -> Webhook-Felder |
+| App-Secret ablesen | App -> Einstellungen -> Allgemein |
+
+### 3. Was der BETREIBER selbst tun muss
+
+1. Die drei Werte in die Server-`.env` setzen - **nie ins Repository, nie
+   in den Chat**:
+   `META_APP_ID`, `META_APP_SECRET`, `META_ES_CONFIG_ID`.
+   Ohne sie wird der Weg gar nicht angeboten (und die CSP-Freigabe fuer
+   Meta bleibt weg).
+2. Den Coexistence-Weg bei Meta durchlaufen und in der WhatsApp Business
+   App auf dem Telefon **bestaetigen** - dieser Schritt passiert auf dem
+   Geraet und kann von hier aus weder ausgeloest noch geprueft werden.
+3. Zahlungsmethode am WhatsApp Business Account hinterlegen (ueber die
+   API nicht pflegbar - derselbe Vorbehalt wie bei den Anzeigen).
+4. WhatsApp in Datenschutzerklaerung und Verarbeitungsverzeichnis
+   aufnehmen (Empfaenger Meta, Auftragsverarbeitung).
+5. **Die Nummer NICHT abmelden und NICHT als gewoehnliche Cloud-API-
+   Nummer registrieren**, solange der Coexistence-Weg nicht bestaetigt
+   ist.
+
+### 4. Was DIENSTLY automatisch tut
+
+Nach dem Klick auf "WhatsApp Business verbinden":
+Code entgegennehmen -> **auf dem Server** gegen ein Token tauschen ->
+Nummer mit diesem Token lesen (der Beweis, dass er traegt) -> Konto
+anlegen oder ergaenzen -> Webhook auf dem WABA abonnieren -> Zustand
+setzen. Zugangsdaten liegen verschluesselt, stehen in `$hidden`, gehen
+nie ins Frontend und nie in ein Protokoll.
+
+### 5. Welchen offiziellen Weg das System benutzt
+
+**Embedded Signup** (Facebook Login for Business), also der von Meta
+vorgesehene Weg. Ausdruecklich NICHT: WhatsApp-Web-Automatisierung,
+QR-Umwege, inoffizielle Schnittstellen, Sitzungs-Abgriff,
+Browser-Steuerung oder ein Zwischenanbieter (kein Twilio, kein
+360dialog) - die Anbindung laeuft direkt gegen Meta.
+
+Im Fenster gibt es ZWEI Auswahlen, und sie sind nicht dasselbe:
+- ohne Zusatz: die Nummer laeuft allein ueber die Cloud API;
+- mit `featureType = whatsapp_business_app_onboarding`: der
+  **Coexistence**-Weg, die Nummer bleibt zusaetzlich in der Business App.
+
+**Aus dem Fenster kommt ein kurzlebiger CODE, kein Token.** Der Tausch
+laeuft ueber `GET /{version}/oauth/access_token` mit `client_id`,
+`client_secret` und `code` - deshalb auf dem Server: ein App-Secret im
+Browser waere ein Dauerschluessel fuer jeden, der die Seite oeffnet.
+
+**Was nicht aus dem Repository stammt und geprueft wurde**: die
+Feldnamen und der Ablauf sind gegen Metas Dokumentation und mehrere
+Anbieter-Dokumentationen abgeglichen worden, nicht aus dem Gedaechtnis
+geschrieben. Bestaetigt: das Webhook-FELD heisst `smb_message_echoes`,
+die Nachrichten darin stehen unter dem Schluessel `message_echoes`,
+`from` ist die Geschaeftsnummer und `to` der Kunde. **Widerspruechlich
+in den Quellen** ist das Enddatum der alten Signup-Fassung (8. bzw.
+15. Oktober 2026) - deshalb steht hier kein Datum als Tatsache. Wir
+setzen ohnehin die aktuelle Fassung ein.
+
+## Der Zustand ist zweigeteilt - und das ist der Punkt
+
+`connection_type` (WIE angebunden) und `connection_status` (WIE es
+steht) sind zwei Spalten, nicht eine. Eine einzige haette
+frueher oder spaeter einen Wert `connected_coexistence` bekommen, und
+die Frage "steht die Verbindung?" waere nur noch ueber eine Liste von
+Sonderwerten zu beantworten.
+
+**Ein gruener Verbindungstest macht aus einem Cloud-API-Konto NIE ein
+Coexistence-Konto** (Auftrag 35, als Test festgehalten). Der Test setzt
+den ZUSTAND; die ART aendert nur der ausdrueckliche Weg oder ein Mensch.
+
+## Zwei Waechter haben mitgeredet
+
+**Der Architektur-Test** hat den Onboarding-Code beanstandet: er nennt
+Meta beim Namen und lag im KERN. Zu Recht - eine Anbindung ist
+Plattformwissen. Er liegt jetzt unter `Channels/Onboarding/`, dort, wo
+Plattformwissen hingehoert.
+
+**Der Fremdressourcen-Test** hat das Meta-SDK gemeldet. Ebenfalls zu
+Recht, und es war mehr als eine Formalie: unsere eigene
+Inhaltsrichtlinie haette das Skript **blockiert** - die Anbindung haette
+im Browser stumm nicht funktioniert. Meta bietet fuer Embedded Signup
+ausschliesslich ein JavaScript-SDK an; ein serverseitiger Redirect mit
+`config_id` liess sich nicht belegen. Also eine ENGE, benannte Ausnahme:
+`connect.facebook.net` im `script-src`, **nur wenn der Weg eingerichtet
+ist**, und nur auf einer Seite der Beraterwelt, die ein Admin oeffnet -
+nie im Kundenportal, nie auf der Website.
+
+## Ein Fehler, den nur die Testsuite zeigen konnte
+
+Die Methode hiess zuerst `setConnection()`. **Die gibt es in Eloquent
+bereits** - sie setzt den Namen der Datenbankverbindung. Ueberschrieben
+schrieb jedes Laden eines Modells in die Datenbank und rief sich selbst
+auf; PHP starb am ueberlaufenden Stack. Die Meldung lautete nur
+"Premature end of PHP process", ohne Datei und ohne Zeile. Sie heisst
+jetzt `markConnection()`. Ein Name, den das Framework schon vergeben
+hat, ist nie nur ein Namensstreit.
+
+## Weiterhin NICHT gebaut
+
+- **Ausgehende Mediendateien** und **genehmigte Vorlagen** ausserhalb des
+  24-Stunden-Fensters.
+- Die `history`- und `smb_app_state_sync`-Ereignisse (frueherer
+  Schriftwechsel und Kontakte aus der Business App) werden noch nicht
+  ausgewertet - sie sind abonnierbar, aber der Kern verarbeitet sie
+  nicht. Bis dahin beginnt die Unterhaltung im Postfach mit der ersten
+  Nachricht NACH der Anbindung.
+- **Coexistence gilt erst als eingerichtet, wenn Meta sie erteilt hat.**
+  Das System zeigt an, was es weiss - es behauptet es nicht.
+
+Tests: `WhatsAppOnboardingTest` (14 Faelle).

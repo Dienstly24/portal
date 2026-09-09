@@ -10,8 +10,10 @@ use App\Models\Conversation;
 use App\Models\SystemSetting;
 use App\Services\Ai\Assistant\AiSettingsResolver;
 use App\Services\Messaging\Channels\ChannelManager;
+use App\Services\Messaging\Channels\Onboarding\EmbeddedSignupService;
 use App\Services\Messaging\Dto\ConnectionTest;
 use App\Support\AiMode;
+use App\Support\ChannelConnection;
 use Illuminate\Http\Request;
 
 /**
@@ -34,7 +36,7 @@ use Illuminate\Http\Request;
  */
 class ChannelController extends Controller
 {
-    public function index(ChannelManager $manager, AiSettingsResolver $resolver)
+    public function index(ChannelManager $manager, AiSettingsResolver $resolver, EmbeddedSignupService $signup)
     {
         $channels = Channel::with(['accounts' => fn ($q) => $q->orderBy('name')])
             ->orderBy('sort')->orderBy('name')->get();
@@ -52,6 +54,8 @@ class ChannelController extends Controller
             'globalModeExplicit' => (string) SystemSetting::get(AiSettingsResolver::GLOBAL_MODE_KEY, ''),
             'modes' => AiMode::LABELS,
             'modeHints' => AiMode::DESCRIPTIONS,
+            'signupReady' => $signup->isConfigured(),
+            'signupConfig' => $signup->browserConfig(),
         ]);
     }
 
@@ -159,6 +163,8 @@ class ChannelController extends Controller
             'name' => $account->name,
         ]);
 
+        $account->markConnection(ChannelConnection::DISCONNECTED);
+
         return back()->with('success',
             'Zugang zu "'.$account->name.'" getrennt. Unterhaltungen und Nachrichten bleiben vollstaendig erhalten.');
     }
@@ -186,8 +192,45 @@ class ChannelController extends Controller
             'status' => $result->status,
         ]);
 
+        // DER TEST SETZT DEN ZUSTAND - aber nur den der Verbindung, nie
+        // die Anbindungsart. Dass die Cloud API antwortet, sagt ueber
+        // die Coexistence-Freigabe nichts (Auftrag 35); ein gruener Test
+        // darf ein Konto also nie zu einem Coexistence-Konto machen.
+        $account->markConnection(
+            $result->ok() ? ChannelConnection::CONNECTED : ChannelConnection::AUTH_ERROR,
+            $result->ok() ? null : $result->message
+        );
+
         return back()->with($result->ok() ? 'success' : 'warning',
             'Verbindungstest "'.$account->name.'": '.$result->label().' - '.$result->message);
+    }
+
+    /**
+     * Anbindungsart von Hand setzen (Auftrag 22).
+     *
+     * Warum das ueberhaupt von Hand geht: eine Nummer, die schon vor
+     * diesem Modul in der Business App lief, hat den Embedded-Signup-Weg
+     * nie durchlaufen - ihr Zustand liesse sich sonst nie richtigstellen.
+     * Es bleibt eine ausdrueckliche Erklaerung eines Menschen, nie eine
+     * Ableitung des Systems.
+     */
+    public function updateConnectionType(Request $request, int $id)
+    {
+        $account = ChannelAccount::findOrFail($id);
+        $data = $request->validate([
+            'connection_type' => ['required', 'string', 'in:'.implode(',', array_keys(ChannelConnection::TYPES))],
+        ]);
+
+        $account->forceFill(['connection_type' => $data['connection_type']])->save();
+
+        ActivityLog::record('channel_account_connection_type', 'channel_account', $account->id, [
+            'name' => $account->name,
+            'connection_type' => $data['connection_type'],
+        ]);
+
+        return back()->with('success', 'Anbindungsart gesetzt: '
+            .ChannelConnection::TYPES[$data['connection_type']]
+            .'. Sie beschreibt, wie die Nummer angebunden ist - der Verbindungstest bleibt davon unberührt.');
     }
 
     /** Globale KI-Betriebsart (Abschnitte 50/86). */

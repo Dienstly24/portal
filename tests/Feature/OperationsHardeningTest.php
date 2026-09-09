@@ -160,6 +160,23 @@ class OperationsHardeningTest extends TestCase
         'auth/register.blade.php' => [
             '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>',
         ],
+        // ZWEITE Ausnahme (Auftrag Teil B): das Anmeldefenster von Meta
+        // fuer die WhatsApp-Anbindung. Meta bietet fuer diesen Weg
+        // ausschliesslich ein JavaScript-SDK an; ohne den Host laesst
+        // sich die offizielle Anbindung nicht durchfuehren, und der
+        // einzige Ausweg waere, Zugangs-Token von Hand durch die
+        // Oberflaeche zu tragen - genau das soll sie vermeiden.
+        //
+        // Die Ausnahme ist eng: sie steht auf EINER Seite der
+        // BERATERWELT, die nur ein Admin oeffnet - nie im Kundenportal
+        // und nie auf der Website, wo die DSGVO-Frage der Besucher-IP
+        // gestellt wird. Die passende CSP-Freigabe in SecurityHeaders
+        // wird zudem nur gesetzt, wenn der Weg ueberhaupt eingerichtet
+        // ist.
+        'admin/channels/_whatsapp_onboarding.blade.php' => [
+            '<script async defer crossorigin="anonymous"
+            src="https://connect.facebook.net/de_DE/sdk.js" @cspNonce></script>',
+        ],
     ];
 
     private function ausnahmenEntfernen(string $relativ, string $inhalt): string

@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\CustomerDocumentController as AdminCustomerDocume
 use App\Http\Controllers\Admin\DuplicateController as AdminDuplicateController;
 use App\Http\Controllers\Admin\PostfachController;
 use App\Http\Controllers\Admin\SignatureController as AdminSignatureController;
+use App\Http\Controllers\Admin\WhatsAppOnboardingController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminCustomerChatController;
 use App\Http\Controllers\AiAssistantController;
@@ -952,6 +953,11 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         Route::put('/konten/{id}', [$c, 'updateAccount'])->whereNumber('id')->name('accounts.update');
         Route::post('/konten/{id}/test', [$c, 'testAccount'])->whereNumber('id')->name('accounts.test');
         Route::post('/konten/{id}/trennen', [$c, 'disconnectAccount'])->whereNumber('id')->name('accounts.disconnect');
+        Route::put('/konten/{id}/anbindungsart', [$c, 'updateConnectionType'])
+            ->whereNumber('id')->name('accounts.connection_type');
+        // Rueckweg aus dem Meta-Fenster: nur ein Code, nie ein Token.
+        Route::post('/whatsapp/verbinden', [WhatsAppOnboardingController::class, 'complete'])
+            ->name('whatsapp.complete');
     });
 
     // KI-Anbieter (Auftrag Abschnitte 81/95/101) - nur admin: hier liegt

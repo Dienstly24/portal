@@ -137,9 +137,19 @@ class WhatsAppAdapter extends AbstractChannelAdapter
                 // WhatsApp Business App getippt hat, in einem eigenen
                 // Feld. Sie sehen aus wie Kundennachrichten und sind das
                 // Gegenteil davon - siehe InboundMessage::$fromBusiness.
+                //
+                // Das Webhook-FELD heisst `smb_message_echoes`, die
+                // Nutzlast darin fuehrt die Nachrichten unter
+                // `message_echoes`. Gelesen wird der ARRAY-Schluessel:
+                // er ist die Stelle, an der die Daten wirklich stehen.
+                // Zusaetzlich zaehlt jede Nachricht als Echo, deren
+                // Aenderungsfeld auf ein Echo lautet - falls Meta die
+                // Nachrichten eines Tages unter `messages` fuehrt.
+                $echoFeld = str_contains((string) ($change['field'] ?? ''), 'message_echoes');
+
                 $eintraege = [];
                 foreach (($value['messages'] ?? []) as $msg) {
-                    $eintraege[] = [$msg, false];
+                    $eintraege[] = [$msg, $echoFeld];
                 }
                 foreach (($value['message_echoes'] ?? []) as $msg) {
                     $eintraege[] = [$msg, true];
