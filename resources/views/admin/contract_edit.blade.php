@@ -76,6 +76,17 @@
     </form>
 </div>
 
+{{-- Signaturen zu diesem Vertrag (natives E-Signatur-Modul, 09.09.2026).
+     Derselbe Baustein wie in der Kundenakte - zwei Kopien liefen
+     erfahrungsgemaess auseinander. --}}
+<div class="card" style="max-width:800px;">
+    @include('admin.partials.signature_section', [
+        'signatures' => \App\Models\SignatureRequest::with('signers')
+            ->where('contract_id', $contract->id)->latest()->limit(8)->get(),
+        'neueSignaturUrl' => route('admin.signatures.create', ['vertrag' => $contract->id]),
+    ])
+</div>
+
 {{-- Aenderungsverlauf (Version History): alte/neue Werte je Feld --}}
 @include('admin.partials.contract_revisions', ['contract' => $contract])
 

@@ -10,9 +10,11 @@ use App\Models\Document;
 use App\Models\DocumentRequest;
 use App\Models\EmailMessage;
 use App\Models\InternalConversationParticipant;
+use App\Models\SignatureRequest;
 use App\Models\Task;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Support\SignatureStatus;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -141,6 +143,18 @@ final class NavBadges
             // Aenderung nur noch sichtbare Kunden.
             'document_requests' => DocumentRequest::awaitingReview()
                 ->when($this->ids() !== null, fn ($q) => $q->whereIn('customer_id', $this->ids()))->count(),
+
+            // Signaturen: die HANDLUNG ist der abgeschlossene Vorgang ohne
+            // Zuordnung - dort wartet Arbeit (Kunde zuordnen). Laufende
+            // Anfragen warten dagegen auf den KUNDEN, nicht auf uns; sie
+            // hier mitzuzaehlen machte aus dem Abzeichen eine Zahl, die man
+            // nicht kleiner bekommt, und damit eine, die man ignoriert.
+            // Sichtbarkeit wie in der Liste: Kundenvorgaenge nach Portfolio,
+            // eigenstaendige nach Urheberschaft.
+            'signatures' => SignatureRequest::where('status', SignatureStatus::COMPLETED)
+                ->whereNull('customer_id')
+                ->when(! $this->user->canSeeAllCustomers(), fn ($q) => $q->where('created_by', $this->user->id))
+                ->count(),
 
             'commissions' => $this->isOneOf(['admin', 'manager'])
                 ? Commission::pendingReview()->count() : 0,

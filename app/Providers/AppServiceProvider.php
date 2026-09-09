@@ -670,6 +670,19 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        // Elektronische Unterschrift. Zwei Eimer mit verschiedenem Zweck:
+        // der IP-Eimer soll das DURCHPROBIEREN von Tokens unbezahlbar
+        // machen, der Token-Eimer ist bewusst weit - ein echter
+        // Unterzeichner laedt Seitenbilder, holt sich einen neuen Code und
+        // versucht es noch einmal; wer dabei ausgesperrt wird, kann seinen
+        // Vertrag nicht unterschreiben und ruft im Buero an.
+        RateLimiter::for('signatur', function ($request) {
+            return [
+                Limit::perMinute(60)->by('sign-ip:'.$request->ip()),
+                Limit::perMinute(120)->by('sign-token:'.sha1((string) $request->route('token'))),
+            ];
+        });
+
         // Passwort vergessen. Der Adress-Eimer ist hier der wichtigere:
         // ohne ihn laesst sich ein fremdes Postfach mit Reset-Mails
         // fluten, solange der Angreifer nur genug IPs hat.
