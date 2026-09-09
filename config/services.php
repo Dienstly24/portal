@@ -48,6 +48,20 @@ return [
         // Schutzgrenze: hoechstes Tagesbudget in EUR, das aus dem System
         // heraus gesetzt werden kann (echtes Geld - bewusst gedeckelt).
         'ads_max_daily_budget' => (int) env('META_ADS_MAX_DAILY_BUDGET', 100),
+
+        /*
+        | Embedded Signup (WhatsApp-Anbindung ueber den offiziellen Weg).
+        |
+        | `app_id` und `config_id` sind OEFFENTLICH - sie stehen im
+        | Browser, das ist bei diesem Verfahren so vorgesehen. Das
+        | `app_secret` ist es NICHT: der Tausch des Codes gegen ein
+        | Token passiert ausschliesslich auf dem Server. Ein Secret im
+        | Frontend waere ein dauerhaft gueltiger Generalschluessel fuer
+        | jeden, der die Seite oeffnet.
+        */
+        'app_id' => env('META_APP_ID'),
+        'app_secret' => env('META_APP_SECRET'),
+        'es_config_id' => env('META_ES_CONFIG_ID'),
     ],
 
     'resend' => [

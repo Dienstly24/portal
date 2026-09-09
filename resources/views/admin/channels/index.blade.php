@@ -88,6 +88,13 @@
         <div style="margin-top:16px;">
             <div style="font-weight:600;margin-bottom:8px;">Geschäftskonten</div>
 
+            @if($channel->key === 'whatsapp')
+                @include('admin.channels._whatsapp_onboarding', [
+                    'signupReady' => $signupReady,
+                    'signupConfig' => $signupConfig,
+                ])
+            @endif
+
             @forelse($channel->accounts as $account)
                 @php
                     $keys = array_keys($account->credentials ?? []);
@@ -147,6 +154,45 @@
                             <button type="submit" class="btn btn-gold" style="margin-bottom:2px;">Speichern</button>
                         </div>
                     </form>
+
+                    {{-- ZUSTAND UND ANBINDUNGSART - zwei getrennte Aussagen.
+                         "Cloud API verbunden" ist NICHT "Coexistence verbunden";
+                         das sind zwei Freigaben von Meta (Auftrag 35). --}}
+                    <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;
+                                border-top:1px solid var(--line);padding-top:10px;">
+                        <div style="min-width:220px;">
+                            <span style="font-size:12px;color:var(--text-muted);">Verbindung</span><br>
+                            @php $ton = \App\Support\ChannelConnection::tone($account->connection_status); @endphp
+                            <strong style="color:{{ $ton === 'ok' ? 'var(--emerald)' : ($ton === 'error' ? '#C0392B' : ($ton === 'warn' ? '#92400E' : 'var(--text-muted)')) }};">
+                                {{ $account->connectionLabel() }}
+                            </strong>
+                            @if($account->connection_error)
+                                <div style="font-size:12px;color:#C0392B;">{{ $account->connection_error }}</div>
+                            @endif
+                            @if($account->connection_checked_at)
+                                <div style="font-size:11px;color:var(--text-muted);">
+                                    geprüft {{ $account->connection_checked_at->lokal()->format('d.m.Y H:i') }}
+                                </div>
+                            @endif
+                            @if($account->waba_id)
+                                <div style="font-size:11px;color:var(--text-muted);">WABA {{ $account->waba_id }}</div>
+                            @endif
+                        </div>
+
+                        <form method="POST" action="{{ route('admin.channels.accounts.connection_type', $account->id) }}"
+                              style="display:flex;gap:6px;align-items:flex-end;">
+                            @csrf @method('PUT')
+                            <label style="min-width:240px;">
+                                <span style="font-size:12px;color:var(--text-muted);">Anbindungsart</span>
+                                <select name="connection_type" class="field">
+                                    @foreach(\App\Support\ChannelConnection::TYPES as $key => $label)
+                                        <option value="{{ $key }}" @selected($account->connection_type === $key)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
+                            <button type="submit" class="btn" style="margin-bottom:2px;">Setzen</button>
+                        </form>
+                    </div>
 
                     <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
                         <form method="POST" action="{{ route('admin.channels.accounts.test', $account->id) }}">

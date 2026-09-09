@@ -87,11 +87,25 @@ class SecurityHeaders
     {
         $nonce = "'nonce-".CspNonce::get()."'";
 
-        // Turnstile (Bot-Schutz der Registrierung, Audit SEC-1) ist der
-        // EINZIGE fremde Skript-Host. Er steht hier ausdruecklich und
-        // nicht als Platzhalter: jeder erlaubte Fremdhost ist ein
+        // Turnstile (Bot-Schutz der Registrierung, Audit SEC-1) war lange
+        // der EINZIGE fremde Skript-Host. Jeder erlaubte Fremdhost steht
+        // hier ausdruecklich und nie als Platzhalter: er ist ein
         // moeglicher Weg fuer eingeschleusten Inhalt.
         $turnstile = 'https://challenges.cloudflare.com';
+
+        // ZWEITER Fremdhost, eng begrenzt: das Anmeldefenster von Meta
+        // (WhatsApp-Anbindung, Auftrag Teil B). Meta bietet fuer diesen
+        // Weg ausschliesslich ein JavaScript-SDK an - ohne den Host ist
+        // die offizielle Anbindung nicht durchfuehrbar, und der einzige
+        // Ausweg waere, Zugangs-Token von Hand durch die Oberflaeche zu
+        // tragen. Genau das soll der Weg vermeiden.
+        //
+        // NUR WENN EINGERICHTET: ist Embedded Signup auf dem Server
+        // nicht konfiguriert, bleibt die Freigabe weg. Eine Erlaubnis,
+        // die niemand braucht, wird auch nicht erteilt.
+        $meta = config('services.meta.app_id') && config('services.meta.es_config_id')
+            ? 'https://connect.facebook.net'
+            : '';
 
         return implode('; ', array_filter([
             "default-src 'self'",
@@ -99,8 +113,10 @@ class SecurityHeaders
             "object-src 'none'",
             "frame-ancestors 'self'",
             "form-action 'self'",
-            // Turnstile rendert sein Widget in einem iframe.
-            "frame-src 'self' ".$turnstile,
+            // Turnstile rendert sein Widget in einem iframe; das
+            // Meta-Fenster laeuft ebenfalls als eingebetteter Rahmen.
+            trim("frame-src 'self' ".$turnstile.' '
+                .($meta !== '' ? 'https://www.facebook.com https://web.facebook.com' : '')),
             // blob: ist noetig, damit die Seite selbst erzeugte Bilder
             // anzeigen und verarbeiten kann: der Dokumenten-Scanner im
             // Kundenportal (Seiten-Vorschau + Verkleinern aufs JPEG),
@@ -129,7 +145,7 @@ class SecurityHeaders
             // docs/SICHERHEIT_SEC_1_BIS_5.md.
             "style-src 'self' 'unsafe-inline'",
             // Kein 'unsafe-inline', kein 'unsafe-eval'.
-            "script-src 'self' ".$nonce.' '.$turnstile,
+            trim("script-src 'self' ".$nonce.' '.$turnstile.' '.$meta),
             // Attribut-Handler (onclick="...") sind damit ausgeschlossen
             // und bleiben es auch: sie koennen keinen Nonce tragen.
             "script-src-attr 'none'",
