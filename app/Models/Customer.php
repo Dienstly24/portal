@@ -7,6 +7,7 @@ use App\Services\CustomerNumberGenerator;
 use App\Services\Matching\DuplicateDetectionService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -361,7 +362,8 @@ class Customer extends Model
     }
     /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
-    public function betreuer() { return $this->belongsToMany(User::class, 'employee_customers', 'customer_id', 'user_id')->withPivot('is_primary'); }
+    /** @return BelongsToMany<User, $this> */
+    public function betreuer(): BelongsToMany { return $this->belongsToMany(User::class, 'employee_customers', 'customer_id', 'user_id')->withPivot('is_primary'); }
 
     /**
      * DER Betreuer im Sinne der automatischen Zuweisung - genau einer.

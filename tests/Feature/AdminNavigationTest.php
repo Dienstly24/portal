@@ -91,6 +91,11 @@ class AdminNavigationTest extends TestCase
 
         $this->assertSame(['kunden', 'interessenten', 'vertraege', 'aenderungen'], $keys($groups['kunden']));
         $this->assertSame(['eingang', 'anforderungen', 'signaturen'], $keys($groups['dokumente']));
+        // Die Kanal-Punkte kommen aus der DATENBANK, nicht aus dem Code:
+        // "Kundenchat" ist der Portal-Kanal, jeder weitere aktive Kanal
+        // (WhatsApp ...) reiht sich hier von selbst ein. Alle fuehren auf
+        // DIESELBE Liste, nur vorgefiltert - deshalb waechst die
+        // Navigation nicht mit jeder Anbindung um eine eigene Seite.
         $this->assertSame(['kundenchat', 'tickets', 'anfragen', 'email', 'team'], $keys($groups['postfach']));
         $this->assertSame(['aufgaben', 'termine'], $keys($groups['mein-tag']));
 

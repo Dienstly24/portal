@@ -29,6 +29,23 @@ final class InboundMessage
         public readonly ?string $senderEmail = null,
         public readonly ?\DateTimeInterface $sentAt = null,
         public readonly array $metadata = [],
+        /**
+         * Die Nachricht stammt von UNSERER Seite - wir werden nur
+         * darueber unterrichtet.
+         *
+         * Der Fall entsteht, sobald dieselbe Kennung auf zwei Wegen
+         * bedient wird: jemand tippt in der App der Plattform, und die
+         * Plattform meldet uns die Nachricht ueber denselben Webhook wie
+         * eine Kundennachricht. Ohne diese Unterscheidung waere die
+         * eigene Antwort eine Kundenfrage - mit Ungelesen-Zaehler, mit
+         * Zuweisung und mit einer KI-Antwort darauf. Die KI antwortet
+         * dann auf sich selbst, und das Ergebnis erreicht den Kunden.
+         *
+         * Bewusst allgemein benannt: das ist keine Eigenheit einer
+         * bestimmten Plattform, sondern die Folge davon, dass ein
+         * Postfach zwei Bedienwege hat.
+         */
+        public readonly bool $fromBusiness = false,
     ) {}
 
     /**

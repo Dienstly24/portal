@@ -213,6 +213,10 @@ class AdminCustomerChatTest extends TestCase
         $this->actingAs($admin)->get(route('admin.dashboard'))
             ->assertOk()
             ->assertSee('Kundenchat') // Seitenleiste: kuerzeres, eindeutiges Label
-            ->assertSee(route('admin.customer_chat'), false);
+            // Der Punkt fuehrt seit dem vereinheitlichten Postfach in die
+            // gemeinsame Liste, vorgefiltert auf den Portal-Kanal: dieselben
+            // Unterhaltungen, aber nicht mehr eine eigene Seite je Kanal.
+            // Die Zahl daneben bleibt dieselbe (ungelesene Kundenantworten).
+            ->assertSee(route('admin.postfach', ['kanal' => 'portal']), false);
     }
 }
