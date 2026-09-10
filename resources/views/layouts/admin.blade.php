@@ -115,6 +115,14 @@ table tr:hover td{background:#EDEAE0;}
 .gs-treffer:hover{background:#F7F5EF;}
 </style>
     @include('partials.favicon')
+    {{--
+      Bausteine EINZELNER Seiten. Sie stehen hier und nicht in app.css,
+      weil sie nur eine Seite beschreiben - und im Kopf und nicht im
+      Rumpf, damit die Seite nicht erst ungestylt aufblitzt.
+      Untergeordnete Views werden VOR dem Layout gerendert, ihr @push
+      erreicht diesen @stack also (Lehre SEC-4).
+    --}}
+    @stack('styles')
 </head>
 <body>
 <button class="admin-mobile-btn" type="button" id="am-btn" aria-label="Menü öffnen">☰</button>
