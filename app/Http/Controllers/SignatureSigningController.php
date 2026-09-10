@@ -7,6 +7,7 @@ use App\Models\SignatureRequest;
 use App\Models\SignatureSigner;
 use App\Services\Signature\SignatureAuditService;
 use App\Services\Signature\SignaturePageRenderer;
+use App\Services\Signature\SignatureRequestService;
 use App\Services\Signature\SignatureSigningService;
 use App\Services\Signature\SignatureStorage;
 use App\Services\Signature\SignatureTokenService;
@@ -37,6 +38,7 @@ class SignatureSigningController extends Controller
         private readonly SignatureStorage $storage,
         private readonly SignaturePageRenderer $renderer,
         private readonly SignatureAuditService $audit,
+        private readonly SignatureRequestService $requests,
     ) {
     }
 
@@ -196,7 +198,39 @@ class SignatureSigningController extends Controller
 
         $this->audit->record($signature, 'signing_started', $signer);
 
-        $errors = $this->signing->sign($signature, $signer, $data['felder'] ?? []);
+        // SCHLEUSE UM DEN GESAMTEN VORGANG (Betreiber-Meldung 10.09.2026).
+        //
+        // Bisher lief der Weg von der Pruefung bis zur Glocke in EINEM
+        // Stueck: jede Stoerung dahinter - fehlende PHP-Erweiterung, volle
+        // Platte, kaputtes PDF - schlug ungefiltert bis zum Unterzeichner
+        // durch. Er sah eine Fehlerseite mit einer Zahl, und im Protokoll
+        // stand "Unterschrift begonnen" und sonst nichts.
+        //
+        // Der Fehler VERSCHWINDET dadurch nicht - er wird sichtbar und
+        // erklaerbar: verstaendlicher Satz an den Unterzeichner, technische
+        // Ursache ins Log, Ereignis ins Protokoll, Glocke an den Ersteller.
+        // Eine 500er-Seite erreicht KEINEN von beiden.
+        try {
+            $errors = $this->signing->sign($signature, $signer, $data['felder'] ?? []);
+        } catch (\Throwable $e) {
+            Log::error('Unterschreiben fehlgeschlagen: '.$e->getMessage(), [
+                'signature_request_id' => $signature->id,
+                'signer_id' => $signer->id,
+            ]);
+            // Das Protokollieren darf den Fehlerfall nicht selbst zum
+            // Absturz bringen - deshalb liegt es hinter der Schranke, nicht
+            // davor (wie beim ErrorRecorder).
+            $this->audit->record($signature, 'signing_failed', $signer,
+                mb_substr($e->getMessage(), 0, 200));
+            $this->requests->notifyCreator($signature, 'Signatur: Unterschreiben fehlgeschlagen',
+                'Ein Unterzeichner konnte nicht unterschreiben. Die technische Ursache steht im Protokoll.');
+
+            return back()->withInput()->with('error',
+                'Das Unterschreiben konnte technisch nicht abgeschlossen werden. '
+                .'Ihre Unterschrift wurde NICHT gespeichert. Wir wurden automatisch '
+                .'informiert und melden uns - bitte versuchen Sie es später erneut.');
+        }
+
         if ($errors !== []) {
             return back()->withInput()->with('error', implode(' ', $errors));
         }

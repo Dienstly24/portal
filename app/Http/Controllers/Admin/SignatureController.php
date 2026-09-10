@@ -15,6 +15,7 @@ use App\Services\Signature\SignatureDocumentService;
 use App\Services\Signature\SignaturePageRenderer;
 use App\Services\Signature\SignatureRequestService;
 use App\Services\Signature\SignatureStorage;
+use App\Support\Bildverarbeitung;
 use App\Support\SignatureFieldType;
 use App\Support\SignatureStatus;
 use Carbon\Carbon;
@@ -173,6 +174,16 @@ class SignatureController extends Controller
     public function store(StoreSignatureRequestRequest $request)
     {
         Gate::authorize('create', SignatureRequest::class);
+
+        // GEPRUEFT WIRD BEIM HOCHLADEN, NICHT BEIM UNTERSCHREIBEN.
+        // Dieselbe Regel wie beim defekten PDF: ein Fehlschlag NACH der
+        // Unterschrift ist dem Unterzeichner nicht zu erklaeren und der
+        // Vorgang nicht zu retten. Ohne GD endete er als HTTP 500, nachdem
+        // der Kunde bereits unterschrieben hatte (Meldung 10.09.2026).
+        if (! Bildverarbeitung::verfuegbar()) {
+            return back()->withInput()->with('error', Bildverarbeitung::meldungFuerOberflaeche());
+        }
+
         $data = $request->validated();
 
         if (! empty($data['customer_id'])) {

@@ -2474,6 +2474,46 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
   Handlung.
 - Tests: `FormularfehlerAufDeutschTest`.
 
+### Der HTTP 500 beim Unterschreiben war der SERVER, nicht der Code (10.09.2026)
+
+- **Zwei Befunde aus `storage/logs/laravel.log`, beide Betrieb, keiner Logik:**
+  (1) `Call to undefined function ...imagecreatefromstring()` in
+  `SignatureSigningService.php:325` - das Paket **`php8.3-gd` fehlte auf dem
+  Server**. Ohne GD EXISTIERT die Funktion nicht; ein fehlender
+  Funktionsname ist ein FATALER Error, den weder das `@` davor noch ein
+  `try` um den Aufruf abfaengt. Die Zeile davor (`getimagesizefromstring`)
+  lief durch - sie gehoert zum PHP-Kern und beweist nichts ueber GD; genau
+  daran liess sich die Ursache festnageln. Der Aufruf steht VOR dem
+  Speichern und vor dem Ereignis `signed`: deshalb endete das Protokoll bei
+  "Unterschrift begonnen" und die Unterschrift war weg.
+  (2) `touch(): Utime failed: Operation not permitted` im `BladeCompiler` -
+  der Deploy baute die Caches als **root**, danach durfte `www-data` sie
+  nicht mehr anfassen und JEDE Seite mit neu zu uebersetzender Vorlage
+  antwortete mit HTTP 500. **Der Deploy meldete dabei Erfolg.**
+- **Die Lehre ist NICHT "GD installieren"** (das ist erledigt), sondern:
+  eine Voraussetzung, die das Programm braucht, wird FRUEH geprueft und
+  hinterlaesst einen Satz, den ein Mensch lesen kann.
+  `App\Support\Bildverarbeitung` ist die EINE Stelle dafuer; sie prueft
+  `function_exists` je Funktion, nicht `extension_loaded` (einzelne
+  Funktionen koennen per `disable_functions` gesperrt sein, waehrend die
+  Erweiterung geladen ist).
+- **Geprueft wird beim HOCHLADEN, nicht beim Unterschreiben** - dieselbe
+  Regel wie beim defekten PDF: ein Fehlschlag NACH der Unterschrift ist dem
+  Unterzeichner nicht zu erklaeren und der Vorgang nicht zu retten.
+- **Schleuse um den Unterschreiben-Pfad**: jede Stoerung dahinter (Platte,
+  Glocke, PDF) gibt jetzt einen verstaendlichen Satz, ein Ereignis
+  `signing_failed` im Protokoll und eine Glocke an den Ersteller. Der Fehler
+  verschwindet dadurch nicht - er wird sichtbar statt zur Fehlerseite mit
+  einer Zahl.
+- **`/admin/systemzustand` wusste nichts davon** - ausgerechnet die Seite,
+  die es melden soll. Sie hat jetzt die Zeile "Bildverarbeitung (GD)" mit
+  dem Installationsbefehl im Hinweis. Die Pruefung kostet nichts (kein
+  Prozess, kein Aufruf).
+- **`scripts/deploy.sh` uebereignet die Caches nach dem Bauen dem
+  Webserver** (`chown` NACH `view:cache` - davor waere es wirkungslos, die
+  Dateien entstehen erst dort). Der Schritt bricht den Deploy nie ab.
+- Tests: `BildverarbeitungFehltTest`.
+
 ## Offene Themen / wartet auf den Betreiber
 
 - **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026
