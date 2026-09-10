@@ -88,6 +88,99 @@ class DesignSystemTest extends TestCase
         $this->assertSame([], $treffer, implode(' | ', $treffer));
     }
 
+    /**
+     * UX-5: `.field` ist ein UMSCHLAG, kein Stil fuer das Feld selbst.
+     *
+     * Drei Seiten hatten `class="field"` direkt auf input/select/textarea.
+     * Der Selektor lautet `.field input` - es traf also NICHTS: keine
+     * Rahmen, keine Beschriftungen, keine Abstaende. Das faellt nie als
+     * Fehler auf, die Seite sieht nur billig aus, und der naechste
+     * Copy-Paste-Block traegt es weiter. Fuer das einzelne Bedienelement
+     * ohne Beschriftungszeile gibt es `.eingabe`.
+     */
+    public function test_field_steht_nie_direkt_auf_dem_bedienelement(): void
+    {
+        $treffer = [];
+
+        foreach ($this->views() as $rel => $pfad) {
+            $inhalt = (string) file_get_contents($pfad);
+            if (preg_match('/<(input|select|textarea)[^>]*class="[^"]*\bfield\b/i', $inhalt)) {
+                $treffer[] = $rel;
+            }
+        }
+
+        $this->assertSame([], $treffer,
+            'class="field" gehoert auf den UMSCHLAG (<div class="field"><label>…), '
+            .'fuer ein einzelnes Bedienelement gibt es .eingabe: '.implode(', ', $treffer));
+    }
+
+    /**
+     * UX-5: Ein Klassenname, den es nicht gibt, ist wirkungslos - und
+     * still. `btn-gold` (seit UX-1 `btn-emerald`) und `badge-emerald`
+     * standen weiter im Bestand; im Postfach fehlte dadurch die Markierung
+     * des GEWAEHLTEN Reiters, alle sieben sahen gleich aus.
+     */
+    public function test_keine_klasse_ohne_definition_im_bundle(): void
+    {
+        // OHNE Kommentare: `.btn-gold` wird in components.css erklaert
+        // ("hiess bis UX-1 .btn-gold"). Wer den Rohtext durchsucht, haelt
+        // die Erlaeuterung fuer eine Definition - und der Waechter schweigt
+        // genau bei der Klasse, deretwegen er geschrieben wurde.
+        $css = preg_replace('#/\*.*?\*/#s', '',
+            (string) file_get_contents(resource_path('css/components.css'))
+            .(string) file_get_contents(resource_path('css/brand.css'))
+            .(string) file_get_contents(resource_path('css/app.css'))
+            .(string) file_get_contents(resource_path('views/layouts/admin.blade.php'))
+            .(string) file_get_contents(resource_path('views/layouts/portal.blade.php')));
+
+        $verboten = ['btn-gold', 'badge-emerald'];
+        $treffer = [];
+
+        foreach ($this->views() as $rel => $pfad) {
+            $inhalt = (string) file_get_contents($pfad);
+            foreach ($verboten as $klasse) {
+                if (str_contains($inhalt, $klasse) && ! str_contains($css, '.'.$klasse)) {
+                    $treffer[] = "$rel: $klasse";
+                }
+            }
+        }
+
+        $this->assertSame([], $treffer, implode(' | ', $treffer));
+    }
+
+    /**
+     * UX-5: Ein Token, das nirgends definiert ist, faerbt nichts - der
+     * Text bleibt schwarz statt grau. `--text-muted` und `--muted` gab es
+     * in der Beraterwelt nie (`--muted` nur in der Website-CSS, die das
+     * Admin-Layout gar nicht laedt).
+     */
+    public function test_jedes_verwendete_token_ist_auch_definiert(): void
+    {
+        $css = (string) file_get_contents(resource_path('css/brand.css'))
+            .(string) file_get_contents(resource_path('css/components.css'))
+            .(string) file_get_contents(resource_path('css/app.css'))
+            .(string) file_get_contents(resource_path('views/layouts/admin.blade.php'))
+            .(string) file_get_contents(resource_path('views/layouts/portal.blade.php'))
+            .(string) file_get_contents(resource_path('views/layouts/partner.blade.php'));
+
+        $treffer = [];
+
+        foreach ($this->views() as $rel => $pfad) {
+            $inhalt = (string) file_get_contents($pfad);
+            preg_match_all('/var\(\s*(--[a-z0-9-]+)/i', $inhalt, $m);
+            foreach (array_unique($m[1]) as $token) {
+                // Eigene Definition in derselben Datei zaehlt ebenfalls.
+                if (str_contains($css, $token.':') || str_contains($inhalt, $token.':')) {
+                    continue;
+                }
+                $treffer[] = "$rel: $token";
+            }
+        }
+
+        $this->assertSame([], $treffer,
+            'Nicht definierte CSS-Variable (faerbt nichts): '.implode(' | ', $treffer));
+    }
+
     public function test_jede_markenfarbe_hat_genau_eine_definition(): void
     {
         $brand = (string) file_get_contents(resource_path('css/brand.css'));

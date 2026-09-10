@@ -21,19 +21,19 @@
     </div>
 </div>
 
-@if(session('success'))<div style="background:var(--emerald-soft);color:var(--emerald);padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
+@if(session('success'))<div class="alert-success">{{ session('success') }}</div>@endif
 
-<div class="card" style="margin-bottom:16px;">
-    <form method="GET" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;">
-        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink-soft);">
-            Zustand
-            <select name="zustand" style="min-width:220px;">
+<div class="card">
+    <form method="GET" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+        <div class="field" style="min-width:220px;margin-bottom:0;">
+            <label for="fZustand">Zustand</label>
+            <select name="zustand" id="fZustand">
                 <option value="">Alle</option>
                 @foreach(\App\Services\Ai\Assistant\Sales\ConversationState::LABELS as $key => $label)
                     <option value="{{ $key }}" @selected($zustand === $key)>{{ $label }}</option>
                 @endforeach
             </select>
-        </label>
+        </div>
         <button type="submit" class="btn btn-primary">Filtern</button>
     </form>
 </div>
