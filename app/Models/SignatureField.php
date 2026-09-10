@@ -23,6 +23,7 @@ class SignatureField extends Model
     protected $fillable = [
         'signature_request_id', 'signature_signer_id', 'type', 'page',
         'pos_x', 'pos_y', 'width', 'height', 'required', 'label', 'value', 'image_path', 'filled_at', 'sort',
+        'company_asset_id',
     ];
 
     protected $casts = [
@@ -66,8 +67,27 @@ class SignatureField extends Model
         return SignatureFieldType::isDrawn((string) $this->type);
     }
 
+    /** Ein Firmenbild - gehoert keinem Unterzeichner. */
+    public function isCompany(): bool
+    {
+        return $this->type === SignatureFieldType::COMPANY;
+    }
+
+    /** @return BelongsTo<CompanySignatureAsset, $this> */
+    public function companyAsset(): BelongsTo
+    {
+        return $this->belongsTo(CompanySignatureAsset::class, 'company_asset_id');
+    }
+
     public function isFilled(): bool
     {
+        // Ein Firmenbild ist fertig, sobald es zugewiesen ist: es wartet auf
+        // niemanden. Es blockiert deshalb auch keinen Versand und taucht in
+        // keiner "noch offen"-Liste auf.
+        if ($this->isCompany()) {
+            return $this->company_asset_id !== null;
+        }
+
         return $this->filled_at !== null
             && ($this->isDrawn() ? $this->image_path !== null : ($this->value ?? '') !== '');
     }

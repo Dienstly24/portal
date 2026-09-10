@@ -45,7 +45,7 @@ class SignedPdfBuilder
         $document = PdfDocument::open($original);
         $stamper = new PdfStamper($document);
 
-        $request->loadMissing(['fields.signer', 'signers']);
+        $request->loadMissing(['fields.signer', 'fields.companyAsset', 'signers']);
 
         foreach ($request->fields as $field) {
             if (! $field->isFilled()) {
@@ -66,6 +66,21 @@ class SignedPdfBuilder
             if ($field->isDrawn()) {
                 $png = $this->storage->read($field->image_path);
                 if ($png !== null) {
+                    $stamper->add(PdfStamp::image($pageIndex, $png, $x, $y, $width, $height));
+                }
+
+                continue;
+            }
+
+            // FIRMENBILD: dieselbe Einbettung wie die Handschrift (Alphakanal
+            // bleibt), aber es kommt aus dem hinterlegten Bestand und nicht
+            // aus einer Zeichenflaeche. Fehlt die Datei, wird NICHTS gesetzt
+            // statt ein Platzhalter - ein leerer Fleck ist ehrlicher als ein
+            // Kasten, den jemand fuer den Stempel haelt.
+            if ($field->isCompany()) {
+                $asset = $field->companyAsset;
+                $png = $asset === null ? null : $this->storage->disk()->get($asset->path);
+                if ($png !== null && $png !== '') {
                     $stamper->add(PdfStamp::image($pageIndex, $png, $x, $y, $width, $height));
                 }
 
@@ -116,6 +131,7 @@ class SignedPdfBuilder
     /** @return list<array{title: string, lines: list<string>}> */
     private function protocolSections(SignatureRequest $request): array
     {
+        $request->loadMissing(['fields.companyAsset.creator']);
         // Zeitpunkte in deutscher Ortszeit - gespeichert wird UTC
         // (Betreiber-Vorgabe 21.08.2026). Hier bewusst ueber LocalTime und
         // nicht ueber das Blade-Makro ->lokal(): das Protokoll entsteht in
@@ -147,6 +163,26 @@ class SignedPdfBuilder
                     $signer->user_agent ? 'Geraet: '.mb_substr($signer->user_agent, 0, 90) : null,
                 ])),
             ];
+        }
+
+        // FIRMENBILDER stehen in einem EIGENEN Abschnitt - nicht bei den
+        // Unterzeichnern. Wer das Protokoll liest, soll auf einen Blick
+        // sehen, was eine abgegebene Erklaerung eines Menschen ist und was
+        // eine vom Betrieb aufgebrachte Grafik.
+        $firmenfelder = $request->fields->filter(fn ($f) => $f->isCompany() && $f->company_asset_id !== null);
+        if ($firmenfelder->isNotEmpty()) {
+            $zeilen = [];
+            foreach ($firmenfelder as $feld) {
+                $asset = $feld->companyAsset;
+                if ($asset === null) {
+                    continue;
+                }
+                $zeilen[] = $asset->typeLabel().': '.$asset->name.' (Seite '.$feld->page.')';
+                $zeilen[] = '  eingesetzt von: '.($asset->creator->name ?? 'unbekannt')
+                    .'; SHA-256 des Bildes: '.mb_substr($asset->hash, 0, 32).'...';
+            }
+            $zeilen[] = 'Firmenbilder sind KEINE Unterschrift einer Person und keine Willenserklaerung.';
+            $sections[] = ['title' => 'Firmenbilder', 'lines' => $zeilen];
         }
 
         // Die rechtliche Einordnung steht im Dokument, aber sie behauptet

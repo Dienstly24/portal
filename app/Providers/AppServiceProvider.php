@@ -469,6 +469,25 @@ class AppServiceProvider extends ServiceProvider
             fn ($user) => $user->role === 'admin' || (bool) ($user->can_manage_commissions ?? false)
         );
 
+        // Firmenbilder (Unternehmenssignatur, Stempel, Logo) sind ein
+        // VERTRAUENSGEGENSTAND: wer sie anlegen oder aendern darf, kann die
+        // Unterschrift des Betriebs auf ein beliebiges Dokument setzen.
+        // Deshalb ein eigenes Recht - und wie beim Provisions-Gate bewusst
+        // KEINE Rolle als Kriterium: eine Rolle waechst mit der Zeit um
+        // Aufgaben, ein Recht wird einzeln vergeben.
+        Gate::define(
+            'firmensignatur-verwalten',
+            fn ($user) => in_array($user->role, ['admin', 'manager'], true)
+        );
+        // Benutzen (auf ein Dokument setzen) darf jede Staff-Rolle, die
+        // ueberhaupt Signaturanfragen anlegen darf - sonst muesste fuer
+        // jeden Stempel ein Admin gerufen werden, und der Betrieb baut sich
+        // Umgehungen.
+        Gate::define(
+            'firmensignatur-benutzen',
+            fn ($user) => in_array($user->role, ['admin', 'manager', 'support', 'employee'], true)
+        );
+
         Password::defaults(
             fn () => PasswordPolicy::for(auth()->user())
         );

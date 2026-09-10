@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Concerns\ScopesCustomerAccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreSignatureRequestRequest;
+use App\Models\CompanySignatureAsset;
 use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\SignatureRequest;
@@ -227,11 +228,22 @@ class SignatureController extends Controller
         $signature = $this->find($id);
         Gate::authorize('update', $signature);
 
+        $darfFirma = Gate::allows('firmensignatur-benutzen');
+        $typen = SignatureFieldType::LABELS;
+        if (! $darfFirma) {
+            unset($typen[SignatureFieldType::COMPANY]);
+        }
+
         return view('admin.signatures.prepare', [
             'signature' => $signature->load(['signers', 'fields']),
             'geometry' => $this->renderer->geometry($signature),
             'previewAvailable' => $this->renderer->available(),
-            'fieldTypes' => SignatureFieldType::LABELS,
+            'fieldTypes' => $typen,
+            // Nur AKTIVE Bilder zur Auswahl: ein stillgelegtes steckt zwar
+            // noch in alten Dokumenten, soll aber in kein neues mehr.
+            'companyAssets' => $darfFirma
+                ? CompanySignatureAsset::where('active', true)->orderBy('type')->orderByDesc('is_default')->get()
+                : collect(),
         ]);
     }
 
@@ -252,6 +264,7 @@ class SignatureController extends Controller
             'fields.*.id' => ['nullable', 'string', 'max:64'],
             'fields.*.signer_id' => ['nullable', 'string', 'max:64'],
             'fields.*.signer_key' => ['nullable', 'string', 'max:64'],
+            'fields.*.company_asset_id' => ['nullable', 'string', 'max:64'],
             'fields.*.type' => ['required', 'string', 'in:'.implode(',', SignatureFieldType::keys())],
             'fields.*.page' => ['required', 'integer', 'min:1', 'max:200'],
             'fields.*.x' => ['required', 'numeric', 'min:0', 'max:1'],
@@ -266,8 +279,19 @@ class SignatureController extends Controller
             return $this->respond($request, false, 'Nach dem Versand kann die Aufteilung nicht mehr geändert werden.');
         }
 
+        // Wer Firmenbilder nicht benutzen darf, kann auch keine setzen -
+        // geprueft wird das HIER, nicht nur im Editor: ein Formular laesst
+        // sich nachbauen, eine Serverpruefung nicht.
+        $felder = $data['fields'] ?? [];
+        if (! Gate::allows('firmensignatur-benutzen')) {
+            $felder = array_values(array_filter(
+                $felder,
+                fn ($f) => ($f['type'] ?? '') !== SignatureFieldType::COMPANY
+            ));
+        }
+
         $keys = $this->requests->syncSigners($signature, $data['signers'] ?? []);
-        $this->requests->syncFields($signature->fresh(), $data['fields'] ?? [], $keys);
+        $this->requests->syncFields($signature->fresh(), $felder, $keys);
 
         return $this->respond($request, true, 'Gespeichert.');
     }

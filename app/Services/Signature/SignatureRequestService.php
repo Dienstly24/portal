@@ -3,6 +3,7 @@
 namespace App\Services\Signature;
 
 use App\Mail\SignatureInvitationMail;
+use App\Models\CompanySignatureAsset;
 use App\Models\SignatureField;
 use App\Models\SignatureRequest;
 use App\Models\SignatureSigner;
@@ -185,7 +186,7 @@ class SignatureRequestService
      * unter einem Unterzeichner, der es schon geoeffnet hat.
      *
      * @param  array<string, string>  $signerKeys  Behelfs-Kennung des Editors => echte Kennung
-     * @param  list<array{id?: string|null, signer_id?: string|null, signer_key?: string|null, type: string, page: int, x: float, y: float, width: float, height: float, required?: bool, label?: string|null}>  $fields
+     * @param  list<array{id?: string|null, signer_id?: string|null, signer_key?: string|null, company_asset_id?: string|null, type: string, page: int, x: float, y: float, width: float, height: float, required?: bool, label?: string|null}>  $fields
      */
     public function syncFields(SignatureRequest $request, array $fields, array $signerKeys = []): void
     {
@@ -202,6 +203,23 @@ class SignatureRequestService
                     $signerId = null; // Niemals einem fremden Unterzeichner zuordnen.
                 }
 
+                // ENTWEDER Unterzeichner ODER Firmenbild - nie beides. Ein
+                // Feld, das einem Menschen gehoert UND einen Stempel traegt,
+                // waere im Protokoll nicht mehr aufzuloesen.
+                $assetId = null;
+                if ($type === SignatureFieldType::COMPANY) {
+                    $signerId = null;
+                    $kandidat = $data['company_asset_id'] ?? null;
+                    if ($kandidat !== null && CompanySignatureAsset::whereKey($kandidat)->exists()) {
+                        $assetId = $kandidat;
+                    }
+                    // Ohne zugewiesenes Bild waere es ein leeres Feld, das
+                    // niemand mehr fuellen kann (es wartet ja auf niemanden).
+                    if ($assetId === null) {
+                        continue;
+                    }
+                }
+
                 $field = null;
                 if (! empty($data['id'])) {
                     $field = $request->fields()->whereKey($data['id'])->first();
@@ -210,6 +228,7 @@ class SignatureRequestService
                 $field->fill([
                     'signature_request_id' => $request->id,
                     'signature_signer_id' => $signerId,
+                    'company_asset_id' => $assetId,
                     'type' => $type,
                     'page' => max(1, min((int) $data['page'], (int) $request->page_count)),
                     'pos_x' => $this->clamp((float) $data['x']),
@@ -249,6 +268,10 @@ class SignatureRequestService
             $blockers[] = 'Es ist noch kein Unterzeichner erfasst.';
         }
         foreach ($request->signers as $signer) {
+            // Firmenbilder zaehlen hier NIE mit: sie gehoeren keinem
+            // Unterzeichner. Ein Vorgang, in dem nur der Stempel des
+            // Betriebs steht, waere sonst versandfertig, ohne dass irgendwer
+            // etwas zu unterschreiben haette.
             $own = $request->fields->where('signature_signer_id', $signer->id);
             if ($own->isEmpty()) {
                 $blockers[] = 'Für '.$signer->name.' ist noch kein Feld gesetzt.';
