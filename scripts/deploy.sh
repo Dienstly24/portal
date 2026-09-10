@@ -68,6 +68,24 @@ php artisan route:cache
 php artisan view:cache
 php artisan event:cache || true
 
+# 5b) Die frisch erzeugten Caches dem WEBSERVER uebereignen.
+#
+#     WARUM (Betreiber-Meldung 10.09.2026): laeuft der Deploy als root,
+#     gehoeren die kompilierten Blade-Dateien danach root. Der Webserver
+#     (www-data) darf sie dann nicht mehr anfassen und quittiert JEDE Seite,
+#     die eine Vorlage neu uebersetzen muss, mit
+#     "touch(): Utime failed: Operation not permitted" - also mit HTTP 500.
+#     Der Deploy meldet dabei ERFOLG. Genau diese Kombination kostete einen
+#     halben Betriebstag, weil sie wie ein Code-Fehler aussieht und keiner
+#     ist. Der Schritt bricht den Deploy nicht ab: laeuft der Deploy bereits
+#     als der richtige Nutzer, ist er ein No-Op.
+webnutzer="$(ps -o user= -C php-fpm8.3 -C php-fpm 2>/dev/null | grep -v '^root$' | head -1 | tr -d ' ')"
+[ -z "$webnutzer" ] && webnutzer="www-data"
+if id "$webnutzer" >/dev/null 2>&1; then
+  chown -R "$webnutzer":"$webnutzer" storage bootstrap/cache 2>/dev/null \
+    || echo "HINWEIS: storage/bootstrap-cache konnten nicht uebereignet werden."
+fi
+
 # 6) Laufende Queue-Worker sauber neu starten, damit sie den neuen Code laden.
 php artisan queue:restart
 

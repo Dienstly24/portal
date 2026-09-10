@@ -2,6 +2,7 @@
 
 namespace App\Services\Signature;
 
+use App\Exceptions\SignatureSigningException;
 use App\Mail\SignatureCompletedMail;
 use App\Models\SignatureField;
 use App\Models\SignatureRequest;
@@ -43,28 +44,27 @@ class SignatureSigningService
     public function blockReason(SignatureRequest $request, SignatureSigner $signer): ?string
     {
         if (! $signer->tokenIsLive()) {
-            return 'Dieser Link ist nicht mehr gültig.';
+            return __('signing.blocked_link_dead');
         }
         if ($signer->hasSigned()) {
-            return 'Sie haben dieses Dokument bereits unterschrieben.';
+            return __('signing.blocked_already_signed');
         }
         if ($signer->hasDeclined()) {
-            return 'Sie haben die Unterschrift zu diesem Dokument abgelehnt.';
+            return __('signing.blocked_already_declined');
         }
         if ($request->status === SignatureStatus::CANCELLED) {
-            return 'Diese Signaturanfrage wurde zurückgezogen.';
+            return __('signing.blocked_cancelled');
         }
         if ($request->hasExpired() || $request->status === SignatureStatus::EXPIRED) {
-            return 'Die Frist für dieses Dokument ist abgelaufen.';
+            return __('signing.blocked_expired');
         }
         if (! $request->isOpen()) {
-            return 'Dieses Dokument steht nicht (mehr) zur Unterschrift bereit.';
+            return __('signing.blocked_not_open');
         }
         if ($request->isSequential()) {
             $current = $request->currentSigner();
             if ($current !== null && $current->id !== $signer->id) {
-                return 'Dieses Dokument wird nacheinander unterschrieben. '
-                    .'Sie erhalten eine E-Mail, sobald Sie an der Reihe sind.';
+                return __('signing.blocked_wait_turn');
             }
         }
 
@@ -106,9 +106,17 @@ class SignatureSigningService
      */
     public function sign(SignatureRequest $request, SignatureSigner $signer, array $values): array
     {
+        // IDEMPOTENZ: ein zweiter Klick (Doppel-Absenden, Neuladen der Seite,
+        // zweiter Reiter) darf nie ein zweites Mal schreiben und nie einen
+        // Fehler erzeugen. Wer schon unterschrieben hat, ist fertig - das ist
+        // der WAHRE Zustand, kein Fehlerfall.
+        if ($signer->hasSigned()) {
+            return [];
+        }
+
         $fields = $request->fields()->where('signature_signer_id', $signer->id)->get();
         if ($fields->isEmpty()) {
-            return ['Für Sie ist in diesem Dokument kein Feld hinterlegt.'];
+            return [__('signing.error_no_field')];
         }
 
         $errors = [];
@@ -119,7 +127,7 @@ class SignatureSigningService
                 $png = $raw === '' ? null : $this->decodeSignature($raw);
                 if ($png === null) {
                     if ($field->required) {
-                        $errors[] = 'Bitte unterschreiben Sie im Feld "'.($field->label ?: $field->typeLabel()).'".';
+                        $errors[] = __('signing.error_signature_missing', ['field' => $field->label ?: $field->typeLabel()]);
                     }
 
                     continue;
@@ -134,7 +142,7 @@ class SignatureSigningService
                 $value = in_array(strtolower($value), ['1', 'on', 'ja', 'true'], true) ? 'ja' : '';
             }
             if ($value === '' && $field->required) {
-                $errors[] = 'Bitte füllen Sie das Feld "'.($field->label ?: $field->typeLabel()).'" aus.';
+                $errors[] = __('signing.error_field_missing', ['field' => $field->label ?: $field->typeLabel()]);
 
                 continue;
             }
@@ -147,34 +155,79 @@ class SignatureSigningService
             return $errors;
         }
 
-        DB::transaction(function () use ($request, $signer, $prepared) {
-            foreach ($prepared as $entry) {
-                /** @var SignatureField $field */
-                $field = $entry['field'];
-                if (isset($entry['png'])) {
-                    $path = $this->storage->fieldImagePath($request, $field->id);
-                    $this->storage->disk()->put($path, $entry['png']);
-                    $field->image_path = $path;
-                } else {
-                    $field->value = $entry['value'];
-                }
-                $field->filled_at = now();
-                $field->save();
+        // Die BILDER liegen ausserhalb der Datenbank und koennen deshalb
+        // nicht mit zurueckgerollt werden - sie werden VOR der Transaktion
+        // geschrieben und einzeln geprueft. Eine verwaiste Datei ohne
+        // Datenbankzeile ist harmlos; eine Datenbankzeile, die auf eine nie
+        // geschriebene Datei zeigt, waere eine Unterschrift, die es nicht
+        // gibt.
+        foreach ($prepared as $index => $entry) {
+            if (! isset($entry['png'])) {
+                continue;
             }
+            /** @var SignatureField $field */
+            $field = $entry['field'];
+            $path = $this->storage->fieldImagePath($request, $field->id);
+            try {
+                $written = $this->storage->disk()->put($path, $entry['png']);
+            } catch (\Throwable $e) {
+                throw new SignatureSigningException('Unterschriftsbild nicht schreibbar: '.$e->getMessage(), previous: $e);
+            }
+            // put() meldet einen Fehlschlag AUCH ohne Ausnahme mit false
+            // (volle Platte, fehlende Rechte). Das ungeprueft zu uebergehen
+            // hiess, den Unterzeichner als fertig zu fuehren, obwohl seine
+            // Handschrift nirgends liegt.
+            if ($written === false) {
+                throw new SignatureSigningException('Unterschriftsbild nicht schreibbar (Platte meldet false): '.$path);
+            }
+            $prepared[$index]['path'] = $path;
+        }
 
-            $signer->forceFill([
-                'status' => SignatureSigner::SIGNED,
-                'signed_at' => now(),
-                'ip_address' => request()->ip(),
-                'user_agent' => mb_substr((string) request()->userAgent(), 0, 500),
-            ])->save();
-        });
+        try {
+            DB::transaction(function () use ($signer, $prepared) {
+                foreach ($prepared as $entry) {
+                    /** @var SignatureField $field */
+                    $field = $entry['field'];
+                    if (isset($entry['path'])) {
+                        $field->image_path = $entry['path'];
+                    } else {
+                        $field->value = $entry['value'];
+                    }
+                    $field->filled_at = now();
+                    $field->save();
+                }
 
+                $signer->forceFill([
+                    'status' => SignatureSigner::SIGNED,
+                    'signed_at' => now(),
+                    'ip_address' => request()->ip(),
+                    'user_agent' => mb_substr((string) request()->userAgent(), 0, 500),
+                ])->save();
+            });
+        } catch (\Throwable $e) {
+            throw new SignatureSigningException('Unterschrift nicht speicherbar: '.$e->getMessage(), previous: $e);
+        }
+
+        // AB HIER IST UNTERSCHRIEBEN. Alles Weitere - Protokoll, Glocke,
+        // Einladung des Naechsten, fertiges PDF - ist Nachlauf und darf die
+        // Unterschrift nicht mehr in Frage stellen. Vorher lief der ganze
+        // Rest ungeschuetzt in derselben Anfrage: eine Glocke, die einmal
+        // nicht schreiben konnte, wurde dem Unterzeichner als HTTP 500
+        // gezeigt, obwohl seine Unterschrift laengst sicher lag.
         $this->audit->record($request, 'signed', $signer, count($prepared).' Felder ausgefüllt');
         $request->unsetRelation('signers');
         $request->unsetRelation('fields');
 
-        $this->advance($request);
+        try {
+            $this->advance($request);
+        } catch (\Throwable $e) {
+            Log::error('Signatur: Nachlauf nach der Unterschrift gescheitert: '.$e->getMessage(), [
+                'signature_request_id' => $request->id,
+                'signature_signer_id' => $signer->id,
+            ]);
+            $this->audit->record($request, 'signed', $signer,
+                'Nachlauf gescheitert: '.mb_substr($e->getMessage(), 0, 200));
+        }
 
         return [];
     }
@@ -243,6 +296,10 @@ class SignatureSigningService
     {
         try {
             $result = $this->pdf->build($request);
+            $path = $this->storage->signedPath($request);
+            if ($this->storage->disk()->put($path, $result['pdf']) === false) {
+                throw new \RuntimeException('Das fertige PDF konnte nicht abgelegt werden.');
+            }
         } catch (\Throwable $e) {
             Log::error('Signatur: unterschriebenes PDF konnte nicht erzeugt werden: '.$e->getMessage(), [
                 'signature_request_id' => $request->id,
@@ -253,9 +310,6 @@ class SignatureSigningService
 
             return;
         }
-
-        $path = $this->storage->signedPath($request);
-        $this->storage->disk()->put($path, $result['pdf']);
 
         $request->forceFill([
             'status' => SignatureStatus::COMPLETED,
@@ -319,13 +373,21 @@ class SignatureSigningService
         if ($info === false || $info['mime'] !== 'image/png') {
             return null;
         }
-        if ($info[0] < 8 || $info[1] < 8 || $info[0] > self::MAX_SIGNATURE_PX || $info[1] > self::MAX_SIGNATURE_PX) {
+        if ($info[0] < 8 || $info[1] < 8) {
             return null;
         }
         $image = @imagecreatefromstring($binary);
         if ($image === false) {
             return null;
         }
+        // ZU GROSS heisst VERKLEINERN, nicht verwerfen. Die Zeichenflaeche
+        // wird in Geraetepixeln aufgenommen: ein 820 CSS-Pixel breites Feld
+        // auf einem Geraet mit Verhaeltnis 2 liefert 1640 px. Frueher fiel
+        // genau diese Unterschrift durch die Obergrenze - und weil ein
+        // fehlendes Pflichtfeld wie "nicht unterschrieben" aussieht, sah der
+        // Unterzeichner auf einem grossen Bildschirm oder modernen Telefon
+        // nur die Aufforderung, doch bitte zu unterschreiben.
+        $image = $this->downscale($image);
         // Leere Flaeche = nicht unterschrieben. Ohne diese Pruefung genuegte
         // ein Klick auf "Bestaetigen", um ein leeres Feld als Unterschrift
         // durchgehen zu lassen.
@@ -342,6 +404,32 @@ class SignatureSigningService
         imagedestroy($image);
 
         return $png === false ? null : $png;
+    }
+
+    /** Bringt ein zu grosses Bild auf die Hoechstkantenlaenge - Seitenverhaeltnis bleibt. */
+    private function downscale(\GdImage $image): \GdImage
+    {
+        $w = imagesx($image);
+        $h = imagesy($image);
+        $max = max($w, $h);
+        if ($max <= self::MAX_SIGNATURE_PX) {
+            return $image;
+        }
+        $factor = self::MAX_SIGNATURE_PX / $max;
+        // VOR dem Skalieren: ohne diese zwei Zeilen rechnet GD den
+        // Alphakanal weg, und aus der durchscheinenden Handschrift wird ein
+        // schwarzer Kasten ueber dem Vertragstext.
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
+        $small = @imagescale($image, max(8, (int) round($w * $factor)), max(8, (int) round($h * $factor)));
+        if ($small === false) {
+            return $image;
+        }
+        imagedestroy($image);
+        imagealphablending($small, false);
+        imagesavealpha($small, true);
+
+        return $small;
     }
 
     /** Enthaelt das Bild ueberhaupt Striche? */

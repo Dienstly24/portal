@@ -102,6 +102,25 @@
     </div>
 </div>
 
+{{-- Signaturen: nur der Weg zur Verwaltung, keine Schalter. Die
+     Firmenbilder sind Dateien, keine Einstellungen - sie gehoeren nicht in
+     dieses Formular, sonst koennte ein Klick auf "Speichern" sie
+     mitaendern. --}}
+@can('firmensignatur-verwalten')
+<div class="card">
+    <div class="card-title" style="margin-bottom:8px;">&#9997; Signaturen</div>
+    <div style="font-size:12.5px;color:var(--ink-soft);line-height:1.6;">
+        Unternehmenssignatur, Firmenstempel und Firmenlogo einmal hinterlegen - danach lassen sie
+        sich im Feld-Editor auf jedes Dokument setzen, ohne dass jemand dafuer eingeladen wird.
+        <strong>Ein Firmenbild ist kein Unterzeichner:</strong> im Signaturprotokoll steht
+        &bdquo;eingesetzt von&ldquo;, nie &bdquo;unterschrieben von&ldquo;.
+    </div>
+    <div style="margin-top:10px;">
+        <a href="{{ route('admin.signatures.company.index') }}" class="btn btn-sm btn-ghost">Unternehmenssignaturen verwalten</a>
+    </div>
+</div>
+@endcan
+
 {{-- KI-Kundenassistent (Spezifikation Abschnitt 30). Der Assistent ist im
      Standard AUS und geht erst nach bewusster Freigabe in Betrieb. Das
      Marker-Feld ai_assistant_form sorgt dafuer, dass nicht angehakte

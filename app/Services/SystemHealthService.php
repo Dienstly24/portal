@@ -11,6 +11,7 @@ use App\Models\ErrorEvent;
 use App\Models\ScheduledTaskRun;
 use App\Models\User;
 use App\Services\Ai\Assistant\AssistantSettings;
+use App\Support\Bildverarbeitung;
 use App\Support\LocalTime;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Console\Kernel;
@@ -352,6 +353,23 @@ class SystemHealthService
                 ? ($binaries['ok'] ? null : 'Fehlende Programme: '.implode(', ', $binaries['missing'])
                     .' - pruefen mit: php artisan ocr:check')
                 : 'OCR_ENABLED=false - jede Analyse geht direkt an die kostenpflichtige KI.',
+        ];
+
+        // --- PHP-ERWEITERUNGEN (Bildverarbeitung)
+        //
+        // WARUM DIESE ZEILE EXISTIERT (Meldung 10.09.2026): auf dem Server
+        // fehlte `php8.3-gd`. Der Unterschreiben-Weg endete deshalb mit
+        // einem HTTP 500 - und ausgerechnet DIESE Seite, die es melden
+        // sollte, wusste nichts davon. Eine fehlende Erweiterung ist genau
+        // die Art von Ausfall, fuer die es die Seite gibt: sie erzeugt
+        // keine Fehlermeldung, sondern ein Verhalten, das niemand erklaeren
+        // kann. Die Pruefung kostet nichts (kein Prozess, kein Aufruf).
+        $bildFehlt = Bildverarbeitung::fehlendeFunktionen();
+        $items[] = [
+            'label' => 'Bildverarbeitung (GD)',
+            'value' => $bildFehlt === [] ? 'verfuegbar' : 'fehlt',
+            'status' => $bildFehlt === [] ? self::OK : self::FAIL,
+            'hint' => $bildFehlt === [] ? null : Bildverarbeitung::hinweisFuerBetrieb(),
         ];
 
         // --- KANAL-ZUGAENGE (WhatsApp & Co.)

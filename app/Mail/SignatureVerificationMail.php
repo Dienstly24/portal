@@ -26,11 +26,16 @@ class SignatureVerificationMail extends Mailable
         public SignatureSigner $signer,
         public string $code,
     ) {
+        $this->locale($signer->localeCode());
     }
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Ihr Bestätigungscode: '.$this->code.' – Dienstly24');
+        // DER CODE STAND FRUEHER IM BETREFF. Ein Betreff erscheint in der
+        // Sperrbildschirm-Vorschau, in der Postfachliste und in jedem
+        // Weiterleitungs-Kopf: der zweite Faktor waere damit genau dort
+        // gelandet, wo ihn jemand ohne Zugriff auf das Postfach lesen kann.
+        return new Envelope(subject: (string) __('signing.mail_subject_code'));
     }
 
     public function content(): Content

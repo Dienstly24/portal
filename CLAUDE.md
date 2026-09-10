@@ -2450,6 +2450,78 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
   - nach dem Abschluss ist der Zugang widerrufen.
 - Tests: `SignatureModuleTest` (26 Faelle, beide Szenarien), `PdfStamperTest`.
 
+### Nachbesserung 10.09.2026 (Betreiber-Meldung "HTTP 500 beim Unterschreiben")
+
+> **NACHTRAG, WICHTIGER ALS DER REST DIESES ABSCHNITTS:** die unten
+> genannte Ursache ("fehlende Schranke") war NUR DIE HALBE WAHRHEIT und
+> ist am selben Tag durch die Logdatei des Servers widerlegt worden. Der
+> gemeldete 500er kam NICHT aus dem Code, sondern aus dem fehlenden
+> Paket `php8.3-gd` - siehe den folgenden Abschnitt. Die Schranke bleibt
+> trotzdem richtig: OHNE sie sah der Unterzeichner die Fehlerseite statt
+> einer Erklaerung. Sie behebt die WIRKUNG, nicht die Ursache - und
+> genau diese Unterscheidung ist die eigentliche Lehre des Tages: eine
+> Fehlerbehandlung, die man fuer die Ursache haelt, verstellt den Blick
+> auf die Logdatei, in der die Antwort seit einem Tag stand.
+
+
+- **Die Ursache war KEIN einzelner Fehler, sondern eine fehlende
+  Schranke** (per Fehlereinspeisung nachgestellt): der Unterschreiben-Pfad
+  lief von der Pruefung bis zur Glocke in EINEM Stueck, jede Stoerung
+  dahinter (Platte, Glocke, PDF) schlug ungefiltert bis zum Unterzeichner
+  durch - und je nach Zeitpunkt war die Unterschrift verloren (vor dem
+  Ereignis `signed`, genau das Bild aus der Meldung) oder laengst
+  gespeichert, waehrend er eine Fehlerseite sah. Jetzt: Schleuse im
+  Controller (Log + Protokoll-Ereignis `signing_failed` + Glocke +
+  verstaendlicher Satz), GEPRUEFTE Schreibvorgaenge (`put()` meldet einen
+  Fehlschlag auch ohne Ausnahme mit `false`), Nachlauf hinter der
+  Schranke, Idempotenz beim doppelten Absenden, zu grosse Unterschriften
+  werden VERKLEINERT statt verworfen (820-px-Feld x Geraeteverhaeltnis 2 =
+  1640 px fiel bisher durch die Obergrenze), Zeichnung ueberlebt einen
+  Fehler (sessionStorage, nicht die Sitzung). Dazu der Editor-Fehler: ein
+  Feld, dessen Unterzeichner im selben Speichervorgang neu entstand,
+  verlor seinen Besitzer - der Vorgang liess sich danach nicht versenden.
+- **Sprache des UNTERZEICHNERS** (`signature_signers.locale`, de/ar/en) -
+  am Unterzeichner, nicht an der Anfrage (deutscher Kunde + arabischer
+  Zeuge im selben Vorgang) und NICHT die Portal-Sprache des Kunden (die
+  wird vorgeschlagen und nie geaendert). `lang/{de,ar,en}/signing.php`,
+  deckungsgleiche Schluessel (Test), `dir="rtl"`, lokale arabische
+  Schrift, Ziffernfolgen mit `dir="ltr"`. **Das PDF wird NIE gespiegelt** -
+  die Protokollseite bleibt deutsch und LTR (ein gespiegelter Vertrag
+  waere kein uebersetzter, sondern ein unlesbarer). Der ZUSTIMMUNGSTEXT
+  ist der Sonderfall: die Voreinstellung gibt es uebersetzt, ein selbst
+  geschriebener Text wird WOERTLICH gezeigt. Nebenbefund: der
+  Bestaetigungscode stand im BETREFF der Mail (Sperrbildschirm-Vorschau!).
+- **Unternehmenssignatur / Firmenstempel / Firmenlogo**
+  (`company_signature_assets`, Feldart `firma`, Einstellungen ->
+  Signaturen). **Ein Firmenbild ist KEIN Unterzeichner** - keine E-Mail,
+  kein Token, keine Zustimmung; im Protokoll steht "eingesetzt von", nie
+  "unterschrieben von". Eigene Tabelle statt einer Zeile in
+  `signature_signers`: sonst saehe eine Grafik im Protokoll wie eine
+  abgegebene Willenserklaerung aus. Ein Firmenfeld blockiert keinen
+  Versand; ohne zugewiesenes Bild entsteht es gar nicht. Rechte
+  `firmensignatur-verwalten` (admin/manager) und `firmensignatur-benutzen`,
+  geprueft an Route UND Controller UND beim Speichern. Bilder werden neu
+  gerendert, Alphakanal bleibt (weisser Kasten ueber dem Vertragstext);
+  ein benutztes Bild wird STILLGELEGT statt geloescht.
+- **Identitaetspruefung** `signature_requests.identity_check`:
+  keine / Geburtsdatum / E-Mail (der alte Ja-Nein-Schalter ist weg, zwei
+  Spalten fuer dieselbe Frage waeren zwei Wahrheiten). EHRLICH: das
+  Geburtsdatum ist KEIN Geheimnis (Ausweis, Versicherungsschein) - es
+  haelt nur den zufaelligen Empfaenger eines weitergeleiteten Links auf,
+  E-Mail bleibt Voreinstellung. Wert NUR als POST-Feld, NIE im Protokoll,
+  VERSCHLUESSELT statt gehasht (40.000 plausible Werte = Hash offline in
+  Sekunden geraten), grobe Antwort, zeitkonstanter Vergleich, 5 Versuche
+  dann 30 Min Sperre + Route-Throttle. Ohne hinterlegtes Datum wird NICHT
+  gefragt. KEIN SMS-Weg.
+- **Anlegen**: zwei gleichberechtigte Wege (bestehender Kunde /
+  "Externe Person hinzufuegen" ohne Kundenakte) mit Sofort-Suche
+  `admin.signatures.customer_search` (portfolio-gescoped, eigener
+  Endpunkt wegen Geburtsdatum und Sprache). Der externe Weg steht bewusst
+  NICHT im Kleingedruckten - wer ihn nicht findet, legt Karteileichen an.
+- Tests: `FaultInjectionSignatureTest`, `SignatureLocalizationTest`,
+  `CompanySignatureAssetTest`, `SignerIdentityTest`,
+  `SignatureCreateFlowTest`.
+
 ### Formularfehler auf Deutsch - und der leere optionale Unterzeichner (10.09.2026)
 
 - **Gemeldet**: beim Anlegen einer Signaturanfrage kam
@@ -2473,6 +2545,46 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
   … ist angegeben." - die Rahmen-Fassung nennt die Bedingung, nicht die
   Handlung.
 - Tests: `FormularfehlerAufDeutschTest`.
+
+### Der HTTP 500 beim Unterschreiben war der SERVER, nicht der Code (10.09.2026)
+
+- **Zwei Befunde aus `storage/logs/laravel.log`, beide Betrieb, keiner Logik:**
+  (1) `Call to undefined function ...imagecreatefromstring()` in
+  `SignatureSigningService.php:325` - das Paket **`php8.3-gd` fehlte auf dem
+  Server**. Ohne GD EXISTIERT die Funktion nicht; ein fehlender
+  Funktionsname ist ein FATALER Error, den weder das `@` davor noch ein
+  `try` um den Aufruf abfaengt. Die Zeile davor (`getimagesizefromstring`)
+  lief durch - sie gehoert zum PHP-Kern und beweist nichts ueber GD; genau
+  daran liess sich die Ursache festnageln. Der Aufruf steht VOR dem
+  Speichern und vor dem Ereignis `signed`: deshalb endete das Protokoll bei
+  "Unterschrift begonnen" und die Unterschrift war weg.
+  (2) `touch(): Utime failed: Operation not permitted` im `BladeCompiler` -
+  der Deploy baute die Caches als **root**, danach durfte `www-data` sie
+  nicht mehr anfassen und JEDE Seite mit neu zu uebersetzender Vorlage
+  antwortete mit HTTP 500. **Der Deploy meldete dabei Erfolg.**
+- **Die Lehre ist NICHT "GD installieren"** (das ist erledigt), sondern:
+  eine Voraussetzung, die das Programm braucht, wird FRUEH geprueft und
+  hinterlaesst einen Satz, den ein Mensch lesen kann.
+  `App\Support\Bildverarbeitung` ist die EINE Stelle dafuer; sie prueft
+  `function_exists` je Funktion, nicht `extension_loaded` (einzelne
+  Funktionen koennen per `disable_functions` gesperrt sein, waehrend die
+  Erweiterung geladen ist).
+- **Geprueft wird beim HOCHLADEN, nicht beim Unterschreiben** - dieselbe
+  Regel wie beim defekten PDF: ein Fehlschlag NACH der Unterschrift ist dem
+  Unterzeichner nicht zu erklaeren und der Vorgang nicht zu retten.
+- **Schleuse um den Unterschreiben-Pfad**: jede Stoerung dahinter (Platte,
+  Glocke, PDF) gibt jetzt einen verstaendlichen Satz, ein Ereignis
+  `signing_failed` im Protokoll und eine Glocke an den Ersteller. Der Fehler
+  verschwindet dadurch nicht - er wird sichtbar statt zur Fehlerseite mit
+  einer Zahl.
+- **`/admin/systemzustand` wusste nichts davon** - ausgerechnet die Seite,
+  die es melden soll. Sie hat jetzt die Zeile "Bildverarbeitung (GD)" mit
+  dem Installationsbefehl im Hinweis. Die Pruefung kostet nichts (kein
+  Prozess, kein Aufruf).
+- **`scripts/deploy.sh` uebereignet die Caches nach dem Bauen dem
+  Webserver** (`chown` NACH `view:cache` - davor waere es wirkungslos, die
+  Dateien entstehen erst dort). Der Schritt bricht den Deploy nie ab.
+- Tests: `BildverarbeitungFehltTest`.
 
 ## Offene Themen / wartet auf den Betreiber
 
