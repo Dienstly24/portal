@@ -9,10 +9,13 @@ use App\Models\Conversation;
 use App\Models\Customer;
 use App\Models\CustomerChannelIdentity;
 use App\Models\CustomerMessage;
+use App\Models\CustomerMessageAttachment;
+use App\Models\Document;
 use App\Models\User;
 use App\Services\CustomerCreation\CustomerAutoCreationService;
 use App\Services\CustomerCreation\DuplicateCustomerException;
 use App\Services\Messaging\AssignmentService;
+use App\Services\Messaging\AttachmentFilingService;
 use App\Services\Messaging\Inbox\ConversationInbox;
 use App\Services\Messaging\Inbox\InboxFilters;
 use App\Support\UploadRules;
@@ -56,6 +59,7 @@ class PostfachController extends Controller
         // mehr zeigen, als die Liste hergeben wuerde.
         $active = null;
         $messages = collect();
+        $aktenUnterlagen = collect();
         if ($request->query('unterhaltung')) {
             $active = $this->inbox->scope($user)
                 ->whereKey($request->query('unterhaltung'))
@@ -69,12 +73,22 @@ class PostfachController extends Controller
                 ->where('direction', CustomerMessage::DIRECTION_INCOMING)
                 ->whereNull('read_at')
                 ->update(['read_at' => now()]);
+
+            // Unterlagen zum Mitschicken. GEDECKELT (dieselbe Lehre wie
+            // bei den grossen Listen): eine Akte mit 300 Unterlagen darf
+            // den Chat nicht laden - die juengsten sind die gefragten.
+            if ($active->customer_id) {
+                $aktenUnterlagen = Document::where('customer_id', $active->customer_id)
+                    ->orderByDesc('created_at')->limit(50)
+                    ->get(['id', 'file_name', 'created_at']);
+            }
         }
 
         return view('admin.postfach.index', [
             'conversations' => $conversations,
             'counts' => $counts,
             'filters' => $filters,
+            'aktenUnterlagen' => $aktenUnterlagen,
             'kanaele' => $kanaele,
             'active' => $active,
             'messages' => $messages,
@@ -97,26 +111,96 @@ class PostfachController extends Controller
             'body' => 'required|string|max:5000',
             'attachments' => 'nullable|array|max:5',
             'attachments.*' => UploadRules::each(UploadRules::ATTACHMENT_MIMES),
+            // Unterlagen AUS DER AKTE mitschicken - der haeufigste Fall
+            // ("schicken Sie mir bitte meine Police") braucht sonst einen
+            // Umweg ueber Herunterladen und wieder Hochladen.
+            'dokumente' => 'nullable|array|max:5',
+            'dokumente.*' => 'string',
         ]);
+
+        $ausAkte = collect();
+        if (! empty($data['dokumente'])) {
+            // Nur Unterlagen DIESES Kunden - die Kennung kommt aus dem
+            // Browser und wird nie geglaubt. Ohne diese Bedingung liesse
+            // sich mit einer fremden Kennung eine fremde Akte abfliessen.
+            if (! $unterhaltung->customer_id) {
+                return back()->with('error', 'Diese Unterhaltung ist keinem Kunden zugeordnet.');
+            }
+            $ausAkte = Document::where('customer_id', $unterhaltung->customer_id)
+                ->whereIn('id', $data['dokumente'])->get();
+        }
 
         // FAEHIGKEITEN statt Kanalnamen (Auftrag 8): kann der Kanal keine
         // Dateien, wird der Anhang abgelehnt - und zwar mit einer
         // Begruendung, statt ihn still zu verschlucken.
-        if ($request->hasFile('attachments') && ! $unterhaltung->channel?->supports('supportsMedia')) {
+        if (($request->hasFile('attachments') || $ausAkte->isNotEmpty())
+            && ! $unterhaltung->channel?->supports('supportsMedia')) {
             return back()->with('error', 'Dieser Kanal kann keine Dateien senden.');
         }
 
-        $nachricht = CustomerMessage::create([
-            'conversation_id' => $unterhaltung->id,
-            'customer_id' => $unterhaltung->customer_id,
-            'sender_id' => $user->id,
-            'body' => $data['body'],
-            'from_staff' => true,
-            'email_mode' => 'none',
-        ]);
-        CustomerMessageController::storeAttachments($request, $nachricht);
+        // Erst die Nachricht, dann die Anhaenge, dann der Versand - sonst
+        // ginge der Text ohne die Dateien raus.
+        CustomerMessage::mitAnhaengen(
+            fn () => CustomerMessage::create([
+                'conversation_id' => $unterhaltung->id,
+                'customer_id' => $unterhaltung->customer_id,
+                'sender_id' => $user->id,
+                'body' => $data['body'],
+                'from_staff' => true,
+                'email_mode' => 'none',
+            ]),
+            function (CustomerMessage $nachricht) use ($request, $ausAkte, $user) {
+                CustomerMessageController::storeAttachments($request, $nachricht);
+
+                foreach ($ausAkte as $dokument) {
+                    // KEINE zweite Kopie: der Anhang zeigt auf dieselbe
+                    // Datei und traegt die Unterlagen-Kennung mit. Damit
+                    // ist im Verlauf belegt, WELCHE Unterlage der Kunde
+                    // bekommen hat - nicht nur, dass er etwas bekam.
+                    CustomerMessageAttachment::create([
+                        'message_id' => $nachricht->id,
+                        'uploaded_by' => $user->id,
+                        'file_name' => $dokument->file_name,
+                        'file_path' => $dokument->file_path,
+                        'disk' => $dokument->disk ?: 'local',
+                        'file_size' => $dokument->file_size,
+                        'document_id' => $dokument->id,
+                    ]);
+                }
+            }
+        );
 
         return back()->with('success', 'Nachricht gesendet.');
+    }
+
+    /**
+     * Einen Chat-Anhang als Unterlage in die Kundenakte uebernehmen.
+     *
+     * Bewusst eine ausdrueckliche Aktion: nicht jedes Bild in einer
+     * Unterhaltung ist ein Nachweis (siehe AttachmentFilingService).
+     */
+    public function fileAttachment(Request $request, string $id, AttachmentFilingService $ablage)
+    {
+        $user = auth()->user();
+        $anhang = CustomerMessageAttachment::with('message.conversation')->findOrFail($id);
+
+        // Zugriff ueber die UNTERHALTUNG pruefen, nicht ueber den Anhang:
+        // dieselbe Sicht wie im Postfach, dieselbe Portfolio-Regel.
+        $unterhaltung = $anhang->message?->conversation;
+        abort_unless($unterhaltung && $this->inbox->scope($user)->whereKey($unterhaltung->id)->exists(), 403);
+
+        try {
+            $dokument = $ablage->uebernehmen($anhang, $user);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        // EHRLICH benennen, was passiert ist: bei inhaltsgleicher
+        // Unterlage entsteht keine zweite Datei, und der Mitarbeiter
+        // soll nicht glauben, er habe gerade etwas angelegt.
+        return back()->with('success', $dokument->wasRecentlyCreated
+            ? 'In die Kundenakte übernommen: '.$dokument->file_name
+            : 'Liegt bereits als Unterlage in der Kundenakte: '.$dokument->file_name);
     }
 
     /** Uebernehmen - aendert die Zustaendigkeit, NIE den Betreuer. */

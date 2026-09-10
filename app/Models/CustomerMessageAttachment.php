@@ -17,6 +17,9 @@ class CustomerMessageAttachment extends Model
         // der MIME-Typ aus der Dateiendung geraten - bei einer ueber eine
         // Plattform-Kennung geholten Datei gibt es oft gar keine Endung.
         'type', 'mime_type', 'file_size', 'external_media_id', 'metadata',
+        // Bruecke in die Kundenakte: gesetzt = bereits als Unterlage
+        // uebernommen (und damit der Schutz gegen doppelte Uebernahme).
+        'document_id',
     ];
 
     protected $casts = ['metadata' => 'array'];
@@ -31,6 +34,12 @@ class CustomerMessageAttachment extends Model
 
     /** @return BelongsTo<User, $this> */
     public function uploader(): BelongsTo { return $this->belongsTo(User::class, 'uploaded_by'); }
+
+    /** @return BelongsTo<Document, $this> */
+    public function document(): BelongsTo { return $this->belongsTo(Document::class, 'document_id'); }
+
+    /** Bereits als Unterlage in der Kundenakte gefuehrt? */
+    public function istUebernommen(): bool { return $this->document_id !== null; }
 
     /** Bild-Anhaenge koennen im Chat als Vorschau gerendert werden. */
     public function isImage(): bool {

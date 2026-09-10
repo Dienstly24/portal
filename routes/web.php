@@ -642,6 +642,13 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         Route::post('/kunde-anlegen', [PostfachController::class, 'createCustomer'])->name('create_customer');
     });
 
+    // Anhang aus einer Unterhaltung in die Kundenakte uebernehmen.
+    // BEWUSST NICHT unter postfach/{id}: die Kennung ist die des
+    // ANHANGS, nicht die der Unterhaltung - zwei verschiedene Dinge
+    // unter einem {id} sind die Vorstufe zur Verwechslung.
+    Route::post('/postfach-anhang/{id}/in-die-akte', [PostfachController::class, 'fileAttachment'])
+        ->name('postfach.file_attachment');
+
     // Zentraler Kunden-Chat: alle Portal-Unterhaltungen an einem Ort
     Route::get('/kundenchat', [AdminCustomerChatController::class, 'index'])->name('customer_chat');
     Route::get('/kundenchat/{id}/feed', [AdminCustomerChatController::class, 'feed'])
