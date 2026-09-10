@@ -101,8 +101,8 @@
                 <div style="flex:1;min-width:0;">
                     <div style="font-weight:600;">
                         {{ $asset->name }}
-                        @if($asset->is_default)<span class="badge badge-emerald">Voreinstellung</span>@endif
-                        @if(!$asset->active)<span class="badge">Stillgelegt</span>@endif
+                        @if($asset->is_default)<span class="badge badge-active">Voreinstellung</span>@endif
+                        @if(!$asset->active)<span class="badge badge-closed">Stillgelegt</span>@endif
                     </div>
                     <div class="muted-sm">
                         {{ $asset->width }}×{{ $asset->height }} px · {{ number_format($asset->bytes / 1024, 0, ',', '.') }} KB

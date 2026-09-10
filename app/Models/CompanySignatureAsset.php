@@ -25,7 +25,7 @@ use Illuminate\Support\Str;
  * @property string $hash
  * @property bool $is_default
  * @property bool $active
- * @property string|null $created_by
+ * @property int|null $created_by
  */
 class CompanySignatureAsset extends Model
 {

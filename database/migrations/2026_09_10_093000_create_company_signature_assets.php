@@ -32,10 +32,12 @@ return new class extends Migration {
             $table->char('hash', 64);
             $table->boolean('is_default')->default(false);
             $table->boolean('active')->default(true);
-            $table->uuid('created_by')->nullable();
+            // foreignId, NICHT uuid: users.id ist ein bigint. SQLite prueft
+            // Spaltentypen nicht und liess die Fremdschluessel-Bedingung
+            // durchgehen - MySQL lehnt sie ab (errno 150). Dieselbe Form wie
+            // in den uebrigen Signatur-Tabellen.
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
-
-            $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
             $table->index(['type', 'active']);
         });
 
