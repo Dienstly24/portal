@@ -92,6 +92,22 @@ class ChannelAccount extends Model
     }
 
     /**
+     * Laeuft der Zugang BALD ab?
+     *
+     * Der Punkt ist die Vorwarnung. Ein Zugang mit 60 Tagen Laufzeit
+     * (so vergibt Meta ihn ueber die uebliche Vorlage) faellt sonst
+     * ohne Ankuendigung aus, und die Stoerung sieht aus wie jede
+     * andere: WhatsApp antwortet einfach nicht mehr. Wer den Ablauf
+     * erst am Ausfalltag sieht, hat keine Woche mehr zum Erneuern.
+     */
+    public function tokenExpiresSoon(int $tage = 14): bool
+    {
+        return $this->token_expires_at !== null
+            && ! $this->tokenExpired()
+            && $this->token_expires_at->lessThanOrEqualTo(now()->addDays($tage));
+    }
+
+    /**
      * Ein Zugang, dessen Ablauf bekannt UND vergangen ist, gilt als
      * abgelaufen. Ist kein Ablauf hinterlegt (Dauer-Token), gilt er als
      * gueltig - "unbekannt" darf den Betrieb nicht anhalten.

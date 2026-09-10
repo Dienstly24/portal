@@ -276,6 +276,13 @@ In der bestehenden App **Dienstly24** (kein Grund fuer eine zweite):
    `META_APP_ID`, `META_APP_SECRET`, `META_ES_CONFIG_ID`.
    Ohne sie wird der Weg gar nicht angeboten (und die CSP-Freigabe fuer
    Meta bleibt weg).
+   Dazu `META_WEBHOOK_VERIFY_TOKEN` mit demselben Wert, der bei Meta
+   unter WhatsApp -> Konfiguration als Verifizierungstoken eingetragen
+   wird. Er ist NUR fuer die Ersteinrichtung noetig: Meta prueft den
+   Endpunkt, bevor eine Nummer angebunden ist - zu diesem Zeitpunkt gibt
+   es noch kein Konto, gegen das sich etwas pruefen liesse. Jede ECHTE
+   Zustellung wird weiterhin ueber die Signatur mit dem App-Secret des
+   jeweiligen Kontos geprueft.
 2. Den Coexistence-Weg bei Meta durchlaufen und in der WhatsApp Business
    App auf dem Telefon **bestaetigen** - dieser Schritt passiert auf dem
    Geraet und kann von hier aus weder ausgeloest noch geprueft werden.

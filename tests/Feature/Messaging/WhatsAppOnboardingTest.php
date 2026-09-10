@@ -290,7 +290,62 @@ class WhatsAppOnboardingTest extends TestCase
     }
 
     /**
-     * Fall 14: Der Zustand allein macht noch keine Coexistence. Erst
+     * Fall 14: DER ABLAUF WIRD MITGESPEICHERT. Die uebliche Vorlage bei
+     * Meta vergibt 60 Tage; ohne diesen Wert stuende das Konto bis zum
+     * Tag des Ausfalls auf "verbunden" - und die Stoerung saehe aus wie
+     * jede andere.
+     */
+    public function test_der_ablauf_des_zugangs_wird_gespeichert(): void
+    {
+        $this->konfiguriert();
+        Http::fake([
+            '*/oauth/access_token*' => Http::response([
+                'access_token' => 'TOKEN-NEU',
+                'expires_in' => 60 * 24 * 3600,
+            ], 200),
+            '*/subscribed_apps' => Http::response(['success' => true], 200),
+            '*' => Http::response(['display_phone_number' => '+49 170 9999999'], 200),
+        ]);
+
+        $this->anbinden();
+
+        $konto = ChannelAccount::firstOrFail();
+        $this->assertNotNull($konto->token_expires_at);
+        $this->assertSame(60, (int) round(now()->diffInDays($konto->token_expires_at)));
+        $this->assertFalse($konto->tokenExpired());
+        $this->assertFalse($konto->tokenExpiresSoon());
+    }
+
+    /** Fall 15: Ein Dauer-Token bekommt KEIN erfundenes Ablaufdatum. */
+    public function test_ein_dauertoken_bekommt_kein_erfundenes_datum(): void
+    {
+        $this->konfiguriert();
+        $this->metaAntwortet();
+
+        $this->anbinden();
+
+        $this->assertNull(ChannelAccount::firstOrFail()->token_expires_at);
+    }
+
+    /** Fall 16: Vor dem Ablauf wird gewarnt - nicht erst danach. */
+    public function test_vor_dem_ablauf_wird_gewarnt(): void
+    {
+        $konto = ChannelAccount::create([
+            'channel_id' => Channel::where('key', 'whatsapp')->firstOrFail()->id,
+            'name' => 'Nummer', 'is_active' => true,
+            'token_expires_at' => now()->addDays(7),
+            'credentials' => ['access_token' => 'T'],
+        ]);
+
+        $this->assertTrue($konto->tokenExpiresSoon());
+        $this->assertFalse($konto->tokenExpired());
+
+        $this->actingAs($this->admin())->get(route('admin.channels.index'))
+            ->assertOk()->assertSee('läuft bald ab');
+    }
+
+    /**
+     * Fall 17: Der Zustand allein macht noch keine Coexistence. Erst
      * BEIDES zusammen - Art und stehende Verbindung - zaehlt.
      */
     public function test_coexistence_verlangt_art_und_verbindung(): void

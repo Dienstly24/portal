@@ -62,6 +62,22 @@ return [
         'app_id' => env('META_APP_ID'),
         'app_secret' => env('META_APP_SECRET'),
         'es_config_id' => env('META_ES_CONFIG_ID'),
+
+        /*
+        | Bestaetigungs-Token des Webhooks fuer die ERSTEINRICHTUNG.
+        |
+        | Meta prueft den Endpunkt, BEVOR eine Nummer angebunden ist -
+        | zu diesem Zeitpunkt gibt es noch kein Kanal-Konto, gegen das
+        | sich ein Token pruefen liesse. Ohne diesen Wert waere die
+        | Reihenfolge unaufloesbar: kein Webhook ohne Konto, kein Konto
+        | ohne Webhook.
+        |
+        | Er gilt NUR fuer die Bestaetigung des Endpunkts. Die ECHTEN
+        | Zustellungen werden weiterhin ueber die Signatur mit dem
+        | App-Secret des jeweiligen Kontos geprueft - daran aendert
+        | dieser Wert nichts.
+        */
+        'webhook_verify_token' => env('META_WEBHOOK_VERIFY_TOKEN'),
     ],
 
     'resend' => [
