@@ -31,11 +31,14 @@ class SignatureCompletedMail extends Mailable
         public SignatureSigner $signer,
         protected string $pdf,
     ) {
+        $this->locale($signer->localeCode());
     }
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Unterschrieben: '.$this->signatureRequest->title.' – Dienstly24');
+        return new Envelope(subject: (string) __('signing.mail_subject_completed', [
+            'title' => $this->signatureRequest->title,
+        ]));
     }
 
     public function content(): Content

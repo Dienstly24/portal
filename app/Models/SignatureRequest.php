@@ -34,13 +34,12 @@ class SignatureRequest extends Model
         'title', 'status', 'customer_id', 'contract_id', 'completed_document_id', 'created_by',
         'original_path', 'original_name', 'original_hash', 'original_size', 'page_count',
         'signed_path', 'signed_hash', 'signed_size',
-        'signing_order', 'require_email_verification', 'consent_text',
+        'signing_order', 'identity_check', 'consent_text',
         'document_type', 'reference', 'note',
         'sent_at', 'completed_at', 'cancelled_at', 'cancel_reason', 'expires_at', 'last_activity_at',
     ];
 
     protected $casts = [
-        'require_email_verification' => 'boolean',
         'page_count' => 'integer',
         'original_size' => 'integer',
         'signed_size' => 'integer',
@@ -99,6 +98,90 @@ class SignatureRequest extends Model
     public function completedDocument(): BelongsTo
     {
         return $this->belongsTo(Document::class, 'completed_document_id');
+    }
+
+    /**
+     * Der Zustimmungstext in der Sprache DIESES Unterzeichners.
+     *
+     * ZWEI FAELLE, und der Unterschied ist wichtig: steht hier noch die
+     * Voreinstellung, ist der Satz von uns - dann gibt es ihn uebersetzt.
+     * Hat ein Mitarbeiter etwas EIGENES geschrieben, wird es WOERTLICH
+     * gezeigt, auch auf einer arabischen Seite. Einen selbst formulierten
+     * rechtlichen Hinweis maschinell zu uebersetzen hiesse, dem
+     * Unterzeichner eine Erklaerung vorzulegen, die so niemand geprueft
+     * hat - und genau darauf beruft er sich spaeter.
+     */
+    /**
+     * Die zusaetzliche Identitaetspruefung dieses Vorgangs.
+     *
+     * EINE Spalte, drei Werte - kein zweiter Schalter daneben. Ein SMS-Weg
+     * fehlt bewusst (Betreiber-Vorgabe): das waere ein weiterer
+     * Dienstleister, ein weiterer Vertrag und eine weitere Datenspur.
+     */
+    public const IDENTITY_NONE = 'keine';
+
+    public const IDENTITY_DOB = 'geburtsdatum';
+
+    public const IDENTITY_EMAIL = 'email';
+
+    public const IDENTITY_CHECKS = [
+        self::IDENTITY_NONE => 'Keine',
+        self::IDENTITY_DOB => 'Geburtsdatum',
+        self::IDENTITY_EMAIL => 'E-Mail-Bestätigung',
+    ];
+
+    public static function identityCheckKeys(): array
+    {
+        return array_keys(self::IDENTITY_CHECKS);
+    }
+
+    public function identityCheckLabel(): string
+    {
+        return self::IDENTITY_CHECKS[$this->identity_check] ?? (string) $this->identity_check;
+    }
+
+    public function requiresEmailVerification(): bool
+    {
+        return $this->identity_check === self::IDENTITY_EMAIL;
+    }
+
+    public function requiresDob(): bool
+    {
+        return $this->identity_check === self::IDENTITY_DOB;
+    }
+
+    /**
+     * Der alte Name als abgeleiteter Wert - damit kein Aufrufer bricht,
+     * ohne dass eine zweite Spalte dieselbe Frage ein zweites Mal
+     * beantwortet.
+     */
+    public function getRequireEmailVerificationAttribute(): bool
+    {
+        return $this->requiresEmailVerification();
+    }
+
+    public function setRequireEmailVerificationAttribute($value): void
+    {
+        // Eine ausdrueckliche Geburtsdatums-Pruefung wird davon NIE
+        // ueberschrieben: der alte Schalter kennt sie gar nicht.
+        if ($this->identity_check === self::IDENTITY_DOB) {
+            return;
+        }
+        $this->attributes['identity_check'] = filter_var($value, FILTER_VALIDATE_BOOLEAN)
+            ? self::IDENTITY_EMAIL
+            : self::IDENTITY_NONE;
+    }
+
+    public function consentTextFor(?SignatureSigner $signer = null): string
+    {
+        $text = (string) $this->consent_text;
+        $vorgabe = (string) __('signing.consent_default', [], 'de');
+
+        if ($signer === null || trim($text) !== trim($vorgabe)) {
+            return $text;
+        }
+
+        return (string) __('signing.consent_default', [], $signer->localeCode());
     }
 
     public function statusLabel(): string
