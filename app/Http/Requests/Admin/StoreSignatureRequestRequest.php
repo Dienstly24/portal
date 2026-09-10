@@ -45,6 +45,10 @@ class StoreSignatureRequestRequest extends FormRequest
             'signers.*.name' => ['required_with:signers.*.email', 'string', 'max:160'],
             'signers.*.email' => ['nullable', 'email:filter', 'max:190'],
             'signers.*.locale' => ['nullable', 'string', 'in:'.implode(',', array_keys(SignatureSigner::LOCALES))],
+            // Nur bei Pruefung "Geburtsdatum" ausgefuellt; der Dienst
+            // normalisiert und verschluesselt es, hier steht deshalb keine
+            // Datumsregel (der Mitarbeiter tippt TT.MM.JJJJ).
+            'signers.*.date_of_birth' => ['nullable', 'string', 'max:20'],
         ];
     }
 

@@ -460,6 +460,10 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     Route::get('/firmensignaturen/{id}/bild', [CompanySignatureAssetController::class, 'image'])
         ->name('signatures.company.image');
     Route::get('/signaturen/neu', [AdminSignatureController::class, 'create'])->name('signatures.create');
+    // Sofort-Suche fuer das Anlage-Formular. VOR /signaturen/{id}, sonst
+    // deutet die Routenreihenfolge "kunden-suche" als Signatur-ID.
+    Route::get('/signaturen/kunden-suche', [AdminSignatureController::class, 'customerSearch'])
+        ->name('signatures.customer_search');
     Route::post('/signaturen', [AdminSignatureController::class, 'store'])
         ->middleware('throttle:60,10')->name('signatures.store');
     Route::get('/signaturen/{id}', [AdminSignatureController::class, 'show'])->name('signatures.show');

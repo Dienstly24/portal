@@ -26,6 +26,46 @@
     @if($customer)<input type="hidden" name="customer_id" value="{{ $customer->id }}">@endif
     @if($contract)<input type="hidden" name="contract_id" value="{{ $contract->id }}">@endif
 
+    @unless($customer)
+    {{-- ZWEI WEGE, gleichberechtigt nebeneinander. Der externe Weg steht
+         BEWUSST nicht im Kleingedruckten: wer ihn nicht findet, legt sich
+         eine Kundenakte auf Vorrat an - und genau die Karteileichen fuehrt
+         der CustomerMergeService spaeter muehsam wieder zusammen. --}}
+    <div class="card" style="margin-bottom:16px;">
+        <div class="card-head-bar">Wer soll unterschreiben?</div>
+        <div style="padding:18px 20px;display:grid;gap:12px;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button type="button" class="btn btn-sm btn-ghost" id="weg-kunde" data-h-click="sigWegKunde">
+                    Bestehender Kunde
+                </button>
+                <button type="button" class="btn btn-sm btn-ghost" id="weg-extern" data-h-click="sigWegExtern">
+                    Externe Person hinzufügen
+                </button>
+            </div>
+
+            <div id="kunden-suche-block">
+                <label for="kundensuche">Kunde suchen</label>
+                <input id="kundensuche" type="text" autocomplete="off" data-h-input="sigKundenSuche"
+                       placeholder="Name, Kundennummer, E-Mail oder Telefon"
+                       style="width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+                <div id="kunden-treffer" style="margin-top:6px;display:grid;gap:4px;"></div>
+                <input type="hidden" name="customer_id" id="customer_id" value="{{ old('customer_id') }}">
+                <div id="kunde-gewaehlt" class="muted-sm" style="margin-top:6px;"></div>
+                <div class="muted-sm" style="margin-top:6px;">
+                    Name, E-Mail, Sprache und Geburtsdatum des ersten Unterzeichners werden übernommen -
+                    sie bleiben änderbar. Der Kunde wird dadurch nicht verändert.
+                </div>
+            </div>
+
+            <div id="extern-hinweis" hidden class="muted-sm">
+                <strong>Es wird kein Kunde angelegt.</strong> Tragen Sie unten einfach Name und E-Mail ein.
+                Nach der Unterschrift können Sie das Dokument einem bestehenden Kunden zuordnen,
+                einen neuen Kunden daraus anlegen - oder es unzugeordnet lassen.
+            </div>
+        </div>
+    </div>
+    @endunless
+
     <div class="card" style="margin-bottom:16px;">
         <div class="card-head-bar">Dokument</div>
         <div style="padding:18px 20px;display:grid;gap:14px;">
@@ -169,6 +209,92 @@
 @pushOnce('cspScripts')
 <script @cspNonce>
 window.__h = window.__h || {};
+
+// ---------------------------------------------------------------------
+// Kundensuche und Uebernahme in den ersten Unterzeichner.
+//
+// UEBERNOMMEN WIRD IN DIE FORMULARFELDER, nicht heimlich im Hintergrund:
+// der Mitarbeiter sieht, was eingetragen wurde, und kann es aendern. Und
+// der KUNDE wird dabei nie veraendert - weder seine Sprache noch sonst
+// etwas; hier entsteht nur ein Vorschlag fuer DIESEN Vorgang.
+// ---------------------------------------------------------------------
+(function () {
+    var sucheUrl = @json(route('admin.signatures.customer_search'));
+    var feld = document.getElementById('kundensuche');
+    if (!feld) { return; }
+
+    var treffer = document.getElementById('kunden-treffer');
+    var idFeld = document.getElementById('customer_id');
+    var gewaehlt = document.getElementById('kunde-gewaehlt');
+    var laufend = null;
+
+    function leeren() { treffer.textContent = ''; }
+
+    function zeigen(kunden) {
+        leeren();
+        kunden.forEach(function (kunde) {
+            var knopf = document.createElement('button');
+            knopf.type = 'button';
+            knopf.className = 'btn btn-sm btn-ghost';
+            knopf.style.cssText = 'text-align:left;justify-content:flex-start;width:100%;';
+            // textContent, kein HTML-String: Kundennamen sind Fremddaten
+            // (dieselbe Regel wie in den anderen Sofort-Suchen).
+            knopf.textContent = kunde.name + ' \u00b7 ' + kunde.number + (kunde.email ? ' \u00b7 ' + kunde.email : '');
+            knopf.addEventListener('click', function () { uebernehmen(kunde); });
+            treffer.appendChild(knopf);
+        });
+    }
+
+    function uebernehmen(kunde) {
+        idFeld.value = kunde.id;
+        gewaehlt.textContent = 'Gew\u00e4hlt: ' + kunde.name + ' (' + kunde.number + ')';
+        feld.value = kunde.name;
+        leeren();
+
+        var name = document.querySelector('[name="signers[0][name]"]');
+        var mail = document.querySelector('[name="signers[0][email]"]');
+        var sprache = document.querySelector('[name="signers[0][locale]"]');
+        var dob = document.querySelector('[name="signers[0][date_of_birth]"]');
+        if (name && !name.value) { name.value = kunde.name === '\u2014' ? '' : kunde.name; }
+        // Eine INTERNE Platzhalter-Adresse kommt als null zurueck und wird
+        // deshalb nie eingetragen - eine Einladung dorthin waere ein
+        // stiller Fehlschlag.
+        if (mail && !mail.value && kunde.email) { mail.value = kunde.email; }
+        if (sprache && kunde.sprache) { sprache.value = kunde.sprache; }
+        if (dob && !dob.value && kunde.geburtsdatum) { dob.value = kunde.geburtsdatum; }
+    }
+
+    window.__h["sigKundenSuche"] = function () {
+        var q = this.value.trim();
+        idFeld.value = '';
+        gewaehlt.textContent = '';
+        if (q.length < 2) { leeren(); return; }
+        if (laufend) { laufend.abort(); }
+        laufend = new AbortController();
+        fetch(sucheUrl + '?q=' + encodeURIComponent(q), {
+            headers: { 'Accept': 'application/json' }, signal: laufend.signal
+        }).then(function (r) { return r.json(); })
+          .then(function (d) { zeigen(d.customers || []); })
+          .catch(function () { /* Abbruch oder Netz - keine Meldung noetig */ });
+    };
+
+    window.__h["sigWegKunde"] = function () {
+        document.getElementById('kunden-suche-block').hidden = false;
+        document.getElementById('extern-hinweis').hidden = true;
+    };
+
+    window.__h["sigWegExtern"] = function () {
+        // Die Auswahl wird ZURUECKGESETZT, nicht nur ausgeblendet: sonst
+        // haengt der Vorgang an einem Kunden, den niemand mehr sieht.
+        idFeld.value = '';
+        gewaehlt.textContent = '';
+        feld.value = '';
+        leeren();
+        document.getElementById('kunden-suche-block').hidden = true;
+        document.getElementById('extern-hinweis').hidden = false;
+    };
+})();
+
 // Das Geburtsdatums-Feld hat nur einen Sinn, wenn die Pruefung darauf
 // steht. Immer sichtbar waere es eine Aufforderung, ein personenbezogenes
 // Datum zu erfassen, das niemand braucht (Datenminimierung).
