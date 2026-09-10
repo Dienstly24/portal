@@ -124,6 +124,26 @@
 .field input:focus, .field select:focus, .field textarea:focus { outline: 2px solid var(--emerald); outline-offset: 1px; }
 .field textarea { min-height: 90px; resize: vertical; }
 
+/* --- Einzelnes Bedienelement OHNE eigene Beschriftungszeile ----------
+ * `.field` ist ein UMSCHLAG (Label + Eingabe) und traegt Abstaende fuer
+ * ein Formular. In einer Werkzeugleiste - Filterzeile, Kopf einer
+ * Unterhaltung - waere das zu viel: dort steht ein Auswahlfeld direkt
+ * neben seinem Knopf.
+ *
+ * Diese Luecke war der Grund, warum mehrere Seiten `class="field"` auf
+ * das Feld SELBST gesetzt haben. Das trifft keine einzige Regel (der
+ * Selektor ist `.field input`), und die Felder blieben voellig
+ * ungestaltet. Es gibt jetzt eine Antwort dafuer, damit die naechste
+ * Seite sie nicht wieder erfindet.
+ * ------------------------------------------------------------------ */
+.eingabe {
+    padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px;
+    font-size: 13.5px; background: var(--surface-soft); color: var(--ink);
+    font-family: inherit; transition: .15s; max-width: 100%;
+}
+.eingabe:focus { outline: 2px solid var(--emerald); outline-offset: 1px; }
+.eingabe-sm { padding: 7px 10px; font-size: 13px; }
+
 /* --- Meldungen ------------------------------------------------------
  * Zwei Schreibweisen im Bestand: die Beraterwelt setzt `class="alert
  * alert-success"`, Kundenportal und Partnerportal nur `class="alert-success"`.
