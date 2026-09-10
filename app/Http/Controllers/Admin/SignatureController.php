@@ -243,11 +243,13 @@ class SignatureController extends Controller
         $data = $request->validate([
             'signers' => ['array', 'max:10'],
             'signers.*.id' => ['nullable', 'string', 'max:64'],
+            'signers.*.key' => ['nullable', 'string', 'max:64'],
             'signers.*.name' => ['required', 'string', 'max:160'],
             'signers.*.email' => ['required', 'email:filter', 'max:190'],
             'fields' => ['array', 'max:200'],
             'fields.*.id' => ['nullable', 'string', 'max:64'],
             'fields.*.signer_id' => ['nullable', 'string', 'max:64'],
+            'fields.*.signer_key' => ['nullable', 'string', 'max:64'],
             'fields.*.type' => ['required', 'string', 'in:'.implode(',', SignatureFieldType::keys())],
             'fields.*.page' => ['required', 'integer', 'min:1', 'max:200'],
             'fields.*.x' => ['required', 'numeric', 'min:0', 'max:1'],
@@ -262,8 +264,8 @@ class SignatureController extends Controller
             return $this->respond($request, false, 'Nach dem Versand kann die Aufteilung nicht mehr geändert werden.');
         }
 
-        $this->requests->syncSigners($signature, $data['signers'] ?? []);
-        $this->requests->syncFields($signature->fresh(), $data['fields'] ?? []);
+        $keys = $this->requests->syncSigners($signature, $data['signers'] ?? []);
+        $this->requests->syncFields($signature->fresh(), $data['fields'] ?? [], $keys);
 
         return $this->respond($request, true, 'Gespeichert.');
     }

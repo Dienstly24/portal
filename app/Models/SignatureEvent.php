@@ -53,6 +53,12 @@ class SignatureEvent extends Model
         'signing_started' => 'Unterschrift begonnen',
         'field_filled' => 'Feld ausgefüllt',
         'signed' => 'Unterschrift abgeschlossen',
+        // Der GEGENPOL zu 'signing_started': ohne ihn endete das Protokoll
+        // bei einer Stoerung stumm mit "Unterschrift begonnen" - genau das
+        // Bild, mit dem der gemeldete HTTP 500 aufgefallen ist. Ein
+        // Fehlschlag, den nur die Logdatei kennt, sieht im Protokoll wie ein
+        // abgebrochener Kunde aus.
+        'signing_failed' => 'Unterschrift fehlgeschlagen',
         'declined' => 'Unterschrift abgelehnt',
         'completed' => 'Signaturvorgang abgeschlossen',
         'pdf_generated' => 'Unterschriebenes PDF erzeugt',

@@ -204,9 +204,46 @@ window.__h = window.__h || {};
         var status = document.getElementById('status-' + id);
         if (!zustand[id].gezeichnet) { return; }
         feld.value = zustand[id].canvas.toDataURL('image/png');
+        merken(id, feld.value);
         if (status) { status.textContent = 'unterschrieben'; }
         gesamtStand();
         markiereFelder();
+    }
+
+    // DIE HANDSCHRIFT DARF NICHT VERLOREN GEHEN. Meldet der Server einen
+    // Fehler (fehlendes Pflichtfeld, Stoerung), laedt die Seite neu - und
+    // eine Zeichenflaeche ist danach leer. Wer gerade muehsam mit dem Finger
+    // unterschrieben hat, muss dann von vorn anfangen und haelt das zu Recht
+    // fuer einen Defekt. Die Zeichnung bleibt deshalb im Browser (nur diesem
+    // Reiter, nur bis er geschlossen wird) - sie wird bewusst NICHT ueber die
+    // Sitzung zurueckgegeben: als data:-URL sind das schnell 40 kB und mehr.
+    function schluessel(id) { return 'sig:' + id; }
+
+    function merken(id, wert) {
+        try { window.sessionStorage.setItem(schluessel(id), wert); } catch (e) { /* privater Modus */ }
+    }
+
+    function vergessen(id) {
+        try { window.sessionStorage.removeItem(schluessel(id)); } catch (e) { /* egal */ }
+    }
+
+    function wiederherstellen(id) {
+        var wert = null;
+        try { wert = window.sessionStorage.getItem(schluessel(id)); } catch (e) { return; }
+        if (!wert) { return; }
+        var eintrag = zustand[id];
+        var bild = new Image();
+        bild.onload = function () {
+            var rect = eintrag.canvas.getBoundingClientRect();
+            eintrag.ctx.drawImage(bild, 0, 0, rect.width, rect.height);
+            eintrag.gezeichnet = true;
+            document.getElementById('daten-' + id).value = wert;
+            var status = document.getElementById('status-' + id);
+            if (status) { status.textContent = 'unterschrieben'; }
+            gesamtStand();
+            markiereFelder();
+        };
+        bild.src = wert;
     }
 
     window.__h["sigLeeren"] = function () {
@@ -216,6 +253,7 @@ window.__h = window.__h || {};
         eintrag.ctx.clearRect(0, 0, eintrag.canvas.width, eintrag.canvas.height);
         eintrag.gezeichnet = false;
         document.getElementById('daten-' + id).value = '';
+        vergessen(id);
         var status = document.getElementById('status-' + id);
         if (status) { status.textContent = 'noch leer'; }
         gesamtStand();
@@ -263,20 +301,40 @@ window.__h = window.__h || {};
 
     markiereFelder();
     gesamtStand();
+    Object.keys(zustand).forEach(wiederherstellen);
 
     // Vor dem Absenden pruefen, ob eine Pflicht-Unterschrift fehlt. Die
     // eigentliche Pruefung macht der Server (dem Browser wird nichts
     // geglaubt) - aber der Unterzeichner soll es VOR dem Klick erfahren.
     var formular = document.getElementById('unterschrift-formular');
+    var knopf = document.getElementById('absenden');
+    var laeuft = false;
+
     formular.addEventListener('submit', function (event) {
+        // ZWEITER KLICK: der Knopf wird zwar gesperrt, aber Enter im
+        // Textfeld und ein schneller Doppelklick loesen trotzdem ein
+        // zweites submit aus. Der Server ist dagegen abgesichert
+        // (idempotent), der Browser soll es gar nicht erst versuchen.
+        if (laeuft) { event.preventDefault(); return; }
+
         var fehlt = Object.keys(zustand).some(function (id) { return !zustand[id].gezeichnet; });
         if (fehlt) {
             event.preventDefault();
             alert('Bitte zeichnen Sie Ihre Unterschrift in das dafür vorgesehene Feld.');
             return;
         }
-        document.getElementById('absenden').disabled = true;
-        document.getElementById('absenden').textContent = 'Wird gespeichert …';
+        laeuft = true;
+        knopf.disabled = true;
+        knopf.textContent = 'Wird gespeichert …';
+    });
+
+    // Zurueck-Taste und Seiten-Cache: der Browser zeigt die Seite dann im
+    // Zustand von vorhin - mit gesperrtem Knopf. Ohne dies steht der
+    // Unterzeichner vor einem Formular, das sich nicht mehr absenden laesst.
+    window.addEventListener('pageshow', function () {
+        laeuft = false;
+        knopf.disabled = false;
+        knopf.textContent = 'Unterschrift bestätigen';
     });
 })();
 </script>

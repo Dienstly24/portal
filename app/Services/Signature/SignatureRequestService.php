@@ -115,11 +115,13 @@ class SignatureRequestService
      * NIE entfernt: seine Unterschrift ist Teil des Vorgangs, und ein
      * Entfernen liesse Felder mit einer fremden Unterschrift zurueck.
      *
-     * @param  list<array{id?: string|null, name: string, email: string}>  $signers
+     * @param  list<array{id?: string|null, key?: string|null, name: string, email: string}>  $signers
+     * @return array<string, string> Behelfs-Kennung des Editors => gespeicherte Kennung
      */
-    public function syncSigners(SignatureRequest $request, array $signers): void
+    public function syncSigners(SignatureRequest $request, array $signers): array
     {
-        DB::transaction(function () use ($request, $signers) {
+        $map = [];
+        DB::transaction(function () use ($request, $signers, &$map) {
             $keep = [];
             foreach ($signers as $position => $data) {
                 $signer = null;
@@ -137,6 +139,15 @@ class SignatureRequestService
                 $signer->status ??= SignatureSigner::PENDING;
                 $signer->save();
                 $keep[] = $signer->id;
+                // Der Editor arbeitet mit Behelfs-Kennungen ("neu-3"), bis
+                // der Server die echten vergibt. Diese Zuordnung ist die
+                // Bruecke: OHNE sie verlor jedes Feld, das im Editor einem
+                // ebenfalls neuen Unterzeichner zugewiesen wurde, seinen
+                // Besitzer - der Vorgang liess sich danach nicht versenden
+                // ("kein Feld hinterlegt"), ohne dass jemand sah, warum.
+                if (isset($data['key']) && $data['key'] !== '') {
+                    $map[$data['key']] = $signer->id;
+                }
                 if ($wasNew) {
                     $this->audit->record($request, 'signer_added', $signer, $signer->name.' <'.$signer->email.'>');
                 }
@@ -156,6 +167,8 @@ class SignatureRequestService
             }
             $request->unsetRelation('signers');
         });
+
+        return $map;
     }
 
     /**
@@ -163,16 +176,20 @@ class SignatureRequestService
      * Aufteilung nicht mehr angefasst - sonst veraendert sich das Dokument
      * unter einem Unterzeichner, der es schon geoeffnet hat.
      *
-     * @param  list<array{id?: string|null, signer_id?: string|null, type: string, page: int, x: float, y: float, width: float, height: float, required?: bool, label?: string|null}>  $fields
+     * @param  array<string, string>  $signerKeys  Behelfs-Kennung des Editors => echte Kennung
+     * @param  list<array{id?: string|null, signer_id?: string|null, signer_key?: string|null, type: string, page: int, x: float, y: float, width: float, height: float, required?: bool, label?: string|null}>  $fields
      */
-    public function syncFields(SignatureRequest $request, array $fields): void
+    public function syncFields(SignatureRequest $request, array $fields, array $signerKeys = []): void
     {
-        DB::transaction(function () use ($request, $fields) {
+        DB::transaction(function () use ($request, $fields, $signerKeys) {
             $signerIds = $request->signers()->pluck('id')->all();
             $keep = [];
             foreach ($fields as $sort => $data) {
                 $type = in_array($data['type'], SignatureFieldType::keys(), true) ? $data['type'] : SignatureFieldType::TEXT;
                 $signerId = $data['signer_id'] ?? null;
+                if ($signerId === null && isset($data['signer_key'])) {
+                    $signerId = $signerKeys[$data['signer_key']] ?? null;
+                }
                 if ($signerId !== null && ! in_array($signerId, $signerIds, true)) {
                     $signerId = null; // Niemals einem fremden Unterzeichner zuordnen.
                 }

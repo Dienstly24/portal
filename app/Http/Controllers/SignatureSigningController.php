@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\SignatureSigningException;
 use App\Mail\SignatureVerificationMail;
 use App\Models\SignatureRequest;
 use App\Models\SignatureSigner;
 use App\Services\Signature\SignatureAuditService;
 use App\Services\Signature\SignaturePageRenderer;
+use App\Services\Signature\SignatureRequestService;
 use App\Services\Signature\SignatureSigningService;
 use App\Services\Signature\SignatureStorage;
 use App\Services\Signature\SignatureTokenService;
@@ -37,6 +39,7 @@ class SignatureSigningController extends Controller
         private readonly SignatureStorage $storage,
         private readonly SignaturePageRenderer $renderer,
         private readonly SignatureAuditService $audit,
+        private readonly SignatureRequestService $requests,
     ) {
     }
 
@@ -179,6 +182,16 @@ class SignatureSigningController extends Controller
     public function sign(Request $request, string $token)
     {
         [$signer, $signature] = $this->resolve($token);
+
+        // DOPPELTES ABSENDEN ist kein Angriff, sondern der Normalfall:
+        // langsame Verbindung, zweiter Klick, Neuladen, zweiter Reiter. Wer
+        // bereits unterschrieben hat, wird auf die Abschluss-Seite gefuehrt
+        // statt auf eine 403-Fehlerseite - dort stand fuer ihn "es hat nicht
+        // geklappt", obwohl es geklappt hatte.
+        if ($signer->hasSigned()) {
+            return redirect()->route('signature.done', $token);
+        }
+
         $this->ensureActionable($signature, $signer);
 
         if ($this->needsVerification($signature, $signer)) {
@@ -196,9 +209,48 @@ class SignatureSigningController extends Controller
 
         $this->audit->record($signature, 'signing_started', $signer);
 
-        $errors = $this->signing->sign($signature, $signer, $data['felder'] ?? []);
+        // DIE SCHLEUSE: hinter dieser Zeile darf KEIN technischer Fehler mehr
+        // ungefiltert zum Unterzeichner durchschlagen. Er ist ein Fremder
+        // ohne Konto in einem Vorgang, den er nicht wiederholen kann, wenn er
+        // ihn nicht versteht; ein roher HTTP 500 laesst ihn ausserdem im
+        // Unklaren, ob seine Unterschrift angekommen ist. Die Ursache gehoert
+        // in Log UND Protokoll - ein Fehlschlag, den nur die Logdatei kennt,
+        // faellt im Alltag niemandem auf (Lehre der Systemzustand-Seite).
+        try {
+            $errors = $this->signing->sign($signature, $signer, $data['felder'] ?? []);
+        } catch (\Throwable $e) {
+            Log::error('Signatur: Unterschreiben fehlgeschlagen: '.$e->getMessage(), [
+                'signature_request_id' => $signature->id,
+                'signature_signer_id' => $signer->id,
+                'exception' => $e,
+            ]);
+            $this->audit->record($signature, 'signing_failed', $signer,
+                mb_substr($e->getMessage(), 0, 200));
+
+            // Der Betrieb muss davon erfahren, OHNE in die Logdatei zu
+            // schauen: der Unterzeichner meldet sich erfahrungsgemaess nicht,
+            // er versucht es spaeter noch einmal - oder gar nicht mehr.
+            try {
+                $this->requests->notifyCreator($signature, 'Signatur: Unterschreiben fehlgeschlagen',
+                    $signer->name.' konnte "'.$signature->title.'" nicht unterschreiben. Bitte prüfen.');
+            } catch (\Throwable) {
+                // Eine gestoerte Glocke darf die Fehlerseite nicht ihrerseits
+                // zum Fehler machen.
+            }
+
+            $friendly = $e instanceof SignatureSigningException
+                ? $e->userMessage()
+                : 'Ihre Unterschrift konnte gerade nicht gespeichert werden. Bitte versuchen Sie es in einem Moment erneut.';
+
+            return back()->with('error', $friendly);
+        }
+
         if ($errors !== []) {
-            return back()->withInput()->with('error', implode(' ', $errors));
+            // Die gezeichnete Unterschrift wird BEWUSST nicht mit
+            // zurueckgegeben: sie ist als data:-URL schnell 40 kB und mehr
+            // und laege dann in der Sitzung. Das Feld haelt der Browser
+            // selbst (sessionStorage), die Sitzung bleibt klein.
+            return back()->withInput($request->except('felder'))->with('error', implode(' ', $errors));
         }
 
         return redirect()->route('signature.done', $token);

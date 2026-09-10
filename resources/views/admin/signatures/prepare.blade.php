@@ -467,12 +467,17 @@ window.__h = window.__h || {};
         // vergibt die echte. Sie darf deshalb nicht mitgeschickt werden.
         var payload = {
             signers: state.signers.map(function (s) {
-                return { id: String(s.id).indexOf('neu-') === 0 ? null : s.id, name: s.name, email: s.email };
+                // "key" ist die Kennung, unter der DIESE Seite den
+                // Unterzeichner kennt - der Server schickt darueber die echte
+                // zurueck an die Felder. Ohne sie verlor jedes Feld eines im
+                // Editor neu angelegten Unterzeichners seinen Besitzer.
+                return { id: String(s.id).indexOf('neu-') === 0 ? null : s.id, key: String(s.id), name: s.name, email: s.email };
             }),
             fields: state.fields.map(function (f) {
                 return {
                     id: String(f.id).indexOf('neu-') === 0 ? null : f.id,
                     signer_id: String(f.signer_id || '').indexOf('neu-') === 0 ? null : f.signer_id,
+                    signer_key: f.signer_id ? String(f.signer_id) : null,
                     type: f.type, page: f.page, x: f.x, y: f.y, width: f.width, height: f.height,
                     required: f.required ? 1 : 0, label: f.label
                 };
