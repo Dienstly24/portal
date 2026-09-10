@@ -2506,9 +2506,27 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
   `admin.signatures.customer_search` (portfolio-gescoped, eigener
   Endpunkt wegen Geburtsdatum und Sprache). Der externe Weg steht bewusst
   NICHT im Kleingedruckten - wer ihn nicht findet, legt Karteileichen an.
+- **Formularfehler sind DEUTSCH und nennen die Stelle** (Betreiber-Meldung
+  10.09.2026: "The signers.1.name field must be a string"). ZWEI Fehler in
+  einem Satz: (1) es gab `lang/ar/validation.php`, aber KEINE deutsche
+  Datei - Fallback ist Englisch, und das betraf JEDES Formular der
+  Beraterwelt, nicht nur die Signaturen. Jetzt `lang/de/validation.php`
+  samt `attributes` im Klartext; Listenfelder sind EINZELN benannt
+  ("Der Name des 2. Unterzeichners"), denn "signers.1.name" sagt dem
+  Mitarbeiter nicht, welche Zeile gemeint ist (Laravel zaehlt ab 0, der
+  Mensch ab 1). Bei `required_with` & Co. steht der zweite Feldname nach
+  einem Doppelpunkt - die Feldnamen tragen einen Artikel, mitten im Satz
+  staende sonst ein grosses "Die".
+  (2) Der eigentliche Defekt: `signers.*.name` hatte kein `nullable`. Das
+  Formular zeigt von sich aus eine ZWEITE, ausdruecklich optionale Zeile;
+  bleibt sie leer, macht `ConvertEmptyStringsToNull` aus "" ein null - und
+  `string` scheitert an null, obwohl niemand etwas eingegeben hat.
+  `required_with` bleibt: eine Zeile MIT Mail und OHNE Namen wird
+  weiterhin abgelehnt.
 - Tests: `FaultInjectionSignatureTest`, `SignatureLocalizationTest`,
   `CompanySignatureAssetTest`, `SignerIdentityTest`,
-  `SignatureCreateFlowTest`.
+  `SignatureCreateFlowTest`, `SignatureSecurityTest`,
+  `FormularfehlerAufDeutschTest`.
 
 ## Offene Themen / wartet auf den Betreiber
 
