@@ -2450,6 +2450,30 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
   - nach dem Abschluss ist der Zugang widerrufen.
 - Tests: `SignatureModuleTest` (26 Faelle, beide Szenarien), `PdfStamperTest`.
 
+### Formularfehler auf Deutsch - und der leere optionale Unterzeichner (10.09.2026)
+
+- **Gemeldet**: beim Anlegen einer Signaturanfrage kam
+  `The signers.1.name field must be a string.` - englisch, und ohne einen
+  Hinweis, WO der Fehler steckt. Beides waren zwei getrennte Fehler.
+- **Der eigentliche Defekt**: das Formular zeigt von sich aus eine ZWEITE,
+  ausdruecklich optionale Unterzeichner-Zeile. Bleibt sie leer, macht
+  Laravels `ConvertEmptyStringsToNull` aus `""` ein `null` - und die Regel
+  `string` scheitert an `null`. Wer nur einen Unterzeichner eintrug, kam
+  also gar nicht weiter. `nullable` steht jetzt VOR den uebrigen Regeln;
+  `required_with` bleibt unveraendert: eine Zeile MIT Mail und OHNE Namen
+  wird weiterhin abgelehnt.
+- **`lang/de/validation.php` gab es bisher nicht.** Deutsch ist die
+  Standardsprache der Anwendung - ohne diese Datei fiel JEDES Formular im
+  ganzen Portal auf die englischen Rahmen-Meldungen zurueck (dieselbe
+  Luecke, die `lang/ar/validation.php` am 18.08.2026 fuer Arabisch
+  geschlossen hat). Dazu `attributes` mit sprechenden Feldnamen JE ZEILE
+  (`signers.0.name` = "Name des 1. Unterzeichners"): ohne den Index nennt
+  die Meldung nur "Name" und der Bearbeiter sucht in der falschen Zeile.
+  `required_with` ist umformuliert zu "… muss ausgefuellt werden. Grund:
+  … ist angegeben." - die Rahmen-Fassung nennt die Bedingung, nicht die
+  Handlung.
+- Tests: `FormularfehlerAufDeutschTest`.
+
 ## Offene Themen / wartet auf den Betreiber
 
 - **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026

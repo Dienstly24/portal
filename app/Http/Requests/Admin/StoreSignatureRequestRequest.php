@@ -40,7 +40,13 @@ class StoreSignatureRequestRequest extends FormRequest
             'expires_at' => ['nullable', 'date', 'after:today'],
 
             'signers' => ['array', 'max:10'],
-            'signers.*.name' => ['required_with:signers.*.email', 'string', 'max:160'],
+            // nullable MUSS davor stehen: das Formular zeigt von sich aus eine
+            // ZWEITE, ausdruecklich optionale Zeile. Bleibt sie leer, macht
+            // Laravels ConvertEmptyStringsToNull aus "" ein null - und die
+            // Regel `string` scheitert an null, obwohl gar nichts eingegeben
+            // wurde. Ergebnis war "The signers.1.name field must be a string"
+            // fuer eine Zeile, die niemand ausfuellen wollte.
+            'signers.*.name' => ['nullable', 'required_with:signers.*.email', 'string', 'max:160'],
             'signers.*.email' => ['nullable', 'email:filter', 'max:190'],
         ];
     }
