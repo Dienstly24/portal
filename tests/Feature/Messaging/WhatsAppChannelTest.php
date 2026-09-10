@@ -159,6 +159,30 @@ class WhatsAppChannelTest extends TestCase
             ->assertStatus(403);
     }
 
+    /**
+     * Fall 6b: Ersteinrichtung OHNE Konto. Meta prueft den Endpunkt, bevor
+     * eine Nummer angebunden ist - ohne diesen Weg waere die Reihenfolge
+     * unaufloesbar (kein Webhook ohne Konto, kein Konto ohne Webhook).
+     */
+    public function test_ersteinrichtung_ohne_konto_ueber_die_konfiguration(): void
+    {
+        config(['services.meta.webhook_verify_token' => 'EINRICHTUNG-XYZ']);
+
+        $this->assertSame(0, ChannelAccount::count());
+
+        $this->get('/webhooks/whatsapp?hub_mode=subscribe&hub_verify_token=EINRICHTUNG-XYZ&hub_challenge=98765')
+            ->assertOk()->assertSee('98765');
+
+        // Ein falsches Token bleibt auch hier aussen vor.
+        $this->get('/webhooks/whatsapp?hub_mode=subscribe&hub_verify_token=FALSCH&hub_challenge=98765')
+            ->assertStatus(403);
+
+        // Und ohne hinterlegten Wert gibt es keinen offenen Endpunkt.
+        config(['services.meta.webhook_verify_token' => null]);
+        $this->get('/webhooks/whatsapp?hub_mode=subscribe&hub_verify_token=EINRICHTUNG-XYZ&hub_challenge=98765')
+            ->assertStatus(403);
+    }
+
     /** Fall 7: Die Nutzlast wird in eine kanalfreie Nachricht uebersetzt. */
     public function test_nutzlast_wird_normalisiert(): void
     {

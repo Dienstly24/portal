@@ -35,6 +35,18 @@ class WhatsAppWebhookController extends Controller
      * Das Bestaetigungs-Token wird gegen JEDES aktive Konto geprueft -
      * beim GET-Aufruf liegt noch keine Rufnummern-Kennung vor, an der man
      * das Konto erkennen koennte.
+     *
+     * UND gegen einen Wert aus der Server-Konfiguration. Der ist bei der
+     * ERSTEINRICHTUNG der einzige Weg: Meta prueft den Endpunkt, bevor
+     * eine Nummer angebunden ist - dann gibt es noch kein Konto, gegen
+     * das sich etwas pruefen liesse. Ohne diesen Ausweg waere die
+     * Reihenfolge unaufloesbar (kein Webhook ohne Konto, kein Konto
+     * ohne Webhook).
+     *
+     * Das betrifft AUSSCHLIESSLICH die Bestaetigung des Endpunkts. Jede
+     * echte Zustellung wird weiterhin ueber die SIGNATUR mit dem
+     * App-Secret des jeweiligen Kontos geprueft - hier wird nichts
+     * aufgeweicht.
      */
     public function verify(Request $request, WhatsAppAdapter $adapter): Response
     {
@@ -49,6 +61,14 @@ class WhatsAppWebhookController extends Controller
             if ($adapter->verifySubscription($account, $token)) {
                 return response($challenge, 200)->header('Content-Type', 'text/plain');
             }
+        }
+
+        // Ersteinrichtung. `hash_equals` auch hier: ein gewoehnlicher
+        // Vergleich verraet ueber die Laufzeit, wie viele Zeichen
+        // gestimmt haben.
+        $einrichtung = (string) config('services.meta.webhook_verify_token');
+        if ($einrichtung !== '' && hash_equals($einrichtung, $token)) {
+            return response($challenge, 200)->header('Content-Type', 'text/plain');
         }
 
         return response('', 403);
