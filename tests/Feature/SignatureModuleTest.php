@@ -172,7 +172,7 @@ class SignatureModuleTest extends TestCase
             'title' => 'Maklervollmacht Mustermann',
             'customer_id' => (string) $customer->id,
             'contract_id' => (string) $contract->id,
-            'identity_check' => SignatureRequest::IDENTITY_NONE,
+            'require_email_verification' => '0',
             'signers' => [['name' => 'Max Mustermann', 'email' => 'max@example.com']],
         ]);
 

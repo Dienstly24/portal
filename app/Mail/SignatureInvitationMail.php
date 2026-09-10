@@ -33,19 +33,14 @@ class SignatureInvitationMail extends Mailable
         public string $token,
         public bool $isReminder = false,
     ) {
-        // DIE SPRACHE DES UNTERZEICHNERS - nicht die des Mitarbeiters, der
-        // versendet, und nicht die Portal-Sprache des Kunden. Laravel wendet
-        // sie auf Betreff UND Inhalt an; ohne sie bekaeme ein arabischer
-        // Unterzeichner eine deutsche Einladung zu einer arabischen Seite.
-        $this->locale($signer->localeCode());
     }
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: (string) ($this->isReminder
-                ? __('signing.mail_subject_reminder')
-                : __('signing.mail_subject_invitation')),
+            subject: $this->isReminder
+                ? 'Erinnerung: Dokument zur Unterschrift – Dienstly24'
+                : 'Dokument zur Unterschrift – Dienstly24',
         );
     }
 

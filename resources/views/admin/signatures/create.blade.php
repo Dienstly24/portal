@@ -26,46 +26,6 @@
     @if($customer)<input type="hidden" name="customer_id" value="{{ $customer->id }}">@endif
     @if($contract)<input type="hidden" name="contract_id" value="{{ $contract->id }}">@endif
 
-    @unless($customer)
-    {{-- ZWEI WEGE, gleichberechtigt nebeneinander. Der externe Weg steht
-         BEWUSST nicht im Kleingedruckten: wer ihn nicht findet, legt sich
-         eine Kundenakte auf Vorrat an - und genau die Karteileichen fuehrt
-         der CustomerMergeService spaeter muehsam wieder zusammen. --}}
-    <div class="card" style="margin-bottom:16px;">
-        <div class="card-head-bar">Wer soll unterschreiben?</div>
-        <div style="padding:18px 20px;display:grid;gap:12px;">
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <button type="button" class="btn btn-sm btn-ghost" id="weg-kunde" data-h-click="sigWegKunde">
-                    Bestehender Kunde
-                </button>
-                <button type="button" class="btn btn-sm btn-ghost" id="weg-extern" data-h-click="sigWegExtern">
-                    Externe Person hinzufügen
-                </button>
-            </div>
-
-            <div id="kunden-suche-block">
-                <label for="kundensuche">Kunde suchen</label>
-                <input id="kundensuche" type="text" autocomplete="off" data-h-input="sigKundenSuche"
-                       placeholder="Name, Kundennummer, E-Mail oder Telefon"
-                       style="width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
-                <div id="kunden-treffer" style="margin-top:6px;display:grid;gap:4px;"></div>
-                <input type="hidden" name="customer_id" id="customer_id" value="{{ old('customer_id') }}">
-                <div id="kunde-gewaehlt" class="muted-sm" style="margin-top:6px;"></div>
-                <div class="muted-sm" style="margin-top:6px;">
-                    Name, E-Mail, Sprache und Geburtsdatum des ersten Unterzeichners werden übernommen -
-                    sie bleiben änderbar. Der Kunde wird dadurch nicht verändert.
-                </div>
-            </div>
-
-            <div id="extern-hinweis" hidden class="muted-sm">
-                <strong>Es wird kein Kunde angelegt.</strong> Tragen Sie unten einfach Name und E-Mail ein.
-                Nach der Unterschrift können Sie das Dokument einem bestehenden Kunden zuordnen,
-                einen neuen Kunden daraus anlegen - oder es unzugeordnet lassen.
-            </div>
-        </div>
-    </div>
-    @endunless
-
     <div class="card" style="margin-bottom:16px;">
         <div class="card-head-bar">Dokument</div>
         <div style="padding:18px 20px;display:grid;gap:14px;">
@@ -115,41 +75,19 @@
         <div class="card-head-bar">Unterzeichner</div>
         <div style="padding:18px 20px;display:grid;gap:12px;">
             <div id="signer-rows" style="display:grid;gap:10px;">
-                @php
-                    // VORSCHLAG, keine Uebernahme: die Portal-Sprache des Kunden
-                    // ist ein guter erster Tipp, aber sie gehoert dem Kunden.
-                    // Wer hier etwas anderes waehlt, aendert den Wert in der
-                    // Kundenakte NICHT.
-                    $spracheVorschlag = $customer?->preferred_lang ?: 'de';
-                @endphp
                 @for($i = 0; $i < 2; $i++)
-                <div style="display:grid;grid-template-columns:1fr 1fr 130px 130px;gap:10px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                     <input type="text" name="signers[{{ $i }}][name]" maxlength="160" value="{{ old("signers.$i.name", $i === 0 ? ($customer->user?->name ?? '') : '') }}"
                            placeholder="Name{{ $i === 0 ? '' : ' (optional)' }}"
                            style="padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
                     <input type="email" name="signers[{{ $i }}][email]" maxlength="190" value="{{ old("signers.$i.email", $i === 0 ? ($customer->user?->email ?? '') : '') }}"
                            placeholder="E-Mail{{ $i === 0 ? '' : ' (optional)' }}"
                            style="padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
-                    <select name="signers[{{ $i }}][locale]" aria-label="Sprache des Unterzeichners"
-                            style="padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
-                        @foreach(\App\Models\SignatureSigner::LOCALES as $code => $bezeichnung)
-                        <option value="{{ $code }}" @selected(old("signers.$i.locale", $i === 0 ? $spracheVorschlag : 'de') === $code)>{{ $bezeichnung }}</option>
-                        @endforeach
-                    </select>
-                    {{-- Nur bei Pruefung "Geburtsdatum" sichtbar. Der Wert
-                         wird verschluesselt gespeichert und nie wieder
-                         angezeigt - er dient ausschliesslich dem Vergleich. --}}
-                    <input type="text" name="signers[{{ $i }}][date_of_birth]" data-dob-feld maxlength="20"
-                           value="{{ old("signers.$i.date_of_birth", $i === 0 ? ($customer?->birth_date?->format('d.m.Y') ?? '') : '') }}"
-                           placeholder="Geb. TT.MM.JJJJ" aria-label="Geburtsdatum des Unterzeichners" hidden
-                           style="padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
                 </div>
                 @endfor
             </div>
-            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <div>
                 <button type="button" class="btn btn-sm btn-ghost" data-h-click="sigAddSigner">+ Weiteren Unterzeichner</button>
-                <span class="muted-sm">Einladung, Unterschriftsseite und Abschluss-Mail erscheinen in der
-                gewählten Sprache. Die Portal-Sprache des Kunden bleibt davon unberührt.</span>
             </div>
 
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:6px;">
@@ -162,20 +100,12 @@
                     </select>
                 </div>
                 <div>
-                    <label for="identity_check">Zusätzliche Identitätsprüfung</label>
-                    <select id="identity_check" name="identity_check"
-                            style="width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
-                        @foreach(\App\Models\SignatureRequest::IDENTITY_CHECKS as $key => $label)
-                        <option value="{{ $key }}" @selected(old('identity_check', \App\Models\SignatureRequest::IDENTITY_EMAIL) === $key)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                    <div class="muted-sm" style="margin-top:6px;">
-                        <strong>E-Mail-Bestätigung</strong> ist die stärkste der drei: sie belegt, dass die Person
-                        Zugriff auf das eingeladene Postfach hat - ein weitergeleiteter Link allein belegt das nicht.
-                        <strong>Geburtsdatum</strong> hält den zufälligen Empfänger eines weitergeleiteten Links auf,
-                        ist aber kein Geheimnis (es steht auf jedem Ausweis). Tragen Sie es dafür im nächsten
-                        Schritt je Unterzeichner ein. <strong>SMS gibt es bewusst nicht.</strong>
-                    </div>
+                    <label>Sicherheit</label>
+                    <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;">
+                        <input type="checkbox" name="require_email_verification" value="1" @checked(old('require_email_verification', true)) style="margin-top:3px;">
+                        <span style="font-size:13.5px;">Bestätigungscode per E-Mail verlangen<br>
+                        <span class="muted-sm">Belegt, dass die Person Zugriff auf das eingeladene Postfach hat.</span></span>
+                    </label>
                 </div>
             </div>
         </div>
@@ -209,120 +139,12 @@
 @pushOnce('cspScripts')
 <script @cspNonce>
 window.__h = window.__h || {};
-
-// ---------------------------------------------------------------------
-// Kundensuche und Uebernahme in den ersten Unterzeichner.
-//
-// UEBERNOMMEN WIRD IN DIE FORMULARFELDER, nicht heimlich im Hintergrund:
-// der Mitarbeiter sieht, was eingetragen wurde, und kann es aendern. Und
-// der KUNDE wird dabei nie veraendert - weder seine Sprache noch sonst
-// etwas; hier entsteht nur ein Vorschlag fuer DIESEN Vorgang.
-// ---------------------------------------------------------------------
-(function () {
-    var sucheUrl = @json(route('admin.signatures.customer_search'));
-    var feld = document.getElementById('kundensuche');
-    if (!feld) { return; }
-
-    var treffer = document.getElementById('kunden-treffer');
-    var idFeld = document.getElementById('customer_id');
-    var gewaehlt = document.getElementById('kunde-gewaehlt');
-    var laufend = null;
-
-    function leeren() { treffer.textContent = ''; }
-
-    function zeigen(kunden) {
-        leeren();
-        kunden.forEach(function (kunde) {
-            var knopf = document.createElement('button');
-            knopf.type = 'button';
-            knopf.className = 'btn btn-sm btn-ghost';
-            knopf.style.cssText = 'text-align:left;justify-content:flex-start;width:100%;';
-            // textContent, kein HTML-String: Kundennamen sind Fremddaten
-            // (dieselbe Regel wie in den anderen Sofort-Suchen).
-            knopf.textContent = kunde.name + ' \u00b7 ' + kunde.number + (kunde.email ? ' \u00b7 ' + kunde.email : '');
-            knopf.addEventListener('click', function () { uebernehmen(kunde); });
-            treffer.appendChild(knopf);
-        });
-    }
-
-    function uebernehmen(kunde) {
-        idFeld.value = kunde.id;
-        gewaehlt.textContent = 'Gew\u00e4hlt: ' + kunde.name + ' (' + kunde.number + ')';
-        feld.value = kunde.name;
-        leeren();
-
-        var name = document.querySelector('[name="signers[0][name]"]');
-        var mail = document.querySelector('[name="signers[0][email]"]');
-        var sprache = document.querySelector('[name="signers[0][locale]"]');
-        var dob = document.querySelector('[name="signers[0][date_of_birth]"]');
-        if (name && !name.value) { name.value = kunde.name === '\u2014' ? '' : kunde.name; }
-        // Eine INTERNE Platzhalter-Adresse kommt als null zurueck und wird
-        // deshalb nie eingetragen - eine Einladung dorthin waere ein
-        // stiller Fehlschlag.
-        if (mail && !mail.value && kunde.email) { mail.value = kunde.email; }
-        if (sprache && kunde.sprache) { sprache.value = kunde.sprache; }
-        if (dob && !dob.value && kunde.geburtsdatum) { dob.value = kunde.geburtsdatum; }
-    }
-
-    window.__h["sigKundenSuche"] = function () {
-        var q = this.value.trim();
-        idFeld.value = '';
-        gewaehlt.textContent = '';
-        if (q.length < 2) { leeren(); return; }
-        if (laufend) { laufend.abort(); }
-        laufend = new AbortController();
-        fetch(sucheUrl + '?q=' + encodeURIComponent(q), {
-            headers: { 'Accept': 'application/json' }, signal: laufend.signal
-        }).then(function (r) { return r.json(); })
-          .then(function (d) { zeigen(d.customers || []); })
-          .catch(function () { /* Abbruch oder Netz - keine Meldung noetig */ });
-    };
-
-    window.__h["sigWegKunde"] = function () {
-        document.getElementById('kunden-suche-block').hidden = false;
-        document.getElementById('extern-hinweis').hidden = true;
-    };
-
-    window.__h["sigWegExtern"] = function () {
-        // Die Auswahl wird ZURUECKGESETZT, nicht nur ausgeblendet: sonst
-        // haengt der Vorgang an einem Kunden, den niemand mehr sieht.
-        idFeld.value = '';
-        gewaehlt.textContent = '';
-        feld.value = '';
-        leeren();
-        document.getElementById('kunden-suche-block').hidden = true;
-        document.getElementById('extern-hinweis').hidden = false;
-    };
-})();
-
-// Das Geburtsdatums-Feld hat nur einen Sinn, wenn die Pruefung darauf
-// steht. Immer sichtbar waere es eine Aufforderung, ein personenbezogenes
-// Datum zu erfassen, das niemand braucht (Datenminimierung).
-(function () {
-    var wahl = document.getElementById('identity_check');
-    function umschalten() {
-        var an = wahl && wahl.value === 'geburtsdatum';
-        var felder = document.querySelectorAll('[data-dob-feld]');
-        for (var i = 0; i < felder.length; i++) { felder[i].hidden = !an; }
-        var reihen = document.getElementById('signer-rows');
-        if (reihen) {
-            for (var j = 0; j < reihen.children.length; j++) {
-                reihen.children[j].style.gridTemplateColumns = an ? '1fr 1fr 130px 130px' : '1fr 1fr 130px';
-            }
-        }
-    }
-    if (wahl) { wahl.addEventListener('change', umschalten); }
-    umschalten();
-    window.__sigDobSichtbar = function () { return wahl && wahl.value === 'geburtsdatum'; };
-    window.__sigDobUmschalten = umschalten;
-})();
-
 window.__h["sigAddSigner"] = function () {
     var rows = document.getElementById('signer-rows');
     var index = rows.children.length;
     if (index >= 10) { return; }
     var row = document.createElement('div');
-    row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 130px;gap:10px;';
+    row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;';
     var name = document.createElement('input');
     name.type = 'text'; name.name = 'signers[' + index + '][name]';
     name.maxLength = 160; name.placeholder = 'Name (optional)';
@@ -331,27 +153,7 @@ window.__h["sigAddSigner"] = function () {
     mail.type = 'email'; mail.name = 'signers[' + index + '][email]';
     mail.maxLength = 190; mail.placeholder = 'E-Mail (optional)';
     mail.style.cssText = name.style.cssText;
-    var sprache = document.createElement('select');
-    sprache.name = 'signers[' + index + '][locale]';
-    sprache.setAttribute('aria-label', 'Sprache des Unterzeichners');
-    sprache.style.cssText = name.style.cssText;
-    // Per Option-Objekt, nicht per HTML-Zeichenkette (SEC-4-Haltung: kein
-    // zusammengebautes Markup, auch nicht mit eigenen Werten).
-    var sprachen = @json(\App\Models\SignatureSigner::LOCALES);
-    Object.keys(sprachen).forEach(function (code) {
-        var opt = document.createElement('option');
-        opt.value = code; opt.textContent = sprachen[code];
-        sprache.appendChild(opt);
-    });
-    var dob = document.createElement('input');
-    dob.type = 'text'; dob.name = 'signers[' + index + '][date_of_birth]';
-    dob.maxLength = 20; dob.placeholder = 'Geb. TT.MM.JJJJ';
-    dob.setAttribute('data-dob-feld', '1');
-    dob.setAttribute('aria-label', 'Geburtsdatum des Unterzeichners');
-    dob.style.cssText = name.style.cssText;
-    row.appendChild(name); row.appendChild(mail); row.appendChild(sprache); row.appendChild(dob);
-    rows.appendChild(row);
-    if (window.__sigDobUmschalten) { window.__sigDobUmschalten(); }
+    row.appendChild(name); row.appendChild(mail); rows.appendChild(row);
 };
 </script>
 @endPushOnce

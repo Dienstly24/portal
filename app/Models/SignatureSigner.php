@@ -43,40 +43,16 @@ class SignatureSigner extends Model
         self::DECLINED => 'Abgelehnt',
     ];
 
-    /**
-     * Die Sprachen, in denen ein Unterzeichner bedient werden kann.
-     *
-     * BEWUSST breiter als das Portal (de/ar): der Unterzeichner ist oft gar
-     * kein Kunde - Zeuge, Arbeitgeber, Vermittler - und Englisch ist die
-     * Sprache, auf die man sich mit einem Fremden notfalls einigt.
-     */
-    public const LOCALES = [
-        'de' => 'Deutsch',
-        'ar' => 'العربية',
-        'en' => 'English',
-    ];
-
-    /** Von rechts nach links geschriebene Sprachen. */
-    public const RTL = ['ar'];
-
     protected $fillable = [
-        'signature_request_id', 'name', 'email', 'locale', 'signing_order', 'status',
+        'signature_request_id', 'name', 'email', 'signing_order', 'status',
         'token_hash', 'token_created_at', 'token_expires_at', 'token_revoked_at',
         'verification_hash', 'verification_expires_at', 'verification_attempts', 'verified_at',
         'invited_at', 'reminded_at', 'reminder_count',
-        'dob_check', 'dob_attempts', 'dob_blocked_until', 'dob_verified_at',
         'viewed_at', 'signed_at', 'declined_at', 'decline_reason',
         'ip_address', 'user_agent',
     ];
 
     protected $casts = [
-        // VERSCHLUESSELT, nicht gehasht: ein Geburtsdatum hat nur rund
-        // 40.000 plausible Werte - ein Hash davon ist offline in Sekunden
-        // geraten. Gelesen wird es ausschliesslich zum Vergleich.
-        'dob_check' => 'encrypted',
-        'dob_attempts' => 'integer',
-        'dob_blocked_until' => 'datetime',
-        'dob_verified_at' => 'datetime',
         'signing_order' => 'integer',
         'verification_attempts' => 'integer',
         'reminder_count' => 'integer',
@@ -117,22 +93,6 @@ class SignatureSigner extends Model
     public function fields(): HasMany
     {
         return $this->hasMany(SignatureField::class, 'signature_signer_id')->orderBy('page')->orderBy('sort');
-    }
-
-    /** Immer eine unterstuetzte Sprache - nie der rohe Spaltenwert. */
-    public function localeCode(): string
-    {
-        return array_key_exists((string) $this->locale, self::LOCALES) ? (string) $this->locale : 'de';
-    }
-
-    public function isRtl(): bool
-    {
-        return in_array($this->localeCode(), self::RTL, true);
-    }
-
-    public function localeLabel(): string
-    {
-        return self::LOCALES[$this->localeCode()];
     }
 
     public function statusLabel(): string
