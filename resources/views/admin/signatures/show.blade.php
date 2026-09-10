@@ -208,7 +208,7 @@
         @if($signature->reference)<div><span class="muted-sm">Referenz:</span> {{ $signature->reference }}</div>@endif
         @if($signature->document_type)<div><span class="muted-sm">Dokumentart:</span> {{ $signature->document_type }}</div>@endif
         <div><span class="muted-sm">Reihenfolge:</span> {{ $signature->isSequential() ? 'Nacheinander' : 'Gleichzeitig' }}</div>
-        <div><span class="muted-sm">E-Mail-Bestätigung:</span> {{ $signature->require_email_verification ? 'ja' : 'nein' }}</div>
+        <div><span class="muted-sm">Identitätsprüfung:</span> {{ $signature->identityCheckLabel() }}</div>
         <div><span class="muted-sm">Ablauf:</span> {{ $signature->expires_at?->lokal()->format('d.m.Y') ?? 'ohne Frist' }}</div>
         @if($signature->completedDocument)
         <div><span class="muted-sm">In der Kundenakte:</span>

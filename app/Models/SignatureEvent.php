@@ -48,6 +48,12 @@ class SignatureEvent extends Model
         'verification_requested' => 'Bestätigungscode angefordert',
         'verification_failed' => 'Bestätigungscode falsch',
         'verified' => 'E-Mail-Adresse bestätigt',
+        // Die Identitaetspruefung steht als EIGENES Ereignis im Protokoll -
+        // nicht unter "Bestätigungscode": es ist eine andere Pruefung mit
+        // anderer Aussagekraft, und im Streitfall zaehlt genau der
+        // Unterschied. Der eingegebene Wert steht NIE dabei.
+        'identity_verified' => 'Identität bestätigt (Geburtsdatum)',
+        'identity_failed' => 'Identitätsprüfung fehlgeschlagen',
         'opened' => 'Dokument geöffnet',
         'document_viewed' => 'Dokument angesehen',
         'signing_started' => 'Unterschrift begonnen',

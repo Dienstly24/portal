@@ -12,6 +12,7 @@ use App\Services\Signature\SignatureRequestService;
 use App\Services\Signature\SignatureSigningService;
 use App\Services\Signature\SignatureStorage;
 use App\Services\Signature\SignatureTokenService;
+use App\Services\Signature\SignerIdentityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
@@ -41,6 +42,7 @@ class SignatureSigningController extends Controller
         private readonly SignaturePageRenderer $renderer,
         private readonly SignatureAuditService $audit,
         private readonly SignatureRequestService $requests,
+        private readonly SignerIdentityService $identity,
     ) {
     }
 
@@ -62,6 +64,15 @@ class SignatureSigningController extends Controller
         }
 
         $this->signing->markOpened($request, $signer);
+
+        if ($this->identity->needsDob($signer)) {
+            return view('signature.identity', [
+                'signature' => $request,
+                'signer' => $signer,
+                'token' => $token,
+                'blocked' => $this->identity->isBlocked($signer),
+            ]);
+        }
 
         if ($this->needsVerification($request, $signer)) {
             return view('signature.verify', [
@@ -133,7 +144,7 @@ class SignatureSigningController extends Controller
         if ($this->signing->blockReason($request, $signer) !== null && ! $request->isCompleted()) {
             abort(403);
         }
-        if ($this->needsVerification($request, $signer)) {
+        if ($this->needsIdentity($request, $signer)) {
             abort(403);
         }
 
@@ -160,7 +171,7 @@ class SignatureSigningController extends Controller
     public function document(string $token)
     {
         [$signer, $request] = $this->resolve($token);
-        if ($this->needsVerification($request, $signer)) {
+        if ($this->needsIdentity($request, $signer)) {
             abort(403);
         }
         $completed = $request->isCompleted() && $signer->hasSigned();
@@ -195,7 +206,7 @@ class SignatureSigningController extends Controller
 
         $this->ensureActionable($signature, $signer);
 
-        if ($this->needsVerification($signature, $signer)) {
+        if ($this->needsIdentity($signature, $signer)) {
             return redirect()->route('signature.show', $token)
                 ->with('error', __('signing.verify_first'));
         }
@@ -255,6 +266,38 @@ class SignatureSigningController extends Controller
         }
 
         return redirect()->route('signature.done', $token);
+    }
+
+    /**
+     * Geburtsdatum bestaetigen.
+     *
+     * Der Wert kommt AUSSCHLIESSLICH als POST-Feld - nie aus der URL, nie
+     * aus dem Token, nie aus einer E-Mail. Er wird geprueft und dann
+     * vergessen; weder Log noch Protokoll sehen ihn.
+     */
+    public function identity(Request $request, string $token)
+    {
+        [$signer, $signature] = $this->resolve($token);
+        $this->ensureActionable($signature, $signer);
+
+        if (! $this->identity->needsDob($signer)) {
+            return redirect()->route('signature.show', $token);
+        }
+        if ($this->identity->isBlocked($signer)) {
+            return back()->with('error', __('signing.dob_blocked'));
+        }
+
+        $data = $request->validate(['geburtsdatum' => ['required', 'string', 'max:20']]);
+
+        if (! $this->identity->verifyDob($signer, $data['geburtsdatum'])) {
+            // KEIN Hinweis darauf, was falsch war, und keine Angabe der
+            // verbleibenden Versuche - beides waere eine Ratehilfe.
+            return back()->with('error', $this->identity->isBlocked($signer->fresh())
+                ? __('signing.dob_blocked')
+                : __('signing.dob_wrong'));
+        }
+
+        return redirect()->route('signature.show', $token);
     }
 
     public function decline(Request $request, string $token)
@@ -321,9 +364,19 @@ class SignatureSigningController extends Controller
         }
     }
 
+    /**
+     * Eine Schranke fuer BEIDE Pruefungen. Getrennte Abfragen an jeder
+     * Stelle waeren die sichere Art, eine davon irgendwo zu vergessen -
+     * und genau die eine Stelle wird dann zum Loch.
+     */
+    private function needsIdentity(SignatureRequest $request, SignatureSigner $signer): bool
+    {
+        return $this->needsVerification($request, $signer) || $this->identity->needsDob($signer);
+    }
+
     private function needsVerification(SignatureRequest $request, SignatureSigner $signer): bool
     {
-        return $request->require_email_verification && $signer->verified_at === null;
+        return $request->requiresEmailVerification() && $signer->verified_at === null;
     }
 
     /** "ma***@example.com" - die Adresse bestaetigen, ohne sie preiszugeben. */

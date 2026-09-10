@@ -46,7 +46,7 @@
     <a href="{{ $signUrl }}" style="background:#17A65B;color:#ffffff;padding:14px 34px;border-radius:8px;text-decoration:none;font-size:16px;font-weight:bold;">{{ __('signing.mail_invitation_button') }}</a>
 </p>
 
-@if($req->require_email_verification)
+@if($req->requiresEmailVerification())
 <p style="font-size:13px;color:#666;">{{ __('signing.mail_code_hint') }}</p>
 @endif
 

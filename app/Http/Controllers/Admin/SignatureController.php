@@ -187,7 +187,7 @@ class SignatureController extends Controller
                 'customer_id' => $data['customer_id'] ?? null,
                 'contract_id' => $data['contract_id'] ?? null,
                 'signing_order' => $data['signing_order'] ?? 'sequential',
-                'require_email_verification' => (bool) ($data['require_email_verification'] ?? false),
+                'identity_check' => $data['identity_check'] ?? SignatureRequest::IDENTITY_EMAIL,
                 'consent_text' => $data['consent_text'] ?? null,
                 'document_type' => $data['document_type'] ?? null,
                 'reference' => $data['reference'] ?? null,
@@ -199,7 +199,12 @@ class SignatureController extends Controller
         }
 
         $this->requests->syncSigners($signature, array_map(
-            fn ($s) => ['name' => $s['name'], 'email' => $s['email'], 'locale' => $s['locale'] ?? 'de'],
+            fn ($s) => [
+                'name' => $s['name'],
+                'email' => $s['email'],
+                'locale' => $s['locale'] ?? 'de',
+                'date_of_birth' => $s['date_of_birth'] ?? null,
+            ],
             array_values(array_filter($data['signers'] ?? [], fn ($s) => ! empty($s['email'])))
         ));
 

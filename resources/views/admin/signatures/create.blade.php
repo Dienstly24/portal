@@ -83,7 +83,7 @@
                     $spracheVorschlag = $customer?->preferred_lang ?: 'de';
                 @endphp
                 @for($i = 0; $i < 2; $i++)
-                <div style="display:grid;grid-template-columns:1fr 1fr 130px;gap:10px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr 130px 130px;gap:10px;">
                     <input type="text" name="signers[{{ $i }}][name]" maxlength="160" value="{{ old("signers.$i.name", $i === 0 ? ($customer->user?->name ?? '') : '') }}"
                            placeholder="Name{{ $i === 0 ? '' : ' (optional)' }}"
                            style="padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
@@ -96,6 +96,13 @@
                         <option value="{{ $code }}" @selected(old("signers.$i.locale", $i === 0 ? $spracheVorschlag : 'de') === $code)>{{ $bezeichnung }}</option>
                         @endforeach
                     </select>
+                    {{-- Nur bei Pruefung "Geburtsdatum" sichtbar. Der Wert
+                         wird verschluesselt gespeichert und nie wieder
+                         angezeigt - er dient ausschliesslich dem Vergleich. --}}
+                    <input type="text" name="signers[{{ $i }}][date_of_birth]" data-dob-feld maxlength="20"
+                           value="{{ old("signers.$i.date_of_birth", $i === 0 ? ($customer?->birth_date?->format('d.m.Y') ?? '') : '') }}"
+                           placeholder="Geb. TT.MM.JJJJ" aria-label="Geburtsdatum des Unterzeichners" hidden
+                           style="padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
                 </div>
                 @endfor
             </div>
@@ -115,12 +122,20 @@
                     </select>
                 </div>
                 <div>
-                    <label>Sicherheit</label>
-                    <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;">
-                        <input type="checkbox" name="require_email_verification" value="1" @checked(old('require_email_verification', true)) style="margin-top:3px;">
-                        <span style="font-size:13.5px;">Bestätigungscode per E-Mail verlangen<br>
-                        <span class="muted-sm">Belegt, dass die Person Zugriff auf das eingeladene Postfach hat.</span></span>
-                    </label>
+                    <label for="identity_check">Zusätzliche Identitätsprüfung</label>
+                    <select id="identity_check" name="identity_check"
+                            style="width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+                        @foreach(\App\Models\SignatureRequest::IDENTITY_CHECKS as $key => $label)
+                        <option value="{{ $key }}" @selected(old('identity_check', \App\Models\SignatureRequest::IDENTITY_EMAIL) === $key)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <div class="muted-sm" style="margin-top:6px;">
+                        <strong>E-Mail-Bestätigung</strong> ist die stärkste der drei: sie belegt, dass die Person
+                        Zugriff auf das eingeladene Postfach hat - ein weitergeleiteter Link allein belegt das nicht.
+                        <strong>Geburtsdatum</strong> hält den zufälligen Empfänger eines weitergeleiteten Links auf,
+                        ist aber kein Geheimnis (es steht auf jedem Ausweis). Tragen Sie es dafür im nächsten
+                        Schritt je Unterzeichner ein. <strong>SMS gibt es bewusst nicht.</strong>
+                    </div>
                 </div>
             </div>
         </div>
@@ -154,6 +169,28 @@
 @pushOnce('cspScripts')
 <script @cspNonce>
 window.__h = window.__h || {};
+// Das Geburtsdatums-Feld hat nur einen Sinn, wenn die Pruefung darauf
+// steht. Immer sichtbar waere es eine Aufforderung, ein personenbezogenes
+// Datum zu erfassen, das niemand braucht (Datenminimierung).
+(function () {
+    var wahl = document.getElementById('identity_check');
+    function umschalten() {
+        var an = wahl && wahl.value === 'geburtsdatum';
+        var felder = document.querySelectorAll('[data-dob-feld]');
+        for (var i = 0; i < felder.length; i++) { felder[i].hidden = !an; }
+        var reihen = document.getElementById('signer-rows');
+        if (reihen) {
+            for (var j = 0; j < reihen.children.length; j++) {
+                reihen.children[j].style.gridTemplateColumns = an ? '1fr 1fr 130px 130px' : '1fr 1fr 130px';
+            }
+        }
+    }
+    if (wahl) { wahl.addEventListener('change', umschalten); }
+    umschalten();
+    window.__sigDobSichtbar = function () { return wahl && wahl.value === 'geburtsdatum'; };
+    window.__sigDobUmschalten = umschalten;
+})();
+
 window.__h["sigAddSigner"] = function () {
     var rows = document.getElementById('signer-rows');
     var index = rows.children.length;
@@ -180,7 +217,15 @@ window.__h["sigAddSigner"] = function () {
         opt.value = code; opt.textContent = sprachen[code];
         sprache.appendChild(opt);
     });
-    row.appendChild(name); row.appendChild(mail); row.appendChild(sprache); rows.appendChild(row);
+    var dob = document.createElement('input');
+    dob.type = 'text'; dob.name = 'signers[' + index + '][date_of_birth]';
+    dob.maxLength = 20; dob.placeholder = 'Geb. TT.MM.JJJJ';
+    dob.setAttribute('data-dob-feld', '1');
+    dob.setAttribute('aria-label', 'Geburtsdatum des Unterzeichners');
+    dob.style.cssText = name.style.cssText;
+    row.appendChild(name); row.appendChild(mail); row.appendChild(sprache); row.appendChild(dob);
+    rows.appendChild(row);
+    if (window.__sigDobUmschalten) { window.__sigDobUmschalten(); }
 };
 </script>
 @endPushOnce

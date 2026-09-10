@@ -45,7 +45,7 @@ class SignatureRequestService
      * Fehlschlag NACH dem Unterschreiben waere dem Unterzeichner nicht zu
      * erklaeren und der Vorgang nicht zu retten.
      *
-     * @param  array{title?: string, customer_id?: string|null, contract_id?: string|null, signing_order?: string, require_email_verification?: bool, consent_text?: string|null, document_type?: string|null, reference?: string|null, note?: string|null, expires_at?: \DateTimeInterface|null}  $attributes
+     * @param  array{title?: string, customer_id?: string|null, contract_id?: string|null, signing_order?: string, identity_check?: string, require_email_verification?: bool, consent_text?: string|null, document_type?: string|null, reference?: string|null, note?: string|null, expires_at?: \DateTimeInterface|null}  $attributes
      */
     public function createFromUpload(UploadedFile $file, array $attributes, ?User $user = null): SignatureRequest
     {
@@ -67,7 +67,12 @@ class SignatureRequestService
             'original_size' => strlen($binary),
             'page_count' => $pageCount,
             'signing_order' => ($attributes['signing_order'] ?? 'sequential') === 'parallel' ? 'parallel' : 'sequential',
-            'require_email_verification' => $attributes['require_email_verification'] ?? true,
+            'identity_check' => $attributes['identity_check']
+                ?? (array_key_exists('require_email_verification', $attributes)
+                    ? ($attributes['require_email_verification']
+                        ? SignatureRequest::IDENTITY_EMAIL
+                        : SignatureRequest::IDENTITY_NONE)
+                    : SignatureRequest::IDENTITY_EMAIL),
             'consent_text' => $attributes['consent_text'] ?? $this->defaultConsentText(),
             'document_type' => $attributes['document_type'] ?? null,
             'reference' => $attributes['reference'] ?? null,
@@ -116,7 +121,7 @@ class SignatureRequestService
      * NIE entfernt: seine Unterschrift ist Teil des Vorgangs, und ein
      * Entfernen liesse Felder mit einer fremden Unterschrift zurueck.
      *
-     * @param  list<array{id?: string|null, key?: string|null, name: string, email: string, locale?: string|null}>  $signers
+     * @param  list<array{id?: string|null, key?: string|null, name: string, email: string, locale?: string|null, date_of_birth?: string|null}>  $signers
      * @return array<string, string> Behelfs-Kennung des Editors => gespeicherte Kennung
      */
     public function syncSigners(SignatureRequest $request, array $signers): array
@@ -145,6 +150,16 @@ class SignatureRequestService
                     $signer->locale = $data['locale'];
                 }
                 $signer->locale ??= 'de';
+
+                // GEBURTSDATUM: nur setzen, wenn ein Wert mitkommt. Ein
+                // fehlender Schluessel heisst "unveraendert", nicht
+                // "loeschen" - der Feld-Editor schickt es nicht mit, und ein
+                // stilles Entfernen wuerde die Pruefung lautlos abschalten.
+                if (array_key_exists('date_of_birth', $data)) {
+                    $identity = app(SignerIdentityService::class);
+                    $signer->save();
+                    $identity->setDateOfBirth($signer, $data['date_of_birth']);
+                }
                 $signer->status ??= SignatureSigner::PENDING;
                 $signer->save();
                 $keep[] = $signer->id;

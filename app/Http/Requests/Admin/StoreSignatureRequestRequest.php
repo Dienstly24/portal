@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\SignatureRequest;
 use App\Models\SignatureSigner;
 use App\Support\UploadRules;
 use Illuminate\Foundation\Http\FormRequest;
@@ -33,7 +34,7 @@ class StoreSignatureRequestRequest extends FormRequest
             'customer_id' => ['nullable', 'string', 'exists:customers,id'],
             'contract_id' => ['nullable', 'string', 'exists:contracts,id'],
             'signing_order' => ['nullable', 'in:sequential,parallel'],
-            'require_email_verification' => ['nullable', 'boolean'],
+            'identity_check' => ['nullable', 'string', 'in:'.implode(',', SignatureRequest::identityCheckKeys())],
             'consent_text' => ['nullable', 'string', 'max:2000'],
             'document_type' => ['nullable', 'string', 'max:60'],
             'reference' => ['nullable', 'string', 'max:120'],

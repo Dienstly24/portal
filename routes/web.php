@@ -180,6 +180,12 @@ Route::middleware('throttle:signatur')->group(function () {
     Route::get('/unterschreiben/{token}', [SignatureSigningController::class, 'show'])->name('signature.show');
     Route::post('/unterschreiben/{token}/code', [SignatureSigningController::class, 'requestCode'])->name('signature.code');
     Route::post('/unterschreiben/{token}/bestaetigen', [SignatureSigningController::class, 'verify'])->name('signature.verify');
+    // Geburtsdatum: ZUSAETZLICH zum Token-Limiter enger gedrosselt. Der
+    // Raum plausibler Geburtsdaten ist klein, das Raten waere sonst eine
+    // Frage von Minuten - der Dienst sperrt nach 5 Fehlversuchen je
+    // Unterzeichner, dieser Limiter deckelt zusaetzlich die Rate.
+    Route::post('/unterschreiben/{token}/identitaet', [SignatureSigningController::class, 'identity'])
+        ->middleware('throttle:10,10')->name('signature.identity');
     Route::get('/unterschreiben/{token}/seite/{page}', [SignatureSigningController::class, 'page'])
         ->whereNumber('page')->name('signature.page');
     Route::get('/unterschreiben/{token}/dokument', [SignatureSigningController::class, 'document'])->name('signature.document');
