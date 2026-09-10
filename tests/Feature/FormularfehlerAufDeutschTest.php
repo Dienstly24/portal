@@ -55,8 +55,8 @@ class FormularfehlerAufDeutschTest extends TestCase
             'document' => $this->pdf(),
             'title' => 'Maklervollmacht',
             'signers' => [
-                ['name' => 'Ahmad Albhre', 'email' => 'ahmad@example.com', 'locale' => 'ar'],
-                ['name' => null, 'email' => null, 'locale' => 'de', 'date_of_birth' => null],
+                ['name' => 'Ahmad Albhre', 'email' => 'ahmad@example.com'],
+                ['name' => null, 'email' => null],
             ],
         ]);
 

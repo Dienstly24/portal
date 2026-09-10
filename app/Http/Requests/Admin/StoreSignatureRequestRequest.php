@@ -2,8 +2,6 @@
 
 namespace App\Http\Requests\Admin;
 
-use App\Models\SignatureRequest;
-use App\Models\SignatureSigner;
 use App\Support\UploadRules;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -34,7 +32,7 @@ class StoreSignatureRequestRequest extends FormRequest
             'customer_id' => ['nullable', 'string', 'exists:customers,id'],
             'contract_id' => ['nullable', 'string', 'exists:contracts,id'],
             'signing_order' => ['nullable', 'in:sequential,parallel'],
-            'identity_check' => ['nullable', 'string', 'in:'.implode(',', SignatureRequest::identityCheckKeys())],
+            'require_email_verification' => ['nullable', 'boolean'],
             'consent_text' => ['nullable', 'string', 'max:2000'],
             'document_type' => ['nullable', 'string', 'max:60'],
             'reference' => ['nullable', 'string', 'max:120'],
@@ -50,11 +48,6 @@ class StoreSignatureRequestRequest extends FormRequest
             // fuer eine Zeile, die niemand ausfuellen wollte.
             'signers.*.name' => ['nullable', 'required_with:signers.*.email', 'string', 'max:160'],
             'signers.*.email' => ['nullable', 'email:filter', 'max:190'],
-            'signers.*.locale' => ['nullable', 'string', 'in:'.implode(',', array_keys(SignatureSigner::LOCALES))],
-            // Nur bei Pruefung "Geburtsdatum" ausgefuellt; der Dienst
-            // normalisiert und verschluesselt es, hier steht deshalb keine
-            // Datumsregel (der Mitarbeiter tippt TT.MM.JJJJ).
-            'signers.*.date_of_birth' => ['nullable', 'string', 'max:20'],
         ];
     }
 

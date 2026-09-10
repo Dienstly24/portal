@@ -2450,83 +2450,29 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
   - nach dem Abschluss ist der Zugang widerrufen.
 - Tests: `SignatureModuleTest` (26 Faelle, beide Szenarien), `PdfStamperTest`.
 
-### Nachbesserung 10.09.2026 (Betreiber-Meldung "HTTP 500 beim Unterschreiben")
+### Formularfehler auf Deutsch - und der leere optionale Unterzeichner (10.09.2026)
 
-- **Die Ursache war KEIN einzelner Fehler, sondern eine fehlende
-  Schranke** (per Fehlereinspeisung nachgestellt): der Unterschreiben-Pfad
-  lief von der Pruefung bis zur Glocke in EINEM Stueck, jede Stoerung
-  dahinter (Platte, Glocke, PDF) schlug ungefiltert bis zum Unterzeichner
-  durch - und je nach Zeitpunkt war die Unterschrift verloren (vor dem
-  Ereignis `signed`, genau das Bild aus der Meldung) oder laengst
-  gespeichert, waehrend er eine Fehlerseite sah. Jetzt: Schleuse im
-  Controller (Log + Protokoll-Ereignis `signing_failed` + Glocke +
-  verstaendlicher Satz), GEPRUEFTE Schreibvorgaenge (`put()` meldet einen
-  Fehlschlag auch ohne Ausnahme mit `false`), Nachlauf hinter der
-  Schranke, Idempotenz beim doppelten Absenden, zu grosse Unterschriften
-  werden VERKLEINERT statt verworfen (820-px-Feld x Geraeteverhaeltnis 2 =
-  1640 px fiel bisher durch die Obergrenze), Zeichnung ueberlebt einen
-  Fehler (sessionStorage, nicht die Sitzung). Dazu der Editor-Fehler: ein
-  Feld, dessen Unterzeichner im selben Speichervorgang neu entstand,
-  verlor seinen Besitzer - der Vorgang liess sich danach nicht versenden.
-- **Sprache des UNTERZEICHNERS** (`signature_signers.locale`, de/ar/en) -
-  am Unterzeichner, nicht an der Anfrage (deutscher Kunde + arabischer
-  Zeuge im selben Vorgang) und NICHT die Portal-Sprache des Kunden (die
-  wird vorgeschlagen und nie geaendert). `lang/{de,ar,en}/signing.php`,
-  deckungsgleiche Schluessel (Test), `dir="rtl"`, lokale arabische
-  Schrift, Ziffernfolgen mit `dir="ltr"`. **Das PDF wird NIE gespiegelt** -
-  die Protokollseite bleibt deutsch und LTR (ein gespiegelter Vertrag
-  waere kein uebersetzter, sondern ein unlesbarer). Der ZUSTIMMUNGSTEXT
-  ist der Sonderfall: die Voreinstellung gibt es uebersetzt, ein selbst
-  geschriebener Text wird WOERTLICH gezeigt. Nebenbefund: der
-  Bestaetigungscode stand im BETREFF der Mail (Sperrbildschirm-Vorschau!).
-- **Unternehmenssignatur / Firmenstempel / Firmenlogo**
-  (`company_signature_assets`, Feldart `firma`, Einstellungen ->
-  Signaturen). **Ein Firmenbild ist KEIN Unterzeichner** - keine E-Mail,
-  kein Token, keine Zustimmung; im Protokoll steht "eingesetzt von", nie
-  "unterschrieben von". Eigene Tabelle statt einer Zeile in
-  `signature_signers`: sonst saehe eine Grafik im Protokoll wie eine
-  abgegebene Willenserklaerung aus. Ein Firmenfeld blockiert keinen
-  Versand; ohne zugewiesenes Bild entsteht es gar nicht. Rechte
-  `firmensignatur-verwalten` (admin/manager) und `firmensignatur-benutzen`,
-  geprueft an Route UND Controller UND beim Speichern. Bilder werden neu
-  gerendert, Alphakanal bleibt (weisser Kasten ueber dem Vertragstext);
-  ein benutztes Bild wird STILLGELEGT statt geloescht.
-- **Identitaetspruefung** `signature_requests.identity_check`:
-  keine / Geburtsdatum / E-Mail (der alte Ja-Nein-Schalter ist weg, zwei
-  Spalten fuer dieselbe Frage waeren zwei Wahrheiten). EHRLICH: das
-  Geburtsdatum ist KEIN Geheimnis (Ausweis, Versicherungsschein) - es
-  haelt nur den zufaelligen Empfaenger eines weitergeleiteten Links auf,
-  E-Mail bleibt Voreinstellung. Wert NUR als POST-Feld, NIE im Protokoll,
-  VERSCHLUESSELT statt gehasht (40.000 plausible Werte = Hash offline in
-  Sekunden geraten), grobe Antwort, zeitkonstanter Vergleich, 5 Versuche
-  dann 30 Min Sperre + Route-Throttle. Ohne hinterlegtes Datum wird NICHT
-  gefragt. KEIN SMS-Weg.
-- **Anlegen**: zwei gleichberechtigte Wege (bestehender Kunde /
-  "Externe Person hinzufuegen" ohne Kundenakte) mit Sofort-Suche
-  `admin.signatures.customer_search` (portfolio-gescoped, eigener
-  Endpunkt wegen Geburtsdatum und Sprache). Der externe Weg steht bewusst
-  NICHT im Kleingedruckten - wer ihn nicht findet, legt Karteileichen an.
-- **Formularfehler sind DEUTSCH und nennen die Stelle** (Betreiber-Meldung
-  10.09.2026: "The signers.1.name field must be a string"). ZWEI Fehler in
-  einem Satz: (1) es gab `lang/ar/validation.php`, aber KEINE deutsche
-  Datei - Fallback ist Englisch, und das betraf JEDES Formular der
-  Beraterwelt, nicht nur die Signaturen. Jetzt `lang/de/validation.php`
-  samt `attributes` im Klartext; Listenfelder sind EINZELN benannt
-  ("Der Name des 2. Unterzeichners"), denn "signers.1.name" sagt dem
-  Mitarbeiter nicht, welche Zeile gemeint ist (Laravel zaehlt ab 0, der
-  Mensch ab 1). Bei `required_with` & Co. steht der zweite Feldname nach
-  einem Doppelpunkt - die Feldnamen tragen einen Artikel, mitten im Satz
-  staende sonst ein grosses "Die".
-  (2) Der eigentliche Defekt: `signers.*.name` hatte kein `nullable`. Das
-  Formular zeigt von sich aus eine ZWEITE, ausdruecklich optionale Zeile;
-  bleibt sie leer, macht `ConvertEmptyStringsToNull` aus "" ein null - und
-  `string` scheitert an null, obwohl niemand etwas eingegeben hat.
-  `required_with` bleibt: eine Zeile MIT Mail und OHNE Namen wird
-  weiterhin abgelehnt.
-- Tests: `FaultInjectionSignatureTest`, `SignatureLocalizationTest`,
-  `CompanySignatureAssetTest`, `SignerIdentityTest`,
-  `SignatureCreateFlowTest`, `SignatureSecurityTest`,
-  `FormularfehlerAufDeutschTest`.
+- **Gemeldet**: beim Anlegen einer Signaturanfrage kam
+  `The signers.1.name field must be a string.` - englisch, und ohne einen
+  Hinweis, WO der Fehler steckt. Beides waren zwei getrennte Fehler.
+- **Der eigentliche Defekt**: das Formular zeigt von sich aus eine ZWEITE,
+  ausdruecklich optionale Unterzeichner-Zeile. Bleibt sie leer, macht
+  Laravels `ConvertEmptyStringsToNull` aus `""` ein `null` - und die Regel
+  `string` scheitert an `null`. Wer nur einen Unterzeichner eintrug, kam
+  also gar nicht weiter. `nullable` steht jetzt VOR den uebrigen Regeln;
+  `required_with` bleibt unveraendert: eine Zeile MIT Mail und OHNE Namen
+  wird weiterhin abgelehnt.
+- **`lang/de/validation.php` gab es bisher nicht.** Deutsch ist die
+  Standardsprache der Anwendung - ohne diese Datei fiel JEDES Formular im
+  ganzen Portal auf die englischen Rahmen-Meldungen zurueck (dieselbe
+  Luecke, die `lang/ar/validation.php` am 18.08.2026 fuer Arabisch
+  geschlossen hat). Dazu `attributes` mit sprechenden Feldnamen JE ZEILE
+  (`signers.0.name` = "Name des 1. Unterzeichners"): ohne den Index nennt
+  die Meldung nur "Name" und der Bearbeiter sucht in der falschen Zeile.
+  `required_with` ist umformuliert zu "… muss ausgefuellt werden. Grund:
+  … ist angegeben." - die Rahmen-Fassung nennt die Bedingung, nicht die
+  Handlung.
+- Tests: `FormularfehlerAufDeutschTest`.
 
 ## Offene Themen / wartet auf den Betreiber
 

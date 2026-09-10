@@ -3,7 +3,6 @@
 namespace App\Services\Signature;
 
 use App\Mail\SignatureInvitationMail;
-use App\Models\CompanySignatureAsset;
 use App\Models\SignatureField;
 use App\Models\SignatureRequest;
 use App\Models\SignatureSigner;
@@ -45,7 +44,7 @@ class SignatureRequestService
      * Fehlschlag NACH dem Unterschreiben waere dem Unterzeichner nicht zu
      * erklaeren und der Vorgang nicht zu retten.
      *
-     * @param  array{title?: string, customer_id?: string|null, contract_id?: string|null, signing_order?: string, identity_check?: string, require_email_verification?: bool, consent_text?: string|null, document_type?: string|null, reference?: string|null, note?: string|null, expires_at?: \DateTimeInterface|null}  $attributes
+     * @param  array{title?: string, customer_id?: string|null, contract_id?: string|null, signing_order?: string, require_email_verification?: bool, consent_text?: string|null, document_type?: string|null, reference?: string|null, note?: string|null, expires_at?: \DateTimeInterface|null}  $attributes
      */
     public function createFromUpload(UploadedFile $file, array $attributes, ?User $user = null): SignatureRequest
     {
@@ -67,12 +66,7 @@ class SignatureRequestService
             'original_size' => strlen($binary),
             'page_count' => $pageCount,
             'signing_order' => ($attributes['signing_order'] ?? 'sequential') === 'parallel' ? 'parallel' : 'sequential',
-            'identity_check' => $attributes['identity_check']
-                ?? (array_key_exists('require_email_verification', $attributes)
-                    ? ($attributes['require_email_verification']
-                        ? SignatureRequest::IDENTITY_EMAIL
-                        : SignatureRequest::IDENTITY_NONE)
-                    : SignatureRequest::IDENTITY_EMAIL),
+            'require_email_verification' => $attributes['require_email_verification'] ?? true,
             'consent_text' => $attributes['consent_text'] ?? $this->defaultConsentText(),
             'document_type' => $attributes['document_type'] ?? null,
             'reference' => $attributes['reference'] ?? null,
@@ -121,13 +115,11 @@ class SignatureRequestService
      * NIE entfernt: seine Unterschrift ist Teil des Vorgangs, und ein
      * Entfernen liesse Felder mit einer fremden Unterschrift zurueck.
      *
-     * @param  list<array{id?: string|null, key?: string|null, name: string, email: string, locale?: string|null, date_of_birth?: string|null}>  $signers
-     * @return array<string, string> Behelfs-Kennung des Editors => gespeicherte Kennung
+     * @param  list<array{id?: string|null, name: string, email: string}>  $signers
      */
-    public function syncSigners(SignatureRequest $request, array $signers): array
+    public function syncSigners(SignatureRequest $request, array $signers): void
     {
-        $map = [];
-        DB::transaction(function () use ($request, $signers, &$map) {
+        DB::transaction(function () use ($request, $signers) {
             $keep = [];
             foreach ($signers as $position => $data) {
                 $signer = null;
@@ -142,36 +134,9 @@ class SignatureRequestService
                     'email' => mb_strtolower(trim($data['email'])),
                     'signing_order' => $position + 1,
                 ]);
-                // Sprache nur setzen, wenn sie mitgeschickt wurde: der
-                // Feld-Editor sendet die Unterzeichner ohne sie, und ein
-                // stilles Zuruecksetzen auf Deutsch waere fuer den
-                // Mitarbeiter nicht nachvollziehbar.
-                if (isset($data['locale']) && array_key_exists($data['locale'], SignatureSigner::LOCALES)) {
-                    $signer->locale = $data['locale'];
-                }
-                $signer->locale ??= 'de';
-
-                // GEBURTSDATUM: nur setzen, wenn ein Wert mitkommt. Ein
-                // fehlender Schluessel heisst "unveraendert", nicht
-                // "loeschen" - der Feld-Editor schickt es nicht mit, und ein
-                // stilles Entfernen wuerde die Pruefung lautlos abschalten.
-                if (array_key_exists('date_of_birth', $data)) {
-                    $identity = app(SignerIdentityService::class);
-                    $signer->save();
-                    $identity->setDateOfBirth($signer, $data['date_of_birth']);
-                }
                 $signer->status ??= SignatureSigner::PENDING;
                 $signer->save();
                 $keep[] = $signer->id;
-                // Der Editor arbeitet mit Behelfs-Kennungen ("neu-3"), bis
-                // der Server die echten vergibt. Diese Zuordnung ist die
-                // Bruecke: OHNE sie verlor jedes Feld, das im Editor einem
-                // ebenfalls neuen Unterzeichner zugewiesen wurde, seinen
-                // Besitzer - der Vorgang liess sich danach nicht versenden
-                // ("kein Feld hinterlegt"), ohne dass jemand sah, warum.
-                if (isset($data['key']) && $data['key'] !== '') {
-                    $map[$data['key']] = $signer->id;
-                }
                 if ($wasNew) {
                     $this->audit->record($request, 'signer_added', $signer, $signer->name.' <'.$signer->email.'>');
                 }
@@ -191,8 +156,6 @@ class SignatureRequestService
             }
             $request->unsetRelation('signers');
         });
-
-        return $map;
     }
 
     /**
@@ -200,39 +163,18 @@ class SignatureRequestService
      * Aufteilung nicht mehr angefasst - sonst veraendert sich das Dokument
      * unter einem Unterzeichner, der es schon geoeffnet hat.
      *
-     * @param  array<string, string>  $signerKeys  Behelfs-Kennung des Editors => echte Kennung
-     * @param  list<array{id?: string|null, signer_id?: string|null, signer_key?: string|null, company_asset_id?: string|null, type: string, page: int, x: float, y: float, width: float, height: float, required?: bool, label?: string|null}>  $fields
+     * @param  list<array{id?: string|null, signer_id?: string|null, type: string, page: int, x: float, y: float, width: float, height: float, required?: bool, label?: string|null}>  $fields
      */
-    public function syncFields(SignatureRequest $request, array $fields, array $signerKeys = []): void
+    public function syncFields(SignatureRequest $request, array $fields): void
     {
-        DB::transaction(function () use ($request, $fields, $signerKeys) {
+        DB::transaction(function () use ($request, $fields) {
             $signerIds = $request->signers()->pluck('id')->all();
             $keep = [];
             foreach ($fields as $sort => $data) {
                 $type = in_array($data['type'], SignatureFieldType::keys(), true) ? $data['type'] : SignatureFieldType::TEXT;
                 $signerId = $data['signer_id'] ?? null;
-                if ($signerId === null && isset($data['signer_key'])) {
-                    $signerId = $signerKeys[$data['signer_key']] ?? null;
-                }
                 if ($signerId !== null && ! in_array($signerId, $signerIds, true)) {
                     $signerId = null; // Niemals einem fremden Unterzeichner zuordnen.
-                }
-
-                // ENTWEDER Unterzeichner ODER Firmenbild - nie beides. Ein
-                // Feld, das einem Menschen gehoert UND einen Stempel traegt,
-                // waere im Protokoll nicht mehr aufzuloesen.
-                $assetId = null;
-                if ($type === SignatureFieldType::COMPANY) {
-                    $signerId = null;
-                    $kandidat = $data['company_asset_id'] ?? null;
-                    if ($kandidat !== null && CompanySignatureAsset::whereKey($kandidat)->exists()) {
-                        $assetId = $kandidat;
-                    }
-                    // Ohne zugewiesenes Bild waere es ein leeres Feld, das
-                    // niemand mehr fuellen kann (es wartet ja auf niemanden).
-                    if ($assetId === null) {
-                        continue;
-                    }
                 }
 
                 $field = null;
@@ -243,7 +185,6 @@ class SignatureRequestService
                 $field->fill([
                     'signature_request_id' => $request->id,
                     'signature_signer_id' => $signerId,
-                    'company_asset_id' => $assetId,
                     'type' => $type,
                     'page' => max(1, min((int) $data['page'], (int) $request->page_count)),
                     'pos_x' => $this->clamp((float) $data['x']),
@@ -283,10 +224,6 @@ class SignatureRequestService
             $blockers[] = 'Es ist noch kein Unterzeichner erfasst.';
         }
         foreach ($request->signers as $signer) {
-            // Firmenbilder zaehlen hier NIE mit: sie gehoeren keinem
-            // Unterzeichner. Ein Vorgang, in dem nur der Stempel des
-            // Betriebs steht, waere sonst versandfertig, ohne dass irgendwer
-            // etwas zu unterschreiben haette.
             $own = $request->fields->where('signature_signer_id', $signer->id);
             if ($own->isEmpty()) {
                 $blockers[] = 'Für '.$signer->name.' ist noch kein Feld gesetzt.';
@@ -452,9 +389,8 @@ class SignatureRequestService
      */
     public function defaultConsentText(): string
     {
-        // EINE Quelle: derselbe Satz steht in lang/{de,ar,en}/signing.php.
-        // Nur so laesst sich beim Anzeigen erkennen, ob der Mitarbeiter den
-        // Text SELBST geschrieben hat - dann wird er nie uebersetzt.
-        return (string) __('signing.consent_default', [], 'de');
+        return 'Mit dem Klick auf "Unterschrift bestätigen" geben Sie eine elektronische '
+            .'Unterschrift ab. Datum, Uhrzeit, IP-Adresse und Geraeteangaben werden zum '
+            .'Nachweis gespeichert. Sie erhalten das unterschriebene Dokument per E-Mail.';
     }
 }

@@ -48,23 +48,11 @@ class SignatureEvent extends Model
         'verification_requested' => 'Bestätigungscode angefordert',
         'verification_failed' => 'Bestätigungscode falsch',
         'verified' => 'E-Mail-Adresse bestätigt',
-        // Die Identitaetspruefung steht als EIGENES Ereignis im Protokoll -
-        // nicht unter "Bestätigungscode": es ist eine andere Pruefung mit
-        // anderer Aussagekraft, und im Streitfall zaehlt genau der
-        // Unterschied. Der eingegebene Wert steht NIE dabei.
-        'identity_verified' => 'Identität bestätigt (Geburtsdatum)',
-        'identity_failed' => 'Identitätsprüfung fehlgeschlagen',
         'opened' => 'Dokument geöffnet',
         'document_viewed' => 'Dokument angesehen',
         'signing_started' => 'Unterschrift begonnen',
         'field_filled' => 'Feld ausgefüllt',
         'signed' => 'Unterschrift abgeschlossen',
-        // Der GEGENPOL zu 'signing_started': ohne ihn endete das Protokoll
-        // bei einer Stoerung stumm mit "Unterschrift begonnen" - genau das
-        // Bild, mit dem der gemeldete HTTP 500 aufgefallen ist. Ein
-        // Fehlschlag, den nur die Logdatei kennt, sieht im Protokoll wie ein
-        // abgebrochener Kunde aus.
-        'signing_failed' => 'Unterschrift fehlgeschlagen',
         'declined' => 'Unterschrift abgelehnt',
         'completed' => 'Signaturvorgang abgeschlossen',
         'pdf_generated' => 'Unterschriebenes PDF erzeugt',

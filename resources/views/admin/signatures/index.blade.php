@@ -8,12 +8,7 @@
             <div class="page-title">Signaturen</div>
             <div class="page-sub">Dokumente zur Unterschrift versenden – mit oder ohne Kundenakte.</div>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;">
-            @can('firmensignatur-verwalten')
-            <a href="{{ route('admin.signatures.company.index') }}" class="btn btn-ghost">Unternehmenssignaturen</a>
-            @endcan
-            <a href="{{ route('admin.signatures.create') }}" class="btn btn-emerald">+ Neue Signaturanfrage</a>
-        </div>
+        <a href="{{ route('admin.signatures.create') }}" class="btn btn-emerald">+ Neue Signaturanfrage</a>
     </div>
 </div>
 

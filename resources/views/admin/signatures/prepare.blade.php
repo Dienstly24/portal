@@ -1,16 +1,11 @@
 @extends('layouts.admin')
 @section('content')
 @php
-    $signerData = $signature->signers->map(fn ($s) => [
-        'id' => $s->id, 'name' => $s->name, 'email' => $s->email, 'locale' => $s->localeCode(),
-    ])->values();
-    $sprachen = \App\Models\SignatureSigner::LOCALES;
-    $assetDaten = $companyAssets->mapWithKeys(fn ($a) => [$a->id => $a->typeLabel().': '.$a->name]);
+    $signerData = $signature->signers->map(fn ($s) => ['id' => $s->id, 'name' => $s->name, 'email' => $s->email])->values();
     $fieldData = $signature->fields->map(fn ($f) => [
         'id' => $f->id, 'signer_id' => $f->signature_signer_id, 'type' => $f->type, 'page' => $f->page,
         'x' => (float) $f->pos_x, 'y' => (float) $f->pos_y, 'width' => (float) $f->width, 'height' => (float) $f->height,
         'required' => (bool) $f->required, 'label' => $f->label,
-        'company_asset_id' => $f->company_asset_id,
     ])->values();
 @endphp
 <div class="page-header">
@@ -63,25 +58,6 @@
                             id="type-{{ $key }}" @disabled(!$signature->isDraft())>{{ $label }}</button>
                     @endforeach
                 </div>
-                @if($companyAssets->isNotEmpty())
-                {{-- Das Firmenbild gehoert KEINEM Unterzeichner: die Auswahl
-                     steht deshalb getrennt unter den Feldarten, nicht in der
-                     Unterzeichner-Liste. --}}
-                <div id="company-choice" hidden style="display:grid;gap:6px;border-top:1px solid var(--line);padding-top:8px;">
-                    <label for="company-asset" class="muted-sm" style="font-weight:600;">Welches Firmenbild?</label>
-                    <select id="company-asset" style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;">
-                        @foreach($companyAssets as $asset)
-                        <option value="{{ $asset->id }}" @selected($asset->is_default)>
-                            {{ $asset->typeLabel() }}: {{ $asset->name }}
-                        </option>
-                        @endforeach
-                    </select>
-                    <div class="muted-sm">
-                        Kein Unterzeichner, keine Einladung - das Bild steht sofort im Dokument.
-                        Im Protokoll erscheint es als „eingesetzt von", nicht als Unterschrift.
-                    </div>
-                </div>
-                @endif
             </div>
         </div>
 
@@ -143,9 +119,6 @@ window.__h = window.__h || {};
         selected: null,
         dirty: false
     };
-    var sprachen = @json($sprachen);
-    var firmenbilder = @json($assetDaten);
-    var sprachCodes = Object.keys(sprachen);
     var urls = {
         page: @json(route('admin.signatures.page', [$signature->id, 0])),
         save: @json(route('admin.signatures.prepare.save', $signature->id))
@@ -254,12 +227,8 @@ window.__h = window.__h || {};
             caption.style.cssText = 'font-size:11px;line-height:1.15;padding:2px 4px;color:' + color + ';'
                 + 'font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
             var owner = state.signers.find(function (s) { return s.id === field.signer_id; });
-            // Firmenbilder tragen den NAMEN DES BILDES, nicht "ohne
-            // Unterzeichner": sie haben keinen, und das ist kein Mangel.
-            caption.textContent = (typeLabels[field.type] || field.type) + ' · '
-                + (field.type === 'firma'
-                    ? (firmenbilder[field.company_asset_id] || 'Firmenbild')
-                    : (owner ? owner.name : 'ohne Unterzeichner'));
+            caption.textContent = (typeLabels[field.type] || field.type)
+                + ' · ' + (owner ? owner.name : 'ohne Unterzeichner');
             box.appendChild(caption);
 
             if (editable) {
@@ -292,13 +261,7 @@ window.__h = window.__h || {};
             mail.className = 'muted-sm';
             mail.style.cssText = 'overflow:hidden;text-overflow:ellipsis;';
             mail.textContent = signer.email || '(ohne E-Mail)';
-            var sprache = document.createElement('div');
-            sprache.className = 'muted-sm';
-            // Die Sprache steht sichtbar an jedem Unterzeichner: welche
-            // Einladung jemand bekommt, soll man sehen, bevor sie raus ist -
-            // nicht erst an der Rueckfrage des Kunden.
-            sprache.textContent = sprachen[signer.locale || 'de'] || sprachen.de;
-            text.appendChild(name); text.appendChild(mail); text.appendChild(sprache);
+            text.appendChild(name); text.appendChild(mail);
             row.appendChild(dot); row.appendChild(text);
             if (editable) {
                 var edit = document.createElement('button');
@@ -332,15 +295,12 @@ window.__h = window.__h || {};
             var button = document.getElementById('type-' + key);
             if (button) { button.style.borderColor = key === state.type ? 'var(--emerald)' : ''; }
         });
-        var wahl = document.getElementById('company-choice');
-        // [hidden] statt style.display (SEC-4-Regel: app.css erzwingt es).
-        if (wahl) { wahl.hidden = state.type !== 'firma'; }
     };
 
     window.__h["sigPlace"] = function (event) {
         if (!editable) { return; }
         if (event.target.closest('[data-field-box]')) { return; }
-        if (!state.signers.length && state.type !== 'firma') {
+        if (!state.signers.length) {
             alert('Bitte zuerst einen Unterzeichner anlegen.');
             return;
         }
@@ -349,17 +309,9 @@ window.__h = window.__h || {};
         var size = defaultSize(state.type);
         var x = (event.clientX - rect.left) / rect.width - size[0] / 2;
         var y = (event.clientY - rect.top) / rect.height - size[1] / 2;
-        var istFirma = state.type === 'firma';
-        var assetFeld = document.getElementById('company-asset');
-        if (istFirma && (!assetFeld || !assetFeld.value)) {
-            alert('Bitte zuerst unter Einstellungen → Signaturen ein Firmenbild hinterlegen.');
-            return;
-        }
         state.fields.push({
             id: uid(),
-            // ENTWEDER Unterzeichner ODER Firmenbild - nie beides.
-            signer_id: istFirma ? null : (document.getElementById('active-signer').value || state.signers[0].id),
-            company_asset_id: istFirma ? assetFeld.value : null,
+            signer_id: document.getElementById('active-signer').value || state.signers[0].id,
             type: state.type,
             page: parseInt(sheet.getAttribute('data-page'), 10),
             x: Math.min(1 - size[0], Math.max(0, x)),
@@ -467,25 +419,13 @@ window.__h = window.__h || {};
         document.getElementById('field-menu').hidden = true;
     };
 
-    /**
-     * Sprachabfrage per prompt - dieselbe Bedienung wie Name und E-Mail
-     * daneben. Eine abgebrochene oder unbekannte Eingabe aendert NICHTS
-     * (der bisherige Wert bleibt), statt still auf Deutsch zu fallen.
-     */
-    function spracheFragen(aktuell) {
-        var antwort = prompt('Sprache (' + sprachCodes.join(' / ') + '):', aktuell);
-        if (antwort === null) { return aktuell; }
-        antwort = String(antwort).trim().toLowerCase();
-        return sprachCodes.indexOf(antwort) === -1 ? aktuell : antwort;
-    }
-
     window.__h["sigAddSigner"] = function () {
         if (state.signers.length >= 10) { return; }
         var name = prompt('Name des Unterzeichners:');
         if (!name) { return; }
         var email = prompt('E-Mail-Adresse von ' + name + ':');
         if (!email) { return; }
-        state.signers.push({ id: uid(), name: name, email: email, locale: spracheFragen('de') });
+        state.signers.push({ id: uid(), name: name, email: email });
         markDirty();
         renderSigners();
         renderFields();
@@ -500,7 +440,6 @@ window.__h = window.__h || {};
         var email = prompt('E-Mail:', signer.email);
         if (email === null) { return; }
         signer.name = name; signer.email = email;
-        signer.locale = spracheFragen(signer.locale || 'de');
         markDirty();
         renderSigners();
         renderFields();
@@ -528,19 +467,12 @@ window.__h = window.__h || {};
         // vergibt die echte. Sie darf deshalb nicht mitgeschickt werden.
         var payload = {
             signers: state.signers.map(function (s) {
-                // "key" ist die Kennung, unter der DIESE Seite den
-                // Unterzeichner kennt - der Server schickt darueber die echte
-                // zurueck an die Felder. Ohne sie verlor jedes Feld eines im
-                // Editor neu angelegten Unterzeichners seinen Besitzer.
-                return { id: String(s.id).indexOf('neu-') === 0 ? null : s.id, key: String(s.id),
-                         name: s.name, email: s.email, locale: s.locale || 'de' };
+                return { id: String(s.id).indexOf('neu-') === 0 ? null : s.id, name: s.name, email: s.email };
             }),
             fields: state.fields.map(function (f) {
                 return {
                     id: String(f.id).indexOf('neu-') === 0 ? null : f.id,
                     signer_id: String(f.signer_id || '').indexOf('neu-') === 0 ? null : f.signer_id,
-                    signer_key: f.signer_id ? String(f.signer_id) : null,
-                    company_asset_id: f.company_asset_id || null,
                     type: f.type, page: f.page, x: f.x, y: f.y, width: f.width, height: f.height,
                     required: f.required ? 1 : 0, label: f.label
                 };
