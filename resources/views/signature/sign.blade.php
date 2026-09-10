@@ -11,28 +11,36 @@
         'width' => (float) $f->width, 'height' => (float) $f->height,
         'label' => $f->label ?: $f->typeLabel(), 'drawn' => $f->isDrawn(),
     ])->values();
+    // Texte fuer das JavaScript. BEWUSST hier und nicht als mehrzeiliges
+    // @json im Skript: Blade zerbricht an einem ueber mehrere Zeilen
+    // gehenden Array-Literal in einer Direktive ("Unclosed '['").
+    $jsTexte = [
+        'fehlt' => __('signing.missing_signature'),
+        'speichert' => __('signing.saving'),
+        'absenden' => __('signing.sign_document'),
+        'unterschrieben' => __('signing.signed_mark'),
+        'leer' => __('signing.empty'),
+        'fortschritt' => __('signing.progress', ['done' => ':done', 'total' => ':total']),
+    ];
 @endphp
 
 <div class="karte">
     <h1>{{ $signature->title }}</h1>
     <p class="lead">
-        Guten Tag {{ $signer->name }}, bitte prüfen Sie das Dokument und unterschreiben Sie unten.
-        Es hat {{ $signature->page_count }} Seite{{ $signature->page_count === 1 ? '' : 'n' }};
-        für Sie sind {{ $fields->count() }} Feld{{ $fields->count() === 1 ? '' : 'er' }} vorgesehen.
+        {{ __('signing.intro', ['name' => $signer->name, 'pages' => $signature->page_count, 'fields' => $fields->count()]) }}
     </p>
     @if($signature->expires_at)
-    <p class="lead" style="margin-top:8px;">Gültig bis {{ $signature->expires_at->lokal()->format('d.m.Y') }}.</p>
+    <p class="lead" style="margin-top:8px;">{{ __('signing.valid_until', ['date' => $signature->expires_at->lokal()->format('d.m.Y')]) }}</p>
     @endif
     <p style="margin-top:12px;">
-        <a href="{{ route('signature.document', $token) }}" target="_blank" rel="noopener">Original-PDF öffnen</a>
+        <a href="{{ route('signature.document', $token) }}" target="_blank" rel="noopener">{{ __('signing.open_original') }}</a>
     </p>
 </div>
 
 @if(!$previewAvailable)
 <div class="hinweis hinweis-warn">
-    Die Seitenansicht ist gerade nicht verfügbar. Bitte öffnen Sie das
-    <a href="{{ route('signature.document', $token) }}" target="_blank" rel="noopener">Original-PDF</a>
-    und unterschreiben Sie anschließend unten.
+    {{ __('signing.preview_missing') }}
+    <a href="{{ route('signature.document', $token) }}" target="_blank" rel="noopener">{{ __('signing.open_original') }}</a>
 </div>
 @else
 <div id="dokument">
@@ -40,7 +48,7 @@
     <div class="seite" data-seite="{{ $page }}">
         {{-- loading="lazy": ein 30-seitiges Dokument soll auf dem Telefon
              nicht 30 Bilder auf einmal laden. --}}
-        <img src="{{ route('signature.page', [$token, $page]) }}" alt="Seite {{ $page }} von {{ $signature->page_count }}"
+        <img src="{{ route('signature.page', [$token, $page]) }}" alt="{{ __('signing.page_of', ['page' => $page, 'total' => $signature->page_count]) }}"
              loading="lazy" width="1400" height="1980">
     </div>
     @endfor
@@ -56,12 +64,12 @@
             <label for="feld-{{ $field->id }}">
                 {{ $field->label ?: $field->typeLabel() }}
                 @if($field->required)<span style="color:#B3261E;">*</span>@endif
-                <span style="font-weight:400;color:var(--ink-soft);"> · Seite {{ $field->page }}</span>
+                <span style="font-weight:400;color:var(--ink-soft);"> · {{ __('signing.page_n', ['page' => $field->page]) }}</span>
             </label>
             @if($field->type === 'kreuz')
                 <label style="display:flex;gap:10px;align-items:center;font-weight:400;">
                     <input type="checkbox" name="felder[{{ $field->id }}]" value="ja" style="width:22px;height:22px;">
-                    <span>{{ $field->label ?: 'Hiermit bestätige ich diesen Punkt' }}</span>
+                    <span>{{ $field->label ?: __('signing.checkbox_default') }}</span>
                 </label>
             @elseif($field->type === 'datum')
                 <input id="feld-{{ $field->id }}" type="text" name="felder[{{ $field->id }}]"
@@ -81,40 +89,40 @@
     <div class="karte">
         <h2>{{ $field->label ?: $field->typeLabel() }}@if($field->required)<span style="color:#B3261E;"> *</span>@endif</h2>
         <p class="lead" style="margin-bottom:10px;">
-            Seite {{ $field->page }} · Mit dem Finger, dem Stift oder der Maus in das Feld zeichnen.
+            {{ __('signing.draw_hint', ['page' => $field->page]) }}
         </p>
         <canvas class="zeichenflaeche" data-unterschrift="{{ $field->id }}"
-                aria-label="Zeichenfläche für {{ $field->label ?: $field->typeLabel() }}"></canvas>
+                aria-label="{{ __('signing.canvas_label', ['field' => $field->label ?: $field->typeLabel()]) }}"></canvas>
         <input type="hidden" name="felder[{{ $field->id }}]" id="daten-{{ $field->id }}">
         <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
             <button type="button" class="knopf knopf-still" style="width:auto;"
-                    data-h-click="sigLeeren" data-ziel="{{ $field->id }}">Neu zeichnen</button>
-            <span class="fortschritt" id="status-{{ $field->id }}">noch leer</span>
+                    data-h-click="sigLeeren" data-ziel="{{ $field->id }}">{{ __('signing.redraw') }}</button>
+            <span class="fortschritt" id="status-{{ $field->id }}">{{ __('signing.empty') }}</span>
         </div>
     </div>
     @endforeach
 
     <div class="karte">
-        <h2>Hinweis zur elektronischen Unterschrift</h2>
-        <p class="lead">{{ $signature->consent_text }}</p>
+        <h2>{{ __('signing.consent_heading') }}</h2>
+        <p class="lead">{{ $signature->consentTextFor($signer) }}</p>
         <label style="display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:14px;">
             <input type="checkbox" name="zustimmung" value="1" required style="width:22px;height:22px;margin-top:2px;flex:none;">
-            <span>Ich habe das Dokument gelesen und unterschreibe es elektronisch.</span>
+            <span>{{ __('signing.consent_checkbox') }}</span>
         </label>
     </div>
 </form>
 
 <div class="karte">
-    <h2>Nicht unterschreiben?</h2>
-    <p class="lead">Wenn Sie das Dokument nicht unterschreiben möchten, teilen Sie uns das bitte hier mit.</p>
+    <h2>{{ __('signing.decline_heading') }}</h2>
+    <p class="lead">{{ __('signing.decline_lead') }}</p>
     <form method="POST" action="{{ route('signature.decline', $token) }}" style="margin-top:12px;"
-          data-confirm="Möchten Sie die Unterschrift wirklich ablehnen? Der Vorgang wird damit beendet.">
+          data-confirm="{{ __('signing.decline_confirm_long') }}">
         @csrf
         <div class="feld">
-            <label for="grund">Grund (optional)</label>
+            <label for="grund">{{ __('signing.decline_reason') }}</label>
             <input id="grund" type="text" name="grund" maxlength="500">
         </div>
-        <button type="submit" class="knopf knopf-still">Unterschrift ablehnen</button>
+        <button type="submit" class="knopf knopf-still">{{ __('signing.decline') }}</button>
     </form>
 </div>
 @endsection
@@ -123,7 +131,7 @@
 <div class="fussleiste">
     <div class="innen">
         <span class="fortschritt" id="gesamt-status"></span>
-        <button type="submit" form="unterschrift-formular" class="knopf" id="absenden">Unterschrift bestätigen</button>
+        <button type="submit" form="unterschrift-formular" class="knopf" id="absenden">{{ __('signing.sign_document') }}</button>
     </div>
 </div>
 @endsection
@@ -133,6 +141,12 @@
 window.__h = window.__h || {};
 (function () {
     "use strict";
+
+    // Die Texte kommen aus derselben Uebersetzungsdatei wie die Seite - ein
+    // deutscher Satz aus einem JavaScript heraus waere sonst genau die
+    // Mischsprache, die den Unterzeichner glauben laesst, die Seite sei
+    // kaputt.
+    var texte = @json($jsTexte);
 
     // Zeichenflaechen. Pointer-Ereignisse decken Finger, Stift und Maus mit
     // EINEM Weg ab - getrennte touch-/mouse-Behandlung laeuft erfahrungs-
@@ -204,9 +218,46 @@ window.__h = window.__h || {};
         var status = document.getElementById('status-' + id);
         if (!zustand[id].gezeichnet) { return; }
         feld.value = zustand[id].canvas.toDataURL('image/png');
-        if (status) { status.textContent = 'unterschrieben'; }
+        merken(id, feld.value);
+        if (status) { status.textContent = texte.unterschrieben; }
         gesamtStand();
         markiereFelder();
+    }
+
+    // DIE HANDSCHRIFT DARF NICHT VERLOREN GEHEN. Meldet der Server einen
+    // Fehler (fehlendes Pflichtfeld, Stoerung), laedt die Seite neu - und
+    // eine Zeichenflaeche ist danach leer. Wer gerade muehsam mit dem Finger
+    // unterschrieben hat, muss dann von vorn anfangen und haelt das zu Recht
+    // fuer einen Defekt. Die Zeichnung bleibt deshalb im Browser (nur diesem
+    // Reiter, nur bis er geschlossen wird) - sie wird bewusst NICHT ueber die
+    // Sitzung zurueckgegeben: als data:-URL sind das schnell 40 kB und mehr.
+    function schluessel(id) { return 'sig:' + id; }
+
+    function merken(id, wert) {
+        try { window.sessionStorage.setItem(schluessel(id), wert); } catch (e) { /* privater Modus */ }
+    }
+
+    function vergessen(id) {
+        try { window.sessionStorage.removeItem(schluessel(id)); } catch (e) { /* egal */ }
+    }
+
+    function wiederherstellen(id) {
+        var wert = null;
+        try { wert = window.sessionStorage.getItem(schluessel(id)); } catch (e) { return; }
+        if (!wert) { return; }
+        var eintrag = zustand[id];
+        var bild = new Image();
+        bild.onload = function () {
+            var rect = eintrag.canvas.getBoundingClientRect();
+            eintrag.ctx.drawImage(bild, 0, 0, rect.width, rect.height);
+            eintrag.gezeichnet = true;
+            document.getElementById('daten-' + id).value = wert;
+            var status = document.getElementById('status-' + id);
+            if (status) { status.textContent = texte.unterschrieben; }
+            gesamtStand();
+            markiereFelder();
+        };
+        bild.src = wert;
     }
 
     window.__h["sigLeeren"] = function () {
@@ -216,8 +267,9 @@ window.__h = window.__h || {};
         eintrag.ctx.clearRect(0, 0, eintrag.canvas.width, eintrag.canvas.height);
         eintrag.gezeichnet = false;
         document.getElementById('daten-' + id).value = '';
+        vergessen(id);
         var status = document.getElementById('status-' + id);
-        if (status) { status.textContent = 'noch leer'; }
+        if (status) { status.textContent = texte.leer; }
         gesamtStand();
         markiereFelder();
     };
@@ -228,7 +280,8 @@ window.__h = window.__h || {};
         var anzeige = document.getElementById('gesamt-status');
         var gesamt = Object.keys(zustand).length;
         if (!anzeige) { return; }
-        anzeige.textContent = gesamt === 0 ? '' : (gesamt - offen) + ' von ' + gesamt + ' unterschrieben';
+        anzeige.textContent = gesamt === 0 ? '' :
+            texte.fortschritt.replace(':done', gesamt - offen).replace(':total', gesamt);
     }
 
     // Die Felder auf den Seitenbildern zeigen, WO im Dokument unterschrieben
@@ -263,20 +316,40 @@ window.__h = window.__h || {};
 
     markiereFelder();
     gesamtStand();
+    Object.keys(zustand).forEach(wiederherstellen);
 
     // Vor dem Absenden pruefen, ob eine Pflicht-Unterschrift fehlt. Die
     // eigentliche Pruefung macht der Server (dem Browser wird nichts
     // geglaubt) - aber der Unterzeichner soll es VOR dem Klick erfahren.
     var formular = document.getElementById('unterschrift-formular');
+    var knopf = document.getElementById('absenden');
+    var laeuft = false;
+
     formular.addEventListener('submit', function (event) {
+        // ZWEITER KLICK: der Knopf wird zwar gesperrt, aber Enter im
+        // Textfeld und ein schneller Doppelklick loesen trotzdem ein
+        // zweites submit aus. Der Server ist dagegen abgesichert
+        // (idempotent), der Browser soll es gar nicht erst versuchen.
+        if (laeuft) { event.preventDefault(); return; }
+
         var fehlt = Object.keys(zustand).some(function (id) { return !zustand[id].gezeichnet; });
         if (fehlt) {
             event.preventDefault();
-            alert('Bitte zeichnen Sie Ihre Unterschrift in das dafür vorgesehene Feld.');
+            alert(texte.fehlt);
             return;
         }
-        document.getElementById('absenden').disabled = true;
-        document.getElementById('absenden').textContent = 'Wird gespeichert …';
+        laeuft = true;
+        knopf.disabled = true;
+        knopf.textContent = texte.speichert;
+    });
+
+    // Zurueck-Taste und Seiten-Cache: der Browser zeigt die Seite dann im
+    // Zustand von vorhin - mit gesperrtem Knopf. Ohne dies steht der
+    // Unterzeichner vor einem Formular, das sich nicht mehr absenden laesst.
+    window.addEventListener('pageshow', function () {
+        laeuft = false;
+        knopf.disabled = false;
+        knopf.textContent = texte.absenden;
     });
 })();
 </script>

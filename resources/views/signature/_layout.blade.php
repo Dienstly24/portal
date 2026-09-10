@@ -1,10 +1,20 @@
+@php
+    // Die Sprache kommt vom UNTERZEICHNER (der Controller hat sie gesetzt),
+    // nicht vom Browser und nicht von der Sitzung eines Mitarbeiters.
+    $sprache = app()->getLocale();
+    $rtl = in_array($sprache, \App\Models\SignatureSigner::RTL, true);
+@endphp
 <!DOCTYPE html>
-<html lang="de">
+<html lang="{{ $sprache }}" dir="{{ $rtl ? 'rtl' : 'ltr' }}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<title>Dienstly24 — Dokument unterschreiben</title>
+<title>Dienstly24 — {{ __('signing.title') }}</title>
+@if($rtl)
+    {{-- Lokal gehostet (DSGVO: kein Google-Server, siehe Website-Regel). --}}
+    <link rel="stylesheet" href="{{ asset('fonts/fonts-ar.css') }}">
+@endif
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 {{-- HELLE Seite, bewusst anders als Anmeldung und Hilfe-Formular: hier wird
      ein Vertrag GELESEN. Dunkles Glas sieht gut aus und ist zum Lesen von
@@ -15,6 +25,13 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Inter',Arial,sans-serif;background:var(--canvas);color:var(--ink);
      -webkit-text-size-adjust:100%;}
+/* Arabisch: eigene Schrift mit passenden Metriken. Ohne sie setzt der
+   Browser eine Systemschrift, in der die Verbindungen der Buchstaben je
+   nach Geraet unterschiedlich brechen - auf einem Vertrag ist das die
+   falsche Stelle zum Sparen. */
+html[dir="rtl"] body{font-family:'IBM Plex Sans Arabic','IBM Plex Sans Arabic Fallback','Noto Sans Arabic',Arial,sans-serif;}
+/* Spiegelbare Ausrichtung: alles, was links stand, steht rechts. */
+html[dir="rtl"] .fortschritt{text-align:right;}
 .kopf{background:var(--graphite);color:#fff;padding:14px 18px;display:flex;align-items:center;
       justify-content:space-between;gap:14px;position:sticky;top:0;z-index:20;}
 .kopf img{height:26px;width:auto;display:block;}
@@ -60,7 +77,7 @@ body{font-family:'Inter',Arial,sans-serif;background:var(--canvas);color:var(--i
 <body>
 <div class="kopf">
     <img src="{{ \App\Support\BrandAssets::logoLight() }}" alt="Dienstly24">
-    <div class="titel">@yield('kopftitel', 'Elektronische Unterschrift')</div>
+    <div class="titel">@yield('kopftitel', __('signing.brand_subtitle'))</div>
 </div>
 <div class="huelle">
     @if(session('success'))<div class="hinweis hinweis-ok">{{ session('success') }}</div>@endif

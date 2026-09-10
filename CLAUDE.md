@@ -2450,6 +2450,66 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
   - nach dem Abschluss ist der Zugang widerrufen.
 - Tests: `SignatureModuleTest` (26 Faelle, beide Szenarien), `PdfStamperTest`.
 
+### Nachbesserung 10.09.2026 (Betreiber-Meldung "HTTP 500 beim Unterschreiben")
+
+- **Die Ursache war KEIN einzelner Fehler, sondern eine fehlende
+  Schranke** (per Fehlereinspeisung nachgestellt): der Unterschreiben-Pfad
+  lief von der Pruefung bis zur Glocke in EINEM Stueck, jede Stoerung
+  dahinter (Platte, Glocke, PDF) schlug ungefiltert bis zum Unterzeichner
+  durch - und je nach Zeitpunkt war die Unterschrift verloren (vor dem
+  Ereignis `signed`, genau das Bild aus der Meldung) oder laengst
+  gespeichert, waehrend er eine Fehlerseite sah. Jetzt: Schleuse im
+  Controller (Log + Protokoll-Ereignis `signing_failed` + Glocke +
+  verstaendlicher Satz), GEPRUEFTE Schreibvorgaenge (`put()` meldet einen
+  Fehlschlag auch ohne Ausnahme mit `false`), Nachlauf hinter der
+  Schranke, Idempotenz beim doppelten Absenden, zu grosse Unterschriften
+  werden VERKLEINERT statt verworfen (820-px-Feld x Geraeteverhaeltnis 2 =
+  1640 px fiel bisher durch die Obergrenze), Zeichnung ueberlebt einen
+  Fehler (sessionStorage, nicht die Sitzung). Dazu der Editor-Fehler: ein
+  Feld, dessen Unterzeichner im selben Speichervorgang neu entstand,
+  verlor seinen Besitzer - der Vorgang liess sich danach nicht versenden.
+- **Sprache des UNTERZEICHNERS** (`signature_signers.locale`, de/ar/en) -
+  am Unterzeichner, nicht an der Anfrage (deutscher Kunde + arabischer
+  Zeuge im selben Vorgang) und NICHT die Portal-Sprache des Kunden (die
+  wird vorgeschlagen und nie geaendert). `lang/{de,ar,en}/signing.php`,
+  deckungsgleiche Schluessel (Test), `dir="rtl"`, lokale arabische
+  Schrift, Ziffernfolgen mit `dir="ltr"`. **Das PDF wird NIE gespiegelt** -
+  die Protokollseite bleibt deutsch und LTR (ein gespiegelter Vertrag
+  waere kein uebersetzter, sondern ein unlesbarer). Der ZUSTIMMUNGSTEXT
+  ist der Sonderfall: die Voreinstellung gibt es uebersetzt, ein selbst
+  geschriebener Text wird WOERTLICH gezeigt. Nebenbefund: der
+  Bestaetigungscode stand im BETREFF der Mail (Sperrbildschirm-Vorschau!).
+- **Unternehmenssignatur / Firmenstempel / Firmenlogo**
+  (`company_signature_assets`, Feldart `firma`, Einstellungen ->
+  Signaturen). **Ein Firmenbild ist KEIN Unterzeichner** - keine E-Mail,
+  kein Token, keine Zustimmung; im Protokoll steht "eingesetzt von", nie
+  "unterschrieben von". Eigene Tabelle statt einer Zeile in
+  `signature_signers`: sonst saehe eine Grafik im Protokoll wie eine
+  abgegebene Willenserklaerung aus. Ein Firmenfeld blockiert keinen
+  Versand; ohne zugewiesenes Bild entsteht es gar nicht. Rechte
+  `firmensignatur-verwalten` (admin/manager) und `firmensignatur-benutzen`,
+  geprueft an Route UND Controller UND beim Speichern. Bilder werden neu
+  gerendert, Alphakanal bleibt (weisser Kasten ueber dem Vertragstext);
+  ein benutztes Bild wird STILLGELEGT statt geloescht.
+- **Identitaetspruefung** `signature_requests.identity_check`:
+  keine / Geburtsdatum / E-Mail (der alte Ja-Nein-Schalter ist weg, zwei
+  Spalten fuer dieselbe Frage waeren zwei Wahrheiten). EHRLICH: das
+  Geburtsdatum ist KEIN Geheimnis (Ausweis, Versicherungsschein) - es
+  haelt nur den zufaelligen Empfaenger eines weitergeleiteten Links auf,
+  E-Mail bleibt Voreinstellung. Wert NUR als POST-Feld, NIE im Protokoll,
+  VERSCHLUESSELT statt gehasht (40.000 plausible Werte = Hash offline in
+  Sekunden geraten), grobe Antwort, zeitkonstanter Vergleich, 5 Versuche
+  dann 30 Min Sperre + Route-Throttle. Ohne hinterlegtes Datum wird NICHT
+  gefragt. KEIN SMS-Weg.
+- **Anlegen**: zwei gleichberechtigte Wege (bestehender Kunde /
+  "Externe Person hinzufuegen" ohne Kundenakte) mit Sofort-Suche
+  `admin.signatures.customer_search` (portfolio-gescoped, eigener
+  Endpunkt wegen Geburtsdatum und Sprache). Der externe Weg steht bewusst
+  NICHT im Kleingedruckten - wer ihn nicht findet, legt Karteileichen an.
+- Tests: `FaultInjectionSignatureTest`, `SignatureLocalizationTest`,
+  `CompanySignatureAssetTest`, `SignerIdentityTest`,
+  `SignatureCreateFlowTest`.
+
 ## Offene Themen / wartet auf den Betreiber
 
 - **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026

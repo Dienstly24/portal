@@ -3,6 +3,7 @@
 use App\Http\Controllers\ActivityReportController;
 use App\Http\Controllers\Admin\AiProviderController;
 use App\Http\Controllers\Admin\ChannelController;
+use App\Http\Controllers\Admin\CompanySignatureAssetController;
 use App\Http\Controllers\Admin\ContractController as AdminContractController;
 use App\Http\Controllers\Admin\CustomerDocumentController as AdminCustomerDocumentController;
 use App\Http\Controllers\Admin\DuplicateController as AdminDuplicateController;
@@ -179,6 +180,12 @@ Route::middleware('throttle:signatur')->group(function () {
     Route::get('/unterschreiben/{token}', [SignatureSigningController::class, 'show'])->name('signature.show');
     Route::post('/unterschreiben/{token}/code', [SignatureSigningController::class, 'requestCode'])->name('signature.code');
     Route::post('/unterschreiben/{token}/bestaetigen', [SignatureSigningController::class, 'verify'])->name('signature.verify');
+    // Geburtsdatum: ZUSAETZLICH zum Token-Limiter enger gedrosselt. Der
+    // Raum plausibler Geburtsdaten ist klein, das Raten waere sonst eine
+    // Frage von Minuten - der Dienst sperrt nach 5 Fehlversuchen je
+    // Unterzeichner, dieser Limiter deckelt zusaetzlich die Rate.
+    Route::post('/unterschreiben/{token}/identitaet', [SignatureSigningController::class, 'identity'])
+        ->middleware('throttle:10,10')->name('signature.identity');
     Route::get('/unterschreiben/{token}/seite/{page}', [SignatureSigningController::class, 'page'])
         ->whereNumber('page')->name('signature.page');
     Route::get('/unterschreiben/{token}/dokument', [SignatureSigningController::class, 'document'])->name('signature.document');
@@ -436,7 +443,27 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
     // beides bekommen. Wer was darf, entscheidet die SignatureRequestPolicy
     // (Portfolio bei Kundenvorgaengen, Urheberschaft bei eigenstaendigen).
     Route::get('/signaturen', [AdminSignatureController::class, 'index'])->name('signatures.index');
+
+    // UNTERNEHMENSSIGNATUREN (Unterschrift des Betriebs, Stempel, Logo).
+    // Eigenes Recht 'firmensignatur-verwalten': wer hier etwas anlegt, kann
+    // die Unterschrift des Betriebs auf ein beliebiges Dokument setzen. Die
+    // Bild-Route steht VOR /signaturen/{id}, sonst deutet die
+    // Routenreihenfolge "firmensignaturen" als Signatur-ID.
+    Route::get('/firmensignaturen', [CompanySignatureAssetController::class, 'index'])
+        ->name('signatures.company.index');
+    Route::post('/firmensignaturen', [CompanySignatureAssetController::class, 'store'])
+        ->name('signatures.company.store');
+    Route::post('/firmensignaturen/{id}/standard', [CompanySignatureAssetController::class, 'makeDefault'])
+        ->name('signatures.company.default');
+    Route::delete('/firmensignaturen/{id}', [CompanySignatureAssetController::class, 'destroy'])
+        ->name('signatures.company.destroy');
+    Route::get('/firmensignaturen/{id}/bild', [CompanySignatureAssetController::class, 'image'])
+        ->name('signatures.company.image');
     Route::get('/signaturen/neu', [AdminSignatureController::class, 'create'])->name('signatures.create');
+    // Sofort-Suche fuer das Anlage-Formular. VOR /signaturen/{id}, sonst
+    // deutet die Routenreihenfolge "kunden-suche" als Signatur-ID.
+    Route::get('/signaturen/kunden-suche', [AdminSignatureController::class, 'customerSearch'])
+        ->name('signatures.customer_search');
     Route::post('/signaturen', [AdminSignatureController::class, 'store'])
         ->middleware('throttle:60,10')->name('signatures.store');
     Route::get('/signaturen/{id}', [AdminSignatureController::class, 'show'])->name('signatures.show');
