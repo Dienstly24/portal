@@ -303,6 +303,26 @@ class SignaturGruppeTest extends TestCase
         $this->assertStringContainsString('7', (string) $html);
     }
 
+    public function test_der_editor_sagt_dem_mitarbeiter_dass_es_eine_unterschrift_ist(): void
+    {
+        // Betreiber-Vorgabe 19: wer sieben Kaesten setzt, muss verstehen,
+        // dass er damit NICHT sieben Unterschriften verlangt. Ohne diesen
+        // Satz nimmt der Mitarbeiter genau das an - der Irrtum, aus dem die
+        // Meldung entstanden ist. Die Gruppe wird nirgends eingestellt: sie
+        // ENTSTEHT dadurch, dass ein Feld einem Unterzeichner gehoert.
+        $request = $this->anfrage(
+            [['name' => 'Ahmad', 'email' => 'ahmad@example.com']],
+            ['ahmad@example.com' => [1, 2, 3, 4, 6, 7, 9]],
+        );
+
+        $html = (string) $this->actingAs($this->admin)
+            ->get(route('admin.signatures.prepare', $request->id))->assertOk()->getContent();
+
+        $this->assertStringContainsString('gruppentext', $html,
+            'Der Editor muss die Signaturgruppe je Unterzeichner ausweisen.');
+        $this->assertStringContainsString('Eine Unterschrift', $html);
+    }
+
     public function test_es_gibt_keinen_weg_die_unterschrift_zu_tippen_oder_hochzuladen(): void
     {
         $request = $this->anfrage(

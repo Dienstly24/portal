@@ -2634,7 +2634,20 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
   einen Zeichnung alle auf "unterschrieben" - der Unterzeichner sucht nicht
   weiter nach Seite 2. Am simulierten iPhone geprueft: eine Flaeche, kein
   Scrollen beim Zeichnen, sieben von sieben Marken erledigt.
-- Tests: `SignaturGruppeTest` (8 Faelle).
+- **Der Editor sagt es dem Mitarbeiter** (Vorgabe 19): unter jedem
+  Unterzeichner steht "Eine Unterschrift - 7 Stellen (Seiten 1, 2, 3, 4,
+  6, 7, 9)", live nachgezogen bei jedem neuen Feld. Bewusst als SATZ und
+  nicht als blosse Zahl: "7" allein liest sich wie "sieben
+  Unterschriften", und genau das ist es nicht. Die Gruppe wird dabei
+  NIRGENDS eingestellt - sie entsteht dadurch, dass ein Feld einem
+  Unterzeichner gehoert.
+- **Das Protokoll deckt die Vorgabe 15 bereits ab** (`signature_events`:
+  sent, opened, document_viewed, signing_started, signed, completed,
+  jeweils mit Zeit, IP, Geraet/Browser, Unterzeichner und Ereignis-ID) -
+  hier war nichts zu ergaenzen; ebenso die Statusliste der Vorgabe 14
+  (`SignatureStatus`: draft/sent/viewed/partially_signed/completed/
+  expired/declined/cancelled).
+- Tests: `SignaturGruppeTest` (9 Faelle).
 
 ## Offene Themen / wartet auf den Betreiber
 
