@@ -3,6 +3,7 @@
 namespace App\Jobs\Messaging;
 
 use App\Models\CustomerMessage;
+use App\Models\CustomerMessageAttachment;
 use App\Services\Messaging\Channels\ChannelManager;
 use App\Services\Messaging\Dto\OutboundMessage;
 use Illuminate\Bus\Queueable;
@@ -10,6 +11,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Ausgehende Nachricht an die Plattform (Auftrag Abschnitt 80).
@@ -35,7 +37,7 @@ class SendOutboundMessageJob implements ShouldQueue
 
     public function handle(ChannelManager $manager): void
     {
-        $message = CustomerMessage::with('conversation.channel', 'conversation.channelAccount')
+        $message = CustomerMessage::with('conversation.channel', 'conversation.channelAccount', 'attachments')
             ->find($this->messageId);
 
         $conversation = $message?->conversation;
@@ -62,26 +64,94 @@ class SendOutboundMessageJob implements ShouldQueue
             return;
         }
 
-        $ergebnis = $manager->driver($conversation->channel->key)->send(
-            new OutboundMessage(
-                recipientId: $empfaenger,
-                text: (string) $message->body,
-                lastInboundAt: $conversation->lastInboundAt(),
-            ),
-            $conversation->channelAccount
-        );
+        $treiber = $manager->driver($conversation->channel->key);
+        $kannMedien = (bool) $conversation->channel->supports('supportsMedia');
 
-        if (! $ergebnis->ok) {
-            $message->advanceStatus(CustomerMessage::STATUS_FAILED, $ergebnis->error);
+        // Die Dateien werden HIER gelesen, nicht im Adapter: wo eine
+        // Datei liegt, ist Sache der Anwendung - der Adapter kennt nur
+        // Bytes. So bleibt er von unserer Ablage unabhaengig.
+        $dateien = $kannMedien
+            ? $message->attachments->map(fn (CustomerMessageAttachment $a) => $this->datei($a))->filter()->values()
+            : collect();
 
-            return;
+        // EINE Datei je Nachricht ist die Regel der Plattform. Mehrere
+        // Anhaenge werden deshalb NACHEINANDER gesendet; der Text haengt
+        // an der ERSTEN, sonst stuende er unter jedem Bild erneut.
+        $sendungen = $dateien->isEmpty()
+            ? [[null, (string) $message->body]]
+            : $dateien->map(fn ($d, $i) => [$d, $i === 0 ? (string) $message->body : ''])->all();
+
+        $ersteKennung = null;
+
+        foreach ($sendungen as [$datei, $text]) {
+            $ergebnis = $treiber->send(
+                new OutboundMessage(
+                    recipientId: $empfaenger,
+                    text: $text,
+                    type: $datei ? 'media' : 'text',
+                    attachments: $datei ? [$datei] : [],
+                    lastInboundAt: $conversation->lastInboundAt(),
+                ),
+                $conversation->channelAccount
+            );
+
+            if (! $ergebnis->ok) {
+                // Teilerfolg EHRLICH melden: was raus ist, ist raus. Die
+                // Nachricht als "fehlgeschlagen" zu fuehren, ohne das zu
+                // sagen, waere die schlechtere Luege - ein Mitarbeiter
+                // wuerde erneut senden und der Kunde bekaeme alles doppelt.
+                $message->advanceStatus(
+                    CustomerMessage::STATUS_FAILED,
+                    $ersteKennung
+                        ? 'Teilweise gesendet - ein weiterer Anhang schlug fehl: '.$ergebnis->error
+                        : $ergebnis->error
+                );
+
+                if ($ersteKennung) {
+                    $message->forceFill(['external_message_id' => $ersteKennung])->save();
+                }
+
+                return;
+            }
+
+            // Die externe Kennung ist der WICHTIGSTE Rueckgabewert: nur
+            // mit ihr lassen sich spaetere Zustell- und Lesemeldungen
+            // dieser Nachricht zuordnen. Bei mehreren Sendungen zaehlt
+            // die erste - sie traegt den Text.
+            $ersteKennung ??= $ergebnis->externalMessageId;
         }
 
-        // Die externe Kennung ist der WICHTIGSTE Rueckgabewert: nur mit
-        // ihr lassen sich spaetere Zustell- und Lesemeldungen dieser
-        // Nachricht zuordnen.
-        $message->forceFill(['external_message_id' => $ergebnis->externalMessageId])->save();
+        $message->forceFill(['external_message_id' => $ersteKennung])->save();
         $message->advanceStatus(CustomerMessage::STATUS_SENT);
+    }
+
+    /**
+     * Anhang als Bytes - oder null, wenn die Datei (noch) nicht da ist.
+     *
+     * Ein fehlender Anhang darf den Versand nicht zum Absturz bringen;
+     * er wird uebersprungen, und der Text geht trotzdem raus.
+     *
+     * @return array{contents:string,mime_type:string,file_name:string}|null
+     */
+    private function datei(CustomerMessageAttachment $anhang): ?array
+    {
+        $platte = $anhang->disk ?: 'local';
+
+        try {
+            if (! $anhang->file_path || ! Storage::disk($platte)->exists($anhang->file_path)) {
+                return null;
+            }
+
+            return [
+                'contents' => (string) Storage::disk($platte)->get($anhang->file_path),
+                'mime_type' => $anhang->mimeType(),
+                'file_name' => $anhang->file_name ?: 'datei',
+            ];
+        } catch (\Throwable $e) {
+            report($e);
+
+            return null;
+        }
     }
 
     public function failed(\Throwable $e): void

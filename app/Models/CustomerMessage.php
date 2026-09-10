@@ -21,6 +21,62 @@ class CustomerMessage extends Model
 
     public const EMAIL_MODES = ['none', 'hint', 'full'];
 
+    /**
+     * Haelt den automatischen Versand zurueck, solange der Aufrufer noch
+     * Anhaenge schreibt. Bewusst KEIN dauerhafter Schalter: nur fuer die
+     * Dauer der Closure, und der Versand wird danach ausdruecklich
+     * angestossen - vergessen kann man ihn also nicht.
+     */
+    private static bool $versandZurueckgehalten = false;
+
+    /**
+     * Nachricht MIT Anhaengen anlegen: erst die Nachricht, dann die
+     * Dateien, dann der Versand.
+     *
+     * @param  callable():static  $anlegen  legt die Nachricht an
+     * @param  callable(static):void  $anhaenge  schreibt die Anhaenge dazu
+     */
+    public static function mitAnhaengen(callable $anlegen, callable $anhaenge): static
+    {
+        self::$versandZurueckgehalten = true;
+
+        try {
+            $nachricht = $anlegen();
+        } finally {
+            // Auch bei einem Fehlschlag zuruecksetzen - sonst sendet die
+            // naechste Nachricht in derselben Anfrage gar nicht mehr.
+            self::$versandZurueckgehalten = false;
+        }
+
+        $anhaenge($nachricht);
+        $nachricht->versandAnstossen();
+
+        return $nachricht;
+    }
+
+    /**
+     * Den ausgehenden Versand anstossen - dieselben Bedingungen wie im
+     * created-Hook, damit beide Wege nie auseinanderlaufen.
+     */
+    public function versandAnstossen(): void
+    {
+        if ($this->source === self::SOURCE_HISTORICAL) {
+            return;
+        }
+        if (! $this->from_staff || ! $this->conversation_id || $this->external_message_id) {
+            return;
+        }
+
+        try {
+            if ($this->conversation()->first()?->external_user_id) {
+                SendOutboundMessageJob::dispatch($this->id);
+            }
+        } catch (\Throwable) {
+            // Wie im Hook: der Versand darf das Speichern nie scheitern
+            // lassen.
+        }
+    }
+
     protected $fillable = [
         'customer_id', 'sender_id', 'body', 'from_staff', 'ai_generated', 'read_at', 'email_mode',
         // Omnichannel (Phase B) - alle optional, damit jeder bestehende
@@ -128,6 +184,16 @@ class CustomerMessage extends Model
         // interner Chat haben keine Gegenstelle ausserhalb und brauchen
         // keinen Versand. Nur ein Kanal mit echter Gegenstelle loest aus.
         static::created(function ($m) {
+            // ANHAENGE ENTSTEHEN NACH DER NACHRICHT - sie brauchen ihre
+            // message_id. Wer hier sofort sendet, schickt den Text OHNE
+            // die Datei los, und der Kunde bekommt "anbei Ihre Police"
+            // ohne Police. Der Aufrufer, der Dateien anhaengt, haelt den
+            // Versand deshalb kurz zurueck und stoesst ihn selbst an,
+            // sobald die Anhaenge stehen (siehe mitAnhaengen()).
+            if (self::$versandZurueckgehalten) {
+                return;
+            }
+
             // HISTORIE GEHT NIE RAUS. Eine nachgelieferte eigene
             // Nachricht wurde vor Wochen bereits gesendet - sie ein
             // zweites Mal zuzustellen waere fuer den Kunden nicht
