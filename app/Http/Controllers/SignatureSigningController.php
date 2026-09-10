@@ -2,19 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\SignatureSigningException;
 use App\Mail\SignatureVerificationMail;
 use App\Models\SignatureRequest;
 use App\Models\SignatureSigner;
 use App\Services\Signature\SignatureAuditService;
 use App\Services\Signature\SignaturePageRenderer;
-use App\Services\Signature\SignatureRequestService;
 use App\Services\Signature\SignatureSigningService;
 use App\Services\Signature\SignatureStorage;
 use App\Services\Signature\SignatureTokenService;
-use App\Services\Signature\SignerIdentityService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -41,8 +37,6 @@ class SignatureSigningController extends Controller
         private readonly SignatureStorage $storage,
         private readonly SignaturePageRenderer $renderer,
         private readonly SignatureAuditService $audit,
-        private readonly SignatureRequestService $requests,
-        private readonly SignerIdentityService $identity,
     ) {
     }
 
@@ -64,15 +58,6 @@ class SignatureSigningController extends Controller
         }
 
         $this->signing->markOpened($request, $signer);
-
-        if ($this->identity->needsDob($signer)) {
-            return view('signature.identity', [
-                'signature' => $request,
-                'signer' => $signer,
-                'token' => $token,
-                'blocked' => $this->identity->isBlocked($signer),
-            ]);
-        }
 
         if ($this->needsVerification($request, $signer)) {
             return view('signature.verify', [
@@ -109,14 +94,14 @@ class SignatureSigningController extends Controller
         } catch (\Throwable $e) {
             Log::error('Signatur: Bestätigungscode nicht versendbar: '.$e->getMessage());
 
-            return back()->with('error', __('signing.verify_send_failed'));
+            return back()->with('error', 'Der Code konnte nicht versendet werden. Bitte später erneut versuchen.');
         }
 
         $this->audit->record($request, 'verification_requested', $signer);
 
         return redirect()->route('signature.show', $token)
             ->with('signature_code_sent', $signer->id)
-            ->with('success', __('signing.verify_sent', ['email' => $this->maskEmail($signer->email)]));
+            ->with('success', 'Wir haben Ihnen einen Bestätigungscode an '.$this->maskEmail($signer->email).' gesendet.');
     }
 
     public function verify(Request $request, string $token)
@@ -129,7 +114,7 @@ class SignatureSigningController extends Controller
         if (! $this->tokens->verifyCode($signer, trim($data['code']))) {
             $this->audit->record($signature, 'verification_failed', $signer);
 
-            return back()->with('error', __('signing.verify_wrong'));
+            return back()->with('error', 'Der Code stimmt nicht oder ist abgelaufen. Bitte fordern Sie einen neuen an.');
         }
 
         $this->audit->record($signature, 'verified', $signer);
@@ -144,7 +129,7 @@ class SignatureSigningController extends Controller
         if ($this->signing->blockReason($request, $signer) !== null && ! $request->isCompleted()) {
             abort(403);
         }
-        if ($this->needsIdentity($request, $signer)) {
+        if ($this->needsVerification($request, $signer)) {
             abort(403);
         }
 
@@ -171,7 +156,7 @@ class SignatureSigningController extends Controller
     public function document(string $token)
     {
         [$signer, $request] = $this->resolve($token);
-        if ($this->needsIdentity($request, $signer)) {
+        if ($this->needsVerification($request, $signer)) {
             abort(403);
         }
         $completed = $request->isCompleted() && $signer->hasSigned();
@@ -194,21 +179,11 @@ class SignatureSigningController extends Controller
     public function sign(Request $request, string $token)
     {
         [$signer, $signature] = $this->resolve($token);
-
-        // DOPPELTES ABSENDEN ist kein Angriff, sondern der Normalfall:
-        // langsame Verbindung, zweiter Klick, Neuladen, zweiter Reiter. Wer
-        // bereits unterschrieben hat, wird auf die Abschluss-Seite gefuehrt
-        // statt auf eine 403-Fehlerseite - dort stand fuer ihn "es hat nicht
-        // geklappt", obwohl es geklappt hatte.
-        if ($signer->hasSigned()) {
-            return redirect()->route('signature.done', $token);
-        }
-
         $this->ensureActionable($signature, $signer);
 
-        if ($this->needsIdentity($signature, $signer)) {
+        if ($this->needsVerification($signature, $signer)) {
             return redirect()->route('signature.show', $token)
-                ->with('error', __('signing.verify_first'));
+                ->with('error', 'Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse.');
         }
 
         $data = $request->validate([
@@ -216,88 +191,17 @@ class SignatureSigningController extends Controller
             'felder' => ['array', 'max:200'],
             'felder.*' => ['nullable', 'string', 'max:4000000'],
         ], [
-            'zustimmung.accepted' => __('signing.consent_required'),
+            'zustimmung.accepted' => 'Bitte bestätigen Sie den Hinweis zur elektronischen Unterschrift.',
         ]);
 
         $this->audit->record($signature, 'signing_started', $signer);
 
-        // DIE SCHLEUSE: hinter dieser Zeile darf KEIN technischer Fehler mehr
-        // ungefiltert zum Unterzeichner durchschlagen. Er ist ein Fremder
-        // ohne Konto in einem Vorgang, den er nicht wiederholen kann, wenn er
-        // ihn nicht versteht; ein roher HTTP 500 laesst ihn ausserdem im
-        // Unklaren, ob seine Unterschrift angekommen ist. Die Ursache gehoert
-        // in Log UND Protokoll - ein Fehlschlag, den nur die Logdatei kennt,
-        // faellt im Alltag niemandem auf (Lehre der Systemzustand-Seite).
-        try {
-            $errors = $this->signing->sign($signature, $signer, $data['felder'] ?? []);
-        } catch (\Throwable $e) {
-            Log::error('Signatur: Unterschreiben fehlgeschlagen: '.$e->getMessage(), [
-                'signature_request_id' => $signature->id,
-                'signature_signer_id' => $signer->id,
-                'exception' => $e,
-            ]);
-            $this->audit->record($signature, 'signing_failed', $signer,
-                mb_substr($e->getMessage(), 0, 200));
-
-            // Der Betrieb muss davon erfahren, OHNE in die Logdatei zu
-            // schauen: der Unterzeichner meldet sich erfahrungsgemaess nicht,
-            // er versucht es spaeter noch einmal - oder gar nicht mehr.
-            try {
-                $this->requests->notifyCreator($signature, 'Signatur: Unterschreiben fehlgeschlagen',
-                    $signer->name.' konnte "'.$signature->title.'" nicht unterschreiben. Bitte prüfen.');
-            } catch (\Throwable) {
-                // Eine gestoerte Glocke darf die Fehlerseite nicht ihrerseits
-                // zum Fehler machen.
-            }
-
-            $friendly = $e instanceof SignatureSigningException
-                ? $e->userMessage()
-                : __('signing.error_generic');
-
-            return back()->with('error', $friendly);
-        }
-
+        $errors = $this->signing->sign($signature, $signer, $data['felder'] ?? []);
         if ($errors !== []) {
-            // Die gezeichnete Unterschrift wird BEWUSST nicht mit
-            // zurueckgegeben: sie ist als data:-URL schnell 40 kB und mehr
-            // und laege dann in der Sitzung. Das Feld haelt der Browser
-            // selbst (sessionStorage), die Sitzung bleibt klein.
-            return back()->withInput($request->except('felder'))->with('error', implode(' ', $errors));
+            return back()->withInput()->with('error', implode(' ', $errors));
         }
 
         return redirect()->route('signature.done', $token);
-    }
-
-    /**
-     * Geburtsdatum bestaetigen.
-     *
-     * Der Wert kommt AUSSCHLIESSLICH als POST-Feld - nie aus der URL, nie
-     * aus dem Token, nie aus einer E-Mail. Er wird geprueft und dann
-     * vergessen; weder Log noch Protokoll sehen ihn.
-     */
-    public function identity(Request $request, string $token)
-    {
-        [$signer, $signature] = $this->resolve($token);
-        $this->ensureActionable($signature, $signer);
-
-        if (! $this->identity->needsDob($signer)) {
-            return redirect()->route('signature.show', $token);
-        }
-        if ($this->identity->isBlocked($signer)) {
-            return back()->with('error', __('signing.dob_blocked'));
-        }
-
-        $data = $request->validate(['geburtsdatum' => ['required', 'string', 'max:20']]);
-
-        if (! $this->identity->verifyDob($signer, $data['geburtsdatum'])) {
-            // KEIN Hinweis darauf, was falsch war, und keine Angabe der
-            // verbleibenden Versuche - beides waere eine Ratehilfe.
-            return back()->with('error', $this->identity->isBlocked($signer->fresh())
-                ? __('signing.dob_blocked')
-                : __('signing.dob_wrong'));
-        }
-
-        return redirect()->route('signature.show', $token);
     }
 
     public function decline(Request $request, string $token)
@@ -330,15 +234,6 @@ class SignatureSigningController extends Controller
     private function resolve(string $token, bool $allowExpired = false): array
     {
         $signer = $this->tokens->find($token);
-        if ($signer !== null) {
-            // DIE SPRACHE DES UNTERZEICHNERS gilt fuer die gesamte
-            // oeffentliche Seite - unabhaengig davon, welche Sprache der
-            // Mitarbeiter in der Beraterwelt eingestellt hat und welche im
-            // Portal des Kunden steht. Sie wird HIER gesetzt, nach der
-            // SetLocale-Middleware: sonst ueberschriebe die Voreinstellung
-            // "Deutsch" die Wahl wieder.
-            App::setLocale($signer->localeCode());
-        }
         if ($signer === null) {
             // BEWUSST dieselbe Antwort wie bei einem abgelaufenen Zugang:
             // aus der Fehlermeldung darf nicht hervorgehen, ob es diesen
@@ -364,19 +259,9 @@ class SignatureSigningController extends Controller
         }
     }
 
-    /**
-     * Eine Schranke fuer BEIDE Pruefungen. Getrennte Abfragen an jeder
-     * Stelle waeren die sichere Art, eine davon irgendwo zu vergessen -
-     * und genau die eine Stelle wird dann zum Loch.
-     */
-    private function needsIdentity(SignatureRequest $request, SignatureSigner $signer): bool
-    {
-        return $this->needsVerification($request, $signer) || $this->identity->needsDob($signer);
-    }
-
     private function needsVerification(SignatureRequest $request, SignatureSigner $signer): bool
     {
-        return $request->requiresEmailVerification() && $signer->verified_at === null;
+        return $request->require_email_verification && $signer->verified_at === null;
     }
 
     /** "ma***@example.com" - die Adresse bestaetigen, ohne sie preiszugeben. */
