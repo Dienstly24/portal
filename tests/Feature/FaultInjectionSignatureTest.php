@@ -94,9 +94,9 @@ class FaultInjectionSignatureTest extends TestCase
     {
         $signer = app(SignatureTokenService::class)->find($token);
         $werte = [];
-        foreach ($signer->fields()->get() as $f) { $werte[$f->id] = $bild ?? $this->bild(); }
+        foreach ($signer->fields()->get() as $f) { $werte[$f->type] = $bild ?? $this->bild(); }
 
-        return $this->post(route('signature.sign', $token), ['zustimmung' => '1', 'felder' => $werte]);
+        return $this->post(route('signature.sign', $token), ['zustimmung' => '1', 'zeichnung' => $werte]);
     }
 
     protected function setUp(): void

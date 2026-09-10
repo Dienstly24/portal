@@ -127,9 +127,9 @@ class SignatureSecurityTest extends TestCase
             $signer = app(SignatureTokenService::class)->find($token);
             $werte = [];
             foreach ($signer->fields()->get() as $f) {
-                $werte[$f->id] = $this->unterschrift();
+                $werte[$f->type] = $this->unterschrift();
             }
-            $this->post(route('signature.sign', $token), ['zustimmung' => '1', 'felder' => $werte]);
+            $this->post(route('signature.sign', $token), ['zustimmung' => '1', 'zeichnung' => $werte]);
         }
 
         $frisch = $request->fresh();

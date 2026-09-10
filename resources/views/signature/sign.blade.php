@@ -3,13 +3,21 @@
 
 @section('inhalt')
 @php
-    $drawn = $fields->filter(fn ($f) => $f->isDrawn());
+    // EINE Zeichenflaeche je GRUPPE (Unterzeichner + Feldart), nicht je
+    // Feld: sieben Unterschriftsfelder sind eine Unterschrift an sieben
+    // Stellen, keine sieben Unterschriften.
+    $gruppen = \App\Support\SignatureGroup::forSigner($signer, $fields);
+    $stellen = $gruppen->sum(fn ($g) => $g->count());
     $typed = $fields->reject(fn ($f) => $f->isDrawn());
     // Feldpositionen fuer die Markierungen auf den Seitenbildern.
     $feldDaten = $fields->map(fn ($f) => [
         'id' => $f->id, 'page' => $f->page, 'x' => (float) $f->pos_x, 'y' => (float) $f->pos_y,
         'width' => (float) $f->width, 'height' => (float) $f->height,
         'label' => $f->label ?: $f->typeLabel(), 'drawn' => $f->isDrawn(),
+        // Die Markierung fragt nach der GRUPPE, nicht nach dem Feld: sonst
+        // bliebe sie auf "Unterschrift erforderlich" stehen, obwohl die
+        // eine Zeichnung sie laengst erledigt hat.
+        'group' => $f->isDrawn() ? (string) $f->type : null,
     ])->values();
     // Texte fuer das JavaScript. BEWUSST hier und nicht als mehrzeiliges
     // @json im Skript: Blade zerbricht an einem ueber mehrere Zeilen
@@ -85,19 +93,24 @@
     </div>
     @endforeach
 
-    @foreach($drawn as $field)
+    @foreach($gruppen as $gruppe)
     <div class="karte">
-        <h2>{{ $field->label ?: $field->typeLabel() }}@if($field->required)<span style="color:#B3261E;"> *</span>@endif</h2>
+        <h2>{{ $gruppe->label() }}@if($gruppe->required())<span style="color:#B3261E;"> *</span>@endif</h2>
+        <p class="lead" style="margin-bottom:4px;">{{ __('signing.draw_instruction') }}</p>
+        {{-- Der Zaehler ist das Herz der Umstellung: er sagt dem
+             Unterzeichner VORHER, dass eine Zeichnung alle Stellen
+             erledigt. Ohne ihn sucht er weiter nach Seite 2. --}}
         <p class="lead" style="margin-bottom:10px;">
-            {{ __('signing.draw_hint', ['page' => $field->page]) }}
+            <strong>{{ trans_choice('signing.applies_to_places', $gruppe->count(), ['count' => $gruppe->count()]) }}</strong>
+            <span style="opacity:.75;">({{ __('signing.pages_list', ['pages' => implode(', ', $gruppe->pages())]) }})</span>
         </p>
-        <canvas class="zeichenflaeche" data-unterschrift="{{ $field->id }}"
-                aria-label="{{ __('signing.canvas_label', ['field' => $field->label ?: $field->typeLabel()]) }}"></canvas>
-        <input type="hidden" name="felder[{{ $field->id }}]" id="daten-{{ $field->id }}">
-        <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
+        <canvas class="zeichenflaeche" data-unterschrift="{{ $gruppe->key() }}"
+                aria-label="{{ __('signing.canvas_label', ['field' => $gruppe->label()]) }}"></canvas>
+        <input type="hidden" name="zeichnung[{{ $gruppe->key() }}]" id="daten-{{ $gruppe->key() }}">
+        <div style="display:flex;gap:10px;margin-top:10px;align-items:center;flex-wrap:wrap;">
             <button type="button" class="knopf knopf-still" style="width:auto;"
-                    data-h-click="sigLeeren" data-ziel="{{ $field->id }}">{{ __('signing.redraw') }}</button>
-            <span class="fortschritt" id="status-{{ $field->id }}">{{ __('signing.empty') }}</span>
+                    data-h-click="sigLeeren" data-ziel="{{ $gruppe->key() }}">{{ __('signing.redraw') }}</button>
+            <span class="fortschritt" id="status-{{ $gruppe->key() }}">{{ __('signing.empty') }}</span>
         </div>
     </div>
     @endforeach
@@ -109,6 +122,14 @@
             <input type="checkbox" name="zustimmung" value="1" required style="width:22px;height:22px;margin-top:2px;flex:none;">
             <span>{{ __('signing.consent_checkbox') }}</span>
         </label>
+        @if($stellen > 0)
+        {{-- Vor dem Bestaetigen ausdruecklich sagen, was gleich passiert.
+             Eine Unterschrift, die an sieben Stellen landet, darf keine
+             Ueberraschung sein. --}}
+        <p class="lead" style="margin-top:12px;">
+            {{ trans_choice('signing.will_be_applied', $stellen, ['count' => $stellen]) }}
+        </p>
+        @endif
     </div>
 </form>
 
@@ -297,16 +318,18 @@ window.__h = window.__h || {};
             if (!seite) { return; }
             var marke = document.createElement('div');
             marke.className = 'feldmarke';
-            if (feld.drawn && zustand[feld.id] && zustand[feld.id].gezeichnet) {
-                marke.className += ' fertig';
-            }
+            var erledigt = feld.drawn && feld.group && zustand[feld.group] && zustand[feld.group].gezeichnet;
+            if (erledigt) { marke.className += ' fertig'; }
             marke.style.left = (feld.x * 100) + '%';
             marke.style.top = (feld.y * 100) + '%';
             marke.style.width = (feld.width * 100) + '%';
             marke.style.height = (feld.height * 100) + '%';
-            marke.textContent = feld.label;
+            // Nach dem Zeichnen sagt die Marke, dass diese Stelle fertig
+            // ist - der Unterzeichner soll sehen, dass EINE Zeichnung alle
+            // Stellen erledigt hat, statt weiter zu suchen.
+            marke.textContent = erledigt ? texte.unterschrieben : feld.label;
             marke.addEventListener('click', function () {
-                var ziel = document.getElementById(feld.drawn ? 'daten-' + feld.id : 'feld-' + feld.id);
+                var ziel = document.getElementById(feld.drawn ? 'daten-' + feld.group : 'feld-' + feld.id);
                 var karte = ziel ? ziel.closest('.karte') : null;
                 if (karte) { karte.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
             });

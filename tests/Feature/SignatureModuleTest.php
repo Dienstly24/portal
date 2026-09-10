@@ -147,14 +147,18 @@ class SignatureModuleTest extends TestCase
     private function unterschreiben(SignatureSigner $signer, ?string $token = null)
     {
         $token ??= $this->token($signer);
-        $felder = [];
+        // EINE Zeichnung je Feldart - nicht mehr je Feld. Genau das ist
+        // die Umstellung: sieben Felder verlangen eine Unterschrift.
+        $zeichnung = [];
         foreach ($signer->fields()->get() as $feld) {
-            $felder[$feld->id] = $this->unterschriftsBild();
+            if ($feld->isDrawn()) {
+                $zeichnung[$feld->type] = $this->unterschriftsBild();
+            }
         }
 
         return $this->post(route('signature.sign', $token), [
             'zustimmung' => '1',
-            'felder' => $felder,
+            'zeichnung' => $zeichnung,
         ]);
     }
 
@@ -455,7 +459,7 @@ class SignatureModuleTest extends TestCase
 
         $this->post(route('signature.sign', $token), [
             'zustimmung' => '1',
-            'felder' => [$signer->fields()->firstOrFail()->id => $png],
+            'zeichnung' => [SignatureFieldType::SIGNATURE => $png],
         ]);
 
         $this->assertFalse($signer->fresh()->hasSigned());
@@ -473,14 +477,15 @@ class SignatureModuleTest extends TestCase
         $anna = $request->signers()->orderBy('signing_order')->skip(1)->first();
         $annasFeld = $anna->fields()->firstOrFail();
 
-        // Max schickt Annas Feld-ID mit. Der Server ordnet Felder ueber die
-        // Zugehoerigkeit zu, nicht ueber das Formular - Annas Feld bleibt leer.
+        // Max schickt Annas Feld-ID mit. Seit der Umstellung auf Gruppen
+        // ist das strukturell wirkungslos: die Zeichnung kommt unter der
+        // FELDART an, und welche Felder dazu gehoeren, bestimmt der Server
+        // aus der Zugehoerigkeit - eine fremde ID hat gar keine Wirkung
+        // mehr, nicht einmal eine, die abgewehrt werden muesste.
         $this->post(route('signature.sign', $this->token($max)), [
             'zustimmung' => '1',
-            'felder' => [
-                $max->fields()->firstOrFail()->id => $this->unterschriftsBild(),
-                $annasFeld->id => $this->unterschriftsBild(),
-            ],
+            'zeichnung' => [SignatureFieldType::SIGNATURE => $this->unterschriftsBild()],
+            'felder' => [$annasFeld->id => $this->unterschriftsBild()],
         ]);
 
         $this->assertTrue($max->fresh()->hasSigned());
@@ -495,7 +500,7 @@ class SignatureModuleTest extends TestCase
         $signer = $request->signers()->firstOrFail();
 
         $this->post(route('signature.sign', $this->token($signer)), [
-            'felder' => [$signer->fields()->firstOrFail()->id => $this->unterschriftsBild()],
+            'zeichnung' => [SignatureFieldType::SIGNATURE => $this->unterschriftsBild()],
         ])->assertSessionHasErrors('zustimmung');
 
         $this->assertFalse($signer->fresh()->hasSigned());

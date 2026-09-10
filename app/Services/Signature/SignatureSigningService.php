@@ -8,7 +8,9 @@ use App\Models\SignatureField;
 use App\Models\SignatureRequest;
 use App\Models\SignatureSigner;
 use App\Support\SignatureFieldType;
+use App\Support\SignatureGroup;
 use App\Support\SignatureStatus;
+use App\Support\Unterschriftsbild;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -104,7 +106,11 @@ class SignatureSigningService
      * @param  array<string, string>  $values  Feld-ID => Wert (Text) bzw. data:-URL (Handschrift)
      * @return list<string> Fehler in Klartext; leer = erfolgreich
      */
-    public function sign(SignatureRequest $request, SignatureSigner $signer, array $values): array
+    /**
+     * @param  array<string,string>  $values    Werte der TIPP-Felder, je Feld-ID
+     * @param  array<string,string>  $drawings  Handschrift je GRUPPE (Feldart), nicht je Feld
+     */
+    public function sign(SignatureRequest $request, SignatureSigner $signer, array $values, array $drawings = []): array
     {
         // IDEMPOTENZ: ein zweiter Klick (Doppel-Absenden, Neuladen der Seite,
         // zweiter Reiter) darf nie ein zweites Mal schreiben und nie einen
@@ -121,21 +127,38 @@ class SignatureSigningService
 
         $errors = [];
         $prepared = [];
-        foreach ($fields as $field) {
-            $raw = $values[$field->id] ?? '';
-            if ($field->isDrawn()) {
-                $png = $raw === '' ? null : $this->decodeSignature($raw);
-                if ($png === null) {
-                    if ($field->required) {
-                        $errors[] = __('signing.error_signature_missing', ['field' => $field->label ?: $field->typeLabel()]);
-                    }
 
-                    continue;
+        // EINE ZEICHNUNG JE GRUPPE - der Kern der Umstellung.
+        //
+        // Vorher stand hier `$values[$field->id]`: jedes Feld holte sich
+        // seine EIGENE Zeichnung, sieben Felder verlangten sieben. Jetzt
+        // kommt die Handschrift aus der Gruppe (Unterzeichner + Art) und
+        // wird auf alle ihre Felder verteilt. Der Unterzeichner zeichnet
+        // einmal; dass ueberall dasselbe steht, ist keine Zusage mehr,
+        // sondern eine Eigenschaft der Ablage - es gibt nur EIN Bild.
+        foreach (SignatureGroup::forSigner($signer, $fields) as $group) {
+            $raw = (string) ($drawings[$group->key()] ?? '');
+            $png = $raw === '' ? null : $this->decodeSignature($raw);
+            if ($png === null) {
+                if ($group->required()) {
+                    $errors[] = __('signing.error_signature_missing', ['field' => $group->label()]);
                 }
-                $prepared[] = ['field' => $field, 'png' => $png];
 
                 continue;
             }
+
+            // Der leere Rand der Zeichenflaeche faellt weg, BEVOR das Bild
+            // abgelegt wird: sonst stuende die Handschrift winzig in der
+            // Mitte eines fast leeren Feldes.
+            $png = Unterschriftsbild::zuschneiden($png);
+            $prepared[] = ['group' => $group, 'png' => $png];
+        }
+
+        foreach ($fields as $field) {
+            if ($field->isDrawn()) {
+                continue; // Oben ueber die Gruppe erledigt.
+            }
+            $raw = $values[$field->id] ?? '';
 
             $value = trim(mb_substr($raw, 0, 500));
             if ($field->type === SignatureFieldType::CHECKBOX) {
@@ -165,9 +188,12 @@ class SignatureSigningService
             if (! isset($entry['png'])) {
                 continue;
             }
-            /** @var SignatureField $field */
-            $field = $entry['field'];
-            $path = $this->storage->fieldImagePath($request, $field->id);
+            /** @var SignatureGroup $group */
+            $group = $entry['group'];
+            // EIN Pfad je Gruppe - nicht je Feld. Sieben Felder zeigen
+            // anschliessend auf dieselbe Datei; es liegen keine sieben
+            // Kopien herum, die auseinanderlaufen koennten.
+            $path = $this->storage->fieldImagePath($request, $group->imageKey());
             try {
                 $written = $this->storage->disk()->put($path, $entry['png']);
             } catch (\Throwable $e) {
@@ -186,13 +212,25 @@ class SignatureSigningService
         try {
             DB::transaction(function () use ($signer, $prepared) {
                 foreach ($prepared as $entry) {
+                    if (isset($entry['path'])) {
+                        /** @var SignatureGroup $group */
+                        $group = $entry['group'];
+                        // Dieselbe Datei in jedes Feld der Gruppe. Damit
+                        // sind alle Stellen in EINEM Zug erledigt - der
+                        // Unterzeichner bekommt nie wieder "Seite 2 fehlt
+                        // noch" zu sehen.
+                        foreach ($group->fields as $feld) {
+                            $feld->image_path = $entry['path'];
+                            $feld->filled_at = now();
+                            $feld->save();
+                        }
+
+                        continue;
+                    }
+
                     /** @var SignatureField $field */
                     $field = $entry['field'];
-                    if (isset($entry['path'])) {
-                        $field->image_path = $entry['path'];
-                    } else {
-                        $field->value = $entry['value'];
-                    }
+                    $field->value = $entry['value'];
                     $field->filled_at = now();
                     $field->save();
                 }

@@ -9,6 +9,7 @@ use App\Services\Pdf\PdfStamp;
 use App\Services\Pdf\PdfStamper;
 use App\Support\LocalTime;
 use App\Support\SignatureFieldType;
+use App\Support\Unterschriftsbild;
 
 /**
  * Erzeugt aus Original + ausgefuellten Feldern das fertige, unterschriebene
@@ -66,7 +67,12 @@ class SignedPdfBuilder
             if ($field->isDrawn()) {
                 $png = $this->storage->read($field->image_path);
                 if ($png !== null) {
-                    $stamper->add(PdfStamp::image($pageIndex, $png, $x, $y, $width, $height));
+                    // NIE auf die Feldgroesse ziehen: dieselbe Unterschrift
+                    // steht in verschieden grossen Feldern, und gezogen
+                    // waere sie einmal gestaucht und einmal gestreckt. Eine
+                    // verzerrte Unterschrift ist keine Unterschrift mehr.
+                    [$bx, $by, $bw, $bh] = Unterschriftsbild::einpassen($png, $x, $y, $width, $height);
+                    $stamper->add(PdfStamp::image($pageIndex, $png, $bx, $by, $bw, $bh));
                 }
 
                 continue;
@@ -81,7 +87,10 @@ class SignedPdfBuilder
                 $asset = $field->companyAsset;
                 $png = $asset === null ? null : $this->storage->disk()->get($asset->path);
                 if ($png !== null && $png !== '') {
-                    $stamper->add(PdfStamp::image($pageIndex, $png, $x, $y, $width, $height));
+                    // Ein Stempel oder eine Wortmarke vertraegt so wenig
+                    // Verzerrung wie eine Handschrift.
+                    [$bx, $by, $bw, $bh] = Unterschriftsbild::einpassen($png, $x, $y, $width, $height);
+                    $stamper->add(PdfStamp::image($pageIndex, $png, $bx, $by, $bw, $bh));
                 }
 
                 continue;

@@ -2586,6 +2586,56 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
   Dateien entstehen erst dort). Der Schritt bricht den Deploy nie ab.
 - Tests: `BildverarbeitungFehltTest`.
 
+### Eine Unterschrift, viele Stellen: die Signaturgruppe (Betreiber-Vorgabe 10.09.2026)
+
+- **Gemeldet**: ein 19-seitiges Dokument mit SIEBEN Unterschriftsstellen
+  fuer denselben Kunden verlangte SIEBEN Zeichnungen. Der Kunde malte
+  siebenmal mit dem Finger, jedes Mal etwas anders - auf Seite 1 stand am
+  Ende eine andere Unterschrift als auf Seite 9.
+- **Die Regel, um die es geht**: `Signature Field != Signature Event`.
+  Sieben Felder sind KEINE sieben Willenserklaerungen, sondern EINE
+  Unterschrift an sieben Stellen - wie beim Papiervertrag, den man einmal
+  unterschreibt, auch wenn das Kuerzel auf jeder Seite wiederholt wird.
+- **Die Ursache lag im Datenmodell, nicht in der Oberflaeche**: das Bild
+  hing am FELD (`signature_fields.image_path`), also war jedes Feld
+  zwangslaeufig eine eigene Unterschrift. Die Felder in der Anzeige
+  auszublenden waere ein Pflaster gewesen - der zweite Klick haette wieder
+  nach der naechsten Zeichnung gefragt.
+- **`App\Support\SignatureGroup`** ist jetzt der Ordnungsbegriff: EIN
+  Unterzeichner + EINE Handschriftart = EINE Unterschrift. **Bewusst OHNE
+  eigene Tabelle**: das Paar (Unterzeichner, Feldart) bestimmt die Gruppe
+  bereits eindeutig. Eine Tabelle `signature_groups` waere eine ZWEITE
+  Quelle fuer dieselbe Aussage und koennte auseinanderlaufen (Feld ohne
+  Gruppe, Gruppe ohne Felder, zwei Gruppen fuer einen Menschen) - genau
+  die Duplikat-Klasse, die im Bestand schon einmal geschmerzt hat. Der
+  Schluessel ist ABGELEITET und kann deshalb nicht falsch sein.
+- **Es gibt nur EIN Bild**: die Zeichnung wird einmal unter
+  `signer-<id>-<art>.png` abgelegt, und ALLE Felder der Gruppe zeigen auf
+  genau diese Datei. "Ueberall dieselbe Unterschrift" ist damit keine
+  Zusage, die man testen muesste, sondern eine Eigenschaft der Ablage.
+  Uebertragen wird unter der FELDART (`zeichnung[unterschrift]`), nie unter
+  Feld-IDs - welche Felder dazugehoeren, entscheidet der Server aus der
+  Zugehoerigkeit. Eine fremde Feld-ID im Formular hat dadurch gar keine
+  Wirkung mehr, nicht einmal eine, die abgewehrt werden muesste.
+- **`App\Support\Unterschriftsbild`** loest die zwei Bildfragen:
+  (1) der leere Rand der Zeichenflaeche wird ueber den ALPHAKANAL
+  abgeschnitten (nicht ueber Helligkeit - eine helle Tinte wuerde sich
+  sonst selbst wegschneiden), sonst stuende die Handschrift winzig in einem
+  fast leeren Feld; (2) das Bild wird ins Feld EINGEPASST und zentriert,
+  nie darauf gezogen. Vorher wurde auf die Feldgroesse gestreckt: dieselbe
+  Unterschrift stand im breiten Feld gestaucht und im hohen gestreckt -
+  eine verzerrte Unterschrift ist keine Unterschrift mehr. Am echten
+  Dokument gemessen: Verhaeltnis 1,519 im 202x42-Feld UND im 83x76-Feld.
+- **NUR GEZEICHNET** (Betreiber-Bedingung): kein Tippen des Namens, kein
+  Hochladen eines Bildes. Ein Test prueft das am ausgelieferten HTML.
+- **Oberflaeche**: eine grosse Flaeche (`clamp(200px,38vh,320px)`,
+  `touch-action:none`), Zaehler VOR dem Bestaetigen ("wird an allen 7
+  Stellen gesetzt"), und die Marken auf den Seitenbildern springen nach der
+  einen Zeichnung alle auf "unterschrieben" - der Unterzeichner sucht nicht
+  weiter nach Seite 2. Am simulierten iPhone geprueft: eine Flaeche, kein
+  Scrollen beim Zeichnen, sieben von sieben Marken erledigt.
+- Tests: `SignaturGruppeTest` (8 Faelle).
+
 ## Offene Themen / wartet auf den Betreiber
 
 - **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026

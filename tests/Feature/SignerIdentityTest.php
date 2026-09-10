@@ -186,12 +186,12 @@ class SignerIdentityTest extends TestCase
         $signer = app(SignatureTokenService::class)->find($token);
         $werte = [];
         foreach ($signer->fields()->get() as $f) {
-            $werte[$f->id] = 'x';
+            $werte[$f->type] = 'x';
         }
 
         // Ein direkt abgesetztes Formular umgeht die Seite - der Server
         // laesst es trotzdem nicht durch.
-        $this->post(route('signature.sign', $token), ['zustimmung' => '1', 'felder' => $werte])
+        $this->post(route('signature.sign', $token), ['zustimmung' => '1', 'zeichnung' => $werte])
             ->assertRedirect(route('signature.show', $token));
 
         $this->assertFalse(app(SignatureTokenService::class)->find($token)->hasSigned());
