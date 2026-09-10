@@ -330,13 +330,25 @@ class WhatsAppAdapter extends AbstractChannelAdapter
             );
         }
 
-        $payload = [
-            'messaging_product' => 'whatsapp',
-            'recipient_type' => 'individual',
-            'to' => $message->recipientId,
-            'type' => 'text',
-            'text' => ['preview_url' => false, 'body' => (string) $message->text],
-        ];
+        // EINE Datei je Nachricht: WhatsApp kennt keine Nachricht mit
+        // mehreren Anhaengen. Mehrere Dateien werden vom Aufrufer als
+        // mehrere Nachrichten geschickt - hier nichts still verschlucken.
+        $anhang = $message->attachments[0] ?? null;
+
+        if ($anhang) {
+            $payload = $this->medienNutzlast($message, $anhang, $token, $phoneId);
+            if ($payload instanceof SendResult) {
+                return $payload;
+            }
+        } else {
+            $payload = [
+                'messaging_product' => 'whatsapp',
+                'recipient_type' => 'individual',
+                'to' => $message->recipientId,
+                'type' => 'text',
+                'text' => ['preview_url' => false, 'body' => (string) $message->text],
+            ];
+        }
 
         try {
             // Token IMMER als Header - nie in Query oder Body: sonst steht
@@ -362,6 +374,79 @@ class WhatsAppAdapter extends AbstractChannelAdapter
         // Kennungen enthalten. Der Betreiber bekommt eine einordnende
         // Meldung, der Rest steht im Log.
         return SendResult::failed($this->classify($antwort->status()));
+    }
+
+    /**
+     * Datei hochladen und daraus die Nutzlast bauen.
+     *
+     * ZWEI SCHRITTE, und der erste ist nicht optional: WhatsApp nimmt
+     * entweder eine Medien-Kennung oder eine OEFFENTLICH abrufbare URL.
+     * Unsere Dateien liegen auf der privaten Platte - eine URL dorthin
+     * gibt es nicht, und es soll auch keine geben. Also wird die Datei
+     * zuerst zu Meta hochgeladen und dann ueber ihre Kennung gesendet.
+     *
+     * @param array<string,mixed> $anhang
+     * @return array<string,mixed>|SendResult Nutzlast, oder ein
+     *         Fehlschlag mit Begruendung fuer den Mitarbeiter
+     */
+    private function medienNutzlast(OutboundMessage $message, array $anhang, string $token, string $phoneId): array|SendResult
+    {
+        $inhalt = $anhang['contents'] ?? null;
+        if (! is_string($inhalt) || $inhalt === '') {
+            return SendResult::failed('Die Datei konnte nicht gelesen werden.');
+        }
+
+        $mime = (string) ($anhang['mime_type'] ?? 'application/octet-stream');
+        $name = (string) ($anhang['file_name'] ?? 'datei');
+
+        try {
+            $hoch = Http::withToken($token)->timeout(60)->connectTimeout(5)
+                ->attach('file', $inhalt, $name, ['Content-Type' => $mime])
+                ->post($this->url($phoneId.'/media'), [
+                    'messaging_product' => 'whatsapp',
+                    'type' => $mime,
+                ]);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return SendResult::failed('WhatsApp nicht erreichbar.');
+        }
+
+        $kennung = $hoch->successful() ? $hoch->json('id') : null;
+        if (! $kennung) {
+            return SendResult::failed($this->classify($hoch->status()));
+        }
+
+        // Der Typ folgt dem MIME-Typ, nicht der Dateiendung: die Endung
+        // fehlt bei einer ueber eine Plattform-Kennung geholten Datei
+        // haeufig ganz.
+        $art = match (true) {
+            str_starts_with($mime, 'image/') => 'image',
+            str_starts_with($mime, 'video/') => 'video',
+            str_starts_with($mime, 'audio/') => 'audio',
+            default => 'document',
+        };
+
+        $medien = ['id' => $kennung];
+
+        // Der Text wird zur BILDUNTERSCHRIFT statt zu einer zweiten
+        // Nachricht - sonst kaeme die Erklaerung getrennt vom Dokument
+        // an, und bei Audio ginge sie ganz verloren (Audio kennt keine
+        // Unterschrift; dort bleibt sie deshalb weg).
+        if ($message->text !== null && $message->text !== '' && $art !== 'audio') {
+            $medien['caption'] = (string) $message->text;
+        }
+        if ($art === 'document') {
+            $medien['filename'] = $name;
+        }
+
+        return [
+            'messaging_product' => 'whatsapp',
+            'recipient_type' => 'individual',
+            'to' => $message->recipientId,
+            'type' => $art,
+            $art => $medien,
+        ];
     }
 
     /**

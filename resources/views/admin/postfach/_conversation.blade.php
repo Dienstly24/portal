@@ -147,8 +147,19 @@
                   background:{{ $eigen ? 'var(--emerald-soft, #e7f5ee)' : 'var(--surface-soft)' }}">
         {!! nl2br(e($m->body)) !!}
         @foreach($m->attachments as $a)
-          <div style="font-size:11px;margin-top:4px">
+          <div class="anhang-zeile">
             <a href="{{ route('admin.messages.attachment', $a->id) }}">{{ $a->file_name }}</a>
+            {{-- Der Weg in die Akte. Bewusst je Anhang und als
+                 ausdrueckliche Aktion: nicht jedes Bild in einer
+                 Unterhaltung ist ein Nachweis. --}}
+            @if($a->istUebernommen())
+              <span class="badge badge-approved" title="Liegt als Unterlage in der Kundenakte">in der Akte</span>
+            @elseif($active->customer_id)
+              <form method="POST" action="{{ route('admin.postfach.file_attachment', $a->id) }}">
+                @csrf
+                <button class="btn btn-ghost btn-sm">In die Akte</button>
+              </form>
+            @endif
           </div>
         @endforeach
       </div>
@@ -176,6 +187,24 @@
   @csrf
   <textarea name="body" class="eingabe" style="width:100%;resize:vertical;" rows="3" required
             placeholder="Antwort über {{ $active->channel?->name }} …"></textarea>
+  @if($active->channel?->supports('supportsMedia') && $aktenUnterlagen->isNotEmpty())
+    {{-- Unterlagen AUS DER AKTE mitschicken - ohne diesen Weg muesste
+         der Mitarbeiter die Police erst herunterladen und wieder
+         hochladen, und im Verlauf stuende danach nicht mehr, WELCHE
+         Unterlage der Kunde bekommen hat. --}}
+    <details class="akten-waehler">
+      <summary>Unterlage aus der Kundenakte anhängen</summary>
+      <div class="akten-liste">
+        @foreach($aktenUnterlagen as $d)
+          <label class="check-inline">
+            <input type="checkbox" name="dokumente[]" value="{{ $d->id }}">
+            <span>{{ $d->file_name }}</span>
+          </label>
+        @endforeach
+      </div>
+      <p class="akten-hinweis">Höchstens 5 Unterlagen je Nachricht.</p>
+    </details>
+  @endif
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     @if($active->channel?->supports('supportsMedia'))
       <input type="file" name="attachments[]" multiple class="eingabe eingabe-sm">
@@ -184,3 +213,15 @@
     <span style="font-size:11px;color:var(--ink-soft)">Wird über {{ $active->channel?->name }} zugestellt.</span>
   </div>
 </form>
+
+@push('styles')
+<style @cspNonce>
+  .anhang-zeile { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11px; margin-top: 6px; }
+  .akten-waehler { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: var(--surface-soft); }
+  .akten-waehler > summary { cursor: pointer; font-size: 13px; color: var(--ink-soft); list-style: none; font-weight: 500; }
+  .akten-waehler > summary::-webkit-details-marker { display: none; }
+  .akten-waehler > summary:hover { color: var(--ink); }
+  .akten-liste { display: grid; gap: 6px; margin-top: 10px; max-height: 200px; overflow-y: auto; }
+  .akten-hinweis { font-size: 11px; color: var(--ink-soft); margin: 8px 0 0; }
+</style>
+@endpush
