@@ -235,7 +235,24 @@ window.__h = window.__h || {};
         renderFields();
     }
 
+    /**
+     * Felder neu zeichnen UND die Gruppenzeile nachziehen.
+     *
+     * Beides gehoert zusammen: wer ein achtes Feld setzt, muss sofort
+     * "8 Stellen" lesen. Stuende dort weiter "7", waere die Anzeige eine
+     * Behauptung ueber einen Zustand von vorhin.
+     */
     function renderFields() {
+        zeichneFelder();
+        renderSignerGruppen();
+    }
+
+    function renderSignerGruppen() {
+        var liste = document.getElementById('signer-list');
+        if (liste && liste.childElementCount > 0) { renderSigners(); }
+    }
+
+    function zeichneFelder() {
         var boxes = document.querySelectorAll('[data-field-box]');
         for (var i = 0; i < boxes.length; i++) { boxes[i].remove(); }
 
@@ -275,6 +292,27 @@ window.__h = window.__h || {};
         });
     }
 
+    /**
+     * "Eine Unterschrift - 7 Stellen (Seiten 1, 2, 3, 4, 6, 7, 9)".
+     *
+     * Bewusst als SATZ und nicht als blosse Zahl: "7" allein liest sich wie
+     * "sieben Unterschriften", und genau das ist es nicht.
+     */
+    function gruppentext(signerId) {
+        var eigene = state.fields.filter(function (f) {
+            return f.signer_id === signerId && (f.type === 'unterschrift' || f.type === 'initialen');
+        });
+        if (eigene.length === 0) { return 'noch keine Unterschriftsfelder'; }
+
+        var seiten = [];
+        eigene.forEach(function (f) { if (seiten.indexOf(f.page) === -1) { seiten.push(f.page); } });
+        seiten.sort(function (a, b) { return a - b; });
+
+        return eigene.length === 1
+            ? 'Eine Unterschrift - 1 Stelle (Seite ' + seiten[0] + ')'
+            : 'Eine Unterschrift - ' + eigene.length + ' Stellen (Seiten ' + seiten.join(', ') + ')';
+    }
+
     function renderSigners() {
         var list = document.getElementById('signer-list');
         list.textContent = '';
@@ -298,7 +336,22 @@ window.__h = window.__h || {};
             // Einladung jemand bekommt, soll man sehen, bevor sie raus ist -
             // nicht erst an der Rueckfrage des Kunden.
             sprache.textContent = sprachen[signer.locale || 'de'] || sprachen.de;
+
+            // DIE SIGNATURGRUPPE SICHTBAR MACHEN.
+            //
+            // Der Mitarbeiter setzt sieben Felder und muss verstehen, dass
+            // er damit NICHT sieben Unterschriften verlangt. Ohne diese
+            // Zeile sieht er sieben Kaesten und nimmt an, der Kunde muesse
+            // siebenmal zeichnen - genau der Irrtum, der die Meldung
+            // ausgeloest hat. Die Gruppe wird nicht eingestellt: sie ENTSTEHT
+            // dadurch, dass ein Feld einem Unterzeichner gehoert.
+            var gruppe = document.createElement('div');
+            gruppe.className = 'muted-sm';
+            gruppe.style.marginTop = '2px';
+            gruppe.textContent = gruppentext(signer.id);
+
             text.appendChild(name); text.appendChild(mail); text.appendChild(sprache);
+            text.appendChild(gruppe);
             row.appendChild(dot); row.appendChild(text);
             if (editable) {
                 var edit = document.createElement('button');

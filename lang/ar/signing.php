@@ -150,4 +150,9 @@ return [
     'mail_subject_reminder' => 'تذكير: مستند للتوقيع – Dienstly24',
     'mail_subject_completed' => 'تم التوقيع: :title – Dienstly24',
     'mail_subject_code' => 'رمز التأكيد الخاص بك – Dienstly24',
+    'draw_instruction' => 'ارسم توقيعك بإصبعك أو بالقلم الإلكتروني أو بالفأرة.',
+    'applies_to_places' => 'سيوضع هذا التوقيع في :count موضع.|سيوضع هذا التوقيع نفسه في المواضع :count كلها.',
+    'pages_list' => 'صفحة :pages',
+    'will_be_applied' => 'عند التأكيد سيوضع توقيعك في :count موضع من المستند.|عند التأكيد سيوضع توقيعك في المواضع :count كلها. ترسم مرة واحدة فقط.',
+    'places_done' => 'اكتمل :count من :total من حقول التوقيع',
 ];

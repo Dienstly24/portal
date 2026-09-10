@@ -177,9 +177,9 @@ class SignatureLocalizationTest extends TestCase
         $signer = app(SignatureTokenService::class)->find($token);
         $werte = [];
         foreach ($signer->fields()->get() as $f) {
-            $werte[$f->id] = $this->bild();
+            $werte[$f->type] = $this->bild();
         }
-        $this->post(route('signature.sign', $token), ['zustimmung' => '1', 'felder' => $werte]);
+        $this->post(route('signature.sign', $token), ['zustimmung' => '1', 'zeichnung' => $werte]);
 
         $frisch = $request->fresh();
         $this->assertSame('completed', $frisch->status);

@@ -144,4 +144,9 @@ return [
     'mail_subject_reminder' => 'Reminder: document to sign – Dienstly24',
     'mail_subject_completed' => 'Signed: :title – Dienstly24',
     'mail_subject_code' => 'Your confirmation code – Dienstly24',
+    'draw_instruction' => 'Draw your signature using your finger, stylus, or mouse.',
+    'applies_to_places' => 'This signature will be placed in :count location.|This one signature will be placed in all :count locations.',
+    'pages_list' => 'page :pages',
+    'will_be_applied' => 'On confirming, your signature will be applied to :count location in this document.|On confirming, your signature will be applied to all :count locations in this document. You only draw once.',
+    'places_done' => ':count of :total signature fields completed',
 ];

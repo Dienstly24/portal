@@ -65,7 +65,7 @@ html[dir="rtl"] .fortschritt{text-align:right;}
            display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--emerald-ink);
            font-weight:700;cursor:pointer;text-align:center;overflow:hidden;padding:1px;}
 .feldmarke.fertig{border-style:solid;background:rgba(23,166,91,.22);}
-.zeichenflaeche{width:100%;height:190px;border:2px dashed var(--line);border-radius:12px;background:#fff;
+.zeichenflaeche{width:100%;height:clamp(200px,38vh,320px);border:2px dashed var(--line);border-radius:12px;background:#fff;
                 touch-action:none;display:block;}
 .fussleiste{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);
             padding:12px 14px calc(12px + env(safe-area-inset-bottom));z-index:30;}

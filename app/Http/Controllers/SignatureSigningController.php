@@ -215,6 +215,11 @@ class SignatureSigningController extends Controller
             'zustimmung' => ['accepted'],
             'felder' => ['array', 'max:200'],
             'felder.*' => ['nullable', 'string', 'max:4000000'],
+            // EINE Zeichnung je Feldart, nicht je Feld. Mehr als eine
+            // Handschriftart gibt es nicht (Unterschrift, Initialen), die
+            // Obergrenze ist deshalb bewusst klein.
+            'zeichnung' => ['array', 'max:4'],
+            'zeichnung.*' => ['nullable', 'string', 'max:4000000'],
         ], [
             'zustimmung.accepted' => __('signing.consent_required'),
         ]);
@@ -229,7 +234,7 @@ class SignatureSigningController extends Controller
         // in Log UND Protokoll - ein Fehlschlag, den nur die Logdatei kennt,
         // faellt im Alltag niemandem auf (Lehre der Systemzustand-Seite).
         try {
-            $errors = $this->signing->sign($signature, $signer, $data['felder'] ?? []);
+            $errors = $this->signing->sign($signature, $signer, $data['felder'] ?? [], $data['zeichnung'] ?? []);
         } catch (\Throwable $e) {
             Log::error('Signatur: Unterschreiben fehlgeschlagen: '.$e->getMessage(), [
                 'signature_request_id' => $signature->id,

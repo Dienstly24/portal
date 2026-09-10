@@ -163,4 +163,9 @@ return [
     'mail_subject_reminder' => 'Erinnerung: Dokument zur Unterschrift – Dienstly24',
     'mail_subject_completed' => 'Unterschrieben: :title – Dienstly24',
     'mail_subject_code' => 'Ihr Bestätigungscode – Dienstly24',
+    'draw_instruction' => 'Zeichnen Sie Ihre Unterschrift mit dem Finger, einem Stift oder der Maus.',
+    'applies_to_places' => 'Diese Unterschrift wird an :count Stelle gesetzt.|Diese eine Unterschrift wird an allen :count Stellen gesetzt.',
+    'pages_list' => 'Seite :pages',
+    'will_be_applied' => 'Mit dem Bestätigen wird Ihre Unterschrift an :count Stelle im Dokument gesetzt.|Mit dem Bestätigen wird Ihre Unterschrift an allen :count Stellen im Dokument gesetzt. Sie zeichnen nur einmal.',
+    'places_done' => ':count von :total Unterschriftsfeldern ausgefüllt',
 ];
