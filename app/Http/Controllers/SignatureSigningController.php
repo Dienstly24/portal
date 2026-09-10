@@ -13,6 +13,7 @@ use App\Services\Signature\SignatureSigningService;
 use App\Services\Signature\SignatureStorage;
 use App\Services\Signature\SignatureTokenService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -97,14 +98,14 @@ class SignatureSigningController extends Controller
         } catch (\Throwable $e) {
             Log::error('Signatur: Bestätigungscode nicht versendbar: '.$e->getMessage());
 
-            return back()->with('error', 'Der Code konnte nicht versendet werden. Bitte später erneut versuchen.');
+            return back()->with('error', __('signing.verify_send_failed'));
         }
 
         $this->audit->record($request, 'verification_requested', $signer);
 
         return redirect()->route('signature.show', $token)
             ->with('signature_code_sent', $signer->id)
-            ->with('success', 'Wir haben Ihnen einen Bestätigungscode an '.$this->maskEmail($signer->email).' gesendet.');
+            ->with('success', __('signing.verify_sent', ['email' => $this->maskEmail($signer->email)]));
     }
 
     public function verify(Request $request, string $token)
@@ -117,7 +118,7 @@ class SignatureSigningController extends Controller
         if (! $this->tokens->verifyCode($signer, trim($data['code']))) {
             $this->audit->record($signature, 'verification_failed', $signer);
 
-            return back()->with('error', 'Der Code stimmt nicht oder ist abgelaufen. Bitte fordern Sie einen neuen an.');
+            return back()->with('error', __('signing.verify_wrong'));
         }
 
         $this->audit->record($signature, 'verified', $signer);
@@ -196,7 +197,7 @@ class SignatureSigningController extends Controller
 
         if ($this->needsVerification($signature, $signer)) {
             return redirect()->route('signature.show', $token)
-                ->with('error', 'Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse.');
+                ->with('error', __('signing.verify_first'));
         }
 
         $data = $request->validate([
@@ -204,7 +205,7 @@ class SignatureSigningController extends Controller
             'felder' => ['array', 'max:200'],
             'felder.*' => ['nullable', 'string', 'max:4000000'],
         ], [
-            'zustimmung.accepted' => 'Bitte bestätigen Sie den Hinweis zur elektronischen Unterschrift.',
+            'zustimmung.accepted' => __('signing.consent_required'),
         ]);
 
         $this->audit->record($signature, 'signing_started', $signer);
@@ -240,7 +241,7 @@ class SignatureSigningController extends Controller
 
             $friendly = $e instanceof SignatureSigningException
                 ? $e->userMessage()
-                : 'Ihre Unterschrift konnte gerade nicht gespeichert werden. Bitte versuchen Sie es in einem Moment erneut.';
+                : __('signing.error_generic');
 
             return back()->with('error', $friendly);
         }
@@ -286,6 +287,15 @@ class SignatureSigningController extends Controller
     private function resolve(string $token, bool $allowExpired = false): array
     {
         $signer = $this->tokens->find($token);
+        if ($signer !== null) {
+            // DIE SPRACHE DES UNTERZEICHNERS gilt fuer die gesamte
+            // oeffentliche Seite - unabhaengig davon, welche Sprache der
+            // Mitarbeiter in der Beraterwelt eingestellt hat und welche im
+            // Portal des Kunden steht. Sie wird HIER gesetzt, nach der
+            // SetLocale-Middleware: sonst ueberschriebe die Voreinstellung
+            // "Deutsch" die Wahl wieder.
+            App::setLocale($signer->localeCode());
+        }
         if ($signer === null) {
             // BEWUSST dieselbe Antwort wie bei einem abgelaufenen Zugang:
             // aus der Fehlermeldung darf nicht hervorgehen, ob es diesen

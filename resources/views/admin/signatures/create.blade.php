@@ -75,19 +75,34 @@
         <div class="card-head-bar">Unterzeichner</div>
         <div style="padding:18px 20px;display:grid;gap:12px;">
             <div id="signer-rows" style="display:grid;gap:10px;">
+                @php
+                    // VORSCHLAG, keine Uebernahme: die Portal-Sprache des Kunden
+                    // ist ein guter erster Tipp, aber sie gehoert dem Kunden.
+                    // Wer hier etwas anderes waehlt, aendert den Wert in der
+                    // Kundenakte NICHT.
+                    $spracheVorschlag = $customer?->preferred_lang ?: 'de';
+                @endphp
                 @for($i = 0; $i < 2; $i++)
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr 130px;gap:10px;">
                     <input type="text" name="signers[{{ $i }}][name]" maxlength="160" value="{{ old("signers.$i.name", $i === 0 ? ($customer->user?->name ?? '') : '') }}"
                            placeholder="Name{{ $i === 0 ? '' : ' (optional)' }}"
                            style="padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
                     <input type="email" name="signers[{{ $i }}][email]" maxlength="190" value="{{ old("signers.$i.email", $i === 0 ? ($customer->user?->email ?? '') : '') }}"
                            placeholder="E-Mail{{ $i === 0 ? '' : ' (optional)' }}"
                            style="padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+                    <select name="signers[{{ $i }}][locale]" aria-label="Sprache des Unterzeichners"
+                            style="padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+                        @foreach(\App\Models\SignatureSigner::LOCALES as $code => $bezeichnung)
+                        <option value="{{ $code }}" @selected(old("signers.$i.locale", $i === 0 ? $spracheVorschlag : 'de') === $code)>{{ $bezeichnung }}</option>
+                        @endforeach
+                    </select>
                 </div>
                 @endfor
             </div>
-            <div>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
                 <button type="button" class="btn btn-sm btn-ghost" data-h-click="sigAddSigner">+ Weiteren Unterzeichner</button>
+                <span class="muted-sm">Einladung, Unterschriftsseite und Abschluss-Mail erscheinen in der
+                gewählten Sprache. Die Portal-Sprache des Kunden bleibt davon unberührt.</span>
             </div>
 
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:6px;">
@@ -144,7 +159,7 @@ window.__h["sigAddSigner"] = function () {
     var index = rows.children.length;
     if (index >= 10) { return; }
     var row = document.createElement('div');
-    row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;';
+    row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 130px;gap:10px;';
     var name = document.createElement('input');
     name.type = 'text'; name.name = 'signers[' + index + '][name]';
     name.maxLength = 160; name.placeholder = 'Name (optional)';
@@ -153,7 +168,19 @@ window.__h["sigAddSigner"] = function () {
     mail.type = 'email'; mail.name = 'signers[' + index + '][email]';
     mail.maxLength = 190; mail.placeholder = 'E-Mail (optional)';
     mail.style.cssText = name.style.cssText;
-    row.appendChild(name); row.appendChild(mail); rows.appendChild(row);
+    var sprache = document.createElement('select');
+    sprache.name = 'signers[' + index + '][locale]';
+    sprache.setAttribute('aria-label', 'Sprache des Unterzeichners');
+    sprache.style.cssText = name.style.cssText;
+    // Per Option-Objekt, nicht per HTML-Zeichenkette (SEC-4-Haltung: kein
+    // zusammengebautes Markup, auch nicht mit eigenen Werten).
+    var sprachen = @json(\App\Models\SignatureSigner::LOCALES);
+    Object.keys(sprachen).forEach(function (code) {
+        var opt = document.createElement('option');
+        opt.value = code; opt.textContent = sprachen[code];
+        sprache.appendChild(opt);
+    });
+    row.appendChild(name); row.appendChild(mail); row.appendChild(sprache); rows.appendChild(row);
 };
 </script>
 @endPushOnce

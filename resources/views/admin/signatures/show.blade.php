@@ -41,7 +41,7 @@
                 <div style="font-weight:600;font-size:14px;">
                     {{ $signer->hasSigned() ? '✓' : ($signer->hasDeclined() ? '✕' : '⏳') }} {{ $signer->name }}
                 </div>
-                <div class="muted-sm">{{ $signer->email }} · Position {{ $signer->signing_order }}</div>
+                <div class="muted-sm">{{ $signer->email }} · Position {{ $signer->signing_order }} · {{ $signer->localeLabel() }}</div>
                 <div class="muted-sm">
                     @if($signer->signed_at)
                         Unterschrieben {{ $signer->signed_at->lokal()->format('d.m.Y H:i') }} Uhr

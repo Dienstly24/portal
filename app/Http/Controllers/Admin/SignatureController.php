@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\StoreSignatureRequestRequest;
 use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\SignatureRequest;
+use App\Models\SignatureSigner;
 use App\Services\CustomerCreation\DuplicateCustomerException;
 use App\Services\Pdf\PdfException;
 use App\Services\Signature\SignatureAuditService;
@@ -197,7 +198,7 @@ class SignatureController extends Controller
         }
 
         $this->requests->syncSigners($signature, array_map(
-            fn ($s) => ['name' => $s['name'], 'email' => $s['email']],
+            fn ($s) => ['name' => $s['name'], 'email' => $s['email'], 'locale' => $s['locale'] ?? 'de'],
             array_values(array_filter($data['signers'] ?? [], fn ($s) => ! empty($s['email'])))
         ));
 
@@ -246,6 +247,7 @@ class SignatureController extends Controller
             'signers.*.key' => ['nullable', 'string', 'max:64'],
             'signers.*.name' => ['required', 'string', 'max:160'],
             'signers.*.email' => ['required', 'email:filter', 'max:190'],
+            'signers.*.locale' => ['nullable', 'string', 'in:'.implode(',', array_keys(SignatureSigner::LOCALES))],
             'fields' => ['array', 'max:200'],
             'fields.*.id' => ['nullable', 'string', 'max:64'],
             'fields.*.signer_id' => ['nullable', 'string', 'max:64'],

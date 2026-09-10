@@ -18,15 +18,19 @@ class SignatureSigningException extends \RuntimeException
 {
     public function __construct(
         string $message,
-        private readonly string $userMessage = 'Ihre Unterschrift konnte gerade nicht gespeichert werden. Bitte versuchen Sie es in einem Moment erneut.',
+        private readonly ?string $userMessage = null,
         ?\Throwable $previous = null,
     ) {
         parent::__construct($message, 0, $previous);
     }
 
-    /** Der Satz fuer den Unterzeichner - nie eine technische Meldung. */
+    /**
+     * Der Satz fuer den Unterzeichner - nie eine technische Meldung, und
+     * IMMER in seiner Sprache (der oeffentliche Controller setzt sie, bevor
+     * irgendetwas passieren kann).
+     */
     public function userMessage(): string
     {
-        return $this->userMessage;
+        return $this->userMessage ?? (string) __('signing.error_generic');
     }
 }

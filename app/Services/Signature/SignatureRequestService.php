@@ -115,7 +115,7 @@ class SignatureRequestService
      * NIE entfernt: seine Unterschrift ist Teil des Vorgangs, und ein
      * Entfernen liesse Felder mit einer fremden Unterschrift zurueck.
      *
-     * @param  list<array{id?: string|null, key?: string|null, name: string, email: string}>  $signers
+     * @param  list<array{id?: string|null, key?: string|null, name: string, email: string, locale?: string|null}>  $signers
      * @return array<string, string> Behelfs-Kennung des Editors => gespeicherte Kennung
      */
     public function syncSigners(SignatureRequest $request, array $signers): array
@@ -136,6 +136,14 @@ class SignatureRequestService
                     'email' => mb_strtolower(trim($data['email'])),
                     'signing_order' => $position + 1,
                 ]);
+                // Sprache nur setzen, wenn sie mitgeschickt wurde: der
+                // Feld-Editor sendet die Unterzeichner ohne sie, und ein
+                // stilles Zuruecksetzen auf Deutsch waere fuer den
+                // Mitarbeiter nicht nachvollziehbar.
+                if (isset($data['locale']) && array_key_exists($data['locale'], SignatureSigner::LOCALES)) {
+                    $signer->locale = $data['locale'];
+                }
+                $signer->locale ??= 'de';
                 $signer->status ??= SignatureSigner::PENDING;
                 $signer->save();
                 $keep[] = $signer->id;
@@ -406,8 +414,9 @@ class SignatureRequestService
      */
     public function defaultConsentText(): string
     {
-        return 'Mit dem Klick auf "Unterschrift bestätigen" geben Sie eine elektronische '
-            .'Unterschrift ab. Datum, Uhrzeit, IP-Adresse und Geraeteangaben werden zum '
-            .'Nachweis gespeichert. Sie erhalten das unterschriebene Dokument per E-Mail.';
+        // EINE Quelle: derselbe Satz steht in lang/{de,ar,en}/signing.php.
+        // Nur so laesst sich beim Anzeigen erkennen, ob der Mitarbeiter den
+        // Text SELBST geschrieben hat - dann wird er nie uebersetzt.
+        return (string) __('signing.consent_default', [], 'de');
     }
 }

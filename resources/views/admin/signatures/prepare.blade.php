@@ -1,7 +1,10 @@
 @extends('layouts.admin')
 @section('content')
 @php
-    $signerData = $signature->signers->map(fn ($s) => ['id' => $s->id, 'name' => $s->name, 'email' => $s->email])->values();
+    $signerData = $signature->signers->map(fn ($s) => [
+        'id' => $s->id, 'name' => $s->name, 'email' => $s->email, 'locale' => $s->localeCode(),
+    ])->values();
+    $sprachen = \App\Models\SignatureSigner::LOCALES;
     $fieldData = $signature->fields->map(fn ($f) => [
         'id' => $f->id, 'signer_id' => $f->signature_signer_id, 'type' => $f->type, 'page' => $f->page,
         'x' => (float) $f->pos_x, 'y' => (float) $f->pos_y, 'width' => (float) $f->width, 'height' => (float) $f->height,
@@ -119,6 +122,8 @@ window.__h = window.__h || {};
         selected: null,
         dirty: false
     };
+    var sprachen = @json($sprachen);
+    var sprachCodes = Object.keys(sprachen);
     var urls = {
         page: @json(route('admin.signatures.page', [$signature->id, 0])),
         save: @json(route('admin.signatures.prepare.save', $signature->id))
@@ -261,7 +266,13 @@ window.__h = window.__h || {};
             mail.className = 'muted-sm';
             mail.style.cssText = 'overflow:hidden;text-overflow:ellipsis;';
             mail.textContent = signer.email || '(ohne E-Mail)';
-            text.appendChild(name); text.appendChild(mail);
+            var sprache = document.createElement('div');
+            sprache.className = 'muted-sm';
+            // Die Sprache steht sichtbar an jedem Unterzeichner: welche
+            // Einladung jemand bekommt, soll man sehen, bevor sie raus ist -
+            // nicht erst an der Rueckfrage des Kunden.
+            sprache.textContent = sprachen[signer.locale || 'de'] || sprachen.de;
+            text.appendChild(name); text.appendChild(mail); text.appendChild(sprache);
             row.appendChild(dot); row.appendChild(text);
             if (editable) {
                 var edit = document.createElement('button');
@@ -419,13 +430,25 @@ window.__h = window.__h || {};
         document.getElementById('field-menu').hidden = true;
     };
 
+    /**
+     * Sprachabfrage per prompt - dieselbe Bedienung wie Name und E-Mail
+     * daneben. Eine abgebrochene oder unbekannte Eingabe aendert NICHTS
+     * (der bisherige Wert bleibt), statt still auf Deutsch zu fallen.
+     */
+    function spracheFragen(aktuell) {
+        var antwort = prompt('Sprache (' + sprachCodes.join(' / ') + '):', aktuell);
+        if (antwort === null) { return aktuell; }
+        antwort = String(antwort).trim().toLowerCase();
+        return sprachCodes.indexOf(antwort) === -1 ? aktuell : antwort;
+    }
+
     window.__h["sigAddSigner"] = function () {
         if (state.signers.length >= 10) { return; }
         var name = prompt('Name des Unterzeichners:');
         if (!name) { return; }
         var email = prompt('E-Mail-Adresse von ' + name + ':');
         if (!email) { return; }
-        state.signers.push({ id: uid(), name: name, email: email });
+        state.signers.push({ id: uid(), name: name, email: email, locale: spracheFragen('de') });
         markDirty();
         renderSigners();
         renderFields();
@@ -440,6 +463,7 @@ window.__h = window.__h || {};
         var email = prompt('E-Mail:', signer.email);
         if (email === null) { return; }
         signer.name = name; signer.email = email;
+        signer.locale = spracheFragen(signer.locale || 'de');
         markDirty();
         renderSigners();
         renderFields();
@@ -471,7 +495,8 @@ window.__h = window.__h || {};
                 // Unterzeichner kennt - der Server schickt darueber die echte
                 // zurueck an die Felder. Ohne sie verlor jedes Feld eines im
                 // Editor neu angelegten Unterzeichners seinen Besitzer.
-                return { id: String(s.id).indexOf('neu-') === 0 ? null : s.id, key: String(s.id), name: s.name, email: s.email };
+                return { id: String(s.id).indexOf('neu-') === 0 ? null : s.id, key: String(s.id),
+                         name: s.name, email: s.email, locale: s.locale || 'de' };
             }),
             fields: state.fields.map(function (f) {
                 return {

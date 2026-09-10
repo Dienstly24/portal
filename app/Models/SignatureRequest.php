@@ -101,6 +101,29 @@ class SignatureRequest extends Model
         return $this->belongsTo(Document::class, 'completed_document_id');
     }
 
+    /**
+     * Der Zustimmungstext in der Sprache DIESES Unterzeichners.
+     *
+     * ZWEI FAELLE, und der Unterschied ist wichtig: steht hier noch die
+     * Voreinstellung, ist der Satz von uns - dann gibt es ihn uebersetzt.
+     * Hat ein Mitarbeiter etwas EIGENES geschrieben, wird es WOERTLICH
+     * gezeigt, auch auf einer arabischen Seite. Einen selbst formulierten
+     * rechtlichen Hinweis maschinell zu uebersetzen hiesse, dem
+     * Unterzeichner eine Erklaerung vorzulegen, die so niemand geprueft
+     * hat - und genau darauf beruft er sich spaeter.
+     */
+    public function consentTextFor(?SignatureSigner $signer = null): string
+    {
+        $text = (string) $this->consent_text;
+        $vorgabe = (string) __('signing.consent_default', [], 'de');
+
+        if ($signer === null || trim($text) !== trim($vorgabe)) {
+            return $text;
+        }
+
+        return (string) __('signing.consent_default', [], $signer->localeCode());
+    }
+
     public function statusLabel(): string
     {
         return SignatureStatus::label($this->status);

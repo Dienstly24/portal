@@ -44,28 +44,27 @@ class SignatureSigningService
     public function blockReason(SignatureRequest $request, SignatureSigner $signer): ?string
     {
         if (! $signer->tokenIsLive()) {
-            return 'Dieser Link ist nicht mehr gültig.';
+            return __('signing.blocked_link_dead');
         }
         if ($signer->hasSigned()) {
-            return 'Sie haben dieses Dokument bereits unterschrieben.';
+            return __('signing.blocked_already_signed');
         }
         if ($signer->hasDeclined()) {
-            return 'Sie haben die Unterschrift zu diesem Dokument abgelehnt.';
+            return __('signing.blocked_already_declined');
         }
         if ($request->status === SignatureStatus::CANCELLED) {
-            return 'Diese Signaturanfrage wurde zurückgezogen.';
+            return __('signing.blocked_cancelled');
         }
         if ($request->hasExpired() || $request->status === SignatureStatus::EXPIRED) {
-            return 'Die Frist für dieses Dokument ist abgelaufen.';
+            return __('signing.blocked_expired');
         }
         if (! $request->isOpen()) {
-            return 'Dieses Dokument steht nicht (mehr) zur Unterschrift bereit.';
+            return __('signing.blocked_not_open');
         }
         if ($request->isSequential()) {
             $current = $request->currentSigner();
             if ($current !== null && $current->id !== $signer->id) {
-                return 'Dieses Dokument wird nacheinander unterschrieben. '
-                    .'Sie erhalten eine E-Mail, sobald Sie an der Reihe sind.';
+                return __('signing.blocked_wait_turn');
             }
         }
 
@@ -117,7 +116,7 @@ class SignatureSigningService
 
         $fields = $request->fields()->where('signature_signer_id', $signer->id)->get();
         if ($fields->isEmpty()) {
-            return ['Für Sie ist in diesem Dokument kein Feld hinterlegt.'];
+            return [__('signing.error_no_field')];
         }
 
         $errors = [];
@@ -128,7 +127,7 @@ class SignatureSigningService
                 $png = $raw === '' ? null : $this->decodeSignature($raw);
                 if ($png === null) {
                     if ($field->required) {
-                        $errors[] = 'Bitte unterschreiben Sie im Feld "'.($field->label ?: $field->typeLabel()).'".';
+                        $errors[] = __('signing.error_signature_missing', ['field' => $field->label ?: $field->typeLabel()]);
                     }
 
                     continue;
@@ -143,7 +142,7 @@ class SignatureSigningService
                 $value = in_array(strtolower($value), ['1', 'on', 'ja', 'true'], true) ? 'ja' : '';
             }
             if ($value === '' && $field->required) {
-                $errors[] = 'Bitte füllen Sie das Feld "'.($field->label ?: $field->typeLabel()).'" aus.';
+                $errors[] = __('signing.error_field_missing', ['field' => $field->label ?: $field->typeLabel()]);
 
                 continue;
             }

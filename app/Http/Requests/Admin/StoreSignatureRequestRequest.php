@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\SignatureSigner;
 use App\Support\UploadRules;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -42,6 +43,7 @@ class StoreSignatureRequestRequest extends FormRequest
             'signers' => ['array', 'max:10'],
             'signers.*.name' => ['required_with:signers.*.email', 'string', 'max:160'],
             'signers.*.email' => ['nullable', 'email:filter', 'max:190'],
+            'signers.*.locale' => ['nullable', 'string', 'in:'.implode(',', array_keys(SignatureSigner::LOCALES))],
         ];
     }
 
