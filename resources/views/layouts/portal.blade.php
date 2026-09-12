@@ -17,14 +17,14 @@
 .badge-closed{background:#EAECEF;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
-.sidebar{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--graphite);color:#fff;display:flex;flex-direction:column;padding:24px 18px;z-index:100;overflow-y:auto;}
+.sidebar{position:fixed;top:0;left:0;width:240px;height:100vh;height:100dvh;background:var(--graphite);color:#fff;display:flex;flex-direction:column;padding:24px 18px;z-index:100;overflow-y:auto;}
 .brand{font-size:22px;font-weight:700;padding:0 6px 24px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:18px;}
 .brand span{color:var(--gold-soft);}
 .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:rgba(255,255,255,.75);font-size:14px;text-decoration:none;margin-bottom:2px;transition:.2s;}
 .nav-item:hover{background:rgba(255,255,255,.06);color:#fff;}
 .nav-item.active{background:rgba(255,255,255,.12);color:#fff;font-weight:600;position:relative;}
 .nav-item.active::before{content:'';position:absolute;inset-inline-start:0;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--gold-soft);}
-.main{margin-left:240px;padding:32px 40px;min-height:100vh;}
+.main{margin-left:240px;padding:32px 40px;min-height:100vh;min-height:100dvh;}
 .metric{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px;}
 .metric .label{font-size:13px;color:var(--ink-soft);margin-bottom:8px;}
 .metric .value{font-size:26px;font-weight:700;color:var(--ink);}
@@ -156,6 +156,17 @@ form textarea{min-height:90px;resize:vertical;}
 </style>
     @include('partials.chat_styles')
     @include('partials.favicon')
+    {{--
+      Bausteine EINZELNER Seiten (wie in layouts/admin.blade.php).
+      Diesen Stapel gab es im Kundenportal bisher NICHT - ein
+      @push('styles') aus einer Portalseite fiel damit still unter den
+      Tisch, genau die Fehlerart aus der SEC-4-Lehre: kein Fehler, keine
+      Meldung, die Regeln fehlen einfach. Er steht NACH dem eigenen
+      <style> des Layouts, damit eine Seite ihre Sonderfaelle
+      ueberschreiben kann, und VOR </head>, damit die Seite nicht erst
+      ungestylt aufblitzt.
+    --}}
+    @stack('styles')
 </head>
 <body>
 {{-- Mobile Topbar: Hamburger + Logo, Glocke sitzt fix rechts daneben --}}

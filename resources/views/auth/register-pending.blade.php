@@ -14,7 +14,7 @@
 <style>
 /* Markenfarben: resources/css/brand.css (UX-1). */
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Inter',Arial,sans-serif;min-height:100vh;color:#fff;display:flex;flex-direction:column;background:var(--graphite-black);}
+body{font-family:'Inter',Arial,sans-serif;min-height:100vh;min-height:100dvh;color:#fff;display:flex;flex-direction:column;background:var(--graphite-black);}
 .bg{position:fixed;inset:0;z-index:-1;background:radial-gradient(1200px 800px at 70% 15%, #1A2C24 0%, var(--graphite-deep) 48%, var(--graphite-black) 100%);}
 .topbar{display:flex;align-items:center;justify-content:space-between;max-width:1200px;width:100%;margin:0 auto;padding:20px 28px 0;}
 .topbar img{height:36px;width:auto;display:block;}

@@ -146,8 +146,8 @@
 </div>
 
 {{-- Vorschau-Modal --}}
-<div id="preview-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:120;align-items:center;justify-content:center;padding:16px;">
-    <div style="background:#F7F5EF;border-radius:14px;width:640px;max-width:95vw;max-height:92vh;overflow-y:auto;position:relative;padding:22px;">
+<div class="d24-modal" id="preview-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:120;align-items:center;justify-content:center;padding:16px;">
+    <div class="d24-modal-box" style="background:#F7F5EF;border-radius:14px;width:640px;max-width:95vw;max-height:92vh;overflow-y:auto;position:relative;padding:22px;">
         <button data-h-click="21904e4644" style="position:absolute;top:12px;right:14px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;">An: <span id="pv-to"></span> · Betreff: <strong id="pv-subject"></strong> <span id="pv-att"></span></div>
         <div style="background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08);">

@@ -1,5 +1,5 @@
-<div id="new-conv-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
-    <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:520px;position:relative;max-height:90vh;overflow-y:auto;">
+<div class="d24-modal" id="new-conv-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
+    <div class="d24-modal-box" style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:520px;position:relative;max-height:90vh;overflow-y:auto;">
         <button data-h-click="1d8410cb3f" class="modal-close">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:18px;">Neue interne Unterhaltung</div>
         <form method="POST" action="{{ route('admin.chat.store') }}">

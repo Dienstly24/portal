@@ -16,7 +16,7 @@
    Flaechentoene dieser Leistungsseiten. */
 :root{--paper:var(--graphite-black);--paper2:#15171b;--muted:#9aa1ab;}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Inter',Arial,sans-serif;min-height:100vh;color:#eef1ee;display:flex;flex-direction:column;background:var(--paper);}
+body{font-family:'Inter',Arial,sans-serif;min-height:100vh;min-height:100dvh;color:#eef1ee;display:flex;flex-direction:column;background:var(--paper);}
 .bg{position:fixed;inset:0;z-index:-1;background:radial-gradient(1200px 800px at 70% 12%, #1A2C24 0%, var(--graphite-deep) 48%, var(--paper) 100%);}
 .bg::after{content:'';position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.05) 1px,transparent 1px);background-size:26px 26px;}
 .topbar{display:flex;align-items:center;justify-content:space-between;max-width:1000px;width:100%;margin:0 auto;padding:16px 24px 0;}

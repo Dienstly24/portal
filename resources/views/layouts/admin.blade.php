@@ -19,7 +19,7 @@
 :root{--sidebar-w:260px;--header-h:64px;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
-.sidebar{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:var(--graphite-deep);color:#fff;display:flex;flex-direction:column;z-index:100;overflow-y:auto;}
+.sidebar{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;height:100dvh;background:var(--graphite-deep);color:#fff;display:flex;flex-direction:column;z-index:100;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
 .sidebar-logo{padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.1);}
 .sidebar-logo img{height:38px;width:auto;object-fit:contain;}
 .nav-item{display:flex;align-items:center;gap:12px;padding:10px 20px;color:rgba(255,255,255,.7);font-size:13.5px;text-decoration:none;transition:.15s;position:relative;}
@@ -57,11 +57,11 @@ body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--ink);}
 .logout-btn{background:none;border:none;color:rgba(255,255,255,.45);font-size:12px;cursor:pointer;margin-top:10px;padding:0;}
 .logout-btn:hover{color:#fff;}
 .header{position:fixed;top:0;left:var(--sidebar-w);right:0;height:var(--header-h);background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 32px;gap:16px;z-index:90;}
-.header-search{flex:1;max-width:480px;position:relative;}
+.header-search{flex:1 1 0;min-width:0;max-width:480px;position:relative;}
 .header-search input{width:100%;padding:9px 14px 9px 38px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#EDEAE0;color:var(--ink);}
 .header-search input:focus{outline:2px solid var(--emerald);outline-offset:1px;background:#fff;color:var(--ink);}
 .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink-soft);font-size:15px;}
-.header-actions{margin-left:auto;display:flex;align-items:center;gap:12px;}
+.header-actions{margin-left:auto;display:flex;align-items:center;gap:12px;flex:none;}
 .icon-btn{width:38px;height:38px;border-radius:8px;border:1px solid var(--line);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-soft);font-size:16px;position:relative;text-decoration:none;}
 .icon-btn:hover{background:var(--canvas);color:var(--ink);}
 .notif-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#E24B4A;border:2px solid #fff;}
@@ -96,19 +96,63 @@ table tr:hover td{background:#EDEAE0;}
 .customer-card .name{font-weight:600;font-size:13.5px;margin-bottom:4px;}
 .customer-card .meta{font-size:12px;color:var(--ink-soft);}
 
-/* Responsive (Final Polish Punkt 8) */
-@media (max-width: 1200px) {
-}
+/*
+ * REIHENFOLGE IST HIER DIE GANZE FUNKTION (Befund Responsive-Audit
+ * 12.09.2026, im Browser gemessen).
+ *
+ * Diese beiden Grundregeln standen frueher UNTERHALB der Medienabfrage,
+ * die `.admin-mobile-btn` auf `display:inline-flex` setzt. Beide Regeln
+ * haben dieselbe Spezifitaet - bei Gleichstand gewinnt die SPAETERE.
+ * Die Medienabfrage war also wirkungslos, und der Menue-Knopf war auf
+ * JEDER Bildschirmbreite `display:none`.
+ *
+ * Die Folge war kein Schoenheitsfehler: unterhalb von 900px schiebt
+ * sich die Navigationsleiste aus dem Bild, und ihr einziger Oeffner war
+ * unsichtbar. Die gesamte Beraterwelt - jede Seite, jeder Bereich - war
+ * damit auf Telefon und Tablet ohne Navigation. Genau das ist die
+ * Ursache hinter der Meldung "auf dem Handy geht es nicht".
+ *
+ * Es ist kein Fehler, der auffaellt: die Seite sieht normal aus, sie
+ * laedt, sie zeigt Inhalte - es fehlt nur der Weg woanders hin. Ein
+ * Test haelt das jetzt fest (ResponsiveLayoutTest).
+ */
+.admin-mobile-btn{display:none;position:fixed;top:10px;inset-inline-start:12px;z-index:130;background:var(--graphite-deep);color:#fff;border:none;border-radius:8px;width:44px;height:44px;font-size:20px;cursor:pointer;align-items:center;justify-content:center;}
+.admin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99;}
+
+/* Responsive (Responsive-Audit 12.09.2026).
+   Raster, Fingermasse und Tabellen stehen zentral in
+   resources/css/responsive.css - hier nur die Geometrie DIESES Layouts
+   (Schublade, Kopfzeile). */
 @media (max-width: 900px) {
-    .sidebar{transform:translateX(-100%);transition:transform .25s;box-shadow:0 0 30px rgba(0,0,0,.35);}
+    .sidebar{transform:translateX(-100%);transition:transform .25s ease;box-shadow:0 0 30px rgba(0,0,0,.35);width:min(300px,84vw);}
     .sidebar.open{transform:translateX(0);}
-    .header{left:0;padding:0 14px 0 60px;}
+    .header{left:0;padding:0 12px 0 64px;gap:8px;}
     .main{margin-left:0;}
-    .grid-2,.grid-3,.metrics-grid{grid-template-columns:1fr;}
+    .main-inner{padding:20px 16px;}
     .admin-mobile-btn{display:inline-flex;}
+    .admin-overlay.show{display:block;}
     .cust-tabs{overflow-x:auto;}
+    /* Die Wortmarke neben dem Menue-Knopf kostet auf 390px den halben
+       Platz der Suche - das Symbol im Knopf fuehrt ohnehin zum
+       Dashboard. */
+    .header-logo{display:none;}
+    /* Das Benachrichtigungs-Fenster stand fest auf 380px Breite. Auf
+       einem 320px-Telefon ragte es links aus dem Bild; es war dort
+       weder vollstaendig lesbar noch vollstaendig bedienbar. */
+    #notif-dropdown{width:min(340px,calc(100vw - 24px));right:-8px;}
 }
-.admin-mobile-btn{display:none;position:fixed;top:11px;left:12px;z-index:130;background:var(--graphite-deep);color:#fff;border:none;border-radius:8px;width:42px;height:42px;font-size:20px;cursor:pointer;align-items:center;justify-content:center;}
+@media (max-width: 420px) {
+    /* Auf dem kleinsten Geraet hat die Suche keinen Platz mehr neben
+       Glocke und Konto. Sie bleibt erreichbar - die Kopfzeile fuehrt
+       auf die Kundenliste, die serverseitig ueber ALLE Felder sucht -
+       aber sie draengt die beiden Bedienelemente nicht mehr aus dem
+       Bild (gemessen: header-actions endete bei 360px auf einem
+       320px-Bildschirm, Glocke und Konto waren unerreichbar). */
+    .header-search{min-width:0;}
+    .header-search input{padding-left:32px;}
+    .search-icon{left:9px;}
+}
+@media print{.admin-mobile-btn,.admin-overlay,.sidebar{display:none !important;}.main{margin-left:0 !important;}}
 /* Treffer der globalen Suche: Hover als CSS statt als
    onmouseover-Handler (Audit SEC-4) - Darstellung gehoert ohnehin
    nicht in ein Ereignis-Attribut. */
@@ -125,7 +169,8 @@ table tr:hover td{background:#EDEAE0;}
     @stack('styles')
 </head>
 <body>
-<button class="admin-mobile-btn" type="button" id="am-btn" aria-label="Menü öffnen">☰</button>
+<button class="admin-mobile-btn" type="button" id="am-btn" aria-label="Menü öffnen" aria-controls="admin-sidebar" aria-expanded="false">☰</button>
+<div class="admin-overlay" id="admin-overlay" hidden></div>
 <div class="sidebar" id="admin-sidebar">
     {{-- Kompakte Marke wie bei grossen Panels (nur das D-Symbol) --}}
     <div class="sidebar-logo"><a href="{{ route('admin.dashboard') }}" title="Dienstly24"><img src="{{ \App\Support\BrandAssets::logoSymbolLight() }}" alt="Dienstly24" style="height:42px;width:auto;"></a></div>
@@ -146,7 +191,7 @@ table tr:hover td{background:#EDEAE0;}
     </div>
 </div>
 <div class="header">
-    <a href="{{ route('admin.dashboard') }}" title="Dienstly24" style="flex:none;margin-right:6px;"><img src="{{ \App\Support\BrandAssets::logoDark() }}" alt="Dienstly24" style="height:30px;width:auto;display:block;"></a>
+    <a href="{{ route('admin.dashboard') }}" title="Dienstly24" class="header-logo" style="flex:none;margin-right:6px;"><img src="{{ \App\Support\BrandAssets::logoDark() }}" alt="Dienstly24" style="height:30px;width:auto;display:block;"></a>
     <div class="header-search">
         <span class="search-icon">🔍</span>
         <input type="text" id="global-search" placeholder="Suche nach Kunden, Verträge, Tickets..."
@@ -163,7 +208,7 @@ table tr:hover td{background:#EDEAE0;}
             <div id="notif-dropdown" style="display:none;position:absolute;top:46px;right:0;width:380px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:300;overflow:hidden;">
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);">
                     <span style="font-size:13px;font-weight:700;">Benachrichtigungen</span>
-                    <button type="button" data-h-click="a5390eb93d" style="border:none;background:none;color:var(--ink-soft);font-size:12px;cursor:pointer;">Alle gelesen</button>
+                    <button type="button" class="notif-readall" data-h-click="a5390eb93d" style="border:none;background:none;color:var(--ink-soft);font-size:12px;cursor:pointer;">Alle gelesen</button>
                 </div>
                 <div id="notif-list" style="max-height:400px;overflow-y:auto;">
                     <p style="padding:16px;font-size:13px;color:var(--ink-soft);">Laden…</p>
@@ -283,7 +328,51 @@ document.addEventListener('visibilitychange', function() {
 });
 </script>
 <script @cspNonce>
-document.getElementById('am-btn')?.addEventListener('click', function(){ document.getElementById('admin-sidebar').classList.toggle('open'); });
+/* Schublade der Beraterwelt (Responsive-Audit 12.09.2026).
+   Vorher war es ein blosses classList.toggle: kein Overlay, kein ESC,
+   kein Schliessen beim Linkklick. Wer die Schublade geoeffnet hatte,
+   musste exakt den Menue-Knopf wieder treffen - ein Tipp daneben ging
+   an den Inhalt DAHINTER, der halb verdeckt war. */
+(function(){
+    var sb=document.getElementById('admin-sidebar');
+    var ov=document.getElementById('admin-overlay');
+    var btn=document.getElementById('am-btn');
+    if(!sb||!btn) return;
+    function openNav(){ sb.classList.add('open'); if(ov){ov.hidden=false;ov.classList.add('show');} document.body.style.overflow='hidden'; btn.setAttribute('aria-expanded','true'); }
+    function closeNav(){ sb.classList.remove('open'); if(ov){ov.classList.remove('show');ov.hidden=true;} document.body.style.overflow=''; btn.setAttribute('aria-expanded','false'); }
+    function toggleNav(){ sb.classList.contains('open') ? closeNav() : openNav(); }
+    btn.addEventListener('click', toggleNav);
+    ov?.addEventListener('click', closeNav);
+    document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeNav(); });
+    sb.querySelectorAll('a.nav-item').forEach(function(a){ a.addEventListener('click', closeNav); });
+    var x0=null;
+    sb.addEventListener('touchstart',function(e){ x0=e.touches[0].clientX; },{passive:true});
+    sb.addEventListener('touchend',function(e){
+        if(x0===null) return;
+        var dx=e.changedTouches[0].clientX-x0; x0=null;
+        var rtl=document.documentElement.dir==='rtl';
+        if((!rtl&&dx<-60)||(rtl&&dx>60)) closeNav();
+    },{passive:true});
+    /* Zurueck auf Rechnerbreite: die Schublade ist dort fest, ein
+       zurueckgebliebenes Overlay wuerde die Seite sperren. */
+    window.addEventListener('resize',function(){ if(window.innerWidth>900) closeNav(); });
+})();
+
+/* Dialoge (.d24-modal): Klick auf den Hintergrund und ESC schliessen.
+   Im Kundenportal gab es das laengst, in der Beraterwelt nicht - dort
+   hatte jeder der 18 Dialoge sein eigenes (oder gar kein) Schliessen.
+   Auf dem Telefon ist das der Unterschied zwischen "Dialog verlassen"
+   und "Seite neu laden": ein kleines Kreuz in der Ecke ist die
+   schlechteste Trefferflaeche, die eine Seite zu bieten hat. */
+document.addEventListener('click', function(e){
+    if (e.target.classList && e.target.classList.contains('d24-modal')) e.target.style.display = 'none';
+});
+document.addEventListener('keydown', function(e){
+    if (e.key !== 'Escape') return;
+    document.querySelectorAll('.d24-modal').forEach(function(m){
+        if (getComputedStyle(m).display !== 'none') m.style.display = 'none';
+    });
+});
 
 // ===== Navigation: Aufklappen und gemerkter Zustand =====
 // Gespeichert wird BEIDE Richtungen ('1' zu, '0' offen) - nur "zugeklappt"

@@ -114,7 +114,7 @@
 
 {{-- Schnellvorschau (Quick-Look): erscheint beim Ueberfahren eines Dokuments,
      ohne eine neue Seite zu oeffnen. Klick auf das Dokument oeffnet es voll. --}}
-<div id="doc-quicklook" style="display:none;position:fixed;z-index:300;width:min(560px,46vw);height:70vh;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.28);overflow:hidden;">
+<div id="doc-quicklook" style="display:none;position:fixed;z-index:300;width:min(560px,46vw);height:min(70vh,70dvh);background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.28);overflow:hidden;">
     <div style="padding:7px 11px;font-size:12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--canvas);">
         <span id="doc-quicklook-name" style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
         <span style="color:var(--ink-soft);white-space:nowrap;">Klick öffnet vollständig</span>
@@ -208,8 +208,8 @@
      arbeitet aber mit diesem Text, und der kann an genau einer Stelle anders
      aussehen. Ohne ihn ist jede Fehlersuche Raten. Kostenlos, ohne KI, und der
      Text wird NICHT gespeichert. --}}
-<div id="ocr-text-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:210;align-items:center;justify-content:center;padding:20px;">
-    <div style="background:var(--surface);border-radius:14px;max-width:900px;width:100%;max-height:86vh;display:flex;flex-direction:column;overflow:hidden;">
+<div class="d24-modal" id="ocr-text-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:210;align-items:center;justify-content:center;padding:20px;">
+    <div class="d24-modal-box" style="background:var(--surface);border-radius:14px;max-width:900px;width:100%;max-height:86vh;display:flex;flex-direction:column;overflow:hidden;">
         <div style="padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:12px;">
             <div style="flex:1;min-width:0;">
                 <div style="font-weight:600;font-size:16px;">🔎 Erkannter Text (das, womit die Erkennung gearbeitet hat)</div>
@@ -223,8 +223,8 @@
     </div>
 </div>
 
-<div id="doc-review-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
-    <div style="background:#fff;border-radius:14px;padding:26px;width:100%;max-width:620px;position:relative;max-height:92vh;overflow-y:auto;">
+<div class="d24-modal" id="doc-review-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
+    <div class="d24-modal-box" style="background:#fff;border-radius:14px;padding:26px;width:100%;max-width:620px;position:relative;max-height:92vh;overflow-y:auto;">
         <button type="button" data-h-click="d10e859b20" style="position:absolute;top:14px;right:14px;border:none;background:none;font-size:20px;cursor:pointer;">✕</button>
         <div style="font-size:17px;font-weight:700;margin-bottom:4px;" id="review-title">Dokument zuordnen</div>
         <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;" id="review-doc-name"></div>
@@ -1468,6 +1468,15 @@ window.docReview = (function() {
     var frame = document.getElementById('doc-quicklook-frame');
     var nameEl = document.getElementById('doc-quicklook-name');
     if (!ql || !frame) return;
+    /*
+     * NUR auf echten Zeigegeraeten (Responsive-Audit 12.09.2026).
+     * Ein Telefon hat kein Hover, simuliert es aber beim Antippen: der
+     * Fingertipp liess ein 46vw schmales Fenster mit eingebettetem PDF
+     * aufgehen, das niemand angefordert hat. Auf dem Telefon oeffnet
+     * der Klick das Dokument ohnehin vollstaendig - es geht keine
+     * Funktion verloren. Frage nach dem GERAET, nicht nach der Breite.
+     */
+    if (window.matchMedia && !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
     var showTimer = null, hideTimer = null;
 
     function place(rect) {

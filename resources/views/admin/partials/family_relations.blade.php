@@ -159,8 +159,8 @@
 </div>
 
 {{-- Suchdialog: bestehenden Kunden finden und verknuepfen. --}}
-<div id="fam-suche-modal" style="display:none;position:fixed;inset:0;background:rgba(11,19,16,.55);z-index:1000;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto;">
-    <div style="background:var(--surface,#FBFAF6);border-radius:14px;max-width:620px;width:100%;padding:22px;">
+<div class="d24-modal" id="fam-suche-modal" style="display:none;position:fixed;inset:0;background:rgba(11,19,16,.55);z-index:1000;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto;">
+    <div class="d24-modal-box" style="background:var(--surface,#FBFAF6);border-radius:14px;max-width:620px;width:100%;padding:22px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
             <div class="card-title" style="margin-bottom:0;">Bestehenden Kunden hinzufügen</div>
             <button type="button" data-h-click="7152198f01" style="background:none;border:0;font-size:20px;cursor:pointer;color:var(--ink-soft);">×</button>

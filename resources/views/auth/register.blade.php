@@ -9,7 +9,7 @@
 <style>
 /* Markenfarben: resources/css/brand.css (UX-1). */
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Inter',Arial,sans-serif;min-height:100vh;color:#fff;display:flex;flex-direction:column;background:var(--graphite-black);overflow-x:hidden;}
+body{font-family:'Inter',Arial,sans-serif;min-height:100vh;min-height:100dvh;color:#fff;display:flex;flex-direction:column;background:var(--graphite-black);overflow-x:hidden;}
 html,body{height:100%;}
 .bg{position:fixed;inset:0;z-index:-1;background:radial-gradient(1200px 800px at 70% 15%, #1A2C24 0%, var(--graphite-deep) 48%, var(--graphite-black) 100%);}
 .orb{position:absolute;border-radius:50%;filter:blur(90px);opacity:.5;will-change:transform;}
