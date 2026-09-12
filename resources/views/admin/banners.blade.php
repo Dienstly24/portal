@@ -143,8 +143,8 @@
 </div>
 
 {{-- Vorschau-Modal: zeigt das Medium in voller Breite wie im Kundenportal --}}
-<div id="previewModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:400;align-items:center;justify-content:center;padding:24px;" data-h-click="e02337344f">
-    <div style="background:#fff;border-radius:14px;max-width:900px;width:100%;overflow:hidden;" data-h-click="d7f56cf72a">
+<div class="d24-modal" id="previewModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:400;align-items:center;justify-content:center;padding:24px;" data-h-click="e02337344f">
+    <div class="d24-modal-box" style="background:#fff;border-radius:14px;max-width:900px;width:100%;overflow:hidden;" data-h-click="d7f56cf72a">
         <div style="padding:12px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);">
             <strong style="font-size:14px;">Vorschau – so erscheint der Banner im Kundenportal</strong>
             <button data-h-click="fa18a7c479" style="border:none;background:none;font-size:20px;cursor:pointer;">✕</button>

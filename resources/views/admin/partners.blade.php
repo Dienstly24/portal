@@ -47,8 +47,8 @@
 </div>
 
 {{-- Modal: Partner anlegen --}}
-<div id="add-partner-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center;">
-    <div style="background:#fff;border-radius:14px;padding:28px;width:480px;max-width:92vw;max-height:90vh;overflow-y:auto;">
+<div class="d24-modal" id="add-partner-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center;">
+    <div class="d24-modal-box" style="background:#fff;border-radius:14px;padding:28px;width:480px;max-width:92vw;max-height:90vh;overflow-y:auto;">
         <div style="font-size:17px;font-weight:700;margin-bottom:16px;">Partner anlegen</div>
         <form method="POST" action="{{ route('admin.partners.store') }}">
             @csrf

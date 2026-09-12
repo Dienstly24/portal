@@ -179,6 +179,11 @@
 .num-strong{ text-align: right; font-weight: 700; }
 .nowrap    { white-space: nowrap; }
 .scroll-x  { overflow-x: auto; }              /* breite Tabellen */
-.card-flush{ padding: 0; overflow: hidden; }  /* Karte, in der eine Tabelle randlos sitzt */
+.card-flush{ padding: 0; overflow-y: hidden; }  /* Karte, in der eine Tabelle randlos sitzt.
+   Das frueher hier stehende `overflow: hidden` war fuer die runden
+   Ecken gedacht und hat auf dem Telefon die rechten Spalten jeder
+   breiten Tabelle ABGESCHNITTEN, ohne Weg sie zu erreichen
+   (Responsive-Audit 12.09.2026). Senkrecht wird weiter geklippt - das
+   haelt die Ecken rund; waagerecht setzt responsive.css `auto`. */
 .card-head-bar { padding: 16px 20px; font-weight: 700; border-bottom: 1px solid var(--line); }
 .modal-close { position: absolute; top: 16px; right: 16px; border: none; background: none; font-size: 20px; cursor: pointer; }

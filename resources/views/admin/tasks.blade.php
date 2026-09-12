@@ -213,8 +213,8 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
 @endif
 
 {{-- Aufgaben-Modal (Anlegen + Bearbeiten) --}}
-<div id="task-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto;">
-    <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:640px;position:relative;margin:auto 0;">
+<div class="d24-modal" id="task-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto;">
+    <div class="d24-modal-box" style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:640px;position:relative;margin:auto 0;">
         <button data-h-click="d085771a23" style="position:absolute;top:16px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;color:var(--ink-soft);">✕</button>
         <div id="tf-heading" style="font-size:18px;font-weight:700;margin-bottom:18px;">Neue Aufgabe</div>
 

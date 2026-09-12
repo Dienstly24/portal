@@ -143,8 +143,8 @@ body.vp-searching .vp-card.vp-hidden{display:none;}
 </div>
 
 {{-- Modal: Link hinzufügen --}}
-<div id="add-link-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
-    <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:480px;position:relative;">
+<div class="d24-modal" id="add-link-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
+    <div class="d24-modal-box" style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:480px;position:relative;">
         <button data-h-click="bf00d05c23" class="modal-close">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:20px;">Neuen Link hinzufügen</div>
         <form method="POST" action="{{ route('admin.tarifrechner.store') }}">

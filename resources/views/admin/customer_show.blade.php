@@ -1028,8 +1028,8 @@ function openMessagesTab() {
      abgespeckten Modals - siehe Button im Seitenkopf. --}}
 
 {{-- Add Note Modal --}}
-<div id="add-note-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
-    <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:480px;position:relative;">
+<div class="d24-modal" id="add-note-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
+    <div class="d24-modal-box" style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:480px;position:relative;">
         <button data-h-click="3581a2b096" class="modal-close">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:20px;">Notiz / Aufgabe hinzufügen</div>
         <form method="POST" action="{{ route('admin.customer.note.store', $customer->id) }}">
@@ -1051,8 +1051,8 @@ function openMessagesTab() {
 </div>
 
 {{-- Smart-Upload Modal (KI): Typ wird automatisch erkannt, Daten extrahiert --}}
-<div id="smart-doc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
-    <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:520px;position:relative;">
+<div class="d24-modal" id="smart-doc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
+    <div class="d24-modal-box" style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:520px;position:relative;">
         <button data-h-click="18823f210f" class="modal-close">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:6px;">⚡ Smart-Upload (KI)</div>
         <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;">
@@ -1184,8 +1184,8 @@ function smartReanalyze(docId, btn) {
 </script>
 
 {{-- Add Document Modal --}}
-<div id="add-doc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
-    <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:520px;position:relative;">
+<div class="d24-modal" id="add-doc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
+    <div class="d24-modal-box" style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:520px;position:relative;">
         <button data-h-click="4d5e9a4c85" class="modal-close">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:20px;">Dokumente hochladen</div>
         <form method="POST" action="{{ route('admin.customer.document.store', $customer->id) }}" enctype="multipart/form-data" id="doc-upload-form">
@@ -1428,8 +1428,8 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 {{-- Modal: Dokument anfordern (Priorität 7) --}}
-<div id="request-doc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center;">
-    <div style="background:#fff;border-radius:14px;padding:28px;width:440px;max-width:92vw;position:relative;">
+<div class="d24-modal" id="request-doc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center;">
+    <div class="d24-modal-box" style="background:#fff;border-radius:14px;padding:28px;width:440px;max-width:92vw;position:relative;">
         <button data-h-click="d23d5db945" class="modal-close">✕</button>
         <div style="font-size:17px;font-weight:700;margin-bottom:6px;">Dokument anfordern</div>
         <div style="font-size:13px;color:var(--ink-soft);margin-bottom:16px;">Der Kunde wird per E-Mail informiert und kann direkt im Portal hochladen.</div>
@@ -1469,8 +1469,8 @@ document.addEventListener('DOMContentLoaded', () => {
 </div>
 
 {{-- Modal: Dokument bearbeiten (Vertragszuordnung, Kategorie, Sichtbarkeit, Priorität, Name) --}}
-<div id="doc-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
-    <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:480px;position:relative;">
+<div class="d24-modal" id="doc-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;">
+    <div class="d24-modal-box" style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:480px;position:relative;">
         <button data-h-click="d8a6407304" class="modal-close">✕</button>
         <div style="font-size:18px;font-weight:700;margin-bottom:20px;">Dokument bearbeiten</div>
         <form method="POST" id="doc-edit-form" action="">

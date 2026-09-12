@@ -70,8 +70,8 @@
 
 @if($canManage)
 {{-- Modal: Vorlage anlegen/bearbeiten --}}
-<div id="tpl-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center;padding:16px;">
-    <div style="background:#fff;border-radius:14px;padding:28px;width:560px;max-width:94vw;max-height:92vh;overflow-y:auto;position:relative;">
+<div class="d24-modal" id="tpl-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center;padding:16px;">
+    <div class="d24-modal-box" style="background:#fff;border-radius:14px;padding:28px;width:560px;max-width:94vw;max-height:92vh;overflow-y:auto;position:relative;">
         <button data-h-click="0ca5a5877d" class="modal-close">✕</button>
         <div id="tpl-modal-title" style="font-size:17px;font-weight:700;margin-bottom:16px;">Neue Vorlage</div>
         <form id="tpl-form" method="POST" action="{{ route('admin.templates.store') }}">

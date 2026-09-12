@@ -1,0 +1,300 @@
+/*
+ * Mobile- und Tablet-Schicht (Responsive-Audit 12.09.2026).
+ *
+ * WARUM DIESE DATEI EXISTIERT
+ * Die Anwendung war auf dem Rechner fertig und auf dem Telefon unbenutzbar.
+ * Die Ursache war keine Sammlung von Schoenheitsfehlern, sondern eine
+ * Luecke in der Schichtung: `components.css` - die EINE Quelle der
+ * Bausteine (UX-2) - enthielt KEINE EINZIGE Medienabfrage. Jeder
+ * Baustein (.grid-2, .metrics-grid, .card-flush, .modal-close) war damit
+ * fest auf Desktop-Masse verdrahtet, und jede Seite, die sie benutzt,
+ * erbte das. Die wenigen vorhandenen Abfragen standen verstreut in
+ * einzelnen Blade-Vorlagen und galten nur dort.
+ *
+ * ABGRENZUNG - das ist der Grund fuer eine eigene Datei statt einiger
+ * Zeilen in components.css: hier steht AUSSCHLIESSLICH, was sich mit der
+ * Bildschirmgroesse oder der Eingabeart aendert. Wer das Aussehen eines
+ * Bausteins sucht, liest components.css; wer sein Verhalten auf dem
+ * Telefon sucht, liest diese Datei. Stuende beides gemischt, waere nach
+ * dem dritten Umbau nicht mehr erkennbar, welche Regel absichtlich nur
+ * fuer eine Bildschirmgroesse gilt.
+ *
+ * ZWEI REGELN, die jede Aenderung hier einhalten muss:
+ *
+ * 1. DESKTOP WIRD NIE ANGEFASST. Jede Regel steht in einer Medienabfrage
+ *    mit `max-width` oder in `(pointer: coarse)`. Eine Regel ohne
+ *    Abfrage gehoert nach components.css, nicht hierher. Damit kann
+ *    diese Datei die bestehende Rechner-Oberflaeche gar nicht
+ *    veraendern - das ist keine Zusage, sondern eine Eigenschaft.
+ *
+ * 2. `pointer: coarse` STATT `max-width` fuer Fingermasse. Die Groesse
+ *    einer Schaltflaeche haengt am FINGER, nicht am Bildschirm: ein
+ *    Tablet im Querformat ist 1024px breit und wird trotzdem beruehrt,
+ *    ein schmales Fenster auf dem Rechner ist 700px breit und wird mit
+ *    der Maus bedient. Wer Fingermasse an `max-width` haengt, trifft
+ *    beide Faelle falsch.
+ */
+
+/* === 1. TABELLEN ====================================================
+ *
+ * DER SCHWERSTE BEFUND DES AUDITS. `.card-flush` trug `overflow:hidden`
+ * (fuer die runden Ecken). Eine Tabelle mit zehn Spalten ist rund
+ * 1020px breit; in einer 254px schmalen Karte auf dem Telefon wurden
+ * damit rund drei Viertel der Spalten ABGESCHNITTEN - und weil
+ * `hidden` nicht scrollt, gab es keinen Weg, sie zu erreichen. Gemessen
+ * am Kundenbestand: Karte 254px sichtbar, Inhalt 1019px. Die Spalten
+ * "Status" und "Aktion" existierten auf dem Telefon schlicht nicht.
+ *
+ * Das ist kein Darstellungsfehler, sondern Datenverlust in der
+ * Oberflaeche: der Mitarbeiter sieht nicht, dass etwas fehlt.
+ *
+ * `overflow-x:auto` statt `hidden` behebt es, ohne die runden Ecken zu
+ * verlieren (`overflow-y:hidden` klippt weiterhin senkrecht). Die Regel
+ * gilt bewusst OHNE Medienabfrage: auf dem Rechner ist die Tabelle
+ * schmaler als die Karte, dann entsteht gar keine Bildlaufleiste - die
+ * Regel ist dort also wirkungslos statt veraendernd.
+ */
+.card-flush { overflow-x: auto; overflow-y: hidden; }
+
+/*
+ * Sicherheitsnetz fuer jede Tabelle, die NICHT in einem `.scroll-x`
+ * sitzt. Von 165 Tabellen im Bestand hatten nur 28 einen
+ * Bildlauf-Rahmen; die uebrigen haetten einzeln umgebaut werden
+ * muessen - 60+ Vorlagen anzufassen ist die risikoreichere Aenderung,
+ * und eine NEUE Tabelle haette die Regel ohnehin wieder verfehlt.
+ * `:has()` deckt Bestand UND Zukunft ab.
+ *
+ * Wichtig: der Bildlauf gehoert an die KARTE, nicht an die Seite. Eine
+ * einzige breite Tabelle darf nie die ganze Seite waagerecht schieben
+ * (Vorgabe 5 des Auftrags).
+ */
+.card:has(> table),
+.card:has(> .card-head-bar + table),
+.card:has(> form > table) { overflow-x: auto; }
+
+/*
+ * `.scroll-x` gab es bereits, war aber unvollstaendig fuer Beruehrung:
+ * ohne `overscroll-behavior-x:contain` uebernimmt iOS Safari die Wisch-
+ * geste am Ende der Tabelle als "Seite zurueck" - der Mitarbeiter
+ * wischt nach rechts, um die letzte Spalte zu sehen, und verlaesst
+ * stattdessen die Seite.
+ */
+.scroll-x {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+}
+
+@media (pointer: coarse) {
+    /* Zeilen nicht umbrechen lassen: eine Tabelle, die sich auf dem
+       Telefon in zehn Zeilen je Datensatz auffaltet, ist unlesbarer als
+       eine, die man schiebt. */
+    .card-flush > table th,
+    .card-flush > table td,
+    .scroll-x > table th,
+    .scroll-x > table td { white-space: nowrap; }
+}
+
+/* === 2. RASTER ======================================================
+ * Vier Kennzahlen nebeneinander sind auf 390px vier unlesbare Saeulen
+ * von 76px. Zwei Stufen statt einer: auf dem Tablet zwei Spalten (die
+ * Kennzahl bleibt vergleichbar), erst auf dem Telefon eine.
+ */
+@media (max-width: 1100px) {
+    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 900px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+    .metrics-grid { grid-template-columns: 1fr; gap: 12px; }
+    .metric-card  { padding: 16px; }
+    .metric-value { font-size: 26px; }
+}
+
+/* Kundenkacheln: standen fest auf vier Spalten und blieben auch auf
+   320px vierspaltig (76px je Kachel - der Name passte in keine). */
+@media (max-width: 1100px) { .customer-cards { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 820px)  { .customer-cards { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 520px)  { .customer-cards { grid-template-columns: 1fr; } }
+
+/* === 3. FINGERMASSE =================================================
+ * WCAG 2.5.5 / Apple HIG: 44px. Gemessen wurde im Ist-Zustand:
+ * Navigationspunkt 40px, Abmelden-Schaltflaeche 18px, Schliessen-Kreuz
+ * 30px, Reiter 30px. Alles unter dem Finger.
+ *
+ * `min-height` statt `height`: der Inhalt darf hoeher werden, nur nie
+ * niedriger. Damit aendert sich an keinem Baustein die Gestaltung, nur
+ * seine Mindest-Trefferflaeche.
+ */
+@media (pointer: coarse) {
+    .nav-item,
+    .nav-group-header,
+    .tab-row .tab,
+    .btn,
+    .icon-btn,
+    .tab-item { min-height: 44px; }
+
+    .nav-item,
+    .tab-row .tab { display: flex; align-items: center; }
+
+    .icon-btn { min-width: 44px; }
+
+    /* Abmelden war eine 18px hohe Textzeile am unteren Rand. */
+    .logout-btn, .logout { min-height: 44px; display: inline-flex; align-items: center; }
+
+    /* "Alle gelesen" im Glocken-Fenster (gemessen 65x18) - die einzige
+       Moeglichkeit, den roten Punkt loszuwerden. */
+    .notif-readall { min-height: 44px; padding: 0 8px; }
+
+    /* Brotkrumen (gemessen 27x20): sie sind auf dem Telefon oft der
+       einzige Weg eine Ebene zurueck - der Zurueck-Knopf des Browsers
+       fuehrt nach einem Formular-Absenden woandershin. */
+    .breadcrumb { gap: 2px; }
+    .breadcrumb a { min-height: 40px; display: inline-flex; align-items: center; padding: 0 6px; }
+
+    /* Die Wortmarke ist ein Link aufs Dashboard; unter 900px ist sie
+       ausgeblendet, auf dem Tablet stand sie mit 30x30 im Bild. */
+    .header-logo { min-height: 44px; display: inline-flex; align-items: center; }
+
+    /* Das Schliessen-Kreuz eines Dialogs ist der wichtigste Knopf auf
+       dem Telefon - er war der kleinste. Die Flaeche waechst, das
+       Zeichen bleibt gleich gross. */
+    .modal-close {
+        min-width: 44px; min-height: 44px;
+        display: inline-flex; align-items: center; justify-content: center;
+        top: 8px; right: 8px;
+    }
+
+    /* Formularfelder: unter 16px Schriftgroesse zoomt iOS Safari beim
+       Hineintippen die ganze Seite - danach ist die Seite verschoben
+       und der Nutzer muss von Hand zurueckzoomen. Das ist kein
+       Schoenheitsfehler, es zerstoert die Bedienung des Formulars. */
+    input, select, textarea,
+    .field input, .field select, .field textarea { font-size: 16px; }
+
+    input:not([type=checkbox]):not([type=radio]),
+    select, textarea { min-height: 44px; }
+}
+
+/* === 4. DIALOGE =====================================================
+ * Die Beraterwelt hatte keine gemeinsame Dialog-Klasse: 15 Vorlagen
+ * trugen denselben Satz Inline-Stile noch einmal, jeweils ohne
+ * Hoehenbegrenzung. Gemessen im Querformat (844x390): Dialoghoehe 486px
+ * bei 390px Bildschirmhoehe - die Schaltflaechen "Abbrechen" und
+ * "Speichern" standen ausserhalb des Bildschirms und waren nicht
+ * erreichbar.
+ *
+ * `.d24-modal` / `.d24-modal-box` gab es im Kundenportal bereits und
+ * loesten dasselbe Problem. Statt eine zweite Loesung zu erfinden,
+ * gelten dieselben Namen jetzt ueberall - eine Quelle.
+ */
+.d24-modal {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0, 0, 0, .45);
+    z-index: 200; align-items: center; justify-content: center;
+    padding: 20px; overflow-y: auto;
+}
+.d24-modal.open { display: flex; }
+.d24-modal-box {
+    background: #fff; border-radius: 14px; padding: 28px;
+    width: 100%; max-width: 480px; position: relative;
+    /* `dvh` ist der Kern: `vh` rechnet auf dem Telefon mit
+       AUSGEFAHRENER Adressleiste. Ein Dialog mit `max-height:92vh`
+       ragt, solange die Leiste sichtbar ist, unten aus dem Bild -
+       genau dort, wo die Schaltflaechen sitzen. `min()` haelt aeltere
+       Browser ohne `dvh` auf dem alten Wert statt auf keinem. */
+    max-height: min(92vh, 92dvh);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+
+/*
+ * HOEHENDECKEL AUCH FUER DIE ALTEN DIALOGE. Die 18 Dialoge der
+ * Beraterwelt tragen ihre Masse als style="..."-Attribut; ein solches
+ * Attribut schlaegt jede Klassenregel. Von diesen 18 setzten neun gar
+ * keine Hoehenbegrenzung - genau sie liefen im Querformat unten aus dem
+ * Bild (gemessen: 486px Dialog auf 390px Bildschirm, "Abbrechen" und
+ * "Speichern" unerreichbar).
+ *
+ * `!important` ist hier kein Durchgriff aus Bequemlichkeit, sondern die
+ * einzige Moeglichkeit, ein Inline-Attribut zu ueberstimmen, ohne 18
+ * Vorlagen gleichzeitig umzuschreiben. Es gilt AUSSCHLIESSLICH unter
+ * 640px - die Rechner-Darstellung bleibt Zeichen fuer Zeichen die alte.
+ * Wandern die Inline-Masse spaeter in Klassen, kann das `!important`
+ * ersatzlos entfallen.
+ */
+@media (max-width: 640px) {
+    /* Auf dem Telefon von unten einfahren statt mittig schweben: der
+       Daumen erreicht den unteren Bildrand, nicht die Mitte. */
+    .d24-modal {
+        padding: 0 !important;
+        align-items: flex-end !important;
+        overflow-y: auto !important;
+    }
+    .d24-modal-box {
+        width: 100% !important;
+        max-width: none !important;
+        border-radius: 16px 16px 0 0 !important;
+        padding: 22px 18px calc(22px + env(safe-area-inset-bottom)) !important;
+        max-height: min(90vh, 90dvh) !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+}
+
+/*
+ * Querformat auf dem Telefon (z.B. 844x390): hier ist nicht die Breite
+ * knapp, sondern die HOEHE. Der Deckel muss deshalb auch oberhalb von
+ * 640px greifen, sonst steht der Dialog wieder unten aus dem Bild.
+ */
+@media (max-height: 520px) and (orientation: landscape) {
+    .d24-modal { align-items: flex-start !important; padding: 8px !important; overflow-y: auto !important; }
+    .d24-modal-box {
+        max-height: min(94vh, 94dvh) !important;
+        overflow-y: auto !important;
+        padding-top: 16px !important;
+        padding-bottom: 16px !important;
+    }
+}
+
+/* === 5. SICHERE BEREICHE ============================================
+ * iPhone-Homeindikator und Notch. Ohne diese Reserve liegt die unterste
+ * Schaltflaeche einer fest stehenden Leiste unter dem Homeindikator und
+ * laesst sich nicht treffen.
+ */
+@supports (padding: max(0px)) {
+    .tabbar { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+/* === 6. UEBERLAUF-BREMSE ============================================
+ * Letzte Instanz gegen waagerechtes Schieben der ganzen Seite. Bewusst
+ * NUR auf dem Telefon und bewusst NUR `overflow-x`: `overflow:hidden`
+ * auf `body` wuerde auf iOS auch das senkrechte Scrollen abwuergen, und
+ * `position:sticky` verliert in einem Element mit `overflow:hidden`
+ * seine Wirkung.
+ *
+ * Das ist eine Bremse, kein Ersatz fuer die Ursachenbehebung oben -
+ * ohne die Tabellen-Regel wuerde sie den Inhalt nur unerreichbar
+ * machen statt ihn scrollbar zu machen.
+ */
+@media (max-width: 900px) {
+    html, body { max-width: 100%; overflow-x: hidden; }
+    img, video, canvas, svg { max-width: 100%; }
+}
+
+/* === 7. LANGE WERTE OHNE TRENNSTELLE ================================
+ * IBAN, Vertragsnummer, Zaehlernummer und E-Mail-Adresse haben keine
+ * Leerzeichen. In einer 320px schmalen Spalte schieben sie die ganze
+ * Seite auf, statt umzubrechen.
+ */
+@media (max-width: 900px) {
+    .break-anywhere, .muted, .metric-sub, td, dd { overflow-wrap: anywhere; }
+}
+@media (pointer: coarse) {
+    /* In einer scrollbaren Tabelle gilt weiterhin `nowrap` (siehe 1) -
+       dort ist Schieben richtig und Umbrechen falsch. */
+    .card-flush > table td, .scroll-x > table td { overflow-wrap: normal; }
+}

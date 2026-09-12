@@ -17,41 +17,175 @@
             <span style="position:absolute;left:0;right:0;bottom:0;padding:14px 18px;background:linear-gradient(transparent,rgba(0,0,0,.65));color:#fff;font-weight:700;font-size:15px;">{{ $b->title }} <span style="font-weight:400;font-size:12.5px;">– {{ __('Mehr erfahren') }} →</span></span>
         </a>
         @if($b->dismiss_days)
-        <button type="button" class="banner-close" data-banner="{{ $b->id }}" title="Ausblenden"
-            style="position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:50%;border:none;background:rgba(0,0,0,.45);color:#fff;font-size:15px;cursor:pointer;line-height:1;">✕</button>
+        <button type="button" class="banner-close" data-banner="{{ $b->id }}" title="{{ __('Ausblenden') }}"
+            aria-label="{{ __('Ausblenden') }}"><span>✕</span></button>
         @endif
     </div>
     @endforeach
     @if($banners->count() > 1)
-    <div style="position:absolute;bottom:10px;right:14px;display:flex;gap:6px;">
+    {{-- Punkte als ECHTE Schaltflaechen mit Fingermass (Responsive-Audit
+         12.09.2026). Vorher waren es 9x9-px-<span>: unter dem Finger
+         (WCAG 2.5.5 verlangt 44px), ohne Tastaturfokus und ohne Rolle
+         fuer Screenreader. Die Trefferflaeche ist jetzt 44x44, der
+         SICHTBARE Punkt bleibt 9px - die Optik aendert sich nicht. --}}
+    <div class="banner-dots" role="tablist" aria-label="{{ __('Banner wählen') }}">
         @foreach($banners as $i => $b)
-        <span class="banner-dot" data-dot="{{ $i }}" style="width:9px;height:9px;border-radius:50%;background:{{ $i === 0 ? '#fff' : 'rgba(255,255,255,.45)' }};cursor:pointer;"></span>
+        <button type="button" class="banner-dot{{ $i === 0 ? ' is-active' : '' }}" data-dot="{{ $i }}"
+                role="tab" aria-selected="{{ $i === 0 ? 'true' : 'false' }}"
+                aria-label="{{ __('Banner') }} {{ $i + 1 }}"></button>
         @endforeach
     </div>
     @endif
+    @push('styles')
+    <style>
+    /* Bannerpunkte: 44px Trefferflaeche, 9px sichtbarer Punkt. Die
+       Flaeche ist unsichtbar und ueberlappt das Bild - deshalb sitzt
+       der Streifen buendig am Rand statt mit Abstand. */
+    #banner-carousel .banner-dots{position:absolute;bottom:0;inset-inline-end:4px;display:flex;gap:2px;z-index:3;}
+    #banner-carousel .banner-dot{width:44px;height:44px;padding:0;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;}
+    #banner-carousel .banner-dot::before{content:'';width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.45);transition:background .18s,transform .18s;}
+    #banner-carousel .banner-dot.is-active::before{background:#fff;transform:scale(1.15);}
+    #banner-carousel .banner-dot:focus-visible{outline:2px solid #fff;outline-offset:-8px;border-radius:50%;}
+    /* Schliessen-Kreuz: sichtbarer Kreis bleibt 30px, Trefferflaeche 44px. */
+    #banner-carousel .banner-close{position:absolute;top:0;inset-inline-end:0;width:44px;height:44px;border:none;background:none;color:#fff;font-size:15px;cursor:pointer;line-height:1;z-index:3;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;}
+    #banner-carousel .banner-close::before{content:'';position:absolute;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.45);}
+    #banner-carousel .banner-close span{position:relative;z-index:1;}
+    #banner-carousel .banner-close:focus-visible{outline:2px solid #fff;outline-offset:-10px;border-radius:50%;}
+    /* Wischen darf nicht mit dem senkrechten Seitenlauf kollidieren:
+       `pan-y` gibt das senkrechte Scrollen frei und laesst uns die
+       waagerechte Geste auswerten. */
+    #banner-carousel{touch-action:pan-y;}
+    /* Im Querformat ist 70vh fast der ganze Bildschirm - der Banner
+       verdeckt dann die Uebersicht darunter vollstaendig. */
+    @media (max-height: 520px) and (orientation: landscape){
+        #banner-carousel img, #banner-carousel video{max-height:52vh;}
+    }
+    @media (prefers-reduced-motion: reduce){
+        #banner-carousel .banner-dot::before{transition:none;}
+    }
+    </style>
+    @endpush
+
     <script @cspNonce>
     (function(){
-        const slides=document.querySelectorAll('#banner-carousel .banner-slide');
-        const dots=document.querySelectorAll('#banner-carousel .banner-dot');
-        let cur=0;
+        var wrap=document.getElementById('banner-carousel');
+        if(!wrap) return;
+
+        /* LEHRE (Responsive-Audit 12.09.2026): die Liste der Folien
+           wurde frueher EINMAL mit querySelectorAll geholt und in einer
+           Konstanten gehalten. Eine solche NodeList ist statisch - sie
+           kennt das spaetere `slide.remove()` des Ausblendens nicht.
+           Blendete ein Kunde einen Banner aus, zeigte die Liste
+           weiterhin drei Eintraege, von denen einer nicht mehr im
+           Dokument stand. Sobald die Selbstschaltung (alle 6 s) auf
+           genau diesen Eintrag traf, setzte sie `display:block` an
+           einem abgehaengten Knoten: das Karussell war LEER, dauerhaft,
+           ohne Fehlermeldung. Nachgestellt und gemessen - nach dem
+           Ausblenden war spaetestens beim dritten Weiterschalten, also
+           nach rund 18 Sekunden, nichts mehr zu sehen.
+           Deshalb wird die Liste bei JEDEM Zugriff frisch gelesen. */
+        function slides(){ return Array.prototype.slice.call(wrap.querySelectorAll('.banner-slide')); }
+        function dots(){ return Array.prototype.slice.call(wrap.querySelectorAll('.banner-dot')); }
+
+        var cur=0, timer=null;
+
         function show(n){
-            if(slides.length<2)return;
-            slides[cur].style.display='none';if(dots[cur])dots[cur].style.background='rgba(255,255,255,.45)';
-            cur=((n%slides.length)+slides.length)%slides.length;
-            slides[cur].style.display='block';if(dots[cur])dots[cur].style.background='#fff';
-        }
-        dots.forEach(d=>d.addEventListener('click',e=>{e.preventDefault();show(parseInt(d.dataset.dot));}));
-        if(slides.length>1)setInterval(()=>show(cur+1),6000);
-        // Schließen: Banner sofort ausblenden und serverseitig für die
-        // konfigurierte Dauer merken.
-        document.querySelectorAll('#banner-carousel .banner-close').forEach(btn=>{
-            btn.addEventListener('click',function(e){
-                e.preventDefault();e.stopPropagation();
-                const slide=btn.closest('.banner-slide');
-                fetch('/portal/banner/'+btn.dataset.banner+'/schliessen',{method:'POST',headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}','Accept':'application/json'}}).catch(()=>{});
-                if(slide){slide.remove();const rest=document.querySelectorAll('#banner-carousel .banner-slide');if(rest.length===0){document.getElementById('banner-carousel').remove();}else{rest[0].style.display='block';}}
+            var sl=slides();
+            if(!sl.length) return;
+            cur=((n%sl.length)+sl.length)%sl.length;
+            sl.forEach(function(s,i){ s.style.display = (i===cur ? 'block' : 'none'); });
+            dots().forEach(function(d,i){
+                d.classList.toggle('is-active', i===cur);
+                d.setAttribute('aria-selected', i===cur ? 'true' : 'false');
             });
+        }
+
+        function start(){
+            stop();
+            if(slides().length>1) timer=setInterval(function(){ show(cur+1); },6000);
+        }
+        function stop(){ if(timer){ clearInterval(timer); timer=null; } }
+
+        /* Nach einer Bedienung nicht sofort weiterschalten: wer gerade
+           einen Banner ausgewaehlt hat, will ihn ansehen und nicht nach
+           zwei Sekunden den naechsten bekommen. */
+        function restart(){ stop(); start(); }
+
+        wrap.addEventListener('click', function(e){
+            var d=e.target.closest('.banner-dot');
+            if(!d) return;
+            e.preventDefault();
+            show(parseInt(d.dataset.dot,10));
+            restart();
         });
+
+        /* Tastatur: Pfeiltasten auf den Punkten. */
+        wrap.addEventListener('keydown', function(e){
+            if(!e.target.closest('.banner-dot')) return;
+            if(e.key==='ArrowRight'||e.key==='ArrowLeft'){
+                e.preventDefault();
+                var rtl=document.documentElement.dir==='rtl';
+                var fwd=(e.key==='ArrowRight')!==rtl;
+                show(cur+(fwd?1:-1)); restart();
+                (dots()[cur]||{}).focus && dots()[cur].focus();
+            }
+        });
+
+        /* WISCHGESTE - fehlte vollstaendig. Auf einem Telefon ist
+           Wischen die erwartete Bedienung eines Karussells; die 9px
+           grossen Punkte waren vorher der EINZIGE Weg, die Folie zu
+           wechseln. Nur auswerten, wenn die Geste deutlich waagerecht
+           ist, sonst wuerde jeder Scrollversuch die Folie umschalten. */
+        var x0=null,y0=null;
+        wrap.addEventListener('touchstart',function(e){
+            if(e.touches.length!==1){ x0=null; return; }
+            x0=e.touches[0].clientX; y0=e.touches[0].clientY; stop();
+        },{passive:true});
+        wrap.addEventListener('touchend',function(e){
+            if(x0===null){ start(); return; }
+            var dx=e.changedTouches[0].clientX-x0;
+            var dy=e.changedTouches[0].clientY-y0;
+            x0=null;
+            if(Math.abs(dx)>40 && Math.abs(dx)>Math.abs(dy)*1.5){
+                var rtl=document.documentElement.dir==='rtl';
+                show(cur + ((dx<0)!==rtl ? 1 : -1));
+            }
+            start();
+        },{passive:true});
+        wrap.addEventListener('touchcancel',function(){ x0=null; start(); },{passive:true});
+
+        /* Im Hintergrundtab nicht weiterlaufen (spart Arbeit auf dem
+           Telefon und verhindert einen Sprung beim Zurueckkehren). */
+        document.addEventListener('visibilitychange', function(){
+            document.visibilityState==='visible' ? start() : stop();
+        });
+
+        /* Ausblenden: Folie entfernen, zugehoerigen Punkt entfernen und
+           neu aufsetzen. Weil `slides()` jetzt frisch liest, ist der
+           Zustand danach in sich stimmig. */
+        wrap.addEventListener('click', function(e){
+            var btn=e.target.closest('.banner-close');
+            if(!btn) return;
+            e.preventDefault(); e.stopPropagation();
+            var slide=btn.closest('.banner-slide');
+            fetch('/portal/banner/'+btn.dataset.banner+'/schliessen',{method:'POST',headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}','Accept':'application/json'}}).catch(function(){});
+            if(!slide) return;
+            var i=slides().indexOf(slide);
+            var d=dots()[i];
+            if(d) d.remove();
+            slide.remove();
+            var rest=slides();
+            if(!rest.length){ stop(); wrap.remove(); return; }
+            /* Punkte neu durchnummerieren - sonst zeigt data-dot auf
+               eine Folie, die es nicht mehr gibt. */
+            dots().forEach(function(dd,k){ dd.dataset.dot=k; });
+            if(rest.length<2){ var dc=wrap.querySelector('.banner-dots'); if(dc) dc.remove(); stop(); }
+            show(cur>=rest.length ? 0 : cur);
+            if(rest.length>1) restart();
+        });
+
+        show(0);
+        start();
     })();
     </script>
 </div>

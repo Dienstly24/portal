@@ -20,6 +20,14 @@
 @import './analytics.css';
 
 /*
+ * Mobile/Tablet-Schicht (Responsive-Audit 12.09.2026) - siehe
+ * responsive.css. Steht bewusst ZULETZT: sie korrigiert Masse der
+ * vorherigen Schichten und darf deshalb nicht von ihnen ueberschrieben
+ * werden.
+ */
+@import './responsive.css';
+
+/*
  * Das hidden-Attribut muss auch gegen eine Klasse mit eigenem display
  * gewinnen (Audit SEC-4).
  *
