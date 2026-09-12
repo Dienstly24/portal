@@ -34,17 +34,23 @@ use Tests\TestCase;
 class ResponsiveLayoutTest extends TestCase
 {
     /**
-     * Layouts mit Schubladen-Navigation:
-     * [Vorlage, Klasse des Oeffners, Klasse der Leiste].
+     * Layouts mit Schubladen-Navigation: [Vorlage, Klasse des Oeffners].
      *
-     * @return array<string,array{0:string,1:string,2:string}>
+     * Bewusst GENAU zwei Werte - so viele, wie jede Testmethode
+     * entgegennimmt. Liefert ein Datenlieferant mehr Werte als die
+     * Methode Parameter hat, meldet PHPUnit 12 das als Warnung, und die
+     * Testsuite endet mit Exitcode 1, obwohl kein einziger Fall
+     * fehlschlaegt. Genau so war es beim ersten Lauf (0 Fehler, 4
+     * Warnungen, CI rot).
+     *
+     * @return array<string,array{0:string,1:string}>
      */
     public static function layouts(): array
     {
         return [
-            'Beraterwelt' => ['layouts/admin.blade.php', 'admin-mobile-btn', 'sidebar'],
-            'Partnerportal' => ['layouts/partner.blade.php', 'p-navbtn', 'sidebar'],
-            'Kundenportal' => ['layouts/portal.blade.php', 'topbar', 'sidebar'],
+            'Beraterwelt' => ['layouts/admin.blade.php', 'admin-mobile-btn'],
+            'Partnerportal' => ['layouts/partner.blade.php', 'p-navbtn'],
+            'Kundenportal' => ['layouts/portal.blade.php', 'topbar'],
         ];
     }
 
@@ -124,14 +130,14 @@ class ResponsiveLayoutTest extends TestCase
      * kleinen Knopf erneut exakt zu treffen: Overlay-Tipp und ESC.
      */
     #[DataProvider('layouts')]
-    public function test_die_schublade_laesst_sich_ohne_den_oeffner_schliessen(string $datei): void
+    public function test_die_schublade_laesst_sich_ohne_den_oeffner_schliessen(string $datei, string $oeffner): void
     {
         $s = $this->quelle($datei);
 
         $this->assertStringContainsString(
             "'Escape'",
             $s,
-            "{$datei}: Kein ESC-Handler. Auf der Tastatur ist das der einzige Weg heraus."
+            "{$datei}: Kein ESC-Handler fuer .{$oeffner}. Auf der Tastatur ist das der einzige Weg heraus."
         );
         $this->assertMatchesRegularExpression(
             '/overlay/i',
