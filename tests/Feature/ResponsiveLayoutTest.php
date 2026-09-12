@@ -199,6 +199,38 @@ class ResponsiveLayoutTest extends TestCase
     }
 
     /**
+     * Die Ueberlauf-Bremse darf `position:sticky` nicht zerstoeren.
+     *
+     * `overflow-x:hidden` erzeugt einen SCROLL-CONTAINER und nimmt damit
+     * JEDEM Nachfahren die Wirkung von `position:sticky`. Beim Bau
+     * dieser Schicht ist genau das passiert: die Filterleiste der
+     * Auswertung (`.an-filter`) scrollte auf 390px und 768px weg,
+     * waehrend sie auf dem Rechner weiter klebte - ein Fehler, den man
+     * nur sieht, wenn man auf einer langen Seite auch wirklich scrollt.
+     *
+     * `overflow-x:clip` schneidet genauso ab, erzeugt aber keinen
+     * Scroll-Container. Der Unterschied ist ein Wort und entscheidet,
+     * ob die Filterleiste auf dem Telefon stehen bleibt.
+     */
+    public function test_die_ueberlauf_bremse_zerstoert_kein_sticky(): void
+    {
+        $css = file_get_contents(resource_path('css/responsive.css'));
+
+        $this->assertMatchesRegularExpression(
+            '/html,\s*body\s*\{[^}]*overflow-x:\s*clip/',
+            $css,
+            'responsive.css: Die Bremse auf html/body muss `overflow-x: clip` benutzen.'
+        );
+        $this->assertDoesNotMatchRegularExpression(
+            '/html,\s*body\s*\{[^}]*overflow-x:\s*hidden/',
+            $css,
+            'responsive.css: `overflow-x: hidden` auf html/body erzeugt einen Scroll-Container '.
+            'und nimmt jedem Nachfahren die Wirkung von position:sticky - die Filterleiste der '.
+            'Auswertung (.an-filter) scrollt dann auf dem Telefon weg. Stattdessen `clip`.'
+        );
+    }
+
+    /**
      * Die Mobil-Schicht muss im Bundle landen. Ein nicht eingebundenes
      * Stylesheet faellt genauso still aus wie ein @push nach @stack
      * (Lehre SEC-4).

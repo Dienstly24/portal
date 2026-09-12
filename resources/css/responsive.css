@@ -271,17 +271,30 @@
 
 /* === 6. UEBERLAUF-BREMSE ============================================
  * Letzte Instanz gegen waagerechtes Schieben der ganzen Seite. Bewusst
- * NUR auf dem Telefon und bewusst NUR `overflow-x`: `overflow:hidden`
- * auf `body` wuerde auf iOS auch das senkrechte Scrollen abwuergen, und
- * `position:sticky` verliert in einem Element mit `overflow:hidden`
- * seine Wirkung.
+ * NUR auf dem Telefon.
+ *
+ * `clip` UND NICHT `hidden` - das ist hier der ganze Punkt und beim
+ * Bauen dieser Datei auch prompt schiefgegangen:
+ *
+ * `overflow-x:hidden` erzeugt einen SCROLL-CONTAINER. Ein solcher
+ * Container nimmt jedem Nachfahren die Wirkung von `position:sticky` -
+ * gemessen ist genau das passiert: die Filterleiste der Auswertung
+ * (`.an-filter`, sie MUSS stehen bleiben, weil jede Zahl der Seite an
+ * ihrer Auswahl haengt) scrollte auf 390px und 768px weg, waehrend sie
+ * auf dem Rechner weiter klebte. Ein Fehler, den man nur sieht, wenn
+ * man auf einer langen Seite auch wirklich scrollt.
+ *
+ * `overflow-x:clip` schneidet ebenfalls ab, erzeugt aber KEINEN
+ * Scroll-Container: `position:sticky` bleibt wirksam, und die andere
+ * Achse wird nicht stillschweigend auf `auto` gezogen (`hidden` tut
+ * das, was auf iOS zusaetzlich das senkrechte Scrollen stoeren kann).
  *
  * Das ist eine Bremse, kein Ersatz fuer die Ursachenbehebung oben -
  * ohne die Tabellen-Regel wuerde sie den Inhalt nur unerreichbar
- * machen statt ihn scrollbar zu machen.
+ * machen statt ihn schiebbar.
  */
 @media (max-width: 900px) {
-    html, body { max-width: 100%; overflow-x: hidden; }
+    html, body { max-width: 100%; overflow-x: clip; }
     img, video, canvas, svg { max-width: 100%; }
 }
 
