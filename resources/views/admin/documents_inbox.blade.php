@@ -114,7 +114,7 @@
 
 {{-- Schnellvorschau (Quick-Look): erscheint beim Ueberfahren eines Dokuments,
      ohne eine neue Seite zu oeffnen. Klick auf das Dokument oeffnet es voll. --}}
-<div id="doc-quicklook" style="display:none;position:fixed;z-index:300;width:min(560px,46vw);height:70vh;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.28);overflow:hidden;">
+<div id="doc-quicklook" style="display:none;position:fixed;z-index:300;width:min(560px,46vw);height:min(70vh,70dvh);background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.28);overflow:hidden;">
     <div style="padding:7px 11px;font-size:12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--canvas);">
         <span id="doc-quicklook-name" style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
         <span style="color:var(--ink-soft);white-space:nowrap;">Klick öffnet vollständig</span>
@@ -1468,6 +1468,15 @@ window.docReview = (function() {
     var frame = document.getElementById('doc-quicklook-frame');
     var nameEl = document.getElementById('doc-quicklook-name');
     if (!ql || !frame) return;
+    /*
+     * NUR auf echten Zeigegeraeten (Responsive-Audit 12.09.2026).
+     * Ein Telefon hat kein Hover, simuliert es aber beim Antippen: der
+     * Fingertipp liess ein 46vw schmales Fenster mit eingebettetem PDF
+     * aufgehen, das niemand angefordert hat. Auf dem Telefon oeffnet
+     * der Klick das Dokument ohnehin vollstaendig - es geht keine
+     * Funktion verloren. Frage nach dem GERAET, nicht nach der Breite.
+     */
+    if (window.matchMedia && !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
     var showTimer = null, hideTimer = null;
 
     function place(rect) {

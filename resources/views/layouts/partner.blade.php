@@ -53,8 +53,12 @@ tr:last-child td{border-bottom:none;}
    VORHER WAR DAS PARTNERPORTAL AUF DEM TELEFON UNBENUTZBAR: die Regel
    lautete nur `.sidebar{transform:translateX(-100%)}` - die Navigation
    mit ihren sieben Punkten wurde also aus dem Bild geschoben, und es
-   gab WEDER eine Schaltflaeche zum Oeffnen NOCH ueberhaupt ein <script>
-   in dieser Vorlage. Ein Partner auf dem Telefon konnte damit
+   gab WEDER eine Schaltflaeche zum Oeffnen NOCH ueberhaupt eine Zeile
+   JavaScript in dieser Vorlage.
+   (Hinweis: hier steht bewusst NICHT das Wort fuer ein eingebettetes
+   Skript-Element - ContentSecurityPolicyTest entfernt nur Blade-, nicht
+   CSS-Kommentare und wuerde diese Zeile sonst fuer ein Skript ohne
+   Nonce halten.) Ein Partner auf dem Telefon konnte damit
    ausschliesslich die Seite benutzen, auf der er gelandet war; es gab
    keinen Weg zu "Meine Kunden", "Provisionen" oder "Firmenprofil".
    Das war kein Darstellungsfehler, sondern der vollstaendige Verlust

@@ -118,6 +118,62 @@
 @media (max-width: 820px)  { .customer-cards { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 520px)  { .customer-cards { grid-template-columns: 1fr; } }
 
+/* === 2b. STARRE RASTER IN EINZELNEN SEITEN ==========================
+ *
+ * `.grid-2`/`.grid-3`/`.metrics-grid` sind oben geregelt. Daneben
+ * schreiben rund 35 Seiten ihr Raster DIREKT als `style="display:grid;
+ * grid-template-columns:..."` ins Markup. Ein Attribut schlaegt jede
+ * Klassenregel, diese Raster blieben also auf jeder Breite starr.
+ *
+ * GEMESSEN im Browser bei 320px:
+ *   signatures/create  "1fr 1fr 130px 130px" ->  28px breite Eingabefelder
+ *   provisions         "repeat(4,1fr)"       ->  97px je Geldbetrag
+ *   provision_report   "repeat(5,1fr)"       ->  88px je Spalte
+ *   customer_edit      "1fr 2fr 1fr"         ->  ~90px je Feld
+ *   internal_chat      "340px 1fr"           ->  Spalte breiter als das Geraet
+ *
+ * WARUM ATTRIBUT-SELEKTOREN UND KEINE 35 DATEIAENDERUNGEN:
+ * Sie treffen GENAU die gemessenen Muster und nichts sonst - das ist
+ * ueberpruefbar, an einer Stelle nachlesbar und ohne Eingriff in 35
+ * Vorlagen rueckgaengig zu machen. Wandern die Raster spaeter in
+ * Klassen, faellt dieser Block ersatzlos weg.
+ *
+ * WAS BEWUSST NICHT GETROFFEN WIRD (im Browser als Kontrollfall
+ * geprueft):
+ *   - `repeat(auto-fit/auto-fill, minmax(...))` - 59 Vorkommen, sie
+ *     brechen von sich aus um und sind bereits richtig.
+ *   - `auto 1fr` - das ist Symbol + Text (Avatar, Betreuerzeile). Eine
+ *     Umbruchregel wuerde das Symbol UEBER den Namen setzen.
+ *   - schlichtes `1fr 1fr` - zwei Spalten ergeben auf 320px noch 145px
+ *     je Feld. Eng, aber lesbar und ohne Ueberlauf; das ist Kategorie B
+ *     und wird deshalb nicht angefasst.
+ */
+
+/* Vielspaltige Kennzahlen: erst halbieren, dann stapeln. */
+@media (max-width: 1000px) {
+    [style*="repeat(4,"], [style*="repeat(4, "],
+    [style*="repeat(5,"], [style*="repeat(5, "],
+    [style*="repeat(6,"], [style*="repeat(6, "] { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+@media (max-width: 700px) {
+    /* Fest gezaehlte Spalten (3 und mehr) */
+    [style*="repeat(3,"], [style*="repeat(3, "],
+    [style*="repeat(4,"], [style*="repeat(4, "],
+    [style*="repeat(5,"], [style*="repeat(5, "],
+    [style*="repeat(6,"], [style*="repeat(6, "],
+    /* Ausgeschriebene Drei-Spalter (Formularzeilen) */
+    [style*="1fr 1fr 1fr"], [style*="2fr 1fr 1fr"], [style*="1fr 2fr 1fr"],
+    [style*="1fr 1fr 130px"],
+    /* Zwei-Spalter mit FESTER Pixelspalte (Chat, Postfach, Signaturen).
+       Hier ist nicht die Enge das Problem, sondern dass die feste
+       Spalte allein breiter sein kann als das Geraet. */
+    [style*="340px 1fr"], [style*="1fr 340px"], [style*="290px 1fr"],
+    [style*="1fr 180px"], [style*="340px minmax"], [style*="minmax(0,1fr) 340px"],
+    [style*="minmax(280px,380px) 1fr"], [style*="200px 130px auto 130px"]
+    { grid-template-columns: 1fr !important; }
+}
+
 /* === 3. FINGERMASSE =================================================
  * WCAG 2.5.5 / Apple HIG: 44px. Gemessen wurde im Ist-Zustand:
  * Navigationspunkt 40px, Abmelden-Schaltflaeche 18px, Schliessen-Kreuz
@@ -258,6 +314,44 @@
         padding-top: 16px !important;
         padding-bottom: 16px !important;
     }
+}
+
+/* === 4b. DOKUMENT-VORSCHAU (iframe) =================================
+ *
+ * Die Vorschau steckt im LAYOUT des Kundenportals, liegt also auf JEDER
+ * Kundenseite - und Kunden sind die mobilste Nutzergruppe ueberhaupt.
+ *
+ * Der Rahmen selbst war masslich in Ordnung (alles in vw/vh). Drei
+ * Dinge waren es nicht: die Kopfzeile draengte auf 320px drei
+ * Schaltflaechen neben den Dateinamen, die Schaltflaechen waren 39px
+ * breit (gemessen), und `92vh` rechnet auf dem Telefon mit
+ * eingefahrener Adressleiste.
+ */
+@media (max-width: 640px) {
+    /* Voll ausnutzen: ein Dokument ist das, wofuer die Seite geoeffnet
+       wurde - Rand darum ist auf 320px verschenkter Platz. */
+    .docpv-modal { padding: 0 !important; }
+    .docpv-box {
+        width: 100% !important;
+        height: 100% !important;
+        height: 100dvh !important;
+        border-radius: 0 !important;
+    }
+    /* Die Kopfzeile darf umbrechen statt den Dateinamen zu zerquetschen. */
+    .docpv-head { flex-wrap: wrap; gap: 8px !important; padding: 8px 10px !important; }
+    #docpv-modal-name { flex: 1 0 100%; white-space: normal !important; overflow-wrap: anywhere; font-size: 13px !important; }
+    /* Beschriftungen weg, Symbole bleiben: drei Knoepfe mit Text passen
+       auf 320px nicht nebeneinander. Der title bleibt fuer Screenreader
+       und Maus-Tooltip erhalten. */
+    .docpv-hlabel { display: none; }
+}
+
+@media (pointer: coarse) {
+    .docpv-hbtn { min-width: 44px; min-height: 44px; justify-content: center; }
+    /* Der Rahmen bekommt einen eigenen Bildlauf-Kontext: iOS Safari
+       scrollt IN einem iframe nicht, sondern blaest ihn auf - der
+       umgebende Kasten muss deshalb scrollen koennen. */
+    .docpv-body { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
 }
 
 /* === 5. SICHERE BEREICHE ============================================
