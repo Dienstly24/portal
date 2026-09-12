@@ -23,7 +23,7 @@ use Tests\TestCase;
  */
 class MobileInteractionTest extends TestCase
 {
-    private function view(string $datei): string
+    private function vorlage(string $datei): string
     {
         $pfad = resource_path('views/'.$datei);
         $this->assertFileExists($pfad);
@@ -50,7 +50,7 @@ class MobileInteractionTest extends TestCase
      */
     public function test_das_karussell_liest_seine_folien_bei_jedem_zugriff_neu(): void
     {
-        $s = $this->view('portal/dashboard.blade.php');
+        $s = $this->vorlage('portal/dashboard.blade.php');
 
         $this->assertStringContainsString(
             'function slides()',
@@ -68,7 +68,7 @@ class MobileInteractionTest extends TestCase
     /** Ohne Wischen war auf dem Telefon nur der 9px-Punkt uebrig. */
     public function test_das_karussell_laesst_sich_wischen(): void
     {
-        $s = $this->view('portal/dashboard.blade.php');
+        $s = $this->vorlage('portal/dashboard.blade.php');
 
         foreach (['touchstart', 'touchend'] as $ereignis) {
             $this->assertStringContainsString(
@@ -90,7 +90,7 @@ class MobileInteractionTest extends TestCase
      */
     public function test_die_bannerpunkte_sind_schaltflaechen_mit_fingermass(): void
     {
-        $s = $this->view('portal/dashboard.blade.php');
+        $s = $this->vorlage('portal/dashboard.blade.php');
 
         $this->assertMatchesRegularExpression(
             '/<button[^>]*class="banner-dot/',
@@ -121,7 +121,7 @@ class MobileInteractionTest extends TestCase
     public function test_die_schnellvorschau_erscheint_nur_auf_zeigegeraeten(): void
     {
         foreach (['partials/doc_preview.blade.php', 'admin/documents_inbox.blade.php'] as $datei) {
-            $s = $this->view($datei);
+            $s = $this->vorlage($datei);
             $this->assertStringContainsString(
                 '(hover: hover) and (pointer: fine)',
                 $s,
@@ -139,7 +139,7 @@ class MobileInteractionTest extends TestCase
      */
     public function test_die_dokumentvorschau_rechnet_mit_der_sichtbaren_hoehe(): void
     {
-        $s = $this->view('partials/doc_preview.blade.php');
+        $s = $this->vorlage('partials/doc_preview.blade.php');
 
         $this->assertStringContainsString(
             'dvh',
@@ -163,7 +163,7 @@ class MobileInteractionTest extends TestCase
      */
     public function test_die_pdf_vorschau_bietet_auf_beruehrgeraeten_einen_ausweg(): void
     {
-        $s = $this->view('partials/doc_preview.blade.php');
+        $s = $this->vorlage('partials/doc_preview.blade.php');
 
         $this->assertStringContainsString(
             'PDF öffnen',

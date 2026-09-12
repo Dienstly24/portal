@@ -33,6 +33,17 @@
 body.vp-searching .vp-link.vp-collapsed{display:flex;}
 .vp-drag{cursor:grab;color:var(--line);font-size:14px;padding:0 4px;user-select:none;flex:none;line-height:1;}
 .vp-link:hover .vp-drag{color:var(--ink-soft);}
+/* Sortieren MIT DEM FINGER (Responsive-Audit 12.09.2026).
+   Die Reihenfolge liess sich bisher nur durch Ziehen aendern - und
+   HTML5-Drag-and-Drop (dragstart/dragover/drop) feuert auf
+   Beruehrgeraeten UEBERHAUPT NICHT. Auf Telefon und Tablet war das
+   Sortieren damit nicht etwa umstaendlich, sondern unmoeglich.
+   Die Pfeile sind die Beruehr-Entsprechung, nicht ein Ersatz: das
+   Ziehen mit der Maus bleibt unveraendert. Sie erscheinen nur dort,
+   wo es kein feines Zeigegeraet gibt. */
+.vp-sort{display:none;flex-direction:column;flex:none;gap:2px;}
+.vp-sort button{border:none;background:none;cursor:pointer;color:var(--ink-soft);font-size:11px;line-height:1;padding:0;width:34px;height:22px;}
+.vp-sort button:disabled{opacity:.25;cursor:default;}
 .vp-link.vp-dragging{opacity:.4;}
 .vp-link.vp-dropover{background:var(--emerald-soft);}
 .vp-link-main{flex:1;min-width:0;display:flex;flex-direction:column;padding:9px 8px;text-decoration:none;color:var(--ink);border-radius:8px;}
@@ -55,6 +66,23 @@ body.vp-searching .vp-link.vp-collapsed{display:flex;}
 body.vp-searching .vp-card.vp-hidden{display:none;}
 
 @media(max-width:600px){.vp-grid{grid-template-columns:1fr;}}
+
+/* REIHENFOLGE: dieser Block steht am ENDE des Stylesheets, nicht bei den
+   Sortier-Regeln oben. `.vp-del` und `.vp-link-title .go` werden weiter
+   unten definiert; bei gleicher Spezifitaet gewinnt die SPAETERE Regel.
+   Stuende dieser Block oben, waere die Kontrastfarbe fuer den Finger
+   wirkungslos - beim ersten Versuch war genau das der Fall, im Browser
+   gemessen (Loeschen-Knopf blieb rgb(224,220,208)). Dieselbe Falle wie
+   beim Menue-Knopf der Beraterwelt. */
+@media (pointer: coarse){
+    .vp-drag{display:none;}
+    .vp-sort{display:flex;}
+    /* Was nur beim Ueberfahren sichtbar wurde, ist auf dem Telefon nie
+       sichtbar - dort gibt es kein Ueberfahren. Loeschen und Sortieren
+       tragen deshalb dauerhaft ihre Kontrastfarbe. */
+    .vp-del{color:var(--ink-soft);}
+    .vp-link-title .go{opacity:1;}
+}
 </style>
 
 <div class="page-header">
@@ -107,6 +135,10 @@ body.vp-searching .vp-card.vp-hidden{display:none;}
             data-id="{{ $link->id }}" data-title="{{ $link->title }}" data-url="{{ $link->url }}"
             data-cat="{{ $key }}" data-icon="{{ $cat['icon'] }}">
             <span class="vp-drag" title="Ziehen zum Sortieren">⠿</span>
+            <span class="vp-sort" role="group" aria-label="Reihenfolge ändern">
+                <button type="button" class="vp-up" title="Nach oben" aria-label="Nach oben">▲</button>
+                <button type="button" class="vp-down" title="Nach unten" aria-label="Nach unten">▼</button>
+            </span>
             <a class="vp-link-main" href="{{ $link->url }}" target="_blank" rel="noopener"
                data-h-click="28508b80be" data-a0="{{ $link->id }}">
                 <span class="vp-link-title">{{ $link->title }} <span class="go">↗</span></span>
@@ -312,6 +344,43 @@ function vpInitDnd(){
         });
     });
 }
+/* Sortieren per Fingertipp. Bewusst DIESELBE Speicherfunktion wie beim
+   Ziehen (vpPersistOrder) - zwei Wege in die Oberflaeche, aber nur ein
+   Weg in die Datenbank. Die Knoepfe am Rand der Liste werden
+   abgeschaltet statt versteckt: eine Schaltflaeche, die verschwindet,
+   laesst die Zeile springen. */
+function vpSortStep(li, richtung){
+    const list = li.parentElement;
+    if(!list) return;
+    const nachbar = richtung < 0 ? li.previousElementSibling : li.nextElementSibling;
+    if(!nachbar || !nachbar.classList.contains('vp-link')) return;
+    if(richtung < 0){ list.insertBefore(li, nachbar); }
+    else { list.insertBefore(nachbar, li); }
+    vpPersistOrder(list);
+    vpSortRefresh(list);
+    li.querySelector(richtung < 0 ? '.vp-up' : '.vp-down')?.focus();
+}
+function vpSortRefresh(list){
+    const zeilen = [...list.querySelectorAll('.vp-link')];
+    zeilen.forEach((li, i) => {
+        const up = li.querySelector('.vp-up'), down = li.querySelector('.vp-down');
+        if(up) up.disabled = (i === 0);
+        if(down) down.disabled = (i === zeilen.length - 1);
+    });
+}
+function vpInitSortButtons(){
+    document.querySelectorAll('.vp-links').forEach(function(list){
+        vpSortRefresh(list);
+        list.addEventListener('click', function(e){
+            const up = e.target.closest('.vp-up'), down = e.target.closest('.vp-down');
+            if(!up && !down) return;
+            e.preventDefault();
+            const li = e.target.closest('.vp-link');
+            if(li) vpSortStep(li, up ? -1 : 1);
+        });
+    });
+}
+
 function vpDragAfter(list, y){
     const els = [...list.querySelectorAll('.vp-link:not(.vp-dragging)')];
     return els.reduce((closest, child) => {
@@ -341,6 +410,7 @@ vpRenderFavs();
 vpRenderRecent();
 vpSyncStars();
 vpInitDnd();
+vpInitSortButtons();
 </script>
 @endsection
 

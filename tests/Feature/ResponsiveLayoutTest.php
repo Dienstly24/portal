@@ -60,7 +60,6 @@ class ResponsiveLayoutTest extends TestCase
      * DER KERNTEST. Die Grundregel `display:none` des Oeffners muss VOR
      * der Medienabfrage stehen, die ihn sichtbar macht - sonst ist er
      * auf jeder Breite unsichtbar.
-     *
      */
     #[DataProvider('layouts')]
     public function test_der_oeffner_der_navigation_wird_auf_schmalen_bildschirmen_sichtbar(string $datei, string $oeffner): void
@@ -102,7 +101,6 @@ class ResponsiveLayoutTest extends TestCase
     /**
      * Wer die Leiste aus dem Bild schiebt, muss einen Weg zurueck
      * anbieten. Im Partnerportal fehlte genau das.
-     *
      */
     #[DataProvider('layouts')]
     public function test_eine_ausgeblendete_navigationsleiste_hat_immer_einen_oeffner(string $datei, string $oeffner): void
@@ -124,7 +122,6 @@ class ResponsiveLayoutTest extends TestCase
     /**
      * Die Schublade muss sich auch wieder schliessen lassen, ohne den
      * kleinen Knopf erneut exakt zu treffen: Overlay-Tipp und ESC.
-     *
      */
     #[DataProvider('layouts')]
     public function test_die_schublade_laesst_sich_ohne_den_oeffner_schliessen(string $datei): void
@@ -147,7 +144,6 @@ class ResponsiveLayoutTest extends TestCase
     /**
      * Fingermass des Oeffners: 44px (WCAG 2.5.5). Gemessen wurde im
      * Ist-Zustand 42px in der Beraterwelt.
-     *
      */
     #[DataProvider('layouts')]
     public function test_der_oeffner_hat_fingermass(string $datei, string $oeffner): void
@@ -157,7 +153,8 @@ class ResponsiveLayoutTest extends TestCase
         if ($start === false) {
             $this->markTestSkipped($datei.': keine Grundregel.');
         }
-        $regel = substr($s, $start, (int) (strpos($s, '}', $start) - $start));
+        $ende = strpos($s, '}', $start);
+        $regel = substr($s, $start, $ende - $start);
 
         $geprueft = 0;
         foreach (['width', 'height'] as $mass) {
