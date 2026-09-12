@@ -8,7 +8,7 @@
 /* Markenfarben bewusst als Hex: diese Seite wird auch auf Website-Hosts
    ohne Vite-Bundle ausgeliefert (UX-1). Werte: brand.css. */
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Inter',Arial,sans-serif;background:#F7F5EF;color:#152826;min-height:100vh;display:flex;flex-direction:column;}
+body{font-family:'Inter',Arial,sans-serif;background:#F7F5EF;color:#152826;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;}
 .top{background:#131A17;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
 .top .logo{display:inline-block;}
 .top .logo img{height:38px;width:auto;display:block;}

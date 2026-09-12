@@ -61,7 +61,7 @@
    Flaechentoene dieser Leistungsseite - sie weicht bewusst ab. */
 :root{--paper:var(--graphite-black);--card:#15171b;--card2:#1b1e23;--glass-line:rgba(255,255,255,.10);--line2:rgba(255,255,255,.16);--muted:#9aa1ab;--text:#eef1ee;}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Inter',system-ui,Arial,sans-serif;min-height:100vh;color:var(--text);display:flex;flex-direction:column;background:var(--paper);line-height:1.6;}
+body{font-family:'Inter',system-ui,Arial,sans-serif;min-height:100vh;min-height:100dvh;color:var(--text);display:flex;flex-direction:column;background:var(--paper);line-height:1.6;}
 .bg{position:fixed;inset:0;z-index:-1;background:radial-gradient(1100px 720px at 78% -8%, #23272e 0%, #14161a 46%, var(--paper) 100%);}
 .bg::after{content:'';position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.045) 1px,transparent 1px);background-size:28px 28px;}
 .topbar{display:flex;align-items:center;justify-content:space-between;max-width:1080px;width:100%;margin:0 auto;padding:18px 24px 0;}

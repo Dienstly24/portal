@@ -15,7 +15,7 @@
    Die Namen folgen resources/css/brand.css. */
 :root{--emerald:#17A65B;--emerald-deep:#128A4B;--gold-soft:#D1C18F;--canvas:#F8F6F0;--card:#FFFFFF;--line:#E0DCD0;--ink:#16211C;--muted:#5F6B62;}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--canvas);color:var(--ink);font-family:'Plus Jakarta Sans',system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;line-height:1.65;}
+body{background:var(--canvas);color:var(--ink);font-family:'Plus Jakarta Sans',system-ui,sans-serif;min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;line-height:1.65;}
 html[dir="rtl"] body{font-family:'IBM Plex Sans Arabic',system-ui,sans-serif;}
 .card{max-width:520px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:46px 34px;text-align:center;box-shadow:0 20px 50px rgba(22,33,28,.08);}
 .code{font-size:3.4rem;font-weight:800;color:var(--emerald-deep);line-height:1;}

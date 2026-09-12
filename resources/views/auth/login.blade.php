@@ -11,7 +11,7 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;}
 /* Single-Screen: alles passt in den ersten Viewport, kein Scrollen auf Desktop */
-body{font-family:'Inter',Arial,sans-serif;height:100vh;color:#fff;display:flex;flex-direction:column;background:var(--graphite-black);overflow:hidden;}
+body{font-family:'Inter',Arial,sans-serif;height:100vh;height:100dvh;color:#fff;display:flex;flex-direction:column;background:var(--graphite-black);overflow:hidden;}
 
 /* --- Dezenter animierter Energie-Hintergrund (nur CSS) --- */
 .bg{position:fixed;inset:0;z-index:-1;background:radial-gradient(1200px 800px at 70% 15%, #1A2C24 0%, var(--graphite-deep) 48%, var(--graphite-black) 100%);}
@@ -68,9 +68,17 @@ label{display:block;font-size:13px;margin-bottom:6px;color:#dde0e5;}
 .foot a:hover{color:#fff;text-decoration:underline;}
 .foot .sep{opacity:.35;}
 
-/* Auf kleinen/mobilen Screens darf wieder gescrollt werden */
-@media(max-width:700px){
-  body{height:auto;min-height:100vh;overflow:auto;}
+/* Auf kleinen/mobilen Screens darf wieder gescrollt werden.
+   ZUSAETZLICH `max-height` (Responsive-Audit 12.09.2026): ein Telefon im
+   QUERFORMAT ist 844px BREIT und faellt damit durch die Breiten-Abfrage,
+   ist aber nur rund 390px hoch. Die Absicht "alles passt in einen
+   Bildschirm, kein Scrollen" ergibt dort keinen Sinn mehr - und
+   `overflow:hidden` auf einer zu kurzen Seite ist die Art Regel, die auf
+   iOS Safari anders ausgeht als im Test. Gemessen ist der Knopf auch
+   ohne diese Zeile erreichbar (die Seite scrollt dann ueber <html>);
+   das hier nimmt die Abhaengigkeit von diesem Zufall heraus. */
+@media(max-width:700px), (max-height:600px){
+  body{height:auto;min-height:100vh;min-height:100dvh;overflow:auto;}
   .topbar{padding:14px 16px 0;}
   .main{padding:16px;}
   h1{font-size:24px;}
