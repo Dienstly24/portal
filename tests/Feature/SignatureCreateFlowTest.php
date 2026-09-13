@@ -132,6 +132,43 @@ class SignatureCreateFlowTest extends TestCase
         $this->assertSame('en', $request->signers()->first()->localeCode());
     }
 
+    public function test_ohne_auswahl_wird_KEINE_zusatzpruefung_gesetzt(): void
+    {
+        Mail::fake();
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        // Betreiber-Vorgabe 13.09.2026: die Zusatzpruefung ist eine bewusste
+        // Entscheidung. Wer nichts auswaehlt, bekommt keine - eine still
+        // gesetzte Huerde kostet den Unterzeichner einen Schritt, von dem
+        // niemand wollte, dass es ihn gibt.
+        $this->actingAs($admin)->post(route('admin.signatures.store'), [
+            'document' => $this->pdf(),
+            'title' => 'Zeugenerklärung',
+            'signers' => [['name' => 'Externer Zeuge', 'email' => 'zeuge@example.com']],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame(SignatureRequest::IDENTITY_NONE, SignatureRequest::firstOrFail()->identity_check);
+    }
+
+    public function test_die_vorauswahl_im_formular_steht_auf_keine(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $html = (string) $this->actingAs($admin)->get(route('admin.signatures.create'))
+            ->assertOk()->getContent();
+
+        // Die vorausgewaehlte Zeile im Auswahlfeld - nicht irgendeine.
+        $this->assertMatchesRegularExpression(
+            '/<option value="'.SignatureRequest::IDENTITY_NONE.'"[^>]*\bselected\b/',
+            $html,
+            'Das Formular muss "Keine" vorauswaehlen.'
+        );
+        $this->assertDoesNotMatchRegularExpression(
+            '/<option value="'.SignatureRequest::IDENTITY_EMAIL.'"[^>]*\bselected\b/',
+            $html
+        );
+    }
+
     public function test_mit_kunde_bleibt_die_zuordnung_erhalten(): void
     {
         Mail::fake();

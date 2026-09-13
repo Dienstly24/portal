@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Concerns\ScopesCustomerAccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreSignatureRequestRequest;
+use App\Models\ActivityLog;
 use App\Models\CompanySignatureAsset;
 use App\Models\Contract;
 use App\Models\Customer;
@@ -198,7 +199,7 @@ class SignatureController extends Controller
                 'customer_id' => $data['customer_id'] ?? null,
                 'contract_id' => $data['contract_id'] ?? null,
                 'signing_order' => $data['signing_order'] ?? 'sequential',
-                'identity_check' => $data['identity_check'] ?? SignatureRequest::IDENTITY_EMAIL,
+                'identity_check' => $data['identity_check'] ?? SignatureRequest::IDENTITY_NONE,
                 'consent_text' => $data['consent_text'] ?? null,
                 'document_type' => $data['document_type'] ?? null,
                 'reference' => $data['reference'] ?? null,
@@ -330,27 +331,7 @@ class SignatureController extends Controller
         $signature = $this->find($id);
         Gate::authorize('update', $signature);
 
-        $data = $request->validate([
-            'signers' => ['array', 'max:10'],
-            'signers.*.id' => ['nullable', 'string', 'max:64'],
-            'signers.*.key' => ['nullable', 'string', 'max:64'],
-            'signers.*.name' => ['required', 'string', 'max:160'],
-            'signers.*.email' => ['required', 'email:filter', 'max:190'],
-            'signers.*.locale' => ['nullable', 'string', 'in:'.implode(',', array_keys(SignatureSigner::LOCALES))],
-            'fields' => ['array', 'max:200'],
-            'fields.*.id' => ['nullable', 'string', 'max:64'],
-            'fields.*.signer_id' => ['nullable', 'string', 'max:64'],
-            'fields.*.signer_key' => ['nullable', 'string', 'max:64'],
-            'fields.*.company_asset_id' => ['nullable', 'string', 'max:64'],
-            'fields.*.type' => ['required', 'string', 'in:'.implode(',', SignatureFieldType::keys())],
-            'fields.*.page' => ['required', 'integer', 'min:1', 'max:200'],
-            'fields.*.x' => ['required', 'numeric', 'min:0', 'max:1'],
-            'fields.*.y' => ['required', 'numeric', 'min:0', 'max:1'],
-            'fields.*.width' => ['required', 'numeric', 'min:0.005', 'max:1'],
-            'fields.*.height' => ['required', 'numeric', 'min:0.003', 'max:1'],
-            'fields.*.required' => ['nullable', 'boolean'],
-            'fields.*.label' => ['nullable', 'string', 'max:120'],
-        ]);
+        $data = $this->validatePayload($request);
 
         if (! $signature->isDraft()) {
             return $this->respond($request, false, 'Nach dem Versand kann die Aufteilung nicht mehr geändert werden.');
@@ -373,6 +354,59 @@ class SignatureController extends Controller
         return $this->respond($request, true, 'Gespeichert.');
     }
 
+    /**
+     * Denselben Stand speichern, den der Editor auch ueber "Speichern"
+     * schickt - genutzt vom Versand, damit "Senden" nie einen veralteten
+     * Stand verschickt. EINE Pruefung fuer beide Wege: waere sie doppelt
+     * geschrieben, unterschieden sich die Grenzen frueher oder spaeter.
+     */
+    /**
+     * Die Grenzen des Editor-Standes - EINMAL beschrieben, von "Speichern"
+     * und von "Senden" benutzt.
+     *
+     * @return array{signers?: array<int,array<string,mixed>>, fields?: array<int,array<string,mixed>>}
+     */
+    private function validatePayload(Request $request): array
+    {
+        return $request->validate([
+            'signers' => ['array', 'max:10'],
+            'signers.*.id' => ['nullable', 'string', 'max:64'],
+            'signers.*.key' => ['nullable', 'string', 'max:64'],
+            'signers.*.name' => ['required', 'string', 'max:160'],
+            'signers.*.email' => ['required', 'email:filter', 'max:190'],
+            'signers.*.locale' => ['nullable', 'string', 'in:'.implode(',', array_keys(SignatureSigner::LOCALES))],
+            'fields' => ['array', 'max:200'],
+            'fields.*.id' => ['nullable', 'string', 'max:64'],
+            'fields.*.signer_id' => ['nullable', 'string', 'max:64'],
+            'fields.*.signer_key' => ['nullable', 'string', 'max:64'],
+            'fields.*.company_asset_id' => ['nullable', 'string', 'max:64'],
+            'fields.*.type' => ['required', 'string', 'in:'.implode(',', SignatureFieldType::keys())],
+            'fields.*.page' => ['required', 'integer', 'min:1', 'max:200'],
+            'fields.*.x' => ['required', 'numeric', 'min:0', 'max:1'],
+            'fields.*.y' => ['required', 'numeric', 'min:0', 'max:1'],
+            'fields.*.width' => ['required', 'numeric', 'min:0.005', 'max:1'],
+            'fields.*.height' => ['required', 'numeric', 'min:0.003', 'max:1'],
+            'fields.*.required' => ['nullable', 'boolean'],
+            'fields.*.label' => ['nullable', 'string', 'max:120'],
+        ]);
+    }
+
+    private function savePayload(Request $request, SignatureRequest $signature): void
+    {
+        $data = $this->validatePayload($request);
+
+        $felder = $data['fields'] ?? [];
+        if (! Gate::allows('firmensignatur-benutzen')) {
+            $felder = array_values(array_filter(
+                $felder,
+                fn ($f) => ($f['type'] ?? '') !== SignatureFieldType::COMPANY
+            ));
+        }
+
+        $keys = $this->requests->syncSigners($signature, $data['signers'] ?? []);
+        $this->requests->syncFields($signature->fresh(), $felder, $keys);
+    }
+
     /** Seitenbild fuer den Editor. Laeuft ueber den Controller, nie ueber einen Dateipfad. */
     public function pageImage(string $id, int $page)
     {
@@ -390,19 +424,82 @@ class SignatureController extends Controller
         ]);
     }
 
+    /**
+     * Versenden - und dabei ungespeicherte Aenderungen MITNEHMEN.
+     *
+     * "Entwurf speichern" war bisher eine technische Zwischenstufe, die der
+     * Mitarbeiter verstehen musste, bevor er versenden durfte: wer die
+     * Felder gesetzt und direkt auf Senden geklickt hat, versendete den
+     * Stand von vorhin - ohne Fehlermeldung. Der Editor schickt seinen
+     * Stand deshalb MIT dem Versand, und gespeichert wird hier, in EINEM
+     * Vorgang. Das Speichern von Hand bleibt daneben bestehen (Zwischenstand
+     * sichern, spaeter weiterarbeiten) - es ist nur keine Bedingung mehr.
+     *
+     * Die Reihenfolge ist Absicht: erst speichern, dann pruefen, dann
+     * versenden. Der Versandblocker muss den NEUEN Stand beurteilen, sonst
+     * lehnt er einen Vorgang ab, der gerade vollstaendig geworden ist.
+     */
     public function send(Request $request, string $id)
     {
         $signature = $this->find($id);
         Gate::authorize('send', $signature);
 
+        if ($signature->isDraft() && $request->has('fields')) {
+            $this->savePayload($request, $signature);
+            $signature = $this->find($id);
+        }
+
         try {
             $this->requests->send($signature->load(['signers', 'fields']));
         } catch (\RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
+            return $this->respond($request, false, $e->getMessage());
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'redirect' => route('admin.signatures.show', $signature->id),
+            ]);
         }
 
         return redirect()->route('admin.signatures.show', $signature->id)
             ->with('success', 'Die Einladung wurde versendet.');
+    }
+
+    /**
+     * Einen ENTWURF loeschen.
+     *
+     * Geloescht wird ausschliesslich, was noch niemand gesehen hat. Sobald
+     * eine Einladung raus ist, ist "stornieren" der richtige Weg: der
+     * Vorgang bleibt mitsamt Protokoll stehen und der Zugang wird
+     * widerrufen. Ein abgeschlossener Vorgang wird nie geloescht - an ihm
+     * haengt der Nachweis fuer eine Unterschrift, die jemand geleistet hat
+     * (die Policy sagt dasselbe, hier steht die fachliche Grenze).
+     */
+    public function destroy(string $id)
+    {
+        $signature = $this->find($id);
+        Gate::authorize('delete', $signature);
+
+        if (! $signature->isDraft()) {
+            return back()->with('error', $signature->isCompleted()
+                ? 'Ein unterschriebenes Dokument wird nicht gelöscht - es ist der Nachweis der Unterschrift.'
+                : 'Diese Anfrage ist bereits versendet. Bitte "Auftrag stornieren" verwenden.');
+        }
+
+        // Die Spur des Loeschens bleibt - im allgemeinen Protokoll, das
+        // nicht am geloeschten Vorgang haengt. Das Signatur-Protokoll
+        // verschwindet mit dem Entwurf, und das ist richtig: es belegt
+        // nichts, was jemals jemanden erreicht hat.
+        ActivityLog::record('signature_draft_deleted', 'signature_request', $signature->id, [
+            'titel' => $signature->title,
+        ]);
+
+        $this->storage->purge($signature);
+        $signature->delete();
+
+        return redirect()->route('admin.signatures.index')
+            ->with('success', 'Der Entwurf wurde gelöscht.');
     }
 
     public function remind(string $id)
