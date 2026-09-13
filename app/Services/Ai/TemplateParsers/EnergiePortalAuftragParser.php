@@ -158,10 +158,9 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
                 .($name !== '' ? ' - '.$name : '')
                 .$this->extras($energie, $insurance)
                 .($bank !== []
-                    ? ' Bankverbindung des Kunden uebernommen'
-                        .($this->kreditinstitut !== null ? ' ('.$this->kreditinstitut.')' : '').'.'
+                    ? ' Bankverbindung des Kunden uebernommen'.$this->kreditinstitutZusatz().'.'
                     : ' Ohne Bankuebernahme.')
-                .($this->bankHinweis !== null ? ' HINWEIS: '.$this->bankHinweis.'.' : '')
+                .$this->bankHinweisZusatz()
                 .' Felder gratis aus der Auftragsuebersicht gelesen (ohne KI).',
             'title' => ($insurance['insurer'] ?? 'Energie').' '.$art.'-Auftrag'
                 .($name !== '' ? ' '.$name : ''),
@@ -846,6 +845,28 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
                 .' Tagen (Kuendigungsfrist Stadtwerke 14 Tage + Bearbeitung).';
         }
         return $out;
+    }
+
+    /**
+     * Kreditinstitut als Klammerzusatz - leer, wenn keines gelesen wurde.
+     *
+     * Bewusst EIGENE Methoden fuer diese beiden Zusaetze (auch fuer den
+     * Bankhinweis): `parse()` setzt den Zustand zu Beginn jedes Laufs
+     * zurueck, gesetzt wird er erst in `parseBank()`. Stuende die Pruefung
+     * auf null direkt in `parse()`, liest die statische Analyse sie als
+     * "immer null" - sie sieht nur das Zuruecksetzen, nicht die spaetere
+     * Zuweisung. Hier wird der Zustand nur GELESEN, nicht vorher in
+     * derselben Methode gesetzt.
+     */
+    private function kreditinstitutZusatz(): string
+    {
+        return $this->kreditinstitut !== null ? ' ('.$this->kreditinstitut.')' : '';
+    }
+
+    /** Hinweis zur Bankverbindung (Abweichung o.ae.) - leer, wenn keiner vorliegt. */
+    private function bankHinweisZusatz(): string
+    {
+        return $this->bankHinweis !== null ? ' HINWEIS: '.$this->bankHinweis.'.' : '';
     }
 
     /** Gebeugte Zeiteinheit zur Anzahl ("1 Tag" / "14 Tage"). */
