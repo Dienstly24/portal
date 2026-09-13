@@ -115,7 +115,14 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
 
     public function parse(string $text): ?array
     {
+        // Zustand je Lauf zuruecksetzen: DIESELBE Instanz liest bis zu DREI
+        // Texte je Dokument (rohe Textebene, saubere Textebene, OCR-Text -
+        // siehe DocumentAnalyzer). Ohne das Zuruecksetzen truege ein spaeter
+        // erfolgreicher Lauf den Bankhinweis oder das Kreditinstitut des
+        // vorherigen, gescheiterten Laufs in die Zusammenfassung.
         $this->felder = new FieldRecognition;
+        $this->bankHinweis = null;
+        $this->kreditinstitut = null;
         $this->text = (string) preg_replace('/\x{00ad}\s*/u', '', $text);
         $upper = mb_strtoupper($this->text);
 

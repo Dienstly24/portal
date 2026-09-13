@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Ai;
 
+use App\Services\Ai\Contracts\DocumentTemplateParser;
 use App\Services\Ai\TemplateParsers\EnergiePortalAuftragParser;
 use Tests\TestCase;
 
@@ -350,7 +351,7 @@ class EnergiePortalAuftragParserTest extends TestCase
      */
     public function test_composite_prefers_this_parser_over_the_generic_one(): void
     {
-        $composite = $this->app->make(\App\Services\Ai\Contracts\DocumentTemplateParser::class);
+        $composite = $this->app->make(DocumentTemplateParser::class);
 
         $r = $composite->parse($this->screenshotText());
 
@@ -368,7 +369,7 @@ class EnergiePortalAuftragParserTest extends TestCase
     /** Ein GAS-Auftrag darf nie als Strom in der Kundenakte landen. */
     public function test_composite_keeps_a_gas_order_a_gas_order(): void
     {
-        $composite = $this->app->make(\App\Services\Ai\Contracts\DocumentTemplateParser::class);
+        $composite = $this->app->make(DocumentTemplateParser::class);
 
         $r = $composite->parse($this->screenshotText([
             'Tariftyp      Strom' => 'Tariftyp      Gas',
@@ -387,10 +388,8 @@ class EnergiePortalAuftragParserTest extends TestCase
     public function test_reads_one_time_bonus_and_notice_period_in_days(): void
     {
         $r = (new EnergiePortalAuftragParser)->parse($this->screenshotText([
-            '1 Monat Kündigungsfrist         MaLo-ID                51214126166'
-                => 'einmaliger Bonus  25,00 £     MaLo-ID                51214126166',
-            '24 Monate Vertragslaufzeit      Status'
-                => '14 Tage Kündigungsfrist         Status',
+            '1 Monat Kündigungsfrist         MaLo-ID                51214126166' => 'einmaliger Bonus  25,00 £     MaLo-ID                51214126166',
+            '24 Monate Vertragslaufzeit      Status' => '14 Tage Kündigungsfrist         Status',
         ]));
 
         $this->assertStringContainsString('Einmaliger Bonus 25,00 EUR', $r['summary']);
@@ -417,8 +416,7 @@ class EnergiePortalAuftragParserTest extends TestCase
     public function test_status_cell_spanning_three_lines_is_reassembled(): void
     {
         $r = (new EnergiePortalAuftragParser)->parse($this->screenshotText([
-            '24 Monate Vertragslaufzeit      Status                 1000 - Auftrag komplett erfasst, wartend auf manuelle Prüfung'
-                => "                                1000 - Auftrag komplett erfasst, wartend\n"
+            '24 Monate Vertragslaufzeit      Status                 1000 - Auftrag komplett erfasst, wartend auf manuelle Prüfung' => "                                1000 - Auftrag komplett erfasst, wartend\n"
                  ."24 Monate Vertragslaufzeit      Status                 auf manuelle Prüfung (16.08.2026\n"
                  .'13:38:17)',
         ]));
@@ -444,6 +442,30 @@ class EnergiePortalAuftragParserTest extends TestCase
             $r['summary']
         );
         $this->assertArrayNotHasKey('bank_name', $r['data']['bank']);
+    }
+
+    /**
+     * DIESELBE Instanz liest bis zu DREI Texte je Dokument (rohe Textebene,
+     * saubere Textebene, OCR-Text - siehe DocumentAnalyzer). Ohne das
+     * Zuruecksetzen des Zustands truege ein spaeter erfolgreicher Lauf den
+     * Bankhinweis oder das Kreditinstitut des vorherigen Laufs in die
+     * Zusammenfassung - eine Angabe aus einem fremden Text.
+     */
+    public function test_state_does_not_leak_between_two_runs(): void
+    {
+        $parser = new EnergiePortalAuftragParser;
+
+        // Erster Lauf: Kreditinstitut steht in der BLZ-Zeile.
+        $erster = $parser->parse($this->screenshotText());
+        $this->assertStringContainsString('(Sparkasse Muster)', $erster['summary']);
+
+        // Zweiter Lauf OHNE Klammerzusatz - der Name des ersten Laufs darf
+        // nicht stehen bleiben.
+        $zweiter = $parser->parse($this->screenshotText([
+            'BLZ: 21450000 (Sparkasse Muster)' => 'BLZ: 21450000',
+        ]));
+
+        $this->assertStringNotContainsString('Sparkasse Muster', $zweiter['summary']);
     }
 
     public function test_ignores_unrelated_documents(): void
