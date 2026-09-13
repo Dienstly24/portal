@@ -23,6 +23,71 @@
 @if(session('success'))<div style="background:var(--emerald-soft);color:var(--emerald-ink);padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
 @if(session('error'))<div style="background:#FBE9E9;color:#B3261E;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('error') }}</div>@endif
 
+@php
+    $unterschrieben = $signature->signedCount();
+    $offen = $signers->count() - $unterschrieben;
+    $erinnerungen = $events->where('event', 'reminder_sent');
+    $letzteErinnerung = $erinnerungen->first();
+    $anteil = $signers->count() > 0 ? (int) round($unterschrieben / $signers->count() * 100) : 0;
+@endphp
+
+{{-- WAS IST GERADE LOS? Nach dem Versand landete der Mitarbeiter bisher auf
+     einer Seite, die vor allem Formulare zeigte - die eigentliche Antwort
+     ("ist es raus? worauf warten wir?") musste er sich aus Abzeichen und
+     Verlauf zusammensuchen. Sie steht jetzt oben, in einem Satz. --}}
+<div class="card" style="padding:16px 20px;margin-bottom:16px;border-left:4px solid
+    {{ $signature->isCompleted() ? 'var(--emerald)' : ($signature->isDraft() ? 'var(--line)' : 'var(--status-warning)') }};">
+    <div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start;">
+        <div style="min-width:220px;">
+            <div style="font-weight:700;font-size:15px;">
+                @if($signature->isCompleted())
+                    ✓ Dokument unterschrieben
+                @elseif($signature->status === 'cancelled')
+                    Auftrag storniert
+                @elseif($signature->status === 'declined')
+                    Unterschrift abgelehnt
+                @elseif($signature->hasExpired() || $signature->status === 'expired')
+                    Frist abgelaufen
+                @elseif($signature->isDraft())
+                    Entwurf – noch nicht versendet
+                @else
+                    ✓ Dokument gesendet
+                @endif
+            </div>
+            <div class="muted-sm" style="margin-top:3px;">
+                @if($signature->isCompleted())
+                    Alle Unterzeichner sind fertig.
+                @elseif($signature->acceptsSignatures())
+                    Warten auf die Unterschrift
+                    @if($signature->customer) von {{ $signature->customer->user?->name }}
+                    @elseif($signers->first()) von {{ $signers->first()->name }}@endif.
+                @elseif($signature->isDraft())
+                    Felder setzen, prüfen, dann versenden.
+                @else
+                    Es kann nicht mehr unterschrieben werden.
+                @endif
+            </div>
+            <div class="muted-sm" style="margin-top:6px;">
+                {{ $signature->title }}
+                @if($signature->sent_at) · gesendet {{ $signature->sent_at->lokal()->format('d.m.Y H:i') }} Uhr @endif
+                @if($letzteErinnerung)
+                    · zuletzt erinnert {{ $letzteErinnerung->created_at?->lokal()->format('d.m.Y H:i') }} Uhr
+                    ({{ $erinnerungen->count() }}×@if($letzteErinnerung->user) durch {{ $letzteErinnerung->user->name }}@endif)
+                @endif
+            </div>
+        </div>
+        <div style="min-width:190px;">
+            <div style="font-size:13px;font-weight:600;margin-bottom:5px;">
+                {{ $unterschrieben }} von {{ $signers->count() }} unterschrieben
+                @if($offen > 0)<span class="muted-sm" style="font-weight:400;"> · {{ $offen }} offen</span>@endif
+            </div>
+            <div style="height:7px;border-radius:99px;background:var(--line);overflow:hidden;">
+                <div style="height:100%;width:{{ $anteil }}%;background:var(--emerald);"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @if($signature->isDraft() && $blockers)
 <div style="background:#FFF6E5;color:#8A5D00;padding:12px 16px;border-radius:8px;margin-bottom:16px;">
     <strong>Noch nicht versandfertig:</strong>
@@ -169,7 +234,8 @@
         @endif
 
         @if($signature->acceptsSignatures())
-            <form method="POST" action="{{ route('admin.signatures.remind', $signature->id) }}">
+            <form method="POST" action="{{ route('admin.signatures.remind', $signature->id) }}"
+                  data-confirm="Erinnerung an die offenen Unterzeichner senden?">
                 @csrf
                 <button type="submit" class="btn btn-sm btn-ghost" style="width:100%;">Erinnerung senden</button>
             </form>
@@ -181,14 +247,30 @@
         <a href="{{ route('admin.signatures.download', [$signature->id, 'original']) }}" class="btn btn-sm btn-ghost">Original-PDF</a>
         <a href="{{ route('admin.signatures.audit', $signature->id) }}" class="btn btn-sm btn-ghost">Audit-Protokoll</a>
 
-        @if(!$signature->isCompleted() && $signature->status !== 'cancelled')
+        {{-- ZWEI VERSCHIEDENE DINGE, bewusst nicht ein Knopf:
+             LOESCHEN gibt es nur fuer den Entwurf - dort hat noch niemand
+             etwas gesehen, es gibt nichts zu belegen.
+             STORNIEREN ist der Weg, sobald eine Einladung raus ist: der
+             Vorgang bleibt mitsamt Protokoll stehen, nur die Zugaenge
+             werden ungueltig. Ein abgeschlossener Vorgang hat weder das
+             eine noch das andere - er ist der Nachweis. --}}
+        @if($signature->isDraft())
+            @can('delete', $signature)
+            <form method="POST" action="{{ route('admin.signatures.destroy', $signature->id) }}"
+                  data-confirm="Entwurf löschen? Das hochgeladene PDF und die gesetzten Felder werden entfernt. Versendet wurde noch nichts.">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="btn btn-sm btn-ghost" style="width:100%;color:#B3261E;">Entwurf löschen</button>
+            </form>
+            @endcan
+        @elseif(!$signature->isCompleted() && $signature->status !== 'cancelled')
         <form method="POST" action="{{ route('admin.signatures.cancel', $signature->id) }}"
-              data-confirm="Signaturanfrage abbrechen? Die Links der Unterzeichner werden sofort ungültig."
+              data-confirm="Auftrag stornieren? Der Kunde kann das Dokument danach nicht mehr unterschreiben."
               style="display:grid;gap:7px;">
             @csrf
             <input type="text" name="reason" maxlength="500" placeholder="Grund (optional)"
                    style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;">
-            <button type="submit" class="btn btn-sm btn-ghost" style="color:#B3261E;">Abbrechen</button>
+            <button type="submit" class="btn btn-sm btn-ghost" style="color:#B3261E;">Auftrag stornieren</button>
         </form>
         @endif
     </div>

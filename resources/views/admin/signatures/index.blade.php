@@ -97,10 +97,22 @@
             <td style="font-size:13px;color:{{ $signature->hasExpired() ? '#B3261E' : 'var(--ink-soft)' }};">
                 {{ $signature->expires_at?->lokal()->format('d.m.Y') ?? '—' }}
             </td>
+            {{-- AKTIONEN FOLGEN DER LAGE. Alles immer anzuzeigen hiesse,
+                 den Mitarbeiter auf Knoepfe klicken zu lassen, die in
+                 seinem Fall gar nichts tun koennen - "Erinnern" an einem
+                 Entwurf, "Bearbeiten" an einem unterschriebenen Dokument. --}}
             <td style="text-align:right;padding-right:20px;white-space:nowrap;">
-                <a href="{{ route('admin.signatures.show', $signature->id) }}" class="btn btn-sm btn-ghost">Öffnen</a>
-                @if($signature->isCompleted())
-                <a href="{{ route('admin.signatures.download', [$signature->id, 'signed']) }}" class="btn btn-sm btn-ghost">PDF</a>
+                <a href="{{ route('admin.signatures.show', $signature->id) }}" class="btn btn-sm btn-ghost">Anzeigen</a>
+                @if($signature->isDraft())
+                    <a href="{{ route('admin.signatures.prepare', $signature->id) }}" class="btn btn-sm btn-ghost">Bearbeiten</a>
+                @elseif($signature->isCompleted())
+                    <a href="{{ route('admin.signatures.download', [$signature->id, 'signed']) }}" class="btn btn-sm btn-ghost">PDF öffnen</a>
+                @elseif($signature->acceptsSignatures())
+                    <form method="POST" action="{{ route('admin.signatures.remind', $signature->id) }}"
+                          style="display:inline;" data-confirm="Erinnerung an die offenen Unterzeichner senden?">
+                        @csrf
+                        <button type="submit" class="btn btn-sm btn-ghost">Erinnern</button>
+                    </form>
                 @endif
             </td>
         </tr>

@@ -386,11 +386,30 @@ class SignatureRequestService
         return true;
     }
 
+    /**
+     * Mindestabstand zwischen zwei Erinnerungen an denselben Vorgang.
+     *
+     * Eine Erinnerung ist eine BITTE, kein Druckmittel. Ohne Abstand wird
+     * aus einem ungeduldigen Klick eine Kette gleichlautender Mails beim
+     * Kunden - und der naechste Schritt ist der Spam-Ordner, in dem dann
+     * auch die urspruengliche Einladung liegt.
+     */
+    public const REMINDER_MIN_HOURS = 4;
+
     /** Erinnerung an alle, die noch nicht unterschrieben haben und schon eingeladen sind. */
     public function remind(SignatureRequest $request): int
     {
         if (! $request->acceptsSignatures()) {
             throw new \RuntimeException('Diese Signaturanfrage ist nicht mehr offen.');
+        }
+        $letzte = $request->signers
+            ->filter(fn (SignatureSigner $s) => $s->reminded_at !== null)
+            ->max('reminded_at');
+        if ($letzte !== null && $letzte->diffInHours(now()) < self::REMINDER_MIN_HOURS) {
+            throw new \RuntimeException(
+                'Die letzte Erinnerung ging am '.$letzte->lokal()->format('d.m.Y H:i')
+                .' Uhr raus. Frühestens '.self::REMINDER_MIN_HOURS.' Stunden später erneut erinnern.'
+            );
         }
         $sent = 0;
         foreach ($this->signersToInvite($request) as $signer) {

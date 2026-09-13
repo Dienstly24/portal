@@ -2702,6 +2702,81 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
   JavaScript-Fehler.
 - Tests: `SignaturBenachrichtigungTest` (8 Faelle).
 
+### Der Editor als Arbeitsgeraet - und der Lebenslauf eines Auftrags (13.09.2026)
+
+- **Gemeldet**: bei einem 14-seitigen Vertrag musste der Mitarbeiter bis ans
+  ENDE des PDF scrollen, um „Entwurf speichern" oder den Weg zum Versand zu
+  erreichen. Das Dokument war der Seiteninhalt - je laenger der Vertrag,
+  desto weiter weg die Knoepfe. Dazu fehlte jeder Weg zurueck: wer einen
+  Auftrag doch nicht wollte, fand weder Loeschen noch Stornieren.
+- **Der Rahmen hat jetzt eine feste Hoehe, gescrollt wird INNEN**
+  (`.sig-shell`: Werkzeugleiste / Betrachter / Aktionsleiste). Die Hoehe wird
+  GEMESSEN, nicht geschaetzt (`passeHoeheAn()`): die Umgebung ueber dem
+  Editor ist nicht ueberall gleich hoch (Brotkrumen, Hinweisband bei
+  fehlender Seitenvorschau), und mit einer festen Zahl im CSS stand die
+  Aktionsleiste auf dem Telefon genau dann unter der Bildschirmkante, wenn
+  ein Hinweis dazukam - also wieder im gemeldeten Zustand. Die CSS-Werte
+  bleiben als Rueckfallebene.
+- **Navigation**: Miniaturen aller Seiten mit ✍-Marke (die ZAHL erst ab zwei
+  Stellen - eine „1" an jedem Blatt waere Ziergrafik), „Seite X / Y" folgt
+  dem Bildlauf, Zoom in 25-Prozent-Schritten, „Breite" als Normalfall,
+  „Nächstes Feld →" reihum ueber Seitengrenzen hinweg. Der Zoom aendert nur
+  die BLATTBREITE (`--zoom`), er baut die Seiten nicht neu auf - ein
+  Neuaufbau waere ein Sprung an den Anfang und laedt jedes Seitenbild erneut.
+- **„Senden" speichert selbst.** „Entwurf speichern" war eine technische
+  Zwischenstufe, die man verstehen musste, bevor man versenden durfte - wer
+  sie uebersah, verschickte den Stand von vorhin, OHNE Fehlermeldung. Der
+  Editor schickt seinen Stand jetzt MIT dem Versand, gespeichert wird auf dem
+  Server in EINEM Vorgang (`SignatureController::send` → `savePayload`);
+  Speichern von Hand bleibt daneben bestehen, es ist nur keine Bedingung
+  mehr. Reihenfolge ist Absicht: erst speichern, dann pruefen, dann senden -
+  sonst beurteilt der Versandblocker einen Stand, der gerade vollstaendig
+  geworden ist.
+- **LOESCHEN und STORNIEREN sind zwei verschiedene Dinge**, und die Grenze
+  steht in Route, Controller UND Policy: ein ENTWURF wird geloescht (es hat
+  ihn nie jemand gesehen, es gibt nichts zu belegen; die Spur bleibt im
+  allgemeinen `ActivityLog`, nicht am geloeschten Vorgang), ein VERSANDTER
+  Auftrag wird storniert (Vorgang und Protokoll bleiben, die Zugaenge werden
+  widerrufen), ein UNTERSCHRIEBENER gar nicht - er IST der Nachweis.
+- **Aktionen sind kontextabhaengig** (Liste und Detailseite): Entwurf →
+  Bearbeiten/Löschen, laufend → Anzeigen/Erinnern/Stornieren, abgeschlossen →
+  Anzeigen/PDF. Alles immer zu zeigen hiesse, auf Knoepfe klicken zu lassen,
+  die im jeweiligen Fall gar nichts tun koennen.
+- **Nach dem Versand sagt die Seite, was los ist**: eine Statuskarte oben mit
+  „✓ Dokument gesendet / Warten auf die Unterschrift von …", Fortschritt
+  („0 von 1 unterschrieben"), Sendezeitpunkt und - falls vorhanden - Zeit,
+  Anzahl und URHEBER der letzten Erinnerung. Der Urheber kommt aus dem
+  Signatur-Protokoll (`reminder_sent` traegt `user_id`), es braucht KEINE
+  neue Spalte und KEINE Migration.
+- **Erinnerungen haben einen Mindestabstand** (`REMINDER_MIN_HOURS`, 4 h).
+  Eine Erinnerung ist eine Bitte, kein Druckmittel; ohne Abstand wird aus
+  einem ungeduldigen Klick eine Kette gleichlautender Mails - und der
+  naechste Schritt ist der Spam-Ordner, in dem dann auch die urspruengliche
+  Einladung liegt.
+- **Nichts wird still verworfen**: „Abbrechen" fragt bei ungespeicherten
+  Aenderungen nach, und der zweite Knopf sagt ausdruecklich „Änderungen
+  verwerfen" - „OK" auf einer Systemabfrage sagt das nicht. Vor dem Versand
+  steht eine KURZE Pruefung (Stellen, Unterzeichner, Dokument); eine lange
+  Bestaetigungsseite liest beim dritten Mal niemand mehr.
+- **Im Browser gefunden, nicht im Test**: der Vergroesserungs-Griff (rechts
+  unten) lag auf demselben Fleck wie der Bearbeiten-Stift (rechts oben) -
+  ein Unterschriftsfeld ist nur rund 20 px hoch, und weil der Griff spaeter
+  eingehaengt wird, lag er oben. Der Stift war sichtbar, aber nicht
+  antippbar; auf dem Telefon war ein gesetztes Feld damit weder zu aendern
+  noch zu loeschen (einen Doppelklick gibt es dort nicht). Der Stift steht
+  jetzt LINKS oben.
+- **Nicht angefasst** (Betreiber-Bedingung): die Signaturgruppe aus PR #328
+  bleibt die EINE Quelle - der Editor zeigt sie nur an („Eine Unterschrift -
+  7 Stellen (Seiten 1, 2, 3, 4, 6, 7, 9)", jetzt anklickbar und zur ersten
+  Stelle springend). Ebenso unveraendert: `signature_events` als einziges
+  Protokoll, `SignatureStatus` als einzige Zustandsliste, die Glocke aus
+  PR #331 (EINE Meldung je Unterzeichner, nicht je Stelle). KEINE Migration.
+- Am simulierten iPhone und am Desktop gemessen: Aktionsleiste in jeder Lage
+  sichtbar (auch nach Bildlauf und Zoom), kein waagerechter Bildlauf der
+  Seite, 14 Miniaturen, Schublade oeffnet und schliesst beim Seitensprung,
+  keine JavaScript-Fehler.
+- Tests: `SignaturWorkflowTest` (19 Faelle).
+
 ## Offene Themen / wartet auf den Betreiber
 
 - **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026
