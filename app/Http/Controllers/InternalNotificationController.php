@@ -20,6 +20,26 @@ use Illuminate\Support\Str;
  */
 class InternalNotificationController extends Controller
 {
+    /**
+     * Symbol je Benachrichtigungsart.
+     *
+     * Bewusst hier und nicht im Modell: es ist eine Frage der ANZEIGE.
+     * Eine unbekannte Art faellt auf das neutrale "i" zurueck - eine neue
+     * Art soll nie eine leere Zeile erzeugen.
+     *
+     * @var array<string,string>
+     */
+    private const SYMBOLE = [
+        'signature' => '✍️',
+        'ticket' => '🎫',
+        'message' => '💬',
+        'mention' => '💬',
+        'change_request' => '🔄',
+        'document' => '📄',
+        'import' => '📥',
+        'system' => '⚙️',
+    ];
+
     public function index(Request $request)
     {
         $user = auth()->user();
@@ -40,7 +60,11 @@ class InternalNotificationController extends Controller
                 if ($n->title) {
                     return [
                         'id' => $n->id,
-                        'icon' => 'ℹ️',
+                        // Ein eigenes Symbol je Art: bisher trug JEDE
+                        // Meldung mit Titel dasselbe "i" - im Stapel liess
+                        // sich eine fertige Unterschrift nicht von einer
+                        // Importmeldung unterscheiden, ohne sie zu lesen.
+                        'icon' => self::SYMBOLE[$n->type] ?? 'ℹ️',
                         'title' => $n->title,
                         'preview' => Str::limit($n->body ?? '', 90),
                         'time' => $n->created_at->lokal()->format('d.m.Y H:i'),

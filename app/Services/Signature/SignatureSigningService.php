@@ -252,12 +252,26 @@ class SignatureSigningService
         // Rest ungeschuetzt in derselben Anfrage: eine Glocke, die einmal
         // nicht schreiben konnte, wurde dem Unterzeichner als HTTP 500
         // gezeigt, obwohl seine Unterschrift laengst sicher lag.
-        $this->audit->record($request, 'signed', $signer, count($prepared).' Felder ausgefüllt');
+        // WER hat unterschrieben - und, falls bekannt, FUER WEN.
+        //
+        // Betreiber-Vorgabe 7: im Protokoll muss ohne Nachschlagen stehen,
+        // wer unterschrieben hat und fuer welche Firma. Die Firma wird NUR
+        // genannt, wenn sie in der verknuepften Kundenakte wirklich steht -
+        // erfunden wird sie nie, und eine neue Spalte braucht es dafuer
+        // nicht. Ein FIRMENBILD ist ausdruecklich KEINE Unterschrift und
+        // erscheint weiterhin getrennt als "eingesetzt von".
+        $stellen = 0;
+        foreach ($prepared as $eintrag) {
+            $stellen += isset($eintrag['group']) ? $eintrag['group']->count() : 1;
+        }
+        $firma = $request->customer?->company_name;
+        $this->audit->record($request, 'signed', $signer,
+            $stellen.' Stelle(n) ausgefüllt'.($firma ? ' · für '.$firma : ''));
         $request->unsetRelation('signers');
         $request->unsetRelation('fields');
 
         try {
-            $this->advance($request);
+            $this->advance($request, $signer);
         } catch (\Throwable $e) {
             Log::error('Signatur: Nachlauf nach der Unterschrift gescheitert: '.$e->getMessage(), [
                 'signature_request_id' => $request->id,
@@ -295,10 +309,21 @@ class SignatureSigningService
      * Nach einer Unterschrift: entweder den Naechsten einladen oder den
      * Vorgang abschliessen.
      */
-    private function advance(SignatureRequest $request): void
+    private function advance(SignatureRequest $request, SignatureSigner $signer): void
     {
         $request->load(['signers', 'fields']);
         $open = $request->signers->filter(fn (SignatureSigner $s) => $s->isPending());
+
+        // DIE PERSONEN-MELDUNG KOMMT IMMER - auch beim letzten (oder
+        // einzigen) Unterzeichner. Vorher stand sie NACH der Abzweigung:
+        // bei genau einem Unterzeichner - dem Normalfall - erfuhr der
+        // Mitarbeiter also nie "der Kunde hat unterschrieben", sondern nur
+        // "Signatur abgeschlossen". Beide Meldungen sagen etwas anderes:
+        // die eine, dass ein MENSCH fertig ist, die andere, dass das
+        // DOKUMENT fertig ist (mit dem erzeugten PDF).
+        $this->requests->notifyCreator($request, 'Dokument unterschrieben',
+            $signer->name.' hat "'.$request->title.'" unterschrieben ('
+            .$request->signedCount().' von '.$request->signers->count().').');
 
         if ($open->isEmpty()) {
             $this->complete($request);
@@ -318,8 +343,6 @@ class SignatureSigningService
             }
         }
 
-        $this->requests->notifyCreator($request, 'Signatur: ein Unterzeichner fertig',
-            '"'.$request->title.'" - '.$request->signedCount().' von '.$request->signers->count().' unterschrieben.');
     }
 
     /**

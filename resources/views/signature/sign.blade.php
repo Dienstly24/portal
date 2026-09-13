@@ -29,6 +29,11 @@
         'unterschrieben' => __('signing.signed_mark'),
         'leer' => __('signing.empty'),
         'fortschritt' => __('signing.progress', ['done' => ':done', 'total' => ':total']),
+        'stellen' => __('signing.places_done', ['count' => ':count', 'total' => ':total']),
+        'seite' => __('signing.page_of', ['page' => ':page', 'total' => ':total']),
+        'z_offen' => __('signing.state_pending'),
+        'z_teilweise' => __('signing.state_in_progress'),
+        'z_fertig' => __('signing.state_completed'),
     ];
 @endphp
 
@@ -51,15 +56,64 @@
     <a href="{{ route('signature.document', $token) }}" target="_blank" rel="noopener">{{ __('signing.open_original') }}</a>
 </div>
 @else
-<div id="dokument">
-    @for($page = 1; $page <= $signature->page_count; $page++)
-    <div class="seite" data-seite="{{ $page }}">
-        {{-- loading="lazy": ein 30-seitiges Dokument soll auf dem Telefon
-             nicht 30 Bilder auf einmal laden. --}}
-        <img src="{{ route('signature.page', [$token, $page]) }}" alt="{{ __('signing.page_of', ['page' => $page, 'total' => $signature->page_count]) }}"
-             loading="lazy" width="1400" height="1980">
+{{-- FORTSCHRITT: der Unterzeichner soll IMMER wissen, wo er steht und was
+     noch fehlt - ohne selbst zu zaehlen. Die Zahlen kommen aus den
+     Gruppen, nicht aus den Feldern: eine Zeichnung erledigt alle Stellen
+     ihrer Gruppe auf einmal. --}}
+<div class="karte fortschrittskarte">
+    <div class="fortschritt-kopf">
+        <strong id="fortschritt-text">{{ __('signing.places_done', ['count' => 0, 'total' => $stellen]) }}</strong>
+        <span class="zustand" id="fortschritt-zustand" data-zustand="offen">{{ __('signing.state_pending') }}</span>
     </div>
-    @endfor
+    <div class="balken"><div class="balken-fuellung" id="fortschritt-balken" style="width:0%"></div></div>
+    <button type="button" class="knopf knopf-still naechste" id="naechste-stelle" data-h-click="sigNaechste">
+        {{ __('signing.next_signature') }}
+    </button>
+</div>
+
+<div id="betrachter">
+    {{-- MINIATUREN: sie beantworten die Frage "wo im Dokument bin ich und
+         wo wird unterschrieben?" auf einen Blick. Auf dem Telefon liegen
+         sie als Streifen QUER ueber dem Dokument - eine Seitenleiste waere
+         dort die halbe Bildschirmbreite. --}}
+    <aside id="miniaturen" aria-label="{{ __('signing.thumbnails') }}">
+        @for($page = 1; $page <= $signature->page_count; $page++)
+        @php $stellenAufSeite = $fields->where('page', $page)->filter(fn ($f) => $f->isDrawn())->count(); @endphp
+        <button type="button" class="miniatur" data-h-click="sigZuSeite" data-seite="{{ $page }}"
+                aria-label="{{ __('signing.page_of', ['page' => $page, 'total' => $signature->page_count]) }}">
+            <img src="{{ route('signature.page', [$token, $page]) }}" alt="" loading="lazy" width="140" height="198">
+            <span class="nummer">{{ $page }}</span>
+            @if($stellenAufSeite > 0)
+            {{-- Die Zahl steht nur, WENN es mehr als eine Stelle ist: eine
+                 "1" an jedem Blatt waere Ziergrafik. --}}
+            <span class="stelle-marke" title="{{ __('signing.signature_here') }}">✍@if($stellenAufSeite > 1) {{ $stellenAufSeite }}@endif</span>
+            @endif
+        </button>
+        @endfor
+    </aside>
+
+    <div id="dokumentspalte">
+        <div id="werkzeuge">
+            <span class="seitenstand" id="seitenstand">{{ __('signing.page_of', ['page' => 1, 'total' => $signature->page_count]) }}</span>
+            <div class="zoomknoepfe">
+                <button type="button" class="zoomknopf" data-h-click="sigZoom" data-richtung="-" aria-label="{{ __('signing.zoom_out') }}">−</button>
+                <button type="button" class="zoomknopf" data-h-click="sigZoom" data-richtung="+" aria-label="{{ __('signing.zoom_in') }}">+</button>
+                <button type="button" class="zoomknopf breit" data-h-click="sigZoom" data-richtung="fit">{{ __('signing.fit_width') }}</button>
+            </div>
+        </div>
+        <div id="dokumentrahmen">
+            <div id="dokument">
+                @for($page = 1; $page <= $signature->page_count; $page++)
+                <div class="seite" data-seite="{{ $page }}">
+                    {{-- loading="lazy": ein 30-seitiges Dokument soll auf dem Telefon
+                         nicht 30 Bilder auf einmal laden. --}}
+                    <img src="{{ route('signature.page', [$token, $page]) }}" alt="{{ __('signing.page_of', ['page' => $page, 'total' => $signature->page_count]) }}"
+                         loading="lazy" width="1400" height="1980">
+                </div>
+                @endfor
+            </div>
+        </div>
+    </div>
 </div>
 @endif
 
@@ -114,6 +168,23 @@
         </div>
     </div>
     @endforeach
+
+    {{-- PRUEFSCHRITT: erscheint erst, wenn alle Stellen erledigt sind.
+         Er zeigt in einem Blick, WAS gleich verbindlich wird - Dokument,
+         Umfang, Unterzeichner - und gibt den Weg zum echten PDF. Vorher
+         waere er eine leere Behauptung, deshalb ist er bis dahin aus. --}}
+    <div class="karte pruefschritt" id="pruefschritt" hidden>
+        <h2>✅ {{ __('signing.review_heading') }}</h2>
+        <p class="lead" id="pruefschritt-satz">{{ trans_choice('signing.review_all_done', $stellen, ['count' => $stellen]) }}</p>
+        <dl class="pruefliste">
+            <dt>{{ __('signing.review_document') }}</dt><dd>{{ $signature->title }}</dd>
+            <dt>{{ __('signing.review_pages') }}</dt><dd>{{ $signature->page_count }}</dd>
+            <dt>{{ __('signing.review_signer') }}</dt><dd>{{ $signer->name }}</dd>
+        </dl>
+        <p style="margin-top:12px;">
+            <a href="{{ route('signature.document', $token) }}" target="_blank" rel="noopener">{{ __('signing.review_view_document') }}</a>
+        </p>
+    </div>
 
     <div class="karte">
         <h2>{{ __('signing.consent_heading') }}</h2>
@@ -295,7 +366,40 @@ window.__h = window.__h || {};
         markiereFelder();
     };
 
+    // Fortschritt in STELLEN, nicht in Zeichnungen: der Unterzeichner
+    // denkt in "wie viel vom Dokument ist erledigt", nicht in
+    // "wie viele Zeichenflaechen habe ich befuellt". Eine Zeichnung setzt
+    // alle Stellen ihrer Gruppe auf einmal - genau das soll man sehen.
+    function stellenStand() {
+        var gesamt = 0, fertig = 0;
+        felder.forEach(function (f) {
+            if (!f.drawn || !f.group) { return; }
+            gesamt++;
+            if (zustand[f.group] && zustand[f.group].gezeichnet) { fertig++; }
+        });
+
+        var text = document.getElementById('fortschritt-text');
+        var balken = document.getElementById('fortschritt-balken');
+        var marke = document.getElementById('fortschritt-zustand');
+        var pruef = document.getElementById('pruefschritt');
+        var naechste = document.getElementById('naechste-stelle');
+
+        if (text) { text.textContent = texte.stellen.replace(':count', fertig).replace(':total', gesamt); }
+        if (balken) { balken.style.width = (gesamt === 0 ? 0 : Math.round(fertig / gesamt * 100)) + '%'; }
+        if (marke) {
+            var z = fertig === 0 ? 'offen' : (fertig < gesamt ? 'teilweise' : 'fertig');
+            marke.setAttribute('data-zustand', z);
+            marke.textContent = z === 'offen' ? texte.z_offen : (z === 'teilweise' ? texte.z_teilweise : texte.z_fertig);
+        }
+        // Der Pruefschritt erscheint erst, wenn er etwas Wahres sagen kann.
+        if (pruef) { pruef.hidden = !(gesamt > 0 && fertig === gesamt); }
+        // Ist nichts mehr offen, fuehrt der Knopf zum Bestaetigen statt in
+        // eine leere Suche.
+        if (naechste) { naechste.hidden = gesamt === 0; }
+    }
+
     function gesamtStand() {
+        stellenStand();
         var offen = 0;
         Object.keys(zustand).forEach(function (id) { if (!zustand[id].gezeichnet) { offen++; } });
         var anzeige = document.getElementById('gesamt-status');
@@ -336,6 +440,80 @@ window.__h = window.__h || {};
             seite.appendChild(marke);
         });
     }
+
+    // ---------------------------------------------------- Betrachter
+    //
+    // Seitenstand, Zoom und der Sprung zur naechsten Stelle. Alles rein
+    // ansichtsseitig - der Server erfaehrt davon nichts und das Absenden
+    // bleibt unveraendert.
+    var rahmen = document.getElementById('dokumentrahmen');
+    var dokument = document.getElementById('dokument');
+    var seitenstand = document.getElementById('seitenstand');
+    var miniaturen = Array.prototype.slice.call(document.querySelectorAll('.miniatur'));
+    var seitenZahl = document.querySelectorAll('#dokument .seite').length;
+    var zoom = 1;
+
+    function zeigeSeite(nummer) {
+        if (!seitenstand) { return; }
+        seitenstand.textContent = texte.seite.replace(':page', nummer).replace(':total', seitenZahl);
+        miniaturen.forEach(function (m) {
+            m.classList.toggle('aktiv', m.getAttribute('data-seite') === String(nummer));
+        });
+    }
+
+    // Welche Seite ist gerade zu sehen? Gemessen wird die Seite, die dem
+    // oberen Drittel des Fensters am naechsten liegt - nicht die groesste
+    // sichtbare: beim Blaettern springt der Zaehler sonst zurueck.
+    function aktuelleSeite() {
+        var beste = 1, besterAbstand = Infinity;
+        document.querySelectorAll('#dokument .seite').forEach(function (el) {
+            var abstand = Math.abs(el.getBoundingClientRect().top - window.innerHeight * 0.25);
+            if (abstand < besterAbstand) { besterAbstand = abstand; beste = el.getAttribute('data-seite'); }
+        });
+        return beste;
+    }
+
+    var scrollLaeuft = false;
+    window.addEventListener('scroll', function () {
+        if (scrollLaeuft) { return; }
+        scrollLaeuft = true;
+        window.requestAnimationFrame(function () { zeigeSeite(aktuelleSeite()); scrollLaeuft = false; });
+    }, { passive: true });
+
+    window.__h["sigZuSeite"] = function () {
+        var nummer = this.getAttribute('data-seite');
+        var ziel = document.querySelector('#dokument .seite[data-seite="' + nummer + '"]');
+        if (ziel) { ziel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+        zeigeSeite(nummer);
+    };
+
+    window.__h["sigZoom"] = function () {
+        var richtung = this.getAttribute('data-richtung');
+        // "fit" ist die Ausgangslage: genau die Breite des Rahmens, also
+        // kein seitliches Scrollen. Das ist bewusst der Normalfall.
+        if (richtung === 'fit') { zoom = 1; }
+        else if (richtung === '+') { zoom = Math.min(zoom + 0.25, 3); }
+        else { zoom = Math.max(zoom - 0.25, 1); }
+        if (dokument) { dokument.style.setProperty('--zoom', zoom); }
+        markiereFelder();
+    };
+
+    // "Naechste Unterschrift": fuehrt zur ersten NOCH OFFENEN Stelle -
+    // auch wenn sie Seiten weiter liegt. Ohne den Knopf muesste der
+    // Unterzeichner das Dokument selbst nach Kaesten absuchen.
+    window.__h["sigNaechste"] = function () {
+        var offen = felder.filter(function (f) {
+            return f.drawn && f.group && !(zustand[f.group] && zustand[f.group].gezeichnet);
+        });
+        // Alles gezeichnet? Dann ist der naechste Schritt das Bestaetigen.
+        var ziel = offen.length > 0
+            ? document.querySelector('#dokument .seite[data-seite="' + offen[0].page + '"]')
+            : document.getElementById('pruefschritt');
+        if (ziel) { ziel.scrollIntoView({ behavior: 'smooth', block: offen.length > 0 ? 'start' : 'center' }); }
+        if (offen.length > 0) { zeigeSeite(offen[0].page); }
+    };
+
+    zeigeSeite(1);
 
     markiereFelder();
     gesamtStand();
