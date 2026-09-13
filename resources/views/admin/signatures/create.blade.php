@@ -166,11 +166,13 @@
                     <select id="identity_check" name="identity_check"
                             style="width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
                         @foreach(\App\Models\SignatureRequest::IDENTITY_CHECKS as $key => $label)
-                        <option value="{{ $key }}" @selected(old('identity_check', \App\Models\SignatureRequest::IDENTITY_EMAIL) === $key)>{{ $label }}</option>
+                        <option value="{{ $key }}" @selected(old('identity_check', \App\Models\SignatureRequest::IDENTITY_NONE) === $key)>{{ $label }}</option>
                         @endforeach
                     </select>
                     <div class="muted-sm" style="margin-top:6px;">
-                        <strong>E-Mail-Bestätigung</strong> ist die stärkste der drei: sie belegt, dass die Person
+                        Voreingestellt ist <strong>Keine</strong> - der Zugang ist bereits durch den
+                        persönlichen Einladungslink geschützt. Die zwei Zusatzstufen wählen Sie bewusst dazu:
+                        <strong>E-Mail-Bestätigung</strong> ist die stärkste, sie belegt, dass die Person
                         Zugriff auf das eingeladene Postfach hat - ein weitergeleiteter Link allein belegt das nicht.
                         <strong>Geburtsdatum</strong> hält den zufälligen Empfänger eines weitergeleiteten Links auf,
                         ist aber kein Geheimnis (es steht auf jedem Ausweis). Tragen Sie es dafür im nächsten

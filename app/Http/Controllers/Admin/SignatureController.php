@@ -198,7 +198,7 @@ class SignatureController extends Controller
                 'customer_id' => $data['customer_id'] ?? null,
                 'contract_id' => $data['contract_id'] ?? null,
                 'signing_order' => $data['signing_order'] ?? 'sequential',
-                'identity_check' => $data['identity_check'] ?? SignatureRequest::IDENTITY_EMAIL,
+                'identity_check' => $data['identity_check'] ?? SignatureRequest::IDENTITY_NONE,
                 'consent_text' => $data['consent_text'] ?? null,
                 'document_type' => $data['document_type'] ?? null,
                 'reference' => $data['reference'] ?? null,

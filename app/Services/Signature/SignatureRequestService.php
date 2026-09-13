@@ -67,12 +67,15 @@ class SignatureRequestService
             'original_size' => strlen($binary),
             'page_count' => $pageCount,
             'signing_order' => ($attributes['signing_order'] ?? 'sequential') === 'parallel' ? 'parallel' : 'sequential',
+            // Voreinstellung KEINE (Betreiber-Vorgabe 13.09.2026): eine
+            // zusaetzliche Huerde wird bewusst gewaehlt, nie stillschweigend
+            // gesetzt. Der alte Schalter bleibt als Uebersetzung bestehen.
             'identity_check' => $attributes['identity_check']
                 ?? (array_key_exists('require_email_verification', $attributes)
                     ? ($attributes['require_email_verification']
                         ? SignatureRequest::IDENTITY_EMAIL
                         : SignatureRequest::IDENTITY_NONE)
-                    : SignatureRequest::IDENTITY_EMAIL),
+                    : SignatureRequest::IDENTITY_NONE),
             'consent_text' => $attributes['consent_text'] ?? $this->defaultConsentText(),
             'document_type' => $attributes['document_type'] ?? null,
             'reference' => $attributes['reference'] ?? null,
