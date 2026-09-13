@@ -2649,6 +2649,59 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
   expired/declined/cancelled).
 - Tests: `SignaturGruppeTest` (9 Faelle).
 
+### Betrachter, Fortschritt und die Glocke (Betreiber-Vorgabe 13.09.2026)
+
+- **Reine ANZEIGE-Aenderung**: kein Backend-Umbau, keine Migration, kein
+  geaenderter Absende-Vertrag. Die Signaturgruppe aus PR #328 bleibt die
+  EINE Quelle - der Betrachter liest sie nur aus.
+- **Miniaturen statt Suchen**: Seitenleiste mit allen Seiten, ✍ auf jeder
+  Seite mit Unterschriftsstelle (die ZAHL nur ab zwei Stellen - eine "1"
+  an jedem Blatt waere Ziergrafik). Auf dem Telefon liegt sie als
+  QUER-Streifen ueber dem Dokument: eine echte Seitenleiste kostet auf
+  390 px die halbe Breite und erzwingt genau das seitliche Scrollen, das
+  vermieden werden soll. Ab 900 px steht sie links.
+- **"Seite X von Y"** wird aus der Bildlaufposition gemessen - und zwar
+  ueber die Seite, die dem oberen VIERTEL des Fensters am naechsten liegt,
+  nicht die groesste sichtbare: sonst springt der Zaehler beim Blaettern
+  zurueck.
+- **Zoom**: "Breite" ist der Normalfall (`--zoom:1`), Plus/Minus in
+  0,25-Schritten bis 3. Beim Hineinzoomen scrollt der RAHMEN, nie die
+  Seite - die Bedienleiste bleibt stehen. Der Ausgangswert steht als echte
+  Definition im CSS und nicht als Fallback im `var()`; der Waechter-Test
+  der Design-Tokens hat genau das zu Recht angemahnt.
+- **Fortschritt in STELLEN, nicht in Zeichenflaechen**: "0 von 7
+  Unterschriftsfeldern ausgefuellt" plus Balken und Zustand
+  (Offen / In Arbeit / Fertig). Der Unterzeichner denkt in "wie viel vom
+  Dokument ist erledigt". Eine Zeichnung setzt alle Stellen ihrer Gruppe
+  auf einmal - genau das soll man sehen.
+- **"Naechste Unterschrift →"** fuehrt zur ersten OFFENEN Stelle, auch
+  seitenweit entfernt; ist nichts mehr offen, fuehrt er zum Pruefschritt
+  statt in eine leere Suche.
+- **Pruefschritt** erscheint ERST, wenn alle Stellen erledigt sind (vorher
+  waere er eine leere Behauptung): Dokument, Seitenzahl, Unterzeichner,
+  Weg zum echten PDF - darunter die unveraenderte Zustimmung.
+- **DIE GLOCKE HATTE EINE LUECKE, und es war der Normalfall**: bei EINEM
+  Unterzeichner sprang `advance()` sofort zum Abschluss - die Meldung
+  "Dokument unterschrieben" stand DAHINTER und kam nie. Der Mitarbeiter
+  las nur "Signatur abgeschlossen". Die Personen-Meldung kommt jetzt
+  IMMER; beide sagen Verschiedenes: die eine, dass ein MENSCH fertig ist,
+  die andere, dass das DOKUMENT fertig ist (mit erzeugtem PDF).
+- **Kein zweites Benachrichtigungssystem**: dieselbe `InternalNotification`
+  wie Tickets und Chat, derselbe `dedup_key` (ein zweites Absenden laeutet
+  nicht erneut), dieselbe Gelesen-Mechanik. NEU ist nur ein Symbol je Art
+  (`SYMBOLE` im `InternalNotificationController`) - vorher trug jede
+  Meldung mit Titel dasselbe "i" und war im Stapel nicht unterscheidbar.
+  Dazu die erste Stufe "Signatur angefordert" beim Versenden.
+- **Protokoll nennt Person UND Firma** (Vorgabe 7): "Max Mustermann -
+  2 Stelle(n) ausgefuellt · fuer Muster Bau GmbH". Die Firma NUR, wenn sie
+  in der verknuepften Kundenakte wirklich steht - erfunden wird sie nie,
+  und eine neue Spalte braucht es dafuer nicht. Ein FIRMENBILD bleibt
+  getrennt ("eingesetzt von") und ist keine Willenserklaerung.
+- Am simulierten iPhone und am Desktop geprueft: 19 Miniaturen, 7 Marken,
+  kein seitliches Scrollen der Seite (auch nicht nach dem Zoomen), keine
+  JavaScript-Fehler.
+- Tests: `SignaturBenachrichtigungTest` (8 Faelle).
+
 ## Offene Themen / wartet auf den Betreiber
 
 - **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026

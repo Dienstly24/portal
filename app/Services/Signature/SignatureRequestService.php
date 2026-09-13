@@ -327,6 +327,14 @@ class SignatureRequestService
         foreach ($this->signersToInvite($request) as $signer) {
             $this->invite($request, $signer);
         }
+
+        // ZWEI STUFEN IM AKTIVITAETSCENTER (Betreiber-Vorgabe 13.09.2026):
+        // "angefordert" und "unterschrieben". Ohne die erste Stufe steht im
+        // Center nur das Ende - wer nachsehen will, ob ein Dokument
+        // ueberhaupt rausgegangen ist, findet dort nichts. Der dedup_key
+        // haelt es bei EINEM Eintrag, auch wenn erneut versendet wird.
+        $this->notifyCreator($request, 'Signatur angefordert',
+            '"'.$request->title.'" wurde an '.$request->signers->count().' Unterzeichner versendet.');
     }
 
     /** @return iterable<SignatureSigner> */

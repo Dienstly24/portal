@@ -67,6 +67,54 @@ html[dir="rtl"] .fortschritt{text-align:right;}
 .feldmarke.fertig{border-style:solid;background:rgba(23,166,91,.22);}
 .zeichenflaeche{width:100%;height:clamp(200px,38vh,320px);border:2px dashed var(--line);border-radius:12px;background:#fff;
                 touch-action:none;display:block;}
+/* --- Betrachter: Miniaturen + Dokument ------------------------------
+   MOBILE FIRST: die Miniaturen liegen als QUER-Streifen ueber dem
+   Dokument. Eine echte Seitenleiste kostet auf einem 390px-Telefon die
+   halbe Breite - und erzwingt genau das seitliche Scrollen, das hier
+   ausdruecklich nicht passieren soll. Erst ab 900px steht sie links. */
+#betrachter{display:flex;flex-direction:column;gap:12px;margin:14px 0;}
+#miniaturen{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 8px;
+            -webkit-overflow-scrolling:touch;scrollbar-width:thin;}
+.miniatur{position:relative;flex:none;width:74px;padding:0;border:2px solid var(--line);
+          border-radius:6px;background:#fff;cursor:pointer;overflow:hidden;line-height:0;}
+.miniatur img{width:100%;height:auto;display:block;}
+.miniatur.aktiv{border-color:var(--emerald);box-shadow:0 0 0 2px rgba(23,166,91,.25);}
+.miniatur .nummer{position:absolute;left:3px;bottom:3px;background:rgba(0,0,0,.62);color:#fff;
+                  font-size:10px;line-height:1;padding:2px 4px;border-radius:3px;}
+.miniatur .stelle-marke{position:absolute;right:3px;top:3px;background:var(--emerald);color:#fff;
+                        font-size:10px;line-height:1;padding:2px 4px;border-radius:3px;font-weight:700;}
+#werkzeuge{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+           padding:8px 10px;background:var(--surface);border:1px solid var(--line);border-radius:8px;}
+.seitenstand{font-size:13px;font-weight:600;white-space:nowrap;}
+.zoomknoepfe{display:flex;gap:6px;}
+.zoomknopf{min-width:36px;height:32px;border:1px solid var(--line);background:#fff;border-radius:6px;
+           font-size:15px;cursor:pointer;padding:0 8px;}
+.zoomknopf.breit{font-size:12px;}
+/* Der Rahmen scrollt, NICHT die Seite: beim Hineinzoomen darf das
+   Dokument breiter werden, ohne die ganze Oberflaeche zu verschieben.
+   Der Ausgangswert von --zoom steht als echte Definition da und nicht
+   als Fallback im var() - sonst waere die einzige Quelle ein Notnagel. */
+#dokumentrahmen{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;}
+#dokument{--zoom:1;width:calc(100% * var(--zoom));}
+.pruefschritt{border-color:var(--emerald);}
+.pruefliste{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin-top:12px;font-size:14px;}
+.pruefliste dt{color:var(--ink-soft);}
+.pruefliste dd{margin:0;font-weight:600;}
+.fortschrittskarte .fortschritt-kopf{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.balken{height:7px;background:var(--line);border-radius:4px;margin:10px 0 12px;overflow:hidden;}
+.balken-fuellung{height:100%;background:var(--emerald);transition:width .25s;}
+.zustand{font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+.zustand[data-zustand="offen"]{background:#FDF2E3;color:#9A6212;}
+.zustand[data-zustand="teilweise"]{background:#E7F1FD;color:#1F4E96;}
+.zustand[data-zustand="fertig"]{background:#E4F5EC;color:#0E6B3A;}
+.knopf.naechste{width:auto;}
+@media (min-width:900px){
+  #betrachter{flex-direction:row;align-items:flex-start;}
+  #miniaturen{flex-direction:column;overflow-x:visible;overflow-y:auto;max-height:78vh;
+              flex:none;width:96px;padding-right:6px;}
+  .miniatur{width:100%;}
+  #dokumentspalte{flex:1;min-width:0;}
+}
 .fussleiste{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);
             padding:12px 14px calc(12px + env(safe-area-inset-bottom));z-index:30;}
 .fussleiste .innen{max-width:820px;margin:0 auto;display:flex;gap:10px;align-items:center;}
