@@ -338,6 +338,114 @@ class EnergiePortalAuftragParserTest extends TestCase
         $this->assertArrayNotHasKey('expected_start_within_days', $r['data']['versicherung']);
     }
 
+    /**
+     * REIHENFOLGE-WAECHTER (Lehre 13.09.2026, vom Betreiber am Ostrom-Auftrag
+     * gemeldet): der Composite nimmt den ERSTEN Parser, der zugreift. Der
+     * generische `EnergieAuftragParser` stand VOR diesem hier und erkannte in
+     * dem Screenshot gerade genug, um zuzugreifen - las daraus aber fast
+     * nichts richtig: Anbieter = der VORVERSORGER, Tarif = "geboren am: ...",
+     * kein Name, keine Anschrift, keine Auftragsnummer. Der spezialisierte
+     * Parser kam nie zum Zug. Geprueft wird deshalb die ECHTE Kette aus dem
+     * Container, nicht dieser Parser allein.
+     */
+    public function test_composite_prefers_this_parser_over_the_generic_one(): void
+    {
+        $composite = $this->app->make(\App\Services\Ai\Contracts\DocumentTemplateParser::class);
+
+        $r = $composite->parse($this->screenshotText());
+
+        $this->assertNotNull($r);
+        $this->assertStringContainsString('Vertriebsportal', $r['summary']);
+        // Anbieter ist die Gesellschaft aus der Kopfzeile - NIE der
+        // Vorversorger, den der generische Parser hier genommen hat.
+        $this->assertSame('Musterenergie AG', $r['data']['versicherung']['insurer']);
+        $this->assertSame('1672525', $r['data']['versicherung']['reference_number']);
+        $this->assertSame('Karim', $r['data']['person']['first_name']);
+        $this->assertSame('Muster', $r['data']['person']['last_name']);
+        $this->assertSame('51214126166', $r['data']['energie']['malo_id']);
+    }
+
+    /** Ein GAS-Auftrag darf nie als Strom in der Kundenakte landen. */
+    public function test_composite_keeps_a_gas_order_a_gas_order(): void
+    {
+        $composite = $this->app->make(\App\Services\Ai\Contracts\DocumentTemplateParser::class);
+
+        $r = $composite->parse($this->screenshotText([
+            'Tariftyp      Strom' => 'Tariftyp      Gas',
+            'Fair Ökostrom 24' => 'Fair Erdgas 24',
+        ]));
+
+        $this->assertSame('gas', $r['data']['versicherung']['sparte']);
+    }
+
+    /**
+     * Der einmalige Bonus und eine Kuendigungsfrist in TAGEN gehoeren zum
+     * Angebot, haben aber kein eigenes Feld. Frueher fielen beide still weg:
+     * der Bonus wurde gar nicht gelesen, die Frist nur in MONATEN. Das
+     * Waehrungszeichen liest die OCR haeufig als "£".
+     */
+    public function test_reads_one_time_bonus_and_notice_period_in_days(): void
+    {
+        $r = (new EnergiePortalAuftragParser)->parse($this->screenshotText([
+            '1 Monat Kündigungsfrist         MaLo-ID                51214126166'
+                => 'einmaliger Bonus  25,00 £     MaLo-ID                51214126166',
+            '24 Monate Vertragslaufzeit      Status'
+                => '14 Tage Kündigungsfrist         Status',
+        ]));
+
+        $this->assertStringContainsString('Einmaliger Bonus 25,00 EUR', $r['summary']);
+        $this->assertStringContainsString('Kündigungsfrist: 14 Tage', $r['summary']);
+    }
+
+    /** Ein Produktname mit dem Wort "Bonus" ist keine Bonus-Angabe. */
+    public function test_product_name_containing_bonus_is_no_bonus_amount(): void
+    {
+        $r = (new EnergiePortalAuftragParser)->parse($this->screenshotText([
+            'Fair Ökostrom 24' => 'SimplyFair24 mit Bonus',
+        ]));
+
+        $this->assertStringNotContainsString('Einmaliger Bonus', $r['summary']);
+    }
+
+    /**
+     * Die Status-Zelle ist MEHRZEILIG, und die Beschriftung "Status" steht in
+     * der MITTLEREN Zeile: der Anfang des Wertes (mit dem Status-CODE) steht
+     * eine Zeile hoeher, der Zeitstempel eine Zeile tiefer. Frueher stand in
+     * der Zusammenfassung ein halber Satz - schlimmer als gar nichts, weil er
+     * wie eine vollstaendige Angabe aussieht.
+     */
+    public function test_status_cell_spanning_three_lines_is_reassembled(): void
+    {
+        $r = (new EnergiePortalAuftragParser)->parse($this->screenshotText([
+            '24 Monate Vertragslaufzeit      Status                 1000 - Auftrag komplett erfasst, wartend auf manuelle Prüfung'
+                => "                                1000 - Auftrag komplett erfasst, wartend\n"
+                 ."24 Monate Vertragslaufzeit      Status                 auf manuelle Prüfung (16.08.2026\n"
+                 .'13:38:17)',
+        ]));
+
+        $this->assertStringContainsString(
+            'Portal-Status: 1000 - Auftrag komplett erfasst, wartend auf manuelle Prüfung (16.08.2026 13:38:17)',
+            $r['summary']
+        );
+    }
+
+    /**
+     * Das Kreditinstitut steht als Klammerzusatz hinter der BLZ. Die
+     * Kundenakte hat dafuer kein Feld (gespeichert werden IBAN/BIC/
+     * Kontoinhaber) - es gehoert deshalb in die Zusammenfassung und NICHT
+     * als toter Wert in die Bankdaten.
+     */
+    public function test_bank_institute_is_named_in_the_summary_only(): void
+    {
+        $r = (new EnergiePortalAuftragParser)->parse($this->screenshotText());
+
+        $this->assertStringContainsString(
+            'Bankverbindung des Kunden uebernommen (Sparkasse Muster)',
+            $r['summary']
+        );
+        $this->assertArrayNotHasKey('bank_name', $r['data']['bank']);
+    }
+
     public function test_ignores_unrelated_documents(): void
     {
         $parser = new EnergiePortalAuftragParser;

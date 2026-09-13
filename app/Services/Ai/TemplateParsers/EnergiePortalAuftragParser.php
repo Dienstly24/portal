@@ -85,7 +85,7 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
         'Tarifübersicht', 'Vertragsbeginn', 'Vertragsnummer',
         'Auftragsdatum', 'Bestellnummer', 'Eingangsdatum',
         'Marktlokation', 'Netzbetreiber', 'Neueinzug zum',
-        'Arbeitspreis', 'Einzugsdatum', 'Geburtsdatum', 'Kontoinhaber',
+        'einmaliger Bonus', 'Arbeitspreis', 'Einzugsdatum', 'Geburtsdatum', 'Kontoinhaber',
         'Kundennummer', 'Lieferbeginn', 'Messlokation', 'Referenz-Nr.',
         'Vorversorger', 'Zählernummer', 'Belieferung', 'Lieferdatum',
         'Mobilnummer', 'Zusatzinfos', 'Einzug zum', 'Geburtstag',
@@ -103,6 +103,9 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
 
     /** Hinweis zur Bankverbindung fuer die Zusammenfassung (Abweichung o.ae.). */
     private ?string $bankHinweis = null;
+
+    /** Kreditinstitut aus der BLZ-Zeile - nur fuer die Zusammenfassung. */
+    private ?string $kreditinstitut = null;
 
     /** Erkennungssicherheit je Feld - siehe App\Support\FieldRecognition. */
     private FieldRecognition $felder;
@@ -147,7 +150,10 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
                 .(isset($energie['tariff']) ? ' ('.$energie['tariff'].')' : '')
                 .($name !== '' ? ' - '.$name : '')
                 .$this->extras($energie, $insurance)
-                .($bank !== [] ? ' Bankverbindung des Kunden uebernommen.' : ' Ohne Bankuebernahme.')
+                .($bank !== []
+                    ? ' Bankverbindung des Kunden uebernommen'
+                        .($this->kreditinstitut !== null ? ' ('.$this->kreditinstitut.')' : '').'.'
+                    : ' Ohne Bankuebernahme.')
                 .($this->bankHinweis !== null ? ' HINWEIS: '.$this->bankHinweis.'.' : '')
                 .' Felder gratis aus der Auftragsuebersicht gelesen (ohne KI).',
             'title' => ($insurance['insurer'] ?? 'Energie').' '.$art.'-Auftrag'
@@ -392,6 +398,16 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
             $raw['bic'] = strtoupper(trim($v));
         }
         $raw['account_holder'] = $voll;
+
+        // Kreditinstitut steht als Klammerzusatz hinter der BLZ ("BLZ:
+        // 21750000 (Nord-Ostsee Sparkasse)"). Die Kundenakte hat dafuer KEIN
+        // Feld (gespeichert werden IBAN/BIC/Kontoinhaber) - der Name geht
+        // deshalb in die Zusammenfassung, wo er dem Mitarbeiter die Pruefung
+        // der Bankverbindung erleichtert, statt als toter Wert zu verfallen.
+        if (($v = $this->labelValue('BLZ')) !== null
+            && preg_match('/\(([\p{L}][\p{L} .\-&]{2,60})\)/u', $v, $m)) {
+            $this->kreditinstitut = trim($m[1]);
+        }
 
         return $this->validatedBank($raw);
     }
@@ -773,16 +789,28 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
                     : '')
                 .'.';
         }
+        // Einmaliger Bonus ("einmaliger Bonus 25,00 €"): er hat kein eigenes
+        // Feld, gehoert aber zum Angebot und darf nicht verschwinden. Das
+        // Waehrungszeichen liest die OCR gern als "£" - gezaehlt wird deshalb
+        // nur der Betrag.
+        // Der BETRAG muss direkt folgen - so wird ein Produktname, der das
+        // Wort traegt ("Ostrom SimplyFair24 mit Bonus"), nie zur Bonus-Angabe.
+        if (preg_match('/(?<![\p{L}])(?:einmaliger\s+|Sofort|Neukunden)?Bonus\s*:?\s+([\d.]+,\d{2})/iu', $this->text, $m)) {
+            $out .= ' Einmaliger Bonus '.$m[1].' EUR.';
+        }
+        // Laufzeit, Preisgarantie und Kuendigungsfrist stehen mal in MONATEN,
+        // mal in TAGEN ("14 Tage Kündigungsfrist") - frueher wurden nur Monate
+        // gelesen, eine Frist in Tagen fiel still weg.
         foreach ([
-            'Vertragslaufzeit' => '/(\d+)\s+Monate?\s+Vertragslaufzeit/u',
-            'Preisgarantie' => '/(\d+)\s+Monate?\s+[\w\-]*Preisgarantie/u',
-            'Kündigungsfrist' => '/(\d+)\s+Monate?\s+Kündigungsfrist/u',
-        ] as $label => $re) {
-            if (preg_match($re, $this->text, $m)) {
-                $out .= ' '.$label.': '.$m[1].' Monat'.((int) $m[1] === 1 ? '' : 'e').'.';
+            'Vertragslaufzeit' => 'Vertragslaufzeit',
+            'Preisgarantie' => '[\w\-]*Preisgarantie',
+            'Kündigungsfrist' => 'Kündigungsfrist',
+        ] as $label => $begriff) {
+            if (preg_match('/(\d+)\s+(Tage?|Wochen?|Monate?|Jahre?)\s+'.$begriff.'/u', $this->text, $m)) {
+                $out .= ' '.$label.': '.$m[1].' '.$this->einheit($m[2], (int) $m[1]).'.';
             }
         }
-        if (($v = $this->labelValue('Status')) !== null) {
+        if (($v = $this->portalStatus()) !== null) {
             $out .= ' Portal-Status: '.$v.'.';
         }
         if (($v = $this->labelValue('Unterschriftsdatum')) !== null) {
@@ -811,6 +839,61 @@ class EnergiePortalAuftragParser implements DocumentTemplateParser
                 .' Tagen (Kuendigungsfrist Stadtwerke 14 Tage + Bearbeitung).';
         }
         return $out;
+    }
+
+    /** Gebeugte Zeiteinheit zur Anzahl ("1 Tag" / "14 Tage"). */
+    private function einheit(string $wort, int $anzahl): string
+    {
+        $w = mb_strtolower($wort);
+
+        return match (true) {
+            str_starts_with($w, 'tag') => $anzahl === 1 ? 'Tag' : 'Tage',
+            str_starts_with($w, 'woche') => $anzahl === 1 ? 'Woche' : 'Wochen',
+            str_starts_with($w, 'jahr') => $anzahl === 1 ? 'Jahr' : 'Jahre',
+            default => $anzahl === 1 ? 'Monat' : 'Monate',
+        };
+    }
+
+    /**
+     * Portal-Status ("1000 - Auftrag komplett erfasst, wartend auf manuelle
+     * Pruefung (13.09.2026 13:38:17)").
+     *
+     * Die Zelle ist MEHRZEILIG, und die Beschriftung "Status" steht in der
+     * MITTLEREN Zeile: der Anfang des Wertes (mit dem Status-CODE) steht eine
+     * Zeile HOEHER, der Zeitstempel eine Zeile tiefer. Ohne dieses
+     * Zusammensetzen stand in der Zusammenfassung ein halber Satz
+     * ("Portal-Status: auf manuelle Pruefung (13.09.2026") - schlimmer als gar
+     * nichts, weil er wie eine vollstaendige Angabe aussieht.
+     */
+    private function portalStatus(): ?string
+    {
+        $wert = $this->labelValue('Status');
+        if ($wert === null) {
+            return null;
+        }
+
+        foreach ($this->lines as $i => $line) {
+            if (! preg_match('/(?<![\p{L}\d])Status(?![\p{L}\d])/u', $line)) {
+                continue;
+            }
+            // Eine Zeile hoeher: der Anfang des Wertes mit dem Status-CODE.
+            for ($j = $i - 1; $j >= 0 && $j >= $i - 2; $j--) {
+                $zellen = $this->cells($this->lines[$j]);
+                $kopf = trim((string) (end($zellen) ?: ''));
+                if (preg_match('/^\d{3,4}\s*[-–]\s*\p{Lu}/u', $kopf)) {
+                    $wert = $kopf.' '.$wert;
+                    break;
+                }
+            }
+            // Eine Zeile tiefer: der abschliessende Zeitstempel.
+            $naechste = trim($this->lines[$i + 1] ?? '');
+            if (preg_match('/^\d{1,2}:\d{2}(?::\d{2})?\)?$/u', $naechste)) {
+                $wert .= ' '.$naechste;
+            }
+            break;
+        }
+
+        return $wert;
     }
 
     /**

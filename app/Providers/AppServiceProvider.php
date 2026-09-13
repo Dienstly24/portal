@@ -221,10 +221,18 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(GruenweltLieferbestaetigungParser::class),
                 $app->make(LichtblickAuftragParser::class),
                 $app->make(PlanBNetZeroAuftragParser::class),
-                $app->make(EnergieAuftragParser::class),
-                // Auftrags-Uebersicht aus dem Vertriebsportal (Screenshot) -
-                // nach den PDF-Auftraegen der Versorger, vor dem DSL-Parser.
+                // Auftrags-Uebersicht aus dem Vertriebsportal (Screenshot):
+                // MUSS VOR dem generischen EnergieAuftragParser stehen - Lehre
+                // 13.09.2026, vom Betreiber am Ostrom-Auftrag gemeldet. Der
+                // Composite nimmt den ERSTEN Parser, der zugreift. Der
+                // generische Parser erkannte in dem Screenshot gerade genug,
+                // um zuzugreifen, las daraus aber fast nichts richtig
+                // (Anbieter = der VORVERSORGER, Tarif = "geboren am: ...",
+                // kein Name, keine Anschrift, keine Auftragsnummer, ein
+                // GAS-Auftrag als Strom) - der spezialisierte Parser kam nie
+                // zum Zug. Spezialisiert vor generisch, wie ueberall hier.
                 $app->make(EnergiePortalAuftragParser::class),
+                $app->make(EnergieAuftragParser::class),
                 $app->make(DslAuftragParser::class),
                 $app->make(PrivathaftpflichtAntragParser::class),
                 $app->make(OnlineProtokollAntragParser::class),

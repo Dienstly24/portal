@@ -743,6 +743,36 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   werden in `TesseractTextExtractor` vor der Erkennung VERDOPPELT -
   Screenshots kommen mit ~150 dpi, sonst verwechselt Tesseract aehnliche
   Zeichen ("NOLADE21RDB" -> "NOLADE2IRDB", "Tariftyp" -> "Tarityp").
+  **SPEZIALISIERT VOR GENERISCH - die wichtigste Lehre dieses Parsers**
+  (13.09.2026, vom Betreiber am Ostrom-Auftrag gemeldet: "das System erkennt
+  nicht 100% der Daten"): Der `CompositeDocumentTemplateParser` nimmt den
+  ERSTEN Parser, der zugreift - die Reihenfolge in `AppServiceProvider` ist
+  damit Programmlogik, keine Kosmetik. Der generische `EnergieAuftragParser`
+  stand VOR diesem hier und erkannte in dem Screenshot gerade genug, um
+  zuzugreifen; gelesen hat er daraus fast nichts richtig: Anbieter = der
+  VORVERSORGER ("EWE VERTRIEB GmbH" statt "Ostrom"), Tarif = "geboren am:
+  01.03.1988", KEIN Name, KEINE Anschrift, KEINE Auftragsnummer, keine
+  MaLo-ID, keine Zaehlernummer, kein Netzbetreiber, keine Preise - und ein
+  GAS-Auftrag wurde zu Strom. Der spezialisierte Parser war fertig, getestet
+  und dokumentiert und kam trotzdem nie zum Zug. Ein Waechter-Test prueft
+  deshalb die ECHTE Kette AUS DEM CONTAINER (nicht den Parser allein), damit
+  die Reihenfolge nicht wieder kippen kann. MERKSATZ fuer jeden neuen Parser:
+  einen Parser zu schreiben genuegt nicht - er muss VOR jedem generischeren
+  stehen, der denselben Text ebenfalls beansprucht.
+  Mit derselben Chromium+Tesseract-Replik gemessen und behoben wurden dabei
+  drei weitere Luecken: der EINMALIGE BONUS ("einmaliger Bonus 25,00 €")
+  wurde gar nicht gelesen (er hat kein eigenes Feld und steht jetzt in der
+  Zusammenfassung; erkannt wird er nur MIT folgendem Betrag, damit ein
+  Produktname wie "SimplyFair24 mit Bonus" nie als Bonus gilt); eine
+  KUENDIGUNGSFRIST IN TAGEN ("14 Tage Kündigungsfrist") fiel still weg, weil
+  nur Monate gelesen wurden; und die mehrzeilige STATUS-Zelle ergab einen
+  halben Satz ("Portal-Status: auf manuelle Pruefung (13.09.2026") - die
+  Beschriftung "Status" steht in der MITTLEREN Zeile, der Status-CODE eine
+  Zeile hoeher, der Zeitstempel eine Zeile tiefer; sie werden jetzt
+  zusammengesetzt. Das KREDITINSTITUT hinter der BLZ ("(Nord-Ostsee
+  Sparkasse)") geht bewusst NUR in die Zusammenfassung: die Kundenakte hat
+  dafuer kein Feld, und `validatedBank` speichert ausschliesslich
+  IBAN/BIC/Kontoinhaber - ein `bank_name` waere ein toter Wert.
 - **Gruenwelt-LIEFERBESTAETIGUNG (Strom/Gas)** (`GruenweltLieferbestaetigungParser`,
   28.08.2026): das Bestaetigungsschreiben NACH dem Auftrag (Gruenwelt
   Waermestrom GmbH / Gruenwelt Energie GmbH, digitale Textebene). Stufe
