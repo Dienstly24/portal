@@ -52,6 +52,9 @@
     display:flex;align-items:center;gap:10px;flex-wrap:wrap;
     padding:10px 12px;border-top:1px solid var(--line);background:var(--surface);
 }
+.sig-stand{flex:1;min-width:190px;font-size:13px;min-height:1px;}
+.sig-stand > div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.nur-schmal{display:none;}
 .sig-thumb{
     display:block;width:100%;border:2px solid transparent;border-radius:6px;background:none;
     padding:0;margin-bottom:9px;cursor:pointer;text-align:center;
@@ -66,11 +69,57 @@
 .sig-seite{margin:0 auto 22px;width:calc((100% - 6px) * var(--zoom));max-width:none;}
 .sig-panel-schliessen{display:none;}
 
+/* Auswahlkarten: Person und Unternehmen sind zwei FACHLICH verschiedene
+   Dinge - als gleich aussehende Knoepfe in einer Reihe waren sie das
+   optisch nicht, und die Unternehmenssignatur ging zwischen den Feldarten
+   unter. */
+.sig-karten{display:grid;gap:8px;}
+.sig-karte{
+    display:grid;gap:2px;text-align:left;cursor:pointer;
+    border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface);
+    font:inherit;color:inherit;
+}
+.sig-karte:hover{border-color:var(--emerald);}
+.sig-karte.aktiv{border-color:var(--emerald);box-shadow:0 0 0 3px var(--emerald-soft);}
+.sig-karte:disabled{opacity:.55;cursor:default;}
+.sig-karte-kopf{font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:7px;}
+.sig-karte-symbol{font-size:15px;}
+.sig-karte-text{font-size:12px;color:var(--ink-soft);}
+.sig-karte-wer{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* Vorschau der Unternehmenssignatur - dasselbe Bild, derselbe Name und
+   dieselbe Reihenfolge wie spaeter im PDF. Wer sie sieht, weiss, was ins
+   Dokument kommt. */
+.sig-firma-vorschau{
+    margin-top:9px;border:1px solid var(--line);border-radius:10px;padding:12px;
+    background:var(--surface);text-align:center;
+}
+.sig-firma-vorschau img{max-width:100%;max-height:74px;display:block;margin:0 auto 7px;}
+.sig-firma-linie{height:1px;background:var(--line);margin:0 0 5px;}
+.sig-firma-name{font-weight:700;font-size:13px;}
+.sig-firma-fuss{font-size:11.5px;color:var(--emerald-ink);margin-top:3px;}
+
+/* Der Leerzustand ist kein leerer Kasten, sondern eine Aufforderung. */
+.sig-leer{
+    max-width:340px;margin:34px auto;text-align:center;color:var(--ink-soft);
+    border:1px dashed var(--line);border-radius:12px;padding:22px;background:var(--surface);
+}
+.sig-leer strong{display:block;color:var(--ink);font-size:14px;margin-bottom:5px;}
+
 /* MOBILE: die beiden Leisten sind Schubladen, kein zweites Layout mit
    halber Breite. Auf 390 px bliebe von einem Dreispalter nichts uebrig -
    und genau dort wird das Dokument am ehesten unterwegs geprueft. */
 @media (max-width:1000px){
     .sig-shell{--sig-chrome:110px;}
+    /* Der Editor ist ein Arbeitsgeraet: auf dem Telefon kostet die
+       Brotkrumen-Zeile zwei Zeilen Dokument und fuehrt nirgends hin, wohin
+       nicht auch "Abbrechen" fuehrt. */
+    .sig-brotkrumen{display:none;}
+    /* Eine Zeile Text, eine Zeile Knoepfe - statt drei Zeilen Umbruch. */
+    .sig-actions{flex-wrap:nowrap;gap:7px;padding:8px 10px;}
+    .sig-stand{min-width:0;}
+    .nur-breit{display:none;}
+    .nur-schmal{display:inline;}
     .sig-body{grid-template-columns:1fr;}
     /* UMBRECHEN statt seitwaerts schieben: eine Leiste mit waagerechtem
        Bildlauf versteckt genau die Knoepfe, die man auf dem Telefon
@@ -94,7 +143,7 @@
 }
 </style>
 
-<div class="page-header" style="margin-bottom:12px;">
+<div class="page-header sig-brotkrumen" style="margin-bottom:12px;">
     <div class="breadcrumb">
         <a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span>
         <a href="{{ route('admin.signatures.index') }}">Signaturen</a><span class="breadcrumb-sep">›</span>
@@ -134,7 +183,7 @@
         </span>
         <button type="button" class="btn btn-sm btn-ghost" data-h-click="sigNaechstesFeld">Nächstes Feld →</button>
         <button type="button" class="btn btn-sm btn-ghost sig-nur-mobil" data-h-click="sigTogglePanel"
-                data-panel="tool-panel">Felder</button>
+                data-panel="tool-panel">Signatur</button>
     </div>
 
     <div class="sig-body">
@@ -155,34 +204,80 @@
                     data-h-click="sigTogglePanel" data-panel="tool-panel"
                     style="width:100%;margin-bottom:8px;">Schließen</button>
 
-            <div style="font-weight:600;font-size:13px;margin-bottom:8px;">Unterzeichner</div>
-            <div id="signer-list" style="display:grid;gap:10px;"></div>
-            <button type="button" class="btn btn-sm btn-ghost" data-h-click="sigAddSigner"
-                    style="margin-top:9px;" @disabled(!$signature->isDraft())>+ Unterzeichner</button>
-
-            <div style="border-top:1px solid var(--line);margin:13px 0 10px;"></div>
-            <div style="font-weight:600;font-size:13px;margin-bottom:6px;">Feld hinzufügen</div>
-            <div class="muted-sm" style="margin-bottom:7px;">Unterzeichner wählen, Feldart wählen, auf die Seite tippen.</div>
-            <select id="active-signer" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;margin-bottom:7px;"></select>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;">
-                @foreach($fieldTypes as $key => $label)
-                <button type="button" class="btn btn-sm btn-ghost" data-h-click="sigPickType" data-type="{{ $key }}"
-                        id="type-{{ $key }}" @disabled(!$signature->isDraft())>{{ $label }}</button>
-                @endforeach
+            {{-- SIGNATUR HINZUFUEGEN: zwei gleichrangige Karten.
+                 Vorher standen sieben gleich aussehende Knoepfe
+                 nebeneinander und die Unternehmenssignatur war einer davon
+                 ("Firmenbild") - wer sie suchte, fand sie nicht, und wer
+                 sie fand, hielt sie fuer ein Logo. Die zwei Wege sind
+                 fachlich verschieden und sehen jetzt auch so aus. --}}
+            <div style="font-weight:600;font-size:13px;margin-bottom:8px;">Signatur hinzufügen</div>
+            <div class="sig-karten">
+                <button type="button" class="sig-karte aktiv" id="karte-person" data-h-click="sigWaehlePerson"
+                        @disabled(!$signature->isDraft())>
+                    <span class="sig-karte-kopf"><span class="sig-karte-symbol">✍</span> Person</span>
+                    <span class="sig-karte-text">Persönliche Signatur</span>
+                    <span class="sig-karte-wer" id="karte-person-wer">noch kein Unterzeichner</span>
+                </button>
+                @if($companyAssets->isNotEmpty())
+                <button type="button" class="sig-karte" id="karte-firma" data-h-click="sigWaehleFirma"
+                        @disabled(!$signature->isDraft())>
+                    <span class="sig-karte-kopf"><span class="sig-karte-symbol">🏢</span> Unternehmen</span>
+                    <span class="sig-karte-text">Unternehmenssignatur</span>
+                    <span class="sig-karte-wer">{{ $firmaName }}</span>
+                </button>
+                @endif
             </div>
+
+            {{-- PERSON --}}
+            <div id="bereich-person" style="margin-top:12px;">
+                <div id="signer-list" style="display:grid;gap:10px;"></div>
+                <button type="button" class="btn btn-sm btn-ghost" data-h-click="sigAddSigner"
+                        style="margin-top:9px;" @disabled(!$signature->isDraft())>+ Unterzeichner</button>
+
+                <div style="border-top:1px solid var(--line);margin:13px 0 10px;"></div>
+                <div class="muted-sm" style="margin-bottom:7px;">Unterzeichner wählen, Feldart wählen, auf die Seite tippen.</div>
+                <select id="active-signer" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;margin-bottom:7px;"></select>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                    @foreach($fieldTypes as $key => $label)
+                    @continue($key === \App\Support\SignatureFieldType::COMPANY)
+                    <button type="button" class="btn btn-sm btn-ghost" data-h-click="sigPickType" data-type="{{ $key }}"
+                            id="type-{{ $key }}" @disabled(!$signature->isDraft())>{{ $label }}</button>
+                    @endforeach
+                </div>
+            </div>
+
+            {{-- UNTERNEHMEN: Vorschau VOR dem Setzen - man sieht, was ins
+                 Dokument kommt, statt es erst dort zu entdecken. --}}
             @if($companyAssets->isNotEmpty())
-            {{-- Das Firmenbild gehoert KEINEM Unterzeichner: die Auswahl
-                 steht deshalb getrennt unter den Feldarten. --}}
-            <div id="company-choice" hidden style="display:grid;gap:6px;border-top:1px solid var(--line);padding-top:8px;margin-top:8px;">
-                <label for="company-asset" class="muted-sm" style="font-weight:600;">Welches Firmenbild?</label>
-                <select id="company-asset" style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;">
+            <div id="bereich-firma" hidden style="margin-top:12px;">
+                @if(!$firmaVollstaendig)
+                <div style="background:#FFF6E5;color:#8A5D00;padding:9px 11px;border-radius:8px;font-size:12.5px;margin-bottom:9px;">
+                    <strong>Unternehmensdaten unvollständig</strong>
+                    <ul style="margin:5px 0 0;padding-left:16px;">
+                        @foreach($firmaFehlt as $fehlt)<li>{{ $fehlt }}</li>@endforeach
+                    </ul>
+                </div>
+                @endif
+                <label for="company-asset" class="muted-sm" style="font-weight:600;display:block;margin-bottom:5px;">Welches Bild?</label>
+                <select id="company-asset" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;">
                     @foreach($companyAssets as $asset)
-                    <option value="{{ $asset->id }}" @selected($asset->is_default)>{{ $asset->typeLabel() }}: {{ $asset->name }}</option>
+                    <option value="{{ $asset->id }}" data-bild="{{ route('admin.signatures.company.image', $asset->id) }}"
+                            @selected($asset->is_default)>{{ $asset->typeLabel() }}: {{ $asset->name }}</option>
                     @endforeach
                 </select>
-                <div class="muted-sm">
-                    Kein Unterzeichner, keine Einladung - das Bild steht sofort im Dokument.
-                    Im Protokoll erscheint es als „eingesetzt von", nicht als Unterschrift.
+
+                <div class="sig-firma-vorschau" id="firma-vorschau">
+                    <img id="firma-bild" alt="Vorschau der Unternehmenssignatur">
+                    <div class="sig-firma-linie"></div>
+                    <div class="sig-firma-name">{{ $firmaName }}</div>
+                    <div class="sig-firma-fuss">✓ Unternehmenssignatur</div>
+                </div>
+
+                <button type="button" class="btn btn-sm btn-emerald" data-h-click="sigPickType" data-type="firma"
+                        style="width:100%;margin-top:9px;" @disabled(!$signature->isDraft())>Auf die Seite setzen</button>
+                <div class="muted-sm" style="margin-top:7px;">
+                    Kein Unterzeichner, keine Einladung - Bild und Firmenname stehen sofort im Dokument.
+                    Im Protokoll erscheint es als „eingesetzt von", nicht als Unterschrift einer Person.
                 </div>
             </div>
             @endif
@@ -192,12 +287,20 @@
     {{-- IMMER ERREICHBAR. Das war der eigentliche Auftrag: kein Knopf mehr
          hinter 14 Seiten PDF. --}}
     <div class="sig-actions">
-        <div style="flex:1;min-width:160px;font-size:13px;">
-            <span id="feld-stand">—</span>
+        <div class="sig-stand">
+            <div id="feld-stand">—</div>
+            <div id="feld-detail" class="muted-sm"></div>
             <div id="save-state" class="muted-sm"></div>
         </div>
-        <button type="button" class="btn btn-sm btn-ghost" data-h-click="sigAbbrechen">Abbrechen</button>
-        <button type="button" class="btn btn-sm btn-ghost" data-h-click="sigSave" @disabled(!$signature->isDraft())>Als Entwurf speichern</button>
+        {{-- Auf dem Telefon kuerzere Beschriftungen: drei ausgeschriebene
+             Knoepfe passen auf 390 px nicht in eine Zeile, und umgebrochen
+             nehmen sie dem Dokument zwei weitere Zeilen weg. --}}
+        <button type="button" class="btn btn-sm btn-ghost" data-h-click="sigAbbrechen">
+            <span class="nur-breit">Abbrechen</span><span class="nur-schmal">✕</span>
+        </button>
+        <button type="button" class="btn btn-sm btn-ghost" data-h-click="sigSave" @disabled(!$signature->isDraft())>
+            <span class="nur-breit">Als Entwurf speichern</span><span class="nur-schmal">Entwurf</span>
+        </button>
         <button type="button" class="btn btn-emerald btn-sm" data-h-click="sigReview" @disabled(!$signature->isDraft())>Senden</button>
     </div>
 </div>
@@ -216,11 +319,16 @@
 
 <div id="field-menu" hidden
      style="position:absolute;z-index:40;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.16);padding:10px;min-width:210px;">
-    <div style="font-size:12px;color:var(--ink-soft);margin-bottom:6px;">Feld bearbeiten</div>
+    <div id="menu-kopf" style="font-size:12.5px;font-weight:700;margin-bottom:6px;">Feld bearbeiten</div>
+    {{-- Die Unterzeichnerwahl gilt NUR fuer Personenfelder. Bei einer
+         Unternehmenssignatur stand dort bisher ein Auswahlfeld, das nichts
+         bewirkte (der Server setzt den Unterzeichner eines Firmenfeldes
+         immer auf leer) - ein Bedienelement, das nichts tut, ist eine
+         Falle. --}}
     <select id="menu-signer" style="width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:13px;margin-bottom:6px;"></select>
     <input id="menu-label" type="text" maxlength="120" placeholder="Beschriftung (optional)"
            style="width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:13px;margin-bottom:6px;">
-    <label style="display:flex;gap:7px;align-items:center;font-size:13px;font-weight:400;margin-bottom:8px;">
+    <label id="menu-pflicht" style="display:flex;gap:7px;align-items:center;font-size:13px;font-weight:400;margin-bottom:8px;">
         <input id="menu-required" type="checkbox"> Pflichtfeld
     </label>
     <div style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -254,6 +362,10 @@ window.__h = window.__h || {};
     };
     var sprachen = @json($sprachen);
     var firmenbilder = @json($assetDaten);
+    // DIESELBE Quelle wie das PDF (Einstellungen -> Firmenname). Der Editor
+    // zeigt den Namen, der spaeter im Dokument steht.
+    var firmaName = @json($firmaName);
+    var firmaVollstaendig = @json($firmaVollstaendig);
     var sprachCodes = Object.keys(sprachen);
     var urls = {
         page: @json(route('admin.signatures.page', [$signature->id, 0])),
@@ -273,8 +385,17 @@ window.__h = window.__h || {};
     var GEZEICHNET = ['unterschrift', 'initialen'];
 
     function uid() { return 'neu-' + Math.random().toString(36).slice(2, 10); }
-    function colorFor(signerId) {
-        var index = state.signers.findIndex(function (s) { return s.id === signerId; });
+    /**
+     * Farbe eines Feldes. Die Unternehmenssignatur hat eine EIGENE -
+     * sie gehoert keinem Unterzeichner, und in Grau sah sie aus wie ein
+     * Feld, dessen Besitzer verloren gegangen ist. Gold ist im
+     * Markensystem der Akzent (nie die Aktionsfarbe), und genau das ist
+     * hier gemeint: eine Hervorhebung, keine Handlung.
+     */
+    function colorFor(field) {
+        if (field && field.type === 'firma') { return brandColor('gold'); }
+        var id = field && field.signer_id;
+        var index = state.signers.findIndex(function (s) { return s.id === id; });
         return index < 0 ? 'var(--ink-soft)' : palette[index % palette.length];
     }
     function geometryFor(page) {
@@ -348,7 +469,12 @@ window.__h = window.__h || {};
         liste.textContent = '';
 
         for (var page = 1; page <= state.pageCount; page++) {
-            var anzahl = state.fields.filter(function (f) { return f.page === page; }).length;
+            // NACH ART getrennt: ein ✍ neben einem Firmenfeld hiesse, dort
+            // muesse jemand mit der Hand zeichnen - dort steht aber die
+            // Unternehmenssignatur, die auf niemanden wartet.
+            var aufSeite = state.fields.filter(function (f) { return f.page === page; });
+            var anzahl = aufSeite.filter(function (f) { return GEZEICHNET.indexOf(f.type) !== -1; }).length;
+            var firmen = aufSeite.filter(function (f) { return f.type === 'firma'; }).length;
             var knopf = document.createElement('button');
             knopf.type = 'button';
             knopf.className = 'sig-thumb' + (page === state.aktuelleSeite ? ' aktiv' : '');
@@ -370,7 +496,9 @@ window.__h = window.__h || {};
 
             var zeile = document.createElement('div');
             zeile.className = 'zeile';
-            zeile.textContent = 'Seite ' + page + (anzahl > 0 ? (anzahl > 1 ? ' ✍ ' + anzahl : ' ✍') : '');
+            zeile.textContent = 'Seite ' + page
+                + (anzahl > 0 ? (anzahl > 1 ? ' ✍' + anzahl : ' ✍') : '')
+                + (firmen > 0 ? (firmen > 1 ? ' 🏢' + firmen : ' 🏢') : '');
             knopf.appendChild(zeile);
 
             liste.appendChild(knopf);
@@ -435,7 +563,7 @@ window.__h = window.__h || {};
         state.fields.forEach(function (field) {
             var sheet = document.getElementById('seite-' + field.page);
             if (!sheet) { return; }
-            var color = colorFor(field.signer_id);
+            var color = colorFor(field);
             var box = document.createElement('div');
             box.setAttribute('data-field-box', field.id);
             box.style.cssText = 'position:absolute;box-sizing:border-box;border:2px solid ' + color + ';'
@@ -443,20 +571,38 @@ window.__h = window.__h || {};
                 + 'left:' + (field.x * 100) + '%;top:' + (field.y * 100) + '%;'
                 + 'width:' + (field.width * 100) + '%;height:' + (field.height * 100) + '%;';
 
+            // WER unterschreibt hier, und in welchem Zustand? Vorher stand
+            // dort die Feldart ("Unterschrift · Max") - die Art sieht man
+            // aber schon am Kasten. Gebraucht wird die IDENTITAET: bei einem
+            // Firmenfeld der FIRMENNAME (nicht der Dateiname des Bildes -
+            // "logo-2024.png" sagt keinem Leser, wer unterschreibt).
+            var owner = state.signers.find(function (s) { return s.id === field.signer_id; });
+            var istFirma = field.type === 'firma';
+            var wer = istFirma ? firmaName : (owner ? owner.name : 'ohne Unterzeichner');
+            var art = istFirma ? 'Unternehmen' : 'Person';
+            var zustand = istFirma
+                ? 'Gesetzt'
+                : (field.type === 'unterschrift' || field.type === 'initialen' ? 'Offen' : typeLabels[field.type] || field.type);
+
             var caption = document.createElement('div');
             // Links Platz fuer den Stift, rechts fuer den Griff - sonst
             // laeuft die Beschriftung unter die beiden Knoepfe.
-            caption.style.cssText = 'font-size:11px;line-height:1.15;padding:2px 18px 2px '
+            caption.style.cssText = 'font-size:11px;line-height:1.2;padding:1px 18px 1px '
                 + (editable ? '22px' : '4px') + ';color:' + color + ';'
-                + 'font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
-            var owner = state.signers.find(function (s) { return s.id === field.signer_id; });
-            // Firmenbilder tragen den NAMEN DES BILDES, nicht "ohne
-            // Unterzeichner": sie haben keinen, und das ist kein Mangel.
-            caption.textContent = (typeLabels[field.type] || field.type) + ' · '
-                + (field.type === 'firma'
-                    ? (firmenbilder[field.company_asset_id] || 'Firmenbild')
-                    : (owner ? owner.name : 'ohne Unterzeichner'));
+                + 'font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+            caption.textContent = (istFirma ? '🏢 ' : '✍ ') + wer;
             box.appendChild(caption);
+
+            // Die zweite Zeile nur, wenn der Kasten hoch genug ist - sonst
+            // waere sie abgeschnitten und stuende halb im Bild.
+            if (field.height > 0.035) {
+                var unten = document.createElement('div');
+                unten.style.cssText = 'font-size:10px;line-height:1.15;padding:0 18px 0 '
+                    + (editable ? '22px' : '4px') + ';color:' + color + ';opacity:.85;'
+                    + 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+                unten.textContent = art + ' · ' + zustand;
+                box.appendChild(unten);
+            }
 
             if (editable) {
                 box.setAttribute('data-h-pointerdown', 'sigDragStart');
@@ -512,16 +658,70 @@ window.__h = window.__h || {};
             : 'Eine Unterschrift - ' + eigene.length + ' Stellen (Seiten ' + seiten.join(', ') + ')';
     }
 
-    /** Die Zeile in der Aktionsleiste: wie viele Stellen, wie viele Menschen. */
+    function firmenFelder() {
+        return state.fields.filter(function (f) { return f.type === 'firma'; });
+    }
+
+    /**
+     * Die Zeile in der Aktionsleiste - nach ART getrennt.
+     *
+     * "7 Felder" sagt nichts darueber, WER unterschreibt. Personen und
+     * Unternehmen sind zwei verschiedene Dinge (das eine wartet auf einen
+     * Menschen, das andere steht schon im Dokument) und werden deshalb
+     * getrennt gezaehlt.
+     */
     function standAktualisieren() {
         var el = document.getElementById('feld-stand');
+        var detail = document.getElementById('feld-detail');
         if (!el) { return; }
         var stellen = unterschriftsFelder().length;
+        var firmen = firmenFelder().length;
         var menschen = state.signers.length;
-        el.textContent = stellen === 0
-            ? 'Noch keine Unterschriftsstelle gesetzt'
-            : stellen + ' Unterschriftsstelle' + (stellen === 1 ? '' : 'n') + ' · '
-              + menschen + ' Unterzeichner';
+
+        if (stellen === 0 && firmen === 0) {
+            el.textContent = 'Noch keine Signatur gesetzt';
+            if (detail) { detail.textContent = 'Person oder Unternehmen wählen, dann auf die Seite tippen.'; }
+            leerzustand(true);
+            return;
+        }
+        leerzustand(false);
+
+        var teile = [];
+        if (firmen > 0) { teile.push(firmen + '× Unternehmen'); }
+        if (stellen > 0) {
+            teile.push(stellen + ' Unterschriftsstelle' + (stellen === 1 ? '' : 'n')
+                + ' · ' + menschen + ' Person' + (menschen === 1 ? '' : 'en'));
+        }
+        el.textContent = teile.join(' · ');
+
+        if (detail) {
+            var offen = state.signers.filter(function (sg) {
+                return unterschriftsFelder().filter(function (f) { return f.signer_id === sg.id; }).length === 0;
+            });
+            detail.textContent = offen.length === 0
+                ? '✓ Alles bereit - jede Person hat eine Unterschriftsstelle.'
+                : 'Noch ohne Stelle: ' + offen.map(function (sg) { return sg.name || sg.email; }).join(', ');
+        }
+    }
+
+    /** Hinweis im leeren Dokument - ein leerer Betrachter erklaert nichts. */
+    function leerzustand(zeigen) {
+        var vorhanden = document.getElementById('sig-leer');
+        if (!zeigen) { if (vorhanden) { vorhanden.remove(); } return; }
+        if (vorhanden || !editable) { return; }
+        var host = document.getElementById('pages');
+        if (!host || !host.firstChild) { return; }
+        var kasten = document.createElement('div');
+        kasten.id = 'sig-leer';
+        kasten.className = 'sig-leer';
+        var titel = document.createElement('strong');
+        titel.textContent = 'Noch keine Signaturen';
+        var text = document.createElement('div');
+        text.textContent = 'Fügen Sie eine Personen- oder Unternehmenssignatur hinzu: '
+            + 'links die Art wählen, dann auf die gewünschte Stelle im Dokument tippen.';
+        kasten.appendChild(titel);
+        kasten.appendChild(text);
+        host.insertBefore(kasten, host.firstChild);
     }
 
     function renderSigners() {
@@ -573,6 +773,17 @@ window.__h = window.__h || {};
             list.appendChild(row);
         });
 
+        // Die Karte nennt, WER hier unterschreibt - genauso wie die
+        // Unternehmenskarte den Firmennamen nennt.
+        var werPerson = document.getElementById('karte-person-wer');
+        if (werPerson) {
+            werPerson.textContent = state.signers.length === 0
+                ? 'noch kein Unterzeichner'
+                : (state.signers.length === 1
+                    ? (state.signers[0].name || state.signers[0].email)
+                    : state.signers.length + ' Unterzeichner');
+        }
+
         [document.getElementById('active-signer'), document.getElementById('menu-signer')].forEach(function (select) {
             var previous = select.value;
             select.textContent = '';
@@ -617,6 +828,17 @@ window.__h = window.__h || {};
         var ziel = felder[state.navIndex];
         zeigeSeite(ziel.page);
         hebeHervor(ziel.id);
+
+        // WO BIN ICH? Ohne diese Zeile springt die Ansicht und der
+        // Mitarbeiter muss selbst herausfinden, welche Stelle er gerade
+        // sieht und wem sie gehoert.
+        var besitzer = state.signers.find(function (sg) { return sg.id === ziel.signer_id; });
+        var detail = document.getElementById('feld-detail');
+        if (detail) {
+            detail.textContent = 'Signatur ' + (state.navIndex + 1) + ' von ' + felder.length
+                + ' · ' + (besitzer ? (besitzer.name || besitzer.email) : 'ohne Unterzeichner')
+                + ' · Seite ' + ziel.page;
+        }
     };
 
     window.__h["sigZurGruppe"] = function () {
@@ -656,15 +878,55 @@ window.__h = window.__h || {};
     }
 
     // ------------------------------------------------------------- Handlungen
-    window.__h["sigPickType"] = function () {
-        state.type = this.getAttribute('data-type');
+
+    /** Umschalten zwischen den zwei Wegen - Person oder Unternehmen. */
+    function karteWaehlen(welche) {
+        ['person', 'firma'].forEach(function (name) {
+            var karte = document.getElementById('karte-' + name);
+            var bereich = document.getElementById('bereich-' + name);
+            if (karte) { karte.classList.toggle('aktiv', name === welche); }
+            // [hidden] statt style.display (SEC-4-Regel: app.css erzwingt es).
+            if (bereich) { bereich.hidden = name !== welche; }
+        });
+    }
+
+    window.__h["sigWaehlePerson"] = function () {
+        karteWaehlen('person');
+        state.type = 'unterschrift';
+        markiereFeldart();
+    };
+
+    window.__h["sigWaehleFirma"] = function () {
+        karteWaehlen('firma');
+        state.type = 'firma';
+        markiereFeldart();
+        firmaVorschau();
+    };
+
+    /** Das gewaehlte Bild in der Vorschau - so, wie es ins Dokument kommt. */
+    function firmaVorschau() {
+        var wahl = document.getElementById('company-asset');
+        var bild = document.getElementById('firma-bild');
+        if (!wahl || !bild) { return; }
+        var option = wahl.options[wahl.selectedIndex];
+        var quelle = option ? option.getAttribute('data-bild') : null;
+        if (quelle) { bild.src = quelle; }
+    }
+    document.addEventListener('change', function (event) {
+        if (event.target && event.target.id === 'company-asset') { firmaVorschau(); }
+    });
+
+    function markiereFeldart() {
         Object.keys(typeLabels).forEach(function (key) {
             var button = document.getElementById('type-' + key);
             if (button) { button.style.borderColor = key === state.type ? 'var(--emerald)' : ''; }
         });
-        var wahl = document.getElementById('company-choice');
-        // [hidden] statt style.display (SEC-4-Regel: app.css erzwingt es).
-        if (wahl) { wahl.hidden = state.type !== 'firma'; }
+    }
+
+    window.__h["sigPickType"] = function () {
+        state.type = this.getAttribute('data-type');
+        markiereFeldart();
+        if (state.type === 'firma') { karteWaehlen('firma'); }
     };
 
     window.__h["sigPlace"] = function (event) {
@@ -683,8 +945,10 @@ window.__h = window.__h || {};
         var istFirma = state.type === 'firma';
         var assetFeld = document.getElementById('company-asset');
         if (istFirma && (!assetFeld || !assetFeld.value)) {
-            zeigeDialog('Kein Firmenbild hinterlegt',
-                ['Bitte zuerst unter Einstellungen → Signaturen ein Firmenbild anlegen.'],
+            // KEINE technische Meldung: was zu tun ist, steht im Satz.
+            zeigeDialog('Unternehmensdaten unvollständig',
+                ['Es ist kein Firmenbild hinterlegt.',
+                 'Bitte unter Einstellungen → Signaturen ein Bild anlegen.'],
                 [{ text: 'Verstanden', klasse: 'btn-ghost' }]);
             return;
         }
@@ -754,6 +1018,21 @@ window.__h = window.__h || {};
         state.selected = id;
         var menu = document.getElementById('field-menu');
         menu.hidden = false;
+
+        // Kopfzeile sagt, WAS man gerade bearbeitet.
+        var istFirma = field.type === 'firma';
+        var besitzer = state.signers.find(function (sg) { return sg.id === field.signer_id; });
+        var kopf = document.getElementById('menu-kopf');
+        if (kopf) {
+            kopf.textContent = istFirma
+                ? '🏢 ' + firmaName + ' · Unternehmen'
+                : '✍ ' + (besitzer ? (besitzer.name || besitzer.email) : 'ohne Unterzeichner')
+                  + ' · ' + (typeLabels[field.type] || field.type);
+        }
+        var wahl = document.getElementById('menu-signer');
+        if (wahl) { wahl.hidden = istFirma; }
+        var pflicht = document.getElementById('menu-pflicht');
+        if (pflicht) { pflicht.hidden = istFirma; }
         var x = Math.min(event.clientX + 8, window.innerWidth - 230);
         var y = Math.min(event.clientY + 8, window.innerHeight - 220);
         menu.style.left = (window.scrollX + Math.max(8, x)) + 'px';
@@ -911,10 +1190,12 @@ window.__h = window.__h || {};
             return;
         }
 
+        var firmen = firmenFelder().length;
         zeigeDialog('Dokument bereit zum Senden', [
-            '✓ ' + stellen + ' Unterschriftsstelle' + (stellen === 1 ? '' : 'n') + ' gesetzt',
-            '✓ ' + state.signers.length + ' Unterzeichner mit E-Mail-Adresse',
             '✓ Dokument mit ' + state.pageCount + ' Seite' + (state.pageCount === 1 ? '' : 'n'),
+            '✓ ' + state.signers.length + ' Unterzeichner mit E-Mail-Adresse',
+            '✓ ' + stellen + ' von ' + stellen + ' Unterschriftspositionen konfiguriert',
+            firmen > 0 ? '✓ Unternehmenssignatur: ' + firmaName + ' (' + firmen + '× im Dokument)' : '',
             state.dirty ? 'Ihre Änderungen werden beim Senden gespeichert.' : ''
         ].filter(Boolean), [
             { text: 'Zurück bearbeiten', klasse: 'btn-ghost' },
@@ -1056,8 +1337,9 @@ window.__h = window.__h || {};
     beobachteBildlauf();
     schliesseMobilPanels();
     standAktualisieren();
-    var initial = document.getElementById('type-unterschrift');
-    if (initial) { initial.style.borderColor = 'var(--emerald)'; }
+    karteWaehlen('person');
+    markiereFeldart();
+    firmaVorschau();
 })();
 </script>
 @endPushOnce

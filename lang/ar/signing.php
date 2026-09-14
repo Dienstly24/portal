@@ -170,4 +170,7 @@ return [
     'review_pages' => 'الصفحات',
     'review_signer' => 'الموقّع',
     'review_view_document' => 'عرض المستند (PDF)',
+    'company_signature' => 'توقيع الشركة',
+    'company_already_set' => 'توقيع الشركة موضوع مسبقًا في المستند - لا يلزمك فعل أي شيء بخصوصه.',
+    'company_not_a_person' => 'هو توقيع الشركة، وليس توقيع شخص.',
 ];

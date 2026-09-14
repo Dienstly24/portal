@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\CompanySignatureAsset;
+use App\Models\SystemSetting;
 use App\Models\User;
 use App\Services\Signature\SignatureRequestService;
 use App\Services\Signature\SignatureStorage;
@@ -186,9 +187,16 @@ class CompanySignatureAssetTest extends TestCase
         // Es blockiert den Versand NICHT und verlangt keine Unterschrift.
         $this->assertSame([], $service->blockersForSending($frisch->load(['signers', 'fields'])));
 
+        SystemSetting::set('company_name', 'Dienstly24 GmbH');
         $ergebnis = app(SignedPdfBuilder::class)->build($frisch);
-        // Das Protokoll benennt es als EINGESETZT, nie als unterschrieben.
-        $this->assertStringContainsString('Firmenbilder', $ergebnis['pdf']);
+
+        // EINE SIGNATUR IST MEHR ALS EIN BILD (Betreiber-Meldung
+        // 14.09.2026): der Firmenname steht IM Dokument, nicht nur im
+        // Portal - sonst sieht jeder Leser des Vertrags eine Grafik und
+        // weiss nicht, welche Firma gezeichnet hat.
+        $this->assertStringContainsString('Dienstly24 GmbH', $ergebnis['pdf']);
+        $this->assertStringContainsString('Unternehmenssignatur: Dienstly24 GmbH', $ergebnis['pdf']);
+        // Und die Einordnung bleibt unveraendert streng.
         $this->assertStringContainsString('eingesetzt von', $ergebnis['pdf']);
         $this->assertStringContainsString('KEINE Unterschrift einer Person', $ergebnis['pdf']);
     }

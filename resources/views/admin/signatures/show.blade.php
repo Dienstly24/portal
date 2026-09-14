@@ -29,6 +29,22 @@
     $erinnerungen = $events->where('event', 'reminder_sent');
     $letzteErinnerung = $erinnerungen->first();
     $anteil = $signers->count() > 0 ? (int) round($unterschrieben / $signers->count() * 100) : 0;
+
+    // STELLEN, nicht Felder: eine Unterschrift kann an sieben Stellen
+    // stehen (Signaturgruppe, PR #328). Gezaehlt wird, was der
+    // Unterzeichner sieht.
+    $stellen = $signature->fields->filter(fn ($f) => $f->isDrawn());
+    $stellenFertig = $stellen->filter(fn ($f) => $f->isFilled())->count();
+    $firmenfelder = $signature->fields->filter(fn ($f) => $f->isCompany());
+
+    // Der Erinnerungs-Mindestabstand als SATZ - der Knopf soll nicht in
+    // eine Fehlermeldung laufen, die man vorher wissen konnte.
+    $erinnernFrei = true;
+    $letzteErinnerungAm = $signers->filter(fn ($s) => $s->reminded_at !== null)->max('reminded_at');
+    if ($letzteErinnerungAm !== null) {
+        $erinnernFrei = $letzteErinnerungAm->diffInHours(now())
+            >= \App\Services\Signature\SignatureRequestService::REMINDER_MIN_HOURS;
+    }
 @endphp
 
 {{-- WAS IST GERADE LOS? Nach dem Versand landete der Mitarbeiter bisher auf
@@ -76,13 +92,27 @@
                 @endif
             </div>
         </div>
-        <div style="min-width:190px;">
+        <div style="min-width:200px;">
             <div style="font-size:13px;font-weight:600;margin-bottom:5px;">
                 {{ $unterschrieben }} von {{ $signers->count() }} unterschrieben
                 @if($offen > 0)<span class="muted-sm" style="font-weight:400;"> · {{ $offen }} offen</span>@endif
             </div>
             <div style="height:7px;border-radius:99px;background:var(--line);overflow:hidden;">
                 <div style="height:100%;width:{{ $anteil }}%;background:var(--emerald);"></div>
+            </div>
+            {{-- Nach ART getrennt: eine Unternehmenssignatur wartet auf
+                 niemanden, eine Personen-Unterschrift schon. Beides in
+                 einer Zahl zu mischen hiesse, den Mitarbeiter auf einen
+                 Kunden warten zu lassen, der gar nicht dran ist. --}}
+            <div class="muted-sm" style="margin-top:7px;line-height:1.5;">
+                @if($stellen->isNotEmpty())
+                    {{ $stellenFertig === $stellen->count() ? '✓' : '·' }}
+                    {{ $stellenFertig }} / {{ $stellen->count() }} Unterschriftsstellen<br>
+                @endif
+                @if($firmenfelder->isNotEmpty())
+                    ✓ {{ $firmenfelder->count() }} / {{ $firmenfelder->count() }} Unternehmen
+                    ({{ \App\Support\Firmensignatur::name() }})
+                @endif
             </div>
         </div>
     </div>
@@ -235,9 +265,18 @@
 
         @if($signature->acceptsSignatures())
             <form method="POST" action="{{ route('admin.signatures.remind', $signature->id) }}"
-                  data-confirm="Erinnerung an die offenen Unterzeichner senden?">
+                  data-confirm="Erinnerung senden? Der Kunde erhält eine Erinnerung zur offenen Signatur.@if($letzteErinnerungAm) Letzte Erinnerung: {{ $letzteErinnerungAm->lokal()->diffForHumans() }}.@endif">
                 @csrf
-                <button type="submit" class="btn btn-sm btn-ghost" style="width:100%;">Erinnerung senden</button>
+                <button type="submit" class="btn btn-sm btn-ghost" style="width:100%;"
+                        @disabled(!$erinnernFrei)>Erinnerung senden</button>
+                @unless($erinnernFrei)
+                {{-- Der Grund steht VOR dem Klick. Ein Knopf, der in eine
+                     Fehlermeldung laeuft, ist eine vergeudete Handlung. --}}
+                <div class="muted-sm" style="margin-top:4px;">
+                    Frühestens {{ \App\Services\Signature\SignatureRequestService::REMINDER_MIN_HOURS }} Stunden
+                    nach der letzten Erinnerung erneut möglich.
+                </div>
+                @endunless
             </form>
         @endif
 

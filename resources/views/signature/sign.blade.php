@@ -117,6 +117,33 @@
 </div>
 @endif
 
+{{-- DIE UNTERNEHMENSSIGNATUR - nur zum Ansehen.
+     Sie steht schon im Dokument; der Unterzeichner soll wissen, dass der
+     Betrieb mitzeichnet, und WER dieser Betrieb ist. Bewusst AUSSERHALB
+     des Formulars: hier gibt es nichts einzugeben und nichts abzusenden. --}}
+@isset($companyFields)
+@if($companyFields->isNotEmpty())
+<div class="karte">
+    <h2>🏢 {{ __('signing.company_signature') }}</h2>
+    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:8px;">
+        @php $bild = $companyFields->first()->companyAsset; @endphp
+        @if($bild)
+        <img src="{{ route('signature.company_image', [$token, $bild->id]) }}" alt=""
+             style="max-height:62px;max-width:170px;">
+        @endif
+        <div>
+            <div style="font-weight:700;font-size:15px;">{{ $companyName }}</div>
+            <div class="lead" style="margin:2px 0 0;">
+                {{ __('signing.pages_list', ['pages' => implode(', ', $companyFields->pluck('page')->unique()->sort()->values()->all())]) }}
+            </div>
+        </div>
+    </div>
+    <p class="lead" style="margin-top:10px;">{{ __('signing.company_already_set') }}</p>
+    <p class="lead" style="margin-top:2px;opacity:.8;">{{ __('signing.company_not_a_person') }}</p>
+</div>
+@endif
+@endisset
+
 <form method="POST" action="{{ route('signature.sign', $token) }}" id="unterschrift-formular">
     @csrf
 

@@ -7,6 +7,7 @@ use App\Services\Pdf\PdfDocument;
 use App\Services\Pdf\PdfException;
 use App\Services\Pdf\PdfStamp;
 use App\Services\Pdf\PdfStamper;
+use App\Support\Firmensignatur;
 use App\Support\LocalTime;
 use App\Support\SignatureFieldType;
 use App\Support\Unterschriftsbild;
@@ -78,19 +79,15 @@ class SignedPdfBuilder
                 continue;
             }
 
-            // FIRMENBILD: dieselbe Einbettung wie die Handschrift (Alphakanal
-            // bleibt), aber es kommt aus dem hinterlegten Bestand und nicht
-            // aus einer Zeichenflaeche. Fehlt die Datei, wird NICHTS gesetzt
+            // UNTERNEHMENSSIGNATUR: Bild UND Firmenname - siehe
+            // stempleFirmensignatur(). Fehlt die Datei, wird NICHTS gesetzt
             // statt ein Platzhalter - ein leerer Fleck ist ehrlicher als ein
             // Kasten, den jemand fuer den Stempel haelt.
             if ($field->isCompany()) {
                 $asset = $field->companyAsset;
                 $png = $asset === null ? null : $this->storage->disk()->get($asset->path);
                 if ($png !== null && $png !== '') {
-                    // Ein Stempel oder eine Wortmarke vertraegt so wenig
-                    // Verzerrung wie eine Handschrift.
-                    [$bx, $by, $bw, $bh] = Unterschriftsbild::einpassen($png, $x, $y, $width, $height);
-                    $stamper->add(PdfStamp::image($pageIndex, $png, $bx, $by, $bw, $bh));
+                    $this->stempleFirmensignatur($stamper, $pageIndex, $png, $x, $y, $width, $height);
                 }
 
                 continue;
@@ -130,6 +127,56 @@ class SignedPdfBuilder
     private function fontSize(float $height): float
     {
         return max(7.0, min(14.0, $height * 0.62));
+    }
+
+    /**
+     * Die Unternehmenssignatur als BLOCK: Bild oben, Firmenname darunter.
+     *
+     * DAS IST DER UNTERSCHIED ZWISCHEN LOGO UND SIGNATUR (Betreiber-Meldung
+     * 14.09.2026). Bisher stand im fertigen Vertrag nur eine Grafik: wer
+     * das Dokument spaeter las, sah ein Zeichen und konnte nicht sagen,
+     * welche Firma unterschrieben hat. Der Name macht daraus eine
+     * zurechenbare Signatur - und er steht IM Dokument, nicht nur im
+     * Portal, denn das Dokument wird weitergereicht.
+     *
+     * EHRLICH BEI ENGEN FELDERN: unter rund 26 Punkten Hoehe ist fuer eine
+     * lesbare Zeile kein Platz. Dann steht dort NUR das Bild - lieber kein
+     * Name als ein Name, der im Bild klebt und beides unleserlich macht.
+     */
+    private function stempleFirmensignatur(
+        PdfStamper $stamper,
+        int $pageIndex,
+        string $png,
+        float $x,
+        float $y,
+        float $width,
+        float $height,
+    ): void {
+        $name = Firmensignatur::name();
+        $zeile = $name === '' ? 0.0 : min(12.0, max(7.0, $height * 0.22));
+        $platzFuerNamen = $height >= 26.0 && $zeile > 0.0;
+
+        // Das Bild bekommt den oberen Teil - der Name steht darunter, wie
+        // auf einem Briefbogen. Ein Stempel oder eine Wortmarke vertraegt
+        // dabei so wenig Verzerrung wie eine Handschrift, deshalb dasselbe
+        // Einpassen wie bei der gezeichneten Unterschrift.
+        // Anzeige-Koordinaten: Ursprung OBEN links. Das Bild behaelt
+        // deshalb sein y, die Namenszeile liegt darunter.
+        $bildHoehe = $platzFuerNamen ? $height - $zeile * 1.45 : $height;
+
+        [$bx, $by, $bw, $bh] = Unterschriftsbild::einpassen($png, $x, $y, $width, $bildHoehe);
+        $stamper->add(PdfStamp::image($pageIndex, $png, $bx, $by, $bw, $bh));
+
+        if (! $platzFuerNamen) {
+            return;
+        }
+
+        // Trennlinie wie eine Unterschriftszeile: sie zeigt, dass Bild und
+        // Name EIN Block sind und der Name nicht zufaellig darunter steht.
+        // Ein Rahmen der Hoehe 0 IST eine Linie ("x y w 0 re S") - dafuer
+        // braucht es keine weitere Stempelart im PdfStamper.
+        $stamper->add(PdfStamp::box($pageIndex, $x, $y + $height - $zeile * 1.32, $width, 0.0));
+        $stamper->add(PdfStamp::text($pageIndex, $name, $x, $y + $height - $zeile, $width, $zeile, $zeile));
     }
 
     private function isChecked(string $value): bool
@@ -190,8 +237,15 @@ class SignedPdfBuilder
                 $zeilen[] = '  eingesetzt von: '.($asset->creator->name ?? 'unbekannt')
                     .'; SHA-256 des Bildes: '.mb_substr($asset->hash, 0, 32).'...';
             }
-            $zeilen[] = 'Firmenbilder sind KEINE Unterschrift einer Person und keine Willenserklaerung.';
-            $sections[] = ['title' => 'Firmenbilder', 'lines' => $zeilen];
+            $zeilen[] = 'Die Unternehmenssignatur ist KEINE Unterschrift einer Person und keine';
+            $zeilen[] = 'Willenserklaerung eines Unterzeichners - sie wird vom Betrieb aufgebracht.';
+            // Der Firmenname steht in der UEBERSCHRIFT: wer das Protokoll
+            // liest, soll nicht erst in den Zeilen suchen muessen, WELCHE
+            // Firma hier gezeichnet hat.
+            $sections[] = [
+                'title' => 'Unternehmenssignatur: '.Firmensignatur::name(),
+                'lines' => $zeilen,
+            ];
         }
 
         // Die rechtliche Einordnung steht im Dokument, aber sie behauptet
