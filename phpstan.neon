@@ -2,7 +2,7 @@
 #
 # Stufe 5 ist der im Auftrag genannte Zielwert und steht hier auch so drin -
 # sie wurde NICHT gesenkt, um die Zahl der Meldungen kleiner aussehen zu
-# lassen. Der Bestand hat auf dieser Stufe 922 Meldungen; sie stehen in
+# lassen. Der Bestand hat auf dieser Stufe 393 Meldungen; sie stehen in
 # phpstan-baseline.neon.
 #
 # Sinn der Baseline: ab sofort faellt jede NEUE Meldung in CI auf, waehrend

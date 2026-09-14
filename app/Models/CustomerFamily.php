@@ -23,6 +23,7 @@ class CustomerFamily extends Model
         return ['health_insurance_number' => 'encrypted', 'pension_insurance_number' => 'encrypted', 'tax_id' => 'encrypted'];
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class, 'customer_id'); }
     protected static function boot() {
         parent::boot();

@@ -56,7 +56,9 @@ class AiKnowledgeEntry extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
+    /** @return BelongsTo<User, $this> */
     public function editor(): BelongsTo { return $this->belongsTo(User::class, 'updated_by'); }
 
     public function scopeActive($q) { return $q->where('active', true); }

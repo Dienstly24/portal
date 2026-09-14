@@ -736,17 +736,25 @@ class Contract extends Model
         static::deleting(fn ($m) => app(ContractProvisionService::class)
             ->createStornoForContract($m, 'Vertrag geloescht'));
     }
+    /** @return HasOne<ContractVehicleDetail, $this> */
     public function vehicleDetail(): HasOne { return $this->hasOne(ContractVehicleDetail::class); }
+    /** @return HasOne<ContractEnergyDetail, $this> */
     public function energyDetail(): HasOne { return $this->hasOne(ContractEnergyDetail::class); }
+    /** @return HasOne<ContractInternetDetail, $this> */
     public function internetDetail(): HasOne { return $this->hasOne(ContractInternetDetail::class); }
     /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    /** @return MorphMany<ExternalReference, $this> */
     public function externalReferences(): MorphMany { return $this->morphMany(ExternalReference::class, 'referenceable'); }
+    /** @return HasMany<Document, $this> */
     public function documents(): HasMany { return $this->hasMany(Document::class); }
+    /** @return HasMany<ContractSwitchReminder, $this> */
     public function switchReminders(): HasMany { return $this->hasMany(ContractSwitchReminder::class); }
     /** Feld-genaue Aenderungshistorie (Audit Log), neueste zuerst. */
+    /** @return HasMany<ContractRevision, $this> */
     public function revisions(): HasMany { return $this->hasMany(ContractRevision::class)->orderByDesc('created_at'); }
     /** Vermittler-Provisionen dieses Vertrags (inkl. Storno-Gegenbuchungen). */
+    /** @return HasMany<Provision, $this> */
     public function provisions(): HasMany { return $this->hasMany(Provision::class); }
 
     // ---------------------------------------------------------------
@@ -837,6 +845,7 @@ class Contract extends Model
      * Gegenstueck am Kunden-Modell - so kann sie im Portal nicht
      * versehentlich mitgeladen und ausgegeben werden.
      */
+    /** @return HasMany<ContractCommission, $this> */
     public function commissions(): HasMany
     {
         return $this->hasMany(ContractCommission::class)->orderByDesc('commission_date');
@@ -846,6 +855,7 @@ class Contract extends Model
      * Bearbeitungsstand einer fehlenden Provision (§19). Genauso
      * VERTRAULICH wie die Buchungen selbst - kein Gegenstueck am Kunden.
      */
+    /** @return HasOne<CommissionFollowup, $this> */
     public function commissionFollowup(): HasOne
     {
         return $this->hasOne(CommissionFollowup::class, 'contract_id');
@@ -862,6 +872,7 @@ class Contract extends Model
         return ContractCommissionStatus::badge($this->commission_status);
     }
 
+    /** @return HasMany<VermittlerSettlement, $this> */
     public function vermittlerSettlements(): HasMany
     {
         return $this->hasMany(VermittlerSettlement::class, 'contract_id')
@@ -869,6 +880,7 @@ class Contract extends Model
     }
 
     /** Historie der Zuordnung (aelteste zuerst - sie erzaehlt den Verlauf). */
+    /** @return HasMany<VermittlerMatchEvent, $this> */
     public function vermittlerEvents(): HasMany
     {
         return $this->hasMany(VermittlerMatchEvent::class, 'contract_id')->orderBy('created_at');

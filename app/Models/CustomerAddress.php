@@ -20,6 +20,7 @@ class CustomerAddress extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
 
     public function typeLabel(): string { return self::TYPES[$this->type] ?? $this->type; }

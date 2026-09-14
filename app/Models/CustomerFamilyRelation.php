@@ -124,16 +124,19 @@ class CustomerFamilyRelation extends Model
         return $role === 'ehepartner' ? 'spouse' : 'family';
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'customer_id');
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function relatedCustomer(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'related_customer_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

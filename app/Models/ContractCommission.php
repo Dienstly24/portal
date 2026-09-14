@@ -79,10 +79,15 @@ class ContractCommission extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return BelongsTo<Contract, $this> */
     public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    /** @return BelongsTo<CommissionImport, $this> */
     public function import(): BelongsTo { return $this->belongsTo(CommissionImport::class, 'import_id'); }
+    /** @return BelongsTo<Document, $this> */
     public function invoiceDocument(): BelongsTo { return $this->belongsTo(Document::class, 'invoice_document_id'); }
+    /** @return HasMany<CommissionAuditLog, $this> */
     public function auditLogs(): HasMany { return $this->hasMany(CommissionAuditLog::class, 'commission_id')->latest('created_at'); }
 
     /** Klartext der Quelle, aus der diese Provision stammt. */

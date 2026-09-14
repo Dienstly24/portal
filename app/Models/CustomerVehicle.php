@@ -16,5 +16,6 @@ class CustomerVehicle extends Model
         parent::boot();
         static::creating(fn ($m) => $m->id = Str::uuid());
     }
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
 }

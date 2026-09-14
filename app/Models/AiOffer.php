@@ -47,8 +47,11 @@ class AiOffer extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return BelongsTo<AiConversation, $this> */
     public function conversation(): BelongsTo { return $this->belongsTo(AiConversation::class, 'conversation_id'); }
+    /** @return BelongsTo<AiLead, $this> */
     public function lead(): BelongsTo { return $this->belongsTo(AiLead::class, 'lead_id'); }
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
 
     public function isSelected(): bool

@@ -108,10 +108,14 @@ class AiConversation extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
     /** Die Unterhaltung im Omnichannel-Sinn - NICHT dieser Steuerstand. */
+    /** @return BelongsTo<Conversation, $this> */
     public function omnichannelConversation(): BelongsTo { return $this->belongsTo(Conversation::class, 'omnichannel_conversation_id'); }
+    /** @return BelongsTo<User, $this> */
     public function employee(): BelongsTo { return $this->belongsTo(User::class, 'assigned_employee_id'); }
+    /** @return HasMany<AiAssistantLog, $this> */
     public function logs(): HasMany { return $this->hasMany(AiAssistantLog::class, 'conversation_id')->latest(); }
 
     /** Steuerstand des Kunden holen/anlegen (Standard: KI aktiv). */
@@ -312,9 +316,13 @@ class AiConversation extends Model
     // Verkaufsassistent: Zustand, Kontext, Stoerung (Abschnitte 12-14)
     // ---------------------------------------------------------------
 
+    /** @return HasMany<AiOffer, $this> */
     public function offers(): HasMany { return $this->hasMany(AiOffer::class, 'conversation_id')->orderBy('label'); }
+    /** @return HasMany<AiConversationEvent, $this> */
     public function events(): HasMany { return $this->hasMany(AiConversationEvent::class, 'conversation_id')->latest(); }
+    /** @return BelongsTo<AiOffer, $this> */
     public function selectedOffer(): BelongsTo { return $this->belongsTo(AiOffer::class, 'selected_offer_id'); }
+    /** @return BelongsTo<AiLead, $this> */
     public function lead(): BelongsTo { return $this->belongsTo(AiLead::class, 'lead_id'); }
 
     public function stateLabel(): string

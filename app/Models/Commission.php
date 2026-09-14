@@ -44,9 +44,13 @@ class Commission extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return BelongsTo<Partner, $this> */
     public function partner(): BelongsTo { return $this->belongsTo(Partner::class); }
+    /** @return BelongsTo<Contract, $this> */
     public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
+    /** @return BelongsTo<EmailMessage, $this> */
     public function emailMessage(): BelongsTo { return $this->belongsTo(EmailMessage::class); }
+    /** @return BelongsTo<User, $this> */
     public function reviewer(): BelongsTo { return $this->belongsTo(User::class, 'reviewed_by'); }
 
     public function scopePendingReview($q) { return $q->where('status', 'pending_review'); }

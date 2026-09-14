@@ -61,8 +61,11 @@ class AiLead extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    /** @return BelongsTo<User, $this> */
     public function employee(): BelongsTo { return $this->belongsTo(User::class, 'assigned_employee_id'); }
+    /** @return HasMany<AiOffer, $this> */
     public function offers(): HasMany { return $this->hasMany(AiOffer::class, 'lead_id')->orderBy('label'); }
 
     public function collectedData(): array

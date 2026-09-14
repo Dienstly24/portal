@@ -61,8 +61,11 @@ class AiAssistantLog extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return BelongsTo<AiConversation, $this> */
     public function conversation(): BelongsTo { return $this->belongsTo(AiConversation::class, 'conversation_id'); }
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    /** @return BelongsTo<User, $this> */
     public function employee(): BelongsTo { return $this->belongsTo(User::class, 'employee_id'); }
 
     public function outcomeLabel(): string

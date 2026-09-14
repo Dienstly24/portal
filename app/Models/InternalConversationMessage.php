@@ -17,6 +17,8 @@ class InternalConversationMessage extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return BelongsTo<InternalConversation, $this> */
     public function conversation(): BelongsTo { return $this->belongsTo(InternalConversation::class, 'conversation_id'); }
+    /** @return BelongsTo<User, $this> */
     public function sender(): BelongsTo { return $this->belongsTo(User::class, 'sender_id'); }
 }

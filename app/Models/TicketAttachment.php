@@ -12,5 +12,6 @@ class TicketAttachment extends Model
     protected $keyType = 'string';
     protected $guarded = [];
 
+    /** @return BelongsTo<Ticket, $this> */
     public function ticket(): BelongsTo { return $this->belongsTo(Ticket::class); }
 }

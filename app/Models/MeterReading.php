@@ -54,11 +54,13 @@ class MeterReading extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return BelongsTo<ContractEnergyDetail, $this> */
     public function energyDetail(): BelongsTo
     {
         return $this->belongsTo(ContractEnergyDetail::class, 'contract_energy_detail_id');
     }
 
+    /** @return BelongsTo<Document, $this> */
     public function document(): BelongsTo
     {
         return $this->belongsTo(Document::class);

@@ -48,8 +48,11 @@ class CommissionImport extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return HasMany<CommissionImportRow, $this> */
     public function rows(): HasMany { return $this->hasMany(CommissionImportRow::class, 'import_id'); }
+    /** @return HasMany<ContractCommission, $this> */
     public function commissions(): HasMany { return $this->hasMany(ContractCommission::class, 'import_id'); }
+    /** @return BelongsTo<User, $this> */
     public function importer(): BelongsTo { return $this->belongsTo(User::class, 'imported_by'); }
 
     public function isDraft(): bool { return $this->status === self::ENTWURF; }

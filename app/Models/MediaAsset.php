@@ -51,6 +51,7 @@ class MediaAsset extends Model
         Cache::forget(self::SLOT_CACHE_KEY);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');

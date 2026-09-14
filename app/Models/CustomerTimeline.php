@@ -17,6 +17,8 @@ class CustomerTimeline extends Model
         parent::boot();
         static::creating(fn ($m) => $m->id = Str::uuid());
     }
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
 }

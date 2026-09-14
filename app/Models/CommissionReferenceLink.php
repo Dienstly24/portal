@@ -36,6 +36,7 @@ class CommissionReferenceLink extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return BelongsTo<Contract, $this> */
     public function contract(): BelongsTo
     {
         return $this->belongsTo(Contract::class);

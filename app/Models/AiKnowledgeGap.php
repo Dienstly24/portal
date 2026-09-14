@@ -57,6 +57,7 @@ class AiKnowledgeGap extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return BelongsTo<User, $this> */
     public function resolver(): BelongsTo { return $this->belongsTo(User::class, 'resolved_by'); }
 
     public function scopeOpen($q) { return $q->where('status', self::STATUS_OPEN); }

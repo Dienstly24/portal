@@ -39,11 +39,13 @@ class ErrorEvent extends Model
         return $query->where('last_seen_at', '>=', $since);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function lastUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'last_user_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function resolver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'resolved_by');

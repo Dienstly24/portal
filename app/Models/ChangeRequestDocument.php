@@ -57,6 +57,7 @@ class ChangeRequestDocument extends Model
         });
     }
 
+    /** @return BelongsTo<CustomerChangeRequest, $this> */
     public function changeRequest(): BelongsTo
     {
         return $this->belongsTo(CustomerChangeRequest::class, 'change_request_id');

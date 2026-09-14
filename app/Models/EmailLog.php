@@ -20,6 +20,8 @@ class EmailLog extends Model
         parent::boot();
         static::creating(fn ($m) => $m->id = (string) Str::uuid());
     }
+    /** @return BelongsTo<EmailCampaign, $this> */
     public function campaign(): BelongsTo { return $this->belongsTo(EmailCampaign::class, 'campaign_id'); }
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
 }

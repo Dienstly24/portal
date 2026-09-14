@@ -13,6 +13,8 @@ class CustomerView extends Model
 
     protected $casts = ['viewed_at' => 'datetime'];
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
 }

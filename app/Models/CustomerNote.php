@@ -15,6 +15,8 @@ class CustomerNote extends Model
         parent::boot();
         static::creating(fn ($m) => $m->id = Str::uuid());
     }
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    /** @return BelongsTo<User, $this> */
     public function createdBy(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
 }

@@ -58,6 +58,7 @@ class User extends Authenticatable
         });
     }
 
+    /** @return HasOne<Customer, $this> */
     public function customer(): HasOne { return $this->hasOne(Customer::class); }
 
     /** Echte, erreichbare E-Mail (Import-Platzhalter zählen nicht). */
@@ -74,15 +75,19 @@ class User extends Authenticatable
         Mail::to($this->email)
             ->send(new PasswordResetMail($this, $token));
     }
+    /** @return BelongsToMany<Customer, $this> */
     public function assignedCustomers(): BelongsToMany { return $this->belongsToMany(Customer::class, 'employee_customers'); }
 
     /** Kunden, die dieser Mitarbeiter geworben hat (Neukunden-Bericht/Provision). */
+    /** @return HasMany<Customer, $this> */
     public function acquiredCustomers(): HasMany { return $this->hasMany(Customer::class, 'acquired_by'); }
 
     /** Sparten-Provisionssaetze dieses Mitarbeiters (Provisions-Management). */
+    /** @return HasMany<ProvisionRate, $this> */
     public function provisionRates(): HasMany { return $this->hasMany(ProvisionRate::class); }
 
     /** Favoriten-Kunden dieses Mitarbeiters (Stern im E-Mail-Composer). */
+    /** @return BelongsToMany<Customer, $this> */
     public function favoriteCustomers(): BelongsToMany { return $this->belongsToMany(Customer::class, 'favorite_customers')->withTimestamps(); }
 
     public function canSeeAllCustomers(): bool {

@@ -52,16 +52,19 @@ class ChangeNotification extends Model
         });
     }
 
+    /** @return BelongsTo<CustomerChangeRequest, $this> */
     public function changeRequest(): BelongsTo
     {
         return $this->belongsTo(CustomerChangeRequest::class, 'change_request_id');
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function sender(): BelongsTo
     {
         return $this->belongsTo(User::class, 'sent_by');

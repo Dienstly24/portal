@@ -15,6 +15,8 @@ class TicketMessage extends Model
         parent::boot();
         static::creating(fn ($m) => $m->id = Str::uuid());
     }
+    /** @return BelongsTo<Ticket, $this> */
     public function ticket(): BelongsTo { return $this->belongsTo(Ticket::class); }
+    /** @return BelongsTo<User, $this> */
     public function sender(): BelongsTo { return $this->belongsTo(User::class, 'sender_id'); }
 }

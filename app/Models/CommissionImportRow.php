@@ -50,8 +50,11 @@ class CommissionImportRow extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return BelongsTo<CommissionImport, $this> */
     public function import(): BelongsTo { return $this->belongsTo(CommissionImport::class, 'import_id'); }
+    /** @return BelongsTo<Contract, $this> */
     public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
 
     /**

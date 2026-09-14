@@ -74,7 +74,9 @@ class AiConversationEvent extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return BelongsTo<AiConversation, $this> */
     public function conversation(): BelongsTo { return $this->belongsTo(AiConversation::class, 'conversation_id'); }
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
 
     public function label(): string

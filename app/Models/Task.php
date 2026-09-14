@@ -69,10 +69,15 @@ class Task extends Model
         });
     }
 
+    /** @return BelongsTo<User, $this> */
     public function assignedTo(): BelongsTo { return $this->belongsTo(User::class, 'assigned_to'); }
+    /** @return BelongsTo<User, $this> */
     public function createdBy(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    /** @return BelongsTo<EmailMessage, $this> */
     public function emailMessage(): BelongsTo { return $this->belongsTo(EmailMessage::class); }
+    /** @return BelongsTo<Contract, $this> */
     public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
 
     /** Offene Aufgaben (alles ausser erledigt). */

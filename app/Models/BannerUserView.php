@@ -17,6 +17,7 @@ class BannerUserView extends Model
 
     protected $casts = ['last_seen_at' => 'datetime', 'dismissed_until' => 'datetime'];
 
+    /** @return BelongsTo<Banner, $this> */
     public function banner(): BelongsTo
     {
         return $this->belongsTo(Banner::class);

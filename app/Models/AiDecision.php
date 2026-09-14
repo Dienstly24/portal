@@ -38,8 +38,11 @@ class AiDecision extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return BelongsTo<EmailMessage, $this> */
     public function emailMessage(): BelongsTo { return $this->belongsTo(EmailMessage::class); }
+    /** @return BelongsTo<Document, $this> */
     public function document(): BelongsTo { return $this->belongsTo(Document::class); }
+    /** @return BelongsTo<User, $this> */
     public function decider(): BelongsTo { return $this->belongsTo(User::class, 'decided_by'); }
 
     public function scopeSuggested($q) { return $q->where('status', 'suggested'); }

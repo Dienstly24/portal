@@ -29,7 +29,9 @@ class VermittlerImport extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return HasMany<VermittlerSettlement, $this> */
     public function settlements(): HasMany { return $this->hasMany(VermittlerSettlement::class, 'import_id'); }
+    /** @return BelongsTo<User, $this> */
     public function importer(): BelongsTo { return $this->belongsTo(User::class, 'imported_by'); }
 
     /** Summe der Provisionen dieses Laufs (nur die Zeilen dieses Imports). */

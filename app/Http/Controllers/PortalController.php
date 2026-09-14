@@ -175,7 +175,7 @@ class PortalController extends Controller
             ->where('type', 'kfz')->with('vehicleDetail')
             ->where('id', $id)->firstOrFail();
         $detail = $contract->vehicleDetail;
-        abort_unless($detail, 404);
+        abort_unless($detail !== null, 404);
 
         $request->validate(['mileage' => 'required|integer|min:0|max:5000000']);
 
@@ -213,7 +213,7 @@ class PortalController extends Controller
             ->whereIn('type', Contract::ENERGY_TYPES)->with('energyDetail')
             ->where('id', $id)->firstOrFail();
         $detail = $contract->energyDetail;
-        abort_unless($detail, 404);
+        abort_unless($detail !== null, 404);
 
         $data = $request->validate([
             'reading' => 'nullable|numeric|min:0|max:99999999',

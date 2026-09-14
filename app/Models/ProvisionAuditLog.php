@@ -43,7 +43,9 @@ class ProvisionAuditLog extends Model
         });
     }
 
+    /** @return BelongsTo<Provision, $this> */
     public function provision(): BelongsTo { return $this->belongsTo(Provision::class); }
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
 
     public function actionLabel(): string

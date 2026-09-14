@@ -97,11 +97,17 @@ class Ticket extends Model
     /** Noch nicht erledigt (weder geloest noch geschlossen). */
     public function scopeActive($query) { return $query->whereNotIn('status', ['resolved', 'closed']); }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    /** @return BelongsTo<User, $this> */
     public function assignedTo(): BelongsTo { return $this->belongsTo(User::class, 'assigned_to'); }
+    /** @return BelongsTo<User, $this> */
     public function closedBy(): BelongsTo { return $this->belongsTo(User::class, 'closed_by'); }
+    /** @return HasMany<TicketMessage, $this> */
     public function messages(): HasMany { return $this->hasMany(TicketMessage::class); }
+    /** @return HasMany<TicketEvent, $this> */
     public function events(): HasMany { return $this->hasMany(TicketEvent::class); }
+    /** @return HasMany<TicketAttachment, $this> */
     public function attachments(): HasMany { return $this->hasMany(TicketAttachment::class); }
 
     public function statusLabel(): string { return self::STATUSES[$this->status] ?? $this->status; }

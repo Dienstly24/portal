@@ -28,12 +28,14 @@ class ContractRevision extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return BelongsTo<Contract, $this> */
     public function contract(): BelongsTo
     {
         return $this->belongsTo(Contract::class);
     }
 
     /** Mitarbeiter, der die Aenderung ausgeloest hat (null = System). */
+    /** @return BelongsTo<User, $this> */
     public function changedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'changed_by');

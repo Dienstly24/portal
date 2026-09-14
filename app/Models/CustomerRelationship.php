@@ -53,11 +53,13 @@ class CustomerRelationship extends Model
         static::creating(fn ($m) => $m->id = (string) Str::uuid());
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customerA(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'customer_a_id');
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customerB(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'customer_b_id');

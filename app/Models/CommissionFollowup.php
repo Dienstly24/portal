@@ -43,7 +43,9 @@ class CommissionFollowup extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return BelongsTo<Contract, $this> */
     public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
+    /** @return BelongsTo<User, $this> */
     public function editor(): BelongsTo { return $this->belongsTo(User::class, 'updated_by'); }
 
     public function statusLabel(): string

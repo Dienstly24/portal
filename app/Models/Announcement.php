@@ -16,5 +16,6 @@ class Announcement extends Model
         parent::boot();
         static::creating(fn ($m) => $m->id = Str::uuid());
     }
+    /** @return BelongsTo<User, $this> */
     public function createdBy(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
 }

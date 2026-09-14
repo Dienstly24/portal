@@ -14,6 +14,7 @@ class BannerDailyStat extends Model
     // muss den Tageswert exakt wiederfinden (Unique banner_id+date).
     protected $fillable = ['banner_id', 'date', 'impressions', 'clicks'];
 
+    /** @return BelongsTo<Banner, $this> */
     public function banner(): BelongsTo
     {
         return $this->belongsTo(Banner::class);

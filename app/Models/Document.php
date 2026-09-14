@@ -147,6 +147,7 @@ class Document extends Model
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function uploader(): BelongsTo { return $this->belongsTo(User::class, 'uploaded_by'); }
     public function scopeCustomerVisible($q) { return $q->where('visibility', 'customer'); }
     /** Dokumenten-Eingang: hochgeladen ohne Kundenzuordnung (nur Mitarbeiter). */
@@ -159,6 +160,7 @@ class Document extends Model
      */
     public function isVermittlerListeVerarbeitet(): bool { return $this->vermittler_import_id !== null; }
 
+    /** @return BelongsTo<VermittlerImport, $this> */
     public function vermittlerImport(): BelongsTo { return $this->belongsTo(VermittlerImport::class, 'vermittler_import_id'); }
     protected static function boot() {
         parent::boot();
@@ -200,10 +202,14 @@ class Document extends Model
         }
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    /** @return BelongsTo<Contract, $this> */
     public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
+    /** @return HasMany<AiDecision, $this> */
     public function aiDecisions(): HasMany { return $this->hasMany(AiDecision::class); }
     /** Das zuerst hochgeladene, inhaltsgleiche Dokument (bei Duplikaten). */
+    /** @return BelongsTo<Document, $this> */
     public function duplicateOriginal(): BelongsTo { return $this->belongsTo(Document::class, 'duplicate_of'); }
 
     /** Deutsches Label des erkannten Dokumenttyps (z.B. "Gesundheitskarte"). */

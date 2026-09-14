@@ -26,7 +26,9 @@ class WorkSession extends Model
         'active_seconds' => 'integer',
     ];
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
+    /** @return HasMany<ActivityLog, $this> */
     public function activityLogs(): HasMany { return $this->hasMany(ActivityLog::class); }
 
     public function scopeOpen($query) { return $query->whereNull('logout_at'); }

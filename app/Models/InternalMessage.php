@@ -29,9 +29,13 @@ class InternalMessage extends Model
         static::creating(fn ($m) => $m->id = (string) Str::uuid());
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    /** @return BelongsTo<User, $this> */
     public function sender(): BelongsTo { return $this->belongsTo(User::class, 'sender_id'); }
+    /** @return BelongsTo<User, $this> */
     public function deletedBy(): BelongsTo { return $this->belongsTo(User::class, 'deleted_by'); }
+    /** @return HasMany<InternalNotification, $this> */
     public function notifications(): HasMany { return $this->hasMany(InternalNotification::class, 'message_id'); }
 
     public function scopeChat($q) { return $q->where('type', 'chat'); }

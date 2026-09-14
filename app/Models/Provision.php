@@ -73,16 +73,24 @@ class Provision extends Model
 
     /** @return BelongsTo<Partner, $this> */
     public function partner(): BelongsTo { return $this->belongsTo(Partner::class); }
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    /** @return BelongsTo<Contract, $this> */
     public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
+    /** @return BelongsTo<User, $this> */
     public function approver(): BelongsTo { return $this->belongsTo(User::class, 'approved_by'); }
+    /** @return BelongsTo<User, $this> */
     public function payer(): BelongsTo { return $this->belongsTo(User::class, 'paid_by'); }
     /** Original-Provision, auf die sich eine Storno-Gegenbuchung bezieht. */
+    /** @return BelongsTo<Provision, $this> */
     public function relatedProvision(): BelongsTo { return $this->belongsTo(Provision::class, 'related_provision_id'); }
     /** Gegenbuchungen, die auf diese Provision zeigen. */
+    /** @return HasMany<Provision, $this> */
     public function counterBookings(): HasMany { return $this->hasMany(Provision::class, 'related_provision_id'); }
     /** Unveraenderliche Aenderungshistorie, neueste zuerst. */
+    /** @return HasMany<ProvisionAuditLog, $this> */
     public function auditLogs(): HasMany { return $this->hasMany(ProvisionAuditLog::class)->orderByDesc('created_at'); }
 
     public function scopeOffen($q) { return $q->where('status', 'offen'); }

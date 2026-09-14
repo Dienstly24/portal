@@ -74,10 +74,15 @@ class CustomerChangeRequest extends Model
         });
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    /** @return BelongsTo<User, $this> */
     public function requester(): BelongsTo { return $this->belongsTo(User::class, 'requested_by'); }
+    /** @return BelongsTo<User, $this> */
     public function reviewer(): BelongsTo { return $this->belongsTo(User::class, 'reviewed_by'); }
+    /** @return HasMany<ChangeRequestDocument, $this> */
     public function documents(): HasMany { return $this->hasMany(ChangeRequestDocument::class, 'change_request_id'); }
+    /** @return HasMany<ChangeNotification, $this> */
     public function notifications(): HasMany { return $this->hasMany(ChangeNotification::class, 'change_request_id'); }
 
     public function scopePending($q) { return $q->where('status', 'pending'); }

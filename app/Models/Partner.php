@@ -36,35 +36,41 @@ class Partner extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return HasMany<Commission, $this> */
     public function commissions(): HasMany
     {
         return $this->hasMany(Commission::class)->latest('statement_date');
     }
 
     /** Login-Account des Partners (role=partner), optional. */
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
     /** Diesem Partner zugeordnete Kunden. */
+    /** @return HasMany<Customer, $this> */
     public function customers(): HasMany
     {
         return $this->hasMany(Customer::class);
     }
 
     /** Vom Partner geworbene Kunden (Neukunden-Bericht/Provision). */
+    /** @return HasMany<Customer, $this> */
     public function acquiredCustomers(): HasMany
     {
         return $this->hasMany(Customer::class, 'acquired_by_partner_id');
     }
 
     /** Sparten-Provisionssaetze dieses Partners (Provisions-Management). */
+    /** @return HasMany<ProvisionRate, $this> */
     public function provisionRates(): HasMany
     {
         return $this->hasMany(ProvisionRate::class);
     }
 
+    /** @return MorphMany<ExternalReference, $this> */
     public function externalReferences(): MorphMany
     {
         return $this->morphMany(ExternalReference::class, 'referenceable');

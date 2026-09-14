@@ -37,6 +37,7 @@ class ExternalReference extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return MorphTo<Model, $this> */
     public function referenceable(): MorphTo
     {
         return $this->morphTo();

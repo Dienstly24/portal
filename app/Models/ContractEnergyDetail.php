@@ -41,9 +41,11 @@ class ContractEnergyDetail extends Model
             }
         });
     }
+    /** @return BelongsTo<Contract, $this> */
     public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
 
     /** Zaehlerstands-Historie, juengste Ablesung zuerst. */
+    /** @return HasMany<MeterReading, $this> */
     public function meterReadings(): HasMany {
         return $this->hasMany(MeterReading::class)->orderByDesc('reading_date')->orderByDesc('created_at');
     }

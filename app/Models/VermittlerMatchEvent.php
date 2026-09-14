@@ -45,8 +45,11 @@ class VermittlerMatchEvent extends Model
         });
     }
 
+    /** @return BelongsTo<Contract, $this> */
     public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
+    /** @return BelongsTo<VermittlerImport, $this> */
     public function import(): BelongsTo { return $this->belongsTo(VermittlerImport::class, 'import_id'); }
 
     public function actionLabel(): string

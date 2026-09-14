@@ -202,9 +202,13 @@ class ContractVehicleDetail extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return BelongsTo<Contract, $this> */
     public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
+    /** @return HasMany<VehicleClaim, $this> */
     public function claims(): HasMany { return $this->hasMany(VehicleClaim::class)->orderByDesc('claim_date'); }
+    /** @return HasMany<VehicleMileageReading, $this> */
     public function mileageReadings(): HasMany { return $this->hasMany(VehicleMileageReading::class)->orderByDesc('reading_date')->orderByDesc('created_at'); }
+    /** @return HasMany<VehicleSfEntry, $this> */
     public function sfHistory(): HasMany { return $this->hasMany(VehicleSfEntry::class)->orderBy('branch')->orderByRaw('valid_from is null')->orderBy('valid_from'); }
 
     // ---- Anzeige-Helper ----------------------------------------------------

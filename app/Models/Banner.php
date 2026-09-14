@@ -23,17 +23,20 @@ class Banner extends Model
         'last_shown_at' => 'datetime',
     ];
 
+    /** @return HasMany<BannerDailyStat, $this> */
     public function dailyStats(): HasMany
     {
         return $this->hasMany(BannerDailyStat::class);
     }
 
+    /** @return HasMany<BannerUserView, $this> */
     public function userViews(): HasMany
     {
         return $this->hasMany(BannerUserView::class);
     }
 
     /** Optionaler Social-Media-Post (Social-Publishing, Phase 1). */
+    /** @return HasOne<BannerSocialPost, $this> */
     public function socialPost(): HasOne
     {
         return $this->hasOne(BannerSocialPost::class);

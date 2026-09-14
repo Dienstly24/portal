@@ -21,6 +21,8 @@ class EmailCampaign extends Model
         parent::boot();
         static::creating(fn ($m) => $m->id = Str::uuid());
     }
+    /** @return BelongsTo<User, $this> */
     public function createdBy(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
+    /** @return HasMany<EmailLog, $this> */
     public function logs(): HasMany { return $this->hasMany(EmailLog::class, 'campaign_id'); }
 }

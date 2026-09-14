@@ -52,11 +52,13 @@ class EmailAccount extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return HasMany<EmailMessage, $this> */
     public function messages(): HasMany
     {
         return $this->hasMany(EmailMessage::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

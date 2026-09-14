@@ -52,8 +52,11 @@ class VermittlerSettlement extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return BelongsTo<Contract, $this> */
     public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    /** @return BelongsTo<VermittlerImport, $this> */
     public function import(): BelongsTo { return $this->belongsTo(VermittlerImport::class, 'import_id'); }
 
     /** Ergebnis des letzten Imports (ersatzweise der dauerhafte Zustand). */

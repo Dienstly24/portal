@@ -36,7 +36,9 @@ class TicketEvent extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: Str::uuid());
     }
 
+    /** @return BelongsTo<Ticket, $this> */
     public function ticket(): BelongsTo { return $this->belongsTo(Ticket::class); }
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
 
     public function icon(): string { return self::LABELS[$this->event][0] ?? 'ℹ️'; }

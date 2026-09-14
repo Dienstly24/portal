@@ -33,7 +33,9 @@ class ProvisionRate extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
+    /** @return BelongsTo<Partner, $this> */
     public function partner(): BelongsTo { return $this->belongsTo(Partner::class); }
 
     /** Hat dieser Satz ueberhaupt einen Wert? (leere Saetze werden geloescht) */

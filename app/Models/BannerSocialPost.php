@@ -38,11 +38,13 @@ class BannerSocialPost extends Model
         'scheduled_for' => 'datetime',
     ];
 
+    /** @return BelongsTo<Banner, $this> */
     public function banner(): BelongsTo
     {
         return $this->belongsTo(Banner::class);
     }
 
+    /** @return HasMany<BannerSocialChannel, $this> */
     public function channels(): HasMany
     {
         return $this->hasMany(BannerSocialChannel::class);

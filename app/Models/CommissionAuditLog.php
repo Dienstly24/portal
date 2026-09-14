@@ -57,8 +57,11 @@ class CommissionAuditLog extends Model
         });
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
+    /** @return BelongsTo<ContractCommission, $this> */
     public function commission(): BelongsTo { return $this->belongsTo(ContractCommission::class, 'commission_id'); }
+    /** @return BelongsTo<Contract, $this> */
     public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
 
     public function actionLabel(): string

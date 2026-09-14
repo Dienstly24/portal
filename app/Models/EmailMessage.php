@@ -52,16 +52,19 @@ class EmailMessage extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
+    /** @return BelongsTo<EmailAccount, $this> */
     public function account(): BelongsTo
     {
         return $this->belongsTo(EmailAccount::class, 'email_account_id');
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /** @return HasMany<AiDecision, $this> */
     public function aiDecisions(): HasMany
     {
         return $this->hasMany(AiDecision::class);

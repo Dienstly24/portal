@@ -25,7 +25,9 @@ class ActivityLog extends Model
         parent::boot();
         static::creating(fn ($m) => $m->id = Str::uuid());
     }
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
+    /** @return BelongsTo<WorkSession, $this> */
     public function workSession(): BelongsTo { return $this->belongsTo(WorkSession::class); }
 
     /**
