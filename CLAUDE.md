@@ -1345,6 +1345,48 @@ Vollstaendig in `docs/SICHERHEIT_SEC_1_BIS_5.md`, Netzwerkteil in
   Fuehrerscheindatum/weitere Fahrer bleiben ausgeschlossen). Tests:
   `AufenthaltstitelParserTest`, `ArbeitsvertragParserTest`,
   `SmartDocumentUploadTest`.
+  **DIE ANSCHRIFT HING AN ZWEI DINGEN, DIE ES IN DER OCR NICHT GIBT**
+  (Nachtrag 14.09.2026, vom Betreiber gemeldet: "die Rueckseite der
+  Aufenthaltskarte wird nicht erkannt - Anschrift und Geburtsort"). Mit
+  Chromium + Tesseract an einer Replik der Rueckseite nachgemessen, in zwei
+  Fassungen (verlustfreies PNG und JPEG-komprimiert wie ein Handyfoto): die
+  OCR liest den Text fast vollstaendig - verloren ging er erst im Parser,
+  und zwar aus zwei Gruenden derselben Klasse wie bei der Zaehlernummer.
+  (1) **Die Beschriftung bricht**: "4. ANSCHRIFT/ADDRESS" kommt in BEIDEN
+  Fassungen als "4. ANSCHRIFTIADDRESS" an - der Schraegstrich wird zum
+  Buchstaben. Die Suche verlangte eine Wortgrenze hinter "Anschrift", fand
+  die Beschriftung nicht und die komplette Anschrift fiel still weg.
+  (2) **Auf Spaltenabstaende ist kein Verlass** (dieselbe Lehre wie beim
+  Energieportal und bei CHECK24): die linke Kartenspalte steht mit nur EINEM
+  Leerzeichen vor dem Aufkleber ("AUGENFARBE/EYE COLOUR 24768 RENDSBURG",
+  "BRAUN OSTLANDSTRASSE 19"). Die Trennung an zwei Leerzeichen verlor die
+  PLZ ganz und machte aus der AUGENFARBE einen Teil der Strasse - gemessen
+  entstand "BRAUN OSTLANDSTRABE" als Strassenname. Eine erfundene Anschrift
+  ist schlimmer als ein leeres Feld: sie passt zu keinem Kunden und landet
+  trotzdem in der Akte. Gesucht wird jetzt nach der FORM des Wertes
+  ("PLZ Ort" bzw. "Strasse Hausnummer" am Zeilenende), nicht nach seiner
+  Spalte; die alte Spaltenlesung bleibt als erster Kandidat erhalten (die
+  Dokumentennummer steht neben dem Aufkleber). Ob die Nachbarspalte
+  anklebt, verraet die PLZ-Zeile: steht die PLZ nicht am Anfang, zaehlt bei
+  der Strasse nur das Wort mit der Strassen-Endung - im sauberen Layout
+  bleibt der mehrteilige Name erhalten ("Alte Kieler Landstr. 141").
+  Der Aufkleber steht dabei oft UMGEKEHRT (PLZ/Ort zuerst, Strasse
+  darunter); beide Reihenfolgen werden gelesen. Die Anschrift der
+  ausstellenden BEHOERDE wird NIE die des Kunden (Test).
+  (3) Nebenbefund **"ß" wird zu "B"**: die Karte druckt in Grossbuchstaben,
+  ein grosses "ss" gibt es dort nicht - "OSTLANDSTRAßE" kommt als
+  "OSTLANDSTRABE" an. Ein "Strabe" gibt es im Deutschen nicht, die
+  Ruecksetzung ist damit eindeutig und erfindet nichts.
+  (4) Nebenbefund **MRZ-Fuellzeichen**: die lange "<<<<"-Kette hinter dem
+  Namen ist die Stelle, an der sich die OCR am haeufigsten verliest
+  ("OMAR<<<<<<" -> "OMAR<<<CCECCCETICCE") - der Buchstabensalat wurde als
+  zweiter Vorname uebernommen. Ein DOPPELTES Fuellzeichen beendet den Namen
+  jetzt; einzelne Buchstaben zaehlen nie als Vorname (die MRZ schreibt
+  Vornamen immer aus, ein einzelner Buchstabe ist dort ein Lesefehler).
+  DIESELBE LUECKE IM KI-PROMPT wie bei der Zaehlernummer: der Prompt nannte
+  den Anschrift-Aufkleber, aber weder die umgekehrte Reihenfolge noch die
+  Abgrenzung zur Behoerdenanschrift. Ein Waechter-Test prueft ausserdem die
+  ECHTE Kette AUS DEM CONTAINER, nicht den Parser allein.
 - **Zuordnungs-Vorschlaege im Dokumenten-Eingang** (Betreiber-Vorgabe
   29.07.2026): Beim Oeffnen von „Kunden zuordnen…" / „Neuen Kunden
   erstellen" laedt der Dialog SOFORT die naechstliegenden Kunden
