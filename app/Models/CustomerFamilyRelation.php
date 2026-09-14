@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
@@ -123,17 +124,20 @@ class CustomerFamilyRelation extends Model
         return $role === 'ehepartner' ? 'spouse' : 'family';
     }
 
-    public function customer()
+    /** @return BelongsTo<Customer, $this> */
+    public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'customer_id');
     }
 
-    public function relatedCustomer()
+    /** @return BelongsTo<Customer, $this> */
+    public function relatedCustomer(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'related_customer_id');
     }
 
-    public function creator()
+    /** @return BelongsTo<User, $this> */
+    public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }

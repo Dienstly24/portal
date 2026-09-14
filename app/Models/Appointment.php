@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 class Appointment extends Model
@@ -15,6 +16,8 @@ class Appointment extends Model
         parent::boot();
         static::creating(fn ($m) => $m->id = Str::uuid());
     }
-    public function customer() { return $this->belongsTo(Customer::class); }
-    public function assignedTo() { return $this->belongsTo(User::class, 'assigned_to'); }
+    /** @return BelongsTo<Customer, $this> */
+    public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    /** @return BelongsTo<User, $this> */
+    public function assignedTo(): BelongsTo { return $this->belongsTo(User::class, 'assigned_to'); }
 }

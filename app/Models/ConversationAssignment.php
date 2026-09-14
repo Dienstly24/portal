@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Historie der Zustaendigkeit. Ohne sie ist nach einer Uebernahme nicht
@@ -32,10 +33,14 @@ class ConversationAssignment extends Model
         'changed_by_employee_id', 'action', 'reason',
     ];
 
-    public function conversation() { return $this->belongsTo(Conversation::class); }
-    public function fromEmployee() { return $this->belongsTo(User::class, 'from_employee_id'); }
-    public function toEmployee() { return $this->belongsTo(User::class, 'to_employee_id'); }
-    public function changedBy() { return $this->belongsTo(User::class, 'changed_by_employee_id'); }
+    /** @return BelongsTo<Conversation, $this> */
+    public function conversation(): BelongsTo { return $this->belongsTo(Conversation::class); }
+    /** @return BelongsTo<User, $this> */
+    public function fromEmployee(): BelongsTo { return $this->belongsTo(User::class, 'from_employee_id'); }
+    /** @return BelongsTo<User, $this> */
+    public function toEmployee(): BelongsTo { return $this->belongsTo(User::class, 'to_employee_id'); }
+    /** @return BelongsTo<User, $this> */
+    public function changedBy(): BelongsTo { return $this->belongsTo(User::class, 'changed_by_employee_id'); }
 
     public function actionLabel(): string
     {

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -46,11 +47,16 @@ class DocumentRequest extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function customer() { return $this->belongsTo(Customer::class); }
-    public function contract() { return $this->belongsTo(Contract::class); }
-    public function document() { return $this->belongsTo(Document::class); }
-    public function requester() { return $this->belongsTo(User::class, 'requested_by'); }
-    public function reviewer() { return $this->belongsTo(User::class, 'reviewed_by'); }
+    /** @return BelongsTo<Customer, $this> */
+    public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    /** @return BelongsTo<Contract, $this> */
+    public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
+    /** @return BelongsTo<Document, $this> */
+    public function document(): BelongsTo { return $this->belongsTo(Document::class); }
+    /** @return BelongsTo<User, $this> */
+    public function requester(): BelongsTo { return $this->belongsTo(User::class, 'requested_by'); }
+    /** @return BelongsTo<User, $this> */
+    public function reviewer(): BelongsTo { return $this->belongsTo(User::class, 'reviewed_by'); }
 
     public function scopeOpenForCustomer($q) { return $q->whereIn('status', ['open', 'rejected']); }
     public function scopeAwaitingReview($q) { return $q->where('status', 'uploaded'); }

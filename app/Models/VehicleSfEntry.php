@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -26,7 +27,8 @@ class VehicleSfEntry extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function vehicleDetail() { return $this->belongsTo(ContractVehicleDetail::class, 'contract_vehicle_detail_id'); }
+    /** @return BelongsTo<ContractVehicleDetail, $this> */
+    public function vehicleDetail(): BelongsTo { return $this->belongsTo(ContractVehicleDetail::class, 'contract_vehicle_detail_id'); }
 
     public function branchLabel(): string { return self::BRANCHES[$this->branch] ?? $this->branch; }
 }

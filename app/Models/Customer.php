@@ -8,6 +8,8 @@ use App\Services\Matching\DuplicateDetectionService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -284,9 +286,12 @@ class Customer extends Model
         return $this->unsubscribe_token;
     }
 
-    public function addresses() { return $this->hasMany(CustomerAddress::class, 'customer_id'); }
-    public function contacts() { return $this->hasMany(CustomerContact::class, 'customer_id'); }
-    public function changeRequests() { return $this->hasMany(CustomerChangeRequest::class, 'customer_id'); }
+    /** @return HasMany<CustomerAddress, $this> */
+    public function addresses(): HasMany { return $this->hasMany(CustomerAddress::class, 'customer_id'); }
+    /** @return HasMany<CustomerContact, $this> */
+    public function contacts(): HasMany { return $this->hasMany(CustomerContact::class, 'customer_id'); }
+    /** @return HasMany<CustomerChangeRequest, $this> */
+    public function changeRequests(): HasMany { return $this->hasMany(CustomerChangeRequest::class, 'customer_id'); }
     /**
      * Kundenfelder, die in den Dubletten-Abgleich einfliessen. Aendert sich
      * eines davon, kann sich die Zahl der Verdachtsfaelle veraendern - der
@@ -387,37 +392,57 @@ class Customer extends Model
     }
 
     /** Kanal-Identitaeten dieses Kunden (WhatsApp-Nummer, Instagram-Konto ...). */
-    public function channelIdentities() { return $this->hasMany(CustomerChannelIdentity::class); }
+    /** @return HasMany<CustomerChannelIdentity, $this> */
+    public function channelIdentities(): HasMany { return $this->hasMany(CustomerChannelIdentity::class); }
 
-    public function conversations() { return $this->hasMany(Conversation::class); }
-    public function contracts() { return $this->hasMany(Contract::class); }
-    public function contractHistories() { return $this->hasMany(ContractHistory::class); }
-    public function tickets() { return $this->hasMany(Ticket::class); }
-    public function documents() { return $this->hasMany(Document::class); }
-    public function consents() { return $this->hasMany(CustomerConsent::class); }
-    public function family() { return $this->hasMany(CustomerFamily::class); }
+    /** @return HasMany<Conversation, $this> */
+    public function conversations(): HasMany { return $this->hasMany(Conversation::class); }
+    /** @return HasMany<Contract, $this> */
+    public function contracts(): HasMany { return $this->hasMany(Contract::class); }
+    /** @return HasMany<ContractHistory, $this> */
+    public function contractHistories(): HasMany { return $this->hasMany(ContractHistory::class); }
+    /** @return HasMany<Ticket, $this> */
+    public function tickets(): HasMany { return $this->hasMany(Ticket::class); }
+    /** @return HasMany<Document, $this> */
+    public function documents(): HasMany { return $this->hasMany(Document::class); }
+    /** @return HasMany<CustomerConsent, $this> */
+    public function consents(): HasMany { return $this->hasMany(CustomerConsent::class); }
+    /** @return HasMany<CustomerFamily, $this> */
+    public function family(): HasMany { return $this->hasMany(CustomerFamily::class); }
 
     /**
      * Familienbeziehungen zu ANDEREN Kundenakten, ausgehend von diesem Kunden:
      * "X ist <Rolle> von mir". Die Gegenrichtung steht in familyRelationsOf().
      */
-    public function familyRelations() { return $this->hasMany(CustomerFamilyRelation::class, 'customer_id'); }
+    /** @return HasMany<CustomerFamilyRelation, $this> */
+    public function familyRelations(): HasMany { return $this->hasMany(CustomerFamilyRelation::class, 'customer_id'); }
 
     /** Beziehungen, in denen dieser Kunde das verknuepfte Mitglied ist ("ich bin <Rolle> von X"). */
-    public function familyRelationsOf() { return $this->hasMany(CustomerFamilyRelation::class, 'related_customer_id'); }
-    public function vehicles() { return $this->hasMany(CustomerVehicle::class); }
-    public function messages() { return $this->hasMany(CustomerMessage::class); }
-    public function notes() { return $this->hasMany(CustomerNote::class)->latest(); }
-    public function timeline() { return $this->hasMany(CustomerTimeline::class)->latest(); }
-    public function appointments() { return $this->hasMany(Appointment::class); }
-    public function externalReferences() { return $this->morphMany(ExternalReference::class, 'referenceable'); }
-    public function partner() { return $this->belongsTo(Partner::class); }
+    /** @return HasMany<CustomerFamilyRelation, $this> */
+    public function familyRelationsOf(): HasMany { return $this->hasMany(CustomerFamilyRelation::class, 'related_customer_id'); }
+    /** @return HasMany<CustomerVehicle, $this> */
+    public function vehicles(): HasMany { return $this->hasMany(CustomerVehicle::class); }
+    /** @return HasMany<CustomerMessage, $this> */
+    public function messages(): HasMany { return $this->hasMany(CustomerMessage::class); }
+    /** @return HasMany<CustomerNote, $this> */
+    public function notes(): HasMany { return $this->hasMany(CustomerNote::class)->latest(); }
+    /** @return HasMany<CustomerTimeline, $this> */
+    public function timeline(): HasMany { return $this->hasMany(CustomerTimeline::class)->latest(); }
+    /** @return HasMany<Appointment, $this> */
+    public function appointments(): HasMany { return $this->hasMany(Appointment::class); }
+    /** @return MorphMany<ExternalReference, $this> */
+    public function externalReferences(): MorphMany { return $this->morphMany(ExternalReference::class, 'referenceable'); }
+    /** @return BelongsTo<Partner, $this> */
+    public function partner(): BelongsTo { return $this->belongsTo(Partner::class); }
     /** Mitarbeiter, der den Datensatz angelegt hat (null = System/Import/Alt-Bestand). */
-    public function creator() { return $this->belongsTo(User::class, 'created_by'); }
+    /** @return BelongsTo<User, $this> */
+    public function creator(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
     /** Werber (Mitarbeiter), der den Kunden geworben hat. */
-    public function acquirer() { return $this->belongsTo(User::class, 'acquired_by'); }
+    /** @return BelongsTo<User, $this> */
+    public function acquirer(): BelongsTo { return $this->belongsTo(User::class, 'acquired_by'); }
     /** Werber (Vertriebspartner), der den Kunden geworben hat. */
-    public function acquirerPartner() { return $this->belongsTo(Partner::class, 'acquired_by_partner_id'); }
+    /** @return BelongsTo<Partner, $this> */
+    public function acquirerPartner(): BelongsTo { return $this->belongsTo(Partner::class, 'acquired_by_partner_id'); }
 
     /**
      * Werber-Schluessel fuer Filter/Formulare: 'u:{id}' (Mitarbeiter),

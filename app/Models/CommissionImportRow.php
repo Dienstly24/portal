@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -49,9 +50,12 @@ class CommissionImportRow extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function import() { return $this->belongsTo(CommissionImport::class, 'import_id'); }
-    public function contract() { return $this->belongsTo(Contract::class); }
-    public function customer() { return $this->belongsTo(Customer::class); }
+    /** @return BelongsTo<CommissionImport, $this> */
+    public function import(): BelongsTo { return $this->belongsTo(CommissionImport::class, 'import_id'); }
+    /** @return BelongsTo<Contract, $this> */
+    public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
+    /** @return BelongsTo<Customer, $this> */
+    public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
 
     /**
      * Kann aus dieser nicht zugeordneten Zeile ein Vertrag entstehen? Der

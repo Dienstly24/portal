@@ -3,6 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Str;
 
 /**
@@ -33,36 +36,42 @@ class Partner extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function commissions()
+    /** @return HasMany<Commission, $this> */
+    public function commissions(): HasMany
     {
         return $this->hasMany(Commission::class)->latest('statement_date');
     }
 
     /** Login-Account des Partners (role=partner), optional. */
-    public function user()
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
     /** Diesem Partner zugeordnete Kunden. */
-    public function customers()
+    /** @return HasMany<Customer, $this> */
+    public function customers(): HasMany
     {
         return $this->hasMany(Customer::class);
     }
 
     /** Vom Partner geworbene Kunden (Neukunden-Bericht/Provision). */
-    public function acquiredCustomers()
+    /** @return HasMany<Customer, $this> */
+    public function acquiredCustomers(): HasMany
     {
         return $this->hasMany(Customer::class, 'acquired_by_partner_id');
     }
 
     /** Sparten-Provisionssaetze dieses Partners (Provisions-Management). */
-    public function provisionRates()
+    /** @return HasMany<ProvisionRate, $this> */
+    public function provisionRates(): HasMany
     {
         return $this->hasMany(ProvisionRate::class);
     }
 
-    public function externalReferences()
+    /** @return MorphMany<ExternalReference, $this> */
+    public function externalReferences(): MorphMany
     {
         return $this->morphMany(ExternalReference::class, 'referenceable');
     }

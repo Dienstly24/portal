@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -73,8 +74,10 @@ class AiConversationEvent extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function conversation() { return $this->belongsTo(AiConversation::class, 'conversation_id'); }
-    public function user() { return $this->belongsTo(User::class); }
+    /** @return BelongsTo<AiConversation, $this> */
+    public function conversation(): BelongsTo { return $this->belongsTo(AiConversation::class, 'conversation_id'); }
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo { return $this->belongsTo(User::class); }
 
     public function label(): string
     {

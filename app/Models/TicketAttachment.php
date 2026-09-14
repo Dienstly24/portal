@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TicketAttachment extends Model
 {
@@ -11,5 +12,6 @@ class TicketAttachment extends Model
     protected $keyType = 'string';
     protected $guarded = [];
 
-    public function ticket() { return $this->belongsTo(Ticket::class); }
+    /** @return BelongsTo<Ticket, $this> */
+    public function ticket(): BelongsTo { return $this->belongsTo(Ticket::class); }
 }

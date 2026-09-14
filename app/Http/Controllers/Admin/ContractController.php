@@ -213,7 +213,7 @@ class ContractController extends Controller
         $contract = Contract::with('energyDetail')->findOrFail($id);
         $this->authorizeCustomerAccess($contract->customer_id);
         $detail = $contract->energyDetail;
-        abort_unless($detail, 404);
+        abort_unless($detail !== null, 404);
 
         $reading = MeterReading::where('contract_energy_detail_id', $detail->id)
             ->where('id', $readingId)->firstOrFail();

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 class TicketMessage extends Model
@@ -14,6 +15,8 @@ class TicketMessage extends Model
         parent::boot();
         static::creating(fn ($m) => $m->id = Str::uuid());
     }
-    public function ticket() { return $this->belongsTo(Ticket::class); }
-    public function sender() { return $this->belongsTo(User::class, 'sender_id'); }
+    /** @return BelongsTo<Ticket, $this> */
+    public function ticket(): BelongsTo { return $this->belongsTo(Ticket::class); }
+    /** @return BelongsTo<User, $this> */
+    public function sender(): BelongsTo { return $this->belongsTo(User::class, 'sender_id'); }
 }

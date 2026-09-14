@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -37,7 +38,8 @@ class MessageTemplate extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function creator() { return $this->belongsTo(User::class, 'created_by'); }
+    /** @return BelongsTo<User, $this> */
+    public function creator(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
 
     /**
      * Ersetzt {{platzhalter}} durch echte Werte. Ohne Kunde bleiben

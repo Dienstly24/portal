@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -53,12 +54,14 @@ class MeterReading extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function energyDetail()
+    /** @return BelongsTo<ContractEnergyDetail, $this> */
+    public function energyDetail(): BelongsTo
     {
         return $this->belongsTo(ContractEnergyDetail::class, 'contract_energy_detail_id');
     }
 
-    public function document()
+    /** @return BelongsTo<Document, $this> */
+    public function document(): BelongsTo
     {
         return $this->belongsTo(Document::class);
     }

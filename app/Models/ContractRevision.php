@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -27,13 +28,15 @@ class ContractRevision extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function contract()
+    /** @return BelongsTo<Contract, $this> */
+    public function contract(): BelongsTo
     {
         return $this->belongsTo(Contract::class);
     }
 
     /** Mitarbeiter, der die Aenderung ausgeloest hat (null = System). */
-    public function changedBy()
+    /** @return BelongsTo<User, $this> */
+    public function changedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'changed_by');
     }

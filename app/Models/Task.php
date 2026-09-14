@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -68,11 +69,16 @@ class Task extends Model
         });
     }
 
-    public function assignedTo() { return $this->belongsTo(User::class, 'assigned_to'); }
-    public function createdBy() { return $this->belongsTo(User::class, 'created_by'); }
-    public function customer() { return $this->belongsTo(Customer::class); }
-    public function emailMessage() { return $this->belongsTo(EmailMessage::class); }
-    public function contract() { return $this->belongsTo(Contract::class); }
+    /** @return BelongsTo<User, $this> */
+    public function assignedTo(): BelongsTo { return $this->belongsTo(User::class, 'assigned_to'); }
+    /** @return BelongsTo<User, $this> */
+    public function createdBy(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
+    /** @return BelongsTo<Customer, $this> */
+    public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    /** @return BelongsTo<EmailMessage, $this> */
+    public function emailMessage(): BelongsTo { return $this->belongsTo(EmailMessage::class); }
+    /** @return BelongsTo<Contract, $this> */
+    public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
 
     /** Offene Aufgaben (alles ausser erledigt). */
     public function scopeOpen($query) { return $query->where('status', '!=', 'done'); }

@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Services\ChangeRequest\ChangeProofPolicy;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 /**
@@ -72,11 +74,16 @@ class CustomerChangeRequest extends Model
         });
     }
 
-    public function customer() { return $this->belongsTo(Customer::class); }
-    public function requester() { return $this->belongsTo(User::class, 'requested_by'); }
-    public function reviewer() { return $this->belongsTo(User::class, 'reviewed_by'); }
-    public function documents() { return $this->hasMany(ChangeRequestDocument::class, 'change_request_id'); }
-    public function notifications() { return $this->hasMany(ChangeNotification::class, 'change_request_id'); }
+    /** @return BelongsTo<Customer, $this> */
+    public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    /** @return BelongsTo<User, $this> */
+    public function requester(): BelongsTo { return $this->belongsTo(User::class, 'requested_by'); }
+    /** @return BelongsTo<User, $this> */
+    public function reviewer(): BelongsTo { return $this->belongsTo(User::class, 'reviewed_by'); }
+    /** @return HasMany<ChangeRequestDocument, $this> */
+    public function documents(): HasMany { return $this->hasMany(ChangeRequestDocument::class, 'change_request_id'); }
+    /** @return HasMany<ChangeNotification, $this> */
+    public function notifications(): HasMany { return $this->hasMany(ChangeNotification::class, 'change_request_id'); }
 
     public function scopePending($q) { return $q->where('status', 'pending'); }
 

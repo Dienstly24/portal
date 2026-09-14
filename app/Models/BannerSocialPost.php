@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Social-Media-Post zu einem Banner (Phase 1 "Social-Publishing"):
@@ -36,12 +38,14 @@ class BannerSocialPost extends Model
         'scheduled_for' => 'datetime',
     ];
 
-    public function banner()
+    /** @return BelongsTo<Banner, $this> */
+    public function banner(): BelongsTo
     {
         return $this->belongsTo(Banner::class);
     }
 
-    public function channels()
+    /** @return HasMany<BannerSocialChannel, $this> */
+    public function channels(): HasMany
     {
         return $this->hasMany(BannerSocialChannel::class);
     }

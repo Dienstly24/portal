@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 class ActivityLog extends Model
@@ -24,8 +25,10 @@ class ActivityLog extends Model
         parent::boot();
         static::creating(fn ($m) => $m->id = Str::uuid());
     }
-    public function user() { return $this->belongsTo(User::class); }
-    public function workSession() { return $this->belongsTo(WorkSession::class); }
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo { return $this->belongsTo(User::class); }
+    /** @return BelongsTo<WorkSession, $this> */
+    public function workSession(): BelongsTo { return $this->belongsTo(WorkSession::class); }
 
     /**
      * Einheitliches Schreiben eines Audit-Eintrags (Audit ARCH-9). Ersetzt das

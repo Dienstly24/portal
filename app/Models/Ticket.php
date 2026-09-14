@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Str;
@@ -95,12 +97,18 @@ class Ticket extends Model
     /** Noch nicht erledigt (weder geloest noch geschlossen). */
     public function scopeActive($query) { return $query->whereNotIn('status', ['resolved', 'closed']); }
 
-    public function customer() { return $this->belongsTo(Customer::class); }
-    public function assignedTo() { return $this->belongsTo(User::class, 'assigned_to'); }
-    public function closedBy() { return $this->belongsTo(User::class, 'closed_by'); }
-    public function messages() { return $this->hasMany(TicketMessage::class); }
-    public function events() { return $this->hasMany(TicketEvent::class); }
-    public function attachments() { return $this->hasMany(TicketAttachment::class); }
+    /** @return BelongsTo<Customer, $this> */
+    public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    /** @return BelongsTo<User, $this> */
+    public function assignedTo(): BelongsTo { return $this->belongsTo(User::class, 'assigned_to'); }
+    /** @return BelongsTo<User, $this> */
+    public function closedBy(): BelongsTo { return $this->belongsTo(User::class, 'closed_by'); }
+    /** @return HasMany<TicketMessage, $this> */
+    public function messages(): HasMany { return $this->hasMany(TicketMessage::class); }
+    /** @return HasMany<TicketEvent, $this> */
+    public function events(): HasMany { return $this->hasMany(TicketEvent::class); }
+    /** @return HasMany<TicketAttachment, $this> */
+    public function attachments(): HasMany { return $this->hasMany(TicketAttachment::class); }
 
     public function statusLabel(): string { return self::STATUSES[$this->status] ?? $this->status; }
     public function typeLabel(): string { return self::TYPES[$this->type] ?? ucfirst(str_replace('_', ' ', (string) $this->type)); }

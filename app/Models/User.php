@@ -5,6 +5,9 @@ namespace App\Models;
 use App\Mail\PasswordResetMail;
 use App\Services\Matching\DuplicateDetectionService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Mail;
@@ -55,7 +58,8 @@ class User extends Authenticatable
         });
     }
 
-    public function customer() { return $this->hasOne(Customer::class); }
+    /** @return HasOne<Customer, $this> */
+    public function customer(): HasOne { return $this->hasOne(Customer::class); }
 
     /** Echte, erreichbare E-Mail (Import-Platzhalter zählen nicht). */
     public function hasRealEmail(): bool {
@@ -71,16 +75,20 @@ class User extends Authenticatable
         Mail::to($this->email)
             ->send(new PasswordResetMail($this, $token));
     }
-    public function assignedCustomers() { return $this->belongsToMany(Customer::class, 'employee_customers'); }
+    /** @return BelongsToMany<Customer, $this> */
+    public function assignedCustomers(): BelongsToMany { return $this->belongsToMany(Customer::class, 'employee_customers'); }
 
     /** Kunden, die dieser Mitarbeiter geworben hat (Neukunden-Bericht/Provision). */
-    public function acquiredCustomers() { return $this->hasMany(Customer::class, 'acquired_by'); }
+    /** @return HasMany<Customer, $this> */
+    public function acquiredCustomers(): HasMany { return $this->hasMany(Customer::class, 'acquired_by'); }
 
     /** Sparten-Provisionssaetze dieses Mitarbeiters (Provisions-Management). */
-    public function provisionRates() { return $this->hasMany(ProvisionRate::class); }
+    /** @return HasMany<ProvisionRate, $this> */
+    public function provisionRates(): HasMany { return $this->hasMany(ProvisionRate::class); }
 
     /** Favoriten-Kunden dieses Mitarbeiters (Stern im E-Mail-Composer). */
-    public function favoriteCustomers() { return $this->belongsToMany(Customer::class, 'favorite_customers')->withTimestamps(); }
+    /** @return BelongsToMany<Customer, $this> */
+    public function favoriteCustomers(): BelongsToMany { return $this->belongsToMany(Customer::class, 'favorite_customers')->withTimestamps(); }
 
     public function canSeeAllCustomers(): bool {
         return in_array($this->role, ['admin', 'manager']) || (bool) $this->can_see_all_customers;

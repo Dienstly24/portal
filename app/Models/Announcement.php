@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 class Announcement extends Model
@@ -15,5 +16,6 @@ class Announcement extends Model
         parent::boot();
         static::creating(fn ($m) => $m->id = Str::uuid());
     }
-    public function createdBy() { return $this->belongsTo(User::class, 'created_by'); }
+    /** @return BelongsTo<User, $this> */
+    public function createdBy(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
 }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -52,12 +53,14 @@ class CustomerRelationship extends Model
         static::creating(fn ($m) => $m->id = (string) Str::uuid());
     }
 
-    public function customerA()
+    /** @return BelongsTo<Customer, $this> */
+    public function customerA(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'customer_a_id');
     }
 
-    public function customerB()
+    /** @return BelongsTo<Customer, $this> */
+    public function customerB(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'customer_b_id');
     }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -56,9 +57,12 @@ class CommissionAuditLog extends Model
         });
     }
 
-    public function user() { return $this->belongsTo(User::class); }
-    public function commission() { return $this->belongsTo(ContractCommission::class, 'commission_id'); }
-    public function contract() { return $this->belongsTo(Contract::class); }
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo { return $this->belongsTo(User::class); }
+    /** @return BelongsTo<ContractCommission, $this> */
+    public function commission(): BelongsTo { return $this->belongsTo(ContractCommission::class, 'commission_id'); }
+    /** @return BelongsTo<Contract, $this> */
+    public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
 
     public function actionLabel(): string
     {

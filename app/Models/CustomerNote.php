@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 class CustomerNote extends Model
@@ -14,6 +15,8 @@ class CustomerNote extends Model
         parent::boot();
         static::creating(fn ($m) => $m->id = Str::uuid());
     }
-    public function customer() { return $this->belongsTo(Customer::class); }
-    public function createdBy() { return $this->belongsTo(User::class, 'created_by'); }
+    /** @return BelongsTo<Customer, $this> */
+    public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    /** @return BelongsTo<User, $this> */
+    public function createdBy(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
 }

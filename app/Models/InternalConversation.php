@@ -3,6 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 /**
@@ -22,16 +26,21 @@ class InternalConversation extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function creator() { return $this->belongsTo(User::class, 'created_by'); }
-    public function participants() { return $this->hasMany(InternalConversationParticipant::class, 'conversation_id'); }
-    public function users() { return $this->belongsToMany(User::class, 'internal_conversation_participants', 'conversation_id', 'user_id')->withPivot('last_read_at'); }
-    public function messages() { return $this->hasMany(InternalConversationMessage::class, 'conversation_id'); }
+    /** @return BelongsTo<User, $this> */
+    public function creator(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
+    /** @return HasMany<InternalConversationParticipant, $this> */
+    public function participants(): HasMany { return $this->hasMany(InternalConversationParticipant::class, 'conversation_id'); }
+    /** @return BelongsToMany<User, $this> */
+    public function users(): BelongsToMany { return $this->belongsToMany(User::class, 'internal_conversation_participants', 'conversation_id', 'user_id')->withPivot('last_read_at'); }
+    /** @return HasMany<InternalConversationMessage, $this> */
+    public function messages(): HasMany { return $this->hasMany(InternalConversationMessage::class, 'conversation_id'); }
     /**
      * Nur die juengste Nachricht - fuer das Notification Center, damit dort
      * nicht der komplette Nachrichtenverlauf jeder Unterhaltung geladen
      * werden muss (Behebung eines N+1-/Speicher-Problems).
      */
-    public function latestMessage() { return $this->hasOne(InternalConversationMessage::class, 'conversation_id')->latestOfMany('created_at'); }
+    /** @return HasOne<InternalConversationMessage, $this> */
+    public function latestMessage(): HasOne { return $this->hasOne(InternalConversationMessage::class, 'conversation_id')->latestOfMany('created_at'); }
 
     public function hasParticipant(int $userId): bool {
         return $this->participants()->where('user_id', $userId)->exists();

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 class InternalConversationMessage extends Model
@@ -16,6 +17,8 @@ class InternalConversationMessage extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function conversation() { return $this->belongsTo(InternalConversation::class, 'conversation_id'); }
-    public function sender() { return $this->belongsTo(User::class, 'sender_id'); }
+    /** @return BelongsTo<InternalConversation, $this> */
+    public function conversation(): BelongsTo { return $this->belongsTo(InternalConversation::class, 'conversation_id'); }
+    /** @return BelongsTo<User, $this> */
+    public function sender(): BelongsTo { return $this->belongsTo(User::class, 'sender_id'); }
 }

@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -145,7 +147,8 @@ class Document extends Model
         ];
     }
 
-    public function uploader() { return $this->belongsTo(User::class, 'uploaded_by'); }
+    /** @return BelongsTo<User, $this> */
+    public function uploader(): BelongsTo { return $this->belongsTo(User::class, 'uploaded_by'); }
     public function scopeCustomerVisible($q) { return $q->where('visibility', 'customer'); }
     /** Dokumenten-Eingang: hochgeladen ohne Kundenzuordnung (nur Mitarbeiter). */
     public function scopeInbox($q) { return $q->whereNull('customer_id'); }
@@ -157,7 +160,8 @@ class Document extends Model
      */
     public function isVermittlerListeVerarbeitet(): bool { return $this->vermittler_import_id !== null; }
 
-    public function vermittlerImport() { return $this->belongsTo(VermittlerImport::class, 'vermittler_import_id'); }
+    /** @return BelongsTo<VermittlerImport, $this> */
+    public function vermittlerImport(): BelongsTo { return $this->belongsTo(VermittlerImport::class, 'vermittler_import_id'); }
     protected static function boot() {
         parent::boot();
         static::creating(function ($m) {
@@ -198,11 +202,15 @@ class Document extends Model
         }
     }
 
-    public function customer() { return $this->belongsTo(Customer::class); }
-    public function contract() { return $this->belongsTo(Contract::class); }
-    public function aiDecisions() { return $this->hasMany(AiDecision::class); }
+    /** @return BelongsTo<Customer, $this> */
+    public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    /** @return BelongsTo<Contract, $this> */
+    public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
+    /** @return HasMany<AiDecision, $this> */
+    public function aiDecisions(): HasMany { return $this->hasMany(AiDecision::class); }
     /** Das zuerst hochgeladene, inhaltsgleiche Dokument (bei Duplikaten). */
-    public function duplicateOriginal() { return $this->belongsTo(Document::class, 'duplicate_of'); }
+    /** @return BelongsTo<Document, $this> */
+    public function duplicateOriginal(): BelongsTo { return $this->belongsTo(Document::class, 'duplicate_of'); }
 
     /** Deutsches Label des erkannten Dokumenttyps (z.B. "Gesundheitskarte"). */
     public function aiTypeLabel(): ?string {

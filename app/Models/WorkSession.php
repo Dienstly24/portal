@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Arbeitssitzung eines Mitarbeiters: Login bis Logout/Timeout.
@@ -24,8 +26,10 @@ class WorkSession extends Model
         'active_seconds' => 'integer',
     ];
 
-    public function user() { return $this->belongsTo(User::class); }
-    public function activityLogs() { return $this->hasMany(ActivityLog::class); }
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo { return $this->belongsTo(User::class); }
+    /** @return HasMany<ActivityLog, $this> */
+    public function activityLogs(): HasMany { return $this->hasMany(ActivityLog::class); }
 
     public function scopeOpen($query) { return $query->whereNull('logout_at'); }
 

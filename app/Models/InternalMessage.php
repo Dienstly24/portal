@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
@@ -27,10 +29,14 @@ class InternalMessage extends Model
         static::creating(fn ($m) => $m->id = (string) Str::uuid());
     }
 
-    public function customer() { return $this->belongsTo(Customer::class); }
-    public function sender() { return $this->belongsTo(User::class, 'sender_id'); }
-    public function deletedBy() { return $this->belongsTo(User::class, 'deleted_by'); }
-    public function notifications() { return $this->hasMany(InternalNotification::class, 'message_id'); }
+    /** @return BelongsTo<Customer, $this> */
+    public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    /** @return BelongsTo<User, $this> */
+    public function sender(): BelongsTo { return $this->belongsTo(User::class, 'sender_id'); }
+    /** @return BelongsTo<User, $this> */
+    public function deletedBy(): BelongsTo { return $this->belongsTo(User::class, 'deleted_by'); }
+    /** @return HasMany<InternalNotification, $this> */
+    public function notifications(): HasMany { return $this->hasMany(InternalNotification::class, 'message_id'); }
 
     public function scopeChat($q) { return $q->where('type', 'chat'); }
     public function scopeNote($q) { return $q->where('type', 'note'); }

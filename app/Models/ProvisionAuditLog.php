@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -42,8 +43,10 @@ class ProvisionAuditLog extends Model
         });
     }
 
-    public function provision() { return $this->belongsTo(Provision::class); }
-    public function user() { return $this->belongsTo(User::class); }
+    /** @return BelongsTo<Provision, $this> */
+    public function provision(): BelongsTo { return $this->belongsTo(Provision::class); }
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo { return $this->belongsTo(User::class); }
 
     public function actionLabel(): string
     {

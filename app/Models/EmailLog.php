@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -19,6 +20,8 @@ class EmailLog extends Model
         parent::boot();
         static::creating(fn ($m) => $m->id = (string) Str::uuid());
     }
-    public function campaign() { return $this->belongsTo(EmailCampaign::class, 'campaign_id'); }
-    public function user() { return $this->belongsTo(User::class); }
+    /** @return BelongsTo<EmailCampaign, $this> */
+    public function campaign(): BelongsTo { return $this->belongsTo(EmailCampaign::class, 'campaign_id'); }
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo { return $this->belongsTo(User::class); }
 }
