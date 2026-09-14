@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 class ContractEnergyDetail extends Model
@@ -39,10 +41,10 @@ class ContractEnergyDetail extends Model
             }
         });
     }
-    public function contract() { return $this->belongsTo(Contract::class); }
+    public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
 
     /** Zaehlerstands-Historie, juengste Ablesung zuerst. */
-    public function meterReadings() {
+    public function meterReadings(): HasMany {
         return $this->hasMany(MeterReading::class)->orderByDesc('reading_date')->orderByDesc('created_at');
     }
 

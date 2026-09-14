@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -38,7 +39,7 @@ class BannerSocialChannel extends Model
      */
     public const PUBLISH_STALE_MINUTES = 15;
 
-    public function post()
+    public function post(): BelongsTo
     {
         return $this->belongsTo(BannerSocialPost::class, 'banner_social_post_id');
     }
@@ -51,7 +52,7 @@ class BannerSocialChannel extends Model
             && $this->publish_started_at->gt(now()->subMinutes(self::PUBLISH_STALE_MINUTES));
     }
 
-    public function publisher()
+    public function publisher(): BelongsTo
     {
         return $this->belongsTo(User::class, 'published_by');
     }

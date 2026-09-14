@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 class CustomerFamily extends Model
@@ -22,7 +23,7 @@ class CustomerFamily extends Model
         return ['health_insurance_number' => 'encrypted', 'pension_insurance_number' => 'encrypted', 'tax_id' => 'encrypted'];
     }
 
-    public function customer() { return $this->belongsTo(Customer::class, 'customer_id'); }
+    public function customer(): BelongsTo { return $this->belongsTo(Customer::class, 'customer_id'); }
     protected static function boot() {
         parent::boot();
         static::creating(fn ($m) => $m->id = Str::uuid());

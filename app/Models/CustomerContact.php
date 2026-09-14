@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 class CustomerContact extends Model
@@ -19,5 +20,5 @@ class CustomerContact extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function customer() { return $this->belongsTo(Customer::class); }
+    public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
 }

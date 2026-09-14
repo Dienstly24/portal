@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -43,10 +44,10 @@ class Commission extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function partner() { return $this->belongsTo(Partner::class); }
-    public function contract() { return $this->belongsTo(Contract::class); }
-    public function emailMessage() { return $this->belongsTo(EmailMessage::class); }
-    public function reviewer() { return $this->belongsTo(User::class, 'reviewed_by'); }
+    public function partner(): BelongsTo { return $this->belongsTo(Partner::class); }
+    public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
+    public function emailMessage(): BelongsTo { return $this->belongsTo(EmailMessage::class); }
+    public function reviewer(): BelongsTo { return $this->belongsTo(User::class, 'reviewed_by'); }
 
     public function scopePendingReview($q) { return $q->where('status', 'pending_review'); }
 

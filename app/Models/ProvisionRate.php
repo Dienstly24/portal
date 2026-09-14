@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -32,8 +33,8 @@ class ProvisionRate extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function user() { return $this->belongsTo(User::class); }
-    public function partner() { return $this->belongsTo(Partner::class); }
+    public function user(): BelongsTo { return $this->belongsTo(User::class); }
+    public function partner(): BelongsTo { return $this->belongsTo(Partner::class); }
 
     /** Hat dieser Satz ueberhaupt einen Wert? (leere Saetze werden geloescht) */
     public function hasValue(): bool

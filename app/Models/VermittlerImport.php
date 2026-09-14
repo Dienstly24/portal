@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 /**
@@ -27,8 +29,8 @@ class VermittlerImport extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function settlements() { return $this->hasMany(VermittlerSettlement::class, 'import_id'); }
-    public function importer() { return $this->belongsTo(User::class, 'imported_by'); }
+    public function settlements(): HasMany { return $this->hasMany(VermittlerSettlement::class, 'import_id'); }
+    public function importer(): BelongsTo { return $this->belongsTo(User::class, 'imported_by'); }
 
     /** Summe der Provisionen dieses Laufs (nur die Zeilen dieses Imports). */
     public function provisionSum(): float

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -55,8 +56,8 @@ class AiKnowledgeEntry extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function creator() { return $this->belongsTo(User::class, 'created_by'); }
-    public function editor() { return $this->belongsTo(User::class, 'updated_by'); }
+    public function creator(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
+    public function editor(): BelongsTo { return $this->belongsTo(User::class, 'updated_by'); }
 
     public function scopeActive($q) { return $q->where('active', true); }
 

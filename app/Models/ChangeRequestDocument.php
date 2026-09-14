@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -56,7 +57,7 @@ class ChangeRequestDocument extends Model
         });
     }
 
-    public function changeRequest()
+    public function changeRequest(): BelongsTo
     {
         return $this->belongsTo(CustomerChangeRequest::class, 'change_request_id');
     }

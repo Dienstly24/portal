@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 class CustomerAddress extends Model
@@ -19,7 +20,7 @@ class CustomerAddress extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function customer() { return $this->belongsTo(Customer::class); }
+    public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
 
     public function typeLabel(): string { return self::TYPES[$this->type] ?? $this->type; }
 }

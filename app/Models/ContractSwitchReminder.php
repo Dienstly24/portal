@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -20,5 +21,5 @@ class ContractSwitchReminder extends Model
         parent::boot();
         static::creating(fn ($m) => $m->id = (string) Str::uuid());
     }
-    public function contract() { return $this->belongsTo(Contract::class); }
+    public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
 }

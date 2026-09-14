@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -60,9 +61,9 @@ class AiAssistantLog extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function conversation() { return $this->belongsTo(AiConversation::class, 'conversation_id'); }
-    public function customer() { return $this->belongsTo(Customer::class); }
-    public function employee() { return $this->belongsTo(User::class, 'employee_id'); }
+    public function conversation(): BelongsTo { return $this->belongsTo(AiConversation::class, 'conversation_id'); }
+    public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    public function employee(): BelongsTo { return $this->belongsTo(User::class, 'employee_id'); }
 
     public function outcomeLabel(): string
     {

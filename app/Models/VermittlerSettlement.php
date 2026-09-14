@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Services\Vermittler\VermittlerStatusMap;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -51,9 +52,9 @@ class VermittlerSettlement extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function contract() { return $this->belongsTo(Contract::class); }
-    public function customer() { return $this->belongsTo(Customer::class); }
-    public function import() { return $this->belongsTo(VermittlerImport::class, 'import_id'); }
+    public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
+    public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    public function import(): BelongsTo { return $this->belongsTo(VermittlerImport::class, 'import_id'); }
 
     /** Ergebnis des letzten Imports (ersatzweise der dauerhafte Zustand). */
     public function importResult(): string

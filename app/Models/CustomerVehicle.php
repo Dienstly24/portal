@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 class CustomerVehicle extends Model
@@ -15,5 +16,5 @@ class CustomerVehicle extends Model
         parent::boot();
         static::creating(fn ($m) => $m->id = Str::uuid());
     }
-    public function customer() { return $this->belongsTo(Customer::class); }
+    public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
 }

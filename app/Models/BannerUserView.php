@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Sichtbarkeit je Kunde: zählt eindeutige Betrachter und merkt sich,
@@ -16,7 +17,7 @@ class BannerUserView extends Model
 
     protected $casts = ['last_seen_at' => 'datetime', 'dismissed_until' => 'datetime'];
 
-    public function banner()
+    public function banner(): BelongsTo
     {
         return $this->belongsTo(Banner::class);
     }

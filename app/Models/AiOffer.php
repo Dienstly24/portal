@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -46,9 +47,9 @@ class AiOffer extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function conversation() { return $this->belongsTo(AiConversation::class, 'conversation_id'); }
-    public function lead() { return $this->belongsTo(AiLead::class, 'lead_id'); }
-    public function creator() { return $this->belongsTo(User::class, 'created_by'); }
+    public function conversation(): BelongsTo { return $this->belongsTo(AiConversation::class, 'conversation_id'); }
+    public function lead(): BelongsTo { return $this->belongsTo(AiLead::class, 'lead_id'); }
+    public function creator(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
 
     public function isSelected(): bool
     {

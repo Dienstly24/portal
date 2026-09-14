@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 /**
@@ -200,10 +202,10 @@ class ContractVehicleDetail extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function contract() { return $this->belongsTo(Contract::class); }
-    public function claims() { return $this->hasMany(VehicleClaim::class)->orderByDesc('claim_date'); }
-    public function mileageReadings() { return $this->hasMany(VehicleMileageReading::class)->orderByDesc('reading_date')->orderByDesc('created_at'); }
-    public function sfHistory() { return $this->hasMany(VehicleSfEntry::class)->orderBy('branch')->orderByRaw('valid_from is null')->orderBy('valid_from'); }
+    public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
+    public function claims(): HasMany { return $this->hasMany(VehicleClaim::class)->orderByDesc('claim_date'); }
+    public function mileageReadings(): HasMany { return $this->hasMany(VehicleMileageReading::class)->orderByDesc('reading_date')->orderByDesc('created_at'); }
+    public function sfHistory(): HasMany { return $this->hasMany(VehicleSfEntry::class)->orderBy('branch')->orderByRaw('valid_from is null')->orderBy('valid_from'); }
 
     // ---- Anzeige-Helper ----------------------------------------------------
 

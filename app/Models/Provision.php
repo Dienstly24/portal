@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 /**
@@ -72,17 +73,17 @@ class Provision extends Model
 
     /** @return BelongsTo<Partner, $this> */
     public function partner(): BelongsTo { return $this->belongsTo(Partner::class); }
-    public function customer() { return $this->belongsTo(Customer::class); }
-    public function contract() { return $this->belongsTo(Contract::class); }
-    public function creator() { return $this->belongsTo(User::class, 'created_by'); }
-    public function approver() { return $this->belongsTo(User::class, 'approved_by'); }
-    public function payer() { return $this->belongsTo(User::class, 'paid_by'); }
+    public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
+    public function creator(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
+    public function approver(): BelongsTo { return $this->belongsTo(User::class, 'approved_by'); }
+    public function payer(): BelongsTo { return $this->belongsTo(User::class, 'paid_by'); }
     /** Original-Provision, auf die sich eine Storno-Gegenbuchung bezieht. */
-    public function relatedProvision() { return $this->belongsTo(Provision::class, 'related_provision_id'); }
+    public function relatedProvision(): BelongsTo { return $this->belongsTo(Provision::class, 'related_provision_id'); }
     /** Gegenbuchungen, die auf diese Provision zeigen. */
-    public function counterBookings() { return $this->hasMany(Provision::class, 'related_provision_id'); }
+    public function counterBookings(): HasMany { return $this->hasMany(Provision::class, 'related_provision_id'); }
     /** Unveraenderliche Aenderungshistorie, neueste zuerst. */
-    public function auditLogs() { return $this->hasMany(ProvisionAuditLog::class)->orderByDesc('created_at'); }
+    public function auditLogs(): HasMany { return $this->hasMany(ProvisionAuditLog::class)->orderByDesc('created_at'); }
 
     public function scopeOffen($q) { return $q->where('status', 'offen'); }
 

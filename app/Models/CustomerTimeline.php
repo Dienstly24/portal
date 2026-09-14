@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 class CustomerTimeline extends Model
@@ -16,6 +17,6 @@ class CustomerTimeline extends Model
         parent::boot();
         static::creating(fn ($m) => $m->id = Str::uuid());
     }
-    public function user() { return $this->belongsTo(User::class); }
-    public function customer() { return $this->belongsTo(Customer::class); }
+    public function user(): BelongsTo { return $this->belongsTo(User::class); }
+    public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
 }

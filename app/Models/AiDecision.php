@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -37,9 +38,9 @@ class AiDecision extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function emailMessage() { return $this->belongsTo(EmailMessage::class); }
-    public function document() { return $this->belongsTo(Document::class); }
-    public function decider() { return $this->belongsTo(User::class, 'decided_by'); }
+    public function emailMessage(): BelongsTo { return $this->belongsTo(EmailMessage::class); }
+    public function document(): BelongsTo { return $this->belongsTo(Document::class); }
+    public function decider(): BelongsTo { return $this->belongsTo(User::class, 'decided_by'); }
 
     public function scopeSuggested($q) { return $q->where('status', 'suggested'); }
 }

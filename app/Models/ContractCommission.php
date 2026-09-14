@@ -7,6 +7,8 @@ use App\Services\Provisionsmanagement\PoolRegistry;
 use App\Support\CommissionKind;
 use App\Support\CommissionStatus;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
@@ -77,11 +79,11 @@ class ContractCommission extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function contract() { return $this->belongsTo(Contract::class); }
-    public function customer() { return $this->belongsTo(Customer::class); }
-    public function import() { return $this->belongsTo(CommissionImport::class, 'import_id'); }
-    public function invoiceDocument() { return $this->belongsTo(Document::class, 'invoice_document_id'); }
-    public function auditLogs() { return $this->hasMany(CommissionAuditLog::class, 'commission_id')->latest('created_at'); }
+    public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
+    public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    public function import(): BelongsTo { return $this->belongsTo(CommissionImport::class, 'import_id'); }
+    public function invoiceDocument(): BelongsTo { return $this->belongsTo(Document::class, 'invoice_document_id'); }
+    public function auditLogs(): HasMany { return $this->hasMany(CommissionAuditLog::class, 'commission_id')->latest('created_at'); }
 
     /** Klartext der Quelle, aus der diese Provision stammt. */
     public function providerLabel(): string

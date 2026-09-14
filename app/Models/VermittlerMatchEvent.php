@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -44,9 +45,9 @@ class VermittlerMatchEvent extends Model
         });
     }
 
-    public function contract() { return $this->belongsTo(Contract::class); }
-    public function user() { return $this->belongsTo(User::class); }
-    public function import() { return $this->belongsTo(VermittlerImport::class, 'import_id'); }
+    public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
+    public function user(): BelongsTo { return $this->belongsTo(User::class); }
+    public function import(): BelongsTo { return $this->belongsTo(VermittlerImport::class, 'import_id'); }
 
     public function actionLabel(): string
     {

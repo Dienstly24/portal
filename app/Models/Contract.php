@@ -8,6 +8,9 @@ use App\Support\ContractCommissionStatus;
 use App\Support\EscooterInsurance;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
@@ -733,18 +736,18 @@ class Contract extends Model
         static::deleting(fn ($m) => app(ContractProvisionService::class)
             ->createStornoForContract($m, 'Vertrag geloescht'));
     }
-    public function vehicleDetail() { return $this->hasOne(ContractVehicleDetail::class); }
-    public function energyDetail() { return $this->hasOne(ContractEnergyDetail::class); }
-    public function internetDetail() { return $this->hasOne(ContractInternetDetail::class); }
+    public function vehicleDetail(): HasOne { return $this->hasOne(ContractVehicleDetail::class); }
+    public function energyDetail(): HasOne { return $this->hasOne(ContractEnergyDetail::class); }
+    public function internetDetail(): HasOne { return $this->hasOne(ContractInternetDetail::class); }
     /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
-    public function externalReferences() { return $this->morphMany(ExternalReference::class, 'referenceable'); }
-    public function documents() { return $this->hasMany(Document::class); }
-    public function switchReminders() { return $this->hasMany(ContractSwitchReminder::class); }
+    public function externalReferences(): MorphMany { return $this->morphMany(ExternalReference::class, 'referenceable'); }
+    public function documents(): HasMany { return $this->hasMany(Document::class); }
+    public function switchReminders(): HasMany { return $this->hasMany(ContractSwitchReminder::class); }
     /** Feld-genaue Aenderungshistorie (Audit Log), neueste zuerst. */
-    public function revisions() { return $this->hasMany(ContractRevision::class)->orderByDesc('created_at'); }
+    public function revisions(): HasMany { return $this->hasMany(ContractRevision::class)->orderByDesc('created_at'); }
     /** Vermittler-Provisionen dieses Vertrags (inkl. Storno-Gegenbuchungen). */
-    public function provisions() { return $this->hasMany(Provision::class); }
+    public function provisions(): HasMany { return $this->hasMany(Provision::class); }
 
     // ---------------------------------------------------------------
     // Vermittler-Abrechnung (Betreiber-Auftrag 20.08.2026)
@@ -834,7 +837,7 @@ class Contract extends Model
      * Gegenstueck am Kunden-Modell - so kann sie im Portal nicht
      * versehentlich mitgeladen und ausgegeben werden.
      */
-    public function commissions()
+    public function commissions(): HasMany
     {
         return $this->hasMany(ContractCommission::class)->orderByDesc('commission_date');
     }
@@ -843,7 +846,7 @@ class Contract extends Model
      * Bearbeitungsstand einer fehlenden Provision (§19). Genauso
      * VERTRAULICH wie die Buchungen selbst - kein Gegenstueck am Kunden.
      */
-    public function commissionFollowup()
+    public function commissionFollowup(): HasOne
     {
         return $this->hasOne(CommissionFollowup::class, 'contract_id');
     }
@@ -859,14 +862,14 @@ class Contract extends Model
         return ContractCommissionStatus::badge($this->commission_status);
     }
 
-    public function vermittlerSettlements()
+    public function vermittlerSettlements(): HasMany
     {
         return $this->hasMany(VermittlerSettlement::class, 'contract_id')
             ->orderByDesc('statement_date')->orderByDesc('created_at');
     }
 
     /** Historie der Zuordnung (aelteste zuerst - sie erzaehlt den Verlauf). */
-    public function vermittlerEvents()
+    public function vermittlerEvents(): HasMany
     {
         return $this->hasMany(VermittlerMatchEvent::class, 'contract_id')->orderBy('created_at');
     }

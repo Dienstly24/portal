@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Services\Ai\Assistant\Sales\ConversationState;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 /**
@@ -106,11 +108,11 @@ class AiConversation extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function customer() { return $this->belongsTo(Customer::class); }
+    public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
     /** Die Unterhaltung im Omnichannel-Sinn - NICHT dieser Steuerstand. */
-    public function omnichannelConversation() { return $this->belongsTo(Conversation::class, 'omnichannel_conversation_id'); }
-    public function employee() { return $this->belongsTo(User::class, 'assigned_employee_id'); }
-    public function logs() { return $this->hasMany(AiAssistantLog::class, 'conversation_id')->latest(); }
+    public function omnichannelConversation(): BelongsTo { return $this->belongsTo(Conversation::class, 'omnichannel_conversation_id'); }
+    public function employee(): BelongsTo { return $this->belongsTo(User::class, 'assigned_employee_id'); }
+    public function logs(): HasMany { return $this->hasMany(AiAssistantLog::class, 'conversation_id')->latest(); }
 
     /** Steuerstand des Kunden holen/anlegen (Standard: KI aktiv). */
     public static function forCustomer(string $customerId): self
@@ -310,10 +312,10 @@ class AiConversation extends Model
     // Verkaufsassistent: Zustand, Kontext, Stoerung (Abschnitte 12-14)
     // ---------------------------------------------------------------
 
-    public function offers() { return $this->hasMany(AiOffer::class, 'conversation_id')->orderBy('label'); }
-    public function events() { return $this->hasMany(AiConversationEvent::class, 'conversation_id')->latest(); }
-    public function selectedOffer() { return $this->belongsTo(AiOffer::class, 'selected_offer_id'); }
-    public function lead() { return $this->belongsTo(AiLead::class, 'lead_id'); }
+    public function offers(): HasMany { return $this->hasMany(AiOffer::class, 'conversation_id')->orderBy('label'); }
+    public function events(): HasMany { return $this->hasMany(AiConversationEvent::class, 'conversation_id')->latest(); }
+    public function selectedOffer(): BelongsTo { return $this->belongsTo(AiOffer::class, 'selected_offer_id'); }
+    public function lead(): BelongsTo { return $this->belongsTo(AiLead::class, 'lead_id'); }
 
     public function stateLabel(): string
     {

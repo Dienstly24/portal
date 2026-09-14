@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Banner extends Model
 {
@@ -21,18 +23,18 @@ class Banner extends Model
         'last_shown_at' => 'datetime',
     ];
 
-    public function dailyStats()
+    public function dailyStats(): HasMany
     {
         return $this->hasMany(BannerDailyStat::class);
     }
 
-    public function userViews()
+    public function userViews(): HasMany
     {
         return $this->hasMany(BannerUserView::class);
     }
 
     /** Optionaler Social-Media-Post (Social-Publishing, Phase 1). */
-    public function socialPost()
+    public function socialPost(): HasOne
     {
         return $this->hasOne(BannerSocialPost::class);
     }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -56,7 +57,7 @@ class AiKnowledgeGap extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function resolver() { return $this->belongsTo(User::class, 'resolved_by'); }
+    public function resolver(): BelongsTo { return $this->belongsTo(User::class, 'resolved_by'); }
 
     public function scopeOpen($q) { return $q->where('status', self::STATUS_OPEN); }
 

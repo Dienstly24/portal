@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Services\Ai\Assistant\Sales\ConversationState;
 use App\Services\Ai\Assistant\Sales\RequirementProfile;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 /**
@@ -59,9 +61,9 @@ class AiLead extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function customer() { return $this->belongsTo(Customer::class); }
-    public function employee() { return $this->belongsTo(User::class, 'assigned_employee_id'); }
-    public function offers() { return $this->hasMany(AiOffer::class, 'lead_id')->orderBy('label'); }
+    public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    public function employee(): BelongsTo { return $this->belongsTo(User::class, 'assigned_employee_id'); }
+    public function offers(): HasMany { return $this->hasMany(AiOffer::class, 'lead_id')->orderBy('label'); }
 
     public function collectedData(): array
     {

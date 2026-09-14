@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Cache;
 
@@ -50,7 +51,7 @@ class MediaAsset extends Model
         Cache::forget(self::SLOT_CACHE_KEY);
     }
 
-    public function uploader()
+    public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');
     }

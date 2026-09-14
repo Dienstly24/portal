@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -51,17 +52,17 @@ class ChangeNotification extends Model
         });
     }
 
-    public function changeRequest()
+    public function changeRequest(): BelongsTo
     {
         return $this->belongsTo(CustomerChangeRequest::class, 'change_request_id');
     }
 
-    public function customer()
+    public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
-    public function sender()
+    public function sender(): BelongsTo
     {
         return $this->belongsTo(User::class, 'sent_by');
     }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Str;
 
 /**
@@ -36,7 +37,7 @@ class ExternalReference extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function referenceable()
+    public function referenceable(): MorphTo
     {
         return $this->morphTo();
     }

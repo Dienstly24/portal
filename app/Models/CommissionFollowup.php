@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -42,8 +43,8 @@ class CommissionFollowup extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function contract() { return $this->belongsTo(Contract::class); }
-    public function editor() { return $this->belongsTo(User::class, 'updated_by'); }
+    public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
+    public function editor(): BelongsTo { return $this->belongsTo(User::class, 'updated_by'); }
 
     public function statusLabel(): string
     {

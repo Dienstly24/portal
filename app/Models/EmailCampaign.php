@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 class EmailCampaign extends Model
@@ -19,6 +21,6 @@ class EmailCampaign extends Model
         parent::boot();
         static::creating(fn ($m) => $m->id = Str::uuid());
     }
-    public function createdBy() { return $this->belongsTo(User::class, 'created_by'); }
-    public function logs() { return $this->hasMany(EmailLog::class, 'campaign_id'); }
+    public function createdBy(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
+    public function logs(): HasMany { return $this->hasMany(EmailLog::class, 'campaign_id'); }
 }

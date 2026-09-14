@@ -6,6 +6,8 @@ use App\Services\CommissionImport\ColumnMap;
 use App\Services\CommissionImport\CommissionSourceProfile;
 use App\Services\Provisionsmanagement\PoolRegistry;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 /**
@@ -46,9 +48,9 @@ class CommissionImport extends Model
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
     }
 
-    public function rows() { return $this->hasMany(CommissionImportRow::class, 'import_id'); }
-    public function commissions() { return $this->hasMany(ContractCommission::class, 'import_id'); }
-    public function importer() { return $this->belongsTo(User::class, 'imported_by'); }
+    public function rows(): HasMany { return $this->hasMany(CommissionImportRow::class, 'import_id'); }
+    public function commissions(): HasMany { return $this->hasMany(ContractCommission::class, 'import_id'); }
+    public function importer(): BelongsTo { return $this->belongsTo(User::class, 'imported_by'); }
 
     public function isDraft(): bool { return $this->status === self::ENTWURF; }
 

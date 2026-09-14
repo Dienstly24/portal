@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Ein zusammengefasster Fehler. Eine Zeile je Fingerabdruck, nicht je
@@ -38,12 +39,12 @@ class ErrorEvent extends Model
         return $query->where('last_seen_at', '>=', $since);
     }
 
-    public function lastUser()
+    public function lastUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'last_user_id');
     }
 
-    public function resolver()
+    public function resolver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'resolved_by');
     }
