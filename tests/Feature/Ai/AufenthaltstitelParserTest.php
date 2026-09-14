@@ -3,6 +3,7 @@
 namespace Tests\Feature\Ai;
 
 use App\Models\Document;
+use App\Services\Ai\Contracts\DocumentTemplateParser;
 use App\Services\Ai\HeuristicDocumentClassifier;
 use App\Services\Ai\TemplateParsers\AufenthaltstitelParser;
 use Tests\TestCase;
@@ -212,6 +213,165 @@ class AufenthaltstitelParserTest extends TestCase
             $this->backSideOcr()
         );
         $this->assertNull((new AufenthaltstitelParser)->parse($two));
+    }
+
+    /**
+     * Rueckseite so, wie die OCR sie an einem echten Kartenfoto tatsaechlich
+     * liefert (14.09.2026 mit Chromium + Tesseract nachgestellt): die
+     * Beschriftung "4. ANSCHRIFT/ADDRESS" verliert ihren Schraegstrich, die
+     * beiden Kartenspalten verschmelzen mit nur EINEM Leerzeichen, und das
+     * gedruckte grosse "STRASSE" kommt als "STRABE" an. Werte erfunden,
+     * Aufbau wie gemessen.
+     */
+    private function backSideOcrAsMeasured(): string
+    {
+        return implode("\n", [
+            '1. ANMERKUNGEN/REMARKS 3. GEBURTSORT/PLACE OF BIRTH',
+            '',
+            'ERWERBSTAETIGKEIT AL MIDAN',
+            'ERLAUBT',
+            '',
+            '4. ANSCHRIFTIADDRESS',
+            'AUGENFARBE/EYE COLOUR 24937 FLENSBURG',
+            'BRAUN NORDLANDSTRABE 7',
+            'GROSSE/HEIGHT',
+            '178 cm',
+            '',
+            '2. AUSSTELLUNGSDATUM-BEHORDE/',
+            'DATE OF ISSUE - AUTHORITY',
+            '05.02.2025 - KRV Flensburg',
+            '',
+            'ARD<<XK402PQRM1',
+            '9507122M3004157SYR<<<<<<<<<<<8',
+            'ALSAMIR<<OMAR<<<<<<<<<<<<<<<<<',
+        ]);
+    }
+
+    public function test_reads_the_address_although_label_and_columns_break(): void
+    {
+        // Gemeldet: "die Rueckseite wird nicht erkannt - Anschrift und
+        // Geburtsort fehlen". Ursache war NICHT die Erkennung des Textes,
+        // sondern zweierlei: die gebrochene Beschriftung und die Trennung
+        // an Spaltenabstaenden, die es in der OCR-Ausgabe nicht gibt.
+        $r = (new AufenthaltstitelParser)->parse($this->backSideOcrAsMeasured());
+
+        $this->assertNotNull($r);
+        $p = $r['data']['person'];
+        $this->assertSame('24937', $p['zip']);
+        $this->assertSame('Flensburg', $p['city']);
+        // Gedrucktes grosses "STRASSE" kommt als "STRABE" an - ein "Strabe"
+        // gibt es im Deutschen nicht, die Ruecksetzung erfindet daher nichts.
+        $this->assertSame('Nordlandstra'."\u{00df}".'e', $p['street']);
+        $this->assertSame('7', $p['house_number']);
+        $this->assertSame('Al Midan', $p['birth_place']);
+        // Die Anschrift steht auch in der Zusammenfassung.
+        $this->assertStringContainsString('24937 Flensburg', $r['summary']);
+    }
+
+    public function test_never_glues_a_value_of_the_neighbouring_column_to_the_street(): void
+    {
+        // Die Augenfarbe klebt mit einem Leerzeichen vor der Strasse. Eine
+        // erfundene Anschrift ("Braun Nordlandstrasse") ist schlimmer als
+        // ein leeres Feld - sie passt zu keinem Kunden und landet trotzdem
+        // in der Akte.
+        $r = (new AufenthaltstitelParser)->parse($this->backSideOcrAsMeasured());
+
+        $this->assertNotNull($r);
+        $this->assertStringNotContainsStringIgnoringCase('braun', $r['data']['person']['street']);
+    }
+
+    public function test_authority_address_never_becomes_the_customer_address(): void
+    {
+        // Ohne Anschrift-Aufkleber bleibt die Anschrift LEER - die Anschrift
+        // der ausstellenden Behoerde ist nie die des Kunden.
+        $ocr = str_replace(
+            [
+                '4. ANSCHRIFTIADDRESS',
+                'AUGENFARBE/EYE COLOUR 24937 FLENSBURG',
+                'BRAUN NORDLANDSTRABE 7',
+                '05.02.2025 - KRV Flensburg',
+            ],
+            [
+                'AUGENFARBE/EYE COLOUR',
+                'BRAUN',
+                '',
+                '05.02.2025 - KRV Flensburg, Kaiserstrasse 8, 24937 Flensburg',
+            ],
+            $this->backSideOcrAsMeasured()
+        );
+        $r = (new AufenthaltstitelParser)->parse($ocr);
+
+        $this->assertNotNull($r);
+        $this->assertArrayNotHasKey('zip', $r['data']['person']);
+        $this->assertArrayNotHasKey('street', $r['data']['person']);
+    }
+
+    public function test_mrz_name_ends_at_the_filler(): void
+    {
+        // Die lange "<<<<"-Kette hinter dem Namen ist die Stelle, an der
+        // sich die OCR am haeufigsten verliest. Der Buchstabensalat dahinter
+        // darf nie als zweiter Vorname in der Kundenakte landen.
+        $ocr = str_replace(
+            'ALSAMIR<<OMAR<<<<<<<<<<<<<<<<<',
+            'ALSAMIR<<OMAR<<<CCECCCETICCE',
+            $this->backSideOcrAsMeasured()
+        );
+        $r = (new AufenthaltstitelParser)->parse($ocr);
+
+        $this->assertNotNull($r);
+        $this->assertSame('Omar', $r['data']['person']['first_name']);
+        $this->assertSame('Alsamir', $r['data']['person']['last_name']);
+    }
+
+    public function test_single_letter_is_never_a_given_name(): void
+    {
+        // Die MRZ schreibt Vornamen IMMER aus - ein einzelner Buchstabe ist
+        // dort kein zweiter Vorname, sondern ein verlesenes Fuellzeichen.
+        $ocr = str_replace(
+            'ALSAMIR<<OMAR<<<<<<<<<<<<<<<<<',
+            'ALSAMIR<<OMAR<S<<<<<<<<<<<<<<<',
+            $this->backSideOcrAsMeasured()
+        );
+        $r = (new AufenthaltstitelParser)->parse($ocr);
+
+        $this->assertNotNull($r);
+        $this->assertSame('Omar', $r['data']['person']['first_name']);
+    }
+
+    public function test_multi_word_street_survives_a_clean_layout(): void
+    {
+        // Im sauberen Layout (Aufkleber allein auf der Zeile) bleibt der
+        // mehrteilige Strassenname vollstaendig.
+        $ocr = str_replace(
+            [
+                'AUGENFARBE/EYE COLOUR 24937 FLENSBURG',
+                'BRAUN NORDLANDSTRABE 7',
+            ],
+            [
+                '24937 Flensburg',
+                'Alte Kieler Landstr. 141',
+            ],
+            $this->backSideOcrAsMeasured()
+        );
+        $r = (new AufenthaltstitelParser)->parse($ocr);
+
+        $this->assertNotNull($r);
+        $this->assertSame('Alte Kieler Landstr.', $r['data']['person']['street']);
+        $this->assertSame('141', $r['data']['person']['house_number']);
+    }
+
+    public function test_the_real_chain_from_the_container_reads_the_back_side(): void
+    {
+        // Wie beim Vertriebsportal-Auftrag (13.09.2026) wird die ECHTE Kette
+        // geprueft, nicht der Parser allein: der CompositeDocumentTemplateParser
+        // nimmt den ERSTEN Parser, der zugreift - ein anderer darf die
+        // Kartenrueckseite nicht vorher fuer sich beanspruchen.
+        $kette = app(DocumentTemplateParser::class);
+        $r = $kette->parse($this->backSideOcrAsMeasured());
+
+        $this->assertNotNull($r);
+        $this->assertSame('aufenthaltstitel', $r['type']);
+        $this->assertSame('24937', $r['data']['person']['zip']);
     }
 
     public function test_ignores_unrelated_documents(): void

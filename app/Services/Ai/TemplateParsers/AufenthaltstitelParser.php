@@ -327,12 +327,29 @@ class AufenthaltstitelParser implements DocumentTemplateParser
         return sprintf('%04d-%02d-%02d', $year, (int) $m[2], (int) $m[3]);
     }
 
-    /** MRZ-Namensteil ("ALALI", "SAFA<PETER") -> "Alali", "Safa Peter". */
+    /**
+     * MRZ-Namensteil ("ALALI", "SAFA<PETER") -> "Alali", "Safa Peter".
+     *
+     * Ein DOPPELTES Fuellzeichen beendet den Namen - alles dahinter ist
+     * Fuellung. Genau dort verliest sich die OCR am haeufigsten (die lange
+     * "<<<<"-Kette wird zu Buchstabensalat), und ohne diese Grenze landete
+     * der Salat als zweiter Vorname in der Kundenakte. Einzelne Buchstaben
+     * zaehlen nicht: die MRZ schreibt Vornamen IMMER aus, ein einzelner
+     * Buchstabe ist dort nie eine Abkuerzung, sondern ein Lesefehler.
+     */
     private function mrzName(string $part): string
     {
-        $part = trim(str_replace('<', ' ', $part));
-        $part = (string) preg_replace('/\s+/', ' ', $part);
-        return $part === '' ? '' : mb_convert_case($part, MB_CASE_TITLE, 'UTF-8');
+        $teile = [];
+        foreach (explode('<', $part) as $wort) {
+            if ($wort === '') {
+                break; // "<<" - Ende des Namensfeldes.
+            }
+            if (preg_match('/^[A-Z]{2,}$/', $wort)) {
+                $teile[] = $wort;
+            }
+        }
+        $name = implode(' ', $teile);
+        return $name === '' ? '' : mb_convert_case($name, MB_CASE_TITLE, 'UTF-8');
     }
 
     private function displayDate(?string $iso): ?string
@@ -344,36 +361,172 @@ class AufenthaltstitelParser implements DocumentTemplateParser
     }
 
     /**
-     * Anschrift-Aufkleber der Rueckseite: nach der Beschriftung "Anschrift/
-     * Address/Adresse" folgen "PLZ Ort" und "Strasse Hausnummer" (in
-     * beliebiger Reihenfolge). Werte rechts einer breiten Spaltenluecke
-     * (z.B. die Dokumentennummer daneben) werden abgeschnitten.
+     * Anschrift-Aufkleber der Rueckseite. ZWEI Lehren aus der Messung an
+     * einem echten Kartenfoto (14.09.2026, Chromium-Replik + Tesseract):
+     *
+     * 1. DIE BESCHRIFTUNG BRICHT: die OCR liest "4. ANSCHRIFT/ADDRESS" als
+     *    "4. ANSCHRIFTIADDRESS" - der Schraegstrich wird zum Buchstaben.
+     *    Eine Wortgrenze hinter "Anschrift" gab es damit nicht mehr, die
+     *    Beschriftung wurde gar nicht gefunden und die komplette Anschrift
+     *    fiel still weg. Gesucht wird deshalb OHNE Wortgrenze.
+     * 2. AUF SPALTENABSTAENDE IST KEIN VERLASS (dieselbe Lehre wie beim
+     *    Energieportal und bei CHECK24): die linke Spalte steht mit nur
+     *    EINEM Leerzeichen vor dem Aufkleber ("AUGENFARBE/EYE COLOUR 24768
+     *    RENDSBURG", "BRAUN OSTLANDSTRASSE 19"). Die Trennung an zwei
+     *    Leerzeichen verlor damit die PLZ ganz und machte aus der
+     *    Augenfarbe einen Teil der Strasse ("BRAUN OSTLANDSTRASSE") - eine
+     *    erfundene Anschrift ist schlimmer als ein leeres Feld. Gesucht
+     *    wird daher nach der FORM des Wertes ("PLZ Ort" bzw. "Strasse
+     *    Hausnummer" am Zeilenende), nicht nach seiner Spalte.
+     *
+     * Ob die Nachbarspalte anklebt, verraet die PLZ-Zeile: steht die PLZ
+     * nicht am Zeilenanfang, sind die Spalten verschmolzen - dann zaehlt
+     * bei der Strasse nur das Wort mit der Strassen-Endung. Im sauberen
+     * Layout bleibt der mehrteilige Name erhalten ("Alte Kieler Landstr.").
      *
      * @return array<string,string>
      */
     private function backAddress(): array
     {
-        $idx = $this->lineIndex('/\bAnschrift\b|\bAdresse\b/iu');
+        // Ohne Wortgrenze: die OCR haengt den Schraegstrich an das Wort.
+        $idx = $this->lineIndex('/ANSCHRIFT|ADRESSE|ADDRESS/i');
         if ($idx === null) {
             return [];
         }
 
-        $out = [];
+        $zeilen = [];
         foreach ($this->nextNonEmpty($idx, 3) as $value) {
-            // Nur die eigene Spalte betrachten (vor einer 2+-Leerzeichen-Luecke).
-            foreach (preg_split('/\s{2,}/', $value) ?: [] as $col) {
-                $col = trim($col);
-                if (! isset($out['zip']) && preg_match('/^(\d{5})\s+(\p{Lu}[\p{L}.\-]*(?:\s\p{L}[\p{L}.\-]+)*)$/u', $col, $m)) {
-                    $out['zip'] = $m[1];
-                    $out['city'] = $m[2];
-                } elseif (! isset($out['street']) && preg_match('/^(\p{Lu}[\p{L}.\-]*(?:\s\p{L}[\p{L}.\-]+)*)\s+(\d{1,4}(?:\s?[a-zA-Z])?)$/u', $col, $m)) {
-                    $out['street'] = $m[1];
-                    $out['house_number'] = trim($m[2]);
+            $zeilen[] = $this->kandidaten($value);
+        }
+
+        $out = [];
+        $verschmolzen = false;
+        $plzZeile = null;
+
+        // 1. Durchgang: PLZ + Ort - und daran erkennen, ob die Nachbarspalte
+        //    anklebt (dann steht die PLZ nicht am Anfang des Kandidaten).
+        foreach ($zeilen as $nr => $kandidaten) {
+            foreach ($kandidaten as $kandidat) {
+                $plz = $this->plzUndOrt($kandidat);
+                if ($plz === null) {
+                    continue;
+                }
+                $out['zip'] = $plz[0];
+                $out['city'] = $plz[1];
+                $verschmolzen = ! str_starts_with($kandidat, $plz[0]);
+                $plzZeile = $nr;
+                break 2;
+            }
+        }
+
+        // 2. Durchgang: Strasse + Hausnummer (nie aus der PLZ-Zeile).
+        foreach ($zeilen as $nr => $kandidaten) {
+            if ($nr === $plzZeile) {
+                continue;
+            }
+            foreach ($kandidaten as $kandidat) {
+                $strasse = $this->strasseUndHausnummer($kandidat, $verschmolzen);
+                if ($strasse !== null) {
+                    $out['street'] = $strasse[0];
+                    $out['house_number'] = $strasse[1];
+                    break 2;
                 }
             }
         }
+
         // Nur uebernehmen, wenn wenigstens PLZ+Ort ODER Strasse sicher sind.
         return (isset($out['zip']) || isset($out['street'])) ? $out : [];
+    }
+
+    /**
+     * Lesbare Bruchstuecke einer Zeile: zuerst die Spalten (getrennt durch
+     * zwei oder mehr Leerzeichen - so steht die Dokumentennummer neben dem
+     * Aufkleber), danach die ganze Zeile. Die ganze Zeile ist der Fall, in
+     * dem die OCR die Spalten mit nur EINEM Leerzeichen verschmilzt.
+     *
+     * @return list<string>
+     */
+    private function kandidaten(string $zeile): array
+    {
+        $ganz = trim((string) preg_replace('/\h+/u', ' ', $zeile));
+        $out = [];
+        foreach (preg_split('/\h{2,}/u', trim($zeile)) ?: [] as $spalte) {
+            $spalte = trim($spalte);
+            if ($spalte !== '' && $spalte !== $ganz) {
+                $out[] = $spalte;
+            }
+        }
+        $out[] = $ganz;
+        return $out;
+    }
+
+    /**
+     * "PLZ Ort" am Zeilenende - die Form traegt sich selbst und haengt
+     * damit nicht an ihrer Spalte. Ein Beschriftungswort ist nie ein Ort.
+     *
+     * @return array{0:string,1:string}|null
+     */
+    private function plzUndOrt(string $zeile): ?array
+    {
+        if (! preg_match('/(?<![\d.\-])(\d{5}) (\p{Lu}[\p{L}.\-]+(?:[ \-]\p{L}[\p{L}.\-]+)*)$/u', $zeile, $m)) {
+            return null;
+        }
+        if ($this->istBeschriftung($m[2])) {
+            return null;
+        }
+        return [$m[1], $this->normalizeName($m[2])];
+    }
+
+    /**
+     * "Strassenname Hausnummer" am Zeilenende. Sind die Spalten
+     * verschmolzen, zaehlt NUR das Wort mit der Strassen-Endung: eine
+     * unvollstaendige Strasse ist immer noch besser als eine, in der ein
+     * Wert der Nachbarspalte steckt.
+     *
+     * @return array{0:string,1:string}|null
+     */
+    private function strasseUndHausnummer(string $zeile, bool $verschmolzen): ?array
+    {
+        $nummer = '(\d{1,4} ?[a-zA-Z]?)$';
+
+        if ($verschmolzen) {
+            if (preg_match('/(\p{L}*(?:'.self::STRASSEN_ENDUNGEN.'))\.?,? '.$nummer.'/iu', $zeile, $m)) {
+                return [$this->strassenName($m[1]), trim($m[2])];
+            }
+            return null;
+        }
+
+        if (preg_match('/^(\p{Lu}[\p{L}.\-]*(?:[ \-]\p{L}[\p{L}.\-]*)*),? '.$nummer.'/u', $zeile, $m)
+            && ! $this->istBeschriftung($m[1])) {
+            return [$this->strassenName($m[1]), trim($m[2])];
+        }
+        return null;
+    }
+
+    /** Endungen, an denen ein Wort als Strassenname erkennbar ist. */
+    private const STRASSEN_ENDUNGEN =
+        'STRASSE|STRABE|STRA\x{00df}E|STR|WEG|ALLEE|PLATZ|RING|GASSE|DAMM|UFER|CHAUSSEE|STEIG|H\x{00d6}FE|HOF|GARTEN|BERG|KAMP|REDDER';
+
+    /**
+     * Strassenname bereinigen. Die Karte druckt in GROSSBUCHSTABEN, und ein
+     * grosses "ss" gibt es dort nicht - die OCR liest das gedruckte
+     * "STRAßE" als "STRABE" (ein "Strabe" gibt es im Deutschen nicht, die
+     * Ruecksetzung ist damit eindeutig und erfindet nichts).
+     */
+    private function strassenName(string $name): string
+    {
+        $name = $this->normalizeName(trim(rtrim(trim($name), ',')));
+        return (string) preg_replace('/strabe\b/iu', 'stra'."\u{00df}".'e', $name);
+    }
+
+    /** Beschriftungen und Merkmalswerte der Karte sind weder Ort noch Strasse. */
+    private function istBeschriftung(string $wert): bool
+    {
+        return (bool) preg_match(
+            '/ANSCHRIFT|ADRESSE|ADDRESS|AUGENFARBE|EYE|COLOU?R|GR[O\x{00d6}]SSE|HEIGHT|ANMERKUNG|REMARK'
+            .'|GEBURTSORT|BIRTH|PLACE|AUSSTELLUNG|BEH[O\x{00d6}]RDE|AUTHORITY|ISSUE|ZUSATZBLATT/iu',
+            $wert
+        );
     }
 
     /**
