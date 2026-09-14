@@ -19,6 +19,7 @@ use App\Services\Signature\SignaturePageRenderer;
 use App\Services\Signature\SignatureRequestService;
 use App\Services\Signature\SignatureStorage;
 use App\Support\Bildverarbeitung;
+use App\Support\Firmensignatur;
 use App\Support\SignatureFieldType;
 use App\Support\SignatureStatus;
 use Carbon\Carbon;
@@ -322,6 +323,13 @@ class SignatureController extends Controller
             'companyAssets' => $darfFirma
                 ? CompanySignatureAsset::where('active', true)->orderBy('type')->orderByDesc('is_default')->get()
                 : collect(),
+            // WER unterschreibt als Betrieb - dieselbe Quelle wie im PDF
+            // (Einstellungen -> Firmenname). Der Editor soll denselben Namen
+            // zeigen, der spaeter im Dokument steht; zwei Quellen waeren die
+            // Vorstufe zu zwei verschiedenen Namen.
+            'firmaName' => Firmensignatur::name(),
+            'firmaVollstaendig' => $darfFirma && Firmensignatur::vollstaendig(),
+            'firmaFehlt' => $darfFirma ? Firmensignatur::fehlendes() : [],
         ]);
     }
 

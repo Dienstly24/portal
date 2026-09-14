@@ -183,4 +183,7 @@ return [
     'review_pages' => 'Seiten',
     'review_signer' => 'Unterzeichner',
     'review_view_document' => 'Dokument ansehen (PDF)',
+    'company_signature' => 'Unternehmenssignatur',
+    'company_already_set' => 'Diese Signatur des Unternehmens ist bereits im Dokument gesetzt - Sie müssen dafür nichts tun.',
+    'company_not_a_person' => 'Sie ist die Signatur des Unternehmens, keine Unterschrift einer Person.',
 ];

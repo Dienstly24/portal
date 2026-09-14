@@ -188,6 +188,8 @@ Route::middleware('throttle:signatur')->group(function () {
         ->middleware('throttle:10,10')->name('signature.identity');
     Route::get('/unterschreiben/{token}/seite/{page}', [SignatureSigningController::class, 'page'])
         ->whereNumber('page')->name('signature.page');
+    Route::get('/unterschreiben/{token}/firmenbild/{asset}', [SignatureSigningController::class, 'companyImage'])
+        ->name('signature.company_image');
     Route::get('/unterschreiben/{token}/dokument', [SignatureSigningController::class, 'document'])->name('signature.document');
     Route::post('/unterschreiben/{token}/unterschreiben', [SignatureSigningController::class, 'sign'])->name('signature.sign');
     Route::post('/unterschreiben/{token}/ablehnen', [SignatureSigningController::class, 'decline'])->name('signature.decline');

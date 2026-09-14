@@ -13,6 +13,7 @@ use App\Services\Signature\SignatureSigningService;
 use App\Services\Signature\SignatureStorage;
 use App\Services\Signature\SignatureTokenService;
 use App\Services\Signature\SignerIdentityService;
+use App\Support\Firmensignatur;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
@@ -88,6 +89,15 @@ class SignatureSigningController extends Controller
             'signer' => $signer,
             'token' => $token,
             'fields' => $request->fields()->where('signature_signer_id', $signer->id)->orderBy('page')->orderBy('sort')->get(),
+            // DIE UNTERNEHMENSSIGNATUR GEHOERT INS BILD, das der
+            // Unterzeichner sieht (Betreiber-Meldung 14.09.2026): sie steht
+            // im selben Dokument und ist Teil dessen, was er unterschreibt.
+            // Sie ist READ-ONLY - er kann sie weder setzen noch aendern;
+            // ausgeblendet zu werden macht sie aber nicht weniger
+            // vorhanden, nur unsichtbar.
+            'companyFields' => $request->fields()->whereNotNull('company_asset_id')
+                ->with('companyAsset')->orderBy('page')->orderBy('sort')->get(),
+            'companyName' => Firmensignatur::name(),
             'geometry' => $this->renderer->geometry($request),
             'previewAvailable' => $this->renderer->available(),
         ]);
@@ -138,6 +148,38 @@ class SignatureSigningController extends Controller
     }
 
     /** Seitenbild des Dokuments - nur mit gueltigem, bestaetigtem Zugang. */
+    /**
+     * Das Bild der Unternehmenssignatur fuer die Unterschreiben-Seite.
+     *
+     * DER ZUGANG HAENGT AM TOKEN, nicht an einer Rolle - der Unterzeichner
+     * hat kein Konto. Ausgeliefert wird ein Bild nur, wenn es in GENAU
+     * DIESEM Vorgang auch wirklich gesetzt ist: sonst waere die Route ein
+     * Weg, sich mit irgendeinem gueltigen Token durch den gesamten
+     * Firmenbild-Bestand zu blaettern.
+     */
+    public function companyImage(string $token, string $asset)
+    {
+        [$signer, $request] = $this->resolve($token);
+        if ($this->signing->blockReason($request, $signer) !== null && ! $request->isCompleted()) {
+            abort(403);
+        }
+        if ($this->needsIdentity($request, $signer)) {
+            abort(403);
+        }
+
+        $feld = $request->fields()->where('company_asset_id', $asset)->with('companyAsset')->first();
+        $pfad = $feld?->companyAsset?->path;
+        $binary = $pfad === null ? null : $this->storage->disk()->get($pfad);
+        if ($binary === null || $binary === '') {
+            abort(404);
+        }
+
+        return response($binary, 200, [
+            'Content-Type' => 'image/png',
+            'Cache-Control' => 'private, max-age=600',
+        ]);
+    }
+
     public function page(string $token, int $page)
     {
         [$signer, $request] = $this->resolve($token);

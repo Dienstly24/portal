@@ -2807,6 +2807,76 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
   keine JavaScript-Fehler.
 - Tests: `SignaturWorkflowTest` (19 Faelle).
 
+### Die Unternehmenssignatur ist eine Signatur, kein Logo (Betreiber-Meldung 14.09.2026)
+
+- **Gemeldet**: „Company Signature fuegt nur ein Logo hinzu." Der Befund
+  stimmte. Das Firmenfeld trug ausschliesslich ein BILD - im fertigen
+  Vertrag stand eine Grafik ohne jeden Bezug. Wer das Dokument spaeter las,
+  sah ein Zeichen und konnte nicht sagen, WELCHE Firma unterschrieben hat.
+  Ein Logo ist ein Wiedererkennungszeichen; eine Signatur braucht den NAMEN.
+- **Die Antwort stand laengst im System und wurde nie gefragt**:
+  Einstellungen → Firmenname (`SystemSetting company_name`).
+  `App\Support\Firmensignatur` ist die EINE Stelle, die sie beantwortet -
+  kein neues Feld, keine Migration, keine zweite Wahrheit. Ohne gepflegten
+  Namen faellt sie auf `config('app.name')` zurueck; leer wird der Block
+  nie, sonst waere er wieder nur ein Logo.
+- **Im PDF ein BLOCK** (`SignedPdfBuilder::stempleFirmensignatur`): Bild
+  oben, Unterschriftslinie, Firmenname darunter - wie auf einem Briefbogen.
+  Die Linie ist ein Rahmen der Hoehe 0 (`x y w 0 re S`); dafuer braucht es
+  keine weitere Stempelart. EHRLICH BEI ENGEN FELDERN: unter rund 26 Punkten
+  Hoehe ist fuer eine lesbare Zeile kein Platz, dann steht dort NUR das Bild -
+  lieber kein Name als einer, der im Bild klebt.
+- **Der Unterzeichner sieht sie jetzt auch.** Die Unterschreiben-Seite
+  filterte die Felder auf den eigenen Unterzeichner, Firmenfelder hatten
+  keinen - der Kunde erfuhr nie, dass der Betrieb mitzeichnet. Jetzt eine
+  Karte mit Bild, Firmenname und Seitenangabe, bewusst AUSSERHALB des
+  Formulars (es gibt nichts einzugeben). Das Bild laeuft ueber eine eigene
+  Route am TOKEN (`signature.company_image`) und nur, wenn es in GENAU
+  diesem Vorgang gesetzt ist - sonst waere ein gueltiges Token ein Weg durch
+  den gesamten Firmenbild-Bestand.
+- **Zwei Karten statt sieben gleicher Knoepfe**: „Signatur hinzufuegen" →
+  Person / Unternehmen, jede mit dem Namen dessen, der dort zeichnet. Die
+  Unternehmenskarte zeigt eine VORSCHAU (Bild, Linie, Name, „✓
+  Unternehmenssignatur") - dieselbe Reihenfolge wie spaeter im PDF. Fehlen
+  Unternehmensdaten, steht im Klartext da, was fehlt; die Karte erscheint
+  gar nicht erst, wenn es kein Bild gibt (eine Karte in eine Sackgasse ist
+  schlimmer als keine).
+- **Die Feldkaesten tragen Identitaet und Zustand** statt der Feldart:
+  „✍ Max Mustermann / Person · Offen" bzw. „🏢 Dienstly24 GmbH /
+  Unternehmen · Gesetzt". Die Art sieht man am Kasten - gebraucht wird, WER
+  dort unterschreibt. Firmenfelder haben eine eigene Farbe (Gold = Akzent,
+  nie Aktionsfarbe); in Grau sahen sie aus wie ein Feld, dessen Besitzer
+  verloren ging.
+- **Getrennt gezaehlt, weil es zwei verschiedene Dinge sind**: eine
+  Unternehmenssignatur wartet auf niemanden, eine Personen-Unterschrift
+  schon. Editor-Leiste und Statusseite zeigen beides getrennt; die
+  Miniaturen ebenfalls (✍ fuer Handschrift, 🏢 fuer Unternehmen) - ein ✍
+  neben einem Firmenfeld hiesse, dort muesse jemand zeichnen.
+- **UNVERAENDERT STRENG**: ein Firmenbild ist KEIN Unterzeichner. Keine
+  E-Mail, kein Token, keine Zustimmung; im Protokoll weiterhin „eingesetzt
+  von", nie „unterschrieben von", und der Satz „KEINE Unterschrift einer
+  Person" steht im PDF. Es blockiert keinen Versand - und es macht einen
+  Vorgang auch nicht versandfertig: ein Dokument, auf dem nur der Betrieb
+  zeichnet, hat niemanden zum Einladen.
+- **Die Signaturgruppe (PR #328) bleibt unberuehrt**: ein Firmenfeld ist
+  keine Handschrift und gehoert keinem Unterzeichner, faellt also gar nicht
+  in eine Gruppe. Ein Test haelt fest, dass aus „eine Unterschrift an drei
+  Stellen" nicht ploetzlich „vier" wird.
+- **Im Browser gefunden** (nicht im Test): (1) auf dem Telefon frassen
+  Brotkrumen-Zeile und die dreizeilig umbrechende Aktionsleiste den
+  Betrachter - Brotkrumen sind dort jetzt aus, die Leiste ist einzeilig mit
+  gekuerzten Knopfbeschriftungen (✕ / Entwurf / Senden). (2) Das Feldmenue
+  zeigte bei einer Unternehmenssignatur ein Unterzeichner-Auswahlfeld, das
+  nichts bewirkte (der Server setzt den Unterzeichner eines Firmenfeldes
+  immer auf leer) - ein Bedienelement, das nichts tut, ist eine Falle; es
+  ist dort jetzt ausgeblendet, stattdessen steht die Identitaet im Kopf.
+- Geprueft am echten Ablauf: Entwurf anlegen, beide Signaturarten setzen,
+  senden, auf dem simulierten iPhone mit dem Finger unterschreiben, fertiges
+  PDF gerendert - Handschrift links, Unternehmensblock rechts (Bild, Linie,
+  „Dienstly24 GmbH").
+- Tests: `UnternehmenssignaturTest` (19 Faelle), `CompanySignatureAssetTest`
+  (nachgezogen: der Firmenname muss im PDF stehen).
+
 ## Offene Themen / wartet auf den Betreiber
 
 - **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026

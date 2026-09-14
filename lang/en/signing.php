@@ -164,4 +164,7 @@ return [
     'review_pages' => 'Pages',
     'review_signer' => 'Signer',
     'review_view_document' => 'View document (PDF)',
+    'company_signature' => 'Company signature',
+    'company_already_set' => 'The company\'s signature is already placed in the document - there is nothing for you to do.',
+    'company_not_a_person' => 'It is the signature of the company, not a person\'s signature.',
 ];
