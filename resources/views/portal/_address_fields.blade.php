@@ -1,20 +1,20 @@
 @php $p = $prefix ?? ''; @endphp
 <div class="field"><label>{{ __('Adresstyp *') }}</label>
-    <select name="type" id="{{ $p }}type" required>
+    <select name="type" id="{{ $p }}type" required aria-label="{{ __('Adresstyp *') }}">
         @foreach(\App\Models\CustomerAddress::TYPES as $key => $label)
         <option value="{{ $key }}">{{ $label }}</option>
         @endforeach
     </select>
 </div>
-<div class="field"><label>{{ __('Straße & Hausnummer *') }}</label><input type="text" name="street" id="{{ $p }}street" required maxlength="255"></div>
+<div class="field"><label>{{ __('Straße & Hausnummer *') }}</label><input type="text" name="street" id="{{ $p }}street" required maxlength="255" aria-label="{{ __('Straße & Hausnummer *') }}"></div>
 <div class="grid-2">
-    <div class="field"><label>{{ __('PLZ *') }}</label><input type="text" name="zip" id="{{ $p }}zip" required maxlength="10"></div>
-    <div class="field"><label>{{ __('Stadt *') }}</label><input type="text" name="city" id="{{ $p }}city" required maxlength="100"></div>
+    <div class="field"><label>{{ __('PLZ *') }}</label><input type="text" name="zip" id="{{ $p }}zip" required maxlength="10" aria-label="{{ __('PLZ *') }}"></div>
+    <div class="field"><label>{{ __('Stadt *') }}</label><input type="text" name="city" id="{{ $p }}city" required maxlength="100" aria-label="{{ __('Stadt *') }}"></div>
 </div>
-<div class="field"><label>{{ __('Land') }}</label><input type="text" name="country" id="{{ $p }}country" value="Deutschland" maxlength="100"></div>
+<div class="field"><label>{{ __('Land') }}</label><input type="text" name="country" id="{{ $p }}country" value="Deutschland" maxlength="100" aria-label="{{ __('Land') }}"></div>
 <div class="field">
     <label>{{ __('Gültig ab') }}</label>
-    <input type="date" name="effective_from" id="{{ $p }}effective_from">
+    <input type="date" name="effective_from" id="{{ $p }}effective_from" aria-label="{{ __('Gültig ab') }}">
     <p style="font-size:12px;color:var(--ink-soft);margin-top:4px;">{{ __('Seit wann bzw. ab wann wohnen Sie unter dieser Anschrift?') }}</p>
 </div>
 
@@ -24,14 +24,14 @@
     <div style="font-weight:700;font-size:13.5px;margin-bottom:6px;">{{ __('📎 Nachweis der Anschrift *') }}</div>
     <div class="field">
         <label style="font-size:12.5px;">{{ __('Was laden Sie hoch?') }}</label>
-        <select name="proof_kind" id="{{ $p }}proof_kind">
+        <select name="proof_kind" id="{{ $p }}proof_kind" aria-label="{{ __('Was laden Sie hoch?') }}">
             <option value="meldebescheinigung">{{ __('Meldebescheinigung') }}</option>
             <option value="id_front">{{ __('Ausweis mit neuer Anschrift (Vorderseite)') }}</option>
             <option value="other">{{ __('Anderer Nachweis (z. B. Mietvertrag)') }}</option>
         </select>
     </div>
-    <div class="field"><input type="file" name="proof" id="{{ $p }}proof" required accept=".pdf,.jpg,.jpeg,.png,.webp"></div>
-    <div class="field"><label style="font-size:12.5px;">{{ __('Rückseite / zweites Dokument (optional)') }}</label><input type="file" name="proof_back" id="{{ $p }}proof_back" accept=".pdf,.jpg,.jpeg,.png,.webp"></div>
+    <div class="field"><input type="file" name="proof" id="{{ $p }}proof" required accept=".pdf,.jpg,.jpeg,.png,.webp" aria-label="{{ __('Nachweis zur Anschrift hochladen') }}"></div>
+    <div class="field"><label style="font-size:12.5px;">{{ __('Rückseite / zweites Dokument (optional)') }}</label><input type="file" name="proof_back" id="{{ $p }}proof_back" accept=".pdf,.jpg,.jpeg,.png,.webp" aria-label="{{ __('Rückseite / zweites Dokument (optional)') }}"></div>
     <p class="muted-2xs">{{ __('Erlaubt: PDF oder Foto (JPG, PNG, WEBP), max. 10 MB je Datei. Straße, PLZ und Ort müssen lesbar sein.') }}</p>
 </div>
 @error('proof')<div class="alert-error">{{ $message }}</div>@enderror

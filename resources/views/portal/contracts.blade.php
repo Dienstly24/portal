@@ -1,7 +1,7 @@
 @extends('layouts.portal')
 @section('content')
 <div class="toolbar">
-    <div><div class="page-title">{{ __('Meine Verträge') }}</div><div class="page-sub">{{ __('Alle Ihre Verträge im Überblick.') }}</div></div>
+    <div><h1 class="page-title">{{ __('Meine Verträge') }}</h1><div class="page-sub">{{ __('Alle Ihre Verträge im Überblick.') }}</div></div>
     <button data-h-click="3422f5c9da" class="btn btn-emerald">+ {{ __('Neuen Vertrag melden') }}</button>
 </div>
 @php
@@ -103,7 +103,7 @@ $typeLabels = [
             @csrf
             <div class="grid-2">
                 <div class="field"><label>{{ __('Versicherungsart *') }}</label>
-                    <select name="type" required>
+                    <select name="type" required aria-label="{{ __('Versicherungsart *') }}">
                         <option value="kfz">{{ __('🚗 KFZ') }}</option>
                         <option value="schutzbrief">{{ __('🆘 Schutzbrief / Mobilclub (z. B. ADAC)') }}</option>
                         <option value="krankenversicherung">{{ __('🏥 Krankenversicherung') }}</option>
@@ -118,10 +118,10 @@ $typeLabels = [
                         <option value="andere">{{ __('📋 Andere') }}</option>
                     </select>
                 </div>
-                <div class="field"><label>{{ __('Gesellschaft *') }}</label><input type="text" name="insurer" required maxlength="255" placeholder="{{ __('z.B. Allianz') }}"></div>
+                <div class="field"><label>{{ __('Gesellschaft *') }}</label><input type="text" name="insurer" required maxlength="255" placeholder="{{ __('z.B. Allianz') }}" aria-label="{{ __('Gesellschaft *') }}"></div>
             </div>
-            <div class="field"><label>{{ __('Vertragsnummer') }}</label><input type="text" name="contract_number" maxlength="100" placeholder="Optional"></div>
-            <div class="field"><label>{{ __('Dokument (PDF/JPG/PNG, max. 10 MB)') }}</label><input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png"></div>
+            <div class="field"><label>{{ __('Vertragsnummer') }}</label><input type="text" name="contract_number" maxlength="100" placeholder="Optional" aria-label="{{ __('Vertragsnummer') }}"></div>
+            <div class="field"><label>{{ __('Dokument (PDF/JPG/PNG, max. 10 MB)') }}</label><input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png" aria-label="{{ __('Dokument (PDF/JPG/PNG, max. 10 MB)') }}"></div>
             <button type="submit" class="btn btn-primary" style="width:100%;">{{ __('Vertrag melden') }}</button>
         </form>
     </div>

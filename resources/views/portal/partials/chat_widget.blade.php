@@ -30,7 +30,7 @@
         <form class="d24c-comp" id="cw-form" method="POST" action="{{ route('portal.messages.store') }}" enctype="multipart/form-data">
             @csrf
             <label class="d24c-clip" title="{{ __('Anhang hinzufügen') }}">📎<input id="cw-file" type="file" name="attachments[]" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" hidden></label>
-            <textarea id="cw-input" name="body" class="d24c-inp" rows="1" maxlength="5000" placeholder="{{ __('Nachricht schreiben …') }}" required></textarea>
+            <textarea id="cw-input" name="body" class="d24c-inp" rows="1" maxlength="5000" placeholder="{{ __('Nachricht schreiben …') }}" required aria-label="📎"></textarea>
             <button type="submit" class="d24c-send" aria-label="{{ __('Senden') }}"><span class="snd-ico">➤</span></button>
         </form>
     </div>

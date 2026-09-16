@@ -3,7 +3,7 @@
      Stelle, damit der Hinweis "intern" nie auf einer Seite fehlt. --}}
 @include('admin.partials.provision_styles')
 <div class="page-header">
-    <div class="page-title">💶 Provisionsmanagement<span style="font-weight:400;color:var(--ink-soft);"> · {{ $titel }}</span></div>
+    <h1 class="page-title">💶 Provisionsmanagement<span style="font-weight:400;color:var(--ink-soft);"> · {{ $titel }}</span></h1>
     <div class="page-sub">
         {{ $untertitel ?? 'Alle Provisionen aus allen Pools an einer Stelle.' }}
         <b>Intern und vertraulich</b> – diese Angaben erreichen weder Kunden noch Mitarbeiter ohne Provisionsrecht.

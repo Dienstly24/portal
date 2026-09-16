@@ -256,25 +256,52 @@ class DashboardAnalyticsService
         $gekuendigt = $leer();
         $vergleich = $leer();
 
+        // GRENZEN EINMAL, NICHT JE ZEILE (Audit 15.09.2026).
+        //
+        // Vorher entstanden die Grenzen der Vergleichsreihe INNERHALB der
+        // Zeilenschleife: zwei `Carbon::copy()->subDays()` je Zeile UND je
+        // Periode. Bei 3.000 Vertraegen und 12 Perioden sind das 72.000
+        // Carbon-Objekte fuer zwoelf Werte, die sich nie aendern. Gemessen:
+        // 431 ms in PHP bei 16 ms Datenbankzeit - und die Kosten wachsen
+        // linear mit dem Bestand (bei 100.000 Vertraegen rund 15 Sekunden,
+        // also eine Fehlerseite).
+        //
+        // Verglichen wird jetzt ueber DATUMS-ZEICHENKETTEN (YYYY-MM-DD).
+        // Das ist hier exakt gleichwertig, nicht naeherungsweise:
+        // `abschluss` kommt als date(...) aus SQL, `end_date` und
+        // `cancellation_date` sind DATE-Spalten - alle ohne Uhrzeit. Die
+        // Periodengrenzen liegen auf startOf/endOf, ein Vergleich auf
+        // Tagesebene trifft daher dieselbe Menge wie betweenIncluded().
+        $grenzen = [];
+        foreach ($perioden as $i => $p) {
+            $grenzen[$i] = [
+                'von' => $p['von']->toDateString(),
+                'bis' => $p['bis']->toDateString(),
+                'vvon' => $p['von']->copy()->subDays($spanne)->toDateString(),
+                'vbis' => $p['bis']->copy()->subDays($spanne)->toDateString(),
+            ];
+        }
+
+        $tag = static fn ($wert) => $wert ? substr((string) $wert, 0, 10) : null;
+
         foreach ($zeilen as $z) {
-            $abschluss = $z->abschluss ? Carbon::parse($z->abschluss) : null;
-            $ende = $z->end_date ? Carbon::parse($z->end_date) : null;
-            $kuendigung = $z->cancellation_date ? Carbon::parse($z->cancellation_date) : null;
+            $abschluss = $tag($z->abschluss);
+            $ende = $tag($z->end_date);
+            $kuendigung = $tag($z->cancellation_date);
             $laueftNoch = in_array($z->status, Contract::ACTIVE_STATUSES, true) && $kuendigung === null;
 
-            foreach ($perioden as $i => $p) {
-                if ($abschluss && $abschluss->betweenIncluded($p['von'], $p['bis'])) {
+            foreach ($grenzen as $i => $g) {
+                if ($abschluss !== null && $abschluss >= $g['von'] && $abschluss <= $g['bis']) {
                     $neu[$i]++;
                 }
-                if ($ende && $ende->betweenIncluded($p['von'], $p['bis']) && $laueftNoch) {
+                if ($laueftNoch && $ende !== null && $ende >= $g['von'] && $ende <= $g['bis']) {
                     $verlaengert[$i]++;
                 }
-                if ($kuendigung && $kuendigung->betweenIncluded($p['von'], $p['bis'])) {
+                if ($kuendigung !== null && $kuendigung >= $g['von'] && $kuendigung <= $g['bis']) {
                     $gekuendigt[$i]++;
                 }
                 // Vergleichsreihe: derselbe Index, um eine Spanne nach hinten.
-                $vp = ['von' => $p['von']->copy()->subDays($spanne), 'bis' => $p['bis']->copy()->subDays($spanne)];
-                if ($abschluss && $abschluss->betweenIncluded($vp['von'], $vp['bis'])) {
+                if ($abschluss !== null && $abschluss >= $g['vvon'] && $abschluss <= $g['vbis']) {
                     $vergleich[$i]++;
                 }
             }

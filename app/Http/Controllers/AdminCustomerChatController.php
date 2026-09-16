@@ -14,6 +14,7 @@ use App\Services\Ai\Assistant\DocumentStatusReader;
 use App\Services\Ai\Assistant\EmployeeAssistantService;
 use App\Services\CustomerConversationService;
 use App\Services\TicketNotifier;
+use App\Support\ChatFeed;
 use Illuminate\Http\Request;
 
 /**
@@ -132,18 +133,20 @@ class AdminCustomerChatController extends Controller
                 ->update(['read_at' => now()]);
         }
 
-        $messages = CustomerMessage::where('customer_id', $customer->id)
-            ->with(['sender', 'attachments', 'customer.user'])
-            // Zweites Sortierkriterium, weil created_at nur sekundengenau ist:
-            // eine Kundennachricht und die unmittelbare Antwort (Team oder
-            // KI-Assistent) tragen regelmaessig denselben Zeitstempel. Ohne
-            // Tiebreaker entscheidet die Datenbank frei, und der Verlauf
-            // kann bei jedem Aufruf anders herum stehen.
-            ->orderBy('created_at')->orderBy('id')
-            ->get();
+        // NUR DAS NEUE (Audit 15.09.2026): dies ist ein Polling-Endpunkt
+        // (alle 10 s, Drossel 120/Min). Vorher holte JEDER Abruf den
+        // kompletten Verlauf samt Anhaengen - eine Unterhaltung, die
+        // ueber Monate waechst, wurde damit hundertfach am Tag
+        // vollstaendig gelesen und uebertragen. Der Client schickt jetzt
+        // seinen Stand mit; die Sortierung bleibt unveraendert
+        // (created_at, dann id - created_at ist nur sekundengenau, und
+        // Kundennachricht und KI-Antwort tragen oft denselben Wert).
+        $seit = ChatFeed::stand($request);
+        $messages = ChatFeed::nachrichten($customer->id, $seit);
 
         return response()->json([
-            'unread' => $messages->where('from_staff', false)->whereNull('read_at')->count(),
+            'unread' => ChatFeed::ungelesen($customer->id, staffView: true),
+            'cursor' => ChatFeed::neuerStand(),
             'messages' => $messages->map(fn ($m) => $m->toChatPayload(staffView: true))->values(),
             // Nicht-Chat-Kanaele (Tickets, E-Mails, Dokumente, Notizen):
             // aendert sich die Version, blendet die Seite einen

@@ -68,6 +68,7 @@ use App\Http\Controllers\WebsiteAssistantController;
 use App\Http\Controllers\WebsiteContactController;
 use App\Http\Controllers\WebsiteController;
 use App\Http\Controllers\WebsiteInquiryController;
+use App\Http\Middleware\HealthToken;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
@@ -96,6 +97,23 @@ Route::prefix('webhooks')->name('webhooks.')->middleware('throttle:300,1')->grou
     Route::get('/whatsapp', [$w, 'verify'])->name('whatsapp.verify');
     Route::post('/whatsapp', [$w, 'handle'])->name('whatsapp.handle');
 });
+
+/*
+| Ampel fuer eine EXTERNE Ueberwachung (Audit 15.09.2026).
+|
+| /admin/systemzustand.json war fuer genau das gebaut, lag aber hinter
+| Anmeldung, Rolle, Passwortzwang und Zweitem Faktor - ein
+| Ueberwachungsdienst bekam dort eine 302 auf die Anmeldeseite und
+| konnte die Ampel nie sehen. Statt den Admin-Bereich zu oeffnen: EIN
+| Endpunkt, EIN Zweck, EIN Geheimnis aus der Server-.env.
+|
+| Ohne gesetzten HEALTH_TOKEN antwortet er mit 404 - eine
+| unkonfigurierte Installation oeffnet nichts. Die Drossel begrenzt
+| zusaetzlich das Erraten des Tokens.
+*/
+Route::get('/gesundheit', [SystemHealthController::class, 'pulse'])
+    ->middleware([HealthToken::class, 'throttle:60,1'])
+    ->name('health.pulse');
 
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap');
@@ -1056,6 +1074,10 @@ Route::get('/api/website-assistent/status', [WebsiteAssistantController::class, 
 Route::get('/api/website-assistent/verlauf', [WebsiteAssistantController::class, 'history'])
     ->middleware('throttle:60,1')
     ->name('api.assistant.history');
+// Drossel je IP als ERSTE Schicht (Audit 15.09.2026 von 20 auf 10
+// gesenkt). Sie allein genuegt nicht - ein Adresswechsel umgeht sie.
+// Die eigentlichen Grenzen zaehlen je Sitzung und als TAGESBUDGET ueber
+// alle Besucher: App\Services\Ai\Assistant\AssistantBudget.
 Route::post('/api/website-assistent', [WebsiteAssistantController::class, 'send'])
-    ->middleware('throttle:20,1')
+    ->middleware('throttle:10,1')
     ->name('api.assistant.send');

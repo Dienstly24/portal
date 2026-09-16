@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 @section('content')
 <div class="page-header">
-    <div class="page-title">💬 {{ $conversation->subject }}</div>
+    <h1 class="page-title">💬 {{ $conversation->subject }}</h1>
     <div class="page-sub">
         Teilnehmer: {{ $conversation->participants->map(fn($p) => $p->user?->name)->filter()->implode(', ') }}
     </div>
@@ -33,7 +33,7 @@
         </div>
         <form method="POST" action="{{ route('admin.chat.reply', $conversation->id) }}" style="display:flex;gap:10px;margin-top:14px;align-items:flex-end;">
             @csrf
-            <textarea name="body" required maxlength="5000" placeholder="Nachricht an das Team…" style="flex:1;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;font-family:inherit;resize:vertical;min-height:52px;"></textarea>
+            <textarea name="body" required maxlength="5000" placeholder="Nachricht an das Team…" style="flex:1;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;font-family:inherit;resize:vertical;min-height:52px;" aria-label="Nachricht an das Team"></textarea>
             <button type="submit" class="btn btn-primary" style="height:44px;">Senden</button>
         </form>
     </div>

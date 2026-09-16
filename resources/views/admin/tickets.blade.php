@@ -37,7 +37,7 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
 @endphp
 <div class="toolbar">
     <div>
-        <div class="page-title">Tickets</div>
+        <h1 class="page-title">Tickets</h1>
         <div class="page-sub">Anfragen registrierter Kunden aus dem Kundenportal.</div>
     </div>
     @if(in_array($me->role, ['admin','manager']))
@@ -109,11 +109,11 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
         @if(request()->boolean('overdue'))<input type="hidden" name="overdue" value="1">@endif
         <div class="field" style="flex:2;min-width:200px;margin-bottom:0;">
             <label>Suche</label>
-            <input type="text" name="q" value="{{ request('q') }}" placeholder="Betreff, Ticket-Nr., Kunde, Kundennummer...">
+            <input type="text" name="q" value="{{ request('q') }}" placeholder="Betreff, Ticket-Nr., Kunde, Kundennummer..." aria-label="Suche">
         </div>
         <div class="field" style="flex:1;min-width:140px;margin-bottom:0;">
             <label>Typ</label>
-            <select name="type" data-h-change="3c951a7e95">
+            <select name="type" data-h-change="3c951a7e95" aria-label="Typ">
                 <option value="">Alle</option>
                 @foreach(\App\Models\Ticket::TYPES as $key => $label)
                 <option value="{{ $key }}" {{ request('type') === $key ? 'selected' : '' }}>{{ $label }}</option>
@@ -122,7 +122,7 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
         </div>
         <div class="field" style="flex:1;min-width:140px;margin-bottom:0;">
             <label>Priorität</label>
-            <select name="priority" data-h-change="3c951a7e95">
+            <select name="priority" data-h-change="3c951a7e95" aria-label="Priorität">
                 <option value="">Alle</option>
                 @foreach(\App\Models\Ticket::PRIORITIES as $key => $p)
                 <option value="{{ $key }}" {{ request('priority') === $key ? 'selected' : '' }}>{{ $p['icon'] }} {{ $p['label'] }}</option>
@@ -131,7 +131,7 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
         </div>
         <div class="field" style="flex:1;min-width:160px;margin-bottom:0;">
             <label>Zugewiesen an</label>
-            <select name="assigned" data-h-change="3c951a7e95">
+            <select name="assigned" data-h-change="3c951a7e95" aria-label="Zugewiesen an">
                 <option value="">Alle</option>
                 <option value="me" {{ request('assigned') === 'me' ? 'selected' : '' }}>Mir zugewiesen</option>
                 <option value="none" {{ request('assigned') === 'none' ? 'selected' : '' }}>Nicht zugewiesen</option>
@@ -142,7 +142,7 @@ $showBulk = $canManage && !$trashView && $tickets->count() > 0;
         </div>
         <div class="field" style="flex:1;min-width:170px;margin-bottom:0;">
             <label>Sortierung</label>
-            <select name="sort" data-h-change="3c951a7e95">
+            <select name="sort" data-h-change="3c951a7e95" aria-label="Sortierung">
                 @foreach(['aktualisiert' => 'Zuletzt aktualisiert', 'neueste' => 'Neueste zuerst', 'aelteste' => 'Älteste zuerst', 'prioritaet' => 'Priorität (dringend zuerst)', 'faellig' => 'Fälligkeit (SLA)'] as $key => $label)
                 <option value="{{ $key }}" {{ $sort === $key ? 'selected' : '' }}>{{ $label }}</option>
                 @endforeach

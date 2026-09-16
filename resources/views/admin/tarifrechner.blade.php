@@ -89,7 +89,7 @@ body.vp-searching .vp-card.vp-hidden{display:none;}
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Vergleichsportale</span></div>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
         <div>
-            <div class="page-title">Vergleichsportale</div>
+            <h1 class="page-title">Vergleichsportale</h1>
             <div class="page-sub">Link-Center — alle Portale &amp; Rechner mit einem Klick</div>
         </div>
         <button data-h-click="b6bd22cb76" class="btn btn-emerald">+ Link hinzufügen</button>
@@ -98,7 +98,7 @@ body.vp-searching .vp-card.vp-hidden{display:none;}
 
 <div class="vp-searchbar">
     <span class="vp-search-icon">🔍</span>
-    <input type="text" id="vp-search" placeholder="Suchen … z.B. „NAFI“, „Check24“ oder „Strom“" autocomplete="off">
+    <input type="text" id="vp-search" placeholder="Suchen … z.B. „NAFI“, „Check24“ oder „Strom“" autocomplete="off" aria-label="Suchen … z.B. „NAFI“, „Check24“ oder „Strom“">
     <button type="button" class="vp-search-clear" id="vp-search-clear" data-h-click="f56dcbf96c" title="Löschen">✕</button>
 </div>
 
@@ -182,15 +182,15 @@ body.vp-searching .vp-card.vp-hidden{display:none;}
         <form method="POST" action="{{ route('admin.tarifrechner.store') }}">
             @csrf
             <div class="field"><label>Kategorie *</label>
-                <select name="category" id="vp-add-category" required>
+                <select name="category" id="vp-add-category" required aria-label="Kategorie">
                     @foreach($categories as $key => $cat)
                     <option value="{{ $key }}">{{ $cat['icon'] }} {{ $cat['label'] }}</option>
                     @endforeach
                 </select>
             </div>
-            <div class="field"><label>Name *</label><input type="text" name="title" required placeholder="z.B. NAFI, Check24, Mr-Money, EVB"></div>
-            <div class="field"><label>URL *</label><input type="url" name="url" required placeholder="https://..."></div>
-            <div class="field"><label>Beschreibung</label><input type="text" name="description" placeholder="Optional"></div>
+            <div class="field"><label>Name *</label><input type="text" name="title" required placeholder="z.B. NAFI, Check24, Mr-Money, EVB" aria-label="Name"></div>
+            <div class="field"><label>URL *</label><input type="url" name="url" required placeholder="https://..." aria-label="URL"></div>
+            <div class="field"><label>Beschreibung</label><input type="text" name="description" placeholder="Optional" aria-label="Beschreibung"></div>
             <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
                 <button type="button" data-h-click="bf00d05c23" class="btn btn-ghost">Abbrechen</button>
                 <button type="submit" class="btn btn-emerald">Hinzufügen</button>

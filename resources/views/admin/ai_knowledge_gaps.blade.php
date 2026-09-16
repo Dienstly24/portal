@@ -13,7 +13,7 @@
         <span>Wissenslücken</span>
     </div>
     <div>
-        <div class="page-title">Wissenslücken</div>
+        <h1 class="page-title">Wissenslücken</h1>
         <div class="page-sub">
             Danach wurde gefragt, ohne dass eine Antwort hinterlegt ist – häufigstes zuerst.
             Einmal beantworten genügt: ab dann beantwortet der Assistent es selbst.
@@ -63,10 +63,10 @@
         <form method="POST" action="{{ route('admin.ai_knowledge_gaps.answer', $gap->id) }}">
             @csrf
             <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;">
-                <div class="field"><label>Titel *</label><input type="text" name="title" required maxlength="255" value="{{ $gap->topic }}"></div>
+                <div class="field"><label>Titel *</label><input type="text" name="title" required maxlength="255" value="{{ $gap->topic }}" aria-label="Titel"></div>
                 <div class="field">
                     <label>Kategorie *</label>
-                    <select name="category" required>
+                    <select name="category" required aria-label="Kategorie">
                         @foreach($categories as $key => $label)
                         <option value="{{ $key }}" @selected($key === 'faq')>{{ $label }}</option>
                         @endforeach
@@ -74,7 +74,7 @@
                 </div>
                 <div class="field">
                     <label>Sprache</label>
-                    <select name="language">
+                    <select name="language" aria-label="Sprache">
                         <option value="">Alle Sprachen</option>
                         @foreach($languages as $key => $label)
                         <option value="{{ $key }}" @selected($gap->language === $key)>{{ $label }}</option>
@@ -85,9 +85,9 @@
             <div class="field">
                 <label>Antwort *</label>
                 <textarea name="content" rows="4" required maxlength="8000"
-                          placeholder="Die Antwort, die der Assistent ab jetzt geben soll – kurz, sachlich, abschließend."></textarea>
+                          placeholder="Die Antwort, die der Assistent ab jetzt geben soll – kurz, sachlich, abschließend." aria-label="Antwort"></textarea>
             </div>
-            <div class="field"><label>Stichwörter (Komma getrennt)</label><input type="text" name="keywords" maxlength="500" placeholder="strom, angebot, tarif"></div>
+            <div class="field"><label>Stichwörter (Komma getrennt)</label><input type="text" name="keywords" maxlength="500" placeholder="strom, angebot, tarif" aria-label="Stichwörter (Komma getrennt)"></div>
             <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
                 <label style="display:flex;gap:8px;align-items:center;cursor:pointer;">
                     <input type="checkbox" name="active" value="1" checked>

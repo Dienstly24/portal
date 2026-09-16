@@ -7,10 +7,29 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>Dienstly24 — Admin</title>
 @vite(['resources/css/app.css', 'resources/js/app.js'])
-{{-- Chart.js lokal gehostet (DSGVO: kein Abfluss von Besucher-IPs an CDN-Drittanbieter) --}}
-<script src="/js/chart.umd.min.js"></script>
-{{-- Markenfarben fuer Canvas-Diagramme (UX-1): Chart.js kann kein var() --}}
+{{-- Chart.js lokal gehostet (DSGVO: kein Abfluss von Besucher-IPs an
+     CDN-Drittanbieter) - aber NUR auf den Seiten, die wirklich ein
+     Diagramm zeichnen (Audit 15.09.2026).
+
+     Vorher stand das Skript hier unbedingt: 200 kB auf JEDEM Aufruf der
+     Beraterwelt, also auf rund 50 Seiten, von denen FUENF ein Diagramm
+     haben (Dashboard, Berichte, Ticket-Statistik, Banner-Statistik,
+     Aktivitaet). Das ist mehr als das Vierzigfache des gesamten eigenen
+     JavaScript-Bundles (4,4 kB) - und auf einer Seite ohne Diagramm
+     ohne jede Wirkung ausser Ladezeit.
+
+     Die Seiten fordern es mit @push('charts') an. WICHTIG: dieses
+     @stack steht im <head>, die Vorlagen der Seiten werden VOR dem
+     Layout gerendert - ihr @push kommt also an. (Umgekehrt faellt ein
+     @push NACH dem @stack DERSELBEN Datei still weg, Lehre vom
+     06.09.2026.) --}}
+{{-- Markenfarben fuer Canvas/JS (UX-1): Chart.js kennt kein var().
+     BLEIBT im Layout - die Datei ist wenige hundert Byte gross und wird
+     auch ohne Diagramm gebraucht (der Signatur-Editor faerbt seine
+     Felder damit). Gross ist nur Chart.js, und das kommt jetzt je
+     Seite. --}}
 <script src="/js/brand.js"></script>
+@stack('charts')
 <style>
 /* Markenfarben: resources/css/brand.css (UX-1).
    Bausteine (.card/.btn/.badge/.field/...): resources/css/components.css
@@ -191,11 +210,19 @@ table tr:hover td{background:#EDEAE0;}
     </div>
 </div>
 <div class="header">
-    <a href="{{ route('admin.dashboard') }}" title="Dienstly24" class="header-logo" style="flex:none;margin-right:6px;"><img src="{{ \App\Support\BrandAssets::logoDark() }}" alt="Dienstly24" style="height:30px;width:auto;display:block;"></a>
+    <a href="{{ route('admin.dashboard') }}" title="Dienstly24" class="header-logo" style="flex:none;margin-right:6px;">{{-- Kopfzeilen-Logo in ANZEIGEGROESSE (Audit 15.09.2026): hier lag
+         das volle 720x254-Bild mit 124 kB, dargestellt auf 30 px Hoehe -
+         auf jeder Seite der Beraterwelt. logo-header.png ist dasselbe
+         Bild in 255x90 (24 kB), also dreifache Pixeldichte fuer eine
+         30-px-Zeile. Ein im Admin hinterlegtes Marken-Logo
+         (BrandAssets) hat weiterhin Vorrang - dann bestimmt der
+         Betreiber das Bild. width/height verhindern das Springen des
+         Layouts waehrend des Ladens. --}}
+        <img src="{{ \App\Support\BrandAssets::logoDark() === '/images/logo-transparent.png' ? '/images/logo-header.png' : \App\Support\BrandAssets::logoDark() }}" alt="Dienstly24" width="255" height="90" style="height:30px;width:auto;display:block;"></a>
     <div class="header-search">
         <span class="search-icon">🔍</span>
         <input type="text" id="global-search" placeholder="Suche nach Kunden, Verträge, Tickets..."
-        data-h-input="0ee4d7cadb" data-h-keydown="6044971a98" autocomplete="off">
+        data-h-input="0ee4d7cadb" data-h-keydown="6044971a98" autocomplete="off" aria-label="Suche nach Kunden, Verträge, Tickets">
     <div id="search-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);max-height:320px;overflow-y:auto;z-index:200;margin-top:4px;"></div>
     </div>
     <div class="header-actions">

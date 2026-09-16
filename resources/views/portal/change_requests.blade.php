@@ -1,6 +1,6 @@
 @extends('layouts.portal')
 @section('content')
-<div class="page-title">{{ __('🔄 Meine Änderungsanfragen') }}</div>
+<h1 class="page-title">{{ __('🔄 Meine Änderungsanfragen') }}</h1>
 <div class="page-sub">{{ __('Alle von Ihnen eingereichten Änderungen und deren Status.') }}</div>
 
 <div class="card">

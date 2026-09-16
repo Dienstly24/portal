@@ -16,7 +16,7 @@
         <span>Interessenten</span>
     </div>
     <div>
-        <div class="page-title">Interessenten von der Website</div>
+        <h1 class="page-title">Interessenten von der Website</h1>
         <div class="page-sub">Vom KI-Assistenten qualifizierte Anfragen. Angebot auswählen und den Interessenten kontaktieren.</div>
     </div>
 </div>

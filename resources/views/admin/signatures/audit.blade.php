@@ -8,7 +8,7 @@
         <span class="breadcrumb-sep">›</span><span>Audit-Protokoll</span>
     </div>
     <div>
-        <div class="page-title">Audit-Protokoll</div>
+        <h1 class="page-title">Audit-Protokoll</h1>
         <div class="page-sub">
             Vollständiger Hergang der Signaturanfrage. Einträge lassen sich nicht ändern und nicht löschen –
             ein Protokoll, das der Protokollierte ändern kann, belegt nichts.

@@ -14,7 +14,7 @@ $sb = $statusBadge[$message->match_status] ?? ['#EEF0F3', '#555', $message->matc
         <a href="{{ route('admin.email_inbox') }}">E-Mail-Posteingang</a><span class="breadcrumb-sep">›</span>
         <span>E-Mail</span>
     </div>
-    <div class="page-title">{{ $message->subject ?: '(kein Betreff)' }}</div>
+    <h1 class="page-title">{{ $message->subject ?: '(kein Betreff)' }}</h1>
 </div>
 
 @if(session('success'))<div style="background:var(--emerald-soft);color:var(--emerald);padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('success') }}</div>@endif
@@ -91,7 +91,7 @@ $sb = $statusBadge[$message->match_status] ?? ['#EEF0F3', '#555', $message->matc
                 <div style="font-size:12px;color:var(--ink-soft);margin-bottom:6px;">Manuell zuordnen</div>
                 <input type="hidden" name="customer_id" class="assign-customer-id">
                 <input type="text" class="assign-search" placeholder="Kunde suchen (Name/Nr.)…" autocomplete="off"
-                    style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;width:100%;font-size:13px;box-sizing:border-box;">
+                    style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;width:100%;font-size:13px;box-sizing:border-box;" aria-label="Kunde suchen (Name/Nr.)">
                 <div class="assign-results" style="display:none;position:absolute;top:60px;left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:50;max-height:240px;overflow-y:auto;"></div>
                 <button type="submit" class="btn btn-emerald btn-sm" style="margin-top:10px;width:100%;" disabled>Zuordnen</button>
             </form>

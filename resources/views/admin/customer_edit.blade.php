@@ -7,7 +7,7 @@
         <a href="{{ route('admin.customer', $customer->id) }}">{{ $customer->user?->name }}</a><span class="breadcrumb-sep">›</span>
         <span>Bearbeiten</span>
     </div>
-    <div class="page-title">{{ $customer->user?->name }} bearbeiten</div>
+    <h1 class="page-title">{{ $customer->user?->name }} bearbeiten</h1>
 </div>
 
 @if($errors->any())
@@ -33,22 +33,22 @@
     <div class="card-title" style="margin-bottom:20px;">Persönliche Daten</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         @php $__np = explode(' ', trim($customer->user?->name ?? ''), 2); @endphp
-        <div class="field"><label>Vorname *</label><input type="text" name="first_name" required value="{{ $__np[0] ?? '' }}"></div>
-        <div class="field"><label>Nachname *</label><input type="text" name="last_name" required value="{{ $__np[1] ?? '' }}"></div>
-        <div class="field"><label>Geburtsdatum</label><input type="date" name="birth_date" value="{{ old('birth_date', $customer->birth_date) }}"></div>
-        <div class="field"><label>Geburtsort *</label><input type="text" name="birth_place" required value="{{ old('birth_place', $customer->birth_place) }}" placeholder="z.B. Damaskus"></div>
+        <div class="field"><label>Vorname *</label><input type="text" name="first_name" required value="{{ $__np[0] ?? '' }}" aria-label="Vorname"></div>
+        <div class="field"><label>Nachname *</label><input type="text" name="last_name" required value="{{ $__np[1] ?? '' }}" aria-label="Nachname"></div>
+        <div class="field"><label>Geburtsdatum</label><input type="date" name="birth_date" value="{{ old('birth_date', $customer->birth_date) }}" aria-label="Geburtsdatum"></div>
+        <div class="field"><label>Geburtsort *</label><input type="text" name="birth_place" required value="{{ old('birth_place', $customer->birth_place) }}" placeholder="z.B. Damaskus" aria-label="Geburtsort"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Nationalität *</label><input type="text" name="nationality" required value="{{ old('nationality', $customer->nationality) }}" placeholder="z.B. Deutsch, Syrisch"></div>
-        <div class="field"><label>Beruf</label><input type="text" name="occupation" value="{{ old('occupation', $customer->occupation) }}" placeholder="z.B. Ingenieur"></div>
+        <div class="field"><label>Nationalität *</label><input type="text" name="nationality" required value="{{ old('nationality', $customer->nationality) }}" placeholder="z.B. Deutsch, Syrisch" aria-label="Nationalität"></div>
+        <div class="field"><label>Beruf</label><input type="text" name="occupation" value="{{ old('occupation', $customer->occupation) }}" placeholder="z.B. Ingenieur" aria-label="Beruf"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Arbeitgeber</label><input type="text" name="employer_name" value="{{ old('employer_name', $customer->employer_name) }}" placeholder="z.B. DF Bau GmbH"></div>
-        <div class="field"><label>Arbeitgeber-Anschrift</label><input type="text" name="employer_address" value="{{ old('employer_address', $customer->employer_address) }}" placeholder="z.B. Beethovenstraße 31, 66126 Saarbrücken"></div>
+        <div class="field"><label>Arbeitgeber</label><input type="text" name="employer_name" value="{{ old('employer_name', $customer->employer_name) }}" placeholder="z.B. DF Bau GmbH" aria-label="Arbeitgeber"></div>
+        <div class="field"><label>Arbeitgeber-Anschrift</label><input type="text" name="employer_address" value="{{ old('employer_address', $customer->employer_address) }}" placeholder="z.B. Beethovenstraße 31, 66126 Saarbrücken" aria-label="Arbeitgeber-Anschrift"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
                 <div class="field"><label>Geschlecht</label>
-            <select name="gender" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+            <select name="gender" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Geschlecht">
                 <option value="">— Nicht angegeben —</option>
                 @foreach(\App\Models\Customer::GENDERS as $gkey => $glabel)
                 <option value="{{ $gkey }}" {{ $customer->gender === $gkey ? 'selected' : '' }}>{{ $glabel }}</option>
@@ -56,7 +56,7 @@
             </select>
         </div>
         <div class="field"><label>Familienstand</label>
-            <select name="marital_status" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+            <select name="marital_status" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Familienstand">
                 <option value="">—</option>
                 @foreach(['ledig','verheiratet','geschieden','verwitwet'] as $ms)
                 <option value="{{ $ms }}" {{ $customer->marital_status === $ms ? 'selected' : '' }}>{{ ucfirst($ms) }}</option>
@@ -64,7 +64,7 @@
             </select>
         </div>
         <div class="field"><label>Sprache</label>
-            <select name="preferred_lang" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+            <select name="preferred_lang" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Sprache">
                 <option value="de" {{ $customer->preferred_lang === 'de' ? 'selected' : '' }}>Deutsch</option>
                 <option value="ar" {{ $customer->preferred_lang === 'ar' ? 'selected' : '' }}>Arabisch</option>
             </select>
@@ -72,13 +72,13 @@
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div class="field"><label>Kundentyp</label>
-            <select name="customer_type" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+            <select name="customer_type" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Kundentyp">
                 <option value="privat" {{ $customer->customer_type === 'privat' ? 'selected' : '' }}>👤 Privatkunde</option>
                 <option value="firma" {{ $customer->customer_type === 'firma' ? 'selected' : '' }}>🏢 Firmenkunde</option>
             </select>
         </div>
         <div class="field"><label>Vertriebspartner (Partnerportal)</label>
-            <select name="partner_id" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+            <select name="partner_id" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Vertriebspartner (Partnerportal)">
                 <option value="">— Kein Partner —</option>
                 @foreach($partners as $p)
                 <option value="{{ $p->id }}" {{ $customer->partner_id === $p->id ? 'selected' : '' }}>{{ $p->name }}</option>
@@ -89,12 +89,12 @@
     <div style="border-top:1px solid var(--line);padding-top:20px;margin-top:4px;">
         <div class="card-title" style="margin-bottom:16px;">Bankverbindung</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="field"><label>IBAN (Haupt)</label><input type="text" name="iban" value="{{ old('iban', $customer->iban) }}" placeholder="DE89 3704 0044 ..."></div>
-            <div class="field"><label>IBAN 2 (Alternativ)</label><input type="text" name="iban2" value="{{ $customer->iban2 }}" placeholder="Optional"></div>
+            <div class="field"><label>IBAN (Haupt)</label><input type="text" name="iban" value="{{ old('iban', $customer->iban) }}" placeholder="DE89 3704 0044 ..." aria-label="IBAN (Haupt)"></div>
+            <div class="field"><label>IBAN 2 (Alternativ)</label><input type="text" name="iban2" value="{{ $customer->iban2 }}" placeholder="Optional" aria-label="IBAN 2 (Alternativ)"></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="field"><label>Kontoinhaber (falls abweichend)</label><input type="text" name="account_holder" value="{{ old('account_holder', $customer->account_holder) }}" placeholder="Optional"></div>
-            <div class="field"><label>BIC (optional)</label><input type="text" name="bic" value="{{ old('bic', $customer->bic) }}" placeholder="Optional - bei deutschen IBAN meist ableitbar"></div>
+            <div class="field"><label>Kontoinhaber (falls abweichend)</label><input type="text" name="account_holder" value="{{ old('account_holder', $customer->account_holder) }}" placeholder="Optional" aria-label="Kontoinhaber (falls abweichend)"></div>
+            <div class="field"><label>BIC (optional)</label><input type="text" name="bic" value="{{ old('bic', $customer->bic) }}" placeholder="Optional - bei deutschen IBAN meist ableitbar" aria-label="BIC (optional)"></div>
         </div>
     </div>
 <div style="border-top:1px solid var(--line);margin-top:20px;"></div>
@@ -105,7 +105,7 @@
             {{-- Platzhalter-/leere Adressen werden als LEER angezeigt, damit der
                  Mitarbeiter sieht, dass die echte E-Mail noch fehlt. --}}
             <input type="email" name="email" value="{{ $customer->user?->hasRealEmail() ? $customer->user->email : '' }}"
-                placeholder="hauptemail@beispiel.de">
+                placeholder="hauptemail@beispiel.de" aria-label="hauptemail@beispiel.de">
             @if(!$customer->user?->hasRealEmail())
                 <div style="font-size:12px;color:#8A5A00;background:#FEF6E7;border:1px solid #E4A11B;border-radius:7px;padding:6px 9px;margin-top:5px;">
                     ⚠ E-Mail fehlt – bitte die echte Adresse eintragen (aktiviert den Portal-Zugang).
@@ -114,24 +114,24 @@
                 <div style="font-size:11px;color:var(--ink-soft);margin-top:4px;">⚠ Login-E-Mail — Änderung betrifft den Portal-Zugang</div>
             @endif
         </div>
-        <div class="field"><label>E-Mail 2 (Alternativ)</label><input type="email" name="email2" value="{{ $customer->email2 }}" placeholder="alternativ@beispiel.de"></div>
+        <div class="field"><label>E-Mail 2 (Alternativ)</label><input type="email" name="email2" value="{{ $customer->email2 }}" placeholder="alternativ@beispiel.de" aria-label="E-Mail 2 (Alternativ)"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Telefon</label><input type="tel" name="phone" value="{{ old('phone', $customer->phone) }}" placeholder="+49 40 ..."></div>
-        <div class="field"><label>Mobil</label><input type="tel" name="mobile" value="{{ old('mobile', $customer->mobile) }}" placeholder="+49 176 ..."></div>
+        <div class="field"><label>Telefon</label><input type="tel" name="phone" value="{{ old('phone', $customer->phone) }}" placeholder="+49 40 ..." aria-label="Telefon"></div>
+        <div class="field"><label>Mobil</label><input type="tel" name="mobile" value="{{ old('mobile', $customer->mobile) }}" placeholder="+49 176 ..." aria-label="Mobil"></div>
     </div>
     <div style="border-top:1px solid var(--line);padding-top:20px;margin-top:4px;">
         <div class="card-title" style="margin-bottom:16px;">Adressen</div>
         <div style="display:grid;grid-template-columns:3fr 1fr;gap:16px;">
-            <div class="field"><label>Straße</label><input type="text" name="street" value="{{ $addr['street'] ?? '' }}" placeholder="Musterstraße"></div>
-            <div class="field"><label>Nr.</label><input type="text" name="street_nr" value="{{ $addr['street_nr'] ?? '' }}" placeholder="12"></div>
+            <div class="field"><label>Straße</label><input type="text" name="street" value="{{ $addr['street'] ?? '' }}" placeholder="Musterstraße" aria-label="Straße"></div>
+            <div class="field"><label>Nr.</label><input type="text" name="street_nr" value="{{ $addr['street_nr'] ?? '' }}" placeholder="12" aria-label="Nr."></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 2fr 1fr;gap:16px;">
-            <div class="field"><label>PLZ</label><input type="text" name="plz" value="{{ $addr['plz'] ?? '' }}" placeholder="20095"></div>
-            <div class="field"><label>Ort</label><input type="text" name="city" value="{{ $addr['city'] ?? '' }}" placeholder="Hamburg"></div>
-            <div class="field"><label>Land</label><input type="text" name="country" value="{{ $addr['country'] ?? '' }}" placeholder="Deutschland"></div>
+            <div class="field"><label>PLZ</label><input type="text" name="plz" value="{{ $addr['plz'] ?? '' }}" placeholder="20095" aria-label="PLZ"></div>
+            <div class="field"><label>Ort</label><input type="text" name="city" value="{{ $addr['city'] ?? '' }}" placeholder="Hamburg" aria-label="Ort"></div>
+            <div class="field"><label>Land</label><input type="text" name="country" value="{{ $addr['country'] ?? '' }}" placeholder="Deutschland" aria-label="Land"></div>
         </div>
-        <div class="field"><label>Adresse 2 (Zweitwohnsitz / Postadresse)</label><input type="text" name="address2" value="{{ $customer->address2 }}" placeholder="Optional"></div>
+        <div class="field"><label>Adresse 2 (Zweitwohnsitz / Postadresse)</label><input type="text" name="address2" value="{{ $customer->address2 }}" placeholder="Optional" aria-label="Adresse 2 (Zweitwohnsitz / Postadresse)"></div>
     </div>
     <div style="border-top:1px solid var(--line);padding-top:20px;margin-top:4px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
@@ -140,20 +140,20 @@
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
             <div class="field"><label>Versicherungsart</label>
-                <select name="health_insurance_type" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                <select name="health_insurance_type" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Versicherungsart">
                     <option value="">— Nicht angegeben —</option>
                     <option value="gesetzlich" {{ $customer->health_insurance_type === 'gesetzlich' ? 'selected' : '' }}>Gesetzlich</option>
                     <option value="privat" {{ $customer->health_insurance_type === 'privat' ? 'selected' : '' }}>Privat</option>
                 </select>
             </div>
-            <div class="field"><label>Krankenkasse</label><input type="text" name="health_insurance_company" value="{{ old('health_insurance_company', $customer->health_insurance_company) }}" placeholder="z.B. TK, AOK"></div>
+            <div class="field"><label>Krankenkasse</label><input type="text" name="health_insurance_company" value="{{ old('health_insurance_company', $customer->health_insurance_company) }}" placeholder="z.B. TK, AOK" aria-label="Krankenkasse"></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="field"><label>Krankenversicherungsnummer</label><input type="text" name="health_insurance_number" value="{{ old('health_insurance_number', $customer->health_insurance_number) }}" placeholder="KV-Nummer"></div>
-            <div class="field"><label>Rentenversicherungsnummer</label><input type="text" name="pension_insurance_number" value="{{ old('pension_insurance_number', $customer->pension_insurance_number) }}" placeholder="z.B. 65 170439 K 001"></div>
+            <div class="field"><label>Krankenversicherungsnummer</label><input type="text" name="health_insurance_number" value="{{ old('health_insurance_number', $customer->health_insurance_number) }}" placeholder="KV-Nummer" aria-label="Krankenversicherungsnummer"></div>
+            <div class="field"><label>Rentenversicherungsnummer</label><input type="text" name="pension_insurance_number" value="{{ old('pension_insurance_number', $customer->pension_insurance_number) }}" placeholder="z.B. 65 170439 K 001" aria-label="Rentenversicherungsnummer"></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="field"><label>Steuer-ID (optional)</label><input type="text" name="tax_id" value="{{ old('tax_id', $customer->tax_id) }}" placeholder="11-stellige Steuer-ID"></div>
+            <div class="field"><label>Steuer-ID (optional)</label><input type="text" name="tax_id" value="{{ old('tax_id', $customer->tax_id) }}" placeholder="11-stellige Steuer-ID" aria-label="Steuer-ID (optional)"></div>
             <div></div>
         </div>
     </div>
@@ -175,21 +175,21 @@
     <div style="border:1px dashed var(--line);border-radius:10px;padding:16px;margin-top:16px;">
         <div style="font-size:13px;font-weight:600;margin-bottom:12px;">+ Neues Familienmitglied hinzufügen</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="field"><label>Name *</label><input type="text" name="family_name[]" placeholder="Vor- und Nachname"></div>
+            <div class="field"><label>Name *</label><input type="text" name="family_name[]" placeholder="Vor- und Nachname" aria-label="Name"></div>
             <div class="field"><label>Verwandtschaft</label>
-                <select name="family_relation[]" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                <select name="family_relation[]" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Verwandtschaft">
                     <option>Kind</option><option>Ehepartner</option><option>Elternteil</option><option>Geschwister</option><option>Sonstige</option>
                 </select>
             </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="field"><label>Geburtsdatum</label><input type="date" name="family_birth[]"></div>
-            <div class="field"><label>Krankenversicherungsnr.</label><input type="text" name="family_kv_nr[]" placeholder="z.B. A123456789"></div>
+            <div class="field"><label>Geburtsdatum</label><input type="date" name="family_birth[]" aria-label="Geburtsdatum"></div>
+            <div class="field"><label>Krankenversicherungsnr.</label><input type="text" name="family_kv_nr[]" placeholder="z.B. A123456789" aria-label="Krankenversicherungsnr."></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="field"><label>Krankenkasse</label><input type="text" name="family_kv_company[]" placeholder="z.B. TK, AOK"></div>
+            <div class="field"><label>Krankenkasse</label><input type="text" name="family_kv_company[]" placeholder="z.B. TK, AOK" aria-label="Krankenkasse"></div>
             <div class="field"><label>KV-Status</label>
-                <select name="family_kv_status[]" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                <select name="family_kv_status[]" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="KV-Status">
                     <option value="">—</option>
                     <option value="mitglied">Mitglied</option>
                     <option value="familienversichert">Familienversichert</option>
@@ -197,10 +197,10 @@
             </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="field"><label>Versicherungsbeginn</label><input type="date" name="family_kv_start[]"></div>
-            <div class="field"><label>Steuernummer / Steuer-ID</label><input type="text" name="family_steuer[]" placeholder="z.B. 12 345 678 901"></div>
+            <div class="field"><label>Versicherungsbeginn</label><input type="date" name="family_kv_start[]" aria-label="Versicherungsbeginn"></div>
+            <div class="field"><label>Steuernummer / Steuer-ID</label><input type="text" name="family_steuer[]" placeholder="z.B. 12 345 678 901" aria-label="Steuernummer / Steuer-ID"></div>
             <div class="field"><label>Geschlecht</label>
-                <select name="family_geschlecht[]" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                <select name="family_geschlecht[]" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Geschlecht">
                     <option value="">—</option>
                     @foreach(\App\Models\CustomerFamily::GENDERS as $gkey => $glabel)
                     <option value="{{ $gkey }}">{{ $glabel }}</option>
@@ -230,9 +230,9 @@
 <div id="section-firma" class="card" style="max-width:760px;display:none;">
     <div class="card-title" style="margin-bottom:20px;">Firmendaten</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Firmenname</label><input type="text" name="company_name" value="{{ old('company_name', $customer->company_name) }}" placeholder="Firmenname GmbH"></div>
+        <div class="field"><label>Firmenname</label><input type="text" name="company_name" value="{{ old('company_name', $customer->company_name) }}" placeholder="Firmenname GmbH" aria-label="Firmenname"></div>
         <div class="field"><label>Rechtsform</label>
-            <select name="company_type" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+            <select name="company_type" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Rechtsform">
                 <option value="">—</option>
                 @foreach(['Einzelunternehmen','GmbH','UG (haftungsbeschränkt)','AG','GbR','OHG','KG','GmbH & Co. KG','e.K.','e.V.'] as $t)
                 <option value="{{ $t }}" {{ $customer->company_type === $t ? 'selected' : '' }}>{{ $t }}</option>
@@ -262,13 +262,13 @@
     @if(!$hasPortalAccess)
     <div class="field">
         <label>Echte E-Mail-Adresse eingeben (aktiviert Portal-Zugang)</label>
-        <input type="email" name="portal_email" placeholder="kunde@beispiel.de">
+        <input type="email" name="portal_email" placeholder="kunde@beispiel.de" aria-label="Echte E-Mail-Adresse eingeben (aktiviert Portal-Zugang)">
         <div style="font-size:11px;color:var(--ink-soft);margin-top:4px;">Nach dem Speichern wird automatisch eine Einladungs-E-Mail an den Kunden gesendet.</div>
     </div>
     @endif
     <div class="field">
         <label>Neues Passwort setzen (optional)</label>
-        <input type="password" name="new_password" placeholder="Leer lassen = kein Wechsel">
+        <input type="password" name="new_password" placeholder="Leer lassen = kein Wechsel" aria-label="Neues Passwort setzen (optional)">
     </div>
 </div>
 

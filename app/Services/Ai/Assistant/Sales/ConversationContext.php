@@ -131,7 +131,14 @@ class ConversationContext
             // Sensible Felder gelten als vorhanden, wenn sie in der Akte
             // stehen - der Wert selbst verlaesst die Akte nicht.
             'birthdate' => $this->customer->birth_date ? 'liegt vor' : null,
-            'email' => $this->customer->email ?: null,
+            // Die Adresse liegt am BENUTZER, nicht an der Kundenakte
+            // ($customer->email gibt es nicht - der Ausdruck war immer
+            // leer, der Assistent fragte also auch bei hinterlegter
+            // Adresse erneut danach). Der interne Platzhalter
+            // @dienstly24.internal zaehlt nicht als Adresse.
+            'email' => ($this->customer->user?->hasRealEmail() || ($this->customer->email2 ?? '') !== '')
+                ? 'liegt vor'
+                : null,
         ], fn ($v) => $v !== null && $v !== '');
     }
 }

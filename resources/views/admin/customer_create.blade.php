@@ -2,7 +2,7 @@
 @section('content')
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.customers') }}">Kunden</a><span class="breadcrumb-sep">›</span><span>Neu</span></div>
-    <div class="page-title">Neuen Kunden erstellen</div>
+    <h1 class="page-title">Neuen Kunden erstellen</h1>
 </div>
 
 <form method="POST" action="{{ route('admin.customers.store') }}">
@@ -20,17 +20,17 @@
 <div class="card" style="max-width:800px;">
     <div class="card-title" style="margin-bottom:20px;">Persönliche Daten</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Vorname *</label><input type="text" name="first_name" required value="{{ old('first_name') }}" placeholder="Max"></div>
-        <div class="field"><label>Nachname *</label><input type="text" name="last_name" required value="{{ old('last_name') }}" placeholder="Mustermann"></div>
+        <div class="field"><label>Vorname *</label><input type="text" name="first_name" required value="{{ old('first_name') }}" placeholder="Max" aria-label="Vorname"></div>
+        <div class="field"><label>Nachname *</label><input type="text" name="last_name" required value="{{ old('last_name') }}" placeholder="Mustermann" aria-label="Nachname"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Geburtsdatum</label><input type="date" name="birth_date" value="{{ old('birth_date') }}"></div>
-        <div class="field"><label>Telefon</label><input type="tel" name="phone" value="{{ old('phone') }}" placeholder="+49 40 ..."></div>
+        <div class="field"><label>Geburtsdatum</label><input type="date" name="birth_date" value="{{ old('birth_date') }}" aria-label="Geburtsdatum"></div>
+        <div class="field"><label>Telefon</label><input type="tel" name="phone" value="{{ old('phone') }}" placeholder="+49 40 ..." aria-label="Telefon"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Mobil</label><input type="tel" name="mobile" value="{{ old('mobile') }}" placeholder="+49 176 ..."></div>
+        <div class="field"><label>Mobil</label><input type="tel" name="mobile" value="{{ old('mobile') }}" placeholder="+49 176 ..." aria-label="Mobil"></div>
                 <div class="field"><label>Geschlecht</label>
-            <select name="gender" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+            <select name="gender" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Geschlecht">
                 <option value="">— Nicht angegeben —</option>
                 @foreach(\App\Models\Customer::GENDERS as $gkey => $glabel)
                 <option value="{{ $gkey }}" >{{ $glabel }}</option>
@@ -38,7 +38,7 @@
             </select>
         </div>
         <div class="field"><label>Familienstand</label>
-            <select name="marital_status" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+            <select name="marital_status" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Familienstand">
                 <option value="">—</option>
                 <option value="ledig">Ledig</option>
                 <option value="verheiratet">Verheiratet</option>
@@ -51,16 +51,16 @@
 
 <div class="card" style="max-width:800px;">
     <div class="card-title" style="margin-bottom:20px;">Kontakt & Adresse</div>
-    <div class="field"><label>E-Mail</label><input type="email" name="email" value="{{ old('email') }}" placeholder="max@beispiel.de (optional – leer lassen, wenn nicht bekannt)"></div>
+    <div class="field"><label>E-Mail</label><input type="email" name="email" value="{{ old('email') }}" placeholder="max@beispiel.de (optional – leer lassen, wenn nicht bekannt)" aria-label="E-Mail"></div>
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;">
-        <div class="field"><label>Straße</label><input type="text" name="street" value="{{ old('street') }}" placeholder="Musterstraße"></div>
-        <div class="field"><label>Hausnummer</label><input type="text" name="street_nr" value="{{ old('street_nr') }}" placeholder="12"></div>
+        <div class="field"><label>Straße</label><input type="text" name="street" value="{{ old('street') }}" placeholder="Musterstraße" aria-label="Straße"></div>
+        <div class="field"><label>Hausnummer</label><input type="text" name="street_nr" value="{{ old('street_nr') }}" placeholder="12" aria-label="Hausnummer"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 2fr 1fr;gap:16px;">
-        <div class="field"><label>PLZ</label><input type="text" name="plz" value="{{ old('plz') }}" placeholder="20095"></div>
-        <div class="field"><label>Ort</label><input type="text" name="city" value="{{ old('city') }}" placeholder="Hamburg"></div>
+        <div class="field"><label>PLZ</label><input type="text" name="plz" value="{{ old('plz') }}" placeholder="20095" aria-label="PLZ"></div>
+        <div class="field"><label>Ort</label><input type="text" name="city" value="{{ old('city') }}" placeholder="Hamburg" aria-label="Ort"></div>
         <div class="field"><label>Land</label>
-            <select name="country" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+            <select name="country" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Land">
                 <option value="Deutschland" selected>Deutschland</option>
                 <option value="Österreich">Österreich</option>
                 <option value="Schweiz">Schweiz</option>
@@ -75,9 +75,9 @@
         <span style="font-size:11.5px;background:#EAF2FB;color:#185FA5;border:1px solid #CFE2F5;padding:3px 10px;border-radius:999px;">🔐 Verschlüsselt gespeichert</span>
     </div>
     <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:16px;">
-        <div class="field"><label>IBAN</label><input type="text" name="iban" value="{{ old('iban') }}" placeholder="DE89 3704 0044 0532 0130 00"></div>
-        <div class="field"><label>Kontoinhaber</label><input type="text" name="account_holder" value="{{ old('account_holder') }}" placeholder="Abweichend vom Kunden?"></div>
-        <div class="field"><label>BIC</label><input type="text" name="bic" value="{{ old('bic') }}" placeholder="Optional"></div>
+        <div class="field"><label>IBAN</label><input type="text" name="iban" value="{{ old('iban') }}" placeholder="DE89 3704 0044 0532 0130 00" aria-label="IBAN"></div>
+        <div class="field"><label>Kontoinhaber</label><input type="text" name="account_holder" value="{{ old('account_holder') }}" placeholder="Abweichend vom Kunden?" aria-label="Kontoinhaber"></div>
+        <div class="field"><label>BIC</label><input type="text" name="bic" value="{{ old('bic') }}" placeholder="Optional" aria-label="BIC"></div>
     </div>
 </div>
 
@@ -86,30 +86,30 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div class="field">
             <label>Passwort (optional)</label>
-            <input type="password" name="password" placeholder="Leer lassen = Startpasswort-Flow">
+            <input type="password" name="password" placeholder="Leer lassen = Startpasswort-Flow" aria-label="Passwort (optional)">
             <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">
                 Leer lassen: Der Kunde erhält sein <strong>Geburtsdatum (TT.MM.JJJJ)</strong> als Startpasswort
                 bzw. ohne Geburtsdatum einen Link zum Selbst-Festlegen – inkl. Einladungs-Mail mit Anleitung.
             </div>
         </div>
         <div class="field"><label>Sprache</label>
-            <select name="preferred_lang" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+            <select name="preferred_lang" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Sprache">
                 <option value="de">Deutsch</option>
                 <option value="ar">Arabisch</option>
             </select>
         </div>
     </div>
     <div class="field"><label>Kundentyp *</label>
-        <select name="customer_type" data-h-change="f76832bcf4" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+        <select name="customer_type" data-h-change="f76832bcf4" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Kundentyp">
             <option value="privat">👤 Privatkunde</option>
             <option value="firma">🏢 Gewerbe / Firma</option>
         </select>
     </div>
     <div id="firma-fields" style="display:none;">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="field"><label>Firmenname</label><input type="text" name="company_name" placeholder="Firmenname GmbH"></div>
+            <div class="field"><label>Firmenname</label><input type="text" name="company_name" placeholder="Firmenname GmbH" aria-label="Firmenname"></div>
             <div class="field"><label>Rechtsform</label>
-                <select name="company_type" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                <select name="company_type" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Rechtsform">
                     <option value="">—</option>
                     <option>Einzelunternehmen</option><option>GmbH</option><option>UG (haftungsbeschränkt)</option><option>AG</option><option>GbR</option><option>OHG</option><option>KG</option><option>GmbH &amp; Co. KG</option><option>e.K.</option><option>e.V.</option>
                 </select>
@@ -127,7 +127,7 @@
         Wer hat diesen Kunden geworben? Grundlage für den Neukunden-Bericht und die Provisions-Abrechnung.
     </div>
     <div class="field" style="max-width:360px;margin:0;"><label>Geworben von</label>
-        <select name="werber" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+        <select name="werber" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Geworben von">
             <option value="">— Kein Werber —</option>
             <optgroup label="Mitarbeiter">
                 @foreach(\App\Models\User::whereIn('role', ['admin','manager','support','employee'])->orderBy('name')->get() as $e)

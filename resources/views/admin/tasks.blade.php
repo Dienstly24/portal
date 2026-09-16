@@ -34,7 +34,7 @@
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Aufgaben</span></div>
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-        <div class="page-title">Aufgaben</div>
+        <h1 class="page-title">Aufgaben</h1>
         <button data-h-click="e98173f7fb" class="btn btn-emerald">+ Aufgabe erstellen</button>
     </div>
 </div>
@@ -64,7 +64,7 @@
         @if($tab !== 'done')
         <div>
             <label style="font-size:12px;color:var(--ink-soft);display:block;margin-bottom:4px;font-weight:600;">Status</label>
-            <select name="status" data-h-change="df663d9750" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-width:130px;">
+            <select name="status" data-h-change="df663d9750" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-width:130px;" aria-label="Status">
                 <option value="">Alle</option>
                 <option value="open" {{ request('status')==='open'?'selected':'' }}>Offen</option>
                 <option value="in_progress" {{ request('status')==='in_progress'?'selected':'' }}>In Bearbeitung</option>
@@ -73,7 +73,7 @@
         @endif
         <div>
             <label style="font-size:12px;color:var(--ink-soft);display:block;margin-bottom:4px;font-weight:600;">Aufgabentyp</label>
-            <select name="type" data-h-change="df663d9750" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-width:140px;">
+            <select name="type" data-h-change="df663d9750" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-width:140px;" aria-label="Aufgabentyp">
                 <option value="">Alle</option>
                 @foreach(\App\Models\Task::TYPES as $tKey => $tDef)
                 <option value="{{ $tKey }}" {{ request('type')===$tKey?'selected':'' }}>{{ $tDef['icon'] }} {{ $tDef['label'] }}</option>
@@ -96,7 +96,7 @@
         <div>
             <label style="font-size:12px;color:var(--ink-soft);display:block;margin-bottom:4px;font-weight:600;">Suche</label>
             <input type="text" name="q" value="{{ request('q') }}" placeholder="Titel, Kunde, Nummer…"
-                style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-width:190px;background:#fff;">
+                style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-width:190px;background:#fff;" aria-label="Suche">
         </div>
         @if(request()->hasAny(['status','type','due','q','customer']) && (request('status') || request('type') || request('due') || request('q') || request('customer')))
         <a href="{{ route('admin.tasks', ['tab'=>$tab]) }}" style="font-size:12.5px;color:var(--ink-soft);padding:9px 4px;">✕ Filter zurücksetzen</a>
@@ -230,18 +230,18 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
             <input type="hidden" name="edit" value="1" id="tf-edit" disabled>
             <input type="hidden" name="_task_id" value="" id="tf-task-id" disabled>
 
-            <div class="field"><label>Titel *</label><input type="text" name="title" id="tf-title" required maxlength="200" placeholder="Was ist zu tun? z. B. „Kunde nachfassen: Angebot KFZ&#8220;"></div>
+            <div class="field"><label>Titel *</label><input type="text" name="title" id="tf-title" required maxlength="200" placeholder="Was ist zu tun? z. B. „Kunde nachfassen: Angebot KFZ&#8220;" aria-label="Titel"></div>
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
                 <div class="field"><label>Typ</label>
-                    <select name="type" id="tf-type">
+                    <select name="type" id="tf-type" aria-label="Typ">
                         @foreach(\App\Models\Task::TYPES as $tKey => $tDef)
                         <option value="{{ $tKey }}">{{ $tDef['icon'] }} {{ $tDef['label'] }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="field"><label>Priorität</label>
-                    <select name="priority" id="tf-priority">
+                    <select name="priority" id="tf-priority" aria-label="Priorität">
                         <option value="medium">Mittel</option>
                         <option value="high">Hoch</option>
                         <option value="low">Niedrig</option>
@@ -251,7 +251,7 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
 
             <div class="field" style="margin-bottom:10px;"><label>Fällig am</label>
                 <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                    <input type="date" name="due_date" id="tf-due" style="width:170px;" data-h-change="abdcfeee46">
+                    <input type="date" name="due_date" id="tf-due" aria-label="Fällig am" style="width:170px;" data-h-change="abdcfeee46">
                     <div style="display:flex;gap:6px;flex-wrap:wrap;" id="tf-due-chips">
                         @foreach([0=>'Heute',1=>'Morgen',3=>'+3 Tage',7=>'+1 Woche',10=>'+10 Tage',20=>'+20 Tage',30=>'+1 Monat'] as $d=>$lbl)
                         <button type="button" class="due-chip" data-days="{{ $d }}" data-h-click="task-faellig" data-tage="{{ $d }}"
@@ -263,7 +263,7 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
             </div>
 
             <div class="field"><label>Zuweisen an *</label>
-                <select name="assigned_to" id="tf-assigned" required>
+                <select name="assigned_to" id="tf-assigned" required aria-label="Zuweisen an">
                     @foreach($staff as $u)
                     <option value="{{ $u->id }}" {{ $u->id === auth()->id() ? 'selected' : '' }}>{{ $u->name }}</option>
                     @endforeach
@@ -280,7 +280,7 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
                     </span>
                     <button type="button" data-h-click="607c69ec0a" style="border:none;background:none;cursor:pointer;color:var(--ink-soft);font-size:15px;" title="Kunde entfernen">✕</button>
                 </div>
-                <input type="text" id="tk-search" autocomplete="off" placeholder="Kunde suchen: Name, Nummer, E-Mail, Firma, Kennzeichen…">
+                <input type="text" id="tk-search" autocomplete="off" placeholder="Kunde suchen: Name, Nummer, E-Mail, Firma, Kennzeichen…" aria-label="Kunde suchen: Name, Nummer, E-Mail, Firma, Kennzeichen">
                 <div id="tk-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);max-height:280px;overflow-y:auto;z-index:50;margin-top:4px;"></div>
                 <input type="hidden" name="customer_id" id="tf-customer-id">
             </div>
@@ -295,7 +295,7 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
                 <div id="tf-ae-fields" style="display:none;margin-top:12px;">
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
                         <div class="field" style="margin-bottom:12px;"><label>Vorlage</label>
-                            <select id="tf-ae-template" data-h-change="13317bb20f">
+                            <select id="tf-ae-template" data-h-change="13317bb20f" aria-label="Vorlage">
                                 <option value="">– Frei schreiben –</option>
                                 @foreach($templates as $tpl)
                                 <option value="{{ $tpl->id }}">{{ $tpl->name }}</option>
@@ -304,13 +304,13 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
                         </div>
                         <div class="field" style="margin-bottom:12px;"><label>Senden am *</label>
                             <div style="display:flex;gap:6px;align-items:center;">
-                                <input type="date" name="auto_email_send_on" id="tf-ae-date" style="flex:1;">
+                                <input type="date" name="auto_email_send_on" id="tf-ae-date" aria-label="E-Mail senden am" style="flex:1;">
                                 <button type="button" data-h-click="2e2af50239" title="Sendetermin = Fälligkeitstag" style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 10px;font-size:12px;cursor:pointer;white-space:nowrap;">= Fällig am</button>
                             </div>
                         </div>
                     </div>
-                    <div class="field" style="margin-bottom:12px;"><label>Betreff *</label><input type="text" name="auto_email_subject" id="tf-ae-subject" maxlength="200" placeholder="z. B. Kurze Erinnerung: Ihre Unterlagen"></div>
-                    <div class="field" style="margin-bottom:8px;"><label>E-Mail-Text *</label><textarea name="auto_email_body" id="tf-ae-body" style="min-height:130px;" placeholder="{{ $mustache('anrede') }},&#10;&#10;…"></textarea></div>
+                    <div class="field" style="margin-bottom:12px;"><label>Betreff *</label><input type="text" name="auto_email_subject" id="tf-ae-subject" maxlength="200" placeholder="z. B. Kurze Erinnerung: Ihre Unterlagen" aria-label="Betreff"></div>
+                    <div class="field" style="margin-bottom:8px;"><label>E-Mail-Text *</label><textarea name="auto_email_body" id="tf-ae-body" style="min-height:130px;" placeholder="{{ $mustache('anrede') }},&#10;&#10;…" aria-label=",&#10;&#10;"></textarea></div>
                     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
                         <span class="muted-2xs">Platzhalter:</span>
                         @foreach($placeholders as $ph => $phLabel)
@@ -325,7 +325,7 @@ $typeDef = \App\Models\Task::TYPES[$t->type] ?? ['label'=>ucfirst($t->type),'ico
             <div id="tf-ae-unavailable" style="display:none;background:var(--canvas);color:var(--ink-soft);border-radius:10px;padding:11px 14px;font-size:12.5px;margin-bottom:16px;">ℹ️ Automatische E-Mail nicht möglich: Der ausgewählte Kunde hat keine echte E-Mail-Adresse.</div>
             @endif
 
-            <div class="field"><label>Beschreibung</label><textarea name="description" id="tf-description" maxlength="5000" placeholder="Details zur Aufgabe…" style="min-height:80px;"></textarea></div>
+            <div class="field"><label>Beschreibung</label><textarea name="description" id="tf-description" maxlength="5000" placeholder="Details zur Aufgabe…" style="min-height:80px;" aria-label="Beschreibung"></textarea></div>
 
             <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
                 <button type="button" data-h-click="d085771a23" class="btn btn-ghost">Abbrechen</button>

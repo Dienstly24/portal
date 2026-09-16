@@ -13,7 +13,7 @@
 
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Systemzustand</span></div>
-    <div class="page-title">Systemzustand</div>
+    <h1 class="page-title">Systemzustand</h1>
     <div class="page-sub">Laeuft im Hintergrund noch alles? Diese Seite fuehrt keine Aktion aus.</div>
 </div>
 

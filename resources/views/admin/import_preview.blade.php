@@ -2,7 +2,7 @@
 @section('content')
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.import_export') }}">Import / Export</a><span class="breadcrumb-sep">›</span><span>Vorschau</span></div>
-    <div class="page-title">Import-Vorschau</div>
+    <h1 class="page-title">Import-Vorschau</h1>
     <div class="page-sub">Datei <strong>{{ $filename }}</strong> — bitte pruefen, bevor die Kunden angelegt werden. Es wurde noch <strong>nichts</strong> gespeichert.</div>
 </div>
 

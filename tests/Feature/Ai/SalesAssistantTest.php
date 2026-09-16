@@ -421,10 +421,12 @@ class SalesAssistantTest extends TestCase
 
     public function test_werkzeug_gibt_keine_pruefpunkte_an_das_modell(): void
     {
+        // Die E-Mail haengt am BENUTZER, nicht an der Kundenakte - frueher
+        // stand sie hier faelschlich unter den Kunden-Attributen und fiel
+        // still weg (Fund der statischen Analyse, Audit 15.09.2026).
         $customer = $this->makeCustomer([
             'iban' => 'DE02120300000000202051',
             'birth_date' => '1990-05-12',
-            'email' => 'kunde@example.de',
         ]);
 
         $context = $this->context($customer);
@@ -436,7 +438,7 @@ class SalesAssistantTest extends TestCase
             'full_name' => 'Abdulwahab Ibrahim',
             'iban' => 'DE02120300000000202051',
             'birthdate' => '12.05.1990',
-            'email' => 'kunde@example.de',
+            'email' => $customer->user->email,
         ]);
 
         $ergebnis = $this->tool('submitContractData', [], $context);

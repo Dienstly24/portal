@@ -3,7 +3,7 @@
 
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Kanäle</span></div>
-    <div class="page-title">Kanäle</div>
+    <h1 class="page-title">Kanäle</h1>
     <div class="page-sub">
         Anbindungen, Geschäftskonten und KI-Betriebsart. Zugangsdaten werden verschlüsselt
         gespeichert und nie wieder angezeigt — nur „gesetzt“ oder „fehlt“.
@@ -178,7 +178,7 @@
                                 @endif
                             </label>
                             <input type="password" name="credentials[access_token]" id="token{{ $account->id }}"
-                                   autocomplete="new-password" placeholder="leer lassen = unverändert">
+                                   autocomplete="new-password" placeholder="leer lassen = unverändert" aria-label="leer lassen = unverändert">
                             <div class="feld-hinweis">
                                 @if($account->tokenExpired() || $account->tokenExpiresSoon())
                                     gültig bis {{ $account->token_expires_at->lokal()->format('d.m.Y') }}
@@ -251,7 +251,7 @@
                     <div class="field">
                         <label for="neuName{{ $channel->id }}">Name</label>
                         <input type="text" name="name" id="neuName{{ $channel->id }}" required
-                               maxlength="120" placeholder="z. B. Geschäfts-Nummer 1">
+                               maxlength="120" placeholder="z. B. Geschäfts-Nummer 1" aria-label="z. B. Geschäfts-Nummer 1">
                     </div>
                     <div class="field">
                         <label for="neuExt{{ $channel->id }}">Kennung der Plattform</label>

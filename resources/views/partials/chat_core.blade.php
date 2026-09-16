@@ -124,13 +124,31 @@ window.D24Chat = (function () {
 
     // Polling: alle N Sekunden Feed holen; markRead() sagt, ob der Chat
     // gerade sichtbar ist (dann Gegenseite-Nachrichten als gelesen markieren).
+    // NUR DAS NEUE HOLEN (Audit 15.09.2026).
+    //
+    // Vorher lieferte jeder Abruf den KOMPLETTEN Verlauf - alle zehn
+    // Sekunden, je offenem Chat. Der Server schickt jetzt einen Stand
+    // ('cursor') mit, den der naechste Abruf als ?seit= zurueckgibt;
+    // zurueck kommt nur, was sich seither geaendert hat.
+    //
+    // sync() ist dabei unveraendert: es erkennt bereits vorhandene
+    // Nachrichten an ihrer ID. Eine doppelt gelieferte Nachricht (die
+    // Ueberlappung des Servers) haengt es deshalb kein zweites Mal an.
     function poll(o) {
+        let cursor = null;
         function tick() {
             if (document.hidden) return;
-            const url = o.url + ((o.markRead && o.markRead()) ? '?mark_read=1' : '');
+            const p = [];
+            if (o.markRead && o.markRead()) p.push('mark_read=1');
+            if (cursor) p.push('seit=' + encodeURIComponent(cursor));
+            const url = o.url + (p.length ? '?' + p.join('&') : '');
             fetch(url, { headers: { 'Accept': 'application/json' } })
                 .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
                 .then(function (d) {
+                    // Erst NACH der erfolgreichen Antwort weiterstellen -
+                    // bei einem Abbruch bliebe sonst eine Luecke im
+                    // Verlauf, die kein spaeterer Abruf mehr schliesst.
+                    if (d.cursor) cursor = d.cursor;
                     const added = sync(o.list, d.messages);
                     if (added) o.scroller.scrollTop = o.scroller.scrollHeight;
                     if (o.onData) o.onData(d);

@@ -3,7 +3,7 @@
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Dokumentenanfragen</span></div>
     <div>
-        <div class="page-title">Dokumentenanfragen</div>
+        <h1 class="page-title">Dokumentenanfragen</h1>
         <div class="page-sub">Von Kunden hochgeladene Dokumente prüfen und offene Anfragen im Blick behalten.</div>
     </div>
 </div>
@@ -37,7 +37,7 @@
                 <form method="POST" action="{{ route('admin.document_requests.reject', $req->id) }}" style="display:flex;gap:8px;">
                     @csrf
                     <input type="text" name="rejection_note" required maxlength="1000" placeholder="Grund für Zurückweisung"
-                        style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;width:220px;font-size:13px;">
+                        style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;width:220px;font-size:13px;" aria-label="Grund für Zurückweisung">
                     <button type="submit" class="btn btn-ghost btn-sm">Zurückweisen</button>
                 </form>
             </div>

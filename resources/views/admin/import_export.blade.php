@@ -2,7 +2,7 @@
 @section('content')
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Import / Export</span></div>
-    <div class="page-title">Import / Export</div>
+    <h1 class="page-title">Import / Export</h1>
     <div class="page-sub">Kundendaten importieren oder exportieren.</div>
 </div>
 

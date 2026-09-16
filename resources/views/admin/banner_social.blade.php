@@ -9,7 +9,7 @@
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.banners') }}">Banner</a><span class="breadcrumb-sep">›</span><span>Social-Media</span></div>
     <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
         <div>
-            <div class="page-title">📣 Social-Media-Publishing</div>
+            <h1 class="page-title">📣 Social-Media-Publishing</h1>
             <div class="page-sub">Einmal vorbereiten, überall posten: fertige Bildformate, Beitragstexte (DE/AR) und messbare Tracking-Links für Facebook, Instagram und TikTok.</div>
         </div>
         <a href="{{ route('admin.banners.stats') }}" class="btn btn-ghost">📊 Statistik-Dashboard</a>
@@ -48,17 +48,17 @@
         <div class="grid-2">
             <div class="field">
                 <label>Beitragstext Deutsch</label>
-                <textarea name="caption_de" rows="6" maxlength="3000" placeholder="Text für den Beitrag – z. B. Angebot, Nutzen, Aufruf. Der Tracking-Link wird unten je Plattform bereitgestellt.">{{ old('caption_de', $post?->caption_de) }}</textarea>
+                <textarea name="caption_de" rows="6" maxlength="3000" placeholder="Text für den Beitrag – z. B. Angebot, Nutzen, Aufruf. Der Tracking-Link wird unten je Plattform bereitgestellt." aria-label="Beitragstext Deutsch">{{ old('caption_de', $post?->caption_de) }}</textarea>
             </div>
             <div class="field">
                 <label>Beitragstext Arabisch</label>
-                <textarea name="caption_ar" rows="6" maxlength="3000" dir="rtl" placeholder="النص العربي للمنشور">{{ old('caption_ar', $post?->caption_ar) }}</textarea>
+                <textarea name="caption_ar" rows="6" maxlength="3000" dir="rtl" placeholder="النص العربي للمنشور" aria-label="Beitragstext Arabisch">{{ old('caption_ar', $post?->caption_ar) }}</textarea>
             </div>
         </div>
         <div class="grid-2">
             <div class="field">
                 <label>Klick-Ziel (öffentliche Seite) *empfohlen</label>
-                <input type="text" name="target_url" value="{{ old('target_url', $post?->target_url) }}" placeholder="https://www.dienstly24.de/leistungen/strom">
+                <input type="text" name="target_url" value="{{ old('target_url', $post?->target_url) }}" placeholder="https://www.dienstly24.de/leistungen/strom" aria-label="Klick-Ziel (öffentliche Seite) *empfohlen">
                 <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">Muss öffentlich erreichbar sein (https://…) – Portal-interne Links liegen hinter dem Login. Ohne Angabe führt der Tracking-Link auf die Startseite.</div>
             </div>
             <div class="field">

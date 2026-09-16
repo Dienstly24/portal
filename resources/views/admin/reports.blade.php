@@ -1,4 +1,12 @@
 @extends('layouts.admin')
+@push('charts')
+{{-- Diese Seite zeichnet ein Diagramm - deshalb wird Chart.js hier
+     ausdruecklich angefordert (Audit 15.09.2026). Es liegt lokal
+     (DSGVO: keine Besucher-IP an ein CDN) und laedt nur noch auf den
+     fuenf Seiten, die es wirklich brauchen. --}}
+<script src="/js/chart.umd.min.js"></script>
+@endpush
+
 @section('content')
 {{--
   BERICHTE & ANALYSEN (Betreiber-Auftrag 06.09.2026).
@@ -27,7 +35,7 @@
 <div class="page-header an-head">
     <div>
         <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Berichte &amp; Analysen</span></div>
-        <div class="page-title">Berichte &amp; Analysen</div>
+        <h1 class="page-title">Berichte &amp; Analysen</h1>
         <div class="page-sub">Leistungskennzahlen, Vertragsentwicklung und Kundenanalyse</div>
     </div>
     <div style="display:flex;gap:8px;">

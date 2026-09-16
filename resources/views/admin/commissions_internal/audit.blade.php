@@ -2,7 +2,7 @@
 @section('content')
 @include('admin.partials.provision_styles')
 <div class="page-header">
-    <div class="page-title">📋 Protokoll der Provisionen</div>
+    <h1 class="page-title">📋 Protokoll der Provisionen</h1>
     <div class="page-sub">
         Jeder Upload, Import, jede Änderung, Zahlung und Rechnungsverknüpfung.
         <b>Rein lesend</b> – aus der Oberfläche lässt sich hier nichts löschen.
@@ -15,11 +15,11 @@
     <form method="GET" action="{{ route('admin.commissions_internal.audit') }}" style="display:flex;gap:12px;flex-wrap:wrap;align-items:end;">
         <div class="field" style="margin:0;min-width:220px;">
             <label>Suche (Vertragsnummer, Datei, Benutzer)</label>
-            <input type="text" name="q" value="{{ $filters['q'] ?? '' }}">
+            <input type="text" name="q" value="{{ $filters['q'] ?? '' }}" aria-label="Suche (Vertragsnummer, Datei, Benutzer)">
         </div>
         <div class="field" style="margin:0;min-width:220px;">
             <label>Vorgang</label>
-            <select name="aktion">
+            <select name="aktion" aria-label="Vorgang">
                 <option value="">Alle</option>
                 @foreach($actions as $key => $label)
                 <option value="{{ $key }}" @selected(($filters['aktion'] ?? '') === $key)>{{ $label }}</option>

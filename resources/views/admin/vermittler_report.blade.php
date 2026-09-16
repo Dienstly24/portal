@@ -2,7 +2,7 @@
 @section('content')
 @include('admin.partials.provision_styles')
 <div class="page-header">
-    <div class="page-title">Auswertung der Vermittler-Abrechnung</div>
+    <h1 class="page-title">Auswertung der Vermittler-Abrechnung</h1>
     <div class="page-sub">Welche Produkte tragen sich? Und wie zuverlässig rechnet der Vermittler ab?</div>
 </div>
 

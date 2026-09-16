@@ -2,7 +2,7 @@
 @section('content')
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.provisions') }}">Vermittler-Provisionen</a><span class="breadcrumb-sep">›</span><span>Dashboard</span></div>
-    <div class="page-title">Leistungs-Dashboard</div>
+    <h1 class="page-title">Leistungs-Dashboard</h1>
     <div class="page-sub">Verträge, Provisionen und Produktivität auf einen Blick - nur für die Verwaltung.</div>
 </div>
 

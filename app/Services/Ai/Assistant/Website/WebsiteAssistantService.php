@@ -3,6 +3,7 @@
 namespace App\Services\Ai\Assistant\Website;
 
 use App\Models\AiLead;
+use App\Services\Ai\Assistant\AssistantBudget;
 use App\Services\Ai\Assistant\AssistantReplies;
 use App\Services\Ai\Assistant\AssistantScopeGuard;
 use App\Services\Ai\Assistant\AssistantSettings;
@@ -34,6 +35,7 @@ class WebsiteAssistantService
         private LeadToolRegistry $tools,
         private LeadService $leads,
         private LanguageDetector $languageDetector,
+        private AssistantBudget $budget,
     ) {
     }
 
@@ -64,6 +66,32 @@ class WebsiteAssistantService
         if (! $this->provider->isEnabled()) {
             return $this->handOver($lead, 'frage', $language, AssistantReplies::FALLBACK);
         }
+
+        // KOSTENBREMSE (Audit 15.09.2026) - erst hier, NACH dem
+        // kostenlosen Vorfilter und VOR dem ersten Modellaufruf.
+        //
+        // Der Website-Assistent ist der einzige oeffentliche, nicht
+        // angemeldete Weg zum Modell. Ohne Grenze sind 20 Anfragen je
+        // Minute und IP rund 28.800 Modellaufrufe am Tag - und mit
+        // wechselnden Adressen beliebig viele. Die Route-Drossel allein
+        // kann das nicht verhindern, weil sie je IP zaehlt.
+        //
+        // Ist eine Grenze erreicht, wird NICHT stillschweigend
+        // abgebrochen: es greift derselbe Weg wie bei einer Stoerung -
+        // ehrliche Antwort an den Besucher und Uebergabe an das Team.
+        // Der Kontakt geht also nie verloren, nur der Modellaufruf
+        // entfaellt.
+        if ($this->budget->ueberschritten(
+            AssistantBudget::BEREICH_WEBSITE,
+            (string) $lead->getKey()
+        ) !== null) {
+            return $this->handOver($lead, 'grenze_erreicht', $language, AssistantReplies::HANDOVER);
+        }
+
+        $this->budget->verbrauchen(
+            AssistantBudget::BEREICH_WEBSITE,
+            (string) $lead->getKey()
+        );
 
         $lead->appendTranscript('besucher', $message);
         $context = new LeadContext($lead, $language);
@@ -101,7 +129,10 @@ class WebsiteAssistantService
                 (new WebsitePrompt)->build($lead, $language),
                 $history,
                 $schemas,
-                (int) config('services.ai_assistant.max_output_tokens', 700),
+                // Antwortlaenge des Website-Assistenten eigens gedeckelt
+                // (Audit 15.09.2026): Ausgabe-Tokens sind der teuerste
+                // Teil eines Aufrufs, und eine Erstauskunft ist kurz.
+                (int) config('services.ai_assistant.website_max_output_tokens', 500),
             );
 
             if (! $turn->wantsTools()) {

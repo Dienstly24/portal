@@ -71,7 +71,7 @@
             @csrf
             <div class="field codeinput">
                 <input id="code" type="text" name="code" required autofocus inputmode="numeric"
-                       autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" placeholder="000000">
+                       autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" placeholder="000000" aria-label="000000">
             </div>
             <button type="submit" class="btn">{{ __('Einrichtung abschließen') }} <span>{{ $rtl ? '←' : '→' }}</span></button>
         </form>

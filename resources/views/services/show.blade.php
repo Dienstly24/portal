@@ -25,36 +25,14 @@
 <meta property="og:title" content="{{ $page->t('title') }} – Dienstly24">
 @if($page->t('meta_description'))<meta property="og:description" content="{{ $page->t('meta_description') }}">@endif
 <meta property="og:url" content="{{ \App\Support\WebsiteHosts::url($rtl ? '/ar' . $sPath : $sPath) }}">
-<script type="application/ld+json" @cspNonce>
-{!! json_encode([
-    '@context' => 'https://schema.org',
-    '@type' => 'Service',
-    'name' => $page->t('title'),
-    'serviceType' => $page->t('title'),
-    'description' => $page->t('meta_description') ?: $page->t('subtitle'),
-    'areaServed' => ['@type' => 'Country', 'name' => 'Deutschland'],
-    'provider' => [
-        '@type' => 'InsuranceAgency',
-        'name' => 'Dienstly24',
-        'url' => url('/'),
-        'telephone' => '+49-179-9673909',
-        'address' => ['@type' => 'PostalAddress', 'streetAddress' => 'Furtweg 51a', 'postalCode' => '22523', 'addressLocality' => 'Hamburg', 'addressCountry' => 'DE'],
-    ],
-], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}
-</script>
-@if(count($faq))
-<script type="application/ld+json" @cspNonce>
-{!! json_encode([
-    '@context' => 'https://schema.org',
-    '@type' => 'FAQPage',
-    'mainEntity' => collect($faq)->map(fn ($f) => [
-        '@type' => 'Question',
-        'name' => $f['q'],
-        'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f['a']],
-    ])->all(),
-], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}
-</script>
-@endif
+{{-- Strukturierte Daten: Aufbau in App\Services\Seo\StructuredData.
+     NICHT als Array hierher zurueckholen - Blade wuerde den Schluessel
+     "at-context" als eigene Direktive kompilieren und PHP-Quelltext ins
+     HTML schreiben (Audit 15.09.2026). --}}
+{!! \App\Services\Seo\StructuredData::script(\App\Services\Seo\StructuredData::service($page)) !!}
+{!! \App\Services\Seo\StructuredData::script(\App\Services\Seo\StructuredData::faqPage(
+    collect($faq)->map(fn ($f) => [$f['q'] ?? null, $f['a'] ?? null])->all()
+)) !!}
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 <style>
 /* Marke: resources/css/brand.css (UX-1). Lokal bleiben nur die dunklen
@@ -208,36 +186,43 @@ label{display:block;font-size:13px;margin-bottom:7px;color:#cfd5cf;font-weight:5
                     @csrf
                     <input type="text" name="website" value="" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
 
-                    <div class="field"><label>{{ __('Name') }} *</label>
-                        <input type="text" name="name" required value="{{ old('name') }}"></div>
+                    {{-- for/id statt aria-label (Audit 15.09.2026): die
+                         Beschriftungen sind ECHT und uebersetzt - sie
+                         gehoeren mit dem Feld verbunden, nicht durch einen
+                         zweiten, fest verdrahteten Text ersetzt. Vorher
+                         hatte das oeffentliche Anfrageformular acht Felder
+                         ohne Namen; mit einer Bildschirmlesehilfe war es
+                         praktisch nicht ausfuellbar. --}}
+                    <div class="field"><label for="anfrage-name">{{ __('Name') }} *</label>
+                        <input type="text" id="anfrage-name" name="name" required value="{{ old('name') }}"></div>
 
                     <div class="grid2">
-                        <div class="field"><label>{{ __('E-Mail') }}</label>
-                            <input type="email" name="email" value="{{ old('email') }}"></div>
-                        <div class="field"><label>{{ __('Telefon') }}</label>
-                            <input type="tel" name="phone" value="{{ old('phone') }}"></div>
+                        <div class="field"><label for="anfrage-email">{{ __('E-Mail') }}</label>
+                            <input type="email" id="anfrage-email" name="email" value="{{ old('email') }}"></div>
+                        <div class="field"><label for="anfrage-telefon">{{ __('Telefon') }}</label>
+                            <input type="tel" id="anfrage-telefon" name="phone" value="{{ old('phone') }}"></div>
                     </div>
 
                     @foreach($customFields as $i => $f)
                         <div class="field">
-                            <label>{{ $f['label'] }}@if($f['required']) *@endif</label>
+                            <label for="anfrage-custom-{{ $i }}">{{ $f['label'] }}@if($f['required']) *@endif</label>
                             @if($f['type'] === 'textarea')
-                                <textarea name="custom[{{ $i }}]" rows="3" @if($f['required']) required @endif>{{ old("custom.$i") }}</textarea>
+                                <textarea id="anfrage-custom-{{ $i }}" name="custom[{{ $i }}]" rows="3" @if($f['required']) required @endif>{{ old("custom.$i") }}</textarea>
                             @elseif($f['type'] === 'select')
-                                <select name="custom[{{ $i }}]" @if($f['required']) required @endif>
+                                <select id="anfrage-custom-{{ $i }}" name="custom[{{ $i }}]" @if($f['required']) required @endif>
                                     <option value="">{{ __('— Bitte wählen —') }}</option>
                                     @foreach($f['options'] as $opt)
                                         <option value="{{ $opt }}" @selected(old("custom.$i") === $opt)>{{ $opt }}</option>
                                     @endforeach
                                 </select>
                             @else
-                                <input type="{{ $f['type'] }}" name="custom[{{ $i }}]" value="{{ old("custom.$i") }}" @if($f['required']) required @endif>
+                                <input type="{{ $f['type'] }}" id="anfrage-custom-{{ $i }}" name="custom[{{ $i }}]" value="{{ old("custom.$i") }}" @if($f['required']) required @endif>
                             @endif
                         </div>
                     @endforeach
 
-                    <div class="field"><label>{{ __('Ihre Nachricht') }}</label>
-                        <textarea name="message" rows="4">{{ old('message') }}</textarea></div>
+                    <div class="field"><label for="anfrage-nachricht">{{ __('Ihre Nachricht') }}</label>
+                        <textarea id="anfrage-nachricht" name="message" rows="4">{{ old('message') }}</textarea></div>
 
                     <div class="consent">
                         <input type="checkbox" name="consent" value="1" id="consent" required>

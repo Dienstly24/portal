@@ -15,6 +15,20 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
+/**
+ * Spalten aus einer BEDINGTEN Migration (sie legt sie nur an, wenn sie
+ * fehlen) - die statische Analyse kann sie dort nicht ablesen und haelt
+ * sie sonst faelschlich fuer undefiniert. Hier stehen sie deshalb
+ * ausdruecklich; die Liste ist keine zweite Wahrheit, sondern die
+ * Beschreibung derselben Spalten aus
+ * database/migrations/2026_07_07_100001_create_customer_extra_tables.php.
+ *
+ * @property string|null $last_contact
+ * @property string|null $email2
+ * @property string|null $address2
+ * @property string|null $nationality
+ * @property string|null $occupation
+ */
 class Customer extends Model
 {
     protected $keyType = 'string';
@@ -178,6 +192,45 @@ class Customer extends Model
     /** Query-Scope-Variante von isMarketingReachable() für Massenversand. */
     public function scopeMarketingReachable($query) {
         return $query->where('marketing_consent', true)->whereNull('unsubscribed_at');
+    }
+
+    /**
+     * Die Kunden, die ein Mitarbeiter sehen darf - als QUERY.
+     *
+     * Der Spiegel von User::canAccessCustomer() auf der Datenbankseite:
+     * dieselbe Regel, nur einmal als PHP-Frage ("darf ich diesen einen?")
+     * und einmal als Bedingung ("welche darf ich?"). Beide muessen
+     * dieselbe Menge meinen - stehen sie als getrennte Kopien im Code,
+     * laufen sie auseinander (genau das ist mit dem Kundenchat passiert,
+     * Audit 15.09.2026).
+     *
+     * whereExists STATT whereIn (Audit 15.09.2026): die frueher benutzte
+     * Liste aller Kunden-IDs waechst mit dem Portfolio. Ein Mitarbeiter
+     * mit 5.000 Kunden erzeugte damit auf JEDER Seite der Beraterwelt
+     * eine IN-Bedingung mit 5.000 UUIDs - erst gelesen, dann als Text in
+     * die Abfrage geschrieben. Die EXISTS-Bedingung laesst dieselbe
+     * Frage in der Datenbank und trifft dort den vorhandenen Index
+     * employee_customers(user_id, customer_id).
+     *
+     * `null` als Nutzer heisst "niemand" und liefert bewusst NICHTS -
+     * eine fehlende Anmeldung darf nie den gesamten Bestand oeffnen.
+     */
+    public function scopeVisibleTo($query, ?User $user) {
+        if (! $user || ! $user->isStaff()) {
+            return $query->whereRaw('1 = 0');
+        }
+        if ($user->canSeeAllCustomers()) {
+            return $query;
+        }
+
+        $betreuer = $user->visibleOwnerIds();
+
+        return $query->whereExists(function ($sub) use ($betreuer) {
+            $sub->selectRaw('1')
+                ->from('employee_customers')
+                ->whereColumn('employee_customers.customer_id', 'customers.id')
+                ->whereIn('employee_customers.user_id', $betreuer);
+        });
     }
 
     /**

@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 @section('content')
 <div class="page-header">
-    <div class="page-title">🔄 Kundenänderungen</div>
+    <h1 class="page-title">🔄 Kundenänderungen</h1>
     <div class="page-sub">Self-Service-Anfragen prüfen, genehmigen oder ablehnen. Daten werden erst nach Genehmigung übernommen. Nachweise werden automatisch gegen die beantragten Angaben geprüft.</div>
 </div>
 
@@ -164,7 +164,7 @@ $fmt = fn($v) => $valueLabels[$v] ?? $v;
                     <button type="button" data-fill-target="ask-body-{{ $r->id }}" data-fill-value="{{ $text }}" class="btn btn-ghost" style="font-size:11px;padding:4px 9px;">{{ $label }}</button>
                     @endforeach
                 </div>
-                <textarea name="body" id="ask-body-{{ $r->id }}" required maxlength="2000" placeholder="Frage an den Kunden …" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-height:70px;font-family:inherit;resize:vertical;"></textarea>
+                <textarea name="body" id="ask-body-{{ $r->id }}" required maxlength="2000" placeholder="Frage an den Kunden …" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-height:70px;font-family:inherit;resize:vertical;" aria-label="Frage an den Kunden"></textarea>
                 <button type="submit" class="btn btn-primary" style="width:100%;margin-top:6px;font-size:12.5px;">Senden & Chat öffnen</button>
             </form>
 
@@ -173,7 +173,7 @@ $fmt = fn($v) => $valueLabels[$v] ?? $v;
                 @csrf
                 <div class="field" style="margin-bottom:10px;">
                     <label style="font-size:12px;">Notiz (optional, bei Ablehnung sichtbar für den Kunden)</label>
-                    <textarea name="notes" maxlength="1000" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-height:60px;font-family:inherit;resize:vertical;"></textarea>
+                    <textarea name="notes" maxlength="1000" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-height:60px;font-family:inherit;resize:vertical;" aria-label="Notiz (optional, bei Ablehnung sichtbar für den Kunden)"></textarea>
                 </div>
                 @if(in_array($r->proof_status, ['mismatch', 'missing'], true))
                 <div style="font-size:12px;color:#A32D2D;margin-bottom:8px;">⚠️ {{ $r->proof_status === 'missing' ? 'Es liegt kein Nachweis vor.' : 'Der Nachweis passt nicht zu den beantragten Angaben.' }} Bitte vor einer Freigabe klären.</div>

@@ -2,7 +2,7 @@
 @section('content')
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.provisions') }}">Vermittler-Provisionen</a><span class="breadcrumb-sep">›</span><span>Sätze</span></div>
-    <div class="page-title">Provisions-Sätze</div>
+    <h1 class="page-title">Provisions-Sätze</h1>
     <div class="page-sub">Je Mitarbeiter und Partner ein eigener Satz pro Sparte - neue Verträge werden damit automatisch vergütet. Ohne Satz keine automatische Buchung.</div>
 </div>
 

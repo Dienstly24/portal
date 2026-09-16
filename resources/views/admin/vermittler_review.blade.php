@@ -2,7 +2,7 @@
 @section('content')
 @include('admin.partials.provision_styles')
 <div class="page-header">
-    <div class="page-title">Prüfliste der Vermittler-Abrechnung</div>
+    <h1 class="page-title">Prüfliste der Vermittler-Abrechnung</h1>
     <div class="page-sub">Alles, was sich nicht eindeutig zuordnen ließ. Jede Zeile braucht eine Entscheidung – automatisch wird hier nichts verknüpft.</div>
 </div>
 
@@ -52,7 +52,7 @@
                             @csrf
                             <input type="hidden" name="contract_id" id="cid-{{ $row->id }}">
                             <input type="text" class="vm-search" data-target="{{ $row->id }}" autocomplete="off"
-                                placeholder="Kunde, Vertragsnummer, Referenz…" style="width:100%;">
+                                placeholder="Kunde, Vertragsnummer, Referenz…" style="width:100%;" aria-label="Kunde, Vertragsnummer, Referenz">
                             <div class="vm-results" id="res-{{ $row->id }}" style="font-size:11.5px;margin-top:4px;"></div>
                             <button type="submit" class="btn btn-primary" style="margin-top:6px;" disabled id="btn-{{ $row->id }}">Zuordnen</button>
                         </form>

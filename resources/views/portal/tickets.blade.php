@@ -1,7 +1,7 @@
 @extends('layouts.portal')
 @section('content')
 <div class="toolbar">
-    <div><div class="page-title">{{ __('Anfragen') }}</div><div class="page-sub">{{ __('Stellen Sie eine Anfrage oder verfolgen Sie den Status.') }}</div></div>
+    <div><h1 class="page-title">{{ __('Anfragen') }}</h1><div class="page-sub">{{ __('Stellen Sie eine Anfrage oder verfolgen Sie den Status.') }}</div></div>
     <a href="{{ route('portal.tickets.create') }}" class="btn btn-emerald">+ {{ __('Neue Anfrage') }}</a>
 </div>
 <div class="card">

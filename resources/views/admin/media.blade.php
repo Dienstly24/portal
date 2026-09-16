@@ -12,7 +12,7 @@
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Medien</span></div>
     <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
         <div>
-            <div class="page-title">Medienverwaltung Website</div>
+            <h1 class="page-title">Medienverwaltung Website</h1>
             <div class="page-sub">Bild hochladen → Platz (Slot) wählen → Alt-Texte eintragen → speichern: sofort live auf www.dienstly24.de. Ohne FTP, ohne Code. Jedes Bild wird automatisch verkleinert (AVIF/WebP/JPG, drei Größen, je &lt; 200 KB).</div>
         </div>
         <div style="text-align:right;font-size:12.5px;color:var(--ink-soft);">
@@ -34,12 +34,12 @@
             <div style="font-weight:600;margin-top:6px;">Dateien hierher ziehen oder klicken</div>
             <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">JPG, PNG, WebP, SVG · max. 10 MB je Datei · mehrere Dateien möglich (bei Slot-Zuweisung genau eine)</div>
             <div id="dropFiles" style="font-size:12.5px;font-weight:600;color:var(--ink);margin-top:8px;"></div>
-            <input type="file" name="files[]" id="fileInput" multiple accept=".jpg,.jpeg,.png,.webp,.svg" style="display:none;">
+            <input type="file" name="files[]" id="fileInput" multiple aria-label="Bilder zum Hochladen auswählen" accept=".jpg,.jpeg,.png,.webp,.svg" style="display:none;">
         </div>
         <div class="grid-2">
             <div class="field">
                 <label>Platz auf der Website (Slot, optional)</label>
-                <select name="slot">
+                <select name="slot" aria-label="Platz auf der Website (Slot, optional)">
                     <option value="">— nur in Bibliothek ablegen —</option>
                     @foreach($assignableSlots as $key => $slot)
                         <option value="{{ $key }}" @selected(old('slot') === $key)>{{ $slot['label'] }} {{ isset($slotUsage[$key]) ? '(belegt – wird ersetzt)' : '(frei)' }}</option>
@@ -47,13 +47,13 @@
                 </select>
                 <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">Bei Zuweisung wandert das bisherige Slot-Bild automatisch ins Archiv (nichts wird gelöscht).</div>
             </div>
-            <div class="field"><label>Titel (optional, sonst Dateiname)</label><input type="text" name="title" value="{{ old('title') }}" maxlength="150"></div>
+            <div class="field"><label>Titel (optional, sonst Dateiname)</label><input type="text" name="title" value="{{ old('title') }}" maxlength="150" aria-label="Titel (optional, sonst Dateiname)"></div>
         </div>
         <div class="grid-2">
-            <div class="field"><label>Alt-Text Deutsch * <span style="font-weight:400;color:var(--ink-soft);">(Pflicht – Barrierefreiheit/SEO)</span></label><input type="text" name="alt_de" value="{{ old('alt_de') }}" required maxlength="500" placeholder="z. B. Beraterin erklärt Kfz-Versicherung am Tablet"></div>
-            <div class="field"><label>Alt-Text Arabisch * <span style="font-weight:400;color:var(--ink-soft);">(Pflicht)</span></label><input type="text" name="alt_ar" value="{{ old('alt_ar') }}" required maxlength="500" dir="rtl" placeholder="وصف الصورة بالعربية"></div>
+            <div class="field"><label>Alt-Text Deutsch * <span style="font-weight:400;color:var(--ink-soft);">(Pflicht – Barrierefreiheit/SEO)</span></label><input type="text" name="alt_de" value="{{ old('alt_de') }}" required maxlength="500" placeholder="z. B. Beraterin erklärt Kfz-Versicherung am Tablet" aria-label="Alt-Text Deutsch * (Pflicht – Barrierefreiheit/SEO)"></div>
+            <div class="field"><label>Alt-Text Arabisch * <span style="font-weight:400;color:var(--ink-soft);">(Pflicht)</span></label><input type="text" name="alt_ar" value="{{ old('alt_ar') }}" required maxlength="500" dir="rtl" placeholder="وصف الصورة بالعربية" aria-label="Alt-Text Arabisch * (Pflicht)"></div>
         </div>
-        <div class="field"><label>Bildnachweis (optional, z. B. „Foto: Pexels/…“)</label><input type="text" name="credit" value="{{ old('credit') }}" maxlength="500"></div>
+        <div class="field"><label>Bildnachweis (optional, z. B. „Foto: Pexels/…“)</label><input type="text" name="credit" value="{{ old('credit') }}" maxlength="500" aria-label="Bildnachweis (optional, z. B. „Foto: Pexels/…“)"></div>
         <button type="submit" class="btn btn-primary" id="uploadBtn">Hochladen & speichern</button>
         <span id="uploadHint" style="display:none;font-size:12.5px;color:var(--ink-soft);margin-inline-start:10px;">⏳ Bilder werden verarbeitet …</span>
     </form>
@@ -77,8 +77,8 @@
 <div class="card">
     <div class="card-title">🗂️ Bibliothek</div>
     <form method="GET" action="{{ route('admin.media') }}" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
-        <input type="text" name="q" value="{{ $q }}" placeholder="Suche: Titel, Dateiname, Alt-Text" style="max-width:280px;">
-        <select name="slot" data-h-change="b8b2b5ce91">
+        <input type="text" name="q" value="{{ $q }}" placeholder="Suche: Titel, Dateiname, Alt-Text" style="max-width:280px;" aria-label="Suche: Titel, Dateiname, Alt-Text">
+        <select name="slot" aria-label="Nach Slot filtern" data-h-change="b8b2b5ce91">
             <option value="">Alle Slots</option>
             @foreach($slots as $key => $slot)<option value="{{ $key }}" @selected($slotFilter === $key)>{{ $slot['label'] }}</option>@endforeach
         </select>
@@ -116,10 +116,10 @@
                         <summary style="cursor:pointer;font-weight:600;">Bearbeiten / Slot</summary>
                         <form method="POST" action="{{ route('admin.media.update', $asset) }}" style="margin-top:8px;">
                             @csrf @method('PUT')
-                            <div class="field"><label>Titel *</label><input type="text" name="title" value="{{ $asset->title }}" required maxlength="150"></div>
-                            <div class="field"><label>Alt DE *</label><input type="text" name="alt_de" value="{{ $asset->alt_de }}" required maxlength="500"></div>
-                            <div class="field"><label>Alt AR *</label><input type="text" name="alt_ar" value="{{ $asset->alt_ar }}" required maxlength="500" dir="rtl"></div>
-                            <div class="field"><label>Bildnachweis</label><input type="text" name="credit" value="{{ $asset->credit }}" maxlength="500"></div>
+                            <div class="field"><label>Titel *</label><input type="text" name="title" value="{{ $asset->title }}" required maxlength="150" aria-label="Titel"></div>
+                            <div class="field"><label>Alt DE *</label><input type="text" name="alt_de" value="{{ $asset->alt_de }}" required maxlength="500" aria-label="Alt DE"></div>
+                            <div class="field"><label>Alt AR *</label><input type="text" name="alt_ar" value="{{ $asset->alt_ar }}" required maxlength="500" dir="rtl" aria-label="Alt AR"></div>
+                            <div class="field"><label>Bildnachweis</label><input type="text" name="credit" value="{{ $asset->credit }}" maxlength="500" aria-label="Bildnachweis"></div>
                             <div class="field"><label>Slot</label>
                                 @if($asset->slot && !array_key_exists($asset->slot, $assignableSlots))
                                     {{-- Marken-Platz: nur Administration/Leitung darf ihn aendern --}}
@@ -137,7 +137,7 @@
                         </form>
                         <form method="POST" action="{{ route('admin.media.replace', $asset) }}" enctype="multipart/form-data" style="margin-top:10px;border-top:1px solid var(--line,#eee);padding-top:8px;">
                             @csrf
-                            <div class="field"><label>Ersetzen (neue Datei, Slot + Alt-Texte werden übernommen)</label><input type="file" name="file" accept=".jpg,.jpeg,.png,.webp,.svg" required></div>
+                            <div class="field"><label>Ersetzen (neue Datei, Slot + Alt-Texte werden übernommen)</label><input type="file" name="file" accept=".jpg,.jpeg,.png,.webp,.svg" required aria-label="Ersetzen (neue Datei, Slot + Alt-Texte werden übernommen)"></div>
                             <button type="submit" class="btn btn-ghost" style="padding:7px 14px;font-size:12.5px;">Ersetzen</button>
                         </form>
                         @if($isManager)

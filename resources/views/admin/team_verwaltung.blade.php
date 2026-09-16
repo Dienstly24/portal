@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 @section('content')
-<div class="page-title">Team-Verwaltung</div>
+<h1 class="page-title">Team-Verwaltung</h1>
 <div class="page-sub">Bestandsuebertragung und Vertretungen verwalten.</div>
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;">
@@ -12,7 +12,7 @@
             @csrf
             <div class="field">
                 <label>Von Mitarbeiter</label>
-                <select name="from_employee" required>
+                <select name="from_employee" required aria-label="Von Mitarbeiter">
                     <option value="">&mdash; waehlen &mdash;</option>
                     @foreach($employees as $e)
                     <option value="{{ $e->id }}">{{ $e->name }} ({{ $e->assigned_customers_count }} Kunden){{ !$e->is_active ? ' - deaktiviert' : '' }}</option>
@@ -21,14 +21,14 @@
             </div>
             <div class="field">
                 <label>An Mitarbeiter</label>
-                <select name="to_employee" required>
+                <select name="to_employee" required aria-label="An Mitarbeiter">
                     <option value="">&mdash; waehlen &mdash;</option>
                     @foreach($employees->where('is_active', true) as $e)
                     <option value="{{ $e->id }}">{{ $e->name }}</option>
                     @endforeach
                 </select>
             </div>
-            <div class="field"><label>Grund (Pflicht)</label><input type="text" name="reason" required placeholder="z.B. Mitarbeiter ausgeschieden"></div>
+            <div class="field"><label>Grund (Pflicht)</label><input type="text" name="reason" required placeholder="z.B. Mitarbeiter ausgeschieden" aria-label="Grund (Pflicht)"></div>
             <button type="submit" class="btn btn-primary">Bestand uebertragen</button>
         </form>
     </div>
@@ -40,7 +40,7 @@
             @csrf
             <div class="field">
                 <label>Abwesender Mitarbeiter</label>
-                <select name="absent_user_id" required>
+                <select name="absent_user_id" required aria-label="Abwesender Mitarbeiter">
                     <option value="">&mdash; waehlen &mdash;</option>
                     @foreach($employees as $e)
                     <option value="{{ $e->id }}">{{ $e->name }}</option>
@@ -49,7 +49,7 @@
             </div>
             <div class="field">
                 <label>Vertreten durch</label>
-                <select name="substitute_user_id" required>
+                <select name="substitute_user_id" required aria-label="Vertreten durch">
                     <option value="">&mdash; waehlen &mdash;</option>
                     @foreach($employees->where('is_active', true) as $e)
                     <option value="{{ $e->id }}">{{ $e->name }}</option>
@@ -57,10 +57,10 @@
                 </select>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                <div class="field"><label>Von</label><input type="date" name="from_date" required></div>
-                <div class="field"><label>Bis</label><input type="date" name="to_date" required></div>
+                <div class="field"><label>Von</label><input type="date" name="from_date" required aria-label="Von"></div>
+                <div class="field"><label>Bis</label><input type="date" name="to_date" required aria-label="Bis"></div>
             </div>
-            <div class="field"><label>Grund (optional)</label><input type="text" name="reason" placeholder="z.B. Urlaub"></div>
+            <div class="field"><label>Grund (optional)</label><input type="text" name="reason" placeholder="z.B. Urlaub" aria-label="Grund (optional)"></div>
             <button type="submit" class="btn btn-primary">Vertretung einrichten</button>
         </form>
 

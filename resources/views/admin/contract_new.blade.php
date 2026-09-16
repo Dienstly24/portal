@@ -2,7 +2,7 @@
 @section('content')
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.contracts') }}">Verträge</a><span class="breadcrumb-sep">›</span><span>Neu anlegen</span></div>
-    <div class="page-title">Vertrag anlegen</div>
+    <h1 class="page-title">Vertrag anlegen</h1>
 </div>
 
 @if($errors->any())
@@ -20,7 +20,7 @@
         <label style="font-weight:700;font-size:15px;">Versicherungsnehmer *</label>
         <div style="position:relative;">
             <input type="text" id="customer-search" placeholder="Kundendaten durchsuchen" data-h-input="82f5c2602a" autocomplete="off"
-                style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#fff;">
+                style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#fff;" aria-label="Kundendaten durchsuchen">
             <div id="customer-dropdown" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:8px;margin-top:4px;max-height:200px;overflow-y:auto;z-index:50;display:none;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
         </div>
         <input type="hidden" name="customer_id_selected" id="customer_id_selected">

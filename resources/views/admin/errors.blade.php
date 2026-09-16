@@ -5,7 +5,7 @@
         <a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span>
         <a href="{{ route('admin.system_health') }}">Systemzustand</a><span class="breadcrumb-sep">›</span><span>Fehler</span>
     </div>
-    <div class="page-title">Fehler</div>
+    <h1 class="page-title">Fehler</h1>
     <div class="page-sub">Was im Betrieb wirklich kaputtgeht – zusammengefasst, nicht jedes Auftreten einzeln.</div>
 </div>
 

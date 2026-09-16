@@ -7,7 +7,7 @@
         <a href="{{ route('admin.customers') }}">Kunden</a><span class="breadcrumb-sep">›</span>
         <span>Kinder werden 15</span>
     </div>
-    <div class="page-title">👧 Kinder werden 15</div>
+    <h1 class="page-title">👧 Kinder werden 15</h1>
     <div class="page-sub">
         Familienmitglieder mit bevorstehender Verselbstständigung – sortiert nach verbleibender Zeit.
         Mit dem 15. Geburtstag wird aus dem abhängigen Familienmitglied automatisch ein eigenständiger Kunde.
@@ -24,7 +24,7 @@
     <form method="GET" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
         <div class="field" style="margin:0;">
             <label style="font-size:12px;">Vorlaufzeit</label>
-            <select name="vorlauf" style="padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+            <select name="vorlauf" style="padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="Vorlaufzeit">
                 @foreach(\App\Services\Family\FamilyRelationService::LEAD_MONTH_CHOICES as $monate)
                 <option value="{{ $monate }}" {{ $leadMonths === $monate ? 'selected' : '' }}>{{ $monate }} Monate vor dem 15. Geburtstag</option>
                 @endforeach

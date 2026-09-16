@@ -2,7 +2,7 @@
 @section('content')
 <div class="toolbar">
     <div>
-        <div class="page-title">{{ __('🏠 Meine Adressen') }}</div>
+        <h1 class="page-title">{{ __('🏠 Meine Adressen') }}</h1>
         <div class="page-sub" style="margin-bottom:0;">{{ __('Adressen hinzufügen oder Änderungen beantragen – Änderungen werden geprüft.') }}</div>
     </div>
     <button data-h-click="da03196f68" class="btn btn-emerald">{{ __('+ Adresse hinzufügen') }}</button>

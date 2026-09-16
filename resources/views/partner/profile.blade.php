@@ -1,6 +1,6 @@
 @extends('layouts.partner')
 @section('content')
-<div class="page-title">Firmenprofil</div>
+<h1 class="page-title">Firmenprofil</h1>
 <div class="page-sub">Ihr Logo erscheint oben links in Ihrem Partnerportal.</div>
 
 <div class="card" style="max-width:560px;">
@@ -21,7 +21,7 @@
         @csrf
         <div class="field">
             <label>Neues Logo (PNG/JPG/WebP, max. 2 MB)</label>
-            <input type="file" name="logo" accept="image/png,image/jpeg,image/webp" required>
+            <input type="file" name="logo" accept="image/png,image/jpeg,image/webp" required aria-label="Neues Logo (PNG/JPG/WebP, max. 2 MB)">
         </div>
         <button type="submit" class="btn btn-primary">Logo speichern</button>
     </form>

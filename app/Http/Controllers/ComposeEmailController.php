@@ -121,7 +121,7 @@ class ComposeEmailController extends Controller
      * Stammdaten und die letzten Interaktionen (Nachrichten, Anfragen,
      * Historie) - damit der Mitarbeiter den Zusammenhang sofort sieht.
      */
-    public function customerContext($customerId)
+    public function customerContext(string $customerId)
     {
         $this->authorizeCompose();
         abort_unless(auth()->user()->canAccessCustomer($customerId), 403);

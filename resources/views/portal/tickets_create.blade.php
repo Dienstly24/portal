@@ -1,13 +1,13 @@
 @extends('layouts.portal')
 @section('content')
-<div class="page-title">{{ __('Neue Anfrage') }}</div>
+<h1 class="page-title">{{ __('Neue Anfrage') }}</h1>
 <div class="page-sub">{{ __('Beschreiben Sie Ihr Anliegen.') }}</div>
 <div class="card">
     <form method="POST" action="{{ route('portal.tickets.store') }}" enctype="multipart/form-data">
         @csrf
         <div class="field">
             <label>{{ __('Art der Anfrage') }}</label>
-            <select name="type" required>
+            <select name="type" required aria-label="{{ __('Art der Anfrage') }}">
                 <option value="damage">{{ __('Schaden melden') }}</option>
                 <option value="change">{{ __('Vertragsänderung') }}</option>
                 <option value="offer">{{ __('Neues Angebot anfragen') }}</option>
@@ -19,7 +19,7 @@
         </div>
         <div class="field">
             <label>{{ __('Dringlichkeit') }}</label>
-            <select name="priority" required>
+            <select name="priority" required aria-label="{{ __('Dringlichkeit') }}">
                 <option value="niedrig">🟢 {{ __('Niedrig') }}</option>
                 <option value="mittel" selected>🟡 {{ __('Mittel') }}</option>
                 <option value="hoch">🔴 {{ __('Hoch') }}</option>
@@ -27,15 +27,15 @@
         </div>
         <div class="field">
             <label>{{ __('Betreff') }}</label>
-            <input type="text" name="subject" required placeholder="{{ __('Kurze Zusammenfassung') }}">
+            <input type="text" name="subject" required placeholder="{{ __('Kurze Zusammenfassung') }}" aria-label="{{ __('Betreff') }}">
         </div>
         <div class="field">
             <label>{{ __('Beschreibung') }}</label>
-            <textarea name="description" required placeholder="{{ __('Beschreiben Sie Ihr Anliegen...') }}"></textarea>
+            <textarea name="description" required placeholder="{{ __('Beschreiben Sie Ihr Anliegen...') }}" aria-label="{{ __('Beschreibung') }}"></textarea>
         </div>
         <div class="field">
             <label>{{ __('Anhänge (optional)') }}</label>
-            <input type="file" name="attachments[]" multiple accept=".pdf,.jpg,.jpeg,.png,.webp">
+            <input type="file" name="attachments[]" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" aria-label="{{ __('Anhänge (optional)') }}">
             <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">{{ __('PDF, JPG, PNG oder WEBP · mehrere Dateien möglich · max. 10 MB pro Datei') }}<br>{{ __('z.B. Versichertenkarte, Unfallfotos, Dokumente') }}</div>
         </div>
         @if ($errors->any())

@@ -23,6 +23,19 @@ class ProcessMediaAssetJob implements ShouldQueue
 
     public int $timeout = 120;
 
+    /**
+     * Genau EIN Versuch (Audit 15.09.2026 - vorher gar keine Angabe).
+     *
+     * Ohne eigene Angabe entscheidet der Worker-Aufruf auf dem Server
+     * (`queue:work --tries=3`), also eine Einstellung, die in diesem
+     * Repository nicht steht. Hier ist ein Wiederholen aber sinnlos:
+     * handle() faengt JEDE Stoerung selbst ab, vermerkt sie am Asset
+     * und kehrt normal zurueck - der Job schlaegt also nie so fehl,
+     * dass ein zweiter Versuch etwas aendern koennte. Und der uebliche
+     * Aufruf ist ohnehin dispatchSync().
+     */
+    public int $tries = 1;
+
     public function __construct(
         public MediaAsset $asset,
         /** Slot, dem das Bild gleich zugewiesen wird - bestimmt Groessen/Formate. */

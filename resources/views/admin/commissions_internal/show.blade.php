@@ -6,7 +6,7 @@
         <a href="{{ route('admin.commissions_internal.index') }}">Interne Provisionen</a><span class="breadcrumb-sep">›</span>
         <span>{{ $commission->internal_contract_number ?: 'Provision' }}</span>
     </div>
-    <div class="page-title">Provision {{ $commission->amountLabel() }}</div>
+    <h1 class="page-title">Provision {{ $commission->amountLabel() }}</h1>
     <div class="page-sub">
         {{ $commission->commission_type ?: 'Provision' }}
         @if($commission->product_name) · {{ $commission->product_name }}@endif
@@ -89,7 +89,7 @@
             <input type="hidden" name="contract_id" id="pc-contract-id">
             <div class="field" style="margin:0;">
                 <label>Vertrag suchen</label>
-                <input type="text" id="pc-search" autocomplete="off" placeholder="Kunde, Vertragsnummer, interne Nummer, Referenz…">
+                <input type="text" id="pc-search" autocomplete="off" placeholder="Kunde, Vertragsnummer, interne Nummer, Referenz…" aria-label="Vertrag suchen">
             </div>
             <div id="pc-results" style="font-size:12px;margin-top:6px;"></div>
             <button type="submit" class="btn btn-primary" id="pc-submit" style="margin-top:10px;" disabled>Zuordnen</button>
@@ -103,14 +103,14 @@
         <form method="POST" action="{{ route('admin.commissions_internal.status', $commission->id) }}">
             @csrf
             <div class="field"><label>Status setzen</label>
-                <select name="status">
+                <select name="status" aria-label="Status setzen">
                     @foreach($statuses as $key => $meta)
                     <option value="{{ $key }}" @selected($commission->status === $key)>{{ $meta['label'] }}</option>
                     @endforeach
                 </select>
             </div>
             <div class="field"><label>Grund (optional, steht im Protokoll)</label>
-                <input type="text" name="grund" maxlength="255">
+                <input type="text" name="grund" maxlength="255" aria-label="Grund (optional, steht im Protokoll)">
             </div>
             <button type="submit" class="btn">Status speichern</button>
         </form>
@@ -119,13 +119,13 @@
             @csrf
             <div class="field"><label>Gezahlter Betrag *</label>
                 <input type="number" step="0.01" min="0" name="betrag"
-                       value="{{ $commission->paid_amount ?? $commission->amount }}" required>
+                       value="{{ $commission->paid_amount ?? $commission->amount }}" required aria-label="Gezahlter Betrag">
             </div>
             <div class="field"><label>Zahlungsdatum *</label>
-                <input type="date" name="zahlungsdatum" value="{{ $commission->payment_date?->format('Y-m-d') ?? now()->format('Y-m-d') }}" required>
+                <input type="date" name="zahlungsdatum" value="{{ $commission->payment_date?->format('Y-m-d') ?? now()->format('Y-m-d') }}" required aria-label="Zahlungsdatum">
             </div>
             <div class="field"><label>Rechnungsnummer (optional)</label>
-                <input type="text" name="rechnungsnummer" maxlength="60" value="{{ $commission->invoice_number }}">
+                <input type="text" name="rechnungsnummer" maxlength="60" value="{{ $commission->invoice_number }}" aria-label="Rechnungsnummer (optional)">
             </div>
             <button type="submit" class="btn btn-primary">Zahlung erfassen</button>
             <div style="font-size:11.5px;color:var(--ink-soft);margin-top:6px;">
@@ -153,9 +153,9 @@
     <form method="POST" action="{{ route('admin.commissions_internal.invoice_link', $commission->id) }}"
           style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end;">
         @csrf
-        <div class="field" style="margin:0;"><label>Rechnungsnummer *</label><input type="text" name="invoice_number" maxlength="60" required></div>
-        <div class="field" style="margin:0;"><label>Rechnungsdatum</label><input type="date" name="invoice_date"></div>
-        <div class="field" style="margin:0;"><label>Rechnungsbetrag</label><input type="number" step="0.01" name="invoice_amount"></div>
+        <div class="field" style="margin:0;"><label>Rechnungsnummer *</label><input type="text" name="invoice_number" maxlength="60" required aria-label="Rechnungsnummer"></div>
+        <div class="field" style="margin:0;"><label>Rechnungsdatum</label><input type="date" name="invoice_date" aria-label="Rechnungsdatum"></div>
+        <div class="field" style="margin:0;"><label>Rechnungsbetrag</label><input type="number" step="0.01" name="invoice_amount" aria-label="Rechnungsbetrag"></div>
         <button type="submit" class="btn">Rechnung verknüpfen</button>
     </form>
     <div style="font-size:11.5px;color:var(--ink-soft);margin-top:8px;">
@@ -170,13 +170,13 @@
         @csrf @method('PUT')
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
             <div class="field" style="margin:0;"><label>Interne Vertragsnummer</label>
-                <input type="text" name="internal_contract_number" maxlength="60" value="{{ $commission->internal_contract_number }}"></div>
+                <input type="text" name="internal_contract_number" maxlength="60" value="{{ $commission->internal_contract_number }}" aria-label="Interne Vertragsnummer"></div>
             <div class="field" style="margin:0;"><label>Provisionsempfänger</label>
-                <input type="text" name="recipient_name" maxlength="190" value="{{ $commission->recipient_name }}"></div>
+                <input type="text" name="recipient_name" maxlength="190" value="{{ $commission->recipient_name }}" aria-label="Provisionsempfänger"></div>
             <div class="field" style="margin:0;"><label>Fälligkeitsdatum</label>
-                <input type="date" name="due_date" value="{{ $commission->due_date?->format('Y-m-d') }}"></div>
+                <input type="date" name="due_date" value="{{ $commission->due_date?->format('Y-m-d') }}" aria-label="Fälligkeitsdatum"></div>
         </div>
-        <div class="field"><label>Interne Notiz</label><textarea name="notes" rows="3" maxlength="5000">{{ $commission->notes }}</textarea></div>
+        <div class="field"><label>Interne Notiz</label><textarea name="notes" rows="3" maxlength="5000" aria-label="Interne Notiz">{{ $commission->notes }}</textarea></div>
         <button type="submit" class="btn">Speichern</button>
     </form>
 </div>

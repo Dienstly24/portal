@@ -26,7 +26,7 @@ $typeConfig = [
 @endphp
 <div class="toolbar">
     <div>
-        <div class="page-title">Kunden</div>
+        <h1 class="page-title">Kunden</h1>
         <div class="page-sub">Alle Kundenakten verwalten.</div>
     </div>
     <div style="display:flex;gap:10px;align-items:center;">
@@ -67,7 +67,7 @@ $typeConfig = [
             <div style="display:flex;gap:8px;">
                 <input type="text" name="q" id="kunden-suche" value="{{ request('q') }}" autocomplete="off"
                     placeholder="Name, Nummer, Telefon, Kennzeichen, Zaehler ..."
-                    style="flex:1;min-width:0;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;background:#fff;">
+                    style="flex:1;min-width:0;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;background:#fff;" aria-label="Name, Nummer, Telefon, Kennzeichen, Zaehler">
                 <button type="submit" class="btn btn-primary btn-sm" title="Suchen">🔍</button>
                 @if(request()->filled('q'))
                 <a href="{{ route('admin.customers', request()->except(['q','page'])) }}" class="btn btn-ghost btn-sm" title="Suche loeschen">✕</a>
@@ -77,7 +77,7 @@ $typeConfig = [
         @if(in_array(auth()->user()->role, ['admin','manager']))
         <div class="flt-group">
             <label class="flt-lbl">Betreuer</label>
-            <select name="betreuer" class="flt-sel" data-h-change="9033f96958">
+            <select name="betreuer" class="flt-sel" data-h-change="9033f96958" aria-label="Betreuer">
                 <option value="">Alle</option>
                 <option value="ohne" {{ request('betreuer') === 'ohne' ? 'selected' : '' }}>— ohne Betreuer —</option>
                 @foreach($employees as $e)
@@ -88,7 +88,7 @@ $typeConfig = [
         @endif
         <div class="flt-group">
             <label class="flt-lbl">Sparte (aktiv)</label>
-            <select name="sparte" class="flt-sel" data-h-change="9033f96958">
+            <select name="sparte" class="flt-sel" data-h-change="9033f96958" aria-label="Sparte (aktiv)">
                 <option value="">Alle Sparten</option>
                 @foreach($sparten as $key => $cfg)
                 <option value="{{ $key }}" {{ request('sparte') === $key ? 'selected' : '' }}>{{ $cfg['icon'] }} {{ $cfg['label'] }}</option>
@@ -97,7 +97,7 @@ $typeConfig = [
         </div>
         <div class="flt-group">
             <label class="flt-lbl">E-Mail</label>
-            <select name="email" class="flt-sel" data-h-change="9033f96958">
+            <select name="email" class="flt-sel" data-h-change="9033f96958" aria-label="E-Mail">
                 <option value="">Alle</option>
                 <option value="mit" {{ request('email')==='mit' ? 'selected' : '' }}>Mit E-Mail</option>
                 <option value="ohne" {{ request('email')==='ohne' ? 'selected' : '' }}>Ohne E-Mail</option>
@@ -105,7 +105,7 @@ $typeConfig = [
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Portal-Status</label>
-            <select name="portal" class="flt-sel" data-h-change="9033f96958">
+            <select name="portal" class="flt-sel" data-h-change="9033f96958" aria-label="Portal-Status">
                 <option value="">Alle</option>
                 @foreach(['kein_account'=>'Kein Portal-Account','passwort_nicht_gesetzt'=>'Passwort nicht gesetzt','einladung_gesendet'=>'Einladung gesendet','aktiviert'=>'Aktiviert - kein Login','erster_login'=>'Aktiv - Login erfolgt','deaktiviert'=>'Deaktiviert'] as $k => $lbl)
                 <option value="{{ $k }}" {{ request('portal')===$k ? 'selected' : '' }}>{{ $lbl }}</option>
@@ -114,7 +114,7 @@ $typeConfig = [
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Vertrag laeuft ab in</label>
-            <select name="ablauf" class="flt-sel" data-h-change="9033f96958">
+            <select name="ablauf" class="flt-sel" data-h-change="9033f96958" aria-label="Vertrag laeuft ab in">
                 <option value="">Egal</option>
                 @foreach(['30'=>'30 Tagen','60'=>'60 Tagen','90'=>'90 Tagen','180'=>'180 Tagen'] as $k => $lbl)
                 <option value="{{ $k }}" {{ request('ablauf')===$k ? 'selected' : '' }}>{{ $lbl }}</option>
@@ -123,7 +123,7 @@ $typeConfig = [
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Letzter Kontakt</label>
-            <select name="kontakt" class="flt-sel" data-h-change="9033f96958">
+            <select name="kontakt" class="flt-sel" data-h-change="9033f96958" aria-label="Letzter Kontakt">
                 <option value="">Egal</option>
                 <option value="nie" {{ request('kontakt')==='nie' ? 'selected' : '' }}>Nie kontaktiert</option>
                 @foreach(['30'=>'vor >30 Tagen','90'=>'vor >90 Tagen','180'=>'vor >180 Tagen','365'=>'vor >1 Jahr'] as $k => $lbl)
@@ -133,7 +133,7 @@ $typeConfig = [
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Sortierung</label>
-            <select name="sort" class="flt-sel" data-h-change="9033f96958">
+            <select name="sort" class="flt-sel" data-h-change="9033f96958" aria-label="Sortierung">
                 @foreach(['neueste'=>'Neueste zuerst','aelteste'=>'Aelteste zuerst','name'=>'Name A-Z','name_desc'=>'Name Z-A','kontakt'=>'Laengster Kontakt'] as $k => $lbl)
                 <option value="{{ $k }}" {{ request('sort','neueste')===$k ? 'selected' : '' }}>{{ $lbl }}</option>
                 @endforeach
@@ -180,13 +180,13 @@ $typeConfig = [
 
 <div id="bulkBar" style="display:none;position:sticky;top:0;z-index:10;background:var(--graphite);color:#fff;border-radius:10px;padding:12px 20px;margin-bottom:12px;align-items:center;gap:14px;flex-wrap:wrap;">
     <span style="font-size:13.5px;font-weight:600;"><span id="bulkCount">0</span> Kunden ausgewaehlt</span>
-    <select name="employee_id" form="bulkForm" required style="padding:8px 12px;border-radius:8px;border:none;font-size:13px;">
+    <select name="employee_id" form="bulkForm" required aria-label="Mitarbeiter für die Sammelzuweisung" style="padding:8px 12px;border-radius:8px;border:none;font-size:13px;">
         <option value="">— Mitarbeiter waehlen —</option>
         @foreach($employees as $e)
         <option value="{{ $e->id }}">{{ $e->name }}</option>
         @endforeach
     </select>
-    <input type="text" name="reason" form="bulkForm" required placeholder="Grund der Zuweisung (Pflicht)" style="padding:8px 12px;border-radius:8px;border:none;font-size:13px;flex:1;min-width:200px;">
+    <input type="text" name="reason" form="bulkForm" required placeholder="Grund der Zuweisung (Pflicht)" style="padding:8px 12px;border-radius:8px;border:none;font-size:13px;flex:1;min-width:200px;" aria-label="Grund der Zuweisung (Pflicht)">
     <label style="font-size:12.5px;display:flex;align-items:center;gap:6px;cursor:pointer;">
         <input type="checkbox" name="replace_existing" value="1" form="bulkForm" style="width:auto;"> Bisherige Betreuer ersetzen
     </label>
@@ -231,14 +231,14 @@ function confirmBulkDelete(form) {
 <div class="card">
     <table>
         <thead><tr>
-            @if(in_array(auth()->user()->role, ['admin','manager']))<th style="width:36px;"><input type="checkbox" id="checkAll" style="width:17px;height:17px;cursor:pointer;accent-color:var(--graphite);"></th>@endif
+            @if(in_array(auth()->user()->role, ['admin','manager']))<th style="width:36px;"><input type="checkbox" id="checkAll" aria-label="Alle Kunden auf dieser Seite auswählen" style="width:17px;height:17px;cursor:pointer;accent-color:var(--graphite);"></th>@endif
             <th>Kunde</th><th>Adresse</th><th>Portal</th><th>Betreuer</th><th>Aktive Verträge</th><th class="num">Aktionen</th>
         </tr></thead>
         <tbody>
         @forelse($customers as $c)
         <tr class="rowLink" data-href="{{ route('admin.customer', $c->id) }}" style="cursor:pointer;">
             @if(in_array(auth()->user()->role, ['admin','manager']))
-            <td class="noNav"><input type="checkbox" class="rowCheck" name="customer_ids[]" value="{{ $c->id }}" form="bulkForm" style="width:17px;height:17px;cursor:pointer;accent-color:var(--graphite);"></td>
+            <td class="noNav"><input type="checkbox" class="rowCheck" name="customer_ids[]" value="{{ $c->id }}" form="bulkForm" aria-label="{{ $c->user?->name ?? 'Kunde' }} auswählen" style="width:17px;height:17px;cursor:pointer;accent-color:var(--graphite);"></td>
             @endif
             <td>
                 <div style="font-weight:600;">{{ $c->user?->name }}</div>
@@ -271,7 +271,7 @@ function confirmBulkDelete(form) {
                             @csrf
                             <label class="flt-lbl">Betreuer für {{ $c->user?->name }}</label>
                             @if($employees->count() > 8)
-                            <input type="text" class="btr-search" placeholder="Mitarbeiter suchen…" autocomplete="off">
+                            <input type="text" class="btr-search" placeholder="Mitarbeiter suchen…" autocomplete="off" aria-label="Mitarbeiter suchen">
                             @endif
                             <div class="btr-list">
                                 @foreach($employees as $e)

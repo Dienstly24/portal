@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 @section('content')
 <div class="page-header">
-    <div class="page-title">💬 Interner Chat</div>
+    <h1 class="page-title">💬 Interner Chat</h1>
     <div class="page-sub">Direkte Kommunikation zwischen Mitarbeitern – getrennt von Kundentickets. Kunden haben keinen Zugriff.</div>
 </div>
 

@@ -2,7 +2,7 @@
 @section('content')
 @include('admin.partials.provision_styles')
 <div class="page-header">
-    <div class="page-title">🤝 Vermittler-Abrechnung</div>
+    <h1 class="page-title">🤝 Vermittler-Abrechnung</h1>
     <div class="page-sub">Abrechnungsdatei des Vermittlers einlesen und mit den erfassten Verträgen abgleichen.</div>
 </div>
 
@@ -62,7 +62,7 @@
         @csrf
         <div class="field" style="max-width:520px;">
             <label>CSV-Datei *</label>
-            <input type="file" name="csv_file" accept=".csv,text/csv,text/plain" required>
+            <input type="file" name="csv_file" accept=".csv,text/csv,text/plain" required aria-label="CSV-Datei">
         </div>
         <label style="display:flex;align-items:flex-start;gap:8px;font-size:12.5px;margin:14px 0 18px;max-width:640px;">
             <input type="checkbox" name="reconcile" value="1" checked style="margin-top:2px;">
@@ -105,7 +105,7 @@
         @csrf
         <div class="field" style="max-width:520px;">
             <label>Datei (CSV, PDF, PNG, JPG) *</label>
-            <input type="file" name="liste_datei" accept=".csv,.txt,.pdf,.png,.jpg,.jpeg,.webp" required>
+            <input type="file" name="liste_datei" accept=".csv,.txt,.pdf,.png,.jpg,.jpeg,.webp" required aria-label="Datei (CSV, PDF, PNG, JPG)">
         </div>
         <button type="submit" class="btn btn-primary" style="margin-top:14px;">Vorgangsliste einlesen</button>
     </form>

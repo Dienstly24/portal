@@ -3,7 +3,7 @@
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.customers') }}">Kunden</a><span class="breadcrumb-sep">›</span><span>Verwandte Kunden</span></div>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-        <div class="page-title">Verwandte Kunden</div>
+        <h1 class="page-title">Verwandte Kunden</h1>
         <a href="{{ route('admin.customers.duplicates') }}" class="btn btn-ghost">← Mögliche Dubletten</a>
     </div>
     <div class="page-sub">Paare, die als „kein Duplikat" markiert wurden – z. B. ein Ehepaar, Familienmitglieder oder ein Haushalt mit gleicher Anschrift/Telefon. Sie sind bewusst KEINE Dubletten, sondern verbundene Kunden: beide Akten bleiben mit allen Verträgen erhalten. Die Beziehungsart lässt sich hier jederzeit als Ehepaar/Familie präzisieren. Ist ein Paar doch dieselbe Person, kann es hier wieder als Dublette freigegeben oder direkt zusammengeführt werden.</div>

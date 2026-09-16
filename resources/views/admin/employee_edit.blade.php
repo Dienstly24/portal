@@ -2,7 +2,7 @@
 @section('content')
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.employees') }}">Mitarbeiter</a><span class="breadcrumb-sep">›</span><span>Bearbeiten</span></div>
-    <div class="page-title">{{ $employee->name }} bearbeiten</div>
+    <h1 class="page-title">{{ $employee->name }} bearbeiten</h1>
 </div>
 
 <form method="POST" action="{{ route('admin.employees.update', $employee->id) }}">
@@ -10,8 +10,8 @@
 
 <div class="card" style="max-width:700px;">
     <div class="card-title" style="margin-bottom:20px;">Persönliche Daten</div>
-    <div class="field"><label>Name *</label><input type="text" name="name" required value="{{ $employee->name }}"></div>
-    <div class="field"><label>E-Mail</label><input type="email" value="{{ $employee->email }}" disabled style="opacity:.6;"></div>
+    <div class="field"><label>Name *</label><input type="text" name="name" required value="{{ $employee->name }}" aria-label="Name"></div>
+    <div class="field"><label>E-Mail</label><input type="email" value="{{ $employee->email }}" disabled style="opacity:.6;" aria-label="E-Mail"></div>
 </div>
 
 <div class="card" style="max-width:700px;">
@@ -62,7 +62,7 @@
 <div id="assignBox">
     <div style="font-size:13px;color:var(--ink-soft);margin-bottom:10px;">Aktuell zugewiesen: <strong id="assignCount">{{ count($assignedIds) }}</strong> Kunden</div>
     <input type="text" id="assignSearch" placeholder="Suche: Name, Nummer, E-Mail, Telefon, Anschrift, Kennzeichen, Zaehler ..." autocomplete="off"
-        style="width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:10px;font-size:14px;margin-bottom:8px;">
+        style="width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:10px;font-size:14px;margin-bottom:8px;" aria-label="Suche: Name, Nummer, E-Mail, Telefon, Anschrift, Kennzeichen, Zaehler">
     <div id="assignResults" style="display:none;border:1px solid var(--line);border-radius:10px;background:#fff;max-height:220px;overflow-y:auto;margin-bottom:12px;"></div>
     <div id="assignSelected" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
 </div>
@@ -178,11 +178,11 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div class="field" style="margin:0;">
             <label>Fester Betrag je Neuvertrag (EUR)</label>
-            <input type="number" name="provision_fixed" step="0.01" min="0" max="99999" value="{{ old('provision_fixed', $employee->provision_fixed) }}" placeholder="z. B. 25,00">
+            <input type="number" name="provision_fixed" step="0.01" min="0" max="99999" value="{{ old('provision_fixed', $employee->provision_fixed) }}" placeholder="z. B. 25,00" aria-label="Fester Betrag je Neuvertrag (EUR)">
         </div>
         <div class="field" style="margin:0;">
             <label>Prozent vom Jahresbeitrag (%)</label>
-            <input type="number" name="provision_percent" step="0.01" min="0" max="100" value="{{ old('provision_percent', $employee->provision_percent) }}" placeholder="z. B. 10">
+            <input type="number" name="provision_percent" step="0.01" min="0" max="100" value="{{ old('provision_percent', $employee->provision_percent) }}" placeholder="z. B. 10" aria-label="Prozent vom Jahresbeitrag (%)">
         </div>
     </div>
 </div>

@@ -2,7 +2,7 @@
 @section('content')
 <div class="toolbar">
     <div>
-        <div class="page-title">Anfragen</div>
+        <h1 class="page-title">Anfragen</h1>
         <div class="page-sub">Leads von der Website (dienstly24.com) und per E-Mail (info@).</div>
     </div>
     <a href="{{ route('admin.inquiries.create') }}" class="btn btn-primary">+ Anfrage erfassen</a>

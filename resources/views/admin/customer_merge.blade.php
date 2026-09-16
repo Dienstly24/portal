@@ -19,7 +19,7 @@ $labels = [
 @endphp
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.customers') }}">Kunden</a><span class="breadcrumb-sep">›</span><span>Zusammenführen</span></div>
-    <div class="page-title">Kunden zusammenführen</div>
+    <h1 class="page-title">Kunden zusammenführen</h1>
 </div>
 <div class="card" style="max-width:680px;">
     <div style="background:#FEF3C7;border-radius:8px;padding:14px 18px;margin-bottom:20px;font-size:13.5px;color:#92400E;line-height:1.6;">
@@ -52,7 +52,7 @@ $labels = [
                 <input type="text" id="dup-search" autocomplete="off"
                     placeholder="Name, Kundennummer, Telefon oder Anschrift"
                     value="{{ $suggested ? trim(($suggested->user?->name ?? '') . ' · ' . $suggested->customer_number) : '' }}"
-                    style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#fff;">
+                    style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#fff;" aria-label="Name, Kundennummer, Telefon oder Anschrift">
                 <div id="dup-dropdown" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:8px;margin-top:4px;max-height:220px;overflow-y:auto;z-index:50;display:none;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
             </div>
             <input type="hidden" name="duplicate_id" id="dup-id" value="{{ $suggested->id ?? '' }}" required>

@@ -2,7 +2,7 @@
 @section('content')
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.employees') }}">Mitarbeiter</a><span class="breadcrumb-sep">›</span><span>Neu</span></div>
-    <div class="page-title">Neuer Mitarbeiter</div>
+    <h1 class="page-title">Neuer Mitarbeiter</h1>
 </div>
 
 <form method="POST" action="{{ route('admin.employees.store') }}">
@@ -10,8 +10,8 @@
 <div class="card" style="max-width:700px;">
     <div class="card-title" style="margin-bottom:20px;">Persönliche Daten</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Name *</label><input type="text" name="name" required placeholder="Max Mustermann"></div>
-        <div class="field"><label>E-Mail *</label><input type="email" name="email" required placeholder="max@dienstly24.de"></div>
+        <div class="field"><label>Name *</label><input type="text" name="name" required placeholder="Max Mustermann" aria-label="Name"></div>
+        <div class="field"><label>E-Mail *</label><input type="email" name="email" required placeholder="max@dienstly24.de" aria-label="E-Mail"></div>
     </div>
     {{--
         Kein Passwort-Feld mehr (Betreiber-Vorgabe 18.08.2026): Der neue

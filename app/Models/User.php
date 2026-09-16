@@ -4,12 +4,14 @@ namespace App\Models;
 
 use App\Mail\PasswordResetMail;
 use App\Services\Matching\DuplicateDetectionService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
 class User extends Authenticatable
@@ -94,20 +96,56 @@ class User extends Authenticatable
         return in_array($this->role, ['admin', 'manager']) || (bool) $this->can_see_all_customers;
     }
 
-    /** Eigene Kunden + Kunden von Kollegen, die man aktuell vertritt */
-    public function visibleCustomerIdsWithSubstitution(): array {
-        $ids = $this->assignedCustomers()->pluck('customers.id')->toArray();
-        $absentIds = Substitution::active()
+    /**
+     * Die Mitarbeiter, deren Portfolio dieser Nutzer gerade sieht:
+     * er selbst plus jeder Kollege, den er aktuell VERTRITT.
+     *
+     * EINE Abfrage (Audit 15.09.2026). Vorher lief hier ein User::find()
+     * JE abwesendem Kollegen und danach je Kollege eine weitere Abfrage
+     * auf dessen Kunden - ein N+1 in einem Pfad, den JEDE Seite der
+     * Beraterwelt durchlaeuft.
+     *
+     * @return array<int, int>
+     */
+    public function visibleOwnerIds(): array {
+        $ids = Substitution::active()
             ->where('substitute_user_id', $this->id)
-            ->pluck('absent_user_id');
-        foreach ($absentIds as $absentId) {
-            $absent = User::find($absentId);
-            if ($absent) {
-                $ids = array_merge($ids, $absent->assignedCustomers()->pluck('customers.id')->toArray());
-            }
-        }
+            ->pluck('absent_user_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+        $ids[] = (int) $this->id;
+
         return array_values(array_unique($ids));
     }
+
+    /**
+     * Eigene Kunden + Kunden von Kollegen, die man aktuell vertritt.
+     *
+     * BEWUSST OHNE ZWISCHENSPEICHER (Audit 15.09.2026): ein Cache je
+     * Modell-Instanz sah zunaechst verlockend aus, weil die Methode je
+     * Anfrage mehrfach aufgerufen wird. Er ist aber genau dann falsch,
+     * wenn sich das Portfolio INNERHALB einer Anfrage aendert - und die
+     * Testsuite hat das sofort gezeigt (Kunde zugewiesen, danach
+     * Suche: der neue Kunde fehlte).
+     *
+     * Eine Sichtbarkeitsregel, die manchmal veraltete Daten liefert, ist
+     * ein Sicherheitsrisiko, kein Tuning. Die teuren Teile sind statt
+     * dessen dort beseitigt, wo sie wirklich weh taten: das N+1 oben,
+     * die EXISTS-Bedingung in Customer::scopeVisibleTo() und die
+     * EXISTS-Pruefung in canAccessCustomer() - keine dieser Stellen
+     * materialisiert noch die vollstaendige Liste.
+     *
+     * @return array<int, string>
+     */
+    public function visibleCustomerIdsWithSubstitution(): array {
+        return DB::table('employee_customers')
+            ->whereIn('user_id', $this->visibleOwnerIds())
+            ->distinct()
+            ->pluck('customer_id')
+            ->map(fn ($id) => (string) $id)
+            ->all();
+    }
+
     /** Interne Rollen - Kunden sind ausdrücklich KEIN Staff. */
     public function isStaff(): bool {
         return in_array($this->role, ['admin', 'manager', 'support', 'employee'], true);
@@ -121,7 +159,17 @@ class User extends Authenticatable
     public function canAccessCustomer($customerId): bool {
         if (! $this->isStaff()) return false;
         if ($this->canSeeAllCustomers()) return true;
-        return in_array((string) $customerId, array_map('strval', $this->visibleCustomerIdsWithSubstitution()), true);
+        if ($customerId === null || $customerId === '') return false;
+
+        // EXISTS statt "ganze Liste holen und darin suchen" (Audit
+        // 15.09.2026): die Pruefung laeuft auf JEDER Kundenseite und
+        // musste bisher erst das komplette Portfolio laden. Jetzt trifft
+        // sie den Index employee_customers(user_id, customer_id) und
+        // liest genau eine Zeile - unabhaengig von der Portfoliogroesse.
+        return DB::table('employee_customers')
+            ->whereIn('user_id', $this->visibleOwnerIds())
+            ->where('customer_id', (string) $customerId)
+            ->exists();
     }
 
     /**
@@ -178,15 +226,29 @@ class User extends Authenticatable
     public function isAdmin() { return $this->role === 'admin'; }
     public function isEmployee() { return $this->role === 'employee'; }
     public function isCustomer() { return $this->role === 'customer'; }
-    public function canSeeCustomer($customerId) {
-        if ($this->isAdmin()) return true;
-        if ($this->can_see_all_customers) return true;
-        return $this->assignedCustomers()->where('customers.id', $customerId)->exists();
-    }
+
+    /**
+     * Die Kunden, die dieser Nutzer sehen darf - als Query.
+     *
+     * EINE QUELLE (Audit 15.09.2026). Hier standen frueher DREI Regeln
+     * nebeneinander, und sie waren nicht deckungsgleich:
+     *   - canSeeAllCustomers()   : admin ODER manager ODER Flag
+     *   - getAccessibleCustomers(): admin ODER Flag  -- manager FEHLTE
+     *   - canSeeCustomer()        : admin ODER Flag, ohne Vertretung
+     *
+     * Folge, am echten System nachgemessen: ein MANAGER mit allen
+     * Rechten sah unter /admin/kundenchat NULL Unterhaltungen, waehrend
+     * ihm die Kundenliste alle 3.000 Kunden zeigte. Kein Fehler, keine
+     * Meldung - die Seite war einfach leer, und niemand konnte wissen,
+     * dass dort Kundennachrichten unbeantwortet lagen. Ein vertretender
+     * Kollege sah aus demselben Grund die Unterhaltungen des Abwesenden
+     * nicht, obwohl er dessen Kunden bearbeiten durfte.
+     *
+     * canSeeCustomer() war toter Code und ist entfallen.
+     *
+     * @return Builder<Customer>
+     */
     public function getAccessibleCustomers() {
-        if ($this->isAdmin() || $this->can_see_all_customers) {
-            return Customer::with('user');
-        }
-        return $this->assignedCustomers()->with('user');
+        return Customer::query()->with('user')->visibleTo($this);
     }
 }

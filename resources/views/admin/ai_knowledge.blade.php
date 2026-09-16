@@ -13,7 +13,7 @@
         <span>KI-Wissensbasis</span>
     </div>
     <div>
-        <div class="page-title">KI-Wissensbasis</div>
+        <h1 class="page-title">KI-Wissensbasis</h1>
         <div class="page-sub">Freigegebene Antworten des Kundenassistenten. Was hier nicht steht, gibt er nicht als Auskunft weiter – dann übernimmt das Team.</div>
     </div>
 </div>
@@ -33,7 +33,7 @@
     <form method="POST" action="{{ route('admin.ai_knowledge.import') }}">
         @csrf
         <div class="field">
-            <textarea name="text" rows="8" required maxlength="100000" placeholder="F: Habt ihr Stromangebote?
+            <textarea name="text" rows="8" required aria-label="Frage-Antwort-Blöcke als Fließtext" maxlength="100000" placeholder="F: Habt ihr Stromangebote?
 A: Ja. Wir vergleichen anbieterunabhängig Strom- und Gastarife und melden uns mit passenden Angeboten.
 
 F: Was kostet die Beratung?
@@ -42,7 +42,7 @@ A: Die Beratung ist kostenlos und unverbindlich.">{{ old('text') }}</textarea>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
             <div class="field">
                 <label>Kategorie für alle *</label>
-                <select name="category" required>
+                <select name="category" required aria-label="Kategorie für alle">
                     @foreach($categories as $key => $label)
                     <option value="{{ $key }}" @selected($key === 'faq')>{{ $label }}</option>
                     @endforeach
@@ -50,7 +50,7 @@ A: Die Beratung ist kostenlos und unverbindlich.">{{ old('text') }}</textarea>
             </div>
             <div class="field">
                 <label>Sprache für alle</label>
-                <select name="language">
+                <select name="language" aria-label="Sprache für alle">
                     <option value="">Alle Sprachen</option>
                     @foreach($languages as $key => $label)
                     <option value="{{ $key }}">{{ $label }}</option>
@@ -71,10 +71,10 @@ A: Die Beratung ist kostenlos und unverbindlich.">{{ old('text') }}</textarea>
     <form method="POST" action="{{ route('admin.ai_knowledge.store') }}">
         @csrf
         <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;">
-            <div class="field"><label>Titel *</label><input type="text" name="title" required maxlength="255" placeholder="z. B. Unterlagen für eine Adressänderung"></div>
+            <div class="field"><label>Titel *</label><input type="text" name="title" required maxlength="255" placeholder="z. B. Unterlagen für eine Adressänderung" aria-label="Titel"></div>
             <div class="field">
                 <label>Kategorie *</label>
-                <select name="category" required>
+                <select name="category" required aria-label="Kategorie">
                     @foreach($categories as $key => $label)
                     <option value="{{ $key }}">{{ $label }}</option>
                     @endforeach
@@ -82,7 +82,7 @@ A: Die Beratung ist kostenlos und unverbindlich.">{{ old('text') }}</textarea>
             </div>
             <div class="field">
                 <label>Sprache</label>
-                <select name="language">
+                <select name="language" aria-label="Sprache">
                     <option value="">Alle Sprachen</option>
                     @foreach($languages as $key => $label)
                     <option value="{{ $key }}">{{ $label }}</option>
@@ -90,8 +90,8 @@ A: Die Beratung ist kostenlos und unverbindlich.">{{ old('text') }}</textarea>
                 </select>
             </div>
         </div>
-        <div class="field"><label>Inhalt *</label><textarea name="content" rows="5" required maxlength="8000" placeholder="Kurz, sachlich und abschließend formuliert – der Assistent gibt diesen Inhalt sinngemäß an den Kunden weiter."></textarea></div>
-        <div class="field"><label>Stichwörter (Komma getrennt)</label><input type="text" name="keywords" maxlength="500" placeholder="adresse, umzug, meldebescheinigung"></div>
+        <div class="field"><label>Inhalt *</label><textarea name="content" rows="5" required maxlength="8000" placeholder="Kurz, sachlich und abschließend formuliert – der Assistent gibt diesen Inhalt sinngemäß an den Kunden weiter." aria-label="Inhalt"></textarea></div>
+        <div class="field"><label>Stichwörter (Komma getrennt)</label><input type="text" name="keywords" maxlength="500" placeholder="adresse, umzug, meldebescheinigung" aria-label="Stichwörter (Komma getrennt)"></div>
         <label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin-bottom:14px;">
             <input type="checkbox" name="active" value="1" checked>
             <span>Aktiv (der Assistent darf diesen Eintrag verwenden)</span>
@@ -113,13 +113,13 @@ A: Die Beratung ist kostenlos und unverbindlich.">{{ old('text') }}</textarea>
 @endif
 
 <form method="GET" action="{{ route('admin.ai_knowledge') }}" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
-    <input type="text" name="q" value="{{ request('q') }}" placeholder="Suchen …" style="max-width:280px;">
-    <select name="status" style="max-width:200px;">
+    <input type="text" name="q" value="{{ request('q') }}" placeholder="Suchen …" style="max-width:280px;" aria-label="Suchen">
+    <select name="status" aria-label="Nach Status filtern" style="max-width:200px;">
         <option value="">Alle Einträge</option>
         <option value="aktiv" @selected(request('status') === 'aktiv')>Nur aktive ({{ $activeCount }})</option>
         <option value="entwurf" @selected(request('status') === 'entwurf')>Nur Entwürfe ({{ $draftCount }})</option>
     </select>
-    <select name="kategorie" style="max-width:220px;">
+    <select name="kategorie" aria-label="Nach Kategorie filtern" style="max-width:220px;">
         <option value="">Alle Kategorien</option>
         @foreach($categories as $key => $label)
         <option value="{{ $key }}" @selected(request('kategorie') === $key)>{{ $label }}</option>
@@ -157,10 +157,10 @@ A: Die Beratung ist kostenlos und unverbindlich.">{{ old('text') }}</textarea>
         <form method="POST" action="{{ route('admin.ai_knowledge.update', $entry->id) }}">
             @csrf @method('PUT')
             <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;">
-                <div class="field"><label>Titel</label><input type="text" name="title" value="{{ $entry->title }}" required maxlength="255"></div>
+                <div class="field"><label>Titel</label><input type="text" name="title" value="{{ $entry->title }}" required maxlength="255" aria-label="Titel"></div>
                 <div class="field">
                     <label>Kategorie</label>
-                    <select name="category" required>
+                    <select name="category" required aria-label="Kategorie">
                         @foreach($categories as $key => $label)
                         <option value="{{ $key }}" @selected($entry->category === $key)>{{ $label }}</option>
                         @endforeach
@@ -168,7 +168,7 @@ A: Die Beratung ist kostenlos und unverbindlich.">{{ old('text') }}</textarea>
                 </div>
                 <div class="field">
                     <label>Sprache</label>
-                    <select name="language">
+                    <select name="language" aria-label="Sprache">
                         <option value="">Alle Sprachen</option>
                         @foreach($languages as $key => $label)
                         <option value="{{ $key }}" @selected($entry->language === $key)>{{ $label }}</option>
@@ -176,8 +176,8 @@ A: Die Beratung ist kostenlos und unverbindlich.">{{ old('text') }}</textarea>
                     </select>
                 </div>
             </div>
-            <div class="field"><label>Inhalt</label><textarea name="content" rows="4" required maxlength="8000">{{ $entry->content }}</textarea></div>
-            <div class="field"><label>Stichwörter</label><input type="text" name="keywords" value="{{ $entry->keywords }}" maxlength="500"></div>
+            <div class="field"><label>Inhalt</label><textarea name="content" rows="4" required maxlength="8000" aria-label="Inhalt">{{ $entry->content }}</textarea></div>
+            <div class="field"><label>Stichwörter</label><input type="text" name="keywords" value="{{ $entry->keywords }}" maxlength="500" aria-label="Stichwörter"></div>
             <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
                 <label style="display:flex;gap:8px;align-items:center;cursor:pointer;">
                     <input type="checkbox" name="active" value="1" @checked($entry->active)>

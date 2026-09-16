@@ -17,7 +17,7 @@ body{font-family:'Inter',Arial,sans-serif;min-height:100vh;min-height:100dvh;col
 .lang-switch a{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.08);border:1px solid var(--glass-line);color:#dde0e5;text-decoration:none;font-size:13px;padding:7px 13px;border-radius:9px;}
 .main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:clamp(10px,2vh,24px) 16px;}
 .card{background:rgba(255,255,255,.06);border:1px solid var(--glass-line);border-radius:18px;padding:clamp(18px,2.6vh,30px);max-width:520px;width:100%;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 24px 60px rgba(0,0,0,.35);}
-.card h2{font-size:22px;color:var(--emerald-mint);margin-bottom:6px;}
+.card h1{font-size:22px;color:var(--emerald-mint);margin:0 0 6px;line-height:1.25;font-weight:700;}
 .card .lead{color:#b7bcc4;font-size:13.5px;line-height:1.5;margin-bottom:clamp(10px,2vh,18px);}
 label{display:block;font-size:13.5px;margin-bottom:7px;color:#dde0e5;}
 .field{margin-bottom:clamp(10px,1.8vh,15px);}
@@ -47,7 +47,7 @@ label{display:block;font-size:13.5px;margin-bottom:7px;color:#dde0e5;}
 
 <div class="main">
 <div class="card">
-    <h2>💬 {{ __('Hilfe & Kontakt') }}</h2>
+    <h1>💬 {{ __('Hilfe & Kontakt') }}</h1>
     <p class="lead">{{ __('Beschreiben Sie kurz Ihr Anliegen – unser Team meldet sich schnellstmöglich bei Ihnen.') }}</p>
 
     @if($errors->any())<div class="error">{{ $errors->first() }}</div>@endif

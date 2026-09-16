@@ -63,6 +63,13 @@ class BannerController extends Controller
 
         // Social-Publishing: Klicks je Plattform ueber die Tracking-Kurzlinks
         // (getrennt von den Portal-Klicks - andere Zielgruppe, eigene Zahlen).
+        // BEWUSST OHNE Grenze (geprueft, Audit 15.09.2026): es gibt genau
+        // EINEN Social-Beitrag je Banner, und Banner sind eine gepflegte,
+        // kleine Menge (sie werden von Hand angelegt und sortiert, die
+        // Liste darueber zeigt sie ebenfalls vollstaendig). Sortiert wird
+        // nach der SUMME der Klicks ueber alle Kanaele - das ist keine
+        // Spalte, also kann die Datenbank es nicht sortieren und ein
+        // Limit waere hier nicht "die besten N", sondern irgendwelche N.
         $socialPosts = BannerSocialPost::with(['channels.publisher', 'banner'])->get()
             ->filter(fn ($p) => $p->banner && $p->channels->isNotEmpty())
             ->sortByDesc(fn ($p) => $p->totalClicks())

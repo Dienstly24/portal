@@ -15,14 +15,27 @@ use Illuminate\Http\Request;
  */
 class CommissionController extends Controller
 {
+    /** So viele offene Gutschriften zeigt die Seite hoechstens. */
+    private const OFFENE_GRENZE = 100;
+
     public function index()
     {
-        $pending = Commission::with('partner')->pendingReview()->orderBy('created_at')->get();
+        // GEDECKELT (Audit 15.09.2026) - dieselbe Regel wie im
+        // E-Mail-Eingang: arbeitet niemand die Pruefliste ab, stapeln
+        // sich die Gutschriften, und die Seite wuechse mit dem Stapel,
+        // bis sie nicht mehr laedt. Die GESAMTZAHL wird trotzdem
+        // genannt: eine still gekuerzte Liste laesst die Pruefung
+        // faelschlich erledigt aussehen.
+        $offen = Commission::with('partner')->pendingReview();
+        $pendingTotal = (clone $offen)->count();
+        $pending = $offen->orderBy('created_at')->limit(self::OFFENE_GRENZE)->get();
+
         $recent = Commission::with(['partner', 'reviewer'])
             ->where('status', '!=', 'pending_review')
             ->latest('reviewed_at')->limit(50)->get();
 
-        return view('admin.commissions', compact('pending', 'recent'));
+        return view('admin.commissions', compact('pending', 'pendingTotal', 'recent')
+            + ['pendingGrenze' => self::OFFENE_GRENZE]);
     }
 
     public function book(Request $request, $id, LexofficeService $lexoffice)

@@ -135,19 +135,19 @@
     <div class="kfz-card-title">📋 Fahrzeugdaten</div>
     <div class="kfz-card-sub">Kennzeichen, Identifikation und Technik.</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
-        <div class="field"><label>Kennzeichen</label><input type="text" id="kfz-plate" name="vehicle[license_plate]" maxlength="20" value="{{ $vd('license_plate', $veh->license_plate ?? '') }}" placeholder="HH-AB 1234" style="{{ $kfzInputStyle }}"></div>
-        <div class="field"><label>Hersteller</label><input type="text" id="kfz-manufacturer" name="vehicle[manufacturer]" value="{{ $vd('manufacturer', $veh->manufacturer ?? '') }}" placeholder="VW" style="{{ $kfzInputStyle }}"></div>
-        <div class="field"><label>Modell</label><input type="text" id="kfz-model" name="vehicle[model]" value="{{ $vd('model', $veh->model ?? '') }}" placeholder="Golf VIII" style="{{ $kfzInputStyle }}"></div>
+        <div class="field"><label>Kennzeichen</label><input type="text" id="kfz-plate" name="vehicle[license_plate]" maxlength="20" value="{{ $vd('license_plate', $veh->license_plate ?? '') }}" placeholder="HH-AB 1234" style="{{ $kfzInputStyle }}" aria-label="Kennzeichen"></div>
+        <div class="field"><label>Hersteller</label><input type="text" id="kfz-manufacturer" name="vehicle[manufacturer]" value="{{ $vd('manufacturer', $veh->manufacturer ?? '') }}" placeholder="VW" style="{{ $kfzInputStyle }}" aria-label="Hersteller"></div>
+        <div class="field"><label>Modell</label><input type="text" id="kfz-model" name="vehicle[model]" value="{{ $vd('model', $veh->model ?? '') }}" placeholder="Golf VIII" style="{{ $kfzInputStyle }}" aria-label="Modell"></div>
     </div>
     <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;">
-        <div class="field"><label>FIN (VIN)</label><input type="text" name="vehicle[vin]" maxlength="30" value="{{ $vd('vin', $veh->vin ?? '') }}" placeholder="WVWZZZ..." style="{{ $kfzInputStyle }}"></div>
-        <div class="field"><label>HSN</label><input type="text" name="vehicle[hsn]" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" value="{{ $vd('hsn', $veh->hsn ?? '') }}" placeholder="0603" style="{{ $kfzInputStyle }}"></div>
-        <div class="field"><label>TSN</label><input type="text" name="vehicle[tsn]" maxlength="10" value="{{ $vd('tsn', $veh->tsn ?? '') }}" placeholder="BJM" style="{{ $kfzInputStyle }}"></div>
+        <div class="field"><label>FIN (VIN)</label><input type="text" name="vehicle[vin]" maxlength="30" value="{{ $vd('vin', $veh->vin ?? '') }}" placeholder="WVWZZZ..." style="{{ $kfzInputStyle }}" aria-label="FIN (VIN)"></div>
+        <div class="field"><label>HSN</label><input type="text" name="vehicle[hsn]" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" value="{{ $vd('hsn', $veh->hsn ?? '') }}" placeholder="0603" style="{{ $kfzInputStyle }}" aria-label="HSN"></div>
+        <div class="field"><label>TSN</label><input type="text" name="vehicle[tsn]" maxlength="10" value="{{ $vd('tsn', $veh->tsn ?? '') }}" placeholder="BJM" style="{{ $kfzInputStyle }}" aria-label="TSN"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
-        <div class="field"><label>Erstzulassung</label><input type="date" name="vehicle[first_registration]" value="{{ $vd('first_registration', $dfmt($veh->first_registration ?? null)) }}" style="{{ $kfzInputStyle }}"></div>
-        <div class="field"><label>Erwerbsdatum</label><input type="date" name="vehicle[acquisition_date]" value="{{ $vd('acquisition_date', $dfmt($veh->acquisition_date ?? null)) }}" style="{{ $kfzInputStyle }}"></div>
-        <div class="field"><label>Leistung (kW)</label><input type="number" name="vehicle[power_kw]" min="1" max="2000" value="{{ $vd('power_kw', $veh->power_kw ?? '') }}" placeholder="110" style="{{ $kfzInputStyle }}"></div>
+        <div class="field"><label>Erstzulassung</label><input type="date" name="vehicle[first_registration]" value="{{ $vd('first_registration', $dfmt($veh->first_registration ?? null)) }}" style="{{ $kfzInputStyle }}" aria-label="Erstzulassung"></div>
+        <div class="field"><label>Erwerbsdatum</label><input type="date" name="vehicle[acquisition_date]" value="{{ $vd('acquisition_date', $dfmt($veh->acquisition_date ?? null)) }}" style="{{ $kfzInputStyle }}" aria-label="Erwerbsdatum"></div>
+        <div class="field"><label>Leistung (kW)</label><input type="number" name="vehicle[power_kw]" min="1" max="2000" value="{{ $vd('power_kw', $veh->power_kw ?? '') }}" placeholder="110" style="{{ $kfzInputStyle }}" aria-label="Leistung (kW)"></div>
     </div>
     <div class="kfz-subline">Zustand bei Erwerb</div>
     <div class="kfz-chip-row">
@@ -168,7 +168,7 @@
             <label class="kfz-chip"><input type="radio" name="vehicle[transmission]" value="{{ $key }}" {{ $curTransmission === $key ? 'checked' : '' }}><span>{{ $label }}</span></label>
             @endforeach
         </div>
-        <div class="field" style="min-width:180px;margin:0;"><label>Farbe</label><input type="text" name="vehicle[color]" maxlength="40" value="{{ $vd('color', $veh->color ?? '') }}" placeholder="schwarz" style="{{ $kfzInputStyle }}"></div>
+        <div class="field" style="min-width:180px;margin:0;"><label>Farbe</label><input type="text" name="vehicle[color]" maxlength="40" value="{{ $vd('color', $veh->color ?? '') }}" placeholder="schwarz" style="{{ $kfzInputStyle }}" aria-label="Farbe"></div>
     </div>
 </div>
 
@@ -252,7 +252,7 @@
     </div>
     <div id="kfz-holder-name" class="field" style="display:none;margin-top:10px;max-width:420px;">
         <label>Name des abweichenden Halters</label>
-        <input type="text" name="vehicle[holder_name]" maxlength="255" value="{{ $vd('holder_name', $veh->holder_name ?? '') }}" placeholder="Vor- und Nachname" style="{{ $kfzInputStyle }}">
+        <input type="text" name="vehicle[holder_name]" maxlength="255" value="{{ $vd('holder_name', $veh->holder_name ?? '') }}" placeholder="Vor- und Nachname" style="{{ $kfzInputStyle }}" aria-label="Name des abweichenden Halters">
     </div>
     <div class="kfz-subline">Eigentümer</div>
     <div class="kfz-chip-row">
@@ -267,9 +267,9 @@
     <div class="kfz-card-title">🧭 Nutzung &amp; Kilometer</div>
     <div class="kfz-card-sub">Alle Ablesungen werden dauerhaft gespeichert – der Kunde kann den aktuellen Stand auch selbst im Portal melden.</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
-        <div class="field"><label>Kilometerstand bei Vertragsbeginn</label><input type="number" name="vehicle[initial_mileage]" min="0" max="5000000" value="{{ $vd('initial_mileage', $veh->initial_mileage ?? '') }}" placeholder="z. B. 45000" style="{{ $kfzInputStyle }}"></div>
-        <div class="field"><label>Aktueller Kilometerstand</label><input type="number" name="vehicle[current_mileage]" min="0" max="5000000" value="{{ $vd('current_mileage', $latestReading->mileage ?? '') }}" placeholder="z. B. 52300" style="{{ $kfzInputStyle }}"></div>
-        <div class="field"><label>Stand vom</label><input type="date" name="vehicle[current_mileage_date]" value="{{ $vd('current_mileage_date', $latestReading?->reading_date?->format('Y-m-d') ?? now()->format('Y-m-d')) }}" style="{{ $kfzInputStyle }}"></div>
+        <div class="field"><label>Kilometerstand bei Vertragsbeginn</label><input type="number" name="vehicle[initial_mileage]" min="0" max="5000000" value="{{ $vd('initial_mileage', $veh->initial_mileage ?? '') }}" placeholder="z. B. 45000" style="{{ $kfzInputStyle }}" aria-label="Kilometerstand bei Vertragsbeginn"></div>
+        <div class="field"><label>Aktueller Kilometerstand</label><input type="number" name="vehicle[current_mileage]" min="0" max="5000000" value="{{ $vd('current_mileage', $latestReading->mileage ?? '') }}" placeholder="z. B. 52300" style="{{ $kfzInputStyle }}" aria-label="Aktueller Kilometerstand"></div>
+        <div class="field"><label>Stand vom</label><input type="date" name="vehicle[current_mileage_date]" value="{{ $vd('current_mileage_date', $latestReading?->reading_date?->format('Y-m-d') ?? now()->format('Y-m-d')) }}" style="{{ $kfzInputStyle }}" aria-label="Stand vom"></div>
     </div>
     @if($latestReading)
     <div class="muted-xs">Letzte Meldung: <b>{{ number_format($latestReading->mileage, 0, ',', '.') }} km</b> am {{ $latestReading->reading_date->format('d.m.Y') }} ({{ $latestReading->sourceLabel() }}@if($latestReading->created_by), {{ $latestReading->created_by }}@endif)</div>
@@ -285,7 +285,7 @@
     </div>
     <div id="kfz-annual-custom" class="field" style="display:none;margin-top:10px;max-width:280px;">
         <label>Eigene Fahrleistung (km/Jahr)</label>
-        <input type="number" name="vehicle[annual_mileage_custom]" min="1000" max="150000" step="100" value="{{ $customAnnual }}" placeholder="z. B. 18500" style="{{ $kfzInputStyle }}">
+        <input type="number" name="vehicle[annual_mileage_custom]" min="1000" max="150000" step="100" value="{{ $customAnnual }}" placeholder="z. B. 18500" style="{{ $kfzInputStyle }}" aria-label="Eigene Fahrleistung (km/Jahr)">
     </div>
     @if($mileageStatus && $mileageStatus['exceeded'])
     <div class="kfz-warn">⚠️ <b>Fahrleistung überschritten:</b> hochgerechnet {{ number_format($mileageStatus['projected'], 0, ',', '.') }} km/Jahr bei vereinbarten {{ number_format($mileageStatus['allowed'], 0, ',', '.') }} km/Jahr. Bitte Kunden auf eine Anpassung ansprechen (sonst droht Nachzahlung im Schadenfall).</div>
@@ -317,9 +317,9 @@
     <div class="kfz-card-title">↩️ Vorversicherung</div>
     <div class="kfz-card-sub">Wo war der Kunde vor diesem Vertrag versichert? Wird beim Wechsel aus dem Beratungsprotokoll übernommen.</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div class="field"><label>Vorheriger Versicherer</label><input type="text" name="vehicle[previous_insurer]" maxlength="120" value="{{ $vd('previous_insurer', $veh->previous_insurer ?? '') }}" placeholder="z. B. Generali" style="{{ $kfzInputStyle }}"></div>
-        <div class="field"><label>Vertragsnummer beim Vorversicherer</label><input type="text" name="vehicle[previous_contract_number]" maxlength="60" value="{{ $vd('previous_contract_number', $veh->previous_contract_number ?? '') }}" placeholder="Nummer des alten Vertrags" style="{{ $kfzInputStyle }}"></div>
-        <div class="field"><label>Dort versichert seit</label><input type="text" name="vehicle[previous_insurance_since]" maxlength="60" value="{{ $vd('previous_insurance_since', $veh->previous_insurance_since ?? '') }}" placeholder="z. B. länger als 3 Jahre" style="{{ $kfzInputStyle }}"></div>
+        <div class="field"><label>Vorheriger Versicherer</label><input type="text" name="vehicle[previous_insurer]" maxlength="120" value="{{ $vd('previous_insurer', $veh->previous_insurer ?? '') }}" placeholder="z. B. Generali" style="{{ $kfzInputStyle }}" aria-label="Vorheriger Versicherer"></div>
+        <div class="field"><label>Vertragsnummer beim Vorversicherer</label><input type="text" name="vehicle[previous_contract_number]" maxlength="60" value="{{ $vd('previous_contract_number', $veh->previous_contract_number ?? '') }}" placeholder="Nummer des alten Vertrags" style="{{ $kfzInputStyle }}" aria-label="Vertragsnummer beim Vorversicherer"></div>
+        <div class="field"><label>Dort versichert seit</label><input type="text" name="vehicle[previous_insurance_since]" maxlength="60" value="{{ $vd('previous_insurance_since', $veh->previous_insurance_since ?? '') }}" placeholder="z. B. länger als 3 Jahre" style="{{ $kfzInputStyle }}" aria-label="Dort versichert seit"></div>
     </div>
     <div class="kfz-subline">Kündigung durch Vorversicherer</div>
     <div class="kfz-chip-row">
@@ -345,14 +345,14 @@
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:560px;">
             <div class="field"><label>SF-Klasse</label>
-                <select name="vehicle[{{ $branch['prefix'] }}_class]" class="kfz-sf-class" data-branch="{{ $branch['short'] }}" data-h-change="78b9583e66" style="{{ $kfzInputStyle }}">
+                <select name="vehicle[{{ $branch['prefix'] }}_class]" class="kfz-sf-class" data-branch="{{ $branch['short'] }}" data-h-change="78b9583e66" style="{{ $kfzInputStyle }}" aria-label="SF-Klasse">
                     <option value="">— keine Angabe —</option>
                     @foreach(VD::sfClassKeys() as $key)
                     <option value="{{ $key }}" {{ $branch['data']['class'] === $key ? 'selected' : '' }}>{{ VD::sfLabel($key) }}</option>
                     @endforeach
                 </select>
             </div>
-            <div class="field"><label>Gültig ab</label><input type="date" name="vehicle[{{ $branch['prefix'] }}_valid_from]" value="{{ $branch['data']['from'] }}" style="{{ $kfzInputStyle }}"></div>
+            <div class="field"><label>Gültig ab</label><input type="date" name="vehicle[{{ $branch['prefix'] }}_valid_from]" value="{{ $branch['data']['from'] }}" style="{{ $kfzInputStyle }}" aria-label="Gültig ab"></div>
         </div>
         <div style="margin:6px 0 4px;font-size:12px;color:var(--ink-soft);">Art der SF-Klasse</div>
         <div class="kfz-chip-row">
@@ -368,7 +368,7 @@
                 @endforeach
             </div>
             <div class="field" style="margin-top:10px;max-width:280px;"><label>Tatsächliche SF-Klasse (übertragbar)</label>
-                <select name="vehicle[{{ $branch['prefix'] }}_real_class]" style="{{ $kfzInputStyle }}">
+                <select name="vehicle[{{ $branch['prefix'] }}_real_class]" style="{{ $kfzInputStyle }}" aria-label="Tatsächliche SF-Klasse (übertragbar)">
                     <option value="">— keine Angabe —</option>
                     @foreach(VD::sfClassKeys() as $key)
                     <option value="{{ $key }}" {{ $branch['data']['real'] === $key ? 'selected' : '' }}>{{ VD::sfLabel($key) }}</option>
@@ -427,11 +427,11 @@ function kfzAddDriver(d) {
     row.style.gridTemplateColumns = '2fr 1fr 1fr 34px';
     row.innerHTML = `
         <div><label class="muted-2xs">Name</label>
-            <input type="text" name="vehicle[additional_drivers][${i}][name]" maxlength="120" value="${kfzEsc(d.name)}" placeholder="Vor- und Nachname" style="${KFZ_INPUT}"></div>
+            <input type="text" name="vehicle[additional_drivers][${i}][name]" maxlength="120" value="${kfzEsc(d.name)}" placeholder="Vor- und Nachname" style="${KFZ_INPUT}" aria-label="Name"></div>
         <div><label class="muted-2xs">Geburtsdatum</label>
-            <input type="date" name="vehicle[additional_drivers][${i}][birth_date]" value="${kfzEsc(d.birth_date)}" style="${KFZ_INPUT}"></div>
+            <input type="date" name="vehicle[additional_drivers][${i}][birth_date]" value="${kfzEsc(d.birth_date)}" style="${KFZ_INPUT}" aria-label="Geburtsdatum"></div>
         <div><label class="muted-2xs">Führerschein seit</label>
-            <input type="date" name="vehicle[additional_drivers][${i}][license_date]" value="${kfzEsc(d.license_date)}" style="${KFZ_INPUT}"></div>
+            <input type="date" name="vehicle[additional_drivers][${i}][license_date]" value="${kfzEsc(d.license_date)}" style="${KFZ_INPUT}" aria-label="Führerschein seit"></div>
         <button type="button" class="kfz-remove" title="Fahrer entfernen" data-h-click="kfz-entfernen">✕</button>`;
     document.getElementById('kfz-drivers').appendChild(row);
 }
@@ -446,17 +446,17 @@ function kfzAddClaim(cl) {
     row.style.gridTemplateColumns = '130px 130px 110px 140px 1fr 34px';
     row.innerHTML = `
         <div><label class="muted-2xs">Datum</label>
-            <input type="date" name="vehicle[claim_rows][${i}][claim_date]" value="${kfzEsc(cl.claim_date)}" style="${KFZ_INPUT}"></div>
+            <input type="date" name="vehicle[claim_rows][${i}][claim_date]" value="${kfzEsc(cl.claim_date)}" style="${KFZ_INPUT}" aria-label="Datum"></div>
         <div><label class="muted-2xs">Art</label>
-            <select name="vehicle[claim_rows][${i}][claim_type]" style="${KFZ_INPUT}">${opts(KFZ_CLAIM_TYPES, cl.claim_type, '—')}</select></div>
+            <select name="vehicle[claim_rows][${i}][claim_type]" style="${KFZ_INPUT}" aria-label="Art">${opts(KFZ_CLAIM_TYPES, cl.claim_type, '—')}</select></div>
         <div><label class="muted-2xs">Schaden (€)</label>
-            <input type="number" step="0.01" min="0" name="vehicle[claim_rows][${i}][damage_amount]" value="${kfzEsc(cl.damage_amount)}" placeholder="0,00" style="${KFZ_INPUT}"></div>
+            <input type="number" step="0.01" min="0" name="vehicle[claim_rows][${i}][damage_amount]" value="${kfzEsc(cl.damage_amount)}" placeholder="0,00" style="${KFZ_INPUT}" aria-label="Schaden (€)"></div>
         <div><label class="muted-2xs">Status</label>
-            <select name="vehicle[claim_rows][${i}][status]" style="${KFZ_INPUT}">${opts(KFZ_CLAIM_STATUSES, cl.status, '—')}</select></div>
+            <select name="vehicle[claim_rows][${i}][status]" style="${KFZ_INPUT}" aria-label="Status">${opts(KFZ_CLAIM_STATUSES, cl.status, '—')}</select></div>
         <div><label class="muted-2xs">Versicherer / Notiz</label>
             <div style="display:flex;gap:6px;">
-                <input type="text" name="vehicle[claim_rows][${i}][insurer]" maxlength="255" value="${kfzEsc(cl.insurer)}" placeholder="Versicherer" style="${KFZ_INPUT}">
-                <input type="text" name="vehicle[claim_rows][${i}][notes]" maxlength="2000" value="${kfzEsc(cl.notes)}" placeholder="Notizen" style="${KFZ_INPUT}">
+                <input type="text" name="vehicle[claim_rows][${i}][insurer]" maxlength="255" value="${kfzEsc(cl.insurer)}" placeholder="Versicherer" style="${KFZ_INPUT}" aria-label="Versicherer">
+                <input type="text" name="vehicle[claim_rows][${i}][notes]" maxlength="2000" value="${kfzEsc(cl.notes)}" placeholder="Notizen" style="${KFZ_INPUT}" aria-label="Notizen">
             </div></div>
         <button type="button" class="kfz-remove" title="Schaden entfernen" data-h-click="kfz-entfernen">✕</button>`;
     document.getElementById('kfz-claims').appendChild(row);

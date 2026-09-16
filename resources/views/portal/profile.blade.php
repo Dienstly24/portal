@@ -1,6 +1,6 @@
 @extends('layouts.portal')
 @section('content')
-<div class="page-title">{{ __('Meine Daten') }}</div>
+<h1 class="page-title">{{ __('Meine Daten') }}</h1>
 <div class="page-sub">{{ __('Persönliche Daten, Adresse und Bankverbindung an einem Ort. Änderungen werden von unserem Team geprüft – Sie können mehrere Änderungen gleichzeitig einreichen.') }}</div>
 
 @if($pending > 0)<div class="notice">Sie haben aktuell {{ $pending }} Änderung(en) in Prüfung. <a href="{{ route('portal.change_requests') }}" style="color:var(--graphite);font-weight:600;">{{ __('Status ansehen →') }}</a></div>@endif
@@ -13,16 +13,16 @@
         <div class="card-title">👤 {{ __('Persönliche Daten') }}</div>
         @php $__np = explode(' ', trim(auth()->user()->name ?? ''), 2); @endphp
         <div class="grid-2">
-            <div class="field"><label>{{ __('Vorname') }} *</label><input type="text" name="first_name" required value="{{ old('first_name', $__np[0] ?? '') }}"></div>
-            <div class="field"><label>{{ __('Nachname') }} *</label><input type="text" name="last_name" required value="{{ old('last_name', $__np[1] ?? '') }}"></div>
+            <div class="field"><label>{{ __('Vorname') }} *</label><input type="text" name="first_name" required value="{{ old('first_name', $__np[0] ?? '') }}" aria-label="{{ __('Vorname') }}"></div>
+            <div class="field"><label>{{ __('Nachname') }} *</label><input type="text" name="last_name" required value="{{ old('last_name', $__np[1] ?? '') }}" aria-label="{{ __('Nachname') }}"></div>
         </div>
         <div class="grid-2">
-            <div class="field"><label>{{ __('E-Mail') }} *</label><input type="email" name="email" required value="{{ old('email', auth()->user()->hasRealEmail() ? auth()->user()->email : '') }}" placeholder="name@example.com"></div>
-            <div class="field"><label>{{ __('Geburtsdatum') }} *</label><input type="date" name="birth_date" required value="{{ old('birth_date', $customer?->birth_date) }}"></div>
+            <div class="field"><label>{{ __('E-Mail') }} *</label><input type="email" name="email" required value="{{ old('email', auth()->user()->hasRealEmail() ? auth()->user()->email : '') }}" placeholder="name@example.com" aria-label="{{ __('E-Mail') }}"></div>
+            <div class="field"><label>{{ __('Geburtsdatum') }} *</label><input type="date" name="birth_date" required value="{{ old('birth_date', $customer?->birth_date) }}" aria-label="{{ __('Geburtsdatum') }}"></div>
         </div>
         <div class="grid-2">
             <div class="field"><label>{{ __('Geschlecht') }}</label>
-                <select name="gender">
+                <select name="gender" aria-label="{{ __('Geschlecht') }}">
                     <option value="">{{ __('— Bitte wählen —') }}</option>
                     @foreach(\App\Models\Customer::GENDERS as $key => $label)
                     <option value="{{ $key }}" {{ $customer?->gender === $key ? 'selected' : '' }}>{{ $label }}</option>
@@ -30,7 +30,7 @@
                 </select>
             </div>
             <div class="field"><label>{{ __('Familienstand') }}</label>
-                <select name="marital_status">
+                <select name="marital_status" aria-label="{{ __('Familienstand') }}">
                     <option value="">{{ __('— Bitte wählen —') }}</option>
                     @foreach(['ledig'=>'Ledig','verheiratet'=>'Verheiratet','geschieden'=>'Geschieden','verwitwet'=>'Verwitwet'] as $k=>$v)
                     <option value="{{ $k }}" {{ $customer?->marital_status === $k ? 'selected' : '' }}>{{ $v }}</option>
@@ -39,30 +39,30 @@
             </div>
         </div>
         <div class="grid-2">
-            <div class="field"><label>{{ __('Geburtsort') }} *</label><input type="text" name="birth_place" required value="{{ $customer?->birth_place }}"></div>
-            <div class="field"><label>{{ __('Nationalität') }} *</label><input type="text" name="nationality" required value="{{ $customer?->nationality }}" placeholder="{{ __('z.B. Deutsch, Syrisch') }}"></div>
+            <div class="field"><label>{{ __('Geburtsort') }} *</label><input type="text" name="birth_place" required value="{{ $customer?->birth_place }}" aria-label="{{ __('Geburtsort') }}"></div>
+            <div class="field"><label>{{ __('Nationalität') }} *</label><input type="text" name="nationality" required value="{{ $customer?->nationality }}" placeholder="{{ __('z.B. Deutsch, Syrisch') }}" aria-label="{{ __('Nationalität') }}"></div>
         </div>
         <div class="grid-2">
-            <div class="field"><label>{{ __('Telefon') }}</label><input type="text" name="phone" value="{{ $customer?->phone }}" placeholder="+49 …"></div>
+            <div class="field"><label>{{ __('Telefon') }}</label><input type="text" name="phone" value="{{ $customer?->phone }}" placeholder="+49 …" aria-label="{{ __('Telefon') }}"></div>
         </div>
         <div class="grid-2">
-            <div class="field"><label>{{ __('Krankenversicherungsnummer') }}</label><input type="text" name="health_insurance_number" value="{{ $customer?->health_insurance_number }}"></div>
-            <div class="field"><label>{{ __('Rentenversicherungsnummer') }}</label><input type="text" name="pension_insurance_number" value="{{ $customer?->pension_insurance_number }}"></div>
+            <div class="field"><label>{{ __('Krankenversicherungsnummer') }}</label><input type="text" name="health_insurance_number" value="{{ $customer?->health_insurance_number }}" aria-label="{{ __('Krankenversicherungsnummer') }}"></div>
+            <div class="field"><label>{{ __('Rentenversicherungsnummer') }}</label><input type="text" name="pension_insurance_number" value="{{ $customer?->pension_insurance_number }}" aria-label="{{ __('Rentenversicherungsnummer') }}"></div>
         </div>
-        <div class="field"><label>{{ __('Steuer-ID') }}</label><input type="text" name="tax_id" value="{{ $customer?->tax_id }}" placeholder="{{ __('11-stellig') }}"></div>
+        <div class="field"><label>{{ __('Steuer-ID') }}</label><input type="text" name="tax_id" value="{{ $customer?->tax_id }}" placeholder="{{ __('11-stellig') }}" aria-label="{{ __('Steuer-ID') }}"></div>
     </div>
 
     {{-- Adresse nach deutschem Standard --}}
     <div class="card">
         <div class="card-title">🏠 {{ __('Adresse') }}</div>
         <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;">
-            <div class="field"><label>{{ __('Straße') }} *</label><input type="text" name="address_street" required value="{{ $customer?->address_street }}"></div>
-            <div class="field"><label>{{ __('Hausnummer') }} *</label><input type="text" name="address_house_number" required value="{{ $customer?->address_house_number }}"></div>
-            <div class="field"><label>{{ __('Zusatz') }}</label><input type="text" name="address_house_suffix" value="{{ $customer?->address_house_suffix }}" placeholder="A, 1a"></div>
+            <div class="field"><label>{{ __('Straße') }} *</label><input type="text" name="address_street" required value="{{ $customer?->address_street }}" aria-label="{{ __('Straße') }}"></div>
+            <div class="field"><label>{{ __('Hausnummer') }} *</label><input type="text" name="address_house_number" required value="{{ $customer?->address_house_number }}" aria-label="{{ __('Hausnummer') }}"></div>
+            <div class="field"><label>{{ __('Zusatz') }}</label><input type="text" name="address_house_suffix" value="{{ $customer?->address_house_suffix }}" placeholder="A, 1a" aria-label="{{ __('Zusatz') }}"></div>
         </div>
         <div class="grid-2">
-            <div class="field"><label>{{ __('Postleitzahl') }} *</label><input type="text" name="address_zip" required value="{{ $customer?->address_zip }}" maxlength="10"></div>
-            <div class="field"><label>{{ __('Ort') }} *</label><input type="text" name="address_city" required value="{{ $customer?->address_city }}"></div>
+            <div class="field"><label>{{ __('Postleitzahl') }} *</label><input type="text" name="address_zip" required value="{{ $customer?->address_zip }}" maxlength="10" aria-label="{{ __('Postleitzahl') }}"></div>
+            <div class="field"><label>{{ __('Ort') }} *</label><input type="text" name="address_city" required value="{{ $customer?->address_city }}" aria-label="{{ __('Ort') }}"></div>
         </div>
         @if($customer?->address && !$customer?->address_street)
         <p class="muted-xs">Bisher hinterlegt: {{ $customer->address }}</p>
@@ -73,10 +73,10 @@
     <div class="card">
         <div class="card-title">🏦 {{ __('Bankverbindung') }}</div>
         <div class="grid-2">
-            <div class="field"><label>{{ __('IBAN') }}</label><input type="text" name="iban" value="" placeholder="{{ $customer?->iban ? '••••' . substr($customer->iban, -4) : 'DE…' }}" data-h-input="1020851b2f"></div>
-            <div class="field"><label>{{ __('Kontoinhaber') }}</label><input type="text" name="account_holder" value="{{ $customer?->account_holder }}"></div>
+            <div class="field"><label>{{ __('IBAN') }}</label><input type="text" name="iban" value="" placeholder="{{ $customer?->iban ? '••••' . substr($customer->iban, -4) : 'DE…' }}" data-h-input="1020851b2f" aria-label="{{ __('IBAN') }}"></div>
+            <div class="field"><label>{{ __('Kontoinhaber') }}</label><input type="text" name="account_holder" value="{{ $customer?->account_holder }}" aria-label="{{ __('Kontoinhaber') }}"></div>
         </div>
-        <div class="field"><label>{{ __('Kontonachweis') }} ({{ __('bei neuer IBAN erforderlich') }})</label><input type="file" name="bank_proof" accept=".pdf,.jpg,.jpeg,.png,.webp"></div>
+        <div class="field"><label>{{ __('Kontonachweis') }} ({{ __('bei neuer IBAN erforderlich') }})</label><input type="file" name="bank_proof" accept=".pdf,.jpg,.jpeg,.png,.webp" aria-label="Nachweis zur Bankverbindung (Kontoauszug)"></div>
         <p class="muted-xs">🔒 {{ __('Foto der Bankkarte oder Kontoauszug – IBAN und Name müssen lesbar sein. Bank- und Steuerdaten werden verschlüsselt gespeichert und erst nach Freigabe übernommen.') }}</p>
     </div>
 
@@ -90,17 +90,17 @@
         <div class="grid-2">
             <div class="field">
                 <label>{{ __('Art des Nachweises') }}</label>
-                <select name="proof_kind">
+                <select name="proof_kind" aria-label="{{ __('Art des Nachweises') }}">
                     <option value="id_front">{{ __('Ausweis (Vorderseite)') }}</option>
                     <option value="meldebescheinigung">{{ __('Meldebescheinigung') }}</option>
                     <option value="other">{{ __('Anderer Nachweis') }}</option>
                 </select>
             </div>
-            <div class="field"><label>{{ __('Gültig ab') }}</label><input type="date" name="effective_from" value="{{ old('effective_from') }}"></div>
+            <div class="field"><label>{{ __('Gültig ab') }}</label><input type="date" name="effective_from" value="{{ old('effective_from') }}" aria-label="{{ __('Gültig ab') }}"></div>
         </div>
         <div class="grid-2">
-            <div class="field"><label>{{ __('Nachweis / Vorderseite') }}</label><input type="file" name="proof" accept=".pdf,.jpg,.jpeg,.png,.webp"></div>
-            <div class="field"><label>{{ __('Rückseite (optional)') }}</label><input type="file" name="proof_back" accept=".pdf,.jpg,.jpeg,.png,.webp"></div>
+            <div class="field"><label>{{ __('Nachweis / Vorderseite') }}</label><input type="file" name="proof" accept=".pdf,.jpg,.jpeg,.png,.webp" aria-label="{{ __('Nachweis / Vorderseite') }}"></div>
+            <div class="field"><label>{{ __('Rückseite (optional)') }}</label><input type="file" name="proof_back" accept=".pdf,.jpg,.jpeg,.png,.webp" aria-label="{{ __('Rückseite (optional)') }}"></div>
         </div>
         <p class="muted-2xs">{{ __('Erlaubt: PDF oder Foto (JPG, PNG, WEBP), max. 10 MB je Datei.') }}</p>
     </div>
@@ -126,16 +126,16 @@
         @if($hatPasswort)
         <div class="field">
             <label>{{ __('Aktuelles Passwort') }}</label>
-            <input type="password" name="current_password" required autocomplete="current-password">
+            <input type="password" name="current_password" required autocomplete="current-password" aria-label="{{ __('Aktuelles Passwort') }}">
         </div>
         @endif
         <div class="field">
             <label>{{ __('Neues Passwort (mind. 8 Zeichen)') }}</label>
-            <input type="password" name="password" required minlength="8" autocomplete="new-password">
+            <input type="password" name="password" required minlength="8" autocomplete="new-password" aria-label="{{ __('Neues Passwort (mind. 8 Zeichen)') }}">
         </div>
         <div class="field">
             <label>{{ __('Neues Passwort bestätigen') }}</label>
-            <input type="password" name="password_confirmation" required minlength="8" autocomplete="new-password">
+            <input type="password" name="password_confirmation" required minlength="8" autocomplete="new-password" aria-label="{{ __('Neues Passwort bestätigen') }}">
         </div>
         <button type="submit" class="btn btn-primary" style="justify-self:start;">{{ __('Passwort speichern') }}</button>
     </form>

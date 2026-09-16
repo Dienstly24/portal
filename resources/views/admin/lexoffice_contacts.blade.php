@@ -4,7 +4,7 @@
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>lexoffice</span><span class="breadcrumb-sep">›</span><span>Kontakte</span></div>
     <div style="display:flex;align-items:center;justify-content:space-between;">
         <div>
-            <div class="page-title">lexoffice Kontakte</div>
+            <h1 class="page-title">lexoffice Kontakte</h1>
             <div class="page-sub">{{ number_format($total) }} Kontakte in lexoffice</div>
         </div>
         <a href="{{ route('admin.lexoffice.invoices') }}" class="btn btn-ghost">📄 Rechnungen →</a>
@@ -13,7 +13,7 @@
 
 <form method="GET" action="{{ route('admin.lexoffice.contacts') }}" style="display:flex;gap:12px;margin-bottom:20px;">
     <input type="text" name="search" value="{{ $search }}" placeholder="Kontakt suchen..."
-        style="flex:1;padding:10px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;max-width:400px;">
+        style="flex:1;padding:10px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;max-width:400px;" aria-label="Kontakt suchen">
     <button type="submit" class="btn btn-primary">Suchen</button>
 </form>
 

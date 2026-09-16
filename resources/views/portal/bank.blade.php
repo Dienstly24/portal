@@ -1,6 +1,6 @@
 @extends('layouts.portal')
 @section('content')
-<div class="page-title">{{ __('🏦 Bankverbindung') }}</div>
+<h1 class="page-title">{{ __('🏦 Bankverbindung') }}</h1>
 <div class="page-sub">{{ __('Ihre Bankdaten können nur über eine geprüfte Änderungsanfrage aktualisiert werden.') }}</div>
 
 @php $pendingBank = $requests->where('status','pending')->first(); @endphp
@@ -25,21 +25,21 @@
         <div class="card-title">{{ __('Neue Bankverbindung beantragen') }}</div>
         <form method="POST" action="{{ route('portal.bank.store') }}" enctype="multipart/form-data">
             @csrf
-            <div class="field"><label>{{ __('IBAN *') }}</label><input type="text" name="iban" required maxlength="34" placeholder="DE00 0000 0000 0000 0000 00" data-h-input="41f899c4a0"></div>
-            <div class="field"><label>{{ __('Kontoinhaber *') }}</label><input type="text" name="account_holder" required maxlength="255" value="{{ auth()->user()->name }}"></div>
+            <div class="field"><label>{{ __('IBAN *') }}</label><input type="text" name="iban" required maxlength="34" placeholder="DE00 0000 0000 0000 0000 00" data-h-input="41f899c4a0" aria-label="{{ __('IBAN *') }}"></div>
+            <div class="field"><label>{{ __('Kontoinhaber *') }}</label><input type="text" name="account_holder" required maxlength="255" value="{{ auth()->user()->name }}" aria-label="{{ __('Kontoinhaber *') }}"></div>
             <div class="field">
                 <label>{{ __('Gültig ab') }}</label>
-                <input type="date" name="effective_from" value="{{ old('effective_from') }}">
+                <input type="date" name="effective_from" value="{{ old('effective_from') }}" aria-label="{{ __('Gültig ab') }}">
                 <p style="font-size:12px;color:var(--ink-soft);margin-top:4px;">{{ __('Ab wann sollen Beiträge von diesem Konto abgebucht werden?') }}</p>
             </div>
 
             <div style="border:1px dashed var(--line);border-radius:10px;padding:14px;margin:16px 0;background:var(--canvas);">
                 <div style="font-weight:700;font-size:13.5px;margin-bottom:6px;">{{ __('📎 Kontonachweis *') }}</div>
                 <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;">{{ __('Zum Schutz vor Missbrauch benötigen wir einen Nachweis, dass das Konto Ihnen gehört: Foto Ihrer Bankkarte oder ein Kontoauszug – IBAN und Name müssen lesbar sein.') }}</p>
-                <div class="field"><input type="file" name="bank_proof" required accept=".pdf,.jpg,.jpeg,.png,.webp"></div>
+                <div class="field"><input type="file" name="bank_proof" required accept=".pdf,.jpg,.jpeg,.png,.webp" aria-label="Nachweis zur Bankverbindung (Kontoauszug)"></div>
                 <div class="grid-2">
-                    <div class="field"><label style="font-size:12.5px;">{{ __('Ausweis Vorderseite (optional)') }}</label><input type="file" name="id_front" accept=".pdf,.jpg,.jpeg,.png,.webp"></div>
-                    <div class="field"><label style="font-size:12.5px;">{{ __('Ausweis Rückseite (optional)') }}</label><input type="file" name="id_back" accept=".pdf,.jpg,.jpeg,.png,.webp"></div>
+                    <div class="field"><label style="font-size:12.5px;">{{ __('Ausweis Vorderseite (optional)') }}</label><input type="file" name="id_front" accept=".pdf,.jpg,.jpeg,.png,.webp" aria-label="{{ __('Ausweis Vorderseite (optional)') }}"></div>
+                    <div class="field"><label style="font-size:12.5px;">{{ __('Ausweis Rückseite (optional)') }}</label><input type="file" name="id_back" accept=".pdf,.jpg,.jpeg,.png,.webp" aria-label="{{ __('Ausweis Rückseite (optional)') }}"></div>
                 </div>
                 <p class="muted-2xs">{{ __('Erlaubt: PDF oder Foto (JPG, PNG, WEBP), max. 10 MB je Datei.') }}</p>
             </div>

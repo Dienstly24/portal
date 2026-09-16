@@ -34,7 +34,7 @@
             @csrf
             <div class="field codeinput">
                 <input id="code" type="text" name="code" required autofocus inputmode="numeric"
-                       autocomplete="one-time-code" placeholder="000000">
+                       autocomplete="one-time-code" placeholder="000000" aria-label="000000">
             </div>
             <button type="submit" class="btn">{{ __('Bestätigen') }} <span>{{ $rtl ? '←' : '→' }}</span></button>
         </form>

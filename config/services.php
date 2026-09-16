@@ -259,6 +259,29 @@ return [
         'max_message_chars' => env('AI_ASSISTANT_MAX_MESSAGE_CHARS', 4000),
         // So viele vorangehende Chat-Nachrichten kommen als Verlauf mit.
         'history_messages' => env('AI_ASSISTANT_HISTORY_MESSAGES', 8),
+
+        /*
+        | KOSTENBREMSE DES WEBSITE-ASSISTENTEN (Audit 15.09.2026).
+        |
+        | Der Website-Assistent ist der einzige oeffentliche, NICHT
+        | angemeldete Weg zum Modell - und hatte bis zu diesem Audit
+        | gar keine Grenze. Die Drossel an der Route zaehlt je IP und
+        | ist damit durch einen Adresswechsel zu umgehen; diese Werte
+        | zaehlen je SITZUNG und je TAG ueber alle Besucher.
+        |
+        | `website_daily_limit` ist die eigentliche Zusicherung: es
+        | begrenzt die Summe ALLER Modellaufrufe der Website pro Tag,
+        | unabhaengig von Adresse und Sitzung. Ist es erreicht, uebergibt
+        | der Assistent an das Team, statt das Modell zu rufen - der
+        | Kontakt geht also nie verloren.
+        */
+        'website_rate_per_hour' => env('AI_ASSISTANT_WEBSITE_RATE_PER_HOUR', 12),
+        'website_session_daily_limit' => env('AI_ASSISTANT_WEBSITE_SESSION_DAILY', 40),
+        'website_daily_limit' => env('AI_ASSISTANT_WEBSITE_DAILY_LIMIT', 300),
+        // Obergrenze der Antwortlaenge des Website-Assistenten. Bewusst
+        // niedriger als im Portal: eine Erstauskunft ist kurz, und die
+        // Ausgabe-Tokens sind der teuerste Teil eines Aufrufs.
+        'website_max_output_tokens' => env('AI_ASSISTANT_WEBSITE_MAX_OUTPUT_TOKENS', 500),
     ],
 
     /*

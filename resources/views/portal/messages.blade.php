@@ -8,7 +8,10 @@
     <div class="chatpage-head">
         <div class="d24c-av">D24</div>
         <div>
-            <div class="chatpage-name">{{ __('Ihr Dienstly24 Team') }}</div>
+            {{-- <h1> statt <div> (Audit 15.09.2026): die Nachrichten-Seite
+                 des Kundenportals hatte keine Ueberschrift der ersten Ebene.
+                 Die Klasse bleibt, die Darstellung aendert sich nicht. --}}
+            <h1 class="chatpage-name">{{ __('Ihr Dienstly24 Team') }}</h1>
             {{-- Transparenz-Pflicht (Spezifikation Abschnitt 26): der Kunde
                  muss erkennen, dass zunaechst ein Assistent antwortet. Der
                  Hinweis erscheint nur, wenn der Assistent wirklich aktiv
@@ -23,6 +26,18 @@
     <div class="d24c-scroll" id="chat-scroll">
         @php $lastDay = null; @endphp
         <div class="d24c-list" id="chat-list" data-last-day="">
+            {{-- Die Seite baut nur die juengsten Nachrichten auf (Audit
+                 15.09.2026). Frueher stand hier der komplette Verlauf -
+                 er waechst mit der Kundenbeziehung, und irgendwann
+                 waechst jede Seitenansicht mit. Der Knopf holt den Rest
+                 nach; verloren geht nichts. --}}
+            @if($hatAeltere ?? false)
+                <div style="text-align:center;padding:10px 0;" id="chat-mehr-zeile">
+                    <button type="button" class="btn btn-ghost" id="chat-mehr" style="font-size:13px;">
+                        {{ __('Frühere Nachrichten laden') }}
+                    </button>
+                </div>
+            @endif
             @forelse($messages as $m)
                 @php
                     $day = $m->created_at->isToday()
@@ -61,7 +76,7 @@
     <form class="d24c-comp" id="chat-form" method="POST" action="{{ route('portal.messages.store') }}" enctype="multipart/form-data">
         @csrf
         <label class="d24c-clip" title="{{ __('Anhang hinzufügen') }}">📎<input id="chat-file" type="file" name="attachments[]" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" hidden></label>
-        <textarea id="chat-input" name="body" class="d24c-inp" rows="1" maxlength="5000" placeholder="{{ __('Nachricht schreiben …') }}" required autocomplete="off"></textarea>
+        <textarea id="chat-input" name="body" class="d24c-inp" rows="1" maxlength="5000" placeholder="{{ __('Nachricht schreiben …') }}" required autocomplete="off" aria-label="📎"></textarea>
         <button type="submit" class="d24c-send" aria-label="{{ __('Senden') }}"><span class="snd-ico">➤</span></button>
     </form>
 </div>
@@ -85,6 +100,39 @@ document.addEventListener('DOMContentLoaded', function () {
         every: 10000,
         markRead: function () { return true; }
     });
+
+    // "Frühere Nachrichten laden": holt den GESAMTEN Verlauf nach und
+    // baut ihn EINMAL auf. Bewusst kein seitenweises Nachladen - der
+    // Knopf wird selten gedrueckt, und wer den Anfang sucht, will ihn
+    // ganz. Die Bildlaufposition bleibt erhalten, damit der Blick nicht
+    // springt.
+    const mehrBtn = document.getElementById('chat-mehr');
+    if (mehrBtn) {
+        mehrBtn.addEventListener('click', function () {
+            mehrBtn.disabled = true;
+            mehrBtn.textContent = '{{ __('Wird geladen …') }}';
+            const vorher = scroller.scrollHeight;
+            fetch('{{ route('portal.messages.feed') }}?alle=1', { headers: { 'Accept': 'application/json' } })
+                .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+                .then(function (d) {
+                    // Neu aufbauen: die aelteren gehoeren VOR die
+                    // vorhandenen, und die Tagestrenner muessen
+                    // stimmen - das ist mit einem vollstaendigen
+                    // Neuaufbau einfacher und weniger fehleranfaellig
+                    // als mit Einfuegen an den Anfang.
+                    list.innerHTML = '';
+                    list.dataset.lastDay = '';
+                    D24Chat.sync(list, d.messages);
+                    const zeile = document.getElementById('chat-mehr-zeile');
+                    if (zeile) zeile.remove();
+                    scroller.scrollTop = scroller.scrollHeight - vorher;
+                })
+                .catch(function () {
+                    mehrBtn.disabled = false;
+                    mehrBtn.textContent = '{{ __('Frühere Nachrichten laden') }}';
+                });
+        });
+    }
 });
 </script>
 @endsection

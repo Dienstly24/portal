@@ -32,22 +32,27 @@ trait ScopesCustomerAccess
         return $user->visibleCustomerIdsWithSubstitution();
     }
 
-    /** Query auf das sichtbare Portfolio einschraenken. */
+    /**
+     * Query auf das sichtbare Portfolio einschraenken.
+     *
+     * Laeuft seit dem Audit 15.09.2026 ueber Customer::scopeVisibleTo() -
+     * dieselbe Bedingung, die auch getAccessibleCustomers() benutzt.
+     * Damit gibt es genau EINE Stelle, an der steht, wer welchen Kunden
+     * sieht; zuvor waren es drei, die sich widersprachen.
+     *
+     * Ausserdem EXISTS statt einer IN-Liste aller Kunden-IDs: die Liste
+     * wuchs mit dem Portfolio und stand auf jeder Seite der Beraterwelt
+     * in der Abfrage.
+     */
     protected function scopeCustomers($query)
     {
-        $ids = $this->visibleCustomerIds();
-        if ($ids !== null) {
-            $query->whereIn('customers.id', $ids);
-        }
-
-        return $query;
+        return $query->visibleTo(auth()->user());
     }
 
     /** 403, wenn der eingeloggte Mitarbeiter diesen Kunden nicht sehen darf. (Audit M1) */
     protected function authorizeCustomerAccess($customerId): void
     {
-        $ids = $this->visibleCustomerIds();
-        if ($ids !== null && ! in_array((string) $customerId, array_map('strval', $ids), true)) {
+        if (! auth()->user()?->canAccessCustomer($customerId)) {
             abort(403, 'Kein Zugriff auf diesen Kunden.');
         }
     }

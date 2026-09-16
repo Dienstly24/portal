@@ -7,7 +7,7 @@
         <a href="{{ route('admin.customer', $customer->id) }}">{{ $customer->user?->name }}</a><span class="breadcrumb-sep">›</span>
         <span>Timeline</span>
     </div>
-    <div class="page-title">Timeline — {{ $customer->user?->name }}</div>
+    <h1 class="page-title">Timeline — {{ $customer->user?->name }}</h1>
 </div>
 
 <div style="max-width:700px;">

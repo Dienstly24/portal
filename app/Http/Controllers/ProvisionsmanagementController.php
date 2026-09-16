@@ -98,13 +98,19 @@ class ProvisionsmanagementController extends Controller implements HasMiddleware
      */
     public function statements(Request $request)
     {
-        $summen = ContractCommission::selectRaw('import_id, COUNT(*) as anzahl, COALESCE(SUM(amount),0) as netto')
-            ->whereNotNull('import_id')->groupBy('import_id')->get()->keyBy('import_id');
-
         $imports = CommissionImport::with('importer')
             ->where('status', CommissionImport::IMPORTIERT)
             ->when($request->filled('pool'), fn ($q) => $q->where('pool', $request->string('pool')))
             ->latest('confirmed_at')->paginate(25)->withQueryString();
+
+        // Summen NUR fuer die Importe DIESER Seite (Audit 15.09.2026).
+        // Vorher wurde ueber ALLE Importe gruppiert und das Ergebnis
+        // vollstaendig in den Speicher geholt - die Seite zeigt aber
+        // hoechstens 25 Zeilen. Der Aufwand wuchs also mit dem Archiv,
+        // der Nutzen blieb gleich.
+        $summen = ContractCommission::selectRaw('import_id, COUNT(*) as anzahl, COALESCE(SUM(amount),0) as netto')
+            ->whereIn('import_id', $imports->pluck('id'))
+            ->groupBy('import_id')->get()->keyBy('import_id');
 
         return view('admin.provisionsmanagement.statements', [
             'imports' => $imports,

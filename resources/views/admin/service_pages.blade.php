@@ -4,7 +4,7 @@
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Leistungsseiten</span></div>
     <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
         <div>
-            <div class="page-title">Leistungsseiten</div>
+            <h1 class="page-title">Leistungsseiten</h1>
             <div class="page-sub">Oeffentliche Seiten unter <code>/leistungen/…</code> – Definition, Kurzinfos und FAQ je Leistung, zweisprachig (DE/AR). Das Anfrageformular jeder Seite erzeugt ein Ticket.</div>
         </div>
         <a href="{{ route('admin.service_pages.create') }}" class="btn btn-primary">➕ Neue Leistungsseite</a>

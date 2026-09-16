@@ -18,7 +18,7 @@
                  mehrere Schreibweisen an. --}}
             <input id="geburtsdatum" type="text" name="geburtsdatum" required dir="ltr"
                    inputmode="numeric" autocomplete="bday" maxlength="20" placeholder="TT.MM.JJJJ"
-                   style="font-size:20px;text-align:center;letter-spacing:1px;">
+                   style="font-size:20px;text-align:center;letter-spacing:1px;" aria-label="TT.MM.JJJJ">
         </div>
         <button type="submit" class="knopf">{{ __('signing.dob_submit') }}</button>
     </form>

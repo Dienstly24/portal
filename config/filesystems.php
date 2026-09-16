@@ -30,10 +30,29 @@ return [
 
     'disks' => [
 
+        /*
+        | Die PRIVATE Platte: Kundendokumente, Nachweise zu Aenderungen
+        | (Kontoauszug, Ausweis, Meldebescheinigung), unterschriebene
+        | PDFs, Chat-Anhaenge, Medien-Originale.
+        |
+        | 'serve' => false (Audit 15.09.2026). Mit `true` registriert
+        | Laravel von sich aus GET und PUT auf /storage/{path} - ganz
+        | ohne Middleware. Diese Routen verlangen zwar eine gueltige
+        | Signatur, aber die Anwendung BRAUCHT sie gar nicht: jeder
+        | Download laeuft ueber einen Controller, der das Portfolio
+        | prueft und den Zugriff protokolliert (nachgemessen: kein
+        | einziger Aufruf von disk('local')->url()/temporaryUrl()).
+        |
+        | Eine Tuer, die niemand benutzt, aber jeder Schluessel oeffnet,
+        | gehoert zugemauert: waere der APP_KEY je aus einer Sicherung
+        | oder einem Log zu holen, liessen sich damit signierte Links
+        | auf JEDE private Datei bauen - an Portfolio-Pruefung UND
+        | Protokoll vorbei.
+        */
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            'serve' => false,
             'throw' => false,
             'report' => false,
         ],

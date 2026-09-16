@@ -4,9 +4,9 @@
         <div style="font-size:18px;font-weight:700;margin-bottom:18px;">Neue interne Unterhaltung</div>
         <form method="POST" action="{{ route('admin.chat.store') }}">
             @csrf
-            <div class="field"><label>Betreff *</label><input type="text" name="subject" required maxlength="255"></div>
+            <div class="field"><label>Betreff *</label><input type="text" name="subject" required maxlength="255" aria-label="Betreff"></div>
             <div class="field"><label>Team einladen (optional)</label>
-                <select name="team">
+                <select name="team" aria-label="Team einladen (optional)">
                     <option value="">— Kein ganzes Team —</option>
                     <option value="support">Gesamter Support</option>
                     <option value="manager">Alle Manager</option>
@@ -25,7 +25,7 @@
                 </div>
                 <p style="font-size:11.5px;color:var(--ink-soft);margin-top:6px;">Nur Mitarbeiter – Kunden erscheinen hier nie.</p>
             </div>
-            <div class="field"><label>Erste Nachricht *</label><textarea name="body" required maxlength="5000" style="width:100%;min-height:80px;padding:10px;border:1px solid var(--line);border-radius:8px;font-family:inherit;"></textarea></div>
+            <div class="field"><label>Erste Nachricht *</label><textarea name="body" required maxlength="5000" style="width:100%;min-height:80px;padding:10px;border:1px solid var(--line);border-radius:8px;font-family:inherit;" aria-label="Erste Nachricht"></textarea></div>
             <button type="submit" class="btn btn-primary" style="width:100%;">Unterhaltung starten</button>
         </form>
     </div>

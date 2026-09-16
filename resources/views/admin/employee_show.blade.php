@@ -30,7 +30,7 @@ $typeConfig = [
         <div style="display:flex;align-items:center;gap:12px;">
             <div style="width:44px;height:44px;border-radius:50%;background:var(--graphite);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;">{{ strtoupper(substr($employee->name,0,2)) }}</div>
             <div>
-                <div class="page-title" style="margin:0;">{{ $employee->name }} @if(!$employee->is_active)<span class="badge badge-closed">Deaktiviert</span>@endif</div>
+                <h1 class="page-title" style="margin:0;">{{ $employee->name }} @if(!$employee->is_active)<span class="badge badge-closed">Deaktiviert</span>@endif</h1>
                 <div class="page-sub" style="margin:0;">{{ $employee->email }}</div>
             </div>
         </div>
@@ -78,7 +78,7 @@ $typeConfig = [
     <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;">Suche nach Name, Nummer, Telefon, Anschrift, Kennzeichen, Zaehlernummer ... – mehrere auswaehlen und gebuendelt zuweisen.</div>
     <script type="application/json" id="assignedIdsData" @cspNonce>{!! $assignedIds->toJson() !!}</script>
     <input type="text" id="assignSearch" autocomplete="off" placeholder="Kunden suchen (mind. 2 Zeichen) ..."
-        style="width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:10px;font-size:14px;margin-bottom:8px;">
+        style="width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:10px;font-size:14px;margin-bottom:8px;" aria-label="Kunden suchen (mind. 2 Zeichen)">
     <div id="assignResultsBar" style="display:none;align-items:center;gap:14px;margin-bottom:8px;font-size:12.5px;">
         <a id="assignSelectAll" style="cursor:pointer;color:var(--emerald);font-weight:600;">☑ Alle Treffer auswaehlen</a>
     </div>
@@ -104,7 +104,7 @@ $typeConfig = [
         <form method="GET" action="{{ route('admin.employees.show', $employee->id) }}" style="display:flex;gap:8px;margin:0;">
             <input type="text" name="q" value="{{ request('q') }}" autocomplete="off"
                 placeholder="In zugewiesenen Kunden suchen ..."
-                style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;min-width:230px;">
+                style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;min-width:230px;" aria-label="In zugewiesenen Kunden suchen">
             <button type="submit" class="btn btn-primary btn-sm" title="Suchen">🔍</button>
             @if(request()->filled('q'))
             <a href="{{ route('admin.employees.show', $employee->id) }}" class="btn btn-ghost btn-sm" title="Suche loeschen">✕</a>

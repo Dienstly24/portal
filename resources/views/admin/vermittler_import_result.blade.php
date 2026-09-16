@@ -7,7 +7,7 @@
         <a href="{{ route('admin.vermittler.index') }}">Vermittler-Abrechnung</a><span class="breadcrumb-sep">›</span>
         <span>Import-Ergebnis</span>
     </div>
-    <div class="page-title">Import abgeschlossen</div>
+    <h1 class="page-title">Import abgeschlossen</h1>
     <div class="page-sub">{{ $import->filename }} · {{ $import->created_at?->lokal()->format('d.m.Y H:i') }} · {{ $import->importer?->name ?? 'System' }}</div>
 </div>
 

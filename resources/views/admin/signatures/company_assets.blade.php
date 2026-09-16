@@ -8,7 +8,7 @@
         <span>Unternehmenssignaturen</span>
     </div>
     <div>
-        <div class="page-title">Unternehmenssignaturen</div>
+        <h1 class="page-title">Unternehmenssignaturen</h1>
         <div class="page-sub">
             Unterschrift des Betriebs, Firmenstempel und Logo - einmal hinterlegt, im Feld-Editor
             auf jedes Dokument setzbar.
@@ -54,7 +54,7 @@
                 <label for="name">Bezeichnung</label>
                 <input id="name" type="text" name="name" maxlength="120" value="{{ old('name') }}"
                        placeholder="z. B. Unterschrift Geschäftsführung"
-                       style="width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+                       style="width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="z. B. Unterschrift Geschäftsführung">
                 <div class="muted-sm">Mehrere Bilder je Art sind erlaubt - der Name unterscheidet sie.</div>
             </div>
         </div>

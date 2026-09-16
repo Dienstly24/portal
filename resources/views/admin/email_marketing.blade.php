@@ -2,7 +2,7 @@
 @section('content')
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>E-Mail Marketing</span></div>
-    <div class="page-title">E-Mail Marketing</div>
+    <h1 class="page-title">E-Mail Marketing</h1>
     <div class="page-sub">Kampagnen erstellen und spartenspezifische Wechsel-Erinnerungen senden.</div>
 </div>
 
@@ -55,7 +55,7 @@
         @endif
         <div class="field">
             <label>Empfänger *</label>
-            <select name="target" required style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+            <select name="target" required style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Empfänger">
                 @php $t = old('target', $draft->target ?? 'all'); @endphp
                 <option value="all" @selected($t==='all')>Alle Kunden ({{ $reachableCustomers }})</option>
                 <option value="kfz" @selected($t==='kfz')>Kfz-Versicherung Kunden</option>
@@ -69,11 +69,11 @@
         </div>
         <div class="field">
             <label>Betreff *</label>
-            <input type="text" name="subject" required placeholder="z.B. Exklusives Angebot für Sie" value="{{ old('subject', $draft->subject ?? '') }}">
+            <input type="text" name="subject" required placeholder="z.B. Exklusives Angebot für Sie" value="{{ old('subject', $draft->subject ?? '') }}" aria-label="Betreff">
         </div>
         <div class="field">
             <label>Nachricht *</label>
-            <textarea name="body" required placeholder="Schreiben Sie Ihre Nachricht hier..." style="min-height:160px;width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;resize:vertical;">{{ old('body', $draft->body ?? '') }}</textarea>
+            <textarea name="body" required placeholder="Schreiben Sie Ihre Nachricht hier..." style="min-height:160px;width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;resize:vertical;" aria-label="Nachricht">{{ old('body', $draft->body ?? '') }}</textarea>
         </div>
         <div class="field">
             <label>Geplanter Versand (nur für „Später senden")</label>

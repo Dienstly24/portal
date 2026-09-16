@@ -327,7 +327,7 @@
          Falle. --}}
     <select id="menu-signer" style="width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:13px;margin-bottom:6px;"></select>
     <input id="menu-label" type="text" maxlength="120" placeholder="Beschriftung (optional)"
-           style="width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:13px;margin-bottom:6px;">
+           style="width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:13px;margin-bottom:6px;" aria-label="Beschriftung (optional)">
     <label id="menu-pflicht" style="display:flex;gap:7px;align-items:center;font-size:13px;font-weight:400;margin-bottom:8px;">
         <input id="menu-required" type="checkbox"> Pflichtfeld
     </label>

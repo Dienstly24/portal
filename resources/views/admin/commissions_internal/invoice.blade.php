@@ -2,7 +2,7 @@
 @section('content')
 @include('admin.partials.provision_styles')
 <div class="page-header">
-    <div class="page-title">🧾 Rechnungsabgleich</div>
+    <h1 class="page-title">🧾 Rechnungsabgleich</h1>
     <div class="page-sub">
         Kennung aus einer Rechnung eingeben – das System zeigt Vertrag, Kunde und die erwarteten Provisionen.
     </div>
@@ -20,7 +20,7 @@
     <form method="GET" action="{{ route('admin.commissions_internal.invoice') }}" style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
         <div class="field" style="margin:0;min-width:280px;">
             <label>Kennung aus der Rechnung</label>
-            <input type="text" name="kennung" value="{{ $identifier }}" placeholder="z. B. V19613073 oder 1477-6741-9200-53">
+            <input type="text" name="kennung" value="{{ $identifier }}" placeholder="z. B. V19613073 oder 1477-6741-9200-53" aria-label="Kennung aus der Rechnung">
         </div>
         <button type="submit" class="btn btn-primary">Suchen</button>
     </form>

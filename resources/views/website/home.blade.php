@@ -26,56 +26,22 @@
     : 'Dienstly24 – Versicherung, Kfz-Zulassung & Energie | Beratung DE & AR')
 
 @section('head-extra')
-<script type="application/ld+json" @cspNonce>
-{!! json_encode([
-    '@context' => 'https://schema.org',
-    '@type' => 'InsuranceAgency',
-    'name' => 'Dienstly24',
-    'url' => WebsiteHosts::url('/'),
-    'image' => WebsiteHosts::url('/images/og-image.jpg'),
-    'description' => 'Anbieterunabhängige Beratung zu Versicherungen, Kfz-Zulassung und Energie – auf Deutsch und Arabisch.',
-    'telephone' => '+49-179-9673909',
-    'email' => config('website.email'),
-    'priceRange' => '€€',
-    'address' => ['@type' => 'PostalAddress', 'streetAddress' => 'Furtweg 51a', 'postalCode' => '22523', 'addressLocality' => 'Hamburg', 'addressCountry' => 'DE'],
-    'areaServed' => ['@type' => 'Country', 'name' => 'Deutschland'],
-    'availableLanguage' => ['de', 'ar'],
-    'openingHoursSpecification' => [[
-        '@type' => 'OpeningHoursSpecification',
-        'dayOfWeek' => ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-        'opens' => '09:00', 'closes' => '18:00',
-    ]],
-    'sameAs' => [config('website.facebook')],
-    'hasOfferCatalog' => [
-        '@type' => 'OfferCatalog',
-        'name' => 'Leistungen',
-        'itemListElement' => array_map(fn ($s) => ['@type' => 'Offer', 'itemOffered' => ['@type' => 'Service', 'name' => $s]], [
-            'Kfz-Versicherung', 'Krankenversicherung', 'Zahnzusatzversicherung',
-            'Kfz-Zulassungsservice', 'Kennzeichen per Post', 'Strom- und Gasberatung',
-        ]),
-    ],
-], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}
-</script>
-<script type="application/ld+json" @cspNonce>
-{!! json_encode([
-    '@context' => 'https://schema.org',
-    '@type' => 'FAQPage',
-    'mainEntity' => array_map(fn ($f) => [
-        '@type' => 'Question', 'name' => $f[0],
-        'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f[1]],
-    ], $isAr ? [
-        ['هل الاستشارة مجانية فعلاً؟', 'نعم، الاستشارة الأولى مجانية تماماً وغير ملزمة.'],
-        ['هل تتحدثون العربية أيضاً؟', 'نعم، فريقنا يقدم الاستشارة بالألمانية والعربية – كما هو أنسب لكم.'],
-        ['كم تستغرق معالجة طلبي؟', 'عادةً نتواصل معكم خلال 24 ساعة.'],
-        ['كيف يمكنني إرسال طلب؟', 'أسهل طريقة هي نموذج الاتصال، أو واتساب، أو الهاتف على الرقم ‎+49 179 9673909.'],
-    ] : [
-        ['Ist die Beratung wirklich kostenlos?', 'Ja, die Erstberatung ist für Sie komplett kostenlos und unverbindlich.'],
-        ['Sprechen Sie auch Arabisch?', 'Ja, unser Team berät Sie auf Deutsch und auf Arabisch – ganz wie es für Sie bequemer ist.'],
-        ['Wie lange dauert die Bearbeitung meiner Anfrage?', 'In der Regel melden wir uns innerhalb von 24 Stunden bei Ihnen.'],
-        ['Wie kann ich eine Anfrage stellen?', 'Am einfachsten über das Kontaktformular, per WhatsApp oder telefonisch unter +49 179 9673909.'],
-    ]),
-], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}
-</script>
+{{-- Strukturierte Daten: Aufbau in App\Services\Seo\StructuredData.
+     Sie duerfen NICHT als Array in dieser Vorlage stehen - Blade macht aus
+     dem Schluessel "at-context" sonst seine eigene Direktive und schreibt
+     PHP-Quelltext ins HTML (Audit 15.09.2026). --}}
+{!! \App\Services\Seo\StructuredData::script(\App\Services\Seo\StructuredData::insuranceAgency()) !!}
+{!! \App\Services\Seo\StructuredData::script(\App\Services\Seo\StructuredData::faqPage($isAr ? [
+    ['هل الاستشارة مجانية فعلاً؟', 'نعم، الاستشارة الأولى مجانية تماماً وغير ملزمة.'],
+    ['هل تتحدثون العربية أيضاً؟', 'نعم، فريقنا يقدم الاستشارة بالألمانية والعربية – كما هو أنسب لكم.'],
+    ['كم تستغرق معالجة طلبي؟', 'عادةً نتواصل معكم خلال 24 ساعة.'],
+    ['كيف يمكنني إرسال طلب؟', 'أسهل طريقة هي نموذج الاتصال، أو واتساب، أو الهاتف على الرقم ‎+49 179 9673909.'],
+] : [
+    ['Ist die Beratung wirklich kostenlos?', 'Ja, die Erstberatung ist für Sie komplett kostenlos und unverbindlich.'],
+    ['Sprechen Sie auch Arabisch?', 'Ja, unser Team berät Sie auf Deutsch und auf Arabisch – ganz wie es für Sie bequemer ist.'],
+    ['Wie lange dauert die Bearbeitung meiner Anfrage?', 'In der Regel melden wir uns innerhalb von 24 Stunden bei Ihnen.'],
+    ['Wie kann ich eine Anfrage stellen?', 'Am einfachsten über das Kontaktformular, per WhatsApp oder telefonisch unter +49 179 9673909.'],
+])) !!}
 @endsection
 
 @section('content')
