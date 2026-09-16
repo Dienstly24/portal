@@ -111,16 +111,36 @@ class ContentSecurityPolicyTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'admin']);
 
+        // NICHT am Statuscode festmachen (Lehre 16.09.2026): die Seite
+        // antwortet voellig regelgerecht mit 503, wenn die Ampel rot ist -
+        // und genau das ist in der Testumgebung der Normalfall (kein
+        // Worker, kein Planer). Der Test haengte an "=== 200" und
+        // UEBERSPRANG sich deshalb immer. Ein Sicherheitstest, der sich
+        // still ueberspringt, steht gruen in der Liste und prueft nichts.
+        // Massstab ist der INHALTSTYP: eine JSON-Antwort ist keine Seite.
         $response = $this->actingAs($admin)->get('/admin/systemzustand.json');
 
-        if ($response->getStatusCode() === 200) {
-            $this->assertFalse(
-                $response->headers->has('Content-Security-Policy'),
-                'JSON-Antworten brauchen keine CSP.'
-            );
-        } else {
-            $this->markTestSkipped('Systemzustand nicht erreichbar.');
-        }
+        $this->assertStringContainsString(
+            'json',
+            (string) $response->headers->get('Content-Type'),
+            'Die Ansicht liefert kein JSON mehr - dann prueft dieser Test das Falsche.'
+        );
+        $this->assertFalse(
+            $response->headers->has('Content-Security-Policy'),
+            'JSON-Antworten brauchen keine CSP.'
+        );
+
+        // Zweiter, anmeldefreier Weg: die Ampel fuer die externe
+        // Ueberwachung. Sie ist der Endpunkt, den ein fremder Dienst
+        // wirklich abfragt.
+        config(['security.health_token' => 'test-health-token-0123456789']);
+        $puls = $this->getJson('/gesundheit?token=test-health-token-0123456789');
+
+        $this->assertStringContainsString('json', (string) $puls->headers->get('Content-Type'));
+        $this->assertFalse(
+            $puls->headers->has('Content-Security-Policy'),
+            'Die Gesundheits-Ampel ist JSON und braucht keine CSP.'
+        );
     }
 
     /**

@@ -57,6 +57,14 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+      # Ohne diese Pakete UEBERSPRINGEN sich fuenf OCR-Testfaelle still -
+      # die Suite meldet trotzdem "bestanden". Auf dem Produktionsserver
+      # sind sie installiert (OCR_ENABLED=true), also gehoert die
+      # Dokumenterkennung auch hier in den Lauf und nicht in die Kuer.
+      # Siehe docs/TESTUMGEBUNG.md.
+      - name: Dokumenterkennung bereitstellen (OCR-Tests laufen sonst nicht)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-deu poppler-utils
+
       - name: Migrationen prüfen (frische DB, SQLite)
         run: php artisan migrate:fresh --force
         env:

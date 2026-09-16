@@ -107,14 +107,22 @@ class ClientIpIntegrityTest extends TestCase
                 'password' => 'test-passwort-2026',
             ]);
 
+        // Die IP steht in der SPALTE `ip`, nicht im `meta`-Feld. Bis zum
+        // 16.09.2026 las dieser Test nur `meta` - fand dort nie etwas und
+        // UEBERSPRANG sich selbst. Ein Sicherheitstest, der sich still
+        // ueberspringt, ist schlimmer als keiner: er steht gruen in der
+        // Liste und prueft nichts. `meta` bleibt als zweite Quelle drin
+        // (aeltere Eintraege fuehrten die IP dort).
         $eintraege = ActivityLog::all()
-            ->map(fn ($e) => $e->metaArray()['ip'] ?? null)
+            ->flatMap(fn ($e) => [$e->ip, $e->metaArray()['ip'] ?? null])
             ->filter()
             ->values();
 
-        if ($eintraege->isEmpty()) {
-            $this->markTestSkipped('Dieser Ablauf schreibt keine IP ins ActivityLog.');
-        }
+        $this->assertNotEmpty(
+            $eintraege,
+            'Die Anmeldung hat keinerlei IP protokolliert - dann kann dieser Test die '
+            .'IP-Faelschung nicht ausschliessen.'
+        );
 
         $this->assertContains('198.51.100.77', $eintraege->all());
         $this->assertNotContains('5.5.5.5', $eintraege->all(),
