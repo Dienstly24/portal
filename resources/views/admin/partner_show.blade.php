@@ -4,7 +4,7 @@
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.partners') }}">Partner</a><span class="breadcrumb-sep">›</span><span>{{ $partner->name }}</span></div>
     <div style="display:flex;align-items:center;justify-content:space-between;">
         <div>
-            <div class="page-title">{{ $partner->name }}</div>
+            <h1 class="page-title">{{ $partner->name }}</h1>
             <div class="page-sub">
                 {{ $partner->partner_number ? 'Partner-Nr. ' . $partner->partner_number . ' · ' : '' }}
                 <span class="badge {{ $partner->is_active ? 'badge-active' : 'badge-pending' }}">{{ $partner->is_active ? 'Aktiv' : 'Inaktiv' }}</span>

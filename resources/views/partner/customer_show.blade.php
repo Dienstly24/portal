@@ -1,6 +1,6 @@
 @extends('layouts.partner')
 @section('content')
-<div class="page-title">{{ $customer->user?->name }}</div>
+<h1 class="page-title">{{ $customer->user?->name }}</h1>
 <div class="page-sub">Kundennr. {{ $customer->customer_number }}</div>
 
 <a href="{{ route('partner.customers') }}" class="btn btn-ghost btn-sm" style="margin-bottom:16px;">← Zurück zur Liste</a>

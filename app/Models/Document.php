@@ -245,4 +245,29 @@ class Document extends Model
     public function isViewable(): bool {
         return $this->isImage() || $this->isPdf();
     }
+
+    /**
+     * Inhaltstyp aus der DATEIENDUNG - die Tabelle `documents` fuehrt
+     * bewusst keine mime-Spalte.
+     *
+     * Warum das hier steht (Audit 15.09.2026): der Rohtext-Weg las
+     * `$document->mime_type`, eine Eigenschaft, die es nie gab. Der
+     * Ausdruck war IMMER leer, also galt jedes Dokument als
+     * application/octet-stream - die kostenlose PDF-Textebene wurde damit
+     * nie angestossen, obwohl sie fuer digitale PDFs die bessere und
+     * fehlerfreie Quelle ist. Kein Fehler, keine Meldung: es kam nur
+     * schlechterer Text heraus.
+     */
+    public function mimeType(): string {
+        return match ($this->extension()) {
+            'jpg', 'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            'gif' => 'image/gif',
+            'tif', 'tiff' => 'image/tiff',
+            'bmp' => 'image/bmp',
+            'pdf' => 'application/pdf',
+            default => 'application/octet-stream',
+        };
+    }
 }

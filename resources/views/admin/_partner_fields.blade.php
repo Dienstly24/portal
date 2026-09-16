@@ -1,42 +1,42 @@
 <div style="display:grid;gap:12px;">
     <div>
         <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Name *</label>
-        <input type="text" name="name" value="{{ old('name', $partner->name ?? '') }}" required maxlength="255" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;">
+        <input type="text" name="name" value="{{ old('name', $partner->name ?? '') }}" required maxlength="255" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;" aria-label="Name">
         @error('name')<div style="color:#B3261E;font-size:12px;margin-top:3px;">{{ $message }}</div>@enderror
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div>
             <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Partner-Nr.</label>
-            <input type="text" name="partner_number" value="{{ old('partner_number', $partner->partner_number ?? '') }}" maxlength="100" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;">
+            <input type="text" name="partner_number" value="{{ old('partner_number', $partner->partner_number ?? '') }}" maxlength="100" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;" aria-label="Partner-Nr.">
         </div>
         <div>
             <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Kontakt-E-Mail</label>
-            <input type="email" name="contact_email" value="{{ old('contact_email', $partner->contact_email ?? '') }}" maxlength="255" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;">
+            <input type="email" name="contact_email" value="{{ old('contact_email', $partner->contact_email ?? '') }}" maxlength="255" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;" aria-label="Kontakt-E-Mail">
         </div>
     </div>
     <div>
         <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Absender-Domains (für automatische Erkennung, kommagetrennt)</label>
-        <input type="text" name="email_domains" value="{{ old('email_domains', implode(', ', $partner->email_domains ?? [])) }}" placeholder="z. B. fondsfinanz.de, partner-abc.de" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;">
+        <input type="text" name="email_domains" value="{{ old('email_domains', implode(', ', $partner->email_domains ?? [])) }}" placeholder="z. B. fondsfinanz.de, partner-abc.de" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;" aria-label="Absender-Domains (für automatische Erkennung, kommagetrennt)">
         <div style="font-size:11px;color:var(--ink-soft);margin-top:3px;">Eingehende Provisions-Mails von diesen Domains werden diesem Partner zugeordnet.</div>
     </div>
     <div>
         <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">IBAN</label>
-        <input type="text" name="iban" value="{{ old('iban', $partner->iban ?? '') }}" maxlength="50" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;">
+        <input type="text" name="iban" value="{{ old('iban', $partner->iban ?? '') }}" maxlength="50" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;" aria-label="IBAN">
     </div>
     <div>
         <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Notizen</label>
-        <textarea name="notes" rows="2" maxlength="5000" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;">{{ old('notes', $partner->notes ?? '') }}</textarea>
+        <textarea name="notes" rows="2" maxlength="5000" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;" aria-label="Notizen">{{ old('notes', $partner->notes ?? '') }}</textarea>
     </div>
     {{-- Provisions-Saetze (Neukunden-Bericht): Vorschlag, wenn dieser Partner
          als Werber eines Neukunden eingetragen ist. Beide optional. --}}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div>
             <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Provision je Neuvertrag (EUR)</label>
-            <input type="number" name="provision_fixed" step="0.01" min="0" max="99999" value="{{ old('provision_fixed', $partner->provision_fixed ?? '') }}" placeholder="z. B. 25,00" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;">
+            <input type="number" name="provision_fixed" step="0.01" min="0" max="99999" value="{{ old('provision_fixed', $partner->provision_fixed ?? '') }}" placeholder="z. B. 25,00" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;" aria-label="Provision je Neuvertrag (EUR)">
         </div>
         <div>
             <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Provision % vom Jahresbeitrag</label>
-            <input type="number" name="provision_percent" step="0.01" min="0" max="100" value="{{ old('provision_percent', $partner->provision_percent ?? '') }}" placeholder="z. B. 10" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;">
+            <input type="number" name="provision_percent" step="0.01" min="0" max="100" value="{{ old('provision_percent', $partner->provision_percent ?? '') }}" placeholder="z. B. 10" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;" aria-label="Provision % vom Jahresbeitrag">
         </div>
     </div>
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;">

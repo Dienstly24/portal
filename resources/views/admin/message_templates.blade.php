@@ -10,7 +10,7 @@
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
         <div>
-            <div class="page-title">📋 Nachrichten- &amp; E-Mail-Vorlagen</div>
+            <h1 class="page-title">📋 Nachrichten- &amp; E-Mail-Vorlagen</h1>
             <div style="font-size:14px;color:var(--ink-soft);">Einmal anlegen, überall mit einem Klick einsetzen – Platzhalter werden automatisch mit Kundendaten gefüllt.</div>
         </div>
         @if($canManage)
@@ -81,11 +81,11 @@
                 <div style="display:grid;grid-template-columns:1fr 180px;gap:12px;">
                     <div>
                         <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Name *</label>
-                        <input type="text" name="name" id="tpl-name" required maxlength="120" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;">
+                        <input type="text" name="name" id="tpl-name" required maxlength="120" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;" aria-label="Name">
                     </div>
                     <div>
                         <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Kategorie *</label>
-                        <select name="category" id="tpl-category" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;">
+                        <select name="category" id="tpl-category" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;" aria-label="Kategorie">
                             <option value="kunde">Kunde</option>
                             <option value="gesellschaft">Gesellschaft</option>
                         </select>
@@ -93,15 +93,15 @@
                 </div>
                 <div>
                     <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Betreff (für E-Mails)</label>
-                    <input type="text" name="subject" id="tpl-subject" maxlength="200" placeholder="z. B. Fehlende Unterlagen zu Ihrem Vertrag" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;">
+                    <input type="text" name="subject" id="tpl-subject" maxlength="200" placeholder="z. B. Fehlende Unterlagen zu Ihrem Vertrag" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;" aria-label="Betreff (für E-Mails)">
                 </div>
                 <div>
                     <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Text *</label>
-                    <textarea name="body" id="tpl-body" required maxlength="10000" rows="9" placeholder="@{{anrede}},&#10;&#10;…&#10;&#10;Mit freundlichen Grüßen&#10;@{{berater}}" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-family:inherit;"></textarea>
+                    <textarea name="body" id="tpl-body" required maxlength="10000" rows="9" placeholder="@{{anrede}},&#10;&#10;…&#10;&#10;Mit freundlichen Grüßen&#10;@{{berater}}" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-family:inherit;" aria-label="@,&#10;&#10;…&#10;&#10;Mit freundlichen Grüßen&#10;@"></textarea>
                 </div>
                 <div>
                     <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Sortierung</label>
-                    <input type="number" name="sort" id="tpl-sort" min="0" max="9999" value="0" style="width:120px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;">
+                    <input type="number" name="sort" id="tpl-sort" min="0" max="9999" value="0" style="width:120px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;" aria-label="Sortierung">
                 </div>
             </div>
             <div style="display:flex;gap:10px;margin-top:18px;">

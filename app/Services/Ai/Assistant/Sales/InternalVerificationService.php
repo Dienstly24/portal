@@ -69,7 +69,11 @@ class InternalVerificationService
 
         $checks['email'] = $this->compare(
             $angaben['email'] ?? null,
-            [$customer->email, $customer->email2],
+            // Die Login-Adresse haengt am BENUTZER; $customer->email gibt
+            // es nicht. Der Vergleich lief bisher nur gegen die
+            // Zweitadresse - eine richtige Angabe galt deshalb als
+            // "weicht ab", sobald der Kunde seine Hauptadresse nannte.
+            [$customer->user?->hasRealEmail() ? $customer->user->email : null, $customer->email2],
             fn ($w) => mb_strtolower(trim((string) $w)),
         );
 

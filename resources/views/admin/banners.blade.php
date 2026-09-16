@@ -4,7 +4,7 @@
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Banner</span></div>
     <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
         <div>
-            <div class="page-title">Bannerverwaltung</div>
+            <h1 class="page-title">Bannerverwaltung</h1>
             <div class="page-sub">Werbebanner im Kundenportal – Bild, Video oder GIF, planbar, mit Klick-Ziel und Statistiken. Mehrere aktive Banner rotieren als Slider.</div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -23,22 +23,22 @@
     <form method="POST" action="{{ route('admin.banners.store') }}" enctype="multipart/form-data" id="createForm">
         @csrf
         <div class="grid-2">
-            <div class="field"><label>Titel *</label><input type="text" name="title" required maxlength="150" placeholder="z.B. Stromwechsel Juli 2026"></div>
+            <div class="field"><label>Titel *</label><input type="text" name="title" required maxlength="150" placeholder="z.B. Stromwechsel Juli 2026" aria-label="Titel"></div>
             <div class="field"><label>Bild / Video / GIF * (beliebige Maße – JPG/PNG/WEBP/GIF/MP4/WEBM, max. 20 MB)</label>
-                <input type="file" name="media" id="createMedia" required accept=".jpg,.jpeg,.png,.webp,.gif,.mp4,.webm">
+                <input type="file" name="media" id="createMedia" required aria-label="Bild, Video oder GIF auswählen" accept=".jpg,.jpeg,.png,.webp,.gif,.mp4,.webm">
                 <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">JPG/PNG werden automatisch komprimiert und als WebP gespeichert.</div>
             </div>
         </div>
         <div class="grid-2">
-            <div class="field"><label>Klick-Ziel (Link, optional)</label><input type="text" name="link_url" placeholder="/portal/contracts oder https://beispiel.de"></div>
+            <div class="field"><label>Klick-Ziel (Link, optional)</label><input type="text" name="link_url" placeholder="/portal/contracts oder https://beispiel.de" aria-label="Klick-Ziel (Link, optional)"></div>
             <div class="field"><label>Öffnen in</label>
-                <select name="link_target"><option value="self">Gleicher Seite</option><option value="blank">Neuem Tab</option></select>
+                <select name="link_target" aria-label="Öffnen in"><option value="self">Gleicher Seite</option><option value="blank">Neuem Tab</option></select>
             </div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
-            <div class="field"><label>Startdatum</label><input type="date" name="start_date"></div>
-            <div class="field"><label>Enddatum</label><input type="date" name="end_date"></div>
-            <div class="field"><label>Schließen-Button <span style="font-weight:400;color:var(--ink-soft);">(Tage ausgeblendet)</span></label><input type="number" name="dismiss_days" min="1" max="365" placeholder="leer = kein ✕"></div>
+            <div class="field"><label>Startdatum</label><input type="date" name="start_date" aria-label="Startdatum"></div>
+            <div class="field"><label>Enddatum</label><input type="date" name="end_date" aria-label="Enddatum"></div>
+            <div class="field"><label>Schließen-Button <span style="font-weight:400;color:var(--ink-soft);">(Tage ausgeblendet)</span></label><input type="number" name="dismiss_days" min="1" max="365" placeholder="leer = kein ✕" aria-label="Schließen-Button (Tage ausgeblendet)"></div>
             <div class="field"><label>Als Entwurf</label>
                 <label style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer;font-size:13.5px;"><input type="checkbox" name="is_draft" value="1" style="width:16px;height:16px;"> nicht sofort ausspielen</label>
             </div>
@@ -116,19 +116,19 @@
             <form method="POST" action="{{ route('admin.banners.update', $b->id) }}" enctype="multipart/form-data">
                 @csrf
                 <div class="grid-2">
-                    <div class="field"><label>Titel</label><input type="text" name="title" value="{{ $b->title }}" required maxlength="150"></div>
-                    <div class="field"><label>Neues Medium (optional – ersetzt das aktuelle)</label><input type="file" name="media" accept=".jpg,.jpeg,.png,.webp,.gif,.mp4,.webm"></div>
+                    <div class="field"><label>Titel</label><input type="text" name="title" value="{{ $b->title }}" required maxlength="150" aria-label="Titel"></div>
+                    <div class="field"><label>Neues Medium (optional – ersetzt das aktuelle)</label><input type="file" name="media" accept=".jpg,.jpeg,.png,.webp,.gif,.mp4,.webm" aria-label="Neues Medium (optional – ersetzt das aktuelle)"></div>
                 </div>
                 <div class="grid-2">
-                    <div class="field"><label>Klick-Ziel (Link)</label><input type="text" name="link_url" value="{{ $b->link_url }}" placeholder="/portal/contracts oder https://…"></div>
+                    <div class="field"><label>Klick-Ziel (Link)</label><input type="text" name="link_url" value="{{ $b->link_url }}" placeholder="/portal/contracts oder https://…" aria-label="Klick-Ziel (Link)"></div>
                     <div class="field"><label>Öffnen in</label>
-                        <select name="link_target"><option value="self" {{ $b->link_target === 'self' ? 'selected' : '' }}>Gleicher Seite</option><option value="blank" {{ $b->link_target === 'blank' ? 'selected' : '' }}>Neuem Tab</option></select>
+                        <select name="link_target" aria-label="Öffnen in"><option value="self" {{ $b->link_target === 'self' ? 'selected' : '' }}>Gleicher Seite</option><option value="blank" {{ $b->link_target === 'blank' ? 'selected' : '' }}>Neuem Tab</option></select>
                     </div>
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
-                    <div class="field"><label>Startdatum</label><input type="date" name="start_date" value="{{ $b->start_date?->format('Y-m-d') }}"></div>
-                    <div class="field"><label>Enddatum</label><input type="date" name="end_date" value="{{ $b->end_date?->format('Y-m-d') }}"></div>
-                    <div class="field"><label>Schließen-Button (Tage)</label><input type="number" name="dismiss_days" min="1" max="365" value="{{ $b->dismiss_days }}" placeholder="leer = kein ✕"></div>
+                    <div class="field"><label>Startdatum</label><input type="date" name="start_date" value="{{ $b->start_date?->format('Y-m-d') }}" aria-label="Startdatum"></div>
+                    <div class="field"><label>Enddatum</label><input type="date" name="end_date" value="{{ $b->end_date?->format('Y-m-d') }}" aria-label="Enddatum"></div>
+                    <div class="field"><label>Schließen-Button (Tage)</label><input type="number" name="dismiss_days" min="1" max="365" value="{{ $b->dismiss_days }}" placeholder="leer = kein ✕" aria-label="Schließen-Button (Tage)"></div>
                     <div class="field"><label>Entwurf</label>
                         <label style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer;font-size:13.5px;"><input type="checkbox" name="is_draft" value="1" {{ $b->is_draft ? 'checked' : '' }} style="width:16px;height:16px;"> nicht ausspielen</label>
                     </div>

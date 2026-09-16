@@ -3,7 +3,7 @@
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Dokumenten-Eingang</span></div>
     <div>
-        <div class="page-title">⚡ Dokumenten-Eingang (KI)</div>
+        <h1 class="page-title">⚡ Dokumenten-Eingang (KI)</h1>
         <div class="page-sub">Dokumente hochladen oder hierher ziehen – die KI erkennt den Typ, liest die Daten und schlägt den passenden Kunden vor.</div>
     </div>
 </div>
@@ -36,7 +36,7 @@
         <div style="font-size:34px;margin-bottom:6px;" aria-hidden="true">📥</div>
         <div style="font-size:14px;color:var(--ink-soft);">Dateien hierher ziehen oder <span style="color:var(--emerald);font-weight:600;">durchsuchen</span></div>
         <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">PDF, JPG, PNG, WEBP · max. 10 MB pro Datei · mehrere Bilder werden zu EINEM Dokument gebündelt</div>
-        <input type="file" id="inbox-files" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none;">
+        <input type="file" id="inbox-files" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" aria-label="Dokumente zum Hochladen auswählen" style="display:none;">
     </div>
     <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--ink-soft);margin-top:10px;cursor:pointer;">
         <input type="checkbox" id="inbox-bundle" checked>
@@ -254,7 +254,7 @@
             <div class="field" style="margin-bottom:6px;">
                 <label>Kunde suchen (Name, Kundennummer, E-Mail, Telefon)</label>
                 <input type="text" id="review-customer-q" autocomplete="off" placeholder="Mind. 2 Zeichen…"
-                    style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                    style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Kunde suchen (Name, Kundennummer, E-Mail, Telefon)">
             </div>
             <div id="review-customer-results" style="margin-bottom:10px;"></div>
             <div id="review-customer-chosen" style="display:none;background:var(--emerald-soft);border:1px solid var(--emerald);border-radius:8px;padding:9px 12px;font-size:13.5px;margin-bottom:12px;"></div>
@@ -271,9 +271,9 @@
             <div style="font-weight:700;font-size:13.5px;margin-bottom:6px;">Name des Kunden *</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                 <input type="text" id="review-first-name" placeholder="Vorname"
-                    style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                    style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Vorname">
                 <input type="text" id="review-last-name" placeholder="Nachname"
-                    style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                    style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Nachname">
             </div>
             <div id="review-name-hint" style="display:none;font-size:12px;color:#8A5A00;margin-top:5px;">
                 ℹ Der Name wurde nicht automatisch gelesen – bitte aus dem Dokument eintragen (👁 Anzeigen).
@@ -284,7 +284,7 @@
                  aenderbar im Neukunden-Bericht. --}}
             <div style="margin-top:10px;">
                 <div style="font-weight:700;font-size:13.5px;margin-bottom:6px;">Geworben von <span style="font-weight:400;color:var(--ink-soft);">(optional – für Neukunden-Bericht &amp; Provision)</span></div>
-                <select id="review-werber" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                <select id="review-werber" aria-label="Werber des neuen Kunden" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
                     <option value="">— Kein Werber —</option>
                     <optgroup label="Mitarbeiter">
                         @foreach(\App\Models\User::whereIn('role', ['admin','manager','support','employee'])->orderBy('name')->get() as $e)
@@ -319,16 +319,16 @@
                 </div>
                 <div id="family-jobstart-wrap" style="display:none;margin-bottom:8px;">
                     <label style="font-size:12.5px;">Arbeitsbeginn</label>
-                    <input type="date" id="family-jobstart" style="width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+                    <input type="date" id="family-jobstart" style="width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="Arbeitsbeginn">
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
                     <div>
                         <label style="font-size:12.5px;">Bisherige Kasse</label>
-                        <input type="text" id="family-old-insurer" placeholder="z.B. AOK" style="width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+                        <input type="text" id="family-old-insurer" placeholder="z.B. AOK" style="width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="Bisherige Kasse">
                     </div>
                     <div>
                         <label style="font-size:12.5px;">Neue Kasse *</label>
-                        <input type="text" id="family-new-insurer" placeholder="z.B. TK" style="width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+                        <input type="text" id="family-new-insurer" placeholder="z.B. TK" style="width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="Neue Kasse">
                     </div>
                 </div>
                 <div id="family-effective-preview" style="font-size:12.5px;color:var(--emerald);font-weight:600;"></div>
@@ -366,7 +366,7 @@
 
         <div class="field">
             <label>Sichtbarkeit des Dokuments</label>
-            <select id="review-visibility" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+            <select id="review-visibility" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Sichtbarkeit des Dokuments">
                 <option value="internal">🔒 Nur intern</option>
                 <option value="customer">👤 Kundensichtbar</option>
             </select>

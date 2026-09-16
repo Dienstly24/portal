@@ -4,7 +4,7 @@
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Partner</span></div>
     <div style="display:flex;align-items:center;justify-content:space-between;">
         <div>
-            <div class="page-title">Partnerverwaltung</div>
+            <h1 class="page-title">Partnerverwaltung</h1>
             <div class="page-sub">Makler- und Vertriebspartner mit automatischer Erkennung eingehender Provisions-Mails.</div>
         </div>
         <button data-h-click="b32170c3e8" class="btn btn-emerald">+ Partner anlegen</button>

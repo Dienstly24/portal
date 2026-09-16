@@ -7,7 +7,7 @@
     <form method="GET" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end;">
         <div class="field" style="margin:0;">
             <label>Pool</label>
-            <select name="pool"><option value="">Alle</option>
+            <select name="pool" aria-label="Pool"><option value="">Alle</option>
                 @foreach($poolListe as $key => $pool)
                 <option value="{{ $key }}" @selected(($filters['pool'] ?? '') === $key)>{{ $pool->name }}</option>
                 @endforeach
@@ -15,7 +15,7 @@
         </div>
         <div class="field" style="margin:0;">
             <label>Zustand</label>
-            <select name="status"><option value="">Überfällig + fehlend + Prüfung</option>
+            <select name="status" aria-label="Zustand"><option value="">Überfällig + fehlend + Prüfung</option>
                 @foreach(\App\Support\ContractCommissionStatus::ALL as $key => $info)
                 <option value="{{ $key }}" @selected(($filters['status'] ?? '') === $key)>{{ $info['label'] }}</option>
                 @endforeach
@@ -23,15 +23,15 @@
         </div>
         <div class="field" style="margin:0;">
             <label>Abschlussmonat</label>
-            <input type="month" name="monat" value="{{ $filters['monat'] ?? '' }}">
+            <input type="month" name="monat" value="{{ $filters['monat'] ?? '' }}" aria-label="Abschlussmonat">
         </div>
         <div class="field" style="margin:0;">
             <label>Gesellschaft / Produkt</label>
-            <input type="text" name="produkt" value="{{ $filters['produkt'] ?? '' }}">
+            <input type="text" name="produkt" value="{{ $filters['produkt'] ?? '' }}" aria-label="Gesellschaft / Produkt">
         </div>
         <div class="field" style="margin:0;">
             <label>Werber (Mitarbeiter)</label>
-            <select name="mitarbeiter"><option value="">Alle</option>
+            <select name="mitarbeiter" aria-label="Werber (Mitarbeiter)"><option value="">Alle</option>
                 @foreach($mitarbeiter as $m)
                 <option value="{{ $m->id }}" @selected((string) ($filters['mitarbeiter'] ?? '') === (string) $m->id)>{{ $m->name }}</option>
                 @endforeach
@@ -39,7 +39,7 @@
         </div>
         <div class="field" style="margin:0;">
             <label>Kunde</label>
-            <input type="text" name="kunde" value="{{ $filters['kunde'] ?? '' }}" placeholder="Name oder Kundennummer">
+            <input type="text" name="kunde" value="{{ $filters['kunde'] ?? '' }}" placeholder="Name oder Kundennummer" aria-label="Kunde">
         </div>
         <button class="btn" type="submit">Filtern</button>
     </form>

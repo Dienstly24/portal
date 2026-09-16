@@ -10,7 +10,7 @@
 @endphp
 <div class="toolbar">
     <div>
-        <div class="page-title">{{ $ticket->subject }}</div>
+        <h1 class="page-title">{{ $ticket->subject }}</h1>
         <div class="page-sub">
             <strong>{{ $ticket->ticket_number }}</strong>
             @if($ticket->customer) · 👤 <a href="{{ route('admin.customer', $ticket->customer_id) }}" style="color:inherit;">{{ $ticket->customer?->user?->name }}</a> · Nr. {{ $ticket->customer->customer_number }}
@@ -94,7 +94,7 @@
             @csrf
             <div class="field">
                 <label>Zugewiesen an</label>
-                <select name="assigned_to">
+                <select name="assigned_to" aria-label="Zugewiesen an">
                     <option value="">— Nicht zugewiesen —</option>
                     @foreach($staff as $u)
                     <option value="{{ $u->id }}" {{ $ticket->assigned_to == $u->id ? 'selected' : '' }}>{{ $u->name }}{{ $u->id === $me->id ? ' (ich)' : '' }}</option>
@@ -104,7 +104,7 @@
             <div class="grid-2">
                 <div class="field">
                     <label>Priorität</label>
-                    <select name="priority">
+                    <select name="priority" aria-label="Priorität">
                         @foreach(\App\Models\Ticket::PRIORITIES as $key => $p)
                         <option value="{{ $key }}" {{ $ticket->priority === $key ? 'selected' : '' }}>{{ $p['icon'] }} {{ $p['label'] }}</option>
                         @endforeach
@@ -112,7 +112,7 @@
                 </div>
                 <div class="field">
                     <label>Typ</label>
-                    <select name="type">
+                    <select name="type" aria-label="Typ">
                         @foreach(\App\Models\Ticket::TYPES as $key => $label)
                         <option value="{{ $key }}" {{ $ticket->type === $key ? 'selected' : '' }}>{{ $label }}</option>
                         @endforeach
@@ -214,15 +214,15 @@
     <div class="card-title">Antworten</div>
     <form method="POST" action="{{ route('admin.ticket.reply', $ticket->id) }}" enctype="multipart/form-data">
         @csrf
-        <div class="field"><label>Nachricht</label><textarea name="body" required placeholder="Ihre Antwort..."></textarea></div>
+        <div class="field"><label>Nachricht</label><textarea name="body" required placeholder="Ihre Antwort..." aria-label="Nachricht"></textarea></div>
         <div class="field">
             <label>Datei anhängen (optional)</label>
-            <input type="file" name="attachments[]" multiple accept=".pdf,.jpg,.jpeg,.png,.webp">
+            <input type="file" name="attachments[]" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" aria-label="Datei anhängen (optional)">
             <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">PDF, JPG, PNG oder WEBP · für den Kunden im Portal sichtbar</div>
         </div>
         <div class="grid-2">
             <div class="field"><label>Status nach dem Senden</label>
-                <select name="status">
+                <select name="status" aria-label="Status nach dem Senden">
                     @foreach(\App\Models\Ticket::STATUSES as $key => $label)
                     <option value="{{ $key }}" {{ ($ticket->status === 'open' || $ticket->status === 'in_progress' ? 'waiting' : $ticket->status) === $key ? 'selected' : '' }}>{{ $label }}</option>
                     @endforeach
@@ -253,7 +253,7 @@
     @if($canManage)
     <form method="POST" action="{{ route('admin.ticket.note', $ticket->id) }}">
         @csrf
-        <div class="field" style="margin-bottom:10px;"><textarea name="body" required placeholder="Interne Notiz für Kollegen..." style="min-height:60px;"></textarea></div>
+        <div class="field" style="margin-bottom:10px;"><textarea name="body" required placeholder="Interne Notiz für Kollegen..." style="min-height:60px;" aria-label="Interne Notiz für Kollegen"></textarea></div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
             <button type="submit" class="btn btn-ghost">🔒 Notiz speichern</button>
             <a href="{{ route('admin.chat.index') }}" style="font-size:12.5px;color:var(--ink-soft);">Längere Absprache? → Interner Chat</a>

@@ -2,7 +2,7 @@
 @section('content')
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.werbung') }}">Werbeanzeigen</a><span class="breadcrumb-sep">›</span><span>Bewerben</span></div>
-    <div class="page-title">📢 Banner bewerben</div>
+    <h1 class="page-title">📢 Banner bewerben</h1>
     <div class="page-sub">Der bereits veröffentlichte Facebook-Beitrag wird als Anzeige auf Facebook und Instagram ausgespielt. Die Anzeige entsteht PAUSIERT – Geld fließt erst nach Ihrem Start-Klick.</div>
 </div>
 
@@ -22,14 +22,14 @@
         <div class="grid-2">
             <div class="field">
                 <label>Ziel der Anzeige</label>
-                <select name="objective">
+                <select name="objective" aria-label="Ziel der Anzeige">
                     <option value="klicks" {{ old('objective', 'klicks') === 'klicks' ? 'selected' : '' }}>Mehr Klicks auf den Link (empfohlen)</option>
                     <option value="reichweite" {{ old('objective') === 'reichweite' ? 'selected' : '' }}>Mehr Reichweite (möglichst viele sehen es)</option>
                 </select>
             </div>
             <div class="field">
                 <label>Sprache der Zielgruppe</label>
-                <select name="language">
+                <select name="language" aria-label="Sprache der Zielgruppe">
                     <option value="alle" {{ old('language', 'alle') === 'alle' ? 'selected' : '' }}>Alle (Deutsch + Arabisch)</option>
                     <option value="de" {{ old('language') === 'de' ? 'selected' : '' }}>Deutschsprachig</option>
                     <option value="ar" {{ old('language') === 'ar' ? 'selected' : '' }}>Arabischsprachig</option>
@@ -39,12 +39,12 @@
         </div>
         {{-- .grid-2 kollabiert am Handy auf eine Spalte (Inline-4er-Grid nicht) --}}
         <div class="grid-2">
-            <div class="field"><label>Alter von</label><input type="number" name="age_min" value="{{ old('age_min', 20) }}" min="18" max="65"></div>
-            <div class="field"><label>Alter bis</label><input type="number" name="age_max" value="{{ old('age_max', 65) }}" min="18" max="65"></div>
+            <div class="field"><label>Alter von</label><input type="number" name="age_min" value="{{ old('age_min', 20) }}" min="18" max="65" aria-label="Alter von"></div>
+            <div class="field"><label>Alter bis</label><input type="number" name="age_max" value="{{ old('age_max', 65) }}" min="18" max="65" aria-label="Alter bis"></div>
         </div>
         <div class="grid-2">
             <div class="field"><label>Tagesbudget (EUR, max. {{ $maxBudget }})</label><input type="number" name="daily_budget_eur" value="{{ old('daily_budget_eur', 10) }}" min="1" max="{{ $maxBudget }}" step="1" required></div>
-            <div class="field"><label>Ende (optional)</label><input type="date" name="end_date" value="{{ old('end_date') }}"><div style="font-size:11.5px;color:var(--ink-soft);margin-top:3px;">leer = läuft bis zum Pausieren</div></div>
+            <div class="field"><label>Ende (optional)</label><input type="date" name="end_date" value="{{ old('end_date') }}" aria-label="Ende (optional)"><div style="font-size:11.5px;color:var(--ink-soft);margin-top:3px;">leer = läuft bis zum Pausieren</div></div>
         </div>
         <div style="display:flex;gap:10px;align-items:center;">
             <button type="submit" class="btn btn-primary">Anzeige erstellen (startet NICHT sofort)</button>

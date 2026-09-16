@@ -3,7 +3,7 @@
 @php $attachments = \App\Models\TicketAttachment::where('ticket_id', $ticket->id)->get(); @endphp
 <div class="toolbar">
     <div>
-        <div class="page-title">{{ $ticket->subject }}</div>
+        <h1 class="page-title">{{ $ticket->subject }}</h1>
         <div class="page-sub">{{ $ticket->ticket_number }} · {{ $ticket->created_at->lokal()->format('d.m.Y') }} · {{ __($ticket->typeLabel()) }} · {{ $ticket->priorityLabel() }}</div>
     </div>
     <span class="badge badge-{{ $ticket->statusBadge() }}">{{ __($ticket->portalStatusLabel()) }}</span>

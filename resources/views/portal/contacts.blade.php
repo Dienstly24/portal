@@ -2,7 +2,7 @@
 @section('content')
 <div class="toolbar">
     <div>
-        <div class="page-title">{{ __('📞 Kontaktinformationen') }}</div>
+        <h1 class="page-title">{{ __('📞 Kontaktinformationen') }}</h1>
         <div class="page-sub" style="margin-bottom:0;">{{ __('Mehrere E-Mail-Adressen und Telefonnummern verwalten – Änderungen werden geprüft.') }}</div>
     </div>
     <button data-h-click="53f97f99eb" class="btn btn-emerald">{{ __('+ Kontakt hinzufügen') }}</button>
@@ -90,20 +90,20 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
             @csrf
             <div class="grid-2">
                 <div class="field"><label>{{ __('Art *') }}</label>
-                    <select name="type" required>
+                    <select name="type" required aria-label="{{ __('Art *') }}">
                         <option value="email">{{ __('E-Mail-Adresse') }}</option>
                         <option value="phone">{{ __('Telefonnummer') }}</option>
                     </select>
                 </div>
                 <div class="field"><label>{{ __('Bezeichnung *') }}</label>
-                    <select name="label" required>
+                    <select name="label" required aria-label="{{ __('Bezeichnung *') }}">
                         @foreach(\App\Models\CustomerContact::LABELS as $key => $label)
                         <option value="{{ $key }}">{{ $label }}</option>
                         @endforeach
                     </select>
                 </div>
             </div>
-            <div class="field"><label>{{ __('E-Mail / Nummer *') }}</label><input type="text" name="value" required maxlength="255" placeholder="{{ __('z.B. name@firma.de oder +49 40 …') }}"></div>
+            <div class="field"><label>{{ __('E-Mail / Nummer *') }}</label><input type="text" name="value" required maxlength="255" placeholder="{{ __('z.B. name@firma.de oder +49 40 …') }}" aria-label="{{ __('E-Mail / Nummer *') }}"></div>
             <button type="submit" class="btn btn-primary" style="width:100%;">{{ __('Zur Prüfung einreichen') }}</button>
         </form>
     </div>
@@ -117,13 +117,13 @@ $pendingChangeIds = $requests->where('status','pending')->pluck('new_data.id')->
         <form method="POST" id="change-contact-form" action="">
             @csrf
             <div class="field"><label>{{ __('Bezeichnung *') }}</label>
-                <select name="label" id="cc-label" required>
+                <select name="label" id="cc-label" required aria-label="{{ __('Bezeichnung *') }}">
                     @foreach(\App\Models\CustomerContact::LABELS as $key => $label)
                     <option value="{{ $key }}">{{ $label }}</option>
                     @endforeach
                 </select>
             </div>
-            <div class="field"><label>{{ __('E-Mail / Nummer *') }}</label><input type="text" name="value" id="cc-value" required maxlength="255"></div>
+            <div class="field"><label>{{ __('E-Mail / Nummer *') }}</label><input type="text" name="value" id="cc-value" required maxlength="255" aria-label="{{ __('E-Mail / Nummer *') }}"></div>
             <button type="submit" class="btn btn-primary" style="width:100%;">{{ __('Änderung einreichen') }}</button>
         </form>
     </div>

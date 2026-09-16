@@ -28,7 +28,7 @@ html,body{height:100%;}
 .lang-switch a:hover{background:rgba(255,255,255,.16);}
 .main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:clamp(10px,2vh,24px) 16px;}
 .card{background:rgba(255,255,255,.06);border:1px solid var(--gold-line);border-radius:18px;padding:clamp(18px,2.6vh,30px);max-width:520px;width:100%;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 24px 60px rgba(0,0,0,.35);}
-.card h2{font-size:24px;color:var(--emerald-mint);margin-bottom:6px;}
+.card h1{font-size:24px;color:var(--emerald-mint);margin:0 0 6px;line-height:1.25;font-weight:700;}
 .card .lead{color:#b7bcc4;font-size:13.5px;line-height:1.5;margin-bottom:clamp(10px,2vh,18px);}
 label{display:block;font-size:13.5px;margin-bottom:7px;color:#dde0e5;}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
@@ -63,7 +63,7 @@ label{display:block;font-size:13.5px;margin-bottom:7px;color:#dde0e5;}
 
 <div class="main">
 <div class="card rise d2">
-    <h2>{{ __('Konto erstellen') }}</h2>
+    <h1>{{ __('Konto erstellen') }}</h1>
     <p class="lead">{{ __('Registrieren Sie sich kostenlos und nutzen Sie Ihr persönliches Kundenportal.') }}</p>
 
     @if($errors->any())<div class="error">{{ $errors->first() }}</div>@endif

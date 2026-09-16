@@ -1020,7 +1020,7 @@ class SmartDocumentUploadController extends Controller
         }
 
         $binary = $disk->get($document->file_path);
-        $mime = $document->mime_type ?: 'application/octet-stream';
+        $mime = $document->mimeType();
 
         // Gleiche Reihenfolge wie die Analyse: erst die (gratis, fehlerfreie)
         // Textebene eines digitalen PDF, sonst OCR. So sieht der Betreiber

@@ -1,6 +1,6 @@
 @extends('layouts.portal')
 @section('content')
-<div class="page-title">{{ __('E-Mail-Verbindung') }}</div>
+<h1 class="page-title">{{ __('E-Mail-Verbindung') }}</h1>
 <div class="page-sub">{{ __('Lassen Sie vertragsbezogene Post automatisch Ihrem Konto zuordnen - freiwillig und jederzeit widerrufbar.') }}</div>
 
 @if($consent)

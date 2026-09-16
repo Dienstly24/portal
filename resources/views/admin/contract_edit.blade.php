@@ -7,7 +7,7 @@
         <a href="{{ route('admin.customer', $contract->customer_id) }}">{{ $contract->customer?->user?->name }}</a><span class="breadcrumb-sep">›</span>
         <span>Vertrag bearbeiten</span>
     </div>
-    <div class="page-title">Vertrag bearbeiten</div>
+    <h1 class="page-title">Vertrag bearbeiten</h1>
     <div class="page-sub">{{ $contract->typeIcon() }} {{ $contract->typeLabel() }} · {{ $contract->insurer }}</div>
 </div>
 

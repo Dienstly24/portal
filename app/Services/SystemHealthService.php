@@ -63,6 +63,7 @@ class SystemHealthService
             'integrations' => $this->integrations(),
             'security' => $this->security(),
             'errors' => $this->errors(),
+            'backup' => $this->backup(),
         ];
 
         return [
@@ -734,6 +735,103 @@ class SystemHealthService
             'title' => 'Fehler',
             'status' => $this->worstOf(array_column($items, 'status')),
             'summary' => $offen24h.' in den letzten 24 Stunden, '.$offen7t.' offen in 7 Tagen.',
+            'items' => $items,
+        ];
+    }
+
+    // =============================================================== Backup
+
+    /**
+     * Laeuft die Sicherung noch - und ist sie brauchbar?
+     *
+     * WARUM HIER (Audit 15.09.2026): eine Sicherung, die seit Wochen
+     * scheitert, meldet sich von selbst nicht. Der Cron-Lauf schreibt in
+     * eine Logdatei, die im Alltag niemand oeffnet - dieselbe Lehre wie
+     * bei den 500ern. Gemerkt haette man es erst beim Wiederherstellen,
+     * also im schlechtesten Moment.
+     *
+     * Gelesen wird NUR die Statusdatei, die scripts/backup.sh am Ende
+     * jedes Laufs schreibt. Diese Seite startet KEIN Backup und ruehrt
+     * keine Datei an - sie bleibt rein lesend.
+     */
+    public function backup(): array
+    {
+        $pfad = storage_path('app/private/backup-status.json');
+
+        if (! is_file($pfad)) {
+            return [
+                'title' => 'Sicherung',
+                'status' => self::INFO,
+                'summary' => 'Noch kein Backup-Lauf erfasst.',
+                'items' => [[
+                    'label' => 'Statusdatei',
+                    'value' => 'fehlt',
+                    'status' => self::INFO,
+                    'hint' => 'Einrichtung: scripts/backup.sh per Cron, siehe docs/BACKUP_UND_WIEDERHERSTELLUNG.md',
+                ]],
+            ];
+        }
+
+        $daten = json_decode((string) @file_get_contents($pfad), true);
+
+        if (! is_array($daten)) {
+            return [
+                'title' => 'Sicherung',
+                'status' => self::WARN,
+                'summary' => 'Die Statusdatei der Sicherung ist unlesbar.',
+                'items' => [],
+            ];
+        }
+
+        // Die Statusdatei schreibt scripts/backup.sh - ein kaputter Wert darf
+        // die Systemzustand-Seite nie mit einer Ausnahme beenden.
+        try {
+            $zeitpunkt = isset($daten['zeitpunkt'])
+                ? Carbon::parse((string) $daten['zeitpunkt'])
+                : null;
+        } catch (\Throwable $e) {
+            $zeitpunkt = null;
+        }
+        $angezeigt = LocalTime::for($zeitpunkt)?->format('d.m.Y H:i') ?? 'unbekannt';
+        $alterStunden = $zeitpunkt ? $zeitpunkt->diffInHours(now()) : null;
+        $gelaufen = ($daten['status'] ?? '') === 'ok';
+
+        // Ein ALTER Erfolg ist kein Erfolg: laeuft der Cron nicht mehr,
+        // bleibt die letzte Meldung fuer immer auf "ok" stehen.
+        $zuAlt = $alterStunden !== null && $alterStunden > 48;
+
+        $items = [[
+            'label' => 'Letzter Lauf',
+            'value' => $gelaufen ? 'erfolgreich' : 'FEHLGESCHLAGEN',
+            'status' => $gelaufen ? self::OK : self::FAIL,
+            'hint' => $gelaufen ? null : (string) ($daten['meldung'] ?? ''),
+        ], [
+            'label' => 'Zeitpunkt',
+            'value' => $angezeigt,
+            'status' => $zuAlt ? self::FAIL : self::OK,
+            'hint' => $zuAlt ? 'Aelter als 48 Stunden - laeuft der Cron-Eintrag noch?' : null,
+        ], [
+            'label' => 'Verschluesselt',
+            'value' => ! empty($daten['verschluesselt']) ? 'ja' : 'NEIN',
+            'status' => ! empty($daten['verschluesselt']) ? self::OK : self::FAIL,
+            'hint' => ! empty($daten['verschluesselt'])
+                ? null
+                : 'BACKUP_PASSPHRASE in der Server-.env setzen - das Archiv enthaelt IBAN-, Ausweis- und Gesundheitsdaten.',
+        ], [
+            'label' => 'Zweiter Speicherort',
+            'value' => ! empty($daten['extern']) ? 'eingerichtet' : 'fehlt',
+            'status' => ! empty($daten['extern']) ? self::OK : self::WARN,
+            'hint' => ! empty($daten['extern'])
+                ? null
+                : 'Ohne externe Kopie vernichtet ein Serverausfall Original UND Sicherung (BACKUP_REMOTE).',
+        ]];
+
+        return [
+            'title' => 'Sicherung',
+            'status' => $this->worstOf(array_column($items, 'status')),
+            'summary' => $gelaufen
+                ? 'Letzte Sicherung '.$angezeigt.'.'
+                : 'Die letzte Sicherung ist fehlgeschlagen.',
             'items' => $items,
         ];
     }

@@ -5,7 +5,7 @@
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Signaturen</span></div>
     <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;">
         <div>
-            <div class="page-title">Signaturen</div>
+            <h1 class="page-title">Signaturen</h1>
             <div class="page-sub">Dokumente zur Unterschrift versenden – mit oder ohne Kundenakte.</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
@@ -40,7 +40,7 @@
         <label class="muted-sm" for="suche">Suche</label>
         <input id="suche" type="search" name="suche" value="{{ $search }}" maxlength="120"
                placeholder="Dokument, Unterzeichner, E-Mail, Kunde, Referenz"
-               style="width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+               style="width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="Dokument, Unterzeichner, E-Mail, Kunde, Referenz">
     </div>
     <div>
         <label class="muted-sm" for="von">Erstellt von</label>

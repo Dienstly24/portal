@@ -39,20 +39,20 @@
             @csrf
             @php $f = $contract->commissionFollowup; @endphp
             <div class="field"><label>Stand</label>
-                <select name="status">
+                <select name="status" aria-label="Stand">
                     @foreach(\App\Models\CommissionFollowup::STATUSES as $k => $v)
                     <option value="{{ $k }}" @selected(($f->status ?? 'offen') === $k)>{{ $v }}</option>
                     @endforeach
                 </select>
             </div>
             <div class="field"><label>Kontakt am</label>
-                <input type="date" name="contacted_on" value="{{ $f?->contacted_on?->format('Y-m-d') }}"></div>
+                <input type="date" name="contacted_on" value="{{ $f?->contacted_on?->format('Y-m-d') }}" aria-label="Kontakt am"></div>
             <div class="field"><label>Ansprechpartner beim Pool</label>
-                <input type="text" name="contact_person" value="{{ $f->contact_person ?? ($pool->contact ?? '') }}"></div>
+                <input type="text" name="contact_person" value="{{ $f->contact_person ?? ($pool->contact ?? '') }}" aria-label="Ansprechpartner beim Pool"></div>
             <div class="field"><label>Antwort des Pools</label>
-                <textarea name="response" rows="2">{{ $f->response ?? '' }}</textarea></div>
+                <textarea name="response" rows="2" aria-label="Antwort des Pools">{{ $f->response ?? '' }}</textarea></div>
             <div class="field"><label>Interne Bemerkung</label>
-                <textarea name="note" rows="2">{{ $f->note ?? '' }}</textarea></div>
+                <textarea name="note" rows="2" aria-label="Interne Bemerkung">{{ $f->note ?? '' }}</textarea></div>
             <button class="btn btn-primary" type="submit">Speichern</button>
             @if($f?->updated_at)
             <div style="font-size:11.5px;color:var(--ink-soft);margin-top:8px;">

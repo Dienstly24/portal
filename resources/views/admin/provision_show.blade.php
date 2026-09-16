@@ -2,10 +2,10 @@
 @section('content')
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.provisions') }}">Vermittler-Provisionen</a><span class="breadcrumb-sep">›</span><span>Buchung</span></div>
-    <div class="page-title" style="display:flex;align-items:center;gap:12px;">
+    <h1 class="page-title" style="display:flex;align-items:center;gap:12px;">
         {{ $provision->typeLabel() }} über {{ number_format((float) $provision->amount, 2, ',', '.') }} €
         <span class="wb-badge {{ ['offen' => 'wb-offen', 'freigegeben' => 'wb-frei', 'ausgezahlt' => 'wb-mit', 'storniert' => 'wb-storno'][$provision->status] ?? 'wb-none' }}">{{ $provision->statusLabel() }}</span>
-    </div>
+    </h1>
     <div class="page-sub">Empfänger: {{ $provision->recipientName() }} · erfasst am {{ $provision->created_at->lokal()->format('d.m.Y H:i') }} von {{ $provision->creator?->name ?? 'System' }}</div>
 </div>
 
@@ -90,11 +90,11 @@
                 @csrf
                 <div class="flt-group">
                     <label class="flt-lbl">Neuer Betrag (EUR)</label>
-                    <input type="number" name="amount" step="0.01" value="{{ $provision->amount }}" required style="width:130px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+                    <input type="number" name="amount" step="0.01" value="{{ $provision->amount }}" required style="width:130px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="Neuer Betrag (EUR)">
                 </div>
                 <div class="flt-group" style="flex:1;min-width:220px;">
                     <label class="flt-lbl">Grund (Pflicht, wird protokolliert)</label>
-                    <input type="text" name="grund" maxlength="500" required placeholder="z. B. Korrektur Jahresbeitrag" style="width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+                    <input type="text" name="grund" maxlength="500" required placeholder="z. B. Korrektur Jahresbeitrag" style="width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="Grund (Pflicht, wird protokolliert)">
                 </div>
                 <button type="submit" class="btn btn-primary btn-sm">Betrag anpassen</button>
             </form>

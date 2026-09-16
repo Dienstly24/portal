@@ -7,7 +7,7 @@
         <a href="{{ route('admin.commissions_internal.import') }}">Import</a><span class="breadcrumb-sep">›</span>
         <span>{{ $import->filename }}</span>
     </div>
-    <div class="page-title">Vorschau: {{ $import->filename }}</div>
+    <h1 class="page-title">Vorschau: {{ $import->filename }}</h1>
     <div class="page-sub">
         @if($import->isDraft())
             Schritte 2–4 – <b>es wurde noch nichts übernommen.</b>
@@ -85,7 +85,7 @@
              gehoert deshalb ueber die Zuordnung, nicht daneben. --}}
         <div class="field" style="max-width:420px;">
             <label>Betriebsart der Datei</label>
-            <select name="modus" @disabled(!$import->isDraft())>
+            <select name="modus" aria-label="Betriebsart der Datei" @disabled(!$import->isDraft())>
                 @foreach($modes as $key => $label)
                 <option value="{{ $key }}" @selected($import->mode === $key)>{{ $label }}</option>
                 @endforeach

@@ -4,7 +4,7 @@
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.settings') }}">Einstellungen</a><span class="breadcrumb-sep">›</span><span>E-Mail-Postfächer</span></div>
     <div style="display:flex;align-items:center;justify-content:space-between;">
         <div>
-            <div class="page-title">E-Mail-Postfächer</div>
+            <h1 class="page-title">E-Mail-Postfächer</h1>
             <div class="page-sub">Zentrale Verwaltung der Postfächer für die automatisierte E-Mail-Verarbeitung.</div>
         </div>
         <a href="{{ route('admin.email_accounts.create') }}" class="btn btn-emerald">+ Postfach hinzufügen</a>

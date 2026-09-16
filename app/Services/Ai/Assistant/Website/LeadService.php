@@ -124,6 +124,12 @@ class LeadService
                 'angebot' => 'Angaben für ein Angebot liegen vor',
                 'mitarbeiter_gewuenscht' => 'Interessent wünscht einen Mitarbeiter',
                 'beschwerde' => 'Beschwerde',
+                // Kostenbremse (Audit 15.09.2026): der Assistent hat nicht
+                // versagt, er durfte nur nicht mehr. Der Mitarbeiter soll
+                // das unterscheiden koennen - eine Uebergabe "Frage nicht
+                // beantwortbar" wuerde ihn in der Wissensbasis suchen
+                // lassen, wo es nichts zu finden gibt.
+                'grenze_erreicht' => 'Tages-/Stundengrenze des Assistenten erreicht - bitte manuell antworten',
                 default => 'Frage konnte nicht aus der Wissensbasis beantwortet werden',
             },
         ];

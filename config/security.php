@@ -34,4 +34,21 @@ return [
     */
     'csp_report_uri' => env('CSP_REPORT_URI'),
 
+    /*
+    | Geheimnis fuer die externe Ueberwachung (Audit 15.09.2026).
+    |
+    | Ist es gesetzt, beantwortet `/gesundheit` (ohne Anmeldung, aber nur
+    | mit diesem Token) eine knappe Ampel: 200 wenn alles laeuft, 503
+    | wenn etwas handlungsbeduerftig ist. Genau das braucht ein
+    | Ueberwachungsdienst - und genau das konnte
+    | /admin/systemzustand.json nicht liefern, weil es hinter Anmeldung,
+    | Rolle und Zweitem Faktor lag.
+    |
+    | LEER = ENDPUNKT AUS (404). Eine Installation ohne gesetztes Token
+    | oeffnet nichts.
+    |
+    | Ein langer Zufallswert: `php -r "echo bin2hex(random_bytes(32));"`
+    */
+    'health_token' => env('HEALTH_TOKEN'),
+
 ];

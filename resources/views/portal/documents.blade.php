@@ -2,7 +2,7 @@
 @section('content')
 <div class="toolbar">
     <div>
-        <div class="page-title">{{ __('Dokumente') }}</div>
+        <h1 class="page-title">{{ __('Dokumente') }}</h1>
         <div class="page-sub" style="margin-bottom:0;">{{ __('Alle Ihre Dokumente und Unterlagen. Sie können hier auch eigene Dokumente hochladen.') }}</div>
     </div>
     <button data-h-click="d464efca56" class="btn btn-emerald">+ {{ __('Dokument hinzufügen') }}</button>
@@ -213,9 +213,9 @@
             <button type="button" class="btn btn-primary" style="display:none;margin-top:16px;" id="scan-done-btn" data-h-click="e68df2cc53">{{ __('Fertig') }}</button>
         </div>
 
-        <input type="file" id="scan-images-input" accept="image/*" multiple style="display:none;">
-        <input type="file" id="scan-camera-input" accept="image/*" capture="environment" style="display:none;">
-        <input type="file" id="scan-pdf-input" accept=".pdf,application/pdf" style="display:none;">
+        <input type="file" id="scan-images-input" accept="image/*" multiple style="display:none;" aria-label="Fotos aus der Galerie auswählen">
+        <input type="file" id="scan-camera-input" accept="image/*" capture="environment" style="display:none;" aria-label="Dokument mit der Kamera aufnehmen">
+        <input type="file" id="scan-pdf-input" accept=".pdf,application/pdf" style="display:none;" aria-label="PDF auswählen">
     </div>
 </div>
 
@@ -583,7 +583,7 @@ window.smartScan = (function() {
      Einordnen und Zuordnen uebernimmt das Team im CRM. --}}
 <form id="classic-upload-form" method="POST" action="{{ route('portal.documents.upload') }}" enctype="multipart/form-data" style="display:none;">
     @csrf
-    <input type="file" id="classic-file-input" name="document" accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,.gif,.doc,.docx,.xls,.xlsx">
+    <input type="file" id="classic-file-input" name="document" accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,.gif,.doc,.docx,.xls,.xlsx" aria-label="Datei zum Hochladen auswählen">
 </form>
 <script @cspNonce>
     // Auto-Submit, sobald der Kunde eine Datei gewaehlt hat.

@@ -7,7 +7,7 @@
         <a href="{{ route('admin.customer', $customer->id) }}">{{ $customer->user?->name }}</a><span class="breadcrumb-sep">›</span>
         <span>Vertrag anlegen</span>
     </div>
-    <div class="page-title">Vertrag anlegen</div>
+    <h1 class="page-title">Vertrag anlegen</h1>
     <div class="page-sub">Für: {{ $customer->user?->name }} · {{ $customer->customer_number }}</div>
 </div>
 

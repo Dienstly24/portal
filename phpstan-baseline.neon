@@ -25,12 +25,6 @@ parameters:
 			path: app/Console/Commands/CheckAiAssistant.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Customer\:\:\$email2\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Console/Commands/MergeAlternativeEmail.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>created_by" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
@@ -155,18 +149,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Http/Controllers/BannerSocialController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Customer\:\:\$last_contact\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/ComposeEmailController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Customer\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Customer\>\:\:\$last_contact\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/ComposeEmailController.php
 
 		-
 			message: '#^Call to an undefined method Carbon\\Carbon\:\:lokal\(\)\.$#'
@@ -319,12 +301,6 @@ parameters:
 			path: app/Http/Controllers/ReportController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Document\:\:\$mime_type\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/SmartDocumentUploadController.php
-
-		-
 			message: '#^Call to an undefined method Carbon\\Carbon\:\:lokal\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -359,12 +335,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Http/Controllers/SocialLinkController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Customer\:\:\$last_contact\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/TaskController.php
 
 		-
 			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
@@ -407,12 +377,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Jobs/PublishSocialChannelJob.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:currentlyActive\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Jobs/SendCampaignJob.php
 
 		-
 			message: '#^Offset ''status'' on array\{status\: string, checks\: array, readable\: int, documents\: int\} on left side of \?\? always exists and is not nullable\.$#'
@@ -593,24 +557,6 @@ parameters:
 			identifier: return.unusedType
 			count: 1
 			path: app/Services/Ai/Assistant/HandoverService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Customer\:\:\$email\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Ai/Assistant/Sales/ConversationContext.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Customer\:\:\$email\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Ai/Assistant/Sales/InternalVerificationService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Customer\:\:\$email2\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Ai/Assistant/Sales/InternalVerificationService.php
 
 		-
 			message: '#^Right side of && is always true\.$#'
@@ -1135,12 +1081,6 @@ parameters:
 			path: app/Services/CustomerCreation/CustomerAutoCreationService.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Customer\:\:\$email2\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Services/DocumentIntake/DocumentIntakeService.php
-
-		-
 			message: '#^Call to function is_array\(\) with array\{\} will always evaluate to true\.$#'
 			identifier: function.alreadyNarrowedType
 			count: 3
@@ -1495,58 +1435,16 @@ parameters:
 			path: app/Services/Mailbox/OAuthTokenService.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Customer\:\:\$email2\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Matching/CustomerMatchingService.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Services/Matching/CustomerMatchingService.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Customer\:\:\$address2\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Matching/CustomerMergeService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Customer\:\:\$email2\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Services/Matching/CustomerMergeService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Customer\:\:\$last_contact\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Services/Matching/CustomerMergeService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Customer\:\:\$nationality\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Matching/CustomerMergeService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Customer\:\:\$occupation\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Matching/CustomerMergeService.php
-
-		-
 			message: '#^Variable \$dupNumber on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.variable
 			count: 1
 			path: app/Services/Matching/CustomerMergeService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Customer\:\:\$email2\.$#'
-			identifier: property.notFound
-			count: 4
-			path: app/Services/Matching/DuplicateDetectionService.php
 
 		-
 			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'

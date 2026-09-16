@@ -3,7 +3,7 @@
 
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>KI-Assistent</span></div>
-    <div class="page-title">KI-Assistent</div>
+    <h1 class="page-title">KI-Assistent</h1>
     <div class="page-sub">
         Anbieter, Modell und Zugangsschlüssel – damit ein Wechsel nicht mehr bedeutet,
         die Server-Konfiguration anzufassen. Schlüssel werden verschlüsselt gespeichert
@@ -66,7 +66,7 @@
                 <div class="field">
                     <label for="zKey{{ $account->id }}">Schlüssel</label>
                     <input type="password" name="api_key" id="zKey{{ $account->id }}"
-                           autocomplete="new-password" placeholder="leer lassen = unverändert">
+                           autocomplete="new-password" placeholder="leer lassen = unverändert" aria-label="leer lassen = unverändert">
                 </div>
             </div>
 
@@ -109,7 +109,7 @@
             <div class="field">
                 <label for="neuName">Name</label>
                 <input type="text" name="name" id="neuName" required maxlength="120"
-                       placeholder="z. B. Anthropic produktiv">
+                       placeholder="z. B. Anthropic produktiv" aria-label="z. B. Anthropic produktiv">
             </div>
             <div class="field">
                 <label for="neuAnbieter">Anbieter</label>

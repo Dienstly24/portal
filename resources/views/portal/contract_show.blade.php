@@ -13,7 +13,7 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:6px;">
         <span style="font-size:40px;line-height:1;">{{ $contract->typeIcon() }}</span>
         <div>
-            <div class="page-title" style="margin-bottom:2px;">{{ $contract->insurer }}</div>
+            <h1 class="page-title" style="margin-bottom:2px;">{{ $contract->insurer }}</h1>
             <div class="page-sub" style="margin-bottom:0;">{{ __($contract->typeLabel()) }}</div>
         </div>
         @php $st = $contract->displayStatus(); @endphp
@@ -111,7 +111,7 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
             <div style="display:flex;gap:8px;">
                 <input type="number" name="mileage" required min="0" max="5000000" inputmode="numeric"
                     value="{{ old('mileage') }}" placeholder="{{ __('z. B.') }} 52300"
-                    style="flex:1;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                    style="flex:1;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="52300">
                 <button type="submit" class="btn btn-primary nowrap">{{ __('Melden') }}</button>
             </div>
             @error('mileage')<div style="color:#A32D2D;font-size:12.5px;margin-top:6px;">{{ $message }}</div>@enderror
@@ -239,7 +239,7 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 <input type="number" name="reading" step="0.001" min="0" max="99999999" inputmode="decimal"
                     value="{{ old('reading') }}" placeholder="{{ __('z. B.') }} 4680"
-                    style="flex:1 1 150px;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                    style="flex:1 1 150px;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="4680">
                 <input type="date" name="reading_date" max="{{ now()->format('Y-m-d') }}"
                     value="{{ old('reading_date', now()->format('Y-m-d')) }}"
                     style="flex:0 1 160px;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
@@ -250,7 +250,7 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
         @if($hasFeedIn)
         <div class="field">
             <label>{{ __('Zählwerk') }}</label>
-            <select name="register" style="width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+            <select name="register" style="width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="{{ __('Zählwerk') }}">
                 @foreach(\App\Models\MeterReading::REGISTERS as $key => $label)
                 <option value="{{ $key }}" {{ old('register', $meterRegister) === $key ? 'selected' : '' }}>{{ $key }} – {{ __($label) }}</option>
                 @endforeach
@@ -261,7 +261,7 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
         <div class="field">
             <label>{{ __('Oder Foto des Zählers hochladen') }}</label>
             <input type="file" name="photo" accept="image/*,application/pdf" capture="environment"
-                style="width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;background:#fff;">
+                style="width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;background:#fff;" aria-label="{{ __('Oder Foto des Zählers hochladen') }}">
             @error('photo')<div style="color:#A32D2D;font-size:12.5px;margin-top:6px;">{{ $message }}</div>@enderror
             <p style="font-size:12px;color:var(--ink-soft);margin-top:8px;">
                 {{ __('Fotografieren Sie das Display so, dass Zählernummer und Stand gut lesbar sind. Wir lesen den Stand aus und tragen ihn mit dem Datum Ihres Uploads ein.') }}
@@ -435,7 +435,7 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
         @csrf
         <div class="field">
             <label>{{ __('Vertragstyp *') }}</label>
-            <select name="type" required style="width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+            <select name="type" required style="width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="{{ __('Vertragstyp *') }}">
                 @foreach(\App\Models\Contract::TYPES as $key => $cfg)
                 <option value="{{ $key }}" {{ old('type', $contract->type) === $key ? 'selected' : '' }}>{{ $cfg['icon'] }} {{ __($cfg['label']) }}</option>
                 @endforeach
@@ -443,27 +443,27 @@ $d = fn($v) => $v ? \Carbon\Carbon::parse($v)->format('d.m.Y') : '—';
         </div>
         <div class="field">
             <label>{{ __('Gesellschaft / Anbieter *') }}</label>
-            <input type="text" name="insurer" required maxlength="255" value="{{ old('insurer', $contract->insurer) }}">
+            <input type="text" name="insurer" required maxlength="255" value="{{ old('insurer', $contract->insurer) }}" aria-label="{{ __('Gesellschaft / Anbieter *') }}">
         </div>
         <div class="field">
             <label>{{ __('Vertragsnummer') }}</label>
-            <input type="text" name="contract_number" maxlength="100" value="{{ old('contract_number', $contract->contract_number) }}">
+            <input type="text" name="contract_number" maxlength="100" value="{{ old('contract_number', $contract->contract_number) }}" aria-label="{{ __('Vertragsnummer') }}">
         </div>
         <div class="field">
             <label>{{ __('Startdatum') }}</label>
-            <input type="date" name="start_date" value="{{ old('start_date', optional($contract->start_date ? \Carbon\Carbon::parse($contract->start_date) : null)->format('Y-m-d')) }}">
+            <input type="date" name="start_date" value="{{ old('start_date', optional($contract->start_date ? \Carbon\Carbon::parse($contract->start_date) : null)->format('Y-m-d')) }}" aria-label="{{ __('Startdatum') }}">
         </div>
         <div class="field">
             <label>{{ __('Enddatum') }}</label>
-            <input type="date" name="end_date" value="{{ old('end_date', optional($contract->end_date ? \Carbon\Carbon::parse($contract->end_date) : null)->format('Y-m-d')) }}">
+            <input type="date" name="end_date" value="{{ old('end_date', optional($contract->end_date ? \Carbon\Carbon::parse($contract->end_date) : null)->format('Y-m-d')) }}" aria-label="{{ __('Enddatum') }}">
         </div>
         <div class="field">
             <label>{{ __('Kündigungsdatum') }}</label>
-            <input type="date" name="cancellation_date" value="{{ old('cancellation_date', optional($contract->cancellation_date ? \Carbon\Carbon::parse($contract->cancellation_date) : null)->format('Y-m-d')) }}">
+            <input type="date" name="cancellation_date" value="{{ old('cancellation_date', optional($contract->cancellation_date ? \Carbon\Carbon::parse($contract->cancellation_date) : null)->format('Y-m-d')) }}" aria-label="{{ __('Kündigungsdatum') }}">
         </div>
         <div class="field">
             <label>{{ __('Anmerkung / gewünschte Änderung') }}</label>
-            <textarea name="notes" maxlength="1000" placeholder="{{ __('z. B. Tarifwechsel gewünscht, neue Vertragsunterlagen, Fragen zum Vertrag …') }}" style="width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;min-height:70px;font-family:inherit;resize:vertical;">{{ old('notes') }}</textarea>
+            <textarea name="notes" maxlength="1000" placeholder="{{ __('z. B. Tarifwechsel gewünscht, neue Vertragsunterlagen, Fragen zum Vertrag …') }}" style="width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;min-height:70px;font-family:inherit;resize:vertical;" aria-label="{{ __('Anmerkung / gewünschte Änderung') }}">{{ old('notes') }}</textarea>
         </div>
         @if($errors->any())<div class="alert-error">{{ __('Bitte prüfen Sie Ihre Eingaben.') }}</div>@endif
         <button type="submit" class="btn btn-primary">{{ __('Änderung einreichen') }}</button>

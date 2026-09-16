@@ -4,7 +4,7 @@
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.banners') }}">Banner</a><span class="breadcrumb-sep">›</span><span>Werbeanzeigen</span></div>
     <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
         <div>
-            <div class="page-title">🎯 Werbeanzeigen (Meta)</div>
+            <h1 class="page-title">🎯 Werbeanzeigen (Meta)</h1>
             <div class="page-sub">Kampagnen auf Facebook &amp; Instagram komplett aus dem System steuern: starten, pausieren, Budget ändern, löschen – Ausgaben und Ergebnisse im Blick.</div>
         </div>
         <a href="{{ route('admin.banners') }}" class="btn btn-ghost">📢 Zur Bannerverwaltung</a>

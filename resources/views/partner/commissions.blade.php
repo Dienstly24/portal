@@ -1,6 +1,6 @@
 @extends('layouts.partner')
 @section('content')
-<div class="page-title">Provisionen</div>
+<h1 class="page-title">Provisionen</h1>
 <div class="page-sub">Ihre Provisionshistorie.</div>
 
 <div class="card">

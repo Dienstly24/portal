@@ -2,7 +2,7 @@
 @section('content')
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Aktivitätsprotokoll</span></div>
-    <div class="page-title">Aktivitätsprotokoll</div>
+    <h1 class="page-title">Aktivitätsprotokoll</h1>
     <div class="page-sub">Alle Aktivitäten im System</div>
 </div>
 

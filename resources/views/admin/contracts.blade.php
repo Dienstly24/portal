@@ -24,7 +24,7 @@
 
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Verträge</span></div>
-    <div class="page-title">Verträge</div>
+    <h1 class="page-title">Verträge</h1>
 </div>
 
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:16px;flex-wrap:wrap;">
@@ -34,7 +34,7 @@
         <input type="hidden" name="gruppe" value="{{ $gruppe }}">
         <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--ink-soft);">🔍</span>
         <input type="text" name="q" value="{{ $suche }}" placeholder="Verträge durchsuchen"
-            style="width:100%;padding:11px 14px 11px 42px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff;">
+            style="width:100%;padding:11px 14px 11px 42px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff;" aria-label="Verträge durchsuchen">
         @if($suche !== '')
         <a href="{{ route('admin.contracts', ['gruppe' => $gruppe]) }}" title="Suche zurücksetzen"
             style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--ink-soft);text-decoration:none;font-size:16px;">✕</a>

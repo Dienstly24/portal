@@ -3,7 +3,7 @@
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.customers') }}">Kunden</a><span class="breadcrumb-sep">›</span><span>Dubletten</span></div>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-        <div class="page-title">Mögliche Dubletten</div>
+        <h1 class="page-title">Mögliche Dubletten</h1>
         <a href="{{ route('admin.customers.relationships') }}" class="btn btn-ghost">🔗 Verwandte Kunden @if(($relationCount ?? 0) > 0)({{ $relationCount }})@endif</a>
     </div>
     <div class="page-sub">Automatischer Abgleich nach Name, Telefon, E-Mail, Anschrift, Geburtsdatum, IBAN und Vertragsnummer. Jede einzelne Übereinstimmung wird angezeigt – bitte jedes Paar prüfen, bevor Sie es zusammenführen. Kein Duplikat? Mit „✕ Kein Duplikat" wandert das Paar zu „Verwandte Kunden".</div>

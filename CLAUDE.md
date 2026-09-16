@@ -20,6 +20,18 @@ Commits, UI-Texte und Kommentare auf **Deutsch/ASCII**.
 5. Vor jedem Push **die volle Testsuite grün** halten: `php artisan test`.
 6. UI-/E-Mail-Änderungen möglichst **real verifizieren** (Headless-Chromium
    unter `/opt/pw-browsers/…`, `playwright-core`), nicht nur Tests.
+7. **Definition of Done (Betreiber-Vorgabe 15.09.2026):** Jede Aenderung
+   an Architektur oder am Verhalten des Codes muss diese Datei
+   mitziehen, wenn sie hier beschrieben ist. Eine CLAUDE.md, die den
+   Code nicht mehr beschreibt, ist schlimmer als keine: sie laesst
+   fertige Bausteine als "noch nicht gebaut" dastehen (so geschehen beim
+   lesenden Partnerportal und beim Postfach) - und was hier als ungebaut
+   steht, wird bei Reviews nicht geprueft, obwohl es produktiv laeuft.
+   Zur Erledigung gehoert ausserdem: Code geaendert, Test der den Fehler
+   BEWEIST (er muss ohne den Fix scheitern), volle Testsuite gruen,
+   `composer stan` und `composer lint` gruen; bei Leistungsfragen eine
+   Messung vorher/nachher, bei Sicherheitsfragen eine Gegenprobe aus der
+   Rolle des Angreifers.
 
 ## Deploy
 
@@ -2414,12 +2426,24 @@ Vollstaendig in `docs/OMNICHANNEL_ANALYSE_UND_ARCHITEKTUR.md`. Kurzfassung:
   idempotent, loescht nichts, ueberschreibt nichts; ein kaputter
   Datensatz beendet nie den Lauf. Ein Nachtrag, den man nach einem
   Abbruch nicht wiederholen darf, ist wertlos.
-- **Noch NICHT gebaut** (bewusst, Betreiber-Entscheidung 06.09.2026):
-  Webhook-Endpunkt, WhatsApp Cloud API (Phase 6), vereinheitlichte Inbox
-  (Phase 7), Haertung (Phase 8). Die zwei registrierten Adapter
-  (`portal`, `internal`) haben absichtlich KEINE externe API - sie
-  belegen, dass der Kern ohne Plattform auskommt, bevor der erste echte
-  Kanal dazukommt.
+- **Stand 15.09.2026 (die frueheren Phasen 6 und 7 sind gebaut, dieser
+  Absatz stand hier veraltet als "noch NICHT gebaut")**: Es gibt den
+  Webhook `/webhooks/whatsapp` (Verifizierung + Idempotenz), den
+  `WhatsAppAdapter` (Signaturpruefung, Empfang, Medien, Versand,
+  Statusmeldungen, 24-Stunden-Fenster IM ADAPTER - nie im Kern),
+  `/admin/kanaele` (Kanal + Konto anlegen, Verbindung testen, Meta-
+  Onboarding) und das vereinheitlichte **Postfach** `/admin/postfach`
+  (`Admin\PostfachController`, `Messaging\Inbox\ConversationInbox` +
+  `InboxFilters`): EINE Liste ueber alle Kanaele mit Filtern, Zuweisung,
+  Zustand und Antwort - inklusive der Unterhaltungen OHNE Kundenakte.
+  Genau die waren vorher unsichtbar: der Kern legte die Nachricht einer
+  unbekannten Nummer korrekt an, aber die Oberflaeche war nach KUNDE
+  sortiert, also sah sie niemand. Zugriff im Postfach laeuft ueber
+  `inbox->scope($user)` - dieselbe Portfolio-Regel wie ueberall.
+  Bestandsaufnahme und offene Punkte: `docs/WHATSAPP_POSTFACH_UND_COEXISTENCE.md`.
+  Weiterhin offen ist die Haertung (Phase 8). Die zwei Adapter ohne
+  externe API (`portal`, `internal`) bleiben bestehen - sie belegen, dass
+  der Kern ohne Plattform auskommt.
 - Inbetriebnahme: `php artisan migrate`, dann
   `messaging:unterhaltungen-nachtragen --probelauf`, dann ohne Schalter.
   Sichtbar aendert sich fuer Mitarbeiter und Kunden zunaechst NICHTS.
@@ -2918,6 +2942,86 @@ Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
   „Dienstly24 GmbH").
 - Tests: `UnternehmenssignaturTest` (19 Faelle), `CompanySignatureAssetTest`
   (nachgezogen: der Firmenname muss im PDF stehen).
+
+## System-Audit 15.09.2026: Befunde und Behebung
+
+Vollstaendiger Bericht: `docs/AUDIT_2026-09-15_BEHEBUNG.md`. Was man im
+Alltag davon wissen muss:
+
+- **JSON-LD gehoert NICHT in eine Blade-Datei.** Laravel 13 hat eine
+  Blade-Direktive `@context` - und der Schluessel eines JSON-LD-Blocks
+  heisst nun einmal `'@context'`. Blade uebersetzte ihn IN JEDER
+  oeffentlichen Seite zu PHP-Code; ausgeliefert wurde roher `<?php`-Text
+  im HTML und ein kaputtes Snippet fuer Google. Die Daten stehen jetzt in
+  `App\Services\Seo\StructuredData` (reines PHP, dort ist `'@context'`
+  eine Zeichenkette) und werden als fertiges, mit Nonce versehenes
+  `<script>` eingesetzt. Zwei Waechter-Tests halten es: keine
+  ausgelieferte Seite darf `<?php` enthalten, und jeder JSON-LD-Block
+  muss gueltiges JSON sein.
+- **Sichtbarkeit von Kunden hat EINE Quelle**: `User::canSeeAllCustomers()`
+  / `visibleOwnerIds()` / `canAccessCustomer()` und der dazu
+  deckungsgleiche Query-Scope `Customer::scopeVisibleTo()` (per
+  `whereExists`, nicht per `whereIn` ueber tausende IDs). Vorher gab es
+  dieselbe Frage in mehreren Fassungen, und eine davon vergass die
+  Vertretung - der Vertreter sah den Chat des vertretenen Kollegen nicht.
+  `canSeeCustomer()` war toter Code und ist weg. **NICHT gecacht**: eine
+  gemerkte Sichtbarkeit war im selben Request nach einer Zuweisung falsch.
+- **Das Auswertungs-Dashboard rechnete je Zeile neu** (`verlauf()`):
+  620,5 ms -> 18,7 ms bei identischem Ergebnis, indem die Zeitraumgrenzen
+  EINMAL vor der Schleife entstehen.
+- **Der oeffentliche Website-Assistent hatte keine Kostenbremse**
+  (`AssistantBudget`): Grenzen je IP, je Sitzung und global je Tag, und
+  zwar VOR dem Modellaufruf - eine erreichte Grenze verhindert den Aufruf,
+  sie verwirft nicht die Antwort. Bei Ueberschreitung antwortet die
+  vorhandene Rueckfallebene und uebergibt an das Team.
+- **Sicherung ist erst eine Sicherung, wenn sie sich zurueckspielen
+  laesst**: `scripts/backup.sh` verschluesselt (GPG AES-256), prueft den
+  Dump auf Inhalt, legt eine externe Kopie an und schreibt eine
+  Statusdatei; `scripts/restore.sh --pruefen` spielt sie zur Kontrolle in
+  eine ANDERE Datenbank (die Produktionsdatenbank aus der `.env` lehnt es
+  ab). `/admin/systemzustand` hat dafuer den Abschnitt "Sicherung" - ein
+  ALTER Erfolg gilt nach 48 Stunden nicht mehr als Erfolg.
+- **Externe Ueberwachung** `/gesundheit` (`HealthToken`-Middleware, Token
+  aus der `.env`, gedrosselt): nur Ampel und Kurzfassung, nie ein Wert und
+  nie ein Geheimnis; HTTP 503, wenn etwas handlungsbeduerftig ist.
+- **`retry_after` muss groesser sein als die Laufzeit des laengsten
+  Jobs.** Fuer Redis stand der Laravel-Standard 90 s, waehrend sieben Jobs
+  bis zu 300 s brauchen - der Umzug auf Redis haette Instagram-Beitraege
+  doppelt veroeffentlicht und Kampagnen zweimal verschickt. Jetzt 360 s,
+  der Kundenimport laeuft auf einem EIGENEN Anschluss (`database-lang` /
+  `redis-lang`, Warteschlange `lang`, `retry_after` 2100) mit eigenem
+  Worker. `QueueTimeoutTest` prueft die Regel fuer BEIDE Treiber.
+- **Der Chat holte bei jeder Abfrage den ganzen Verlauf** (473 KB je
+  Abfrage). `App\Support\ChatFeed` liefert seitenweise (50) und danach nur
+  noch das Neue ab einem Stand: 0,1 KB je Abfrage.
+- **Die private Platte lieferte Dateien ueber eine eigene Route aus**
+  (`'serve' => false`): jeder Zugriff laeuft jetzt zwingend durch einen
+  Controller mit Berechtigungspruefung.
+- **Barrierefreiheit**: jede Seite hat eine `<h1>`, Eingabefelder haben
+  Beschriftung bzw. `aria-label`. Honeypot-Felder bleiben bewusst
+  `aria-hidden` und unbenannt - eine Beschriftung waere die Anleitung zum
+  Umgehen.
+- **Statische Analyse** (`composer stan`): Baseline 307 -> 290, und zwar
+  nur durch BEHOBENE Ursachen. Drei davon waren echte Fehler derselben
+  Bauart - ein Zugriff auf eine Eigenschaft, die es gar nicht gibt, was
+  PHP klaglos als `null` liefert: `Customer::$email` (die Adresse haengt
+  am Benutzer) liess den Verkaufsassistenten die E-Mail IMMER fuer
+  unbekannt halten und die stille Pruefung eine richtige Adresse als
+  "weicht ab" werten; `Document::$mime_type` (die Tabelle hat keine
+  mime-Spalte) liess jedes Dokument als `application/octet-stream` gelten,
+  womit die kostenlose PDF-Textebene nie zum Zug kam. Tests:
+  `StatischeAnalyseFundeTest`.
+- **"4 Policies bei 98 Modellen" war ein Fehlalarm.** Dieses Projekt
+  prueft ueberwiegend anders: Rolle an der Route, Recht an der Route
+  (`can:`), Portfolio-Scope im Controller, je Bereich ein Helfer
+  (`authorizeTicketAccess`, `inbox->scope`, `ownCampaign`). Die vier
+  Policies decken genau die Objekte, deren Eigentuemer sich NICHT aus dem
+  Kunden ergibt. 98 Policies waeren eine zweite Wahrheit neben der
+  vorhandenen Pruefung. Was fehlte, war der NACHWEIS: `ZugriffspruefungTest`
+  geht alle Routen durch, die fuer die breite Personalrolle offen sind und
+  einen Datensatz ueber den Pfad annehmen, und verlangt fuer jede eine
+  erkennbare Pruefung. Ausnahmen (Datensaetze ohne Eigentuemer, z.B.
+  Medien-Slots) stehen namentlich im Test.
 
 ## Offene Themen / wartet auf den Betreiber
 

@@ -50,7 +50,14 @@
 
 /* --- Seitenkopf --------------------------------------------------- */
 .page-header { margin-bottom: 24px; }
-.page-title  { font-size: var(--page-title-size); font-weight: 700; margin-bottom: var(--page-title-mb); }
+/* .page-title ist seit dem Audit 15.09.2026 ein <h1> (vorher ein <div>).
+   KEINE der 114 Seiten der Beraterwelt hatte eine Ueberschrift der ersten
+   Ebene - fuer eine Bildschirmlesehilfe hatte damit keine dieser Seiten
+   eine erkennbare Struktur. Groesse, Gewicht UND Abstand stehen deshalb
+   ausdruecklich hier: ohne das erbte das <h1> die Browser-Vorgabe (2em,
+   eigene Aussenabstaende) und die Seiten saehen anders aus. So bleibt die
+   Darstellung unveraendert. */
+.page-title  { font-size: var(--page-title-size); font-weight: 700; margin: 0 0 var(--page-title-mb); line-height: 1.25; }
 .page-sub    { color: var(--ink-soft); font-size: 14px; margin-bottom: var(--page-sub-mb); }
 
 /* --- Karte -------------------------------------------------------- */

@@ -10,6 +10,7 @@ use App\Models\CustomerMessageAttachment;
 use App\Services\Ai\Assistant\AssistantSettings;
 use App\Services\Ai\Assistant\ConversationResumeService;
 use App\Services\CustomerMessageNotifier;
+use App\Support\ChatFeed;
 use App\Support\UploadRules;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -32,10 +33,14 @@ class PortalMessageController extends Controller
     public function index()
     {
         $customer = $this->getCustomer();
-        $messages = CustomerMessage::where('customer_id', $customer->id)
-            ->with(['sender', 'attachments'])
-            ->orderBy('created_at')->orderBy('id')
-            ->get();
+
+        // Nur die JUENGSTEN Nachrichten (Audit 15.09.2026). Vorher baute
+        // die Seite den kompletten Verlauf auf - bei einer ueber Monate
+        // gewachsenen Unterhaltung waechst damit jede einzelne Antwort
+        // mit dem Alter der Kundenbeziehung. Aeltere holt der Knopf
+        // "Frühere Nachrichten" nach; niemand verliert etwas.
+        $messages = ChatFeed::nachrichten($customer->id, null);
+        $hatAeltere = ChatFeed::hatAeltere($customer->id, $messages->first());
 
         // Beraternachrichten gelten mit dem Oeffnen der Seite als gelesen.
         CustomerMessage::where('customer_id', $customer->id)
@@ -57,13 +62,21 @@ class PortalMessageController extends Controller
             && app(ConversationResumeService::class)
                 ->isAiOnDuty($customer, $conversation);
 
-        return view('portal.messages', compact('customer', 'messages', 'aiActive'));
+        return view('portal.messages', compact('customer', 'messages', 'aiActive', 'hatAeltere'));
     }
 
     /**
-     * JSON-Feed fuer Chat-Seite und Chat-Widget: kompletter Verlauf plus
-     * Ungelesen-Zaehler. mark_read=1 markiert Beraternachrichten als
-     * gelesen (der Chat ist geoeffnet und sichtbar).
+     * JSON-Feed fuer Chat-Seite und Chat-Widget.
+     *
+     * NUR DAS NEUE (Audit 15.09.2026): `?seit=` liefert ausschliesslich,
+     * was sich seither geaendert hat - neue Nachrichten UND der
+     * Lesehaken an bereits gesendeten. Vorher holte jeder Abruf den
+     * kompletten Verlauf; bei einer Drossel von 120 Abrufen je Minute
+     * und einem Verlauf, der ueber Monate waechst, ist das die Art Last,
+     * die erst spaeter weh tut.
+     *
+     * `?alle=1` (Mehr laden) gibt bewusst alles zurueck.
+     * mark_read=1 markiert Beraternachrichten als gelesen.
      */
     public function feed(Request $request)
     {
@@ -75,13 +88,12 @@ class PortalMessageController extends Controller
                 ->update(['read_at' => now()]);
         }
 
-        $messages = CustomerMessage::where('customer_id', $customer->id)
-            ->with(['sender', 'attachments'])
-            ->orderBy('created_at')->orderBy('id')
-            ->get();
+        $seit = ChatFeed::stand($request);
+        $messages = ChatFeed::nachrichten($customer->id, $seit, allesLaden: $request->boolean('alle'));
 
         return response()->json([
-            'unread' => $messages->where('from_staff', true)->whereNull('read_at')->count(),
+            'unread' => ChatFeed::ungelesen($customer->id, staffView: false),
+            'cursor' => ChatFeed::neuerStand(),
             'messages' => $messages->map(fn ($m) => $m->toChatPayload())->values(),
         ]);
     }

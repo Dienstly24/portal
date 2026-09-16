@@ -6,7 +6,7 @@
         <a href="{{ route('admin.signatures.index') }}">Signaturen</a><span class="breadcrumb-sep">›</span><span>Neu</span>
     </div>
     <div>
-        <div class="page-title">Neue Signaturanfrage</div>
+        <h1 class="page-title">Neue Signaturanfrage</h1>
         <div class="page-sub">
             PDF hochladen, Unterzeichner erfassen – die Felder setzen Sie im nächsten Schritt.
             @if(!$customer)Ein Kunde ist <strong>nicht</strong> erforderlich; zuordnen können Sie das Dokument nach der Unterschrift.@endif
@@ -47,7 +47,7 @@
                 <label for="kundensuche">Kunde suchen</label>
                 <input id="kundensuche" type="text" autocomplete="off" data-h-input="sigKundenSuche"
                        placeholder="Name, Kundennummer, E-Mail oder Telefon"
-                       style="width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+                       style="width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="Name, Kundennummer, E-Mail oder Telefon">
                 <div id="kunden-treffer" style="margin-top:6px;display:grid;gap:4px;"></div>
                 <input type="hidden" name="customer_id" id="customer_id" value="{{ old('customer_id') }}">
                 <div id="kunde-gewaehlt" class="muted-sm" style="margin-top:6px;"></div>
@@ -87,7 +87,7 @@
                 <label for="title">Titel <span style="color:#B3261E;">*</span></label>
                 <input id="title" type="text" name="title" required maxlength="180" value="{{ old('title') }}"
                        placeholder="z. B. Maklervollmacht Mustermann"
-                       style="width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+                       style="width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="z. B. Maklervollmacht Mustermann">
             </div>
 
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
@@ -126,10 +126,10 @@
                 <div style="display:grid;grid-template-columns:1fr 1fr 130px 130px;gap:10px;">
                     <input type="text" name="signers[{{ $i }}][name]" maxlength="160" value="{{ old("signers.$i.name", $i === 0 ? ($customer->user?->name ?? '') : '') }}"
                            placeholder="Name{{ $i === 0 ? '' : ' (optional)' }}"
-                           style="padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+                           style="padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="Name">
                     <input type="email" name="signers[{{ $i }}][email]" maxlength="190" value="{{ old("signers.$i.email", $i === 0 ? ($customer->user?->email ?? '') : '') }}"
                            placeholder="E-Mail{{ $i === 0 ? '' : ' (optional)' }}"
-                           style="padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+                           style="padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="E-Mail">
                     <select name="signers[{{ $i }}][locale]" aria-label="Sprache des Unterzeichners"
                             style="padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
                         @foreach(\App\Models\SignatureSigner::LOCALES as $code => $bezeichnung)

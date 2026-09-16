@@ -4,7 +4,7 @@
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>lexoffice</span><span class="breadcrumb-sep">›</span><span>Rechnungen</span></div>
     <div style="display:flex;align-items:center;justify-content:space-between;">
         <div>
-            <div class="page-title">lexoffice Rechnungen</div>
+            <h1 class="page-title">lexoffice Rechnungen</h1>
             <div class="page-sub">{{ number_format($total) }} Rechnungen in lexoffice</div>
         </div>
         <a href="{{ route('admin.lexoffice.contacts') }}" class="btn btn-ghost">👥 Kontakte →</a>
@@ -46,7 +46,7 @@
                 <div id="send-{{ $inv['id'] }}" style="display:none;margin-top:8px;">
                     <form method="POST" action="{{ route('admin.lexoffice.invoice.send', $inv['id']) }}" style="display:flex;gap:6px;">
                         @csrf
-                        <input type="email" name="email" placeholder="E-Mail eingeben..." required style="padding:6px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;width:200px;">
+                        <input type="email" name="email" placeholder="E-Mail eingeben..." required style="padding:6px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;width:200px;" aria-label="E-Mail eingeben">
                         <button type="submit" class="btn btn-primary btn-sm">Senden</button>
                     </form>
                 </div>

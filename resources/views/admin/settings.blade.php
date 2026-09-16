@@ -2,7 +2,7 @@
 @section('content')
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Einstellungen</span></div>
-    <div class="page-title">Einstellungen</div>
+    <h1 class="page-title">Einstellungen</h1>
     <div class="page-sub">Systemkonfiguration und Integrationen</div>
 </div>
 
@@ -43,19 +43,19 @@
 
 <div class="card">
     <div class="card-title" style="margin-bottom:20px;">🏢 Unternehmen</div>
-    <div class="field"><label>Firmenname</label><input type="text" name="company_name" value="{{ $settings['company_name'] }}"></div>
-    <div class="field"><label>E-Mail</label><input type="email" name="company_email" value="{{ $settings['company_email'] }}"></div>
-    <div class="field"><label>Telefon</label><input type="tel" name="company_phone" value="{{ $settings['company_phone'] }}"></div>
-    <div class="field"><label>Adresse</label><input type="text" name="company_address" value="{{ $settings['company_address'] }}"></div>
+    <div class="field"><label>Firmenname</label><input type="text" name="company_name" value="{{ $settings['company_name'] }}" aria-label="Firmenname"></div>
+    <div class="field"><label>E-Mail</label><input type="email" name="company_email" value="{{ $settings['company_email'] }}" aria-label="E-Mail"></div>
+    <div class="field"><label>Telefon</label><input type="tel" name="company_phone" value="{{ $settings['company_phone'] }}" aria-label="Telefon"></div>
+    <div class="field"><label>Adresse</label><input type="text" name="company_address" value="{{ $settings['company_address'] }}" aria-label="Adresse"></div>
 </div>
 
 <div class="card">
     <div class="card-title" style="margin-bottom:20px;">🔗 Portal URLs</div>
-    <div class="field"><label>Kunden-Portal URL</label><input type="text" name="portal_url" value="{{ $settings['portal_url'] }}"></div>
-    <div class="field"><label>Admin URL</label><input type="text" name="admin_url" value="{{ $settings['admin_url'] }}"></div>
+    <div class="field"><label>Kunden-Portal URL</label><input type="text" name="portal_url" value="{{ $settings['portal_url'] }}" aria-label="Kunden-Portal URL"></div>
+    <div class="field"><label>Admin URL</label><input type="text" name="admin_url" value="{{ $settings['admin_url'] }}" aria-label="Admin URL"></div>
     <div class="field">
         <label>Vertrags-Erinnerung (Tage vor Ablauf)</label>
-        <input type="text" name="contract_reminder_days" value="{{ $settings['contract_reminder_days'] }}" placeholder="30,14,7">
+        <input type="text" name="contract_reminder_days" value="{{ $settings['contract_reminder_days'] }}" placeholder="30,14,7" aria-label="Vertrags-Erinnerung (Tage vor Ablauf)">
         <div style="font-size:11px;color:var(--ink-soft);margin-top:4px;">Kommagetrennte Tagesangaben</div>
     </div>
 </div>
@@ -64,7 +64,7 @@
     <div class="card-title" style="margin-bottom:20px;">🔄 Kundenänderungen (Nachweise)</div>
     <div class="field">
         <label>Automatische Freigabe geprüfter Änderungen</label>
-        <select name="change_request_auto_approve">
+        <select name="change_request_auto_approve" aria-label="Automatische Freigabe geprüfter Änderungen">
             @foreach(\App\Services\ChangeRequest\ChangeProofPolicy::AUTO_APPROVE_MODES as $key => $label)
             <option value="{{ $key }}" {{ $settings['change_request_auto_approve'] === $key ? 'selected' : '' }}>{{ $label }}</option>
             @endforeach
@@ -158,7 +158,7 @@
     <div class="field">
         <label>Maximale automatische Antworten pro Vorgang</label>
         <input type="number" name="ai_assistant_max_replies_per_case" min="0" max="100"
-               value="{{ $settings['ai_assistant_max_replies_per_case'] }}">
+               value="{{ $settings['ai_assistant_max_replies_per_case'] }}" aria-label="Maximale automatische Antworten pro Vorgang">
     </div>
     {{-- Wiederaufnahme (Betreiber-Vorgabe 20.08.2026): eine Uebernahme gilt
          dem VORGANG, nicht dem Kunden. Ohne diese Regel blieb ein Kunde nach
@@ -170,7 +170,7 @@
     <div class="field">
         <label>Ruhefrist nach der letzten Mitarbeiter-Nachricht (Stunden)</label>
         <input type="number" name="ai_assistant_resume_quiet_hours" min="1" max="720"
-               value="{{ $settings['ai_assistant_resume_quiet_hours'] }}">
+               value="{{ $settings['ai_assistant_resume_quiet_hours'] }}" aria-label="Ruhefrist nach der letzten Mitarbeiter-Nachricht (Stunden)">
         <div style="font-size:12.5px;color:var(--ink-soft);margin-top:4px;">
             Die KI kommt zurück, sobald der übernommene Vorgang abgeschlossen ist –
             spätestens nach dieser Frist ohne Nachricht eines Mitarbeiters. Jede eigene
@@ -213,7 +213,7 @@
     <div class="card-title" style="margin-bottom:20px;">🔌 Integrationen</div>
     <div class="field">
         <label>lexoffice API Key</label>
-        <input type="text" name="lexoffice_api_key" value="{{ $settings['lexoffice_api_key'] }}" placeholder="API Key eingeben">
+        <input type="text" name="lexoffice_api_key" value="{{ $settings['lexoffice_api_key'] }}" placeholder="API Key eingeben" aria-label="lexoffice API Key">
         <div style="font-size:11px;color:var(--ink-soft);margin-top:4px;">
             <a href="https://app.lexoffice.de/addons/public-api" target="_blank" style="color:var(--graphite);">API Key generieren →</a>
         </div>
@@ -253,17 +253,17 @@
         leiten auf die offizielle Website weiter – eine Inhaltsquelle, keine doppelten Texte.
     </div>
     <div class="field"><label>Rechtsseiten-Quelle: Website-Basis-URL (leer lassen = Portal zeigt eigene Seiten aus den Texten unten)</label>
-        <input type="url" name="legal_external_base" value="{{ $settings['legal_external_base'] }}" placeholder="https://dienstly24.de"></div>
+        <input type="url" name="legal_external_base" value="{{ $settings['legal_external_base'] }}" placeholder="https://dienstly24.de" aria-label="https://dienstly24.de"></div>
     <div class="field"><label>Datei-Endung der Website-Seiten (die Website liefert die Seiten als statische Dateien aus, z. B. /impressum<strong>.html</strong>. Leeren, sobald die Website URLs ohne Endung unterstuetzt)</label>
-        <input type="text" name="legal_external_suffix" value="{{ $settings['legal_external_suffix'] }}" placeholder=".html"></div>
+        <input type="text" name="legal_external_suffix" value="{{ $settings['legal_external_suffix'] }}" placeholder=".html" aria-label=".html"></div>
     <div class="field"><label>Impressum – Zusatzangaben (Inhaber, USt-IdNr., Aufsichtsbehörde …) – nur im Portal-Modus sichtbar</label>
-        <textarea name="legal_impressum" rows="4">{{ $settings['legal_impressum'] }}</textarea></div>
+        <textarea name="legal_impressum" rows="4" aria-label="Impressum (eigener Text)">{{ $settings['legal_impressum'] }}</textarea></div>
     <div class="field"><label>AGB – vollständiger Text (ersetzt den Standardtext)</label>
-        <textarea name="legal_agb" rows="6">{{ $settings['legal_agb'] }}</textarea></div>
+        <textarea name="legal_agb" rows="6" aria-label="AGB – vollständiger Text (ersetzt den Standardtext)">{{ $settings['legal_agb'] }}</textarea></div>
     <div class="field"><label>Datenschutzerklärung – Zusatzabschnitte</label>
-        <textarea name="legal_datenschutz" rows="4">{{ $settings['legal_datenschutz'] }}</textarea></div>
+        <textarea name="legal_datenschutz" rows="4" aria-label="Datenschutzerklärung – Zusatzabschnitte">{{ $settings['legal_datenschutz'] }}</textarea></div>
     <div class="field"><label>Cookie-Richtlinie – eigener Text (ersetzt den Standardtext)</label>
-        <textarea name="legal_cookies" rows="4">{{ $settings['legal_cookies'] }}</textarea></div>
+        <textarea name="legal_cookies" rows="4" aria-label="Cookie-Richtlinie – eigener Text (ersetzt den Standardtext)">{{ $settings['legal_cookies'] }}</textarea></div>
 </div>
 
 </div>

@@ -3,7 +3,7 @@
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>E-Mail-Posteingang</span></div>
     <div>
-        <div class="page-title">E-Mail-Posteingang</div>
+        <h1 class="page-title">E-Mail-Posteingang</h1>
         <div class="page-sub">Automatisch verarbeitete E-Mails: Zuordnungen bestätigen und offene Fälle zuweisen.</div>
     </div>
 </div>
@@ -90,7 +90,7 @@
                 @csrf
                 <input type="hidden" name="customer_id" class="assign-customer-id">
                 <input type="text" class="assign-search" placeholder="Kunde suchen (Name/Nr./Telefon)…" autocomplete="off"
-                    style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;width:240px;font-size:13px;">
+                    style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;width:240px;font-size:13px;" aria-label="Kunde suchen (Name/Nr./Telefon)">
                 <div class="assign-results" style="display:none;position:absolute;top:40px;left:0;width:280px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:50;max-height:260px;overflow-y:auto;"></div>
                 <button type="submit" class="btn btn-emerald btn-sm" disabled>Zuordnen</button>
             </form>

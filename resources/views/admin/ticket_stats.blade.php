@@ -1,8 +1,16 @@
 @extends('layouts.admin')
+@push('charts')
+{{-- Diese Seite zeichnet ein Diagramm - deshalb wird Chart.js hier
+     ausdruecklich angefordert (Audit 15.09.2026). Es liegt lokal
+     (DSGVO: keine Besucher-IP an ein CDN) und laedt nur noch auf den
+     fuenf Seiten, die es wirklich brauchen. --}}
+<script src="/js/chart.umd.min.js"></script>
+@endpush
+
 @section('content')
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.tickets') }}">Tickets</a><span class="breadcrumb-sep">›</span><span>Statistik</span></div>
-    <div class="page-title">Ticket-Statistik</div>
+    <h1 class="page-title">Ticket-Statistik</h1>
     <div class="page-sub">Anfragen, Erledigungsquote und Team-Leistung seit {{ $from->format('d.m.Y') }}.</div>
 </div>
 

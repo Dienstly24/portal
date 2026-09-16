@@ -8,7 +8,7 @@
 .kchat{display:grid;grid-template-columns:340px minmax(0,1fr);background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;height:calc(100vh - var(--header-h) - 56px);min-height:460px;}
 .kchat-side{border-inline-end:1px solid var(--line);display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--surface);}
 .kchat-side-head{padding:14px 14px 10px;border-bottom:1px solid var(--line);}
-.kchat-title{font-size:15px;font-weight:700;margin-bottom:10px;}
+.kchat-title{font-size:15px;font-weight:700;margin:0 0 10px;line-height:1.3;}
 .kchat-search input{width:100%;padding:9px 13px;border:1px solid var(--line);border-radius:999px;font-size:13px;background:var(--canvas);color:var(--ink);}
 .kchat-search input:focus{outline:2px solid var(--emerald);outline-offset:1px;background:#fff;}
 .kchat-convs{overflow-y:auto;flex:1;}
@@ -131,7 +131,7 @@
 <div class="kchat {{ $active ? 'mode-thread' : 'mode-list' }}">
     <aside class="kchat-side">
         <div class="kchat-side-head">
-            <div class="kchat-title">💬 Kundenkommunikation</div>
+            <h1 class="kchat-title">💬 Kundenkommunikation</h1>
             <form method="GET" action="{{ route('admin.customer_chat') }}" class="kchat-search">
                 <input type="search" name="q" value="{{ request('q') }}" placeholder="Kunde suchen (Name, Nr., E-Mail) …" aria-label="Kunde suchen">
             </form>
@@ -256,7 +256,7 @@
                     <button type="button" class="active" data-ziel="note">🔒 Notiz</button>
                     <button type="button" data-ziel="chat">💬 Intern teilen (@Name erwähnt Kollegen)</button>
                 </div>
-                <textarea name="note" required rows="2" maxlength="5000" placeholder="Interne Notiz – nur für das Team sichtbar …"></textarea>
+                <textarea name="note" required rows="2" maxlength="5000" placeholder="Interne Notiz – nur für das Team sichtbar …" aria-label="Interne Notiz – nur für das Team sichtbar"></textarea>
             </div>
             <input type="hidden" name="type" value="chat" disabled id="kx-note-type">
             <button type="submit" class="btn btn-emerald" style="padding:7px 16px;font-size:13px;">Speichern</button>
@@ -293,7 +293,7 @@
                     </label>
                 </div>
                 <label style="font-size:12.5px;color:var(--ink-soft);display:block;margin-bottom:12px;">Betreff
-                    <input type="text" name="subject" required maxlength="255" placeholder="Kurzbeschreibung des Anliegens" style="width:100%;margin-top:4px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+                    <input type="text" name="subject" required maxlength="255" placeholder="Kurzbeschreibung des Anliegens" style="width:100%;margin-top:4px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="Kurzbeschreibung des Anliegens">
                 </label>
                 <label style="font-size:12.5px;color:var(--ink-soft);display:block;margin-bottom:14px;">Beschreibung
                     <textarea name="description" required rows="4" maxlength="5000" style="width:100%;margin-top:4px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;font-family:inherit;resize:vertical;">{{ $ticketPrefill }}</textarea>
@@ -353,7 +353,7 @@
             @csrf
             @if($activeTicket)<input type="hidden" name="status" value="{{ $activeTicket->status }}" disabled id="kc-ticket-status">@endif
             <label class="d24c-clip" title="{{ __('Anhang hinzufügen') }}">📎<input id="kc-file" type="file" name="attachments[]" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" hidden></label>
-            <textarea id="kc-input" name="body" class="d24c-inp" rows="1" maxlength="5000" placeholder="Nachricht an {{ $active->user?->name ?? 'den Kunden' }} …" required></textarea>
+            <textarea id="kc-input" name="body" class="d24c-inp" rows="1" maxlength="5000" placeholder="Nachricht an {{ $active->user?->name ?? 'den Kunden' }} …" required aria-label="Nachricht an"></textarea>
             <button type="submit" class="d24c-send" aria-label="{{ __('Senden') }}"><span class="snd-ico">➤</span></button>
         </form>
         @else

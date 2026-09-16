@@ -4,7 +4,7 @@
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Mitarbeiter</span></div>
     <div style="display:flex;align-items:center;justify-content:space-between;">
         <div>
-            <div class="page-title">Mitarbeiter</div>
+            <h1 class="page-title">Mitarbeiter</h1>
             <div class="page-sub">Verwalten Sie Ihr Team und deren Zugriffsrechte.</div>
         </div>
         <a href="{{ route('admin.employees.create') }}" class="btn btn-emerald">+ Neuer Mitarbeiter</a>

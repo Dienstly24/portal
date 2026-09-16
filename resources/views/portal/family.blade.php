@@ -2,7 +2,7 @@
 @section('content')
 <div class="toolbar">
     <div>
-        <div class="page-title">{{ __('👨‍👩‍👦 Meine Familie') }}</div>
+        <h1 class="page-title">{{ __('👨‍👩‍👦 Meine Familie') }}</h1>
         <div class="page-sub" style="margin-bottom:0;">{{ __('Familienmitglieder hinzufügen oder Änderungen beantragen – jede Angabe wird von unserem Team geprüft.') }}</div>
     </div>
     <button data-h-click="af24f60d8a" class="btn btn-emerald">+ {{ __('Familienmitglied hinzufügen') }}</button>
@@ -87,32 +87,32 @@ $rejected = $requests->where('status','rejected');
         <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">{{ __('Die Angaben werden erst nach Prüfung durch unser Team übernommen.') }}</p>
         <form method="POST" action="{{ route('portal.family.store') }}">
             @csrf
-            <div class="field"><label>{{ __('Name *') }}</label><input type="text" name="name" required maxlength="255"></div>
+            <div class="field"><label>{{ __('Name *') }}</label><input type="text" name="name" required maxlength="255" aria-label="{{ __('Name *') }}"></div>
             <div class="grid-2">
                 <div class="field"><label>{{ __('Beziehung *') }}</label>
-                    <select name="relation" required>
+                    <select name="relation" required aria-label="{{ __('Beziehung *') }}">
                         <option value="ehepartner">{{ __('Ehepartner') }}</option>
                         <option value="kind">{{ __('Kind') }}</option>
                         <option value="andere">{{ __('Weitere Person') }}</option>
                     </select>
                 </div>
-                <div class="field"><label>{{ __('Geburtsdatum') }}</label><input type="date" name="birth_date" max="{{ now()->toDateString() }}"></div>
+                <div class="field"><label>{{ __('Geburtsdatum') }}</label><input type="date" name="birth_date" max="{{ now()->toDateString() }}" aria-label="{{ __('Geburtsdatum') }}"></div>
             </div>
             <div class="grid-2">
                 <div class="field"><label>{{ __('Geschlecht') }}</label>
-                    <select name="gender">
+                    <select name="gender" aria-label="{{ __('Geschlecht') }}">
                         <option value="">{{ __('— Bitte wählen —') }}</option>
                         <option value="male">{{ __('Männlich') }}</option>
                         <option value="female">{{ __('Weiblich') }}</option>
                     </select>
                 </div>
-                <div class="field"><label>{{ __('Geburtsort') }}</label><input type="text" name="birth_place" maxlength="255"></div>
+                <div class="field"><label>{{ __('Geburtsort') }}</label><input type="text" name="birth_place" maxlength="255" aria-label="{{ __('Geburtsort') }}"></div>
             </div>
             <div class="grid-2">
-                <div class="field"><label>{{ __('Krankenversicherungsnr.') }}</label><input type="text" name="health_insurance_number" maxlength="50"></div>
-                <div class="field"><label>{{ __('Rentenversicherungsnr.') }}</label><input type="text" name="pension_insurance_number" maxlength="50"></div>
+                <div class="field"><label>{{ __('Krankenversicherungsnr.') }}</label><input type="text" name="health_insurance_number" maxlength="50" aria-label="{{ __('Krankenversicherungsnr.') }}"></div>
+                <div class="field"><label>{{ __('Rentenversicherungsnr.') }}</label><input type="text" name="pension_insurance_number" maxlength="50" aria-label="{{ __('Rentenversicherungsnr.') }}"></div>
             </div>
-            <div class="field"><label>{{ __('Steuer-ID') }}</label><input type="text" name="tax_id" maxlength="20"></div>
+            <div class="field"><label>{{ __('Steuer-ID') }}</label><input type="text" name="tax_id" maxlength="20" aria-label="{{ __('Steuer-ID') }}"></div>
             <button type="submit" class="btn btn-primary" style="width:100%;">{{ __('Zur Prüfung einreichen') }}</button>
         </form>
     </div>
@@ -126,16 +126,16 @@ $rejected = $requests->where('status','rejected');
         <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">{{ __('Die Änderung wird erst nach Prüfung wirksam.') }}</p>
         <form method="POST" id="change-family-form" action="">
             @csrf
-            <div class="field"><label>{{ __('Name *') }}</label><input type="text" name="name" id="cf-name" required maxlength="255"></div>
+            <div class="field"><label>{{ __('Name *') }}</label><input type="text" name="name" id="cf-name" required maxlength="255" aria-label="{{ __('Name *') }}"></div>
             <div class="grid-2">
                 <div class="field"><label>{{ __('Beziehung *') }}</label>
-                    <select name="relation" id="cf-relation" required>
+                    <select name="relation" id="cf-relation" required aria-label="{{ __('Beziehung *') }}">
                         <option value="ehepartner">{{ __('Ehepartner') }}</option>
                         <option value="kind">{{ __('Kind') }}</option>
                         <option value="andere">{{ __('Weitere Person') }}</option>
                     </select>
                 </div>
-                <div class="field"><label>{{ __('Geburtsdatum') }}</label><input type="date" name="birth_date" id="cf-birth" max="{{ now()->toDateString() }}"></div>
+                <div class="field"><label>{{ __('Geburtsdatum') }}</label><input type="date" name="birth_date" id="cf-birth" max="{{ now()->toDateString() }}" aria-label="{{ __('Geburtsdatum') }}"></div>
             </div>
             <button type="submit" class="btn btn-primary" style="width:100%;">{{ __('Änderung einreichen') }}</button>
         </form>

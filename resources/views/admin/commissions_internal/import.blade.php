@@ -2,7 +2,7 @@
 @section('content')
 @include('admin.partials.provision_styles')
 <div class="page-header">
-    <div class="page-title">📥 Provisionen aus CSV / Excel importieren</div>
+    <h1 class="page-title">📥 Provisionen aus CSV / Excel importieren</h1>
     <div class="page-sub">Schritt 1 von 5 – Datei hochladen. Es wird noch nichts übernommen.</div>
 </div>
 
@@ -49,7 +49,7 @@
              Erkennung anhand des Dateiformats einen Pool vor. --}}
         <div class="field" style="max-width:560px;">
             <label>Quelle / Pool</label>
-            <select name="pool">
+            <select name="pool" aria-label="Quelle / Pool">
                 <option value="">Automatisch aus dem Dateiformat erkennen</option>
                 @foreach($pools as $key => $pool)
                 <option value="{{ $key }}">{{ $pool->name }} <span>({{ $pool->deadlineLabel() }})</span></option>
@@ -60,7 +60,7 @@
         <div class="field" style="max-width:560px;">
             <label>CSV- oder Excel-Datei *</label>
             <input type="file" name="datei" required
-                   accept=".csv,.txt,.xlsx,.xlsm,.xls,text/csv,text/plain,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream">
+                   accept=".csv,.txt,.xlsx,.xlsm,.xls,text/csv,text/plain,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream" aria-label="CSV- oder Excel-Datei">
         </div>
 
         <details style="margin:14px 0 18px;max-width:640px;font-size:12.5px;">
@@ -68,7 +68,7 @@
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:12px;">
                 <div class="field" style="margin:0;">
                     <label>Trennzeichen (CSV)</label>
-                    <select name="delimiter">
+                    <select name="delimiter" aria-label="Trennzeichen (CSV)">
                         <option value="">Automatisch erkennen</option>
                         <option value=";">Semikolon ( ; )</option>
                         <option value=",">Komma ( , )</option>
@@ -78,7 +78,7 @@
                 </div>
                 <div class="field" style="margin:0;">
                     <label>Kodierung (CSV)</label>
-                    <select name="encoding">
+                    <select name="encoding" aria-label="Kodierung (CSV)">
                         <option value="">Automatisch erkennen</option>
                         <option value="UTF-8">UTF-8</option>
                         <option value="Windows-1252">Windows-1252 / ISO-8859-1</option>
@@ -87,11 +87,11 @@
                 </div>
                 <div class="field" style="margin:0;">
                     <label>Tabellenblatt (Excel)</label>
-                    <input type="text" name="sheet" placeholder="leer = erstes Blatt">
+                    <input type="text" name="sheet" placeholder="leer = erstes Blatt" aria-label="Tabellenblatt (Excel)">
                 </div>
                 <div class="field" style="margin:0;">
                     <label>Betriebsart</label>
-                    <select name="modus">
+                    <select name="modus" aria-label="Betriebsart">
                         <option value="">Automatisch erkennen</option>
                         @foreach(\App\Services\CommissionImport\ColumnMap::MODES as $key => $label)
                         <option value="{{ $key }}">{{ $label }}</option>

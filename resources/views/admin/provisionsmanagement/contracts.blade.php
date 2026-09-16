@@ -7,11 +7,11 @@
     <form method="GET" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:end;">
         <div class="field" style="margin:0;">
             <label>Suche</label>
-            <input type="text" name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Vertragsnummer, Kunde, Gesellschaft…">
+            <input type="text" name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Vertragsnummer, Kunde, Gesellschaft…" aria-label="Suche">
         </div>
         <div class="field" style="margin:0;">
             <label>Pool</label>
-            <select name="pool">
+            <select name="pool" aria-label="Pool">
                 <option value="">Alle</option>
                 @foreach($poolListe as $key => $pool)
                 <option value="{{ $key }}" @selected(($filters['pool'] ?? '') === $key)>{{ $pool->name }}</option>
@@ -20,7 +20,7 @@
         </div>
         <div class="field" style="margin:0;">
             <label>Provisions-Zustand</label>
-            <select name="status">
+            <select name="status" aria-label="Provisions-Zustand">
                 <option value="">Alle</option>
                 @foreach(\App\Support\ContractCommissionStatus::ALL as $key => $info)
                 <option value="{{ $key }}" @selected(($filters['status'] ?? '') === $key)>{{ $info['label'] }}</option>

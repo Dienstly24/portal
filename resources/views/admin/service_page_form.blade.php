@@ -7,7 +7,7 @@
         <a href="{{ route('admin.service_pages') }}">Leistungsseiten</a><span class="breadcrumb-sep">›</span>
         <span>{{ $isEdit ? 'Bearbeiten' : 'Neu' }}</span>
     </div>
-    <div class="page-title">{{ $isEdit ? 'Leistungsseite bearbeiten' : 'Neue Leistungsseite' }}</div>
+    <h1 class="page-title">{{ $isEdit ? 'Leistungsseite bearbeiten' : 'Neue Leistungsseite' }}</h1>
     <div class="page-sub">Texte in Deutsch und Arabisch pflegen. Arabisch faellt bei leeren Feldern auf Deutsch zurueck.</div>
 </div>
 
@@ -26,29 +26,29 @@
         <div class="card-title">Grunddaten</div>
         <div class="grid-2">
             <div class="field"><label>Titel (DE) *</label>
-                <input type="text" name="title_de" required maxlength="255" value="{{ old('title_de', $page->title_de) }}" placeholder="z.B. Kfz-Versicherung"></div>
+                <input type="text" name="title_de" required maxlength="255" value="{{ old('title_de', $page->title_de) }}" placeholder="z.B. Kfz-Versicherung" aria-label="Titel (DE)"></div>
             <div class="field"><label>Titel (AR)</label>
-                <input type="text" name="title_ar" maxlength="255" dir="rtl" value="{{ old('title_ar', $page->title_ar) }}"></div>
+                <input type="text" name="title_ar" maxlength="255" dir="rtl" value="{{ old('title_ar', $page->title_ar) }}" aria-label="Titel (AR)"></div>
         </div>
         <div class="grid-2">
             <div class="field"><label>Slug (URL) *</label>
-                <input type="text" name="slug" required maxlength="120" value="{{ old('slug', $page->slug) }}" placeholder="kfz-versicherung">
+                <input type="text" name="slug" required maxlength="120" value="{{ old('slug', $page->slug) }}" placeholder="kfz-versicherung" aria-label="Slug (URL)">
                 <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">Nur Kleinbuchstaben, Zahlen und Bindestriche. Ergibt <code>/leistungen/…</code></div>
             </div>
             <div class="field"><label>Kategorie</label>
-                <input type="text" name="category" maxlength="60" value="{{ old('category', $page->category) }}" placeholder="versicherung / kfz / energie"></div>
+                <input type="text" name="category" maxlength="60" value="{{ old('category', $page->category) }}" placeholder="versicherung / kfz / energie" aria-label="Kategorie"></div>
         </div>
         <div class="grid-2">
             <div class="field"><label>Icon (Emoji)</label>
-                <input type="text" name="icon" maxlength="16" value="{{ old('icon', $page->icon) }}" placeholder="🚗"></div>
+                <input type="text" name="icon" maxlength="16" value="{{ old('icon', $page->icon) }}" placeholder="🚗" aria-label="Icon (Emoji)"></div>
             <div class="field"><label>Reihenfolge</label>
-                <input type="number" name="sort_order" min="0" max="65535" value="{{ old('sort_order', $page->sort_order) }}"></div>
+                <input type="number" name="sort_order" min="0" max="65535" value="{{ old('sort_order', $page->sort_order) }}" aria-label="Reihenfolge"></div>
         </div>
         <div class="grid-2">
             <div class="field"><label>Untertitel (DE)</label>
-                <input type="text" name="subtitle_de" maxlength="255" value="{{ old('subtitle_de', $page->subtitle_de) }}"></div>
+                <input type="text" name="subtitle_de" maxlength="255" value="{{ old('subtitle_de', $page->subtitle_de) }}" aria-label="Untertitel (DE)"></div>
             <div class="field"><label>Untertitel (AR)</label>
-                <input type="text" name="subtitle_ar" maxlength="255" dir="rtl" value="{{ old('subtitle_ar', $page->subtitle_ar) }}"></div>
+                <input type="text" name="subtitle_ar" maxlength="255" dir="rtl" value="{{ old('subtitle_ar', $page->subtitle_ar) }}" aria-label="Untertitel (AR)"></div>
         </div>
         <div class="field">
             <label><input type="checkbox" name="is_active" value="1" {{ old('is_active', $page->is_active) ? 'checked' : '' }}> Seite oeffentlich sichtbar</label>
@@ -59,15 +59,15 @@
         <div class="card-title">Einleitung (Definition) &amp; Kurzinfos</div>
         <div class="grid-2">
             <div class="field"><label>Einleitung / „Was ist …“ (DE)</label>
-                <textarea name="intro_de" rows="5" maxlength="5000">{{ old('intro_de', $page->intro_de) }}</textarea></div>
+                <textarea name="intro_de" rows="5" maxlength="5000" aria-label="Einleitung / „Was ist …“ (DE)">{{ old('intro_de', $page->intro_de) }}</textarea></div>
             <div class="field"><label>Einleitung (AR)</label>
-                <textarea name="intro_ar" rows="5" maxlength="5000" dir="rtl">{{ old('intro_ar', $page->intro_ar) }}</textarea></div>
+                <textarea name="intro_ar" rows="5" maxlength="5000" dir="rtl" aria-label="Einleitung (AR)">{{ old('intro_ar', $page->intro_ar) }}</textarea></div>
         </div>
         <div class="grid-2">
             <div class="field"><label>Kurzinfos (DE) – eine pro Zeile</label>
-                <textarea name="highlights_de" rows="5" maxlength="3000" placeholder="Gesetzliche Haftpflicht&#10;Teilkasko bei Diebstahl">{{ old('highlights_de', $page->highlights_de) }}</textarea></div>
+                <textarea name="highlights_de" rows="5" maxlength="3000" placeholder="Gesetzliche Haftpflicht&#10;Teilkasko bei Diebstahl" aria-label="Kurzinfos (DE) – eine pro Zeile">{{ old('highlights_de', $page->highlights_de) }}</textarea></div>
             <div class="field"><label>Kurzinfos (AR) – eine pro Zeile</label>
-                <textarea name="highlights_ar" rows="5" maxlength="3000" dir="rtl">{{ old('highlights_ar', $page->highlights_ar) }}</textarea></div>
+                <textarea name="highlights_ar" rows="5" maxlength="3000" dir="rtl" aria-label="Kurzinfos (AR) – eine pro Zeile">{{ old('highlights_ar', $page->highlights_ar) }}</textarea></div>
         </div>
     </div>
 
@@ -76,9 +76,9 @@
         <div class="page-sub" style="margin-bottom:14px;">Formatierung: Zeile mit <code>## </code> = Zwischenüberschrift, Zeile mit <code>- </code> = Aufzählungspunkt, Leerzeile = neuer Absatz.</div>
         <div class="grid-2">
             <div class="field"><label>Inhalt (DE)</label>
-                <textarea name="body_de" rows="12" maxlength="20000" placeholder="## Darauf kommt es an&#10;Die Kfz-Haftpflicht ist ...&#10;&#10;- Punkt eins&#10;- Punkt zwei">{{ old('body_de', $page->body_de) }}</textarea></div>
+                <textarea name="body_de" rows="12" maxlength="20000" placeholder="## Darauf kommt es an&#10;Die Kfz-Haftpflicht ist ...&#10;&#10;- Punkt eins&#10;- Punkt zwei" aria-label="Inhalt (DE)">{{ old('body_de', $page->body_de) }}</textarea></div>
             <div class="field"><label>Inhalt (AR)</label>
-                <textarea name="body_ar" rows="12" maxlength="20000" dir="rtl">{{ old('body_ar', $page->body_ar) }}</textarea></div>
+                <textarea name="body_ar" rows="12" maxlength="20000" dir="rtl" aria-label="Inhalt (AR)">{{ old('body_ar', $page->body_ar) }}</textarea></div>
         </div>
     </div>
 
@@ -107,7 +107,7 @@
         <div class="card-title">Anbieter-Laufband (optional)</div>
         <div class="page-sub" style="margin-bottom:14px;">Ein Anbietername pro Zeile – wird als ruhiges Laufband angezeigt. Nur Namen (kein fremdes Logo). Bitte nur Anbieter aufführen, zu denen Sie tatsächlich beraten oder vermitteln.</div>
         <div class="field"><label>Anbieter (eine pro Zeile)</label>
-            <textarea name="providers" rows="6" maxlength="4000" placeholder="Allianz&#10;AXA&#10;...">{{ old('providers', $page->providers) }}</textarea></div>
+            <textarea name="providers" rows="6" maxlength="4000" placeholder="Allianz&#10;AXA&#10;..." aria-label="Anbieter (eine pro Zeile)">{{ old('providers', $page->providers) }}</textarea></div>
     </div>
 
     <div class="card">
@@ -137,16 +137,16 @@
     <div class="card">
         <div class="card-title">Bild &amp; SEO (optional)</div>
         <div class="field"><label>Bild (JPG/PNG/WEBP, max. 4 MB)</label>
-            <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp">
+            <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp" aria-label="Bild (JPG/PNG/WEBP, max. 4 MB)">
             @if($page->image_path)
                 <div style="margin-top:8px;"><img src="{{ $page->imageUrl() }}" alt="" style="max-height:90px;border-radius:8px;"></div>
             @endif
         </div>
         <div class="grid-2">
             <div class="field"><label>Meta-Beschreibung (DE)</label>
-                <input type="text" name="meta_description_de" maxlength="255" value="{{ old('meta_description_de', $page->meta_description_de) }}"></div>
+                <input type="text" name="meta_description_de" maxlength="255" value="{{ old('meta_description_de', $page->meta_description_de) }}" aria-label="Meta-Beschreibung (DE)"></div>
             <div class="field"><label>Meta-Beschreibung (AR)</label>
-                <input type="text" name="meta_description_ar" maxlength="255" dir="rtl" value="{{ old('meta_description_ar', $page->meta_description_ar) }}"></div>
+                <input type="text" name="meta_description_ar" maxlength="255" dir="rtl" value="{{ old('meta_description_ar', $page->meta_description_ar) }}" aria-label="Meta-Beschreibung (AR)"></div>
         </div>
     </div>
 

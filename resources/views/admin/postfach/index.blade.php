@@ -18,7 +18,7 @@
 
   <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
     <div>
-      <div class="page-title" style="margin-bottom:2px;">Postfach</div>
+      <h1 class="page-title" style="margin-bottom:2px;">Postfach</h1>
       <div class="page-sub">Alle Kanäle in einer Liste — auch Nachrichten ohne zugeordnete Kundenakte.</div>
     </div>
     @if($filters->isFiltered())
@@ -60,7 +60,7 @@
       <div class="field filter-suche">
         <label for="fSuche">Suche</label>
         <input type="search" name="q" id="fSuche" value="{{ $filters->search }}"
-               placeholder="Kunde, Nachricht, Telefon, E-Mail oder Kennung …">
+               placeholder="Kunde, Nachricht, Telefon, E-Mail oder Kennung …" aria-label="Kunde, Nachricht, Telefon, E-Mail oder Kennung">
       </div>
       <div class="field">
         <label for="fStatus">Zustand</label>

@@ -3,7 +3,7 @@
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Provisionen</span></div>
     <div>
-        <div class="page-title">Provisionen</div>
+        <h1 class="page-title">Provisionen</h1>
         <div class="page-sub">Automatisch erfasste Gutschriften prüfen und als Lexoffice-Beleg buchen.</div>
     </div>
 </div>
@@ -29,7 +29,16 @@
 @if(session('error'))<div style="background:#FBE9E9;color:#B3261E;padding:10px 16px;border-radius:8px;margin-bottom:16px;">{{ session('error') }}</div>@endif
 
 <div class="card" style="padding:0;overflow:hidden;margin-bottom:24px;">
-    <div class="card-head-bar">Zu prüfen ({{ $pending->count() }})</div>
+    {{-- Die Liste ist gedeckelt (Audit 15.09.2026). Die Ueberschrift
+         nennt die GESAMTZAHL, nicht die Zahl der gezeigten Zeilen -
+         eine still gekuerzte Pruefliste sieht sonst erledigt aus. --}}
+    <div class="card-head-bar">Zu prüfen ({{ $pendingTotal ?? $pending->count() }})</div>
+    @if(($pendingTotal ?? 0) > $pending->count())
+        <div class="alert alert-warning" style="margin:12px;">
+            ⚠ Es werden die ältesten {{ $pending->count() }} von {{ $pendingTotal }} offenen
+            Gutschriften gezeigt. Nach dem Bearbeiten erscheinen die nächsten.
+        </div>
+    @endif
     @forelse($pending as $c)
     <form method="POST" action="{{ route('admin.commissions.book', $c->id) }}" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;padding:16px 20px;border-bottom:1px solid var(--line);">
         @csrf
@@ -39,15 +48,15 @@
         </div>
         <div>
             <label style="font-size:11px;color:var(--ink-soft);display:block;">Gutschrift-Nr.</label>
-            <input type="text" name="credit_note_number" value="{{ $c->credit_note_number }}" maxlength="100" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;width:150px;">
+            <input type="text" name="credit_note_number" value="{{ $c->credit_note_number }}" maxlength="100" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;width:150px;" aria-label="Gutschrift-Nr.">
         </div>
         <div>
             <label style="font-size:11px;color:var(--ink-soft);display:block;">Betrag (€) *</label>
-            <input type="number" step="0.01" min="0.01" name="amount" value="{{ $c->amount }}" required style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;width:120px;">
+            <input type="number" step="0.01" min="0.01" name="amount" value="{{ $c->amount }}" required style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;width:120px;" aria-label="Betrag (€)">
         </div>
         <div>
             <label style="font-size:11px;color:var(--ink-soft);display:block;">Datum *</label>
-            <input type="date" name="statement_date" value="{{ $c->statement_date?->format('Y-m-d') ?? now()->format('Y-m-d') }}" required style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;">
+            <input type="date" name="statement_date" value="{{ $c->statement_date?->format('Y-m-d') ?? now()->format('Y-m-d') }}" required style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;" aria-label="Datum">
         </div>
         <div style="display:flex;gap:8px;margin-left:auto;">
             <button type="submit" class="btn btn-emerald btn-sm" data-h-click="7ede9fa4ef">Buchen (Lexoffice)</button>

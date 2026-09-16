@@ -2,8 +2,25 @@
 #
 # Stufe 5 ist der im Auftrag genannte Zielwert und steht hier auch so drin -
 # sie wurde NICHT gesenkt, um die Zahl der Meldungen kleiner aussehen zu
-# lassen. Der Bestand hat auf dieser Stufe 393 Meldungen; sie stehen in
+# lassen. Der Bestand hat auf dieser Stufe 290 Meldungen; sie stehen in
 # phpstan-baseline.neon.
+#
+# Stand der Verkleinerung (Audit 15.09.2026): 307 -> 290. Herausgenommen
+# wurden ausschliesslich Eintraege, deren URSACHE behoben ist - vier davon
+# waren echte Fehler, die nur dank der Analyse auffielen (siehe
+# docs/AUDIT_2026-09-15_BEHEBUNG.md). Was bewusst STEHEN BLEIBT und warum:
+#   - Carbon::lokal() (11x): Laufzeit-Makro, statisch unsichtbar. Der
+#     Versuch, es ueber eine Stub-Datei zu beschreiben, wurde gemessen und
+#     VERWORFEN: eine Stub-Datei ERSETZT die Klasse, danach fehlten Carbon
+#     alle uebrigen Methoden (35 Folgefehler quer durch den Bestand).
+#   - nullsafe.neverNull / nullCoalesce.offset / notIdentical.alwaysTrue
+#     (166x): das ist absichtlich defensiver Code. PHPStan haelt z.B.
+#     auth()->user() fuer nie null - fuer einen Gast ist es das sehr wohl.
+#     Diese Pruefungen zu entfernen, taeuschte Sauberkeit vor und erzeugte
+#     echte Abstuerze.
+#   - Aggregat-Aliase aus selectRaw ($anzahl, $netto, $monat ...): keine
+#     Spalten, also auch keine Modell-Eigenschaften. Sie zu annotieren waere
+#     eine Unwahrheit im Modell.
 #
 # Sinn der Baseline: ab sofort faellt jede NEUE Meldung in CI auf, waehrend
 # der Altbestand die Einfuehrung des Werkzeugs nicht blockiert. Sie ist ein

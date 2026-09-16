@@ -2,7 +2,7 @@
 @section('content')
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.activity.index') }}">Aktivität &amp; Arbeitszeiten</a><span class="breadcrumb-sep">›</span><span>Einstellungen</span></div>
-    <div class="page-title">Einstellungen: Aktivitätserfassung</div>
+    <h1 class="page-title">Einstellungen: Aktivitätserfassung</h1>
     <div class="page-sub">Schwellwerte und Punkte-Gewichte — Änderungen wirken sofort, ohne Code-Anpassung. Nur für Administratoren.</div>
 </div>
 
@@ -40,12 +40,12 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
             <div class="field">
                 <label>Leerlauf-Schwellwert (Minuten)</label>
-                <input type="number" name="idle_threshold" min="1" max="240" value="{{ old('idle_threshold', $idleThreshold) }}">
+                <input type="number" name="idle_threshold" min="1" max="240" value="{{ old('idle_threshold', $idleThreshold) }}" aria-label="Leerlauf-Schwellwert (Minuten)">
                 <div style="font-size:11px;color:var(--ink-soft);margin-top:4px;">Max. anrechenbare Lücke zwischen zwei produktiven Aktionen. Standard: 5</div>
             </div>
             <div class="field">
                 <label>Sitzungs-Timeout (Minuten)</label>
-                <input type="number" name="session_timeout" min="5" max="480" value="{{ old('session_timeout', $sessionTimeout) }}">
+                <input type="number" name="session_timeout" min="5" max="480" value="{{ old('session_timeout', $sessionTimeout) }}" aria-label="Sitzungs-Timeout (Minuten)">
                 <div style="font-size:11px;color:var(--ink-soft);margin-top:4px;">Ohne jeden Request gilt die Sitzung danach als beendet. Standard: 30</div>
             </div>
         </div>

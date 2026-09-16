@@ -4,7 +4,7 @@
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Ankündigungen</span></div>
     <div style="display:flex;align-items:center;justify-content:space-between;">
         <div>
-            <div class="page-title">Ankündigungen</div>
+            <h1 class="page-title">Ankündigungen</h1>
             <div class="page-sub">Interne Mitteilungen für Ihr Team</div>
         </div>
         <button data-h-click="dc50ce1357" class="btn btn-emerald">+ Neue Ankündigung</button>
@@ -55,17 +55,17 @@ $c = $colors[$a->priority];
         <div style="font-size:18px;font-weight:700;margin-bottom:20px;">Neue Ankündigung</div>
         <form method="POST" action="{{ route('admin.announcements.store') }}">
             @csrf
-            <div class="field"><label>Titel *</label><input type="text" name="title" required placeholder="Titel der Ankündigung"></div>
-            <div class="field"><label>Nachricht *</label><textarea name="body" required placeholder="Inhalt der Ankündigung..." style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;min-height:100px;font-family:inherit;resize:vertical;"></textarea></div>
+            <div class="field"><label>Titel *</label><input type="text" name="title" required placeholder="Titel der Ankündigung" aria-label="Titel"></div>
+            <div class="field"><label>Nachricht *</label><textarea name="body" required placeholder="Inhalt der Ankündigung..." style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;min-height:100px;font-family:inherit;resize:vertical;" aria-label="Nachricht"></textarea></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
                 <div class="field"><label>Priorität</label>
-                    <select name="priority" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                    <select name="priority" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Priorität">
                         <option value="normal">📋 Normal</option>
                         <option value="important">⚠️ Wichtig</option>
                         <option value="urgent">🚨 Dringend</option>
                     </select>
                 </div>
-                <div class="field"><label>Läuft ab am</label><input type="date" name="expires_at"></div>
+                <div class="field"><label>Läuft ab am</label><input type="date" name="expires_at" aria-label="Läuft ab am"></div>
             </div>
             <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
                 <button type="button" data-h-click="8f89fd6f1d" class="btn btn-ghost">Abbrechen</button>

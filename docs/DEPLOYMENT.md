@@ -46,10 +46,38 @@ ssh-keygen -t ed25519 -C "github-deploy" -f deploy_key -N ""
   User=dienstly
   Restart=always
   WorkingDirectory=/home/dienstly/portal
-  ExecStart=/usr/bin/php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+  ExecStart=/usr/bin/php artisan queue:work --queue=default --sleep=3 --tries=3 --max-time=3600
   [Install]
   WantedBy=multi-user.target
   ```
+
+  **ZWEITER Worker fuer lange Laeufe (Audit 15.09.2026).**
+  Der Kundenimport (`ImportCustomersJob`) laeuft bis zu 30 Minuten. Auf der
+  Standard-Verbindung (`retry_after` 360 s) wurde er nach sechs Minuten ein
+  zweites Mal aus der Warteschlange geholt und als FEHLGESCHLAGEN
+  eingetragen, obwohl der erste Lauf sauber weiterarbeitete - der Betreiber
+  sah Rot fuer einen gelungenen Import. Er laeuft deshalb auf der eigenen
+  Verbindung `database-lang` (Schlange `lang`, `retry_after` 2100 s).
+
+  Diese Schlange braucht einen EIGENEN Worker. Laeuft er nicht, bleibt ein
+  Import einfach liegen - er geht nicht verloren und wird nicht doppelt
+  ausgefuehrt:
+  ```ini
+  [Unit]
+  Description=Dienstly Queue Worker (lange Laeufe)
+  After=network.target
+  [Service]
+  User=dienstly
+  Restart=always
+  WorkingDirectory=/home/dienstly/portal
+  ExecStart=/usr/bin/php artisan queue:work database-lang --queue=lang --sleep=5 --tries=1 --timeout=1800 --max-time=3600
+  [Install]
+  WantedBy=multi-user.target
+  ```
+  Wichtig beim ersten Worker: `--queue=default` ergaenzen, damit er die
+  langen Jobs NICHT mitzieht (ohne Angabe bedient er jede Schlange und
+  wuerde den Import mit dem kurzen `retry_after` der Standardverbindung
+  abarbeiten - genau der Zustand, den die Trennung behebt).
 
 ## Was beim Deploy passiert (`scripts/deploy.sh`)
 1. Wartungsmodus an (`php artisan down`) – mit **Trap**, der die App bei jedem Ausgang (auch Fehler) wieder online nimmt.

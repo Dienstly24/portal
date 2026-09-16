@@ -193,11 +193,11 @@
                             <label>Kennung<input type="text" name="label" value="{{ chr(65 + $angebote->count()) }}" maxlength="10" required></label>
                             <label>Anbieter<input type="text" name="provider" maxlength="120"></label>
                             <label>Produkt/Tarif<input type="text" name="product" maxlength="160" required></label>
-                            <label>Geschwindigkeit<input type="text" name="speed" maxlength="60" placeholder="z. B. 250 MBit/s"></label>
+                            <label>Geschwindigkeit<input type="text" name="speed" maxlength="60" placeholder="z. B. 250 MBit/s" aria-label="z. B. 250 MBit/s"></label>
                             <label>Preis (EUR)<input type="number" name="price" step="0.01" min="0" max="99999"></label>
                             <label>Zeitraum<input type="text" name="price_period" value="Monat" maxlength="20"></label>
                             <label>Laufzeit (Monate)<input type="number" name="duration_months" min="0" max="120"></label>
-                            <label class="wide">Bedingungen<input type="text" name="terms" maxlength="1000" placeholder="z. B. 3 Monate Aktionspreis"></label>
+                            <label class="wide">Bedingungen<input type="text" name="terms" maxlength="1000" placeholder="z. B. 3 Monate Aktionspreis" aria-label="z. B. 3 Monate Aktionspreis"></label>
                         </div>
                         <button type="submit" class="kx-ai-btn primary">Angebot speichern</button>
                     </form>

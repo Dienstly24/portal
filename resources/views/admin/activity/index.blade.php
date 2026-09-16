@@ -1,8 +1,16 @@
 @extends('layouts.admin')
+@push('charts')
+{{-- Diese Seite zeichnet ein Diagramm - deshalb wird Chart.js hier
+     ausdruecklich angefordert (Audit 15.09.2026). Es liegt lokal
+     (DSGVO: keine Besucher-IP an ein CDN) und laedt nur noch auf den
+     fuenf Seiten, die es wirklich brauchen. --}}
+<script src="/js/chart.umd.min.js"></script>
+@endpush
+
 @section('content')
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Aktivität &amp; Arbeitszeiten</span></div>
-    <div class="page-title">Aktivität &amp; Arbeitszeiten</div>
+    <h1 class="page-title">Aktivität &amp; Arbeitszeiten</h1>
     <div class="page-sub">Aktive Arbeitszeit, Leerlauf und Produktivität je Mitarbeiter — nur für die Verwaltung sichtbar.</div>
 </div>
 
@@ -21,11 +29,11 @@
         <form method="GET" action="{{ route('admin.activity.index') }}" style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;">
             <div>
                 <label style="display:block;font-size:12px;color:var(--ink-soft);font-weight:600;margin-bottom:6px;">Von Datum</label>
-                <input type="date" name="von" value="{{ $from->format('Y-m-d') }}" style="padding:9px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                <input type="date" name="von" value="{{ $from->format('Y-m-d') }}" style="padding:9px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Von Datum">
             </div>
             <div>
                 <label style="display:block;font-size:12px;color:var(--ink-soft);font-weight:600;margin-bottom:6px;">Bis Datum</label>
-                <input type="date" name="bis" value="{{ $to->format('Y-m-d') }}" style="padding:9px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                <input type="date" name="bis" value="{{ $to->format('Y-m-d') }}" style="padding:9px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Bis Datum">
             </div>
             <button type="submit" class="btn btn-primary btn-sm">Anwenden</button>
         </form>

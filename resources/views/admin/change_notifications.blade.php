@@ -6,7 +6,7 @@ $proof = $changeRequest->proofState();
 @endphp
 
 <div class="page-header">
-    <div class="page-title">📨 Mitteilungen an Gesellschaften</div>
+    <h1 class="page-title">📨 Mitteilungen an Gesellschaften</h1>
     <div class="page-sub">
         {{ $changeRequest->typeLabel() }} von
         <a href="{{ route('admin.customer', $changeRequest->customer_id) }}" style="color:var(--graphite);font-weight:600;">{{ $customer?->user?->name ?? '—' }}</a>
@@ -61,16 +61,16 @@ $proof = $changeRequest->proofState();
         <div class="grid-2">
             <div class="field">
                 <label style="font-size:12px;">E-Mail der Gesellschaft *</label>
-                <input type="email" name="recipient" value="{{ $n->recipient }}" placeholder="service@gesellschaft.de" maxlength="190" style="width:100%;">
+                <input type="email" name="recipient" value="{{ $n->recipient }}" placeholder="service@gesellschaft.de" maxlength="190" style="width:100%;" aria-label="E-Mail der Gesellschaft">
             </div>
             <div class="field">
                 <label style="font-size:12px;">Betreff *</label>
-                <input type="text" name="subject" value="{{ $n->subject }}" required maxlength="190" style="width:100%;">
+                <input type="text" name="subject" value="{{ $n->subject }}" required maxlength="190" style="width:100%;" aria-label="Betreff">
             </div>
         </div>
         <div class="field">
             <label style="font-size:12px;">Text *</label>
-            <textarea name="body" required maxlength="10000" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-height:220px;font-family:inherit;resize:vertical;">{{ $n->body }}</textarea>
+            <textarea name="body" required maxlength="10000" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-height:220px;font-family:inherit;resize:vertical;" aria-label="Text">{{ $n->body }}</textarea>
         </div>
         @if($changeRequest->documents->isNotEmpty())
         <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:12px;">
@@ -87,7 +87,7 @@ $proof = $changeRequest->proofState();
         @csrf
         <div class="field" style="margin:0;">
             <label style="font-size:12px;">Anders erledigt</label>
-            <select name="channel" style="font-size:13px;">
+            <select name="channel" style="font-size:13px;" aria-label="Anders erledigt">
                 <option value="">— nicht nötig —</option>
                 <option value="post">Per Post gesendet</option>
                 <option value="portal">Im Portal der Gesellschaft erfasst</option>
@@ -95,7 +95,7 @@ $proof = $changeRequest->proofState();
         </div>
         <div class="field" style="margin:0;flex:1;min-width:200px;">
             <label style="font-size:12px;">Notiz (optional)</label>
-            <input type="text" name="note" maxlength="500" style="width:100%;">
+            <input type="text" name="note" maxlength="500" style="width:100%;" aria-label="Notiz (optional)">
         </div>
         <button type="submit" class="btn btn-ghost" style="font-size:12.5px;">✓ Als erledigt markieren</button>
     </form>

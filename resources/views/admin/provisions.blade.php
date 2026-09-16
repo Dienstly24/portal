@@ -2,7 +2,7 @@
 @section('content')
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Vermittler-Provisionen</span></div>
-    <div class="page-title">Vermittler-Provisionen</div>
+    <h1 class="page-title">Vermittler-Provisionen</h1>
     <div class="page-sub">Automatisch je Neuvertrag gebucht (Satz je Sparte) - Freigabe und Auszahlung bleiben Handarbeit der Verwaltung.</div>
 </div>
 
@@ -46,7 +46,7 @@
         @csrf
         <div class="flt-group">
             <label class="flt-lbl">Art</label>
-            <select name="art" class="flt-sel">
+            <select name="art" class="flt-sel" aria-label="Art">
                 <option value="manuell">Provision (manuell)</option>
                 <option value="bonus">Bonus</option>
                 <option value="abzug">Abzug (wird negativ gebucht)</option>
@@ -54,7 +54,7 @@
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Empfänger</label>
-            <select name="empfaenger" class="flt-sel" required>
+            <select name="empfaenger" class="flt-sel" required aria-label="Empfänger">
                 <option value="">— wählen —</option>
                 <optgroup label="Mitarbeiter">
                     @foreach($employees as $e)
@@ -70,11 +70,11 @@
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Betrag (EUR)</label>
-            <input type="number" name="amount" step="0.01" min="0.01" required placeholder="0,00" style="width:120px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+            <input type="number" name="amount" step="0.01" min="0.01" required placeholder="0,00" style="width:120px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="Betrag (EUR)">
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Sparte (optional)</label>
-            <select name="sparte" class="flt-sel">
+            <select name="sparte" class="flt-sel" aria-label="Sparte (optional)">
                 <option value="">—</option>
                 @foreach(\App\Models\Contract::TYPES as $key => $cfg)
                 <option value="{{ $key }}">{{ $cfg['label'] }}</option>
@@ -83,7 +83,7 @@
         </div>
         <div class="flt-group" style="flex:1;min-width:220px;">
             <label class="flt-lbl">Notiz / Grund (bei Bonus &amp; Abzug Pflicht)</label>
-            <input type="text" name="note" maxlength="500" placeholder="z. B. Sonderprämie Juli" style="width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+            <input type="text" name="note" maxlength="500" placeholder="z. B. Sonderprämie Juli" style="width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="Notiz / Grund (bei Bonus &amp; Abzug Pflicht)">
         </div>
         <button type="submit" class="btn btn-primary">Erfassen</button>
     </form>
@@ -94,7 +94,7 @@
     <form method="GET" action="{{ route('admin.provisions') }}" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin:0;">
         <div class="flt-group">
             <label class="flt-lbl">Status</label>
-            <select name="status" class="flt-sel" data-h-change="d017698d7c">
+            <select name="status" class="flt-sel" data-h-change="d017698d7c" aria-label="Status">
                 <option value="">Alle</option>
                 @foreach(\App\Models\Provision::STATUSES as $key => $label)
                 <option value="{{ $key }}" {{ request('status') === $key ? 'selected' : '' }}>{{ $label }}</option>
@@ -103,7 +103,7 @@
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Empfänger</label>
-            <select name="empfaenger" class="flt-sel" data-h-change="d017698d7c">
+            <select name="empfaenger" class="flt-sel" data-h-change="d017698d7c" aria-label="Empfänger">
                 <option value="">Alle</option>
                 <optgroup label="Mitarbeiter">
                     @foreach($employees as $e)
@@ -119,7 +119,7 @@
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Art</label>
-            <select name="typ" class="flt-sel" data-h-change="d017698d7c">
+            <select name="typ" class="flt-sel" data-h-change="d017698d7c" aria-label="Art">
                 <option value="">Alle</option>
                 @foreach(\App\Models\Provision::TYPES as $key => $label)
                 <option value="{{ $key }}" {{ request('typ') === $key ? 'selected' : '' }}>{{ $label }}</option>
@@ -128,7 +128,7 @@
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Sparte</label>
-            <select name="sparte" class="flt-sel" data-h-change="d017698d7c">
+            <select name="sparte" class="flt-sel" data-h-change="d017698d7c" aria-label="Sparte">
                 <option value="">Alle</option>
                 @foreach(\App\Models\Contract::TYPES as $key => $cfg)
                 <option value="{{ $key }}" {{ request('sparte') === $key ? 'selected' : '' }}>{{ $cfg['label'] }}</option>
@@ -137,7 +137,7 @@
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Gesellschaft</label>
-            <select name="gesellschaft" class="flt-sel" data-h-change="d017698d7c">
+            <select name="gesellschaft" class="flt-sel" data-h-change="d017698d7c" aria-label="Gesellschaft">
                 <option value="">Alle</option>
                 @foreach($insurers as $ins)
                 <option value="{{ $ins }}" {{ request('gesellschaft') === $ins ? 'selected' : '' }}>{{ $ins }}</option>
@@ -146,15 +146,15 @@
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Kunde</label>
-            <input type="text" name="kunde" value="{{ request('kunde') }}" placeholder="Name / Kundennr." style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;width:150px;">
+            <input type="text" name="kunde" value="{{ request('kunde') }}" placeholder="Name / Kundennr." style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;width:150px;" aria-label="Kunde">
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Monat</label>
-            <input type="month" name="monat" value="{{ request('monat') }}" data-h-change="d017698d7c" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+            <input type="month" name="monat" value="{{ request('monat') }}" data-h-change="d017698d7c" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="Monat">
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Jahr</label>
-            <select name="jahr" class="flt-sel" data-h-change="d017698d7c" style="min-width:90px;">
+            <select name="jahr" class="flt-sel" data-h-change="d017698d7c" style="min-width:90px;" aria-label="Jahr">
                 <option value="">Alle</option>
                 @for($y = now()->year; $y >= now()->year - 5; $y--)
                 <option value="{{ $y }}" {{ request('jahr') == $y ? 'selected' : '' }}>{{ $y }}</option>

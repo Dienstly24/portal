@@ -26,6 +26,32 @@ class ImportCustomersJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    /**
+     * Eigene Verbindung fuer LANGE Laeufe (Audit 15.09.2026).
+     *
+     * `database` hat retry_after = 360 - ein Import mit $timeout = 1800
+     * wurde danach ein zweites Mal aus der Warteschlange geholt und
+     * (wegen tries = 1) als FEHLGESCHLAGEN eingetragen, waehrend der
+     * erste Lauf noch sauber arbeitete. `database-lang` hat ein
+     * retry_after, das ueber dem Zeitlimit liegt.
+     *
+     * Auf dem Server braucht diese Schlange einen eigenen Worker
+     * (docs/DEPLOYMENT.md). Fehlt er, bleibt der Import LIEGEN - er geht
+     * nicht verloren und laeuft nicht doppelt.
+     */
+    /**
+     * Verbindungen fuer lange Laeufe, je Treiber (siehe config/queue.php).
+     *
+     * Beide noetig: ein Umzug auf Redis (docs/ANLEITUNG_REDIS_AR.md)
+     * wuerde den Import sonst auf eine Verbindung mit retry_after = 90
+     * Sekunden legen - bei einem Zeitlimit von 1800 waere das derselbe
+     * Fehler wie zuvor, nur zwanzigmal schaerfer.
+     */
+    public const VERBINDUNGEN = [
+        'database' => 'database-lang',
+        'redis' => 'redis-lang',
+    ];
+
     /** Grosse Importe brauchen Zeit - Timeout entsprechend grosszuegig. */
     public int $timeout = 1800;
 
@@ -36,6 +62,40 @@ class ImportCustomersJob implements ShouldQueue
         public readonly string $path,
         public readonly ?int $actorId = null,
     ) {
+        // Verbindung im KONSTRUKTOR statt als Eigenschaft: das Trait
+        // Queueable deklariert $connection/$queue bereits, und eine
+        // Neudeklaration mit eigenem Vorgabewert ist in PHP ein FATALER
+        // Fehler beim Laden der Klasse. Der Waechter-Test QueueTimeoutTest
+        // hat genau das sofort aufgedeckt.
+        //
+        // NUR bei einer echten Datenbank-Warteschlange umlenken. Laeuft
+        // die Anwendung auf `sync` (Testsuite, und jede Installation
+        // ohne Worker), wird der Import SOFORT ausgefuehrt - dort gibt
+        // es kein retry_after und damit auch das Problem nicht. Ohne
+        // diese Bedingung waere der Import auf `sync` still in einer
+        // Warteschlange gelandet, die niemand abarbeitet: er haette
+        // schlicht nicht mehr stattgefunden. Die Testsuite hat genau
+        // das sofort gemeldet (5 fehlgeschlagene Importtests).
+        // NUR bei einer echten Warteschlange umlenken. Laeuft die
+        // Anwendung auf `sync` (Testsuite, und jede Installation ohne
+        // Worker), wird der Import SOFORT ausgefuehrt - dort gibt es kein
+        // retry_after und damit auch das Problem nicht. Ohne diese
+        // Bedingung waere der Import auf `sync` still in einer
+        // Warteschlange gelandet, die niemand abarbeitet: er haette
+        // schlicht nicht mehr stattgefunden. Die Testsuite hat genau das
+        // sofort gemeldet (5 fehlgeschlagene Importtests).
+        $ziel = self::VERBINDUNGEN[$this->treiberDerVorgabe()] ?? null;
+        if ($ziel !== null) {
+            $this->onConnection($ziel)->onQueue('lang');
+        }
+    }
+
+    /** Treiber der voreingestellten Warteschlangen-Verbindung. */
+    private function treiberDerVorgabe(): ?string
+    {
+        $vorgabe = config('queue.default');
+
+        return $vorgabe ? config('queue.connections.'.$vorgabe.'.driver') : null;
     }
 
     public function handle(CustomerCsvImporter $importer): void

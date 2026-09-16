@@ -2,7 +2,7 @@
 @section('content')
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.reports') }}">Berichte</a><span class="breadcrumb-sep">›</span><span>Neukunden</span></div>
-    <div class="page-title">Neukunden-Bericht</div>
+    <h1 class="page-title">Neukunden-Bericht</h1>
     <div class="page-sub">Wer wurde wann angelegt, von wem geworben, bei welcher Gesellschaft - mit Direkteinstieg in jede Kundenakte.</div>
 </div>
 
@@ -42,11 +42,11 @@
     <form method="GET" action="{{ route('admin.reports.neukunden') }}" style="display:flex;align-items:flex-end;gap:10px;margin-left:auto;flex-wrap:wrap;">
         <div class="flt-group">
             <label class="flt-lbl">Von</label>
-            <input type="date" name="from" value="{{ request('from', $from->format('Y-m-d')) }}" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+            <input type="date" name="from" value="{{ request('from', $from->format('Y-m-d')) }}" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="Von">
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Bis</label>
-            <input type="date" name="to" value="{{ request('to', $to->format('Y-m-d')) }}" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+            <input type="date" name="to" value="{{ request('to', $to->format('Y-m-d')) }}" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="Bis">
         </div>
         <button type="submit" class="btn btn-primary btn-sm">Anwenden</button>
     </form>
@@ -174,7 +174,7 @@
                             <input type="hidden" name="period_from" value="{{ $from->format('Y-m-d') }}">
                             <input type="hidden" name="period_to" value="{{ $to->format('Y-m-d') }}">
                             <input type="hidden" name="note" value="Neukunden {{ $from->format('d.m.Y') }} - {{ $to->format('d.m.Y') }}: {{ $row['customers'] }} Kunden, {{ $row['contracts'] }} Vertraege">
-                            <input type="number" name="amount" step="0.01" min="0.01" value="{{ $row['suggested'] > 0 ? number_format($row['suggested'], 2, '.', '') : '' }}" required placeholder="0,00" style="width:90px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:13px;">
+                            <input type="number" name="amount" step="0.01" min="0.01" value="{{ $row['suggested'] > 0 ? number_format($row['suggested'], 2, '.', '') : '' }}" required placeholder="0,00" style="width:90px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:13px;" aria-label="0,00">
                             <button type="submit" class="btn btn-primary btn-sm">Erfassen</button>
                         </form>
                     @endif
@@ -194,11 +194,11 @@
         @if($month)<input type="hidden" name="monat" value="{{ $month->format('Y-m') }}">@else<input type="hidden" name="from" value="{{ request('from') }}"><input type="hidden" name="to" value="{{ request('to') }}">@endif
         <div class="flt-group" style="flex:1;min-width:200px;">
             <label class="flt-lbl" for="nk-suche">Suche</label>
-            <input type="text" name="q" id="nk-suche" value="{{ request('q') }}" autocomplete="off" placeholder="Name, Nummer, Telefon ..." style="width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;background:#fff;">
+            <input type="text" name="q" id="nk-suche" value="{{ request('q') }}" autocomplete="off" placeholder="Name, Nummer, Telefon ..." style="width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;background:#fff;" aria-label="Suche">
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Werber</label>
-            <select name="werber" class="flt-sel" data-h-change="17e692883c">
+            <select name="werber" class="flt-sel" data-h-change="17e692883c" aria-label="Werber">
                 <option value="">Alle</option>
                 <option value="keiner" {{ request('werber') === 'keiner' ? 'selected' : '' }}>Ohne Werber</option>
                 <optgroup label="Mitarbeiter">
@@ -215,7 +215,7 @@
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Angelegt von</label>
-            <select name="angelegt_von" class="flt-sel" data-h-change="17e692883c">
+            <select name="angelegt_von" class="flt-sel" data-h-change="17e692883c" aria-label="Angelegt von">
                 <option value="">Alle</option>
                 <option value="system" {{ request('angelegt_von') === 'system' ? 'selected' : '' }}>System / Import</option>
                 @foreach($employees as $e)
@@ -225,7 +225,7 @@
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Gesellschaft</label>
-            <select name="gesellschaft" class="flt-sel" data-h-change="17e692883c">
+            <select name="gesellschaft" class="flt-sel" data-h-change="17e692883c" aria-label="Gesellschaft">
                 <option value="">Alle</option>
                 @foreach($insurers as $ins)
                 <option value="{{ $ins }}" {{ request('gesellschaft') === $ins ? 'selected' : '' }}>{{ $ins }}</option>
@@ -234,7 +234,7 @@
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Sparte</label>
-            <select name="sparte" class="flt-sel" data-h-change="17e692883c">
+            <select name="sparte" class="flt-sel" data-h-change="17e692883c" aria-label="Sparte">
                 <option value="">Alle</option>
                 @foreach(\App\Models\Contract::TYPES as $key => $cfg)
                 <option value="{{ $key }}" {{ request('sparte') === $key ? 'selected' : '' }}>{{ $cfg['icon'] }} {{ $cfg['label'] }}</option>
@@ -243,7 +243,7 @@
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Vertrag</label>
-            <select name="vertrag" class="flt-sel" data-h-change="17e692883c">
+            <select name="vertrag" class="flt-sel" data-h-change="17e692883c" aria-label="Vertrag">
                 <option value="">Egal</option>
                 <option value="mit" {{ request('vertrag') === 'mit' ? 'selected' : '' }}>Mit Vertrag</option>
                 <option value="ohne" {{ request('vertrag') === 'ohne' ? 'selected' : '' }}>Ohne Vertrag</option>
@@ -291,7 +291,7 @@
                         <form method="POST" action="{{ route('admin.reports.neukunden.werber', $c->id) }}" style="margin:0;display:grid;gap:8px;">
                             @csrf
                             <label class="flt-lbl">Geworben von</label>
-                            <select name="werber" class="flt-sel" style="min-width:200px;">
+                            <select name="werber" class="flt-sel" style="min-width:200px;" aria-label="Geworben von">
                                 <option value="keiner">— Kein Werber —</option>
                                 <optgroup label="Mitarbeiter">
                                     @foreach($employees as $e)

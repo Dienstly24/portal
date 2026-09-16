@@ -9,7 +9,7 @@
     </div>
     <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;">
         <div>
-            <div class="page-title">{{ $signature->title }}</div>
+            <h1 class="page-title">{{ $signature->title }}</h1>
             <div class="page-sub">
                 <span class="badge {{ $signature->statusTone() }}">{{ $signature->statusLabel() }}</span>
                 · {{ $signature->page_count }} Seite{{ $signature->page_count === 1 ? '' : 'n' }}
@@ -205,7 +205,7 @@
                 <input type="hidden" name="aktion" value="kunde">
                 <label for="kundensuche" style="font-size:13.5px;">Bestehendem Kunden zuordnen</label>
                 <input id="kundensuche" type="search" autocomplete="off" placeholder="Name, Kundennummer oder E-Mail"
-                       style="padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+                       style="padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="Name, Kundennummer oder E-Mail">
                 <div id="kunden-treffer" style="display:grid;gap:4px;"></div>
                 <input type="hidden" name="customer_id" id="kunden-id">
                 <button type="submit" class="btn btn-sm btn-emerald" id="kunden-submit" disabled>Ausgewählten Kunden zuordnen</button>
@@ -308,7 +308,7 @@
               style="display:grid;gap:7px;">
             @csrf
             <input type="text" name="reason" maxlength="500" placeholder="Grund (optional)"
-                   style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;">
+                   style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;" aria-label="Grund (optional)">
             <button type="submit" class="btn btn-sm btn-ghost" style="color:#B3261E;">Auftrag stornieren</button>
         </form>
         @endif

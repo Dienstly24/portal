@@ -77,7 +77,7 @@
       style="display:flex;gap:6px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
   @csrf
   <label style="font-size:12px;color:var(--ink-soft)">Zuständigkeit übergeben an</label>
-  <select name="employee_id" class="eingabe">
+  <select name="employee_id" class="eingabe" aria-label="Zuständigkeit übergeben an">
     @foreach($mitarbeiter as $m)
       <option value="{{ $m->id }}" @selected($active->assigned_employee_id === $m->id)>{{ $m->name }}</option>
     @endforeach
@@ -99,15 +99,15 @@
       <form method="POST" action="{{ route('admin.postfach.create_customer', $active->id) }}"
             style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
         @csrf
-        <input name="first_name" class="eingabe" style="width:130px" placeholder="Vorname" required>
-        <input name="last_name" class="eingabe" style="width:130px" placeholder="Nachname" required>
+        <input name="first_name" class="eingabe" style="width:130px" placeholder="Vorname" required aria-label="Vorname">
+        <input name="last_name" class="eingabe" style="width:130px" placeholder="Nachname" required aria-label="Nachname">
         <button class="btn btn-primary">Kunde anlegen</button>
       </form>
       <form method="POST" action="{{ route('admin.postfach.link_customer', $active->id) }}"
             style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
         @csrf
         <input name="customer_id" class="eingabe" style="width:280px"
-               placeholder="Kundennummer/ID einer bestehenden Akte" required>
+               placeholder="Kundennummer/ID einer bestehenden Akte" required aria-label="Kundennummer/ID einer bestehenden Akte">
         <button class="btn btn-ghost">Mit Kunde verknüpfen</button>
       </form>
     </div>
@@ -186,7 +186,7 @@
       enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:8px">
   @csrf
   <textarea name="body" class="eingabe" style="width:100%;resize:vertical;" rows="3" required
-            placeholder="Antwort über {{ $active->channel?->name }} …"></textarea>
+            placeholder="Antwort über {{ $active->channel?->name }} …" aria-label="Antwort über"></textarea>
   @if($active->channel?->supports('supportsMedia') && $aktenUnterlagen->isNotEmpty())
     {{-- Unterlagen AUS DER AKTE mitschicken - ohne diesen Weg muesste
          der Mitarbeiter die Police erst herunterladen und wieder

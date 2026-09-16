@@ -7,11 +7,11 @@
 
 <div class="card" style="max-width:1250px;margin-bottom:16px;">
     <form method="GET" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end;">
-        <div class="field" style="margin:0;"><label>Von</label><input type="date" name="von" value="{{ $filters['von'] ?? '' }}"></div>
-        <div class="field" style="margin:0;"><label>Bis</label><input type="date" name="bis" value="{{ $filters['bis'] ?? '' }}"></div>
+        <div class="field" style="margin:0;"><label>Von</label><input type="date" name="von" value="{{ $filters['von'] ?? '' }}" aria-label="Von"></div>
+        <div class="field" style="margin:0;"><label>Bis</label><input type="date" name="bis" value="{{ $filters['bis'] ?? '' }}" aria-label="Bis"></div>
         <div class="field" style="margin:0;">
             <label>Pool</label>
-            <select name="pool"><option value="">Alle</option>
+            <select name="pool" aria-label="Pool"><option value="">Alle</option>
                 @foreach($poolListe as $key => $pool)
                 <option value="{{ $key }}" @selected(($filters['pool'] ?? '') === $key)>{{ $pool->name }}</option>
                 @endforeach

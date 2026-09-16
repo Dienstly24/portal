@@ -6,7 +6,7 @@
         <a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span>
         <span>E-Mail verfassen</span>
     </div>
-    <div class="page-title">✉️ E-Mail verfassen</div>
+    <h1 class="page-title">✉️ E-Mail verfassen</h1>
     <div style="font-size:14px;color:var(--ink-soft);">Kunde suchen, Vorlage wählen, prüfen, senden – Platzhalter und Anrede werden automatisch gefüllt.</div>
 </div>
 
@@ -43,12 +43,12 @@
             <label>Empfänger (E-Mail) *</label>
             <input type="email" name="to" id="f-to" required maxlength="190" list="to-suggestions" autocomplete="off"
                 value="{{ old('to', $customer?->user?->email && !str_contains($customer->user->email, '@dienstly24.internal') ? $customer->user->email : '') }}"
-                placeholder="Kunde suchen (rechts) oder E-Mail direkt eingeben – z. B. service@gesellschaft.de">
+                placeholder="Kunde suchen (rechts) oder E-Mail direkt eingeben – z. B. service@gesellschaft.de" aria-label="Empfänger (E-Mail)">
             <datalist id="to-suggestions"></datalist>
         </div>
         <div class="field">
             <label>Betreff *</label>
-            <input type="text" name="subject" id="f-subject" required maxlength="200" value="{{ old('subject') }}">
+            <input type="text" name="subject" id="f-subject" required maxlength="200" value="{{ old('subject') }}" aria-label="Betreff">
         </div>
         <div id="anrede-row" style="display:none;margin:-6px 0 12px;">
             <span style="font-size:12px;color:var(--ink-soft);margin-right:6px;">Anrede einfügen:</span>
@@ -58,7 +58,7 @@
         <div class="field" style="margin-bottom:6px;">
             <label>Nachricht *</label>
             <textarea name="body" id="f-body" required maxlength="10000" rows="13"
-                placeholder="Text schreiben, Vorlage wählen (rechts) oder ✨ KI-Entwurf nutzen. Während des Tippens werden Satz-Vervollständigungen vorgeschlagen – mit Tab übernehmen.">{{ old('body') }}</textarea>
+                placeholder="Text schreiben, Vorlage wählen (rechts) oder ✨ KI-Entwurf nutzen. Während des Tippens werden Satz-Vervollständigungen vorgeschlagen – mit Tab übernehmen." aria-label="Nachricht">{{ old('body') }}</textarea>
             <div id="sc-suggest"><span class="tabhint">Tab ⇥</span>💡 <b id="sc-suggest-text"></b></div>
         </div>
         <div class="field">
@@ -76,7 +76,7 @@
         @if($aiAvailable)
         <div id="ai-panel" style="display:none;margin-top:14px;background:var(--canvas);border:1px solid var(--line);border-radius:10px;padding:14px;">
             <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Worum soll es in der E-Mail gehen?</label>
-            <textarea id="ai-goal" rows="2" maxlength="1000" placeholder="z. B. Angebot zur KFZ-Versicherung nachfassen und um Rückmeldung bis Freitag bitten" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-family:inherit;"></textarea>
+            <textarea id="ai-goal" rows="2" maxlength="1000" placeholder="z. B. Angebot zur KFZ-Versicherung nachfassen und um Rückmeldung bis Freitag bitten" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-family:inherit;" aria-label="Worum soll es in der E-Mail gehen?"></textarea>
             <div style="display:flex;gap:10px;align-items:center;margin-top:8px;">
                 <button type="button" class="btn btn-primary btn-sm" id="ai-go" data-h-click="9c8866127c">Entwurf erstellen</button>
                 <span id="ai-status" style="font-size:12.5px;color:var(--ink-soft);"></span>
@@ -104,7 +104,7 @@
 <div class="card">
     <div class="card-title" style="margin-bottom:10px;">🔍 Kunde</div>
     <input type="text" id="sc-search" autocomplete="off" placeholder="Name, E-Mail, Nummer oder Firma…"
-        style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+        style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="Name, E-Mail, Nummer oder Firma">
     <div id="sc-results" style="margin-top:8px;"></div>
 
     <div id="sc-card" style="display:none;margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--canvas);">
@@ -128,7 +128,7 @@
 <div class="card" style="margin-top:16px;">
     <div class="card-title" style="margin-bottom:10px;">📄 Vorlagen</div>
     <input type="text" id="tpl-search" autocomplete="off" placeholder="Vorlage suchen… z. B. angebot"
-        style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+        style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="Vorlage suchen… z. B. angebot">
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;" id="tpl-chips">
         <button type="button" class="tpl-chip" data-q="angebot">Angebot</button>
         <button type="button" class="tpl-chip" data-q="termin">Termin</button>

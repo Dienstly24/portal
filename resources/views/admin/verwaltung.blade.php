@@ -9,7 +9,7 @@
      unveraendert AdminNavigation anhand der Rolle. --}}
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Einstellungen</span></div>
-    <div class="page-title">Einstellungen</div>
+    <h1 class="page-title">Einstellungen</h1>
     <div class="page-sub">Vertrieb, Marketing und Verwaltung</div>
 </div>
 

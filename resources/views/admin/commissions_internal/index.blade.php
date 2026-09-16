@@ -2,7 +2,7 @@
 @section('content')
 @include('admin.partials.provision_styles')
 <div class="page-header">
-    <div class="page-title">💶 Interne Provisionen</div>
+    <h1 class="page-title">💶 Interne Provisionen</h1>
     <div class="page-sub">
         Provisionsdaten aus Fremdsystemen, gebunden an den Vertrag im Portal.
         <b>Intern und vertraulich</b> – diese Angaben erreichen den Kunden nirgends.
@@ -52,11 +52,11 @@
         <div class="field" style="margin:0;">
             <label>Suche</label>
             <input type="text" name="q" value="{{ $filters['q'] ?? '' }}"
-                   placeholder="Interne Vertragsnummer, Kunde, Empfänger, Rechnung…">
+                   placeholder="Interne Vertragsnummer, Kunde, Empfänger, Rechnung…" aria-label="Suche">
         </div>
         <div class="field" style="margin:0;">
             <label>Status</label>
-            <select name="status">
+            <select name="status" aria-label="Status">
                 <option value="">Alle</option>
                 @foreach($statuses as $key => $meta)
                 <option value="{{ $key }}" @selected(($filters['status'] ?? '') === $key)>{{ $meta['label'] }}</option>
@@ -65,7 +65,7 @@
         </div>
         <div class="field" style="margin:0;">
             <label>Quelle</label>
-            <select name="quelle">
+            <select name="quelle" aria-label="Quelle">
                 <option value="">Alle Quellen</option>
                 @foreach($providers as $key => $profile)
                 <option value="{{ $key }}" @selected(($filters['quelle'] ?? '') === $key)>{{ $profile['label'] }}</option>
@@ -75,19 +75,19 @@
         </div>
         <div class="field" style="margin:0;">
             <label>Provisionsempfänger</label>
-            <input type="text" name="empfaenger" value="{{ $filters['empfaenger'] ?? '' }}">
+            <input type="text" name="empfaenger" value="{{ $filters['empfaenger'] ?? '' }}" aria-label="Provisionsempfänger">
         </div>
         <div class="field" style="margin:0;">
             <label>Provisionsdatum von</label>
-            <input type="date" name="von" value="{{ $filters['von'] ?? '' }}">
+            <input type="date" name="von" value="{{ $filters['von'] ?? '' }}" aria-label="Provisionsdatum von">
         </div>
         <div class="field" style="margin:0;">
             <label>bis</label>
-            <input type="date" name="bis" value="{{ $filters['bis'] ?? '' }}">
+            <input type="date" name="bis" value="{{ $filters['bis'] ?? '' }}" aria-label="bis">
         </div>
         <div class="field" style="margin:0;">
             <label>Zuordnung</label>
-            <select name="zuordnung">
+            <select name="zuordnung" aria-label="Zuordnung">
                 <option value="">Alle</option>
                 <option value="offen" @selected(($filters['zuordnung'] ?? '') === 'offen')>Nur ohne Vertrag</option>
             </select>

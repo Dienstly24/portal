@@ -4,7 +4,7 @@
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><span>Termine</span></div>
     <div style="display:flex;align-items:center;justify-content:space-between;">
         <div>
-            <div class="page-title">Termine</div>
+            <h1 class="page-title">Termine</h1>
             <div class="page-sub">Kundentermine verwalten</div>
         </div>
         <button data-h-click="d766695e1e" class="btn btn-emerald">+ Neuer Termin</button>
@@ -76,9 +76,9 @@
         </div>
         <form method="POST" action="{{ route('admin.appointments.store') }}">
             @csrf
-            <div class="field"><label>Titel *</label><input type="text" name="title" required placeholder="Beratungsgespräch, Vertragsabschluss..."></div>
+            <div class="field"><label>Titel *</label><input type="text" name="title" required placeholder="Beratungsgespräch, Vertragsabschluss..." aria-label="Titel"></div>
             <div class="field"><label>Kunde *</label>
-                <select name="customer_id" required style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                <select name="customer_id" required style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Kunde">
                     <option value="">Kunde auswählen...</option>
                     @foreach(\App\Models\Customer::with('user')->orderBy('created_at','desc')->take(100)->get() as $c)
                     <option value="{{ $c->id }}">{{ $c->user?->name }}</option>
@@ -86,17 +86,17 @@
                 </select>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                <div class="field"><label>Beginn *</label><input type="datetime-local" name="starts_at" required></div>
-                <div class="field"><label>Ende *</label><input type="datetime-local" name="ends_at" required></div>
+                <div class="field"><label>Beginn *</label><input type="datetime-local" name="starts_at" required aria-label="Beginn"></div>
+                <div class="field"><label>Ende *</label><input type="datetime-local" name="ends_at" required aria-label="Ende"></div>
             </div>
             <div class="field"><label>Mitarbeiter</label>
-                <select name="assigned_to" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                <select name="assigned_to" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Mitarbeiter">
                     @foreach(\App\Models\User::whereIn('role',['admin','employee'])->get() as $u)
                     <option value="{{ $u->id }}" {{ $u->id === auth()->id() ? 'selected' : '' }}>{{ $u->name }}</option>
                     @endforeach
                 </select>
             </div>
-            <div class="field"><label>Notizen</label><textarea name="notes" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;min-height:70px;font-family:inherit;resize:vertical;"></textarea></div>
+            <div class="field"><label>Notizen</label><textarea name="notes" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;min-height:70px;font-family:inherit;resize:vertical;" aria-label="Notizen"></textarea></div>
             <div style="display:flex;gap:10px;justify-content:flex-end;">
                 <button type="button" data-h-click="8464169003" class="btn btn-ghost">Abbrechen</button>
                 <button type="submit" class="btn btn-primary">Termin speichern</button>

@@ -1,6 +1,6 @@
 @extends('layouts.partner')
 @section('content')
-<div class="page-title">Willkommen, {{ $partner->name }}</div>
+<h1 class="page-title">Willkommen, {{ $partner->name }}</h1>
 <div class="page-sub">Ihre Übersicht als Vertriebspartner von Dienstly24.</div>
 
 <div class="grid-3">

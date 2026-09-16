@@ -37,7 +37,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;">
         <div>
-            <div class="page-title" style="display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <h1 class="page-title" style="display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;">
                 <span>{{ $customer->user?->name }}</span>
                 @if($customer->birth_date)
                 <span style="font-size:13px;font-weight:600;color:var(--ink-soft);background:var(--surface-soft,#F7F5EF);border:1px solid var(--line);border-radius:12px;padding:2px 10px;white-space:nowrap;">🎂 {{ \Carbon\Carbon::parse($customer->birth_date)->format('d.m.Y') }}</span>
@@ -49,7 +49,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
                 @if($famStatus['key'] !== 'eigenstaendig')
                 <span style="font-size:12.5px;font-weight:600;color:{{ $famStatus['color'] }};background:{{ $famStatus['bg'] }};border-radius:12px;padding:2px 10px;white-space:nowrap;">{{ $famStatus['label'] }}</span>
                 @endif
-            </div>
+            </h1>
             <div style="font-size:14px;color:var(--ink-soft);">
                 {{ $customer->customer_number }}@if($customer->user?->email) · {{ $customer->user?->email }}@endif
             </div>
@@ -857,7 +857,7 @@ $auslaufendGesamt = $aktiveVertraege->filter(fn($c) => !empty($c->cancellation_d
             <a href="{{ route('admin.templates') }}" class="muted-xs">Vorlagen verwalten →</a>
             @endif
         </div>
-        <textarea id="msg-body" name="body" required maxlength="5000" placeholder="Nachricht an den Kunden… (Vorlage wählen oder frei schreiben)" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;font-family:inherit;resize:vertical;min-height:84px;"></textarea>
+        <textarea id="msg-body" name="body" required maxlength="5000" placeholder="Nachricht an den Kunden… (Vorlage wählen oder frei schreiben)" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;font-family:inherit;resize:vertical;min-height:84px;" aria-label="Nachricht an den Kunden… (Vorlage wählen oder frei schreiben)"></textarea>
         <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:10px;">
             <label style="font-size:12.5px;color:var(--ink-soft);display:inline-flex;align-items:center;gap:6px;margin:0;">
                 📎 <input type="file" name="attachments[]" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" style="width:auto;font-size:12px;padding:4px;background:none;border:none;">
@@ -988,7 +988,7 @@ function openMessagesTab() {
     <form method="POST" action="{{ route('admin.internal.store', $customer->id) }}" style="margin-top:14px;">
         @csrf
         <input type="hidden" name="type" value="note">
-        <div class="field"><textarea name="message" required maxlength="5000" placeholder="Wichtige dauerhafte Information zum Kunden…" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;font-family:inherit;resize:vertical;min-height:64px;"></textarea></div>
+        <div class="field"><textarea name="message" required maxlength="5000" placeholder="Wichtige dauerhafte Information zum Kunden…" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;font-family:inherit;resize:vertical;min-height:64px;" aria-label="Wichtige dauerhafte Information zum Kunden"></textarea></div>
         <button type="submit" class="btn btn-primary">Notiz speichern</button>
     </form>
 </div>
@@ -1040,8 +1040,8 @@ function openMessagesTab() {
                     <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="radio" name="type" value="task" style="width:auto;"> ✅ Aufgabe</label>
                 </div>
             </div>
-            <div class="field"><label>Text *</label><textarea name="note" required style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;min-height:90px;font-family:inherit;resize:vertical;" placeholder="Notiz oder Aufgabenbeschreibung..."></textarea></div>
-            <div class="field"><label>Fälligkeitsdatum (optional)</label><input type="date" name="due_date"></div>
+            <div class="field"><label>Text *</label><textarea name="note" required style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;min-height:90px;font-family:inherit;resize:vertical;" placeholder="Notiz oder Aufgabenbeschreibung..." aria-label="Text"></textarea></div>
+            <div class="field"><label>Fälligkeitsdatum (optional)</label><input type="date" name="due_date" aria-label="Fälligkeitsdatum (optional)"></div>
             <div style="display:flex;gap:10px;justify-content:flex-end;">
                 <button type="button" data-h-click="3581a2b096" class="btn btn-ghost">Abbrechen</button>
                 <button type="submit" class="btn btn-primary">Hinzufügen</button>
@@ -1071,7 +1071,7 @@ function openMessagesTab() {
             Mehrere Bilder zu EINEM mehrseitigen Dokument bündeln
         </label>
         <div class="field"><label>Sichtbarkeit</label>
-            <select id="smart-visibility" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+            <select id="smart-visibility" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Sichtbarkeit">
                 <option value="internal">🔒 Nur intern (nach Prüfung freigeben)</option>
                 <option value="customer">👤 Kundensichtbar</option>
             </select>
@@ -1200,14 +1200,14 @@ function smartReanalyze(docId, btn) {
             <div id="file-list" style="margin-bottom:14px;"></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
                 <div class="field"><label>Kategorie</label>
-                    <select name="category" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                    <select name="category" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Kategorie">
                         @foreach(\App\Models\Document::CATEGORIES as $ckey => $clabel)
                         <option value="{{ $ckey }}">{{ $clabel }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="field"><label>Sichtbarkeit</label>
-                    <select name="visibility" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                    <select name="visibility" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Sichtbarkeit">
                         <option value="customer">👤 Kundensichtbar</option>
                         <option value="internal">🔒 Nur intern</option>
                     </select>
@@ -1215,14 +1215,14 @@ function smartReanalyze(docId, btn) {
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
                 <div class="field"><label>Priorität</label>
-                    <select name="color" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                    <select name="color" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Priorität">
                         <option value="green">🟢 Normal</option>
                         <option value="yellow">🟡 Wichtig</option>
                         <option value="red">🔴 Dringend</option>
                     </select>
                 </div>
                 <div class="field"><label>Zu Vertrag zuordnen (optional)</label>
-                    <select name="contract_id" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                    <select name="contract_id" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Zu Vertrag zuordnen (optional)">
                         <option value="">— kein Vertrag —</option>
                         {{-- Alle Vertraege waehlbar (auch beendete - Post kommt
                              auch zu Altvertraegen), beendete aber gekennzeichnet. --}}
@@ -1438,20 +1438,20 @@ document.addEventListener('DOMContentLoaded', () => {
             <div style="display:grid;gap:12px;">
                 <div>
                     <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Welches Dokument? *</label>
-                    <input type="text" name="title" required maxlength="255" placeholder="z. B. Kopie des Personalausweises" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;">
+                    <input type="text" name="title" required maxlength="255" placeholder="z. B. Kopie des Personalausweises" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;" aria-label="Welches Dokument?">
                 </div>
                 <div>
                     <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Hinweis für den Kunden</label>
-                    <textarea name="description" rows="2" maxlength="2000" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;"></textarea>
+                    <textarea name="description" rows="2" maxlength="2000" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;" aria-label="Hinweis für den Kunden"></textarea>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                     <div>
                         <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Frist</label>
-                        <input type="date" name="deadline" min="{{ now()->format('Y-m-d') }}" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;">
+                        <input type="date" name="deadline" min="{{ now()->format('Y-m-d') }}" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;" aria-label="Frist">
                     </div>
                     <div>
                         <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Betrifft Vertrag</label>
-                        <select name="contract_id" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;">
+                        <select name="contract_id" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;" aria-label="Betrifft Vertrag">
                             <option value="">— keiner —</option>
                             @foreach($customer->contracts as $ct)
                             <option value="{{ $ct->id }}">{{ $ct->contract_number }} ({{ $ct->insurer }}@if($ct->isHistoric()) · beendet @endif)</option>
@@ -1475,17 +1475,17 @@ document.addEventListener('DOMContentLoaded', () => {
         <div style="font-size:18px;font-weight:700;margin-bottom:20px;">Dokument bearbeiten</div>
         <form method="POST" id="doc-edit-form" action="">
             @csrf @method('PUT')
-            <div class="field"><label>Dateiname</label><input type="text" name="file_name" id="doc-edit-name" maxlength="255" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;"></div>
+            <div class="field"><label>Dateiname</label><input type="text" name="file_name" id="doc-edit-name" maxlength="255" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Dateiname"></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
                 <div class="field"><label>Kategorie</label>
-                    <select name="category" id="doc-edit-category" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                    <select name="category" id="doc-edit-category" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Kategorie">
                         @foreach(\App\Models\Document::CATEGORIES as $ckey => $clabel)
                         <option value="{{ $ckey }}">{{ $clabel }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="field"><label>Sichtbarkeit</label>
-                    <select name="visibility" id="doc-edit-visibility" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                    <select name="visibility" id="doc-edit-visibility" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Sichtbarkeit">
                         <option value="customer">👤 Kundensichtbar</option>
                         <option value="internal">🔒 Nur intern</option>
                     </select>
@@ -1493,14 +1493,14 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
                 <div class="field"><label>Priorität</label>
-                    <select name="color" id="doc-edit-color" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                    <select name="color" id="doc-edit-color" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Priorität">
                         <option value="green">🟢 Normal</option>
                         <option value="yellow">🟡 Wichtig</option>
                         <option value="red">🔴 Dringend</option>
                     </select>
                 </div>
                 <div class="field"><label>Zu Vertrag zuordnen</label>
-                    <select name="contract_id" id="doc-edit-contract" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+                    <select name="contract_id" id="doc-edit-contract" style="width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Zu Vertrag zuordnen">
                         <option value="">— kein Vertrag —</option>
                         {{-- Alle Vertraege waehlbar (auch beendete - Post kommt
                              auch zu Altvertraegen), beendete aber gekennzeichnet. --}}

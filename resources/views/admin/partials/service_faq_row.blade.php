@@ -1,15 +1,15 @@
 <div class="faq-row" style="border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px;">
     <div class="grid-2">
         <div class="field" style="margin-bottom:8px;"><label>Frage (DE)</label>
-            <input type="text" name="faq_q_de[]" maxlength="255" value="{{ $q_de ?? '' }}"></div>
+            <input type="text" name="faq_q_de[]" maxlength="255" value="{{ $q_de ?? '' }}" aria-label="Frage (DE)"></div>
         <div class="field" style="margin-bottom:8px;"><label>Frage (AR)</label>
-            <input type="text" name="faq_q_ar[]" maxlength="255" dir="rtl" value="{{ $q_ar ?? '' }}"></div>
+            <input type="text" name="faq_q_ar[]" maxlength="255" dir="rtl" value="{{ $q_ar ?? '' }}" aria-label="Frage (AR)"></div>
     </div>
     <div class="grid-2">
         <div class="field" style="margin-bottom:8px;"><label>Antwort (DE)</label>
-            <textarea name="faq_a_de[]" rows="2" maxlength="2000">{{ $a_de ?? '' }}</textarea></div>
+            <textarea name="faq_a_de[]" rows="2" maxlength="2000" aria-label="Antwort (DE)">{{ $a_de ?? '' }}</textarea></div>
         <div class="field" style="margin-bottom:8px;"><label>Antwort (AR)</label>
-            <textarea name="faq_a_ar[]" rows="2" maxlength="2000" dir="rtl">{{ $a_ar ?? '' }}</textarea></div>
+            <textarea name="faq_a_ar[]" rows="2" maxlength="2000" dir="rtl" aria-label="Antwort (AR)">{{ $a_ar ?? '' }}</textarea></div>
     </div>
     <button type="button" class="btn btn-ghost" style="padding:5px 12px;color:#A32D2D;" data-h-click="d3cf6a107e">Entfernen</button>
 </div>

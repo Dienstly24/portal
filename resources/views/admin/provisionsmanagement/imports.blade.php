@@ -7,7 +7,7 @@
     <form method="GET" style="display:flex;gap:12px;flex-wrap:wrap;align-items:end;">
         <div class="field" style="margin:0;min-width:200px;">
             <label>Pool</label>
-            <select name="pool">
+            <select name="pool" aria-label="Pool">
                 <option value="">Alle</option>
                 @foreach($poolListe as $key => $pool)
                 <option value="{{ $key }}" @selected(($filters['pool'] ?? '') === $key)>{{ $pool->name }}</option>
@@ -16,7 +16,7 @@
         </div>
         <div class="field" style="margin:0;min-width:180px;">
             <label>Stand</label>
-            <select name="status">
+            <select name="status" aria-label="Stand">
                 <option value="">Alle</option>
                 @foreach(['entwurf' => 'Entwurf', 'importiert' => 'Importiert', 'verworfen' => 'Verworfen'] as $k => $v)
                 <option value="{{ $k }}" @selected(($filters['status'] ?? '') === $k)>{{ $v }}</option>

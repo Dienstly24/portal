@@ -71,7 +71,7 @@
                     <label for="code">{{ __('Zur Bestätigung: Code aus Ihrer App') }}</label>
                     <div class="field codeinput">
                         <input id="code" type="text" name="code" required inputmode="numeric"
-                               autocomplete="one-time-code" placeholder="000000">
+                               autocomplete="one-time-code" placeholder="000000" aria-label="000000">
                     </div>
                     <button type="submit" class="btn">{{ __('Neue Ersatzcodes erstellen') }}</button>
                 </form>

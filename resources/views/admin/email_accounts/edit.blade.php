@@ -2,7 +2,7 @@
 @section('content')
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.email_accounts.index') }}">E-Mail-Postfächer</a><span class="breadcrumb-sep">›</span><span>{{ $account->name }}</span></div>
-    <div class="page-title">Postfach bearbeiten</div>
+    <h1 class="page-title">Postfach bearbeiten</h1>
 </div>
 
 @if($errors->any())

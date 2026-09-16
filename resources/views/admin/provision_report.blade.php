@@ -2,7 +2,7 @@
 @section('content')
 <div class="page-header">
     <div class="breadcrumb"><a href="{{ route('admin.dashboard') }}">🏠</a><span class="breadcrumb-sep">›</span><a href="{{ route('admin.provisions') }}">Vermittler-Provisionen</a><span class="breadcrumb-sep">›</span><span>Monatsbericht</span></div>
-    <div class="page-title">Provisions-Monatsbericht</div>
+    <h1 class="page-title">Provisions-Monatsbericht</h1>
     <div class="page-sub">Je Mitarbeiter und Partner: Neukunden, Verträge nach Sparte, Provision, Abzüge und Netto - exportierbar als Excel und PDF.</div>
 </div>
 
@@ -31,11 +31,11 @@
     <form method="GET" action="{{ route('admin.provisions.report') }}" style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin:0;">
         <div class="flt-group">
             <label class="flt-lbl">Von</label>
-            <input type="date" name="from" value="{{ request('from', $from->format('Y-m-d')) }}" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+            <input type="date" name="from" value="{{ request('from', $from->format('Y-m-d')) }}" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="Von">
         </div>
         <div class="flt-group">
             <label class="flt-lbl">Bis</label>
-            <input type="date" name="to" value="{{ request('to', $to->format('Y-m-d')) }}" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;">
+            <input type="date" name="to" value="{{ request('to', $to->format('Y-m-d')) }}" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;" aria-label="Bis">
         </div>
         <button type="submit" class="btn btn-primary btn-sm">Anwenden</button>
     </form>

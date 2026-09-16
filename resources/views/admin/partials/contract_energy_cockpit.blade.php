@@ -158,16 +158,16 @@
         <div style="flex:1 1 150px;">
             <label style="display:block;font-size:11px;color:#8A919E;font-weight:700;margin-bottom:4px;">Zählerstand ({{ $meterUnit }})</label>
             <input type="number" name="reading" step="0.001" min="0" max="99999999" required placeholder="z. B. 4680"
-                   style="width:100%;padding:9px 10px;border:1px solid #1E2A24;border-radius:8px;font-size:14px;background:var(--graphite-black);color:#fff;">
+                   style="width:100%;padding:9px 10px;border:1px solid #1E2A24;border-radius:8px;font-size:14px;background:var(--graphite-black);color:#fff;" aria-label="z. B. 4680">
         </div>
         <div style="flex:0 1 150px;">
             <label style="display:block;font-size:11px;color:#8A919E;font-weight:700;margin-bottom:4px;">Abgelesen am</label>
             <input type="date" name="reading_date" max="{{ now()->format('Y-m-d') }}" value="{{ now()->format('Y-m-d') }}"
-                   style="width:100%;padding:9px 10px;border:1px solid #1E2A24;border-radius:8px;font-size:14px;background:var(--graphite-black);color:#fff;">
+                   style="width:100%;padding:9px 10px;border:1px solid #1E2A24;border-radius:8px;font-size:14px;background:var(--graphite-black);color:#fff;" aria-label="Abgelesen am">
         </div>
         <div style="flex:0 1 190px;">
             <label style="display:block;font-size:11px;color:#8A919E;font-weight:700;margin-bottom:4px;">Zählwerk</label>
-            <select name="register" style="width:100%;padding:9px 10px;border:1px solid #1E2A24;border-radius:8px;font-size:14px;background:var(--graphite-black);color:#fff;">
+            <select name="register" style="width:100%;padding:9px 10px;border:1px solid #1E2A24;border-radius:8px;font-size:14px;background:var(--graphite-black);color:#fff;" aria-label="Zählwerk">
                 @foreach(\App\Models\MeterReading::REGISTERS as $key => $label)
                 <option value="{{ $key }}">{{ $key }} – {{ $label }}</option>
                 @endforeach

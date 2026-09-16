@@ -66,7 +66,7 @@ form textarea{min-height:90px;resize:vertical;}
 /* Chat-Seite: fuellt die Hoehe zwischen Kopf und Fussleisten */
 .chatpage{display:flex;flex-direction:column;height:calc(100dvh - 64px);min-height:420px;max-width:920px;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;}
 .chatpage-head{display:flex;align-items:center;gap:11px;padding:13px 16px;background:linear-gradient(135deg,var(--graphite),var(--graphite-deep));color:#fff;}
-.chatpage-name{font-weight:700;font-size:15px;}
+.chatpage-name{font-weight:700;font-size:15px;margin:0;line-height:1.3;}
 .chatpage-status{font-size:11.5px;color:var(--gold-soft);display:flex;align-items:center;gap:5px;}
 .chatpage-status::before{content:'';width:7px;height:7px;border-radius:50%;background:#2ecc71;}
 

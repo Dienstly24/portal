@@ -18,7 +18,7 @@
 <div class="field">
     <label style="font-weight:700;font-size:15px;">Sparte *</label>
     <select name="type" id="sparte" required data-h-change="98ff44e737"
-        style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+        style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Sparte">
         <option value="">Bitte auswählen</option>
         {{-- Privat zuerst, gewerbliche Sparten (Betriebs-/Frachtfuehrer-
              haftpflicht) in einer eigenen Gruppe darunter --}}
@@ -40,7 +40,7 @@
 <div id="type-other-wrap" class="field" style="display:none;">
     <label>Was für ein Vertrag? *</label>
     <input type="text" name="type_other" maxlength="120" value="{{ $val('type_other', $c->type_other ?? '') }}"
-        placeholder="z. B. Reise-Schutz, Sterbegeldversicherung, Tierhalterhaftpflicht ...">
+        placeholder="z. B. Reise-Schutz, Sterbegeldversicherung, Tierhalterhaftpflicht ..." aria-label="Was für ein Vertrag?">
 </div>
 
 {{-- Schutzbrief / Mobilclub: Mitgliedschafts-Stufe wie beim ADAC
@@ -48,7 +48,7 @@
      oder der Anbieter (z.B. reiner KFZ-Schutzbrief) keine Stufen kennt. --}}
 <div id="subtype-wrap-schutzbrief" class="field subtype-wrap" style="display:none;">
     <label>Mitgliedschaft / Tarifstufe</label>
-    <select name="subtype" data-subtype-for="schutzbrief" disabled style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+    <select name="subtype" data-subtype-for="schutzbrief" disabled style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Mitgliedschaft / Tarifstufe">
         <option value="">— bitte wählen —</option>
         @foreach(\App\Models\Contract::SUBTYPES['schutzbrief'] as $ok => $ol)
         <option value="{{ $ok }}" {{ $curSub === $ok ? 'selected' : '' }}>{{ $ol }}</option>
@@ -59,7 +59,7 @@
 {{-- Krankenversicherung: GKV/PKV steuert die Wechsel-Erinnerungen --}}
 <div id="subtype-wrap-krankenversicherung" class="field subtype-wrap" style="display:none;">
     <label>Art der Krankenversicherung</label>
-    <select name="subtype" data-subtype-for="krankenversicherung" disabled style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+    <select name="subtype" data-subtype-for="krankenversicherung" disabled style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Art der Krankenversicherung">
         <option value="">— bitte wählen —</option>
         <option value="gkv" {{ $curSub === 'gkv' ? 'selected' : '' }}>Gesetzlich (GKV) – erhält Wechsel-Erinnerung nach 12 Monaten</option>
         <option value="pkv" {{ $curSub === 'pkv' ? 'selected' : '' }}>Privat (PKV) – keine Wechsel-Erinnerung</option>
@@ -70,7 +70,7 @@
      Gleiche subtype-Spalte wie oben; nur das aktive Feld wird abgeschickt (disabled). --}}
 <div id="subtype-wrap-krankenzusatz" class="field subtype-wrap" style="display:none;">
     <label>Art der Krankenzusatz</label>
-    <select name="subtype" data-subtype-for="krankenzusatz" disabled style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+    <select name="subtype" data-subtype-for="krankenzusatz" disabled style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Art der Krankenzusatz">
         <option value="">— bitte wählen —</option>
         @foreach(\App\Models\Contract::SUBTYPES['krankenzusatz'] as $ok => $ol)
         <option value="{{ $ok }}" {{ $curSub === $ok ? 'selected' : '' }}>{{ $ol }}</option>
@@ -81,12 +81,12 @@
 <div style="border-top:1px solid var(--line);margin:24px 0;"></div>
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-    <div class="field"><label>Versicherer / Anbieter *</label><input type="text" name="insurer" required value="{{ $val('insurer', $c->insurer ?? '') }}" placeholder="z.B. Allianz, HUK-Coburg..."></div>
+    <div class="field"><label>Versicherer / Anbieter *</label><input type="text" name="insurer" required value="{{ $val('insurer', $c->insurer ?? '') }}" placeholder="z.B. Allianz, HUK-Coburg..." aria-label="Versicherer / Anbieter"></div>
     <div class="field">
         {{-- Bei Energievertraegen (Strom/Gas) heisst dieses Feld "Vertragsnummer"
              statt "Versicherungsnummer (VSNR)" - per JS umgeschaltet. --}}
         <label id="contract-number-label">Versicherungsnummer (VSNR)</label>
-        <input type="text" name="contract_number" maxlength="255" value="{{ $val('contract_number', $c->contract_number ?? '') }}" placeholder="Optional – später nachtragbar">
+        <input type="text" name="contract_number" maxlength="255" value="{{ $val('contract_number', $c->contract_number ?? '') }}" placeholder="Optional – später nachtragbar" aria-label="Versicherungsnummer (VSNR)">
         <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">Leer lassen, falls die echte Nummer noch nicht vorliegt. Es wird keine automatische Nummer erzeugt.</div>
     </div>
     <div class="field">
@@ -96,7 +96,7 @@
              ohne weitere Angabe. Bewusst ein EIGENES Feld neben der
              Versicherungsnummer - es sind zwei Nummern aus zwei Systemen. --}}
         <label>Interne Vertragsnummer (Pool/Fremdsystem)</label>
-        <input type="text" name="internal_contract_number" maxlength="60" value="{{ $val('internal_contract_number', $c->internal_contract_number ?? '') }}" placeholder="z. B. V19613073">
+        <input type="text" name="internal_contract_number" maxlength="60" value="{{ $val('internal_contract_number', $c->internal_contract_number ?? '') }}" placeholder="z. B. V19613073" aria-label="Interne Vertragsnummer (Pool/Fremdsystem)">
         <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">Schlüssel für die Provisionsabrechnung. Wird beim Import automatisch ergänzt, sobald sie in einer Datei auftaucht.</div>
     </div>
     <div class="field">
@@ -105,7 +105,7 @@
              Vorgang spaeter wiederfinden - auch bevor die echte
              Versicherungsnummer vorliegt. --}}
         <label>Referenz-/Vorgangsnummer</label>
-        <input type="text" name="reference_number" maxlength="60" value="{{ $val('reference_number', $c->reference_number ?? '') }}" placeholder="z. B. 1477-6741-9200-53">
+        <input type="text" name="reference_number" maxlength="60" value="{{ $val('reference_number', $c->reference_number ?? '') }}" placeholder="z. B. 1477-6741-9200-53" aria-label="Referenz-/Vorgangsnummer">
         <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">Nummer des Antrags/Vorgangs beim Portal oder Vermittler. Spätere Post (Bestätigung, Abrechnung) mit dieser Nummer findet den Vertrag automatisch.</div>
     </div>
     <div class="field">
@@ -114,7 +114,7 @@
              noch leer - sie kommt Wochen spaeter mit der Abrechnung und wird
              dann automatisch ueber die Referenz-Nr. zugeordnet. --}}
         <label>Vermittler-ID / Abrechnungs-ID</label>
-        <input type="text" name="vermittler_id" maxlength="60" value="{{ $val('vermittler_id', $c->vermittler_id ?? '') }}" placeholder="Kommt mit der Abrechnung – meist leer lassen">
+        <input type="text" name="vermittler_id" maxlength="60" value="{{ $val('vermittler_id', $c->vermittler_id ?? '') }}" placeholder="Kommt mit der Abrechnung – meist leer lassen" aria-label="Vermittler-ID / Abrechnungs-ID">
         <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">Nummer des Datensatzes in der Abrechnung des Vermittlers. Wird beim CSV-Import automatisch über die Referenz-Nr. zugeordnet – hier nur eintragen, wenn sie bereits bekannt ist.</div>
     </div>
 </div>
@@ -145,7 +145,7 @@
          Live-Hinweis, was der gewaehlte Status ausloest. Quelle:
          Contract::STATUS_OPTIONS - dieselbe Liste validiert der Controller. --}}
     <div class="field"><label>Status *</label>
-        <select name="status" id="contract-status" required data-h-change="62df777e04" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+        <select name="status" id="contract-status" required data-h-change="62df777e04" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Status">
             <optgroup label="Aktueller Bestand">
                 @foreach(\App\Models\Contract::STATUS_OPTIONS as $sk => $so)
                 @if($so['group'] === \App\Models\Contract::GROUP_ACTIVE)
@@ -178,7 +178,7 @@
         </div>
     </div>
     <div class="field"><label>Ablauf</label>
-        <input type="date" id="contract-end" name="end_date" value="{{ $endVal }}">
+        <input type="date" id="contract-end" name="end_date" value="{{ $endVal }}" aria-label="Ablauf">
     </div>
 </div>
 {{-- Vertragsstufe: Auftrag/Antrag oder bestaetigter Vertrag. "Antrag" sorgt
@@ -186,7 +186,7 @@
      DIESEN Vertrag ergaenzt, statt einen zweiten anzulegen. --}}
 <div class="field">
     <label>Vertragsstufe</label>
-    <select name="stage" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+    <select name="stage" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Vertragsstufe">
         @php $curStage = old('stage', $c->stage ?? ''); @endphp
         <option value="" {{ $curStage === '' ? 'selected' : '' }}>— keine Angabe —</option>
         @foreach(\App\Models\Contract::STAGE_LABELS as $stk => $stl)
@@ -219,12 +219,12 @@
 </style>
 <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;">
     <div class="field"><label>Kündigungsdatum <span style="font-weight:400;color:var(--ink-soft);">(eingereicht am)</span></label>
-        <input type="date" id="contract-cancel" name="cancellation_date" value="{{ $val('cancellation_date', $c && $c->cancellation_date ? \Carbon\Carbon::parse($c->cancellation_date)->format('Y-m-d') : '') }}">
+        <input type="date" id="contract-cancel" name="cancellation_date" value="{{ $val('cancellation_date', $c && $c->cancellation_date ? \Carbon\Carbon::parse($c->cancellation_date)->format('Y-m-d') : '') }}" aria-label="Kündigungsdatum (eingereicht am)">
         {{-- Live-Hinweis: wann die Kuendigung wirklich wirkt (KFZ: 1 Monat
              Frist zum Ablauf, sonst verlaengert sich der Vertrag ums Jahr). --}}
         <div id="cancel-effect-hint" style="font-size:11.5px;color:var(--ink-soft);margin-top:5px;"></div>
     </div>
-    <div class="field"><label>Notizen</label><input type="text" name="notes" value="{{ $val('notes', $c->notes ?? '') }}" placeholder="Interne Notizen..."></div>
+    <div class="field"><label>Notizen</label><input type="text" name="notes" value="{{ $val('notes', $c->notes ?? '') }}" placeholder="Interne Notizen..." aria-label="Notizen"></div>
 </div>
 
 {{-- Beitrag + Zahlweise: was der Kunde zahlt und in welchem Rhythmus. Gilt fuer
@@ -235,12 +235,12 @@
         <label>Beitrag (€)</label>
         <input type="number" step="0.01" min="0" name="premium_amount"
             value="{{ $val('premium_amount', $c && $c->premium_amount !== null ? rtrim(rtrim(number_format((float) $c->premium_amount, 2, '.', ''), '0'), '.') : '') }}"
-            placeholder="z. B. 49,90">
+            placeholder="z. B. 49,90" aria-label="Beitrag (€)">
         <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">Leer lassen, wenn kein Beitrag hinterlegt werden soll.</div>
     </div>
     <div class="field">
         <label>Zahlweise</label>
-        <select name="premium_interval" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+        <select name="premium_interval" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Zahlweise">
             @foreach(\App\Models\Contract::PREMIUM_INTERVALS as $ik => $cfg)
             <option value="{{ $ik }}" {{ $curInterval === $ik ? 'selected' : '' }}>{{ $cfg['label'] }}</option>
             @endforeach
@@ -257,38 +257,38 @@
 <div id="section-energy" class="branch-section" style="display:none;border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;">
     <div class="card-title" style="font-size:14px;">⚡ Energievertrag (Strom / Gas)</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Tarif</label><input type="text" name="energy[tariff]" value="{{ $val('energy.tariff', $en->tariff ?? '') }}"></div>
+        <div class="field"><label>Tarif</label><input type="text" name="energy[tariff]" value="{{ $val('energy.tariff', $en->tariff ?? '') }}" aria-label="Tarif"></div>
         {{-- Energievertraege haben zusaetzlich eine Kundennummer beim Anbieter
              (getrennt von der Vertragsnummer oben). --}}
-        <div class="field"><label>Kundennummer (beim Anbieter)</label><input type="text" name="energy[customer_number]" maxlength="60" value="{{ $val('energy.customer_number', $en->customer_number ?? '') }}" placeholder="Kundennummer des Energieanbieters"></div>
+        <div class="field"><label>Kundennummer (beim Anbieter)</label><input type="text" name="energy[customer_number]" maxlength="60" value="{{ $val('energy.customer_number', $en->customer_number ?? '') }}" placeholder="Kundennummer des Energieanbieters" aria-label="Kundennummer (beim Anbieter)"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Verbrauch (kWh/Jahr)</label><input type="number" name="energy[consumption_kwh]" min="0" value="{{ $val('energy.consumption_kwh', $en->consumption_kwh ?? '') }}"></div>
-        <div class="field"><label>Zählernummer</label><input type="text" name="energy[meter_number]" maxlength="60" value="{{ $val('energy.meter_number', $en->meter_number ?? '') }}"></div>
+        <div class="field"><label>Verbrauch (kWh/Jahr)</label><input type="number" name="energy[consumption_kwh]" min="0" value="{{ $val('energy.consumption_kwh', $en->consumption_kwh ?? '') }}" aria-label="Verbrauch (kWh/Jahr)"></div>
+        <div class="field"><label>Zählernummer</label><input type="text" name="energy[meter_number]" maxlength="60" value="{{ $val('energy.meter_number', $en->meter_number ?? '') }}" aria-label="Zählernummer"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Marktlokations-ID (MaLo-ID, 11 Ziffern)</label><input type="text" name="energy[malo_id]" maxlength="11" pattern="[0-9]{11}" value="{{ $val('energy.malo_id', $en->malo_id ?? '') }}" placeholder="Nicht die Zählernummer!"></div>
-        <div class="field"><label>Zählerstand (optional)</label><input type="text" name="energy[meter_reading]" maxlength="30" value="{{ $val('energy.meter_reading', $en->meter_reading ?? '') }}"></div>
+        <div class="field"><label>Marktlokations-ID (MaLo-ID, 11 Ziffern)</label><input type="text" name="energy[malo_id]" maxlength="11" pattern="[0-9]{11}" value="{{ $val('energy.malo_id', $en->malo_id ?? '') }}" placeholder="Nicht die Zählernummer!" aria-label="Marktlokations-ID (MaLo-ID, 11 Ziffern)"></div>
+        <div class="field"><label>Zählerstand (optional)</label><input type="text" name="energy[meter_reading]" maxlength="30" value="{{ $val('energy.meter_reading', $en->meter_reading ?? '') }}" aria-label="Zählerstand (optional)"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Netzbetreiber (optional)</label><input type="text" name="energy[grid_operator]" value="{{ $val('energy.grid_operator', $en->grid_operator ?? '') }}"></div>
-        <div class="field"><label>Messstellenbetreiber (optional)</label><input type="text" name="energy[metering_operator]" value="{{ $val('energy.metering_operator', $en->metering_operator ?? '') }}"></div>
+        <div class="field"><label>Netzbetreiber (optional)</label><input type="text" name="energy[grid_operator]" value="{{ $val('energy.grid_operator', $en->grid_operator ?? '') }}" aria-label="Netzbetreiber (optional)"></div>
+        <div class="field"><label>Messstellenbetreiber (optional)</label><input type="text" name="energy[metering_operator]" value="{{ $val('energy.metering_operator', $en->metering_operator ?? '') }}" aria-label="Messstellenbetreiber (optional)"></div>
     </div>
     {{-- Vorversorger (bisheriger Lieferant beim Wechsel) - aus dem Auftrag. --}}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Bisheriger Lieferant (Vorversorger)</label><input type="text" name="energy[previous_provider]" maxlength="150" value="{{ $val('energy.previous_provider', $en->previous_provider ?? '') }}" placeholder="z. B. Stadtwerke Neuss"></div>
-        <div class="field"><label>Kundennummer beim bisherigen Lieferanten</label><input type="text" name="energy[previous_customer_number]" maxlength="60" value="{{ $val('energy.previous_customer_number', $en->previous_customer_number ?? '') }}"></div>
+        <div class="field"><label>Bisheriger Lieferant (Vorversorger)</label><input type="text" name="energy[previous_provider]" maxlength="150" value="{{ $val('energy.previous_provider', $en->previous_provider ?? '') }}" placeholder="z. B. Stadtwerke Neuss" aria-label="Bisheriger Lieferant (Vorversorger)"></div>
+        <div class="field"><label>Kundennummer beim bisherigen Lieferanten</label><input type="text" name="energy[previous_customer_number]" maxlength="60" value="{{ $val('energy.previous_customer_number', $en->previous_customer_number ?? '') }}" aria-label="Kundennummer beim bisherigen Lieferanten"></div>
     </div>
     {{-- Tarifpreise: Arbeitspreis (ct/kWh) und Grundpreis (EUR/Monat) - die
          beiden Kernpreise eines Energietarifs, getrennt vom Abschlag. --}}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Arbeitspreis (ct/kWh)</label><input type="number" step="0.001" name="energy[working_price]" min="0" value="{{ $val('energy.working_price', $en && $en->working_price !== null ? rtrim(rtrim(number_format((float) $en->working_price, 3, '.', ''), '0'), '.') : '') }}" placeholder="z. B. 28,9"></div>
-        <div class="field"><label>Grundpreis (€/Monat)</label><input type="number" step="0.01" name="energy[base_price]" min="0" value="{{ $val('energy.base_price', $en && $en->base_price !== null ? rtrim(rtrim(number_format((float) $en->base_price, 2, '.', ''), '0'), '.') : '') }}" placeholder="z. B. 11,90"></div>
+        <div class="field"><label>Arbeitspreis (ct/kWh)</label><input type="number" step="0.001" name="energy[working_price]" min="0" value="{{ $val('energy.working_price', $en && $en->working_price !== null ? rtrim(rtrim(number_format((float) $en->working_price, 3, '.', ''), '0'), '.') : '') }}" placeholder="z. B. 28,9" aria-label="Arbeitspreis (ct/kWh)"></div>
+        <div class="field"><label>Grundpreis (€/Monat)</label><input type="number" step="0.01" name="energy[base_price]" min="0" value="{{ $val('energy.base_price', $en && $en->base_price !== null ? rtrim(rtrim(number_format((float) $en->base_price, 2, '.', ''), '0'), '.') : '') }}" placeholder="z. B. 11,90" aria-label="Grundpreis (€/Monat)"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Abschlag (€)</label><input type="number" step="0.01" name="energy[payment_amount]" min="0" value="{{ $val('energy.payment_amount', $en->payment_amount ?? '') }}"></div>
+        <div class="field"><label>Abschlag (€)</label><input type="number" step="0.01" name="energy[payment_amount]" min="0" value="{{ $val('energy.payment_amount', $en->payment_amount ?? '') }}" aria-label="Abschlag (€)"></div>
         <div class="field"><label>Zahlungsintervall</label>
-            <select name="energy[payment_interval]" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;">
+            <select name="energy[payment_interval]" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;" aria-label="Zahlungsintervall">
                 @php $curInt = old('energy.payment_interval', $en->payment_interval ?? ''); @endphp
                 <option value="">—</option>
                 @foreach(['monatlich'=>'Monatlich','vierteljaehrlich'=>'Vierteljährlich','halbjaehrlich'=>'Halbjährlich','jaehrlich'=>'Jährlich'] as $ik => $il)
@@ -311,22 +311,22 @@
         einen Aktionspreis fuer die ersten Monate, danach den regulaeren Preis.
     </p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Tarif</label><input type="text" name="internet[tariff]" maxlength="255" value="{{ $val('internet.tariff', $net->tariff ?? '') }}" placeholder="z. B. Magenta Zuhause L"></div>
-        <div class="field"><label>Geschwindigkeit (Download)</label><input type="text" name="internet[speed]" maxlength="30" value="{{ $val('internet.speed', $net->speed ?? '') }}" placeholder="z. B. 100 Mbit/s"></div>
+        <div class="field"><label>Tarif</label><input type="text" name="internet[tariff]" maxlength="255" value="{{ $val('internet.tariff', $net->tariff ?? '') }}" placeholder="z. B. Magenta Zuhause L" aria-label="Tarif"></div>
+        <div class="field"><label>Geschwindigkeit (Download)</label><input type="text" name="internet[speed]" maxlength="30" value="{{ $val('internet.speed', $net->speed ?? '') }}" placeholder="z. B. 100 Mbit/s" aria-label="Geschwindigkeit (Download)"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Upload-Geschwindigkeit (optional)</label><input type="text" name="internet[upload_speed]" maxlength="30" value="{{ $val('internet.upload_speed', $net->upload_speed ?? '') }}" placeholder="z. B. 40 Mbit/s"></div>
+        <div class="field"><label>Upload-Geschwindigkeit (optional)</label><input type="text" name="internet[upload_speed]" maxlength="30" value="{{ $val('internet.upload_speed', $net->upload_speed ?? '') }}" placeholder="z. B. 40 Mbit/s" aria-label="Upload-Geschwindigkeit (optional)"></div>
         {{-- Beim Auftrag gibt es noch keinen Anschlusstermin ("schnellstmoeglich"),
              Beginn/Ablauf sind leer - die Laufzeit steht deshalb als eigenes Feld. --}}
-        <div class="field"><label>Mindestlaufzeit (Monate)</label><input type="number" step="1" min="0" max="60" name="internet[min_duration_months]" value="{{ $val('internet.min_duration_months', $net->min_duration_months ?? '') }}" placeholder="z. B. 24"></div>
+        <div class="field"><label>Mindestlaufzeit (Monate)</label><input type="number" step="1" min="0" max="60" name="internet[min_duration_months]" value="{{ $val('internet.min_duration_months', $net->min_duration_months ?? '') }}" placeholder="z. B. 24" aria-label="Mindestlaufzeit (Monate)"></div>
     </div>
 
     {{-- Preisvariabler Tarif: Aktionsphase + regulaerer Preis. --}}
     <div style="font-weight:600;font-size:13px;margin:6px 0 8px;color:var(--ink);">Preis (variabel)</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
-        <div class="field"><label>Aktionspreis (€/Monat)</label><input type="number" step="0.01" min="0" name="internet[price_initial]" value="{{ $val('internet.price_initial', $net && $net->price_initial !== null ? rtrim(rtrim(number_format((float) $net->price_initial, 2, '.', ''), '0'), '.') : '') }}" placeholder="z. B. 9,95"></div>
-        <div class="field"><label>Aktion gilt für (Monate)</label><input type="number" step="1" min="0" max="60" name="internet[price_initial_months]" value="{{ $val('internet.price_initial_months', $net->price_initial_months ?? '') }}" placeholder="z. B. 6"></div>
-        <div class="field"><label>Danach (€/Monat)</label><input type="number" step="0.01" min="0" name="internet[price_regular]" value="{{ $val('internet.price_regular', $net && $net->price_regular !== null ? rtrim(rtrim(number_format((float) $net->price_regular, 2, '.', ''), '0'), '.') : '') }}" placeholder="z. B. 48,95"></div>
+        <div class="field"><label>Aktionspreis (€/Monat)</label><input type="number" step="0.01" min="0" name="internet[price_initial]" value="{{ $val('internet.price_initial', $net && $net->price_initial !== null ? rtrim(rtrim(number_format((float) $net->price_initial, 2, '.', ''), '0'), '.') : '') }}" placeholder="z. B. 9,95" aria-label="Aktionspreis (€/Monat)"></div>
+        <div class="field"><label>Aktion gilt für (Monate)</label><input type="number" step="1" min="0" max="60" name="internet[price_initial_months]" value="{{ $val('internet.price_initial_months', $net->price_initial_months ?? '') }}" placeholder="z. B. 6" aria-label="Aktion gilt für (Monate)"></div>
+        <div class="field"><label>Danach (€/Monat)</label><input type="number" step="0.01" min="0" name="internet[price_regular]" value="{{ $val('internet.price_regular', $net && $net->price_regular !== null ? rtrim(rtrim(number_format((float) $net->price_regular, 2, '.', ''), '0'), '.') : '') }}" placeholder="z. B. 48,95" aria-label="Danach (€/Monat)"></div>
     </div>
 
     {{-- Router: inklusive oder mit monatlichem Aufpreis. --}}
@@ -338,23 +338,23 @@
         </label>
     </div>
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;">
-        <div class="field"><label>Router-Modell</label><input type="text" name="internet[router_name]" maxlength="120" value="{{ $val('internet.router_name', $net->router_name ?? '') }}" placeholder="z. B. Telekom Speedport Smart 4"></div>
-        <div class="field"><label>Router-Aufpreis (€/Monat)</label><input type="number" step="0.01" min="0" name="internet[router_price]" value="{{ $val('internet.router_price', $net && $net->router_price !== null ? rtrim(rtrim(number_format((float) $net->router_price, 2, '.', ''), '0'), '.') : '') }}" placeholder="0,00 = inklusive"></div>
+        <div class="field"><label>Router-Modell</label><input type="text" name="internet[router_name]" maxlength="120" value="{{ $val('internet.router_name', $net->router_name ?? '') }}" placeholder="z. B. Telekom Speedport Smart 4" aria-label="Router-Modell"></div>
+        <div class="field"><label>Router-Aufpreis (€/Monat)</label><input type="number" step="0.01" min="0" name="internet[router_price]" value="{{ $val('internet.router_price', $net && $net->router_price !== null ? rtrim(rtrim(number_format((float) $net->router_price, 2, '.', ''), '0'), '.') : '') }}" placeholder="0,00 = inklusive" aria-label="Router-Aufpreis (€/Monat)"></div>
     </div>
 
     {{-- Einmalige Kosten beim Abschluss: Bereitstellung ("was kostet die
          Schaltung") und Versand des Routers - stehen im Auftrag als "einmalig". --}}
     <div style="font-weight:600;font-size:13px;margin:10px 0 8px;color:var(--ink);">Einmalige Kosten</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Bereitstellungsgebühr (€ einmalig)</label><input type="number" step="0.01" min="0" name="internet[setup_fee]" value="{{ $val('internet.setup_fee', $net && $net->setup_fee !== null ? rtrim(rtrim(number_format((float) $net->setup_fee, 2, '.', ''), '0'), '.') : '') }}" placeholder="z. B. 49,99"></div>
-        <div class="field"><label>Versandkosten (€ einmalig)</label><input type="number" step="0.01" min="0" name="internet[shipping_fee]" value="{{ $val('internet.shipping_fee', $net && $net->shipping_fee !== null ? rtrim(rtrim(number_format((float) $net->shipping_fee, 2, '.', ''), '0'), '.') : '') }}" placeholder="z. B. 9,99"></div>
+        <div class="field"><label>Bereitstellungsgebühr (€ einmalig)</label><input type="number" step="0.01" min="0" name="internet[setup_fee]" value="{{ $val('internet.setup_fee', $net && $net->setup_fee !== null ? rtrim(rtrim(number_format((float) $net->setup_fee, 2, '.', ''), '0'), '.') : '') }}" placeholder="z. B. 49,99" aria-label="Bereitstellungsgebühr (€ einmalig)"></div>
+        <div class="field"><label>Versandkosten (€ einmalig)</label><input type="number" step="0.01" min="0" name="internet[shipping_fee]" value="{{ $val('internet.shipping_fee', $net && $net->shipping_fee !== null ? rtrim(rtrim(number_format((float) $net->shipping_fee, 2, '.', ''), '0'), '.') : '') }}" placeholder="z. B. 9,99" aria-label="Versandkosten (€ einmalig)"></div>
     </div>
 
     {{-- Einmalige Vorteile beim Abschluss (Cashback/Bonus, Gutschein/Gutschrift). --}}
     <div style="font-weight:600;font-size:13px;margin:10px 0 8px;color:var(--ink);">Vorteile beim Abschluss</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Bonus / Cashback (€)</label><input type="number" step="0.01" min="0" name="internet[bonus_amount]" value="{{ $val('internet.bonus_amount', $net && $net->bonus_amount !== null ? rtrim(rtrim(number_format((float) $net->bonus_amount, 2, '.', ''), '0'), '.') : '') }}" placeholder="z. B. 155,00"></div>
-        <div class="field"><label>Gutschein / Gutschrift (€)</label><input type="number" step="0.01" min="0" name="internet[voucher_amount]" value="{{ $val('internet.voucher_amount', $net && $net->voucher_amount !== null ? rtrim(rtrim(number_format((float) $net->voucher_amount, 2, '.', ''), '0'), '.') : '') }}" placeholder="z. B. 100,00"></div>
+        <div class="field"><label>Bonus / Cashback (€)</label><input type="number" step="0.01" min="0" name="internet[bonus_amount]" value="{{ $val('internet.bonus_amount', $net && $net->bonus_amount !== null ? rtrim(rtrim(number_format((float) $net->bonus_amount, 2, '.', ''), '0'), '.') : '') }}" placeholder="z. B. 155,00" aria-label="Bonus / Cashback (€)"></div>
+        <div class="field"><label>Gutschein / Gutschrift (€)</label><input type="number" step="0.01" min="0" name="internet[voucher_amount]" value="{{ $val('internet.voucher_amount', $net && $net->voucher_amount !== null ? rtrim(rtrim(number_format((float) $net->voucher_amount, 2, '.', ''), '0'), '.') : '') }}" placeholder="z. B. 100,00" aria-label="Gutschein / Gutschrift (€)"></div>
     </div>
 </div>
 
@@ -367,12 +367,12 @@
         Der Ablauf wird aus dem Beginn berechnet und muss nicht von Hand gesetzt werden.
     </p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Versicherungskennzeichen</label><input type="text" name="escooter[license_plate]" maxlength="20" value="{{ $val('escooter.license_plate', $veh->license_plate ?? '') }}" placeholder="z. B. 611 MDS"></div>
-        <div class="field"><label>Fahrgestellnummer (FIN)</label><input type="text" name="escooter[vin]" maxlength="30" value="{{ $val('escooter.vin', $veh->vin ?? '') }}" placeholder="z. B. ZSF10Z23075358"></div>
+        <div class="field"><label>Versicherungskennzeichen</label><input type="text" name="escooter[license_plate]" maxlength="20" value="{{ $val('escooter.license_plate', $veh->license_plate ?? '') }}" placeholder="z. B. 611 MDS" aria-label="Versicherungskennzeichen"></div>
+        <div class="field"><label>Fahrgestellnummer (FIN)</label><input type="text" name="escooter[vin]" maxlength="30" value="{{ $val('escooter.vin', $veh->vin ?? '') }}" placeholder="z. B. ZSF10Z23075358" aria-label="Fahrgestellnummer (FIN)"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="field"><label>Hersteller/Modellbezeichnung</label><input type="text" name="escooter[manufacturer]" maxlength="255" value="{{ $val('escooter.manufacturer', $veh->manufacturer ?? '') }}" placeholder="z. B. ZHEJIANG KUANTU (RC)"></div>
-        <div class="field"><label>Modell (optional)</label><input type="text" name="escooter[model]" maxlength="255" value="{{ $val('escooter.model', $veh->model ?? '') }}"></div>
+        <div class="field"><label>Hersteller/Modellbezeichnung</label><input type="text" name="escooter[manufacturer]" maxlength="255" value="{{ $val('escooter.manufacturer', $veh->manufacturer ?? '') }}" placeholder="z. B. ZHEJIANG KUANTU (RC)" aria-label="Hersteller/Modellbezeichnung"></div>
+        <div class="field"><label>Modell (optional)</label><input type="text" name="escooter[model]" maxlength="255" value="{{ $val('escooter.model', $veh->model ?? '') }}" aria-label="Modell (optional)"></div>
     </div>
     <div class="field">
         <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">

@@ -17,23 +17,23 @@
         @csrf @method('PUT')
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;align-items:end;">
             <div class="field" style="margin:0;"><label>Name</label>
-                <input type="text" name="name" value="{{ $pool->name }}" required></div>
+                <input type="text" name="name" value="{{ $pool->name }}" required aria-label="Name"></div>
             <div class="field" style="margin:0;"><label>Dateiformat</label>
-                <select name="source_profile">
+                <select name="source_profile" aria-label="Dateiformat">
                     @foreach($profile as $key => $label)
                     <option value="{{ $key }}" @selected((string) $pool->source_profile === (string) $key)>{{ $label }}</option>
                     @endforeach
                 </select></div>
             <div class="field" style="margin:0;"><label>Erwartet nach (Monate)</label>
-                <input type="number" name="expected_months" min="0" max="36" value="{{ $pool->expected_months }}" required></div>
+                <input type="number" name="expected_months" min="0" max="36" value="{{ $pool->expected_months }}" required aria-label="Erwartet nach (Monate)"></div>
             <div class="field" style="margin:0;"><label>Prüffrist (Monate)</label>
-                <input type="number" name="check_months" min="0" max="60" value="{{ $pool->check_months }}" required></div>
+                <input type="number" name="check_months" min="0" max="60" value="{{ $pool->check_months }}" required aria-label="Prüffrist (Monate)"></div>
             <div class="field" style="margin:0;"><label>Ansprechpartner</label>
-                <input type="text" name="contact" value="{{ $pool->contact }}"></div>
+                <input type="text" name="contact" value="{{ $pool->contact }}" aria-label="Ansprechpartner"></div>
             <div class="field" style="margin:0;"><label>Aktiv</label>
-                <select name="active"><option value="1" @selected($pool->active)>Ja</option><option value="0" @selected(!$pool->active)>Nein</option></select></div>
+                <select name="active" aria-label="Aktiv"><option value="1" @selected($pool->active)>Ja</option><option value="0" @selected(!$pool->active)>Nein</option></select></div>
             <div class="field" style="margin:0;grid-column:1 / -1;"><label>Notiz</label>
-                <input type="text" name="notes" value="{{ $pool->notes }}"></div>
+                <input type="text" name="notes" value="{{ $pool->notes }}" aria-label="Notiz"></div>
         </div>
         <div style="margin-top:10px;display:flex;gap:10px;align-items:center;">
             <button class="btn btn-primary" type="submit">Speichern</button>
@@ -46,13 +46,13 @@
     <form method="POST" action="{{ route('admin.provisionsmanagement.pool_store') }}">
         @csrf
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;align-items:end;">
-            <div class="field" style="margin:0;"><label>Name</label><input type="text" name="name" required></div>
-            <div class="field" style="margin:0;"><label>Schlüssel (optional)</label><input type="text" name="key" placeholder="wird aus dem Namen gebildet"></div>
+            <div class="field" style="margin:0;"><label>Name</label><input type="text" name="name" required aria-label="Name"></div>
+            <div class="field" style="margin:0;"><label>Schlüssel (optional)</label><input type="text" name="key" placeholder="wird aus dem Namen gebildet" aria-label="Schlüssel (optional)"></div>
             <div class="field" style="margin:0;"><label>Dateiformat</label>
-                <select name="source_profile">@foreach($profile as $key => $label)<option value="{{ $key }}">{{ $label }}</option>@endforeach</select></div>
-            <div class="field" style="margin:0;"><label>Erwartet nach (Monate)</label><input type="number" name="expected_months" min="0" max="36" value="3" required></div>
-            <div class="field" style="margin:0;"><label>Prüffrist (Monate)</label><input type="number" name="check_months" min="0" max="60" value="5" required></div>
-            <div class="field" style="margin:0;"><label>Ansprechpartner</label><input type="text" name="contact"></div>
+                <select name="source_profile" aria-label="Dateiformat">@foreach($profile as $key => $label)<option value="{{ $key }}">{{ $label }}</option>@endforeach</select></div>
+            <div class="field" style="margin:0;"><label>Erwartet nach (Monate)</label><input type="number" name="expected_months" min="0" max="36" value="3" required aria-label="Erwartet nach (Monate)"></div>
+            <div class="field" style="margin:0;"><label>Prüffrist (Monate)</label><input type="number" name="check_months" min="0" max="60" value="5" required aria-label="Prüffrist (Monate)"></div>
+            <div class="field" style="margin:0;"><label>Ansprechpartner</label><input type="text" name="contact" aria-label="Ansprechpartner"></div>
         </div>
         <input type="hidden" name="active" value="1">
         <button class="btn btn-primary" type="submit" style="margin-top:10px;">Pool anlegen</button>

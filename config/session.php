@@ -169,7 +169,21 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    /*
+    | Nur ueber HTTPS senden.
+    |
+    | Ohne Vorgabe liefert env() hier null, und Laravel setzt das Flag
+    | dann "automatisch" nach dem gerade laufenden Request. Das ist genau
+    | dann falsch, wenn es darauf ankommt: erreicht eine Anfrage den
+    | Origin ausnahmsweise ueber HTTP (Cutover, Fehlkonfiguration,
+    | Gesundheitspruefung am Proxy vorbei), geht das Sitzungs-Cookie
+    | OHNE Secure-Flag raus - und ein Angreifer im selben Netz kann es
+    | mitlesen.
+    |
+    | Deshalb: in PRODUKTION immer true, sonst der bisherige Automatismus.
+    | Die Server-.env kann das weiterhin ueberschreiben (Audit 15.09.2026).
+    */
+    'secure' => env('SESSION_SECURE_COOKIE', env('APP_ENV') === 'production' ?: null),
 
     /*
     |--------------------------------------------------------------------------

@@ -192,7 +192,7 @@
 @endif
 
 
-<div class="page-title">{{ __('Übersicht') }}</div>
+<h1 class="page-title">{{ __('Übersicht') }}</h1>
 <div class="page-sub">{{ __('Willkommen zurück') }}, {{ auth()->user()->name }}.</div>
 
 {{-- Kontakt-Hero: Chat, Anfrage und Dokument-Upload immer einen Klick
