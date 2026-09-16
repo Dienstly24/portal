@@ -146,6 +146,13 @@ class TicketStatsTest extends TestCase
         $response = $this->actingAs($admin)->get(route('admin.tickets.stats'))->assertOk();
         $response->assertSee('Willi Worker');
         $response->assertSee($customer->customer_number);
+        // Der NAME kommt seit dem 16.09.2026 aus einer eigenen Abfrage fuer
+        // die fuenf Meistanfragenden statt aus einer Beziehung an jedem
+        // einzelnen Ticket. Er muss trotzdem dastehen.
+        $response->assertSee($customer->user->name);
+        $response->assertViewHas('topCustomers', fn ($rows) => $rows->count() === 1
+            && $rows[0]['n'] === 2
+            && $rows[0]['number'] === $customer->customer_number);
         $response->assertViewHas('byEmployee', fn ($rows) => $rows->count() === 1
             && $rows[0]['total'] === 2 && $rows[0]['erledigt'] === 1 && $rows[0]['rating'] === 4.0);
     }
