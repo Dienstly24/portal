@@ -3023,6 +3023,65 @@ Alltag davon wissen muss:
   erkennbare Pruefung. Ausnahmen (Datensaetze ohne Eigentuemer, z.B.
   Medien-Slots) stehen namentlich im Test.
 
+## Nachlauf zum Audit (16.09.2026): Testumgebung, Sicherung, Messung
+
+Vollstaendig in `docs/AUDIT_2026-09-15_BEHEBUNG.md` und
+`docs/TESTUMGEBUNG.md`. Was im Alltag zaehlt:
+
+- **Ein SICHERHEITSTEST darf sich nie selbst ueberspringen.** Zwei taten
+  es und liefen dadurch monatelang als "bestanden": `ClientIpIntegrityTest`
+  suchte die Client-IP im Feld `meta`, gespeichert wird sie in der SPALTE
+  `ip` - er fand nie etwas und uebersprang sich, womit der Schutz gegen
+  gefaelschte Client-IPs (SEC-2) ungeprueft war. Und
+  `ContentSecurityPolicyTest` haengte an `Statuscode === 200`, waehrend die
+  Systemzustand-Ansicht regelgerecht 503 liefert, sobald die Ampel rot ist.
+  `TestumgebungTest` verbietet `markTestSkipped` jetzt in
+  `tests/Feature/Security/`. Anderswo bleibt es erlaubt - ein Entwickler
+  ohne tesseract soll arbeiten koennen.
+- **0 uebersprungen gehoert zur Zielvorgabe.** Ein uebersprungener Test
+  sieht aus wie ein bestandener und wird nie repariert. Die fuenf
+  OCR-Faelle brauchen `tesseract-ocr` und `poppler-utils`; beide sind
+  jetzt Teil der dokumentierten Testumgebung UND der CI - auf dem
+  Produktionsserver ist OCR aktiv, also gehoert die Erkennung in den Lauf.
+- **`bash scripts/testumgebung-pruefen.sh`** sagt vor dem ersten Test, was
+  auf dieser Maschine fehlt, und nennt den Befehl dazu. Es vergleicht
+  `vendor/` PAKETWEISE mit `composer.lock` - "es gibt einen vendor-Ordner"
+  ist keine Aussage.
+- **Netzbeschraenkte Umgebungen**: `composer install` holt seine Pakete von
+  `api.github.com`. Ist der Host gesperrt, scheitert es mit "Could not
+  authenticate against github.com" - an der Umgebung, nicht am Projekt
+  (Kennzeichen: `[403]` und eine `zipball`-Adresse). Ausweg
+  `composer install --prefer-source`. Die CI ist davon nicht betroffen und
+  ist der Massstab.
+- **Die Sicherung ist jetzt BEWIESEN, nicht nur eingerichtet.** Durchgespielt
+  am 16.09.2026 gegen eine Wegwerf-Datenbank mit echtem Schema:
+  Backup -> AES-256-Archiv (ohne Schluessel nicht lesbar) -> Kopie an den
+  zweiten Ort -> Rueckspielen in eine ANDERE Datenbank -> 108 Tabellen und
+  die erwarteten Datensaetze wieder da. Gegenproben: falsches Passwort
+  bricht ab (Exitcode 1), die Produktionsdatenbank aus der `.env` wird als
+  Ziel abgelehnt (Exitcode 1), ein fehlgeschlagenes Backup schreibt
+  `status: fehler` in die Statusdatei - und faerbt damit
+  `/admin/systemzustand` rot.
+- **Leistung wird gemessen, nicht behauptet** (`LeistungsmessungTest`): der
+  Test prueft die EIGENSCHAFT (waechst nicht ueberproportional), nicht die
+  Millisekundenzahl - die haengt an der Maschine und waere auf einem
+  langsamen Runner grundlos rot. Die Zahlen zum Vergleich, auf derselben
+  Maschine und denselben Daten erhoben (Median aus 5 Laeufen, 2000
+  Vertraege): Auswertungs-Dashboard 322,3 ms -> 14,9 ms; Chat-Abfrage bei
+  500 Nachrichten 200,1 kB (Verhalten vor der Behebung) -> 0,00 kB mit
+  Stand, erste Seite 20,0 kB.
+- **Die Ticket-Auswertung** lud ueber `with('customer.user')` fuer JEDES
+  Ticket der Kohorte den Kunden samt Benutzer - gebraucht wird die Akte nur
+  fuer die fuenf Kunden mit den meisten Anfragen. Erst zaehlen, dann EINE
+  Abfrage fuer diese fuenf; die Erledigt-Kurve laeuft ueber `cursor()`.
+- **Bewusst NICHT angefasst**: Sichtbarkeit von Kunden fuer Mitarbeiter und
+  Support. Das ist eine eigene Aufgabe mit eigener Spezifikation und
+  eigenen Sicherheitstests ("Employee & Support Customer Access
+  Architecture"). `users.can_see_all_customers` steht in der Migration
+  weiterhin auf `true` - jedes NEUE Personalkonto sieht damit den gesamten
+  Bestand, bis jemand den Haken entfernt. Das ist eine Voreinstellung, kein
+  Codefehler, und die Umstellung gehoert in jene Aufgabe.
+
 ## Offene Themen / wartet auf den Betreiber
 
 - **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026
