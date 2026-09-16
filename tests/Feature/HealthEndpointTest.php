@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Services\SystemHealthService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
 /**
@@ -39,6 +40,32 @@ class HealthEndpointTest extends TestCase
         $this->getJson('/gesundheit')->assertNotFound();
         $this->getJson('/gesundheit?token=falsch')->assertNotFound();
         $this->withHeader('X-Health-Token', 'falsch')->getJson('/gesundheit')->assertNotFound();
+    }
+
+    /**
+     * Die Drossel muss auch bei FALSCHEM Token greifen (Sicherheits-
+     * Nachpruefung 15.09.2026). Sonst waere das Erraten des Tokens
+     * unbegrenzt moeglich, obwohl an der Route eine Drossel steht.
+     *
+     * Beim Nachpruefen gemessen: Laravel fuehrt `throttle` ueber die
+     * Middleware-Prioritaet ohnehin vor der Token-Pruefung aus, in
+     * welcher Reihenfolge sie auch an der Route stehen. Dieser Test
+     * sichert deshalb das VERHALTEN ab - er wuerde auch anschlagen,
+     * wenn jemand die Drossel entfernt oder gegen eine eigene Pruefung
+     * ohne Zaehler tauscht.
+     */
+    public function test_falsche_versuche_werden_gedrosselt(): void
+    {
+        config(['security.health_token' => self::TOKEN]);
+        RateLimiter::clear(sha1('127.0.0.1'));
+
+        $letzte = null;
+        for ($i = 0; $i < 61; $i++) {
+            $letzte = $this->getJson('/gesundheit?token=falsch');
+        }
+
+        $this->assertSame(429, $letzte->getStatusCode(),
+            'Nach 60 Fehlversuchen muss die Drossel greifen - sonst steht sie hinter der Token-Pruefung.');
     }
 
     /**

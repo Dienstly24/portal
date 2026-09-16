@@ -112,7 +112,14 @@ Route::prefix('webhooks')->name('webhooks.')->middleware('throttle:300,1')->grou
 | zusaetzlich das Erraten des Tokens.
 */
 Route::get('/gesundheit', [SystemHealthController::class, 'pulse'])
-    ->middleware([HealthToken::class, 'throttle:60,1'])
+    // Die Drossel steht hier zuerst, weil sie zuerst LAUFEN soll: ein
+    // falsches Token darf die Abfrage nicht beenden, bevor der Zaehler
+    // hochgeht. (Geprueft: Laravel zieht `throttle` ueber die
+    // Middleware-Prioritaet ohnehin nach vorn, die Schreibweise sagt es
+    // nur ausdruecklich. Der Test
+    // HealthEndpointTest::test_falsche_versuche_werden_gedrosselt haelt
+    // das Verhalten fest, nicht die Schreibweise.)
+    ->middleware(['throttle:60,1', HealthToken::class])
     ->name('health.pulse');
 
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
