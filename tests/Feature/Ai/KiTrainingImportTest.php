@@ -387,6 +387,41 @@ class KiTrainingImportTest extends TestCase
         $this->assertStringNotContainsString('370400440532013000', $beispiel->question.$beispiel->answer);
     }
 
+    /**
+     * Der Name aus der KUNDENAKTE zaehlt auch dann, wenn er NICHT der
+     * Absendername im Export ist. Der Export nennt oft nur "Kundin"
+     * oder eine Rufnummer - der Betrieb spricht den Menschen im Text
+     * trotzdem mit Namen an. Faellt diese Quelle aus, faellt es an
+     * test_17 nicht auf: dort ist der Name zufaellig auch der
+     * Absendername und wird schon darueber geschwaerzt.
+     */
+    public function test_17b_der_name_aus_der_kundenakte_zaehlt_auch_ohne_absendernamen(): void
+    {
+        $admin = $this->admin();
+        $kunde = $this->kunde('Petra Schneider', ['company_name' => 'Schneider Bau GmbH']);
+        $import = $this->hochladen($admin, implode("\n", [
+            '17.09.26, 09:00 - Kundin: Koennen Sie mir bitte den Stand meiner Police mitteilen?',
+            '17.09.26, 09:05 - Dienstly24: Petra, die Police der Schneider Bau GmbH laeuft weiter.',
+        ]));
+
+        Channel::where('key', 'whatsapp')->update(['is_active' => true]);
+        $this->actingAs($admin)->put(route('admin.ki_training.update', $import->id), [
+            'customer_id' => $kunde->id,
+            'business_sender' => 'Dienstly24',
+        ]);
+        $this->actingAs($admin)->post(route('admin.ki_training.confirm', $import->id));
+
+        $beispiel = AiTrainingExample::firstOrFail();
+        $text = $beispiel->question.' '.$beispiel->answer;
+
+        $this->assertStringContainsString('[NAME]', $text,
+            'Die Schwaerzung muss ueberhaupt gegriffen haben.');
+        $this->assertStringNotContainsString('Petra', $text,
+            'Der Personenname haengt am Benutzer, nicht am Kunden - genau diese Quelle war toter Code.');
+        $this->assertStringNotContainsString('Schneider', $text,
+            'Auch der Firmenname der Kundenakte gehoert geschwaerzt.');
+    }
+
     /** Freigeben macht aus einem Beispiel eine Auskunft. */
     public function test_18_die_freigabe_erzeugt_einen_wissenseintrag(): void
     {

@@ -189,7 +189,7 @@ class TrainingImportService
             // Eine nachgelieferte Nachricht holt eine Unterhaltung NIE
             // nach oben: sie ist alt. Der Zeitpunkt wird nur gesetzt,
             // wenn es noch keinen gibt.
-            if (! $unterhaltung->last_message_at && $import->stats['last_at'] ?? null) {
+            if (! $unterhaltung->last_message_at && ($import->stats['last_at'] ?? null)) {
                 $unterhaltung->forceFill(['last_message_at' => $import->stats['last_at']])->save();
             }
 
@@ -283,12 +283,12 @@ class TrainingImportService
 
         $kunde = $import->customer;
         if ($kunde) {
-            foreach ([$kunde->first_name, $kunde->last_name, $kunde->company_name] as $teil) {
-                if ($teil) {
-                    $namen[] = (string) $teil;
-                }
+            // Die Kundenakte fuehrt KEINEN Personennamen - sie hat nur
+            // den Firmennamen; der Personenname haengt am Benutzer
+            // (dieselbe Lehre wie bei Customer::$email).
+            if ($kunde->company_name) {
+                $namen[] = (string) $kunde->company_name;
             }
-            // Der Anzeigename haengt am Benutzer, nicht am Kunden.
             if ($kunde->user?->name) {
                 foreach (preg_split('/\s+/', $kunde->user->name) ?: [] as $wort) {
                     $namen[] = $wort;
