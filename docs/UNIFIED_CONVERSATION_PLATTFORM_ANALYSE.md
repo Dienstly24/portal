@@ -664,3 +664,89 @@ idempotent und darf jederzeit wiederholt werden.
 Die Reihenfolge des Berichts gilt unveraendert weiter: Phase 3/4
 (Verlauf hochladen, Kompetenzmessung, Freigabe), danach die uebrigen,
 und External Support zuletzt.
+
+---
+
+# PHASE 3 UMGESETZT (18.09.2026): Verlauf hochladen, schwaerzen, freigeben
+
+Der Betreiber-Wunsch war: "ich lade vom System aus lebende Gespraeche
+hoch, die KI lernt daraus, ich pruefe die Kompetenz und gebe erst dann
+frei". Phase 3 baut die ersten drei Viertel davon; die Kompetenzmessung
+ist Phase 4.
+
+## Der Weg, den der Betreiber bedient
+
+`/admin/ki-training`, fuenf Schritte, arabische Anleitung in
+`docs/ANLEITUNG_KI_TRAINING_AR.md`:
+
+1. Datei hochladen (der Knopf "Chat exportieren" im Telefon).
+2. Vorschau lesen - was wurde erkannt, wer hat geschrieben, was fehlt.
+3. Kundenakte und Betriebs-Absender festlegen.
+4. Uebernehmen - stummer Verlauf + geschwaerzte Paare.
+5. Jedes Paar einzeln freigeben oder ablehnen.
+
+## Was die Datei wirklich enthaelt
+
+Der Export sieht aus wie "Datum - Absender: Text", und genau daran
+scheitert jeder naive Ausdruck. Fuenf Befunde, jeder als Test:
+
+| Befund | Folge ohne Behandlung |
+|---|---|
+| Zwei Zeilenformate (iOS `[...]`, Android `... - `) | die Haelfte der Dateien liefert null Nachrichten |
+| **Unsichtbare Zeichen** (U+200E je Zeile, U+202F vor AM/PM) | die Datei "funktioniert einfach nicht", und man sieht nicht warum |
+| Mehrzeilige Nachrichten ohne Kopf | jeder laengere Text zerfaellt in Bruchstuecke ohne Absender |
+| Systemzeilen | "Nachrichten sind verschluesselt" stuende als Kundennachricht im Verlauf |
+| `<Medien ausgeschlossen>` | jemand sucht spaeter ein Bild, das es im Export nie gab |
+
+Das zweite ist die eigentliche Falle: die Zeichen sind im Editor nicht
+zu sehen. Es ist dieselbe Klasse Fehler wie die OCR-Lehren - der Text
+kommt an, er verliert sich erst in der Verarbeitung.
+
+## Zwei Angaben werden nie geraten
+
+Beide sind Uebernahme-Sperren mit Begruendung im Klartext:
+
+- **Die Kundenakte.** Der Export nennt nur einen Anzeigenamen, und ein
+  Name zaehlt in diesem System nie als Zuordnung.
+- **Welcher Absender der Betrieb ist.** Steht nicht in der Datei. Ohne
+  diese Angabe ist nicht bestimmbar, was Frage und was Antwort ist - ein
+  vertauschtes Paar fuellte die Wissensbasis mit der Frage als Antwort.
+
+Ein Absendername, der gar nicht in der Datei vorkommt, wird abgelehnt.
+
+## Warum das Schwaerzen deterministisch ist
+
+Ein Modell zum Schwaerzen zu benutzen hiesse, genau die Daten an genau
+den Dienst zu schicken, vor dem geschuetzt werden soll - und man wuesste
+nie, ob es etwas uebersehen hat.
+
+Die **Reihenfolge** der Muster ist Programmlogik: wer die Telefonnummer
+vor der IBAN schwaerzt, zerlegt die IBAN in Ziffernbloecke, und der Rest
+entgeht jeder weiteren Pruefung.
+
+Der **Name** ist der Sonderfall: geschwaerzt werden ausschliesslich die
+Namen, die wirklich bekannt sind. Namen allgemein zu erkennen ist Raten
+("Mai" ist ein Monat und ein Nachname) und machte gewoehnlichen Text
+unlesbar. Was nicht zugeordnet werden konnte, wird im Klartext gemeldet.
+
+Gespeichert wird **nur** die geschwaerzte Fassung. Ein Datensatz mit
+beidem waere ein zweiter Kundendatenbestand mit eigener Loeschpflicht.
+
+## Der Pruefsatz - und warum er jetzt schon entsteht
+
+Jedes vierte Paar wird zurueckgehalten (`is_holdout`, deterministisch).
+Es kommt bewusst nie in die Wissensbasis. Ohne diese Trennung wuerde die
+Kompetenzmessung der Phase 4 die KI an genau den Antworten pruefen, die
+man ihr vorher gegeben hat - das Ergebnis waere immer gut und immer
+wertlos.
+
+Die Spalte entsteht jetzt, weil sie sich nachtraeglich nicht sauber auf
+einen gewachsenen Bestand anwenden liesse.
+
+## Offen
+
+- **Phase 4**: Kompetenzmessung (Nachspielen der zurueckgehaltenen
+  Gespraeche, vier Kennzahlen, K.-o.-Kriterium "erfundene Angabe") und
+  der Freigabe-Schalter je Kanal.
+- **Rechtlich**: Datenschutzerklaerung und Verarbeitungsverzeichnis VOR
+  dem ersten echten Verlauf - siehe "Offene Themen" in der CLAUDE.md.
