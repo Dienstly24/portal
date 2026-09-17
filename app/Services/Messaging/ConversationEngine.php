@@ -2,6 +2,7 @@
 
 namespace App\Services\Messaging;
 
+use App\Events\Messaging\ConversationChannelJoined;
 use App\Events\Messaging\ConversationCreated;
 use App\Events\Messaging\InboundMessageReceived;
 use App\Events\Messaging\MessageStatusChanged;
@@ -9,6 +10,7 @@ use App\Jobs\Messaging\FetchInboundMediaJob;
 use App\Models\Channel;
 use App\Models\ChannelAccount;
 use App\Models\Conversation;
+use App\Models\ConversationChannel;
 use App\Models\Customer;
 use App\Models\CustomerMessage;
 use App\Models\CustomerMessageAttachment;
@@ -30,6 +32,7 @@ class ConversationEngine
     public function __construct(
         private readonly CustomerResolver $customers,
         private readonly AssignmentService $assignments,
+        private readonly ChannelRoutingService $routing,
     ) {}
 
     /**
@@ -83,6 +86,12 @@ class ConversationEngine
             $message = CustomerMessage::create([
                 'conversation_id' => $conversation->id,
                 'customer_id' => $customer?->id,
+                // JEDE Nachricht traegt ihren Kanal (Auftrag Abschnitt 7).
+                // Ohne diese Angabe waere nach einer Zusammenfuehrung
+                // nicht mehr feststellbar, woher sie kam - und der
+                // Rueckweg (Kanal wieder loesen) haette keine Grundlage.
+                'channel_id' => $channel->id,
+                'channel_account_id' => $account?->id,
                 'direction' => $vonUns
                     ? CustomerMessage::DIRECTION_OUTGOING
                     : CustomerMessage::DIRECTION_INCOMING,
@@ -146,8 +155,24 @@ class ConversationEngine
                         : $message->created_at)
                 : $message->created_at;
 
+            // Den Kanal dieser Unterhaltung nachziehen: WANN wurde er
+            // zuletzt benutzt? Eine nachgelieferte Nachricht schiebt den
+            // Stand nie vor (siehe `touch`).
+            $link = $this->routing->attach(
+                $conversation, $channel, $account,
+                $inbound->externalUserId, $inbound->externalConversationId
+            );
+            $this->routing->touch($link, $message->created_at);
+
             $conversation->forceFill([
                 'last_message_at' => $letzte,
+                // Der zuletzt benutzte Kanal - die Grundlage dafuer, dass
+                // eine Antwort dort landet, wo der Kunde gerade ist. Eine
+                // nachgelieferte Nachricht aendert ihn nicht: sie sagt
+                // nichts darueber, wo der Kunde HEUTE erreichbar ist.
+                'last_channel_id' => $historisch
+                    ? ($conversation->last_channel_id ?: $channel->id)
+                    : $channel->id,
                 // Eine Kundenantwort holt eine geschlossene Unterhaltung
                 // zurueck: der Kunde schreibt weiter, also ist der Vorgang
                 // nicht erledigt. Ein ARCHIV bleibt dagegen Archiv - es ist
@@ -204,10 +229,17 @@ class ConversationEngine
     /**
      * Die Unterhaltung finden oder anlegen.
      *
-     * Die Regel ist KANALBEWUSST, ohne den Kanal zu kennen: nennt die
-     * Plattform eine eigene Unterhaltungs-Kennung, gilt sie; sonst ist
-     * die Unterhaltung durch Konto und Gegenstelle bestimmt. Beides ohne
-     * eine einzige Bedingung auf einen Kanalnamen.
+     * Gesucht wird ueber die KANAL-ZUGEHOERIGKEIT (`conversation_channels`),
+     * nicht mehr ueber `conversations.channel_id`. Der Unterschied ist
+     * der ganze Punkt von Phase 2: seit eine Unterhaltung mehrere
+     * Kanaele tragen kann, sagt die Spalte nur noch, wo sie BEGONNEN
+     * hat. Wer weiter danach sucht, findet einen spaeter
+     * dazugekommenen Kanal nie und legt bei jeder Nachricht eine neue
+     * Unterhaltung an.
+     *
+     * Die Regel bleibt KANALBEWUSST, ohne den Kanal zu kennen: nennt
+     * die Plattform eine eigene Unterhaltungs-Kennung, gilt sie; sonst
+     * ist die Unterhaltung durch Konto und Gegenstelle bestimmt.
      */
     public function locate(
         InboundMessage $inbound,
@@ -215,17 +247,7 @@ class ConversationEngine
         ?ChannelAccount $account,
         ?Customer $customer,
     ): Conversation {
-        $query = Conversation::where('channel_id', $channel->id)
-            ->when($account, fn ($q) => $q->where('channel_account_id', $account->id));
-
-        $conversation = $inbound->externalConversationId
-            ? (clone $query)->where('external_conversation_id', $inbound->externalConversationId)->first()
-            : (clone $query)->where('external_user_id', $inbound->externalUserId)
-                // Eine ARCHIVIERTE Unterhaltung wird nicht fortgesetzt -
-                // sie wurde bewusst abgelegt. Eine neue Nachricht beginnt
-                // dann einen neuen Vorgang, statt das Archiv zu stoeren.
-                ->whereNull('archived_at')
-                ->latest('last_message_at')->first();
+        $conversation = $this->findByChannel($inbound, $channel, $account);
 
         if ($conversation) {
             // Die Akte kann sich NACHTRAEGLICH klaeren (der Mitarbeiter
@@ -239,18 +261,73 @@ class ConversationEngine
             return $conversation;
         }
 
+        // KANALUEBERGREIFEND ANSCHLIESSEN (Auftrag Abschnitt 2): derselbe
+        // Kunde schreibt jetzt ueber einen anderen Weg. Ob das erlaubt
+        // ist, entscheidet ausschliesslich der Routing-Dienst - dort
+        // stehen die vier Bedingungen an EINER Stelle.
+        $anschluss = $this->routing->findJoinCandidate($customer?->id, $channel);
+
+        if ($anschluss) {
+            $this->routing->attach(
+                $anschluss, $channel, $account,
+                $inbound->externalUserId, $inbound->externalConversationId,
+                ConversationChannel::JOIN_AUTO
+            );
+
+            event(new ConversationChannelJoined($anschluss, $channel));
+
+            return $anschluss;
+        }
+
         $conversation = Conversation::create([
             'customer_id' => $customer?->id,
             'channel_id' => $channel->id,
+            'last_channel_id' => $channel->id,
             'channel_account_id' => $account?->id,
             'external_conversation_id' => $inbound->externalConversationId,
             'external_user_id' => $inbound->externalUserId,
             'status' => Conversation::STATUS_OPEN,
         ]);
 
+        $this->routing->attach(
+            $conversation, $channel, $account,
+            $inbound->externalUserId, $inbound->externalConversationId
+        );
+
         event(new ConversationCreated($conversation));
 
         return $conversation;
+    }
+
+    /**
+     * Die Unterhaltung, die diesen Kanal UND diese Gegenstelle bereits
+     * traegt.
+     */
+    private function findByChannel(
+        InboundMessage $inbound,
+        Channel $channel,
+        ?ChannelAccount $account,
+    ): ?Conversation {
+        $basis = fn () => ConversationChannel::query()
+            ->where('channel_id', $channel->id)
+            ->when($account, fn ($q) => $q->where('channel_account_id', $account->id));
+
+        $link = $inbound->externalConversationId
+            ? $basis()->where('external_conversation_id', $inbound->externalConversationId)->first()
+            : null;
+
+        if (! $link && $inbound->externalUserId) {
+            $link = $basis()
+                ->where('external_user_id', $inbound->externalUserId)
+                // Eine ARCHIVIERTE Unterhaltung wird nicht fortgesetzt -
+                // sie wurde bewusst abgelegt. Eine neue Nachricht beginnt
+                // dann einen neuen Vorgang, statt das Archiv zu stoeren.
+                ->whereHas('conversation', fn ($q) => $q->whereNull('archived_at'))
+                ->orderByDesc('last_message_at')
+                ->first();
+        }
+
+        return $link?->conversation;
     }
 
     /**
@@ -261,9 +338,12 @@ class ConversationEngine
      */
     public function forCustomer(Customer $customer, Channel $channel, ?ChannelAccount $account = null): Conversation
     {
-        $conversation = Conversation::where('customer_id', $customer->id)
-            ->where('channel_id', $channel->id)
+        // Auch hier ueber die Zugehoerigkeit: ein Kanal, der spaeter
+        // dazukam, gehoert genauso zu dieser Unterhaltung wie der erste.
+        $conversation = Conversation::query()
+            ->where('customer_id', $customer->id)
             ->whereNull('archived_at')
+            ->whereHas('channels', fn ($q) => $q->where('channel_id', $channel->id))
             ->latest('last_message_at')
             ->first();
 
@@ -274,9 +354,12 @@ class ConversationEngine
         $conversation = Conversation::create([
             'customer_id' => $customer->id,
             'channel_id' => $channel->id,
+            'last_channel_id' => $channel->id,
             'channel_account_id' => $account?->id,
             'status' => Conversation::STATUS_OPEN,
         ]);
+
+        $this->routing->attach($conversation, $channel, $account);
 
         event(new ConversationCreated($conversation));
 

@@ -17,6 +17,7 @@ use App\Services\CustomerCreation\CustomerAutoCreationService;
 use App\Services\CustomerCreation\DuplicateCustomerException;
 use App\Services\Messaging\AssignmentService;
 use App\Services\Messaging\AttachmentFilingService;
+use App\Services\Messaging\ChannelRoutingService;
 use App\Services\Messaging\Inbox\ConversationInbox;
 use App\Services\Messaging\Inbox\InboxFilters;
 use App\Support\UploadRules;
@@ -44,6 +45,7 @@ class PostfachController extends Controller
     public function __construct(
         private readonly ConversationInbox $inbox,
         private readonly AssignmentService $assignments,
+        private readonly ChannelRoutingService $routing,
     ) {}
 
     public function index(Request $request)
@@ -60,6 +62,9 @@ class PostfachController extends Controller
         // mehr zeigen, als die Liste hergeben wuerde.
         $active = null;
         $messages = collect();
+        $kanaeleDerUnterhaltung = collect();
+        $antwortKanaele = collect();
+        $antwortKanal = null;
         $aktenUnterlagen = collect();
         $notizen = collect();
         $identitaet = null;
@@ -68,7 +73,7 @@ class PostfachController extends Controller
                 ->whereKey($request->query('unterhaltung'))
                 ->firstOrFail();
 
-            $messages = $active->messages()->with(['sender', 'attachments'])
+            $messages = $active->messages()->with(['sender', 'attachments', 'channel'])
                 ->orderBy('created_at')->get();
 
             // Interne Notizen zu DIESEM Vorgang. Aelteste zuerst, wie
@@ -79,6 +84,13 @@ class PostfachController extends Controller
             // Steht die Kundenzuordnung auf einem Indiz? Dann sagt es
             // die Seite - und bietet die Bestaetigung gleich mit an.
             $identitaet = $this->identityFor($active);
+
+            // Die Kanaele dieser Unterhaltung: fuer die Kopfzeile, den
+            // Antwort-Umschalter und den Trennen-Knopf.
+            $kanaeleDerUnterhaltung = $active->channels()->with(['channel', 'joinedBy'])
+                ->get()->sortBy(fn ($l) => $l->first_message_at ?: $l->joined_at)->values();
+            $antwortKanal = $this->routing->defaultChannelId($active);
+            $antwortKanaele = $this->routing->availableChannels($active);
 
             // Sichtbar heisst gelesen - dieselbe Regel wie im Kundenchat.
             CustomerMessage::where('conversation_id', $active->id)
@@ -106,15 +118,22 @@ class PostfachController extends Controller
             'messages' => $messages,
             'notizen' => $notizen,
             'identitaet' => $identitaet,
+            'kanaeleDerUnterhaltung' => $kanaeleDerUnterhaltung,
+            'antwortKanaele' => $antwortKanaele,
+            'antwortKanal' => $antwortKanal,
             'mitarbeiter' => User::whereIn('role', ['admin', 'manager', 'support', 'employee'])
                 ->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
     /**
-     * Antworten. Der Kanal wird NICHT gewaehlt - er steht an der
-     * Unterhaltung. Der Versand selbst haengt am Modell-Hook; hier wird
-     * nur die Nachricht geschrieben.
+     * Antworten (Auftrag Abschnitt 14).
+     *
+     * Der Kanal wird nur dann gewaehlt, wenn die Unterhaltung MEHRERE
+     * traegt - sonst steht er fest. Und die Auswahl aus dem Browser ist
+     * nie die Erlaubnis: welcher Kanal zulaessig ist, entscheidet hier
+     * der Server anhand der Zugehoerigkeit. Dass die Oberflaeche einen
+     * Kanal anbietet, heisst gar nichts.
      */
     public function reply(Request $request, string $id)
     {
@@ -123,6 +142,7 @@ class PostfachController extends Controller
 
         $data = $request->validate([
             'body' => 'required|string|max:5000',
+            'channel_id' => 'nullable|integer',
             'attachments' => 'nullable|array|max:5',
             'attachments.*' => UploadRules::each(UploadRules::ATTACHMENT_MIMES),
             // Unterlagen AUS DER AKTE mitschicken - der haeufigste Fall
@@ -144,11 +164,34 @@ class PostfachController extends Controller
                 ->whereIn('id', $data['dokumente'])->get();
         }
 
+        /*
+         * WELCHER KANAL?
+         *
+         * Die Wahl des Browsers gilt nur, wenn sie in der Liste der
+         * zulaessigen Kanaele steht (`availableChannels`). Eine fremde
+         * Kennung faellt damit nicht nur durch - sie hat ueberhaupt
+         * keine Wirkung, weil der Wert aus der geprueften Liste kommt
+         * und nicht aus der Anfrage.
+         */
+        $erlaubte = $this->routing->availableChannels($unterhaltung);
+        $gewaehlt = $data['channel_id'] ?? null;
+
+        $link = $gewaehlt
+            ? $erlaubte->firstWhere('channel_id', (int) $gewaehlt)
+            : null;
+
+        if ($gewaehlt && ! $link) {
+            return back()->with('error', 'Über diesen Kanal kann in dieser Unterhaltung nicht geantwortet werden.');
+        }
+
+        $link ??= $erlaubte->firstWhere('channel_id', $this->routing->defaultChannelId($unterhaltung));
+        $kanal = $link?->channel ?: $unterhaltung->channel;
+
         // FAEHIGKEITEN statt Kanalnamen (Auftrag 8): kann der Kanal keine
         // Dateien, wird der Anhang abgelehnt - und zwar mit einer
         // Begruendung, statt ihn still zu verschlucken.
         if (($request->hasFile('attachments') || $ausAkte->isNotEmpty())
-            && ! $unterhaltung->channel?->supports('supportsMedia')) {
+            && ! $kanal?->supports('supportsMedia')) {
             return back()->with('error', 'Dieser Kanal kann keine Dateien senden.');
         }
 
@@ -162,6 +205,10 @@ class PostfachController extends Controller
                 'body' => $data['body'],
                 'from_staff' => true,
                 'email_mode' => 'none',
+                // Die Nachricht traegt ihren Kanal - daran haengt der
+                // Versandweg und spaeter die Anzeige der Herkunft.
+                'channel_id' => $kanal?->id,
+                'channel_account_id' => $link?->channel_account_id ?: $unterhaltung->channel_account_id,
             ]),
             function (CustomerMessage $nachricht) use ($request, $ausAkte, $user) {
                 CustomerMessageController::storeAttachments($request, $nachricht);
@@ -184,7 +231,43 @@ class PostfachController extends Controller
             }
         );
 
-        return back()->with('success', 'Nachricht gesendet.');
+        // Den zuletzt benutzten Kanal nachziehen. Er beantwortet die
+        // Frage "wo lief das zuletzt?" - und die stellt sich bei einer
+        // Unterhaltung mit mehreren Kanaelen bei jedem Oeffnen.
+        if ($kanal && $unterhaltung->last_channel_id !== $kanal->id) {
+            $unterhaltung->forceFill(['last_channel_id' => $kanal->id])->save();
+        }
+        if ($link) {
+            $this->routing->touch($link, now());
+        }
+
+        return back()->with('success', 'Nachricht gesendet über '.($kanal?->name ?: 'den Kanal der Unterhaltung').'.');
+    }
+
+    /**
+     * Einen Kanal wieder HERAUSLOESEN (Phase 2).
+     *
+     * Der Rueckweg ist die Bedingung dafuer, dass Zusammenfuehren
+     * ueberhaupt vertretbar ist: ohne ihn waere eine falsche Verbindung
+     * endgueltig. Er ist verlustfrei, weil jede Nachricht ihren Kanal
+     * traegt - was zu diesem Kanal gehoert, ist bestimmbar und nicht zu
+     * erraten.
+     */
+    public function detachChannel(Request $request, string $id)
+    {
+        $user = auth()->user();
+        $unterhaltung = $this->inbox->scope($user)->whereKey($id)->firstOrFail();
+        $data = $request->validate(['channel_id' => 'required|integer']);
+
+        $neu = $this->routing->detach($unterhaltung, (int) $data['channel_id'], $user);
+
+        if (! $neu) {
+            return back()->with('error',
+                'Dieser Kanal lässt sich nicht trennen - die Unterhaltung hat auf ihm begonnen.');
+        }
+
+        return back()->with('success',
+            'Kanal getrennt. Seine Nachrichten stehen jetzt in einer eigenen Unterhaltung.');
     }
 
     /**

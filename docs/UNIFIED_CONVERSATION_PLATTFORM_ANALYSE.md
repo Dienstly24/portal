@@ -591,3 +591,76 @@ Phase 2 vor Phase 3 zu setzen hat einen sachlichen Grund, nicht nur den
 Wunsch: wenn die Unterhaltung spaeter mehrere Kanaele traegt, aendert
 sich die Form der Daten, auf denen die Kompetenzmessung rechnet. Erst
 das Datenmodell, dann das Messen darauf - andersherum misst man zweimal.
+
+---
+
+# PHASE 2 UMGESETZT (17.09.2026): mehrere Kanaele, EIN Vorgang
+
+Risiko 1 des Berichts ("Multi-Channel-Conversation ist ein
+Datenmodell-Bruch") ist damit abgearbeitet - und zwar so, dass der
+Bruch nicht stattfindet.
+
+## Der Trick: additiv statt umbauend
+
+Die naheliegende Umsetzung waere gewesen, `conversations.channel_id` zu
+entfernen und den Kanal ausschliesslich an die Nachricht zu haengen.
+Das haette JEDE Abfrage im Postfach, jeden Filter, jeden Zaehler und die
+Sortierung angefasst - und zwar gleichzeitig.
+
+Stattdessen:
+
+| Was | Vorher | Jetzt |
+|---|---|---|
+| `conversations.channel_id` | der Kanal | der **erste** Kanal |
+| `conversations.last_channel_id` | - | der zuletzt benutzte |
+| `conversation_channels` | - | **alle** Kanaele mit Gegenstelle je Kanal |
+| `customer_messages.channel_id` | - | der Kanal **dieser** Nachricht |
+
+Keine Spalte wurde entfernt oder umbenannt, keine Zeile geaendert. Die
+Lesepfade, die weiter `channel_id` benutzen, liefern weiterhin eine
+richtige Antwort - nur eine engere.
+
+## Die vier Bedingungen fuer eine Zusammenfuehrung
+
+Sie stehen an EINER Stelle (`ChannelRoutingService::findJoinCandidate`):
+
+1. Der Betreiber hat es eingeschaltet (**Voreinstellung AUS**).
+2. Der Kunde ist BEKANNT.
+3. Es gibt GENAU EINE offene Unterhaltung von ihm.
+4. Sie ist hoechstens 30 Tage alt.
+
+Zu (2): eine Nachricht von einer unbekannten Nummer gehoert per
+Definition zu niemandem. Zu (3): bei zwei Kandidaten waere jede Wahl
+eine Vermutung - dieselbe Regel wie im Kundenabgleich und im
+Provisions-Import. Zu (4): ein Vorgang von vor Monaten ist eine ANDERE
+Sache; ihn fortzuschreiben waere kein Zusammenhang, sondern eine
+Behauptung.
+
+## Warum der Rueckweg zuerst gebaut wurde
+
+Ohne "Kanal trennen" waere eine falsche Verbindung endgueltig - und
+damit waere das Zusammenfuehren gar nicht vertretbar gewesen. Er ist
+verlustfrei, **weil** jede Nachricht ihren Kanal traegt: was zu diesem
+Kanal gehoert, ist bestimmbar und nicht zu erraten. Genau dafuer gibt es
+die Spalte; sie ist nicht nur Anzeige.
+
+Nachrichten OHNE Kanal (Altbestand vor Phase 2) bleiben beim Trennen
+bewusst zurueck: wo sie hingehoeren, ist nicht belegt.
+
+## Was der Betreiber tun muss
+
+1. `php artisan migrate`
+2. `php artisan messaging:kanal-nachtragen --probelauf` - zeigt, wie
+   viele Unterhaltungen und Nachrichten nachzutragen sind.
+3. `php artisan messaging:kanal-nachtragen` - ohne Schalter.
+4. **Erst danach** und nur wenn gewuenscht: Einstellungen -> Postfach ->
+   "Kanäle automatisch zu einer Unterhaltung zusammenführen".
+
+Bis Schritt 4 aendert sich sichtbar NICHTS. Der Nachtrag ist
+idempotent und darf jederzeit wiederholt werden.
+
+## Offen bleibt
+
+Die Reihenfolge des Berichts gilt unveraendert weiter: Phase 3/4
+(Verlauf hochladen, Kompetenzmessung, Freigabe), danach die uebrigen,
+und External Support zuletzt.

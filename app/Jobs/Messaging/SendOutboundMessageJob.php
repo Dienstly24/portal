@@ -4,6 +4,7 @@ namespace App\Jobs\Messaging;
 
 use App\Models\CustomerMessage;
 use App\Models\CustomerMessageAttachment;
+use App\Services\Messaging\ChannelRoutingService;
 use App\Services\Messaging\Channels\ChannelManager;
 use App\Services\Messaging\Dto\OutboundMessage;
 use Illuminate\Bus\Queueable;
@@ -18,7 +19,8 @@ use Illuminate\Support\Facades\Storage;
  *
  * Der Weg ist derselbe fuer JEDEN Kanal: Nachricht -> Conversation
  * Engine -> Adapter. Wer hier steht, weiss nicht, ob es WhatsApp oder
- * Telegram wird - das entscheidet die Unterhaltung ueber ihren Kanal.
+ * Telegram wird - das entscheidet die NACHRICHT ueber ihren Kanal
+ * (seit Phase 2; die Unterhaltung kann mehrere tragen).
  *
  * `tries = 1` - dieselbe harte Regel wie beim Social-Versand: ein
  * zweiter Versuch koennte eine bereits zugestellte Nachricht ein
@@ -35,13 +37,14 @@ class SendOutboundMessageJob implements ShouldQueue
 
     public function __construct(public string $messageId) {}
 
-    public function handle(ChannelManager $manager): void
+    public function handle(ChannelManager $manager, ChannelRoutingService $routing): void
     {
-        $message = CustomerMessage::with('conversation.channel', 'conversation.channelAccount', 'attachments')
-            ->find($this->messageId);
+        $message = CustomerMessage::with([
+            'conversation.channel', 'conversation.channels.channel', 'channel', 'channelAccount', 'attachments',
+        ])->find($this->messageId);
 
         $conversation = $message?->conversation;
-        if (! $message || ! $conversation || ! $conversation->channel) {
+        if (! $message || ! $conversation) {
             return;
         }
 
@@ -51,21 +54,41 @@ class SendOutboundMessageJob implements ShouldQueue
             return;
         }
 
-        if (! $manager->has($conversation->channel->key)) {
+        /*
+         * DER KANAL DER NACHRICHT, nicht der der Unterhaltung (Phase 2).
+         *
+         * Seit eine Unterhaltung mehrere Kanaele tragen kann, ist
+         * `conversation->channel` nur noch der ERSTE. Wer danach sendet,
+         * schickt die Antwort auf einen WhatsApp-Verlauf ins Portal -
+         * und der Kunde, der auf sein Telefon schaut, bekommt nie etwas.
+         */
+        $kanal = $message->channel ?: $conversation->channel;
+        if (! $kanal) {
+            return;
+        }
+
+        if (! $manager->has($kanal->key)) {
             $message->advanceStatus(CustomerMessage::STATUS_FAILED, 'Kein Adapter fuer diesen Kanal.');
 
             return;
         }
 
-        $empfaenger = $conversation->external_user_id;
+        // Die Gegenstelle haengt am KANAL: dieselbe Person ist bei einem
+        // Telefon-Kanal eine Rufnummer und im Portal eine Kennung.
+        // Rueckfall auf die Unterhaltung fuer den Altbestand, der noch
+        // keine Kanal-Zugehoerigkeit hat.
+        $empfaenger = $routing->recipientFor($conversation, $kanal->id)
+            ?: $conversation->external_user_id;
+
         if (! $empfaenger) {
             $message->advanceStatus(CustomerMessage::STATUS_FAILED, 'Keine Gegenstelle hinterlegt.');
 
             return;
         }
 
-        $treiber = $manager->driver($conversation->channel->key);
-        $kannMedien = (bool) $conversation->channel->supports('supportsMedia');
+        $treiber = $manager->driver($kanal->key);
+        $kannMedien = (bool) $kanal->supports('supportsMedia');
+        $konto = $message->channelAccount ?: $conversation->channelAccount;
 
         // Die Dateien werden HIER gelesen, nicht im Adapter: wo eine
         // Datei liegt, ist Sache der Anwendung - der Adapter kennt nur
@@ -92,7 +115,7 @@ class SendOutboundMessageJob implements ShouldQueue
                     attachments: $datei ? [$datei] : [],
                     lastInboundAt: $conversation->lastInboundAt(),
                 ),
-                $conversation->channelAccount
+                $konto
             );
 
             if (! $ergebnis->ok) {

@@ -12,6 +12,7 @@ use App\Models\CustomerMessageAttachment;
 use App\Models\User;
 use App\Services\Ai\Assistant\CustomerAssistantService;
 use App\Services\Messaging\AssignmentService;
+use App\Services\Messaging\ChannelRoutingService;
 use App\Services\Messaging\Channels\ChannelManager;
 use App\Services\Messaging\Channels\WhatsAppAdapter;
 use App\Services\Messaging\ConversationEngine;
@@ -305,7 +306,7 @@ class WhatsAppAbnahmeTest extends TestCase
         Http::assertSentCount(1);
 
         (new SendOutboundMessageJob($antwort->id))
-            ->handle(app(ChannelManager::class));
+            ->handle(app(ChannelManager::class), app(ChannelRoutingService::class));
 
         Http::assertSentCount(1);
     }

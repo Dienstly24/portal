@@ -38,7 +38,7 @@ class ConversationInbox
     public function scope(User $user): Builder
     {
         $query = Conversation::query()
-            ->with(['channel', 'channelAccount', 'customer.user', 'assignee'])
+            ->with(['channel', 'lastChannel', 'channelAccount', 'customer.user', 'assignee', 'channels.channel'])
             ->withCount(['messages as unread_count' => fn ($q) => $q
                 ->where('direction', CustomerMessage::DIRECTION_INCOMING)
                 ->whereNull('read_at'),
@@ -94,11 +94,31 @@ class ConversationInbox
     {
         $query = $this->scope($user);
 
-        $query->when($filters->channel, fn ($q, $key) => $q
-            ->whereHas('channel', fn ($c) => $c->where('key', $key))
-        );
+        // Der Kanal-Filter geht ueber die ZUGEHOERIGKEIT, nicht ueber
+        // `conversations.channel_id` (Phase 2): die Spalte sagt nur noch,
+        // wo die Unterhaltung BEGONNEN hat. Wer danach filtert, verliert
+        // jede Unterhaltung, die ueber diesen Kanal fortgesetzt wurde -
+        // und ausgerechnet der Kanal-Reiter waere dann unvollstaendig.
+        // Der RUECKFALL ist kein Schmuck: zwischen dem Deployment und
+        // dem Nachtrag des Bestands (`messaging:kanal-nachtragen`) haben
+        // die vorhandenen Unterhaltungen noch keinen Eintrag. Ohne diese
+        // zweite Bedingung waere das Postfach in dieser Zeit LEER - und
+        // zwar ohne Fehlermeldung.
+        $query->when($filters->channel, fn ($q, $key) => $q->where(fn ($w) => $w
+            ->whereHas('channels.channel', fn ($c) => $c->where('key', $key))
+            ->orWhere(fn ($alt) => $alt
+                ->whereDoesntHave('channels')
+                ->whereHas('channel', fn ($c) => $c->where('key', $key))
+            )
+        ));
 
-        $query->when($filters->account, fn ($q, $id) => $q->where('channel_account_id', $id));
+        $query->when($filters->account, fn ($q, $id) => $q->where(fn ($w) => $w
+            ->whereHas('channels', fn ($c) => $c->where('channel_account_id', $id))
+            ->orWhere(fn ($alt) => $alt
+                ->whereDoesntHave('channels')
+                ->where('channel_account_id', $id)
+            )
+        ));
         $query->when($filters->status, fn ($q, $s) => $q->where('status', $s));
         $query->when($filters->customer, fn ($q, $id) => $q->where('customer_id', $id));
         $query->when($filters->assignee, fn ($q, $id) => $q->where('assigned_employee_id', $id));

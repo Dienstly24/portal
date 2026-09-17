@@ -8,6 +8,7 @@ use App\Models\SystemSetting;
 use App\Services\Ai\Assistant\AssistantSettings;
 use App\Services\Ai\Assistant\Contracts\AssistantProviderInterface;
 use App\Services\ChangeRequest\ChangeProofPolicy;
+use App\Services\Messaging\ChannelRoutingService;
 
 class SettingsController extends Controller
 {
@@ -47,6 +48,10 @@ class SettingsController extends Controller
             // AN - eine Schutzschicht, die man erst einschalten muss, ist
             // in der Praxis meistens aus.
             'two_factor_required' => SystemSetting::get('two_factor_required', EnsureTwoFactor::defaultSetting()),
+            // Postfach: kanaluebergreifende Unterhaltungen. Voreinstellung
+            // AUS - eine Aenderung, die bestehende Unterhaltungen anders
+            // fuehrt, schaltet sich nicht selbst scharf.
+            ChannelRoutingService::SETTING_AUTO_JOIN => SystemSetting::get(ChannelRoutingService::SETTING_AUTO_JOIN, '0'),
         ];
 
         // KI-Kundenassistent (Spezifikation Abschnitt 30): Betriebsschalter
@@ -94,6 +99,15 @@ class SettingsController extends Controller
         // Marker bleibt der bisherige Wert stehen.
         if ($request->has('security_form')) {
             SystemSetting::set('two_factor_required', $request->boolean('two_factor_required') ? '1' : '0');
+        }
+
+        // Postfach: eigener Marker aus demselben Grund - ein anderes
+        // Formular darf die Zusammenfuehrung weder ein- noch ausschalten.
+        if ($request->has('messaging_form')) {
+            SystemSetting::set(
+                ChannelRoutingService::SETTING_AUTO_JOIN,
+                $request->boolean(ChannelRoutingService::SETTING_AUTO_JOIN) ? '1' : '0'
+            );
         }
 
         // KI-Kundenassistent: Schalter kommen als Checkboxen, ein nicht

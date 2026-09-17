@@ -68,7 +68,16 @@ class CustomerMessage extends Model
         }
 
         try {
-            if ($this->conversation()->first()?->external_user_id) {
+            // Gibt es ueberhaupt eine Gegenstelle? Seit Phase 2 haengt
+            // sie am KANAL der Nachricht, nicht mehr an der Unterhaltung -
+            // die kann mehrere tragen. Der Rueckfall deckt den
+            // Altbestand ohne Kanal-Zugehoerigkeit ab.
+            $unterhaltung = $this->conversation()->first();
+            $ziel = $this->channel_id
+                ? $unterhaltung?->channelLink($this->channel_id)?->external_user_id
+                : null;
+
+            if ($ziel ?: $unterhaltung?->external_user_id) {
                 SendOutboundMessageJob::dispatch($this->id);
             }
         } catch (\Throwable) {
@@ -81,7 +90,8 @@ class CustomerMessage extends Model
         'customer_id', 'sender_id', 'body', 'from_staff', 'ai_generated', 'read_at', 'email_mode',
         // Omnichannel (Phase B) - alle optional, damit jeder bestehende
         // Schreibweg unveraendert weiterlaeuft.
-        'conversation_id', 'direction', 'sender_type', 'external_message_id',
+        'conversation_id', 'channel_id', 'channel_account_id',
+        'direction', 'sender_type', 'external_message_id',
         'message_type', 'source', 'status', 'metadata', 'sent_at', 'delivered_at',
         'failed_at', 'failure_reason',
     ];
@@ -180,9 +190,10 @@ class CustomerMessage extends Model
         // vergessene faellt als "die Nachricht ging nie raus" auf - beim
         // Kunden, nicht bei uns.
         //
-        // Die Bedingung `external_user_id` ist der Filter: Portal und
-        // interner Chat haben keine Gegenstelle ausserhalb und brauchen
-        // keinen Versand. Nur ein Kanal mit echter Gegenstelle loest aus.
+        // Die GEGENSTELLE ist der Filter: Portal und interner Chat
+        // haben keine ausserhalb und brauchen keinen Versand. Welche es
+        // ist, entscheidet seit Phase 2 der Kanal der NACHRICHT - siehe
+        // versandAnstossen(), wo die Bedingung fuer beide Wege steht.
         static::created(function ($m) {
             // ANHAENGE ENTSTEHEN NACH DER NACHRICHT - sie brauchen ihre
             // message_id. Wer hier sofort sendet, schickt den Text OHNE
@@ -194,29 +205,12 @@ class CustomerMessage extends Model
                 return;
             }
 
-            // HISTORIE GEHT NIE RAUS. Eine nachgelieferte eigene
-            // Nachricht wurde vor Wochen bereits gesendet - sie ein
-            // zweites Mal zuzustellen waere fuer den Kunden nicht
-            // erklaerbar. Die Bedingung steht VOR allen anderen, weil
-            // sie die folgenschwerste ist.
-            if ($m->source === self::SOURCE_HISTORICAL) {
-                return;
-            }
-
-            if (! $m->from_staff || ! $m->conversation_id || $m->external_message_id) {
-                return;
-            }
-
-            try {
-                $unterhaltung = $m->conversation()->first();
-                if ($unterhaltung?->external_user_id) {
-                    SendOutboundMessageJob::dispatch($m->id);
-                }
-            } catch (\Throwable) {
-                // Der Versand darf das Speichern der Nachricht nie
-                // scheitern lassen - sie steht dann im Verlauf und kann
-                // erneut angestossen werden.
-            }
+            // EINE Bedingung fuer beide Wege. Bis Phase 2 stand sie hier
+            // ein zweites Mal, leicht abweichend - und genau daran faellt
+            // eine Aenderung wie der kanalabhaengige Empfaenger durch:
+            // der eine Weg lernt sie, der andere nicht, und die Nachricht
+            // geht je nach Aufrufer raus oder nicht.
+            $m->versandAnstossen();
         });
 
         // Schreibt ein MENSCH an den Kunden, faengt die Ruhefrist der
@@ -239,6 +233,31 @@ class CustomerMessage extends Model
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
     /** @return BelongsTo<Conversation, $this> */
     public function conversation(): BelongsTo { return $this->belongsTo(Conversation::class, 'conversation_id'); }
+
+    /**
+     * Der Kanal DIESER Nachricht (Phase 2, Auftrag Abschnitt 7).
+     *
+     * @return BelongsTo<Channel, $this>
+     */
+    public function channel(): BelongsTo { return $this->belongsTo(Channel::class, 'channel_id'); }
+
+    /** @return BelongsTo<ChannelAccount, $this> */
+    public function channelAccount(): BelongsTo { return $this->belongsTo(ChannelAccount::class, 'channel_account_id'); }
+
+    /**
+     * Welcher Kanal gilt fuer diese Nachricht?
+     *
+     * MIT RUECKFALL auf die Unterhaltung: der Altbestand hat die Spalte
+     * nicht, und der Nachtrag ist ein eigener, spaeterer Schritt. Ohne
+     * diesen Rueckfall stuende nach dem Deployment an jeder alten
+     * Nachricht "Kanal unbekannt" - und die Antwort auf einen alten
+     * Vorgang haette kein Ziel mehr. Solange eine Unterhaltung nur einen
+     * Kanal hat, sind beide Angaben ohnehin dieselbe.
+     */
+    public function channelId(): ?int
+    {
+        return $this->channel_id ?: $this->conversation?->channel_id;
+    }
     /** @return BelongsTo<User, $this> */
     public function sender(): BelongsTo { return $this->belongsTo(User::class, 'sender_id'); }
 
