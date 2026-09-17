@@ -11,6 +11,7 @@ use App\Models\Customer;
 use App\Models\CustomerMessage;
 use App\Models\CustomerMessageAttachment;
 use App\Models\User;
+use App\Services\Messaging\ChannelRoutingService;
 use App\Services\Messaging\Channels\ChannelManager;
 use App\Services\Messaging\Channels\WhatsAppAdapter;
 use App\Services\Messaging\ConversationEngine;
@@ -158,7 +159,7 @@ class WhatsAppDeliveryTest extends TestCase
             'conversation_id' => $unterhaltung->id, 'body' => 'Spaete Antwort', 'from_staff' => true,
         ]);
 
-        (new SendOutboundMessageJob($antwort->id))->handle(app(ChannelManager::class));
+        (new SendOutboundMessageJob($antwort->id))->handle(app(ChannelManager::class), app(ChannelRoutingService::class));
 
         Http::assertNothingSent();
         $frisch = $antwort->fresh();
@@ -183,7 +184,7 @@ class WhatsAppDeliveryTest extends TestCase
             'conversation_id' => $unterhaltung->id, 'body' => 'Antwort', 'from_staff' => true,
         ]);
 
-        (new SendOutboundMessageJob($antwort->id))->handle(app(ChannelManager::class));
+        (new SendOutboundMessageJob($antwort->id))->handle(app(ChannelManager::class), app(ChannelRoutingService::class));
 
         $this->assertSame('wamid.OK', $antwort->fresh()->external_message_id);
     }
@@ -202,7 +203,7 @@ class WhatsAppDeliveryTest extends TestCase
             'conversation_id' => $unterhaltung->id, 'body' => 'Erstkontakt', 'from_staff' => true,
         ]);
 
-        (new SendOutboundMessageJob($antwort->id))->handle(app(ChannelManager::class));
+        (new SendOutboundMessageJob($antwort->id))->handle(app(ChannelManager::class), app(ChannelRoutingService::class));
 
         $this->assertSame('wamid.E', $antwort->fresh()->external_message_id);
     }
@@ -244,7 +245,7 @@ class WhatsAppDeliveryTest extends TestCase
             'type' => 'image', 'mime_type' => 'image/jpeg', 'external_media_id' => 'media-1',
         ]);
 
-        (new FetchInboundMediaJob($anhang->id))->handle(app(ChannelManager::class));
+        (new FetchInboundMediaJob($anhang->id))->handle(app(ChannelManager::class), app(ChannelRoutingService::class));
 
         $frisch = $anhang->fresh();
         $this->assertNotSame('', $frisch->file_path);
@@ -267,7 +268,7 @@ class WhatsAppDeliveryTest extends TestCase
             'file_path' => 'customers/1/messages/da.jpg', 'external_media_id' => 'media-1',
         ]);
 
-        (new FetchInboundMediaJob($anhang->id))->handle(app(ChannelManager::class));
+        (new FetchInboundMediaJob($anhang->id))->handle(app(ChannelManager::class), app(ChannelRoutingService::class));
 
         Http::assertNothingSent();
     }
@@ -292,7 +293,7 @@ class WhatsAppDeliveryTest extends TestCase
             'file_path' => '', 'type' => 'document', 'external_media_id' => 'media-2',
         ]);
 
-        (new FetchInboundMediaJob($anhang->id))->handle(app(ChannelManager::class));
+        (new FetchInboundMediaJob($anhang->id))->handle(app(ChannelManager::class), app(ChannelRoutingService::class));
 
         $frisch = $anhang->fresh();
         $this->assertSame('passwd.pdf', $frisch->file_name);
@@ -316,7 +317,7 @@ class WhatsAppDeliveryTest extends TestCase
             'type' => 'image', 'external_media_id' => 'media-3',
         ]);
 
-        (new FetchInboundMediaJob($anhang->id))->handle(app(ChannelManager::class));
+        (new FetchInboundMediaJob($anhang->id))->handle(app(ChannelManager::class), app(ChannelRoutingService::class));
 
         $this->assertSame('', $anhang->fresh()->file_path);
     }

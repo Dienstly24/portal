@@ -96,14 +96,26 @@ class MessagingArchitectureTest extends TestCase
             'Plattformwissen gehoert in den Adapter, nicht in den Kern: '.implode(', ', $treffer));
     }
 
-    /** Fall 2: Auch die Unterhaltung selbst bleibt kanalfrei. */
+    /**
+     * Fall 2: Auch die Unterhaltung selbst bleibt kanalfrei - und seit
+     * Phase 2 ebenso ihre Kanal-Zugehoerigkeit.
+     *
+     * `ConversationChannel` ist genau die Stelle, an der ein Kanalname
+     * am verfuehrerischsten waere ("wenn WhatsApp, dann ...") - und
+     * gleichzeitig die, an der er die Abstraktion am gruendlichsten
+     * zerstoeren wuerde.
+     */
     public function test_die_unterhaltung_nennt_keinen_kanal_beim_namen(): void
     {
-        $inhalt = $this->codeOhneKommentare(app_path('Models/Conversation.php'));
+        $dateien = ['Models/Conversation.php', 'Models/ConversationChannel.php'];
 
-        foreach (self::PLATTFORMEN as $plattform) {
-            $this->assertStringNotContainsString($plattform, $inhalt,
-                "Conversation darf '{$plattform}' nicht kennen.");
+        foreach ($dateien as $datei) {
+            $inhalt = $this->codeOhneKommentare(app_path($datei));
+
+            foreach (self::PLATTFORMEN as $plattform) {
+                $this->assertStringNotContainsString($plattform, $inhalt,
+                    "{$datei} darf '{$plattform}' nicht kennen.");
+            }
         }
     }
 

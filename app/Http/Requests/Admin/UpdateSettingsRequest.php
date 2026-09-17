@@ -5,6 +5,7 @@ namespace App\Http\Requests\Admin;
 use App\Http\Controllers\LegalPageController;
 use App\Services\Ai\Assistant\AssistantSettings;
 use App\Services\ChangeRequest\ChangeProofPolicy;
+use App\Services\Messaging\ChannelRoutingService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -126,6 +127,8 @@ class UpdateSettingsRequest extends FormRequest
             'security_form' => ['sometimes'],
             'ai_assistant_form' => ['sometimes'],
             'two_factor_required' => ['sometimes'],
+            'messaging_form' => ['sometimes'],
+            ChannelRoutingService::SETTING_AUTO_JOIN => ['sometimes'],
         ];
 
         // KI-Assistent: Schalter sind Checkboxen (an = "1"/"on", aus =

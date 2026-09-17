@@ -2516,6 +2516,92 @@ geaendert.
   Antwortfeld.
 - Tests: `ConversationNotesUndHerkunftTest` (17 Faelle).
 
+## Unified Conversation Platform - Phase 2: mehrere Kanaele, EIN Vorgang (17.09.2026)
+
+Betreiber-Entscheidung: direkt nach Phase 1. Bis hierher galt "eine
+Unterhaltung = ein Kanal". Schreibt derselbe Kunde heute ueber WhatsApp
+und morgen im Portal, entstanden zwei Unterhaltungen - der Mitarbeiter
+sah die Vorgeschichte nicht, obwohl es dieselbe Sache ist.
+
+- **JEDE NACHRICHT TRAEGT IHREN KANAL** (`customer_messages.channel_id`
+  + `channel_account_id`). Das ist die Grundlage von allem: ohne sie
+  waere nach einer Zusammenfuehrung nicht mehr feststellbar, WOHER eine
+  Nachricht kam (Auftrag Abschnitt 7) und WOHIN die Antwort gehoert -
+  und der Rueckweg haette keine Grundlage. `CustomerMessage::channelId()`
+  faellt auf den Kanal der Unterhaltung zurueck: der Altbestand hat die
+  Spalte nicht, und der Nachtrag ist ein eigener, spaeterer Schritt.
+- **`conversation_channels`** sagt, WELCHE Kanaele eine Unterhaltung
+  umfasst. **Die Gegenstelle steht dort, nicht an der Unterhaltung**:
+  dieselbe Person ist bei WhatsApp eine Rufnummer und im Portal eine
+  Benutzer-Kennung - eine einzige Spalte koennte nur eine von beiden
+  tragen, und die Antwort ginge an die falsche Adresse. `link_key` ist
+  eine zusammengesetzte Spalte statt eines UNIQUE ueber drei Felder:
+  ein Kanal OHNE Konto waere sonst beliebig oft eintragbar (NULL gilt in
+  beiden Datenbanken als "immer verschieden" - dieselbe Falle wie bei
+  `channel_events`).
+  `conversations.channel_id` bleibt und heisst ab jetzt **erster**
+  Kanal, `last_channel_id` ist der zuletzt benutzte.
+- **JEDE Unterhaltung bekommt ihren Eintrag beim Anlegen** (Modell-Hook
+  in `Conversation`, nicht im Engine) - es gilt fuer JEDEN Schreibweg.
+  Eine Unterhaltung ohne Eintrag waere im Kanal-Filter des Postfachs
+  unsichtbar, und zwar ohne Fehlermeldung: die Liste zeigt einfach eine
+  Zeile weniger.
+- **GESUCHT WIRD UEBER DIE ZUGEHOERIGKEIT**, nicht ueber
+  `conversations.channel_id` (`ConversationEngine::locate`). Wer weiter
+  nach der Spalte sucht, findet einen spaeter dazugekommenen Kanal nie
+  und legt bei JEDER Nachricht eine neue Unterhaltung an. Dasselbe im
+  Postfach-Filter - mit **Rueckfall** auf `conversations.channel_id` fuer
+  Unterhaltungen ohne Eintrag: zwischen Deployment und Nachtrag waere
+  das Postfach sonst LEER, ohne Fehlermeldung.
+- **ZUSAMMENGEFUEHRT WIRD NUR UNTER VIER BEDINGUNGEN**
+  (`ChannelRoutingService::findJoinCandidate`, die EINE Stelle dafuer):
+  der Betreiber hat es eingeschaltet; der Kunde ist BEKANNT (eine
+  unbekannte Nummer gehoert per Definition zu niemandem); es gibt GENAU
+  EINE offene Unterhaltung von ihm (bei zweien waere jede Wahl eine
+  Vermutung - dieselbe Regel wie im Kundenabgleich und im
+  Provisions-Import); sie ist hoechstens `JOIN_MAX_AGE_DAYS` (30) alt.
+  Archiv und Abschluss sind bewusste Entscheidungen von Menschen und
+  kommen nie in Frage.
+  **Schalter `messaging_kanaluebergreifend`, VOREINSTELLUNG AUS** -
+  eine Aenderung, die bestehende Unterhaltungen anders fuehrt, schaltet
+  sich nicht selbst scharf (dieselbe Haltung wie beim KI-Assistenten).
+  Nach dem Deployment verhaelt sich das Postfach exakt wie vorher.
+- **DER RUECKWEG IST DIE BEDINGUNG** (`ChannelRoutingService::detach`,
+  Knopf im Postfach): ein nachtraeglich verbundener Kanal laesst sich
+  wieder trennen, seine Nachrichten wandern vollstaendig in eine eigene
+  Unterhaltung. Er ist VERLUSTFREI, WEIL jede Nachricht ihren Kanal
+  traegt - genau dafuer gibt es die Spalte. Ohne diesen Weg waere eine
+  falsche Verbindung endgueltig und das Zusammenfuehren damit gar nicht
+  vertretbar. Der ERSTE Kanal wird nie geloest - er ist die Unterhaltung
+  selbst. Beim Trennen wird der Eintrag NICHT verschoben, sondern der
+  vom Modell-Hook bereits angelegte ergaenzt (sonst UNIQUE-Verletzung).
+- **ANTWORTWEG** (Auftrag Abschnitt 14): voreingestellt ist der Kanal
+  des letzten EINGANGS - dort wartet der Kunde; der zuletzt benutzte
+  waere unsere eigene Sicht. Der Umschalter erscheint nur bei mehreren
+  Kanaelen. **Dem Browser wird nichts geglaubt**: welcher Kanal zulaessig
+  ist, entscheidet `availableChannels()` auf dem Server, und der Wert
+  wird aus dieser geprueften Liste genommen, nicht aus der Anfrage.
+- **DER VERSAND FOLGT DER NACHRICHT, nicht der Unterhaltung**
+  (`SendOutboundMessageJob`): seit eine Unterhaltung mehrere Kanaele
+  tragen kann, ist `conversation->channel` nur noch der ERSTE. Wer
+  danach sendet, schickt die Antwort auf einen WhatsApp-Verlauf ins
+  Portal. Ebenso der Empfaenger - er haengt am Kanal.
+- **Nebenbei behoben**: der Versand-Anstoss stand ZWEIMAL im Modell
+  (created-Hook und `versandAnstossen()`), leicht abweichend. Genau daran
+  faellt eine Aenderung wie der kanalabhaengige Empfaenger durch: der eine
+  Weg lernt sie, der andere nicht. Jetzt EINE Bedingung.
+- **Nachtrag** `messaging:kanal-nachtragen` (`--probelauf`): idempotent,
+  loescht nichts, ueberschreibt nichts, ein kaputter Datensatz beendet
+  nie den Lauf. Er ist RISIKOLOS, weil der Kanal der Unterhaltung der
+  Kanal jeder ihrer Nachrichten IST, solange sie nur einen hat - es wird
+  nichts geraten, nur aufgeschrieben, was ohnehin gilt. Die Nachrichten
+  werden je Unterhaltung in EINER Anweisung aktualisiert, nicht Zeile
+  fuer Zeile.
+- Die Architekturregel gilt unveraendert und wird jetzt auch an
+  `ConversationChannel` gemessen - genau die Stelle, an der ein
+  Kanalname am verfuehrerischsten waere.
+- Tests: `MehrkanalUnterhaltungTest` (17 Faelle).
+
 ## E-Signatur: Dokumente zur Unterschrift (Betreiber-Auftrag 09.09.2026)
 
 Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung

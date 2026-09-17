@@ -102,6 +102,33 @@
     </div>
 </div>
 
+{{-- Postfach: kanaluebergreifende Unterhaltungen. Eigener Marker
+     (messaging_form) aus demselben Grund wie bei der Sicherheit. --}}
+<div class="card">
+    <div class="card-title" style="margin-bottom:8px;">&#128172; Postfach</div>
+    <input type="hidden" name="messaging_form" value="1">
+    <label class="ki-toggle">
+        <input type="checkbox" name="{{ \App\Services\Messaging\ChannelRoutingService::SETTING_AUTO_JOIN }}" value="1"
+               @checked(($settings[\App\Services\Messaging\ChannelRoutingService::SETTING_AUTO_JOIN] ?? '0') === '1')>
+        <span><strong>Kanäle automatisch zu einer Unterhaltung zusammenführen</strong></span>
+    </label>
+    <div style="font-size:12.5px;color:var(--ink-soft);line-height:1.6;margin-top:8px;">
+        Schreibt derselbe Kunde heute über WhatsApp und morgen im Portal, ist das aus Sicht des
+        Betriebs eine Sache - der Mitarbeiter soll die Vorgeschichte sehen, ohne zwischen zwei
+        Listen zu springen. Zusammengeführt wird nur unter <strong>vier</strong> Bedingungen: der
+        Kunde ist bekannt (eine unbekannte Nummer gehört niemandem), es gibt
+        <strong>genau eine</strong> offene Unterhaltung von ihm (bei zweien wäre jede Wahl geraten),
+        sie ist höchstens
+        {{ \App\Services\Messaging\ChannelRoutingService::JOIN_MAX_AGE_DAYS }} Tage alt, und sie
+        trägt diesen Kanal noch nicht.
+        <strong>Der Weg zurück bleibt immer offen:</strong> ein nachträglich verbundener Kanal lässt
+        sich im Postfach wieder trennen, seine Nachrichten wandern dann vollständig in eine eigene
+        Unterhaltung - jede Nachricht trägt dafür ihren Kanal.
+        <strong>Voreinstellung aus</strong>: solange der Haken fehlt, verhält sich das Postfach
+        genau wie bisher.
+    </div>
+</div>
+
 {{-- Signaturen: nur der Weg zur Verwaltung, keine Schalter. Die
      Firmenbilder sind Dateien, keine Einstellungen - sie gehoeren nicht in
      dieses Formular, sonst koennte ein Klick auf "Speichern" sie

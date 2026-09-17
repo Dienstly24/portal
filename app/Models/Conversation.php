@@ -43,7 +43,7 @@ class Conversation extends Model
     public const LOCK_MINUTES = 3;
 
     protected $fillable = [
-        'customer_id', 'channel_id', 'channel_account_id',
+        'customer_id', 'channel_id', 'last_channel_id', 'channel_account_id',
         'external_conversation_id', 'external_user_id',
         'assigned_employee_id', 'status', 'ai_mode', 'subject', 'last_message_at',
         'closed_at', 'archived_at', 'reopened_at', 'locked_by', 'locked_at',
@@ -61,6 +61,47 @@ class Conversation extends Model
     {
         parent::boot();
         static::creating(fn ($m) => $m->id = $m->id ?: (string) Str::uuid());
+
+        /*
+         * JEDE Unterhaltung traegt vom ersten Moment an ihren Kanal
+         * (Phase 2).
+         *
+         * Hier im Modell und nicht im Conversation Engine - dieselbe
+         * Begruendung wie beim Versand-Anstoss: es gilt fuer JEDEN
+         * Schreibweg. Eine Unterhaltung ohne Eintrag waere im
+         * Kanal-Filter des Postfachs unsichtbar, und zwar ohne
+         * Fehlermeldung: die Liste zeigt einfach eine Zeile weniger.
+         * Genau diese Art Ausfall bemerkt man erst, wenn ein Kunde
+         * nachfragt.
+         *
+         * Der Eintrag ist idempotent, der Engine darf ihn also
+         * zusaetzlich mit der Gegenstelle ergaenzen.
+         */
+        static::created(function (self $m) {
+            if (! $m->channel_id) {
+                return;
+            }
+
+            try {
+                ConversationChannel::firstOrCreate(
+                    ['link_key' => ConversationChannel::linkKey($m->id, $m->channel_id, $m->channel_account_id)],
+                    [
+                        'conversation_id' => $m->id,
+                        'channel_id' => $m->channel_id,
+                        'channel_account_id' => $m->channel_account_id,
+                        'external_user_id' => $m->external_user_id,
+                        'external_conversation_id' => $m->external_conversation_id,
+                        'join_method' => ConversationChannel::JOIN_INITIAL,
+                        'joined_at' => now(),
+                    ]
+                );
+            } catch (\Throwable) {
+                // Wie beim Versand: das Anlegen der Unterhaltung darf
+                // daran nie scheitern. Fehlt der Eintrag, traegt ihn der
+                // Nachtrag nach - die Nachricht ist dann sichtbar, nur
+                // der Kanal-Reiter waere unvollstaendig.
+            }
+        });
     }
 
     /** @return BelongsTo<Customer, $this> */
@@ -77,6 +118,39 @@ class Conversation extends Model
     public function messages(): HasMany { return $this->hasMany(CustomerMessage::class, 'conversation_id'); }
     /** @return HasMany<ConversationAssignment, $this> */
     public function assignments(): HasMany { return $this->hasMany(ConversationAssignment::class); }
+
+    /**
+     * ALLE Kanaele dieser Unterhaltung (Phase 2).
+     *
+     * `channel` (Einzahl) ist ab jetzt der ERSTE Kanal, `lastChannel`
+     * der zuletzt benutzte. Beide bleiben als Spalte bestehen, weil die
+     * Inbox danach sortiert und filtert - eine Beziehung statt einer
+     * Spalte haette dort je Zeile eine weitere Abfrage bedeutet.
+     *
+     * @return HasMany<ConversationChannel, $this>
+     */
+    public function channels(): HasMany { return $this->hasMany(ConversationChannel::class); }
+
+    /** @return BelongsTo<Channel, $this> */
+    public function lastChannel(): BelongsTo { return $this->belongsTo(Channel::class, 'last_channel_id'); }
+
+    /**
+     * Die Zugehoerigkeit zu EINEM Kanal - der Weg zur Gegenstelle.
+     *
+     * Ohne sie waere nach einer Zusammenfuehrung nicht mehr bestimmbar,
+     * an WELCHE Adresse eine Antwort auf diesem Kanal geht.
+     */
+    public function channelLink(int $channelId): ?ConversationChannel
+    {
+        return $this->channels->firstWhere('channel_id', $channelId)
+            ?: $this->channels()->where('channel_id', $channelId)->first();
+    }
+
+    /** Traegt diese Unterhaltung mehr als einen Kanal? */
+    public function isMultiChannel(): bool
+    {
+        return $this->channels()->count() > 1;
+    }
 
     /**
      * Interne Notizen zu diesem Vorgang.

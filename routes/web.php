@@ -676,6 +676,8 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         // Eine automatisch erkannte Kundenzuordnung bestaetigen.
         Route::post('/zuordnung-bestaetigen', [PostfachController::class, 'confirmIdentity'])
             ->name('confirm_identity');
+        // Einen nachtraeglich verbundenen Kanal wieder herausloesen.
+        Route::post('/kanal-trennen', [PostfachController::class, 'detachChannel'])->name('detach_channel');
     });
 
     // Anhang aus einer Unterhaltung in die Kundenakte uebernehmen.

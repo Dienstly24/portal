@@ -10,6 +10,7 @@ use App\Models\Conversation;
 use App\Models\Customer;
 use App\Models\CustomerMessage;
 use App\Models\User;
+use App\Services\Messaging\ChannelRoutingService;
 use App\Services\Messaging\Channels\ChannelManager;
 use App\Services\Messaging\Channels\WhatsAppAdapter;
 use App\Services\Messaging\ConversationEngine;
@@ -294,7 +295,7 @@ class WhatsAppChannelTest extends TestCase
             'from_staff' => true,
         ]);
 
-        (new SendOutboundMessageJob($nachricht->id))->handle(app(ChannelManager::class));
+        (new SendOutboundMessageJob($nachricht->id))->handle(app(ChannelManager::class), app(ChannelRoutingService::class));
 
         $frisch = $nachricht->fresh();
         $this->assertSame('wamid.NEU', $frisch->external_message_id);
@@ -317,7 +318,7 @@ class WhatsAppChannelTest extends TestCase
             'conversation_id' => $unterhaltung->id, 'body' => 'x', 'from_staff' => true,
         ]);
 
-        (new SendOutboundMessageJob($nachricht->id))->handle(app(ChannelManager::class));
+        (new SendOutboundMessageJob($nachricht->id))->handle(app(ChannelManager::class), app(ChannelRoutingService::class));
 
         $frisch = $nachricht->fresh();
         $this->assertSame(CustomerMessage::STATUS_FAILED, $frisch->status);
@@ -345,7 +346,7 @@ class WhatsAppChannelTest extends TestCase
             'external_message_id' => 'wamid.SCHON',
         ]);
 
-        (new SendOutboundMessageJob($nachricht->id))->handle(app(ChannelManager::class));
+        (new SendOutboundMessageJob($nachricht->id))->handle(app(ChannelManager::class), app(ChannelRoutingService::class));
 
         Http::assertNothingSent();
     }

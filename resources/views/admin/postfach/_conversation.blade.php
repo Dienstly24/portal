@@ -23,12 +23,34 @@
       @endif
     </div>
     <div>
-      <div style="color:var(--ink-soft);font-size:11px">Kanal</div>
-      <strong>{{ $active->channel?->name }}</strong>
+      {{-- MEHRERE KANAELE (Phase 2): eine Unterhaltung kann ueber
+           WhatsApp begonnen und im Portal weitergegangen sein. Wer nur
+           einen Namen sieht, haelt den Rest fuer einen anderen Vorgang. --}}
+      <div style="color:var(--ink-soft);font-size:11px">
+        {{ $kanaeleDerUnterhaltung->count() > 1 ? 'Kanäle' : 'Kanal' }}
+      </div>
+      @if($kanaeleDerUnterhaltung->isEmpty())
+        <strong>{{ $active->channel?->name }}</strong>
+      @else
+        <div class="kanal-liste">
+          @foreach($kanaeleDerUnterhaltung as $link)
+            <span class="kanal-marke" title="{{ $link->joinMethodLabel() }}{{ $link->external_user_id ? ' · '.$link->external_user_id : '' }}">
+              {{ $link->channel?->name }}
+              @if($link->isJoined())<span class="kanal-marke-zusatz">+</span>@endif
+            </span>
+          @endforeach
+        </div>
+      @endif
       @if($active->channelAccount)
         <div style="color:var(--ink-soft)">{{ $active->channelAccount->name }}</div>
       @endif
     </div>
+    @if($kanaeleDerUnterhaltung->count() > 1)
+      <div>
+        <div style="color:var(--ink-soft);font-size:11px">Zuletzt über</div>
+        <strong>{{ $active->lastChannel?->name ?: $active->channel?->name }}</strong>
+      </div>
+    @endif
     <div>
       <div style="color:var(--ink-soft);font-size:11px">Betreuer</div>
       <strong>{{ $betreuer?->name ?: '—' }}</strong>
@@ -192,6 +214,12 @@
           Kunde
         @endif
         · {{ $m->created_at?->lokal()?->format('d.m.Y H:i') }}
+        {{-- WOHER kam diese Nachricht? (Auftrag Abschnitt 7) Nur wenn
+             die Unterhaltung mehr als einen Kanal traegt - sonst stuende
+             an jeder Zeile derselbe Name und saegte nichts aus. --}}
+        @if($kanaeleDerUnterhaltung->count() > 1 && $m->channel)
+          · <span class="kanal-marke kanal-marke-klein">{{ $m->channel->name }}</span>
+        @endif
         @if($m->isHistorical())
           · <span title="Aus der WhatsApp Business App übernommen">Historie</span>
         @endif
@@ -236,13 +264,61 @@
   </form>
 </details>
 
-{{-- Composer: der Kanal wird NICHT gewaehlt. Er steht an der
-     Unterhaltung, und was er kann, steht in seinen Faehigkeiten. --}}
+@php $trennbar = $kanaeleDerUnterhaltung->filter(fn ($l) => $l->isJoined()); @endphp
+@if($trennbar->isNotEmpty())
+  {{-- DER RUECKWEG. Ohne ihn waere eine falsche Zusammenfuehrung
+       endgueltig - und genau deshalb waere sie dann auch nicht
+       vertretbar. --}}
+  <details class="kanal-trennen">
+    <summary>Nachträglich verbundene Kanäle ({{ $trennbar->count() }})</summary>
+    @foreach($trennbar as $link)
+      <div class="kanal-trennen-zeile">
+        <div>
+          <strong>{{ $link->channel?->name }}</strong>
+          <div>
+            {{ $link->joinMethodLabel() }}@if($link->joinedBy) · {{ $link->joinedBy->name }}@endif
+            @if($link->joined_at) · {{ $link->joined_at->lokal()->format('d.m.Y H:i') }}@endif
+          </div>
+        </div>
+        <form method="POST" action="{{ route('admin.postfach.detach_channel', $active->id) }}"
+              data-confirm="Diesen Kanal wirklich trennen? Seine Nachrichten wandern in eine eigene Unterhaltung.">
+          @csrf
+          <input type="hidden" name="channel_id" value="{{ $link->channel_id }}">
+          <button class="btn btn-ghost btn-sm">Kanal trennen</button>
+        </form>
+      </div>
+    @endforeach
+  </details>
+@endif
+
+{{-- Composer: der Antwortweg ergibt sich aus der Unterhaltung - der
+     Mitarbeiter waehlt ihn nur, wenn es wirklich mehrere gibt. Was ein
+     Kanal kann, steht in seinen Faehigkeiten, nie in seinem Namen. --}}
 <form method="POST" action="{{ route('admin.postfach.reply', $active->id) }}"
       enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:8px">
   @csrf
+  @php $antwortName = $antwortKanaele->firstWhere('channel_id', $antwortKanal)?->channel?->name
+        ?: $active->channel?->name; @endphp
   <textarea name="body" class="eingabe" style="width:100%;resize:vertical;" rows="3" required
-            placeholder="Antwort über {{ $active->channel?->name }} …" aria-label="Antwort über"></textarea>
+            placeholder="Antwort über {{ $antwortName }} …" aria-label="Antwort über"></textarea>
+
+  @if($antwortKanaele->count() > 1)
+    {{-- ANTWORTWEG WAEHLEN (Auftrag Abschnitt 14). Voreingestellt ist der
+         Kanal, ueber den der Kunde ZULETZT geschrieben hat - dort wartet
+         er. Angeboten werden nur Kanaele, ueber die auch wirklich
+         gesendet werden kann; ob gesendet werden DARF, prueft der Server
+         beim Absenden erneut. --}}
+    <fieldset class="kanal-wahl">
+      <legend>Antworten über</legend>
+      @foreach($antwortKanaele as $link)
+        <label class="check-inline">
+          <input type="radio" name="channel_id" value="{{ $link->channel_id }}"
+                 @checked($link->channel_id === $antwortKanal)>
+          <span>{{ $link->channel?->name }}</span>
+        </label>
+      @endforeach
+    </fieldset>
+  @endif
   @if($active->channel?->supports('supportsMedia') && $aktenUnterlagen->isNotEmpty())
     {{-- Unterlagen AUS DER AKTE mitschicken - ohne diesen Weg muesste
          der Mitarbeiter die Police erst herunterladen und wieder
@@ -303,5 +379,28 @@
   .notiz-formular { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
   .notiz-zeile { display: flex; gap: 10px; align-items: center; justify-content: space-between;
     flex-wrap: wrap; font-size: 12px; }
+
+  /* Kanal-Marken. Ein Kanal ist eine Herkunftsangabe, keine Aktion -
+     deshalb neutrale Flaeche und nie die Aktionsfarbe. */
+  .kanal-liste { display: flex; gap: 4px; flex-wrap: wrap; }
+  .kanal-marke { display: inline-block; border: 1px solid var(--line); border-radius: 999px;
+    padding: 1px 8px; font-size: 11px; font-weight: 500; background: var(--surface); }
+  .kanal-marke-klein { padding: 0 6px; font-weight: 400; }
+  /* Das "+" sagt: nachtraeglich dazugekommen, nicht hier begonnen. */
+  .kanal-marke-zusatz { color: var(--ink-soft); }
+
+  .kanal-wahl { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px;
+    display: flex; gap: 14px; align-items: center; flex-wrap: wrap; background: var(--surface-soft); }
+  .kanal-wahl > legend { font-size: 11px; color: var(--ink-soft); padding: 0 4px; }
+
+  .kanal-trennen { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
+    background: var(--surface-soft); margin-bottom: 12px; }
+  .kanal-trennen > summary { cursor: pointer; font-size: 13px; font-weight: 500; color: var(--ink-soft);
+    list-style: none; }
+  .kanal-trennen > summary::-webkit-details-marker { display: none; }
+  .kanal-trennen > summary:hover { color: var(--ink); }
+  .kanal-trennen-zeile { display: flex; gap: 12px; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; margin-top: 10px; font-size: 12px; }
+  .kanal-trennen-zeile div div { color: var(--ink-soft); font-size: 11px; }
 </style>
 @endpush
