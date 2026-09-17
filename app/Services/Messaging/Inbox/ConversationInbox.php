@@ -57,6 +57,35 @@ class ConversationInbox
     }
 
     /**
+     * Darf dieser Mitarbeiter DIESE Nachricht (und damit ihre Anhaenge)
+     * sehen?
+     *
+     * DIESELBE Regel wie die Liste - und genau das war der Fehler, der
+     * am 17.09.2026 auffiel: die Anhangs-Auslieferung fragte nur
+     * `canAccessCustomer($message->customer_id)`. Bei einem UNBEKANNTEN
+     * KONTAKT ist dieser Wert `null`, also bekam ein Mitarbeiter fuer
+     * jeden Anhang eine 403 - waehrend die Unterhaltung selbst
+     * absichtlich fuer ihn sichtbar war. Er sah die Nachricht "Anbei
+     * mein Versicherungsschein" und konnte die Datei nicht oeffnen.
+     *
+     * Zwei Wege, weil es zwei Arten von Nachrichten gibt: eine
+     * Unterhaltung entscheidet ueber sich selbst; eine Nachricht aus der
+     * Zeit vor den Unterhaltungen (Altbestand) haengt nur am Kunden.
+     */
+    public function canAccessMessage(User $user, ?CustomerMessage $message): bool
+    {
+        if (! $message) {
+            return false;
+        }
+
+        if ($message->conversation_id) {
+            return $this->scope($user)->whereKey($message->conversation_id)->exists();
+        }
+
+        return $user->canAccessCustomer($message->customer_id);
+    }
+
+    /**
      * Die gefilterte, sortierte Liste.
      *
      * @return Builder<Conversation>

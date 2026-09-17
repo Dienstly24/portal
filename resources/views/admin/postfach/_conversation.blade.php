@@ -86,6 +86,26 @@
   <span style="font-size:11px;color:var(--ink-soft)">Der Betreuer des Kunden bleibt unverändert.</span>
 </form>
 
+@if(($identitaet ?? null) && $identitaet->needsVerification())
+  {{-- ZUORDNUNG AUF EINEM INDIZ (Auftrag Abschnitt 8).
+       Die Zuordnung funktioniert - sie wurde nur nie von einem Menschen
+       geprueft. Eine Rufnummer kann weitergegeben oder von einem
+       Familienmitglied benutzt werden; das faellt sonst erst auf, wenn
+       ein Kunde die Unterhaltung eines anderen liest. --}}
+  <div class="zuordnung-hinweis">
+    <div>
+      <strong>Zuordnung noch nicht bestätigt</strong>
+      <p>
+        {{ $identitaet->methodLabel() }} — von keinem Mitarbeiter geprüft.
+        Bitte kurz ansehen, ob die Nachrichten wirklich zu dieser Kundenakte gehören.
+      </p>
+    </div>
+    <form method="POST" action="{{ route('admin.postfach.confirm_identity', $active->id) }}">
+      @csrf<button class="btn btn-ghost btn-sm">Zuordnung bestätigen</button>
+    </form>
+  </div>
+@endif
+
 @if($unbekannt)
   {{-- UNBEKANNTER KONTAKT (Prioritaet 3): die Nachricht ist da, nur die
        Akte fehlt. Beides laesst sich hier erledigen, ohne den Verlauf zu
@@ -180,6 +200,42 @@
   @endforeach
 </div>
 
+{{-- INTERNE NOTIZEN (Auftrag Abschnitt 13).
+     Bewusst ein eigener, anders aussehender Block und NICHT in den
+     Verlauf gemischt: wer eine interne Bemerkung zwischen den
+     Kundennachrichten stehen sieht, tippt sie beim naechsten Mal ins
+     Antwortfeld. Die Trennung muss man SEHEN. --}}
+<details class="notizen" @if($notizen->isNotEmpty()) open @endif>
+  <summary>Interne Notizen ({{ $notizen->count() }}) — der Kunde sieht sie nicht</summary>
+
+  @foreach($notizen as $n)
+    <div class="notiz">
+      <div class="notiz-text">{!! nl2br(e($n->body)) !!}</div>
+      <div class="notiz-fuss">
+        {{ $n->author?->name ?: 'Unbekannt' }}
+        · {{ $n->created_at?->lokal()?->format('d.m.Y H:i') }}
+        @if($n->visibility === \App\Models\ConversationNote::VISIBILITY_SUPPORT)
+          · <span title="Auch für einen beauftragten externen Support sichtbar">auch für externen Support</span>
+        @endif
+      </div>
+    </div>
+  @endforeach
+
+  <form method="POST" action="{{ route('admin.postfach.note', $active->id) }}" class="notiz-formular">
+    @csrf
+    <textarea name="body" class="eingabe" rows="2" required
+              placeholder="Interne Notiz zu diesem Vorgang …" aria-label="Interne Notiz"></textarea>
+    <div class="notiz-zeile">
+      <label class="check-inline">
+        <input type="checkbox" name="visibility"
+               value="{{ \App\Models\ConversationNote::VISIBILITY_SUPPORT }}">
+        <span>Auch für externen Support sichtbar</span>
+      </label>
+      <button class="btn btn-ghost btn-sm">Notiz speichern</button>
+    </div>
+  </form>
+</details>
+
 {{-- Composer: der Kanal wird NICHT gewaehlt. Er steht an der
      Unterhaltung, und was er kann, steht in seinen Faehigkeiten. --}}
 <form method="POST" action="{{ route('admin.postfach.reply', $active->id) }}"
@@ -223,5 +279,29 @@
   .akten-waehler > summary:hover { color: var(--ink); }
   .akten-liste { display: grid; gap: 6px; margin-top: 10px; max-height: 200px; overflow-y: auto; }
   .akten-hinweis { font-size: 11px; color: var(--ink-soft); margin: 8px 0 0; }
+
+  /* Zuordnung auf einem Indiz - Hinweis, keine Fehlermeldung: die
+     Zuordnung ist wahrscheinlich richtig, nur ungeprueft. Deshalb die
+     Warnfarbe und nicht die Fehlerfarbe. */
+  .zuordnung-hinweis { display: flex; gap: 12px; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; border: 1px solid var(--status-warning); border-radius: 8px;
+    padding: 10px 12px; margin-bottom: 12px; background: var(--surface-soft); }
+  .zuordnung-hinweis strong { font-size: 13px; }
+  .zuordnung-hinweis p { font-size: 12px; color: var(--ink-soft); margin: 4px 0 0; }
+
+  .notizen { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
+    background: var(--surface-soft); margin-bottom: 12px; }
+  .notizen > summary { cursor: pointer; font-size: 13px; font-weight: 500; color: var(--ink-soft);
+    list-style: none; }
+  .notizen > summary::-webkit-details-marker { display: none; }
+  .notizen > summary:hover { color: var(--ink); }
+  /* Deutlich anders als eine Chat-Blase - sie darf nie wie eine
+     Nachricht an den Kunden aussehen. */
+  .notiz { border-left: 3px solid var(--gold); padding: 6px 0 6px 10px; margin-top: 10px; }
+  .notiz-text { font-size: 13px; white-space: normal; }
+  .notiz-fuss { font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
+  .notiz-formular { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+  .notiz-zeile { display: flex; gap: 10px; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; font-size: 12px; }
 </style>
 @endpush

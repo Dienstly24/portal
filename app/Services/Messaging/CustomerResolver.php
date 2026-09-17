@@ -44,32 +44,70 @@ class CustomerResolver
         // 2) Telefonnummer bzw. E-Mail aus der Nachricht. Beides sind
         //    Kennungen, die der Kunde selbst gesetzt hat - aber sie
         //    zaehlen nur, wenn sie GENAU EINEN Kunden treffen.
-        $customer = $this->byPhone($message->senderPhone)
-            ?? $this->byEmail($message->senderEmail);
+        //
+        //    WELCHES der beiden Verfahren gegriffen hat, wird
+        //    mitgefuehrt: eine so entstandene Zuordnung ist ein INDIZ,
+        //    kein Beleg (Auftrag Abschnitt 8). Eine Rufnummer kann
+        //    weitergegeben oder von einem Familienmitglied benutzt
+        //    werden - meistens stimmt der Treffer, aber niemand hat
+        //    hingesehen. Das Postfach zeigt diese Zuordnungen deshalb
+        //    mit einer Bitte um Bestaetigung an.
+        $customer = $this->byPhone($message->senderPhone);
+        $methode = CustomerChannelIdentity::METHOD_PHONE;
+
+        if (! $customer) {
+            $customer = $this->byEmail($message->senderEmail);
+            $methode = CustomerChannelIdentity::METHOD_EMAIL;
+        }
 
         if ($customer) {
-            // Ab jetzt ist die Zuordnung ein Beleg: beim naechsten Mal
-            // greift Stufe 1 und wir suchen nicht mehr.
-            $this->remember($customer, $channel, $account, $message);
+            // Ab jetzt ist die Zuordnung gespeichert: beim naechsten Mal
+            // greift Stufe 1 und wir suchen nicht mehr. Sie bleibt
+            // trotzdem unbestaetigt, bis ein Mensch sie bestaetigt -
+            // einmal gespeichert heisst nicht einmal geprueft.
+            $this->remember($customer, $channel, $account, $message, $methode);
         }
 
         return $customer;
     }
 
-    /** Kanal-Identitaet festhalten - idempotent. */
-    public function remember(Customer $customer, Channel $channel, ?ChannelAccount $account, InboundMessage $message): CustomerChannelIdentity
-    {
-        return CustomerChannelIdentity::updateOrCreate(
-            [
-                'channel_account_id' => $account?->id,
-                'external_user_id' => $message->externalUserId,
-            ],
-            [
-                'customer_id' => $customer->id,
-                'channel_id' => $channel->id,
-                'external_username' => $message->senderName,
-            ]
-        );
+    /**
+     * Kanal-Identitaet festhalten - idempotent.
+     *
+     * Die HERKUNFT wird nur beim Anlegen gesetzt bzw. wenn sie sich
+     * verbessert: eine von einem Menschen bestaetigte Zuordnung darf
+     * eine spaetere automatische Erkennung nie wieder auf "Indiz"
+     * zuruecksetzen. Sonst waere die Bestaetigung bei der naechsten
+     * Nachricht wieder weg, und niemand koennte sich je durch die Liste
+     * arbeiten.
+     */
+    public function remember(
+        Customer $customer,
+        Channel $channel,
+        ?ChannelAccount $account,
+        InboundMessage $message,
+        string $methode = CustomerChannelIdentity::METHOD_MANUAL,
+    ): CustomerChannelIdentity {
+        $identity = CustomerChannelIdentity::firstOrNew([
+            'channel_account_id' => $account?->id,
+            'external_user_id' => $message->externalUserId,
+        ]);
+
+        $identity->fill([
+            'customer_id' => $customer->id,
+            'channel_id' => $channel->id,
+            'external_username' => $message->senderName,
+        ]);
+
+        // Herkunft nur setzen, wenn noch keine da ist - oder wenn ein
+        // MENSCH zuordnet (das ist immer die bessere Auskunft).
+        if (! $identity->match_method || $methode === CustomerChannelIdentity::METHOD_MANUAL) {
+            $identity->match_method = $methode;
+        }
+
+        $identity->save();
+
+        return $identity;
     }
 
     /**
