@@ -78,6 +78,18 @@ class Conversation extends Model
     /** @return HasMany<ConversationAssignment, $this> */
     public function assignments(): HasMany { return $this->hasMany(ConversationAssignment::class); }
 
+    /**
+     * Interne Notizen zu diesem Vorgang.
+     *
+     * Sie sind bewusst KEINE Nachrichten: `messages()` liefert, was
+     * zwischen uns und dem Kunden gelaufen ist, und genau darauf
+     * verlassen sich Portal, Verlauf, Suche und die KI. Eine Notiz
+     * gehoert in keine dieser Antworten.
+     *
+     * @return HasMany<ConversationNote, $this>
+     */
+    public function notes(): HasMany { return $this->hasMany(ConversationNote::class); }
+
     /** @return HasOne<CustomerMessage, $this> */
     public function latestMessage(): HasOne
     {

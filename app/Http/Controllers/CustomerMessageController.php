@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\CustomerMessage;
 use App\Models\CustomerMessageAttachment;
 use App\Services\CustomerMessageNotifier;
+use App\Services\Messaging\Inbox\ConversationInbox;
 use App\Support\UploadRules;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -71,10 +72,27 @@ class CustomerMessageController extends Controller
         ]);
     }
 
+    /**
+     * Zugriff auf einen Anhang - ueber DIESELBE Regel wie das Postfach.
+     *
+     * Vorher stand hier `canAccessCustomer($message->customer_id)`. Bei
+     * einer Nachricht von einem UNBEKANNTEN KONTAKT ist dieser Wert
+     * `null`: die Unterhaltung war im Postfach absichtlich fuer jeden
+     * Mitarbeiter sichtbar, der Anhang darin aber fuer niemanden
+     * ausserhalb der Leitung zu oeffnen. Genau die Datei, die ein
+     * Mitarbeiter ansehen muss, um die Nachricht zuordnen zu koennen.
+     *
+     * Die Regel steht jetzt an EINER Stelle (`ConversationInbox`) -
+     * zwei Zugriffsregeln fuer dasselbe Objekt sind die Vorstufe zur
+     * naechsten Abweichung.
+     */
     private function findAccessibleAttachment($id): CustomerMessageAttachment
     {
         $attachment = CustomerMessageAttachment::with('message')->findOrFail($id);
-        abort_unless(auth()->user()->canAccessCustomer($attachment->message->customer_id), 403);
+        abort_unless(
+            app(ConversationInbox::class)->canAccessMessage(auth()->user(), $attachment->message),
+            403
+        );
         return $attachment;
     }
 

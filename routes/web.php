@@ -671,6 +671,11 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
         Route::post('/zustand', [PostfachController::class, 'status'])->name('status');
         Route::post('/kunde-verknuepfen', [PostfachController::class, 'linkCustomer'])->name('link_customer');
         Route::post('/kunde-anlegen', [PostfachController::class, 'createCustomer'])->name('create_customer');
+        // Interne Notiz am Vorgang - erreicht den Kunden nie.
+        Route::post('/notiz', [PostfachController::class, 'storeNote'])->name('note');
+        // Eine automatisch erkannte Kundenzuordnung bestaetigen.
+        Route::post('/zuordnung-bestaetigen', [PostfachController::class, 'confirmIdentity'])
+            ->name('confirm_identity');
     });
 
     // Anhang aus einer Unterhaltung in die Kundenakte uebernehmen.

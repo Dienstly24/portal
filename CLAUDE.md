@@ -2450,6 +2450,72 @@ Vollstaendig in `docs/OMNICHANNEL_ANALYSE_UND_ARCHITEKTUR.md`. Kurzfassung:
 - Tests: `OmnichannelFoundationTest`, `ConversationAssignmentTest`,
   `MessagingArchitectureTest`, `ConversationBackfillTest`.
 
+## Unified Conversation Platform - Phase 1 (Betreiber-Auftrag 17.09.2026)
+
+Bestandsaufnahme und Gesamtplan:
+`docs/UNIFIED_CONVERSATION_PLATTFORM_ANALYSE.md`. Wichtigster Befund
+dort: die verlangte Plattform ist zu rund zwei Dritteln BEREITS GEBAUT
+(Omnichannel Phase B). Phase 1 schliesst die drei Luecken, die beim
+Lesen des Bestands auffielen - rein additiv, keine bestehende Zeile
+geaendert.
+
+- **Der Anhang eines UNBEKANNTEN Kontakts war fuer genau die
+  Mitarbeiter gesperrt, die ihn zuordnen sollen.** Die Auslieferung
+  fragte `canAccessCustomer($message->customer_id)`; bei einer Nachricht
+  ohne Kundenakte ist dieser Wert `null`, also 403 - waehrend die
+  Unterhaltung im Postfach absichtlich fuer jeden sichtbar ist. Der
+  Mitarbeiter las "Anbei mein Versicherungsschein" und kam nicht an die
+  Datei. Die Regel steht jetzt an EINER Stelle
+  (`ConversationInbox::canAccessMessage()`) und ist dieselbe wie die der
+  Liste: eine Unterhaltung entscheidet ueber sich selbst, eine Nachricht
+  aus der Zeit VOR den Unterhaltungen weiterhin ueber ihren Kunden
+  (sonst waere der gesamte Altbestand gesperrt). Ein FREMDER Kunde
+  bleibt fremd - als Test festgehalten, denn ein blosses "erlaube alles
+  ohne Kunden" haette genau hier ein Loch gerissen.
+- **Herkunft der Kundenzuordnung** (`customer_channel_identities`:
+  `match_method`, `verified_by`, `verified_at`). Vorher sah man einer
+  Zuordnung nicht an, ob ein MENSCH die Akte ausgewaehlt hat oder ob
+  eine Telefonnummer zufaellig zu genau einem Kunden passte - Beleg und
+  Indiz standen als derselbe Datensatz da. Eine Rufnummer kann
+  weitergegeben oder von einem Familienmitglied benutzt werden; das
+  faellt sonst erst auf, wenn ein Kunde die Unterhaltung eines anderen
+  liest. Vier Verfahren (`manual` / `identity` / `phone_exact` /
+  `email_exact`), die beiden letzten gelten als UNSICHER und erzeugen im
+  Postfach die Bitte um Bestaetigung. Ordnet ein Mitarbeiter zu, gilt es
+  SOFORT als bestaetigt (er ist die Bestaetigung). **Eine bestaetigte
+  Zuordnung faellt NIE wieder auf "Indiz" zurueck** - sonst waere die
+  Bestaetigung bei der naechsten Nachricht weg und niemand kaeme je
+  durch die Liste. **Altbestand ohne `match_method` gilt AUSDRUECKLICH
+  NICHT als ungeprueft**: die Herkunft wurde damals nicht vermerkt,
+  mehr sagt das Feld nicht - eine Warnung an jedem Datensatz haette die
+  echten Faelle darin untergehen lassen (dieselbe Lehre wie bei den
+  Fehler-Eintraegen: nur echte Defekte, sonst ist die Anzeige wertlos).
+  BEWUSST SPALTEN statt einer zweiten Tabelle: die Identitaet IST die
+  Zuordnung, es gibt genau eine Zeile je (Konto, Kennung) - eine
+  Tabelle daneben waere eine zweite Quelle fuer dieselbe Aussage
+  (dieselbe Ueberlegung wie bei der Signaturgruppe).
+- **Interne Notizen an der Unterhaltung** (`conversation_notes`,
+  `ConversationNote`). "Wartet auf die Bestaetigung der Werkstatt" ist
+  keine Nachricht an den Kunden und keine Eigenschaft des Kunden -
+  bisher gab es dafuer keinen Ort. NICHT `customer_notes`: die haengen
+  am KUNDEN und stuenden dort noch in zwei Jahren.
+  **Die Trennung ist STRUKTURELL, nicht durch eine Bedingung**: das
+  Kundenportal kann eine Notiz nicht laden, weil es die Tabelle nicht
+  kennt. Ein Flag `ist_intern` an `customer_messages` waere nur so lange
+  sicher, wie JEDE Abfrage im Portal daran denkt - und die naechste neue
+  Abfrage denkt nicht daran; eine vergessene Bedingung waere eine
+  interne Bemerkung im Chat des Kunden. Kein `updated_at` und kein
+  Aenderungsweg (wie `signature_events`). Die Stufe `visibility`
+  (`internal` / `support`) entsteht JETZT, obwohl es die Rolle des
+  externen Supports noch nicht gibt - sie nachtraeglich einzufuehren
+  hiesse, den Altbestand in einen Zustand zu setzen, den niemand
+  geprueft hat; ohne ausdrueckliche Wahl gilt die STRENGERE Stufe.
+  In der Oberflaeche ein eigener, anders aussehender Block und NICHT in
+  den Verlauf gemischt: wer eine interne Bemerkung zwischen den
+  Kundennachrichten stehen sieht, tippt sie beim naechsten Mal ins
+  Antwortfeld.
+- Tests: `ConversationNotesUndHerkunftTest` (17 Faelle).
+
 ## E-Signatur: Dokumente zur Unterschrift (Betreiber-Auftrag 09.09.2026)
 
 Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung

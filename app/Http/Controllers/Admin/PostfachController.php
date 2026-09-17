@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\CustomerMessageController;
 use App\Models\Channel;
 use App\Models\Conversation;
+use App\Models\ConversationNote;
 use App\Models\Customer;
 use App\Models\CustomerChannelIdentity;
 use App\Models\CustomerMessage;
@@ -60,6 +61,8 @@ class PostfachController extends Controller
         $active = null;
         $messages = collect();
         $aktenUnterlagen = collect();
+        $notizen = collect();
+        $identitaet = null;
         if ($request->query('unterhaltung')) {
             $active = $this->inbox->scope($user)
                 ->whereKey($request->query('unterhaltung'))
@@ -67,6 +70,15 @@ class PostfachController extends Controller
 
             $messages = $active->messages()->with(['sender', 'attachments'])
                 ->orderBy('created_at')->get();
+
+            // Interne Notizen zu DIESEM Vorgang. Aelteste zuerst, wie
+            // der Verlauf daneben - eine Notiz ist eine Randbemerkung
+            // zum Gespraech und liest sich in dessen Reihenfolge.
+            $notizen = $active->notes()->with('author')->orderBy('created_at')->get();
+
+            // Steht die Kundenzuordnung auf einem Indiz? Dann sagt es
+            // die Seite - und bietet die Bestaetigung gleich mit an.
+            $identitaet = $this->identityFor($active);
 
             // Sichtbar heisst gelesen - dieselbe Regel wie im Kundenchat.
             CustomerMessage::where('conversation_id', $active->id)
@@ -92,6 +104,8 @@ class PostfachController extends Controller
             'kanaele' => $kanaele,
             'active' => $active,
             'messages' => $messages,
+            'notizen' => $notizen,
+            'identitaet' => $identitaet,
             'mitarbeiter' => User::whereIn('role', ['admin', 'manager', 'support', 'employee'])
                 ->orderBy('name')->get(['id', 'name']),
         ]);
@@ -322,16 +336,98 @@ class PostfachController extends Controller
             ->update(['customer_id' => $kunde->id]);
 
         if ($unterhaltung->external_user_id) {
-            CustomerChannelIdentity::firstOrCreate([
+            $identitaet = CustomerChannelIdentity::firstOrCreate([
                 'channel_account_id' => $unterhaltung->channel_account_id,
                 'external_user_id' => $unterhaltung->external_user_id,
             ], [
                 'customer_id' => $kunde->id,
                 'channel_id' => $unterhaltung->channel_id,
             ]);
+
+            // Ein MENSCH hat diese Akte ausgewaehlt - das ist der
+            // staerkste Beleg, den es gibt, und er gilt sofort. Es waere
+            // sinnlos, ihn anschliessend noch einmal bestaetigen zu
+            // lassen.
+            $identitaet->forceFill([
+                'match_method' => CustomerChannelIdentity::METHOD_MANUAL,
+                'verified_by' => auth()->id(),
+                'verified_at' => now(),
+            ])->save();
         }
 
         // Erst jetzt gibt es einen Betreuer, den man zuweisen koennte.
         $this->assignments->autoAssign($unterhaltung->fresh());
+    }
+
+    /**
+     * INTERNE NOTIZ an der Unterhaltung (Auftrag Abschnitt 13).
+     *
+     * Sie erreicht den Kunden nicht - und zwar nicht, weil hier eine
+     * Bedingung steht, sondern weil sie in einer anderen Tabelle liegt,
+     * die das Kundenportal gar nicht kennt.
+     */
+    public function storeNote(Request $request, string $id)
+    {
+        $user = auth()->user();
+        $unterhaltung = $this->inbox->scope($user)->whereKey($id)->firstOrFail();
+
+        $data = $request->validate([
+            'body' => 'required|string|max:5000',
+            'visibility' => 'nullable|in:'.implode(',', array_keys(ConversationNote::VISIBILITIES)),
+        ]);
+
+        ConversationNote::create([
+            'conversation_id' => $unterhaltung->id,
+            'user_id' => $user->id,
+            'body' => $data['body'],
+            // Ohne ausdrueckliche Wahl gilt die STRENGERE Stufe.
+            'visibility' => $data['visibility'] ?? ConversationNote::VISIBILITY_INTERNAL,
+        ]);
+
+        return back()->with('success', 'Interne Notiz gespeichert. Der Kunde sieht sie nicht.');
+    }
+
+    /**
+     * Eine automatisch erkannte Zuordnung bestaetigen (Auftrag
+     * Abschnitt 8).
+     *
+     * Die Zuordnung selbst aendert sich dadurch NICHT - sie war schon
+     * da und hat funktioniert. Bestaetigt wird nur, dass ein Mensch
+     * hingesehen hat. Genau deshalb gibt es hier keinen "ablehnen"-Knopf:
+     * eine falsche Zuordnung wird nicht weggeklickt, sie wird korrigiert,
+     * und das ist eine andere, groessere Handlung.
+     */
+    public function confirmIdentity(Request $request, string $id)
+    {
+        $user = auth()->user();
+        $unterhaltung = $this->inbox->scope($user)->whereKey($id)->firstOrFail();
+
+        $identitaet = $this->identityFor($unterhaltung);
+        abort_unless($identitaet && $identitaet->needsVerification(), 422,
+            'Für diese Unterhaltung steht keine Zuordnung zur Bestätigung an.');
+
+        $identitaet->confirm($user);
+
+        return back()->with('success', 'Zuordnung bestätigt.');
+    }
+
+    /**
+     * Die Kanal-Identitaet dieser Unterhaltung, falls es eine gibt.
+     *
+     * Gesucht wird ueber Konto UND Kennung - dasselbe Paar, unter dem
+     * der Resolver sie anlegt. Ueber den Kunden allein zu suchen waere
+     * falsch: derselbe Kunde kann mehrere Kennungen im selben Kanal
+     * haben (zwei Rufnummern), und dann bestaetigte ein Klick die
+     * falsche.
+     */
+    private function identityFor(Conversation $unterhaltung): ?CustomerChannelIdentity
+    {
+        if (! $unterhaltung->external_user_id) {
+            return null;
+        }
+
+        return CustomerChannelIdentity::where('external_user_id', $unterhaltung->external_user_id)
+            ->where('channel_account_id', $unterhaltung->channel_account_id)
+            ->first();
     }
 }
