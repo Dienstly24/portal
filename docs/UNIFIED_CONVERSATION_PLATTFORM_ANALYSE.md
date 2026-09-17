@@ -423,3 +423,171 @@ Phase 7 (Datenschutz), Phase 9 (Datenmodell).
    (`docs/WHATSAPP_POSTFACH_UND_COEXISTENCE.md`, Teil B, Abschnitt 3).
 
 Erst nach diesen Antworten beginnt Phase 1 bzw. die gewaehlte Phase.
+
+---
+
+# NACHTRAG 17.09.2026 - Entscheidungen des Betreibers
+
+Der Betreiber hat die vier offenen Fragen beantwortet. Damit aendert
+sich die Reihenfolge, und der Trainings-Teil bekommt einen konkreten
+Zuschnitt.
+
+## Die Entscheidungen
+
+| Frage | Antwort |
+|---|---|
+| Reihenfolge | **External Support ist das LETZTE**, nicht das erste |
+| Multi-Channel-Conversation | **direkt nach Phase 1** |
+| Trainingsdaten | eigener Bereich IM SYSTEM: Verlauf hochladen -> KI lernt daraus -> Kompetenz pruefen -> **ausdrueckliche Freigabe** fuer echte Kundengespraeche |
+| External Support | wird umgesetzt, aber zuletzt |
+
+## Der wichtigste Punkt vorweg: was "Training" hier heissen kann
+
+Der Wunsch ist voellig richtig verstanden - und er ist umsetzbar. Nur
+nicht so, wie das Wort es nahelegt, und das muss VOR dem Bau klar sein,
+sonst wartet der Betreiber auf eine Wirkung, die nie eintritt.
+
+**Ein Modell wie Claude wird durch Hochladen nicht nachtrainiert.** Wir
+rufen eine API auf; die Gewichte des Modells sind unveraenderlich. Das
+steht auch schon so in dieser Datei (Wissensluecken, 18.08.2026): "es
+gibt kein Nachtrainieren und kein selbsttaetiges Lernen".
+
+Was den gewuenschten Effekt TATSAECHLICH erzeugt - und zwar besser,
+schneller und ueberpruefbar:
+
+| Was der Betreiber will | Wie es wirklich entsteht |
+|---|---|
+| "die KI lernt aus unseren Gespraechen" | Aus den Verlaeufen werden **Frage-Antwort-Paare** gezogen und nach menschlicher Freigabe zu `ai_knowledge_entries`. Der Assistent antwortet ab dann mit UNSEREN Antworten. |
+| "sie soll klingen wie wir" | `ki:leitfaden-entwurf` misst bereits Laenge, Ansprache, Begruessung, Rueckfragen an echten Mitarbeiter-Antworten (Kategorie `leitfaden`). |
+| "ich will sehen, ob sie es kann" | **Nachspielen**: die hochgeladenen Gespraeche laufen gegen die KI, ihre Antwort wird mit der ECHTEN Mitarbeiter-Antwort verglichen. Ergebnis ist eine Zahl, kein Gefuehl. |
+| "erst dann darf sie an echte Kunden" | Ein Schalter, der sich **erst oeffnen laesst, wenn die Messung bestanden ist**. |
+
+Der Unterschied ist nicht akademisch: ein nachtrainiertes Modell kann
+man nicht befragen, warum es etwas gesagt hat, und nicht zurueckdrehen.
+Eine freigegebene Wissensbasis kann man lesen, aendern und einzeln
+abschalten. Fuer einen Versicherungsmakler ist das zweite die einzig
+vertretbare Bauform.
+
+## Der Ablauf, wie ihn der Betreiber bedient
+
+Vier Schritte, eine Seite, kein Fachwissen noetig:
+
+```
+1. HOCHLADEN     /admin/ki-training  ->  "Verlauf hochladen"
+                 WhatsApp-Export (.txt/.zip), CSV, E-Mail-Export
+                        |
+2. LESEN         automatisch: Wer hat wann was geschrieben?
+                 Kunde oder Mitarbeiter? -> Vorschau VOR dem Speichern
+                        |
+3. PRUEFEN       PII wird geschwaerzt, Paare vorgeschlagen,
+                 Mensch gibt frei / lehnt ab (Sammelaktion)
+                        |
+4. MESSEN        "Kompetenz pruefen" -> KI spielt die Gespraeche nach
+                 Ergebnis: 82 % uebereinstimmend, 11 % uebergeben,
+                           7 % abweichend  (jede Abweichung lesbar)
+                        |
+5. FREIGEBEN     Knopf "Fuer echte Kundengespraeche freigeben"
+                 -> gesperrt, solange die Messung nicht bestanden ist
+```
+
+### Schritt 1-2: Hochladen und lesen
+
+**Das Fundament dafuer existiert bereits und ist geprueft.**
+`CustomerMessage::SOURCE_HISTORICAL` ist genau dieser Fall: eine
+nachgelieferte Nachricht wird gespeichert, ist sichtbar und
+durchsuchbar, aber sie ist **kein Ereignis** - sie stoesst die KI nicht
+an, erzeugt keinen Ungelesen-Stand, holt keine Unterhaltung nach oben
+und sendet nichts. 14 Tests halten das fest
+(`WhatsAppHistoryImportTest`).
+
+Neu ist nur der WEG hinein: heute kommt Historie ueber das
+`history`-Webhook von Meta, kuenftig zusaetzlich ueber einen Upload.
+Format WhatsApp-Export (`[17.09.26, 14:03] Mohamad: Text`) - das ist
+der Knopf "Chat exportieren" im Telefon, mehr muss der Betreiber nicht
+tun.
+
+**Vorschau vor dem Speichern** (dieselbe Regel wie beim Provisions-
+Import, 26.08.2026): erst zeigen, was erkannt wurde - wie viele
+Nachrichten, wie viele Gespraeche, welcher Kunde, was nicht lesbar war -
+dann erst schreiben. Ein Import, der sein Ergebnis erst zeigt, NACHDEM
+er geschrieben hat, laesst dem Betreiber keine Wahl mehr.
+
+### Schritt 3: Schwaerzen und freigeben
+
+Unveraendert die Kette aus Abschnitt G. Zwei Regeln bleiben hart:
+
+- **Die Rohnachricht wird nie in den Trainingsbestand kopiert** - nur
+  der geschwaerzte Text.
+- **Nichts wird ohne einen Menschen zur Auskunft.** Jeder Vorschlag
+  entsteht INAKTIV, genau wie heute bei `ki:wissensbasis-vorschlag`.
+
+### Schritt 4: Die Kompetenzmessung - das eigentlich Neue
+
+Hier liegt der Kern des Betreiber-Wunsches, und dafuer gibt es heute
+nichts.
+
+Die hochgeladenen Gespraeche werden **geteilt**: ein Teil wird zur
+Wissensbasis, ein anderer Teil wird **zurueckgehalten** und dient
+ausschliesslich als Pruefung (Abschnitt 21: Evaluation Dataset getrennt
+vom Training). Ohne diese Trennung prueft man die KI an genau den
+Antworten, die man ihr vorher gegeben hat - das Ergebnis waere immer
+gut und immer wertlos.
+
+Gemessen wird je Gespraech:
+
+| Kennzahl | Bedeutung |
+|---|---|
+| uebereinstimmend | KI sagt fachlich dasselbe wie der Mitarbeiter |
+| uebergeben | KI erkennt, dass sie es nicht weiss -> **das ist ein ERFOLG**, kein Fehler |
+| abweichend | KI sagt etwas anderes -> im Klartext lesbar, mit beiden Antworten nebeneinander |
+| erfunden | KI nennt eine Angabe, die nirgends belegt ist -> **K.-o.-Kriterium** |
+
+"Erfunden" ist bewusst ein Ausschlusskriterium und keine Prozentzahl:
+eine KI, die einem Kunden eine Deckung zusagt, die es nicht gibt, ist
+nicht "zu 95 % gut".
+
+### Schritt 5: Die Freigabe
+
+Ein Schalter, aber mit Bedingung davor:
+
+- Er ist **gesperrt**, solange keine bestandene Messung vorliegt.
+- Er nennt **immer**, worauf er sich stuetzt: "Freigabe auf Basis der
+  Messung vom 20.09.2026, 214 Gespraeche, 0 erfundene Angaben".
+- Er wirkt ueber die **bestehende** Hierarchie (`AiMode`:
+  Unterhaltung -> Kunde -> Konto -> Kanal -> Global). Es entsteht kein
+  zweiter Schalter neben dem, den es gibt - sonst haette die Frage "ist
+  die KI an?" zwei Antworten.
+- Er ist **je Kanal** zu vergeben: fuer den Portal-Chat freigegeben
+  heisst nicht fuer WhatsApp freigegeben. Der Ton und die Erwartung
+  sind dort andere.
+- **Zurueckziehen jederzeit, mit einem Klick** - die bestehende
+  Notbremse bleibt, wo sie ist.
+
+## Rechtlicher Vorbehalt bleibt bestehen
+
+Echte Kundenkommunikation zur KI-Verbesserung zu verwenden ist ein
+eigener Verarbeitungszweck (Art. 5 Abs. 1 lit. b DSGVO). Das gehoert in
+Datenschutzerklaerung und Verarbeitungsverzeichnis, BEVOR der erste
+echte Verlauf hochgeladen wird - unabhaengig davon, wie gut geschwaerzt
+wird. Der Bau selbst kann vorher beginnen; die Benutzung mit echten
+Daten nicht.
+
+## Neue Reihenfolge
+
+| Phase | Inhalt | Status |
+|---|---|---|
+| **1** | Die drei Luecken aus A.5 + Internal Notes | **startklar, keine Entscheidung noetig** |
+| **2** | Multi-Channel-Conversation (Betreiber-Entscheidung: direkt nach Phase 1) | Datenmodell-Aenderung, groesstes Einzelrisiko |
+| **3** | Verlauf-Upload + Vorschau + Schwaerzung + Freigabe von Wissenseintraegen | baut auf `SOURCE_HISTORICAL` |
+| **4** | Kompetenzmessung (Nachspielen, vier Kennzahlen) + Freigabe-Schalter je Kanal | der Kern des Betreiber-Wunsches |
+| **5** | Conversation-Erweiterung: Prioritaet, Tags, Teams, Lebenszyklus, Audit | |
+| **6** | KI im Postfach: Generate/Edit/Regenerate/Approve/Reject protokolliert | |
+| **7** | Facebook + Messenger Adapter | |
+| **8** | Observability, Kennzahlen je Kanal, SLA | |
+| **9** | E-Mail als Kanal, zweistufig | |
+| **10** | **External Support** (zweiachsige Berechtigung, `/support`) | zuletzt, auf Betreiber-Entscheidung |
+
+Phase 2 vor Phase 3 zu setzen hat einen sachlichen Grund, nicht nur den
+Wunsch: wenn die Unterhaltung spaeter mehrere Kanaele traegt, aendert
+sich die Form der Daten, auf denen die Kompetenzmessung rechnet. Erst
+das Datenmodell, dann das Messen darauf - andersherum misst man zweimal.
