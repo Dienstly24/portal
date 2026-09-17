@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\ScopesCustomerAccess;
 use App\Mail\GuestTicketReplyMail;
 
 use App\Mail\TicketReplyMail;
+use App\Models\Customer;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
 use App\Models\TicketMessage;
@@ -163,8 +164,16 @@ class TicketController extends Controller
             default => now()->subDays((int) $zeitraum - 1)->startOfDay(),
         };
 
-        // Kohorte: alle Tickets, die im Zeitraum ERSTELLT wurden (inkl. Gaeste)
-        $cohort = Ticket::with('customer.user')->where('created_at', '>=', $from)->get();
+        // Kohorte: alle Tickets, die im Zeitraum ERSTELLT wurden (inkl. Gaeste).
+        //
+        // BEWUSST OHNE `with('customer.user')` (Audit-Nachlauf 16.09.2026):
+        // die Kundenakte wird von allen Auswertungen hier nur an EINER
+        // Stelle gebraucht, naemlich fuer die fuenf Kunden mit den meisten
+        // Anfragen. Vorher haengte an jedem einzelnen Ticket der ganze
+        // Kunde samt Benutzer - bei einem Jahreszeitraum also tausende
+        // Objekte, um am Ende fuenf Namen anzuzeigen. Die Namen kommen
+        // jetzt unten in EINER Abfrage fuer genau diese fuenf.
+        $cohort = Ticket::where('created_at', '>=', $from)->get();
         $finished = $cohort->filter(fn ($t) => $t->isFinished());
         $ratings = $cohort->whereNotNull('rating');
 
@@ -204,9 +213,12 @@ class TicketController extends Controller
         }
         // Erledigt-Kurve zaehlt ALLE im Zeitraum abgeschlossenen Tickets
         // (auch aeltere), damit die Team-Leistung sichtbar ist.
+        // `cursor()` statt `get()`: gezaehlt wird zeilenweise, das Ergebnis
+        // ist dasselbe - nur liegt nie der ganze Bestand gleichzeitig im
+        // Speicher.
         Ticket::whereIn('status', ['resolved', 'closed'])
             ->where(fn ($q) => $q->where('resolved_at', '>=', $from)->orWhere('closed_at', '>=', $from))
-            ->get()
+            ->cursor()
             ->each(function ($t) use (&$finishedPerDay, $from) {
                 $done = $t->closed_at ?? $t->resolved_at;
                 if ($done && $done->gte($from)) {
@@ -238,14 +250,21 @@ class TicketController extends Controller
                 ];
             })->sortByDesc('total')->values();
 
-        // Kunden mit den meisten Anfragen im Zeitraum
-        $topCustomers = $cohort->whereNotNull('customer_id')->groupBy('customer_id')
-            ->map(fn ($tickets, $customerId) => [
-                'id' => $customerId,
-                'name' => $tickets->first()->customer?->user?->name ?? 'Kunde',
-                'number' => $tickets->first()->customer?->customer_number,
-                'n' => $tickets->count(),
-            ])->sortByDesc('n')->take(5)->values();
+        // Kunden mit den meisten Anfragen im Zeitraum. Erst zaehlen, dann
+        // die fuenf Namen holen - nicht umgekehrt (siehe Kommentar oben
+        // an der Kohorte).
+        $topGezaehlt = $cohort->whereNotNull('customer_id')->groupBy('customer_id')
+            ->map(fn ($tickets, $customerId) => ['id' => $customerId, 'n' => $tickets->count()])
+            ->sortByDesc('n')->take(5)->values();
+
+        $topAkten = Customer::with('user')->whereIn('id', $topGezaehlt->pluck('id'))->get()->keyBy('id');
+
+        $topCustomers = $topGezaehlt->map(fn ($eintrag) => [
+            'id' => $eintrag['id'],
+            'name' => $topAkten[$eintrag['id']]?->user?->name ?? 'Kunde',
+            'number' => $topAkten[$eintrag['id']]?->customer_number,
+            'n' => $eintrag['n'],
+        ]);
 
         return view('admin.ticket_stats', [
             'zeitraum' => $zeitraum,

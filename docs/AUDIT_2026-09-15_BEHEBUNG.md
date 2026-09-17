@@ -263,3 +263,175 @@ Entscheidung des Betreibers.
 3. **Veraltete Pakete** (keine Sicherheitsfrage, `composer audit` ist
    sauber): larastan 3.12.0 -> 3.12.1, laravel/framework 13.31.0 ->
    13.32.0, phpunit 12 -> 13 (Hauptversion, eigener Vorgang).
+
+---
+
+# Nachlauf 16.09.2026: Verifikation nach dem Merge von PR #338
+
+Auftrag: die verbleibenden Punkte schliessen, die Testumgebung
+reproduzierbar machen und alles gegenpruefen. **Nicht** Teil dieser
+Aufgabe (ausdrueckliche Vorgabe): Sichtbarkeit von Kunden fuer
+Mitarbeiter und Support - dafuer gibt es eine eigene Aufgabe.
+
+## Ausgangslage nach dem Merge
+
+`main` war auf PHPStan **rot** - allerdings aus einem Grund, den PR #338
+bereits behoben hat: der Dependabot-Merge #334 lief vor #338 durch und
+trug noch die drei veralteten Baseline-Muster (`last_contact`,
+`currentlyActive`). Auf dem Stand nach #338 ist PHPStan gruen.
+
+## 1. Testumgebung (die offene Aufgabe)
+
+**Befund A - zwei Sicherheitstests liefen nie.** Von den sieben
+uebersprungenen Tests waren zwei SICHERHEITStests, die sich unter einer
+Bedingung selbst uebersprangen:
+
+| Test | Warum er sich uebersprang | Folge |
+|---|---|---|
+| `ClientIpIntegrityTest::test_activity_log_records_the_real_client_ip` | las die IP im Feld `meta`, gespeichert wird sie in der Spalte `ip` | der Schutz gegen gefaelschte Client-IPs (SEC-2) war ungeprueft |
+| `ContentSecurityPolicyTest::test_non_html_responses_get_no_policy` | verlangte Statuscode 200, die Ansicht liefert regelgerecht 503 bei roter Ampel | JSON-Antworten wurden nie auf fehlende CSP geprueft |
+
+Gemessen wurde zuerst, was die Anwendung tatsaechlich tut: sie
+protokolliert `198.51.100.77` (die echte Adresse) und **nicht** das per
+`X-Forwarded-For` behauptete `5.5.5.5`. Das Verhalten war also richtig -
+nur sah es niemand. Gegenprobe nach der Reparatur: mit
+`TRUSTED_PROXIES='*'` faellt der Test.
+
+Regel daraus, als Test festgehalten
+(`TestumgebungTest::test_kein_sicherheitstest_ueberspringt_sich_selbst`):
+in `tests/Feature/Security/` ist `markTestSkipped` verboten.
+
+**Befund B - fuenf Faelle brauchten Systempakete.** `tesseract-ocr` und
+`poppler-utils` fehlten. Sie sind jetzt in `docs/TESTUMGEBUNG.md`
+beschrieben, werden von `scripts/testumgebung-pruefen.sh` gemeldet und in
+CI installiert - auf dem Produktionsserver ist OCR aktiv, also gehoert
+die Erkennung in den Lauf.
+
+**Ergebnis:** 2871 Tests, 2871 bestanden, **0 uebersprungen** (vorher 7).
+
+**Grenze der Umgebung, ehrlich benannt:** In dieser Sandbox scheitert
+`composer install` mit "Could not authenticate against github.com" -
+`api.github.com` liefert 403 (mit `-vvv` sichtbar als `[403] ... /zipball/...`).
+Das ist eine Netzsperre der Umgebung, kein Projektfehler; die GitHub-Actions-CI
+fuehrt `composer install`, `npm ci`, `npm run build` und die volle Suite bei
+jedem Push aus. Ausweg fuer solche Umgebungen ist `--prefer-source`,
+dokumentiert in `docs/TESTUMGEBUNG.md`. Das lokale `vendor/` wurde
+paketweise gegen `composer.lock` geprueft: 116 Pakete, 0 fehlend, 0
+abweichend - lokal gemessen wird also dasselbe wie in CI.
+
+## 2. Sicherung: durchgespielt, nicht behauptet
+
+Gegen eine Wegwerf-Datenbank mit dem ECHTEN Schema (108 Tabellen,
+Migrationen frisch eingespielt) und echten Datensaetzen:
+
+| Schritt | Ergebnis |
+|---|---|
+| `scripts/backup.sh` | Dump + Dateien, AES-256 verschluesselt, im Lauf geprueft (108 Tabellen im Dump) |
+| Verschluesselung | `PGP symmetric key encrypted data - AES with 256-bit key`; ohne Schluessel nicht lesbar (gegengeprueft) |
+| Zweiter Speicherort | per rclone uebertragen UND zurueckgelesen |
+| Statusdatei | `{"status":"ok", ..., "verschluesselt":true, "extern":true}` |
+| `restore.sh --pruefen` | bestanden: entschluesselbar, 108 Tabellen, Pflichttabellen vollstaendig |
+| `restore.sh --wiederherstellen` | in eine ANDERE Datenbank eingespielt; Kundennummer und Vertrag wieder da |
+| Dateien | privates Dokument aus dem Archiv wiederhergestellt |
+
+Gegenproben (das Wichtigere):
+
+| Fall | Erwartung | Gemessen |
+|---|---|---|
+| falsches Passwort | Abbruch | "die Sicherung ist unbrauchbar", **Exitcode 1** |
+| Produktionsdatenbank als Ziel | Ablehnung | "ist die PRODUKTIVE Datenbank", **Exitcode 1** |
+| keine Sicherung vorhanden | eindeutige Meldung | **Exitcode 2** |
+| Backup mit kaputtem DB-Zugang | ehrliche Statusdatei | `{"status":"fehler", ...}` -> Systemzustand rot |
+
+**Offen bleibt die Inbetriebnahme auf dem Server** (Betreiber):
+`BACKUP_PASSPHRASE` und `BACKUP_REMOTE` in die Server-`.env`, Cron-Eintrag,
+und `restore.sh --pruefen` dort einmal laufen lassen.
+
+## 3. Sicherheits-Neupruefung
+
+Angriffsseitig gemessen und als `ReAuditTest` + `DateizugriffTest`
+festgeschrieben (13 Faelle):
+
+| Bereich | Ergebnis |
+|---|---|
+| Fremdzugriff ueber die ID (Dokument eines anderen Kunden) | 404, Inhalt kommt nicht heraus |
+| Offene Weiterleitung (`?redirect=`, `?next=`) | fuehrt nie auf einen fremden Host |
+| Webhook ohne Signatur | 403 |
+| `/gesundheit` ohne Token | 404 (kein 401 - er verraet nicht einmal, dass es ihn gibt) |
+| `/gesundheit` mit Token | nur Ampel; kein Schluessel, kein Wert |
+| Adminbereich ohne Anmeldung / als Kunde | kein einziger 200er |
+| CORS | keine Freigabe |
+| Sicherheitsheader | nosniff, SAMEORIGIN, Referrer-Policy, CSP ohne `unsafe-inline` im `script-src` |
+| Private Platte | `serve => false`, liefert nichts selbst aus |
+| Pfad mit `..` | bricht nicht aus dem Kundenordner aus |
+| Ausfuehrbare Uploads (php/phtml/sh/html) | abgelehnt, auf keiner Whitelist |
+| SQL-Einschleusung | keine Interpolation in `DB::raw`/`whereRaw` (nur Konstanten) |
+| Drosselung | Anmeldung, Registrierung, Passwort-Reset, zweiter Faktor, Webhooks, Gesundheit |
+| Geheimnisse | keine `.env` im Repository |
+| Abhaengigkeiten | `composer audit` und `npm audit` ohne Befund |
+
+KI-Endpunkt (geschichtet, alles VOR dem Modellaufruf): Eingabe auf 2000
+Zeichen begrenzt, Ausgabe auf 500 Tokens, Grenzen je IP, je Sitzung und
+als Tagesbudget, Rueckfallebene mit Uebergabe ans Team, Protokoll ohne IP
+und ohne Nachrichtentext (nur Bereich und Art der Grenze).
+
+**Gemessen und als Fehlalarm verworfen:** mehrere Formulare setzen
+`outline:none`, was nach fehlendem Tastatur-Fokus aussieht. Im Browser
+gemessen liegt auf `/login`, `/register` und `/hilfe` ein 2px-Fokusrahmen -
+die Regel aus `components.css` ueberschreibt das Inline-CSS.
+
+## 4. Warteschlange
+
+| Job | Zeitlimit | Versuche |
+|---|---|---|
+| `ImportCustomersJob` | 1800 s | 1 (eigener Anschluss `*-lang`, `retry_after` 2100) |
+| `PublishSocialChannelJob` | 300 s | 1 |
+| `SendCampaignJob` | 300 s | 3 (idempotent ueber einen Unique-Index) |
+| `AnalyzeDocumentJob` | 300 s | 2 |
+| alle uebrigen | <= 180 s | 1-3 |
+
+`retry_after` betraegt 360 s auf beiden normalen Anschluessen - groesser
+als das laengste Zeitlimit (300 s). Jeder Job, bei dem eine Wiederholung
+schaden wuerde (Beitrag, Antwort, Import, Versand), steht auf
+`tries = 1`; der einzige Job mit Wiederholung UND Versand
+(`SendCampaignJob`) traegt den Protokolleintrag VOR dem Versand ein und
+faengt die Kollision am Unique-Index ab.
+
+## 5. Leistung, vorher/nachher
+
+Gleiche Maschine, gleiche Daten, Median aus 5 Laeufen, SQLite im
+Speicher; das "vorher" wurde durch Zuruecksetzen der Aenderung erzeugt,
+nicht aus der Erinnerung zitiert.
+
+| Messung | Vorher | Nachher |
+|---|---|---|
+| Auswertungs-Dashboard, 2000 Vertraege | 322,3 ms | **14,9 ms** |
+| Chat-Abfrage, 500 Nachrichten im Verlauf | 200,1 kB je Abfrage | **0,00 kB** mit Stand (erste Seite 20,0 kB) |
+
+Zusaetzlich: die Ticket-Auswertung laedt die Kundenakte nicht mehr fuer
+jedes Ticket der Kohorte, sondern nur fuer die fuenf mit den meisten
+Anfragen; die Erledigt-Kurve laeuft ueber `cursor()`.
+
+`LeistungsmessungTest` sichert die EIGENSCHAFT ab (kein
+ueberproportionales Wachstum), nicht die Millisekundenzahl - die haengt
+an der Maschine.
+
+## 6. Browser
+
+13 Seiten je Geraet auf Desktop (1440), Tablet (820) und Handy (390),
+oeffentlich UND angemeldet in der Beraterwelt: keine Konsolenfehler,
+keine Netzwerkfehler, kein waagerechter Bildlauf, `<h1>` auf jeder Seite,
+kein Eingabefeld ohne Beschriftung, jeder JSON-LD-Block gueltiges JSON.
+
+## 7. Was offen bleibt
+
+1. **Employee / Support Customer Access Architecture** - eigene Aufgabe,
+   ausdruecklich nicht Teil dieser. Dazu gehoert auch, dass
+   `users.can_see_all_customers` in der Migration auf `true` steht.
+2. **Netz/Firewall (SEC-2)** - `scripts/netz-pruefen.sh` liegt bereit und
+   ist rein lesend; das Einschalten einer Firewall bleibt beim Betreiber,
+   weil ein blinder Schritt den SSH-Zugang kappen kann.
+3. **Inbetriebnahme der Sicherung** auf dem Server (Passwort, zweiter
+   Speicherort, Cron) und einmal `restore.sh --pruefen` dort.
+4. **Veraltete Pakete** ohne Sicherheitsbezug: larastan 3.12.0 -> 3.12.1,
+   laravel/framework 13.31.0 -> 13.32.0, phpunit 12 -> 13 (Hauptversion).
