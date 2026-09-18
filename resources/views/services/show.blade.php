@@ -11,9 +11,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dienstly24 — {{ $page->t('title') }}</title>
+{{-- Titel: LEISTUNG zuerst, Marke hinten (SEO-Auftrag Abschnitt 8).
+     Google kuerzt den Titel von rechts, und in der Trefferliste entscheidet
+     das erste Wort. "Dienstly24 - Kfz-Versicherung" verschenkte bei 21
+     Seiten jedes Mal den Anfang an einen Markennamen, den niemand sucht,
+     der Dienstly24 noch nicht kennt. --}}
+<title>{{ $page->t('title') }} | Dienstly24</title>
 @if($page->t('meta_description'))<meta name="description" content="{{ $page->t('meta_description') }}">@endif
 <meta name="robots" content="index, follow">
+<meta name="author" content="Dienstly24">
 {{-- Canonical/hreflang IMMER auf dem Website-Host (www.dienstly24.de):
      DE- und AR-Version sind echte URLs (P1-3/P1-4). --}}
 @php $sPath = '/leistungen/' . $page->slug; @endphp
@@ -21,10 +27,31 @@
 <link rel="alternate" hreflang="de" href="{{ \App\Support\WebsiteHosts::url($sPath) }}">
 <link rel="alternate" hreflang="ar" href="{{ \App\Support\WebsiteHosts::url('/ar' . $sPath) }}">
 <link rel="alternate" hreflang="x-default" href="{{ \App\Support\WebsiteHosts::url($sPath) }}">
+{{-- Open Graph / Twitter vollstaendig (Abschnitt 32): ohne og:image
+     zeigte jedes Teilen dieser Seite bei WhatsApp, Facebook und LinkedIn
+     nur einen grauen Kasten - ausgerechnet auf dem Weg, ueber den der
+     Betrieb seine Kunden erreicht. Das Bild kommt aus dem Medien-Slot,
+     ersatzweise aus dem mitgelieferten Bestand. --}}
+@php
+    $ogAsset = \App\Models\MediaAsset::forSlot('og-image-social');
+    $ogUrl = $ogAsset?->fallbackUrl()
+        ? 'https://' . \App\Support\WebsiteHosts::canonical() . $ogAsset->fallbackUrl()
+        : \App\Support\WebsiteHosts::url('/images/og-image.jpg');
+@endphp
 <meta property="og:type" content="website">
+<meta property="og:site_name" content="Dienstly24">
 <meta property="og:title" content="{{ $page->t('title') }} – Dienstly24">
 @if($page->t('meta_description'))<meta property="og:description" content="{{ $page->t('meta_description') }}">@endif
 <meta property="og:url" content="{{ \App\Support\WebsiteHosts::url($rtl ? '/ar' . $sPath : $sPath) }}">
+<meta property="og:image" content="{{ $ogUrl }}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="{{ $rtl ? 'ar_AR' : 'de_DE' }}">
+<meta property="og:locale:alternate" content="{{ $rtl ? 'de_DE' : 'ar_AR' }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ $page->t('title') }} – Dienstly24">
+@if($page->t('meta_description'))<meta name="twitter:description" content="{{ $page->t('meta_description') }}">@endif
+<meta name="twitter:image" content="{{ $ogUrl }}">
 {{-- Strukturierte Daten: Aufbau in App\Services\Seo\StructuredData.
      NICHT als Array hierher zurueckholen - Blade wuerde den Schluessel
      "at-context" als eigene Direktive kompilieren und PHP-Quelltext ins
@@ -33,6 +60,12 @@
 {!! \App\Services\Seo\StructuredData::script(\App\Services\Seo\StructuredData::faqPage(
     collect($faq)->map(fn ($f) => [$f['q'] ?? null, $f['a'] ?? null])->all()
 )) !!}
+{!! \App\Services\Seo\StructuredData::script(\App\Services\Seo\StructuredData::organization()) !!}
+{!! \App\Services\Seo\StructuredData::script(\App\Services\Seo\StructuredData::breadcrumbList([
+    [__('Startseite'), $rtl ? '/ar' : '/'],
+    [__('Leistungen'), $rtl ? '/ar/leistungen' : '/leistungen'],
+    [$page->t('title'), $rtl ? '/ar' . $sPath : $sPath],
+])) !!}
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 <style>
 /* Marke: resources/css/brand.css (UX-1). Lokal bleiben nur die dunklen
@@ -49,6 +82,33 @@ body{font-family:'Inter',system-ui,Arial,sans-serif;min-height:100vh;min-height:
 .page{flex:1;max-width:1080px;width:100%;margin:0 auto;padding:26px 24px 48px;}
 .back{display:inline-flex;align-items:center;gap:6px;margin-bottom:22px;color:var(--muted);text-decoration:none;font-size:13.5px;}
 .back:hover{color:#fff;}
+/* Brotkrumen (Abschnitt 22): sichtbar UND als BreadcrumbList ausgezeichnet -
+   Google zeigt in der Trefferliste den Pfad statt der nackten URL. */
+.krumen{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:20px;font-size:13.5px;color:var(--muted);}
+.krumen a{color:var(--muted);text-decoration:none;}
+.krumen a:hover{color:#fff;text-decoration:underline;}
+.krumen [aria-current]{color:#dfe4e0;}
+.krumen .tr{opacity:.45;}
+/* Direkter Kontakt: Telefon und WhatsApp als ECHTE Knoepfe. Bisher war das
+   Formular der einzige Weg - auf dem Telefon ist ein Anruf aber der
+   kuerzeste Weg zu einer Anfrage (Abschnitt 24/25). */
+.kontaktbox{margin:0 0 30px;padding:18px 20px;border:1px solid var(--glass-line);border-radius:16px;background:rgba(23,166,91,.07);}
+.kontaktbox p{font-size:14px;color:#c7cec9;margin-bottom:12px;}
+.kontaktwege{display:flex;flex-wrap:wrap;gap:10px;}
+.kontaktwege a{display:inline-flex;align-items:center;gap:8px;padding:11px 18px;border-radius:12px;font-size:14.5px;font-weight:600;text-decoration:none;min-height:44px;}
+.kontaktwege .k-tel{background:var(--emerald);color:#fff;}
+.kontaktwege .k-wa{background:rgba(255,255,255,.08);border:1px solid var(--glass-line);color:#eef1ee;}
+.kontaktwege .k-form{background:transparent;border:1px solid var(--glass-line);color:#c7cec9;}
+.kontaktwege a:hover{filter:brightness(1.08);}
+/* Verwandte Leistungen: der thematische Ausgang aus der Seite. */
+.weiter{margin-top:34px;}
+.weiter h2{font-size:18px;color:#fff;margin-bottom:14px;}
+.weiter .liste{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+@media(max-width:820px){.weiter .liste{grid-template-columns:1fr 1fr;}}
+@media(max-width:520px){.weiter .liste{grid-template-columns:1fr;}}
+.weiter a{display:block;padding:15px 16px;border:1px solid var(--glass-line);border-radius:14px;background:var(--card);color:#eef1ee;text-decoration:none;font-size:14.5px;font-weight:600;transition:border-color .2s,transform .2s;}
+.weiter a:hover{border-color:var(--emerald);transform:translateY(-3px);}
+.weiter a span{display:block;margin-top:5px;font-size:12.5px;font-weight:400;color:var(--muted);}
 /* Hero */
 .hero{display:flex;gap:20px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
 /* Im Admin hochgeladenes Seitenbild (weisse Kachel vertraegt auch Bilder mit weissem Hintergrund) */
@@ -121,11 +181,23 @@ label{display:block;font-size:13px;margin-bottom:7px;color:#cfd5cf;font-weight:5
 
 <div class="topbar">
     <a href="{{ url('/') }}"><img src="{{ \App\Support\BrandAssets::logoLight() }}" alt="Dienstly24"></a>
-    <div class="lang-switch"><a href="{{ route('locale.switch', $rtl ? 'de' : 'ar') }}">🌐 {{ $rtl ? 'Deutsch' : 'العربية' }}</a></div>
+    {{-- Sprachwahl = ECHTER Link auf die andere Sprachversion DIESER Seite,
+         also genau die Adresse, die auch im hreflang steht. Vorher fuehrte
+         der Knopf auf den Sitzungs-Umschalter /sprache/ar: die URL blieb
+         dieselbe, der Inhalt wechselte. Fuer Google sind das zwei Inhalte
+         unter einer Adresse - die arabische Fassung war ueber die
+         Oberflaeche gar nicht als eigene Seite erreichbar. --}}
+    <div class="lang-switch"><a href="{{ \App\Support\WebsiteHosts::url($rtl ? $sPath : '/ar' . $sPath) }}" lang="{{ $rtl ? 'de' : 'ar' }}" hreflang="{{ $rtl ? 'de' : 'ar' }}">🌐 {{ $rtl ? 'Deutsch' : 'العربية' }}</a></div>
 </div>
 
 <div class="page">
-    <a href="{{ route('services.index') }}" class="back">← {{ __('Alle Leistungen') }}</a>
+    <nav class="krumen" aria-label="{{ __('Brotkrumen') }}">
+        <a href="{{ $rtl ? '/ar' : '/' }}">{{ __('Startseite') }}</a>
+        <span class="tr" aria-hidden="true">›</span>
+        <a href="{{ $rtl ? '/ar/leistungen' : '/leistungen' }}">{{ __('Leistungen') }}</a>
+        <span class="tr" aria-hidden="true">›</span>
+        <span aria-current="page">{{ $page->t('title') }}</span>
+    </nav>
 
     <div class="hero">
         @if($page->image_path)
@@ -141,6 +213,38 @@ label{display:block;font-size:13px;margin-bottom:7px;color:#cfd5cf;font-weight:5
         @endif
     </div>
     @if($page->t('intro'))<p class="lead">{{ $page->t('intro') }}</p>@endif
+
+    {{-- Direkte Kontaktwege VOR dem Formular (Abschnitt 24/25): Telefon und
+         WhatsApp sind auf dem Telefon ein Fingertipp, ein Formular sind
+         acht Felder. Der Hinweis auf die deutschlandweite Beratung steht
+         genau hier, weil ein Besucher aus Koeln sonst aus der Hamburger
+         Anschrift im Fuss schliesst, er sei nicht gemeint. --}}
+    @php
+        $telE164 = config('website.phone_e164');
+        $telAnzeige = config('website.phone_display');
+        $waLeistung = $rtl
+            ? 'مرحباً Dienstly24، أريد استشارة بخصوص: ' . $page->t('title')
+            : 'Hallo Dienstly24, ich interessiere mich für: ' . $page->title_de;
+        $waLink = 'https://wa.me/' . config('website.whatsapp') . '?text=' . rawurlencode($waLeistung);
+    @endphp
+    <div class="kontaktbox">
+        <p>{{ $rtl
+            ? 'استشارة مجانية وغير ملزمة – بالعربية والألمانية، في جميع أنحاء ألمانيا عبر الهاتف أو الإنترنت.'
+            : 'Kostenlose, unverbindliche Beratung – auf Deutsch und Arabisch, deutschlandweit telefonisch und online.' }}</p>
+        <div class="kontaktwege">
+            <a class="k-tel" href="tel:{{ $telE164 }}" data-cta="telefon" data-cta-seite="{{ $page->slug }}">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.13.96.36 1.9.7 2.8a2 2 0 0 1-.45 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.27a2 2 0 0 1 2.1-.45c.9.34 1.84.57 2.8.7A2 2 0 0 1 22 16.9z"/></svg>
+                {{-- Im arabischen Fliesstext dreht die Zweirichtungs-Regel
+                     die Zifferngruppen um: aus "+49 179 9673909" wurde auf
+                     der Seite "9673909 179 49+" - eine Nummer, die niemanden
+                     erreicht. Sie steht deshalb ausdruecklich linkslaeufig
+                     (dieselbe Regel wie bei den Signaturseiten). --}}
+                <span dir="ltr">{{ $telAnzeige }}</span>
+            </a>
+            <a class="k-wa" href="{{ $waLink }}" target="_blank" rel="noopener" data-cta="whatsapp" data-cta-seite="{{ $page->slug }}">WhatsApp</a>
+            <a class="k-form" href="#anfrage" data-cta="formular" data-cta-seite="{{ $page->slug }}">{{ __('Beratung anfragen') }}</a>
+        </div>
+    </div>
 
     <div class="cols {{ $hasLeft ? 'two' : 'one' }}">
         @if($hasLeft)
@@ -237,6 +341,20 @@ label{display:block;font-size:13px;margin-bottom:7px;color:#cfd5cf;font-weight:5
         </div>
     </div>
 
+    @if($related->isNotEmpty())
+    <section class="weiter" aria-labelledby="weiter-titel">
+        <h2 id="weiter-titel">{{ $rtl ? 'خدمات ذات صلة' : 'Passende weitere Leistungen' }}</h2>
+        <div class="liste">
+            @foreach($related as $r)
+                <a href="{{ ($rtl ? '/ar' : '') . '/leistungen/' . $r->slug }}">
+                    {{ $r->t('title') }}
+                    @if($r->t('subtitle'))<span>{{ $r->t('subtitle') }}</span>@endif
+                </a>
+            @endforeach
+        </div>
+    </section>
+    @endif
+
     @php $providers = $page->providerList(); @endphp
     @if(count($providers))
     <div class="providers" aria-label="{{ __('Anbieter im Überblick') }}">
@@ -251,11 +369,24 @@ label{display:block;font-size:13px;margin-bottom:7px;color:#cfd5cf;font-weight:5
     @endif
 </div>
 
+{{-- Pflichtangaben vollstaendig (Abschnitt 12): Versicherungsvermittlung
+     ist ein Bereich, in dem Google und Nutzer Vertrauensbelege erwarten.
+     Impressum und Datenschutz allein reichen dafuer nicht - Erstinformation
+     (Registernummer, Aufsichtsbehoerde), AGB und Widerruf gehoeren auf jede
+     oeffentliche Seite, nicht nur auf die Startseite. --}}
 <div class="foot">
+    <span>© {{ date('Y') }} Dienstly24</span><span class="sep">·</span>
     <a href="{{ url('/impressum') }}">{{ __('Impressum') }}</a><span class="sep">·</span>
     <a href="{{ url('/datenschutz') }}">{{ __('Datenschutz') }}</a><span class="sep">·</span>
+    <a href="{{ url('/erstinformation') }}">{{ __('Erstinformation') }}</a><span class="sep">·</span>
+    <a href="{{ url('/agb') }}">AGB</a><span class="sep">·</span>
+    <a href="{{ url('/widerruf') }}">{{ __('Widerruf') }}</a><span class="sep">·</span>
+    <a href="{{ url('/leistungen') }}">{{ __('Alle Leistungen') }}</a><span class="sep">·</span>
     <a href="{{ route('login') }}">{{ __('Kundenportal') }}</a>
 </div>
+<p class="foot" style="border-top:0;padding-top:0;max-width:780px;margin:0 auto 22px;text-align:center;line-height:1.6;">{{ $rtl
+    ? 'تتم وساطة التأمين عبر وسيط تأمين مرخّص وفق المادة 34d الفقرة 1 من قانون مزاولة الحرف الألماني (GewO). تجدون بيانات الوسيط ورقم السجل وجهة الرقابة في صفحة بيانات الناشر (Impressum) وصفحة المعلومات الأولى (Erstinformation).'
+    : 'Die Versicherungsvermittlung erfolgt über einen zugelassenen Versicherungsmakler gem. § 34d Abs. 1 GewO. Angaben zum Vermittler, Registernummer und Aufsichtsbehörde finden Sie im Impressum und in der Erstinformation.' }}</p>
 {{-- WhatsApp-Float mit leistungsspezifischem Text (P0-3) --}}
 @include('website.partials.whatsapp', ['waText' => $rtl
     ? 'مرحباً Dienstly24، أريد استشارة بخصوص: ' . $page->t('title')

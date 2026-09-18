@@ -3365,6 +3365,85 @@ Vollstaendig in `docs/AUDIT_2026-09-15_BEHEBUNG.md` und
   Bestand, bis jemand den Haken entfernt. Das ist eine Voreinstellung, kein
   Codefehler, und die Umstellung gehoert in jene Aufgabe.
 
+## SEO & Online-Sichtbarkeit (Betreiber-Auftrag 02.10.2026)
+
+Vollstaendig in `docs/SEO_BESTANDSAUFNAHME_UND_MASSNAHMEN.md`, arabische
+Betreiber-Anleitung `docs/ANLEITUNG_SEO_AR.md`. Die Kurzfassung:
+
+- **WAS NICHT GEPRUEFT WERDEN KONNTE, steht als ungeprueft da**: die
+  Arbeitsumgebung hat keinen Netzzugang zu `www.dienstly24.de`. Live-Crawl,
+  Search Console, Rankings, Backlinks, Core Web Vitals als Feldwerte und das
+  Google-Business-Profil sind deshalb NICHT bewertet. Geschaetzte Zahlen in
+  einer SEO-Tabelle sehen aus wie gemessene - das ist der Grund, warum dort
+  keine stehen.
+- **Der Bestand war gut**: dynamische `robots.txt`/`sitemap.xml` aus echten
+  Inhalten, Canonical + hreflang auf jeder Seite, echte `/ar`-URLs, keine
+  externen Ressourcen, eigenstaendiger Fachtext je Sparte. Gefehlt haben
+  Dinge, die KEINE Stoerung erzeugen - kein 500er, keine Konsolenmeldung,
+  kein kaputtes Layout: genau deshalb standen sie monatelang da.
+- **Titel: LEISTUNG zuerst, Marke hinten** (`Kfz-Versicherung | Dienstly24`).
+  Google kuerzt von rechts; 21-mal stand der Markenname vor dem Suchwort.
+- **Brotkrumen sichtbar UND als `BreadcrumbList`** (`StructuredData::
+  breadcrumbList`). Ein Schema ohne sichtbares Gegenstueck ist laut
+  Google-Richtlinie unzulaessig - beides entsteht deshalb zusammen.
+- **Leistungsseiten waren SACKGASSEN**: einziger Ausgang "Alle Leistungen".
+  Jetzt vier verwandte Leistungen, gleiche Kategorie zuerst
+  (`ServicePageController::related`), mit Auffuellen - sonst haette eine
+  Kategorie mit nur einer Seite (Energie) weiterhin keinen Ausgang.
+- **Die arabische Fassung verliess sich selbst**: `route('services.show')`
+  liefert IMMER die deutsche Adresse, also verlinkte jede Kachel auf
+  `/ar/leistungen` nach `/leistungen`. Und der Sprachumschalter fuehrte auf
+  den Sitzungsschalter `/sprache/ar`: dieselbe URL, anderer Inhalt - fuer
+  Google zwei Inhalte unter einer Adresse. Beides zeigt jetzt auf die
+  ECHTE Adresse, dieselbe, die im `hreflang` steht.
+- **Pflichtangaben auf JEDER oeffentlichen Seite**, nicht nur auf der
+  Startseite (Impressum, Datenschutz, Erstinformation, AGB, Widerruf +
+  Vermittler-Hinweis). Versicherungsvermittlung ist ein Bereich, in dem
+  Nutzer und Suchmaschinen Vertrauensbelege erwarten.
+- **Telefon und WhatsApp als Knoepfe** vor dem Formular: auf dem Telefon
+  ist ein Anruf ein Fingertipp, das Formular sind acht Felder.
+- **Neue Landingpage `/leistungen/versicherungsmakler`** - das wichtigste
+  kommerzielle Suchwort des Betriebs hatte keine eigene Seite; keine der 21
+  Spartenseiten beantwortet die Absicht "wer beraet mich?".
+  **SIE BLEIBT HINTER DER BEQUEMEN FORMULIERUNG ZURUECK**: laut
+  `/erstinformation` haelt Dienstly24 die Erlaubnis nach Paragraph 34d GewO
+  NICHT selbst, sondern vermittelt als vertraglich gebundener Vermittler
+  unter der Haftung von NESA Versicherung und Finanzen. Die Seite sagt das
+  ausdruecklich und verlinkt die Erstinformation. "Wir sind Ihr
+  Versicherungsmakler mit Erlaubnis nach 34d" waere die staerkere
+  Ueberschrift und eine falsche Angabe ueber das eigene Unternehmen - ein
+  Test haelt das fest.
+- **`sameAs` kommt aus `config/website.php` (`social`), ohne Standardwert**
+  ausser Facebook. Ein erfundenes Profil waere eine falsche
+  Unternehmensangabe, und Google prueft `sameAs`. Weitere Profile per
+  `WEBSITE_INSTAGRAM`/`_LINKEDIN`/`_YOUTUBE`/`_GOOGLE_BUSINESS` in der
+  Server-`.env` - erst wenn sie WIRKLICH existieren.
+- **`WebSite` nur auf der Startseite, `Organization` auf den Unterseiten.**
+  Eine Website gibt es einmal, nicht 22-mal; und eine Unterseite ist kein
+  zweiter Standort - traegt sie den vollen `InsuranceAgency`-Block mit
+  Anschrift und Oeffnungszeiten, behauptet jede Seite eine eigene Filiale.
+- **BEWUSST NICHT GEBAUT**: die lokale Hamburg-Seite (sie wirkt erst, wenn
+  das Business-Profil vollstaendig ist - sonst ist sie eine Seite ohne
+  Signal dahinter, die Vorstufe einer Doorway Page) und der Ratgeber (drei
+  duenne Artikel schaden mehr als sie nutzen).
+- **Messung ist VORBEREITET, nicht eingebaut**: es gibt kein Analysewerkzeug
+  im Projekt, und das ist kein Versehen - seit SEC-4 laesst die
+  Inhaltsrichtlinie nur eigene Skripte mit Nonce zu, ein Fremdskript braucht
+  eine bewusste Entscheidung samt Datenschutzerklaerung. Alle Kontaktknoepfe
+  tragen `data-cta` (telefon/whatsapp/formular) und `data-cta-seite`; sobald
+  ein Werkzeug da ist, ist die Messung ein Einzeiler in `ui.js`.
+- **ZWEI FEHLER FAND ERST DER BROWSER**, beide nur in der ARABISCHEN
+  Fassung und beide ohne jede Fehlermeldung: die Brotkrumen standen auf
+  DEUTSCH (`lang/ar.json` kannte die Woerter nicht - `__()` gibt dann den
+  Schluessel zurueck, dieselbe Luecke wie bei `lang/ar/validation.php`),
+  und die Telefonnummer wurde VERDREHT angezeigt (`+49 179 9673909` ->
+  `9673909 179 49+`; die Zweirichtungs-Regel dreht Zifferngruppen im
+  arabischen Fliesstext). Das zweite ist keine Schoenheitsfrage: eine so
+  abgetippte Nummer erreicht niemanden. Nummer jetzt `dir="ltr"`, beides
+  als Test festgehalten. LEHRE: eine Oberflaechenaenderung, die in beiden
+  Sprachen erscheint, muss in BEIDEN angeschaut werden.
+- Tests: `SeoSichtbarkeitTest`, ergaenzend `StructuredDataTest`.
+
 ## Offene Themen / wartet auf den Betreiber
 
 - **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026

@@ -45,6 +45,132 @@ class ServicePageSeeder extends Seeder
     private function pages(): array
     {
         return [
+            /*
+             * WARUM DIESE SEITE AN ERSTER STELLE STEHT (SEO-Auftrag 02.10.2026,
+             * Abschnitt 3): "Versicherungsmakler" ist das wichtigste
+             * kommerzielle Suchwort des Betriebs - und es hatte bis dahin
+             * keine eigene Seite. Wer danach sucht, sucht nicht eine einzelne
+             * Sparte, sondern jemanden, der ihn beraet; diese Absicht
+             * beantwortete keine der 21 Spartenseiten.
+             *
+             * INHALTLICH STRENG AN DER ERSTINFORMATION AUSGERICHTET:
+             * Dienstly24 ist NICHT selbst Inhaber der Erlaubnis nach
+             * Paragraph 34d GewO, sondern vermittelt als vertraglich
+             * gebundener Vermittler unter der Haftung von NESA Versicherung
+             * und Finanzen (Registernummer und Aufsicht siehe
+             * /erstinformation). Die Seite sagt das ausdruecklich. Ein
+             * "Wir sind Ihr Versicherungsmakler mit Erlaubnis nach 34d"
+             * waere die bequemere Ueberschrift - und eine falsche Angabe
+             * ueber das eigene Unternehmen, also genau das, was in diesem
+             * Bereich Vertrauen (und im Zweifel die Zulassung) kostet.
+             */
+            [
+                'slug' => 'versicherungsmakler',
+                'category' => 'versicherung',
+                'icon' => '🤝',
+                'title_de' => 'Versicherungsmakler',
+                'title_ar' => 'وسيط تأمين',
+                'subtitle_de' => 'Unabhängige Beratung statt Verkauf – so arbeiten wir',
+                'subtitle_ar' => 'استشارة مستقلة بدل البيع – هيك منشتغل',
+                'intro_de' => 'Ein Versicherungsmakler steht auf der Seite des Kunden, nicht auf der '
+                    .'Seite einer Versicherungsgesellschaft: Er vergleicht die Angebote mehrerer '
+                    .'Anbieter und empfiehlt, was zur jeweiligen Situation passt. Genau so arbeiten '
+                    .'wir – kostenlos für Sie, deutschlandweit und auf Deutsch wie auf Arabisch.',
+                'intro_ar' => 'وسيط التأمين (Versicherungsmakler) بيكون بصف الزبون، مو بصف شركة تأمين '
+                    .'معيّنة: بيقارن عروض عدة شركات وبينصح بالأنسب للوضع الشخصي. وهيك تماماً منشتغل – '
+                    .'مجاناً إلك، بكل ألمانيا، وبالعربي متل الألماني.',
+                'highlights_de' => "Anbieterunabhängiger Vergleich statt eines einzelnen Anbieters\n"
+                    ."Für Sie kostenlos – die Vergütung zahlt die Gesellschaft (Courtage im Beitrag enthalten)\n"
+                    ."Ein fester Ansprechpartner, auch im Schadenfall\n"
+                    ."Beratung deutschlandweit – telefonisch, online und in Hamburg vor Ort\n"
+                    .'Beratung auf Deutsch und Arabisch',
+                'highlights_ar' => "مقارنة مستقلة عن الشركات بدل عرض شركة وحدة\n"
+                    ."مجاني إلك – الأجر بتدفعه شركة التأمين (العمولة أصلاً ضمن القسط)\n"
+                    ."جهة اتصال ثابتة، كمان وقت الضرر\n"
+                    ."استشارة بكل ألمانيا – هاتف وأونلاين، وبهامبورغ حضورياً\n"
+                    .'استشارة بالعربي والألماني',
+                'meta_description_de' => 'Versicherungsmakler statt Vertreter: Was der Unterschied ist, '
+                    .'was eine Maklervollmacht bedeutet und wie die Beratung abläuft. Kostenlos, '
+                    .'deutschlandweit, auf Deutsch und Arabisch.',
+                'meta_description_ar' => 'وسيط تأمين بدل وكيل شركة: شو الفرق، وشو معنى توكيل الوساطة، '
+                    .'وكيف بتمشي الاستشارة. مجاناً، بكل ألمانيا، بالعربي والألماني.',
+                'body_de' => "## Makler, Vertreter oder Vergleichsportal – der Unterschied\n"
+                    ."Ein Versicherungsvertreter arbeitet im Auftrag EINER Gesellschaft und vermittelt deren Tarife. Ein Versicherungsmakler wird dagegen vom Kunden beauftragt: Er ist rechtlich dessen Sachwalter, vergleicht die Angebote mehrerer Gesellschaften und schuldet eine Empfehlung, die zum Bedarf passt (§ 60 VVG). Ein Vergleichsportal wiederum liefert eine Liste – aber keinen Menschen, der die Unterschiede erklärt und im Schadenfall erreichbar ist.\n\n"
+                    ."## Wer bei Dienstly24 vermittelt\n"
+                    ."Damit hier nichts im Unklaren bleibt: Die Vermittlung von Versicherungsverträgen erfolgt über einen zugelassenen Versicherungsmakler mit Erlaubnis nach § 34d Abs. 1 GewO. Dienstly24 tritt dabei als vertraglich gebundener Vermittler unter dessen Haftung auf. Name, Registernummer im Vermittlerregister und die zuständige Aufsichtsbehörde stehen vollständig in unserer Erstinformation – bitte lesen Sie sie, bevor Sie uns beauftragen.\n\n"
+                    ."## Was eine Maklervollmacht bedeutet\n"
+                    ."Mit der Maklervollmacht erlauben Sie uns, gegenüber den Gesellschaften für Sie aufzutreten: Unterlagen anzufordern, Verträge einzusehen, Änderungen zu melden und im Schadenfall zu vermitteln. Wichtig dabei:\n"
+                    ."- Sie kündigt keinen einzigen Ihrer Verträge. Bestehende Verträge laufen unverändert weiter.\n"
+                    ."- Sie verpflichtet Sie zu nichts. Sie schließen nur ab, was Sie selbst wollen.\n"
+                    ."- Sie ist jederzeit widerrufbar.\n\n"
+                    ."## Was es kostet\n"
+                    ."Die Beratung ist für Sie kostenlos. Vergütet wird die Vermittlung über eine Courtage, die die Versicherungsgesellschaft zahlt und die im Versicherungsbeitrag bereits enthalten ist – Sie zahlen also nicht zusätzlich dafür, dass wir vergleichen. Die Einzelheiten zur Vergütung stehen in der Erstinformation.\n\n"
+                    ."## So läuft die Beratung ab\n"
+                    ."- Anliegen schildern: telefonisch, per WhatsApp, über das Formular oder persönlich in Hamburg.\n"
+                    ."- Bedarf klären: Was ist vorhanden, was fehlt, was ist verzichtbar? Auch \"Sie brauchen das nicht\" ist ein Ergebnis.\n"
+                    ."- Vergleichen und erklären: Sie bekommen die Unterschiede in verständlicher Sprache, nicht als Tariftabelle.\n"
+                    ."- Entscheiden: Sie entscheiden in Ruhe. Wir begleiten den Abschluss und bleiben danach Ihr Ansprechpartner.\n\n"
+                    ."## Welche Unterlagen wir brauchen\n"
+                    ."Für ein belastbares Angebot genügen meist: bestehende Policen oder die Vertragsnummern, Angaben zur Person (Geburtsdatum, Anschrift) und – je nach Sparte – Fahrzeugschein, Vorversicherer oder Angaben zur Wohnsituation. Fehlt etwas, sagen wir Ihnen das; geraten wird nichts.\n\n"
+                    ."## Deutschlandweit – mit Sitz in Hamburg\n"
+                    .'Beraten wird telefonisch und online in ganz Deutschland; unser Büro steht in Hamburg (Furtweg 51a, 22523 Hamburg) für Termine vor Ort zur Verfügung. Unterlagen können Sie digital einreichen, Ihre Verträge sehen Sie jederzeit im Kundenportal.',
+                'body_ar' => "## وسيط، وكيل، ولا موقع مقارنة – شو الفرق\n"
+                    ."وكيل التأمين (Vertreter) بيشتغل لحساب شركة وحدة وبيسوّق تعرفاتها. أما وسيط التأمين (Makler) فالزبون هو يلي بيوكّله: قانونياً هو ممثّل مصلحة الزبون، بيقارن عروض عدة شركات، ولازم ينصح بالأنسب للحاجة (المادة 60 VVG). وموقع المقارنة بيعطيك لائحة – بس ما بيعطيك إنسان بيشرحلك الفروق وبيكون موجود وقت الضرر.\n\n"
+                    ."## مين بيتوسّط عند Dienstly24\n"
+                    ."حتى ما يضل شي غامض: وساطة عقود التأمين بتتم عبر وسيط تأمين مرخّص وفق المادة 34d الفقرة 1 من قانون مزاولة الحرف (GewO). وDienstly24 بتشتغل كوسيط مرتبط تعاقدياً وتحت مسؤوليته. الاسم ورقم القيد بسجل الوسطاء وجهة الرقابة كلها مذكورة كاملة بصفحة المعلومات الأولى (Erstinformation) – رجاءً اقرأها قبل ما توكّلنا.\n\n"
+                    ."## شو معنى توكيل الوساطة (Maklervollmacht)\n"
+                    ."بتوكيل الوساطة بتسمحلنا نمثّلك قدام الشركات: نطلب أوراق، نطّلع على العقود، نبلّغ عن التعديلات، ونتوسّط وقت الضرر. والمهم:\n"
+                    ."- ما بيلغي ولا عقد من عقودك. العقود القائمة بتضل شغالة متل ما هي.\n"
+                    ."- ما بيلزمك بشي. ما بتوقّع إلا يلي بتريده إنت.\n"
+                    ."- فيك تسحبه بأي وقت.\n\n"
+                    ."## قديش بيكلّف\n"
+                    ."الاستشارة مجانية إلك. أجر الوساطة (Courtage) بتدفعه شركة التأمين وهو أصلاً محسوب ضمن قسط التأمين – يعني ما بتدفع شي زيادة لأنّنا منقارنلك. تفاصيل الأجر موجودة بصفحة المعلومات الأولى.\n\n"
+                    ."## كيف بتمشي الاستشارة\n"
+                    ."- احكيلنا شو بدك: هاتف، واتساب، النموذج، أو شخصياً بهامبورغ.\n"
+                    ."- منوضّح الحاجة: شو موجود، شو ناقص، وشو ما إله لزوم؟ وكمان \"ما بتحتاج هالشي\" هي نتيجة.\n"
+                    ."- منقارن ومنشرح: بتوصلك الفروقات بلغة مفهومة، مو كجدول تعرفات.\n"
+                    ."- إنت بتقرّر: على راحتك. منرافقك بالتعاقد ومنضل جهة الاتصال بعدها.\n\n"
+                    ."## شو الأوراق يلي منحتاجها\n"
+                    ."لعرض دقيق عادةً بيكفي: البوالص الحالية أو أرقام العقود، بياناتك الشخصية (تاريخ الميلاد والعنوان)، وحسب النوع: أوراق السيارة، أو الشركة السابقة، أو معلومات عن السكن. إذا في شي ناقص منقلك – وما منخمّن شي.\n\n"
+                    ."## بكل ألمانيا – والمقر بهامبورغ\n"
+                    .'الاستشارة بتتم هاتفياً وأونلاين بكل ألمانيا، ومكتبنا بهامبورغ (Furtweg 51a, 22523 Hamburg) جاهز للمواعيد الحضورية. فيك ترسل الأوراق رقمياً، وبتشوف عقودك بأي وقت ببوابة العملاء.',
+                'faq' => [
+                    [
+                        'q_de' => 'Was kostet mich ein Versicherungsmakler?',
+                        'q_ar' => 'قديش بيكلّفني وسيط التأمين؟',
+                        'a_de' => 'Für Sie nichts. Die Vergütung erfolgt über eine Courtage, die die Versicherungsgesellschaft zahlt und die im Beitrag bereits enthalten ist. Einzelheiten stehen in unserer Erstinformation.',
+                        'a_ar' => 'ما بيكلّفك شي. الأجر بيجي كعمولة (Courtage) بتدفعها شركة التأمين وهي أصلاً ضمن القسط. التفاصيل بصفحة المعلومات الأولى.',
+                    ],
+                    [
+                        'q_de' => 'Was ist der Unterschied zu einem Versicherungsvertreter?',
+                        'q_ar' => 'شو الفرق عن وكيل التأمين؟',
+                        'a_de' => 'Ein Vertreter arbeitet für eine Gesellschaft und vermittelt deren Tarife. Ein Makler wird vom Kunden beauftragt und vergleicht die Angebote mehrerer Gesellschaften.',
+                        'a_ar' => 'الوكيل بيشتغل لشركة وحدة وبيسوّق تعرفاتها. الوسيط بيوكّله الزبون وبيقارن عروض عدة شركات.',
+                    ],
+                    [
+                        'q_de' => 'Kündigt die Maklervollmacht meine bestehenden Verträge?',
+                        'q_ar' => 'هل توكيل الوساطة بيلغي عقودي الحالية؟',
+                        'a_de' => 'Nein. Die Maklervollmacht kündigt nichts. Sie erlaubt uns nur, für Sie mit den Gesellschaften zu sprechen – und ist jederzeit widerrufbar.',
+                        'a_ar' => 'لا. التوكيل ما بيلغي شي. بس بيسمحلنا نحكي مع الشركات نيابةً عنك، وفيك تسحبه بأي وقت.',
+                    ],
+                    [
+                        'q_de' => 'Beraten Sie auch außerhalb von Hamburg?',
+                        'q_ar' => 'بتقدّموا استشارة برّا هامبورغ كمان؟',
+                        'a_de' => 'Ja. Die Beratung findet deutschlandweit telefonisch und online statt. Unser Büro in Hamburg steht zusätzlich für Termine vor Ort zur Verfügung.',
+                        'a_ar' => 'أي. الاستشارة بتتم بكل ألمانيا هاتفياً وأونلاين، ومكتبنا بهامبورغ متاح كمان للمواعيد الحضورية.',
+                    ],
+                    [
+                        'q_de' => 'Kann ich auf Arabisch beraten werden?',
+                        'q_ar' => 'فيني آخد الاستشارة بالعربي؟',
+                        'a_de' => 'Ja. Wir beraten auf Deutsch und auf Arabisch – Sie wählen, was Ihnen leichter fällt.',
+                        'a_ar' => 'أي. منقدّم الاستشارة بالألماني وبالعربي – إنت بتختار الأسهل إلك.',
+                    ],
+                ],
+                'fields' => [
+                    ['label_de' => 'Worum geht es?', 'label_ar' => 'شو الموضوع؟', 'type' => 'select', 'options_de' => 'Bestehende Verträge prüfen, Neuer Versicherungsschutz, Schadenfall, Etwas anderes', 'options_ar' => 'مراجعة عقود قائمة, تأمين جديد, حالة ضرر, شي تاني', 'required' => true],
+                    ['label_de' => 'Bevorzugte Sprache', 'label_ar' => 'اللغة المفضّلة', 'type' => 'select', 'options_de' => 'Deutsch, Arabisch', 'options_ar' => 'ألماني, عربي', 'required' => false],
+                ],
+            ],
             [
                 'slug' => 'kfz-versicherung',
                 'category' => 'versicherung',

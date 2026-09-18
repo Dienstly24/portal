@@ -10,6 +10,7 @@ use App\Models\Ticket;
 use App\Services\SpamFilter;
 use App\Services\TicketNotifier;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
@@ -31,7 +32,37 @@ class ServicePageController extends Controller
     public function show(string $slug)
     {
         $page = ServicePage::active()->where('slug', $slug)->firstOrFail();
-        return view('services.show', compact('page'));
+
+        return view('services.show', [
+            'page' => $page,
+            'related' => $this->related($page),
+        ]);
+    }
+
+    /**
+     * Thematisch verwandte Leistungen (SEO-Auftrag Abschnitt 10: interne
+     * Verlinkung). Vorher war jede Leistungsseite eine SACKGASSE - der
+     * einzige Ausgang war "Alle Leistungen". Damit erreichte die
+     * Kfz-Versicherung die Kfz-Zulassung nie, obwohl beide zum selben
+     * Anliegen gehoeren, und die Verlinkungstiefe der Seiten blieb flach.
+     *
+     * Zuerst die GLEICHE Kategorie (Kfz zu Kfz, Versicherung zu
+     * Versicherung) - das ist der echte thematische Bezug; erst wenn davon
+     * zu wenige existieren, wird mit dem uebrigen Bestand aufgefuellt. Ohne
+     * das Auffuellen haette eine Kategorie mit nur einer Seite (Energie)
+     * weiterhin keinen einzigen Ausgang.
+     *
+     * @return Collection<int, ServicePage>
+     */
+    private function related(ServicePage $page)
+    {
+        $alle = ServicePage::active()->ordered()
+            ->where('id', '!=', $page->id)
+            ->get();
+
+        return $alle->sortBy(fn (ServicePage $p) => $p->category === $page->category ? 0 : 1)
+            ->values()
+            ->take(4);
     }
 
     public function submit(Request $request, string $slug)
