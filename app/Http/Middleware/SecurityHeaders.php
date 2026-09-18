@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Support\CspNonce;
+use App\Support\Matomo;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Vite;
@@ -107,6 +108,18 @@ class SecurityHeaders
             ? 'https://connect.facebook.net'
             : '';
 
+        // DRITTER Host, und der einzige, der dem Betrieb selbst gehoert:
+        // die eigene Matomo-Installation (Betreiber-Entscheidung
+        // 18.09.2026). Genau deshalb fiel die Wahl auf Matomo statt GA4 -
+        // eine Freigabe fuer googletagmanager.com waere die Rueckkehr zu
+        // dem Zustand, den SEC-4 beseitigt hat.
+        //
+        // WIE BEI META: ohne Einrichtung keine Freigabe. Und der Wert
+        // kommt nicht roh aus der .env, sondern durch die Pruefung in
+        // App\Support\Matomo - ein Tippfehler dort darf keinen fremden
+        // Skript-Host in die Richtlinie schreiben.
+        $matomo = Matomo::cspOrigin();
+
         return implode('; ', array_filter([
             "default-src 'self'",
             "base-uri 'self'",
@@ -145,11 +158,17 @@ class SecurityHeaders
             // docs/SICHERHEIT_SEC_1_BIS_5.md.
             "style-src 'self' 'unsafe-inline'",
             // Kein 'unsafe-inline', kein 'unsafe-eval'.
-            trim("script-src 'self' ".$nonce.' '.$turnstile.' '.$meta),
+            // Leere Eintraege fallen weg statt doppelte Leerzeichen zu
+            // hinterlassen: die Richtlinie ist eine Zeichenkette, die
+            // Menschen im Zweifelsfall lesen muessen.
+            implode(' ', array_filter(["script-src 'self'", $nonce, $turnstile, $meta, $matomo])),
             // Attribut-Handler (onclick="...") sind damit ausgeschlossen
             // und bleiben es auch: sie koennen keinen Nonce tragen.
             "script-src-attr 'none'",
-            "connect-src 'self'",
+            // Matomo meldet den Seitenaufruf per Anfrage an matomo.php -
+            // ohne connect-src laedt das Skript zwar, sendet aber nie
+            // etwas, und die Auswertung bliebe dauerhaft leer.
+            implode(' ', array_filter(["connect-src 'self'", $matomo])),
             config('security.csp_report_uri')
                 ? 'report-uri '.config('security.csp_report_uri')
                 : null,

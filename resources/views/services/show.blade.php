@@ -391,6 +391,7 @@ label{display:block;font-size:13px;margin-bottom:7px;color:#cfd5cf;font-weight:5
 @include('website.partials.whatsapp', ['waText' => $rtl
     ? 'مرحباً Dienstly24، أريد استشارة بخصوص: ' . $page->t('title')
     : 'Hallo Dienstly24, ich interessiere mich für: ' . $page->title_de])
+@include('partials.matomo')
 {{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
 @stack('cspScripts')
 </body>

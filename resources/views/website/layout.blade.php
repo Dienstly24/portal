@@ -100,7 +100,7 @@
       <a href="{{ $deUrl }}" @class(['active' => ! $isAr]) lang="de" hreflang="de">DE</a>
       <a href="{{ $arUrl }}" @class(['active' => $isAr]) lang="ar" hreflang="ar">AR</a>
     </div>
-    <a href="https://portal.dienstly24.de/login" class="btn btn-ghost btn-login-text" style="padding:9px 18px;font-size:.86rem;">{{ $isAr ? 'تسجيل الدخول' : 'Login' }}</a>
+    <a href="https://portal.dienstly24.de/login" class="btn btn-ghost btn-login-text" data-cta="portal" data-cta-seite="kopfzeile" style="padding:9px 18px;font-size:.86rem;">{{ $isAr ? 'تسجيل الدخول' : 'Login' }}</a>
     <button class="burger" id="burger" aria-label="{{ $isAr ? 'القائمة' : 'Menü' }}" aria-expanded="false"><span></span><span></span><span></span></button>
   </div>
 </div></header>
@@ -128,11 +128,11 @@
       <li><a href="{{ $anchor('ueber') }}">{{ $isAr ? 'من نحن' : 'Über uns' }}</a></li>
       <li><a href="{{ $anchor('ablauf') }}">{{ $isAr ? 'آلية العمل' : 'Ablauf' }}</a></li>
       <li><a href="{{ $anchor('stimmen') }}">{{ $isAr ? 'آراء العملاء' : 'Kundenstimmen' }}</a></li>
-      <li><a href="https://portal.dienstly24.de/login">{{ $isAr ? 'بوابة العملاء' : 'Kundenportal' }}</a></li>
+      <li><a href="https://portal.dienstly24.de/login" data-cta="portal" data-cta-seite="fuss">{{ $isAr ? 'بوابة العملاء' : 'Kundenportal' }}</a></li>
     </ul></div>
     <div><h3 class="ftitle">{{ $isAr ? 'اتصل بنا' : 'Kontakt' }}</h3><ul>
-      <li><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.13.96.36 1.9.7 2.8a2 2 0 0 1-.45 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.27a2 2 0 0 1 2.1-.45c.9.34 1.84.57 2.8.7A2 2 0 0 1 22 16.9z"/></svg><a href="tel:{{ $phoneE164 }}" class="telnum">{{ $phoneDisplay }}</a></li>
-      <li><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg><a href="mailto:{{ $mail }}">{{ $mail }}</a></li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.13.96.36 1.9.7 2.8a2 2 0 0 1-.45 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.27a2 2 0 0 1 2.1-.45c.9.34 1.84.57 2.8.7A2 2 0 0 1 22 16.9z"/></svg><a href="tel:{{ $phoneE164 }}" class="telnum" data-cta="telefon" data-cta-seite="fuss">{{ $phoneDisplay }}</a></li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg><a href="mailto:{{ $mail }}" data-cta="email" data-cta-seite="fuss">{{ $mail }}</a></li>
       <li><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>{{ $addr['street'] }}, {{ $addr['zip'] }} {{ $addr['city'] }}</li>
       <li><a href="{{ config('website.facebook') }}" target="_blank" rel="noopener">Facebook</a></li>
     </ul></div>
@@ -150,6 +150,7 @@
 
 @include('website.partials.whatsapp')
 @include('website.partials.assistant')
+@include('partials.matomo')
 <script src="/website-assets/site.js?v={{ @filemtime(public_path('website-assets/site.js')) ?: 1 }}" defer></script>
 {{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
 @stack('cspScripts')
