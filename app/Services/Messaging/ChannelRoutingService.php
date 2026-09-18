@@ -142,16 +142,24 @@ class ChannelRoutingService
      * geantwortet wird dort, wo der Kunde zuletzt geschrieben hat.
      * Sonst antwortete man im Portal, waehrend der Kunde gerade auf
      * seinem Telefon wartet.
+     *
+     * GELESEN, NICHT GESUCHT: die Angabe steht als Spalte an der
+     * Unterhaltung, geschrieben vom Engine in der echten
+     * Ankunftsreihenfolge. Die fruehere Suche nach der letzten
+     * eingehenden Nachricht per `latest('created_at')` war UNBESTIMMT -
+     * die Spalte hat keine Sekundenbruchteile, und zwei Nachrichten
+     * derselben Sekunde (Webhook-Stapel ist der Normalfall) durfte die
+     * Datenbank in beliebiger Reihenfolge liefern. Ein Tiebreaker auf
+     * die Kennung half nicht: sie ist ein ZUFAELLIGES UUID v4, also
+     * nicht zeitlich sortierbar - das Ergebnis waere wiederholbar
+     * falsch statt zufaellig falsch gewesen.
+     *
+     * Die Rueckfallkette bleibt: fehlt die Spalte (Altbestand), ist der
+     * zuletzt benutzte Kanal die beste verfuegbare Antwort.
      */
     public function defaultChannelId(Conversation $conversation): ?int
     {
-        $letzte = $conversation->messages()
-            ->where('direction', CustomerMessage::DIRECTION_INCOMING)
-            ->whereNotNull('channel_id')
-            ->latest('created_at')
-            ->first();
-
-        return $letzte?->channel_id
+        return $conversation->last_inbound_channel_id
             ?: $conversation->last_channel_id
             ?: $conversation->channel_id;
     }
@@ -295,10 +303,24 @@ class ChannelRoutingService
      */
     private function nachziehen(Conversation $conversation): void
     {
-        $letzte = $conversation->messages()->latest('created_at')->first();
+        // Hier ist die Reihenfolge nicht mehr bekannt (die Nachrichten
+        // liegen schon), deshalb die Kennung als STABILER Tiebreaker:
+        // sie macht das Ergebnis wiederholbar. Chronologisch ist sie
+        // NICHT - ein zufaelliges UUID sagt nichts ueber die Zeit. Bei
+        // zwei Nachrichten derselben Sekunde ist jede von beiden eine
+        // vertretbare Antwort; unvertretbar waere nur, dass zwei
+        // Aufrufe Verschiedenes liefern.
+        $letzte = $conversation->messages()
+            ->orderByDesc('created_at')->orderByDesc('id')->first();
+
+        $letzterEingang = $conversation->messages()
+            ->where('direction', CustomerMessage::DIRECTION_INCOMING)
+            ->whereNotNull('channel_id')
+            ->orderByDesc('created_at')->orderByDesc('id')->first();
 
         $conversation->forceFill([
             'last_channel_id' => $letzte?->channel_id ?: $conversation->channel_id,
+            'last_inbound_channel_id' => $letzterEingang?->channel_id,
             'last_message_at' => $letzte?->created_at ?: $conversation->last_message_at,
         ])->save();
     }

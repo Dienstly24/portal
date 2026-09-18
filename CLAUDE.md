@@ -2581,6 +2581,32 @@ sah die Vorgeschichte nicht, obwohl es dieselbe Sache ist.
   Kanaelen. **Dem Browser wird nichts geglaubt**: welcher Kanal zulaessig
   ist, entscheidet `availableChannels()` auf dem Server, und der Wert
   wird aus dieser geprueften Liste genommen, nicht aus der Anfrage.
+  **Nachtrag 18.09.2026 - er wird GELESEN, nicht GESUCHT**
+  (`conversations.last_inbound_channel_id`, geschrieben vom Engine in der
+  echten Ankunftsreihenfolge). Vorher suchte `defaultChannelId()` die
+  letzte eingehende Nachricht per `latest('created_at')` - und das ist
+  UNBESTIMMT: die Spalte hat keine Sekundenbruchteile, und zwei Eingaenge
+  in derselben Sekunde sind bei einem Webhook-Stapel der Normalfall, nicht
+  die Ausnahme. Die Datenbank darf die Zeilen dann in beliebiger
+  Reihenfolge liefern; SQLite gab die spaetere, MySQL die fruehere -
+  DERSELBE Code, zwei Ergebnisse, und die Antwort ging womoeglich auf den
+  falschen Kanal. Ein Tiebreaker auf die Kennung half NICHT:
+  `customer_messages.id` ist ein ZUFAELLIGES UUID v4 (`Str::uuid()`), also
+  nicht zeitlich sortierbar - das Ergebnis waere wiederholbar falsch
+  geworden statt zufaellig falsch. Reihenfolge kann man nur dort
+  festhalten, wo sie noch bekannt ist: bei der Ankunft. Zwei Dinge
+  verschieben den Wert nie - die EIGENE Antwort (kein Eingang) und eine
+  nachgelieferte Nachricht (sie sagt nichts darueber, wo der Kunde HEUTE
+  erreichbar ist). Rueckfallkette bleibt `last_channel_id` ->
+  `channel_id`, deshalb braucht der Altbestand keinen Nachtrag - ein
+  Nachtrag muesste genau die unbestimmte Sortierung benutzen, die hier
+  abgeschafft wird. LEHRE: ein Test, der nur auf SQLite laeuft, kann diese
+  Klasse Fehler nicht finden - der MySQL-Lauf in der CI ist kein Luxus.
+  Und weil `main` den Deploy an `needs: [test, audit]` haengt, kostete der
+  eine rote Test nicht nur einen roten Haken: der Deploy wurde
+  UEBERSPRUNGEN, und die neue Seite gab auf dem Server 404 - ein
+  fehlgeschlagener Test auf `main` heisst immer auch "nicht ausgeliefert".
+  Faelle 10b/10c in `MehrkanalUnterhaltungTest`.
 - **DER VERSAND FOLGT DER NACHRICHT, nicht der Unterhaltung**
   (`SendOutboundMessageJob`): seit eine Unterhaltung mehrere Kanaele
   tragen kann, ist `conversation->channel` nur noch der ERSTE. Wer
