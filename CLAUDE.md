@@ -2602,6 +2602,111 @@ sah die Vorgeschichte nicht, obwohl es dieselbe Sache ist.
   Kanalname am verfuehrerischsten waere.
 - Tests: `MehrkanalUnterhaltungTest` (17 Faelle).
 
+## Unified Conversation Platform - Phase 3: Verlauf hochladen und freigeben (18.09.2026)
+
+Betreiber-Wunsch: "ich lade vom System aus lebende Gespraeche hoch, die
+KI lernt daraus, ich pruefe die Kompetenz und gebe erst dann frei fuer
+echte Kunden". `/admin/ki-training` (nur admin/manager), arabische
+Anleitung `docs/ANLEITUNG_KI_TRAINING_AR.md`.
+
+- **EHRLICH, WAS DAS IST.** Das Modell wird NICHT nachtrainiert - die
+  Gewichte einer API sind unveraenderlich, und das steht auch so auf der
+  Seite. Was entsteht, sind **Frage-Antwort-Paare**, die ein Mensch
+  einzeln freigibt; ab dann antwortet der Assistent mit UNSEREN
+  Antworten - nachlesbar, aenderbar, einzeln abschaltbar. Ein
+  nachtrainiertes Modell koennte man weder befragen noch zurueckdrehen;
+  fuer einen Versicherungsmakler ist das die einzig vertretbare Bauform.
+  Dieselbe Aussage stand schon bei den Wissensluecken (18.08.2026) - neu
+  ist der WEG, nicht die Haltung.
+- **ZWEISTUFIG** wie der Provisions-Import: `analyze()` legt einen
+  ENTWURF ab (`training_imports` + `training_import_messages`), erst
+  `confirm()` schreibt. Ein Import, der sein Ergebnis zeigt, NACHDEM er
+  geschrieben hat, laesst keine Wahl mehr.
+- **DIE EXPORT-DATEI IST UNZUVERLAESSIGER, ALS SIE AUSSIEHT**
+  (`WhatsAppExportParser`, jede Falle als Test):
+  (1) ZWEI Zeilenformate - `[17.09.26, 14:03:22] Name: Text` (iOS) und
+  `17.09.26, 14:03 - Name: Text` (Android).
+  (2) **UNSICHTBARE ZEICHEN**: iOS setzt vor JEDE Zeile ein U+200E und
+  vor AM/PM ein schmales geschuetztes Leerzeichen (U+202F). Beide sind im
+  Editor nicht zu sehen; ohne sie zu entfernen findet kein Ausdruck
+  etwas, und die Datei "funktioniert einfach nicht" - dieselbe Klasse
+  Fehler wie die OCR-Lehren.
+  (3) MEHRZEILIGE Nachrichten: Folgezeilen tragen keinen Kopf und
+  gehoeren zur vorherigen - sonst zerfaellt jeder laengere Text in
+  Bruchstuecke ohne Absender.
+  (4) SYSTEMZEILEN ("Ende-zu-Ende-verschluesselt") haben keinen
+  Menschen als Urheber.
+  (5) MEDIEN SIND NICHT DABEI ("<Medien ausgeschlossen>") - die Vorschau
+  sagt es ausdruecklich, sonst sucht spaeter jemand ein Bild, das es nie
+  gab.
+  Ein unlesbares Datum wird NIE geraten (Tag vor Monat, Zukunft
+  verworfen): die Nachricht behaelt ihren Text und die Reihenfolge der
+  Datei.
+- **ZWEI ANGABEN WERDEN NIE GERATEN**, beide sind Uebernahme-Sperren:
+  die KUNDENAKTE (der Export nennt nur einen Anzeigenamen, und ein Name
+  zaehlt hier nie als Zuordnung - Regel des `CustomerResolver`) und
+  **welcher Absender DER BETRIEB ist**. Ohne die zweite Angabe ist nicht
+  bestimmbar, was Frage und was Antwort ist; ein vertauschtes Paar
+  fuellte die Wissensbasis mit der Frage als Antwort. Der Parser zaehlt
+  die Absender, der Mensch waehlt. Ein Name, der gar nicht in der Datei
+  steht, wird abgelehnt.
+- **DER UEBERNOMMENE VERLAUF IST STUMM**: er entsteht als
+  `CustomerMessage` mit `source = historical` - sichtbar und
+  durchsuchbar, aber kein Ereignis: keine KI-Antwort, kein
+  Ungelesen-Stand, kein Versand. Diese Eigenschaft war bereits gebaut
+  und ist durch 14 Tests abgesichert; Phase 3 fuegt nur den Weg hinein
+  hinzu. Ohne sie bekaeme der Kunde beim Einlesen eine Lawine von
+  Antworten auf Monate alte Fragen.
+  IDEMPOTENT ueber eine abgeleitete Kennung
+  (`training:<import>:<zeile>`) plus den vorhandenen UNIQUE auf
+  (Unterhaltung, externe Kennung) - ein zweiter Anlauf nach einem
+  Abbruch erzeugt nichts doppelt.
+  Die GEGENSTELLE wird nur ERGAENZT: hat der Kunde eine Rufnummer, ist
+  die Unterhaltung fortsetzbar; hat er keine, bleibt sie ein reines
+  Archiv - ehrlicher als eine erfundene Adresse, die beim ersten
+  Antwortversuch ins Leere ginge.
+- **SCHWAERZEN IST DETERMINISTISCH** (`PiiRedactor`), nie mit einem
+  Modell: ein Modell zum Schwaerzen zu benutzen hiesse, genau die Daten
+  an genau den Dienst zu schicken, vor dem geschuetzt werden soll - und
+  man wuesste nie, ob es etwas uebersehen hat.
+  **REIHENFOLGE IST PROGRAMMLOGIK**: vom Spezifischsten zum
+  Allgemeinsten. Wer die Telefonnummer vor der IBAN schwaerzt, zerlegt
+  die IBAN in Ziffernbloecke, und der Rest entgeht jeder Pruefung
+  (dieselbe Lehre wie bei der Parser-Reihenfolge 13.09.2026).
+  **DER NAME IST DER SONDERFALL**: geschwaerzt werden AUSSCHLIESSLICH
+  die Namen, die wirklich bekannt sind (Absender des Exports,
+  Kundenakte) - Namen allgemein zu erkennen ist Raten ("Mai" ist ein
+  Monat und ein Nachname) und machte gewoehnlichen Text unlesbar.
+  Was NICHT zugeordnet werden konnte, wird GEMELDET und im Klartext
+  genannt - eine Warnung, die den Fund verschweigt, kann niemand
+  pruefen. Eine zu BREITE Schwaerzung ist dabei harmlos, eine zu enge
+  nicht.
+- **NUR DIE GESCHWAERZTE FASSUNG WIRD GESPEICHERT**
+  (`ai_training_examples`). Ein Datensatz mit beidem waere ein ZWEITER
+  Kundendatenbestand mit eigener Loeschpflicht, und die Schwaerzung waere
+  nur noch eine Anzeige.
+- **JEDES VIERTE PAAR IST PRUEFSATZ** (`is_holdout`, deterministisch -
+  zwei Laeufe auf derselben Datei muessen dasselbe ergeben, sonst ist
+  eine Messung nicht wiederholbar). Die Freigabe hat dadurch ZWEI
+  Bedeutungen: normal -> es wird zur AUSKUNFT (Wissensbasis-Eintrag,
+  `source_key = training:<id>` als Herkunft UND Duplikatsschutz);
+  Pruefsatz -> es wird zur MESSLATTE und gelangt ausdruecklich NICHT in
+  die Wissensbasis. Wer den Pruefsatz hineinliesse, pruefte die KI
+  spaeter an genau den Antworten, die er ihr vorher gegeben hat - das
+  Ergebnis waere immer gut und immer wertlos.
+- **NICHTS WIRD AUTOMATISCH FREIGEGEBEN**: nicht jede historische
+  Antwort war richtig, aktuell oder vollstaendig (Auftrag Abschnitt 19).
+  Freigegeben wird ein Eintrag allerdings SOFORT aktiv - der Mitarbeiter
+  hat Frage, Antwort und Schwaerzungsbericht gerade gelesen; ihn danach
+  noch einmal in der Wissensbasis freigeben zu lassen waere dieselbe
+  Entscheidung ein zweites Mal.
+- **RECHTLICH offen und dokumentiert**: echte Kundenkommunikation zur
+  KI-Verbesserung zu verwenden ist ein eigener Verarbeitungszweck
+  (Art. 5 Abs. 1 lit. b DSGVO) - Datenschutzerklaerung und
+  Verarbeitungsverzeichnis VOR dem ersten echten Verlauf, siehe "Offene
+  Themen".
+- Tests: `KiTrainingImportTest` (23 Faelle).
+
 ## E-Signatur: Dokumente zur Unterschrift (Betreiber-Auftrag 09.09.2026)
 
 Vollstaendig in `docs/SIGNATUR_MODUL.md`, arabische Betreiber-Anleitung
@@ -3342,6 +3447,16 @@ Vollstaendig in `docs/AUDIT_2026-09-15_BEHEBUNG.md` und
   Zustimmungstext, der je Anfrage aenderbar ist. Ausserdem: Aufnahme der
   gespeicherten Nachweisdaten (IP, Geraet, Zeitpunkt) in das
   Verarbeitungsverzeichnis.
+
+- **KI-Training: Datenschutz VOR dem ersten echten Verlauf.** Der Weg
+  ist gebaut (`/admin/ki-training`, Phase 3), aber echte
+  Kundenkommunikation zur KI-Verbesserung zu verwenden ist ein EIGENER
+  Verarbeitungszweck (Art. 5 Abs. 1 lit. b DSGVO). Vom Betreiber vor dem
+  ersten Upload eines echten Gespraechs zu erledigen: Aufnahme in
+  Datenschutzerklaerung und Verarbeitungsverzeichnis; Entscheidung, ob
+  die Kunden darueber informiert werden. Die Schwaerzung ist
+  deterministisch und getestet - sie ersetzt aber keine Rechtsgrundlage.
+  Der Bau durfte vorher beginnen, die Benutzung mit echten Daten nicht.
 
 - **Finale Logo-Dateien** kommen vom Betreiber (bevorzugt SVG, sonst PNG
   transparent ≥320px hoch; Light- und Dark-Variante; optional 512×512 Icon).

@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\CompanySignatureAssetController;
 use App\Http\Controllers\Admin\ContractController as AdminContractController;
 use App\Http\Controllers\Admin\CustomerDocumentController as AdminCustomerDocumentController;
 use App\Http\Controllers\Admin\DuplicateController as AdminDuplicateController;
+use App\Http\Controllers\Admin\KiTrainingController;
 use App\Http\Controllers\Admin\PostfachController;
 use App\Http\Controllers\Admin\SignatureController as AdminSignatureController;
 use App\Http\Controllers\Admin\WhatsAppOnboardingController;
@@ -745,6 +746,22 @@ Route::middleware(['auth', 'role:admin,manager,support,employee'])->prefix('admi
             ->name('ai_knowledge_gaps.status');
         Route::post('/ki-wissensbasis/sammelaktion', [AiAssistantController::class, 'knowledgeBulk'])
             ->name('ai_knowledge.bulk');
+
+        /*
+        | KI-TRAINING: Gespraechsverlauf hochladen, pruefen, schwaerzen,
+        | freigeben. Dieselbe Rollen-Grenze wie die Wissensbasis - was
+        | hier freigegeben wird, sagt die KI spaeter JEDEM Kunden.
+        */
+        Route::get('/ki-training', [KiTrainingController::class, 'index'])->name('ki_training');
+        Route::post('/ki-training', [KiTrainingController::class, 'store'])->name('ki_training.store');
+        Route::put('/ki-training/{id}', [KiTrainingController::class, 'update'])
+            ->whereNumber('id')->name('ki_training.update');
+        Route::post('/ki-training/{id}/uebernehmen', [KiTrainingController::class, 'confirm'])
+            ->whereNumber('id')->name('ki_training.confirm');
+        Route::post('/ki-training/{id}/verwerfen', [KiTrainingController::class, 'discard'])
+            ->whereNumber('id')->name('ki_training.discard');
+        Route::post('/ki-training/beispiel/{id}', [KiTrainingController::class, 'review'])
+            ->whereNumber('id')->name('ki_training.review');
         Route::put('/ki-wissensbasis/{id}', [AiAssistantController::class, 'knowledgeUpdate'])
             ->name('ai_knowledge.update');
         Route::delete('/ki-wissensbasis/{id}', [AiAssistantController::class, 'knowledgeDestroy'])

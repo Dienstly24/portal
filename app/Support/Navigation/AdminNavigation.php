@@ -316,6 +316,10 @@ final class AdminNavigation
             ['zeiten', 'Zeiten & Aktivität', 'admin.activity.index', 'clock', ['admin.activity.*']],
             ['protokoll', 'Aktivitätslog', 'admin.activity_log', 'log', ['admin.activity_log*']],
             ['ki-wissen', 'KI-Wissensbasis', 'admin.ai_knowledge', 'brain', ['admin.ai_knowledge*', 'admin.ai_knowledge_gaps*']],
+            // Eigener Punkt und nicht unter der Wissensbasis: hier wird
+            // ein Gespraechsverlauf HOCHGELADEN und geprueft - das ist
+            // eine andere Taetigkeit als das Pflegen von Eintraegen.
+            ['ki-training', 'KI-Training', 'admin.ki_training', 'brain', ['admin.ki_training*']],
             ['systemzustand', 'Systemzustand', 'admin.system_health', 'pulse', ['admin.system_health*']],
             ['fehler', 'Fehler', 'admin.errors', 'alert', ['admin.errors*']],
             ['datenimport', 'Import / Export', 'admin.import_export', 'inbox', ['admin.import_export*', 'admin.import*', 'admin.export*']],
