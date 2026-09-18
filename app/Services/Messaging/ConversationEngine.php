@@ -173,6 +173,25 @@ class ConversationEngine
                 'last_channel_id' => $historisch
                     ? ($conversation->last_channel_id ?: $channel->id)
                     : $channel->id,
+                // WOHIN die Antwort gehoert: der Kanal des letzten
+                // EINGANGS - dort wartet der Kunde. Der zuletzt benutzte
+                // Kanal waere unsere eigene Sicht (unsere Antwort ist
+                // auch eine Benutzung).
+                //
+                // Geschrieben wird er HIER, weil nur hier die
+                // Reihenfolge bekannt ist. `created_at` traegt keine
+                // Sekundenbruchteile, und die Kennung ist ein
+                // ZUFAELLIGES UUID - aus zwei Nachrichten derselben
+                // Sekunde laesst sich hinterher nicht mehr ablesen,
+                // welche die spaetere war.
+                //
+                // Nur eine echte Kundennachricht zaehlt: unsere eigene
+                // Antwort ist kein Eingang, und eine nachgelieferte
+                // Nachricht sagt nichts darueber, wo der Kunde HEUTE
+                // erreichbar ist.
+                'last_inbound_channel_id' => ($vonUns || $historisch)
+                    ? $conversation->last_inbound_channel_id
+                    : $channel->id,
                 // Eine Kundenantwort holt eine geschlossene Unterhaltung
                 // zurueck: der Kunde schreibt weiter, also ist der Vorgang
                 // nicht erledigt. Ein ARCHIV bleibt dagegen Archiv - es ist

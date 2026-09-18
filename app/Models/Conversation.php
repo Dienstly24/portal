@@ -43,7 +43,8 @@ class Conversation extends Model
     public const LOCK_MINUTES = 3;
 
     protected $fillable = [
-        'customer_id', 'channel_id', 'last_channel_id', 'channel_account_id',
+        'customer_id', 'channel_id', 'last_channel_id', 'last_inbound_channel_id',
+        'channel_account_id',
         'external_conversation_id', 'external_user_id',
         'assigned_employee_id', 'status', 'ai_mode', 'subject', 'last_message_at',
         'closed_at', 'archived_at', 'reopened_at', 'locked_by', 'locked_at',

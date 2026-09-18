@@ -339,6 +339,118 @@ class MehrkanalUnterhaltungTest extends TestCase
     }
 
     /**
+     * DER FALL, DER AUF MYSQL DURCHFIEL: zwei Eingaenge in DERSELBEN
+     * Sekunde. `customer_messages.created_at` traegt keine
+     * Sekundenbruchteile, und ein Webhook-Stapel ist der Normalfall -
+     * die Datenbank darf die beiden Zeilen dann in beliebiger
+     * Reihenfolge liefern. Auf SQLite kam die spaetere zuerst, auf MySQL
+     * die fruehere; derselbe Code, zwei Ergebnisse.
+     *
+     * Ein Tiebreaker auf die Kennung reicht NICHT: sie ist ein
+     * zufaelliges UUID v4. Deshalb steht der Antwortweg als Spalte,
+     * geschrieben in der echten Ankunftsreihenfolge.
+     */
+    public function test_10b_bei_gleicher_uhrzeit_gilt_der_wirklich_letzte_eingang(): void
+    {
+        $this->autoJoin(true);
+        $kunde = $this->kunde();
+
+        $wa = $this->kanal('whatsapp');
+        $portal = $this->kanal('portal');
+        $this->verknuepfe($kunde, $wa, '491701234567');
+        $this->verknuepfe($kunde, $portal, 'portal-1');
+
+        $ersteNachricht = $this->eingang($wa, '491701234567', 'Zuerst über WhatsApp');
+        $zweiteNachricht = $this->eingang($portal, 'portal-1', 'Jetzt im Portal');
+
+        // Beide auf DIESELBE Sekunde setzen - genau der Zustand, den ein
+        // Webhook-Stapel erzeugt. Danach ist aus den Daten allein nicht
+        // mehr ablesbar, welche die spaetere war.
+        $zeitpunkt = now()->startOfSecond();
+        foreach ([$ersteNachricht, $zweiteNachricht] as $nachricht) {
+            $nachricht->forceFill(['created_at' => $zeitpunkt])->saveQuietly();
+        }
+
+        $unterhaltung = Conversation::firstOrFail();
+
+        $this->assertSame(
+            $portal->id,
+            app(ChannelRoutingService::class)->defaultChannelId($unterhaltung),
+            'Der Antwortweg darf nicht von der Zeilenreihenfolge der Datenbank abhaengen.'
+        );
+    }
+
+    /**
+     * Der Antwortweg steht als Spalte und wird in der ECHTEN
+     * Ankunftsreihenfolge geschrieben - dort, wo die Reihenfolge noch
+     * bekannt ist. Dieser Fall ist datenbankunabhaengig: er prueft nicht
+     * das Ergebnis einer Sortierung, sondern dass ueberhaupt nicht
+     * sortiert werden muss.
+     *
+     * Zwei Dinge verschieben ihn NIE: unsere eigene Antwort (sie ist
+     * kein Eingang - sonst antwortete man dort, wo man selbst zuletzt
+     * geschrieben hat) und eine nachgelieferte Nachricht (sie sagt
+     * nichts darueber, wo der Kunde HEUTE erreichbar ist).
+     */
+    public function test_10c_der_eingangskanal_wird_bei_der_ankunft_festgehalten(): void
+    {
+        $this->autoJoin(true);
+        $kunde = $this->kunde();
+
+        $wa = $this->kanal('whatsapp');
+        $portal = $this->kanal('portal');
+        $this->verknuepfe($kunde, $wa, '491701234567');
+        $this->verknuepfe($kunde, $portal, 'portal-1');
+
+        $this->eingang($wa, '491701234567', 'Zuerst über WhatsApp');
+        $this->assertSame(
+            $wa->id,
+            Conversation::firstOrFail()->last_inbound_channel_id
+        );
+
+        $this->eingang($portal, 'portal-1', 'Jetzt im Portal');
+        $this->assertSame(
+            $portal->id,
+            Conversation::firstOrFail()->last_inbound_channel_id
+        );
+
+        // Unsere eigene Antwort auf dem anderen Kanal.
+        $this->engine()->handleInbound(
+            new InboundMessage(
+                externalUserId: '491701234567',
+                externalMessageId: 'unsere-antwort',
+                text: 'Antwort des Teams',
+                fromBusiness: true,
+            ),
+            $wa
+        );
+
+        $this->assertSame(
+            $portal->id,
+            Conversation::firstOrFail()->last_inbound_channel_id,
+            'Die eigene Antwort ist kein Eingang.'
+        );
+
+        // Ein nachgelieferter Verlauf auf dem anderen Kanal.
+        $this->engine()->handleInbound(
+            new InboundMessage(
+                externalUserId: '491701234567',
+                externalMessageId: 'alte-nachricht',
+                text: 'Frage von vor Monaten',
+                sentAt: now()->subMonths(3),
+                historical: true,
+            ),
+            $wa
+        );
+
+        $this->assertSame(
+            $portal->id,
+            Conversation::firstOrFail()->last_inbound_channel_id,
+            'Eine nachgelieferte Nachricht verschiebt den Antwortweg nie.'
+        );
+    }
+
+    /**
      * DEM BROWSER WIRD NICHTS GEGLAUBT: dass die Oberflaeche einen Kanal
      * anbietet, ist keine Erlaubnis.
      */
