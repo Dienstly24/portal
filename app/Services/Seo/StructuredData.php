@@ -80,7 +80,7 @@ class StructuredData
                 'opens' => '09:00',
                 'closes' => '18:00',
             ]],
-            'sameAs' => array_filter([config('website.facebook')]),
+            'sameAs' => self::sameAs(),
             'hasOfferCatalog' => [
                 '@type' => 'OfferCatalog',
                 'name' => 'Leistungen',
@@ -150,6 +150,120 @@ class StructuredData
             '@context' => 'https://schema.org',
             '@type' => 'FAQPage',
             'mainEntity' => $fragen,
+        ];
+    }
+
+    /**
+     * Oeffentliche Profile des Betriebs (`sameAs`).
+     *
+     * Sie sind fuer Suchmaschinen die Bruecke zwischen der Website und den
+     * uebrigen Auftritten desselben Unternehmens - dieselbe Marke, nicht
+     * zufaellig derselbe Name. Gepflegt werden sie an EINER Stelle
+     * (config/website.php); erfunden wird nie eines.
+     *
+     * @return array<int, string>
+     */
+    public static function sameAs(): array
+    {
+        return array_values(array_filter((array) config('website.social', [])));
+    }
+
+    /**
+     * Der Betrieb als Organisation - fuer JEDE Seite, nicht nur die Startseite.
+     *
+     * WARUM ZUSAETZLICH ZU `insuranceAgency()`: die Startseite beschreibt sich
+     * als InsuranceAgency mit Anschrift und Oeffnungszeiten (das ist der
+     * LOKALE Eintrag, Grundlage fuer Google Maps). Eine Unterseite ist aber
+     * kein zweiter Standort - traegt sie denselben Block, behauptet jede der
+     * 22 Seiten eine eigene Filiale in der Furtweg 51a. Deshalb hier die
+     * schlanke Organisation OHNE Oeffnungszeiten: Name, Adresse, Kontakt,
+     * Profile. Damit ist auf jeder Seite eindeutig, WER spricht, ohne den
+     * Standort zu vervielfachen.
+     *
+     * @return array<string, mixed>
+     */
+    public static function organization(): array
+    {
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'Organization',
+            'name' => 'Dienstly24',
+            'url' => WebsiteHosts::url('/'),
+            'logo' => WebsiteHosts::url('/images/logo-transparent.png'),
+            'address' => self::ADRESSE,
+            'areaServed' => self::GEBIET,
+            'availableLanguage' => ['de', 'ar'],
+            'contactPoint' => [[
+                '@type' => 'ContactPoint',
+                'contactType' => 'customer service',
+                'telephone' => self::TELEFON,
+                'email' => config('website.email'),
+                'areaServed' => 'DE',
+                'availableLanguage' => ['German', 'Arabic'],
+            ]],
+            'sameAs' => self::sameAs(),
+        ];
+    }
+
+    /**
+     * Die Website als Ganzes (Startseite).
+     *
+     * BEWUSST OHNE `SearchAction`: eine Suchfunktion ueber die oeffentlichen
+     * Seiten gibt es nicht. Ein `potentialAction` auf eine Adresse, die 404
+     * liefert, waere eine Behauptung ueber eine Funktion, die es nicht gibt -
+     * dieselbe Regel wie ueberall: nur auszeichnen, was sichtbar vorhanden ist.
+     *
+     * @return array<string, mixed>
+     */
+    public static function webSite(): array
+    {
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'WebSite',
+            'name' => 'Dienstly24',
+            'url' => WebsiteHosts::url('/'),
+            'inLanguage' => ['de', 'ar'],
+            'publisher' => ['@type' => 'Organization', 'name' => 'Dienstly24', 'url' => WebsiteHosts::url('/')],
+        ];
+    }
+
+    /**
+     * Brotkrumen-Pfad. `$stufen` ist eine Liste aus [Beschriftung, Pfad];
+     * der Pfad ist relativ ("/leistungen") und wird auf den kanonischen
+     * Host gehoben - dieselbe Adresse, die auch im Canonical steht.
+     *
+     * Die LETZTE Stufe (die aktuelle Seite) bekommt bewusst ebenfalls eine
+     * `item`-Adresse: Google akzeptiert beides, aber ein Eintrag ohne
+     * Adresse faellt in manchen Pruefwerkzeugen als unvollstaendig auf.
+     *
+     * @param  array<int, array{0: string, 1: string}>  $stufen
+     * @return array<string, mixed>|null
+     */
+    public static function breadcrumbList(array $stufen): ?array
+    {
+        $elemente = [];
+        foreach ($stufen as $stufe) {
+            $name = trim($stufe[0]);
+            $pfad = trim($stufe[1]);
+            if ($name === '' || $pfad === '') {
+                continue;
+            }
+            $elemente[] = [
+                '@type' => 'ListItem',
+                'position' => count($elemente) + 1,
+                'name' => $name,
+                'item' => WebsiteHosts::url($pfad),
+            ];
+        }
+
+        if (count($elemente) < 2) {
+            return null;
+        }
+
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'BreadcrumbList',
+            'itemListElement' => $elemente,
         ];
     }
 

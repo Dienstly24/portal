@@ -31,6 +31,13 @@
      dem Schluessel "at-context" sonst seine eigene Direktive und schreibt
      PHP-Quelltext ins HTML (Audit 15.09.2026). --}}
 {!! \App\Services\Seo\StructuredData::script(\App\Services\Seo\StructuredData::insuranceAgency()) !!}
+{{-- WebSite (Abschnitt 21/33): benennt die Adresse als Website der Marke
+     Dienstly24 und nennt ihre Sprachen. BEWUSST NUR auf der Startseite -
+     eine Website gibt es einmal, nicht 22-mal. Die Organisation selbst
+     steckt bereits im InsuranceAgency-Block darueber (er IST eine
+     Organization mit Anschrift und Oeffnungszeiten); ein zweiter
+     Organization-Block waere dieselbe Aussage ein zweites Mal. --}}
+{!! \App\Services\Seo\StructuredData::script(\App\Services\Seo\StructuredData::webSite()) !!}
 {!! \App\Services\Seo\StructuredData::script(\App\Services\Seo\StructuredData::faqPage($isAr ? [
     ['هل الاستشارة مجانية فعلاً؟', 'نعم، الاستشارة الأولى مجانية تماماً وغير ملزمة.'],
     ['هل تتحدثون العربية أيضاً؟', 'نعم، فريقنا يقدم الاستشارة بالألمانية والعربية – كما هو أنسب لكم.'],

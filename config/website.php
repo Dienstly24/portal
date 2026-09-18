@@ -48,6 +48,24 @@ return [
     'address' => ['street' => 'Furtweg 51a', 'zip' => '22523', 'city' => 'Hamburg'],
     'facebook' => 'https://www.facebook.com/Dienstly24',
 
+    /*
+     * Weitere oeffentliche Profile des Betriebs (Entity-Signale, SEO-Auftrag
+     * Abschnitt 20/33): sie gehen als `sameAs` in die strukturierten Daten.
+     *
+     * BEWUSST AUS DER .env, ohne Standardwert: ein erfundenes Profil waere
+     * eine falsche Unternehmensangabe - und Google prueft `sameAs`. Erst
+     * wenn ein Profil WIRKLICH existiert, wird es hier eingetragen. Leere
+     * Werte fallen weg, ein Betrieb ohne Instagram hat dann eben nur
+     * Facebook - das ist ehrlich und richtig.
+     */
+    'social' => array_values(array_filter([
+        'https://www.facebook.com/Dienstly24',
+        env('WEBSITE_INSTAGRAM'),
+        env('WEBSITE_LINKEDIN'),
+        env('WEBSITE_YOUTUBE'),
+        env('WEBSITE_GOOGLE_BUSINESS'),
+    ])),
+
     // WhatsApp-Nummer fuer den Float-Button (wa.me, ohne '+').
     'whatsapp' => env('WEBSITE_WHATSAPP', '491799673909'),
 
