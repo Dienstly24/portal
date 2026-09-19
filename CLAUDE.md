@@ -3606,7 +3606,59 @@ Betreiber-Anleitung in `docs/ANLEITUNG_MATOMO_AR.md` (Abschnitte 7/7a).
   nicht pruefbar, eine erfundene waere schlimmer als keine - Google nimmt
   den Ort aus dem bestaetigten Profil) und weitere Stadtseiten (ein Buero
   = eine Ortsseite; alles andere waere eine Doorway Page).
-- Tests: `EinwilligungUndHamburgTest` (34 Faelle).
+- **VERTRAUENS-KARTE STATT EINGEBETTETER KARTE** (Betreiber-Wunsch
+  19.09.2026: "die Kunden sollen den Eintrag sehen" - aber es gibt
+  keinen Besuchsbetrieb). Ein Google-Kartenrahmen war die naheliegende
+  Antwort und die falsche: er sendet die IP JEDES Besuchers an Google,
+  bevor er zugestimmt hat (dieselbe Klasse Fremdzugriff wie die
+  Google-Schriften), er verlangt `frame-src`/`script-src` fuer
+  Google-Hosts und nimmt damit SEC-4 zurueck, er braucht eine dritte
+  Einwilligungs-Kategorie - und er sagt "komm vorbei", waehrend der
+  Betrieb ausschliesslich online arbeitet. **Vertrauen tragen die
+  BEWERTUNGEN, nicht der Karten-Pin.**
+  `resources/views/website/partials/google_trust.blade.php` zeigt
+  Sterne, Wert, Anzahl und den Profil-Link auf Startseite und
+  Ortsseite; der Satz "Sie muessen nirgendwo hinkommen" steht fest in
+  der Karte. **Der Browser des Besuchers spricht NIE mit Google** - ein
+  Test prueft im ausgelieferten HTML, dass ausser dem Profil-LINK
+  (der laedt nichts) kein Google-Host vorkommt.
+  Geholt wird im Hintergrund: `google:bewertungen-holen` (taeglich
+  04:45) -> `GoogleBewertungAbruf` (Places API New, Zeitlimit 10/5 s)
+  -> Cache; `App\Support\GoogleBewertung` liest NUR den Cache, nie die
+  API (Lehre 20.08.2026 - kein Web-Request wartet auf einen fremden
+  Dienst). Ortskennung ueber `google:place-id-finden`: der Befehl zeigt
+  die Treffer und SCHREIBT NICHTS - bei mehreren wird nie geraten, eine
+  falsche Kennung zeigt die Bewertungen eines FREMDEN Unternehmens.
+  NICHTS WIRD ERFUNDEN: ohne `WEBSITE_GOOGLE_BUSINESS` keine Karte,
+  ohne abgerufene Zahlen keine Zahlen, bei 0 Bewertungen keine Zahl
+  ("0,0 (0)" liest sich wie ein schlechtes Ergebnis und bedeutet nur,
+  dass noch niemand bewertet hat). **Der Wert laeuft nach
+  `MAX_ALTER_TAGE` (7) ab** - die Ablaufzeit des Cache-Eintrags IST die
+  Regel, es gibt keine zweite Pruefung, die jemand vergessen koennte;
+  sonst stuende eine Bewertung von vor Monaten als aktuelle da (UWG).
+  Ein FEHLSCHLAG loescht den Stand nicht (eine Stoerung bei Google soll
+  die Zahl nicht sofort von der Seite nehmen). Die Quellenangabe
+  "Bewertungen von Google" ist Pflicht und steht als TEXT da - ein Logo
+  von einem Google-Server waere genau der Fremdzugriff, den die Karte
+  vermeidet.
+- **Die Zeiten standen DREIMAL, nicht zweimal.** Am 19.09.2026 wurden
+  Hamburg-Seite und Schema auf `config/website.php` zusammengefuehrt -
+  eine dritte Kopie blieb fest verdrahtet im Kontaktblock der
+  Startseite stehen. LEHRE: eine gemeinsame Quelle fuer den WERT
+  genuegt nicht, solange jede Vorlage die Zeile selbst FORMATIERT.
+  `App\Support\Erreichbarkeit` (`zeile()` / `kurz()`) ist jetzt auch
+  die eine Formatierung; der Waechter-Test aendert die Quelle und
+  verlangt, dass Startseite UND Ortsseite mitgehen.
+- **UNSICHTBARER KNOPF, im Browser gefunden**: `.btn-ghost` faerbt
+  seinen Text mit `--dark-text` (#F5F3EC) - es ist die Variante fuer
+  die DUNKLEN Abschnitte (Hero, Kundenstimmen). Die Hamburg-Seite und
+  der Kontaktblock sind HELL (#F8F6F0 / #F1EEE5): dort stand
+  naht-weisse Schrift auf naht-weissem Grund, WhatsApp und
+  Kontaktformular waren praktisch unlesbar. Fuer helle Flaechen gibt es
+  `.btn-ghost-light` - es fehlte nur das "-light". Kein Fehler, keine
+  Konsolenmeldung: nur ein Knopf, den niemand sieht. Test am Markup.
+- Tests: `EinwilligungUndHamburgTest` (34 Faelle),
+  `GoogleBewertungTest` (19 Faelle).
 
 ## Offene Themen / wartet auf den Betreiber
 

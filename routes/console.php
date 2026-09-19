@@ -73,6 +73,14 @@ Schedule::command('ai:answer-pending')->everyTenMinutes()->withoutOverlapping();
 // egal wie alt: ein Problem verschwindet nicht durch Ignorieren.
 Schedule::command('errors:prune')->dailyAt('03:55');
 
+/*
+ | Bewertung des Google-Unternehmensprofils holen und zwischenspeichern.
+ | Die Website liest danach NUR den Cache - kein Seitenaufruf wartet je
+ | auf Google, und der Browser des Besuchers spricht nie mit Google.
+ | Ohne eingerichteten Schluessel endet der Lauf sofort und still.
+ */
+Schedule::command('google:bewertungen-holen')->dailyAt('04:45');
+
 // Provisionsmanagement: Fristen laufen ab, ohne dass jemand etwas tut.
 // Frueh am Morgen, damit die Liste "Fehlende Provisionen" schon steht, wenn
 // der Betrieb den Tag beginnt.
