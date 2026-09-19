@@ -18,22 +18,8 @@
      * Unternehmensprofil wird gegen genau diese Angabe abgeglichen, und
      * zwei Quellen heissen frueher oder spaeter zwei Antworten.
      */
-    $zeiten = config('website.opening_hours');
-    $tagKurz = ['Monday' => ['Montag', 'الاثنين'], 'Friday' => ['Freitag', 'الجمعة']];
-    $vonTag = $tagKurz[reset($zeiten['tage'])][$isAr ? 1 : 0] ?? '';
-    $bisTag = $tagKurz[end($zeiten['tage'])][$isAr ? 1 : 0] ?? '';
-    $zeitZeile = $isAr
-        ? $vonTag.' – '.$bisTag.'، '.$zeiten['von'].' – '.$zeiten['bis']
-        : $vonTag.' bis '.$bisTag.', '.$zeiten['von'].' – '.$zeiten['bis'].' Uhr';
+    $zeitZeile = \App\Support\Erreichbarkeit::zeile($isAr);
 
-    /*
-     * DER RUECKWEG ZUM UNTERNEHMENSPROFIL - nur wenn es WIRKLICH
-     * existiert (`WEBSITE_GOOGLE_BUSINESS` in der Server-.env). Ohne
-     * Eintrag erscheint der Knopf gar nicht: ein Link auf ein Profil,
-     * das es nicht gibt, ist eine falsche Angabe ueber das eigene
-     * Unternehmen - dieselbe Regel wie bei `sameAs`.
-     */
-    $profil = config('website.google_business');
 @endphp
 
 @section('title', $isAr
@@ -108,24 +94,12 @@
         <a class="btn btn-primary" href="tel:{{ $telE164 }}" data-cta="telefon" data-cta-seite="hamburg">
           <span dir="ltr">{{ $telAnzeige }}</span>
         </a>
-        <a class="btn btn-ghost" href="{{ $waLink }}" target="_blank" rel="noopener"
+        <a class="btn btn-ghost-light" href="{{ $waLink }}" target="_blank" rel="noopener"
            data-cta="whatsapp" data-cta-seite="hamburg">WhatsApp</a>
-        <a class="btn btn-ghost" href="{{ ($isAr ? '/ar' : '') }}/#kontakt" data-cta="formular" data-cta-seite="hamburg">
+        <a class="btn btn-ghost-light" href="{{ ($isAr ? '/ar' : '') }}/#kontakt" data-cta="formular" data-cta-seite="hamburg">
           {{ $isAr ? 'نموذج الاتصال' : 'Kontaktformular' }}
         </a>
       </div>
-      @if($profil)
-        {{-- Zweiter Weg des Zwei-Wege-Links: das Profil verweist auf die
-             Website, die Website auf das Profil. Dort stehen die
-             Bewertungen echter Kunden - eine ANFAHRT wird bewusst nicht
-             versprochen, es gibt keinen Besuchsbetrieb. --}}
-        <p class="hh-klein hh-profil">
-          <a href="{{ $profil }}" target="_blank" rel="noopener"
-             data-cta="google-profil" data-cta-seite="hamburg">
-            {{ $isAr ? 'ملفّنا على Google – آراء العملاء' : 'Unser Profil bei Google – Bewertungen' }}
-          </a>
-        </p>
-      @endif
     </div>
 
     <div class="hh-karte">
@@ -149,6 +123,12 @@
           : 'Weil alles online läuft, macht es keinen Unterschied, ob Sie in Hamburg wohnen oder anderswo in Deutschland.' }}</p>
     </div>
   </div>
+
+  {{-- Zweiter Weg des Zwei-Wege-Links: das Profil verweist auf die
+       Website, die Website auf das Profil. Bewusst als Vertrauens-Karte
+       mit den BEWERTUNGEN und ausdruecklich OHNE Anfahrt - es gibt
+       keinen Besuchsbetrieb. --}}
+  @include('website.partials.google_trust', ['seite' => 'hamburg'])
 </div></section>
 
 {{-- Die Leistungen bekommen HIER nur den lokalen Satz und den Link -

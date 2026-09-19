@@ -33,6 +33,26 @@ return [
     // Konto. System-User-Token aus dem Business Manager (laeuft nicht ab);
     // Werte NUR in der Server-.env, nie im Repo/Chat. Einrichtung Schritt
     // fuer Schritt: docs/ANLEITUNG_META_API_AR.md
+    /*
+     | Google Places API - NUR fuer Bewertung + Anzahl des eigenen
+     | Unternehmensprofils (Vertrauens-Karte auf der Website).
+     |
+     | Gelesen wird ausschliesslich im Hintergrund
+     | (`google:bewertungen-holen`, taeglich) und in den Cache gelegt -
+     | der Browser des Besuchers spricht NIE mit Google. Ein
+     | eingebetteter Kartenrahmen wuerde die IP jedes Besuchers dorthin
+     | senden und `frame-src` aus SEC-4 wieder oeffnen; genau deshalb
+     | dieser Umweg.
+     |
+     | Die Ortskennung findet `google:place-id-finden` - sie wird NIE
+     | geraten, der Befehl zeigt die Treffer und ein Mensch waehlt.
+     | Werte nur in der Server-.env.
+     */
+    'google_places' => [
+        'api_key' => env('GOOGLE_PLACES_API_KEY'),
+        'place_id' => env('GOOGLE_PLACE_ID'),
+    ],
+
     'meta' => [
         'page_id' => env('META_PAGE_ID'),
         'ig_user_id' => env('META_IG_USER_ID'),
