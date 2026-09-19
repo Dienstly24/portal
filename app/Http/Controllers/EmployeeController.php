@@ -23,6 +23,63 @@ use Illuminate\Support\Str;
 
 class EmployeeController extends Controller
 {
+    /**
+     * Die sieben Einzelrechte der Mitarbeiterakte.
+     *
+     * Sie stehen hier als Liste, weil `store()` und `update()` sie beide
+     * setzen - zwei getippte Kopien laufen frueher oder spaeter
+     * auseinander, und ein Recht, das nur an EINER der beiden Stellen
+     * geprueft wird, ist ungeprueft.
+     */
+    private const RECHTE = [
+        'can_see_all_customers', 'can_manage_contracts', 'can_manage_tickets',
+        'can_approve_changes', 'can_send_emails', 'can_import_export',
+        'can_manage_commissions',
+    ];
+
+    /**
+     * NIEMAND VERGIBT EIN RECHT, DAS ER SELBST NICHT HAT.
+     *
+     * Der Selbst-Riegel in `update()` allein genuegt nicht: ein Manager
+     * ohne `can_manage_commissions` konnte sonst ein NEUES Konto mit
+     * diesem Recht anlegen und als Einladungsziel seine eigene Adresse
+     * eintragen - derselbe Weg, nur ueber eine Ecke. Ein Recht, das man
+     * an sich selbst weiterreichen kann, ist keine Beschraenkung.
+     *
+     * Administratoren sind ausgenommen: fuer sie ist das Gate
+     * `provisionen-verwalten` ohnehin offen, eine Sperre waere also nur
+     * eine Huerde ohne Wirkung.
+     *
+     * Die Sperre gilt in BEIDE Richtungen: wer ein Recht nicht vergeben
+     * darf, kann es auch nicht entziehen. Das ist nicht Symmetrie um
+     * ihrer selbst willen - eine Maske, die eine nicht angekreuzte
+     * Kasten-Reihe als "abwaehlen" liest, wuerde einem Kollegen sein
+     * Recht sonst schon beim blossen Umbenennen still wegnehmen. Der
+     * Bestand bleibt daher unberuehrt, in welche Richtung auch immer
+     * abgeschickt wurde.
+     *
+     * Ein nicht vergebbares Recht wird NICHT als Fehler gemeldet. Eine
+     * Fehlermeldung waere hier eine Auskunft darueber, welche Rechte es
+     * gibt und welche der Handelnde nicht hat.
+     *
+     * @return array<string, bool>
+     */
+    private function vergebbareRechte(Request $request, ?User $bestand = null): array
+    {
+        $handelnder = auth()->user();
+        $werte = [];
+
+        foreach (self::RECHTE as $recht) {
+            $darfVergeben = $handelnder->role === 'admin' || (bool) $handelnder->{$recht};
+
+            $werte[$recht] = $darfVergeben
+                ? $request->has($recht)
+                : (bool) ($bestand->{$recht} ?? false);
+        }
+
+        return $werte;
+    }
+
     public function index() {
         $roles = auth()->user()->role === 'manager'
             ? ['manager', 'support', 'employee']
@@ -56,13 +113,7 @@ class EmployeeController extends Controller
             'password' => bcrypt(Str::random(48)),
             'role' => 'employee',
             'access_level' => $request->access_level ?? 'full',
-            'can_see_all_customers' => $request->has('can_see_all_customers'),
-            'can_manage_contracts' => $request->has('can_manage_contracts'),
-            'can_manage_tickets' => $request->has('can_manage_tickets'),
-            'can_approve_changes' => $request->has('can_approve_changes'),
-            'can_send_emails' => $request->has('can_send_emails'),
-            'can_import_export' => $request->has('can_import_export'),
-            'can_manage_commissions' => $request->has('can_manage_commissions'),
+            ...$this->vergebbareRechte($request),
         ]);
 
         // بناء قائمة الصلاحيات للإيميل
@@ -215,6 +266,17 @@ class EmployeeController extends Controller
 
     public function update(Request $request, $id) {
         $employee = User::findOrFail($id);
+        // Eigene Rechte aendert niemand ueber diese Maske. `destroy()` und
+        // `toggleActive()` halten das laengst so - hier fehlte der Satz, und
+        // genau das war die Luecke: ein Manager OHNE
+        // `can_manage_commissions` konnte sich das Recht selbst setzen und
+        // damit die Provisionsdaten oeffnen, die das Gate
+        // `provisionen-verwalten` bewusst NICHT an die Rolle bindet.
+        // Das Verbot auf Administrator-Konten darunter half nicht: das
+        // eigene Konto ist keines.
+        if ($employee->id === auth()->id()) {
+            abort(403, 'Eigene Rechte koennen hier nicht geaendert werden - das muss ein anderes Konto tun.');
+        }
         if (auth()->user()->role === 'manager' && $employee->role === 'admin') {
             abort(403, 'Kein Zugriff auf Administrator-Konten.');
         }
@@ -231,13 +293,7 @@ class EmployeeController extends Controller
                 'name' => $request->name,
                 'role' => in_array($request->role, ['employee', 'manager']) ? $request->role : $employee->role,
                 'access_level' => $request->access_level ?? 'full',
-                'can_see_all_customers' => $request->has('can_see_all_customers'),
-                'can_manage_contracts' => $request->has('can_manage_contracts'),
-                'can_manage_tickets' => $request->has('can_manage_tickets'),
-                'can_approve_changes' => $request->has('can_approve_changes'),
-                'can_send_emails' => $request->has('can_send_emails'),
-                'can_import_export' => $request->has('can_import_export'),
-                'can_manage_commissions' => $request->has('can_manage_commissions'),
+                ...$this->vergebbareRechte($request, $employee),
                 'provision_fixed' => $request->filled('provision_fixed') ? round((float) $request->provision_fixed, 2) : null,
                 'provision_percent' => $request->filled('provision_percent') ? round((float) $request->provision_percent, 2) : null,
             ]);
