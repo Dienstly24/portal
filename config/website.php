@@ -48,7 +48,15 @@ return [
     'address' => ['street' => 'Furtweg 51a', 'zip' => '22523', 'city' => 'Hamburg'],
 
     /*
-     * OEFFNUNGSZEITEN - EINE Quelle fuer Seite UND strukturierte Daten.
+     * ERREICHBARKEITS-ZEITEN - EINE Quelle fuer Seite UND strukturierte
+     * Daten.
+     *
+     * KEIN BESUCHSBETRIEB (Betreiber-Klarstellung 19.09.2026): der
+     * Betrieb arbeitet ausschliesslich online, niemand kommt ins Buero.
+     * Das hier sind die Zeiten, in denen jemand ans Telefon geht - nicht
+     * die Zeiten, zu denen man vorbeikommen kann. Die Hamburg-Seite sagt
+     * das ausdruecklich dazu; im Schema heisst das Feld trotzdem
+     * `openingHoursSpecification`, weil schema.org kein anderes kennt.
      *
      * Sie standen bis 19.09.2026 doppelt: als Text auf der Hamburg-Seite
      * und noch einmal fest verdrahtet im `InsuranceAgency`-Schema. Wer

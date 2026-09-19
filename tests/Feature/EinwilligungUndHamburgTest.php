@@ -612,4 +612,83 @@ class EinwilligungUndHamburgTest extends TestCase
             $this->assertStringContainsString('sameAs', $html, $pfad);
         }
     }
+
+    /**
+     * KEIN BESUCHSBETRIEB (Betreiber-Klarstellung 19.09.2026): der
+     * Betrieb arbeitet ausschliesslich online, bis hin zur
+     * Kfz-Zulassung - niemand muss ins Buero kommen.
+     *
+     * Die erste Fassung der Seite versprach genau das Gegenteil
+     * ("Beratung vor Ort", "Kommen Sie persoenlich vorbei",
+     * "Unterlagen mitbringen", "Unterschriften im Buero") und nannte
+     * die Anschrift als Besuchsadresse. Das ist keine Geschmacksfrage:
+     * wer deshalb hinfaehrt, steht vor einer verschlossenen Tuer, und
+     * im Google-Unternehmensprofil waere es der Unterschied zwischen
+     * einem Ladengeschaeft und einem Dienstleistungsgebiet.
+     *
+     * Der Test haelt BEIDE Sprachen fest - die arabische Fassung ist am
+     * 02.10.2026 schon einmal unbemerkt zurueckgeblieben.
+     */
+    public function test_die_hamburg_seite_verspricht_keinen_termin_vor_ort(): void
+    {
+        $verboten = [
+            '/versicherungsmakler-hamburg' => [
+                'Beratung vor Ort',
+                'Termin vor Ort',
+                'persönlich vorbei',
+                'vorbeikommen',
+                'mitbringen',
+                'Unterschriften im Büro',
+                'Unser Büro',
+            ],
+            '/ar/versicherungsmakler-hamburg' => [
+                'استشارة حضورية',
+                'تعالوا شخصياً',
+                'الموعد الحضوري',
+                'موعداً في مكتبكم',
+            ],
+        ];
+
+        foreach ($verboten as $pfad => $begriffe) {
+            $html = $this->get($pfad)->assertOk()->getContent();
+
+            foreach ($begriffe as $begriff) {
+                $this->assertStringNotContainsString($begriff, $html, $pfad.' / '.$begriff);
+            }
+
+            /*
+             * Die Anschrift bleibt im Fuss jeder Seite stehen (Sitz des
+             * Betriebs, Pflichtangabe) - im INHALT der Ortsseite hat sie
+             * nichts zu suchen: dort liest sie sich als Besuchsadresse.
+             */
+            preg_match('#<main[^>]*>(.*)</main>#s', $html, $inhalt);
+            $this->assertNotEmpty($inhalt, $pfad);
+            $this->assertStringNotContainsString(
+                config('website.address')['street'],
+                $inhalt[1],
+                $pfad
+            );
+        }
+    }
+
+    /**
+     * Und die Gegenprobe: die Seite sagt ausdruecklich, dass alles
+     * online laeuft. Ein blosses Weglassen der Termin-Saetze waere eine
+     * Seite, die die Frage offen laesst - der Besucher faehrt dann im
+     * Zweifel doch hin.
+     */
+    public function test_die_hamburg_seite_sagt_dass_alles_online_laeuft(): void
+    {
+        $html = $this->get('/versicherungsmakler-hamburg')->assertOk()->getContent();
+
+        $this->assertStringContainsString('komplett online', $html);
+        $this->assertStringContainsString('Muss ich zu Ihnen ins Büro kommen?', $html);
+        $this->assertStringContainsString('einen Besuchsbetrieb gibt es an unserem Sitz nicht', $html);
+        // Der ausdruecklich genannte Fall des Betreibers.
+        $this->assertStringContainsString('Kfz-Zulassung übernehmen wir komplett', $html);
+
+        $ar = $this->get('/ar/versicherungsmakler-hamburg')->assertOk()->getContent();
+        $this->assertStringContainsString('أونلاين', $ar);
+        $this->assertStringContainsString('لا يوجد استقبال للزوار', $ar);
+    }
 }

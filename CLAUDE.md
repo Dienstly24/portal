@@ -3526,9 +3526,31 @@ Betreiber-Anleitung in `docs/ANLEITUNG_MATOMO_AR.md` (Abschnitte 7/7a).
   mehr.
 - **Hamburg-Seite** `/versicherungsmakler-hamburg` (+ `/ar/...`): die im
   SEO-Auftrag zurueckgestellte Ortsseite. KEINE Doorway Page - eigene
-  Inhalte (Buero, Anfahrt, Oeffnungszeiten, Termin vor Ort, fuenf lokale
+  Inhalte (Erreichbarkeit, Ablauf der Online-Beratung, fuenf lokale
   Fragen), kein kopierter Spartentext (Test). EINE Ortsseite, weil es
-  EINEN Standort gibt. Sie bleibt bei der Wahrheit zur Erlaubnis nach
+  EINEN Standort gibt.
+  **KEIN BESUCHSBETRIEB (Betreiber-Klarstellung 19.09.2026)**: die
+  erste Fassung versprach "Beratung vor Ort", "Kommen Sie persoenlich
+  vorbei", "Unterlagen mitbringen" und "Unterschriften im Buero" und
+  nannte die Anschrift als Besuchsadresse. Tatsaechlich arbeitet der
+  Betrieb AUSSCHLIESSLICH online - bis hin zur Kfz-Zulassung, fuer die
+  niemand zur Zulassungsstelle muss. Das ist keine Geschmacksfrage: wer
+  deshalb hinfaehrt, steht vor einer verschlossenen Tuer, und im
+  Google-Unternehmensprofil ist es der Unterschied zwischen einem
+  Ladengeschaeft und einem Dienstleistungsgebiet (Adresse dort deshalb
+  VERBORGEN, Service-Area Business - siehe
+  `docs/ANLEITUNG_GOOGLE_BUSINESS_AR.md`). Die Zeiten aus
+  `config/website.php` sind ERREICHBARKEITS-Zeiten, keine Einladung
+  vorbeizukommen; im Schema heissen sie trotzdem
+  `openingHoursSpecification`, weil schema.org kein anderes Feld kennt.
+  Die ANSCHRIFT bleibt im Fuss jeder Seite (Sitz, Pflichtangabe) und im
+  Schema, steht aber NICHT mehr im Inhalt der Ortsseite - dort liest
+  sie sich als Besuchsadresse. Zwei Waechter-Tests halten es in BEIDEN
+  Sprachen fest (die arabische Fassung ist am 02.10.2026 schon einmal
+  unbemerkt zurueckgeblieben): keine Termin-Zusage im Text, und
+  ausdruecklich "komplett online" samt beantworteter Frage "Muss ich zu
+  Ihnen ins Buero kommen?" - ein blosses Weglassen liesse die Frage
+  offen, und der Besucher faehrt dann im Zweifel doch hin. Sie bleibt bei der Wahrheit zur Erlaubnis nach
   § 34d GewO (vertraglich gebundener Vermittler unter der Haftung von
   NESA, Link auf die Erstinformation - ebenfalls Test). `InsuranceAgency`
   steht hier ZU RECHT, weil dies die Standortseite IST; alle uebrigen
