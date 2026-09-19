@@ -70,7 +70,8 @@ class MatomoMessungTest extends TestCase
             $this->assertStringContainsString('matomo.php', $html, $pfad);
             // Ohne Nonce blockiert der Browser das Skript und die
             // Messung bleibt dauerhaft leer - ohne jede Fehlermeldung.
-            $this->assertMatchesRegularExpression('#<script nonce="[^"]+">\s*\nvar _paq#', $html, $pfad);
+            $this->assertMatchesRegularExpression('#<script nonce="[^"]+">\s*\n\(function#', $html, $pfad);
+            $this->assertStringContainsString('_paq', $html, $pfad);
         }
     }
 

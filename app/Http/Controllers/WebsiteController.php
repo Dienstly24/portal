@@ -28,6 +28,14 @@ use Illuminate\Validation\Rule;
  */
 class WebsiteController extends Controller
 {
+    /**
+     * Pfad der lokalen Hamburg-Seite. Als Konstante, weil er an DREI
+     * Stellen gebraucht wird (Route, Controller, Sitemap) - drei
+     * getippte Zeichenketten laufen auseinander, und dann fehlt die
+     * Seite still in der Sitemap.
+     */
+    public const HAMBURG_SLUG = 'versicherungsmakler-hamburg';
+
     /** Rechtsseiten der Website (aus der statischen Website uebernommen). */
     public const LEGAL_PAGES = [
         'impressum' => 'Impressum',
@@ -42,6 +50,27 @@ class WebsiteController extends Controller
     public function home()
     {
         return view('website.home', ['websitePath' => '/', 'onHome' => true]);
+    }
+
+    /**
+     * Die LOKALE Seite fuer Hamburg (Betreiber-Auftrag 19.09.2026).
+     *
+     * Sie wurde beim SEO-Auftrag am 02.10.2026 bewusst zurueckgestellt,
+     * bis das Google-Business-Profil steht - eine Ortsseite ohne
+     * Profil dahinter ist eine Seite ohne Signal. Der Betreiber hat sie
+     * jetzt angefordert.
+     *
+     * SIE IST KEINE KOPIE DER NATIONALEN SEITE mit eingesetztem
+     * Stadtnamen - genau das waere eine Doorway Page und im Auftrag
+     * (Abschnitt 5/28) ausdruecklich ausgeschlossen. Sie beantwortet,
+     * was nur hier gilt: wo das Buero steht, wann es besetzt ist, was
+     * ein Termin vor Ort bringt, und dass in Hamburg auf Deutsch UND
+     * Arabisch beraten wird. Alles andere verweist auf die
+     * Leistungsseiten, statt es ein zweites Mal zu erzaehlen.
+     */
+    public function hamburg()
+    {
+        return view('website.hamburg', ['websitePath' => '/'.self::HAMBURG_SLUG]);
     }
 
     public function thanks()

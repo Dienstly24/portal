@@ -73,6 +73,10 @@ class SeoController extends Controller
         $homeMtime = @filemtime(resource_path('views/website/home.blade.php')) ?: null;
         $add('/', $homeMtime ? date('Y-m-d', $homeMtime) : null);
 
+        // Lokale Seite Hamburg (DE + AR), lastmod aus der Vorlage.
+        $hhMtime = @filemtime(resource_path('views/website/hamburg.blade.php')) ?: null;
+        $add('/'.WebsiteController::HAMBURG_SLUG, $hhMtime ? date('Y-m-d', $hhMtime) : null);
+
         // Leistungen: Uebersicht + aktive Seiten mit echtem lastmod aus der DB.
         $pages = ServicePage::active()->ordered()->get();
         $newest = $pages->max('updated_at');

@@ -114,9 +114,11 @@ body{font-family:'Inter',Arial,sans-serif;min-height:100vh;min-height:100dvh;col
     <a href="{{ url('/erstinformation') }}">{{ __('Erstinformation') }}</a><span class="sep">·</span>
     <a href="{{ url('/agb') }}">AGB</a><span class="sep">·</span>
     <a href="{{ url('/widerruf') }}">{{ __('Widerruf') }}</a><span class="sep">·</span>
-    <a href="{{ route('login') }}">{{ __('Kundenportal') }}</a>
+    <a href="{{ route('login') }}" data-cta="portal" data-cta-seite="leistungen">{{ __('Kundenportal') }}</a><span class="sep">·</span>
+    <a href="#" data-consent-oeffnen>{{ __('Cookie-Einstellungen') }}</a>
 </div>
 @include('website.partials.whatsapp')
+@include('partials.cookie_consent')
 @include('partials.matomo')
 {{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
 @stack('cspScripts')
