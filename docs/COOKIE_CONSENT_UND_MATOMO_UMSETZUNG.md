@@ -236,18 +236,28 @@ laeuft:
 Sie war im SEO-Auftrag bewusst zurueckgestellt worden; der Betreiber hat
 sie am 19.09.2026 angefordert.
 
-- **Keine Doorway Page**: eigene Inhalte (Buero, Anfahrt,
-  Oeffnungszeiten, was ein Termin vor Ort bringt, fuenf lokale Fragen),
-  **kein** kopierter Text von den Spartenseiten - ein Test haelt das
-  fest. Es entsteht **eine** Ortsseite, weil es **einen** Standort gibt.
-  Keine kuenstlichen Stadtseiten.
+- **Keine Doorway Page**: eigene Inhalte (Erreichbarkeit, Ablauf der
+  Online-Beratung, fuenf lokale Fragen), **kein** kopierter Text von den
+  Spartenseiten - ein Test haelt das fest. Es entsteht **eine**
+  Ortsseite, weil es **einen** Standort gibt. Keine kuenstlichen
+  Stadtseiten.
+- **KEIN BESUCHSBETRIEB** (Betreiber-Klarstellung 19.09.2026): die
+  erste Fassung dieser Seite versprach Beratung vor Ort, Mitbringen von
+  Unterlagen und Unterschriften im Buero. Der Betrieb arbeitet
+  ausschliesslich online, bis hin zur Kfz-Zulassung. Die Seite sagt das
+  jetzt ausdruecklich ("komplett online", FAQ "Muss ich zu Ihnen ins
+  Buero kommen?" - "Nein"); die Anschrift steht nur noch im Fuss und im
+  Schema, nicht mehr im Seiteninhalt. Zwei Waechter-Tests in beiden
+  Sprachen. Im Google-Unternehmensprofil gehoert dazu die verborgene
+  Adresse (Service-Area Business).
 - **Sie bleibt bei der Wahrheit**: laut `/erstinformation` haelt
   Dienstly24 die Erlaubnis nach § 34d GewO **nicht selbst**, sondern
   vermittelt als vertraglich gebundener Vermittler unter der Haftung von
   NESA Versicherung und Finanzen. Die Seite sagt das ausdruecklich und
   verlinkt die Erstinformation - auch das ein Test.
-- Nur echte Angaben: Anschrift und Telefon aus `config/website.php`,
-  Oeffnungszeiten wie im Betrieb. Keine Bewertungen, keine Zahlen ueber
+- Nur echte Angaben: Telefon aus `config/website.php`, die Zeiten
+  ebenfalls - sie sind ERREICHBARKEITS-Zeiten, keine Oeffnungszeiten
+  eines Ladens. Keine Bewertungen, keine Zahlen ueber
   Kundenmengen, keine erfundenen Auszeichnungen.
 - Strukturierte Daten `InsuranceAgency` hier **zu Recht** (dies IST die
   Standortseite) plus `BreadcrumbList`. Auf allen uebrigen Unterseiten

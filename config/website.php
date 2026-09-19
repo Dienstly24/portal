@@ -46,6 +46,34 @@ return [
     'phone_e164' => '+491799673909',
     'email' => 'info@dienstly24.de',
     'address' => ['street' => 'Furtweg 51a', 'zip' => '22523', 'city' => 'Hamburg'],
+
+    /*
+     * ERREICHBARKEITS-ZEITEN - EINE Quelle fuer Seite UND strukturierte
+     * Daten.
+     *
+     * KEIN BESUCHSBETRIEB (Betreiber-Klarstellung 19.09.2026): der
+     * Betrieb arbeitet ausschliesslich online, niemand kommt ins Buero.
+     * Das hier sind die Zeiten, in denen jemand ans Telefon geht - nicht
+     * die Zeiten, zu denen man vorbeikommen kann. Die Hamburg-Seite sagt
+     * das ausdruecklich dazu; im Schema heisst das Feld trotzdem
+     * `openingHoursSpecification`, weil schema.org kein anderes kennt.
+     *
+     * Sie standen bis 19.09.2026 doppelt: als Text auf der Hamburg-Seite
+     * und noch einmal fest verdrahtet im `InsuranceAgency`-Schema. Wer
+     * die eine aendert und die andere vergisst, erzeugt genau den
+     * Widerspruch, den Google beim Abgleich mit dem
+     * Unternehmensprofil bemaengelt - und niemand sieht ihn, weil beide
+     * Stellen fuer sich richtig aussehen.
+     *
+     * `von`/`bis` in 24-Stunden-Schreibweise (schema.org verlangt das),
+     * `tage` in der Benennung von schema.org. Die ANZEIGE wird daraus
+     * gebildet, nicht umgekehrt.
+     */
+    'opening_hours' => [
+        'tage' => ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+        'von' => '09:00',
+        'bis' => '18:00',
+    ],
     'facebook' => 'https://www.facebook.com/Dienstly24',
 
     /*
@@ -65,6 +93,15 @@ return [
         env('WEBSITE_YOUTUBE'),
         env('WEBSITE_GOOGLE_BUSINESS'),
     ])),
+
+    /*
+     * Dasselbe Profil noch einmal einzeln - die Hamburg-Seite verlinkt
+     * es SICHTBAR (Zwei-Wege-Link: Profil -> Website, Website -> Profil).
+     * Ohne Eintrag erscheint dort kein Knopf; ein Link auf ein Profil,
+     * das es nicht gibt, waere eine falsche Angabe ueber das eigene
+     * Unternehmen.
+     */
+    'google_business' => env('WEBSITE_GOOGLE_BUSINESS'),
 
     // WhatsApp-Nummer fuer den Float-Button (wa.me, ohne '+').
     'whatsapp' => env('WEBSITE_WHATSAPP', '491799673909'),

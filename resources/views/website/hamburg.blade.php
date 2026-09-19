@@ -5,35 +5,61 @@
     $isAr = app()->getLocale() === 'ar';
     $hSlug = \App\Http\Controllers\WebsiteController::HAMBURG_SLUG;
     $lPrefix = $isAr ? '/ar/leistungen/' : '/leistungen/';
-    $addr = config('website.address');
     $telE164 = config('website.phone_e164');
     $telAnzeige = config('website.phone_display');
     $waText = $isAr
-        ? 'مرحباً Dienstly24، أريد موعداً في مكتبكم بهامبورغ.'
-        : 'Hallo Dienstly24, ich möchte einen Termin in Ihrem Büro in Hamburg.';
+        ? 'مرحباً Dienstly24، أريد استشارة. أنا في هامبورغ.'
+        : 'Hallo Dienstly24, ich haette gern eine Beratung. Ich bin aus Hamburg.';
     $waLink = 'https://wa.me/'.config('website.whatsapp').'?text='.rawurlencode($waText);
+
+    /*
+     * OEFFNUNGSZEITEN AUS DER EINEN QUELLE (`config/website.php`). Sie
+     * standen hier als Text und noch einmal im Schema - ein Google-
+     * Unternehmensprofil wird gegen genau diese Angabe abgeglichen, und
+     * zwei Quellen heissen frueher oder spaeter zwei Antworten.
+     */
+    $zeiten = config('website.opening_hours');
+    $tagKurz = ['Monday' => ['Montag', 'الاثنين'], 'Friday' => ['Freitag', 'الجمعة']];
+    $vonTag = $tagKurz[reset($zeiten['tage'])][$isAr ? 1 : 0] ?? '';
+    $bisTag = $tagKurz[end($zeiten['tage'])][$isAr ? 1 : 0] ?? '';
+    $zeitZeile = $isAr
+        ? $vonTag.' – '.$bisTag.'، '.$zeiten['von'].' – '.$zeiten['bis']
+        : $vonTag.' bis '.$bisTag.', '.$zeiten['von'].' – '.$zeiten['bis'].' Uhr';
+
+    /*
+     * DER RUECKWEG ZUM UNTERNEHMENSPROFIL - nur wenn es WIRKLICH
+     * existiert (`WEBSITE_GOOGLE_BUSINESS` in der Server-.env). Ohne
+     * Eintrag erscheint der Knopf gar nicht: ein Link auf ein Profil,
+     * das es nicht gibt, ist eine falsche Angabe ueber das eigene
+     * Unternehmen - dieselbe Regel wie bei `sameAs`.
+     */
+    $profil = config('website.google_business');
 @endphp
 
 @section('title', $isAr
-    ? 'وسيط تأمين في هامبورغ | استشارة حضورية بالعربية والألمانية | Dienstly24'
-    : 'Versicherungsmakler in Hamburg | Beratung vor Ort | Dienstly24')
+    ? 'وسيط تأمين في هامبورغ | كل شيء أونلاين بالعربية والألمانية | Dienstly24'
+    : 'Versicherungsmakler in Hamburg | komplett online | Dienstly24')
 
 @section('description', $isAr
-    ? 'استشارة تأمين في هامبورغ – حضورياً في مكتبنا في Furtweg 51a، بالعربية والألمانية. تأمين السيارات والتأمين الصحي وتسجيل السيارات والكهرباء والغاز. مجاناً وبدون التزام.'
-    : 'Versicherungsberatung in Hamburg – persönlich in unserem Büro im Furtweg 51a, auf Deutsch und Arabisch. Kfz, Krankenversicherung, Kfz-Zulassung sowie Strom & Gas. Kostenlos und unverbindlich.')
+    ? 'وسيط تأمين مقرّه هامبورغ – كل شيء أونلاين، بالعربية والألمانية. تأمين السيارات والتأمين الصحي وتسجيل السيارات والكهرباء والغاز. لا داعي للحضور إلى أي مكتب. مجاناً وبدون التزام.'
+    : 'Versicherungsmakler mit Sitz in Hamburg – komplett online, auf Deutsch und Arabisch. Kfz, Krankenversicherung, Kfz-Zulassung sowie Strom & Gas. Sie müssen nirgendwo hinkommen. Kostenlos und unverbindlich.')
 
-@section('og-title', $isAr ? 'وسيط تأمين في هامبورغ – Dienstly24' : 'Versicherungsmakler in Hamburg – Dienstly24')
+@section('og-title', $isAr ? 'وسيط تأمين في هامبورغ – كل شيء أونلاين' : 'Versicherungsmakler in Hamburg – komplett online')
 
 @section('head-extra')
 {{-- Strukturierte Daten: Aufbau in App\Services\Seo\StructuredData (nie
      als Array in der Vorlage - Blade macht aus "at-context" sonst eine
      eigene Direktive, Audit 15.09.2026).
 
-     HIER IST DER `InsuranceAgency`-BLOCK MIT ANSCHRIFT RICHTIG, waehrend
-     er auf den Leistungsseiten bewusst fehlt: Dies ist die Seite UEBER
-     DEN STANDORT. Sie beschreibt dasselbe eine Buero wie die Startseite,
-     nicht ein zweites - es gibt weiterhin genau eine Anschrift im
-     gesamten Auftritt. --}}
+     HIER IST DER `InsuranceAgency`-BLOCK RICHTIG, waehrend er auf den
+     Leistungsseiten bewusst fehlt: dies ist die Seite ueber den SITZ des
+     Betriebs. Sie beschreibt denselben einen Betrieb wie die Startseite,
+     nicht einen zweiten - es gibt weiterhin genau eine Anschrift im
+     gesamten Auftritt.
+
+     KEIN BESUCHSBETRIEB (Betreiber-Klarstellung 19.09.2026): gearbeitet
+     wird ausschliesslich online. Die Zeiten sind ERREICHBARKEITS-Zeiten,
+     keine Einladung vorbeizukommen; die Seite sagt das ausdruecklich. --}}
 {!! \App\Services\Seo\StructuredData::script(\App\Services\Seo\StructuredData::insuranceAgency()) !!}
 {!! \App\Services\Seo\StructuredData::script(\App\Services\Seo\StructuredData::breadcrumbList([
     [__('Startseite'), $isAr ? '/ar' : '/'],
@@ -53,11 +79,11 @@
   <div class="section-head">
     <span class="kicker">{{ $isAr ? 'هامبورغ' : 'Hamburg' }}</span>
     <h1 class="title display">{{ $isAr
-        ? 'وسيط تأمين في هامبورغ – استشارة حضورية'
-        : 'Versicherungsmakler in Hamburg – Beratung vor Ort' }}</h1>
+        ? 'وسيط تأمين في هامبورغ – كل شيء أونلاين'
+        : 'Versicherungsmakler in Hamburg – komplett online' }}</h1>
     <p>{{ $isAr
-        ? 'مكتبنا في هامبورغ، والاستشارة بالعربية والألمانية. تعالوا شخصياً، أو اتصلوا، أو اكتبوا لنا – كما يناسبكم.'
-        : 'Unser Büro steht in Hamburg, beraten wird auf Deutsch und auf Arabisch. Kommen Sie persönlich vorbei, rufen Sie an oder schreiben Sie uns – wie es Ihnen lieber ist.' }}</p>
+        ? 'مقرّنا في هامبورغ، والعمل كلّه أونلاين: هاتف، واتساب، وبوابة العملاء – بالعربية والألمانية. لا تحتاجون للحضور إلى أي مكتب، ولا حتى لتسجيل السيارة.'
+        : 'Unser Sitz ist in Hamburg, gearbeitet wird vollständig online: Telefon, WhatsApp und Kundenportal – auf Deutsch und auf Arabisch. Sie müssen zu keinem Termin erscheinen, auch nicht für die Kfz-Zulassung.' }}</p>
   </div>
 
   {{-- EHRLICH AN DER ERSTINFORMATION AUSGERICHTET, genau wie die
@@ -73,16 +99,11 @@
   {{-- Der Standort: die einzigen Angaben, die es nur hier gibt. --}}
   <div class="hh-karten">
     <div class="hh-karte">
-      <h2>{{ $isAr ? 'مكتبنا' : 'Unser Büro' }}</h2>
-      <p class="hh-adresse">
-        <strong>Dienstly24</strong><br>
-        {{ $addr['street'] }}<br>
-        {{ $addr['zip'] }} {{ $addr['city'] }}
-      </p>
-      <p class="hh-zeit">{{ $isAr ? 'الاثنين – الجمعة، 09:00 – 18:00' : 'Montag bis Freitag, 09:00 – 18:00 Uhr' }}</p>
+      <h2>{{ $isAr ? 'كيف تصلون إلينا' : 'So erreichen Sie uns' }}</h2>
+      <p class="hh-zeit">{{ $zeitZeile }}</p>
       <p class="hh-klein">{{ $isAr
-          ? 'يُفضَّل الاتصال قبل الحضور حتى نخصّص لكم وقتاً كافياً.'
-          : 'Am besten kurz anrufen oder schreiben – dann planen wir in Ruhe Zeit für Sie ein.' }}</p>
+          ? 'نردّ خلال ساعات العمل. خارجها اكتبوا لنا وسنعاود الاتصال.'
+          : 'In dieser Zeit sind wir erreichbar. Ausserhalb schreiben Sie uns einfach – wir melden uns zurück.' }}</p>
       <div class="hh-wege">
         <a class="btn btn-primary" href="tel:{{ $telE164 }}" data-cta="telefon" data-cta-seite="hamburg">
           <span dir="ltr">{{ $telAnzeige }}</span>
@@ -93,27 +114,39 @@
           {{ $isAr ? 'نموذج الاتصال' : 'Kontaktformular' }}
         </a>
       </div>
+      @if($profil)
+        {{-- Zweiter Weg des Zwei-Wege-Links: das Profil verweist auf die
+             Website, die Website auf das Profil. Dort stehen die
+             Bewertungen echter Kunden - eine ANFAHRT wird bewusst nicht
+             versprochen, es gibt keinen Besuchsbetrieb. --}}
+        <p class="hh-klein hh-profil">
+          <a href="{{ $profil }}" target="_blank" rel="noopener"
+             data-cta="google-profil" data-cta-seite="hamburg">
+            {{ $isAr ? 'ملفّنا على Google – آراء العملاء' : 'Unser Profil bei Google – Bewertungen' }}
+          </a>
+        </p>
+      @endif
     </div>
 
     <div class="hh-karte">
-      <h2>{{ $isAr ? 'ما الذي يميّز الموعد الحضوري' : 'Was ein Termin vor Ort bringt' }}</h2>
+      <h2>{{ $isAr ? 'كيف تسير الأمور أونلاين' : 'So läuft es online ab' }}</h2>
       <ul class="hh-liste">
         <li>{{ $isAr
-            ? 'إحضار الأوراق معكم: نصوّرها ونحفظها في ملفكم مباشرة.'
-            : 'Unterlagen mitbringen: Wir erfassen sie direkt und legen sie in Ihrer Akte ab.' }}</li>
+            ? 'تصوّرون الأوراق بالهاتف وترسلونها عبر واتساب أو ترفعونها في بوابة العملاء – ونحفظها في ملفكم.'
+            : 'Unterlagen mit dem Handy abfotografieren – per WhatsApp schicken oder im Kundenportal hochladen. Wir legen sie in Ihrer Akte ab.' }}</li>
         <li>{{ $isAr
-            ? 'شرح العقود القائمة بندًا بندًا، وما يغطّيه فعلاً وما لا يغطّيه.'
-            : 'Bestehende Verträge gemeinsam durchgehen – was wirklich gedeckt ist und was nicht.' }}</li>
+            ? 'نراجع عقودكم القائمة ونشرح ما يغطّيه فعلاً وما لا يغطّيه – هاتفياً أو كتابةً.'
+            : 'Bestehende Verträge gehen wir durch und erklären, was wirklich gedeckt ist und was nicht – am Telefon oder schriftlich.' }}</li>
         <li>{{ $isAr
-            ? 'التوقيع على المستندات في المكتب، أو رقمياً إذا فضّلتم ذلك.'
-            : 'Unterschriften im Büro erledigen – oder digital, wenn Ihnen das lieber ist.' }}</li>
+            ? 'التوقيع رقمي: يصلكم رابط، وتوقّعون بإصبعكم على الهاتف.'
+            : 'Unterschrieben wird digital: Sie bekommen einen Link und zeichnen mit dem Finger auf dem Telefon.' }}</li>
         <li>{{ $isAr
-            ? 'الاستشارة بالعربية أو بالألمانية، كما يناسبكم.'
-            : 'Beratung auf Arabisch oder auf Deutsch – ganz wie Sie möchten.' }}</li>
+            ? 'تسجيل السيارة نتكفّل به كاملاً – لا أنتم ولا نحن نذهب بكم إلى دائرة المرور.'
+            : 'Die Kfz-Zulassung übernehmen wir komplett – Sie müssen nicht zur Zulassungsstelle.' }}</li>
       </ul>
       <p class="hh-klein">{{ $isAr
-          ? 'ولمن هو خارج هامبورغ: الاستشارة نفسها متاحة هاتفياً وأونلاين في كل ألمانيا.'
-          : 'Und wer nicht in Hamburg ist: Dieselbe Beratung gibt es deutschlandweit telefonisch und online.' }}</p>
+          ? 'لأنّ كل شيء أونلاين، لا فرق إن كنتم في هامبورغ أو في أي مكان آخر في ألمانيا.'
+          : 'Weil alles online läuft, macht es keinen Unterschied, ob Sie in Hamburg wohnen oder anderswo in Deutschland.' }}</p>
     </div>
   </div>
 </div></section>
@@ -163,20 +196,20 @@
 <section><div class="container">
   <div class="section-head center">
     <span class="kicker">FAQ</span>
-    <h2 class="title display">{{ $isAr ? 'أسئلة عن الموعد في هامبورغ' : 'Fragen zum Termin in Hamburg' }}</h2>
+    <h2 class="title display">{{ $isAr ? 'أسئلة متكرّرة' : 'Häufige Fragen' }}</h2>
   </div>
   <div class="faq">
     <details>
-      <summary>{{ $isAr ? 'هل يمكنني الحضور بدون موعد؟' : 'Kann ich ohne Termin vorbeikommen?' }}</summary>
+      <summary>{{ $isAr ? 'هل يجب أن آتي إلى المكتب؟' : 'Muss ich zu Ihnen ins Büro kommen?' }}</summary>
       <p>{{ $isAr
-          ? 'يُفضَّل أن تتصلوا أو تكتبوا لنا قبل الحضور. هكذا نضمن أن يكون هناك شخص متفرّغ لكم ولا تنتظروا.'
-          : 'Rufen Sie am besten kurz an oder schreiben Sie uns. So ist jemand für Sie da und Sie warten nicht.' }}</p>
+          ? 'لا. نحن نعمل أونلاين بالكامل، ولا يوجد استقبال للزوار في المقرّ. كل شيء يتم بالهاتف أو واتساب أو بوابة العملاء – بما في ذلك تسجيل السيارة والتوقيع.'
+          : 'Nein. Wir arbeiten vollständig online, einen Besuchsbetrieb gibt es an unserem Sitz nicht. Alles läuft über Telefon, WhatsApp oder das Kundenportal – auch die Kfz-Zulassung und die Unterschrift.' }}</p>
     </details>
     <details>
-      <summary>{{ $isAr ? 'ما الأوراق التي أحضرها معي؟' : 'Welche Unterlagen soll ich mitbringen?' }}</summary>
+      <summary>{{ $isAr ? 'كيف أرسل أوراقي؟' : 'Wie schicke ich Ihnen meine Unterlagen?' }}</summary>
       <p>{{ $isAr
-          ? 'ما هو موجود لديكم: البوالص الحالية أو أرقام العقود، وإثبات الهوية، وحسب الموضوع أوراق السيارة أو بيانات المزوّد السابق. إذا نقص شيء نقول لكم ذلك – ولا نخمّن أي بيان.'
-          : 'Was da ist: bestehende Policen oder Vertragsnummern, ein Ausweisdokument und – je nach Anliegen – Fahrzeugpapiere oder Angaben zum bisherigen Anbieter. Fehlt etwas, sagen wir Ihnen das; geraten wird nichts.' }}</p>
+          ? 'صورة بالهاتف تكفي – عبر واتساب أو رفعاً في بوابة العملاء. المفيد: البوالص الحالية أو أرقام العقود، إثبات الهوية، وحسب الموضوع أوراق السيارة أو بيانات المزوّد السابق. إذا نقص شيء نقول لكم ذلك – ولا نخمّن أي بيان.'
+          : 'Ein Handyfoto genügt – per WhatsApp oder als Upload im Kundenportal. Hilfreich sind: bestehende Policen oder Vertragsnummern, ein Ausweisdokument und – je nach Anliegen – Fahrzeugpapiere oder Angaben zum bisherigen Anbieter. Fehlt etwas, sagen wir Ihnen das; geraten wird nichts.' }}</p>
     </details>
     <details>
       <summary>{{ $isAr ? 'هل الاستشارة بالعربية متاحة فعلاً؟' : 'Wird wirklich auch auf Arabisch beraten?' }}</summary>
@@ -187,8 +220,8 @@
     <details>
       <summary>{{ $isAr ? 'هل تعملون خارج هامبورغ أيضاً؟' : 'Beraten Sie auch außerhalb von Hamburg?' }}</summary>
       <p>{{ $isAr
-          ? 'نعم، في كل ألمانيا هاتفياً وأونلاين. المكتب في هامبورغ إضافة لمن يفضّل اللقاء الشخصي.'
-          : 'Ja, deutschlandweit telefonisch und online. Das Büro in Hamburg ist das Zusätzliche für alle, die das persönliche Gespräch möchten.' }}</p>
+          ? 'نعم، في كل ألمانيا. وبما أنّ كل شيء أونلاين، فالخدمة واحدة تماماً أينما كنتم؛ هامبورغ هي مقرّنا فقط.'
+          : 'Ja, deutschlandweit. Da ohnehin alles online läuft, ist die Beratung überall dieselbe – Hamburg ist unser Sitz, mehr nicht.' }}</p>
     </details>
     <details>
       <summary>{{ $isAr ? 'قديش بتكلّف الاستشارة؟' : 'Was kostet die Beratung?' }}</summary>
@@ -208,7 +241,6 @@
 @media(max-width:820px){.hh-karten{grid-template-columns:1fr;}}
 .hh-karte{border:1px solid var(--line);border-radius:18px;padding:24px;background:var(--card);}
 .hh-karte h2{font-size:1.05rem;margin:0 0 12px;}
-.hh-adresse{font-size:1rem;line-height:1.7;margin:0 0 6px;}
 .hh-zeit{font-size:.92rem;font-weight:600;margin:0 0 6px;}
 .hh-klein{font-size:.85rem;color:var(--muted);line-height:1.6;margin:8px 0 0;}
 .hh-wege{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;}
