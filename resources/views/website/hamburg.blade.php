@@ -12,6 +12,29 @@
         ? 'مرحباً Dienstly24، أريد موعداً في مكتبكم بهامبورغ.'
         : 'Hallo Dienstly24, ich möchte einen Termin in Ihrem Büro in Hamburg.';
     $waLink = 'https://wa.me/'.config('website.whatsapp').'?text='.rawurlencode($waText);
+
+    /*
+     * OEFFNUNGSZEITEN AUS DER EINEN QUELLE (`config/website.php`). Sie
+     * standen hier als Text und noch einmal im Schema - ein Google-
+     * Unternehmensprofil wird gegen genau diese Angabe abgeglichen, und
+     * zwei Quellen heissen frueher oder spaeter zwei Antworten.
+     */
+    $zeiten = config('website.opening_hours');
+    $tagKurz = ['Monday' => ['Montag', 'الاثنين'], 'Friday' => ['Freitag', 'الجمعة']];
+    $vonTag = $tagKurz[reset($zeiten['tage'])][$isAr ? 1 : 0] ?? '';
+    $bisTag = $tagKurz[end($zeiten['tage'])][$isAr ? 1 : 0] ?? '';
+    $zeitZeile = $isAr
+        ? $vonTag.' – '.$bisTag.'، '.$zeiten['von'].' – '.$zeiten['bis']
+        : $vonTag.' bis '.$bisTag.', '.$zeiten['von'].' – '.$zeiten['bis'].' Uhr';
+
+    /*
+     * DER RUECKWEG ZUM UNTERNEHMENSPROFIL - nur wenn es WIRKLICH
+     * existiert (`WEBSITE_GOOGLE_BUSINESS` in der Server-.env). Ohne
+     * Eintrag erscheint der Knopf gar nicht: ein Link auf ein Profil,
+     * das es nicht gibt, ist eine falsche Angabe ueber das eigene
+     * Unternehmen - dieselbe Regel wie bei `sameAs`.
+     */
+    $profil = config('website.google_business');
 @endphp
 
 @section('title', $isAr
@@ -79,7 +102,7 @@
         {{ $addr['street'] }}<br>
         {{ $addr['zip'] }} {{ $addr['city'] }}
       </p>
-      <p class="hh-zeit">{{ $isAr ? 'الاثنين – الجمعة، 09:00 – 18:00' : 'Montag bis Freitag, 09:00 – 18:00 Uhr' }}</p>
+      <p class="hh-zeit">{{ $zeitZeile }}</p>
       <p class="hh-klein">{{ $isAr
           ? 'يُفضَّل الاتصال قبل الحضور حتى نخصّص لكم وقتاً كافياً.'
           : 'Am besten kurz anrufen oder schreiben – dann planen wir in Ruhe Zeit für Sie ein.' }}</p>
@@ -93,6 +116,17 @@
           {{ $isAr ? 'نموذج الاتصال' : 'Kontaktformular' }}
         </a>
       </div>
+      @if($profil)
+        {{-- Zweiter Weg des Zwei-Wege-Links: das Profil verweist auf die
+             Website, die Website auf das Profil. Dort stehen Anfahrt,
+             Karte und die Bewertungen echter Kunden. --}}
+        <p class="hh-klein hh-profil">
+          <a href="{{ $profil }}" target="_blank" rel="noopener"
+             data-cta="google-profil" data-cta-seite="hamburg">
+            {{ $isAr ? 'ملفّنا على خرائط Google – الوصول والتقييمات' : 'Unser Profil bei Google – Anfahrt und Bewertungen' }}
+          </a>
+        </p>
+      @endif
     </div>
 
     <div class="hh-karte">

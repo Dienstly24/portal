@@ -74,12 +74,7 @@ class StructuredData
             'address' => self::ADRESSE,
             'areaServed' => self::GEBIET,
             'availableLanguage' => ['de', 'ar'],
-            'openingHoursSpecification' => [[
-                '@type' => 'OpeningHoursSpecification',
-                'dayOfWeek' => ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-                'opens' => '09:00',
-                'closes' => '18:00',
-            ]],
+            'openingHoursSpecification' => [self::oeffnungszeiten()],
             'sameAs' => self::sameAs(),
             'hasOfferCatalog' => [
                 '@type' => 'OfferCatalog',
@@ -163,6 +158,29 @@ class StructuredData
      *
      * @return array<int, string>
      */
+    /**
+     * Die Oeffnungszeiten aus der EINEN Quelle (`config/website.php`).
+     *
+     * Sie standen hier frueher fest verdrahtet und ein zweites Mal als
+     * Text auf der Hamburg-Seite. Ein Unternehmensprofil bei Google wird
+     * gegen genau diese Angaben abgeglichen - zwei Quellen heisst
+     * frueher oder spaeter zwei Antworten.
+     *
+     * @return array<string, mixed>
+     */
+    private static function oeffnungszeiten(): array
+    {
+        /** @var array{tage: list<string>, von: string, bis: string} $zeiten */
+        $zeiten = config('website.opening_hours');
+
+        return [
+            '@type' => 'OpeningHoursSpecification',
+            'dayOfWeek' => $zeiten['tage'],
+            'opens' => $zeiten['von'],
+            'closes' => $zeiten['bis'],
+        ];
+    }
+
     public static function sameAs(): array
     {
         return array_values(array_filter((array) config('website.social', [])));

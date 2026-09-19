@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Services\Seo\StructuredData;
 use App\Support\Consent;
 use Database\Seeders\ServicePageSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -540,5 +541,75 @@ class EinwilligungUndHamburgTest extends TestCase
         $this->assertStringContainsString('d24-consent', $html);
         $this->assertStringNotContainsString('_paq', $html);
         $this->assertStringNotContainsString('matomo.js', $html);
+    }
+
+    /**
+     * OEFFNUNGSZEITEN HABEN EINE QUELLE.
+     *
+     * Bis 19.09.2026 standen sie doppelt: als Text auf der Seite und
+     * fest verdrahtet im `InsuranceAgency`-Schema. Beide sahen fuer sich
+     * richtig aus - wer eine davon aendert, erzeugt genau den
+     * Widerspruch, den Google beim Abgleich mit dem Unternehmensprofil
+     * bemaengelt, und niemand sieht ihn.
+     *
+     * Der Test aendert die EINE Quelle und verlangt, dass BEIDE Stellen
+     * mitgehen. Mit den alten festen Werten scheitert er.
+     */
+    public function test_oeffnungszeiten_stehen_nur_an_einer_stelle(): void
+    {
+        config(['website.opening_hours' => [
+            'tage' => ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+            'von' => '08:30',
+            'bis' => '17:15',
+        ]]);
+
+        $html = $this->get('https://www.dienstly24.de/versicherungsmakler-hamburg')
+            ->assertOk()->getContent();
+
+        // Die Seite zeigt die neuen Zeiten ...
+        $this->assertStringContainsString('08:30', $html);
+        $this->assertStringContainsString('17:15', $html);
+        $this->assertStringNotContainsString('09:00', $html);
+
+        // ... und das Schema nennt dieselben.
+        $daten = StructuredData::insuranceAgency();
+        $this->assertSame('08:30', $daten['openingHoursSpecification'][0]['opens']);
+        $this->assertSame('17:15', $daten['openingHoursSpecification'][0]['closes']);
+    }
+
+    /**
+     * DER ZWEI-WEGE-LINK ENTSTEHT NICHT AUS DEM NICHTS: ohne
+     * hinterlegtes Unternehmensprofil erscheint kein Knopf. Ein Link auf
+     * ein Profil, das es nicht gibt, waere eine falsche Angabe ueber das
+     * eigene Unternehmen - dieselbe Regel wie bei `sameAs`.
+     */
+    public function test_ohne_unternehmensprofil_kein_link_darauf(): void
+    {
+        config(['website.google_business' => null]);
+
+        $html = $this->get('https://www.dienstly24.de/versicherungsmakler-hamburg')
+            ->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('data-cta="google-profil"', $html);
+        $this->assertStringNotContainsString('Profil bei Google', $html);
+    }
+
+    public function test_mit_unternehmensprofil_verlinkt_die_seite_es_sichtbar(): void
+    {
+        $profil = 'https://maps.app.goo.gl/beispiel';
+        config([
+            'website.google_business' => $profil,
+            'website.social' => ['https://www.facebook.com/Dienstly24', $profil],
+        ]);
+
+        foreach (['/versicherungsmakler-hamburg', '/ar/versicherungsmakler-hamburg'] as $pfad) {
+            $html = $this->get('https://www.dienstly24.de'.$pfad)->assertOk()->getContent();
+
+            // Sichtbar auf der Seite ...
+            $this->assertStringContainsString($profil, $html, $pfad);
+            $this->assertStringContainsString('data-cta="google-profil"', $html, $pfad);
+            // ... und als Entity-Signal in den strukturierten Daten.
+            $this->assertStringContainsString('sameAs', $html, $pfad);
+        }
     }
 }

@@ -3557,7 +3557,34 @@ Betreiber-Anleitung in `docs/ANLEITUNG_MATOMO_AR.md` (Abschnitte 7/7a).
   NICHTS unerreichbar wird. LEHRE: eine Aenderung, die auf mehreren
   Layouts erscheint, muss auf JEDEM davon im Browser angesehen werden -
   dieselbe Klasse Versaeumnis wie die arabische Fassung am 02.10.2026.
-- Tests: `EinwilligungUndHamburgTest` (31 Faelle).
+- **GOOGLE-UNTERNEHMENSPROFIL: der Zwei-Wege-Link ist gebaut, das
+  Profil bleibt Betreiber-Sache** (19.09.2026, arabische Anleitung
+  `docs/ANLEITUNG_GOOGLE_BUSINESS_AR.md`). Beim Nachfassen fielen zwei
+  Dinge auf, die genau am Abgleich Profil<->Website scheitern:
+  (1) **Die OEFFNUNGSZEITEN standen DOPPELT** - als Text auf der
+  Hamburg-Seite und noch einmal fest verdrahtet im
+  `InsuranceAgency`-Schema. Beide sahen fuer sich richtig aus; wer eine
+  davon aendert, erzeugt den Widerspruch, den Google beim Abgleich mit
+  dem Profil bemaengelt, und niemand sieht ihn. Sie stehen jetzt EINMAL
+  in `config/website.php` (`opening_hours`, Tage in schema.org-Benennung,
+  Zeiten 24-Stunden) - die ANZEIGE wird daraus gebildet, nicht umgekehrt.
+  Ein Test aendert die eine Quelle und verlangt, dass Seite UND Schema
+  mitgehen.
+  (2) **Kein sichtbarer Rueckweg**: `WEBSITE_GOOGLE_BUSINESS` ging nur in
+  `sameAs`. Jetzt zusaetzlich `config('website.google_business')` und ein
+  sichtbarer Knopf auf der Hamburg-Seite (DE/AR, `data-cta="google-profil"`
+  - die Klicks zaehlt Matomo damit ohne Codeaenderung mit). **Ohne
+  Eintrag erscheint kein Knopf** - ein Link auf ein Profil, das es nicht
+  gibt, waere eine falsche Angabe ueber das eigene Unternehmen, dieselbe
+  Regel wie bei `sameAs`. Beides als Test.
+  **NAP ist geprueft konsistent**: Anschrift und Telefon stehen in
+  Impressum, Datenschutz, AGB, Startseite, Hamburg-Seite, E-Mail-Fuss und
+  Schema zeichengleich - das ist die Voraussetzung, nicht eine Nettigkeit.
+  **BEWUSST NICHT GEMACHT**: Geokoordinaten im Schema (ohne Netzzugang
+  nicht pruefbar, eine erfundene waere schlimmer als keine - Google nimmt
+  den Ort aus dem bestaetigten Profil) und weitere Stadtseiten (ein Buero
+  = eine Ortsseite; alles andere waere eine Doorway Page).
+- Tests: `EinwilligungUndHamburgTest` (34 Faelle).
 
 ## Offene Themen / wartet auf den Betreiber
 
