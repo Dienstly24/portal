@@ -51,6 +51,35 @@ return [
 
         // Nummer der Website in Matomo (bei der ersten Einrichtung die 1).
         'site_id' => env('MATOMO_SITE_ID'),
+
+        /*
+         * Nach wie vielen Tagen Matomo die ROHDATEN loescht.
+         *
+         * Eingestellt wird das IN MATOMO (Administration -> Privacy ->
+         * "Regularly delete old raw data"). Hier steht dieselbe Zahl,
+         * weil die Datenschutzerklaerung sie nennen muss - sie darf
+         * nicht von Hand abgetippt in der Rechtsseite stehen und dann
+         * von der echten Einstellung abweichen. WER SIE IN MATOMO
+         * AENDERT, AENDERT SIE AUCH HIER.
+         */
+        'log_retention_days' => (int) env('MATOMO_LOG_RETENTION_DAYS', 180),
     ],
+
+    /*
+     * Braucht die Messung eine Einwilligung des Besuchers?
+     *
+     * STANDARD JA - die strengere Auslegung, und die einzige, die der
+     * Code von sich aus treffen darf. Matomo laeuft hier ohne Kennungen
+     * (`disableCookies`) und die IP wird serverseitig gekuerzt; ob damit
+     * Paragraph 25 TTDSG ueberhaupt greift, ist eine RECHTSFRAGE.
+     *
+     * Der Schalter gehoert deshalb dem Betreiber und seinem
+     * Datenschutzbeauftragten: `ANALYTICS_REQUIRES_CONSENT=false` stellt
+     * die Statistik auf "notwendig" und misst dann jeden Besucher.
+     * Der Code entscheidet das NICHT - er kennt die Rechtsauffassung
+     * nicht, und eine falsch gesetzte Voreinstellung faellt niemandem
+     * auf, weil sie keine Fehlermeldung erzeugt.
+     */
+    'requires_consent' => (bool) env('ANALYTICS_REQUIRES_CONSENT', true),
 
 ];

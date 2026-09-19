@@ -144,7 +144,9 @@ class WebsiteMergeTest extends TestCase
         $this->get('https://www.dienstly24.de/bildnachweise')->assertOk();
         $this->get('https://www.dienstly24.de/cookie-richtlinie')
             ->assertOk()
-            ->assertSee('ohne Tracking');
+            // Seit dem Einwilligungs-Banner (19.09.2026) nennt die Seite
+            // die notwendigen Cookies ausdruecklich als tracking-frei.
+            ->assertSee('keine Tracking-Merkmale');
     }
 
     public function test_legal_kontakt_on_website_host_goes_to_contact_section(): void

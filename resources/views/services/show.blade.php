@@ -286,7 +286,7 @@ label{display:block;font-size:13px;margin-bottom:7px;color:#cfd5cf;font-weight:5
                 <div class="ok">✓ {{ __('Vielen Dank! Wir melden uns schnellstmöglich bei Ihnen – in der Regel innerhalb von 24 Stunden.') }}</div>
             @else
                 @if($errors->any())<div class="error">{{ $errors->first() }}</div>@endif
-                <form method="POST" action="{{ route('services.submit', $page->slug) }}">
+                <form method="POST" action="{{ route('services.submit', $page->slug) }}" data-cta-formular="{{ $page->slug }}">
                     @csrf
                     <input type="text" name="website" value="" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
 
@@ -382,7 +382,8 @@ label{display:block;font-size:13px;margin-bottom:7px;color:#cfd5cf;font-weight:5
     <a href="{{ url('/agb') }}">AGB</a><span class="sep">·</span>
     <a href="{{ url('/widerruf') }}">{{ __('Widerruf') }}</a><span class="sep">·</span>
     <a href="{{ url('/leistungen') }}">{{ __('Alle Leistungen') }}</a><span class="sep">·</span>
-    <a href="{{ route('login') }}">{{ __('Kundenportal') }}</a>
+    <a href="{{ route('login') }}" data-cta="portal" data-cta-seite="leistung">{{ __('Kundenportal') }}</a><span class="sep">·</span>
+    <a href="#" data-consent-oeffnen>{{ __('Cookie-Einstellungen') }}</a>
 </div>
 <p class="foot" style="border-top:0;padding-top:0;max-width:780px;margin:0 auto 22px;text-align:center;line-height:1.6;">{{ $rtl
     ? 'تتم وساطة التأمين عبر وسيط تأمين مرخّص وفق المادة 34d الفقرة 1 من قانون مزاولة الحرف الألماني (GewO). تجدون بيانات الوسيط ورقم السجل وجهة الرقابة في صفحة بيانات الناشر (Impressum) وصفحة المعلومات الأولى (Erstinformation).'
@@ -391,6 +392,7 @@ label{display:block;font-size:13px;margin-bottom:7px;color:#cfd5cf;font-weight:5
 @include('website.partials.whatsapp', ['waText' => $rtl
     ? 'مرحباً Dienstly24، أريد استشارة بخصوص: ' . $page->t('title')
     : 'Hallo Dienstly24, ich interessiere mich für: ' . $page->title_de])
+@include('partials.cookie_consent')
 @include('partials.matomo')
 {{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
 @stack('cspScripts')

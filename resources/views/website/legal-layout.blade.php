@@ -43,8 +43,9 @@
 </main>
 <footer>
   © {{ date('Y') }} Dienstly24 ·
-  <a href="/impressum">Impressum</a><a href="/datenschutz">Datenschutz</a><a href="/agb">AGB</a><a href="/widerruf">Widerruf</a><a href="/erstinformation">Erstinformation</a><a href="/cookie-richtlinie">Cookie-Richtlinie</a><a href="/bildnachweise">Bildnachweise</a>
+  <a href="/impressum">Impressum</a><a href="/datenschutz">Datenschutz</a><a href="/agb">AGB</a><a href="/widerruf">Widerruf</a><a href="/erstinformation">Erstinformation</a><a href="/cookie-richtlinie">Cookie-Richtlinie</a><a href="/bildnachweise">Bildnachweise</a><a href="#" data-consent-oeffnen>Cookie-Einstellungen</a>
 </footer>
+@include('partials.cookie_consent')
 @include('partials.matomo')
 {{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
 @stack('cspScripts')

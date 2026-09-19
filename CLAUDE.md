@@ -3466,6 +3466,77 @@ Betreiber-Anleitung `docs/ANLEITUNG_SEO_AR.md`. Die Kurzfassung:
   Sprachen erscheint, muss in BEIDEN angeschaut werden.
 - Tests: `SeoSichtbarkeitTest`, `MatomoMessungTest`, ergaenzend `StructuredDataTest`.
 
+## Cookie-Einwilligung und die Hamburg-Seite (Betreiber-Auftrag 19.09.2026)
+
+Vollstaendig in `docs/COOKIE_CONSENT_UND_MATOMO_UMSETZUNG.md`, arabische
+Betreiber-Anleitung in `docs/ANLEITUNG_MATOMO_AR.md` (Abschnitte 7/7a).
+
+- **NICHTS LAEUFT VOR DER EINWILLIGUNG.** Der uebliche Fehler ist, das
+  Messskript zu laden und ihm danach zu sagen, es solle nichts senden -
+  dann ist die Verbindung aufgebaut und die IP uebertragen. Hier haengt
+  der LADEVORGANG selbst im Rueckruf
+  (`window.d24Consent.beiFreigabe('statistik', starten)`): vor der
+  Entscheidung gibt es kein `<script>`, keine Anfrage, keinen Eintrag.
+  Im Browser nachgemessen, nicht zugesagt.
+  **FAIL-CLOSED**: fehlt der Banner auf einer Seite, ist
+  `window.d24Consent` nicht da und es wird NICHT gemessen. Ein
+  Einbindungsfehler darf nie dazu fuehren, dass ungefragt gemessen wird.
+  Ein Test prueft im AUSGELIEFERTEN HTML, dass der Banner VOR der
+  Messung steht.
+- **`App\Support\Consent` ist die EINE Quelle** (Kategorien,
+  Cookie-Format `v1:statistik`, Domain, Einwilligungspflicht). Drei
+  Entscheidungen: (1) nur Kategorien, die es WIRKLICH gibt - `notwendig`
+  und `statistik`, keine Werbung und keine externen Medien, weil nichts
+  davon eingebunden ist; eine leere Kategorie aufzufuehren waere eine
+  falsche Aussage ueber das eigene Unternehmen. (2) **KEIN BANNER OHNE
+  EINWILLIGUNGSPFLICHTIGE TECHNIK** (`optionaleDiensteVorhanden()`):
+  ohne eingerichtetes Matomo erscheint keine Abfrage - sie waere ein
+  Klick ins Leere und ihr Text beschriebe einen Dienst, den es nicht
+  gibt; sobald `MATOMO_URL` gesetzt wird, erscheint der Banner VON
+  SELBST. (3) der Altbestand `cookie_consent=all|essential` wird
+  geerbt - wer damals entschieden hat, wird nicht erneut gefragt.
+  Die Versionsmarke `v1` ist Absicht: kommt eine Kategorie hinzu, ist
+  jede alte Einwilligung ungueltig, statt still auf Neues ausgedehnt zu
+  werden.
+- **EIN Banner fuer Website UND Portal.** Das Cookie liegt auf der
+  gemeinsamen Domain `dienstly24.de`, deshalb wird nur einmal gefragt.
+  Kein Consent-Anbieter, kein externes Skript, keine zweite Abfrage fuer
+  Matomo. Der Banner ist SELBSTTRAGEND (eigenes CSS, eigenes Skript mit
+  Nonce, `addEventListener` statt `onclick`, kein `ui.js`, kein
+  `window.__h`) - genau deshalb laesst er sich in die Website-Vorlagen
+  einbinden, die kein Vite-Bundle laden; der alte Banner konnte das
+  nicht und fehlte dort.
+- **Ablehnen blockiert NICHTS**: Website, Portal, Anmeldung, Formulare
+  und Kontaktwege funktionieren unveraendert. Widerruf ueber
+  "Cookie-Einstellungen" im Fuss jeder Seite (`data-consent-oeffnen`),
+  Art. 7 Abs. 3 DSGVO.
+- **Im Browser gefunden, von keinem Test gemeldet**: der
+  Einstellungen-Block stand auf dem Telefon dauerhaft offen - `[hidden]`
+  verliert gegen `display:grid`, dieselbe SEC-4-Falle wie bei
+  `.bulk-bar`. Das Partial traegt sein CSS selbst, die Regel aus
+  `app.css` gilt dort NICHT; sie steht jetzt im Partial.
+- **Rechtsfrage bleibt Rechtsfrage**: ob cookieloses Matomo ueberhaupt
+  eine Einwilligung braucht, entscheidet der Code nicht. Er nimmt die
+  STRENGERE Auffassung an; `ANALYTICS_REQUIRES_CONSENT=false` stellt es
+  um, und das gehoert nur mit schriftlicher Einschaetzung geaendert.
+  Datenschutzerklaerung und Cookie-Richtlinie haengen an
+  `Matomo::aktiv()` - eine Erklaerung, die einen Dienst nennt, den es
+  nicht gibt, ist genauso falsch wie eine, die einen verschweigt, und
+  eine, die von Hand nachgezogen werden muss, wird es irgendwann nicht
+  mehr.
+- **Hamburg-Seite** `/versicherungsmakler-hamburg` (+ `/ar/...`): die im
+  SEO-Auftrag zurueckgestellte Ortsseite. KEINE Doorway Page - eigene
+  Inhalte (Buero, Anfahrt, Oeffnungszeiten, Termin vor Ort, fuenf lokale
+  Fragen), kein kopierter Spartentext (Test). EINE Ortsseite, weil es
+  EINEN Standort gibt. Sie bleibt bei der Wahrheit zur Erlaubnis nach
+  § 34d GewO (vertraglich gebundener Vermittler unter der Haftung von
+  NESA, Link auf die Erstinformation - ebenfalls Test). `InsuranceAgency`
+  steht hier ZU RECHT, weil dies die Standortseite IST; alle uebrigen
+  Unterseiten bleiben bei `Organization`, sonst behauptete jede Seite
+  eine eigene Filiale. Wirksam wird sie erst mit dem vollstaendigen
+  Google-Unternehmensprofil.
+- Tests: `EinwilligungUndHamburgTest` (28 Faelle).
+
 ## Offene Themen / wartet auf den Betreiber
 
 - **SEC-1/SEC-2 Inbetriebnahme** (Code ist fertig und seit 03.09.2026

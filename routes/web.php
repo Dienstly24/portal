@@ -137,11 +137,19 @@ Route::prefix('ar')->name('ar.')->middleware('forceLocale:ar')->group(function (
     Route::get('/kontakt/danke', [WebsiteController::class, 'thanks'])->name('website.thanks');
     Route::get('/leistungen', [ServicePageController::class, 'index'])->name('services.index');
     Route::get('/leistungen/{slug}', [ServicePageController::class, 'show'])->name('services.show');
+    Route::get('/'.WebsiteController::HAMBURG_SLUG, [WebsiteController::class, 'hamburg'])
+        ->name('website.hamburg');
     Route::get('/{page}', [LegalPageController::class, 'show'])
         ->whereIn('page', array_merge(array_keys(WebsiteController::LEGAL_PAGES), ['kontakt']))
         ->name('legal');
 });
 // ================================================================================
+
+// Lokale Seite Hamburg (Betreiber-Auftrag 19.09.2026). Sie steht VOR der
+// '/{page}'-Rechtsseiten-Route: deren whereIn laesst den Pfad zwar ohnehin
+// nicht durch, aber die Reihenfolge macht es unabhaengig von dieser Liste.
+Route::get('/'.WebsiteController::HAMBURG_SLUG, [WebsiteController::class, 'hamburg'])
+    ->name('website.hamburg');
 
 // Öffentliche Leistungsseiten (Definition + Kurzinfos + FAQ je Leistung).
 // Das Anfrageformular erzeugt ein Ticket im System (source=website).

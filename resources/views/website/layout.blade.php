@@ -128,6 +128,7 @@
       <li><a href="{{ $anchor('ueber') }}">{{ $isAr ? 'من نحن' : 'Über uns' }}</a></li>
       <li><a href="{{ $anchor('ablauf') }}">{{ $isAr ? 'آلية العمل' : 'Ablauf' }}</a></li>
       <li><a href="{{ $anchor('stimmen') }}">{{ $isAr ? 'آراء العملاء' : 'Kundenstimmen' }}</a></li>
+      <li><a href="{{ ($isAr ? '/ar/' : '/') . 'versicherungsmakler-hamburg' }}">{{ $isAr ? 'هامبورغ' : 'Hamburg' }}</a></li>
       <li><a href="https://portal.dienstly24.de/login" data-cta="portal" data-cta-seite="fuss">{{ $isAr ? 'بوابة العملاء' : 'Kundenportal' }}</a></li>
     </ul></div>
     <div><h3 class="ftitle">{{ $isAr ? 'اتصل بنا' : 'Kontakt' }}</h3><ul>
@@ -143,13 +144,14 @@
   <div class="fbottom">
     <span>© {{ date('Y') }} Dienstly24</span>
     <div class="fl">
-      <a href="/impressum">Impressum</a><a href="/datenschutz">{{ $isAr ? 'حماية البيانات' : 'Datenschutz' }}</a><a href="/agb">AGB</a><a href="/widerruf">{{ $isAr ? 'حق الرجوع' : 'Widerruf' }}</a><a href="/erstinformation">Erstinformation</a><a href="/cookie-richtlinie">Cookies</a><a href="/bildnachweise">{{ $isAr ? 'مصادر الصور' : 'Bildnachweise' }}</a>
+      <a href="/impressum">Impressum</a><a href="/datenschutz">{{ $isAr ? 'حماية البيانات' : 'Datenschutz' }}</a><a href="/agb">AGB</a><a href="/widerruf">{{ $isAr ? 'حق الرجوع' : 'Widerruf' }}</a><a href="/erstinformation">Erstinformation</a><a href="/cookie-richtlinie">Cookies</a><a href="/bildnachweise">{{ $isAr ? 'مصادر الصور' : 'Bildnachweise' }}</a><a href="#" data-consent-oeffnen>{{ $isAr ? 'إعدادات الكوكيز' : 'Cookie-Einstellungen' }}</a>
     </div>
   </div>
 </div></footer>
 
 @include('website.partials.whatsapp')
 @include('website.partials.assistant')
+@include('partials.cookie_consent')
 @include('partials.matomo')
 <script src="/website-assets/site.js?v={{ @filemtime(public_path('website-assets/site.js')) ?: 1 }}" defer></script>
 {{-- Ereignis-Verdrahtung der Seite (Audit SEC-4) --}}
