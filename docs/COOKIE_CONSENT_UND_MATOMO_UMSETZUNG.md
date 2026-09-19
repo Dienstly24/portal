@@ -145,6 +145,49 @@ Geprueft in DE und AR, am Desktop und am simulierten iPhone: kein
 waagerechter Bildlauf, keine JavaScript-Fehler, arabische Fassung RTL
 mit den Knoepfen **[قبول الكل] [رفض] [الإعدادات]**.
 
+### Nachtrag 19.09.2026: die Anmeldeseite war blockiert
+
+Der erste Durchgang hatte nur die oeffentliche Website im Browser
+angesehen - die Anmeldeseite und das Portal nicht, obwohl der Banner
+auch dort steht. Genau dort lag ein Verstoss gegen die Bedingung
+"eine Ablehnung darf niemanden am Anmelden hindern":
+
+Auf dem iPhone lag die Leiste ueber dem **gesamten** Anmeldeformular
+samt Knopf, und zwar unerreichbar. Nachgerechnet: die Seite ist 808 px
+hoch, das Fenster 664 px - es waren also 144 px Bildlauf moeglich, der
+Knopf bei 522 px blieb danach immer noch unter der Leiste. Anmelden war
+ohne Beantworten der Cookie-Frage **nicht moeglich**. Am Desktop war
+alles in Ordnung; nur deshalb fiel es nicht auf.
+
+Drei Aenderungen, alle im Partial selbst - keine Vorlage musste
+angefasst werden:
+
+1. **Der Banner reserviert seinen Platz selbst.** Er misst seine Hoehe
+   und haengt sie unten an den Seiteninhalt; beim Entscheiden gibt er
+   sie wieder frei. GEMESSEN, nicht geschaetzt: die Hoehe haengt an
+   Sprache, Schriftgroesse und daran, ob die Einstellungen offen sind -
+   deshalb auch bei `resize` erneut. Ohne diesen Schritt war das untere
+   Ende jeder Seite dauerhaft unerreichbar.
+2. **Nur der TEXT scrollt, nie die Knoepfe.** Vorher lag der ganze
+   Kasten im Bildlauf; auf dem Telefon konnte damit ausgerechnet
+   "Ablehnen" unter die Kante rutschen. Eine Ablehnung, die schwerer zu
+   erreichen ist als eine Zustimmung, ist keine freiwillige
+   Einwilligung (Art. 4 Nr. 11 DSGVO).
+3. **Zwei Knopfreihen statt drei** auf schmalen Bildschirmen: die
+   Leiste ist damit 48 % statt 57 % des Telefonbildschirms hoch. Dieser
+   Platz fehlt der Seite darunter, solange die Frage offen ist.
+
+**Ehrlich zur Grenze:** eine Leiste am unteren Rand verdeckt auf einem
+Telefon zwangslaeufig den unteren Teil des Sichtfensters, solange sie
+steht. Was jetzt gilt und gemessen ist: **nichts wird unerreichbar**,
+und mit einer Antwort - auch "Ablehnen" - ist die Leiste sofort weg.
+Zugesagt wird genau das, nicht mehr.
+
+Tests: `test_der_banner_reserviert_seinen_platz`,
+`test_nur_der_text_scrollt_nie_die_knoepfe`,
+`test_auf_der_anmeldeseite_wird_nie_gemessen` - alle drei sind ohne die
+Behebung rot.
+
 ---
 
 ## 7. Verarbeitungsverzeichnis - fertige Angaben zum Uebernehmen
